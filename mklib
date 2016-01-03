@@ -1,0 +1,14 @@
+</$objtype/mkfile
+<$TOP/mkconfig
+
+OBJS=${SRC:%.ml=%.cmo}
+
+all:V: lib.cma
+
+lib.cma: $OBJS
+	$OCAMLC $INCLUDES $prereq -a -o $target
+
+<$TOP/mkcommon
+<.depend
+
+

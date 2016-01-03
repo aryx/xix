@@ -1,0 +1,8 @@
+# -*- sh -*-
+
+TOP=..
+
+INCLUDES=-I .
+SRC=common.ml
+
+<$TOP/mklib

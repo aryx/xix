@@ -1,0 +1,8 @@
+
+OCAMLC=ocamlc
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc
+OCAMLDEP=ocamldep
+
+
+

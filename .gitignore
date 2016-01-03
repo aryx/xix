@@ -1,0 +1,4 @@
+
+*.cm*
+.depend
+.md5sum_*

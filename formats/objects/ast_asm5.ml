@@ -1,4 +1,37 @@
-(* TODO: remain debugging and extensions chapters *)
+(* Yoann Padioleau
+ *
+ * Copyright (C) 2015, 2016 Yoann Padioleau
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public License
+ * version 2.1 as published by the Free Software Foundation, with the
+ * special exception on linking described in file license.txt.
+ * 
+ * This library is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
+ * license.txt for more details.
+ *)
+open Common
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(*
+ * Abstract Syntax Tree for the assembly language supported by 5a
+ * which we call Asm5.
+ *
+ * Note that in plan9 object files are mostly the serialized form of 
+ * the assembly AST which is why this file is in this directory.
+ * 
+ * TODO: remain debugging and extensions chapters
+ *  - special bits, mv closer to relevant instr? Arith has only .S,
+ *    Mov has only .P, .W, etc.
+ *)
+
+(*****************************************************************************)
+(* The AST related types *)
+(*****************************************************************************)
 
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
@@ -35,14 +68,15 @@ type arith_operand =
              (register, int (* between 0 and 31 *)) Common.either
 
   and shift_reg_op =
-    | Sh_left | Sh_right
-    | Sh_minus | Sh_at
+    | Sh_logic_left | Sh_logic_right
+    | Sh_arith_right | Sh_rotate_right
 
 type mov_operand = 
   (* Immediate shift register *)
   | Imsr of arith_operand
   (* eXtended immediate *)
   | Ximm of ximm
+
   | Indirect of register * offset
   (* those below are all specialized forms of Indirect *)
   | Param of symbol option * offset (* FP *)
@@ -68,7 +102,7 @@ type branch_operand =
   (* after resolve *)
   | Absolute of virtual_code_address
 
-(* todo: just transform labels in symbols? but then need to keep
+(* less: could transform labels in symbols? but then need to keep
  * Relative jumps and remove Absolute.
  *)  
 
@@ -78,7 +112,8 @@ type branch_operand =
 
 type instr = 
   (* Arithmetic *)
-  | Arith of arith_opcode * arith_operand * register * register option
+  | Arith of arith_opcode * 
+      arith_operand (* src *) * register option * register (* dst *)
 
   (* Memory *)
   | MOV of move_size * mov_operand * mov_operand (* virtual *)
@@ -94,7 +129,7 @@ type instr =
   | Bxx of condition * branch_operand (* virtual, sugar *) 
 
   (* System *)
-  | SWI of int
+  | SWI of int (* value actually unused in plan9 *)
   | RFE (* virtual, sugar for MOVM *)
 
   (* Misc *)
@@ -121,18 +156,20 @@ type instr =
     | GT of sign | LT of sign | GE of sign | LE of sign
     (* ????? *)
     | MI | PL | VS | VC
-    (* ????? AL | NV *)
+    (* always/never *)
+    | AL | NV
 
+   (* sign is relevant only for a load operation, not a store *)
    and sign = Signed | Unsigned
    and move_size = Byte of sign | Word | HalfWord of sign
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of symbol * attributes * int
-  | GLOBL of symbol (* can have offset? *) * attributes * int
-  | DATA of symbol * offset * int (* size *) * ximm
+  | TEXT of entity * attributes * int (* size locals *)
+  | GLOBL of entity (* can have offset? *) * attributes * int (* size *)
+  | DATA of entity * offset * int (* size *) * ximm
   (* any ximm? even String? And Float? for float should have DWORD? *)
-  | WORD of (int, ximm) Common.either
+  | WORD of (integer, ximm) Common.either
 
   and attributes = attribute list
   and attribute = DUPOK | NOPROF
@@ -143,7 +180,7 @@ type pseudo_instr =
 
 type line = 
   | P of pseudo_instr
-  | I of instr * condition option (* * bitset list *)
+  | I of instr * condition (* TODO bitset list *)
   (* disappear after resolve *)
   | L of label
   (* ex: #line 20 "foo.c" *)

@@ -6,7 +6,7 @@ OBJS=${SRC:%.ml=%.cmo}
 all:V: $PROG
 
 $PROG: $OBJS
-	$OCAMLC $INCLUDES $prereq -o $target
+	$OCAMLC $INCLUDES $SYSLIBS $LIBS $prereq -o $target
 
 clean:V:
 	rm -f *.cm[ioxa] *.cmt* *.o *.a *.cmxa *.annot

@@ -11,7 +11,21 @@ let with_file_out f file =
   close_out chan;
   res
 
+let with_file_in f file = 
+  let chan = open_in file in
+  let res = f chan in
+  close_in chan;
+  res
+
 exception Todo
+exception Impossible
+
+let rec filter_some = function
+  | [] -> []
+  | None :: l -> filter_some l
+  | Some e :: l -> e :: filter_some l
+
+let map_filter f xs = xs |> List.map f |> filter_some
 
 let memoized ?(use_cache=true) h k f =
   if not use_cache

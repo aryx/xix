@@ -3,11 +3,14 @@
 TOP=..
 INCLUDES=-I $TOP/commons -I $TOP/formats/objects
 
-SRC= parser_asm5.ml lexer_asm5.ml parse_asm5.ml \
+SRC= globals.ml parser_asm5.ml lexer_asm5.ml parse_asm5.ml \
  resolve_labels5.ml main.ml
 
-# Principia spirit! THE assembler! :)
-PROG=assembler
+SYSLIBS=str.cma
+LIBS=$TOP/commons/lib.cma $TOP/formats/objects/lib.cma
+
+# or use Principia spirit! THE assembler! so call it simply 'assembler' ? :)
+PROG=5a
 
 <$TOP/mkone
 
@@ -26,3 +29,8 @@ lexer_asm5.ml: lexer_asm5.mll
 
 parser_asm5.ml parser_asm5.mli: parser_asm5.mly
 	$OCAMLYACC $prereq
+
+
+loc:V:
+   wc -l globals.ml lexer_asm5.mll parser_asm5.mly parse_asm5.ml* main.ml $TOP/formats/objects/ast_asm5.ml
+

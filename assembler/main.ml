@@ -4,7 +4,7 @@ open Common
 (* Prelude *)
 (*****************************************************************************)
 (* Limitations compared to 5a:
- *  - no parallel multi files thing (not the place anyway)
+ *  - no multiple files processing in parallel (not the place, use xargs)
  *)
 
 let thechar = '5'
@@ -14,22 +14,27 @@ let assemble infile outfile =
   let prog = Resolve_labels5.resolve prog in
   Object_code5.save (prog, infile) outfile
 
+let usage = 
+  spf "usage: %ca [-options] file.s" thechar
+
 let main () =
   let infile = ref "" in
   let outfile = ref "" in
-  Arg.parse [
+  let options = [
     "-o", Arg.Set_string outfile,
     " <file> output file";
-  ] 
-  (fun f -> 
-    if !infile <> ""
-    then failwith "already specified an input file";
-    infile := f;
-  )
-  (spf "%ca [-options] file.s" thechar);
+  ]
+  in
+  Arg.parse options
+   (fun f -> 
+     if !infile <> ""
+     then failwith "already specified an input file";
+     infile := f;
+   )
+   usage;
 
   if !infile = ""
-  then failwith "we need an input file";
+  then begin Arg.usage options usage; exit (-1); end;
   if !outfile = ""
   then begin 
     let b = Filename.basename !infile in

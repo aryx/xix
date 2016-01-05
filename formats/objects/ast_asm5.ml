@@ -98,7 +98,7 @@ type branch_operand =
   (* rel *)
   (* before resolve *)
   | Relative of int (* relative to PC, in units of virtual_code_address *)
-  | Label of label * offset (* useful to have offset? *)
+  | LabelUse of label * offset (* useful to have offset? *)
   (* after resolve *)
   | Absolute of virtual_code_address
 
@@ -152,10 +152,14 @@ type instr =
     | TST | TEQ | CMN
 
   and condition =
-    | EQ | NEQ
+    (* equal, not equal *)
+    | EQ | NE
+    (* greater, less, greater or, less or equal *)
     | GT of sign | LT of sign | GE of sign | LE of sign
-    (* ????? *)
-    | MI | PL | VS | VC
+    (* minus/negative plus/positive *)
+    | MI | PL 
+    (* overflow set/clear *)
+    | VS | VC
     (* always/never *)
     | AL | NV
 
@@ -167,23 +171,25 @@ type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
   | TEXT of entity * attributes * int (* size locals *)
   | GLOBL of entity (* can have offset? *) * attributes * int (* size *)
-  | DATA of entity * offset * int (* size *) * ximm
+  | DATA of entity * offset * int (* size *) * imm_or_ximm
   (* any ximm? even String? And Float? for float should have DWORD? *)
-  | WORD of (integer, ximm) Common.either
+  | WORD of imm_or_ximm
 
   and attributes = attribute list
   and attribute = DUPOK | NOPROF
+
+  and imm_or_ximm = (integer, ximm) Common.either
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
 type line = 
-  | P of pseudo_instr
-  | I of instr * condition (* TODO bitset list *)
+  | Pseudo of pseudo_instr
+  | Instr of instr * condition (* TODO bitset list *)
   (* disappear after resolve *)
-  | L of label
+  | LabelDef of label
   (* ex: #line 20 "foo.c" *)
-  | D of int * Common.filename
+  | LineDirective of int * Common.filename
 
 type program = (line * pos) list

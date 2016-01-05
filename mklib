@@ -13,5 +13,3 @@ clean:V:
 
 <$TOP/mkcommon
 <.depend
-
-

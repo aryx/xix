@@ -1,3 +1,3 @@
 
-(* modifies also Lexer_asm.line and Lexer_asm.line_directives *)
+(* modifies also Globals.line *)
 val parse: Common.filename -> Ast_asm5.program

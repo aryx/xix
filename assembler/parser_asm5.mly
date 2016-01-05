@@ -6,11 +6,8 @@ open Ast_asm5
 (* Prelude *)
 (*****************************************************************************)
 
-(* mostly used by lexer but mutual dependency forces us to define it here *)
-let line = ref 1
-
 let error s =
-  failwith (spf "Syntax error: %s at line %d" s !line)
+  failwith (spf "Syntax error: %s at line %d" s !Globals.line)
 
 (* less: can have multiple at the same time? bitset? then use land? *)
 let attributes_of_int i =
@@ -33,7 +30,7 @@ let attributes_of_int i =
 %token <Ast_asm5.move_size> TMOV TSWAP
 %token TB  TBL TRET
 %token <Ast_asm5.cmp_opcode> TCMP   
-%token <Ast_asm5.condition> TBxx TCOND
+%token <Ast_asm5.condition> TBx TCOND
 %token TSWI TRFE
 
 %token TTEXT TGLOBL 
@@ -43,7 +40,7 @@ let attributes_of_int i =
 /*(*2 registers *)*/
 /*(*-----------------------------------------*)*/
 
-%token <Ast_asm5.register> TRxx
+%token <Ast_asm5.register> TRx
 %token TR
 %token TPC TSB TFP TSP
 
@@ -79,6 +76,11 @@ let attributes_of_int i =
 %token TPLUS TMINUS TTILDE TMUL TMOD
 %token TSLASH
 
+/*(*-----------------------------------------*)*/
+/*(*2 Misc *)*/
+/*(*-----------------------------------------*)*/
+%token <int * string> TSharpLine
+
 /*(*************************************************************************)*/
 /*(*1 Priorities *)*/
 /*(*************************************************************************)*/
@@ -110,11 +112,14 @@ lines:
 
 line: 
  |               TSEMICOLON { [] }
- | instr         TSEMICOLON { [($1, $2)] }
- | pseudo_instr  TSEMICOLON { [(P $1, $2)] }
+ | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
+ | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
  | label_def line  { $1::$2 }
 
-label_def: TIDENT TCOLON    { (L $1, !line) }
+ /*(*pad: I added that, was handled via global originally *)*/
+ | TSharpLine    TSEMICOLON { [(LineDirective (fst $1, snd $1), $2)] }
+
+label_def: TIDENT TCOLON    { (LabelDef $1, !Globals.line) }
 
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions *)*/
@@ -136,12 +141,14 @@ pseudo_instr:
 /*(* pad: I introduced this intermediate rule *)*/
 entity: name
   { match $1 with
+    | Entity (e, 0) -> e
     | _ -> error "entity expected"
   } 
 
 entity_and_offset: name
   { match $1 with
-    | _ -> error "entity and offset expected"
+    | Entity (e, n) -> (e, n)
+    | _ -> error "entity with offset expected"
   } 
 
 
@@ -150,24 +157,24 @@ entity_and_offset: name
 /*(*************************************************************************)*/
 
 instr:
- | TARITH cond  imsr TCOMMA reg TCOMMA reg { I (Arith ($1, $3, Some $5, $7),$2)}
- | TARITH cond  imsr TCOMMA reg            { I (Arith ($1, $3, None,    $5),$2)}
+ | TARITH cond  imsr TCOMMA reg TCOMMA reg { (Arith ($1, $3, Some $5, $7),$2)}
+ | TARITH cond  imsr TCOMMA reg            { (Arith ($1, $3, None,    $5),$2)}
 
- | TMOV   cond  gen  TCOMMA gen     { I (MOV ($1, $3, $5), $2) }
+ | TMOV   cond  gen  TCOMMA gen     { (MOV ($1, $3, $5), $2) }
 
- | TSWAP  cond  reg  TCOMMA ireg    { I (SWAP ($1, $5, $3, None), $2) }
- | TSWAP  cond  ireg TCOMMA reg     { I (SWAP ($1, $3, $5, None), $2) }
+ | TSWAP  cond  reg  TCOMMA ireg    { (SWAP ($1, $5, $3, None), $2) }
+ | TSWAP  cond  ireg TCOMMA reg     { (SWAP ($1, $3, $5, None), $2) }
  | TSWAP  cond  reg  TCOMMA ireg TCOMMA reg 
-     { I (SWAP ($1, $5, $3, Some $7), $2) }
+     { (SWAP ($1, $5, $3, Some $7), $2) }
 
- | TB  cond branch           { I (B $3, $2) }
- | TBL cond branch           { I (BL $3, $2)}
- | TCMP cond imsr TCOMMA reg { I (Cmp ($1, $3, $5), $2) } 
- | TBxx rel                  { I (Bxx ($1, $2), AL) }
- | TRET cond                 { I (RET, $2) }
+ | TB  cond branch           { (B $3, $2) }
+ | TBL cond branch           { (BL $3, $2)}
+ | TCMP cond imsr TCOMMA reg { (Cmp ($1, $3, $5), $2) } 
+ | TBx rel                   { (Bxx ($1, $2), AL) }
+ | TRET cond                 { (RET, $2) }
 
- | TSWI cond imm { I (SWI $3, $2) }
- | TRFE cond     { I (RFE, $2) }
+ | TSWI cond imm { (SWI $3, $2) }
+ | TRFE cond     { (RFE, $2) }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
@@ -206,7 +213,7 @@ expr:
 
 
 reg:
- | TRxx                { $1 }
+ | TRx                { $1 }
  | TR TOPAR expr TCPAR 
      { if $3 <= 15 && $3 >= 0
        then R $3
@@ -239,7 +246,7 @@ gen:
  | con TOPAR pointer TCPAR { $3 None $1 }
 
 ximm:
- | TDOLLAR con     { Left $2 }
+ | imm             { Left $1 }
  | TDOLLAR TSTRING { Right (String $2) }
  | TDOLLAR entity  { Right (Address $2) }
 
@@ -283,12 +290,12 @@ offset:
 
 
 branch: 
- | rel   { $1 }
- | name  { (* only SB? *) }
- | ireg  { }
+ | rel               { $1 }
+ | entity_and_offset { SymbolJump (fst $1, snd $1) }
+ | ireg              { IndirectJump $1 }
 
 rel:
- | TIDENT offset        { Label ($1, $2) }
+ | TIDENT offset        { LabelUse ($1, $2) }
  | con TOPAR TPC TCPAR  { Relative $1 }
 
 
@@ -296,6 +303,7 @@ rel:
 /*(*1 Misc *)*/
 /*(*************************************************************************)*/
 
+/*(* TODO: special bits or inline in previous rule? *)*/
 cond:
- | /* empty */ { }
- | cond TCOND  { }
+ | /* empty */ { AL }
+ | TCOND  { $1 }

@@ -1,4 +1,6 @@
 {
+open Common
+
 open Ast_asm5
 open Parser_asm5
 
@@ -9,13 +11,11 @@ open Parser_asm5
  *  - does not handle unicode
  *  - does not recognize the uU lL suffix 
  *    (but was skipped by 5a anyway)
- *  - does not handle preprocessing directives, assume external cpp
+ *  - handles just the #line directive, assumes external cpp
  *    (but better to factorize code and separate concerns anyway)
  *)
 
-let line_directives = ref []
-
-(* TODO: do like prfile? *)
+(* TODO: do like prfile? but then would a lines_directives global *)
 let error s =
   failwith (spf "Lexical error: %s (line %d)" s !Globals.line)
 
@@ -26,7 +26,7 @@ let code_of_escape_char c =
   | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
   | 'f' -> error "unknown \\f"
   (* could be removed, special 5a escape char *)
-  | 'a' -> 0x07 | 'v' -> 0x0b | 'z' -> 0x00
+  | 'a' -> 0x07 | 'v' -> 0x0b | 'z' -> 0
   | _ -> error "unknown escape sequence"
 
 let string_of_ascii i =
@@ -57,21 +57,21 @@ rule token = parse
   | "//" [^'\n']* { token lexbuf }
   | "/*"          { comment lexbuf }
 
-  | '\n' { incr line; TSEMICOLON }
+  | '\n' { let old = !Globals.line in incr Globals.line; TSEMICOLON old }
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
-  | ';' { TSEMICOLON }
+  | ';' { TSEMICOLON !Globals.line }
+
   | ':' { TCOLON }
   | ',' { TCOMMA }
   | '(' { TOPAR } | ')' { TCPAR }
   | '$' { TDOLLAR }
 
-  | '+' { TPLUS } | '-' { TMINUS } | '*' { TMUL }
-  (* used for division and for DATA *)
-  | '/' { TSLASH } 
-  | '%' { TMOD }
+  | '+' { TPLUS } | '-' { TMINUS } 
+  (* '/' is used for division and for DATA too *)
+  | '*' { TMUL }  | '/' { TSLASH } | '%' { TMOD }
 
   (* has to be before the rule for identifiers *)
   | '.' { TDOT }
@@ -82,7 +82,7 @@ rule token = parse
   | "R" (digit+ as s) 
       { let i = int_of_string s in 
         if i <= 15 && i >=0
-        then TRxx i
+        then TRx (R i)
         else error ("register number not valid")
       }
 
@@ -90,10 +90,8 @@ rule token = parse
   | (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
       let s = Lexing.lexeme lexbuf in
       (* fast enough? I hope ocaml generate good code for strings matching *)
-      match x with
+      match s with
       (* instructions *)
-      | "NOP" -> TNOP
-
       | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
 
       | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
@@ -112,15 +110,20 @@ rule token = parse
       | "CMP" -> TCMP CMP 
       | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
       | "RET" -> TRET
-      | "BEQ" -> Bxx EQ | "BNE" -> Bxx NE
-      | "BGT" -> Bxx GT | "BLT" -> Bxx LT | "BGE" -> Bxx GE | "BLE" -> Bxx LE
-      | "BHI" -> Bxx HI | "BLO" -> Bxx LO | "BHS" -> Bxx HS | "BLS" -> Bxx LS
-      | "BMI" -> Bxx MI | "BPL" -> Bxx PL | "BVS" -> Bxx VS | "BVC" -> Bxx VC
+      
+      | "BEQ" -> TBx EQ | "BNE" -> TBx NE
+      | "BGT" -> TBx (GT Signed) | "BLT" -> TBx (LT Signed)
+      | "BGE" -> TBx (GE Signed) | "BLE" -> TBx (LE Signed)
+      | "BHI" -> TBx (GT Unsigned) | "BLO" -> TBx (LT Unsigned) 
+      | "BHS" -> TBx (GE Unsigned) | "BLS" -> TBx (LE Unsigned)
+
+      | "BMI" -> TBx MI | "BPL" -> TBx PL 
+      | "BVS" -> TBx VS | "BVC" -> TBx VC
 
       | "SWI" -> TSWI
       | "RFE" -> TRFE
 
-      (* pseudo *)
+      (* pseudo instructions *)
       | "TEXT" -> TTEXT | "GLOBL" -> TGLOBL
       | "WORD" -> TWORD | "DATA" -> TDATA
 
@@ -130,18 +133,17 @@ rule token = parse
       (* pseudo registers *)
       | "PC" -> TPC | "SB" -> TSB | "SP" -> TSP | "FP" -> TFP
 
-      (* condition *)
-
+      (* conditions *)
       | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND GT | ".LT" -> TCOND LT 
-      | ".GE" -> TCOND GE | ".LE" -> TCOND LE
-      | ".HI" -> TCOND HI | ".LO" -> TCOND LO 
-      | ".HS" -> TCOND HS | ".LS" -> TCOND LS
+      | ".GT" -> TCOND (GT Signed)   | ".LT" -> TCOND (LT Signed) 
+      | ".GE" -> TCOND (GE Signed)   | ".LE" -> TCOND (LE Signed)
+      | ".HI" -> TCOND (GT Unsigned) | ".LO" -> TCOND (LT Unsigned)
+      | ".HS" -> TCOND (GE Unsigned) | ".LS" -> TCOND (LE Unsigned)
       | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
 
       (* less: could impose is_lowercase? *)
-      | _ -> TIDENT x
+      | _ -> TIDENT s
     }
 
   (* ----------------------------------------------------------------------- *)
@@ -161,8 +163,8 @@ rule token = parse
   | "'" { TINT (char lexbuf) }
   | '"' { 
     let s = string lexbuf in
-    (* TODO? why this limit though? *)
-    if String.length > 8
+    (* less: why this limit though? *)
+    if String.length s > 8
     then error ("string constant too long")
     else TSTRING s
   }
@@ -170,11 +172,9 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Misc *)
   (* ----------------------------------------------------------------------- *)
-  (* stricter: I impose a filename *)
-  | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"') {
-      let directive = SharpLine (int_of_string s1, s2) in
-      Common.push directive line_directives
-    }
+  (* stricter: I impose a filename (with no quote in name, hmm) *)
+  | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"') 
+      { TSharpLine (int_of_string s1, s2) }
   | "#line" { error "syntax in #line" }
 
   (* ----------------------------------------------------------------------- *)
@@ -185,10 +185,10 @@ rule token = parse
 (* Rule char *)
 (*****************************************************************************)
 and char = parse
-  | "''" { Char.code '\'' }
+  | "''"                            { Char.code '\'' }
   | "\\" ((oct oct? oct?) as s) "'" { int_of_string ("0o" ^ s) }
-  | "\\" (['a'-'z'] as c) "'"   { code_of_escape_char c }
-  | [^ '\\' '\'' '\n'] as c  "'"     { Char.code c }
+  | "\\" (['a'-'z'] as c) "'"       { code_of_escape_char c }
+  | [^ '\\' '\'' '\n'] as c  "'"    { Char.code c }
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }
   | _    { error "missing '" }
@@ -216,5 +216,5 @@ and comment = parse
   | "*/"          { token lexbuf }
   | [^ '*' '\n']+ { comment lexbuf }
   | '*'           { comment lexbuf }
-  | '\n'          { incr line; comment lexbuf }
+  | '\n'          { incr Globals.line; comment lexbuf }
   | eof           { error "end of file in comment" }

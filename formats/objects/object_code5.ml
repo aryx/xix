@@ -11,3 +11,13 @@ let save obj file =
   file |> Common.with_file_out (fun chan ->
     output_value chan (version, obj)
   )
+
+exception WrongVersion
+
+let load file =
+  file |> Common.with_file_in (fun chan ->
+    let (ver, obj) = input_value chan in
+    if ver <> version
+    then raise WrongVersion
+    else obj
+  )

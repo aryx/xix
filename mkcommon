@@ -1,10 +1,7 @@
 # -*- sh -*-
 
-clean:V:
-	rm -f *.cm*
-
 depend:V:
-	$OCAMLDEP $INCLUDES *.ml*  > .depend
+	$OCAMLDEP $INCLUDES *.ml *.mli  > .depend
 
 #| grep -v -e '.* :$'
 

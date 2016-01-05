@@ -1,0 +1,16 @@
+</$objtype/mkfile
+<$TOP/mkconfig
+
+OBJS=${SRC:%.ml=%.cmo}
+
+all:V: $PROG
+
+$PROG: $OBJS
+	$OCAMLC $INCLUDES $prereq -o $target
+
+clean:V:
+	rm -f *.cm[ioxa] *.cmt* *.o *.a *.cmxa *.annot
+	rm -f *~ .*~ *.exe gmon.out #*#
+
+<$TOP/mkcommon
+<.depend

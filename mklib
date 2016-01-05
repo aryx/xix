@@ -8,6 +8,9 @@ all:V: lib.cma
 lib.cma: $OBJS
 	$OCAMLC $INCLUDES $prereq -a -o $target
 
+clean:V:
+	rm -f *.cm*
+
 <$TOP/mkcommon
 <.depend
 

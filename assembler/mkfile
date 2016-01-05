@@ -1,0 +1,28 @@
+# -*- sh -*-
+
+TOP=..
+INCLUDES=-I $TOP/commons -I $TOP/formats/objects
+
+SRC= parser_asm5.ml lexer_asm5.ml parse_asm5.ml \
+ resolve_labels5.ml main.ml
+
+# Principia spirit! THE assembler! :)
+PROG=assembler
+
+<$TOP/mkone
+
+beforedepend:V: lexer_asm5.ml parser_asm5.ml parser_asm5.mli
+	
+
+depend:V: beforedepend
+
+clean:V:
+	rm -f $PROG *.cm*
+	rm -f lexer_asm5.ml
+	rm -f parser_asm5.ml parser_asm5.mli parser_asm5.output
+
+lexer_asm5.ml: lexer_asm5.mll
+	$OCAMLLEX $prereq
+
+parser_asm5.ml parser_asm5.mli: parser_asm5.mly
+	$OCAMLYACC $prereq

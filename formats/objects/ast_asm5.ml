@@ -11,9 +11,12 @@ open Common
  * Note that in plan9 object files are mostly the serialized form of 
  * the assembly AST which is why this file is in this directory.
  * 
- * TODO: remain debugging and extensions chapters
+ * TODO: 
+ *  - floats, MULA, MULL, MOVM, PSR, MCR/MRC
  *  - special bits, mv closer to relevant instr? Arith has only .S,
- *    Mov has only .P, .W, etc.
+ *    Mov has only .P, .W, MOVM has many others.
+ *  - 5c only: CASE, BCASE, MULU/DIVU/MODU, ASIGNAME!
+ *  - 
  *)
 
 (*****************************************************************************)
@@ -36,7 +39,8 @@ type offset = int
 
 type label = string
 type symbol = string
-type entity = symbol * bool (* static *)
+(* less: optional signature *)
+type entity = symbol * bool (* private symbol (aka static symbol) *)
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
@@ -173,10 +177,12 @@ type pseudo_instr =
 
 type line = 
   | Pseudo of pseudo_instr
-  | Instr of instr * condition (* TODO bitset list *)
+  (* condition should be AL for B and Bxx instructions *)
+  | Instr of instr * condition (* TODO special bits or put before? *)
   (* disappear after resolve *)
   | LabelDef of label
   (* ex: #line 20 "foo.c" *)
   | LineDirective of int * Common.filename
+  (* less: PragmaLibDirective of string *)
 
 type program = (line * pos) list

@@ -103,6 +103,8 @@ rule token = parse
       | "ADC" -> TARITH ADC | "SBC" -> TARITH SBC
       | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC
 
+      | "MVN" -> TMVN
+
       | "MOVW" -> TMOV Word
       | "MOVB" -> TMOV (Byte     Signed) | "MOVBU" -> TMOV (Byte     Unsigned)
       | "MOVH" -> TMOV (HalfWord Signed) | "MOVHU" -> TMOV (HalfWord Unsigned)
@@ -173,7 +175,9 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Misc *)
   (* ----------------------------------------------------------------------- *)
-  (* stricter: I impose a filename (with no quote in name, hmm) *)
+  (* stricter: I impose a filename (with no quote in name, hmm) 
+   * less: normalize? realpath? 
+   *)
   | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"') 
       { TSharpLine (int_of_string s1, s2) }
   | "#line" { error "syntax in #line" }

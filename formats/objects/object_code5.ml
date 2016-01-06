@@ -1,5 +1,6 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 
+(* todo: use absolute path? realpath? *)
 type object_code = 
   Ast_asm5.program * Common.filename
 

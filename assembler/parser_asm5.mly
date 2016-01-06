@@ -16,6 +16,7 @@ let attributes_of_int i =
    | 0 -> [] 
    | 1 -> [NOPROF] 
    | 2 -> [DUPOK]
+   | 3 -> [DUPOK; NOPROF]
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
 %}
 
@@ -28,6 +29,7 @@ let attributes_of_int i =
 /*(*-----------------------------------------*)*/
 
 %token <Ast_asm5.arith_opcode> TARITH
+%token TMVN
 %token <Ast_asm5.move_size> TMOV TSWAP
 %token TB  TBL TRET
 %token <Ast_asm5.cmp_opcode> TCMP   
@@ -160,6 +162,7 @@ entity_and_offset: name
 instr:
  | TARITH cond  imsr TCOMMA reg TCOMMA reg { (Arith ($1, $3, Some $5, $7),$2)}
  | TARITH cond  imsr TCOMMA reg            { (Arith ($1, $3, None,    $5),$2)}
+ | TMVN   cond  imsr TCOMMA reg            { (Arith (MVN, $3, None,    $5),$2)}
 
  | TMOV   cond  gen  TCOMMA gen     { (MOV ($1, $3, $5), $2) }
 
@@ -167,8 +170,8 @@ instr:
  | TSWAP  cond  ireg TCOMMA reg     { (SWAP ($1, $3, $5, None), $2) }
  | TSWAP  cond  reg  TCOMMA ireg TCOMMA reg 
      { (SWAP ($1, $5, $3, Some $7), $2) }
-
- | TB  cond branch           { (B $3, $2) }
+ /*(*stricter: no cond here, use Bxx form, so normalized AST *)*/
+ | TB       branch           { (B $2, AL) }
  | TBL cond branch           { (BL $3, $2)}
  | TCMP cond imsr TCOMMA reg { (Cmp ($1, $3, $5), $2) } 
  | TBx rel                   { (Bxx ($1, $2), AL) }
@@ -191,9 +194,11 @@ imm: TDOLLAR con      { $2 }
 
 con:
  | TINT { $1 }
+
  | TMINUS con { - $2 }
  | TPLUS  con { $2 }
  | TTILDE con { lnot $2 }
+
  | TOPAR expr TCPAR { $2 }
 
 expr:

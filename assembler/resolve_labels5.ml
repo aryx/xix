@@ -48,6 +48,7 @@ let resolve ps =
               | Absolute _ -> raise Impossible
             in
             (match inst with
+            (* could issue warning if cond <> AL when B *)
             | B _ -> B opd
             | BL _ -> BL opd
             | Bxx (cond, _) -> Bxx (cond, opd)

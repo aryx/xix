@@ -9,14 +9,14 @@ open Common
  *)
 
 let thechar = '5'
+let usage = 
+  spf "usage: %ca [-options] file.s" thechar
 
 let assemble infile outfile =
   let prog = Parse_asm5.parse infile in
   let prog = Resolve_labels5.resolve prog in
   Object_code5.save (prog, infile) outfile
 
-let usage = 
-  spf "usage: %ca [-options] file.s" thechar
 
 let main () =
   let infile = ref "" in

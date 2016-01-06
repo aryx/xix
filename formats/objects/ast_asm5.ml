@@ -5,7 +5,7 @@ open Common
 (* Prelude *)
 (*****************************************************************************)
 (*
- * Abstract Syntax Tree for the assembly language supported by 5a
+ * Abstract Syntax Tree (AST) for the assembly language supported by 5a
  * which we call Asm5.
  *
  * Note that in plan9 object files are mostly the serialized form of 
@@ -16,7 +16,6 @@ open Common
  *  - special bits, mv closer to relevant instr? Arith has only .S,
  *    Mov has only .P, .W, MOVM has many others.
  *  - 5c only: CASE, BCASE, MULU/DIVU/MODU, ASIGNAME!
- *  - 
  *)
 
 (*****************************************************************************)
@@ -34,26 +33,28 @@ type pos = int
 type integer = int 
 (* increments by unit of 1 *)
 type virtual_code_address = int
-(* can be 0, negative, positive *)
+(* can be 0, negative, or positive *)
 type offset = int
 
 type label = string
 type symbol = string
 (* less: optional signature *)
-type entity = symbol * bool (* private symbol (aka static symbol) *)
+type entity = symbol * bool (* true when private symbol (aka static symbol) *)
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
 type register = R of int (* between 0 and 15 *)
+(* reserved by assembler/linker/compiler *)
 let rSB = R 12
 let rSP = R 13
+(* reserved by hardware *)
 let rLINK = R 14
 let rPC = R 15
 
 type arith_operand =
-  | Imm of integer (* characters are converted in integers *)
+  | Imm of integer (* characters are converted to integers *)
   | Reg of register
   | Shift of register * shift_reg_op * 
              (register, int (* between 0 and 31 *)) Common.either
@@ -82,14 +83,13 @@ type mov_operand =
     | Address of entity
 
 type branch_operand =
-  (* nireg *)
   | SymbolJump of entity * offset
   | IndirectJump of register
 
-  (* rel *)
   (* before resolve *)
   | Relative of int (* relative to PC, in units of virtual_code_address *)
   | LabelUse of label * offset (* useful to have offset? *)
+
   (* after resolve *)
   | Absolute of virtual_code_address
 
@@ -116,7 +116,7 @@ type instr =
   | BL of branch_operand
   | RET (* virtual *)
   | Cmp of cmp_opcode * arith_operand * register
-  (* TODO: normally just rel here, relative jump or label *)
+  (* just Relative or LabelUse here for branch_operand *)
   | Bxx of condition * branch_operand (* virtual, sugar *) 
 
   (* System *)
@@ -145,18 +145,18 @@ type instr =
   and condition =
     (* equal, not equal *)
     | EQ | NE
-    (* greater, less, greater or, less or equal *)
+    (* greater than, less than, greater or equal, less or equal *)
     | GT of sign | LT of sign | GE of sign | LE of sign
-    (* minus/negative plus/positive *)
+    (* minus/negative, plus/positive *)
     | MI | PL 
     (* overflow set/clear *)
     | VS | VC
     (* always/never *)
     | AL | NV
 
-   (* sign is relevant only for a load operation, not a store *)
+   and move_size = Word | HalfWord of sign | Byte of sign
+   (* sign is relevant in MOV only for a load operation *)
    and sign = Signed | Unsigned
-   and move_size = Byte of sign | Word | HalfWord of sign
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)

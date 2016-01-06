@@ -6,6 +6,11 @@ open Common
 (*****************************************************************************)
 (* Limitations compared to 5a:
  *  - no multiple files processing in parallel (not the place, use xargs)
+ * 
+ * todo?:
+ *  - better Lexer_asm.error() and Parser_asm.error() using lines_directives?
+ *    actually prfile() was buggy
+ *    gcc -I have #line for included file? can reconstruct tree?
  *)
 
 let thechar = '5'

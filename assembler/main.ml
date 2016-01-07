@@ -17,7 +17,7 @@ let thechar = '5'
 let usage = 
   spf "usage: %ca [-options] file.s" thechar
 
-let assemble infile outfile =
+let assemble5 infile outfile =
   let prog = Parse_asm5.parse infile in
   let prog = Resolve_labels5.resolve prog in
   Object_code5.save (prog, infile) outfile
@@ -48,7 +48,7 @@ let main () =
     then outfile := Common.matched1 b ^ (spf ".%c" thechar)
     else outfile := b ^ (spf ".%c" thechar)
   end;
-  assemble !infile !outfile
+  assemble5 !infile !outfile
   
 
 let _ = 

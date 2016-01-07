@@ -46,7 +46,7 @@ let resolve ps =
         in
         let inst = 
           match inst with
-          (* could issue warning if cond <> AL when B *)
+          (* less: could issue warning if cond <> AL when B *)
           | B opd -> B (resolve_branch_operand opd)
           | BL opd -> BL (resolve_branch_operand opd)
           | Bxx (cond, opd) -> Bxx (cond, resolve_branch_operand opd)

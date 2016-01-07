@@ -1,6 +1,7 @@
 %{
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+
 open Ast_asm5
 
 (*****************************************************************************)
@@ -10,7 +11,7 @@ open Ast_asm5
 let error s =
   failwith (spf "Syntax error: %s at line %d" s !Globals.line)
 
-(* less: can have multiple at the same time? bitset? then use land? *)
+(* less: should use keywords in Asm5 instead of abuse integers *)
 let attributes_of_int i =
    match i with 
    | 0 -> [] 
@@ -138,7 +139,7 @@ pseudo_instr:
  | TTEXT  entity TCOMMA imm    { TEXT  ($2, [], $4) }
  | TGLOBL entity TCOMMA imm    { GLOBL ($2, [], $4) }
 
- /*(* todo: would be better to have mnemonics for attributes too *)*/
+ /*(* less: would be better to have mnemonics for attributes too *)*/
  | TTEXT entity TCOMMA con TCOMMA imm
      { TEXT ($2, attributes_of_int $4, $6) }
  | TGLOBL entity TCOMMA con TCOMMA imm
@@ -166,9 +167,9 @@ entity_and_offset: name
 /*(*************************************************************************)*/
 
 instr:
- | TARITH cond  imsr TCOMMA reg TCOMMA reg { (Arith ($1, $3, Some $5, $7),$2)}
- | TARITH cond  imsr TCOMMA reg            { (Arith ($1, $3, None,    $5),$2)}
- | TMVN   cond  imsr TCOMMA reg            { (Arith (MVN, $3, None,    $5),$2)}
+ | TARITH cond  imsr TCOMMA reg TCOMMA reg { (Arith ($1, $3, Some $5, $7),$2) }
+ | TARITH cond  imsr TCOMMA reg            { (Arith ($1, $3, None,    $5),$2) }
+ | TMVN   cond  imsr TCOMMA reg            { (Arith (MVN, $3, None,   $5),$2) }
 
  | TMOV   cond  gen  TCOMMA gen     { (MOV ($1, $3, $5), $2) }
 
@@ -177,11 +178,11 @@ instr:
  | TSWAP  cond  reg  TCOMMA ireg TCOMMA reg 
      { (SWAP ($1, $5, $3, Some $7), $2) }
  /*(*stricter: no cond here, use Bxx form, so normalized AST *)*/
- | TB       branch           { (B $2, AL) }
- | TBL cond branch           { (BL $3, $2)}
- | TCMP cond imsr TCOMMA reg { (Cmp ($1, $3, $5), $2) } 
- | TBx rel                   { (Bxx ($1, $2), AL) }
- | TRET cond                 { (RET, $2) }
+ | TB        branch           { (B $2, AL) }
+ | TBx       rel              { (Bxx ($1, $2), AL) }
+ | TBL  cond branch           { (BL $3, $2)}
+ | TCMP cond imsr TCOMMA reg  { (Cmp ($1, $3, $5), $2) } 
+ | TRET cond                  { (RET, $2) }
 
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }
@@ -259,6 +260,7 @@ gen:
 
 ximm:
  | imm             { Left $1 }
+ (* todo: float *)
  | TDOLLAR TSTRING { Right (String $2) }
  | TDOLLAR entity  { Right (Address $2) }
 

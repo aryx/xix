@@ -4,7 +4,9 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Limitations compared to 5a:
+(* An OCaml port of 5a, the plan9 ARM assembler.
+ *
+ * Limitations compared to 5a:
  *  - no multiple files processing in parallel (not the place, use xargs)
  * 
  * todo?:

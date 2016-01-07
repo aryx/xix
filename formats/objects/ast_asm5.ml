@@ -38,8 +38,15 @@ type offset = int
 
 type label = string
 type symbol = string
-(* less: optional signature *)
-type entity = symbol * bool (* true when private symbol (aka static symbol) *)
+
+type entity = {
+  name: symbol;
+  (* Some when private symbol (aka static symbol).
+   * ugly: mutable because modifed by linker in naming phase.
+   *)
+  mutable priv: int option; 
+  signature: int option;
+}
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)

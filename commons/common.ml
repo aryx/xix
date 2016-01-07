@@ -18,6 +18,9 @@ let with_file_in f file =
   close_in chan;
   res
 
+let push a aref =
+  aref := a::!aref
+
 exception Todo
 exception Impossible
 

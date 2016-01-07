@@ -31,29 +31,25 @@ let resolve ps =
     | Pseudo (TEXT _ | WORD _) -> incr pc; Some (p, line)
     | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> Some (p, line)
     | Instr (inst, cond) ->
+        let resolve_branch_operand opd =
+          match opd with
+          | SymbolJump _ | IndirectJump _ -> opd
+          | Relative i -> Absolute (!pc + i)
+          | LabelUse (lbl, i) ->
+            (try
+               let pc = Hashtbl.find h lbl in
+               Absolute (pc + i)
+             with Not_found ->
+               failwith (spf "undefined label: %s, at line %d" lbl line)
+            )
+          | Absolute _ -> raise Impossible
+        in
         let inst = 
           match inst with
-          | B opd | BL opd | Bxx (_, opd)  ->
-              let opd =
-                match opd with
-                | SymbolJump _ | IndirectJump _ -> opd
-                | Relative i -> Absolute (!pc + i)
-                | LabelUse (lbl, i) ->
-                    (try
-                       let pc = Hashtbl.find h lbl in
-                       Absolute (pc + i)
-                     with Not_found ->
-                       failwith (spf "undefined label: %s, at line %d" lbl line)
-                    )
-                | Absolute _ -> raise Impossible
-              in
-              (match inst with
-              (* could issue warning if cond <> AL when B *)
-              | B _ -> B opd
-              | BL _ -> BL opd
-              | Bxx (cond, _) -> Bxx (cond, opd)
-              | _ -> raise Impossible
-              )
+          (* could issue warning if cond <> AL when B *)
+          | B opd -> B (resolve_branch_operand opd)
+          | BL opd -> BL (resolve_branch_operand opd)
+          | Bxx (cond, opd) -> Bxx (cond, resolve_branch_operand opd)
           | _ -> inst
         in
         incr pc;

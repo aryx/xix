@@ -18,6 +18,12 @@ let attributes_of_int i =
    | 2 -> [DUPOK]
    | 3 -> [DUPOK; NOPROF]
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
+
+let mk_e name static = 
+  { name = name;
+    priv = if static then Some (-1) else None;
+    signature = None;
+  }
 %}
 
 /*(*************************************************************************)*/
@@ -264,8 +270,8 @@ ireg: TOPAR reg TCPAR { $2 }
 
 
 name: 
- | TIDENT offset         TOPAR pointer TCPAR { $4 (Some ($1, false)) $2 }
- | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Entity (($1, true), $4) }
+ | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Entity (mk_e $1 true, $4) }
 
 pointer: 
  | TSB  { (fun name_opt offset ->
@@ -277,13 +283,13 @@ pointer:
  | TSP  { (fun name_opt offset ->
            match name_opt with
            | None -> Param (None, offset)
-           | Some (s, _false) -> Param (Some s, offset)
+           | Some ({name = s; priv = _false}) -> Param (Some s, offset)
            )
          }
  | TFP  { (fun name_opt offset ->
            match name_opt with
            | None -> Local (None, offset)
-           | Some (s, _false) -> Local (Some s, offset)
+           | Some ({name = s; priv = _false}) -> Local (Some s, offset)
            )
          }
 

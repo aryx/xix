@@ -260,7 +260,7 @@ gen:
 
 ximm:
  | imm             { Left $1 }
- (* todo: float *)
+ /*(* todo: float *)*/
  | TDOLLAR TSTRING { Right (String $2) }
  | TDOLLAR entity  { Right (Address $2) }
 

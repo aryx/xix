@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-OCAMLC=ocamlc -g
+OCAMLC=ocamlc -g -dtypes
 OCAMLLEX=ocamllex #-ml # -ml for debugging lexer, but slightly slower
 OCAMLYACC=ocamlyacc -v
 OCAMLDEP=ocamldep

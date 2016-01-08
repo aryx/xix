@@ -10,9 +10,11 @@ module T = Types
  *
  * Limitations compared to 5l:
  * - the -E digit
- * - profiling -p
  * 
  * todo?:
+ *  - profiling -p
+ *  - symbol table, program counter line table
+ *  - nice error reporting for signature conflict
  *  - library input files, libpath
  *)
 
@@ -32,8 +34,9 @@ let link config xs outfile =
     Resolve5.layout_text symbols2 config.T.init_text graph in
 
   let sizes = { T.text_size; data_size; bss_size } in
+  (* todo: modify config now that can know initdat *)
  
-  let instrs = Codegen5.gen symbols2 graph in
+  let instrs = Codegen5.gen symbols2 config graph in
   let datas = Datagen.gen symbols2 data in
   Executable.gen config sizes instrs datas symbols2 outfile
 

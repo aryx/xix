@@ -4,4 +4,4 @@
  *)
 val load: 
   string (* entry point *) -> Common.filename list -> 
-   Types5.code list * Types5.data list * Types.symbol_table
+  Types5.code array * Types5.data list * Types.symbol_table

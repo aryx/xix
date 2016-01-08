@@ -42,4 +42,6 @@ let gen config sizes cs ds symbols outfile =
   cs |> List.iter (lput chan);
   (* no seek to a page boundary; a disk image is not a memory image *)
   ds |> List.iter (lput chan);
- )  
+  
+  (* todo: symbol table, program counter line table *)
+ )

@@ -26,7 +26,7 @@ type section =
 type value = {
   mutable section: section;
   (* the filename is for safe linking error report *)
-  signature: (int * Common.filename) option;
+  signature: (int (* todo: * Common.filename *)) option;
 }
 
 type symbol_table = (symbol, value) Hashtbl.t
@@ -60,6 +60,25 @@ type sections_size = {
 }
 
 (* SXRef if not found *)
-let lookup k h =
-  raise Todo
+let lookup k sigopt h =
+  let v =
+    try
+      Hashtbl.find h k
+    with Not_found ->
+      let v = { section = SXref; signature = sigopt } in
+      Hashtbl.add h k v;
+      v
+  in
+  (match sigopt, v.signature with
+  | None, None -> ()
+  | Some i1, Some i2 ->
+      (* todo: report also offending object files *)
+      if i1 <> i2
+      then failwith (spf "incompatible type signatures %d and %d" i1 i2)
+      else ()
+  (* less: could report error when one define sig and not other *)
+  | _ -> ()
+  );
+  v
+
   

@@ -6,6 +6,7 @@ module T5 = Types5
 
 let build_graph symbols xs =
   let len = Array.length xs in
+  (* stricter: does not make sense to me to allow empty programs *)
   if len = 0
   then failwith "empty program";
 
@@ -57,15 +58,3 @@ let build_graph symbols xs =
 
   nodes.(0)
  
-
-let layout_data symbols =
-  (* define special symbols *)
-  raise Todo
-
-let layout_text symbols2 cg =
-
-  (* let textsize = ... in *)
-
-  (* adjust etext with textsize *)
-  raise Todo
-

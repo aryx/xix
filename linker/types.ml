@@ -50,6 +50,7 @@ type config = {
   init_text: addr;
   init_round: int;
   init_data: addr option;
+  (* less: could be (string, addr) Common.either too *)
   entry_point: string;
 }
 

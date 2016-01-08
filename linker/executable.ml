@@ -9,9 +9,11 @@ let lput chan word =
 let gen config sizes cs ds symbols outfile =
  outfile |> Common.with_file_out (fun chan ->
 
-  if config.T.header_type <> "a.out"
-  then failwith (spf "executable format not supported: %s" 
-                   config.T.header_type);
+  let entry = config.T.entry_point in
+  let format = config.T.header_type in
+
+  if format  <> "a.out"
+  then failwith (spf "executable format not supported: %s" format);
 
   let header = { A_out.
      magic = 0x647;
@@ -25,22 +27,24 @@ let gen config sizes cs ds symbols outfile =
      
      entry =
       try 
-        let v = Hashtbl.find symbols (config.T.entry_point, T.Public) in
+        let v = Hashtbl.find symbols (entry, T.Public) in
         (match v.T.section2 with
         | T.SText2 pc  -> pc
-        | _ -> failwith (spf "entry not TEXT: %s" config.T.entry_point)
+        | _ -> failwith (spf "entry not TEXT: %s" entry)
         )
       with Not_found ->
         (* less: 5l does instead default to INITTEXT *)
-        failwith (spf "entry not found: %s" config.T.entry_point)
+        failwith (spf "entry not found: %s" entry)
       ;
   }
   in
-  (* generate header *)
+  (* Header *)
   A_out.write_header header chan;
 
+  (* Text section *)
   cs |> List.iter (lput chan);
-  (* no seek to a page boundary; a disk image is not a memory image *)
+  (* Data section *)
+  (* no seek to a page boundary; a disk image is not a memory image! *)
   ds |> List.iter (lput chan);
   
   (* todo: symbol table, program counter line table *)

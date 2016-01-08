@@ -10,6 +10,7 @@ module T = Types
  *
  * Limitations compared to 5l:
  * - the -E digit
+ * - the extensions/optimisations about small data, string in text, more??
  * 
  * todo?:
  *  - profiling -p
@@ -33,9 +34,9 @@ let link config xs outfile =
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
-    Resolve5.layout_data symbols in
+    Layout5.layout_data symbols in
   let symbols2, text_size = 
-    Resolve5.layout_text symbols2 config.T.init_text graph in
+    Layout5.layout_text symbols2 config.T.init_text graph in
 
   let sizes = { T.text_size; data_size; bss_size } in
   (* todo: modify config now that can know initdat *)
@@ -60,6 +61,7 @@ let main () =
     
     "-H", Arg.Set_string header_type,
     " <str> executable format";
+    (* less: Arg support 0x1000 integer syntax? *)
     "-T", Arg.Int (fun i -> init_text := Some i),
     " <addr> start of text section";
     "-R", Arg.Int (fun i -> init_round := Some i),
@@ -67,6 +69,7 @@ let main () =
     "-D", Arg.Int (fun i -> init_data := Some i),
     " <addr> start of data section";
 
+    (* less: support integer value instead of string too? *)
     "-E", Arg.Set_string init_entry,
     " <str> entry point";
   ]

@@ -175,6 +175,7 @@ type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
   | TEXT of entity * attributes * int (* size locals *)
   | GLOBL of entity (* can have offset? *) * attributes * int (* size *)
+
   | DATA of entity * offset * int (* size *) * imm_or_ximm
   (* any ximm? even String? And Float? for float should have DWORD? *)
   | WORD of imm_or_ximm

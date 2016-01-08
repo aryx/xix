@@ -1,0 +1,8 @@
+# -*- sh -*-
+
+TOP=../..
+
+INCLUDES=-I $TOP/commons
+SRC=a_out.ml
+
+<$TOP/mklib

@@ -15,7 +15,7 @@ open Common
  *  - floats, MULA, MULL, MOVM, PSR, MCR/MRC
  *  - special bits, mv closer to relevant instr? Arith has only .S,
  *    Mov has only .P, .W, MOVM has many others.
- *  - 5c only: CASE, BCASE, MULU/DIVU/MODU, ASIGNAME!
+ *  - 5c only: CASE, BCASE, MULU/DIVU/MODU
  *)
 
 (*****************************************************************************)
@@ -27,12 +27,12 @@ open Common
 (* ------------------------------------------------------------------------- *)
 
 (* line# *)
-type pos = int 
+type pos = int
 
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
 type integer = int 
 (* increments by unit of 1 *)
-type virtual_code_address = int
+type virt_pc = int
 (* can be 0, negative, or positive *)
 type offset = int
 
@@ -41,8 +41,8 @@ type symbol = string
 
 type entity = {
   name: symbol;
-  (* Some when private symbol (aka static symbol).
-   * ugly: mutable because modifed by linker in naming phase.
+  (* Some x when entity is a private symbol (aka static symbol).
+   * mutable (ugly?) modifed by linker in naming phase.
    *)
   mutable priv: int option; 
   signature: int option;
@@ -89,20 +89,26 @@ type mov_operand =
     (* stricter: we disallow address of FP or SP, and offset to SB *)
     | Address of entity
 
-type branch_operand =
-  | SymbolJump of entity * offset
-  | IndirectJump of register
+(* I use a ref so the code which resolves branches is shorter.
+ * The ref is modified by the assembler and then linker.
+ * less: I could transform labels in symbols early-on, but nice to
+ * resolve as soon as we can.
+ *)  
+type branch_operand = branch_operand2 ref
+and branch_operand2 =
 
-  (* before resolve *)
+  (* resolved by assembler *)
   | Relative of int (* relative to PC, in units of virtual_code_address *)
   | LabelUse of label * offset (* useful to have offset? *)
 
-  (* after resolve *)
-  | Absolute of virtual_code_address
+  (* resolved by linker *)
+  | SymbolJump of entity (* no offset, it would not be used by 5l anyway *)
 
-(* less: could transform labels in symbols? but then need to keep
- * Relative jumps and remove Absolute.
- *)  
+  (* after resolution *)
+  | Absolute of virt_pc
+
+  (* resolved dynamically by the machine *)
+  | IndirectJump of register
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -186,6 +192,7 @@ type line =
   | Pseudo of pseudo_instr
   (* condition should be AL for B and Bxx instructions *)
   | Instr of instr * condition (* TODO special bits or put before? *)
+
   (* disappear after resolve *)
   | LabelDef of label
   (* ex: #line 20 "foo.c" *)

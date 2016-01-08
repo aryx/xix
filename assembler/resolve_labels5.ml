@@ -24,35 +24,33 @@ let resolve ps =
 
   (* second pass, process the label uses *)
   pc := 0;
-  ps |> Common.map_filter (fun (p, line) ->
+  ps |> List.filter (fun (p, line) ->
     (match p with
     (* no need keep labels in object files *)
-    | LabelDef _ -> None
-    | Pseudo (TEXT _ | WORD _) -> incr pc; Some (p, line)
-    | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> Some (p, line)
+    | LabelDef _ -> false
+    | Pseudo (TEXT _ | WORD _) -> incr pc; true
+    | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> true
     | Instr (inst, cond) ->
         let resolve_branch_operand opd =
-          match opd with
-          | SymbolJump _ | IndirectJump _ -> opd
-          | Relative i -> Absolute (!pc + i)
+          match !opd with
+          | SymbolJump _ | IndirectJump _ -> ()
+          | Relative i -> opd := Absolute (!pc + i)
           | LabelUse (lbl, i) ->
             (try
                let pc = Hashtbl.find h lbl in
-               Absolute (pc + i)
+               opd := Absolute (pc + i)
              with Not_found ->
                failwith (spf "undefined label: %s, at line %d" lbl line)
             )
-          | Absolute _ -> raise Impossible
+          | Absolute _ -> 
+              raise (Impossible "Absolute can't be made via assembly syntax")
         in
-        let inst = 
-          match inst with
-          (* less: could issue warning if cond <> AL when B *)
-          | B opd -> B (resolve_branch_operand opd)
-          | BL opd -> BL (resolve_branch_operand opd)
-          | Bxx (cond, opd) -> Bxx (cond, resolve_branch_operand opd)
-          | _ -> inst
-        in
+        (match inst with
+        (* less: could issue warning if cond <> AL when B *)
+        | B opd | BL opd | Bxx (_, opd) -> resolve_branch_operand opd
+        | _ -> ()
+        );
         incr pc;
-        Some (Instr (inst, cond), line)
+        true
     )
   )

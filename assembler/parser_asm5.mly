@@ -305,12 +305,12 @@ offset:
 
 branch: 
  | rel               { $1 }
- | entity_and_offset { SymbolJump (fst $1, snd $1) }
- | ireg              { IndirectJump $1 }
+ | entity            { ref (SymbolJump $1) }
+ | ireg              { ref (IndirectJump $1) }
 
 rel:
- | TIDENT offset        { LabelUse ($1, $2) }
- | con TOPAR TPC TCPAR  { Relative $1 }
+ | TIDENT offset        { ref (LabelUse ($1, $2)) }
+ | con TOPAR TPC TCPAR  { ref (Relative $1) }
 
 
 /*(*************************************************************************)*/

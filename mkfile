@@ -2,7 +2,9 @@
 </$objtype/mkfile
 <mkconfig
 
-DIRS=commons formats/objects formats/executables assembler
+DIRS=commons\
+  formats/objects formats/executables\
+  assembler linker
 
 all:V: all.directories
 clean:V: clean.directories

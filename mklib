@@ -9,7 +9,8 @@ lib.cma: $OBJS
 	$OCAMLC $INCLUDES $prereq -a -o $target
 
 clean:V:
-	rm -f *.cm*
+	rm -f *.cm[ioxa] *.cmt* *.o *.a *.cmxa *.annot
+	rm -f *~ .*~ *.exe gmon.out #*#
 
 <$TOP/mkcommon
 <.depend

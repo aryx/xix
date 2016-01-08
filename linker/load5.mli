@@ -1,6 +1,6 @@
 
-(* will relocate branching instructions 
- * less: return also LineDirective info
+(* Will also relocate branching instructions.
+ * less: return also LineDirective info per file.
  *)
 val load: 
   Common.filename list -> 

@@ -4,27 +4,19 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
-let error s =
-  failwith s
-
-let lookup_ent ent h =
-  let symbol = T5.symbol_of_entity ent in
-  T.lookup symbol ent.signature h
-
 (* modifies ent, modifies h *)
 let process_ent ent h idfile =
   (match ent.priv with
   | Some _ -> ent.priv <- Some idfile
   | None -> ()
   );
-  lookup_ent ent h |> ignore
+  T5.lookup_ent ent h |> ignore
 
-(* visit entities to populate symbol table with wanted symbols 
+(* Visit entities to populate symbol table with wanted symbols.
  * This is more complicated than in 5l because we can not rely
  * on an ANAME or Operand.sym.
- * boilerplate, could be auto generated.
+ * This is boilerplate which could be auto generated.
  *)
-
 let visit_entities f xs =
   let rec ximm x =
     match x with
@@ -43,8 +35,8 @@ let visit_entities f xs =
     | Imsr _ | Indirect _ | Param _ | Local _ -> ()
   in
   let rec branch_operand x =
-    match x with
-    | SymbolJump (ent, _) -> f ent
+    match !x with
+    | SymbolJump ent -> f ent
     | IndirectJump _ | Relative _ | LabelUse _ | Absolute _ -> ()
   in
   xs |> List.iter (fun (x, _line) ->
@@ -97,8 +89,8 @@ let load xs =
     (* naming and populating symbol table h *)
     prog |> visit_entities (fun ent -> process_ent ent h !idfile);
 
-    (* split and concatenate in code vs data, relocate branches, add
-     * definitions in symbol table h.
+    (* split and concatenate in code vs data, relocate branches, 
+     * and add definitions in symbol table h.
      *)
     prog |> List.iter (fun (p, line) ->
       match p with
@@ -106,23 +98,23 @@ let load xs =
           (match pseudo with
           | TEXT (ent, attrs, size) ->
               (* less: set curtext *)
-              let v = lookup_ent ent h in
+              let v = T5.lookup_ent ent h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SText !pc;
-              | _ -> error (spf "redefinition of %s" ent.name)
+              | _ -> failwith (spf "redefinition of %s" ent.name)
               );
               (* less: adjust autosize? *)
-              code |> Common.push (T5.TEXT (ent, attrs, size), line);
+              code |> Common.push (T5.TEXT (ent, attrs, size), (file, line));
               incr pc;
           | WORD v ->
-              code |> Common.push (T5.WORD v, line);
+              code |> Common.push (T5.WORD v, (file, line));
               incr pc;
             
           | GLOBL (ent, attrs, size) -> 
-              let v = lookup_ent ent h in
+              let v = T5.lookup_ent ent h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SBss size;
-              | _ -> error (spf "redefinition of %s" ent.name)
+              | _ -> failwith (spf "redefinition of %s" ent.name)
               );
           | DATA (ent, offset, size, v) -> 
               data |> Common.push (T5.DATA (ent, offset, size, v))
@@ -130,23 +122,20 @@ let load xs =
 
       | Instr (inst, cond) ->
           let relocate_branch opd =
-            match opd with
-            | SymbolJump _ | IndirectJump _ -> opd
+            match !opd with
+            | SymbolJump _ | IndirectJump _ -> ()
             | Relative _ | LabelUse _ ->
-                error "use of label or relative jump in object"
-            | Absolute i -> Absolute (i + ipc)
+                raise (Impossible "Relative or LabelUse resolved by assembler")
+            | Absolute i -> opd := Absolute (i + ipc)
           in
-          let inst = 
-            match inst with
-            | B opd -> B (relocate_branch opd)
-            | BL opd -> BL (relocate_branch opd)
-            | Bxx (cond, opd) -> Bxx (cond, relocate_branch opd)
-            | _ -> inst
-          in
-          code |> Common.push (T5.I (inst, cond), line);
+          (match inst with
+          | B opd | BL opd | Bxx (_, opd) -> relocate_branch opd
+          | _ -> ()
+          );
+          code |> Common.push (T5.I (inst, cond), (file, line));
           incr pc;
 
-      | LabelDef _ -> error (spf "label definition in object")
+      | LabelDef _ -> failwith (spf "label definition in object")
       (* todo: return also, but for now stripped info *)
       | LineDirective _ -> ()
     );

@@ -23,7 +23,11 @@ let usage =
   spf "usage: %cl [-options] objects" thechar
 
 let link config xs outfile =
-  let (code, data, symbols) = Load5.load config.T.entry_point xs in
+  let (code, data, symbols) = Load5.load xs in
+
+  (* mark at least as SXref the entry point *)
+  T.lookup (config.T.entry_point, T.Public) None symbols |> ignore;
+  Check.check symbols;
   
   let graph = Resolve5.build_graph symbols code in
   let graph = Rewrite5.rewrite graph in

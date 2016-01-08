@@ -22,7 +22,11 @@ let push a aref =
   aref := a::!aref
 
 exception Todo
-exception Impossible
+exception Impossible of string
+
+let if_some f = function
+  | None -> ()
+  | Some x -> f x
 
 let rec filter_some = function
   | [] -> []
@@ -30,6 +34,9 @@ let rec filter_some = function
   | Some e :: l -> e :: filter_some l
 
 let map_filter f xs = xs |> List.map f |> filter_some
+
+let exclude p xs =
+  xs |> List.filter (fun x -> not (p x))
 
 let memoized ?(use_cache=true) h k f =
   if not use_cache

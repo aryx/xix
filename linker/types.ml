@@ -38,9 +38,7 @@ type section2 =
   | SData2 of offset
   | SBss2 of offset
 
-type value2 = {
-  section2: section2;
-}
+type value2 = section2
 
 type symbol_table2 = (symbol, value2) Hashtbl.t
 

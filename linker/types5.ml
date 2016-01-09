@@ -54,6 +54,9 @@ let lookup_ent ent h =
 let s_of_loc (file, line) =
   spf "%s:%d" file line
 
+let s_of_ent ent = 
+  ent.name ^ (match ent.priv with None -> "" | Some _ -> "<>")
+
 let rec iter_with_env f env n =
   let env = f env n in
   n.next |> Common.if_some (fun n -> iter_with_env f env n)

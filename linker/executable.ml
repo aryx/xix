@@ -28,7 +28,7 @@ let gen config sizes cs ds symbols2 outfile =
      entry =
       try 
         let v = Hashtbl.find symbols2 (entry, T.Public) in
-        (match v.T.section2 with
+        (match v with
         | T.SText2 pc  -> pc
         | _ -> failwith (spf "entry not TEXT: %s" entry)
         )

@@ -25,6 +25,10 @@ let mk_e name static =
     priv = if static then Some (-1) else None;
     signature = None;
   }
+(* less: could make sure 
+ *  - TEXT size is multiple of 4
+ *  - DATA size is > 0
+ *)
 %}
 
 /*(*************************************************************************)*/

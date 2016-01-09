@@ -24,6 +24,12 @@ let push a aref =
 exception Todo
 exception Impossible of string
 
+let rec rnd x v =
+  if x mod v = 0
+  then x
+  else rnd (x+1) v
+
+
 let if_some f = function
   | None -> ()
   | Some x -> f x

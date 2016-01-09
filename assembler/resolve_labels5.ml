@@ -15,9 +15,11 @@ let resolve ps =
         (* better check duplicate here than via lexing tricks *)
         if Hashtbl.mem h lbl
         then failwith (spf "redeclaration of %s at line %d" lbl line);
+
         Hashtbl.add h lbl !pc;
         (* no incr pc; share pc if multiple labels at same place *)
-    | Instr _ | Pseudo (TEXT _ | WORD _) -> incr pc
+    | Instr _ | Pseudo (TEXT _ | WORD _) -> 
+        incr pc
     | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> ()
     )
   );
@@ -26,7 +28,7 @@ let resolve ps =
   pc := 0;
   ps |> List.filter (fun (p, line) ->
     (match p with
-    (* no need keep labels in object files *)
+    (* no need to keep the labels in the object file *)
     | LabelDef _ -> false
     | Pseudo (TEXT _ | WORD _) -> incr pc; true
     | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> true
@@ -46,7 +48,7 @@ let resolve ps =
               raise (Impossible "Absolute can't be made via assembly syntax")
         in
         (match inst with
-        (* less: could issue warning if cond <> AL when B *)
+        (* less: could issue warning if cond <> AL when B or Bxx *)
         | B opd | BL opd | Bxx (_, opd) -> resolve_branch_operand opd
         | _ -> ()
         );

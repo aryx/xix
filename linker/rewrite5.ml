@@ -31,23 +31,23 @@ let rewrite cg =
     | T5.TEXT (ent, _attrs, _size) ->
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
-    | T5.WORD _ -> (curtext, n)
+    | T5.WORD _ -> (curtext, Some n)
     | T5.I (instr, cond) ->
         let env = 
           match instr with
           | BL _ -> 
               curtext |> Common.if_some (fun p -> Hashtbl.remove is_leaf p);
-              (curtext, n)
+              (curtext, Some n)
           | NOP ->
               prev_no_nop |> Common.if_some (fun prev ->
                 prev.T5.next <- n.T5.next;
               );
               (curtext, prev_no_nop)
-          | _ -> (curtext, n)
+          | _ -> (curtext, Some n)
         in
         n.T5.branch |> Common.if_some (fun n2 ->
           match n2.T5.node with
-          | I (NOP, _) -> n.T5.branch <- find_first_no_nop_node n2.T5.next 
+          | T5.I (NOP, _) -> n.T5.branch <- find_first_no_nop_node n2.T5.next 
           | _ -> ()
         );
         env
@@ -73,25 +73,29 @@ let rewrite cg =
           n.T5.node <- T5.TEXT (ent, attrs, autosize);
           let n1 = { T5.
             (* TODO W BIT *)
-            node = T5.I (MOV (WORD, rLINK, Indirect (rSP, -autosize)));
+            node = T5.I (MOV (Word, Imsr (Reg rLINK), 
+                                    Indirect (rSP, -autosize)), AL);
             next = n.T5.next;
             branch = None;
             loc = n.T5.loc;
           }
           in
-          n.T5.next <- n1
+          n.T5.next <- Some n1;
         );
         autosize_opt
 
     | T5.WORD _ -> autosize_opt
     | T5.I (RET, cond) ->
         n.T5.node <- T5.I
-          (match autosize_opt with
-          | None -> B (ref (IndirectJump (rLINK)))
-            (* TODO P BIT *)
-          | Some autosize -> MOV (WORD, Indirect (rSP, autosize), rPC)
-          );
+          ((match autosize_opt with
+           | None -> B (ref (IndirectJump (rLINK)))
+             (* TODO P BIT *)
+           | Some autosize -> MOV (Word, Indirect (rSP, autosize), 
+                                         Imsr (Reg rPC))
+           ), cond);
         autosize_opt
     | _ -> autosize_opt        
-  )
+  ) None;
+  (* works by side effect, still return first node *)
+  cg
 

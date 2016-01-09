@@ -29,7 +29,6 @@ type data =
 type node = {
   (* can be altered during rewriting *)
   mutable node: instr;
-  (* can be altered during rewriting *)
   mutable next: node option;
   mutable branch: node option;
   

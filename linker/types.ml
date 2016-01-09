@@ -58,7 +58,7 @@ type sections_size = {
   bss_size: int;
 }
 
-(* SXRef if not found *)
+(* create new entry with SXRef if not found *)
 let lookup k sigopt h =
   let v =
     try
@@ -80,4 +80,3 @@ let lookup k sigopt h =
   );
   v
 
-  

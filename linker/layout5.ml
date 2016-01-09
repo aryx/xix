@@ -75,6 +75,7 @@ let layout_data symbols ds =
   xdefine h2 symbols ("bdata", T.Public) (T.SData2 0);
   xdefine h2 symbols ("edata", T.Public) (T.SData2 data_size);
   xdefine h2 symbols ("end", T.Public) (T.SData2 (data_size + bss_size));
+  xdefine h2 symbols ("setR12", T.Public) (T.SData2 0);
   (* this is incorrect but it will be corrected later *)
   xdefine h2 symbols ("etext", T.Public) (T.SText2 0);
 

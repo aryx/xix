@@ -19,7 +19,7 @@ type offset = int
 
 type section =
   | SText of virt_pc
-  | SBss of int
+  | SData of int
   | SXref
 
 (* before layout *)

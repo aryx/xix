@@ -6,7 +6,7 @@ module T5 = Types5
 let lput chan word =
   if true then raise Todo
 
-let gen config sizes cs ds symbols outfile =
+let gen config sizes cs ds symbols2 outfile =
  outfile |> Common.with_file_out (fun chan ->
 
   let entry = config.T.entry_point in
@@ -27,11 +27,12 @@ let gen config sizes cs ds symbols outfile =
      
      entry =
       try 
-        let v = Hashtbl.find symbols (entry, T.Public) in
+        let v = Hashtbl.find symbols2 (entry, T.Public) in
         (match v.T.section2 with
         | T.SText2 pc  -> pc
         | _ -> failwith (spf "entry not TEXT: %s" entry)
         )
+      (* normally impossible if propagated correctly, see main.ml *)
       with Not_found ->
         (* less: 5l does instead default to INITTEXT *)
         failwith (spf "entry not found: %s" entry)

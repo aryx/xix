@@ -53,3 +53,7 @@ let lookup_ent ent h =
 (* less: would need Hist mapping for this file to convert to original source *)
 let s_of_loc (file, line) =
   spf "%s:%d" file line
+
+let rec iter_with_env f env n =
+  let env = f env n in
+  n.next |> Common.if_some (fun n -> iter_with_env f env n)

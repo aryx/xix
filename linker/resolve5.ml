@@ -6,7 +6,8 @@ module T5 = Types5
 
 let build_graph symbols xs =
   let len = Array.length xs in
-  (* stricter: does not make sense to me to allow empty programs *)
+
+  (* stricter: does not make sense to allow empty programs *)
   if len = 0
   then failwith "empty program";
 
@@ -33,24 +34,24 @@ let build_graph symbols xs =
           | Relative _ | LabelUse _ ->
               raise (Impossible "Relative and LabelUse resolved by assembler")
           | SymbolJump ent ->
-             (* resolve branching to symbols *)
-             (match (T5.lookup_ent ent symbols).T.section with
-             | T.SText virt_pc -> opd := Absolute virt_pc; Some virt_pc
-             | T.SXref -> raise (Impossible "SXRef raised by Check.check")
-             (* less: 5l converts them to SText 0 to avoid reporting
-              * multiple times the same error but we fail early instead.
-              *)
-             | T.SBss _ -> failwith "branching to a data symbol"
-             )
+              (* resolve branching to symbols *)
+              (match (T5.lookup_ent ent symbols).T.section with
+              | T.SText virt_pc -> opd := Absolute virt_pc; Some virt_pc
+              | T.SXref -> raise (Impossible "SXRef raised by Check.check")
+              (* less: 5l converts them to SText 0 to avoid reporting
+               * multiple times the same error but we fail early instead.
+               *)
+              | T.SData _ -> failwith "branching to a data symbol"
+              )
           | Absolute virt_pc -> Some virt_pc
         in
         (match inst with
         | B opd | BL opd | Bxx (_, opd) -> 
-          resolve_branch_operand opd |> Common.if_some (fun virt_pc ->
-            if virt_pc < len
-            then n.T5.branch <- Some nodes.(virt_pc)
-            else failwith (spf "branch out of range %d at %s" virt_pc
-                             (T5.s_of_loc n.T5.loc))
+            resolve_branch_operand opd |> Common.if_some (fun virt_pc ->
+              if virt_pc < len
+              then n.T5.branch <- Some nodes.(virt_pc)
+              else failwith (spf "branch out of range %d at %s" virt_pc
+                               (T5.s_of_loc n.T5.loc))
             )
         | _ -> ()
         )

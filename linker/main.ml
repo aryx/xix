@@ -11,6 +11,7 @@ module T = Types
  * Limitations compared to 5l:
  * - the -E digit
  * - the extensions/optimisations about small data, string in text, more??
+ * - the extensions not yet understood (import/export, dynamic linking)
  * 
  * todo?:
  *  - profiling -p
@@ -42,7 +43,7 @@ let link config xs outfile =
   (* todo: modify config now that can know initdat *)
  
   let instrs = Codegen5.gen symbols2 config graph in
-  let datas = Datagen.gen symbols2 data in
+  let datas  = Datagen.gen symbols2 data in
   Executable.gen config sizes instrs datas symbols2 outfile
 
 let main () =

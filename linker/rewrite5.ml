@@ -5,11 +5,6 @@ module T = Types
 module T5 = Types5
 
 
-let rec iter_with_env f env n =
-  let env = f env n in
-  n.T5.next |> Common.if_some (fun n -> iter_with_env f env n)
-
-
 let rec find_first_no_nop_node nopt =
   match nopt with
   | None -> failwith "could not find non NOP node for branch"
@@ -25,8 +20,8 @@ let rewrite cg =
   (* a set *)
   let is_leaf = Hashtbl.create 101 in
 
-  (* step1: mark or delete *)
-  cg |> iter_with_env (fun (curtext, prev_no_nop) n ->
+  (* step1: mark is leaf and delete NOPs *)
+  cg |> T5.iter_with_env (fun (curtext, prev_no_nop) n ->
     match n.T5.node with
     | T5.TEXT (ent, _attrs, _size) ->
         Hashtbl.add is_leaf ent true;
@@ -54,7 +49,7 @@ let rewrite cg =
   ) (None, None);
   
   (* step2: transform *)
-  cg |> iter_with_env (fun autosize_opt n ->
+  cg |> T5.iter_with_env (fun autosize_opt n ->
     match n.T5.node with
     | T5.TEXT (ent, attrs, size) ->
         if size mod 4 <> 0

@@ -4,7 +4,7 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
-(* modifies ent, modifies h *)
+(* Naming, modifies ent, modifies h *)
 let process_ent ent h idfile =
   (match ent.priv with
   | Some _ -> ent.priv <- Some idfile
@@ -113,7 +113,7 @@ let load xs =
           | GLOBL (ent, attrs, size) -> 
               let v = T5.lookup_ent ent h in
               (match v.T.section with
-              | T.SXref -> v.T.section <- T.SBss size;
+              | T.SXref -> v.T.section <- T.SData size;
               | _ -> failwith (spf "redefinition of %s" ent.name)
               );
           | DATA (ent, offset, size, v) -> 

@@ -29,7 +29,7 @@ let rec rnd x v =
   then x
   else rnd (x+1) v
 
-
+(* used to be called do_option, or opt *)
 let if_some f = function
   | None -> ()
   | Some x -> f x

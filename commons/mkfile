@@ -1,5 +1,4 @@
 # -*- sh -*-
-
 TOP=..
 
 INCLUDES=-I .

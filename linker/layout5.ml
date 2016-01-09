@@ -81,7 +81,7 @@ let layout_data symbols ds =
 
 
 
-let layout_text symbols2 cg =
+let layout_text symbols2 init_text cg =
 
   (* let textsize = ... in *)
 

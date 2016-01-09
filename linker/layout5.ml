@@ -4,7 +4,7 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
-let layout_data symbols =
+let layout_data symbols ds =
   (* define special symbols *)
   raise Todo
 

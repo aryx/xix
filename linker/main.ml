@@ -34,7 +34,7 @@ let link config xs outfile =
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
-    Layout5.layout_data symbols in
+    Layout5.layout_data symbols data in
   let symbols2, text_size = 
     Layout5.layout_text symbols2 config.T.init_text graph in
 

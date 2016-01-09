@@ -32,6 +32,9 @@ type node = {
   (* can be altered during rewriting *)
   mutable next: node option;
   mutable branch: node option;
+  
+  (* set after layout_text *)
+  mutable real_pc: T.real_pc;
 
   loc: loc;
 }
@@ -56,6 +59,10 @@ let s_of_loc (file, line) =
 
 let s_of_ent ent = 
   ent.name ^ (match ent.priv with None -> "" | Some _ -> "<>")
+
+let rec iter f n =
+  f n;
+  n.next |> Common.if_some (iter f)
 
 let rec iter_with_env f env n =
   let env = f env n in

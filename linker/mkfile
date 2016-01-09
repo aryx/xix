@@ -5,8 +5,8 @@ INCLUDES=-I $TOP/commons -I $TOP/formats/objects -I $TOP/formats/executables
 
 SRC=\
  types.ml types5.ml\
- load5.ml check.ml resolve5.ml rewrite5.ml layout5.ml\
- codegen5.ml datagen.ml\
+ load5.ml check.ml resolve5.ml rewrite5.ml\
+ codegen5.ml datagen.ml layout5.ml\
  executable.ml main.ml
 
 SYSLIBS=str.cma

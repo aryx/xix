@@ -11,6 +11,8 @@ let xdefine h2 h symb v =
 
   Hashtbl.add h2 symb v
 
+
+
 let layout_data symbols ds =
   let h2 = Hashtbl.create 101 in
 
@@ -83,8 +85,25 @@ let layout_data symbols ds =
 
 let layout_text symbols2 init_text cg =
 
-  (* let textsize = ... in *)
+  let pc = ref init_text in
 
-  (* adjust etext with textsize *)
-  raise Todo
+  cg |> T5.iter (fun n ->
+    n.T5.real_pc <- !pc;
+
+    (* TODO: pool handling *)
+    let size = Codegen5.size_of_instruction symbols2 n in
+    (match n.T5.node with
+    | T5.TEXT (ent, _, _) ->
+        (* todo? useful for something except find pc of entry point? *)
+        Hashtbl.add symbols2 (T5.symbol_of_entity ent) (T.SText2 !pc);
+    | _ -> failwith (spf "zero-width instruction at %s" (T5.s_of_loc n.T5.loc))
+    );
+    (* TODO: pool handling *)
+    pc := !pc + size
+  );
+  let final_text = Common.rnd !pc 8 in
+  let textsize = final_text - init_text in
+  Hashtbl.replace symbols2 ("etext", T.Public) (T.SText2 final_text);
+  
+  symbols2, cg, textsize
 

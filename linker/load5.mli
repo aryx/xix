@@ -1,5 +1,6 @@
 
-(* Will also relocate branching instructions.
+(* Load all the object files and split in code vs data.
+ * Will also relocate branching instructions.
  * less: return also LineDirective info per file.
  *)
 val load: 

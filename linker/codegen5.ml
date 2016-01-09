@@ -14,8 +14,10 @@ let immaddr x =
   raise Todo
 
 
-
 let gen_one cg instr =
+  raise Todo
+
+let size_of_instruction symbols2 node =
   raise Todo
 
 let gen symbols cg =
@@ -24,3 +26,4 @@ let gen symbols cg =
 (* double check pc is like one computed by layout_text 
  otherwise failwith  "phase error ..."
 *)
+

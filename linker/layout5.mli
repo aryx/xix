@@ -1,9 +1,16 @@
 
-(* returns also data_size x bss_size *)
+(* Returns symbol_table2 with SData2 and SBss2 entries populated.
+ * Returns also data_size x bss_size.
+ *)
 val layout_data: 
-  Types.symbol_table -> Types5.data list -> Types.symbol_table2 * (int * int)
+  Types.symbol_table -> Types5.data list -> 
+  Types.symbol_table2 * (int * int)
 
-(* returns also text_size *)
+(* Returns symbol_table2 with SText2 entries populated. 
+ * Returns also nodes in code_graph with their real_pc field set.
+ * Returns also text_size.
+ * !! works by side effect on code_graph and symbol_table2, take care !!
+ *)
 val layout_text: 
   Types.symbol_table2 -> Types.real_pc (* INITTEXT *) -> Types5.code_graph -> 
-  Types.symbol_table2 * int
+  Types.symbol_table2 * Types5.code_graph * int

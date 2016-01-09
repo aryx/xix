@@ -73,6 +73,7 @@ let rewrite cg =
             next = n.T5.next;
             branch = None;
             loc = n.T5.loc;
+            real_pc = -1;
           }
           in
           n.T5.next <- Some n1;

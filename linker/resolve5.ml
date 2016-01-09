@@ -13,7 +13,7 @@ let build_graph symbols xs =
 
   (* graph initialization *)
   let nodes = xs |> Array.map (fun (instr, loc) ->
-    { T5. node = instr; next = None; branch = None; loc = loc; }
+    { T5. node = instr; next = None; branch = None; loc = loc; real_pc = -1 }
   )
   in
 

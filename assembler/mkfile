@@ -32,5 +32,5 @@ parser_asm5.ml parser_asm5.mli: parser_asm5.mly
 
 
 loc:V:
-   wc -l globals.ml lexer_asm5.mll parser_asm5.mly parse_asm5.ml* main.ml $TOP/formats/objects/ast_asm5.ml
+   wc -l globals.ml lexer_asm5.mll parser_asm5.mly parse_asm5.ml* main.ml $TOP/formats/objects/ast_asm5.ml $TOP/formats/objects/object_code5.ml*
 

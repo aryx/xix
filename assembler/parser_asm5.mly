@@ -136,8 +136,10 @@ label_def: TIDENT TCOLON    { (LabelDef $1, !Globals.line) }
 /*(*************************************************************************)*/
 /*(* can't factorize in attr_opt, shift/reduce conflict with TCOMMA *)*/
 pseudo_instr:
- | TTEXT  entity TCOMMA imm    { TEXT  ($2, [], $4) }
- | TGLOBL entity TCOMMA imm    { GLOBL ($2, [], $4) }
+ | TTEXT  entity TCOMMA imm    
+     { TEXT  ($2, [], $4) }
+ | TGLOBL entity TCOMMA imm    
+     { GLOBL ($2, [], $4) }
 
  /*(* less: would be better to have mnemonics for attributes too *)*/
  | TTEXT entity TCOMMA con TCOMMA imm

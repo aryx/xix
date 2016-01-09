@@ -173,7 +173,7 @@ type instr =
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of entity * attributes * int (* size locals *)
+  | TEXT of entity * attributes * int (* size locals, should be multiple of 4 *)
   | GLOBL of entity (* can have offset? *) * attributes * int (* size *)
 
   | DATA of entity * offset * int (* size *) * imm_or_ximm

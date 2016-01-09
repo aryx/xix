@@ -1,5 +1,8 @@
+# -*- sh -*-
 </$objtype/mkfile
 <$TOP/mkconfig
+
+# assumes the "includer" has defined TOP, SRC and INCLUDES
 
 OBJS=${SRC:%.ml=%.cmo}
 
@@ -9,8 +12,8 @@ lib.cma: $OBJS
 	$OCAMLC $INCLUDES $prereq -a -o $target
 
 clean:V:
-	rm -f *.cm[ioxa] *.cmt* *.o *.a *.cmxa *.annot
-	rm -f *~ .*~ *.exe gmon.out #*#
+	rm -f *.cm[ioxa] *.cmxa *.o *.a  *.annot *.cmt*
+	rm -f *~ .*~ *.exe gmon.out
 
 <$TOP/mkcommon
 <.depend

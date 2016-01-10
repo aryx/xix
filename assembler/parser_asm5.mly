@@ -173,16 +173,18 @@ entity_and_offset: name
 /*(*************************************************************************)*/
 
 instr:
- | TARITH cond  imsr TCOMMA reg TCOMMA reg { (Arith ($1, $3, Some $5, $7),$2) }
- | TARITH cond  imsr TCOMMA reg            { (Arith ($1, $3, None,    $5),$2) }
- | TMVN   cond  imsr TCOMMA reg            { (Arith (MVN, $3, None,   $5),$2) }
+ | TARITH cond  imsr TCOMMA reg TCOMMA reg 
+     { (Arith ($1, None, $3, Some $5, $7), $2) }
+ | TARITH cond  imsr TCOMMA reg  { (Arith ($1,  None, $3, None, $5), $2) }
+ | TMVN   cond  imsr TCOMMA reg  { (Arith (MVN, None, $3, None, $5), $2) }
 
- | TMOV   cond  gen  TCOMMA gen     { (MOV ($1, $3, $5), $2) }
+ | TMOV   cond  gen  TCOMMA gen     { (MOV ($1, None, $3, $5), $2) }
 
  | TSWAP  cond  reg  TCOMMA ireg    { (SWAP ($1, $5, $3, None), $2) }
  | TSWAP  cond  ireg TCOMMA reg     { (SWAP ($1, $3, $5, None), $2) }
  | TSWAP  cond  reg  TCOMMA ireg TCOMMA reg 
      { (SWAP ($1, $5, $3, Some $7), $2) }
+
  /*(*stricter: no cond here, use Bxx form, so normalized AST *)*/
  | TB        branch           { (B $2, AL) }
  | TBx       rel              { (Bxx ($1, $2), AL) }

@@ -12,9 +12,10 @@ open Common
  * the assembly AST which is why this file is in this directory.
  * 
  * TODO: 
- *  - floats, MULA, MULL, MOVM, PSR, MCR/MRC
- *  - special bits, mv closer to relevant instr? Arith has only .S,
- *    Mov has only .P, .W, MOVM has many others.
+ *  - floats,
+ *  - MULA, MULL,
+ *  - MOVM (and his special bits .IA), 
+ *  - PSR, MCR/MRC,
  *  - 5c only: CASE, BCASE, MULU/DIVU/MODU
  *)
 
@@ -116,11 +117,12 @@ and branch_operand2 =
 
 type instr = 
   (* Arithmetic *)
-  | Arith of arith_opcode * 
+  | Arith of arith_opcode * arith_option *
       arith_operand (* src *) * register option * register (* dst *)
 
   (* Memory *)
-  | MOV of move_size * mov_operand * mov_operand (* virtual *)
+  | MOV of move_size * move_option *
+      mov_operand * mov_operand (* virtual *)
   | SWAP of move_size (* actually only (Byte x) *) * 
        register (* indirect *) * register * register option
 
@@ -150,6 +152,9 @@ type instr =
     | BIC  | ADC | SBC  | RSB | RSC
     (* middle operand always empty (could lift up and put special type) *)
     | MVN 
+  and arith_option = arith_cond option
+   and arith_cond = Set_condition (* .S *)
+
   and cmp_opcode = 
     | CMP
     (* less useful *)
@@ -170,6 +175,8 @@ type instr =
    and move_size = Word | HalfWord of sign | Byte of sign
    (* sign is relevant in MOV only for a load operation *)
    and sign = Signed | Unsigned
+   and move_option = move_cond option
+     and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)

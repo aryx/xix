@@ -1,12 +1,28 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Ast_asm5
+module T = Types
 module T5 = Types5
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
 (* 
  * No need for optab/oplook/ocmp/cmp. Just use pattern matching!
  * (but we might not win or even lose on the bit manip stuff)
  *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let offset_to_R12 x =
+  raise Todo
+
+(*****************************************************************************)
+(* Operand classes *)
+(*****************************************************************************)
 
 type operand_class =
   | CReg
@@ -28,17 +44,12 @@ type operand_class =
     }
   and auto_class = bool (* is_small *)
   and addr_class = bool (* TODO *)
-
-
 (* TODO: embed the value with the constructor? *)
 
 let immrot x =
   raise Todo
 
 let immaddr x =
-  raise Todo
-
-let offset_to_R12 x =
   raise Todo
 
 let const_class_of_integer x =
@@ -67,33 +78,51 @@ let auto_class_of_auto autosize (is_param, offset) =
     then raise Todo
     else raise Todo
   else
-    let v = autosize + 4 + offset in
+    let _v = autosize + 4 + offset in
     raise Todo
 
 let aclass_of_imm_or_ximm x =
   raise Todo
 
 
+(*****************************************************************************)
+(* Code generation helpers *)
+(*****************************************************************************)
 let (<<) = (lsl)
 let (>>) = (lsr)
-let (@|) = (lor)
+let (|@) = (lor)
+
+(*****************************************************************************)
+(* The rules! *)
+(*****************************************************************************)
+
+type action = {
+  size: int;
+  pool: int option;
+  binary: unit -> T.word list;
+}
+
 
 let rules symbols2 x =
   match x.T5.node with
   | T5.TEXT (_, _, _) -> 
-      0, (fun () -> [])
+      { size = 0; pool = None; binary = (fun () -> []) }
   (* todo: actually write more rules with WORD instead of doing in aclass *)
   | T5.WORD _ -> 
-      4, (fun () -> [raise Todo])
+      { size = 4; pool = None; binary = (fun () -> [raise Todo]) }
 
   | T5.I (instr, cond) ->
       (match instr with
       | _ -> raise Todo
       )
 
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
 let size_of_instruction symbols2 node =
-  let (size, _f) = rules symbols2 node in
-  size
+  let action  = rules symbols2 node in
+  action.size
 
 
 
@@ -101,10 +130,10 @@ let gen_one cg instr =
   raise Todo
 
 
+(* TODO: double check pc is like one computed by layout_text 
+   otherwise failwith  "phase error ..."
+*)
 let gen symbols cg =
   raise Todo
 
-(* double check pc is like one computed by layout_text 
- otherwise failwith  "phase error ..."
-*)
 

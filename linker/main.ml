@@ -6,7 +6,7 @@ module T = Types
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5l, the plan9 ARM linker.
+(* An OCaml port of 5l, the Plan9 ARM linker.
  *
  * Limitations compared to 5l:
  * - the -E digit

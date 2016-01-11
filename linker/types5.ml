@@ -1,6 +1,5 @@
 open Common
 
-open Ast_asm5
 module A = Ast_asm5
 module T = Types
 
@@ -46,18 +45,18 @@ type code_graph = node (* the first node *)
 
 (* assert not Some -1 ! should have been set during loading! *)
 let symbol_of_entity e =
-  e.name, (match e.priv with None -> T.Public | Some i -> T.Private i)
+  e.A.name, (match e.A.priv with None -> T.Public | Some i -> T.Private i)
 
 let lookup_ent ent h =
   let symbol = symbol_of_entity ent in
-  T.lookup symbol ent.signature h
+  T.lookup symbol ent.A.signature h
 
 (* less: would need Hist mapping for this file to convert to original source *)
 let s_of_loc (file, line) =
   spf "%s:%d" file line
 
 let s_of_ent ent = 
-  ent.name ^ (match ent.priv with None -> "" | Some _ -> "<>")
+  ent.A.name ^ (match ent.A.priv with None -> "" | Some _ -> "<>")
 
 let rec iter f n =
   f n;

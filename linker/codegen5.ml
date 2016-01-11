@@ -8,9 +8,9 @@ module T5 = Types5
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 
- * No need for optab/oplook/ocmp/cmp. Just use pattern matching!
- * (but we might not win or even lose on the bit manip stuff)
+(* ARM code generation.
+ *
+ * No need for optab/oplook/ocmp/cmp as in 5l. Just use pattern matching!
  *)
 
 (*****************************************************************************)
@@ -24,72 +24,17 @@ let offset_to_R12 x =
 (* Operand classes *)
 (*****************************************************************************)
 
-type operand_class =
-  | CReg
-  | CBranch
-  | CConst of const_class
-  | CSymbol of symbol_class
-  | CIndirectReg of indirect_class
-  | CAuto of auto_class
-  | CAddr of addr_class
-  and const_class =
-    | Rot
-    | NRot
-    | LConst
-  and symbol_class =
-    | Xxx
-  and indirect_class = 
-    { small_offset: bool;
-      rototable: bool;
-    }
-  and auto_class = bool (* is_small *)
-  and addr_class = bool (* TODO *)
-(* TODO: embed the value with the constructor? *)
-
 let immrot x =
   raise Todo
 
 let immaddr x =
   raise Todo
 
-let const_class_of_integer x =
-  match () with
-  | _ when immrot x <> None -> Rot
-  | _ when immrot (lnot x) <> None -> NRot
-  | _ -> LConst
-
-let indirect_class_of_offset x =
-  { small_offset = immaddr x <> None;
-    rototable = immrot x <> None;
-  }
-
-let symbol_class_of_entity symbols2 (ent, offset) =
-  let v = raise Todo in
-  let v = offset_to_R12 (v + offset) in
-  if immaddr v <> None
-  then raise Todo
-
-(* need autosize! *)
-let auto_class_of_auto autosize (is_param, offset) =
-  if is_param
-  then 
-    let v = autosize + offset in
-    if immaddr v <> None
-    then raise Todo
-    else raise Todo
-  else
-    let _v = autosize + 4 + offset in
-    raise Todo
-
-let aclass_of_imm_or_ximm x =
-  raise Todo
-
-
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
 
-(* give opportunity to sanity check if conflicts *)
+(* more declaratif and give opportunity to sanity check if conflicts *)
 type composed_word = (int * int) list
 
 let gcond cond =
@@ -130,11 +75,11 @@ let gop_arith op opt =
 
   | MUL 
   | DIV 
-  | MOD -> raise (Impossible "should match those cases before")
+  | MOD -> raise (Impossible "should match those cases separately")
 
   | SLL 
   | SRL 
-  | SRA -> raise (Impossible "should transform those cases")
+  | SRA -> raise (Impossible "should match those cases separately")
 
   ) @ 
   (match opt with
@@ -148,13 +93,6 @@ let gop_cmp op =
   | TEQ -> [(0x9, 21); (1, 20)]
   | CMP -> [(0xa, 21); (1, 20)]
   | CMN -> [(0xb, 21); (1, 20)]
-
-(*
-let (<<) = (lsl)
-let (>>) = (lsr)
-(* less: could make sure does not interfere! *)
-let (|@) = (lor)
-*)
 
 (*****************************************************************************)
 (* The rules! *)
@@ -183,6 +121,7 @@ let rules symbols2 x =
 
   | T5.I (instr, cond) ->
     (match instr with
+
     | Arith ((AND|ORR|EOR|ADD|SUB|BIC|ADC|SBC|RSB|RSC|MVN) as op, opt, 
              from, middle, (R rt)) ->
         let r =

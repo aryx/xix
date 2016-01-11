@@ -19,8 +19,7 @@ beforedepend:V: lexer_asm5.ml parser_asm5.ml parser_asm5.mli
 
 depend:V: beforedepend
 
-clean:V:
-	rm -f $PROG *.cm* *.annot
+distclean:V: clean
 	rm -f lexer_asm5.ml
 	rm -f parser_asm5.ml parser_asm5.mli parser_asm5.output
 

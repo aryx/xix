@@ -17,9 +17,5 @@ PROG=5l
 
 <$TOP/mkone
 
-clean:V:
-	rm -f $PROG *.cm*
-
-
 loc:V:
    wc -l $SRC

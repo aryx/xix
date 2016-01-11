@@ -8,7 +8,7 @@ let resolve ps =
   let pc = ref 0 in
   let h = Hashtbl.create 101 in
 
-  (* first pass, process the label definitions *)
+  (* first pass, process the label definitions, populate h *)
   ps |> List.iter (fun (p, line) ->
     (match p with
     | LabelDef lbl -> 
@@ -24,19 +24,23 @@ let resolve ps =
     )
   );
 
-  (* second pass, process the label uses *)
+  (* second pass, process the label uses, resolve some branch operands *)
   pc := 0;
   ps |> List.filter (fun (p, line) ->
     (match p with
     (* no need to keep the labels in the object file *)
     | LabelDef _ -> false
-    | Pseudo (TEXT _ | WORD _) -> incr pc; true
+    | Pseudo (TEXT _ | WORD _) -> 
+        incr pc; 
+        true
     | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> true
     | Instr (inst, cond) ->
         let resolve_branch_operand opd =
           match !opd with
           | SymbolJump _ | IndirectJump _ -> ()
-          | Relative i -> opd := Absolute (!pc + i)
+          (* Relative and LabelUse -> Absolute *)
+          | Relative i -> 
+              opd := Absolute (!pc + i)
           | LabelUse (lbl, i) ->
             (try
                let pc = Hashtbl.find h lbl in

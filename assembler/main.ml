@@ -7,12 +7,15 @@ open Common
 (* An OCaml port of 5a, the Plan9 ARM assembler.
  *
  * Limitations compared to 5a:
+ *  - no embeded macro processor (better to factorize, use cpp) but
+ *    handle at least #line directives
  *  - no multiple files processing in parallel (not the place, use xargs)
  * 
- * todo?:
+ * todo:
+ *  - advanced instructions: floats, MULL, etc
  *  - better Lexer_asm.error() and Parser_asm.error() using lines_directives?
- *    actually prfile() was buggy
- *    gcc -I have #line for included file? can reconstruct tree?
+ *    (actually prfile() was buggy
+ *    gcc -I have #line for included file? can reconstruct tree?)
  *)
 
 let thechar = '5'

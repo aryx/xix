@@ -7,6 +7,18 @@ open Ast_asm5
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* 
+ * less: could make sure 
+ *  - TEXT size is multiple of 4
+ *  - DATA size is > 0
+ * todo:
+ *  - special bits
+ *  - advanced instructions
+ *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let error s =
   failwith (spf "Syntax error: %s at line %d" s !Globals.line)
@@ -25,10 +37,6 @@ let mk_e name static =
     priv = if static then Some (-1) else None;
     signature = None;
   }
-(* less: could make sure 
- *  - TEXT size is multiple of 4
- *  - DATA size is > 0
- *)
 %}
 
 /*(*************************************************************************)*/

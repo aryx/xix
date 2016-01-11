@@ -11,6 +11,8 @@ open Common
  * Note that in plan9 object files are mostly the serialized form of 
  * the assembly AST which is why this file is in this directory.
  * 
+ * !!! If you modify this file please increment Object_code5.version !!!
+ * 
  * TODO: 
  *  - floats,
  *  - MULA, MULL,
@@ -176,6 +178,7 @@ type instr =
    (* sign is relevant in MOV only for a load operation *)
    and sign = Signed | Unsigned
    and move_option = move_cond option
+     (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
 
 type pseudo_instr =

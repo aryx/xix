@@ -37,6 +37,8 @@ let immaddr x =
 (* more declaratif and give opportunity to sanity check if conflicts *)
 type composed_word = (int * int) list
 
+(* gxxx means gen_binary_code of xxx *)
+
 let gcond cond =
   match cond with
   | EQ            -> (0x0, 28)
@@ -127,12 +129,17 @@ let rules symbols2 x =
         let r =
           if op = MVN
           then 0
-          else match middle with None -> rt | Some (R x) -> x 
+          else 
+            match middle with 
+            | None -> rt 
+            | Some (R x) -> x 
         in
         let from_part =
           match from with
           | Reg (R rf) -> [(rf, 0)]
-          | _ -> raise Todo
+          | Shift (r2, op2, rcon) -> 
+              raise Todo
+          | Imm i -> raise Todo
         in
         { size = 4; pool = None; binary = (fun () ->
           [[gcond cond]@ gop_arith op opt @ [(r, 16); (rt, 12)] @ from_part]

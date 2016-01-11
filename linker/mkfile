@@ -18,4 +18,4 @@ PROG=5l
 <$TOP/mkone
 
 loc:V:
-   wc -l $SRC
+   wc -l $SRC *.mli

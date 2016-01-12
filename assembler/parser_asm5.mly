@@ -8,12 +8,13 @@ open Ast_asm5
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * less: could make sure 
- *  - TEXT size is multiple of 4
- *  - DATA size is > 0
  * todo:
  *  - special bits
  *  - advanced instructions
+ * 
+ * less: could make sure 
+ *  - TEXT size is multiple of 4
+ *  - DATA size is > 0
  *)
 
 (*****************************************************************************)
@@ -162,7 +163,7 @@ pseudo_instr:
  | TDATA entity_and_offset TSLASH con TCOMMA ximm  
      { DATA (fst $2, snd $2, $4, $6) }
 
-/*(* pad: I introduced this intermediate rule *)*/
+/*(* stricter: I introduced those intermediate rules *)*/
 entity: name
   { match $1 with
     | Entity (e, 0) -> e
@@ -333,7 +334,7 @@ rel:
 /*(*1 Misc *)*/
 /*(*************************************************************************)*/
 
-/*(* TODO: special bits or inline in previous rule? *)*/
+/*(* todo: special bits or inline in previous rule? *)*/
 cond:
  | /* empty */ { AL }
  | TCOND  { $1 }

@@ -53,6 +53,8 @@ let main () =
     then outfile := Common.matched1 b ^ (spf ".%c" thechar)
     else outfile := b ^ (spf ".%c" thechar)
   end;
+
+  (* main call *)
   assemble5 !infile !outfile
   
 

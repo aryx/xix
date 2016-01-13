@@ -126,6 +126,15 @@ let gop_rcon x =
 let gshift (R rf) op2 rcon = 
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 
+
+let gbranch_static {T5. loc; branch; real_pc } cond is_bl =
+  match branch with
+  | None -> raise (Impossible "resolving should have set the branch field")
+  | Some n -> 
+      (* see opbra() *)
+      raise Todo
+      
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -141,9 +150,9 @@ type action = {
  * - rt = register to   (called Rd in refcard)
  * - r  = register middle (called Rn in refcard)
  *)
-let rules symbols2 x =
-  let loc = x.T5.loc in
-  match x.T5.node with
+let rules symbols2 node =
+  let loc = node.T5.loc in
+  match node.T5.node with
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
@@ -310,6 +319,53 @@ let rules symbols2 x =
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
     (* --------------------------------------------------------------------- *)
+    | B x ->
+        if cond <> AL 
+        then raise (Impossible "B should always be with AL");
+        { size = 4; pool = Some LPOOL; binary = (fun () ->
+          match !x with
+          | Absolute _ -> gbranch_static node AL false
+          (* B (R) -> ADD 0, R, PC *)
+          | IndirectJump (R r) ->
+              let (R rt) = rPC in
+              [ [(1, 25); gop_arith ADD; (r, 16); (rt, 12); (0, 0)] ]
+          | _ -> raise (Impossible "5a or 5l should have resolved this branch")
+        )}
+    | BL x ->
+        (match !x with
+        | Absolute _ -> 
+            { size = 4; pool = None; binary = (fun () ->
+              gbranch_static node AL true
+            )}
+        (* BL (R) -> ADD 0, PC, LINK; ADD 0, R, PC *)
+        | IndirectJump (R r) ->
+           { size = 8; pool = None; binary = (fun () ->
+             let (R r2) = rPC in
+             let (R rt) = rLINK in
+              [ 
+                (* remember that when PC is involved in input operand
+                 * there is an implicit +8 which is perfect for our case
+                 * here
+                 *)
+                [(1, 25); gop_arith ADD; (r2, 16); (rt, 12); (0, 0)];
+                [(1, 25); gop_arith ADD; (r, 16); (r2, 12); (0, 0)];
+              ]
+             )}
+        | _ -> raise (Impossible "5a or 5l should have resolved this branch")
+        )
+
+    | Bxx (cond2, x) ->
+        if cond <> AL 
+        then raise (Impossible "Bxx should always be with AL");
+        (match !x with
+        | Absolute _ -> 
+            { size = 4; pool = Some LPOOL; binary = (fun () ->
+              gbranch_static node cond2 true
+            )}
+        (* stricter: better error message at least? *)
+        | IndirectJump _ -> error loc "Bxx supports only static jumps"
+        | _ -> raise (Impossible "5a or 5l should have resolved this branch")
+        )
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
@@ -318,6 +374,16 @@ let rules symbols2 x =
     (* --------------------------------------------------------------------- *)
     (* System *)
     (* --------------------------------------------------------------------- *)
+    | SWI i ->
+        if i <> 0
+        then error loc (spf "SWI does not use its parameter under Plan9");
+        { size = 4; pool = None; binary = (fun () ->
+          [ [gcond cond; (0xf, 24)] ]
+        )}
+    (* RFE -> MOVM.S.W.U 0(r13),[r15] *)
+    | RFE ->
+        { size = 4; pool = None; binary = (fun () -> [ [(0xe8fd8000, 0)] ]) }
+        
 
     (* --------------------------------------------------------------------- *)
     (* Other *)
@@ -337,6 +403,7 @@ let size_of_instruction symbols2 node =
 
 
 let gen_one cg instr =
+  (* todo: can sanity check size and list are the same *)
   raise Todo
 
 

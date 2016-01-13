@@ -10,10 +10,12 @@ let check h =
     | _ -> ()
   )
 
-(* less: could also check validity of object file, that registers
- * are in range, integers are in range, etc
- * ex with immediate in shifting operation:
- * if i >= 0 && i <= 31
- * then ...
- * else failwith "shift value out of range"
+(* less: could also check validity of object file, 
+ *  - registers are in range, 
+ *  - integers are in range
+ *    ex with immediate in shifting operation:
+ *    if i >= 0 && i <= 31
+ *    then ...
+ *    else failwith "shift value out of range"
+ *  - that cond is AL for B and Bxx
  *)

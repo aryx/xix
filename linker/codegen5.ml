@@ -24,6 +24,8 @@ type pool =
 (* more declaratif and give opportunity to sanity check if overlap *)
 type composed_word = (int * int) list
 
+type mem_opcode = LDR | STR
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -139,7 +141,10 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
       (* todo: stricter: warn if too big, but should never happens *)
       
       [ [gcond cond; (0x5, 25);] @ (if is_bl then [(0x1, 24)] else []) @ [v,0] ]
-      
+
+let gmem op cond move_size opt offset_or_rm rbase rt =
+(* todo: move_size can be Word or Byte, that's it *)
+  raise Todo
 
 (*****************************************************************************)
 (* The rules! *)
@@ -375,6 +380,27 @@ let rules symbols2 node =
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)
+
+    (* Load *)
+
+    | MOVE ((Word | Byte Unsigned), opt, from, Imsr (Reg (R rt))) ->
+        (match from with
+        | _ -> raise Todo
+        )
+
+    (* Store *)
+
+    (* note that works for Byte Signed and Unsigned here *)
+    | MOVE ((Word | Byte _), opt, Imsr (Reg (R rf)), dest) ->
+        (match dest with
+        | _ -> raise Todo
+        )
+
+    (* Swap *)
+
+    (* Address *)
+
+    (* Half words and signed bytes *)
 
     (* --------------------------------------------------------------------- *)
     (* System *)

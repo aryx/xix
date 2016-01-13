@@ -1,6 +1,6 @@
 
 type pool =
-  | LOperand of int
+  | PoolOperand of int
   | LPOOL
 
 (* This is used for the code layout. *)

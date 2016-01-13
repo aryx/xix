@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Ast_asm5
@@ -32,7 +33,7 @@ let layout_data symbols ds =
                                    (T5.s_of_ent ent))
         | T.SXref -> raise (Impossible "SXRef detected by Check.check")
         );
-
+        (* use replace cos can have multiple DATA for the same GLOBL *)
         Hashtbl.replace is_data (T5.symbol_of_entity ent) true
   );
 

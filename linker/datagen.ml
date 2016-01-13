@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (* GLOBL independent of DATA so need many passes, 

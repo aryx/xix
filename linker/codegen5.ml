@@ -34,10 +34,10 @@ let immaddr x =
 (* Code generation helpers *)
 (*****************************************************************************)
 
-(* more declaratif and give opportunity to sanity check if conflicts *)
+(* more declaratif and give opportunity to sanity check if overlap *)
 type composed_word = (int * int) list
 
-(* gxxx means gen_binary_code of xxx *)
+(* gxxx below means gen_binary_code of xxx *)
 
 let gcond cond =
   match cond with
@@ -69,7 +69,7 @@ let gop_arith op opt =
   | ADC -> [0x5, 21]
   | SBC -> [0x6, 21]
   | RSC -> [0x7, 21]
-  (* TST 0x8, TEQ 0x9, CMP 0xa, CMN 0xb *)
+  (* TST 0x8, TEQ 0x9, CMP 0xa, CMN 0xb via gop_cmp below *)
   | ORR -> [0xc, 21]
   (* MOV 0xd *)
   | BIC -> [0xe, 21]
@@ -109,11 +109,11 @@ type action = {
 (* conventions (matches the one used (inconsistently) in 5l):
  * - rf = register from (called Rm in refcard)
  * - rt = register to   (called Rd in refcard)
- * - r = register middle (called Rn in refcard)
+ * - r  = register middle (called Rn in refcard)
  *)
 let rules symbols2 x =
   match x.T5.node with
-  (* was kept just for better error reporting localisation *)
+  (* TEXT instructions were kept just for better error reporting localisation *)
   | T5.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
 

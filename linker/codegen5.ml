@@ -2,6 +2,7 @@
 open Common
 
 open Ast_asm5
+module T = Types
 module T5 = Types5
 
 (*****************************************************************************)
@@ -16,11 +17,11 @@ module T5 = Types5
 (* Helpers *)
 (*****************************************************************************)
 
-let offset_to_R12 x =
-  raise Todo
-
 let error loc s =
   failwith (spf "%s at %s" s (T5.s_of_loc loc))
+
+let offset_to_R12 x =
+  raise Todo
 
 (*****************************************************************************)
 (* Operand classes *)
@@ -96,6 +97,7 @@ let gop_shift op =
 
 let gop_cmp op =
   match op with
+  (* Set_condition set by default for comparison opcodes *)
   | TST -> [(0x8, 21); (1, 20)]
   | TEQ -> [(0x9, 21); (1, 20)]
   | CMP -> [(0xa, 21); (1, 20)]
@@ -148,7 +150,14 @@ let rules symbols2 x =
         match x with
         | Left i -> [ [(i, 0)] ]
         | Right (String s) -> raise Todo
-        | Right (Address ent) -> raise Todo
+        | Right (Address ent) -> 
+            let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+            (match v with
+             | T.SText2 real_pc -> [ [real_pc, 0] ]
+             | T.SData2 offset | T.SBss2 offset -> 
+                 (* need initdat *)
+                 raise Todo
+            )
         )
       }
 
@@ -158,7 +167,7 @@ let rules symbols2 x =
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)
-    | Arith ((AND|ORR|EOR|ADD|SUB|BIC|ADC|SBC|RSB|RSC|MVN|MOV) as op, opt, 
+    | Arith ((AND|ORR|EOR|ADD|SUB|BIC|ADC|SBC|RSB|RSC|MVN|MOV) as op, opt,
              from, middle, (R rt)) ->
         let r =
           if op = MVN || op = MOV
@@ -205,6 +214,28 @@ let rules symbols2 x =
           [[gcond cond; gop_arith MOV] @ gsetbit opt @ [(rt, 12); gop_shift op]
             @ from_part @ [(r, 0)]]
         )}
+
+    | Arith (MUL, opt, from, middle, (R rt)) ->
+        let rf =
+          match from with
+          | Reg (R rf) -> rf
+          (* stricter: not stricter but better error message at least *)
+          | Shift _ | Imm _ ->
+              error loc "MUL can take only register operands"
+        in
+        let r = 
+          match middle with 
+          | None -> rt 
+          | Some (R x) -> x 
+        in
+        (* ?? *)
+        let (r, rf) = if rt = r then (rf, rt) else (r, rf) in
+        
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; (0x0, 21)] @ gsetbit opt 
+            @ [(rt, 16); (rf, 8); (0x9, 4); (r, 0) ]]
+        )}
+        
 
 
     | Cmp (op, from, (R r)) ->

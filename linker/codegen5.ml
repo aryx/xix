@@ -127,12 +127,18 @@ let gshift (R rf) op2 rcon =
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 
 
-let gbranch_static {T5. loc; branch; real_pc } cond is_bl =
+let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
   match branch with
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some n -> 
-      (* see opbra() *)
-      raise Todo
+      let dst_pc = n.T5.real_pc in
+      let v = (dst_pc - src_pc) - 8 in
+      if v mod 4 <> 0
+      then raise (Impossible "layout text wrong, not word aligned node");
+      let v = v asr 2 in
+      (* todo: stricter: warn if too big, but should never happens *)
+      
+      [ [gcond cond; (0x5, 25);] @ (if is_bl then [(0x1, 24)] else []) @ [v,0] ]
       
 
 (*****************************************************************************)
@@ -359,7 +365,7 @@ let rules symbols2 node =
         then raise (Impossible "Bxx should always be with AL");
         (match !x with
         | Absolute _ -> 
-            { size = 4; pool = Some LPOOL; binary = (fun () ->
+            { size = 4; pool = None; binary = (fun () ->
               gbranch_static node cond2 true
             )}
         (* stricter: better error message at least? *)
@@ -382,7 +388,9 @@ let rules symbols2 node =
         )}
     (* RFE -> MOVM.S.W.U 0(r13),[r15] *)
     | RFE ->
-        { size = 4; pool = None; binary = (fun () -> [ [(0xe8fd8000, 0)] ]) }
+        { size = 4; pool = None; binary = (fun () -> 
+          [ [(0xe8fd8000, 0)] ]
+        )}
         
 
     (* --------------------------------------------------------------------- *)

@@ -92,8 +92,7 @@ let layout_text symbols2 init_text cg =
   cg |> T5.iter (fun n ->
     n.T5.real_pc <- !pc;
 
-    (* TODO: pool handling *)
-    let size = Codegen5.size_of_instruction symbols2 n in
+    let size, pooloptTODO = Codegen5.size_of_instruction symbols2 n in
     (match n.T5.node with
     | T5.TEXT (ent, _, _) ->
         (* Useful for something except find pc of entry point?

@@ -14,6 +14,14 @@ module T5 = Types5
  *)
 
 (*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+type pool =
+  | LOperand of int
+  | LPOOL
+
+(*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
@@ -124,7 +132,7 @@ let gshift (R rf) op2 rcon =
 
 type action = {
   size: int;
-  pool: int option;
+  pool: pool option;
   binary: unit -> composed_word list;
 }
 
@@ -278,7 +286,7 @@ let rules symbols2 x =
      * MOVH RF, RT  -> SLL 16, RF, RT; SRA 16, RT, RT -> ...
      * MOVHU RF, RT -> SLL 16, RF, RT; SRL 16, RT, RT -> 
      *)
-    | MOVE ((Byte _|HalfWord _) as size, None,Imsr(Reg(R rf)),Imsr(Reg(R rt)))->
+    | MOVE ((Byte _|HalfWord _)as size, None, Imsr(Reg(R rf)),Imsr(Reg(R rt)))->
         let rop =
           match size with
           | Byte Unsigned | HalfWord Unsigned -> SRL
@@ -297,8 +305,6 @@ let rules symbols2 x =
             [gcond cond; gop_arith MOV; (rt, 12); gop_shift rop; (sh,7);(rt,0)];
           ]
         )}
-      
-
 
 
     (* --------------------------------------------------------------------- *)
@@ -326,7 +332,7 @@ let rules symbols2 x =
 
 let size_of_instruction symbols2 node =
   let action  = rules symbols2 node in
-  action.size
+  action.size, action.pool
 
 
 

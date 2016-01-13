@@ -66,6 +66,7 @@ let rPC = R 15
 type arith_operand =
   | Imm of integer (* characters are converted to integers *)
   | Reg of register
+  (* can not be used with shift opcodes SLL/SRL/SRA *)
   | Shift of register * shift_reg_op * 
              (register, int (* between 0 and 31 *)) Common.either
 
@@ -149,6 +150,7 @@ type instr =
     | AND | ORR | EOR
     (* arith *)
     | ADD | SUB | MUL | DIV | MOD (* DIV and MOD are virtual *)
+    (* bit shifting; immediate operand can only be between 0 and 31 *)
     | SLL | SRL | SRA (* virtual, sugar for bitshift register *)
     (* less useful *)
     | BIC  | ADC | SBC  | RSB | RSC

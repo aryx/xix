@@ -18,8 +18,11 @@ module T5 = Types5
 (*****************************************************************************)
 
 type pool =
-  | LOperand of int
-  | LPOOL
+  | PoolOperand of int
+  | LPOOL (* todo: still don't know why we need that *)
+
+(* more declaratif and give opportunity to sanity check if overlap *)
+type composed_word = (int * int) list
 
 (*****************************************************************************)
 (* Helpers *)
@@ -44,9 +47,6 @@ let immaddr x =
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
-
-(* more declaratif and give opportunity to sanity check if overlap *)
-type composed_word = (int * int) list
 
 (* gxxx below means gen_binary_code of xxx *)
 
@@ -167,7 +167,6 @@ let rules symbols2 node =
   | T5.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
 
-  (* todo: actually write more rules with WORD instead of doing in aclass *)
   | T5.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
         match x with
@@ -391,12 +390,10 @@ let rules symbols2 node =
         { size = 4; pool = None; binary = (fun () -> 
           [ [(0xe8fd8000, 0)] ]
         )}
-        
 
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)
-
     | _ -> error loc "illegal combination"
     )
 

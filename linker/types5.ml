@@ -30,6 +30,7 @@ type node = {
   (* can be altered during rewriting *)
   mutable node: instr;
   mutable next: node option;
+  (* for branching instructions and also for instructions using the pool *)
   mutable branch: node option;
   
   (* set after layout_text *)

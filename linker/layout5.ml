@@ -96,7 +96,9 @@ let layout_text symbols2 init_text cg =
     let size = Codegen5.size_of_instruction symbols2 n in
     (match n.T5.node with
     | T5.TEXT (ent, _, _) ->
-        (* todo? useful for something except find pc of entry point? *)
+        (* Useful for something except find pc of entry point?
+         * Yes for getting the address of a procedure, e.g. in WORD $foo(SB)
+         *)
         Hashtbl.add symbols2 (T5.symbol_of_entity ent) (T.SText2 !pc);
     | _ -> failwith (spf "zero-width instruction at %s" (T5.s_of_loc n.T5.loc))
     );

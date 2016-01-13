@@ -51,7 +51,7 @@ let visit_entities f xs =
       )
     | Instr (i, _cond) ->
       (match i with
-      | MOV (_, _, m1, m2) -> mov_operand m1; mov_operand m2
+      | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
       | B b | BL b | Bxx (_, b) -> branch_operand b
       | Arith _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> () 
       )

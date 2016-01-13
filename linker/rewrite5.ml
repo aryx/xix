@@ -68,7 +68,7 @@ let rewrite cg =
           (* for further steps. todo? could have is_leaf info there too? *)
           n.T5.node <- T5.TEXT (ent, attrs, autosize);
           let n1 = { T5.
-            node = T5.I (MOV (Word, Some WriteAddressBase, 
+            node = T5.I (MOVE (Word, Some WriteAddressBase, 
                               Imsr (Reg rLINK), 
                               Indirect (rSP, -autosize)), AL);
             next = n.T5.next;
@@ -86,7 +86,7 @@ let rewrite cg =
         n.T5.node <- T5.I
           ((match autosize_opt with
            | None -> B (ref (IndirectJump (rLINK)))
-           | Some autosize -> MOV (Word, Some PostOffsetWrite,
+           | Some autosize -> MOVE (Word, Some PostOffsetWrite,
                                    Indirect (rSP, autosize), 
                                    Imsr (Reg rPC))
            ), cond);

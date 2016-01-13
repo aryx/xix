@@ -5,7 +5,7 @@ type object_code =
   Ast_asm5.program * Common.filename
 
 (* less: could be sha1 of ast_asm5.ml for safe marshalling *)
-let version = 3
+let version = 4
 
 (* can normalize before? *)
 let save obj file =

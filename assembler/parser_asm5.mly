@@ -187,7 +187,7 @@ instr:
  | TARITH cond  imsr TCOMMA reg  { (Arith ($1,  None, $3, None, $5), $2) }
  | TMVN   cond  imsr TCOMMA reg  { (Arith (MVN, None, $3, None, $5), $2) }
 
- | TMOV   cond  gen  TCOMMA gen     { (MOV ($1, None, $3, $5), $2) }
+ | TMOV   cond  gen  TCOMMA gen     { (MOVE ($1, None, $3, $5), $2) }
 
  | TSWAP  cond  reg  TCOMMA ireg    { (SWAP ($1, $5, $3, None), $2) }
  | TSWAP  cond  ireg TCOMMA reg     { (SWAP ($1, $3, $5, None), $2) }

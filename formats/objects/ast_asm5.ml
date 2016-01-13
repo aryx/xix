@@ -123,7 +123,7 @@ type instr =
       arith_operand (* src *) * register option * register (* dst *)
 
   (* Memory *)
-  | MOV of move_size * move_option *
+  | MOVE of move_size * move_option *
       mov_operand * mov_operand (* virtual *)
   | SWAP of move_size (* actually only (Byte x) *) * 
        register (* indirect *) * register * register option
@@ -153,7 +153,7 @@ type instr =
     (* less useful *)
     | BIC  | ADC | SBC  | RSB | RSC
     (* middle operand always empty (could lift up and put special type) *)
-    | MVN 
+    | MOV | MVN (* MOV has no reading syntax in 5a, MOVE is used *)
   and arith_option = arith_cond option
    and arith_cond = Set_condition (* .S *)
 

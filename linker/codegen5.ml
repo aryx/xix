@@ -2,7 +2,6 @@
 open Common
 
 open Ast_asm5
-module T = Types
 module T5 = Types5
 
 (*****************************************************************************)
@@ -19,6 +18,9 @@ module T5 = Types5
 
 let offset_to_R12 x =
   raise Todo
+
+let error loc s =
+  failwith (spf "%s at %s" s (T5.s_of_loc loc))
 
 (*****************************************************************************)
 (* Operand classes *)
@@ -75,19 +77,21 @@ let gop_arith op opt =
   | BIC -> [0xe, 21]
   | MVN -> [0xf, 21]
 
-  | MUL 
-  | DIV 
-  | MOD -> raise (Impossible "should match those cases separately")
-
-  | SLL 
-  | SRL 
-  | SRA -> raise (Impossible "should match those cases separately")
-
+  | MUL | DIV | MOD -> raise (Impossible "should match those cases separately")
+  | SLL | SRL | SRA -> raise (Impossible "should match those cases separately")
   ) @ 
   (match opt with
   | None -> []
   | Some Set_condition -> [(1, 20)]
   )
+
+let gop_shift op =
+  match op with
+  | SLL -> (0, 5)
+  | SRL -> (1, 5)
+  | SRA -> (2, 5)
+  | _ -> raise (Impossible "should match those cases separately")
+
 
 let gop_cmp op =
   match op with
@@ -96,7 +100,7 @@ let gop_cmp op =
   | CMP -> [(0xa, 21); (1, 20)]
   | CMN -> [(0xb, 21); (1, 20)]
 
-let gop_shift op =
+let gop_bitshift_register op =
   match op with
   | Sh_logic_left   -> (0x0, 5)
   | Sh_logic_right  -> (0x1, 5)
@@ -106,10 +110,10 @@ let gop_shift op =
 let gop_rcon x =
   match x with
   | Left (R r) -> [(r,8); (1, 4)]
-  | Right i -> [(i, 7)]
+  | Right i    -> [(i, 7); (0, 4)]
 
-let gshift (R r2) op2 rcon = 
-  gop_rcon rcon @ [gop_shift op2; (r2, 0)]
+let gshift (R rf) op2 rcon = 
+  gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 
 (*****************************************************************************)
 (* The rules! *)
@@ -127,6 +131,7 @@ type action = {
  * - r  = register middle (called Rn in refcard)
  *)
 let rules symbols2 x =
+  let loc = x.T5.loc in
   match x.T5.node with
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
@@ -139,11 +144,11 @@ let rules symbols2 x =
   (* todo: actually write more rules with WORD instead of doing in aclass *)
   | T5.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
-        [match x with
-        | Left i -> [(i, 0)]
+        match x with
+        | Left i -> [ [(i, 0)] ]
         | Right (String s) -> raise Todo
         | Right (Address ent) -> raise Todo
-        ])
+        )
       }
 
   | T5.I (instr, cond) ->
@@ -174,7 +179,7 @@ let rules symbols2 x =
         in
         { size = 4; pool = None; binary = (fun () ->
           [[gcond cond] @ gop_arith op opt @ [(r, 16); (rt, 12)] @ from_part]
-          )}
+        )}
 
     | Cmp (op, from, (R r)) ->
         let from_part = 
@@ -188,8 +193,8 @@ let rules symbols2 x =
               )
         in
         { size = 4; pool = None; binary = (fun () ->
-            [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
-          )}
+          [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
+        )}
         
     | MOV (Word, None, Imsr from, Imsr (Reg (R rt))) -> 
         let from_part = 
@@ -203,8 +208,30 @@ let rules symbols2 x =
               )
         in
         { size = 4; pool = None; binary = (fun () ->
-            [[gcond cond; (0xd, 21); (0, 16); (rt, 12)] @ from_part]
-          )}
+          [[gcond cond; (0xd, 21); (0, 16); (rt, 12)] @ from_part]
+        )}
+
+    | Arith ((SLL|SRL|SRA) as op, opt, from, middle, (R rt)) ->
+        let r = 
+          match middle with 
+          | None -> rt 
+          | Some (R x) -> x 
+        in
+        let from_part = 
+          match from with
+          | Imm i ->
+              if i >= 0 && i <= 31
+              then [(i, 7)]
+              (* stricter: failwith, not silently truncate *)
+              else error loc (spf "shit value out of range %d" i)
+          | Reg (R rf) -> [(rf, 8); (1, 4)]
+          (* stricter: I added that *)
+          | Shift _ -> error loc "bitshift on shift operation not allowed"
+        in
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; (0xd, 21); (rt, 12); gop_shift op] @from_part@[(r,0)]]
+        )}
+
 
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
@@ -222,7 +249,7 @@ let rules symbols2 x =
     (* Other *)
     (* --------------------------------------------------------------------- *)
 
-    | _ -> failwith "illegal combination"
+    | _ -> error loc "illegal combination"
     )
 
 (*****************************************************************************)

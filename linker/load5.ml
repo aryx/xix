@@ -86,6 +86,7 @@ let load xs =
 
     (* object loading is so much easier in ocaml *)
     let (prog, _srcfile) = Object_code5.load file in
+    (* less: could check valid AST, range of registers, shift values, etc *)
 
     (* naming and populating symbol table h *)
     prog |> visit_entities (fun ent -> process_ent ent h !idfile);

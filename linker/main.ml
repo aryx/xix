@@ -24,8 +24,8 @@ let thechar = '5'
 let usage = 
   spf "usage: %cl [-options] objects" thechar
 
-let link config xs outfile =
-  let (code, data, symbols) = Load5.load xs in
+let link config objfiles outfile =
+  let (code, data, symbols) = Load5.load objfiles in
 
   (* mark at least as SXref the entry point *)
   T.lookup (config.T.entry_point, T.Public) None symbols |> ignore;
@@ -102,6 +102,8 @@ let main () =
         | "elf" -> raise Todo
         | s -> failwith (spf "unknown -H option, format not handled: %s" s)
       in
+
+      (* the main call *)
       link config xs !outfile
   )
   

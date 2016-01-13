@@ -12,7 +12,7 @@ let check h =
 
 (* less: could also check validity of object file, that registers
  * are in range, integers are in range, etc
- * ex with register:
+ * ex with immediate in shifting operation:
  * if i >= 0 && i <= 31
  * then ...
  * else failwith "shift value out of range"

@@ -96,6 +96,21 @@ let gop_cmp op =
   | CMP -> [(0xa, 21); (1, 20)]
   | CMN -> [(0xb, 21); (1, 20)]
 
+let gop_shift op =
+  match op with
+  | Sh_logic_left   -> (0x0, 5)
+  | Sh_logic_right  -> (0x1, 5)
+  | Sh_arith_right  -> (0x2, 5)
+  | Sh_rotate_right -> (0x3, 5)
+
+let gop_rcon x =
+  match x with
+  | Left (R r) -> [(r,8); (1, 4)]
+  | Right i -> [(i, 7)]
+
+let gshift (R r2) op2 rcon = 
+  gop_rcon rcon @ [gop_shift op2; (r2, 0)]
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -113,17 +128,30 @@ type action = {
  *)
 let rules symbols2 x =
   match x.T5.node with
+  (* --------------------------------------------------------------------- *)
+  (* Pseudo *)
+  (* --------------------------------------------------------------------- *)
+
   (* TEXT instructions were kept just for better error reporting localisation *)
   | T5.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
 
   (* todo: actually write more rules with WORD instead of doing in aclass *)
-  | T5.WORD _ -> 
-      { size = 4; pool = None; binary = (fun () -> [raise Todo]) }
+  | T5.WORD x ->
+      { size = 4; pool = None; binary = (fun () -> 
+        [match x with
+        | Left i -> [(i, 0)]
+        | Right (String s) -> raise Todo
+        | Right (Address ent) -> raise Todo
+        ])
+      }
 
   | T5.I (instr, cond) ->
     (match instr with
 
+    (* --------------------------------------------------------------------- *)
+    (* Arithmetics *)
+    (* --------------------------------------------------------------------- *)
     | Arith ((AND|ORR|EOR|ADD|SUB|BIC|ADC|SBC|RSB|RSC|MVN) as op, opt, 
              from, middle, (R rt)) ->
         let r =
@@ -136,29 +164,65 @@ let rules symbols2 x =
         in
         let from_part =
           match from with
-          | Reg (R rf) -> [(rf, 0)]
-          | Shift (r2, op2, rcon) -> 
-              raise Todo
-          | Imm i -> raise Todo
+          | Reg (R rf)      -> [(rf, 0)]
+          | Shift (a, b, c) -> gshift a b c
+          | Imm i ->
+              (match immrot i with
+              | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
+              | None -> raise Todo
+              )
         in
         { size = 4; pool = None; binary = (fun () ->
-          [[gcond cond]@ gop_arith op opt @ [(r, 16); (rt, 12)] @ from_part]
+          [[gcond cond] @ gop_arith op opt @ [(r, 16); (rt, 12)] @ from_part]
           )}
 
     | Cmp (op, from, (R r)) ->
         let from_part = 
           match from with
           | Reg (R rf) -> [(rf, 0)]
-          | _ -> raise Todo
+          | Shift (a, b, c) -> gshift a b c
+          | Imm i ->
+              (match immrot i with
+              | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
+              | None -> raise Todo
+              )
         in
         { size = 4; pool = None; binary = (fun () ->
             [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
           )}
         
-    | MOV (Word, _, Imsr (Reg (R rf)), Imsr (Reg (R rt))) -> 
-        raise Todo
+    | MOV (Word, None, Imsr from, Imsr (Reg (R rt))) -> 
+        let from_part = 
+          match from with
+          | Reg (R rf) -> [(rf, 0)]
+          | Shift (a, b, c) -> gshift a b c
+          | Imm i ->
+              (match immrot i with
+              | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
+              | None -> raise Todo
+              )
+        in
+        { size = 4; pool = None; binary = (fun () ->
+            [[gcond cond; (0xd, 21); (0, 16); (rt, 12)] @ from_part]
+          )}
 
-    | _ -> raise Todo
+    (* --------------------------------------------------------------------- *)
+    (* Control flow *)
+    (* --------------------------------------------------------------------- *)
+
+    (* --------------------------------------------------------------------- *)
+    (* Memory *)
+    (* --------------------------------------------------------------------- *)
+
+    (* --------------------------------------------------------------------- *)
+    (* System *)
+    (* --------------------------------------------------------------------- *)
+
+    (* --------------------------------------------------------------------- *)
+    (* Other *)
+    (* --------------------------------------------------------------------- *)
+
+    | _ -> failwith "illegal combination"
     )
 
 (*****************************************************************************)

@@ -10,3 +10,10 @@ let check h =
     | _ -> ()
   )
 
+(* less: could also check validity of object file, that registers
+ * are in range, integers are in range, etc
+ * ex with register:
+ * if i >= 0 && i <= 31
+ * then ...
+ * else failwith "shift value out of range"
+ *)

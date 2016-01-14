@@ -2,6 +2,7 @@
 
 open Ast_asm5
 
+let vof_pos = Ocaml.vof_int
 let vof_symbol = Ocaml.vof_string
 let vof_label = Ocaml.vof_string
 let vof_integer = Ocaml.vof_int
@@ -216,3 +217,8 @@ let vof_line =
       and v2 = vof_filename v2
       in Ocaml.VSum (("LineDirective", [ v1; v2 ]))
   
+let vof_program v =
+  Ocaml.vof_list
+    (fun (v1, v2) ->
+       let v1 = vof_line v1 and v2 = vof_pos v2 in Ocaml.VTuple [ v1; v2 ])
+    v

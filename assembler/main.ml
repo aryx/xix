@@ -22,18 +22,25 @@ let thechar = '5'
 let usage = 
   spf "usage: %ca [-options] file.s" thechar
 
-let assemble5 infile outfile =
+let assemble5 dump infile outfile =
   let prog = Parse_asm5.parse infile in
   let prog = Resolve_labels5.resolve prog in
+  if dump 
+  then prog |> Meta_ast_asm5.vof_program |> Ocaml.string_of_v |> Common.pr2;
   Object_code5.save (prog, infile) outfile
 
 
 let main () =
   let infile = ref "" in
   let outfile = ref "" in
+  let dump = ref false in
   let options = [
     "-o", Arg.Set_string outfile,
     " <file> output file";
+
+    (* pad: I added that *)
+    "-dump", Arg.Set dump,
+    " dump the parsed AST";
   ]
   in
   Arg.parse options
@@ -55,7 +62,7 @@ let main () =
   end;
 
   (* main call *)
-  assemble5 !infile !outfile
+  assemble5 !dump !infile !outfile
   
 
 let _ = 

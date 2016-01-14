@@ -74,6 +74,9 @@ let main () =
     (* less: support integer value instead of string too? *)
     "-E", Arg.Set_string init_entry,
     " <str> entry point";
+
+    "-debug_gen", Arg.Set Flag.debug_gen,
+    " debug code generation";
   ]
   in
   Arg.parse options (fun f -> infiles := f::!infiles) usage;

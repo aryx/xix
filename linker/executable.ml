@@ -4,11 +4,23 @@ open Common
 module T = Types
 module T5 = Types5
 
-let lput chan word =
-  if true then raise Todo
+let lputl chan word =
+  if word < 0 
+  then raise (Impossible (spf "should call lputl with uint not %d" word));
+
+  let x1 = Char.chr (word mod 256) in
+  let x2 = Char.chr ((word lsr 8) mod 256) in
+  let x3 = Char.chr ((word lsr 16) mod 256) in
+  let x4 = Char.chr ((word lsr 24) mod 256) in
+  output_char chan x1;
+  output_char chan x2;
+  output_char chan x3;
+  output_char chan x4;
+  ()
+  
 
 let cput chan byte =
-  if true then raise Todo
+  output_char chan byte
   
 
 let gen config sizes cs ds symbols2 outfile =
@@ -21,7 +33,6 @@ let gen config sizes cs ds symbols2 outfile =
   then failwith (spf "executable format not supported: %s" format);
 
   let header = { A_out.
-     magic = 0x647;
      text_size = sizes.T.text_size;
      data_size = sizes.T.data_size;
      bss_size = sizes.T.bss_size;
@@ -48,7 +59,7 @@ let gen config sizes cs ds symbols2 outfile =
   A_out.write_header header chan;
 
   (* Text section *)
-  cs |> List.iter (lput chan);
+  cs |> List.iter (lputl chan);
   (* Data section *)
   (* no seek to a page boundary; a disk image is not a memory image! *)
   ds |> Array.iter (cput chan);

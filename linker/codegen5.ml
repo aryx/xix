@@ -56,6 +56,12 @@ let sanity_check_composed_word n xs =
   in
   aux 32 xs
 
+let word_of_composed_word x =
+  x |> List.fold_left (fun acc (v, i) ->
+    (v lsl i) lor acc
+  ) 0
+
+
 let offset_to_R12 x =
   (* less: x - BIG at some point if want some optimisation *)
   x
@@ -210,7 +216,7 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   (match opt with
   | None ->                  [(1, 24)] (* pre offset write *)
   | Some PostOffsetWrite ->  [(0, 24)]
-  | Some WriteAddressBase -> [(1, 21)]
+  | Some WriteAddressBase -> [(1, 24); (1, 21)]
   ) @
   [(match move_size with 
    | Word -> (0, 22) 
@@ -281,7 +287,7 @@ let rules symbols2 autosize node =
     | Arith ((AND|ORR|EOR|ADD|SUB|BIC|ADC|SBC|RSB|RSC|MVN|MOV) as op, opt,
              from, middle, (R rt)) ->
         let r =
-          if op = MVN || op = MOV
+          if (op = MVN || op = MOV)
           then 0
           else 
             match middle with 
@@ -375,8 +381,9 @@ let rules symbols2 autosize node =
               | None -> error node "TODO"
               )
         in
+        let r = if !Flag.kencc_compatible then rt else 0 in
         { size = 4; pool = None; binary = (fun () ->
-          [[gcond cond; gop_arith MOV; (0, 16); (rt, 12)] @ from_part]
+          [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ from_part]
         )}
 
     (* MOVBU R, RT -> ADD 0xff, R, RT *)
@@ -562,15 +569,16 @@ let gen symbols2 config cg =
     then begin 
       n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v |> pr2;
       pr2 "-->";
-      xs |> List.iter pr2_gen;
+      xs |> List.iter (fun x ->
+        let w = word_of_composed_word x in
+        pr2 (spf "%s (0x%x)" (Common.dump x) w);
+      );
       pr2 ".";
     end;
 
     let xs = xs |> List.map (fun composed_word ->
       sanity_check_composed_word n composed_word;
-      composed_word |> List.fold_left (fun acc (v, i) ->
-        (v lsl i) lor acc
-      ) 0
+      word_of_composed_word composed_word;
     )
     in
     res |> Common.push xs;

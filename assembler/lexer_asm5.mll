@@ -183,6 +183,7 @@ rule token = parse
   | "#line" { error "syntax in #line" }
 
   (* ----------------------------------------------------------------------- *)
+  (* less: maybe return a fake semicolon the first time? *)
   | eof { EOF }
   | _ { error "unrecognized character" }
 

@@ -36,6 +36,26 @@ let error node s =
               (node.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v)
   )
 
+let sanity_check_composed_word n xs =
+  let dbg = Common.dump xs in
+  let rec aux bit xs =
+    match xs with
+    | [] -> ()
+    | (x,bit2)::xs ->
+        let size = bit - bit2 in
+        (match () with
+        | _ when bit2 >= bit -> error n ("composed word not sorted: " ^ dbg)
+        | _ when x < 0       -> error n (spf "negative value %d: %s" x dbg)
+        | _ when size <= 0   -> error n (spf "no space for value %d: %s" x dbg)
+        | _ when x >= 1 lsl (size + 1) ->
+            error n (spf "value %d overflow outside its space (%d - %d): %s "
+                       x bit bit2 dbg)
+        | _ -> ()
+        );
+        aux bit2 xs
+  in
+  aux 32 xs
+
 let offset_to_R12 x =
   (* less: x - BIG at some point if want some optimisation *)
   x
@@ -240,14 +260,14 @@ let rules symbols2 autosize node =
       { size = 4; pool = None; binary = (fun () -> 
         match x with
         | Left i -> [ [(i, 0)] ]
-        | Right (String s) -> raise Todo
+        | Right (String s) -> error node "TODO"
         | Right (Address ent) -> 
             let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
             (match v with
              | T.SText2 real_pc -> [ [real_pc, 0] ]
              | T.SData2 offset | T.SBss2 offset -> 
                  (* need initdat *)
-                 raise Todo
+                 error node "TODO"
             )
         )
       }
@@ -275,7 +295,7 @@ let rules symbols2 autosize node =
           | Imm i ->
               (match immrot i with
               | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
-              | None -> raise Todo
+              | None -> error node "TODO"
               )
         in
         { size = 4; pool = None; binary = (fun () ->
@@ -337,7 +357,7 @@ let rules symbols2 autosize node =
           | Imm i ->
               (match immrot i with
               | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
-              | None -> raise Todo
+              | None -> error node "TODO"
               )
         in
         { size = 4; pool = None; binary = (fun () ->
@@ -352,7 +372,7 @@ let rules symbols2 autosize node =
           | Imm i ->
               (match immrot i with
               | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
-              | None -> raise Todo
+              | None -> error node "TODO"
               )
         in
         { size = 4; pool = None; binary = (fun () ->
@@ -450,8 +470,8 @@ let rules symbols2 autosize node =
     | MOVE ((Word | Byte Unsigned) as size, opt, from, Imsr (Reg rt)) ->
         (match from with
         | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
-        | Imsr (Shift _) -> raise Todo
-        | Ximm _ -> raise Todo
+        | Imsr (Shift _) -> error node "TODO"
+        | Ximm _ -> error node "TODO"
         | Indirect _ | Param _ | Local _ | Entity _ ->
             let (rbase, offset) = 
               base_and_offset_of_indirect node symbols2 autosize from in
@@ -461,7 +481,7 @@ let rules symbols2 autosize node =
                 [ gmem cond LDR size opt (Left offset) rbase rt ]
               )}
             else
-              raise Todo
+              error node "TODO"
         )
 
     (* Store *)
@@ -470,8 +490,8 @@ let rules symbols2 autosize node =
     | MOVE ((Word | Byte _) as size, opt, Imsr (Reg rf), dest) ->
         (match dest with
         | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
-        | Imsr (Shift _) -> raise Todo
-        | Ximm _ -> raise Todo
+        | Imsr (Shift _) -> error node "TODO"
+        | Ximm _ -> error node "TODO"
         | Indirect _ | Param _ | Local _ | Entity _ ->
             let (rbase, offset) = 
               base_and_offset_of_indirect node symbols2 autosize dest in
@@ -481,7 +501,7 @@ let rules symbols2 autosize node =
                 [ gmem cond STR size opt (Left offset) rbase rf ]
               )}
             else
-              raise Todo
+              error node "TODO"
         )
 
     (* Swap *)
@@ -546,8 +566,8 @@ let gen symbols2 config cg =
       pr2 ".";
     end;
 
-    let xs = instrs |> List.map (fun composed_word ->
-      (* less: could check for overlap in composed_words *)
+    let xs = xs |> List.map (fun composed_word ->
+      sanity_check_composed_word n composed_word;
       composed_word |> List.fold_left (fun acc (v, i) ->
         (v lsl i) lor acc
       ) 0

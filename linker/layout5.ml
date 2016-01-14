@@ -88,19 +88,27 @@ let layout_data symbols ds =
 let layout_text symbols2 init_text cg =
 
   let pc = ref init_text in
+  let autosize = ref None in
 
   cg |> T5.iter (fun n ->
     n.T5.real_pc <- !pc;
 
-    let size, pooloptTODO = Codegen5.size_of_instruction symbols2 n in
-    (match n.T5.node with
-    | T5.TEXT (ent, _, _) ->
-        (* Useful for something except find pc of entry point?
-         * Yes for getting the address of a procedure, e.g. in WORD $foo(SB)
-         *)
-        Hashtbl.add symbols2 (T5.symbol_of_entity ent) (T.SText2 !pc);
-    | _ -> failwith (spf "zero-width instruction at %s" (T5.s_of_loc n.T5.loc))
-    );
+    let size, pooloptTODO = 
+      Codegen5.size_of_instruction symbols2 !autosize n 
+    in
+    if size = 0
+    then
+      (match n.T5.node with
+      | T5.TEXT (ent, _, size) ->
+          (* remember that rewrite5 has adjusted autosize correctly *)
+          autosize := Some size;
+          (* Useful to find pc of entry point and to get the address of a
+           * procedure, e.g. in WORD $foo(SB)
+           *)
+          Hashtbl.add symbols2 (T5.symbol_of_entity ent) (T.SText2 !pc);
+      | _ -> failwith (spf "zero-width instruction at %s" 
+                         (T5.s_of_loc n.T5.loc))
+      );
     (* TODO: pool handling *)
     pc := !pc + size
   );

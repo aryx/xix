@@ -65,7 +65,7 @@ let rewrite cg =
           else Some (size + 4)
         in
         autosize_opt |> Common.if_some (fun autosize ->
-          (* for further steps. todo? could have is_leaf info there too? *)
+          (* for layout text we need to set the final autosize *)
           n.T5.node <- T5.TEXT (ent, attrs, autosize);
           let n1 = { T5.
             node = T5.I (MOVE (Word, Some WriteAddressBase, 

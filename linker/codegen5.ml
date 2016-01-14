@@ -14,17 +14,20 @@ module T5 = Types5
  *)
 
 (*****************************************************************************)
-(* Types *)
+(* Types and constants *)
 (*****************************************************************************)
-
-type pool =
-  | PoolOperand of int
-  | LPOOL (* todo: still don't know why we need that *)
 
 (* more declaratif and give opportunity to sanity check if overlap *)
 type composed_word = (int * int) list
 
 type mem_opcode = LDR | STR
+
+type pool =
+  | PoolOperand of int
+  | LPOOL (* todo: still don't know why we need that *)
+
+let rSP = R 13
+let rSB = R 12
 
 (*****************************************************************************)
 (* Helpers *)
@@ -33,8 +36,40 @@ type mem_opcode = LDR | STR
 let error loc s =
   failwith (spf "%s at %s" s (T5.s_of_loc loc))
 
+(* less: x - BIG at some point if want some optimisation *)
 let offset_to_R12 x =
-  raise Todo
+  x
+
+let base_and_offset_of_indirect loc symbols2 autosize_opt x =
+  match x with
+  | Indirect (r, off) -> r, off 
+  | Param (_s, off) ->
+      (match autosize_opt with
+      | None -> error loc "use of parameter outside of procedure"
+      (* remember that +4 here is because we access the frame of the
+       * caller which for sure is not a leaf. Note that autosize
+       * here had possibly a +4 done if the current function
+       * was a leaf, but still we need another +4 because what matters
+       * now is the adjustment of the frame of the caller!
+       *)
+      | Some autosize -> rSP, autosize + 4 + off
+      )
+  | Local (_s, off) -> 
+      (match autosize_opt with
+      | None -> error loc "use of local outside of procedure"
+      | Some autosize -> rSP, autosize + off
+      )
+  | Entity (ent, off) ->
+      let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+      (match v with
+      | T.SData2 offset | T.SBss2 offset -> 
+          rSB, offset_to_R12 (offset + off)
+      (* stricter: allowed in 5l I think but wrong codegen I think *)
+      | T.SText2 _ -> 
+          error loc (spf "use of procedure %s in indirect with offset"
+                       (T5.s_of_ent ent))
+      )
+  | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
 
 (*****************************************************************************)
 (* Operand classes *)
@@ -142,6 +177,9 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
       
       [ [gcond cond; (0x5, 25);] @ (if is_bl then [(0x1, 24)] else []) @ [v,0] ]
 
+
+
+
 let gmem op cond move_size opt offset_or_rm rbase rt =
 (* todo: move_size can be Word or Byte, that's it *)
   raise Todo
@@ -161,7 +199,7 @@ type action = {
  * - rt = register to   (called Rd in refcard)
  * - r  = register middle (called Rn in refcard)
  *)
-let rules symbols2 node =
+let rules symbols2 autosize node =
   let loc = node.T5.loc in
   match node.T5.node with
   (* --------------------------------------------------------------------- *)
@@ -385,7 +423,14 @@ let rules symbols2 node =
 
     | MOVE ((Word | Byte Unsigned), opt, from, Imsr (Reg (R rt))) ->
         (match from with
-        | _ -> raise Todo
+        | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
+        | Imsr (Shift _) -> raise Todo
+        | Ximm _ -> raise Todo
+        | Indirect _ | Param _ | Local _ | Entity _ ->
+            let (_rbase, _offset) = 
+              base_and_offset_of_indirect loc symbols2 autosize from in
+            raise Todo
+            
         )
 
     (* Store *)
@@ -427,8 +472,8 @@ let rules symbols2 node =
 (* entry points *)
 (*****************************************************************************)
 
-let size_of_instruction symbols2 node =
-  let action  = rules symbols2 node in
+let size_of_instruction symbols2 autosize node =
+  let action  = rules symbols2 autosize node in
   action.size, action.pool
 
 
@@ -442,6 +487,7 @@ let gen_one cg instr =
    otherwise failwith  "phase error ..."
 *)
 let gen symbols cg =
+  (* todo: need also update autosize *)
   raise Todo
 
 

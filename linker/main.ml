@@ -12,6 +12,7 @@ module T = Types
  * - the -E digit
  * - the extensions/optimisations about small data, string in text, more??
  * - the extensions not yet understood (import/export, dynamic linking)
+ * - half word specialized instructions and immhalf()
  * 
  * todo?:
  *  - profiling -p

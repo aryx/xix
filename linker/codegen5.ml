@@ -36,8 +36,8 @@ let rSB = R 12
 let error loc s =
   failwith (spf "%s at %s" s (T5.s_of_loc loc))
 
-(* less: x - BIG at some point if want some optimisation *)
 let offset_to_R12 x =
+  (* less: x - BIG at some point if want some optimisation *)
   x
 
 let base_and_offset_of_indirect loc symbols2 autosize_opt x =
@@ -50,7 +50,7 @@ let base_and_offset_of_indirect loc symbols2 autosize_opt x =
        * caller which for sure is not a leaf. Note that autosize
        * here had possibly a +4 done if the current function
        * was a leaf, but still we need another +4 because what matters
-       * now is the adjustment of the frame of the caller!
+       * now is the adjustment in the frame of the caller!
        *)
       | Some autosize -> rSP, autosize + 4 + off
       )

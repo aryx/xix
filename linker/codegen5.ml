@@ -26,9 +26,6 @@ type pool =
   | PoolOperand of int
   | LPOOL (* todo: still don't know why we need that *)
 
-let rSP = R 13
-let rSB = R 12
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -70,10 +67,18 @@ let base_and_offset_of_indirect loc symbols2 autosize x =
 (*****************************************************************************)
 
 let immrot x =
-  raise Todo
+  if x >= 0 && x <= 0xff
+  then Some (0, x)
+  else raise Todo
 
-let immaddr x =
-  raise Todo
+let immoffset x =
+  (x >= 0 && x <= 0xfff) || (x < 0 && x >= -0xfff)
+(* job done already by gmem
+  match () with
+  | _ when x >= 0 && x <= 0xfff -> Some [(1, 24); (1, 23); (v, 0)]
+  | _ when x < 0 && x >= -0xfff -> Some [(1, 24); (0, 23); (-v, 0)]
+  | _ -> None
+*)
 
 (*****************************************************************************)
 (* Code generation helpers *)
@@ -169,14 +174,39 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
       let v = v asr 2 in
       (* todo: stricter: warn if too big, but should never happens *)
       
-      [ [gcond cond; (0x5, 25);] @ (if is_bl then [(0x1, 24)] else []) @ [v,0] ]
+      [gcond cond; (0x5, 25);
+       (if is_bl then (0x1, 24) else (0x0, 24)); 
+       (v,0) 
+       ]
 
 
 
 
-let gmem op cond move_size opt offset_or_rm rbase rt =
-(* todo: move_size can be Word or Byte, that's it *)
-  raise Todo
+let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
+  [gcond cond; (0x1, 26) ] @
+  (match opt with
+  | None ->                  [(1, 24)] (* pre offset write *)
+  | Some PostOffsetWrite ->  [(0, 24)]
+  | Some WriteAddressBase -> [(1, 21)]
+  ) @
+  [(match move_size with 
+   | Word -> (0, 22) 
+   | Byte _ -> (1, 22) 
+   | HalfWord _ -> raise (Impossible "should use different pattern rule")
+   );
+   (match op with 
+    | LDR -> (1, 20) 
+    | STR -> (0, 20)
+   );
+   (rbase, 16); (rt, 12);
+  ] @
+  (match offset_or_rm with
+  | Left offset -> 
+      if offset >= 0 
+      then [(1, 23); (offset, 0)]
+      else [(0, 23); (-offset, 0)]
+  | Right (R r) -> [(1, 25); (r, 0)]
+  )
 
 (*****************************************************************************)
 (* The rules! *)
@@ -366,7 +396,7 @@ let rules symbols2 autosize node =
         then raise (Impossible "B should always be with AL");
         { size = 4; pool = Some LPOOL; binary = (fun () ->
           match !x with
-          | Absolute _ -> gbranch_static node AL false
+          | Absolute _ -> [ gbranch_static node AL false ]
           (* B (R) -> ADD 0, R, PC *)
           | IndirectJump (R r) ->
               let (R rt) = rPC in
@@ -377,7 +407,7 @@ let rules symbols2 autosize node =
         (match !x with
         | Absolute _ -> 
             { size = 4; pool = None; binary = (fun () ->
-              gbranch_static node AL true
+              [ gbranch_static node AL true ]
             )}
         (* BL (R) -> ADD 0, PC, LINK; ADD 0, R, PC *)
         | IndirectJump (R r) ->
@@ -402,7 +432,7 @@ let rules symbols2 autosize node =
         (match !x with
         | Absolute _ -> 
             { size = 4; pool = None; binary = (fun () ->
-              gbranch_static node cond2 true
+              [ gbranch_static node cond2 true ]
             )}
         (* stricter: better error message at least? *)
         | IndirectJump _ -> error loc "Bxx supports only static jumps"
@@ -415,24 +445,41 @@ let rules symbols2 autosize node =
 
     (* Load *)
 
-    | MOVE ((Word | Byte Unsigned), opt, from, Imsr (Reg (R rt))) ->
+    | MOVE ((Word | Byte Unsigned) as size, opt, from, Imsr (Reg rt)) ->
         (match from with
         | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
         | Imsr (Shift _) -> raise Todo
         | Ximm _ -> raise Todo
         | Indirect _ | Param _ | Local _ | Entity _ ->
-            let (_rbase, _offset) = 
+            let (rbase, offset) = 
               base_and_offset_of_indirect loc symbols2 autosize from in
-            raise Todo
-            
+            if immoffset offset
+            then
+              { size = 4; pool = None; binary = (fun () -> 
+                [ gmem cond LDR size opt (Left offset) rbase rt ]
+              )}
+            else
+              raise Todo
         )
 
     (* Store *)
 
     (* note that works for Byte Signed and Unsigned here *)
-    | MOVE ((Word | Byte _), opt, Imsr (Reg (R rf)), dest) ->
+    | MOVE ((Word | Byte _) as size, opt, Imsr (Reg rf), dest) ->
         (match dest with
-        | _ -> raise Todo
+        | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
+        | Imsr (Shift _) -> raise Todo
+        | Ximm _ -> raise Todo
+        | Indirect _ | Param _ | Local _ | Entity _ ->
+            let (rbase, offset) = 
+              base_and_offset_of_indirect loc symbols2 autosize dest in
+            if immoffset offset
+            then
+              { size = 4; pool = None; binary = (fun () -> 
+                [ gmem cond STR size opt (Left offset) rbase rf ]
+              )}
+            else
+              raise Todo
         )
 
     (* Swap *)

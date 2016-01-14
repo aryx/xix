@@ -56,7 +56,8 @@ type entity = {
 (* ------------------------------------------------------------------------- *)
 
 type register = R of int (* between 0 and 15 *)
-(* reserved by assembler/linker/compiler *)
+(* reserved by linker *)
+let rTMP = R 11
 let rSB = R 12
 let rSP = R 13
 (* reserved by hardware *)

@@ -98,7 +98,7 @@ let layout_text symbols2 init_text cg =
   cg |> T5.iter (fun n ->
     n.T5.real_pc <- !pc;
 
-    let size, pooloptTODO = 
+    let size, poolopt = 
       Codegen5.size_of_instruction symbols2 !autosize n 
     in
     if size = 0
@@ -114,7 +114,9 @@ let layout_text symbols2 init_text cg =
       | _ -> failwith (spf "zero-width instruction at %s" 
                          (T5.s_of_loc n.T5.loc))
       );
-    (* TODO: pool handling *)
+    poolopt |> Common.if_some (fun pool ->
+      raise Todo
+    );
     pc := !pc + size
   );
   let final_text = Common.rnd !pc 8 in

@@ -1,4 +1,4 @@
 
 val gen: 
-  Types.symbol_table2 -> Types5.data list -> Types.word list
-
+  Types.symbol_table2 -> Types.sections_size -> Types5.data list -> 
+  Types.byte array

@@ -17,6 +17,8 @@ type addr = int
 type word = int
 (* 32 bits *)
 type offset = int
+(* 8 bits *)
+type byte = char
 
 type section =
   | SText of virt_pc

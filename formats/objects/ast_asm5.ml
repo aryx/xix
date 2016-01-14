@@ -8,8 +8,8 @@ open Common
  * Abstract Syntax Tree (AST) for the assembly language supported by 5a
  * which we call Asm5.
  *
- * Note that in plan9 object files are mostly the serialized form of 
- * the assembly AST which is why this file is in this directory.
+ * Note that in Plan9 object files are mostly the serialized form of 
+ * the assembly AST, which is why this file is in this directory.
  * 
  * !!! If you modify this file please increment Object_code5.version !!!
  * 
@@ -48,6 +48,7 @@ type entity = {
    * mutable (ugly?) modifed by linker in naming phase.
    *)
   mutable priv: int option; 
+  (* for safe linking, generated only by 5c, not 5a *)
   signature: int option;
 }
 (* with tarzan *)
@@ -195,7 +196,7 @@ type pseudo_instr =
   | TEXT of entity * attributes * int (* size locals, should be multiple of 4 *)
   | GLOBL of entity (* can have offset? *) * attributes * int (* size *)
 
-  | DATA of entity * offset * int (* size, should be > 0 *) * imm_or_ximm
+  | DATA of entity * offset * int (* size, should be in [1..8] *) * imm_or_ximm
   (* any ximm? even String? And Float? for float should have DWORD? *)
   | WORD of imm_or_ximm
 

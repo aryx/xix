@@ -7,6 +7,10 @@ module T5 = Types5
 let lput chan word =
   if true then raise Todo
 
+let cput chan byte =
+  if true then raise Todo
+  
+
 let gen config sizes cs ds symbols2 outfile =
  outfile |> Common.with_file_out (fun chan ->
 
@@ -47,7 +51,7 @@ let gen config sizes cs ds symbols2 outfile =
   cs |> List.iter (lput chan);
   (* Data section *)
   (* no seek to a page boundary; a disk image is not a memory image! *)
-  ds |> List.iter (lput chan);
+  ds |> Array.iter (cput chan);
   
   (* todo: symbol table, program counter line table *)
  )

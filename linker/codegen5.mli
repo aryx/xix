@@ -9,5 +9,6 @@ val size_of_instruction:
   int * pool option
 
 val gen: 
-  Types.symbol_table2 -> Types.config -> Types5.code_graph -> Types.word list
+  Types.symbol_table2 -> Types.config -> Types5.code_graph -> 
+  Types.word list
 

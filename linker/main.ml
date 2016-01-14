@@ -44,7 +44,7 @@ let link config objfiles outfile =
   (* todo: modify config now that can know initdat *)
  
   let instrs = Codegen5.gen symbols2 config graph in
-  let datas  = Datagen.gen symbols2 data in
+  let datas  = Datagen.gen symbols2 sizes data in
   Executable.gen config sizes instrs datas symbols2 outfile
 
 let main () =

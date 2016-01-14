@@ -40,10 +40,11 @@ let layout_data symbols ds =
   (* step1: sanity check sizes and align *)
   symbols |> Hashtbl.iter (fun (s, _) v ->
     match v.T.section with
-    (* less: do the small segment thing *)
+    (* less: do the small segment optimisation *)
     | T.SData size ->
         if size <= 0
         then failwith (spf "%s: no size" s);
+
         if size mod 4 <> 0
         then v.T.section <- T.SData (Common.rnd size 4)
     | _ -> ()

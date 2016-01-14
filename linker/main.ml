@@ -41,10 +41,15 @@ let link config objfiles outfile =
     Layout5.layout_text symbols2 config.T.init_text graph in
 
   let sizes = { T.text_size; data_size; bss_size } in
-  (* todo: modify config now that can know initdat *)
+  let init_data =  
+    match config.T.init_data with
+    | None -> rnd (text_size - config.T.init_text) config.T.init_round
+    | Some x -> x
+  in
+  let config = { config with T.init_data = Some init_data } in
  
   let instrs = Codegen5.gen symbols2 config graph in
-  let datas  = Datagen.gen symbols2 sizes data in
+  let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 outfile
 
 let main () =

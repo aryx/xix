@@ -225,7 +225,7 @@ type action = {
  *)
 let rules symbols2 autosize node =
   let loc = node.T5.loc in
-  match node.T5.node with
+  match node.T5.instr with
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
@@ -533,10 +533,12 @@ let gen symbols2 config cg =
     if List.length instrs * 4 <> size
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
                               (T5.s_of_loc n.T5.loc)));
+    
+    if !Flag.debug_gen 
+    then n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v |> pr2;
 
     let xs = instrs |> List.map (fun composed_word ->
       let composed_word = composed_word |> Common.sort_by_val_highfirst in
-
       if !Flag.debug_gen then begin
         pr2_gen composed_word;
       end;
@@ -549,7 +551,7 @@ let gen symbols2 config cg =
     res |> Common.push xs;
 
     pc := !pc + size;
-    (match n.T5.node with
+    (match n.T5.instr with
     | T5.TEXT (_, _, size) -> autosize := size;
     | _ -> ()
     );

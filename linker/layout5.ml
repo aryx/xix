@@ -103,7 +103,7 @@ let layout_text symbols2 init_text cg =
     in
     if size = 0
     then
-      (match n.T5.node with
+      (match n.T5.instr with
       | T5.TEXT (ent, _, size) ->
           (* remember that rewrite5 has adjusted autosize correctly *)
           autosize := size;

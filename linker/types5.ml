@@ -6,6 +6,7 @@ module T = Types
 
 (* a single line number is not enough anymore, we need also the filename *)
 type loc = Common.filename * Ast_asm5.pos
+ (* with tarzan *)
 
 (* Split Asm5 instructions in code vs data.
  *
@@ -19,6 +20,7 @@ and instr =
   | TEXT of A.entity * A.attributes * int
   | WORD of A.imm_or_ximm
   | I of A.instr * A.condition
+ (* with tarzan *)
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
@@ -28,7 +30,7 @@ type data =
 (* graph via pointers, like in original 5l *)
 type node = {
   (* can be altered during rewriting *)
-  mutable node: instr;
+  mutable instr: instr;
   mutable next: node option;
   (* for branching instructions and also for instructions using the pool *)
   mutable branch: node option;

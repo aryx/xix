@@ -10,7 +10,7 @@ let rec find_first_no_nop_node nopt =
   match nopt with
   | None -> failwith "could not find non NOP node for branch"
   | Some n ->
-      (match n.T5.node with
+      (match n.T5.instr with
       | T5.I (NOP, _) -> find_first_no_nop_node n.T5.next
       | _ -> Some n
       )
@@ -23,7 +23,7 @@ let rewrite cg =
 
   (* step1: mark is leaf and delete NOPs *)
   cg |> T5.iter_with_env (fun (curtext, prev_no_nop) n ->
-    match n.T5.node with
+    match n.T5.instr with
     | T5.TEXT (ent, _attrs, _size) ->
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
@@ -42,7 +42,7 @@ let rewrite cg =
           | _ -> (curtext, Some n)
         in
         n.T5.branch |> Common.if_some (fun n2 ->
-          match n2.T5.node with
+          match n2.T5.instr with
           | T5.I (NOP, _) -> n.T5.branch <- find_first_no_nop_node n2.T5.next 
           | _ -> ()
         );
@@ -51,7 +51,7 @@ let rewrite cg =
   
   (* step2: transform *)
   cg |> T5.iter_with_env (fun autosize_opt n ->
-    match n.T5.node with
+    match n.T5.instr with
     | T5.TEXT (ent, attrs, size) ->
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
@@ -66,9 +66,9 @@ let rewrite cg =
         in
         autosize_opt |> Common.if_some (fun autosize ->
           (* for layout text we need to set the final autosize *)
-          n.T5.node <- T5.TEXT (ent, attrs, autosize);
+          n.T5.instr <- T5.TEXT (ent, attrs, autosize);
           let n1 = { T5.
-            node = T5.I (MOVE (Word, Some WriteAddressBase, 
+            instr = T5.I (MOVE (Word, Some WriteAddressBase, 
                               Imsr (Reg rLINK), 
                               Indirect (rSP, -autosize)), AL);
             next = n.T5.next;
@@ -83,7 +83,7 @@ let rewrite cg =
 
     | T5.WORD _ -> autosize_opt
     | T5.I (RET, cond) ->
-        n.T5.node <- T5.I
+        n.T5.instr <- T5.I
           ((match autosize_opt with
            | None -> B (ref (IndirectJump (rLINK)))
            | Some autosize -> MOVE (Word, Some PostOffsetWrite,

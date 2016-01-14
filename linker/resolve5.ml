@@ -14,7 +14,7 @@ let build_graph symbols xs =
 
   (* graph initialization *)
   let nodes = xs |> Array.map (fun (instr, loc) ->
-    { T5. node = instr; next = None; branch = None; loc = loc; real_pc = -1 }
+    { T5. instr; next = None; branch = None; loc; real_pc = -1 }
   )
   in
 
@@ -26,7 +26,7 @@ let build_graph symbols xs =
 
   (* set the branch fields *)
   nodes |> Array.iter (fun n ->
-    match n.T5.node with
+    match n.T5.instr with
     | T5.TEXT _ | T5.WORD _ -> ()
     | T5.I (inst, cond) ->
         let resolve_branch_operand opd =

@@ -81,3 +81,6 @@ let lookup k sigopt h =
   );
   v
 
+let s_of_symbol (s, scope) =
+  (* less: could print the object filename instead *)
+  s ^ (match scope with Public -> "" | Private _ -> "<>")

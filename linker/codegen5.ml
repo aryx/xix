@@ -30,14 +30,17 @@ type pool =
 (* Helpers *)
 (*****************************************************************************)
 
-let error loc s =
-  failwith (spf "%s at %s" s (T5.s_of_loc loc))
+let error node s =
+  failwith (spf "%s at %s on %s" s 
+              (T5.s_of_loc node.T5.loc)
+              (node.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v)
+  )
 
 let offset_to_R12 x =
   (* less: x - BIG at some point if want some optimisation *)
   x
 
-let base_and_offset_of_indirect loc symbols2 autosize x =
+let base_and_offset_of_indirect node symbols2 autosize x =
   match x with
   | Indirect (r, off) -> r, off 
   | Param (_s, off) ->
@@ -57,7 +60,7 @@ let base_and_offset_of_indirect loc symbols2 autosize x =
           rSB, offset_to_R12 (offset + off)
       (* stricter: allowed in 5l I think but wrong codegen I think *)
       | T.SText2 _ -> 
-          error loc (spf "use of procedure %s in indirect with offset"
+          error node (spf "use of procedure %s in indirect with offset"
                        (T5.s_of_ent ent))
       )
   | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
@@ -224,7 +227,6 @@ type action = {
  * - r  = register middle (called Rn in refcard)
  *)
 let rules symbols2 autosize node =
-  let loc = node.T5.loc in
   match node.T5.instr with
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
@@ -294,10 +296,10 @@ let rules symbols2 autosize node =
               if i >= 0 && i <= 31
               then [(i, 7)]
               (* stricter: failwith, not silently truncate *)
-              else error loc (spf "shit value out of range %d" i)
+              else error node (spf "shit value out of range %d" i)
           | Reg (R rf) -> [(rf, 8); (1, 4)]
           (* stricter: I added that *)
-          | Shift _ -> error loc "bitshift on shift operation not allowed"
+          | Shift _ -> error node "bitshift on shift operation not allowed"
         in
         { size = 4; pool = None; binary = (fun () ->
           [[gcond cond; gop_arith MOV] @ gsetbit opt @ [(rt, 12); gop_shift op]
@@ -310,7 +312,7 @@ let rules symbols2 autosize node =
           | Reg (R rf) -> rf
           (* stricter: not stricter but better error message at least *)
           | Shift _ | Imm _ ->
-              error loc "MUL can take only register operands"
+              error node "MUL can take only register operands"
         in
         let r = 
           match middle with 
@@ -435,7 +437,7 @@ let rules symbols2 autosize node =
               [ gbranch_static node cond2 true ]
             )}
         (* stricter: better error message at least? *)
-        | IndirectJump _ -> error loc "Bxx supports only static jumps"
+        | IndirectJump _ -> error node "Bxx supports only static jumps"
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )
 
@@ -452,7 +454,7 @@ let rules symbols2 autosize node =
         | Ximm _ -> raise Todo
         | Indirect _ | Param _ | Local _ | Entity _ ->
             let (rbase, offset) = 
-              base_and_offset_of_indirect loc symbols2 autosize from in
+              base_and_offset_of_indirect node symbols2 autosize from in
             if immoffset offset
             then
               { size = 4; pool = None; binary = (fun () -> 
@@ -472,7 +474,7 @@ let rules symbols2 autosize node =
         | Ximm _ -> raise Todo
         | Indirect _ | Param _ | Local _ | Entity _ ->
             let (rbase, offset) = 
-              base_and_offset_of_indirect loc symbols2 autosize dest in
+              base_and_offset_of_indirect node symbols2 autosize dest in
             if immoffset offset
             then
               { size = 4; pool = None; binary = (fun () -> 
@@ -493,7 +495,7 @@ let rules symbols2 autosize node =
     (* --------------------------------------------------------------------- *)
     | SWI i ->
         if i <> 0
-        then error loc (spf "SWI does not use its parameter under Plan9");
+        then error node (spf "SWI does not use its parameter under Plan9");
         { size = 4; pool = None; binary = (fun () ->
           [ [gcond cond; (0xf, 24)] ]
         )}
@@ -506,7 +508,7 @@ let rules symbols2 autosize node =
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)
-    | _ -> error loc "illegal combination"
+    | _ -> error node "illegal combination"
     )
 
 (*****************************************************************************)
@@ -533,15 +535,18 @@ let gen symbols2 config cg =
     if List.length instrs * 4 <> size
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
                               (T5.s_of_loc n.T5.loc)));
+
+    let xs = instrs |> List.map Common.sort_by_val_highfirst in
     
     if !Flag.debug_gen 
-    then n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v |> pr2;
+    then begin 
+      n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v |> pr2;
+      pr2 "-->";
+      xs |> List.iter pr2_gen;
+      pr2 ".";
+    end;
 
     let xs = instrs |> List.map (fun composed_word ->
-      let composed_word = composed_word |> Common.sort_by_val_highfirst in
-      if !Flag.debug_gen then begin
-        pr2_gen composed_word;
-      end;
       (* less: could check for overlap in composed_words *)
       composed_word |> List.fold_left (fun acc (v, i) ->
         (v lsl i) lor acc

@@ -4,9 +4,9 @@ open Common
 module T = Types
 
 let check h =
-  h |> Hashtbl.iter (fun (s, _) v ->
+  h |> Hashtbl.iter (fun symb v ->
     match v.T.section with
-    | T.SXref -> failwith (spf "%s: not defined" s)
+    | T.SXref -> failwith (spf "%s: not defined" (T.s_of_symbol symb))
     | _ -> ()
   )
 

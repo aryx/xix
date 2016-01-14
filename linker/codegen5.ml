@@ -527,8 +527,41 @@ let gen_one cg instr =
 (* TODO: double check pc is like one computed by layout_text 
    otherwise failwith  "phase error ..."
 *)
-let gen symbols cg =
-  (* todo: need also update autosize *)
-  raise Todo
+let gen symbols2 config cg =
 
+  let pc = ref config.T.init_text in
+  let autosize = ref 0 in
+  let res = ref [] in
 
+  cg |> T5.iter (fun n ->
+
+    let {size; binary }  = rules symbols2 !autosize n in
+    let instrs = binary () in
+
+    if n.T5.real_pc <> !pc
+    then raise (Impossible "layout inconsistent with code generation");
+    if List.length instrs * 4 <> size
+    then raise (Impossible (spf "size of rule does not match #instrs at %s"
+                              (T5.s_of_loc n.T5.loc)));
+
+    let xs = instrs |> List.map (fun composed_word ->
+      let composed_word = composed_word |> Common.sort_by_val_highfirst in
+      pr2_gen composed_word;
+      (* less: could check for overlap in composed_words *)
+      composed_word |> List.fold_left (fun acc (v, i) ->
+        (v lsl i) lor acc
+      ) 0
+    )
+    in
+
+    res |> Common.push xs;
+
+    pc := !pc + size;
+    (match n.T5.node with
+    | T5.TEXT (_, _, size) ->
+        autosize := size;
+    | _ -> ()
+    );
+  );
+
+  !res |> List.rev |> List.flatten

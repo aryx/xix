@@ -2,6 +2,7 @@
 TOP=..
 
 INCLUDES=-I .
-SRC=common.ml
+SRC=common.ml \
+ common2.ml ocaml.ml
 
 <$TOP/mklib

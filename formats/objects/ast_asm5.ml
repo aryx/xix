@@ -50,12 +50,14 @@ type entity = {
   mutable priv: int option; 
   signature: int option;
 }
+(* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
 type register = R of int (* between 0 and 15 *)
+ (* with tarzan *)
 (* reserved by linker *)
 let rTMP = R 11
 let rSB = R 12
@@ -74,6 +76,7 @@ type arith_operand =
   and shift_reg_op =
     | Sh_logic_left | Sh_logic_right
     | Sh_arith_right | Sh_rotate_right
+(* with tarzan *)
 
 type mov_operand = 
   (* Immediate shift register *)
@@ -93,6 +96,7 @@ type mov_operand =
     (* Float? *)
     (* stricter: we disallow address of FP or SP, and offset to SB *)
     | Address of entity
+(* with tarzan *)
 
 (* I use a ref so the code which resolves branches is shorter.
  * The ref is modified by the assembler and then linker.
@@ -114,6 +118,7 @@ and branch_operand2 =
 
   (* resolved dynamically by the machine *)
   | IndirectJump of register
+(* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -183,6 +188,7 @@ type instr =
    and move_option = move_cond option
      (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+(* with tarzan *)
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
@@ -197,6 +203,7 @@ type pseudo_instr =
   and attribute = DUPOK | NOPROF
 
   and imm_or_ximm = (integer, ximm) Common.either
+(* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
@@ -212,5 +219,6 @@ type line =
   (* ex: #line 20 "foo.c" *)
   | LineDirective of int * Common.filename
   (* less: PragmaLibDirective of string *)
+(* with tarzan *)
 
 type program = (line * pos) list

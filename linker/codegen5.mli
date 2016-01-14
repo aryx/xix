@@ -5,7 +5,7 @@ type pool =
 
 (* This is used for the code layout. *)
 val size_of_instruction: 
-  Types.symbol_table2 -> int option (* autosize*) -> Types5.node -> 
+  Types.symbol_table2 -> int (* autosize*) -> Types5.node -> 
   int * pool option
 
 val gen: 

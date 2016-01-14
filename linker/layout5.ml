@@ -88,7 +88,12 @@ let layout_data symbols ds =
 let layout_text symbols2 init_text cg =
 
   let pc = ref init_text in
-  let autosize = ref None in
+  (* less: could be a None, to be more precise, to detect use of local/param
+   * outside a procedure. But anyway at frontier of objects we
+   * are considered in TEXT of preceding obj which does not make
+   * much sense. (should do this kind of check in check.ml though)
+   *)
+  let autosize = ref 0 in
 
   cg |> T5.iter (fun n ->
     n.T5.real_pc <- !pc;
@@ -101,7 +106,7 @@ let layout_text symbols2 init_text cg =
       (match n.T5.node with
       | T5.TEXT (ent, _, size) ->
           (* remember that rewrite5 has adjusted autosize correctly *)
-          autosize := Some size;
+          autosize := size;
           (* Useful to find pc of entry point and to get the address of a
            * procedure, e.g. in WORD $foo(SB)
            *)

@@ -40,25 +40,19 @@ let offset_to_R12 x =
   (* less: x - BIG at some point if want some optimisation *)
   x
 
-let base_and_offset_of_indirect loc symbols2 autosize_opt x =
+let base_and_offset_of_indirect loc symbols2 autosize x =
   match x with
   | Indirect (r, off) -> r, off 
   | Param (_s, off) ->
-      (match autosize_opt with
-      | None -> error loc "use of parameter outside of procedure"
       (* remember that +4 here is because we access the frame of the
        * caller which for sure is not a leaf. Note that autosize
        * here had possibly a +4 done if the current function
        * was a leaf, but still we need another +4 because what matters
        * now is the adjustment in the frame of the caller!
        *)
-      | Some autosize -> rSP, autosize + 4 + off
-      )
+      rSP, autosize + 4 + off
   | Local (_s, off) -> 
-      (match autosize_opt with
-      | None -> error loc "use of local outside of procedure"
-      | Some autosize -> rSP, autosize + off
-      )
+      rSP, autosize + off
   | Entity (ent, off) ->
       let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
       (match v with

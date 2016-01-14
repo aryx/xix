@@ -20,6 +20,8 @@ let check h =
  *  - that cond is AL for B and Bxx,
  *  - that use Local or Param only when inside a Text (and for Local
  *    that if fits the size specified),
+ *    | None -> error loc "use of parameter outside of procedure"
+ *    | None -> error loc "use of local outside of procedure"
  *  - ...
  *  See use of error() in codegen5.ml, or notes about 5l in ocaml in
  *  Linker.nw for more invariants to check.

@@ -95,6 +95,7 @@ let layout_text symbols2 init_text cg =
    * much sense. (should do this kind of check in check.ml though)
    *)
   let autosize = ref 0 in
+  let literal_pools = ref [] in
 
   cg |> T5.iter (fun n ->
     n.T5.real_pc <- !pc;
@@ -119,10 +120,43 @@ let layout_text symbols2 init_text cg =
       match pool with
       | Codegen5.LPOOL -> pr2 "TODO: LPOOL"
       | Codegen5.PoolOperand imm_or_ximm ->
-          raise Todo
+          let instr = T5.WORD imm_or_ximm in
+          (* less: check if already present in literal_pools *)
+          let node = { T5. instr; next = None; branch = None; real_pc = -1; 
+                           loc = n.T5.loc } in
+          if node.T5.branch <> None
+          then raise (Impossible "attaching literal to branching instruction");
+          n.T5.branch <- Some node;
+          literal_pools |> Common.push node;
+          
     );
-    pc := !pc + size
+    pc := !pc + size;
+
+    (* flush pool *)
+    (* todo: complex condition when possible out of offset range *)
+    if n.T5.next = None && !literal_pools <> [] then begin
+      let rec aux prev xs =
+        match xs with
+        | [] -> ()
+        | x::xs ->
+            prev.T5.next <- Some x;
+            aux x xs
+      in
+      aux n !literal_pools;
+      literal_pools := [];
+    end;
+
   );
+  if !Flag.debug_layout then begin
+    cg |> T5.iter (fun n ->
+      pr2 (spf "%d: %s" n.T5.real_pc
+             (n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v));
+      n.T5.branch |> Common.if_some (fun n -> 
+        pr2 (spf " -> branch: %d" n.T5.real_pc)
+      )
+    );
+  end;
+
   let final_text = Common.rnd !pc 8 in
   let textsize = final_text - init_text in
   Hashtbl.replace symbols2 ("etext", T.Public) (T.SText2 final_text);

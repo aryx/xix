@@ -13,10 +13,11 @@ let gen symbols2 init_data sizes ds =
     let info = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
     match info with
     | T.SData2 offset ->
-        let _final_offset = offset + offset2 in
+        let base = offset + offset2 in
         (match v with
         | Left i -> raise Todo
-        | Right (String s) -> raise Todo
+        | Right (String s) -> 
+            for i = 0 to size_slice -1 do arr.(base + i) <- s.[i] done
         | Right (Address ent2) ->
             let info2 = Hashtbl.find symbols2 (T5.symbol_of_entity ent2) in
             let _i = 

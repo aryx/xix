@@ -204,12 +204,12 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
       let v = (dst_pc - src_pc) - 8 in
       if v mod 4 <> 0
       then raise (Impossible "layout text wrong, not word aligned node");
-      let v = v asr 2 in
-      (* todo: stricter: warn if too big, but should never happens *)
+      let v = (v asr 2) land 0xffffff in
+      (* less: stricter: warn if too big, but should never happens *)
       
       [gcond cond; (0x5, 25);
        (if is_bl then (0x1, 24) else (0x0, 24)); 
-       (v land 0xffffff,0) 
+       (v, 0) 
        ]
 
 
@@ -241,6 +241,18 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   | Right (R r) -> [(1, 25); (r, 0)]
   )
 
+let gload_from_pool { T5. branch; real_pc = src_pc } cond rt =
+  match branch with
+  | None -> raise (Impossible "literal pool should be attached to node")
+  | Some n ->
+      let dst_pc = n.T5.real_pc in
+      let v = (dst_pc - src_pc) - 8 in
+      if v mod 4 <> 0
+      then raise (Impossible "layout text wrong, not word aligned node");
+      (* LDR v(R15), R11 *)
+      gmem cond LDR Word None (Left v) rPC rt
+      
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -256,7 +268,7 @@ type action = {
  * - rt = register to   (called Rd in refcard)
  * - r  = register middle (called Rn in refcard)
  *)
-let rules symbols2 autosize node =
+let rules symbols2 autosize init_data node =
   match node.T5.instr with
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
@@ -270,14 +282,18 @@ let rules symbols2 autosize node =
       { size = 4; pool = None; binary = (fun () -> 
         match x with
         | Left i -> [ [(i, 0)] ]
-        | Right (String s) -> error node "TODO"
+        | Right (String s) -> 
+            (* stricter? what does 5l do with that? confusing I think *)
+            error node "string not allowed with WORD, use DATA"
         | Right (Address ent) -> 
             let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
             (match v with
              | T.SText2 real_pc -> [ [real_pc, 0] ]
              | T.SData2 offset | T.SBss2 offset -> 
-                 (* need initdat *)
-                 error node "TODO"
+                 (match init_data with
+                 | None -> raise (Impossible "init_data should be set")
+                 | Some init_data -> [ [init_data + offset, 0] ]
+                 )
             )
         )
       }
@@ -479,7 +495,9 @@ let rules symbols2 autosize node =
     (* Address *)
     | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
         (match ximm with
-        | String _ -> error node "TODO"
+        | String _ -> 
+            (* stricter? what does 5l do with that? confusing I think *)
+            error node "string not allowed in MOVW, use DATA"
         | Address ent ->
             let from_part_when_small_offset_to_R12 =
               try 
@@ -487,13 +505,13 @@ let rules symbols2 autosize node =
                 match v with
                 | T.SData2 offset | T.SBss2 offset ->
                     let final_offset = offset_to_R12 offset in
-                    immrot final_offset
                     (* super important extra condition! for bootstrapping
                      * setR12 in MOVW $setR12(SB), R12 and not
                      * transform in ADD offset_set_R12, R12, R12.
                      *)
-(*TODO JUST TO TEST                    && final_offset <> 0 *)
-                     
+                    if final_offset = 0 
+                    then None
+                    else immrot final_offset
                 | T.SText2 _ -> None
               (* layout_text has not been fully done yet so we may have
                * the address of a procedure we don't know yet
@@ -509,8 +527,9 @@ let rules symbols2 autosize node =
                   (rot, 8); (v, 0)]]
             )}
             | None -> 
-              { size = 8; pool=Some(PoolOperand(Right ximm)); binary=(fun () ->
-                raise Todo
+              (* MOVW $L(SB), RT -> LDR x(R15), RT *)
+              { size = 4; pool=Some(PoolOperand(Right ximm)); binary=(fun () ->
+                [ gload_from_pool node cond (R rt) ]
               )}
             )
         )
@@ -521,7 +540,10 @@ let rules symbols2 autosize node =
         (match from with
         | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
         | Imsr (Shift _) -> error node "TODO"
-        | Ximm _ -> error node "TODO"
+        | Ximm _ -> 
+            if size = Word 
+            then raise (Impossible "pattern covered before")
+            else error node "illegal combination"
         | Indirect _ | Param _ | Local _ | Entity _ ->
             let (rbase, offset) = 
               base_and_offset_of_indirect node symbols2 autosize from in
@@ -539,9 +561,10 @@ let rules symbols2 autosize node =
     (* note that works for Byte Signed and Unsigned here *)
     | MOVE ((Word | Byte _) as size, opt, Imsr (Reg rf), dest) ->
         (match dest with
-        | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
-        | Imsr (Shift _) -> error node "TODO"
-        | Ximm _ -> error node "TODO"
+        | Imsr (Reg _) -> raise (Impossible "pattern covered before")
+        (* stricter: better error message *)
+        | Imsr _ | Ximm _ -> 
+            error node "illegal to store in an (extended) immediate"
         | Indirect _ | Param _ | Local _ | Entity _ ->
             let (rbase, offset) = 
               base_and_offset_of_indirect node symbols2 autosize dest in
@@ -585,7 +608,7 @@ let rules symbols2 autosize node =
 (*****************************************************************************)
 
 let size_of_instruction symbols2 autosize node =
-  let action  = rules symbols2 autosize node in
+  let action  = rules symbols2 autosize None node in
   action.size, action.pool
 
 let gen symbols2 config cg =
@@ -596,7 +619,7 @@ let gen symbols2 config cg =
 
   cg |> T5.iter (fun n ->
 
-    let {size; binary }  = rules symbols2 !autosize n in
+    let {size; binary }  = rules symbols2 !autosize config.T.init_data n in
     let instrs = binary () in
 
     if n.T5.real_pc <> !pc

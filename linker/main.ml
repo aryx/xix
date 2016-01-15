@@ -80,6 +80,8 @@ let main () =
     "-E", Arg.Set_string init_entry,
     " <str> entry point";
 
+    "-debug_layout", Arg.Set Flag.debug_layout,
+    " debug code generation";
     "-debug_gen", Arg.Set Flag.debug_gen,
     " debug code generation";
   ]

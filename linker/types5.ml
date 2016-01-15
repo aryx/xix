@@ -64,7 +64,7 @@ let s_of_ent ent =
 
 let rec iter f n =
   f n;
-  n.next |> Common.if_some (iter f)
+  n.next |> Common.if_some (fun n -> iter f n)
 
 let rec iter_with_env f env n =
   let env = f env n in

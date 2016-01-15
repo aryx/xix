@@ -23,8 +23,12 @@ type composed_word = (int * int) list
 type mem_opcode = LDR | STR
 
 type pool =
-  | PoolOperand of int
-  | LPOOL (* todo: still don't know why we need that *)
+  (* note that it is not always an int! Sometimes it can be an
+   * Address which will be resolved only at the very end.
+   *)
+  | PoolOperand of imm_or_ximm
+  (* todo: still don't know why we need that *)
+  | LPOOL 
 
 (*****************************************************************************)
 (* Helpers *)
@@ -472,6 +476,45 @@ let rules symbols2 autosize node =
     (* Memory *)
     (* --------------------------------------------------------------------- *)
 
+    (* Address *)
+    | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
+        (match ximm with
+        | String _ -> error node "TODO"
+        | Address ent ->
+            let from_part_when_small_offset_to_R12 =
+              try 
+                let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+                match v with
+                | T.SData2 offset | T.SBss2 offset ->
+                    let final_offset = offset_to_R12 offset in
+                    immrot final_offset
+                    (* super important extra condition! for bootstrapping
+                     * setR12 in MOVW $setR12(SB), R12 and not
+                     * transform in ADD offset_set_R12, R12, R12.
+                     *)
+(*TODO JUST TO TEST                    && final_offset <> 0 *)
+                     
+                | T.SText2 _ -> None
+              (* layout_text has not been fully done yet so we may have
+               * the address of a procedure we don't know yet
+               *)
+              with Not_found -> None
+            in
+            (match from_part_when_small_offset_to_R12 with
+            | Some (rot, v) ->
+              (* MOVW $x(SB), RT -> ADD $offset_to_r12, R12, RT  *)
+              { size = 4; pool = None; binary = (fun () ->
+                let (R r) = rSB in
+                [[gcond cond; (1, 25); gop_arith ADD; (r, 16); (rt, 12); 
+                  (rot, 8); (v, 0)]]
+            )}
+            | None -> 
+              { size = 8; pool=Some(PoolOperand(Right ximm)); binary=(fun () ->
+                raise Todo
+              )}
+            )
+        )
+
     (* Load *)
 
     | MOVE ((Word | Byte Unsigned) as size, opt, from, Imsr (Reg rt)) ->
@@ -513,7 +556,6 @@ let rules symbols2 autosize node =
 
     (* Swap *)
 
-    (* Address *)
 
     (* Half words and signed bytes *)
 

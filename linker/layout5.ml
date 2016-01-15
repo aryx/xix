@@ -116,7 +116,10 @@ let layout_text symbols2 init_text cg =
                          (T5.s_of_loc n.T5.loc))
       );
     poolopt |> Common.if_some (fun pool ->
-      raise Todo
+      match pool with
+      | Codegen5.LPOOL -> pr2 "TODO: LPOOL"
+      | Codegen5.PoolOperand imm_or_ximm ->
+          raise Todo
     );
     pc := !pc + size
   );

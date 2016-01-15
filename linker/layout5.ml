@@ -71,7 +71,7 @@ let layout_data symbols ds =
     | _ -> ()
   );
   orig := Common.rnd !orig 8;
-  let bss_size = !orig in
+  let bss_size = !orig - data_size in
 
   (* define special symbols *)
   xdefine h2 symbols ("bdata", T.Public) (T.SData2 0);

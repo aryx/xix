@@ -209,7 +209,7 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
       
       [gcond cond; (0x5, 25);
        (if is_bl then (0x1, 24) else (0x0, 24)); 
-       (v,0) 
+       (v land 0xffffff,0) 
        ]
 
 

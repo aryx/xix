@@ -17,9 +17,10 @@
  (join-string 
   (list 
    ""
-   (case 2
+   (case 3
      (1 (concat p "/linker/test.5"))
      (2 (concat p "/linker/helloworld.5"))
+     (3 (concat (concat p "/linker/hello.5") " " (concat p "/linker/world.5")))
      )
    )))
 

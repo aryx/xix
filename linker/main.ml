@@ -88,7 +88,7 @@ let main () =
   in
   Arg.parse options (fun f -> infiles := f::!infiles) usage;
 
-  (match !infiles with
+  (match List.rev !infiles with
   | [] -> 
       Arg.usage options usage; 
       exit (-1)

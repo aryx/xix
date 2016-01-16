@@ -42,17 +42,19 @@ let resolve ps =
           | Relative i -> 
               opd := Absolute (!pc + i)
           | LabelUse (lbl, i) ->
-            (try
-               let pc = Hashtbl.find h lbl in
-               opd := Absolute (pc + i)
-             with Not_found ->
-               failwith (spf "undefined label: %s, at line %d" lbl line)
-            )
+              (try
+                 let pc = Hashtbl.find h lbl in
+                 opd := Absolute (pc + i)
+               with Not_found ->
+                 failwith (spf "undefined label: %s, at line %d" lbl line)
+               )
           | Absolute _ -> 
               raise (Impossible "Absolute can't be made via assembly syntax")
         in
         (match inst with
-        (* less: could issue warning if cond <> AL when B or Bxx *)
+        (* less: could issue warning if cond <> AL when B or Bxx,
+         * or normalize?
+         *)
         | B opd | BL opd | Bxx (_, opd) -> resolve_branch_operand opd
         | _ -> ()
         );

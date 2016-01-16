@@ -2,6 +2,8 @@
 open Common
 
 type header = {
+  magic: int;
+
   text_size: int;
   data_size: int;
   bss_size: int;
@@ -12,6 +14,7 @@ type header = {
   entry: int;
 }
 
+(* a.out uses big-endian integers even on low-endian architectures *)
 let lput chan word =
   if word < 0 
   then raise (Impossible (spf "should call lput with uint not %d" word));
@@ -26,8 +29,10 @@ let lput chan word =
   output_char chan x1;
   ()
 
+(* entry point *)
 let write_header header chan =
-  lput chan 0x647;
+  lput chan header.magic;
+
   lput chan header.text_size;
   lput chan header.data_size;
   lput chan header.bss_size;
@@ -36,4 +41,3 @@ let write_header header chan =
   lput chan 0;
   lput chan header.pc_size;
   ()
-  

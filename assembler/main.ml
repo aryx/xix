@@ -6,16 +6,17 @@ open Common
 (*****************************************************************************)
 (* An OCaml port of 5a, the Plan9 ARM assembler.
  *
- * Limitations compared to 5a:
- *  - no embedded macro processor (better to factorize, use cpp) but
- *    handle at least #line directives
- *  - no multiple files processing in parallel (not the place, use xargs)
+ * Main limitations compared to 5a:
+ *  - no embedded macro processor but handle at least the #line directive
+ *    (better to factorize, use external cpp)
+ *  - no multiple files processing in parallel 
+ *    (not the place, use xargs)
  * 
  * todo:
  *  - advanced instructions: floats, MULL, coprocessor, psr, etc
  *  - better Lexer_asm.error() and Parser_asm.error() using lines_directives?
- *    (actually prfile() was buggy
- *    gcc -I have #line for included file? can reconstruct tree?)
+ *    (actually prfile() was buggy. gcc -I have #line for included file? 
+ *     can reconstruct tree?)
  *)
 
 let thechar = '5'
@@ -31,9 +32,10 @@ let assemble5 dump infile outfile =
 
 
 let main () =
-  let infile = ref "" in
+  let infile  = ref "" in
   let outfile = ref "" in
-  let dump = ref false in
+  let dump    = ref false in
+
   let options = [
     "-o", Arg.Set_string outfile,
     " <file> output file";
@@ -53,16 +55,18 @@ let main () =
 
   if !infile = ""
   then begin Arg.usage options usage; exit (-1); end;
-  if !outfile = ""
-  then begin 
-    let b = Filename.basename !infile in
-    if b =~ "\\(.*\\)\\.s"
-    then outfile := Common.matched1 b ^ (spf ".%c" thechar)
-    else outfile := b ^ (spf ".%c" thechar)
-  end;
+  let outfile = 
+    if !outfile = ""
+    then
+      let b = Filename.basename !infile in
+      if b =~ "\\(.*\\)\\.s"
+      then Common.matched1 b ^ (spf ".%c" thechar)
+      else b ^ (spf ".%c" thechar)
+    else !outfile
+  in
 
   (* main call *)
-  assemble5 !dump !infile !outfile
+  assemble5 !dump !infile outfile
   
 
 let _ = 

@@ -16,7 +16,7 @@ open Parser_asm5
  *    (but better to factorize code and separate concerns anyway)
  *)
 
-(* TODO: do like prfile? but then would a lines_directives global *)
+(* less: do like prfile? but then need a lines_directives global? *)
 let error s =
   failwith (spf "Lexical error: %s (line %d)" s !Globals.line)
 
@@ -58,6 +58,7 @@ rule token = parse
   | "//" [^'\n']* { token lexbuf }
   | "/*"          { comment lexbuf }
 
+  (* newlines are converted in fake semicolons for the grammar *)
   | '\n' { let old = !Globals.line in incr Globals.line; TSEMICOLON old }
 
   (* ----------------------------------------------------------------------- *)
@@ -119,7 +120,6 @@ rule token = parse
       | "BGE" -> TBx (GE Signed) | "BLE" -> TBx (LE Signed)
       | "BHI" -> TBx (GT Unsigned) | "BLO" -> TBx (LT Unsigned) 
       | "BHS" -> TBx (GE Unsigned) | "BLS" -> TBx (LE Unsigned)
-
       | "BMI" -> TBx MI | "BPL" -> TBx PL 
       | "BVS" -> TBx VS | "BVC" -> TBx VC
 
@@ -144,6 +144,9 @@ rule token = parse
       | ".HS" -> TCOND (GE Unsigned) | ".LS" -> TCOND (LE Unsigned)
       | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
+
+      (* less: special bits *)
+      (* less: float, MUL, ... *)
 
       (* less: could impose is_lowercase? *)
       | _ -> TIDENT s

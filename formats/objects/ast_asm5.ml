@@ -16,7 +16,7 @@ open Common
  * TODO: 
  *  - floats,
  *  - MULA, MULL,
- *  - MOVM (and his special bits .IA), 
+ *  - MOVM (and his special bits .IA/...), 
  *  - PSR, MCR/MRC,
  *  - 5c only: CASE, BCASE, MULU/DIVU/MODU
  *)
@@ -85,6 +85,7 @@ type mov_operand =
   | Ximm of ximm
 
   | Indirect of register * offset
+
   (* those below are all specialized forms of Indirect *)
   | Param of symbol option * offset (* FP *)
   | Local of symbol option * offset (* SP *)
@@ -98,16 +99,16 @@ type mov_operand =
     | Address of entity
 (* with tarzan *)
 
-(* I use a ref so the code which resolves branches is shorter.
+(* I use a ref below so the code which resolves branches is shorter.
  * The ref is modified by the assembler and then linker.
- * less: I could transform labels in symbols early-on, but nice to
- * resolve as soon as we can.
  *)  
 type branch_operand = branch_operand2 ref
 and branch_operand2 =
 
   (* resolved by assembler *)
-  | Relative of int (* relative to PC, in units of virtual_code_address *)
+  (* relative to PC, in units of virtual_code_address *)
+  | Relative of int 
+  (* we could transform labels in symbols early-on, but nice to resolve ASAP *)
   | LabelUse of label * offset (* useful to have offset? *)
 
   (* resolved by linker *)
@@ -131,7 +132,7 @@ type instr =
 
   (* Memory *)
   | MOVE of move_size * move_option *
-      mov_operand * mov_operand (* virtual *)
+      mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
   | SWAP of move_size (* actually only (Byte x) *) * 
        register (* indirect *) * register * register option
 
@@ -141,7 +142,7 @@ type instr =
   | RET (* virtual *)
   | Cmp of cmp_opcode * arith_operand * register
   (* just Relative or LabelUse here for branch_operand *)
-  | Bxx of condition * branch_operand (* virtual, sugar *) 
+  | Bxx of condition * branch_operand (* virtual, sugar for B.XX *) 
 
   (* System *)
   | SWI of int (* value actually unused in plan9 *)
@@ -154,8 +155,8 @@ type instr =
   and arith_opcode = 
     (* logic *)
     | AND | ORR | EOR
-    (* arith *)
-    | ADD | SUB | MUL | DIV | MOD (* DIV and MOD are virtual *)
+    (* arithmetic *)
+    | ADD | SUB   | MUL   | DIV | MOD (* DIV and MOD are virtual *)
     (* bit shifting; immediate operand can only be between 0 and 31 *)
     | SLL | SRL | SRA (* virtual, sugar for bitshift register *)
     (* less useful *)
@@ -182,9 +183,10 @@ type instr =
     (* always/never *)
     | AL | NV
 
-   and move_size = Word | HalfWord of sign | Byte of sign
-   (* sign is relevant in MOV only for a load operation *)
+   (* in a MOVE, sign is relevant only for a load operation *)
    and sign = Signed | Unsigned
+
+   and move_size = Word | HalfWord of sign | Byte of sign
    and move_option = move_cond option
      (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
@@ -199,9 +201,7 @@ type pseudo_instr =
   (* any ximm? even String? And Float? for float should have DWORD? *)
   | WORD of imm_or_ximm
 
-  and attributes = attribute list
-  and attribute = DUPOK | NOPROF
-
+  and attributes = { dupok: bool; prof: bool }
   and imm_or_ximm = (integer, ximm) Common.either
 (* with tarzan *)
 
@@ -211,8 +211,7 @@ type pseudo_instr =
 
 type line = 
   | Pseudo of pseudo_instr
-  (* condition should be AL for B and Bxx instructions *)
-  | Instr of instr * condition (* TODO special bits or put before? *)
+  | Instr of instr * condition (* cond should be AL for B/Bxx instructions *)
 
   (* disappear after resolve *)
   | LabelDef of label

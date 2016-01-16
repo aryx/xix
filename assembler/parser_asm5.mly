@@ -24,13 +24,18 @@ open Ast_asm5
 let error s =
   failwith (spf "Syntax error: %s at line %d" s !Globals.line)
 
+let noattr = { dupok = false; prof = true }
+
 (* less: should use keywords in Asm5 instead of abuse integers *)
 let attributes_of_int i =
    match i with 
-   | 0 -> [] 
-   | 1 -> [NOPROF] 
-   | 2 -> [DUPOK]
-   | 3 -> [DUPOK; NOPROF]
+   | 0 -> noattr
+   (* NOPROF *)
+   | 1 -> { dupok = false; prof = false }
+   (* DUPOK *)
+   | 2 -> { dupok = true; prof = true }
+   (* both DUPOK and NOPROF *)
+   | 3 -> { dupok = true; prof = false }
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
 
 let mk_e name static = 
@@ -139,7 +144,7 @@ line:
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
  | label_def line  { $1::$2 }
 
- /*(*pad: I added that, was handled via global originally *)*/
+ /*(*pad: I added that, was handled via a global originally *)*/
  | TSharpLine    TSEMICOLON { [(LineDirective (fst $1, snd $1), $2)] }
 
 label_def: TIDENT TCOLON    { (LabelDef $1, !Globals.line) }
@@ -150,9 +155,9 @@ label_def: TIDENT TCOLON    { (LabelDef $1, !Globals.line) }
 /*(* can't factorize in attr_opt, shift/reduce conflict with TCOMMA *)*/
 pseudo_instr:
  | TTEXT  entity TCOMMA imm    
-     { TEXT  ($2, [], $4) }
+     { TEXT  ($2, noattr, $4) }
  | TGLOBL entity TCOMMA imm    
-     { GLOBL ($2, [], $4) }
+     { GLOBL ($2, noattr, $4) }
 
  /*(* less: would be better to have mnemonics for attributes too *)*/
  | TTEXT entity TCOMMA con TCOMMA imm

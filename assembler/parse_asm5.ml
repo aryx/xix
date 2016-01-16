@@ -10,4 +10,3 @@ let parse file =
     with Parsing.Parse_error ->
       failwith (spf "Syntax error: line %d" !Globals.line)
   )
-

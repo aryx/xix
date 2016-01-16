@@ -196,11 +196,16 @@ let rec vof_pseudo_instr =
       and v4 = vof_imm_or_ximm v4
       in Ocaml.VSum (("DATA", [ v1; v2; v3; v4 ]))
   | WORD v1 -> let v1 = vof_imm_or_ximm v1 in Ocaml.VSum (("WORD", [ v1 ]))
-and vof_attributes v = Ocaml.vof_list vof_attribute v
-and vof_attribute =
-  function
-  | DUPOK -> Ocaml.VSum (("DUPOK", []))
-  | NOPROF -> Ocaml.VSum (("NOPROF", []))
+
+and vof_attributes { dupok = v_dupok; prof = v_prof } =
+  let bnds = [] in
+  let arg = Ocaml.vof_bool v_prof in
+  let bnd = ("prof", arg) in
+  let bnds = bnd :: bnds in
+  let arg = Ocaml.vof_bool v_dupok in
+  let bnd = ("dupok", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+
+
 and vof_imm_or_ximm v = Ocaml.vof_either vof_integer vof_ximm v
   
 let vof_line =

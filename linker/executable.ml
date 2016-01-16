@@ -33,6 +33,9 @@ let gen config sizes cs ds symbols2 outfile =
   then failwith (spf "executable format not supported: %s" format);
 
   let header = { A_out.
+     (* Plan9 ARM *)
+     magic = 0x647;
+
      text_size = sizes.T.text_size;
      data_size = sizes.T.data_size;
      bss_size = sizes.T.bss_size;

@@ -4,7 +4,8 @@ let rec join_gen a = function
   | [x] -> [x]
   | x::xs -> x::a::(join_gen a xs)
 
-let command2 s = ignore(Sys.command s)
+let command2 s = 
+  ignore(Sys.command s)
 
 
 (* julia: convert something printed using format to print into a string *)

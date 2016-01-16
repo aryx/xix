@@ -6,6 +6,7 @@ let spf = Printf.sprintf
 
 type ('a, 'b) either = Left of 'a | Right of 'b
 
+
 let with_file_out f file = 
   let chan = open_out file in
   let res = f chan in
@@ -29,6 +30,7 @@ let rec rnd x v =
   then x
   else rnd (x+1) v
 
+
 (* used to be called do_option, or opt *)
 let if_some f = function
   | None -> ()
@@ -41,8 +43,22 @@ let rec filter_some = function
 
 let map_filter f xs = xs |> List.map f |> filter_some
 
+
+
 let exclude p xs =
   xs |> List.filter (fun x -> not (p x))
+
+let sort_by_val_highfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
+let sort_by_val_lowfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare v1 v2) xs
+
+let sort_by_key_highfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare k2 k1) xs
+let sort_by_key_lowfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs
+
+
 
 let memoized ?(use_cache=true) h k f =
   if not use_cache
@@ -55,6 +71,10 @@ let memoized ?(use_cache=true) h k f =
         Hashtbl.add h k v;
         v
       end
+
+
+
+
 
 let (matched: int -> string -> string) = fun i s ->
   Str.matched_group i s
@@ -77,6 +97,9 @@ let candidate_match_func s re =
 
 let (=~) s re =
   candidate_match_func s re
+
+
+
 
 
 (* start of dumper.ml *)
@@ -181,12 +204,3 @@ let pr2 s =
 let pr2_gen x = pr2 (dump x)
 
 
-let sort_by_val_highfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
-let sort_by_val_lowfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare v1 v2) xs
-
-let sort_by_key_highfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare k2 k1) xs
-let sort_by_key_lowfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs

@@ -186,6 +186,10 @@ let gop_rcon x =
   | Left (R r) -> [(r,8); (1, 4)]
   | Right i    -> [(i, 7); (0, 4)]
 
+
+
+
+
 let gshift (R rf) op2 rcon = 
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 

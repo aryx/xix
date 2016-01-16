@@ -106,12 +106,6 @@ let immrot x =
 
 let immoffset x =
   (x >= 0 && x <= 0xfff) || (x < 0 && x >= -0xfff)
-(* job done already by gmem
-  match () with
-  | _ when x >= 0 && x <= 0xfff -> Some [(1, 24); (1, 23); (v, 0)]
-  | _ when x < 0 && x >= -0xfff -> Some [(1, 24); (0, 23); (-v, 0)]
-  | _ -> None
-*)
 
 (*****************************************************************************)
 (* Code generation helpers *)

@@ -9,16 +9,26 @@ module T = Types
 (* An OCaml port of 5l, the Plan9 ARM linker.
  *
  * Limitations compared to 5l:
- * - the -E digit
- * - the extensions/optimisations about small data, string in text, more??
+ * - the -E digit 
+ *   (what was it anyway?)
+ * - the optimisations about small data, strings in text section
+ *   (really gain?)
  * - the extensions not yet understood (import/export, dynamic linking)
  * - half word specialized instructions and immhalf()
+ *   (rare instructions anyway no?)
+ * - address of parameter or local is not supported
+ *   (why would you want that? 5c generates that?)
  * 
  * todo?:
+ *  - arith LCON less: NCON
+ *  - half word and byte load/store basic version
+ *  - endianess and datagen
+ *  - advanced instructions: floats, MULL, coprocessor, psr, etc
+ *  - library, but need 5c in ocaml first I think, libpath
  *  - profiling -p
- *  - symbol table, program counter line table
- *  - nice error reporting for signature conflict
- *  - library input files, libpath
+ *  - symbol table
+ *  - program counter line table
+ *  - nice error reporting for signature conflict, conflicting objects
  *)
 
 let thechar = '5'

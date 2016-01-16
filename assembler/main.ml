@@ -12,7 +12,7 @@ open Common
  *  - no multiple files processing in parallel (not the place, use xargs)
  * 
  * todo:
- *  - advanced instructions: floats, MULL, etc
+ *  - advanced instructions: floats, MULL, coprocessor, psr, etc
  *  - better Lexer_asm.error() and Parser_asm.error() using lines_directives?
  *    (actually prfile() was buggy
  *    gcc -I have #line for included file? can reconstruct tree?)

@@ -58,19 +58,18 @@ type entity = {
 (* ------------------------------------------------------------------------- *)
 
 type register = R of int (* between 0 and 15 *)
- (* with tarzan *)
 (* reserved by linker *)
 let rTMP = R 11
-let rSB = R 12
-let rSP = R 13
+let rSB  = R 12
+let rSP  = R 13
 (* reserved by hardware *)
 let rLINK = R 14
-let rPC = R 15
+let rPC   = R 15
 
 type arith_operand =
   | Imm of integer (* characters are converted to integers *)
   | Reg of register
-  (* can not be used with shift opcodes SLL/SRL/SRA *)
+  (* can not be used with shift opcodes (SLL/SRL/SRA) *)
   | Shift of register * shift_reg_op * 
              (register, int (* between 0 and 31 *)) Common.either
 
@@ -137,7 +136,7 @@ type instr =
        register (* indirect *) * register * register option
 
   (* Control flow *)
-  | B of branch_operand
+  | B  of branch_operand
   | BL of branch_operand
   | RET (* virtual *)
   | Cmp of cmp_opcode * arith_operand * register

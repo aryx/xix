@@ -2,7 +2,7 @@
 
 (* todo: use absolute path? realpath? *)
 type object_code = 
-  Ast_asm5.program * Common.filename
+  Ast_asm5.program * Common.filename (* src file *)
 
 (* less: could be sha1 of ast_asm5.ml for safe marshalling *)
 let version = 4

@@ -17,7 +17,7 @@ type header = {
 (* a.out uses big-endian integers even on low-endian architectures *)
 let lput chan word =
   if word < 0 
-  then raise (Impossible (spf "should call lput with uint not %d" word));
+  then raise (Impossible (spf "should call lput with a uint not %d" word));
 
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in

@@ -51,7 +51,8 @@ let sanity_check_composed_word n xs =
         | _ when bit2 >= bit -> error n ("composed word not sorted: " ^ dbg)
         | _ when x < 0       -> error n (spf "negative value %d: %s" x dbg)
         | _ when size <= 0   -> error n (spf "no space for value %d: %s" x dbg)
-        | _ when x >= 1 lsl (size + 1) ->
+        (* if size = 2 then maxval = 3 so x >= 2^2 (= 1 lsl 2) then error *)
+        | _ when x >= 1 lsl size ->
             error n (spf "value %d overflow outside its space (%d - %d): %s "
                        x bit bit2 dbg)
         | _ -> ()
@@ -74,7 +75,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
   match x with
   | Indirect (r, off) -> r, off 
   | Param (_s, off) ->
-      (* remember that +4 here is because we access the frame of the
+      (* remember that the +4 below is because we access the frame of the
        * caller which for sure is not a leaf. Note that autosize
        * here had possibly a +4 done if the current function
        * was a leaf, but still we need another +4 because what matters
@@ -88,7 +89,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
       (match v with
       | T.SData2 offset | T.SBss2 offset -> 
           rSB, offset_to_R12 (offset + off)
-      (* stricter: allowed in 5l I think but wrong codegen I think *)
+      (* stricter: allowed in 5l but I think with wrong codegen *)
       | T.SText2 _ -> 
           error node (spf "use of procedure %s in indirect with offset"
                        (T5.s_of_ent ent))
@@ -187,8 +188,9 @@ let gop_rcon x =
   | Right i    -> [(i, 7); (0, 4)]
 
 
-
-
+(*****************************************************************************)
+(* More complex code generation helpers *)
+(*****************************************************************************)
 
 let gshift (R rf) op2 rcon = 
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
@@ -204,7 +206,6 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
       then raise (Impossible "layout text wrong, not word aligned node");
       let v = (v asr 2) land 0xffffff in
       (* less: stricter: warn if too big, but should never happens *)
-      
       [gcond cond; (0x5, 25);
        (if is_bl then (0x1, 24) else (0x0, 24)); 
        (v, 0) 
@@ -216,7 +217,7 @@ let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
 let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   [gcond cond; (0x1, 26) ] @
   (match opt with
-  | None ->                  [(1, 24)] (* pre offset write *)
+  | None ->                  [(1, 24)] (* pre offset *)
   | Some PostOffsetWrite ->  [(0, 24)]
   | Some WriteAddressBase -> [(1, 24); (1, 21)]
   ) @
@@ -243,11 +244,12 @@ let gload_from_pool { T5. branch; real_pc = src_pc } cond rt =
   match branch with
   | None -> raise (Impossible "literal pool should be attached to node")
   | Some n ->
+      (* less: could assert the dst node is a WORD *)
       let dst_pc = n.T5.real_pc in
       let v = (dst_pc - src_pc) - 8 in
       if v mod 4 <> 0
       then raise (Impossible "layout text wrong, not word aligned node");
-      (* LDR v(R15), R11 *)
+      (* LDR v(R15), RT (usually R11) *)
       gmem cond LDR Word None (Left v) rPC rt
       
 
@@ -256,7 +258,8 @@ let gload_from_pool { T5. branch; real_pc = src_pc } cond rt =
 (*****************************************************************************)
 
 type action = {
-  size: int;
+  (* a multiple of 4 *)
+  size: int; 
   pool: pool option;
   binary: unit -> composed_word list;
 }
@@ -279,22 +282,21 @@ let rules symbols2 autosize init_data node =
   | T5.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
         match x with
-        | Left i -> [ [(i, 0)] ]
+        | Left i -> [ [(i land 0xffffffff, 0)] ]
         | Right (String s) -> 
             (* stricter? what does 5l do with that? confusing I think *)
-            error node "string not allowed with WORD, use DATA"
+            error node "string not allowed with WORD; use DATA"
         | Right (Address ent) -> 
             let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
             (match v with
-             | T.SText2 real_pc -> [ [real_pc, 0] ]
+             | T.SText2 real_pc -> [ [(real_pc, 0)] ]
              | T.SData2 offset | T.SBss2 offset -> 
                  (match init_data with
-                 | None -> raise (Impossible "init_data should be set")
-                 | Some init_data -> [ [init_data + offset, 0] ]
+                 | None -> raise (Impossible "init_data should be set by now")
+                 | Some init_data -> [ [(init_data + offset, 0)] ]
                  )
             )
-        )
-      }
+      )}
 
   | T5.I (instr, cond) ->
     (match instr with
@@ -319,7 +321,7 @@ let rules symbols2 autosize init_data node =
           | Imm i ->
               (match immrot i with
               | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
-              | None -> error node "TODO"
+              | None -> error node "TODO: LCON"
               )
         in
         { size = 4; pool = None; binary = (fun () ->
@@ -354,7 +356,7 @@ let rules symbols2 autosize init_data node =
         let rf =
           match from with
           | Reg (R rf) -> rf
-          (* stricter: not stricter but better error message at least *)
+          (* stricter: better error message *)
           | Shift _ | Imm _ ->
               error node "MUL can take only register operands"
         in
@@ -407,7 +409,7 @@ let rules symbols2 autosize init_data node =
     (* MOVBU R, RT -> ADD 0xff, R, RT *)
     | MOVE (Byte Unsigned, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
         { size = 4; pool = None; binary = (fun () ->
-          [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff,0)]]
+          [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff, 0)]]
         )}
 
     (* MOVB RF, RT  -> SLL 24, RF, RT; SRA 24, RT, RT -> MOV (RF << 24), RT;...
@@ -434,6 +436,7 @@ let rules symbols2 autosize init_data node =
           ]
         )}
 
+    | Arith ((DIV|MOD), _, _, _, _) -> error node "TODO: DIV/MOD"
 
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
@@ -447,7 +450,7 @@ let rules symbols2 autosize init_data node =
           (* B (R) -> ADD 0, R, PC *)
           | IndirectJump (R r) ->
               let (R rt) = rPC in
-              [ [(1, 25); gop_arith ADD; (r, 16); (rt, 12); (0, 0)] ]
+              [ [gcond AL; (1, 25); gop_arith ADD; (r, 16); (rt, 12); (0, 0)] ]
           | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )}
     | BL x ->
@@ -456,18 +459,17 @@ let rules symbols2 autosize init_data node =
             { size = 4; pool = None; binary = (fun () ->
               [ gbranch_static node AL true ]
             )}
-        (* BL (R) -> ADD 0, PC, LINK; ADD 0, R, PC *)
+        (* BL (R) -> ADD $0, PC, LINK; ADD $0, R, PC *)
         | IndirectJump (R r) ->
            { size = 8; pool = None; binary = (fun () ->
              let (R r2) = rPC in
              let (R rt) = rLINK in
               [ 
-                (* remember that when PC is involved in input operand
-                 * there is an implicit +8 which is perfect for our case
-                 * here
+                (* Remember that when PC is involved in input operand
+                 * there is an implicit +8 which is perfect for our case.
                  *)
-                [(1, 25); gop_arith ADD; (r2, 16); (rt, 12); (0, 0)];
-                [(1, 25); gop_arith ADD; (r, 16); (r2, 12); (0, 0)];
+                [gcond cond;(1, 25); gop_arith ADD; (r2, 16); (rt, 12); (0, 0)];
+                [gcond cond;(1, 25); gop_arith ADD; (r, 16);  (r2, 12); (0, 0)];
               ]
              )}
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
@@ -479,12 +481,14 @@ let rules symbols2 autosize init_data node =
         (match !x with
         | Absolute _ -> 
             { size = 4; pool = None; binary = (fun () ->
-              [ gbranch_static node cond2 true ]
+              [ gbranch_static node cond2 false ]
             )}
         (* stricter: better error message at least? *)
         | IndirectJump _ -> error node "Bxx supports only static jumps"
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )
+
+    | RET | NOP -> raise (Impossible "rewrite should have transformed RET/NOP")
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
@@ -495,7 +499,7 @@ let rules symbols2 autosize init_data node =
         (match ximm with
         | String _ -> 
             (* stricter? what does 5l do with that? confusing I think *)
-            error node "string not allowed in MOVW, use DATA"
+            error node "string not allowed in MOVW; use DATA"
         | Address ent ->
             let from_part_when_small_offset_to_R12 =
               try 
@@ -503,9 +507,9 @@ let rules symbols2 autosize init_data node =
                 match v with
                 | T.SData2 offset | T.SBss2 offset ->
                     let final_offset = offset_to_R12 offset in
-                    (* super important extra condition! for bootstrapping
+                    (* super important condition! for bootstrapping
                      * setR12 in MOVW $setR12(SB), R12 and not
-                     * transform in ADD offset_set_R12, R12, R12.
+                     * transform it in ADD offset_set_R12, R12, R12.
                      *)
                     if final_offset = 0 
                     then None
@@ -536,7 +540,10 @@ let rules symbols2 autosize init_data node =
 
     | MOVE ((Word | Byte Unsigned) as size, opt, from, Imsr (Reg rt)) ->
         (match from with
-        | Imsr (Imm _ | Reg _) -> raise (Impossible "pattern covered before")
+        | Imsr (Imm _ | Reg _) -> 
+            if size = Word 
+            then raise (Impossible "pattern covered before")
+            else error node "illegal combination?"
         | Imsr (Shift _) -> error node "TODO"
         | Ximm _ -> 
             if size = Word 
@@ -551,7 +558,7 @@ let rules symbols2 autosize init_data node =
                 [ gmem cond LDR size opt (Left offset) rbase rt ]
               )}
             else
-              error node "TODO"
+              error node "TODO: Large offset"
         )
 
     (* Store *)
@@ -572,13 +579,19 @@ let rules symbols2 autosize init_data node =
                 [ gmem cond STR size opt (Left offset) rbase rf ]
               )}
             else
-              error node "TODO"
+              error node "TODO: store with large offset"
         )
 
     (* Swap *)
-
+    | SWAP _ -> error node "TODO: SWAP"
 
     (* Half words and signed bytes *)
+    | MOVE ((HalfWord _ | Byte _), opt, from, dest) -> 
+        error node "TODO: half"
+
+    | MOVE (Word, opt, from, dest) ->
+       (* stricter: better error message *)
+       error node "illegal combination: at least one operand must be a register"
 
     (* --------------------------------------------------------------------- *)
     (* System *)
@@ -586,6 +599,7 @@ let rules symbols2 autosize init_data node =
     | SWI i ->
         if i <> 0
         then error node (spf "SWI does not use its parameter under Plan9");
+
         { size = 4; pool = None; binary = (fun () ->
           [ [gcond cond; (0xf, 24)] ]
         )}
@@ -598,7 +612,7 @@ let rules symbols2 autosize init_data node =
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)
-    | _ -> error node "illegal combination"
+(*    | _ -> error node "illegal combination"*)
     )
 
 (*****************************************************************************)
@@ -609,11 +623,14 @@ let size_of_instruction symbols2 autosize node =
   let action  = rules symbols2 autosize None node in
   action.size, action.pool
 
+
 let gen symbols2 config cg =
 
-  let pc = ref config.T.init_text in
-  let autosize = ref 0 in
   let res = ref [] in
+  let autosize = ref 0 in
+
+  (* just for sanity checking *)
+  let pc = ref config.T.init_text in
 
   cg |> T5.iter (fun n ->
 
@@ -648,6 +665,7 @@ let gen symbols2 config cg =
 
     pc := !pc + size;
     (match n.T5.instr with
+    (* after the resolve phase the size of a TEXT is the final autosize *)
     | T5.TEXT (_, _, size) -> autosize := size;
     | _ -> ()
     );

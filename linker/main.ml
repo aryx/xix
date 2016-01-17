@@ -114,6 +114,7 @@ let main () =
             { T.
               header_type = "a.out";
               header_size = 32;
+              (* 4128 = 4096 (1 page) + 32 (the header) *)
               init_text  = (match !init_text  with Some x -> x | None -> 4128);
               init_round = (match !init_round with Some x -> x | None -> 4096);
               init_data = !init_data;
@@ -127,7 +128,6 @@ let main () =
       (* the main call *)
       link config xs !outfile
   )
-  
 
 let _ = 
   main ()

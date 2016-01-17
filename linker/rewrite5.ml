@@ -34,6 +34,7 @@ let rewrite cg =
           | BL _ -> 
               curtext |> Common.if_some (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
+          (* remove the NOP *)
           | NOP ->
               prev_no_nop |> Common.if_some (fun prev ->
                 prev.T5.next <- n.T5.next;
@@ -55,7 +56,7 @@ let rewrite cg =
     | T5.TEXT (ent, attrs, size) ->
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
-                         ent.name);
+                         (T5.s_of_ent ent));
         if size < 0 
         then failwith "TODO: handle size local -4";
         
@@ -67,6 +68,7 @@ let rewrite cg =
         autosize_opt |> Common.if_some (fun autosize ->
           (* for layout text we need to set the final autosize *)
           n.T5.instr <- T5.TEXT (ent, attrs, autosize);
+          (* MOVW.W R14, -autosize(SP) *)
           let n1 = { T5.
             instr = T5.I (MOVE (Word, Some WriteAddressBase, 
                               Imsr (Reg rLINK), 
@@ -85,7 +87,9 @@ let rewrite cg =
     | T5.I (RET, cond) ->
         n.T5.instr <- T5.I
           ((match autosize_opt with
+           (* B (R14) *)
            | None -> B (ref (IndirectJump (rLINK)))
+           (* MOVW.P autosize(SP), PC *)
            | Some autosize -> MOVE (Word, Some PostOffsetWrite,
                                    Indirect (rSP, autosize), 
                                    Imsr (Reg rPC))

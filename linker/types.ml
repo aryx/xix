@@ -4,7 +4,7 @@ open Common
 type symbol = string * scope
    and scope =
      | Public
-     | Private of int (* represents a unique filename *)
+     | Private of int (* represents a unique filename, less: use filename? *)
 
 (* increments by 1 *)
 type virt_pc = int
@@ -36,7 +36,7 @@ type symbol_table = (symbol, value) Hashtbl.t
 
 (* after layout *)
 type section2 =
-  | SText2 of real_pc (* less: add auto_size information? *)
+  | SText2 of real_pc
   (* offset to start of data section for ARM *)
   | SData2 of offset
   | SBss2 of offset
@@ -77,7 +77,6 @@ let lookup k sigopt h =
       (* todo: report also offending object files *)
       if i1 <> i2
       then failwith (spf "incompatible type signatures %d and %d" i1 i2)
-      else ()
   (* less: could report error when one define sig and not other *)
   | _ -> ()
   );

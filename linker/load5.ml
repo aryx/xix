@@ -11,6 +11,7 @@ let process_ent ent h idfile =
   | Some _ -> ent.priv <- Some idfile
   | None -> ()
   );
+  (* populate symbol table with SXref if new entity *)
   T5.lookup_ent ent h |> ignore
 
 (* Visit entities to populate symbol table with wanted symbols.
@@ -20,23 +21,23 @@ let process_ent ent h idfile =
  *  a visitor_asm5.ml
  *)
 let visit_entities f xs =
-  let rec ximm x =
+  let ximm x =
     match x with
     | Address ent -> f ent
     | String _ -> ()
   in
-  let rec imm_or_ximm x =
+  let imm_or_ximm x =
     match x with
     | Left _ -> ()
     | Right x -> ximm x
   in
-  let rec mov_operand x =
+  let mov_operand x =
     match x with
     | Entity (ent, _) -> f ent
     | Ximm x -> ximm x
     | Imsr _ | Indirect _ | Param _ | Local _ -> ()
   in
-  let rec branch_operand x =
+  let branch_operand x =
     match !x with
     | SymbolJump ent -> f ent
     | IndirectJump _ | Relative _ | LabelUse _ | Absolute _ -> ()
@@ -85,7 +86,7 @@ let load xs =
     (* less: assert it is a .5 file *)
     (* todo: if lib file! *)
 
-    (* object loading is so much easier in ocaml *)
+    (* object loading is so much easier in ocaml :) *)
     let (prog, _srcfile) = Object_code5.load file in
     (* less: could check valid AST, range of registers, shift values, etc *)
 
@@ -100,7 +101,7 @@ let load xs =
       | Pseudo pseudo ->
           (match pseudo with
           | TEXT (ent, attrs, size) ->
-              (* less: set curtext *)
+              (* less: set curtext for better error managment *)
               let v = T5.lookup_ent ent h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SText !pc;

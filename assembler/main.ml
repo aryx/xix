@@ -11,6 +11,7 @@ open Common
  *    (better to factorize, use external cpp)
  *  - no multiple files processing in parallel 
  *    (not the place, use xargs)
+ *  - no unicode support
  * 
  * todo:
  *  - advanced instructions: floats, MULL, coprocessor, psr, etc

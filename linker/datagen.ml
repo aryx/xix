@@ -17,7 +17,9 @@ let gen symbols2 init_data sizes ds =
         (match v with
         | Left i -> raise Todo
         | Right (String s) -> 
-            for i = 0 to size_slice -1 do arr.(base + i) <- s.[i] done
+            for i = 0 to size_slice -1 do 
+              arr.(base + i) <- s.[i] 
+            done
         | Right (Address ent2) ->
             let info2 = Hashtbl.find symbols2 (T5.symbol_of_entity ent2) in
             let _i = 

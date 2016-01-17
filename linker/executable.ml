@@ -4,9 +4,10 @@ open Common
 module T = Types
 module T5 = Types5
 
+(* little-endian put long (see also lput in a_out.ml for big-endian version) *)
 let lputl chan word =
   if word < 0 
-  then raise (Impossible (spf "should call lputl with uint not %d" word));
+  then raise (Impossible (spf "should call lputl with a uint not %d" word));
 
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in

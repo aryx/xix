@@ -22,14 +22,14 @@ let layout_data symbols ds =
 
   (* step0: identify Data vs Bss (and sanity check DATA instructions) *)
   ds |> List.iter (function
-    | T5.DATA (ent, offset, size_slice, _) ->
+    | T5.DATA (ent, offset, size_slice, _v) ->
         (* sanity checks *)
         (match (T5.lookup_ent ent symbols).T.section with
         | T.SData size ->
             if offset + size_slice > size
             then failwith (spf "initialize bounds (%d): %s" size
                              (T5.s_of_ent ent))
-        | T.SText _ -> failwith (spf "initialize TEXT, not data for %s"
+        | T.SText _ -> failwith (spf "initialize TEXT, not a GLOBL for %s"
                                    (T5.s_of_ent ent))
         | T.SXref -> raise (Impossible "SXRef detected by Check.check")
         );
@@ -51,6 +51,7 @@ let layout_data symbols ds =
   );
 
   let orig = ref 0 in
+
   (* step2: layout Data section *)
   symbols |> Hashtbl.iter (fun symb v ->
     match v.T.section with
@@ -74,12 +75,16 @@ let layout_data symbols ds =
   let bss_size = !orig - data_size in
 
   (* define special symbols *)
-  xdefine h2 symbols ("bdata", T.Public) (T.SData2 0);
-  xdefine h2 symbols ("edata", T.Public) (T.SData2 data_size);
-  xdefine h2 symbols ("end", T.Public) (T.SData2 (data_size + bss_size));
-  xdefine h2 symbols ("setR12", T.Public) (T.SData2 0);
-  (* this is incorrect but it will be corrected later *)
-  xdefine h2 symbols ("etext", T.Public) (T.SText2 0);
+  xdefine h2 symbols ("bdata"  , T.Public) (T.SData2 0);
+  xdefine h2 symbols ("edata"  , T.Public) (T.SData2 data_size);
+  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size));
+  xdefine h2 symbols ("setR12" , T.Public) (T.SData2 0);
+  (* This is incorrect but it will be corrected later. This has
+   * no consequence on the size of the code computed in layout_text
+   * because address resolution for procedures always use a literal
+   * pool.
+   *)
+  xdefine h2 symbols ("etext"  , T.Public) (T.SText2 0);
 
   h2, (data_size, bss_size)
 
@@ -92,7 +97,7 @@ let layout_text symbols2 init_text cg =
   (* less: could be a None, to be more precise, to detect use of local/param
    * outside a procedure. But anyway at frontier of objects we
    * are considered in TEXT of preceding obj which does not make
-   * much sense. (should do this kind of check in check.ml though)
+   * much sense (we should do this kind of check in check.ml though).
    *)
   let autosize = ref 0 in
   let literal_pools = ref [] in
@@ -126,6 +131,7 @@ let layout_text symbols2 init_text cg =
                            loc = n.T5.loc } in
           if node.T5.branch <> None
           then raise (Impossible "attaching literal to branching instruction");
+
           n.T5.branch <- Some node;
           literal_pools |> Common.push node;
           
@@ -135,10 +141,12 @@ let layout_text symbols2 init_text cg =
     (* flush pool *)
     (* todo: complex condition when possible out of offset range *)
     if n.T5.next = None && !literal_pools <> [] then begin
+      (* extend cg, and so the cg |> T5.iter, on the fly! *)
       let rec aux prev xs =
         match xs with
         | [] -> ()
         | x::xs ->
+            (* cg grows *)
             prev.T5.next <- Some x;
             aux x xs
       in

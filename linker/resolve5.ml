@@ -37,9 +37,11 @@ let build_graph symbols xs =
           | SymbolJump ent ->
               (* resolve branching to symbols *)
               (match (T5.lookup_ent ent symbols).T.section with
-              | T.SText virt_pc -> opd := Absolute virt_pc; Some virt_pc
+              | T.SText virt_pc -> 
+                  opd := Absolute virt_pc; 
+                  Some virt_pc
               | T.SXref -> raise (Impossible "SXRef raised by Check.check")
-              (* less: 5l converts them to SText 0 to avoid reporting
+              (* stricter: 5l converts them to SText 0 to avoid reporting
                * multiple times the same error but we fail early instead.
                *)
               | T.SData _ -> failwith "branching to a data symbol"

@@ -144,9 +144,11 @@ rule token = parse
   | [^'\'' '`'  '$' '{' '}'  ':' '=' '<'  '%'   '\n' '\\' '#' ' ' '\t']+ 
       { TOther (Lexing.lexeme lexbuf) }
 
+  | '\\' { TOther "\\" }
+
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
-  | _   { error "unrecognized character" }
+  | _ as c   { error (spf "unrecognized character: '%c'" c) }
 
 (*****************************************************************************)
 (* Rule quote *)

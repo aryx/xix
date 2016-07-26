@@ -8,6 +8,22 @@ let command2 s =
   ignore(Sys.command s)
 
 
+
+
+let enum x n =
+  if not(x <= n)
+  then failwith (Printf.sprintf "bad values in enum, expect %d <= %d" x n);
+  let rec enum_aux acc x n =
+    if x = n then n::acc else enum_aux (x::acc) (x+1) n
+  in
+  List.rev (enum_aux [] x n)
+
+let (list_of_string: string -> char list) = function
+    "" -> []
+  | s -> (enum 0 ((String.length s) - 1) |> List.map (String.get s))
+
+
+
 (* julia: convert something printed using format to print into a string *)
 let format_to_string f =
   let (nm,o) = Filename.open_temp_file "format_to_s" ".out" in

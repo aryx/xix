@@ -33,7 +33,13 @@ type rule_ = {
   is_meta: bool;
 }
   (* less: could make an enum *)
-  and rule_attribute = char
+  and rule_attribute = 
+    | Quiet
+    | Virtual
+    | Delete
+
+    (* less: not sure I want to handle them *)
+    | NotHandled of char
 
 type instr_kind =
   (* should resolve to a single filename *)

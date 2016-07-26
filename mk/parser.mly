@@ -9,24 +9,33 @@ open Ast
 (*****************************************************************************)
 (* 
  * todo:
- *  - good parsing error messages
+ *  - good parsing error messages, right now
  *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+let error_loc loc s =
+  failwith (spf "%s:%d: Syntax error; %s" loc.file loc.line s)
+
 let error s =
-  failwith (spf "%s:%d: Syntax error %s" !Globals.file !Globals.line s)
+  error_loc { file = !Globals.file; line = !Globals.line } s
 
 let contain_percent words =
   words |> List.exists (fun word ->
     word |> List.exists (fun word_elem -> word_elem = Percent)
   )
 
-let attrs_of_string s =
-  pr2 "TODO: attrs_of_string";
-  []
+let attrs_of_string loc s =
+  s |> Common2.list_of_string |> List.map (function
+    | 'Q' -> Quiet
+    | 'V' -> Virtual
+    | 'D' -> Delete
+    | ('N' | 'R' | 'n') as c  -> NotHandled c
+    | c -> error_loc loc (spf "rule attribute not supported: %c" c)
+  )
+
 
 %}
 
@@ -90,7 +99,8 @@ instr:
         }]
      }
  | words TColon TOther TColon words_opt TNewline recipe 
-     { [{instr = Rule { targets = $1; prereqs = $5; attr = attrs_of_string $3; 
+     { [{instr = Rule { targets = $1; prereqs = $5; 
+                        attr = attrs_of_string $2 $3; 
                         recipe = $7;
                         is_meta = contain_percent $1;
                        };

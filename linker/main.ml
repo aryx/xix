@@ -91,9 +91,9 @@ let main () =
     "-E", Arg.Set_string init_entry,
     " <str> entry point";
 
-    "-debug_layout", Arg.Set Flag.debug_layout,
+    "-debug_layout", Arg.Set Flags.debug_layout,
     " debug layout code";
-    "-debug_gen", Arg.Set Flag.debug_gen,
+    "-debug_gen", Arg.Set Flags.debug_gen,
     " debug code generation";
   ]
   in

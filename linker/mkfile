@@ -3,7 +3,7 @@
 TOP=..
 INCLUDES=-I $TOP/commons -I $TOP/formats/objects -I $TOP/formats/executables
 
-SRC= flag.ml\
+SRC= flags.ml\
  types.ml types5.ml meta_types5.ml \
  load5.ml check.ml resolve5.ml rewrite5.ml\
  codegen5.ml datagen.ml layout5.ml\

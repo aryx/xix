@@ -402,7 +402,7 @@ let rules symbols2 autosize init_data node =
               | None -> error node "TODO"
               )
         in
-        let r = if !Flag.kencc_compatible then rt else 0 in
+        let r = if !Flags.kencc_compatible then rt else 0 in
         { size = 4; pool = None; binary = (fun () ->
           [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ from_part]
         )}
@@ -646,7 +646,7 @@ let gen symbols2 config cg =
 
     let xs = instrs |> List.map Common.sort_by_val_highfirst in
     
-    if !Flag.debug_gen 
+    if !Flags.debug_gen 
     then begin 
       n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v |> pr2;
       pr2 "-->";

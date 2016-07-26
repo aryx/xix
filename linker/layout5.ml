@@ -155,7 +155,7 @@ let layout_text symbols2 init_text cg =
     end;
 
   );
-  if !Flag.debug_layout then begin
+  if !Flags.debug_layout then begin
     cg |> T5.iter (fun n ->
       pr2 (spf "%d: %s" n.T5.real_pc
              (n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v));

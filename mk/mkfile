@@ -1,0 +1,39 @@
+# -*- sh -*-
+
+TOP=..
+INCLUDES=-I $TOP/commons
+
+SRC= globals.ml \
+  ast.ml \
+  parser.ml lexer.ml parse.ml \
+  env.ml rules.ml job.ml   \
+  eval.ml graph.ml scheduler.ml shell.ml \
+  shellenv.ml  \
+  main.ml
+
+SYSLIBS=str.cma
+LIBS=$TOP/commons/lib.cma
+
+PROG=mk
+
+<$TOP/mkone
+
+beforedepend:V: lexer.ml parser.ml parser.mli
+
+
+depend:V: beforedepend
+
+distclean:V: clean
+	rm -f lexer.ml
+	rm -f parser.ml parser.mli parser.output
+
+lexer.ml: lexer.mll
+	$OCAMLLEX $prereq
+
+parser.ml parser.mli: parser.mly
+	$OCAMLYACC $prereq
+
+
+#loc:V:
+# mk distclean
+# wc -l *.ml*

@@ -3,6 +3,7 @@ TOP=..
 
 INCLUDES=-I .
 SRC=common.ml \
- common2.ml ocaml.ml
+ common2.ml ocaml.ml \
+ set.ml map.ml
 
 <$TOP/mklib

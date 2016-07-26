@@ -9,7 +9,7 @@ open Ast
 (*****************************************************************************)
 (* 
  * todo:
- *  - good error messages
+ *  - good parsing error messages
  *)
 
 (*****************************************************************************)
@@ -27,8 +27,6 @@ let contain_percent words =
 let attrs_of_string s =
   pr2 "TODO: attrs_of_string";
   []
-  
-
 
 %}
 
@@ -38,9 +36,15 @@ let attrs_of_string s =
 
 %token <string> TSpace
 %token TNewline
+
 %token <Ast.loc> TColon TEq TInf
 %token TPercent
-%token <string> TVar TQuoted TBackquoted TOther TLineRecipe
+
+%token <string> TVar TVarColon
+%token <string> TQuoted TBackquoted 
+%token <string> TOther TLineRecipe
+
+%token TCBrace
 %token TEndRecipe
 
 %token EOF
@@ -70,16 +74,14 @@ instrs:
 | /*(*empty*)*/ { [] }
 
 instr:
- |                                  TNewline  { [] }
- | TInf words                       TNewline  
-     { [{instr = Include $2; loc = $1}] }
+ | TNewline             { [] }
+ | TInf words TNewline  { [{instr = Include $2; loc = $1}] }
 
- | TOther TEq            words_opt  TNewline        
-     { [{instr = Definition ($1, false, $3); loc = $2}] }
- | TOther TEq TOther TEq words_opt  TNewline        
-     { raise Todo }
+ /*(* stricter: no space after variable name, no private var syntax *)*/
+ | TOther TEq words_opt TNewline        
+     { [{instr = Definition ($1, $3); loc = $2}] }
 
- | words TColon               words TNewline recipe 
+ | words TColon words_opt TNewline recipe
      { [{instr = Rule { targets = $1; prereqs = $3; attr = []; 
                         recipe = $5;
                         is_meta = contain_percent $1;
@@ -87,7 +89,7 @@ instr:
          loc = $2;
         }]
      }
- | words TColon TOther TColon words TNewline recipe 
+ | words TColon TOther TColon words_opt TNewline recipe 
      { [{instr = Rule { targets = $1; prereqs = $5; attr = attrs_of_string $3; 
                         recipe = $7;
                         is_meta = contain_percent $1;
@@ -108,34 +110,37 @@ instr:
 /*(*1 Words *)*/
 /*(*************************************************************************)*/
 
-/*(* stricter: disallow leading and trailing spaces? *)*/
+/*(* remove leading spaces *)*/
 words: 
- | spaces words2 spaces { $2 }
- | spaces words2        { $2 }
- |        words2 spaces { $1 }
- |        words2        { $1 }
+ | spaces words_ { $2 }
+ | words_        { $1 }
 
-words2:
-| word spaces words2  { $1 :: $3 }
+words_:
+| word spaces words_ { $1 :: $3 }
 | word        { [$1] }
+/*(* remove trailing spaces *)*/
+| word spaces { [$1] }
 
+/*(* stricter: forbid just spaces; if have space, then must have a word *)*/
 words_opt:
 | words          { $1 }
 | /*(*empty*)*/  { [] }
 
+/*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
 word:
 | word_elem word { $1::$2 }
 | word_elem      { [$1] }
 
 word_elem:
-| TOther   { String $1 }
-| TPercent { Percent}
-| TQuoted  { Quoted $1 }
-| TVar     { Var (SimpleVar $1) }
+| TOther      { String $1 }
+| TPercent    { Percent }
+| TQuoted     { String $1 }
 | TBackquoted { Backquoted $1 }
+| TVar        { Var (SimpleVar $1) }
+| TVarColon word TEq word TCBrace { Var (SubstVar ($1, $2, $4)) }
 
-/*(* the lexer agglomerate spaces in one TSpace token, but then the escaped
-   * newline are not agglomerated *)*/
+/*(* the lexer agglomerates spaces in one TSpace token, but then the escaped
+   * newline are not agglomerated so we may have multiple TSpace *)*/
 spaces: 
  | TSpace { }
  | TSpace spaces { }
@@ -149,9 +154,4 @@ recipe: recipe_lines_opt TEndRecipe
 recipe_lines_opt:
  | /*(* empty *)*/              { [] }
  | TLineRecipe recipe_lines_opt { $1 :: $2 }
- 
-
-/*(*************************************************************************)*/
-/*(*1 Misc *)*/
-/*(*************************************************************************)*/
 

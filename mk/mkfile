@@ -3,7 +3,7 @@
 TOP=..
 INCLUDES=-I $TOP/commons
 
-SRC= globals.ml \
+SRC= globals.ml flags.ml \
   ast.ml \
   parser.ml lexer.ml parse.ml \
   env.ml rules.ml job.ml   \
@@ -34,6 +34,6 @@ parser.ml parser.mli: parser.mly
 	$OCAMLYACC $prereq
 
 
-#loc:V:
-# mk distclean
-# wc -l *.ml*
+loc:V:
+ mk distclean
+ wc -l *.ml*

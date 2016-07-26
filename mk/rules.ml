@@ -3,7 +3,7 @@ type 'a rule_ = {
   targets: 'a list;
   prereqs: 'a list;
 
-  attr: Ast.rule_attribute list;
+  attr: Ast.rule_attribute Set.t;
   recipe: Ast.recipe option;
 }
 

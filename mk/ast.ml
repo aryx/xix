@@ -1,26 +1,26 @@
 
 type var = 
+  (* $name or ${name} (the string does not contain the dollar or braces) *)
   | SimpleVar of string
-  (* todo: ${name} or ${name: % = %} *)
+  (* ${name:a%b=c%d} *)
+  | SubstVar of (string * word * word)
 
-type word_elem =
+and word_elem =
   | String of string
   | Percent
-  (* the string does not include the quotes *)
-  | Quoted of string
-
   (* evaluated during parsing *)
   | Var of var
+   (* `...` or `{...} (the string does not include the backquote or braces) *)
   | Backquoted of string
 
 (* no separator; direct concatenation *)
-type word = word_elem list
+and word = word_elem list
 
 (* separated by spaces *)
 type words = word list
 
 
-(* the strings do not contain the leading space nor trailing newline *)
+(* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = string list
 
 type rule_ = {
@@ -40,7 +40,7 @@ type instr_kind =
   | Include of words
   | Rule of rule_
   (* stricter: I disallow dynamic def like $X=42 where there was a X=AVAR *)
-  | Definition of string * bool (* private *) * words
+  | Definition of string * words
 
 type loc = {
   file: Common.filename;

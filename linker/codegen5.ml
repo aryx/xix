@@ -17,7 +17,7 @@ module T5 = Types5
 (* Types and constants *)
 (*****************************************************************************)
 
-(* more declaratif and give opportunity to sanity check if overlap *)
+(* new: more declaratif and give opportunity to sanity check if overlap *)
 type composed_word = (int * int) list
 
 type mem_opcode = LDR | STR
@@ -40,6 +40,7 @@ let error node s =
               (node.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v)
   )
 
+(* new: can detect some typing mistakes *)
 let sanity_check_composed_word n xs =
   let dbg = Common.dump xs in
   let rec aux bit xs =

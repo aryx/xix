@@ -10,14 +10,15 @@ module T = Types
  *
  * Limitations compared to 5l:
  * - the -E digit 
- *   (what was it anyway?)
+ *   (What was it anyway?)
  * - the optimisations about small data, strings in text section
  *   (really gain?)
  * - the extensions not yet understood (import/export, dynamic linking)
+ *   (not sure it was used by any plan9 programs)
  * - half word specialized instructions and immhalf()
- *   (rare instructions anyway no?)
+ *   (rare instructions anyway?)
  * - address of parameter or local is not supported
- *   (why would you want that? 5c generates that?)
+ *   (Why would you want that? Does 5c generate that?)
  * 
  * todo?:
  *  - arith LCON less: NCON
@@ -47,7 +48,7 @@ let link config objfiles outfile =
 
   let symbols2, (data_size, bss_size) = 
     Layout5.layout_data symbols data in
-  let symbols2, graph, text_size = 
+  let symbols2, graph(* why modify that??*), text_size = 
     Layout5.layout_text symbols2 config.T.init_text graph in
 
   let sizes = { T.text_size; data_size; bss_size } in
@@ -91,7 +92,7 @@ let main () =
     " <str> entry point";
 
     "-debug_layout", Arg.Set Flag.debug_layout,
-    " debug code generation";
+    " debug layout code";
     "-debug_gen", Arg.Set Flag.debug_gen,
     " debug code generation";
   ]

@@ -1,6 +1,6 @@
 
 (* Mostly used by lexer but also by parser, and by error managment code.
- * We can not define it in the lexer because of mutual dependency issue.
- * We can not define it in the parser because it's not exported in .mli.
+ * We can not define it in the lexer because of a mutual dependency issue.
+ * We can not define it in the parser because it is not exported in the .mli.
  *)
 let line = ref 1

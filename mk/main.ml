@@ -43,7 +43,7 @@ open Common
  *    and evaluating, so avoid duplicate work like handling quoted characters
  *    or percent at many places.
  * 
- * Todo:
+ * todo:
  *  - xx=yyy overriding
  *  - some flags (-a, -e, etc)
  *  - recursive mk? dynamic mkfile?
@@ -76,6 +76,7 @@ let main () =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let action = ref "" in
+  let backtrace = ref false in
 
   let options = [
 
@@ -93,32 +94,48 @@ let main () =
     " dump the tokens as they are generated";
     "-debug_ast", Arg.Set Flags.debug_ast,
     " dump the parsed AST";
+    "-backtrace", Arg.Set backtrace,
+    " dump a backtrace after an error";
   ]
   in
   (* less: handle xx=yy *)
   Arg.parse (Arg.align options) (fun t -> targets := t :: !targets) usage;
+  try 
 
-  (* initialisation *)
-  let env = Env.initenv() in
-
-  (* to test and debug components of mk *)
-  if !action <> "" then begin do_action !action (List.rev !targets); exit 0 end;
-
-  (* parsing (and evaluating) *)
-  let instrs = Parse.parse !infile in
-  let rules, env = Eval.eval env targets instrs in
-
-  (* building *)
-  if !targets = []
-  then failwith "mk: nothing to mk";
-
-  (* less: build shellenv here ?*)
-  !targets |> List.rev |> List.iter (fun target ->
-    build_target env rules target
-  );
-    (* less: profiling*)
-  ()
+    (* initialisation *)
+    let env = Env.initenv() in
+    
+    (* to test and debug components of mk *)
+    if !action <> "" then begin 
+      do_action !action (List.rev !targets); exit 0 
+    end;
+    
+    (* parsing (and evaluating) *)
+    let instrs = Parse.parse !infile in
+    let rules, env = Eval.eval env targets instrs in
+    
+    (* building *)
+    if !targets = []
+    then failwith "mk: nothing to mk";
+    
+    (* less: build shellenv here ?*)
+    !targets |> List.rev |> List.iter (fun target ->
+      build_target env rules target
+    );
+      (* less: profiling*)
+    ()
+  with exn ->
+    if !backtrace 
+    then raise exn
+    else 
+      (match exn with
+      | Failure s -> 
+          pr2 s;
+          exit (-2)
+      | _ -> raise exn
+      )
 
 
 let _ = 
-  main ()
+    main ()
+      

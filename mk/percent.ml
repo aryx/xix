@@ -6,8 +6,15 @@ module A = Ast
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* A poor's man regexp system
-*)
+(* A poor's man regexp system. 
+ *
+ * alt: could reuse Str and just have a regexp_of_word that
+ * transform a word pattern containing % in a regular regexp.
+ *) 
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 exception TooManyPercents
 exception PercentNotFound
@@ -22,10 +29,14 @@ let rec string_after_percent xs =
     | _ -> raise (Impossible "see eval_partial_word")
     )
 
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
 (* pre: should have called eval_partial_word so the word should contain
  * only String or Percent.
  * ex: match_ [String "foo"; Percent; String ".c"] "foobar.c"
- * This is arguably sadly more complicated than the C code.
+ * This is arguably (and sadly) more complicated than the C code.
  *)
 let rec match_ word str =
   let len = String.length str in
@@ -59,7 +70,6 @@ let subst word stem =
     | A.Percent -> stem
     | _ -> raise (Impossible "see eval_partial_word")
   ) |> String.concat ""
-
 
 
 let match_and_subst pat sub str =

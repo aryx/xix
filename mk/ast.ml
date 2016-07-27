@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 type var = 
   (* $name or ${name} (the string does not contain the dollar or braces) *)
@@ -8,6 +9,7 @@ type var =
 and word_elem =
   | String of string
   | Percent
+
   (* evaluated during parsing *)
   | Var of var
    (* `...` or `{...} (the string does not include the backquote or braces) *)
@@ -32,13 +34,10 @@ type rule_ = {
   (* derived from whether targets or prereqs contain a Percent *)
   is_meta: bool;
 }
-  (* less: could make an enum *)
   and rule_attribute = 
     | Quiet
     | Virtual
     | Delete
-
-    (* less: not sure I want to handle them *)
     | NotHandled of char
 
 type instr_kind =

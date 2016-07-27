@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (* expanded variables and backquote *)
@@ -29,5 +30,3 @@ let initenv () =
     Hashtbl.add env.vars s xs
   );
   env
-
-    

@@ -6,5 +6,5 @@ type t = {
   internal_vars: (string, values) Hashtbl.t;
 }
 
-(* will read the OS environment variables (e.g., PATH, HOME) *)
+(* will read the OS environment variables (e.g., PATH, HOME, objtype) *)
 val initenv: unit -> t

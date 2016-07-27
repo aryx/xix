@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module A = Ast
@@ -10,7 +11,7 @@ let error loc s =
 let warning loc s =
   pr2 (spf "warning: %s (at %s:%d)" s loc.A.file loc.A.line)
 
-
+(* TODO: actually a word can become a words *)
 let rec eval_partial_word loc env word =
   word |> List.map (fun word_elem ->
     match word_elem with
@@ -25,12 +26,14 @@ let rec eval_partial_word loc env word =
            match x with
            | A.SimpleVar _ -> xs
            | A.SubstVar (_, pattern, subst) -> 
+               (* recurse! pattern can contain some variable *)
                let pattern = eval_partial_word loc env pattern in
-               let subst = eval_partial_word loc env subst in
+               let subst   = eval_partial_word loc env subst in
                xs |> List.map (fun s -> 
                  Percent.match_and_subst pattern subst s
                )
          in
+         (* TODO: should have space between, so should return words! *)
          xs |> List.map (fun s -> A.String s)
             
     | A.Backquoted s -> error loc "TODO Backquoted not supported yet in eval"
@@ -107,7 +110,3 @@ let eval env targets xs =
     simples = simples;
     metas = !metas
   }, env
-
-    
-
-

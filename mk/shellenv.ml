@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 let read_environment () =
@@ -8,4 +9,3 @@ let read_environment () =
       var, Common.split "[ \t]+" str
     else failwith (spf "wrong format for environment variable: %s" s)
   )
-

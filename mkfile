@@ -3,6 +3,7 @@
 <mkconfig
 
 DIRS=commons\
+  mk\
   formats/objects formats/executables\
   assembler linker
 

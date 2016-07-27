@@ -33,7 +33,7 @@ let attrs_of_string loc s =
     | 'V' -> Virtual
     | 'D' -> Delete
     | ('N' | 'R' | 'n') as c  -> NotHandled c
-    | c -> error_loc loc (spf "rule attribute not supported: %c" c)
+    | c -> error_loc loc (spf "unknown attribute: %c" c)
   )
 
 
@@ -109,10 +109,9 @@ instr:
      }
 
 /*(* less: 
-    "expected one of :<=\n", 
-    "missing include file name\n"
-    "multiple vars on left side of assignment\n"
-    "unknown attribute %s" (for rule, for variable def)
+    "expected one of :<=\n", in general
+    "missing include file name\n"    < no words.
+    "multiple vars on left side of assignment\n"  words =
     "missing trailing :" (for rule attribute)
   *)*/
 

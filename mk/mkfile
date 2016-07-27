@@ -6,12 +6,11 @@ INCLUDES=-I $TOP/commons
 SRC= globals.ml flags.ml \
   ast.ml \
   parser.ml lexer.ml parse.ml \
-  env.ml rules.ml job.ml   \
+  shellenv.ml env.ml rules.ml job.ml   \
   eval.ml graph.ml scheduler.ml shell.ml \
-  shellenv.ml  \
   main.ml
 
-SYSLIBS=str.cma
+SYSLIBS=str.cma unix.cma
 LIBS=$TOP/commons/lib.cma
 
 PROG=mk
@@ -35,5 +34,5 @@ parser.ml parser.mli: parser.mly
 
 
 loc:V:
- mk distclean
- wc -l *.ml*
+	mk distclean
+	wc -l *.ml*

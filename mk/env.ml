@@ -19,7 +19,15 @@ let internal_vars = [
 
 (* less: could take the readenv function as a parameter? *)
 let initenv () =
-  pr2 "Todo:initenv";
-  { vars = Hashtbl.create 101;
-    internal_vars = Hashtbl.create 101;
-  }
+  let env = 
+    { vars = Hashtbl.create 101;
+      internal_vars = Hashtbl.create 101;
+    }
+  in
+  Shellenv.read_environment () |> List.iter (fun (s, xs) ->
+    (* todo: checks? *)
+    Hashtbl.add env.vars s xs
+  );
+  env
+
+    

@@ -95,6 +95,9 @@ let candidate_match_func s re =
   in
   Str.string_match compile_re s 0
 
+let split sep s = Str.split (Str.regexp sep) s
+
+
 let (=~) s re =
   candidate_match_func s re
 

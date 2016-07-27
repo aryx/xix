@@ -7,7 +7,8 @@ SRC= globals.ml flags.ml \
   ast.ml \
   parser.ml lexer.ml parse.ml \
   shellenv.ml env.ml rules.ml job.ml   \
-  eval.ml graph.ml scheduler.ml shell.ml \
+  percent.ml eval.ml\
+  graph.ml scheduler.ml shell.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

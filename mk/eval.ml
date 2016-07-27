@@ -11,33 +11,49 @@ let warning loc s =
   pr2 (spf "warning: %s (at %s:%d)" s loc.A.file loc.A.line)
 
 
+let rec eval_partial_word loc env word =
+  word |> List.map (fun word_elem ->
+    match word_elem with
+    | A.String _ | A.Percent -> [word_elem]
+    | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as x)  ->
+         (* stricter: mk does not complain *)
+         if not (Hashtbl.mem env.E.vars v)
+         then error loc (spf "variable not found '%s'" v);
+
+         let xs = Hashtbl.find env.E.vars v in
+         let xs =
+           match x with
+           | A.SimpleVar _ -> xs
+           | A.SubstVar (_, pattern, subst) -> 
+               let pattern = eval_partial_word loc env pattern in
+               let subst = eval_partial_word loc env subst in
+               xs |> List.map (fun s -> 
+                 Percent.match_and_subst pattern subst s
+               )
+         in
+         xs |> List.map (fun s -> A.String s)
+            
+    | A.Backquoted s -> error loc "TODO Backquoted not supported yet in eval"
+
+  ) |> List.flatten
+
+
 (* opti? could use a Buffer *)
 let rec eval_word loc env word =
+  let word = eval_partial_word loc env word in
+
   let rec aux acc elems =
     match elems with
     | [] -> [acc]
     | x::xs ->
       (match x with
       | A.String s -> aux (acc ^ s) xs
+      (* less: could print a warning? user should escape this char *)
       | A.Percent -> aux (acc ^ "%") xs
-      | A.Var v ->
-        (match v with
-        | A.SimpleVar v ->
-            (* stricter: mk does not complain *)
-            if not (Hashtbl.mem env.E.vars v)
-            then error loc (spf "variable not found '%s'" v);
 
-            let ys = Hashtbl.find env.E.vars v in
-            (match ys with
-            | [] -> aux acc xs
-            | [y] -> aux (acc ^ y) xs
-            | _ -> error loc "TODO multi strings variable"
-            )
-        | A.SubstVar _ -> error loc "TODO Substvar not supported yet in eval"
-        )
-      | A.Backquoted s -> error loc "TODO Backquoted not supported yet in eval"
+      | A.Var _ | A.Backquoted _ -> 
+        error loc "Impossible, eval_partial_word should fix Var and Backquoted"
       )
-
   in
   aux "" word
 

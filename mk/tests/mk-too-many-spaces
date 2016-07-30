@@ -1,0 +1,6 @@
+# I force A=
+A = 1
+
+# I forbid to have space if no prereqs at all
+target1: 
+  echo bad

@@ -1,0 +1,5 @@
+
+A=a b c d
+
+# issue an error
+B= x${A}y

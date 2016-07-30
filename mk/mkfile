@@ -6,9 +6,11 @@ INCLUDES=-I $TOP/commons
 SRC= globals.ml flags.ml \
   ast.ml \
   parser.ml lexer.ml parse.ml \
-  shellenv.ml env.ml rules.ml job.ml   \
-  percent.ml eval.ml\
-  graph.ml scheduler.ml shell.ml \
+  percent.ml  shellenv.ml env.ml  rules.ml \
+  eval.ml \
+  graph.ml \
+  job.ml \
+  scheduler.ml shell.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

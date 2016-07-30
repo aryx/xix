@@ -6,7 +6,7 @@ type var =
   (* ${name:a%b=c%d} *)
   | SubstVar of (string * word * word)
 
-and word_elem =
+and word_element =
   | String of string
   | Percent
 
@@ -16,7 +16,7 @@ and word_elem =
   | Backquoted of string
 
 (* no separator, direct concatenation (hence the need for ${name}) *)
-and word = W of word_elem list
+and word = W of word_element list
 
 (* separated by spaces *)
 type words = word list
@@ -28,7 +28,7 @@ type recipe = R of string list
 type rule_ = {
   targets: words;
   prereqs: words;
-  attr: rule_attribute list;
+  attrs: rule_attribute list;
   recipe: recipe option;
 }
   and rule_attribute = 

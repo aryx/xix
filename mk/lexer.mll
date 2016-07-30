@@ -13,7 +13,7 @@ open Parser
  *)
 
 let error s =
-  failwith (spf "%s:%d: Lexical error %s" !Globals.file !Globals.line s)
+  failwith (spf "%s:%d: Lexical error, %s" !Globals.file !Globals.line s)
 
 let loc () = 
   { Ast.file = !Globals.file; Ast.line = !Globals.line; }

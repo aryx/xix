@@ -1,9 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-(* P for pattern *)
-module P = Rules
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -12,6 +9,15 @@ module P = Rules
  * alt: could reuse Str and just have a regexp_of_word that
  * transform a word pattern containing % in a regular regexp.
  *) 
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+type pattern_elem =
+  | PStr of string
+  | PPercent
+type pattern = P of pattern_elem list
 
 (*****************************************************************************)
 (* Helpers *)
@@ -25,8 +31,8 @@ let rec string_after_percent xs =
   | [] -> ""
   | x::xs ->
     (match x with 
-    | P.PStr s -> s ^ string_after_percent xs
-    | P.PPercent -> raise TooManyPercents
+    | PStr s -> s ^ string_after_percent xs
+    | PPercent -> raise TooManyPercents
     )
 
 (*****************************************************************************)
@@ -37,21 +43,21 @@ let rec string_after_percent xs =
  * This is arguably (and sadly) more complicated than the C code.
  *)
 
-let rec match_ (P.P pat) str =
+let rec match_ (P pat) str =
   let len = String.length str in
   match pat with
   | [] -> raise PercentNotFound
   | x::xs ->
     (match x with
-    | P.PStr s ->
+    | PStr s ->
         let len2 = String.length s in
         if len2 > len
         then None
         else
           if s <> (String.sub str 0 len2)
           then None
-          else match_ (P.P xs) (String.sub str len2 (len - len2))
-    | P.PPercent ->
+          else match_ (P xs) (String.sub str len2 (len - len2))
+    | PPercent ->
         let str_pat_after = string_after_percent xs in
         let len_after = String.length str_pat_after in
         let len_matching_percent = len - len_after in
@@ -62,10 +68,10 @@ let rec match_ (P.P pat) str =
         else None
     )        
 
-let subst (P.P pat) stem =
+let subst (P pat) stem =
   pat |> List.map (function
-    | P.PStr s -> s
-    | P.PPercent -> stem
+    | PStr s -> s
+    | PPercent -> stem
   ) |> String.concat ""
 
 

@@ -4,6 +4,7 @@ open Common
 module A = Ast
 module E = Env
 module R = Rules
+module P = Percent
 
 (*****************************************************************************)
 (* Prelude *)
@@ -28,14 +29,14 @@ let warning loc s =
  * opti? could use a Buffer 
  *)
 let rec (eval_word: Ast.loc -> Env.t -> Ast.word -> 
-          (Env.values, Rules.pattern) Common.either) = fun loc env (A.W word)->
+          (Env.values, Percent.pattern) Common.either)= fun loc env (A.W word)->
   let rec aux acc xs =
     match xs with
-    | [] -> Right (R.P (List.rev acc))
+    | [] -> Right (P.P (List.rev acc))
     | x::xs ->
       (match x with
-      | A.String s -> aux ((R.PStr s)::acc) xs
-      | A.Percent  -> aux (R.PPercent::acc) xs
+      | A.String s -> aux ((P.PStr s)::acc) xs
+      | A.Percent  -> aux (P.PPercent::acc) xs
 
       | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind)  ->
 
@@ -62,12 +63,12 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
                )
          in
          (match ys, acc, xs with
-         | [], [], []  -> Right (R.P [])
+         | [], [], []  -> Right (P.P [])
          | [], acc, xs ->
              (* stricter: *)
              warning loc (spf "use of empty variable '%s' in scalar context" v);
              aux acc xs
-         | [str], acc, xs -> aux ((R.PStr str)::acc) xs
+         | [str], acc, xs -> aux ((P.PStr str)::acc) xs
          | _::_::_, [], [] -> Left ys
          | _::_::_, acc, xs ->
              (* stricter: *)
@@ -81,22 +82,22 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
 
 
 let rec (eval_words: Ast.loc -> Env.t -> Ast.words -> 
-         (string list, Rules.pattern list) Common.either) = fun loc env words->
+         (string list, Percent.pattern list) Common.either)= fun loc env words->
   let res = words |> List.map (eval_word loc env) in
   if res |> List.exists (fun x ->
     match x with
     | Left _ -> false
-    | Right (R.P xs) -> List.mem R.PPercent xs
+    | Right (P.P xs) -> List.mem P.PPercent xs
   )
   then res |> List.map (function
-    | Left xs -> xs |> List.map (fun s -> R.P [R.PStr s])
+    | Left xs -> xs |> List.map (fun s -> P.P [P.PStr s])
     | Right x -> [x]
   ) |> List.flatten |> (fun xs -> Right xs)
   else res |> List.map (function
     | Left xs -> xs
-    | Right (R.P xs) -> xs |> List.map (function 
-        | R.PStr s -> s
-        | R.PPercent -> raise (Impossible "exists predicate above is wrong")
+    | Right (P.P xs) -> xs |> List.map (function 
+        | P.PStr s -> s
+        | P.PPercent -> raise (Impossible "exists predicate above is wrong")
     ) |> (fun elems -> [elems |> String.concat ""])
   ) |> List.flatten |> (fun xs -> Left xs)
 
@@ -148,8 +149,31 @@ let eval env targets xs =
           | Right _ -> error loc "use quotes for variable definitions with %"
           )
 
-      | A.Rule r -> error loc "TODO Rule"
+      | A.Rule r -> 
+          let targets = eval_words loc env r.A.targets in
+          let prereqs = eval_words loc env r.A.prereqs in
+          (match targets, prereqs with
+          | Left targets, Left prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs;
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe } in
 
+              targets |> List.iter (fun target ->
+                Hashtbl.add simples target rfinal
+              )
+          | Right targets, Right prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs;
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe } in
+              metas |> Common.push rfinal
+          | _, _ ->
+              (* stricter? could allow Right targets, Left prereqs *)
+              error loc "only one of target or prereq use %%"
+          )
     )
   in
   instrs xs;

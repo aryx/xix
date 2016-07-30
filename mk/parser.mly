@@ -21,7 +21,7 @@ open Ast
 (*****************************************************************************)
 
 let error_loc loc s =
-  failwith (spf "%s:%d: Syntax error; %s" loc.file loc.line s)
+  failwith (spf "%s:%d: Syntax error, %s" loc.file loc.line s)
 
 let error s =
   error_loc { file = !Globals.file; line = !Globals.line } s
@@ -90,13 +90,13 @@ instr:
      { [{instr = Definition ($1, $3); loc = $2}] }
 
  | words TColon words_opt TNewline recipe
-     { [{instr = Rule { targets = $1; prereqs = $3; attr = []; recipe = $5;};
+     { [{instr = Rule { targets = $1; prereqs = $3; attrs = []; recipe = $5;};
          loc = $2;
         }]
      }
  | words TColon TOther TColon words_opt TNewline recipe 
      { [{instr = Rule { targets = $1; prereqs = $5; 
-                        attr = attrs_of_string $2 $3; 
+                        attrs = attrs_of_string $2 $3; 
                         recipe = $7;
                        };
          loc = $2;

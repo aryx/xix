@@ -4,14 +4,12 @@ exception PercentNotFound
 
 (* return the possible stem *)
 val match_: 
-  Ast.word (* the pattern, only String and Percent *) -> string 
-  -> string option
+  Rules.pattern -> string -> string option
   
 val subst:
-  Ast.word (* the subst, only String and Percent *) -> string (* stem *)
-  -> string
+  Rules.pattern -> string (* stem *) -> string
 
 (* print a warning if not match *)
 val match_and_subst:
-  Ast.word (* pattern *) -> Ast.word (* subst *) -> string (* src *) 
+  Rules.pattern (* pattern *) -> Rules.pattern (* subst *) -> string (* src *) 
   -> string

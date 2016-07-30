@@ -5,14 +5,29 @@ module A = Ast
 module R = Rules
 module E = Env
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Error management *)
+(*****************************************************************************)
+
 let error loc s =
   failwith (spf "%s:%d: Semantic error, %s" loc.A.file loc.A.line s)
 
 let warning loc s =
   pr2 (spf "warning: %s (at %s:%d)" s loc.A.file loc.A.line)
 
-(* TODO: actually a word can become a words *)
-let rec eval_partial_word loc env word =
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+(* a word can become multiple words! *)
+(*
+let rec (eval_partial_word: A.loc -> Env.t -> A.word -> 
+ loc env word =
   word |> List.map (fun word_elem ->
     match word_elem with
     | A.String _ | A.Percent -> [word_elem]
@@ -39,10 +54,12 @@ let rec eval_partial_word loc env word =
     | A.Backquoted s -> error loc "TODO Backquoted not supported yet in eval"
 
   ) |> List.flatten
-
+*)
 
 (* opti? could use a Buffer *)
 let rec eval_word loc env word =
+  raise Todo
+(*
   let word = eval_partial_word loc env word in
 
   let rec aux acc elems =
@@ -59,12 +76,18 @@ let rec eval_word loc env word =
       )
   in
   aux "" word
+*)
 
 let rec eval_words loc env words =
+  raise Todo
+(*
   words |> List.map (eval_word loc env) |> List.flatten
+*)
 
 
-
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let eval env targets xs =
 

@@ -11,7 +11,9 @@ type node = {
   prereqs: arc list ref;
 }
 and arc = {
-  (* can point to an existing node since the graph of dependencies is a DAG *)
+  (* Can point to an existing node since the graph of dependencies is a DAG.
+   * None for virtual targets (still need a recipe hence an arc).
+  *)
   dest: node option;
 
   (* what we need from the rule *)
@@ -21,4 +23,3 @@ and arc = {
 
 val graph: 
   string (* target *) -> Rules.t -> node (* the root *)
-  

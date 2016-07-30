@@ -14,7 +14,7 @@ open Common
  *  - no :P:
  *    (it is barely documented anyway, and you can do without)
  *  - no private variables
- *    (I never saw mkfiles using it)
+ *    (I never saw mkfiles using it, and complicates the parsing of '=')
  *  - only one -f is supported, not an array of up to 256 mkfiles
  *    (who uses that? maybe to have mk -f varfile -f mkfile)
  *  - no sequential vs parallel mode, and no parallel for multi targets
@@ -30,13 +30,16 @@ open Common
  *  - no unicode support
  * 
  * Improvements (IMHO):
+ *  - simplifications by not supporting the features mentioned above
  *  - TODO be more relaxing on date (or use nanosec); if equal time then ok
  *    (modern machines can generate the .o and a.out in the same second)
  *  - generate error when no mkfile
- *  - TODO warn at least when guess that shprint might be wrong
+ *  - TODO warn at least when think shprint might be wrong
  *  - TODO better error when found cycle, show full trace!
  *  - TODO better error message when error in recipe, right now
  *    I get the error at the beginning and a trailing of regular shprint
+ *    (but more plan9's style, so at least dont print the rest? or print
+ *     also message at the end that something went wrong)
  *
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
@@ -46,7 +49,8 @@ open Common
  * todo:
  *  - xx=yyy overriding
  *  - some flags (-a, -e, etc)
- *  - recursive mk? dynamic mkfile?
+ *  - recursive mk? (used by my mkfile in plan9-ml)
+ *  - dynamic mkfile?
  *  - look at source code of omake? and mk-in-go?
  *)
 
@@ -75,6 +79,7 @@ let do_action s xs =
 let main () =
   let infile  = ref "mkfile" in
   let targets = ref [] in
+
   let action = ref "" in
   let backtrace = ref false in
 
@@ -94,6 +99,7 @@ let main () =
     " dump the tokens as they are generated";
     "-debug_ast", Arg.Set Flags.debug_ast,
     " dump the parsed AST";
+
     "-backtrace", Arg.Set backtrace,
     " dump a backtrace after an error";
   ]
@@ -107,7 +113,8 @@ let main () =
     
     (* to test and debug components of mk *)
     if !action <> "" then begin 
-      do_action !action (List.rev !targets); exit 0 
+      do_action !action (List.rev !targets); 
+      exit 0 
     end;
     
     (* parsing (and evaluating) *)
@@ -117,7 +124,6 @@ let main () =
     (* building *)
     if !targets = []
     then failwith "mk: nothing to mk";
-    
     (* less: build shellenv here ?*)
     !targets |> List.rev |> List.iter (fun target ->
       build_target env rules target
@@ -134,7 +140,6 @@ let main () =
           exit (-2)
       | _ -> raise exn
       )
-
 
 let _ = 
     main ()

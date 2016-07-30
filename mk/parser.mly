@@ -9,7 +9,11 @@ open Ast
 (*****************************************************************************)
 (* 
  * todo:
- *  - good parsing error messages, right now
+ *  - good parsing error messages, right now hard.
+    "expected one of :<=\n", in general
+    "missing include file name\n"    < no words.
+    "multiple vars on left side of assignment\n"  words =
+    "missing trailing :" (for rule attribute)
  *)
 
 (*****************************************************************************)
@@ -23,7 +27,7 @@ let error s =
   error_loc { file = !Globals.file; line = !Globals.line } s
 
 let contain_percent words =
-  words |> List.exists (fun word ->
+  words |> List.exists (fun (W word) ->
     word |> List.exists (fun word_elem -> word_elem = Percent)
   )
 
@@ -35,7 +39,6 @@ let attrs_of_string loc s =
     | ('N' | 'R' | 'n') as c  -> NotHandled c
     | c -> error_loc loc (spf "unknown attribute: %c" c)
   )
-
 
 %}
 
@@ -50,8 +53,8 @@ let attrs_of_string loc s =
 %token TPercent
 
 %token <string> TVar TVarColon
-%token <string> TQuoted TBackquoted 
-%token <string> TOther TLineRecipe
+%token <string> TQuoted TBackquoted TLineRecipe
+%token <string> TOther
 
 %token TCBrace
 %token TEndRecipe
@@ -109,10 +112,7 @@ instr:
      }
 
 /*(* less: 
-    "expected one of :<=\n", in general
-    "missing include file name\n"    < no words.
-    "multiple vars on left side of assignment\n"  words =
-    "missing trailing :" (for rule attribute)
+instr: error { }
   *)*/
 
 /*(*************************************************************************)*/
@@ -125,10 +125,10 @@ words:
  | words_        { $1 }
 
 words_:
-| word spaces words_ { $1 :: $3 }
-| word        { [$1] }
+| word spaces words_ { (W $1) :: $3 }
+| word        { [W $1] }
 /*(* remove trailing spaces *)*/
-| word spaces { [$1] }
+| word spaces { [W $1] }
 
 /*(* stricter: forbid just spaces; if have space, then must have a word *)*/
 words_opt:
@@ -137,7 +137,7 @@ words_opt:
 
 /*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
 word:
-| word_elem word { $1::$2 }
+| word_elem word { ($1::$2) }
 | word_elem      { [$1] }
 
 word_elem:
@@ -146,10 +146,12 @@ word_elem:
 | TQuoted     { String $1 }
 | TBackquoted { Backquoted $1 }
 | TVar        { Var (SimpleVar $1) }
-| TVarColon word TEq word TCBrace { Var (SubstVar ($1, $2, $4)) }
+| TVarColon word TEq word TCBrace { Var (SubstVar ($1, W $2, W $4)) }
 
 /*(* the lexer agglomerates spaces in one TSpace token, but then the escaped
-   * newline are not agglomerated so we may have multiple TSpace *)*/
+   * newline are not agglomerated so we may have multiple TSpace so
+   * we should also normalize that.
+   *)*/
 spaces: 
  | TSpace { }
  | TSpace spaces { }
@@ -158,7 +160,7 @@ spaces:
 /*(*1 recipe *)*/
 /*(*************************************************************************)*/
 recipe: recipe_lines_opt TEndRecipe 
- { if $1 = [] then None else Some $1 }
+ { if $1 = [] then None else Some (R $1) }
 
 recipe_lines_opt:
  | /*(* empty *)*/              { [] }

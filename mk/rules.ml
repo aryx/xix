@@ -10,12 +10,13 @@ type 'a rule_ = {
 type pattern_elem =
   | PStr of string
   | PPercent
-type pattern = pattern_elem list
-
+type pattern = P of pattern_elem list
 
 
 type t = {
+  (* use Hashtbl.find_all since a target can be associated to multiple rules *)
   simples: (string, string rule_) Hashtbl.t;
+
   metas: (pattern rule_) list;
 }
 
@@ -25,4 +26,3 @@ type rule_exec = {
 
   (* loc? *)
 }
-

@@ -7,7 +7,7 @@ open Common
 (* An OCaml port of 5a, the Plan9 ARM assembler.
  *
  * Main limitations compared to 5a:
- *  - no embedded macro processor but handle at least the #line directive
+ *  - no embedded macro processor, but handle at least the #line directive
  *    (better to factorize, use external cpp)
  *  - no multiple files processing in parallel 
  *    (not the place, use xargs)

@@ -10,20 +10,20 @@ and word_elem =
   | String of string
   | Percent
 
-  (* evaluated during parsing *)
+  (* evaluated in eval.ml just after parsing *)
   | Var of var
    (* `...` or `{...} (the string does not include the backquote or braces) *)
   | Backquoted of string
 
-(* no separator; direct concatenation *)
-and word = word_elem list
+(* no separator, direct concatenation (hence the need for ${name}) *)
+and word = W of word_elem list
 
 (* separated by spaces *)
 type words = word list
 
 
 (* (the strings do not contain the leading space nor trailing newline) *)
-type recipe = string list
+type recipe = R of string list
 
 type rule_ = {
   targets: words;
@@ -44,7 +44,7 @@ type instr_kind =
   (* should resolve to a single filename *)
   | Include of words
   | Rule of rule_
-  (* stricter: I disallow dynamic def like $X=42 where there was a X=AVAR *)
+  (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR *)
   | Definition of string * words
 
 type loc = {

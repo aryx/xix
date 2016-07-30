@@ -16,12 +16,10 @@ let error s =
   failwith (spf "%s:%d: Lexical error %s" !Globals.file !Globals.line s)
 
 let loc () = 
-  { Ast.file = !Globals.file;
-    Ast.line = !Globals.line;
-  }
+  { Ast.file = !Globals.file; Ast.line = !Globals.line; }
 
  
-(* state *)
+(* lexer state *)
 type state = 
   | Start
 
@@ -32,7 +30,7 @@ type state =
 
   (* once we started to parse an assign, the second = is like a string *)
   | AfterEq
-  (* except inside ${x:...=...} where still want = to have a special meaning *)
+  (* except inside ${x:...=...} where we still want = to be TEq *)
   | InBrace
 
 (* see also parse.ml and code using that global *)
@@ -63,9 +61,8 @@ let space = [' ''\t']
 let letter = ['a'-'z''A'-'Z''_']
 let number = ['0'-'9']
 
-(* less: WORDCHR = !utfrune("!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", (r) *)
+(* stricter: WORDCHR = !utfrune("!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", (r) *)
 let ident = letter (letter | number)*
-
 
 (*****************************************************************************)
 (* Main rule *)
@@ -96,7 +93,7 @@ rule token = parse
 
   | ':' { state := AfterColon; TColon (loc()) }
   | '=' { if !state = AfterEq
-          (* but that means have to normalize a serie of words *)
+          (* todo? means we have to normalize a serie of words *)
           then TOther "=" 
           else begin
             state := AfterEq;
@@ -111,12 +108,12 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
 
   (* stricter: force leading letter, so $0 is wrong (found bug in plan9/) *)
-  | '$' (ident as s) { TVar s }
+  | '$'    (ident as s)     { TVar s }
   | '$''{' (ident as s) '}' { TVar s }
   (* important to eat ':' otherwise would trigger a AfterColon we don't want*)
   | '$''{' (ident as s) ':' 
       { 
-        (* this is to handle = inside ${} *)
+        (* this is to handle '=' inside ${} *)
         save_state_outside_brace := !state;
         state := InBrace;
         TVarColon s 
@@ -160,7 +157,7 @@ and quote = parse
   | "''"                 { "'" ^ quote lexbuf }
 
   | '\\' '\n'            { incr Globals.line; " " ^ quote lexbuf }
-  (* new: instead of "missing closing '"  *)
+  (* new: better error message instead of "missing closing '"  *)
   | '\n' { error "newline in quoted string" }
 
   | [^ '\\' '\'' '\n']+  { let x = Lexing.lexeme lexbuf in x ^ quote lexbuf }
@@ -212,6 +209,6 @@ and recipe = parse
   | ('#'   [^'\n']*) as s '\n'? { incr Globals.line; TLineRecipe s }
   | space ([^'\n']*) as s '\n'? { incr Globals.line; TLineRecipe s }
 
-  | [^ '#' ' ' '\t']           { state := Start; yyback 1 lexbuf; TEndRecipe }
-  | eof { state := Start; yyback 1 lexbuf; TEndRecipe }
+  | [^ '#' ' ' '\t']    { state := Start; yyback 1 lexbuf; TEndRecipe }
+  | eof                 { state := Start; yyback 1 lexbuf; TEndRecipe }
   | _ { error "unrecognized character in recipe" }

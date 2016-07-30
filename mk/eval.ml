@@ -2,8 +2,8 @@
 open Common
 
 module A = Ast
-module R = Rules
 module E = Env
+module R = Rules
 
 (*****************************************************************************)
 (* Prelude *)
@@ -24,65 +24,81 @@ let warning loc s =
 (* Helpers *)
 (*****************************************************************************)
 
-(* a word can become multiple words! *)
-(*
-let rec (eval_partial_word: A.loc -> Env.t -> A.word -> 
- loc env word =
-  word |> List.map (fun word_elem ->
-    match word_elem with
-    | A.String _ | A.Percent -> [word_elem]
-    | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as x)  ->
+(* A word can become multiple strings!
+ * opti? could use a Buffer 
+ *)
+let rec (eval_word: Ast.loc -> Env.t -> Ast.word -> 
+          (Env.values, Rules.pattern) Common.either) = fun loc env (A.W word)->
+  let rec aux acc xs =
+    match xs with
+    | [] -> Right (R.P (List.rev acc))
+    | x::xs ->
+      (match x with
+      | A.String s -> aux ((R.PStr s)::acc) xs
+      | A.Percent  -> aux (R.PPercent::acc) xs
+
+      | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind)  ->
+
          (* stricter: mk does not complain *)
          if not (Hashtbl.mem env.E.vars v)
          then error loc (spf "variable not found '%s'" v);
 
-         let xs = Hashtbl.find env.E.vars v in
-         let xs =
-           match x with
-           | A.SimpleVar _ -> xs
+         let ys = Hashtbl.find env.E.vars v in
+         let ys =
+           match vkind with
+           | A.SimpleVar _ -> ys
            | A.SubstVar (_, pattern, subst) -> 
                (* recurse! pattern can contain some variable *)
-               let pattern = eval_partial_word loc env pattern in
-               let subst   = eval_partial_word loc env subst in
-               xs |> List.map (fun s -> 
-                 Percent.match_and_subst pattern subst s
+               let pattern = eval_word loc env pattern in
+               let subst   = eval_word loc env subst in
+               (match pattern, subst with
+               | Right pattern, Right subst ->
+                   ys |> List.map (fun s -> 
+                     Percent.match_and_subst pattern subst s
+                   )
+               (* stricter? what does mk?*)
+               | _ -> error loc 
+                 "pattern or subst do not resolve to a single string"
                )
          in
-         (* TODO: should have space between, so should return words! *)
-         xs |> List.map (fun s -> A.String s)
-            
-    | A.Backquoted s -> error loc "TODO Backquoted not supported yet in eval"
+         (match ys, acc, xs with
+         | [], [], []  -> Right (R.P [])
+         | [], acc, xs ->
+             (* stricter: *)
+             warning loc (spf "use of empty variable '%s' in scalar context" v);
+             aux acc xs
+         | [str], acc, xs -> aux ((R.PStr str)::acc) xs
+         | _::_::_, [], [] -> Left ys
+         | _::_::_, acc, xs ->
+             (* stricter: *)
+             error loc (spf "use of list variable '%s' in scalar context" v)
+         )
 
-  ) |> List.flatten
-*)
-
-(* opti? could use a Buffer *)
-let rec eval_word loc env word =
-  raise Todo
-(*
-  let word = eval_partial_word loc env word in
-
-  let rec aux acc elems =
-    match elems with
-    | [] -> [acc]
-    | x::xs ->
-      (match x with
-      | A.String s -> aux (acc ^ s) xs
-      (* less: could print a warning? user should escape this char *)
-      | A.Percent -> aux (acc ^ "%") xs
-
-      | A.Var _ | A.Backquoted _ -> 
-        error loc "Impossible, eval_partial_word should fix Var and Backquoted"
+      | A.Backquoted _ -> error loc "TODO: Backquoted not supported yet in eval"
       )
   in
-  aux "" word
-*)
+  aux [] word
 
-let rec eval_words loc env words =
-  raise Todo
-(*
-  words |> List.map (eval_word loc env) |> List.flatten
-*)
+
+let rec (eval_words: Ast.loc -> Env.t -> Ast.words -> 
+         (string list, Rules.pattern list) Common.either) = fun loc env words->
+  let res = words |> List.map (eval_word loc env) in
+  if res |> List.exists (fun x ->
+    match x with
+    | Left _ -> false
+    | Right (R.P xs) -> List.mem R.PPercent xs
+  )
+  then res |> List.map (function
+    | Left xs -> xs |> List.map (fun s -> R.P [R.PStr s])
+    | Right x -> [x]
+  ) |> List.flatten |> (fun xs -> Right xs)
+  else res |> List.map (function
+    | Left xs -> xs
+    | Right (R.P xs) -> xs |> List.map (function 
+        | R.PStr s -> s
+        | R.PPercent -> raise (Impossible "exists predicate above is wrong")
+    ) |> (fun elems -> [elems |> String.concat ""])
+  ) |> List.flatten |> (fun xs -> Left xs)
 
 
 (*****************************************************************************)
@@ -97,22 +113,27 @@ let eval env targets xs =
   let rec instrs xs = 
     xs |> List.iter (fun instr ->
       let loc = instr.A.loc in
+
       match instr.A.instr with
       | A.Include ws ->
-          let xs = eval_words loc env ws in
-          (match xs with
-          | [file] -> 
+          let res = eval_words loc env ws in
+          (match res with
+          | Left [file] -> 
               if not (Sys.file_exists file)
-              then warning loc (spf "skipping missing include file: %s" file);
-            
-              let xs = Parse.parse file in
-              (* recurse *)
-              instrs xs
+              then warning loc (spf "skipping missing include file: %s" file)
+              else
+                let xs = Parse.parse file in
+                (* recurse *)
+                instrs xs
 
           (* new? what does mk does? *)
-          | [] -> error loc "missing include file"
-          | _ -> error loc "too many files to include"
+          | Left [] -> error loc "missing include file"
+
+          (* stricter: force use quotes for filename with spaces or percent *)
+          | Right _ | Left (_::_) -> 
+              error loc "use quotes for filenames with spaces or %%"
           )
+
       | A.Definition (s, ws) ->
           (* todo: handle override variables *)
 
@@ -120,8 +141,12 @@ let eval env targets xs =
           if Hashtbl.mem env.E.vars s
           then error loc (spf "redefinition of %s" s);
 
-          let xs = eval_words loc env ws in
-          Hashtbl.replace env.E.vars s xs
+          let res = eval_words loc env ws in
+          (match res with
+          | Left xs -> Hashtbl.replace env.E.vars s xs
+          (* stricter: no dynamic patterns *)
+          | Right _ -> error loc "use quotes for variable definitions with %"
+          )
 
       | A.Rule r -> error loc "TODO Rule"
 

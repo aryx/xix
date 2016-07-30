@@ -10,10 +10,10 @@ open Ast
 (* 
  * todo:
  *  - good parsing error messages, right now hard.
-    "expected one of :<=\n", in general
-    "missing include file name\n"    < no words.
-    "multiple vars on left side of assignment\n"  words =
-    "missing trailing :" (for rule attribute)
+      "expected one of :<=\n", in general
+      "missing include file name\n"    < no words.
+      "multiple vars on left side of assignment\n"  words =
+      "missing trailing :" (for rule attribute)
  *)
 
 (*****************************************************************************)
@@ -26,10 +26,6 @@ let error_loc loc s =
 let error s =
   error_loc { file = !Globals.file; line = !Globals.line } s
 
-let contain_percent words =
-  words |> List.exists (fun (W word) ->
-    word |> List.exists (fun word_elem -> word_elem = Percent)
-  )
 
 let attrs_of_string loc s =
   s |> Common2.list_of_string |> List.map (function
@@ -94,10 +90,7 @@ instr:
      { [{instr = Definition ($1, $3); loc = $2}] }
 
  | words TColon words_opt TNewline recipe
-     { [{instr = Rule { targets = $1; prereqs = $3; attr = []; 
-                        recipe = $5;
-                        is_meta = contain_percent $1;
-                       };
+     { [{instr = Rule { targets = $1; prereqs = $3; attr = []; recipe = $5;};
          loc = $2;
         }]
      }
@@ -105,7 +98,6 @@ instr:
      { [{instr = Rule { targets = $1; prereqs = $5; 
                         attr = attrs_of_string $2 $3; 
                         recipe = $7;
-                        is_meta = contain_percent $1;
                        };
          loc = $2;
         }]
@@ -165,4 +157,3 @@ recipe: recipe_lines_opt TEndRecipe
 recipe_lines_opt:
  | /*(* empty *)*/              { [] }
  | TLineRecipe recipe_lines_opt { $1 :: $2 }
-

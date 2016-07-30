@@ -30,9 +30,6 @@ type rule_ = {
   prereqs: words;
   attr: rule_attribute list;
   recipe: recipe option;
-
-  (* derived from whether targets or prereqs contain a Percent *)
-  is_meta: bool;
 }
   and rule_attribute = 
     | Quiet
@@ -41,7 +38,7 @@ type rule_ = {
     | NotHandled of char
 
 type instr_kind =
-  (* should resolve to a single filename *)
+  (* should resolve to a single filename, less: could enforce of word? *)
   | Include of words
   | Rule of rule_
   (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR *)

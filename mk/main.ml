@@ -14,15 +14,17 @@ open Common
  *  - no :P:
  *    (it is barely documented anyway, and you can do without)
  *  - no private variables
- *    (I never saw mkfiles using it, and complicates the parsing of '=')
+ *    (I never saw mkfiles using it, and it complicates the parsing of '=')
  *  - only one -f is supported, not an array of up to 256 mkfiles
  *    (who uses that? maybe to have mk -f varfile -f mkfile)
  *  - no sequential vs parallel mode, and no parallel for multi targets
  *    (most of the time you give just one target anyway)
- *  - disallow :=< in more context
- *    (confusing for reader anyway)
- *  - disallow dynamic assignements like $X=1
- *    (who uses that?)
+ *  - disallow :=<% in more context
+ *    (confusing for reader anyway, force user to quote)
+ *  - disallow dynamic assignements like X=B ... $X=1
+ *    (harder to read, who uses that?)
+ *  - disallow dynamic patterns like X=%.o  $X: %.c
+ *    (harder to read)
  *  - no opti like missing intermediate (mk -i)
  *    (I barely understand the algorithm anyway)
  *  - no vacuous check
@@ -50,17 +52,14 @@ open Common
  *  - xx=yyy overriding
  *  - some flags (-a, -e, etc)
  *  - recursive mk? (used by my mkfile in plan9-ml)
- *  - dynamic mkfile?
- *  - look at source code of omake? and mk-in-go?
+ *  - dynamic mkfile? to makeup for lack of ifdef?
  *)
 
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
 
-(*val build_target: 
-  Env.t -> Rules.t -> string (* target *) -> unit
-*)
-let build_target env rules target =
+let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
+ fun env rules target ->
   raise Todo
 
 

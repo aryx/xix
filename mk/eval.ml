@@ -106,7 +106,7 @@ let rec (eval_words: Ast.loc -> Env.t -> Ast.words ->
 (* Entry point *)
 (*****************************************************************************)
 
-let eval env targets xs =
+let eval env targets_ref xs =
 
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
@@ -162,7 +162,10 @@ let eval env targets xs =
 
               targets |> List.iter (fun target ->
                 Hashtbl.add simples target rfinal
-              )
+              );
+              if !targets_ref = [] 
+              then targets_ref := targets;
+
           | Right targets, Right prereqs ->
               let rfinal = { R.
                              targets = targets; 

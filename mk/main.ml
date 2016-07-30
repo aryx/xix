@@ -72,6 +72,14 @@ let do_action s xs =
         let _ast = Parse.parse file in
         ()
       )
+  | "-test_eval" ->
+      xs |> List.iter (fun file ->
+        pr2 (spf "processing %s" file);
+        let env = Env.initenv() in
+        let instrs = Parse.parse file in
+        let _rules, _env = Eval.eval env (ref []) instrs in
+        ()
+      )
   | _ -> failwith ("action not supported: " ^ s)
 
 
@@ -91,6 +99,8 @@ let main () =
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"),
+    " ";
+    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"),
     " ";
 
     (* pad: I added that *)

@@ -3,7 +3,7 @@ type node = {
   (* usually a filename *)
   name: string;
   (* None for virtual targets and inexistent files *)
-  time: float option;
+  mutable time: float option;
   
   prereqs: arc list ref;
 }

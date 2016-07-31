@@ -122,6 +122,7 @@ rule token = parse
       { state := !save_state_outside_brace; 
         TCBrace 
       }
+  | '$' { error "missing variable name" }
 
   (* ----------------------------------------------------------------------- *)
   (* Quoted strings *)

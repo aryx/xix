@@ -91,6 +91,7 @@ let rec apply_rules target rules =
         then ()
         else arcs |> Common.push { dest = None; rule_exec = Rules.rule_exec r }
       else pre |> List.iter (fun prereq ->
+        (* recurse *)
         let dest = apply_rules prereq rules in
         arcs |> Common.push { dest = Some dest; rule_exec = Rules.rule_exec r }
       )

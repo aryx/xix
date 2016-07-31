@@ -10,7 +10,6 @@ open Ast
 (* 
  * todo:
  *  - good parsing error messages, right now hard.
-      "expected one of :<=\n", in general
       "missing include file name\n"    < no words.
       "multiple vars on left side of assignment\n"  words =
       "missing trailing :" (for rule attribute)
@@ -102,6 +101,9 @@ instr:
          loc = $2;
         }]
      }
+
+ | error TNewline { error "expected one of :<=\n" }
+ 
 
 /*(* less: 
 instr: error { }

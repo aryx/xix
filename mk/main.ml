@@ -49,7 +49,9 @@ open Common
  *    or percent at many places.
  * 
  * todo:
- *  - xx=yyy overriding
+ *  - checks on the dependency graph
+ *  - ambiguous() check, graph fixes, and better trace!
+ *  - xx=yyy overriding and S_OVERRIDE
  *  - some flags (-a, -e, etc)
  *  - recursive mk? (used by my mkfile in plan9-ml)
  *  - & vs %? rarely found use

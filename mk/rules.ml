@@ -5,6 +5,8 @@ type 'a rule_ = {
 
   attrs: Ast.rule_attribute Set.t;
   recipe: Ast.recipe option;
+
+  loc: Ast.loc;
 }
 
 
@@ -19,10 +21,11 @@ type rule_exec = {
   recipe2: Ast.recipe option;
   stem: string option;
 
-  (* loc? *)
+  loc2: Ast.loc;
 }
 
 let rule_exec r =
   { recipe2 = r.recipe;
-    stem = None
+    stem = None;
+    loc2 = r.loc;
   }

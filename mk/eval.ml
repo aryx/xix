@@ -158,7 +158,9 @@ let eval env targets_ref xs =
                              targets = targets; 
                              prereqs = prereqs;
                              attrs = Set.of_list r.A.attrs;
-                             recipe = r.A.recipe } in
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
 
               targets |> List.iter (fun target ->
                 Hashtbl.add simples target rfinal
@@ -171,7 +173,9 @@ let eval env targets_ref xs =
                              targets = targets; 
                              prereqs = prereqs;
                              attrs = Set.of_list r.A.attrs;
-                             recipe = r.A.recipe } in
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
               metas |> Common.push rfinal
           | _, _ ->
               (* stricter? could allow Right targets, Left prereqs *)

@@ -3,11 +3,22 @@ open Common
 
 module R = Rules
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 type node = {
   (* usually a filename *)
   name: string;
-  (* None for virtual targets and inexistent files *)
-  time: float option;
+
+  (* None for virtual targets and inexistent files.
+   * mutable because will be updated once the target is generated.
+   *)
+  mutable time: float option;
   
   (* todo: other flags *)
   (* is_virtual: bool; *)
@@ -17,12 +28,15 @@ type node = {
 and arc = {
   (* can point to an existing node since the graph of dependencies is a DAG *)
   dest: node option;
-
   (* what we need from the rule *)
   rule_exec: Rules.rule_exec;
 }
 
 let hnode = Hashtbl.create 101
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (* opti? time cache, and flag to skip cache if want refresh *)
 let timeof file =
@@ -44,26 +58,38 @@ let new_node target =
 let exec_stem r stem =
   { (Rules.rule_exec r) with Rules.stem = Some stem }
 
+(*****************************************************************************)
+(* Checks *)
+(*****************************************************************************)
+
 (* todo: cycle detection, ambiguous and graph fixing *)
 let check_graph root =
   pr2 "TODO: check_graph";
   root
 
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
 
 let rec apply_rules target rules =
+  (* the graph of dependency is actually a DAG, so look if node already there *)
   if Hashtbl.mem hnode target
   then Hashtbl.find hnode target
   else begin
+
     let node = new_node target in
     let arcs = node.prereqs in
   
     (* look for simple rules *)
     let rs = Hashtbl.find_all rules.R.simples target in
     rs |> List.iter (fun r ->
-      (* less: if no recipe and no prereqs, skip, but weird rule no? *)
       let pre = r.R.prereqs in
       if pre = []
-      then arcs |> Common.push { dest = None; rule_exec = Rules.rule_exec r }
+      then
+        (* some tools generate useless deps with no recipe and no prereqs *)
+        if r.R.recipe = None
+        then ()
+        else arcs |> Common.push { dest = None; rule_exec = Rules.rule_exec r }
       else pre |> List.iter (fun prereq ->
         let dest = apply_rules prereq rules in
         arcs |> Common.push { dest = Some dest; rule_exec = Rules.rule_exec r }
@@ -77,7 +103,9 @@ let rec apply_rules target rules =
         (match Percent.match_ target_pat target with
         | None -> ()
         | Some stem ->
-           (* less: if no recipe and no prereqs, skip, but weird rule no? *)
+           (* less: if no recipe and no prereqs, skip, but weird rule no?
+            * especially for a metarule
+            *)
           let pre = r.R.prereqs in
           if pre = []
           then arcs |> Common.push { dest = None; rule_exec=exec_stem r stem }
@@ -96,6 +124,15 @@ let rec apply_rules target rules =
     node
   end
 
+(*****************************************************************************)
+(* Debug *)
+(*****************************************************************************)
+
+let loc_of_arc arc =
+  let rexec = arc.rule_exec in
+  let loc = rexec.R.loc2 in
+  spf "(%s:%d)" loc.Ast.file loc.Ast.line
+
 let dump_graph node =
   let pr s = print_string (s ^ "\n") in
   pr "digraph misc {";
@@ -108,9 +145,11 @@ let dump_graph node =
       Hashtbl.add hdone node1.name true;
       !(node1.prereqs) |> List.iter (fun arc ->
         match arc.dest with
-        | None -> pr (spf "\"%s\" -> \"<NOTHING>\";" node1.name)
+        | None -> pr (spf "\"%s\" -> \"<NOTHING>\";    # %s" 
+                        node1.name (loc_of_arc arc))
         | Some node2 -> 
-          pr (spf "\"%s\" -> \"%s\";" node1.name node2.name);
+          pr (spf "\"%s\" -> \"%s\";       # %s" 
+                node1.name node2.name (loc_of_arc arc));
           (* recurse *)
           aux node2
       )
@@ -119,6 +158,10 @@ let dump_graph node =
   aux node;
   pr "}";
   ()
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 (* todo: infinite rule detection *)
 let build_graph target rules =

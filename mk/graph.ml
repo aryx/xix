@@ -95,11 +95,35 @@ let rec apply_rules target rules =
     node.prereqs := List.rev !arcs;
     node
   end
-  
+
+let dump_graph node =
+  let pr s = print_string (s ^ "\n") in
+  pr "digraph misc {";
+  pr "size = \"10,10\";" ;
+  let hdone = Hashtbl.create 101 in
+  let rec aux node1 =
+    if Hashtbl.mem hdone node1.name
+    then ()
+    else begin
+      Hashtbl.add hdone node1.name true;
+      !(node1.prereqs) |> List.iter (fun arc ->
+        match arc.dest with
+        | None -> pr (spf "\"%s\" -> \"<NOTHING>\";" node1.name)
+        | Some node2 -> 
+          pr (spf "\"%s\" -> \"%s\";" node1.name node2.name);
+          (* recurse *)
+          aux node2
+      )
+    end
+  in
+  aux node;
+  pr "}";
+  ()
 
 (* todo: infinite rule detection *)
 let build_graph target rules =
   let root = apply_rules target rules in
-  check_graph root;
+  (* todo: check_graph root; *)
   (* todo: propagate_attribute *)
+  if !Flags.dump_graph then dump_graph root;
   root

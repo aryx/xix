@@ -61,8 +61,7 @@ let usage =
 
 let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
  fun env rules target ->
-   let root = Graph.build_graph target rules in
-   pr2_gen root;
+   let _root = Graph.build_graph target rules in
    raise Todo
 
 

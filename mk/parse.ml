@@ -16,12 +16,12 @@ let parse file =
       | Lexer.InBrace -> 
           Lexer.token lexbuf
       | Lexer.InRecipe -> Lexer.recipe lexbuf
-      ) |> (fun tok -> if !Flags.debug_lexer then pr2_gen tok; tok)
+      ) |> (fun tok -> if !Flags.dump_tokens then pr2_gen tok; tok)
     in
       
     try 
       Parser.program lexfunc lexbuf
-      |> (fun ast -> if !Flags.debug_ast then ast |> List.iter pr2_gen; ast)
+      |> (fun ast -> if !Flags.dump_ast then ast |> List.iter pr2_gen; ast)
 
     (* less: could track line of : and = *)
     with Parsing.Parse_error ->

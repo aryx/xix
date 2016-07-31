@@ -5,9 +5,6 @@ type node = {
   (* None for virtual targets and inexistent files *)
   time: float option;
   
-  (* todo: flags *)
-  is_virtual: bool;
-
   prereqs: arc list ref;
 }
 and arc = {
@@ -21,5 +18,5 @@ and arc = {
 }
 
 
-val graph: 
+val build_graph: 
   string (* target *) -> Rules.t -> node (* the root *)

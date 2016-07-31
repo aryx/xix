@@ -52,6 +52,7 @@ open Common
  *  - xx=yyy overriding
  *  - some flags (-a, -e, etc)
  *  - recursive mk? (used by my mkfile in plan9-ml)
+ *  - & vs %? rarely found use
  *  - dynamic mkfile? to makeup for lack of ifdef?
  *)
 
@@ -60,7 +61,9 @@ let usage =
 
 let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
  fun env rules target ->
-  raise Todo
+   let root = Graph.build_graph target rules in
+   pr2_gen root;
+   raise Todo
 
 
 (* to test the different mk components *)
@@ -87,8 +90,10 @@ let main () =
   let infile  = ref "mkfile" in
   let targets = ref [] in
 
+  (* for debugging *)
   let action = ref "" in
   let backtrace = ref false in
+  let debugger = ref false in
 
   let options = [
 
@@ -104,10 +109,14 @@ let main () =
     " ";
 
     (* pad: I added that *)
-    "-debug_lexer", Arg.Set Flags.debug_lexer,
+    "-debugger", Arg.Set debugger,
+    " ";
+    "-dump_tokens", Arg.Set Flags.dump_tokens,
     " dump the tokens as they are generated";
-    "-debug_ast", Arg.Set Flags.debug_ast,
+    "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
+    "-dump_graph", Arg.Set Flags.dump_graph,
+    " dump the generated graph";
 
     "-backtrace", Arg.Set backtrace,
     " dump a backtrace after an error";
@@ -125,7 +134,11 @@ let main () =
       do_action !action (List.rev !targets); 
       exit 0 
     end;
-    
+    if !debugger then begin
+      Sys.chdir (Filename.dirname !infile);
+      Hashtbl.add env.Env.vars "objtype" ["386"]
+    end;
+
     (* parsing (and evaluating) *)
     let instrs = Parse.parse !infile in
     let rules, env = Eval.eval env targets instrs in

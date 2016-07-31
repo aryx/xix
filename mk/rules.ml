@@ -16,8 +16,13 @@ type t = {
 }
 
 type rule_exec = {
-  recipe: Ast.recipe option;
+  recipe2: Ast.recipe option;
   stem: string option;
 
   (* loc? *)
 }
+
+let rule_exec r =
+  { recipe2 = r.recipe;
+    stem = None
+  }

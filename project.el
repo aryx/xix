@@ -32,7 +32,7 @@
   (list 
    ""
    (case 1
-     (1 (concat "-f " (concat p "/mk/mkfile")))
+     (1 (concat "-debugger -f " (concat p "/mk/mkfile")))
      )
    )))
 

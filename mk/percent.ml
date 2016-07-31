@@ -61,11 +61,14 @@ let rec match_ (P pat) str =
         let str_pat_after = string_after_percent xs in
         let len_after = String.length str_pat_after in
         let len_matching_percent = len - len_after in
-        let stem = String.sub str 0 len_matching_percent in
-        if str_pat_after = String.sub str len_matching_percent 
-          (len - len_matching_percent) && stem <> ""
-        then Some stem
-        else None
+        if len_matching_percent < 0
+        then None
+        else
+          let stem = String.sub str 0 len_matching_percent in
+          if str_pat_after = String.sub str len_matching_percent 
+            (len - len_matching_percent) && stem <> ""
+          then Some stem
+          else None
     )        
 
 let subst (P pat) stem =

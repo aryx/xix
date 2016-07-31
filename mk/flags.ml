@@ -1,4 +1,5 @@
 
-let debug_lexer = ref false
+let dump_tokens = ref false
+let dump_ast = ref false
+let dump_graph = ref false
 
-let debug_ast = ref false

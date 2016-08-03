@@ -5,15 +5,22 @@ type node = {
 
   mutable time: float option;
   mutable state: build_state;
+
+  mutable visited: bool;
 }
-and arc = {
-  dest: node option;
-  rule_exec: Rules.rule_exec;
-}
-and build_state =
-  | NotMade
-  | BeingMade
-  | Made
+  and arc = {
+    dest: node option;
+    rule_exec: Rules.rule_exec;
+  }
+  and build_state =
+    | NotMade
+    | BeingMade
+    | Made
+
+type graph = node (* the root *)
 
 val build_graph: 
-  string (* target *) -> Rules.t -> node (* the root *)
+  string (* target *) -> Rules.t -> graph
+
+val check_cycle: 
+  node -> unit

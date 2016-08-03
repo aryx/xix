@@ -24,19 +24,26 @@ type node = {
   mutable state: build_state;
   (* todo: other flags *)
   (* is_virtual: bool; *)
+ 
+  (* used only for check_cycle for now *)
+  mutable visited: bool;
 }
-and arc = {
-  (* note that because the graph of dependencies is a DAG, multiple arcs
-   * may point to the same node.
-   *)
-  dest: node option;
-  (* what we need from the rule *)
-  rule_exec: Rules.rule_exec;
-}
-and build_state = 
-  | NotMade
-  | BeingMade
-  | Made
+  and arc = {
+    (* note that because the graph of dependencies is a DAG, multiple arcs
+     * may point to the same node.
+     *)
+    dest: node option;
+    (* what we need from the rule *)
+    rule_exec: Rules.rule_exec;
+  }
+  and build_state = 
+    | NotMade
+    | BeingMade
+    | Made
+
+type graph = node (* the root *)
+
+
 
 let hnode = Hashtbl.create 101
 
@@ -57,6 +64,7 @@ let new_node target =
     time = timeof target;
     prereqs = ref [];
     state = NotMade;
+    visited = false;
   }
   in
   Hashtbl.add hnode target node;
@@ -68,6 +76,34 @@ let exec_stem r stem =
 (*****************************************************************************)
 (* Checks *)
 (*****************************************************************************)
+
+let check_cycle node =
+
+  let rec aux trace node =
+    if node.visited
+    then begin
+      (* less: I could just display the loop instead of starting from root *)
+      let str = (node::trace) |> List.rev |> List.map (fun x -> 
+        if x.name = node.name
+        then spf "|%s|" x.name
+        else x.name
+      ) |> String.concat "->"
+      in
+      failwith (spf "cycle in graph detected at target %s (trace = %s)"
+                     node.name str)
+    end;
+
+    node.visited <- true;
+    !(node.prereqs) |> List.iter (fun arc ->
+      match arc.dest with
+      | Some node2 -> aux (node::trace) node2
+      | None -> ()
+    );
+    node.visited <- false;
+  in
+  aux [] node
+                                    
+  
 
 (* todo: cycle detection, ambiguous and graph fixing *)
 let check_graph root =

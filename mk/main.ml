@@ -83,7 +83,8 @@ let do_action s xs =
 
 let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
  fun env rules target ->
-   let _root = Graph.build_graph target rules in
+   let root = Graph.build_graph target rules in
+   Graph.check_cycle root;
    raise Todo
 
 let main () =

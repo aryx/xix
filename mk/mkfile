@@ -10,7 +10,7 @@ SRC= globals.ml flags.ml \
   eval.ml \
   graph.ml \
   job.ml \
-  scheduler.ml shell.ml \
+  outofdate.ml scheduler.ml shell.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

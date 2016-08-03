@@ -61,12 +61,6 @@ open Common
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
 
-let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
- fun env rules target ->
-   let _root = Graph.build_graph target rules in
-   raise Todo
-
-
 (* to test the different mk components *)
 let do_action s xs =
   match s with
@@ -86,6 +80,11 @@ let do_action s xs =
       )
   | _ -> failwith ("action not supported: " ^ s)
 
+
+let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
+ fun env rules target ->
+   let _root = Graph.build_graph target rules in
+   raise Todo
 
 let main () =
   let infile  = ref "mkfile" in
@@ -166,4 +165,3 @@ let main () =
 
 let _ = 
     main ()
-      

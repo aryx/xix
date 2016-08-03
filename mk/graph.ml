@@ -15,22 +15,28 @@ type node = {
   (* usually a filename *)
   name: string;
 
+  prereqs: arc list ref;
+
   (* None for virtual targets and inexistent files.
-   * mutable because will be updated once the target is generated.
+   * mutable because it will be updated once the target is generated.
    *)
   mutable time: float option;
-  
+  mutable state: build_state;
   (* todo: other flags *)
   (* is_virtual: bool; *)
-
-  prereqs: arc list ref;
 }
 and arc = {
-  (* can point to an existing node since the graph of dependencies is a DAG *)
+  (* note that because the graph of dependencies is a DAG, multiple arcs
+   * may point to the same node.
+   *)
   dest: node option;
   (* what we need from the rule *)
   rule_exec: Rules.rule_exec;
 }
+and build_state = 
+  | NotMade
+  | BeingMade
+  | Made
 
 let hnode = Hashtbl.create 101
 
@@ -49,7 +55,8 @@ let new_node target =
   let node = {
     name = target;
     time = timeof target;
-    prereqs = ref []
+    prereqs = ref [];
+    state = NotMade;
   }
   in
   Hashtbl.add hnode target node;

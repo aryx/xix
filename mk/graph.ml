@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+module A = Ast
 module R = Rules
 
 (*****************************************************************************)
@@ -15,26 +16,28 @@ type node = {
   (* usually a filename *)
   name: string;
 
+  (* a ref because it can be adjusted later in check_ambiguous *)
   prereqs: arc list ref;
 
   (* None for virtual targets and inexistent files.
    * mutable because it will be updated once the target is generated.
    *)
   mutable time: float option;
-  mutable state: build_state;
-  (* todo: other flags *)
-  (* is_virtual: bool; *)
- 
   (* used only for check_cycle for now *)
   mutable visited: bool;
+
+  mutable state: build_state;
+
+  (* todo: other flags *)
+  (* is_virtual: bool; *)
 }
   and arc = {
-    (* note that because the graph of dependencies is a DAG, multiple arcs
-     * may point to the same node.
+    (* note that because the graph of dependencies is a DAG, multiple
+     * arcs may point to the same node. 
      *)
     dest: node option;
-    (* what we need from the rule *)
-    rule_exec: Rules.rule_exec;
+    (* what we need from the rule to execute a recipe (and report errors) *)
+    rule: Rules.rule_exec;
   }
   and build_state = 
     | NotMade
@@ -44,7 +47,9 @@ type node = {
 type graph = node (* the root *)
 
 
-
+(* The graph is a DAG, some arcs may point to previously created nodes.
+ * This is why we store in this hash all the created nodes.
+ *)
 let hnode = Hashtbl.create 101
 
 (*****************************************************************************)
@@ -70,50 +75,15 @@ let new_node target =
   Hashtbl.add hnode target node;
   node
 
-let exec_stem r stem =
+let rule_exec_stem r stem =
   { (Rules.rule_exec r) with Rules.stem = Some stem }
 
-(*****************************************************************************)
-(* Checks *)
-(*****************************************************************************)
-
-let check_cycle node =
-
-  let rec aux trace node =
-    if node.visited
-    then begin
-      (* less: I could just display the loop instead of starting from root *)
-      let str = (node::trace) |> List.rev |> List.map (fun x -> 
-        if x.name = node.name
-        then spf "|%s|" x.name
-        else x.name
-      ) |> String.concat "->"
-      in
-      failwith (spf "cycle in graph detected at target %s (trace = %s)"
-                     node.name str)
-    end;
-
-    node.visited <- true;
-    !(node.prereqs) |> List.iter (fun arc ->
-      match arc.dest with
-      | Some node2 -> aux (node::trace) node2
-      | None -> ()
-    );
-    node.visited <- false;
-  in
-  aux [] node
-                                    
-  
-
-(* todo: cycle detection, ambiguous and graph fixing *)
-let check_graph root =
-  pr2 "TODO: check_graph";
-  root
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(* todo: infinite rule detection *)
 let rec apply_rules target rules =
   (* the graph of dependency is actually a DAG, so look if node already there *)
   if Hashtbl.mem hnode target
@@ -132,11 +102,11 @@ let rec apply_rules target rules =
         (* some tools generate useless deps with no recipe and no prereqs *)
         if r.R.recipe = None
         then ()
-        else arcs |> Common.push { dest = None; rule_exec = Rules.rule_exec r }
+        else arcs |> Common.push { dest = None; rule = Rules.rule_exec r }
       else pre |> List.iter (fun prereq ->
         (* recurse *)
         let dest = apply_rules prereq rules in
-        arcs |> Common.push { dest = Some dest; rule_exec = Rules.rule_exec r }
+        arcs |> Common.push { dest = Some dest; rule = Rules.rule_exec r }
       )
     );
 
@@ -152,29 +122,111 @@ let rec apply_rules target rules =
             *)
           let pre = r.R.prereqs in
           if pre = []
-          then arcs |> Common.push { dest = None; rule_exec=exec_stem r stem }
+          then arcs |> Common.push { dest = None; rule = rule_exec_stem r stem }
           else pre |> List.iter (fun prereq_pat ->
             let prereq = Percent.subst prereq_pat stem in
             let dest = apply_rules prereq rules in
-            arcs |> Common.push { dest = Some dest; rule_exec=exec_stem r stem }
+            arcs |> Common.push { dest = Some dest; rule=rule_exec_stem r stem }
           )
         )
       )
     );
 
     (* should not matter normally, but nice to have same sequential order 
-     * of exec as the one specified in the mkfile *)
+     * of exec as the one specified in the mkfile 
+     *)
     node.prereqs := List.rev !arcs;
     node
   end
+
+(*****************************************************************************)
+(* Checks *)
+(*****************************************************************************)
+
+let error_cycle node trace =
+  (* less: I could just display the loop instead of starting from root *)
+  let str = (node::trace) |> List.rev |> List.map (fun x -> 
+    if x.name = node.name then spf "|%s|" x.name else x.name
+  ) |> String.concat "->"
+  in
+  failwith (spf "cycle in graph detected at target %s (trace = %s)"
+              node.name str)
+
+let check_cycle node =
+
+  let rec aux trace node =
+    if node.visited
+    then error_cycle node trace;
+
+    node.visited <- true;
+    !(node.prereqs) |> List.iter (fun arc ->
+      arc.dest |> Common.if_some (fun node2 -> 
+        aux (node::trace) node2
+      )
+    );
+    node.visited <- false;
+  in
+  aux [] node
+
+
+
+
+let error_ambiguous node groups =
+  let candidates = 
+    groups |> List.map (fun (rule, arcs) -> 
+      let loc = rule.R.loc2 in
+      (* one arc representative is enough *)
+      let arc = List.hd arcs in
+      spf "\t%s <- (%s:%d)- %s" 
+        node.name loc.A.file loc.A.line
+        (match arc.dest with None -> "" | Some n -> n.name)
+    )
+  in
+  failwith (spf "ambiguous recipes for %s: \n%s" 
+              node.name  (candidates |> String.concat "\n"))
+
+let rec check_ambiguous node =
+
+  !(node.prereqs) |> List.iter (fun arc ->
+    (* less: opti: could use visited to avoid duplicate work in a DAG *)
+    arc.dest |> Common.if_some (fun node2 -> 
+      (* recurse *)
+      check_ambiguous node2
+    );
+  );
+
+  let arcs = !(node.prereqs) in
+  let arcs_with_recipe = 
+    arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
+  let group_by_rule =
+    arcs_with_recipe |> Common.group_by (fun arc -> arc.rule)
+  in
+  
+  match List.length group_by_rule with
+  | 0 -> ()
+    (* stricter? or report it later? *)
+    (* failwith (spf "no recipe to make %s" node.name) *)
+  | 1 -> ()
+  | 2 | _ -> 
+    let group_with_simple_rule =
+      group_by_rule |> Common.exclude (fun (r, _) -> R.is_meta r) 
+    in
+    (match List.length group_with_simple_rule with
+    | 0 -> error_ambiguous node group_by_rule
+    | 1 ->
+      (* update graph *)
+      node.prereqs := Common.exclude (fun arc -> R.is_meta arc.rule) arcs;
+    | 2 | _ -> error_ambiguous node group_with_simple_rule
+    )
+
+
 
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
 
 let loc_of_arc arc =
-  let rexec = arc.rule_exec in
-  let loc = rexec.R.loc2 in
+  let loc = arc.rule.R.loc2 in
   spf "(%s:%d)" loc.Ast.file loc.Ast.line
 
 let dump_graph node =
@@ -210,7 +262,6 @@ let dump_graph node =
 (* todo: infinite rule detection *)
 let build_graph target rules =
   let root = apply_rules target rules in
-  (* todo: check_graph root; *)
   (* todo: propagate_attribute *)
   if !Flags.dump_graph then dump_graph root;
   root

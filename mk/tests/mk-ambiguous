@@ -1,0 +1,6 @@
+
+foo.5: foo.c
+       5c -c foo.c
+
+foo.5: bar.c
+       5c -c bar.c

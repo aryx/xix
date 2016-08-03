@@ -207,3 +207,17 @@ let pr2 s =
 let pr2_gen x = pr2 (dump x)
 
 
+let group_by f xs =
+  (* use Hashtbl.find_all property *)
+  let h = Hashtbl.create 101 in
+
+  (* could use Set *)
+  let hkeys = Hashtbl.create 101 in
+  
+  xs |> List.iter (fun x ->
+    let k = f x in
+    Hashtbl.replace hkeys k true;
+    Hashtbl.add h k x
+  );
+  Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
+    

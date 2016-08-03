@@ -1,0 +1,6 @@
+
+%.5: %.c
+	5c -c $stem.c
+
+foo.5: foo.c
+	5c -c $stem.c

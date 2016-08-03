@@ -25,7 +25,7 @@ type words = word list
 (* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = R of string list
 
-type rule_ = {
+type rule = {
   targets: words;
   prereqs: words;
   attrs: rule_attribute list;
@@ -40,7 +40,7 @@ type rule_ = {
 type instr_kind =
   (* should resolve to a single filename, less: could enforce of word? *)
   | Include of words
-  | Rule of rule_
+  | Rule of rule
   (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR *)
   | Definition of string * words
 

@@ -85,7 +85,12 @@ let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
  fun env rules target ->
    let root = Graph.build_graph target rules in
    Graph.check_cycle root;
+   Graph.check_ambiguous root;
+
    raise Todo
+
+
+
 
 let main () =
   let infile  = ref "mkfile" in
@@ -154,13 +159,14 @@ let main () =
       (* less: profiling*)
     ()
   with exn ->
-    if !backtrace 
+    if !backtrace || !debugger
     then raise exn
     else 
       (match exn with
       | Failure s -> 
-          pr2 s;
-          exit (-2)
+          (* useful to indicate that error comes from mk, not subprocess *)
+          pr2 ("mk: " ^ s);
+          exit (-1)
       | _ -> raise exn
       )
 

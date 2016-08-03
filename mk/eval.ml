@@ -59,7 +59,7 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
                    )
                (* stricter? what does mk?*)
                | _ -> error loc 
-                 "pattern or subst do not resolve to a single string"
+                 "pattern or subst does not resolve to a single string"
                )
          in
          (match ys, acc, xs with

@@ -1,5 +1,5 @@
 
-type 'a rule_ = {
+type 'a rule = {
   targets: 'a list;
   prereqs: 'a list;
 
@@ -12,9 +12,9 @@ type 'a rule_ = {
 
 type t = {
   (* use Hashtbl.find_all since a target can be associated to multiple rules *)
-  simples: (string, string rule_) Hashtbl.t;
+  simples: (string, string rule) Hashtbl.t;
 
-  metas: (Percent.pattern rule_) list;
+  metas: (Percent.pattern rule) list;
 }
 
 type rule_exec = {
@@ -29,3 +29,9 @@ let rule_exec r =
     stem = None;
     loc2 = r.loc;
   }
+
+let has_recipe re =
+  re.recipe2 <> None
+
+let is_meta re =
+  re.stem <> None

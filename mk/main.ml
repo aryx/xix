@@ -1,6 +1,9 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+module G = Graph
+module R = Rules
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -87,7 +90,21 @@ let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
    Graph.check_cycle root;
    Graph.check_ambiguous root;
 
-   raise Todo
+   let ever_did = ref false in
+
+   while root.G.state = G.NotMade do
+     let did = ref false in
+     (* may call internally Scheduler.run to schedule jobs *)
+     Outofdate.work root did;
+     if !did 
+     then ever_did := true
+     else 
+       if !ever_did 
+       then Scheduler.waitup ()
+   done;
+   
+   if not !ever_did
+   then print_string (spf "mk: '%s' is up to date\n" root.G.name)
 
 
 

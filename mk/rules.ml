@@ -21,14 +21,12 @@ type rule_exec = {
   recipe2: Ast.recipe option;
   stem: string option;
 
+  all_targets: string list;
+  all_prereqs: string list;
+
   loc2: Ast.loc;
 }
 
-let rule_exec r =
-  { recipe2 = r.recipe;
-    stem = None;
-    loc2 = r.loc;
-  }
 
 let has_recipe re =
   re.recipe2 <> None

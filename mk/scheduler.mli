@@ -1,11 +1,11 @@
 
 (*
 val jobs:
-
-val waitup:
-
-val run:
-
 val sched:
-
 *)
+
+val run: 
+  Job.t -> unit
+
+val waitup: 
+  unit -> unit

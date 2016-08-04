@@ -1,11 +1,12 @@
 
 type node = {
   name: string;
-  prereqs: arc list ref;
+  arcs: arc list ref;
 
   mutable time: float option;
-  mutable visited: bool;
   mutable state: build_state;
+
+  mutable visited: bool;
 }
   and arc = {
     dest: node option;
@@ -18,8 +19,9 @@ type node = {
 
 type graph = node (* the root *)
 
+val hnodes: (string, node) Hashtbl.t
 
-
+(* will also modify hnode *)
 val build_graph: 
   string (* target *) -> Rules.t -> graph
 

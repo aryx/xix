@@ -122,8 +122,11 @@ let main () =
 
     "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
+    
+    "-n", Arg.Set Flags.dry_mode,
+    " dry mode";
 
-    (* less: -n, -a, etc *)
+    (* less: -a, etc *)
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"),

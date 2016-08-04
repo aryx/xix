@@ -207,8 +207,8 @@ and backquote2 = parse
 (* Rule recipe *)
 (*****************************************************************************)
 and recipe = parse
-  | ('#'   [^'\n']*) as s '\n'? { incr Globals.line; TLineRecipe s }
-  | space ([^'\n']*) as s '\n'? { incr Globals.line; TLineRecipe s }
+  | ('#'   [^'\n']*) as s   '\n'? { incr Globals.line; TLineRecipe s }
+  | space (([^'\n']*) as s) '\n'? { incr Globals.line; TLineRecipe s }
 
   | [^ '#' ' ' '\t']    { state := Start; yyback 1 lexbuf; TEndRecipe }
   | eof                 { state := Start; yyback 1 lexbuf; TEndRecipe }

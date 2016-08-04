@@ -49,7 +49,7 @@ let sched () =
     else
       let flags = "-e" in
       let shellenv = raise Todo in
-      let _pid = Shell.execsh flags recipe shellenv in
+      let _pid = Shell.execsh shellenv flags recipe in
       raise Todo
     
   with Queue.Empty ->

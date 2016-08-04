@@ -25,7 +25,7 @@ let outofdate node arc =
        (match node.G.time, node2.G.time with
        | _      , None    -> raise (Impossible "inexistent dep")
        | None   , Some _  -> true
-       | Some t1, Some t2 -> t1 <= t2
+       | Some t1, Some t2 -> t1 < t2
        )
 
 

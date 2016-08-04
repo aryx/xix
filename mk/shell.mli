@@ -1,3 +1,4 @@
 
 val execsh: 
-  string -> Ast.recipe -> Shellenv.t -> int (* pid *)
+  Shellenv.t -> string (* sh arguments *) -> Ast.recipe (* sh stdin *) ->
+  int (* pid *)

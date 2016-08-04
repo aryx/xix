@@ -10,7 +10,7 @@ type 'a rule = {
 }
 
 
-type t = {
+type rules = {
   (* use Hashtbl.find_all since a target can be associated to multiple rules *)
   simples: (string, string rule) Hashtbl.t;
 

@@ -27,16 +27,20 @@ let jobs = Queue.create ()
 let sched () =
   try 
     let job = Queue.take jobs in
+    let recipe = 
+      match job.J.rule.R.recipe2 with 
+      | Some x -> x 
+      | None -> raise (Impossible "job without a recipe")
+    in
+
     (*todo: let shellenv = build_shell_env job in *)
     
     (* less: unless Quiet *)
-    job.J.rule.R.recipe2 |> Common.if_some (fun (Ast.R recipe) ->
-      (* todo: subst variable!! *)
-      recipe |> List.iter (fun s ->
-        print_string (s ^ "\n")
-      )
-    );
-    
+    (* todo: subst variable!! *)
+    recipe |> (fun (Ast.R xs) -> xs |> List.iter (fun s ->
+      print_string (s ^ "\n")
+    ));
+
     if !Flags.dry_mode 
     then job.J.target_nodes |> List.iter (fun node ->
       node.G.time <- Some (Unix.time ());
@@ -44,7 +48,8 @@ let sched () =
     )
     else
       let flags = "-e" in
-      let pid = execsh flags job.recipe shellenv in
+      let shellenv = raise Todo in
+      let _pid = Shell.execsh flags recipe shellenv in
       raise Todo
     
   with Queue.Empty ->
@@ -61,4 +66,3 @@ let run job =
 
 let waitup () =
   raise Todo
-

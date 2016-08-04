@@ -37,7 +37,7 @@ type state =
 let state = ref Start
 
 (* A single var is enough since mk does not allow recursivity in braces
- * as in ${x:%${y}x=%.c}. No need for a stack.
+ * as in ${x:%${y}x=%.c}. We do not need a stack.
  * *)
 let save_state_outside_brace = ref Start
 
@@ -72,10 +72,10 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
-  (* in mk spaces have a meaning *)
+  (* in mk, spaces have a meaning *)
   | space+        { TSpace (Lexing.lexeme lexbuf) }
 
-  (* in mk newline has a meaning *)
+  (* in mk, newline has a meaning *)
   | '\n' { incr Globals.line;
            state := if !state = AfterColon then InRecipe else Start;
            TNewline }
@@ -83,7 +83,7 @@ rule token = parse
   (* escaped newline *)
   | '\\' '\n'     { incr Globals.line; TSpace (Lexing.lexeme lexbuf) }
 
-  (* less: does not handle escaped newline in comment *)
+  (* less: handle escaped newline in comment *)
   | '#' [^ '\n']* { token lexbuf }
 
 
@@ -93,7 +93,7 @@ rule token = parse
 
   | ':' { state := AfterColon; TColon (loc()) }
   | '=' { if !state = AfterEq
-          (* todo? means we have to normalize a serie of words *)
+          (* todo? means we have to normalize a series of word elements *)
           then TOther "=" 
           else begin
             state := AfterEq;
@@ -120,8 +120,10 @@ rule token = parse
       }
   | '}' 
       { state := !save_state_outside_brace; 
+        save_state_outside_brace := Start;
         TCBrace 
       }
+
   | '$' { error "missing variable name" }
 
   (* ----------------------------------------------------------------------- *)
@@ -142,6 +144,7 @@ rule token = parse
   | [^'\'' '`'  '$' '{' '}'  ':' '=' '<'  '%'   '\n' '\\' '#' ' ' '\t']+ 
       { TOther (Lexing.lexeme lexbuf) }
 
+  (* todo? means we have to normalize a series of word elements *)
   | '\\' { TOther "\\" }
 
   (* ----------------------------------------------------------------------- *)
@@ -180,7 +183,7 @@ and backquote = parse
   | '\n' { error "newline in backquoted string" }
 
   | [^ '\\' '\'' '`' '\n']+ 
-      { let x = Lexing.lexeme lexbuf in x ^ backquote lexbuf}
+      { let x = Lexing.lexeme lexbuf in x ^ backquote lexbuf }
   | "'" { let s = quote lexbuf in s ^ backquote lexbuf }
 
   (* new: instead of "missing closing `"  *)
@@ -196,7 +199,7 @@ and backquote2 = parse
   | '\n' { error "newline in backquoted string" }
 
   | [^ '\\' '\'' '}' '\n']+ 
-      { let x = Lexing.lexeme lexbuf in x ^ backquote2 lexbuf}
+      { let x = Lexing.lexeme lexbuf in x ^ backquote2 lexbuf }
   | "'" { let s = quote lexbuf in s ^ backquote2 lexbuf }
 
   (* new: instead of "missing closing `"  *)
@@ -207,8 +210,8 @@ and backquote2 = parse
 (* Rule recipe *)
 (*****************************************************************************)
 and recipe = parse
-  | ('#'   [^'\n']*) as s   '\n'? { incr Globals.line; TLineRecipe s }
-  | space (([^'\n']*) as s) '\n'? { incr Globals.line; TLineRecipe s }
+  | ('#'   [^'\n']*) as s '\n'? { incr Globals.line; TLineRecipe s }
+  | space ([^'\n']* as s) '\n'? { incr Globals.line; TLineRecipe s }
 
   | [^ '#' ' ' '\t']    { state := Start; yyback 1 lexbuf; TEndRecipe }
   | eof                 { state := Start; yyback 1 lexbuf; TEndRecipe }

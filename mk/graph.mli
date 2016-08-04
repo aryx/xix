@@ -23,7 +23,7 @@ val hnodes: (string, node) Hashtbl.t
 
 (* will also modify hnode *)
 val build_graph: 
-  string (* target *) -> Rules.t -> graph
+  string (* target *) -> Rules.rules -> graph
 
 
 val check_cycle: 

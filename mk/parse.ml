@@ -15,7 +15,8 @@ let parse file =
       | Lexer.AfterEq 
       | Lexer.InBrace -> 
           Lexer.token lexbuf
-      | Lexer.InRecipe -> Lexer.recipe lexbuf
+      | Lexer.InRecipe -> 
+          Lexer.recipe lexbuf
       ) |> (fun tok -> if !Flags.dump_tokens then pr2_gen tok; tok)
     in
       

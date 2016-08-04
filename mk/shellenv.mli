@@ -1,4 +1,6 @@
 
+type t = (string * string list) list
+
 val read_environment: 
-  unit -> (string * string list) list
- 
+  unit -> t
+

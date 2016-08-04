@@ -15,19 +15,17 @@ module J = Job
 
 let outofdate node arc =
   match arc.G.dest with
-  | None -> raise (Impossible "should not call outofdate with nodeless arc")
+  | None -> raise (Impossible "should not call outofdate on nodeless arcs")
   | Some node2 -> 
-      (* I use the stricly < in C version because on modern machines 
+      (* I use the strictly < in the C version because on modern machines 
        * many files can be created in the same second. In OCaml,
-       * the time is a float with higher precision than the second?
-       * TODO really?
+       * the time is a float with higher precision so I can use back
+       * the <=.
        *)
        (match node.G.time, node2.G.time with
-       | None, None -> raise (Impossible "inexistent target and dep")
-       | Some _, None -> raise (Impossible "inexistent dep")
-
-       | None, Some _ -> true
-       | Some t1, Some t2 -> t1 < t2
+       | _      , None    -> raise (Impossible "inexistent dep")
+       | None   , Some _  -> true
+       | Some t1, Some t2 -> t1 <= t2
        )
 
 
@@ -77,10 +75,9 @@ let dorecipe node did =
 (* Entry points *)
 (*****************************************************************************)
 
-(* we could return a job list, which would be cleaner, but it is
- * more efficient to run a job as soon as we find an opportunity
+(* We could return a job list, which would be cleaner, but it is
+ * more efficient to run a job as soon as we find an opportunity.
  *)
-
 let rec work node did =
   if node.G.state = G.BeingMade
   then ()

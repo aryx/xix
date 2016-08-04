@@ -51,7 +51,7 @@ type node = {
 type graph = node (* the root *)
 
 
-(* The graph is a DAG, some arcs may point to previously created nodes.
+(* The graph is a DAG; some arcs may point to previously created nodes.
  * This is why we store in this hash all the created nodes.
  * 
  * Moreover, later in dorecipe() when we run a job, we want to build
@@ -75,6 +75,7 @@ let new_node target =
   let node = {
     name = target;
     time = timeof target;
+
     arcs = ref [];
     state = NotMade;
     visited = false;
@@ -109,7 +110,7 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
 
 (* todo: infinite rule detection *)
 let rec apply_rules target rules =
-  (* the graph of dependency is actually a DAG, so look if node already there *)
+  (* the graph of dependency is a DAG, so we must look if node already there *)
   if Hashtbl.mem hnodes target
   then Hashtbl.find hnodes target
   else begin
@@ -123,10 +124,13 @@ let rec apply_rules target rules =
       let pre = r.R.prereqs in
       if pre = []
       then
-        (* some tools generate useless deps with no recipe and no prereqs *)
+        (* some tools (e.g., ocamldep) generate useless deps with no
+         * recipe and no prereqs that we can safely skip (we could warn)
+         *)
         if r.R.recipe = None
         then ()
         else arcs |> Common.push { dest = None; rule = rule_exec r }
+
       else pre |> List.iter (fun prereq ->
         (* recurse *)
         let dest = apply_rules prereq rules in
@@ -142,7 +146,7 @@ let rec apply_rules target rules =
         | None -> ()
         | Some stem ->
            (* less: if no recipe and no prereqs, skip, but weird rule no?
-            * especially for a metarule
+            * especially for a metarule, so maybe we should warn
             *)
           let pre = r.R.prereqs in
           if pre = []
@@ -157,8 +161,9 @@ let rec apply_rules target rules =
       )
     );
 
-    (* should not matter normally, but nice to have same sequential order 
-     * of exec as the one specified in the mkfile 
+    (* List.rev is optional. The order should not matter, but it can
+     * be nice to have the same sequential order of exec as the one 
+     * specified in the mkfile.
      *)
     node.arcs := List.rev !arcs;
     node
@@ -170,15 +175,18 @@ let rec apply_rules target rules =
 
 let error_cycle node trace =
   (* less: I could just display the loop instead of starting from root *)
-  let str = (node::trace) |> List.rev |> List.map (fun x -> 
-    if x.name = node.name then spf "|%s|" x.name else x.name
-  ) |> String.concat "->"
+  let str = 
+    (node::trace) 
+    |> List.rev 
+    |> List.map (fun x -> 
+      if x.name = node.name then spf "|%s|" x.name else x.name
+     )
+    |> String.concat "->"
   in
   failwith (spf "cycle in graph detected at target %s (trace = %s)"
               node.name str)
 
 let check_cycle node =
-
   let rec aux trace node =
     if node.visited
     then error_cycle node trace;
@@ -212,7 +220,9 @@ let error_ambiguous node groups =
 
 let rec check_ambiguous node =
 
-  !(node.arcs) |> List.iter (fun arc ->
+  let arcs = !(node.arcs) in
+
+  arcs |> List.iter (fun arc ->
     (* less: opti: could use visited to avoid duplicate work in a DAG *)
     arc.dest |> Common.if_some (fun node2 -> 
       (* recurse *)
@@ -220,28 +230,28 @@ let rec check_ambiguous node =
     );
   );
 
-  let arcs = !(node.arcs) in
   let arcs_with_recipe = 
     arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
-  let group_by_rule =
+  (* opti? rule_exec is big now, so maybe need have a rule_exec id *)
+  let groups_by_rule =
     arcs_with_recipe |> Common.group_by (fun arc -> arc.rule)
   in
   
-  match List.length group_by_rule with
+  match List.length groups_by_rule with
   | 0 -> ()
     (* stricter? or report it later? *)
     (* failwith (spf "no recipe to make %s" node.name) *)
   | 1 -> ()
   | 2 | _ -> 
-    let group_with_simple_rule =
-      group_by_rule |> Common.exclude (fun (r, _) -> R.is_meta r) 
+    let groups_with_simple_rule =
+      groups_by_rule |> Common.exclude (fun (r, _) -> R.is_meta r) 
     in
-    (match List.length group_with_simple_rule with
-    | 0 -> error_ambiguous node group_by_rule
+    (match List.length groups_with_simple_rule with
+    | 0 -> error_ambiguous node groups_by_rule
     | 1 ->
       (* update graph *)
       node.arcs := Common.exclude (fun arc -> R.is_meta arc.rule) arcs;
-    | 2 | _ -> error_ambiguous node group_with_simple_rule
+    | 2 | _ -> error_ambiguous node groups_with_simple_rule
     )
 
 
@@ -255,7 +265,9 @@ let loc_of_arc arc =
   spf "(%s:%d)" loc.Ast.file loc.Ast.line
 
 let dump_graph node =
-  let pr s = print_string (s ^ "\n") in
+  let pr s = 
+    print_string (s ^ "\n") 
+  in
   pr "digraph misc {";
   pr "size = \"10,10\";" ;
   let hdone = Hashtbl.create 101 in
@@ -284,7 +296,6 @@ let dump_graph node =
 (* Entry point *)
 (*****************************************************************************)
 
-(* todo: infinite rule detection *)
 let build_graph target rules =
   let root = apply_rules target rules in
   (* todo: propagate_attribute *)

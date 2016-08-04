@@ -18,12 +18,14 @@ module R = Rules
  *    (it is barely documented anyway, and you can do without)
  *  - no private variables
  *    (I never saw mkfiles using it, and it complicates the parsing of '=')
+ *  - no &
+ *    (rarely found use, % is enough)
  *  - only one -f is supported, not an array of up to 256 mkfiles
  *    (who uses that? maybe to have mk -f varfile -f mkfile)
  *  - no sequential vs parallel mode, and no parallel for multi targets
  *    (most of the time you give just one target anyway)
  *  - disallow :=<% in more context
- *    (confusing for reader anyway, force user to quote)
+ *    (confusing for reader anyway, I prefer to force the user to quote)
  *  - disallow dynamic assignements like X=B ... $X=1
  *    (harder to read, who uses that?)
  *  - disallow dynamic patterns like X=%.o  $X: %.c
@@ -39,8 +41,8 @@ module R = Rules
  *  - TODO be more relaxing on date (or use nanosec); if equal time then ok
  *    (modern machines can generate the .o and a.out in the same second)
  *  - generate error when no mkfile
- *  - TODO warn at least when think shprint might be wrong
- *  - TODO better error when found cycle, show full trace!
+ *  - TODO warn at least when we think shprint might be wrong
+ *  - better error when found cycle, show full trace!
  *  - TODO better error message when error in recipe, right now
  *    I get the error at the beginning and a trailing of regular shprint
  *    (but more plan9's style, so at least dont print the rest? or print
@@ -50,19 +52,21 @@ module R = Rules
  *  - different approach to parsing. Separate more clearly lexing, parsing,
  *    and evaluating, so avoid duplicate work like handling quoted characters
  *    or percent at many places.
+ *  - less use of globals, pass them around
  * 
  * todo:
- *  - checks on the dependency graph
- *  - ambiguous() check, graph fixes, and better trace!
- *  - xx=yyy overriding and S_OVERRIDE
  *  - some flags (-a, -e, etc)
- *  - recursive mk? (used by my mkfile in plan9-ml)
- *  - & vs %? rarely found use
  *  - dynamic mkfile? to makeup for lack of ifdef?
+ *  - recursive mk? (used by my mkfile in plan9-ml)
+ *  - xx=yyy overriding and S_OVERRIDE
  *)
 
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
+
+(*****************************************************************************)
+(* Testing *)
+(*****************************************************************************)
 
 (* to test the different mk components *)
 let do_action s xs =
@@ -83,9 +87,13 @@ let do_action s xs =
       )
   | _ -> failwith ("action not supported: " ^ s)
 
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
 
-let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
+let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
  fun env rules target ->
+
    let root = Graph.build_graph target rules in
    Graph.check_cycle root;
    Graph.check_ambiguous root;
@@ -104,10 +112,38 @@ let (build_target: Env.t -> Rules.t -> string (* target *) -> unit) =
    done;
    
    if not !ever_did
-   then print_string (spf "mk: '%s' is up to date\n" root.G.name)
+   then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 
 
+let (build_targets: Common.filename -> string list ref -> unit) = 
+ fun infile targets ->
 
+    (* initialisation *)
+    let env = Env.initenv() in
+    
+    if !Flags.debugger then begin
+      Sys.chdir (Filename.dirname infile);
+      Hashtbl.add env.Env.vars "objtype" ["386"]
+    end;
+
+    (* parsing (and evaluating) *)
+    let instrs = Parse.parse infile in
+    let rules, env = Eval.eval env targets instrs in
+    
+    (* building *)
+    if !targets = []
+    then failwith "mk: nothing to mk";
+
+    (* less: build shellenv here ?*)
+    !targets |> List.rev |> List.iter (fun target ->
+      build_target env rules target
+    )
+    (* less: profiling*)
+
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let main () =
   let infile  = ref "mkfile" in
@@ -116,7 +152,6 @@ let main () =
   (* for debugging *)
   let action = ref "" in
   let backtrace = ref false in
-  let debugger = ref false in
 
   let options = [
 
@@ -125,17 +160,14 @@ let main () =
     
     "-n", Arg.Set Flags.dry_mode,
     " dry mode";
-
     (* less: -a, etc *)
 
     (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"),
-    " ";
-    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"),
-    " ";
+    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
 
     (* pad: I added that *)
-    "-debugger", Arg.Set debugger,
+    "-debugger", Arg.Set Flags.debugger,
     " ";
     "-dump_tokens", Arg.Set Flags.dump_tokens,
     " dump the tokens as they are generated";
@@ -148,38 +180,21 @@ let main () =
     " dump a backtrace after an error";
   ]
   in
-  (* less: handle xx=yy *)
-  Arg.parse (Arg.align options) (fun t -> targets := t :: !targets) usage;
+  Arg.parse (Arg.align options) (fun t -> 
+    (* less: handle also xx=yy *)
+    targets := t :: !targets
+  ) usage;
+
+  (* to test and debug components of mk *)
+  if !action <> "" then begin 
+    do_action !action (List.rev !targets); 
+    exit 0 
+  end;
+
   try 
-
-    (* initialisation *)
-    let env = Env.initenv() in
-    
-    (* to test and debug components of mk *)
-    if !action <> "" then begin 
-      do_action !action (List.rev !targets); 
-      exit 0 
-    end;
-    if !debugger then begin
-      Sys.chdir (Filename.dirname !infile);
-      Hashtbl.add env.Env.vars "objtype" ["386"]
-    end;
-
-    (* parsing (and evaluating) *)
-    let instrs = Parse.parse !infile in
-    let rules, env = Eval.eval env targets instrs in
-    
-    (* building *)
-    if !targets = []
-    then failwith "mk: nothing to mk";
-    (* less: build shellenv here ?*)
-    !targets |> List.rev |> List.iter (fun target ->
-      build_target env rules target
-    );
-      (* less: profiling*)
-    ()
+    build_targets !infile targets
   with exn ->
-    if !backtrace || !debugger
+    if !backtrace || !Flags.debugger
     then raise exn
     else 
       (match exn with

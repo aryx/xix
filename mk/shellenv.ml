@@ -1,6 +1,9 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+type t = (string * string list) list
+
+
 let read_environment () =
   Unix.environment () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"

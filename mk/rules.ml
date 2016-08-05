@@ -19,12 +19,14 @@ type rules = {
 
 type rule_exec = {
   recipe2: Ast.recipe option;
+  attrs2: Ast.rule_attribute Set.t;
+  loc2: Ast.loc;
+
   stem: string option;
 
   all_targets: string list;
   all_prereqs: string list;
 
-  loc2: Ast.loc;
 }
 
 

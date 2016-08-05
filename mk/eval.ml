@@ -142,6 +142,8 @@ let eval env targets_ref xs =
           if Hashtbl.mem env.E.vars s
           then error loc (spf "redefinition of %s" s);
 
+          Hashtbl.add env.E.vars_we_set s true;
+
           let res = eval_words loc env ws in
           (match res with
           | Left xs -> Hashtbl.replace env.E.vars s xs

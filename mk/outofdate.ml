@@ -28,81 +28,100 @@ let outofdate node arc =
        | Some t1, Some t2 -> t1 < t2
        )
 
+let update node =
+  node.G.state <- G.Made;
+  if node.G.is_virtual
+  then begin
+    node.G.time <- Some 1.0;
+    (* less: take max time of prereqs, need that? *)
+  end
+  else 
+    node.G.time <- File.timeof node.G.name
+    
 
-let dorecipe node did =
-  let master_arc = 
-    try 
-      !(node.G.arcs) |> List.find (fun arc -> R.has_recipe arc.G.rule)
-    with Not_found -> 
-      (* todo: could be because virtual target *)
-      failwith (spf "no recipe to make '%s'" node.G.name)
-  in
-  let master_rule = master_arc.G.rule in
 
-  let all_targets = master_rule.R.all_targets in
-  (* less: outofdate_targets (aka target) *)
-  let nodes =
-    all_targets |> Common.map_filter (fun target ->
-      if Hashtbl.mem G.hnodes target
-      then Some (Hashtbl.find G.hnodes target)
-      else None
-    )
-  in
-  (* less: newprereqs *)
-  let all_prereqs =
-    nodes |> List.fold_left (fun acc node ->
-      !(node.G.arcs) |> List.fold_left (fun acc arc ->
-        match arc.G.dest with
-        | None -> acc
-        | Some node -> Set.add node.G.name acc
-      ) acc
-    ) Set.empty
-  in
-
-  nodes |> List.iter (fun node ->
-    node.G.state <- G.BeingMade
-  );
-  Scheduler.run { J. 
-                  rule = master_rule;
-                  target_nodes = nodes;
-                  
-                  all_targets = all_targets;
-                  all_prereqs = Set.elements all_prereqs;
-                };
-  did := true
+let dorecipe env node did =
+  if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
+  then
+    if node.G.is_virtual
+    then update node
+    else failwith (spf "no recipe to make '%s'" node.G.name)
+  else begin
+    let master_arc = 
+      try node.G.arcs |> List.find (fun arc -> R.has_recipe arc.G.rule)
+      with Not_found -> raise (Impossible "List.exists above")
+    in
+    let master_rule = master_arc.G.rule in
+    
+    let all_targets = master_rule.R.all_targets in
+    (* less: outofdate_targets (aka target) *)
+    let nodes =
+      all_targets |> Common.map_filter (fun target ->
+        if Hashtbl.mem G.hnodes target
+        then Some (Hashtbl.find G.hnodes target)
+        else None
+      )
+    in
+    (* less: newprereqs *)
+    let all_prereqs =
+      nodes |> List.fold_left (fun acc node ->
+        node.G.arcs |> List.fold_left (fun acc arc ->
+          match arc.G.dest with
+          | None -> acc
+          | Some node -> Set.add node.G.name acc
+        ) acc
+      ) Set.empty
+    in
+    
+    nodes |> List.iter (fun node ->
+      node.G.state <- G.BeingMade
+    );
+    Scheduler.run { J. 
+                    rule = master_rule;
+                    target_nodes = nodes;
+                    env = env;
+                    
+                    all_targets = all_targets;
+                    all_prereqs = Set.elements all_prereqs;
+                  };
+    did := true
+  end
 
 (*****************************************************************************)
-(* Entry points *)
+(* Entry point *)
 (*****************************************************************************)
 
-(* We could return a job list, which would be cleaner, but it is
+(* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
  *)
-let rec work node did =
+let rec work env node did =
   if node.G.state = G.BeingMade
   then ()
   else 
-    match !(node.G.arcs) with
+    match node.G.arcs with
     (* a leaf *)
     | [] ->
+        (* could be a virtual node, but weird to have a virtual node leaf*)
         if node.G.time = None
-        then failwith (spf "don't know how to make '%s'" node.G.name)
-        else node.G.state <- G.Made
+        then failwith (spf "don't know how to make '%s'" node.G.name);
+
+        (* less: why not call update here?*)
+        node.G.state <- G.Made
 
     (* a node *)
     | xs ->
         let out_of_date = ref false in
         let ready = ref true in
+
         xs |> List.iter (fun arc ->
           match arc.G.dest with
           | Some node2 ->
               (* recurse! *)
-              work node2 did;
+              work env node2 did;
               
               (match node2.G.state with
-              | G.NotMade | G.BeingMade -> 
-                  ready := false;
-              | _ -> ()
+              | G.NotMade | G.BeingMade -> ready := false;
+              | G.Made -> ()
               );
               if outofdate node arc 
               then out_of_date := true
@@ -116,4 +135,4 @@ let rec work node did =
         else 
           if not !out_of_date 
           then node.G.state <- G.Made
-          else dorecipe node did
+          else dorecipe env node did

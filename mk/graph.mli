@@ -1,12 +1,15 @@
 
 type node = {
   name: string;
-  arcs: arc list ref;
+
+  mutable arcs: arc list;
 
   mutable time: float option;
   mutable state: build_state;
 
   mutable visited: bool;
+
+  mutable is_virtual: bool;
 }
   and arc = {
     dest: node option;

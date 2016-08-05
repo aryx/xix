@@ -3,7 +3,6 @@ open Common
 
 type t = (string * string list) list
 
-
 let read_environment () =
   Unix.environment () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"

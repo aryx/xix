@@ -221,3 +221,8 @@ let group_by f xs =
   );
   Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
     
+
+let hash_of_list xs =
+  let h = Hashtbl.create 101 in
+  xs |> List.iter (fun (k, v) -> Hashtbl.replace h k v);
+  h

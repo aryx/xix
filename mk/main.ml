@@ -103,7 +103,7 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
    while root.G.state = G.NotMade do
      let did = ref false in
      (* may call internally Scheduler.run to schedule jobs *)
-     Outofdate.work root did;
+     Outofdate.work env root did;
      if !did 
      then ever_did := true
      else 

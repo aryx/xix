@@ -4,4 +4,4 @@
  * Made or BeingMade some nodes.
  *)
 val work: 
-  Graph.graph -> bool ref -> unit
+  Env.t -> Graph.node -> bool ref -> unit

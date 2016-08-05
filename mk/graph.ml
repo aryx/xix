@@ -16,24 +16,26 @@ type node = {
   (* usually a filename *)
   name: string;
 
-  (* A ref because it can be adjusted later in check_ambiguous.
-   * It was called prereqs before, but actually virtual rules
+  (* mutable because it can be adjusted later in check_ambiguous.
+   * Note that it was called prereqs before, but virtual rules
    * without any prereq still have an arc, with an empty dest 
    * (and a recipe). So, arcs is a better field name.
    *)
-  arcs: arc list ref;
+  mutable arcs: arc list;
 
-  (* None for virtual targets and inexistent files.
-   * mutable because it will be updated once the target is generated.
+  (* None for inexistent files (and virtual targets).
+   * mutable because it will be updated once the target is generated
+   * (or when we discover a target is a virtual node).
    *)
   mutable time: float option;
+
   mutable state: build_state;
 
   (* used only for check_cycle for now *)
   mutable visited: bool;
 
+  mutable is_virtual: bool;
   (* todo: other flags *)
-  (* is_virtual: bool; *)
 }
   and arc = {
     (* note that because the graph of dependencies is a DAG, multiple
@@ -64,21 +66,15 @@ let hnodes = Hashtbl.create 101
 (* Helpers *)
 (*****************************************************************************)
 
-(* opti? time cache, and flag to skip cache if want refresh *)
-let timeof file =
-  try 
-    let stat = Unix.lstat file in
-    Some (stat.Unix.st_mtime)
-  with Unix.Unix_error (_, _, _) -> None
-
 let new_node target =
   let node = {
     name = target;
-    time = timeof target;
+    time = File.timeof target;
 
-    arcs = ref [];
+    arcs = [];
     state = NotMade;
     visited = false;
+    is_virtual = false;
   }
   in
   Hashtbl.add hnodes target node;
@@ -87,8 +83,10 @@ let new_node target =
 let rule_exec (r: string Rules.rule) =
   { R. 
     recipe2 = r.R.recipe;
-    stem = None;
     loc2 = r.R.loc;
+    attrs2 = r.R.attrs;
+
+    stem = None;
     all_targets = r.R.targets;
     all_prereqs = r.R.prereqs;
   }
@@ -96,8 +94,10 @@ let rule_exec (r: string Rules.rule) =
 let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
   { R. 
     recipe2 = r.R.recipe;
-    stem = Some stem;
     loc2 = r.R.loc;
+    attrs2 = r.R.attrs;
+
+    stem = Some stem;
     all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
     all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
   }
@@ -116,7 +116,7 @@ let rec apply_rules target rules =
   else begin
 
     let node = new_node target in
-    let arcs = node.arcs in
+    let arcs = ref [] in
   
     (* look for simple rules *)
     let rs = Hashtbl.find_all rules.R.simples target in
@@ -165,7 +165,7 @@ let rec apply_rules target rules =
      * be nice to have the same sequential order of exec as the one 
      * specified in the mkfile.
      *)
-    node.arcs := List.rev !arcs;
+    node.arcs <- List.rev !arcs;
     node
   end
 
@@ -192,7 +192,7 @@ let check_cycle node =
     then error_cycle node trace;
 
     node.visited <- true;
-    !(node.arcs) |> List.iter (fun arc ->
+    node.arcs |> List.iter (fun arc ->
       arc.dest |> Common.if_some (fun node2 -> 
         aux (node::trace) node2
       )
@@ -220,9 +220,7 @@ let error_ambiguous node groups =
 
 let rec check_ambiguous node =
 
-  let arcs = !(node.arcs) in
-
-  arcs |> List.iter (fun arc ->
+  node.arcs |> List.iter (fun arc ->
     (* less: opti: could use visited to avoid duplicate work in a DAG *)
     arc.dest |> Common.if_some (fun node2 -> 
       (* recurse *)
@@ -231,7 +229,7 @@ let rec check_ambiguous node =
   );
 
   let arcs_with_recipe = 
-    arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
+    node.arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
   (* opti? rule_exec is big now, so maybe need have a rule_exec id *)
   let groups_by_rule =
     arcs_with_recipe |> Common.group_by (fun arc -> arc.rule)
@@ -250,10 +248,26 @@ let rec check_ambiguous node =
     | 0 -> error_ambiguous node groups_by_rule
     | 1 ->
       (* update graph *)
-      node.arcs := Common.exclude (fun arc -> R.is_meta arc.rule) arcs;
+      node.arcs <- Common.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
     | 2 | _ -> error_ambiguous node groups_with_simple_rule
     )
 
+(*****************************************************************************)
+(* Adjustments *)
+(*****************************************************************************)
+let rec propagate_attributes node =
+  node.arcs |> List.iter (fun arc ->
+    arc.rule.R.attrs2 |> Set.iter (function
+      | A.Virtual -> 
+          node.is_virtual <- true;
+          (* maybe there was a file with the name of the virtual target 
+           * in the directory, but we do not want its time
+           *)
+          node.time <- None;
+      | _ -> ()
+    );
+    arc.dest |> Common.if_some propagate_attributes
+  )
 
 
 (*****************************************************************************)
@@ -276,7 +290,7 @@ let dump_graph node =
     then ()
     else begin
       Hashtbl.add hdone node1.name true;
-      !(node1.arcs) |> List.iter (fun arc ->
+      node1.arcs |> List.iter (fun arc ->
         match arc.dest with
         | None -> pr (spf "\"%s\" -> \"<NOTHING>\";    # %s" 
                         node1.name (loc_of_arc arc))
@@ -298,6 +312,7 @@ let dump_graph node =
 
 let build_graph target rules =
   let root = apply_rules target rules in
-  (* todo: propagate_attribute *)
+  propagate_attributes root;
+
   if !Flags.dump_graph then dump_graph root;
   root

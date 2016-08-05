@@ -24,6 +24,13 @@ let jobs = Queue.create ()
 (* Helpers *)
 (*****************************************************************************)
 
+let build_shellenv job =
+  raise Todo
+
+let shprint env shellenv s =
+  (* TODO *)
+  print_string (s ^ "\n")
+
 let sched () =
   try 
     let job = Queue.take jobs in
@@ -33,12 +40,11 @@ let sched () =
       | None -> raise (Impossible "job without a recipe")
     in
 
-    (*todo: let shellenv = build_shell_env job in *)
+    let shellenv = build_shellenv job in
     
     (* less: unless Quiet *)
-    (* todo: subst variable!! *)
     recipe |> (fun (Ast.R xs) -> xs |> List.iter (fun s ->
-      print_string (s ^ "\n")
+      shprint job.J.env shellenv s
     ));
 
     if !Flags.dry_mode 

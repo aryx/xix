@@ -8,7 +8,7 @@ SRC= globals.ml flags.ml \
   parser.ml lexer.ml parse.ml \
   percent.ml  shellenv.ml env.ml  rules.ml \
   eval.ml \
-  graph.ml \
+  file.ml graph.ml \
   job.ml scheduler.ml outofdate.ml shell.ml \
   main.ml
 

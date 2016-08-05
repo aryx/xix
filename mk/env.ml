@@ -14,8 +14,8 @@ type values = string list
 
 type t = {
   vars         : (string, values) Hashtbl.t;
+  internal_vars: (string, values) Hashtbl.t;
 
-  internal_vars: (string, bool) Hashtbl.t;
   vars_we_set: (string, bool) Hashtbl.t;
 }
 
@@ -36,6 +36,9 @@ let mk_vars = [
 let initenv () =
   (* less: extra checks and filtering on read_environment? *)
   { vars          = Shellenv.read_environment () |> Common.hash_of_list;
-    internal_vars = mk_vars |> List.map (fun k ->k,true) |> Common.hash_of_list;
+    internal_vars = mk_vars |> List.map (fun k -> k,[]) |> Common.hash_of_list;
     vars_we_set   = Hashtbl.create 101;
   }
+
+let shellenv_of_env env =
+  raise Todo

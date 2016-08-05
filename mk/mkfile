@@ -4,12 +4,11 @@ TOP=..
 INCLUDES=-I $TOP/commons
 
 SRC= globals.ml flags.ml \
-  ast.ml \
-  parser.ml lexer.ml parse.ml \
-  percent.ml  shellenv.ml env.ml  rules.ml \
-  eval.ml \
+  ast.ml   parser.ml lexer.ml parse.ml \
+  shellenv.ml shell.ml \
+  percent.ml env.ml rules.ml   eval.ml \
   file.ml graph.ml \
-  job.ml scheduler.ml outofdate.ml shell.ml \
+  job.ml   scheduler.ml outofdate.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

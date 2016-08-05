@@ -52,6 +52,10 @@ let shprint env s =
   in
   print_string (s ^ "\n")
 
+(*****************************************************************************)
+(* Main algorithms *)
+(*****************************************************************************)
+
 let sched () =
   try 
     let job = Queue.take jobs in
@@ -79,6 +83,9 @@ let sched () =
   with Queue.Empty ->
     raise (Impossible "no jobs to schedule")
 
+let waitup () =
+  raise Todo
+
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
@@ -88,5 +95,3 @@ let run job =
   if !nrunning < !nproclimit
   then sched ()
 
-let waitup () =
-  raise Todo

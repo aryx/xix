@@ -179,6 +179,15 @@ let eval env targets_ref xs =
                              loc = loc;
                            } in
               metas |> Common.push rfinal
+          | Right targets, Left [] ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = [];
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+              metas |> Common.push rfinal
           | _, _ ->
               (* stricter? could allow Right targets, Left prereqs *)
               error loc "only one of target or prereq use %%"

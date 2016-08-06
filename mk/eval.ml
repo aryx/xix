@@ -162,7 +162,7 @@ let eval env targets_ref xs =
               let rfinal = { R.
                              targets = targets; 
                              prereqs = prereqs;
-                             attrs = Set.of_list r.A.attrs;
+                             attrs = Setx.of_list r.A.attrs;
                              recipe = r.A.recipe;
                              loc = loc;
                            } in
@@ -177,7 +177,7 @@ let eval env targets_ref xs =
               let rfinal = { R.
                              targets = targets; 
                              prereqs = prereqs;
-                             attrs = Set.of_list r.A.attrs;
+                             attrs = Setx.of_list r.A.attrs;
                              recipe = r.A.recipe;
                              loc = loc;
                            } in
@@ -186,7 +186,7 @@ let eval env targets_ref xs =
               let rfinal = { R.
                              targets = targets; 
                              prereqs = [];
-                             attrs = Set.of_list r.A.attrs;
+                             attrs = Setx.of_list r.A.attrs;
                              recipe = r.A.recipe;
                              loc = loc;
                            } in

@@ -217,7 +217,7 @@ let main () =
       | Failure s -> 
           (* useful to indicate that error comes from mk, not subprocess *)
           pr2 ("mk: " ^ s);
-          exit (-1)
+          exit (1)
       | _ -> raise exn
       )
 

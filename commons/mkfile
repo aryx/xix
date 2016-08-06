@@ -1,9 +1,11 @@
 # -*- sh -*-
 TOP=..
 
+# could have set.ml and map.ml; it works with ocamlc, but not with ocamlopt :(
+
 INCLUDES=-I .
 SRC=common.ml \
  common2.ml ocaml.ml \
- set.ml map.ml
+ setx.ml mapx.ml
 
 <$TOP/mklib

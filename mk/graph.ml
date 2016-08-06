@@ -263,7 +263,7 @@ let rec check_ambiguous node =
 (*****************************************************************************)
 let rec propagate_attributes node =
   node.arcs |> List.iter (fun arc ->
-    arc.rule.R.attrs2 |> Set.iter (function
+    arc.rule.R.attrs2 |> Setx.iter (function
       | A.Virtual -> 
           node.is_virtual <- true;
           (* maybe there was a file with the name of the virtual target 

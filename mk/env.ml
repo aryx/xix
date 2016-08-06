@@ -34,9 +34,20 @@ let mk_vars = [
 
 (* less: could take the readenv function as a parameter? *)
 let initenv () =
+  let internal = 
+    mk_vars |> List.map (fun k -> k,[]) |> Common.hash_of_list in
+  let vars = 
+    Shellenv.read_environment () |> Common.exclude (fun (s, _) ->
+      (* when you use mk recursively, the environment might contain
+       * a $stem from a parent mk process.
+       *)
+      Hashtbl.mem internal s
+    ) |> Common.hash_of_list
+  in
+
   (* less: extra checks and filtering on read_environment? *)
-  { vars          = Shellenv.read_environment () |> Common.hash_of_list;
-    internal_vars = mk_vars |> List.map (fun k -> k,[]) |> Common.hash_of_list;
+  { vars          = vars;
+    internal_vars = internal;
     vars_we_set   = Hashtbl.create 101;
   }
 

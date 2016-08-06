@@ -138,8 +138,11 @@ let eval env targets_ref xs =
       | A.Definition (s, ws) ->
           (* todo: handle override variables *)
 
-          (* stricter? forbid redefinitions *)
-          if Hashtbl.mem env.E.vars s
+          (* stricter: forbid redefinitions.
+           * bug: ok to redefine variable from environment, otherwise
+           *  hard to use mk recursively
+           *)
+          if Hashtbl.mem env.E.vars s && Hashtbl.mem env.E.vars_we_set s
           then error loc (spf "redefinition of %s" s);
 
           Hashtbl.add env.E.vars_we_set s true;

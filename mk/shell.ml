@@ -1,9 +1,14 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*
 let shellpath = "/bin/sh"
-(* -I for rc *)
 let shellflags = []
+let iws = " "
+*)
+let shellpath = "/bin/rc"
+let shellflags = ["-I"]
+let iws = "\001"
 
 let execsh shellenv flags inputs =
 
@@ -26,7 +31,7 @@ let execsh shellenv flags inputs =
       (try 
          let env = 
            shellenv |> List.map (fun (s, xs) -> 
-             spf "%s=%s" s (String.concat " " xs))
+             spf "%s=%s" s (String.concat iws xs))
          in
          Unix.execve 
            shellpath 

@@ -1,10 +1,5 @@
 # -*- sh -*-
 
-depend:V:
-	$OCAMLDEP $INCLUDES *.ml *.mli  > .depend
-
-#| grep -v -e '.* :$'
-
 # do not use prereq or it will include also the .cmi in the command line
 # because of the .depend file that also define some rules
 %.cmo: %.ml
@@ -13,5 +8,13 @@ depend:V:
 %.cmi: %.mli
 	$OCAMLC $INCLUDES -c $stem.mli
 
+%.cmx: %.ml
+	$OCAMLOPT $INCLUDES -c $stem.ml
+
 %.$O: %.c
 	$CC $CFLAGS -v -c $stem.c -o $stem.$O
+
+depend:V:
+	$OCAMLDEP $INCLUDES *.ml *.mli  > .depend
+
+#| grep -v -e '.* :$'

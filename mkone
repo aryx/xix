@@ -7,9 +7,16 @@
 OBJS=${SRC:%.ml=%.cmo}
 
 all:V: $PROG
+opt:V: $PROG.opt
 
 $PROG: $OBJS
 	$OCAMLC $INCLUDES $SYSLIBS $LIBS $prereq -o $target
+
+SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}
+LIBSOPT=${LIBS:%.cma=%.cmxa}
+
+$PROG.opt: ${OBJS:%.cmo=%.cmx}
+	$OCAMLOPT $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq -o $target
 
 clean:V:
 	rm -f $PROG *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*

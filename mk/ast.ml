@@ -17,7 +17,7 @@ type word = W of word_element list
      (* `...` or `{...} (the string does not include the backquote or braces) *)
     | Backquoted of string
 
-     type var = 
+     and var = 
       (* $name or ${name} (the string does not contain the $ or {}) *)
       | SimpleVar of string
       (* ${name:a%b=c%d} *)

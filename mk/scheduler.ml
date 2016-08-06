@@ -14,6 +14,7 @@ module E = Env
 (* Globals *)
 (*****************************************************************************)
 
+let running = Hashtbl.create 101
 let nrunning = ref 0
 
 (* todo: use environemt to set it *)
@@ -31,10 +32,12 @@ let adjust_env job =
 
   (* less: should be all_target *)
   Hashtbl.replace env.E.internal_vars "target" job.J.all_targets;
+  (* less: newprereqs *)
   Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
   job.J.rule.Rules.stem |> Common.if_some (fun s ->
     Hashtbl.replace env.E.internal_vars "stem" [s];
   );
+
   env
 
 let shprint env s =
@@ -75,16 +78,15 @@ let sched () =
       node.G.state <- G.Made;
     )
     else
-      let flags = "-e" in
+      let flags = ["-e"] in
       let shellenv = Env.shellenv_of_env env in
-      let _pid = Shell.execsh shellenv flags recipe in
-      raise Todo
+      let pid = Shell.execsh shellenv flags recipe in
+      Hashtbl.add running pid job;
+      incr nrunning
     
   with Queue.Empty ->
     raise (Impossible "no jobs to schedule")
 
-let waitup () =
-  raise Todo
 
 (*****************************************************************************)
 (* Entry points *)
@@ -95,3 +97,27 @@ let run job =
   if !nrunning < !nproclimit
   then sched ()
 
+
+let waitup () =
+  let (pid, ret) = Unix.wait () in
+  let job = 
+    try Hashtbl.find running pid
+    with Not_found ->
+      raise 
+        (Impossible (spf "wait returned unexpected process with pid %d" pid))
+  in
+  decr nrunning;
+  Hashtbl.remove running pid;
+
+  match ret with
+  | Unix.WEXITED 0 ->
+      job.J.target_nodes |> List.iter (fun node ->
+        G.update node
+      );
+      (* same code than in run *)
+      if !nrunning < !nproclimit
+      then sched ()
+  | Unix.WEXITED n ->
+      failwith (spf "error in child process, exit status = %d" n)
+  | Unix.WSIGNALED n | Unix.WSTOPPED n ->
+      failwith (spf "child process killed/stopped by signal = %d" n)

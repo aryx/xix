@@ -316,3 +316,14 @@ let build_graph target rules =
 
   if !Flags.dump_graph then dump_graph root;
   root
+
+(* update graph once a node has been built *)
+let update node =
+  node.state <- Made;
+  if node.is_virtual
+  then begin
+    node.time <- Some 1.0;
+    (* less: take max time of prereqs, need that? *)
+  end
+  else 
+    node.time <- File.timeof node.name

@@ -41,4 +41,5 @@ let initenv () =
   }
 
 let shellenv_of_env env =
-  raise Todo
+  Common.hash_to_list env.internal_vars @
+  Common.hash_to_list env.vars

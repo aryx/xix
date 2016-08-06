@@ -28,15 +28,6 @@ let outofdate node arc =
        | Some t1, Some t2 -> t1 < t2
        )
 
-let update node =
-  node.G.state <- G.Made;
-  if node.G.is_virtual
-  then begin
-    node.G.time <- Some 1.0;
-    (* less: take max time of prereqs, need that? *)
-  end
-  else 
-    node.G.time <- File.timeof node.G.name
     
 
 
@@ -44,7 +35,7 @@ let dorecipe env node did =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
   then
     if node.G.is_virtual
-    then update node
+    then G.update node
     else failwith (spf "no recipe to make '%s'" node.G.name)
   else begin
     let master_arc = 

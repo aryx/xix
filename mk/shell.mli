@@ -1,4 +1,4 @@
 
 val execsh: 
-  Shellenv.t -> string (* sh arguments *) -> string list (* sh stdin *) ->
+  Shellenv.t -> string list (* sh arguments *) -> string list (* sh stdin *) ->
   int (* pid *)

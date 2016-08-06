@@ -226,3 +226,6 @@ let hash_of_list xs =
   let h = Hashtbl.create 101 in
   xs |> List.iter (fun (k, v) -> Hashtbl.replace h k v);
   h
+
+let hash_to_list h =
+  Hashtbl.fold (fun k v acc -> (k,v)::acc) h []

@@ -1,6 +1,11 @@
-
 *.cm*
 *.annot
+*.byte
+*.opt
+
+*.o
+*.a
+
 .depend
 .md5sum_*
 
@@ -11,9 +16,11 @@
 /assembler/parser_asm5.mli
 /assembler/parser_asm5.output
 /assembler/5a
+
 /linker/5l
+
 /mk/lexer.ml
-/mk/mk
 /mk/parser.ml
 /mk/parser.mli
 /mk/parser.output
+/mk/mk

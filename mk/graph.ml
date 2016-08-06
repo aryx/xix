@@ -77,6 +77,9 @@ let new_node target =
     is_virtual = false;
   }
   in
+  if !Flags.trace
+  then pr2 (spf "newnode(%s), time = %s" target (File.str_of_time node.time));
+
   Hashtbl.add hnodes target node;
   node
 
@@ -110,6 +113,9 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
 
 (* todo: infinite rule detection *)
 let rec apply_rules target rules =
+  if !Flags.trace
+  then pr2 (spf "apply_rules('%s')" target);
+
   (* the graph of dependency is a DAG, so we must look if node already there *)
   if Hashtbl.mem hnodes target
   then Hashtbl.find hnodes target
@@ -320,10 +326,20 @@ let build_graph target rules =
 (* update graph once a node has been built *)
 let update node =
   node.state <- Made;
+  if !Flags.trace
+  then pr2 (spf "update(): node %s time=%s" node.name 
+              (File.str_of_time node.time));
+  
   if node.is_virtual
   then begin
     node.time <- Some 1.0;
     (* less: take max time of prereqs, need that? *)
   end
-  else 
-    node.time <- File.timeof node.name
+  else begin
+    let oldtime = node.time in
+    node.time <- File.timeof node.name;
+
+    if oldtime = node.time || node.time = None
+    then failwith (spf "recipe did not update %s, time =%s" node.name
+                     (File.str_of_time node.time));
+  end

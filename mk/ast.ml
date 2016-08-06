@@ -55,5 +55,3 @@ type instr = {
     | Rule of rule
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR *)
     | Definition of string * words
-
-

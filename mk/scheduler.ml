@@ -53,7 +53,37 @@ let shprint env s =
           else Str.matched_string s
       ) s
   in
-  print_string (s ^ "\n")
+  print_string ("|" ^ s ^ "|\n");
+  (* bug: dont forget to flush, otherwise can have weird output
+   * when mix printing on stdout and stderr like printing
+   * multiple times the same recipe (weird, very weird)
+   *)
+  flush stdout
+
+(*****************************************************************************)
+(* Debug *)
+(*****************************************************************************)
+
+let dump_job func job pidopt =
+  pr2 (spf "(%d): %s pid = %d; targets = %s" 
+         (Unix.getpid())
+         func 
+         (match pidopt with Some pid -> pid | None -> 0)
+         (job.J.target_nodes |> List.map (fun node -> node.G.name) 
+             |> String.concat " "))
+(*
+  let rule = job.J.rule in
+      ; recipe = '%s'; stem = %s
+         (match rule.R.recipe2 with 
+         | None -> "" 
+         | Some (Ast.R xs) ->String.concat "\\n" xs
+         )
+         (match rule.R.stem with
+         | None -> ""
+         | Some s -> s
+         )
+*)
+
 
 (*****************************************************************************)
 (* Main algorithms *)
@@ -62,6 +92,10 @@ let shprint env s =
 let sched () =
   try 
     let job = Queue.take jobs in
+
+    if !Flags.dump_jobs
+    then dump_job "sched1: firing up " job None;
+
     let recipe = 
       match job.J.rule.R.recipe2 with 
       | Some (Ast.R x) -> x
@@ -77,12 +111,17 @@ let sched () =
       node.G.time <- Some (Unix.time ());
       node.G.state <- G.Made;
     )
-    else
+    else begin
       let flags = ["-e"] in
       let shellenv = Env.shellenv_of_env env in
       let pid = Shell.execsh shellenv flags recipe in
+
+      if !Flags.dump_jobs
+      then dump_job "sched2: " job (Some pid);
+
       Hashtbl.add running pid job;
       incr nrunning
+    end
     
   with Queue.Empty ->
     raise (Impossible "no jobs to schedule")
@@ -94,28 +133,43 @@ let sched () =
 
 let run job =
   Queue.add job jobs;
+
+  if !Flags.dump_jobs
+  then dump_job "run: " job None;
+
   if !nrunning < !nproclimit
   then sched ()
 
 
+
 let waitup () =
-  let (pid, ret) = Unix.wait () in
+  let (pid, ret) = 
+    try 
+      Unix.wait () 
+    with Unix.Unix_error (error, str1, str2) ->
+      failwith (spf "%s: %s (%s)" str1 (Unix.error_message error) str2)
+  in
   let job = 
     try Hashtbl.find running pid
     with Not_found ->
       raise 
         (Impossible (spf "wait returned unexpected process with pid %d" pid))
   in
-  decr nrunning;
+  if !Flags.dump_jobs
+  then dump_job "waitup: " job (Some pid);
+
   Hashtbl.remove running pid;
+  decr nrunning;
 
   match ret with
   | Unix.WEXITED 0 ->
       job.J.target_nodes |> List.iter (fun node ->
         G.update node
       );
-      (* same code than in run *)
-      if !nrunning < !nproclimit
+      (* similar code in run();
+       * I added the test on jobs size though.
+      *)
+      if !nrunning < !nproclimit && Queue.length jobs > 0
       then sched ()
   | Unix.WEXITED n ->
       failwith (spf "error in child process, exit status = %d" n)

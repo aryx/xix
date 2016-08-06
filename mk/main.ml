@@ -107,8 +107,14 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
      if !did 
      then ever_did := true
      else 
-       if !ever_did 
+       (* no work possible, let's wait for a job process to finish *)
+       if !Scheduler.nrunning > 0
        then Scheduler.waitup ()
+   done;
+
+   (* bug: root can be BeingMade in which case we need to wait *)
+   while !Scheduler.nrunning > 0 do
+     Scheduler.waitup ();
    done;
    
    if not !ever_did
@@ -132,7 +138,7 @@ let (build_targets: Common.filename -> string list ref -> unit) =
     
     (* building *)
     if !targets = []
-    then failwith "mk: nothing to mk";
+    then failwith "nothing to mk";
 
     (* less: build shellenv here ?*)
     !targets |> List.rev |> List.iter (fun target ->
@@ -158,6 +164,8 @@ let main () =
     "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
     
+    "-e", Arg.Set Flags.explain_mode,
+    " explain mode";
     "-n", Arg.Set Flags.dry_mode,
     " dry mode";
     (* less: -a, etc *)
@@ -167,15 +175,23 @@ let main () =
     "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
 
     (* pad: I added that *)
-    "-debugger", Arg.Set Flags.debugger,
-    " ";
     "-dump_tokens", Arg.Set Flags.dump_tokens,
     " dump the tokens as they are generated";
     "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
     "-dump_graph", Arg.Set Flags.dump_graph,
     " dump the generated graph";
+    "-dump_jobs", Arg.Set Flags.dump_jobs,
+    " ";
 
+    "-trace", Arg.Unit (fun () ->
+      Flags.trace := true;
+      Flags.explain_mode := true;
+    ),
+    " trace the main functions";
+
+    "-debugger", Arg.Set Flags.debugger,
+    " ";
     "-backtrace", Arg.Set backtrace,
     " dump a backtrace after an error";
   ]

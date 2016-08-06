@@ -23,11 +23,20 @@ let outofdate node arc =
        * the <=.
        *)
        (match node.G.time, node2.G.time with
-       | _      , None    -> raise (Impossible "inexistent dep")
+       (* in foo.exe: foo.o: foo.c, foo.exe and foo.o might not
+        * exist and so have a time set to None. In that case,
+        * I consider foo.exe also out of date as anyway foo.o
+        * will be generated
+        *)
+       | _      , None    -> true
        | None   , Some _  -> true
        | Some t1, Some t2 -> t1 < t2
        )
 
+let opt0 opttime =
+  match opttime with
+  | None -> 0.
+  | Some x -> x
     
 
 
@@ -54,15 +63,34 @@ let dorecipe env node did =
       )
     in
     (* less: newprereqs *)
-    let all_prereqs =
-      nodes |> List.fold_left (fun acc node ->
-        node.G.arcs |> List.fold_left (fun acc arc ->
-          match arc.G.dest with
-          | None -> acc
-          | Some node -> Set.add node.G.name acc
-        ) acc
-      ) Set.empty
-    in
+    let all_prereqs = ref [] in
+    (* bug: can not use Set for the accumulator below! Indeed, we want
+     * the order for prereqs to be the original order in the mkfile.
+     * If not, some command may not work if the order of the file
+     * matters (e.g., with the ocaml linker the .cmo must be given
+     * in a certain order)
+     *)
+    let hdone_prereqs = Hashtbl.create 101 in
+    nodes |> List.iter (fun target ->
+      target.G.arcs |> List.iter (fun arc ->
+        match arc.G.dest with
+        | None -> ()
+        | Some prereq -> 
+            (* less: could do that instead in work when find out about
+             * an outofdate arc
+             *)
+            if !Flags.explain_mode && outofdate node arc
+            then pr2 (spf "%s(%.1f) < %s(%.1f)"
+                        node.G.name (opt0 node.G.time)
+                        prereq.G.name (opt0 prereq.G.time));
+            if Hashtbl.mem hdone_prereqs prereq
+            then ()
+            else begin
+              Hashtbl.add hdone_prereqs prereq true;
+              Common.push prereq.G.name all_prereqs
+            end
+      )
+    );
     
     nodes |> List.iter (fun node ->
       node.G.state <- G.BeingMade
@@ -73,7 +101,7 @@ let dorecipe env node did =
                     env = env;
                     
                     all_targets = all_targets;
-                    all_prereqs = Set.elements all_prereqs;
+                    all_prereqs = List.rev !all_prereqs;
                   };
     did := true
   end
@@ -86,6 +114,9 @@ let dorecipe env node did =
  * more efficient to run a job as soon as we find an opportunity.
  *)
 let rec work env node did =
+  if !Flags.trace
+  then pr2 (spf "work(%s) time=%s" node.G.name (File.str_of_time node.G.time));
+
   if node.G.state = G.BeingMade
   then ()
   else 
@@ -114,7 +145,7 @@ let rec work env node did =
               | G.NotMade | G.BeingMade -> ready := false;
               | G.Made -> ()
               );
-              if outofdate node arc 
+              if outofdate node arc
               then out_of_date := true
 
           | None ->

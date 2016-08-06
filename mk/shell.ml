@@ -2,33 +2,36 @@
 open Common
 
 let shellpath = "/bin/sh"
-
+(* -I for rc *)
+let shellflags = []
 
 let execsh shellenv flags inputs =
 
   let pid = Unix.fork () in
   
-  (* children *)
+  (* children case *)
   if pid = 0
   then begin
     let (pipe_read, pipe_write) = Unix.pipe () in
 
-    let pid = Unix.fork () in
+    let pid2 = Unix.fork () in
 
-    (* child 1, the shell interpeter *)
-    if pid = 0
+    (* child 1, the shell interpeter, the process with pid returned by execsh *)
+    if pid2 <> 0
     then begin
       Unix.dup2 pipe_read Unix.stdin;
       Unix.close pipe_read;
       Unix.close pipe_write;
 
       (try 
-        Unix.execve 
-          shellpath 
-          (Array.of_list ("-I"::flags))
-          (shellenv |> List.map (fun (s, xs) -> 
-            spf "%s=%s" s (String.concat " " xs)
-           ) |> Array.of_list) 
+         let env = 
+           shellenv |> List.map (fun (s, xs) -> 
+             spf "%s=%s" s (String.concat " " xs))
+         in
+         Unix.execve 
+           shellpath 
+           (Array.of_list (flags @ shellflags))
+           (Array.of_list env)
           |> ignore;
       with Unix.Unix_error _ -> failwith "Could not execute a shell command"
       );
@@ -51,6 +54,6 @@ let execsh shellenv flags inputs =
       exit 0;
     end
   end
-  else pid
-  (* parent *)
-    
+
+  (* parent case *)
+  else pid (* pid of child1 *)

@@ -1,0 +1,2 @@
+Imported from ocaml-light/yacc2/.
+The literate document is in plan9/generators/CompilerGenerator.nw

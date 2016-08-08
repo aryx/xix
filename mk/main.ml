@@ -59,8 +59,7 @@ module R = Rules
  * todo:
  *  - some flags (-a, -e, etc)
  *  - dynamic mkfile? to makeup for lack of ifdef?
- *  - recursive mk? (used by my mkfile in plan9-ml)
- *  - xx=yyy overriding and S_OVERRIDE
+ *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS
  *)
 
 let usage =

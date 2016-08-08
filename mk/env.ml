@@ -53,6 +53,16 @@ let initenv () =
       Hashtbl.mem internal s
     ) |> Common.hash_of_list
   in
+  (* for recursive mk *)
+  let mkflags = 
+    Sys.argv |> Array.fold_left (fun acc s ->
+      if s =~ "^-"
+      then s::acc
+      else acc
+    ) []
+  in
+  Hashtbl.add vars "MKFLAGS" (List.rev mkflags);
+
 
   (* less: extra checks and filtering on read_environment? *)
   { vars          = vars;

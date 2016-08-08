@@ -1,0 +1,5 @@
+
+LIB=
+
+foo.o: $LIB
+       echo $LIB

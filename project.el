@@ -31,8 +31,9 @@
  (join-string 
   (list 
    ""
-   (case 1
+   (case 2
      (1 (concat "-debugger -f " (concat p "/mk/mkfile")))
+     (2 "-debugger -f /home/pad/plan9/windows/rio/mkfile")
      )
    )))
 

@@ -2,7 +2,7 @@
 
 OPT=.opt
 
-OCAMLC=ocamlc$OPT -g -dtypes
+OCAMLC=ocamlc$OPT -g -dtypes -bin-annot
 OCAMLLEX=ocamllex #-ml # -ml for debugging lexer, but slightly slower
 OCAMLYACC=ocamlyacc -v
 OCAMLDEP=ocamldep

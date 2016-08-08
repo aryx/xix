@@ -185,6 +185,8 @@ let main () =
     "-n", Arg.Set Flags.dry_mode,
     " dry mode";
     (* less: -a, etc *)
+    "-strict", Arg.Set Flags.strict_mode,
+    " strict mode";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

@@ -40,14 +40,18 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
 
       | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind)  ->
 
-         (* stricter: mk does not complain *)
-         if not (Hashtbl.mem env.E.vars v)
-         then begin 
-           if !Flags.dump_env then Env.dump_env env;
-           error loc (spf "variable not found '%s'" v);
-         end;
-
-         let ys = Hashtbl.find env.E.vars v in
+         let ys = 
+           try 
+             Hashtbl.find env.E.vars v 
+           with Not_found ->
+             (* stricter: mk does not complain *)
+             if !Flags.strict_mode
+             then begin 
+               if !Flags.dump_env then Env.dump_env env;
+               error loc (spf "variable not found '%s'" v);
+             end
+             else []
+         in
          let ys =
            match vkind with
            | A.SimpleVar _ -> ys
@@ -142,10 +146,13 @@ let eval env targets_ref xs =
           (* todo: handle override variables *)
 
           (* stricter: forbid redefinitions.
-           * bug: ok to redefine variable from environment, otherwise
-           *  hard to use mk recursively
+           * (bug: but ok to redefine variable from environment, otherwise
+           *  hard to use mk recursively, hence the use of vars_we_set below)
+           * less: could allow to redefine in strict mode if previous
+           *  def was empty.
            *)
-          if Hashtbl.mem env.E.vars s && Hashtbl.mem env.E.vars_we_set s
+          if Hashtbl.mem env.E.vars s && Hashtbl.mem env.E.vars_we_set s 
+             && !Flags.strict_mode
           then error loc (spf "redefinition of %s" s);
 
           Hashtbl.add env.E.vars_we_set s true;
@@ -190,18 +197,19 @@ let eval env targets_ref xs =
           (* it is ok to have a % only for the target to allow
            * for instance rules such as %.o: $HFILES
            *)
-          | Right targets, Left xs ->
+          | Right targets, Left prereqs ->
               let rfinal = { R.
                              targets = targets; 
-                             prereqs = xs |> List.map (fun s -> P.P [P.PStr s]);
+                             prereqs = prereqs 
+                               |> List.map (fun s -> P.P [P.PStr s]);
                              attrs = Setx.of_list r.A.attrs;
                              recipe = r.A.recipe;
                              loc = loc;
                            } in
               metas |> Common.push rfinal
-          | _, _ ->
-              (* stricter? could allow Right targets, Left prereqs *)
-              error loc "only one of target or prereq use %%"
+          | Left _, Right _ ->
+              (* stricter: *)
+              error loc "Forgot to use %% for the target"
           )
     )
   in

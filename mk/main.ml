@@ -38,7 +38,7 @@ module R = Rules
  * 
  * Improvements (IMHO):
  *  - simplifications by not supporting the features mentioned above
- *  - TODO be more relaxing on date (or use nanosec); if equal time then ok
+ *  - be more relaxing on date (or TODO use nanosec); if equal time then ok
  *    (modern machines can generate the .o and a.out in the same second)
  *  - generate error when no mkfile
  *  - TODO warn at least when we think shprint might be wrong
@@ -47,6 +47,8 @@ module R = Rules
  *    I get the error at the beginning and a trailing of regular shprint
  *    (but more plan9's style, so at least dont print the rest? or print
  *     also message at the end that something went wrong)
+ *  - a strict mode where we forbid to redefine variable, use of undefined
+ *    variable
  *
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
@@ -74,15 +76,16 @@ let do_action s xs =
   | "-test_parser" ->
       xs |> List.iter (fun file ->
         pr2 (spf "processing %s" file);
-        let _ast = Parse.parse file in
-        ()
+        let instrs = Parse.parse file in
+        instrs |> List.iter pr2_gen;
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->
         pr2 (spf "processing %s" file);
         let env = Env.initenv() in
         let instrs = Parse.parse file in
-        let _rules, _env = Eval.eval env (ref []) instrs in
+        let _rules, env = Eval.eval env (ref []) instrs in
+        Env.dump_env env;
         ()
       )
   | _ -> failwith ("action not supported: " ^ s)
@@ -95,6 +98,11 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
  fun env rules target ->
 
    let root = Graph.build_graph target rules in
+
+   (* could do that after the checks *)
+   if !Flags.dump_graph 
+   then Graph.dump_graph root;
+   
    Graph.check_cycle root;
    Graph.check_ambiguous root;
 
@@ -134,7 +142,14 @@ let (build_targets: Common.filename -> string list ref -> unit) =
 
     (* parsing (and evaluating) *)
     let instrs = Parse.parse infile in
+
+    if !Flags.dump_ast 
+    then instrs |> List.iter pr2_gen;
+
     let rules, env = Eval.eval env targets instrs in
+
+    if !Flags.dump_env 
+    then Env.dump_env env;
     
     (* building *)
     if !targets = []
@@ -161,6 +176,7 @@ let main () =
 
   let options = [
 
+    (* less: maybe should do a chdir (Dirname infile) *)
     "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
     
@@ -179,6 +195,8 @@ let main () =
     " dump the tokens as they are generated";
     "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
+    "-dump_env", Arg.Set Flags.dump_env,
+    " dump the environment";
     "-dump_graph", Arg.Set Flags.dump_graph,
     " dump the generated graph";
     "-dump_jobs", Arg.Set Flags.dump_jobs,

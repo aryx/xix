@@ -42,7 +42,10 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
 
          (* stricter: mk does not complain *)
          if not (Hashtbl.mem env.E.vars v)
-         then error loc (spf "variable not found '%s'" v);
+         then begin 
+           if !Flags.dump_env then Env.dump_env env;
+           error loc (spf "variable not found '%s'" v);
+         end;
 
          let ys = Hashtbl.find env.E.vars v in
          let ys =
@@ -158,6 +161,7 @@ let eval env targets_ref xs =
           let targets = eval_words loc env r.A.targets in
           let prereqs = eval_words loc env r.A.prereqs in
           (match targets, prereqs with
+          (* regular rules *)
           | Left targets, Left prereqs ->
               let rfinal = { R.
                              targets = targets; 
@@ -173,6 +177,7 @@ let eval env targets_ref xs =
               if !targets_ref = [] 
               then targets_ref := targets;
 
+          (* meta rules *)
           | Right targets, Right prereqs ->
               let rfinal = { R.
                              targets = targets; 
@@ -182,10 +187,13 @@ let eval env targets_ref xs =
                              loc = loc;
                            } in
               metas |> Common.push rfinal
-          | Right targets, Left [] ->
+          (* it is ok to have a % only for the target to allow
+           * for instance rules such as %.o: $HFILES
+           *)
+          | Right targets, Left xs ->
               let rfinal = { R.
                              targets = targets; 
-                             prereqs = [];
+                             prereqs = xs |> List.map (fun s -> P.P [P.PStr s]);
                              attrs = Setx.of_list r.A.attrs;
                              recipe = r.A.recipe;
                              loc = loc;

@@ -12,3 +12,7 @@ type t = {
 val initenv: unit -> t
 
 val shellenv_of_env: t -> Shellenv.t
+
+
+val dump_env: 
+  t -> unit

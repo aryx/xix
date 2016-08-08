@@ -22,8 +22,6 @@ let parse file =
       
     try 
       Parser.program lexfunc lexbuf
-      |> (fun ast -> if !Flags.dump_ast then ast |> List.iter pr2_gen; ast)
-
     (* less: could track line of : and = *)
     with Parsing.Parse_error ->
       failwith (spf "%s:%d: Syntax error" !Globals.file !Globals.line)

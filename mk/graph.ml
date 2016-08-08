@@ -319,8 +319,6 @@ let dump_graph node =
 let build_graph target rules =
   let root = apply_rules target rules in
   propagate_attributes root;
-
-  if !Flags.dump_graph then dump_graph root;
   root
 
 (* update graph once a node has been built *)

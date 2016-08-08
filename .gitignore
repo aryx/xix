@@ -24,3 +24,5 @@
 /mk/parser.mli
 /mk/parser.output
 /mk/mk
+/graph_code.marshall
+/graph_code.marshall.opti

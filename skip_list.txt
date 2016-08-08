@@ -1,0 +1,6 @@
+# -*- sh -*-
+
+#dir: linker
+#dir: assembler
+#dir: formats
+#dir: mk

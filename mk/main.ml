@@ -60,6 +60,10 @@ module R = Rules
  *  - some flags (-a, -e, etc)
  *  - dynamic mkfile? to makeup for lack of ifdef?
  *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS
+ *  - improve speed:
+ *    * -u
+ *    * use nproc for environment
+ *    * profile mk.byte
  *)
 
 let usage =

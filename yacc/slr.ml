@@ -1,4 +1,4 @@
-(*s: yacc2/slr.ml *)
+(*s: yacc/slr.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -18,6 +18,9 @@
 open Ast
 open Lr0
 open Lrtables
+
+module Set = Set_
+module Map = Map_
 
 (*****************************************************************************)
 (* Prelude *)
@@ -89,4 +92,4 @@ let lr_tables env auto follow =
 
   action_tables, goto_tables
 (*e: function Slr.lr_tables (yacc) *)
-(*e: yacc2/slr.ml *)
+(*e: yacc/slr.ml *)

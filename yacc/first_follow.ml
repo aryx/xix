@@ -1,4 +1,4 @@
-(*s: yacc2/first_follow.ml *)
+(*s: yacc/first_follow.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -18,6 +18,9 @@
 open Ast
 open Lr0 (* for the augmented grammar *)
 
+module Set = Set_
+module Map = Map_
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -34,15 +37,15 @@ open Lr0 (* for the augmented grammar *)
 (*****************************************************************************)
 
 (*s: type First_follow.first (yacc) *)
-type first = (Ast.symbol, Ast.term Set.t) Map.t
+type first = (Ast.symbol, Ast.term Set_.t) Map_.t
 (*e: type First_follow.first (yacc) *)
 
 (*s: type First_follow.epsilon (yacc) *)
-type epsilon = Ast.nonterm Set.t
+type epsilon = Ast.nonterm Set_.t
 (*e: type First_follow.epsilon (yacc) *)
 
 (*s: type First_follow.follow (yacc) *)
-type follow = (Ast.nonterm, Ast.term Set.t) Map.t
+type follow = (Ast.nonterm, Ast.term Set_.t) Map_.t
 (*e: type First_follow.follow (yacc) *)
 
 (*****************************************************************************)
@@ -200,4 +203,4 @@ let compute_follow env (first, epsilon) =
   done;
   !follow
 (*e: function First_follow.compute_follow (yacc) *)
-(*e: yacc2/first_follow.ml *)
+(*e: yacc/first_follow.ml *)

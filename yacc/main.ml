@@ -1,4 +1,4 @@
-(*s: yacc2/main.ml *)
+(*s: yacc/main.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -25,14 +25,6 @@ open Ast
  * todo:
  *  - handle priorities, precedences
  *  - EBNF support!
- *  - simple grammar checker (use/def, wrong $)
- *  - handle error position
- *  - generate #line?
- *  - lalr?
- * 
- *  - static analysis. Example of errors we should also report:
- * File "parser_asm.mly", line 179: $2 refers to terminal `TOPAR', which has no argument
- * 
  *)
 
 (*****************************************************************************)
@@ -95,12 +87,13 @@ let main () =
 
 (*s: toplevel Main._1 (yacc) *)
 let _ = 
+(*
   Tests.test_lr0 ();
   Tests.test_first_follow ();
   Tests.test_slr ();
   Tests.test_lr_engine ();
-
+*)
   Printexc.catch main (); 
   exit 0
 (*e: toplevel Main._1 (yacc) *)
-(*e: yacc2/main.ml *)
+(*e: yacc/main.ml *)

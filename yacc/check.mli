@@ -1,4 +1,4 @@
-(*s: yacc2/check.mli *)
+(*s: yacc/check.mli *)
 
 (*s: type Check.error (yacc) *)
 type error = unit
@@ -11,4 +11,4 @@ exception Error of error
 (*s: signature Check.check (yacc) *)
 val check: Ast.parser_definition -> unit
 (*e: signature Check.check (yacc) *)
-(*e: yacc2/check.mli *)
+(*e: yacc/check.mli *)

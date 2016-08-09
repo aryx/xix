@@ -1,4 +1,4 @@
-/*(*s: yacc2/parser.mly *)*/
+/*(*s: yacc/parser.mly *)*/
 %{
 /*(*s: copyright ocamlyacc *)*/
 (* Yoann Padioleau
@@ -114,4 +114,4 @@ terms_opt:
 /*(*e: yacc extra rules *)*/
 /*(*e: grammar (yacc) *)*/
 
-/*(*e: yacc2/parser.mly *)*/
+/*(*e: yacc/parser.mly *)*/

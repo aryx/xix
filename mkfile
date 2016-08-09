@@ -2,10 +2,12 @@
 </$objtype/mkfile
 <mkconfig
 
-DIRS=commons\
+DIRS=\
+  lib_core commons\
   mk\
-  formats/objects formats/executables\
-  assembler linker
+  lib_parsing lex yacc\
+  formats/objects assembler\
+  formats/executables linker\
 
 all:V: all.directories
 opt:V: opt.directories

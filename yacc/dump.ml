@@ -1,4 +1,4 @@
-(*s: yacc2/dump.ml *)
+(*s: yacc/dump.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -19,6 +19,9 @@ open Format
 
 open Ast
 open Lr0
+
+module Set = Set_
+module Map = Map_
 
 (*****************************************************************************)
 (* Prelude *)
@@ -238,4 +241,4 @@ let dump_lrtables env lrtables =
   ()
 (*e: function Dump.dump_lrtables (yacc) *)
 
-(*e: yacc2/dump.ml *)
+(*e: yacc/dump.ml *)

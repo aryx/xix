@@ -1,4 +1,4 @@
-(*s: yacc2/dump.mli *)
+(*s: yacc/dump.mli *)
 
 (*s: signature Dump.dump_item (yacc) *)
 val dump_item: Lr0.env -> Lr0.item -> unit
@@ -15,4 +15,4 @@ val dump_lr0_automaton: Lr0.env -> Lr0.automaton -> unit
 (*s: signature Dump.dump_lrtables (yacc) *)
 val dump_lrtables: Lr0.env -> Lrtables.lr_tables -> unit
 (*e: signature Dump.dump_lrtables (yacc) *)
-(*e: yacc2/dump.mli *)
+(*e: yacc/dump.mli *)

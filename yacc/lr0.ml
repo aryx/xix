@@ -1,4 +1,4 @@
-(*s: yacc2/lr0.ml *)
+(*s: yacc/lr0.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -16,6 +16,9 @@
  *)
 (*e: copyright ocamlyacc *)
 open Ast
+
+module Set = Set_
+module Map = Map_
 
 (*****************************************************************************)
 (* Prelude *)
@@ -48,7 +51,7 @@ type item = ruleidx * dotidx
 
 (*s: type Lr0.items (yacc) *)
 (* a.k.a an LR0 state *)
-type items = item Set.t
+type items = item Set_.t
 (*e: type Lr0.items (yacc) *)
 
 (*s: type Lr0.env (yacc) *)
@@ -60,12 +63,12 @@ type env = {
 
 (*s: type Lr0.automaton (yacc) *)
 type automaton = {
-  states: items Set.t;
+  states: items Set_.t;
   (* state 0 is the starting state *)
   int_to_state: items array;
-  state_to_int: (items, stateid) Map.t;
+  state_to_int: (items, stateid) Map_.t;
   (* goto mapping *)
-  trans: (items * Ast.symbol, items) Map.t;
+  trans: (items * Ast.symbol, items) Map_.t;
 }
 (*e: type Lr0.automaton (yacc) *)
 
@@ -210,4 +213,4 @@ let canonical_lr0_automaton env =
     trans = trans
   }
 (*e: function Lr0.canonical_lr0_automaton (yacc) *)
-(*e: yacc2/lr0.ml *)
+(*e: yacc/lr0.ml *)

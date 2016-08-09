@@ -1,4 +1,4 @@
-(*s: yacc2/lr0.mli *)
+(*s: yacc/lr0.mli *)
 
 (*s: type Lr0.ruleidx (yacc) *)
 (* the index of the rule in env.g *)
@@ -20,7 +20,7 @@ type item = ruleidx * dotidx
 
 (*s: type Lr0.items (yacc) *)
 (* a.k.a an LR0 state *)
-type items = item Set.t
+type items = item Set_.t
 (*e: type Lr0.items (yacc) *)
 
 (*s: type Lr0.env (yacc) *)
@@ -32,12 +32,12 @@ type env = {
 
 (*s: type Lr0.automaton (yacc) *)
 type automaton = {
-  states: items Set.t;
+  states: items Set_.t;
   (* state 0 is the starting state *)
   int_to_state: items array;
-  state_to_int: (items, stateid) Map.t;
+  state_to_int: (items, stateid) Map_.t;
   (* goto mapping *)
-  trans: (items * Ast.symbol, items) Map.t;
+  trans: (items * Ast.symbol, items) Map_.t;
 }
 (*e: type Lr0.automaton (yacc) *)
 
@@ -65,6 +65,6 @@ val after_dot: Ast.rule_ -> dotidx -> Ast.symbol option
 (*e: signature Lr0.after_dot (yacc) *)
 
 (*s: signature Lr0.all_symbols (yacc) *)
-val all_symbols: env -> Ast.symbol Set.t
+val all_symbols: env -> Ast.symbol Set_.t
 (*e: signature Lr0.all_symbols (yacc) *)
-(*e: yacc2/lr0.mli *)
+(*e: yacc/lr0.mli *)

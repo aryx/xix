@@ -1,4 +1,4 @@
-(*s: yacc2/ast.ml *)
+(*s: yacc/ast.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -114,4 +114,4 @@ let start_symbol def =
     )
   with Not_found -> failwith "no start symbol found"
 (*e: function Ast.start_symbol (yacc) *)
-(*e: yacc2/ast.ml *)
+(*e: yacc/ast.ml *)

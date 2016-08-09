@@ -1,4 +1,4 @@
-(*s: yacc2/lexer.mll *)
+(*s: yacc/lexer.mll *)
 {
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
@@ -165,4 +165,4 @@ and comment2 = parse
 | eof { raise (Lexical_error "unterminated C comment") }
 | _   { comment2 lexbuf }
 (*e: backward compatible lexing rules (yacc) *)
-(*e: yacc2/lexer.mll *)
+(*e: yacc/lexer.mll *)

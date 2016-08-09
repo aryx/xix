@@ -14,8 +14,8 @@
 (* Compiling a lexer definition *)
 
 open Ast
-module Set = Setx
-module Map = Mapx
+module Set = Set_
+module Map = Map_
 
 (*s: type Lexgen.action_id *)
 type action_id = int

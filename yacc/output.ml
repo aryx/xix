@@ -1,4 +1,4 @@
-(*s: yacc2/output.ml *)
+(*s: yacc/output.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -18,6 +18,9 @@
 open Ast
 open Lr0
 open Lrtables
+
+module Set = Set_
+module Map = Map_
 
 (*****************************************************************************)
 (* Prelude *)
@@ -260,4 +263,4 @@ let output_parser def env lrtables ic oc =
   ()
 (*e: function Output.output_parser (yacc) *)
 
-(*e: yacc2/output.ml *)
+(*e: yacc/output.ml *)

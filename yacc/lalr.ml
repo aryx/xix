@@ -1,2 +1,2 @@
-(*s: yacc2/lalr.ml *)
-(*e: yacc2/lalr.ml *)
+(*s: yacc/lalr.ml *)
+(*e: yacc/lalr.ml *)

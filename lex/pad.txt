@@ -1,0 +1,2 @@
+Imported from ocaml-light/lex.
+The literate document is in plan9/generators/CompilerGenerator.nw

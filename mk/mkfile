@@ -1,7 +1,7 @@
 # -*- sh -*-
 
 TOP=..
-INCLUDES=-I $TOP/commons
+INCLUDES=-I $TOP/commons -I $TOP/lib_core
 
 SRC= globals.ml flags.ml \
   ast.ml   parser.ml lexer.ml parse.ml \
@@ -12,7 +12,7 @@ SRC= globals.ml flags.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/commons/lib.cma
+LIBS=$TOP/lib_core/lib.cma $TOP/commons/lib.cma
 
 PROG=mk
 

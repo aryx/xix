@@ -1,0 +1,38 @@
+# -*- sh -*-
+# The parser generator
+
+TOP=..
+INCLUDES=-I $TOP/lib_core -I $TOP/lib_parsing
+
+SRC= ast.ml\
+ parser.ml lexer.ml\
+ check.ml\
+ lr0.ml first_follow.ml lrtables.ml slr.ml lalr.ml \
+ output.ml dump.ml \
+ tests.ml main.ml
+
+#SYSLIBS=
+LIBS=$TOP/lib_core/lib.cma $TOP/lib_parsing/lib.cma
+
+PROG=ocamlyacc
+
+<$TOP/mkone
+
+beforedepend:V: lexer.ml parser.ml parser.mli
+depend:V: beforedepend
+
+distclean:V: clean
+	rm -f lexer.ml parser.ml parser.mli 
+
+lexer.ml: lexer.mll
+	$OCAMLLEX $prereq
+
+parser.ml parser.mli: parser.mly
+	$OCAMLYACC $prereq
+	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml
+#pad: this  perl thing is just because ocamlyacc does not handle well
+# syncweb special comment at the very end
+
+
+loc:V:
+   wc -l globals.ml lexer_asm5.mll parser_asm5.mly parse_asm5.ml* main.ml $TOP/formats/objects/ast_asm5.ml $TOP/formats/objects/object_code5.ml*

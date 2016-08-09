@@ -31,3 +31,8 @@
 /lex/parser.mli
 /lex/parser.output
 /lex/ocamllex
+/yacc/lexer.ml
+/yacc/ocamlyacc
+/yacc/parser.ml
+/yacc/parser.mli
+/yacc/parser.output

@@ -2,16 +2,15 @@
 
 OPT=.opt
 
-OCAMLC=ocamlc$OPT -g -dtypes -bin-annot
+COMPFLAGS=-g -dtypes -bin-annot
+#WARNING_FLAGS?=-w +A-4-29-6-45-41-44-48 -warn-error +a 
+#OCAMLCFLAGS=-g -thread -dtypes $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA) 
+
+LINKFLAGS=-g
+# -custom
+
+OCAMLC=ocamlc$OPT 
 OCAMLLEX=ocamllex #-ml # -ml for debugging lexer, but slightly slower
 OCAMLYACC=ocamlyacc -v
 OCAMLDEP=ocamldep
 OCAMLOPT=ocamlopt$OPT
-
-#WARNING_FLAGS?=-w +A-4-29-6-45-41-44-48 -warn-error +a 
-#OCAMLCFLAGS=-g -thread -dtypes $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA) 
-
-#OCAMLC=ocamlc$(OPTBIN) $(OCAMLCFLAGS) $(PP) $(INCLUDES)
-#OCAMLDEP=ocamldep $(PP) $(INCLUDES)
-#OCAMLMKTOP=ocamlmktop -g -custom $(INCLUDES) -thread
-#OCAMLOPT=ocamlopt$(OPTBIN) $(OPTFLAGS) $(PP) $(INCLUDES)

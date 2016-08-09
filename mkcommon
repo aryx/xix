@@ -3,13 +3,13 @@
 # do not use prereq or it will include also the .cmi in the command line
 # because of the .depend file that also define some rules
 %.cmo: %.ml
-	$OCAMLC $INCLUDES -c $stem.ml
+	$OCAMLC $COMPFLAGS $INCLUDES -c $stem.ml
 
 %.cmi: %.mli
-	$OCAMLC $INCLUDES -c $stem.mli
+	$OCAMLC $COMPFLAGS $INCLUDES -c $stem.mli
 
 %.cmx: %.ml
-	$OCAMLOPT $INCLUDES -c $stem.ml
+	$OCAMLOPT $COMPFLAGS $INCLUDES -c $stem.ml
 
 %.$O: %.c
 	$CC $CFLAGS -v -c $stem.c -o $stem.$O

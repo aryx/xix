@@ -1,0 +1,10 @@
+# -*- sh -*-
+TOP=..
+
+# We could have lexing.ml and parsing.ml. It would work with ocamlc,
+# but not with ocamlopt :(
+
+INCLUDES=-I $TOP/lib_core
+SRC=lexing_.ml parsing_.ml
+
+<$TOP/mklib

@@ -26,3 +26,8 @@
 /mk/mk
 /graph_code.marshall
 /graph_code.marshall.opti
+/lex/lexer.ml
+/lex/parser.ml
+/lex/parser.mli
+/lex/parser.output
+/lex/ocamllex

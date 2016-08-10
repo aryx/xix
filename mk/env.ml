@@ -9,7 +9,9 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(* content of variables (after full expansion and backquote resolution) *)
+(* Content of variables (after full expansion and backquote resolution).
+ * It should not contain any empty strings (but it can contain empty lists).
+ *)
 type values = string list
 
 type t = {
@@ -28,6 +30,13 @@ let mk_vars = [
   *)
 ]
 
+(* invariant *)
+let check_values xs = 
+  xs |> List.iter (fun s ->
+    if s = ""
+    then raise (Impossible (spf "empty string in values"))
+  )
+  
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
@@ -53,6 +62,7 @@ let initenv () =
       Hashtbl.mem internal s
     ) |> Common.hash_of_list
   in
+
   (* for recursive mk *)
   let mkflags = 
     Sys.argv |> Array.fold_left (fun acc s ->
@@ -62,7 +72,6 @@ let initenv () =
     ) []
   in
   Hashtbl.add vars "MKFLAGS" (List.rev mkflags);
-
 
   (* less: extra checks and filtering on read_environment? *)
   { vars          = vars;

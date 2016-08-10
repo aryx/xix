@@ -7,6 +7,7 @@ module R = Rules
 module P = Percent
 
 module Set = Set_
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -28,12 +29,19 @@ let warning loc s =
 
 (* A word can become multiple strings!
  * opti? could use a Buffer 
+ * invariant: 
+ *  - the returned list of strings must not contain any empty string
+ *  - less: the returned pattern must contain at least a PPercent
  *)
 let rec (eval_word: Ast.loc -> Env.t -> Ast.word -> 
           (Env.values, Percent.pattern) Common.either)= fun loc env (A.W word)->
   let rec aux acc xs =
     match xs with
-    | [] -> Right (P.P (List.rev acc))
+    | [] -> 
+        if acc = []
+        then Left []
+        (* less: could look if any PPercent in acc and if not return a Left *)
+        else Right (P.P (List.rev acc))
     | x::xs ->
       (match x with
       | A.String s -> aux ((P.PStr s)::acc) xs
@@ -48,7 +56,8 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
              (* stricter: mk does not complain *)
              if !Flags.strict_mode
              then begin 
-               if !Flags.dump_env then Env.dump_env env;
+               if !Flags.dump_env 
+               then Env.dump_env env;
                error loc (spf "variable not found '%s'" v);
              end
              else []
@@ -71,13 +80,22 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
                )
          in
          (match ys, acc, xs with
-         | [], [], []  -> Right (P.P [])
+
+         (* variable does not contain anything *)
+         | [], [], []  -> 
+             Left []
          | [], acc, xs ->
              (* stricter: *)
              warning loc (spf "use of empty variable '%s' in scalar context" v);
              aux acc xs
-         | [str], acc, xs -> aux ((P.PStr str)::acc) xs
-         | _::_::_, [], [] -> Left ys
+
+         (* variable contains a single element (scalar) *)
+         | [str], acc, xs -> 
+             aux ((P.PStr str)::acc) xs
+
+         (* variable contains many elements (array) *)
+         | _::_::_, [], [] -> 
+             Left ys
          | _::_::_, acc, xs ->
              (* stricter: *)
              error loc (spf "use of list variable '%s' in scalar context" v)
@@ -91,23 +109,29 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
 
 let rec (eval_words: Ast.loc -> Env.t -> Ast.words -> 
          (string list, Percent.pattern list) Common.either)= fun loc env words->
+  
   let res = words |> List.map (eval_word loc env) in
+
   if res |> List.exists (fun x ->
     match x with
     | Left _ -> false
     | Right (P.P xs) -> List.mem P.PPercent xs
   )
+
+  (* a list of patterns *)
   then res |> List.map (function
     | Left xs -> xs |> List.map (fun s -> P.P [P.PStr s])
     | Right x -> [x]
-  ) |> List.flatten |> (fun xs -> Right xs)
+  ) |> List.flatten |> (fun xs -> List.iter Percent.check_pattern xs; Right xs)
+
+  (* a list of strings *)
   else res |> List.map (function
     | Left xs -> xs
     | Right (P.P xs) -> xs |> List.map (function 
         | P.PStr s -> s
         | P.PPercent -> raise (Impossible "exists predicate above is wrong")
     ) |> (fun elems -> [elems |> String.concat ""])
-  ) |> List.flatten |> (fun xs -> Left xs)
+  ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
 
 
 (*****************************************************************************)

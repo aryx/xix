@@ -33,7 +33,8 @@
    ""
    (case 2
      (1 (concat "-debugger -f " (concat p "/mk/mkfile")))
-     (2 "-debugger -f /home/pad/plan9/windows/rio/mkfile")
+     (2 (concat "-debugger -f " (concat p "/mk/tests/mk-empty-var")))
+     (3 "-debugger -f /home/pad/plan9/windows/rio/mkfile")
      )
    )))
 

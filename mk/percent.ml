@@ -19,6 +19,17 @@ type pattern_elem =
   | PPercent
 type pattern = P of pattern_elem list
 
+
+
+let check_pattern (P xs) =
+  if xs = []
+  then raise (Impossible (spf "empty pattern"));
+  xs |> List.iter (function
+    | PPercent -> ()
+    | PStr "" -> raise (Impossible (spf "empty string element in pattern"));
+    | PStr _ -> ()
+  )
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)

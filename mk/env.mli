@@ -13,6 +13,8 @@ val initenv: unit -> t
 
 val shellenv_of_env: t -> Shellenv.t
 
+val check_values: 
+  values -> unit
 
 val dump_env: 
   t -> unit

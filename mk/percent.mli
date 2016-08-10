@@ -1,8 +1,10 @@
 
-type pattern_elem =
-  | PStr of string
-  | PPercent
+
+(* The list must contain at least one element *)
 type pattern = P of pattern_elem list
+  and pattern_elem =
+    | PStr of string
+    | PPercent
 
 exception TooManyPercents
 exception PercentNotFound
@@ -17,3 +19,7 @@ val subst:
 (* print a warning if not match *)
 val match_and_subst:
   pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
+
+
+val check_pattern: 
+  pattern -> unit

@@ -1,5 +1,6 @@
 
 LIB=
+HFILES=foo.c bar.c
 
-foo.o: $LIB
+foo.o: $HFILES $LIB
        echo $LIB

@@ -5,11 +5,13 @@ type loc = {
   line: int;
 }
 
-(* no separator, direct concatenation (hence the need for ${name} below) *)
+(* No separator, direct concatenation (hence the need for ${name} below).
+ * The list must contain at least one element.
+ *)
 type word = W of word_element list
 
   and word_element =
-    | String of string
+    | String of string (* except the empty string *)
     | Percent
   
     (* evaluated in eval.ml just after parsing *)

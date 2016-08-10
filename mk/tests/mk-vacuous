@@ -1,0 +1,8 @@
+
+all: foo.o
+
+%.o: %.c
+     echo compiler
+
+%.o: %.s     
+     echo assembler

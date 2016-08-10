@@ -1,8 +1,6 @@
 
 foo: bar
 
-
 bar: foobar
 
 foobar: bar
-

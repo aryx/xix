@@ -3,4 +3,3 @@ $A=42
 
 all:Q:
  echo $B
-

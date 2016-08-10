@@ -17,10 +17,11 @@ type node = {
   (* usually a filename *)
   name: string;
 
-  (* mutable because it can be adjusted later in check_ambiguous.
-   * Note that it was called prereqs before, but virtual rules
-   * without any prereq still have an arc, with an empty dest 
-   * (and a recipe). So, arcs is a better field name.
+  (* mutable because this field can be adjusted later in check_ambiguous
+   * and vacuous.
+   * Note that this field was called 'prereqs' before, but virtual rules
+   * without any prereq still have an arc (with an empty dest,
+   * and a recipe), so 'arcs' is a better field name.
    *)
   mutable arcs: arc list;
 
@@ -32,11 +33,16 @@ type node = {
 
   mutable state: build_state;
 
+  mutable is_virtual: bool;
+  (* todo: other flags *)
+
+
   (* used only for check_cycle for now *)
   mutable visited: bool;
 
-  mutable is_virtual: bool;
-  (* todo: other flags *)
+  (* used for vacuous *)
+  mutable probable: bool;
+
 }
   and arc = {
     (* note that because the graph of dependencies is a DAG, multiple
@@ -68,14 +74,15 @@ let hnodes = Hashtbl.create 101
 (*****************************************************************************)
 
 let new_node target =
+  let time = File.timeof target in
   let node = {
     name = target;
-    time = File.timeof target;
-
+    time = time;
     arcs = [];
     state = NotMade;
     visited = false;
     is_virtual = false;
+    probable = time <> None;
   }
   in
   if !Flags.trace
@@ -107,7 +114,6 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
   }
 
 
-
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
@@ -128,6 +134,8 @@ let rec apply_rules target rules =
     (* look for simple rules *)
     let rs = Hashtbl.find_all rules.R.simples target in
     rs |> List.iter (fun r ->
+      node.probable <- true;
+
       let pre = r.R.prereqs in
       if pre = []
       then
@@ -277,6 +285,22 @@ let rec propagate_attributes node =
   )
 
 
+let rec vacuous node =
+  let vacuous_node = ref (not node.probable) in
+  
+  node.arcs <- node.arcs |> Common.exclude (fun arc ->
+    match arc.dest with
+    | Some node2 -> 
+        if vacuous node2 && R.is_meta arc.rule
+        then true
+        else begin vacuous_node := false; false end
+    | None ->
+        vacuous_node := false;
+        false
+  );
+  !vacuous_node
+
+
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
@@ -319,7 +343,17 @@ let dump_graph node =
 
 let build_graph target rules =
   let root = apply_rules target rules in
+
+  check_cycle root;
+
+  (* must be before check_ambiguous! *)
+  root.probable <- true;
+  vacuous root |> ignore;
+
+  check_ambiguous root;
+
   propagate_attributes root;
+   
   root
 
 (* update graph once a node has been built *)

@@ -106,9 +106,6 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
    if !Flags.dump_graph 
    then Graph.dump_graph root;
    
-   Graph.check_cycle root;
-   Graph.check_ambiguous root;
-
    let ever_did = ref false in
 
    while root.G.state = G.NotMade do

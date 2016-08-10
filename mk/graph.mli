@@ -7,9 +7,11 @@ type node = {
   mutable time: float option;
   mutable state: build_state;
 
-  mutable visited: bool;
-
   mutable is_virtual: bool;
+
+  mutable visited: bool;
+  mutable probable: bool;
+
 }
   and arc = {
     dest: node option;
@@ -22,9 +24,10 @@ type node = {
 
 type graph = node (* the root *)
 
+
 val hnodes: (string, node) Hashtbl.t
 
-(* will also modify hnode *)
+(* !will also modify hnode! *)
 val build_graph: 
   string (* target *) -> Rules.rules -> graph
 
@@ -32,6 +35,9 @@ val build_graph:
 val update:
   node -> unit
 
+
+
+(* internals *)
 val check_cycle: 
   graph -> unit
 

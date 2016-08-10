@@ -30,8 +30,17 @@ let execsh shellenv flags inputs =
 
       (try 
          let env = 
-           shellenv |> List.map (fun (s, xs) -> 
-             spf "%s=%s" s (String.concat iws xs))
+           shellenv 
+            (* bug: I exclude empty variables
+             * otherwise rc does strange things. Indeed, programs
+             * such as ocamlc get confused by empty variables
+             * used in shell command as in ocamlc $FLAG where FLAG is empty.
+             * (got the problem also with mk-plan9port)
+             *)
+            |> Common.exclude (fun (s, xs) -> xs = [])
+            |> List.map (fun (s, xs) -> 
+              spf "%s=%s" s (String.concat iws xs)
+            )
          in
          Unix.execve 
            shellpath 

@@ -59,6 +59,13 @@ module R = Rules
  *  - bug: mk does not stop when error in subdir
  *    mk recursive should stop at first dir with pb! rc -e works?
  *    mk-sh works? rewrite for loop for sh?
+ *  - store all output of children process and output only
+ *    command that generates error! luisa will be happier :) no more long
+ *    command line scrolling
+ *    (and no interleaving of command output far away from originator,
+ *    as in ninja)
+ *  - output only a short version of the command instead of full shprint
+ *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja)
  *  - some flags (-a, -e, etc)
  *  - dynamic mkfile? to makeup for lack of ifdef?
  *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS

@@ -187,6 +187,8 @@ let main () =
     (* less: -a, etc *)
     "-strict", Arg.Set Flags.strict_mode,
     " strict mode";
+    "-v", Arg.Set Flags.verbose,
+    " verbose mode";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
@@ -200,7 +202,7 @@ let main () =
     "-dump_env", Arg.Set Flags.dump_env,
     " dump the environment";
     "-dump_graph", Arg.Set Flags.dump_graph,
-    " dump the generated graph";
+    " dump the generated graph (in graphviz dot format)";
     "-dump_jobs", Arg.Set Flags.dump_jobs,
     " ";
 
@@ -213,7 +215,7 @@ let main () =
     "-debugger", Arg.Set Flags.debugger,
     " ";
     "-backtrace", Arg.Set backtrace,
-    " dump a backtrace after an error";
+    " dump the backtrace after an error";
   ]
   in
   Arg.parse (Arg.align options) (fun t -> 

@@ -292,12 +292,20 @@ let rec vacuous node =
     match arc.dest with
     | Some node2 -> 
         if vacuous node2 && R.is_meta arc.rule
-        then true
-        else begin vacuous_node := false; false end
+        then begin
+          if !Flags.verbose
+          then pr2 (spf "vacuous arc detected: %s -> %s" node.name node2.name);
+          true
+        end else begin 
+          vacuous_node := false; 
+          false 
+        end
     | None ->
         vacuous_node := false;
         false
   );
+  if !vacuous_node && !Flags.verbose 
+  then pr2 (spf "vacuous node detected: %s" node.name);
   !vacuous_node
 
 

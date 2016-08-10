@@ -34,10 +34,13 @@ let execsh shellenv flags inputs =
             (* bug: I exclude empty variables
              * otherwise rc does strange things. Indeed, programs
              * such as ocamlc get confused by empty variables
-             * used in shell command as in ocamlc $FLAG where FLAG is empty.
-             * (got the problem also with mk-plan9port)
+             * used in shell commands such as ocamlc $FLAG where FLAG is empty.
+             * I get the problem also with mk-plan9port.
+             * Note however that there is no problem with mk-sh.byte, so
+             * this is an rc issue.
              *)
             |> Common.exclude (fun (s, xs) -> xs = [])
+
             |> List.map (fun (s, xs) -> 
               spf "%s=%s" s (String.concat iws xs)
             )

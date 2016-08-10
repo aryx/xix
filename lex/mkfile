@@ -9,7 +9,7 @@ SRC= ast.ml \
  lexgen.ml compact.ml output.ml \
  main.ml
 
-#SYSLIBS=
+SYSLIBS=
 LIBS=$TOP/lib_core/lib.cma
 
 PROG=ocamllex
@@ -24,7 +24,6 @@ distclean:V: clean
 
 lexer.ml: lexer.mll
 	$OCAMLLEX $prereq
-
 parser.ml parser.mli: parser.mly
 	$OCAMLYACC $prereq
 	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml

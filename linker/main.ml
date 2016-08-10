@@ -8,14 +8,14 @@ module T = Types
 (*****************************************************************************)
 (* An OCaml port of 5l, the Plan9 ARM linker.
  *
- * Limitations compared to 5l:
- * - the -E digit 
+ * Main limitations compared to 5l:
+ * - no -E digit 
  *   (What was it anyway?)
- * - the optimisations about small data, strings in text section
+ * - no optimisation about small data, strings in text section
  *   (really gain?)
- * - the extensions not yet understood (import/export, dynamic linking)
+ * - no extensions not yet understood (import/export, dynamic linking)
  *   (not sure it was used by any plan9 programs)
- * - half word specialized instructions and immhalf()
+ * - no half-word specialized instructions and immhalf()
  *   (rare instructions anyway?)
  * - address of parameter or local is not supported
  *   (Why would you want that? Does 5c generate that?)

@@ -49,7 +49,6 @@ module R = Rules
  *     also message at the end that something went wrong)
  *  - a strict mode where we forbid to redefine variable, use of undefined
  *    variable
- *
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
  *    and evaluating, so avoid duplicate work like handling quoted characters
@@ -57,6 +56,9 @@ module R = Rules
  *  - less use of globals, pass them around
  * 
  * todo:
+ *  - bug: mk does not stop when error in subdir
+ *    mk recursive should stop at first dir with pb! rc -e works?
+ *    mk-sh works? rewrite for loop for sh?
  *  - some flags (-a, -e, etc)
  *  - dynamic mkfile? to makeup for lack of ifdef?
  *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS
@@ -64,6 +66,7 @@ module R = Rules
  *    * -u
  *    * use nproc for environment
  *    * profile mk.byte
+ * less: look at source code of omake? and mk-in-go?
  *)
 
 let usage =

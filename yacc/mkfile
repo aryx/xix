@@ -16,7 +16,7 @@ LIBS=$TOP/lib_core/lib.cma $TOP/lib_parsing/lib.cma
 
 PROG=ocamlyacc
 
-<$TOP/mkone
+<$TOP/mkprog
 
 beforedepend:V: lexer.ml parser.ml parser.mli
 depend:V: beforedepend

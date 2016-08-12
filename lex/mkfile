@@ -14,7 +14,7 @@ LIBS=$TOP/lib_core/lib.cma
 
 PROG=ocamllex
 
-<$TOP/mkone
+<$TOP/mkprog
 
 beforedepend:V: lexer.ml parser.ml parser.mli
 depend:V: beforedepend

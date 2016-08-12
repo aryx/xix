@@ -15,7 +15,7 @@ LIBS=$TOP/commons/lib.cma $TOP/formats/objects/lib.cma $TOP/formats/executables/
 # or use Principia spirit! THE linker! so call it simply 'linker' ? :)
 PROG=5l
 
-<$TOP/mkone
+<$TOP/mkprog
 
 loc:V:
    wc -l $SRC *.mli

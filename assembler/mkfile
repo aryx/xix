@@ -14,7 +14,7 @@ LIBS=$TOP/commons/lib.cma $TOP/formats/objects/lib.cma
 # or use Principia spirit! THE assembler! so call it simply 'assembler' ? :)
 PROG=5a
 
-<$TOP/mkone
+<$TOP/mkprog
 
 beforedepend:V: lexer_asm5.ml parser_asm5.ml parser_asm5.mli
 depend:V: beforedepend

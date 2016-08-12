@@ -16,7 +16,7 @@ LIBS=$TOP/lib_core/lib.cma $TOP/commons/lib.cma
 
 PROG=mk
 
-<$TOP/mkone
+<$TOP/mkprog
 
 beforedepend:V: lexer.ml parser.ml parser.mli
 

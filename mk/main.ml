@@ -13,13 +13,13 @@ module R = Rules
  *  - no regexp rules
  *    (not worth it, % are good enough)
  *  - no special handling for archives
- *    (fast enough nowadays)
+ *    (fast enough nowadays to recreate full archives from scratch)
  *  - no :P:
  *    (it is barely documented anyway, and you can do without)
  *  - no private variables
  *    (I never saw mkfiles using it, and it complicates the parsing of '=')
  *  - no &
- *    (rarely found use, % is enough)
+ *    (rarely found used, % is enough)
  *  - only one -f is supported, not an array of up to 256 mkfiles
  *    (who uses that? maybe to have mk -f varfile -f mkfile)
  *  - no sequential vs parallel mode, and no parallel for multi targets
@@ -31,8 +31,6 @@ module R = Rules
  *  - disallow dynamic patterns like X=%.o  $X: %.c
  *    (harder to read)
  *  - no opti like missing intermediate (mk -i)
- *    (I barely understand the algorithm anyway)
- *  - no vacuous check
  *    (I barely understand the algorithm anyway)
  *  - no unicode support
  * 
@@ -49,6 +47,8 @@ module R = Rules
  *     also message at the end that something went wrong)
  *  - a strict mode where we forbid to redefine variable, use of undefined
  *    variable
+ *  - a new Interactive attribute :I: so one can call interactive program
+ *    in a recipe (e.g., syncweb)
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
  *    and evaluating, so avoid duplicate work like handling quoted characters
@@ -65,8 +65,9 @@ module R = Rules
  *    (and no interleaving of command output far away from originator,
  *    as in ninja)
  *  - output only a short version of the command instead of full shprint
- *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja)
- *  - some flags (-a, -e, etc)
+ *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja),
+ *    or foo.cmo <- foo.ml, foo.byte <- foo.cmo bar.cmo ...
+ *  - some flags (-a, etc)
  *  - dynamic mkfile? to makeup for lack of ifdef?
  *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS
  *  - improve speed:

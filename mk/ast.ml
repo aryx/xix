@@ -40,9 +40,10 @@ type rule = {
   recipe: recipe option;
 }
   and rule_attribute = 
-    | Quiet
     | Virtual
+    | Quiet
     | Delete
+    | Interactive (* pad: I added this one *)
     | NotHandled of char
 
 

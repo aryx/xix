@@ -31,6 +31,7 @@ let attrs_of_string loc s =
     | 'Q' -> Quiet
     | 'V' -> Virtual
     | 'D' -> Delete
+    | 'I' -> Interactive
     | ('N' | 'R' | 'n') as c  -> NotHandled c
     | c -> error_loc loc (spf "unknown attribute: %c" c)
   )

@@ -5,6 +5,7 @@ module A = Ast
 module R = Rules
 
 module Set = Set_
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -34,14 +35,14 @@ type node = {
   mutable state: build_state;
 
   mutable is_virtual: bool;
-  (* todo: other flags *)
-
 
   (* used only for check_cycle for now *)
   mutable visited: bool;
-
   (* used for vacuous *)
   mutable probable: bool;
+
+  (* todo: other flags? *)
+
 
 }
   and arc = {

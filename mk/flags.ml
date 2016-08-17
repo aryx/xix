@@ -1,6 +1,8 @@
 
 let dry_mode = ref false
 let explain_mode = ref false
+
+(* pad: I added this one *)
 let strict_mode = ref false
 let verbose = ref false
 

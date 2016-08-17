@@ -6,6 +6,8 @@ module G = Graph
 module R = Rules
 module E = Env
 
+module Set = Set_
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -34,7 +36,7 @@ let adjust_env job =
   Hashtbl.replace env.E.internal_vars "target" job.J.all_targets;
   (* less: newprereqs *)
   Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
-  job.J.rule.Rules.stem |> Common.if_some (fun s ->
+  job.J.rule.R.stem |> Common.if_some (fun s ->
     Hashtbl.replace env.E.internal_vars "stem" [s];
   );
 
@@ -92,19 +94,20 @@ let dump_job func job pidopt =
 let sched () =
   try 
     let job = Queue.take jobs in
+    let rule = job.J.rule in
 
     if !Flags.dump_jobs
     then dump_job "sched1: firing up " job None;
 
     let recipe = 
-      match job.J.rule.R.recipe2 with 
+      match rule.R.recipe2 with 
       | Some (Ast.R x) -> x
       | None -> raise (Impossible "job without a recipe")
     in
     let env = adjust_env job in
     
-    (* less: unless Quiet *)
-    recipe |> List.iter (fun s -> shprint env s);
+    if not (Set.mem Ast.Quiet rule.R.attrs2)
+    then recipe |> List.iter (fun s -> shprint env s);
 
     if !Flags.dry_mode 
     then job.J.target_nodes |> List.iter (fun node ->
@@ -112,9 +115,13 @@ let sched () =
       node.G.state <- G.Made;
     )
     else begin
-      let flags = ["-e"] in
-      let shellenv = Env.shellenv_of_env env in
-      let pid = Shell.execsh shellenv flags recipe in
+      let pid = 
+        Shell.execsh 
+          (Env.shellenv_of_env env)
+          ["-e"]
+          recipe 
+          (Set.mem Ast.Interactive rule.R.attrs2) 
+      in
 
       if !Flags.dump_jobs
       then dump_job "sched2: " job (Some pid);

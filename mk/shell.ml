@@ -7,16 +7,62 @@ let shellflags = []
 let iws = " "
 *)
 let shellpath = "/bin/rc"
-let shellflags = ["-I"]
+let shellflags = ["-I"] (* non interactive, so? todo: no prompt? *)
 let iws = "\001"
 
-let execsh shellenv flags inputs =
+
+let execsh shellenv flags inputs interactive =
 
   let pid = Unix.fork () in
   
   (* children case *)
   if pid = 0
-  then begin
+  then
+    let env = 
+      shellenv 
+       (* bug: I exclude empty variables
+        * otherwise rc does strange things. Indeed, programs
+        * such as ocamlc get confused by empty variables
+        * used in shell commands such as ocamlc $FLAG where FLAG is empty.
+        * I get the problem also with mk-plan9port.
+        * Note however that there is no problem with mk-sh.byte, so
+        * this is an rc issue.
+        *)
+       |> Common.exclude (fun (s, xs) -> xs = [])
+
+       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat iws xs))
+    in
+
+    (* pad: I added this feature so mk can call interactive program
+     * such as syncweb. Otherwise stdin is used to feed the shell
+     * and so any program called from the shell will not have any stdin
+     *)
+    if interactive 
+    then begin
+      let tmpfile = Filename.temp_file "mk" "sh" in
+      (try
+         let chan = open_out tmpfile in
+         inputs |> List.iter (fun s -> 
+           output_string chan s; 
+           output_string chan "\n"
+         );
+         close_out chan
+       with Sys_error s -> 
+         failwith (spf "Could not create temporary file (error = %s)" s)
+      ); 
+      (try 
+         Unix.execve 
+           shellpath 
+           (Array.of_list (flags @ shellflags @ [tmpfile]))
+           (Array.of_list env)
+          |> ignore;
+      with Unix.Unix_error _ -> failwith "Could not execute a shell command"
+      );
+      (* unreachable *)
+      exit (-2);
+      
+    end else begin
+
     let (pipe_read, pipe_write) = Unix.pipe () in
 
     let pid2 = Unix.fork () in
@@ -29,22 +75,6 @@ let execsh shellenv flags inputs =
       Unix.close pipe_write;
 
       (try 
-         let env = 
-           shellenv 
-            (* bug: I exclude empty variables
-             * otherwise rc does strange things. Indeed, programs
-             * such as ocamlc get confused by empty variables
-             * used in shell commands such as ocamlc $FLAG where FLAG is empty.
-             * I get the problem also with mk-plan9port.
-             * Note however that there is no problem with mk-sh.byte, so
-             * this is an rc issue.
-             *)
-            |> Common.exclude (fun (s, xs) -> xs = [])
-
-            |> List.map (fun (s, xs) -> 
-              spf "%s=%s" s (String.concat iws xs)
-            )
-         in
          Unix.execve 
            shellpath 
            (Array.of_list (flags @ shellflags))

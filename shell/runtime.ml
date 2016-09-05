@@ -1,11 +1,24 @@
 
+type varname = string
+
+(* In RC the base value is really a list of value.
+ * Single values are really considered just list with one element.
+ *)
+type value = string list
+
+type var = { 
+  mutable v: value option;
+  (* less: changed: bool *)
+}
+
+
 type thread = {
   code: Opcode.codevec;
   pc: int ref;
 
-  mutable argv: Ast.words;
-  mutable argv_stack: Ast.words list;
-  locals: (Ast.varname, Ast.var) Hashtbl.t;
+  mutable argv: string list;
+  mutable argv_stack: string list list;
+  locals: (varname, var) Hashtbl.t;
 
   (* stdin by default (can be changed when do '. file'?? when eval) *)
   mutable chan: in_channel;
@@ -17,7 +30,7 @@ type thread = {
   line: int ref;
 }
 
-let (globals: (Ast.varname, Ast.var) Hashtbl.t) = 
+let (globals: (varname, var) Hashtbl.t) = 
   Hashtbl.create 101
 
 (* less: could have also  

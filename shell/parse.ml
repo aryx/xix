@@ -5,7 +5,7 @@ let parse_line chan =
 
   let _lexbuf = Lexing.from_channel chan in
 
-  let lexfunc lexbuf =
+  let _lexfunc lexbuf =
     (* todo: call pprompt if doprompt *)
 
     (* todo: have different state after having parsed a $?

@@ -6,7 +6,7 @@ let gvlook name =
   try 
     Hashtbl.find R.globals name
   with Not_found ->
-    let var = { Ast.v = None } in
+    let var = { R.v = None } in
     Hashtbl.add R.globals name var;
     var
     
@@ -19,7 +19,7 @@ let vlook name =
 
 let setvar name v =
   let var = vlook name in
-  var.Ast.v <- Some v
+  var.R.v <- Some v
 
 
 

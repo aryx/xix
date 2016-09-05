@@ -12,7 +12,7 @@ let op_repl () =
 
   (* set prompstr *)
   if t.R.iflag then begin
-    let promptv = (Var.vlook "prompt").Ast.v in
+    let promptv = (Var.vlook "prompt").R.v in
     Prompt.prompt := 
       (match promptv with
       | Some (x::xs) -> x

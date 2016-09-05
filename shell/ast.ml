@@ -1,21 +1,26 @@
 
-(* less: W of word_element list  
+(* 
+ * less: W of word_element list  
  *  where word_element = Star | Question | Bracket | Str of string
  * elements: word_element list;
- * quoted: bool;
  *)
-type word = string
+type word = 
+  (* the string can contain * ? [ special char
+   * less: the should be preceded by \001
+   *)
+  | Word of string * bool (* quoted *)
+
+  | Dollar of word
+  | Count of word
+
+  | List of words
+  | Index of word * words
+  (* ^ is distributive on lists *)
+  | Concat of word * word
 
 (* separated by spaces *)
-type words = word list
+and words = word list
 
-(* less: mv in runtime? *)
-type varname = string
-type value = words
-type var = { 
-  mutable v: value option;
-  (* less: changed: bool *)
-}
 
 type redirection = 
   | RWrite

@@ -14,7 +14,7 @@ let pprompt () =
     flush stderr;
 
     (* set promptstr for the next pprompt() *)
-    let promptv = (Var.vlook "prompt").Ast.v in
+    let promptv = (Var.vlook "prompt").R.v in
 
     prompt := 
       (match promptv with

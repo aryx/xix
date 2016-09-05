@@ -112,7 +112,7 @@ cmd:
   | TTwiddle word words { }
 
   | cmd TPipe cmd { }
-/*less: | brace epilog */
+  | brace epilog { }
 
 /* why not put those with line: ?*/
 
@@ -141,10 +141,22 @@ cmd:
 simple:
   | first       { }
   | simple word { }
-
   | simple redir { }
-/*todo: | brace  then working? */
-  | brace { }
+
+
+paren: TOPar body TCPar { }
+
+brace: TOBrace body TCBrace { }
+
+body: 
+  | cmd { }
+  | cmdsan body { }
+
+cmdsan:
+  | cmdsa { }
+  | cmd TNewline { }
+
+assign: first TEq word { }
 
 
 /*(*************************************************************************)*/
@@ -190,27 +202,19 @@ words:
   | words word { }
 
 /*(*************************************************************************)*/
-/*(*1 Other *)*/
+/*(*1 Redirection *)*/
 /*(*************************************************************************)*/
 
 redir:
   | TRedir word { }
 
+epilog:
+  | /*empty*/ { }
+  | redir epilog { }
 
-paren: TOPar body TCPar { }
-
-brace: TOBrace body TCBrace { }
-
-
-body: 
-  | cmd { }
-  | cmdsan body { }
-
-cmdsan:
-  | cmdsa { }
-  | cmd TNewline { }
-
-assign: first TEq word { }
+/*(*************************************************************************)*/
+/*(*1 Compounds *)*/
+/*(*************************************************************************)*/
 
 /*(*************************************************************************)*/
 /*(*1 Misc *)*/

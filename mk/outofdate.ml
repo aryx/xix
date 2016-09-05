@@ -138,6 +138,7 @@ let rec work env node did =
         xs |> List.iter (fun arc ->
           match arc.G.dest with
           | Some node2 ->
+              (* TODO: why recurse if node is Made? *)
               (* recurse! *)
               work env node2 did;
               

@@ -9,9 +9,14 @@ type t = {
 }
 
 (* will read the OS environment variables (e.g., PATH, HOME, objtype) *)
-val initenv: unit -> t
+val initenv: 
+  unit -> t
 
-val shellenv_of_env: t -> Shellenv.t
+val shellenv_of_env: 
+  t -> Shellenv.t
+
+
+(* internals *)
 
 val check_values: 
   values -> unit

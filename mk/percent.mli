@@ -20,6 +20,7 @@ val subst:
 val match_and_subst:
   pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
 
+(* internals *)
 
 val check_pattern: 
   pattern -> unit

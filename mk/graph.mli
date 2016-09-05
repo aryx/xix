@@ -45,7 +45,6 @@ val check_cycle:
 val check_ambiguous:
   graph -> unit
 
-
 (* output graphviz dot file *)
 val dump_graph: 
   graph -> unit

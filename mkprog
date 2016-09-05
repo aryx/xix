@@ -10,7 +10,7 @@ all:V: $PROG
 opt:V: $PROG.opt
 
 $PROG: $OBJS
-	$OCAMLC $LINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq -o $target
+	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq -o $target
 
 SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}
 LIBSOPT=${LIBS:%.cma=%.cmxa}

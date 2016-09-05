@@ -1,8 +1,8 @@
 
 type varname = string
 
-(* In RC the base value is really a list of value.
- * Single values are really considered just list with one element.
+(* In RC the base value is really the list of strings.
+ * Single word are really considered just a list with one element.
  *)
 type value = string list
 
@@ -17,7 +17,7 @@ type thread = {
   pc: int ref;
 
   mutable argv: string list;
-  mutable argv_stack: string list list;
+  mutable argv_stack: (string list) list;
   locals: (varname, var) Hashtbl.t;
 
   (* stdin by default (can be changed when do '. file'?? when eval) *)

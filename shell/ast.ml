@@ -5,15 +5,15 @@ type word =
    * 
    * less: W of word_element list  
    *  where word_element = Star | Question | Bracket | Str of string
-   * elements: word_element list;
    *)
   | Word of string * bool (* quoted *)
+  | List of words
 
   | Dollar of word
-  | Count of word
 
-  | List of words
+  | Count of word
   | Index of word * words
+
   (* ^ is distributive on lists *)
   | Concat of word * word
 
@@ -29,7 +29,7 @@ type redirection =
 type cmd =
   | EmptyCommand
   | Simple of word * words
-  | Compound of cmd list
+  | Compound of cmd_sequence
 
   | Redir of redirection * cmd
   | Pipe of cmd * cmd
@@ -40,17 +40,22 @@ type cmd =
 
   | Match of word * words
 
-  | If of cmd list * cmd
+  | If of cmd_sequence * cmd
   | IfNot of cmd
 
-  | While of cmd list * cmd
-  | Switch of word * cmd list
+  | While of cmd_sequence * cmd
+  | Switch of word * cmd_sequence
 
   | ForIn of word * words * cmd
   | For of word * cmd
 
-  | Fn of word * cmd list
+  | Fn of word * cmd_sequence
   | DelFn of word
 
-type line = unit
+and cmd_sequence =
+  | Async of cmd * cmd_sequence
+  | Seq   of cmd * cmd_sequence
+  | Last  of cmd
 
+(* None for EOF *)
+type line = cmd_sequence option

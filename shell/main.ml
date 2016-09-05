@@ -51,7 +51,7 @@ let interpreter () =
   t.R.iflag <- !Flags.interactive;
 
   (* less: set argv0 *)
-  for i = Array.length Sys.argv - 1 to 1 do
+  for i = (Array.length Sys.argv) - 1 downto 1 do
     Runtime.push_word (Sys.argv.(i))
   done;
 

@@ -85,8 +85,8 @@ open Ast
 /*(*1 line *)*/
 /*(*************************************************************************)*/
 rc:
-  | EOF           { }
-  | line TNewline { }
+  | EOF           { None }
+  | line TNewline { raise Todo }
 
 /*(* =~ stmt *)*/
 line:

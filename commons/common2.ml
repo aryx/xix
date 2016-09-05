@@ -4,12 +4,6 @@ let rec join_gen a = function
   | [x] -> [x]
   | x::xs -> x::a::(join_gen a xs)
 
-let command2 s = 
-  ignore(Sys.command s)
-
-
-
-
 let enum x n =
   if not(x <= n)
   then failwith (Printf.sprintf "bad values in enum, expect %d <= %d" x n);
@@ -23,6 +17,9 @@ let (list_of_string: string -> char list) = function
   | s -> (enum 0 ((String.length s) - 1) |> List.map (String.get s))
 
 
+
+let command2 s = 
+  ignore(Sys.command s)
 
 (* julia: convert something printed using format to print into a string *)
 let format_to_string f =
@@ -45,5 +42,5 @@ let format_to_string f =
     loop() in
   (try loop() with End_of_file -> ());
   close_in i;
-  command2 ("rm -f " ^ nm);
+  Sys.command ("rm -f " ^ nm) |> ignore;
   String.concat "\n" (List.rev !lines)

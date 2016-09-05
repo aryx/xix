@@ -2,9 +2,9 @@
 
 type filename = string
 
-let spf = Printf.sprintf
-
 type ('a, 'b) either = Left of 'a | Right of 'b
+
+let spf = Printf.sprintf
 
 
 let with_file_out f file = 
@@ -59,7 +59,6 @@ let sort_by_key_lowfirst xs =
   List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs
 
 
-
 let memoized ?(use_cache=true) h k f =
   if not use_cache
   then f ()
@@ -71,8 +70,6 @@ let memoized ?(use_cache=true) h k f =
         Hashtbl.add h k v;
         v
       end
-
-
 
 
 
@@ -96,7 +93,6 @@ let candidate_match_func s re =
   Str.string_match compile_re s 0
 
 let split sep s = Str.split (Str.regexp sep) s
-
 
 let (=~) s re =
   candidate_match_func s re
@@ -229,3 +225,17 @@ let hash_of_list xs =
 
 let hash_to_list h =
   Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
+
+let take n xs =
+  let rec next n xs acc =
+    match (n,xs) with
+    | (0,_) -> List.rev acc
+    | (_,[]) -> failwith "Common.take: not enough"
+    | (n,x::xs) -> next (n-1) xs (x::acc) in
+  next n xs []
+
+let rec take_safe n xs =
+  match (n,xs) with
+  | (0,_) -> []
+  | (_,[]) -> []
+  | (n,x::xs) -> x::take_safe (n-1) xs

@@ -1,6 +1,6 @@
 
-(* rc does not use lots of types. No integer, no boolean, no float, etc.
- * The only type in RC is the list of strings. Even a single
+(* rc does not use types. Anyway there is no integer, no boolean, no float.
+ * The only value in RC is the list of strings. Even a single
  * string is really a list with one element.
  *)
 type value = 
@@ -19,31 +19,39 @@ type value =
   | Count of value
   | Index of value * values
 
-  (* ^ is distributive on lists *)
+  (* ^ distributes over lists *)
   | Concat of value * value
 
 (* separated by spaces *)
 and values = value list
 
 type redirection = 
-  | RWrite
-  | RRead
-  | RAppend
-  (* less: RHere *)
+  | RWrite (* > *)
+  | RRead  (* < *)
+  | RAppend (* >> *)
+  (* less: RHere *) (* << *)
 
 type cmd =
   | EmptyCommand
+
+  (* Base *)
+
   | Simple of value * values
-  | Compound of cmd_sequence
+
+  (* IO *)
 
   | Redir of redirection * cmd
   | Pipe of cmd * cmd
+
+  (* expressions *)
 
   | And of cmd * cmd
   | Or of cmd * cmd
   | Not of cmd
 
   | Match of value * values
+
+  (* stmts *)
 
   | If of cmd_sequence * cmd
   | IfNot of cmd
@@ -54,13 +62,19 @@ type cmd =
   | ForIn of value * values * cmd
   | For of value * cmd
 
+  | Compound of cmd_sequence
+
+  (* definitions *)
+
   | Fn of value * cmd_sequence
   | DelFn of value
+  (* can do x=a; but also $x=b ! *)
+  | Assign of value * value
 
 and cmd_sequence =
   | Async of cmd * cmd_sequence
   | Seq   of cmd * cmd_sequence
   | Last  of cmd
 
-(* None for EOF *)
+(* None when reads EOF *)
 type line = cmd_sequence option

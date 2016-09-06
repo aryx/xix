@@ -58,7 +58,7 @@ let parse_line lexbuf =
       |> (fun ast -> if !Flags.dump_ast then pr2 (Dumper.s_of_line ast); ast)
     with 
       | Parsing.Parse_error ->
-          error "Parsing error" !curtok
+          error "syntax error" !curtok
       | Lexer.Lexical_error s ->
-          error (spf "Lexical error, %s" s) !curtok
+          error (spf "lexical error, %s" s) !curtok
 

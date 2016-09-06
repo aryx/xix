@@ -187,8 +187,8 @@ comword:
   | TCount word  { Count $2 }
   | TDollar word TSub words TCPar { Index ($2, $4) }
   | TOPar words TCPar  { List $2 }
+  | TBackquote brace   { CommandOutput $2 }
   /* less: TStringify
-   *  backquote
   */
 
 word:

@@ -13,6 +13,8 @@ type value =
    *)
   | Word of string * bool (* quoted *)
   | List of values
+  (* this causes value and cmd to be mutually recursive *)
+  | CommandOutput of cmd_sequence
 
   | Dollar of value
 
@@ -22,21 +24,19 @@ type value =
   (* ^ distributes over lists *)
   | Concat of value * value
 
+
 (* separated by spaces *)
 and values = value list
- (* with tarzan *)
 
-type redirection_kind = 
+and redirection_kind = 
   | RWrite (* > *)
   | RRead  (* < *)
   | RAppend (* > > *)
   (* less: RHere *) (* < < *)
- (* with tarzan *)
 
-type redirection = redirection_kind * value (* the filename *)
- (* with tarzan *)
+and redirection = redirection_kind * value (* the filename *)
 
-type cmd =
+and cmd =
   | EmptyCommand
 
   (* Base *)

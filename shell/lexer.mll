@@ -76,8 +76,11 @@ rule token = parse
   (* less: advanced pipe and redirection *)
 
   | ';'  { TSemicolon }
+  | '='  { TEq }
   | '('  { TOPar }   | ')' { TCPar }
   | '{'  { TOBrace } | '}' { TCBrace }
+
+  | "`" { TBackquote } 
 
   | "~" { TTwiddle } 
   | "!" { TBang }

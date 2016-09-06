@@ -26,7 +26,7 @@ type items = item Set_.t
 (*s: type Lr0.env (yacc) *)
 type env = {
   (* augmented grammar where r0 is $S -> start_original_grammar *)
-  g: Ast.rule_ array;
+  g: Ast.rule array;
 }
 (*e: type Lr0.env (yacc) *)
 
@@ -61,7 +61,7 @@ val canonical_lr0_automaton: env -> automaton
 (* helper functions used also by slr.ml *)
 
 (*s: signature Lr0.after_dot (yacc) *)
-val after_dot: Ast.rule_ -> dotidx -> Ast.symbol option
+val after_dot: Ast.rule -> dotidx -> Ast.symbol option
 (*e: signature Lr0.after_dot (yacc) *)
 
 (*s: signature Lr0.all_symbols (yacc) *)

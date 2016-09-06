@@ -57,7 +57,7 @@ type items = item Set_.t
 (*s: type Lr0.env (yacc) *)
 type env = {
   (* augmented grammar where r0 is $S -> start_original_grammar *)
-  g: Ast.rule_ array;
+  g: Ast.rule array;
 }
 (*e: type Lr0.env (yacc) *)
 

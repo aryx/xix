@@ -46,10 +46,10 @@ type action = location
 (*e: type Ast.action (yacc) *)
 
 (*s: type Ast.grammar (yacc) *)
-type grammar = rule_ list
+type grammar = rule list
 (*e: type Ast.grammar (yacc) *)
 (*s: type Ast.rule_ (yacc) *)
-  and rule_ = {
+  and rule = {
     lhs: nonterm;
     rhs: symbol list;
     act: action;

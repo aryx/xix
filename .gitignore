@@ -36,3 +36,8 @@
 /yacc/parser.ml
 /yacc/parser.mli
 /yacc/parser.output
+/shell/lexer.ml
+/shell/parser.ml
+/shell/parser.mli
+/shell/parser.output
+/shell/rc

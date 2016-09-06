@@ -1,0 +1,10 @@
+#!/bin/rc
+
+rfork e
+
+flagfmt='a,b,c,d,s,f binary,r res,x width'
+args='name | pid list'
+if(! ifs=() eval `{aux/getflags $*} || ~ $#* 0){
+	aux/usage
+	exit usage
+}

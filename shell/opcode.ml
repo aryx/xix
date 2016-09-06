@@ -1,7 +1,7 @@
 
 type opcode =
-  | F of (unit -> unit)
+  | F of ((unit -> unit) * string)
+  | I of int
   | S of string
-  (* | I of int *)
 
 type codevec = opcode array

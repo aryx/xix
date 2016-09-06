@@ -37,7 +37,7 @@ let do_action s xs =
 (*****************************************************************************)
 
 let bootstrap_simple = 
-  [| O.F Op_repl.op_repl|]
+  [| O.F Op_repl.xrepl|]
 
 (* The real one is more complex.
  * *=(argv);. /usr/lib/rcmain $*
@@ -84,7 +84,7 @@ let interpreter () =
     (* less: debug runq *)
     incr t.R.pc;
     (match t.R.code.(!(t.R.pc) - 1) with
-    | O.F f -> f ()
+    | O.F (f, _str) -> f ()
     | O.S s -> 
         failwith (spf "was expecting a F, not a S: %s" s)
     );

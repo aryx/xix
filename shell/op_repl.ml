@@ -41,3 +41,4 @@ let op_repl () =
    * in main should call us back since the pc was decremented above
    *)
 
+let xrepl = op_repl, "repl"

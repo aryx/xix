@@ -11,6 +11,9 @@ open Parser
  *  - no unicode support
 *)
 
+let error s =
+  failwith (spf "Lexical error, %s" s)
+
 let skipnl lexbuf = 
   print_string "TODO: skipnl"
 }
@@ -108,6 +111,7 @@ rule token = parse
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
+  | _ as c   { error (spf "unrecognized character: '%c'" c) }
 
 (*****************************************************************************)
 (* Quote rule *)

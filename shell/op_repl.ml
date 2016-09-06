@@ -21,8 +21,9 @@ let op_repl () =
       );
   end;
   (* less: call Noerror before yyparse *)
+  let lexbuf = Lexing.from_channel t.R.chan in
   
-  let ast_opt = Parse.parse_line t.R.chan in
+  let ast_opt = Parse.parse_line lexbuf in
 
   match ast_opt with
   | None -> 

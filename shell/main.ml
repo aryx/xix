@@ -34,8 +34,10 @@ let do_action s xs =
       xs |> List.iter (fun file ->
         pr2 (spf "processing %s" file);
         let chan = open_in file in
+        let lexbuf = Lexing.from_channel chan in
+
         let rec loop () =
-          let line = Parse.parse_line chan in
+          let line = Parse.parse_line lexbuf in
           match line with
           | Some seq -> 
             pr2_gen line;

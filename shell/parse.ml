@@ -1,9 +1,8 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-let parse_line chan =
+let parse_line lexbuf =
 
-  let lexbuf = Lexing.from_channel chan in
   let lexfunc lexbuf =
     (* todo: call pprompt if doprompt *)
 
@@ -24,5 +23,3 @@ let parse_line chan =
       Parser.rc lexfunc lexbuf
     with Parsing.Parse_error ->
       raise Parsing.Parse_error
-
-

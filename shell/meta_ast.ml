@@ -27,6 +27,10 @@ and vof_redirection_kind =
   | RWrite -> Ocaml.VSum (("RWrite", []))
   | RRead -> Ocaml.VSum (("RRead", []))
   | RAppend -> Ocaml.VSum (("RAppend", []))
+  | RDup ((v1, v2)) ->
+      let v1 = Ocaml.vof_int v1
+      and v2 = Ocaml.vof_int v2
+      in Ocaml.VSum (("RDup", [ v1; v2 ]))
 and vof_redirection (v1, v2) =
   let v1 = vof_redirection_kind v1
   and v2 = vof_value v2
@@ -46,6 +50,12 @@ and vof_cmd =
       let v1 = vof_cmd v1
       and v2 = vof_cmd v2
       in Ocaml.VSum (("Pipe", [ v1; v2 ]))
+  | Dup ((v1, v2, v3, v4)) ->
+      let v1 = vof_cmd v1
+      and v2 = vof_redirection_kind v2
+      and v3 = Ocaml.vof_int v3
+      and v4 = Ocaml.vof_int v4
+      in Ocaml.VSum (("Dup", [ v1; v2; v3; v4 ]))
   | And ((v1, v2)) ->
       let v1 = vof_cmd v1
       and v2 = vof_cmd v2

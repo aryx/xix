@@ -44,6 +44,7 @@ let mk_Seq (a, b) =
 %token TAndAnd TOrOr TBang
 %token TPipe
 %token<Ast.redirection_kind> TRedir
+%token<Ast.redirection_kind * int * int> TDup
 %token TAnd TSubshell
 %token TTwiddle  
 
@@ -116,7 +117,9 @@ cmd:
       let redirs = List.rev redirs in
       let base = Simple (cmd, args) in
       redirs |> List.fold_left (fun acc e ->
-        Redir (acc, e)
+        match e with
+        | Left (kind, word)    -> Redir (acc, (kind, word))
+        | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
       ) base
     }
 
@@ -127,7 +130,11 @@ cmd:
 
   | cmd TPipe cmd  { Pipe ($1, $3) }
   | brace epilog   { 
-      $2 |> List.fold_left (fun acc e -> Redir (acc, e)) (Compound $1) 
+      $2 |> List.fold_left (fun acc e -> 
+        match e with
+        | Left (kind, word) -> Redir (acc, (kind, word))
+        | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
+      ) (Compound $1) 
   }
 
   | TIf paren_skipnl cmd { If ($2, $3) }
@@ -221,7 +228,8 @@ words_rev:
 /*(*************************************************************************)*/
 
 redir:
-  | TRedir word { ($1, $2) }
+  | TRedir word { Left ($1, $2) }
+  | TDup        { Right $1 }
 
 epilog:
   | /*empty*/    { [] }

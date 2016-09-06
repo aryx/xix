@@ -33,6 +33,7 @@ and redirection_kind =
   | RRead  (* < *)
   | RAppend (* > > *)
   (* less: RHere *) (* < < *)
+  | RDup of int * int
 
 and redirection = redirection_kind * value (* the filename *)
 
@@ -47,6 +48,7 @@ and cmd =
 
   | Redir of cmd * redirection
   | Pipe of cmd * cmd
+  | Dup of cmd * redirection_kind * int * int (* >[1=2] *)
 
   (* expressions *)
 

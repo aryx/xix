@@ -1,14 +1,14 @@
 
 type varname = string
 
-(* In RC the base value is really the list of strings.
- * Single word are really considered just a list with one element.
+(* In RC the basic (and only) value is the list of strings.
+ * A single word is considered as a list with one element.
  *)
 type value = string list
 
 type var = { 
   mutable v: value option;
-  (* less: changed: bool *)
+  (* less: opti: changed: bool *)
 }
 
 
@@ -25,8 +25,9 @@ type thread = {
   (* to display a prompt or not *)
   mutable iflag: bool;
 
-  (* for error reporting ("<stdin>" when reading from stdin) *)
-  mutable file: Common.filename;
+  (* for error reporting (None when reading from stdin) *)
+  (* less: file has to be mutable? could be a param of start? like chan? *)
+  mutable file: Common.filename option;
   line: int ref;
 
 }
@@ -36,7 +37,7 @@ let (globals: (varname, var) Hashtbl.t) =
 
 (* less: could have also  
  *  let run = { code = boostrap; pc = 1; chan = stdin }
- * in addition to runq. Then no need cur ().
+ * in addition to runq. Then no need for cur ().
  *)
 let runq = ref []
 
@@ -68,7 +69,7 @@ let start code pc locals =
     (* todo: cmdfile, cmdfd, eof, iflag *)
     chan = stdin;
     iflag = false;
-    file = "<stdin>";
+    file = None;
     line = ref 1;
   } in
 

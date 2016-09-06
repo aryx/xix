@@ -36,6 +36,11 @@ let do_action s xs =
         let chan = open_in file in
         let lexbuf = Lexing.from_channel chan in
 
+        (* for error reporting I need a runq *)
+        Runtime.start [||] 0 (Hashtbl.create 0);
+        let t = Runtime.cur () in
+        t.R.file <- Some file;
+
         let rec loop () =
           let line = Parse.parse_line lexbuf in
           match line with
@@ -104,6 +109,8 @@ let interpreter () =
     | O.F (f, _str) -> f ()
     | O.S s -> 
         failwith (spf "was expecting a F, not a S: %s" s)
+    | O.I i -> 
+        failwith (spf "was expecting a F, not a I: %d" i)
     );
     (* todo: handle trap *)
   done

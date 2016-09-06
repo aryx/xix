@@ -11,11 +11,17 @@ open Parser
  *  - no unicode support
 *)
 
+exception Lexical_error of string
 let error s =
-  failwith (spf "Lexical error, %s" s)
+  raise (Lexical_error s)
 
 let skipnl lexbuf = 
   print_string "TODO: skipnl"
+
+let incr_lineno () =
+  let t = Runtime.cur () in
+  incr t.Runtime.line
+  
 }
 
 
@@ -43,8 +49,9 @@ rule token = parse
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
   | [' ''\t']+ { token lexbuf }
-  | '\n'      { TNewline }
+  | '\n'      { incr_lineno(); TNewline }
   | '\\''\n'  {
+      incr_lineno ();
       (* note: cannot call 'token lexbuf' otherwill will not
 
        * get the prompt if what is after the newline is a set of spaces.
@@ -62,15 +69,15 @@ rule token = parse
   | "||" { skipnl lexbuf; TOrOr }
 
   | "&"  { TAnd }
-  | "|"  { TPipe }
+  | "|"  { skipnl lexbuf; TPipe }
   | ">"  { TRedir Ast.RWrite }
   | "<"  { TRedir Ast.RRead }
   | ">>" { TRedir Ast.RAppend }
   (* less: advanced pipe and redirection *)
 
-  | ';'
-  | '('  | ')'
-  | '{'  | '}'
+  | ';'  { TSemicolon }
+  | '('  { TOPar }   | ')' { TCPar }
+  | '{'  { TOBrace } | '}' { TCBrace }
 
   | "~" { TTwiddle } 
   | "!" { TBang }
@@ -118,5 +125,9 @@ rule token = parse
 (*****************************************************************************)
 and quote = parse
   | "'" { "" } 
+  | "\n" { 
+      incr_lineno ();
+      raise Todo
+    }
   | eof { raise Todo }
 

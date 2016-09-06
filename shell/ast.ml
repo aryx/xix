@@ -24,14 +24,17 @@ type value =
 
 (* separated by spaces *)
 and values = value list
+ (* with tarzan *)
 
 type redirection_kind = 
   | RWrite (* > *)
   | RRead  (* < *)
-  | RAppend (* >> *)
-  (* less: RHere *) (* << *)
+  | RAppend (* > > *)
+  (* less: RHere *) (* < < *)
+ (* with tarzan *)
 
 type redirection = redirection_kind * value (* the filename *)
+ (* with tarzan *)
 
 type cmd =
   | EmptyCommand
@@ -82,6 +85,8 @@ and cmd_sequence =
   | Async of cmd * cmd_sequence
   | Seq   of cmd * cmd_sequence
   | LastCmd  of cmd
+ (* with tarzan *)
 
 (* None when reads EOF *)
 type line = cmd_sequence option
+ (* with tarzan *)

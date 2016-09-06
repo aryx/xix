@@ -40,7 +40,7 @@ let do_action s xs =
           let line = Parse.parse_line lexbuf in
           match line with
           | Some seq -> 
-            pr2_gen line;
+            pr2 (Dumper.s_of_cmd_sequence seq);
             loop ();
           | None -> ()
         in
@@ -135,6 +135,8 @@ let main () =
     (* pad: I added that *)
     "-dump_tokens", Arg.Set Flags.dump_tokens,
     " dump the tokens as they are generated";
+    "-dump_ast", Arg.Set Flags.dump_ast,
+    " dump the parsed AST";
 
     (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,

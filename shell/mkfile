@@ -4,9 +4,10 @@ TOP=..
 INCLUDES=-I $TOP/commons -I $TOP/lib_core
 
 SRC=  flags.ml globals.ml \
-  ast.ml \
+  ast.ml meta_ast.ml \
   opcode.ml runtime.ml \
   var.ml prompt.ml \
+  dumper.ml \
   parser.ml lexer.ml parse.ml \
   compile.ml \
   op_repl.ml \

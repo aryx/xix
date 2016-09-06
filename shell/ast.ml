@@ -12,7 +12,7 @@ type value =
    *  where word_element = Star | Question | Bracket | Str of string
    *)
   | Word of string * bool (* quoted *)
-  | List of value
+  | List of values
 
   | Dollar of value
 
@@ -25,11 +25,13 @@ type value =
 (* separated by spaces *)
 and values = value list
 
-type redirection = 
+type redirection_kind = 
   | RWrite (* > *)
   | RRead  (* < *)
   | RAppend (* >> *)
   (* less: RHere *) (* << *)
+
+type redirection = redirection_kind * value (* the filename *)
 
 type cmd =
   | EmptyCommand
@@ -76,6 +78,7 @@ type cmd =
   | Assign of value * value * cmd (* can be EmptyCommand *)
 
 and cmd_sequence =
+  (* less: could be in cmd, and rewrite a & b in a&; b *)
   | Async of cmd * cmd_sequence
   | Seq   of cmd * cmd_sequence
   | LastCmd  of cmd

@@ -28,6 +28,7 @@ type thread = {
   (* for error reporting ("<stdin>" when reading from stdin) *)
   mutable file: Common.filename;
   line: int ref;
+
 }
 
 let (globals: (varname, var) Hashtbl.t) = 

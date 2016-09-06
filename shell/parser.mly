@@ -180,8 +180,8 @@ comword:
 
 word:
   | comword { }
-  | word TCaret word { }
   | keyword { }
+  | word TCaret word { }
 
 
 

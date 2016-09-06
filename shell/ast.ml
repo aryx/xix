@@ -40,7 +40,7 @@ type cmd =
 
   (* IO *)
 
-  | Redir of redirection * cmd
+  | Redir of cmd * redirection
   | Pipe of cmd * cmd
 
   (* expressions *)
@@ -50,6 +50,7 @@ type cmd =
   | Not of cmd
 
   | Match of value * values
+  (* can also run the program 'test' for other comparisons *)
 
   (* stmts *)
 
@@ -60,6 +61,7 @@ type cmd =
   | Switch of value * cmd_sequence
 
   | ForIn of value * values * cmd
+  (* less: could desugar as ForIn value $* *)
   | For of value * cmd
 
   | Compound of cmd_sequence
@@ -68,13 +70,15 @@ type cmd =
 
   | Fn of value * cmd_sequence
   | DelFn of value
-  (* can do x=a; but also $x=b ! *)
-  | Assign of value * value
+  (* can do x=a; but also $x=b ! 
+   * less: could have AssignGlobal and AssignLocal of ... cmd
+   *)
+  | Assign of value * value * cmd (* can be EmptyCommand *)
 
 and cmd_sequence =
   | Async of cmd * cmd_sequence
   | Seq   of cmd * cmd_sequence
-  | Last  of cmd
+  | LastCmd  of cmd
 
 (* None when reads EOF *)
 type line = cmd_sequence option

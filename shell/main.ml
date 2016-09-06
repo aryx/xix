@@ -11,17 +11,18 @@ module O = Opcode
  *
  * Main limitations compared to rc:
  *  - no unicode
- *  - no fancy redirection or pipe
- * 
+ *  - no _fancy_ redirections or pipes (but basic redirections and pipes)
  * 
  * todo:
  *  - Isatty
- *  - add ~ shortcut for HOME
+ *  - add ~ shortcut for HOME (from csh?)
+ *  - file arg
+ *  - -c
+ *  - -m ??
  *)
 
 let usage =
   "usage: rc [-SsrdiIlxepvV] [-c arg] [-m command] [file [arg ...]]"
-
 
 (*****************************************************************************)
 (* Testing *)
@@ -36,11 +37,35 @@ let do_action s xs =
 (*****************************************************************************)
 
 let bootstrap_simple = 
-  [| Opcode.F Op_repl.op_repl|]
+  [| O.F Op_repl.op_repl|]
 
-(* the real one is more complex *)
+(* The real one is more complex.
+ * *=(argv);. /usr/lib/rcmain $*
+ *)
 let bootstrap = 
-  [| |]
+  [| 
+    (*
+      Op_stack.op_mark;
+      Op_stack.op_word;
+      O.S "*";
+      Op_xxx.op_assign;
+      Op_stack.op_mark;
+      Op_stack.op_mark;
+
+      Op_stack.op_word;
+      O.S "*";
+      Op_var.op_dollar;
+
+      Op_stack.op_word;
+      O.S "/rc/lib/rcmain"; (* or use -m *)
+
+      Op_stack.op_word;
+      O.S ".";
+
+      Op_proc.op_simple;
+      Op_proc.op_exit;
+    *)
+  |]
 
 
 let interpreter () =
@@ -82,6 +107,8 @@ let main () =
   let options = [
     "-i", Arg.Set Flags.interactive,
     " interactive mode (display prompt)";
+    "-I", Arg.Clear Flags.interactive,
+    " non-interactive mode (no prompt)";
     "-l", Arg.Set Flags.login,
     " login mode (execute ~/lib/profile)";
 

@@ -124,10 +124,13 @@ rule token = parse
 (* Quote rule *)
 (*****************************************************************************)
 and quote = parse
+  | "''" { "'" ^ quote lexbuf } 
   | "'" { "" } 
   | "\n" { 
       incr_lineno ();
-      raise Todo
+      "\n" ^ quote lexbuf
     }
-  | eof { raise Todo }
+  | [^'\'' '\n']+ { let s = Lexing.lexeme lexbuf in s ^ quote lexbuf }
+  (* stricter: generate error *)
+  | eof { error "unterminated quote" }
 

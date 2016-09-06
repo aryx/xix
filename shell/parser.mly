@@ -15,6 +15,12 @@ open Ast
 (* Helpers *)
 (*****************************************************************************)
 
+let mk_Seq (a, b) =
+  match a, b with
+  | EmptyCommand, _ -> b
+  | _, (LastCmd EmptyCommand) -> LastCmd a
+  | _ -> Seq (a,b)
+  
 %}
 
 /*(*************************************************************************)*/
@@ -94,7 +100,7 @@ line:
   | cmdsa line { $1 $2  }
 
 cmdsa:
-  | cmd TSemicolon { (fun x -> Seq ($1, x)) }
+  | cmd TSemicolon { (fun x -> mk_Seq ($1, x)) }
   | cmd TAnd       { (fun x -> Async ($1, x)) }
 
 /*(*************************************************************************)*/
@@ -120,7 +126,9 @@ cmd:
   | TTwiddle word words { Match ($2, $3) }
 
   | cmd TPipe cmd  { Pipe ($1, $3) }
-  | brace epilog   { raise Todo }
+  | brace epilog   { 
+      $2 |> List.fold_left (fun acc e -> Redir (acc, e)) (Compound $1) 
+  }
 
   | TIf paren_skipnl cmd { If ($2, $3) }
   | TIf tnot_skipnl  cmd { IfNot $3 }
@@ -159,7 +167,7 @@ body:
 
 cmdsan:
   | cmdsa        { $1 }
-  | cmd TNewline { (fun x -> Seq ($1, x)) }
+  | cmd TNewline { (fun x -> mk_Seq ($1, x)) }
 
 assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 
@@ -216,8 +224,8 @@ redir:
   | TRedir word { ($1, $2) }
 
 epilog:
-  | /*empty*/    { raise Todo }
-  | redir epilog { raise Todo }
+  | /*empty*/    { [] }
+  | redir epilog { $1::$2 }
 
 /*(*************************************************************************)*/
 /*(*1 Compounds *)*/

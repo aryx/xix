@@ -12,6 +12,8 @@ module O = Opcode
  * Main limitations compared to rc:
  *  - no unicode
  *  - no _fancy_ redirections or pipes (but basic redirections and pipes)
+ *  - no storing of function in the environment
+ *    (used by some scripts? Can do the same by using '. lib.rc')
  * 
  * todo:
  *  - Isatty

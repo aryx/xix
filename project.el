@@ -6,7 +6,7 @@
  (split-string 
   "commons
    formats/objects formats/executables
-   assembler linker mk
+   assembler linker mk shell
    "
   ))
 
@@ -35,6 +35,17 @@
      (1 (concat "-debugger -f " (concat p "/mk/mkfile")))
      (2 (concat "-debugger -f " (concat p "/mk/tests/mk-empty-var")))
      (3 "-debugger -f /home/pad/plan9/windows/rio/mkfile")
+     )
+   )))
+
+(setq
+ pad-ocaml-project-prog     "shell/rc"
+ pad-ocaml-project-args 
+ (join-string 
+  (list 
+   ""
+   (case 1
+     (1 (concat "-debugger -test_parser " (concat p "/shell/tests/hello.rc")))
      )
    )))
 

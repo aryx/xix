@@ -30,6 +30,21 @@ let usage =
 
 let do_action s xs =
   match s with
+  | "-test_parser" ->
+      xs |> List.iter (fun file ->
+        pr2 (spf "processing %s" file);
+        let chan = open_in file in
+        let rec loop () =
+          let line = Parse.parse_line chan in
+          match line with
+          | Some seq -> 
+            pr2_gen line;
+            loop ();
+          | None -> ()
+        in
+        loop ()
+      )
+
   | _ -> failwith ("action not supported: " ^ s)
 
 (*****************************************************************************)
@@ -112,6 +127,14 @@ let main () =
     "-l", Arg.Set Flags.login,
     " login mode (execute ~/lib/profile)";
 
+    (* pad: I added that *)
+    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+
+    (* pad: I added that *)
+    "-dump_tokens", Arg.Set Flags.dump_tokens,
+    " dump the tokens as they are generated";
+
+    (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,
     " ";
     "-backtrace", Arg.Set backtrace,

@@ -22,7 +22,7 @@ let skipnl lexbuf =
 (* original: !strchr("\n \t#;&|^$=`'{}()<>", c) && c!=EOF;
  * note that wordchr allows '~', '!', '@', '"', ','
  *)
-let wordchr = [^'\n'' ''\t' '#'
+let wordchr = [^'\n' ' ' '\t' '#'
                 ';' '&''|''^' '$' '=' 
                 '`' '\'' 
                '{''}' '('')' '<''>'
@@ -39,7 +39,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
-  | [' ''\t'] { token lexbuf }
+  | [' ''\t']+ { token lexbuf }
   | '\n'      { TNewline }
   | '\\''\n'  {
       (* note: cannot call 'token lexbuf' otherwill will not

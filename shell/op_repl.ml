@@ -28,8 +28,7 @@ let op_REPL () =
     let ast_opt = Parse.parse_line lexbuf in
 
     match ast_opt with
-    | None -> 
-        Op_control.op_Return ()
+    | None -> R.return ()
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in

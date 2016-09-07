@@ -10,17 +10,17 @@ module O = Opcode
 (* An OCaml port of rc, the Plan9 shell.
  *
  * Main limitations compared to rc:
- *  - no unicode
- *  - not all fancy redirections or fancy pipes
+ *  - no unicode support
+ *  - not all the fancy redirections and fancy pipes
  *  - no storing of function in the environment
- *    (used by some scripts? Can do the same by using '. lib.rc')
+ *    (used by rcmain. But can do the same by using '. rcmain')
  * 
  * todo:
  *  - Isatty
  *  - add ~ shortcut for HOME (from csh?)
- *  - file arg
- *  - -c
- *  - -m ??
+ *  - rc foo.rc
+ *  - rc -c
+ *  - rcmain and rc -m 
  *)
 
 let usage =
@@ -58,6 +58,34 @@ let do_action s xs =
   | _ -> failwith ("action not supported: " ^ s)
 
 (*****************************************************************************)
+(* Opcode dispatcher *)
+(*****************************************************************************)
+
+let dispatch operation =
+  match operation with
+  | O.REPL -> Op_repl.op_REPL ()
+  | O.Simple -> Op_process.op_Simple ()
+
+  (* push_list() *)
+  | O.Mark -> 
+      let t = R.cur () in
+      t.R.argv_stack <- t.R.argv :: t.R.argv_stack;
+      t.R.argv <- [];
+
+  | O.Word ->
+      let t = R.cur () in
+      let x = t.R.code.(!(t.R.pc)) in
+      incr t.R.pc;
+      (match x with
+      | O.S s -> R.push_word s
+      (* stricter *)
+      | _ -> failwith (spf "was expecting a S, not %s" 
+                         (Dumper.s_of_operation operation))
+      )
+
+  | _ -> failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
+
+(*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
@@ -70,10 +98,12 @@ let bootstrap_simple =
 let bootstrap = 
   [| 
       O.F O.Mark;
+
       O.F O.Word;
       O.S "*";
       O.F O.Assign;
       O.F O.Mark;
+
       O.F O.Mark;
 
       O.F O.Word;
@@ -87,32 +117,9 @@ let bootstrap =
       O.S ".";
 
       O.F O.Simple;
+
       O.F O.Exit;
   |]
-
-
-
-let dispatch operation =
-  match operation with
-  | O.REPL -> Op_repl.op_REPL ()
-  | O.Simple -> Op_process.op_Simple ()
-
-  | O.Mark -> 
-      let t = R.cur () in
-      t.R.argv_stack <- t.R.argv :: t.R.argv_stack;
-      t.R.argv <- [];
-  | O.Word ->
-      let t = R.cur () in
-      let x = t.R.code.(!(t.R.pc)) in
-      incr t.R.pc;
-      (match x with
-      | O.S s -> R.push_word s
-      (* stricter *)
-      | _ -> failwith (spf "was expecting a S, not %s" 
-                         (Dumper.s_of_operation operation))
-      )
-
-  | _ -> failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
 
 
 let interpreter () =
@@ -130,7 +137,7 @@ let interpreter () =
   while true do
 
     (* bug: need to fetch the current thread each time,
-     * as the interpreted code may have modified runq
+     * as the interpreted code may have modified runq.
      *)
     let t = Runtime.cur () in
 

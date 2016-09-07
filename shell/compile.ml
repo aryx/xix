@@ -3,7 +3,9 @@ open Common
 module A = Ast
 module O = Opcode
 
-(* todo: need pass eflag in all the subfunc below? *)
+(* todo: need pass eflag in all the subfunc below? 
+ * maybe now that all types are mutually recursive.
+ *)
 let outcode_seq seq eflag emit idx =
 
   let rec xseq seq eflag =
@@ -20,6 +22,7 @@ let outcode_seq seq eflag emit idx =
         if eflag then emit (O.F O.Eflag);
         
     | _ -> failwith ("TODO: " ^ Dumper.s_of_cmd cmd)
+
   and xword w eflag =
     match w with
     | A.Word (s, _quoted) ->
@@ -27,6 +30,7 @@ let outcode_seq seq eflag emit idx =
         emit (O.S s);
 
     | _ -> failwith ("TODO: " ^ Dumper.s_of_value w)
+
   and xwords ws eflag =
     ws |> List.rev |> List.iter (fun w -> xword w eflag);
     
@@ -36,17 +40,21 @@ let outcode_seq seq eflag emit idx =
 
 let compile seq =
 
+  (* a growing array *)
   let codebuf = ref [| |] in
   let len_codebuf = ref 0 in
+  (* pointer in codebuf *)
   let idx = ref 0 in
 
   let codebuf_template = Array.create 100 (O.I 0) in
 
   let emit x =
+    (* grow the array if needed *)
     if !idx = !len_codebuf then begin
       len_codebuf := !len_codebuf + 100;
       codebuf := Array.append !codebuf codebuf_template;
     end;
+
     !codebuf.(!idx) <- x;
     incr idx
   in

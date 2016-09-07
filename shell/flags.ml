@@ -3,7 +3,7 @@
 let interactive = ref true
 (* -l (or by default if argv0 starts with a -) *)
 let login = ref false
-
+(* -e *)
 let eflag = ref false
 
 

@@ -13,4 +13,3 @@ let error s =
   while (R.cur ()).R.iflag do
     R.return ();
   done
-

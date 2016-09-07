@@ -16,6 +16,7 @@ exception Lexical_error of string
 let error s =
   raise (Lexical_error s)
 
+(* we could do that in pprompt too *)
 let incr_lineno () =
   let t = Runtime.cur () in
   incr t.Runtime.line
@@ -35,6 +36,7 @@ let wordchr = [^'\n' ' ' '\t' '#'
                '{''}' '('')' '<''>'
                 ]
 
+(* less: not used yet, special regexp used with lastdol *)
 let idchr = ['a'-'z''A'-'Z''0'-'9''_''*']
 
 (*****************************************************************************)
@@ -51,13 +53,7 @@ rule token = parse
   | '\\''\n'  {
       incr_lineno ();
       Prompt.pprompt ();
-      (* note: cannot call 'token lexbuf' otherwill will not
-
-       * get the prompt if what is after the newline is a set of spaces.
-       * Need the prompt ASAP. So return a Fake token that is
-       * interpreted in a special way in the caller of token.
-       *)
-      raise Todo
+      token lexbuf
   }    
   | '#' [^'\n']* { token lexbuf }
 
@@ -67,8 +63,10 @@ rule token = parse
   | "&&" { Globals.skipnl := true; TAndAnd }
   | "||" { Globals.skipnl := true; TOrOr }
 
+  | ';'  { TSemicolon }
   | "&"  { TAnd }
   | "|"  { Globals.skipnl := true; TPipe }
+
   | ">"  { TRedir Ast.RWrite }
   | "<"  { TRedir Ast.RRead }
   | ">>" { TRedir Ast.RAppend }
@@ -78,11 +76,10 @@ rule token = parse
          { TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1) }
   (* less: advanced pipe and redirection *)
 
-  | ';'  { TSemicolon }
-  | '='  { TEq }
   | '('  { TOPar }   | ')' { TCPar }
   | '{'  { TOBrace } | '}' { TCBrace }
 
+  | '='  { TEq }
   | "`" { TBackquote } 
 
   | "~" { TTwiddle } 
@@ -142,4 +139,3 @@ and quote = parse
   | [^'\'' '\n']+ { let s = Lexing.lexeme lexbuf in s ^ quote lexbuf }
   (* stricter: generate error *)
   | eof { error "unterminated quote" }
-

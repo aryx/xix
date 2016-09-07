@@ -21,10 +21,9 @@ let error s (curtok, curtokstr) =
 
   (* todo: reset globals like lastdol, lastword *)
   (* less: error recovery, skip until next newline *)
-  (* less:
-     nerror++;
-     setvar("status", newword(m, nil));
-  *)
+  Status.setstatus s;
+
+  (* less: nerror++; *)
   failwith str
    
 
@@ -36,6 +35,7 @@ let parse_line lexbuf =
   let got_skipnl_last_round = ref false in
 
   let rec lexfunc lexbuf =
+    (* less: could do that in caller? would remove need for doprompt *)
     if !Prompt.doprompt
     then Prompt.pprompt ();
 
@@ -58,7 +58,6 @@ let parse_line lexbuf =
     then got_skipnl_last_round := true;
     Globals.skipnl := false;
 
-
     let s = Lexing.lexeme lexbuf in
     curtok := (!tok, s);
     (* todo: 
@@ -69,12 +68,11 @@ let parse_line lexbuf =
     !tok 
     |> (fun tok -> if !Flags.dump_tokens then pr2_gen (tok,s) ; tok)
   in
-
-    try 
-      Parser.rc lexfunc lexbuf
-      |> (fun ast -> if !Flags.dump_ast then pr2 (Dumper.s_of_line ast); ast)
-    with 
-      | Parsing.Parse_error ->
-          error "syntax error" !curtok
-      | Lexer.Lexical_error s ->
-          error (spf "lexical error, %s" s) !curtok
+  try 
+    Parser.rc lexfunc lexbuf
+    |> (fun ast -> if !Flags.dump_ast then pr2 (Dumper.s_of_line ast); ast)
+  with 
+    | Parsing.Parse_error ->
+        error "syntax error" !curtok
+    | Lexer.Lexical_error s ->
+        error (spf "lexical error, %s" s) !curtok

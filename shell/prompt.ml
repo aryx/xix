@@ -8,6 +8,7 @@ module R = Runtime
  * No because when we get a newline, we know we should display the prompt,
  * but not before finishing executing the command. So the display
  * prompt should be done before the next round of input.
+ * less: actually we could do it in the caller of parse_line, in the REPL.
  *)
 let doprompt = ref true
 
@@ -21,7 +22,6 @@ let pprompt () =
 
     (* set promptstr for the next pprompt() *)
     let promptv = (Var.vlook "prompt").R.v in
-
     prompt := 
       (match promptv with
       | Some [x;y] -> y

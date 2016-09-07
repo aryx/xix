@@ -7,14 +7,14 @@ open Ast
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 
- * todo:
- *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(* This is a useful optimisation as you can get lots of EmptyCommand,
+ * for instance, in {\nls\n} you will get 2 EmptyCommand (for each \n)
+*)
 let mk_Seq (a, b) =
   match a, b with
   | EmptyCommand, _ -> b
@@ -76,6 +76,7 @@ let mk_Seq (a, b) =
 %left TBang TSubshell
 %left TPipe
 %left TCaret
+/*(* $$A -> ($ ($ A)) not (($ $) A) *)*/
 %right TDollar TCount TStringify
 %left TSub
 
@@ -122,13 +123,6 @@ cmd:
         | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
       ) base
     }
-
-  | cmd TAndAnd cmd { And ($1, $3) }
-  | cmd TOrOr cmd   { Or  ($1, $3) }
-  | TBang cmd       { Not $2 }
-  | TTwiddle word words { Match ($2, $3) }
-
-  | cmd TPipe cmd  { Pipe ($1, $3) }
   | brace epilog   { 
       $2 |> List.fold_left (fun acc e -> 
         match e with
@@ -137,24 +131,29 @@ cmd:
       ) (Compound $1) 
   }
 
+  | cmd TAndAnd cmd { And ($1, $3) }
+  | cmd TOrOr cmd   { Or  ($1, $3) }
+  | TBang cmd       { Not $2 }
+
+  | TTwiddle word words { Match ($2, $3) }
+
+  | cmd TPipe cmd  { Pipe ($1, $3) }
+
   | TIf paren_skipnl cmd { If ($2, $3) }
   | TIf tnot_skipnl  cmd { IfNot $3 }
 
   | TWhile paren_skipnl cmd   { While ($2, $3) }
   | TSwitch word_skipnl brace { Switch ($2, $3) }
 
-
-  | TFor TOPar word TIn words tcpar_skipnl cmd %prec TFor 
-     { ForIn ($3, $5, $7) }
-  | TFor TOPar word tcpar_skipnl cmd           %prec TFor 
-     { For ($3, $5) }
+  /*(* I added the %prec TFor. *)*/
+  | TFor TOPar word TIn words tcpar_skipnl cmd %prec TFor { ForIn ($3, $5, $7) }
+  | TFor TOPar word tcpar_skipnl cmd           %prec TFor { For ($3, $5) }
 
   /*(* stricter: allow only word, not words *)*/
   | TFn word brace { Fn ($2, $3) }
   | TFn word       { DelFn $2 }
 
   | assign cmd %prec TBang { $1 $2 }
-
 
 
 /*(* =~ primary expr *)*/
@@ -189,20 +188,18 @@ first:
 
 
 comword:
-  | TWord        { Word (fst $1, snd $1) }
-  | TDollar word { Dollar $2 }
-  | TCount word  { Count $2 }
+  | TWord                         { Word (fst $1, snd $1) }
+  | TDollar word                  { Dollar $2 }
+  | TCount word                   { Count $2 }
   | TDollar word TSub words TCPar { Index ($2, $4) }
-  | TOPar words TCPar  { List $2 }
-  | TBackquote brace   { CommandOutput $2 }
-  | TStringify word    { Stringify $2 }
+  | TOPar words TCPar             { List $2 }
+  | TBackquote brace              { CommandOutput $2 }
+  | TStringify word               { Stringify $2 }
 
 word:
   | comword          { $1 }
   | keyword          { Word ($1, false) }
   | word TCaret word { Concat ($1, $3) }
-
-
 
 keyword:
   | TFor { "for" }  | TIn { "in" }
@@ -235,11 +232,7 @@ epilog:
   | redir epilog { $1::$2 }
 
 /*(*************************************************************************)*/
-/*(*1 Compounds *)*/
-/*(*************************************************************************)*/
-
-/*(*************************************************************************)*/
-/*(*1 Misc *)*/
+/*(*1 Skipnl hacks *)*/
 /*(*************************************************************************)*/
 
 paren_skipnl: paren { Globals.skipnl := true; $1 }

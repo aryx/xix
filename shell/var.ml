@@ -10,7 +10,6 @@ let gvlook name =
     Hashtbl.add R.globals name var;
     var
     
-
 let vlook name =
   if !Runtime.runq <> []
   then 
@@ -20,6 +19,7 @@ let vlook name =
     with Not_found ->
       gvlook name
   else gvlook name
+
 
 let setvar name v =
   let var = vlook name in

@@ -74,17 +74,17 @@ and cmd =
    *)
   | Assign of value * value * cmd (* can be EmptyCommand *)
 
-and cmd_sequence = cmd list
+  and cmd_sequence = cmd list
 
-and redirection = redirection_kind * value (* the filename *)
+  and redirection = redirection_kind * value (* the filename *)
 
-and redirection_kind = 
-  | RWrite (* > *)
-  | RRead  (* < *)
-  | RAppend (* > > *)
-  (* less: RHere *) (* < < *)
-  | RDup of int * int (* >[x=y] *)
- (* with tarzan *)
+    and redirection_kind = 
+      | RWrite (* > *)
+      | RRead  (* < *)
+      | RAppend (* > > *)
+      (* less: RHere *) (* < < *)
+      | RDup of int * int (* >[x=y] *)
+     (* with tarzan *)
 
 
 (* None when reads EOF *)

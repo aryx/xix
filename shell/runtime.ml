@@ -30,6 +30,9 @@ type thread = {
   mutable file: Common.filename option;
   line: int ref;
 
+  (* todo: mutable redir: 
+  *)
+
 }
 
 let (globals: (varname, var) Hashtbl.t) = 

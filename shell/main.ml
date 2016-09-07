@@ -61,7 +61,7 @@ let do_action s xs =
 (*****************************************************************************)
 
 let bootstrap_simple = 
-  [| O.F Op_repl.xrepl|]
+  [| O.F O.REPL |]
 
 (* The real one is more complex.
  * *=(argv);. /usr/lib/rcmain $*
@@ -109,7 +109,10 @@ let interpreter () =
     incr t.R.pc;
     (match t.R.code.(!(t.R.pc) - 1) with
     (* opcode dispatch ! *)
-    | O.F (f, _str) -> f ()
+    | O.F operation ->
+      (match operation with
+      | _ -> raise Todo
+      )
 
     | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
     | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)

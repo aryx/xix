@@ -242,10 +242,10 @@ epilog:
 /*(*1 Misc *)*/
 /*(*************************************************************************)*/
 
-paren_skipnl: paren { $1 }
+paren_skipnl: paren { Globals.skipnl := true; $1 }
 
-tnot_skipnl: TNot {  }
+tnot_skipnl: TNot   { Globals.skipnl := true; }
 
-word_skipnl: word { $1 }
+word_skipnl: word   { Globals.skipnl := true; $1 }
 
-tcpar_skipnl: TCPar { }
+tcpar_skipnl: TCPar { Globals.skipnl := true; }

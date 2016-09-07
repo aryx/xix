@@ -65,11 +65,11 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
-  | "&&" { skipnl lexbuf; TAndAnd }
-  | "||" { skipnl lexbuf; TOrOr }
+  | "&&" { Globals.skipnl := true; TAndAnd }
+  | "||" { Globals.skipnl := true; TOrOr }
 
   | "&"  { TAnd }
-  | "|"  { skipnl lexbuf; TPipe }
+  | "|"  { Globals.skipnl := true; TPipe }
   | ">"  { TRedir Ast.RWrite }
   | "<"  { TRedir Ast.RRead }
   | ">>" { TRedir Ast.RAppend }

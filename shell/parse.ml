@@ -32,24 +32,43 @@ let error s (curtok, curtokstr) =
 
 
 let parse_line lexbuf =
-
   let curtok = ref (Parser.EOF, "EOF") in
+  Globals.skipnl := false;
+  let got_skipnl_last_round = ref false in
 
-  let lexfunc lexbuf =
+  let rec lexfunc lexbuf =
     (* todo: call pprompt if doprompt *)
+    (* todo: have different state after having parsed a $?*)
 
-    (* todo: have different state after having parsed a $?
-     *)
-    let tok = Lexer.token lexbuf in
+    let tok = ref (Lexer.token lexbuf) in
+
+    if !got_skipnl_last_round then begin
+      (match !tok with
+      | Parser.TNewline -> 
+        let rec loop () =
+          tok := Lexer.token lexbuf;
+          if !tok = Parser.TNewline
+          then loop ()
+        in
+        loop ()
+      | _ -> ()
+      );
+      got_skipnl_last_round := false;
+    end;
+    if !Globals.skipnl 
+    then got_skipnl_last_round := true;
+    Globals.skipnl := false;
+
+
     let s = Lexing.lexeme lexbuf in
-    curtok := (tok, s);
+    curtok := (!tok, s);
     (* todo: 
        - handle lastdol 
        - call pprompt() if TNewline or TBackslashNewline
        - handle SUB
        - handle free caret insertion
     *)
-    tok 
+    !tok 
     |> (fun tok -> if !Flags.dump_tokens then pr2_gen (tok,s) ; tok)
   in
 

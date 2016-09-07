@@ -11,3 +11,14 @@ let s_of_cmd_sequence x =
 let s_of_cmd x =
   let v = Meta_ast.vof_cmd x in
   Ocaml.string_of_v v
+
+
+let s_of_opcode x =
+  let v = Meta_opcode.vof_opcode x in
+  Ocaml.string_of_v v
+
+let s_of_codevec x =
+  let xs = Array.to_list x in
+  let v = Ocaml.vof_list Meta_opcode.vof_opcode xs in
+  Ocaml.string_of_v v
+  

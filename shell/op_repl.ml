@@ -3,7 +3,7 @@ open Common
 module R = Runtime
 
 (* was called Xrdcmds *)
-let op_repl () =
+let op_REPL () =
 
   let t = R.cur () in
 
@@ -32,16 +32,14 @@ let op_repl () =
         Op_control.op_return ()
     | Some seq ->
         (* should contain an op_return *)
+        let _codevec = Compile.compile seq in
 (*
-        let codevec = Compile.compile seq in
-        decr t.R.pc;
         R.start codevec 0 t.R.locals
 *)
+        decr t.R.pc;
         (* when codevec does a op_return(), then interpreter loop
          * in main should call us back since the pc was decremented above
          *)
-         decr t.R.pc;
-         pr2 (Dumper.s_of_cmd_sequence seq)
 
   with Failure s -> 
     (* todo: check signals  *)
@@ -54,5 +52,3 @@ let op_repl () =
       (* go back for next command *)
       decr t.R.pc;
     end
-
-let xrepl = op_repl, "repl"

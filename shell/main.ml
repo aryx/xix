@@ -24,7 +24,8 @@ module O = Opcode
  *)
 
 let usage =
-  "usage: rc [-SsrdiIlxepvV] [-c arg] [-m command] [file [arg ...]]"
+  "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
+(* -d and -p are dead according to man page so I removed them *)
 
 (*****************************************************************************)
 (* Testing *)
@@ -111,6 +112,7 @@ let interpreter () =
     (* opcode dispatch ! *)
     | O.F operation ->
       (match operation with
+      | O.REPL -> Op_repl.op_REPL ()
       | _ -> raise Todo
       )
 
@@ -140,6 +142,8 @@ let main () =
     " non-interactive mode (no prompt)";
     "-l", Arg.Set Flags.login,
     " login mode (execute ~/lib/profile)";
+    "-e", Arg.Set Flags.eflag,
+    " exit if $status is non-null after a simple command";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
@@ -149,6 +153,8 @@ let main () =
     " dump the tokens as they are generated";
     "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
+    "-dump_opcodes", Arg.Set Flags.dump_opcodes,
+    " dump the generated opcodes ";
 
     (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,
@@ -188,4 +194,3 @@ let main () =
 
 let _ = 
     main ()
-

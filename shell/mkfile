@@ -9,7 +9,7 @@ SRC=  flags.ml globals.ml \
   dumper.ml \
   compile.ml \
   runtime.ml \
-  var.ml prompt.ml status.ml \
+  var.ml prompt.ml status.ml error.ml \
   parser.ml lexer.ml parse.ml \
   builtin.ml \
   op_control.ml op_repl.ml op_process.ml \

@@ -82,21 +82,5 @@ let start code pc locals =
 
   runq := t::!runq
 
-let setstatus s =
-  raise Todo
-
 let return () =
   raise Todo
-
-(* less: error1 similar to error but without %r *)
-let error s =
-  (* less: use argv0 *)
-  (* less: use %r *)
-  pr2 (spf "rc: %s" s);
-
-  setstatus "error";
-
-  while (cur ()).iflag do
-    return ();
-  done
-

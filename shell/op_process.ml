@@ -1,6 +1,7 @@
 open Common
 
 module R = Runtime
+module E = Error
 
 
 let op_Simple () =
@@ -15,7 +16,7 @@ let op_Simple () =
    * expansion the list becomes empty.
    * stricter: give extra explanations
    *)
-  | [] -> R.error "empty argument list (after variable expansion)" 
+  | [] -> E.error "empty argument list (after variable expansion)" 
   | argv0::args ->
       if Builtin.is_builtin argv0
       then raise Todo

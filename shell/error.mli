@@ -1,0 +1,2 @@
+
+val error: string -> unit

@@ -1,12 +1,12 @@
 
 (* rc does not use types; there is no integer, no boolean, no float.
- * The only value in RC is the list of strings. Even a single
+ * The only value in rc is the list of strings. Even a single
  * string is really a list with one element.
  *)
 type value = 
-  (* the string can contain * ? [ special char
-   * less: they should be preceded by \001
+  (* the string can contain * ? [ special char,
    * so even a single word can expand to a list of strings.
+   * less: they should be preceded by \001
    * less: W of word_elt list and word_elt = Star | Question | ...Str of string
    *)
   | Word of string * bool (* quoted *)
@@ -33,7 +33,7 @@ and redirection_kind =
   | RRead  (* < *)
   | RAppend (* > > *)
   (* less: RHere *) (* < < *)
-  | RDup of int * int
+  | RDup of int * int (* >[x=y] *)
 
 and redirection = redirection_kind * value (* the filename *)
 
@@ -43,11 +43,11 @@ and cmd =
   (* Base *)
 
   | Simple of value * values
+  | Pipe of cmd * cmd
 
-  (* IO *)
+  (* Redirections *)
 
   | Redir of cmd * redirection
-  | Pipe of cmd * cmd
   | Dup of cmd * redirection_kind * int * int (* >[1=2] *)
 
   (* expressions *)

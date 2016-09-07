@@ -24,18 +24,9 @@ type value =
 
   | Stringify of value
 
-
 (* separated by spaces *)
 and values = value list
 
-and redirection_kind = 
-  | RWrite (* > *)
-  | RRead  (* < *)
-  | RAppend (* > > *)
-  (* less: RHere *) (* < < *)
-  | RDup of int * int (* >[x=y] *)
-
-and redirection = redirection_kind * value (* the filename *)
 
 and cmd =
   | EmptyCommand
@@ -44,6 +35,7 @@ and cmd =
 
   | Simple of value * values
   | Pipe of cmd * cmd
+  | Async of cmd
 
   (* Redirections *)
 
@@ -82,12 +74,18 @@ and cmd =
    *)
   | Assign of value * value * cmd (* can be EmptyCommand *)
 
-and cmd_sequence =
-  (* less: could be in cmd, and rewrite a & b in a&; b *)
-  | Async of cmd * cmd_sequence
-  | Seq   of cmd * cmd_sequence
-  | LastCmd  of cmd
+and cmd_sequence = cmd list
+
+and redirection = redirection_kind * value (* the filename *)
+
+and redirection_kind = 
+  | RWrite (* > *)
+  | RRead  (* < *)
+  | RAppend (* > > *)
+  (* less: RHere *) (* < < *)
+  | RDup of int * int (* >[x=y] *)
  (* with tarzan *)
+
 
 (* None when reads EOF *)
 type line = cmd_sequence option

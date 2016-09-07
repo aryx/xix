@@ -8,11 +8,7 @@ let outcode_seq seq eflag emit idx =
 
   let rec xseq seq eflag =
    (* less set iflast *)
-
-    match seq with
-    | A.LastCmd cmd -> xcmd cmd eflag
-    | A.Seq (cmd, seq) -> xcmd cmd eflag; xseq seq eflag
-    | A.Async _ -> failwith ("TODO: " ^ Dumper.s_of_cmd_sequence seq)
+    seq |> List.iter (fun x -> xcmd x eflag)
   
   and xcmd cmd eflag =
     match cmd with

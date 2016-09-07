@@ -24,19 +24,6 @@ let rec vof_value =
   | Stringify v1 ->
       let v1 = vof_value v1 in Ocaml.VSum (("Stringify", [ v1 ]))
 and vof_values v = Ocaml.vof_list vof_value v
-and vof_redirection_kind =
-  function
-  | RWrite -> Ocaml.VSum (("RWrite", []))
-  | RRead -> Ocaml.VSum (("RRead", []))
-  | RAppend -> Ocaml.VSum (("RAppend", []))
-  | RDup ((v1, v2)) ->
-      let v1 = Ocaml.vof_int v1
-      and v2 = Ocaml.vof_int v2
-      in Ocaml.VSum (("RDup", [ v1; v2 ]))
-and vof_redirection (v1, v2) =
-  let v1 = vof_redirection_kind v1
-  and v2 = vof_value v2
-  in Ocaml.VTuple [ v1; v2 ]
 and vof_cmd =
   function
   | EmptyCommand -> Ocaml.VSum (("EmptyCommand", []))
@@ -44,14 +31,15 @@ and vof_cmd =
       let v1 = vof_value v1
       and v2 = vof_values v2
       in Ocaml.VSum (("Simple", [ v1; v2 ]))
-  | Redir ((v1, v2)) ->
-      let v1 = vof_cmd v1
-      and v2 = vof_redirection v2
-      in Ocaml.VSum (("Redir", [ v1; v2 ]))
   | Pipe ((v1, v2)) ->
       let v1 = vof_cmd v1
       and v2 = vof_cmd v2
       in Ocaml.VSum (("Pipe", [ v1; v2 ]))
+  | Async v1 -> let v1 = vof_cmd v1 in Ocaml.VSum (("Async", [ v1 ]))
+  | Redir ((v1, v2)) ->
+      let v1 = vof_cmd v1
+      and v2 = vof_redirection v2
+      in Ocaml.VSum (("Redir", [ v1; v2 ]))
   | Dup ((v1, v2, v3, v4)) ->
       let v1 = vof_cmd v1
       and v2 = vof_redirection_kind v2
@@ -105,17 +93,20 @@ and vof_cmd =
       and v2 = vof_value v2
       and v3 = vof_cmd v3
       in Ocaml.VSum (("Assign", [ v1; v2; v3 ]))
-and vof_cmd_sequence =
+and vof_cmd_sequence v = Ocaml.vof_list vof_cmd v
+and vof_redirection (v1, v2) =
+  let v1 = vof_redirection_kind v1
+  and v2 = vof_value v2
+  in Ocaml.VTuple [ v1; v2 ]
+and vof_redirection_kind =
   function
-  | Async ((v1, v2)) ->
-      let v1 = vof_cmd v1
-      and v2 = vof_cmd_sequence v2
-      in Ocaml.VSum (("Async", [ v1; v2 ]))
-  | Seq ((v1, v2)) ->
-      let v1 = vof_cmd v1
-      and v2 = vof_cmd_sequence v2
-      in Ocaml.VSum (("Seq", [ v1; v2 ]))
-  | LastCmd v1 -> let v1 = vof_cmd v1 in Ocaml.VSum (("LastCmd", [ v1 ]))
+  | RWrite -> Ocaml.VSum (("RWrite", []))
+  | RRead -> Ocaml.VSum (("RRead", []))
+  | RAppend -> Ocaml.VSum (("RAppend", []))
+  | RDup ((v1, v2)) ->
+      let v1 = Ocaml.vof_int v1
+      and v2 = Ocaml.vof_int v2
+      in Ocaml.VSum (("RDup", [ v1; v2 ]))
   
 let vof_line v = Ocaml.vof_option vof_cmd_sequence v
   

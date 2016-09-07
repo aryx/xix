@@ -18,8 +18,8 @@ open Ast
 let mk_Seq (a, b) =
   match a, b with
   | EmptyCommand, _ -> b
-  | _, (LastCmd EmptyCommand) -> LastCmd a
-  | _ -> Seq (a,b)
+  | _, [EmptyCommand] -> [a]
+  | _ -> a::b
   
 %}
 
@@ -97,12 +97,12 @@ rc:
 
 /*(* =~ stmt *)*/
 line:
-  | cmd { LastCmd $1 }
+  | cmd { [$1] }
   | cmdsa line { $1 $2  }
 
 cmdsa:
   | cmd TSemicolon { (fun x -> mk_Seq ($1, x)) }
-  | cmd TAnd       { (fun x -> Async ($1, x)) }
+  | cmd TAnd       { (fun x -> mk_Seq (Async $1, x)) }
 
 /*(*************************************************************************)*/
 /*(*1 Command *)*/
@@ -169,7 +169,7 @@ paren: TOPar body TCPar { $2 }
 brace: TOBrace body TCBrace { $2 }
 
 body: 
-  | cmd         { LastCmd $1 }
+  | cmd         { [$1] }
   | cmdsan body { $1 $2 }
 
 cmdsan:

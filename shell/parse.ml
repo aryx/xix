@@ -43,16 +43,15 @@ let parse_line lexbuf =
     let tok = ref (Lexer.token lexbuf) in
 
     if !got_skipnl_last_round then begin
-      (match !tok with
-      | Parser.TNewline -> 
+      if !tok = Parser.TNewline 
+      then begin
         let rec loop () =
           tok := Lexer.token lexbuf;
           if !tok = Parser.TNewline
           then loop ()
         in
         loop ()
-      | _ -> ()
-      );
+      end;
       got_skipnl_last_round := false;
     end;
     if !Globals.skipnl 
@@ -80,4 +79,3 @@ let parse_line lexbuf =
           error "syntax error" !curtok
       | Lexer.Lexical_error s ->
           error (spf "lexical error, %s" s) !curtok
-

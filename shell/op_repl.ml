@@ -29,13 +29,11 @@ let op_REPL () =
 
     match ast_opt with
     | None -> 
-        Op_control.op_return ()
+        Op_control.op_Return ()
     | Some seq ->
         (* should contain an op_return *)
-        let _codevec = Compile.compile seq in
-(*
-        R.start codevec 0 t.R.locals
-*)
+        let codevec = Compile.compile seq in
+        R.start codevec 0 t.R.locals;
         decr t.R.pc;
         (* when codevec does a op_return(), then interpreter loop
          * in main should call us back since the pc was decremented above

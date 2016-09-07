@@ -3,13 +3,48 @@ open Common
 module A = Ast
 module O = Opcode
 
+(* todo: need pass eflag in all the subfunc below? *)
+let outcode_seq seq eflag emit idx =
+
+  let rec xseq seq eflag =
+   (* less set iflast *)
+
+    match seq with
+    | A.LastCmd cmd -> xcmd cmd eflag
+    | A.Seq (cmd, seq) -> xcmd cmd eflag; xseq seq eflag
+    | A.Async _ -> failwith ("TODO: " ^ Dumper.s_of_cmd_sequence seq)
+  
+  and xcmd cmd eflag =
+    match cmd with
+    | A.Simple (w, ws) -> 
+        emit (O.F O.Mark);
+        xwords ws eflag;
+        xword w eflag;
+        emit (O.F O.Simple);
+        if eflag then emit (O.F O.Eflag);
+        
+    | _ -> failwith ("TODO: " ^ Dumper.s_of_cmd cmd)
+  and xword w eflag =
+    match w with
+    | A.Word (s, _quoted) ->
+        emit (O.F O.Word);
+        emit (O.S s);
+
+    | _ -> failwith ("TODO: " ^ Dumper.s_of_value w)
+  and xwords ws eflag =
+    ws |> List.rev |> List.iter (fun w -> xword w eflag);
+    
+  in
+  xseq seq eflag
+
+
 let compile seq =
 
   let codebuf = ref [| |] in
   let len_codebuf = ref 0 in
   let idx = ref 0 in
 
-  let codebuf_template = Array.create !len_codebuf (O.I 0) in
+  let codebuf_template = Array.create 100 (O.I 0) in
 
   let emit x =
     if !idx = !len_codebuf then begin
@@ -20,10 +55,7 @@ let compile seq =
     incr idx
   in
   
-  let rec outcode_seq seq eflag =
-    raise Todo
-  in
-  outcode_seq seq !Flags.eflag;
+  outcode_seq seq !Flags.eflag emit idx;
   emit (O.F O.Return);
   (* less: O.F O.End *)
   (* less: heredoc, readhere() *)

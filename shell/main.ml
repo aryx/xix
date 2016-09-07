@@ -69,28 +69,50 @@ let bootstrap_simple =
  *)
 let bootstrap = 
   [| 
-    (*
-      Op_stack.op_mark;
-      Op_stack.op_word;
+      O.F O.Mark;
+      O.F O.Word;
       O.S "*";
-      Op_xxx.op_assign;
-      Op_stack.op_mark;
-      Op_stack.op_mark;
+      O.F O.Assign;
+      O.F O.Mark;
+      O.F O.Mark;
 
-      Op_stack.op_word;
+      O.F O.Word;
       O.S "*";
-      Op_var.op_dollar;
+      O.F O.Dollar;
 
-      Op_stack.op_word;
+      O.F O.Word;
       O.S "/rc/lib/rcmain"; (* or use -m *)
 
-      Op_stack.op_word;
+      O.F O.Word;
       O.S ".";
 
-      Op_proc.op_simple;
-      Op_proc.op_exit;
-    *)
+      O.F O.Simple;
+      O.F O.Exit;
   |]
+
+
+
+let dispatch operation =
+  match operation with
+  | O.REPL -> Op_repl.op_REPL ()
+  | O.Simple -> Op_process.op_Simple ()
+
+  | O.Mark -> 
+      let t = R.cur () in
+      t.R.argv_stack <- t.R.argv :: t.R.argv_stack;
+      t.R.argv <- [];
+  | O.Word ->
+      let t = R.cur () in
+      let x = t.R.code.(!(t.R.pc)) in
+      incr t.R.pc;
+      (match x with
+      | O.S s -> R.push_word s
+      (* stricter *)
+      | _ -> failwith (spf "was expecting a S, not %s" 
+                         (Dumper.s_of_operation operation))
+      )
+
+  | _ -> failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
 
 
 let interpreter () =
@@ -106,16 +128,18 @@ let interpreter () =
   done;
 
   while true do
+
+    (* bug: need to fetch the current thread each time,
+     * as the interpreted code may have modified runq
+     *)
+    let t = Runtime.cur () in
+
     (* less: debug runq *)
     incr t.R.pc;
     (match t.R.code.(!(t.R.pc) - 1) with
-    (* opcode dispatch ! *)
-    | O.F operation ->
-      (match operation with
-      | O.REPL -> Op_repl.op_REPL ()
-      | _ -> raise Todo
-      )
 
+    (* opcode dispatch ! *)
+    | O.F operation ->  dispatch operation
     | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
     | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
     );

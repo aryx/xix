@@ -11,6 +11,10 @@ val s_of_line:
   Ast.line -> string
 val s_of_cmd_sequence:
   Ast.cmd_sequence -> string
+val s_of_value: 
+  Ast.value -> string
 
 val s_of_codevec:
   Opcode.codevec -> string
+val s_of_operation:
+  Opcode.operation -> string

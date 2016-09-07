@@ -9,9 +9,10 @@ SRC=  flags.ml globals.ml \
   dumper.ml \
   compile.ml \
   runtime.ml \
-  var.ml prompt.ml \
+  var.ml prompt.ml status.ml \
   parser.ml lexer.ml parse.ml \
-  op_control.ml op_repl.ml \
+  builtin.ml \
+  op_control.ml op_repl.ml op_process.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

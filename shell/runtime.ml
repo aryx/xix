@@ -1,3 +1,4 @@
+open Common
 
 type varname = string
 
@@ -51,15 +52,18 @@ let cur () =
   | [] -> failwith "empty runq"
   | x::xs -> x
 
-
+(*
 let push_list () =
   let t = cur () in
   t.argv_stack <- t.argv :: t.argv_stack;
   t.argv <- []
 
+*)
+
 let push_word s =
   let t = cur () in
   t.argv <- s::t.argv
+
 
 (* todo: starts with pc <> 0 sometimes? *)
 let start code pc locals =
@@ -77,4 +81,22 @@ let start code pc locals =
   } in
 
   runq := t::!runq
+
+let setstatus s =
+  raise Todo
+
+let return () =
+  raise Todo
+
+(* less: error1 similar to error but without %r *)
+let error s =
+  (* less: use argv0 *)
+  (* less: use %r *)
+  pr2 (spf "rc: %s" s);
+
+  setstatus "error";
+
+  while (cur ()).iflag do
+    return ();
+  done
 

@@ -24,6 +24,8 @@ type value =
   (* ^ distributes over lists *)
   | Concat of value * value
 
+  | Stringify of value
+
 
 (* separated by spaces *)
 and values = value list

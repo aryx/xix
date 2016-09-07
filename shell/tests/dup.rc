@@ -1,0 +1,5 @@
+
+if(~ $#conflicting 2 || ~ $#conflicting 3){
+	echo 'can only use one of -b, -c or -s' >[1=2]
+	exit usage
+}

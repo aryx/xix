@@ -49,7 +49,7 @@ rule token = parse
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
   | [' ''\t']+ { token lexbuf }
-  | '\n'      { incr_lineno(); TNewline }
+  | '\n'       { incr_lineno(); TNewline }
   | '\\''\n'  {
       incr_lineno ();
       (* note: cannot call 'token lexbuf' otherwill will not
@@ -89,6 +89,8 @@ rule token = parse
   | "~" { TTwiddle } 
   | "!" { TBang }
   | "@" { TSubshell }
+
+  | "^" { TCaret }
 
   (* ----------------------------------------------------------------------- *)
   (* Variables *)

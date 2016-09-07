@@ -21,6 +21,8 @@ let rec vof_value =
       let v1 = vof_value v1
       and v2 = vof_value v2
       in Ocaml.VSum (("Concat", [ v1; v2 ]))
+  | Stringify v1 ->
+      let v1 = vof_value v1 in Ocaml.VSum (("Stringify", [ v1 ]))
 and vof_values v = Ocaml.vof_list vof_value v
 and vof_redirection_kind =
   function

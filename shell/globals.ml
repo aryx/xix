@@ -3,8 +3,9 @@
  * newlines as regular space. Because rc is an interactive
  * interpreter, newline has a special meaning: it terminates a command.
  * However, sometimes we just want to add a newline because the command
- * is too long. You can escape the newline. But when we start to parse 
- * 'cmd1 &&' we know that we are expecting more stuff. So after the &&
- * we consider the newline not as a command terminator, but as a space.
+ * is too long. Escaping the newline is one way to do it. 
+ * But when we start to parse 'cmd1 &&' we know that we are expecting
+ * more stuff. So after the && we consider the newline not as
+ * a command terminator, but as a space.
  *)
 let skipnl = ref false

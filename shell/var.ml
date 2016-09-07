@@ -11,11 +11,15 @@ let gvlook name =
     var
     
 
-(* less: could pass thread in param? *)
 let vlook name =
   if !Runtime.runq <> []
-  then raise Todo
-  else raise Todo
+  then 
+    let t = Runtime.cur () in
+    try 
+      Hashtbl.find t.R.locals name
+    with Not_found ->
+      gvlook name
+  else gvlook name
 
 let setvar name v =
   let var = vlook name in

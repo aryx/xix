@@ -2,7 +2,13 @@ open Common
 
 module R = Runtime
 
-(* true so prompt displayed before the first character is read *)
+(* Set to true so the prompt is displayed before the first character is read.
+ *
+ * Do we need that global? Can we not just call pprompt() explicitely?
+ * No because when we get a newline, we know we should display the prompt,
+ * but not before finishing executing the command. So the display
+ * prompt should be done before the next round of input.
+ *)
 let doprompt = ref true
 
 let prompt = ref "% "
@@ -23,6 +29,5 @@ let pprompt () =
       | Some _ | None -> "\t"
       );
   end;
-  incr t.R.line;
+  (* alt: incr t.R.line; this is done in the lexer instead *)
   doprompt := false
-

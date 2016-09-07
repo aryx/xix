@@ -10,7 +10,7 @@ SRC=  flags.ml globals.ml \
   dumper.ml \
   parser.ml lexer.ml parse.ml \
   compile.ml \
-  op_repl.ml \
+  op_control.ml op_repl.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

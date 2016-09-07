@@ -25,20 +25,19 @@ let error s (curtok, curtokstr) =
      nerror++;
      setvar("status", newword(m, nil));
   *)
-
   failwith str
    
 
 
-
 let parse_line lexbuf =
   let curtok = ref (Parser.EOF, "EOF") in
+
   Globals.skipnl := false;
   let got_skipnl_last_round = ref false in
 
   let rec lexfunc lexbuf =
-    (* todo: call pprompt if doprompt *)
-    (* todo: have different state after having parsed a $?*)
+    if !Prompt.doprompt
+    then Prompt.pprompt ();
 
     let tok = ref (Lexer.token lexbuf) in
 
@@ -46,6 +45,7 @@ let parse_line lexbuf =
       if !tok = Parser.TNewline 
       then begin
         let rec loop () =
+          Prompt.pprompt ();
           tok := Lexer.token lexbuf;
           if !tok = Parser.TNewline
           then loop ()
@@ -63,7 +63,6 @@ let parse_line lexbuf =
     curtok := (!tok, s);
     (* todo: 
        - handle lastdol 
-       - call pprompt() if TNewline or TBackslashNewline
        - handle SUB
        - handle free caret insertion
     *)

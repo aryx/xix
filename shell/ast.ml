@@ -1,19 +1,17 @@
 
-(* rc does not use types. Anyway there is no integer, no boolean, no float.
+(* rc does not use types; there is no integer, no boolean, no float.
  * The only value in RC is the list of strings. Even a single
  * string is really a list with one element.
  *)
 type value = 
   (* the string can contain * ? [ special char
-   * less: the should be preceded by \001
+   * less: they should be preceded by \001
    * so even a single word can expand to a list of strings.
-   * 
-   * less: W of word_element list  
-   *  where word_element = Star | Question | Bracket | Str of string
+   * less: W of word_elt list and word_elt = Star | Question | ...Str of string
    *)
   | Word of string * bool (* quoted *)
   | List of values
-  (* this causes value and cmd to be mutually recursive *)
+  (* this causes the value and cmd types to be mutually recursive *)
   | CommandOutput of cmd_sequence
 
   | Dollar of value

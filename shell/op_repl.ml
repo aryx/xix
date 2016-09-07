@@ -21,25 +21,38 @@ let op_repl () =
       );
   end;
   (* less: call Noerror before yyparse *)
+
   let lexbuf = Lexing.from_channel t.R.chan in
-  
-  let ast_opt = Parse.parse_line lexbuf in
 
-  match ast_opt with
-  | None -> 
-      (* todo: error management if parse_line return error 
-       * check for EOF here.
-      *)
-      raise Todo
-  | Some ast ->
-      (* should contain an op_return *)
-      let codevec = Compile.compile ast in
-      
+  try 
+    let ast_opt = Parse.parse_line lexbuf in
+
+    match ast_opt with
+    | None -> 
+        Op_control.op_return ()
+    | Some seq ->
+        (* should contain an op_return *)
+(*
+        let codevec = Compile.compile seq in
+        decr t.R.pc;
+        R.start codevec 0 t.R.locals
+*)
+        (* when codevec does a op_return(), then interpreter loop
+         * in main should call us back since the pc was decremented above
+         *)
+         decr t.R.pc;
+         pr2 (Dumper.s_of_cmd_sequence seq)
+
+  with Failure s -> 
+    (* todo: check signals  *)
+
+    if not t.R.iflag
+    (* less: was doing Xreturn originally *)
+    then failwith s
+    else begin
+      pr2 s;
+      (* go back for next command *)
       decr t.R.pc;
-      R.start codevec 0 t.R.locals
-
-  (* when codevec does a op_return(), then interpreter loop
-   * in main should call us back since the pc was decremented above
-   *)
+    end
 
 let xrepl = op_repl, "repl"

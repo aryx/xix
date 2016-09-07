@@ -12,11 +12,9 @@ open Parser
 *)
 
 exception Lexical_error of string
+
 let error s =
   raise (Lexical_error s)
-
-let skipnl lexbuf = 
-  print_string "TODO: skipnl"
 
 let incr_lineno () =
   let t = Runtime.cur () in
@@ -49,9 +47,10 @@ rule token = parse
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
   | [' ''\t']+ { token lexbuf }
-  | '\n'       { incr_lineno(); TNewline }
+  | '\n'       { incr_lineno(); Prompt.doprompt := true; TNewline }
   | '\\''\n'  {
       incr_lineno ();
+      Prompt.pprompt ();
       (* note: cannot call 'token lexbuf' otherwill will not
 
        * get the prompt if what is after the newline is a set of spaces.
@@ -137,6 +136,7 @@ and quote = parse
   | "'" { "" } 
   | "\n" { 
       incr_lineno ();
+      Prompt.pprompt ();
       "\n" ^ quote lexbuf
     }
   | [^'\'' '\n']+ { let s = Lexing.lexeme lexbuf in s ^ quote lexbuf }

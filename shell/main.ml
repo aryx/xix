@@ -108,11 +108,11 @@ let interpreter () =
     (* less: debug runq *)
     incr t.R.pc;
     (match t.R.code.(!(t.R.pc) - 1) with
+    (* opcode dispatch ! *)
     | O.F (f, _str) -> f ()
-    | O.S s -> 
-        failwith (spf "was expecting a F, not a S: %s" s)
-    | O.I i -> 
-        failwith (spf "was expecting a F, not a I: %d" i)
+
+    | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
+    | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
     );
     (* todo: handle trap *)
   done

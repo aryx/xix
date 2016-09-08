@@ -21,7 +21,7 @@ type thread = {
   mutable argv: string list;
   locals: (varname, var) Hashtbl.t;
 
-  (* seems needed only for switch commands *)
+  (* less: seems needed only for switch commands, so remove it? *)
   mutable argv_stack: (string list) list;
 
   (* stdin by default (can be changed when do '. file'?? when eval) *)
@@ -54,17 +54,32 @@ let cur () =
   | [] -> failwith "empty runq"
   | x::xs -> x
 
-(*
+(* I think we could get rid of that when we remove argv_stack *)
 let push_list () =
   let t = cur () in
   t.argv_stack <- t.argv :: t.argv_stack;
   t.argv <- []
 
-*)
+(* I think we could get rid of that when we remove argv_stack *)
+let pop_list () =
+  let t = cur () in
+  match t.argv_stack with
+  | [] -> failwith "pop_list but no argv"
+  | x::xs -> 
+      t.argv_stack <- xs;
+      t.argv <- x
+
 
 let push_word s =
   let t = cur () in
   t.argv <- s::t.argv
+
+let pop_word () =
+  let t = cur () in
+  match t.argv with
+  | [] -> failwith "pop_word but no word!"
+  | _x::xs ->
+      t.argv <- xs
 
 
 (* starts with pc <> 0 when handle async, traps, pipes, etc  *)
@@ -86,3 +101,8 @@ let start code pc locals =
 
 let return () =
   raise Todo
+
+(* todo: more stuff? *)
+let exit s =
+  pr2 s;
+  exit (-2)

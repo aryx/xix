@@ -66,11 +66,8 @@ let dispatch operation =
   | O.REPL -> Op_repl.op_REPL ()
   | O.Simple -> Op_process.op_Simple ()
 
-  (* push_list() *)
   | O.Mark -> 
-      let t = R.cur () in
-      t.R.argv_stack <- t.R.argv :: t.R.argv_stack;
-      t.R.argv <- [];
+      R.push_list ()
 
   | O.Word ->
       let t = R.cur () in

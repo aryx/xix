@@ -12,7 +12,7 @@ module E = Error
  *
  * Main limitations compared to rc:
  *  - no unicode support
- *  - not all the fancy redirections and fancy pipes
+ *  - not all of the fancy redirections and fancy pipes
  *  - no storing of function in the environment
  *    (used by rcmain. But can do the same by using '. rcmain')
  * 

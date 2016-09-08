@@ -97,9 +97,20 @@ let op_Simple () =
   | [] -> E.error "empty argument list (after variable expansion)" 
 
   | argv0::args ->
-      if Builtin.is_builtin argv0
-      then Builtin.dispatch argv0 args
-      else begin
+      match argv0 with
+      (* todo: if argv0 is a function *)
+      | "builtin" -> 
+          (match args with
+          | [] ->
+              pr2 "builtin: empty argument list";
+              Status.setstatus "empty arg list";
+              R.pop_list ()
+          | argv0::args ->
+              R.pop_word ();
+              Builtin.dispatch argv0
+          )
+      | s when Builtin.is_builtin s -> Builtin.dispatch argv0
+      | _ ->
         (* if exitnext opti *)
         flush stderr;
         (* less: Updenv *)
@@ -115,4 +126,3 @@ let op_Simple () =
           | Unix.Unix_error (err, s1, s2) -> 
               E.error (s_of_unix_error err s1 s2)
         )
-      end

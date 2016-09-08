@@ -99,10 +99,18 @@ let start code pc locals =
 
   runq := t::!runq
 
-let return () =
-  raise Todo
 
 (* todo: more stuff? *)
-let exit s =
-  pr2 s;
+let exit _s =
+  (* todo: how communicate error to parent process under Unix? *)
   exit (-2)
+
+
+let return () =
+  (* todo: turfredir() *)
+  match !runq with
+  | [] -> failwith "empty runq"
+  | [x] -> exit "TODO: getstatus()"
+  | x::xs -> 
+      runq := xs
+

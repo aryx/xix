@@ -65,10 +65,9 @@ let dispatch operation =
   match operation with
   | O.REPL -> Op_repl.op_REPL ()
   | O.Simple -> Op_process.op_Simple ()
+  | O.Return -> R.return ()
 
-  | O.Mark -> 
-      R.push_list ()
-
+  | O.Mark -> R.push_list ()
   | O.Word ->
       let t = R.cur () in
       let x = t.R.code.(!(t.R.pc)) in

@@ -4,3 +4,7 @@ val vlook:
 
 val vinit: 
   unit -> unit
+
+val setvar:
+  Runtime.varname -> Runtime.value -> unit
+

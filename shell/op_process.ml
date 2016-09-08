@@ -3,10 +3,26 @@ open Common
 module R = Runtime
 module E = Error
 
+let s_of_unix_error err _s1 _s2 = 
+  spf "%s" (Unix.error_message err)
+
 let execute args path =
 
+  let argv = Array.of_list args in
+  let errstr = ref "" in
+
   (* less: Updenv () *)
-  raise Todo
+  path |> List.iter (fun root ->
+    let path = (if root = "" then "" else root ^ "/") ^ argv.(0) in
+    try 
+      Unix.execv path argv |> ignore
+    with Unix.Unix_error (err, s1, s2) ->
+     errstr := s_of_unix_error err s1 s2;
+     Globals.errstr := s2
+  );
+  (* reached only when could not find a path *)
+  pr2 (spf "%s: %s" argv.(0) !errstr)
+
 
 let exec () =
   R.pop_word ();
@@ -19,7 +35,7 @@ let exec () =
   | prog::xs -> 
       (* todo: doredir *)
       execute argv (Path.search_path_for_cmd prog);
-      (* should not be reached *)
+      (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 
 let forkexec () =
@@ -30,15 +46,40 @@ let forkexec () =
     (* less: clearwaitpids *)
     R.push_word "exec";
     exec ();
-    (* should not be reached *)
-    R.exit "can't exec"
+    (* should not be reached, unless prog could not be executed *)
+    R.exit ("can't exec: " ^ !Globals.errstr)
   end
   else 
     (* less: addwaitpid *)
     pid
 
 let waitfor pid =
-  raise Todo
+  (* less: check for havewaitpid *)
+
+  try 
+    let rec aux () =
+      let (pid2, status) = Unix.wait () in
+      if pid = pid2
+      then begin
+        Status.setstatus 
+          (match status with
+          | Unix.WEXITED i -> spf "%d" i
+          | Unix.WSIGNALED i -> spf "signaled %d" i
+          | Unix.WSTOPPED i -> spf "stopped %d" i
+          );
+        0
+      end else begin
+        (* todo: lookup in runq for one waiting on pid *)
+        aux
+      end ()
+    in
+    aux ()
+  with Unix.Unix_error (err, s1, s2) ->
+    Globals.errstr := s_of_unix_error err s1 s2;
+    if err = Unix.EINTR
+    then -1
+    else 0
+
 
 let op_Simple () =
   let t = R.cur () in
@@ -65,13 +106,13 @@ let op_Simple () =
         (try 
           let pid = forkexec () in
           R.pop_list ();
-          while waitfor pid <> pid do
+          while waitfor pid < 0 do
             ()
           done
         with
           | Failure s ->
               E.error ("try again: " ^ s)
           | Unix.Unix_error (err, s1, s2) -> 
-              E.error (spf "%s %s %s" (Unix.error_message err) s1 s2)
+              E.error (s_of_unix_error err s1 s2)
         )
       end

@@ -3,5 +3,6 @@ open Common
 module R = Runtime
 
 let setstatus s =
-  raise Todo
+  Var.setvar "status" [s]
+
 

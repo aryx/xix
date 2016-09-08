@@ -152,10 +152,20 @@ let interpreter () =
      * as the interpreted code may have modified runq.
      *)
     let t = Runtime.cur () in
+    let pc = t.R.pc in
 
-    (* less: debug runq *)
-    incr t.R.pc;
-    (match t.R.code.(!(t.R.pc) - 1) with
+    (* less: cycle =~ codevec pointer *)
+    if !Flags.rflag
+    then pr2 (spf "pid %d %d %s %s"
+                (Unix.getpid ())
+                !pc
+                (Dumper.s_of_opcode t.R.code.(!pc))
+                ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
+                    spf "(%s)" (String.concat " " xs)
+                   ) |> String.concat " "));
+    
+    incr pc;
+    (match t.R.code.(!pc - 1) with
 
     (* opcode dispatch ! *)
     | O.F operation ->  dispatch operation
@@ -187,6 +197,8 @@ let main () =
     " login mode (execute ~/lib/profile)";
     "-e", Arg.Set Flags.eflag,
     " exit if $status is non-null after a simple command";
+    "-r", Arg.Set Flags.rflag,
+    " print internal form of commands (opcodes)";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

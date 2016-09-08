@@ -5,6 +5,8 @@ let interactive = ref true
 let login = ref false
 (* -e *)
 let eflag = ref false
+(* -r, similar to dump_opcodes, but at each step *)
+let rflag = ref false
 
 
 let dump_tokens = ref false

@@ -84,8 +84,11 @@ let pop_word () =
       t.argv <- xs
 
 
-(* starts with pc <> 0 when handle async, traps, pipes, etc  *)
-let start code pc locals =
+(* This function was called start(), but it does not really start right
+ * away the new thread. So better to call it mk_thread.
+ * It starts with pc <> 0 when handle async, traps, pipes, etc.
+ *)
+let mk_thread code pc locals =
   let t = {
     code = code;
     pc = ref pc;
@@ -98,8 +101,10 @@ let start code pc locals =
     file = None;
     line = ref 1;
   } in
-
+  t
+  (* old: do that in caller now, so more explicit 
   runq := t::!runq
+  *)
 
 
 (* todo: more stuff? *)

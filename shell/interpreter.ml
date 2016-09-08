@@ -23,9 +23,8 @@ let interpret operation =
       incr t.R.pc;
       (match x with
       | O.S s -> R.push_word s
-      (* stricter *)
-      | _ -> failwith (spf "was expecting a S, not %s" 
-                         (Dumper.s_of_operation operation))
+      (* stricter: but should never happen *)
+      | op -> failwith (spf "was expecting a S, not %s" (Dumper.s_of_opcode op))
       )
 
   | O.Assign ->
@@ -45,7 +44,46 @@ let interpret operation =
       | _ -> E.error "variable name not singleton!"
       )
 
-  | O.Pipe -> raise Todo
+  | O.Pipe -> 
+      let t = R.cur () in
+      let pc = t.R.pc in
+      let lfd =
+        match t.R.code.(!pc) with
+        | O.I i -> i
+        (* stricter: generate error, but should never happen *)
+        | op -> 
+          failwith (spf "was expecting I, not %s" (Dumper.s_of_opcode op))
+      in
+      incr pc;
+      let rfd =
+        match t.R.code.(!pc) with
+        | O.I i -> i
+        (* stricter: generate error, but should never happen *)
+        | op -> 
+          failwith (spf "was expecting I, not %s" (Dumper.s_of_opcode op))
+      in
+      incr pc;
+
+      let (pipe_read, pipe_write) = Unix.pipe () in
+      let forkid = Unix.fork () in
+      (* child *)
+      if forkid = 0 then begin
+        (* less: clearwaitpids () *)
+
+        (* pc + 2 to jump the jump addresses *)
+        let newt = R.mk_thread t.R.code (!pc + 2) t.R.locals in
+        R.runq := [newt];
+        Unix.close pipe_read;
+        raise Todo
+
+      (* parent *)
+      end else begin
+        raise Todo
+      end
+
+
+
+
   | O.PipeWait -> raise Todo
 
   | (Popm|

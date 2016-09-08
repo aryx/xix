@@ -34,7 +34,7 @@ and cmd =
   (* Base *)
 
   | Simple of value * values
-  | Pipe of cmd * cmd
+  | Pipe of cmd * cmd (* less: lfd, rfd option *)
   | Async of cmd
 
   (* Redirections *)

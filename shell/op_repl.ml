@@ -32,7 +32,9 @@ let op_REPL () =
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in
-        R.start codevec 0 t.R.locals;
+        let newt = R.mk_thread codevec 0 t.R.locals in
+        R.runq := newt::!(R.runq);
+
         decr t.R.pc;
         (* when codevec does a op_return(), then interpreter loop
          * in main should call us back since the pc was decremented above

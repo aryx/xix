@@ -40,8 +40,8 @@ let do_action s xs =
         let lexbuf = Lexing.from_channel chan in
 
         (* for error reporting I need a runq *)
-        Runtime.start [||] 0 (Hashtbl.create 0);
-        let t = Runtime.cur () in
+        let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
+        R.runq := t::!R.runq;
         t.R.file <- Some file;
 
         let rec loop () =
@@ -95,9 +95,9 @@ let bootstrap =
 
 
 let interpret () =
-  Runtime.start bootstrap_simple 0 (Hashtbl.create 11);
+  let t = R.mk_thread bootstrap_simple 0 (Hashtbl.create 11) in
+  R.runq := t::!R.runq;
 
-  let t = Runtime.cur () in
   t.R.chan <- stdin;
   t.R.iflag <- !Flags.interactive;
 

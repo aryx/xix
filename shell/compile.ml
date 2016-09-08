@@ -25,7 +25,7 @@ let rec split_at_non_assign = function
 (* todo: need pass eflag in all the subfunc below? 
  * maybe now that all types are mutually recursive.
  *)
-let outcode_seq seq eflag emit idx =
+let outcode_seq seq eflag (emit,set,idx) =
 
   let rec xseq seq eflag =
    (* less set iflast *)
@@ -68,6 +68,26 @@ let outcode_seq seq eflag emit idx =
               emit (O.F O.Unlocal);
             )
         )
+    | A.Pipe (cmd1, cmd2) ->
+        emit (O.F O.Pipe);
+        emit (O.I 1);
+        emit (O.I 0);
+
+        let p = !idx in
+        emit (O.I 0);
+        let q = !idx in
+        emit (O.I 0);
+
+        xcmd cmd1 eflag;
+        emit (O.F O.Exit);
+
+        set p (O.I !idx);
+        xcmd cmd2 eflag;
+        emit (O.F O.Return);
+
+        set q (O.I !idx);
+        emit (O.F O.PipeWait);
+        
         
     | _ -> failwith ("TODO: " ^ Dumper.s_of_cmd cmd)
 
@@ -112,8 +132,13 @@ let compile seq =
     !codebuf.(!idx) <- x;
     incr idx
   in
+  let set idx2 x =
+    if idx2 < 0 || idx2 >= !len_codebuf
+    then failwith (spf "Bad address %d in set()" idx2);
+    !codebuf.(idx2) <- x;
+  in
   
-  outcode_seq seq !Flags.eflag emit idx;
+  outcode_seq seq !Flags.eflag (emit,set,idx);
   emit (O.F O.Return);
   (* less: O.F O.End *)
   (* less: heredoc, readhere() *)

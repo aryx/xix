@@ -3,9 +3,6 @@ open Common
 
 module R = Runtime
 module O = Opcode
-module E = Error
-
-open Opcode (* just for big dispatch error case below *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -60,49 +57,6 @@ let do_action s xs =
 
   | _ -> failwith ("action not supported: " ^ s)
 
-(*****************************************************************************)
-(* Opcode dispatcher *)
-(*****************************************************************************)
-
-let dispatch operation =
-  match operation with
-  | O.REPL -> Op_repl.op_REPL ()
-  | O.Simple -> Op_process.op_Simple ()
-  | O.Return -> R.return ()
-
-  | O.Mark -> R.push_list ()
-  | O.Word ->
-      let t = R.cur () in
-      let x = t.R.code.(!(t.R.pc)) in
-      incr t.R.pc;
-      (match x with
-      | O.S s -> R.push_word s
-      (* stricter *)
-      | _ -> failwith (spf "was expecting a S, not %s" 
-                         (Dumper.s_of_operation operation))
-      )
-  | O.Assign ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] ->
-          (* no call to globlist for varname as it can be "*" for $* *)
-          (* less: deglob varname *)
-          let v = Var.vlook varname in
-          R.pop_list ();
-          (* less: globlist *)
-          let argv = t.R.argv in
-          v.R.v <- Some argv;
-          R.pop_list ();
-
-      | _ -> E.error "variable name not singleton!"
-      )
-  | (Popm|Count|Concatenate|Stringify|Glob|Dollar|Index|Local|Unlocal|Fn|DelFn|
-Exit|If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|Read|Write|
-ReadWrite|Append|Close|Dup|Pipe|PipeWait|PipeFd|Error|Eflag|Subshell|
-Backquote|Async) ->
-    failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
-
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -140,7 +94,7 @@ let bootstrap =
   |]
 
 
-let interpreter () =
+let interpret () =
   Runtime.start bootstrap_simple 0 (Hashtbl.create 11);
 
   let t = Runtime.cur () in
@@ -174,7 +128,7 @@ let interpreter () =
     (match t.R.code.(!pc - 1) with
 
     (* opcode dispatch ! *)
-    | O.F operation ->  dispatch operation
+    | O.F operation ->  Interpreter.interpret operation
     | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
     | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
     );
@@ -240,7 +194,7 @@ let main () =
   (* todo: trap_init () *)
 
   try 
-    interpreter ()
+    interpret ()
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn

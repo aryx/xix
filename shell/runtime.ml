@@ -1,14 +1,18 @@
 open Common
 
-(* can be anything: "*", "1", "2", "foo" *)
+(* can be anything: "foo", but also "*", "1", "2", etc *)
 type varname = string
 
-(* In RC the basic (and only) value is the list of strings.
+(* In rc the basic (and only) value is the list of strings.
  * A single word is considered as a list with one element.
  *)
 type value = string list
 
 type var = { 
+  (* can be None when lookup for a value that was never set before,
+   * which is different from Some [] (when do A=()), which is also
+   * different from Some [""] (when do A='').
+   *)
   mutable v: value option;
   (* less: opti: changed: bool *)
 }
@@ -108,6 +112,7 @@ let return () =
   (* todo: turfredir() *)
   match !runq with
   | [] -> failwith "empty runq"
+  (* last thread in runq, we exit then *)
   | [x] -> exit "TODO: getstatus()"
   | x::xs -> 
       runq := xs

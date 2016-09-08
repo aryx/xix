@@ -6,6 +6,19 @@ module E = Error
 
 open Opcode (* just for big dispatch error case below *)
 
+let file_descr_of_int i =
+  match i with
+  | 0 -> Unix.stdin
+  | 1 -> Unix.stdout
+  | 2 -> Unix.stderr
+  | n -> failwith (spf "file_descr_of_int: unsupported int %d" n)
+
+let int_at_address t pc =
+  match t.R.code.(pc) with
+  | O.I i -> i
+  (* stricter: generate error, but should never happen *)
+  | op -> failwith (spf "was expecting I, not %s" (Dumper.s_of_opcode op))
+
 
 let interpret operation =
   match operation with
@@ -19,8 +32,9 @@ let interpret operation =
   | O.Mark -> R.push_list ()
   | O.Word ->
       let t = R.cur () in
-      let x = t.R.code.(!(t.R.pc)) in
-      incr t.R.pc;
+      let pc = t.R.pc in
+      let x = t.R.code.(!pc) in
+      incr pc;
       (match x with
       | O.S s -> R.push_word s
       (* stricter: but should never happen *)
@@ -47,20 +61,16 @@ let interpret operation =
   | O.Pipe -> 
       let t = R.cur () in
       let pc = t.R.pc in
+      (* should be stdout *)
       let lfd =
-        match t.R.code.(!pc) with
-        | O.I i -> i
-        (* stricter: generate error, but should never happen *)
-        | op -> 
-          failwith (spf "was expecting I, not %s" (Dumper.s_of_opcode op))
+        let i = int_at_address t !pc in
+        file_descr_of_int i
       in
       incr pc;
+      (* should be stdin *)
       let rfd =
-        match t.R.code.(!pc) with
-        | O.I i -> i
-        (* stricter: generate error, but should never happen *)
-        | op -> 
-          failwith (spf "was expecting I, not %s" (Dumper.s_of_opcode op))
+        let i = int_at_address t !pc in
+        file_descr_of_int i
       in
       incr pc;
 
@@ -69,19 +79,26 @@ let interpret operation =
       (* child *)
       if forkid = 0 then begin
         (* less: clearwaitpids () *)
-
         (* pc + 2 to jump the jump addresses *)
-        let newt = R.mk_thread t.R.code (!pc + 2) t.R.locals in
+        let newt = 
+          R.mk_thread t.R.code (int_at_address t (!pc + 2)) t.R.locals in
         R.runq := [newt];
         Unix.close pipe_read;
-        raise Todo
-
+        newt.R.redirections <- 
+          (R.FromTo (pipe_write, lfd))::newt.R.redirections;
       (* parent *)
       end else begin
-        raise Todo
+        (* less: addwaitpid () *)
+        let newt = 
+          R.mk_thread t.R.code (int_at_address t (!pc+0)) t.R.locals in
+        R.runq := newt::!R.runq;
+        Unix.close pipe_write;
+        newt.R.redirections <- 
+          (R.FromTo (pipe_read, rfd))::newt.R.redirections;
+        (* once newt finished, jump to Xpipewait *)
+        pc := int_at_address t (!pc+1);
+        (* less: store forkid in t.pid  *)
       end
-
-
 
 
   | O.PipeWait -> raise Todo

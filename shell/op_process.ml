@@ -6,6 +6,15 @@ module E = Error
 let s_of_unix_error err _s1 _s2 = 
   spf "%s" (Unix.error_message err)
 
+let doredir xs =
+  xs |> List.rev |> List.iter (fun redir ->
+    match redir with
+    | R.FromTo (xfrom, xto) ->
+        Unix.dup2 xfrom xto;
+        Unix.close xfrom
+  )
+
+
 let execute args path =
 
   let argv = Array.of_list args in
@@ -33,7 +42,7 @@ let exec () =
   match argv with
   | [] -> E.error "empty argument list" 
   | prog::xs -> 
-      (* todo: doredir *)
+      doredir t.R.redirections;
       execute argv (Path.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()

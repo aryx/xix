@@ -38,9 +38,14 @@ type thread = {
   mutable file: Common.filename option;
   line: int ref;
 
-  (* todo: mutable redir: 
-  *)
+  (* things to do before exec'ing the simple command *)
+  mutable redirections: redir list;
 }
+
+  and redir =
+    | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
+
+
 
 let (globals: (varname, var) Hashtbl.t) = 
   Hashtbl.create 101
@@ -100,6 +105,12 @@ let mk_thread code pc locals =
     iflag = false;
     file = None;
     line = ref 1;
+
+    redirections = 
+      (match !runq with
+      | [] -> []
+      | x::xs -> x.redirections
+      );
   } in
   t
   (* old: do that in caller now, so more explicit 

@@ -17,7 +17,8 @@ let int_at_address t pc =
   match t.R.code.(pc) with
   | O.I i -> i
   (* stricter: generate error, but should never happen *)
-  | op -> failwith (spf "was expecting I, not %s" (Dumper.s_of_opcode op))
+  | op -> failwith (spf "was expecting I, not %s at %d" 
+                      (Dumper.s_of_opcode op) pc)
 
 
 let interpret operation =
@@ -27,7 +28,9 @@ let interpret operation =
   | O.Simple -> Op_process.op_Simple ()
 
   | O.Return -> R.return ()
-  | O.Exit -> raise Todo
+  | O.Exit -> 
+      (* todo: trapreq *)
+      R.exit (Status.getstatus())
 
   | O.Mark -> R.push_list ()
   | O.Word ->
@@ -79,9 +82,9 @@ let interpret operation =
       (* child *)
       if forkid = 0 then begin
         (* less: clearwaitpids () *)
-        (* pc + 2 to jump the jump addresses *)
+        (* pc + 2 to jump over the jump addresses *)
         let newt = 
-          R.mk_thread t.R.code (int_at_address t (!pc + 2)) t.R.locals in
+          R.mk_thread t.R.code (!pc + 2) t.R.locals in
         R.runq := [newt];
         Unix.close pipe_read;
         newt.R.redirections <- 
@@ -97,11 +100,27 @@ let interpret operation =
           (R.FromTo (pipe_read, rfd))::newt.R.redirections;
         (* once newt finished, jump to Xpipewait *)
         pc := int_at_address t (!pc+1);
-        (* less: store forkid in t.pid  *)
+        t.R.pid <- Some forkid;
       end
 
 
-  | O.PipeWait -> raise Todo
+  | O.PipeWait -> 
+      let t = R.cur () in
+      let pid = t.R.pid in
+      (match pid with
+      (* a previous waitfor() already got it *)
+      | None -> 
+          Status.setstatus 
+            (Status.concstatus t.status (Status.getstatus()));
+      | Some pid ->
+          let status = Status.getstatus () in
+          (* will internally call setstatus() when it found the right child *)
+          Process.waitfor pid |> ignore;
+          t.R.pid <- None;
+          Status.setstatus 
+            (Status.concstatus (Status.getstatus()) status);
+      )
+
 
   | (Popm|
      Count|Concatenate|Stringify|Glob|Dollar|Index|

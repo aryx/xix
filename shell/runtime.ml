@@ -40,6 +40,11 @@ type thread = {
 
   (* things to do before exec'ing the simple command *)
   mutable redirections: redir list;
+
+  (* process to wait for in Xpipewait (set from Xpipe) *)
+  mutable pid: int option;
+  (* exit status from child process returned from wait() *)
+  mutable status: string;
 }
 
   and redir =
@@ -106,6 +111,8 @@ let mk_thread code pc locals =
     file = None;
     line = ref 1;
 
+    pid = None;
+    status = "";
     redirections = 
       (match !runq with
       | [] -> []

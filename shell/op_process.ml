@@ -3,8 +3,6 @@ open Common
 module R = Runtime
 module E = Error
 
-let s_of_unix_error err _s1 _s2 = 
-  spf "%s" (Unix.error_message err)
 
 let doredir xs =
   xs |> List.rev |> List.iter (fun redir ->
@@ -26,7 +24,7 @@ let execute args path =
     try 
       Unix.execv path argv |> ignore
     with Unix.Unix_error (err, s1, s2) ->
-     errstr := s_of_unix_error err s1 s2;
+     errstr := Process.s_of_unix_error err s1 s2;
      Globals.errstr := s2
   );
   (* reached only when could not find a path *)
@@ -63,32 +61,6 @@ let forkexec () =
     (* less: addwaitpid *)
     pid
 
-let waitfor pid =
-  (* less: check for havewaitpid *)
-
-  try 
-    let rec aux () =
-      let (pid2, status) = Unix.wait () in
-      if pid = pid2
-      then begin
-        Status.setstatus 
-          (match status with
-          | Unix.WEXITED i -> spf "%d" i
-          | Unix.WSIGNALED i -> spf "signaled %d" i
-          | Unix.WSTOPPED i -> spf "stopped %d" i
-          );
-        0
-      end else begin
-        (* todo: lookup in runq for one waiting on pid *)
-        aux
-      end ()
-    in
-    aux ()
-  with Unix.Unix_error (err, s1, s2) ->
-    Globals.errstr := s_of_unix_error err s1 s2;
-    if err = Unix.EINTR
-    then -1
-    else 0
 
 
 let op_Simple () =
@@ -127,12 +99,13 @@ let op_Simple () =
         (try 
           let pid = forkexec () in
           R.pop_list ();
-          while waitfor pid < 0 do
+          (* do again even if was interrupted *)
+          while Process.waitfor pid = Process.WaitforInterrupted do
             ()
           done
         with
           | Failure s ->
               E.error ("try again: " ^ s)
           | Unix.Unix_error (err, s1, s2) -> 
-              E.error (s_of_unix_error err s1 s2)
+              E.error (Process.s_of_unix_error err s1 s2)
         )

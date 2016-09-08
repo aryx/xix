@@ -111,7 +111,7 @@ let interpret operation =
       (* a previous waitfor() already got it *)
       | None -> 
           Status.setstatus 
-            (Status.concstatus t.status (Status.getstatus()));
+            (Status.concstatus t.R.status (Status.getstatus()));
       | Some pid ->
           let status = Status.getstatus () in
           (* will internally call setstatus() when it found the right child *)

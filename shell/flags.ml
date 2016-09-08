@@ -3,10 +3,13 @@
 let interactive = ref true
 (* -l (or by default if argv0 starts with a -) *)
 let login = ref false
+
 (* -e *)
 let eflag = ref false
 (* -r, similar to dump_opcodes, but at each step *)
 let rflag = ref false
+(* -s *)
+let sflag = ref false
 
 
 let dump_tokens = ref false

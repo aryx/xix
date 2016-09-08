@@ -8,7 +8,8 @@ let op_REPL () =
   let t = R.cur () in
 
   (* todo: flush error and reset error count *)
-  (* todo: print status if -s *)
+  if !Flags.sflag && not (Status.truestatus()) 
+  then pr2 (spf "status=%s" (Status.getstatus ()));
 
   (* set prompstr *)
   if t.R.iflag then begin

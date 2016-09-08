@@ -15,3 +15,7 @@ let getstatus () =
 
 let concstatus s1 s2 =
   s1 ^ "|" ^ s2
+
+let truestatus () =
+  let s = getstatus () in
+  s = "" || s =~ "0+\\(|0+\\)*"

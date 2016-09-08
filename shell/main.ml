@@ -159,6 +159,8 @@ let main () =
     " exit if $status is non-null after a simple command";
     "-r", Arg.Set Flags.rflag,
     " print internal form of commands (opcodes)";
+    "-s", Arg.Set Flags.sflag,
+    " print exit status after any command where the status is non-null";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

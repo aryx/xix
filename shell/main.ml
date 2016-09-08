@@ -5,6 +5,8 @@ module R = Runtime
 module O = Opcode
 module E = Error
 
+open Opcode (* just for big dispatch error case below *)
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -84,6 +86,7 @@ let dispatch operation =
       let argv = t.R.argv in
       (match argv with
       | [varname] ->
+          (* no call to globlist for varname as it can be "*" for $* *)
           (* less: deglob varname *)
           let v = Var.vlook varname in
           R.pop_list ();
@@ -94,8 +97,12 @@ let dispatch operation =
 
       | _ -> E.error "variable name not singleton!"
       )
+  | (Popm|Count|Concatenate|Stringify|Glob|Dollar|Index|Local|Unlocal|Fn|DelFn|
+Exit|If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|Read|Write|
+ReadWrite|Append|Close|Dup|Pipe|PipeWait|PipeFd|Error|Eflag|Subshell|
+Backquote|Async) ->
+    failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
 
-  | _ -> failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -110,14 +117,13 @@ let bootstrap_simple =
 let bootstrap = 
   [| 
       O.F O.Mark;
-
       O.F O.Word;
       O.S "*";
       O.F O.Assign;
-      O.F O.Mark;
 
       O.F O.Mark;
 
+      O.F O.Mark;
       O.F O.Word;
       O.S "*";
       O.F O.Dollar;

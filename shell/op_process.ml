@@ -25,7 +25,7 @@ let execute args path =
 
 
 let exec () =
-  R.pop_word ();
+  R.pop_word (); (* "exec" *)
 
   let t = R.cur () in
   let argv = t.R.argv in
@@ -44,6 +44,7 @@ let forkexec () =
   if pid = 0
   then begin
     (* less: clearwaitpids *)
+    (* less: could simplify and remove this word if exec was not a builtin *)
     R.push_word "exec";
     exec ();
     (* should not be reached, unless prog could not be executed *)

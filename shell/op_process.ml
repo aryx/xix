@@ -3,7 +3,9 @@ open Common
 module R = Runtime
 module E = Error
 
-let execute args cmdpath =
+let execute args path =
+
+  (* less: Updenv () *)
   raise Todo
 
 let exec () =
@@ -16,7 +18,7 @@ let exec () =
   | [] -> E.error "empty argument list" 
   | prog::xs -> 
       (* todo: doredir *)
-      execute argv (Path.find_in_PATH prog);
+      execute argv (Path.search_path_for_cmd prog);
       (* should not be reached *)
       R.pop_list ()
 

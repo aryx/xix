@@ -21,7 +21,7 @@ type thread = {
   mutable argv: string list;
   locals: (varname, var) Hashtbl.t;
 
-  (* less: seems needed only for switch commands, so remove it? *)
+  (* Used for switch but also assignments. *)
   mutable argv_stack: (string list) list;
 
   (* stdin by default (can be changed when do '. file'?? when eval) *)
@@ -54,13 +54,11 @@ let cur () =
   | [] -> failwith "empty runq"
   | x::xs -> x
 
-(* I think we could get rid of that when we remove argv_stack *)
 let push_list () =
   let t = cur () in
   t.argv_stack <- t.argv :: t.argv_stack;
   t.argv <- []
 
-(* I think we could get rid of that when we remove argv_stack *)
 let pop_list () =
   let t = cur () in
   match t.argv_stack with

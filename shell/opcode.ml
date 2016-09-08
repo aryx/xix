@@ -29,7 +29,7 @@ type operation =
   | Dollar (* (name) *)
   | Index  (* ??? *)
   | Local (* (name, val) *)
-  | Unlocal (* ?? *)
+  | Unlocal (* *)
 
   (* Functions *)
   | Fn (* (name){... Xreturn } *)

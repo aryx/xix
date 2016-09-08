@@ -3,6 +3,25 @@ open Common
 module A = Ast
 module O = Opcode
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let rec split_at_non_assign = function
+  | A.Assign (val1, val2, cmd) ->
+      let (a,b) = split_at_non_assign cmd in
+      (val1, val2)::a, b
+  | b -> [], b
+
+
+(*****************************************************************************)
+(* Compilation algorithm *)
+(*****************************************************************************)
+
 (* todo: need pass eflag in all the subfunc below? 
  * maybe now that all types are mutually recursive.
  *)
@@ -20,6 +39,35 @@ let outcode_seq seq eflag emit idx =
         xword w eflag;
         emit (O.F O.Simple);
         if eflag then emit (O.F O.Eflag);
+
+    | A.Assign (val1, val2, cmd) ->
+        let all_assigns, cmd = 
+          split_at_non_assign (A.Assign (val1, val2, cmd)) in
+        (match cmd with
+        (* A=b; *)
+        | A.EmptyCommand -> 
+            all_assigns |> List.iter (fun (val1, val2) ->
+              emit (O.F O.Mark);
+              xword val2 eflag;
+              emit (O.F O.Mark);
+              xword val1 eflag;
+              emit (O.F O.Assign);
+            )
+
+        (* A=b cmd; *)
+        | _ -> 
+            all_assigns |> List.iter (fun (val1, val2) ->
+              emit (O.F O.Mark);
+              xword val2 eflag;
+              emit (O.F O.Mark);
+              xword val1 eflag;
+              emit (O.F O.Local);
+            );
+            xcmd cmd eflag;
+            all_assigns |> List.iter (fun (_, _) ->
+              emit (O.F O.Unlocal);
+            )
+        )
         
     | _ -> failwith ("TODO: " ^ Dumper.s_of_cmd cmd)
 
@@ -29,6 +77,9 @@ let outcode_seq seq eflag emit idx =
         emit (O.F O.Word);
         emit (O.S s);
 
+    | A.List ws ->
+        xwords ws eflag
+
     | _ -> failwith ("TODO: " ^ Dumper.s_of_value w)
 
   and xwords ws eflag =
@@ -37,6 +88,9 @@ let outcode_seq seq eflag emit idx =
   in
   xseq seq eflag
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let compile seq =
 

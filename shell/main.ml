@@ -3,6 +3,7 @@ open Common
 
 module R = Runtime
 module O = Opcode
+module E = Error
 
 (*****************************************************************************)
 (* Prelude *)
@@ -77,6 +78,21 @@ let dispatch operation =
       (* stricter *)
       | _ -> failwith (spf "was expecting a S, not %s" 
                          (Dumper.s_of_operation operation))
+      )
+  | O.Assign ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] ->
+          (* less: deglob varname *)
+          let v = Var.vlook varname in
+          R.pop_list ();
+          (* less: globlist *)
+          let argv = t.R.argv in
+          v.R.v <- Some argv;
+          R.pop_list ();
+
+      | _ -> E.error "variable name not singleton!"
       )
 
   | _ -> failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))

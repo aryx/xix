@@ -157,10 +157,13 @@ let main () =
     " login mode (execute ~/lib/profile)";
     "-e", Arg.Set Flags.eflag,
     " exit if $status is non-null after a simple command";
+
     "-r", Arg.Set Flags.rflag,
     " print internal form of commands (opcodes)";
     "-s", Arg.Set Flags.sflag,
     " print exit status after any command where the status is non-null";
+    "-x", Arg.Set Flags.xflag,
+    " print each simple command before executing it";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

@@ -113,25 +113,25 @@ let interpret operation =
           (R.FromTo (pipe_read, rfd))::newt.R.redirections;
         (* once newt finished, jump to Xpipewait *)
         pc := int_at_address t (!pc+1);
-        t.R.pid <- Some forkid;
+        t.R.waitstatus <- R.WaitFor forkid;
       end
 
 
   | O.PipeWait -> 
       let t = R.cur () in
-      let pid = t.R.pid in
-      (match pid with
+      (match t.R.waitstatus with
+      (* stricter: *)
+      | R.NothingToWaitfor -> 
+          failwith "Impossible: NothingToWaitfor for PipeWait"
       (* a previous waitfor() already got it *)
-      | None -> 
-          Status.setstatus 
-            (Status.concstatus t.R.status (Status.getstatus()));
-      | Some pid ->
+      | R.ChildStatus status -> 
+          Status.setstatus (Status.concstatus status (Status.getstatus()));
+      | R.WaitFor pid ->
           let status = Status.getstatus () in
           (* will internally call setstatus() when it found the right child *)
           Process.waitfor pid |> ignore;
-          t.R.pid <- None;
-          Status.setstatus 
-            (Status.concstatus (Status.getstatus()) status);
+          t.R.waitstatus <- R.NothingToWaitfor;
+          Status.setstatus (Status.concstatus (Status.getstatus()) status);
       )
 
 

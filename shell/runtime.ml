@@ -41,14 +41,20 @@ type thread = {
   (* things to do before exec'ing the simple command *)
   mutable redirections: redir list;
 
-  (* process to wait for in Xpipewait (set from Xpipe) *)
-  mutable pid: int option;
-  (* exit status from child process returned from wait() *)
-  mutable status: string;
+  (* things to wait for after a thread forked a process *)
+  mutable waitstatus: waitstatus;
 }
 
   and redir =
     | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
+
+  and waitstatus =
+    | NothingToWaitfor
+    (* process pid to wait for in Xpipewait (set from Xpipe) *)
+    | WaitFor of int 
+    (* exit status from child process returned from a wait() *)
+    | ChildStatus of string
+
 
 
 
@@ -111,8 +117,7 @@ let mk_thread code pc locals =
     file = None;
     line = ref 1;
 
-    pid = None;
-    status = "";
+    waitstatus = NothingToWaitfor;
     redirections = 
       (match !runq with
       | [] -> []

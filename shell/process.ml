@@ -49,11 +49,11 @@ let waitfor pid =
         WaitforFound
       end else begin
         !R.runq |> List.iter (fun t ->
-          if t.R.pid = (Some pid2)
-          then begin 
-            t.R.pid <- None;
-            t.R.status <- status_str;
-          end
+          match t.R.waitstatus with
+          | R.WaitFor pid ->
+              if pid = pid2
+              then t.R.waitstatus <- R.ChildStatus status_str;
+          | R.ChildStatus _ | R.NothingToWaitfor -> ()
         );
         loop ()
       end

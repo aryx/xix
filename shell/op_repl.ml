@@ -29,7 +29,7 @@ let op_REPL () =
     let ast_opt = Parse.parse_line lexbuf in
 
     match ast_opt with
-    | None -> R.return ()
+    | None -> Process.return ()
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in

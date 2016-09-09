@@ -4,6 +4,10 @@ type waitfor_result =
   | WaitforFound
   | WaitforNotfound
 
+val return: unit -> unit
+
+val exit: string -> unit
+
 val waitfor: int -> waitfor_result
 
 

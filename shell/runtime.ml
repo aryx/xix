@@ -125,18 +125,3 @@ let mk_thread code pc locals =
   *)
 
 
-(* todo: more stuff? *)
-let exit _s =
-  (* todo: how communicate error to parent process under Unix? *)
-  exit (-2)
-
-
-let return () =
-  (* todo: turfredir() *)
-  match !runq with
-  | [] -> failwith "empty runq"
-  (* last thread in runq, we exit then *)
-  | [x] -> exit "TODO: getstatus()"
-  | x::xs -> 
-      runq := xs
-

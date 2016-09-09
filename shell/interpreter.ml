@@ -27,10 +27,10 @@ let interpret operation =
 
   | O.Simple -> Op_process.op_Simple ()
 
-  | O.Return -> R.return ()
+  | O.Return -> Process.return ()
   | O.Exit -> 
       (* todo: trapreq *)
-      R.exit (Status.getstatus())
+      Process.exit (Status.getstatus())
 
   | O.Mark -> R.push_list ()
   | O.Word ->

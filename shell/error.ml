@@ -11,5 +11,5 @@ let error s =
   Status.setstatus "error";
 
   while (R.cur ()).R.iflag do
-    R.return ();
+    Process.return ();
   done

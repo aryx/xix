@@ -7,6 +7,25 @@ let s_of_unix_error err _s1 _s2 =
   spf "%s" (Unix.error_message err)
 
 
+let exit s =
+  (* todo: Updenv *)
+  Status.setstatus s;
+  (* todo: how communicate error to parent process under Unix? *)
+  exit (if Status.truestatus () then 0 else 1)
+
+
+let return () =
+  (* todo: turfredir() *)
+  match !R.runq with
+  | [] -> failwith "empty runq"
+  (* last thread in runq, we exit then *)
+  | [x] -> exit (Status.getstatus ())
+  | x::xs -> 
+      R.runq := xs
+
+
+
+
 type waitfor_result =
   | WaitforInterrupted
   | WaitforFound

@@ -55,7 +55,8 @@ let forkexec () =
     R.push_word "exec";
     exec ();
     (* should not be reached, unless prog could not be executed *)
-    R.exit ("can't exec: " ^ !Globals.errstr)
+    Process.exit ("can't exec: " ^ !Globals.errstr);
+    0
   end
   else 
     (* less: addwaitpid *)
@@ -68,7 +69,8 @@ let op_Simple () =
   let argv = t.R.argv in
 
   (* less: globlist () *)
-  (* less: -x *)
+  if !Flags.xflag 
+  then pr2 (String.concat " " argv);
 
   match argv with
   (* How can you get an empty list as Simple has at least one word?

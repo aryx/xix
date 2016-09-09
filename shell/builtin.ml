@@ -3,7 +3,7 @@ open Common
 module R = Runtime
 
 let is_builtin s =
-  List.mem s ["cd"; "exit"]
+  List.mem s ["cd"]
 
 let dochdir s =
   try 
@@ -18,6 +18,7 @@ let dispatch s =
       let t = R.cur () in
       let argv = t.R.argv in
       Status.setstatus "can't cd";
+
       (* less: cdpath vlook *)
       (match argv with
       | [cd] -> 
@@ -40,6 +41,5 @@ let dispatch s =
       );
       R.pop_list()
 
-  | "exit" -> failwith s
   | _ -> failwith (spf "unsupported builtin %s" s)
 

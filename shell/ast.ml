@@ -4,25 +4,25 @@
  * string is really a list with one element.
  *)
 type value = 
-  (* the string can contain * ? [ special char,
-   * so even a single word can expand to a list of strings.
+  (* The string can contain the * ? [ special characters.
+   * So, even a single word can expand to a list of strings.
    * less: they should be preceded by \001
    * less: W of word_elt list and word_elt = Star | Question | ...Str of string
    *)
   | Word of string * bool (* quoted *)
   | List of values
-  (* this causes the value and cmd types to be mutually recursive *)
+  (* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
   | CommandOutput of cmd_sequence
 
   | Dollar of value
 
-  | Count of value
-  | Index of value * values
+  | Count of value (* $#foo *)
+  | Index of value * values (* $foo(...) *)
 
   (* ^ distributes over lists *)
   | Concat of value * value
 
-  | Stringify of value
+  | Stringify of value (* $"foo " *)
 
 (* separated by spaces *)
 and values = value list
@@ -54,6 +54,7 @@ and cmd =
   (* stmts *)
 
   | If of cmd_sequence * cmd
+  (* less: could put as a cmd option in If *)
   | IfNot of cmd
 
   | While of cmd_sequence * cmd
@@ -89,4 +90,5 @@ and cmd =
 
 (* None when reads EOF *)
 type line = cmd_sequence option
+
  (* with tarzan *)

@@ -6,11 +6,21 @@ module E = Error
 
 open Opcode (* just for big dispatch error case below *)
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+(* could be in runtime.ml *)
 let file_descr_of_int i =
   match i with
   | 0 -> Unix.stdin
   | 1 -> Unix.stdout
   | 2 -> Unix.stderr
+  (* todo: how do that? if do >[1=4] ?? *)
   | n -> failwith (spf "file_descr_of_int: unsupported int %d" n)
 
 let int_at_address t pc =
@@ -20,6 +30,9 @@ let int_at_address t pc =
   | op -> failwith (spf "was expecting I, not %s at %d" 
                       (Dumper.s_of_opcode op) pc)
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let interpret operation =
   match operation with
@@ -43,7 +56,7 @@ let interpret operation =
       (* stricter: but should never happen *)
       | op -> failwith (spf "was expecting a S, not %s" (Dumper.s_of_opcode op))
       )
-
+  (* Assign (varname) (args) *)
   | O.Assign ->
       let t = R.cur () in
       let argv = t.R.argv in
@@ -53,7 +66,7 @@ let interpret operation =
           (* less: deglob varname *)
           let v = Var.vlook varname in
           R.pop_list ();
-          (* less: globlist *)
+          (* less: globlist for the arguments *)
           let argv = t.R.argv in
           v.R.v <- Some argv;
           R.pop_list ();
@@ -64,13 +77,13 @@ let interpret operation =
   | O.Pipe -> 
       let t = R.cur () in
       let pc = t.R.pc in
-      (* should be stdout *)
+      (* left file descriptor, should be stdout *)
       let lfd =
         let i = int_at_address t !pc in
         file_descr_of_int i
       in
       incr pc;
-      (* should be stdin *)
+      (* right file descriptor, should be stdin *)
       let rfd =
         let i = int_at_address t !pc in
         file_descr_of_int i
@@ -79,12 +92,12 @@ let interpret operation =
 
       let (pipe_read, pipe_write) = Unix.pipe () in
       let forkid = Unix.fork () in
+
       (* child *)
       if forkid = 0 then begin
         (* less: clearwaitpids () *)
         (* pc + 2 to jump over the jump addresses *)
-        let newt = 
-          R.mk_thread t.R.code (!pc + 2) t.R.locals in
+        let newt = R.mk_thread t.R.code (!pc + 2) t.R.locals in
         R.runq := [newt];
         Unix.close pipe_read;
         newt.R.redirections <- 

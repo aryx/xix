@@ -4,7 +4,7 @@ let interactive = ref true
 (* -l (or by default if argv0 starts with a -) *)
 let login = ref false
 
-(* -e, for strict error checking. Abort the script ASAP. *)
+(* -e, for strict error checking. Abort the script when an error happens.*)
 let eflag = ref false
 (* -r, similar to dump_opcodes, but at each step *)
 let rflag = ref false
@@ -12,7 +12,6 @@ let rflag = ref false
 let sflag = ref false
 (* -x, to print simple commands before executing them *)
 let xflag = ref false
-
 
 
 let dump_tokens = ref false

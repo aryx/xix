@@ -1,4 +1,6 @@
-Plan9 software ported to OCaml.
+Plan 9 software ported to OCaml.
 
-mk depend
-mk
+export ROOT=`pwd`
+export objtype=386
+ocamlrun ./bootstrap/mk depend
+ocamlrun ./bootstrap/mk

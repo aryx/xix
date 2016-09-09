@@ -78,11 +78,11 @@ let outcode_seq seq eflag (emit,set,idx) =
         let q = !idx in
         emit (O.I 0);
 
-        (* will be executed in a forked child *)
+        (* will be executed in a forked child, hence Exit *)
         xcmd cmd1 eflag;
         emit (O.F O.Exit);
 
-        (* will be executed in a children thread *)
+        (* will be executed in a children thread, hence Return *)
         set p (O.I !idx);
         xcmd cmd2 eflag;
         emit (O.F O.Return);

@@ -111,7 +111,8 @@ let interpret operation =
         Unix.close pipe_write;
         newt.R.redirections <- 
           (R.FromTo (pipe_read, rfd))::newt.R.redirections;
-        (* once newt finished, jump to Xpipewait *)
+      
+       (* once newt finished, jump to Xpipewait *)
         pc := int_at_address t (!pc+1);
         t.R.waitstatus <- R.WaitFor forkid;
       end

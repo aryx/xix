@@ -6,7 +6,7 @@ let search_path_for_cmd s =
   let nullpath = [""] in
 
   if s =~ "^/" ||
-     (* plan9 device paths *)
+     (* Plan 9 device paths *)
      s =~ "^#" || 
      s =~ "\\./" ||
      s =~ "\\.\\./"

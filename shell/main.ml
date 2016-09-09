@@ -7,7 +7,7 @@ module O = Opcode
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of rc, the Plan9 shell.
+(* An OCaml port of rc, the Plan 9 shell.
  *
  * Main limitations compared to rc:
  *  - no unicode support

@@ -12,5 +12,5 @@
  *)
 let skipnl = ref false
 
-(* to mimic plan9 errstr() *)
+(* to mimic Plan 9 errstr() *)
 let errstr = ref ""

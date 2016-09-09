@@ -599,7 +599,7 @@ let rules symbols2 autosize init_data node =
     (* --------------------------------------------------------------------- *)
     | SWI i ->
         if i <> 0
-        then error node (spf "SWI does not use its parameter under Plan9");
+        then error node (spf "SWI does not use its parameter under Plan 9");
 
         { size = 4; pool = None; binary = (fun () ->
           [ [gcond cond; (0xf, 24)] ]

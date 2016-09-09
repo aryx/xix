@@ -16,7 +16,7 @@ exception Lexical_error of string
 let error s =
   raise (Lexical_error s)
 
-(* we could do that in pprompt too *)
+(* we could do that in pprompt() too *)
 let incr_lineno () =
   let t = Runtime.cur () in
   incr t.Runtime.line

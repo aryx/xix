@@ -4,7 +4,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5a, the Plan9 ARM assembler.
+(* An OCaml port of 5a, the Plan 9 ARM assembler.
  *
  * Main limitations compared to 5a:
  *  - no embedded macro processor, but handle at least the #line directive

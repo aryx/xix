@@ -7,7 +7,7 @@ module R = Rules
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of mk, the Plan9 build system.
+(* An OCaml port of mk, the Plan 9 build system.
  *
  * Main limitations compared to mk:
  *  - no regexp rules
@@ -43,7 +43,7 @@ module R = Rules
  *  - better error when found cycle, show full trace!
  *  - TODO better error message when error in recipe, right now
  *    I get the error at the beginning and a trailing of regular shprint
- *    (but more plan9's style, so at least dont print the rest? or print
+ *    (but more Plan 9's style, so at least dont print the rest? or print
  *     also message at the end that something went wrong)
  *  - a strict mode where we forbid to redefine variable, use of undefined
  *    variable

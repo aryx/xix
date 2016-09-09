@@ -8,7 +8,7 @@ open Common
  * Abstract Syntax Tree (AST) for the assembly language supported by 5a
  * which we call Asm5.
  *
- * Note that in Plan9 object files are mostly the serialized form of 
+ * Note that in Plan 9 object files are mostly the serialized form of 
  * the assembly AST, which is why this file is in this directory.
  * 
  * !!! If you modify this file please increment Object_code5.version !!!
@@ -145,7 +145,7 @@ type instr =
   | Bxx of condition * branch_operand (* virtual, sugar for B.XX *) 
 
   (* System *)
-  | SWI of int (* value actually unused in plan9 *)
+  | SWI of int (* value actually unused in Plan 9 *)
   | RFE (* virtual, sugar for MOVM *)
 
   (* Misc *)

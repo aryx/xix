@@ -123,5 +123,3 @@ let mk_thread code pc locals =
   (* old: do that in caller now, so more explicit 
   runq := t::!runq
   *)
-
-

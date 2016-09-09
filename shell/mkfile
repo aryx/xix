@@ -12,7 +12,7 @@ SRC=  flags.ml globals.ml \
   var.ml prompt.ml status.ml path.ml process.ml error.ml \
   parser.ml lexer.ml parse.ml \
   builtin.ml \
-  op_control.ml op_repl.ml op_process.ml \
+  op_repl.ml op_process.ml \
   interpreter.ml main.ml
 
 SYSLIBS=str.cma unix.cma

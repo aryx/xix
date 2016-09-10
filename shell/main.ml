@@ -71,24 +71,20 @@ let bootstrap_simple =
 let bootstrap = 
   [| 
       O.F O.Mark;
-      O.F O.Word;
-      O.S "*";
-      O.F O.Assign;
+        O.F O.Word;
+        O.S "*";
+      O.F O.Assign; (* will pop_list twice *)
 
       O.F O.Mark;
-
-      O.F O.Mark;
-      O.F O.Word;
-      O.S "*";
-      O.F O.Dollar;
-
-      O.F O.Word;
-      O.S "/rc/lib/rcmain"; (* or use -m *)
-
-      O.F O.Word;
-      O.S ".";
-
-      O.F O.Simple;
+        O.F O.Mark;
+          O.F O.Word;
+          O.S "*";
+        O.F O.Dollar; (* will pop_list once *)
+        O.F O.Word;
+        O.S !Flags.rcmain; (* can be changed -m *)
+        O.F O.Word;
+        O.S ".";
+      O.F O.Simple; (* will pop_list once *)
 
       O.F O.Exit;
   |]
@@ -157,6 +153,8 @@ let main () =
     " login mode (execute ~/lib/profile)";
     "-e", Arg.Set Flags.eflag,
     " exit if $status is non-null after a simple command";
+    "-m", Arg.Set_string Flags.rcmain,
+    " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
 
     "-r", Arg.Set Flags.rflag,
     " print internal form of commands (opcodes)";

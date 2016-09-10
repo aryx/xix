@@ -13,6 +13,8 @@ let sflag = ref false
 (* -x, to print simple commands before executing them *)
 let xflag = ref false
 
+(* can be changed with -m *)
+let rcmain = ref "/rc/lib/rcmain"
 
 let dump_tokens = ref false
 let dump_ast = ref false

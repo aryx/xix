@@ -36,8 +36,10 @@ let int_at_address t pc =
 
 let interpret operation =
   match operation with
+  (* *)
   | O.REPL -> Op_repl.op_REPL ()
 
+  (* (args) *)
   | O.Simple -> Op_process.op_Simple ()
 
   | O.Return -> Process.return ()
@@ -46,6 +48,7 @@ let interpret operation =
       Process.exit (Status.getstatus())
 
   | O.Mark -> R.push_list ()
+  (* [string] *)
   | O.Word ->
       let t = R.cur () in
       let pc = t.R.pc in
@@ -56,7 +59,7 @@ let interpret operation =
       (* stricter: but should never happen *)
       | op -> failwith (spf "was expecting a S, not %s" (Dumper.s_of_opcode op))
       )
-  (* Assign (varname) (args) *)
+  (* (name) (val) *)
   | O.Assign ->
       let t = R.cur () in
       let argv = t.R.argv in
@@ -66,6 +69,7 @@ let interpret operation =
           (* less: deglob varname *)
           let v = Var.vlook varname in
           R.pop_list ();
+
           (* less: globlist for the arguments *)
           let argv = t.R.argv in
           v.R.v <- Some argv;
@@ -74,6 +78,7 @@ let interpret operation =
       | _ -> E.error "variable name not singleton!"
       )
 
+  (* [i j]{... Xreturn}{... Xreturn} *)
   | O.Pipe -> 
       let t = R.cur () in
       let pc = t.R.pc in
@@ -100,8 +105,7 @@ let interpret operation =
         let newt = R.mk_thread t.R.code (!pc + 2) t.R.locals in
         R.runq := [newt];
         Unix.close pipe_read;
-        newt.R.redirections <- 
-          (R.FromTo (pipe_write, lfd))::newt.R.redirections;
+        R.push_redir (R.FromTo (pipe_write, lfd));
       (* parent *)
       end else begin
         (* less: addwaitpid () *)
@@ -109,8 +113,7 @@ let interpret operation =
           R.mk_thread t.R.code (int_at_address t (!pc+0)) t.R.locals in
         R.runq := newt::!R.runq;
         Unix.close pipe_write;
-        newt.R.redirections <- 
-          (R.FromTo (pipe_read, rfd))::newt.R.redirections;
+        R.push_redir (R.FromTo (pipe_read, rfd));
       
        (* once newt finished, jump to Xpipewait *)
         pc := int_at_address t (!pc+1);
@@ -118,6 +121,7 @@ let interpret operation =
       end
 
 
+  (* argument passed through Thread.pid *)
   | O.PipeWait -> 
       let t = R.cur () in
       (match t.R.waitstatus with
@@ -135,9 +139,42 @@ let interpret operation =
           Status.setstatus (Status.concstatus (Status.getstatus()) status);
       )
 
+  (* (value?) *)
+  | O.Glob ->
+      pr2 "TODO: interpret Glob";
+      ()
+
+  (* (file)[fd] *)
+  | O.Write ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      let pc = t.R.pc in
+      (match argv with
+      | []       -> E.error "> requires file"
+      | x::y::xs -> E.error "> requires singleton"
+      | [file] ->
+          (try 
+            let fd_from = 
+              Unix.openfile file [Unix.O_CREAT;Unix.O_WRONLY] 0o666 in
+            (* should be stdout *)
+            let fd_to =
+              let i = int_at_address t !pc in
+              file_descr_of_int i
+            in
+            R.push_redir (R.FromTo (fd_from, fd_to));
+            incr pc;
+            R.pop_list();
+          with Unix.Unix_error (err, s1, s2) ->
+            prerr_string (spf "%s: " file);
+            E.error "can't open"
+          )
+              
+      )
+  | O.Popredir ->
+      R.pop_redir ()
 
   | (Popm|
-     Count|Concatenate|Stringify|Glob|Dollar|Index|
+     Count|Concatenate|Stringify|Dollar|Index|
      Local|Unlocal|Fn|DelFn|
      If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|
      Read|Write|ReadWrite|Append|Close|Dup|PipeFd|

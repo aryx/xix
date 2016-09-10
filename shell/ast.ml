@@ -77,6 +77,7 @@ and cmd =
 
   and cmd_sequence = cmd list
 
+  (* todo: RDup does not have a filename? so push value inside RWrite of value*)
   and redirection = redirection_kind * value (* the filename *)
 
     and redirection_kind = 

@@ -20,8 +20,7 @@ type operation =
   | Stringify (* (name) *)
 
   (* Globbing *)
-
-  | Glob (* ?? *)
+  | Glob (* (value?) *)
 
   (* Variable *)
 
@@ -70,11 +69,12 @@ type operation =
   | Append (* (file)[fd] *)
   | Close  (* [fd] *)
   | Dup    (* [fd0 fd1] *)
+  | Popredir (* *)
 
   (* Pipes *)
 
   | Pipe (* [i j]{... Xreturn}{... Xreturn} *)
-  | PipeWait
+  | PipeWait (* argument passed through Thread.pid *)
   | PipeFd (* [type]{... Xreturn} *)
 
   (* Error management *)
@@ -87,7 +87,7 @@ type operation =
   | Backquote (* {... Xreturn} *)
   | Async     (* {... Xreturn} *)
 
-  | REPL
+  | REPL (* *)
   (* with tarzan *)
 
 type opcode =

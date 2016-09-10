@@ -90,7 +90,30 @@ let outcode_seq seq eflag (emit,set,idx) =
         (* will be executed by parent once the children thread finished *)
         set q (O.I !idx);
         emit (O.F O.PipeWait);
+
+    | A.Redir (cmd, (redir_kind, word)) ->
+        (* resolve the filename *)
+        emit (O.F O.Mark);
+        xword word;
+        emit (O.F O.Glob);
+
+        (match redir_kind with
+        | A.RWrite ->
+            emit (O.F O.Write);
+            emit (O.I 1);
+        (* less: and A.RHere *)
+        | A.RRead -> 
+            emit (O.F O.Read);
+            emit (O.I 0);
+        | A.RAppend -> 
+            emit (O.F O.Append);
+            emit (O.I 1);
+        | _ -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
+        );
         
+        (* perform the command *)
+        xcmd cmd eflag;
+        emit (O.F O.Popredir);
         
     | _ -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
 

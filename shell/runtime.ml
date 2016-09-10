@@ -46,6 +46,9 @@ type thread = {
 }
 
   and redir =
+    (* the file descriptor From becomes To, e.g., /tmp/foo becomes stdout,
+     * which means your process output will now go in /tmp/foo.
+     *)
     | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
 
   and waitstatus =
@@ -99,6 +102,21 @@ let pop_word () =
   | _x::xs ->
       t.argv <- xs
 
+
+let push_redir x =
+  let t = cur () in
+  t.redirections <- x::t.redirections
+
+let pop_redir () =
+  let t= cur () in
+  match t.redirections with
+  | [] -> failwith "popredir null!"
+  | x::xs ->
+      t.redirections <- xs;
+      (match x with
+      | FromTo (fd_from, fd_to) ->
+          Unix.close fd_from
+      )
 
 (* This function was called start(), but it does not really start right
  * away the new thread. So better to call it mk_thread.

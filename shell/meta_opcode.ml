@@ -46,6 +46,7 @@ let vof_operation =
   | Backquote -> Ocaml.VSum (("Backquote", []))
   | Async -> Ocaml.VSum (("Async", []))
   | REPL -> Ocaml.VSum (("REPL", []))
+  | Popredir -> Ocaml.VSum (("Popredir", []))
   
 let vof_opcode =
   function

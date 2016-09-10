@@ -195,7 +195,9 @@ let main () =
     exit 0 
   end;
 
-  (* less: if argc=1 and Isatty then Flags.interactive := true *)
+  (* todo: 
+   * if argc=1 and Isatty then Flags.interactive := true 
+   *)
   Var.vinit ();
   (* todo: trap_init () *)
 

@@ -1,6 +1,6 @@
 
 (* -i (or by default when detects that stdin is /dev/cons *)
-let interactive = ref true
+let interactive = ref false
 (* -l (or by default if argv0 starts with a -) *)
 let login = ref false
 
@@ -12,6 +12,8 @@ let rflag = ref false
 let sflag = ref false
 (* -x, to print simple commands before executing them *)
 let xflag = ref false
+
+(* less: let cflag = ref "" *)
 
 (* can be changed with -m *)
 let rcmain = ref "/rc/lib/rcmain"

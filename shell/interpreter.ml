@@ -173,8 +173,42 @@ let interpret operation =
   | O.Popredir ->
       R.pop_redir ()
 
+  (* (name) *)
+  | O.Dollar ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] -> 
+         (* less: deglob varname *)
+         (try 
+            let value =
+              if varname =~ "^[0-9]+$"
+              then
+                let i = int_of_string varname in
+                let v = (Var.vlook "*").R.v in
+                (match v with
+                (* stricter: array out of bound checking *)
+                | None -> failwith "undefined $*"
+                | Some xs -> 
+                    (* list indexes in rc starts at 1, not 0 *)
+                    if i >= 1 && i <= List.length xs
+                    then Some ([List.nth xs (i-1)])
+                    else failwith (spf "out of bound, $%d too big for $*" i)
+                )
+              else (Var.vlook varname).R.v
+            in
+            R.pop_list ();
+            let argv = t.R.argv in
+            let newargv = 
+              (match value with None -> [] | Some xs -> xs) @ argv in
+            t.R.argv <- newargv
+          with Failure s -> E.error s
+         )             
+      | _ -> E.error "variable name not singleton!"
+      )
+
   | (Popm|
-     Count|Concatenate|Stringify|Dollar    |Index|
+     Count|Concatenate|Stringify    |Index|
      Local|Unlocal|
      Fn|DelFn|
      If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|

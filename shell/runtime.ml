@@ -85,7 +85,13 @@ let push_list () =
 let pop_list () =
   let t = cur () in
   match t.argv_stack with
-  | [] -> failwith "pop_list but no argv"
+  (* At the very beginning we do *=(argv) in bootstrap.
+   * In that case, Assign will generate two pop_list, but for
+   * the second one argv_stack becomes empty. The only thing
+   * we must do is to empty argv then.
+   *)
+  | [] ->
+     t.argv <- []
   | x::xs -> 
       t.argv_stack <- xs;
       t.argv <- x

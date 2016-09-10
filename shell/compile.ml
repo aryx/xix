@@ -3,6 +3,8 @@ open Common
 module A = Ast
 module O = Opcode
 
+open Ast (* just for big dispatch error case below *)
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -114,8 +116,15 @@ let outcode_seq seq eflag (emit,set,idx) =
         (* perform the command *)
         xcmd cmd eflag;
         emit (O.F O.Popredir);
-        
-    | _ -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
+
+    | (EmptyCommand|
+       Async _|Dup (_, _, _, _)|
+       And (_, _)|Or (_, _)|Not _|
+       Match (_, _)|If (_, _)|IfNot _|While (_, _)|Switch (_, _)|
+       ForIn (_, _, _)|For (_, _)|
+       Compound _|Fn (_, _)|DelFn _
+       )
+       -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
 
  (* Do we need to pass eflag here too?
   * Even though types are mutually recursive because of Backquote, the
@@ -130,7 +139,16 @@ let outcode_seq seq eflag (emit,set,idx) =
     | A.List ws ->
         xwords ws
 
-    | _ -> failwith ("TODO compile: " ^ Dumper.s_of_value w)
+    | A.Dollar w ->
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.Dollar);
+       
+
+    | (CommandOutput _|
+       Count _|Index (_, _)|Concat (_, _)|Stringify _
+      )
+       -> failwith ("TODO compile: " ^ Dumper.s_of_value w)
 
   and xwords ws =
     ws |> List.rev |> List.iter (fun w -> xword w);

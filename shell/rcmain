@@ -1,2 +1,5 @@
 path=(/bin /usr/bin)
-echo good job bob
+ifs=' 	
+'
+. -i /dev/stdin
+exit $status

@@ -174,10 +174,11 @@ let interpret operation =
       R.pop_redir ()
 
   | (Popm|
-     Count|Concatenate|Stringify|Dollar|Index|
-     Local|Unlocal|Fn|DelFn|
+     Count|Concatenate|Stringify|Dollar    |Index|
+     Local|Unlocal|
+     Fn|DelFn|
      If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|
-     Read|Write|ReadWrite|Append|Close|Dup|PipeFd|
+     Read|Append |ReadWrite|Close|Dup|PipeFd|
      Error|Eflag|
      Subshell|Backquote|Async
     ) ->

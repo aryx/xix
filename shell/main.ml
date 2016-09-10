@@ -96,7 +96,7 @@ let interpret () =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
-  t.R.chan <- stdin;
+  t.R.lexbuf <- Lexing.from_channel stdin;
   t.R.iflag <- !Flags.interactive;
 
   (* less: set argv0 *)

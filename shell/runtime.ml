@@ -28,8 +28,8 @@ type thread = {
   (* Used for switch but also assignments. *)
   mutable argv_stack: (string list) list;
 
-  (* stdin by default (can be changed when do '. file'?? when eval) *)
-  mutable chan: in_channel;
+  (* connected on stdin by default (changed when do '. file') *)
+  mutable lexbuf: Lexing.lexbuf;
   (* to display a prompt or not *)
   mutable iflag: bool;
 
@@ -150,7 +150,7 @@ let mk_thread code pc locals =
     argv_stack = [];
     locals = locals;
 
-    chan = stdin;
+    lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
     iflag = false;
     file = None;
     line = ref 1;

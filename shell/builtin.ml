@@ -85,7 +85,7 @@ let dispatch s =
             R.runq := [newt];
             R.push_redir (R.Close (Unix.descr_of_in_channel chan));
             newt.R.file <- Some file;
-            newt.R.chan <- chan;
+            newt.R.lexbuf <- Lexing.from_channel chan;
             newt.R.iflag <- iflag;
             (* push for $* *)
             R.push_list ();

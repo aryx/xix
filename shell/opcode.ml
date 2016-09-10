@@ -16,7 +16,7 @@ type operation =
   | Word (* [string] *)
   | Popm (* (value) *)
   | Count (* (name) *)
-  | Concatenate (* (left, right) *)
+  | Concatenate (* (left)(right) *)
   | Stringify (* (name) *)
 
   (* Globbing *)
@@ -24,10 +24,10 @@ type operation =
 
   (* Variable *)
 
-  | Assign (* (name, val) *)
+  | Assign (* (name)(val) *)
   | Dollar (* (name) *)
   | Index  (* ??? *)
-  | Local (* (name, val) *)
+  | Local (* (name)(val) *)
   | Unlocal (* *)
 
   (* Functions *)

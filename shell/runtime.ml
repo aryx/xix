@@ -50,6 +50,7 @@ type thread = {
      * which means your process output will now go in /tmp/foo.
      *)
     | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
+    | Close of Unix.file_descr
 
   and waitstatus =
     | NothingToWaitfor
@@ -122,7 +123,20 @@ let pop_redir () =
       (match x with
       | FromTo (fd_from, fd_to) ->
           Unix.close fd_from
+      | Close _ ->
+          ()
       )
+
+let doredir xs =
+  xs |> List.rev |> List.iter (fun redir ->
+    match redir with
+    | FromTo (xfrom, xto) ->
+        Unix.dup2 xfrom xto;
+        Unix.close xfrom
+    | Close from ->
+        Unix.close from
+  )
+
 
 (* This function was called start(), but it does not really start right
  * away the new thread. So better to call it mk_thread.

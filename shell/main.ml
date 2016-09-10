@@ -67,8 +67,10 @@ let bootstrap_simple =
 
 (* The real one is more complex.
  * *=(argv);. /usr/lib/rcmain $*
+ * Boostrap is now a function because it uses a flag that can be
+ * modified after startup.
  *)
-let bootstrap = 
+let bootstrap () = 
   [| 
       O.F O.Mark;
         O.F O.Word;
@@ -91,7 +93,7 @@ let bootstrap =
 
 
 let interpret () =
-  let t = R.mk_thread bootstrap 0 (Hashtbl.create 11) in
+  let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
   t.R.chan <- stdin;

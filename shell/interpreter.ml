@@ -77,6 +77,20 @@ let interpret operation =
 
       | _ -> E.error "variable name not singleton!"
       )
+  (* (name) (val) *)
+  | O.Local ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] ->
+        (* less: deglob varname *)
+        R.pop_list ();
+        (* less: globlist *)
+        let argv = t.R.argv in
+        Hashtbl.add t.R.locals varname { R.v = Some argv };
+        R.pop_list ();
+      | _ -> E.error "variable name not singleton!"
+      )
 
   (* [i j]{... Xreturn}{... Xreturn} *)
   | O.Pipe -> 
@@ -209,7 +223,7 @@ let interpret operation =
 
   | (Popm|
      Count|Concatenate|Stringify    |Index|
-     Local|Unlocal|
+     Unlocal|
      Fn|DelFn|
      If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|
      Read|Append |ReadWrite|Close|Dup|PipeFd|

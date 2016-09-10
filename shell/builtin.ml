@@ -1,9 +1,11 @@
 open Common
 
 module R = Runtime
+module E = Error
+module O = Opcode
 
 let is_builtin s =
-  List.mem s ["cd"]
+  List.mem s ["cd"; "."]
 
 let dochdir s =
   try 
@@ -11,6 +13,26 @@ let dochdir s =
     true
   with Unix.Unix_error _ ->
     false
+
+(*  *)
+let dotcmds = 
+  [|
+    O.F O.Mark;
+      O.F O.Word;
+      O.S "0";
+    O.F O.Local;
+
+    O.F O.Mark;
+      O.F O.Word;
+      O.S "*";
+    O.F O.Local;
+
+    O.F O.REPL;
+
+    O.F O.Unlocal;
+    O.F O.Unlocal;
+    O.F O.Return;
+  |]         
 
 let dispatch s =
   match s with
@@ -40,6 +62,44 @@ let dispatch s =
           pr2 "Usage: cd [directory]";
       );
       R.pop_list()
+
+  | "." ->
+      let t = R.cur () in
+      R.pop_word (); (* "." *)
+      (* less: eflagok to reset it when executed first *)
+
+      let iflag =
+        match t.R.argv with
+        | "-i"::xs -> R.pop_word (); true
+        | _ -> false
+      in
+      (match t.R.argv with
+      | [] -> E.error "Usage: . [-i] file [arg ...]"
+      | zero::args ->
+          R.pop_word ();
+          (* less: searchpath, also for dot? seems wrong *)
+          (try 
+            let file = zero in
+            let chan = open_in file in
+            let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
+            R.runq := [newt];
+            R.push_redir (R.Close (Unix.descr_of_in_channel chan));
+            newt.R.file <- Some file;
+            newt.R.chan <- chan;
+            newt.R.iflag <- iflag;
+            (* push for $* *)
+            R.push_list ();
+            newt.R.argv <- args;
+            (* push for $0 *)
+            R.push_list ();
+            newt.R.argv <- [zero];
+
+          with Failure _ ->
+            prerr_string (spf "%s: " zero);
+            E.error ".: can't open"
+          )
+      ) 
+
 
   | _ -> failwith (spf "unsupported builtin %s" s)
 

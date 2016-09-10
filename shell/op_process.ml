@@ -4,14 +4,6 @@ module R = Runtime
 module E = Error
 
 
-let doredir xs =
-  xs |> List.rev |> List.iter (fun redir ->
-    match redir with
-    | R.FromTo (xfrom, xto) ->
-        Unix.dup2 xfrom xto;
-        Unix.close xfrom
-  )
-
 
 let execute args path =
 
@@ -40,7 +32,7 @@ let exec () =
   match argv with
   | [] -> E.error "empty argument list" 
   | prog::xs -> 
-      doredir t.R.redirections;
+      R.doredir t.R.redirections;
       execute argv (Path.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()

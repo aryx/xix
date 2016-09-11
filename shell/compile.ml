@@ -117,12 +117,12 @@ let outcode_seq seq eflag (emit,set,idx) =
         xcmd cmd eflag;
         emit (O.F O.Popredir);
 
-    | (EmptyCommand|
+    | (EmptyCommand|Compound _|
        Async _|Dup (_, _, _, _)|
        And (_, _)|Or (_, _)|Not _|
-       Match (_, _)|If (_, _)|IfNot _|While (_, _)|Switch (_, _)|
+       If (_, _)|IfNot _|While (_, _)|Switch (_, _)|Match (_, _)|
        ForIn (_, _, _)|For (_, _)|
-       Compound _|Fn (_, _)|DelFn _
+       Fn (_, _)|DelFn _
        )
        -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
 

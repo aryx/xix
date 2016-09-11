@@ -1,5 +1,13 @@
 open Common
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and globals *)
+(*****************************************************************************)
+
 (* can be anything: "foo", but also "*", "1", "2", etc *)
 type varname = string
 
@@ -39,7 +47,7 @@ type thread = {
   line: int ref;
 
   (* things to do before exec'ing the simple command *)
-  mutable redirections: redir list;
+  mutable redirections: (redir list) list;
 
   (* things to wait for after a thread forked a process *)
   mutable waitstatus: waitstatus;
@@ -59,19 +67,19 @@ type thread = {
     (* exit status from child process returned from a wait() *)
     | ChildStatus of string
 
-
-
-
 let (globals: (varname, var) Hashtbl.t) = 
   Hashtbl.create 101
 
 (* less: argv0 *)
 
-
 (* less: could have also  'let cur = { code = boostrap; pc = 1; chan = stdin }'
  * in addition to runq. Then there will be no need for cur ().
  *)
 let runq = ref []
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let cur () =
   match !runq with
@@ -112,14 +120,18 @@ let pop_word () =
 
 let push_redir x =
   let t = cur () in
-  t.redirections <- x::t.redirections
+  match t.redirections with
+  | [] -> failwith "push_redir: no starting redir"
+  | xs::xxs -> t.redirections <- (x::xs)::xxs
+
 
 let pop_redir () =
   let t= cur () in
   match t.redirections with
-  | [] -> failwith "popredir null!"
-  | x::xs ->
-      t.redirections <- xs;
+  | [] -> failwith "pop_redir: no starting redir"
+  | []::xxs -> failwith "popredir null!"
+  | (x::xs)::xxs ->
+      t.redirections <- xs::xxs;
       (match x with
       | FromTo (fd_from, fd_to) ->
           Unix.close fd_from
@@ -127,8 +139,15 @@ let pop_redir () =
           ()
       )
 
-let doredir xs =
-  xs |> List.rev |> List.iter (fun redir ->
+let turf_redir () =
+  let t = cur () in
+  while List.hd t.redirections <> [] do
+    pop_redir ()
+  done
+  
+
+let doredir xxs =
+  xxs |> List.flatten |> List.rev |> List.iter (fun redir ->
     match redir with
     | FromTo (xfrom, xto) ->
         Unix.dup2 xfrom xto;
@@ -158,8 +177,8 @@ let mk_thread code pc locals =
     waitstatus = NothingToWaitfor;
     redirections = 
       (match !runq with
-      | [] -> []
-      | x::xs -> x.redirections
+      | [] -> []::[]
+      | t::ts -> []::t.redirections
       );
   } in
   t

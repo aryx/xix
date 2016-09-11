@@ -13,9 +13,11 @@ let exit s =
   (* todo: how communicate error to parent process under Unix? *)
   exit (if Status.truestatus () then 0 else 1)
 
-
+(* Was called Xreturn but called not only from the opcode interpreter.
+ * It is an helper function really.
+ *)
 let return () =
-  (* todo: turfredir() *)
+  R.turf_redir ();
   match !R.runq with
   | [] -> failwith "empty runq"
   (* last thread in runq, we exit then *)

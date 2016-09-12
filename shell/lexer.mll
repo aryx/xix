@@ -102,7 +102,7 @@ rule token = parse
   | "'" { let s = quote lexbuf in TWord (s, true) }
 
   (* ----------------------------------------------------------------------- *)
-  (* Ketwords and unquoted words *)
+  (* Keywords and unquoted words *)
   (* ----------------------------------------------------------------------- *)
 
   | wordchr+ { 

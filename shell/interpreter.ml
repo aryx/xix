@@ -4,8 +4,6 @@ module O = Opcode
 module R = Runtime
 module E = Error
 
-open Opcode (* just for big dispatch error case below *)
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -244,7 +242,7 @@ let interpret operation =
       )
 
   (* (pat, str) *)
-  | Match ->
+  | O.Match ->
       let t = R.cur () in
       let argv = t.R.argv in
       let subject = String.concat " " argv in
@@ -295,12 +293,12 @@ let interpret operation =
   | O.Popm ->
       R.pop_list ()
 
-  | (Count|Concatenate|Stringify    |Index|
-     Unlocal|
-     Fn|DelFn|
-     IfNot|For|Wastrue|Bang|False|True|
-     Read|Append |ReadWrite|Close|Dup|PipeFd|
-     Error|Eflag|
-     Subshell|Backquote|Async
+  | (O.Concatenate|O.Stringify    |O.Index|
+     O.Unlocal|
+     O.Fn|O.DelFn|
+     O.IfNot|O.For|O.Bang|O.False|O.True|
+     O.Read|O.Append |O.ReadWrite|O.Close|O.Dup|O.PipeFd|
+     O.Error|O.Eflag|
+     O.Subshell|O.Backquote|O.Async
     ) ->
     failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))

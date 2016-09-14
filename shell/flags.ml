@@ -15,6 +15,8 @@ let xflag = ref false
 
 (* less: let cflag = ref "" *)
 
+let (hflags: (char, bool) Hashtbl.t) = Hashtbl.create 10
+
 (* can be changed with -m *)
 let rcmain = ref "/rc/lib/rcmain"
 

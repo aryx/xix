@@ -229,15 +229,15 @@ let interpret operation =
       let argv = t.R.argv in
       (match argv with
       | [varname] -> 
-        (* less: deglob *)
-        let value = vlook_varname_or_index varname in
-        let num = 
-          match value with
-          | None -> 0
-          | Some xs -> List.length xs
-        in
-        R.push_word (spf "%d" num)
-        
+          (* less: deglob *)
+          let value = vlook_varname_or_index varname in
+          let num = 
+            match value with
+            | None -> 0
+            | Some xs -> List.length xs
+          in
+          R.pop_list ();
+          R.push_word (spf "%d" num)
       | _ -> E.error "variable name not singleton!"
       )
 

@@ -92,7 +92,7 @@ let bootstrap () =
   |]
 
 
-let interpret () =
+let interpret args =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
@@ -100,9 +100,7 @@ let interpret () =
   t.R.iflag <- !Flags.interactive;
 
   (* less: set argv0 *)
-  for i = (Array.length Sys.argv) - 1 downto 1 do
-    Runtime.push_word (Sys.argv.(i))
-  done;
+  args |> List.rev |> List.iter Runtime.push_word;
 
   while true do
 
@@ -201,8 +199,18 @@ let main () =
   Var.vinit ();
   (* todo: trap_init () *)
 
+  (* for flags builtin *)
+  Sys.argv |> Array.iter (fun s ->
+    if s =~ "^-\\([a-zA-Z]\\)"
+    then begin
+      let letter = Common.matched1 s in
+      let char = String.get letter 0 in
+      Hashtbl.add Flags.hflags char true
+    end
+  );
+
   try 
-    interpret ()
+    interpret (List.rev !args)
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn

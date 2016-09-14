@@ -44,9 +44,10 @@
  (join-string 
   (list 
    ""
-   (case 2
+   (case 3
      (1 (concat "-debugger -test_parser " (concat p "/shell/tests/hello.rc")))
      (2 (concat "-debugger -dump_opcodes"))
+     (3 (concat "-m " (concat p "/shell/rcmain-unix") " -i -r -dump_ast"))
      )
    )))
 

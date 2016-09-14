@@ -5,7 +5,13 @@ module E = Error
 module O = Opcode
 
 let is_builtin s =
-  List.mem s ["cd"; "."]
+  List.mem s [
+    "cd"; 
+    "."; "eval"; 
+    "exit";
+    "flag";
+    "finit"
+  ]
 
 let dochdir s =
   try 
@@ -100,6 +106,33 @@ let dispatch s =
           )
       ) 
 
+  | "flag" -> 
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [_flag;letter] ->
+          (* stricter: *)
+          if String.length letter <> 1
+          then E.error "flag argument must be a single letter"
+          else begin
+            let char = String.get letter 0 in
+            let is_set =
+              try Hashtbl.find Flags.hflags char
+              with Not_found -> false
+            in
+            Status.setstatus (if is_set then "" else "flag not set");
+          end
+
+      | [_flag;letter;set] ->
+          failwith "TODO: flag letter +- not handled yet"
+
+      | _ -> E.error ("Usage: flag [letter] [+-]")
+      );
+      R.pop_list()
+
+  | "finit" -> 
+     (* less: Xrdfn *)
+     R.pop_list ()
 
   | _ -> failwith (spf "unsupported builtin %s" s)
 

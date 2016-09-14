@@ -272,12 +272,33 @@ let interpret operation =
   | O.Wastrue ->
       Globals.ifnot := false
 
+  (* [addr] *)
+  | O.Jump ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      pc := int_at_address t (!pc);
 
-  | (Popm|
-     Count|Concatenate|Stringify    |Index|
+  (* (pat, value){...} *)
+  | O.Case ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      let s = List.hd t.R.argv_stack |> String.concat " " in
+      let argv = t.R.argv in
+      let match_found = argv |> List.exists (fun w -> Pattern.match_str s w) in
+      (if match_found
+      then incr pc
+      else pc := int_at_address t (!pc)
+      );
+      R.pop_list ();
+
+  (* (value) *)
+  | O.Popm ->
+      R.pop_list ()
+
+  | (Count|Concatenate|Stringify    |Index|
      Unlocal|
      Fn|DelFn|
-     IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|
+     IfNot|For|Wastrue|Bang|False|True|
      Read|Append |ReadWrite|Close|Dup|PipeFd|
      Error|Eflag|
      Subshell|Backquote|Async

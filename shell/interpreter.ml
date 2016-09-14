@@ -270,6 +270,13 @@ let interpret operation =
   | O.Wastrue ->
       Globals.ifnot := false
 
+  | O.IfNot ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      if !Globals.ifnot
+      then incr pc
+      else pc := int_at_address t (!pc);
+
   (* [addr] *)
   | O.Jump ->
       let t = R.cur () in
@@ -293,10 +300,39 @@ let interpret operation =
   | O.Popm ->
       R.pop_list ()
 
+  (* (name) *)
+  | O.DelFn ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      argv |> List.iter (fun s ->
+        let x = Fn.flook s in
+        match x with
+        | Some _ -> Hashtbl.remove R.fns s
+        (* stricter: *)
+        | None -> E.error (spf "deleting undefined function %s" s)
+      );
+
+  | O.Not ->
+      Status.setstatus (if Status.truestatus() then "false" else "");
+
+  | O.True ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      if Status.truestatus ()
+      then incr pc
+      else pc := int_at_address t (!pc)
+
+  | O.False ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      if Status.truestatus ()
+      then pc := int_at_address t (!pc)
+      else incr pc
+
   | (O.Concatenate|O.Stringify    |O.Index|
      O.Unlocal|
-     O.Fn|O.DelFn|
-     O.IfNot|O.For|O.Bang|O.False|O.True|
+     O.Fn|
+     O.For|
      O.Read|O.Append |O.ReadWrite|O.Close|O.Dup|O.PipeFd|
      O.Error|O.Eflag|
      O.Subshell|O.Backquote|O.Async

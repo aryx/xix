@@ -34,12 +34,13 @@ let split_when_case cmds =
 let outcode_seq seq eflag (emit,set,idx) =
 
   let rec xseq seq eflag =
-   (* less set iflast, for if not checking *)
+   (* less set iflast, for if not syntax error checking *)
     seq |> List.iter (fun x -> xcmd x eflag)
   
   and xcmd cmd eflag =
     match cmd with
     | A.EmptyCommand -> ()
+    | A.Compound seq -> xseq seq eflag
 
     | A.Simple (w, ws) -> 
         emit (O.F O.Mark);
@@ -134,6 +135,13 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Wastrue);
         set p (O.I !idx);
 
+    | A.IfNot cmd ->
+        emit (O.F O.IfNot);
+        let p = !idx in
+        emit (O.I 0);
+        xcmd cmd eflag;
+        set p (O.I !idx);
+
     | A.Match (w, ws) ->
         emit (O.F O.Mark);
         xwords ws;
@@ -187,13 +195,33 @@ let outcode_seq seq eflag (emit,set,idx) =
         (* can not call pop_list(), here, otherwise circular deps *)
         emit (O.F O.Popm);
 
+    | A.DelFn w ->
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.DelFn);
 
-    | (A.Compound _|
-       A.Async _|A.Dup (_, _, _, _)|
-       A.And (_, _)|A.Or (_, _)|A.Not _|
-       A.IfNot _|A.While (_, _)|
+    | A.Not cmd ->
+        xcmd cmd eflag;
+        emit (O.F O.Not);
+
+    | A.And (cmd1, cmd2) ->
+        xcmd cmd1 false;
+        emit (O.F O.True);
+        let p = !idx in
+        xcmd cmd2 eflag;
+        set p (O.I !idx)
+
+    | A.Or (cmd1, cmd2) ->
+        xcmd cmd1 false;
+        emit (O.F O.False);
+        let p = !idx in
+        xcmd cmd2 eflag;
+        set p (O.I !idx)
+
+    | (A.Async _|A.Dup (_, _, _, _)|
+       A.While (_, _)|
        A.ForIn (_, _, _)|A.For (_, _)|
-       A.Fn (_, _)|A.DelFn _
+       A.Fn (_, _)
        )
        -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
 

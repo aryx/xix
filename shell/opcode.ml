@@ -57,7 +57,7 @@ type operation =
   (* Boolean return status  *)
 
   | Wastrue
-  | Bang
+  | Not
   | False (* {...} *)
   | True  (* {...} *)
 

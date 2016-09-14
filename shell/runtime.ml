@@ -25,6 +25,12 @@ type var = {
   (* less: opti: changed: bool *)
 }
 
+type fn = {
+  code: Opcode.codevec;
+  pc: int;
+  (* less: fnchanged *)
+}
+
 
 type thread = {
   code: Opcode.codevec;
@@ -68,6 +74,9 @@ type thread = {
     | ChildStatus of string
 
 let (globals: (varname, var) Hashtbl.t) = 
+  Hashtbl.create 101
+
+let (fns: (string, fn) Hashtbl.t) = 
   Hashtbl.create 101
 
 (* less: argv0 *)

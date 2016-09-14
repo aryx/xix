@@ -54,7 +54,7 @@ and cmd =
   (* stmts *)
 
   | If of cmd_sequence * cmd
-  (* Note that you can not put a 'cmd option' in If instead for the else. 
+  (* Note that you can not put a 'cmd option' in If instead of IfNot below. 
    * rc has to process 'if(...) cmd\n' now! It can not wait for an else.
    *)
   | IfNot of cmd

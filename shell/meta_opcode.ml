@@ -28,7 +28,7 @@ let vof_operation =
   | Case -> Ocaml.VSum (("Case", []))
   | For -> Ocaml.VSum (("For", []))
   | Wastrue -> Ocaml.VSum (("Wastrue", []))
-  | Bang -> Ocaml.VSum (("Bang", []))
+  | Not -> Ocaml.VSum (("Not", []))
   | False -> Ocaml.VSum ((" False", []))
   | True -> Ocaml.VSum ((" True", []))
   | Read -> Ocaml.VSum (("Read", []))

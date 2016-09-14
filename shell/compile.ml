@@ -26,7 +26,6 @@ let split_when_case cmds =
   )
 
 
-
 (*****************************************************************************)
 (* Compilation algorithm *)
 (*****************************************************************************)
@@ -195,6 +194,18 @@ let outcode_seq seq eflag (emit,set,idx) =
         (* can not call pop_list(), here, otherwise circular deps *)
         emit (O.F O.Popm);
 
+    | A.Fn (w, cmds) ->
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.Fn);
+        let p = !idx in
+        (* less: emit str of fn *)
+        emit (O.S "Fn String Todo?");
+        xseq cmds eflag;
+        emit (O.F O.Unlocal);
+        emit (O.F O.Return);
+        set p (O.I !idx);
+
     | A.DelFn w ->
         emit (O.F O.Mark);
         xword w;
@@ -220,8 +231,7 @@ let outcode_seq seq eflag (emit,set,idx) =
 
     | (A.Async _|A.Dup (_, _, _, _)|
        A.While (_, _)|
-       A.ForIn (_, _, _)|A.For (_, _)|
-       A.Fn (_, _)
+       A.ForIn (_, _, _)|A.For (_, _)
        )
        -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
 
@@ -247,7 +257,6 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.Count);
-       
 
     | (A.CommandOutput _|
        A.Index (_, _)|A.Concat (_, _)|A.Stringify _

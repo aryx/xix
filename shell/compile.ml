@@ -34,6 +34,8 @@ let outcode_seq seq eflag (emit,set,idx) =
   
   and xcmd cmd eflag =
     match cmd with
+    | A.EmptyCommand -> ()
+
     | A.Simple (w, ws) -> 
         emit (O.F O.Mark);
         xwords ws;
@@ -70,6 +72,7 @@ let outcode_seq seq eflag (emit,set,idx) =
               emit (O.F O.Unlocal);
             )
         )
+
     | A.Pipe (cmd1, cmd2) ->
         emit (O.F O.Pipe);
         emit (O.I 1); (* left fd *)
@@ -117,10 +120,29 @@ let outcode_seq seq eflag (emit,set,idx) =
         xcmd cmd eflag;
         emit (O.F O.Popredir);
 
-    | (EmptyCommand|Compound _|
+    | A.If (cmds, cmd) ->
+        xseq cmds false;
+        emit (O.F O.If);
+        let p = !idx in
+        emit (O.I 0);
+        xcmd cmd eflag;
+        emit (O.F O.Wastrue);
+        set p (O.I !idx);
+
+    | A.Match (w, ws) ->
+        emit (O.F O.Mark);
+        xwords ws;
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.Match);
+        if eflag 
+        then emit (O.F O.Eflag);
+        
+
+    | (Compound _|
        Async _|Dup (_, _, _, _)|
        And (_, _)|Or (_, _)|Not _|
-       If (_, _)|IfNot _|While (_, _)|Switch (_, _)|Match (_, _)|
+       If (_, _)|IfNot _|While (_, _)|Switch (_, _)|
        ForIn (_, _, _)|For (_, _)|
        Fn (_, _)|DelFn _
        )
@@ -143,10 +165,15 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.Dollar);
+
+    | A.Count w ->
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.Count);
        
 
     | (CommandOutput _|
-       Count _|Index (_, _)|Concat (_, _)|Stringify _
+       Index (_, _)|Concat (_, _)|Stringify _
       )
        -> failwith ("TODO compile: " ^ Dumper.s_of_value w)
 

@@ -14,3 +14,10 @@ let skipnl = ref false
 
 (* to mimic Plan 9 errstr() *)
 let errstr = ref ""
+
+
+(* Set to true at the beginning of an if and back to false
+ * if rc executes the then branch. Kept to true otherwise
+ * so next IfNot will run.
+ *)
+let ifnot = ref false

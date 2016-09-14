@@ -30,6 +30,23 @@ let int_at_address t pc =
   | op -> failwith (spf "was expecting I, not %s at %d" 
                       (Dumper.s_of_opcode op) pc)
 
+
+let vlook_varname_or_index varname =
+  if varname =~ "^[0-9]+$"
+  then
+    let i = int_of_string varname in
+    let v = (Var.vlook "*").R.v in
+    (match v with
+    (* stricter: array out of bound checking *)
+    | None -> failwith "undefined $*"
+    | Some xs -> 
+        (* list indexes in rc starts at 1, not 0 *)
+        if i >= 1 && i <= List.length xs
+        then Some ([List.nth xs (i-1)])
+        else failwith (spf "out of bound, $%d too big for $*" i)
+    )
+  else (Var.vlook varname).R.v
+
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
@@ -48,6 +65,7 @@ let interpret operation =
       Process.exit (Status.getstatus())
 
   | O.Mark -> R.push_list ()
+
   (* [string] *)
   | O.Word ->
       let t = R.cur () in
@@ -59,6 +77,7 @@ let interpret operation =
       (* stricter: but should never happen *)
       | op -> failwith (spf "was expecting a S, not %s" (Dumper.s_of_opcode op))
       )
+
   (* (name) (val) *)
   | O.Assign ->
       let t = R.cur () in
@@ -77,6 +96,7 @@ let interpret operation =
 
       | _ -> E.error "variable name not singleton!"
       )
+
   (* (name) (val) *)
   | O.Local ->
       let t = R.cur () in
@@ -134,7 +154,6 @@ let interpret operation =
         t.R.waitstatus <- R.WaitFor forkid;
       end
 
-
   (* argument passed through Thread.pid *)
   | O.PipeWait -> 
       let t = R.cur () in
@@ -184,6 +203,7 @@ let interpret operation =
           )
               
       )
+
   | O.Popredir ->
       R.pop_redir ()
 
@@ -195,22 +215,7 @@ let interpret operation =
       | [varname] -> 
          (* less: deglob varname *)
          (try 
-            let value =
-              if varname =~ "^[0-9]+$"
-              then
-                let i = int_of_string varname in
-                let v = (Var.vlook "*").R.v in
-                (match v with
-                (* stricter: array out of bound checking *)
-                | None -> failwith "undefined $*"
-                | Some xs -> 
-                    (* list indexes in rc starts at 1, not 0 *)
-                    if i >= 1 && i <= List.length xs
-                    then Some ([List.nth xs (i-1)])
-                    else failwith (spf "out of bound, $%d too big for $*" i)
-                )
-              else (Var.vlook varname).R.v
-            in
+            let value = vlook_varname_or_index varname in
             R.pop_list ();
             let argv = t.R.argv in
             let newargv = 
@@ -220,12 +225,56 @@ let interpret operation =
          )             
       | _ -> E.error "variable name not singleton!"
       )
+  (* (name) *)
+  | O.Count ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] -> 
+        (* less: deglob *)
+        let value = vlook_varname_or_index varname in
+        let num = 
+          match value with
+          | None -> 0
+          | Some xs -> List.length xs
+        in
+        R.push_word (spf "%d" num)
+        
+      | _ -> E.error "variable name not singleton!"
+      )
+
+  (* (pat, str) *)
+  | Match ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      let subject = String.concat " " argv in
+      Status.setstatus "no match";
+      R.pop_list ();
+      let argv = t.R.argv in
+      argv |> List.exists (fun w -> 
+        if Pattern.match_str subject w
+        then begin
+          Status.setstatus "";
+          true
+        end else false
+      ) |> ignore;
+      R.pop_list ();
+
+  | O.If ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+
+      Globals.ifnot := true;
+      if Status.truestatus()
+      then incr pc
+      else pc := int_at_address t (!pc);
+
 
   | (Popm|
      Count|Concatenate|Stringify    |Index|
      Unlocal|
      Fn|DelFn|
-     If|IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|
+     IfNot|Jump|Match|Case|For|Wastrue|Bang|False|True|
      Read|Append |ReadWrite|Close|Dup|PipeFd|
      Error|Eflag|
      Subshell|Backquote|Async

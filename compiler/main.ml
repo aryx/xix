@@ -8,12 +8,29 @@ open Common
  *
  * Main limitations compared to 5c:
  *  - no unicode support
- *  - ???
+ *  - can not compile multiple files at the same time
+ *    (but you should use mk anyway)
+ *  - can not compile from stdin
+ *    (but who uses that?)
+ *  - does not link
+ *    (let the linker do that)
  * 
  * todo:
+ *  - debugger support
+ *  - profiler support
+ *  - linker support
  *)
 
-let usage = ""
+let thechar = '5'
+let thestring = "arm"
+
+let usage = 
+  spf "usage: %cc [-options] files" thechar
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 
 (*****************************************************************************)
 (* Testing *)
@@ -22,7 +39,10 @@ let usage = ""
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-let compile () =
+let compile (defs, include_paths) infile outfile =
+  (* less: add /arm/include *)
+
+  let _ast = Parse.parse (defs, include_paths) infile in
   raise Todo
 
 (*****************************************************************************)
@@ -33,11 +53,30 @@ let main () =
 
   let args = ref [] in
 
+  let outfile = ref "" in
+
+  (* for cpp *)
+  let include_paths = ref [] in
+  let macros = ref [] in
+  let include_dot = ref true in
+
+
   (* for debugging *)
   let action = ref "" in
   let backtrace = ref false in
 
   let options = [
+    "-o", Arg.Set_string outfile,
+    " <file> place output (an object) in file";
+
+    "-D", Arg.String (fun s ->
+      raise Todo
+    ), " <name=def> define the name to the preprocessor";
+    "-I", Arg.String (fun s ->
+      raise Todo
+    ), " <dir> add dir as a path to look for '#include <file>' files";
+    "-.", Arg.Clear include_dot,
+    " suppress automatic searching for include files in the file argument's dir"
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
@@ -59,6 +98,7 @@ let main () =
   Arg.parse (Arg.align options) (fun t -> 
     args := t::!args
   ) usage;
+  (* todo: process the old style -Dname=val and -Idir *)
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -67,7 +107,40 @@ let main () =
   end;
 
   try 
-    compile ()
+    (match !args, !outfile with
+    | [], "" -> 
+        pr usage;
+        Error.errorexit ()
+    | [x], outfile ->
+      let base = Filename.basename x in
+      let dir = Filename.dirname x in
+      let include_paths =
+        if !include_dot
+        then dir::!include_paths
+        else !include_paths
+      in
+      let include_paths =
+        (try
+          [Sys.getenv "INCLUDE"]
+        with Not_found ->
+          [spf "/%s/include" thestring; "/sys/include";]
+        ) @ include_paths
+      in
+
+      let outfile = 
+        if outfile = ""
+        then
+          if base =~ "\\(.*\\)\\.c"
+          then Common.matched1 base ^ (spf ".%c" thechar)
+          else b ^ (spf ".%c" thechar)
+        else outfile
+      in
+      compile (!defs, include_paths) x outfile
+    | _ -> 
+      (* stricter: *)
+      failwith 
+        "compiling multiple files at the same time is not supported; use mk"
+    )
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn

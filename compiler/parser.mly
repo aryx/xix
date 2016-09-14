@@ -12,16 +12,34 @@ open Ast
 (* Helpers *)
 (*****************************************************************************)
 
+(* less: automatic lineno
+let mk_e 
+*)
+
+
 %}
 
 /*(*************************************************************************)*/
 /*(*1 Tokens *)*/
 /*(*************************************************************************)*/
 
+%token <string> TName TTypeName
+
+%token <string * sign * intsize> TConst
+%token <string * floatsize> TFConst
+%token <string * stringsize> TString
 
 /*(*-----------------------------------------*)*/
 /*(*2 Keywords *)*/
 /*(*-----------------------------------------*)*/
+%token Tvoid  Tchar Tshort Tint Tlong  Tdouble Tfloat  Tsigned Tunsigned
+%token Tstruct Tunion Tenum
+%token Ttypedef
+%token Tconst Tvolatile  Trestrict Tinline
+%token Tauto Tstatic Textern Tregister
+%token Tif Telse  Twhile Tdo  Tfor  Tbreak Tcontinue  Treturn Tgoto
+%token Tswitch Tcase Tdefault
+%token Tsizeof
 
 /*(*-----------------------------------------*)*/
 /*(*2 Operators *)*/
@@ -34,6 +52,7 @@ open Ast
 /*(*-----------------------------------------*)*/
 /*(*2 Misc *)*/
 /*(*-----------------------------------------*)*/
+%token <int * string> TSharpLine
 %token EOF
 
 /*(*************************************************************************)*/

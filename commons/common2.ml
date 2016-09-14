@@ -44,3 +44,13 @@ let format_to_string f =
   close_in i;
   Sys.command ("rm -f " ^ nm) |> ignore;
   String.concat "\n" (List.rev !lines)
+
+
+let rec (span: ('a -> bool) -> 'a list -> 'a list * 'a list) =
+ fun p -> function
+  | []    -> ([], [])
+  | x::xs ->
+      if p x then
+        let (l1, l2) = span p xs in
+        (x::l1, l2)
+      else ([], x::xs)

@@ -21,6 +21,13 @@ let rec split_at_non_assign = function
       (val1, val2)::a, b
   | b -> [], b
 
+let split_when_case cmds =
+  cmds |> Common2.span (function
+    | (A.Simple (A.Word ("case", false), _)) -> false
+    | _ -> true
+  )
+
+
 
 (*****************************************************************************)
 (* Compilation algorithm *)
@@ -137,12 +144,56 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Match);
         if eflag 
         then emit (O.F O.Eflag);
+
+    | A.Switch (w, cmds) ->
+
+        (match cmds with
+        | (A.Simple (A.Word ("case", false), _))::_ -> ()
+        | _ -> failwith "case missing in switch"
+        );
+
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.Jump);
+
+        let nextcase = !idx in
+        emit (O.I 0);
+        let out = !idx in
+        emit (O.F O.Jump);
+        let leave = !idx in
+        emit (O.I 0);
         
+        set nextcase (O.I !idx);
+
+        let rec aux cmds =
+          match cmds with
+          | [] -> ()
+          | (A.Simple (A.Word ("case", false), ws))::cmds ->
+              emit (O.F O.Mark);
+              xwords ws;
+              emit (O.F O.Case);
+              let nextcase = !idx in
+              emit (O.I 0);
+
+              let cmds_for_this_case, other_cases = split_when_case cmds in
+              cmds_for_this_case |> List.iter (fun cmd ->
+                xcmd cmd eflag
+              );
+              emit (O.F O.Jump);
+              emit (O.I out);
+              set nextcase (O.I !idx);
+          | _ -> failwith "case missing in switch"
+        in
+        aux cmds;
+        set leave (O.I !idx);
+        (* can not call pop_list(), here, otherwise circular deps *)
+        emit (O.F O.Popm);
+
 
     | (Compound _|
        Async _|Dup (_, _, _, _)|
        And (_, _)|Or (_, _)|Not _|
-       If (_, _)|IfNot _|While (_, _)|Switch (_, _)|
+       IfNot _|While (_, _)|
        ForIn (_, _, _)|For (_, _)|
        Fn (_, _)|DelFn _
        )

@@ -269,6 +269,9 @@ let interpret operation =
       then incr pc
       else pc := int_at_address t (!pc);
 
+  | O.Wastrue ->
+      Globals.ifnot := false
+
 
   | (Popm|
      Count|Concatenate|Stringify    |Index|

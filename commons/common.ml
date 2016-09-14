@@ -195,12 +195,20 @@ let (dump : 'a -> string) = fun x ->
   Dumper.dump x
 *)
 
+
+
+let pr s =
+  print_string s;
+  print_string "\n";
+  flush stdout
+
 let pr2 s =
   prerr_string s;
   prerr_string "\n";
   flush stderr
 
 let pr2_gen x = pr2 (dump x)
+
 
 
 let group_by f xs =

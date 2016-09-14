@@ -13,6 +13,8 @@ let is_builtin s =
     "finit"
   ]
 
+let ndots = ref 0
+
 let dochdir s =
   try 
     Unix.chdir s;
@@ -72,7 +74,10 @@ let dispatch s =
   | "." ->
       let t = R.cur () in
       R.pop_word (); (* "." *)
-      (* less: eflagok to reset it when executed first *)
+
+      if !ndots > 0
+      then Globals.eflagok := true;
+      incr ndots;
 
       let iflag =
         match t.R.argv with

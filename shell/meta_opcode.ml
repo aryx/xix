@@ -40,7 +40,6 @@ let vof_operation =
   | Pipe -> Ocaml.VSum (("Pipe", []))
   | PipeWait -> Ocaml.VSum (("PipeWait", []))
   | PipeFd -> Ocaml.VSum (("PipeFd", []))
-  | Error -> Ocaml.VSum (("Error", []))
   | Eflag -> Ocaml.VSum (("Eflag", []))
   | Subshell -> Ocaml.VSum (("Subshell", []))
   | Backquote -> Ocaml.VSum (("Backquote", []))

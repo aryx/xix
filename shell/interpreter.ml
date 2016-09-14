@@ -329,12 +329,15 @@ let interpret operation =
       then pc := int_at_address t (!pc)
       else incr pc
 
+  | O.Eflag ->
+      if !Globals.eflagok && not (Status.truestatus())
+      then Process.exit (Status.getstatus())
+
   | (O.Concatenate|O.Stringify    |O.Index|
      O.Unlocal|
      O.Fn|
      O.For|
      O.Read|O.Append |O.ReadWrite|O.Close|O.Dup|O.PipeFd|
-     O.Error|O.Eflag|
      O.Subshell|O.Backquote|O.Async
     ) ->
     failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))

@@ -78,7 +78,6 @@ type operation =
   | PipeFd (* [type]{... Xreturn} *)
 
   (* Error management *)
-  | Error
   | Eflag
 
   (* ?? *)

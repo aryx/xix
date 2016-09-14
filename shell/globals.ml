@@ -21,3 +21,6 @@ let errstr = ref ""
  * so next IfNot will run.
  *)
 let ifnot = ref false
+
+(* this is set after the first . of rcmain *)
+let eflagok = ref false

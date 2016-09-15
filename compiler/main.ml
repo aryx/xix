@@ -112,34 +112,34 @@ let main () =
         pr usage;
         Error.errorexit ()
     | [x], outfile ->
-      let base = Filename.basename x in
-      let dir = Filename.dirname x in
-      let include_paths =
-        if !include_dot
-        then dir::!include_paths
-        else !include_paths
-      in
-      let include_paths =
-        (try
-          [Sys.getenv "INCLUDE"]
-        with Not_found ->
-          [spf "/%s/include" thestring; "/sys/include";]
-        ) @ include_paths
-      in
-
-      let outfile = 
-        if outfile = ""
-        then
-          if base =~ "\\(.*\\)\\.c"
-          then Common.matched1 base ^ (spf ".%c" thechar)
-          else b ^ (spf ".%c" thechar)
-        else outfile
-      in
-      compile (!defs, include_paths) x outfile
+        let base = Filename.basename x in
+        let dir = Filename.dirname x in
+        let include_paths =
+          if !include_dot
+          then dir::!include_paths
+          else !include_paths
+        in
+        let include_paths =
+          (try
+            [Sys.getenv "INCLUDE"]
+          with Not_found ->
+            [spf "/%s/include" thestring; "/sys/include";]
+          ) @ include_paths
+        in
+        
+        let outfile = 
+          if outfile = ""
+          then
+            if base =~ "\\(.*\\)\\.c"
+            then Common.matched1 base ^ (spf ".%c" thechar)
+            else b ^ (spf ".%c" thechar)
+          else outfile
+        in
+        compile (!defs, include_paths) x outfile
     | _ -> 
       (* stricter: *)
-      failwith 
-        "compiling multiple files at the same time is not supported; use mk"
+        failwith 
+          "compiling multiple files at the same time is not supported; use mk"
     )
   with exn ->
     if !backtrace || !Flags.debugger

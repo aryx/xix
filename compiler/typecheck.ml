@@ -7,4 +7,9 @@ type env = {
   tags: (string, Type.tagdef) Hashtbl.t;
   (* labels: string, ??  *)
   (* macros handled by cpp, so no need here *)
+  
+  block: blockid;
 }
+
+
+type scope = env list

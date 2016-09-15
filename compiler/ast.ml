@@ -20,7 +20,10 @@ type loc = int
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
-(* less: ref to symbol? or use external hash? *)
+(* less: ref to symbol? or use external hash? 
+ * less: set later a blockid so unambiguous?
+ * todo: lineno field?
+ *)
 type name = string
 (* ------------------------------------------------------------------------- *)
 (* Types *)
@@ -29,14 +32,19 @@ type name = string
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
+(* todo: lineno field *)
 and expr =
   | ExprTodo
-(* todo: lineno field *)
 
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
 (* ------------------------------------------------------------------------- *)
+(* todo: lineno field *)
 and stmt =
+  (* have a specific case type? hard in C because they mix labels
+   * and case a lot (see the lexer of 5c).
+   *)
+  | Switch
   | StmtTodo
 
 (* ------------------------------------------------------------------------- *)

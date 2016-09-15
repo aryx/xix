@@ -8,11 +8,11 @@ type t =
   | Static (* Private global *)
 
 type intsize =
-  | SInt
-  | SShort
-  | SLong
-  | SVLong
+  | Int
+  | Short
+  | Long
+  | VLong
 
 type floatsize = 
-  | SFloat
-  | SDouble
+  | Float
+  | Double

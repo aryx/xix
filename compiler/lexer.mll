@@ -8,25 +8,42 @@ open Parser
 (* Prelude *)
 (*****************************************************************************)
 (* Limitations compared to 5c:
- *  - no unicode support
+ *  - no L"" and L'' unicode support
+ *  - no unicode support for identifier
  *  - handles just the #line directive, assumes external cpp
  *    (but better to factorize code and separate concerns anyway)
-*)
-
+ *)
 
 (* less: do like prfile? but then need a lines_directives global? *)
 let error s =
   failwith (spf "Lexical error: %s (line %d)" s !Globals.line)
 
-}
+let sign_of_suffix s =
+  match String.lowercase s with
+  | "" -> Signed
+  | "u" -> Unsigned
+  | s -> error (spf "Impossible: wrong sign suffix: %s" s)
 
+let intsize_of_suffix s =
+  match String.lowercase s with
+  | "" -> Int
+  | "l" -> Long
+  | "ll" -> VLong
+  | s -> error (spf "Impossible: wrong int size suffix: %s" s)
+
+let floatsize_of_suffix s =
+  match String.lowercase s with
+  | "" -> Double
+  | "f" -> Float
+  | s -> error (spf "Impossible: wrong float size suffix: %s" s)
+
+}
 
 (*****************************************************************************)
 (* Regexps aliases *)
 (*****************************************************************************)
 let letter = ['a'-'z''A'-'Z']
 let digit = ['0'-'9']
-
 
 (*****************************************************************************)
 (* Main rule *)
@@ -37,12 +54,9 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
-  | [' ''\t']+ { token lexbuf }
-
+  | [' ''\t']+    { token lexbuf }
   | "//" [^'\n']* { token lexbuf }
-
   | "/*"          { comment lexbuf }
-
   | '\n' { incr Globals.line; token lexbuf }
 
   (* ----------------------------------------------------------------------- *)
@@ -51,9 +65,12 @@ rule token = parse
   | "+" { TPlus } | "-" { TMinus }
   | "*" { TMul } | "/" { TDiv } | "%" { TMod }
 
-  | "!" { TBang } | "!=" { TBangEq }
+  | "=" { TEq } 
+  | "==" { TEqEq } | "!=" { TBangEq }
   | "&" { TAnd } | "|"   { TOr } | "^" { TXor }
+  | "~" { TTilde }
   | "&&" { TAndAnd } | "||" { TOrOr }
+  | "!" { TBang } 
 
   | "++" { TPlusPlus } | "--" { TMinusMinus }  
 
@@ -61,33 +78,45 @@ rule token = parse
   | "<=" { TInfEq } | ">=" { TSupEq }
   | "<<" { TInfInf (* TLsh *) } | ">>" { TSupSup (* TRsh *) }
 
-  | "=" { TEq } | "==" { TEqEq }
 
   | "+=" { TOpEq "+") } | "-=" { TOpEq "-" } | "%=" { TOpEq "%" }
   | "*=" { TOpEq "*" }  | "/=" { TOpEq "/" } 
   | ">>=" { TOpEq ">>" } | "<<=" { TOpEq "<<" }
   | "&=" { TOpEq "&" } | "|=" { TOpEq "|" } | "^=" | { TOpEq "^" }
 
+  | "(" { TOPar } | ")" { TCPar }
+  | "{" { TOBrace } | "}" { TCBrace }
+  | "[" { TOBra } | "]" { TCBra }
              
-
+  | "," { TComma } | ";"  { TSemicolon }
   | "->" { TArrow }
+  | "."  { TDot }
+  | "?"  { TQuestion }
+  | ":"  { TColon }
 
   (* ----------------------------------------------------------------------- *)
   (* Numbers *)
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
-  | "0"  (oct+ as s) (['U''u']? as sign) (['L''l'] as vlong)
-      { TConst ("0o" ^ s, 
-                if sign = "" then Signed else Unsigned, 
-                  VLong)  }
-  | "0x" hex+        
+  | "0"  (oct+ as s) (['U''u']? as unsigned) (['L''l']* as long)
+      { TConst ("0o" ^ s, sign_of_suffix unsigned, intsize_of_suffix long)
+  | "0x" (hex+ as s)  (['U''u']? as unsigned) (['L''l']* as long)
+      { TConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long)
+  | "0x" { error "malformed hex constant" }
+
+  | ['1'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
       { TConst (Lexing.lexeme lexbuf, 
-                if sign = "" then Signed else Unsigned, 
-                VLong) }
+                sign_of_suffix unsigned, intsize_of_suffix long)
+      }
+
 
   (* stricter: I impose some digit+ after '.' and after 'e' *)
-  | (digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?
-     { TFConst (Lexing.lexeme lexbuf) }
+  | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) as s 
+      (['F''f']* as float)
+     { TFConst (s, floatsize_of_suffix float) }
+
+  | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
+     { error "malformed fp constant exponent" }
 
   (* ----------------------------------------------------------------------- *)
   (* Strings and chars *)
@@ -158,4 +187,4 @@ and comment = parse
   | [^ '*' '\n']+ { comment lexbuf }
   | '*'           { comment lexbuf }
   | '\n'          { incr Globals.line; comment lexbuf }
-  | eof           { error "end of file in comment" }
+  | eof           { error "eof in comment" }

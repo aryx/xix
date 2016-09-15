@@ -1,4 +1,5 @@
 open Common
 
 let errorexit s =
-  raise Todo
+  pr2 s;
+  exit (-1)

@@ -37,13 +37,19 @@ let usage =
 
 let do_action s xs =
   match s with
+  | "-test_parser" ->
+      xs |> List.iter (fun file ->
+        pr2 (spf "processing %s" file);
+        let _ = Parse.parse ([], []) file in
+        ()
+      )
+
   | _ -> failwith ("action not supported: " ^ s)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 let compile (defs, include_paths) infile outfile =
-  (* less: add /arm/include *)
 
   let _ast = Parse.parse (defs, include_paths) infile in
   raise Todo
@@ -112,7 +118,8 @@ let main () =
   try 
     (match !args, !outfile with
     | [], "" -> 
-        Error.errorexit usage
+        Arg.usage (Arg.align options) usage;
+        Error.errorexit ""
     | [x], outfile ->
         let base = Filename.basename x in
         let dir = Filename.dirname x in

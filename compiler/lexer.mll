@@ -8,8 +8,9 @@ open Parser
 (* Prelude *)
 (*****************************************************************************)
 (* Limitations compared to 5c:
- *  - no L"" and L'' unicode support
- *  - no unicode support for identifier
+ *  - no L"" and L'' unicode strings or characters
+ *  - no \x hexa escape sequence in strings or characters
+ *  - no unicode identifier
  *  - handles just the #line directive, assumes external cpp
  *    (but better to factorize code and separate concerns anyway)
  *)
@@ -37,6 +38,7 @@ let floatsize_of_suffix s =
   | "f" -> Storage.Float
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)
 
+(* dup: lexer_asm5.mll *)
 (* stricter: we disallow \ with unknown character *)
 let code_of_escape_char c =
   match c with
@@ -48,6 +50,10 @@ let code_of_escape_char c =
   | 'a' -> 0x07 | 'v' -> 0x0b 
   | _ -> error "unknown escape sequence"
 
+(* dup: lexer_asm5.mll *)
+let string_of_ascii i =
+  String.make 1 (Char.chr i)
+
 }
 
 (*****************************************************************************)
@@ -58,7 +64,6 @@ let letter = ['a'-'z''A'-'Z']
 let digit = ['0'-'9']
 let oct = ['0'-'7']
 let hex = (digit | ['A'-'F''a'-'f'])
-
 
 (*****************************************************************************)
 (* Main rule *)
@@ -138,6 +143,8 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   | "'" { TConst (spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
 
+  | '"' { TString (string lexbuf, Storage.String) }
+
   (* ----------------------------------------------------------------------- *)
   (* Keywords and identifiers *)
   (* ----------------------------------------------------------------------- *)
@@ -181,6 +188,8 @@ rule token = parse
   | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"') 
       { TSharpLine (int_of_string s1, s2) }
   | "#line" { error "syntax in #line" }
+  (* temporary: to test without cpp *)
+  | "#" [^'\n']* { token lexbuf }
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
@@ -189,6 +198,17 @@ rule token = parse
 (*****************************************************************************)
 (* String rule *)
 (*****************************************************************************)
+and string = parse
+  | '"' { "" }
+  | "\\" ((oct oct oct) as s)
+      { let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
+  | "\\" (['a'-'z'] as c) 
+      { let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
+  | [^ '\\' '"' '\n']+   
+      { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
+  | '\n' { error "newline in string" }
+  | eof  { error "end of file in string" }
+  | _    { error "undefined character in string" }
 
 (*****************************************************************************)
 (* Character rule *)

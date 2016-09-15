@@ -8,8 +8,9 @@ type t =
   | Static (* Private global *)
 
 type intsize =
-  | Int
+  | Char
   | Short
+  | Int
   | Long
   | VLong
 

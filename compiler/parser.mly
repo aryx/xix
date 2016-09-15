@@ -83,7 +83,7 @@ let mk_e
 %left   TAnd
 %left   TEqEq TBangEq
 %left   TInf TSup TInfEq TSupEq
-%left   TInfInf LSupSup
+%left   TInfInf TSupSup
 %left   TPlus TMinus
 %left   TMul TDiv TMod
 %right  TMinusMinus TPlusPlus TArrow TDot TOBra TOPar

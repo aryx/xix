@@ -41,3 +41,8 @@
 /shell/parser.mli
 /shell/parser.output
 /shell/rc
+/compiler/lexer.ml
+/compiler/parser.ml
+/compiler/parser.mli
+/compiler/parser.output
+/compiler/5c

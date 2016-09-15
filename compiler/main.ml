@@ -31,10 +31,13 @@ let usage =
 (* Helpers *)
 (*****************************************************************************)
 
-
 (*****************************************************************************)
 (* Testing *)
 (*****************************************************************************)
+
+let do_action s xs =
+  match s with
+  | _ -> failwith ("action not supported: " ^ s)
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -57,7 +60,7 @@ let main () =
 
   (* for cpp *)
   let include_paths = ref [] in
-  let macros = ref [] in
+  let defs = ref [] in
   let include_dot = ref true in
 
 
@@ -76,7 +79,7 @@ let main () =
       raise Todo
     ), " <dir> add dir as a path to look for '#include <file>' files";
     "-.", Arg.Clear include_dot,
-    " suppress automatic searching for include files in the file argument's dir"
+    " suppress auto search for include files in the file argument's dir";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
@@ -109,8 +112,7 @@ let main () =
   try 
     (match !args, !outfile with
     | [], "" -> 
-        pr usage;
-        Error.errorexit ()
+        Error.errorexit usage
     | [x], outfile ->
         let base = Filename.basename x in
         let dir = Filename.dirname x in
@@ -132,7 +134,7 @@ let main () =
           then
             if base =~ "\\(.*\\)\\.c"
             then Common.matched1 base ^ (spf ".%c" thechar)
-            else b ^ (spf ".%c" thechar)
+            else base ^ (spf ".%c" thechar)
           else outfile
         in
         compile (!defs, include_paths) x outfile

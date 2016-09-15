@@ -27,9 +27,9 @@ let mk_e
 /*(*************************************************************************)*/
 
 %token <string> TName TTypeName
-%token <string * sign * intsize> TConst
-%token <string * floatsize> TFConst
-%token <string * stringsize> TString
+%token <string * Type.sign * Storage.intsize> TConst
+%token <string * Storage.floatsize> TFConst
+%token <string * Storage.stringsize> TString
 
 /*(*-----------------------------------------*)*/
 /*(*2 Keywords *)*/
@@ -92,8 +92,10 @@ let mk_e
 /*(*1 Rules type declaration *)*/
 /*(*************************************************************************)*/
 
-%type <Ast.prog> prog
+%type <Ast.program> prog
 %start prog
+
+%%
 
 /*(*************************************************************************)*/
 /*(*1 Program *)*/
@@ -127,7 +129,7 @@ xdlist:
  | xdecor { }
  | xdecor TEq init { }
 
- | xdlist TComma xdlist
+ | xdlist TComma xdlist { }
 
 
 /*(*-----------------------------------------*)*/
@@ -160,16 +162,16 @@ slist:
 stmnt: 
  | ulstmnt { }
  | labels ulstmnt { }
- | error Tsemicolon { }
+ | error TSemicolon { }
 
 ulstmnt:
- | zcexpr Tsemicolon { }
+ | zcexpr TSemicolon { }
  | block { }
- | TIf TOPar cexpr TCPar stmnt { }
- | TIf TOPar cexpr TCPar stmnt TElse stmnt { }
- | TWhile TOPar cexpr TCPar stmnt { }
- | TDo stmnt TWhile TOPar cexpr TCPar TSemicolon { }
- | TFor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt { }
+ | Tif TOPar cexpr TCPar stmnt { }
+ | Tif TOPar cexpr TCPar stmnt Telse stmnt { }
+ | Twhile TOPar cexpr TCPar stmnt { }
+ | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { }
+ | Tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt { }
  | Treturn zcexpr TSemicolon { }
  | Tbreak TSemicolon { }
  | Tcontinue TSemicolon { }
@@ -230,7 +232,7 @@ expr:
 xuexpr:
  | uexpr { }
 
- | TOPar tlist abdecor TCPar xuexpr 
+ | TOPar tlist abdecor TCPar xuexpr  { }
 
 uexpr:
  | pexpr { }
@@ -340,7 +342,7 @@ tname:
  | Tfloat { }
  | Tdouble { }
 
- | Tvoid
+ | Tvoid { }
 
  | Tsigned { }
  | Tunsigned { }
@@ -392,7 +394,7 @@ arglist:
  | tlist abdecor { }
 
  | arglist TComma arglist { }
- | TDot Dot Dot { }
+ | TDot TDot TDot { }
 
 
 abdecor:
@@ -402,7 +404,7 @@ abdecor:
 abdecor1:
  | TMul zgnlist { }
  | TMul zgnlist abdecor1 { }
- | abdecor2
+ | abdecor2  { }
 
 abdecor2:
  | abdecor3 { }

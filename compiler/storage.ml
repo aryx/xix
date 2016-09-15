@@ -16,3 +16,7 @@ type intsize =
 type floatsize = 
   | Float
   | Double
+
+type stringsize =
+  | String
+  | Unicode

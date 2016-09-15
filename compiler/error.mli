@@ -1,0 +1,3 @@
+
+val errorexit: string -> unit
+

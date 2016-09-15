@@ -20,21 +20,21 @@ let error s =
 
 let sign_of_suffix s =
   match String.lowercase s with
-  | "" -> Signed
-  | "u" -> Unsigned
+  | "" -> Type.Signed
+  | "u" -> Type.Unsigned
   | s -> error (spf "Impossible: wrong sign suffix: %s" s)
 
 let intsize_of_suffix s =
   match String.lowercase s with
-  | "" -> Int
-  | "l" -> Long
-  | "ll" -> VLong
+  | "" -> Storage.Int
+  | "l" -> Storage.Long
+  | "ll" -> Storage.VLong
   | s -> error (spf "Impossible: wrong int size suffix: %s" s)
 
 let floatsize_of_suffix s =
   match String.lowercase s with
-  | "" -> Double
-  | "f" -> Float
+  | "" -> Storage.Double
+  | "f" -> Storage.Float
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)
 
 }
@@ -42,8 +42,12 @@ let floatsize_of_suffix s =
 (*****************************************************************************)
 (* Regexps aliases *)
 (*****************************************************************************)
+let space = [' ''\t']
 let letter = ['a'-'z''A'-'Z']
 let digit = ['0'-'9']
+let oct = ['0'-'7']
+let hex = (digit | ['A'-'F''a'-'f'])
+
 
 (*****************************************************************************)
 (* Main rule *)
@@ -79,10 +83,10 @@ rule token = parse
   | "<<" { TInfInf (* TLsh *) } | ">>" { TSupSup (* TRsh *) }
 
 
-  | "+=" { TOpEq "+") } | "-=" { TOpEq "-" } | "%=" { TOpEq "%" }
+  | "+=" { TOpEq "+" } | "-=" { TOpEq "-" } | "%=" { TOpEq "%" }
   | "*=" { TOpEq "*" }  | "/=" { TOpEq "/" } 
   | ">>=" { TOpEq ">>" } | "<<=" { TOpEq "<<" }
-  | "&=" { TOpEq "&" } | "|=" { TOpEq "|" } | "^=" | { TOpEq "^" }
+  | "&=" { TOpEq "&" } | "|=" { TOpEq "|" } | "^=" { TOpEq "^" }
 
   | "(" { TOPar } | ")" { TCPar }
   | "{" { TOBrace } | "}" { TCBrace }
@@ -99,9 +103,9 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
   | "0"  (oct+ as s) (['U''u']? as unsigned) (['L''l']* as long)
-      { TConst ("0o" ^ s, sign_of_suffix unsigned, intsize_of_suffix long)
+      { TConst ("0o" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
   | "0x" (hex+ as s)  (['U''u']? as unsigned) (['L''l']* as long)
-      { TConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long)
+      { TConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
   | "0x" { error "malformed hex constant" }
 
   | ['1'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)

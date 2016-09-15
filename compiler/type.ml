@@ -20,11 +20,11 @@ type t =
   | TDouble
 
   (* composite *)
-  | TIndirect of type_
+  | TIndirect of t
   (* Why not unsugar to TIndirect? for better error messages? *)
-  | TArray of type_ (* no size here *)
+  | TArray of t (* no size here *)
 
-  | TFunc of type_ * (type_) list
+  | TFunc of t * t list
 
   (* less: and scope? counter?
    * ref to symbol? or use external hash?
@@ -36,6 +36,6 @@ type t =
 (* less: type qualifier, but 5c does not use this information *)
 
 type tagdef =
-  | Struct of (string * t) list;
-  | Union of (string * t) list;
+  | Struct of (string * t) list
+  | Union of (string * t) list
   | Enum

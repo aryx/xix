@@ -229,9 +229,11 @@ let outcode_seq seq eflag (emit,set,idx) =
         xcmd cmd2 eflag;
         set p (O.I !idx)
 
-    | (A.Async _|A.Dup (_, _, _, _)|
+    | (A.Async _|
+       A.Dup (_, _, _, _)|
        A.While (_, _)|
-       A.ForIn (_, _, _)|A.For (_, _)
+       A.ForIn (_, _, _)|
+       A.For (_, _)
        )
        -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
 
@@ -259,7 +261,9 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Count);
 
     | (A.CommandOutput _|
-       A.Index (_, _)|A.Concat (_, _)|A.Stringify _
+       A.Index (_, _)|
+       A.Concat (_, _)|
+       A.Stringify _
       )
        -> failwith ("TODO compile: " ^ Dumper.s_of_value w)
 

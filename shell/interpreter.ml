@@ -337,7 +337,8 @@ let interpret operation =
      O.Unlocal|
      O.Fn|
      O.For|
-     O.Read|O.Append |O.ReadWrite|O.Close|O.Dup|O.PipeFd|
+     O.Read|O.Append |O.ReadWrite|
+     O.Close|O.Dup|O.PipeFd|
      O.Subshell|O.Backquote|O.Async
     ) ->
     failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))

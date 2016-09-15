@@ -16,11 +16,11 @@ module O = Opcode
  *    (used by rcmain. But can do the same by using '. rcmain')
  * 
  * todo:
- *  - Isatty
+ *  - read environment variables and export variables
+ *  - globbing
+ *  - Isatty rc -i detection
  *  - add ~ shortcut for HOME (from csh?)
- *  - rc foo.rc
  *  - rc -c
- *  - rcmain and rc -m 
  *)
 
 let usage =

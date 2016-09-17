@@ -65,7 +65,7 @@ let main () =
   let outfile = ref "" in
 
   (* for cpp *)
-  let include_paths = ref [] in
+  let include_paths = ref ["."] in
   let defs = ref [] in
   let include_dot = ref true in
 
@@ -120,9 +120,9 @@ let main () =
     | [], "" -> 
         Arg.usage (Arg.align options) usage;
         Error.errorexit ""
-    | [x], outfile ->
-        let base = Filename.basename x in
-        let dir = Filename.dirname x in
+    | [cfile], outfile ->
+        let base = Filename.basename cfile in
+        let dir = Filename.dirname cfile in
         let include_paths =
           if !include_dot
           then dir::!include_paths
@@ -144,7 +144,7 @@ let main () =
             else base ^ (spf ".%c" thechar)
           else outfile
         in
-        compile (!defs, include_paths) x outfile
+        compile (!defs, include_paths) cfile outfile
     | _ -> 
       (* stricter: *)
         failwith 

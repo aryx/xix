@@ -8,7 +8,8 @@ DIRS=\
   lib_parsing lex yacc\
   formats/objects assembler\
   formats/executables linker\
-  
+  compiler
+
 
 all:V: all.directories
 opt:V: opt.directories

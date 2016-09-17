@@ -45,6 +45,7 @@ and stmt =
    * and case a lot (see the lexer of 5c).
    *)
   | Switch
+
   | StmtTodo
 
 (* ------------------------------------------------------------------------- *)

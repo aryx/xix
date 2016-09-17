@@ -5,8 +5,8 @@ INCLUDES=-I $TOP/commons -I $TOP/lib_core
 
 SRC= globals.ml flags.ml \
   ast.ml type.ml storage.ml \
-  preprocessor.ml \
   error.ml \
+  preprocessor.ml lexer_cpp.ml \
   parser.ml lexer.ml parse.ml \
   main.ml
 
@@ -17,7 +17,7 @@ PROG=5c
 
 <$TOP/mkprog
 
-beforedepend:V: lexer.ml parser.ml parser.mli
+beforedepend:V: lexer.ml parser.ml parser.mli   lexer_cpp.ml
 
 
 depend:V: beforedepend
@@ -31,6 +31,10 @@ lexer.ml: lexer.mll
 
 parser.ml parser.mli: parser.mly
 	$OCAMLYACC $prereq
+
+
+lexer_cpp.ml: lexer_cpp.mll
+	$OCAMLLEX $prereq
 
 
 loc:V:

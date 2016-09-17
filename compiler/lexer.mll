@@ -11,8 +11,6 @@ open Parser
  *  - no L"" and L'' unicode strings or characters
  *  - no \x hexa escape sequence in strings or characters
  *  - no unicode identifier
- *  - handles just the #line directive, assumes external cpp
- *    (but better to factorize code and separate concerns anyway)
  *)
 
 (* less: do like prfile? but then need a lines_directives global? *)
@@ -181,15 +179,10 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* stricter: I impose a filename (with no quote in name, hmm) 
-   * less: normalize? realpath? 
-   * dup: lexer_asm5.mll
-   *)
-  | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"') 
-      { TSharpLine (int_of_string s1, s2) }
-  | "#line" { error "syntax in #line" }
-  (* temporary: to test without cpp *)
+  (* temporary: to test without cpp 
   | "#" [^'\n']* { token lexbuf }
+  *)
+  | "#" { TSharp }
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }

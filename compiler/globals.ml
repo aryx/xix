@@ -1,6 +1,7 @@
 
-(* Global line number, after pre-processing. Need a special
- * structure to map a global line number to a (file, line) pair.
+(* Global line number (after pre-processing). You need another
+ * data structure to map a global line number to a (file, line) pair
+ * (see Preprocessor.line_history).
  *)
 let line = ref 1
 

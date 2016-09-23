@@ -27,7 +27,7 @@ distclean:V: clean
 	rm -f lexer.ml
 	rm -f parser.ml parser.mli parser.output
 
-lexer.ml: lexer.mll
+lexer.ml:D: lexer.mll
 	$OCAMLLEX $prereq
 
 parser.ml parser.mli: parser.mly

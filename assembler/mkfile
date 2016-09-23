@@ -23,7 +23,7 @@ distclean:V: clean
 	rm -f lexer_asm5.ml
 	rm -f parser_asm5.ml parser_asm5.mli parser_asm5.output
 
-lexer_asm5.ml: lexer_asm5.mll
+lexer_asm5.ml:D: lexer_asm5.mll
 	$OCAMLLEX $prereq
 parser_asm5.ml parser_asm5.mli: parser_asm5.mly
 	$OCAMLYACC $prereq

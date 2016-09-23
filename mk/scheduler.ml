@@ -179,6 +179,16 @@ let waitup () =
       if !nrunning < !nproclimit && Queue.length jobs > 0
       then sched ()
   | Unix.WEXITED n ->
+      (* less: call shprint *)
+      if Set.mem Ast.Delete job.J.rule.R.attrs2 
+      then 
+        job.J.rule.R.all_targets |> List.iter (fun f ->
+          if Sys.file_exists f
+          then begin
+            pr2 (spf "deleting %s" f);
+            Sys.remove f
+          end
+        );
       failwith (spf "error in child process, exit status = %d" n)
   | Unix.WSIGNALED n | Unix.WSTOPPED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)

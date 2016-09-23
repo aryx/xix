@@ -24,7 +24,7 @@ depend:V: beforedepend
 distclean:V: clean
 	rm -f lexer.ml parser.ml parser.mli 
 
-lexer.ml: lexer.mll
+lexer.ml:D: lexer.mll
 	$OCAMLLEX $prereq
 
 parser.ml parser.mli: parser.mly

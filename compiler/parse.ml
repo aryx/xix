@@ -22,11 +22,11 @@ let parse (defs, paths) file =
             close_in chan;
             (* todo: linehist 0 0 *)
             lexfunc lexbuf
-
         (* less: 
            if List.length stack > 1000
            then error "macro/io expansion too deep"
         *)
+
         | T.TSharp ->
             let t = Lexer_cpp.token lexbuf in
             (match t with
@@ -57,4 +57,3 @@ let parse_no_cpp file =
       failwith (spf "Syntax error: line %d" !Globals.line)
     )
   )
-

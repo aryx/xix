@@ -6,8 +6,9 @@ open Common
 (*****************************************************************************)
 (*
  * Main limitations compared to the cpp embedded in 5c of Plan 9:
+ *  - no support for unicode
  *  - see lexer_cpp.mll
- * Limitations compared to ANSI cpp:
+ * Main limitations compared to ANSI cpp:
  *  - no complex boolean expressions for #ifdefs
  * 
  * stricter:
@@ -17,7 +18,7 @@ open Common
  *    (not limited to 25 because of the use of #a to #z)
  *  - allow any body size 
  *    (no 8196 buffer limit)
- *  - allow any filename size in include 
+ *  - allow any filename length in #include 
  *    (no 200 limit)
  *)
 
@@ -34,31 +35,17 @@ type include_paths = Common.filename list
 type macro = {
   name: string;
   nbargs: int option;
+  varargs: bool; (* use "..." *)
 
   (* body contains #xxx substrings corresponding to the parameter of the macro.
    * For instance, #define foo(a,b) a+b --> {name="foo";nbargs=2;body="#1+#2"}.
-   * Do we have a risk of having numbers squashed with the macro parameter?
+   * 
+   * Is there a risk of having numbers squashed with the macro parameter?
    * No, because if you have 'a1+b' then 'a1' is a separate identifier 
-   * so you can't generate #11+#2 .
+   * so you can not generate #11+#2 .
    *)
   body: string;
 }
-
-type directive =
-  | Include of Common.filename * bool (* true if <>, false if "" *)
-
-  | Line of int * Common.filename
-
-  | Define of macro
-  | Undef of string
-
-  | Ifdef of string
-  | Ifndef of string
-  | Else
-  | Endif
-
-  | Pragma of string * string
-
 
 type line_history = HistoryTodo
 
@@ -70,15 +57,15 @@ exception Error of string * int
 (* Globals *)
 (*****************************************************************************)
 
-(* cwd is used to manage #include "..."; It is altered when you
- * include a file; cwd becomes the dirname of the included file??? *)
+(* cwd is used to manage #include "...". It is altered when you
+ * include a file. cwd becomes the dirname of the included file??? *)
 let cwd = ref (Sys.getcwd ())
 
-(* We could have the global line below defined here instead of in globals.ml. 
+(* We could have the global 'line' below defined here instead of in globals.ml.
  * However, we can also call the C parser after cpp, in which
  * case the parser has nothing to do with the preprocessor,
- * but the parser still needs to manage a line number, so better to put
- * line in globals.ml.
+ * but the parser still needs to manage a line number, so it is better to put
+ * 'line' in globals.ml.
  * 
  * let line = ref 1
  *)
@@ -96,3 +83,15 @@ let cwd = ref (Sys.getcwd ())
  *  raise Todo
  *)
 
+(* less: Could use Set instead of list for the set of include paths*)
+
+(*
+let do_define (s, v) =
+ let macro { 
+ }
+ in
+
+parse Define:
+ check if already defined.
+
+*)

@@ -9,7 +9,7 @@ open Parser
 (*****************************************************************************)
 (* Limitations compared to 5c:
  *  - no L"" and L'' unicode strings or characters
- *  - no \x hexa escape sequence in strings or characters
+ *  - no \x hexadecimal escape sequence in strings or characters
  *  - no unicode identifier
  *)
 
@@ -75,36 +75,37 @@ rule token = parse
   | [' ''\t']+    { token lexbuf }
   | "//" [^'\n']* { token lexbuf }
   | "/*"          { comment lexbuf }
-  | '\n' { incr Globals.line; token lexbuf }
+
+  | '\n'          { incr Globals.line; token lexbuf }
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
   | "+" { TPlus } | "-" { TMinus }
-  | "*" { TMul } | "/" { TDiv } | "%" { TMod }
+  | "*" { TMul }  | "/" { TDiv } | "%" { TMod }
 
-  | "=" { TEq } 
+  | "="  { TEq } 
   | "==" { TEqEq } | "!=" { TBangEq }
-  | "&" { TAnd } | "|"   { TOr } | "^" { TXor }
-  | "~" { TTilde }
+  | "&"  { TAnd }  | "|"   { TOr } | "^" { TXor }
+  | "~"  { TTilde }
   | "&&" { TAndAnd } | "||" { TOrOr }
-  | "!" { TBang } 
+  | "!"  { TBang } 
 
   | "++" { TPlusPlus } | "--" { TMinusMinus }  
 
-  | "<"  { TInf } | ">" { TSup }
+  | "<"  { TInf }   | ">" { TSup }
   | "<=" { TInfEq } | ">=" { TSupEq }
   | "<<" { TInfInf (* TLsh *) } | ">>" { TSupSup (* TRsh *) }
 
 
-  | "+=" { TOpEq "+" } | "-=" { TOpEq "-" } | "%=" { TOpEq "%" }
-  | "*=" { TOpEq "*" }  | "/=" { TOpEq "/" } 
+  | "+=" { TOpEq "+" }   | "-=" { TOpEq "-" } 
+  | "*=" { TOpEq "*" }   | "/=" { TOpEq "/" } | "%=" { TOpEq "%" }
   | ">>=" { TOpEq ">>" } | "<<=" { TOpEq "<<" }
-  | "&=" { TOpEq "&" } | "|=" { TOpEq "|" } | "^=" { TOpEq "^" }
+  | "&=" { TOpEq "&" }   | "|=" { TOpEq "|" } | "^=" { TOpEq "^" }
 
-  | "(" { TOPar } | ")" { TCPar }
+  | "(" { TOPar }   | ")" { TCPar }
   | "{" { TOBrace } | "}" { TCBrace }
-  | "[" { TOBra } | "]" { TCBra }
+  | "[" { TOBra }   | "]" { TCBra }
              
   | "," { TComma } | ";"  { TSemicolon }
   | "->" { TArrow }
@@ -163,8 +164,9 @@ rule token = parse
       | "struct" -> Tstruct | "union" -> Tunion | "enum" -> Tenum
       | "typedef" -> Ttypedef
 
-      | "if" -> Tif | "else" -> Telse | "while" -> Twhile | "do" -> Tdo
-      | "for" -> Tfor | "break" -> Tbreak | "continue" -> Tcontinue
+      | "if" -> Tif | "else" -> Telse 
+      | "while" -> Twhile | "do" -> Tdo | "for" -> Tfor 
+      | "break" -> Tbreak | "continue" -> Tcontinue
       | "switch" -> Tswitch | "case" -> Tcase | "default" -> Tdefault
       | "return" -> Treturn | "goto" -> Tgoto
 
@@ -179,9 +181,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* temporary: to test without cpp 
-  | "#" [^'\n']* { token lexbuf }
-  *)
+  (* See lexer_cpp.mll *)
   | "#" { TSharp }
 
   (* ----------------------------------------------------------------------- *)

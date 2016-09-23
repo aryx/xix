@@ -4,7 +4,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5c, the Plan 9 C compiler for ARM.
+(* An OCaml port of 5c, the Plan 9 C compiler with ARM backend.
  *
  * Main limitations compared to 5c:
  *  - no unicode support
@@ -13,7 +13,7 @@ open Common
  *  - can not compile from stdin
  *    (but who uses that?)
  *  - does not link
- *    (let the linker do that)
+ *    (let the linker do that, but 5c does it??)
  * 
  * todo:
  *  - debugger support
@@ -60,15 +60,15 @@ let compile (defs, include_paths) infile outfile =
 
 let main () =
 
+  (* in *)
   let args = ref [] in
-
+  (* out *)
   let outfile = ref "" in
 
   (* for cpp *)
   let include_paths = ref ["."] in
   let defs = ref [] in
   let include_dot = ref true in
-
 
   (* for debugging *)
   let action = ref "" in
@@ -79,8 +79,13 @@ let main () =
     " <file> place output (an object) in file";
 
     "-D", Arg.String (fun s ->
+      let (var, val_) = 
+        if s =~ "\\(.*\\)=\\(.*\\)"
+        then Common.matched2 s
+        else (s, "1")
+      in
       raise Todo
-    ), " <name=def> define the name to the preprocessor";
+    ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
       raise Todo
     ), " <dir> add dir as a path to look for '#include <file>' files";
@@ -130,9 +135,12 @@ let main () =
         in
         let include_paths =
           (try
+            (* less: split space? *)
             [Sys.getenv "INCLUDE"]
           with Not_found ->
-            [spf "/%s/include" thestring; "/sys/include";]
+            [spf "/%s/include" thestring; 
+             "/sys/include";
+            ]
           ) @ include_paths
         in
         
@@ -157,8 +165,7 @@ let main () =
       (match exn with
       | Failure s -> 
           (* useful to indicate that error comes from 5c? *)
-          pr2 ("5c: " ^ s);
-          exit (1)
+          Error.errorexit ("5c: " ^ s)
       | _ -> raise exn
       )
 

@@ -1,7 +1,9 @@
 
 type sign = Signed | Unsigned
 
-(* Note that no TTypedef here. The typedef expansion has been done. *)
+(* Note that there is no TTypedef here; The typedef expansion
+ * has alreafy been done. 
+ *)
 type t =
   | TVoid
 

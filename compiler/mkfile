@@ -6,7 +6,7 @@ INCLUDES=-I $TOP/commons -I $TOP/lib_core
 SRC= globals.ml flags.ml \
   ast.ml type.ml storage.ml \
   error.ml \
-  preprocessor.ml lexer_cpp.ml \
+  ast_cpp.ml lexer_cpp.ml preprocessor.ml  \
   parser.ml lexer.ml parse.ml \
   main.ml
 
@@ -26,14 +26,14 @@ distclean:V: clean
 	rm -f lexer.ml
 	rm -f parser.ml parser.mli parser.output
 
-lexer.ml: lexer.mll
+lexer.ml:D: lexer.mll
 	$OCAMLLEX $prereq
 
 parser.ml parser.mli: parser.mly
 	$OCAMLYACC $prereq
 
 
-lexer_cpp.ml: lexer_cpp.mll
+lexer_cpp.ml:D: lexer_cpp.mll
 	$OCAMLLEX $prereq
 
 

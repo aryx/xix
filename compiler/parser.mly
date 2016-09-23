@@ -114,13 +114,13 @@ prog:
 /*(*-----------------------------------------*)*/
 
 xdecl: 
- | zctlist TSemicolon { }
+ | zctlist        TSemicolon { }
  | zctlist xdlist TSemicolon { }
  | zctlist xdecor block { }
 
 zctlist:
  | /*(*empty*)*/ { }
- | ctllist { }
+ | ctllist       { }
 
 ctllist: types { }
 
@@ -137,10 +137,10 @@ xdlist:
 /*(*-----------------------------------------*)*/
 
 adecl:
- | ctllist TSemicolon { }
+ | ctllist        TSemicolon { }
  | ctllist adlist TSemicolon { }
 
-/*(* equal to xdlist but different codegen *)*/
+/*(* equal to xdlist but different codegen? *)*/
 adlist:
  | xdecor { }
  | xdecor TEq init { }
@@ -160,8 +160,9 @@ slist:
  | slist stmnt { }
 
 stmnt: 
- | ulstmnt { }
+ | ulstmnt        { }
  | labels ulstmnt { }
+
  | error TSemicolon { }
 
 ulstmnt:
@@ -429,7 +430,7 @@ edecl:
 
 zedlist:
  | /*(*empty*)*/ { }
- | edlist { }
+ | edlist        { }
 
 edlist:
  | edecor { }

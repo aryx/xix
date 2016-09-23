@@ -1,7 +1,7 @@
 
 (* will call cpp internally first *)
 val parse: 
-  (Preprocessor.defs * Preprocessor.include_paths) -> Common.filename -> 
+  (Preprocessor.cmdline_defs * Preprocessor.include_paths)-> Common.filename -> 
   Ast.program
 
 (* internals *)

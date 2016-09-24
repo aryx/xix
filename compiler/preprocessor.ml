@@ -73,7 +73,7 @@ let define_cmdline_def (k, v) =
 
 let define (s, params, body) =
   if Hashtbl.mem hmacros s
-  then failwith (spf "macro redefined: %s" s)
+  then raise (Error.Error (spf "macro redefined: %s" s, !Location_cpp.line))
   else 
     Hashtbl.add hmacros s
       (match params with

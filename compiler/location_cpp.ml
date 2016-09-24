@@ -4,6 +4,9 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(*
+ * less: normalize filenames? use realpath?
+ *)
 
 (*****************************************************************************)
 (* Types and globals *)
@@ -48,7 +51,19 @@ let line = ref 1
 (*****************************************************************************)
 
 let add_event event =
-  history := event::!history
+  history := {location_event = event; global_line = !line }::!history
+
+(* for 5c -f *)
+let dump_event event =
+  match event with
+  | Include file -> 
+      pr (spf "%4d: %s" !line file)
+  | Line (file, local_line) -> 
+      pr (spf "%4d: %s (#line %d)" !line file local_line)
+  | Eof -> 
+      pr (spf "%4d: <pop>" !line)
+
+
 
 let final_loc_of_loc lineno =
   raise Todo

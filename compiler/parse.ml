@@ -5,12 +5,20 @@ module D = Ast_cpp (* D for Directives *)
 module L = Location_cpp
 module P = Preprocessor
 
+let add_event event =
+  if !Flags.debug_line
+  then Location_cpp.dump_event event;
+
+  Location_cpp.add_event event
+
+
 let parse (defs, paths) file = 
 
   L.line := 1;
   defs |> List.iter Preprocessor.define_cmdline_def;
 
   let chan = open_in file in
+  add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(file, chan, lexbuf)] in
 
@@ -18,11 +26,12 @@ let parse (defs, paths) file =
     match !stack with
     | (file, chan, lexbuf)::xs ->
         let t = Lexer.token lexbuf in
+
         (match t with
         | T.EOF -> 
             stack := xs;
             close_in chan;
-            (* todo: linehist 0 0 *)
+            add_event L.Eof;
             lexfunc ()
         (* less: 
            if List.length stack > 1000
@@ -33,24 +42,44 @@ let parse (defs, paths) file =
             let t = Lexer_cpp.token lexbuf in
             (match t with
             | D.Include (f, system) ->
-              let path = Preprocessor.find_include paths (f, system) in
-              let chan = open_in path in
-              let lexbuf = Lexing.from_channel chan in
-              stack := (path, chan, lexbuf)::!stack;
+                let path = Preprocessor.find_include paths (f, system) in
+                (try 
+                  let chan = open_in path in
+                  add_event (L.Include path);
+                  let lexbuf = Lexing.from_channel chan in
+                  stack := (path, chan, lexbuf)::!stack;
+                with Failure s ->
+                  raise (Error.Error (s, !Location_cpp.line))
+                )
 
             | D.Define (s, params, body) ->
                 Preprocessor.define (s, params, body)
 
-            | D.Line _
-            | D.Undef _
+            | D.Undef s ->
+                (* stricter: check that was defined *)
+                if not (Hashtbl.mem Preprocessor.hmacros s)
+                then raise (Error.Error (spf "macro %s was not defined" s,
+                                         !Location_cpp.line))
+                else Hashtbl.remove Preprocessor.hmacros s
+
+            | D.Line (line, file) ->
+                add_event (L.Line (file, line));
+
             | D.Ifdef _
             | D.Ifndef _
             | D.Else
             | D.Endif
+
             | D.Pragma _
                 -> raise Todo
             );
             lexfunc ()
+
+        (* stricter: in theory could do macro for reserved keyword? *)
+        | T.TName s | T.TTypeName s ->
+            if Hashtbl.mem Preprocessor.hmacros s
+            then raise Todo
+            else t
         | _ -> t
         )
            

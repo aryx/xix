@@ -98,6 +98,10 @@ let main () =
     " ";
     "-e", Arg.Set Flags.debug_inclusion,
     " ";
+    "-debug_line", Arg.Set Flags.debug_line,
+    " ";
+    "-f", Arg.Set Flags.debug_line,
+    " ";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

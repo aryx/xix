@@ -22,3 +22,7 @@ val add_event:
 (* uses history *)
 val final_loc_of_loc: 
     loc -> final_loc
+
+
+val dump_event:
+  location_event -> unit

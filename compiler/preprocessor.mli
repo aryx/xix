@@ -10,7 +10,7 @@ type macro = {
   body: string;
 }
 
-(* val hmacros: (string, macro) Hashtbl.t *)
+val hmacros: (string, macro) Hashtbl.t
 
 val define_cmdline_def: 
   (string * string) -> unit

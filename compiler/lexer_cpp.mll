@@ -15,7 +15,7 @@ open Ast_cpp
  *    (but some people like to do  '#    ifdef', when have nested ifdefs)
  *  - empty # are not converted in #endif
  *    (who does use that?)
- *  - allow only space before the newline; we do not skip any character
+ *  - allow only spaces before the newline; we do not skip any character
  *    (who does put garbage there?)
  *)
 
@@ -53,13 +53,13 @@ rule token = parse
         let params = raise Todo in
         let varargs = raise Todo in
 
-        let body = define_body params lexbuf in
+        let body = define_body s1 params lexbuf in
         Define (s1, Some (params, varargs), Some body)
       }
 
   | "define" space+ (sym as s1) space+
       { 
-        let body = define_body [] lexbuf in 
+        let body = define_body s1 [] lexbuf in 
         Define (s1, None, Some body)
       }
 
@@ -79,10 +79,7 @@ rule token = parse
 
   | "endif" { Endif }
 
-  (* stricter: I impose a filename (with no quote in name, like original?) 
-   * less: normalize? realpath? 
-   * dup: lexer_asm5.mll
-   *)
+  (* stricter: I impose a filename (with no quote in name, like original?) *)
   | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
       { Line (int_of_string s1, s2) }
   | "#line" { error "syntax in #line" }
@@ -95,18 +92,34 @@ rule token = parse
 (*****************************************************************************)
 (* Macro body *)
 (*****************************************************************************)
-and define_body params = parse
+and define_body macro params = parse
   | sym as s  
      {
       try 
         let i = List.assoc s params in
-        spf "#%d" i ^ define_body params lexbuf
+        (* safe to use # for a special mark since C code can not
+         * use this symbol since it is reserved by cpp
+         *)
+        spf "#%d" i ^ define_body macro params lexbuf
       with Not_found ->
-        s ^ define_body params lexbuf
+        s ^ define_body macro params lexbuf
      }
-  | [^'\n' '_' 'a'-'z''A'-'Z']+ as s { s ^ define_body params lexbuf }
+  | [^'\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\']+ as s 
+      { s ^ define_body macro params lexbuf }
+
+  | "'" { raise Todo}
+  | '"' { raise Todo }
+
+  | "//" { raise Todo }
+  | "/*" { raise Todo }
+
+  | '/' { "/" ^ define_body macro params lexbuf }
+
+  | "\\" "\n" { incr Location_cpp.line; " " ^ define_body macro params lexbuf }
+  | '\\' { "\\" ^ define_body macro params lexbuf }
+
   | '\n' { incr Location_cpp.line; "" }
-  | eof  { "" }
+  | eof  { error (spf "eof in macro %s" macro) }
 
 (*****************************************************************************)
 (* Comment *)

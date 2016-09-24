@@ -4,8 +4,8 @@ TOP=..
 INCLUDES=-I $TOP/commons -I $TOP/lib_core
 
 SRC= globals.ml flags.ml \
+  location_cpp.ml error.ml \
   ast.ml type.ml storage.ml \
-  error.ml \
   ast_cpp.ml lexer_cpp.ml preprocessor.ml  \
   parser.ml lexer.ml parse.ml \
   main.ml
@@ -23,7 +23,7 @@ beforedepend:V: lexer.ml parser.ml parser.mli   lexer_cpp.ml
 depend:V: beforedepend
 
 distclean:V: clean
-	rm -f lexer.ml
+	rm -f lexer.ml lexer_cpp.ml
 	rm -f parser.ml parser.mli parser.output
 
 lexer.ml:D: lexer.mll

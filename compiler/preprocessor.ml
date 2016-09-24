@@ -1,6 +1,8 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+module L = Location_cpp
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -47,7 +49,6 @@ type macro = {
   body: string;
 }
 
-type line_history = HistoryTodo
 
 (*
 exception Error of string * int
@@ -57,41 +58,47 @@ exception Error of string * int
 (* Globals *)
 (*****************************************************************************)
 
+let hmacros = Hashtbl.create 101
+
 (* cwd is used to manage #include "...". It is altered when you
  * include a file. cwd becomes the dirname of the included file??? *)
 let cwd = ref (Sys.getcwd ())
-
-(* We could have the global 'line' below defined here instead of in globals.ml.
- * However, we can also call the C parser after cpp, in which
- * case the parser has nothing to do with the preprocessor,
- * but the parser still needs to manage a line number, so it is better to put
- * 'line' in globals.ml.
- * 
- * let line = ref 1
- *)
-
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
-(*
- * let final_location_of_lineno lineno =
- *  raise Todo
- * 
- * let find_included_file file include_paths =
- *  raise Todo
- *)
+let define_cmdline_def (k, v) =
+  Hashtbl.add hmacros k { name = k; nbargs = None; varargs = false; body = v; }
 
-(* less: Could use Set instead of list for the set of include paths*)
+let define (s, params, body) =
+  if Hashtbl.mem hmacros s
+  then failwith (spf "macro redefined: %s" s)
+  else 
+    Hashtbl.add hmacros s
+      (match params with
+        | None -> 
+          { name = s; nbargs = None; varargs = false; body = s }
+        | Some (params, varargs) ->
+          { name = s; nbargs = Some (List.length params); 
+            varargs = varargs; body = s }
+      )
 
-(*
-let do_define (s, v) =
- let macro { 
- }
- in
 
-parse Define:
- check if already defined.
-
-*)
+(* less: Could use Set instead of list for the set of include paths *)
+let rec find_include paths (f, system) =
+  match paths with 
+  (* stricter: better error message *)
+  | [] -> failwith (spf "could not find %s in include paths" f)
+  | x::xs ->
+      if x = "." && system
+      then find_include xs (f, system)
+      else 
+        let path = Filename.concat x f in
+        if Sys.file_exists path
+        then begin
+          if !Flags.debug_inclusion
+          then pr (spf "%d: %s" !L.line path);
+          path
+        end
+        else find_include xs (f, system)

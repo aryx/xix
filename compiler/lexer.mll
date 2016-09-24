@@ -13,9 +13,9 @@ open Parser
  *  - no unicode identifier
  *)
 
-(* less: do like prfile? but then need a lines_directives global? *)
 let error s =
-  failwith (spf "Lexical error: %s (line %d)" s !Globals.line)
+  raise (Error.Error (spf "Lexical error: %s" s, !Location_cpp.line))
+
 
 let sign_of_suffix s =
   match String.lowercase s with
@@ -76,7 +76,7 @@ rule token = parse
   | "//" [^'\n']* { token lexbuf }
   | "/*"          { comment lexbuf }
 
-  | '\n'          { incr Globals.line; token lexbuf }
+  | '\n'          { incr Location_cpp.line; token lexbuf }
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
@@ -219,10 +219,11 @@ and char = parse
 (*****************************************************************************)
 (* Comment rule *)
 (*****************************************************************************)
+
 (* dup: lexer_asm5.mll *)
 and comment = parse
   | "*/"          { token lexbuf }
   | [^ '*' '\n']+ { comment lexbuf }
   | '*'           { comment lexbuf }
-  | '\n'          { incr Globals.line; comment lexbuf }
+  | '\n'          { incr Location_cpp.line; comment lexbuf }
   | eof           { error "eof in comment" }

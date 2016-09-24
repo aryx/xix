@@ -14,6 +14,7 @@ open Common
  *    (but who uses that?)
  *  - does not link
  *    (let the linker do that, but 5c does it??)
+ *  - no error recovery, stop at first error
  * 
  * todo:
  *  - debugger support
@@ -84,13 +85,19 @@ let main () =
         then Common.matched2 s
         else (s, "1")
       in
-      raise Todo
+      Preprocessor.define_cmdline_def (var, val_)
     ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
       raise Todo
     ), " <dir> add dir as a path to look for '#include <file>' files";
     "-.", Arg.Clear include_dot,
     " suppress auto search for include files in the file argument's dir";
+
+    (* pad: I used long name for those options *)
+    "-debug_inclusion", Arg.Set Flags.debug_inclusion,
+    " ";
+    "-e", Arg.Set Flags.debug_inclusion,
+    " ";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
@@ -100,6 +107,7 @@ let main () =
     " dump the tokens as they are generated";
     "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
+
 
     (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,
@@ -165,7 +173,9 @@ let main () =
       (match exn with
       | Failure s -> 
           (* useful to indicate that error comes from 5c? *)
-          Error.errorexit ("5c: " ^ s)
+          Error.errorexit (spf "%cc: %s" thechar s)
+      | Error.Error (s, loc) ->
+          raise Todo
       | _ -> raise exn
       )
 

@@ -11,18 +11,16 @@ open Ast_cpp
  *  - no support for unicode
  * 
  * stricter: 
- *  - no space allowed before the # keyword
- *    (but some people like to do  #    ifdef, when have nested ifdefs)
+ *  - no space allowed between '#' and the directive
+ *    (but some people like to do  '#    ifdef', when have nested ifdefs)
  *  - empty # are not converted in #endif
  *    (who does use that?)
  *  - allow only space before the newline; we do not skip any character
  *    (who does put garbage there?)
  *)
 
-(* todo: use Hist to report error at the right place, 
- * throw Preprocessor.Error then? *)
 let error s =
-  failwith (spf "Lexical error in cpp: %s (line %d)" s !Globals.line)
+  raise  (Error.Error (spf "Lexical error in cpp: %s" s, !Location_cpp.line))
 
 }
 
@@ -53,6 +51,7 @@ rule token = parse
         let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one? *)
         let params = raise Todo in
+        let varargs = raise Todo in
 
         let body = define_body params lexbuf in
         Define (s1, Some (params, varargs), Some body)
@@ -94,6 +93,22 @@ rule token = parse
   | sym { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
 
 (*****************************************************************************)
+(* Macro body *)
+(*****************************************************************************)
+and define_body params = parse
+  | sym as s  
+     {
+      try 
+        let i = List.assoc s params in
+        spf "#%d" i ^ define_body params lexbuf
+      with Not_found ->
+        s ^ define_body params lexbuf
+     }
+  | [^'\n' '_' 'a'-'z''A'-'Z']+ as s { s ^ define_body params lexbuf }
+  | '\n' { incr Location_cpp.line; "" }
+  | eof  { "" }
+
+(*****************************************************************************)
 (* Comment *)
 (*****************************************************************************)
 
@@ -101,7 +116,7 @@ and comment_and_newline = parse
   | space+        { comment_and_newline lexbuf }
   | "//" [^'\n']* { comment_and_newline lexbuf }
   | "/*"          { comment_star lexbuf; comment_and_newline lexbuf }
-  | "\n"          { incr Globals.line }
+  | "\n"          { incr Location_cpp.line }
   (* pad: new error message *)
   | _ as c        { error (spf "unexpected character %c after directive" c) }
   | eof           { error "expected newline, not EOF" }

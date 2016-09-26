@@ -38,7 +38,13 @@ type t =
   | TUnionName of string
 
 
-(* less: type qualifier, but 5c does not use this information *)
+(* 5c does not use this information? for volatile at least? *)
+type qualifier = 
+  | Volatile
+  (* used? *)
+  | Const
+  | Restrict
+  | Inline
 
 type tagdef =
   | Struct of (string * t) list

@@ -21,6 +21,8 @@ let parse (defs, paths) file =
   add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(file, chan, lexbuf)] in
+  (* less: let push x = check if too deep? *)
+
   let last_ident = ref "" in
 
   let rec lexfunc () =

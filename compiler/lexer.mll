@@ -3,6 +3,7 @@
 open Common
 
 open Parser
+module A = Ast
 module L = Location_cpp
 
 (*****************************************************************************)
@@ -99,10 +100,10 @@ rule token = parse
   | "<<" { TInfInf (* TLsh *) } | ">>" { TSupSup (* TRsh *) }
 
 
-  | "+=" { TOpEq "+" }   | "-=" { TOpEq "-" } 
-  | "*=" { TOpEq "*" }   | "/=" { TOpEq "/" } | "%=" { TOpEq "%" }
-  | ">>=" { TOpEq ">>" } | "<<=" { TOpEq "<<" }
-  | "&=" { TOpEq "&" }   | "|=" { TOpEq "|" } | "^=" { TOpEq "^" }
+  | "+=" { TOpEq A.Plus }       | "-=" { TOpEq A.Minus } 
+  | "*=" { TOpEq A.Mul }        | "/=" { TOpEq A.Div } | "%=" { TOpEq A.Mod }
+  | ">>="{ TOpEq A.ShiftRight } | "<<=" { TOpEq A.ShiftLeft }
+  | "&=" { TOpEq A.And }        | "|=" { TOpEq A.Or }  | "^=" { TOpEq A.Xor }
 
   | "(" { TOPar }   | ")" { TCPar }
   | "{" { TOBrace } | "}" { TCBrace }

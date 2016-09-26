@@ -134,8 +134,9 @@ and const_expr = expr
 
   and binaryOp = Arith of arithOp | Logical of logicalOp
        and arithOp   = 
-         | Plus | Minus | Mul | Div | Mod
-         | DecLeft | DecRight 
+         | Plus | Minus 
+         | Mul | Div | Mod
+         | ShiftLeft | ShiftRight 
          | And | Or | Xor
        and logicalOp = 
          | Inf | Sup | InfEq | SupEq 

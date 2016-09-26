@@ -69,6 +69,7 @@ rule token = parse
 
   | "define" { error "syntax in #define" }
 
+  (* stricter: require comment-or-space-only after sym also for #undef *)
   | "undef" space+ (sym as s)
       { comment_and_newline lexbuf; Undef s }
   | "undef" { error "syntax in #undef" } 

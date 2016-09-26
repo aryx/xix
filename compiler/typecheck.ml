@@ -1,12 +1,21 @@
 
+(* Environment for naming and typechecking.
+ *
+ * No macros here; they are handled by cpp. 
+ *)
 type env = {
   ids:  (string, Type.t * Storage.t) Hashtbl.t;
   tags: (string, Type.tagdef) Hashtbl.t;
+  typedefs: (string, Ast.type_) Hashtbl.t;
   (* labels: string, ??  *)
-  (* macros handled by cpp, so no need here *)
   
+  (* or do that in parsing? *)
   block: blockid;
 
-  ids_scope: string list list;
-  tags_scope: string list list;
+  (* to push and pop when enter/leave a block or scope *)
+  ids_scope: ((string * (Type.t * Storage.t)) list) list;
+  tags_scope: ((string * Type.tagdef) list) list;
+  typedefs_scope: ((string * Ast.type_) list) list;
+
+  block_scope: blockid list;
 }

@@ -10,6 +10,7 @@ open Ast
 (* Limitations compared to 5c:
  *  - no support for old style parameter declaration
  *    (obsolete practice anyway)
+ *  - impose a certain order for the storage, qualifier, and types
  *)
 
 (*****************************************************************************)
@@ -19,6 +20,30 @@ open Ast
 (* less: automatic lineno
 let mk_e 
 *)
+
+type qstc = {
+  q: Type.qualifier list;
+  s: Type.sign option;
+  t: Type.t option;
+
+  c: Storage.t option;
+}
+
+let add_q q x =
+  raise Todo
+let add_s s x =
+  raise Todo
+let add_t t x =
+  raise Todo
+let add_c c x =
+  raise Todo
+
+(* things we lift up in the AST *)
+let defs =
+  ref []
+
+let blockno = ref 0
+let blockstack = ref []
 
 %}
 
@@ -53,7 +78,7 @@ let mk_e
 %token TPlusPlus TMinusMinus
 %token TInf TSup  TInfEq TSupEq
 %token TInfInf TSupSup
-%token <string> TOpEq
+%token <Ast.arithOp> TOpEq
 
 /*(*-----------------------------------------*)*/
 /*(*2 Punctuation *)*/
@@ -71,11 +96,18 @@ let mk_e
 /*(*************************************************************************)*/
 /*(*1 Priorities *)*/
 /*(*************************************************************************)*/
+/*(* must be at the top so that it has the lowest priority *)*/
+%nonassoc LOW_PRIORITY_RULE
+/*(* see conflicts.txt *)*/
+%nonassoc Telse
 
+/*(* in 5c but not in orig_c.mly *)*/
 %left   TSemicolon
 %left   TComma
 %right  TEq TOpEq
 %right  TQuestion TColon
+
+/*(* same than in orig_c.mly *)*/
 %left   TOrOr
 %left   TAndAnd
 %left   TOr
@@ -86,6 +118,8 @@ let mk_e
 %left   TInfInf TSupSup
 %left   TPlus TMinus
 %left   TMul TDiv TMod
+
+/*(* in 5c but not in orig_c.mly *)*/
 %right  TMinusMinus TPlusPlus TArrow TDot TOBra TOPar
 
 /*(*************************************************************************)*/
@@ -100,9 +134,11 @@ let mk_e
 /*(*************************************************************************)*/
 /*(*1 Program *)*/
 /*(*************************************************************************)*/
-prog:
+prog: prog1 EOF { $1 }
+
+prog1:
  |  /*(*empty*)*/ { [] }
- | prog xdecl { [] }
+ | prog1 xdecl { [] }
 
 
 /*(*************************************************************************)*/
@@ -332,7 +368,7 @@ qual:
 /*(*************************************************************************)*/
 
 /*(*-----------------------------------------*)*/
-/*(*2 Types part 1 *)*/
+/*(*2 Types part 1 (left part of a type) *)*/
 /*(*-----------------------------------------*)*/
 
 tname:
@@ -366,8 +402,16 @@ complex:
 
 
 /*(*-----------------------------------------*)*/
-/*(*2 Types part 2 *)*/
+/*(*2 Types part 2 (right part of a type) *)*/
 /*(*-----------------------------------------*)*/
+
+/*
+(* declarator return a couple: 
+ *  (name, partial type (a function to be applied to return type))
+ *
+ * note that with 'int* f(int)' we must return Func(Pointer int,int) and not
+ * Pointer (Func(int,int)).
+ *)*/
 
 xdecor:
  | xdecor2 { }
@@ -453,16 +497,17 @@ enum:
 /*(*************************************************************************)*/
 
 gname:
- | Tconst { }
+ | Tconst    { }
  | Tvolatile { }
  | Trestrict { }
 
 cname:
  | Tauto { }
- | Tstatic { }
- | Textern { }
+
+ | Tstatic   { }
+ | Textern   { }
  | Tregister { }
- | Tinline { }
+ | Tinline   { }
 
  | Ttypedef { }
 

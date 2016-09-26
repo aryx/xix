@@ -147,8 +147,7 @@ let main () =
         in
         let include_paths =
           (try
-            (* less: split space? *)
-            [Sys.getenv "INCLUDE"]
+            Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
           with Not_found ->
             [spf "/%s/include" thestring; 
              "/sys/include";

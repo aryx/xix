@@ -2,11 +2,15 @@
 open Common
 
 module L = Location_cpp
+module Flags = Flags_cpp
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(*
+(* 
+ * Cpp as a library.
+ * This is used by 5c but also 5a.
+ * 
  * Main limitations compared to the cpp embedded in 5c of Plan 9:
  *  - no support for unicode
  *  - see lexer_cpp.mll

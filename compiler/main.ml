@@ -94,9 +94,9 @@ let main () =
     " suppress auto search for include files in the file argument's dir";
 
     (* pad: I used long name for those options *)
-    "-debug_inclusion", Arg.Set Flags.debug_inclusion,
+    "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion,
     " ";
-    "-e", Arg.Set Flags.debug_inclusion,
+    "-e", Arg.Set Flags_cpp.debug_inclusion,
     " ";
     "-debug_line", Arg.Set Flags.debug_line,
     " ";

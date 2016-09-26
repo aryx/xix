@@ -118,6 +118,7 @@ xdecl:
  | zctlist xdlist TSemicolon { }
  | zctlist xdecor block { }
 
+/*(* stricter? forbid empty here? *)*/
 zctlist:
  | /*(*empty*)*/ { }
  | ctllist       { }
@@ -451,15 +452,10 @@ enum:
 /*(*1 Storage, qualifiers *)*/
 /*(*************************************************************************)*/
 
-gctname:
- | tname { }
- | gname { }
- | cname { }
-
-gcname:
- | gname { }
- | cname { }
-
+gname:
+ | Tconst { }
+ | Tvolatile { }
+ | Trestrict { }
 
 cname:
  | Tauto { }
@@ -470,10 +466,16 @@ cname:
 
  | Ttypedef { }
 
-gname:
- | Tconst { }
- | Tvolatile { }
- | Trestrict { }
+
+gctname:
+ | tname { }
+ | gname { }
+ | cname { }
+
+gcname:
+ | gname { }
+ | cname { }
+
 
 gctnlist: 
  | gctname { }
@@ -483,8 +485,11 @@ gcnlist:
  | gcname { }
  | gcnlist gcname { }
 
+
+/*(* stricter? impose an order? c then g then t? *)*/
 types:
  | tname { }
+ /*(* stricter? forbid this? *)*/
  | gcnlist { }
  | tname gctnlist { }
  | gcnlist tname { }

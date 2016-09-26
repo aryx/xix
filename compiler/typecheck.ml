@@ -1,7 +1,4 @@
 
-(* for scope *)
-type blockid = int
-
 type env = {
   ids:  (string, Type.t * Storage.t) Hashtbl.t;
   tags: (string, Type.tagdef) Hashtbl.t;

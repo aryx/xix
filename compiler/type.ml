@@ -5,6 +5,8 @@ type sign = Signed | Unsigned
  * has alreafy been done. 
  *)
 type t =
+  (* Basic *)
+
   | TVoid
 
   (* integers *)
@@ -21,8 +23,9 @@ type t =
   | TFloat
   | TDouble
 
-  (* composite *)
-  | TIndirect of t
+  (* Composite *)
+
+  | TPointer of t
   (* Why not unsugar to TIndirect? for better error messages? *)
   | TArray of t (* no size here *)
 

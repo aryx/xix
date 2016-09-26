@@ -49,6 +49,7 @@ module R = Rules
  *    variable
  *  - a new Interactive attribute :I: so one can call interactive program
  *    in a recipe (e.g., syncweb)
+ *  - TODO a luisa mode, more synthetic, just DONE
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
  *    and evaluating, so avoid duplicate work like handling quoted characters
@@ -121,17 +122,20 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
 
    while root.G.state = G.NotMade do
      let did = ref false in
+
      (* may call internally Scheduler.run to schedule jobs *)
      Outofdate.work env root did;
+
      if !did 
      then ever_did := true
      else 
        (* no work possible, let's wait for a job process to finish *)
        if !Scheduler.nrunning > 0
        then Scheduler.waitup ()
+       (* else: impossible? *)
    done;
 
-   (* bug: root can be BeingMade in which case we need to wait *)
+   (* bugfix: root can be BeingMade in which case we need to wait *)
    while !Scheduler.nrunning > 0 do
      Scheduler.waitup ();
    done;
@@ -250,6 +254,17 @@ let main () =
       | Failure s -> 
           (* useful to indicate that error comes from mk, not subprocess *)
           pr2 ("mk: " ^ s);
+          (* need to wait for other children before exiting, otherwise
+           * could get corrupted incomplete object files.
+           *)
+          while !Scheduler.nrunning > 0 do
+              try 
+                (* todo: if dump_jobs, print pid we wait and its recipe *)
+                Unix.wait () |> ignore;
+                decr Scheduler.nrunning
+              with Unix.Unix_error (error, str1, str2) ->
+                failwith (spf "%s" (Unix.error_message error))
+          done;
           exit (1)
       | _ -> raise exn
       )

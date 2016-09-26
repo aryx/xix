@@ -6,6 +6,7 @@ DIRS=\
   lib_core commons\
   mk shell\
   lib_parsing lex yacc\
+  macroprocessor\
   formats/objects assembler\
   formats/executables linker\
   compiler

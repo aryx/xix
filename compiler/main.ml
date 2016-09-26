@@ -178,8 +178,10 @@ let main () =
       | Failure s -> 
           (* useful to indicate that error comes from 5c? *)
           Error.errorexit (spf "%cc: %s" thechar s)
-      | Error.Error (s, loc) ->
-          raise Todo
+      | Location_cpp.Error (s, loc) ->
+          (* less: could use final_loc_and_includers_of_loc loc *)
+          let (file, line) = Location_cpp.final_loc_of_loc loc in
+          Error.errorexit (spf "%s:%d %s" file line s)
       | _ -> raise exn
       )
 

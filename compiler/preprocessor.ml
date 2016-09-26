@@ -50,10 +50,6 @@ type macro = {
 }
 
 
-(*
-exception Error of string * int
-*)
-
 (*****************************************************************************)
 (* Globals *)
 (*****************************************************************************)
@@ -73,7 +69,7 @@ let define_cmdline_def (k, v) =
 
 let define (s, params, body) =
   if Hashtbl.mem hmacros s
-  then raise (Error.Error (spf "macro redefined: %s" s, !Location_cpp.line))
+  then raise (L.Error (spf "macro redefined: %s" s, !L.line))
   else 
     Hashtbl.add hmacros s
       (match params with

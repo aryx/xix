@@ -3,6 +3,7 @@
 open Common
 
 open Parser
+module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
@@ -14,7 +15,7 @@ open Parser
  *)
 
 let error s =
-  raise (Error.Error (spf "Lexical error: %s" s, !Location_cpp.line))
+  raise (L.Error (spf "Lexical error: %s" s, !L.line))
 
 
 let sign_of_suffix s =

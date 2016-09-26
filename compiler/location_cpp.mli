@@ -8,12 +8,15 @@ type location_history = {
 }
   and location_event =
     | Include of Common.filename
-    | Line of Common.filename * int
+    | Line of int * Common.filename
     | Eof
 
 (* val history: location_history list ref *)
 
 val line: loc ref
+
+exception Error of string * loc
+
 
 (* add to history *)
 val add_event: 

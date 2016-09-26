@@ -13,8 +13,6 @@
 type directive =
   | Include of Common.filename * bool (* true if <>, false if "" *)
 
-  | Line of int * Common.filename
-
   (* the define body has been processed and every parameter occurence
    * is replaced by a #xxx where xxx is the number corresponding to the
    * ith parameter.
@@ -27,5 +25,7 @@ type directive =
   | Ifndef of string
   | Else
   | Endif
+
+  | Line of int * Common.filename
 
   | Pragma of string * string

@@ -3,6 +3,7 @@
 open Common
 
 open Ast_cpp
+module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
@@ -20,7 +21,7 @@ open Ast_cpp
  *)
 
 let error s =
-  raise  (Error.Error (spf "Lexical error in cpp: %s" s, !Location_cpp.line))
+  raise  (L.Error (spf "Lexical error in cpp: %s" s, !L.line))
 
 }
 
@@ -48,7 +49,7 @@ rule token = parse
 
   | "define" space+ (sym as s1) '(' [^')']* as s2 ')'
       { 
-        let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
+        let _xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one? *)
         let params = raise Todo in
         let varargs = raise Todo in
@@ -122,6 +123,14 @@ and define_body macro params = parse
   | eof  { error (spf "eof in macro %s" macro) }
 
 (*****************************************************************************)
+(* Strings and characters *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Macro arguments *)
+(*****************************************************************************)
+
+(*****************************************************************************)
 (* Comment *)
 (*****************************************************************************)
 
@@ -142,5 +151,5 @@ and comment_star = parse
   | eof           { error "eof in comment" }
 
 (*****************************************************************************)
-(* skip *)
+(* Skipping, for ifdefs *)
 (*****************************************************************************)

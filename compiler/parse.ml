@@ -21,6 +21,7 @@ let parse (defs, paths) file =
   add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(file, chan, lexbuf)] in
+  let last_ident = ref "" in
 
   let rec lexfunc () =
     match !stack with
@@ -49,7 +50,7 @@ let parse (defs, paths) file =
                   let lexbuf = Lexing.from_channel chan in
                   stack := (path, chan, lexbuf)::!stack;
                 with Failure s ->
-                  raise (Error.Error (s, !Location_cpp.line))
+                  raise (L.Error (s, !L.line))
                 )
 
             | D.Define (s, params, body) ->
@@ -58,12 +59,11 @@ let parse (defs, paths) file =
             | D.Undef s ->
                 (* stricter: check that was defined *)
                 if not (Hashtbl.mem Preprocessor.hmacros s)
-                then raise (Error.Error (spf "macro %s was not defined" s,
-                                         !Location_cpp.line))
+                then raise (L.Error (spf "macro %s was not defined" s,!L.line))
                 else Hashtbl.remove Preprocessor.hmacros s
 
             | D.Line (line, file) ->
-                add_event (L.Line (file, line));
+                add_event (L.Line (line, file));
 
             | D.Ifdef _
             | D.Ifndef _
@@ -77,6 +77,7 @@ let parse (defs, paths) file =
 
         (* stricter: in theory could do macro for reserved keyword? *)
         | T.TName s | T.TTypeName s ->
+            last_ident := s;
             if Hashtbl.mem Preprocessor.hmacros s
             then raise Todo
             else t
@@ -89,7 +90,11 @@ let parse (defs, paths) file =
   (try 
     Parser.prog (fun _lexbuf -> lexfunc ()) lexbuf
   with Parsing.Parse_error ->
-    raise (Error.Error (spf "Syntax error", !L.line))
+    (* less: record last name, and do like 5c *)
+    raise (L.Error ((if !last_ident = "" 
+                    then "Syntax error" 
+                    else spf "Syntax error, last name: %s" !last_ident)
+                   , !L.line))
   )
 
 
@@ -101,7 +106,6 @@ let parse_no_cpp file =
     (try 
       Parser.prog Lexer.token lexbuf
     with Parsing.Parse_error ->
-      (* less: record last name, and do like 5c *)
       failwith (spf "Syntax error: line %d" !L.line)
     )
   )

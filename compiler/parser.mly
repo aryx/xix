@@ -3,14 +3,19 @@
 open Common
 
 open Ast
+module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Limitations compared to 5c:
+(* Limitations compared to 5c (and sometimes also ANSI C):
  *  - no support for old style parameter declaration
  *    (obsolete practice anyway)
  *  - impose a certain order for the storage, qualifier, and types
+ *    (everybody follow this convention anyway)
+ *  - no implicit single 'signed' means 'signed int'. Signed has to have
+ *    an int-type after.
+ *  - no support for anonymous field (kencc extension)
  *)
 
 (*****************************************************************************)
@@ -21,29 +26,48 @@ open Ast
 let mk_e 
 *)
 
-type qstc = {
-  q: Type.qualifier list;
-  s: Type.sign option;
-  t: Type.t option;
-
-  c: Storage.t option;
-}
-
-let add_q q x =
-  raise Todo
-let add_s s x =
-  raise Todo
-let add_t t x =
-  raise Todo
-let add_c c x =
-  raise Todo
-
-(* things we lift up in the AST *)
+(* Defs contain things we lift up in the AST (struct defs, enum defs, typedefs).
+ * Note that by tagging those defs with a blockid, there is no escape-scope
+ * problem.
+ *)
 let defs =
   ref []
 
-let blockno = ref 0
-let blockstack = ref []
+let get_and_reset x =
+  let v = !x in
+  x := [];
+  v
+
+(* to manage scope (used notably to recognize typedefs in the lexer) *)
+type env = {
+  ids: (string, idkind * Ast.blockid) Hashtbl.t;
+  tags: (string, tagkind * Ast.blockid) Hashtbl.t;
+  mutable block: Ast.blockid;
+
+  mutable ids_scope: ((string * (idkind * Ast.blockid)) list) list;
+  mutable tags_scope: ((string * (tagkind * Ast.blockid)) list) list;
+  mutable block_scope: Ast.blockid list;
+
+}
+
+let env = {
+  ids = Hashtbl.create 101;
+  tags = Hashtbl.create 101;
+  block = 0;
+  
+  ids_scope = [];
+  tags_scope = [];
+  block_scope = [];
+}
+
+let block_counter = ref 0
+let gensym_counter = ref 0
+let gensym () =
+  incr gensym_counter;
+  spf "|sym%d|" !gensym_counter
+
+let error s =
+  raise (L.Error (spf "Syntax error: %s" s, !L.line))
 
 %}
 
@@ -134,11 +158,11 @@ let blockstack = ref []
 /*(*************************************************************************)*/
 /*(*1 Program *)*/
 /*(*************************************************************************)*/
-prog: prog1 EOF { $1 }
+prog: prog1 EOF   { $1 }
 
 prog1:
  |  /*(*empty*)*/ { [] }
- | prog1 xdecl { [] }
+ | prog1 xdecl    { $1 @ $2 }
 
 
 /*(*************************************************************************)*/
@@ -150,23 +174,63 @@ prog1:
 /*(*-----------------------------------------*)*/
 
 xdecl: 
- | zctlist        TSemicolon { }
- | zctlist xdlist TSemicolon { }
- | zctlist xdecor block { }
+ | storage_and_type        TSemicolon 
+     { (* stricter: *)
+       if !defs = [] 
+       then error "declaration without any identifier";
+       get_and_reset defs;
+     }
+ | storage_and_type xdlist TSemicolon 
+     { get_and_reset defs @
+       ($2 |> List.map (fun ((id, typ2), init) ->
+          let (sto_or_typedef, typ1) = $1 in
+          let typ = typ2 typ1 in
+          (match sto_or_typedef, init with
+          | Left sto, _ -> 
+              VarDecl { v_name = (id, env.block);
+                        v_type = typ;
+                        v_storage = sto;
+                        v_init = init;
+                      }
+          (* stricter: clang also reports this, but not 5c *)
+          | Right (), Some _ ->
+              error "initializer with typedef"
+          | Right _, None ->
+              (* todo: proper scope handling, add in env.ids *)
+              Hashtbl.add Globals.hids id Ast.IdTypedef;
+              Hashtbl.add env.ids id (Ast.IdTypedef, env.block);
 
-/*(* stricter? forbid empty here? *)*/
-zctlist:
- | /*(*empty*)*/ { }
- | ctllist       { }
-
-ctllist: types { }
+              TypeDef { t_name = (id, env.block);
+                        t_type = typ;
+                      }
+         )
+        )) 
+     }
+ | storage_and_type xdecor block      
+     { get_and_reset defs @
+       [ let (id, typ2) = $2 in
+         let (sto_or_typedef, typ1) = $1 in
+         let typ = typ2 typ1 in
+         (match typ, sto_or_typedef with
+         | TFunction ft, Left sto -> 
+             FuncDef { f_name = id;
+                       f_type = ft;
+                       f_body = $3;
+                       f_storage = sto; }
+         (* stricter: *)
+         | TFunction _, Right _ ->
+             error "a function definition can not be a type definition"
+         | _, _ -> error "not a function type"
+         )
+       ]
+     }
 
 
 xdlist:
- | xdecor { }
- | xdecor TEq init { }
+ | xdecor          { [$1, None] }
+ | xdecor TEq init { [$1, Some $3] }
 
- | xdlist TComma xdlist { }
+ | xdlist TComma xdlist { $1 @ $3 }
 
 
 /*(*-----------------------------------------*)*/
@@ -174,38 +238,35 @@ xdlist:
 /*(*-----------------------------------------*)*/
 
 adecl:
- | ctllist        TSemicolon { }
- | ctllist adlist TSemicolon { }
+ | storage_and_type        TSemicolon 
+     { [StmtTodo] }
+ | storage_and_type adlist TSemicolon 
+     { [StmtTodo] }
 
-/*(* equal to xdlist but different codegen? *)*/
-adlist:
- | xdecor { }
- | xdecor TEq init { }
-
- | adlist TComma adlist { }
+adlist: xdlist { $1 }
 
 
 /*(*************************************************************************)*/
 /*(*1 Statements *)*/
 /*(*************************************************************************)*/
 
-block: TOBrace slist TCBrace { }
+block: TOBrace slist TCBrace { $2 }
 
 slist:
- | /*(*empty*)*/ { }
- | slist adecl { }
- | slist stmnt { }
+ | /*(*empty*)*/ { [] }
+ | slist adecl { $1 @ $2 }
+ | slist stmnt { $1 @ [$2] }
 
 stmnt: 
- | ulstmnt        { }
- | labels ulstmnt { }
+ | ulstmnt        { StmtTodo }
+ | labels ulstmnt { StmtTodo }
 
- | error TSemicolon { }
+ | error TSemicolon { error "error before semicolon" }
 
 ulstmnt:
  | zcexpr TSemicolon { }
  | block { }
- | Tif TOPar cexpr TCPar stmnt { }
+ | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE { }
  | Tif TOPar cexpr TCPar stmnt Telse stmnt { }
  | Twhile TOPar cexpr TCPar stmnt { }
  | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { }
@@ -214,13 +275,17 @@ ulstmnt:
  | Tbreak TSemicolon { }
  | Tcontinue TSemicolon { }
  | Tswitch TOPar cexpr TCPar stmnt { }
- | Tgoto ltag TSemicolon { }
+ | Tgoto tag TSemicolon { }
+
+tag: 
+ | TName     { $1 }
+ | TTypeName { $1 }
 
 
 
 forexpr: 
  | zcexpr { }
- | ctllist adlist { }
+ | storage_and_type adlist { }
 
 labels:
  | label { }
@@ -270,7 +335,7 @@ expr:
 xuexpr:
  | uexpr { }
 
- | TOPar tlist abdecor TCPar xuexpr  { }
+ | TOPar qualifier_and_type abdecor TCPar xuexpr  { }
 
 uexpr:
  | pexpr { }
@@ -293,10 +358,10 @@ pexpr:
  | pexpr TOPar zelist TCPar { }
  | pexpr TOBra cexpr TCBra { }
 
- | pexpr TDot ltag { }
- | pexpr TArrow ltag { } 
+ | pexpr TDot tag { }
+ | pexpr TArrow tag { } 
 
- | name { }
+ | TName { }
 
  | TConst { } 
  | TFConst { }
@@ -305,7 +370,7 @@ pexpr:
  | pexpr TPlusPlus { }
  | pexpr TMinusMinus { } 
 
- | Tsizeof TOPar tlist abdecor TCPar { }
+ | Tsizeof TOPar qualifier_and_type abdecor TCPar { }
  | Tsizeof uexpr { }
 
 cexpr:
@@ -343,8 +408,8 @@ elist:
 /*(*************************************************************************)*/
 
 init: 
- | expr { }
- | TOBrace ilist TCBrace { }
+ | expr                  { ExprTodo }
+ | TOBrace ilist TCBrace { ExprTodo }
 
 ilist:
  | qlist { }
@@ -352,14 +417,14 @@ ilist:
  | qlist init { }
 
 qlist:
- | init TComma { }
+ | init TComma       { }
  | qlist init TComma { }
- | qual { }
+ | qual       { }
  | qlist qual { } 
 
 qual:
  | TOBra lexpr TCBra { }
- | TDot ltag { }
+ | TDot tag { }
  | qual TEq { }
 
 
@@ -371,35 +436,74 @@ qual:
 /*(*2 Types part 1 (left part of a type) *)*/
 /*(*-----------------------------------------*)*/
 
-tname:
- | Tchar { }
- | Tshort { }
- | Tint { }
- | Tlong { }
+simple_type:
+ | Tchar            { (Type.TChar Type.Signed) }
+ | Tsigned Tchar    { (Type.TChar Type.Signed) }
+ | Tunsigned Tchar  { (Type.TChar Type.Unsigned) }
 
- | Tfloat { }
- | Tdouble { }
+ | Tshort           { (Type.TShort Type.Signed) }
+ | Tunsigned Tshort { (Type.TShort Type.Unsigned) }
 
- | Tvoid { }
+ | Tint             { (Type.TInt Type.Signed) }
+ | Tunsigned Tint   { (Type.TInt Type.Unsigned) }
 
- | Tsigned { }
- | Tunsigned { }
+ | Tlong            { (Type.TLong Type.Signed) }
+ | Tunsigned Tlong  { (Type.TLong Type.Unsigned) }
 
-complex:
- | Tstruct ltag { }
- | Tunion ltag { }
- | Tenum ltag { }
+ | Tlong Tlong      { (Type.TVLong Type.Signed) }
+ | Tunsigned Tlong Tlong { (Type.TVLong Type.Unsigned) }
 
- | Tstruct ltag sbody { }
- | Tunion ltag sbody { }
- | Tenum ltag TOBrace enum TCBrace { }
 
- | Tstruct sbody { }
- | Tunion sbody { }
- | Tenum TOBrace enum TCBrace { }
+ | Tfloat  { Type.TFloat }
+ | Tdouble { Type.TDouble }
 
- | TTypeName { }
+ | Tvoid   { Type.TVoid }
 
+su:
+ | Tstruct { Ast.Struct }
+ | Tunion  { Ast.Union }
+
+tag_opt:
+ | tag          { $1 }
+ | /*(*empty*)*/ { gensym () }
+
+complex_type:
+ | su tag { 
+     try 
+       let (tagkind, bid) = Hashtbl.find env.tags $2 in
+       (* less: assert takind = $1 *)
+       let fullname = $2, bid in
+       Ast.TStructName ($1, fullname)
+     with Not_found ->
+       (* todo: should check later that defined somewhere, kinda forward decl *)
+       let fullname = $2, env.block in
+       Ast.TStructName ($1, fullname)
+ }
+
+ | su tag_opt sbody {
+     let fullname = $2, env.block in
+     (* todo: check if already defined? or conflicting su? *)
+     defs := (StructDef { s_name = fullname; s_kind = $1; s_flds = $3 })::!defs;
+     Ast.TStructName ($1, fullname)
+ }
+
+
+ | Tenum tag   { raise Todo }
+ | Tenum tag_opt TOBrace enum TCBrace {
+     let fullname = $2, env.block in
+     defs := (EnumDef { e_name = fullname; e_constants = $4 })::!defs;
+     Ast.TEnumName fullname
+ }
+
+ | TTypeName 
+     { 
+       try let (_,bid) = Hashtbl.find env.ids $1 in Ast.TTypeName ($1,bid) 
+       with Not_found -> error (spf "count not find typedef for %s" $1)
+     }
+
+type_:
+  | simple_type  { Ast.TBase $1 }
+  | complex_type { $1 }
 
 /*(*-----------------------------------------*)*/
 /*(*2 Types part 2 (right part of a type) *)*/
@@ -414,21 +518,18 @@ complex:
  *)*/
 
 xdecor:
- | xdecor2 { }
- | TMul zgnlist xdecor { }
+ | xdecor2                { $1 }
+ | TMul qualifiers xdecor { $3 (* TODO *) }
 
+/*(* use tag here too, as can have foo foo; declarations *)*/
 xdecor2:
- | tag { }
- | TOPar xdecor TCPar { }
- | xdecor2 TOBra zexpr TCBra { }
- | xdecor2 TOPar zarglist TCPar { }
+ | tag { $1, (fun x -> x) }
+ | TOPar xdecor TCPar { $2 }
+ | xdecor2 TOBra zexpr TCBra { $1  (* TODO *) }
+ | xdecor2 TOPar zarglist TCPar { $1  (* TODO *) }
 
-tag:
- | ltag { }
 
-ltag: 
- | TName { }
- | TTypeName { }
+
 
 zarglist:
  | /*(*empty*)*/ { }
@@ -436,8 +537,8 @@ zarglist:
 
 /*less: name { } */
 arglist:
- | tlist xdecor { }
- | tlist abdecor { }
+ | qualifier_and_type xdecor { }
+ | qualifier_and_type abdecor { }
 
  | arglist TComma arglist { }
  | TDot TDot TDot { }
@@ -445,11 +546,11 @@ arglist:
 
 abdecor:
  | /*(*empty*)*/ { }
- | abdecor1 { }
+ | abdecor1      { }
 
 abdecor1:
- | TMul zgnlist { }
- | TMul zgnlist abdecor1 { }
+ | TMul qualifiers { }
+ | TMul qualifiers abdecor1 { }
  | abdecor2  { }
 
 abdecor2:
@@ -467,96 +568,71 @@ abdecor3:
 /*(*1 Struct/union/enum definition *)*/
 /*(*************************************************************************)*/
 
-sbody: TOBrace edecl TCBrace { }
+sbody: TOBrace edecl TCBrace { $2 }
 
 edecl:
- |       tlist zedlist TSemicolon { }
- | edecl tlist zedlist TSemicolon { }
+ |       edecl_elem TSemicolon { $1 }
+ | edecl edecl_elem TSemicolon { $1 @ $2 }
 
+edecl_elem: qualifier_and_type zedlist
+ { $2 |> List.map (fun (id, typ2) -> 
+     let typ1 = $1 in
+     let typ = typ2 typ1 in
+     { fld_name = Some id; fld_type = typ }
+   )
+ }
+
+/*(* so can parse nested struct def without any identifier *)*/
 zedlist:
- | /*(*empty*)*/ { }
- | edlist        { }
+ | /*(*empty*)*/ { [] }
+ | edlist        { $1 }
 
 edlist:
- | edecor { }
- | edlist TComma edecor { }
+ | edecor               { [$1] }
+ | edlist TComma edecor { $1 @ [$3] }
 
-edecor:
- | xdecor { }
+edecor: xdecor { $1 }
 
-
+/*(* todo: same scope than identifier? so modify htypedef? 
+   * todo: populate early, as const_expr can reference enum constants defined before
+   *)*/
 enum:
- | TName { }
- | TName TEq expr { }
+ | TName { raise Todo }
+ | TName TEq const_expr { raise Todo }
 
- | enum TComma enum { }
- | enum TComma { }
+ | enum TComma enum { $1 @ $3 }
+ | enum TComma      { $1 }
+
+const_expr: expr { }
 
 /*(*************************************************************************)*/
 /*(*1 Storage, qualifiers *)*/
 /*(*************************************************************************)*/
 
-gname:
- | Tconst    { }
- | Tvolatile { }
- | Trestrict { }
+storage:
+ | Tauto     { Storage.Auto }
+ | Tstatic   { Storage.Static }
+ | Textern   { Storage.Extern }
+ | Tregister { Storage.Auto }
+ | Tinline   { error "inline not supported" }
 
-cname:
- | Tauto { }
-
- | Tstatic   { }
- | Textern   { }
- | Tregister { }
- | Tinline   { }
-
- | Ttypedef { }
+qualifier:
+ | Tconst    { Type.Const }
+ | Tvolatile { Type.Volatile }
+ | Trestrict { error "restrict not supported" }
 
 
-gctname:
- | tname { }
- | gname { }
- | cname { }
+/*(* stricter: impose an order. c then g then t? *)*/
+storage_and_type:
+ |          qualifiers type_ { Left Storage.Auto, $2 }
+ | storage  qualifiers type_ { Left $1, $3 }
+ | Ttypedef qualifiers type_ { Right (), $3 }
 
-gcname:
- | gname { }
- | cname { }
+qualifier_and_type: qualifiers type_ { $2 }
 
-
-gctnlist: 
- | gctname { }
- | gctnlist gctname { }
-
-gcnlist:
- | gcname { }
- | gcnlist gcname { }
-
-
-/*(* stricter? impose an order? c then g then t? *)*/
-types:
- | tname { }
- /*(* stricter? forbid this? *)*/
- | gcnlist { }
- | tname gctnlist { }
- | gcnlist tname { }
- | gcnlist tname gctnlist { }
-
- | complex { }
- | complex gctnlist { }
- | gcnlist complex zgnlist { }
-
-tlist: types { }
-
-zgnlist:
+qualifiers:
  | /*(*empty*)*/ { }
- | zgnlist gname { }
-
-
-/*(*************************************************************************)*/
-/*(*1 Name *)*/
-/*(*************************************************************************)*/
-
-name:
- | TName { }
+ | qualifiers qualifier { }
 
 /*(*************************************************************************)*/
 /*(*1 xxx_opt, xxx_list *)*/

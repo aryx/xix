@@ -41,10 +41,9 @@ type t =
 (* 5c does not use this information? for volatile at least? *)
 type qualifier = 
   | Volatile
-  (* used? *)
+  (* used? seems not really supported *)
   | Const
-  | Restrict
-  | Inline
+  (* less: unsupported: | Restrict | Inline *)
 
 type tagdef =
   | Struct of (string * t) list

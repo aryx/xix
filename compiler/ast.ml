@@ -5,22 +5,24 @@
 (*****************************************************************************)
 (* An Abstract Syntax Tree (AST) for C.
  * 
- * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
- * 
  * The AST does not match exactly the source code; we do a few simplications
  * at parsing time:
- *  - no nested struct, they are lifted to the toplevel and a blockid
- *    is associated with the tag name to avoid name conflicts
- *  - no anonymous structure (an artificial name is gensym'ed)
- *  - no mix of typedefs with other variable declarations, again
+ *  - no nested struct definitions; they are lifted to the toplevel and 
+ *    a blockid is associated with the tag name to avoid name conflicts
+ *  - no anonymous structure; an artificial name is gensym'ed.
+ *  - no mix of typedefs with other variable declarations; again
  *    they are lifted to the top
+ *  - enums are also lifted to the top (and its constants are tagged with
+ *    a blockid)
+ * 
+ * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
  *)
 
 (*****************************************************************************)
 (* The AST related types *)
 (*****************************************************************************)
 
-(* global linenumber *)
+(* global linenumber after preprocessing *)
 type loc = Location_cpp.loc
 
 (* ------------------------------------------------------------------------- *)
@@ -28,7 +30,6 @@ type loc = Location_cpp.loc
 (* ------------------------------------------------------------------------- *)
 
 (* less: ref to symbol? or use external hash? 
- * less: set later a blockid so unambiguous?
  * todo: lineno field?
  *)
 type name = string
@@ -36,15 +37,22 @@ type name = string
 (* for scope *)
 type blockid = int
 
-(* name can be a gensym'ed name for anonymous struct/union/enum *)
+(* name below can be a gensym'ed name for anonymous struct/union/enum *)
 type fullname = name * blockid
+
+(* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers. *) 
+type idkind =
+  | IdIdent
+  | IdTypedef
+  | IdEnumConstant
 
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* Merge with Type.t? But typedef expansion is not done here,
- * and constant expressions are also not resolved yet. Better to separate
- * I think.
+(* Merge with Type.t? No. For one thing, typedef expansion is not done here.
+ * Moreover constant expressions are also not resolved yet (those expressions
+ * can involve enum constants which will be resolved later).
+ * Better to separate I think.
  * todo: lineno field
  * todo: qualifier type
  *)
@@ -53,9 +61,10 @@ type type_ =
   | TPointer of type_
   | TArray of const_expr option * type_
   | TFunction of function_type
+
   | TStructName of struct_kind * fullname
-  (* hmmm but in C it's really like an int no? but scheck could be
-   * extended at some point to do more strict type checking! 
+  (* In C an enum is really like an int. However, we could do
+   * extended checks at some point to do more strict type checking! 
    *)
   | TEnumName of fullname
   | TTypeName of fullname
@@ -75,13 +84,13 @@ type type_ =
 (* ------------------------------------------------------------------------- *)
 (* todo: lineno field *)
 and expr =
-  (* Characters are transformed in Int at parsing time *)
+  (* Note that characters are transformed in Int at parsing time; no need Char*)
   | Int of string * Storage.intsize
   | Float of string * Storage.floatsize
   | String of string * Storage.stringsize
 
-
-  | Id of name
+  (* Global, local, parameter, enum constant (can be scoped), function *)
+  | Id of fullname
 
   | Call of expr * argument list
 
@@ -119,11 +128,11 @@ and expr =
 
 and argument = expr
 
-(* todo: now that call preprocessor first, cases where not a constant? 
- * can have basic arithmetic here?
+(* Now that we call the preprocessor first, cases where const_expr is
+ * not a constant? Can have basic arithmetic here? 
+ * At least can have enum constants.
  *)
 and const_expr = expr
-
 
   and unaryOp  = 
     (* less: could be lift up, those are really important operators *)
@@ -157,13 +166,15 @@ and stmt =
 
   | While of expr * stmt
   | DoWhile of stmt * expr
+  (* todo: can have declarations here *)
   | For of expr option * expr option * expr option * stmt
 
   | Return of expr option
   | Continue | Break
 
-  | Label of name * stmt
-  | Goto of name
+  | Label of fullname * stmt
+  | Goto of fullname
+
   (* should occur only in Switch *)
   | Case of expr * stmt list
   | Default of stmt list
@@ -174,8 +185,8 @@ and stmt =
 
 
 
-(* have a specific case type? hard in C because they mix labels
- * and case a lot (see the lexer of 5c).
+(* Can we have a specific case type? It is hard in C because they mix labels
+ * and 'case' a lot (see the code in the lexer of 5c).
  *)
 and case = stmt
 
@@ -184,7 +195,7 @@ and case = stmt
 (* ------------------------------------------------------------------------- *)
 
 and var_decl = {
-  v_name: name;
+  v_name: fullname;
   v_type: type_;
   v_storage: Storage.t;
   v_init: initialiser option;
@@ -199,6 +210,7 @@ and var_decl = {
 (* Definitions *)
 (* ------------------------------------------------------------------------- *)
 type func_def = {
+  (* functions are globals, no need for fullname here *)
   f_name: name;
   f_type: function_type;
   f_body: stmt list;
@@ -211,8 +223,8 @@ type struct_def = {
   s_flds: field_def list;
 }
 
-  (* We could merge with var_decl, but field have no storage normally and
-   * they can have bitfields
+  (* We could merge with var_decl, but fields have no storage, and
+   * they can have bitfields.
    *)
   and field_def = { 
    (* less: bitfield annotation
@@ -224,11 +236,18 @@ type struct_def = {
 
 type enum_def = { 
   e_name: fullname;
-  e_constants: (name * const_expr option) list;
+  (* we also need to use fullname for constants, to scope them *)
+  e_constants: (fullname * const_expr option) list;
 }
 
+(* to manage tag scope *)
+type tagkind =
+  | TagStruct
+  | TagUnion
+  | TagEnum
+
 type type_def = { 
-  t_name: name;
+  t_name: fullname;
   t_type: type_;
 }
 

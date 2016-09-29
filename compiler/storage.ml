@@ -1,11 +1,14 @@
 
+(* No Typedef here, this is not a storage! *) 
 type t =
   | Auto   (* local *)
-  | Param  (* parameter *)
+  | Param  (* parameter *) (* ??? *)
 
   | Extern (* public global defined elsewhere *)
   | Global (* public global defined here *)
   | Static (* Private global *)
+
+  (* less:  | Inline? | Register *)
 
 type intsize =
   | Char

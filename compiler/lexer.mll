@@ -175,8 +175,12 @@ rule token = parse
       | "sizeof" -> Tsizeof
 
       | _ -> 
-        if Hashtbl.mem Globals.htypedefs s
-        then TTypeName s
+        if Hashtbl.mem Globals.hids s
+        then 
+          (match Hashtbl.find Globals.hids s with
+          | A.IdIdent | A.IdEnumConstant -> TName s
+          | A.IdTypedef -> TTypeName s
+          )
         else TName s
   }
 

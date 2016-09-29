@@ -16,6 +16,10 @@ open Common
  *    (let the linker do that, but 5c does it??)
  *  - no error recovery, stop at first error
  * 
+ * improvements:
+ *  - forbid more constructs (typedef and initializers, typedef function
+ *    definitions, etc)
+ * 
  * todo:
  *  - debugger support
  *  - profiler support
@@ -94,14 +98,10 @@ let main () =
     " suppress auto search for include files in the file argument's dir";
 
     (* pad: I used long name for those options *)
-    "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion,
-    " ";
-    "-e", Arg.Set Flags_cpp.debug_inclusion,
-    " ";
-    "-debug_line", Arg.Set Flags.debug_line,
-    " ";
-    "-f", Arg.Set Flags.debug_line,
-    " ";
+    "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
+    "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
+    "-debug_line", Arg.Set Flags.debug_line, " ";
+    "-f", Arg.Set Flags.debug_line, " ";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

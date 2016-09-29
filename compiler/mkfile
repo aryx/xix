@@ -3,9 +3,10 @@
 TOP=..
 INCLUDES=-I $TOP/commons -I $TOP/lib_core -I $TOP/macroprocessor
 
-SRC= globals.ml flags.ml \
+SRC= flags.ml \
   error.ml \
   ast.ml type.ml storage.ml \
+  globals.ml \
   parser.ml lexer.ml parse.ml \
   main.ml
 

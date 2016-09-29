@@ -47,3 +47,4 @@
 /compiler/parser.output
 /compiler/5c
 /compiler/lexer_cpp.ml
+/macroprocessor/lexer_cpp.ml

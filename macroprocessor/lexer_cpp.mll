@@ -41,20 +41,32 @@ let sym = (letter | '_') (letter | digit | '_')*
 rule token = parse
 
   | "include" space* '"' ([^'"''\n']+ as file) '"'
-      { comment_and_newline lexbuf; Include (file, false)  }
+      { space_or_comment_and_newline lexbuf; Include (file, false)  }
   | "include" space* '<' ([^'>''\n']+ as file) '>'
-      { comment_and_newline lexbuf; Include(file, true) }
+      { space_or_comment_and_newline lexbuf; Include(file, true) }
   | "include" { error "syntax in #include" }
 
 
   | "define" space+ (sym as s1) '(' [^')']* as s2 ')'
       { 
-        let _xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
-        (* check if identifier or "..." for last one? *)
-        let params = raise Todo in
-        let varargs = raise Todo in
+        let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
 
-        let body = define_body s1 params lexbuf in
+        (* check if identifier or "..." for last one *)
+        let params, varargs = 
+          let rec aux xs =
+            match xs with
+            | [] -> [], false
+            (* todo: __VA_ARGS__ *)
+            | ["..."] -> [], true
+            | "..."::xs -> error "... should be the last parameter of a macro"
+            | x::xs ->
+               if x =~ "[A-Za-z_][A-Za-z_0-9]*" 
+               then let (params, bool) = aux xs in x::params, bool
+               else error (spf "wrong syntax for macro parameter: %s" x)
+          in
+          aux xs
+        in
+        let body = define_body s1 (Common2.index_list_1 params) lexbuf in
         Define (s1, Some (params, varargs), Some body)
       }
 
@@ -65,13 +77,13 @@ rule token = parse
       }
 
   | "define" space+ (sym as s1)
-      { comment_and_newline lexbuf; Define (s1, None, None) }
+      { space_or_comment_and_newline lexbuf; Define (s1, None, None) }
 
   | "define" { error "syntax in #define" }
 
   (* stricter: require comment-or-space-only after sym also for #undef *)
   | "undef" space+ (sym as s)
-      { comment_and_newline lexbuf; Undef s }
+      { space_or_comment_and_newline lexbuf; Undef s }
   | "undef" { error "syntax in #undef" } 
 
 
@@ -112,15 +124,16 @@ and define_body macro params = parse
   | "'" { raise Todo}
   | '"' { raise Todo }
 
-  | "//" { raise Todo }
-  | "/*" { raise Todo }
+  | "//" [^'\n']* { define_body macro params lexbuf }
+  | "/*"          { comment_star lexbuf; define_body macro params lexbuf }
 
   | '/' { "/" ^ define_body macro params lexbuf }
 
   | "\\" "\n" { incr Location_cpp.line; " " ^ define_body macro params lexbuf }
   | '\\' { "\\" ^ define_body macro params lexbuf }
-
+  (* end of macro *)
   | '\n' { incr Location_cpp.line; "" }
+
   | eof  { error (spf "eof in macro %s" macro) }
 
 (*****************************************************************************)
@@ -135,10 +148,10 @@ and define_body macro params = parse
 (* Comment *)
 (*****************************************************************************)
 
-and comment_and_newline = parse
-  | space+        { comment_and_newline lexbuf }
-  | "//" [^'\n']* { comment_and_newline lexbuf }
-  | "/*"          { comment_star lexbuf; comment_and_newline lexbuf }
+and space_or_comment_and_newline = parse
+  | space+        { space_or_comment_and_newline lexbuf }
+  | "//" [^'\n']* { space_or_comment_and_newline lexbuf }
+  | "/*"          { comment_star lexbuf; space_or_comment_and_newline lexbuf }
   | "\n"          { incr Location_cpp.line }
   (* pad: new error message *)
   | _ as c        { error (spf "unexpected character %c after directive" c) }

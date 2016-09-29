@@ -17,6 +17,21 @@ let (list_of_string: string -> char list) = function
   | s -> (enum 0 ((String.length s) - 1) |> List.map (String.get s))
 
 
+let rec zip xs ys =
+  match (xs,ys) with
+  | ([],[]) -> []
+  | ([],_) -> failwith "zip: not same length"
+  | (_,[]) -> failwith "zip: not same length"
+  | (x::xs,y::ys) -> (x,y)::zip xs ys
+
+let index_list xs =
+  if xs = [] 
+  then [] (* enum 0 (-1) generate an exception *)
+  else zip xs (enum 0 ((List.length xs) -1))
+
+let index_list_1 xs =
+  xs |> index_list |> List.map (fun (x,i) -> x, i+1)
+
 
 let command2 s = 
   ignore(Sys.command s)

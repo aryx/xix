@@ -61,7 +61,7 @@ let dump_event event =
 (* 'history' contains the list of location_events in reverse 
  * (because we always add an event to the end), for instance: 
  * [200; 150; 130; 60; 1]. The first step is to reverse this list:
- * [1; 60; 130; 150; 200]. The, if we look for information about line 135, 
+ * [1; 60; 130; 150; 200]. Then, if we look for information about line 135, 
  * we want to stop when we encounter 150,
  * so when lineno < x.global_line below succeed for the first time.
  *)
@@ -76,8 +76,8 @@ let final_loc_of_loc lineno =
         (match x.location_event, stack with
         | Eof, [] -> 
             failwith (spf "could not find final location for lineno %d" lineno)
-        | Eof, y::ys ->
-            aux y ys xs
+        | Eof, (lastfile, lastlineno, lastdelta)::ys ->
+            aux (lastfile, x.global_line, lastdelta) ys xs
         | Include file, ys ->
             aux (file, x.global_line, 1)
               ((lastfile, lastlineno, lastdelta)::ys) xs

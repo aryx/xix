@@ -464,7 +464,7 @@ su:
  | Tunion  { Ast.Union }
 
 tag_opt:
- | tag          { $1 }
+ | tag           { $1 }
  | /*(*empty*)*/ { gensym () }
 
 complex_type:

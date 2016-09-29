@@ -9,7 +9,7 @@ OBJS=${SRC:%.ml=%.cmo}
 all:V: $PROG
 opt:V: $PROG.opt
 
-$PROG: $OBJS
+$PROG: $OBJS $LIBS
 	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq -o $target
 
 SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}

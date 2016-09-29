@@ -67,12 +67,13 @@ let parse (defs, paths) file =
             | D.Line (line, file) ->
                 add_event (L.Line (line, file));
 
+            (* less: for "lib" should add a L.PragmaLib event? *)
+            | D.Pragma _ -> ()
+
             | D.Ifdef _
             | D.Ifndef _
             | D.Else
             | D.Endif
-
-            | D.Pragma _
                 -> raise Todo
             );
             lexfunc ()

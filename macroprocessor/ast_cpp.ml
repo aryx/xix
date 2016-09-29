@@ -28,4 +28,4 @@ type directive =
 
   | Line of int * Common.filename
 
-  | Pragma of string * string
+  | Pragma of string * string list

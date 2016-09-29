@@ -99,6 +99,18 @@ rule token = parse
   | "#line" { error "syntax in #line" }
 
 
+  | "pragma" space+ "lib" space* '"' ([^'"''\n']+ as file) '"'
+      { space_or_comment_and_newline lexbuf; Pragma("lib", [file]) }
+  | "pragma" space+ "src" space* '"' ([^'"''\n']+ as file) '"'
+      { space_or_comment_and_newline lexbuf; Pragma("src", [file]) }
+
+  | "pragma" space+ "varargck" space* "argpos" [^'\n']+
+      { space_or_comment_and_newline lexbuf; Pragma("varargck", ["TODO"]) }
+  | "pragma" space+ "varargck" space* "type" [^'\n']+
+      { space_or_comment_and_newline lexbuf; Pragma("varargck", ["TODO"]) }
+  | "pragma" space+ "varargck" space* "flag" [^'\n']+
+      { space_or_comment_and_newline lexbuf; Pragma("varargck", ["TODO"]) }
+
   | "pragma"  { error "syntax in #pragma" }
 
   | sym { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
@@ -118,11 +130,13 @@ and define_body macro params = parse
       with Not_found ->
         s ^ define_body macro params lexbuf
      }
-  | [^'\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\']+ as s 
+  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/']+ as s 
       { s ^ define_body macro params lexbuf }
 
-  | "'" { raise Todo}
-  | '"' { raise Todo }
+  | "'" { let s = define_body_char macro params lexbuf in 
+          "'" ^ s ^ define_body macro params lexbuf }
+  | '"' { let s = define_body_string macro params lexbuf in 
+          "\"" ^ s ^ define_body macro params lexbuf }
 
   | "//" [^'\n']* { define_body macro params lexbuf }
   | "/*"          { comment_star lexbuf; define_body macro params lexbuf }
@@ -139,6 +153,37 @@ and define_body macro params = parse
 (*****************************************************************************)
 (* Strings and characters *)
 (*****************************************************************************)
+
+and define_body_char macro params = parse
+  (* no need for stringify! substitute also in strings *)
+  | sym as s  
+     { try let i = List.assoc s params in
+        spf "#%d" i ^ define_body_char macro params lexbuf
+      with Not_found -> s ^ define_body_char macro params lexbuf
+     }
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '\\']+ as s 
+      { s ^ define_body_char macro params lexbuf }
+  | '\\' _ 
+      { let s = Lexing.lexeme lexbuf in s^define_body_char macro params lexbuf }
+  | "'" { "'" }
+  | '\n' { error (spf "newline in character in macro %s" macro) }
+  | eof  { error (spf "eof in macro %s" macro) }
+
+and define_body_string macro params = parse
+  (* no need for stringify! substitute also in strings *)
+  | sym as s  
+     { try let i = List.assoc s params in
+        spf "#%d" i ^ define_body_string macro params lexbuf
+      with Not_found -> s ^ define_body_string macro params lexbuf
+     }
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '"' '\\']+ as s 
+      { s ^ define_body_string macro params lexbuf }
+  | '\\' _ 
+      { let s=Lexing.lexeme lexbuf in s^define_body_string macro params lexbuf }
+  | '"' { "\"" }
+  | '\n' { error (spf "newline in string in macro %s" macro) }
+  | eof  { error (spf "eof in macro %s" macro) }
+
 
 (*****************************************************************************)
 (* Macro arguments *)

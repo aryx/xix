@@ -597,13 +597,13 @@ edecor: xdecor { $1 }
    * todo: populate early, as const_expr can reference enum constants defined before
    *)*/
 enum:
- | TName { raise Todo }
- | TName TEq const_expr { raise Todo }
+ | TName                { [($1, env.block), None] }
+ | TName TEq const_expr { [($1, env.block), Some $3] }
 
  | enum TComma enum { $1 @ $3 }
  | enum TComma      { $1 }
 
-const_expr: expr { }
+const_expr: expr { ExprTodo }
 
 /*(*************************************************************************)*/
 /*(*1 Storage, qualifiers *)*/

@@ -18,6 +18,7 @@ module L = Location_cpp
  *  - no support for anonymous field (kencc extension)
  *  - forbid typedefs inside forexpr
  *  - (sure?) forbid definitions (typedefs, struct, enum) not at the toplevel
+ *  - can not mix qualified and not qualified elements in initializers lists
  * 
  * todo: 
  *  - add qualifiers in AST
@@ -55,6 +56,15 @@ type env = {
   mutable block_scope: Ast.blockid list;
 
 }
+
+let add_id env id idkind =
+  Hashtbl.add Globals.hids id idkind;
+  Hashtbl.add env.ids id (idkind, env.block)
+  (* todo: proper scope handling, add in env.ids_stack *)
+let new_scope env =
+  raise Todo
+let pop_scope env =
+  raise Todo
 
 let env = {
   ids = Hashtbl.create 101;
@@ -194,7 +204,7 @@ xdecl:
           let typ = typ2 typ1 in
           (match sto_or_typedef, init with
           | Left sto, _ -> 
-              (* todo: populate env.ids *)
+              add_id env id IdIdent;
               VarDecl { v_name = (id, env.block);
                         v_type = typ;
                         v_storage = sto;
@@ -204,9 +214,7 @@ xdecl:
           | Right (), Some _ ->
               error "initializer with typedef"
           | Right _, None ->
-              (* todo: proper scope handling, add in env.ids_stack *)
-              Hashtbl.add Globals.hids id Ast.IdTypedef;
-              Hashtbl.add env.ids id (Ast.IdTypedef, env.block);
+              add_id env id IdTypedef;
               TypeDef { t_name = (id, env.block); t_type = typ; }
          )
         )) 
@@ -219,6 +227,7 @@ xdecl:
          let typ = typ2 typ1 in
          (match typ, sto_or_typedef with
          | TFunction ft, Left sto -> 
+             add_id env id IdIdent;
              FuncDef { f_name = id;
                        f_type = ft;
                        f_body = Block $3;
@@ -260,6 +269,7 @@ adecl:
           let typ = typ2 typ1 in
           (match sto_or_typedef with
           | Left sto -> 
+              add_id env id IdIdent;
               Var { v_name = (id, env.block);
                     v_type = typ;
                     v_storage = sto;
@@ -327,12 +337,12 @@ forexpr:
           let typ = typ2 typ1 in
           (match sto_or_typedef with
           | Left sto -> 
+                 add_id env id IdIdent;
                  { v_name = (id, env.block);
                     v_type = typ;
                     v_storage = sto;
                     v_init = init;
                   }
-          (* todo: populate hids *)
           (* stricter: *)
           | Right _ -> error "typedefs inside 'for' are forbidden"
           )
@@ -416,7 +426,14 @@ pexpr:
  | pexpr TDot tag   { RecordAccess ($1, $3) }
  | pexpr TArrow tag { RecordPtAccess ($1, $3) } 
 
- | TName { ExprTodo }
+ | TName   
+     { try 
+         let (idkind, blockid) = Hashtbl.find env.ids $1 in
+         assert (idkind <> IdTypedef);
+         Id ($1, blockid)
+       with Not_found ->
+         error (spf "name not declared: %s" $1)
+     }
 
  | TIConst { let (a,b,c) = $1 in Int (a,b,c) } 
  | TFConst { Float (fst $1, snd $1) }
@@ -446,7 +463,7 @@ string:
 
 zexpr:
  | /*(*empty*)*/ { None }
- | lexpr         { Some $1 }
+ | expr         { Some $1 }
 
 zcexpr:
  | /*(*empty*)*/ { None }
@@ -460,34 +477,38 @@ elist:
  | expr { [$1] }
  | elist TComma elist { $1 @ $3 }
 
-
-/*(* ??? useful intermediate *)*/
-lexpr: expr { $1 }
-
-
 /*(*************************************************************************)*/
 /*(*1 Initializers *)*/
 /*(*************************************************************************)*/
 
 init: 
- | expr                  { ExprTodo }
- | TOBrace ilist TCBrace { ExprTodo }
+ | expr                  { $1 }
+ | TOBrace ilist TCBrace 
+     { match $2 with
+       | [] -> failwith "Impossible: grammar force one element"
+       | (Left x)::xs ->
+           ArrayInit (x::(xs |> List.map (function
+             | Left x -> x
+             | Right _ -> error "mixing array and record initializer forbidden"
+           )))
+       | (Right x)::xs ->
+           RecordInit (x::(xs |> List.map (function
+             | Right x -> x
+             | Left _ -> error "mixing array and record initializer forbidden"
+           )))
+     }
 
 ilist:
- | qlist      { }
- |       init { }
- | qlist init { }
+ | init2              { [$1] }
+ | ilist TComma init2 { $1 @ [$3] }
 
-qlist:
- |       init TComma { }
- | qlist init TComma { }
- | qual       { }
- | qlist qual { } 
+init2:
+ | init          { Left (None, $1) }
+ | qual TEq init { $1 $3 }
 
 qual:
- | TOBra lexpr TCBra { }
- | TDot tag { }
- | qual TEq { }
+ | TOBra expr TCBra { (fun x -> Left (Some $2, x)) }
+ | TDot tag         { (fun x -> Right ($2, x)) }
 
 
 /*(*************************************************************************)*/
@@ -669,7 +690,7 @@ enum:
  | enum TComma enum { $1 @ $3 }
  | enum TComma      { $1 }
 
-const_expr: expr { ExprTodo }
+const_expr: expr { $1 }
 
 /*(*************************************************************************)*/
 /*(*1 Storage, qualifiers *)*/
@@ -699,7 +720,3 @@ qualifier_and_type: qualifiers type_ { $2 }
 qualifiers:
  | /*(*empty*)*/        { [] }
  | qualifiers qualifier { $1 @ [$2] }
-
-/*(*************************************************************************)*/
-/*(*1 xxx_opt, xxx_list *)*/
-/*(*************************************************************************)*/

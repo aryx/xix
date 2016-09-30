@@ -125,8 +125,6 @@ and expr =
   (* gccext: kenccext: *)
   | GccConstructor  of type_ * expr (* always an ArrayInit (or RecordInit?) *)
 
-  | ExprTodo
-
 and argument = expr
 
 (* Now that we call the preprocessor first, cases where const_expr is

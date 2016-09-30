@@ -142,7 +142,6 @@ and vof_expr =
       let v1 = vof_type_ v1
       and v2 = vof_expr v2
       in Ocaml.VSum (("GccConstructor", [ v1; v2 ]))
-  | ExprTodo -> Ocaml.VSum (("ExprTodo", []))
 and vof_argument v = vof_expr v
 and vof_const_expr v = vof_expr v
 and vof_unaryOp =

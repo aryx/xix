@@ -38,19 +38,20 @@ let sym = (letter | '_') (letter | digit | '_')*
 (* Main rule *)
 (*****************************************************************************)
 
+(* pre: the rules below assume the '#' has already been consumed *)
 rule token = parse
 
   | "include" space* '"' ([^'"''\n']+ as file) '"'
-      { space_or_comment_and_newline lexbuf; Include (file, false)  }
+      { space_or_comment_and_newline lexbuf; 
+        Include (file, false)  }
   | "include" space* '<' ([^'>''\n']+ as file) '>'
-      { space_or_comment_and_newline lexbuf; Include(file, true) }
+      { space_or_comment_and_newline lexbuf; 
+        Include(file, true) }
   | "include" { error "syntax in #include" }
 
 
   | "define" space+ (sym as s1) '(' [^')']* as s2 ')'
-      { 
-        let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
-
+      { let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one *)
         let params, varargs = 
           let rec aux xs =
@@ -71,27 +72,38 @@ rule token = parse
       }
 
   | "define" space+ (sym as s1) space+
-      { 
-        let body = define_body s1 [] lexbuf in 
-        Define (s1, None, Some body)
-      }
+      { let body = define_body s1 [] lexbuf in 
+        Define (s1, None, Some body)  }
 
   | "define" space+ (sym as s1)
-      { space_or_comment_and_newline lexbuf; Define (s1, None, None) }
+      { space_or_comment_and_newline lexbuf; 
+        Define (s1, None, None) }
 
   | "define" { error "syntax in #define" }
 
   (* stricter: require comment-or-space-only after sym also for #undef *)
   | "undef" space+ (sym as s)
-      { space_or_comment_and_newline lexbuf; Undef s }
+      { space_or_comment_and_newline lexbuf; 
+        Undef s }
   | "undef" { error "syntax in #undef" } 
 
 
-  | "ifdef"
-  | "ifndef"
-  | "else"
+  | "ifdef" space+ (sym as s) 
+      { space_or_comment_and_newline lexbuf;
+        Ifdef s }
+  | "ifndef" space+ (sym as s) 
+      { space_or_comment_and_newline lexbuf;
+        Ifndef s }
+  | "ifdef" { error "syntax in #ifdef" } 
+  | "ifndef" { error "syntax in #ifndef" } 
 
-  | "endif" { Endif }
+  | "else"  
+      { space_or_comment_and_newline lexbuf; 
+        Else }
+
+  | "endif" 
+      { space_or_comment_and_newline lexbuf; 
+        Endif }
 
   (* stricter: I impose a filename (with no quote in name, like original?) *)
   | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
@@ -100,17 +112,21 @@ rule token = parse
 
 
   | "pragma" space+ "lib" space* '"' ([^'"''\n']+ as file) '"'
-      { space_or_comment_and_newline lexbuf; Pragma("lib", [file]) }
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("lib", [file]) }
   | "pragma" space+ "src" space* '"' ([^'"''\n']+ as file) '"'
-      { space_or_comment_and_newline lexbuf; Pragma("src", [file]) }
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("src", [file]) }
 
   | "pragma" space+ "varargck" space* "argpos" [^'\n']+
-      { space_or_comment_and_newline lexbuf; Pragma("varargck", ["TODO"]) }
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) }
   | "pragma" space+ "varargck" space* "type" [^'\n']+
-      { space_or_comment_and_newline lexbuf; Pragma("varargck", ["TODO"]) }
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) }
   | "pragma" space+ "varargck" space* "flag" [^'\n']+
-      { space_or_comment_and_newline lexbuf; Pragma("varargck", ["TODO"]) }
-
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) }
   | "pragma"  { error "syntax in #pragma" }
 
   | sym { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
@@ -120,8 +136,7 @@ rule token = parse
 (*****************************************************************************)
 and define_body macro params = parse
   | sym as s  
-     {
-      try 
+     { try 
         let i = List.assoc s params in
         (* safe to use # for a special mark since C code can not
          * use this symbol since it is reserved by cpp
@@ -159,7 +174,7 @@ and define_body_char macro params = parse
   | sym as s  
      { try let i = List.assoc s params in
         spf "#%d" i ^ define_body_char macro params lexbuf
-      with Not_found -> s ^ define_body_char macro params lexbuf
+       with Not_found -> s ^ define_body_char macro params lexbuf
      }
   | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '\\']+ as s 
       { s ^ define_body_char macro params lexbuf }
@@ -174,7 +189,7 @@ and define_body_string macro params = parse
   | sym as s  
      { try let i = List.assoc s params in
         spf "#%d" i ^ define_body_string macro params lexbuf
-      with Not_found -> s ^ define_body_string macro params lexbuf
+       with Not_found -> s ^ define_body_string macro params lexbuf
      }
   | [^ '\n' '_' 'a'-'z''A'-'Z' '"' '\\']+ as s 
       { s ^ define_body_string macro params lexbuf }
@@ -198,7 +213,7 @@ and space_or_comment_and_newline = parse
   | "//" [^'\n']* { space_or_comment_and_newline lexbuf }
   | "/*"          { comment_star lexbuf; space_or_comment_and_newline lexbuf }
   | "\n"          { incr Location_cpp.line }
-  (* pad: new error message *)
+  (* stricter: new error message *)
   | _ as c        { error (spf "unexpected character %c after directive" c) }
   | eof           { error "expected newline, not EOF" }
 

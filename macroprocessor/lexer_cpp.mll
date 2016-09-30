@@ -50,7 +50,7 @@ rule token = parse
   | "include" { error "syntax in #include" }
 
 
-  | "define" space+ (sym as s1) '(' [^')']* as s2 ')'
+  | "define" space+ (sym as s1) '(' ([^')']* as s2) ')'
       { let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one *)
         let params, varargs = 
@@ -145,7 +145,7 @@ and define_body macro params = parse
       with Not_found ->
         s ^ define_body macro params lexbuf
      }
-  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/']+ as s 
+  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/' '#']+ as s 
       { s ^ define_body macro params lexbuf }
 
   | "'" { let s = define_body_char macro params lexbuf in 
@@ -157,6 +157,7 @@ and define_body macro params = parse
   | "/*"          { comment_star lexbuf; define_body macro params lexbuf }
 
   | '/' { "/" ^ define_body macro params lexbuf }
+  | '#' { "##" ^ define_body macro params lexbuf }
 
   | "\\" "\n" { incr Location_cpp.line; " " ^ define_body macro params lexbuf }
   | '\\' { "\\" ^ define_body macro params lexbuf }
@@ -176,10 +177,11 @@ and define_body_char macro params = parse
         spf "#%d" i ^ define_body_char macro params lexbuf
        with Not_found -> s ^ define_body_char macro params lexbuf
      }
-  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '\\']+ as s 
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '\\' '#']+ as s 
       { s ^ define_body_char macro params lexbuf }
   | '\\' _ 
       { let s = Lexing.lexeme lexbuf in s^define_body_char macro params lexbuf }
+  | '#' { "##" ^ define_body_char macro params lexbuf }
   | "'" { "'" }
   | '\n' { error (spf "newline in character in macro %s" macro) }
   | eof  { error (spf "eof in macro %s" macro) }
@@ -191,10 +193,11 @@ and define_body_string macro params = parse
         spf "#%d" i ^ define_body_string macro params lexbuf
        with Not_found -> s ^ define_body_string macro params lexbuf
      }
-  | [^ '\n' '_' 'a'-'z''A'-'Z' '"' '\\']+ as s 
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '"' '\\' '#']+ as s 
       { s ^ define_body_string macro params lexbuf }
   | '\\' _ 
       { let s=Lexing.lexeme lexbuf in s^define_body_string macro params lexbuf }
+  | '#' { "##" ^ define_body_string macro params lexbuf }
   | '"' { "\"" }
   | '\n' { error (spf "newline in string in macro %s" macro) }
   | eof  { error (spf "eof in macro %s" macro) }

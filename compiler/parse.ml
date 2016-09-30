@@ -60,9 +60,6 @@ let parse (defs, paths) file =
                 )
 
             | D.Define (s, params, body) ->
-                if !Flags_cpp.debug_macros
-                then pr2 (spf "#define %s %s" s 
-                            (match body with Some s -> s | None -> ""));
                 Preprocessor.define (s, params, body)
 
             | D.Undef s ->
@@ -86,7 +83,17 @@ let parse (defs, paths) file =
             lexfunc ()
 
         (* stricter: in theory could do macro for reserved keyword? *)
-        | T.TName s | T.TTypeName s ->
+        | T.TName _ | T.TTypeName _ 
+        | T.Tvoid | T.Tchar | T.Tshort | T.Tint | T.Tlong
+        | T.Tdouble | T.Tfloat | T.Tsigned | T.Tunsigned
+        | T.Tstruct | T.Tunion | T.Tenum | T.Ttypedef
+        | T.Tconst | T.Tvolatile | T.Trestrict | T.Tinline
+        | T.Tauto | T.Tstatic | T.Textern | T.Tregister
+        | T.Tif | T.Telse | T.Twhile | T.Tdo | T.Tfor 
+        | T.Tbreak | T.Tcontinue | T.Treturn | T.Tgoto
+        | T.Tswitch | T.Tcase | T.Tdefault | T.Tsizeof
+          ->
+            let s = Lexing.lexeme lexbuf in
             last_ident := s;
             if Hashtbl.mem Preprocessor.hmacros s
             then 

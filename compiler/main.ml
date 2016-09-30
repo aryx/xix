@@ -59,8 +59,8 @@ let compile (defs, include_paths) infile outfile =
   let ast = Parse.parse (defs, include_paths) infile in
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_program ast);
-  
-  pr2 (Dumper.s_of_program ast)
+  ()
+
 
 (*****************************************************************************)
 (* Entry point *)

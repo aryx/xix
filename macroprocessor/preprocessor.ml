@@ -75,15 +75,20 @@ let define (s, params, body) =
   let sbody = match body with Some x -> x | None -> "1" in
   if Hashtbl.mem hmacros s
   then raise (L.Error (spf "macro redefined: %s" s, !L.line))
-  else 
-    Hashtbl.add hmacros s
-      (match params with
-        | None -> 
+  else begin
+    let macro =
+      match params with
+      | None -> 
           { name = s; nbargs = None; varargs = false; body = sbody }
-        | Some (params, varargs) ->
+      | Some (params, varargs) ->
           { name = s; nbargs = Some (List.length params); 
             varargs = varargs; body = sbody }
-      )
+    in
+    if !Flags_cpp.debug_macros
+    then pr2 (spf "#define %s %s" s macro.body);
+
+    Hashtbl.add hmacros s macro
+  end
 
 
 (* less: Could use Set instead of list for the set of include paths *)

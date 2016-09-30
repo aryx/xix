@@ -72,16 +72,17 @@ let define_cmdline_def (k, v) =
   Hashtbl.add hmacros k { name = k; nbargs = None; varargs = false; body = v; }
 
 let define (s, params, body) =
+  let sbody = match body with Some x -> x | None -> "1" in
   if Hashtbl.mem hmacros s
   then raise (L.Error (spf "macro redefined: %s" s, !L.line))
   else 
     Hashtbl.add hmacros s
       (match params with
         | None -> 
-          { name = s; nbargs = None; varargs = false; body = s }
+          { name = s; nbargs = None; varargs = false; body = sbody }
         | Some (params, varargs) ->
           { name = s; nbargs = Some (List.length params); 
-            varargs = varargs; body = s }
+            varargs = varargs; body = sbody }
       )
 
 

@@ -174,7 +174,7 @@ rule token = parse
 
       | "sizeof" -> Tsizeof
 
-      | _ -> 
+      | _ ->
         if Hashtbl.mem Globals.hids s
         then 
           (match Hashtbl.find Globals.hids s with

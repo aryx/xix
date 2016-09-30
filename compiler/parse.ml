@@ -20,21 +20,25 @@ let parse (defs, paths) file =
   let chan = open_in file in
   add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
-  let stack = ref [(file, chan, lexbuf)] in
+  let stack = ref [(Some chan, lexbuf)] in
   (* less: let push x = check if too deep? *)
 
   let last_ident = ref "" in
 
   let rec lexfunc () =
     match !stack with
-    | (file, chan, lexbuf)::xs ->
+    | (chanopt, lexbuf)::xs ->
         let t = Lexer.token lexbuf in
 
         (match t with
         | T.EOF -> 
             stack := xs;
-            close_in chan;
-            add_event L.Eof;
+            (match chanopt with
+            | Some chan ->
+                close_in chan;
+                add_event L.Eof; (* TODO: unless was macro expansion? *)
+            | None -> ()
+            );
             lexfunc ()
         (* less: 
            if List.length stack > 1000
@@ -50,12 +54,15 @@ let parse (defs, paths) file =
                   let chan = open_in path in
                   add_event (L.Include path);
                   let lexbuf = Lexing.from_channel chan in
-                  stack := (path, chan, lexbuf)::!stack;
+                  stack := (Some chan, lexbuf)::!stack;
                 with Failure s ->
                   raise (L.Error (s, !L.line))
                 )
 
             | D.Define (s, params, body) ->
+                if !Flags_cpp.debug_macros
+                then pr2 (spf "#define %s %s" s 
+                            (match body with Some s -> s | None -> ""));
                 Preprocessor.define (s, params, body)
 
             | D.Undef s ->
@@ -82,7 +89,17 @@ let parse (defs, paths) file =
         | T.TName s | T.TTypeName s ->
             last_ident := s;
             if Hashtbl.mem Preprocessor.hmacros s
-            then raise Todo
+            then 
+              let macro = Hashtbl.find Preprocessor.hmacros s in
+              if macro.P.nbargs = None
+              then begin
+                let body = macro.P.body in
+                if !Flags_cpp.debug_macros
+                then pr2 (spf "#expand %s %s" macro.P.name body);
+                let lexbuf = Lexing.from_string body in
+                stack := (None, lexbuf)::!stack;
+                lexfunc ()
+              end else raise Todo
             else t
         | _ -> t
         )

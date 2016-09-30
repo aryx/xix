@@ -59,7 +59,8 @@ let compile (defs, include_paths) infile outfile =
   let ast = Parse.parse (defs, include_paths) infile in
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_program ast);
-  raise Todo
+  
+  pr2 (Dumper.s_of_program ast)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -104,6 +105,8 @@ let main () =
     "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-debug_line", Arg.Set Flags.debug_line, " ";
     "-f", Arg.Set Flags.debug_line, " ";
+    "-debug_macros", Arg.Set Flags_cpp.debug_macros, " ";
+    "-m", Arg.Set Flags_cpp.debug_macros, " ";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

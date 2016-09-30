@@ -39,6 +39,7 @@ type blockid = int
 
 (* name below can be a gensym'ed name for anonymous struct/union/enum *)
 type fullname = name * blockid
+ (* with tarzan *)
 
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers. *) 
 type idkind =
@@ -69,7 +70,7 @@ type type_ =
   | TEnumName of fullname
   | TTypeName of fullname
 
- and function_type = (type_ * parameter list * bool (* var args *))
+ and function_type = (type_ * (parameter list * bool (* var args *)))
 
   and parameter = {
     p_type: type_;
@@ -152,11 +153,13 @@ and const_expr = expr
          | Eq | NotEq 
          | AndLog | OrLog
 
+ (* with tarzan *)
+
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
 (* ------------------------------------------------------------------------- *)
 (* todo: lineno field *)
-and stmt =
+type stmt =
   | ExprSt of expr
   | Block of stmt list
 
@@ -204,6 +207,7 @@ and var_decl = {
  and initialiser = expr
  and storage = Extern | Static | DefaultStorage
 
+ (* with tarzan *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -216,6 +220,7 @@ type func_def = {
   f_body: stmt list;
   f_storage: Storage.t;
 }
+ (* with tarzan *)
 
 type struct_def = {
   s_name: fullname;
@@ -233,12 +238,14 @@ type struct_def = {
     fld_name: name option;
     fld_type: type_;
   }
+ (* with tarzan *)
 
 type enum_def = { 
   e_name: fullname;
   (* we also need to use fullname for constants, to scope them *)
   e_constants: (fullname * const_expr option) list;
 }
+ (* with tarzan *)
 
 (* to manage tag scope *)
 type tagkind =
@@ -250,6 +257,7 @@ type type_def = {
   t_name: fullname;
   t_type: type_;
 }
+ (* with tarzan *)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -263,8 +271,10 @@ type toplevel =
   | FuncDef of func_def
   (* contains extern decls and prototypes *)
   | VarDecl of var_decl
+ (* with tarzan *)
 
 type program = toplevel list
+ (* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Any *)
@@ -277,6 +287,8 @@ type any =
   | Type of type_
   | Toplevel of toplevel
   | Program of program
+
+ (* with tarzan *)
 
 (*****************************************************************************)
 (* Helpers *)

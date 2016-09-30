@@ -1,5 +1,10 @@
 
+(* Same than Ast.blockid, but repeated here to avoid a mutual dependency *)
+type blockid = int
+ (* with tarzan *)
+
 type sign = Signed | Unsigned
+ (* with tarzan *)
 
 (* Note that there is no TTypedef here; The typedef expansion
  * has alreafy been done. 
@@ -34,18 +39,21 @@ type t =
   (* less: and scope? counter?
    * ref to symbol? or use external hash?
    *)
-  | TStructName of string
-  | TUnionName of string
+  | TStructName of string * blockid
+  | TUnionName of string * blockid
+ (* with tarzan *)
 
 
-(* 5c does not use this information? for volatile at least? *)
+(* Does 5c use this information? Volatile at least? *)
 type qualifier = 
   | Volatile
   (* used? seems not really supported *)
   | Const
   (* less: unsupported: | Restrict | Inline *)
+ (* with tarzan *)
 
 type tagdef =
   | Struct of (string * t) list
   | Union of (string * t) list
   | Enum
+ (* with tarzan *)

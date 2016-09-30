@@ -27,7 +27,7 @@ let mk_e
 *)
 
 (* Defs contain things we lift up in the AST (struct defs, enum defs, typedefs).
- * Note that by tagging those defs with a blockid, there is no escape-scope
+ * Note that we tag those defs with a blockid, so there is no escape-scope
  * problem.
  *)
 let defs =
@@ -61,6 +61,7 @@ let env = {
 }
 
 let block_counter = ref 0
+
 let gensym_counter = ref 0
 let gensym () =
   incr gensym_counter;
@@ -385,10 +386,10 @@ string:
 
 
 zexpr:
- | /*(*empty*)*/ { }
- | lexpr { }
+ | /*(*empty*)*/ { None }
+ | lexpr         { Some $1 }
 
-lexpr: expr { }
+lexpr: expr { ExprTodo }
 
 zcexpr:
  | /*(*empty*)*/ { }
@@ -519,25 +520,29 @@ type_:
 
 xdecor:
  | xdecor2                { $1 }
- | TMul qualifiers xdecor { $3 (* TODO *) }
+ | TMul qualifiers xdecor { let (id, f) = $3 in id, (fun x -> TPointer (f x)) }
 
 /*(* use tag here too, as can have foo foo; declarations *)*/
 xdecor2:
- | tag { $1, (fun x -> x) }
- | TOPar xdecor TCPar { $2 }
- | xdecor2 TOBra zexpr TCBra { $1  (* TODO *) }
- | xdecor2 TOPar zarglist TCPar { $1  (* TODO *) }
+ | tag                
+     { $1, (fun x -> x) }
+ | TOPar xdecor TCPar 
+     { $2 }
+ | xdecor2 TOBra zexpr TCBra 
+     { let (id, f) = $1 in id, (fun x -> TArray ($3, f x)) }
+ | xdecor2 TOPar zarglist TCPar
+     { let (id, f) = $1 in id, (fun x -> TFunction (f x, $3)) }
 
 
 
 
 zarglist:
- | /*(*empty*)*/ { }
- | arglist { }
+ | /*(*empty*)*/ { [], false }
+ | arglist       { (* TODO: $1 *) [], false }
 
 /*less: name { } */
 arglist:
- | qualifier_and_type xdecor { }
+ | qualifier_and_type xdecor  { }
  | qualifier_and_type abdecor { }
 
  | arglist TComma arglist { }
@@ -631,8 +636,8 @@ storage_and_type:
 qualifier_and_type: qualifiers type_ { $2 }
 
 qualifiers:
- | /*(*empty*)*/ { }
- | qualifiers qualifier { }
+ | /*(*empty*)*/        { [] }
+ | qualifiers qualifier { $1 @ [$2] }
 
 /*(*************************************************************************)*/
 /*(*1 xxx_opt, xxx_list *)*/

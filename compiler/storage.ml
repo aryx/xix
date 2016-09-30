@@ -1,5 +1,5 @@
 
-(* No Typedef here, this is not a storage! *) 
+(* No Typedef here, because a typedef is not a storage! *) 
 type t =
   | Auto   (* local *)
   | Param  (* parameter *) (* ??? *)
@@ -7,8 +7,8 @@ type t =
   | Extern (* public global defined elsewhere *)
   | Global (* public global defined here *)
   | Static (* Private global *)
-
   (* less:  | Inline? | Register *)
+ (* with tarzan *)
 
 type intsize =
   | Char
@@ -16,11 +16,14 @@ type intsize =
   | Int
   | Long
   | VLong
+ (* with tarzan *)
 
 type floatsize = 
   | Float
   | Double
+ (* with tarzan *)
 
 type stringsize =
   | String
   | Unicode
+ (* with tarzan *)

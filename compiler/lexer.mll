@@ -120,13 +120,13 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
   | "0"  (oct+ as s) (['U''u']? as unsigned) (['L''l']* as long)
-      { TConst ("0o" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
+      { TIConst ("0o" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
   | "0x" (hex+ as s)  (['U''u']? as unsigned) (['L''l']* as long)
-      { TConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
+      { TIConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
   | "0x" { error "malformed hex constant" }
 
   | ['1'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
-      { TConst (Lexing.lexeme lexbuf, 
+      { TIConst (Lexing.lexeme lexbuf, 
                 sign_of_suffix unsigned, intsize_of_suffix long)
       }
 
@@ -142,7 +142,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Strings and chars *)
   (* ----------------------------------------------------------------------- *)
-  | "'" { TConst (spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
+  | "'" { TIConst (spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
 
   | '"' { TString (string lexbuf, Storage.String) }
 

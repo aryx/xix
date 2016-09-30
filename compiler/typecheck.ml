@@ -20,3 +20,7 @@ type env = {
 
   block_scope: blockid list;
 }
+
+(* todo:
+ *  - check goto to a label defined in the function
+ *)

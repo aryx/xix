@@ -18,6 +18,10 @@ module L = Location_cpp
  *  - no support for anonymous field (kencc extension)
  *  - forbid typedefs inside forexpr
  *  - (sure?) forbid definitions (typedefs, struct, enum) not at the toplevel
+ * 
+ * todo: 
+ *  - add qualifiers in AST
+ *  - lineno
  *)
 
 (*****************************************************************************)
@@ -79,7 +83,7 @@ let error s =
 /*(*************************************************************************)*/
 
 %token <string> TName TTypeName
-%token <string * Type.sign * Storage.intsize> TConst
+%token <string * Type.sign * Storage.intsize> TIConst
 %token <string * Storage.floatsize> TFConst
 %token <string * Storage.stringsize> TString
 
@@ -167,7 +171,6 @@ prog1:
  |  /*(*empty*)*/ { [] }
  | prog1 xdecl    { $1 @ $2 }
 
-
 /*(*************************************************************************)*/
 /*(*1 Declarations *)*/
 /*(*************************************************************************)*/
@@ -184,7 +187,8 @@ xdecl:
        get_and_reset defs;
      }
  | storage_and_type xdlist TSemicolon 
-     { get_and_reset defs @
+     { (* less: could suggest to separate struct/enum def from vardecl *)
+       get_and_reset defs @
        ($2 |> List.map (fun ((id, typ2), init) ->
           let (sto_or_typedef, typ1) = $1 in
           let typ = typ2 typ1 in
@@ -200,7 +204,7 @@ xdecl:
           | Right (), Some _ ->
               error "initializer with typedef"
           | Right _, None ->
-              (* todo: proper scope handling, add in env.ids *)
+              (* todo: proper scope handling, add in env.ids_stack *)
               Hashtbl.add Globals.hids id Ast.IdTypedef;
               Hashtbl.add env.ids id (Ast.IdTypedef, env.block);
               TypeDef { t_name = (id, env.block); t_type = typ; }
@@ -208,7 +212,8 @@ xdecl:
         )) 
      }
  | storage_and_type xdecor block      
-     { get_and_reset defs @
+     { if !defs <> []
+       then error "move struct or typedef definitions to the toplevel";
        [ let (id, typ2) = $2 in
          let (sto_or_typedef, typ1) = $1 in
          let typ = typ2 typ1 in
@@ -249,7 +254,7 @@ adecl:
  | storage_and_type adlist TSemicolon 
      { (* stricter: *)
        if !defs <> [] 
-       then error "move struct or type definitions to the toplevel";
+       then error "move struct or typedef definitions to the toplevel";
        ($2 |> List.map (fun ((id, typ2), init) ->
           let (sto_or_typedef, typ1) = $1 in
           let typ = typ2 typ1 in
@@ -266,9 +271,7 @@ adecl:
        ))
      }
 
-
 adlist: xdlist { $1 }
-
 
 /*(*************************************************************************)*/
 /*(*1 Statements *)*/
@@ -278,8 +281,8 @@ block: TOBrace slist TCBrace { $2 }
 
 slist:
  | /*(*empty*)*/ { [] }
- | slist adecl { $1 @ $2 }
- | slist stmnt { $1 @ [$2] }
+ | slist adecl   { $1 @ $2 }
+ | slist stmnt   { $1 @ [$2] }
 
 stmnt: 
  | ulstmnt        { $1 }
@@ -290,20 +293,24 @@ stmnt:
 ulstmnt: 
  | cexpr TSemicolon { ExprSt $1 }
  /*(* stricter: was zcexpr before *)*/
- | TSemicolon       { error "missing expression before semicolon" }
+ |       TSemicolon { error "missing expression before semicolon" }
+
  | block { Block $1 }
+
  | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE { If ($3, $5, Block[]) }
  | Tif TOPar cexpr TCPar stmnt Telse stmnt { If ($3, $5, $7) }
- | Twhile TOPar cexpr TCPar stmnt          { While ($3, $5) }
+ /*(* stricter: I impose a block, not any stmnt *)*/
+ | Tswitch TOPar cexpr TCPar block { Switch ($3, $5) }
+
+ | Twhile TOPar cexpr TCPar stmnt                { While ($3, $5) }
  | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { DoWhile ($2, $5) }
  | Tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt 
      { For ($3, $5, $7, $9) }
+
  | Treturn zcexpr TSemicolon { Return ($2) }
  | Tbreak TSemicolon         { Break }
  | Tcontinue TSemicolon      { Continue } 
- /*(* stricter: impose a block, not any stmnt *)*/
- | Tswitch TOPar cexpr TCPar block { Switch ($3, $5) }
- | Tgoto tag TSemicolon { Goto ($2) }
+ | Tgoto tag TSemicolon      { Goto ($2) }
 
 tag: 
  | TName     { $1 }
@@ -338,9 +345,9 @@ labels:
 
 label:
  /*(* less: not tag here? can not conflict with typedef? *)*/
- | TName TColon      { (fun st -> Label ($1, st)) }
- | Tcase expr TColon { (fun st -> Case ($2, st)) }
- | Tdefault TColon   { (fun st -> Default st) }
+ | TName      TColon  { (fun st -> Label ($1, st)) }
+ | Tcase expr TColon  { (fun st -> Case ($2, st)) }
+ | Tdefault   TColon  { (fun st -> Default st) }
 
 /*(*************************************************************************)*/
 /*(*1 Expressions *)*/
@@ -349,85 +356,92 @@ label:
 expr:
  | xuexpr { $1 }
 
- | expr TPlus expr { ExprTodo }
- | expr TMinus expr { ExprTodo }
- | expr TMul expr { ExprTodo }
- | expr TDiv expr { ExprTodo }
- | expr TMod expr { ExprTodo }
+ | expr TPlus expr   { Binary ($1, Arith Plus, $3) }
+ | expr TMinus expr  { Binary ($1, Arith Minus, $3) }
+ | expr TMul expr    { Binary ($1, Arith Mul, $3) }
+ | expr TDiv expr    { Binary ($1, Arith Div, $3) }
+ | expr TMod expr    { Binary ($1, Arith Mod, $3) }
 
- | expr TAnd expr { ExprTodo }
- | expr TXor expr { ExprTodo }
- | expr TOr expr { ExprTodo }
+ | expr TAnd expr    { Binary ($1, Arith And, $3) }
+ | expr TXor expr    { Binary ($1, Arith Xor, $3) }
+ | expr TOr expr     { Binary ($1, Arith Or, $3) }
 
- | expr TSupSup expr { ExprTodo }
- | expr TInfInf expr { ExprTodo }
+ | expr TSupSup expr { Binary ($1, Arith ShiftRight, $3) }
+ | expr TInfInf expr { Binary ($1, Arith ShiftLeft , $3) }
 
- | expr TAndAnd expr { ExprTodo }
- | expr TOrOr expr { ExprTodo }
+ | expr TAndAnd expr { Binary ($1, Logical AndLog, $3) }
+ | expr TOrOr expr   { Binary ($1, Logical OrLog, $3) }
 
- | expr TEqEq expr { ExprTodo }
- | expr TBangEq expr { ExprTodo }
+ | expr TEqEq expr   { Binary ($1, Logical Eq, $3) }
+ | expr TBangEq expr { Binary ($1, Logical NotEq, $3) }
 
- | expr TInf expr { ExprTodo }
- | expr TSup expr  { ExprTodo }
- | expr TInfEq expr { ExprTodo }
- | expr TSupEq expr { ExprTodo }
+ | expr TInf expr    { Binary ($1, Logical Inf, $3) }
+ | expr TSup expr    { Binary ($1, Logical Sup, $3) }
+ | expr TInfEq expr  { Binary ($1, Logical InfEq, $3) }
+ | expr TSupEq expr  { Binary ($1, Logical SupEq, $3) }
 
- | expr TEq expr { ExprTodo }
- | expr TOpEq expr { ExprTodo }
 
- | expr TQuestion cexpr TColon expr { ExprTodo }
+ | expr TEq expr     { Assign (SimpleAssign, $1, $3) }
+ | expr TOpEq expr   { Assign (OpAssign $2, $1, $3) }
+
+ | expr TQuestion cexpr TColon expr { CondExpr ($1, $3, $5) }
 
 xuexpr:
- | uexpr { ExprTodo }
+ | uexpr { $1 }
 
- | TOPar qualifier_and_type abdecor TCPar xuexpr  { ExprTodo }
+ | TOPar qualifier_and_type abdecor TCPar xuexpr  { Cast ($3 $2, $5) }
 
 uexpr:
- | pexpr { ExprTodo }
+ | pexpr { $1 }
 
- | TPlus xuexpr { ExprTodo }
- | TMinus xuexpr { ExprTodo }
+ | TPlus xuexpr  { Unary (UnPlus, $2) }
+ | TMinus xuexpr { Unary (UnMinus, $2) }
 
- | TBang xuexpr { ExprTodo }
- | TTilde xuexpr { ExprTodo }
+ | TBang xuexpr  { Unary (Not, $2) }
+ | TTilde xuexpr { Unary (Tilde, $2) }
 
- | TMul xuexpr { ExprTodo }
- | TAnd xuexpr  { ExprTodo }
+ | TMul xuexpr  { Unary (DeRef, $2) }
+ | TAnd xuexpr  { Unary (GetRef, $2) }
 
- | TPlusPlus xuexpr { ExprTodo }
- | TMinusMinus xuexpr { ExprTodo } 
+ | TPlusPlus xuexpr   { Prefix (Inc, $2) }
+ | TMinusMinus xuexpr { Prefix (Dec, $2) } 
 
 pexpr:
- | TOPar cexpr TCPar { ExprTodo }
+ | TOPar cexpr TCPar { $2 }
 
- | pexpr TOPar zelist TCPar { ExprTodo }
- | pexpr TOBra cexpr TCBra { ExprTodo }
+ | pexpr TOPar zelist TCPar { Call ($1, $3) }
+ /*(* stricter: was cexpr, but ugly to allow cexpr here *)*/
+ | pexpr TOBra expr TCBra  { ArrayAccess ($1, $3) }
 
- | pexpr TDot tag { ExprTodo }
- | pexpr TArrow tag { ExprTodo } 
+ | pexpr TDot tag   { RecordAccess ($1, $3) }
+ | pexpr TArrow tag { RecordPtAccess ($1, $3) } 
 
  | TName { ExprTodo }
 
- | TConst { ExprTodo } 
- | TFConst { ExprTodo }
- | string { ExprTodo }
+ | TIConst { let (a,b,c) = $1 in Int (a,b,c) } 
+ | TFConst { Float (fst $1, snd $1) }
+ | string  { String (fst $1, snd $1) }
 
- | pexpr TPlusPlus { ExprTodo }
- | pexpr TMinusMinus { ExprTodo } 
+ | pexpr TPlusPlus   { Postfix ($1, Inc) }
+ | pexpr TMinusMinus { Postfix ($1, Dec) } 
 
- | Tsizeof TOPar qualifier_and_type abdecor TCPar { ExprTodo }
- | Tsizeof uexpr { ExprTodo }
+ | Tsizeof TOPar qualifier_and_type abdecor TCPar { SizeOf (Right ($4 $3)) }
+ | Tsizeof uexpr { SizeOf (Left $2) }
 
 cexpr:
- | expr { ExprTodo }
- | cexpr TComma cexpr { ExprTodo }
+ | expr { $1 }
+ | cexpr TComma cexpr { Sequence ($1, $3) }
 
 
 string:
- | TString { }
- | string TString { }
-
+ | TString        { $1 }
+ | string TString 
+     { let (s1,t1) = $1 in let (s2,t2) = $2 in
+       (* stricter: better error message, 5c just says "syntax error" *)
+       if t1 <> t2
+       then error "incompatible strings"
+       else s1 ^ s2, t1
+     }
 
 
 zexpr:
@@ -438,10 +452,6 @@ zcexpr:
  | /*(*empty*)*/ { None }
  | cexpr         { Some $1 }
 
-
-/*(* ??? useful intermediate *)*/
-lexpr: expr { $1 }
-
 zelist:
  | /*(*empty*)*/ { [] }
  | elist         { $1 }
@@ -449,6 +459,10 @@ zelist:
 elist:
  | expr { [$1] }
  | elist TComma elist { $1 @ $3 }
+
+
+/*(* ??? useful intermediate *)*/
+lexpr: expr { $1 }
 
 
 /*(*************************************************************************)*/
@@ -460,12 +474,12 @@ init:
  | TOBrace ilist TCBrace { ExprTodo }
 
 ilist:
- | qlist { }
- | init { }
+ | qlist      { }
+ |       init { }
  | qlist init { }
 
 qlist:
- | init TComma       { }
+ |       init TComma { }
  | qlist init TComma { }
  | qual       { }
  | qlist qual { } 
@@ -544,8 +558,7 @@ complex_type:
  }
 
  | TTypeName 
-     { 
-       try let (_,bid) = Hashtbl.find env.ids $1 in Ast.TTypeName ($1,bid) 
+     { try let (_,bid) = Hashtbl.find env.ids $1 in Ast.TTypeName ($1,bid) 
        with Not_found -> error (spf "count not find typedef for %s" $1)
      }
 
@@ -582,7 +595,6 @@ xdecor2:
 
 
 
-
 zarglist:
  | /*(*empty*)*/ { [], false }
  | arglist       { (* TODO: $1 *) [], false }
@@ -596,24 +608,26 @@ arglist:
  | TDot TDot TDot { }
 
 
+/*(*-----------------------------------------*)*/
+
 abdecor:
- | /*(*empty*)*/ { }
- | abdecor1      { }
+ | /*(*empty*)*/ { (fun x -> x) }
+ | abdecor1      { $1 }
 
 abdecor1:
- | TMul qualifiers { }
- | TMul qualifiers abdecor1 { }
- | abdecor2  { }
+ | TMul qualifiers          { (fun x -> TPointer x) }
+ | TMul qualifiers abdecor1 { (fun x -> TPointer ($3 x)) }
+ | abdecor2  { $1 }
 
 abdecor2:
- | abdecor3 { }
- | abdecor2 TOPar zarglist TCPar { }
- | abdecor2 TOBra zexpr TCBra { }
+ | abdecor3 { $1 }
+ | abdecor2 TOPar zarglist TCPar { (fun x -> TFunction ($1 x, $3)) }
+ | abdecor2 TOBra zexpr TCBra    { (fun x -> TArray ($3, $1 x)) }
 
 abdecor3:
- | TOPar TCPar { }
- | TOBra zexpr TCBra { }
- | TOPar abdecor1 TCPar { }
+ | TOPar TCPar          { (fun x -> TFunction (x, ([], false)))  }
+ | TOBra zexpr TCBra    { (fun x -> TArray ($2, x)) }
+ | TOPar abdecor1 TCPar { $2 }
 
 
 /*(*************************************************************************)*/

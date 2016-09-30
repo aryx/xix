@@ -85,7 +85,7 @@ type type_ =
 (* todo: lineno field *)
 and expr =
   (* Note that characters are transformed in Int at parsing time; no need Char*)
-  | Int of string * Storage.intsize
+  | Int of string * Type.sign * Storage.intsize
   | Float of string * Storage.floatsize
   | String of string * Storage.stringsize
 
@@ -98,7 +98,8 @@ and expr =
   | Assign of assignOp * expr * expr
 
   | ArrayAccess of expr * expr (* x[y] *)
-  (* Why x->y instead of x.y choice?
+  | RecordAccess of expr * name (* x.y *)
+  (* todo? keep just x->y? Why x->y instead of x.y choice?
    * it's more consistent with ArrayAccess where expr has to be
    * a kind of pointer too. That means x.y is actually unsugared in (&x)->y
    *)
@@ -107,13 +108,13 @@ and expr =
   | Cast of type_ * expr
 
   | Postfix of expr * fixOp
-  | Infix of expr * fixOp
+  | Prefix of fixOp * expr
   (* contains GetRef and Deref!!  *)
-  | Unary of expr * unaryOp
+  | Unary of unaryOp * expr
   | Binary of expr * binaryOp * expr
 
   | CondExpr of expr * expr * expr
-  (* should be a statement ... *)
+  (* x, y, but really should be a statement *)
   | Sequence of expr * expr
 
   | SizeOf of (expr, type_) Common.either

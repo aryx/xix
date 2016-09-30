@@ -52,10 +52,11 @@ and vof_struct_kind =
   | Union -> Ocaml.VSum (("Union", []))
 and vof_expr =
   function
-  | Int ((v1, v2)) ->
+  | Int ((v1, v2, v3)) ->
       let v1 = Ocaml.vof_string v1
-      and v2 = Storage.vof_intsize v2
-      in Ocaml.VSum (("Int", [ v1; v2 ]))
+      and v2 = Type.vof_sign v2
+      and v3 = Storage.vof_intsize v3
+      in Ocaml.VSum (("Int", [ v1; v2; v3 ]))
   | Float ((v1, v2)) ->
       let v1 = Ocaml.vof_string v1
       and v2 = Storage.vof_floatsize v2
@@ -78,6 +79,10 @@ and vof_expr =
       let v1 = vof_expr v1
       and v2 = vof_expr v2
       in Ocaml.VSum (("ArrayAccess", [ v1; v2 ]))
+  | RecordAccess ((v1, v2)) ->
+      let v1 = vof_expr v1
+      and v2 = vof_name v2
+      in Ocaml.VSum (("RecordAccess", [ v1; v2 ]))
   | RecordPtAccess ((v1, v2)) ->
       let v1 = vof_expr v1
       and v2 = vof_name v2
@@ -90,13 +95,13 @@ and vof_expr =
       let v1 = vof_expr v1
       and v2 = vof_fixOp v2
       in Ocaml.VSum (("Postfix", [ v1; v2 ]))
-  | Infix ((v1, v2)) ->
-      let v1 = vof_expr v1
-      and v2 = vof_fixOp v2
-      in Ocaml.VSum (("Infix", [ v1; v2 ]))
+  | Prefix ((v1, v2)) ->
+      let v1 = vof_fixOp v1
+      and v2 = vof_expr v2
+      in Ocaml.VSum (("Prefix", [ v1; v2 ]))
   | Unary ((v1, v2)) ->
-      let v1 = vof_expr v1
-      and v2 = vof_unaryOp v2
+      let v1 = vof_unaryOp v1
+      and v2 = vof_expr v2
       in Ocaml.VSum (("Unary", [ v1; v2 ]))
   | Binary ((v1, v2, v3)) ->
       let v1 = vof_expr v1

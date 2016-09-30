@@ -208,7 +208,9 @@ let rec vof_stmt =
       and v2 = vof_expr v2
       in Ocaml.VSum (("DoWhile", [ v1; v2 ]))
   | For ((v1, v2, v3, v4)) ->
-      let v1 = Ocaml.vof_option vof_expr v1
+      let v1 =
+        Common.vof_either (Ocaml.vof_option vof_expr)
+          (Ocaml.vof_list vof_var_decl) v1
       and v2 = Ocaml.vof_option vof_expr v2
       and v3 = Ocaml.vof_option vof_expr v3
       and v4 = vof_stmt v4
@@ -219,16 +221,16 @@ let rec vof_stmt =
   | Continue -> Ocaml.VSum (("Continue", []))
   | Break -> Ocaml.VSum (("Break", []))
   | Label ((v1, v2)) ->
-      let v1 = vof_fullname v1
+      let v1 = vof_name v1
       and v2 = vof_stmt v2
       in Ocaml.VSum (("Label", [ v1; v2 ]))
-  | Goto v1 -> let v1 = vof_fullname v1 in Ocaml.VSum (("Goto", [ v1 ]))
+  | Goto v1 -> let v1 = vof_name v1 in Ocaml.VSum (("Goto", [ v1 ]))
   | Case ((v1, v2)) ->
       let v1 = vof_expr v1
-      and v2 = Ocaml.vof_list vof_stmt v2
+      and v2 = vof_stmt v2
       in Ocaml.VSum (("Case", [ v1; v2 ]))
   | Default v1 ->
-      let v1 = Ocaml.vof_list vof_stmt v1 in Ocaml.VSum (("Default", [ v1 ]))
+      let v1 = vof_stmt v1 in Ocaml.VSum (("Default", [ v1 ]))
   | Vars v1 ->
       let v1 = Ocaml.vof_list vof_var_decl v1
       in Ocaml.VSum (("Vars", [ v1 ]))
@@ -265,7 +267,7 @@ let vof_func_def {
   let arg = Storage.vof_t v_f_storage in
   let bnd = ("f_storage", arg) in
   let bnds = bnd :: bnds in
-  let arg = Ocaml.vof_list vof_stmt v_f_body in
+  let arg = vof_stmt v_f_body in
   let bnd = ("f_body", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_function_type v_f_type in

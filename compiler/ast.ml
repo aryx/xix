@@ -168,18 +168,20 @@ type stmt =
 
   | While of expr * stmt
   | DoWhile of stmt * expr
-  (* todo: can have declarations here *)
-  | For of expr option * expr option * expr option * stmt
+  | For of (expr option, var_decl list) Common.either * 
+           expr option * 
+           expr option * 
+           stmt
 
   | Return of expr option
   | Continue | Break
 
-  | Label of fullname * stmt
-  | Goto of fullname
+  | Label of name * stmt
+  | Goto of name
 
   (* should occur only in Switch *)
-  | Case of expr * stmt list
-  | Default of stmt list
+  | Case of expr * stmt
+  | Default of stmt
 
   | Vars of var_decl list
 
@@ -214,7 +216,8 @@ type func_def = {
   (* functions are globals, no need for fullname here *)
   f_name: name;
   f_type: function_type;
-  f_body: stmt list;
+  (* always a Block *)
+  f_body: stmt;
   (* not Param|Auto *)
   f_storage: Storage.t;
 }

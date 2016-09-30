@@ -16,6 +16,8 @@ module L = Location_cpp
  *  - no implicit single 'signed' means 'signed int'. Signed has to have
  *    an int-type after.
  *  - no support for anonymous field (kencc extension)
+ *  - forbid typedefs inside forexpr
+ *  - STILL? forbid typedefs not at the toplevel
  *)
 
 (*****************************************************************************)
@@ -188,6 +190,7 @@ xdecl:
           let typ = typ2 typ1 in
           (match sto_or_typedef, init with
           | Left sto, _ -> 
+              (* todo: populate env.ids *)
               VarDecl { v_name = (id, env.block);
                         v_type = typ;
                         v_storage = sto;
@@ -200,10 +203,7 @@ xdecl:
               (* todo: proper scope handling, add in env.ids *)
               Hashtbl.add Globals.hids id Ast.IdTypedef;
               Hashtbl.add env.ids id (Ast.IdTypedef, env.block);
-
-              TypeDef { t_name = (id, env.block);
-                        t_type = typ;
-                      }
+              TypeDef { t_name = (id, env.block); t_type = typ; }
          )
         )) 
      }
@@ -216,7 +216,7 @@ xdecl:
          | TFunction ft, Left sto -> 
              FuncDef { f_name = id;
                        f_type = ft;
-                       f_body = $3;
+                       f_body = Block $3;
                        f_storage = sto; }
          (* stricter: *)
          | TFunction _, Right _ ->
@@ -259,24 +259,28 @@ slist:
  | slist stmnt { $1 @ [$2] }
 
 stmnt: 
- | ulstmnt        { StmtTodo }
- | labels ulstmnt { StmtTodo }
+ | ulstmnt        { $1 }
+ | labels ulstmnt { $1 $2 }
 
  | error TSemicolon { error "error before semicolon" }
 
-ulstmnt:
- | zcexpr TSemicolon { }
- | block { }
- | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE { }
- | Tif TOPar cexpr TCPar stmnt Telse stmnt { }
- | Twhile TOPar cexpr TCPar stmnt { }
- | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { }
- | Tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt { }
- | Treturn zcexpr TSemicolon { }
- | Tbreak TSemicolon { }
- | Tcontinue TSemicolon { }
- | Tswitch TOPar cexpr TCPar stmnt { }
- | Tgoto tag TSemicolon { }
+ulstmnt: 
+ | cexpr TSemicolon { ExprSt $1 }
+ /*(* stricter: was zcexpr before *)*/
+ | TSemicolon       { error "missing expression before semicolon" }
+ | block { Block $1 }
+ | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE { If ($3, $5, Block[]) }
+ | Tif TOPar cexpr TCPar stmnt Telse stmnt { If ($3, $5, $7) }
+ | Twhile TOPar cexpr TCPar stmnt          { While ($3, $5) }
+ | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { DoWhile ($2, $5) }
+ | Tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt 
+     { For ($3, $5, $7, $9) }
+ | Treturn zcexpr TSemicolon { Return ($2) }
+ | Tbreak TSemicolon         { Break }
+ | Tcontinue TSemicolon      { Continue } 
+ /*(* stricter: impose a block, not any stmnt *)*/
+ | Tswitch TOPar cexpr TCPar block { Switch ($3, $5) }
+ | Tgoto tag TSemicolon { Goto ($2) }
 
 tag: 
  | TName     { $1 }
@@ -285,98 +289,115 @@ tag:
 
 
 forexpr: 
- | zcexpr { }
- | storage_and_type adlist { }
+ | zcexpr { Left $1 }
+ | storage_and_type adlist 
+     { (* less: introduce a new scope? *)
+       Right ($2 |> List.map (fun ((id, typ2), init) ->
+          let (sto_or_typedef, typ1) = $1 in
+          let typ = typ2 typ1 in
+          (match sto_or_typedef with
+          | Left sto -> 
+                      { v_name = (id, env.block);
+                        v_type = typ;
+                        v_storage = sto;
+                        v_init = init;
+                      }
+          (* stricter: *)
+          | Right _ -> error "typedefs inside 'for' are forbidden"
+          )
+       ))
+     }
 
 labels:
- | label { }
- | labels label { }
+ | label        { (fun st -> $1 st)  }
+ | labels label { (fun st -> $1 ($2 st)) }
 
 label:
- | TName TColon { }
- | Tcase expr TColon { }
- | Tdefault TColon { }
+ /*(* less: not tag here? can not conflict with typedef? *)*/
+ | TName TColon      { (fun st -> Label ($1, st)) }
+ | Tcase expr TColon { (fun st -> Case ($2, st)) }
+ | Tdefault TColon   { (fun st -> Default st) }
 
 /*(*************************************************************************)*/
 /*(*1 Expressions *)*/
 /*(*************************************************************************)*/
 
 expr:
- | xuexpr { }
+ | xuexpr { ExprTodo }
 
- | expr TPlus expr { }
- | expr TMinus expr { }
- | expr TMul expr { }
- | expr TDiv expr { }
- | expr TMod expr { }
+ | expr TPlus expr { ExprTodo }
+ | expr TMinus expr { ExprTodo }
+ | expr TMul expr { ExprTodo }
+ | expr TDiv expr { ExprTodo }
+ | expr TMod expr { ExprTodo }
 
- | expr TAnd expr { }
- | expr TXor expr { }
- | expr TOr expr { }
+ | expr TAnd expr { ExprTodo }
+ | expr TXor expr { ExprTodo }
+ | expr TOr expr { ExprTodo }
 
- | expr TSupSup expr { }
- | expr TInfInf expr { }
+ | expr TSupSup expr { ExprTodo }
+ | expr TInfInf expr { ExprTodo }
 
- | expr TAndAnd expr { }
- | expr TOrOr expr { }
+ | expr TAndAnd expr { ExprTodo }
+ | expr TOrOr expr { ExprTodo }
 
- | expr TEqEq expr { }
- | expr TBangEq expr { }
+ | expr TEqEq expr { ExprTodo }
+ | expr TBangEq expr { ExprTodo }
 
- | expr TInf expr { }
- | expr TSup expr  { }
- | expr TInfEq expr { }
- | expr TSupEq expr { }
+ | expr TInf expr { ExprTodo }
+ | expr TSup expr  { ExprTodo }
+ | expr TInfEq expr { ExprTodo }
+ | expr TSupEq expr { ExprTodo }
 
- | expr TEq expr { }
- | expr TOpEq expr { }
+ | expr TEq expr { ExprTodo }
+ | expr TOpEq expr { ExprTodo }
 
- | expr TQuestion cexpr TColon expr { }
+ | expr TQuestion cexpr TColon expr { ExprTodo }
 
 xuexpr:
- | uexpr { }
+ | uexpr { ExprTodo }
 
- | TOPar qualifier_and_type abdecor TCPar xuexpr  { }
+ | TOPar qualifier_and_type abdecor TCPar xuexpr  { ExprTodo }
 
 uexpr:
- | pexpr { }
+ | pexpr { ExprTodo }
 
- | TPlus xuexpr { }
- | TMinus xuexpr { }
+ | TPlus xuexpr { ExprTodo }
+ | TMinus xuexpr { ExprTodo }
 
- | TBang xuexpr { }
- | TTilde xuexpr { }
+ | TBang xuexpr { ExprTodo }
+ | TTilde xuexpr { ExprTodo }
 
- | TMul xuexpr { }
- | TAnd xuexpr  { }
+ | TMul xuexpr { ExprTodo }
+ | TAnd xuexpr  { ExprTodo }
 
- | TPlusPlus xuexpr { }
- | TMinusMinus xuexpr { } 
+ | TPlusPlus xuexpr { ExprTodo }
+ | TMinusMinus xuexpr { ExprTodo } 
 
 pexpr:
- | TOPar cexpr TCPar { }
+ | TOPar cexpr TCPar { ExprTodo }
 
- | pexpr TOPar zelist TCPar { }
- | pexpr TOBra cexpr TCBra { }
+ | pexpr TOPar zelist TCPar { ExprTodo }
+ | pexpr TOBra cexpr TCBra { ExprTodo }
 
- | pexpr TDot tag { }
- | pexpr TArrow tag { } 
+ | pexpr TDot tag { ExprTodo }
+ | pexpr TArrow tag { ExprTodo } 
 
- | TName { }
+ | TName { ExprTodo }
 
- | TConst { } 
- | TFConst { }
- | string { }
+ | TConst { ExprTodo } 
+ | TFConst { ExprTodo }
+ | string { ExprTodo }
 
- | pexpr TPlusPlus { }
- | pexpr TMinusMinus { } 
+ | pexpr TPlusPlus { ExprTodo }
+ | pexpr TMinusMinus { ExprTodo } 
 
- | Tsizeof TOPar qualifier_and_type abdecor TCPar { }
- | Tsizeof uexpr { }
+ | Tsizeof TOPar qualifier_and_type abdecor TCPar { ExprTodo }
+ | Tsizeof uexpr { ExprTodo }
 
 cexpr:
- | expr { }
- | cexpr TComma cexpr { }
+ | expr { ExprTodo }
+ | cexpr TComma cexpr { ExprTodo }
 
 
 string:
@@ -389,19 +410,21 @@ zexpr:
  | /*(*empty*)*/ { None }
  | lexpr         { Some $1 }
 
-lexpr: expr { ExprTodo }
-
 zcexpr:
- | /*(*empty*)*/ { }
- | cexpr { }
+ | /*(*empty*)*/ { None }
+ | cexpr         { Some $1 }
+
+
+/*(* ??? useful intermediate *)*/
+lexpr: expr { $1 }
 
 zelist:
- | /*(*empty*)*/ { }
- | elist { }
+ | /*(*empty*)*/ { [] }
+ | elist         { $1 }
 
 elist:
- | expr { }
- | elist TComma elist { }
+ | expr { [$1] }
+ | elist TComma elist { $1 @ $3 }
 
 
 /*(*************************************************************************)*/

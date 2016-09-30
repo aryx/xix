@@ -1,6 +1,6 @@
 open Common
 
-let s_of_program x =
-  let v = Meta_ast.vof_program x in
+let s_of_any x =
+  let v = Meta_ast.vof_any x in
   Ocaml.string_of_v v
 

@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 (* Same than Ast.blockid, but repeated here to avoid a mutual dependency *)
 type blockid = int

@@ -29,7 +29,7 @@ type loc = Location_cpp.loc
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
-(* less: ref to symbol? or use external hash? 
+(* less: ref to a symbol? or use external hash? 
  * todo: lineno field?
  *)
 type name = string
@@ -39,7 +39,6 @@ type blockid = int
 
 (* name below can be a gensym'ed name for anonymous struct/union/enum *)
 type fullname = name * blockid
- (* with tarzan *)
 
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers. *) 
 type idkind =
@@ -205,8 +204,6 @@ and var_decl = {
 }
  (* can have ArrayInit and RecordInit here in addition to other expr *)
  and initialiser = expr
- and storage = Extern | Static | DefaultStorage
-
  (* with tarzan *)
 
 
@@ -218,6 +215,7 @@ type func_def = {
   f_name: name;
   f_type: function_type;
   f_body: stmt list;
+  (* not Param|Auto *)
   f_storage: Storage.t;
 }
  (* with tarzan *)
@@ -242,12 +240,12 @@ type struct_def = {
 
 type enum_def = { 
   e_name: fullname;
-  (* we also need to use fullname for constants, to scope them *)
+  (* we also need to use 'fullname' for constants, to scope them *)
   e_constants: (fullname * const_expr option) list;
 }
  (* with tarzan *)
 
-(* to manage tag scope *)
+(* to manage the scope of tags *)
 type tagkind =
   | TagStruct
   | TagUnion

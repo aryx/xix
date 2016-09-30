@@ -254,11 +254,6 @@ and
   let arg = vof_fullname v_v_name in
   let bnd = ("v_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 and vof_initialiser v = vof_expr v
-and vof_storage =
-  function
-  | Extern -> Ocaml.VSum (("Extern", []))
-  | Static -> Ocaml.VSum (("Static", []))
-  | DefaultStorage -> Ocaml.VSum (("DefaultStorage", []))
   
 let vof_func_def {
                    f_name = v_f_name;

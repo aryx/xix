@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module T = Parser  (* T for Tokens *)
@@ -5,12 +6,23 @@ module D = Ast_cpp (* D for Directives *)
 module L = Location_cpp
 module P = Preprocessor
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let add_event event =
   if !Flags.debug_line
   then Location_cpp.dump_event event;
 
   Location_cpp.add_event event
 
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
 
 let parse (defs, paths) file = 
 

@@ -1,2 +1,2 @@
 
-val s_of_program: Ast.program -> string
+val s_of_any: Ast.any -> string

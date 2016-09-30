@@ -12,18 +12,16 @@ open Common
  *    (but you should use mk anyway)
  *  - can not compile from stdin
  *    (but who uses that?)
- *  - does not link
- *    (let the linker do that, but 5c does it??)
- *  - no error recovery, stop at first error
+ *  - no error recovery, we stop at the first error
  * 
  * improvements:
- *  - forbid more constructs (typedef and initializers, typedef function
- *    definitions, etc)
+ *  - forbid more constructs: typedef and initializers, typedef function
+ *    definitions, and more (see tests/)
  * 
  * todo:
+ *  - safe-linking support
  *  - debugger support
  *  - profiler support
- *  - linker support
  *)
 
 let thechar = '5'
@@ -58,7 +56,7 @@ let compile (defs, include_paths) infile outfile =
 
   let ast = Parse.parse (defs, include_paths) infile in
   if !Flags.dump_ast
-  then pr2 (Dumper.s_of_program ast);
+  then pr2 (Dumper.s_of_any (Ast.Program ast));
   ()
 
 
@@ -95,12 +93,12 @@ let main () =
       Preprocessor.define_cmdline_def (var, val_)
     ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
-      raise Todo
+      include_paths := s::!include_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
     "-.", Arg.Clear include_dot,
     " suppress auto search for include files in the file argument's dir";
 
-    (* pad: I used long name for those options *)
+    (* pad: I added long names for those options *)
     "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-debug_line", Arg.Set Flags.debug_line, " ";
@@ -117,7 +115,6 @@ let main () =
     "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
 
-
     (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,
     " ";
@@ -129,7 +126,7 @@ let main () =
   Arg.parse (Arg.align options) (fun t -> 
     args := t::!args
   ) usage;
-  (* todo: process the old style -Dname=val and -Idir *)
+  (* less: process the old style -Dname=val and -Idir attached *)
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -146,18 +143,14 @@ let main () =
         let base = Filename.basename cfile in
         let dir = Filename.dirname cfile in
         let include_paths =
-          if !include_dot
+          (try Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
+          with Not_found ->
+            [spf "/%s/include" thestring; "/sys/include";]
+          ) @
+          (if !include_dot
           then dir::!include_paths
           else !include_paths
-        in
-        let include_paths =
-          (try
-            Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
-          with Not_found ->
-            [spf "/%s/include" thestring; 
-             "/sys/include";
-            ]
-          ) @ include_paths
+          )
         in
         
         let outfile = 

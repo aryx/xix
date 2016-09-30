@@ -1,3 +1,4 @@
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 (* No Typedef here, because a typedef is not a storage! *) 
 type t =

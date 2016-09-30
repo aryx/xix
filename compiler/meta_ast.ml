@@ -231,10 +231,9 @@ let rec vof_stmt =
       in Ocaml.VSum (("Case", [ v1; v2 ]))
   | Default v1 ->
       let v1 = vof_stmt v1 in Ocaml.VSum (("Default", [ v1 ]))
-  | Vars v1 ->
-      let v1 = Ocaml.vof_list vof_var_decl v1
-      in Ocaml.VSum (("Vars", [ v1 ]))
-  | StmtTodo -> Ocaml.VSum (("StmtTodo", []))
+  | Var v1 ->
+      let v1 = vof_var_decl v1
+      in Ocaml.VSum (("Var", [ v1 ]))
 and vof_case v = vof_stmt v
 and
   vof_var_decl {

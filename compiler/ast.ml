@@ -183,9 +183,7 @@ type stmt =
   | Case of expr * stmt
   | Default of stmt
 
-  | Vars of var_decl list
-
-  | StmtTodo
+  | Var of var_decl
 
 
 

@@ -11,13 +11,13 @@ module L = Location_cpp
 (* Limitations compared to 5c (and sometimes also ANSI C):
  *  - no support for old style parameter declaration
  *    (obsolete practice anyway)
- *  - impose a certain order for the storage, qualifier, and types
+ *  - impose a certain order for the storage, qualifier, and type
  *    (everybody follow this convention anyway)
  *  - no implicit single 'signed' means 'signed int'. Signed has to have
- *    an int-type after.
+ *    an explicit int-type after.
  *  - no support for anonymous field (kencc extension)
  *  - forbid typedefs inside forexpr
- *  - STILL? forbid typedefs not at the toplevel
+ *  - (sure?) forbid definitions (typedefs, struct, enum) not at the toplevel
  *)
 
 (*****************************************************************************)
@@ -240,9 +240,32 @@ xdlist:
 
 adecl:
  | storage_and_type        TSemicolon 
-     { [StmtTodo] }
+     { if !defs = [] 
+       then error "declaration without any identifier";
+       (* stricter: *)
+       error "move struct or typedef definitions to the toplevel";
+     }
+
  | storage_and_type adlist TSemicolon 
-     { [StmtTodo] }
+     { (* stricter: *)
+       if !defs <> [] 
+       then error "move struct or type definitions to the toplevel";
+       ($2 |> List.map (fun ((id, typ2), init) ->
+          let (sto_or_typedef, typ1) = $1 in
+          let typ = typ2 typ1 in
+          (match sto_or_typedef with
+          | Left sto -> 
+              Var { v_name = (id, env.block);
+                    v_type = typ;
+                    v_storage = sto;
+                    v_init = init;
+                  }
+          (* stricter: *)
+          | Right _ -> error "typedefs not at the toplevel are forbidden"
+          )
+       ))
+     }
+
 
 adlist: xdlist { $1 }
 
@@ -297,11 +320,12 @@ forexpr:
           let typ = typ2 typ1 in
           (match sto_or_typedef with
           | Left sto -> 
-                      { v_name = (id, env.block);
-                        v_type = typ;
-                        v_storage = sto;
-                        v_init = init;
-                      }
+                 { v_name = (id, env.block);
+                    v_type = typ;
+                    v_storage = sto;
+                    v_init = init;
+                  }
+          (* todo: populate hids *)
           (* stricter: *)
           | Right _ -> error "typedefs inside 'for' are forbidden"
           )
@@ -323,7 +347,7 @@ label:
 /*(*************************************************************************)*/
 
 expr:
- | xuexpr { ExprTodo }
+ | xuexpr { $1 }
 
  | expr TPlus expr { ExprTodo }
  | expr TMinus expr { ExprTodo }

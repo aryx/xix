@@ -36,7 +36,13 @@ module Flags = Flags_cpp
 type cmdline_defs = (string * string) list
 
 (* -I *)
-type include_paths = Common.filename list
+type system_paths = Common.filename list
+
+(* The first element in the list is supposed to contain the directory
+ * of the C file so it is looked for "" but not for <>
+ *)
+type include_paths = Common.filename * system_paths
+
 
 type macro = {
   name: string;
@@ -92,19 +98,20 @@ let define (s, params, body) =
 
 
 (* less: Could use Set instead of list for the set of include paths *)
-let rec find_include paths (f, system) =
+let rec find_include (dir, system_paths) (f, system) =
+  if system
+  then find_include_bis system_paths f
+  else find_include_bis (dir::system_paths) f
+and find_include_bis paths f =
   match paths with 
   (* stricter: better error message *)
   | [] -> failwith (spf "could not find %s in include paths" f)
   | x::xs ->
-      if x = "." && system
-      then find_include xs (f, system)
-      else 
-        let path = Filename.concat x f in
-        if Sys.file_exists path
-        then begin
-          if !Flags.debug_inclusion
-          then pr (spf "%d: %s" !L.line path);
-          path
-        end
-        else find_include xs (f, system)
+      let path = Filename.concat x f in
+      if Sys.file_exists path
+      then begin
+        if !Flags.debug_inclusion
+        then pr (spf "%d: %s" !L.line path);
+        path
+      end
+      else find_include_bis xs f

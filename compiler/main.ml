@@ -13,6 +13,8 @@ open Common
  *  - can not compile from stdin
  *    (but who uses that?)
  *  - no error recovery, we stop at the first error
+ *  - no -. to remove auto search for header in current directory
+ *    (but who uses that?)
  * 
  * improvements:
  *  - forbid more constructs: typedef and initializers, typedef function
@@ -44,11 +46,11 @@ let do_action s xs =
       xs |> List.iter (fun file ->
         Hashtbl.clear Preprocessor.hmacros;
         pr2 (spf "processing %s" file);
-        let include_paths = 
-          ["."; spf "/%s/include" thestring; "/sys/include";]
+        let system_paths = 
+          [spf "/%s/include" thestring; "/sys/include";]
         in
         try 
-          let _ = Parse.parse ([], include_paths) file in
+          let _ = Parse.parse ([], (".", system_paths)) file in
           ()
         with Location_cpp.Error (s, loc) ->
           let (file, line) = Location_cpp.final_loc_of_loc loc in
@@ -80,9 +82,8 @@ let main () =
   let outfile = ref "" in
 
   (* for cpp *)
-  let include_paths = ref ["."] in
+  let system_paths = ref [] in
   let defs = ref [] in
-  let include_dot = ref true in
 
   (* for debugging *)
   let action = ref "" in
@@ -101,10 +102,8 @@ let main () =
       Preprocessor.define_cmdline_def (var, val_)
     ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
-      include_paths := s::!include_paths
+      system_paths := s::!system_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
-    "-.", Arg.Clear include_dot,
-    " suppress auto search for include files in the file argument's dir";
 
     (* pad: I added long names for those options *)
     "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
@@ -150,15 +149,12 @@ let main () =
     | [cfile], outfile ->
         let base = Filename.basename cfile in
         let dir = Filename.dirname cfile in
-        let include_paths =
+        let system_paths =
           (try Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
           with Not_found ->
             [spf "/%s/include" thestring; "/sys/include";]
           ) @
-          (if !include_dot
-          then dir::!include_paths
-          else !include_paths
-          )
+          !system_paths
         in
         
         let outfile = 
@@ -169,7 +165,7 @@ let main () =
             else base ^ (spf ".%c" thechar)
           else outfile
         in
-        compile (!defs, include_paths) cfile outfile
+        compile (!defs, (dir, system_paths)) cfile outfile
     | _ -> 
       (* stricter: *)
         failwith 

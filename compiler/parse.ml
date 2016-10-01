@@ -118,7 +118,9 @@ let parse (defs, paths) file =
                 let lexbuf = Lexing.from_string body in
                 stack := (None, lexbuf)::!stack;
                 lexfunc ()
-              end else raise Todo
+              end else begin
+                raise Todo
+              end
             else t
         | _ -> t
         )

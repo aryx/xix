@@ -61,6 +61,7 @@ let add_id env id idkind =
   Hashtbl.add Globals.hids id idkind;
   Hashtbl.add env.ids id (idkind, env.block)
   (* todo: proper scope handling, add in env.ids_stack *)
+
 let new_scope env =
   raise Todo
 let pop_scope env =
@@ -302,8 +303,8 @@ stmnt:
 
 ulstmnt: 
  | cexpr TSemicolon { ExprSt $1 }
- /*(* stricter: was zcexpr before *)*/
- |       TSemicolon { error "missing expression before semicolon" }
+ /*(* used when do for(...) ; to have an empty statement *)*/
+ |       TSemicolon { Block [] }
 
  | block { Block $1 }
 
@@ -483,7 +484,7 @@ elist:
 
 init: 
  | expr                  { $1 }
- | TOBrace ilist TCBrace 
+ | TOBrace ilist comma_opt TCBrace 
      { match $2 with
        | [] -> failwith "Impossible: grammar force one element"
        | (Left x)::xs ->
@@ -497,6 +498,10 @@ init:
              | Left _ -> error "mixing array and record initializer forbidden"
            )))
      }
+
+comma_opt:
+ | /*(*empty*)*/ { }
+ | TComma { }
 
 ilist:
  | init2              { [$1] }
@@ -596,12 +601,12 @@ type_:
  *  (name, partial type (a function to be applied to return type))
  *
  * note that with 'int* f(int)' we must return Func(Pointer int,int) and not
- * Pointer (Func(int,int)).
+ * Pointer (Func(int,int)), so TMul binds before the rest of xdecor.
  *)*/
 
 xdecor:
  | xdecor2                { $1 }
- | TMul qualifiers xdecor { let (id, f) = $3 in id, (fun x -> TPointer (f x)) }
+ | TMul qualifiers xdecor { let (id, f) = $3 in id, (fun x -> f (TPointer x)) }
 
 /*(* use tag here too, as can have foo foo; declarations *)*/
 xdecor2:
@@ -618,15 +623,27 @@ xdecor2:
 
 zarglist:
  | /*(*empty*)*/ { [], false }
- | arglist       { (* TODO: $1 *) [], false }
+ | arglist       { $1 }
 
 /*less: name { } */
 arglist:
- | qualifier_and_type xdecor  { }
- | qualifier_and_type abdecor { }
+ | qualifier_and_type xdecor  
+     { let (id, typ2) = $2 in
+       (* todo: remove from scope at some scope? add in scope in caller? *)
+       add_id env id IdIdent;
+       [{p_name = Some id; p_type = typ2 $1 }], false
+     }
+ | qualifier_and_type abdecor { [{ p_name = None; p_type = $2 $1 }], false }
 
- | arglist TComma arglist { }
- | TDot TDot TDot { }
+ | arglist TComma arglist 
+     { let (xs, isdot1) = $1 in
+       let (ys, isdot2) = $3 in
+       (* stricter: 5c does not report *)
+       if isdot1
+       then error "dots allowed only in last parameter position";
+       xs @ ys, isdot2
+     }
+ | TDot TDot TDot { [], true }
 
 
 /*(*-----------------------------------------*)*/
@@ -637,7 +654,7 @@ abdecor:
 
 abdecor1:
  | TMul qualifiers          { (fun x -> TPointer x) }
- | TMul qualifiers abdecor1 { (fun x -> TPointer ($3 x)) }
+ | TMul qualifiers abdecor1 { (fun x -> $3 (TPointer x)) }
  | abdecor2  { $1 }
 
 abdecor2:

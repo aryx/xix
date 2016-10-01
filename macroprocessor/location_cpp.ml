@@ -75,6 +75,7 @@ let final_loc_of_loc lineno =
       else
         (match x.location_event, stack with
         | Eof, (lastfile, _lastlineno, lastdelta)::ys ->
+            (* bugfix: wrong!! TODO *)
             aux (lastfile, x.global_line, lastdelta) ys xs
         | Eof, [] -> 
             failwith ("impossible: wrong location history, unpaired Eof")

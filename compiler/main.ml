@@ -16,7 +16,7 @@ open Common
  * 
  * improvements:
  *  - forbid more constructs: typedef and initializers, typedef function
- *    definitions, and more (see tests/)
+ *    definitions, three dots parameter in the middle, and more (see tests/)
  * 
  * todo:
  *  - safe-linking support
@@ -42,9 +42,17 @@ let do_action s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
+        Hashtbl.clear Preprocessor.hmacros;
         pr2 (spf "processing %s" file);
-        let _ = Parse.parse ([], []) file in
-        ()
+        let include_paths = 
+          ["."; spf "/%s/include" thestring; "/sys/include";]
+        in
+        try 
+          let _ = Parse.parse ([], include_paths) file in
+          ()
+        with Location_cpp.Error (s, loc) ->
+          let (file, line) = Location_cpp.final_loc_of_loc loc in
+          failwith (spf "%s:%d %s" file line s)
       )
 
   | _ -> failwith ("action not supported: " ^ s)

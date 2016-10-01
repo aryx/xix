@@ -78,6 +78,10 @@ let define_cmdline_def (k, v) =
   Hashtbl.add hmacros k { name = k; nbargs = None; varargs = false; body = v; }
 
 let define (s, params, body) =
+  (* We could forbid here 's' to conflict with C keyboard, but this
+   * should be done in the caller, as cpp can be used with different
+   * languages, which may use different keywords.
+   *)
   let sbody = match body with Some x -> x | None -> "1" in
   if Hashtbl.mem hmacros s
   then raise (L.Error (spf "macro redefined: %s" s, !L.line))

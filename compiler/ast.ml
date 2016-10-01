@@ -123,16 +123,16 @@ and expr =
   | SizeOf of (expr, type_) Common.either
 
   (* should appear only in a variable initializer, or after GccConstructor *)
-  | ArrayInit of (expr option * expr) list
+  | ArrayInit of (const_expr option * expr) list
   | RecordInit of (name * expr) list
   (* gccext: kenccext: *)
   | GccConstructor  of type_ * expr (* always an ArrayInit (or RecordInit?) *)
 
 and argument = expr
 
-(* Now that we call the preprocessor first, cases where const_expr is
- * not a constant? Can have basic arithmetic here? 
- * At least can have enum constants.
+(* Now that we call the preprocessor first, is there case where const_expr is
+ * not a constant? Yes, you can have basic arithmetic like 2 << 3,
+ * or enum constants.
  *)
 and const_expr = expr
 
@@ -186,8 +186,6 @@ type stmt =
   | Default of stmt
 
   | Var of var_decl
-
-
 
 (* Can we have a specific case type? It is hard in C because they mix labels
  * and 'case' a lot (see the code in the lexer of 5c).

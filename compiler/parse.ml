@@ -14,6 +14,9 @@ module P = Preprocessor
 (* Helpers *)
 (*****************************************************************************)
 
+let error s =
+  raise (L.Error (s, !L.line))
+
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
@@ -61,17 +64,17 @@ let parse (defs, paths) file =
                   *)
                   stack := (Some chan, lexbuf)::!stack;
                 with Failure s ->
-                  raise (L.Error (s, !L.line))
+                  error s
                 )
 
             | D.Define (s, params, body) ->
-               (* stricter: todo: forbid s to conflict with C keyboard *)
+               (* todo: stricter: forbid s to conflict with C keyboard *)
                 Preprocessor.define (s, params, body)
 
             | D.Undef s ->
                 (* stricter: check that was defined *)
                 if not (Hashtbl.mem Preprocessor.hmacros s)
-                then raise (L.Error (spf "macro %s was not defined" s,!L.line));
+                then error (spf "macro %s was not defined" s);
                 Hashtbl.remove Preprocessor.hmacros s
 
             | D.Line (line, file) ->
@@ -88,7 +91,6 @@ let parse (defs, paths) file =
             );
             lexfunc ()
 
-        (* stricter: in theory could do macro for reserved keyword? *)
         | T.TName _ | T.TTypeName _ 
         (* stricter: I forbid to have macros overwrite keywords *)
         (*
@@ -107,18 +109,21 @@ let parse (defs, paths) file =
             if Hashtbl.mem Preprocessor.hmacros s
             then 
               let macro = Hashtbl.find Preprocessor.hmacros s in
-
-              if macro.P.nbargs = None
-              then begin
-                let body = macro.P.body in
-                if !Flags_cpp.debug_macros
-                then pr2 (spf "#expand %s %s" macro.P.name body);
-                let lexbuf = Lexing.from_string body in
-                stack := (None, lexbuf)::!stack;
-                lexfunc ()
-              end else begin
-                raise Todo
-              end
+              match macro.P.nbargs with
+              | None ->
+                  let body = macro.P.body in
+                  if !Flags_cpp.debug_macros
+                  then pr2 (spf "#expand %s %s" s body);
+                  let lexbuf = Lexing.from_string body in
+                  stack := (None, lexbuf)::!stack;
+                  lexfunc ()
+              | Some n ->
+                  let args = Lexer_cpp.macro_arguments lexbuf in
+                  if List.length args <> n
+                  then error (spf "argument mismatch expanding: %s" s)
+                  else begin
+                    raise Todo
+                  end
             else t
         | _ -> t
         )
@@ -129,11 +134,10 @@ let parse (defs, paths) file =
   (try 
     Parser.prog (fun _lexbuf -> lexfunc ()) lexbuf
   with Parsing.Parse_error ->
-    raise (L.Error ("Syntax error" ^ 
-                       (if !last_ident = "" 
-                        then ""
-                        else spf ", last name: %s" !last_ident),
-                    !L.line))
+    error ("Syntax error" ^ 
+              (if !last_ident = "" 
+               then ""
+               else spf ", last name: %s" !last_ident))
   )
 
 

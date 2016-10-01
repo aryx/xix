@@ -82,7 +82,9 @@ type type_ =
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
-(* todo: lineno field *)
+(* todo: lineno field 
+ * todo: mutable t: Type.t?
+ *)
 and expr =
   (* Note that characters are transformed in Int at parsing time; no need Char*)
   | Int of string * Type.sign * Storage.intsize
@@ -90,6 +92,7 @@ and expr =
   | String of string * Storage.stringsize
 
   (* Global, local, parameter, enum constant (can be scoped), function *)
+  (* todo: mutable symkind? storage? setused? *)
   | Id of fullname
 
   | Call of expr * argument list

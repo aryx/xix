@@ -108,8 +108,8 @@ let main () =
     (* pad: I added long names for those options *)
     "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
-    "-debug_line", Arg.Set Flags.debug_line, " ";
-    "-f", Arg.Set Flags.debug_line, " ";
+    "-debug_line", Arg.Set Flags_cpp.debug_line, " ";
+    "-f", Arg.Set Flags_cpp.debug_line, " ";
     "-debug_macros", Arg.Set Flags_cpp.debug_macros, " ";
     "-m", Arg.Set Flags_cpp.debug_macros, " ";
 

@@ -14,12 +14,6 @@ module P = Preprocessor
 (* Helpers *)
 (*****************************************************************************)
 
-let add_event event =
-  if !Flags.debug_line
-  then Location_cpp.dump_event event;
-
-  Location_cpp.add_event event
-
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
@@ -30,7 +24,7 @@ let parse (defs, paths) file =
   defs |> List.iter Preprocessor.define_cmdline_def;
 
   let chan = open_in file in
-  add_event (L.Include file);
+  L.add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(Some chan, lexbuf)] in
   (* less: let push x = check if too deep? *)
@@ -48,7 +42,7 @@ let parse (defs, paths) file =
             (match chanopt with
             | Some chan ->
                 close_in chan;
-                add_event L.Eof; (* TODO: unless was macro expansion? *)
+                L.add_event L.Eof; (* TODO: unless was macro expansion? *)
             | None -> ()
             );
             lexfunc ()
@@ -64,7 +58,7 @@ let parse (defs, paths) file =
                 let path = Preprocessor.find_include paths (f, system) in
                 (try 
                   let chan = open_in path in
-                  add_event (L.Include path);
+                  L.add_event (L.Include path);
                   let lexbuf = Lexing.from_channel chan in
                   stack := (Some chan, lexbuf)::!stack;
                 with Failure s ->
@@ -81,7 +75,7 @@ let parse (defs, paths) file =
                 else Hashtbl.remove Preprocessor.hmacros s
 
             | D.Line (line, file) ->
-                add_event (L.Line (line, file));
+                L.add_event (L.Line (line, file));
 
             (* less: for "lib" should add a L.PragmaLib event? *)
             | D.Pragma _ -> ()

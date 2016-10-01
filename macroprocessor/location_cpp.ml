@@ -41,11 +41,8 @@ let line = ref 1
 exception Error of string * loc
 
 (*****************************************************************************)
-(* Entry points *)
+(* Debugging *)
 (*****************************************************************************)
-
-let add_event event =
-  history := {location_event = event; global_line = !line }::!history
 
 (* for 5c -f *)
 let dump_event event =
@@ -56,6 +53,15 @@ let dump_event event =
       pr (spf "%4d: %s (#line %d)" !line file local_line)
   | Eof -> 
       pr (spf "%4d: <pop>" !line)
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+let add_event event =
+  if !Flags_cpp.debug_line
+  then dump_event event;
+  history := {location_event = event; global_line = !line }::!history
 
 
 (* 'history' contains the list of location_events in reverse order

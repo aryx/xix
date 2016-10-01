@@ -122,7 +122,15 @@ let parse (defs, paths) file =
                   if List.length args <> n
                   then error (spf "argument mismatch expanding: %s" s)
                   else begin
-                    raise Todo
+                    let body = macro.P.body in
+                    let lexbuf = Lexing.from_string body in
+                    let body = 
+                      Lexer_cpp.subst_args_in_macro_body s args lexbuf in
+                    if !Flags_cpp.debug_macros
+                    then pr2 (spf "#expand %s %s" s body);
+                    let lexbuf = Lexing.from_string body in
+                    stack := (None, lexbuf)::!stack;
+                    lexfunc ()
                   end
             else t
         | _ -> t

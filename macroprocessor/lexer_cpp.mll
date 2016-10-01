@@ -13,10 +13,10 @@ module L = Location_cpp
  * 
  * stricter: 
  *  - no space allowed between '#' and the directive
- *    (but some people like to do  '#    ifdef', when have nested ifdefs)
- *  - empty # are not converted in #endif
+ *    (even though some people like to do  '#  ifdef', when have nested ifdefs)
+ *  - single '#' are not converted in #endif
  *    (who does use that?)
- *  - allow only spaces before the newline; we do not skip any character
+ *  - only spaces before the newline; we do not skip any character
  *    (who does put garbage there?)
  *)
 
@@ -38,10 +38,10 @@ let sym = (letter | '_') (letter | digit | '_')*
 (* Main rule *)
 (*****************************************************************************)
 
-(* pre: the rules below assume the '#' has already been consumed *)
+(* pre: 'token' assumes the '#' has already been consumed *)
 rule token = parse
 
-  (* note that does not handle filenames containing double quotes *)
+  (* note that filenames containing double quotes are not supported *)
   | "include" space* '"' ([^ '"' '\n']+ as file) '"'
       { space_or_comment_and_newline lexbuf; 
         Include (file, false)  }
@@ -145,9 +145,14 @@ and define_body name params = parse
       with Not_found ->
         s ^ define_body name params lexbuf
      }
+
   | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/' '#']+ as s 
       { s ^ define_body name params lexbuf }
 
+  (* end of macro *)
+  | '\n' { incr Location_cpp.line; "" }
+
+  (* special cases *)
   | "'" 
       { let s = define_body_char name params lexbuf in 
         "'" ^ s ^ define_body name params lexbuf }
@@ -157,15 +162,14 @@ and define_body name params = parse
 
   | "//" [^'\n']* { define_body name params lexbuf }
   | "/*"          { comment_star lexbuf; define_body name params lexbuf }
-
   | '/' { "/" ^ define_body name params lexbuf }
+
+  (* we escape single '#' by doubling it (classic) *)
   | '#' { "##" ^ define_body name params lexbuf }
 
   (* could do " " ^ but that is not what 5c does *)
   | "\\" "\n" { incr Location_cpp.line; define_body name params lexbuf }
   | '\\' { "\\" ^ define_body name params lexbuf }
-  (* end of macro *)
-  | '\n' { incr Location_cpp.line; "" }
 
   | eof  { error (spf "eof in macro %s" name) }
 
@@ -192,6 +196,7 @@ and define_body_char name params = parse
   (* todo: what if escaped newline here? allowed??? *)
   | '\\' _ 
       { let s = Lexing.lexeme lexbuf in s^define_body_char name params lexbuf }
+
   (* escape # to disambiguate with use of # to reference a parameter *)
   | '#' { "##" ^ define_body_char name params lexbuf }
 
@@ -228,46 +233,41 @@ and define_body_string name params = parse
  *)
 and macro_arguments = parse
  | space* "(" 
-     { macro_args 0 ("", []) lexbuf |> List.rev }
+     { macro_args 0 "" [] lexbuf |> List.rev }
  (* stricter: better error message *)
  | _ as c { error (spf "was expecting a '(' not %c for macro arguments" c) }
- | eof { raise Todo }
+ | eof    { error "was expecting a '(', not an eof for macro arguments" }
 
-and macro_args depth acc = parse
+and macro_args depth str args = parse
  | ")" 
      { if depth = 0 
-       then 
-         let (str, args) = acc in
-         str::args
-       else raise Todo 
+       then str::args
+       else error "TODO: macro_args )"
      }
 
- | "'" { raise Todo }
- | '"' { raise Todo }
+ | [^ '\'' '"' '/' ',' '\n' '(' ')']+ 
+     { macro_args depth (str ^ Lexing.lexeme lexbuf) args lexbuf }
 
- | "//" { raise Todo }
- | "/*" { raise Todo }
- | "/"  { raise Todo }
-
- | "(" { raise Todo }
  | "," 
      { if depth = 0 
        (* todo: if reached varargs! *)
-       then 
-         let (str, args) = acc in
-         macro_args 0 ("",str::args) lexbuf 
-       else raise Todo 
+       then macro_args 0 "" (str::args) lexbuf 
+       else error "TODO: macro_args , depth <>0 "
      }
- | "\n" 
-     { let (str, args) = acc in
-       macro_args depth (str^" ", args) lexbuf 
-     }
- 
- | [^ '\'' '"' '/' ',' '\n' '(' ')']+ 
-     { let (str, args) = acc in
-       macro_args depth (str ^ Lexing.lexeme lexbuf, args) lexbuf 
-     }
- | _ as c   { error (spf "unrecognized character: '%c'" c) }
+
+ | "("  { macro_args (depth+1) (str^"(") args lexbuf }
+
+ (* special cases *)
+ | "'" { error "TODO: macro_args quote" }
+ | '"' { error "TODO: macro_args double quote" }
+
+ | "//" { error "TODO: macro_args comment1" }
+ | "/*" { error "TODO: macro_args comment2" }
+ | "/"  { macro_args depth     (str^"/") args lexbuf }
+
+ | "\n" { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
+
+ | _ as c { error (spf "unrecognized character: '%c'" c) }
  (* stricter: better error message *)
  | eof { error "eof in macro arguments" }
 
@@ -275,6 +275,21 @@ and macro_args depth acc = parse
  * Note that the lexbuf here will be different. It will correspond
  * to the string of the body of a macro.
  *)
+and subst_args_in_macro_body name args = parse
+ | [^ '\n' '#']+ as s { s ^ subst_args_in_macro_body name args lexbuf }
+ | "##" { "#" ^ subst_args_in_macro_body name args lexbuf }
+ | "#" (digit+ as s) 
+     { let i = int_of_string s in
+       try 
+         let arg = List.nth args (i - 1) in
+         arg ^ subst_args_in_macro_body name args lexbuf
+       with Failure _ -> 
+         (* stricter: better error message *)
+         error (spf "could not find argument %d in macro of %s" i name)
+     }
+ (* the escaped newlines should have been removed *)
+ | "\n" { failwith "impossible: newline in macro body" }
+ | eof { "" }
 
 (*****************************************************************************)
 (* Comment *)

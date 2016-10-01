@@ -48,6 +48,8 @@ let code_of_escape_char c =
   | 'f' -> error "unknown \\f"
   (* could be removed, special 5c escape char *)
   | 'a' -> 0x07 | 'v' -> 0x0b 
+
+  | '\\' | '\'' | '"' -> Char.code c 
   | _ -> error "unknown escape sequence"
 
 (* dup: lexer_asm5.mll *)
@@ -201,8 +203,9 @@ and string = parse
   | '"' { "" }
   | "\\" ((oct oct oct) as s)
       { let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
-  | "\\" (['a'-'z'] as c) 
+  | "\\" (['a'-'z' '\\' '"'] as c) 
       { let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
+  | "\\\n" { string lexbuf }
   | [^ '\\' '"' '\n']+   
       { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
   | '\n' { error "newline in string" }
@@ -216,7 +219,8 @@ and char = parse
   | "''"                            { Char.code '\'' }
   (* less: 5c allows up to 8 octal number when in L'' mode *)
   | "\\" ((oct oct? oct?) as s) "'" { int_of_string ("0o" ^ s) }
-  | "\\" (['a'-'z'] as c) "'"       { code_of_escape_char c }
+  | "\\" (['a'-'z' '\\' '\''] as c) "'"       { code_of_escape_char c }
+  | "\\\n" { char lexbuf }
   | [^ '\\' '\'' '\n'] as c  "'"    { Char.code c }
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }

@@ -23,6 +23,7 @@ let error s =
 
 let parse (defs, paths) file = 
 
+  L.history := [];
   L.line := 1;
   defs |> List.iter Preprocessor.define_cmdline_def;
 

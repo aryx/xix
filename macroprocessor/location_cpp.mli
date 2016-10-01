@@ -11,8 +11,8 @@ type location_history = {
     | Line of int * Common.filename
     | Eof
 
-(* val history: location_history list ref *)
-
+(* both should be reseted each time you parse a new file *)
+val history: location_history list ref
 val line: loc ref
 
 exception Error of string * loc

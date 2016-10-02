@@ -89,10 +89,10 @@ rule token = parse
   | "undef" { error "syntax in #undef" } 
 
 
-  | "ifdef" space+ (sym as s) 
+  | "ifdef" space+ (sym as s)
       { space_or_comment_and_newline lexbuf;
         Ifdef s }
-  | "ifndef" space+ (sym as s) 
+  | "ifndef" space+ (sym as s)
       { space_or_comment_and_newline lexbuf;
         Ifndef s }
   | "ifdef" { error "syntax in #ifdef" } 
@@ -317,3 +317,34 @@ and comment_star = parse
 (*****************************************************************************)
 (* Skipping, for ifdefs *)
 (*****************************************************************************)
+
+and skip_for_ifdef depth bol = parse
+  | "\n"         { skip_for_ifdef depth true lexbuf }
+  | [' ' '\t']+  { skip_for_ifdef depth bol lexbuf }
+
+  | [^'#' '\n' ' ' '\t']+ { skip_for_ifdef depth false lexbuf }
+  
+  | "#endif" 
+      { if bol
+        then
+          if depth = 0 
+          (* done! just eat until newline *)
+          then space_or_comment_and_newline lexbuf
+          else skip_for_ifdef (depth - 1) false lexbuf
+        else skip_for_ifdef depth false lexbuf
+      }
+  | "#else" 
+      { if bol && depth = 0
+        then space_or_comment_and_newline lexbuf
+        else skip_for_ifdef depth false lexbuf
+      }
+  | "#ifdef" | "#ifndef" 
+      { if bol 
+        then skip_for_ifdef (depth + 1) false lexbuf 
+        else skip_for_ifdef depth false lexbuf
+      }
+
+  | "#" { skip_for_ifdef depth false lexbuf }
+
+  (* stricter: *)
+  | eof { error "eof in #ifdef or #ifndef" }  

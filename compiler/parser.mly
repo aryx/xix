@@ -77,6 +77,11 @@ let env = {
   block_scope = [];
 }
 
+let _ =
+  Hashtbl.add env.ids "USED" (IdIdent, 0);
+  Hashtbl.add env.ids "SET" (IdIdent, 0);
+  ()
+
 let block_counter = ref 0
 
 let gensym_counter = ref 0

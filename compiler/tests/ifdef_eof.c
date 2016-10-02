@@ -1,0 +1,2 @@
+#ifdef FOO
+int x;

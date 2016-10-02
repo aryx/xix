@@ -84,11 +84,18 @@ let parse (defs, paths) file =
             (* less: for "lib" should add a L.PragmaLib event? *)
             | D.Pragma _ -> ()
 
-            | D.Ifdef _
-            | D.Ifndef _
-            | D.Else
-            | D.Endif
-                -> raise Todo
+            | D.Ifdef s ->
+                if Hashtbl.mem Preprocessor.hmacros s
+                then ()
+                else Lexer_cpp.skip_for_ifdef 0 true lexbuf
+
+            | D.Ifndef s ->
+                if not (Hashtbl.mem Preprocessor.hmacros s)
+                then ()
+                else Lexer_cpp.skip_for_ifdef 0 true lexbuf
+            | D.Else ->
+                Lexer_cpp.skip_for_ifdef 0 true lexbuf
+            | D.Endif -> ()
             );
             lexfunc ()
 

@@ -1,5 +1,5 @@
 typedef	unsigned int	uint;
-typedef	uintx		Rune;
+typedef	uint		Rune;
 
 typedef int foo;
 foo bar;

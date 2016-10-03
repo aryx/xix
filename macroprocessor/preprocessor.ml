@@ -67,7 +67,9 @@ type macro = {
 let hmacros = Hashtbl.create 101
 
 (* cwd is used to manage #include "...". It is altered when you
- * include a file. cwd becomes the dirname of the included file??? *)
+ * include a file. cwd becomes the dirname of the included file??? 
+ * TODO: dead? used?
+ *)
 let cwd = ref (Sys.getcwd ())
 
 (*****************************************************************************)
@@ -77,7 +79,7 @@ let cwd = ref (Sys.getcwd ())
 let define_cmdline_def (k, v) =
   Hashtbl.add hmacros k { name = k; nbargs = None; varargs = false; body = v; }
 
-let define (s, params, body) =
+let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
   (* We could forbid here 's' to conflict with C keyboard, but this
    * should be done in the caller, as cpp can be used with different
    * languages, which may use different keywords.
@@ -90,7 +92,7 @@ let define (s, params, body) =
       match params with
       | None -> 
           { name = s; nbargs = None; varargs = false; body = sbody }
-      | Some (params, varargs) ->
+      | Some params ->
           { name = s; nbargs = Some (List.length params); 
             varargs = varargs; body = sbody }
     in

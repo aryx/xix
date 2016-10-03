@@ -81,21 +81,22 @@ rule token = parse
           aux xs
         in
         let body = define_body s1 (Common2.index_list_1 params) lexbuf in
-        Define (s1, Some (params, varargs), Some body)
+        Define { name = s1; params = Some (params); varargs = varargs;
+                 body = Some body }
       }
   (* a space after the symbol means the macro has no argument, even if
    * this space is followed by a '('.
    *)
   | "define" space+ (symbol as s1) space+
       { let body = define_body s1 [] lexbuf in 
-        Define (s1, None, Some body)  
+        Define { name = s1; params = None; varargs = false; body = Some body}
       }
   (* if do '#define FOO+' then? we should return a syntax error because
    * of the space_or_comment_and_newline below.
    *)
   | "define" space+ (symbol as s1)
       { space_or_comment_and_newline lexbuf; 
-        Define (s1, None, None) 
+        Define { name = s1; params = None; varargs = false; body =  None }
       }
   | "define" { error "syntax in #define" }
 
@@ -227,7 +228,9 @@ and define_body_strchar endchar name params = parse
      }
   | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\' '#']+ as s 
       { s ^ define_body_strchar endchar name params lexbuf }
-  (* todo: what if escaped newline here? allowed??? *)
+
+  | '\\' '\n' 
+      { incr Location_cpp.line; define_body_strchar endchar name params lexbuf }
   | '\\' _ as s { s^define_body_strchar endchar name params lexbuf }
 
   (* escape # to disambiguate with use of # to reference a parameter *)
@@ -324,7 +327,8 @@ and subst_args_in_macro_body name args = parse
 (*****************************************************************************)
 and macro_args_strchar endchar = parse
   | [^ '\n' '\'' '"' '\\' ]+ as s  { s ^ macro_args_strchar endchar lexbuf }
-  (* todo: what if escaped newline here? allowed? Yes I think *)
+
+  | '\\' '\n' { incr Location_cpp.line; macro_args_strchar endchar lexbuf }
   | '\\' _ as s { s^macro_args_strchar endchar lexbuf }
 
   | ['\'' '"'] as c
@@ -375,7 +379,6 @@ and comment_star_newline_ok = parse
 and skip_for_ifdef depth bol = parse
   | '\n'         { incr Location_cpp.line; skip_for_ifdef depth true lexbuf }
   | [' ' '\t']+  { skip_for_ifdef depth bol lexbuf }
-
   | [^'#' '\n' ' ' '\t']+ { skip_for_ifdef depth false lexbuf }
   
   | "#endif" 

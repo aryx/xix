@@ -15,12 +15,10 @@ type macro = {
 
 val hmacros: (string, macro) Hashtbl.t
 
-val define_cmdline_def: 
-  (string * string) -> unit
+val define_cmdline_def: (string * string) -> unit
 
 (* may raise an exception if macro was already defined *)
-val define:
-  (string * (string list * bool (* ... *)) option * string option) -> unit
+val define: Ast_cpp.macro -> unit
 
 (* may raise an exception if the file could not be found *)
 val find_include:

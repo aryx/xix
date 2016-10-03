@@ -37,7 +37,6 @@ let history = ref []
  *)
 let line = ref 1
 
-
 exception Error of string * loc
 
 (*****************************************************************************)

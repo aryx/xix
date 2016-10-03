@@ -68,9 +68,9 @@ let parse (defs, paths) file =
                   error s
                 )
 
-            | D.Define (s, params, body) ->
+            | D.Define macro_ast ->
                (* todo: stricter: forbid s to conflict with C keyboard *)
-                Preprocessor.define (s, params, body)
+                Preprocessor.define macro_ast
 
             | D.Undef s ->
                 (* stricter: check that was defined *)

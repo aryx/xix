@@ -44,10 +44,12 @@ rule token = parse
   (* note that filenames containing double quotes are not supported *)
   | "include" space* '"' ([^ '"' '\n']+ as file) '"'
       { space_or_comment_and_newline lexbuf; 
-        Include (file, false)  }
+        Include (file, false)  
+      }
   | "include" space* '<' ([^ '>' '\n']+ as file) '>'
       { space_or_comment_and_newline lexbuf; 
-        Include(file, true) }
+        Include(file, true) 
+      }
   | "include" { error "syntax in #include" }
 
   (* Macro definition part 1 *)
@@ -74,36 +76,43 @@ rule token = parse
 
   | "define" space+ (sym as s1) space+
       { let body = define_body s1 [] lexbuf in 
-        Define (s1, None, Some body)  }
+        Define (s1, None, Some body)  
+      }
   (* if do '#define FOO+' then? should return syntax error *)
   | "define" space+ (sym as s1)
       { space_or_comment_and_newline lexbuf; 
-        Define (s1, None, None) }
+        Define (s1, None, None) 
+      }
 
   | "define" { error "syntax in #define" }
 
   (* stricter: require space_or_comment-only after sym also for #undef *)
   | "undef" space+ (sym as s)
       { space_or_comment_and_newline lexbuf; 
-        Undef s }
+        Undef s 
+      }
   | "undef" { error "syntax in #undef" } 
 
 
   | "ifdef" space+ (sym as s)
       { space_or_comment_and_newline lexbuf;
-        Ifdef s }
+        Ifdef s 
+      }
   | "ifndef" space+ (sym as s)
       { space_or_comment_and_newline lexbuf;
-        Ifndef s }
+        Ifndef s 
+      }
   | "ifdef" { error "syntax in #ifdef" } 
   | "ifndef" { error "syntax in #ifndef" } 
 
   | "else"  
       { space_or_comment_and_newline lexbuf; 
-        Else }
+        Else 
+      }
   | "endif" 
       { space_or_comment_and_newline lexbuf; 
-        Endif }
+        Endif 
+      }
 
   (* stricter: I impose a filename (with no quote in name, like original?) *)
   | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
@@ -113,20 +122,25 @@ rule token = parse
 
   | "pragma" space+ "lib" space* '"' ([^'"''\n']+ as file) '"'
       { space_or_comment_and_newline lexbuf; 
-        Pragma("lib", [file]) }
+        Pragma("lib", [file]) 
+      }
   | "pragma" space+ "src" space* '"' ([^'"''\n']+ as file) '"'
       { space_or_comment_and_newline lexbuf; 
-        Pragma("src", [file]) }
+        Pragma("src", [file]) 
+      }
 
   | "pragma" space+ "varargck" space* "argpos" [^'\n']+
       { space_or_comment_and_newline lexbuf; 
-        Pragma("varargck", ["TODO"]) }
+        Pragma("varargck", ["TODO"]) 
+      }
   | "pragma" space+ "varargck" space* "type" [^'\n']+
       { space_or_comment_and_newline lexbuf; 
-        Pragma("varargck", ["TODO"]) }
+        Pragma("varargck", ["TODO"]) 
+      }
   | "pragma" space+ "varargck" space* "flag" [^'\n']+
       { space_or_comment_and_newline lexbuf; 
-        Pragma("varargck", ["TODO"]) }
+        Pragma("varargck", ["TODO"]) 
+      }
   | "pragma"  { error "syntax in #pragma" }
 
   | sym { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
@@ -155,15 +169,20 @@ and define_body name params = parse
   (* special cases *)
   | "'" 
       { let s = define_body_char name params lexbuf in 
-        "'" ^ s ^ define_body name params lexbuf }
+        "'" ^ s ^ define_body name params lexbuf 
+      }
   | '"' 
       { let s = define_body_string name params lexbuf in 
-         "\"" ^ s ^ define_body name params lexbuf }
+         "\"" ^ s ^ define_body name params lexbuf 
+      }
 
   | "//" [^'\n']* { define_body name params lexbuf }
-  | "/*"          { comment_star lexbuf; define_body name params lexbuf }
-  | '/' { "/" ^ define_body name params lexbuf }
+  | "/*"          
+      { comment_star_no_newline lexbuf; 
+        define_body name params lexbuf 
+      }
 
+  | '/' { "/" ^ define_body name params lexbuf }
   (* we escape single '#' by doubling it (classic) *)
   | '#' { "##" ^ define_body name params lexbuf }
 
@@ -200,7 +219,7 @@ and define_body_char name params = parse
   (* escape # to disambiguate with use of # to reference a parameter *)
   | '#' { "##" ^ define_body_char name params lexbuf }
 
-  | "'" { "'" }
+  | "'"  { "'" }
   | '\n' { error (spf "newline in character in macro %s" name) }
   | eof  { error (spf "eof in macro %s" name) }
 
@@ -232,8 +251,7 @@ and define_body_string name params = parse
  * a macro. We still use ocamllex for that because it is convenient.
  *)
 and macro_arguments = parse
- | space* "(" 
-     { macro_args 0 "" [] lexbuf |> List.rev }
+ | space* "("   { macro_args 0 "" [] lexbuf |> List.rev }
  (* stricter: better error message *)
  | _ as c { error (spf "was expecting a '(' not %c for macro arguments" c) }
  | eof    { error "was expecting a '(', not an eof for macro arguments" }
@@ -261,8 +279,11 @@ and macro_args depth str args = parse
  | "'" { error "TODO: macro_args quote" }
  | '"' { error "TODO: macro_args double quote" }
 
- | "//" { error "TODO: macro_args comment1" }
- | "/*" { error "TODO: macro_args comment2" }
+ | "//" [^ '\n']* { macro_args depth str args lexbuf }
+ | "/*" 
+     { comment_star_newline_ok lexbuf; 
+       macro_args depth (str^" ") args lexbuf 
+     }
  | "/"  { macro_args depth     (str^"/") args lexbuf }
 
  | "\n" { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
@@ -292,7 +313,7 @@ and subst_args_in_macro_body name args = parse
  | eof { "" }
 
 (*****************************************************************************)
-(* Comment *)
+(* Comments *)
 (*****************************************************************************)
 
 and space_or_comment_and_newline = parse
@@ -300,19 +321,28 @@ and space_or_comment_and_newline = parse
   | "\n"          { incr Location_cpp.line }
 
   | "//" [^'\n']* { space_or_comment_and_newline lexbuf }
-  | "/*"          { comment_star lexbuf; space_or_comment_and_newline lexbuf }
+  | "/*"          { comment_star_no_newline lexbuf; 
+                    space_or_comment_and_newline lexbuf }
 
   (* stricter: new error message *)
   | _ as c        { error (spf "unexpected character %c after directive" c) }
   | eof           { error "expected newline, not EOF" }
 
-and comment_star = parse
+and comment_star_no_newline = parse
   | "*/"          { }
-  | [^ '*' '\n']+ { comment_star lexbuf }
-  | '*'           { comment_star lexbuf }
+  | [^ '*' '\n']+ { comment_star_no_newline lexbuf }
+  | '*'           { comment_star_no_newline lexbuf }
 
   | '\n'          { error "comment across newline" }
   | eof           { error "eof in comment" }
+
+and comment_star_newline_ok = parse
+  | "*/"          { }
+  | [^ '*' '\n']+ { comment_star_newline_ok lexbuf }
+  | '*'           { comment_star_newline_ok lexbuf }
+  | '\n'          { incr Location_cpp.line; comment_star_newline_ok lexbuf }
+  | eof           { error "eof in comment" }
+
 
 (*****************************************************************************)
 (* Skipping, for ifdefs *)

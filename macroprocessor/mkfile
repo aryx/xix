@@ -13,7 +13,7 @@ beforedepend:V: lexer_cpp.ml
 depend:V: beforedepend
 
 distclean:V: clean
-	rm -f exer_cpp.ml
+	rm -f lexer_cpp.ml
 
 lexer_cpp.ml:D: lexer_cpp.mll
 	$OCAMLLEX $prereq

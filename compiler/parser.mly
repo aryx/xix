@@ -540,6 +540,8 @@ simple_type:
 
  | Tint             { (Type.TInt Type.Signed) }
  | Tunsigned Tint   { (Type.TInt Type.Unsigned) }
+ /*(*bad: should be removed, but for compatibility with plan9 code I keep it*)*/
+ | Tunsigned        { (Type.TInt Type.Unsigned) }
 
  | Tlong            { (Type.TLong Type.Signed) }
  | Tunsigned Tlong  { (Type.TLong Type.Unsigned) }
@@ -582,7 +584,17 @@ complex_type:
  }
 
 
- | Tenum tag   { raise Todo }
+ | Tenum tag   { 
+     try 
+       let (tagkind, bid) = Hashtbl.find env.tags $2 in
+       (* less: assert takind = $1 *)
+       let fullname = $2, bid in
+       Ast.TEnumName (fullname)
+     with Not_found ->
+       (* todo: should check later that defined somewhere, kinda forward decl *)
+       let fullname = $2, env.block in
+       Ast.TEnumName (fullname)
+    }
  | Tenum tag_opt TOBrace enum TCBrace {
      let fullname = $2, env.block in
      defs := (EnumDef { e_name = fullname; e_constants = $4 })::!defs;

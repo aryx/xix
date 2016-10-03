@@ -91,7 +91,8 @@ let final_loc_of_loc lineno =
         | Line (line, file), _y::ys ->
             aux (file, x.global_line, line) ys xs
         | Line (line, file), [] ->
-            failwith "impossible: #line should occur inside a file"
+            (* todo: wrong *)
+            aux (file, x.global_line, line) [] xs
         )
   in
   aux ("<nofile>", 0, 0) [] (List.rev !history)

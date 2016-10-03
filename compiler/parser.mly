@@ -438,7 +438,8 @@ pexpr:
          assert (idkind <> IdTypedef);
          Id ($1, blockid)
        with Not_found ->
-         error (spf "name not declared: %s" $1)
+         pr2 (spf "name not declared: %s" $1);
+         Id ($1, 0)
      }
 
  | TIConst { let (a,b,c) = $1 in Int (a,b,c) } 

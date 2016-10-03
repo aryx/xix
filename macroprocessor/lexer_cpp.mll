@@ -128,9 +128,10 @@ rule token = parse
       }
 
   (* stricter: I impose a filename (with no quote in name, like original?) *)
-  | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
-      { Line (int_of_string s1, s2) }
-  | "#line" { error "syntax in #line" }
+  | "line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
+      { space_or_comment_and_newline lexbuf;
+        Line (int_of_string s1, s2) }
+  | "line" { error "syntax in #line" }
 
 
   | "pragma" space+ "lib" space* '"' ([^'"''\n']+ as file) '"'
@@ -153,6 +154,11 @@ rule token = parse
   | "pragma" space+ "varargck" space* "flag" [^'\n']+
       { space_or_comment_and_newline lexbuf; 
         Pragma("varargck", ["TODO"]) 
+      }
+
+  | "pragma" space+ "incomplete" space* (symbol as s)
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("incomplete", [s]) 
       }
   | "pragma"  { error "syntax in #pragma" }
 
@@ -196,7 +202,7 @@ and define_body name params = parse
   | '#' { "##" ^ define_body name params lexbuf }
 
   (* could do " " ^ but that is not what 5c does *)
-  | "\\" "\n" { incr Location_cpp.line; define_body name params lexbuf }
+  | '\\' '\n' { incr Location_cpp.line; define_body name params lexbuf }
   | '\\' { "\\" ^ define_body name params lexbuf }
 
   | eof  { error (spf "eof in macro %s" name) }
@@ -246,7 +252,11 @@ and define_body_strchar endchar name params = parse
  * a macro. We still use ocamllex for that because it is convenient.
  *)
 and macro_arguments = parse
- | space* "("   { macro_args 0 "" [] lexbuf |> List.rev }
+ | space* "("   
+     { let xs = macro_args 0 "" [] lexbuf in
+       let xs = List.rev xs in
+       if xs = [""] then [] else xs
+     }
  (* stricter: better error message *)
  | _ as c { error (spf "was expecting a '(' not %c for macro arguments" c) }
  | eof    { error "was expecting a '(', not an eof for macro arguments" }
@@ -282,7 +292,7 @@ and macro_args depth str args = parse
      }
  | "/"  { macro_args depth     (str^"/") args lexbuf }
 
- | "\n" { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
+ | '\n' { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
 
  | _ as c { error (spf "unrecognized character: '%c'" c) }
  (* stricter: better error message *)
@@ -305,7 +315,7 @@ and subst_args_in_macro_body name args = parse
          error (spf "could not find argument %d in macro of %s" i name)
      }
  (* the escaped newlines should have been removed *)
- | "\n" { failwith "impossible: newline in macro body" }
+ | '\n' { failwith "impossible: newline in macro body" }
  | eof { "" }
 
 
@@ -332,7 +342,7 @@ and macro_args_strchar endchar = parse
 
 and space_or_comment_and_newline = parse
   | space+        { space_or_comment_and_newline lexbuf }
-  | "\n"          { incr Location_cpp.line }
+  | '\n'          { incr Location_cpp.line }
 
   | "//" [^'\n']* { space_or_comment_and_newline lexbuf }
   | "/*"          { comment_star_no_newline lexbuf; 
@@ -363,7 +373,7 @@ and comment_star_newline_ok = parse
 (*****************************************************************************)
 
 and skip_for_ifdef depth bol = parse
-  | "\n"         { skip_for_ifdef depth true lexbuf }
+  | '\n'         { incr Location_cpp.line; skip_for_ifdef depth true lexbuf }
   | [' ' '\t']+  { skip_for_ifdef depth bol lexbuf }
 
   | [^'#' '\n' ' ' '\t']+ { skip_for_ifdef depth false lexbuf }

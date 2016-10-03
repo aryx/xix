@@ -45,7 +45,8 @@ let code_of_escape_char c =
   | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
   | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
 
-  | 'f' -> error "unknown \\f"
+  (* compatibility with plan 9 C code? *)
+  | 'f' -> pr2 "unknown \\f"; 0x00
   (* could be removed, special 5c escape char *)
   | 'a' -> 0x07 | 'v' -> 0x0b 
 
@@ -206,7 +207,7 @@ and string = parse
   | "\\" (['a'-'z' '\\' '"'] as c) 
       { let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
   (* strings can contain newline! but they must be escaped before *)
-  | "\\\n" { "\n" ^ string lexbuf }
+  | '\\' '\n' { "\n" ^ string lexbuf }
   | [^ '\\' '"' '\n']+   
       { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
   | '\n' { error "newline in string" }
@@ -221,7 +222,7 @@ and char = parse
   (* less: 5c allows up to 8 octal number when in L'' mode *)
   | "\\" ((oct oct? oct?) as s) "'" { int_of_string ("0o" ^ s) }
   | "\\" (['a'-'z' '\\' '\''] as c) "'"       { code_of_escape_char c }
-  | "\\\n" { char lexbuf }
+  | '\\' '\n' { char lexbuf }
   | [^ '\\' '\'' '\n'] as c  "'"    { Char.code c }
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }

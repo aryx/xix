@@ -75,6 +75,11 @@ module R = Rules
  *    * -u
  *    * use nproc for environment
  *    * profile mk.byte
+ *  - we could reduce a bit the size of the code by reusing cpp!
+ *    #include is equivalent of <, #define is equivalent of variable definition
+ *    but for variable we would still need the dynamic binding of
+ *    $target, $prereq, so maybe not good to provide an extra and different
+ *    #define mechanism and syntax for using variables/constants.
  * less: look at source code of omake? and mk-in-go?
  *)
 

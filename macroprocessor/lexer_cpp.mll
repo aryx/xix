@@ -8,15 +8,25 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Limitations compared to cpp:
+(* A port of plan 9 builtin preprocessing in OCaml.
+ *
+ * The main functions of the text preprocessors are:
+ *  - including other files
+ *  - expanding macros
+ *  - skipping text inside ifdefs
+ * 
+ *
+ * Limitations compared to cpp:
  *  - no support for unicode
  * 
  * stricter: 
  *  - no space allowed between '#' and the directive
- *    (even though some people like to do  '#  ifdef', when have nested ifdefs)
+ *    (even though some people like to do  '#  ifdef', when have nested ifdefs,
+ *     but nested ifdefs are bad practice anyway)
  *  - single '#' are not converted in #endif
  *    (who does use that?)
- *  - only spaces before the newline; we do not skip any character
+ *  - only space or comment between the directive and the newline; 
+ *    we do not skip any character
  *    (who does put garbage there?)
  *)
 
@@ -32,13 +42,13 @@ let space  = [' ''\t']
 let letter = ['a'-'z''A'-'Z']
 let digit  = ['0'-'9']
 
-let sym = (letter | '_') (letter | digit | '_')*
+let symbol = (letter | '_') (letter | digit | '_')*
 
 (*****************************************************************************)
 (* Main rule *)
 (*****************************************************************************)
 
-(* pre: 'token' assumes the '#' has already been consumed *)
+(* pre: 'token' below assumes the '#' has already been consumed *)
 rule token = parse
 
   (* note that filenames containing double quotes are not supported *)
@@ -53,7 +63,7 @@ rule token = parse
   | "include" { error "syntax in #include" }
 
   (* Macro definition part 1 *)
-  | "define" space+ (sym as s1) '(' ([^')']* as s2) ')'
+  | "define" space+ (symbol as s1) '(' ([^')']* as s2) ')'
       { let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one *)
         let params, varargs = 
@@ -73,32 +83,35 @@ rule token = parse
         let body = define_body s1 (Common2.index_list_1 params) lexbuf in
         Define (s1, Some (params, varargs), Some body)
       }
-
-  | "define" space+ (sym as s1) space+
+  (* a space after the symbol means the macro has no argument, even if
+   * this space is followed by a '('.
+   *)
+  | "define" space+ (symbol as s1) space+
       { let body = define_body s1 [] lexbuf in 
         Define (s1, None, Some body)  
       }
-  (* if do '#define FOO+' then? should return syntax error *)
-  | "define" space+ (sym as s1)
+  (* if do '#define FOO+' then? we should return a syntax error because
+   * of the space_or_comment_and_newline below.
+   *)
+  | "define" space+ (symbol as s1)
       { space_or_comment_and_newline lexbuf; 
         Define (s1, None, None) 
       }
-
   | "define" { error "syntax in #define" }
 
-  (* stricter: require space_or_comment-only after sym also for #undef *)
-  | "undef" space+ (sym as s)
+  (* stricter: require space_or_comment-only after sym *)
+  | "undef" space+ (symbol as s)
       { space_or_comment_and_newline lexbuf; 
         Undef s 
       }
   | "undef" { error "syntax in #undef" } 
 
 
-  | "ifdef" space+ (sym as s)
+  | "ifdef" space+ (symbol as s)
       { space_or_comment_and_newline lexbuf;
         Ifdef s 
       }
-  | "ifndef" space+ (sym as s)
+  | "ifndef" space+ (symbol as s)
       { space_or_comment_and_newline lexbuf;
         Ifndef s 
       }
@@ -143,13 +156,13 @@ rule token = parse
       }
   | "pragma"  { error "syntax in #pragma" }
 
-  | sym { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
+  | symbol { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
 
 (*****************************************************************************)
 (* Macro definition part 2, the body *)
 (*****************************************************************************)
 and define_body name params = parse
-  | sym as s  
+  | symbol as s  
      { try 
         let i = List.assoc s params in
         (* safe to use # for a special mark since C code can not
@@ -205,7 +218,7 @@ and define_body name params = parse
 
 and define_body_char name params = parse
   (* no need for stringify! substitute also in strings *)
-  | sym as s  
+  | symbol as s  
      { try let i = List.assoc s params in
         spf "#%d" i ^ define_body_char name params lexbuf
        with Not_found -> s ^ define_body_char name params lexbuf
@@ -226,7 +239,7 @@ and define_body_char name params = parse
 (* less: could factorize *)
 and define_body_string name params = parse
   (* no need for stringify! substitute also in strings *)
-  | sym as s  
+  | symbol as s  
      { try let i = List.assoc s params in
         spf "#%d" i ^ define_body_string name params lexbuf
        with Not_found -> s ^ define_body_string name params lexbuf

@@ -3,7 +3,8 @@
 TOP=..
 INCLUDES=-I $TOP/commons
 
-SRC= flags_cpp.ml location_cpp.ml ast_cpp.ml lexer_cpp.ml preprocessor.ml 
+SRC= flags_cpp.ml location_cpp.ml ast_cpp.ml lexer_cpp.ml preprocessor.ml \
+ parse_cpp.ml
 
 <$TOP/mklib
 

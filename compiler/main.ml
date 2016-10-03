@@ -44,7 +44,6 @@ let do_action s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
-        Hashtbl.clear Preprocessor.hmacros;
         pr2 (spf "processing %s" file);
         let system_paths = 
           [spf "/%s/include" thestring; "/sys/include";]
@@ -99,7 +98,7 @@ let main () =
         then Common.matched2 s
         else (s, "1")
       in
-      Preprocessor.define_cmdline_def (var, val_)
+      defs := (var, val_)::!defs
     ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
       system_paths := s::!system_paths

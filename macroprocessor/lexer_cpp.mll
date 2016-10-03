@@ -180,13 +180,9 @@ and define_body name params = parse
   | '\n' { incr Location_cpp.line; "" }
 
   (* special cases *)
-  | "'" 
-      { let s = define_body_char name params lexbuf in 
-        "'" ^ s ^ define_body name params lexbuf 
-      }
-  | '"' 
-      { let s = define_body_string name params lexbuf in 
-         "\"" ^ s ^ define_body name params lexbuf 
+  | ['\'' '"'] as c
+      { let s = define_body_strchar c name params lexbuf in 
+        String.make 1 c ^ s ^ define_body name params lexbuf 
       }
 
   | "//" [^'\n']* { define_body name params lexbuf }
@@ -216,43 +212,29 @@ and define_body name params = parse
  *    just return the string
 *)
 
-and define_body_char name params = parse
+and define_body_strchar endchar name params = parse
   (* no need for stringify! substitute also in strings *)
   | symbol as s  
      { try let i = List.assoc s params in
-        spf "#%d" i ^ define_body_char name params lexbuf
-       with Not_found -> s ^ define_body_char name params lexbuf
+        spf "#%d" i ^ define_body_strchar endchar name params lexbuf
+       with Not_found -> s ^ define_body_strchar endchar name params lexbuf
      }
-  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '\\' '#']+ as s 
-      { s ^ define_body_char name params lexbuf }
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\' '#']+ as s 
+      { s ^ define_body_strchar endchar name params lexbuf }
   (* todo: what if escaped newline here? allowed??? *)
-  | '\\' _ 
-      { let s = Lexing.lexeme lexbuf in s^define_body_char name params lexbuf }
+  | '\\' _ as s { s^define_body_strchar endchar name params lexbuf }
 
   (* escape # to disambiguate with use of # to reference a parameter *)
-  | '#' { "##" ^ define_body_char name params lexbuf }
+  | '#' { "##" ^ define_body_strchar endchar name params lexbuf }
 
-  | "'"  { "'" }
-  | '\n' { error (spf "newline in character in macro %s" name) }
+  | ['\'' '"'] as c
+      { if c = endchar 
+        then String.make 1 c
+        else String.make 1 c ^ define_body_strchar endchar name params lexbuf
+      }
+
+  | '\n' { error (spf "newline in character or string in macro %s" name) }
   | eof  { error (spf "eof in macro %s" name) }
-
-(* less: could factorize *)
-and define_body_string name params = parse
-  (* no need for stringify! substitute also in strings *)
-  | symbol as s  
-     { try let i = List.assoc s params in
-        spf "#%d" i ^ define_body_string name params lexbuf
-       with Not_found -> s ^ define_body_string name params lexbuf
-     }
-  | [^ '\n' '_' 'a'-'z''A'-'Z' '"' '\\' '#']+ as s 
-      { s ^ define_body_string name params lexbuf }
-  | '\\' _ 
-      { let s=Lexing.lexeme lexbuf in s^define_body_string name params lexbuf }
-  | '#' { "##" ^ define_body_string name params lexbuf }
-  | '"' { "\"" }
-  | '\n' { error (spf "newline in string in macro %s" name) }
-  | eof  { error (spf "eof in macro %s" name) }
-
 
 (*****************************************************************************)
 (* Macro use *)
@@ -273,7 +255,7 @@ and macro_args depth str args = parse
  | ")" 
      { if depth = 0 
        then str::args
-       else error "TODO: macro_args )"
+       else macro_args (depth - 1) (str ^ ")") args lexbuf
      }
 
  | [^ '\'' '"' '/' ',' '\n' '(' ')']+ 
@@ -283,14 +265,15 @@ and macro_args depth str args = parse
      { if depth = 0 
        (* todo: if reached varargs! *)
        then macro_args 0 "" (str::args) lexbuf 
-       else error "TODO: macro_args , depth <>0 "
+       else macro_args depth (str ^ ",") args lexbuf
      }
 
  | "("  { macro_args (depth+1) (str^"(") args lexbuf }
 
- (* special cases *)
- | "'" { error "TODO: macro_args quote" }
- | '"' { error "TODO: macro_args double quote" }
+  | ['\'' '"'] as c
+      { let s = macro_args_strchar c lexbuf in 
+        macro_args depth (str ^ String.make 1 c ^ s) args lexbuf
+      }
 
  | "//" [^ '\n']* { macro_args depth str args lexbuf }
  | "/*" 
@@ -324,6 +307,24 @@ and subst_args_in_macro_body name args = parse
  (* the escaped newlines should have been removed *)
  | "\n" { failwith "impossible: newline in macro body" }
  | eof { "" }
+
+
+(*****************************************************************************)
+(* Strings and characters (part1) *)
+(*****************************************************************************)
+and macro_args_strchar endchar = parse
+  | [^ '\n' '\'' '"' '\\' ]+ as s  { s ^ macro_args_strchar endchar lexbuf }
+  (* todo: what if escaped newline here? allowed? Yes I think *)
+  | '\\' _ as s { s^macro_args_strchar endchar lexbuf }
+
+  | ['\'' '"'] as c
+      { if c = endchar 
+        then String.make 1 c
+        else String.make 1 c ^ macro_args_strchar endchar lexbuf
+      }
+  | '\n' { error (spf "newline in character or string") }
+  | eof  { error (spf "eof in character or string in macro argument") }
+
 
 (*****************************************************************************)
 (* Comments *)

@@ -304,7 +304,7 @@ stmnt:
  | ulstmnt        { $1 }
  | labels ulstmnt { $1 $2 }
 
- | error TSemicolon { error "error before semicolon" }
+
 
 ulstmnt: 
  | cexpr TSemicolon { ExprSt $1 }

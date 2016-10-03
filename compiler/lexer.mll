@@ -127,7 +127,7 @@ rule token = parse
       { TIConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
   | "0x" { error "malformed hex constant" }
 
-  | ['1'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
+  | ['0'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
       { TIConst (Lexing.lexeme lexbuf, 
                 sign_of_suffix unsigned, intsize_of_suffix long)
       }
@@ -205,7 +205,8 @@ and string = parse
       { let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
   | "\\" (['a'-'z' '\\' '"'] as c) 
       { let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
-  | "\\\n" { string lexbuf }
+  (* strings can contain newline! but they must be escaped before *)
+  | "\\\n" { "\n" ^ string lexbuf }
   | [^ '\\' '"' '\n']+   
       { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
   | '\n' { error "newline in string" }

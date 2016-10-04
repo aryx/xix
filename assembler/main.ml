@@ -12,7 +12,7 @@ open Common
  *  - no unicode support
  * 
  * todo:
- *  - advanced instructions: floats, MULL, coprocessor, psr, etc
+ *  - advanced instructions: floats, MULL, coprocessor, PSR, etc
  *)
 
 let thechar = '5'
@@ -46,6 +46,7 @@ let main () =
     "-o", Arg.Set_string outfile,
     " <file> output file";
 
+    (* dup: same in compiler/main.ml *)
     "-D", Arg.String (fun s ->
       let (var, val_) = 
         if s =~ "\\(.*\\)=\\(.*\\)"
@@ -87,6 +88,7 @@ let main () =
     else !outfile
   in
 
+  (* dup: same in compiler/main.ml *)
   let system_paths =
     (try Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
      with Not_found ->

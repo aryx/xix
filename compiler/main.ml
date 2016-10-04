@@ -126,7 +126,6 @@ let main () =
     " ";
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
-
   ]
   in
   Arg.parse (Arg.align options) (fun t -> 

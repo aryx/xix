@@ -3,6 +3,7 @@
 open Common
 
 open Ast_asm5
+module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
@@ -22,7 +23,8 @@ open Ast_asm5
 (*****************************************************************************)
 
 let error s =
-  failwith (spf "Syntax error: %s at line %d" s !Globals.line)
+  raise (L.Error (spf "Syntax error: %s" s, !L.line))
+
 
 let noattr = { dupok = false; prof = true }
 
@@ -43,6 +45,7 @@ let mk_e name static =
     priv = if static then Some (-1) else None;
     signature = None;
   }
+
 %}
 
 /*(*************************************************************************)*/
@@ -91,7 +94,6 @@ let mk_e name static =
 
 /*(* line number *)*/
 %token <int> TSEMICOLON 
-%token EOF
 
 %token TCOLON TDOT TCOMMA TDOLLAR
 %token TOPAR TCPAR
@@ -107,7 +109,8 @@ let mk_e name static =
 /*(*-----------------------------------------*)*/
 /*(*2 Misc *)*/
 /*(*-----------------------------------------*)*/
-%token <int * string> TSharpLine
+%token TSharp
+%token EOF
 
 /*(*************************************************************************)*/
 /*(*1 Priorities *)*/
@@ -144,10 +147,7 @@ line:
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
  | label_def line  { $1::$2 }
 
- /*(*pad: I added that, was handled via a global originally *)*/
- | TSharpLine    TSEMICOLON { [(LineDirective (fst $1, snd $1), $2)] }
-
-label_def: TIDENT TCOLON    { (LabelDef $1, !Globals.line) }
+label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions *)*/

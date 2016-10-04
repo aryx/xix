@@ -4,6 +4,7 @@ open Common
 
 open Ast_asm5
 open Parser_asm5
+module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
@@ -12,13 +13,10 @@ open Parser_asm5
  *  - does not handle unicode
  *  - does not recognize the uU lL suffix 
  *    (but was skipped by 5a anyway)
- *  - handles just the #line directive, assumes external cpp
- *    (but better to factorize code and separate concerns anyway)
  *)
 
-(* less: do like prfile? but then need a lines_directives global? *)
 let error s =
-  failwith (spf "Lexical error: %s (line %d)" s !Globals.line)
+  raise (L.Error (spf "Lexical error: %s" s, !L.line))
 
 (* stricter: we disallow \ with unknown character *)
 let code_of_escape_char c =
@@ -40,7 +38,6 @@ let string_of_ascii i =
 (*****************************************************************************)
 let letter = ['a'-'z''A'-'Z']
 let space = [' ''\t']
-
 let digit = ['0'-'9']
 let hex = (digit | ['A'-'F''a'-'f'])
 let oct = ['0'-'7']
@@ -59,12 +56,12 @@ rule token = parse
   | "/*"          { comment lexbuf }
 
   (* newlines are converted in fake semicolons for the grammar *)
-  | '\n' { let old = !Globals.line in incr Globals.line; TSEMICOLON old }
+  | '\n' { let old = !L.line in incr L.line; TSEMICOLON old }
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
-  | ';' { TSEMICOLON !Globals.line }
+  | ';' { TSEMICOLON !L.line }
 
   | ':' { TCOLON }
   | ',' { TCOMMA }
@@ -167,28 +164,24 @@ rule token = parse
   (* Chars/Strings *)
   (* ----------------------------------------------------------------------- *)
   | "'" { TINT (char lexbuf) }
-  | '"' { 
-    let s = string lexbuf in
-    (* less: why this limit though? *)
-    if String.length s > 8
-    then error ("string constant too long")
-    else TSTRING s
-  }
+  | '"' 
+      { let s = string lexbuf in
+        (* less: why this limit though? *)
+        if String.length s > 8
+        then error ("string constant too long")
+        else TSTRING s
+      }
 
   (* ----------------------------------------------------------------------- *)
-  (* Misc *)
+  (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* stricter: I impose a filename (with no quote in name, hmm) 
-   * less: normalize? realpath? 
-   *)
-  | "#line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"') 
-      { TSharpLine (int_of_string s1, s2) }
-  | "#line" { error "syntax in #line" }
+  (* See ../macroprocessor/lexer_cpp.mll *)
+  | "#" { TSharp }
 
   (* ----------------------------------------------------------------------- *)
   (* less: maybe return a fake semicolon the first time? *)
   | eof { EOF }
-  | _ { error "unrecognized character" }
+  | _ as c   { error (spf "unrecognized character: '%c'" c) }
 
 (*****************************************************************************)
 (* Rule char *)
@@ -224,5 +217,5 @@ and comment = parse
   | "*/"          { token lexbuf }
   | [^ '*' '\n']+ { comment lexbuf }
   | '*'           { comment lexbuf }
-  | '\n'          { incr Globals.line; comment lexbuf }
+  | '\n'          { incr L.line; comment lexbuf }
   | eof           { error "end of file in comment" }

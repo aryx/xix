@@ -23,9 +23,11 @@ let code_of_escape_char c =
   match c with
   | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
   | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
+
   | 'f' -> error "unknown \\f"
   (* could be removed, special 5a escape char *)
   | 'a' -> 0x07 | 'v' -> 0x0b | 'z' -> 0
+
   | _ -> error "unknown escape sequence"
 
 let string_of_ascii i =

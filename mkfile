@@ -19,7 +19,7 @@ depend:V: depend.directories
 
 %.directories:V:
 	for(i in $DIRS) @{
-		cd $i
 		echo $i/
+		cd $i
 		mk $MKFLAGS $stem
 	}

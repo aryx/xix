@@ -204,6 +204,11 @@ let eval env targets_ref xs =
                            } in
 
               targets |> List.iter (fun target ->
+                (* less: could check if already there, in which case
+                 * need to Hashtbl.replace, not add.
+                 * todo: could have a :O: attribute clearly identifying
+                 * that you overwrite a previous rule!
+                 *)
                 Hashtbl.add simples target rfinal
               );
               if !targets_ref = [] 

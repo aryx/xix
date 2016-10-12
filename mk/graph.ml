@@ -226,7 +226,7 @@ let error_ambiguous node groups =
       let loc = rule.R.loc2 in
       (* one arc representative is enough *)
       let arc = List.hd arcs in
-      spf "\t%s <- (%s:%d)- %s" 
+      spf "\t%s <-(%s:%d)- %s" 
         node.name loc.A.file loc.A.line
         (match arc.dest with None -> "" | Some n -> n.name)
     )
@@ -381,6 +381,15 @@ let update node =
     let oldtime = node.time in
     node.time <- File.timeof node.name;
 
+    (* todo: actually can happen for rule like
+     * x.tab.h: y.tab.h
+	 *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+     * (see plan9/shell/rc/mkfile).
+     * In that case we should not failwith.
+     * Because it is a rare case, maybe we should have a special
+     * attribute for those rules, so not fail only when have this
+     * attribute
+     *)
     if oldtime = node.time || node.time = None
     then failwith (spf "recipe did not update %s, time =%s" node.name
                      (File.str_of_time node.time));

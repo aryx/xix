@@ -91,6 +91,9 @@ let gensym () =
 
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
+let warn s =
+  raise (L.Error (spf "Warning: %s" s, !L.line))
+
 
 %}
 
@@ -313,15 +316,32 @@ ulstmnt:
 
  | block { Block $1 }
 
- | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE { If ($3, $5, Block[]) }
- | Tif TOPar cexpr TCPar stmnt Telse stmnt { If ($3, $5, $7) }
+ | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
+     { 
+       if $5 = Block []
+       then warn "empty if body";
+       If ($3, $5, Block[]) 
+     }
+ | Tif TOPar cexpr TCPar stmnt Telse stmnt 
+     { 
+       if $5 = Block []
+       then warn "empty if body";
+       if $7 = Block []
+       then warn "empty else body";
+       If ($3, $5, $7) 
+     }
  /*(* stricter: I impose a block, not any stmnt *)*/
- | Tswitch TOPar cexpr TCPar block { Switch ($3, $5) }
+ | Tswitch TOPar cexpr TCPar block 
+     { (* less: generate (0:int - (0:int - x)) *)
+       Switch ($3, $5) 
+     }
 
  | Twhile TOPar cexpr TCPar stmnt                { While ($3, $5) }
  | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { DoWhile ($2, $5) }
  | Tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt 
-     { For ($3, $5, $7, $9) }
+     { (* todo: new scope, markdcl, and add hidden var_decl *)
+       For ($3, $5, $7, $9) 
+     }
 
  | Treturn zcexpr TSemicolon { Return ($2) }
  | Tbreak TSemicolon         { Break }
@@ -470,7 +490,10 @@ string:
 
 zexpr:
  | /*(*empty*)*/ { None }
- | expr         { Some $1 }
+ | lexpr         { Some $1 }
+
+/*(*todo: (long expr) is wrapping expr in a (long) cast *)*/
+lexpr: expr { $1 }
 
 zcexpr:
  | /*(*empty*)*/ { None }
@@ -518,7 +541,7 @@ init2:
  | qual TEq init { $1 $3 }
 
 qual:
- | TOBra expr TCBra { (fun x -> Left (Some $2, x)) }
+ | TOBra lexpr TCBra { (fun x -> Left (Some $2, x)) }
  | TDot tag         { (fun x -> Right ($2, x)) }
 
 
@@ -575,12 +598,12 @@ complex_type:
        let fullname = $2, env.block in
        Ast.TStructName ($1, fullname)
  }
-
  | su tag_opt sbody {
      let fullname = $2, env.block in
      (* todo: check if already defined? or conflicting su? *)
      defs := (StructDef { s_name = fullname; s_kind = $1; s_flds = $3 })::!defs;
      Ast.TStructName ($1, fullname)
+     (* todo: sualign *)
  }
 
 

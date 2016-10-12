@@ -23,4 +23,6 @@ type env = {
 
 (* todo:
  *  - check goto to a label defined in the function
+ *  - tmerge to compare decl to def.
+ *  - evaluate const_expr  "enum not a constant: %s"
  *)

@@ -109,7 +109,9 @@ let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
   end
 
 
-(* less: Could use Set instead of list for the set of include paths *)
+(* less: Could use Set instead of list for the set of include paths 
+ * todo: if absolute path, need to find it.
+*)
 let rec find_include (dir, system_paths) (f, system) =
   if system
   then find_include_bis system_paths f
@@ -119,7 +121,12 @@ and find_include_bis paths f =
   (* stricter: better error message *)
   | [] -> failwith (spf "could not find %s in include paths" f)
   | x::xs ->
-      let path = Filename.concat x f in
+      let path = 
+        if x = "."
+        (* this will handle also absolute path *)
+        then f
+        else Filename.concat x f 
+      in
       if Sys.file_exists path
       then begin
         if !Flags.debug_inclusion

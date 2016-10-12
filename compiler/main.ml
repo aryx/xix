@@ -83,6 +83,8 @@ let main () =
   (* for cpp *)
   let system_paths = ref [] in
   let defs = ref [] in
+  (* Ansi Posix Environment for plan9 *)
+  let ape = ref false in 
 
   (* for debugging *)
   let action = ref "" in
@@ -103,6 +105,8 @@ let main () =
     "-I", Arg.String (fun s ->
       system_paths := s::!system_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
+    "-ape", Arg.Set ape,
+    " ";
 
     (* pad: I added long names for those options *)
     "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
@@ -150,7 +154,9 @@ let main () =
         let system_paths =
           (try Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
           with Not_found ->
-            [spf "/%s/include" thestring; "/sys/include";]
+            [spf "/%s/include" thestring; 
+             "/sys/include";
+            ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
           ) @
           !system_paths
         in

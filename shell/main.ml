@@ -12,8 +12,12 @@ module O = Opcode
  * Main limitations compared to rc:
  *  - no unicode support
  *  - not all of the fancy redirections and fancy pipes
- *  - no storing of function in the environment
+ *  - no storing of functions in the environment
  *    (used by rcmain. But can do the same by using '. rcmain')
+ * 
+ * Improvements (IMHO):
+ *  - a strict mode where we report when deleting undefined function,
+ *    more?
  * 
  * todo:
  *  - read environment variables and export variables
@@ -23,9 +27,10 @@ module O = Opcode
  *  - rc -c
  *)
 
+
+(* -d and -p are dead according to man page so I removed them *)
 let usage =
   "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
-(* -d and -p are dead according to man page so I removed them *)
 
 (*****************************************************************************)
 (* Testing *)
@@ -65,8 +70,8 @@ let do_action s xs =
 let bootstrap_simple = 
   [| O.F O.REPL |]
 
-(* The real one is more complex.
- * *=(argv);. /usr/lib/rcmain $*
+(* The real one is more complex:
+ *  *=(argv);. /usr/lib/rcmain $*
  * Boostrap is now a function because it uses a flag that can be
  * modified after startup.
  *)
@@ -163,6 +168,10 @@ let main () =
     " print exit status after any command where the status is non-null";
     "-x", Arg.Set Flags.xflag,
     " print each simple command before executing it";
+
+    (* pad: I added that *)
+    "-strict", Arg.Set Flags.strict_mode,
+    " strict mode";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

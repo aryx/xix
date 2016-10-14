@@ -94,4 +94,6 @@ and cmd =
 (* None when reads EOF *)
 type line = cmd_sequence option
 
+(* less: type any = Line of line | ... so easier dumper *)
+
  (* with tarzan *)

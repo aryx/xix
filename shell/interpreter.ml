@@ -308,8 +308,10 @@ let interpret operation =
         let x = Fn.flook s in
         match x with
         | Some _ -> Hashtbl.remove R.fns s
-        (* stricter: *)
-        | None -> E.error (spf "deleting undefined function %s" s)
+        | None -> 
+            (* stricter: *)
+            if !Flags.strict_mode
+            then E.error (spf "deleting undefined function %s" s)
       );
 
   | O.Not ->

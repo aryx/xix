@@ -22,7 +22,7 @@ let dochdir s =
   with Unix.Unix_error _ ->
     false
 
-(*  *)
+(* for the builtin '.' (called 'source' in bash) *)
 let dotcmds = 
   [|
     O.F O.Mark;
@@ -47,6 +47,7 @@ let dispatch s =
   | "cd" -> 
       let t = R.cur () in
       let argv = t.R.argv in
+      (* default value in case something goes wrong below *)
       Status.setstatus "can't cd";
 
       (* less: cdpath vlook *)

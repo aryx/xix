@@ -27,7 +27,6 @@ module O = Opcode
  *  - rc -c
  *)
 
-
 (* -d and -p are dead according to man page so I removed them *)
 let usage =
   "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
@@ -109,7 +108,7 @@ let interpret args =
 
   while true do
 
-    (* bug: need to fetch the current thread each time,
+    (* bugfix: need to fetch the current thread each time,
      * as the interpreted code may have modified runq.
      *)
     let t = Runtime.cur () in
@@ -208,7 +207,7 @@ let main () =
   Var.vinit ();
   (* todo: trap_init () *)
 
-  (* for flags builtin *)
+  (* for 'flags' builtin (see builtin.ml) *)
   Sys.argv |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"
     then begin

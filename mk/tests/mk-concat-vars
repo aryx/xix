@@ -1,0 +1,7 @@
+A=foo bar
+B=bar foo
+
+C=$A$B
+
+all:
+        echo $C

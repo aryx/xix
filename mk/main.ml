@@ -47,6 +47,7 @@ module R = Rules
  *     also message at the end that something went wrong)
  *  - a strict mode where we forbid to redefine variable, use of undefined
  *    variable
+ *  - forbid to use list variables in a scalar context (error prone I think)
  *  - a new Interactive attribute :I: so one can call interactive program
  *    in a recipe (e.g., syncweb)
  *  - TODO a luisa mode, more synthetic, just DONE

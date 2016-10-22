@@ -18,7 +18,6 @@ module L = Location_cpp
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
 
-(* stricter: we disallow \ with unknown character *)
 let code_of_escape_char c =
   match c with
   | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
@@ -28,6 +27,7 @@ let code_of_escape_char c =
   (* could be removed, special 5a escape char *)
   | 'a' -> 0x07 | 'v' -> 0x0b | 'z' -> 0
 
+  (* stricter: we disallow \ with unknown character *)
   | _ -> error "unknown escape sequence"
 
 let string_of_ascii i =
@@ -90,7 +90,7 @@ rule token = parse
   (* looser: actually for '.' 5a imposes to have an isalpha() after *)    
   | (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
       let s = Lexing.lexeme lexbuf in
-      (* fast enough? I hope ocaml generate good code for strings matching *)
+      (* fast enough? I hope OCaml generate good code for strings matching *)
       match s with
       (* instructions *)
       | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
@@ -177,7 +177,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* See ../macroprocessor/lexer_cpp.mll *)
+  (* See ../macroprocessor/lexer_cpp.mll (called from parse_asm5.ml) *)
   | "#" { TSharp }
 
   (* ----------------------------------------------------------------------- *)

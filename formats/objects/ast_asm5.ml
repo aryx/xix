@@ -18,7 +18,7 @@ open Common
  *  - MULA, MULL,
  *  - MOVM (and his special bits .IA/...), 
  *  - PSR, MCR/MRC,
- *  - 5c only: CASE, BCASE, MULU/DIVU/MODU
+ *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU
  *)
 
 (*****************************************************************************)
@@ -29,7 +29,7 @@ open Common
 (* Numbers and Strings *)
 (* ------------------------------------------------------------------------- *)
 
-(* line# *)
+(* (global) line# *)
 type pos = int
 
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
@@ -117,7 +117,7 @@ and branch_operand2 =
   (* after resolution *)
   | Absolute of virt_pc
 
-  (* resolved dynamically by the machine *)
+  (* resolved dynamically by the machine (e.g., B (R14)) *)
   | IndirectJump of register
 (* with tarzan *)
 

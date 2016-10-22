@@ -94,7 +94,7 @@ let main () =
      with Not_found ->
        [spf "/%s/include" thestring; "/sys/include";]
     ) @
-      !system_paths
+      (List.rev !system_paths)
   in
   let dir = Filename.dirname !infile in
 

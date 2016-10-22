@@ -28,7 +28,7 @@ let error s =
 
 let noattr = { dupok = false; prof = true }
 
-(* less: should use keywords in Asm5 instead of abuse integers *)
+(* less: should use keywords in Asm5 instead of abusing integers *)
 let attributes_of_int i =
    match i with 
    | 0 -> noattr
@@ -38,6 +38,7 @@ let attributes_of_int i =
    | 2 -> { dupok = true; prof = true }
    (* both DUPOK and NOPROF *)
    | 3 -> { dupok = true; prof = false }
+
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
 
 let mk_e name static = 
@@ -145,14 +146,15 @@ line:
  |               TSEMICOLON { [] }
  | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
- | label_def line  { $1::$2 }
+
+ | label_def line           { $1::$2 }
 
 label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions *)*/
 /*(*************************************************************************)*/
-/*(* can't factorize in attr_opt, shift/reduce conflict with TCOMMA *)*/
+/*(* I can't factorize in attr_opt; shift/reduce conflict with TCOMMA *)*/
 pseudo_instr:
  | TTEXT  entity TCOMMA imm    
      { TEXT  ($2, noattr, $4) }
@@ -180,7 +182,6 @@ entity_and_offset: name
     | Entity (e, n) -> (e, n)
     | _ -> error "entity with offset expected"
   } 
-
 
 /*(*************************************************************************)*/
 /*(*1 Instructions *)*/

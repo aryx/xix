@@ -12,7 +12,7 @@ let resolve ps =
   ps |> List.iter (fun (p, line) ->
     (match p with
     | LabelDef lbl -> 
-        (* better check duplicate here than via lexing tricks *)
+        (* better to check duplicate here than via lexing tricks *)
         if Hashtbl.mem h lbl
         then failwith (spf "redeclaration of %s at line %d" lbl line);
 
@@ -26,10 +26,12 @@ let resolve ps =
 
   (* second pass, process the label uses, resolve some branch operands *)
   pc := 0;
+  (* filter but modify also by side effect p *)
   ps |> List.filter (fun (p, line) ->
     (match p with
     (* no need to keep the labels in the object file *)
     | LabelDef _ -> false
+
     | Pseudo (TEXT _ | WORD _) -> 
         incr pc; 
         true
@@ -44,6 +46,7 @@ let resolve ps =
           | LabelUse (lbl, i) ->
               (try
                  let pc = Hashtbl.find h lbl in
+                 (* less: could keep label info also for debugging purpose? *)
                  opd := Absolute (pc + i)
                with Not_found ->
                  failwith (spf "undefined label: %s, at line %d" lbl line)

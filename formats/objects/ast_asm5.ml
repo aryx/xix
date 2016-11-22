@@ -215,6 +215,7 @@ type line =
 
   (* disappear after resolve *)
   | LabelDef of label
+
   (* ex: #line 20 "foo.c" *)
   | LineDirective of int * Common.filename
   (* less: PragmaLibDirective of string *)

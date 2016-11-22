@@ -1,7 +1,9 @@
 # -*- sh -*-
 
 TOP=..
-INCLUDES=-I $TOP/commons -I $TOP/lib_core -I $TOP/macroprocessor
+INCLUDES=-I $TOP/commons -I $TOP/lib_core \
+  -I $TOP/macroprocessor \
+  -I $TOP/formats/objects
 
 SRC= flags.ml \
   type.ml meta_type.ml storage.ml meta_storage.ml \
@@ -10,10 +12,13 @@ SRC= flags.ml \
   globals.ml \
   error.ml \
   parser.ml lexer.ml parse.ml \
+  codegen.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/lib_core/lib.cma $TOP/commons/lib.cma $TOP/macroprocessor/lib.cma
+LIBS=$TOP/lib_core/lib.cma $TOP/commons/lib.cma \
+ $TOP/macroprocessor/lib.cma \
+ $TOP/formats/objects/lib.cma
 
 PROG=5c
 

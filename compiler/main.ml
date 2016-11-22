@@ -13,6 +13,7 @@ open Common
  *  - can not compile from stdin
  *    (but who uses that?)
  *  - no error recovery, we stop at the first error
+ *    (but compiler now fast enough and errors have a domino effect anyway)
  *  - no -. to remove auto search for header in current directory
  *    (but who uses that?)
  *  - stricter for grammar (see parser.mly), for instance force a specific

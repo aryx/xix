@@ -1,0 +1,11 @@
+foo: foo.5 bar.5
+	5l -o foo foo.5 bar.5
+%.5: %.c
+	5c -c $^
+
+foo.5: foo.h
+bar.5: foo.h
+
+VERSION=2
+foo.h: foo
+	cat foo.inc | sed -e s/VERSION/$VERSION/ > foo.h

@@ -35,7 +35,9 @@ let resolve ps =
     | Pseudo (TEXT _ | WORD _) -> 
         incr pc; 
         true
-    | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> true
+    | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> 
+        (* no pc increment here *)
+        true
     | Instr (inst, cond) ->
         let resolve_branch_operand opd =
           match !opd with

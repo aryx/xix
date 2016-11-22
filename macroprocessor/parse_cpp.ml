@@ -262,5 +262,3 @@ let parse hooks (defs, paths) file =
                then ""
                else spf ", last name: %s" !last_ident))
   )
-
-

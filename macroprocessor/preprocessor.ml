@@ -19,6 +19,3 @@ type system_paths = Common.filename list
  * of the C file so it is looked for "" but not for <>
  *)
 type include_paths = Common.filename * system_paths
-
-
-

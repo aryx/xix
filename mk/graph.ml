@@ -204,6 +204,7 @@ let error_cycle node trace =
 
 let check_cycle node =
   let rec aux trace node =
+    (* stricter: mk also check if nodes has arcs, but looks wrong to me *)
     if node.visited
     then error_cycle node trace;
 

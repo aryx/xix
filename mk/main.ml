@@ -45,8 +45,8 @@ module R = Rules
  *    I get the error at the beginning and a trailing of regular shprint
  *    (but more Plan 9's style, so at least dont print the rest? or print
  *     also message at the end that something went wrong)
- *  - a strict mode where we forbid to redefine variable, use of undefined
- *    variable
+ *  - a strict mode where we forbid to redefine variables, use of undefined
+ *    variables
  *  - forbid to use list variables in a scalar context (error prone I think)
  *  - a new Interactive attribute :I: so one can call interactive program
  *    in a recipe (e.g., syncweb)

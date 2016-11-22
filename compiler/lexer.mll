@@ -145,6 +145,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Strings and chars *)
   (* ----------------------------------------------------------------------- *)
+  (* converting characters in integers *)
   | "'" { TIConst (spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
 
   | '"' { TString (string lexbuf, Storage.String) }

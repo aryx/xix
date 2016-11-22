@@ -49,7 +49,7 @@ type idkind =
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* Merge with Type.t? No. For one thing, typedef expansion is not done here.
+(* Merge with Type.t? No. For one thing typedef expansion is not done here.
  * Moreover constant expressions are also not resolved yet (those expressions
  * can involve enum constants which will be resolved later).
  * Better to separate I think.
@@ -69,7 +69,7 @@ type type_ =
   | TEnumName of fullname
   | TTypeName of fullname
 
- and function_type = (type_ * (parameter list * bool (* var args *)))
+ and function_type = (type_ * (parameter list * bool (* var args '...' *)))
 
   and parameter = {
     p_type: type_;
@@ -130,9 +130,9 @@ and expr =
 
 and argument = expr
 
-(* Now that we call the preprocessor first, is there case where const_expr is
- * not a constant? Yes, you can have basic arithmetic like 2 << 3,
- * or enum constants.
+(* Now that we call the preprocessor first, the remaining cases
+ * where const_expr is not a constant are basic arithmetic expressions
+ * like 2 << 3, or enum constants.
  *)
 and const_expr = expr
 

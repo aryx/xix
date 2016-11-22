@@ -51,7 +51,7 @@ type env = {
   tags: (string, tagkind * Ast.blockid) Hashtbl.t;
   mutable block: Ast.blockid;
 
-  mutable ids_scope: ((string * (idkind * Ast.blockid)) list) list;
+  mutable ids_scope:  ((string * (idkind * Ast.blockid)) list) list;
   mutable tags_scope: ((string * (tagkind * Ast.blockid)) list) list;
   mutable block_scope: Ast.blockid list;
 
@@ -93,7 +93,6 @@ let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
 let warn s =
   raise (L.Error (spf "Warning: %s" s, !L.line))
-
 
 %}
 

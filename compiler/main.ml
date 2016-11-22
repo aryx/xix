@@ -15,10 +15,15 @@ open Common
  *  - no error recovery, we stop at the first error
  *  - no -. to remove auto search for header in current directory
  *    (but who uses that?)
+ *  - stricter for grammar (see parser.mly), for instance force a specific
+ *    order between the sign, qualifier, and type.
  * 
  * improvements:
- *  - forbid more constructs: typedef and initializers, typedef function
- *    definitions, three dots parameter in the middle, and more (see tests/)
+ *  - forbid more constructs: 
+ *     * typedef and initializers, 
+ *     * typedef function definitions, 
+ *     * three dots parameter in the middle, 
+ *     * more (see tests/)
  * 
  * todo:
  *  - safe-linking support
@@ -66,6 +71,8 @@ let compile (defs, include_paths) infile outfile =
   let ast = Parse.parse (defs, include_paths) infile in
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_any (Ast.Program ast));
+
+  (* todo: code generation *)
   ()
 
 
@@ -101,20 +108,20 @@ let main () =
         else (s, "1")
       in
       defs := (var, val_)::!defs
-    ), " <name=def> (or just <name>) define the name to the preprocessor";
+    ), " <name=def> (or just <name>) define name for preprocessor";
     "-I", Arg.String (fun s ->
       system_paths := s::!system_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
     "-ape", Arg.Set ape,
     " ";
 
+    "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
+    "-f", Arg.Set Flags_cpp.debug_line, " ";
+    "-m", Arg.Set Flags_cpp.debug_macros, " ";
     (* pad: I added long names for those options *)
     "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
-    "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
-    "-debug_line", Arg.Set Flags_cpp.debug_line, " ";
-    "-f", Arg.Set Flags_cpp.debug_line, " ";
-    "-debug_macros", Arg.Set Flags_cpp.debug_macros, " ";
-    "-m", Arg.Set Flags_cpp.debug_macros, " ";
+    "-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
+    "-debug_macros",    Arg.Set Flags_cpp.debug_macros, " ";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

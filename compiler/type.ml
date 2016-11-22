@@ -7,8 +7,8 @@ type blockid = int
 type sign = Signed | Unsigned
  (* with tarzan *)
 
-(* Note that there is no TTypedef here; The typedef expansion
- * has alreafy been done. 
+(* Note that there is no TTypedef here; 
+ * The typedef expansion has already been done.
  *)
 type t =
   (* Basic *)
@@ -39,6 +39,7 @@ type t =
 
   (* less: and scope? counter?
    * ref to symbol? or use external hash?
+   * less: could merge in TStruct of struct_kind
    *)
   | TStructName of string * blockid
   | TUnionName of string * blockid

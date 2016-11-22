@@ -7,7 +7,7 @@ type t =
 
   | Extern (* public global defined elsewhere *)
   | Global (* public global defined here *)
-  | Static (* Private global *)
+  | Static (* Private global less: could rename Private *)
   (* less:  | Inline? | Register *)
  (* with tarzan *)
 

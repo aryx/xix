@@ -17,7 +17,7 @@ let parse (defs, paths) file =
      lexer = Lexer.token;
      category = (fun t ->
        match t with
-       | T.EOF -> Parse_cpp.Eof
+       | T.EOF    -> Parse_cpp.Eof
        | T.TSharp -> Parse_cpp.Sharp
 
        | T.TName s | T.TTypeName s -> Parse_cpp.Ident s

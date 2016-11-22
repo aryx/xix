@@ -217,10 +217,6 @@ let vof_line =
       and v2 = vof_condition v2
       in Ocaml.VSum (("Instr", [ v1; v2 ]))
   | LabelDef v1 -> let v1 = vof_label v1 in Ocaml.VSum (("LabelDef", [ v1 ]))
-  | LineDirective ((v1, v2)) ->
-      let v1 = Ocaml.vof_int v1
-      and v2 = vof_filename v2
-      in Ocaml.VSum (("LineDirective", [ v1; v2 ]))
   
 let vof_program v =
   Ocaml.vof_list

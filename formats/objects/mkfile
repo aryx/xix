@@ -2,7 +2,7 @@
 
 TOP=../..
 
-INCLUDES=-I $TOP/commons
+INCLUDES=-I $TOP/commons -I $TOP/macroprocessor
 
 SRC=ast_asm5.ml object_code5.ml \
   meta_ast_asm5.ml

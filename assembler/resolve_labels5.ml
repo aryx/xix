@@ -20,7 +20,7 @@ let resolve ps =
         (* no incr pc; share pc if multiple labels at same place *)
     | Instr _ | Pseudo (TEXT _ | WORD _) -> 
         incr pc
-    | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> ()
+    | Pseudo (DATA _ | GLOBL _) -> ()
     )
   );
 
@@ -35,7 +35,7 @@ let resolve ps =
     | Pseudo (TEXT _ | WORD _) -> 
         incr pc; 
         true
-    | Pseudo (DATA _ | GLOBL _) | LineDirective _ -> 
+    | Pseudo (DATA _ | GLOBL _) -> 
         (* no pc increment here *)
         true
     | Instr (inst, cond) ->

@@ -57,7 +57,7 @@ let visit_entities f xs =
       | B b | BL b | Bxx (_, b) -> branch_operand b
       | Arith _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> () 
       )
-    | LabelDef _ | LineDirective _ -> ()
+    | LabelDef _ -> ()
   )
 
 
@@ -140,8 +140,6 @@ let load xs =
           incr pc;
 
       | LabelDef _ -> failwith (spf "label definition in object")
-      (* todo: return also, but for now stripped info *)
-      | LineDirective _ -> ()
     );
   );
   Array.of_list (List.rev !code), List.rev !data, h

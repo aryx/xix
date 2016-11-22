@@ -12,7 +12,7 @@ SRC= flags.ml \
   globals.ml \
   error.ml \
   parser.ml lexer.ml parse.ml \
-  codegen.ml \
+  codegen5.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

@@ -55,6 +55,8 @@ type env = {
   mutable tags_scope: ((string * (tagkind * Ast.blockid)) list) list;
   mutable block_scope: Ast.blockid list;
 
+  (* less: autooffset?  *)
+
 }
 
 let add_id env id idkind =
@@ -66,6 +68,7 @@ let new_scope env =
   raise Todo
 let pop_scope env =
   raise Todo
+
 
 let env = {
   ids = Hashtbl.create 101;
@@ -83,6 +86,8 @@ let _ =
   ()
 
 let block_counter = ref 0
+
+
 
 let gensym_counter = ref 0
 let gensym () =

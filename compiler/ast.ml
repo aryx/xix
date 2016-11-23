@@ -29,7 +29,7 @@ type loc = Location_cpp.loc
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
-(* less: ref to a symbol? or use external hash? 
+(* less: ref to a symbol? or use external hash? or environment each time?
  * todo: lineno field?
  *)
 type name = string

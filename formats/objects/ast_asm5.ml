@@ -44,7 +44,7 @@ type symbol = string
 
 type entity = {
   name: symbol;
-  (* Some x when entity is a private symbol (aka static symbol).
+  (* 'Some _' when entity is a private symbol (aka static symbol).
    * mutable (ugly?) modifed by linker in naming phase.
    *)
   mutable priv: int option; 

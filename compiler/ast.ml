@@ -15,6 +15,12 @@
  *  - enums are also lifted to the top (and its constants are tagged with
  *    a blockid)
  * 
+ * This AST is actually a named AST (but not a typed AST). Indeed, in C we can
+ * not do the naming in a separate phase after parsing. Indeed, because 
+ * of a grammar ambiguity with typedefs, we need to keep track of 
+ * typedefs and identifiers and their scope. Moreover, because we 
+ * lift up struct definitions, this AST is also a named AST for the tags.
+ * 
  * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
  *)
 
@@ -29,9 +35,7 @@ type loc = Location_cpp.loc
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
-(* less: ref to a symbol? or use external hash? or environment each time?
- * todo: lineno field?
- *)
+(* less: ref to a symbol? or use external hash? or environment each time? *)
 type name = string
 
 (* for scope *)
@@ -73,8 +77,12 @@ type type_ =
 
   and parameter = {
     p_type: type_;
-    (* when part of a prototype, the name is not always mentionned *)
-    p_name: name option;
+    (* when part of a prototype, the name is not always mentionned.
+     * I use fullname here for consistency. Parameters are like locals,
+     * so can have simply Id of fullname below and have no difference
+     * between accessing a local or a parameter.
+     *)
+    p_name: fullname option;
   }
 
  and struct_kind = Struct | Union
@@ -92,7 +100,7 @@ and expr =
   | String of string * Storage.stringsize
 
   (* Global, local, parameter, enum constant (can be scoped), function *)
-  (* todo: mutable symkind? storage? setused? *)
+  (* todo: mutable symkind? storage? type? setused? *)
   | Id of fullname
 
   | Call of expr * argument list
@@ -108,6 +116,7 @@ and expr =
    *)
   | RecordPtAccess of expr * name (* x->y,  and not x.y!! *)
 
+  (* less: bool (* explicit cast *) *)
   | Cast of type_ * expr
 
   | Postfix of expr * fixOp
@@ -224,6 +233,7 @@ type func_def = {
 type struct_def = {
   s_name: fullname;
   s_kind: struct_kind;
+
   s_flds: field_def list;
 }
 

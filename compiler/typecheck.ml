@@ -1,28 +1,47 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
-(* Environment for naming and typechecking.
- *
- * No macros here; they are handled by cpp. 
- *)
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+(* less: vlong? *)
+type integer = int
+
+(* Environment for typechecking *)
 type env = {
-  ids:  (string, Type.t * Storage.t) Hashtbl.t;
-  tags: (string, Type.tagdef) Hashtbl.t;
-  typedefs: (string, Ast.type_) Hashtbl.t;
+  ids:  (Ast.fullname, Type.t * Storage.t) Hashtbl.t;
+  tags: (Ast.fullname, Type.tagdef) Hashtbl.t;
+  typedefs: (Ast.fullname, Type.t) Hashtbl.t;
+
+  constants: (Ast.fullname, integer) Hashtbl.t;
   (* labels: string, ??  *)
-  
-  (* or do that in parsing? *)
-  block: blockid;
-
-  (* to push and pop when enter/leave a block or scope *)
-  ids_scope: ((string * (Type.t * Storage.t)) list) list;
-  tags_scope: ((string * Type.tagdef) list) list;
-  typedefs_scope: ((string * Ast.type_) list) list;
-
-  block_scope: blockid list;
 }
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (* todo:
- *  - check goto to a label defined in the function
  *  - tmerge to compare decl to def.
  *  - evaluate const_expr  "enum not a constant: %s"
+ *  - stuff done by 5c at parsing time:
+ *    * type of Cast
+ *    * type of lexpr
+ *    * type of Return
+ *    * type of identifier
+ *    * type of constants (integers, floats, strings)
+ *  - adjust storage when have more information
+ *     (also if initializer => extern to global)
+ *  - check if redeclare things (which is different from refining things)
+ *    for instance two parameters with same name, if two locals with same name.
+ *    or if redefine same structure in same scope, or conflicting sukind
+ *    for the same tag.
+ *    (or do that in check.ml??)
+ *  - can define enum with same name than global entity? there would
+ *    have the same blockid but will get ambiguity then.
+ *    (or do that in check.ml??)
  *)

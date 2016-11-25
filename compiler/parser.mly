@@ -8,7 +8,10 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Limitations compared to 5c (and sometimes also ANSI C):
+(* Many things done at parsing time by 5c are not done here. We do
+ * the minimum here. We just return a very simple AST.
+ * 
+ * Limitations compared to 5c (and sometimes also ANSI C):
  *  - no support for old style parameter declaration
  *    (obsolete practice anyway)
  *  - impose a certain order for the storage, qualifier, and type
@@ -17,17 +20,25 @@ module L = Location_cpp
  *    an explicit int-type after.
  *  - no support for anonymous field (kencc extension)
  *  - forbid typedefs inside forexpr
- *  - (sure?) forbid definitions (typedefs, struct, enum) not at the toplevel
+ *  - sure? forbid definitions (typedefs, struct, enum) not at toplevel
+ *    (confusing anyway?)
+ *    (but then would no need blockid for those, or just for nested struct def)
  *  - can not mix qualified and not qualified elements in initializers lists
  * 
  * todo: 
- *  - add qualifiers in AST
  *  - lineno
+ *  - add qualifiers in AST
  *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
+let error s =
+  raise (L.Error (spf "Syntax error: %s" s, !L.line))
+let warn s =
+  raise (L.Error (spf "Warning: %s" s, !L.line))
+
 
 (* less: automatic lineno
 let mk_e 
@@ -47,27 +58,36 @@ let get_and_reset x =
 
 (* to manage scope (used notably to recognize typedefs in the lexer) *)
 type env = {
-  ids: (string, idkind * Ast.blockid) Hashtbl.t;
+  (* there are mainly two namespaces in C: one for ids and one for tags *)
+  ids:  (string, idkind * Ast.blockid) Hashtbl.t;
   tags: (string, tagkind * Ast.blockid) Hashtbl.t;
+
   mutable block: Ast.blockid;
+  (* less: mutable labels: string list; *)
 
-  mutable ids_scope:  ((string * (idkind * Ast.blockid)) list) list;
-  mutable tags_scope: ((string * (tagkind * Ast.blockid)) list) list;
+  mutable ids_scope:  (string list) list;
+  mutable tags_scope: (string list) list;
   mutable block_scope: Ast.blockid list;
-
-  (* less: autooffset?  *)
 
 }
 
+(* Check if id already declared? It is complex because at the toplevel
+ * it is ok to redeclare the same variable or prototype.
+ * So better to do those checks in another phase.
+ *)
 let add_id env id idkind =
   Hashtbl.add Globals.hids id idkind;
-  Hashtbl.add env.ids id (idkind, env.block)
-  (* todo: proper scope handling, add in env.ids_stack *)
+  Hashtbl.add env.ids id (idkind, env.block);
+  match env.ids_scope with
+  | xs::xss -> env.ids_scope <- (id::xs)::xss
+  | [] -> env.ids_scope <- [[id]]
 
-let new_scope env =
-  raise Todo
-let pop_scope env =
-  raise Todo
+let add_tag env tag tagkind =
+  Hashtbl.add env.tags tag (tagkind, env.block);
+  match env.tags_scope with
+  | xs::xss -> env.tags_scope <- (tag::xs)::xss
+  | [] -> env.tags_scope <- [[tag]]
+
 
 
 let env = {
@@ -81,23 +101,43 @@ let env = {
 }
 
 let _ =
-  Hashtbl.add env.ids "USED" (IdIdent, 0);
-  Hashtbl.add env.ids "SET" (IdIdent, 0);
+  add_id env "USED" IdIdent;
+  add_id env "SET" IdIdent;
   ()
 
 let block_counter = ref 0
-
-
 
 let gensym_counter = ref 0
 let gensym () =
   incr gensym_counter;
   spf "|sym%d|" !gensym_counter
 
-let error s =
-  raise (L.Error (spf "Syntax error: %s" s, !L.line))
-let warn s =
-  raise (L.Error (spf "Warning: %s" s, !L.line))
+
+let new_scope env =
+  incr block_counter;
+  env.block_scope <- env.block :: env.block_scope;
+  env.block <- !block_counter;
+  env.ids_scope <- []::env.ids_scope;
+  env.tags_scope <- []::env.tags_scope;
+  ()
+
+(* less: should return an optional list of instructions *)
+let pop_scope env =
+  (match env.block_scope, env.ids_scope, env.tags_scope with
+  | x::xs, ys::yss, zs::zss -> 
+      env.block <- x;
+      env.block_scope <- xs;
+      ys |> List.iter (fun id ->
+        Hashtbl.remove env.ids id;
+        Hashtbl.remove Globals.hids id;
+      );
+      zs |> List.iter (fun tag -> 
+        Hashtbl.remove env.tags tag
+      );
+      env.ids_scope <- yss;
+      env.tags_scope <- zss;
+  | _ -> error "pop empty declaration stack"
+  )
 
 %}
 
@@ -218,7 +258,7 @@ xdecl:
           (match sto_or_typedef, init with
           | Left sto, _ -> 
               add_id env id IdIdent;
-              VarDecl { v_name = (id, env.block);
+              VarDecl { v_name = (id, env.block (* 0 *));
                         v_type = typ;
                         v_storage = sto;
                         v_init = init;
@@ -232,27 +272,36 @@ xdecl:
          )
         )) 
      }
- | storage_and_type xdecor block      
-     { if !defs <> []
-       then error "move struct or typedef definitions to the toplevel";
-       [ let (id, typ2) = $2 in
-         let (sto_or_typedef, typ1) = $1 in
-         let typ = typ2 typ1 in
-         (match typ, sto_or_typedef with
-         | TFunction ft, Left sto -> 
-             add_id env id IdIdent;
-             FuncDef { f_name = id;
-                       f_type = ft;
-                       f_body = Block $3;
-                       f_storage = sto; }
-         (* stricter: *)
-         | TFunction _, Right _ ->
-             error "a function definition can not be a type definition"
-         | _, _ -> error "not a function type"
-         )
+ | storage_and_type_xdecor block      
+     { let (id, ft, sto) = $1 in
+       pop_scope env;
+       [ FuncDef { f_name = id;
+                   f_type = ft;
+                   f_body = Block $2;
+                   f_storage = sto; 
+                 }
        ]
      }
 
+storage_and_type_xdecor: storage_and_type xdecor
+    { (* stricter: *)
+      if !defs <> []
+      then error "move struct or typedef definitions to the toplevel";
+      let (id, typ2) = $2 in
+      let (sto_or_typedef, typ1) = $1 in
+      let typ = typ2 typ1 in
+      (match typ, sto_or_typedef with
+      | TFunction ft, Left sto -> 
+          add_id env id IdIdent;
+          new_scope env;
+          (* TODO: add params in scope! *)
+          (id, ft, sto)
+      (* stricter: *)
+      | TFunction _, Right _ ->
+          error "a function definition can not be a type definition"
+      | _, _ -> error "not a function type"
+      )
+    }
 
 xdlist:
  | xdecor          { [$1, None] }
@@ -271,6 +320,7 @@ adecl:
        then error "declaration without any identifier";
        (* stricter: *)
        error "move struct or typedef definitions to the toplevel";
+       (* TODO? could allow and just return [] here *)
      }
 
  | storage_and_type adlist TSemicolon 
@@ -300,7 +350,10 @@ adlist: xdlist { $1 }
 /*(*1 Statements *)*/
 /*(*************************************************************************)*/
 
-block: TOBrace slist TCBrace { $2 }
+block: tobrace slist tcbrace { $2 }
+
+tobrace: TOBrace { new_scope env }
+tcbrace: TCBrace { pop_scope env } 
 
 slist:
  | /*(*empty*)*/ { [] }
@@ -342,8 +395,8 @@ ulstmnt:
 
  | Twhile TOPar cexpr TCPar stmnt                { While ($3, $5) }
  | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { DoWhile ($2, $5) }
- | Tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt 
-     { (* todo: new scope, markdcl, and add hidden var_decl *)
+ | tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt
+     { pop_scope env;
        For ($3, $5, $7, $9) 
      }
 
@@ -357,6 +410,7 @@ tag:
  | TTypeName { $1 }
 
 
+tfor: Tfor { new_scope env }
 
 forexpr: 
  | zcexpr { Left $1 }
@@ -369,10 +423,10 @@ forexpr:
           | Left sto -> 
                  add_id env id IdIdent;
                  { v_name = (id, env.block);
-                    v_type = typ;
-                    v_storage = sto;
-                    v_init = init;
-                  }
+                   v_type = typ;
+                   v_storage = sto;
+                   v_init = init;
+                 }
           (* stricter: *)
           | Right _ -> error "typedefs inside 'for' are forbidden"
           )
@@ -449,6 +503,7 @@ uexpr:
 pexpr:
  | TOPar cexpr TCPar { $2 }
 
+ /*(* less: could do implicit declaration of unknown function *)*/
  | pexpr TOPar zelist TCPar { Call ($1, $3) }
  /*(* stricter: was cexpr, but ugly to allow cexpr here *)*/
  | pexpr TOBra expr TCBra  { ArrayAccess ($1, $3) }
@@ -462,7 +517,8 @@ pexpr:
          assert (idkind <> IdTypedef);
          Id ($1, blockid)
        with Not_found ->
-         pr2 (spf "name not declared: %s" $1);
+         (* less: if caller is a Call, then implicit declaration of func? *)
+         warn (spf "name not declared: %s" $1);
          Id ($1, 0)
      }
 
@@ -581,6 +637,9 @@ simple_type:
  | Tdouble { Type.TDouble }
 
  | Tvoid   { Type.TVoid }
+/*(* less: allow other combinations in grammar but report error?
+   * better than just "syntax error".
+   *)*/
 
 su:
  | Tstruct { Ast.Struct }
@@ -599,15 +658,18 @@ complex_type:
        Ast.TStructName ($1, fullname)
      with Not_found ->
        (* todo: should check later that defined somewhere, kinda forward decl *)
+       (* todo: add in env.tags? *)
+       (* todo: put 0 for block here? *)
        let fullname = $2, env.block in
        Ast.TStructName ($1, fullname)
  }
  | su tag_opt sbody {
      let fullname = $2, env.block in
-     (* todo: check if already defined? or conflicting su? *)
+     (* check if already defined? or conflicting su? do that in typecheck.ml *)
      defs := (StructDef { s_name = fullname; s_kind = $1; s_flds = $3 })::!defs;
+     (* todo: add in env.tags!! *)
      Ast.TStructName ($1, fullname)
-     (* todo: sualign *)
+     (* less: sualign *)
  }
 
 
@@ -624,12 +686,17 @@ complex_type:
     }
  | Tenum tag_opt TOBrace enum TCBrace {
      let fullname = $2, env.block in
+     (* todo: scope?? *)
+     (* todo: add in env.tags! *)
      defs := (EnumDef { e_name = fullname; e_constants = $4 })::!defs;
      Ast.TEnumName fullname
  }
 
  | TTypeName 
-     { try let (_,bid) = Hashtbl.find env.ids $1 in Ast.TTypeName ($1,bid) 
+     { try 
+         let (idkind, bid) = Hashtbl.find env.ids $1 in 
+         assert (idkind = IdTypedef);
+         Ast.TTypeName ($1, bid) 
        with Not_found -> error (spf "count not find typedef for %s" $1)
      }
 
@@ -661,26 +728,30 @@ xdecor2:
      { $2 }
  | xdecor2 TOBra zexpr TCBra 
      { let (id, f) = $1 in id, (fun x -> TArray ($3, f x)) }
- | xdecor2 TOPar zarglist TCPar
+ (* todo: add scope here. Parameters will be added back in scope
+  * before processing the body of a function.
+  *)
+ | xdecor2 TOPar zparamlist TCPar
      { let (id, f) = $1 in id, (fun x -> TFunction (f x, $3)) }
 
 
 
-zarglist:
+zparamlist:
  | /*(*empty*)*/ { [], false }
- | arglist       { $1 }
+ | paramlist       { $1 }
 
 /*less: name { } */
-arglist:
+paramlist:
  | qualifier_and_type xdecor  
      { let (id, typ2) = $2 in
-       (* todo: remove from scope at some scope? add in scope in caller? *)
-       add_id env id IdIdent;
+       (* add id in scope? No, because it would add id to toplevel scope.
+        * Add id in scope in caller before parsing the body of the function.
+        *)
        [{p_name = Some id; p_type = typ2 $1 }], false
      }
  | qualifier_and_type abdecor { [{ p_name = None; p_type = $2 $1 }], false }
 
- | arglist TComma arglist 
+ | paramlist TComma paramlist 
      { let (xs, isdot1) = $1 in
        let (ys, isdot2) = $3 in
        (* stricter: 5c does not report *)
@@ -704,7 +775,7 @@ abdecor1:
 
 abdecor2:
  | abdecor3 { $1 }
- | abdecor2 TOPar zarglist TCPar { (fun x -> TFunction ($1 x, $3)) }
+ | abdecor2 TOPar zparamlist TCPar { (fun x -> TFunction ($1 x, $3)) }
  | abdecor2 TOBra zexpr TCBra    { (fun x -> TArray ($3, $1 x)) }
 
 abdecor3:
@@ -717,6 +788,7 @@ abdecor3:
 /*(*1 Struct/union/enum definition *)*/
 /*(*************************************************************************)*/
 
+/*(* todo: scope?? *)*/
 sbody: TOBrace edecl TCBrace { $2 }
 
 edecl:
@@ -725,6 +797,7 @@ edecl:
 
 edecl_elem: qualifier_and_type zedlist
  { $2 |> List.map (fun (id, typ2) -> 
+     (* note that this element can introduce a nested struct definition! *)
      let typ1 = $1 in
      let typ = typ2 typ1 in
      { fld_name = Some id; fld_type = typ }
@@ -742,15 +815,18 @@ edlist:
 
 edecor: xdecor { $1 }
 
-/*(* todo: same scope than identifier? so modify htypedef? 
-   * todo: populate early, as const_expr can reference enum constants defined before
+
+
+/*(* 
    *)*/
 enum:
  | TName                
      { add_id env $1 IdEnumConstant; 
        [($1, env.block), None] }
  | TName TEq const_expr 
-     { add_id env $1 IdEnumConstant; 
+     { 
+      (* note that const_expr can reference enum constants defined before *)
+       add_id env $1 IdEnumConstant;
        [($1, env.block), Some $3] }
 
  | enum TComma enum { $1 @ $3 }
@@ -766,6 +842,7 @@ storage:
  | Tauto     { Storage.Auto }
  | Tstatic   { Storage.Static }
  | Textern   { Storage.Extern }
+ /*(* 5c skips register declarations *)*/
  | Tregister { Storage.Auto }
  | Tinline   { error "inline not supported" }
 

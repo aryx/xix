@@ -4,6 +4,8 @@
 type blockid = int
  (* with tarzan *)
 
+type fullname = string * blockid
+
 type sign = Signed | Unsigned
  (* with tarzan *)
 
@@ -41,8 +43,8 @@ type t =
    * ref to symbol? or use external hash?
    * less: could merge in TStruct of struct_kind
    *)
-  | TStructName of string * blockid
-  | TUnionName of string * blockid
+  | TStructName of fullname
+  | TUnionName of fullname
  (* with tarzan *)
 
 

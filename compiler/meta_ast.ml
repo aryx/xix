@@ -2,9 +2,10 @@
 
 open Ast
 
-(* I modified vof_expr and vof_stmt to not show the line information.
+(* I modified vof_expr and vof_stmt to not always show the line information.
  * Less noise that way.
  *)
+let show_all_pos = ref false
 
 let vof_name x = Ocaml.vof_string x
 let vof_blockid x = Ocaml.vof_int x
@@ -19,15 +20,15 @@ let vof_fullname (v1, v2) =
 
 
 let rec vof_type_ { t = v_t; t_loc = v_t_loc } =
-(*
+  if !show_all_pos
+  then
   let bnds = [] in
   let arg = vof_loc v_t_loc in
   let bnd = ("t_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_type_bis v_t in
   let bnd = ("t", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-*)
-  vof_type_bis v_t
+  else vof_type_bis v_t
 and vof_type_bis =
   function
   | TBase v1 -> let v1 = Type.vof_t v1 in Ocaml.VSum (("TBase", [ v1 ]))
@@ -70,15 +71,15 @@ and vof_struct_kind =
   | Struct -> Ocaml.VSum (("Struct", []))
   | Union -> Ocaml.VSum (("Union", []))
 and vof_expr { e = v_e; e_loc = v_e_loc } =
-(*
+  if !show_all_pos
+  then
   let bnds = [] in
   let arg = vof_loc v_e_loc in
   let bnd = ("e_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_expr_bis v_e in
   let bnd = ("e", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-*)
-  vof_expr_bis v_e
+  else vof_expr_bis v_e
 and vof_expr_bis =
   function
   | Int ((v1, v2, v3)) ->
@@ -219,15 +220,15 @@ and vof_logicalOp =
   | OrLog -> Ocaml.VSum (("OrLog", []))
   
 let rec vof_stmt { st = v_s; stmt_loc = v_stmt_loc } =
-(*
+  if !show_all_pos
+  then
   let bnds = [] in
   let arg = vof_loc v_stmt_loc in
   let bnd = ("stmt_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_stmt_bis v_s in
   let bnd = ("st", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-*)
-  vof_stmt_bis v_s
+  else vof_stmt_bis v_s
 and vof_stmt_bis =
   function
   | ExprSt v1 -> let v1 = vof_expr v1 in Ocaml.VSum (("ExprSt", [ v1 ]))
@@ -431,4 +432,3 @@ let vof_any =
   | Toplevel v1 ->
       let v1 = vof_toplevel v1 in Ocaml.VSum (("Toplevel", [ v1 ]))
   | Program v1 -> let v1 = vof_program v1 in Ocaml.VSum (("Program", [ v1 ]))
-

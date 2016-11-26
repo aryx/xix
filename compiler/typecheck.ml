@@ -31,7 +31,9 @@ type env = {
 (* Helpers *)
 (*****************************************************************************)
 
-(* if declare multiple times the same global *)
+(* if you declare multiple times the same global, we need to make sure
+ * the types are compatible. ex: extern int foo; and int foo = 1;
+ *)
 let compatible_types t1 t2 =
   raise Todo
 
@@ -40,7 +42,10 @@ let merge_types t1 t2 =
   raise Todo
 
 
-(* if declare multiple times the same global *)
+(* if you declare multiple times the same global, we need to make sure
+ * the storage declaration are compatible and we need to compute the
+ * final storage.
+ *)
 let merge_storage oldstorage laststorage =
   raise Todo
 
@@ -63,6 +68,7 @@ let maxtype t1 t2 =
  *    * type of constants (integers, floats, strings)
  *  - adjust storage when have more information
  *     (also if initializer => extern to global)
+ * 
  *  - check if redeclare things (which is different from refining things)
  *    for instance two parameters with same name, if two locals with same name.
  *    or if redefine same structure in same scope, or conflicting sukind

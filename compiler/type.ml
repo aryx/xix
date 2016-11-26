@@ -1,14 +1,14 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
-(* Same than Ast.blockid, but repeated here to avoid a mutual dependency *)
+(* Same than in ast.ml, but repeated here to avoid a mutual dependency *)
 type blockid = int
-
 type fullname = string * blockid
 
 type sign = Signed | Unsigned
 
 (* Note that there is no TTypedef here; 
  * The typedef expansion has already been done.
+ * less: put qualifier here?
  *)
 type t =
   (* Basic *)
@@ -23,7 +23,7 @@ type t =
   | TLong of sign
   | TVLong of sign
 
-  | TEnum (* of string? *)
+  | TEnum (* of fullname? *)
 
   (* floats *)
   | TFloat
@@ -54,5 +54,5 @@ type qualifier =
 type tagdef =
   | Struct of (string * t) list
   | Union of (string * t) list
-  | Enum
+  | Enum (* less: of intsize? *)
  (* with tarzan *)

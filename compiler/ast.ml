@@ -10,16 +10,19 @@
  *  - no nested struct definitions; they are lifted to the toplevel and 
  *    a blockid is associated with the tag name to avoid name conflicts
  *  - no anonymous structure; an artificial name is gensym'ed.
- *  - no mix of typedefs with other variable declarations;
+ *  - no mix of typedefs with variable declarations;
  *    again they are lifted to the top
  *  - enums are also lifted to the top (and its constants are tagged with
  *    a blockid)
  * 
- * This AST is actually a named AST (but not a typed AST). Indeed, in C we can
- * not do the naming in a separate phase after parsing. Because 
- * of a grammar ambiguity with typedefs, we need to keep track of 
- * typedefs and identifiers and their scope. Moreover, because we 
- * lift up struct definitions, we also need to track and resolve tags.
+ * This AST is actually more a named AST (but not a typed AST). 
+ * Indeed, in C the naming phase can not be a separate phase after parsing. 
+ * The grammar of C has an ambiguity with typedefs, so we need to keep track of 
+ * typedefs and identifiers and their scope during parsing. It would be
+ * redundant to do this work again in a separate naming phase, so I 
+ * name and resolve the scope of identifiers at parsing time.
+ * Moreover, because I lift up struct definitions, I also need to keep track
+ * and resolve the scope of tags.
  * 
  * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
  *)
@@ -40,9 +43,10 @@ type name = string
 (* for scope *)
 type blockid = int
 
-(* A fully resolved and scoped name. We could use a ref to a symbol.
- * Instead, we use external hash or environment each time. Better 
- * separation of concerns in my opinion that way.
+(* A fully resolved and scoped name. 
+ * 5c uses a reference to a symbol in a symbol table. Instead, I use external
+ * hash or environment each time. I think it offers a better separation 
+ * of concerns.
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
 type fullname = name * blockid
@@ -53,14 +57,20 @@ type idkind =
   | IdTypedef
   | IdEnumConstant
 
+(* to manage the scope of tags *)
+type tagkind =
+  | TagStruct
+  | TagUnion
+  | TagEnum
+
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* What are the differences with Type.t? 
+(* What are the differences between type_ below and Type.t? 
  * - typedef expansion is not done here
  * - constant expressions are not resolved yet 
  *  (those expressions can involve enum constants which will be resolved later).
- * Better to separate I think.
+ * Again, I think it offers a better separation of concerns.
  * todo: qualifier type
  *)
 type type_ = {
@@ -74,7 +84,7 @@ type type_ = {
   | TFunction of function_type
 
   | TStructName of struct_kind * fullname
-  (* In C an enum is really like an int. However, we could do
+  (* In C an enum is really like an int. However, I could do
    * extended checks at some point to do more strict type checking! 
    *)
   | TEnumName of fullname
@@ -85,9 +95,9 @@ type type_ = {
   and parameter = {
     (* When part of a prototype, the name is not always mentionned, hence
      * the option below.
-     * I use fullname here for consistency; parameters are treated like locals,
-     * so we can have below simply 'Id of fullname' and have no differences
-     * between accessing a local or a parameter.
+     * I use 'fullname' here for consistency; parameters are treated like,
+     * locals, so we can have below simply 'Id of fullname' and have 
+     * no differences between accessing a local or a parameter.
      *)
     p_name: fullname option;
     p_loc: loc;
@@ -100,7 +110,7 @@ type type_ = {
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
-(* todo: mutable t: Type.t? *)
+(* todo: mutable e_type: Type.t? *)
 and expr = { 
   e: expr_bis;
   e_loc: loc;
@@ -138,7 +148,7 @@ and expr = {
   | Binary of expr * binaryOp * expr
 
   | CondExpr of expr * expr * expr
-  (* x, y, but really should be a statement *)
+  (* 'x, y', but really should be a statement *)
   | Sequence of expr * expr
 
   | SizeOf of (expr, type_) Common.either
@@ -158,7 +168,7 @@ and argument = expr
 and const_expr = expr
 
   and unaryOp  = 
-    (* less: could be lift up, those are really important operators *)
+    (* less: could be lift up; those are really important operators *)
     | GetRef | DeRef 
     | UnPlus |  UnMinus | Tilde | Not 
   and assignOp = SimpleAssign | OpAssign of arithOp
@@ -202,6 +212,7 @@ type stmt = {
   | Return of expr option
   | Continue | Break
 
+  (* labels have a function scope, so no need to use 'fullname' here *)
   | Label of name * stmt
   | Goto of name
 
@@ -239,7 +250,7 @@ type func_def = {
   (* functions have a global scope, no need for fullname here *)
   f_name: name;
   f_loc: loc;
-  (* not Param|Auto *)
+  (* everything except Param or Auto *)
   f_storage: Storage.t;
   f_type: function_type;
   (* always a Block *)
@@ -251,10 +262,8 @@ type struct_def = {
   s_name: fullname;
   s_loc: loc;
   s_kind: struct_kind;
-
   s_flds: field_def list;
 }
-
   (* We could merge with var_decl, but fields have no storage, and
    * they can have bitfields.
    *)
@@ -264,7 +273,6 @@ type struct_def = {
     *)
     fld_name: name option;
     fld_loc: loc;
-
     fld_type: type_;
   }
  (* with tarzan *)
@@ -272,24 +280,17 @@ type struct_def = {
 type enum_def = { 
   e_name: fullname;
   e_loc: loc;
-  (* we also need to use 'fullname' for constants, to scope them.
-   * less: actually seems like enum constants have a global scope?
-   *)
   e_constants: enum_constant list;
 }
   and enum_constant = {
+  (* we also need to use 'fullname' for constants, to scope them.
+   * less: actually seems like enum constants have a global scope?
+   *)
     ecst_name: fullname;
     ecst_loc: loc;
     ecst_value: const_expr option;
   }
-
  (* with tarzan *)
-
-(* to manage the scope of tags *)
-type tagkind =
-  | TagStruct
-  | TagUnion
-  | TagEnum
 
 type type_def = { 
   typedef_name: fullname;

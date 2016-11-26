@@ -8,7 +8,7 @@ open Ast
  * For naming see parser.mly.
  * 
  * This module makes sure every entity used is defined. In some cases
- * it also checks if an entity is unused or wrongly redeclareded.
+ * it also checks if an entity is unused or incorrectly redeclared.
  *)
 
 (*****************************************************************************)
@@ -16,8 +16,8 @@ open Ast
 (*****************************************************************************)
 
 type usedef = {
-  mutable defined: Ast.pos option;
-  mutable used: Ast.pos option;
+  mutable defined: Ast.loc option;
+  mutable used: Ast.loc option;
 }
 
 type env = {
@@ -27,13 +27,21 @@ type env = {
   labels:   (string, usedef) Hashtbl.t;
 }
 
+(*
+type local_entity = 
+  | Id of fullname
+  | Label of string
+
+mutable entities_scope = (local_entity list) list;
+*)
+
 (*****************************************************************************)
 (* Use/Def *)
 (*****************************************************************************)
 
 (* use of undefined, redefined, unused 
  * todo:
- *  - make sure consistent use of takkind
+ *  - make sure consistent use of tagkind
  *  - consistent use of type?
  *)
 let check_usedef program =

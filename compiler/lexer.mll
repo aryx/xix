@@ -17,8 +17,14 @@ module L = Location_cpp
  *  Int64.t? if unsigned long long constant? enough? overflow in int64_of_str?
  *)
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
+
+let loc () = !L.line
 
 
 let sign_of_suffix s =
@@ -88,50 +94,52 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
-  | "+" { TPlus } | "-" { TMinus }
-  | "*" { TMul }  | "/" { TDiv } | "%" { TMod }
+  | "+" { TPlus (loc()) } | "-" { TMinus (loc()) }
+  | "*" { TMul  (loc()) } | "/" { TDiv   (loc()) } | "%" { TMod (loc()) }
 
-  | "="  { TEq } 
-  | "==" { TEqEq } | "!=" { TBangEq }
-  | "&"  { TAnd }  | "|"   { TOr } | "^" { TXor }
-  | "~"  { TTilde }
-  | "&&" { TAndAnd } | "||" { TOrOr }
-  | "!"  { TBang } 
+  | "="  { TEq   (loc()) }
+  | "==" { TEqEq (loc()) }  | "!=" { TBangEq (loc()) }
+  | "&"  { TAnd  (loc()) }  | "|"  { TOr     (loc()) } | "^" { TXor (loc()) }
+  | "~"  { TTilde  (loc()) }
+  | "&&" { TAndAnd (loc()) } | "||" { TOrOr (loc()) }
+  | "!"  { TBang   (loc()) }
 
-  | "++" { TPlusPlus } | "--" { TMinusMinus }  
+  | "++" { TPlusPlus (loc()) } | "--" { TMinusMinus (loc()) }
 
-  | "<"  { TInf }   | ">" { TSup }
-  | "<=" { TInfEq } | ">=" { TSupEq }
-  | "<<" { TInfInf (* TLsh *) } | ">>" { TSupSup (* TRsh *) }
+  | "<"  { TInf   (loc()) } | ">"  { TSup   (loc()) }
+  | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
+  | "<<" { TInfInf (* TLsh *) (loc()) } | ">>" { TSupSup (* TRsh *) (loc()) }
 
 
-  | "+=" { TOpEq A.Plus }       | "-=" { TOpEq A.Minus } 
-  | "*=" { TOpEq A.Mul }        | "/=" { TOpEq A.Div } | "%=" { TOpEq A.Mod }
-  | ">>="{ TOpEq A.ShiftRight } | "<<=" { TOpEq A.ShiftLeft }
-  | "&=" { TOpEq A.And }        | "|=" { TOpEq A.Or }  | "^=" { TOpEq A.Xor }
+  | "+=" { TOpEq (loc(), A.Plus) } | "-=" { TOpEq (loc(), A.Minus) }
+  | "*=" { TOpEq (loc(), A.Mul) }  | "/=" { TOpEq (loc(), A.Div) }
+  | "%=" { TOpEq (loc(), A.Mod) }
+  | ">>="{ TOpEq (loc(), A.ShiftRight) } | "<<=" { TOpEq (loc(), A.ShiftLeft) }
+  | "&=" { TOpEq (loc(), A.And) }        | "|="  { TOpEq (loc(), A.Or) }
+  | "^=" { TOpEq (loc(), A.Xor) }
 
-  | "(" { TOPar }   | ")" { TCPar }
-  | "{" { TOBrace } | "}" { TCBrace }
-  | "[" { TOBra }   | "]" { TCBra }
+  | "(" { TOPar   (loc()) } | ")" { TCPar   (loc()) }
+  | "{" { TOBrace (loc()) } | "}" { TCBrace (loc()) }
+  | "[" { TOBra   (loc()) } | "]" { TCBra   (loc()) }
              
-  | "," { TComma } | ";"  { TSemicolon }
-  | "->" { TArrow }
-  | "."  { TDot }
-  | "?"  { TQuestion }
-  | ":"  { TColon }
+  | ","  { TComma (loc()) } | ";"  { TSemicolon (loc()) }
+  | "->" { TArrow (loc()) }
+  | "."  { TDot   (loc()) }
+  | "?"  { TQuestion (loc()) }
+  | ":"  { TColon    (loc()) }
 
   (* ----------------------------------------------------------------------- *)
   (* Numbers *)
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
   | "0"  (oct+ as s) (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst ("0o" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
+      { TIConst(loc(), "0o"^s, sign_of_suffix unsigned,intsize_of_suffix long)}
   | "0x" (hex+ as s)  (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst ("0x" ^ s, sign_of_suffix unsigned, intsize_of_suffix long) }
+      { TIConst(loc(), "0x"^s, sign_of_suffix unsigned, intsize_of_suffix long)}
   | "0x" { error "malformed hex constant" }
 
   | ['0'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst (Lexing.lexeme lexbuf, 
+      { TIConst (loc(), Lexing.lexeme lexbuf, 
                 sign_of_suffix unsigned, intsize_of_suffix long)
       }
 
@@ -139,7 +147,7 @@ rule token = parse
   (* stricter: I impose some digit+ after '.' and after 'e' *)
   | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) as s 
       (['F''f']* as float)
-     { TFConst (s, floatsize_of_suffix float) }
+     { TFConst (loc(), s, floatsize_of_suffix float) }
 
   | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
      { error "malformed fp constant exponent" }
@@ -148,9 +156,9 @@ rule token = parse
   (* Strings and chars *)
   (* ----------------------------------------------------------------------- *)
   (* converting characters in integers *)
-  | "'" { TIConst (spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
+  | "'" { TIConst (loc(), spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
 
-  | '"' { TString (string lexbuf, Storage.String) }
+  | '"' { TString (loc(), string lexbuf, Storage.String) }
 
   (* ----------------------------------------------------------------------- *)
   (* Keywords and identifiers *)
@@ -158,36 +166,40 @@ rule token = parse
   | (letter | '_') (letter | digit | '_')* {
       let s = Lexing.lexeme lexbuf in
       match s with
-      | "auto" -> Tauto | "static" -> Tstatic | "extern" -> Textern
-      | "register" -> Tregister
+      | "auto" -> Tauto (loc()) | "static" -> Tstatic (loc()) 
+      | "extern" -> Textern (loc())
+      | "register" -> Tregister (loc())
 
-      | "const" -> Tconst | "volatile" -> Tvolatile
-      | "inline" -> Tinline | "restrict" -> Trestrict
+      | "const" -> Tconst (loc()) | "volatile" -> Tvolatile (loc())
+      | "inline" -> Tinline (loc()) | "restrict" -> Trestrict (loc())
 
-      | "void" -> Tvoid
-      | "char" -> Tchar | "short" -> Tshort | "int" -> Tint | "long" -> Tlong
-      | "float" -> Tfloat | "double" -> Tdouble
-      | "signed" -> Tsigned | "unsigned" -> Tunsigned
+      | "void" -> Tvoid (loc())
+      | "char" -> Tchar (loc()) | "short" -> Tshort (loc()) 
+      | "int"  -> Tint  (loc()) | "long"  -> Tlong  (loc())
+      | "float"  -> Tfloat  (loc()) | "double"   -> Tdouble   (loc())
+      | "signed" -> Tsigned (loc()) | "unsigned" -> Tunsigned (loc())
 
-      | "struct" -> Tstruct | "union" -> Tunion | "enum" -> Tenum
-      | "typedef" -> Ttypedef
+      | "struct" -> Tstruct (loc()) | "union" -> Tunion (loc()) 
+      | "enum" -> Tenum (loc())
+      | "typedef" -> Ttypedef (loc())
 
-      | "if" -> Tif | "else" -> Telse 
-      | "while" -> Twhile | "do" -> Tdo | "for" -> Tfor 
-      | "break" -> Tbreak | "continue" -> Tcontinue
-      | "switch" -> Tswitch | "case" -> Tcase | "default" -> Tdefault
-      | "return" -> Treturn | "goto" -> Tgoto
+      | "if" -> Tif (loc()) | "else" -> Telse (loc())
+      | "while" -> Twhile (loc()) | "do" -> Tdo (loc()) | "for" -> Tfor (loc())
+      | "break" -> Tbreak (loc()) | "continue" -> Tcontinue (loc())
+      | "switch" -> Tswitch (loc()) 
+      | "case" -> Tcase (loc()) | "default" -> Tdefault (loc())
+      | "return" -> Treturn (loc()) | "goto" -> Tgoto (loc())
 
-      | "sizeof" -> Tsizeof
+      | "sizeof" -> Tsizeof (loc())
 
       | _ ->
         if Hashtbl.mem Globals.hids s
         then 
           (match Hashtbl.find Globals.hids s with
-          | A.IdIdent | A.IdEnumConstant -> TName s
-          | A.IdTypedef -> TTypeName s
+          | A.IdIdent | A.IdEnumConstant -> TName (loc(), s)
+          | A.IdTypedef -> TTypeName (loc(), s)
           )
-        else TName s
+        else TName (loc(), s)
   }
 
   (* ----------------------------------------------------------------------- *)

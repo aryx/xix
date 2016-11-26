@@ -2,8 +2,13 @@
 
 open Ast
 
+(* I modified vof_expr and vof_stmt to not show the line information.
+ * Less noise that way.
+ *)
+
 let vof_name x = Ocaml.vof_string x
 let vof_blockid x = Ocaml.vof_int x
+let vof_loc x = Ocaml.vof_int x
 
 module Type = Meta_type
 module Storage = Meta_storage
@@ -11,8 +16,19 @@ module Common = Ocaml
 
 let vof_fullname (v1, v2) =
   let v1 = vof_name v1 and v2 = vof_blockid v2 in Ocaml.VTuple [ v1; v2 ]
-  
-let rec vof_type_ =
+
+
+let rec vof_type_ { t = v_t; t_loc = v_t_loc } =
+(*
+  let bnds = [] in
+  let arg = vof_loc v_t_loc in
+  let bnd = ("t_loc", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_type_bis v_t in
+  let bnd = ("t", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+*)
+  vof_type_bis v_t
+and vof_type_bis =
   function
   | TBase v1 -> let v1 = Type.vof_t v1 in Ocaml.VSum (("TBase", [ v1 ]))
   | TPointer v1 -> let v1 = vof_type_ v1 in Ocaml.VSum (("TPointer", [ v1 ]))
@@ -39,18 +55,31 @@ and vof_function_type (v1, v2) =
         and v2 = Ocaml.vof_bool v2
         in Ocaml.VTuple [ v1; v2 ]
   in Ocaml.VTuple [ v1; v2 ]
-and vof_parameter { p_type = v_p_type; p_name = v_p_name } =
+and vof_parameter { p_name = v_p_name; p_loc = v_p_loc; p_type = v_p_type } =
   let bnds = [] in
-  let arg = Ocaml.vof_option vof_name v_p_name in
-  let bnd = ("p_name", arg) in
-  let bnds = bnd :: bnds in
   let arg = vof_type_ v_p_type in
-  let bnd = ("p_type", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let bnd = ("p_type", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_loc v_p_loc in
+  let bnd = ("p_loc", arg) in
+  let bnds = bnd :: bnds in
+  let arg = Ocaml.vof_option vof_fullname v_p_name in
+  let bnd = ("p_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 and vof_struct_kind =
   function
   | Struct -> Ocaml.VSum (("Struct", []))
   | Union -> Ocaml.VSum (("Union", []))
-and vof_expr =
+and vof_expr { e = v_e; e_loc = v_e_loc } =
+(*
+  let bnds = [] in
+  let arg = vof_loc v_e_loc in
+  let bnd = ("e_loc", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_expr_bis v_e in
+  let bnd = ("e", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+*)
+  vof_expr_bis v_e
+and vof_expr_bis =
   function
   | Int ((v1, v2, v3)) ->
       let v1 = Ocaml.vof_string v1
@@ -124,7 +153,7 @@ and vof_expr =
       let v1 =
         Ocaml.vof_list
           (fun (v1, v2) ->
-             let v1 = Ocaml.vof_option vof_expr v1
+             let v1 = Ocaml.vof_option vof_const_expr v1
              and v2 = vof_expr v2
              in Ocaml.VTuple [ v1; v2 ])
           v1
@@ -189,7 +218,17 @@ and vof_logicalOp =
   | AndLog -> Ocaml.VSum (("AndLog", []))
   | OrLog -> Ocaml.VSum (("OrLog", []))
   
-let rec vof_stmt =
+let rec vof_stmt { st = v_s; stmt_loc = v_stmt_loc } =
+(*
+  let bnds = [] in
+  let arg = vof_loc v_stmt_loc in
+  let bnd = ("stmt_loc", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_stmt_bis v_s in
+  let bnd = ("st", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+*)
+  vof_stmt_bis v_s
+and vof_stmt_bis =
   function
   | ExprSt v1 -> let v1 = vof_expr v1 in Ocaml.VSum (("ExprSt", [ v1 ]))
   | Block v1 ->
@@ -201,7 +240,7 @@ let rec vof_stmt =
       in Ocaml.VSum (("If", [ v1; v2; v3 ]))
   | Switch ((v1, v2)) ->
       let v1 = vof_expr v1
-      and v2 = Ocaml.vof_list vof_case v2
+      and v2 = vof_caselist v2
       in Ocaml.VSum (("Switch", [ v1; v2 ]))
   | While ((v1, v2)) ->
       let v1 = vof_expr v1
@@ -233,28 +272,29 @@ let rec vof_stmt =
       let v1 = vof_expr v1
       and v2 = vof_stmt v2
       in Ocaml.VSum (("Case", [ v1; v2 ]))
-  | Default v1 ->
-      let v1 = vof_stmt v1 in Ocaml.VSum (("Default", [ v1 ]))
-  | Var v1 ->
-      let v1 = vof_var_decl v1
-      in Ocaml.VSum (("Var", [ v1 ]))
-and vof_case v = vof_stmt v
+  | Default v1 -> let v1 = vof_stmt v1 in Ocaml.VSum (("Default", [ v1 ]))
+  | Var v1 -> let v1 = vof_var_decl v1 in Ocaml.VSum (("Var", [ v1 ]))
+and vof_caselist v = vof_stmt v
 and
   vof_var_decl {
                  v_name = v_v_name;
-                 v_type = v_v_type;
+                 v_loc = v_v_loc;
                  v_storage = v_v_storage;
+                 v_type = v_v_type;
                  v_init = v_v_init
                } =
   let bnds = [] in
   let arg = Ocaml.vof_option vof_initialiser v_v_init in
   let bnd = ("v_init", arg) in
   let bnds = bnd :: bnds in
+  let arg = vof_type_ v_v_type in
+  let bnd = ("v_type", arg) in
+  let bnds = bnd :: bnds in
   let arg = Storage.vof_t v_v_storage in
   let bnd = ("v_storage", arg) in
   let bnds = bnd :: bnds in
-  let arg = vof_type_ v_v_type in
-  let bnd = ("v_type", arg) in
+  let arg = vof_loc v_v_loc in
+  let bnd = ("v_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_fullname v_v_name in
   let bnd = ("v_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
@@ -262,27 +302,34 @@ and vof_initialiser v = vof_expr v
   
 let vof_func_def {
                    f_name = v_f_name;
+                   f_loc = v_f_loc;
+                   f_storage = v_f_storage;
                    f_type = v_f_type;
-                   f_body = v_f_body;
-                   f_storage = v_f_storage
+                   f_body = v_f_body
                  } =
   let bnds = [] in
-  let arg = Storage.vof_t v_f_storage in
-  let bnd = ("f_storage", arg) in
-  let bnds = bnd :: bnds in
   let arg = vof_stmt v_f_body in
   let bnd = ("f_body", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_function_type v_f_type in
   let bnd = ("f_type", arg) in
   let bnds = bnd :: bnds in
+  let arg = Storage.vof_t v_f_storage in
+  let bnd = ("f_storage", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_loc v_f_loc in
+  let bnd = ("f_loc", arg) in
+  let bnds = bnd :: bnds in
   let arg = vof_name v_f_name in
   let bnd = ("f_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 
-
 let rec
-  vof_struct_def { s_name = v_s_name; s_kind = v_s_kind; s_flds = v_s_flds }
-                 =
+  vof_struct_def {
+                   s_name = v_s_name;
+                   s_loc = v_s_loc;
+                   s_kind = v_s_kind;
+                   s_flds = v_s_flds
+                 } =
   let bnds = [] in
   let arg = Ocaml.vof_list vof_field_def v_s_flds in
   let bnd = ("s_flds", arg) in
@@ -290,38 +337,76 @@ let rec
   let arg = vof_struct_kind v_s_kind in
   let bnd = ("s_kind", arg) in
   let bnds = bnd :: bnds in
+  let arg = vof_loc v_s_loc in
+  let bnd = ("s_loc", arg) in
+  let bnds = bnd :: bnds in
   let arg = vof_fullname v_s_name in
   let bnd = ("s_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   
-and vof_field_def { fld_name = v_fld_name; fld_type = v_fld_type } =
+and
+  vof_field_def {
+                  fld_name = v_fld_name;
+                  fld_loc = v_fld_loc;
+                  fld_type = v_fld_type
+                } =
   let bnds = [] in
   let arg = vof_type_ v_fld_type in
   let bnd = ("fld_type", arg) in
   let bnds = bnd :: bnds in
+  let arg = vof_loc v_fld_loc in
+  let bnd = ("fld_loc", arg) in
+  let bnds = bnd :: bnds in
   let arg = Ocaml.vof_option vof_name v_fld_name in
   let bnd = ("fld_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   
-let vof_enum_def { e_name = v_e_name; e_constants = v_e_constants } =
+let rec
+  vof_enum_def {
+                 e_name = v_e_name;
+                 e_loc = v_e_loc;
+                 e_constants = v_e_constants
+               } =
   let bnds = [] in
-  let arg =
-    Ocaml.vof_list
-      (fun (v1, v2) ->
-         let v1 = vof_fullname v1
-         and v2 = Ocaml.vof_option vof_const_expr v2
-         in Ocaml.VTuple [ v1; v2 ])
-      v_e_constants in
+  let arg = Ocaml.vof_list vof_enum_constant v_e_constants in
   let bnd = ("e_constants", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_loc v_e_loc in
+  let bnd = ("e_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_fullname v_e_name in
   let bnd = ("e_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-  
-let vof_type_def { t_name = v_t_name; t_type = v_t_type } =
+
+
+and
+  vof_enum_constant {
+                      ecst_name = v_ecst_name;
+                      ecst_loc = v_ecst_loc;
+                      ecst_value = v_ecst_value
+                    } =
   let bnds = [] in
-  let arg = vof_type_ v_t_type in
-  let bnd = ("t_type", arg) in
+  let arg = Ocaml.vof_option vof_const_expr v_ecst_value in
+  let bnd = ("ecst_value", arg) in
   let bnds = bnd :: bnds in
-  let arg = vof_fullname v_t_name in
-  let bnd = ("t_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let arg = vof_loc v_ecst_loc in
+  let bnd = ("ecst_loc", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_fullname v_ecst_name in
+  let bnd = ("ecst_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  
+let vof_type_def {
+                   typedef_name = v_typedef_name;
+                   typedef_loc = v_typedef_loc;
+                   typedef_type = v_typedef_type
+                 } =
+  let bnds = [] in
+  let arg = vof_type_ v_typedef_type in
+  let bnd = ("typedef_type", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_loc v_typedef_loc in
+  let bnd = ("typedef_loc", arg) in
+  let bnds = bnd :: bnds in
+  let arg = vof_fullname v_typedef_name in
+  let bnd = ("typedef_name", arg) in
+  let bnds = bnd :: bnds in Ocaml.VDict bnds
   
 let vof_toplevel =
   function
@@ -346,5 +431,4 @@ let vof_any =
   | Toplevel v1 ->
       let v1 = vof_toplevel v1 in Ocaml.VSum (("Toplevel", [ v1 ]))
   | Program v1 -> let v1 = vof_program v1 in Ocaml.VSum (("Program", [ v1 ]))
-  
 

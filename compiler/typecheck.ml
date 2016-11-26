@@ -3,6 +3,12 @@
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* This module assigns the final (resolved) type to every identifiers.
+ * Typedefs are expanded, struct definitions are computed.
+ * 
+ * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
+ * we do not have to handle scope here.
+ *)
 
 (*****************************************************************************)
 (* Types *)
@@ -20,6 +26,27 @@ type env = {
   constants: (Ast.fullname, integer) Hashtbl.t;
   (* labels: string, ??  *)
 }
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+(* if declare multiple times the same global *)
+let compatible_types t1 t2 =
+  raise Todo
+
+(* if declare multiple times the same global *)
+let merge_types t1 t2 =
+  raise Todo
+
+
+(* if declare multiple times the same global *)
+let merge_storage oldstorage laststorage =
+  raise Todo
+
+(* when processing enumeration constants *)
+let maxtype t1 t2 =
+  raise Todo
 
 (*****************************************************************************)
 (* Entry point *)

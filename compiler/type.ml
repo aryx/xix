@@ -2,12 +2,10 @@
 
 (* Same than Ast.blockid, but repeated here to avoid a mutual dependency *)
 type blockid = int
- (* with tarzan *)
 
 type fullname = string * blockid
 
 type sign = Signed | Unsigned
- (* with tarzan *)
 
 (* Note that there is no TTypedef here; 
  * The typedef expansion has already been done.
@@ -39,10 +37,7 @@ type t =
 
   | TFunc of t * t list
 
-  (* less: and scope? counter?
-   * ref to symbol? or use external hash?
-   * less: could merge in TStruct of struct_kind
-   *)
+  (* less: could merge in TStruct of struct_kind *)
   | TStructName of fullname
   | TUnionName of fullname
  (* with tarzan *)

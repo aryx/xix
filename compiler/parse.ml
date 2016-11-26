@@ -20,7 +20,7 @@ let parse (defs, paths) file =
        | T.EOF    -> Parse_cpp.Eof
        | T.TSharp -> Parse_cpp.Sharp
 
-       | T.TName s | T.TTypeName s -> Parse_cpp.Ident s
+       | T.TName (_, s) | T.TTypeName (_, s) -> Parse_cpp.Ident s
         (* stricter: I forbid to have macros overwrite keywords *)
         (*
         | T.Tvoid | T.Tchar | T.Tshort | T.Tint | T.Tlong

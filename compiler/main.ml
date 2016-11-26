@@ -18,6 +18,7 @@ open Common
  *    (but who uses that?)
  *  - stricter for grammar (see parser.mly), for instance force a specific
  *    order between the sign, qualifier, and type.
+ *  - disallow implicit declarations of functions
  * 
  * improvements:
  *  - forbid more constructs: 
@@ -77,9 +78,11 @@ let compile (defs, include_paths) infile outfile =
    * type annotations, storage annotations, 
    * etc 
    *)
-
+(*
   let asm = Codegen5.codegen ast in
   Object_code5.save (asm, !Location_cpp.history) outfile
+*)
+  ()
 
 
 (*****************************************************************************)

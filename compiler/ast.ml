@@ -5,21 +5,21 @@
 (*****************************************************************************)
 (* An Abstract Syntax Tree (AST) for C.
  * 
- * The AST does not match exactly the source code; we do a few simplications
- * at parsing time:
+ * The AST below does not match exactly the source code; I do a few
+ * simplications at parsing time:
  *  - no nested struct definitions; they are lifted to the toplevel and 
  *    a blockid is associated with the tag name to avoid name conflicts
  *  - no anonymous structure; an artificial name is gensym'ed.
- *  - no mix of typedefs with other variable declarations; again
- *    they are lifted to the top
+ *  - no mix of typedefs with other variable declarations;
+ *    again they are lifted to the top
  *  - enums are also lifted to the top (and its constants are tagged with
  *    a blockid)
  * 
  * This AST is actually a named AST (but not a typed AST). Indeed, in C we can
- * not do the naming in a separate phase after parsing. Indeed, because 
+ * not do the naming in a separate phase after parsing. Because 
  * of a grammar ambiguity with typedefs, we need to keep track of 
  * typedefs and identifiers and their scope. Moreover, because we 
- * lift up struct definitions, this AST is also a named AST for the tags.
+ * lift up struct definitions, we also need to track and resolve tags.
  * 
  * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
  *)
@@ -35,13 +35,16 @@ type loc = Location_cpp.loc
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
-(* less: ref to a symbol? or use external hash? or environment each time? *)
 type name = string
 
 (* for scope *)
 type blockid = int
 
-(* name below can be a gensym'ed name for anonymous struct/union/enum *)
+(* A fully resolved and scoped name. We could use a ref to a symbol.
+ * Instead, we use external hash or environment each time. Better 
+ * separation of concerns in my opinion that way.
+ * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
+ *)
 type fullname = name * blockid
 
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers. *) 
@@ -53,14 +56,18 @@ type idkind =
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* Merge with Type.t? No. For one thing typedef expansion is not done here.
- * Moreover constant expressions are also not resolved yet (those expressions
- * can involve enum constants which will be resolved later).
+(* What are the differences with Type.t? 
+ * - typedef expansion is not done here
+ * - constant expressions are not resolved yet 
+ *  (those expressions can involve enum constants which will be resolved later).
  * Better to separate I think.
- * todo: lineno field
  * todo: qualifier type
  *)
-type type_ =
+type type_ = {
+  t: type_bis;
+  t_loc: loc;
+}
+  and type_bis = 
   | TBase of Type.t (* only the Basic stuff *)
   | TPointer of type_
   | TArray of const_expr option * type_
@@ -76,13 +83,16 @@ type type_ =
  and function_type = (type_ * (parameter list * bool (* var args '...' *)))
 
   and parameter = {
-    p_type: type_;
-    (* when part of a prototype, the name is not always mentionned.
-     * I use fullname here for consistency. Parameters are like locals,
-     * so can have simply Id of fullname below and have no difference
+    (* When part of a prototype, the name is not always mentionned, hence
+     * the option below.
+     * I use fullname here for consistency; parameters are treated like locals,
+     * so we can have below simply 'Id of fullname' and have no differences
      * between accessing a local or a parameter.
      *)
     p_name: fullname option;
+    p_loc: loc;
+
+    p_type: type_;
   }
 
  and struct_kind = Struct | Union
@@ -90,10 +100,12 @@ type type_ =
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
-(* todo: lineno field 
- * todo: mutable t: Type.t?
- *)
-and expr =
+(* todo: mutable t: Type.t? *)
+and expr = { 
+  e: expr_bis;
+  e_loc: loc;
+}
+  and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
   | Int of string * Type.sign * Storage.intsize
   | Float of string * Storage.floatsize
@@ -110,13 +122,13 @@ and expr =
 
   | ArrayAccess of expr * expr (* x[y] *)
   | RecordAccess of expr * name (* x.y *)
-  (* todo? keep just x->y? Why x->y instead of x.y choice?
+  (* less? keep just x->y? Why x->y instead of x.y choice?
    * it's more consistent with ArrayAccess where expr has to be
    * a kind of pointer too. That means x.y is actually unsugared in (&x)->y
    *)
   | RecordPtAccess of expr * name (* x->y,  and not x.y!! *)
 
-  (* less: bool (* explicit cast *) *)
+  (* less: bool (* explicit cast (xcast) *) *)
   | Cast of type_ * expr
 
   | Postfix of expr * fixOp
@@ -141,7 +153,7 @@ and argument = expr
 
 (* Now that we call the preprocessor first, the remaining cases
  * where const_expr is not a constant are basic arithmetic expressions
- * like 2 << 3, or enum constants.
+ * like 2 < < 3, or enum constants.
  *)
 and const_expr = expr
 
@@ -168,14 +180,17 @@ and const_expr = expr
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
 (* ------------------------------------------------------------------------- *)
-(* todo: lineno field *)
-type stmt =
+type stmt = {
+  st: stmt_bis;
+  stmt_loc: loc;
+}
+  and stmt_bis = 
   | ExprSt of expr
   | Block of stmt list
 
   | If of expr * stmt * stmt
 
-  | Switch of expr * case list
+  | Switch of expr * case_list
 
   | While of expr * stmt
   | DoWhile of stmt * expr
@@ -199,7 +214,7 @@ type stmt =
 (* Can we have a specific case type? It is hard in C because they mix labels
  * and 'case' a lot (see the code in the lexer of 5c).
  *)
-and case = stmt
+and case_list = stmt
 
 (* ------------------------------------------------------------------------- *)
 (* Variables *)
@@ -207,8 +222,9 @@ and case = stmt
 
 and var_decl = {
   v_name: fullname;
-  v_type: type_;
+  v_loc: loc;
   v_storage: Storage.t;
+  v_type: type_;
   v_init: initialiser option;
 }
  (* can have ArrayInit and RecordInit here in addition to other expr *)
@@ -220,18 +236,20 @@ and var_decl = {
 (* Definitions *)
 (* ------------------------------------------------------------------------- *)
 type func_def = {
-  (* functions are globals, no need for fullname here *)
+  (* functions have a global scope, no need for fullname here *)
   f_name: name;
+  f_loc: loc;
+  (* not Param|Auto *)
+  f_storage: Storage.t;
   f_type: function_type;
   (* always a Block *)
   f_body: stmt;
-  (* not Param|Auto *)
-  f_storage: Storage.t;
 }
  (* with tarzan *)
 
 type struct_def = {
   s_name: fullname;
+  s_loc: loc;
   s_kind: struct_kind;
 
   s_flds: field_def list;
@@ -241,19 +259,30 @@ type struct_def = {
    * they can have bitfields.
    *)
   and field_def = { 
-   (* less: bitfield annotation
+   (* todo: bitfield annotation
     * kenccext: the option on fld_name is for inlined anonymous structure.
     *)
     fld_name: name option;
+    fld_loc: loc;
+
     fld_type: type_;
   }
  (* with tarzan *)
 
 type enum_def = { 
   e_name: fullname;
-  (* we also need to use 'fullname' for constants, to scope them *)
-  e_constants: (fullname * const_expr option) list;
+  e_loc: loc;
+  (* we also need to use 'fullname' for constants, to scope them.
+   * less: actually seems like enum constants have a global scope?
+   *)
+  e_constants: enum_constant list;
 }
+  and enum_constant = {
+    ecst_name: fullname;
+    ecst_loc: loc;
+    ecst_value: const_expr option;
+  }
+
  (* with tarzan *)
 
 (* to manage the scope of tags *)
@@ -263,8 +292,9 @@ type tagkind =
   | TagEnum
 
 type type_def = { 
-  t_name: fullname;
-  t_type: type_;
+  typedef_name: fullname;
+  typedef_loc: loc;
+  typedef_type: type_;
 }
  (* with tarzan *)
 
@@ -276,7 +306,6 @@ type toplevel =
   | StructDef of struct_def
   | TypeDef of type_def
   | EnumDef of enum_def
-
   | FuncDef of func_def
   (* contains extern decls and prototypes *)
   | VarDecl of var_decl

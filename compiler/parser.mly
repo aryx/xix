@@ -297,12 +297,20 @@ storage_and_type_xdecor: storage_and_type xdecor
       let (sto_or_typedef, typ1) = $1 in
       let typ = typ2 typ1 in
       (match typ.t, sto_or_typedef with
-      | TFunction ft, Left sto -> 
+      | TFunction (ret, (params, varargs)), Left sto -> 
           (* add in global scope the function name *)
           add_id env id IdIdent;
           (* add in new scope the parameters *)
           new_scope env;
-          (* TODO: add params in scope! and return adjusted ft *)
+          let params = params |> List.map (fun p ->
+            match p.p_name with
+            | Some (id, _) -> 
+                add_id env id IdIdent;
+                { p with p_name = Some (id, env.block) }
+            | None -> p
+          )
+          in
+          let ft = (ret, (params, varargs)) in
           ((id, loc), ft, sto)
       (* stricter: *)
       | TFunction _, Right _ ->

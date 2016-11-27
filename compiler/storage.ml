@@ -2,10 +2,8 @@
 
 (* No Typedef here, because a typedef is not a storage! *) 
 type t =
-  (* NoStorage?? *)
   | Auto   (* local *)
-  | Param  (* parameter *) (* ??? *)
-
+  | Param  (* parameter *)
   | Extern (* public global defined elsewhere *)
   | Global (* public global defined here *)
   | Static (* Private global less: could rename Private *)

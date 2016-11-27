@@ -291,7 +291,7 @@ and
   let arg = vof_type_ v_v_type in
   let bnd = ("v_type", arg) in
   let bnds = bnd :: bnds in
-  let arg = Storage.vof_t v_v_storage in
+  let arg = Ocaml.vof_option Storage.vof_t v_v_storage in
   let bnd = ("v_storage", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_loc v_v_loc in
@@ -315,7 +315,7 @@ let vof_func_def {
   let arg = vof_function_type v_f_type in
   let bnd = ("f_type", arg) in
   let bnds = bnd :: bnds in
-  let arg = Storage.vof_t v_f_storage in
+  let arg = Ocaml.vof_option Storage.vof_t v_f_storage in
   let bnd = ("f_storage", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_loc v_f_loc in

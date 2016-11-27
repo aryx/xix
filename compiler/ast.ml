@@ -234,7 +234,7 @@ and case_list = stmt
 and var_decl = {
   v_name: fullname;
   v_loc: loc;
-  v_storage: Storage.t; (* less: Storage option? *)
+  v_storage: Storage.t option;
   v_type: type_;
   v_init: initialiser option;
 }
@@ -251,7 +251,7 @@ type func_def = {
   f_name: name;
   f_loc: loc;
   (* everything except Param or Auto *)
-  f_storage: Storage.t;
+  f_storage: Storage.t option;
   f_type: function_type;
   (* always a Block *)
   f_body: stmt;

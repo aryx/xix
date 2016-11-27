@@ -887,8 +887,8 @@ qualifier:
 
 /*(* stricter: I impose an order. c(lass) then g(arbage) then t(type). *)*/
 storage_and_type:
- |          qualifiers type_ { Left Storage.Auto (* NoStorage?*), $2 }
- | storage  qualifiers type_ { Left $1, $3 }
+ |          qualifiers type_ { Left None, $2 }
+ | storage  qualifiers type_ { Left (Some $1), $3 }
  | Ttypedef qualifiers type_ { Right (), $3 }
 
 qualifier_and_type: qualifiers type_ { $2 }

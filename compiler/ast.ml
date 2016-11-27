@@ -234,7 +234,7 @@ and case_list = stmt
 and var_decl = {
   v_name: fullname;
   v_loc: loc;
-  v_storage: Storage.t;
+  v_storage: Storage.t; (* less: Storage option? *)
   v_type: type_;
   v_init: initialiser option;
 }

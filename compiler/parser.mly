@@ -43,7 +43,7 @@ let mk_t t loc = { t = t; t_loc = loc }
 let mk_st st loc = { st = st; stmt_loc = loc }
 
 
-(* Defs contain things we lift up in the AST (struct defs, enum defs, typedefs).
+(* Defs contains things we lift up in the AST (struct defs, enums, typedefs).
  * Note that we tag those defs with a blockid, so there is no escape-scope
  * problem.
  *)
@@ -69,9 +69,9 @@ type env = {
 
 }
 
-(* Check if id already declared? It is complex because at the toplevel
+(* Warn if id already declared? No, because at the toplevel
  * it is ok to redeclare the same variable or prototype.
- * So better to do those checks in another phase.
+ * So better to do those checks in another phase (in check.ml).
  *)
 let add_id env id idkind =
   Hashtbl.add Globals.hids id idkind;
@@ -98,6 +98,7 @@ let env = {
   block_scope = [];
 }
 
+(* a few builtins *)
 let _ =
   add_id env "USED" IdIdent;
   add_id env "SET" IdIdent;
@@ -119,7 +120,6 @@ let new_scope env =
   env.tags_scope <- []::env.tags_scope;
   ()
 
-(* less: should return an optional list of instructions *)
 let pop_scope env =
   (match env.block_scope, env.ids_scope, env.tags_scope with
   | x::xs, ys::yss, zs::zss -> 
@@ -136,6 +136,7 @@ let pop_scope env =
       env.tags_scope <- zss;
   | _ -> raise (Impossible "pop empty declaration stack, grammar wrong")
   )
+  (* less: return an optional list of instructions at some point *)
 
 %}
 
@@ -266,13 +267,13 @@ xdecl:
           (* stricter: clang also reports this, but not 5c *)
           | Right (), Some _ ->
               error "initializer with typedef"
-          | Right _, None ->
+          | Right (), None ->
               add_id env id IdTypedef;
               TypeDef { typedef_name = (id, env.block); 
                         typedef_loc = loc; 
                         typedef_type = typ; 
                       }
-         )
+          )
         )) 
      }
 
@@ -301,7 +302,7 @@ storage_and_type_xdecor: storage_and_type xdecor
           add_id env id IdIdent;
           (* add in new scope the parameters *)
           new_scope env;
-          (* TODO: add params in scope! *)
+          (* TODO: add params in scope! and return adjusted ft *)
           ((id, loc), ft, sto)
       (* stricter: *)
       | TFunction _, Right _ ->
@@ -347,7 +348,7 @@ adecl:
                            v_init = init;
                          }) loc
           (* stricter: *)
-          | Right _ -> error "typedefs not at the toplevel are forbidden"
+          | Right () -> error "typedefs not at the toplevel are forbidden"
           )
        ))
      }
@@ -358,12 +359,12 @@ adlist: xdlist { $1 }
 /*(*1 Statements *)*/
 /*(*************************************************************************)*/
 
-block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
-
 block: tobrace slist tcbrace { mk_st (Block $2) $1 }
 
 tobrace: TOBrace { new_scope env; $1 }
 tcbrace: TCBrace { pop_scope env; $1 } 
+
+block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
 
 slist:
  | /*(*empty*)*/ { [] }
@@ -423,20 +424,21 @@ tag:
 tfor: Tfor { new_scope env; $1 }
 
 forexpr: 
- | zcexpr { Left $1 }
+ | zcexpr 
+     { Left $1 }
  | storage_and_type adlist 
      { Right ($2 |> List.map (fun (((id, loc), typ2), init) ->
           let (sto_or_typedef, typ1) = $1 in
           let typ = typ2 typ1 in
           (match sto_or_typedef with
           | Left sto -> 
-                 add_id env id IdIdent;
-                 { v_name = (id, env.block);
-                   v_loc = loc;
-                   v_type = typ;
-                   v_storage = sto;
-                   v_init = init;
-                 }
+            add_id env id IdIdent;
+            { v_name = (id, env.block);
+              v_loc = loc;
+              v_type = typ;
+              v_storage = sto;
+              v_init = init;
+            }
           (* stricter: *)
           | Right _ -> error "typedefs inside 'for' are forbidden"
           )
@@ -533,9 +535,9 @@ pexpr:
          (*Id ($1, 0)*)
      }
 
- | TIConst { let (loc, a,b,c) = $1 in mk_e (Int (a,b,c)) loc } 
- | TFConst { let (loc, a,b) = $1   in mk_e (Float (a, b)) loc }
- | string  { let (loc, a,b) = $1   in mk_e (String (a, b)) loc }
+ | TIConst { let (loc, a,b,c) = $1 in mk_e (Int (a,b,c))  loc } 
+ | TFConst { let (loc, a,b)   = $1 in mk_e (Float (a,b))  loc }
+ | string  { let (loc, a,b)   = $1 in mk_e (String (a,b)) loc }
 
  | pexpr TPlusPlus   { mk_e (Postfix ($1, Inc)) $2 }
  | pexpr TMinusMinus { mk_e (Postfix ($1, Dec)) $2 } 
@@ -588,7 +590,7 @@ init:
  | expr                  { $1 }
  | TOBrace ilist comma_opt TCBrace 
      { match $2 with
-       | [] -> failwith "Impossible: grammar force one element"
+       | [] -> raise (Impossible "grammar force at least one element")
        | (Left x)::xs ->
            mk_e (ArrayInit (x::(xs |> List.map (function
              | Left x -> x
@@ -615,7 +617,7 @@ init2:
 
 qual:
  | TOBra lexpr TCBra { (fun x -> Left (Some $2, x)) }
- | TDot tag         { (fun x -> Right (snd $2, x)) }
+ | TDot tag          { (fun x -> Right (snd $2, x)) }
 
 
 /*(*************************************************************************)*/
@@ -628,6 +630,7 @@ qual:
 
 simple_type:
  | Tchar            { (Type.TChar Type.Signed, $1) }
+ /*(* meh, I should remove all Signed variants *)*/
  | Tsigned Tchar    { (Type.TChar Type.Signed, $1) }
  | Tunsigned Tchar  { (Type.TChar Type.Unsigned, $1) }
 
@@ -651,7 +654,7 @@ simple_type:
 
  | Tvoid   { (Type.TVoid, $1) }
 /*(* less: allow other combinations in grammar but report error?
-   * better than just "syntax error".
+   * better than just "syntax error"?
    *)*/
 
 su:
@@ -667,52 +670,46 @@ complex_type:
      let (su, loc) = $1 in
      let (_, id) = $2 in
      try 
-       let (tagkind, bid) = Hashtbl.find env.tags id in
-       (* less: assert takind = $1 *)
+       let (_tagkind, bid) = Hashtbl.find env.tags id in
+       (* assert takind = $1? let check.ml do this check *)
        let fullname = id, bid in
        mk_t (Ast.TStructName (su, fullname)) loc
      with Not_found ->
-       (* todo: should check later that defined somewhere, kinda forward decl *)
-       (* todo: add in env.tags? *)
-       (* todo: put 0 for block here? *)
-       let fullname = id, env.block in
+       (* will check in check.ml whether struct defined indeed later *)
+       let fullname = id, 0 in
        mk_t (Ast.TStructName (su, fullname)) loc
  }
  | su tag_opt sbody {
      let (su, loc) = $1 in
      let id = $2 in
      let fullname = id, env.block in
-     (* check if already defined? or conflicting su? do that in typecheck.ml *)
+     (* check if already defined? or conflicting su? do that in check.ml *)
      defs := (StructDef { s_name = fullname; 
                           s_loc = loc;
                           s_kind = su; 
                           s_flds = $3 })::!defs;
-     (* todo: add in env.tags!! *)
+     add_tag env id (if su = Struct then TagStruct else TagUnion);
      mk_t (Ast.TStructName (su, fullname)) loc
-     (* less: sualign *)
  }
 
 
  | Tenum tag   { 
      let (_, id) = $2 in
      try 
-       let (tagkind, bid) = Hashtbl.find env.tags id in
-       (* less: assert takind = $1 *)
+       let (_tagkind, bid) = Hashtbl.find env.tags id in
        let fullname = id, bid in
        mk_t (Ast.TEnumName (fullname)) $1
      with Not_found ->
-       (* todo: should check later that defined somewhere, kinda forward decl *)
-       let fullname = id, env.block in
+       let fullname = id, 0 in
        mk_t (Ast.TEnumName (fullname)) $1
     }
  | Tenum tag_opt TOBrace enum TCBrace {
      let id = $2 in
      let fullname = id, env.block in
-     (* todo: scope?? *)
-     (* todo: add in env.tags! *)
      defs := (EnumDef { e_name = fullname;
                         e_loc = $1;
                         e_constants = $4 })::!defs;
+     add_tag env id TagEnum;
      mk_t (Ast.TEnumName fullname) $1
  }
 
@@ -739,6 +736,7 @@ type_:
  *
  * note that with 'int* f(int)' we must return Func(Pointer int,int) and not
  * Pointer (Func(int,int)), so TMul binds before the rest of xdecor.
+ * less: handle qualifiers
  *)*/
 
 xdecor:
@@ -748,7 +746,7 @@ xdecor:
        id, (fun x -> f (mk_t (TPointer x) $1))
      }
 
-/*(* use tag here too, as can have foo foo; declarations *)*/
+/*(* use tag here too, as can have 'foo foo;' declarations *)*/
 xdecor2:
  | tag                
      { (snd $1, fst $1), (fun x -> x) }
@@ -756,9 +754,7 @@ xdecor2:
      { $2 }
  | xdecor2 TOBra zexpr TCBra 
      { let (id, f) = $1 in id, (fun x -> mk_t (TArray ($3, f x)) $2) }
- /*(* todo: add scope here. Parameters will be added back in scope
-  * before processing the body of a function.
-  *)*/
+ /*(* add parameters in scope in caller, when processing the function body *)*/
  | xdecor2 TOPar zparamlist TCPar
      { let (id, f) = $1 in id, (fun x -> mk_t (TFunction (f x, $3)) $2) }
 
@@ -772,7 +768,10 @@ zparamlist:
 paramlist:
  | qualifier_and_type xdecor  
      { let ((id, loc), typ2) = $2 in
-       [{p_name = Some (id, env.block); 
+       (* the final blockid will be assigned when create the scope of the
+        * function body.
+        *)
+       [{p_name = Some (id, -1); 
          p_loc = loc;
          p_type = typ2 $1 }], false
      }
@@ -850,7 +849,7 @@ edecor: xdecor { $1 }
 
 
 
-/*(* 
+/*(* TODO which scope ??? global scope?
    *)*/
 enum:
  | TName                
@@ -886,9 +885,9 @@ qualifier:
  | Trestrict { error "restrict not supported" }
 
 
-/*(* stricter: impose an order. c then g then t? *)*/
+/*(* stricter: I impose an order. c(lass) then g(arbage) then t(type). *)*/
 storage_and_type:
- |          qualifiers type_ { Left Storage.Auto, $2 }
+ |          qualifiers type_ { Left Storage.Auto (* NoStorage?*), $2 }
  | storage  qualifiers type_ { Left $1, $3 }
  | Ttypedef qualifiers type_ { Right (), $3 }
 

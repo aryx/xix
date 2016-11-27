@@ -2,6 +2,7 @@
 
 (* No Typedef here, because a typedef is not a storage! *) 
 type t =
+  (* NoStorage?? *)
   | Auto   (* local *)
   | Param  (* parameter *) (* ??? *)
 

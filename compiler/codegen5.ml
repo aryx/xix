@@ -11,7 +11,7 @@ module Asm = Ast_asm5
  * todo:
  *   - compute offset for local/params
  *   - firstarg opti
- *   - structure alignment
+ *   - structure alignment (sualign)
  *)
 
 (*****************************************************************************)

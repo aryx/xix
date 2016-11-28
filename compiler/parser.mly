@@ -661,9 +661,7 @@ simple_type:
  | Tdouble { (Type.TDouble, $1) }
 
  | Tvoid   { (Type.TVoid, $1) }
-/*(* less: allow other combinations in grammar but report error?
-   * better than just "syntax error"?
-   *)*/
+/*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
 su:
  | Tstruct { Ast.Struct, $1 }
@@ -772,7 +770,6 @@ zparamlist:
  | /*(*empty*)*/ { [], false }
  | paramlist       { $1 }
 
-/*less: name { } */
 paramlist:
  | qualifier_and_type xdecor  
      { let ((id, loc), typ2) = $2 in
@@ -857,8 +854,6 @@ edecor: xdecor { $1 }
 
 
 
-/*(* TODO which scope ??? global scope?
-   *)*/
 enum:
  | TName                
      { let (loc, id) = $1 in
@@ -879,13 +874,15 @@ const_expr: expr { $1 }
 /*(*1 Storage, qualifiers *)*/
 /*(*************************************************************************)*/
 
+/*(* less: allow some combinations? like extern register? *)*/
 storage:
  | Tauto     { Storage.Auto }
  | Tstatic   { Storage.Static }
  | Textern   { Storage.Extern }
  /*(* 5c skips register declarations *)*/
- | Tregister { Storage.Auto }
+ | Tregister { Storage.Auto (* less: None *) }
  | Tinline   { error "inline not supported" }
+/*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
 qualifier:
  | Tconst    { Type.Const }

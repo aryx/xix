@@ -23,7 +23,7 @@ type t =
   | TLong of sign
   | TVLong of sign
 
-  | TEnum (* of fullname? *)
+  | TEnum (* of fullname? of t?  *)
 
   (* floats *)
   | TFloat
@@ -54,5 +54,5 @@ type qualifier =
 type tagdef =
   | Struct of (string * t) list
   | Union of (string * t) list
-  | Enum (* less: of intsize? *)
+  | Enum (* less: of intsize? or float! *)
  (* with tarzan *)

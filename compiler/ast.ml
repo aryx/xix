@@ -16,12 +16,12 @@
  *    a blockid)
  * 
  * This AST is actually more a named AST (but not a typed AST). 
- * Indeed, in C the naming phase can not be a separate phase after parsing. 
+ * Indeed, in C the naming phase can not be separated completely from parsing. 
  * The grammar of C has an ambiguity with typedefs, so we need to keep track of 
  * typedefs and identifiers and their scope during parsing. It would be
  * redundant to do this work again in a separate naming phase, so I 
  * name and resolve the scope of identifiers at parsing time.
- * Moreover, because I lift up struct definitions, I also need to keep track
+ * Moreover, because I lift up struct definitions, I also keep track
  * and resolve the scope of tags.
  * 
  * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml

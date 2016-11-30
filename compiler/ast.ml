@@ -335,3 +335,5 @@ type any =
 let tagkind_of_su = function
   | Struct -> TagStruct
   | Union -> TagUnion
+
+let unwrap (name, _) = name    

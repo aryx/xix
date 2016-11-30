@@ -44,9 +44,6 @@ exception Error2 of
 (* Helpers *)
 (*****************************************************************************)
 
-let unwrap (name, _) = name    
-
-
 let inconsistent_tag (name, _block) loc usedef =
   let locbefore = 
     match usedef with
@@ -80,7 +77,7 @@ let check_usedef program =
                          def.s_loc,
                          "previous definition is here", locdef))
         );
-        
+        usedef.defined <- Some def.s_loc;
       with Not_found ->
         Hashtbl.add env.tags def.s_name 
           ({defined = Some def.s_loc; used = None; }, tagkind)
@@ -109,13 +106,13 @@ let check_usedef program =
           raise (Error2 (spf "redefinition of '%s'" (unwrap name0, def.e_loc,
                          "previous definition is here", locdef))
         );
+        usedef.defined <- Some def.e_loc;
       with Not_found ->
         Hashtbl.add env.tags def.e_name 
           ({defined = Some def.e_loc; used = None; }, tagkind)
       );
 
-
-    | TypeDef def -> raise Todo
+    | TypeDef def ->
     | FuncDef def -> raise Todo
     | VarDecl decl ->
       (* todo: decl.v_name *)

@@ -315,6 +315,9 @@ storage_and_type_xdecor: storage_and_type xdecor
       (* stricter: *)
       | TFunction _, Right _ ->
           error "a function definition can not be a type definition"
+      (* stricter: it could be TTypeName that resolves to a TFunction, but 
+       * I resolve typedefs later so I have to forbid it here.
+       *)
       | _, _ -> error "not a function type"
       )
     }

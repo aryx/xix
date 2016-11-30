@@ -74,6 +74,8 @@ let compile (defs, include_paths) infile outfile =
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_any (Ast.Program ast));
 
+  Check.check_program ast;
+
   (* todo: typechecking, typedef expansion,
    * type annotations, storage annotations, 
    * etc 
@@ -82,6 +84,8 @@ let compile (defs, include_paths) infile outfile =
   let asm = Codegen5.codegen ast in
   Object_code5.save (asm, !Location_cpp.history) outfile
 *)
+
+  pr2 (Dumper.s_of_any (Ast.Program ast));
   ()
 
 

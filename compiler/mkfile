@@ -12,6 +12,7 @@ SRC= flags.ml \
   globals.ml \
   error.ml \
   parser.ml lexer.ml parse.ml \
+  check.ml \
   codegen5.ml \
   main.ml
 

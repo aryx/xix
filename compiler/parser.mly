@@ -8,7 +8,7 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Many things done at parsing time by 5c are not done here. We do
+(* 5c does many things at parsing which we do not do here. We do
  * the minimum here. We just return a very simple AST.
  * 
  * Limitations compared to 5c (and sometimes also ANSI C):
@@ -19,10 +19,10 @@ module L = Location_cpp
  *  - no implicit single 'signed' means 'signed int'. Signed has to have
  *    an explicit int-type after.
  *  - no support (yet) for anonymous field (kencc extension)
- *  - forbid typedefs inside forexpr
  *  - sure? forbid definitions (typedefs, struct, enum) not at toplevel
  *    (confusing anyway?)
  *    (but then would no need blockid for those, or just for nested struct def)
+ *  - forbid typedefs inside forexpr
  *  - can not mix qualified and not qualified elements in initializers lists
  * 
  * todo: 
@@ -35,15 +35,15 @@ module L = Location_cpp
 
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
-let warn s =
-  raise (L.Error (spf "Warning: %s" s, !L.line))
+let warn s loc =
+  raise (L.Error (spf "Warning: %s" s, loc))
 
 let mk_e e loc = { e = e; e_loc = loc }
 let mk_t t loc = { t = t; t_loc = loc }
 let mk_st st loc = { st = st; stmt_loc = loc }
 
 
-(* Defs contains things we lift up in the AST (struct defs, enums, typedefs).
+(* 'defs' contains things we lift up in the AST (struct defs, enums, typedefs).
  * Note that we tag those defs with a blockid, so there is no escape-scope
  * problem.
  *)
@@ -71,7 +71,7 @@ type env = {
 
 (* Warn if id already declared? No, because at the toplevel
  * it is ok to redeclare the same variable or prototype.
- * So better to do those checks in another phase (in check.ml).
+ * So better to do those checks in another phase (in check.ml or typecheck.ml).
  *)
 let add_id env id idkind =
   Hashtbl.add Globals.hids id idkind;
@@ -336,13 +336,14 @@ adecl:
        then error "declaration without any identifier";
        (* stricter: *)
        error "move struct or typedef definitions to the toplevel";
-       (* TODO? could allow and just return [] here *)
+       (* TODO? could allow at least structdef and just return [] here *)
      }
 
  | storage_and_type adlist TSemicolon 
      { (* stricter: *)
        if !defs <> [] 
        then error "move struct or typedef definitions to the toplevel";
+       (* less: could factorize code with xdecl *)
        ($2 |> List.map (fun (((id, loc), typ2), init) ->
           let (sto_or_typedef, typ1) = $1 in
           let typ = typ2 typ1 in
@@ -395,15 +396,15 @@ ulstmnt:
  | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
      { 
        if $5.st = Block []
-       then warn "empty if body";
+       then warn "empty if body" $5.stmt_loc;
        mk_st (If ($3, $5, mk_st (Block[]) $1)) $1
      }
  | Tif TOPar cexpr TCPar stmnt Telse stmnt 
      { 
        if $5.st = Block []
-       then warn "empty if body";
+       then warn "empty if body" $5.stmt_loc;
        if $7.st = Block []
-       then warn "empty else body";
+       then warn "empty else body" $7.stmt_loc;
        mk_st (If ($3, $5, $7)) $1
      }
  /*(* stricter: I impose a block, not any stmnt *)*/
@@ -435,7 +436,9 @@ forexpr:
  | zcexpr 
      { Left $1 }
  | storage_and_type adlist 
-     { Right ($2 |> List.map (fun (((id, loc), typ2), init) ->
+     { Right 
+         (* less: could factorize code with xdecl *)
+         ($2 |> List.map (fun (((id, loc), typ2), init) ->
           let (sto_or_typedef, typ1) = $1 in
           let typ = typ2 typ1 in
           (match sto_or_typedef with
@@ -539,7 +542,7 @@ pexpr:
          mk_e (Id (id, blockid)) loc
        with Not_found ->
          (* stricter: if caller is Call, still forbid implicit decl of func! *)
-         warn (spf "name not declared: %s" id)
+         error (spf "name not declared: %s" id)
          (*Id ($1, 0)*)
      }
 
@@ -663,6 +666,7 @@ simple_type:
  | Tvoid   { (Type.TVoid, $1) }
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
+
 su:
  | Tstruct { Ast.Struct, $1 }
  | Tunion  { Ast.Union, $1 }
@@ -682,7 +686,7 @@ complex_type:
        mk_t (Ast.TStructName (su, fullname)) loc
      with Not_found ->
        (* will check in check.ml whether struct defined indeed later *)
-       let fullname = id, 0 in
+       let fullname = id, 0 (* less: or env.block? *) in
        mk_t (Ast.TStructName (su, fullname)) loc
  }
  | su tag_opt sbody {
@@ -706,7 +710,7 @@ complex_type:
        let fullname = id, bid in
        mk_t (Ast.TEnumName (fullname)) $1
      with Not_found ->
-       let fullname = id, 0 in
+       let fullname = id, 0 (* less: or env.block? *) in
        mk_t (Ast.TEnumName (fullname)) $1
     }
  | Tenum tag_opt TOBrace enum TCBrace {
@@ -725,7 +729,8 @@ complex_type:
          let (idkind, bid) = Hashtbl.find env.ids id in 
          assert (idkind = IdTypedef);
          mk_t (Ast.TTypeName (id, bid)) loc
-       with Not_found -> error (spf "count not find typedef for %s" id)
+       with Not_found -> 
+         raise (Impossible (spf "could not find typedef for %s" id))
      }
 
 type_:
@@ -742,6 +747,7 @@ type_:
  *
  * note that with 'int* f(int)' we must return Func(Pointer int,int) and not
  * Pointer (Func(int,int)), so TMul binds before the rest of xdecor.
+ * 
  * less: handle qualifiers
  *)*/
 
@@ -752,7 +758,7 @@ xdecor:
        id, (fun x -> f (mk_t (TPointer x) $1))
      }
 
-/*(* use tag here too, as can have 'foo foo;' declarations *)*/
+/*(* use 'tag' here too, because you can have 'foo foo;' declarations *)*/
 xdecor2:
  | tag                
      { (snd $1, fst $1), (fun x -> x) }
@@ -773,18 +779,13 @@ zparamlist:
 paramlist:
  | qualifier_and_type xdecor  
      { let ((id, loc), typ2) = $2 in
-       (* the final blockid will be assigned when create the scope of the
+       (* the final blockid will be assigned when we create the scope of the
         * function body.
         *)
-       [{p_name = Some (id, -1); 
-         p_loc = loc;
-         p_type = typ2 $1 }], false
+       [{p_name = Some (id, -1); p_loc = loc; p_type = typ2 $1 }], false
      }
  | qualifier_and_type abdecor 
-     { [{ p_name = None;
-          p_loc = $1.t_loc;
-          p_type = $2 $1 }], false 
-     }
+     { [{ p_name = None; p_loc = $1.t_loc; p_type = $2 $1 }], false }
 
  | paramlist TComma paramlist 
      { let (xs, isdot1) = $1 in
@@ -818,9 +819,24 @@ abdecor3:
  | TOBra zexpr TCBra    { (fun x -> mk_t (TArray ($2, x)) $1) }
  | TOPar abdecor1 TCPar { $2 }
 
+/*(*-----------------------------------------*)*/
+/*(*3 qualifiers *)*/
+/*(*-----------------------------------------*)*/
+
+qualifier:
+ | Tconst    { Type.Const }
+ | Tvolatile { Type.Volatile }
+ | Trestrict { error "restrict not supported" }
+
+qualifier_and_type: qualifiers type_ { $2 }
+/*(* less: allow storage here, so better than just "syntax error"? *)*/
+
+qualifiers:
+ | /*(*empty*)*/        { [] }
+ | qualifiers qualifier { $1 @ [$2] }
 
 /*(*************************************************************************)*/
-/*(*1 Struct/union/enum definition *)*/
+/*(*1 Struct/union/enum body *)*/
 /*(*************************************************************************)*/
 
 /*(* a structure does not define a new scope *)*/
@@ -835,9 +851,7 @@ edecl_elem: qualifier_and_type zedlist
      (* note that this element can introduce a nested struct definition! *)
      let typ1 = $1 in
      let typ = typ2 typ1 in
-     { fld_name = Some id; 
-       fld_loc = loc;
-       fld_type = typ }
+     { fld_name = Some id; fld_loc = loc; fld_type = typ }
    )
  }
 
@@ -858,12 +872,14 @@ enum:
  | TName                
      { let (loc, id) = $1 in
        add_id env id IdEnumConstant; 
-       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = None}] }
+       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = None}] 
+     }
  | TName TEq const_expr 
      { let (loc, id) = $1 in
       (* note that const_expr can reference enum constants defined before *)
        add_id env id IdEnumConstant;
-       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = Some $3}] }
+       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = Some $3}] 
+     }
 
  | enum TComma enum { $1 @ $3 }
  | enum TComma      { $1 }
@@ -879,15 +895,10 @@ storage:
  | Tauto     { Storage.Auto }
  | Tstatic   { Storage.Static }
  | Textern   { Storage.Extern }
- /*(* 5c skips register declarations *)*/
- | Tregister { Storage.Auto (* less: None *) }
+ /*(* stricter: 5c skips register declarations *)*/
+ | Tregister { error "register not supported" }
  | Tinline   { error "inline not supported" }
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
-
-qualifier:
- | Tconst    { Type.Const }
- | Tvolatile { Type.Volatile }
- | Trestrict { error "restrict not supported" }
 
 
 /*(* stricter: I impose an order. c(lass) then g(arbage) then t(type). *)*/
@@ -895,9 +906,5 @@ storage_and_type:
  |          qualifiers type_ { Left None, $2 }
  | storage  qualifiers type_ { Left (Some $1), $3 }
  | Ttypedef qualifiers type_ { Right (), $3 }
+/*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
-qualifier_and_type: qualifiers type_ { $2 }
-
-qualifiers:
- | /*(*empty*)*/        { [] }
- | qualifiers qualifier { $1 @ [$2] }

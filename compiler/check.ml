@@ -7,8 +7,7 @@ open Ast
 (* Prelude *)
 (*****************************************************************************)
 (* This module makes sure every entity used is defined. In some cases
- * it also checks if an entity is unused, used but undefined,
- * and if it is incorrectly redeclared.
+ * it also checks if an entity is unused, or if it is incorrectly redeclared.
  * 
  * For typechecking see typecheck.ml.
  * For naming see parser.mly.
@@ -55,6 +54,21 @@ let inconsistent_tag fullname loc usedef =
     "previous use is here", locbefore
   ))
 
+let check_inconsistent_or_redefined_tag env fullname tagkind loc =
+  try 
+    let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
+    if tagkind <> oldtagkind
+    then inconsistent_tag fullname loc usedef;
+    (* the tag may not be defined, as in a previous 'struct Foo x;' *)
+    usedef.defined |> Common.if_some (fun locdef ->
+      raise (Error2 (spf "redefinition of '%s'" (unwrap fullname), loc,
+                     "previous definition is here", locdef))
+    );
+    usedef.defined <- Some loc;
+  with Not_found ->
+    Hashtbl.add env.tags fullname ({defined = Some loc; used = None;}, tagkind)
+
+
 let inconsistent_id fullname loc usedef =
   let locbefore = 
     match usedef with
@@ -67,6 +81,27 @@ let inconsistent_id fullname loc usedef =
   ))
 
 
+let check_inconsistent_or_redefined_id env fullname idkind loc =
+  try 
+    let (usedef, oldidkind) = Hashtbl.find env.ids fullname in
+    if idkind <> oldidkind
+    then inconsistent_id fullname loc usedef
+    else
+      (match usedef.defined with
+      | Some locdef ->
+        (* stricter: 5c allows at least for same typedef *)
+        raise (Error2 (spf "redefinition of '%s'" (unwrap fullname), loc,
+                       "previous definition is here", locdef))
+      (* the id must be defined, there is no forward use of ids
+       * (enum constants, typedefs, variables)
+       *)
+      | None -> raise (Impossible "ids are always defined first")
+      )
+  with Not_found ->
+    Hashtbl.add env.ids fullname ({defined = Some loc; used = None; }, idkind)
+
+
+
 (*****************************************************************************)
 (* Use/Def *)
 (*****************************************************************************)
@@ -76,24 +111,10 @@ let check_usedef program =
 
   let rec toplevel env = function
     | StructDef { s_kind = su; s_name = fullname; s_loc = loc; s_flds = flds }->
-
       (* checking the tag *)
 
       let tagkind = Ast.tagkind_of_su su in
-      (try 
-        let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
-        if tagkind <> oldtagkind
-        then inconsistent_tag fullname loc usedef;
-        (* the tag may not be defined, as in a previous 'struct Foo x;' *)
-        usedef.defined |> Common.if_some (fun locdef ->
-          raise (Error2 (spf "redefinition of '%s'" (unwrap fullname), loc,
-                         "previous definition is here", locdef))
-        );
-        usedef.defined <- Some loc;
-      with Not_found ->
-        Hashtbl.add env.tags fullname 
-          ({defined = Some loc; used = None; }, tagkind)
-      );
+      check_inconsistent_or_redefined_tag env fullname tagkind loc;
 
       (* checking the fields *)
 
@@ -112,93 +133,33 @@ let check_usedef program =
       )
 
     | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
-
       (* checking the tag *)
 
       let tagkind = TagEnum in
-      (* less: could factorize with StructDef with a 
-       * check_inconsitent_or_redefined_tag
-       *)
-      (try 
-        let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
-        if tagkind <> oldtagkind
-        then inconsistent_tag fullname loc usedef;
-        (* the tag may not be defined, as in a previous 'enum Foo x;' *)
-        usedef.defined |> Common.if_some (fun locdef ->
-          raise (Error2 (spf "redefinition of '%s'" (unwrap fullname), loc,
-                         "previous definition is here", locdef))
-        );
-        usedef.defined <- Some loc;
-      with Not_found ->
-        Hashtbl.add env.tags fullname
-          ({defined = Some loc; used = None; }, tagkind)
-      );
+      check_inconsistent_or_redefined_tag env fullname tagkind loc;
 
       (* checking the constants *)
 
       csts |> List.iter 
           (fun { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
-            (try 
-               let (usedef, idkind) = Hashtbl.find env.ids fullname in
-               if idkind <> IdEnumConstant
-               then inconsistent_id fullname loc usedef
-               else
-                 (match usedef.defined with
-                 | Some locdef ->
-                   raise (Error2 (spf "redefinition of '%s'" (unwrap fullname),
-                                  loc,
-                                  "previous definition is here", locdef))
-                 (* the constant must be defined, there is no forward
-                  * decl of enum constants
-                  *)
-                 | None -> raise (Impossible "ids are always defined first")
-                 )
-             with Not_found ->
-               Hashtbl.add env.ids fullname
-                 ({defined = Some loc; used = None; }, IdEnumConstant)
-            );
+            check_inconsistent_or_redefined_id env fullname IdEnumConstant loc;
             eopt |> Common.if_some (expr env)
-      );
+          );
 
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
-
-      (* less: could factorize with EnumConstant and VarDecl with a 
-       * check_inconsitent_or_redefined_id
-       *)
-      (try 
-         let (usedef, idkind) = Hashtbl.find env.ids fullname in
-         if idkind <> IdTypedef
-         then inconsistent_id fullname loc usedef
-         else 
-           (match  usedef.defined with
-           | Some locdef ->
-             (* stricter: 5c allows if same typedef *)
-             raise (Error2 (spf "redefinition of '%s'" (unwrap fullname), loc,
-                            "previous definition is here", locdef))
-           | None -> raise (Impossible "ids are always defined first")
-           )
-       with Not_found ->
-         Hashtbl.add env.ids fullname 
-           ({defined = Some loc; used = None; }, IdTypedef)
-      );
+      check_inconsistent_or_redefined_id env fullname IdTypedef loc;
       type_ env typ
            
     | FuncDef def -> raise Todo
     | VarDecl { v_name = fullname; v_loc = loc; v_type = t; v_init = eopt} ->
-      (try
-         let (usedef, idkind) = Hashtbl.find env.ids fullname in
-         if idkind <> IdIdent
-         then inconsistent_id fullname loc usedef
-         else 
-           (match  usedef.defined with
-           | Some locdef ->
-             (* this can be ok, it depends on the situation, see typecheck.ml*)
-             ()
-           | None -> raise (Impossible "ids are always defined first")
-           )
-       with Not_found ->
-         Hashtbl.add env.ids fullname
-           ({defined = Some loc; used = None;}, IdIdent)
+      (if Hashtbl.mem env.ids fullname &&
+          snd (Hashtbl.find env.ids fullname) = IdIdent
+      (* this can be ok, you can redeclare toplevel identifiers as you
+       * can give a final storage. It depends on the situation, 
+       * see typecheck.ml
+       *)
+       then ()
+       else check_inconsistent_or_redefined_id env fullname IdIdent loc
       );
       type_ env t;
       eopt |> Common.if_some (expr env)

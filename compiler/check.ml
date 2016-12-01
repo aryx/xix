@@ -264,12 +264,11 @@ let check_usedef program =
         expr env e;
         stmt env st1;
         stmt env st2;
-    | Switch (e, st) ->
+    | While (e, st) 
+    | Switch (e, st) | Case (e, st) ->
         expr env e;
         stmt env st;
-    | While (e, st) -> 
-        expr env  e;
-        stmt env st;
+
     | DoWhile (st, e) ->
         stmt env st;
         expr env e
@@ -314,9 +313,6 @@ let check_usedef program =
            Hashtbl.add env.labels name
              { defined = None; used = Some st0.stmt_loc }
         )
-    | Case (e, st) ->
-        expr env e;
-        stmt env st
     | Default st -> stmt env st
 
     | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt } ->

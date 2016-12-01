@@ -121,7 +121,7 @@ let check_inconsistent_or_redefined_id env fullname idkind loc =
     else
       (match usedef.defined with
       | Some locdef ->
-        (* stricter: 5c allows at least for same typedef *)
+        (* stricter: 5c allows at least for same typedef; I do not. *)
         error (Inconsistent (spf "redefinition of '%s'" (unwrap fullname), loc,
                              "previous definition is here", locdef))
       (* the id must be defined, there is no forward use of ids

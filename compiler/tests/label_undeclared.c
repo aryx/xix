@@ -1,0 +1,4 @@
+void foo() {
+  goto bar;
+
+}

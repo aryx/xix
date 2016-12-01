@@ -44,6 +44,11 @@ let string_of_error err =
 exception Error of error
 
 (*****************************************************************************)
+(* Constant expression evaluator *)
+(*****************************************************************************)
+
+
+(*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
@@ -51,6 +56,12 @@ exception Error of error
 let rec asttype_to_type env typ0 =
   match typ0.t with
   | TBase t -> t
+  | TPointer typ -> Type.TPointer (asttype_to_type env typ)
+  | TArray (eopt, typ) ->
+      raise Todo
+  | TStructName (su, fullname) -> Type.TStructName (su, fullname)
+  | TEnumName fullname ->
+      raise Todo
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
   | _ -> raise Todo
 
@@ -120,10 +131,12 @@ let check_and_annotate_program ast =
             (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
               (name, asttype_to_type env typ)))
 
-    | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
-      raise Todo
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
       Hashtbl.add env.typedefs fullname (asttype_to_type env typ)
+
+    | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
+      raise Todo
+
     | VarDecl { v_name = fullname; v_loc = loc; v_type = typ;
                 v_storage = stoopt; v_init = eopt} ->
       let t = asttype_to_type env typ in

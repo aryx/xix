@@ -28,9 +28,10 @@ type integer = int
 (* Environment for typechecking *)
 type env = {
   ids:  (Ast.fullname, Type.t * Storage.t * Location_cpp.loc) Hashtbl.t;
-  tags: (Ast.fullname, Type.tagdef) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   constants: (Ast.fullname, integer) Hashtbl.t;
+  (* less: enum? fullname -> Type.t but only basic? *)
 }
 
 (* less: factorize things in error.ml? *)
@@ -119,7 +120,7 @@ let check_and_annotate_program ast =
 
   let env = {
     ids = Hashtbl.create 101;
-    tags = Hashtbl.create 101;
+    structs = Hashtbl.create 101;
     typedefs = Hashtbl.create 101;
     constants = Hashtbl.create 101;
   }

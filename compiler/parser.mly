@@ -676,8 +676,8 @@ simple_type:
 
 
 su:
- | Tstruct { Ast.Struct, $1 }
- | Tunion  { Ast.Union, $1 }
+ | Tstruct { Type.Struct, $1 }
+ | Tunion  { Type.Union, $1 }
 
 tag_opt:
  | tag           { snd $1 }
@@ -706,7 +706,7 @@ complex_type:
                           s_loc = loc;
                           s_kind = su; 
                           s_flds = $3 })::!defs;
-     add_tag env id (if su = Struct then TagStruct else TagUnion);
+     add_tag env id (Ast.tagkind_of_su su);
      mk_t (Ast.TStructName (su, fullname)) loc
  }
 

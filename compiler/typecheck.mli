@@ -3,7 +3,7 @@ type integer = int
 
 type env = {
   ids:  (Ast.fullname, Type.t * Storage.t * Location_cpp.loc) Hashtbl.t;
-  tags: (Ast.fullname, Type.tagdef) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   constants: (Ast.fullname, integer) Hashtbl.t;
 }

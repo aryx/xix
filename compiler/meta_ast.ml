@@ -10,6 +10,7 @@ let show_all_pos = ref false
 let vof_name x = Ocaml.vof_string x
 let vof_blockid x = Ocaml.vof_int x
 let vof_loc x = Ocaml.vof_int x
+let vof_struct_kind x = Meta_type.vof_struct_kind x
 
 module Type = Meta_type
 module Storage = Meta_storage
@@ -66,10 +67,7 @@ and vof_parameter { p_name = v_p_name; p_loc = v_p_loc; p_type = v_p_type } =
   let bnds = bnd :: bnds in
   let arg = Ocaml.vof_option vof_fullname v_p_name in
   let bnd = ("p_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-and vof_struct_kind =
-  function
-  | Struct -> Ocaml.VSum (("Struct", []))
-  | Union -> Ocaml.VSum (("Union", []))
+
 and vof_expr { e = v_e; e_loc = v_e_loc } =
   if !show_all_pos
   then

@@ -1,10 +1,11 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
-(* Same than in ast.ml, but repeated here to avoid a mutual dependency *)
 type blockid = int
 type fullname = string * blockid
 
 type sign = Signed | Unsigned
+
+type struct_kind = Struct | Union
 
 (* Note that there is no TTypedef here; 
  * The typedef expansion has already been done.
@@ -37,9 +38,7 @@ type t =
 
   | TFunc of t * t list
 
-  (* less: could merge in TStruct of struct_kind *)
-  | TStructName of fullname
-  | TUnionName of fullname
+  | TStructName of struct_kind * fullname
  (* with tarzan *)
 
 
@@ -51,8 +50,7 @@ type qualifier =
   (* less: unsupported: | Restrict | Inline *)
  (* with tarzan *)
 
-type tagdef =
-  | Struct of (string * t) list
-  | Union of (string * t) list
-  | Enum (* less: of intsize? or float! *)
+type structdef = (string * t) list
+type enumdef = Enum (* less: of intsize? or float! *)
+
  (* with tarzan *)

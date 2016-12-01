@@ -42,17 +42,21 @@ type loc = Location_cpp.loc
 type name = string
 
 (* for scope *)
-type blockid = int
+type blockid = int (* same than Type.blockid, repeated here for clarity *)
 
 (* A fully resolved and scoped name. 
- * 5c uses a reference to a symbol in a symbol table. Instead, I use external
- * hash or environment each time. I think it offers a better separation 
- * of concerns.
+ * 5c uses a reference to a symbol in  symbol table to fully qualify a name.
+ * Instead, I use a unique blockid and an external hash or environment that
+ * maps this fullname to the appropriate information.
+ * I think it offers a better separation of concerns.
+ * 
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
-type fullname = name * blockid
+type fullname = name * blockid (* same than Type.fullname *)
 
-(* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers. *) 
+(* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
+ * Could be moved in a separate naming.ml, but not worth it for just two types.
+ *)
 type idkind =
   | IdIdent
   | IdTypedef
@@ -85,7 +89,7 @@ type type_ = {
   | TArray of const_expr option * type_
   | TFunction of function_type
 
-  | TStructName of struct_kind * fullname
+  | TStructName of Type.struct_kind * fullname
   (* In C an enum is really like an int. However, I could do
    * extended checks at some point to do more strict type checking! 
    *)
@@ -107,7 +111,6 @@ type type_ = {
     p_type: type_;
   }
 
- and struct_kind = Struct | Union
 
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
@@ -263,7 +266,7 @@ type func_def = {
 type struct_def = {
   s_name: fullname;
   s_loc: loc;
-  s_kind: struct_kind;
+  s_kind: Type.struct_kind;
   s_flds: field_def list;
 }
   (* We could merge with var_decl, but fields have no storage, and
@@ -335,7 +338,7 @@ type any =
 (* Helpers *)
 (*****************************************************************************)
 let tagkind_of_su = function
-  | Struct -> TagStruct
-  | Union -> TagUnion
+  | Type.Struct -> TagStruct
+  | Type.Union -> TagUnion
 
 let unwrap (name, _) = name    

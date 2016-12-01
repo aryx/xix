@@ -8,6 +8,16 @@ let vof_sign =
   function
   | Signed -> Ocaml.VSum (("Signed", []))
   | Unsigned -> Ocaml.VSum (("Unsigned", []))
+
+let vof_fullname (v1, v2) =
+  let v1 = Ocaml.vof_string v1 and v2 = vof_blockid v2 in 
+  Ocaml.VTuple [ v1; v2 ]
+
+let vof_struct_kind =
+  function
+  | Struct -> Ocaml.VSum (("Struct", []))
+  | Union -> Ocaml.VSum (("Union", []))
+
   
 let rec vof_t =
   function
@@ -27,39 +37,21 @@ let rec vof_t =
       and v2 = Ocaml.vof_list vof_t v2
       in Ocaml.VSum (("TFunc", [ v1; v2 ]))
   | TStructName ((v1, v2)) ->
-      let v1 = Ocaml.vof_string v1
-      and v2 = vof_blockid v2
+      let v1 = vof_struct_kind v1
+      and v2 = vof_fullname v2
       in Ocaml.VSum (("TStructName", [ v1; v2 ]))
-  | TUnionName ((v1, v2)) ->
-      let v1 = Ocaml.vof_string v1
-      and v2 = vof_blockid v2
-      in Ocaml.VSum (("TUnionName", [ v1; v2 ]))
   
 let vof_qualifier =
   function
   | Volatile -> Ocaml.VSum (("Volatile", []))
   | Const -> Ocaml.VSum (("Const", []))
   
-let vof_tagdef =
-  function
-  | Struct v1 ->
-      let v1 =
-        Ocaml.vof_list
-          (fun (v1, v2) ->
-             let v1 = Ocaml.vof_string v1
-             and v2 = vof_t v2
-             in Ocaml.VTuple [ v1; v2 ])
-          v1
-      in Ocaml.VSum (("Struct", [ v1 ]))
-  | Union v1 ->
-      let v1 =
-        Ocaml.vof_list
-          (fun (v1, v2) ->
-             let v1 = Ocaml.vof_string v1
-             and v2 = vof_t v2
-             in Ocaml.VTuple [ v1; v2 ])
-          v1
-      in Ocaml.VSum (("Union", [ v1 ]))
-  | Enum -> Ocaml.VSum (("Enum", []))
+let vof_structdef v1 =
+  Ocaml.vof_list
+    (fun (v1, v2) ->
+      let v1 = Ocaml.vof_string v1
+      and v2 = vof_t v2
+      in Ocaml.VTuple [ v1; v2 ])
+    v1
   
 

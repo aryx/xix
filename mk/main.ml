@@ -76,6 +76,10 @@ module R = Rules
  *    * -u
  *    * use nproc for environment
  *    * profile mk.byte
+ *  - a -profile, a la pad, so see times in parsing, in graph exploration,
+ *    etc.
+ *  - a -dump and -restart, as in emacs -dump and undump(), see the comments in 
+ *    https://news.ycombinator.com/item?id=13073566
  *  - we could reduce a bit the size of the code by reusing cpp!
  *    #include is equivalent of <, #define is equivalent of variable definition
  *    but for variable we would still need the dynamic binding of

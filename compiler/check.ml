@@ -290,7 +290,8 @@ let check_usedef program =
          with Not_found ->
            Hashtbl.add env.labels name 
              {defined = Some st0.stmt_loc; used = None}
-        )
+        );
+        stmt env st;
     | Goto name ->
         (try 
            let usedef = Hashtbl.find env.labels name in

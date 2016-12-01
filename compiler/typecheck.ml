@@ -1,13 +1,21 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+open Ast
+module T = Type
+module S = Storage
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
 (* This module assigns the final (resolved) type to every identifiers.
  * Typedefs are expanded, struct definitions are computed.
+ * It also assigns the final storage to every identifiers.
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
- * we do not have to handle scope here.
+ * we do not have to handle scope here. 
+ * Thanks to check.ml we do not have to check for inconcistencies or
+ * redefinition of tags. We can assume everything is fine.
  *)
 
 (*****************************************************************************)
@@ -22,19 +30,28 @@ type env = {
   ids:  (Ast.fullname, Type.t * Storage.t) Hashtbl.t;
   tags: (Ast.fullname, Type.tagdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
-
   constants: (Ast.fullname, integer) Hashtbl.t;
-  (* labels: string, ??  *)
 }
+
+type error =
+  | ErrorMisc of string * Location_cpp.loc
+
+let string_of_error err =
+  match err with
+  | ErrorMisc (s, loc) ->
+    let (file, line) = Location_cpp.final_loc_of_loc loc in
+    spf "%s:%d error: %s" file line s
+
+
+exception Error of error
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
 (* if you declare multiple times the same global, we need to make sure
- * the types are compatible. ex: extern int foo; and int foo = 1;
- * In the same way this is also where we detect inconsistencies like
- * int foo; void foo();
+ * the types are compatible. ex: 'extern int foo; and int foo = 1;'
+ * This is where we detect inconsistencies like 'int foo; void foo();'
  *)
 let compatible_types t1 t2 =
   raise Todo
@@ -80,3 +97,6 @@ let maxtype t1 t2 =
  *    have the same blockid but will get ambiguity then.
  *    (or do that in check.ml??)
  *)
+
+let check_program ast =
+  raise Todo

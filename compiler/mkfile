@@ -6,13 +6,13 @@ INCLUDES=-I $TOP/commons -I $TOP/lib_core \
   -I $TOP/formats/objects
 
 SRC= flags.ml \
-  type.ml meta_type.ml storage.ml meta_storage.ml \
+  type.ml meta_type.ml   storage.ml meta_storage.ml \
   ast.ml meta_ast.ml \
   dumper.ml \
   globals.ml \
   error.ml \
   parser.ml lexer.ml parse.ml \
-  check.ml \
+  check.ml typecheck.ml \
   codegen5.ml \
   main.ml
 

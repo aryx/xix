@@ -192,6 +192,8 @@ rule token = parse
 
       | "sizeof" -> Tsizeof (loc())
 
+      (* less: USED/SET here? or manage via symbol table *)
+
       | _ ->
         if Hashtbl.mem Globals.hids s
         then 

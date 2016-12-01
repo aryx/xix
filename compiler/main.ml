@@ -209,12 +209,8 @@ let main () =
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
           Error.errorexit (spf "%s:%d %s" file line s)
-      | Check.Error2 (s1, loc1, s2, loc2) ->
-
-          let (file1, line1) = Location_cpp.final_loc_of_loc loc1 in
-          let (file2, line2) = Location_cpp.final_loc_of_loc loc2 in
-          Error.errorexit (spf "%s:%d error: %s\n%s:%d note: %s" 
-                             file1 line1 s1 file2 line2 s2)
+      | Check.Error err ->
+          Error.errorexit (Check.string_of_error err)
 
       | _ -> raise exn
       )

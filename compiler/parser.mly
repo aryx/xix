@@ -98,7 +98,10 @@ let env = {
   block_scope = [];
 }
 
-(* a few builtins *)
+(* a few builtins.
+ * less: 5c manages USED/SET at a lower level; they are lexical keywords
+ * and they are in the AST with special nodes (OUSED/OSET)
+ *)
 let _ =
   add_id env "USED" IdIdent;
   add_id env "SET" IdIdent;

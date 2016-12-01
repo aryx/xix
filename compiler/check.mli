@@ -1,5 +1,15 @@
 
-exception Error2 of string * Location_cpp.loc * string * Location_cpp.loc   
+type error =
+  | Inconsistent of 
+      string * Location_cpp.loc * (* error here *) 
+      string * Location_cpp.loc   (* previous decl/def/whatever here *)
+  | ErrorMisc of string * Location_cpp.loc
+  | Warning of string * Location_cpp.loc
 
-(* raise Location_cpp.Error or Error2 exception *)
+val string_of_error: error -> string
+
+exception Error of error
+val failhard : bool ref
+
+(* can raise Error if failhard, otherwise print on stderr *)
 val check_program: Ast.program -> unit

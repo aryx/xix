@@ -27,27 +27,26 @@ type integer = int
 
 (* Environment for typechecking *)
 type env = {
-  ids:  (Ast.fullname, Type.t * Storage.t) Hashtbl.t;
+  ids:  (Ast.fullname, Type.t * Storage.t * Location_cpp.loc) Hashtbl.t;
   tags: (Ast.fullname, Type.tagdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   constants: (Ast.fullname, integer) Hashtbl.t;
 }
 
-type error =
-  | ErrorMisc of string * Location_cpp.loc
+(* less: factorize with check.ml? or put in error.ml? *)
+type error = Check.error
 
 let string_of_error err =
-  match err with
-  | ErrorMisc (s, loc) ->
-    let (file, line) = Location_cpp.final_loc_of_loc loc in
-    spf "%s:%d error: %s" file line s
-
+  Check.string_of_error err
 
 exception Error of error
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
+let expand_typedefs env typ =
+  raise Todo
 
 (* if you declare multiple times the same global, we need to make sure
  * the types are compatible. ex: 'extern int foo; and int foo = 1;'
@@ -71,6 +70,8 @@ let merge_storage oldstorage laststorage =
 (* when processing enumeration constants *)
 let maxtype t1 t2 =
   raise Todo
+
+
 
 (*****************************************************************************)
 (* Entry point *)
@@ -99,4 +100,19 @@ let maxtype t1 t2 =
  *)
 
 let check_program ast =
+
+  let rec toplevel env = function
+    | _ -> raise Todo
+  and stmt env st0 = function
+    | _ -> raise Todo
+  in
+
+  let env = {
+    ids = Hashtbl.create 101;
+    tags = Hashtbl.create 101;
+    typedefs = Hashtbl.create 101;
+    constants = Hashtbl.create 101;
+  }
+  in
+  
   raise Todo

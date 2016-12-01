@@ -300,6 +300,7 @@ let check_usedef program =
                                   st0.stmt_loc,
                                   "previous definition is here", locprev))
            );
+           usedef.defined <- Some st0.stmt_loc;
          with Not_found ->
            Hashtbl.add env.labels name 
              {defined = Some st0.stmt_loc; used = None}

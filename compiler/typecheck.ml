@@ -4,6 +4,7 @@ open Common
 open Ast
 module T = Type
 module S = Storage
+module E = Check
 
 (*****************************************************************************)
 (* Prelude *)
@@ -46,8 +47,16 @@ exception Error of error
 (* Helpers *)
 (*****************************************************************************)
 
-let expand_typedefs env typ =
-  raise Todo
+(* will expand typedefs, resolve constant expressions *)
+let rec asttype_to_type env typ0 =
+  match typ0.t with
+  | TBase t -> t
+  | TTypeName fullname -> Hashtbl.find env.typedefs fullname
+  | _ -> raise Todo
+
+let sametype t1 t2 =
+  t1 = t2
+
 
 (* if you declare multiple times the same global, we need to make sure
  * the types are compatible. ex: 'extern int foo; and int foo = 1;'
@@ -71,7 +80,6 @@ let merge_storage oldstorage laststorage =
 (* when processing enumeration constants *)
 let maxtype t1 t2 =
   raise Todo
-
 
 
 (*****************************************************************************)
@@ -102,16 +110,51 @@ let maxtype t1 t2 =
 
 let check_and_annotate_program ast =
 
+  let funcs = ref [] in
+  let globals = ref [] in
+
   let rec toplevel env = function
     | StructDef { s_kind = su; s_name = fullname; s_loc = loc; s_flds = flds }->
-      raise Todo
+      Hashtbl.add env.structs fullname 
+        (su, flds |> List.map 
+            (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
+              (name, asttype_to_type env typ)))
+
     | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
       raise Todo
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
-      raise Todo
+      Hashtbl.add env.typedefs fullname (asttype_to_type env typ)
+    | VarDecl { v_name = fullname; v_loc = loc; v_type = typ;
+                v_storage = stoopt; v_init = eopt} ->
+      let t = asttype_to_type env typ in
+      (try 
+         let (oldt, oldsto, oldloc) = Hashtbl.find env.ids fullname in
+         (* check type compatibility *)
+         if not (sametype t oldt)
+         then raise (Error (E.Inconsistent (
+              (* less: could dump both type using vof_type *)
+               spf "redefinition of '%s' with a different type" 
+                 (unwrap fullname), loc,
+               "previous definition is here", oldloc)))
+         else
+           (* TODO: need merge?? *)
+           let finalt = t in
+           (* check storage compatibility and compute final storage *)
+           let finalsto = 
+             match stoopt, oldsto with
+             (* TODO: adjust! *)
+             | _ -> Storage.Global
+           in
+           Hashtbl.replace env.ids fullname (finalt, finalsto, loc)
+       with Not_found ->
+         let finalsto =
+           match stoopt with
+           | _ -> Storage.Global
+         in
+         Hashtbl.add env.ids fullname (t, finalsto, loc)
+      )
+
     | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st } ->
-      raise Todo
-    | VarDecl { v_name = fullname; v_loc = loc; v_type = t; v_init = eopt} ->
       raise Todo
 
   and stmt env st0 = function
@@ -125,5 +168,5 @@ let check_and_annotate_program ast =
     constants = Hashtbl.create 101;
   }
   in
-  
-  raise Todo
+  ast |> List.iter (toplevel env);
+  env, List.rev !funcs, List.rev !globals

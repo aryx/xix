@@ -21,7 +21,7 @@ open Common
  *  - disallow implicit declarations of functions
  * 
  * improvements:
- *  - forbid more constructs: 
+ *  - we forbid more constructs: 
  *     * typedef and initializers, 
  *     * typedef function definitions, 
  *     * three dots parameter in the middle, 

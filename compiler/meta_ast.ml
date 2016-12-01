@@ -357,7 +357,7 @@ and
   let arg = vof_loc v_fld_loc in
   let bnd = ("fld_loc", arg) in
   let bnds = bnd :: bnds in
-  let arg = Ocaml.vof_option vof_name v_fld_name in
+  let arg = vof_name v_fld_name in
   let bnd = ("fld_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   
 let rec

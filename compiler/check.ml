@@ -164,16 +164,14 @@ let check_usedef program =
 
       let hflds = Hashtbl.create 11 in
       flds |> List.iter 
-       (fun {fld_name = nameopt; fld_loc = loc; fld_type = typ} ->
-        nameopt |> Common.if_some (fun name ->
+       (fun {fld_name = name; fld_loc = loc; fld_type = typ} ->
           (* stricter: 5c does not report, clang does *)
           if Hashtbl.mem hflds name
           then error (Inconsistent (spf "duplicate member '%s'" name, loc,
                                     "previous declaration is here", 
                                     Hashtbl.find hflds name));
           Hashtbl.add hflds name loc;
-        );
-        type_ env typ
+          type_ env typ
       )
 
     | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->

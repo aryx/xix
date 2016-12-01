@@ -8,21 +8,23 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 5c does many things at parsing which we do not do here. We do
+(* 5c does many things during parsing which we do not do here. We do
  * the minimum here. We just return a very simple AST.
  * 
- * Limitations compared to 5c (and sometimes also ANSI C):
+ * Limitations compared to 5c (and sometimes also to ANSI C and C11):
  *  - no support for old style parameter declaration
  *    (obsolete practice anyway)
  *  - impose a certain order for the storage, qualifier, and type
  *    (everybody follow this convention anyway)
- *  - no implicit single 'signed' means 'signed int'. Signed has to have
- *    an explicit int-type after.
- *  - no support (yet) for anonymous field (kencc extension)
+ *  - no implicit single 'signed' means 'signed int'. 
+ *    Signed has to have an explicit int-type after.
+ *  - no support for anonymous field (kencc extension)
+ *    (code is harder to read with this extension anyway)
  *  - sure? forbid definitions (typedefs, struct, enum) not at toplevel
  *    (confusing anyway?)
  *    (but then would no need blockid for those, or just for nested struct def)
  *  - forbid typedefs inside forexpr
+ *    (who uses that anyway?)
  *  - can not mix qualified and not qualified elements in initializers lists
  * 
  * todo: 
@@ -852,19 +854,15 @@ edecl:
  |       edecl_elem TSemicolon { $1 }
  | edecl edecl_elem TSemicolon { $1 @ $2 }
 
-edecl_elem: qualifier_and_type zedlist
+/*(* stricter: no kenccext about unnamed structure element *)*/
+edecl_elem: qualifier_and_type edlist
  { $2 |> List.map (fun ((id, loc), typ2) -> 
      (* note that this element can introduce a nested struct definition! *)
      let typ1 = $1 in
      let typ = typ2 typ1 in
-     { fld_name = Some id; fld_loc = loc; fld_type = typ }
+     { fld_name = id; fld_loc = loc; fld_type = typ }
    )
  }
-
-/*(* so can parse nested struct def without any identifier *)*/
-zedlist:
- | /*(*empty*)*/ { [] }
- | edlist        { $1 }
 
 edlist:
  | edecor               { [$1] }

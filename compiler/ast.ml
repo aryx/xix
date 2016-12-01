@@ -271,9 +271,9 @@ type struct_def = {
    *)
   and field_def = { 
    (* todo: bitfield annotation
-    * kenccext: the option on fld_name is for inlined anonymous structure.
+    * stricter: no anonymous struct/union (used originally in arm/u.h though)
     *)
-    fld_name: name option;
+    fld_name: name;
     fld_loc: loc;
     fld_type: type_;
   }

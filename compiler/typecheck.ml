@@ -9,7 +9,7 @@ module E = Check
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* This module assigns the final (resolved) type to every identifiers.
+(* This module assigns a final (resolved) type to every identifiers.
  * Typedefs are expanded, struct definitions are computed.
  * It also assigns the final storage to every identifiers.
  * 
@@ -63,20 +63,23 @@ let rec asttype_to_type env typ0 =
   | TEnumName fullname ->
       raise Todo
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
-  | _ -> raise Todo
+  | TFunction (tret, (tparams, tdots)) ->
+    Type.TFunc (asttype_to_type env tret,
+                tparams |> List.map (fun p -> asttype_to_type env p.p_type),
+                tdots)
 
+
+(* if you declare multiple times the same global, we need to make sure
+ * the types are the same. ex: 'extern int foo; ... int foo = 1;'
+ * This is where we detect inconsistencies like 'int foo; void foo();'
+ *)
 let sametype t1 t2 =
   t1 = t2
 
 
-(* if you declare multiple times the same global, we need to make sure
- * the types are compatible. ex: 'extern int foo; and int foo = 1;'
- * This is where we detect inconsistencies like 'int foo; void foo();'
- *)
-let compatible_types t1 t2 =
-  raise Todo
-
-(* if declare multiple times the same global *)
+(* if you declare multiple times the same global, we may need to merge
+ * types. Really???
+*)
 let merge_types t1 t2 =
   raise Todo
 
@@ -87,6 +90,7 @@ let merge_types t1 t2 =
  *)
 let merge_storage oldstorage laststorage =
   raise Todo
+
 
 (* when processing enumeration constants *)
 let maxtype t1 t2 =

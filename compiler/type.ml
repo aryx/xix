@@ -36,7 +36,7 @@ type t =
   (* Why not unsugar to TIndirect? for better error messages? *)
   | TArray of t (* no size here *)
 
-  | TFunc of t * t list
+  | TFunc of t * t list * bool (* varargs '...' *)
 
   | TStructName of struct_kind * fullname
  (* with tarzan *)

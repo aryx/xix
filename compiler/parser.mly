@@ -37,8 +37,6 @@ module L = Location_cpp
 
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
-let warn s loc =
-  raise (L.Error (spf "Warning: %s" s, loc))
 
 let mk_e e loc = { e = e; e_loc = loc }
 let mk_t t loc = { t = t; t_loc = loc }
@@ -404,15 +402,15 @@ ulstmnt:
  | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
      { 
        if $5.st = Block []
-       then warn "empty if body" $5.stmt_loc;
+       then Error.warn "empty if body" $5.stmt_loc;
        mk_st (If ($3, $5, mk_st (Block[]) $1)) $1
      }
  | Tif TOPar cexpr TCPar stmnt Telse stmnt 
      { 
        if $5.st = Block []
-       then warn "empty if body" $5.stmt_loc;
+       then Error.warn "empty if body" $5.stmt_loc;
        if $7.st = Block []
-       then warn "empty else body" $7.stmt_loc;
+       then Error.warn "empty else body" $7.stmt_loc;
        mk_st (If ($3, $5, $7)) $1
      }
  /*(* stricter: I impose a block, not any stmnt *)*/

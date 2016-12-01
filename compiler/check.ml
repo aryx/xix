@@ -37,7 +37,6 @@ type error =
       string * Location_cpp.loc * (* error here *) 
       string * Location_cpp.loc   (* previous decl/def/whatever here *)
   | ErrorMisc of string * Location_cpp.loc
-  | Warning of string * Location_cpp.loc
 
 let string_of_error err =
   match err with
@@ -45,10 +44,6 @@ let string_of_error err =
     let (file1, line1) = Location_cpp.final_loc_of_loc loc1 in
     let (file2, line2) = Location_cpp.final_loc_of_loc loc2 in
     spf "%s:%d error: %s\n%s:%d note: %s" file1 line1 s1 file2 line2 s2
-
-  | Warning (s, loc) ->
-    let (file, line) = Location_cpp.final_loc_of_loc loc in
-    spf "%s:%d warning: %s" file line s
   | ErrorMisc (s, loc) ->
     let (file, line) = Location_cpp.final_loc_of_loc loc in
     spf "%s:%d error: %s" file line s
@@ -61,13 +56,6 @@ let error err =
   if !failhard
   then raise (Error err)
   else pr2 (string_of_error err)
-
-let warn s loc =
-  let err = Warning (s, loc) in
-  if !failhard
-  then raise (Error err)
-  else pr2 (string_of_error err)
-  
  
 (*****************************************************************************)
 (* Helpers *)
@@ -140,7 +128,8 @@ let check_unused_locals env =
     match usedef with
     | { defined = Some loc; used = None } ->
         (* 5c says whether 'auto' or 'param' *) 
-        warn (spf "variable declared and not used: '%s'" (unwrap fullname)) loc
+        Error.warn 
+          (spf "variable declared and not used: '%s'" (unwrap fullname)) loc
     | { defined = None; } -> raise (Impossible "locals are always defined")
     | { defined = _; used = Some _ } -> ()
   )
@@ -231,7 +220,7 @@ let check_usedef program =
         | { used = Some loc; defined = None } ->
             error (ErrorMisc (spf "use of undeclared label '%s'" name, loc))
         | { defined = Some loc; used = None } ->
-            warn (spf "label declared and not used '%s'" name) loc
+            Error.warn (spf "label declared and not used '%s'" name) loc
         | { defined = None; used = None } -> 
           raise (Impossible "at least one of used or defined")
       );

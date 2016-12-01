@@ -129,6 +129,11 @@ let main () =
     "-ape", Arg.Set ape,
     " ";
 
+    "-w", Arg.Set Flags.warn,
+    " enable warnings";
+    "-werror", Arg.Set Flags.warnerror,
+    " warnings generate error exceptions";
+
     "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-f", Arg.Set Flags_cpp.debug_line, " ";
     "-m", Arg.Set Flags_cpp.debug_macros, " ";

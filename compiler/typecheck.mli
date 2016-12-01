@@ -15,8 +15,11 @@ val string_of_error: error -> string
 exception Error of error
 
 
-(* can raise Error
- * todo: return also modified Ast.program?
+(* Returns resolved type and storage information for identifiers, tags,
+ * resolved enum constants, constant expression evaluations.
+ * Returns also Ast.program elements with annotated types at each node.
+ * Basically returns everything you need to easily generate code.
+ * can raise Error.
  *)
-val check_program: Ast.program -> env
-
+val check_and_annotate_program: 
+  Ast.program -> env * Ast.func_def list * Ast.var_decl list

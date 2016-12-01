@@ -33,7 +33,7 @@ type env = {
   constants: (Ast.fullname, integer) Hashtbl.t;
 }
 
-(* less: factorize with check.ml? or put in error.ml? *)
+(* less: factorize things in error.ml? *)
 type error = Check.error
 
 let string_of_error err =
@@ -99,10 +99,20 @@ let maxtype t1 t2 =
  *    (or do that in check.ml??)
  *)
 
-let check_program ast =
+let check_and_annotate_program ast =
 
   let rec toplevel env = function
-    | _ -> raise Todo
+    | StructDef { s_kind = su; s_name = fullname; s_loc = loc; s_flds = flds }->
+      raise Todo
+    | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
+      raise Todo
+    | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
+      raise Todo
+    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st } ->
+      raise Todo
+    | VarDecl { v_name = fullname; v_loc = loc; v_type = t; v_init = eopt} ->
+      raise Todo
+
   and stmt env st0 = function
     | _ -> raise Todo
   in

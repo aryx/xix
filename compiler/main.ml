@@ -76,12 +76,11 @@ let compile (defs, include_paths) infile outfile =
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_any (Ast.Program ast));
 
+  (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
+  (* typedef expansion, type and storage resolution, etc. *)
+  let (_env, _funcs, _globals) = Typecheck.check_and_annotate_program ast in
 
-  (* todo: typechecking, typedef expansion,
-   * type annotations, storage annotations, 
-   * etc 
-   *)
 (*
   let asm = Codegen5.codegen ast in
   Object_code5.save (asm, !Location_cpp.history) outfile

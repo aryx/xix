@@ -16,11 +16,12 @@
  *    a blockid)
  * 
  * This AST is actually more a named AST (but not a typed AST). 
- * Indeed, in C the naming phase can not be separated completely from parsing. 
+ * Indeed, in C, you can not separate completely the naming phase from parsing.
  * The grammar of C has an ambiguity with typedefs, so we need to keep track of 
  * typedefs and identifiers and their scope during parsing. It would be
  * redundant to do this work again in a separate naming phase, so I 
- * name and resolve the scope of identifiers at parsing time.
+ * name and resolve the scope of identifiers at parsing time
+ * (however I check for inconsistencies or redefinitions after parsing).
  * Moreover, because I lift up struct definitions, I also keep track
  * and resolve the scope of tags.
  * 
@@ -71,6 +72,7 @@ type tagkind =
  * - constant expressions are not resolved yet 
  *  (those expressions can involve enum constants which will be resolved later).
  * Again, I think it offers a better separation of concerns.
+ * Note that 'type_' and 'expr' are mutually recursive (because of const_expr).
  * todo: qualifier type
  *)
 type type_ = {
@@ -307,9 +309,9 @@ type toplevel =
   | StructDef of struct_def
   | TypeDef of type_def
   | EnumDef of enum_def
-  | FuncDef of func_def
-  (* contains extern decls and prototypes *)
+  (* globals, but also extern decls and prototypes *)
   | VarDecl of var_decl
+  | FuncDef of func_def
  (* with tarzan *)
 
 type program = toplevel list

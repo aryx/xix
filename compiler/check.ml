@@ -10,7 +10,7 @@ open Ast
  * it also checks if an entity is unused, or if it is incorrectly redeclared.
  * 
  * For typechecking see typecheck.ml.
- * For naming see parser.mly.
+ * For naming and scope resolving see parser.mly.
  *)
 
 (*****************************************************************************)
@@ -26,7 +26,7 @@ type env = {
   ids:      (fullname, usedef * Ast.idkind) Hashtbl.t;
   tags:     (fullname, usedef * Ast.tagkind) Hashtbl.t;
 
-  (* to reset after each function, function scope *)
+  (* to reset after each function (because labels have a function scope) *)
   mutable labels:   (string, usedef) Hashtbl.t;
   (* block scope *)
   mutable local_ids: fullname list;
@@ -76,8 +76,7 @@ let warn s loc =
 let inconsistent_tag fullname loc usedef =
   let locbefore = 
     match usedef with
-    | { defined = Some loc } -> loc
-    | { used = Some loc } -> loc
+    | { defined = Some loc } | { used = Some loc } -> loc
     | _ -> raise (Impossible "must have a def or a use")
   in
   error (Inconsistent (
@@ -91,11 +90,12 @@ let check_inconsistent_or_redefined_tag env fullname tagkind loc =
     let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
     if tagkind <> oldtagkind
     then inconsistent_tag fullname loc usedef;
-    (* the tag may not be defined, as in a previous 'struct Foo x;' *)
+    (* the tag may not have be defined, as in a previous 'struct Foo x;' *)
     usedef.defined |> Common.if_some (fun locdef ->
       error (Inconsistent (spf "redefinition of '%s'" (unwrap fullname), loc,
                      "previous definition is here", locdef))
     );
+    (* now it's defined *)
     usedef.defined <- Some loc;
   with Not_found ->
     Hashtbl.add env.tags fullname ({defined = Some loc; used = None;}, tagkind)
@@ -127,7 +127,7 @@ let check_inconsistent_or_redefined_id env fullname idkind loc =
       (* the id must be defined, there is no forward use of ids
        * (enum constants, typedefs, variables)
        *)
-      | None -> raise (Impossible "ids are always defined first")
+      | None -> raise (Impossible "ids are always defined before being used")
       )
   with Not_found ->
     Hashtbl.add env.ids fullname ({defined = Some loc; used = None; }, idkind)
@@ -141,7 +141,7 @@ let check_unused_locals env =
     | { defined = Some loc; used = None } ->
         (* 5c says whether 'auto' or 'param' *) 
         warn (spf "variable declared and not used: '%s'" (unwrap fullname)) loc
-    | { defined = None; } -> raise (Impossible "local are always defined")
+    | { defined = None; } -> raise (Impossible "locals are always defined")
     | { defined = _; used = Some _ } -> ()
   )
 
@@ -207,6 +207,7 @@ let check_usedef program =
        else check_inconsistent_or_redefined_id env fullname IdIdent loc
       );
       type_ env {t = TFunction ftyp; t_loc = loc };
+      (* new function scope *)
       let env = { env with local_ids = []; labels = Hashtbl.create 11 } in
       let (_tret, (tparams, _dots)) = ftyp in
       tparams |> List.iter (fun { p_name = fullnameopt; p_loc=loc;} ->
@@ -216,7 +217,15 @@ let check_usedef program =
         );
       );
 
+      (* We could match st to a Block and avoid new scope for it, but
+       * it does not matter here. We do it correctly in parser.mly so
+       * a parameter and local with the same name will have the same
+       * blockid so we will detect if you redefine an entity even
+       * if in different scope here.
+       *)
       stmt env st;
+
+      (* check function scope *)
       check_unused_locals env;
       env.labels |> Hashtbl.iter (fun name usedef ->
         match usedef with
@@ -246,8 +255,10 @@ let check_usedef program =
     match st0.st with
     | ExprSt e -> expr env e
     | Block xs ->
+        (* new block scope *)
         let env = { env with local_ids = [] } in
         List.iter (stmt env) xs;
+        (* check block scope *)
         check_unused_locals env
     | If (e, st1, st2) ->
         expr env e;
@@ -263,6 +274,7 @@ let check_usedef program =
         stmt env st;
         expr env e
     | For (e1either, e2opt, e3opt, st) ->
+        (* new block scope again *)
         let env = { env with local_ids = [] } in
         (match e1either with
         | Left e1opt -> e1opt |> Common.if_some (expr env)
@@ -274,6 +286,7 @@ let check_usedef program =
         e2opt |> Common.if_some (expr env);
         e3opt |> Common.if_some (expr env);
         stmt env st;
+        (* check block scope *)
         check_unused_locals env
 
     | Return eopt -> eopt |> Common.if_some (expr env)

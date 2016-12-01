@@ -33,6 +33,8 @@ type env = {
 
 (* if you declare multiple times the same global, we need to make sure
  * the types are compatible. ex: extern int foo; and int foo = 1;
+ * In the same way this is also where we detect inconsistencies like
+ * int foo; void foo();
  *)
 let compatible_types t1 t2 =
   raise Todo

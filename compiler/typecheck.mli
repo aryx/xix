@@ -2,11 +2,18 @@
 type integer = int
 
 type env = {
-  ids:  (Ast.fullname, Type.t * Storage.t * Location_cpp.loc) Hashtbl.t;
+  ids:  (Ast.fullname, idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   constants: (Ast.fullname, integer) Hashtbl.t;
 }
+  and idinfo = {
+    typ: Type.t;
+    sto: Storage.t;
+    loc: Location_cpp.loc;
+    (* typed initialisers *)
+    ini: Ast.initialiser option;
+  }
 
 type error = Check.error
 
@@ -22,4 +29,4 @@ exception Error of error
  * can raise Error.
  *)
 val check_and_annotate_program: 
-  Ast.program -> env * Ast.func_def list * Ast.var_decl list
+  Ast.program -> env * Ast.func_def list

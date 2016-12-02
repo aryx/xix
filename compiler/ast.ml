@@ -166,7 +166,7 @@ and expr = {
 
 and argument = expr
 
-(* Now that we call the preprocessor first, the remaining cases
+(* Because we call the preprocessor first, the remaining cases
  * where const_expr is not a constant are basic arithmetic expressions
  * like 2 < < 3, or enum constants.
  *)
@@ -196,7 +196,7 @@ and const_expr = expr
 (* Statement *)
 (* ------------------------------------------------------------------------- *)
 type stmt = {
-  st: stmt_bis;
+  stmt: stmt_bis;
   stmt_loc: loc;
 }
   and stmt_bis = 
@@ -283,9 +283,9 @@ type struct_def = {
  (* with tarzan *)
 
 type enum_def = { 
-  e_name: fullname;
-  e_loc: loc;
-  e_constants: enum_constant list;
+  enum_name: fullname;
+  enum_loc: loc;
+  enum_constants: enum_constant list;
 }
   and enum_constant = {
   (* we also need to use 'fullname' for constants, to scope them.

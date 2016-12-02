@@ -24,7 +24,10 @@ type t =
   | TLong of sign
   | TVLong of sign
 
-  | TEnum (* of fullname? of t?  *)
+  (* less: of fullname? so stricter! or of t? any, almost never write
+   * enum X foo; always abuse int;
+   *)
+  | TEnum 
 
   (* floats *)
   | TFloat

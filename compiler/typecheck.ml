@@ -54,7 +54,6 @@ exception Error of error
 (* Constant expression evaluator *)
 (*****************************************************************************)
 
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -78,10 +77,15 @@ let rec asttype_to_type env typ0 =
 
 (* if you declare multiple times the same global, we need to make sure
  * the types are the same. ex: 'extern int foo; ... int foo = 1;'
- * This is where we detect inconsistencies like 'int foo; void foo();'
+ * This is where we detect inconsistencies like 'int foo; void foo();'.
+ * 
+ * todo: allow struct with different names if have same fields!
+ * So need to pass env. Or be stricter and forbid it? useful feature?
  *)
-let sametype t1 t2 =
+let same_types t1 t2 =
   t1 = t2
+
+    
 
 
 (* if you declare multiple times the same global, we may need to merge
@@ -90,15 +94,23 @@ let sametype t1 t2 =
 let merge_types t1 t2 =
   raise Todo
 
+(* when processing enumeration constants *)
+let max_types t1 t2 =
+  raise Todo
+
+let compatible_types t1 t2 =
+  raise Todo
+
 
 (* If you declare multiple times the same global, we need to make sure
  * the storage declaration are compatible and we need to compute the
- * final storage.
+ * final (resolved) storage.
+ * This function works for global entities (variables but also functions).
  *)
 let merge_storage_global name loc stoopt ini old =
   match stoopt, old.sto with
-    (* this is ok, a header file can declare many externs that
-     * a C file then selectively "implements"
+    (* this is ok, a header file can declare many externs and a C file
+     * can then selectively "implements" some of those declarations.
      *)
     | None, S.Extern -> S.Global
     | None, S.Global ->
@@ -116,15 +128,13 @@ let merge_storage_global name loc stoopt ini old =
 
     (* stricter: forbid auto for globals *)
     | Some S.Auto, _ ->
-      raise  (Error(E.ErrorMisc ("illegal storage class for global",loc)))
-    | Some S.Param, _ -> 
-      raise (Impossible "param is not a kwd")
-    | Some S.Global, _ -> 
-      raise (Impossible "global is not a kwd")
+      raise  (Error(E.ErrorMisc ("illegal storage class for file-scoped entity",
+                                 loc)))
+    | Some (S.Param | S.Global), _ -> 
+      raise (Impossible "param or global are not keywords")
     | _, (S.Auto | S.Param) -> 
-      raise (Impossible "globals can't be Auto")
+      raise (Impossible "globals can't be auto or param")
 
-        
     | Some S.Static, (S.Extern | S.Global) ->
       raise (Error (E.Inconsistent (
        spf "static declaration of '%s' follows non-static declaration" name,loc,
@@ -141,12 +151,6 @@ let merge_storage_global name loc stoopt ini old =
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))
         else S.Static
-
-
-
-(* when processing enumeration constants *)
-let maxtype t1 t2 =
-  raise Todo
 
 
 (*****************************************************************************)
@@ -189,7 +193,7 @@ let check_and_annotate_program ast =
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
       Hashtbl.add env.typedefs fullname (asttype_to_type env typ)
 
-    | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
+    | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }->
       raise Todo
 
     (* remember that VarDecl covers also prototypes *)
@@ -214,7 +218,7 @@ let check_and_annotate_program ast =
          let old = Hashtbl.find env.ids fullname in
 
          (* check type compatibility *)
-         if not (sametype t old.typ)
+         if not (same_types t old.typ)
          then raise (Error (E.Inconsistent (
               (* less: could dump both type using vof_type *)
                spf "redefinition of '%s' with a different type" 
@@ -241,7 +245,6 @@ let check_and_annotate_program ast =
            Hashtbl.replace env.ids fullname 
              {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
        with Not_found ->
-
          let finalsto =
            match stoopt with
            | None -> S.Global
@@ -259,6 +262,8 @@ let check_and_annotate_program ast =
     | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st } ->
       (* todo: call toplevel with Var_decl adapted from FuncDef with ini *)
       raise Todo
+
+
 
   and stmt env st0 = function
     | _ -> raise Todo

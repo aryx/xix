@@ -40,7 +40,7 @@ let error s =
 
 let mk_e e loc = { e = e; e_loc = loc }
 let mk_t t loc = { t = t; t_loc = loc }
-let mk_st st loc = { st = st; stmt_loc = loc }
+let mk_st st loc = { stmt = st; stmt_loc = loc }
 
 
 (* 'defs' contains things we lift up in the AST (struct defs, enums, typedefs).
@@ -401,15 +401,15 @@ ulstmnt:
 
  | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
      { 
-       if $5.st = Block []
+       if $5.stmt = Block []
        then Error.warn "empty if body" $5.stmt_loc;
        mk_st (If ($3, $5, mk_st (Block[]) $1)) $1
      }
  | Tif TOPar cexpr TCPar stmnt Telse stmnt 
      { 
-       if $5.st = Block []
+       if $5.stmt = Block []
        then Error.warn "empty if body" $5.stmt_loc;
-       if $7.st = Block []
+       if $7.stmt = Block []
        then Error.warn "empty else body" $7.stmt_loc;
        mk_st (If ($3, $5, $7)) $1
      }
@@ -722,9 +722,9 @@ complex_type:
  | Tenum tag_opt TOBrace enum TCBrace {
      let id = $2 in
      let fullname = id, env.block in
-     defs := (EnumDef { e_name = fullname;
-                        e_loc = $1;
-                        e_constants = $4 })::!defs;
+     defs := (EnumDef { enum_name = fullname;
+                        enum_loc = $1;
+                        enum_constants = $4 })::!defs;
      add_tag env id TagEnum;
      mk_t (Ast.TEnumName fullname) $1
  }

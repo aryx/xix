@@ -163,7 +163,7 @@ let check_usedef program =
           type_ env typ
       )
 
-    | EnumDef { e_name = fullname; e_loc = loc; e_constants = csts } ->
+    | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }->
       (* checking the tag *)
 
       let tagkind = TagEnum in
@@ -239,7 +239,7 @@ let check_usedef program =
       eopt |> Common.if_some (expr env)
 
   and stmt env st0 =
-    match st0.st with
+    match st0.stmt with
     | ExprSt e -> expr env e
     | Block xs ->
         (* new block scope *)
@@ -266,7 +266,7 @@ let check_usedef program =
         | Left e1opt -> e1opt |> Common.if_some (expr env)
         | Right decls ->
             decls |> List.iter (fun decl -> 
-              stmt env ({st = Var decl; stmt_loc = decl.v_loc }) 
+              stmt env ({stmt = Var decl; stmt_loc = decl.v_loc }) 
             )
         );
         e2opt |> Common.if_some (expr env);

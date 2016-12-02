@@ -217,7 +217,7 @@ and vof_logicalOp =
   | AndLog -> Ocaml.VSum (("AndLog", []))
   | OrLog -> Ocaml.VSum (("OrLog", []))
   
-let rec vof_stmt { st = v_s; stmt_loc = v_stmt_loc } =
+let rec vof_stmt { stmt = v_s; stmt_loc = v_stmt_loc } =
   if !show_all_pos
   then
   let bnds = [] in
@@ -225,7 +225,7 @@ let rec vof_stmt { st = v_s; stmt_loc = v_stmt_loc } =
   let bnd = ("stmt_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_stmt_bis v_s in
-  let bnd = ("st", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let bnd = ("stmt", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   else vof_stmt_bis v_s
 and vof_stmt_bis =
   function
@@ -360,19 +360,19 @@ and
   
 let rec
   vof_enum_def {
-                 e_name = v_e_name;
-                 e_loc = v_e_loc;
-                 e_constants = v_e_constants
+                 enum_name = v_e_name;
+                 enum_loc = v_e_loc;
+                 enum_constants = v_e_constants
                } =
   let bnds = [] in
   let arg = Ocaml.vof_list vof_enum_constant v_e_constants in
-  let bnd = ("e_constants", arg) in
+  let bnd = ("enum_constants", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_loc v_e_loc in
-  let bnd = ("e_loc", arg) in
+  let bnd = ("enum_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_fullname v_e_name in
-  let bnd = ("e_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let bnd = ("enum_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 
 
 and

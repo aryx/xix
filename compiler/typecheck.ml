@@ -11,7 +11,7 @@ module E = Check
 (*****************************************************************************)
 (* This module assigns a final (resolved) type to every identifiers.
  * Typedefs are expanded, struct definitions are computed.
- * It also assigns the final storage to every identifiers.
+ * It also assigns a final storage to every identifiers.
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
  * we do not have to handle scope here. 
@@ -55,7 +55,7 @@ exception Error of error
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Helpers *)
+(* Types helpers *)
 (*****************************************************************************)
 
 (* will expand typedefs, resolve constant expressions *)
@@ -92,7 +92,8 @@ let same_types t1 t2 =
  * types. Really???
 *)
 let merge_types t1 t2 =
-  raise Todo
+  t1
+
 
 (* when processing enumeration constants *)
 let max_types t1 t2 =
@@ -101,24 +102,40 @@ let max_types t1 t2 =
 let compatible_types t1 t2 =
   raise Todo
 
+(*****************************************************************************)
+(* Storage helpers *)
+(*****************************************************************************)
 
 (* If you declare multiple times the same global, we need to make sure
- * the storage declaration are compatible and we need to compute the
+ * the storage declarations are compatible and we need to compute the
  * final (resolved) storage.
- * This function works for global entities (variables but also functions).
+ * This function works for toplevel entities (globals but also functions).
  *)
-let merge_storage_global name loc stoopt ini old =
+let merge_storage_toplevel name loc stoopt ini old =
   match stoopt, old.sto with
+    (* The None cases first *)
+  
     (* this is ok, a header file can declare many externs and a C file
      * can then selectively "implements" some of those declarations.
      *)
     | None, S.Extern -> S.Global
     | None, S.Global ->
+        (* stricter: even clang does not say anything here *)
         if ini = None
         then raise (Error (E.Inconsistent (
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))
         else S.Global
+
+    (* stricter: 5c just warns for this *)
+    | (None | Some S.Extern), S.Static ->
+      raise (Error (E.Inconsistent (
+       spf "non-static declaration of '%s' follows static declaration" name,loc,
+       "previous definition is here", old.loc)))
+    | _, (S.Auto | S.Param) -> 
+      raise (Impossible "globals can't be auto or param")
+
+    (* The Some cases *)
 
     (* stricter: useless extern *)
     | Some S.Extern, (S.Global | S.Extern) ->
@@ -126,23 +143,12 @@ let merge_storage_global name loc stoopt ini old =
         spf "useless extern declaration of '%s'" name, loc,
         "previous definition is here", old.loc)))
 
-    (* stricter: forbid auto for globals *)
     | Some S.Auto, _ ->
       raise  (Error(E.ErrorMisc ("illegal storage class for file-scoped entity",
                                  loc)))
-    | Some (S.Param | S.Global), _ -> 
-      raise (Impossible "param or global are not keywords")
-    | _, (S.Auto | S.Param) -> 
-      raise (Impossible "globals can't be auto or param")
-
     | Some S.Static, (S.Extern | S.Global) ->
       raise (Error (E.Inconsistent (
        spf "static declaration of '%s' follows non-static declaration" name,loc,
-       "previous definition is here", old.loc)))
-    (* stricter: 5c just warns for this *)
-    | (None | Some S.Extern), S.Static ->
-      raise (Error (E.Inconsistent (
-       spf "non-static declaration of '%s' follows static declaration" name,loc,
        "previous definition is here", old.loc)))
 
     | Some S.Static, S.Static ->
@@ -151,6 +157,10 @@ let merge_storage_global name loc stoopt ini old =
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))
         else S.Static
+
+    | Some (S.Global | S.Param), _ -> 
+      raise (Impossible "param or global are not keywords")
+
 
 
 (*****************************************************************************)
@@ -225,9 +235,8 @@ let check_and_annotate_program ast =
                  (unwrap fullname), loc,
                "previous definition is here", old.loc)))
          else
-           (* TODO: need merge?? *)
-           let finalt = t in
-
+           let finalt = 
+             merge_types t old.typ in
            let finalini = 
              match ini, old.ini with
              | Some x, None | None, Some x -> Some x
@@ -237,10 +246,9 @@ let check_and_annotate_program ast =
                spf "redefinition of '%s'" (unwrap fullname), loc,
                "previous definition is here", old.loc)))
            in
-
            (* check storage compatibility and compute final storage *)
            let finalsto = 
-             merge_storage_global (unwrap fullname) loc stoopt ini old in
+             merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
 
            Hashtbl.replace env.ids fullname 
              {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
@@ -251,7 +259,8 @@ let check_and_annotate_program ast =
            | Some S.Extern -> S.Extern
            | Some S.Static -> S.Static
            | Some S.Auto -> 
-             raise (Error(E.ErrorMisc ("illegal storage class for global",loc)))
+             raise (Error(E.ErrorMisc 
+                          ("illegal storage class for file-scoped entity",loc)))
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")
          in
@@ -259,14 +268,85 @@ let check_and_annotate_program ast =
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       )
 
-    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st } ->
-      (* todo: call toplevel with Var_decl adapted from FuncDef with ini *)
-      raise Todo
+    | FuncDef ({f_name=name; f_loc=loc; f_type=ftyp; 
+               f_storage=stoopt; f_body=st;} as def) ->
+      (* less: lots of code in common with Var_decl; we could factorize
+       * but a few things are different still.
+       *)
+      let t = asttype_to_type env ({t = TFunction ftyp; t_loc = loc}) in
+      let fullname = (name, 0) in
+      (* we use a fake initializer for function definitions to 
+       * be able to store those definitions in env.ids. That way
+       * we can detect function redefinitions, useless redeclarations, etc.
+       *)
+      let ini = Some { e = Id fullname; e_loc = loc } in
+
+      (try 
+         (* check for weird redeclarations *)
+         let old = Hashtbl.find env.ids fullname in
+
+         (* check type compatibility *)
+         if not (same_types t old.typ)
+         then raise (Error (E.Inconsistent (
+              (* less: could dump both type using vof_type *)
+               spf "redefinition of '%s' with a different type" 
+                 (unwrap fullname), loc,
+               "previous definition is here", old.loc)))
+         else
+           let finalt = 
+             merge_types t old.typ in
+           let finalini = 
+             match ini, old.ini with
+             | Some x, None | None, Some x -> Some x
+             | None, None -> None
+             | Some x, Some y ->
+               raise (Error (E.Inconsistent (
+               spf "redefinition of '%s'" (unwrap fullname), loc,
+               "previous definition is here", old.loc)))
+           in
+           (* check storage compatibility and compute final storage *)
+           let finalsto = 
+             merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
+
+           Hashtbl.replace env.ids fullname 
+             {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
+       with Not_found ->
+         let finalsto =
+           match stoopt with
+           | None -> S.Global
+           | Some S.Static -> S.Static
+           (* different than for VarDecl here *)
+           | Some S.Extern -> 
+             raise(Error(E.ErrorMisc("'extern' function with initializer",loc)))
+           | Some S.Auto -> 
+             raise (Error(E.ErrorMisc 
+                          ("illegal storage class for file-scoped entity",loc)))
+           | Some (S.Global | S.Param) -> 
+             raise (Impossible "global or param are not keywords")
+         in
+         Hashtbl.add env.ids fullname 
+           {typ = t; sto = finalsto; loc = loc; ini = ini }
+      );
+
+      (* TODO add params before process st!! *)
+      let (tret, (tparams, _dots)) = ftyp in
+      tparams |> List.iter (fun p ->
+        p.p_name |> Common.if_some (fun fullname ->
+          let t = asttype_to_type env p.p_type in
+          Hashtbl.add env.ids fullname 
+            {typ = t; sto = S.Param; loc = loc; ini = None }
+        )
+      );
+      (* statements with expressions annontated with types *)
+      let st = stmt env st in
+      funcs := { def with f_body = st }::!funcs;
 
 
 
-  and stmt env st0 = function
-    | _ -> raise Todo
+  and stmt env st0 =
+    (* TODO *)
+    st0
+
 
   and expr env e0 =
     (* TODO *)

@@ -19,6 +19,9 @@ open Common
  *  - stricter for grammar (see parser.mly), for instance force a specific
  *    order between the sign, qualifier, and type.
  *  - disallow implicit declarations of functions
+ *  - stricter for typechecking (see typecheck.ml), for instance
+ *    we do not support void* conversions (5c -V), and we use name
+ *    equality for typechecking structs, not field equality.
  * 
  * improvements:
  *  - we forbid more constructs: 

@@ -31,7 +31,11 @@ let rec vof_t =
   | TFloat -> Ocaml.VSum (("TFloat", []))
   | TDouble -> Ocaml.VSum (("TDouble", []))
   | TPointer v1 -> let v1 = vof_t v1 in Ocaml.VSum (("TPointer", [ v1 ]))
-  | TArray v1 -> let v1 = vof_t v1 in Ocaml.VSum (("TArray", [ v1 ]))
+  | TArray ((v1, v2)) ->
+      let v1 = Ocaml.vof_option Ocaml.vof_int v1
+      and v2 = vof_t v2
+      in Ocaml.VSum (("TArray", [ v1; v2 ]))
+
   | TFunc ((v1, v2, v3)) ->
       let v1 = vof_t v1
       and v2 = Ocaml.vof_list vof_t v2

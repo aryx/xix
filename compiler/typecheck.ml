@@ -17,6 +17,12 @@ module E = Check
  * we do not have to handle scope here. 
  * Thanks to check.ml we do not have to check for inconcistencies or
  * redefinition of tags. We can assume everything is fine.
+ * 
+ * limitations compared to 5c:
+ *  - no void* conversions 
+ *    (clang does not either)
+ *  - no struct equality using field equality. I use name equality.
+ *    (who uses that anyway?)
  *)
 
 (*****************************************************************************)
@@ -57,12 +63,11 @@ exception Error of error
 (* if you declare multiple times the same global, we need to make sure
  * the types are the same. ex: 'extern int foo; ... int foo = 1;'
  * This is where we detect inconsistencies like 'int foo; void foo();'.
- * 
- * todo: allow struct with different names if have same fields!
- * So need to pass env. Or be stricter and forbid it? useful feature?
  *)
 let same_types t1 t2 =
   t1 = t2
+  (* stricter: void* can not match any pointer *)
+  (* stricter: struct equality by name, not fields *)
    
 
 

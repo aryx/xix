@@ -36,8 +36,10 @@ type t =
   (* Composite *)
 
   | TPointer of t
-  (* Why not unsugar to TIndirect? for better error messages? *)
-  | TArray of t (* no size here *)
+  (* Why not unsugar to TPointer? for better error messages! and because
+   * the type system checks for array incompatibilities. int[2] != int[3].
+   *)
+  | TArray of int option * t
 
   | TFunc of t * t list * bool (* varargs '...' *)
 

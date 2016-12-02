@@ -38,7 +38,7 @@ type env = {
     typ: Type.t;
     sto: Storage.t;
     loc: Location_cpp.loc;
-    (* typed initialisers *)
+    (* typed initialisers (fake expression for function definitions) *)
     ini: Ast.initialiser option;
   }
 
@@ -51,29 +51,8 @@ let string_of_error err =
 exception Error of error
 
 (*****************************************************************************)
-(* Constant expression evaluator *)
-(*****************************************************************************)
-
-(*****************************************************************************)
 (* Types helpers *)
 (*****************************************************************************)
-
-(* will expand typedefs, resolve constant expressions *)
-let rec asttype_to_type env typ0 =
-  match typ0.t with
-  | TBase t -> t
-  | TPointer typ -> Type.TPointer (asttype_to_type env typ)
-  | TArray (eopt, typ) ->
-      raise Todo
-  | TStructName (su, fullname) -> Type.TStructName (su, fullname)
-  | TEnumName fullname ->
-      raise Todo
-  | TTypeName fullname -> Hashtbl.find env.typedefs fullname
-  | TFunction (tret, (tparams, tdots)) ->
-    Type.TFunc (asttype_to_type env tret,
-                tparams |> List.map (fun p -> asttype_to_type env p.p_type),
-                tdots)
-
 
 (* if you declare multiple times the same global, we need to make sure
  * the types are the same. ex: 'extern int foo; ... int foo = 1;'
@@ -84,8 +63,7 @@ let rec asttype_to_type env typ0 =
  *)
 let same_types t1 t2 =
   t1 = t2
-
-    
+   
 
 
 (* if you declare multiple times the same global, we may need to merge
@@ -161,7 +139,49 @@ let merge_storage_toplevel name loc stoopt ini old =
     | Some (S.Global | S.Param), _ -> 
       raise (Impossible "param or global are not keywords")
 
+(*****************************************************************************)
+(* Constant expression evaluator *)
+(*****************************************************************************)
 
+(*****************************************************************************)
+(* AST Types to Types.t *)
+(*****************************************************************************)
+
+(* will expand typedefs, resolve constant expressions *)
+let rec type_ env typ0 =
+  match typ0.t with
+  | TBase t -> t
+  | TPointer typ -> Type.TPointer (type_ env typ)
+  | TArray (eopt, typ) ->
+      raise Todo
+  | TStructName (su, fullname) -> Type.TStructName (su, fullname)
+  | TEnumName fullname ->
+      raise Todo
+  | TTypeName fullname -> Hashtbl.find env.typedefs fullname
+  | TFunction (tret, (tparams, tdots)) ->
+    Type.TFunc (type_ env tret, 
+                tparams |> List.map (fun p -> type_ env p.p_type), tdots)
+
+(*****************************************************************************)
+(* Expression typechecking *)
+(*****************************************************************************)
+let rec expr env e0 =
+    (* TODO *)
+    e0
+
+and expropt env eopt = 
+    match eopt with
+    | None -> None
+    | Some e -> Some (expr env e)
+
+
+(*****************************************************************************)
+(* Statement *)
+(*****************************************************************************)
+(* boilerplate mostly *)
+let rec stmt env st0 =
+    (* TODO *)
+    st0
 
 (*****************************************************************************)
 (* Entry point *)
@@ -197,11 +217,11 @@ let check_and_annotate_program ast =
     | StructDef { s_kind = su; s_name = fullname; s_loc = loc; s_flds = flds }->
       Hashtbl.add env.structs fullname 
         (su, flds |> List.map 
-            (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
-              (name, asttype_to_type env typ)))
+            (fun {fld_name = name; fld_loc=_; fld_type = typ } -> 
+              (name, type_ env typ)))
 
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
-      Hashtbl.add env.typedefs fullname (asttype_to_type env typ)
+      Hashtbl.add env.typedefs fullname (type_ env typ)
 
     | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }->
       raise Todo
@@ -209,7 +229,7 @@ let check_and_annotate_program ast =
     (* remember that VarDecl covers also prototypes *)
     | VarDecl { v_name = fullname; v_loc = loc; v_type = typ;
                 v_storage = stoopt; v_init = eopt} ->
-      let t = asttype_to_type env typ in
+      let t = type_ env typ in
       let ini = expropt env eopt in
 
       (* step1: check for weird declarations *)
@@ -273,7 +293,7 @@ let check_and_annotate_program ast =
       (* less: lots of code in common with Var_decl; we could factorize
        * but a few things are different still.
        *)
-      let t = asttype_to_type env ({t = TFunction ftyp; t_loc = loc}) in
+      let t = type_ env ({t = TFunction ftyp; t_loc = loc}) in
       let fullname = (name, 0) in
       (* we use a fake initializer for function definitions to 
        * be able to store those definitions in env.ids. That way
@@ -328,34 +348,19 @@ let check_and_annotate_program ast =
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       );
 
-      (* TODO add params before process st!! *)
+      (* add params in environment before process st *)
       let (tret, (tparams, _dots)) = ftyp in
       tparams |> List.iter (fun p ->
         p.p_name |> Common.if_some (fun fullname ->
-          let t = asttype_to_type env p.p_type in
           Hashtbl.add env.ids fullname 
-            {typ = t; sto = S.Param; loc = loc; ini = None }
+            {typ = type_ env p.p_type; sto = S.Param; loc = loc; ini = None }
         )
       );
-      (* statements with expressions annontated with types *)
+      (* the expressions inside the statements are now annontated with types *)
       let st = stmt env st in
       funcs := { def with f_body = st }::!funcs;
-
-
-
-  and stmt env st0 =
-    (* TODO *)
-    st0
-
-
-  and expr env e0 =
-    (* TODO *)
-    e0
-  and expropt env eopt = 
-    match eopt with
-    | None -> None
-    | Some e -> Some (expr env e)
   in
+
 
   let env = {
     ids = Hashtbl.create 101;

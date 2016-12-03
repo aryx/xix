@@ -9,9 +9,14 @@ module E = Check
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* This module assigns a final (resolved) type to every identifiers.
- * Typedefs are expanded, struct definitions are computed.
- * It also assigns a final storage to every identifiers.
+(* This module does many things:
+ *  - it assigns a final (resolved) type to every identifiers
+ *  - it expands typedefs
+ *  - it assigns a final storage to every identifiers
+ *  - it assigns at type to every expressions
+ *  - it returns a typed AST and also transforms this AST
+ *    (enums are replaced by their value, constant string replaces
+ *     by a reference, etc)
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
  * we do not have to handle scope here. 
@@ -82,6 +87,11 @@ let merge_types t1 t2 =
 let max_types t1 t2 =
   raise Todo
 
+(* when you apply an operation between two expressions, this
+ * expression can be valid even if the types of those two expressions
+ * are not the same. However, they must be "compatible". 
+ * The compatibility policy depends on the operation of the expression.
+ *)
 let compatible_types t1 t2 =
   raise Todo
 
@@ -152,7 +162,7 @@ let merge_storage_toplevel name loc stoopt ini old =
 (* AST Types to Types.t *)
 (*****************************************************************************)
 
-(* will expand typedefs, resolve constant expressions *)
+(* Expand typedefs and resolve constant expressions. *)
 let rec type_ env typ0 =
   match typ0.t with
   | TBase t -> t
@@ -170,6 +180,8 @@ let rec type_ env typ0 =
 (*****************************************************************************)
 (* Expression typechecking *)
 (*****************************************************************************)
+
+
 let rec expr env e0 =
     (* TODO *)
     e0
@@ -193,7 +205,6 @@ let rec stmt env st0 =
 (*****************************************************************************)
 
 (* todo:
- *  - tmerge to compare decl to def.
  *  - evaluate const_expr  "enum not a constant: %s"
  *  - stuff done by 5c at parsing time:
  *    * type of Cast
@@ -201,17 +212,6 @@ let rec stmt env st0 =
  *    * type of Return
  *    * type of identifier
  *    * type of constants (integers, floats, strings)
- *  - adjust storage when have more information
- *     (also if initializer => extern to global)
- * 
- *  - check if redeclare things (which is different from refining things)
- *    for instance two parameters with same name, if two locals with same name.
- *    or if redefine same structure in same scope, or conflicting sukind
- *    for the same tag.
- *    (or do that in check.ml??)
- *  - can define enum with same name than global entity? there would
- *    have the same blockid but will get ambiguity then.
- *    (or do that in check.ml??)
  *)
 
 let check_and_annotate_program ast =

@@ -115,15 +115,16 @@ type type_ = {
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
-(* todo: mutable e_type: Type.t? *)
 and expr = { 
   e: expr_bis;
   e_loc: loc;
+  (* todo: mutable e_type: Type.t? mutable lvalue: bool? *)
 }
   and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
   | Int of string * Type.sign * Storage.intsize
   | Float of string * Storage.floatsize
+  (* codegen: converted to Id after typechecking *)
   | String of string * Storage.stringsize
 
   (* Global, local, parameter, enum constant (can be scoped), function *)

@@ -13,8 +13,6 @@ module L = Location_cpp
  *  - no L"" and L'' unicode strings or characters
  *  - no \x hexadecimal escape sequence in strings or characters
  *  - no unicode identifier
- * todo: have a (large) integer and (large) double for the constant?
- *  Int64.t? if unsigned long long constant? enough? overflow in int64_of_str?
  *)
 
 (*****************************************************************************)

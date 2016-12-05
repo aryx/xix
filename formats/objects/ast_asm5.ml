@@ -4,8 +4,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(*
- * Abstract Syntax Tree (AST) for the assembly language supported by 5a
+(* Abstract Syntax Tree (AST) for the assembly language supported by 5a,
  * which we call Asm5.
  *
  * Note that in Plan 9 object files are mostly the serialized form of 
@@ -30,7 +29,7 @@ open Common
 (* ------------------------------------------------------------------------- *)
 
 (* (global) line# *)
-type pos = int
+type loc = int (* Same than Location_cpp.loc *)
 
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
 type integer = int 
@@ -48,7 +47,7 @@ type entity = {
    * mutable (ugly?) modifed by linker in naming phase.
    *)
   mutable priv: int option; 
-  (* for safe linking, generated only by 5c, not 5a *)
+  (* for safe linking (generated only by 5c, not 5a) *)
   signature: int option;
 }
 (* with tarzan *)
@@ -217,5 +216,5 @@ type line =
   (* less: PragmaLibDirective of string *)
 (* with tarzan *)
 
-type program = (line * pos) list
+type program = (line * loc) list
  (* with tarzan *)

@@ -239,7 +239,7 @@ let check_usedef program =
       eopt |> Common.if_some (expr env)
 
   and stmt env st0 =
-    match st0.stmt with
+    match st0.s with
     | ExprSt e -> expr env e
     | Block xs ->
         (* new block scope *)
@@ -266,7 +266,7 @@ let check_usedef program =
         | Left e1opt -> e1opt |> Common.if_some (expr env)
         | Right decls ->
             decls |> List.iter (fun decl -> 
-              stmt env ({stmt = Var decl; stmt_loc = decl.v_loc }) 
+              stmt env ({s = Var decl; s_loc = decl.v_loc }) 
             )
         );
         e2opt |> Common.if_some (expr env);
@@ -283,22 +283,21 @@ let check_usedef program =
            let usedef = Hashtbl.find env.labels name in
            usedef.defined |> Common.if_some (fun locprev ->
              error (Inconsistent (spf "redefinition of label '%s'" name, 
-                                  st0.stmt_loc,
+                                  st0.s_loc,
                                   "previous definition is here", locprev))
            );
-           usedef.defined <- Some st0.stmt_loc;
+           usedef.defined <- Some st0.s_loc;
          with Not_found ->
            Hashtbl.add env.labels name 
-             {defined = Some st0.stmt_loc; used = None}
+             {defined = Some st0.s_loc; used = None}
         );
         stmt env st;
     | Goto name ->
         (try 
            let usedef = Hashtbl.find env.labels name in
-           usedef.used <- Some st0.stmt_loc
+           usedef.used <- Some st0.s_loc
          with Not_found ->
-           Hashtbl.add env.labels name
-             { defined = None; used = Some st0.stmt_loc }
+           Hashtbl.add env.labels name { defined = None; used = Some st0.s_loc }
         )
     | Default st -> stmt env st
 

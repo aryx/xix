@@ -40,7 +40,7 @@ let error s =
 
 let mk_e e loc = { e = e; e_loc = loc }
 let mk_t t loc = { t = t; t_loc = loc }
-let mk_st st loc = { stmt = st; stmt_loc = loc }
+let mk_st st loc = { s = st; s_loc = loc }
 
 
 (* 'defs' contains things we lift up in the AST (struct defs, enums, typedefs).
@@ -401,16 +401,16 @@ ulstmnt:
 
  | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
      { 
-       if $5.stmt = Block []
-       then Error.warn "empty if body" $5.stmt_loc;
+       if $5.s = Block []
+       then Error.warn "empty if body" $5.s_loc;
        mk_st (If ($3, $5, mk_st (Block[]) $1)) $1
      }
  | Tif TOPar cexpr TCPar stmnt Telse stmnt 
      { 
-       if $5.stmt = Block []
-       then Error.warn "empty if body" $5.stmt_loc;
-       if $7.stmt = Block []
-       then Error.warn "empty else body" $7.stmt_loc;
+       if $5.s = Block []
+       then Error.warn "empty if body" $5.s_loc;
+       if $7.s = Block []
+       then Error.warn "empty else body" $7.s_loc;
        mk_st (If ($3, $5, $7)) $1
      }
  /*(* stricter: I impose a block, not any stmnt *)*/

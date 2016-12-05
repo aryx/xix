@@ -217,15 +217,15 @@ and vof_logicalOp =
   | AndLog -> Ocaml.VSum (("AndLog", []))
   | OrLog -> Ocaml.VSum (("OrLog", []))
   
-let rec vof_stmt { stmt = v_s; stmt_loc = v_stmt_loc } =
+let rec vof_stmt { s = v_s; s_loc = v_stmt_loc } =
   if !show_all_pos
   then
   let bnds = [] in
   let arg = vof_loc v_stmt_loc in
-  let bnd = ("stmt_loc", arg) in
+  let bnd = ("s_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_stmt_bis v_s in
-  let bnd = ("stmt", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let bnd = ("s", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   else vof_stmt_bis v_s
 and vof_stmt_bis =
   function

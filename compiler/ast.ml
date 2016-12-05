@@ -202,8 +202,8 @@ and const_expr = expr
 (* Statement *)
 (* ------------------------------------------------------------------------- *)
 type stmt = {
-  stmt: stmt_bis;
-  stmt_loc: loc;
+  s: stmt_bis;
+  s_loc: loc;
 }
   and stmt_bis = 
   | ExprSt of expr

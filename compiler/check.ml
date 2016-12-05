@@ -143,7 +143,7 @@ let check_unused_locals env =
 let check_usedef program =
 
   let rec toplevel env = function
-    | StructDef { s_kind = su; s_name = fullname; s_loc = loc; s_flds = flds }->
+    | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
       (* checking the tag *)
 
       let tagkind = Ast.tagkind_of_su su in

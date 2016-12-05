@@ -269,11 +269,12 @@ type func_def = {
 }
  (* with tarzan *)
 
+(* struct and union *)
 type struct_def = {
-  s_name: fullname;
-  s_loc: loc;
-  s_kind: Type.struct_kind;
-  s_flds: field_def list;
+  su_name: fullname;
+  su_loc: loc;
+  su_kind: Type.struct_kind;
+  su_flds: field_def list;
 }
   (* We could merge with var_decl, but fields have no storage, and
    * they can have bitfields.

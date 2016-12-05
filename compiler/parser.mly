@@ -700,10 +700,10 @@ complex_type:
      let id = $2 in
      let fullname = id, env.block in
      (* check if already defined? or conflicting su? do that in check.ml *)
-     defs := (StructDef { s_name = fullname; 
-                          s_loc = loc;
-                          s_kind = su; 
-                          s_flds = $3 })::!defs;
+     defs := (StructDef { su_name = fullname; 
+                          su_loc = loc;
+                          su_kind = su; 
+                          su_flds = $3 })::!defs;
      add_tag env id (Ast.tagkind_of_su su);
      mk_t (Ast.TStructName (su, fullname)) loc
  }

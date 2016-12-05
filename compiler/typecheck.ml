@@ -42,6 +42,7 @@ type env = {
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
+  (* less: Ast.expr where but be only either Int | Float *)
   constants: (Ast.fullname, integer) Hashtbl.t;
   (* less: enum? fullname -> Type.t but only basic? *)
 }
@@ -219,7 +220,7 @@ let check_and_annotate_program ast =
   let funcs = ref [] in
 
   let rec toplevel env = function
-    | StructDef { s_kind = su; s_name = fullname; s_loc = loc; s_flds = flds }->
+    | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
       Hashtbl.add env.structs fullname 
         (su, flds |> List.map 
             (fun {fld_name = name; fld_loc=_; fld_type = typ } -> 

@@ -324,23 +324,23 @@ let vof_func_def {
 
 let rec
   vof_struct_def {
-                   s_name = v_s_name;
-                   s_loc = v_s_loc;
-                   s_kind = v_s_kind;
-                   s_flds = v_s_flds
+                   su_name = v_s_name;
+                   su_loc = v_s_loc;
+                   su_kind = v_s_kind;
+                   su_flds = v_s_flds
                  } =
   let bnds = [] in
   let arg = Ocaml.vof_list vof_field_def v_s_flds in
-  let bnd = ("s_flds", arg) in
+  let bnd = ("su_flds", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_struct_kind v_s_kind in
-  let bnd = ("s_kind", arg) in
+  let bnd = ("su_kind", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_loc v_s_loc in
-  let bnd = ("s_loc", arg) in
+  let bnd = ("su_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_fullname v_s_name in
-  let bnd = ("s_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let bnd = ("su_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   
 and
   vof_field_def {

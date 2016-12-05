@@ -12,10 +12,6 @@ module L = Location_cpp
  * todo:
  *  - special bits
  *  - advanced instructions
- * 
- * less: could make sure 
- *  - TEXT size is multiple of 4
- *  - DATA size is > 0
  *)
 
 (*****************************************************************************)

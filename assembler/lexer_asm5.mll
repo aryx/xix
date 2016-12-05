@@ -10,8 +10,8 @@ module L = Location_cpp
 (* Prelude *)
 (*****************************************************************************)
 (* Limitations compared to 5a:
- *  - does not handle unicode
- *  - does not recognize the uU lL suffix 
+ *  - no unicode support
+ *  - no uU lL suffix
  *    (but was skipped by 5a anyway)
  *)
 

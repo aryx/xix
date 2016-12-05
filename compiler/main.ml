@@ -4,7 +4,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5c, the Plan 9 C compiler with ARM backend.
+(* An OCaml port of 5c, the Plan 9 C compiler for ARM.
  *
  * Main limitations compared to 5c:
  *  - no unicode support
@@ -12,10 +12,10 @@ open Common
  *    (but you should use mk anyway)
  *  - can not compile from stdin
  *    (but who uses that?)
- *  - no error recovery, we stop at the first error
- *    (but compiler now fast enough and errors have a domino effect anyway)
  *  - no -. to remove auto search for header in current directory
  *    (but who uses that?)
+ *  - no error recovery, we stop at the first error (except in check.ml)
+ *    (but compiler now fast enough and errors have a domino effect anyway)
  *  - stricter for grammar (see parser.mly), for instance force a specific
  *    order between the sign, qualifier, and type.
  *  - disallow implicit declarations of functions
@@ -28,7 +28,7 @@ open Common
  *     * typedef and initializers, 
  *     * typedef function definitions, 
  *     * three dots parameter in the middle, 
- *     * more (see tests/)
+ *     * far more (see tests/)
  *  - better error location (no use of vague nearln) and
  *    better error messages (a la clang)
  * 

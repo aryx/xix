@@ -26,6 +26,9 @@
  * and resolve the scope of tags.
  * 
  * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
+ * 
+ * todo: have a (large) integer and (large) double for Int and Float?
+ * Int64.t? if unsigned long long constant? enough? overflow in int64_of_str?
  *)
 
 (*****************************************************************************)
@@ -149,7 +152,7 @@ and expr = {
 
   | Postfix of expr * fixOp
   | Prefix of fixOp * expr
-  (* contains GetRef and Deref!!  *)
+  (* contains GetRef and Deref!! pointers!  *)
   | Unary of unaryOp * expr
   | Binary of expr * binaryOp * expr
 
@@ -176,7 +179,9 @@ and const_expr = expr
   and unaryOp  = 
     (* less: could be lift up; those are really important operators *)
     | GetRef | DeRef 
-    | UnPlus |  UnMinus | Tilde | Not 
+    (* codegen: converted to binary operation with 0 (-x => 0-x) *)
+    | UnPlus |  UnMinus 
+    | Tilde | Not 
   and assignOp = SimpleAssign | OpAssign of arithOp
   and fixOp    = Dec | Inc
 

@@ -22,6 +22,12 @@ open Common
  *  - stricter for typechecking (see typecheck.ml), for instance
  *    we do not support void* conversions (5c -V), and we use name
  *    equality for typechecking structs, not field equality.
+ *  - no support for certain kencc extensions: 
+ *     * unnamed structure element
+ *       (confusing anyway)
+ *     * typestr
+ *       (seems dead)
+
  * 
  * improvements:
  *  - we forbid more constructs: 

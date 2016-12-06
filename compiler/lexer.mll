@@ -13,6 +13,9 @@ module L = Location_cpp
  *  - no L"" and L'' unicode strings or characters
  *  - no \x hexadecimal escape sequence in strings or characters
  *  - no unicode identifier
+ *  - no typestr
+ *    (seems dead extension anyway)
+ *  - no signof
  *)
 
 (*****************************************************************************)

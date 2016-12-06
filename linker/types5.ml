@@ -5,7 +5,7 @@ module A = Ast_asm5
 module T = Types
 
 (* a single line number is not enough anymore, we need also the filename *)
-type loc = Common.filename * Ast_asm5.pos
+type loc = Common.filename * Ast_asm5.loc
  (* with tarzan *)
 
 (* Split Asm5 instructions in code vs data.

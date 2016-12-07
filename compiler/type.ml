@@ -3,23 +3,19 @@
 type blockid = int
 type fullname = string * blockid
 
-type sign = Signed | Unsigned
-
-type struct_kind = Struct | Union
-
-(* Note that there is no TTypedef here; 
- * The typedef expansion has already been done.
+(* Note that there is no Typedef below. The typechecker
+ * expands typedefs. There is no Enum either, because
+ * variables using enum (as in 'enum Foo x;') gets their type
+ * expanded to an integer type.
+ *
  * less: put qualifier here?
- * todoext: Bool! with strict bool checking
+ * todoext: Bool! with strict bool checking. 
+ * todoext?: Enum of fullname with stricter checking.
  *)
 type t =
-  (* Basic *)
   | Void
-  (* integers *)
   | I of integer_type
-  (* floats *)
   | F of float_type
-  (* Composite *)
   | Pointer of t
   (* Why not unsugar to Pointer? for better error messages! and because
    * the type system checks for array incompatibilities. int[2] != int[3].
@@ -27,9 +23,6 @@ type t =
   | Array of int option * t
   | Func of t * t list * bool (* varargs '...' *)
   | StructName of struct_kind * fullname
-  (* less: TEnum of fullname? so stricter! or of t? any, almost never write
-   * enum X foo; always abuse int;
-   *)
 
   and integer_type =
   | Char of sign
@@ -42,6 +35,9 @@ type t =
   | Float
   | Double
 
+ and sign = Signed | Unsigned
+ and struct_kind = Struct | Union
+
  (* with tarzan *)
 
 
@@ -53,9 +49,8 @@ type qualifier =
   (* less: unsupported: | Restrict | Inline *)
  (* with tarzan *)
 
+(* todo: bitfield *)
 type structdef = (string * t) list
-type enumdef = Enum (* less: of intsize? or float! *)
-
  (* with tarzan *)
 
 let int = I (Int (Signed))

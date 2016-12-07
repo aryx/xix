@@ -154,7 +154,7 @@ let check_usedef program =
       let hflds = Hashtbl.create 11 in
       flds |> List.iter 
        (fun {fld_name = name; fld_loc = loc; fld_type = typ} ->
-          (* stricter: 5c does not report, clang does *)
+          (* stricter: 5c reports at use time, clang does immediately *)
           if Hashtbl.mem hflds name
           then error (Inconsistent (spf "duplicate member '%s'" name, loc,
                                     "previous declaration is here", 

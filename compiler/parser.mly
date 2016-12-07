@@ -865,7 +865,7 @@ qualifiers:
 /*(*1 Struct/union/enum body *)*/
 /*(*************************************************************************)*/
 
-/*(* a structure does not define a new scope *)*/
+/*(* note that a structure does not define a new scope *)*/
 sbody: TOBrace edecl TCBrace { $2 }
 
 edecl:
@@ -882,6 +882,7 @@ edecl_elem: qualifier_and_type edlist
    )
  }
 
+/*(* todo: bitfield *)*/
 edlist:
  | edecor               { [$1] }
  | edlist TComma edecor { $1 @ [$3] }

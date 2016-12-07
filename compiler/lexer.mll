@@ -11,12 +11,16 @@ module T = Type
 (* Prelude *)
 (*****************************************************************************)
 (* Limitations compared to 5c:
- *  - no L"" and L'' unicode strings or characters
+ *  - no L"" and L'' unicode strings or unicode characters
  *  - no \x hexadecimal escape sequence in strings or characters
  *  - no unicode identifier
  *  - no typestr
  *    (seems dead extension anyway)
  *  - no signof
+ * 
+ * todo: handle big numbers here? or let later phases do that?
+ *  check for overflow, truncation, sign-extended character constant, etc
+ *  see yyerror and warn in Compiler.nw
  *)
 
 (*****************************************************************************)
@@ -48,7 +52,6 @@ let floattype_of_suffix s =
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)
 
 (* dup: lexer_asm5.mll *)
-(* stricter: we disallow \ with unknown character *)
 let code_of_escape_char c =
   match c with
   | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
@@ -60,6 +63,7 @@ let code_of_escape_char c =
   | 'a' -> 0x07 | 'v' -> 0x0b 
 
   | '\\' | '\'' | '"' -> Char.code c 
+  (* stricter: we disallow \ with unknown character *)
   | _ -> error "unknown escape sequence"
 
 (* dup: lexer_asm5.mll *)
@@ -98,26 +102,27 @@ rule token = parse
   | "+" { TPlus (loc()) } | "-" { TMinus (loc()) }
   | "*" { TMul  (loc()) } | "/" { TDiv   (loc()) } | "%" { TMod (loc()) }
 
-  | "="  { TEq   (loc()) }
-  | "==" { TEqEq (loc()) }  | "!=" { TBangEq (loc()) }
   | "&"  { TAnd  (loc()) }  | "|"  { TOr     (loc()) } | "^" { TXor (loc()) }
+  | "<<" { TInfInf (* TLsh *) (loc()) } | ">>" { TSupSup (* TRsh *) (loc()) }
   | "~"  { TTilde  (loc()) }
+
   | "&&" { TAndAnd (loc()) } | "||" { TOrOr (loc()) }
   | "!"  { TBang   (loc()) }
 
   | "++" { TPlusPlus (loc()) } | "--" { TMinusMinus (loc()) }
 
-  | "<"  { TInf   (loc()) } | ">"  { TSup   (loc()) }
-  | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
-  | "<<" { TInfInf (* TLsh *) (loc()) } | ">>" { TSupSup (* TRsh *) (loc()) }
-
+  | "="  { TEq   (loc()) }
+  | "==" { TEqEq (loc()) }  | "!=" { TBangEq (loc()) }
 
   | "+=" { TOpEq (loc(), A.Plus) } | "-=" { TOpEq (loc(), A.Minus) }
   | "*=" { TOpEq (loc(), A.Mul) }  | "/=" { TOpEq (loc(), A.Div) }
   | "%=" { TOpEq (loc(), A.Mod) }
-  | ">>="{ TOpEq (loc(), A.ShiftRight) } | "<<=" { TOpEq (loc(), A.ShiftLeft) }
   | "&=" { TOpEq (loc(), A.And) }        | "|="  { TOpEq (loc(), A.Or) }
   | "^=" { TOpEq (loc(), A.Xor) }
+  | ">>="{ TOpEq (loc(), A.ShiftRight) } | "<<=" { TOpEq (loc(), A.ShiftLeft) }
+
+  | "<"  { TInf   (loc()) } | ">"  { TSup   (loc()) }
+  | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
 
   | "(" { TOPar   (loc()) } | ")" { TCPar   (loc()) }
   | "{" { TOBrace (loc()) } | "}" { TCBrace (loc()) }
@@ -141,12 +146,12 @@ rule token = parse
   | ['0'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
       { TIConst (loc(), Lexing.lexeme lexbuf, inttype_of_suffix unsigned long)}
 
-
   (* stricter: I impose some digit+ after '.' and after 'e' *)
   | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) as s 
       (['F''f']* as float)
      { TFConst (loc(), s, floattype_of_suffix float) }
 
+  (* special regexp for better error message *)
   | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
      { error "malformed fp constant exponent" }
 
@@ -163,8 +168,10 @@ rule token = parse
   | (letter | '_') (letter | digit | '_')* {
       let s = Lexing.lexeme lexbuf in
       match s with
-      | "auto" -> Tauto (loc()) | "static" -> Tstatic (loc()) 
+      | "static" -> Tstatic (loc()) 
       | "extern" -> Textern (loc())
+      (* we could forbid those constructs; they are not really useful *)
+      | "auto" -> Tauto (loc()) 
       | "register" -> Tregister (loc())
 
       | "const" -> Tconst (loc()) | "volatile" -> Tvolatile (loc())
@@ -174,6 +181,7 @@ rule token = parse
       | "char" -> Tchar (loc()) | "short" -> Tshort (loc()) 
       | "int"  -> Tint  (loc()) | "long"  -> Tlong  (loc())
       | "float"  -> Tfloat  (loc()) | "double"   -> Tdouble   (loc())
+
       | "signed" -> Tsigned (loc()) | "unsigned" -> Tunsigned (loc())
 
       | "struct" -> Tstruct (loc()) | "union" -> Tunion (loc()) 
@@ -188,12 +196,12 @@ rule token = parse
       | "return" -> Treturn (loc()) | "goto" -> Tgoto (loc())
 
       | "sizeof" -> Tsizeof (loc())
-
       (* less: USED/SET here? or manage via symbol table *)
 
       | _ ->
         if Hashtbl.mem Globals.hids s
         then 
+          (* typedef trick, because ambiguity in C grammar *)
           (match Hashtbl.find Globals.hids s with
           | A.IdIdent | A.IdEnumConstant -> TName (loc(), s)
           | A.IdTypedef -> TTypeName (loc(), s)

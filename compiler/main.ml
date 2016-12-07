@@ -27,7 +27,9 @@ open Common
  *       (confusing anyway)
  *     * typestr
  *       (seems dead)
-
+ *  - no support for certain C features:
+ *     * enum float
+ * 
  * 
  * improvements:
  *  - we forbid more constructs: 
@@ -82,6 +84,7 @@ let do_action s xs =
 let compile (defs, include_paths) infile outfile =
 
   let ast = Parse.parse (defs, include_paths) infile in
+
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_any (Ast.Program ast));
 

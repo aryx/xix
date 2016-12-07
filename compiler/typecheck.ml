@@ -94,13 +94,96 @@ let merge_types t1 t2 =
 let max_types t1 t2 =
   raise Todo
 
+
+
 (* when you apply an operation between two expressions, this
  * expression can be valid even if the types of those two expressions
  * are not the same. However, they must be "compatible". 
  * The compatibility policy depends on the operation of the expression.
  *)
-let compatible_types t1 t2 =
-  raise Todo
+
+let check_compatible_binary op t1 t2 loc =
+  match op with
+  | Arith Plus ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _)
+    | T.Pointer _, T.I _
+    | T.I _, T.Pointer _
+      -> ()
+    (* you can not add 2 pointers *)
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Arith Minus ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _)
+    (* you can not sub a pointer to an int (but can sub an int to a pointer) *)
+    | T.Pointer _, T.I _
+      -> ()
+    (* you can sub 2 pointers *)
+    | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Arith (Mul | Div) ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Arith (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) ->
+    (match t1, t2 with
+    | (T.I _), (T.I _ ) 
+      -> ()
+    (* stricter: I do not allow T.Int _ with T.F _, 5c does (clang does not) *)
+    | _ -> type_error2 t1 t2 loc
+    )
+
+  | Logical (Eq | NotEq  | Inf | Sup | InfEq | SupEq) ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
+    | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
+    (* you can not compare two structures! no deep equality (nor arrays) *)
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Logical (AndLog | OrLog) ->
+    (* stricter? should impose bool! *)
+
+    (match t1 with
+    | (T.I _ | T.F _ | T.Pointer _) ->
+      (match t2 with
+      | (T.I _ | T.F _ | T.Pointer _) -> ()
+      | _ -> type_error t2 loc
+      )
+    | _ -> type_error t1 loc
+    )
+            
+
+let check_compatible_assign op t1 t2 loc =
+  match op with
+  | SimpleAssign ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
+    | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
+    | T.StructName (su1, name1), T.StructName (su2, name2) 
+      when su1 = su2 && name1 = name2 -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  (* not exactly the same rule *)
+  | OpAssign op ->
+    (match op with
+    | (Plus | Minus) ->
+      (match t1, t2 with
+      | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
+      (* you can not x += y or x-=y when both x and y are pointers
+       * (even though you can do x = x - y)
+       *)
+      | T.Pointer _, T.I _ -> ()
+      | _ -> type_error2 t1 t2 loc
+      )
+    | (Mul | Div) 
+    | (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) 
+      -> check_compatible_binary (Arith op) t1 t2 loc
+    )
+
+
 
 (*****************************************************************************)
 (* Storage helpers *)
@@ -166,6 +249,24 @@ let merge_storage_toplevel name loc stoopt ini old =
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* Other helpers *)
+(*****************************************************************************)
+
+
+(* assumes has called the typechecker on e before, so enum constants
+ * has been substituted
+ *)
+let rec lvalue e0 =
+  match e0.e with
+  | Id _ 
+  | Unary (DeRef, _)
+    -> true
+  | Int _ | Float _ | String _
+  | Binary _ | Unary _
+    -> false
+  | _ -> raise Todo
+
+(*****************************************************************************)
 (* AST Types to Types.t *)
 (*****************************************************************************)
 
@@ -182,65 +283,6 @@ let rec type_ env typ0 =
   | TFunction (tret, (tparams, tdots)) ->
       T.Func (type_ env tret, 
                 tparams |> List.map (fun p -> type_ env p.p_type), tdots)
-
-(*****************************************************************************)
-(* Type compatibility for operations *)
-(*****************************************************************************)
-let check_compatible_binary loc op t1 t2 =
-  match op with
-  | Arith Plus ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _)
-    | T.I _, T.Pointer _
-    | T.Pointer _, T.I _
-    (* you can not add 2 pointers *)
-      -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Arith Minus ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _)
-    (* you can sub 2 pointers *)
-    | T.Pointer _, T.Pointer _
-    (* you can not sub a pointer to an int (but can sub an int to a pointer) *)
-    | T.Pointer _, T.I _
-      -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Arith (Mul | Div) ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Arith (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) ->
-    (match t1, t2 with
-    | (T.I _), (T.I _ ) 
-    (* stricter: do not allow T.Int _ with T.F _, 5c does (clang does not) *)
-      -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-
-  | Logical (Eq | NotEq  | Inf | Sup | InfEq | SupEq) ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _) 
-    | T.Pointer _, T.Pointer _
-    (* you can not compare two structures! no deep equality *)
-      -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Logical (AndLog | OrLog) ->
-    (* stricter? should impose bool! *)
-
-    (match t1 with
-    | (T.I _ | T.F _ | T.Pointer _) ->
-      (match t2 with
-      | (T.I _ | T.F _ | T.Pointer _) -> ()
-      | _ -> type_error t2 loc
-      )
-    | _ -> type_error t1 loc
-    )
-            
-
 
   
 
@@ -269,7 +311,7 @@ let rec expr env e0 =
   | Binary (e1, op, e2) ->
     let e1 = expr env e1 in
     let e2 = expr env e2 in
-    check_compatible_binary e0.e_loc op e1.e_type e2.e_type;
+    check_compatible_binary op e1.e_type e2.e_type e0.e_loc ;
     (* TODO: add casts *)
     raise Todo
 
@@ -294,7 +336,20 @@ let rec expr env e0 =
       | _ -> type_error e.e_type e.e_loc 
       );
       { e0 with e = Unary (Not, e); e_type = T.int }
+
+    | GetRef ->
+      raise Todo
+    | DeRef ->
+      raise Todo
     )
+  | Assign (op, e1, e2) ->
+    let e1 = expr env e1 in
+    let e2 = expr env e2 in
+    if not (lvalue (e1))
+    then raise (Error (E.ErrorMisc ("not an l-value", e0.e_loc)));
+    check_compatible_assign op e1.e_type e2.e_type e0.e_loc;
+    (* TODO: add casts *)
+    raise Todo
 
 
   | _ -> raise Todo

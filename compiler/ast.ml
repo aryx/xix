@@ -142,6 +142,7 @@ and expr = {
   (* should be a statement really *)
   | Assign of assignOp * expr * expr
 
+  (* codegen: converted to pointer arithmetic, *(x+y) *)
   | ArrayAccess of expr * expr (* x[y] *)
   (* codegen: converted to pointer offset access *)
   | RecordAccess of expr * name (* x.y *)

@@ -338,9 +338,19 @@ let rec expr env e0 =
       { e0 with e = Unary (Not, e); e_type = T.int }
 
     | GetRef ->
-      raise Todo
+      let e = expr env e in
+      if not (lvalue (e))
+      then raise (Error (E.ErrorMisc ("not an l-value", e0.e_loc)));
+      (* less: warn if take address of array or function, ADDROP *)
+      { e0 with e = Unary (GetRef, e); e_type = T.Pointer (e.e_type) }
+
     | DeRef ->
-      raise Todo
+      let e = expr env e in
+      (match e.e_type with
+      | T.Pointer t -> 
+        { e0 with e = Unary (DeRef, e); e_type = t }
+      | _ -> type_error e.e_type e.e_loc
+      )
     )
   | Assign (op, e1, e2) ->
     let e1 = expr env e1 in

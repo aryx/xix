@@ -749,13 +749,24 @@ type_:
 /*(*-----------------------------------------*)*/
 /*(*2 Types part 2 (right part of a type) *)*/
 /*(*-----------------------------------------*)*/
-
 /*
 (* declarator return a couple: 
  *  (name, partial type (a function to be applied to return type))
  *
- * note that with 'int* f(int)' we must return Func(Pointer int,int) and not
- * Pointer (Func(int,int)), so TMul binds before the rest of xdecor.
+ * Note that with 'int* foo(int)' we must return 
+ * TFunction(Pointer int, [int]) and not Pointer (Func(int,[int])).
+ * The grammar parses the xdecor part  '*foo(int)' as:
+ *         *
+ *         |
+ *         ()
+ *       /   \
+ *      foo     [ int]
+ * 
+ * So when we return the partial function for TMul, we must
+ * apply first TPointer to the return type 'x', and then apply
+ * the function for xdecor.
+ * 
+ * 
  * 
  * less: handle qualifiers
  *)*/
@@ -774,16 +785,22 @@ xdecor2:
  | TOPar xdecor TCPar 
      { $2 }
  | xdecor2 TOBra zexpr TCBra 
-     { let (id, f) = $1 in id, (fun x -> mk_t (TArray ($3, f x)) $2) }
+     { let (id, f) = $1 in 
+       (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
+       id, (fun x -> f (mk_t (TArray ($3, x)) $2))
+     }
  /*(* add parameters in scope in caller, when processing the function body *)*/
  | xdecor2 TOPar zparamlist TCPar
-     { let (id, f) = $1 in id, (fun x -> mk_t (TFunction (f x, $3)) $2) }
+     { let (id, f) = $1 in 
+       (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
+       id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
+     }
 
 
 
 zparamlist:
  | /*(*empty*)*/ { [], false }
- | paramlist       { $1 }
+ | paramlist     { $1 }
 
 paramlist:
  | qualifier_and_type xdecor  
@@ -820,8 +837,8 @@ abdecor1:
 
 abdecor2:
  | abdecor3 { $1 }
- | abdecor2 TOPar zparamlist TCPar { (fun x -> mk_t (TFunction ($1 x, $3)) $2) }
- | abdecor2 TOBra zexpr TCBra      { (fun x -> mk_t (TArray ($3, $1 x)) $2) }
+ | abdecor2 TOPar zparamlist TCPar { (fun x -> $1 (mk_t (TFunction (x, $3))$2))}
+ | abdecor2 TOBra zexpr TCBra      { (fun x -> $1 (mk_t (TArray ($3, x))$2))}
 
 abdecor3:
  | TOPar TCPar          { (fun x -> mk_t (TFunction (x, ([], false))) $1)  }

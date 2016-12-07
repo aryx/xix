@@ -167,25 +167,26 @@ let merge_storage_toplevel name loc stoopt ini old =
 let rec type_ env typ0 =
   match typ0.t with
   | TBase t -> t
-  | TPointer typ -> Type.TPointer (type_ env typ)
+  | TPointer typ -> T.Pointer (type_ env typ)
   | TArray (eopt, typ) ->
       raise Todo
-  | TStructName (su, fullname) -> Type.TStructName (su, fullname)
+  | TStructName (su, fullname) -> T.StructName (su, fullname)
   | TEnumName fullname ->
       raise Todo
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
   | TFunction (tret, (tparams, tdots)) ->
-    Type.TFunc (type_ env tret, 
+    T.Func (type_ env tret, 
                 tparams |> List.map (fun p -> type_ env p.p_type), tdots)
 
 (*****************************************************************************)
 (* Expression typechecking *)
 (*****************************************************************************)
 
-
 let rec expr env e0 =
-    (* TODO *)
-    e0
+  match e0.e with
+  | Int (s, inttype) -> {e0 with e_type = T.I inttype }
+  | _ -> raise Todo
+
 
 and expropt env eopt = 
     match eopt with
@@ -240,7 +241,7 @@ let check_and_annotate_program ast =
 
       (* step1: check for weird declarations *)
       (match t, ini, stoopt with
-      | T.TFunc _, Some _, _ -> 
+      | T.Func _, Some _, _ -> 
         raise (Error(E.ErrorMisc 
                      ("illegal initializer (only var can be initialized)",loc)))
       (* stricter: 5c says nothing, clang just warns *)
@@ -305,7 +306,7 @@ let check_and_annotate_program ast =
        * be able to store those definitions in env.ids. That way
        * we can detect function redefinitions, useless redeclarations, etc.
        *)
-      let ini = Some { e = Id fullname; e_loc = loc } in
+      let ini = Some { e = Id fullname; e_loc = loc; e_type = Type.Void } in
 
       (try 
          (* check for weird redeclarations *)

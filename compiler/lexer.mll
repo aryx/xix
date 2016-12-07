@@ -27,24 +27,23 @@ let error s =
 
 let loc () = !L.line
 
-
-let sign_of_suffix s =
-  match String.lowercase s with
-  | "" -> Type.Signed
-  | "u" -> Type.Unsigned
-  | s -> error (spf "Impossible: wrong sign suffix: %s" s)
-
-let intsize_of_suffix s =
-  match String.lowercase s with
-  | "" -> Storage.Int
-  | "l" -> Storage.Long
-  | "ll" -> Storage.VLong
+let inttype_of_suffix sign size =
+  let sign =
+    match String.lowercase sign with
+      | "" -> Type.Signed
+      | "u" -> Type.Unsigned
+      | s -> error (spf "Impossible: wrong sign suffix: %s" s)
+  in
+  match String.lowercase size with
+  | "" -> Type.Int sign
+  | "l" -> Type.Long sign
+  | "ll" -> Type.VLong sign
   | s -> error (spf "Impossible: wrong int size suffix: %s" s)
 
-let floatsize_of_suffix s =
+let floattype_of_suffix s =
   match String.lowercase s with
-  | "" -> Storage.Double
-  | "f" -> Storage.Float
+  | "" -> Type.Double
+  | "f" -> Type.Float
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)
 
 (* dup: lexer_asm5.mll *)
@@ -134,21 +133,18 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
   | "0"  (oct+ as s) (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst(loc(), "0o"^s, sign_of_suffix unsigned,intsize_of_suffix long)}
+      { TIConst(loc(), "0o"^s, inttype_of_suffix unsigned long)}
   | "0x" (hex+ as s)  (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst(loc(), "0x"^s, sign_of_suffix unsigned, intsize_of_suffix long)}
+      { TIConst(loc(), "0x"^s, inttype_of_suffix unsigned long)}
   | "0x" { error "malformed hex constant" }
-
   | ['0'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst (loc(), Lexing.lexeme lexbuf, 
-                sign_of_suffix unsigned, intsize_of_suffix long)
-      }
+      { TIConst (loc(), Lexing.lexeme lexbuf, inttype_of_suffix unsigned long)}
 
 
   (* stricter: I impose some digit+ after '.' and after 'e' *)
   | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) as s 
       (['F''f']* as float)
-     { TFConst (loc(), s, floatsize_of_suffix float) }
+     { TFConst (loc(), s, floattype_of_suffix float) }
 
   | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
      { error "malformed fp constant exponent" }
@@ -157,9 +153,10 @@ rule token = parse
   (* Strings and chars *)
   (* ----------------------------------------------------------------------- *)
   (* converting characters in integers *)
-  | "'" { TIConst (loc(), spf "%d" (char lexbuf), Type.Signed, Storage.Char) }
+  | "'" { TIConst (loc(), spf "%d" (char lexbuf), Type.Char (Type.Signed)) }
 
-  | '"' { TString (loc(), string lexbuf, Storage.String) }
+  | '"' { TString (loc(), string lexbuf, 
+                   Type.Array (None, Type.I (Type.Char Type.Signed))) }
 
   (* ----------------------------------------------------------------------- *)
   (* Keywords and identifiers *)

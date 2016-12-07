@@ -38,7 +38,7 @@ module L = Location_cpp
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
 
-let mk_e e loc = { e = e; e_loc = loc }
+let mk_e e loc = { e = e; e_loc = loc; e_type = Type.Void }
 let mk_t t loc = { t = t; t_loc = loc }
 let mk_st st loc = { s = st; s_loc = loc }
 
@@ -148,9 +148,9 @@ let pop_scope env =
 /*(*************************************************************************)*/
 
 %token <Ast.loc * string> TName TTypeName
-%token <Ast.loc * string * Type.sign * Storage.intsize> TIConst
-%token <Ast.loc * string * Storage.floatsize> TFConst
-%token <Ast.loc * string * Storage.stringsize> TString
+%token <Ast.loc * string * Type.integer_type> TIConst
+%token <Ast.loc * string * Type.float_type> TFConst
+%token <Ast.loc * string * Type.t> TString
 
 /*(*-----------------------------------------*)*/
 /*(*2 Keywords *)*/
@@ -552,9 +552,9 @@ pexpr:
          (*Id ($1, 0)*)
      }
 
- | TIConst { let (loc, a,b,c) = $1 in mk_e (Int (a,b,c))  loc } 
- | TFConst { let (loc, a,b)   = $1 in mk_e (Float (a,b))  loc }
- | string  { let (loc, a,b)   = $1 in mk_e (String (a,b)) loc }
+ | TIConst { let (loc, a,b) = $1 in mk_e (Int (a,b))    loc } 
+ | TFConst { let (loc, a,b) = $1 in mk_e (Float (a,b))  loc }
+ | string  { let (loc, a,b) = $1 in mk_e (String (a,b)) loc }
 
  | pexpr TPlusPlus   { mk_e (Postfix ($1, Inc)) $2 }
  | pexpr TMinusMinus { mk_e (Postfix ($1, Dec)) $2 } 
@@ -646,30 +646,30 @@ qual:
 /*(*-----------------------------------------*)*/
 
 simple_type:
- | Tchar            { (Type.TChar Type.Signed, $1) }
+ | Tchar            { (Type.I (Type.Char Type.Signed), $1) }
  /*(* meh, I should remove all Signed variants *)*/
- | Tsigned Tchar    { (Type.TChar Type.Signed, $1) }
- | Tunsigned Tchar  { (Type.TChar Type.Unsigned, $1) }
+ | Tsigned Tchar    { (Type.I (Type.Char Type.Signed), $1) }
+ | Tunsigned Tchar  { (Type.I (Type.Char Type.Unsigned), $1) }
 
- | Tshort           { (Type.TShort Type.Signed, $1) }
- | Tunsigned Tshort { (Type.TShort Type.Unsigned, $1) }
+ | Tshort           { (Type.I (Type.Short Type.Signed), $1) }
+ | Tunsigned Tshort { (Type.I (Type.Short Type.Unsigned), $1) }
 
- | Tint             { (Type.TInt Type.Signed, $1) }
- | Tunsigned Tint   { (Type.TInt Type.Unsigned, $1) }
+ | Tint             { (Type.I (Type.Int Type.Signed), $1) }
+ | Tunsigned Tint   { (Type.I (Type.Int Type.Unsigned), $1) }
  /*(*bad: should be removed, but for compatibility with plan9 code I keep it*)*/
- | Tunsigned        { (Type.TInt Type.Unsigned, $1) }
+ | Tunsigned        { (Type.I (Type.Int Type.Unsigned), $1) }
 
- | Tlong            { (Type.TLong Type.Signed, $1) }
- | Tunsigned Tlong  { (Type.TLong Type.Unsigned, $1) }
+ | Tlong            { (Type.I (Type.Long Type.Signed), $1) }
+ | Tunsigned Tlong  { (Type.I (Type.Long Type.Unsigned), $1) }
 
- | Tlong Tlong      { (Type.TVLong Type.Signed, $1) }
- | Tunsigned Tlong Tlong { (Type.TVLong Type.Unsigned, $1) }
+ | Tlong Tlong      { (Type.I (Type.VLong Type.Signed), $1) }
+ | Tunsigned Tlong Tlong { (Type.I (Type.VLong Type.Unsigned), $1) }
 
 
- | Tfloat  { (Type.TFloat, $1) }
- | Tdouble { (Type.TDouble, $1) }
+ | Tfloat  { (Type.F (Type.Float), $1) }
+ | Tdouble { (Type.F (Type.Double), $1) }
 
- | Tvoid   { (Type.TVoid, $1) }
+ | Tvoid   { (Type.Void, $1) }
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
 

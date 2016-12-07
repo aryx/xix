@@ -13,38 +13,37 @@ type struct_kind = Struct | Union
  *)
 type t =
   (* Basic *)
-
-  | TVoid
-
+  | Void
   (* integers *)
-  | TChar of sign
-  | TShort of sign
-
-  | TInt of sign
-  | TLong of sign
-  | TVLong of sign
-
-  (* less: of fullname? so stricter! or of t? any, almost never write
-   * enum X foo; always abuse int;
-   *)
-  | TEnum 
-
+  | I of integer_type
   (* floats *)
-  | TFloat
-  | TDouble
-
+  | F of float_type
   (* Composite *)
-
-  | TPointer of t
-  (* Why not unsugar to TPointer? for better error messages! and because
+  | Pointer of t
+  (* Why not unsugar to Pointer? for better error messages! and because
    * the type system checks for array incompatibilities. int[2] != int[3].
    *)
-  | TArray of int option * t
+  | Array of int option * t
+  | Func of t * t list * bool (* varargs '...' *)
+  | StructName of struct_kind * fullname
 
-  | TFunc of t * t list * bool (* varargs '...' *)
+  and integer_type =
+  | Char of sign
+  | Short of sign
 
-  | TStructName of struct_kind * fullname
+  | Int of sign
+  | Long of sign
+  | VLong of sign
+  (* less: TEnum of fullname? so stricter! or of t? any, almost never write
+   * enum X foo; always abuse int;
+   *)
+
+  and float_type = 
+  | Float
+  | Double
+
  (* with tarzan *)
+
 
 
 (* Does 5c use this information? Volatile at least? *)

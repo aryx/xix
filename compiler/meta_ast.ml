@@ -68,30 +68,34 @@ and vof_parameter { p_name = v_p_name; p_loc = v_p_loc; p_type = v_p_type } =
   let arg = Ocaml.vof_option vof_fullname v_p_name in
   let bnd = ("p_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 
-and vof_expr { e = v_e; e_loc = v_e_loc } =
+and vof_expr { e = v_e; e_loc = v_e_loc; e_type = v_e_type } =
   if !show_all_pos
   then
   let bnds = [] in
+  let arg = Type.vof_t v_e_type in
+  let bnd = ("e_type", arg) in
+  let bnds = bnd :: bnds in
   let arg = vof_loc v_e_loc in
   let bnd = ("e_loc", arg) in
   let bnds = bnd :: bnds in
   let arg = vof_expr_bis v_e in
-  let bnd = ("e", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+  let bnd = ("e", arg) in 
+  let bnds = bnd :: bnds in 
+  Ocaml.VDict bnds
   else vof_expr_bis v_e
 and vof_expr_bis =
   function
-  | Int ((v1, v2, v3)) ->
+  | Int ((v1, v2)) ->
       let v1 = Ocaml.vof_string v1
-      and v2 = Type.vof_sign v2
-      and v3 = Storage.vof_intsize v3
-      in Ocaml.VSum (("Int", [ v1; v2; v3 ]))
+      and v2 = Type.vof_integer_type v2
+      in Ocaml.VSum (("Int", [ v1; v2 ]))
   | Float ((v1, v2)) ->
       let v1 = Ocaml.vof_string v1
-      and v2 = Storage.vof_floatsize v2
+      and v2 = Type.vof_float_type v2
       in Ocaml.VSum (("Float", [ v1; v2 ]))
   | String ((v1, v2)) ->
       let v1 = Ocaml.vof_string v1
-      and v2 = Storage.vof_stringsize v2
+      and v2 = Type.vof_t v2
       in Ocaml.VSum (("String", [ v1; v2 ]))
   | Id v1 -> let v1 = vof_fullname v1 in Ocaml.VSum (("Id", [ v1 ]))
   | Call ((v1, v2)) ->

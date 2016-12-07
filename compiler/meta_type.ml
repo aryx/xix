@@ -21,30 +21,35 @@ let vof_struct_kind =
   
 let rec vof_t =
   function
-  | TVoid -> Ocaml.VSum (("TVoid", []))
-  | TChar v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("TChar", [ v1 ]))
-  | TShort v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("TShort", [ v1 ]))
-  | TInt v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("TInt", [ v1 ]))
-  | TLong v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("TLong", [ v1 ]))
-  | TVLong v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("TVLong", [ v1 ]))
-  | TEnum -> Ocaml.VSum (("TEnum", []))
-  | TFloat -> Ocaml.VSum (("TFloat", []))
-  | TDouble -> Ocaml.VSum (("TDouble", []))
-  | TPointer v1 -> let v1 = vof_t v1 in Ocaml.VSum (("TPointer", [ v1 ]))
-  | TArray ((v1, v2)) ->
+  | Void -> Ocaml.VSum (("Void", []))
+  | I v1 -> let v1 = vof_integer_type v1 in Ocaml.VSum (("I", [ v1 ]))
+  | F v1 -> let v1 = vof_float_type v1 in Ocaml.VSum (("F", [ v1 ]))
+  | Pointer v1 -> let v1 = vof_t v1 in Ocaml.VSum (("Pointer", [ v1 ]))
+  | Array ((v1, v2)) ->
       let v1 = Ocaml.vof_option Ocaml.vof_int v1
       and v2 = vof_t v2
-      in Ocaml.VSum (("TArray", [ v1; v2 ]))
-
-  | TFunc ((v1, v2, v3)) ->
+      in Ocaml.VSum (("Array", [ v1; v2 ]))
+  | Func ((v1, v2, v3)) ->
       let v1 = vof_t v1
       and v2 = Ocaml.vof_list vof_t v2
       and v3 = Ocaml.vof_bool v3
-      in Ocaml.VSum (("TFunc", [ v1; v2; v3 ]))
-  | TStructName ((v1, v2)) ->
+      in Ocaml.VSum (("Func", [ v1; v2; v3 ]))
+  | StructName ((v1, v2)) ->
       let v1 = vof_struct_kind v1
       and v2 = vof_fullname v2
-      in Ocaml.VSum (("TStructName", [ v1; v2 ]))
+      in Ocaml.VSum (("StructName", [ v1; v2 ]))
+and vof_integer_type =
+  function
+  | Char v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Char", [ v1 ]))
+  | Short v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Short", [ v1 ]))
+  | Int v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Int", [ v1 ]))
+  | Long v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Long", [ v1 ]))
+  | VLong v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("VLong", [ v1 ]))
+and vof_float_type =
+  function
+  | Float -> Ocaml.VSum (("Float", []))
+  | Double -> Ocaml.VSum (("Double", []))
+
   
 let vof_qualifier =
   function

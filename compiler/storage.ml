@@ -10,21 +10,3 @@ type t =
   (* less:  | Inline? | Register? | ExternRegister?
   *)
  (* with tarzan *)
-
-type intsize =
-  | Char
-  | Short
-  | Int
-  | Long
-  | VLong
- (* with tarzan *)
-
-type floatsize = 
-  | Float
-  | Double
- (* with tarzan *)
-
-type stringsize =
-  | String
-  | Unicode
- (* with tarzan *)

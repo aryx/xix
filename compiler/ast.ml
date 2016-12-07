@@ -121,17 +121,20 @@ type type_ = {
 and expr = { 
   e: expr_bis;
   e_loc: loc;
-  (* todo: mutable e_type: Type.t? mutable lvalue: bool? *)
+  (* properly set during typechecking in typecheck.ml *)
+  e_type: Type.t;
+  (* less: ? mutable lvalue: bool? *)
 }
   and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
-  | Int of string * Type.sign * Storage.intsize
-  | Float of string * Storage.floatsize
+  | Int of string * Type.integer_type
+  | Float of string * Type.float_type
   (* codegen: converted to Id after typechecking *)
-  | String of string * Storage.stringsize
+  | String of string * Type.t
 
   (* Global, local, parameter, enum constant (can be scoped), function *)
   (* todo: mutable symkind? storage? type? setused? *)
+  (* codegen: converted to Int for enum constant *)
   | Id of fullname
 
   | Call of expr * argument list
@@ -140,6 +143,7 @@ and expr = {
   | Assign of assignOp * expr * expr
 
   | ArrayAccess of expr * expr (* x[y] *)
+  (* codegen: converted to pointer offset access *)
   | RecordAccess of expr * name (* x.y *)
   (* less? keep just x->y? Why x->y instead of x.y choice?
    * it's more consistent with ArrayAccess where expr has to be

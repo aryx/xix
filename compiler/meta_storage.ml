@@ -9,23 +9,4 @@ let vof_t =
   | Extern -> Ocaml.VSum (("Extern", []))
   | Global -> Ocaml.VSum (("Global", []))
   | Static -> Ocaml.VSum (("Static", []))
-  
-let vof_intsize =
-  function
-  | Char -> Ocaml.VSum (("Char", []))
-  | Short -> Ocaml.VSum (("Short", []))
-  | Int -> Ocaml.VSum (("Int", []))
-  | Long -> Ocaml.VSum (("Long", []))
-  | VLong -> Ocaml.VSum (("VLong", []))
-  
-let vof_floatsize =
-  function
-  | Float -> Ocaml.VSum (("Float", []))
-  | Double -> Ocaml.VSum (("Double", []))
-  
-let vof_stringsize =
-  function
-  | String -> Ocaml.VSum (("String", []))
-  | Unicode -> Ocaml.VSum (("Unicode", []))
-  
 

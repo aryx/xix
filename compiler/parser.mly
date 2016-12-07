@@ -3,15 +3,16 @@
 open Common
 
 open Ast
+module T = Type
 module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 5c does many things during parsing which we do not do here. We do
- * the minimum here. We just return a very simple AST.
+(* 5c does many things during parsing; Instead, we do the minimum here. 
+ * We just return a very simple AST.
  * 
- * Limitations compared to 5c (and sometimes also to ANSI C and C11):
+ * Limitations compared to 5c (and sometimes also to ANSI C or C11):
  *  - no support for old style parameter declaration
  *    (obsolete practice anyway)
  *  - impose a certain order for the storage, qualifier, and type
@@ -38,7 +39,7 @@ module L = Location_cpp
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
 
-let mk_e e loc = { e = e; e_loc = loc; e_type = Type.Void }
+let mk_e e loc = { e = e; e_loc = loc; e_type = T.Void }
 let mk_t t loc = { t = t; t_loc = loc }
 let mk_st st loc = { s = st; s_loc = loc }
 
@@ -69,9 +70,9 @@ type env = {
 
 }
 
-(* Warn if id already declared? No, because at the toplevel
+(* Should we warn if 'id' already declared? No, because at the toplevel
  * it is ok to redeclare the same variable or prototype.
- * So better to do those checks in another phase (in check.ml or typecheck.ml).
+ * So better to do those checks in another phase (in check.ml and typecheck.ml).
  *)
 let add_id env id idkind =
   Hashtbl.add Globals.hids id idkind;
@@ -109,6 +110,7 @@ let _ =
 
 let block_counter = ref 0
 
+(* for anonymous struct/union/enum *)
 let gensym_counter = ref 0
 let gensym () =
   incr gensym_counter;
@@ -295,7 +297,7 @@ xdecl:
 storage_and_type_xdecor: storage_and_type xdecor
     { (* stricter: *)
       if !defs <> []
-      then error "move struct or typedef definitions to the toplevel";
+      then error "move struct or typedef definition outside the function";
       let ((id, loc), typ2) = $2 in
       let (sto_or_typedef, typ1) = $1 in
       let typ = typ2 typ1 in
@@ -319,7 +321,8 @@ storage_and_type_xdecor: storage_and_type xdecor
       | TFunction _, Right _ ->
           error "a function definition can not be a type definition"
       (* stricter: it could be TTypeName that resolves to a TFunction, but 
-       * I resolve typedefs later so I have to forbid it here.
+       * I resolve typedefs later so I have to forbid it here, and it is
+       * confusing anyway as you can not see the parameter.
        *)
       | _, _ -> error "not a function type"
       )
@@ -536,7 +539,7 @@ pexpr:
  | pexpr TOPar zelist TCPar { mk_e (Call ($1, $3)) $2 }
  /*(* stricter: was cexpr, but ugly to allow cexpr here *)*/
  | pexpr TOBra expr TCBra  { mk_e (ArrayAccess ($1, $3)) $2 }
-
+ /*(* we could unsugar here RecordPtAccess; instead we do it in typecheck.ml*)*/
  | pexpr TDot tag   { mk_e (RecordAccess ($1, snd $3)) $2 }
  | pexpr TArrow tag { mk_e (RecordPtAccess ($1, snd $3)) $2 } 
 
@@ -646,36 +649,36 @@ qual:
 /*(*-----------------------------------------*)*/
 
 simple_type:
- | Tchar            { (Type.I (Type.Char Type.Signed), $1) }
+ | Tchar            { (T.I (T.Char T.Signed), $1) }
  /*(* meh, I should remove all Signed variants *)*/
- | Tsigned Tchar    { (Type.I (Type.Char Type.Signed), $1) }
- | Tunsigned Tchar  { (Type.I (Type.Char Type.Unsigned), $1) }
+ | Tsigned Tchar    { (T.I (T.Char T.Signed), $1) }
+ | Tunsigned Tchar  { (T.I (T.Char T.Unsigned), $1) }
 
- | Tshort           { (Type.I (Type.Short Type.Signed), $1) }
- | Tunsigned Tshort { (Type.I (Type.Short Type.Unsigned), $1) }
+ | Tshort           { (T.I (T.Short T.Signed), $1) }
+ | Tunsigned Tshort { (T.I (T.Short T.Unsigned), $1) }
 
- | Tint             { (Type.I (Type.Int Type.Signed), $1) }
- | Tunsigned Tint   { (Type.I (Type.Int Type.Unsigned), $1) }
+ | Tint             { (T.I (T.Int T.Signed), $1) }
+ | Tunsigned Tint   { (T.I (T.Int T.Unsigned), $1) }
  /*(*bad: should be removed, but for compatibility with plan9 code I keep it*)*/
- | Tunsigned        { (Type.I (Type.Int Type.Unsigned), $1) }
+ | Tunsigned        { (T.I (T.Int T.Unsigned), $1) }
 
- | Tlong            { (Type.I (Type.Long Type.Signed), $1) }
- | Tunsigned Tlong  { (Type.I (Type.Long Type.Unsigned), $1) }
+ | Tlong            { (T.I (T.Long T.Signed), $1) }
+ | Tunsigned Tlong  { (T.I (T.Long T.Unsigned), $1) }
 
- | Tlong Tlong      { (Type.I (Type.VLong Type.Signed), $1) }
- | Tunsigned Tlong Tlong { (Type.I (Type.VLong Type.Unsigned), $1) }
+ | Tlong Tlong      { (T.I (T.VLong T.Signed), $1) }
+ | Tunsigned Tlong Tlong { (T.I (T.VLong T.Unsigned), $1) }
 
 
- | Tfloat  { (Type.F (Type.Float), $1) }
- | Tdouble { (Type.F (Type.Double), $1) }
+ | Tfloat  { (T.F (T.Float), $1) }
+ | Tdouble { (T.F (T.Double), $1) }
 
- | Tvoid   { (Type.Void, $1) }
+ | Tvoid   { (T.Void, $1) }
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
 
 su:
- | Tstruct { Type.Struct, $1 }
- | Tunion  { Type.Union, $1 }
+ | Tstruct { T.Struct, $1 }
+ | Tunion  { T.Union, $1 }
 
 tag_opt:
  | tag           { snd $1 }
@@ -691,7 +694,7 @@ complex_type:
        let fullname = id, bid in
        mk_t (Ast.TStructName (su, fullname)) loc
      with Not_found ->
-       (* will check in check.ml whether struct defined indeed later *)
+       (* will check in check.ml whether struct defined later *)
        let fullname = id, 0 (* less: or env.block? *) in
        mk_t (Ast.TStructName (su, fullname)) loc
  }
@@ -699,7 +702,7 @@ complex_type:
      let (su, loc) = $1 in
      let id = $2 in
      let fullname = id, env.block in
-     (* check if already defined? or conflicting su? do that in check.ml *)
+     (* check if already defined in check.ml *)
      defs := (StructDef { su_name = fullname; 
                           su_loc = loc;
                           su_kind = su; 
@@ -830,8 +833,8 @@ abdecor3:
 /*(*-----------------------------------------*)*/
 
 qualifier:
- | Tconst    { Type.Const }
- | Tvolatile { Type.Volatile }
+ | Tconst    { T.Const }
+ | Tvolatile { T.Volatile }
  | Trestrict { error "restrict not supported" }
 
 qualifier_and_type: qualifiers type_ { $2 }
@@ -897,7 +900,7 @@ storage:
  | Tauto     { Storage.Auto }
  | Tstatic   { Storage.Static }
  | Textern   { Storage.Extern }
- /*(* stricter: 5c skips register declarations *)*/
+ /*(* stricter: 5c just skips register declarations, I forbid them *)*/
  | Tregister { error "register not supported" }
  | Tinline   { error "inline not supported" }
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/

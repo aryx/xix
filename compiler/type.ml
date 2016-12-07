@@ -10,6 +10,7 @@ type struct_kind = Struct | Union
 (* Note that there is no TTypedef here; 
  * The typedef expansion has already been done.
  * less: put qualifier here?
+ * todoext: Bool! with strict bool checking
  *)
 type t =
   (* Basic *)
@@ -26,24 +27,22 @@ type t =
   | Array of int option * t
   | Func of t * t list * bool (* varargs '...' *)
   | StructName of struct_kind * fullname
+  (* less: TEnum of fullname? so stricter! or of t? any, almost never write
+   * enum X foo; always abuse int;
+   *)
 
   and integer_type =
   | Char of sign
   | Short of sign
-
   | Int of sign
   | Long of sign
   | VLong of sign
-  (* less: TEnum of fullname? so stricter! or of t? any, almost never write
-   * enum X foo; always abuse int;
-   *)
 
   and float_type = 
   | Float
   | Double
 
  (* with tarzan *)
-
 
 
 (* Does 5c use this information? Volatile at least? *)
@@ -58,3 +57,5 @@ type structdef = (string * t) list
 type enumdef = Enum (* less: of intsize? or float! *)
 
  (* with tarzan *)
+
+let int = I (Int (Signed))

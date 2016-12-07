@@ -47,7 +47,7 @@ type env = {
   (* stricter: no float enum *)
   enums: (fullname, Type.integer_type) Hashtbl.t;
   (* less: Ast.expr where can be only either Int | Float *)
-  constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
+  constants: (Ast.fullname, string * Type.integer_type) Hashtbl.t;
 }
   and idinfo = {
     typ: Type.t;
@@ -65,7 +65,10 @@ let string_of_error err =
 
 exception Error of error
 
-let type_error t1 t2 loc =
+let type_error t loc =
+  raise Todo
+
+let type_error2 t1 t2 loc =
   raise Todo
 
 (*****************************************************************************)
@@ -181,20 +184,119 @@ let rec type_ env typ0 =
                 tparams |> List.map (fun p -> type_ env p.p_type), tdots)
 
 (*****************************************************************************)
+(* Type compatibility for operations *)
+(*****************************************************************************)
+let check_compatible_binary loc op t1 t2 =
+  match op with
+  | Arith Plus ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _)
+    | T.I _, T.Pointer _
+    | T.Pointer _, T.I _
+    (* you can not add 2 pointers *)
+      -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Arith Minus ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _)
+    (* you can sub 2 pointers *)
+    | T.Pointer _, T.Pointer _
+    (* you can not sub a pointer to an int (but can sub an int to a pointer) *)
+    | T.Pointer _, T.I _
+      -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Arith (Mul | Div) ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Arith (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) ->
+    (match t1, t2 with
+    | (T.I _), (T.I _ ) 
+    (* stricter: do not allow T.Int _ with T.F _, 5c does (clang does not) *)
+      -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+
+  | Logical (Eq | NotEq  | Inf | Sup | InfEq | SupEq) ->
+    (match t1, t2 with
+    | (T.I _ | T.F _), (T.I _ | T.F _) 
+    | T.Pointer _, T.Pointer _
+    (* you can not compare two structures! no deep equality *)
+      -> ()
+    | _ -> type_error2 t1 t2 loc
+    )
+  | Logical (AndLog | OrLog) ->
+    (* stricter? should impose bool! *)
+
+    (match t1 with
+    | (T.I _ | T.F _ | T.Pointer _) ->
+      (match t2 with
+      | (T.I _ | T.F _ | T.Pointer _) -> ()
+      | _ -> type_error t2 loc
+      )
+    | _ -> type_error t1 loc
+    )
+            
+
+
+  
+
+(*****************************************************************************)
 (* Expression typechecking *)
 (*****************************************************************************)
 
 let rec expr env e0 =
   match e0.e with
-  | Int (s, inttype) ->     { e0 with e_type = T.I inttype }
-  | Float (s, floattype) -> { e0 with e_type = T.F floattype }
-  | String (s, t) -> { e0 with e_type = t }
+  | Int    (s, inttype)   -> { e0 with e_type = T.I inttype }
+  | Float  (s, floattype) -> { e0 with e_type = T.F floattype }
+  | String (s, t)         -> { e0 with e_type = t }
   | Id fullname ->
-    raise Todo
+     if Hashtbl.mem env.constants fullname
+     then
+       let (s, inttype) = Hashtbl.find env.constants fullname in
+       { e0 with e = Int (s, inttype); e_type = T.I inttype }
+     else
+       let idinfo = Hashtbl.find env.ids fullname in
+       { e0 with e_type = idinfo.typ }
   | Sequence (e1, e2) -> 
     let e1 = expr env e1 in
     let e2 = expr env e2 in
     { e0 with e = Sequence (e1, e2); e_type = e2.e_type }
+
+  | Binary (e1, op, e2) ->
+    let e1 = expr env e1 in
+    let e2 = expr env e2 in
+    check_compatible_binary e0.e_loc op e1.e_type e2.e_type;
+    (* TODO: add casts *)
+    raise Todo
+
+  | Unary (op, e) ->
+    (match op with
+    | UnPlus -> 
+      expr env { e0 with e = 
+          Binary ({ e0 with e = Int ("0", T.Int (T.Signed))}, Arith (Plus),e) 
+          }
+    | UnMinus -> 
+      expr env { e0 with e = 
+          Binary ({ e0 with e = Int ("0", T.Int (T.Signed))}, Arith (Minus), e)
+          }
+    | Tilde ->
+      expr env { e0 with e = 
+          Binary ({ e0 with e = Int ("-1", T.Int (T.Signed))}, Arith (Xor), e) 
+          }
+    | Not ->
+      let e = expr env e in
+      (match e.e_type with
+      | T.I _ | T.F _ | T.Pointer _ -> ()
+      | _ -> type_error e.e_type e.e_loc 
+      );
+      { e0 with e = Unary (Not, e); e_type = T.int }
+    )
+
+
   | _ -> raise Todo
 
 

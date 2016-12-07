@@ -185,7 +185,9 @@ and const_expr = expr
     | GetRef | DeRef 
     (* codegen: converted to binary operation with 0 (-x => 0-x) *)
     | UnPlus |  UnMinus 
-    | Tilde | Not 
+    (* codegen: converted to -1 ^ x *)
+    | Tilde 
+    | Not 
   and assignOp = SimpleAssign | OpAssign of arithOp
   and fixOp    = Dec | Inc
 

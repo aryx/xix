@@ -11,7 +11,7 @@
  *    a blockid is associated with the tag name to avoid name conflicts
  *  - no anonymous structure; an artificial name is gensym'ed.
  *  - no mix of typedefs with variable declarations;
- *    again they are lifted to the top
+ *    again typedefs are lifted to the top
  *  - enums are also lifted to the top (and its constants are tagged with
  *    a blockid)
  * 
@@ -48,7 +48,7 @@ type name = string
 type blockid = int (* same than Type.blockid, repeated here for clarity *)
 
 (* A fully resolved and scoped name. 
- * 5c uses a reference to a symbol in  symbol table to fully qualify a name.
+ * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
  * Instead, I use a unique blockid and an external hash or environment that
  * maps this fullname to the appropriate information.
  * I think it offers a better separation of concerns.
@@ -79,6 +79,7 @@ type tagkind =
  * - constant expressions are not resolved yet 
  *  (those expressions can involve enum constants which will be resolved later).
  * Again, I think it offers a better separation of concerns.
+ * 
  * Note that 'type_' and 'expr' are mutually recursive (because of const_expr).
  * todo: qualifier type
  *)
@@ -93,7 +94,7 @@ type type_ = {
   | TFunction of function_type
 
   | TStructName of Type.struct_kind * fullname
-  (* In C an enum is really like an int. However, I could do
+  (* In C an enum is really like an int. However, we could do
    * extended checks at some point to do more strict type checking! 
    *)
   | TEnumName of fullname
@@ -104,6 +105,7 @@ type type_ = {
   and parameter = {
     (* When part of a prototype, the name is not always mentionned, hence
      * the option below.
+     * 
      * I use 'fullname' here for consistency; parameters are treated like,
      * locals, so we can have below simply 'Id of fullname' and have 
      * no differences between accessing a local or a parameter.
@@ -123,18 +125,17 @@ and expr = {
   e_loc: loc;
   (* properly set during typechecking in typecheck.ml *)
   e_type: Type.t;
-  (* less: ? mutable lvalue: bool? *)
 }
   and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
   | Int of string * Type.integer_type
   | Float of string * Type.float_type
   (* codegen: converted to Id after typechecking *)
-  | String of string * Type.t
+  | String of string * Type.t (* always array of chars for now, no unicode *)
 
   (* Global, local, parameter, enum constant (can be scoped), function *)
   (* todo: mutable symkind? storage? type? setused? *)
-  (* codegen: converted to Int for enum constant *)
+  (* codegen: converted to Int when the fullname refers to a enum constant *)
   | Id of fullname
 
   | Call of expr * argument list
@@ -146,10 +147,7 @@ and expr = {
   | ArrayAccess of expr * expr (* x[y] *)
   (* codegen: converted to pointer offset access *)
   | RecordAccess of expr * name (* x.y *)
-  (* less? keep just x->y? Why x->y instead of x.y choice?
-   * it's more consistent with ArrayAccess where expr has to be
-   * a kind of pointer too. That means x.y is actually unsugared in (&x)->y
-   *)
+  (* codegen: converted to RecordAccess, ( *x ).y *)
   | RecordPtAccess of expr * name (* x->y,  and not x.y!! *)
 
   (* less: bool (* explicit cast (xcast) *) *)
@@ -165,6 +163,7 @@ and expr = {
   (* 'x, y', but really should be a statement *)
   | Sequence of expr * expr
 
+  (* codegen: converted to Int?? *)
   | SizeOf of (expr, type_) Common.either
 
   (* should appear only in a variable initializer, or after GccConstructor *)
@@ -218,6 +217,7 @@ type stmt = {
 
   | If of expr * stmt * stmt
 
+  (* expr must have an integer type; it can not be a pointer like in a If *)
   | Switch of expr * case_list
 
   | While of expr * stmt
@@ -283,9 +283,7 @@ type struct_def = {
   su_kind: Type.struct_kind;
   su_flds: field_def list;
 }
-  (* We could merge with var_decl, but fields have no storage, and
-   * they can have bitfields.
-   *)
+  (* Not the same than var_decl; fields have no storage and can have bitflds.*)
   and field_def = { 
    (* todo: bitfield annotation
     * stricter: no anonymous struct/union (used originally in arm/u.h though)
@@ -297,14 +295,13 @@ type struct_def = {
  (* with tarzan *)
 
 type enum_def = { 
+  (* this name is rarely used; C programmers rarely write 'enum Foo x;' *)
   enum_name: fullname;
   enum_loc: loc;
   enum_constants: enum_constant list;
 }
   and enum_constant = {
-  (* we also need to use 'fullname' for constants, to scope them.
-   * less: actually seems like enum constants have a global scope?
-   *)
+  (* we also need to use 'fullname' for constants, to scope them *)
     ecst_name: fullname;
     ecst_loc: loc;
     ecst_value: const_expr option;

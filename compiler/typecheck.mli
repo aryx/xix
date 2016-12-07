@@ -5,7 +5,8 @@ type env = {
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
-  constants: (Ast.fullname, integer) Hashtbl.t;
+  enums: (Ast.fullname, Type.integer_type) Hashtbl.t;
+  constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 }
   and idinfo = {
     typ: Type.t;

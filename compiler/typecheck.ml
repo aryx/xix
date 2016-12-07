@@ -26,7 +26,9 @@ module E = Check
  * limitations compared to 5c:
  *  - no void* conversions 
  *    (clang does not either)
- *  - no struct equality using field equality. I use name equality.
+ *  - no struct equality by field equality. I use name equality.
+ *    (who uses that anyway?)
+ *  - no float enum
  *    (who uses that anyway?)
  *)
 
@@ -42,9 +44,10 @@ type env = {
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
-  (* less: Ast.expr where but be only either Int | Float *)
-  constants: (Ast.fullname, integer) Hashtbl.t;
-  (* less: enum? fullname -> Type.t but only basic? *)
+  (* stricter: no float enum *)
+  enums: (fullname, Type.integer_type) Hashtbl.t;
+  (* less: Ast.expr where can be only either Int | Float *)
+  constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 }
   and idinfo = {
     typ: Type.t;
@@ -62,6 +65,9 @@ let string_of_error err =
 
 exception Error of error
 
+let type_error t1 t2 loc =
+  raise Todo
+
 (*****************************************************************************)
 (* Types helpers *)
 (*****************************************************************************)
@@ -76,15 +82,12 @@ let same_types t1 t2 =
   (* stricter: struct equality by name, not fields *)
    
 
-
-(* if you declare multiple times the same global, we may need to merge
- * types. Really???
-*)
+(* if you declare multiple times the same global, we should merge types. *)
 let merge_types t1 t2 =
   t1
 
 
-(* when processing enumeration constants *)
+(* when processing enumeration constants, we want to keep the biggest type *)
 let max_types t1 t2 =
   raise Todo
 
@@ -138,8 +141,8 @@ let merge_storage_toplevel name loc stoopt ini old =
         "previous definition is here", old.loc)))
 
     | Some S.Auto, _ ->
-      raise  (Error(E.ErrorMisc ("illegal storage class for file-scoped entity",
-                                 loc)))
+      raise  (Error(E.ErrorMisc 
+                ("illegal storage class for file-scoped entity", loc)))
     | Some S.Static, (S.Extern | S.Global) ->
       raise (Error (E.Inconsistent (
        spf "static declaration of '%s' follows non-static declaration" name,loc,
@@ -171,11 +174,10 @@ let rec type_ env typ0 =
   | TArray (eopt, typ) ->
       raise Todo
   | TStructName (su, fullname) -> T.StructName (su, fullname)
-  | TEnumName fullname ->
-      raise Todo
+  | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
   | TFunction (tret, (tparams, tdots)) ->
-    T.Func (type_ env tret, 
+      T.Func (type_ env tret, 
                 tparams |> List.map (fun p -> type_ env p.p_type), tdots)
 
 (*****************************************************************************)
@@ -184,7 +186,15 @@ let rec type_ env typ0 =
 
 let rec expr env e0 =
   match e0.e with
-  | Int (s, inttype) -> {e0 with e_type = T.I inttype }
+  | Int (s, inttype) ->     { e0 with e_type = T.I inttype }
+  | Float (s, floattype) -> { e0 with e_type = T.F floattype }
+  | String (s, t) -> { e0 with e_type = t }
+  | Id fullname ->
+    raise Todo
+  | Sequence (e1, e2) -> 
+    let e1 = expr env e1 in
+    let e2 = expr env e2 in
+    { e0 with e = Sequence (e1, e2); e_type = e2.e_type }
   | _ -> raise Todo
 
 
@@ -373,6 +383,7 @@ let check_and_annotate_program ast =
     ids = Hashtbl.create 101;
     structs = Hashtbl.create 101;
     typedefs = Hashtbl.create 101;
+    enums = Hashtbl.create 101;
     constants = Hashtbl.create 101;
   }
   in

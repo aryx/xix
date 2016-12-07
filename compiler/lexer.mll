@@ -5,6 +5,7 @@ open Common
 open Parser
 module A = Ast
 module L = Location_cpp
+module T = Type
 
 (*****************************************************************************)
 (* Prelude *)
@@ -30,20 +31,20 @@ let loc () = !L.line
 let inttype_of_suffix sign size =
   let sign =
     match String.lowercase sign with
-      | "" -> Type.Signed
-      | "u" -> Type.Unsigned
+      | "" -> T.Signed
+      | "u" -> T.Unsigned
       | s -> error (spf "Impossible: wrong sign suffix: %s" s)
   in
   match String.lowercase size with
-  | "" -> Type.Int sign
-  | "l" -> Type.Long sign
-  | "ll" -> Type.VLong sign
+  | "" -> T.Int sign
+  | "l" -> T.Long sign
+  | "ll" -> T.VLong sign
   | s -> error (spf "Impossible: wrong int size suffix: %s" s)
 
 let floattype_of_suffix s =
   match String.lowercase s with
-  | "" -> Type.Double
-  | "f" -> Type.Float
+  | "" -> T.Double
+  | "f" -> T.Float
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)
 
 (* dup: lexer_asm5.mll *)
@@ -153,10 +154,8 @@ rule token = parse
   (* Strings and chars *)
   (* ----------------------------------------------------------------------- *)
   (* converting characters in integers *)
-  | "'" { TIConst (loc(), spf "%d" (char lexbuf), Type.Char (Type.Signed)) }
-
-  | '"' { TString (loc(), string lexbuf, 
-                   Type.Array (None, Type.I (Type.Char Type.Signed))) }
+  | "'" { TIConst (loc(), spf "%d" (char lexbuf), T.Char (T.Signed)) }
+  | '"' { TString (loc(), string lexbuf, T.Array (None, T.I (T.Char T.Signed)))}
 
   (* ----------------------------------------------------------------------- *)
   (* Keywords and identifiers *)

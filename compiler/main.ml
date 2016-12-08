@@ -91,7 +91,9 @@ let compile (defs, include_paths) infile outfile =
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let (_env, _funcs) = Typecheck.check_and_annotate_program ast in
+  let (_env, _funcs) = 
+    Typecheck.check_and_annotate_program ast 
+  in
 
 (*
   let asm = Codegen5.codegen ast in

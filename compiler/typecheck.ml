@@ -360,7 +360,8 @@ let rec lvalue e0 =
   | _ -> raise Todo
 
 let array_to_pointer env e =
-  raise Todo
+  (* TODO *)
+  e
 
 (*****************************************************************************)
 (* AST Types to Types.t *)

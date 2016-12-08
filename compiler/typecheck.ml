@@ -10,12 +10,12 @@ module E = Check
 (* Prelude *)
 (*****************************************************************************)
 (* This module does many things:
- *  - it assigns a final (resolved) type to every identifiers
  *  - it expands typedefs
+ *  - it assigns a final (resolved) type to every identifiers
  *  - it assigns a final storage to every identifiers
  *  - it assigns at type to every expressions
  *  - it returns a typed AST and also transforms this AST
- *    (enums are replaced by their value, constant string replaces
+ *    (enum constants are replaced by their value, constant string replaces
  *     by a reference, etc)
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
@@ -65,11 +65,13 @@ let string_of_error err =
 
 exception Error of error
 
-let type_error t loc =
-  raise Todo
+let type_error _t loc =
+  (* less: dump t? *)
+  raise (Error (E.ErrorMisc ("incompatible type", loc)))
 
-let type_error2 t1 t2 loc =
-  raise Todo
+let type_error2 _t1 _t2 loc =
+  (* less: dump t1 and t2? *)
+  raise (Error (E.ErrorMisc ("incompatible types", loc)))
 
 (*****************************************************************************)
 (* Types helpers *)
@@ -78,6 +80,8 @@ let type_error2 t1 t2 loc =
 (* if you declare multiple times the same global, we need to make sure
  * the types are the same. ex: 'extern int foo; ... int foo = 1;'
  * This is where we detect inconsistencies like 'int foo; void foo();'.
+ * 
+ * Because we expand typedefs, testing the equality of two types is simple.
  *)
 let same_types t1 t2 =
   t1 = t2
@@ -89,19 +93,18 @@ let same_types t1 t2 =
 let merge_types t1 t2 =
   t1
 
-
 (* when processing enumeration constants, we want to keep the biggest type *)
 let max_types t1 t2 =
   raise Todo
-
 
 
 (* when you apply an operation between two expressions, this
  * expression can be valid even if the types of those two expressions
  * are not the same. However, they must be "compatible". 
  * The compatibility policy depends on the operation of the expression.
+ * 
+ * less: better error messages, for instance when want to add 2 pointers.
  *)
-
 let check_compatible_binary op t1 t2 loc =
   match op with
   | Arith Plus ->
@@ -173,7 +176,8 @@ let check_compatible_assign op t1 t2 loc =
       (match t1, t2 with
       | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
       (* you can not x += y or x-=y when both x and y are pointers
-       * (even though you can do x = x - y)
+       * (even though you can do x - y because the result type is a long,
+       * and so you can not assign than back into x)
        *)
       | T.Pointer _, T.I _ -> ()
       | _ -> type_error2 t1 t2 loc
@@ -252,18 +256,20 @@ let merge_storage_toplevel name loc stoopt ini old =
 (* Other helpers *)
 (*****************************************************************************)
 
-
-(* assumes has called the typechecker on e before, so enum constants
- * has been substituted
+(* we assume the typechecker has called expr() on 'e0' before, 
+ * so Id of enum constants for example has been substituted to Int
+ * and so are not considered an lvalue.
  *)
 let rec lvalue e0 =
   match e0.e with
   | Id _ 
   | Unary (DeRef, _)
+  | RecordAccess _
     -> true
   | Int _ | Float _ | String _
   | Binary _ | Unary _
     -> false
+  | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
 
 (*****************************************************************************)
@@ -277,14 +283,14 @@ let rec type_ env typ0 =
   | TPointer typ -> T.Pointer (type_ env typ)
   | TArray (eopt, typ) ->
       raise Todo
-  | TStructName (su, fullname) -> T.StructName (su, fullname)
-  | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
-  | TTypeName fullname -> Hashtbl.find env.typedefs fullname
   | TFunction (tret, (tparams, tdots)) ->
       T.Func (type_ env tret, 
                 tparams |> List.map (fun p -> type_ env p.p_type), tdots)
-
-  
+  | TStructName (su, fullname) -> T.StructName (su, fullname)
+  (* expand enums *)
+  | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
+  (* expand typedefs *)
+  | TTypeName fullname -> Hashtbl.find env.typedefs fullname
 
 (*****************************************************************************)
 (* Expression typechecking *)
@@ -311,27 +317,25 @@ let rec expr env e0 =
   | Binary (e1, op, e2) ->
     let e1 = expr env e1 in
     let e2 = expr env e2 in
-    check_compatible_binary op e1.e_type e2.e_type e0.e_loc ;
+    check_compatible_binary op e1.e_type e2.e_type e0.e_loc;
     (* TODO: add casts *)
     raise Todo
 
   | Unary (op, e) ->
     (match op with
     | UnPlus -> 
-      expr env { e0 with e = 
-          Binary ({ e0 with e = Int ("0", T.Int (T.Signed))}, Arith (Plus),e) 
-          }
+      let e = Binary ({e0 with e = Int ("0", T.Int T.Signed)}, Arith Plus, e) in
+      expr env { e0 with e = e }
     | UnMinus -> 
-      expr env { e0 with e = 
-          Binary ({ e0 with e = Int ("0", T.Int (T.Signed))}, Arith (Minus), e)
-          }
+      let e = Binary ({e0 with e = Int ("0", T.Int T.Signed)}, Arith Minus, e)in
+      expr env { e0 with e = e }
     | Tilde ->
-      expr env { e0 with e = 
-          Binary ({ e0 with e = Int ("-1", T.Int (T.Signed))}, Arith (Xor), e) 
-          }
+      let e = Binary ({e0 with e = Int ("-1", T.Int T.Signed)}, Arith Xor, e) in
+      expr env { e0 with e = e }
     | Not ->
       let e = expr env e in
       (match e.e_type with
+      (* less: what about T.Array ? *)
       | T.I _ | T.F _ | T.Pointer _ -> ()
       | _ -> type_error e.e_type e.e_loc 
       );
@@ -347,8 +351,8 @@ let rec expr env e0 =
     | DeRef ->
       let e = expr env e in
       (match e.e_type with
-      | T.Pointer t -> 
-        { e0 with e = Unary (DeRef, e); e_type = t }
+      (* less: what about T.Array ? *)
+      | T.Pointer t ->{ e0 with e = Unary (DeRef, e); e_type = t }
       | _ -> type_error e.e_type e.e_loc
       )
     )
@@ -361,8 +365,61 @@ let rec expr env e0 =
     (* TODO: add casts *)
     raise Todo
 
+  (* x[y] --> *(x+y) *)
+  | ArrayAccess (e1, e2) ->
+    let e = Unary (DeRef, { e0 with e = Binary (e1, Arith Plus, e2) }) in
+    expr env { e0 with e = e }
+  (* x->y --> ( *x).y *)
+  | RecordPtAccess (e, name) ->
+    let e = RecordAccess ({ e0 with e = Unary (DeRef, e)}, name) in
+    expr env { e0 with e = e }
 
-  | _ -> raise Todo
+  | RecordAccess (e, name) ->
+    let e = expr env e in
+    (match e.e_type with
+    | T.StructName (su, fullname) ->
+      let (_su2, def) = Hashtbl.find env.structs fullname in
+      (try
+         let t = List.assoc name def in
+         { e0 with e = RecordAccess (e, name); e_type = t }
+       with Not_found ->
+         raise (Error (E.ErrorMisc (spf "not a member of struct/union: %s" name,
+                                   e.e_loc)))
+      )
+    | _ -> type_error e.e_type e.e_loc
+    )
+  | Call (e, es) ->
+    raise Todo
+  | Cast (typ, e) ->
+    let t = type_ env typ in
+    let e = expr env e in
+    (match e.e_type, t with
+    | T.I _, (T.I _ | T.F _ | T.Pointer _ | T.Void)
+    | T.F _, (T.I _ | T.F _ | T.Void)
+    | T.Pointer _, (T.I _ | T.Pointer _ | T.Void)
+      -> ()
+    (* less: seems pretty useless *)
+    | T.Void, T.Void -> ()
+    (* less: seems pretty useless *)
+    | T.StructName (su1, _) , T.StructName (su2, _) when su1 = su2 -> ()
+    | T.StructName _, T.Void -> ()
+    | _ -> type_error2 e.e_type t e0.e_loc
+    );
+    { e0 with e = Cast (typ, e); e_type = t }
+
+  | SizeOf(te) ->
+    raise Todo
+  | CondExpr (e1, e2, e3) ->
+    raise Todo
+  | Postfix(e, op) ->
+    raise Todo
+  | Prefix(op, e) ->
+    raise Todo
+
+  | ArrayInit _
+  | RecordInit _
+  | GccConstructor _
+      -> raise Todo
 
 
 and expropt env eopt = 
@@ -374,10 +431,50 @@ and expropt env eopt =
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
-(* boilerplate mostly *)
+
+(* Boilerplate mostly.
+ * expr() should not do any side effect on the environment, so we can
+ * call recursively in any order stmt() and expr() (including the
+ * reverse order of evaluation of OCaml for arguments).
+ *)
 let rec stmt env st0 =
-    (* TODO *)
-    st0
+  { st0 with s = 
+    (match st0.s with
+    | ExprSt e -> ExprSt (expr env e)
+    | Block xs -> Block (List.map (stmt env) xs)
+    | If (e, st1, st2) -> If (expr env e, stmt env st1, stmt env st2)
+    (* todo: ensure e is an integer! not a pointer *)
+    | Switch (e, xs) -> Switch (expr env e, stmt env xs)
+    (* less: should enforce int expr? *)
+    | Case (e, st) -> Case (expr env e, stmt env st)
+    | Default st -> Default (stmt env st)
+
+    | While (e, st) -> While (expr env e, stmt env st)
+    | DoWhile (st, e) -> DoWhile (stmt env st, expr env e)
+    | For (e1either, e2opt, e3opt, st) ->
+      (* we may have to do side effect on the environment, so process that
+       * first
+       *)
+      let e1either = 
+        (match e1either with 
+        | Left e1opt -> Left (expropt env e1opt)
+        | Right decls -> 
+          raise Todo
+        )
+      in
+      For (e1either, expropt env e2opt, expropt env e3opt, stmt env st)
+    (* todo: check compatible with return type of function! so need
+     * to know enclosing function type!
+     *)
+    | Return eopt -> Return (expropt env eopt)
+    | Continue -> Continue
+    | Break -> Break
+    | Label (name, st) -> Label (name, stmt env st)
+    | Goto name -> Goto name
+    | Var vdecl -> raise Todo
+    )
+  }
+
 
 (*****************************************************************************)
 (* Entry point *)
@@ -545,7 +642,6 @@ let check_and_annotate_program ast =
       funcs := { def with f_body = st }::!funcs;
   in
 
-
   let env = {
     ids = Hashtbl.create 101;
     structs = Hashtbl.create 101;
@@ -555,4 +651,5 @@ let check_and_annotate_program ast =
   }
   in
   ast |> List.iter (toplevel env);
+
   env, List.rev !funcs

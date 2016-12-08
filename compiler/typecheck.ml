@@ -13,7 +13,7 @@ module E = Check
  *  - it expands typedefs
  *  - it assigns a final (resolved) type to every identifiers
  *  - it assigns a final storage to every identifiers
- *  - it assigns at type to every expressions
+ *  - it assigns a type to every expressions
  *  - it returns a typed AST and also transforms this AST
  *    (enum constants are replaced by their value, constant string replaces
  *     by a reference, etc)
@@ -24,7 +24,7 @@ module E = Check
  * redefinition of tags. We can assume everything is fine.
  * 
  * limitations compared to 5c:
- *  - no void* conversions 
+ *  - no 'void*' conversions 
  *    (clang does not either)
  *  - no struct equality by field equality. I use name equality.
  *    (who uses that anyway?)
@@ -48,6 +48,10 @@ type env = {
   enums: (fullname, Type.integer_type) Hashtbl.t;
   (* stricter: no support for float enum constants either *)
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
+
+  (* todo: current_function_type
+     todo: expr_context:
+  *)
 }
   and idinfo = {
     typ: Type.t;
@@ -81,15 +85,17 @@ let type_error2 _t1 _t2 loc =
  * the types are the same. ex: 'extern int foo; ... int foo = 1;'
  * This is where we detect inconsistencies like 'int foo; void foo();'.
  * 
- * Because we expand typedefs, testing the equality of two types is simple.
+ * Because we expand typedefs before calling same_types, and because
+ * we do struct equality by name not fields, testing the equality of 
+ * two types is simple.
  *)
 let same_types t1 t2 =
   t1 = t2
   (* stricter: void* can not match any pointer *)
-  (* stricter: struct equality by name, not fields *)
+  (* stricter: struct equality by name, not by fields *)
    
 
-(* if you declare multiple times the same global, we should merge types. *)
+(* if you declare multiple times the same global, we must merge types. *)
 let merge_types t1 t2 =
   t1
 
@@ -122,7 +128,7 @@ let check_compatible_binary op t1 t2 loc =
     (* you can not sub a pointer to an int (but can sub an int to a pointer) *)
     | T.Pointer _, T.I _
       -> ()
-    (* you can sub 2 pointers *)
+    (* you can sub 2 pointers (if they have the same types) *)
     | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
     | _ -> type_error2 t1 t2 loc
     )
@@ -147,8 +153,7 @@ let check_compatible_binary op t1 t2 loc =
     | _ -> type_error2 t1 t2 loc
     )
   | Logical (AndLog | OrLog) ->
-    (* stricter? should impose bool! *)
-
+    (* stricter? should impose Bool! *)
     (match t1 with
     | (T.I _ | T.F _ | T.Pointer _) ->
       (match t2 with
@@ -169,15 +174,15 @@ let check_compatible_assign op t1 t2 loc =
       when su1 = su2 && name1 = name2 -> ()
     | _ -> type_error2 t1 t2 loc
     )
-  (* not exactly the same rule *)
+  (* not exactly the same rule than in check_compatible_binary *)
   | OpAssign op ->
     (match op with
     | (Plus | Minus) ->
       (match t1, t2 with
       | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
       (* you can not x += y or x-=y when both x and y are pointers
-       * (even though you can do x - y because the result type is a long,
-       * and so you can not assign than back into x)
+       * even though you can do x - y because the result type is a long
+       * (and so you can not assign than back into x).
        *)
       | T.Pointer _, T.I _ -> ()
       | _ -> type_error2 t1 t2 loc
@@ -187,6 +192,32 @@ let check_compatible_assign op t1 t2 loc =
       -> check_compatible_binary (Arith op) t1 t2 loc
     )
 
+let rec check_args_vs_params es tparams varargs loc =
+  match es, tparams, varargs with
+  (* stricter? confusing to have foo() and foo(void) *)
+  | [], ([] | [T.Void]), _ -> ()
+  | [], _, _ -> 
+    raise (Error (E.ErrorMisc ("not enough function arguments", loc)))
+  | e::es, [], false -> 
+    raise (Error (E.ErrorMisc ("too many function arguments", loc)))
+  | e::es, [], true -> 
+    (match e.e_type with
+    | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
+    | _ -> type_error e.e_type loc
+    );
+    check_args_vs_params es [] true loc
+  | e::es, t::ts, _ ->
+    (match e.e_type with
+    | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
+    | _ -> type_error e.e_type loc
+    );
+    (try 
+       check_compatible_assign SimpleAssign t e.e_type e.e_loc
+     with Error _ ->
+       raise (Error (E.ErrorMisc ("argument prototype mismatch", e.e_loc)))
+    );
+    check_args_vs_params es ts varargs loc
+    
 
 
 (*****************************************************************************)
@@ -257,7 +288,9 @@ exception NotAConstant
 (* stricter: I do not handle float constants for enums *)
 let rec eval env e0 =
   match e0.e with
-  (* less: enough for big integers? *)
+  (* todo: enough for big integers? 
+   * todo: we should also return an inttype in addition to the integer value.
+   *)
   | Int (s, inttype) -> int_of_string s
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
@@ -326,7 +359,7 @@ let rec lvalue e0 =
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
 
-let array_to_pointer e =
+let array_to_pointer env e =
   raise Todo
 
 (*****************************************************************************)
@@ -367,7 +400,7 @@ let rec expr env e0 =
   match e0.e with
   | Int    (s, inttype)   -> { e0 with e_type = T.I inttype }
   | Float  (s, floattype) -> { e0 with e_type = T.F floattype }
-  | String (s, t)         -> { e0 with e_type = t } |> array_to_pointer
+  | String (s, t)         -> { e0 with e_type = t } |> array_to_pointer env
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
      then
@@ -375,7 +408,7 @@ let rec expr env e0 =
        { e0 with e = Int (spf "%d" i, inttype); e_type = T.I inttype }
      else
        let idinfo = Hashtbl.find env.ids fullname in
-       { e0 with e_type = idinfo.typ } |> array_to_pointer
+       { e0 with e_type = idinfo.typ } |> array_to_pointer env
   | Sequence (e1, e2) -> 
     let e1 = expr env e1 in
     let e2 = expr env e2 in
@@ -385,7 +418,7 @@ let rec expr env e0 =
     let e1 = expr env e1 in
     let e2 = expr env e2 in
     check_compatible_binary op e1.e_type e2.e_type e0.e_loc;
-    (* TODO: add casts *)
+    (* TODO: add casts, get final type *)
     raise Todo
 
   | Unary (op, e) ->
@@ -418,9 +451,9 @@ let rec expr env e0 =
     | DeRef ->
       let e = expr env e in
       (match e.e_type with
-      (* less: what about T.Array ? *)
+      (* what about T.Array? see array_to_pointer *)
       | T.Pointer t -> 
-        { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer
+        { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer env
       | _ -> type_error e.e_type e.e_loc
       )
     )
@@ -449,7 +482,8 @@ let rec expr env e0 =
       let (_su2, def) = Hashtbl.find env.structs fullname in
       (try
          let t = List.assoc name def in
-         { e0 with e = RecordAccess (e, name); e_type = t } |> array_to_pointer
+         { e0 with e = RecordAccess (e, name); e_type = t } 
+          |> array_to_pointer env
        with Not_found ->
          raise (Error (E.ErrorMisc (spf "not a member of struct/union: %s" name,
                                    e.e_loc)))
@@ -457,7 +491,21 @@ let rec expr env e0 =
     | _ -> type_error e.e_type e.e_loc
     )
   | Call (e, es) ->
-    raise Todo
+    (* less: should disable implicit OADDR for function here in env *)
+    let e = expr env e in
+    (* less: should enable OADDR for function and array here *)
+    let es = List.map (expr env) es in
+    (match e.e_type with
+    | T.Func (tret, tparams, varargs) ->
+      check_args_vs_params es tparams varargs e0.e_loc;
+      (* TODO: add cast *)
+      (* less: format checking *)
+      { e0 with e = Call (e, es); e_type = tret }
+    | T.Pointer (T.Func (tret, tparams, varargs)) ->
+      (* stricter?: forbid? or add DeRef if function pointer *)
+      type_error e.e_type e.e_loc
+    | _ -> type_error e.e_type e.e_loc
+    )
   | Cast (typ, e) ->
     let t = type_ env typ in
     let e = expr env e in
@@ -475,13 +523,14 @@ let rec expr env e0 =
     );
     { e0 with e = Cast (typ, e); e_type = t } (* |> array_to_pointer ? *)
 
-  | SizeOf(te) ->
-    raise Todo
   | CondExpr (e1, e2, e3) ->
     raise Todo
   | Postfix(e, op) ->
     raise Todo
   | Prefix(op, e) ->
+    raise Todo
+
+  | SizeOf(te) ->
     raise Todo
 
   | ArrayInit _
@@ -494,7 +543,6 @@ and expropt env eopt =
     match eopt with
     | None -> None
     | Some e -> Some (expr env e)
-
 
 (*****************************************************************************)
 (* Statement *)
@@ -517,11 +565,13 @@ let rec stmt env st0 =
     | Case (e, st) -> Case (expr env e, stmt env st)
     | Default st -> Default (stmt env st)
 
+    (* stricter? should require Bool, not abuse pointer *)
     | While (e, st) -> While (expr env e, stmt env st)
     | DoWhile (st, e) -> DoWhile (stmt env st, expr env e)
+
     | For (e1either, e2opt, e3opt, st) ->
-      (* we may have to do side effect on the environment, so process that
-       * first
+      (* we may have to do side effects on the environment, so we process
+       * e1either first
        *)
       let e1either = 
         (match e1either with 
@@ -533,12 +583,25 @@ let rec stmt env st0 =
     (* todo: check compatible with return type of function! so need
      * to know enclosing function type!
      *)
-    | Return eopt -> Return (expropt env eopt)
+    | Return eopt -> 
+      raise Todo;
+      Return 
+        (match eopt with
+        | None -> 
+          (* todo: check Void type *)
+          None 
+        | Some e -> 
+          let e = expr env e in
+          (* todo: check tret type *)
+          Some e
+        )
     | Continue -> Continue
     | Break -> Break
     | Label (name, st) -> Label (name, stmt env st)
     | Goto name -> Goto name
-    | Var vdecl -> raise Todo
+    | Var { v_name = fullname; v_loc = loc; v_type = typ;
+            v_storage = stoopt; v_init = eopt} -> 
+      raise Todo
     )
   }
 
@@ -595,6 +658,14 @@ let check_and_annotate_program ast =
       let t = type_ env typ in
       let ini = expropt env eopt in
 
+      (* step 0: typechecking initializer *)
+      (match ini with
+      | None -> ()
+      | Some e ->
+        (* less: no const checking for this assign *)
+        check_compatible_assign (SimpleAssign) t e.e_type loc
+      );
+
       (* step1: check for weird declarations *)
       (match t, ini, stoopt with
       | T.Func _, Some _, _ -> 
@@ -650,6 +721,7 @@ let check_and_annotate_program ast =
          Hashtbl.add env.ids fullname 
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       )
+
 
     | FuncDef ({f_name=name; f_loc=loc; f_type=ftyp; 
                f_storage=stoopt; f_body=st;} as def) ->

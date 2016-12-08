@@ -6,7 +6,7 @@
  (split-string 
   "commons
    formats/objects formats/executables
-   assembler linker mk shell
+   assembler linker mk shell compiler
    "
   ))
 
@@ -50,4 +50,17 @@
      (3 (concat "-m " (concat p "/shell/rcmain-unix") " -i -r -dump_ast"))
      )
    )))
+
+(setq
+ pad-ocaml-project-prog     "compiler/5c"
+ pad-ocaml-project-args 
+ (join-string 
+  (list 
+   ""
+   (case 2
+     (1 (concat "-debugger -test_parser " (concat p "/compiler/tests/hello.rc")))
+     (2 (concat "-debugger " (concat p "/compiler/tests/helloworld.c")))
+     )
+   )))
+
 

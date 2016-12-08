@@ -46,8 +46,8 @@ type env = {
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   (* stricter: no float enum *)
   enums: (fullname, Type.integer_type) Hashtbl.t;
-  (* less: Ast.expr where can be only either Int | Float *)
-  constants: (Ast.fullname, string * Type.integer_type) Hashtbl.t;
+  (* stricter: no support for float enum constants either *)
+  constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 }
   and idinfo = {
     typ: Type.t;
@@ -252,6 +252,15 @@ let merge_storage_toplevel name loc stoopt ini old =
 (* Constant expression evaluator *)
 (*****************************************************************************)
 
+exception NotAConstant
+
+(* stricter: I do not handle float constants for enums *)
+let eval env e0 =
+  match e0.e with
+  (* less: enough for big integers? *)
+  | Int (s, inttype) -> int_of_string s
+  | _ -> raise Todo
+
 (*****************************************************************************)
 (* Other helpers *)
 (*****************************************************************************)
@@ -285,7 +294,17 @@ let rec type_ env typ0 =
   | TBase t -> t
   | TPointer typ -> T.Pointer (type_ env typ)
   | TArray (eopt, typ) ->
-      raise Todo
+      (match eopt with
+      | None -> T.Array (None, type_ env typ)
+      | Some e ->
+        (try 
+           let i = eval env e in
+           T.Array (Some i, type_ env typ)
+         with NotAConstant ->
+           raise (Error (E.ErrorMisc ("array size must be a positive constant",
+                                      typ0.t_loc)))
+        )
+      )
   | TFunction (tret, (tparams, tdots)) ->
       T.Func (type_ env tret, 
                 tparams |> List.map (fun p -> type_ env p.p_type), tdots)
@@ -307,8 +326,8 @@ let rec expr env e0 =
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
      then
-       let (s, inttype) = Hashtbl.find env.constants fullname in
-       { e0 with e = Int (s, inttype); e_type = T.I inttype }
+       let (i, inttype) = Hashtbl.find env.constants fullname in
+       { e0 with e = Int (spf "%d" i, inttype); e_type = T.I inttype }
      else
        let idinfo = Hashtbl.find env.ids fullname in
        { e0 with e_type = idinfo.typ } |> array_to_pointer
@@ -508,8 +527,35 @@ let check_and_annotate_program ast =
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
       Hashtbl.add env.typedefs fullname (type_ env typ)
 
-    | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }->
-      raise Todo
+    | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }
+      ->
+      (* stricter: no support for float enum constants *)
+      let lastvalue = ref 0 in
+      let maxt = ref (T.Int (T.Signed)) in
+      let xs = csts |> List.map (fun 
+        { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
+          (match eopt with
+          | Some e ->
+            (try 
+               (* less: should also return an integer type *)
+               let i = eval env e in
+               let t = (T.Int (T.Signed)) in
+               (* todo: maxt := max_types !maxt t; *)
+               Hashtbl.add env.constants fullname (i, t);
+               lastvalue := i;
+             with NotAConstant ->
+               raise (Error (E.ErrorMisc (spf "enum not a constant: %s"
+                                            (unwrap fullname), loc)))
+            )
+          | None ->
+            (* todo: curt *)
+            let t = (T.Int (T.Signed)) in
+            Hashtbl.add env.constants fullname (!lastvalue, t);
+          );
+          incr lastvalue
+      )
+      in
+      Hashtbl.add env.enums fullname !maxt
 
     (* remember that VarDecl covers also prototypes *)
     | VarDecl { v_name = fullname; v_loc = loc; v_type = typ;

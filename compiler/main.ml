@@ -48,6 +48,7 @@ open Common
 
 let thechar = '5'
 let thestring = "arm"
+let arch = Arch5.arch
 
 let usage = 
   spf "usage: %cc [-options] files" thechar

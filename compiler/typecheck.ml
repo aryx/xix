@@ -272,6 +272,9 @@ let rec lvalue e0 =
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
 
+let array_to_pointer e =
+  raise Todo
+
 (*****************************************************************************)
 (* AST Types to Types.t *)
 (*****************************************************************************)
@@ -300,7 +303,7 @@ let rec expr env e0 =
   match e0.e with
   | Int    (s, inttype)   -> { e0 with e_type = T.I inttype }
   | Float  (s, floattype) -> { e0 with e_type = T.F floattype }
-  | String (s, t)         -> { e0 with e_type = t }
+  | String (s, t)         -> { e0 with e_type = t } |> array_to_pointer
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
      then
@@ -308,7 +311,7 @@ let rec expr env e0 =
        { e0 with e = Int (s, inttype); e_type = T.I inttype }
      else
        let idinfo = Hashtbl.find env.ids fullname in
-       { e0 with e_type = idinfo.typ }
+       { e0 with e_type = idinfo.typ } |> array_to_pointer
   | Sequence (e1, e2) -> 
     let e1 = expr env e1 in
     let e2 = expr env e2 in
@@ -352,7 +355,8 @@ let rec expr env e0 =
       let e = expr env e in
       (match e.e_type with
       (* less: what about T.Array ? *)
-      | T.Pointer t ->{ e0 with e = Unary (DeRef, e); e_type = t }
+      | T.Pointer t -> 
+        { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer
       | _ -> type_error e.e_type e.e_loc
       )
     )
@@ -381,7 +385,7 @@ let rec expr env e0 =
       let (_su2, def) = Hashtbl.find env.structs fullname in
       (try
          let t = List.assoc name def in
-         { e0 with e = RecordAccess (e, name); e_type = t }
+         { e0 with e = RecordAccess (e, name); e_type = t } |> array_to_pointer
        with Not_found ->
          raise (Error (E.ErrorMisc (spf "not a member of struct/union: %s" name,
                                    e.e_loc)))
@@ -405,7 +409,7 @@ let rec expr env e0 =
     | T.StructName _, T.Void -> ()
     | _ -> type_error2 e.e_type t e0.e_loc
     );
-    { e0 with e = Cast (typ, e); e_type = t }
+    { e0 with e = Cast (typ, e); e_type = t } (* |> array_to_pointer ? *)
 
   | SizeOf(te) ->
     raise Todo

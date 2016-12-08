@@ -94,9 +94,9 @@ let merge_types t1 t2 =
   t1
 
 (* when processing enumeration constants, we want to keep the biggest type *)
-let max_types t1 t2 =
-  raise Todo
-
+(*
+let max_types t1 t2 = ...
+*)
 
 (* when you apply an operation between two expressions, this
  * expression can be valid even if the types of those two expressions
@@ -526,8 +526,7 @@ let rec stmt env st0 =
       let e1either = 
         (match e1either with 
         | Left e1opt -> Left (expropt env e1opt)
-        | Right decls -> 
-          raise Todo
+        | Right decls -> raise Todo
         )
       in
       For (e1either, expropt env e2opt, expropt env e3opt, stmt env st)
@@ -543,20 +542,9 @@ let rec stmt env st0 =
     )
   }
 
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
-(* todo:
- *  - evaluate const_expr  "enum not a constant: %s"
- *  - stuff done by 5c at parsing time:
- *    * type of Cast
- *    * type of lexpr
- *    * type of Return
- *    * type of identifier
- *    * type of constants (integers, floats, strings)
- *)
 
 let check_and_annotate_program ast =
 

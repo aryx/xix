@@ -255,10 +255,55 @@ let merge_storage_toplevel name loc stoopt ini old =
 exception NotAConstant
 
 (* stricter: I do not handle float constants for enums *)
-let eval env e0 =
+let rec eval env e0 =
   match e0.e with
   (* less: enough for big integers? *)
   | Int (s, inttype) -> int_of_string s
+  | Id fullname ->
+     if Hashtbl.mem env.constants fullname
+     then
+       let (i, inttype) = Hashtbl.find env.constants fullname in
+       i
+     else raise NotAConstant
+  | Binary (e1, op, e2) ->
+    let i1 = eval env e1 in
+    let i2 = eval env e2 in
+    (match op with
+    | Arith op -> 
+      (match op with
+      | Plus -> i1 + i2
+      | Minus -> i1 - i2
+      | Mul -> i1 * i2
+      | Div -> 
+        (* stricter: error, not warning *)
+        if i2 = 0 
+        then raise (Error (E.ErrorMisc ("divide by zero", e0.e_loc)))
+        else i1 / i2
+      | Mod -> 
+        if i2 = 0 
+        then raise (Error (E.ErrorMisc ("modulo by zero", e0.e_loc)))
+        else i1 mod i2
+      | And -> i1 land i2
+      | Or -> i1 lor i2
+      | Xor -> i1 lxor i2
+      | ShiftLeft -> i1 lsl i2
+      (* less: could be asr! need type information! *)
+      | ShiftRight -> i1 lsr i2
+      )
+    | Logical op ->
+      (match op with
+      | _ -> raise Todo
+      )
+    )
+  | Unary (op, e) ->
+    let i = eval env e in
+    (match op with
+    | UnPlus -> i
+    | UnMinus -> - i
+    | Tilde -> lnot i (* sure? *)
+    | _ -> raise Todo
+    )
+
   | _ -> raise Todo
 
 (*****************************************************************************)
@@ -532,7 +577,7 @@ let check_and_annotate_program ast =
       (* stricter: no support for float enum constants *)
       let lastvalue = ref 0 in
       let maxt = ref (T.Int (T.Signed)) in
-      let xs = csts |> List.map (fun 
+      csts |> List.iter (fun 
         { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
           (match eopt with
           | Some e ->
@@ -553,8 +598,7 @@ let check_and_annotate_program ast =
             Hashtbl.add env.constants fullname (!lastvalue, t);
           );
           incr lastvalue
-      )
-      in
+      );
       Hashtbl.add env.enums fullname !maxt
 
     (* remember that VarDecl covers also prototypes *)

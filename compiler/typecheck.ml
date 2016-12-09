@@ -95,9 +95,12 @@ let type_error2 t1 t2 loc =
  * two types is simple.
  *)
 let same_types t1 t2 =
-  t1 = t2
-  (* stricter: void* can not match any pointer *)
+  match t1, t2 with
+  (* void* can not match any pointer *)
+  | T.Pointer T.Void, T.Pointer _ -> true
+  | T.Pointer _, T.Pointer T.Void -> true
   (* stricter: struct equality by name, not by fields *)
+  | _ -> t1 = t2
    
 
 (* if you declare multiple times the same global, we must merge types. *)
@@ -134,9 +137,9 @@ let check_compatible_binary op t1 t2 loc =
     | T.Pointer _, T.I _
       -> ()
     (* you can sub 2 pointers (if they have the same types, and the
-     * result is a long)
+     * result is a long). same_types() will allow a void* to match any pointer.
      *)
-    | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
+    | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
     | _ -> type_error2 t1 t2 loc
     )
   | Arith (Mul | Div) ->
@@ -155,7 +158,7 @@ let check_compatible_binary op t1 t2 loc =
   | Logical (Eq | NotEq  | Inf | Sup | InfEq | SupEq) ->
     (match t1, t2 with
     | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-    | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
+    | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
     (* you can not compare two structures! no deep equality (nor arrays) *)
     | _ -> type_error2 t1 t2 loc
     )
@@ -228,7 +231,7 @@ let check_compatible_assign op t1 t2 loc =
     (match t1, t2 with
     | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
     (* todo: void* special handling? *)
-    | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
+    | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
     | T.StructName (su1, name1), T.StructName (su2, name2) 
       when su1 = su2 && name1 = name2 -> ()
     | _ -> type_error2 t1 t2 loc

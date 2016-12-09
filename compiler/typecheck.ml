@@ -169,7 +169,55 @@ let check_compatible_binary op t1 t2 loc =
 
 let result_type_binary t1 t2 =
   match t1, t2 with
-  | _ -> raise Todo
+  | T.I (T.Char, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Char, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
+  | T.I (T.Char, T.Unsigned), (T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Short, T.Signed), (T.I ((T.Char|T.Short), sign)) -> 
+      T.I (T.Short, sign)
+  | T.I (T.Short, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Short, T.Unsigned), (T.I ((T.Char|T.Short), _)) -> 
+      T.I (T.Short, T.Unsigned)
+  | T.I (T.Short, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
+  | T.I (T.Short, T.Unsigned), (T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Int, T.Signed), (T.I ((T.Char|T.Short|T.Int), sign)) -> 
+      T.I (T.Int, sign)
+  | T.I (T.Int, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Int, T.Unsigned), (T.I ((T.Char|T.Short|T.Int), _)) -> 
+      T.I (T.Int, T.Unsigned)
+  | T.I (T.Int, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
+  | T.I (T.Int, T.Unsigned), (T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Long, T.Signed), (T.I ((T.Char|T.Short|T.Int|T.Long), sign))-> 
+      T.I (T.Long, sign)
+  | T.I (T.Long, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.Long, T.Unsigned), (T.I ((T.Char|T.Short|T.Int|T.Long), _)) -> 
+      T.I (T.Long, T.Unsigned)
+  | T.I (T.Long, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
+  | T.I (T.Long, T.Unsigned), (T.F _ | T.Pointer _) -> t2
+
+  | T.I (T.VLong, T.Signed),(T.I ((T.Char|T.Short|T.Int|T.Long|T.VLong),sign))->
+      T.I (T.VLong, sign)
+  | T.I (T.VLong, T.Signed), (T.F _ | T.Pointer _) -> t2
+
+  | T.F T.Float, (T.I _ | T.F T.Float) -> T.F T.Float
+  | T.F T.Float, T.F T.Double -> T.F T.Double
+  | T.F T.Float, T.Pointer _ -> t2
+
+  | T.F T.Double, (T.I _ | T.F _) -> T.F T.Double
+  | T.F T.Double, T.Pointer _ -> t2
+
+  | T.Pointer _, (T.I _ | T.F _) -> t1
+  | T.Pointer _, T.Pointer _ ->
+    assert (t1 = t2);
+    t1
+
+  | _ -> raise (Impossible "case should be forbidden by compatibility policy")
 
 let check_compatible_assign op t1 t2 loc =
   match op with
@@ -590,7 +638,7 @@ let rec expr env e0 =
     (* stricter? should enforce e1.e_type is a Bool *)
     check_compatible_binary (Logical Eq) e2.e_type e3.e_type e0.e_loc;
     (* todo: special nil handling? need? *)
-    let finalt = result_type_binary e2.e_loc e3.e_type in
+    let finalt = result_type_binary e2.e_type e3.e_type in
     (* todo: add cast *)
     { e0 with e = CondExpr (e1, e2, e3); e_type = finalt }
 

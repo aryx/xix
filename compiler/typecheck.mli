@@ -9,7 +9,7 @@ type env = {
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
   (* used only internally *)
-  current_function_type: (Type.t * Type.t list * bool);
+  return_type: Type.t;
   expr_context: expr_context;
 }
   and idinfo = {

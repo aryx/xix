@@ -49,7 +49,7 @@ type env = {
   (* stricter: no support for float enum constants either *)
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
-  current_function_type: (Type.t * Type.t list * bool);
+  return_type: Type.t;
   expr_context: expr_context;
 }
   and idinfo = {
@@ -328,7 +328,14 @@ let rec eval env e0 =
       )
     | Logical op ->
       (match op with
-      | _ -> raise Todo
+      | Eq    -> if i1 = i2 then 1 else 0
+      | NotEq -> if i1 <> i2 then 1 else 0
+      | Inf   -> if i1 < i2 then 1 else 0
+      | Sup   -> if i1 > i2 then 1 else 0
+      | InfEq -> if i1 <= i2 then 1 else 0
+      | SupEq -> if i1 >= i2 then 1 else 0
+      | AndLog -> raise Todo
+      | OrLog -> raise Todo
       )
     )
   | Unary (op, e) ->
@@ -595,10 +602,16 @@ let rec expr env e0 =
         ); e_type = e.e_type }
 
   | SizeOf(te) ->
-    (* todo: CtxSizeof because if mention array, want size of array,
-     * not of pointer to array
-     *)
-    raise Todo
+    (match te with
+    | Left e ->
+      (* we pass a special context because if t2 mentions an array, 
+       * we want the size of the array, not the size of a pointer to an array
+       *)
+      let e = expr { env with expr_context = CtxSizeof  } e in
+      { e0 with e = SizeOf (Left e); e_type = T.int }
+    | Right typ ->
+      { e0 with e = SizeOf (Right typ); e_type = T.int }
+    )
 
   | ArrayInit _
   | RecordInit _
@@ -651,15 +664,18 @@ let rec stmt env st0 =
      * to know enclosing function type!
      *)
     | Return eopt -> 
-      raise Todo;
       Return 
         (match eopt with
         | None -> 
-          (* todo: check Void type *)
-          None 
+          if env.return_type = T.Void
+          then None 
+          (* stricter: error, not warn *)
+          else raise (Error (E.ErrorMisc 
+                               ("null return of a typed function", st0.s_loc)))
         | Some e -> 
           let e = expr env e in
-          (* todo: check tret type *)
+          check_compatible_assign SimpleAssign env.return_type e.e_type e.e_loc;
+          (* todo: add cast *)
           Some e
         )
     | Continue -> Continue
@@ -894,7 +910,7 @@ let check_and_annotate_program ast =
         )
       );
       (* the expressions inside the statements are now annontated with types *)
-      let st = stmt env st in
+      let st = stmt { env with return_type = type_ env tret } st in
       funcs := { def with f_body = st }::!funcs;
   in
 
@@ -905,7 +921,7 @@ let check_and_annotate_program ast =
     enums = Hashtbl.create 101;
     constants = Hashtbl.create 101;
     
-    current_function_type = (Type.Void, [], false);
+    return_type = Type.Void;
     expr_context = CtxWantValue;
   }
   in

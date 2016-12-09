@@ -49,9 +49,8 @@ type env = {
   (* stricter: no support for float enum constants either *)
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
-  (* todo: current_function_type
-     todo: expr_context:
-  *)
+  current_function_type: (Type.t * Type.t list * bool);
+  expr_context: expr_context;
 }
   and idinfo = {
     typ: Type.t;
@@ -60,6 +59,7 @@ type env = {
     (* typed initialisers (fake expression for function definitions) *)
     ini: Ast.initialiser option;
   }
+and expr_context = CtxWantValue | CtxGetRef | CtxSizeof
 
 (* less: could factorize things in error.ml? *)
 type error = Check.error
@@ -162,7 +162,10 @@ let check_compatible_binary op t1 t2 loc =
       )
     | _ -> type_error t1 loc
     )
-            
+
+let result_type_binary t1 t2 =
+  match t1, t2 with
+  | _ -> raise Todo
 
 let check_compatible_assign op t1 t2 loc =
   match op with
@@ -352,16 +355,35 @@ let rec lvalue e0 =
   | Id _ 
   | Unary (DeRef, _)
   | RecordAccess _
+  (* strings are transformed at some point in Id *)
+  | String _
     -> true
-  | Int _ | Float _ | String _
+  | Int _ | Float _
   | Binary _ | Unary _
     -> false
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
 
+(* when you mention an array in a context where you want to access the array,
+ * we prefix the array with a '&' and change its type from a T.Array
+ * to a T.Pointer. This allows in turn to write typechecking rules
+ * mentioning only Pointer (see for example check_compatible_binary)
+ *)
 let array_to_pointer env e =
-  (* TODO *)
-  e
+  match e.e_type with
+  | T.Array (_, t) ->
+    (match env.expr_context with
+    | CtxWantValue -> 
+      if not (lvalue (e))
+      then raise (Error (E.ErrorMisc ("not an l-value", e.e_loc)));
+      { e = Unary (GetRef, e); e_type = T.Pointer t; e_loc = e.e_loc }
+    | CtxGetRef -> 
+      Error.warn "address of array ignored" e.e_loc;
+      e
+    | CtxSizeof -> e
+    )
+  (* stricter? do something for Function? or force to put address? *)
+  | _ -> e
 
 (*****************************************************************************)
 (* AST Types to Types.t *)
@@ -398,9 +420,12 @@ let rec type_ env typ0 =
 (*****************************************************************************)
 
 let rec expr env e0 =
+  (* default env for recursive call *)
+  let newenv = { env with expr_context = CtxWantValue } in
   match e0.e with
   | Int    (s, inttype)   -> { e0 with e_type = T.I inttype }
   | Float  (s, floattype) -> { e0 with e_type = T.F floattype }
+  (* less: transform in Id later? *)
   | String (s, t)         -> { e0 with e_type = t } |> array_to_pointer env
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
@@ -411,16 +436,29 @@ let rec expr env e0 =
        let idinfo = Hashtbl.find env.ids fullname in
        { e0 with e_type = idinfo.typ } |> array_to_pointer env
   | Sequence (e1, e2) -> 
-    let e1 = expr env e1 in
-    let e2 = expr env e2 in
+    let e1 = expr newenv e1 in
+    let e2 = expr newenv e2 in
     { e0 with e = Sequence (e1, e2); e_type = e2.e_type }
 
   | Binary (e1, op, e2) ->
-    let e1 = expr env e1 in
-    let e2 = expr env e2 in
+    let e1 = expr newenv e1 in
+    let e2 = expr newenv e2 in
     check_compatible_binary op e1.e_type e2.e_type e0.e_loc;
-    (* TODO: add casts, get final type *)
-    raise Todo
+    (* todo: add casts if left and right not the same types? or do it later? *)
+    let finalt = 
+      match op with
+      | Arith (Plus | Minus | Mul | Div | Mod    
+              | And | Or | Xor
+              (* todo: also add T.int cast when shl/shr on right operand *)
+              | ShiftLeft | ShiftRight
+              ) -> result_type_binary e1.e_type e2.e_type
+      | Logical (Eq | NotEq  
+                | Inf | Sup | InfEq | SupEq
+                | AndLog | OrLog
+                ) ->
+        T.int
+    in
+    { e0 with e = Binary (e1, op, e2); e_type = finalt }
 
   | Unary (op, e) ->
     (match op with
@@ -434,23 +472,24 @@ let rec expr env e0 =
       let e = Binary ({e0 with e = Int ("-1", T.Int T.Signed)}, Arith Xor, e) in
       expr env { e0 with e = e }
     | Not ->
-      let e = expr env e in
+      let e = expr newenv e in
       (match e.e_type with
-      (* less: what about T.Array ? *)
+      (* what about T.Array? see array_to_pointer above *)
       | T.I _ | T.F _ | T.Pointer _ -> ()
       | _ -> type_error e.e_type e.e_loc 
       );
       { e0 with e = Unary (Not, e); e_type = T.int }
 
     | GetRef ->
-      let e = expr env e in
+      (* we dont want an additional '&' added before an array *)
+      let e = expr { env with expr_context = CtxGetRef } e in
       if not (lvalue (e))
       then raise (Error (E.ErrorMisc ("not an l-value", e0.e_loc)));
       (* less: warn if take address of array or function, ADDROP *)
       { e0 with e = Unary (GetRef, e); e_type = T.Pointer (e.e_type) }
 
     | DeRef ->
-      let e = expr env e in
+      let e = expr newenv e in
       (match e.e_type with
       (* what about T.Array? see array_to_pointer *)
       | T.Pointer t -> 
@@ -459,13 +498,16 @@ let rec expr env e0 =
       )
     )
   | Assign (op, e1, e2) ->
-    let e1 = expr env e1 in
-    let e2 = expr env e2 in
+    let e1 = expr newenv e1 in
+    let e2 = expr newenv e2 in
     if not (lvalue (e1))
     then raise (Error (E.ErrorMisc ("not an l-value", e0.e_loc)));
     check_compatible_assign op e1.e_type e2.e_type e0.e_loc;
-    (* TODO: add casts *)
-    raise Todo
+    (* todo: add cast on e2 if not same type,
+     * todo: mixedasop thing?
+     *)
+    { e0 with e = Assign (op, e1, e2); e_type = e1.e_type }
+
 
   (* x[y] --> *(x+y) *)
   | ArrayAccess (e1, e2) ->
@@ -477,7 +519,7 @@ let rec expr env e0 =
     expr env { e0 with e = e }
 
   | RecordAccess (e, name) ->
-    let e = expr env e in
+    let e = expr newenv e in
     (match e.e_type with
     | T.StructName (su, fullname) ->
       let (_su2, def) = Hashtbl.find env.structs fullname in
@@ -493,13 +535,13 @@ let rec expr env e0 =
     )
   | Call (e, es) ->
     (* less: should disable implicit OADDR for function here in env *)
-    let e = expr env e in
-    (* less: should enable OADDR for function and array here *)
-    let es = List.map (expr env) es in
+    let e = expr newenv e in
+    (* enable GetRef for array here (and functions) *)
+    let es = List.map (expr { env with expr_context = CtxWantValue }) es in
     (match e.e_type with
     | T.Func (tret, tparams, varargs) ->
       check_args_vs_params es tparams varargs e0.e_loc;
-      (* TODO: add cast *)
+      (* todo: add cast *)
       (* less: format checking *)
       { e0 with e = Call (e, es); e_type = tret }
     | T.Pointer (T.Func (tret, tparams, varargs)) ->
@@ -509,7 +551,7 @@ let rec expr env e0 =
     )
   | Cast (typ, e) ->
     let t = type_ env typ in
-    let e = expr env e in
+    let e = expr newenv e in
     (match e.e_type, t with
     | T.I _, (T.I _ | T.F _ | T.Pointer _ | T.Void)
     | T.F _, (T.I _ | T.F _ | T.Void)
@@ -525,13 +567,37 @@ let rec expr env e0 =
     { e0 with e = Cast (typ, e); e_type = t } (* |> array_to_pointer ? *)
 
   | CondExpr (e1, e2, e3) ->
-    raise Todo
-  | Postfix(e, op) ->
-    raise Todo
-  | Prefix(op, e) ->
-    raise Todo
+    let e1 = expr newenv e1 in
+    let e2 = expr newenv e2 in
+    let e3 = expr newenv e3 in
+    (* stricter? should enforce e1.e_type is a Bool *)
+    check_compatible_binary (Logical Eq) e2.e_type e3.e_type e0.e_loc;
+    (* todo: special nil handling? need? *)
+    let finalt = result_type_binary e2.e_loc e3.e_type in
+    (* todo: add cast *)
+    { e0 with e = CondExpr (e1, e2, e3); e_type = finalt }
+
+  | Postfix(e, op) | Prefix (op, e) ->
+    let e = expr newenv e in
+    if not (lvalue (e))
+    then raise (Error (E.ErrorMisc ("not an l-value", e.e_loc)));
+    check_compatible_binary (Arith Plus) e.e_type T.int e0.e_loc;
+    (match e.e_type with
+    | T.Pointer T.Void ->
+      raise (Error (E.ErrorMisc ("inc/dec of a void pointer", e.e_loc)));
+    | _ -> ()
+    );
+    { e0 with e = 
+        (match e0.e with 
+        | Postfix _ -> Postfix (e, op)
+        | Prefix _ -> Prefix (op, e)
+        | _ -> raise (Impossible "pattern match only those cases")
+        ); e_type = e.e_type }
 
   | SizeOf(te) ->
+    (* todo: CtxSizeof because if mention array, want size of array,
+     * not of pointer to array
+     *)
     raise Todo
 
   | ArrayInit _
@@ -602,7 +668,42 @@ let rec stmt env st0 =
     | Goto name -> Goto name
     | Var { v_name = fullname; v_loc = loc; v_type = typ;
             v_storage = stoopt; v_init = eopt} -> 
-      raise Todo
+
+      let t = type_ env typ in
+      let ini = expropt env eopt in
+      (match t with
+      (* stricter: forbid nested prototypes *)
+      | T.Func _ -> raise (Error (E.ErrorMisc 
+                       ("prototypes inside functions are forbidden", loc)));
+      | _ -> ()
+      );
+      let sto =
+        match stoopt with
+        | None -> S.Auto
+        (* stricter? forbid? confusing anyway to shadow locals *)
+        | Some S.Extern ->
+          raise (Error (E.ErrorMisc 
+              ("extern declaration inside functions are forbidden", loc)));
+        | Some S.Static -> 
+          raise Todo
+        | Some S.Auto -> 
+          (* stricter: I warn at least *)
+          Error.warn "useless auto keyword" loc;
+          S.Auto
+        | Some (S.Global | S.Param) -> 
+          raise (Impossible "global/param are not keywords")
+      in
+
+      (match ini with
+      | None -> ()
+      | Some e ->
+        (* less: no const checking for this assign *)
+        check_compatible_assign (SimpleAssign) t e.e_type loc
+        (* todo: add cast if not same type *)
+      );
+      Hashtbl.add env.ids fullname { typ = t; sto = sto; ini = ini; loc = loc };
+      Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
+            v_init = ini }
     )
   }
 
@@ -803,6 +904,9 @@ let check_and_annotate_program ast =
     typedefs = Hashtbl.create 101;
     enums = Hashtbl.create 101;
     constants = Hashtbl.create 101;
+    
+    current_function_type = (Type.Void, [], false);
+    expr_context = CtxWantValue;
   }
   in
   ast |> List.iter (toplevel env);

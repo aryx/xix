@@ -1,1 +1,4 @@
-auto int x;
+
+void foo() {
+  auto int x;
+}

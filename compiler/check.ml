@@ -308,6 +308,7 @@ let check_usedef program =
      *  extern int i;  in which case we must go back to global
      *  scope for i! so rewrite AST? or just in typecheck.ml
      *  generate right storage for it.
+     * can also be nested prototype (but I should forbid it
      *)
       check_inconsistent_or_redefined_id env fullname IdIdent loc;
       env.local_ids <- fullname :: env.local_ids;

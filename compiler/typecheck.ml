@@ -76,10 +76,11 @@ let type_error _t loc =
   (* less: dump t? *)
   raise (Error (E.ErrorMisc ("incompatible type", loc)))
 
+(* todo: for op xxx *)
 let type_error2 t1 t2 loc =
   let s1 = Dumper.s_of_any (FinalType t1) in
   let s2 = Dumper.s_of_any (FinalType t2) in
-  raise (Error (E.ErrorMisc (spf "incompatible types (%s != %s)" s1 s2, loc)))
+  raise (Error (E.ErrorMisc (spf "incompatible types (%s and %s)" s1 s2, loc)))
 
 (*****************************************************************************)
 (* Types helpers *)
@@ -132,7 +133,9 @@ let check_compatible_binary op t1 t2 loc =
     (* you can not sub a pointer to an int (but can sub an int to a pointer) *)
     | T.Pointer _, T.I _
       -> ()
-    (* you can sub 2 pointers (if they have the same types) *)
+    (* you can sub 2 pointers (if they have the same types, and the
+     * result is a long)
+     *)
     | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
     | _ -> type_error2 t1 t2 loc
     )
@@ -512,7 +515,12 @@ let rec expr env e0 =
     (* todo: add casts if left and right not the same types? or do it later? *)
     let finalt = 
       match op with
-      | Arith (Plus | Minus | Mul | Div | Mod    
+      | Arith Minus ->
+        (match e1.e_type, e2.e_type with
+        | T.Pointer _, T.Pointer _ -> T.long
+        | _ -> result_type_binary e1.e_type e2.e_type
+        )
+      | Arith (Plus | Mul | Div | Mod    
               | And | Or | Xor
               (* todo: also add T.int cast when shl/shr on right operand *)
               | ShiftLeft | ShiftRight

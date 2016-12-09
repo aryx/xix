@@ -59,3 +59,4 @@ type structdef = (string * t) list
  (* with tarzan *)
 
 let int = I (Int, Signed)
+let long = I (Long, Signed)

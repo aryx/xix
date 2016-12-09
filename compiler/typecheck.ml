@@ -705,8 +705,14 @@ let rec stmt env st0 =
     | ExprSt e -> ExprSt (expr env e)
     | Block xs -> Block (List.map (stmt env) xs)
     | If (e, st1, st2) -> If (expr env e, stmt env st1, stmt env st2)
-    (* todo: ensure e is an integer! not a pointer *)
-    | Switch (e, xs) -> Switch (expr env e, stmt env xs)
+    | Switch (e, xs) -> 
+      let e = expr env e in
+      (* ensure e is an integer! not a pointer *)
+      (match e.e_type with
+      | T.I _ | T.F _ -> ()
+      | _ -> type_error e.e_type e.e_loc
+      );
+      Switch (e, stmt env xs)
     (* less: should enforce int expr? *)
     | Case (e, st) -> Case (expr env e, stmt env st)
     | Default st -> Default (stmt env st)

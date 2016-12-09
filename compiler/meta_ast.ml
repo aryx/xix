@@ -2,10 +2,12 @@
 
 open Ast
 
-(* I modified vof_expr and vof_stmt to not always show the line information.
+(* I modified vof_expr and vof_stmt to not always show the 
+ * line information and type information.
  * Less noise that way.
  *)
 let show_all_pos = ref false
+let show_types = ref false
 
 let vof_name x = Ocaml.vof_string x
 let vof_blockid x = Ocaml.vof_int x
@@ -26,10 +28,13 @@ let rec vof_type_ { t = v_t; t_loc = v_t_loc } =
   let bnds = [] in
   let arg = vof_loc v_t_loc in
   let bnd = ("t_loc", arg) in
-  let bnds = bnd :: bnds in
+  let bnds = bnd :: bnds  in
   let arg = vof_type_bis v_t in
-  let bnd = ("t", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
-  else vof_type_bis v_t
+  let bnd = ("t", arg) in 
+  let bnds = bnd :: bnds in 
+  Ocaml.VDict bnds
+  else 
+    vof_type_bis v_t
 and vof_type_bis =
   function
   | TBase v1 -> let v1 = Type.vof_t v1 in Ocaml.VSum (("TBase", [ v1 ]))
@@ -69,15 +74,15 @@ and vof_parameter { p_name = v_p_name; p_loc = v_p_loc; p_type = v_p_type } =
   let bnd = ("p_name", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 
 and vof_expr { e = v_e; e_loc = v_e_loc; e_type = v_e_type } =
-  if !show_all_pos
+  if !show_all_pos || !show_types
   then
   let bnds = [] in
   let arg = Type.vof_t v_e_type in
   let bnd = ("e_type", arg) in
-  let bnds = bnd :: bnds in
+  let bnds = if !show_types then bnd :: bnds else bnds in
   let arg = vof_loc v_e_loc in
   let bnd = ("e_loc", arg) in
-  let bnds = bnd :: bnds in
+  let bnds = if !show_all_pos then bnd :: bnds else bnds in
   let arg = vof_expr_bis v_e in
   let bnd = ("e", arg) in 
   let bnds = bnd :: bnds in 

@@ -92,16 +92,20 @@ let compile (defs, include_paths) infile outfile =
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let (_env, _funcs) = 
+  let (_env, funcs) = 
     Typecheck.check_and_annotate_program ast 
   in
+  
+  if !Flags.dump_typed_ast
+  then funcs |> List.iter (fun func ->
+    pr2 (Dumper.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func)))
+  );
 
 (*
   let asm = Codegen5.codegen ast in
   Object_code5.save (asm, !Location_cpp.history) outfile
 *)
 
-  pr2 (Dumper.s_of_any (Ast.Program ast));
   ()
 
 
@@ -165,6 +169,8 @@ let main () =
     " dump the tokens as they are generated";
     "-dump_ast", Arg.Set Flags.dump_ast,
     " dump the parsed AST";
+    "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
+    " dump the typed AST";
 
     (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,

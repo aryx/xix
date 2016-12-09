@@ -4,10 +4,11 @@ open Type
 
 let vof_blockid v = Ocaml.vof_int v
   
+(* pad: modif vof_sign to be more compact *)
 let vof_sign =
   function
-  | Signed -> Ocaml.VSum (("Signed", []))
-  | Unsigned -> Ocaml.VSum (("Unsigned", []))
+  | Signed -> Ocaml.VSum (("S", []))
+  | Unsigned -> Ocaml.VSum (("U", []))
 
 let vof_fullname (v1, v2) =
   let v1 = Ocaml.vof_string v1 and v2 = vof_blockid v2 in 

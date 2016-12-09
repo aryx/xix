@@ -15,8 +15,7 @@ module E = Check
  *  - it assigns a final storage to every identifiers
  *  - it assigns a type to every expressions
  *  - it returns a typed AST and also transforms this AST
- *    (enum constants are replaced by their value, constant string replaces
- *     by a reference, etc)
+ *    (e.g., enum constants are replaced by their value)
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
  * we do not have to handle scope here. 
@@ -665,9 +664,7 @@ let rec stmt env st0 =
         )
       in
       For (e1either, expropt env e2opt, expropt env e3opt, stmt env st)
-    (* todo: check compatible with return type of function! so need
-     * to know enclosing function type!
-     *)
+
     | Return eopt -> 
       Return 
         (match eopt with

@@ -18,10 +18,6 @@ module Asm = Ast_asm5
 (* Helpers *)
 (*****************************************************************************)
 
-let width_of_type t =
-  raise Todo
-
-
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
@@ -31,5 +27,5 @@ let width_of_type t =
  * - use ast_asm_common.ml?
  *)
 
-let codegen ast =
+let codegen env funcs =
   raise Todo

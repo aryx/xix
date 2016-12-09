@@ -163,7 +163,7 @@ and expr = {
   (* 'x, y', but really should be a statement *)
   | Sequence of expr * expr
 
-  (* codegen: converted to Int?? *)
+  (* codegen: converted to Int *)
   | SizeOf of (expr, type_) Common.either
 
   (* should appear only in a variable initializer, or after GccConstructor *)

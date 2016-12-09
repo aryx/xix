@@ -97,9 +97,11 @@ let compile (defs, include_paths) infile outfile =
   in
   
   if !Flags.dump_typed_ast
-  then funcs |> List.iter (fun func ->
-    pr2 (Dumper.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func)))
-  );
+  then begin 
+    funcs |> List.iter (fun func ->
+      pr2 (Dumper.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func)))
+    );
+  end;
 
 (*
   let asm = Codegen5.codegen ast in

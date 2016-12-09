@@ -29,6 +29,10 @@ module E = Check
  *    (who uses that anyway?)
  *  - no float enum
  *    (who uses that anyway?)
+ * 
+ * todo: 
+ *  - const checking (in check_const.ml?)
+ *  - format checking (in check_format.ml?)
  *)
 
 (*****************************************************************************)
@@ -72,9 +76,10 @@ let type_error _t loc =
   (* less: dump t? *)
   raise (Error (E.ErrorMisc ("incompatible type", loc)))
 
-let type_error2 _t1 _t2 loc =
-  (* less: dump t1 and t2? *)
-  raise (Error (E.ErrorMisc ("incompatible types", loc)))
+let type_error2 t1 t2 loc =
+  let s1 = Dumper.s_of_any (FinalType t1) in
+  let s2 = Dumper.s_of_any (FinalType t2) in
+  raise (Error (E.ErrorMisc (spf "incompatible types (%s != %s)" s1 s2, loc)))
 
 (*****************************************************************************)
 (* Types helpers *)
@@ -171,6 +176,7 @@ let check_compatible_assign op t1 t2 loc =
   | SimpleAssign ->
     (match t1, t2 with
     | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
+    (* todo: void* special handling? *)
     | T.Pointer t1, T.Pointer t2 when same_types t1 t2 -> ()
     | T.StructName (su1, name1), T.StructName (su2, name2) 
       when su1 = su2 && name1 = name2 -> ()

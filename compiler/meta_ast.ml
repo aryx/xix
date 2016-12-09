@@ -439,3 +439,4 @@ let vof_any =
   | Toplevel v1 ->
       let v1 = vof_toplevel v1 in Ocaml.VSum (("Toplevel", [ v1 ]))
   | Program v1 -> let v1 = vof_program v1 in Ocaml.VSum (("Program", [ v1 ]))
+  | FinalType v1 -> let v1 = Type.vof_t v1 in Ocaml.VSum (("T", [ v1 ]))

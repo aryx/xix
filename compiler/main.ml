@@ -92,12 +92,19 @@ let compile (defs, include_paths) infile outfile =
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let (_env, funcs) = 
+  let (env, funcs) = 
     Typecheck.check_and_annotate_program ast 
   in
   
   if !Flags.dump_typed_ast
   then begin 
+    env.Typecheck.ids |> Hashtbl.iter (fun k v ->
+      match v.Typecheck.sto with
+      | Storage.Global | Storage.Static ->
+        pr2 (Ast.unwrap k);
+        pr2 (Dumper.s_of_any (Ast.FinalType v.Typecheck.typ));
+      | _ -> ()
+    );
     funcs |> List.iter (fun func ->
       pr2 (Dumper.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func)))
     );

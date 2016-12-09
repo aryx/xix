@@ -342,6 +342,7 @@ type any =
   | Type of type_
   | Toplevel of toplevel
   | Program of program
+  | FinalType of Type.t
 
  (* with tarzan *)
 

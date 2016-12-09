@@ -96,7 +96,7 @@ let type_error2 t1 t2 loc =
  *)
 let same_types t1 t2 =
   match t1, t2 with
-  (* void* can not match any pointer *)
+  (* 'void*' can match any pointer! The generic trick of C *)
   | T.Pointer T.Void, T.Pointer _ -> true
   | T.Pointer _, T.Pointer T.Void -> true
   (* stricter: struct equality by name, not by fields *)

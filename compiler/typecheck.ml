@@ -415,7 +415,12 @@ let rec type_ env typ0 =
       )
   | TFunction (tret, (tparams, tdots)) ->
       T.Func (type_ env tret, 
-                tparams |> List.map (fun p -> type_ env p.p_type), tdots)
+                tparams |> List.map (fun p -> 
+                  (* todo: transform T.Array and T.Func in pointer? 
+                   * or forbid it or warn?
+                   *)
+                  type_ env p.p_type
+                ), tdots)
   | TStructName (su, fullname) -> T.StructName (su, fullname)
   (* expand enums *)
   | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)

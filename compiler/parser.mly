@@ -649,24 +649,24 @@ qual:
 /*(*-----------------------------------------*)*/
 
 simple_type:
- | Tchar            { (T.I (T.Char T.Signed), $1) }
+ | Tchar            { (T.I (T.Char, T.Signed), $1) }
  /*(* meh, I should remove all Signed variants *)*/
- | Tsigned Tchar    { (T.I (T.Char T.Signed), $1) }
- | Tunsigned Tchar  { (T.I (T.Char T.Unsigned), $1) }
+ | Tsigned Tchar    { (T.I (T.Char, T.Signed), $1) }
+ | Tunsigned Tchar  { (T.I (T.Char, T.Unsigned), $1) }
 
- | Tshort           { (T.I (T.Short T.Signed), $1) }
- | Tunsigned Tshort { (T.I (T.Short T.Unsigned), $1) }
+ | Tshort           { (T.I (T.Short, T.Signed), $1) }
+ | Tunsigned Tshort { (T.I (T.Short, T.Unsigned), $1) }
 
- | Tint             { (T.I (T.Int T.Signed), $1) }
- | Tunsigned Tint   { (T.I (T.Int T.Unsigned), $1) }
+ | Tint             { (T.I (T.Int, T.Signed), $1) }
+ | Tunsigned Tint   { (T.I (T.Int, T.Unsigned), $1) }
  /*(*bad: should be removed, but for compatibility with plan9 code I keep it*)*/
- | Tunsigned        { (T.I (T.Int T.Unsigned), $1) }
+ | Tunsigned        { (T.I (T.Int, T.Unsigned), $1) }
 
- | Tlong            { (T.I (T.Long T.Signed), $1) }
- | Tunsigned Tlong  { (T.I (T.Long T.Unsigned), $1) }
+ | Tlong            { (T.I (T.Long, T.Signed), $1) }
+ | Tunsigned Tlong  { (T.I (T.Long, T.Unsigned), $1) }
 
- | Tlong Tlong      { (T.I (T.VLong T.Signed), $1) }
- | Tunsigned Tlong Tlong { (T.I (T.VLong T.Unsigned), $1) }
+ | Tlong Tlong      { (T.I (T.VLong, T.Signed), $1) }
+ | Tunsigned Tlong Tlong { (T.I (T.VLong, T.Unsigned), $1) }
 
 
  | Tfloat  { (T.F (T.Float), $1) }

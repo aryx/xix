@@ -39,13 +39,19 @@ let rec vof_t =
       let v1 = vof_struct_kind v1
       and v2 = vof_fullname v2
       in Ocaml.VSum (("StructName", [ v1; v2 ]))
-and vof_integer_type =
+
+and vof_integer_type (v1, v2) =
+  let v1 = vof_integer_kind v1
+  and v2 = vof_sign v2
+  in Ocaml.VTuple [ v1; v2 ]
+and vof_integer_kind =
   function
-  | Char v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Char", [ v1 ]))
-  | Short v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Short", [ v1 ]))
-  | Int v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Int", [ v1 ]))
-  | Long v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Long", [ v1 ]))
-  | VLong v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("VLong", [ v1 ]))
+  | Char -> Ocaml.VSum (("Char", []))
+  | Short -> Ocaml.VSum (("Short", []))
+  | Int -> Ocaml.VSum (("Int", []))
+  | Long -> Ocaml.VSum (("Long", []))
+  | VLong -> Ocaml.VSum (("VLong", []))
+
 and vof_float_type =
   function
   | Float -> Ocaml.VSum (("Float", []))

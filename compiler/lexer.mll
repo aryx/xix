@@ -40,9 +40,9 @@ let inttype_of_suffix sign size =
       | s -> error (spf "Impossible: wrong sign suffix: %s" s)
   in
   match String.lowercase size with
-  | "" -> T.Int sign
-  | "l" -> T.Long sign
-  | "ll" -> T.VLong sign
+  | "" -> T.Int, sign
+  | "l" -> T.Long, sign
+  | "ll" -> T.VLong, sign
   | s -> error (spf "Impossible: wrong int size suffix: %s" s)
 
 let floattype_of_suffix s =
@@ -159,8 +159,8 @@ rule token = parse
   (* Strings and chars *)
   (* ----------------------------------------------------------------------- *)
   (* converting characters in integers *)
-  | "'" { TIConst (loc(), spf "%d" (char lexbuf), T.Char (T.Signed)) }
-  | '"' { TString (loc(), string lexbuf, T.Array (None, T.I (T.Char T.Signed)))}
+  | "'" { TIConst (loc(), spf "%d" (char lexbuf), (T.Char, T.Signed)) }
+  | '"' { TString (loc(), string lexbuf, T.Array (None, T.I (T.Char,T.Signed)))}
 
   (* ----------------------------------------------------------------------- *)
   (* Keywords and identifiers *)

@@ -480,13 +480,13 @@ let rec expr env e0 =
   | Unary (op, e) ->
     (match op with
     | UnPlus -> 
-      let e = Binary ({e0 with e = Int ("0", T.Int T.Signed)}, Arith Plus, e) in
+      let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Plus,e) in
       expr env { e0 with e = e }
     | UnMinus -> 
-      let e = Binary ({e0 with e = Int ("0", T.Int T.Signed)}, Arith Minus, e)in
+      let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Minus,e)in
       expr env { e0 with e = e }
     | Tilde ->
-      let e = Binary ({e0 with e = Int ("-1", T.Int T.Signed)}, Arith Xor, e) in
+      let e = Binary ({e0 with e = Int ("-1",(T.Int,T.Signed))}, Arith Xor,e) in
       expr env { e0 with e = e }
     | Not ->
       let e = expr newenv e in
@@ -753,7 +753,7 @@ let check_and_annotate_program ast =
       ->
       (* stricter: no support for float enum constants *)
       let lastvalue = ref 0 in
-      let maxt = ref (T.Int (T.Signed)) in
+      let maxt = ref (T.Int, T.Signed) in
       csts |> List.iter (fun 
         { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
           (match eopt with
@@ -761,7 +761,7 @@ let check_and_annotate_program ast =
             (try 
                (* less: should also return an integer type *)
                let i = eval env e in
-               let t = (T.Int (T.Signed)) in
+               let t = (T.Int, T.Signed) in
                (* todo: maxt := max_types !maxt t; *)
                Hashtbl.add env.constants fullname (i, t);
                lastvalue := i;
@@ -771,7 +771,7 @@ let check_and_annotate_program ast =
             )
           | None ->
             (* todo: curt *)
-            let t = (T.Int (T.Signed)) in
+            let t = (T.Int ,T.Signed) in
             Hashtbl.add env.constants fullname (!lastvalue, t);
           );
           incr lastvalue

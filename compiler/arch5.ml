@@ -7,13 +7,13 @@ module T = Type
 let rec width_of_type env t =
   match t with
   | T.Void -> 0
-  | T.I inttype ->
+  | T.I (inttype, _sign) ->
     (match inttype with
-    | T.Char _ -> 1
-    | T.Short _ -> 2
-    | T.Int _ -> 4
-    | T.Long _ -> 4
-    | T.VLong _ -> 8
+    | T.Char -> 1
+    | T.Short -> 2
+    | T.Int -> 4
+    | T.Long -> 4
+    | T.VLong -> 8
     )
   | T.F T.Float -> 4
   | T.F T.Double -> 8

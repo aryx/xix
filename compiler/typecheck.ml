@@ -609,17 +609,18 @@ let rec expr env e0 =
   | Call (e, es) ->
     (* less: should disable implicit OADDR for function here in env *)
     let e = expr newenv e in
-    (* enable GetRef for array here (and functions) *)
-    let es = List.map (expr { env with expr_context = CtxWantValue }) es in
     (match e.e_type with
+    | T.Pointer (T.Func (tret, tparams, varargs)) ->
+      (* stricter?: we could forbid it, but annoying for my print in libc.h *)
+      let e = { e with e = Unary (DeRef, e); } in
+      expr newenv { e0 with e = Call (e, es) }
     | T.Func (tret, tparams, varargs) ->
+       (* enable GetRef for array here (and functions) *)
+      let es = List.map (expr { env with expr_context = CtxWantValue }) es in
       check_args_vs_params es tparams varargs e0.e_loc;
       (* todo: add cast *)
       (* less: format checking *)
       { e0 with e = Call (e, es); e_type = tret }
-    | T.Pointer (T.Func (tret, tparams, varargs)) ->
-      (* stricter?: forbid? or add DeRef if function pointer *)
-      type_error e.e_type e.e_loc
     | _ -> type_error e.e_type e.e_loc
     )
   | Cast (typ, e) ->

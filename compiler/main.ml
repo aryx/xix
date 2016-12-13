@@ -93,14 +93,14 @@ let compile (defs, include_paths) infile outfile =
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let (env, funcs) = 
+  let (ids, structs, funcs) = 
     Typecheck.check_and_annotate_program ast 
   in
   
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
-    env.Typecheck.ids |> Hashtbl.iter (fun k v ->
+    ids |> Hashtbl.iter (fun k v ->
       match v.Typecheck.sto with
       | Storage.Global | Storage.Static ->
         pr2 (Ast.unwrap k);
@@ -113,7 +113,7 @@ let compile (defs, include_paths) infile outfile =
   end;
 
   (* todo: Rewrite.rewrite *)
-  let asm = Codegen5.codegen env funcs in
+  let asm = Codegen5.codegen (ids, structs, funcs) in
 
   if !Flags.dump_asm
   then begin

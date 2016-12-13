@@ -36,5 +36,5 @@ module TC = Typecheck
  * - use ast_asm_common.ml?
  *)
 
-let codegen env funcs =
+let codegen (ids, structs, funcs) =
   raise Todo

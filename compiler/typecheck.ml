@@ -44,8 +44,11 @@ type integer = int
 
 (* Environment for typechecking *)
 type env = {
+  (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+
+  (* internal *)
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   (* stricter: no float enum *)
   enums: (fullname, Type.integer_type) Hashtbl.t;
@@ -1010,4 +1013,4 @@ let check_and_annotate_program ast =
   in
   ast |> List.iter (toplevel env);
 
-  env, List.rev !funcs
+  env.ids, env.structs, List.rev !funcs

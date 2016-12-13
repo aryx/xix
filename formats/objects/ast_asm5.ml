@@ -182,7 +182,7 @@ type instr =
     (* always/never *)
     | AL | NV
 
-   (* in a MOVE sign is relevant only for a load operation *)
+   (* In a MOVE, sign is relevant only for a load operation *)
    and sign = Signed | Unsigned
 
    and move_size = Word | HalfWord of sign | Byte of sign

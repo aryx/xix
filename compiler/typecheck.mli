@@ -4,11 +4,11 @@ type integer = int
 type env = {
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   enums: (Ast.fullname, Type.integer_type) Hashtbl.t;
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
-  (* used only internally *)
   return_type: Type.t;
   expr_context: expr_context;
 }

@@ -30,6 +30,8 @@ type env = {
   mutable labels:   (string, usedef) Hashtbl.t;
   (* block scope *)
   mutable local_ids: fullname list;
+
+  (* todo: inbreakable: bool; incontinueable: bool *)
 }
 
 type error = 
@@ -276,8 +278,10 @@ let check_usedef program =
         check_unused_locals env
 
     | Return eopt -> eopt |> Common.if_some (expr env)
+    (* todo: check that inside something that be continue/break *)
     | Continue | Break -> ()
 
+    (* checks on labels are done in FuncDef once we analyzed the whole body *)
     | Label (name, st) ->
         (try
            let usedef = Hashtbl.find env.labels name in

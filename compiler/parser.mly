@@ -69,6 +69,11 @@ type env = {
   mutable block_scope: Ast.blockid list;
 
 }
+(* alt: could have a recursive environment with 'parent: env;' and so
+ * we could remove the need for those xxx_scope.
+ * we would need then a lookup_id and lookup_tag that would
+ * possibly look in the parent field.
+ *)
 
 (* Should we warn if 'id' already declared? No, because at the toplevel
  * it is ok to redeclare the same variable or prototype.

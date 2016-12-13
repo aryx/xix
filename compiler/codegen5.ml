@@ -2,7 +2,12 @@
 open Common
 
 module C = Ast
-module Asm = Ast_asm5
+module O = Ast_asm5
+
+module T = Type
+module S = Storage
+module E = Check
+module TC = Typecheck
 
 (*****************************************************************************)
 (* Prelude *)
@@ -13,6 +18,10 @@ module Asm = Ast_asm5
  *   - firstarg opti
  *   - structure alignment (sualign)
  *)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
 
 (*****************************************************************************)
 (* Helpers *)

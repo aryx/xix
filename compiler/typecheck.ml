@@ -276,6 +276,7 @@ let rec check_args_vs_params es tparams varargs loc =
     | _ -> type_error e.e_type loc
     );
     (try 
+       (* todo: convert to int small types? see tcoma *)
        check_compatible_assign SimpleAssign t e.e_type e.e_loc
      with Error _ ->
        raise (Error (E.ErrorMisc ("argument prototype mismatch", e.e_loc)))
@@ -422,6 +423,9 @@ let rec lvalue e0 =
   match e0.e with
   | Id _ 
   | Unary (DeRef, _)
+  (* todo: lvalue only if leftpart is a lvalue. But when it can not be
+   * a lvalue?
+   *)
   | RecordAccess _
   (* strings are transformed at some point in Id *)
   | String _
@@ -710,6 +714,7 @@ let rec stmt env st0 =
     (match st0.s with
     | ExprSt e -> ExprSt (expr env e)
     | Block xs -> Block (List.map (stmt env) xs)
+    (* stricter? should impose at least number or pointer for e? *)
     | If (e, st1, st2) -> If (expr env e, stmt env st1, stmt env st2)
     | Switch (e, xs) -> 
       let e = expr env e in
@@ -981,6 +986,8 @@ let check_and_annotate_program ast =
       let (tret, (tparams, _dots)) = ftyp in
       tparams |> List.iter (fun p ->
         p.p_name |> Common.if_some (fun fullname ->
+          (* todo: warn if array or function? enforce pointer! *)
+          (* todo: convert to int small types? see paramconv? *)
           Hashtbl.add env.ids fullname 
             {typ = type_ env p.p_type; sto = S.Param; loc = loc; ini = None }
         )

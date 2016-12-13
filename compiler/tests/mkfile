@@ -1,3 +1,4 @@
 clean:V:
-        rm -f *.5 *.out
+        rm -f *.5 *.out *.s
+
 

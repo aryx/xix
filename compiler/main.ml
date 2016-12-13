@@ -86,6 +86,7 @@ let compile (defs, include_paths) infile outfile =
 
   let ast = Parse.parse (defs, include_paths) infile in
 
+  (* debug *)
   if !Flags.dump_ast
   then pr2 (Dumper.s_of_any (Ast.Program ast));
 
@@ -96,6 +97,7 @@ let compile (defs, include_paths) infile outfile =
     Typecheck.check_and_annotate_program ast 
   in
   
+  (* debug *)
   if !Flags.dump_typed_ast
   then begin 
     env.Typecheck.ids |> Hashtbl.iter (fun k v ->
@@ -110,12 +112,16 @@ let compile (defs, include_paths) infile outfile =
     );
   end;
 
-(*
-  let asm = Codegen5.codegen ast in
-  Object_code5.save (asm, !Location_cpp.history) outfile
-*)
+  (* todo: Rewrite.rewrite *)
+  let asm = Codegen5.codegen env funcs in
 
-  ()
+  if !Flags.dump_asm
+  then begin
+    ()
+  end;
+
+  Object_code5.save (asm, !Location_cpp.history) outfile
+
 
 
 (*****************************************************************************)
@@ -162,6 +168,9 @@ let main () =
     "-werror", Arg.Set Flags.warnerror,
     " warnings generate error exceptions";
 
+    "-S", Arg.Set Flags.dump_asm,
+    " dump the generated assembly";
+
     "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-f", Arg.Set Flags_cpp.debug_line, " ";
     "-m", Arg.Set Flags_cpp.debug_macros, " ";
@@ -180,6 +189,8 @@ let main () =
     " dump the parsed AST";
     "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
     " dump the typed AST";
+    "-dump_asm", Arg.Set Flags.dump_asm,
+    " dump the generated assembly";
 
     (* pad: I added that *)
     "-debugger", Arg.Set Flags.debugger,

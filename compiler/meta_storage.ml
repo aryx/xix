@@ -4,7 +4,7 @@ open Storage
 
 let vof_t =
   function
-  | Auto -> Ocaml.VSum (("Auto", []))
+  | Local -> Ocaml.VSum (("Local", []))
   | Param -> Ocaml.VSum (("Param", []))
   | Extern -> Ocaml.VSum (("Extern", []))
   | Global -> Ocaml.VSum (("Global", []))

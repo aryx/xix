@@ -2,7 +2,7 @@
 
 (* No Typedef here, because a typedef is not a storage! *) 
 type t =
-  | Auto   (* local *)
+  | Local  (* local *)
   | Param  (* parameter *)
   | Extern (* public global defined elsewhere *)
   | Global (* public global defined here *)

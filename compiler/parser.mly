@@ -920,7 +920,7 @@ const_expr: expr { $1 }
 
 /*(* less: allow some combinations? like extern register? *)*/
 storage:
- | Tauto     { Storage.Auto }
+ | Tauto     { Storage.Local }
  | Tstatic   { Storage.Static }
  | Textern   { Storage.Extern }
  /*(* stricter: 5c just skips register declarations, I forbid them *)*/

@@ -318,7 +318,7 @@ let merge_storage_toplevel name loc stoopt ini old =
       raise (Error (E.Inconsistent (
        spf "non-static declaration of '%s' follows static declaration" name,loc,
        "previous definition is here", old.loc)))
-    | _, (S.Auto | S.Param) -> 
+    | _, (S.Local | S.Param) -> 
       raise (Impossible "globals can't be auto or param")
 
     (* The Some cases *)
@@ -329,7 +329,7 @@ let merge_storage_toplevel name loc stoopt ini old =
         spf "useless extern declaration of '%s'" name, loc,
         "previous definition is here", old.loc)))
 
-    | Some S.Auto, _ ->
+    | Some S.Local, _ ->
       raise  (Error(E.ErrorMisc 
                 ("illegal storage class for file-scoped entity", loc)))
     | Some S.Static, (S.Extern | S.Global) ->
@@ -787,17 +787,17 @@ let rec stmt env st0 =
       );
       let sto =
         match stoopt with
-        | None -> S.Auto
+        | None -> S.Local
         (* stricter? forbid? confusing anyway to shadow locals *)
         | Some S.Extern ->
           raise (Error (E.ErrorMisc 
               ("extern declaration inside functions are forbidden", loc)));
         | Some S.Static -> 
           raise Todo
-        | Some S.Auto -> 
+        | Some S.Local -> 
           (* stricter: I warn at least *)
           Error.warn "useless auto keyword" loc;
-          S.Auto
+          S.Local
         | Some (S.Global | S.Param) -> 
           raise (Impossible "global/param are not keywords")
       in
@@ -922,7 +922,7 @@ let check_and_annotate_program ast =
            | None -> S.Global
            | Some S.Extern -> S.Extern
            | Some S.Static -> S.Static
-           | Some S.Auto -> 
+           | Some S.Local -> 
              raise (Error(E.ErrorMisc 
                           ("illegal storage class for file-scoped entity",loc)))
            | Some (S.Global | S.Param) -> 
@@ -983,7 +983,7 @@ let check_and_annotate_program ast =
            (* different than for VarDecl here *)
            | Some S.Extern -> 
              raise(Error(E.ErrorMisc("'extern' function with initializer",loc)))
-           | Some S.Auto -> 
+           | Some S.Local -> 
              raise (Error(E.ErrorMisc 
                           ("illegal storage class for file-scoped entity",loc)))
            | Some (S.Global | S.Param) -> 

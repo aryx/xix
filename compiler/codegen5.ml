@@ -7,16 +7,20 @@ module A = Ast_asm5
 
 module T = Type
 module S = Storage
-module E = Check
 module TC = Typecheck
+module E = Check
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
 (*
- * todo:
+ * todo later:
+ *   - field, structures
  *   - firstarg opti
- *   - structure alignment (sualign)
+ *   - alignment 
+ *     * structure (sualign)
+ *     * parameters
+ *   - float
  *)
 
 (*****************************************************************************)
@@ -41,31 +45,65 @@ type env = {
   mutable offset_locals: int;
   (* for parameters and locals *)
   offsets: (Ast.fullname, int) Hashtbl.t;
+  (* reference counting registers used (size = 16), 
+   * really a (A.register, int) Hashtbl.t;
+   *)
+  regs: int array;
 }
 
 let rRET = A.R 0
 let rARG = A.R 0
 
-(* less:
-type addrable = 
- | Const 
- | Name
- | Register
- | IndReg
+let rEXT1 = A.R 10
+let rEXT2 = A.R 9
+
+let regs_initial = 
+  let arr = Array.create A.nb_registers 0 in
+  [A.rLINK; A.rPC;       (* hardware reseved *)
+   A.rTMP; A.rSB; A.rSP; (* linker reserved *)
+   rEXT1; rEXT2;         (* compiler reserved *)
+  ] |> List.iter (fun (A.R x) ->
+    arr.(x) <- 1
+  );
+  arr
+   
+  
+
+type integer = int
+
+(* some form of instruction selection *)
+type operand_able = 
+ { opd: operand_able_kind;
+   typ: Type.t;
+   loc: Ast.loc;
+ }
+and operand_able_kind =
+ | ConstI of integer (* less: type? *)
+ | Register of A.register
+
+ (* indirect *)
+ | Name of Ast.fullname (* less: could put idinfo here *)
+ | Indirect of A.register * A.offset
+(*
  | Addr
  | Ind
+
  | Add
 *)
 
+
+type error = Check.error
+let string_of_error err =
+  Check.string_of_error err
+exception Error of error
+
+
 (*****************************************************************************)
-(* Helpers *)
+(* Instructions  *)
 (*****************************************************************************)
 
-let fake_instr = 
-  A.Instr (A.NOP, A.AL)
-let fake_loc =
-  -1
-
+let fake_instr = A.Instr (A.NOP, A.AL)
+let fake_loc = -1
 let noattr = { A.dupok = false; A.prof = false }
 
 let add_instr env instr loc = 
@@ -96,6 +134,10 @@ let set_instr env pc instr loc =
 let patch_instr env pcgoto pcdest =
   raise Todo
 
+(*****************************************************************************)
+(* C to Asm helpers  *)
+(*****************************************************************************)
+
 let entity_of_id fullname idinfo = 
   { A.name = Ast.unwrap fullname;
     A.priv = 
@@ -107,6 +149,48 @@ let entity_of_id fullname idinfo =
     (* less: analyse idinfo.typ *)
     A.signature = None;
   }
+
+(*****************************************************************************)
+(* Operand able, instruction selection  *)
+(*****************************************************************************)
+
+let operand_able env e0 =
+  let kind_opt = 
+    match e0.e with
+    (* less: put also type? *)
+    | Int (s, inttype) -> 
+      Some (ConstI (int_of_string s))
+    (* todo: float handling *)
+    | Float _ -> None
+    | Id fullname -> Some (Name fullname)
+    | Unary (op, e) ->
+      (match op with
+      | GetRef -> raise Todo
+      | DeRef -> raise Todo
+      | UnPlus | UnMinus | Tilde -> 
+        raise (Impossible "should have been converted")
+      | Not -> raise Todo
+      )
+    | Binary (e1, op, e2) ->
+      (match op with
+      | Arith Plus -> raise Todo
+      | _ -> None
+      )
+    
+    | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
+      -> None
+    
+    | Cast _ -> raise Todo
+    | RecordAccess _ -> raise Todo
+    
+    | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
+    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _
+      -> raise (Impossible "should have been converted")
+  in
+  match kind_opt with
+  | None -> None
+  | Some opd -> Some { opd = opd; typ = e0.e_type; loc = e0.e_loc }
+
 
 (*****************************************************************************)
 (* Register allocation helpers *)
@@ -125,7 +209,7 @@ let regalloc env e_orig dst_regopt
 let gopcode env =
   raise Todo
 
-let gmove env =
+let gmove env opd1 opd2 =
   raise Todo
 
 (*****************************************************************************)
@@ -137,36 +221,41 @@ let gmove env =
  *)
 let rec expr env e0 optdst =
 
-  (* todo: if addrable, then gmove *)
-
-  match e0.e with
-  | Sequence (e1, e2) -> 
-    expr env e1 None;
-    expr env e2 optdst
-
-  (* less: lots of possible opti *)
-  | Binary (e1, op, e2) ->
-    (match op with
-    | Arith (Plus | Minus 
-            | And | Or | Xor 
-            | ShiftLeft | ShiftRight
-            | Mul | Div | Mod) ->
-      raise Todo
-    | Logical _ ->
+  match operand_able env e0, optdst with
+  | Some opd, Some reg -> gmove env opd (Register reg)
+  | Some _, None -> 
+     (* less: should have warned about unused opd in check.ml *)
+     ()
+  | None, _ ->
+    (match e0.e with
+    | Sequence (e1, e2) -> 
+      expr env e1 None;
+      expr env e2 optdst
+    
+    (* less: lots of possible opti *)
+    | Binary (e1, op, e2) ->
+      (match op with
+      | Arith (Plus | Minus 
+              | And | Or | Xor 
+              | ShiftLeft | ShiftRight
+              | Mul | Div | Mod) ->
+        raise Todo
+      | Logical _ ->
+        raise Todo
+      )
+    
+    | Assign (op, e1, e2) ->
+      (match op with
+      | SimpleAssign ->
+        raise Todo
+      | OpAssign op ->
+        raise Todo
+      )
+    
+    | _ -> 
+      pr2 (Dumper.s_of_any (Expr e0));
       raise Todo
     )
-
-  | Assign (op, e1, e2) ->
-    (match op with
-    | SimpleAssign ->
-      raise Todo
-    | OpAssign op ->
-      raise Todo
-    )
-
-  | _ -> 
-    pr2 (Dumper.s_of_any (Expr e0));
-    raise Todo
 
 (*****************************************************************************)
 (* Statement *)
@@ -225,6 +314,7 @@ let codegen (ids, structs, funcs) =
     size_locals = -1;
     offset_locals = -1;
     offsets = Hashtbl.create 0;
+    regs = Array.make 0 16;
   } in
 
   funcs |> List.iter (fun { f_name=name; f_loc=loc; f_body=st; f_type=typ } ->
@@ -262,6 +352,7 @@ let codegen (ids, structs, funcs) =
       size_locals = 0;
       offset_locals = 0;
       offsets = offsets;
+      regs = Array.copy regs_initial;
     } in
     stmt newenv st;
 
@@ -270,6 +361,11 @@ let codegen (ids, structs, funcs) =
                          newenv.size_locals)))
       loc;
     add_instr env (A.Instr (A.RET, A.AL)) loc;
+
+    newenv.regs |> Array.iteri (fun i v ->
+      if regs_initial.(i) <> v
+      then raise (Error (E.ErrorMisc (spf "reg %d left allocated" i, loc)));
+    );
 
   );
 

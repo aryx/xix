@@ -151,6 +151,29 @@ let entity_of_id fullname idinfo =
     A.signature = None;
   }
 
+let symbol fullname = Ast.unwrap fullname
+
+let mov_operand env opd =
+  match opd.opd with
+  | ConstI i   -> A.Imsr (A.Imm i)
+  | Register r -> A.Imsr (A.Reg r)
+  | Name fullname ->
+    let idinfo = Hashtbl.find env.ids fullname in
+    (match idinfo.TC.sto with
+    | S.Param -> 
+      let offset = Hashtbl.find env.offsets fullname in
+      A.Param (Some (symbol fullname), offset)
+    | S.Local ->
+      let offset = Hashtbl.find env.offsets fullname in
+      A.Local (Some (symbol fullname), offset)
+    | S.Static | S.Global | S.Extern ->
+      (* less: can have non 0 offset?? *)
+      let offset = 0 in
+      A.Entity (entity_of_id fullname idinfo, offset)
+    )
+  | Indirect _ -> raise Todo
+  (* todo: OIND, OADDR, ADD *)
+
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
@@ -223,32 +246,52 @@ let gopcode env =
 
 let rec gmove env opd1 opd2 =
   match opd1.opd with
+  (* a load *)
   | Name _ | Indirect _ ->
     let move_size = 
-      (* todo: use opd1.typ to decide *)
-      A.Word
+      match opd1.typ with
+      | T.I (T.Int, _) -> A.Word
+      | _ -> raise Todo
     in
+    (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
     let opd1reg = opd_regalloc env opd1 (Some opd2) in
     gmove_aux env move_size opd1 opd1reg;
     gmove env opd1reg opd2;
     opd_regfree env opd1reg
   | _ ->
     (match opd2.opd with
+    (* a store *)
     | Name _ | Indirect _ ->
       let move_size =
-        (* todo: *)
-        A.Word
+        match opd2.typ with
+        | T.I (T.Int, _) -> A.Word
+        | _ -> raise Todo
       in
-      raise Todo
+      (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
+      let opd2reg = opd_regalloc env opd2 None in
+      gmove env opd1 opd2reg;
+      gmove_aux env move_size opd2reg opd2;
+      opd_regfree env opd2reg
+
     | _ -> 
       (* the simple case *)
-      raise Todo
+      let move_size = 
+        match opd1.typ, opd2.typ with
+        | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
+        (* todo: lots of opti related to float *)
+        | _ -> raise Todo
+      in
+      gmove_aux env move_size opd1 opd2
     )
+
 (* At this point, either opd1 or opd2 references memory, but not both,
  * so we can do the move in one instruction.
  *)
 and gmove_aux env move_size opd1 opd2 =
-  raise Todo
+  add_instr env 
+    (A.Instr (A.MOVE (move_size, None, 
+                      mov_operand env opd1,
+                      mov_operand env opd2), A.AL)) opd1.loc
 
 (*****************************************************************************)
 (* Expression *)

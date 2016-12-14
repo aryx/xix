@@ -717,8 +717,14 @@ let rec stmt env st0 =
     (match st0.s with
     | ExprSt e -> ExprSt (expr env e)
     | Block xs -> Block (List.map (stmt env) xs)
-    (* stricter? should impose at least number or pointer for e? *)
-    | If (e, st1, st2) -> If (expr env e, stmt env st1, stmt env st2)
+    (* stricter: error when does not typecheck, not just set null type on e *)
+    | If (e, st1, st2) -> 
+      let e = expr env e in
+      (match e.e_type with
+      | T.I _ | T.F _ | T.Pointer _ -> ()
+      | _ -> type_error e.e_type e.e_loc
+      );
+      If (e, stmt env st1, stmt env st2)
     | Switch (e, xs) -> 
       let e = expr env e in
       (* ensure e is an integer! not a pointer *)
@@ -732,8 +738,10 @@ let rec stmt env st0 =
     | Default st -> Default (stmt env st)
 
     (* stricter? should require Bool, not abuse pointer *)
-    | While (e, st) -> While (expr env e, stmt env st)
-    | DoWhile (st, e) -> DoWhile (stmt env st, expr env e)
+    | While (e, st) -> 
+      While (expr env e, stmt env st)
+    | DoWhile (st, e) -> 
+      DoWhile (stmt env st, expr env e)
 
     | For (e1either, e2opt, e3opt, st) ->
       (* we may have to do side effects on the environment, so we process

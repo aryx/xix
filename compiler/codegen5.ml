@@ -78,11 +78,11 @@ type operand_able =
    loc: Ast.loc;
  }
 and operand_able_kind =
- | ConstI of integer (* less: type? *)
+ | ConstI of integer
  | Register of A.register
 
  (* indirect *)
- | Name of Ast.fullname (* less: could put idinfo here *)
+ | Name of Ast.fullname
  | Indirect of A.register * A.offset
 (*
  | Addr
@@ -120,16 +120,17 @@ let add_instr env instr loc =
   env.pc <- env.pc + 1;
   ()
 
-let add_fake_instr env str =
-  let spc = env.pc in
-  add_instr env (A.LabelDef (str ^ "(fake)")) fake_loc;
-  spc
-
 let set_instr env pc instr loc =
   if pc >= env.pc
   then failwith (spf "set_instr: pc > env.pc (%d >= %d)" pc env.pc);
   env.code.(pc) <- (instr, loc)
-  
+
+
+let add_fake_instr env str =
+  let spc = env.pc in
+  add_instr env (A.LabelDef (str ^ "(fake)")) fake_loc;
+  spc
+ 
 
 let patch_instr env pcgoto pcdest =
   raise Todo
@@ -154,22 +155,21 @@ let entity_of_id fullname idinfo =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
+(* less: should do the OADDR/OIND reduction before *)
 let operand_able env e0 =
   let kind_opt = 
     match e0.e with
-    (* less: put also type? *)
-    | Int (s, inttype) -> 
-      Some (ConstI (int_of_string s))
+    | Int (s, inttype) -> Some (ConstI (int_of_string s))
     (* todo: float handling *)
     | Float _ -> None
     | Id fullname -> Some (Name fullname)
     | Unary (op, e) ->
-      (match op with
-      | GetRef -> raise Todo
-      | DeRef -> raise Todo
-      | UnPlus | UnMinus | Tilde -> 
+      (match op, e.e with
+      | GetRef, _ -> None
+      | DeRef, _  -> raise Todo
+      | (UnPlus | UnMinus | Tilde), _ -> 
         raise (Impossible "should have been converted")
-      | Not -> raise Todo
+      | Not, _ -> raise Todo
       )
     | Binary (e1, op, e2) ->
       (match op with
@@ -195,12 +195,24 @@ let operand_able env e0 =
 (*****************************************************************************)
 (* Register allocation helpers *)
 (*****************************************************************************)
-(*
-let reguse env reg
-let regfree env reg
-let regalloc env e_orig dst_regopt
 
-*)
+let reguse env (A.R x) =
+  env.regs.(x) <- env.regs.(x) + 1
+
+let regfree env (A.R x) = 
+  env.regs.(x) <- env.regs.(x) - 1;
+  if env.regs.(x) <= 0
+  then raise (Error (E.ErrorMisc ("error in regfree", fake_loc)))
+  
+let regalloc env =
+  (* less: lasti trick? *)
+  raise Todo
+
+let opd_regalloc env opd tgtopt =
+  raise Todo
+
+let opd_regfree env opd =
+  raise Todo
 
 (*****************************************************************************)
 (* Code generation helpers *)
@@ -209,7 +221,33 @@ let regalloc env e_orig dst_regopt
 let gopcode env =
   raise Todo
 
-let gmove env opd1 opd2 =
+let rec gmove env opd1 opd2 =
+  match opd1.opd with
+  | Name _ | Indirect _ ->
+    let move_size = 
+      (* todo: use opd1.typ to decide *)
+      A.Word
+    in
+    let opd1reg = opd_regalloc env opd1 (Some opd2) in
+    gmove_aux env move_size opd1 opd1reg;
+    gmove env opd1reg opd2;
+    opd_regfree env opd1reg
+  | _ ->
+    (match opd2.opd with
+    | Name _ | Indirect _ ->
+      let move_size =
+        (* todo: *)
+        A.Word
+      in
+      raise Todo
+    | _ -> 
+      (* the simple case *)
+      raise Todo
+    )
+(* At this point, either opd1 or opd2 references memory, but not both,
+ * so we can do the move in one instruction.
+ *)
+and gmove_aux env move_size opd1 opd2 =
   raise Todo
 
 (*****************************************************************************)
@@ -219,10 +257,10 @@ let gmove env opd1 opd2 =
 (* todo: inrel ? 
  * todo: if complex type node
  *)
-let rec expr env e0 optdst =
+let rec expr env e0 dst_opd_opt =
 
-  match operand_able env e0, optdst with
-  | Some opd, Some reg -> gmove env opd (Register reg)
+  match operand_able env e0, dst_opd_opt with
+  | Some opd1, Some opd2 -> gmove env opd1 opd2
   | Some _, None -> 
      (* less: should have warned about unused opd in check.ml *)
      ()
@@ -230,7 +268,7 @@ let rec expr env e0 optdst =
     (match e0.e with
     | Sequence (e1, e2) -> 
       expr env e1 None;
-      expr env e2 optdst
+      expr env e2 dst_opd_opt
     
     (* less: lots of possible opti *)
     | Binary (e1, op, e2) ->
@@ -281,7 +319,7 @@ let rec stmt env st0 =
     | Some e ->
       (* todo: if type compatible with R0 *)
       (* todo: reguse, regfree, with_reg *)
-      let dst = rRET in
+      let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
       expr env e (Some dst);
       add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
     )

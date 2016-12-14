@@ -106,7 +106,7 @@ let entity_of_id fullname idinfo =
 (*****************************************************************************)
 let rec stmt env st0 =
   if true
-  then raise Todo
+  then ()
   else ()
 
 (*****************************************************************************)
@@ -142,16 +142,19 @@ let codegen (ids, structs, funcs) =
 
     let spc = add_fake_instr env "TEXT" in
     let offsets = Hashtbl.create 11 in
-    (* todo: add offsets for paramters *)
-
-    stmt { env with 
+    (* todo: add offsets for paramters
+       todo: align offset_locals with return type
+    *)
+    let newenv = { env with 
       size_locals = 0;
       offset_locals = 0;
       offsets = offsets;
-    } st;
+    } in
+    stmt newenv st;
 
     set_instr env spc 
-      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, env.size_locals)))
+      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, 
+                         newenv.size_locals)))
       loc;
     add_instr env (A.Instr (A.RET, A.AL)) loc;
 

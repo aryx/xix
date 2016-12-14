@@ -117,7 +117,12 @@ let compile (defs, include_paths) infile outfile =
 
   if !Flags.dump_asm
   then begin
-    ()
+    let pc = ref 0 in
+    asm |> List.iter (fun (instr, _loc) ->
+      let v = Meta_ast_asm5.vof_line instr in
+      pr2 (spf "%2d: %s" !pc (Ocaml.string_of_v v));
+      incr pc;
+    );
   end;
 
   Object_code5.save (asm, !Location_cpp.history) outfile

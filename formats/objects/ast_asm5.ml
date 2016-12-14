@@ -64,6 +64,7 @@ let rSP  = R 13
 (* reserved by hardware *)
 let rLINK = R 14
 let rPC   = R 15
+let nb_registers = 16
 
 type arith_operand =
   | Imm of integer (* characters are converted to integers *)

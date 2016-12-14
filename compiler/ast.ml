@@ -213,6 +213,7 @@ type stmt = {
 }
   and stmt_bis = 
   | ExprSt of expr
+  (* empty statement is simply Block [] *)
   | Block of stmt list
 
   | If of expr * stmt * stmt

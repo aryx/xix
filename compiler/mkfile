@@ -15,7 +15,7 @@ SRC= flags.ml \
   arch.ml \
   check.ml typecheck.ml \
   rewrite.ml \
-  codegen5.ml arch5.ml \
+  arch5.ml codegen5.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma

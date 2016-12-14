@@ -10,6 +10,10 @@ let vof_offset = Ocaml.vof_int
 let vof_virt_pc = Ocaml.vof_int
 let vof_filename = Ocaml.vof_string
 
+(* pad: I did a few adjustments like shorten to "sig" and
+ * remove wrappers like Instr
+ *)
+
 let vof_register =
   function | R v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("R", [ v1 ]))
 
@@ -17,7 +21,8 @@ let vof_register =
 let vof_entity { name = v_name; priv = v_priv; signature = v_signature } =
   let bnds = [] in
   let arg = Ocaml.vof_option Ocaml.vof_int v_signature in
-  let bnd = ("signature", arg) in
+  (* pad: shortened to sig *)
+  let bnd = ("sig", arg) in
   let bnds = bnd :: bnds in
   let arg = Ocaml.vof_option Ocaml.vof_int v_priv in
   let bnd = ("priv", arg) in
@@ -215,7 +220,9 @@ let vof_line =
   | Instr ((v1, v2)) ->
       let v1 = vof_instr v1
       and v2 = vof_condition v2
-      in Ocaml.VSum (("Instr", [ v1; v2 ]))
+      in
+      (* pad: Ocaml.VSum (("Instr", [ v1; v2 ])) *)
+      Ocaml.VTuple (([ v1; v2 ]))
   | LabelDef v1 -> let v1 = vof_label v1 in Ocaml.VSum (("LabelDef", [ v1 ]))
   
 let vof_program v =

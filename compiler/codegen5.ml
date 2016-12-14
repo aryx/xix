@@ -44,11 +44,11 @@ type env = {
   mutable size_locals: int;
   mutable offset_locals: int;
   (* for parameters and locals *)
-  offsets: (Ast.fullname, int) Hashtbl.t;
+  mutable offsets: (Ast.fullname, int) Hashtbl.t;
   (* reference counting registers used (size = 16), 
    * really a (A.register, int) Hashtbl.t;
    *)
-  regs: int array;
+  mutable regs: int array;
 }
 
 let rRET = A.R 0
@@ -429,21 +429,19 @@ let codegen (ids, structs, funcs) =
     
     
     (* todo: align offset_locals with return type *)
-    let newenv = { env with 
-      size_locals = 0;
-      offset_locals = 0;
-      offsets = offsets;
-      regs = Array.copy regs_initial;
-    } in
-    stmt newenv st;
+    env.size_locals <- 0;
+    env.offset_locals <- 0;
+    env.offsets <- offsets;
+    env.regs <- Array.copy regs_initial;
+    stmt env st;
 
     set_instr env spc 
-      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, 
-                         newenv.size_locals)))
+      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, env.size_locals)))
       loc;
     add_instr env (A.Instr (A.RET, A.AL)) loc;
 
-    newenv.regs |> Array.iteri (fun i v ->
+    (* sanity check register allocation *)
+    env.regs |> Array.iteri (fun i v ->
       if regs_initial.(i) <> v
       then raise (Error (E.ErrorMisc (spf "reg %d left allocated" i, loc)));
     );
@@ -452,5 +450,5 @@ let codegen (ids, structs, funcs) =
 
   (* todo: generate code for ids after *)
 
-  (Array.sub env.code 0 (env.pc - 1) |> Array.to_list) @
+  (Array.sub env.code 0 (env.pc) |> Array.to_list) @
   List.rev env.data

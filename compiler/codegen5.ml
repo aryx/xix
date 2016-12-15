@@ -165,7 +165,8 @@ let mov_operand env opd =
       A.Param (Some (symbol fullname), offset)
     | S.Local ->
       let offset = Hashtbl.find env.offsets fullname in
-      A.Local (Some (symbol fullname), offset)
+      (* - offset for locals *)
+      A.Local (Some (symbol fullname), - offset)
     | S.Static | S.Global | S.Extern ->
       (* less: can have non 0 offset?? *)
       let offset = 0 in

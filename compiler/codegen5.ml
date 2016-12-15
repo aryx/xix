@@ -118,6 +118,7 @@ exception Error of error
 
 let fake_instr = A.Instr (A.NOP, A.AL)
 let fake_loc = -1
+let fake_pc = -1
 let noattr = { A.prof = false; A.dupok = false}
 
 let add_instr env instr loc = 
@@ -144,12 +145,18 @@ let add_fake_instr env str =
   let spc = env.pc in
   add_instr env (A.LabelDef (str ^ "(fake)")) fake_loc;
   spc
- 
 
-let patch_instr env pcgoto pcdest =
+let add_fake_goto env loc =
+  let spc = env.pc in
+  add_instr env (A.Instr (A.B (ref (A.Absolute fake_pc)), A.AL)) loc;
+  spc
+ 
+let patch_fake_goto env pcgoto pcdest =
   match env.code.(pcgoto) with
-  | A.Instr (A.B aref, A.AL), _loc ->
-    if !aref = (A.Absolute (-1))
+  | A.Instr (A.B aref, A.AL), _loc 
+  | A.Instr (A.Bxx (_, aref), A.AL), _loc
+    ->
+    if !aref = (A.Absolute fake_pc)
     then aref := A.Absolute pcdest
     else raise (Impossible "patching already resolved branch")
   | _ -> raise (Impossible "patching non jump instruction")
@@ -245,29 +252,40 @@ let reguse env (A.R x) =
 
 let regfree env (A.R x) = 
   env.regs.(x) <- env.regs.(x) - 1;
-  if env.regs.(x) <= 0
+  if env.regs.(x) < 0
   then raise (Error (E.ErrorMisc ("error in regfree", fake_loc)))
+
+let with_reg env r f =
+  (* less: care about exn? meh, if exn then no recovery anyway *)
+  reguse env r;
+  let res = f() in
+  regfree env r;
+  res
   
 let regalloc env =
   (* less: lasti trick? *)
-  raise Todo
+  let rec aux i n =
+    (* todo: impossible? can reach this point? *)
+    if i >= n 
+    then raise (Impossible "out of fixed registers");
+
+    if env.regs.(i) = 0
+    then begin
+      env.regs.(i) <- 1;
+      i
+    end
+    else aux (i+1) n
+  in
+  aux 0 (Array.length env.regs)
+
 
 (* todo: can reuse previous register if thtopt is a register *)
 let opd_regalloc env opd _tgtoptTODO =
   match opd.typ with
   | T.I _ | T.Pointer _ ->
-    let rec aux i n =
-      (* todo: impossible? can reach this point? *)
-      if i >= n 
-      then raise (Error (E.ErrorMisc ("out of fixed registers", opd.loc)));
-      if env.regs.(i) = 0
-      then begin
-        env.regs.(i) <- 1;
-        { opd with opd = Register (A.R i) }
-      end
-      else aux (i+1) n
-    in
-    aux 0 (Array.length env.regs)
+    let i = regalloc env in
+      { opd with opd = Register (A.R i) }
+
 
   | _ -> raise Todo
 
@@ -397,6 +415,19 @@ let rec expr env e0 dst_opd_opt =
       raise Todo
     )
 
+let expr_cond env e0 =
+  (* todo: *)
+  with_reg env rRET (fun () ->
+    let dst = { opd = Register rRET; typ = e0.e_type; loc = e0.e_loc } in
+    expr env e0 (Some dst);
+    (* less: actually should be last loc of e0 *)
+    let loc = e0.e_loc in
+    add_instr env (A.Instr (A.Cmp (A.CMP, A.Imm 0, rRET), A.AL)) loc;
+    let pc = env.pc in
+    add_instr env (A.Instr (A.Bxx (A.EQ,(ref (A.Absolute fake_pc))),A.AL)) loc;
+    pc
+  )
+
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
@@ -421,10 +452,11 @@ let rec stmt env st0 =
       add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
     | Some e ->
       (* todo: if type compatible with R0 *)
-      (* todo: reguse, regfree, with_reg *)
-      let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
-      expr env e (Some dst);
-      add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
+      with_reg env rRET (fun () ->
+        let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
+        expr env e (Some dst);
+        add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
+      )
     )
 
   | Label (name, st) ->
@@ -433,7 +465,7 @@ let rec stmt env st0 =
     if Hashtbl.mem env.forward_gotos name
     then begin
       let xs = Hashtbl.find env.forward_gotos name in
-      xs |> List.iter (fun xpc -> patch_instr env xpc here);
+      xs |> List.iter (fun xpc -> patch_fake_goto env xpc here);
       (* not really necessary because can not define the same label twice *)
       Hashtbl.remove env.forward_gotos name
     end;
@@ -449,12 +481,23 @@ let rec stmt env st0 =
           (here:: (if Hashtbl.mem env.forward_gotos name
                   then Hashtbl.find env.forward_gotos name
                   else []));
-        -1
+        fake_pc
       end
     in
     add_instr env (A.Instr (A.B (ref (A.Absolute dstpc)), A.AL)) st0.s_loc;
     
-    
+  | If (e, st1, st2) ->
+    let goto_else_or_end = ref (expr_cond env e) in
+    if st1.s <> Block []
+    then stmt env st1;
+    if st2.s <> Block []
+    then begin
+      let goto_end = add_fake_goto env st2.s_loc in
+      patch_fake_goto env !goto_else_or_end env.pc;
+      stmt env st2;
+      goto_else_or_end := goto_end;
+    end;
+    patch_fake_goto env !goto_else_or_end env.pc
     
   | _ -> 
     pr2 (Dumper.s_of_any (Stmt st0));

@@ -29,10 +29,15 @@ module E = Check
 
 (* Environment for code generation *)
 type env = {
+
+  (* computed by previous typechecking phase *)
+
   ids:  (Ast.fullname, TC.idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   arch: Arch.arch;
+
+  (* the output *)
 
   mutable pc: A.virt_pc;
   (* growing array *)
@@ -41,10 +46,19 @@ type env = {
   mutable data: (A.line * A.loc) list;
 
   (* reinitialized for each function *)
+
   mutable size_locals: int;
   mutable offset_locals: int;
   (* for parameters and locals *)
   mutable offsets: (Ast.fullname, int) Hashtbl.t;
+
+  mutable labels: (string, A.virt_pc) Hashtbl.t;
+  (* if the label is defined after the goto, when we process the label,
+   * we need to update the previous goto instructions.
+   *)
+  mutable forward_gotos: (string, A.virt_pc list) Hashtbl.t;
+
+
   (* reference counting registers used (size = 16), 
    * really a (A.register, int) Hashtbl.t;
    *)
@@ -133,7 +147,13 @@ let add_fake_instr env str =
  
 
 let patch_instr env pcgoto pcdest =
-  raise Todo
+  match env.code.(pcgoto) with
+  | A.Instr (A.B aref, A.AL), _loc ->
+    if !aref = (A.Absolute (-1))
+    then aref := A.Absolute pcdest
+    else raise (Impossible "patching already resolved branch")
+  | _ -> raise (Impossible "patching non jump instruction")
+
 
 (*****************************************************************************)
 (* C to Asm helpers  *)
@@ -406,6 +426,35 @@ let rec stmt env st0 =
       expr env e (Some dst);
       add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
     )
+
+  | Label (name, st) ->
+    let here = env.pc in
+    Hashtbl.add env.labels name here;
+    if Hashtbl.mem env.forward_gotos name
+    then begin
+      let xs = Hashtbl.find env.forward_gotos name in
+      xs |> List.iter (fun xpc -> patch_instr env xpc here);
+      (* not really necessary because can not define the same label twice *)
+      Hashtbl.remove env.forward_gotos name
+    end;
+    (* todo? generate dummy Goto +1? *)
+    stmt env st
+  | Goto name ->
+    let here = env.pc in
+    let dstpc = 
+      if Hashtbl.mem env.labels name
+      then Hashtbl.find env.labels name
+      else begin
+        Hashtbl.replace env.forward_gotos name
+          (here:: (if Hashtbl.mem env.forward_gotos name
+                  then Hashtbl.find env.forward_gotos name
+                  else []));
+        -1
+      end
+    in
+    add_instr env (A.Instr (A.B (ref (A.Absolute dstpc)), A.AL)) st0.s_loc;
+    
+    
     
   | _ -> 
     pr2 (Dumper.s_of_any (Stmt st0));
@@ -435,6 +484,8 @@ let codegen (ids, structs, funcs) =
     size_locals = -1;
     offset_locals = -1;
     offsets = Hashtbl.create 0;
+    labels = Hashtbl.create 0;
+    forward_gotos = Hashtbl.create 0;
     regs = Array.make 0 16;
   } in
 
@@ -472,6 +523,8 @@ let codegen (ids, structs, funcs) =
     env.size_locals <- 0;
     env.offset_locals <- 0;
     env.offsets <- offsets;
+    env.labels <- Hashtbl.create 11;
+    env.forward_gotos <- Hashtbl.create 11;
     env.regs <- Array.copy regs_initial;
     stmt env st;
 

@@ -104,7 +104,7 @@ exception Error of error
 
 let fake_instr = A.Instr (A.NOP, A.AL)
 let fake_loc = -1
-let noattr = { A.dupok = false; A.prof = false }
+let noattr = { A.prof = false; A.dupok = false}
 
 let add_instr env instr loc = 
   (* grow array if necessary *)
@@ -401,7 +401,7 @@ let codegen (ids, structs, funcs) =
   funcs |> List.iter (fun { f_name=name; f_loc=loc; f_body=st; f_type=typ } ->
     let fullname = (name, 0) in
     let idinfo = Hashtbl.find env.ids fullname in
-    (* less: can set fields from C? *)
+    (* todo: if Flag.profile (can be disabled by #pragma) *)
     let attrs = noattr in
 
     let spc = add_fake_instr env "TEXT" in

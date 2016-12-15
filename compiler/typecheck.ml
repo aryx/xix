@@ -31,8 +31,10 @@ module E = Check
  *    (who uses that anyway?)
  * 
  * todo: 
- *  - const checking (in check_const.ml?)
- *  - format checking (in check_format.ml?)
+ *  - const checking (in check_const.ml? need types!
+ *  - format checking (in check_format.ml?) need types!
+ *  - misc checks
+ *    * stupid shift bits (need constant evaluation) outside width
  *)
 
 (*****************************************************************************)
@@ -484,10 +486,12 @@ let rec type_ env typ0 =
   | TFunction (tret, (tparams, tdots)) ->
       T.Func (type_ env tret, 
                 tparams |> List.map (fun p -> 
-                  (* todo: transform T.Array and T.Func in pointer? 
-                   * or forbid it or warn?
-                   *)
-                  type_ env p.p_type
+                  let t = type_ env p.p_type in
+                  (match t with
+                  (* stricter: could transform T.Array and T.Func in pointer *)
+                  | T.Array _ | T.Func _ -> type_error t p.p_loc
+                  | _ -> t
+                  )
                 ), tdots)
   | TStructName (su, fullname) -> T.StructName (su, fullname)
   (* expand enums *)
@@ -997,10 +1001,15 @@ let check_and_annotate_program ast =
       let (tret, (tparams, _dots)) = ftyp in
       tparams |> List.iter (fun p ->
         p.p_name |> Common.if_some (fun fullname ->
-          (* todo: warn if array or function? enforce pointer! *)
-          (* todo: convert to int small types? see paramconv? *)
+          let t = type_ env p.p_type in
+          (match t with
+          (* stricter: 5c and clang says nothing, could convert in pointer *) 
+          | T.Array _ | T.Func _ -> type_error t p.p_loc
+          (* todo: convert small types to int? see paramconv? *)
+          | _ -> ()
+          );
           Hashtbl.add env.ids fullname 
-            {typ = type_ env p.p_type; sto = S.Param; loc = loc; ini = None }
+            {typ = t; sto = S.Param; loc = loc; ini = None }
         )
       );
       (* the expressions inside the statements are now annontated with types *)

@@ -232,11 +232,34 @@ let regalloc env =
   (* less: lasti trick? *)
   raise Todo
 
-let opd_regalloc env opd tgtopt =
-  raise Todo
+(* todo: can reuse previous register if thtopt is a register *)
+let opd_regalloc env opd _tgtoptTODO =
+  match opd.typ with
+  | T.I _ | T.Pointer _ ->
+    let rec aux i n =
+      (* todo: impossible? can reach this point? *)
+      if i >= n 
+      then raise (Error (E.ErrorMisc ("out of fixed registers", opd.loc)));
+      if env.regs.(i) = 0
+      then begin
+        env.regs.(i) <- 1;
+        { opd with opd = Register (A.R i) }
+      end
+      else aux (i+1) n
+    in
+    aux 0 (Array.length env.regs)
+
+  | _ -> raise Todo
+
 
 let opd_regfree env opd =
-  raise Todo
+  match opd.opd with
+  | Register (A.R i) ->
+    env.regs.(i) <- env.regs.(i) - 1;
+    if env.regs.(i) < 0
+    then raise (Error (E.ErrorMisc ("error in regfree", opd.loc)));
+  | _ -> raise (Impossible "opd_regfree on non-register operand")
+
 
 (*****************************************************************************)
 (* Code generation helpers *)
@@ -245,6 +268,13 @@ let opd_regfree env opd =
 let gopcode env =
   raise Todo
 
+(* Even though two arguments are operand_able, it does not mean
+ * we can move one into the other with one instruction. Indeed,
+ * 5a supports in theory general MOVW, but 5l restricts those
+ * MOVW to only store and load, but not both at the same time.
+ * This is why below we must decompose the move in 2 instructions
+ * sometimes.
+ *)
 let rec gmove env opd1 opd2 =
   match opd1.opd with
   (* a load *)
@@ -275,7 +305,7 @@ let rec gmove env opd1 opd2 =
       opd_regfree env opd2reg
 
     | _ -> 
-      (* the simple case *)
+      (* the simple cases *)
       let move_size = 
         match opd1.typ, opd2.typ with
         | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
@@ -289,6 +319,10 @@ let rec gmove env opd1 opd2 =
  * so we can do the move in one instruction.
  *)
 and gmove_aux env move_size opd1 opd2 =
+  (* less: should happen only for register? *)
+  if opd1.opd = opd2.opd
+  then ()
+  else 
   add_instr env 
     (A.Instr (A.MOVE (move_size, None, 
                       mov_operand env opd1,
@@ -329,7 +363,11 @@ let rec expr env e0 dst_opd_opt =
     | Assign (op, e1, e2) ->
       (match op with
       | SimpleAssign ->
-        raise Todo
+        (match operand_able env e1, operand_able env e2, dst_opd_opt with
+        (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
+        | Some opd1, Some opd2, None -> gmove env opd2 opd1
+        | _ -> raise Todo
+        )
       | OpAssign op ->
         raise Todo
       )
@@ -354,8 +392,9 @@ let rec stmt env st0 =
       let t = idinfo.TC.typ in
       let sizet = env.arch.Arch.width_of_type {Arch.structs = env.structs} t in
       (* todo: align *)
-      Hashtbl.add env.offsets fullname env.offset_locals;
       env.offset_locals <- env.offset_locals + sizet;
+      Hashtbl.add env.offsets fullname env.offset_locals;
+      env.size_locals <- env.size_locals + sizet;
   | Return eopt ->
     (match eopt with
     | None ->

@@ -498,7 +498,22 @@ let rec stmt env st0 =
       goto_else_or_end := goto_end;
     end;
     patch_fake_goto env !goto_else_or_end env.pc
+
+  | While (e, st) ->
+    let goto_entry = add_fake_goto env e.e_loc in
+    let goto_for_continue = add_fake_goto env e.e_loc in
+    let goto_for_break = add_fake_goto env e.e_loc in
+    patch_fake_goto env goto_for_continue env.pc;
+    patch_fake_goto env goto_entry env.pc;
     
+    let goto_else = expr_cond env e in
+    patch_fake_goto env goto_else goto_for_break;
+    stmt env st;
+    (* less: should be last loc of st? *)
+    let loc = e.e_loc in
+    add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
+    patch_fake_goto env goto_for_break env.pc
+
   | _ -> 
     pr2 (Dumper.s_of_any (Stmt st0));
     raise Todo

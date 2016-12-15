@@ -279,7 +279,9 @@ let regalloc env =
   aux 0 (Array.length env.regs)
 
 
-(* todo: can reuse previous register if thtopt is a register *)
+(* todo: can reuse previous register if thtopt is a register 
+ * see for example return.c for miss opportunity to reuse R0 instead of R1
+ *)
 let opd_regalloc env opd _tgtoptTODO =
   match opd.typ with
   | T.I _ | T.Pointer _ ->

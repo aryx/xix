@@ -434,6 +434,11 @@ let expr_cond env e0 =
     pc
   )
 
+let expropt env eopt =
+  match eopt with
+  | None -> ()
+  | Some e -> expr env e None
+
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
@@ -564,6 +569,38 @@ let rec stmt env st0 =
       add_instr env (A.Instr (A.B (ref(A.Absolute dst)), A.AL)) st0.s_loc;
     | None -> raise (Impossible "should be detected in check.ml")
     )
+
+  | For (e1either, e2opt, e3opt, st) ->
+    (match e1either with
+    | Left e1opt -> expropt env e1opt
+    (* todo: scope, should reset autoffset once processed loop *)
+    | Right decls -> 
+      decls |> List.iter (fun var -> stmt env { s = Var var; s_loc=var.v_loc});
+    );
+    let goto_entry        = add_fake_goto env st0.s_loc in
+    let goto_for_continue = add_fake_goto env st0.s_loc in
+    let goto_for_break    = add_fake_goto env st0.s_loc in
+
+    patch_fake_goto env goto_for_continue !(env.pc);
+    expropt env e3opt;
+    patch_fake_goto env goto_entry !(env.pc);
+    (match e2opt with
+    | None -> ()
+    | Some e2 -> 
+      let goto_else = expr_cond env e2 in
+      patch_fake_goto env goto_else goto_for_break;
+    );
+    
+    let env = { env with 
+      break_pc = Some goto_for_break; 
+      continue_pc = Some goto_for_continue;
+    }
+    in
+    stmt env st;
+
+    let loc = st0.s_loc in
+    add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
+    patch_fake_goto env goto_for_break !(env.pc)
 
   | _ -> 
     pr2 (Dumper.s_of_any (Stmt st0));

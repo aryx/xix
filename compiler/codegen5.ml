@@ -220,8 +220,7 @@ let mov_operand env opd =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
-(* less: assumes the (OADDR (OIND x)) => x simplification done before 
- * less: rename to mov_operand_able? because $name+x can be an operand
+(* less: rename to mov_operand_able? because $name+x can be an operand
  *  but not a mov operand?
  *)
 let operand_able env e0 =
@@ -233,12 +232,6 @@ let operand_able env e0 =
     | Id fullname -> Some (Name (fullname, 0))
     | Unary (op, e) ->
       (match op with
-       (* todo: Why does not consider OADDR (NAME) as operand_able, even though
-        *  there is a Addr case in operand_able type? because
-        *  OADDR requires special treatment?
-        *)
-      | GetRef -> None
-
       | DeRef  ->
         (match e.e with
         (* less: this should be handled in rewrite.ml *(& x) ==> x *)
@@ -254,6 +247,12 @@ let operand_able env e0 =
         | _ -> None
         )
 
+      (* todo: Why does not consider OADDR (NAME) as operand_able, even though
+       *  there is a Addr case in operand_able type? because
+       *  OADDR requires special treatment?
+       *)
+      | GetRef -> None
+   
       | (UnPlus | UnMinus | Tilde) -> 
         raise (Impossible "should have been converted")
       | Not -> raise Todo

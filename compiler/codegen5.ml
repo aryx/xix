@@ -145,6 +145,7 @@ let add_instr env instr loc =
     Array.blit !(env.code) (Array.length !(env.code)) newcode 0 0;
     env.code := newcode
   end;
+
   !(env.code).(!(env.pc)) <- (instr, loc);
   incr env.pc;
   ()
@@ -198,6 +199,7 @@ let mov_operand env opd =
   match opd.opd with
   | ConstI i   -> A.Imsr (A.Imm i)
   | Register r -> A.Imsr (A.Reg r)
+  (* less: opportunity for bitshifted registers? *)
   | Name fullname ->
     let idinfo = Hashtbl.find env.ids fullname in
     (match idinfo.TC.sto with
@@ -220,11 +222,11 @@ let mov_operand env opd =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
-(* less: should do the OADDR/OIND reduction before *)
+(* less: assumes the (OADDR (OIND x)) => x simplification done before *)
 let operand_able env e0 =
   let kind_opt = 
     match e0.e with
-    | Int (s, inttype) -> Some (ConstI (int_of_string s))
+    | Int (s, _inttype) -> Some (ConstI (int_of_string s))
     (* todo: float handling *)
     | Float _ -> None
     | Id fullname -> Some (Name fullname)
@@ -300,9 +302,7 @@ let opd_regalloc env opd _tgtoptTODO =
   match opd.typ with
   | T.I _ | T.Pointer _ ->
     let i = regalloc env in
-      { opd with opd = Register (A.R i) }
-
-
+    { opd with opd = Register (A.R i) }
   | _ -> raise Todo
 
 
@@ -319,13 +319,10 @@ let opd_regfree env opd =
 (* Code generation helpers *)
 (*****************************************************************************)
 
-let gopcode env =
-  raise Todo
-
 (* Even though two arguments are operand_able, it does not mean
  * we can move one into the other with one instruction. Indeed,
  * 5a supports in theory general MOVW, but 5l restricts those
- * MOVW to only store and load, but not both at the same time.
+ * MOVW to only store and load (not both at the same time).
  * This is why below we must decompose the move in 2 instructions
  * sometimes.
  *)
@@ -369,7 +366,7 @@ let rec gmove env opd1 opd2 =
       gmove_aux env move_size opd1 opd2
     )
 
-(* At this point, either opd1 or opd2 references memory, but not both,
+(* At this point, either opd1 or opd2 references memory (but not both),
  * so we can do the move in one instruction.
  *)
 and gmove_aux env move_size opd1 opd2 =
@@ -614,19 +611,13 @@ let rec stmt env st0 =
     add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
 
-  | _ -> 
-    pr2 (Dumper.s_of_any (Stmt st0));
+  | Switch _ | Case _ | Default _ -> 
     raise Todo
 
 
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
-
-(* gclean:
- * - generate all AGLOBL
- * - use ast_asm_common.ml?
- *)
 
 let codegen (ids, structs, funcs) =
 
@@ -682,14 +673,6 @@ let codegen (ids, structs, funcs) =
     
     
     (* todo: align offset_locals with return type *)
-(*
-    env.size_locals <- 0;
-    env.offset_locals <- 0;
-    env.offsets <- offsets;
-    env.labels <- Hashtbl.create 11;
-    env.forward_gotos <- Hashtbl.create 11;
-    env.regs <- Array.copy regs_initial;
-*)
     let env = { env with
       size_locals = ref 0;
       offset_locals = ref 0;
@@ -703,8 +686,7 @@ let codegen (ids, structs, funcs) =
 
     set_instr env spc 
       (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, 
-                         !(env.size_locals))))
-      loc;
+                         !(env.size_locals)))) loc;
     add_instr env (A.Instr (A.RET, A.AL)) loc;
 
     (* sanity check register allocation *)
@@ -712,10 +694,9 @@ let codegen (ids, structs, funcs) =
       if regs_initial.(i) <> v
       then raise (Error (E.ErrorMisc (spf "reg %d left allocated" i, loc)));
     );
-
   );
 
-  (* todo: generate code for ids after *)
+  (* todo: generate code for ids after, for CGLOBAL *)
 
   (Array.sub !(env.code) 0 !(env.pc) |> Array.to_list) @
   List.rev !(env.data)

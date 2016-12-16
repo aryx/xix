@@ -31,7 +31,7 @@ module E = Check
  *    (who uses that anyway?)
  * 
  * todo: 
- *  - const checking (in check_const.ml? need types!
+ *  - const checking (in check_const.ml?) need types!
  *  - format checking (in check_format.ml?) need types!
  *  - misc checks
  *    * stupid shift bits (need constant evaluation) outside width
@@ -57,7 +57,9 @@ type env = {
   (* stricter: no support for float enum constants either *)
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
+  (* return type of function; used to typecheck Return *)
   return_type: Type.t;
+  (* used to add some implicate GetRef for arrays and functions *)
   expr_context: expr_context;
 }
   and idinfo = {
@@ -135,6 +137,7 @@ let check_compatible_binary op t1 t2 loc =
     | T.I _, T.Pointer _
       -> ()
     (* you can not add 2 pointers *)
+    | T.Pointer _, T.Pointer _
     | _ -> type_error2 t1 t2 loc
     )
   | Arith Minus ->
@@ -237,7 +240,7 @@ let check_compatible_assign op t1 t2 loc =
   | SimpleAssign ->
     (match t1, t2 with
     | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-    (* todo: void* special handling? *)
+    (* 'void*' special handling done in same_types() *)
     | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
     | T.StructName (su1, name1), T.StructName (su2, name2) 
       when su1 = su2 && name1 = name2 -> ()
@@ -288,8 +291,6 @@ let rec check_args_vs_params es tparams varargs loc =
     );
     check_args_vs_params es ts varargs loc
     
-
-
 (*****************************************************************************)
 (* Storage helpers *)
 (*****************************************************************************)
@@ -395,10 +396,10 @@ let rec eval env e0 =
       )
     | Logical op ->
       (match op with
-      | Eq    -> if i1 = i2 then 1 else 0
+      | Eq    -> if i1 =  i2 then 1 else 0
       | NotEq -> if i1 <> i2 then 1 else 0
-      | Inf   -> if i1 < i2 then 1 else 0
-      | Sup   -> if i1 > i2 then 1 else 0
+      | Inf   -> if i1 <  i2 then 1 else 0
+      | Sup   -> if i1 >  i2 then 1 else 0
       | InfEq -> if i1 <= i2 then 1 else 0
       | SupEq -> if i1 >= i2 then 1 else 0
       | AndLog -> raise Todo
@@ -731,7 +732,7 @@ let rec stmt env st0 =
       If (e, stmt env st1, stmt env st2)
     | Switch (e, xs) -> 
       let e = expr env e in
-      (* ensure e is an integer! not a pointer *)
+      (* ensure e is a number! not a pointer *)
       (match e.e_type with
       | T.I _ | T.F _ -> ()
       | _ -> type_error e.e_type e.e_loc

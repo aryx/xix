@@ -133,9 +133,11 @@ and expr = {
   (* codegen: converted to Id after typechecking *)
   | String of string * Type.t (* always array of chars for now, no unicode *)
 
-  (* Global, local, parameter, enum constant (can be scoped), function *)
-  (* todo: mutable symkind? storage? type? setused? *)
-  (* codegen: converted to Int when the fullname refers to a enum constant *)
+  (* Global, local, parameter, enum constant (can be scoped), function.
+   * Not that the storage, type, usage of ids is computed later and stored
+   * in external hashtbl.
+   * codegen: Id converted to Int when the fullname refers to a enum constant 
+   *)
   | Id of fullname
 
   | Call of expr * argument list
@@ -181,7 +183,7 @@ and argument = expr
 and const_expr = expr
 
   and unaryOp  = 
-    (* less: could be lift up; those are really important operators *)
+    (* less: could be lifted up; those are really important operators *)
     | GetRef | DeRef 
     (* codegen: converted to binary operation with 0 (-x => 0-x) *)
     | UnPlus |  UnMinus 
@@ -267,7 +269,7 @@ and var_decl = {
 (* Definitions *)
 (* ------------------------------------------------------------------------- *)
 type func_def = {
-  (* functions have a global scope, no need for fullname here *)
+  (* functions have a global scope; no need for fullname here *)
   f_name: name;
   f_loc: loc;
   (* everything except Param or Auto *)

@@ -26,8 +26,11 @@ let rec width_of_type env t =
     | Some i -> i * width_of_type env t
     )
   | T.StructName (su, fullname) ->
-      let _flds = Hashtbl.find env.structs fullname in
-      raise Todo
+      let (_su, flds) = Hashtbl.find env.structs fullname in
+      (* todo: align so extra size *)
+      flds 
+      |> List.map (fun (fld, t) -> width_of_type env t)
+      |> List.fold_left (+) 0
 
 let arch = {
   width_of_type = width_of_type;

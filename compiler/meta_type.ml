@@ -70,5 +70,4 @@ let vof_structdef v1 =
       and v2 = vof_t v2
       in Ocaml.VTuple [ v1; v2 ])
     v1
-  
 

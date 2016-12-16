@@ -229,6 +229,7 @@ type stmt = {
            stmt
 
   | Return of expr option
+  (* no argument to continue or break as in PHP *)
   | Continue | Break
 
   (* labels have a function scope, so no need to use 'fullname' here *)

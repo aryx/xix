@@ -59,6 +59,10 @@ type env = {
    *)
   forward_gotos: (string, A.virt_pc list) Hashtbl.t;
 
+  (* reinitialized for each block scope *)
+  break_pc: A.virt_pc option;
+  continue_pc: A.virt_pc option;
+
   (* reference counting registers used (size = 16), 
    * really a (A.register, int) Hashtbl.t;
    *)
@@ -511,6 +515,11 @@ let rec stmt env st0 =
     let goto_else = expr_cond env e in
     patch_fake_goto env goto_else goto_for_break;
 
+    let env = { env with 
+      break_pc = Some goto_for_break; 
+      continue_pc = Some goto_for_continue;
+    }
+    in
     stmt env st;
 
     (* less: should be last loc of st? *)
@@ -531,12 +540,30 @@ let rec stmt env st0 =
     (* for a dowhile! *)
     patch_fake_goto env goto_entry !(env.pc);
 
+    let env = { env with 
+      break_pc = Some goto_for_break; 
+      continue_pc = Some goto_for_continue;
+    }
+    in
     stmt env st;
 
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
     add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
+
+  | Break -> 
+    (match env.break_pc with
+    | Some dst ->
+      add_instr env (A.Instr (A.B (ref(A.Absolute dst)), A.AL)) st0.s_loc;
+    | None -> raise (Impossible "should be detected in check.ml")
+    )
+  | Continue ->
+    (match env.continue_pc with
+    | Some dst ->
+      add_instr env (A.Instr (A.B (ref(A.Absolute dst)), A.AL)) st0.s_loc;
+    | None -> raise (Impossible "should be detected in check.ml")
+    )
 
   | _ -> 
     pr2 (Dumper.s_of_any (Stmt st0));
@@ -568,6 +595,10 @@ let codegen (ids, structs, funcs) =
     offsets       = Hashtbl.create 0;
     labels        = Hashtbl.create 0;
     forward_gotos = Hashtbl.create 0;
+
+    break_pc = None;
+    continue_pc = None;
+
     regs          = Array.make 0 16;
   } in
 

@@ -34,6 +34,9 @@ type env = {
 
   ids:  (Ast.fullname, TC.idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  (* less: compute offset for each field?
+   * fields: (Ast.fullname * string, A.offset) Hashtbl.t
+   *)
 
   arch: Arch.arch;
 
@@ -48,10 +51,19 @@ type env = {
 
   (* reinitialized for each function *)
 
+  (* reference counting registers used (size = 16), 
+   * really a (A.register, int) Hashtbl.t;
+   *)
+  regs: int array;
+
   size_locals: int ref;
   offset_locals: int ref;
+
   (* for parameters and locals *)
+
   offsets: (Ast.fullname, int) Hashtbl.t;
+
+  (* for goto/labels *)
 
   labels: (string, A.virt_pc) Hashtbl.t;
   (* if the label is defined after the goto, when we process the label,
@@ -59,14 +71,12 @@ type env = {
    *)
   forward_gotos: (string, A.virt_pc list) Hashtbl.t;
 
+  (* for loops (and switch) *)
+
   (* reinitialized for each block scope *)
   break_pc: A.virt_pc option;
   continue_pc: A.virt_pc option;
 
-  (* reference counting registers used (size = 16), 
-   * really a (A.register, int) Hashtbl.t;
-   *)
-  regs: int array;
 }
 
 let rRET = A.R 0
@@ -378,6 +388,8 @@ and gmove_aux env move_size opd1 opd2 =
 
 (* todo: inrel ? 
  * todo: if complex type node
+ * less: dst_opd always a register? maybe, but still need to carry
+ *  also its type and loc, so maybe easier to always wrap it in an operand.
  *)
 let rec expr env e0 dst_opd_opt =
 
@@ -455,8 +467,8 @@ let rec stmt env st0 =
       let sizet = env.arch.Arch.width_of_type {Arch.structs = env.structs} t in
       (* todo: align *)
       env.offset_locals := !(env.offset_locals) + sizet;
-      Hashtbl.add env.offsets fullname !(env.offset_locals);
       env.size_locals := !(env.size_locals) + sizet;
+      Hashtbl.add env.offsets fullname !(env.offset_locals);
   | Return eopt ->
     (match eopt with
     | None ->
@@ -687,7 +699,6 @@ let codegen (ids, structs, funcs) =
       regs          = Array.copy regs_initial;
     }
     in
-
     stmt env st;
 
     set_instr env spc 

@@ -15,11 +15,12 @@ module E = Check
 (*****************************************************************************)
 (*
  * todo later:
- *   - field, structures
+ *   - fields, structures
  *   - firstarg opti
  *   - alignment 
- *     * structure (sualign)
+ *     * fields (sualign)
  *     * parameters
+ *   - other integer types and cast
  *   - float
  *)
 
@@ -222,7 +223,8 @@ let mov_operand env opd =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
-(* less: assumes the (OADDR (OIND x)) => x simplification done before *)
+(* less: assumes the (OADDR (OIND x)) => x simplification done before 
+*)
 let operand_able env e0 =
   let kind_opt = 
     match e0.e with
@@ -232,6 +234,10 @@ let operand_able env e0 =
     | Id fullname -> Some (Name fullname)
     | Unary (op, e) ->
       (match op, e.e with
+       (* todo: Why does not consider OADDR (NAME) as operand_able, even though
+        *  there is a Addr case in operand_able type? because
+        *  OADDR requires special treatment?
+        *)
       | GetRef, _ -> None
       | DeRef, _  -> raise Todo
       | (UnPlus | UnMinus | Tilde), _ -> 
@@ -417,8 +423,24 @@ let rec expr env e0 dst_opd_opt =
       (match op with
       | SimpleAssign ->
         (match operand_able env e1, operand_able env e2, dst_opd_opt with
-        (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
-        | Some opd1, Some opd2, None -> gmove env opd2 opd1
+        (* ex: x = 1; *)
+        | Some opd1, Some opd2, None -> 
+          (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
+          gmove env opd2 opd1
+
+        (* ex: y = &x;, y = x + y, ... *)
+        | Some opd1, None, None ->
+          raise Todo
+
+        (* ex: return x = 1;, x = y = z, ... *)
+        | Some opd1, Some opd2, Some dst ->
+          raise Todo
+
+        (* ex: return x = x+y;, x = y = z, ... *)
+        | Some opd1, None, Some dst ->
+          raise Todo
+
+        (* ex: *x = 1; *)
         | _ -> raise Todo
         )
       | OpAssign op ->

@@ -433,9 +433,12 @@ let rec lvalue e0 =
    * a lvalue?
    *)
   | RecordAccess _
-  (* strings are transformed at some point in Id *)
-  | String _
     -> true
+  (* stricter: strings are transformed at some point in Id, but it
+   * does not make sense to consider them as lvalue.
+   *)
+  | String _ -> false
+
   | Int _ | Float _
   | Binary _ | Unary _
     -> false

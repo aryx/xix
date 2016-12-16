@@ -39,30 +39,30 @@ type env = {
 
   (* the output *)
 
-  mutable pc: A.virt_pc;
+  pc: A.virt_pc ref;
+
   (* growing array *)
-  mutable code: (A.line * A.loc) array;
+  code: (A.line * A.loc) array ref;
   (* should contain only DATA or GLOBL *)
-  mutable data: (A.line * A.loc) list;
+  data: (A.line * A.loc) list ref;
 
   (* reinitialized for each function *)
 
-  mutable size_locals: int;
-  mutable offset_locals: int;
+  size_locals: int ref;
+  offset_locals: int ref;
   (* for parameters and locals *)
-  mutable offsets: (Ast.fullname, int) Hashtbl.t;
+  offsets: (Ast.fullname, int) Hashtbl.t;
 
-  mutable labels: (string, A.virt_pc) Hashtbl.t;
+  labels: (string, A.virt_pc) Hashtbl.t;
   (* if the label is defined after the goto, when we process the label,
    * we need to update the previous goto instructions.
    *)
-  mutable forward_gotos: (string, A.virt_pc list) Hashtbl.t;
-
+  forward_gotos: (string, A.virt_pc list) Hashtbl.t;
 
   (* reference counting registers used (size = 16), 
    * really a (A.register, int) Hashtbl.t;
    *)
-  mutable regs: int array;
+  regs: int array;
 }
 
 let rRET = A.R 0
@@ -123,36 +123,36 @@ let noattr = { A.prof = false; A.dupok = false}
 
 let add_instr env instr loc = 
   (* grow array if necessary *)
-  if env.pc >= Array.length env.code
+  if !(env.pc) >= Array.length !(env.code)
   then begin
     let newcode = 
-      Array.make (Array.length env.code + 100)  (fake_instr, fake_loc)
+      Array.make (Array.length !(env.code) + 100)  (fake_instr, fake_loc)
     in
-    Array.blit env.code (Array.length env.code) newcode 0 0;
-    env.code <- newcode
+    Array.blit !(env.code) (Array.length !(env.code)) newcode 0 0;
+    env.code := newcode
   end;
-  env.code.(env.pc) <- (instr, loc);
-  env.pc <- env.pc + 1;
+  !(env.code).(!(env.pc)) <- (instr, loc);
+  incr env.pc;
   ()
 
 let set_instr env pc instr loc =
-  if pc >= env.pc
-  then failwith (spf "set_instr: pc > env.pc (%d >= %d)" pc env.pc);
-  env.code.(pc) <- (instr, loc)
+  if pc >= !(env.pc)
+  then failwith (spf "set_instr: pc > env.pc (%d >= %d)" pc !(env.pc));
+  !(env.code).(pc) <- (instr, loc)
 
 
 let add_fake_instr env str =
-  let spc = env.pc in
+  let spc = !(env.pc) in
   add_instr env (A.LabelDef (str ^ "(fake)")) fake_loc;
   spc
 
 let add_fake_goto env loc =
-  let spc = env.pc in
+  let spc = !(env.pc) in
   add_instr env (A.Instr (A.B (ref (A.Absolute fake_pc)), A.AL)) loc;
   spc
  
 let patch_fake_goto env pcgoto pcdest =
-  match env.code.(pcgoto) with
+  match !(env.code).(pcgoto) with
   | A.Instr (A.B aref, A.AL), _loc 
   | A.Instr (A.Bxx (_, aref), A.AL), _loc
     ->
@@ -425,7 +425,7 @@ let expr_cond env e0 =
     (* less: actually should be last loc of e0 *)
     let loc = e0.e_loc in
     add_instr env (A.Instr (A.Cmp (A.CMP, A.Imm 0, rRET), A.AL)) loc;
-    let pc = env.pc in
+    let pc = !(env.pc) in
     add_instr env (A.Instr (A.Bxx (A.EQ,(ref (A.Absolute fake_pc))),A.AL)) loc;
     pc
   )
@@ -445,9 +445,9 @@ let rec stmt env st0 =
       let t = idinfo.TC.typ in
       let sizet = env.arch.Arch.width_of_type {Arch.structs = env.structs} t in
       (* todo: align *)
-      env.offset_locals <- env.offset_locals + sizet;
-      Hashtbl.add env.offsets fullname env.offset_locals;
-      env.size_locals <- env.size_locals + sizet;
+      env.offset_locals := !(env.offset_locals) + sizet;
+      Hashtbl.add env.offsets fullname !(env.offset_locals);
+      env.size_locals := !(env.size_locals) + sizet;
   | Return eopt ->
     (match eopt with
     | None ->
@@ -462,7 +462,7 @@ let rec stmt env st0 =
     )
 
   | Label (name, st) ->
-    let here = env.pc in
+    let here = !(env.pc) in
     Hashtbl.add env.labels name here;
     if Hashtbl.mem env.forward_gotos name
     then begin
@@ -474,7 +474,7 @@ let rec stmt env st0 =
     (* todo? generate dummy Goto +1? *)
     stmt env st
   | Goto name ->
-    let here = env.pc in
+    let here = !(env.pc) in
     let dstpc = 
       if Hashtbl.mem env.labels name
       then Hashtbl.find env.labels name
@@ -495,18 +495,18 @@ let rec stmt env st0 =
     if st2.s <> Block []
     then begin
       let goto_end = add_fake_goto env st2.s_loc in
-      patch_fake_goto env !goto_else_or_end env.pc;
+      patch_fake_goto env !goto_else_or_end !(env.pc);
       stmt env st2;
       goto_else_or_end := goto_end;
     end;
-    patch_fake_goto env !goto_else_or_end env.pc
+    patch_fake_goto env !goto_else_or_end !(env.pc)
 
   | While (e, st) ->
     let goto_entry        = add_fake_goto env e.e_loc in
     let goto_for_continue = add_fake_goto env e.e_loc in
     let goto_for_break    = add_fake_goto env e.e_loc in
-    patch_fake_goto env goto_for_continue env.pc;
-    patch_fake_goto env goto_entry env.pc;
+    patch_fake_goto env goto_for_continue !(env.pc);
+    patch_fake_goto env goto_entry !(env.pc);
     
     let goto_else = expr_cond env e in
     patch_fake_goto env goto_else goto_for_break;
@@ -516,27 +516,27 @@ let rec stmt env st0 =
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
     add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
-    patch_fake_goto env goto_for_break env.pc
+    patch_fake_goto env goto_for_break !(env.pc)
 
   | DoWhile (st, e) ->
 
     let goto_entry        = add_fake_goto env e.e_loc in
     let goto_for_continue = add_fake_goto env e.e_loc in
     let goto_for_break    = add_fake_goto env e.e_loc in
-    patch_fake_goto env goto_for_continue env.pc;
+    patch_fake_goto env goto_for_continue !(env.pc);
     (* for a while: patch_fake_goto env goto_entry env.pc; *)
     
     let goto_else = expr_cond env e in
     patch_fake_goto env goto_else goto_for_break;
     (* for a dowhile! *)
-    patch_fake_goto env goto_entry env.pc;
+    patch_fake_goto env goto_entry !(env.pc);
 
     stmt env st;
 
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
     add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
-    patch_fake_goto env goto_for_break env.pc
+    patch_fake_goto env goto_for_break !(env.pc)
 
   | _ -> 
     pr2 (Dumper.s_of_any (Stmt st0));
@@ -559,16 +559,16 @@ let codegen (ids, structs, funcs) =
     structs = structs;
     arch = Arch5.arch;
 
-    pc = 0;
-    code = [||];
-    data = [];
+    pc = ref 0;
+    code = ref [||];
+    data = ref [];
 
-    size_locals = -1;
-    offset_locals = -1;
-    offsets = Hashtbl.create 0;
-    labels = Hashtbl.create 0;
+    size_locals = ref 0;
+    offset_locals = ref 0;
+    offsets       = Hashtbl.create 0;
+    labels        = Hashtbl.create 0;
     forward_gotos = Hashtbl.create 0;
-    regs = Array.make 0 16;
+    regs          = Array.make 0 16;
   } in
 
   funcs |> List.iter (fun { f_name=name; f_loc=loc; f_body=st; f_type=typ } ->
@@ -602,16 +602,29 @@ let codegen (ids, structs, funcs) =
     
     
     (* todo: align offset_locals with return type *)
+(*
     env.size_locals <- 0;
     env.offset_locals <- 0;
     env.offsets <- offsets;
     env.labels <- Hashtbl.create 11;
     env.forward_gotos <- Hashtbl.create 11;
     env.regs <- Array.copy regs_initial;
+*)
+    let env = { env with
+      size_locals = ref 0;
+      offset_locals = ref 0;
+      offsets       = offsets;
+      labels        = Hashtbl.create 11;
+      forward_gotos = Hashtbl.create 11;
+      regs          = Array.copy regs_initial;
+    }
+    in
+
     stmt env st;
 
     set_instr env spc 
-      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, env.size_locals)))
+      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, 
+                         !(env.size_locals))))
       loc;
     add_instr env (A.Instr (A.RET, A.AL)) loc;
 
@@ -625,5 +638,5 @@ let codegen (ids, structs, funcs) =
 
   (* todo: generate code for ids after *)
 
-  (Array.sub env.code 0 (env.pc) |> Array.to_list) @
-  List.rev env.data
+  (Array.sub !(env.code) 0 !(env.pc) |> Array.to_list) @
+  List.rev !(env.data)

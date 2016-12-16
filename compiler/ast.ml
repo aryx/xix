@@ -162,7 +162,9 @@ and expr = {
   | Binary of expr * binaryOp * expr
 
   | CondExpr of expr * expr * expr
-  (* 'x, y', but really should be a statement *)
+  (* 'x, y', but really should be a statement, and could be removed.
+   * I think mostly used in 'for(...;...;...)' 
+   *)
   | Sequence of expr * expr
 
   (* codegen: converted to Int *)

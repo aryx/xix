@@ -111,13 +111,10 @@ and operand_able_kind =
  | Register of A.register
 
  (* indirect *)
- | Name of Ast.fullname
+ | Name of Ast.fullname * A.offset
  | Indirect of A.register * A.offset
 (*
- | Addr
- | Ind
-
- | Add
+ | Addr?
 *)
 
 
@@ -201,48 +198,65 @@ let mov_operand env opd =
   | ConstI i   -> A.Imsr (A.Imm i)
   | Register r -> A.Imsr (A.Reg r)
   (* less: opportunity for bitshifted registers? *)
-  | Name fullname ->
+  | Name (fullname, offset_extra) ->
     let idinfo = Hashtbl.find env.ids fullname in
     (match idinfo.TC.sto with
     | S.Param -> 
-      let offset = Hashtbl.find env.offsets fullname in
+      let offset = Hashtbl.find env.offsets fullname + offset_extra in
       A.Param (Some (symbol fullname), offset)
     | S.Local ->
-      let offset = Hashtbl.find env.offsets fullname in
+      let offset = Hashtbl.find env.offsets fullname + offset_extra in
       (* - offset for locals *)
       A.Local (Some (symbol fullname), - offset)
     | S.Static | S.Global | S.Extern ->
       (* less: can have non 0 offset?? *)
-      let offset = 0 in
+      let offset = offset_extra in
       A.Entity (entity_of_id fullname idinfo, offset)
     )
   | Indirect _ -> raise Todo
-  (* todo: OIND, OADDR, ADD *)
+  (* todo: OADDR? *)
 
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
 (* less: assumes the (OADDR (OIND x)) => x simplification done before 
-*)
+ * less: rename to mov_operand_able? because $name+x can be an operand
+ *  but not a mov operand?
+ *)
 let operand_able env e0 =
   let kind_opt = 
     match e0.e with
     | Int (s, _inttype) -> Some (ConstI (int_of_string s))
     (* todo: float handling *)
     | Float _ -> None
-    | Id fullname -> Some (Name fullname)
+    | Id fullname -> Some (Name (fullname, 0))
     | Unary (op, e) ->
-      (match op, e.e with
+      (match op with
        (* todo: Why does not consider OADDR (NAME) as operand_able, even though
         *  there is a Addr case in operand_able type? because
         *  OADDR requires special treatment?
         *)
-      | GetRef, _ -> None
-      | DeRef, _  -> raise Todo
-      | (UnPlus | UnMinus | Tilde), _ -> 
+      | GetRef -> None
+
+      | DeRef  ->
+        (match e.e with
+        (* less: this should be handled in rewrite.ml *(& x) ==> x *)
+        | (Unary (GetRef, { e = Id fullname })) -> Some (Name (fullname, 0))
+        (* less: should normalize constant to left or right in rewrite.ml *)
+        | Binary ({ e = Int (s1, _) }, 
+                  Arith Plus, 
+                  {e = (Unary (GetRef, { e = Id fullname })) })
+        | Binary ({e = (Unary (GetRef, { e = Id fullname })) }, 
+                  Arith Plus, 
+                  { e = Int (s1, _) })
+          -> Some (Name (fullname, int_of_string s1))
+        | _ -> None
+        )
+
+      | (UnPlus | UnMinus | Tilde) -> 
         raise (Impossible "should have been converted")
-      | Not, _ -> raise Todo
+      | Not -> raise Todo
       )
     | Binary (e1, op, e2) ->
       (match op with

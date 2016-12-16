@@ -60,7 +60,7 @@
    (case 3
      (1 (concat "-debugger -test_parser " (concat p "/compiler/tests/hello.rc")))
      (2 (concat "-debugger " (concat p "/compiler/tests/helloworld.c")))
-     (3 (concat "-debugger -dump_asm " (concat p "/compiler/tests/trivial.c")))
+     (3 (concat "-debugger -dump_asm " (concat p "/compiler/tests/pointer.c")))
      )
    )))
 

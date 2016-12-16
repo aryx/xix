@@ -113,9 +113,9 @@ and operand_able_kind =
  (* indirect *)
  | Name of Ast.fullname * A.offset
  | Indirect of A.register * A.offset
-(*
- | Addr?
-*)
+
+ | Addr of Ast.fullname
+
 
 
 type error = Check.error
@@ -214,7 +214,10 @@ let mov_operand env opd =
       A.Entity (entity_of_id fullname idinfo, offset)
     )
   | Indirect _ -> raise Todo
-  (* todo: OADDR? *)
+  | Addr fullname -> 
+    let idinfo = Hashtbl.find env.ids fullname in
+    A.Ximm (A.Address (entity_of_id fullname idinfo))
+
 
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
@@ -247,11 +250,16 @@ let operand_able env e0 =
         | _ -> None
         )
 
-      (* todo: Why does not consider OADDR (NAME) as operand_able, even though
+      (* todo: Why does not consider OADDR (ONAME) as operand_able, even though
        *  there is a Addr case in operand_able type? because
        *  OADDR requires special treatment?
        *)
-      | GetRef -> None
+      | GetRef -> 
+        (match e.e with
+        (* todo: why 5c does not make OADDR (ONAME) an addable >= INDEXED? *)
+        | Id fullname -> Some (Addr fullname)
+        | _ -> None
+        )
    
       | (UnPlus | UnMinus | Tilde) -> 
         raise (Impossible "should have been converted")
@@ -351,7 +359,7 @@ let rec gmove env opd1 opd2 =
   | Name _ | Indirect _ ->
     let move_size = 
       match opd1.typ with
-      | T.I (T.Int, _) -> A.Word
+      | T.I (T.Int, _) | T.Pointer _ -> A.Word
       | _ -> raise Todo
     in
     (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
@@ -365,7 +373,7 @@ let rec gmove env opd1 opd2 =
     | Name _ | Indirect _ ->
       let move_size =
         match opd2.typ with
-        | T.I (T.Int, _) -> A.Word
+        | T.I (T.Int, _) | T.Pointer _ -> A.Word
         | _ -> raise Todo
       in
       (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
@@ -379,6 +387,7 @@ let rec gmove env opd1 opd2 =
       let move_size = 
         match opd1.typ, opd2.typ with
         | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
+        | T.Pointer _, T.Pointer _ -> A.Word
         (* todo: lots of opti related to float *)
         | _ -> raise Todo
       in

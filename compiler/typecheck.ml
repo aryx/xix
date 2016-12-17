@@ -415,7 +415,9 @@ let rec eval env e0 =
     | _ -> raise Todo
     )
 
-  | _ -> raise Todo
+  | _ -> 
+    raise NotAConstant (* todo: more opporunities? *)
+
 
 (*****************************************************************************)
 (* Other helpers *)

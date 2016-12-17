@@ -256,7 +256,7 @@ let operand_able env e0 =
    
       | (UnPlus | UnMinus | Tilde) -> 
         raise (Impossible "should have been converted")
-      | Not -> raise Todo
+      | Not -> None
       )
     (* less: could be operand_able if do constant_evaluation later *)
     | Binary (e1, op, e2) -> None
@@ -269,7 +269,7 @@ let operand_able env e0 =
     | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
       raise (Impossible "should have been converted")
     | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
-      raise Todo
+      None
   in
   match kind_opt with
   | None -> None

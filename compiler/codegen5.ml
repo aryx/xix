@@ -489,7 +489,17 @@ let rec expr env e0 dst_opd_opt =
     | Unary (op, e) ->
       (match op with
       | GetRef -> 
-        raise (Impossible "handled in operand_able()")
+        (match e.e, dst_opd_opt  with
+        | Id fullname, Some dst -> 
+          raise (Impossible "handled in operand_able()")
+        | Id fullname, None ->
+          raise (Impossible "should be detected in check.ml")
+        | Unary (DeRef, _), _ ->
+          raise (Impossible "should be simplified in rewrite.ml")
+        | _ -> 
+          raise (Impossible "not an lvalue?")
+        )
+
       | DeRef ->
         raise Todo
 

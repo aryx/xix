@@ -96,6 +96,7 @@ type mov_operand =
     | String of string (* limited to 8 characters *)
     (* Float? *)
     (* stricter: we disallow address of FP or SP, and offset to SB *)
+    (* todo: need to allow address of local or param!! *)
     | Address of entity
 (* with tarzan *)
 

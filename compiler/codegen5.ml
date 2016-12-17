@@ -16,6 +16,7 @@ module E = Check
 (*
  * todo later:
  *   - fields, structures
+ *   - funcalls
  *   - firstarg opti
  *   - alignment 
  *     * fields (sualign)
@@ -52,7 +53,7 @@ type env = {
 
   (* reinitialized for each function *)
 
-  (* reference counting registers used (size = 16), 
+  (* reference counting the used registers (size = 16), 
    * really a (A.register, int) Hashtbl.t;
    *)
   regs: int array;
@@ -61,19 +62,16 @@ type env = {
   offset_locals: int ref;
 
   (* for parameters and locals *)
-
   offsets: (Ast.fullname, int) Hashtbl.t;
 
   (* for goto/labels *)
-
   labels: (string, A.virt_pc) Hashtbl.t;
   (* if the label is defined after the goto, when we process the label,
-   * we need to update the previous goto instructions.
+   * we need to update previous goto instructions.
    *)
   forward_gotos: (string, A.virt_pc list) Hashtbl.t;
 
   (* for loops (and switch) *)
-
   (* reinitialized for each block scope *)
   break_pc: A.virt_pc option;
   continue_pc: A.virt_pc option;
@@ -199,6 +197,7 @@ let mov_operand env opd =
   | ConstI i   -> A.Imsr (A.Imm i)
   | Register r -> A.Imsr (A.Reg r)
   (* less: opportunity for bitshifted registers? *)
+
   | Name (fullname, offset_extra) ->
     let idinfo = Hashtbl.find env.ids fullname in
     (match idinfo.TC.sto with
@@ -232,9 +231,10 @@ let operand_able env e0 =
     | Id fullname -> Some (Name (fullname, 0))
     | Unary (op, e) ->
       (match op with
+      (* special case to handle *(&arr + <cst>) *)
       | DeRef  ->
         (match e.e with
-        (* less: this should be handled in rewrite.ml *(& x) ==> x *)
+        (* less: this should be handled in rewrite.ml *(&x) ==> x *)
         | (Unary (GetRef, { e = Id fullname })) -> Some (Name (fullname, 0))
         (* less: should normalize constant to left or right in rewrite.ml *)
         | Binary ({ e = Int (s1, _) }, 
@@ -258,7 +258,7 @@ let operand_able env e0 =
         raise (Impossible "should have been converted")
       | Not -> None
       )
-    (* less: could be operand_able if do constant_evaluation later *)
+    (* less: could be operand_able if we do constant_evaluation later *)
     | Binary (e1, op, e2) -> None
     | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
       -> None
@@ -312,8 +312,9 @@ let regalloc env =
   aux 0 (Array.length env.regs)
 
 
-(* todo: can reuse previous register if thtopt is a register 
+(* todo: can reuse previous register if 'tgtopt' is a register 
  * see for example return.c for miss opportunity to reuse R0 instead of R1
+ * todo: pass type and loc instead of opd?
  *)
 let opd_regalloc env opd _tgtoptTODO =
   match opd.typ with
@@ -323,6 +324,7 @@ let opd_regalloc env opd _tgtoptTODO =
   | _ -> raise Todo
 
 (* less: maybe right to generalize expr and operand_able in 5c? *)
+(* todo: pass type and loc instead of opd? *)
 let opd_regalloc_e env e _tgtoptTODO =
   match e.e_type with
   | T.I _ | T.Pointer _ ->
@@ -345,7 +347,7 @@ let opd_regfree env opd =
  * we can move one into the other with one instruction. 
  * In theory, 5a supports general MOVW, but 5l restricts those
  * MOVW to only store and load (not both at the same time).
- * This is why below we must decompose the move in 2 instructions
+ * This is why we must decompose below the move in 2 instructions
  * sometimes.
  *)
 let rec gmove env opd1 opd2 =

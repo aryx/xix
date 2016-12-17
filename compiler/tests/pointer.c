@@ -6,6 +6,6 @@ int foo() {
   x = 42;
 
   y = &x;
-//  return *y;
+  return *y;
 
 }

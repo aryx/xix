@@ -332,6 +332,15 @@ let opd_regalloc env opd _tgtoptTODO =
     { opd with opd = Register (A.R i) }
   | _ -> raise Todo
 
+(* less: maybe right to generalize expr and operand_able in 5c? *)
+let opd_regalloc_e env e _tgtoptTODO =
+  match e.e_type with
+  | T.I _ | T.Pointer _ ->
+    let i = regalloc env in
+    { opd = Register (A.R i); typ = e.e_type; loc = e.e_loc }
+  | _ -> raise Todo
+
+
 
 let opd_regfree env opd =
   match opd.opd with
@@ -450,17 +459,26 @@ let rec expr env e0 dst_opd_opt =
           (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
           gmove env opd2 opd1
 
-        (* ex: y = &x;, y = x + y, ... *)
-        | Some opd1, None, None ->
-          raise Todo
-
         (* ex: return x = 1;, x = y = z, ... *)
         | Some opd1, Some opd2, Some dst ->
           raise Todo
 
+
+        (* ex: y = &x;, y = x + y, ... *)
+        | Some opd1, None, None ->
+          let opd2reg = opd_regalloc_e env e2 None in
+          expr env e2 (Some opd2reg);
+          gmove env opd2reg opd1;
+          opd_regfree env opd2reg;
+
         (* ex: return x = x+y;, x = y = z, ... *)
         | Some opd1, None, Some dst ->
-          raise Todo
+          let opd2reg = opd_regalloc_e env e2 None in
+          expr env e2 (Some opd2reg);
+          gmove env opd2reg opd1;
+          gmove env opd2reg dst; (* only diff with case above *)
+          opd_regfree env opd2reg;
+
 
         (* ex: *x = 1; *)
         | _ -> raise Todo
@@ -468,7 +486,17 @@ let rec expr env e0 dst_opd_opt =
       | OpAssign op ->
         raise Todo
       )
-    
+    | Unary (op, e) ->
+      (match op with
+      | GetRef -> 
+        raise (Impossible "handled in operand_able()")
+      | DeRef ->
+        raise Todo
+
+      | (UnPlus | UnMinus | Tilde) -> 
+        raise (Impossible "should have been converted")
+      | Not -> raise Todo
+      )
     | _ -> 
       pr2 (Dumper.s_of_any (Expr e0));
       raise Todo

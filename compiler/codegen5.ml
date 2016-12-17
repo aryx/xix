@@ -209,11 +209,10 @@ let mov_operand env opd =
       (* - offset for locals *)
       A.Local (Some (symbol fullname), - offset)
     | S.Static | S.Global | S.Extern ->
-      (* less: can have non 0 offset?? *)
       let offset = offset_extra in
       A.Entity (entity_of_id fullname idinfo, offset)
     )
-  | Indirect _ -> raise Todo
+  | Indirect (r, offset) -> A.Indirect (r, offset)
   | Addr fullname -> 
     let idinfo = Hashtbl.find env.ids fullname in
     A.Ximm (A.Address (entity_of_id fullname idinfo))
@@ -223,9 +222,6 @@ let mov_operand env opd =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
-(* less: rename to mov_operand_able? because $name+x can be an operand
- *  but not a mov operand?
- *)
 let operand_able env e0 =
   let kind_opt = 
     match e0.e with
@@ -250,13 +246,9 @@ let operand_able env e0 =
         | _ -> None
         )
 
-      (* todo: Why does not consider OADDR (ONAME) as operand_able, even though
-       *  there is a Addr case in operand_able type? because
-       *  OADDR requires special treatment?
-       *)
       | GetRef -> 
         (match e.e with
-        (* todo: why 5c does not make OADDR (ONAME) an addable >= INDEXED? *)
+        (* todo: why 5c does not make OADDR (ONAME) an addressable node? *)
         | Id fullname -> Some (Addr fullname)
         | _ -> None
         )
@@ -265,21 +257,18 @@ let operand_able env e0 =
         raise (Impossible "should have been converted")
       | Not -> raise Todo
       )
-    | Binary (e1, op, e2) ->
-      (match op with
-      | Arith Plus -> raise Todo
-      | _ -> None
-      )
-    
+    (* less: could be operand_able if do constant_evaluation later *)
+    | Binary (e1, op, e2) -> None
     | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
       -> None
     
     | Cast _ -> raise Todo
     | RecordAccess _ -> raise Todo
     
-    | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
-    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _
-      -> raise (Impossible "should have been converted")
+    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+      raise (Impossible "should have been converted")
+    | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
+      raise Todo
   in
   match kind_opt with
   | None -> None
@@ -416,6 +405,13 @@ and gmove_aux env move_size opd1 opd2 =
                       mov_operand env opd1,
                       mov_operand env opd2), A.AL)) opd1.loc
 
+let gmove_opt env opd1 opd2opt = 
+  match opd2opt with
+  | Some opd2 -> gmove env opd1 opd2
+  | None ->
+    (* less warn *)
+    ()
+
 (*****************************************************************************)
 (* Expression *)
 (*****************************************************************************)
@@ -481,7 +477,8 @@ let rec expr env e0 dst_opd_opt =
 
 
         (* ex: *x = 1; *)
-        | _ -> raise Todo
+        | None, _, _ ->
+          raise Todo
         )
       | OpAssign op ->
         raise Todo
@@ -501,7 +498,16 @@ let rec expr env e0 dst_opd_opt =
         )
 
       | DeRef ->
-        raise Todo
+        let opd1reg = opd_regalloc_e env e dst_opd_opt in
+        expr env e (Some opd1reg);
+        gmove_opt env
+          (match opd1reg.opd with
+          | Register r -> { opd = Indirect (r, 0); loc = e.e_loc;
+                            typ = e0.e_type }
+          | _ -> raise (Impossible "opd_regalloc_e returns always Register")
+          ) dst_opd_opt;
+        opd_regfree env opd1reg;
+        
 
       | (UnPlus | UnMinus | Tilde) -> 
         raise (Impossible "should have been converted")

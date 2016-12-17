@@ -7,7 +7,7 @@ int foo() {
 
   y = &x;
 
-  // *y = 1;
+  *y = 1;
 
   return *y;
 

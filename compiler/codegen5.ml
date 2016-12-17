@@ -185,6 +185,7 @@ let entity_of_id fullname idinfo =
       (match idinfo.TC.sto with
       | S.Static -> Some (-1)
       | S.Global | S.Extern -> None
+      (* todo: can take address of parameter and local, so allow it here *)
       | _ -> raise (Impossible "entity can be only Static/Global/Extern")
       );
     (* less: analyse idinfo.typ *)
@@ -330,13 +331,9 @@ let opd_regalloc_e env e _tgtoptTODO =
   | _ -> raise Todo
 
 
-
 let opd_regfree env opd =
   match opd.opd with
-  | Register (A.R i) ->
-    env.regs.(i) <- env.regs.(i) - 1;
-    if env.regs.(i) < 0
-    then raise (Error (E.ErrorMisc ("error in regfree", opd.loc)));
+  | Register r -> regfree env r;
   | _ -> raise (Impossible "opd_regfree on non-register operand")
 
 
@@ -345,8 +342,8 @@ let opd_regfree env opd =
 (*****************************************************************************)
 
 (* Even though two arguments are operand_able, it does not mean
- * we can move one into the other with one instruction. Indeed,
- * 5a supports in theory general MOVW, but 5l restricts those
+ * we can move one into the other with one instruction. 
+ * In theory, 5a supports general MOVW, but 5l restricts those
  * MOVW to only store and load (not both at the same time).
  * This is why below we must decompose the move in 2 instructions
  * sometimes.
@@ -409,7 +406,7 @@ let gmove_opt env opd1 opd2opt =
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
   | None ->
-    (* less warn *)
+    (* less: should have warned about unused opd in check.ml *)
     ()
 
 (*****************************************************************************)
@@ -423,12 +420,9 @@ let gmove_opt env opd1 opd2opt =
  *)
 let rec expr env e0 dst_opd_opt =
 
-  match operand_able env e0, dst_opd_opt with
-  | Some opd1, Some opd2 -> gmove env opd1 opd2
-  | Some _, None -> 
-     (* less: should have warned about unused opd in check.ml *)
-     ()
-  | None, _ ->
+  match operand_able env e0 with
+  | Some opd1 -> gmove_opt env opd1 dst_opd_opt
+  | None ->
     (match e0.e with
     | Sequence (e1, e2) -> 
       expr env e1 None;
@@ -486,12 +480,10 @@ let rec expr env e0 dst_opd_opt =
     | Unary (op, e) ->
       (match op with
       | GetRef -> 
-        (match e.e, dst_opd_opt  with
-        | Id fullname, Some dst -> 
+        (match e.e  with
+        | Id fullname -> 
           raise (Impossible "handled in operand_able()")
-        | Id fullname, None ->
-          raise (Impossible "should be detected in check.ml")
-        | Unary (DeRef, _), _ ->
+        | Unary (DeRef, _) ->
           raise (Impossible "should be simplified in rewrite.ml")
         | _ -> 
           raise (Impossible "not an lvalue?")

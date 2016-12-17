@@ -492,6 +492,7 @@ let rec expr env e0 dst_opd_opt =
         )
 
       | DeRef ->
+        (* less: opti of Deref of Add with constant? *)
         let opd1reg = opd_regalloc_e env e dst_opd_opt in
         expr env e (Some opd1reg);
         gmove_opt env

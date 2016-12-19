@@ -4,8 +4,8 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Abstract Syntax Tree (AST) for the assembly language supported by 5a,
- * which we call Asm5.
+(* Abstract Syntax Tree (AST) for the assembly language supported by 5a.
+ * I call this language Asm5.
  *
  * Note that in Plan 9 object files are mostly the serialized form of 
  * the assembly AST, which is why this file is in this directory.
@@ -29,7 +29,7 @@ open Common
 (* ------------------------------------------------------------------------- *)
 
 (* (global) line# *)
-type loc = int (* Same than Location_cpp.loc *)
+type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
 
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
 type integer = int 
@@ -41,7 +41,7 @@ type offset = int
 type label = string
 type symbol = string
 
-type entity = {
+type global = {
   name: symbol;
   (* 'Some _' when entity is a private symbol (aka static symbol).
    * mutable (ugly?) modifed by linker in naming phase.
@@ -85,23 +85,30 @@ type mov_operand =
   | Ximm of ximm
 
   | Indirect of register * offset
+  (* another form of Indirect *)
+  | Entity of entity
 
-  (* those below are all specialized forms of Indirect *)
+  and entity = 
   | Param of symbol option * offset (* FP *)
   | Local of symbol option * offset (* SP *)
   (* stricter: we disallow anonymous offsets to SB *)
-  | Entity of entity * offset (* SB *) 
+  | Global of global * offset (* SB *) 
 
   and ximm =
     | String of string (* limited to 8 characters *)
-    (* Float? *)
-    (* stricter: we disallow address of FP or SP, and offset to SB *)
-    (* todo: need to allow address of local or param!! *)
-    | Address of entity
-(* with tarzan *)
 
-(* I use a ref below so the code which resolves branches is shorter.
- * The ref is modified by the assembler and then linker.
+    (* Float? *)
+
+    (* I used to disallow address of FP or SP, and offset to SB, but
+     * 5c needs this feature, so you can take the address of a local.
+     * old: Address of global.
+     *)
+    | Address of entity
+ (* with tarzan *)
+
+
+(* I use a ref below so the code that resolves branches is shorter.
+ * The ref is modified by the assembler and then by the linker.
  *)  
 type branch_operand = branch_operand2 ref
 and branch_operand2 =
@@ -113,7 +120,7 @@ and branch_operand2 =
   | LabelUse of label * offset (* useful to have offset? *)
 
   (* resolved by linker *)
-  | SymbolJump of entity (* no offset, it would not be used by 5l anyway *)
+  | SymbolJump of global (* no offset (it would not be used by 5l anyway) *)
 
   (* after resolution *)
   | Absolute of virt_pc
@@ -195,10 +202,10 @@ type instr =
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of entity * attributes * int (* size locals, should be multiple of 4 *)
-  | GLOBL of entity (* can have offset? *) * attributes * int (* size *)
+  | TEXT of global * attributes * int (* size locals, should be multiple of 4 *)
+  | GLOBL of global (* can have offset? *) * attributes * int (* size *)
 
-  | DATA of entity * offset * int (* size, should be in [1..8] *) * imm_or_ximm
+  | DATA of global * offset * int (* size, should be in [1..8] *) * imm_or_ximm
   (* any ximm? even String? And Float? for float should have DWORD? *)
   | WORD of imm_or_ximm
 

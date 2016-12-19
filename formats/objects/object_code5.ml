@@ -5,7 +5,7 @@ type object_code =
   Ast_asm5.program * Location_cpp.location_history list
 
 (* less: could be sha1 of ast_asm5.ml for even safer marshalling *)
-let version = 5
+let version = 6
 
 (* can normalize before? or check every invariants? *)
 let save obj file =

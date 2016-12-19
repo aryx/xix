@@ -18,7 +18,7 @@ let vof_register =
   function | R v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("R", [ v1 ]))
 
 
-let vof_entity { name = v_name; priv = v_priv; signature = v_signature } =
+let vof_global { name = v_name; priv = v_priv; signature = v_signature } =
   let bnds = [] in
   let arg = Ocaml.vof_option Ocaml.vof_int v_signature in
   (* pad: shortened to sig *)
@@ -54,6 +54,12 @@ let rec vof_mov_operand =
       let v1 = vof_register v1
       and v2 = vof_offset v2
       in Ocaml.VSum (("Indirect", [ v1; v2 ]))
+  | Entity v1 -> 
+    let v1 = vof_entity v1 in
+    Ocaml.VSum (("Entity", [v1]))
+
+and vof_entity = 
+ function
   | Param ((v1, v2)) ->
       let v1 = Ocaml.vof_option vof_symbol v1
       and v2 = vof_offset v2
@@ -62,10 +68,10 @@ let rec vof_mov_operand =
       let v1 = Ocaml.vof_option vof_symbol v1
       and v2 = vof_offset v2
       in Ocaml.VSum (("Local", [ v1; v2 ]))
-  | Entity ((v1, v2)) ->
-      let v1 = vof_entity v1
+  | Global ((v1, v2)) ->
+      let v1 = vof_global v1
       and v2 = vof_offset v2
-      in Ocaml.VSum (("Entity", [ v1; v2 ]))
+      in Ocaml.VSum (("Global", [ v1; v2 ]))
 and vof_ximm =
   function
   | String v1 ->
@@ -82,7 +88,7 @@ and vof_branch_operand2 =
       and v2 = vof_offset v2
       in Ocaml.VSum (("LabelUse", [ v1; v2 ]))
   | SymbolJump v1 ->
-      let v1 = vof_entity v1 in Ocaml.VSum (("SymbolJump", [ v1 ]))
+      let v1 = vof_global v1 in Ocaml.VSum (("SymbolJump", [ v1 ]))
   | Absolute v1 ->
       let v1 = vof_virt_pc v1 in Ocaml.VSum (("Absolute", [ v1 ]))
   | IndirectJump v1 ->
@@ -185,17 +191,17 @@ and vof_move_cond =
 let rec vof_pseudo_instr =
   function
   | TEXT ((v1, v2, v3)) ->
-      let v1 = vof_entity v1
+      let v1 = vof_global v1
       and v2 = vof_attributes v2
       and v3 = Ocaml.vof_int v3
       in Ocaml.VSum (("TEXT", [ v1; v2; v3 ]))
   | GLOBL ((v1, v2, v3)) ->
-      let v1 = vof_entity v1
+      let v1 = vof_global v1
       and v2 = vof_attributes v2
       and v3 = Ocaml.vof_int v3
       in Ocaml.VSum (("GLOBL", [ v1; v2; v3 ]))
   | DATA ((v1, v2, v3, v4)) ->
-      let v1 = vof_entity v1
+      let v1 = vof_global v1
       and v2 = vof_offset v2
       and v3 = Ocaml.vof_int v3
       and v4 = vof_imm_or_ximm v4

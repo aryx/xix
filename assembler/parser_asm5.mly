@@ -246,6 +246,7 @@ expr:
 
 reg:
  | TRx                { $1 }
+ /*(* stricter? could remove, redundant with cpp *)*/
  | TR TOPAR expr TCPAR 
      { if $3 <= 15 && $3 >= 0
        then R $3

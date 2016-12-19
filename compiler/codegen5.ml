@@ -177,14 +177,13 @@ let patch_fake_goto env pcgoto pcdest =
 (* C to Asm helpers  *)
 (*****************************************************************************)
 
-let entity_of_id fullname idinfo = 
+let global_of_id fullname idinfo = 
   { A.name = Ast.unwrap fullname;
     A.priv = 
       (match idinfo.TC.sto with
       | S.Static -> Some (-1)
       | S.Global | S.Extern -> None
-      (* todo: can take address of parameter and local, so allow it here *)
-      | _ -> raise (Impossible "entity can be only Static/Global/Extern")
+      | _ -> raise (Impossible "global can be only Static/Global/Extern")
       );
     (* less: analyse idinfo.typ *)
     A.signature = None;
@@ -192,30 +191,33 @@ let entity_of_id fullname idinfo =
 
 let symbol fullname = Ast.unwrap fullname
 
+let entity_of_id env fullname offset_extra =
+  let idinfo = Hashtbl.find env.ids fullname in
+  match idinfo.TC.sto with
+  | S.Param -> 
+    let offset = Hashtbl.find env.offsets fullname + offset_extra in
+    A.Param (Some (symbol fullname), offset)
+  | S.Local ->
+    let offset = Hashtbl.find env.offsets fullname + offset_extra in
+    (* - offset for locals *)
+    A.Local (Some (symbol fullname), - offset)
+  | S.Static | S.Global | S.Extern ->
+    let offset = offset_extra in
+    A.Global (global_of_id fullname idinfo, offset)
+
+
 let mov_operand env opd =
   match opd.opd with
   | ConstI i   -> A.Imsr (A.Imm i)
   | Register r -> A.Imsr (A.Reg r)
   (* less: opportunity for bitshifted registers? *)
 
-  | Name (fullname, offset_extra) ->
-    let idinfo = Hashtbl.find env.ids fullname in
-    (match idinfo.TC.sto with
-    | S.Param -> 
-      let offset = Hashtbl.find env.offsets fullname + offset_extra in
-      A.Param (Some (symbol fullname), offset)
-    | S.Local ->
-      let offset = Hashtbl.find env.offsets fullname + offset_extra in
-      (* - offset for locals *)
-      A.Local (Some (symbol fullname), - offset)
-    | S.Static | S.Global | S.Extern ->
-      let offset = offset_extra in
-      A.Entity (entity_of_id fullname idinfo, offset)
-    )
-  | Indirect (r, offset) -> A.Indirect (r, offset)
+  | Name (fullname, offset_extra) -> 
+    A.Entity (entity_of_id env fullname offset_extra)
+  | Indirect (r, offset) -> 
+    A.Indirect (r, offset)
   | Addr fullname -> 
-    let idinfo = Hashtbl.find env.ids fullname in
-    A.Ximm (A.Address (entity_of_id fullname idinfo))
+    A.Ximm (A.Address (entity_of_id env fullname 0))
 
 
 (*****************************************************************************)
@@ -768,7 +770,7 @@ let codegen (ids, structs, funcs) =
     stmt env st;
 
     set_instr env spc 
-      (A.Pseudo (A.TEXT (entity_of_id fullname idinfo, attrs, 
+      (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
                          !(env.size_locals)))) loc;
     add_instr env (A.Instr (A.RET, A.AL)) loc;
 

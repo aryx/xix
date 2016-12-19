@@ -152,31 +152,31 @@ label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 /*(*************************************************************************)*/
 /*(* I can't factorize in attr_opt; shift/reduce conflict with TCOMMA *)*/
 pseudo_instr:
- | TTEXT  entity TCOMMA imm    
+ | TTEXT  global TCOMMA imm    
      { TEXT  ($2, noattr, $4) }
- | TGLOBL entity TCOMMA imm    
+ | TGLOBL global TCOMMA imm    
      { GLOBL ($2, noattr, $4) }
 
  /*(* less: would be better to have mnemonics for attributes too *)*/
- | TTEXT entity TCOMMA con TCOMMA imm
+ | TTEXT global TCOMMA con TCOMMA imm
      { TEXT ($2, attributes_of_int $4, $6) }
- | TGLOBL entity TCOMMA con TCOMMA imm
+ | TGLOBL global TCOMMA con TCOMMA imm
      { GLOBL ($2, attributes_of_int $4, $6) }
 
- | TDATA entity_and_offset TSLASH con TCOMMA ximm  
+ | TDATA global_and_offset TSLASH con TCOMMA ximm  
      { DATA (fst $2, snd $2, $4, $6) }
 
 /*(* stricter: I introduced those intermediate rules *)*/
-entity: name
+global: name
   { match $1 with
-    | Entity (e, 0) -> e
-    | _ -> error "entity expected"
+    | Global (e, 0) -> e
+    | _ -> error "global (without any offset) expected"
   } 
 
-entity_and_offset: name
+global_and_offset: name
   { match $1 with
-    | Entity (e, n) -> (e, n)
-    | _ -> error "entity with offset expected"
+    | Global (e, n) -> (e, n)
+    | _ -> error "global with offset expected"
   } 
 
 /*(*************************************************************************)*/
@@ -275,14 +275,14 @@ gen:
  | reg   { Imsr (Reg $1) }
 
  | ioreg { $1 }
- | name  { $1 }
- | con TOPAR pointer TCPAR { $3 None $1 }
+ | name                    { Entity $1 }
+ | con TOPAR pointer TCPAR { Entity ($3 None $1) }
 
 ximm:
  | imm             { Left $1 }
  /*(* todo: float *)*/
  | TDOLLAR TSTRING { Right (String $2) }
- | TDOLLAR entity  { Right (Address $2) }
+ | TDOLLAR name    { Right (Address $2) }
 
 ioreg:
  | ireg                { Indirect ($1, 0) }
@@ -293,13 +293,13 @@ ireg: TOPAR reg TCPAR { $2 }
 
 name: 
  | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
- | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Entity (mk_e $1 true, $4) }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
 
 pointer: 
  | TSB  { (fun name_opt offset ->
            match name_opt with
            | None -> error "identifier expected"
-           | Some e -> Entity (e, offset)
+           | Some e -> Global (e, offset)
           )
          }
  | TSP  { (fun name_opt offset ->
@@ -325,7 +325,7 @@ offset:
 
 branch: 
  | rel               { $1 }
- | entity            { ref (SymbolJump $1) }
+ | global            { ref (SymbolJump $1) }
  | ireg              { ref (IndirectJump $1) }
 
 rel:

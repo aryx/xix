@@ -16,7 +16,7 @@ let rec vof_code (v1, v2) =
 and vof_instr =
   function
   | TEXT ((v1, v2, v3)) ->
-      let v1 = A.vof_entity v1
+      let v1 = A.vof_global v1
       and v2 = A.vof_attributes v2
       and v3 = Ocaml.vof_int v3
       in Ocaml.VSum (("TEXT", [ v1; v2; v3 ]))

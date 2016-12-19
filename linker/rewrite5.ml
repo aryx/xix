@@ -53,21 +53,21 @@ let rewrite cg =
   (* step2: transform *)
   cg |> T5.iter_with_env (fun autosize_opt n ->
     match n.T5.instr with
-    | T5.TEXT (ent, attrs, size) ->
+    | T5.TEXT (global, attrs, size) ->
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
-                         (T5.s_of_ent ent));
+                         (T5.s_of_global global));
         if size < 0 
         then failwith "TODO: handle size local -4";
         
         let autosize_opt = 
-          if size == 0 && Hashtbl.mem is_leaf ent
+          if size == 0 && Hashtbl.mem is_leaf global
           then None
           else Some (size + 4)
         in
         autosize_opt |> Common.if_some (fun autosize ->
           (* for layout text we need to set the final autosize *)
-          n.T5.instr <- T5.TEXT (ent, attrs, autosize);
+          n.T5.instr <- T5.TEXT (global, attrs, autosize);
           (* MOVW.W R14, -autosize(SP) *)
           let n1 = { T5.
             instr = T5.I (MOVE (Word, Some WriteAddressBase, 

@@ -34,9 +34,9 @@ let build_graph symbols xs =
           | IndirectJump _ -> None
           | Relative _ | LabelUse _ ->
               raise (Impossible "Relative and LabelUse resolved by assembler")
-          | SymbolJump ent ->
+          | SymbolJump x ->
               (* resolve branching to symbols *)
-              (match (T5.lookup_ent ent symbols).T.section with
+              (match (T5.lookup_global x symbols).T.section with
               | T.SText virt_pc -> 
                   opd := Absolute virt_pc; 
                   Some virt_pc

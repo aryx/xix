@@ -75,7 +75,7 @@ let offset_to_R12 x =
 let base_and_offset_of_indirect node symbols2 autosize x =
   match x with
   | Indirect (r, off) -> r, off 
-  | Param (_s, off) ->
+  | Entity (Param (_s, off)) ->
       (* remember that the +4 below is because we access the frame of the
        * caller which for sure is not a leaf. Note that autosize
        * here had possibly a +4 done if the current function
@@ -83,17 +83,17 @@ let base_and_offset_of_indirect node symbols2 autosize x =
        * now is the adjustment in the frame of the caller!
        *)
       rSP, autosize + 4 + off
-  | Local (_s, off) -> 
+  | Entity (Local (_s, off)) -> 
       rSP, autosize + off
-  | Entity (ent, off) ->
-      let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+  | Entity (Global (global, off)) ->
+      let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
       (match v with
       | T.SData2 offset | T.SBss2 offset -> 
           rSB, offset_to_R12 (offset + off)
       (* stricter: allowed in 5l but I think with wrong codegen *)
       | T.SText2 _ -> 
           error node (spf "use of procedure %s in indirect with offset"
-                       (T5.s_of_ent ent))
+                       (T5.s_of_global global))
       )
   | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
 
@@ -287,8 +287,8 @@ let rules symbols2 autosize init_data node =
         | Right (String s) -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed with WORD; use DATA"
-        | Right (Address ent) -> 
-            let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+        | Right (Address (Global (global, _offsetTODO))) -> 
+            let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
             (match v with
              | T.SText2 real_pc -> [ [(real_pc, 0)] ]
              | T.SData2 offset | T.SBss2 offset -> 
@@ -297,6 +297,7 @@ let rules symbols2 autosize init_data node =
                  | Some init_data -> [ [(init_data + offset, 0)] ]
                  )
             )
+        | Right (Address (Param _ | Local _)) -> raise Todo
       )}
 
   | T5.I (instr, cond) ->
@@ -501,10 +502,10 @@ let rules symbols2 autosize init_data node =
         | String _ -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed in MOVW; use DATA"
-        | Address ent ->
+        | Address (Global (global, _offsetTODO)) ->
             let from_part_when_small_offset_to_R12 =
               try 
-                let v = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+                let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
                 match v with
                 | T.SData2 offset | T.SBss2 offset ->
                     let final_offset = offset_to_R12 offset in
@@ -535,6 +536,7 @@ let rules symbols2 autosize init_data node =
                 [ gload_from_pool node cond (R rt) ]
               )}
             )
+        | Address (Local _ | Param _) -> raise Todo
         )
 
     (* Load *)
@@ -550,7 +552,7 @@ let rules symbols2 autosize init_data node =
             if size = Word 
             then raise (Impossible "pattern covered before")
             else error node "illegal combination"
-        | Indirect _ | Param _ | Local _ | Entity _ ->
+        | Indirect _ | Entity _ ->
             let (rbase, offset) = 
               base_and_offset_of_indirect node symbols2 autosize from in
             if immoffset offset
@@ -571,7 +573,7 @@ let rules symbols2 autosize init_data node =
         (* stricter: better error message *)
         | Imsr _ | Ximm _ -> 
             error node "illegal to store in an (extended) immediate"
-        | Indirect _ | Param _ | Local _ | Entity _ ->
+        | Indirect _ | Entity _ ->
             let (rbase, offset) = 
               base_and_offset_of_indirect node symbols2 autosize dest in
             if immoffset offset

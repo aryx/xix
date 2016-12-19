@@ -11,21 +11,21 @@ type loc = Common.filename * Ast_asm5.loc
 (* Split Asm5 instructions in code vs data.
  *
  * For 'code' below we want to do some naming. We could copy many of 
- * ast_asm5.ml and replace 'entity' with the fully resolved 'symbol'.
+ * ast_asm5.ml and replace 'global' with the fully resolved 'symbol'.
  * But it would be a big copy paste. Instead, we opted for a mutable field 
  * in ast_asm5.ml set by the linker (see Ast_asm5.entity.priv).
  *)
 type code = (instr * loc)
 (* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
 and instr =
-  | TEXT of A.entity * A.attributes * int
+  | TEXT of A.global * A.attributes * int
   | WORD of A.imm_or_ximm
   | I of A.instr * A.condition
  (* with tarzan *)
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
-  | DATA of A.entity * A.offset * int * A.imm_or_ximm
+  | DATA of A.global * A.offset * int * A.imm_or_ximm
 
 
 (* graph via pointers, like in original 5l *)
@@ -47,20 +47,20 @@ type code_graph = node (* the first node *)
 
 
 (* assert not Some -1 ! should have been set during loading! *)
-let symbol_of_entity e =
+let symbol_of_global e =
   e.A.name, (match e.A.priv with None -> T.Public | Some i -> T.Private i)
 
-let lookup_ent ent h =
-  let symbol = symbol_of_entity ent in
-  T.lookup symbol ent.A.signature h
+let lookup_global x h =
+  let symbol = symbol_of_global x in
+  T.lookup symbol x.A.signature h
 
 
 (* less: would need Hist mapping for this file to convert to original source *)
 let s_of_loc (file, line) =
   spf "%s:%d" file line
 
-let s_of_ent ent = 
-  ent.A.name ^ (match ent.A.priv with None -> "" | Some _ -> "<>")
+let s_of_global x = 
+  x.A.name ^ (match x.A.priv with None -> "" | Some _ -> "<>")
 
 
 let rec iter f n =

@@ -22,19 +22,19 @@ let layout_data symbols ds =
 
   (* step0: identify Data vs Bss (and sanity check DATA instructions) *)
   ds |> List.iter (function
-    | T5.DATA (ent, offset, size_slice, _v) ->
+    | T5.DATA (global, offset, size_slice, _v) ->
         (* sanity checks *)
-        (match (T5.lookup_ent ent symbols).T.section with
+        (match (T5.lookup_global global symbols).T.section with
         | T.SData size ->
             if offset + size_slice > size
             then failwith (spf "initialize bounds (%d): %s" size
-                             (T5.s_of_ent ent))
+                             (T5.s_of_global global))
         | T.SText _ -> failwith (spf "initialize TEXT, not a GLOBL for %s"
-                                   (T5.s_of_ent ent))
+                                   (T5.s_of_global global))
         | T.SXref -> raise (Impossible "SXRef detected by Check.check")
         );
         (* use replace cos can have multiple DATA for the same GLOBL *)
-        Hashtbl.replace is_data (T5.symbol_of_entity ent) true
+        Hashtbl.replace is_data (T5.symbol_of_global global) true
   );
 
   (* step1: sanity check sizes and align *)
@@ -111,13 +111,13 @@ let layout_text symbols2 init_text cg =
     if size = 0
     then
       (match n.T5.instr with
-      | T5.TEXT (ent, _, size) ->
+      | T5.TEXT (global, _, size) ->
           (* remember that rewrite5 has adjusted autosize correctly *)
           autosize := size;
           (* Useful to find pc of entry point and to get the address of a
            * procedure, e.g. in WORD $foo(SB)
            *)
-          Hashtbl.add symbols2 (T5.symbol_of_entity ent) (T.SText2 !pc);
+          Hashtbl.add symbols2 (T5.symbol_of_global global) (T.SText2 !pc);
       | _ -> failwith (spf "zero-width instruction at %s" 
                          (T5.s_of_loc n.T5.loc))
       );

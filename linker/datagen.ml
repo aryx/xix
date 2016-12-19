@@ -9,8 +9,8 @@ let gen symbols2 init_data sizes ds =
   let arr = Array.create sizes.T.data_size (Char.chr 0) in
 
   ds |> List.iter (fun d ->
-    let T5.DATA (ent, offset2, size_slice, v) = d in
-    let info = Hashtbl.find symbols2 (T5.symbol_of_entity ent) in
+    let T5.DATA (global, offset2, size_slice, v) = d in
+    let info = Hashtbl.find symbols2 (T5.symbol_of_global global) in
     match info with
     | T.SData2 offset ->
         let base = offset + offset2 in
@@ -20,8 +20,8 @@ let gen symbols2 init_data sizes ds =
             for i = 0 to size_slice -1 do 
               arr.(base + i) <- s.[i] 
             done
-        | Right (Address ent2) ->
-            let info2 = Hashtbl.find symbols2 (T5.symbol_of_entity ent2) in
+        | Right (Address (Global (global2,_offsetTODO))) ->
+            let info2 = Hashtbl.find symbols2 (T5.symbol_of_global global2) in
             let _i = 
               match info2 with
               | T.SText2 real_pc -> 
@@ -30,6 +30,7 @@ let gen symbols2 init_data sizes ds =
                   init_data + offset
             in
             raise Todo
+        | Right (Address (Local _ | Param _)) -> raise Todo
         )
     | T.SBss2 _ -> raise (Impossible "layout_data missed a DATA")
     | T.SText2 _ -> raise (Impossible "layout_data did this check")

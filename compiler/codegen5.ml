@@ -14,9 +14,10 @@ module E = Check
 (* Prelude *)
 (*****************************************************************************)
 (*
- * todo later:
- *   - fields, structures
+ * todo:
  *   - funcalls
+ *   - fields, structures
+ * todo later:
  *   - firstarg opti
  *   - alignment 
  *     * fields (sualign)
@@ -34,8 +35,9 @@ type env = {
 
   (* computed by previous typechecking phase *)
 
-  ids:  (Ast.fullname, TC.idinfo) Hashtbl.t;
+  ids:     (Ast.fullname, TC.idinfo) Hashtbl.t;
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+
   (* less: compute offset for each field?
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
    *)
@@ -60,7 +62,6 @@ type env = {
 
   size_locals: int ref;
   offset_locals: int ref;
-
   (* for parameters and locals *)
   offsets: (Ast.fullname, int) Hashtbl.t;
 
@@ -79,8 +80,9 @@ type env = {
 }
 
 let rRET = A.R 0
-let rARG = A.R 0
+(* opti: let rARG = A.R 0 *)
 
+(* for 'extern register xx;', used in ARM kernel *)
 let rEXT1 = A.R 10
 let rEXT2 = A.R 9
 
@@ -111,7 +113,7 @@ and operand_able_kind =
  (* indirect *)
  | Name of Ast.fullname * A.offset
  | Indirect of A.register * A.offset
-
+ (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
 
 
@@ -135,8 +137,9 @@ let add_instr env instr loc =
   (* grow array if necessary *)
   if !(env.pc) >= Array.length !(env.code)
   then begin
+    let increment = 100 in
     let newcode = 
-      Array.make (Array.length !(env.code) + 100)  (fake_instr, fake_loc)
+      Array.make (Array.length !(env.code) + increment)  (fake_instr, fake_loc)
     in
     Array.blit !(env.code) (Array.length !(env.code)) newcode 0 0;
     env.code := newcode
@@ -206,34 +209,32 @@ let entity_of_id env fullname offset_extra =
     A.Global (global_of_id fullname idinfo, offset)
 
 
-let mov_operand env opd =
+(* less: opportunity for bitshifted registers? *)
+let mov_operand_of_opd env opd =
   match opd.opd with
   | ConstI i   -> A.Imsr (A.Imm i)
   | Register r -> A.Imsr (A.Reg r)
-  (* less: opportunity for bitshifted registers? *)
+  | Name (fullname, offset) -> A.Entity (entity_of_id env fullname offset)
+  | Indirect (r, offset) -> A.Indirect (r, offset)
+  | Addr fullname -> A.Ximm (A.Address (entity_of_id env fullname 0))
 
-  | Name (fullname, offset_extra) -> 
-    A.Entity (entity_of_id env fullname offset_extra)
-  | Indirect (r, offset) -> 
-    A.Indirect (r, offset)
-  | Addr fullname -> 
-    A.Ximm (A.Address (entity_of_id env fullname 0))
-
-let instr_of_op op r1 r2 r3 =
-  A.Arith
-    ((match op with
+let arith_instr_of_op op r1 r2 r3 =
+  A.Arith (
+    (match op with
     | Arith op ->
       (match op with 
       | Plus -> A.ADD | Minus -> A.SUB
       | And -> A.AND | Or -> A.ORR | Xor -> A.EOR
-      (* todo: need type info *)
+      (* todo: need type info for A.SLR *)
       | ShiftLeft -> A.SLL | ShiftRight -> A.SRA
+      (* todo: need type info for A.MULU, etc *)
       | Mul -> A.MUL | Div -> A.DIV | Mod -> A.MOD
       )
     | Logical _ -> raise Todo
     ),
-     None, A.Reg r1, Some r2, r3
-    )
+    None, 
+    A.Reg r1, Some r2, r3
+  )
 
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
@@ -266,7 +267,7 @@ let operand_able env e0 =
 
       | GetRef -> 
         (match e.e with
-        (* todo: why 5c does not make OADDR (ONAME) an addressable node? *)
+        (* why 5c does not make OADDR (ONAME) an addressable node? *)
         | Id fullname -> Some (Addr fullname)
         | _ -> None
         )
@@ -315,9 +316,13 @@ let with_reg env r f =
 let regalloc env =
   (* less: lasti trick? *)
   let rec aux i n =
-    (* todo: impossible? can reach this point? *)
+    (* This happens in extreme case when the expression tree has a huge
+     * depth everywhere. In that case, we should allocate a new temporary
+     * on the stack but this complexifies the algorithm.
+     *)
     if i >= n 
-    then raise (Impossible "out of fixed registers");
+    then raise (Error (E.ErrorMisc 
+                      ("out of fixed registers; rewrite your code", fake_loc)));
 
     if env.regs.(i) = 0
     then begin
@@ -329,12 +334,11 @@ let regalloc env =
   aux 0 (Array.length env.regs)
 
 
-(* todo: can reuse previous register if 'tgtopt' is a register 
- * see for example return.c for miss opportunity to reuse R0 instead of R1
- * todo: pass type and loc instead of opd?
+(* We can reuse a previous register if 'tgtopt' is a register.
+ * See for example return.c where we can reuse R0 instead of a new R1.
  *)
-let opd_regalloc env opd tgtopt =
-  match opd.typ with
+let opd_regalloc env typ loc tgtopt =
+  match typ with
   | T.I _ | T.Pointer _ ->
     let i = 
       match tgtopt with
@@ -343,24 +347,15 @@ let opd_regalloc env opd tgtopt =
         x
       | _ -> regalloc env
     in
-    { opd with opd = Register (A.R i) }
+    { opd = Register (A.R i); typ = typ; loc = loc }
   | _ -> raise Todo
 
-(* less: maybe right to generalize expr and operand_able in 5c? *)
-(* todo: pass type and loc instead of opd? *)
+(*
+let opd_regalloc_opd env opd tgtopt =
+  opd_regalloc env opd.typ opd.loc tgtopt
 let opd_regalloc_e env e tgtopt =
-  match e.e_type with
-  | T.I _ | T.Pointer _ ->
-    let i = 
-      match tgtopt with
-      | Some { opd = Register (A.R x) } ->
-        reguse env (A.R x);
-        x
-      | _ -> regalloc env
-    in
-    { opd = Register (A.R i); typ = e.e_type; loc = e.e_loc }
-  | _ -> raise Todo
-
+  opd_regalloc env e.e_type e.e_loc tgtopt
+*)
 
 let opd_regfree env opd =
   match opd.opd with
@@ -389,7 +384,7 @@ let rec gmove env opd1 opd2 =
       | _ -> raise Todo
     in
     (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
-    let opd1reg = opd_regalloc env opd1 (Some opd2) in
+    let opd1reg = opd_regalloc env opd1.typ opd1.loc (Some opd2) in
     gmove_aux env move_size opd1 opd1reg;
     gmove env opd1reg opd2;
     opd_regfree env opd1reg
@@ -403,7 +398,7 @@ let rec gmove env opd1 opd2 =
         | _ -> raise Todo
       in
       (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
-      let opd2reg = opd_regalloc env opd2 None in
+      let opd2reg = opd_regalloc env opd2.typ opd2.loc None in
       gmove env opd1 opd2reg;
       gmove_aux env move_size opd2reg opd2;
       opd_regfree env opd2reg
@@ -430,8 +425,8 @@ and gmove_aux env move_size opd1 opd2 =
   else 
   add_instr env 
     (A.Instr (A.MOVE (move_size, None, 
-                      mov_operand env opd1,
-                      mov_operand env opd2), A.AL)) opd1.loc
+                      mov_operand_of_opd env opd1,
+                      mov_operand_of_opd env opd2), A.AL)) opd1.loc
 
 let gmove_opt env opd1 opd2opt = 
   match opd2opt with
@@ -439,7 +434,6 @@ let gmove_opt env opd1 opd2opt =
   | None ->
     (* less: should have warned about unused opd in check.ml *)
     ()
-
 
 
 (*****************************************************************************)
@@ -468,14 +462,15 @@ let rec expr env e0 dst_opd_opt =
               | And | Or | Xor 
               | ShiftLeft | ShiftRight
               | Mul | Div | Mod) ->
-        (* less: if l more "complex" than r? *)
-        let opd2reg = opd_regalloc_e env e2 dst_opd_opt in
+        (* todo: if l more "complex" than r? *)
+        let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
         expr env e2 (Some opd2reg);
-        let opd1reg = opd_regalloc_e env e1 None in
+        let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
         expr env e1 (Some opd1reg);
         (match opd1reg.opd, opd2reg.opd with
         | Register r1, Register r2 ->
-          add_instr env (A.Instr (instr_of_op op r1 r2 r1, A.AL)) e0.e_loc;
+          add_instr env (A.Instr (arith_instr_of_op op r1 r2 r1, A.AL)) 
+            e0.e_loc;
           gmove_opt env opd1reg dst_opd_opt;
           opd_regfree env opd2reg;
           opd_regfree env opd1reg;
@@ -502,14 +497,14 @@ let rec expr env e0 dst_opd_opt =
 
         (* ex: y = &x;, y = x + y, ... *)
         | Some opd1, None, None ->
-          let opd2reg = opd_regalloc_e env e2 None in
+          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
           expr env e2 (Some opd2reg);
           gmove env opd2reg opd1;
           opd_regfree env opd2reg;
 
         (* ex: return x = x+y;, x = y = z, ... *)
         | Some opd1, None, Some dst ->
-          let opd2reg = opd_regalloc_e env e2 None in
+          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
           expr env e2 (Some opd2reg);
           gmove env opd2reg opd1;
           gmove env opd2reg dst; (* only diff with case above *)
@@ -537,7 +532,7 @@ let rec expr env e0 dst_opd_opt =
 
       | DeRef ->
         (* less: opti of Deref of Add with constant? *)
-        let opd1reg = opd_regalloc_e env e dst_opd_opt in
+        let opd1reg = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
         expr env e (Some opd1reg);
         gmove_opt env
           (match opd1reg.opd with

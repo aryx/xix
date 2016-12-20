@@ -333,19 +333,31 @@ let regalloc env =
  * see for example return.c for miss opportunity to reuse R0 instead of R1
  * todo: pass type and loc instead of opd?
  *)
-let opd_regalloc env opd _tgtoptTODO =
+let opd_regalloc env opd tgtopt =
   match opd.typ with
   | T.I _ | T.Pointer _ ->
-    let i = regalloc env in
+    let i = 
+      match tgtopt with
+      | Some { opd = Register (A.R x) } -> 
+        reguse env (A.R x);
+        x
+      | _ -> regalloc env
+    in
     { opd with opd = Register (A.R i) }
   | _ -> raise Todo
 
 (* less: maybe right to generalize expr and operand_able in 5c? *)
 (* todo: pass type and loc instead of opd? *)
-let opd_regalloc_e env e _tgtoptTODO =
+let opd_regalloc_e env e tgtopt =
   match e.e_type with
   | T.I _ | T.Pointer _ ->
-    let i = regalloc env in
+    let i = 
+      match tgtopt with
+      | Some { opd = Register (A.R x) } ->
+        reguse env (A.R x);
+        x
+      | _ -> regalloc env
+    in
     { opd = Register (A.R i); typ = e.e_type; loc = e.e_loc }
   | _ -> raise Todo
 

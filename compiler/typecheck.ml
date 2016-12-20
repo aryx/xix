@@ -698,6 +698,10 @@ let rec expr env e0 =
        *)
       let e = expr { env with expr_context = CtxSizeof  } e in
       { e0 with e = SizeOf (Left e); e_type = T.int }
+    (* todo: build a fake expression but with the right expanded type
+     * so the codegen later does not have to redo the job of expanding
+     * typedefs.
+     *)
     | Right typ ->
       { e0 with e = SizeOf (Right typ); e_type = T.int }
     )

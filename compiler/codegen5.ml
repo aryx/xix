@@ -219,6 +219,21 @@ let mov_operand env opd =
   | Addr fullname -> 
     A.Ximm (A.Address (entity_of_id env fullname 0))
 
+let instr_of_op op r1 r2 r3 =
+  A.Arith
+    ((match op with
+    | Arith op ->
+      (match op with 
+      | Plus -> A.ADD | Minus -> A.SUB
+      | And -> A.AND | Or -> A.ORR | Xor -> A.EOR
+      (* todo: need type info *)
+      | ShiftLeft -> A.SLL | ShiftRight -> A.SRA
+      | Mul -> A.MUL | Div -> A.DIV | Mod -> A.MOD
+      )
+    | Logical _ -> raise Todo
+    ),
+     None, A.Reg r1, Some r2, r3
+    )
 
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
@@ -413,6 +428,8 @@ let gmove_opt env opd1 opd2opt =
     (* less: should have warned about unused opd in check.ml *)
     ()
 
+
+
 (*****************************************************************************)
 (* Expression *)
 (*****************************************************************************)
@@ -420,7 +437,7 @@ let gmove_opt env opd1 opd2opt =
 (* todo: inrel ? 
  * todo: if complex type node
  * less: dst_opd always a register? maybe, but still need to carry
- *  also its type and loc, so maybe easier to always wrap it in an operand.
+ *  also its type and loc, so maybe easier to always wrap it in an operand?
  *)
 let rec expr env e0 dst_opd_opt =
 
@@ -439,7 +456,20 @@ let rec expr env e0 dst_opd_opt =
               | And | Or | Xor 
               | ShiftLeft | ShiftRight
               | Mul | Div | Mod) ->
-        raise Todo
+        (* less: if l more "complex" than r? *)
+        let opd2reg = opd_regalloc_e env e2 dst_opd_opt in
+        expr env e2 (Some opd2reg);
+        let opd1reg = opd_regalloc_e env e1 None in
+        expr env e1 (Some opd1reg);
+        (match opd1reg.opd, opd2reg.opd with
+        | Register r1, Register r2 ->
+          add_instr env (A.Instr (instr_of_op op r1 r2 r1, A.AL)) e0.e_loc;
+          gmove_opt env opd1reg dst_opd_opt;
+          opd_regfree env opd2reg;
+          opd_regfree env opd1reg;
+        | _ -> raise (Impossible "both operands comes from opd_regalloc_e")
+        )
+        
       | Logical _ ->
         raise Todo
       )

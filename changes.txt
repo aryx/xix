@@ -1,0 +1,27 @@
+-*- org -*-
+
+* 0.4 (Q4 2016) (5c typechecker and basic code generator)
+
+finish cpp
+
+* 0.3 (Q3 2016) (mk, rc, 5c parser, cpp)
+
+port of mk
+port of rc
+port of 5c (just parser and dumper)
+port of cpp
+
+* 0.2 (Q2 2016) ()
+
+* 0.1 (Q1 2016) (5l)
+
+start of repository, mkfiles, skeleton
+
+port of 5l
+finish 5a
+
+* -----------------------------------------------------------
+
+* Alpha (Dec 2015) (5a)
+
+port of 5a

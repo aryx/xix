@@ -240,7 +240,7 @@ let arith_instr_of_op op r1 r2 r3 =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 
-let operand_able env e0 =
+let operand_able e0 =
   let kind_opt = 
     match e0.e with
     | Int (s, _inttype) -> Some (ConstI (int_of_string s))
@@ -293,6 +293,41 @@ let operand_able env e0 =
   | None -> None
   | Some opd -> Some { opd = opd; typ = e0.e_type; loc = e0.e_loc }
 
+let fn_complexity = 100 
+
+(* less: could optimize by caching result in node, so no need
+ * call again complexity on subtree later
+ *)
+let rec complexity e =
+  if operand_able e <> None
+  then 0
+  else 
+    match e.e with
+    | Int _ | Float _ | String _ | Id _ -> 0
+    | Call _ -> fn_complexity
+    | Assign (_, e1, e2) | ArrayAccess (e1, e2) | Binary (e1, _, e2) 
+    | Sequence (e1, e2)  ->
+      let n1 = complexity e1 in
+      let n2 = complexity e2 in
+      if n1 = n2
+      then 1 + n1
+      else max n1 n2
+
+    | CondExpr (e1, e2, e3) -> 
+      complexity {e with e = Sequence (e1, { e with e = Sequence (e2, e3) } ) }
+
+    | RecordAccess (e, _) | RecordPtAccess (e, _)
+    | Cast (_, e)
+    | Postfix (e, _) | Prefix (_, e)
+    | Unary (_, e)
+      -> 
+      let n = complexity e in
+      if n = 0 then 1 else n
+    (* should be converted in Int anyway *)
+    | SizeOf _ -> 0
+
+    | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
+
 
 (*****************************************************************************)
 (* Register allocation helpers *)
@@ -313,7 +348,7 @@ let with_reg env r f =
   regfree env r;
   res
   
-let regalloc env =
+let regalloc env loc =
   (* less: lasti trick? *)
   let rec aux i n =
     (* This happens in extreme case when the expression tree has a huge
@@ -322,7 +357,7 @@ let regalloc env =
      *)
     if i >= n 
     then raise (Error (E.ErrorMisc 
-                      ("out of fixed registers; rewrite your code", fake_loc)));
+                      ("out of fixed registers; rewrite your code", loc)));
 
     if env.regs.(i) = 0
     then begin
@@ -345,7 +380,7 @@ let opd_regalloc env typ loc tgtopt =
       | Some { opd = Register (A.R x) } -> 
         reguse env (A.R x);
         x
-      | _ -> regalloc env
+      | _ -> regalloc env loc
     in
     { opd = Register (A.R i); typ = typ; loc = loc }
   | _ -> raise Todo
@@ -447,7 +482,7 @@ let gmove_opt env opd1 opd2opt =
  *)
 let rec expr env e0 dst_opd_opt =
 
-  match operand_able env e0 with
+  match operand_able e0 with
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
     (match e0.e with
@@ -462,21 +497,50 @@ let rec expr env e0 dst_opd_opt =
               | And | Or | Xor 
               | ShiftLeft | ShiftRight
               | Mul | Div | Mod) ->
-        (* todo: if l more "complex" than r? *)
-        let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
-        expr env e2 (Some opd2reg);
-        let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
-        expr env e1 (Some opd1reg);
-        (match opd1reg.opd, opd2reg.opd with
-        | Register r1, Register r2 ->
-          add_instr env (A.Instr (arith_instr_of_op op r1 r2 r1, A.AL)) 
-            e0.e_loc;
-          gmove_opt env opd1reg dst_opd_opt;
-          opd_regfree env opd2reg;
-          opd_regfree env opd1reg;
-        | _ -> raise (Impossible "both operands comes from opd_regalloc_e")
-        )
-        
+        let n1 = complexity e1 in
+        let n2 = complexity e2 in
+        let opdres, opdother = 
+          if n1 >= n2
+          then begin
+            let opd1reg = opd_regalloc env e1.e_type e1.e_loc dst_opd_opt in
+            expr env e1 (Some opd1reg);
+            let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
+            expr env e2 (Some opd2reg);
+            (match opd1reg.opd, opd2reg.opd with
+            | Register r1, Register r2 ->
+              (* again reverse order SUB r2 r1 ... means r1 - r2 *)
+              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A.AL)) 
+                e0.e_loc;
+            | _ -> raise (Impossible "both operands comes from opd_regalloc")
+            );
+            opd1reg, opd2reg
+          end
+          else begin
+            let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
+            expr env e2 (Some opd2reg);
+            let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
+            expr env e1 (Some opd1reg);
+            (match opd1reg.opd, opd2reg.opd with
+            | Register r1, Register r2 ->
+              (* This time we store result in r2! important and subtle.
+               * This avoids some extra MOVW; see plus_chain.c
+               *)
+              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A.AL)) 
+                e0.e_loc;
+            | _ -> raise (Impossible "both operands comes from opd_regalloc")
+            );
+            opd2reg, opd1reg
+          end
+        in
+        (* This is why it is better for opdres to be the register
+         * allocated from dst_opd_opt so the MOVW below can become a NOP
+         * and be removed.
+         *)
+        gmove_opt env opdres dst_opd_opt;
+
+        opd_regfree env opdres;
+        opd_regfree env opdother;
+            
       | Logical _ ->
         raise Todo
       )
@@ -484,7 +548,7 @@ let rec expr env e0 dst_opd_opt =
     | Assign (op, e1, e2) ->
       (match op with
       | SimpleAssign ->
-        (match operand_able env e1, operand_able env e2, dst_opd_opt with
+        (match operand_able e1, operand_able e2, dst_opd_opt with
         (* ex: x = 1; *)
         | Some opd1, Some opd2, None -> 
           (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
@@ -733,7 +797,8 @@ let rec stmt env st0 =
     add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
 
-  | Switch _ | Case _ | Default _ -> 
+  | Switch _ 
+  | Case _ | Default _ -> 
     raise Todo
 
 

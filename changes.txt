@@ -1,8 +1,13 @@
 -*- org -*-
 
+* 0.5 (Q1 2017) (??)
+
+* -----------------------------------------------------------
+
 * 0.4 (Q4 2016) (5c typechecker and basic code generator)
 
 finish cpp
+finish first port of 5c (typechecker and basic code generator)
 
 * 0.3 (Q3 2016) (mk, rc, 5c parser, cpp)
 
@@ -22,6 +27,10 @@ finish 5a
 
 * -----------------------------------------------------------
 
-* Alpha (Dec 2015) (5a)
+* Alpha (Dec 2015) (5a + lex/yacc import)
 
 port of 5a
+import of yacc that I ported in may 2015
+import of lex from OCaml.
+import of lib_parsing/ from the modifications I made to lex (and yacc).
+

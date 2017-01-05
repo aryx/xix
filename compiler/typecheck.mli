@@ -12,7 +12,7 @@ val string_of_error: error -> string
 exception Error of error
 
 (* Returns resolved type and storage information for identifiers and tags.
- * Returns also Ast.program elements with annotated types at each node.
+ * Annotate also with types each expression nodes in the returned functions
  * (so you can more easily generate code later).
  * 
  * It also internally resolves enum constants and replaces them

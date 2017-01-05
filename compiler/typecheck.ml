@@ -782,8 +782,17 @@ let check_and_annotate_program ast =
     | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
       Hashtbl.add env.structs fullname 
         (su, flds |> List.map 
-            (fun {fld_name = name; fld_loc=_; fld_type = typ } -> 
-              (name, type_ env typ)))
+            (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
+              let t = type_ env typ in
+              (match Ast.is_gensymed name, t with
+              | false, _ -> ()
+              | true, T.StructName _ -> ()
+              | true, _ -> raise (Error (E.ErrorMisc (
+                     "unnamed structure element must be struct/union", loc)))
+              );
+              (name, t)
+            )
+        )
 
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
       Hashtbl.add env.typedefs fullname (type_ env typ)

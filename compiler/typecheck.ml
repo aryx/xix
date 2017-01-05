@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Ast
@@ -350,74 +350,6 @@ let merge_storage_toplevel name loc stoopt ini old =
     | Some (S.Global | S.Param), _ -> 
       raise (Impossible "param or global are not keywords")
 
-(*****************************************************************************)
-(* Constant expression evaluator *)
-(*****************************************************************************)
-
-exception NotAConstant
-
-(* stricter: I do not handle float constants for enums *)
-let rec eval env e0 =
-  match e0.e with
-  (* todo: enough for big integers? 
-   * todo: we should also return an inttype in addition to the integer value.
-   *)
-  | Int (s, inttype) -> int_of_string s
-  | Id fullname ->
-     if Hashtbl.mem env.constants fullname
-     then
-       let (i, inttype) = Hashtbl.find env.constants fullname in
-       i
-     else raise NotAConstant
-  | Binary (e1, op, e2) ->
-    let i1 = eval env e1 in
-    let i2 = eval env e2 in
-    (match op with
-    | Arith op -> 
-      (match op with
-      | Plus -> i1 + i2
-      | Minus -> i1 - i2
-      | Mul -> i1 * i2
-      | Div -> 
-        (* stricter: error, not warning *)
-        if i2 = 0 
-        then raise (Error (E.ErrorMisc ("divide by zero", e0.e_loc)))
-        else i1 / i2
-      | Mod -> 
-        if i2 = 0 
-        then raise (Error (E.ErrorMisc ("modulo by zero", e0.e_loc)))
-        else i1 mod i2
-      | And -> i1 land i2
-      | Or -> i1 lor i2
-      | Xor -> i1 lxor i2
-      | ShiftLeft -> i1 lsl i2
-      (* less: could be asr! need type information! *)
-      | ShiftRight -> i1 lsr i2
-      )
-    | Logical op ->
-      (match op with
-      | Eq    -> if i1 =  i2 then 1 else 0
-      | NotEq -> if i1 <> i2 then 1 else 0
-      | Inf   -> if i1 <  i2 then 1 else 0
-      | Sup   -> if i1 >  i2 then 1 else 0
-      | InfEq -> if i1 <= i2 then 1 else 0
-      | SupEq -> if i1 >= i2 then 1 else 0
-      | AndLog -> raise Todo
-      | OrLog -> raise Todo
-      )
-    )
-  | Unary (op, e) ->
-    let i = eval env e in
-    (match op with
-    | UnPlus -> i
-    | UnMinus -> - i
-    | Tilde -> lnot i (* sure? *)
-    | _ -> raise Todo
-    )
-
-  | _ -> 
-    raise NotAConstant (* todo: more opporunities? *)
-
 
 (*****************************************************************************)
 (* Other helpers *)
@@ -436,10 +368,14 @@ let rec lvalue e0 =
    *)
   | RecordAccess _
     -> true
-  (* stricter: strings are transformed at some point in Id, but it
-   * does not make sense to consider them as lvalue.
+  (* strings are transformed at some point in Id.
+   * We must consider them as an lvalue, because an Id is an lvalue 
+   * and because if a string is passed as an argument to a function, we want
+   * to pass the address of this string (see array_to_pointer()).
    *)
-  | String _ -> false
+  | String _ -> 
+    (* raise (Impossible "transformed before") *)
+    true
 
   | Int _ | Float _
   | Binary _ | Unary _
@@ -482,9 +418,9 @@ let rec type_ env typ0 =
       | None -> T.Array (None, type_ env typ)
       | Some e ->
         (try 
-           let i = eval env e in
+           let i = Eval_const.eval env.constants e in
            T.Array (Some i, type_ env typ)
-         with NotAConstant ->
+         with Eval_const.NotAConstant ->
            raise (Error (E.ErrorMisc ("array size must be a positive constant",
                                       typ0.t_loc)))
         )
@@ -495,7 +431,8 @@ let rec type_ env typ0 =
                   let t = type_ env p.p_type in
                   (match t with
                   (* libc.h has a 'typedef long jmp_buf[2]' and then functions
-                   * like 'int setjmp(jmp_buf)' so we need to support that
+                   * like 'int setjmp(jmp_buf)' so we need to support that.
+                   * less: could warn?
                    *)
                   | T.Array (_, t) -> T.Pointer t
                   (* stricter: could transform T.Func in pointer *)
@@ -862,12 +799,12 @@ let check_and_annotate_program ast =
           | Some e ->
             (try 
                (* less: should also return an integer type *)
-               let i = eval env e in
+               let i = Eval_const.eval env.constants e in
                let t = (T.Int, T.Signed) in
                (* todo: maxt := max_types !maxt t; *)
                Hashtbl.add env.constants fullname (i, t);
                lastvalue := i;
-             with NotAConstant ->
+             with Eval_const.NotAConstant ->
                raise (Error (E.ErrorMisc (spf "enum not a constant: %s"
                                             (unwrap fullname), loc)))
             )

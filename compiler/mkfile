@@ -13,7 +13,7 @@ SRC= flags.ml \
   error.ml \
   parser.ml lexer.ml parse.ml \
   arch.ml \
-  check.ml typecheck.ml \
+  check.ml eval_const.ml typecheck.ml \
   rewrite.ml \
   arch5.ml codegen5.ml \
   main.ml

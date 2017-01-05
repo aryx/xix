@@ -57,10 +57,11 @@
  (join-string 
   (list 
    ""
-   (case 3
+   (case 4
      (1 (concat "-debugger -test_parser " (concat p "/compiler/tests/hello.rc")))
      (2 (concat "-debugger " (concat p "/compiler/tests/helloworld.c")))
      (3 (concat "-debugger -dump_asm " (concat p "/compiler/tests/pointer.c")))
+     (4 (concat "-debugger -dump_asm /home/pad/plan9/builders/mk/mk.c"))
      )
    )))
 

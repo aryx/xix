@@ -10,6 +10,7 @@
  *  - no nested struct definitions; they are lifted to the toplevel and 
  *    a blockid is associated with the tag name to avoid name conflicts
  *  - no anonymous structure; an artificial name is gensym'ed.
+ *  - no anonymous structure element; an artificial field name is gensym'ed
  *  - no mix of typedefs with variable declarations;
  *    again typedefs are lifted to the top
  *  - enums are also lifted to the top (and its constants are tagged with
@@ -27,8 +28,9 @@
  * 
  * See also pfff/lang_c/parsing/ast_c.ml and pfff/lang_cpp/parsing/ast_cpp.ml
  * 
- * todo: have a (large) integer and (large) double for Int and Float?
- * Int64.t? if unsigned long long constant? enough? overflow in int64_of_str?
+ * todo: 
+ *  - have a (large) integer and (large) double for Int and Float?
+ *    Int64.t? if unsigned long long constant? enough? overflow in int64_of_str?
  *)
 
 (*****************************************************************************)
@@ -287,12 +289,13 @@ type struct_def = {
   su_name: fullname;
   su_loc: loc;
   su_kind: Type.struct_kind;
+  (* todo: bitfield annotation *)
   su_flds: field_def list;
 }
   (* Not the same than var_decl; fields have no storage and can have bitflds.*)
   and field_def = { 
-   (* todo: bitfield annotation
-    * stricter: no anonymous struct/union (used originally in arm/u.h though)
+   (* kenccext: anonymous structure element get an artificial field name
+    * (see is_gensymed()) 
     *)
     fld_name: name;
     fld_loc: loc;
@@ -360,3 +363,8 @@ let tagkind_of_su = function
   | Type.Union -> TagUnion
 
 let unwrap (name, _) = name    
+
+open Common
+(* see also Parser.gensym *)
+let is_gensymed str = 
+  str =~ "|sym[0-9]+|.*"

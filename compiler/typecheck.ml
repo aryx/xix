@@ -494,8 +494,12 @@ let rec type_ env typ0 =
                 tparams |> List.map (fun p -> 
                   let t = type_ env p.p_type in
                   (match t with
-                  (* stricter: could transform T.Array and T.Func in pointer *)
-                  | T.Array _ | T.Func _ -> type_error t p.p_loc
+                  (* libc.h has a 'typedef long jmp_buf[2]' and then functions
+                   * like 'int setjmp(jmp_buf)' so we need to support that
+                   *)
+                  | T.Array (_, t) -> T.Pointer t
+                  (* stricter: could transform T.Func in pointer *)
+                  | T.Func _ -> type_error t p.p_loc
                   | _ -> t
                   )
                 ), tdots)

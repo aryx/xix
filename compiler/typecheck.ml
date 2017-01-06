@@ -530,9 +530,9 @@ let rec expr env e0 =
     | DeRef ->
       let e = expr newenv e in
       (match e.e_type with
-      (* what about T.Array? see array_to_pointer *)
       | T.Pointer t -> 
         { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer env
+      (* what about T.Array? see array_to_pointer() *)
       | _ -> type_error e.e_type e.e_loc
       )
     )
@@ -581,7 +581,7 @@ let rec expr env e0 =
       let e = { e with e = Unary (DeRef, e); } in
       expr newenv { e0 with e = Call (e, es) }
     | T.Func (tret, tparams, varargs) ->
-       (* enable GetRef for array here (and functions) *)
+       (* we enable GetRef for array here (and functions) *)
       let es = List.map (expr { env with expr_context = CtxWantValue }) es in
       check_args_vs_params es tparams varargs e0.e_loc;
       (* todo: add cast *)
@@ -665,7 +665,7 @@ and expropt env eopt =
 (* Statement *)
 (*****************************************************************************)
 
-(* Boilerplate mostly.
+(* The code below is boilerplate, mostly.
  * expr() should not do any side effect on the environment, so we can
  * call recursively in any order stmt() and expr() (including the
  * reverse order of evaluation of OCaml for arguments).
@@ -675,14 +675,16 @@ let rec stmt env st0 =
     (match st0.s with
     | ExprSt e -> ExprSt (expr env e)
     | Block xs -> Block (List.map (stmt env) xs)
-    (* stricter: error when does not typecheck, not just set null type on e *)
+
     | If (e, st1, st2) -> 
       let e = expr env e in
       (match e.e_type with
       | T.I _ | T.F _ | T.Pointer _ -> ()
+      (* stricter: error when does not typecheck, not just set null type on e *)
       | _ -> type_error e.e_type e.e_loc
       );
       If (e, stmt env st1, stmt env st2)
+
     | Switch (e, xs) -> 
       let e = expr env e in
       (* ensure e is a number! not a pointer *)
@@ -691,6 +693,7 @@ let rec stmt env st0 =
       | _ -> type_error e.e_type e.e_loc
       );
       Switch (e, stmt env xs)
+
     (* less: should enforce int expr? *)
     | Case (e, st) -> Case (expr env e, stmt env st)
     | Default st -> Default (stmt env st)

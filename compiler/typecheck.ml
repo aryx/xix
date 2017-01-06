@@ -19,12 +19,12 @@ module E = Check
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
  * we do not have to handle scope here. 
- * Thanks to check.ml we do not have to check for inconcistencies or
+ * Thanks to check.ml we do not have to check for inconsistencies or
  * redefinition of tags. We can assume everything is fine.
  * 
  * limitations compared to 5c:
  *  - no 'void*' conversions 
- *    (clang does not either)
+ *    (clang does not either? but we do accept so void* vs xxx* )
  *  - no struct equality by field equality. I use name equality.
  *    (who uses that anyway?)
  *  - no float enum
@@ -59,7 +59,7 @@ type env = {
 
   (* return type of function; used to typecheck Return *)
   return_type: Type.t;
-  (* used to add some implicate GetRef for arrays and functions *)
+  (* used to add some implicit GetRef for arrays and functions *)
   expr_context: expr_context;
 }
   and idinfo = {
@@ -106,8 +106,8 @@ let same_types t1 t2 =
   (* 'void*' can match any pointer! The generic trick of C
    * (but only when the pointer is at the top of the type).
    *)
-  | T.Pointer T.Void, T.Pointer _ -> true
-  | T.Pointer _, T.Pointer T.Void -> true
+  | T.Pointer T.Void, T.Pointer _      -> true
+  | T.Pointer _,      T.Pointer T.Void -> true
   (* stricter: struct equality by name, not by fields *)
   | _ -> t1 = t2
    
@@ -364,11 +364,11 @@ let rec lvalue e0 =
   | Id _ 
   | Unary (DeRef, _)
   (* todo: lvalue only if leftpart is a lvalue. But when it can not be
-   * a lvalue?
+   * a lvalue? if bitfield?
    *)
   | RecordAccess _
     -> true
-  (* strings are transformed at some point in Id.
+  (* Strings are transformed at some point in Id.
    * We must consider them as an lvalue, because an Id is an lvalue 
    * and because if a string is passed as an argument to a function, we want
    * to pass the address of this string (see array_to_pointer()).
@@ -378,15 +378,16 @@ let rec lvalue e0 =
     true
 
   | Int _ | Float _
-  | Binary _ | Unary _
+  | Binary _ 
+  | Unary ((GetRef | UnPlus |  UnMinus | Tilde | Not), _)
     -> false
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
 
-(* when you mention an array in a context where you want to access the array,
- * we prefix the array with a '&' and change its type from a T.Array
+(* When you mention an array in a context where you want to access the array
+ * content, we prefix the array with a '&' and change its type from a T.Array
  * to a T.Pointer. This allows in turn to write typechecking rules
- * mentioning only Pointer (see for example check_compatible_binary)
+ * mentioning only Pointer (see for example check_compatible_binary).
  *)
 let array_to_pointer env e =
   match e.e_type with
@@ -395,6 +396,7 @@ let array_to_pointer env e =
     | CtxWantValue -> 
       if not (lvalue (e))
       then raise (Error (E.ErrorMisc ("not an l-value", e.e_loc)));
+
       { e = Unary (GetRef, e); e_type = T.Pointer t; e_loc = e.e_loc }
     | CtxGetRef -> 
       Error.warn "address of array ignored" e.e_loc;
@@ -453,6 +455,7 @@ let rec type_ env typ0 =
 let rec expr env e0 =
   (* default env for recursive call *)
   let newenv = { env with expr_context = CtxWantValue } in
+
   match e0.e with
   | Int    (s, inttype)   -> { e0 with e_type = T.I inttype }
   | Float  (s, floattype) -> { e0 with e_type = T.F floattype }

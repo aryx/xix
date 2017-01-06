@@ -884,9 +884,10 @@ edecl_elem:
        { fld_name = id; fld_loc = loc; fld_type = typ }
      )
    }
-/*(* kenccext: unnamed structure element, used in u.h, regexp.h, etc *)*/
+/*(* kenccext: c99ext? unnamed structure elt; used in u.h/regexp.h/bio.h/.. *)*/
  | qualifier_and_type
    { let s = gensym () in
+    (* note that this anon elt can even be a nested anon struct definition! *)
      let typ = $1 in
      (* check that struct/union done later after typedef expansion *)
      [ { fld_name = s; fld_loc = typ.t_loc; fld_type = typ } ]

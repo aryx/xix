@@ -836,6 +836,11 @@ let check_and_annotate_program ast =
         (su, flds |> List.map 
             (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
               let t = type_ env typ in
+              (* kenccext: c99ext?:
+               * less: if there are multiple anon structure elements, we 
+               * could check eagerly if no ambiguous fields instead
+               * of checking it when you use a field.
+               *)
               (match Ast.is_gensymed name, t with
               | false, _ -> ()
               | true, T.StructName _ -> ()

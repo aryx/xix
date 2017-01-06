@@ -23,13 +23,13 @@ open Common
  *    we do not support void* conversions (5c -V), and we use name
  *    equality for typechecking structs, not field equality.
  *  - no support for certain kencc extensions: 
- *     * unnamed structure element
+ *     * STILL? unnamed structure element
  *       (confusing anyway)
  *     * typestr
  *       (seems dead)
  *  - no support for certain C features:
  *     * enum float
- * 
+ *       (who uses that?)
  * 
  * improvements:
  *  - we forbid more constructs: 
@@ -113,12 +113,14 @@ let compile (defs, include_paths) infile outfile =
   end;
 
   (* todo: Rewrite.rewrite *)
+
   let asm = Codegen5.codegen (ids, structs, funcs) in
 
   if !Flags.dump_asm
   then begin
     let pc = ref 0 in
     asm |> List.iter (fun (instr, _loc) ->
+      (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
       let v = Meta_ast_asm5.vof_line instr in
       pr2 (spf "%2d: %s" !pc (Ocaml.string_of_v v));
       incr pc;

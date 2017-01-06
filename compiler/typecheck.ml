@@ -81,13 +81,13 @@ exception Error of error
 
 let type_error _t loc =
   (* less: dump t? *)
-  raise (Error (E.ErrorMisc ("incompatible type", loc)))
+  raise (Error (E.Misc ("incompatible type", loc)))
 
 (* todo: for op xxx *)
 let type_error2 t1 t2 loc =
   let s1 = Dumper.s_of_any (FinalType t1) in
   let s2 = Dumper.s_of_any (FinalType t2) in
-  raise (Error (E.ErrorMisc (spf "incompatible types (%s and %s)" s1 s2, loc)))
+  raise (Error (E.Misc (spf "incompatible types (%s and %s)" s1 s2, loc)))
 
 (*****************************************************************************)
 (* Types helpers *)
@@ -269,9 +269,9 @@ let rec check_args_vs_params es tparams varargs loc =
   (* stricter? confusing to have foo() and foo(void) *)
   | [], ([] | [T.Void]), _ -> ()
   | [], _, _ -> 
-    raise (Error (E.ErrorMisc ("not enough function arguments", loc)))
+    raise (Error (E.Misc ("not enough function arguments", loc)))
   | e::es, [], false -> 
-    raise (Error (E.ErrorMisc ("too many function arguments", loc)))
+    raise (Error (E.Misc ("too many function arguments", loc)))
   | e::es, [], true -> 
     (match e.e_type with
     | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
@@ -287,7 +287,7 @@ let rec check_args_vs_params es tparams varargs loc =
        (* todo: convert to int small types? see tcoma *)
        check_compatible_assign SimpleAssign t e.e_type e.e_loc
      with Error _ ->
-       raise (Error (E.ErrorMisc ("argument prototype mismatch", e.e_loc)))
+       raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
     );
     check_args_vs_params es ts varargs loc
     
@@ -333,8 +333,7 @@ let merge_storage_toplevel name loc stoopt ini old =
         "previous definition is here", old.loc)))
 
     | Some S.Local, _ ->
-      raise  (Error(E.ErrorMisc 
-                ("illegal storage class for file-scoped entity", loc)))
+      raise (Error(E.Misc("illegal storage class for file-scoped entity", loc)))
     | Some S.Static, (S.Extern | S.Global) ->
       raise (Error (E.Inconsistent (
        spf "static declaration of '%s' follows non-static declaration" name,loc,
@@ -395,7 +394,7 @@ let array_to_pointer env e =
     (match env.expr_context with
     | CtxWantValue -> 
       if not (lvalue (e))
-      then raise (Error (E.ErrorMisc ("not an l-value", e.e_loc)));
+      then raise (Error (E.Misc ("not an l-value", e.e_loc)));
 
       { e = Unary (GetRef, e); e_type = T.Pointer t; e_loc = e.e_loc }
     | CtxGetRef -> 
@@ -423,8 +422,8 @@ let rec type_ env typ0 =
            let i = Eval_const.eval env.constants e in
            T.Array (Some i, type_ env typ)
          with Eval_const.NotAConstant ->
-           raise (Error (E.ErrorMisc ("array size must be a positive constant",
-                                      typ0.t_loc)))
+           raise (Error
+                  (E.Misc("array size must be a positive constant",typ0.t_loc)))
         )
       )
   | TFunction (tret, (tparams, tdots)) ->
@@ -523,7 +522,7 @@ let rec expr env e0 =
       (* we dont want an additional '&' added before an array *)
       let e = expr { env with expr_context = CtxGetRef } e in
       if not (lvalue (e))
-      then raise (Error (E.ErrorMisc ("not an l-value", e0.e_loc)));
+      then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
       (* less: warn if take address of array or function, ADDROP *)
       { e0 with e = Unary (GetRef, e); e_type = T.Pointer (e.e_type) }
 
@@ -540,7 +539,7 @@ let rec expr env e0 =
     let e1 = expr newenv e1 in
     let e2 = expr newenv e2 in
     if not (lvalue (e1))
-    then raise (Error (E.ErrorMisc ("not an l-value", e0.e_loc)));
+    then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
     check_compatible_assign op e1.e_type e2.e_type e0.e_loc;
     (* todo: add cast on e2 if not same type,
      * todo: mixedasop thing?
@@ -567,8 +566,8 @@ let rec expr env e0 =
          { e0 with e = RecordAccess (e, name); e_type = t } 
           |> array_to_pointer env
        with Not_found ->
-         raise (Error (E.ErrorMisc (spf "not a member of struct/union: %s" name,
-                                   e.e_loc)))
+         raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
+                             e.e_loc)))
       )
     | _ -> type_error e.e_type e.e_loc
     )
@@ -620,11 +619,11 @@ let rec expr env e0 =
   | Postfix(e, op) | Prefix (op, e) ->
     let e = expr newenv e in
     if not (lvalue (e))
-    then raise (Error (E.ErrorMisc ("not an l-value", e.e_loc)));
+    then raise (Error (E.Misc ("not an l-value", e.e_loc)));
     check_compatible_binary (Arith Plus) e.e_type T.int e0.e_loc;
     (match e.e_type with
     | T.Pointer T.Void ->
-      raise (Error (E.ErrorMisc ("inc/dec of a void pointer", e.e_loc)));
+      raise (Error (E.Misc ("inc/dec of a void pointer", e.e_loc)));
     | _ -> ()
     );
     { e0 with e = 
@@ -723,8 +722,8 @@ let rec stmt env st0 =
           if env.return_type = T.Void
           then None 
           (* stricter: error, not warn *)
-          else raise (Error (E.ErrorMisc 
-                               ("null return of a typed function", st0.s_loc)))
+          else raise (Error (E.Misc ("null return of a typed function", 
+                                     st0.s_loc)))
         | Some e -> 
           let e = expr env e in
           check_compatible_assign SimpleAssign env.return_type e.e_type e.e_loc;
@@ -742,8 +741,8 @@ let rec stmt env st0 =
       let ini = expropt env eopt in
       (match t with
       (* stricter: forbid nested prototypes *)
-      | T.Func _ -> raise (Error (E.ErrorMisc 
-                       ("prototypes inside functions are forbidden", loc)));
+      | T.Func _ -> 
+         raise (Error(E.Misc("prototypes inside functions are forbidden",loc)));
       | _ -> ()
       );
       let sto =
@@ -751,8 +750,8 @@ let rec stmt env st0 =
         | None -> S.Local
         (* stricter? forbid? confusing anyway to shadow locals *)
         | Some S.Extern ->
-          raise (Error (E.ErrorMisc 
-              ("extern declaration inside functions are forbidden", loc)));
+          raise(Error(E.Misc 
+                     ("extern declaration inside functions are forbidden",loc)))
         | Some S.Static -> 
           raise Todo
         | Some S.Local -> 
@@ -793,8 +792,9 @@ let check_and_annotate_program ast =
               (match Ast.is_gensymed name, t with
               | false, _ -> ()
               | true, T.StructName _ -> ()
-              | true, _ -> raise (Error (E.ErrorMisc (
-                     "unnamed structure element must be struct/union", loc)))
+              | true, _ -> 
+                raise (Error (E.Misc 
+                       ("unnamed structure element must be struct/union", loc)))
               );
               (name, t)
             )
@@ -820,7 +820,7 @@ let check_and_annotate_program ast =
                Hashtbl.add env.constants fullname (i, t);
                lastvalue := i;
              with Eval_const.NotAConstant ->
-               raise (Error (E.ErrorMisc (spf "enum not a constant: %s"
+               raise (Error (E.Misc (spf "enum not a constant: %s"
                                             (unwrap fullname), loc)))
             )
           | None ->
@@ -849,11 +849,11 @@ let check_and_annotate_program ast =
       (* step1: check for weird declarations *)
       (match t, ini, stoopt with
       | T.Func _, Some _, _ -> 
-        raise (Error(E.ErrorMisc 
+        raise (Error(E.Misc 
                      ("illegal initializer (only var can be initialized)",loc)))
       (* stricter: 5c says nothing, clang just warns *)
       | _, Some _, Some S.Extern ->
-        raise (Error(E.ErrorMisc("'extern' variable has an initializer", loc)))
+        raise (Error (E.Misc ("'extern' variable has an initializer", loc)))
       | _ -> ()
       );
 
@@ -893,7 +893,7 @@ let check_and_annotate_program ast =
            | Some S.Extern -> S.Extern
            | Some S.Static -> S.Static
            | Some S.Local -> 
-             raise (Error(E.ErrorMisc 
+             raise (Error(E.Misc 
                           ("illegal storage class for file-scoped entity",loc)))
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")
@@ -952,9 +952,9 @@ let check_and_annotate_program ast =
            | Some S.Static -> S.Static
            (* different than for VarDecl here *)
            | Some S.Extern -> 
-             raise(Error(E.ErrorMisc("'extern' function with initializer",loc)))
+             raise (Error (E.Misc ("'extern' function with initializer", loc)))
            | Some S.Local -> 
-             raise (Error(E.ErrorMisc 
+             raise (Error(E.Misc 
                           ("illegal storage class for file-scoped entity",loc)))
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")

@@ -38,7 +38,7 @@ type error =
   | Inconsistent of 
       string * Location_cpp.loc * (* error here *) 
       string * Location_cpp.loc   (* previous decl/def/whatever here *)
-  | ErrorMisc of string * Location_cpp.loc
+  | Misc of string * Location_cpp.loc
 
 let string_of_error err =
   match err with
@@ -46,7 +46,7 @@ let string_of_error err =
     let (file1, line1) = Location_cpp.final_loc_of_loc loc1 in
     let (file2, line2) = Location_cpp.final_loc_of_loc loc2 in
     spf "%s:%d error: %s\n%s:%d note: %s" file1 line1 s1 file2 line2 s2
-  | ErrorMisc (s, loc) ->
+  | Misc (s, loc) ->
     let (file, line) = Location_cpp.final_loc_of_loc loc in
     spf "%s:%d error: %s" file line s
 
@@ -220,7 +220,7 @@ let check_usedef program =
         match usedef with
         | { defined = Some _; used = Some _ } -> ()
         | { used = Some loc; defined = None } ->
-            error (ErrorMisc (spf "use of undeclared label '%s'" name, loc))
+            error (Misc (spf "use of undeclared label '%s'" name, loc))
         | { defined = Some loc; used = None } ->
             Error.warn (spf "label declared and not used '%s'" name) loc
         | { defined = None; used = None } -> 
@@ -407,7 +407,7 @@ let check_usedef program =
   env.tags |> Hashtbl.iter (fun fullname (usedef, idkind) ->
     match usedef with
     | { used = Some loc; defined = None } ->
-      error (ErrorMisc (spf "use of tag '%s' that is never completed"
+      error (Misc (spf "use of tag '%s' that is never completed"
                           (unwrap fullname), loc))
     (* this can happen, header file are big and can cover multiple modules *)
     | { defined = Some _; used = None } -> ()

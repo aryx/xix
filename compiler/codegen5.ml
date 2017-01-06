@@ -339,7 +339,7 @@ let reguse env (A.R x) =
 let regfree env (A.R x) = 
   env.regs.(x) <- env.regs.(x) - 1;
   if env.regs.(x) < 0
-  then raise (Error (E.ErrorMisc ("error in regfree", fake_loc)))
+  then raise (Error (E.Misc ("error in regfree", fake_loc)))
 
 let with_reg env r f =
   (* less: care about exn? meh, if exn then no recovery anyway *)
@@ -356,8 +356,7 @@ let regalloc env loc =
      * on the stack but this complexifies the algorithm.
      *)
     if i >= n 
-    then raise (Error (E.ErrorMisc 
-                      ("out of fixed registers; rewrite your code", loc)));
+    then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
 
     if env.regs.(i) = 0
     then begin
@@ -879,7 +878,7 @@ let codegen (ids, structs, funcs) =
     (* sanity check register allocation *)
     env.regs |> Array.iteri (fun i v ->
       if regs_initial.(i) <> v
-      then raise (Error (E.ErrorMisc (spf "reg %d left allocated" i, loc)));
+      then raise (Error (E.Misc (spf "reg %d left allocated" i, loc)));
     );
   );
 

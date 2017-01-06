@@ -55,11 +55,11 @@ let rec eval env e0 =
       | Div -> 
         (* stricter: error, not warning *)
         if i2 = 0 
-        then raise (Error (E.ErrorMisc ("divide by zero", e0.e_loc)))
+        then raise (Error (E.Misc ("divide by zero", e0.e_loc)))
         else i1 / i2
       | Mod -> 
         if i2 = 0 
-        then raise (Error (E.ErrorMisc ("modulo by zero", e0.e_loc)))
+        then raise (Error (E.Misc ("modulo by zero", e0.e_loc)))
         else i1 mod i2
       | And -> i1 land i2
       | Or -> i1 lor i2

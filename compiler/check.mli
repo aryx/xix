@@ -3,7 +3,7 @@ type error =
   | Inconsistent of 
       string * Location_cpp.loc * (* error here *) 
       string * Location_cpp.loc   (* previous decl/def/whatever here *)
-  | ErrorMisc of string * Location_cpp.loc
+  | Misc of string * Location_cpp.loc
 
 val string_of_error: error -> string
 

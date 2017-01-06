@@ -49,6 +49,7 @@ type qualifier =
   (* less: unsupported: | Restrict | Inline *)
  (* with tarzan *)
 
+(* note that the field can be gensym'ed for anonymous struct/union elements *)
 (* todo: bitfield *)
 type structdef = (string * t) list
  (* with tarzan *)

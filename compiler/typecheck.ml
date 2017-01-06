@@ -235,6 +235,9 @@ let result_type_binary t1 t2 =
 
   | _ -> raise (Impossible "case should be forbidden by compatibility policy")
 
+(* less: could run typ_ext hooks here? and return a new node? for
+ * unnamed_inheritance.c?
+ *)
 let check_compatible_assign op t1 t2 loc =
   match op with
   | SimpleAssign ->
@@ -405,6 +408,41 @@ let array_to_pointer env e =
   (* stricter? do something for Function? or force to put address? *)
   | _ -> e
 
+(* X.foo --> X.|sym42|.foo *)
+let rec unsugar_anon_structure_element env e0 e name def =
+  
+  let res = ref [] in
+
+  def |> List.iter (fun (fldname, t) ->
+    if fldname = name
+    then res |> Common.push { e0 with e = RecordAccess (e, name); e_type = t }
+    else
+      if Ast.is_gensymed fldname
+      then
+        (match t with
+        | T.StructName (su, fullname) ->
+          let (_su2, def) = Hashtbl.find env.structs fullname in
+          (try 
+             let e = 
+               unsugar_anon_structure_element env e0
+                 ({ e with e = RecordAccess (e, fldname); e_type = t })
+                 name def
+             in
+             res |> Common.push e
+           with Not_found -> ()
+          )
+        | _ -> raise (Impossible "checked anon elements are struct/union")
+        )
+      else ()
+  );
+  (match !res with
+  | [x] -> x
+  | [] -> raise Not_found
+  | x::y::xs ->
+    raise (Error(E.Misc(spf "ambiguous unnamed structure element %s" name,
+                               e.e_loc)))
+  )
+
 (*****************************************************************************)
 (* AST Types to Types.t *)
 (*****************************************************************************)
@@ -566,8 +604,17 @@ let rec expr env e0 =
          { e0 with e = RecordAccess (e, name); e_type = t } 
           |> array_to_pointer env
        with Not_found ->
-         raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
-                             e.e_loc)))
+         if def |> List.exists (fun (fld, _) -> Ast.is_gensymed fld)
+         then 
+           try 
+             unsugar_anon_structure_element env e0 e name def 
+               |>array_to_pointer env
+           with Not_found ->
+             raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
+                                 e.e_loc)))
+         else
+           raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
+                               e.e_loc)))
       )
     | _ -> type_error e.e_type e.e_loc
     )

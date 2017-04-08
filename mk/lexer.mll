@@ -8,7 +8,6 @@ open Parser
 (* Prelude *)
 (*****************************************************************************)
 (* Limitations compared to mk:
- *  - escaped newlines not handled in comments
  *  - does not handle unicode (use ulex?)
  *)
 
@@ -83,8 +82,15 @@ rule token = parse
   (* escaped newline *)
   | '\\' '\n'     { incr Globals.line; TSpace (Lexing.lexeme lexbuf) }
 
-  (* less: handle escaped newline in comment *)
+  (* comments *)
   | '#' [^ '\n']* { token lexbuf }
+
+  (* escaped newline in comment (useful to handle) *)
+  | '#' [^ '\n']* '\\' '\n' 
+      { incr Globals.line; 
+        token lexbuf 
+      }
+      
 
 
   (* ----------------------------------------------------------------------- *)

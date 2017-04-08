@@ -21,6 +21,10 @@ module T = Types
  *   (Why would you want that? Does 5c generate that?)
  * 
  * todo?:
+ *  - -v is quite useful to debug "redefinition" linking errors
+ *    (see pb I had when linking bcm/ kernel)
+ *  - when get undefined symbol, print function you are currently in!
+ *    very useful to diagnose issue to give context and where to look for
  *  - arith LCON less: NCON
  *  - half word and byte load/store basic version
  *  - endianess and datagen

@@ -161,6 +161,7 @@ rule token = parse
       { space_or_comment_and_newline lexbuf; 
         Pragma("incomplete", [s]) 
       }
+  (* stricter: we do not silently skip unknown pragmas *)
   | "pragma"  { error "syntax in #pragma" }
 
   | symbol { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }

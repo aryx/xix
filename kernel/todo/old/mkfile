@@ -1,0 +1,20 @@
+LOADADDR=0x80008000
+
+LD=5l
+AS=5a
+CC=5c
+
+OBJ=start.5
+
+%.5: %.s
+	$AS $prereq
+
+%.5: %.c
+	$CC $prereq
+
+kernel: $OBJ $LIB
+	$LD -f -o $target -H6 -R4096 -T$LOADADDR -l $OBJ $LIB
+
+
+run:VI:
+	qemu-system-arm -M raspi2 -bios kernel

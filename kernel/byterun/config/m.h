@@ -1,0 +1,4 @@
+#define ARCH_SIXTYFOUR
+#undef ARCH_CODE32
+#undef ARCH_BIG_ENDIAN
+#undef ARCH_ALIGN_DOUBLE

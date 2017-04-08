@@ -36,8 +36,8 @@ let main () =
   let dump    = ref false in
 
   (* for cpp *)
-  let system_paths = ref [] in
-  let defs = ref [] in
+  let include_paths = ref [] in
+  let macro_defs = ref [] in
 
   (* for debugging *)
   let backtrace = ref false in
@@ -53,10 +53,10 @@ let main () =
         then Common.matched2 s
         else (s, "1")
       in
-      defs := (var, val_)::!defs
+      macro_defs := (var, val_)::!macro_defs
     ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
-      system_paths := s::!system_paths
+      include_paths := s::!include_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
 
     (* pad: I added that *)
@@ -93,14 +93,14 @@ let main () =
     (try Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
      with Not_found ->
        [spf "/%s/include" thestring; "/sys/include";]
-    ) @
-      (List.rev !system_paths)
+    )
   in
+  let include_paths = system_paths @ (List.rev !include_paths) in
   let dir = Filename.dirname !infile in
 
   try 
     (* main call *)
-    assemble5 !dump (!defs, (dir, system_paths)) !infile outfile
+    assemble5 !dump (!macro_defs, (dir, include_paths)) !infile outfile
   with  exn ->
     if !backtrace
     then raise exn

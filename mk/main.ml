@@ -51,6 +51,7 @@ module R = Rules
  *  - a new Interactive attribute :I: so one can call interactive program
  *    in a recipe (e.g., syncweb)
  *  - TODO a luisa mode, more synthetic, just DONE
+ *  - TODO: like in buck, show all processors and IDLE or active (GUI?)
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
  *    and evaluating, so avoid duplicate work like handling quoted characters

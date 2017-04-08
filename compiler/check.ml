@@ -326,7 +326,9 @@ let check_usedef program =
            let (usedef, _idkind) = Hashtbl.find env.ids fullname in
            usedef.used <- Some e0.e_loc
          with Not_found ->
-           raise (Impossible "ids are always declared first")
+           (* todo: can be USED or SET *)
+           raise (Impossible (spf "ids are always declared first: %s" 
+                                (unwrap fullname)))
         )
     | Call (e, es) -> exprs env (e::es)
     | Assign (_, e1, e2) | Binary (e1, _, e2) | Sequence (e1, e2) 

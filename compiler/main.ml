@@ -22,6 +22,8 @@ open Common
  *  - stricter for typechecking (see typecheck.ml), for instance
  *    we do not support void* conversions (5c -V), and we use name
  *    equality for typechecking structs, not field equality.
+ *    we also do not automatically transform 0 in nil; I force to write
+ *    nil
  *  - no support for certain kencc extensions: 
  *     * STILL? unnamed structure element
  *       (confusing anyway)

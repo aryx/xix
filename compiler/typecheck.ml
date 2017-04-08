@@ -29,6 +29,8 @@ module E = Check
  *    (who uses that anyway?)
  *  - no float enum
  *    (who uses that anyway?)
+ *  - no 0 to nil automatic cast inserted
+ *    (I prefer stricter typechecking)
  * 
  * todo: 
  *  - const checking (in check_const.ml?) need types!
@@ -229,6 +231,11 @@ let result_type_binary t1 t2 =
   | T.F T.Double, T.Pointer _ -> t2
 
   | T.Pointer _, (T.I _ | T.F _) -> t1
+
+  (* see same_types special handling of void* pointers *)
+  | T.Pointer T.Void, T.Pointer _ -> t2
+  | T.Pointer _, T.Pointer T.Void -> t1
+
   | T.Pointer _, T.Pointer _ ->
     assert (t1 = t2);
     t1
@@ -406,6 +413,14 @@ let array_to_pointer env e =
     | CtxSizeof -> e
     )
   (* stricter? do something for Function? or force to put address? *)
+  | T.Func _ ->
+    (match env.expr_context with
+    | CtxWantValue -> 
+      Error.warn "you should get the address of the function" e.e_loc;
+      e
+    | _ -> e
+    )
+    
   | _ -> e
 
 (* X.foo --> X.|sym42|.foo *)

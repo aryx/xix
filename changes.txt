@@ -1,6 +1,14 @@
 -*- org -*-
 
-* 0.5 (Q1 2017) (??)
+* 0.6 (Q2 2017) (???)
+
+* 0.5 (Q1 2017) (kernel start)
+
+minimal C kernel for Raspberry Pi (boot, malloc, libc, print) by
+ selecting subset of 9/bcm/ and 9/port in plan9
+minimal ocaml hello world linked in kernel
+ by linking the byterun interpreter from ocaml light 1.07 to the
+ minimal C kernel (incorporate more libc)
 
 * -----------------------------------------------------------
 

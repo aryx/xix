@@ -1,0 +1,4 @@
+requirements:
+ - ocaml (ocamlrun, ocamlc, ocaml stdlib)
+ - kencc for kernel/ (until can bootstrap it from 5a/5c/5l provided by
+   plan9-ml)

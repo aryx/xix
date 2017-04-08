@@ -6,7 +6,7 @@
  (split-string 
   "commons
    formats/objects formats/executables
-   assembler linker mk shell compiler
+   assembler linker mk shell compiler macroprocessor
    "
   ))
 
@@ -61,7 +61,7 @@
      (1 (concat "-debugger -test_parser " (concat p "/compiler/tests/hello.rc")))
      (2 (concat "-debugger " (concat p "/compiler/tests/helloworld.c")))
      (3 (concat "-debugger -dump_asm " (concat p "/compiler/tests/pointer.c")))
-     (4 (concat "-debugger -dump_asm /home/pad/plan9/builders/mk/mk.c"))
+     (4 (concat "-debugger -dump_asm /home/pad/plan9/builders/mk/dumpers.c"))
      )
    )))
 

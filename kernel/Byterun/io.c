@@ -152,7 +152,7 @@ int putblock(struct channel *channel, char *p, long int len)
 
   n = len >= INT_MAX ? INT_MAX : (int) len;
   free = channel->end - channel->curr;
-  if (n <= free && 0) {
+  if (n <= free && 0) { // TODO!!!
     print("putblock1\n");
     /* Write request small enough to fit in buffer: transfer to buffer. */
     bcopy(p, channel->curr, n);
@@ -381,7 +381,7 @@ value caml_flush_partial(value vchannel)            /* ML */
 
 value caml_flush(value vchannel)            /* ML */
 {
-  //flush(Channel(vchannel));
+  flush(Channel(vchannel));
   return Val_unit;
 }
 

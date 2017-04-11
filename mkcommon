@@ -16,5 +16,5 @@
 
 depend:V:
 	$OCAMLDEP $INCLUDES *.ml *.mli  > .depend
-
+#ocamldep generates some empty entries that mk does not like
 #| grep -v -e '.* :$'

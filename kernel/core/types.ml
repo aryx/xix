@@ -22,8 +22,8 @@ type space = User | Kernel
 (* todo: on 32 bits archi! *)
 type addr = int32
 
-type virt = V of addr * space
-type phys = P of addr
+type virt_addr = V of addr * space
+type phys_addr = P of addr
 
 (*****************************************************************************)
 (* could be in time.ml *)
@@ -40,6 +40,7 @@ type fd = int
 
 (* special symbols: '/', '..', '#' *)
 type filename = string
+
 
 (*****************************************************************************)
 (* misc *)

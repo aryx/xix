@@ -1,42 +1,18 @@
 #############################################################################
-# Compilers
-#############################################################################
-
-#objtype=arm
-#</$objtype/mkfile
-CC=5c
-LD=5l
-O=5
-AS=5a
-
-OCAML=/home/pad/github/fork-ocaml
-OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
-
-#############################################################################
-# Config
-#############################################################################
-
-LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
-
-# I removed -T because prims.c (a generated file) has wrong signatures 
-CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
-
-OCAMLCFLAGS=-I core
-
-#############################################################################
 # Src
 #############################################################################
+O=5
 
 CMO= core/types.cmo\
   core/ureg.cmo\
   \
-  syscall.cmo\
+  sysmisc.cmo\
+  syscall.cmo syscall_dispatch.cmo\
   main.cmo
 
 XXX=\
   core/memory.cmo\
-  sysmisc.cmo \
-   syscall_dispatch.cmo \
+
 
 OBJ=\
 	bcm/start.$O\
@@ -215,6 +191,34 @@ OBJ=\
 # not    byterun/prims.$O, now in ocaml.$O
 
 #############################################################################
+# Compilers
+#############################################################################
+
+#objtype=arm
+#</$objtype/mkfile
+CC=5c
+LD=5l
+O=5
+AS=5a
+
+OCAML=/home/pad/github/fork-ocaml
+OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
+OCAMLDEP=ocamldep
+
+#############################################################################
+# Config
+#############################################################################
+
+LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
+
+# I removed -T because prims.c (a generated file) has wrong signatures 
+CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
+
+OCAMLINCLUDES=-I core
+OCAMLCFLAGS=$OCAMLINCLUDES
+
+
+#############################################################################
 # Toplevel targets
 #############################################################################
 
@@ -233,7 +237,7 @@ run:V:
 	qemu-system-arm -M raspi2 -bios 9minimal
 
 depend:V:
-	$OCAMLDEP 
+	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$'
 
 #############################################################################
 # Meta rules
@@ -248,6 +252,5 @@ depend:V:
 %.cmo: %.ml
 	$OCAMLC $OCAMLCFLAGS -c $stem.ml
              
-
-
+#############################################################################
 <.depend

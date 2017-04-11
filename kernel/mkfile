@@ -1,5 +1,9 @@
-objtype=arm
-</$objtype/mkfile
+#objtype=arm
+#</$objtype/mkfile
+CC=5c
+LD=5l
+O=5
+AS=5a
 
 LOADADDR=0x80008000
 

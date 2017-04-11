@@ -4,8 +4,8 @@ objtype=arm
 LOADADDR=0x80008000
 
 OBJ=\
-	start.$O\
-    startv7.$O\
+	bcm/start.$O\
+    bcm/startv7.$O\
     \
     libc/arm/getcallerpc.$O\
     libc/arm/memmove.$O\
@@ -153,7 +153,7 @@ OBJ=\
     byterun/instrtrace.$O\
     byterun/9.$O\
     \
-    globals.$O\
+    bcm/globals.$O\
     \
 	port/taslock.$O\
 	port/xalloc.$O\
@@ -163,27 +163,28 @@ OBJ=\
     port/swconsole.$O\
 	port/print.$O\
     \
-    concurrency_raspi2.$O\
-    tas_raspi2.$O\
-	mmu.$O\
-    mmuinvalidate.$O\
-	spl.$O\
-    raspi2.$O\
+    bcm/concurrency_raspi2.$O\
+    bcm/tas_raspi2.$O\
+	bcm/mmu.$O\
+    bcm/mmuinvalidate.$O\
+	bcm/spl.$O\
+    bcm/raspi2.$O\
     \
-    vcore.$O\
-    screen.$O\
+    bcm/vcore.$O\
+    bcm/screen.$O\
     \
-    helloworld.$O\
+	bcm/fakes.$O\
+	bcm/main.$O\
     \
-	fakes.$O\
-	main.$O
+    helloworld.$O
+
 
 # I removed -T because prims.c (a generated file) has wrong signatures 
-CFLAGS=-FV -Iinclude/arm -Iinclude
+CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
 # use of -l so no automagic lib and no _main
-9minimal: $OBJ $LIB mkfile
-	$LD -f -o $target -H6 -R4096 -T$LOADADDR -l $OBJ $LIB
+9minimal: $OBJ mkfile
+	$LD -f -o $target -H6 -R4096 -T$LOADADDR -l $OBJ
 
 %.$O:	%.s
 	$AS $AFLAGS -o $stem.$O $stem.s

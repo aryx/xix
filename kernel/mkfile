@@ -5,13 +5,20 @@ O=5
 
 CMO= core/types.cmo\
   core/ureg.cmo\
+  core/conf.cmo\
+  core/memory.cmo\
+  core/device.cmo\
+  core/chan.cmo\
+  core/proc.cmo\
+  core/cpu.cmo\
+  core/globals.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\
   main.cmo
 
 XXX=\
-  core/memory.cmo\
+ xx
 
 
 OBJ=\
@@ -251,6 +258,7 @@ depend:V:
 
 %.cmo: %.ml
 	$OCAMLC $OCAMLCFLAGS -c $stem.ml
-             
+
+
 #############################################################################
 <.depend

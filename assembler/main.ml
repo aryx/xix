@@ -13,6 +13,10 @@ open Common
  * 
  * todo:
  *  - advanced instructions: floats, MULL, coprocessor, PSR, etc
+ *  - make it a multi-archi assembler by following
+ *    the new design by Rob Pike of Go assembler to factorize things
+ *    (see https://www.youtube.com/watch?v=KINIAgRpkDA&feature=youtu.be )
+ *    (=~ 2 tables, register string -> code, and opcode string -> code
  *)
 
 let thechar = '5'

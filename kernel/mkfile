@@ -21,12 +21,22 @@ LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
 # I removed -T because prims.c (a generated file) has wrong signatures 
 CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
+OCAMLCFLAGS=-I core
 
 #############################################################################
 # Src
 #############################################################################
 
-CMO=main.cmo
+CMO= core/types.cmo\
+  core/ureg.cmo\
+  \
+  syscall.cmo\
+  main.cmo
+
+XXX=\
+  core/memory.cmo\
+  sysmisc.cmo \
+   syscall_dispatch.cmo \
 
 OBJ=\
 	bcm/start.$O\
@@ -212,7 +222,7 @@ OBJ=\
 9minimal: $OBJ mkfile
 	$LD $LDFLAGS -o $target $OBJ
 
-ocaml.c: $CMO
+ocaml.c: $CMO mkfile
 	$OCAMLC -output-c $CMO -o ocaml.c
 
 
@@ -236,7 +246,7 @@ depend:V:
 	$CC $CFLAGS -o $stem.$O $stem.c 
 
 %.cmo: %.ml
-	$OCAMLC -c $stem.ml
+	$OCAMLC $OCAMLCFLAGS -c $stem.ml
              
 
 

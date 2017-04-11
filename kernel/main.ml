@@ -18,5 +18,9 @@ let _ =
     print_string (Printf.sprintf "res = %d" x);
   with Exn1 s ->
     print_string (Printf.sprintf "exn1 = %s" s);
-  )
+  );
+(*
+  let call = Syscall.Nop in
+  Syscall_dispatch.dispatch call
+*)
     

@@ -4,10 +4,8 @@
 
 // bool   arch_splhi(void);
 TEXT arch_splhi(SB), 1, $-4
-    /*s: [[arch_splxxx()]] save caller information(arm) */
     MOVW    $(CPUADDR+4), R2        /* save caller pc in Cpu */
     MOVW    R14, 0(R2)
-    /*e: [[arch_splxxx()]] save caller information(arm) */
     MOVW    CPSR, R0            /* turn off irqs (but not fiqs) */
     ORR $(PsrDirq), R0, R1
     MOVW    R1, CPSR
@@ -22,10 +20,8 @@ TEXT arch_spllo(SB), 1, $-4
         
 // void    arch_splx(bool);
 TEXT arch_splx(SB), 1, $-4
-    /*s: [[arch_splxxx()]] save caller information(arm) */
     MOVW    $(CPUADDR+4), R2        /* save caller pc in Cpu */
     MOVW    R14, 0(R2)
-    /*e: [[arch_splxxx()]] save caller information(arm) */
     MOVW    R0, R1              /* reset interrupt level */
     MOVW    CPSR, R0 //dead
     MOVW    R1, CPSR

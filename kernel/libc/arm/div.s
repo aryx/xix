@@ -1,4 +1,3 @@
-/*s: lib_core/libc/arm/div.s */
 Q	= 0
 N	= 1
 D	= 2
@@ -117,4 +116,3 @@ TEXT	_modu(SB), 1, $16
 out:
  BL	rest<>(SB)
  B	out
-/*e: lib_core/libc/arm/div.s */

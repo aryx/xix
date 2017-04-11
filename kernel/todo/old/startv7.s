@@ -63,12 +63,9 @@ _ramZ:
     MOVW    $setR12(SB), R12
     MOVW    $(CPUADDR+CPUSIZE-4), R13
     MOVW    $_startpg(SB), R15
-/*e: function armstart(raspberry pi2)(arm) */
 
-/*s: function _startpg(raspberry pi2)(arm) */
 TEXT _startpg(SB), 1, $-4
 
-    /*s: [[_startpg()]] enable cycle counter(raspberry pi2)(arm) */
     /*
      * enable cycle counter
      */
@@ -76,7 +73,6 @@ TEXT _startpg(SB), 1, $-4
     MCR CpSC, 0, R1, C(CpCLD), C(CpCLDena), CpCLDenacyc
     MOVW    $1, R1
     MCR CpSC, 0, R1, C(CpCLD), C(CpCLDena), CpCLDenapmnc
-    /*e: [[_startpg()]] enable cycle counter(raspberry pi2)(arm) */
     /*
      * call main and loop forever if it returns
      */
@@ -84,9 +80,7 @@ TEXT _startpg(SB), 1, $-4
     B   0(PC)
 
     BL  _div(SB)        /* hack to load _div, etc. */
-/*e: function _startpg(raspberry pi2)(arm) */
 
-/*s: function cpureset(raspberry pi2)(arm) */
 /*
  * startup entry for cpu(s) other than 0
  */
@@ -183,12 +177,9 @@ reset:
     MOVW    $setR12(SB), R12
     ADD $KZERO, R13
     MOVW    $_startpg2(SB), R15
-/*e: function cpureset(raspberry pi2)(arm) */
 
-/*s: function _startpg2(raspberry pi2)(arm) */
 TEXT _startpg2(SB), 1, $-4
 
-    /*s: [[_startpg2()]] enable cycle counter(raspberry pi2)(arm) */
     /*
      * enable cycle counter
      */
@@ -196,7 +187,6 @@ TEXT _startpg2(SB), 1, $-4
     MCR CpSC, 0, R1, C(CpCLD), C(CpCLDena), CpCLDenacyc
     MOVW    $1, R1
     MCR CpSC, 0, R1, C(CpCLD), C(CpCLDena), CpCLDenapmnc
-    /*e: [[_startpg2()]] enable cycle counter(raspberry pi2)(arm) */
     /*
      * call cpustart and loop forever if it returns
      */
@@ -204,16 +194,12 @@ TEXT _startpg2(SB), 1, $-4
     AND $(MAXCPUS-1), R0            /* mask out non-cpu-id bits */
     BL  ,cpustart(SB)
     B   ,0(PC)
-/*e: function _startpg2(raspberry pi2)(arm) */
 
-/*s: function cpidget(raspberry pi2)(arm) */
 TEXT cpidget(SB), 1, $-4            /* main ID */
     MRC CpSC, 0, R0, C(CpID), C(0), CpIDid
     RET
-/*e: function cpidget(raspberry pi2)(arm) */
 
         
-/*s: function arch_idlehands(raspberry pi2)(arm) */
 TEXT arch_idlehands(SB), $-4
     MOVW    CPSR, R3
     ORR $(PsrDirq|PsrDfiq), R3, R1      /* splfhi */
@@ -229,6 +215,4 @@ TEXT arch_idlehands(SB), $-4
 
     MOVW    R3, CPSR            /* splx */
     RET
-/*e: function arch_idlehands(raspberry pi2)(arm) */
 
-/*e: init/arm/startv7.s */

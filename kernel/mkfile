@@ -1,3 +1,7 @@
+#############################################################################
+# Compilers
+#############################################################################
+
 #objtype=arm
 #</$objtype/mkfile
 CC=5c
@@ -5,7 +9,24 @@ LD=5l
 O=5
 AS=5a
 
-LOADADDR=0x80008000
+OCAML=/home/pad/github/fork-ocaml
+OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
+
+#############################################################################
+# Config
+#############################################################################
+
+LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
+
+# I removed -T because prims.c (a generated file) has wrong signatures 
+CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
+
+
+#############################################################################
+# Src
+#############################################################################
+
+CMO=main.cmo
 
 OBJ=\
 	bcm/start.$O\
@@ -152,7 +173,6 @@ OBJ=\
     byterun/sys.$O\
     byterun/signals.$O\
     byterun/io.$O\
-    byterun/prims.$O\
     byterun/startup.$O\
     byterun/instrtrace.$O\
     byterun/9.$O\
@@ -177,18 +197,37 @@ OBJ=\
     bcm/vcore.$O\
     bcm/screen.$O\
     \
-	bcm/fakes.$O\
-	bcm/main.$O\
+	fakes.$O\
+	main.$O\
     \
-    helloworld.$O
+    ocaml.$O
 
+# not    byterun/prims.$O, now in ocaml.$O
 
-# I removed -T because prims.c (a generated file) has wrong signatures 
-CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
+#############################################################################
+# Toplevel targets
+#############################################################################
 
 # use of -l so no automagic lib and no _main
 9minimal: $OBJ mkfile
-	$LD -f -o $target -H6 -R4096 -T$LOADADDR -l $OBJ
+	$LD $LDFLAGS -o $target $OBJ
+
+ocaml.c: $CMO
+	$OCAMLC -output-c $CMO -o ocaml.c
+
+
+clean:V:
+	rm -f $OBJ $CMO ocaml.c 9minimal
+
+run:V:
+	qemu-system-arm -M raspi2 -bios 9minimal
+
+depend:V:
+	$OCAMLDEP 
+
+#############################################################################
+# Meta rules
+#############################################################################
 
 %.$O:	%.s
 	$AS $AFLAGS -o $stem.$O $stem.s
@@ -196,10 +235,9 @@ CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 %.$O:	%.c
 	$CC $CFLAGS -o $stem.$O $stem.c 
 
+%.cmo: %.ml
+	$OCAMLC -c $stem.ml
+             
 
-clean:V:
-	rm -f $OBJ 9minimal
 
-run:V:
-	qemu-system-arm -M raspi2 -bios 9minimal
-
+<.depend

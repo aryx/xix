@@ -1,4 +1,3 @@
-/*s: portfns_buses.h */
 
 // devuart.c
 int   uartgetc(void);
@@ -12,4 +11,3 @@ void  uartkick(void*);
 // <arch>/main.c for now (called from port)
 //int arch_isaconfig(char*, int, ISAConf*); // now in core/ for backward deps
 
-/*e: portfns_buses.h */

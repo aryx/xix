@@ -1,5 +1,3 @@
-/*s: byterun/misc.h */
-/*s: copyright header C xavier and damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier and damien */
 
 /* Miscellaneous macros and variables. */
 
@@ -35,14 +32,10 @@ typedef size_t asize_t;
 typedef char * addr;
 
 #ifdef __GNUC__
-/*s: constant Noreturn */
 /* Works only in GCC 2.5 and later */
 #define Noreturn __attribute ((noreturn))
-/*e: constant Noreturn */
 #else
-/*s: constant Noreturn (byterun/misc.h) */
 #define Noreturn
-/*e: constant Noreturn (byterun/misc.h) */
 #endif
 
 /* Assertions */
@@ -50,9 +43,7 @@ typedef char * addr;
 #ifdef DEBUG
 #define Assert(x) if (!(x)) failed_assert ( #x , __FILE__, __LINE__)
 #else
-/*s: function Assert */
 #define Assert(x)
-/*e: function Assert */
 #endif
 
 void failed_assert (char *, char *, int) Noreturn;
@@ -75,4 +66,3 @@ unsigned long not_random (void);
 
 
 #endif /* _misc_ */
-/*e: byterun/misc.h */

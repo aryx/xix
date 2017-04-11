@@ -1,4 +1,3 @@
-/*s: portfns_misc.h */
 
 // parse.c
 Cmdbuf*  parsecmd(char *a, int n);
@@ -9,4 +8,3 @@ void     cmderror(Cmdbuf*, char*);
 void     randominit(void);
 ulong    randomread(void*, ulong);
 
-/*e: portfns_misc.h */

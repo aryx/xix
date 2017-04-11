@@ -1,4 +1,3 @@
-/*s: portfns_devices.h */
 
 // sys/devroot.c
 extern void  addbootfile(char*, uchar*, ulong);
@@ -65,4 +64,3 @@ extern void  arch__screeninit(void);
 // sys/<arch>/devarch.c (called from arch specific)
 extern Dirtab* addarchfile(char*, int, long(*)(Chan*,void*,long,vlong), long(*)(Chan*,void*,long,vlong));
 
-/*e: portfns_devices.h */

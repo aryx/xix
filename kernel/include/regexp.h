@@ -1,4 +1,3 @@
-/*s: include/regexp.h */
 #pragma src "/sys/src/libregexp"
 #pragma lib "libregexp.a"
 
@@ -65,4 +64,3 @@ extern int  regexec(Reprog*, char*, Resub*, int);
 extern void regsub(char*, char*, int, Resub*, int);
 extern int  rregexec(Reprog*, Rune*, Resub*, int);
 extern void rregsub(Rune*, Rune*, int, Resub*, int);
-/*e: include/regexp.h */

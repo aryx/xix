@@ -1,6 +1,4 @@
-/*s: arm/ureg.h */
 typedef struct Ureg Ureg;
-/*s: struct Ureg(arm) */
 //coupling: do not change the order! some assembly code assumes this order.
 struct Ureg {
     ulong   r0;
@@ -31,5 +29,3 @@ struct Ureg {
 
     ulong   pc; /* interrupted addr */ // r15
 };
-/*e: struct Ureg(arm) */
-/*e: arm/ureg.h */

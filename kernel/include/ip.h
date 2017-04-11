@@ -1,19 +1,11 @@
-/*s: include/net/ip.h */
 #pragma	src	"/sys/src/libip"
 #pragma	lib	"libip.a"
 
-/*s: enum _anon_ */
 enum 
 {
-    /*s: constant IPaddrlen */
     IPaddrlen=	16,
-    /*e: constant IPaddrlen */
-    /*s: constant IPv4addrlen */
     IPv4addrlen=	4,
-    /*e: constant IPv4addrlen */
-    /*s: constant IPv4off */
     IPv4off=	12,
-    /*e: constant IPv4off */
 
     IPllen=		4,
     IPV4HDR_LEN=	20,
@@ -22,17 +14,10 @@ enum
     IP_VER4= 	0x40,
     IP_VER6=	0x60,
 };
-/*e: enum _anon_ */
 
-/*s: typedef ipv4 */
 typedef uchar ipv4[IPv4addrlen];
-/*e: typedef ipv4 */
-/*s: typedef ipaddr */
 typedef uchar ipaddr[IPaddrlen];
-/*e: typedef ipaddr */
-/*s: typedef iplong */
 typedef ulong iplong;
-/*e: typedef iplong */
 
 
 // forward decl
@@ -47,7 +32,6 @@ typedef struct Udphdr Udphdr;
  *  for reading /net/ipifc
  */
 
-/*s: struct Iplifc (user) */
 /* local address */
 struct Iplifc
 {
@@ -56,20 +40,14 @@ struct Iplifc
     ipaddr	mask;
     ipaddr	net;		/* ip & mask */
 
-    /*s: [[Iplifc(user)]] ipv6 fields */
     ulong	preflt;			/* preferred lifetime */
     ulong	validlt;		/* valid lifetime */
-    /*e: [[Iplifc(user)]] ipv6 fields */
 
     // Extra
-    /*s: [[Iplifc(user)]] extra fields */
     // list<ref_own<Iplifc>>, head = Ipifc.lifc
     Iplifc	*next;
-    /*e: [[Iplifc(user)]] extra fields */
 };
-/*e: struct Iplifc (user) */
 
-/*s: struct Ipv6rp */
 /* default values, one per stack */
 struct Ipv6rp
 {
@@ -83,9 +61,7 @@ struct Ipv6rp
     int	ttl;
     int	routerlt;	
 };
-/*e: struct Ipv6rp */
 
-/*s: struct Ipifc (user) */
 /* actual interface */
 struct Ipifc
 {
@@ -96,36 +72,22 @@ struct Ipifc
     // list<ref_own<Iplifc> (next = Iplifc.next)
     Iplifc	*lifc;
 
-    /*s: [[Ipifc(user)]] stat fields */
     ulong	pktin;
     ulong	pktout;
     ulong	errin;
     ulong	errout;
-    /*e: [[Ipifc(user)]] stat fields */
-    /*s: [[Ipifc(user)]] ipv6 fields */
     Ipv6rp	rp;
-    /*x: [[Ipifc(user)]] ipv6 fields */
     uchar	sendra6;		/* on == send router adv */
     uchar	recvra6;		/* on == rcv router adv */
-    /*e: [[Ipifc(user)]] ipv6 fields */
 
     //Extra
-    /*s: [[Ipifc(user)]] extra fields */
     Ipifc	*next;
-    /*x: [[Ipifc(user)]] extra fields */
     int	index;			/* number of interface in ipifc dir */
-    /*e: [[Ipifc(user)]] extra fields */
 };
-/*e: struct Ipifc (user) */
 
-/*s: macro ISIPV6MCAST */
 #define ISIPV6MCAST(addr)	((addr)[0] == 0xff)
-/*e: macro ISIPV6MCAST */
-/*s: macro ISIPV6LINKLOCAL */
 #define ISIPV6LINKLOCAL(addr) ((addr)[0] == 0xfe && ((addr)[1] & 0xc0) == 0x80)
-/*e: macro ISIPV6LINKLOCAL */
 
-/*s: enum _anon_ (include/net/ip.h) */
 /*
  * ipv6 constants
  * `ra' is `router advertisement', `rs' is `router solicitation'.
@@ -171,10 +133,8 @@ enum {
     V6retranstimer	= 1000,
     V6initprobedelay= 5000,
 };
-/*e: enum _anon_ (include/net/ip.h) */
 
 
-/*s: struct Ip6hdr */
 /* V6 header on the wire */
 struct Ip6hdr {
     uchar	vcf[4];		/* version:4, traffic class:8, flow label:20 */
@@ -185,9 +145,7 @@ struct Ip6hdr {
     ipaddr	dst;	/* destination address */
     uchar	payload[];
 };
-/*e: struct Ip6hdr */
 
-/*s: struct Icmp6hdr */
 /*
  *  user-level icmpv6 with control message "headers"
  */
@@ -196,16 +154,12 @@ struct Icmp6hdr {
     ipaddr	laddr;	/* local address */
     ipaddr	raddr;	/* remote address */
 };
-/*e: struct Icmp6hdr */
 
-/*s: constant Udphdrsize */
 /*
  *  user level udp headers with control message "headers"
  */
 #define Udphdrsize 52 /* size of a Udphdr */
-/*e: constant Udphdrsize */
 
-/*s: struct Udphdr (user) */
 struct Udphdr
 {
     ipaddr	raddr;	/* V6 remote address */
@@ -215,7 +169,6 @@ struct Udphdr
     uchar	rport[2];		/* remote port */
     uchar	lport[2];		/* local port */
 };
-/*e: struct Udphdr (user) */
 
 uchar*	defmask(ipaddr);
 void	maskip(ipaddr, ipaddr, ipaddr);
@@ -245,12 +198,8 @@ ushort	ptclbsum(uchar*, int);
 int		v6tov4(uchar*, uchar*);
 void	v4tov6(uchar*, uchar*);
 
-/*s: macro ipcmp */
 #define	ipcmp(x, y) memcmp(x, y, IPaddrlen)
-/*e: macro ipcmp */
-/*s: macro ipmove */
 #define	ipmove(x, y) memmove(x, y, IPaddrlen)
-/*e: macro ipmove */
 
 extern ipaddr IPv4bcast;
 extern ipaddr IPv4bcastobs;
@@ -260,12 +209,9 @@ extern ipaddr IPnoaddr;
 extern ipaddr v4prefix;
 extern ipaddr IPallbits;
 
-/*s: macro CLASS */
 #define CLASS(p) ((*(uchar*)(p))>>6)
-/*e: macro CLASS */
 
 #pragma	varargck	type	"I"	uchar*
 #pragma	varargck	type	"V"	uchar*
 #pragma	varargck	type	"E"	uchar*
 #pragma	varargck	type	"M"	uchar*
-/*e: include/net/ip.h */

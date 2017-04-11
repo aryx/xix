@@ -1,5 +1,3 @@
-/*s: byterun/compact.h */
-/*s: copyright header C damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C damien */
 
 #ifndef _compact_
 #define _compact_
@@ -23,4 +20,3 @@ void compact_heap_maybe (void);
 
 
 #endif /* _compact_ */
-/*e: byterun/compact.h */

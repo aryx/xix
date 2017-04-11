@@ -1,5 +1,3 @@
-/*s: byterun/alloc.h */
-/*s: copyright header C xavier and damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier and damien */
 
 #ifndef _alloc_
 #define _alloc_
@@ -32,4 +29,3 @@ int convert_flag_list (value, int *);
 
 
 #endif /* _alloc_ */
-/*e: byterun/alloc.h */

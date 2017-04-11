@@ -1,13 +1,9 @@
-/*s: portdat_buses.h */
 
-/*s: constant NISAOPT */
 /*
  *  a parsed plan9.ini line
  */
 #define NISAOPT   8
-/*e: constant NISAOPT */
 
-/*s: struct ISAConf */
 struct ISAConf {
   char  *type;
   ulong port;
@@ -20,7 +16,6 @@ struct ISAConf {
   int nopt;
   char  *opt[NISAOPT];
 };
-/*e: struct ISAConf */
 
 /*
  *  routines to access UART hardware
@@ -113,4 +108,3 @@ extern Dev uartdevtab;
 extern PhysUart* physuart[];
 
 //void (*lprint)(char *, int);
-/*e: portdat_buses.h */

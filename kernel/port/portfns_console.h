@@ -1,4 +1,3 @@
-/*s: portfns_console.h */
 
 // devcons.c
 // (*print) is declared lib.h
@@ -26,4 +25,3 @@ void    rdb(void);
 // print.c
 // overrides _fmtlock, from lib_core/libc/fmt/fmtlock.c that are used
 // in fmt related functions
-/*e: portfns_console.h */

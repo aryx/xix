@@ -1,4 +1,3 @@
-/*s: portfns_concurrency.h */
 // taslock.c
 int  lock(Lock*);
 void unlock(Lock*);
@@ -43,4 +42,3 @@ long arch_xdec(long*);
 
 //void  arch_coherence(void); // now in core/ for backward deps
 
-/*e: portfns_concurrency.h */

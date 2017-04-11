@@ -1,5 +1,3 @@
-/*s: byterun/stacks.h */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* structure of the stacks */
 
@@ -28,12 +25,8 @@ extern value * extern_sp;
 extern value * trapsp;
 extern value * trap_barrier;
 
-/*s: function Trap_pc */
 #define Trap_pc(tp) (((code_t *)(tp))[0])
-/*e: function Trap_pc */
-/*s: function Trap_link */
 #define Trap_link(tp) (((value **)(tp))[1])
-/*e: function Trap_link */
 
 void reset_roots (void);
 void init_stack (unsigned long init_max_size);
@@ -43,4 +36,3 @@ void change_max_stack_size (unsigned long new_max_size);
 
 #endif /* _stacks_ */
 
-/*e: byterun/stacks.h */

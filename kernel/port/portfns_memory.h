@@ -1,4 +1,3 @@
-/*s: portfns_memory.h */
 
 // xalloc.c
 void* xalloc(ulong);
@@ -99,4 +98,3 @@ void  arch_memorysummary(void);
 // in <arch>/mmu.c (called from main and other other cpu init function)
 void  arch_mmuinit(void);
 
-/*e: portfns_memory.h */

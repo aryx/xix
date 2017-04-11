@@ -1,5 +1,3 @@
-/*s: byterun/fix_code.h */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Handling of blocks of bytecode (endianness switch, threading). */
 
@@ -39,4 +36,3 @@ void thread_code (code_t code, asize_t len);
 #endif
 
 #endif
-/*e: byterun/fix_code.h */

@@ -1,5 +1,3 @@
-/*s: byterun/instrtrace.h */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Trace the instructions executed */
 
@@ -27,4 +24,3 @@ void stop_here (void);
 void disasm_instr (code_t pc);
 
 #endif
-/*e: byterun/instrtrace.h */

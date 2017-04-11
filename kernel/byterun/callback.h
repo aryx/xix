@@ -1,5 +1,3 @@
-/*s: byterun/callback.h */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Callbacks from C to Caml */
 
@@ -30,4 +27,3 @@ void caml_main (char ** argv);
 void caml_startup (char ** argv);
 
 #endif
-/*e: byterun/callback.h */

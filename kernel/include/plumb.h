@@ -1,4 +1,3 @@
-/*s: include/plumb.h */
 #pragma	lib	"libplumb.a"
 #pragma	src	"/sys/src/libplumb"
 
@@ -16,7 +15,6 @@
 typedef struct Plumbattr Plumbattr;
 typedef struct Plumbmsg Plumbmsg;
 
-/*s: struct Plumbmsg */
 struct Plumbmsg
 {
     char		*src;
@@ -27,16 +25,13 @@ struct Plumbmsg
     int			ndata;
     char		*data;
 };
-/*e: struct Plumbmsg */
 
-/*s: struct Plumbattr */
 struct Plumbattr
 {
     char		*name;
     char		*value;
     Plumbattr		*next;
 };
-/*e: struct Plumbattr */
 
 int		    plumbsend(int, Plumbmsg*);
 int		    plumbsendtext(int, char*, char*, char*, char*);
@@ -53,4 +48,3 @@ char*		plumblookup(Plumbattr*, char*);
 int		    plumbopen(char*, int);
 
 int		eplumb(int, char*);
-/*e: include/plumb.h */

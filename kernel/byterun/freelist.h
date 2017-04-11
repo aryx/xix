@@ -1,5 +1,3 @@
-/*s: byterun/freelist.h */
-/*s: copyright header C damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C damien */
 
 /* Free lists of heap blocks. */
 
@@ -30,4 +27,3 @@ void fl_add_block (char *);
 
 
 #endif /* _freelist_ */
-/*e: byterun/freelist.h */

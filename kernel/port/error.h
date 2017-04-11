@@ -1,4 +1,3 @@
-/*s: error.h */
 extern char Emount[];   /* inconsistent mount */
 extern char Eunmount[];   /* not mounted */
 extern char Eismtpt[];    /* is a mount point */
@@ -54,4 +53,3 @@ extern char Enotconf[];   /* endpoint not configured */
 extern char Estalled[];   /* endpoint stalled */
 extern char Esbadstat[];  /* invalid directory entry received from server */
 extern char Enoversion[]; /* version not established for mount channel */
-/*e: error.h */

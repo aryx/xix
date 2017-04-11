@@ -1,5 +1,3 @@
-/*s: byterun/gc_ctrl.h */
-/*s: copyright header C damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C damien */
 
 #ifndef _gc_ctrl_
 #define _gc_ctrl_
@@ -31,4 +28,3 @@ void init_gc (unsigned long, unsigned long, unsigned long,
 
 
 #endif /* _gc_ctrl_ */
-/*e: byterun/gc_ctrl.h */

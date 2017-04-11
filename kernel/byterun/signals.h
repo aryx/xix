@@ -1,5 +1,3 @@
-/*s: byterun/signals.h */
-/*s: copyright header C xavier and damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier and damien */
 
 #ifndef _signals_
 #define _signals_
@@ -33,4 +30,3 @@ extern void (*leave_blocking_section_hook)();
 
 #endif /* _signals_ */
 
-/*e: byterun/signals.h */

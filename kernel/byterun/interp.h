@@ -1,5 +1,3 @@
-/*s: byterun/interp.h */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* The bytecode interpreter */
 
@@ -20,9 +17,6 @@
 #include "misc.h"
 #include "mlvalues.h"
 
-/*s: signature function interprete */
 value interprete (code_t prog, asize_t prog_size);
-/*e: signature function interprete */
 
 #endif
-/*e: byterun/interp.h */

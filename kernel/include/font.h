@@ -1,4 +1,3 @@
-/*s: include/font.h */
 #pragma src "/sys/src/libdraw"
 #pragma lib "libdraw.a"
 // This file assumes you have included draw.h before.
@@ -11,7 +10,6 @@ typedef struct	Subfont Subfont;
 
 // The main type, Font, is defined in draw.h.
 
-/*s: struct Fontchar */
 struct	Fontchar
 {
     // character coordinates in Subfont.bits
@@ -23,9 +21,7 @@ struct	Fontchar
     schar	left;		/* offset of baseline */
     uchar	width;		/* width of baseline */
 };
-/*e: struct Fontchar */
 
-/*s: struct Subfont */
 /*
  * Subfonts
  *
@@ -48,17 +44,13 @@ struct	Subfont
     Fontchar 	*info;	/* n+1 character descriptors */
     short		n;		/* number of chars in font */
 
-    /*s: [[Subfont]] other fields */
     uchar		height;		/* height of image */
     char		ascent;		/* top of image to baseline */
-    /*e: [[Subfont]] other fields */
 
     // Extra
     int		ref;
 };
-/*e: struct Subfont */
 
-/*s: struct Cachefont */
 struct Cachefont
 {
     Rune		min;	/* lowest rune value to be taken from subfont */
@@ -72,9 +64,7 @@ struct Cachefont
     char		*subfontname;		/* to access subfont */
 
 };
-/*e: struct Cachefont */
 
-/*s: struct Cacheinfo */
 struct Cacheinfo
 {
     // the key
@@ -87,9 +77,7 @@ struct Cacheinfo
 
     ushort		age;
 };
-/*e: struct Cacheinfo */
 
-/*s: struct Cachesubf */
 struct Cachesubf
 {
     // ref<Cachefont>, the key
@@ -99,41 +87,26 @@ struct Cachesubf
 
     ulong		age;	/* for replacement */
 };
-/*e: struct Cachesubf */
 
-/*s: enum misc */
 enum
 {
     /* starting values */
-    /*s: constant NFCACHE */
     LOG2NFCACHE =	6,
     NFCACHE =	(1<<LOG2NFCACHE),	/* #chars cached */
-    /*e: constant NFCACHE */
-    /*s: constant NFLOOK */
     NFLOOK =	5,			/* #chars to scan in cache */
-    /*e: constant NFLOOK */
-    /*s: constant NFSUBF */
     NFSUBF =	2,			/* #subfonts to cache */
-    /*e: constant NFSUBF */
 
     /* max value */
-    /*s: constant MAXFCACHE */
     MAXFCACHE =	1024+NFLOOK,		/* upper limit */
-    /*e: constant MAXFCACHE */
-    /*s: constant MAXSUBF */
     MAXSUBF =	50,			/* generous upper limit */
-    /*e: constant MAXSUBF */
 
     /* deltas */
-    /*s: constant DSUBF */
     DSUBF = 	4,
-    /*e: constant DSUBF */
 
     /* expiry ages */
     SUBFAGE	=	10000,
     CACHEAGE =	10000
 };
-/*e: enum misc */
 
 
 // internal to font code
@@ -160,4 +133,3 @@ extern	byte	defontdata[];
 extern	int		sizeofdefont;
 
 
-/*e: include/font.h */

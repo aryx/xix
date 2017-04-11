@@ -1,4 +1,3 @@
-/*s: kernel/devices/screen/portscreen.h */
 // The content of this file used to be in pc/screen.h, but many prototypes were
 // VGA independent, so it is better to have a generic portscreen.h interface 
 // and VGA-specific stuff in pc/screen.h in a separate file.
@@ -20,18 +19,14 @@ extern bool  arch_ishwimage(Memimage*);
 
 // Cursor
 
-/*s: struct Cursorinfo */
 struct Cursorinfo {
   Cursor;
   Lock;
 };
-/*e: struct Cursorinfo */
 typedef struct Cursorinfo Cursorinfo;
 
-/*s: global signature cursor */
 // devmouse.c (set in <arch>/screen.c)
 extern Cursorinfo 	cursor;
-/*e: global signature cursor */
 
 // swcursor.c (called from <arch>/screen.c from arch_cursorxxx)
 extern void swcursor_init(void);
@@ -64,4 +59,3 @@ extern Rectangle swconsole_window;
 extern void swconsole_init(void);
 extern void swconsole_screenputs(char *s, int n);
 
-/*e: kernel/devices/screen/portscreen.h */

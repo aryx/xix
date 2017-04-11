@@ -1,4 +1,3 @@
-/*s: include/thread.h */
 #pragma src "/sys/src/libthread"
 #pragma lib "libthread.a"
 
@@ -11,7 +10,6 @@ typedef struct Ref  Ref;
 typedef struct Ioproc Ioproc;
 #pragma incomplete Ioproc
 
-/*s: struct Channel */
 /*
  * Channel structure.  s is the size of the buffer.  For unbuffered channels
  * s is zero.  v is an array of s values.  If s is zero, v is unused.
@@ -32,9 +30,7 @@ struct Channel {
     // must be at the end of the struct! 
     byte	v[1];		/* Array of s values in the channel */
 };
-/*e: struct Channel */
 
-/*s: enum chanop */
 /* Channel operations for alt: */
 enum chanop {
     CHANEND,
@@ -45,10 +41,8 @@ enum chanop {
 
     CHANNOBLK,
 };
-/*e: enum chanop */
 typedef enum chanop ChanOp;
 
-/*s: struct Alt */
 struct Alt {
     Channel	*c;		/* channel */
     void	*v;		/* pointer to value */
@@ -62,13 +56,10 @@ struct Alt {
     Channel	**tag;		/* pointer to rendez-vous tag */
     int	entryno;	/* entry number */
 };
-/*e: struct Alt */
 
-/*s: struct Ref */
 struct Ref {
     long	ref;
 };
-/*e: struct Ref */
 
 long    decref(Ref *r);         /* returns 0 iff value is now zero */
 void    incref(Ref *r);
@@ -151,4 +142,3 @@ void    **tprivaddr(int);
 void    yield(void);
 
 extern  int mainstacksize;
-/*e: include/thread.h */

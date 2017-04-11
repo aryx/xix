@@ -1,4 +1,3 @@
-/*s: include/memlayer.h */
 #pragma src "/sys/src/libmemlayer"
 #pragma lib "libmemlayer.a"
 // This file assumes you have included draw.h before.
@@ -7,22 +6,17 @@
 typedef struct Memscreen Memscreen;
 typedef void (*Refreshfn)(Memimage*, Rectangle, void*);
 
-/*s: struct Memscreen */
 struct Memscreen
 {
     Memimage	*image;		/* upon which all layers are drawn */
     Memimage	*fill;		/* if non-zero, picture to use when repainting */
 
-    /*s: [[Memscreen]] stack windows fields */
     // list<ref<Memimage>> (next = Memimage.layer->rear)
     Memimage	*frontmost;	/* frontmost layer on screen */
     // list<ref<Memimage>> (next = Memimage.layer->front)
     Memimage	*rearmost;	/* rearmost layer on screen */
-    /*e: [[Memscreen]] stack windows fields */
 };
-/*e: struct Memscreen */
 
-/*s: struct Memlayer */
 struct Memlayer
 {
     Rectangle		screenr;	/* true position of layer on screen */
@@ -35,19 +29,12 @@ struct Memlayer
     Memimage	*save;	/* save area for obscured parts */
 
 
-    /*s: [[Memlayer]] stack windows fields */
     Memimage	*front;	/* window in front of this one */
     Memimage	*rear;	/* window behind this one*/
-    /*e: [[Memlayer]] stack windows fields */
-    /*s: [[Memlayer]] refresh fields */
     Refreshfn	refreshfn;		/* function to call to refresh obscured parts if save==nil */
     void		*refreshptr;	/* argument to refreshfn */
-    /*e: [[Memlayer]] refresh fields */
-    /*s: [[Memlayer]] other fields */
     bool		clear;	/* layer is fully visible */
-    /*e: [[Memlayer]] other fields */
 };
-/*e: struct Memlayer */
 
 /*
  * These functions accept local coordinates
@@ -79,4 +66,3 @@ void			_memlayerop(void (*fn)(Memimage*, Rectangle, Rectangle, void*, int), Memi
 
 void			_memltofrontfill(Memimage*, int);
 void			_memlsetclear(Memscreen*);
-/*e: include/memlayer.h */

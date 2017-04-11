@@ -1,5 +1,3 @@
-/*s: byterun/weak.h */
-/*s: copyright header C damien 1997 */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C damien 1997 */
 
 
 /* Operations on weak arrays */
@@ -18,4 +15,3 @@
 #include "mlvalues.h"
 
 extern value weak_list_head;
-/*e: byterun/weak.h */

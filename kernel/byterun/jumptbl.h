@@ -49,11 +49,8 @@
   &&lbl_POPTRAP, 
   &&lbl_RAISE,
   &&lbl_CHECK_SIGNALS,
-  /*s: foreign &&lbl_C calls opcodes */
   &&lbl_C_CALLN,
-  /*x: foreign &&lbl_C calls opcodes */
     &&lbl_C_CALL1, &&lbl_C_CALL2, &&lbl_C_CALL3, &&lbl_C_CALL4, &&lbl_C_CALL5,
-  /*e: foreign &&lbl_C calls opcodes */
   &&lbl_GETSTRINGCHAR, &&lbl_SETSTRINGCHAR, 
   &&lbl_VECTLENGTH, &&lbl_GETVECTITEM, &&lbl_SETVECTITEM,
   &&lbl_RESTART, 

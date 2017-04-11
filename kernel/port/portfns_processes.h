@@ -1,4 +1,3 @@
-/*s: portfns_processes.h */
 
 // proc.c
 // (now in portfns_core.h, to remove some backward dependencies)
@@ -108,4 +107,3 @@ void  arch_mul64fract(uvlong*, uvlong, uvlong);
 // portdat_processes.c
 void (*proctrace)(Proc*, int, vlong); // was in devproc.c
 void (*kproftimer)(ulong); // was in portfns.h
-/*e: portfns_processes.h */

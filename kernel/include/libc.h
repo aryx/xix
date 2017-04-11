@@ -1,4 +1,3 @@
-/*s: include/libc.h */
 #pragma lib "libc.a"
 #pragma src "/sys/src/libc"
 
@@ -6,59 +5,41 @@
 // pad's stuff
 // --------------------------------------------
 // More types! Types are good!
-/*s: type bool */
 typedef int bool;
 enum _bool {
   false = 0,
   true = 1
 };
-/*e: type bool */
 
-/*s: type byte */
 typedef uchar byte;
-/*e: type byte */
 
 typedef uchar bool_byte;
 
 //typedef char* string; // conflict
 //typedef char* filename; // conflict in sam with function filename
 
-/*s: constant STDxxx */
 #define STDIN 0
 #define STDOUT 1
 #define STDERR 2
-/*e: constant STDxxx */
-/*s: type fdt */
 typedef int fdt; // file descriptor type
-/*e: type fdt */
 
-/*s: constant OKxxx */
 #define OK_0 0
 #define OK_1 1
-/*e: constant OKxxx */
-/*s: constant ERRORxxx */
 #define ERROR_0 0
 #define ERROR_1 1
 #define ERROR_NEG1 (-1)
-/*e: constant ERRORxxx */
-/*s: type errorxxx */
 // later: unify all of that to be more consistent!
 typedef int error0; // 0 is the error value
 typedef int error1; // 1 is the error value
 typedef int errorneg1; // -1 is the error value
 typedef int errorn; // 1 or more means error
-/*e: type errorxxx */
 
 // --------------------------------------------
 // end pad's stuff
 // --------------------------------------------
 
-/*s: function nelem */
 #define nelem(x)    (sizeof(x)/sizeof((x)[0]))
-/*e: function nelem */
-/*s: function offsetof */
 #define offsetof(s, m)  (ulong)(&(((s*)nil)->m))
-/*e: function offsetof */
 
 typedef struct Fmt Fmt;
 typedef struct Tm Tm;
@@ -115,24 +96,12 @@ extern  int     tokenize(char*, char**, int);
 
 enum
 {
-    /*s: constant UTFmax */
     UTFmax      = 4,        /* maximum bytes per rune */
-    /*e: constant UTFmax */
-    /*s: constant Runesync */
     Runesync    = 0x80,     /* cannot represent part of a UTF sequence (<) */
-    /*e: constant Runesync */
-    /*s: constant Runeself */
     Runeself    = 0x80,     /* rune and UTF sequences are the same (<) */
-    /*e: constant Runeself */
-    /*s: constant Runeerror */
     Runeerror   = 0xFFFD,   /* decoding error in UTF */
-    /*e: constant Runeerror */
-    /*s: constant Runemax */
     Runemax     = 0x10FFFF, /* 21-bit rune */
-    /*e: constant Runemax */
-    /*s: constant Runemask */
     Runemask    = 0x1FFFFF, /* bits used by runes (see grep) */
-    /*e: constant Runemask */
 };
 
 /*
@@ -197,7 +166,6 @@ extern  void*   malloctopoolblock(void*);
 /*
  * print routines
  */
-/*s: type Fmt */
 struct Fmt {
     uchar   runes;          /* output buffer is runes or chars? */
     void    *start;         /* of buffer */
@@ -212,9 +180,7 @@ struct Fmt {
     int     prec;
     ulong   flags;
 };
-/*e: type Fmt */
 
-/*s: type Fmt_flag */
 enum Fmt_flag {
     FmtWidth    = 1,
     FmtLeft     = FmtWidth << 1,
@@ -232,7 +198,6 @@ enum Fmt_flag {
 
     FmtFlag     = FmtByte << 1
 };
-/*e: type Fmt_flag */
 
 // pad: used to be just print()? but for cg transformed in a pointer func
 extern  int     (*print)(char*, ...);
@@ -426,7 +391,6 @@ extern  long    muldiv(long, long, long);
 /*
  * Time-of-day
  */
-/*s: type Tm */
 struct Tm {
     int sec;
     int min;
@@ -441,7 +405,6 @@ struct Tm {
     char    zone[4];
     int     tzoff;
 };
-/*e: type Tm */
 
 extern  Tm*     gmtime(long);
 extern  Tm*     localtime(long);
@@ -467,9 +430,7 @@ enum
 };
 
 // debugging tools
-/*s: macro assert */
 #define assert(x)   do{ if(x) {} else _assert("x"); }while(0)
-/*e: macro assert */
 extern  void    (*_assert)(char*);
 extern  void    perror(char*);
 extern  void    sysfatal(char*, ...);
@@ -538,7 +499,6 @@ extern  void    qsort(void*, long, long, int (*)(void*, void*));
 /*
  *  profiling
  */
-/*s: type Prof */
 enum Profiling {
     Profoff,        /* No profiling */
 
@@ -547,7 +507,6 @@ enum Profiling {
     Proftime,       /* Measure total time */
     Profsample,     /* Use clock interrupt to sample (default when there is no cycle counter) */
 }; /* what */
-/*e: type Prof */
 
 extern  void    prof(void (*fn)(void*), void *arg, int entries, int what);
 
@@ -563,12 +522,10 @@ extern int     casl(ulong*, ulong, ulong);
 /*
  *  synchronization
  */
-/*s: type Lock */
 struct Lock {
     long    key;
     long    sem;
 };
-/*e: type Lock */
 
 extern int  _tas(int*);
 
@@ -576,22 +533,18 @@ extern  void    lock(Lock*);
 extern  void    unlock(Lock*);
 extern  int     canlock(Lock*);
 
-/*s: type QLp */
 struct QLp {
     int inuse;
     QLp *next;
     char    state;
 };
-/*e: type QLp */
 
-/*s: type QLock */
 struct QLock {
     Lock    lock;
     int locked;
     QLp *head;
     QLp     *tail;
 };
-/*e: type QLock */
 
 
 extern  void    qlock(QLock*);
@@ -599,7 +552,6 @@ extern  void    qunlock(QLock*);
 extern  int     canqlock(QLock*);
 extern  void    _qlockinit(void* (*)(void*, void*));    /* called only by the thread library */
 
-/*s: type RWLock */
 struct RWLock {
     Lock    lock;
     int readers;    /* number of readers */
@@ -607,7 +559,6 @@ struct RWLock {
     QLp *head;      /* list of waiting processes */
     QLp *tail;
 };
-/*e: type RWLock */
 
 
 extern  void    rlock(RWLock*);
@@ -617,13 +568,11 @@ extern  void    wlock(RWLock*);
 extern  void    wunlock(RWLock*);
 extern  int     canwlock(RWLock*);
 
-/*s: type Rendez */
 struct Rendez {
     QLock   *l;
     QLp *head;
     QLp *tail;
 };
-/*e: type Rendez */
 
 extern  void    rsleep(Rendez*);    /* unlocks r->l, sleeps, locks r->l again */
 extern  int     rwakeup(Rendez*);
@@ -653,7 +602,6 @@ extern  int pushtls(int, char*, char*, int, char*, char*);
 /*
  *  network services
  */
-/*s: type NetConnInfo */
 struct NetConnInfo {
     char    *dir;       /* connection directory */
     char    *root;      /* network root */
@@ -665,7 +613,6 @@ struct NetConnInfo {
     char    *laddr;     /* local address */
     char    *raddr;     /* remote address */
 };
-/*e: type NetConnInfo */
 extern  NetConnInfo*    getnetconninfo(char*, int);
 extern  void            freenetconninfo(NetConnInfo*);
 
@@ -678,10 +625,7 @@ extern  void            freenetconninfo(NetConnInfo*);
 
 
 // getopt like macros
-/*s: signature global argv0 */
 extern char *argv0;
-/*e: signature global argv0 */
-/*s: macro ARGBEGIN */
 #define ARGBEGIN    for((argv0||(argv0=*argv)),argv++,argc--;\
                 argv[0] && argv[0][0]=='-' && argv[0][1];\
                 argc--, argv++) {\
@@ -694,24 +638,14 @@ extern char *argv0;
                 _argc = 0;\
                 while(*_args && (_args += chartorune(&_argc, _args)))\
                 switch(_argc)
-/*e: macro ARGBEGIN */
-/*s: macro ARGEND */
 #define ARGEND      SET(_argt);USED(_argt,_argc,_args);}USED(argv, argc);
-/*e: macro ARGEND */
-/*s: macro ARGF */
 #define ARGF()      (_argt=_args, _args="",\
                 (*_argt? _argt: argv[1]? (argc--, *++argv): 0))
-/*e: macro ARGF */
-/*s: macro EARGF */
 #define EARGF(x)    (_argt=_args, _args="",\
                 (*_argt? _argt: argv[1]? (argc--, *++argv): ((x), abort(), (char*)0)))
-/*e: macro EARGF */
-/*s: macro ARGC */
 #define ARGC()      _argc
-/*e: macro ARGC */
 
 
 /* this is used by sbrk and brk,  it's a really bad idea to redefine it */
 extern  char    end[];
 
-/*e: include/libc.h */

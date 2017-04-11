@@ -1,5 +1,3 @@
-/*s: byterun/roots.h */
-/*s: copyright header C xavier and damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,12 +8,9 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier and damien */
 
 #ifndef _roots_
-/*s: constant _roots_ */
 #define _roots_
-/*e: constant _roots_ */
 
 #include "misc.h"
 #include "memory.h"
@@ -37,4 +32,3 @@ void do_local_roots(scanning_action f, char * bottom_of_stack,
 extern void (*scan_roots_hook) (scanning_action);
 
 #endif /* _roots_ */
-/*e: byterun/roots.h */

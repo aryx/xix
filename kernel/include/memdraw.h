@@ -1,4 +1,3 @@
-/*s: include/memdraw.h */
 #pragma	src	"/sys/src/libmemdraw"
 #pragma	lib	"libmemdraw.a"
 // This file assumes you have included draw.h before.
@@ -15,7 +14,6 @@ typedef struct	Fontchar Fontchar;
 #pragma incomplete Memlayer
 #pragma incomplete Fontchar
 
-/*s: struct Memdata */
 /*
  * Memdata is allocated from main pool, but .data from the image pool.
  * Memdata is allocated separately to permit patching its pointer after
@@ -29,15 +27,11 @@ struct Memdata
     // the pixels!
     byte	*bdata;	/* pointer to first byte of actual data; word-aligned */
 
-    /*s: [[Memdata]] other fields */
     bool	allocd;	/* is this malloc'd? */
-    /*e: [[Memdata]] other fields */
     // Extra
     int		ref;		/* number of Memimages using this data */
 };
-/*e: struct Memdata */
 
-/*s: enum fxxx */
 enum {
     Frepl	= 1<<0,	/* is replicated */
     // derives from Memimage.chan
@@ -46,9 +40,7 @@ enum {
     Fcmap	= 1<<4,	/* has cmap channel */
     Fbytes	= 1<<5,	/* has only 8-bit channels */
 };
-/*e: enum fxxx */
 
-/*s: struct Memimage */
 struct Memimage
 {
     Rectangle	r;		/* rectangle in data area, local coords */
@@ -66,27 +58,19 @@ struct Memimage
     // ref_own<Memdata>
     Memdata	*data;	/* pointer to data; shared by windows in this image */
 
-    /*s: [[MemImage]] layer fields */
     // ref_own<Memlayer>
     Memlayer	*layer;	/* nil if not a layer*/
-    /*e: [[MemImage]] layer fields */
-    /*s: [[MemImage]] other fields */
     int		zero;		/* data->bdata+zero==&byte containing (0,0) */
     ulong	width;	/* width in words of a single scan line */
-    /*x: [[MemImage]] other fields */
     // map<enum<ImageChan>, int>
     int		shift[NChan];
     // map<enum<ImageChan>, int>
     int		mask[NChan];
     // map<enum<ImageChan>, int>
     int		nbits[NChan];
-    /*x: [[MemImage]] other fields */
     Memcmap	*cmap;
-    /*e: [[MemImage]] other fields */
 };
-/*e: struct Memimage */
 
-/*s: struct Memcmap */
 struct Memcmap
 {
     // map<colorcmap8, (reg8, green8, blue8)>
@@ -94,9 +78,7 @@ struct Memcmap
     // map<(red4,green4,blue4), colorcmap8)
     byte	rgb2cmap[16*16*16];
 };
-/*e: struct Memcmap */
 
-/*s: struct Memsubfont */
 /*
  * Subfonts
  *
@@ -120,9 +102,7 @@ struct	Memsubfont
     uchar	height;		/* height of bitmap */
     char	ascent;		/* top of bitmap to baseline */
 };
-/*e: struct Memsubfont */
 
-/*s: enum _anon_ (include/memdraw.h)2 */
 /*
  * Encapsulated parameters and information for sub-draw routines.
  */
@@ -135,9 +115,7 @@ enum Drawparams {
 
     Fullmask=1<<4, // fully opaque mask
 };
-/*e: enum _anon_ (include/memdraw.h)2 */
 //TODO: internal to draw.c?
-/*s: struct Memdrawparam */
 struct	Memdrawparam
 {
     Memimage *dst;
@@ -152,19 +130,14 @@ struct	Memdrawparam
     // enum<Drawop>
     int op;
 
-    /*s: [[Memdrawparam]] other fields */
     // enum<Drawparams>
     ulong state;
-    /*x: [[Memdrawparam]] other fields */
     ulong sval;		/* if Simplesrc, the source pixel in src format */
     rgba  srgba;	/* sval in rgba */
     ulong sdval;	/* sval in dst format */
-    /*x: [[Memdrawparam]] other fields */
     ulong mval;		/* if Simplemask, the mask pixel in mask format */
     rgba  mrgba;	/* mval in rgba */
-    /*e: [[Memdrawparam]] other fields */
 };
-/*e: struct Memdrawparam */
 
 /*
  * Memimage management
@@ -246,10 +219,8 @@ extern void	_memimageline(Memimage*, Point, Point, int, int, int, Memimage*, Poi
 extern void	_memfillpolysc(Memimage*, Point*, int, int, Memimage*, Point, int, int, int, int);
 
 // used by color.c and alphadraw.c now (and test files)
-/*s: function RGB2K */
 /* perfect approximation to NTSC = .299r+.587g+.114b when 0 ≤ r,g,b < 256 */
 #define RGB2K(r,g,b)	((156763*(r)+307758*(g)+59769*(b))>>19)
-/*e: function RGB2K */
 
 /*
  * Kernel interface
@@ -275,4 +246,3 @@ extern int		drawdebug;
 #pragma varargck type "b" int
 #pragma varargck type "b" uint
 
-/*e: include/memdraw.h */

@@ -1,4 +1,3 @@
-/*s: portfns_init.h */
 
 // rebootcmd.c
 void    rebootcmd(int, char**);
@@ -15,4 +14,3 @@ void    bootlinks(void);
 // in <arch>/?? (called from main) but different prototypes
 //void  arch_touser(void*);
 
-/*e: portfns_init.h */

@@ -1,5 +1,3 @@
-/*s: byterun/str.h */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 #ifndef _str_
 #define _str_
@@ -23,4 +20,3 @@ mlsize_t string_length (value);
 
 
 #endif /* _str_ */
-/*e: byterun/str.h */

@@ -1,9 +1,7 @@
-/*s: fmt/fmtquote.c */
 #include <u.h>
 #include <libc.h>
 #include "fmtdef.h"
 
-/*s: function _quotesetup */
 /*
  * How many bytes of output UTF will be produced by quoting (if necessary) this string?
  * How many runes? How much of the input will be consumed?
@@ -92,9 +90,7 @@ _quotesetup(char *s, Rune *r, int nin, int nout, Quoteinfo *q, int sharp, int ru
         q->nrunesout++;
     }
 }
-/*e: function _quotesetup */
 
-/*s: function qstrfmt */
 static int
 qstrfmt(char *sin, Rune *rin, Quoteinfo *q, Fmt *f)
 {
@@ -168,9 +164,7 @@ qstrfmt(char *sin, Rune *rin, Quoteinfo *q, Fmt *f)
     }
     return 0;
 }
-/*e: function qstrfmt */
 
-/*s: function _quotestrfmt */
 int
 _quotestrfmt(int runesin, Fmt *f)
 {
@@ -212,34 +206,26 @@ _quotestrfmt(int runesin, Fmt *f)
         return _fmtcpy(f, s, q.nrunesin, q.nbytesin);
     return qstrfmt(s, nil, &q, f);
 }
-/*e: function _quotestrfmt */
 
-/*s: function quotestrfmt */
 int
 quotestrfmt(Fmt *f)
 {
     return _quotestrfmt(0, f);
 }
-/*e: function quotestrfmt */
 
-/*s: function quoterunestrfmt */
 int
 quoterunestrfmt(Fmt *f)
 {
     return _quotestrfmt(1, f);
 }
-/*e: function quoterunestrfmt */
 
-/*s: function quotefmtinstall */
 void
 quotefmtinstall(void)
 {
     fmtinstall('q', quotestrfmt);
     fmtinstall('Q', quoterunestrfmt);
 }
-/*e: function quotefmtinstall */
 
-/*s: function _needsquotes */
 int
 _needsquotes(char *s, int *quotelenp)
 {
@@ -250,9 +236,7 @@ _needsquotes(char *s, int *quotelenp)
 
     return q.quoted;
 }
-/*e: function _needsquotes */
 
-/*s: function _runeneedsquotes */
 int
 _runeneedsquotes(Rune *r, int *quotelenp)
 {
@@ -263,5 +247,3 @@ _runeneedsquotes(Rune *r, int *quotelenp)
 
     return q.quoted;
 }
-/*e: function _runeneedsquotes */
-/*e: fmt/fmtquote.c */

@@ -1,8 +1,6 @@
-/*s: port/muldiv.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function umuldiv */
 ulong
 umuldiv(ulong a, ulong b, ulong c)
 {
@@ -13,9 +11,7 @@ umuldiv(ulong a, ulong b, ulong c)
         abort();
     return d;
 }
-/*e: function umuldiv */
 
-/*s: function muldiv */
 long
 muldiv(long a, long b, long c)
 {
@@ -40,5 +36,3 @@ muldiv(long a, long b, long c)
         v = -v;
     return v;
 }
-/*e: function muldiv */
-/*e: port/muldiv.c */

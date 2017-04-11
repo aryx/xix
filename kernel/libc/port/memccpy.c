@@ -1,8 +1,6 @@
-/*s: port/memccpy.c */
 #include    <u.h>
 #include    <libc.h>
 
-/*s: function memccpy */
 void*
 memccpy(void *a1, void *a2, int c, ulong n)
 {
@@ -18,5 +16,3 @@ memccpy(void *a1, void *a2, int c, ulong n)
     }
     return nil;
 }
-/*e: function memccpy */
-/*e: port/memccpy.c */

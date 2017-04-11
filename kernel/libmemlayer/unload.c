@@ -1,27 +1,22 @@
-/*s: lib_graphics/libmemlayer/unload.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
 #include <memdraw.h>
 #include <memlayer.h>
 
-/*s: function memunload */
 errorneg1
 memunload(Memimage *src, Rectangle r, byte *data, int n)
 {
     Memlayer *dl;
-    /*s: [[memunload()]] other locals */
     Rectangle lr;
     int dx;
     Memimage *tmp;
-    /*e: [[memunload()]] other locals */
 
     Top:
     dl = src->layer;
     if(dl == nil)
         return unloadmemimage(src, r, data, n);
     // else
-    /*s: [[memunload()]] if src has layer */
     /*
      Convert to screen coordinates.
      */
@@ -57,7 +52,4 @@ memunload(Memimage *src, Rectangle r, byte *data, int n)
     n = unloadmemimage(tmp, lr, data, n);
     freememimage(tmp);
     return n;
-    /*e: [[memunload()]] if src has layer */
 }
-/*e: function memunload */
-/*e: lib_graphics/libmemlayer/unload.c */

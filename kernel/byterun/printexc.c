@@ -1,5 +1,3 @@
-/*s: byterun/printexc.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Print an uncaught exception and abort */
 
@@ -29,22 +26,17 @@
 #include "backtrace.h"
 #include "debugger.h"
 
-/*s: struct stringbuf */
 struct stringbuf {
   char * ptr;
   char * end;
   char data[256];
 };
-/*e: struct stringbuf */
 
-/*s: function add_char */
 static void add_char(struct stringbuf *buf, char c)
 {
   if (buf->ptr < buf->end) *(buf->ptr++) = c;
 }
-/*e: function add_char */
 
-/*s: function add_string */
 static void add_string(struct stringbuf *buf, char *s)
 {
   int len = strlen(s);
@@ -52,13 +44,9 @@ static void add_string(struct stringbuf *buf, char *s)
   if (len > 0) bcopy(s, buf->ptr, len);
   buf->ptr += len;
 }
-/*e: function add_string */
   
-/*s: function errprintf */
 #define errprintf(fmt,arg) fprintf(stderr, fmt, arg)
-/*e: function errprintf */
 
-/*s: function fatal_uncaught_exception */
 void fatal_uncaught_exception(value exn)
 {
   mlsize_t start, i;
@@ -103,5 +91,3 @@ void fatal_uncaught_exception(value exn)
 
   exit(2);
 }
-/*e: function fatal_uncaught_exception */
-/*e: byterun/printexc.c */

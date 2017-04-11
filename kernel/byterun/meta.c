@@ -1,5 +1,3 @@
-/*s: byterun/meta.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Primitives for the toplevel */
 
@@ -29,14 +26,11 @@
 
 #ifndef NATIVE_CODE
 
-/*s: function get_global_data */
 value get_global_data(value unit)     /* ML */
 {
   return global_data;
 }
-/*e: function get_global_data */
 
-/*s: function reify_bytecode */
 value reify_bytecode(value prog, value len) /* ML */
 {
   value clos;
@@ -50,9 +44,7 @@ value reify_bytecode(value prog, value len) /* ML */
   Code_val(clos) = (code_t) prog;
   return clos;
 }
-/*e: function reify_bytecode */
 
-/*s: function realloc_global */
 value realloc_global(value size)      /* ML */
 {
   mlsize_t requested_size, actual_size, i;
@@ -73,46 +65,34 @@ value realloc_global(value size)      /* ML */
   }
   return Val_unit;
 }
-/*e: function realloc_global */
     
-/*s: function available_primitives */
 value available_primitives(value unit)    /* ML */
 {
   return copy_string_array(names_of_cprim);
 }
-/*e: function available_primitives */
 
-/*s: function get_current_environment */
 value get_current_environment(value unit) /* ML */
 {
   return *extern_sp;
 }
-/*e: function get_current_environment */
 
 #else
 
-/*s: function get_global_data (byterun/meta.c) */
 /* Dummy definitions to support compilation of ocamlc.opt */
 
 value get_global_data(value unit)
 {
   invalid_argument("Meta.get_global_data");
 }
-/*e: function get_global_data (byterun/meta.c) */
 
-/*s: function realloc_global (byterun/meta.c) */
 value realloc_global(value size)
 {
   invalid_argument("Meta.realloc_global");
 }
-/*e: function realloc_global (byterun/meta.c) */
     
-/*s: function available_primitives (byterun/meta.c) */
 value available_primitives(value unit)
 {
   invalid_argument("Meta.available_primitives");
 }
-/*e: function available_primitives (byterun/meta.c) */
 
 #endif
-/*e: byterun/meta.c */

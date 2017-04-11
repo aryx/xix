@@ -24,13 +24,11 @@ arch__cpuinit(void)
     cpu->perf.period = 1;
 
     m0 = CPUS(0);
-    /*s: [[arch__cpuinit()]] it not cpu0 */
     if (cpu->cpuno != 0) {
         /* synchronise with cpu 0 */
         cpu->ticks = m0->ticks;
         cpu->fastclock = m0->fastclock;
     }
-    /*e: [[arch__cpuinit()]] it not cpu0 */
 }
 
 void

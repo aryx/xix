@@ -1,8 +1,6 @@
-/*s: port/abs.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function abs */
 int
 abs(int a)
 {
@@ -10,6 +8,4 @@ abs(int a)
         return -a;
     return a;
 }
-/*e: function abs */
 
-/*e: port/abs.c */

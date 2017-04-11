@@ -1,4 +1,3 @@
-/*s: lib_graphics/libmemdraw/string.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
@@ -6,7 +5,6 @@
 #include <memlayer.h>
 #include <font.h>
 
-/*s: function memimagestring */
 Point
 memimagestring(Memimage *b, Point p, Memimage *color, Point cp, Memsubfont *f, char *cs)
 {
@@ -37,9 +35,7 @@ memimagestring(Memimage *b, Point p, Memimage *color, Point cp, Memsubfont *f, c
     }
     return p;
 }
-/*e: function memimagestring */
 
-/*s: function memsubfontwidth */
 Point
 memsubfontwidth(Memsubfont *f, char *cs)
 {
@@ -70,5 +66,3 @@ memsubfontwidth(Memsubfont *f, char *cs)
     }
     return p;
 }
-/*e: function memsubfontwidth */
-/*e: lib_graphics/libmemdraw/string.c */

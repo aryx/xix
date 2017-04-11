@@ -1,8 +1,6 @@
-/*s: port/fmod.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function fmod */
 /*
  * floating-point mod function without infinity or NaN checking
  */
@@ -31,5 +29,3 @@ fmod (double x, double y)
         r = -r;
     return r;
 }
-/*e: function fmod */
-/*e: port/fmod.c */

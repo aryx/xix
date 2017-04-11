@@ -1,4 +1,3 @@
-/*s: port/pool.c */
 /*
  * This allocator takes blocks from a coarser allocator (p->alloc) and
  * uses them as arenas.
@@ -49,55 +48,34 @@ typedef struct Bhdr Bhdr;
 typedef struct Btail    Btail;
 typedef struct Free Free;
 
-/*s: struct Bhdr */
 struct Bhdr {
     ulong   magic;
     ulong   size;
 };
-/*e: struct Bhdr */
-/*s: enum _anon_ (port/pool.c) */
 enum {
     NOT_MAGIC = 0xdeadfa11,
     DEAD_MAGIC = 0xdeaddead,
 };
-/*e: enum _anon_ (port/pool.c) */
-/*s: macro B2NB */
 #define B2NB(b) ((Bhdr*)((uchar*)(b)+(b)->size))
-/*e: macro B2NB */
 
-/*s: macro SHORT */
 #define SHORT(x) (((x)[0] << 8) | (x)[1])
-/*e: macro SHORT */
-/*s: macro PSHORT */
 #define PSHORT(p, x) \
     (((uchar*)(p))[0] = ((x)>>8)&0xFF, \
     ((uchar*)(p))[1] = (x)&0xFF)
-/*e: macro PSHORT */
 
-/*s: enum _anon_ (port/pool.c)2 */
 enum {
     TAIL_MAGIC0 = 0xBE,
     TAIL_MAGIC1 = 0xEF
 };
-/*e: enum _anon_ (port/pool.c)2 */
-/*s: struct Btail */
 struct Btail {
     uchar   magic0;
     uchar   datasize[2];
     uchar   magic1;
     ulong   size;   /* same as Bhdr->size */
 };
-/*e: struct Btail */
-/*s: macro B2T */
 #define B2T(b)  ((Btail*)((uchar*)(b)+(b)->size-sizeof(Btail)))
-/*e: macro B2T */
-/*s: macro B2PT */
 #define B2PT(b) ((Btail*)((uchar*)(b)-sizeof(Btail)))
-/*e: macro B2PT */
-/*s: macro T2HDR */
 #define T2HDR(t) ((Bhdr*)((uchar*)(t)+sizeof(Btail)-(t)->size))
-/*e: macro T2HDR */
-/*s: struct Free */
 struct Free {
             Bhdr;
     Free*   left;
@@ -105,14 +83,10 @@ struct Free {
     Free*   next;
     Free*   prev;
 };
-/*e: struct Free */
-/*s: enum _anon_ (port/pool.c)3 */
 enum {
     FREE_MAGIC = 0xBA5EBA11,
 };
-/*e: enum _anon_ (port/pool.c)3 */
 
-/*s: struct Alloc */
 /*
  * the point of the notused fields is to make 8c differentiate
  * between Bhdr and Allocblk, and between Kempt and Unkempt.
@@ -120,15 +94,11 @@ enum {
 struct Alloc {
             Bhdr;
 };
-/*e: struct Alloc */
-/*s: enum _anon_ (port/pool.c)4 */
 enum {
     ALLOC_MAGIC = 0x0A110C09,
     UNALLOC_MAGIC = 0xCAB00D1E+1,
 };
-/*e: enum _anon_ (port/pool.c)4 */
 
-/*s: struct Arena */
 struct Arena {
             Bhdr;
     Arena*  aup;
@@ -136,46 +106,27 @@ struct Arena {
     ulong   asize;
     ulong   pad;    /* to a multiple of 8 bytes */
 };
-/*e: struct Arena */
-/*s: enum _anon_ (port/pool.c)5 */
 enum {
     ARENA_MAGIC = 0xC0A1E5CE+1,
     ARENATAIL_MAGIC = 0xEC5E1A0C+1,
 };
-/*e: enum _anon_ (port/pool.c)5 */
-/*s: macro A2TB */
 #define A2TB(a) ((Bhdr*)((uchar*)(a)+(a)->asize-sizeof(Bhdr)))
-/*e: macro A2TB */
-/*s: macro A2B */
 #define A2B(a)  B2NB(a)
-/*e: macro A2B */
 
-/*s: enum _anon_ (port/pool.c)6 */
 enum {
     ALIGN_MAGIC = 0xA1F1D1C1,
 };
-/*e: enum _anon_ (port/pool.c)6 */
 
-/*s: enum _anon_ (port/pool.c)7 */
 enum {
     MINBLOCKSIZE = sizeof(Free)+sizeof(Btail)
 };
-/*e: enum _anon_ (port/pool.c)7 */
 
-/*s: global datamagic */
 static uchar datamagic[] = { 0xFE, 0xF1, 0xF0, 0xFA };
-/*e: global datamagic */
 
-/*s: constant Poison */
 #define Poison  (void*)0xCafeBabe
-/*e: constant Poison */
 
-/*s: macro _B2D */
 #define _B2D(a) ((void*)((uchar*)a+sizeof(Bhdr)))
-/*e: macro _B2D */
-/*s: macro _D2B */
 #define _D2B(v) ((Alloc*)((uchar*)v-sizeof(Bhdr)))
-/*e: macro _D2B */
 
 // static void* _B2D(void*);
 // static void* _D2B(void*);
@@ -240,7 +191,6 @@ static Free*    treelookupgt(Free*, ulong);
 #define DPRINT  if(!(p->flags & POOL_DEBUGGING)){}else p->print
 #define LOG     if(!(p->flags & POOL_LOGGING)){}else p->print
 
-/*s: function checklist */
 /*
  * Tree walking
  */
@@ -259,9 +209,7 @@ checklist(Free *t)
         assert(q->magic==FREE_MAGIC);
     }
 }
-/*e: function checklist */
 
-/*s: function checktree */
 static void
 checktree(Free *t, int a, int b)
 {
@@ -276,9 +224,7 @@ checktree(Free *t, int a, int b)
         checktree(t->right, t->size, b);
     
 }
-/*e: function checktree */
 
-/*s: function ltreewalk */
 /* ltreewalk: return address of pointer to node of size == size */
 static Free**
 ltreewalk(Free **t, ulong size)
@@ -299,18 +245,14 @@ ltreewalk(Free **t, ulong size)
             t = &(*t)->right;
     }
 }
-/*e: function ltreewalk */
 
-/*s: function treelookup */
 /* treelookup: find node in tree with size == size */
 static Free*
 treelookup(Free *t, ulong size)
 {
     return *ltreewalk(&t, size);
 }
-/*e: function treelookup */
 
-/*s: function treeinsert */
 /* treeinsert: insert node into tree */
 static Free*
 treeinsert(Free *tree, Free *node)
@@ -331,9 +273,7 @@ treeinsert(Free *tree, Free *node)
     *loc = node;
     return tree;
 }
-/*e: function treeinsert */
 
-/*s: function treedelete */
 /* treedelete: remove node from tree */
 static Free*
 treedelete(Free *tree, Free *node)
@@ -363,9 +303,7 @@ treedelete(Free *tree, Free *node)
     node->left = node->right = Poison;
     return tree;
 }
-/*e: function treedelete */
 
-/*s: function treelookupgt */
 /* treelookupgt: find smallest node in tree with size >= size */
 static Free*
 treelookupgt(Free *t, ulong size)
@@ -385,13 +323,11 @@ treelookupgt(Free *t, ulong size)
             t = t->right;
     }
 }
-/*e: function treelookupgt */
 
 /* 
  * List maintenance
  */
 
-/*s: function listadd */
 /* listadd: add a node to a doubly linked list */
 static Free*
 listadd(Free *list, Free *node)
@@ -410,9 +346,7 @@ listadd(Free *list, Free *node)
 
     return list;
 }
-/*e: function listadd */
 
-/*s: function listdelete */
 /* listdelete: remove node from a doubly linked list */
 static Free*
 listdelete(Pool *p, Free *list, Free *node)
@@ -434,13 +368,11 @@ listdelete(Pool *p, Free *list, Free *node)
     node->prev = node->next = Poison;
     return list;
 }
-/*e: function listdelete */
 
 /*
  * Pool maintenance
  */
 
-/*s: function pooladd */
 /* pooladd: add anode to the free pool */
 static Free*
 pooladd(Pool *p, Alloc *anode)
@@ -463,9 +395,7 @@ pooladd(Pool *p, Alloc *anode)
     p->curfree += node->size;
     return node;
 }
-/*e: function pooladd */
 
-/*s: function pooldel */
 /* pooldel: remove node from the free pool */
 static Alloc*
 pooldel(Pool *p, Free *node)
@@ -493,12 +423,10 @@ pooldel(Pool *p, Free *node)
     node->magic = UNALLOC_MAGIC;
     return (Alloc*)node;
 }
-/*e: function pooldel */
 
 /*
  * Block maintenance 
  */
-/*s: function dsize2bsize */
 /* block allocation */
 static ulong
 dsize2bsize(Pool *p, ulong sz)
@@ -511,9 +439,7 @@ dsize2bsize(Pool *p, ulong sz)
     sz = (sz+p->quantum-1)&~(p->quantum-1);
     return sz;
 }
-/*e: function dsize2bsize */
 
-/*s: function bsize2asize */
 static ulong
 bsize2asize(Pool *p, ulong sz)
 {
@@ -523,10 +449,8 @@ bsize2asize(Pool *p, ulong sz)
     sz = (sz+p->quantum)&~(p->quantum-1);
     return sz;
 }
-/*e: function bsize2asize */
 
 /* blockmerge: merge a and b, known to be adjacent */
-/*s: function blockmerge */
 /* both are removed from pool if necessary. */
 static Alloc*
 blockmerge(Pool *pool, Bhdr *a, Bhdr *b)
@@ -557,9 +481,7 @@ blockmerge(Pool *pool, Bhdr *a, Bhdr *b)
     a->magic = UNALLOC_MAGIC;
     return (Alloc*)a;
 }
-/*e: function blockmerge */
 
-/*s: function blocksetsize */
 /* blocksetsize: set the total size of a block, fixing tail pointers */
 static Bhdr*
 blocksetsize(Bhdr *b, ulong bsize)
@@ -575,9 +497,7 @@ blocksetsize(Bhdr *b, ulong bsize)
     t->magic1 = TAIL_MAGIC1;
     return b;
 }
-/*e: function blocksetsize */
 
-/*s: function getdsize */
 /* getdsize: return the requested data size for an allocated block */
 static ulong
 getdsize(Alloc *b)
@@ -586,7 +506,6 @@ getdsize(Alloc *b)
     t = B2T(b);
     return b->size - SHORT(t->datasize);
 }
-/*e: function getdsize */
 
 /* blocksetdsize: set the user data size of a block */
 static Alloc*
@@ -611,7 +530,6 @@ blocksetdsize(Pool *p, Alloc *b, ulong dsize)
     return b;
 }
 
-/*s: function trim */
 /* trim: trim a block down to what is needed to hold dsize bytes of user data */
 Alloc*
 trim(Pool *p, Alloc *b, ulong dsize)
@@ -639,9 +557,7 @@ trim(Pool *p, Alloc *b, ulong dsize)
     blocksetdsize(p, b, dsize);
     return b;
 }
-/*e: function trim */
 
-/*s: function freefromfront */
 static Alloc*
 freefromfront(Pool *p, Alloc *b, ulong skip)
 {
@@ -659,13 +575,11 @@ freefromfront(Pool *p, Alloc *b, ulong skip)
     }
     return b;   
 }
-/*e: function freefromfront */
 
 /*
  * Arena maintenance
  */
 
-/*s: function arenasetsize */
 /* arenasetsize: set arena size, updating tail */
 static void
 arenasetsize(Arena *a, ulong asize)
@@ -677,9 +591,7 @@ arenasetsize(Arena *a, ulong asize)
     atail->magic = ARENATAIL_MAGIC;
     atail->size = 0;
 }
-/*e: function arenasetsize */
 
-/*s: function poolnewarena */
 /* poolnewarena: allocate new arena */
 static void
 poolnewarena(Pool *p, ulong asize)
@@ -738,10 +650,8 @@ poolnewarena(Pool *p, ulong asize)
     if(a->down)
         arenamerge(p, a->down, a);
 }
-/*e: function poolnewarena */
 
 /* blockresize: grow a block to encompass space past its end, possibly by */
-/*s: function blockgrow */
 /* trimming it into two different blocks. */
 static void
 blockgrow(Pool *p, Bhdr *b, ulong nsize)
@@ -768,9 +678,7 @@ blockgrow(Pool *p, Bhdr *b, ulong nsize)
         trim(p, a, dsize);
     }
 }
-/*e: function blockgrow */
 
-/*s: function arenamerge */
 /* arenamerge: attempt to coalesce to arenas that might be adjacent */
 static Arena*
 arenamerge(Pool *p, Arena *bot, Arena *top)
@@ -806,9 +714,7 @@ arenamerge(Pool *p, Arena *bot, Arena *top)
     blockcheck(p, bbot);
     return bot;
 }
-/*e: function arenamerge */
 
-/*s: function dumpblock */
 /* dumpblock: print block's vital stats */
 static void
 dumpblock(Pool *p, Bhdr *b)
@@ -838,18 +744,14 @@ dumpblock(Pool *p, Bhdr *b)
             cp[0], cp[1], cp[2], cp[3], cp[4], cp[5], cp[6], cp[7]);
     }
 }
-/*e: function dumpblock */
 
-/*s: function printblock */
 static void
 printblock(Pool *p, Bhdr *b, char *msg)
 {
     p->print(p, "%s\n", msg);
     dumpblock(p, b);
 }
-/*e: function printblock */
 
-/*s: function panicblock */
 static void
 panicblock(Pool *p, Bhdr *b, char *msg)
 {
@@ -857,10 +759,8 @@ panicblock(Pool *p, Bhdr *b, char *msg)
     dumpblock(p, b);
     p->panic(p, "pool panic");
 }
-/*e: function panicblock */
 
 /* blockcheck: ensure a block consistent with our expectations */
-/*s: function blockcheck */
 /* should only be called when holding pool lock */
 static void
 blockcheck(Pool *p, Bhdr *b)
@@ -941,9 +841,7 @@ blockcheck(Pool *p, Bhdr *b)
         break;
     }
 }
-/*e: function blockcheck */
 
-/*s: enum _anon_ (port/pool.c)8 */
 /*
  * compact an arena by shifting all the free blocks to the end.
  * assumes pool lock is held.
@@ -951,9 +849,7 @@ blockcheck(Pool *p, Bhdr *b)
 enum {
     FLOATING_MAGIC = 0xCBCBCBCB,    /* temporarily neither allocated nor in the free tree */
 };
-/*e: enum _anon_ (port/pool.c)8 */
 
-/*s: function arenacompact */
 static int
 arenacompact(Pool *p, Arena *a)
 {
@@ -996,9 +892,7 @@ arenacompact(Pool *p, Arena *a)
 
     return compacted;       
 }
-/*e: function arenacompact */
 
-/*s: function poolcompactl */
 /*
  * compact a pool by compacting each individual arena.
  * 'twould be nice to shift blocks from one arena to the
@@ -1019,7 +913,6 @@ poolcompactl(Pool *pool)
         compacted |= arenacompact(pool, a);
     return compacted;
 }
-/*e: function poolcompactl */
 
 /*
 static int
@@ -1033,7 +926,6 @@ poolcompactl(Pool*)
  * Actual allocators
  */
 
-/*s: function B2D */
 /*
 static void*
 _B2D(void *a)
@@ -1049,9 +941,7 @@ B2D(Pool *p, Alloc *a)
         p->panic(p, "B2D called on unworthy block");
     return _B2D(a);
 }
-/*e: function B2D */
 
-/*s: function D2B */
 /*
 static void*
 _D2B(void *v)
@@ -1078,9 +968,7 @@ D2B(Pool *p, void *v)
         p->panic(p, "D2B called on non-block %p (double-free?)", v);
     return a;
 }
-/*e: function D2B */
 
-/*s: function poolallocl */
 /* poolallocl: attempt to allocate block to hold dsize user bytes; assumes lock held */
 static void*
 poolallocl(Pool *p, ulong dsize)
@@ -1112,9 +1000,7 @@ poolallocl(Pool *p, ulong dsize)
     }
     return B2D(p, ab);
 }
-/*e: function poolallocl */
 
-/*s: function poolreallocl */
 /* poolreallocl: attempt to grow v to ndsize bytes; assumes lock held */
 static void*
 poolreallocl(Pool *p, void *v, ulong ndsize)
@@ -1195,9 +1081,7 @@ poolreallocl(Pool *p, void *v, ulong ndsize)
     poolfreel(p, v);
     return nv;
 }
-/*e: function poolreallocl */
 
-/*s: function alignptr */
 static void*
 alignptr(void *v, ulong align, long offset)
 {
@@ -1215,9 +1099,7 @@ alignptr(void *v, ulong align, long offset)
     }
     return c;
 }
-/*e: function alignptr */
 
-/*s: function poolallocalignl */
 /* poolallocalignl: allocate as described below; assumes pool locked */
 static void*
 poolallocalignl(Pool *p, ulong dsize, ulong align, long offset, ulong span)
@@ -1296,9 +1178,7 @@ poolallocalignl(Pool *p, ulong dsize, ulong align, long offset, ulong span)
     }
     return c;
 }
-/*e: function poolallocalignl */
 
-/*s: function poolfreel */
 /* poolfree: free block obtained from poolalloc; assumes lock held */
 static void
 poolfreel(Pool *p, void *v)
@@ -1334,9 +1214,7 @@ poolfreel(Pool *p, void *v)
 
     pooladd(p, ab);
 }
-/*e: function poolfreel */
 
-/*s: function poolalloc */
 void*
 poolalloc(Pool *p, ulong n)
 {
@@ -1361,9 +1239,7 @@ poolalloc(Pool *p, ulong n)
     p->unlock(p);
     return v;
 }
-/*e: function poolalloc */
 
-/*s: function poolallocalign */
 void*
 poolallocalign(Pool *p, ulong n, ulong align, long offset, ulong span)
 {
@@ -1388,9 +1264,7 @@ poolallocalign(Pool *p, ulong n, ulong align, long offset, ulong span)
     p->unlock(p);
     return v;
 }
-/*e: function poolallocalign */
 
-/*s: function poolcompact */
 int
 poolcompact(Pool *p)
 {
@@ -1414,9 +1288,7 @@ poolcompact(Pool *p)
     p->unlock(p);
     return rv;
 }
-/*e: function poolcompact */
 
-/*s: function poolrealloc */
 void*
 poolrealloc(Pool *p, void *v, ulong n)
 {
@@ -1441,9 +1313,7 @@ poolrealloc(Pool *p, void *v, ulong n)
     p->unlock(p);
     return nv;
 }
-/*e: function poolrealloc */
 
-/*s: function poolfree */
 void
 poolfree(Pool *p, void *v)
 {
@@ -1465,9 +1335,7 @@ poolfree(Pool *p, void *v)
     LOG(p, "poolfree %p %p\n", p, v);
     p->unlock(p);
 }
-/*e: function poolfree */
 
-/*s: function poolmsize */
 /*
  * Return the real size of a block, and let the user use it. 
  */
@@ -1503,9 +1371,7 @@ poolmsize(Pool *p, void *v)
     p->unlock(p);
     return dsize;
 }
-/*e: function poolmsize */
 
-/*s: function poolcheckarena */
 /*
  * Debugging 
  */
@@ -1523,9 +1389,7 @@ poolcheckarena(Pool *p, Arena *a)
     if(b != atail)
         p->panic(p, "found wrong tail");
 }
-/*e: function poolcheckarena */
 
-/*s: function poolcheckl */
 static void
 poolcheckl(Pool *p)
 {
@@ -1536,9 +1400,7 @@ poolcheckl(Pool *p)
     if(p->freeroot)
         checktree(p->freeroot, 0, 1<<30);
 }
-/*e: function poolcheckl */
 
-/*s: function poolcheck */
 void
 poolcheck(Pool *p)
 {
@@ -1546,9 +1408,7 @@ poolcheck(Pool *p)
     poolcheckl(p);
     p->unlock(p);
 }
-/*e: function poolcheck */
 
-/*s: function poolblockcheck */
 void
 poolblockcheck(Pool *p, void *v)
 {
@@ -1559,9 +1419,7 @@ poolblockcheck(Pool *p, void *v)
     blockcheck(p, D2B(p, v));
     p->unlock(p);
 }
-/*e: function poolblockcheck */
 
-/*s: function pooldumpl */
 static void
 pooldumpl(Pool *p)
 {
@@ -1571,9 +1429,7 @@ pooldumpl(Pool *p)
     for(a=p->arenalist; a; a=a->down)
         pooldumparena(p, a);
 }
-/*e: function pooldumpl */
 
-/*s: function pooldump */
 void
 pooldump(Pool *p)
 {
@@ -1581,9 +1437,7 @@ pooldump(Pool *p)
     pooldumpl(p);
     p->unlock(p);
 }
-/*e: function pooldump */
 
-/*s: function pooldumparena */
 static void
 pooldumparena(Pool *p, Arena *a)
 {
@@ -1593,9 +1447,7 @@ pooldumparena(Pool *p, Arena *a)
         p->print(p, "(%p %.8lux %lud)", b, b->magic, b->size);
     p->print(p, "\n");
 }
-/*e: function pooldumparena */
 
-/*s: function memmark */
 /*
  * mark the memory in such a way that we know who marked it
  * (via the signature) and we know where the marking started.
@@ -1614,5 +1466,3 @@ memmark(void *v, int sig, ulong size)
     while(p<ep)
         *p++ = sig;
 }
-/*e: function memmark */
-/*e: port/pool.c */

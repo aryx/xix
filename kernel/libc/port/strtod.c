@@ -1,9 +1,7 @@
-/*s: port/strtod.c */
 #include <u.h>
 #include <libc.h>
 #include <ctype.h>
 
-/*s: enum _anon_ (port/strtod.c) */
 /*
  * This routine will convert to arbitrary precision
  * floating point entirely in multi-precision fixed.
@@ -41,7 +39,6 @@ enum
     S6,         // _+#.#e+  #S7
     S7,         // _+#.#e+# #S7
 };
-/*e: enum _anon_ (port/strtod.c) */
 
 static  int xcmp(char*, char*);
 static  int fpcmp(char*, ulong*);
@@ -51,16 +48,13 @@ static  void    mulascii(char*, int*, int*, int*);
 static  void    divby(char*, int*, int);
 
 typedef struct  Tab Tab;
-/*s: struct Tab */
 struct  Tab
 {
     int bp;
     int siz;
     char*   cmp;
 };
-/*e: struct Tab */
 
-/*s: function strtod */
 double
 strtod(char *as, char **aas)
 {
@@ -308,9 +302,7 @@ retinf:
         return Inf(-1);
     return Inf(+1);
 }
-/*e: function strtod */
 
-/*s: function frnorm */
 static void
 frnorm(ulong *f)
 {
@@ -324,9 +316,7 @@ frnorm(ulong *f)
     }
     f[0] += c;
 }
-/*e: function frnorm */
 
-/*s: function fpcmp */
 static int
 fpcmp(char *a, ulong* f)
 {
@@ -364,9 +354,7 @@ fpcmp(char *a, ulong* f)
     cont:;
     }
 }
-/*e: function fpcmp */
 
-/*s: function _divby */
 static void
 _divby(char *a, int *na, int b)
 {
@@ -409,9 +397,7 @@ xx:
     }
     *p = 0;
 }
-/*e: function _divby */
 
-/*s: function divby */
 static void
 divby(char *a, int *na, int b)
 {
@@ -423,9 +409,7 @@ divby(char *a, int *na, int b)
     if(b > 0)
         _divby(a, na, b);
 }
-/*e: function divby */
 
-/*s: global tab1 */
 static  Tab tab1[] =
 {
      1,  0, "",
@@ -439,9 +423,7 @@ static  Tab tab1[] =
     26,  8, "67108863",
     27,  9, "134217727",
 };
-/*e: global tab1 */
 
-/*s: function divascii */
 static void
 divascii(char *a, int *na, int *dp, int *bp)
 {
@@ -459,9 +441,7 @@ divascii(char *a, int *na, int *dp, int *bp)
     *bp += b;
     divby(a, na, b);
 }
-/*e: function divascii */
 
-/*s: function mulby */
 static void
 mulby(char *a, char *p, char *q, int b)
 {
@@ -488,9 +468,7 @@ mulby(char *a, char *p, char *q, int b)
         *p = c + '0';
     }
 }
-/*e: function mulby */
 
-/*s: global tab2 */
 static  Tab tab2[] =
 {
      1,  1, "",             // dp = 0-0
@@ -504,9 +482,7 @@ static  Tab tab2[] =
     26, 19, "1490116119384765625",
     27, 19, "7450580596923828125",      // dp 8-9
 };
-/*e: global tab2 */
 
-/*s: function mulascii */
 static void
 mulascii(char *a, int *na, int *dp, int *bp)
 {
@@ -527,9 +503,7 @@ mulascii(char *a, int *na, int *dp, int *bp)
     *na += d;
     mulby(a, p+d, p, b);
 }
-/*e: function mulascii */
 
-/*s: function xcmp */
 static int
 xcmp(char *a, char *b)
 {
@@ -544,5 +518,3 @@ xcmp(char *a, char *b)
     }
     return 0;
 }
-/*e: function xcmp */
-/*e: port/strtod.c */

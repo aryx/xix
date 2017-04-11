@@ -1,30 +1,22 @@
-/*s: xalloc.c */
-/*s: kernel basic includes */
 #include <u.h>
 #include "../port/lib.h"
 #include "../port/error.h"
 #include "mem.h"
 #include "dat.h"
 #include "fns.h"
-/*e: kernel basic includes */
 
-/*s: xalloc.c forward decl */
 void        xhole(ulong, ulong);
-/*e: xalloc.c forward decl */
 
 //*****************************************************************************
 // The global
 //*****************************************************************************
 
-/*s: global xlists */
 static Xalloc   xlists;
-/*e: global xlists */
 
 //*****************************************************************************
 // Initialization
 //*****************************************************************************
 
-/*s: function xinit */
 void
 xinit(void)
 {
@@ -59,10 +51,8 @@ xinit(void)
         if(nkpages > 0){
             xhole(m->base, nkpages*BY2PG);
             kpages -= nkpages;
-            /*s: [[xinit()]] nkpages kernel memory in m */
             m->kbase = (ulong)KADDR(m->base);
             m->klimit = (ulong)KADDR(m->base+nkpages*BY2PG);
-            /*e: [[xinit()]] nkpages kernel memory in m */
         }
 
         /* if anything left over, give to user */
@@ -77,13 +67,11 @@ xinit(void)
         }
     }
 }
-/*e: function xinit */
 
 //*****************************************************************************
 // Functions
 //*****************************************************************************
 
-/*s: function xspanalloc */
 kern_addr3
 xspanalloc(ulong size, int align, ulong span)
 {
@@ -109,9 +97,7 @@ xspanalloc(ulong size, int align, ulong span)
 
     return (kern_addr3)v;
 }
-/*e: function xspanalloc */
 
-/*s: function xallocz */
 kern_addr3
 xallocz(ulong size, bool zero)
 {
@@ -152,17 +138,13 @@ xallocz(ulong size, bool zero)
     iunlock(&xlists);
     return nil;
 }
-/*e: function xallocz */
 
-/*s: function xalloc */
 kern_addr3
 xalloc(ulong size)
 {
     return xallocz(size, true);
 }
-/*e: function xalloc */
 
-/*s: function xfree */
 void
 xfree(kern_addr3 p)
 {
@@ -175,9 +157,7 @@ xfree(kern_addr3 p)
     }
     xhole(PADDR((kern_addr)x), x->size);
 }
-/*e: function xfree */
 
-/*s: function xmerge */
 bool
 xmerge(kern_addr3 vp, kern_addr3 vq)
 {
@@ -187,7 +167,6 @@ xmerge(kern_addr3 vp, kern_addr3 vq)
     q = (Xhdr*)(((ulong)vq - offsetof(Xhdr, data[0])));
 
     if(p->magix != Magichole || q->magix != Magichole) {
-        /*s: [[xmerge()]] debug info when not magichole */
                 int i;
                 ulong *wd;
                 void *badp;
@@ -202,7 +181,6 @@ xmerge(kern_addr3 vp, kern_addr3 vq)
                     print("\n");
                     wd++;
                 }
-        /*e: [[xmerge()]] debug info when not magichole */
         panic("xmerge(%#p, %#p) bad magic %#lux, %#lux",
             vp, vq, p->magix, q->magix);
     }
@@ -212,9 +190,7 @@ xmerge(kern_addr3 vp, kern_addr3 vq)
     }
     return false;
 }
-/*e: function xmerge */
 
-/*s: function xhole */
 void
 xhole(phys_addr addr, ulong size)
 {
@@ -268,13 +244,11 @@ xhole(phys_addr addr, ulong size)
     *l = h;
     iunlock(&xlists);
 }
-/*e: function xhole */
 
 //*****************************************************************************
 // Debugging
 //*****************************************************************************
 
-/*s: function xsummary */
 void
 xsummary(void)
 {
@@ -309,5 +283,3 @@ xsummary(void)
     }
     print(" %d bytes free\n", i);
 }
-/*e: function xsummary */
-/*e: xalloc.c */

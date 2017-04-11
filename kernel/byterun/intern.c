@@ -1,5 +1,3 @@
-/*s: byterun/intern.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Structured input, compact format */
 
@@ -31,66 +28,35 @@
 
 static unsigned char * intern_input;
 static unsigned char * intern_src;
-/*s: global intern_input_malloced */
 static int intern_input_malloced;
-/*e: global intern_input_malloced */
-/*s: global intern_dest */
 static header_t * intern_dest;
-/*e: global intern_dest */
-/*s: global obj_counter (byterun/intern.c) */
 static asize_t obj_counter;
-/*e: global obj_counter (byterun/intern.c) */
-/*s: global intern_obj_table */
 static value * intern_obj_table;
-/*e: global intern_obj_table */
-/*s: global intern_color */
 static unsigned int intern_color;
-/*e: global intern_color */
-/*s: global intern_header */
 static header_t intern_header;
-/*e: global intern_header */
-/*s: global intern_block */
 static value intern_block;
-/*e: global intern_block */
 
-/*s: constant Sign_extend_shift */
 #define Sign_extend_shift ((sizeof(long) - 1) * 8)
-/*e: constant Sign_extend_shift */
-/*s: function Sign_extend */
 #define Sign_extend(x) (((long)(x) << Sign_extend_shift) >> Sign_extend_shift)
-/*e: function Sign_extend */
 
-/*s: function read8u */
 #define read8u() (*intern_src++)
-/*e: function read8u */
-/*s: function read8s */
 #define read8s() Sign_extend(*intern_src++)
-/*e: function read8s */
-/*s: function read16u */
 #define read16u() \
   (intern_src += 2, \
    (intern_src[-2] << 8) + intern_src[-1])
-/*e: function read16u */
-/*s: function read16s */
 #define read16s() \
   (intern_src += 2, \
    (Sign_extend(intern_src[-2]) << 8) + intern_src[-1])
-/*e: function read16s */
-/*s: function read32u */
 #define read32u() \
   (intern_src += 4, \
    (intern_src[-4] << 24) + (intern_src[-3] << 16) + \
    (intern_src[-2] << 8) + intern_src[-1])
-/*e: function read32u */
-/*s: function read32s */
 #define read32s() \
   (intern_src += 4, \
    (Sign_extend(intern_src[-4]) << 24) + (intern_src[-3] << 16) + \
    (intern_src[-2] << 8) + intern_src[-1])
-/*e: function read32s */
 
 #ifdef ARCH_SIXTYFOUR
-/*s: function read64s */
 static long read64s(void)
 {
   long res;
@@ -100,22 +66,17 @@ static long read64s(void)
   intern_src += 8;
   return res;
 }
-/*e: function read64s */
 #endif
 
-/*s: function readblock */
 #define readblock(dest,len) \
   (bcopy(intern_src, dest, len), intern_src += len)
-/*e: function readblock */
 
-/*s: function intern_cleanup */
 static void intern_cleanup(void)
 {
   if (intern_input_malloced) stat_free(intern_input);
   if (intern_obj_table != NULL) stat_free(intern_obj_table);
   Hd_val(intern_block) = intern_header; /* Don't confuse the GC */
 }
-/*e: function intern_cleanup */
 
 static void intern_rec(value *dest)
 {
@@ -274,7 +235,6 @@ static void intern_rec(value *dest)
   *dest = v;
 }
 
-/*s: function intern_alloc */
 static void intern_alloc(mlsize_t whsize, mlsize_t num_objects)
 {
   mlsize_t wosize;
@@ -297,9 +257,7 @@ static void intern_alloc(mlsize_t whsize, mlsize_t num_objects)
       intern_obj_table = NULL;
   }
 }
-/*e: function intern_alloc */
 
-/*s: function input_val */
 value input_val(struct channel *chan)
 {
   uint32 magic;
@@ -334,9 +292,7 @@ value input_val(struct channel *chan)
   if (intern_obj_table != NULL) stat_free(intern_obj_table);
   return res;
 }
-/*e: function input_val */
 
-/*s: function input_value */
 value input_value(value vchan)        /* ML */
 {
   struct channel * chan = Channel(vchan);
@@ -349,9 +305,7 @@ value input_value(value vchan)        /* ML */
   End_roots();
   return res;
 }
-/*e: function input_value */
 
-/*s: function input_val_from_string */
 value input_val_from_string(value str, long int ofs)
 {
   mlsize_t num_objects, size_32, size_64, whsize;
@@ -378,16 +332,12 @@ value input_val_from_string(value str, long int ofs)
   if (intern_obj_table != NULL) stat_free(intern_obj_table);
   return obj;
 }
-/*e: function input_val_from_string */
 
-/*s: function input_value_from_string */
 value input_value_from_string(value str, value ofs) /* ML */
 {
   return input_val_from_string(str, Long_val(ofs));
 }
-/*e: function input_value_from_string */
 
-/*s: function marshal_data_size */
 value marshal_data_size(value buff, value ofs) /* ML */
 {
   uint32 magic;
@@ -400,7 +350,6 @@ value marshal_data_size(value buff, value ofs) /* ML */
   block_len = read32u();
   return Val_long(block_len);
 }
-/*e: function marshal_data_size */
 
 /* Return an MD5 checksum of the code area */
 
@@ -408,7 +357,6 @@ value marshal_data_size(value buff, value ofs) /* ML */
 
 #include "md5.h"
 
-/*s: function code_checksum */
 unsigned char * code_checksum()
 {
   static unsigned char checksum[16];
@@ -425,18 +373,14 @@ unsigned char * code_checksum()
   }
   return checksum;
 }
-/*e: function code_checksum */
 
 #else
 
 #include "fix_code.h"
 
-/*s: function code_checksum (byterun/intern.c) */
 unsigned char * code_checksum(void)
 {
   return code_md5;
 }
-/*e: function code_checksum (byterun/intern.c) */
 
 #endif
-/*e: byterun/intern.c */

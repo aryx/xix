@@ -1,5 +1,3 @@
-/*s: byterun/instrtrace.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Trace the instructions executed */
 
@@ -31,19 +28,12 @@
 extern code_t start_code;
 extern char * names_of_cprim[];
 
-/*s: global icount */
 long icount = 0;
-/*e: global icount */
 
-/*s: function stop_here */
 void stop_here () {}
-/*e: function stop_here */
 
-/*s: global trace_flag */
 int trace_flag = 0;
-/*e: global trace_flag */
 
-/*s: function disasm_instr */
 void disasm_instr(pc)
      code_t pc;
 {
@@ -75,7 +65,5 @@ void disasm_instr(pc)
       printf("\n");
     }
 }
-/*e: function disasm_instr */
 
 //#endif
-/*e: byterun/instrtrace.c */

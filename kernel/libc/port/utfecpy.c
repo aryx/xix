@@ -1,8 +1,6 @@
-/*s: port/utfecpy.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function utfecpy */
 char*
 utfecpy(char *to, char *e, char *from)
 {
@@ -21,5 +19,3 @@ utfecpy(char *to, char *e, char *from)
     }
     return end;
 }
-/*e: function utfecpy */
-/*e: port/utfecpy.c */

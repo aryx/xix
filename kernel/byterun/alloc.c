@@ -1,5 +1,3 @@
-/*s: byterun/alloc.c */
-/*s: copyright header C xavier and damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier and damien */
 
 /* 1. Allocation functions doing the same work as the macros in the
       case where [Setup_for_gc] and [Restore_after_gc] are no-ops.
@@ -29,14 +26,9 @@
 #include "mlvalues.h"
 #include "stacks.h"
 
-/*s: constant Setup_for_gc */
 #define Setup_for_gc
-/*e: constant Setup_for_gc */
-/*s: constant Restore_after_gc */
 #define Restore_after_gc
-/*e: constant Restore_after_gc */
 
-/*s: function alloc */
 value alloc (mlsize_t wosize, tag_t tag)
 {
   value result;
@@ -64,16 +56,12 @@ value alloc_small (mlsize_t wosize, tag_t tag)
   Alloc_small (result, wosize, tag);
   return result;
 }
-/*e: function alloc */
 
-/*s: function alloc_tuple */
 value alloc_tuple(mlsize_t n)
 {
   return alloc(n, 0);
 }
-/*e: function alloc_tuple */
 
-/*s: function alloc_string */
 value alloc_string (mlsize_t len)
 {
   value result;
@@ -91,9 +79,7 @@ value alloc_string (mlsize_t len)
   Byte (result, offset_index) = offset_index - len;
   return result;
 }
-/*e: function alloc_string */
 
-/*s: function alloc_final */
 value alloc_final (mlsize_t len, final_fun fun, mlsize_t mem, mlsize_t max)
 {
   value result = alloc_shr (len, Final_tag);
@@ -103,9 +89,7 @@ value alloc_final (mlsize_t len, final_fun fun, mlsize_t mem, mlsize_t max)
   result = check_urgent_gc (result);
   return result;
 }
-/*e: function alloc_final */
 
-/*s: function copy_string */
 value copy_string(char *s)
 {
   int len;
@@ -116,9 +100,7 @@ value copy_string(char *s)
   bcopy(s, String_val(res), len);
   return res;
 }
-/*e: function copy_string */
 
-/*s: function alloc_array */
 value alloc_array(value (*funct)(char *), char ** arr)
 {
   mlsize_t nbr, n;
@@ -141,16 +123,12 @@ value alloc_array(value (*funct)(char *), char ** arr)
     return result;
   }
 }
-/*e: function alloc_array */
 
-/*s: function copy_string_array */
 value copy_string_array(char **arr)
 {
   return alloc_array(copy_string, arr);
 }
-/*e: function copy_string_array */
 
-/*s: function convert_flag_list */
 int convert_flag_list(value list, int *flags)
 {
   int res;
@@ -161,5 +139,3 @@ int convert_flag_list(value list, int *flags)
   }
   return res;
 }
-/*e: function convert_flag_list */
-/*e: byterun/alloc.c */

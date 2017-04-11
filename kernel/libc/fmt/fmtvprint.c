@@ -1,10 +1,8 @@
-/*s: fmt/fmtvprint.c */
 #include <u.h>
 #include <libc.h>
 #include "fmtdef.h"
 
 
-/*s: function fmtvprint */
 /*
  * format a string into the output buffer
  * designed for formats which themselves call fmt
@@ -23,6 +21,4 @@ fmtvprint(Fmt *f, char *fmt, va_list args)
         return 0;
     return n;
 }
-/*e: function fmtvprint */
 
-/*e: fmt/fmtvprint.c */

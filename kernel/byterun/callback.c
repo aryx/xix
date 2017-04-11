@@ -1,5 +1,3 @@
-/*s: byterun/callback.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* Callbacks from C to Caml */
 
@@ -34,27 +31,16 @@
 #include "fix_code.h"
 #include "stacks.h"
 
-/*s: global callback_depth */
 int callback_depth = 0;
-/*e: global callback_depth */
 
-/*s: global callback1_code */
 static opcode_t callback1_code[] = { ACC1, APPLY1, POP, 1, STOP };
-/*e: global callback1_code */
-/*s: global callback2_code */
 static opcode_t callback2_code[] = { ACC2, APPLY2, POP, 1, STOP };
-/*e: global callback2_code */
-/*s: global callback3_code */
 static opcode_t callback3_code[] = { ACC3, APPLY3, POP, 1, STOP };
-/*e: global callback3_code */
 
 #ifdef THREADED_CODE
 
-/*s: global callback_code_threaded */
 static int callback_code_threaded = 0;
-/*e: global callback_code_threaded */
 
-/*s: function thread_callback */
 static void thread_callback(void)
 {
   thread_code(callback1_code, sizeof(callback1_code));
@@ -62,19 +48,15 @@ static void thread_callback(void)
   thread_code(callback3_code, sizeof(callback3_code));
   callback_code_threaded = 1;
 }
-/*e: function thread_callback */
 
 #define Init_callback() if (!callback_code_threaded) thread_callback()
 
 #else
 
-/*s: function Init_callback */
 #define Init_callback()
-/*e: function Init_callback */
 
 #endif
 
-/*s: function callback */
 value callback(value closure, value arg)
 {
   value res;
@@ -87,9 +69,7 @@ value callback(value closure, value arg)
   callback_depth--;
   return res;
 }
-/*e: function callback */
 
-/*s: function callback2 */
 value callback2(value closure, value arg1, value arg2)
 {
   value res;
@@ -103,9 +83,7 @@ value callback2(value closure, value arg1, value arg2)
   callback_depth--;
   return res;
 }
-/*e: function callback2 */
 
-/*s: function callback3 */
 value callback3(value closure, value arg1, value arg2, value arg3)
 {
   value res;
@@ -120,11 +98,9 @@ value callback3(value closure, value arg1, value arg2, value arg3)
   callback_depth--;
   return res;
 }
-/*e: function callback3 */
 
 #endif
 
-/*s: struct named_value */
 /* Naming of Caml values */
 
 struct named_value {
@@ -132,26 +108,18 @@ struct named_value {
   struct named_value * next;
   char name[1];
 };
-/*e: struct named_value */
 
-/*s: constant Named_value_size */
 #define Named_value_size 13
-/*e: constant Named_value_size */
 
-/*s: global named_value_table */
 static struct named_value * named_value_table[Named_value_size] = { NULL, };
-/*e: global named_value_table */
 
-/*s: function hash_value_name */
 static unsigned int hash_value_name(char *name)
 {
   unsigned int h;
   for (h = 0; *name != 0; name++) h = h * 19 + *name;
   return h % Named_value_size;
 }
-/*e: function hash_value_name */
 
-/*s: function register_named_value */
 value register_named_value(value vname, value val) /* ML */
 {
   struct named_value * nv;
@@ -167,9 +135,7 @@ value register_named_value(value vname, value val) /* ML */
   register_global_root(&nv->val);
   return Val_unit;
 }
-/*e: function register_named_value */
 
-/*s: function caml_named_value */
 value * caml_named_value(char *name)
 {
   struct named_value * nv;
@@ -180,5 +146,3 @@ value * caml_named_value(char *name)
   }
   return NULL;
 }
-/*e: function caml_named_value */
-/*e: byterun/callback.c */

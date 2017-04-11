@@ -1,5 +1,3 @@
-/*s: byterun/interp.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 /* The bytecode interpreter */
 
@@ -32,7 +29,6 @@
 #include "stacks.h"
 #include "str.h"
 
-/*s: interp.c toplevel comment */
 /* Registers for the abstract machine:
         pc         the code pointer
         sp         the stack pointer (grows downward)
@@ -43,62 +39,36 @@
         extra_args number of extra arguments provided by the caller
 
 sp is a local copy of the global variable extern_sp. */
-/*e: interp.c toplevel comment */
 
 /* Instruction decoding */
 
 #ifdef THREADED_CODE
-/*s: macro Instruct for THREADED_CODE */
 #  define Instruct(name) lbl_##name
-/*e: macro Instruct for THREADED_CODE */
 //#  if defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
 #  ifdef ARCH_SIXTYFOUR
-/*s: constant Jumptbl_base */
 #    define Jumptbl_base ((char *) &&lbl_ACC0)
-/*e: constant Jumptbl_base */
 #  else
-/*s: constant Jumptbl_base (byterun/interp.c) */
 #    define Jumptbl_base ((char *) 0)
-/*e: constant Jumptbl_base (byterun/interp.c) */
-/*s: constant jumptbl_base */
 #    define jumptbl_base ((char *) 0)
-/*e: constant jumptbl_base */
 #  endif
 #  ifdef DEBUG
-/*s: macro Next for THREADED_CODE ifdef DEBUG */
 #    define Next goto next_instr
-/*e: macro Next for THREADED_CODE ifdef DEBUG */
 #  else
-/*s: macro Next for THREADED_CODE */
 #    define Next goto *(void *)(jumptbl_base + *pc++)
-/*e: macro Next for THREADED_CODE */
 #  endif
 #else
-/*s: macro Instruct */
 #  define Instruct(name) case name
-/*e: macro Instruct */
-/*s: macro Next */
 #  define Next break
-/*e: macro Next */
 #endif
 
 
-/*s: constant Setup_for_gc (byterun/interp.c) */
 /* GC interface */
 
 #define Setup_for_gc { sp -= 2; sp[0] = accu; sp[1] = env; extern_sp = sp; }
-/*e: constant Setup_for_gc (byterun/interp.c) */
-/*s: constant Restore_after_gc (byterun/interp.c) */
 #define Restore_after_gc { accu = sp[0]; env = sp[1]; sp += 2; }
-/*e: constant Restore_after_gc (byterun/interp.c) */
-/*s: constant Setup_for_c_call */
 #define Setup_for_c_call { *--sp = env; extern_sp = sp; }
-/*e: constant Setup_for_c_call */
-/*s: constant Restore_after_c_call */
 #define Restore_after_c_call { sp = extern_sp; env = *sp++; }
-/*e: constant Restore_after_c_call */
 
-/*s: constant Setup_for_debugger */
 /* Debugger interface */
 
 #define Setup_for_debugger \
@@ -106,22 +76,15 @@ sp is a local copy of the global variable extern_sp. */
      sp[0] = accu; sp[1] = (value)(pc - 1); \
      sp[2] = env; sp[3] = Val_long(extra_args); \
      extern_sp = sp; }
-/*e: constant Setup_for_debugger */
-/*s: constant Restore_after_debugger */
 #define Restore_after_debugger { sp += 4; }
-/*e: constant Restore_after_debugger */
 
 #ifdef THREADED_CODE
-/*s: macro Restart_curr_instr if THREADED_CODE */
 #define Restart_curr_instr \
   goto *(jumptable[saved_code[pc - 1 - start_code]])
-/*e: macro Restart_curr_instr if THREADED_CODE */
 #else
-/*s: macro Restart_curr_instr */
 #define Restart_curr_instr \
   curr_instr = saved_code[pc - 1 - start_code]; \
   goto dispatch_instr
-/*e: macro Restart_curr_instr */
 #endif
 
 /* Register optimization.
@@ -144,22 +107,17 @@ sp is a local copy of the global variable extern_sp. */
 
 /* The interpreter itself */
 
-/*s: function interpreter */
 value interprete(code_t prog, asize_t prog_size)
 {
-  /*s: [[interprete()]] local variables */
-  /*s: [[interpreter()]] ifdef PC_REG */
   #ifdef PC_REG
     register code_t pc PC_REG;
     register value * sp SP_REG;
     register value accu ACCU_REG;
-  /*e: [[interpreter()]] ifdef PC_REG */
   #else
   register code_t pc;
   register value * sp;
   register value accu;
   #endif
-  /*s: [[interpreter()]] ifdef THREADED_CODE, jumptbl_base register declaration */
   //#if defined(THREADED_CODE) && defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
   #ifdef THREADED_CODE
   #ifdef ARCH_SIXTYFOUR
@@ -172,43 +130,30 @@ value interprete(code_t prog, asize_t prog_size)
   #endif
   #endif
   #endif
-  /*e: [[interpreter()]] ifdef THREADED_CODE, jumptbl_base register declaration */
   value env;
   long extra_args;
 
   #ifndef THREADED_CODE
   opcode_t curr_instr;
   #endif
-  /*s: [[interprete()]] other local variables */
   value * modify_dest, modify_newval;
-  /*x: [[interprete()]] other local variables */
   struct longjmp_buffer *    initial_external_raise;
   int                        initial_sp_offset;
   struct caml__roots_block * initial_local_roots;
   int                        initial_callback_depth;
-  /*x: [[interprete()]] other local variables */
   struct longjmp_buffer raise_buf;
-  /*e: [[interprete()]] other local variables */
-  /*e: [[interprete()]] local variables */
-  /*s: [[interprete()]] initialisations */
-  /*s: [[interprete()]] ifdef THREADED_CODE initialisations */
-  /*s: [[interpreter()]] ifdef THREADED_CODE, jumptable declaration */
   #ifdef THREADED_CODE
     static void * jumptable[] = {
   #    include "jumptbl.h"
     };
   #endif
-  /*e: [[interpreter()]] ifdef THREADED_CODE, jumptable declaration */
   if (prog == NULL) {           /* Interpreter is initializing */
-    /*s: [[interpreter()]] ifdef THREADED_CODE, initializing */
     #ifdef THREADED_CODE
         instr_table = (char **) jumptable; 
         instr_base = Jumptbl_base;
     #endif
-    /*e: [[interpreter()]] ifdef THREADED_CODE, initializing */
     return Val_unit;
   }
-  /*s: [[interpreter()]] ifdef THREADED_CODE, jumptbl_base setting */
   //#if defined(THREADED_CODE) && defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
   #ifdef THREADED_CODE
   #ifdef ARCH_SIXTYFOUR
@@ -217,15 +162,10 @@ value interprete(code_t prog, asize_t prog_size)
   #endif
   #endif
   #endif
-  /*e: [[interpreter()]] ifdef THREADED_CODE, jumptbl_base setting */
-  /*e: [[interprete()]] ifdef THREADED_CODE initialisations */
-  /*s: [[interprete()]] initial_xxx initialisations */
   initial_local_roots = local_roots;
   initial_sp_offset = (char *) stack_high - (char *) extern_sp;
   initial_external_raise = external_raise;
   initial_callback_depth = callback_depth;
-  /*e: [[interprete()]] initial_xxx initialisations */
-  /*s: [[interprete()]] exception initialisations */
   if (sigsetjmp(raise_buf.buf, 1)) {
     local_roots = initial_local_roots;
     sp = extern_sp;
@@ -235,16 +175,13 @@ value interprete(code_t prog, asize_t prog_size)
     goto raise_exception;
   }
   external_raise = &raise_buf;
-  /*e: [[interprete()]] exception initialisations */
 
   sp = extern_sp;
   pc = prog;
   extra_args = 0;
   env = Atom(0);
   accu = Val_int(0);
-  /*e: [[interprete()]] initialisations */
 
-  /*s: [[interpreter()]] ifdef THREADED_CODE, loop start */
   #ifdef THREADED_CODE
   #ifdef DEBUG
    next_instr:
@@ -253,10 +190,8 @@ value interprete(code_t prog, asize_t prog_size)
     Assert(sp <= stack_high);
   #endif
     goto *(void *)(jumptbl_base + *pc++); /* Jump to the first instruction */
-  /*e: [[interpreter()]] ifdef THREADED_CODE, loop start */
   #else
   while(1) {
-    /*s: [[interpreter()]] ifdef DEBUG, loop start */
     ///disasm_instr(pc);
     #ifdef DEBUG
         if (icount-- == 0) stop_here ();
@@ -264,20 +199,16 @@ value interprete(code_t prog, asize_t prog_size)
         Assert(sp >= stack_low);
         Assert(sp <= stack_high);
     #endif
-    /*e: [[interpreter()]] ifdef DEBUG, loop start */
     curr_instr = *pc++;
     dispatch_instr:
     switch(curr_instr) {
   #endif /* #else THREADED_CODE */
   
-    /*s: [[interpreter()]] basic stack operations cases */
     /* Basic stack operations */
 
-        /*s: [[interpreter()]] basic stack operation before ACC case */
         Instruct(PUSHACC):
           *--sp = accu;
           /* Fallthrough */
-        /*e: [[interpreter()]] basic stack operation before ACC case */
         Instruct(ACC):
           accu = sp[*pc++];
           Next;
@@ -291,7 +222,6 @@ value interprete(code_t prog, asize_t prog_size)
           sp[*pc++] = accu;
           accu = Val_unit;
           Next;
-    /*x: [[interpreter()]] basic stack operations cases */
         Instruct(ACC0):
           accu = sp[0]; Next;
         Instruct(ACC1):
@@ -308,7 +238,6 @@ value interprete(code_t prog, asize_t prog_size)
           accu = sp[6]; Next;
         Instruct(ACC7):
           accu = sp[7]; Next;
-    /*x: [[interpreter()]] basic stack operations cases */
         Instruct(PUSHACC1):
           *--sp = accu; accu = sp[1]; Next;
         Instruct(PUSHACC2):
@@ -323,19 +252,14 @@ value interprete(code_t prog, asize_t prog_size)
           *--sp = accu; accu = sp[6]; Next;
         Instruct(PUSHACC7):
           *--sp = accu; accu = sp[7]; Next;
-    /*e: [[interpreter()]] basic stack operations cases */
-    /*s: [[interpreter()]] env access cases */
     /* Access in heap-allocated environment */
 
-        /*s: [[interpreter()]] env access before ENVACC case */
         Instruct(PUSHENVACC):
           *--sp = accu;
           /* Fallthrough */
-        /*e: [[interpreter()]] env access before ENVACC case */
         Instruct(ENVACC):
           accu = Field(env, *pc++);
           Next;
-    /*x: [[interpreter()]] env access cases */
         Instruct(ENVACC1):
           accu = Field(env, 1); Next;
         Instruct(ENVACC2):
@@ -353,8 +277,6 @@ value interprete(code_t prog, asize_t prog_size)
           *--sp = accu; accu = Field(env, 3); Next;
         Instruct(PUSHENVACC4):
           *--sp = accu; accu = Field(env, 4); Next;
-    /*e: [[interpreter()]] env access cases */
-    /*s: [[interpreter()]] function application cases */
     /* Function application */
 
         Instruct(PUSH_RETADDR): {
@@ -400,7 +322,6 @@ value interprete(code_t prog, asize_t prog_size)
           }
           Next;
         }
-    /*x: [[interpreter()]] function application cases */
         Instruct(APPLY1): {
           value arg1 = sp[0];
           sp -= 3;
@@ -476,8 +397,6 @@ value interprete(code_t prog, asize_t prog_size)
           extra_args += 2;
           goto check_stacks;
         }
-    /*e: [[interpreter()]] function application cases */
-    /*s: [[interpreter()]] misc cases */
         Instruct(RESTART): {
           int num_args = Wosize_val(env) - 2;
           int i;
@@ -533,13 +452,9 @@ value interprete(code_t prog, asize_t prog_size)
           pc++;
           Next;
         }
-    /*e: [[interpreter()]] misc cases */
-    /*s: [[interpreter()]] global data access cases */
-        /*s: [[interpreter()]] before GETGLOBAL case */
         Instruct(PUSHGETGLOBAL):
           *--sp = accu;
           /* Fallthrough */
-        /*e: [[interpreter()]] before GETGLOBAL case */
         Instruct(GETGLOBAL):
           accu = Field(global_data, *pc);
           pc++;
@@ -550,12 +465,9 @@ value interprete(code_t prog, asize_t prog_size)
           accu = Val_unit;
           pc++;
           Next;
-    /*x: [[interpreter()]] global data access cases */
-        /*s: [[interpreter()]] before GETGLOBALFIELD case */
         Instruct(PUSHGETGLOBALFIELD):
           *--sp = accu;
           /* Fallthrough */
-        /*e: [[interpreter()]] before GETGLOBALFIELD case */
         Instruct(GETGLOBALFIELD): {
           accu = Field(global_data, *pc);
           pc++;
@@ -563,14 +475,10 @@ value interprete(code_t prog, asize_t prog_size)
           pc++;
           Next;
         }
-    /*e: [[interpreter()]] global data access cases */
-    /*s: [[interpreter()]] blocks allocation cases */
     /* Allocation of blocks */
-        /*s: [[interpreter()]] before ATOM case */
         Instruct(PUSHATOM):
           *--sp = accu;
           /* Fallthrough */
-        /*e: [[interpreter()]] before ATOM case */
         Instruct(ATOM):
           accu = Atom(*pc++); Next;
 
@@ -585,7 +493,6 @@ value interprete(code_t prog, asize_t prog_size)
           accu = block;
           Next;
         }
-    /*x: [[interpreter()]] blocks allocation cases */
         Instruct(PUSHATOM0):
           *--sp = accu;
           /* Fallthrough */
@@ -621,8 +528,6 @@ value interprete(code_t prog, asize_t prog_size)
           accu = block;
           Next;
         }
-    /*e: [[interpreter()]] blocks allocation cases */
-    /*s: [[interpreter()]] blocks access cases */
     /* Access to components of blocks */
         Instruct(GETFIELD):
           accu = Field(accu, *pc); pc++; Next;
@@ -633,17 +538,14 @@ value interprete(code_t prog, asize_t prog_size)
           modify_newval = *sp++;
           goto modify;
 
-        /*s: [[interpreter()]] before modify label */
         Instruct(SETFIELD0):
           modify_dest = &Field(accu, 0);
           modify_newval = *sp++;
         /* Fallthrough */
-        /*e: [[interpreter()]] before modify label */
         modify:
           Modify(modify_dest, modify_newval);
           accu = Val_unit;
           Next;
-    /*x: [[interpreter()]] blocks access cases */
 
         Instruct(GETFIELD0):
           accu = Field(accu, 0); Next;
@@ -666,8 +568,6 @@ value interprete(code_t prog, asize_t prog_size)
           modify_dest = &Field(accu, 3);
           modify_newval = *sp++;
           goto modify;
-    /*e: [[interpreter()]] blocks access cases */
-    /*s: [[interpreter()]] recursive definition cases */
     /* For recursive definitions */
 
         Instruct(DUMMY): {
@@ -688,8 +588,6 @@ value interprete(code_t prog, asize_t prog_size)
           accu = Val_unit;
           Next;
         }
-    /*e: [[interpreter()]] recursive definition cases */
-    /*s: [[interpreter()]] branching cases */
     /* Branches and conditional branches */
 
         Instruct(BRANCH):
@@ -719,8 +617,6 @@ value interprete(code_t prog, asize_t prog_size)
         Instruct(BOOLNOT):
           accu = Val_not(accu);
           Next;
-    /*e: [[interpreter()]] branching cases */
-    /*s: [[interpreter()]] exception cases */
     /* Exceptions */
 
         Instruct(PUSHTRAP):
@@ -759,9 +655,6 @@ value interprete(code_t prog, asize_t prog_size)
           extra_args = Long_val(sp[3]);
           sp += 4;
           Next;
-    /*e: [[interpreter()]] exception cases */
-    /*s: [[interpreter()]] signal cases */
-    /*s: [[interpreter()]] before CHECK_SIGNALS case */
     /* Stack checks */
 
         check_stacks:
@@ -771,7 +664,6 @@ value interprete(code_t prog, asize_t prog_size)
             sp = extern_sp;
           }
           /* Fall through CHECK_SIGNALS */
-    /*e: [[interpreter()]] before CHECK_SIGNALS case */
 
     /* Signal handling */
 
@@ -804,8 +696,6 @@ value interprete(code_t prog, asize_t prog_size)
             }
           }
           Next;
-    /*e: [[interpreter()]] signal cases */
-    /*s: [[interpreter()]] foreign c calls cases */
     /* Calling C functions */
 
         Instruct(C_CALLN): {
@@ -818,7 +708,6 @@ value interprete(code_t prog, asize_t prog_size)
           pc++;
           Next;
         }
-    /*x: [[interpreter()]] foreign c calls cases */
 
         Instruct(C_CALL1):
           Setup_for_c_call;
@@ -854,20 +743,15 @@ value interprete(code_t prog, asize_t prog_size)
           sp += 4;
           pc++;
           Next;
-    /*e: [[interpreter()]] foreign c calls cases */
-    /*s: [[interpreter()]] arithmetics cases */
     /* Integer constants */
 
-        /*s: [[interpreter()]] before CONSTINT case */
             Instruct(PUSHCONSTINT):
               *--sp = accu;
               /* Fallthrough */
-        /*e: [[interpreter()]] before CONSTINT case */
         Instruct(CONSTINT):
           accu = Val_int(*pc);
           pc++;
           Next;
-    /*x: [[interpreter()]] arithmetics cases */
         Instruct(CONST0):
           accu = Val_int(0); Next;
         Instruct(CONST1):
@@ -885,7 +769,6 @@ value interprete(code_t prog, asize_t prog_size)
           *--sp = accu; accu = Val_int(2); Next;
         Instruct(PUSHCONST3):
           *--sp = accu; accu = Val_int(3); Next;
-    /*x: [[interpreter()]] arithmetics cases */
     /* Integer arithmetic */
 
         Instruct(NEGINT):
@@ -909,14 +792,12 @@ value interprete(code_t prog, asize_t prog_size)
           accu = Val_long(Long_val(accu) % divisor);
           Next;
         }
-    /*x: [[interpreter()]] arithmetics cases */
         Instruct(ANDINT):
           accu = (value)((long) accu & (long) *sp++); Next;
         Instruct(ORINT):
           accu = (value)((long) accu | (long) *sp++); Next;
         Instruct(XORINT):
           accu = (value)(((long) accu ^ (long) *sp++) | 1); Next;
-    /*x: [[interpreter()]] arithmetics cases */
         Instruct(LSLINT):
           accu = (value)((((long) accu - 1) << Long_val(*sp++)) + 1); Next;
         Instruct(LSRINT):
@@ -924,7 +805,6 @@ value interprete(code_t prog, asize_t prog_size)
           Next;
         Instruct(ASRINT):
           accu = (value)((((long) accu - 1) >> Long_val(*sp++)) | 1); Next;
-    /*x: [[interpreter()]] arithmetics cases */
     #define Integer_comparison(opname,tst) \
         Instruct(opname): \
           accu = Val_int((long) accu tst (long) *sp++); Next;
@@ -935,7 +815,6 @@ value interprete(code_t prog, asize_t prog_size)
         Integer_comparison(LEINT, <=)
         Integer_comparison(GTINT, >)
         Integer_comparison(GEINT, >=)
-    /*x: [[interpreter()]] arithmetics cases */
         Instruct(OFFSETINT):
           accu += *pc << 1;
           pc++;
@@ -945,8 +824,6 @@ value interprete(code_t prog, asize_t prog_size)
           accu = Val_unit;
           pc++;
           Next;
-    /*e: [[interpreter()]] arithmetics cases */
-    /*s: [[interpreter()]] array cases */
     /* Array operations */
 
         Instruct(VECTLENGTH):
@@ -961,8 +838,6 @@ value interprete(code_t prog, asize_t prog_size)
           modify_newval = sp[1];
           sp += 2;
           goto modify;
-    /*e: [[interpreter()]] array cases */
-    /*s: [[interpreter()]] string cases */
     /* String operations */
 
         Instruct(GETSTRINGCHAR):
@@ -974,8 +849,6 @@ value interprete(code_t prog, asize_t prog_size)
           sp += 2;
           accu = Val_unit;
           Next;
-    /*e: [[interpreter()]] string cases */
-    /*s: [[interpreter()]] debugger cases */
     /* Debugging and machine control */
 
         Instruct(STOP):
@@ -996,7 +869,6 @@ value interprete(code_t prog, asize_t prog_size)
           debugger(BREAKPOINT);
           Restore_after_debugger;
           Restart_curr_instr;
-    /*e: [[interpreter()]] debugger cases */
 
     #ifndef THREADED_CODE
     default:
@@ -1006,5 +878,3 @@ value interprete(code_t prog, asize_t prog_size)
   }
   #endif /* ifndef THREADED_CODE */
 }
-/*e: function interpreter */
-/*e: byterun/interp.c */

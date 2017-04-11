@@ -1,11 +1,9 @@
-/*s: lib_graphics/libmemlayer/ldelete.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
 #include <memdraw.h>
 #include <memlayer.h>
 
-/*s: function memldelete */
 void
 memldelete(Memimage *i)
 {
@@ -27,7 +25,6 @@ memldelete(Memimage *i)
         i->clipr = i->r;
         memdraw(i, i->r, s->fill, i->r.min, nil, i->r.min, S);
     }
-    /*s: [[memldelete()]] manage stack of windows */
     // remove_double_list(l, s->frontmost, s->rearmost)
     if(l->front){
         l->front->layer->rear = nil;
@@ -36,14 +33,11 @@ memldelete(Memimage *i)
         s->frontmost = nil;
         s->rearmost = nil;
     }
-    /*e: [[memldelete()]] manage stack of windows */
 
     free(l);
     freememimage(i);
 }
-/*e: function memldelete */
 
-/*s: function memlfree */
 /*
  * Just free the data structures, don't do graphics
  */
@@ -57,9 +51,7 @@ memlfree(Memimage *i)
     free(l);
     freememimage(i);
 }
-/*e: function memlfree */
 
-/*s: function _memlsetclear */
 void
 _memlsetclear(Memscreen *s)
 {
@@ -77,5 +69,3 @@ _memlsetclear(Memscreen *s)
                 }
     }
 }
-/*e: function _memlsetclear */
-/*e: lib_graphics/libmemlayer/ldelete.c */

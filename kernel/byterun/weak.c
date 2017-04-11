@@ -1,5 +1,3 @@
-/*s: byterun/weak.c */
-/*s: copyright header C damien 1997 */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C damien 1997 */
 
 /* Operations on weak arrays */
 
@@ -19,11 +16,8 @@
 #include "memory.h"
 #include "mlvalues.h"
 
-/*s: global weak_list_head */
 value weak_list_head = 0;
-/*e: global weak_list_head */
 
-/*s: function weak_create */
 value weak_create (value len)        /* ML */
 {
   mlsize_t size, i;
@@ -37,16 +31,10 @@ value weak_create (value len)        /* ML */
   weak_list_head = res;
   return res;
 }
-/*e: function weak_create */
 
-/*s: constant None_val */
 #define None_val 1
-/*e: constant None_val */
-/*s: constant Some_tag */
 #define Some_tag 0
-/*e: constant Some_tag */
 
-/*s: function weak_set */
 value weak_set (value ar, value n, value el)     /* ML */
 {
   mlsize_t offset = Long_val (n) + 1;
@@ -58,16 +46,10 @@ value weak_set (value ar, value n, value el)     /* ML */
   }
   return Val_unit;
 }
-/*e: function weak_set */
 
-/*s: constant Setup_for_gc (byterun/weak.c) */
 #define Setup_for_gc
-/*e: constant Setup_for_gc (byterun/weak.c) */
-/*s: constant Restore_after_gc (byterun/weak.c) */
 #define Restore_after_gc
-/*e: constant Restore_after_gc (byterun/weak.c) */
 
-/*s: function weak_get */
 value weak_get (value ar, value n)        /* ML */
 {
   mlsize_t offset = Long_val (n) + 1;
@@ -87,8 +69,6 @@ value weak_get (value ar, value n)        /* ML */
   }
   return res;
 }
-/*e: function weak_get */
 
 #undef Setup_for_gc
 #undef Restore_after_gc
-/*e: byterun/weak.c */

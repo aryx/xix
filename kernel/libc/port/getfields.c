@@ -1,8 +1,6 @@
-/*s: port/getfields.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function getfields */
 int
 getfields(char *str, char **args, int max, int mflag, char *set)
 {
@@ -37,5 +35,3 @@ getfields(char *str, char **args, int max, int mflag, char *set)
     }
     return narg;
 }
-/*e: function getfields */
-/*e: port/getfields.c */

@@ -1,10 +1,8 @@
-/*s: lib_graphics/libmemdraw/chan.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
 #include <memdraw.h>
 
-/*s: function memsetchan */
 errorneg1
 memsetchan(Memimage *i, ulong chan)
 {
@@ -14,12 +12,10 @@ memsetchan(Memimage *i, ulong chan)
     bool bytes;
 
     d = chantodepth(chan);
-    /*s: [[memsetchan()]] sanity check d */
     if(d == 0) {
         werrstr("bad channel descriptor");
         return ERROR_NEG1;
     }
-    /*e: [[memsetchan()]] sanity check d */
     i->chan = chan;
     i->depth = d;
     i->flags &= ~(Fgrey|Falpha|Fcmap|Fbytes);
@@ -27,12 +23,10 @@ memsetchan(Memimage *i, ulong chan)
 
     for(cc=chan, j=0, k=0; cc; j+=NBITS(cc), cc>>=8, k++){
         t=TYPE(cc);
-        /*s: [[memsetchan()]] sanity check t */
         if(t < 0 || t >= NChan){
             werrstr("bad channel string");
             return -1;
         }
-        /*e: [[memsetchan()]] sanity check t */
         if(t == CGrey)
             i->flags |= Fgrey;
         if(t == CAlpha)
@@ -54,6 +48,4 @@ memsetchan(Memimage *i, ulong chan)
         i->flags |= Fbytes;
     return OK_0;
 }
-/*e: function memsetchan */
 
-/*e: lib_graphics/libmemdraw/chan.c */

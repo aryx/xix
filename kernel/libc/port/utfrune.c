@@ -1,8 +1,6 @@
-/*s: port/utfrune.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function utfrune */
 char*
 utfrune(char *s, long c)
 {
@@ -29,5 +27,3 @@ utfrune(char *s, long c)
         s += n;
     }
 }
-/*e: function utfrune */
-/*e: port/utfrune.c */

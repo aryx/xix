@@ -1,8 +1,6 @@
-/*s: port/fabs.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function fabs */
 double
 fabs(double arg)
 {
@@ -11,5 +9,3 @@ fabs(double arg)
         return -arg;
     return arg;
 }
-/*e: function fabs */
-/*e: port/fabs.c */

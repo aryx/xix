@@ -1,4 +1,3 @@
-/*s: kernel/devices/screen/arm/screen.c */
 /*
  * bcm2385 framebuffer
  */

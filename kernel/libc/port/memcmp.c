@@ -1,8 +1,6 @@
-/*s: port/memcmp.c */
 #include    <u.h>
 #include    <libc.h>
 
-/*s: function memcmp */
 int
 memcmp(void *a1, void *a2, ulong n)
 {
@@ -23,5 +21,3 @@ memcmp(void *a1, void *a2, ulong n)
     }
     return 0;
 }
-/*e: function memcmp */
-/*e: port/memcmp.c */

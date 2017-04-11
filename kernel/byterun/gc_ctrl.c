@@ -1,5 +1,3 @@
-/*s: byterun/gc_ctrl.c */
-/*s: copyright header C damien */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C damien */
 
 #include "alloc.h"
 #include "compact.h"
@@ -38,11 +35,8 @@ extern long major_heap_increment;  /* bytes; cf. major_gc.c */
 extern unsigned long percent_free;    /*        cf. major_gc.c */
 extern unsigned long percent_max;     /*        cf. compact.c */
 
-/*s: function Next (byterun/gc_ctrl.c) */
 #define Next(hp) ((hp) + Bhsize_hp (hp))
-/*e: function Next (byterun/gc_ctrl.c) */
 
-/*s: function gc_stat */
 /* This will also thoroughly verify the heap if compiled in DEBUG mode. */
 
 value gc_stat(value v) /* ML */
@@ -127,9 +121,7 @@ value gc_stat(value v) /* ML */
   Field (res, 13) = Val_long (stat_compactions);
   return res;
 }
-/*e: function gc_stat */
 
-/*s: function gc_get */
 value gc_get(value v) /* ML */
 {
   value res;
@@ -148,27 +140,19 @@ value gc_get(value v) /* ML */
 #endif
   return res;
 }
-/*e: function gc_get */
 
-/*s: function Max */
 #define Max(x,y) ((x) < (y) ? (y) : (x))
-/*e: function Max */
 
-/*s: function norm_pfree */
 static unsigned long norm_pfree (long unsigned int p)
 {
   return Max (p, 1);
 }
-/*e: function norm_pfree */
 
-/*s: function norm_pmax */
 static unsigned long norm_pmax (long unsigned int p)
 {
   return p;
 }
-/*e: function norm_pmax */
 
-/*s: function norm_heapincr */
 static long norm_heapincr (long unsigned int i)
 {
 #define Psv (Wsize_bsize (Page_size))
@@ -177,18 +161,14 @@ static long norm_heapincr (long unsigned int i)
   if (i > Heap_chunk_max) i = Heap_chunk_max;
   return i;
 }
-/*e: function norm_heapincr */
 
-/*s: function norm_minsize */
 static long norm_minsize (long int s)
 {
   if (s < Minor_heap_min) s = Minor_heap_min;
   if (s > Minor_heap_max) s = Minor_heap_max;
   return s;
 }
-/*e: function norm_minsize */
 
-/*s: function gc_set */
 value gc_set(value v) /* ML */
 {
   unsigned long newpf, newpm;
@@ -229,26 +209,20 @@ value gc_set(value v) /* ML */
   }
   return Val_unit;
 }
-/*e: function gc_set */
 
-/*s: function gc_minor */
 value gc_minor(value v) /* ML */
 {                                                    Assert (v == Val_unit);
   minor_collection ();
   return Val_unit;
 }
-/*e: function gc_minor */
 
-/*s: function gc_major */
 value gc_major(value v) /* ML */
 {                                                    Assert (v == Val_unit);
   minor_collection ();
   finish_major_cycle ();
   return Val_unit;
 }
-/*e: function gc_major */
 
-/*s: function gc_full_major */
 value gc_full_major(value v) /* ML */
 {                                                    Assert (v == Val_unit);
   minor_collection ();
@@ -256,9 +230,7 @@ value gc_full_major(value v) /* ML */
   finish_major_cycle ();
   return Val_unit;
 }
-/*e: function gc_full_major */
 
-/*s: function gc_compaction */
 value gc_compaction(value v) /* ML */
 {                                                    Assert (v == Val_unit);
   minor_collection ();
@@ -267,9 +239,7 @@ value gc_compaction(value v) /* ML */
   compact_heap ();
   return Val_unit;
 }
-/*e: function gc_compaction */
 
-/*s: function init_gc */
 void init_gc (long unsigned int minor_size, long unsigned int major_size, long unsigned int major_incr, long unsigned int percent_fr, long unsigned int percent_m, long unsigned int verb)
 {
   unsigned long major_heap_size = Bsize_wsize (norm_heapincr (major_size));
@@ -290,5 +260,3 @@ void init_gc (long unsigned int minor_size, long unsigned int major_size, long u
   gc_message ("Initial heap increment: %luk bytes\n",
               major_heap_increment / 1024);
 }
-/*e: function init_gc */
-/*e: byterun/gc_ctrl.c */

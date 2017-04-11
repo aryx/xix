@@ -1,12 +1,9 @@
-/*s: alloc.c */
-/*s: kernel basic includes */
 #include <u.h>
 #include "../port/lib.h"
 #include "../port/error.h"
 #include "mem.h"
 #include "dat.h"
 #include "fns.h"
-/*e: kernel basic includes */
 
 #include    <pool.h>
 
@@ -38,7 +35,6 @@ enum {
     ReallocOffset = 1
 };
 
-/*s: alloc.c debugging macro */
 /* non tracing
  *
 enum {
@@ -48,9 +44,7 @@ enum {
 };
  *
  */
-/*e: alloc.c debugging macro */
 
-/*s: function setmalloctag */
 void
 setmalloctag(kern_addr3 v, kern_addr pc)
 {
@@ -61,9 +55,7 @@ setmalloctag(kern_addr3 v, kern_addr pc)
     u = v;
     u[-Npadlong+MallocOffset] = pc;
 }
-/*e: function setmalloctag */
 
-/*s: function setrealloctag */
 void
 setrealloctag(kern_addr3 v, kern_addr pc)
 {
@@ -74,13 +66,11 @@ setrealloctag(kern_addr3 v, kern_addr pc)
     u = v;
     u[-Npadlong+ReallocOffset] = pc;
 }
-/*e: function setrealloctag */
 
 //*****************************************************************************
 // Pool wrappers
 //*****************************************************************************
 
-/*s: function smalloc */
 // non failing malloc! will repeat until it can
 kern_addr3
 smalloc(ulong size)
@@ -100,9 +90,7 @@ smalloc(ulong size)
     memset(v, 0, size); // clear
     return v;
 }
-/*e: function smalloc */
 
-/*s: function malloc */
 kern_addr3
 malloc(ulong size)
 {
@@ -119,9 +107,7 @@ malloc(ulong size)
     memset(v, 0, size);
     return v;
 }
-/*e: function malloc */
 
-/*s: function mallocz */
 kern_addr3
 mallocz(ulong size, bool clr)
 {
@@ -137,9 +123,7 @@ mallocz(ulong size, bool clr)
         memset(v, 0, size);
     return v;
 }
-/*e: function mallocz */
 
-/*s: function mallocalign */
 kern_addr3
 mallocalign(ulong size, ulong align, long offset, ulong span)
 {
@@ -156,18 +140,14 @@ mallocalign(ulong size, ulong align, long offset, ulong span)
         memset(v, 0, size);
     return v;
 }
-/*e: function mallocalign */
 
-/*s: function free */
 void
 free(kern_addr3 v)
 {
     if(v != nil)
         poolfree(mainmem, (ulong*)v-Npadlong);
 }
-/*e: function free */
 
-/*s: function realloc */
 kern_addr3
 realloc(kern_addr3 v, ulong size)
 {
@@ -186,15 +166,12 @@ realloc(kern_addr3 v, ulong size)
     }       
     return nv;
 }
-/*e: function realloc */
 
-/*s: function msize */
 ulong
 msize(void *v)
 {
     return poolmsize(mainmem, (ulong*)v-Npadlong)-Npadlong*sizeof(ulong);
 }
-/*e: function msize */
 
 
 //*****************************************************************************
@@ -203,7 +180,6 @@ msize(void *v)
 
 //pad: was in chan.c
 
-/*s: function kstrcpy */
 /*
  * Rather than strncpy, which zeros the rest of the buffer, kstrcpy
  * truncates if necessary, always zero terminates, does not zero fill,
@@ -235,9 +211,7 @@ kstrcpy(char *s, char *t, int ns)
         ;
     strcpy(s+ns, "...");
 }
-/*e: function kstrcpy */
 
-/*s: function kstrdup */
 /*
  * Atomically replace *p with copy of s
  */
@@ -262,5 +236,3 @@ kstrdup(char **p, char *s)
     *p = t;
     free(prev);
 }
-/*e: function kstrdup */
-/*e: alloc.c */

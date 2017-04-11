@@ -1,4 +1,3 @@
-/*s: port/tan.c */
 /*
     floating point tangent
 
@@ -9,32 +8,15 @@
 #include <u.h>
 #include <libc.h>
 
-/*s: global p0 (port/tan.c) */
 static double p0     = -0.1306820264754825668269611177e+5;
-/*e: global p0 (port/tan.c) */
-/*s: global p1 (port/tan.c) */
 static double p1      = 0.1055970901714953193602353981e+4;
-/*e: global p1 (port/tan.c) */
-/*s: global p2 (port/tan.c) */
 static double p2     = -0.1550685653483266376941705728e+2;
-/*e: global p2 (port/tan.c) */
-/*s: global p3 (port/tan.c) */
 static double p3      = 0.3422554387241003435328470489e-1;
-/*e: global p3 (port/tan.c) */
-/*s: global p4 */
 static double p4      = 0.3386638642677172096076369e-4;
-/*e: global p4 */
-/*s: global q0 (port/tan.c) */
 static double q0     = -0.1663895238947119001851464661e+5;
-/*e: global q0 (port/tan.c) */
-/*s: global q1 (port/tan.c) */
 static double q1      = 0.4765751362916483698926655581e+4;
-/*e: global q1 (port/tan.c) */
-/*s: global q2 (port/tan.c) */
 static double q2     = -0.1555033164031709966900124574e+3;
-/*e: global q2 (port/tan.c) */
 
-/*s: function tan */
 double
 tan(double arg)
 {
@@ -83,5 +65,3 @@ tan(double arg)
         temp = -temp;
     return temp;
 }
-/*e: function tan */
-/*e: port/tan.c */

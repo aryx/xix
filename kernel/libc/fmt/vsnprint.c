@@ -1,8 +1,6 @@
-/*s: fmt/vsnprint.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function vsnprint */
 int
 vsnprint(char *buf, int len, char *fmt, va_list args)
 {
@@ -22,5 +20,3 @@ vsnprint(char *buf, int len, char *fmt, va_list args)
     *(char*)f.to = '\0';
     return (char*)f.to - buf;
 }
-/*e: function vsnprint */
-/*e: fmt/vsnprint.c */

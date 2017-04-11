@@ -1,8 +1,6 @@
-/*s: port/atol.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function atol */
 long
 atol(char *s)
 {
@@ -46,14 +44,10 @@ atol(char *s)
         n = -n;
     return n;
 }
-/*e: function atol */
 
-/*s: function atoi */
 int
 atoi(char *s)
 {
 
     return atol(s);
 }
-/*e: function atoi */
-/*e: port/atol.c */

@@ -1,4 +1,3 @@
-/*s: lib_graphics/libmemdraw/alphadraw.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
@@ -6,34 +5,19 @@
 
 #define DBG1 if(0) print
 
-/*s: function MUL */
 #define MUL(x, y, t)	(t = (x)*(y)+128, (t+(t>>8))>>8)
-/*e: function MUL */
-/*s: constant MASK13 */
 #define MASK13	0xFF00FF00
-/*e: constant MASK13 */
-/*s: constant MASK02 */
 #define MASK02	0x00FF00FF
-/*e: constant MASK02 */
-/*s: function MUL13 */
 #define MUL13(a, x, t)		(t = (a)*(((x)&MASK13)>>8)+128, ((t+((t>>8)&MASK02))>>8)&MASK02)
-/*e: function MUL13 */
-/*s: function MUL02 */
 #define MUL02(a, x, t)		(t = (a)*(((x)&MASK02)>>0)+128, ((t+((t>>8)&MASK02))>>8)&MASK02)
-/*e: function MUL02 */
-/*s: function MUL0123 */
 #define MUL0123(a, x, s, t)	((MUL13(a, x, s)<<8)|MUL02(a, x, t))
-/*e: function MUL0123 */
 
-/*s: global ones */
 static uchar ones = 0xff;
-/*e: global ones */
 
 /*
  * General alpha drawing case.  Can handle anything.
  */
 typedef struct	Buffer	Buffer;
-/*s: struct Buffer */
 struct Buffer {
     /* used by most routines */
     byte	*red;
@@ -46,7 +30,6 @@ struct Buffer {
 
     byte	*grey;
 
-    /*s: [[Buffer]] boolcalc fields */
     /* used by boolcalc* for mask data */
     uchar	*m;		/* ptr to mask data r.min byte; like p->bytermin */
     int		mskip;	/* no. of left bits to skip in *m */
@@ -54,22 +37,17 @@ struct Buffer {
     int		bmskip;	/* no. of left bits to skip in *bm */
     uchar	*em;		/* ptr to mask data img->r.max.x byte; like p->bytey0e */
     int		emskip;	/* no. of right bits to skip in *em */
-    /*e: [[Buffer]] boolcalc fields */
 };
-/*e: struct Buffer */
 
 typedef struct	ParamDraw	Param;
 typedef Buffer	Readfn(Param*, uchar*, int);
 typedef void	Writefn(Param*, uchar*, Buffer);
 typedef Buffer	Calcfn(Buffer, Buffer, Buffer, int, int, int);
 
-/*s: enum _anon_ (lib_graphics/libmemdraw/draw.c) */
 enum {
     MAXBCACHE = 16
 };
-/*e: enum _anon_ (lib_graphics/libmemdraw/draw.c) */
 
-/*s: struct ParamDraw */
 /* giant rathole to customize functions with */
 struct ParamDraw {
 
@@ -92,36 +70,24 @@ struct ParamDraw {
 
     int	dir; // -1 or 1
 
-    /*s: [[ParamDraw]] mask fields */
     bool	alphaonly;
     bool	convgrey;
     Readfn	*greymaskcall;	
-    /*e: [[ParamDraw]] mask fields */
-    /*s: [[ParamDraw]] conversion fields */
     Readfn	*convreadcall;
     Writefn	*convwritecall;
     int	convbufoff;
     Param	*convdpar;
     int	convdx;
-    /*x: [[ParamDraw]] conversion fields */
     uchar	*convbuf;
-    /*e: [[ParamDraw]] conversion fields */
-    /*s: [[ParamDraw]] replication fields */
     bool	replcache;	/* if set, cache buffers */
-    /*x: [[ParamDraw]] replication fields */
     Readfn	*replcall;
-    /*x: [[ParamDraw]] replication fields */
     Buffer	bcache[MAXBCACHE];
     ulong	bfilled;
-    /*e: [[ParamDraw]] replication fields */
 };
-/*e: struct ParamDraw */
 
 static Readfn	greymaskread, replread, readptr;
 
-/*s: global nullwrite */
 static Writefn	nullwrite;
-/*e: global nullwrite */
 
 static Calcfn	alphacalc0, alphacalc14, alphacalc2810, alphacalc3679, alphacalc5, alphacalc11, alphacalcS;
 static Calcfn	boolcalc14, boolcalc236789, boolcalc1011;
@@ -134,7 +100,6 @@ static Calcfn*	boolcopyfn(Memimage*, Memimage*);
 static Readfn*	convfn(Memimage*, Param*, Memimage*, Param*, int*);
 static Readfn*	ptrfn(Memimage*);
 
-/*s: global alphacalc */
 static Calcfn *alphacalc[Ncomp] = 
 {
     alphacalc0,         /* Clear */
@@ -150,9 +115,7 @@ static Calcfn *alphacalc[Ncomp] =
     alphacalc2810,      /* S */
     alphacalc11,        /* SoverD */ // the classic
 };
-/*e: global alphacalc */
 
-/*s: global boolcalc */
 static Calcfn *boolcalc[Ncomp] =
 {
     alphacalc0,		/* Clear */
@@ -168,29 +131,21 @@ static Calcfn *boolcalc[Ncomp] =
     boolcalc1011,		/* S */
     boolcalc1011,		/* SoverD */
 };
-/*e: global boolcalc */
 
 /*
  * Avoid standard Lock, QLock so that can be used in kernel.
  */
 typedef struct Dbuf Dbuf;
-/*s: struct Dbuf */
 struct Dbuf
 {
     Param spar, mpar, dpar;
     // array<byte> (length = Dbuf.n)
     byte *p;
     int n;
-    /*s: [[Dbuf]] other fields */
     bool inuse;
-    /*e: [[Dbuf]] other fields */
 };
-/*e: struct Dbuf */
-/*s: global dbuf */
 static Dbuf dbuf[10];
-/*e: global dbuf */
 
-/*s: function allocdbuf */
 static Dbuf*
 allocdbuf(void)
 {
@@ -204,9 +159,7 @@ allocdbuf(void)
     }
     return nil;
 }
-/*e: function allocdbuf */
 
-/*s: function getparam */
 static void
 getparam(Param *p, Memimage *img, Rectangle r, bool convgrey, bool needbuf, int *ndrawbuf)
 {
@@ -233,20 +186,16 @@ getparam(Param *p, Memimage *img, Rectangle r, bool convgrey, bool needbuf, int 
     p->bwidth   = sizeof(ulong) * img->width;
 
     nbuf = 1;
-    /*s: [[getparam()]] if small replicated rectangle */
     if((img->flags&Frepl) && Dy(img->r) <= MAXBCACHE && Dy(img->r) < Dy(r)){
         p->replcache = true;
         nbuf = Dy(img->r);
     }
-    /*e: [[getparam()]] if small replicated rectangle */
 
     p->bufdelta = 4 * p->dx;
     p->bufoff = *ndrawbuf;
     *ndrawbuf += p->bufdelta * nbuf;
 }
-/*e: function getparam */
 
-/*s: function clipy */
 static void
 clipy(Memimage *img, int *y)
 {
@@ -261,9 +210,7 @@ clipy(Memimage *img, int *y)
         *y = dy-1;
     assert(0 <= *y && *y < dy);
 }
-/*e: function clipy */
 
-/*s: function alphadraw */
 /*
  * For each scan line, we expand the pixels from source, mask, and destination
  * into byte-aligned red, green, blue, alpha, and grey channels.  If buffering
@@ -287,33 +234,24 @@ clipy(Memimage *img, int *y)
 int
 alphadraw(Memdrawparam *par)
 {
-    /*s: [[alphadraw()]] locals */
     Memimage *src, *mask, *dst;
     Rectangle r, sr, mr;
     int dx, dy;
     // enum<Drawop>
     int op;
-    /*x: [[alphadraw()]] locals */
     bool isgrey;
-    /*x: [[alphadraw()]] locals */
     Readfn *rdsrc, *rdmask, *rddst;
     Calcfn *calc;
     Writefn *wrdst;
-    /*x: [[alphadraw()]] locals */
     Buffer bsrc, bdst, bmask;
-    /*x: [[alphadraw()]] locals */
     int starty, endy;
     int dsty, srcy, masky;
     int dir;
     int y; // iteration variable, we iterate over lines
-    /*x: [[alphadraw()]] locals */
     bool needbuf;
-    /*x: [[alphadraw()]] locals */
     Dbuf *z;
-    /*x: [[alphadraw()]] locals */
     byte *drawbuf;
     int ndrawbuf;
-    /*e: [[alphadraw()]] locals */
 
     r = par->r;
     dx = Dx(r);
@@ -330,7 +268,6 @@ alphadraw(Memdrawparam *par)
     dir = 1;
 
     isgrey = dst->flags&Fgrey;
-    /*s: [[alphadraw()]] set needbuf and possibly adjust starty and endy */
     /*
      * Buffering when src and dst are the same bitmap is sufficient but not 
      * necessary.  There are stronger conditions we could use.  We could
@@ -344,24 +281,16 @@ alphadraw(Memdrawparam *par)
         starty = dy-1;
         endy = -1;
     }
-    /*e: [[alphadraw()]] set needbuf and possibly adjust starty and endy */
 
-    /*s: [[alphadraw()]] set Dbuf z part1 */
     z = allocdbuf();
-    /*s: [[alphadraw()]] sanity check z */
     if(z == nil)
         return 0;
-    /*e: [[alphadraw()]] sanity check z */
-    /*s: [[alphadraw()]] set z params part1 */
     ndrawbuf = 0;
     getparam(&z->spar, src, sr,  isgrey, needbuf, &ndrawbuf);
     getparam(&z->dpar, dst, r,   isgrey, needbuf, &ndrawbuf);
     getparam(&z->mpar, mask, mr, false,  needbuf, &ndrawbuf);
     z->spar.dir = z->mpar.dir = z->dpar.dir = dir;
-    /*e: [[alphadraw()]] set z params part1 */
-    /*e: [[alphadraw()]] set Dbuf z part1 */
 
-    /*s: [[alphadraw()]] if source has no alpha and simple bit mask */
     /*
      * If the mask is purely boolean, we can convert from src to dst format
      * when we read src, and then just copy it to dst where the mask tells us to.
@@ -387,14 +316,12 @@ alphadraw(Memdrawparam *par)
         calc = boolcopyfn(dst, mask);
         wrdst = nullwrite;
     }
-    /*e: [[alphadraw()]] if source has no alpha and simple bit mask */
     else{
         /* usual alphadraw parameter fetching */
         rdsrc = readfn(src);
         rddst = readfn(dst);
         wrdst = writefn(dst);
         calc = alphacalc[op];
-        /*s: [[alphadraw()]] set rdmask */
         if(mask->flags&Falpha){
             rdmask = readalphafn(mask);
             z->mpar.alphaonly = true;
@@ -408,7 +335,6 @@ alphadraw(Memdrawparam *par)
             z->mpar.convgrey = true;
             rdmask = greymaskread;
 
-            /*s: [[alphadraw()]] when mask and source have no alpha, possibly adapt calc */
             /*
              * Should really be above, but then boolcopyfns would have
              * to deal with bit alignment, and I haven't written that.
@@ -421,12 +347,9 @@ alphadraw(Memdrawparam *par)
                 calc = boolcalc[op];
             else if(op == SoverD && !(src->flags&Falpha))
                 calc = alphacalcS;
-            /*e: [[alphadraw()]] when mask and source have no alpha, possibly adapt calc */
         }
-        /*e: [[alphadraw()]] set rdmask */
     }
 
-    /*s: [[alphadraw()]] when small repl rectangle optimization */
     /*
      * If the image has a small enough repl rectangle,
      * we can just read each line once and cache them.
@@ -439,23 +362,16 @@ alphadraw(Memdrawparam *par)
         z->mpar.replcall = rdmask;
         rdmask = replread;
     }
-    /*e: [[alphadraw()]] when small repl rectangle optimization */
-    /*s: [[alphadraw()]] set Dbuf z part2 */
-    /*s: [[alphadraw()]] grow drawbuf if needed */
     if(z->n < ndrawbuf){
         free(z->p);
         z->p = mallocz(ndrawbuf, 0);
-        /*s: [[alphadraw()]] sanity check [[z->p]] */
         if(z->p == nil){
             z->inuse = false;
             return 0;
         }
-        /*e: [[alphadraw()]] sanity check [[z->p]] */
         z->n = ndrawbuf;
     }
-    /*e: [[alphadraw()]] grow drawbuf if needed */
     drawbuf = z->p;
-    /*s: [[alphadraw()]] set z params part2 */
     /*
      * Before we were saving only offsets from drawbuf in the parameter
      * structures; now that drawbuf has been grown to accomodate us,
@@ -464,12 +380,8 @@ alphadraw(Memdrawparam *par)
     z->spar.bufbase = drawbuf + z->spar.bufoff;
     z->mpar.bufbase = drawbuf + z->mpar.bufoff;
     z->dpar.bufbase = drawbuf + z->dpar.bufoff;
-    /*x: [[alphadraw()]] set z params part2 */
     z->spar.convbuf = drawbuf + z->spar.convbufoff;
-    /*e: [[alphadraw()]] set z params part2 */
-    /*e: [[alphadraw()]] set Dbuf z part2 */
 
-    /*s: [[alphadraw()]] setting srcy, masky, and dsty, and clipping part1 */
     /*
      * srcy, masky, and dsty are offsets from the top of their
      * respective Rectangles.  they need to be contained within
@@ -478,18 +390,15 @@ alphadraw(Memdrawparam *par)
     srcy  = (starty + sr.min.y - src->r.min.y)  % Dy(src->r);
     masky = (starty + mr.min.y - mask->r.min.y) % Dy(mask->r);
     dsty  =  starty + r.min.y  - dst->r.min.y;
-    /*e: [[alphadraw()]] setting srcy, masky, and dsty, and clipping part1 */
     assert(0 <= srcy  && srcy  < Dy(src->r));
     assert(0 <= masky && masky < Dy(mask->r));
     assert(0 <= dsty  && dsty  < Dy(dst->r));
 
     // the big loop!
     for(y=starty; y!=endy; y+=dir, srcy+=dir, masky+=dir, dsty+=dir){
-        /*s: [[alphadraw()]] clipping part2 */
         clipy(src, &srcy);
         clipy(dst, &dsty);
         clipy(mask, &masky);
-        /*e: [[alphadraw()]] clipping part2 */
 
         bsrc  = rdsrc (&z->spar, z->spar.bufbase, srcy);
         bmask = rdmask(&z->mpar, z->mpar.bufbase, masky);
@@ -499,14 +408,10 @@ alphadraw(Memdrawparam *par)
         bdst = calc(bdst, bsrc, bmask, dx, isgrey, op);
         wrdst(&z->dpar, z->dpar.bytermin + dsty * z->dpar.bwidth, bdst);
     }
-    /*s: [[alphadraw()]] free z */
     z->inuse = false;
-    /*e: [[alphadraw()]] free z */
     return 1;
 }
-/*e: function alphadraw */
 
-/*s: function alphacalc0 */
 static Buffer
 alphacalc0(Buffer bdst, Buffer b1, Buffer b2, int dx, int grey, int op)
 {
@@ -518,9 +423,7 @@ alphacalc0(Buffer bdst, Buffer b1, Buffer b2, int dx, int grey, int op)
     memset(bdst.rgba, 0, dx * bdst.delta);
     return bdst;
 }
-/*e: function alphacalc0 */
 
-/*s: function alphacalc14 */
 static Buffer
 alphacalc14(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
 {
@@ -572,9 +475,7 @@ alphacalc14(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
     }
     return obdst;
 }
-/*e: function alphacalc14 */
 
-/*s: function alphacalc2810 */
 static Buffer
 alphacalc2810(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
 {
@@ -628,9 +529,7 @@ alphacalc2810(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
     }
     return obdst;
 }
-/*e: function alphacalc2810 */
 
-/*s: function alphacalc3679 */
 static Buffer
 alphacalc3679(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
 {
@@ -692,9 +591,7 @@ alphacalc3679(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
     }
     return obdst;
 }
-/*e: function alphacalc3679 */
 
-/*s: function alphacalc5 */
 static Buffer
 alphacalc5(Buffer bdst, Buffer b1, Buffer b2, int dx, int grey, int op)
 {
@@ -706,9 +603,7 @@ alphacalc5(Buffer bdst, Buffer b1, Buffer b2, int dx, int grey, int op)
 
     return bdst;
 }
-/*e: function alphacalc5 */
 
-/*s: function alphacalc11 */
 static Buffer
 alphacalc11(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
 {
@@ -724,9 +619,7 @@ alphacalc11(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
 
     USED(op);
     obdst = bdst;
-    /*s: [[alphacalc11()]] alpha handling part1 */
     sadelta = (bsrc.alpha == &ones) ? 0 : bsrc.delta;
-    /*e: [[alphacalc11()]] alpha handling part1 */
     q = (bsrc.delta == 4) && (bdst.delta == 4);
 
     // pixel iteration of the line
@@ -735,15 +628,12 @@ alphacalc11(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
         ma = *bmask.alpha;
         fd = 255 - MUL(sa, ma, t);
 
-        /*s: [[alphacalc11()]] if isgrey */
         if(grey){
             *bdst.grey = MUL(ma, *bsrc.grey, s) + MUL(fd, *bdst.grey, t);
             bsrc.grey += bsrc.delta;
             bdst.grey += bdst.delta;
         }
-        /*e: [[alphacalc11()]] if isgrey */
         else{
-            /*s: [[alphacalc11()]] special case for 32bits source and dest */
             if(q){
                 *bdst.rgba = MUL0123(ma, *bsrc.rgba, s, t)+MUL0123(fd, *bdst.rgba, u, v);
                 bsrc.rgba++;
@@ -752,7 +642,6 @@ alphacalc11(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
                 bmask.alpha += bmask.delta;
                 continue;
             }
-            /*e: [[alphacalc11()]] special case for 32bits source and dest */
             // else
 
             *bdst.red = MUL(ma, *bsrc.red, s) + MUL(fd, *bdst.red, t);
@@ -768,20 +657,16 @@ alphacalc11(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, bool grey, int op)
             bdst.grn += bdst.delta;
         }
 
-        /*s: [[alphacalc11()]] alpha handling part2 */
         if(bdst.alpha != &ones){
             *bdst.alpha = MUL(ma, sa, s) + MUL(fd, *bdst.alpha, t);
             bdst.alpha += bdst.delta;
         }
         bmask.alpha += bmask.delta;
         bsrc.alpha += sadelta;
-        /*e: [[alphacalc11()]] alpha handling part2 */
     }
     return obdst;
 }
-/*e: function alphacalc11 */
 
-/*s: function alphacalcS */
 /* source alpha 1 */
 static Buffer
 alphacalcS(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
@@ -821,9 +706,7 @@ alphacalcS(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
     }
     return obdst;
 }
-/*e: function alphacalcS */
 
-/*s: function boolcalc14 */
 static Buffer
 boolcalc14(Buffer bdst, Buffer b1, Buffer bmask, int dx, int grey, int op)
 {
@@ -858,9 +741,7 @@ boolcalc14(Buffer bdst, Buffer b1, Buffer bmask, int dx, int grey, int op)
     }
     return obdst;
 }
-/*e: function boolcalc14 */
 
-/*s: function boolcalc236789 */
 static Buffer
 boolcalc236789(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
 {
@@ -915,9 +796,7 @@ boolcalc236789(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
     }
     return obdst;
 }
-/*e: function boolcalc236789 */
 
-/*s: function boolcalc1011 */
 static Buffer
 boolcalc1011(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
 {
@@ -963,8 +842,6 @@ boolcalc1011(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int grey, int op)
     }
     return obdst;
 }
-/*e: function boolcalc1011 */
-/*s: function replread */
 /*
  * Replicated cached scan line read.  Call the function listed in the Param,
  * but cache the result so that for replicated images we only do the work once.
@@ -982,9 +859,7 @@ replread(Param *p, uchar *s, int y)
     }
     return *b;
 }
-/*e: function replread */
 
-/*s: function greymaskread */
 /*
  * Alpha reading function that simply relabels the grey pointer.
  */
@@ -997,17 +872,13 @@ greymaskread(Param *p, uchar *buf, int y)
     b.alpha = b.grey;
     return b;
 }
-/*e: function greymaskread */
 
-/*s: global replbit */
 /*
  * Conversion tables.
  */
 uchar replbit[1+8][256];		/* replbit[x][y] is the replication of the x-bit quantity y to 8-bit depth */
-/*e: global replbit */
 
 
-/*s: function readnbit */
 static Buffer
 readnbit(Param *p, uchar *buf, int y)
 {
@@ -1099,9 +970,7 @@ readnbit(Param *p, uchar *buf, int y)
 
     return b;
 }
-/*e: function readnbit */
 
-/*s: function writenbit */
 static void
 writenbit(Param *p, uchar *w, Buffer src)
 {
@@ -1142,9 +1011,7 @@ writenbit(Param *p, uchar *w, Buffer src)
     DBG1("\n");
     return;
 }
-/*e: function writenbit */
 
-/*s: function readcmap */
 static Buffer
 readcmap(Param *p, uchar *buf, int y)
 {
@@ -1211,9 +1078,7 @@ readcmap(Param *p, uchar *buf, int y)
     }
     return b;
 }
-/*e: function readcmap */
 
-/*s: function writecmap */
 static void
 writecmap(Param *p, uchar *w, Buffer src)
 {
@@ -1231,9 +1096,7 @@ writecmap(Param *p, uchar *w, Buffer src)
     for(i=0; i<dx; i++, red+=delta, grn+=delta, blu+=delta)
         *w++ = cmap[(*red>>4)*256+(*grn>>4)*16+(*blu>>4)];
 }
-/*e: function writecmap */
 
-/*s: function readbyte */
 static Buffer
 readbyte(Param *p, byte *buf, int y)
 {
@@ -1245,12 +1108,10 @@ readbyte(Param *p, byte *buf, int y)
 
     bool isgrey, convgrey;
     bool alphaonly, copyalpha;
-    /*s: [[readbyte]] other locals */
     int i;
     byte *rrepl, *grepl, *brepl, *arepl, *krepl;
     byte ured, ugrn, ublu;
     ulong u;
-    /*e: [[readbyte]] other locals */
 
     img = p->img;
     begin = p->bytey0s  + y*p->bwidth;
@@ -1266,7 +1127,6 @@ readbyte(Param *p, byte *buf, int y)
     copyalpha = img->flags&Falpha;
     alphaonly = p->alphaonly;
 
-    /*s: [[readbyte()]] simple case when no repl, no grey, depth 8 */
     /* if we can, avoid processing everything */
     if(!(img->flags&Frepl) && !convgrey && (img->flags&Fbytes)){
         memset(&b, 0, sizeof(Buffer));
@@ -1280,11 +1140,9 @@ readbyte(Param *p, byte *buf, int y)
             b.alpha = r + img->shift[CAlpha]/8;
         else
             b.alpha = &ones;
-        /*s: [[readbyte()]] in simple case, if isgrey */
         if(isgrey){
             b.grey = r + img->shift[CGrey]/8;
             b.red = b.grn = b.blu = b.grey;
-        /*e: [[readbyte()]] in simple case, if isgrey */
         }else{
             b.red = r + img->shift[CRed]/8;
             b.grn = r + img->shift[CGreen]/8;
@@ -1293,9 +1151,7 @@ readbyte(Param *p, byte *buf, int y)
         b.delta = nb;
         return b;
     }
-    /*e: [[readbyte()]] simple case when no repl, no grey, depth 8 */
     // else
-    /*s: [[readbyte()]] more complex cases, possible repl, grey, and small depth */
     DBG1("2\n");
     rrepl = replbit[img->nbits[CRed]];
     grepl = replbit[img->nbits[CGreen]];
@@ -1352,11 +1208,8 @@ readbyte(Param *p, byte *buf, int y)
         b.delta = copyalpha+3;
     }
     return b;
-    /*e: [[readbyte()]] more complex cases, possible repl, grey, and small depth */
 }
-/*e: function readbyte */
 
-/*s: function writebyte */
 static void
 writebyte(Param *p, byte *w, Buffer src)
 {
@@ -1388,24 +1241,20 @@ writebyte(Param *p, byte *w, Buffer src)
     isalpha = img->flags&Falpha;
     isgrey = img->flags&Fgrey;
 
-    /*s: [[writebyte()]] alpha handling part1 */
     adelta = src.delta;
     if(isalpha && (alpha == nil || alpha == &ones)){
         ff = 0xFF;
         alpha = &ff;
         adelta = 0;
     }
-    /*e: [[writebyte()]] alpha handling part1 */
 
     for(i=0; i<dx; i++){
         u = w[0] | (w[1]<<8) | (w[2]<<16) | (w[3]<<24);
         u &= mask;
-        /*s: [[writebyte()]] if isgrey */
         if(isgrey){
             u |= ((*grey >> (8-img->nbits[CGrey])) & img->mask[CGrey]) << img->shift[CGrey];
             grey += delta;
         }
-        /*e: [[writebyte()]] if isgrey */
         else{
             u |= ((*red >> (8-img->nbits[CRed])) & img->mask[CRed]) << img->shift[CRed];
             u |= ((*grn >> (8-img->nbits[CGreen])) & img->mask[CGreen]) << img->shift[CGreen];
@@ -1414,12 +1263,10 @@ writebyte(Param *p, byte *w, Buffer src)
             grn += delta;
             blu += delta;
         }
-        /*s: [[writebyte()]] alpha handling part2 */
         if(isalpha){
             u |= ((*alpha >> (8-img->nbits[CAlpha])) & img->mask[CAlpha]) << img->shift[CAlpha];
             alpha += adelta;
         }
-        /*e: [[writebyte()]] alpha handling part2 */
 
         w[0] = u;
         w[1] = u>>8;
@@ -1428,50 +1275,34 @@ writebyte(Param *p, byte *w, Buffer src)
         w += nb;
     }
 }
-/*e: function writebyte */
 
-/*s: function readfn */
 static Readfn*
 readfn(Memimage *img)
 {
-    /*s: [[readfn()]] if depth less than 8 */
     if(img->depth < 8)
         return readnbit;
-    /*e: [[readfn()]] if depth less than 8 */
-    /*s: [[readfn()]] if cmap */
     if(img->nbits[CMap] == 8)
         return readcmap;
-    /*e: [[readfn()]] if cmap */
     return readbyte;
 }
-/*e: function readfn */
 
-/*s: function readalphafn */
 static Readfn*
 readalphafn(Memimage *m)
 {
     USED(m);
     return readbyte;
 }
-/*e: function readalphafn */
 
-/*s: function writefn */
 static Writefn*
 writefn(Memimage *img)
 {
-    /*s: [[writefn()]] if depth less than 8 */
     if(img->depth < 8)
         return writenbit;
-    /*e: [[writefn()]] if depth less than 8 */
-    /*s: [[writefn()]] if cmap */
     if(img->chan == CMAP8)
         return writecmap;
-    /*e: [[writefn()]] if cmap */
     return writebyte;
 }
-/*e: function writefn */
 
-/*s: function nullwrite */
 static void
 nullwrite(Param *p, uchar *s, Buffer b)
 {
@@ -1479,9 +1310,7 @@ nullwrite(Param *p, uchar *s, Buffer b)
     USED(s);
     USED(b);
 }
-/*e: function nullwrite */
 
-/*s: function readptr */
 static Buffer
 readptr(Param *p, uchar *s, int y)
 {
@@ -1496,9 +1325,7 @@ readptr(Param *p, uchar *s, int y)
     b.delta = p->img->depth/8;
     return b;
 }
-/*e: function readptr */
 
-/*s: function boolmemmove */
 static Buffer
 boolmemmove(Buffer bdst, Buffer bsrc, Buffer b1, int dx, int i, int o)
 {
@@ -1509,9 +1336,7 @@ boolmemmove(Buffer bdst, Buffer bsrc, Buffer b1, int dx, int i, int o)
     memmove(bdst.red, bsrc.red, dx*bdst.delta);
     return bdst;
 }
-/*e: function boolmemmove */
 
-/*s: function boolcopy8 */
 static Buffer
 boolcopy8(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
 {
@@ -1528,9 +1353,7 @@ boolcopy8(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
             *w = *r;
     return bdst;	/* not used */
 }
-/*e: function boolcopy8 */
 
-/*s: function boolcopy16 */
 static Buffer
 boolcopy16(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
 {
@@ -1548,9 +1371,7 @@ boolcopy16(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
             *w = *r;
     return bdst;	/* not used */
 }
-/*e: function boolcopy16 */
 
-/*s: function boolcopy24 */
 static Buffer
 boolcopy24(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
 {
@@ -1575,9 +1396,7 @@ boolcopy24(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
     }
     return bdst;	/* not used */
 }
-/*e: function boolcopy24 */
 
-/*s: function boolcopy32 */
 static Buffer
 boolcopy32(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
 {
@@ -1595,9 +1414,7 @@ boolcopy32(Buffer bdst, Buffer bsrc, Buffer bmask, int dx, int i, int o)
             *w = *r;
     return bdst;	/* not used */
 }
-/*e: function boolcopy32 */
 
-/*s: function genconv */
 static Buffer
 genconv(Param *p, uchar *buf, int y)
 {
@@ -1627,9 +1444,7 @@ genconv(Param *p, uchar *buf, int y)
     
     return b;
 }
-/*e: function genconv */
 
-/*s: function convfn */
 static Readfn*
 convfn(Memimage *dst, Param *dpar, Memimage *src, Param *spar, int *ndrawbuf)
 {
@@ -1660,12 +1475,10 @@ convfn(Memimage *dst, Param *dpar, Memimage *src, Param *spar, int *ndrawbuf)
     DBG1("genconv...");
     return genconv;
 }
-/*e: function convfn */
 
 // in resolution.c now
 extern ulong pixelbits(Memimage *i, Point pt);
 
-/*s: function boolcopyfn */
 static Calcfn*
 boolcopyfn(Memimage *img, Memimage *mask)
 {
@@ -1686,7 +1499,5 @@ boolcopyfn(Memimage *img, Memimage *mask)
     }
     return nil;
 }
-/*e: function boolcopyfn */
 
 
-/*e: lib_graphics/libmemdraw/alphadraw.c */

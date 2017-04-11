@@ -1,20 +1,12 @@
-/*s: port/rune.c */
 #include    <u.h>
 #include    <libc.h>
 
-/*s: macro Bit */
 #define Bit(i) (7-(i))
-/*e: macro Bit */
-/*s: macro T */
 /* N 0's preceded by i 1's, T(Bit(2)) is 1100 0000 */
 #define T(i) (((1 << (Bit(i)+1))-1) ^ 0xFF)
-/*e: macro T */
-/*s: macro RuneX */
 /* 0000 0000 0000 0111 1111 1111 */
 #define RuneX(i) ((1 << (Bit(i) + ((i)-1)*Bitx))-1)
-/*e: macro RuneX */
 
-/*s: enum _anon_ (port/rune.c) */
 enum
 {
     Bitx    = Bit(1),
@@ -30,9 +22,7 @@ enum
 
     Bad = Runeerror,
 };
-/*e: enum _anon_ (port/rune.c) */
 
-/*s: function chartorune */
 int
 chartorune(Rune *rune, char *str)
 {
@@ -81,9 +71,7 @@ bad:
     *rune = Bad;
     return 1;
 }
-/*e: function chartorune */
 
-/*s: function runetochar */
 int
 runetochar(char *str, Rune *rune)
 {
@@ -127,9 +115,7 @@ runetochar(char *str, Rune *rune)
     }
     return UTFmax;
 }
-/*e: function runetochar */
 
-/*s: function runelen */
 int
 runelen(long c)
 {
@@ -139,9 +125,7 @@ runelen(long c)
     rune = c;
     return runetochar(str, &rune);
 }
-/*e: function runelen */
 
-/*s: function runenlen */
 int
 runenlen(Rune *r, int nrune)
 {
@@ -163,9 +147,7 @@ runenlen(Rune *r, int nrune)
     }
     return nb;
 }
-/*e: function runenlen */
 
-/*s: function fullrune */
 int
 fullrune(char *str, int n)
 {
@@ -182,5 +164,3 @@ fullrune(char *str, int n)
             return n >= i - 1;
     return n >= UTFmax;
 }
-/*e: function fullrune */
-/*e: port/rune.c */

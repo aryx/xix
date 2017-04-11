@@ -1,11 +1,9 @@
-/*s: lib_graphics/libmemlayer/lsetrefresh.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
 #include <memdraw.h>
 #include <memlayer.h>
 
-/*s: function memlsetrefresh */
 int
 memlsetrefresh(Memimage *i, Refreshfn fn, void *ptr)
 {
@@ -35,5 +33,3 @@ memlsetrefresh(Memimage *i, Refreshfn fn, void *ptr)
     l->refreshptr = nil;
     return 1;
 }
-/*e: function memlsetrefresh */
-/*e: lib_graphics/libmemlayer/lsetrefresh.c */

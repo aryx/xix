@@ -1,4 +1,3 @@
-/*s: lib_graphics/libmemdraw/fillpoly.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
@@ -7,7 +6,6 @@
 
 typedef struct Seg	Seg;
 
-/*s: struct Seg */
 struct Seg
 {
     Point	p0;
@@ -15,17 +13,13 @@ struct Seg
 
     long	d; // direction? 1 or -1?
 
-    /*s: [[Seg]] other fields */
     long	num;
     long	den;
     long	dz;
     long	dzrem;
-    /*x: [[Seg]] other fields */
     long	z;
     long	zerr;
-    /*e: [[Seg]] other fields */
 };
-/*e: struct Seg */
 
 static	void	zsort(Seg **seg, Seg **ep);
 static	int	ycompare(void*, void*);
@@ -34,7 +28,6 @@ static	int	zcompare(void*, void*);
 static	void	xscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, Point sp, int, int, int, int);
 static	void	yscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, Point sp, int, int);
 
-/*s: function fillline */
 static void
 fillline(Memimage *dst, int xleft, int xright, int y, Memimage *src, Point p, int op)
 {
@@ -50,9 +43,7 @@ fillline(Memimage *dst, int xleft, int xright, int y, Memimage *src, Point p, in
 
     memdraw(dst, r, src, p, memopaque, p, op);
 }
-/*e: function fillline */
 
-/*s: function fillpoint */
 static void
 fillpoint(Memimage *dst, int x, int y, Memimage *src, Point p, int op)
 {
@@ -66,17 +57,13 @@ fillpoint(Memimage *dst, int x, int y, Memimage *src, Point p, int op)
     p.y += y;
     memdraw(dst, r, src, p, memopaque, p, op);
 }
-/*e: function fillpoint */
 
-/*s: function memfillpoly */
 void
 memfillpoly(Memimage *dst, Point *vert, int nvert, int w, Memimage *src, Point sp, int op)
 {
     _memfillpolysc(dst, vert, nvert, w, src, sp, false, 0, false, op);
 }
-/*e: function memfillpoly */
 
-/*s: function _memfillpolysc */
 void
 _memfillpolysc(Memimage *dst, Point *vert, int nvert, int w, Memimage *src, Point sp, bool detail, int fixshift, bool clipped, int op)
 {
@@ -87,63 +74,47 @@ _memfillpolysc(Memimage *dst, Point *vert, int nvert, int w, Memimage *src, Poin
     Point p0;
     int i;
 
-    /*s: [[_memfillpolysc()]] sanity check nvert */
     if(nvert == 0)
         return;
-    /*e: [[_memfillpolysc()]] sanity check nvert */
 
     segtab = malloc((nvert+1)*sizeof(Seg));
-    /*s: [[_memfillpolysc()]] sanity check segtab */
     if(segtab == nil) {
         free(seg);
         return;
     }
-    /*e: [[_memfillpolysc()]] sanity check segtab */
     seg = malloc((nvert+2)*sizeof(Seg*));
-    /*s: [[_memfillpolysc()]] sanity check seg */
     if(seg == nil)
         return;
-    /*e: [[_memfillpolysc()]] sanity check seg */
 
     sp.x = (sp.x - vert[0].x) >> fixshift;
     sp.y = (sp.y - vert[0].y) >> fixshift;
 
     p0 = vert[nvert-1]; // start from the end
-    /*s: [[_memfillpolysc()]] adjust p0 if no fixshift */
     if(!fixshift) {
         p0.x <<= 1;
         p0.y <<= 1;
     }
-    /*e: [[_memfillpolysc()]] adjust p0 if no fixshift */
     for(i = 0; i < nvert; i++) {
         segtab[i].p0 = p0;
         p0 = vert[i];
-        /*s: [[_memfillpolysc()]] adjust p0 if no fixshift */
         if(!fixshift) {
             p0.x <<= 1;
             p0.y <<= 1;
         }
-        /*e: [[_memfillpolysc()]] adjust p0 if no fixshift */
         segtab[i].p1 = p0;
         segtab[i].d = 1;
     }
-    /*s: [[_memfillpolysc()]] adjust fixshift if no fixshift */
     if(!fixshift)
         fixshift = 1;
-    /*e: [[_memfillpolysc()]] adjust fixshift if no fixshift */
 
     xscan(dst, seg, segtab, nvert, w, src, sp, detail, fixshift, clipped, op);
-    /*s: [[_memfillpolysc()]] if detail */
     if(detail)
         yscan(dst, seg, segtab, nvert, w, src, sp, fixshift, op);
-    /*e: [[_memfillpolysc()]] if detail */
 
     free(seg);
     free(segtab);
 }
-/*e: function _memfillpolysc */
 
-/*s: function mod */
 static long
 mod(long x, long y)
 {
@@ -154,9 +125,7 @@ mod(long x, long y)
         return z;
     return z + y;
 }
-/*e: function mod */
 
-/*s: function sdiv */
 static long
 sdiv(long x, long y)
 {
@@ -165,9 +134,7 @@ sdiv(long x, long y)
 
     return (x+((y>>30)|1))/y-1;
 }
-/*e: function sdiv */
 
-/*s: function smuldivmod */
 static long
 smuldivmod(long x, long y, long z, long *mod)
 {
@@ -186,9 +153,7 @@ smuldivmod(long x, long y, long z, long *mod)
         return vx/z;
     return -((-vx)/z);
 }
-/*e: function smuldivmod */
 
-/*s: function xscan */
 static void
 xscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, Point sp, bool detail, int fixshift, bool clipped, int op)
 {
@@ -318,14 +283,12 @@ xscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, 
             if(ix2 > maxx)
                 ix2 = maxx;
 
-            /*s: [[xscan()]] if detail */
             if(ix == ix2 && detail) {
                 if(xerr*p[0]->den + p[0]->zerr*xden > p[0]->den*xden)
                     x++;
                 ix = (x + x2) >> (fixshift+1);
                 ix2 = ix+1;
             }
-            /*e: [[xscan()]] if detail */
 
             // the call
             (*fill)(dst, ix, ix2, iy, src, sp, op);
@@ -334,9 +297,7 @@ xscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, 
         iy++;
     }
 }
-/*e: function xscan */
 
-/*s: function yscan */
 static void
 yscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, Point sp, int fixshift, int op)
 {
@@ -465,9 +426,7 @@ yscan(Memimage *dst, Seg **seg, Seg *segtab, int nseg, int wind, Memimage *src, 
         ix++;
     }
 }
-/*e: function yscan */
 
-/*s: function zsort */
 static void
 zsort(Seg **seg, Seg **ep)
 {
@@ -499,9 +458,7 @@ zsort(Seg **seg, Seg **ep)
         }
     }
 }
-/*e: function zsort */
 
-/*s: function ycompare */
 static int
 ycompare(void *a, void *b)
 {
@@ -517,9 +474,7 @@ ycompare(void *a, void *b)
         return 0;
     return 1;
 }
-/*e: function ycompare */
 
-/*s: function xcompare */
 static int
 xcompare(void *a, void *b)
 {
@@ -537,9 +492,7 @@ xcompare(void *a, void *b)
         return 0;
     return 1;
 }
-/*e: function xcompare */
 
-/*s: function zcompare */
 static int
 zcompare(void *a, void *b)
 {
@@ -555,5 +508,3 @@ zcompare(void *a, void *b)
         return 0;
     return 1;
 }
-/*e: function zcompare */
-/*e: lib_graphics/libmemdraw/fillpoly.c */

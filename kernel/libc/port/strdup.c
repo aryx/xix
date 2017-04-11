@@ -1,8 +1,6 @@
-/*s: port/strdup.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function strdup */
 char*
 strdup(char *s) 
 {  
@@ -15,5 +13,3 @@ strdup(char *s)
 
     return strcpy(ns, s);
 }
-/*e: function strdup */
-/*e: port/strdup.c */

@@ -1,18 +1,10 @@
-/*s: port/nan.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: constant NANEXP */
 #define NANEXP  (2047<<20)
-/*e: constant NANEXP */
-/*s: constant NANMASK */
 #define NANMASK (2047<<20)
-/*e: constant NANMASK */
-/*s: constant NANSIGN */
 #define NANSIGN (1<<31)
-/*e: constant NANSIGN */
 
-/*s: function NaN */
 double
 NaN(void)
 {
@@ -22,9 +14,7 @@ NaN(void)
     a.lo = 1;
     return a.x;
 }
-/*e: function NaN */
 
-/*s: function isNaN */
 int
 isNaN(double d)
 {
@@ -35,9 +25,7 @@ isNaN(double d)
         return 0;
     return !isInf(d, 0);
 }
-/*e: function isNaN */
 
-/*s: function Inf */
 double
 Inf(int sign)
 {
@@ -49,9 +37,7 @@ Inf(int sign)
         a.hi |= NANSIGN;
     return a.x;
 }
-/*e: function Inf */
 
-/*s: function isInf */
 int
 isInf(double d, int sign)
 {
@@ -66,5 +52,3 @@ isInf(double d, int sign)
         return sign <= 0;
     return 0;
 }
-/*e: function isInf */
-/*e: port/nan.c */

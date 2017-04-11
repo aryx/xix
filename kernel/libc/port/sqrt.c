@@ -1,4 +1,3 @@
-/*s: port/sqrt.c */
 /*
     sqrt returns the square root of its floating
     point argument. Newton's method.
@@ -9,7 +8,6 @@
 #include <u.h>
 #include <libc.h>
 
-/*s: function sqrt */
 double
 sqrt(double arg)
 {
@@ -54,5 +52,3 @@ sqrt(double arg)
         temp = 0.5*(temp + arg/temp);
     return temp;
 }
-/*e: function sqrt */
-/*e: port/sqrt.c */

@@ -1,4 +1,3 @@
-/*s: lib_graphics/libmemdraw/defont.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
@@ -6,7 +5,6 @@
 #include <font.h>
 #include <memdraw.h>
 
-/*s: function getmemdefont */
 Memsubfont*
 getmemdefont(void)
 {
@@ -70,5 +68,3 @@ getmemdefont(void)
     }
     return f;
 }
-/*e: function getmemdefont */
-/*e: lib_graphics/libmemdraw/defont.c */

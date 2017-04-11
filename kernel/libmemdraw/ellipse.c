@@ -1,4 +1,3 @@
-/*s: lib_graphics/libmemdraw/ellipse.c */
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
@@ -24,7 +23,6 @@ static	void	bellipse(int, State*, Param*);
 static	void	erect(int, int, int, int, Param*);
 static	void	eline(int, int, int, int, Param*);
 
-/*s: struct ParamEllipse */
 struct ParamEllipse {
     Memimage	*dst;
     Memimage	*src;
@@ -34,9 +32,7 @@ struct ParamEllipse {
     Memimage	*disc;
     int			op;
 };
-/*e: struct ParamEllipse */
 
-/*s: struct State */
 /*
  * denote residual error by e(x,y) = b^2*x^2 + a^2*y^2 - a^2*b^2
  * e(x,y) = 0 on ellipse, e(x,y) < 0 inside, e(x,y) > 0 outside
@@ -56,9 +52,7 @@ struct State {
     vlong	d2xe;
     vlong	d2ye;
 };
-/*e: struct State */
 
-/*s: function newstate */
 static
 State*
 newstate(State *s, int a, int b)
@@ -78,9 +72,7 @@ newstate(State *s, int a, int b)
     s->d2ye = s->a2<<1;
     return s;
 }
-/*e: function newstate */
 
-/*s: function step */
 /*
  * return x coord of rightmost pixel on next scan line
  */
@@ -110,9 +102,7 @@ step(State *s)
     }
     return s->x;	  
 }
-/*e: function step */
 
-/*s: function memellipse */
 void
 memellipse(Memimage *dst, Point c, int a, int b, int t, Memimage *src, Point sp, int op)
 {
@@ -172,13 +162,9 @@ memellipse(Memimage *dst, Point c, int a, int b, int t, Memimage *src, Point sp,
         inx = outx + 1;
     }
 }
-/*e: function memellipse */
 
-/*s: global p00 (lib_graphics/libmemdraw/ellipse.c) */
 static Point p00 = {0, 0};
-/*e: global p00 (lib_graphics/libmemdraw/ellipse.c) */
 
-/*s: function bellipse */
 /*
  * a brushed ellipse
  */
@@ -211,9 +197,7 @@ bellipse(int y, State *s, Param *p)
         oy = y;
     } while(oy > 0);
 }
-/*e: function bellipse */
 
-/*s: function erect */
 /*
  * a rectangle with closed (not half-open) coordinates expressed
  * relative to the center of the ellipse
@@ -228,9 +212,7 @@ erect(int x0, int y0, int x1, int y1, Param *p)
     r = Rect(p->c.x+x0, p->c.y+y0, p->c.x+x1+1, p->c.y+y1+1);
     memdraw(p->dst, r, p->src, addpt(p->sp, r.min), memopaque, p00, p->op);
 }
-/*e: function erect */
 
-/*s: function epoint */
 /*
  * a brushed point similarly specified
  */
@@ -246,9 +228,7 @@ epoint(int x, int y, Param *p)
     r = Rpt(addpt(p0, p->disc->r.min), addpt(p0, p->disc->r.max));
     memdraw(p->dst, r, p->src, addpt(p->sp, r.min), p->disc, p->disc->r.min, p->op);
 }
-/*e: function epoint */
 
-/*s: function eline */
 /* 
  * a brushed horizontal or vertical line similarly specified
  */
@@ -265,5 +245,3 @@ eline(int x0, int y0, int x1, int y1, Param *p)
     if(x1-x0 || y1-y0)
         epoint(x1, y1, p);
 }
-/*e: function eline */
-/*e: lib_graphics/libmemdraw/ellipse.c */

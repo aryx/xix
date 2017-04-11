@@ -15,14 +15,11 @@ dmaaddr(void *va)
 /*
  * Mailbox interface with videocore gpu
  */
-/*s: constant MAILBOX(arm) */
 #define MAILBOX     (VIRTIO+0xB880)
-/*e: constant MAILBOX(arm) */
 
 typedef struct Fbinfo Fbinfo;
 typedef struct Prophdr Prophdr;
 
-/*s: enum _anon_ (arch/arm/vcore.c)(arm) */
 enum {
     Read        = 0x00>>2,
     Write       = 0x00>>2,
@@ -35,24 +32,18 @@ enum {
 
     NRegs       = 0x20>>2,
 };
-/*e: enum _anon_ (arch/arm/vcore.c)(arm) */
-/*s: enum _anon_ (arch/arm/vcore.c)2(arm) */
 enum {
     ChanFb      = 1,
     ChanProps   = 8,
     ChanMask    = 0xF,
 };
-/*e: enum _anon_ (arch/arm/vcore.c)2(arm) */
 
-/*s: enum _anon_ (arch/arm/vcore.c)3(arm) */
 enum {
     Req         = 0x0,
     RspOk       = 0x80000000,
     TagResp     = 1<<31,
 };
-/*e: enum _anon_ (arch/arm/vcore.c)3(arm) */
 
-/*s: enum _anon_ (arch/arm/vcore.c)4(arm) */
 enum {
     TagGetfwrev = 0x00000001,
     TagGetrev   = 0x00010002,
@@ -83,9 +74,7 @@ enum {
     TagGetrgb   = 0x00044006,
     TagSetrgb   = 0x00048006,
 };
-/*e: enum _anon_ (arch/arm/vcore.c)4(arm) */
 
-/*s: struct Fbinfo(arm) */
 // Framebuffer
 // The order matters! the fields match the memory-mapped external registers.
 struct Fbinfo {
@@ -100,10 +89,8 @@ struct Fbinfo {
     u32int  base;           /* returned by gpu */
     u32int  screensize;     /* returned by gpu */
 };
-/*e: struct Fbinfo(arm) */
 
 
-/*s: struct Prophdr(arm) */
 struct Prophdr {
     u32int  len;
     u32int  req;
@@ -112,9 +99,7 @@ struct Prophdr {
     u32int  taglen;
     u32int  data[1];
 };
-/*e: struct Prophdr(arm) */
 
-/*s: function vcwrite(arm) */
 static void
 vcwrite(uint chan, int val)
 {
@@ -127,9 +112,7 @@ vcwrite(uint chan, int val)
     arch_coherence();
     r[Write] = val | chan;
 }
-/*e: function vcwrite(arm) */
 
-/*s: function vcread(arm) */
 static int
 vcread(uint chan)
 {
@@ -145,9 +128,7 @@ vcread(uint chan)
     }while((x&ChanMask) != chan);
     return x & ~ChanMask;
 }
-/*e: function vcread(arm) */
 
-/*s: function vcreq(arm) */
 /*
  * Property interface
  */
@@ -196,9 +177,7 @@ vcreq(int tag, void *buf, int vallen, int rsplen)
 
     return rsplen;
 }
-/*e: function vcreq(arm) */
 
-/*s: function fbdefault(arm) */
 /*
  * Framebuffer
  */
@@ -215,9 +194,7 @@ fbdefault(int *width, int *height, int *depth)
     *depth = buf[2];
     return OK_0;
 }
-/*e: function fbdefault(arm) */
 
-/*s: function fbinit(arm) */
 void*
 fbinit(bool set, int *width, int *height, int *depth)
 {
@@ -233,9 +210,7 @@ fbinit(bool set, int *width, int *height, int *depth)
     fi->xres = fi->xresvirtual = *width;
     fi->yres = fi->yresvirtual = *height;
     fi->bpp = *depth;
-    /*s: [[fbinit()]] write back cache after modified fb info(arm) */
     //cachedwbinvse(fi, sizeof(Fbinfo));
-    /*e: [[fbinit()]] write back cache after modified fb info(arm) */
     vcwrite(ChanFb, dmaaddr(fi));
 
     if(vcread(ChanFb) != 0)
@@ -247,10 +222,8 @@ fbinit(bool set, int *width, int *height, int *depth)
         memset((char*)va, 0x7F, fi->screensize);
     return (void*)va;
 }
-/*e: function fbinit(arm) */
 
 
-/*s: function getramsize(arm) */
 /*
  * Get ARM ram
  */
@@ -264,4 +237,3 @@ getramsize(Confmem *mem)
     mem->base = buf[0];
     mem->limit = buf[1];
 }
-/*e: function getramsize(arm) */

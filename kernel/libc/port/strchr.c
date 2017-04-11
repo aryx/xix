@@ -1,8 +1,6 @@
-/*s: port/strchr.c */
 #include <u.h>
 #include <libc.h>
 
-/*s: function strchr */
 char*
 strchr(char *s, int c)
 {
@@ -20,5 +18,3 @@ strchr(char *s, int c)
             return s-1;
     return 0;
 }
-/*e: function strchr */
-/*e: port/strchr.c */

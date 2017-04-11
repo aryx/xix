@@ -1,5 +1,3 @@
-/*s: byterun/compare.c */
-/*s: copyright header C xavier */
 /***********************************************************************/
 /*                                                                     */
 /*                           Objective Caml                            */
@@ -10,7 +8,6 @@
 /*  Automatique.  Distributed only by permission.                      */
 /*                                                                     */
 /***********************************************************************/
-/*e: copyright header C xavier */
 
 #include "config.h"
 
@@ -20,7 +17,6 @@
 #include "mlvalues.h"
 #include "str.h"
 
-/*s: function compare_val */
 /* Structural comparison on trees.
    May loop on cyclic structures. */
 
@@ -104,9 +100,7 @@ static long compare_val(value v1, value v2)
   }
   }
 }
-/*e: function compare_val */
 
-/*s: function compare */
 value compare(value v1, value v2)           /* ML */
 {
   long res = compare_val(v1, v2);
@@ -117,47 +111,33 @@ value compare(value v1, value v2)           /* ML */
   else
     return Val_int(0);
 }
-/*e: function compare */
 
-/*s: function equal */
 value equal(value v1, value v2)            /* ML */
 {
   return Val_int(compare_val(v1, v2) == 0);
 }
-/*e: function equal */
 
-/*s: function notequal */
 value notequal(value v1, value v2)            /* ML */
 {
   return Val_int(compare_val(v1, v2) != 0);
 }
-/*e: function notequal */
 
-/*s: function lessthan */
 value lessthan(value v1, value v2)            /* ML */
 {
   return Val_int(compare_val(v1, v2) < 0);
 }
-/*e: function lessthan */
 
-/*s: function lessequal */
 value lessequal(value v1, value v2)          /* ML */
 {
   return Val_int(compare_val(v1, v2) <= 0);
 }
-/*e: function lessequal */
 
-/*s: function greaterthan */
 value greaterthan(value v1, value v2)        /* ML */
 {
   return Val_int(compare_val(v1, v2) > 0);
 }
-/*e: function greaterthan */
 
-/*s: function greaterequal */
 value greaterequal(value v1, value v2)       /* ML */
 {
   return Val_int(compare_val(v1, v2) >= 0);
 }
-/*e: function greaterequal */
-/*e: byterun/compare.c */

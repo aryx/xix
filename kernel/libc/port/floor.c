@@ -1,7 +1,5 @@
-/*s: port/floor.c */
 #include <u.h>
 #include <libc.h>
-/*s: function floor */
 /*
  * floor and ceil-- greatest integer <= arg
  * (resp least >=)
@@ -21,13 +19,9 @@ floor(double d)
         modf(d, &d);
     return d;
 }
-/*e: function floor */
 
-/*s: function ceil */
 double
 ceil(double d)
 {
     return -floor(-d);
 }
-/*e: function ceil */
-/*e: port/floor.c */

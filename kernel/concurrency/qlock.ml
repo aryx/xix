@@ -42,3 +42,17 @@ let unlock q =
   with Queue.Empty ->
     q.locked <- false;
     Spinlock.unlock q.l
+
+let canlock q =
+  if not (Spinlock.canlock q.l)
+  then false
+  else 
+    if q.locked 
+    then begin
+      Spinlock.unlock q.l;
+      false
+    end else begin
+      q.locked <- true;
+      Spinlock.unlock q.l;
+      true
+    end

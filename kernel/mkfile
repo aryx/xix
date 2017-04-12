@@ -16,6 +16,8 @@ CMO= \
   core/cpu.cmo\
   core/globals.cmo\
   \
+  concurrency/tas.cmo\
+  concurrency/spl.cmo\
   concurrency/spinlock.cmo\
   \
   sysmisc.cmo\
@@ -226,7 +228,7 @@ LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
 # I removed -T because prims.c (a generated file) has wrong signatures 
 CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
-OCAMLINCLUDES=-I commons -I core
+OCAMLINCLUDES=-I commons -I core -I concurrency
 OCAMLCFLAGS=$OCAMLINCLUDES
 
 

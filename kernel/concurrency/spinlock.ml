@@ -1,26 +1,52 @@
 open Common
 
-(* todo:
- * - handle multiple processors and interrupts. Use arch_tas()!
- * less:
+(* less:
+ * - nlocks
  * - use monitor approach instead of fine-grained locks?
  *)
 
 type t = {
-  mutable hold: bool;
-
+  hold: bool ref;
+  (* less: debugging info
+   * pc: kern_addr;
+   * pid: Proc.pid;
+   *)
 }
 
-(* simple when assume only 1 processor and no interrupt code *)
+(* less: add debugging info in lock once you grab it *)
 let lock x =
-  if x.hold
-  then failwith "lock already hold! Impossible if use only 1 processor"
-  else x.hold <- true
+  if Tas.tas x.hold = false
+  then () (* good to go! *)
+  else begin
+    (* we have to spin *)
+    let finish = ref false in
+    while not !finish do
+      let i = ref 0 in
+      (* less: coherence issue? *)
+      while not !(x.hold) do
+        incr i;
+        if !i > 10000000
+        then failwith "lock loop";
+      done;
+      (* let's try again *)
+      if Tas.tas x.hold = false
+      then finish := true;
+    done
+  end
 
 let unlock x =
-  if not x.hold
+  if not !(x.hold)
   then failwith "Spinlock.unlock: not locked";
-  x.hold <- false
+  (* less: other sanity checks on x.pid <> up.pid *)
+  (* less: coherence issue? *)
+  x.hold := false
+
+let canlock x =
+  if Tas.tas x.hold = false
+  then (* less: update debugging fields *) true
+  else false
+
+
 
 let with_lock f x =
   raise Todo

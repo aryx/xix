@@ -28,4 +28,8 @@ type t = {
 
   mutable slash: Chan.t;
   mutable dot: Chan.t;
+
+  (* less: debugging fields
+   *  lastlock: Spinlock.t ref;
+   *)
 }

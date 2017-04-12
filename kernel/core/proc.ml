@@ -31,5 +31,6 @@ type t = {
 
   (* less: debugging fields
    *  lastlock: Spinlock.t ref;
+   *  qpc: kern_addr; (* pc calling last qlock *)
    *)
 }

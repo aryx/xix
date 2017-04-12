@@ -15,10 +15,12 @@ CMO= \
   core/proc.cmo\
   core/cpu.cmo\
   core/globals.cmo\
+  core/sched.cmo\
   \
   concurrency/tas.cmo\
   concurrency/spl.cmo\
   concurrency/spinlock.cmo\
+  concurrency/qlock.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\

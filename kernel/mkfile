@@ -23,6 +23,7 @@ CMO= \
   concurrency/qlock.cmo\
   concurrency/rwlock.cmo\
   concurrency/ref.cmo\
+  concurrency/counter.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\

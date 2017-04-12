@@ -50,3 +50,7 @@ let canlock x =
 
 let with_lock f x =
   raise Todo
+
+
+let make () = 
+  { hold = ref false }

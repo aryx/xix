@@ -52,4 +52,3 @@ l2ap(int ap)
 {
     return (AP(0, (ap)));
 }
-

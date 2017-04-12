@@ -2,30 +2,30 @@
 type pid = int
 
 type state = 
-  | Dead
   | Running
 
-  | Ready
-  | Scheding
-
-  | Wakeme
-
+  | Dead
   | Broken
   | Moribund
   | Stopped
 
+  | Ready
+  | Scheding
+
+  | Queueing of rw option
+(*
   | Rendezvous
   | Waitrelease
+  | Wakeme
+*)
 
-  (* less: factorize of R | W option ?*)
-  | Queueing
-  | QueueingR
-  | QueueingW
+and rw = Read | Write
+
 
 type t = {
   pid: pid;
-  state: state;
+  mutable state: state;
 
-  slash: Chan.t ref;
-  dot: Chan.t ref;
+  mutable slash: Chan.t;
+  mutable dot: Chan.t;
 }

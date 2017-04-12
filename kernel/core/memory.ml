@@ -1,3 +1,4 @@
+open Common
 open Types
 
 (* less: arm! *)
@@ -18,7 +19,7 @@ let utzero = V (0x0 + pg2by, User)
 (* less: raspberry-specific *)
 let physIO = P (0x20000000)
 
-let virtIO = V (0x7E000000, Kernel)
+let virtIO = V (0x3E000000, Kernel) (* TODO: should be 0x7E000000 *)
 
 
 let virt_to_phys x =

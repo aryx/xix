@@ -3,7 +3,10 @@
 #############################################################################
 O=5
 
-CMO= core/types.cmo\
+CMO= \
+  commons/common.cmo\
+  \
+  core/types.cmo\
   core/ureg.cmo\
   core/conf.cmo\
   core/memory.cmo\
@@ -12,6 +15,8 @@ CMO= core/types.cmo\
   core/proc.cmo\
   core/cpu.cmo\
   core/globals.cmo\
+  \
+  concurrency/spinlock.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\
@@ -221,7 +226,7 @@ LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
 # I removed -T because prims.c (a generated file) has wrong signatures 
 CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
-OCAMLINCLUDES=-I core
+OCAMLINCLUDES=-I commons -I core
 OCAMLCFLAGS=$OCAMLINCLUDES
 
 

@@ -46,9 +46,11 @@ type t =
   (* less: Segattach ... *)
 
   (* concurrency *)
+  (*
   | RendezVous
   | SemAcquire
   | SemRelease
+  *)
   (* less: TSemAcquire *)
   
   (* misc *)

@@ -1,5 +1,8 @@
 open Types
 
+(* copy from device.ml to avoid mutual deps *)
+type devid = int
+
 type qid = {
   qpath: int64;
   qver: int;
@@ -16,17 +19,14 @@ type open_mode =
   | OReadWrite
 
 type t = {
-  chantype: Device.devid;
+  qid: qid;
+  chantype: devid;
   (* less: dev: int *)
 
-  qid: qid;
-
-  path: string list;
-
+  mode: open_mode;
   offset: int64;
 
-  mode: open_mode;
-  
+  path: string list;
   ismtpt: bool;
 
   (* ref: Ref.t; *)

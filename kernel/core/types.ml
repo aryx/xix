@@ -45,6 +45,7 @@ type fd = int
 (* special symbols: '/', '..', '#' *)
 type filename = string
 
+type perm = int
 
 (*****************************************************************************)
 (* misc *)

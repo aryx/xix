@@ -33,4 +33,7 @@ type t = {
    *  lastlock: Spinlock.t ref;
    *  qpc: kern_addr; (* pc calling last qlock *)
    *)
+  (* less:
+  nspinlocks: Ref.t;
+  *)
 }

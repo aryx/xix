@@ -15,8 +15,12 @@ type t = {
 
 (* less: add debugging info in lock once you grab it *)
 let lock x =
+  let when_hold () =
+    (* less: increment up.nlocks (but using low level atomic_inc) *)
+    ()
+  in
   if Tas.tas x.hold = false
-  then () (* good to go! *)
+  then when_hold () (* good to go! *)
   else begin
     (* we have to spin *)
     let finish = ref false in
@@ -30,7 +34,10 @@ let lock x =
       done;
       (* let's try again *)
       if Tas.tas x.hold = false
-      then finish := true;
+      then begin 
+        when_hold ();
+        finish := true;
+      end
     done
   end
 

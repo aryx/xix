@@ -1,11 +1,11 @@
 
-(* TODO: delete once feature *)
+(* todo: delete once added the { Xxx. } feature in my ocaml light *)
 open Cpu 
 open Proc
 open Chan
 open Conf
 
-(* less: could move the globals in their respective files *)
+(* less: could move the globals (and fakexxx) in their respective files *)
 
 let fakecpu = { Cpu.
   cpuno = 0;
@@ -45,9 +45,7 @@ let cpu = ref fakecpu
 
 let up = ref fakeproc
 
-let devtab = 
-[|
-|]
+let devtab = ref ([| |]: Device.t array)
 
 let conf = ref fakeconf
 (* less: let config = Hashtbl.create 101 *)

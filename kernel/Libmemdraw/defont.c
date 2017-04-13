@@ -1,9 +1,10 @@
 #include <u.h>
 #include <libc.h>
 #include <draw.h>
-#include <draw_private.h>
 #include <font.h>
 #include <memdraw.h>
+
+extern	ulong	drawld2chan[];
 
 Memsubfont*
 getmemdefont(void)

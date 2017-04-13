@@ -10,9 +10,6 @@
 #define L2X(va)     FEXT((va), 12, 8)
 #define L2AP(ap)    l2ap(ap)
 
-#define L1ptedramattrs  soc.l1ptedramattrs
-#define L2ptedramattrs  soc.l2ptedramattrs
-
 enum {
 L1lo        = UZERO/MiB,        /* L1X(UZERO)? */
 L1hi        = (USTKTOP+MiB-1)/MiB,  /* L1X(USTKTOP+MiB-1)? */
@@ -36,14 +33,14 @@ mmuinit(void *a)
     va = KZERO;
     for(pa = 0; pa < soc.dramsize; pa += MiB, va += MiB)
     {
-        l1[L1X(va)] = pa|Dom0|L1AP(Krw)|Section|L1ptedramattrs;
+        l1[L1X(va)] = pa|Dom0|L1AP(Krw)|Section;
     }
 
     /*
      * identity map first MB of ram so mmu can be enabled
      */
     // ???
-    l1[L1X(0)] = 0|Dom0|L1AP(Krw)|Section|L1ptedramattrs;
+    l1[L1X(0)] = 0|Dom0|L1AP(Krw)|Section;
 
     /*
      * map i/o registers 
@@ -65,7 +62,7 @@ mmuinit(void *a)
     l2 = (PTE*)PADDR(L2);
     va = HVECTORS;
     l1[L1X(va)] = (uintptr)l2|Dom0|Coarse;
-    l2[L2X(va)] = L2AP(Krw)|Small|L2ptedramattrs;
+    l2[L2X(va)] = L2AP(Krw)|Small;
 }
 
 void

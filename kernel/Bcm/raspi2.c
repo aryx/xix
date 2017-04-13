@@ -18,11 +18,9 @@ typedef struct Mboxes Mboxes;
 Soc soc = {
     .dramsize   = 1024*MiB,
     .physio     = 0x3F000000,
-     .l1ptedramattrs = Cached | Buffered | L1wralloc | L1sharable,
-     .l2ptedramattrs = Cached | Buffered | L2wralloc | L2sharable,
-     .armlocal   = 0x40000000,
-     .busdram    = 0xC0000000,
-     .busio      = 0x7E000000,
+    .armlocal   = 0x40000000,
+    .busdram    = 0xC0000000,
+    .busio      = 0x7E000000,
 };
 
 

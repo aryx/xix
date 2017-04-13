@@ -57,3 +57,38 @@ let free seg =
     );
     Qlock.unlock seg.ql;
   end
+
+let pdx offset = 
+  offset / Pagetable.pagetab_memory_mapped
+let ptx offset = 
+  (offset land (Pagetable.pagetab_memory_mapped - 1)) / Memory.pg2by
+  
+
+let add_page_to_segment page seg =
+  let (VU va) = page.Page.va in
+  let (VU base) = seg.base in
+  let (VU top) = seg.top in
+  
+  if va < base || va >= top
+  then failwith "add_patch_to_segment: page out of segment range";
+  
+  let offset = va - base in
+  let pt =
+    match seg.pagedir.(pdx offset) with
+    | None -> 
+      let pt = Pagetable.alloc () in
+      seg.pagedir.(pdx offset) <- Some pt;
+      pt
+    | Some x -> x
+  in
+  if pt.Pagetable.pagetab.(ptx offset) <> None
+  then failwith "add_page_to_segment: address already mapped to a page";
+  pt.Pagetable.pagetab.(ptx offset) <- Some page;
+  
+  let i = ptx offset in
+  if i < pt.Pagetable.first
+  then pt.Pagetable.first <- i;
+  if i > pt.Pagetable.last
+  then pt.Pagetable.last <- i;
+
+  ()

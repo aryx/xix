@@ -27,5 +27,5 @@ let virt_to_phys x =
 let phys_to_virt x =
   raise Todo
 
-let memclear va size =
+let memclear ua size =
   raise Todo

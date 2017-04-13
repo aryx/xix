@@ -34,13 +34,23 @@ let unchain p =
     allocator.free <- xs;
     allocator.freecnt <- allocator.freecnt -1;
     ()
-  
+
+let chain_free_head p =
+  if Spinlock.canlock allocator.l
+  then failwith "chain_free_head: palloc lock should be held";
+  allocator.free <- p::allocator.free;
+  allocator.freecnt <- allocator.freecnt + 1;
+  ()
+
+(* todo: when need that? *)
+let chain_free_tail p =
+  raise Todo
 
 (* todo: should be swapalloc.highwater *)
 let highwater = 100
 
 
-let newpage clear segopt va =
+let alloc clear segopt va =
   Spinlock.lock allocator.l;
 
   if allocator.freecnt > highwater
@@ -65,3 +75,20 @@ let newpage clear segopt va =
   else 
     failwith "TODO: very few free pages"
 
+(* less: if page is a swapaddress? *)
+let free p =
+  Spinlock.lock allocator.l;
+  Spinlock.lock p.Page.l;
+  if p.Page.refcnt = 0
+  then failwith "Page_allocator.free: refcnt is 0";
+  p.Page.refcnt <- p.Page.refcnt - 1;
+  if p.Page.refcnt > 0
+  then begin
+    Spinlock.unlock p.Page.l;
+    Spinlock.unlock allocator.l;
+  end else begin
+    chain_free_head p;
+    (* todo: wakeup if people wait on freememr *)
+    Spinlock.unlock p.Page.l;
+    Spinlock.unlock allocator.l;
+  end

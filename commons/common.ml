@@ -1,5 +1,7 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 
+(* |> now included by default in OCaml (and optimized) *)
+
 type filename = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b

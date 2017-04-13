@@ -1,6 +1,10 @@
 open Common
 open Types
 
+let kb = 1024
+let mb = 1024 * 1024 (* 1048576 *)
+let gb = 1024 * 1024 * 1024 (* 1073741824 *)
+
 (* less: arm! *)
 let pg2by = 0x1000
 

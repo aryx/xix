@@ -29,6 +29,8 @@ CMO= \
   \
   memory/page.cmo\
   memory/page_allocator.cmo\
+  memory/pagetable.cmo\
+  memory/segment.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\

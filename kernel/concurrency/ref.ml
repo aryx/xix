@@ -7,6 +7,7 @@ let alloc () =
     l = Spinlock.alloc ();
   }
 
+
 let inc x =
   Spinlock.lock x.l;
   x.cnt <- x.cnt + 1;
@@ -23,3 +24,9 @@ let dec x =
   if v < 0
   then failwith "Ref.dec has a negative count";
   v
+
+(* Ref often abused as a lock too *)
+let lock x =
+  Spinlock.lock x.l
+let unlock x =
+  Spinlock.unlock x.l

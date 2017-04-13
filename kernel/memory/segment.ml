@@ -20,7 +20,7 @@ type t = {
 
   (* use for reference count and for its lock *)
   l: Ref.t;
-  (* lk: Qlock.t; *)
+  ql: Qlock.t;
 }
 
 (* less: use growing array? *)
@@ -42,5 +42,18 @@ let alloc kind base nb_pages =
     nb_pages = nb_pages;
     pagedir = Array.make pgdir_size None;
     l = Ref.alloc ();
+    ql = Qlock.alloc ();
   }
   
+let free seg =
+  let cnt = Ref.dec seg.l in
+  if cnt = 0
+  then begin
+    Qlock.lock seg.ql;
+    seg.pagedir |> Array.iter (fun pagedir ->
+      pagedir |> Common.if_some (fun pagetable ->
+        Pagetable.free pagetable;
+      );
+    );
+    Qlock.unlock seg.ql;
+  end

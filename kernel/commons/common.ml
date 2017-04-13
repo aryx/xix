@@ -17,3 +17,5 @@ let is_power_of_2 x =
 let round_up x pow2 =
   assert (is_power_of_2 pow2);
   (x + (pow2 - 1)) land (lnot (pow2 - 1))
+
+(*TODO! let _ = assert(round_up 2045 1024 = 3072) *)

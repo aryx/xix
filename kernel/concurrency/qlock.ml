@@ -16,6 +16,13 @@ type t = {
   l: Spinlock.t;
 }
 
+let alloc () =
+  { locked = false;
+    q = Queue.create ();
+    l = Spinlock.alloc ();
+  }
+  
+
 let lock q =
   Spinlock.lock q.l;
   if not q.locked

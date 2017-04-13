@@ -50,3 +50,5 @@
 /macroprocessor/lexer_cpp.ml
 /kernel/9minimal
 /kernel/ocaml.c
+/linker/garbage_ml
+/compiler/garbage_ml

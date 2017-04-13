@@ -7,11 +7,11 @@ CMO= \
   commons/common.cmo\
   \
   core/types.cmo\
-  core/ureg.cmo\
   core/conf.cmo\
   core/memory.cmo\
   core/chan.cmo\
   core/device.cmo\
+  core/ureg.cmo\
   core/proc.cmo\
   core/cpu.cmo\
   core/globals.cmo\

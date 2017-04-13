@@ -9,6 +9,8 @@ CMO= \
   core/types.cmo\
   core/conf.cmo\
   core/memory.cmo\
+  core/spinlock_.cmo\
+  core/ref_.cmo\
   core/chan.cmo\
   core/device.cmo\
   core/ureg.cmo\

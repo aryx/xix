@@ -1,17 +1,12 @@
 open Common
+open Spinlock_
 
 (* less:
  * - nlocks
  * - use monitor approach instead of fine-grained locks?
  *)
 
-type t = {
-  hold: bool ref;
-  (* less: debugging info
-   * pc: kern_addr;
-   * pid: Proc.pid;
-   *)
-}
+type t = Spinlock_.t
 
 (* less: add debugging info in lock once you grab it *)
 let lock x =

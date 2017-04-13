@@ -4,7 +4,8 @@ open Types
 type devid = int
 
 type qid = {
-  qpath: int64;
+  (* less: really need more than 32billions files? *)
+  qpath: int64; 
   qver: int;
   qtype: qid_kind;
 }
@@ -29,5 +30,6 @@ type t = {
   path: string list;
   ismtpt: bool;
 
-  (* ref: Ref.t; *)
+  (* The spinlock in this ref is also Chan's lock *)
+  refcnt: Ref_.t;
 }

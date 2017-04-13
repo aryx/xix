@@ -54,5 +54,5 @@ let with_lock f x =
   raise Todo
 
 
-let make () = 
+let alloc () = 
   { hold = ref false }

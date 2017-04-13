@@ -12,5 +12,5 @@ let gen x =
 let make () =
   { Ref_.
     cnt = 0;
-    l = Spinlock.make ();
+    l = Spinlock.alloc ();
   }

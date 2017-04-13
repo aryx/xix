@@ -19,7 +19,7 @@ let allocator = {
   pages = [| |];
   free = [];
   freecnt = 0;
-  l = Spinlock.make ();
+  l = Spinlock.alloc ();
 }
 
 let unchain p =

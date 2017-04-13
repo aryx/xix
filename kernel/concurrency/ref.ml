@@ -2,7 +2,10 @@ open Ref_
 
 type t = Ref_.t
 
-
+let alloc () = 
+  { cnt = 1;
+    l = Spinlock.alloc ();
+  }
 
 let inc x =
   Spinlock.lock x.l;

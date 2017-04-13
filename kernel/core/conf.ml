@@ -11,6 +11,13 @@ type t = {
   ncpu: int;
   mem: confmem list;
   nproc: int;
+
+  (* set in confinit *)
+  upages: int;
+  kpages: int;
+
+  (* upage+kpage *)
+  npages: int;
 }
 
 (* less: let config = Hashtbl.create 101 *)

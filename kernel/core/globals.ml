@@ -36,6 +36,10 @@ let fakeconf = { Conf.
   ncpu = 0;
   nproc = 0;
   mem = [];
+
+  upages = 0;
+  kpages = 0;
+  npages = 0;
 }
  
 

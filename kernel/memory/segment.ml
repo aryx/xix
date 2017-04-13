@@ -8,6 +8,7 @@ type kind =
   | Stack
 
 type t = {
+  (* todo: why it matters here? Dupe with Proc.segtype? *)
   kind: kind;
   
   base: user_addr;

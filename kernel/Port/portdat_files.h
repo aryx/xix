@@ -132,41 +132,41 @@ struct Mhead
 
 
 
-#include <fcall.h>
+//#include <fcall.h>
 
-// was in devmnt.c
-struct Mntrpc
-{
-  Chan* c;    /* Channel for whom we are working */
-  Mntrpc* list;   /* Free/pending list */
-  Fcall request;  /* Outgoing file system protocol message */
-  Fcall   reply;    /* Incoming reply */
-  Mnt*  m;    /* Mount device during rpc */
-  Rendez  r;    /* Place to hang out */
-  byte*  rpc;    /* I/O Data buffer */
-  uint  rpclen;   /* len of buffer */
-  Block *b;   /* reply blocks */
-  char  done;   /* Rpc completed */
-  uvlong  stime;    /* start time for mnt statistics */
-  ulong reqlen;   /* request length for mnt statistics */
-  ulong replen;   /* reply length for mnt statistics */
-  Mntrpc* flushed;  /* message this one flushes */
-};
-
-struct Mnt
-{
-  Lock;
-  /* references are counted using c->ref; channels on this mount point incref(c->mchan) == Mnt.c */
-  Chan  *c;   /* Channel to file service */
-  Proc  *rip;   /* Reader in progress */
-  Mntrpc  *queue;   /* Queue of pending requests on this channel */
-  ulong id;   /* Multiplexer id for channel check */
-  Mnt *list;    /* Free list */
-  int flags;    /* cache */
-  int msize;    /* data + IOHDRSZ */
-  char  *version; /* 9P version */
-  Queue *q;   /* input queue */
-};
+//// was in devmnt.c
+//struct Mntrpc
+//{
+//  Chan* c;    /* Channel for whom we are working */
+//  Mntrpc* list;   /* Free/pending list */
+//  Fcall request;  /* Outgoing file system protocol message */
+//  Fcall   reply;    /* Incoming reply */
+//  Mnt*  m;    /* Mount device during rpc */
+//  Rendez  r;    /* Place to hang out */
+//  byte*  rpc;    /* I/O Data buffer */
+//  uint  rpclen;   /* len of buffer */
+//  Block *b;   /* reply blocks */
+//  char  done;   /* Rpc completed */
+//  uvlong  stime;    /* start time for mnt statistics */
+//  ulong reqlen;   /* request length for mnt statistics */
+//  ulong replen;   /* reply length for mnt statistics */
+//  Mntrpc* flushed;  /* message this one flushes */
+//};
+//
+//struct Mnt
+//{
+//  Lock;
+//  /* references are counted using c->ref; channels on this mount point incref(c->mchan) == Mnt.c */
+//  Chan  *c;   /* Channel to file service */
+//  Proc  *rip;   /* Reader in progress */
+//  Mntrpc  *queue;   /* Queue of pending requests on this channel */
+//  ulong id;   /* Multiplexer id for channel check */
+//  Mnt *list;    /* Free list */
+//  int flags;    /* cache */
+//  int msize;    /* data + IOHDRSZ */
+//  char  *version; /* 9P version */
+//  Queue *q;   /* input queue */
+//};
 
 
 

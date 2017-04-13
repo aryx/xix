@@ -26,6 +26,7 @@ CMO= \
   concurrency/counter.cmo\
   \
   memory/page.cmo\
+  memory/page_allocator.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\

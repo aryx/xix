@@ -4,6 +4,8 @@ open Cpu
 open Proc
 open Chan
 open Conf
+open Spinlock_
+open Ref_
 
 (* less: could move the globals (and fakexxx) in their respective files *)
 
@@ -12,6 +14,13 @@ let fakecpu = { Cpu.
   proc = ref None;
   ticks = 0;
   cpumhz = 0;
+}
+let fakelock = { Spinlock_.
+  hold = ref false;
+}
+let fakeref = { Ref_.
+  cnt = 0;
+  l = fakelock;
 }
 let fakeqid = { Chan.
   qpath = 0;
@@ -25,6 +34,7 @@ let fakechan = { Chan.
   offset = 0;
   mode = ORead;
   ismtpt = false;
+  refcnt = fakeref;
 }
 let fakeproc = { Proc.
   pid = 0;

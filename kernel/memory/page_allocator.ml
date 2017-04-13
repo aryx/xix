@@ -6,7 +6,7 @@ type t = {
   (* big array! *)
   mutable pages: Page.t array;
 
-  (* less: use Queue.t instead? *)
+  (* less: use Queue.t instead? or Double_list.ml? *)
   mutable free: Page.t list;
   mutable freecnt: int;
 
@@ -15,7 +15,7 @@ type t = {
 }
 
 let allocator = {
-  (* set in xinit *)
+  (* set in init *)
   pages = [| |];
   free = [];
   freecnt = 0;
@@ -92,3 +92,8 @@ let free p =
     Spinlock.unlock p.Page.l;
     Spinlock.unlock allocator.l;
   end
+
+
+
+let init xs =
+  raise Todo

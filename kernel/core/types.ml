@@ -34,7 +34,7 @@ type kern_addr = VK of addr
 (*****************************************************************************)
 type sec = int
 
-type time = unit
+type time = unit (* TODO float? no! *)
 
 (*****************************************************************************)
 (* could be in files.ml *)
@@ -45,6 +45,7 @@ type fd = int
 (* special symbols: '/', '..', '#' *)
 type filename = string
 
+(* todo? more precise type? ugo? rwx? *)
 type perm = int
 
 (*****************************************************************************)

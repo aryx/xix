@@ -15,9 +15,9 @@ typedef void* kern_addr3;
 // was a default in portdat.h
 #define STAGESIZE 64 // for struct Uart
 
-#include "port/portdat_concurrency.h" // Lock (used in Cpu so must be before)
 #include "dat_core.h"                    // Arch_Cpu
 #include "port/portdat_core.h"        // Cpu!!, Conf, Label
+#include "port/portdat_concurrency.h" // Lock
 #include "dat_memory.h"                  // Arch_Proc
 #include "port/portdat_memory.h"      // Page, Pagetable, Segment, KImage
 #include "port/portdat_files.h"       // Chan!! Dev!!

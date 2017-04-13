@@ -12,7 +12,7 @@ type t = {
   mem: confmem list;
   nproc: int;
 
-  (* set in confinit *)
+  (* set in Main.confinit *)
   upages: int;
   kpages: int;
 

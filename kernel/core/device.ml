@@ -33,4 +33,3 @@ type t = {
   (* less: power
   *)
 }
-

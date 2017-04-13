@@ -35,6 +35,11 @@ module R = Rules
  *  - no unicode support
  * 
  * Improvements (IMHO):
+ *  - a strict mode where we forbid to redefine variables, use of undefined
+ *    variables
+ *  - forbid to use list variables in a scalar context (error prone I think)
+ *  - a new Interactive attribute :I: so one can call interactive program
+ *    in a recipe (e.g., syncweb)
  *  - simplifications by not supporting the features mentioned above
  *  - be more relaxing on date (or TODO use nanosec); if equal time then ok
  *    (modern machines can generate the .o and a.out in the same second)
@@ -45,11 +50,6 @@ module R = Rules
  *    I get the error at the beginning and a trailing of regular shprint
  *    (but more Plan 9's style, so at least dont print the rest? or print
  *     also message at the end that something went wrong)
- *  - a strict mode where we forbid to redefine variables, use of undefined
- *    variables
- *  - forbid to use list variables in a scalar context (error prone I think)
- *  - a new Interactive attribute :I: so one can call interactive program
- *    in a recipe (e.g., syncweb)
  *  - TODO a luisa mode, more synthetic, just DONE
  *  - TODO: like in buck, show all processors and IDLE or active (GUI?)
  * Internal improvements (IMHO):

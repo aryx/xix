@@ -19,6 +19,7 @@ module T = Types
  *   (rare instructions anyway?)
  * - address of parameter or local is not supported
  *   (Why would you want that? Does 5c generate that?)
+ *   update: actually I support it now no?
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors

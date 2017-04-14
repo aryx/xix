@@ -51,7 +51,10 @@ let canlock x =
 
 
 let with_lock f x =
-  raise Todo
+  lock x;
+  Common.finalize f (fun () ->
+    unlock x
+  )
 
 
 let alloc () = 

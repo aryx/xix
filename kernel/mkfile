@@ -36,6 +36,8 @@ CMO= \
   memory/segment.cmo\
   memory/proc_segment.cmo\
   \
+  processes/proc.cmo\
+  \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\
   main.cmo
@@ -244,7 +246,7 @@ LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
 # I removed -T because prims.c (a generated file) has wrong signatures 
 CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
-OCAMLINCLUDES=-I commons -I core -I concurrency -I memory
+OCAMLINCLUDES=-I commons -I core -I concurrency -I memory -I processes
 OCAMLCFLAGS=$OCAMLINCLUDES
 
 

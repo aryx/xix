@@ -51,6 +51,9 @@ let fakeproc = { Proc_.
   dot = fakechan;
   seg = Hashtbl.create 0;
   seglock = fakeqlock;
+  name = "";
+  in_syscall = false;
+  parent = -1;
 }
 let fakeconf = { Conf.
   ncpu = 0;

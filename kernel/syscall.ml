@@ -10,7 +10,7 @@ type t =
   | Await
 
   (* memory *)
-  | Brk
+  | Brk of user_addr option
 
   (* file *)
   | Open of filename

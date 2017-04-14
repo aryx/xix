@@ -19,3 +19,12 @@ let round_up x pow2 =
   (x + (pow2 - 1)) land (lnot (pow2 - 1))
 
 (*TODO! let _ = assert(round_up 2045 1024 = 3072) *)
+
+let finalize f cleanup =
+  try
+    let res = f () in
+    cleanup ();
+    res
+  with e ->
+    cleanup ();
+    raise e

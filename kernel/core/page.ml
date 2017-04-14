@@ -22,5 +22,5 @@ type t = {
 
   (* less: color, cachectl *)
 
-  l: Spinlock.t;
+  l: Spinlock_.t;
 }

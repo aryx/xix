@@ -1,6 +1,6 @@
 open Types
 
-type devid = int
+type devid = Types.devid
 
 type t = {
   devcode: rune;

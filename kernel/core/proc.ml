@@ -1,5 +1,6 @@
+open Types
 
-type pid = int
+type pid = Types.pid
 
 type state = 
   | Running
@@ -18,9 +19,15 @@ type state =
   | Waitrelease
   | Wakeme
 *)
+  and rw = Read | Write
 
-and rw = Read | Write
+type segment =
+  | PStack
+  | PText
+  | PData
+  | PBss
 
+  | PExtra
 
 type t = {
   pid: pid;
@@ -28,6 +35,9 @@ type t = {
 
   mutable slash: Chan.t;
   mutable dot: Chan.t;
+
+  mutable seg: Segment_.t array; (* length = Obj.tag PExtra *)
+  seglock: Qlock_.t;
 
   (* less: debugging fields
    *  lastlock: Spinlock.t ref;

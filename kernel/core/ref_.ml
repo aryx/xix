@@ -1,5 +1,5 @@
 
 type t = {
   mutable cnt: int;
-  l: Spinlock.t;
+  l: Spinlock_.t;
 }

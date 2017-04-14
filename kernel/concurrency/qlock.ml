@@ -1,20 +1,12 @@
 open Common
 open Types
+open Qlock_
 
 (* todo:
  * - use monitor approach instead of fine-grained locks?
  *)
 
-type t = {
-  mutable locked: bool;
-  q: Proc.t Queue.t;
-
-  (* less: debugging fields
-   *  pc: kern_addr;
-   *)
-
-  l: Spinlock.t;
-}
+type t = Qlock_.t
 
 let alloc () =
   { locked = false;
@@ -30,7 +22,7 @@ let lock q =
     q.locked <- true;
     Spinlock.unlock q.l;
   end else begin
-    Queue.add !Globals.up q.q;
+    Queue.add !Globals.up.Proc.pid q.q;
     (!Globals.up).Proc.state  <- Proc.Queueing None;
     Spinlock.unlock q.l;
     !Sched.sched ();
@@ -45,7 +37,7 @@ let unlock q =
   try 
     let p = Queue.take q.q in
     Spinlock.unlock q.l;
-    !Sched.ready p
+    !Sched.ready_pid p
   with Queue.Empty ->
     q.locked <- false;
     Spinlock.unlock q.l

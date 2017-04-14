@@ -6,6 +6,7 @@ open Chan
 open Conf
 open Spinlock_
 open Ref_
+open Qlock_
 
 (* less: could move the globals (and fakexxx) in their respective files *)
 
@@ -15,12 +16,18 @@ let fakecpu = { Cpu.
   ticks = 0;
   cpumhz = 0;
 }
+
 let fakelock = { Spinlock_.
   hold = ref false;
 }
 let fakeref = { Ref_.
   cnt = 0;
-  l = fakelock;
+  Ref_.l = fakelock;
+}
+let fakeqlock = { Qlock_.
+  locked = false;
+  q = Queue.create ();
+  Qlock_.l = fakelock;
 }
 let fakeqid = { Chan.
   qpath = 0;
@@ -36,11 +43,14 @@ let fakechan = { Chan.
   ismtpt = false;
   refcnt = fakeref;
 }
+
 let fakeproc = { Proc.
   pid = 0;
   state = Dead;
   slash = fakechan;
   dot = fakechan;
+  seg = [| |];
+  seglock = fakeqlock;
 }
 let fakeconf = { Conf.
   ncpu = 0;

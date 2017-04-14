@@ -2,7 +2,9 @@ open Types
 
 exception Found of Segment_.t
 
-(* less: dolock bool *)
+(* less: dolock bool 
+ * less: return option instead of Not_found?
+ *)
 let segment_of_addr p addr =
   try 
     p.Proc_.seg |> Hashtbl.iter (fun _section seg ->

@@ -9,6 +9,7 @@ type kind =
 type t = {
   (* todo: why it matters here? Dupe with Proc.segtype? *)
   kind: kind;
+  (* less: read_only: bool; for KImage? *)
   
   base: user_addr;
   top: user_addr;
@@ -17,9 +18,11 @@ type t = {
 
   nb_pages: int;
 
+
   (* use for reference count and for its lock *)
   l: Ref_.t;
   ql: Qlock_.t;
+
 }
 
 (* less: use growing array? *)

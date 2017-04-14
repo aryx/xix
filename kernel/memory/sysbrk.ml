@@ -34,6 +34,7 @@ let change_segment_top addr section =
       then begin
         let newarr = Array.make new_pgdir_size None in
         Array.blit seg.Segment_.pagedir 0 newarr 0 old_pgdir_size;
+        seg.Segment_.pagedir <- newarr;
       end;
       seg.Segment_.top <- new_top;
       seg.Segment_.nb_pages <- new_nb_pages;

@@ -9,7 +9,9 @@ let bar x =
 let foo x = 
   bar x
 
-let _ =
+let main =
+  Common._print := print_string;
+
   let x = 1+1 in
   let s = Printf.sprintf "hello world %d\n" x in
   print_string s;

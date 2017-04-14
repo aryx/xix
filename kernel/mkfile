@@ -41,7 +41,8 @@ CMO= \
   \
   processes/proc.cmo\
   \
-  sysmisc.cmo\
+  sysnop.cmo\
+  syserrstr.cmo\
   syscall.cmo syscall_dispatch.cmo\
   main.cmo
 

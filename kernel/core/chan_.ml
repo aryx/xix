@@ -1,8 +1,5 @@
 open Types
 
-(* copy from device.ml to avoid mutual deps *)
-type devid = int
-
 type qid = {
   (* less: really need more than 32billions files? *)
   qpath: int64; 

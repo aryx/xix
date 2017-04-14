@@ -5,7 +5,7 @@ open Types
 type t = {
   cpuno: int;
 
-  proc: Proc.t option ref;
+  proc: Proc_.t option ref;
 
   (* todo: Arch_cpu *)
 

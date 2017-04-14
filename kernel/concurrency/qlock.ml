@@ -22,8 +22,8 @@ let lock q =
     q.locked <- true;
     Spinlock.unlock q.l;
   end else begin
-    Queue.add !Globals.up.Proc.pid q.q;
-    (!Globals.up).Proc.state  <- Proc.Queueing None;
+    Queue.add !Globals.up.Proc_.pid q.q;
+    (!Globals.up).Proc_.state  <- Proc_.Queueing None;
     Spinlock.unlock q.l;
     !Sched.sched ();
     (* will resume here once woke up by another process *)

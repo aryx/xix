@@ -41,7 +41,7 @@ let ptx offset =
   
 
 let add_page_to_segment page seg =
-  let (VU va) = page.Page.va in
+  let (VU va) = page.Page_.va in
   let (VU base) = seg.base in
   let (VU top) = seg.top in
   

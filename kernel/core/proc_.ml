@@ -33,8 +33,8 @@ type t = {
   pid: pid;
   mutable state: state;
 
-  mutable slash: Chan.t;
-  mutable dot: Chan.t;
+  mutable slash: Chan_.t;
+  mutable dot: Chan_.t;
 
   (* less: should use Segment_.t array; more efficient, but more tedious *)
   mutable seg: (section, Segment_.t) Hashtbl.t;

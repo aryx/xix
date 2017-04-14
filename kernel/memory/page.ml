@@ -1,16 +1,19 @@
 open Common
 open Types
+open Page_
 
-type t = {
+type t = Page_.t
+
+type allocator = {
 
   (* big array! *)
-  mutable pages: Page.t array;
+  mutable pages: t array;
 
   (* less: use Queue.t instead? or Double_list.ml? *)
-  mutable free: Page.t list;
+  mutable free: t list;
   mutable freecnt: int;
 
-  (* !lock ordering! Page_allocator.l before Page.l *)
+  (* !lock ordering! allocator.l before t.l *)
   l: Spinlock.t;
 }
 
@@ -57,15 +60,15 @@ let alloc clear segopt va =
   then begin
     let p = List.hd allocator.free in
     unchain p;
-    Spinlock.lock p.Page.l;
-    if p.Page.refcnt <> 0
+    Spinlock.lock p.Page_.l;
+    if p.refcnt <> 0
     then failwith "newpage: page ref != 0";
     (* less: uncachepage *)
-    p.Page.refcnt <- 1;
-    p.Page.va <- va;
-    p.Page.modified <- false;
-    p.Page.referenced <- false;
-    Spinlock.unlock p.Page.l;
+    p.refcnt <- 1;
+    p.va <- va;
+    p.modified <- false;
+    p.referenced <- false;
+    Spinlock.unlock p.Page_.l;
     Spinlock.unlock allocator.l;
 
     if clear 
@@ -78,18 +81,18 @@ let alloc clear segopt va =
 (* less: if page is a swapaddress? *)
 let free p =
   Spinlock.lock allocator.l;
-  Spinlock.lock p.Page.l;
-  if p.Page.refcnt = 0
-  then failwith "Page_allocator.free: refcnt is 0";
-  p.Page.refcnt <- p.Page.refcnt - 1;
-  if p.Page.refcnt > 0
+  Spinlock.lock p.Page_.l;
+  if p.refcnt = 0
+  then failwith "Page.free: refcnt is 0";
+  p.refcnt <- p.refcnt - 1;
+  if p.refcnt > 0
   then begin
-    Spinlock.unlock p.Page.l;
+    Spinlock.unlock p.Page_.l;
     Spinlock.unlock allocator.l;
   end else begin
     chain_free_head p;
     (* todo: wakeup if people wait on freememr *)
-    Spinlock.unlock p.Page.l;
+    Spinlock.unlock p.Page_.l;
     Spinlock.unlock allocator.l;
   end
 

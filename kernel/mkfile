@@ -12,13 +12,13 @@ CMO= \
   core/spinlock_.cmo\
   core/qlock_.cmo\
   core/ref_.cmo\
-  core/chan.cmo\
-  core/device.cmo\
-  core/ureg.cmo\
-  core/page.cmo\
+  core/chan_.cmo\
+  core/device_.cmo\
+  core/page_.cmo\
   core/pagetable_.cmo\
   core/segment_.cmo\
-  core/proc.cmo\
+  core/ureg.cmo\
+  core/proc_.cmo\
   core/cpu.cmo\
   core/globals.cmo\
   core/sched.cmo\
@@ -31,7 +31,7 @@ CMO= \
   concurrency/ref.cmo\
   concurrency/counter.cmo\
   \
-  memory/page_allocator.cmo\
+  memory/page.cmo\
   memory/pagetable.cmo\
   memory/segment.cmo\
   \

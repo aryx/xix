@@ -15,7 +15,7 @@ let free pt =
   if pt.first < pagetab_size
   then 
     for i = pt.first to pt.last do
-      pt.pagetab.(i) |> Common.if_some (fun p -> Page_allocator.free p);
+      pt.pagetab.(i) |> Common.if_some (fun p -> Page.free p);
     done
 
 let copy pt_old =
@@ -26,9 +26,9 @@ let copy pt_old =
   then begin
     for i = pt_new.first to pt_new.last do
       pt_old.pagetab.(i) |> Common.if_some (fun p -> 
-        Spinlock.lock p.Page.l;
-        p.Page.refcnt <- p.Page.refcnt + 1;
-        Spinlock.unlock p.Page.l;
+        Spinlock.lock p.Page_.l;
+        p.Page_.refcnt <- p.Page_.refcnt + 1;
+        Spinlock.unlock p.Page_.l;
         pt_new.pagetab.(i) <- Some p;
       );
     done

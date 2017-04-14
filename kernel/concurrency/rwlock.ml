@@ -9,8 +9,8 @@ type t = {
   mutable readers: int;
   mutable writer: bool;
 
-  q: Proc.t Queue.t;
-  mutable wproc: Proc.t option;
+  q: Proc_.t Queue.t;
+  mutable wproc: Proc_.t option;
 
   l: Spinlock.t;
 }

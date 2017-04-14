@@ -1,9 +1,9 @@
 
 (* todo: delete once added the { Xxx. } feature in my ocaml light *)
 open Cpu 
-open Proc
-open Chan
 open Conf
+open Proc_
+open Chan_
 open Spinlock_
 open Ref_
 open Qlock_
@@ -29,12 +29,12 @@ let fakeqlock = { Qlock_.
   q = Queue.create ();
   Qlock_.l = fakelock;
 }
-let fakeqid = { Chan.
+let fakeqid = { Chan_.
   qpath = 0;
   qver = 0;
   qtype = QFile;
 }
-let fakechan = { Chan.
+let fakechan = { Chan_.
   chantype = 0;
   qid = fakeqid;
   path = [];
@@ -44,7 +44,7 @@ let fakechan = { Chan.
   refcnt = fakeref;
 }
 
-let fakeproc = { Proc.
+let fakeproc = { Proc_.
   pid = 0;
   state = Dead;
   slash = fakechan;
@@ -69,7 +69,7 @@ let cpu = ref fakecpu
 
 let up = ref fakeproc
 
-let devtab = ref ([| |]: Device.t array)
+let devtab = ref ([| |]: Device_.t array)
 
 let conf = ref fakeconf
 (* less: let config = Hashtbl.create 101 *)

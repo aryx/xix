@@ -1,13 +1,15 @@
 
 let (|>) o f = f o
 
+let (_print: (string -> unit) ref) = 
+  ref (fun s -> failwith "Common._print not defined")
+let print s = !_print s
+
 let if_some f = function
   | None -> ()
   | Some x -> f x
 
-
 exception Todo
-
 exception Impossible of string
 
 let is_power_of_2 x =

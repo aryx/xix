@@ -75,6 +75,7 @@ let alloc clear segopt va =
     Spinlock.unlock p.Page_.l;
     Spinlock.unlock allocator.l;
 
+    (* todo: need map it in MMU first!! arch_kmap? *)
     if clear 
     then Memory.memclear va Memory.pg2by;
     p

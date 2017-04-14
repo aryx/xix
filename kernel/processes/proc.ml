@@ -14,6 +14,10 @@ type allocator = {
 let pidcounter = 
   Counter.alloc ()  
 
+(* less: let inuse = Ref.alloc ()
+ *  and make sure < Globals.conf.Conf.nproc
+ *)
+
 let allocator = {
   hpids = Hashtbl.create 101;
   l = Spinlock.alloc ();

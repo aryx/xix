@@ -35,7 +35,9 @@ CMO= \
   memory/page.cmo\
   memory/pagetable.cmo\
   memory/segment.cmo\
+  memory/user_memory.cmo\
   memory/proc_segment.cmo\
+  memory/sysbrk.cmo\
   \
   processes/proc.cmo\
   \

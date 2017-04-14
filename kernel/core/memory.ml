@@ -2,7 +2,6 @@ open Common
 open Types
 
 
-
 let kb = 1024
 let mb = 1024 * 1024 (* 1048576 *)
 let gb = 1024 * 1024 * 1024 (* 1073741824 *)
@@ -31,7 +30,4 @@ let virt_to_phys x =
   raise Todo
 
 let phys_to_virt x =
-  raise Todo
-
-let memclear ua size =
   raise Todo

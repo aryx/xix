@@ -53,7 +53,9 @@ let fakeproc = { Proc_.
   seglock = fakeqlock;
   name = "";
   in_syscall = false;
-  parent = -1;
+  parent = None;
+  nchild = 0;
+  user = "";
 }
 let fakeconf = { Conf.
   ncpu = 0;

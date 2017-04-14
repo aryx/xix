@@ -4,8 +4,8 @@ type t =
   | Nop
 
   (* process *)
-  | Rfork
-  | Exec of filename
+  | Rfork (* todo: flags *)
+  | Exec of filename * string list (* args *)
   | Exits of string
   | Await
 

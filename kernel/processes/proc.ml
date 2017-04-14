@@ -36,7 +36,9 @@ let proc_of_pid pid =
 
   
   
-
+(* todo: needed? not better to inline in sysrfork so actually need
+ * less mutable?
+ *)
 let alloc () =
   let pid = Counter.gen pidcounter in
   let p = 
@@ -48,7 +50,9 @@ let alloc () =
     seglock = Qlock.alloc ();
     name = "";
     in_syscall = false;
-    parent = -1;
+    parent = None;
+    nchild = 0;
+    user = "";
   }
   in
   hash p

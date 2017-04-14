@@ -32,9 +32,15 @@ type section =
 type t = {
   pid: pid;
   mutable state: state;
-  (* less: user: string; *)
+  mutable user: string;
+  (* executable name. Can be also *init* for kernel process *)
+  mutable name: string; 
 
-  mutable parent: pid; (* mutable because can not be set in alloc() but fork()*)
+  (* 'mutable' because can not be set in alloc() but fork(). 
+   * 'option' because if NoWait flag given, no parent.
+   *)
+  mutable parent: pid option; 
+  mutable nchild: int;
 
   mutable slash: Chan_.t;
   mutable dot: Chan_.t;
@@ -48,7 +54,6 @@ type t = {
 
 
   mutable in_syscall: bool;
-  mutable name: string; (* can be also *init* for kernel process *)
 
   (* less: debugging fields
    *  lastlock: Spinlock.t ref;

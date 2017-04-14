@@ -24,3 +24,8 @@ let _ =
   Syscall_dispatch.dispatch call
 *)
     
+(* in C: confinit (); xinit();  screeninit ()
+ * todo:
+ * Page.init ()
+ * Proc.init ()
+*)

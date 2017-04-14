@@ -9,7 +9,7 @@ type t = Ref.t
 let gen x =
   Ref.inc x
 
-let make () =
+let alloc () =
   { Ref_.
     cnt = 0;
     l = Spinlock.alloc ();

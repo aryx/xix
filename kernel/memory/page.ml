@@ -4,6 +4,10 @@ open Page_
 
 type t = Page_.t
 
+(* We have to use an allocator here. We can not just use ocaml malloc
+ * to create Page from thin air because a Page references a physical
+ * memory range!
+ *)
 type allocator = {
 
   (* big array! *)

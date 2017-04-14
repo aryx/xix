@@ -34,6 +34,7 @@ CMO= \
   memory/page.cmo\
   memory/pagetable.cmo\
   memory/segment.cmo\
+  memory/proc_segment.cmo\
   \
   sysmisc.cmo\
   syscall.cmo syscall_dispatch.cmo\

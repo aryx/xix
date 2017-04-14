@@ -1,6 +1,11 @@
 open Common
 open Types
 
+(* less: Pervasives would work? *)
+let (@<) (VU a) (VU b) = a < b
+let (@-) (VU a) (VU b) = 
+  assert (a >= b);
+  a - b
 
 (* use up 
 *)

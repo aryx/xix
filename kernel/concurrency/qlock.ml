@@ -55,3 +55,9 @@ let canlock q =
       Spinlock.unlock q.l;
       true
     end
+
+let with_lock f x =
+  lock x;
+  Common.finalize f (fun () ->
+    unlock x
+  )

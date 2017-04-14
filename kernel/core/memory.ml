@@ -7,7 +7,10 @@ let mb = 1024 * 1024 (* 1048576 *)
 let gb = 1024 * 1024 * 1024 (* 1073741824 *)
 
 (* less: arm! *)
-let pg2by = 0x1000
+let pg2by = 0x1000 (* 4096 *)
+
+let roundup_page (VU addr) = 
+  VU (Common.roundup addr pg2by)
 
 
 (* general constants *)

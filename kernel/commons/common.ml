@@ -18,7 +18,7 @@ let is_power_of_2 x =
   x <> 0 && 
   x land (x - 1) = 0 
 
-let round_up x pow2 =
+let roundup x pow2 =
   assert (is_power_of_2 pow2);
   (x + (pow2 - 1)) land (lnot (pow2 - 1))
 

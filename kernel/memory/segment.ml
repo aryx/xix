@@ -5,11 +5,11 @@ open Segment_
 type t = Segment_.t
 
 let alloc kind base nb_pages =
-  if nb_pages > pagedir_size * Pagetable_.pagetab_size
-  then failwith "Enovmem";
+  if nb_pages > Segment_.pagedir_size * Pagetable_.pagetab_size
+  then raise Error.Enovmem;
   let top = match base with VU x -> VU (x + nb_pages * Memory.pg2by) in
   let pgdir_size = 
-    Common.round_up nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
+    Common.roundup nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
   in
   { 
     kind = kind;

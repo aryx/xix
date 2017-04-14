@@ -21,13 +21,13 @@ type state =
 *)
   and rw = Read | Write
 
-type segment =
-  | PStack
-  | PText
-  | PData
-  | PBss
+type section =
+  | SText
+  | SData
+  | SBss
+  | SStack
 
-  | PExtra
+  | SExtra
 
 type t = {
   pid: pid;
@@ -36,8 +36,14 @@ type t = {
   mutable slash: Chan.t;
   mutable dot: Chan.t;
 
-  mutable seg: Segment_.t array; (* length = Obj.tag PExtra *)
+  (* less: should use Segment_.t array; more efficient, but more tedious *)
+  mutable seg: (section, Segment_.t) Hashtbl.t;
+  (* less: should use monitor instead of separate data and its lock? 
+   * or have a mutable seg: Segment_t.array Qlock_.locked; ?
+   *)
   seglock: Qlock_.t;
+
+
 
   (* less: debugging fields
    *  lastlock: Spinlock.t ref;

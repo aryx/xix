@@ -49,7 +49,7 @@ let fakeproc = { Proc.
   state = Dead;
   slash = fakechan;
   dot = fakechan;
-  seg = [| |];
+  seg = Hashtbl.create 0;
   seglock = fakeqlock;
 }
 let fakeconf = { Conf.

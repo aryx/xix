@@ -1,13 +1,15 @@
 open Types
 
 type kind = 
-  | SText
+  | SText (* todo: of ?? *)
   | SData
   | SBss
   | SStack
 
 type t = {
-  (* todo: why it matters here? Dupe with Proc.segtype? *)
+  (* Dupe with Proc.segtype? We need the kind here because
+   * Segment.copy will do different things depending on the segment kind.
+   *)
   kind: kind;
   (* less: read_only: bool; for KImage? *)
   

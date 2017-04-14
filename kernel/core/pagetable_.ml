@@ -1,5 +1,6 @@
 open Types
 
+(* todo: PageOrSwap below? use either? *)
 type t = {
   (* Why not use a list? too slow! *)
   pagetab: Page.t option array; (* length = pagetab_size = 256 *)

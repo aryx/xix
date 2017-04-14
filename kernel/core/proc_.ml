@@ -21,6 +21,7 @@ type state =
 *)
   and rw = Read | Write
 
+(* a.k.a segment *)
 type section =
   | SText
   | SData

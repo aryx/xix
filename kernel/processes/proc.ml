@@ -46,17 +46,25 @@ let proc_of_pid pid =
 let alloc () =
   let pid = Counter.gen pidcounter in
   let p = 
+  (* less: if can now alloc, do noprocpanic and resrcwait? assume
+   * use proc arena for that
+   *)
   { pid = pid;
     state = Scheding;
+
     slash = Globals.fakechan;
     dot = Globals.fakechan;
+
     seg = Hashtbl.create 10;
     seglock = Qlock.alloc ();
+
     name = "";
+    user = "";
     in_syscall = false;
+
     parent = None;
     nchild = 0;
-    user = "";
+
   }
   in
   hash p

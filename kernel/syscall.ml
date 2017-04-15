@@ -4,13 +4,13 @@ type t =
   | Nop
 
   (* process *)
-  | Rfork (* todo: flags *)
+  | Rfork of rfork_flags
   | Exec of filename * string list (* args *)
   | Exits of string
   | Await
 
   (* memory *)
-  | Brk of user_addr option
+  | Brk of user_addr
 
   (* file *)
   | Open of filename
@@ -61,3 +61,23 @@ type t =
 
   (* todo? replace with a better error management comm between user/kernel?*)
   | Errstr
+
+
+  and rfork_flags = 
+    | Fork of fork_flags * common_flags
+    | NoFork of common_flags
+    and fork_flags = {
+      share_mem: bool;
+      wait_child: bool;
+    }
+   and common_flags = {
+      fork_fds: fork_kind;
+      fork_namespace: fork_kind;
+      fork_env: fork_kind;
+      (* less: 
+       * share_rendezvous_group: bool;
+       * share_note_group: bool;
+       *)
+    }
+    and fork_kind = Clean | Copy | Share (* Share mean Nothing for NoFork *)
+    

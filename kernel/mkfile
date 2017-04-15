@@ -8,6 +8,7 @@ CMO= \
   \
   core/types.cmo\
   core/error.cmo\
+  syscall.cmo\
   core/conf.cmo\
   core/memory.cmo\
   core/spinlock_.cmo\
@@ -41,10 +42,11 @@ CMO= \
   memory/sysbrk.cmo\
   \
   processes/proc.cmo\
+  processes/sysrfork.cmo\
   \
   sysnop.cmo\
   syserrstr.cmo\
-  syscall.cmo syscall_dispatch.cmo\
+  syscall_dispatch.cmo\
   main.cmo
 
 XXX=\

@@ -33,6 +33,7 @@ type section =
 type t = {
   pid: pid;
   mutable state: state;
+
   mutable user: string;
   (* executable name. Can be also *init* for kernel process *)
   mutable name: string; 
@@ -43,9 +44,6 @@ type t = {
   mutable parent: pid option; 
   mutable nchild: int;
 
-  mutable slash: Chan_.t;
-  mutable dot: Chan_.t;
-
   (* less: should use Segment_.t array; more efficient, but more tedious *)
   mutable seg: (section, Segment_.t) Hashtbl.t;
   (* less: should use monitor instead of separate data and its lock? 
@@ -53,8 +51,13 @@ type t = {
    *)
   seglock: Qlock_.t;
 
+  mutable slash: Chan_.t;
+  mutable dot: Chan_.t;
+
 
   mutable in_syscall: bool;
+  (* todo: kstack!!
+  *)
 
   (* less: debugging fields
    *  lastlock: Spinlock.t ref;
@@ -62,6 +65,5 @@ type t = {
    *)
   (* less:
   nspinlocks: Ref.t;
-  kstack??
   *)
 }

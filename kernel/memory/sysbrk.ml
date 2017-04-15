@@ -41,8 +41,7 @@ let change_segment_top addr section =
     end
   )
 
-(* brk? *)
-let syscall_brk addr_opt =
-  match addr_opt with
-  | None -> raise Todo
-  | Some addr -> change_segment_top addr Proc_.SBss
+(* brk means?  *)
+let syscall_brk addr =
+  (* less: allow addr_opt and None where return base? useful? *)
+  change_segment_top addr Proc_.SBss

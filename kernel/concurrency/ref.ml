@@ -10,6 +10,7 @@ let alloc () =
 
 let inc x =
   Spinlock.lock x.l;
+  (* less: can detect overflow? exn in ocaml? *)
   x.cnt <- x.cnt + 1;
   (* todo: does this copy an int somewhere (e.g., in stack when in C) *)
   let v = x.cnt in

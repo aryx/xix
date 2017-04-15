@@ -23,7 +23,7 @@ CMO= \
   core/proc_.cmo\
   core/cpu.cmo\
   core/globals.cmo\
-  core/sched.cmo\
+  core/hooks.cmo\
   \
   concurrency/tas.cmo\
   concurrency/spl.cmo\

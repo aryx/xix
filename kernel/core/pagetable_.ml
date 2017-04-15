@@ -2,8 +2,8 @@ open Types
 
 (* todo: PageOrSwap below? use either? *)
 type t = {
-  (* Why not use a list? too slow! *)
-  pagetab: Page.t option array; (* length = pagetab_size = 256 *)
+  (* opti: use an array; faster than a list *)
+  pagetab: Page_.t option array; (* length = pagetab_size = 256 *)
 
   (* opti: to avoid iterate over all entries in pagetab.
    * useful for SStack where allocated pages are at the end

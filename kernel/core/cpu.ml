@@ -12,5 +12,5 @@ type t = {
   mutable ticks: int64;
   cpumhz: int;
 
-  (* less: stack? *)
+  (* todo: stack? *)
 }

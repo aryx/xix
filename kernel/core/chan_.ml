@@ -1,7 +1,7 @@
 open Types
 
 type qid = {
-  (* less: really need more than 32billions files? *)
+  (* less: really need more than 32 billions files? *)
   qpath: int64; 
   qver: int;
   qtype: qid_kind;
@@ -9,12 +9,14 @@ type qid = {
 and qid_kind =
   | QFile
   | QDir
+  (* less: more stuff here*)
 
 
 type open_mode =
   | ORead
   | OWrite
   | OReadWrite
+  (* less: more stuff here*)
 
 type t = {
   qid: qid;

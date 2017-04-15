@@ -3,7 +3,7 @@ open Types
 open Qlock_
 
 (* todo:
- * - use monitor approach instead of fine-grained locks?
+ * - use a monitor approach instead of fine-grained locks?
  *)
 
 type t = Qlock_.t
@@ -35,9 +35,9 @@ let unlock q =
   if not q.locked 
   then failwith "Qlock.unlock called with qlock not held";
   try 
-    let p = Queue.take q.q in
+    let pid = Queue.take q.q in
     Spinlock.unlock q.l;
-    !Sched.ready_pid p
+    !Sched.ready pid
   with Queue.Empty ->
     q.locked <- false;
     Spinlock.unlock q.l

@@ -19,6 +19,7 @@ let fakecpu = { Cpu.
 
 let fakelock = { Spinlock_.
   hold = ref false;
+  p = None;
 }
 let fakeref = { Ref_.
   cnt = 0;
@@ -67,6 +68,7 @@ let fakeconf = { Conf.
   npages = 0;
 }
  
+(* !!! The globals !!! *)
 
 let cpu = ref fakecpu
 (* less: cpus array *)

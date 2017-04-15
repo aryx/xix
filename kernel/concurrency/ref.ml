@@ -1,3 +1,5 @@
+open Common
+open Types
 open Ref_
 
 type t = Ref_.t
@@ -26,7 +28,7 @@ let dec x =
   then failwith "Ref.dec has a negative count";
   v
 
-(* Ref often abused as a lock too *)
+(* a Ref is often used as a lock too *)
 let lock x =
   Spinlock.lock x.l
 let unlock x =

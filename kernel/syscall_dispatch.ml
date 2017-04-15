@@ -10,7 +10,9 @@ let dispatch syscall =
 
   | Brk x -> Sysbrk.syscall_brk x
 
-  | Rfork x -> Sysrfork.syscall_rfork x
+  | Rfork x -> 
+    let pid = Sysrfork.syscall_rfork x in
+    raise Todo
 
   | Errstr -> Syserrstr.syscall_errstr ()
 

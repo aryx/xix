@@ -6,6 +6,7 @@ O=5
 CMO= \
   commons/common.cmo\
   \
+  core/arch.cmo\
   core/types.cmo\
   core/error.cmo\
   syscall.cmo\
@@ -19,7 +20,6 @@ CMO= \
   core/page_.cmo\
   core/pagetable_.cmo\
   core/segment_.cmo\
-  core/ureg.cmo\
   core/proc_.cmo\
   core/cpu.cmo\
   core/globals.cmo\
@@ -270,7 +270,7 @@ ocaml.c: $CMO mkfile
 
 
 clean:V:
-	rm -f $OBJ $CMO ocaml.c 9minimal
+	rm -f $OBJ $CMO ocaml.c 9minimal */*.cmi
 
 run:V:
 	qemu-system-arm -M raspi2 -bios 9minimal

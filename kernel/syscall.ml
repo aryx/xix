@@ -62,7 +62,7 @@ type t =
   (* todo? replace with a better error management comm between user/kernel?*)
   | Errstr
 
-
+  (* Rfork has a complex interface *)
   and rfork_flags = 
     | Fork of fork_flags * common_flags
     | NoFork of common_flags

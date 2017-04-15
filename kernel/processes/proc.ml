@@ -40,14 +40,15 @@ let proc_of_pid pid =
 
   
   
-(* todo: needed? not better to inline in sysrfork so actually need
- * less mutable?
+(* alloc() is sometimes better inlined in the caller (e.g., in sysrfork)
+ * so better see how to setup everything.
+ * Use { (alloc()) with ... } if you need to modify the non-mutable fields.
  *)
 let alloc () =
   let pid = Counter.gen pidcounter in
   let p = 
-  (* less: if can now alloc, do noprocpanic and resrcwait? assume
-   * use proc arena for that
+  (* less: if can not alloc, do noprocpanic and resrcwait? 
+   * (assume use proc arena for that)
    *)
   { pid = pid;
     state = Scheding;
@@ -68,7 +69,6 @@ let alloc () =
   }
   in
   hash p
-  
 
 let free p =
   raise Todo

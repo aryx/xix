@@ -18,3 +18,6 @@ let ok_addr_range addr len write =
 
 let valid_addr_range addr len write =
   raise Todo
+
+let memchr x =
+  raise Todo

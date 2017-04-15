@@ -1,4 +1,5 @@
 open Common
+open Types
 open Spinlock_
 
 (* less:
@@ -8,10 +9,12 @@ open Spinlock_
 
 type t = Spinlock_.t
 
-(* less: add debugging info in lock once you grab it *)
 let lock x =
   let when_hold () =
     (* less: increment up.nlocks (but using low level atomic_inc) *)
+    if (!Globals.up).Proc_.pid <> 0 
+    then x.p <- Some (!Globals.up).Proc_.pid;
+    (* less: add more debugging info in lock once you grab it *)
     ()
   in
   if Tas.tas x.hold = false
@@ -58,4 +61,6 @@ let with_lock f x =
 
 
 let alloc () = 
-  { hold = ref false }
+  { hold = ref false;
+    p = None;
+  }

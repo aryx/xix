@@ -17,15 +17,16 @@ type rune = char
 (*****************************************************************************)
 (* could be in memory.ml *)
 (*****************************************************************************)
-type space = User | Kernel
 
-(* todo: on 32 bits archi! *)
-type addr = int32
+type addr = Arch.addr
 
-type virt_addr = V of addr * space
 type phys_addr = P of addr
+(*
+type space = User | Kernel
+type virt_addr = V of addr * space
+*)
 
-(* dupe of virt_addr, but more precise in types *)
+(* dupe of virt_addr but more precise in types *)
 type user_addr = VU of addr
 type kern_addr = VK of addr
 

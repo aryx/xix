@@ -29,29 +29,28 @@ type section =
   | SStack
 
   | SExtra
+  (* less: physical segment extension *)
 
 type t = {
   pid: pid;
   mutable state: state;
 
-  mutable user: string;
+  user: string;
   (* executable name. Can be also *init* for kernel process *)
   mutable name: string; 
 
-  (* 'mutable' because can not be set in alloc() but fork(). 
-   * 'option' because if NoWait flag given, no parent.
-   *)
-  mutable parent: pid option; 
+  (* None when NoWait flag in sysrfork (also first proc has no parent) *)
+  parent: pid option; (* less: opti: direct link to parent *)
   mutable nchild: int;
 
-  (* less: should use Segment_.t array; more efficient, but more tedious *)
+  (* less: opti: should use Segment_.t array; but more tedious *)
   mutable seg: (section, Segment_.t) Hashtbl.t;
   (* less: should use monitor instead of separate data and its lock? 
    * or have a mutable seg: Segment_t.array Qlock_.locked; ?
    *)
   seglock: Qlock_.t;
 
-  mutable slash: Chan_.t;
+  slash: Chan_.t;
   mutable dot: Chan_.t;
 
 

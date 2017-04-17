@@ -72,6 +72,11 @@ let syscall_rfork flags =
       up.nchild <- up.nchild + 1;
     );
 
+    (* todo: arch_flushmmu, arch_forkchild *)
+    !Hooks.ready pid;
+    !Hooks.sched ();
+    pid
+
   | Syscall.NoFork (flags) -> 
     let up = !(Globals.up) in
     raise Todo

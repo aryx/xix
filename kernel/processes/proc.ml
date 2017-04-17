@@ -4,8 +4,10 @@ open Proc_
 
 type allocator = {
   (* less: an arena allocator? but then Proc.pid can not be a constant field.
-   * An arena allocator is not strictly necessary here (as for Page).
+   * I think an arena allocator is not necessary here (but the Page 
+   * arena allocator is on the opposite).
    *)
+
   hpids: (pid, Proc_.t) Hashtbl.t;
 
   l: Spinlock_.t;
@@ -41,7 +43,7 @@ let proc_of_pid pid =
   
   
 (* alloc() is sometimes better inlined in the caller (e.g., in sysrfork)
- * so better see how to setup everything.
+ * so it's easier to see if you setup everything.
  * Use { (alloc()) with ... } if you need to modify the non-mutable fields.
  *)
 let alloc () =

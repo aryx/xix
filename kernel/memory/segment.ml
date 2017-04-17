@@ -81,6 +81,7 @@ let really_copy oldseg =
   );
   seg
 
+(* less: pass also proc segment type, to handle KImage opti and data2txt *)
 let copy_or_share seg share =
   seg.ql |> Qlock.with_lock (fun () ->
     match seg.kind with
@@ -90,7 +91,7 @@ let copy_or_share seg share =
     | SStack -> really_copy seg
     (* share or copy *)
     | SData | SBss ->
-      (* less: if SData and KImage? *)
+      (* less: if SData and Proc_SText? data2txt *)
       if share
       then really_share seg
       else really_copy seg
@@ -99,7 +100,6 @@ let copy_or_share seg share =
 
 let share seg =
   copy_or_share seg true
-
 let copy seg =
   copy_or_share seg false
 

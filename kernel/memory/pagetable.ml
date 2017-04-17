@@ -10,7 +10,7 @@ let alloc () =
     last = 0;
   }
 
-(* less: pass segment too? or just pass segment type? *)
+(* less: pass seg type if want to handle SG_PHYSICAL (or handle it in caller)*)
 let free pt =
   if pt.first < pagetab_size
   then 
@@ -18,6 +18,9 @@ let free pt =
       pt.pagetab.(i) |> Common.if_some (fun p -> Page.free p);
     done
 
+(* actually share the pages, but create a fresh pagetable so when fault,
+ * we will be able to allocate a new page (copy on write).
+ *)
 let copy pt_old =
   let pt_new = alloc () in
   pt_new.first <- pt_old.first;

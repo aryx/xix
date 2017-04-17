@@ -6,8 +6,8 @@ type t =
   (* process *)
   | Rfork of rfork_flags
   | Exec of filename * string list (* args *)
-  | Exits of string
   | Await
+  | Exits of string
 
   (* memory *)
   | Brk of user_addr

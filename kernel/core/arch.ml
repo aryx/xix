@@ -7,6 +7,8 @@ type int32 = int
 
 type addr = int32
 
+(* less: let wd2by = 4 *)
+
 type ureg = {
   r0: int32;
   r1: int32;
@@ -51,5 +53,8 @@ type t = {
 
   kzero:  ...
   ktzero: ...
+
+  set_pc:
+  set_sp: 
 }
 *)

@@ -105,6 +105,13 @@ let free p =
   end
 
 
-
+(* init the allocator *)
 let init xs =
   raise Todo
+
+
+let share p = 
+  Spinlock.lock p.Page_.l;
+  p.refcnt <- p.refcnt + 1;
+  Spinlock.unlock p.Page_.l;
+  p

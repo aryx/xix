@@ -2,33 +2,58 @@ open Common
 open Types
 open Proc_
 
+(* todo: can call files/chan.ml from here? *)
+module Chan = struct
+let share chan =
+  Ref.inc chan.Chan_.refcnt; 
+  chan
+end
+
 
 let syscall_rfork flags =
   match flags with
   | Syscall.Fork (fork_flags, flags) ->
     let up = !(Globals.up) in
 
-    (* I prefer to inline Proc.alloc () here *)
+    (* I prefer to inline Proc.alloc () here (I could use { alloc () with }) *)
     let pid = Counter.gen Proc.pidcounter in
+    let seg = Hashtbl.create 10 in
     let p = {
       pid = pid;
       state = Scheding;
 
-      parent = Some up.pid;
+      parent = if fork_flags.Syscall.wait_child then Some up.pid else None;
       nchild = 0;
+      childlock = Spinlock.alloc ();
 
-      slash = up.slash;
-      dot = begin up.dot (* todo: increment ref! *) end;
+      slash = up.slash; (* no need to refcount slash *)
+      dot = Chan.share up.dot;
 
       (* memory *)
-      seg = raise Todo;
+      seg = begin
+        (* less: seglock |> Qlock.with_lock ?? why need that *)
+        up.seg |> Hashtbl.iter (fun section s ->
+          Hashtbl.add seg section 
+            (* we will always share SText and create fresh stack, but
+             * we might share SData and SBss
+             * todo: remove Segment_.kind and inline some of the code
+             * of Segment.dupseg here?
+             *)
+            (if fork_flags.Syscall.share_mem
+             then Segment.share s
+             else Segment.copy s
+            )
+        );
+        seg
+      end;
+
       seglock = Qlock.alloc ();
 
       (* todo: fds *)
       (* todo: namespace *)
       (* todo: environment *)
-      (* todo: rendezvous group *)
-      (* todo: note group *)
+      (* less: rendezvous group *)
+      (* less: note group *)
 
       (* misc *)
       user = up.user;
@@ -40,7 +65,12 @@ let syscall_rfork flags =
     }
     in
     (* as in Proc.alloc() *)
-    Proc.hash p
+    Proc.hash p;
+
+    if fork_flags.Syscall.wait_child
+    then up.childlock |> Spinlock.with_lock (fun () ->
+      up.nchild <- up.nchild + 1;
+    );
 
   | Syscall.NoFork (flags) -> 
     let up = !(Globals.up) in

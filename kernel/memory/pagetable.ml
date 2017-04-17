@@ -26,10 +26,7 @@ let copy pt_old =
   then begin
     for i = pt_new.first to pt_new.last do
       pt_old.pagetab.(i) |> Common.if_some (fun p -> 
-        Spinlock.lock p.Page_.l;
-        p.Page_.refcnt <- p.Page_.refcnt + 1;
-        Spinlock.unlock p.Page_.l;
-        pt_new.pagetab.(i) <- Some p;
+        pt_new.pagetab.(i) <- Some (Page.share p);
       );
     done
   end;

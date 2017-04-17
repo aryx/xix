@@ -2,7 +2,10 @@ open Types
   
 (* This is different than Proc.section. We need to remember a kind
  * in the segment because Segment.copy will do different things 
- * depending on the kind.
+ * depending on the kind (and fix_fault).
+ * todo: maybe can remove it if inline the decision upwards and 
+ *  if Proc_segment.segment_of_addr return a pair Segment * Proc_.segtype
+ *  or need anyway two types because of the TSEG of SG_DATA?
  *)
 type kind = 
   | SText (* todo: of ?? *)
@@ -23,7 +26,7 @@ type t = {
   mutable nb_pages: int;
 
   (* use for reference count and for its lock *)
-  l: Ref_.t;
+  refcnt: Ref_.t;
   ql: Qlock_.t;
 
 }

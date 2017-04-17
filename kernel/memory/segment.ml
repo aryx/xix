@@ -17,12 +17,12 @@ let alloc kind base nb_pages =
     top = top;
     nb_pages = nb_pages;
     pagedir = Array.make pgdir_size None;
-    l = Ref.alloc ();
+    refcnt = Ref.alloc ();
     ql = Qlock.alloc ();
   }
   
 let free seg =
-  let cnt = Ref.dec seg.l in
+  let cnt = Ref.dec seg.refcnt in
   if cnt = 0
   then begin
     Qlock.lock seg.ql;
@@ -66,5 +66,40 @@ let add_page_to_segment page seg =
   then pt.Pagetable_.first <- i;
   if i > pt.Pagetable_.last
   then pt.Pagetable_.last <- i;
-
   ()
+
+let really_share seg =
+  Ref.inc seg.refcnt;
+  seg
+
+let really_copy oldseg =
+  let seg = alloc oldseg.kind oldseg.base oldseg.nb_pages in
+  oldseg.pagedir |> Array.iteri (fun i x ->
+    x |> Common.if_some (fun pt -> 
+      seg.pagedir.(i) <- Some (Pagetable.copy pt)
+  )
+  );
+  seg
+
+let copy_or_share seg share =
+  seg.ql |> Qlock.with_lock (fun () ->
+    match seg.kind with
+    (* always share *)
+    | SText -> really_share seg
+    (* always new *)
+    | SStack -> really_copy seg
+    (* share or copy *)
+    | SData | SBss ->
+      (* less: if SData and KImage? *)
+      if share
+      then really_share seg
+      else really_copy seg
+  )
+  
+
+let share seg =
+  copy_or_share seg true
+
+let copy seg =
+  copy_or_share seg false
+

@@ -1,5 +1,8 @@
 open Common
 
+(* Test And Set, the concurrency primitive block 
+*)
+
 (* todo: external arch_tas: bool ref -> bool = "caml_tas" *)
 
 (* tas() get the old content, set the ref, and then return

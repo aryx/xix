@@ -53,6 +53,7 @@ type t = {
   slash: Chan_.t;
   mutable dot: Chan_.t;
 
+  childlock: Spinlock_.t;
 
   mutable in_syscall: bool;
   (* todo: kstack!!

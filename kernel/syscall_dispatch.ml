@@ -19,6 +19,9 @@ let dispatch syscall =
     (* let (_pid, _time, _msg) = waitmsg    in *)
     raise Todo
 
+  | Exits str ->
+    Sysexits.syscall_exits str
+
   | Errstr -> Syserrstr.syscall_errstr ()
 
   | _ -> raise Todo

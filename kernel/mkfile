@@ -42,6 +42,7 @@ CMO= \
   processes/proc.cmo\
   processes/sysrfork.cmo\
   processes/sysawait.cmo\
+  processes/sysexits.cmo\
   \
   sysnop.cmo\
   syserrstr.cmo\

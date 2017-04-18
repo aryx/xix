@@ -4,16 +4,18 @@ open Spinlock_
 
 (* less:
  * - nlocks
- * - use monitor approach instead of fine-grained locks?
+ * - use monitor approach instead of fine-grained locks? anyway, monitor
+ *   need to rely on spinlock internally?
  *)
 
 type t = Spinlock_.t
 
 let lock x =
   let when_hold () =
+    let up = !Globals.up in
     (* less: increment up.nlocks (but using low level atomic_inc) *)
-    if (!Globals.up).Proc_.pid <> 0 
-    then x.p <- Some (!Globals.up).Proc_.pid;
+    if up.Proc_.pid <> 0 
+    then x.p <- Some up.Proc_.pid;
     (* less: add more debugging info in lock once you grab it *)
     ()
   in
@@ -52,7 +54,7 @@ let canlock x =
   else false
 
 
-
+(* so nice compared to C *)
 let with_lock f x =
   lock x;
   Common.finalize f (fun () ->

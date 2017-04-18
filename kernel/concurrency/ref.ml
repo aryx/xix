@@ -28,7 +28,18 @@ let dec x =
   then failwith "Ref.dec has a negative count";
   v
 
-(* a Ref is often used as a lock too *)
+let dec_and_is_zero x =
+  Spinlock.lock x.l;
+  x.cnt <- x.cnt - 1;
+  let v = x.cnt in
+  Spinlock.unlock x.l;
+  if v < 0
+  then failwith "Ref.dec has a negative count";
+  v = 0
+
+  
+
+(* a Ref is often used as a lock for other fields (e.g., in Page_.t) *)
 let lock x =
   Spinlock.lock x.l
 let unlock x =

@@ -1,6 +1,6 @@
 open Common
 
-(* Test And Set, the concurrency primitive block 
+(* Test And Set, the concurrency building block 
 *)
 
 (* todo: external arch_tas: bool ref -> bool = "caml_tas" *)

@@ -32,7 +32,7 @@ let syscall_rfork flags =
 
       (* memory *)
       seg = begin
-        (* less: seglock |> Qlock.with_lock ?? why need that *)
+        (* todo: seglock |> Qlock.with_lock ?? why need that? because pager? *)
         up.seg |> Hashtbl.iter (fun section s ->
           Hashtbl.add seg section 
             (* we will always share SText and create fresh stack, but
@@ -53,6 +53,7 @@ let syscall_rfork flags =
       (* todo: fds *)
       (* todo: namespace *)
       (* todo: environment *)
+
       (* less: rendezvous group *)
       (* less: note group *)
 

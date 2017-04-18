@@ -7,8 +7,10 @@ type t = Segment_.t
 let alloc kind base nb_pages =
   if nb_pages > Segment_.pagedir_size * Pagetable_.pagetab_size
   then raise Error.Enovmem;
+
   let top = match base with VU x -> VU (x + nb_pages * Memory.pg2by) in
   let pgdir_size = 
+    (* each pgdir entry will have pagetab_size pgtab entries *)
     Common.roundup nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
   in
   { 
@@ -22,8 +24,7 @@ let alloc kind base nb_pages =
   }
   
 let free seg =
-  let cnt = Ref.dec seg.refcnt in
-  if cnt = 0
+  if Ref.dec_and_is_zero seg.refcnt
   then begin
     Qlock.lock seg.ql;
     seg.pagedir |> Array.iter (fun pagedir ->
@@ -46,7 +47,7 @@ let add_page_to_segment page seg =
   let (VU top) = seg.top in
   
   if va < base || va >= top
-  then failwith "add_patch_to_segment: page out of segment range";
+  then failwith "add_page_to_segment: page out of segment range";
   
   let offset = va - base in
   let pt =
@@ -59,14 +60,17 @@ let add_page_to_segment page seg =
   in
   if pt.Pagetable_.pagetab.(ptx offset) <> None
   then failwith "add_page_to_segment: address already mapped to a page";
+
   pt.Pagetable_.pagetab.(ptx offset) <- Some page;
-  
+
   let i = ptx offset in
   if i < pt.Pagetable_.first
   then pt.Pagetable_.first <- i;
   if i > pt.Pagetable_.last
   then pt.Pagetable_.last <- i;
   ()
+
+
 
 let really_share seg =
   Ref.inc seg.refcnt;

@@ -1,5 +1,6 @@
 open Types
 
+(* less: a request type and an answer type? like plan9p? *)
 type t = 
   | Nop
 
@@ -67,13 +68,13 @@ type t =
    * less: opti: could use a bitset for the whole type
    *)
   and rfork_flags = 
-    | Fork of fork_flags * common_flags
-    | NoFork of common_flags
+    | Fork of fork_flags * common_rfork_flags
+    | NoFork of common_rfork_flags
     and fork_flags = {
       share_mem: bool;
       wait_child: bool;
     }
-   and common_flags = {
+   and common_rfork_flags = {
       fork_fds: fork_kind;
       fork_namespace: fork_kind;
       fork_env: fork_kind;
@@ -83,4 +84,3 @@ type t =
        *)
     }
     and fork_kind = Clean | Copy | Share (* Share mean Nothing for NoFork *)
-    

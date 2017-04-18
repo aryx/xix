@@ -1,13 +1,13 @@
 open Common
 open Types
 
-(* less: delete once have { Xxx. ... } feature *)
-open Ref_
-
 type t = Ref.t
 
 let gen x =
   Ref.inc x
+
+(* less: delete once have { Xxx.xxx= yyy= ... } feature *)
+open Ref_
 
 let alloc () =
   { Ref_.

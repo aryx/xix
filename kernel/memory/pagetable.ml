@@ -19,7 +19,8 @@ let free pt =
     done
 
 (* actually share the pages, but create a fresh pagetable so when fault,
- * we will be able to allocate a new page (copy on write).
+ * we will be able to allocate a new page (copy on write) and reference
+ * this new page in the pagetab array.
  *)
 let copy pt_old =
   let pt_new = alloc () in

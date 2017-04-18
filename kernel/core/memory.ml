@@ -1,7 +1,7 @@
 open Common
 open Types
 
-type addr = Types.addr
+type addr = Types.addr (* itself an alias for Arch.addr *)
 type phys_addr = Types.phys_addr
 type user_addr = Types.user_addr
 type kern_addr = Types.kern_addr
@@ -24,6 +24,10 @@ let ktzero = VK Arch.ktzero
 let uzero = VU 0x0
 let utzero = VU (0x0 + pg2by)
 
+let ustktop = VU 0x2000000
+let ustksize = 8 * mb
+
+(* mv in arch.ml? *)
 let virt_to_phys x =
   raise Todo
 

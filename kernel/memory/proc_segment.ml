@@ -2,7 +2,7 @@ open Types
 
 exception Found of Segment_.t
 
-(* less: dolock bool 
+(* todo: dolock bool (complex Segment_.ql locking) 
  * less: return option instead of Not_found?
  * todo: return section! so less need store segment kind?
  *  or pb when have STEXT in SG_DATA?

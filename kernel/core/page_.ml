@@ -1,9 +1,10 @@
 open Common
 open Types
 
-(* A kind of portable Page Table Entry (PTE). It remembers also
- * the reverse mapping (pa -> va), include a ref count, and records other
- * meta-data about the page (modified/referenced).
+(* The type below is a kind of portable Page Table Entry (PTE). 
+ * Page.t remembers also the reverse mapping (pa -> va), it includes 
+ * a ref count, and it records other meta-data about the page 
+ * (modified/referenced).
  * 
  * less: opti: There will be lots of those Page.t so
  *   - factorize modified/references in a bitset
@@ -17,7 +18,8 @@ type t = {
   mutable va: user_addr;
 
   mutable refcnt: int; (* should be Ref.t but protected already by Page.l *)
-
+  
+  (* PTE bitfields *)
   mutable modified: bool;
   mutable referenced: bool;
 

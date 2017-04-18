@@ -1,17 +1,17 @@
 open Types
 
-(* todo: PageOrSwap below? use either? *)
+(* todo: PageOrSwap below? use Common.either? *)
 type t = {
-  (* opti: use an array; faster than a list *)
+  (* opti: we use an array; faster than a list *)
   pagetab: Page_.t option array; (* length = pagetab_size = 256 *)
 
-  (* opti: to avoid iterate over all entries in pagetab.
-   * useful for SStack where allocated pages are at the end
+  (* opti: the fields below allow to avoid iterate over all entries in pagetab.
+   * This is useful especially for SStack where allocated pages are at the end
    * of the array.
-   * todo: but who needs to iterate? just Pagetable.free and copy?
-   *  useful opti then? 
+   * todo: but who needs to iterate? just Pagetable.free and copy?  useful 
+   *  opti then? 
    *)
-  mutable first: int; (* pagetab_size when None *)
+  mutable first: int; (* pagetab_size when pagetab is full of None *)
   mutable last: int;
 }
 

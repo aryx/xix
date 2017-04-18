@@ -22,8 +22,9 @@ let lock q =
     q.locked <- true;
     Spinlock.unlock q.l;
   end else begin
-    Queue.add !Globals.up.Proc_.pid q.q;
-    (!Globals.up).Proc_.state  <- Proc_.Queueing None;
+    let up = !Globals.up in
+    Queue.add up.Proc_.pid q.q;
+    up.Proc_.state  <- Proc_.Queueing None;
     Spinlock.unlock q.l;
     !Hooks.sched ();
     (* will resume here once woke up by another process *)
@@ -56,6 +57,7 @@ let canlock q =
       true
     end
 
+(* so much better than those waserror/nexterror/poperror in C *)
 let with_lock f x =
   lock x;
   Common.finalize f (fun () ->

@@ -26,16 +26,14 @@ type space = User | Kernel
 type virt_addr = V of addr * space
 *)
 
-(* dupe of virt_addr but more precise in types *)
+(* similar to virt_addr but more precise! better type signatures. *)
 type user_addr = VU of addr
 type kern_addr = VK of addr
 
 (*****************************************************************************)
-(* could be in time.ml *)
+(* could be in proc.ml *)
 (*****************************************************************************)
-type sec = int
-
-type time = unit (* TODO float? no! *)
+type pid = int
 
 (*****************************************************************************)
 (* could be in files.ml *)
@@ -55,9 +53,12 @@ type perm = int
 type devid = int
 
 (*****************************************************************************)
-(* could be in proc.ml *)
+(* could be in time.ml *)
 (*****************************************************************************)
-type pid = int
+type sec = int
+
+type time = unit (* TODO float? no! no float in the kernel! *)
+
 
 (*****************************************************************************)
 (* misc *)

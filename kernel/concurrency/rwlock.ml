@@ -1,15 +1,15 @@
 open Common
 open Types
 
-(* todo:
- * - use monitor approach instead of fine-grained locks?
- *)
-
+(* less: put in core/ too? or no mutual deps for Rwlock.t? *)
 type t = {
+  (* instead of a 'locked: bool' *)
   mutable readers: int;
   mutable writer: bool;
 
-  q: Proc_.t Queue.t;
+  (* the readers *)
+  rprocs: Proc_.t Queue.t;
+  (* the writer *)
   mutable wproc: Proc_.t option;
 
   l: Spinlock.t;

@@ -10,20 +10,21 @@ type t = Page_.t
  *)
 type allocator = {
 
-  (* big array! *)
+  (* big array! will map all pages from physical memory *)
   mutable pages: t array;
 
   (* less: use Queue.t instead? or Double_list.ml? *)
   mutable free: t list;
   mutable freecnt: int;
 
-  (* !lock ordering! allocator.l before t.l *)
+  (* !lock ordering! allocator.l before page.l *)
   l: Spinlock.t;
 }
 
 let allocator = {
   (* set in init *)
   pages = [| |];
+
   free = [];
   freecnt = 0;
   l = Spinlock.alloc ();
@@ -39,7 +40,7 @@ let unchain p =
     if x != p
     then raise (Impossible "unchain should be called with top free page");
     allocator.free <- xs;
-    allocator.freecnt <- allocator.freecnt -1;
+    allocator.freecnt <- allocator.freecnt - 1;
     ()
 
 let chain_free_head p =
@@ -57,13 +58,14 @@ let chain_free_tail p =
 let highwater = 100
 
 
-let alloc clear segopt va =
+let alloc va clear (* less: segopt *) =
   Spinlock.lock allocator.l;
 
   if allocator.freecnt > highwater
   then begin
     let p = List.hd allocator.free in
     unchain p;
+    (* less: why lock? we should be the only one anyway no? for consistency? *)
     Spinlock.lock p.Page_.l;
     if p.refcnt <> 0
     then failwith "newpage: page ref != 0";
@@ -89,6 +91,10 @@ let alloc clear segopt va =
 (* less: if page is a swapaddress? *)
 let free p =
   Spinlock.lock allocator.l;
+  (* we should use Ref.dec_and_is_zero but for opti reason we
+   * use a spinlock and a separate int for a refcnt (and not a Ref)
+   * so have to be more verbose
+   *)
   Spinlock.lock p.Page_.l;
   if p.refcnt = 0
   then failwith "Page.free: refcnt is 0";
@@ -106,7 +112,7 @@ let free p =
 
 
 (* init the allocator *)
-let init xs =
+let init_allocator xs =
   raise Todo
 
 

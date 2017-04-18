@@ -7,15 +7,17 @@ let syscall_await () =
 
   (* sanity check *)  
   up.childlock |> Spinlock.with_lock (fun () ->
+    (* important to check waitq too! child might have exited before 
+     * the parent await *)
     if up.nchild = 0 && List.length up.waitq = 0
     then raise Error.Enochild;
   );
   
-  !Hooks.sleep (fun () -> 
+  !Hooks.sleep (* todo: up.wait_rendezvous *)  (fun () -> 
     (* todo: no need lock childlock ?? *)
     up.waitq <> []
   );
-
+  (* ok, got something *)
   Spinlock.lock up.childlock;
   let wmsg = 
     match up.waitq with

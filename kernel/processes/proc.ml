@@ -4,10 +4,11 @@ open Proc_
 
 type allocator = {
   (* less: an arena allocator? but then Proc.pid can not be a constant field.
-   * I think an arena allocator is not necessary here (but the Page 
-   * arena allocator is on the opposite).
+   * I think an arena allocator is not necessary here 
+   * (the Page arena allocator is necessary on the opposite).
    *)
 
+  (* used even more now that I use pid in Qlock.q instead of direct reference*)
   hpids: (pid, Proc_.t) Hashtbl.t;
 
   l: Spinlock_.t;
@@ -35,6 +36,7 @@ let unhash p =
   Hashtbl.remove allocator.hpids p.Proc_.pid;
   Spinlock.unlock allocator.l
 
+(* can raise Not_found *)
 let proc_of_pid pid =
   allocator.l |> Spinlock.with_lock (fun () ->
     Hashtbl.find allocator.hpids pid
@@ -50,7 +52,7 @@ let alloc () =
   let pid = Counter.gen pidcounter in
   let p = 
   (* less: if can not alloc, do noprocpanic and resrcwait? 
-   * (assume use proc arena for that)
+   * (assume use proc arena for that?)
    *)
   { pid = pid;
     state = Scheding;
@@ -69,7 +71,6 @@ let alloc () =
     nchild = 0;
     waitq = [];
     childlock = Spinlock.alloc ();
-
   }
   in
   hash p

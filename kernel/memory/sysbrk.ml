@@ -3,8 +3,9 @@ open Types
 open User_memory (* for operators @<, @-, etc *)
 
 let change_segment_top addr section =
+  let up = !Globals.up in
   let seg =
-    try Hashtbl.find !(Globals.up).Proc_.seg section
+    try Hashtbl.find up.Proc_.seg section
     with Not_found -> raise Error.Ebadarg
   in
   seg.Segment_.ql |> Qlock.with_lock  (fun () ->
@@ -13,7 +14,7 @@ let change_segment_top addr section =
     then raise Todo
     else begin
       (* make sure new_top does not overlap with another segment *)
-      !(Globals.up).Proc_.seg |> Hashtbl.iter (fun section2 seg2 ->
+      up.Proc_.seg |> Hashtbl.iter (fun section2 seg2 ->
         if section2 <> section
         then
           if new_top >= seg2.Segment_.base && new_top < seg2.Segment_.top

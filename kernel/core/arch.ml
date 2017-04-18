@@ -6,7 +6,6 @@
 type int32 = int
 
 type addr = int32
-
 (* less: let wd2by = 4 *)
 
 type ureg = {
@@ -37,14 +36,13 @@ type ureg = {
 
 let pg2by = 0x1000 (* 4096 *)
 
-(* todo: should be 0x80000000 but cant be stored in int
+(* todo: should be 0x80000000 but this big number cant be stored in OCaml int
  * todo: make sure mem.h agrees with that! and virt_io, etc.
 *)
 let kzero = 0x40000000 
 let ktzero = kzero + 0x8000
 
 (* less: let cpuaddr = V (kzero + 0x2000, Kernel) *)
-
 
 
 (* less: need generic type?

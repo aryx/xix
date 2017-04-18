@@ -9,3 +9,7 @@ let (sched: (unit -> unit) ref) = ref (fun () ->
 let (ready: (pid -> unit) ref) = ref (fun p ->
   failwith "ready() not defined"
 )
+
+let (sleep: ((unit -> bool) -> unit) ref) = ref (fun _f ->
+  failwith "sleep() not defined"
+)

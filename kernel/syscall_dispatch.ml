@@ -21,6 +21,7 @@ let dispatch syscall =
 
   | Exits str ->
     Sysexits.syscall_exits str
+    (* no return from here ... *)
 
   | Errstr -> Syserrstr.syscall_errstr ()
 

@@ -15,7 +15,8 @@ let dispatch syscall =
     raise Todo
 
   | Await ->
-    let (_pid, _time, _msg) = Sysawait.syscall_await () in
+    let _opt_waitmsg =  Sysawait.syscall_await () in
+    (* let (_pid, _time, _msg) = waitmsg    in *)
     raise Todo
 
   | Errstr -> Syserrstr.syscall_errstr ()

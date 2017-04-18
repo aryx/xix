@@ -2,3 +2,4 @@
 exception Ebadarg
 exception Enovmem
 exception Esoverlap
+exception Enochild

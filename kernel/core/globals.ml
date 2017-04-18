@@ -52,11 +52,12 @@ let fakeproc = { Proc_.
   dot = fakechan;
   seg = Hashtbl.create 11;
   seglock = fakeqlock;
-  childlock = fakelock;
   name = "";
   in_syscall = false;
   parent = None;
   nchild = 0;
+  waitq = [];
+  childlock = fakelock;
   user = "";
   
 }

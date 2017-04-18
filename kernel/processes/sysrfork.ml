@@ -24,6 +24,7 @@ let syscall_rfork flags =
 
       parent = if fork_flags.Syscall.wait_child then Some up.pid else None;
       nchild = 0;
+      waitq = [];
       childlock = Spinlock.alloc ();
 
       slash = up.slash; (* no need to refcount slash *)

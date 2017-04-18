@@ -28,8 +28,14 @@ type section =
   | SBss
   | SStack
 
-  | SExtra
+  | SExtra (* temporary SStack used in sysexec *)
   (* less: physical segment extension *)
+
+type waitmsg = {
+  child_pid: pid;
+  child_exits: string;
+  (* less: time fields of child *)
+}
 
 type t = {
   pid: pid;
@@ -42,6 +48,8 @@ type t = {
   (* None when NoWait flag in sysrfork (also first proc has no parent) *)
   parent: pid option; (* less: opti: direct link to parent *)
   mutable nchild: int;
+  mutable waitq: waitmsg list;
+  childlock: Spinlock_.t;
 
   (* less: opti: should use Segment_.t array; but more tedious *)
   mutable seg: (section, Segment_.t) Hashtbl.t;
@@ -53,7 +61,6 @@ type t = {
   slash: Chan_.t;
   mutable dot: Chan_.t;
 
-  childlock: Spinlock_.t;
 
   mutable in_syscall: bool;
   (* todo: kstack!!

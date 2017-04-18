@@ -67,6 +67,7 @@ let alloc () =
 
     parent = None;
     nchild = 0;
+    waitq = [];
     childlock = Spinlock.alloc ();
 
   }

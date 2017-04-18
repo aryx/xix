@@ -14,6 +14,10 @@ let dispatch syscall =
     let _pid = Sysrfork.syscall_rfork x in
     raise Todo
 
+  | Await ->
+    let (_pid, _time, _msg) = Sysawait.syscall_await () in
+    raise Todo
+
   | Errstr -> Syserrstr.syscall_errstr ()
 
   | _ -> raise Todo

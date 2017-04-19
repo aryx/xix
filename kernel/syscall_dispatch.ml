@@ -14,6 +14,8 @@ let dispatch syscall =
     let _pid = Sysrfork.syscall_rfork x in
     raise Todo
 
+  | Exec (cmd, args) -> Sysexec.syscall_exec cmd args
+
   | Await ->
     let _opt_waitmsg =  Sysawait.syscall_await () in
     (* let (_pid, _time, _msg) = waitmsg    in *)

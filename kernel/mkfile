@@ -1,6 +1,8 @@
 #############################################################################
 # Src
 #############################################################################
+# less: take common.ml and a_out.ml from ../? 
+
 CMO= \
   commons/common.cmo\
   \
@@ -42,6 +44,7 @@ CMO= \
   \
   processes/proc.cmo\
   processes/sysrfork.cmo\
+  processes/sysexec.cmo\
   processes/sysawait.cmo\
   processes/sysexits.cmo\
   \

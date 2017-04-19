@@ -44,6 +44,9 @@ let ktzero = kzero + 0x8000
 
 (* less: let cpuaddr = V (kzero + 0x2000, Kernel) *)
 
+(* _MAGIC(0, 20) where _MAGIC(f, b)	((f)|((((4*(b))+0)*(b))+7)) *)
+let aout_magic = -1 (* todo:!! *)
+
 
 (* less: need generic type?
 type t = {

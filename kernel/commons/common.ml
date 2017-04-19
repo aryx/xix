@@ -24,6 +24,11 @@ let is_power_of_2 x =
   x <> 0 && 
   x land (x - 1) = 0 
 
+let log2 x =
+  if false
+  then 0
+  else raise Todo
+
 let roundup x pow2 =
   assert (is_power_of_2 pow2);
   (x + (pow2 - 1)) land (lnot (pow2 - 1))

@@ -23,6 +23,7 @@ let lput chan word =
   let x2 = Char.chr ((word lsr 8) mod 256) in
   let x3 = Char.chr ((word lsr 16) mod 256) in
   let x4 = Char.chr ((word lsr 24) mod 256) in
+  (* big part first; most-significant byte first *)
   output_char chan x4;
   output_char chan x3;
   output_char chan x2;

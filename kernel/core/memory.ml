@@ -12,10 +12,7 @@ let mb = 1024 * 1024 (* 1048576 *)
 let gb = 1024 * 1024 * 1024 (* 1073741824 *)
 
 let pg2by = Arch.pg2by
-
-let roundup_page (VU addr) = 
-  VU (Common.roundup addr pg2by)
-
+let pgshift = log2 pg2by
 
 (* general constants *)
 let kzero = VK Arch.kzero

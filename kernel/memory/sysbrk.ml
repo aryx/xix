@@ -10,7 +10,7 @@ let change_segment_top addr section =
   in
   (* less: why need lock? who else will modify up.seg? the pager? *)
   seg.Segment_.ql |> Qlock.with_lock  (fun () ->
-    let new_top = Memory.roundup_page addr in
+    let new_top = User_memory.roundup_page addr in
     if new_top @< seg.Segment_.top
     then raise Todo
     else begin

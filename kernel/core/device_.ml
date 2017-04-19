@@ -1,6 +1,7 @@
 open Types
 
 type devid = Types.devid
+type seek = Seek of int64
 
 type t = {
   devcode: rune;
@@ -14,8 +15,11 @@ type t = {
   open_: Chan_.t -> Chan_.open_mode -> Chan_.t;
   close: Chan_.t -> unit;
 
-  read: Chan_.t -> user_addr * int -> int64 -> int ;
-  write: Chan_.t -> user_addr * int -> int64 -> int;
+  (* todo: should be Chan_.t -> user_addr * int -> int64 -> int;?
+   * or virt_addr?
+   *)
+  read: Chan_.t -> string -> int -> seek -> int ;
+  write: Chan_.t -> string -> int -> seek -> int;
   (* less: bread, bwrite *)
 
   (* todo:

@@ -17,6 +17,7 @@ let syscall_rfork flags =
 
     (* I prefer to inline Proc.alloc () here (I could use { alloc () with }) *)
     let pid = Counter.gen Proc.pidcounter in
+
     let seg = Hashtbl.create 10 in
     let p = {
       pid = pid;

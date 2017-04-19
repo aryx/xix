@@ -56,7 +56,12 @@ let unlock x =
 
 let canlock x =
   if Tas.tas x.hold = false
-  then (* less: update debugging fields *) true
+  then begin
+    (* coupling: copy paste of lock when_hold *) 
+    let up = !Globals.up in
+    x.p <- up.Proc_.pid;
+    true
+  end
   else false
 
 

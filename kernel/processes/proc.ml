@@ -16,7 +16,7 @@ type allocator = {
 
 (* pids will start at 1, so no conflict with Globals.fake_proc pid 0 *)
 let pidcounter = 
-  Counter.alloc ()  
+  Counter.alloc 0
 
 (* less: let inuse = Ref.alloc ()
  *  and make sure < Globals.conf.Conf.nproc

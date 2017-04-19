@@ -19,7 +19,7 @@ let alloc kind base nb_pages =
     top = top;
     nb_pages = nb_pages;
     pagedir = Array.make pgdir_size None;
-    refcnt = Ref.alloc ();
+    refcnt = Ref.alloc 1;
     ql = Qlock.alloc ();
   }
   
@@ -107,4 +107,3 @@ let share seg =
   copy_or_share seg true
 let copy seg =
   copy_or_share seg false
-

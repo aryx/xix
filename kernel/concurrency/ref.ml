@@ -4,8 +4,8 @@ open Ref_
 
 type t = Ref_.t
 
-let alloc () = 
-  { cnt = 1;
+let alloc n = 
+  { cnt = n;
     l = Spinlock.alloc ();
   }
 

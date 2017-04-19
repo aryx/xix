@@ -13,4 +13,7 @@ type t = {
   cpumhz: int;
 
   (* todo: stack? *)
+  (* less: 
+   * mutable ilock_depths: int;
+   *)
 }

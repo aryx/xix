@@ -6,15 +6,15 @@ open Common
 (* less: in plan9 there is really just high or low; no intermediate *)
 type prio = Low | High
 
-let spl_high () =
+let high () =
   raise Todo
 
-let spl_low () =
+let low () =
   raise Todo
 
-let spl_set prio =
+let set prio =
   raise Todo
 
-let spl_is_low () =
+let is_low () =
   raise Todo
 

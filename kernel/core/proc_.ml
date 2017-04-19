@@ -34,7 +34,7 @@ type section =
 (* message sent from child to parent through exits() and 
  * received by parent through await().
  *)
-type waitmsg = {
+type wait_msg = {
   child_pid: pid;
   child_exits: string;
   (* less: time fields of child *)
@@ -53,7 +53,7 @@ type t = {
   (* less: opti: direct link to parent *)
   parent: pid option; 
   mutable nchild: int;
-  mutable waitq: waitmsg list;
+  mutable waitq: wait_msg list;
   (* the child of a process will modify nchild and waitq above, as well
    * as calls to rfork and await in the parent, hence the lock below.
    *)
@@ -64,6 +64,7 @@ type t = {
   mutable seg: (section, Segment_.t) Hashtbl.t;
   (* seglock is useful only when you have a pager in a concurrent kernel
    * process that wants to access your process segments.
+   * less: why pager wants your segments? 
    *)
   (* less: should use monitor instead of separate data and its lock? 
    *  or have a mutable seg: Segment_t.array Qlock_.locked; ?
@@ -83,10 +84,11 @@ type t = {
   *)
 
   (* less: debugging fields
-   *  lastlock: Spinlock.t ref;
+   *  last_lock: Spinlock.t ref;
+   *  last_ilock: Ilock.t ref;
    *  qpc: kern_addr; (* pc calling last qlock *)
    *)
   (* less:
-  nspinlocks: Ref.t;
+  nspinlocks: Ref.t; (* nilocks is in cpu.ml *)
   *)
 }

@@ -8,6 +8,7 @@ let change_segment_top addr section =
     try Hashtbl.find up.Proc_.seg section
     with Not_found -> raise Error.Ebadarg
   in
+  (* less: why need lock? who else will modify up.seg? the pager? *)
   seg.Segment_.ql |> Qlock.with_lock  (fun () ->
     let new_top = Memory.roundup_page addr in
     if new_top @< seg.Segment_.top

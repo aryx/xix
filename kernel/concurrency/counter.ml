@@ -3,6 +3,7 @@ open Types
 
 type t = Ref.t
 
+(* will start at 1 *)
 let gen x =
   Ref.inc x
 

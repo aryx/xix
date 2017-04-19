@@ -26,6 +26,7 @@ CMO= \
   concurrency/tas.cmo\
   concurrency/spl.cmo\
   concurrency/spinlock.cmo\
+  concurrency/ilock.cmo\
   concurrency/qlock.cmo\
   concurrency/rwlock.cmo\
   concurrency/ref.cmo\

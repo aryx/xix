@@ -1,7 +1,7 @@
 open Common
 open Types
 
-(* less: put in core/ too? or no mutual deps for Rwlock.t? *)
+(* less: put in core/ too? or no mutual deps for Rwlock.t with Proc? *)
 type t = {
   (* instead of a 'locked: bool' *)
   mutable readers: int;
@@ -11,6 +11,10 @@ type t = {
   rprocs: Proc_.t Queue.t;
   (* the writer *)
   mutable wproc: Proc_.t option;
+
+  (* less: debugging:
+   * wpc: kern_addr
+   *)
 
   l: Spinlock.t;
 }

@@ -14,6 +14,7 @@ type allocator = {
   l: Spinlock_.t;
 }
 
+(* pids will start at 1, so no conflict with Globals.fake_proc pid 0 *)
 let pidcounter = 
   Counter.alloc ()  
 

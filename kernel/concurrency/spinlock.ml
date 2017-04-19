@@ -6,6 +6,7 @@ open Spinlock_
  * - nlocks
  * - use monitor approach instead of fine-grained locks? anyway, monitor
  *   need to rely on spinlock internally?
+ * - statistics
  *)
 
 type t = Spinlock_.t
@@ -13,7 +14,10 @@ type t = Spinlock_.t
 let lock x =
   let when_hold () =
     let up = !Globals.up in
-    (* less: increment up.nlocks (but using low level atomic_inc) *)
+    (* less: 
+     * - increment up.nlocks (but using low level atomic_inc) 
+     * - update up.last_spinlock
+    *)
     if up.Proc_.pid <> 0 
     then x.p <- Some up.Proc_.pid;
     (* less: add more debugging info in lock once you grab it *)
@@ -44,7 +48,12 @@ let lock x =
 let unlock x =
   if not !(x.hold)
   then failwith "Spinlock.unlock: not locked";
-  (* less: other sanity checks on x.pid <> up.pid *)
+  let up = !Globals.up in
+  (match x.p with
+  | None     when up.Proc_.pid <> 0 -> failwith "Spinlock.unlock: up changed"
+  | Some pid when up.Proc_.pid <> pid -> failwith "Spinlock.unlock: up changed"
+  );
+
   (* less: coherence issue? *)
   x.hold := false
 

@@ -41,6 +41,7 @@ let ptx offset =
   (offset land (Pagetable_.pagetab_memory_mapped - 1)) / Memory.pg2by
   
 
+(* less: no seglock? *)
 let add_page_to_segment page seg =
   let (VU va) = page.Page_.va in
   let (VU base) = seg.base in

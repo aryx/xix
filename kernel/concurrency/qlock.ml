@@ -16,6 +16,7 @@ let alloc () =
   
 
 let lock q =
+  (* todo: sanity check ilockdepth, nlocks *)
   Spinlock.lock q.l;
   if not q.locked
   then begin

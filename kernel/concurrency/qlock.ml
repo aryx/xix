@@ -4,6 +4,7 @@ open Qlock_
 
 (* todo:
  * - use a monitor approach instead of fine-grained locks?
+ * - statistics
  *)
 
 type t = Qlock_.t

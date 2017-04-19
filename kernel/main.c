@@ -153,7 +153,7 @@ main(void)
     mmuinit1((void*)L1); // finish mmu initialization started in mmuinit0
 
     arch__confinit();     /* figures out amount of memory */
-    xinit();
+    xinit(); // less: can we get rid of xalloc? just have malloc?
 
     arch__screeninit(); // screenputs = swconsole_screenputs
     

@@ -7,7 +7,10 @@ type t = {
   hold: bool ref;
 
   (* less: opti: direct reference to Proc.t instead of pid *)
-  mutable p: pid option;
+  (* really 'pid option' but for init kernel code we use the pid 0, the
+   * one in Globals.fakeproc assigned initially to Globals.up.
+   *)
+  mutable p: pid;
 
   (* less: debugging fields
    * pc: kern_addr;

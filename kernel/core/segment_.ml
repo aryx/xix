@@ -22,7 +22,13 @@ type t = {
   (* mutable because can be changed by sysbrk() (or segsysbrk()) *)
   mutable top: user_addr;
 
-  (* less: opti: todo? impose length = pagedir_size = 1984 | 16 *)
+  (* Why not use 'Page_.t option array' directly? because we will
+   * use page fault to populate this array, so this array will be sparse
+   * and so it is better to save space to go through a pagedir/pagatab
+   * division. This division allows to implement efficiently a sparse array
+   * (an alternative is (int, Page_.t) Hashtbl.t).
+   * less: opti: todo? impose length = pagedir_size = 1984 | 16 
+  *)
   mutable pagedir: Pagetable_.t option array; 
   mutable nb_pages: int;
 

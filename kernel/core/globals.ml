@@ -19,7 +19,7 @@ let fakecpu = { Cpu.
 
 let fakelock = { Spinlock_.
   hold = ref false;
-  p = None;
+  p = 0; (* same than fakeproc.pid *)
 }
 let fakeref = { Ref_.
   cnt = 0;

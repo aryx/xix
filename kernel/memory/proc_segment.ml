@@ -1,5 +1,7 @@
 open Types
 
+(* less: mv in segment.ml? *)
+
 exception Found of Segment_.t
 
 (* todo: dolock bool (complex Segment_.ql locking) 

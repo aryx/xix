@@ -28,7 +28,7 @@ let lock q =
     Queue.add up.Proc_.pid q.q;
     up.Proc_.state  <- Proc_.Queueing None;
     Spinlock.unlock q.l;
-    !Hooks.sched ();
+    !Hooks.Scheduler.sched ();
     (* will resume here once woke up by another process *)
   end
 
@@ -40,7 +40,7 @@ let unlock q =
   try 
     let pid = Queue.take q.q in
     Spinlock.unlock q.l;
-    !Hooks.ready pid
+    !Hooks.Scheduler.ready pid
   with Queue.Empty ->
     q.locked <- false;
     Spinlock.unlock q.l

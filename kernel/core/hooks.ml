@@ -1,15 +1,29 @@
 open Types
 
-(* less: opti: direct call, but mutual dependency problem *)
-let (sched: (unit -> unit) ref) = ref (fun () ->
-  failwith "sched() not defined"
-)
+module Scheduler = struct
+  (* less: opti: direct call, but mutual dependency problem *)
+  let (sched: (unit -> unit) ref) = ref (fun () ->
+    failwith "sched() not defined"
+  )
+  
+  (* less: opti: use direct Proc_.t ref instead of pid *)
+  let (ready: (pid -> unit) ref) = ref (fun p ->
+    failwith "ready() not defined"
+  )
+  
+  let (sleep: ((unit -> bool) -> unit) ref) = ref (fun _f ->
+    failwith "sleep() not defined"
+  )
+end
 
-(* less: opti: use direct Proc_.t ref instead of pid *)
-let (ready: (pid -> unit) ref) = ref (fun p ->
-  failwith "ready() not defined"
-)
+module Chan = struct
 
-let (sleep: ((unit -> bool) -> unit) ref) = ref (fun _f ->
-  failwith "sleep() not defined"
-)
+  let (chan_of_filename: (filename -> Chan_.t) ref) = ref (fun file ->
+    failwith "chan_of_filename() not defined"
+  )
+
+  let (close: (Chan_.t -> unit) ref) = ref (fun chan ->
+    failwith "chan_of_filename() not defined"
+  )
+
+end

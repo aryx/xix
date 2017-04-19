@@ -13,7 +13,7 @@ let syscall_await () =
     then raise Error.Enochild;
   );
   
-  !Hooks.sleep (* todo: up.wait_rendezvous *)  (fun () -> 
+  !Hooks.Scheduler.sleep (* todo: up.wait_rendezvous *)  (fun () -> 
     (* todo: no need lock childlock ?? *)
     up.waitq <> []
   );

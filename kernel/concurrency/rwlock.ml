@@ -40,7 +40,7 @@ let rlock q =
     Queue.add up.Proc_.pid q.q;
     up.Proc_.state  <- Proc_.Queueing (Some Proc_.Read);
     Spinlock.unlock q.l;
-    !Hooks.sched ();
+    !Hooks.Scheduler.sched ();
     (* will resume here once woke up by another process *)
   end
 
@@ -70,7 +70,7 @@ let wlock q =
     Queue.add up.Proc_.pid q.q;
     up.Proc_.state <- Proc_.Queueing (Some Proc_.Write);
     Spinlock.unlock q.l;
-    !Hooks.sched ();
+    !Hooks.Scheduler.sched ();
     (* will resume here once woke up by another process *)
   end
 

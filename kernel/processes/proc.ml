@@ -76,6 +76,8 @@ let alloc () =
   in
   hash p
 
+(* todo: sysexits just set to Moribund. Who really free?
+ * pidunhash and the Gc?
+ *)
 let free p =
   raise Todo
-

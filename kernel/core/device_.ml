@@ -18,7 +18,7 @@ type t = {
   (* todo: should be Chan_.t -> user_addr * int -> int64 -> int;?
    * or virt_addr?
    *)
-  read: Chan_.t -> string -> int -> seek -> int ;
+  read: Chan_.t -> string (* buffer *) -> int (* nb bytes *) -> seek -> int;
   write: Chan_.t -> string -> int -> seek -> int;
   (* less: bread, bwrite *)
 

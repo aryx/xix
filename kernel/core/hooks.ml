@@ -25,6 +25,7 @@ end
 
 module Chan = struct
 
+  (* called 'namec' in 9 *)
   let (chan_of_filename: (filename -> Chan_.t) ref) = ref (fun file ->
     failwith "chan_of_filename() not defined"
   )

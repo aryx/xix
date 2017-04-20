@@ -4,9 +4,9 @@ open Types
  * 'kind' of a segment in the segment because Segment.copy will do 
  * different things depending on the kind (same for fix_fault).
  * 
- * todo: maybe can remove it if inline the decision upwards and 
+ * todo: maybe we can remove 'kind' if we inline the decision upwards and 
  *  if Proc_segment.segment_of_addr return a pair Segment * Proc_.segtype
- *  or need anyway two types because of the TSEG of SG_DATA?
+ *  (or need anyway two types because of the TSEG of SG_DATA?)
  *)
 type kind = 
   | SText (* todo: of daddr ?? of Kimage?? *)
@@ -23,8 +23,8 @@ type t = {
   mutable top: user_addr;
 
   (* Why not use 'Page_.t option array' directly? because we will
-   * use page fault to populate this array, so this array will be sparse
-   * and so it is better to save space to go through a pagedir/pagatab
+   * use page fault to populate this array, so this array will be sparse.
+   * It is better to save space by going through a pagedir/pagatab
    * division. This division allows to implement efficiently a sparse array
    * (an alternative is (int, Page_.t) Hashtbl.t).
    * less: opti: todo? impose length = pagedir_size = 1984 | 16 

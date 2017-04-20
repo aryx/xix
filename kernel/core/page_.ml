@@ -2,14 +2,18 @@ open Common
 open Types
 
 (* The type below is a kind of portable Page Table Entry (PTE). 
- * Page.t remembers also the reverse mapping (pa -> va), it includes 
- * a ref count, and it records other meta-data about the page 
+ * It maps a virtual address to a physical address.
+ * 
+ * Page.t remembers also the reverse mapping (pa -> va), includes 
+ * a ref count, and records other meta-data about the page 
  * (modified/referenced).
  * 
- * less: opti: There will be lots of those Page.t so
+ * less: opti: there will be lots of those Page.t so we should:
  *   - factorize modified/references in a bitset
  *   - use int or short for reference count
- *   - just use MMU pte data structure for that (int storing lots of info)
+ *   - just use MMU pte data structure for that 
+ *     (an int can store lots of info because the 12 low bits of the PTE
+ *      are not used because the physical address must be at a page boundary)
  *)
 type t = { 
   (* the PTE *)
@@ -25,5 +29,6 @@ type t = {
 
   (* less: color, cachectl *)
 
+  (* acts also as Ref.t via refcnt above *)  
   l: Spinlock_.t;
 }

@@ -21,10 +21,12 @@ type rune = char
 type addr = Arch.addr
 
 type phys_addr = P of addr
-(*
-type space = User | Kernel
+
+(* there are a few places where functions accept either a user or kernel
+ * address (e.g., Device_.t.read method)
+ *)
 type virt_addr = V of addr * space
-*)
+   and space = User | Kernel
 
 (* similar to virt_addr but more precise! better type signatures. *)
 type user_addr = VU of addr

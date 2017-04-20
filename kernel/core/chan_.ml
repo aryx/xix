@@ -12,11 +12,12 @@ and qid_kind =
   (* less: more stuff here*)
 
 
-type open_mode =
-  | ORead
-  | OWrite
-  | OReadWrite
+(* less: opti: use a bitset *)
+type open_mode = {
+  read: bool;
+  write: bool;
   (* less: more stuff here*)
+}
 
 type t = {
   qid: qid;

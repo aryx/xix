@@ -40,7 +40,7 @@ let fakechan = { Chan_.
   qid = fakeqid;
   path = [];
   offset = 0;
-  mode = ORead;
+  mode = { Chan_.read = false; write = false};
   ismtpt = false;
   refcnt = fakeref;
 }
@@ -78,6 +78,7 @@ let cpu = ref fakecpu
 (* less: cpus array *)
 (* less: active *)
 
+(* sentinel proc; convenent because need less if (up == nil) code *)
 let up = ref fakeproc
 
 let devtab = ref ([| |]: Device_.t array)

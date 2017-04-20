@@ -81,7 +81,8 @@ type t = {
 
 
   mutable in_syscall: bool;
-  (* todo: kstack!!
+
+  (* todo: kstack!! via Thread.t? 
   *)
 
   (* kernel process *)

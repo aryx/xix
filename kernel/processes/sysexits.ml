@@ -66,7 +66,7 @@ let syscall_exits str =
     Hashtbl.clear up.seg;
   );
 
-  (* todo: why need that?? *)
+  (* todo: why need that?? coupling with sched *)
   Spinlock.lock Proc.allocator.Proc.l;
   Spinlock.lock Page.allocator.Page.l;
 

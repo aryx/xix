@@ -1,4 +1,3 @@
-
 /*
  *  parameters for sysproc.c
  */
@@ -27,4 +26,3 @@ struct Arch_FPsave
 
     uintptr pc;     /* of failed fp instr. */
 };
-

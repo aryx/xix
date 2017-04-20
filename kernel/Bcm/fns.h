@@ -59,15 +59,6 @@ extern char *cputype2name(char *buf, int size);
 
 extern void armtimerset(int);
 
-extern void cachedwb(void);
-extern void cachedwbinv(void);
-extern void cachedinvse(void*, int);
-extern void cachedwbse(void*, int);
-extern void cachedwbinvse(void*, int);
-extern void cacheiinv(void);
-extern void cacheuwbinv(void);
-
-
 // coproc.c
 extern ulong cprd(int cp, int op1, int crn, int crm, int op2);
 extern ulong cprdsc(int op1, int crn, int crm, int op2);

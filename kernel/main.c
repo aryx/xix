@@ -166,7 +166,7 @@ main(void)
     x2 = malloc(100);
     print("Fuck yeah!%p, %p\n", x1, x2); // yeah!
 
-    caml_startup(nil);
+    caml_startup(nil); // no arguments for now
 
     print("Done!"); // yeah!
     assert(0);          /* shouldn't have returned */

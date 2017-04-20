@@ -9,6 +9,7 @@
 // Last 4 bits of PSR
 #define PsrMusr     0x00000010  /* user mode */
 #define PsrMsvc     0x00000013  /* `protected mode for OS' */
+
 #define PsrMirq     0x00000012
 #define PsrMabt     0x00000017
 #define PsrMund     0x0000001B
@@ -54,9 +55,6 @@
  */
 #define CpIDid      0           /* main ID */
 #define CpIDmpid    5           /* multiprocessor id (cortex) */
-/* CpIDid op1 values */
-#define CpIDcsize   1           /* cache size (cortex) */
-#define CpIDcssel   2           /* cache size select (cortex) */
 
 /*
  * CpCONTROL op2 codes, op1==0, Crm==0.
@@ -79,12 +77,6 @@
 #define CpCtre      (1<<28)     /* TRE: TEX remap enable */
 #define CpCsbo (3<<22|1<<18|1<<16|017<<3)       /* must be 1 (armv7) */
 #define CpCsbz (CpCtre|1<<26|CpCve|1<<15|7<<7)  /* must be 0 (armv7) */
-/*
- * CpCONTROL: op1==0, CRm==0, op2==CpAuxctl.
- * Auxiliary control register on cortex at least.
- */
-/* cortex-a7 and cortex-a9 */
-#define CpACsmp         (1<<6)  /* SMP l1 caches coherence; needed for ldrex/strex */
 
 /*
  * CpTTB op1==0, Crm==0 opcode2 values.
@@ -97,20 +89,6 @@
 #define CpFSRdata   0           /* armv6, armv7 */
 #define CpFSRinst   1           /* armv6, armv7 */
 
-/*
- * CpCACHE Secondary (CRm) registers and opcode2 fields.  op1==0.
- * In ARM-speak, 'flush' means invalidate and 'clean' means writeback.
- */
-#define CpCACHEintr 0           /* interrupt (op2==4) */
-#define CpCACHEinvi 5           /* instruction, branch table */
-#define CpCACHEinvd 6           /* data or unified */
-#define CpCACHEinvu 7           /* unified (not on cortex) */
-#define CpCACHEwb   10          /* writeback to PoC */
-#define CpCACHEwbi  14          /* writeback+invalidate (to PoC) */
-#define CpCACHEall  0           /* entire (not for invd nor wb(i) on cortex) */
-#define CpCACHEse   1           /* single entry */
-#define CpCACHEsi   2           /* set/index (set/way) */
-#define CpCACHEwait 4           /* wait (prefetch flush on cortex) */
 
 /*
  * CpTLB Secondary (CRm) registers and opcode2 fields.
@@ -142,14 +120,6 @@
 #define CpSPMctl    0           /* performance monitor control */
 #define CpSPMcyc    1           /* cycle counter register */
 
-// For MCRR
-
-/*
- * CpCACHERANGE opcode2 fields for MCRR instruction (armv6)
- */
-#define CpCACHERANGEinvd    6       /* invalidate data */
-#define CpCACHERANGEdwb     12      /* writeback */
-#define CpCACHERANGEdwbi    14      /* writeback+invalidate */
 
 // Misc
 
@@ -169,19 +139,15 @@
 #define Coarse      (Mbz|1)         /* L1 */
 #define Section     (Mbz|2)         /* L1 1MB */
 #define Fine        (Mbz|3)         /* L1 */
+
 #define Large       0x00000001      /* L2 64KB */
 #define Small       0x00000002      /* L2 4KB */
-#define Tiny        0x00000003      /* L2 1KB: not in v7 */
 
-#define Buffered    0x00000004      /* L[12]: write-back not -thru */
-#define Cached      0x00000008      /* L[12] */
+// simplified caching for now: No cache!
+//#define Buffered    0x00000004      /* L[12]: write-back not -thru */
+//#define Cached      0x00000008      /* L[12] */
 
 #define Dom0        0
-
-#define L1wralloc   (1<<12)         /* L1 TEX */
-#define L1sharable  (1<<16)
-#define L2wralloc   (1<<6)          /* L2 TEX (small pages) */
-#define L2sharable  (1<<10)
 
 #define Noaccess    0       /* AP, DAC */
 #define Krw     1           /* AP */

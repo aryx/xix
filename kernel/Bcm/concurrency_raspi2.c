@@ -5,10 +5,10 @@
 #include "dat.h"
 #include "fns.h"
 
+// in libc/arm/atom.s
 extern long _xdec(long *p);
 extern long _xinc(long *p);
 
-// use libc version?? ok??
 long
 arch_xdec(long *p)
 {

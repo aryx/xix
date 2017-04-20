@@ -1,7 +1,6 @@
 /*
  * Memory and machine-specific definitions.  Used in C and assembler.
  */
-
 #define KiB     1024u           /* Kibi 0x0000000000000400 */
 #define MiB     1048576u        /* Mebi 0x0000000000100000 */
 #define GiB     1073741824u     /* Gibi 000000000040000000 */
@@ -33,6 +32,7 @@
  * vectors are at 0, plan9.ini is at KZERO+256 and is limited to 16K by
  * devenv.
  */
+//TODO: change to agree with Arch.kzero!
 #define KSEG0       0x80000000      /* kernel segment */
 /* mask to check segment; good for 1GB dram */
 #define KSEGM       0xC0000000
@@ -50,6 +50,7 @@
 
 #define KTZERO      (KZERO+0x8000)      /* kernel text start */
 
+//TODO: change to agree with Arch.kzero!
 #define VIRTIO      0x7E000000      /* i/o registers */
 #define FRAMEBUFFER 0xC0000000      /* video framebuffer */
 

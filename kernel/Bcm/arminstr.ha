@@ -10,18 +10,14 @@
 /*
  * new instructions
  */
+// simplified caching and coherence for now: No cache!
 #define ISB \
     MOVW    $0, R0; \
-    MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEinvi), CpCACHEwait
+    //MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEinvi), CpCACHEwait
 #define DSB \
     MOVW    $0, R0; \
-    MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEwb), CpCACHEwait
+    //MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEwb), CpCACHEwait
 #define BARRIERS    ISB; DSB
-
-#define MCRR(coproc, op, rd, rn, crm) \
-    WORD $(0xec400000|(rn)<<16|(rd)<<12|(coproc)<<8|(op)<<4|(crm))
-#define MRRC(coproc, op, rd, rn, crm) \
-    WORD $(0xec500000|(rn)<<16|(rd)<<12|(coproc)<<8|(op)<<4|(crm))
 
 #define LDREX(fp,t)   WORD $(0xe<<28|0x01900f9f | (fp)<<16 | (t)<<12)
 /* `The order of operands is from left to right in dataflow order' - asm man */

@@ -38,8 +38,6 @@ static Memimage xgscreen =
 };
 
 
-
-
 /*
  * Drawing
  */

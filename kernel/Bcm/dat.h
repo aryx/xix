@@ -43,9 +43,3 @@ extern register Proc* up;           /* R9 */
 extern ulong memsize;
 
 #define KMESGSIZE (16*1024) // for /dev/kmesg
-
-// TODO: put that in portdat.h or in netif.h?
-#pragma varargck  type  "I" uchar*
-#pragma varargck  type  "V" uchar*
-#pragma varargck  type  "E" uchar*
-#pragma varargck  type  "M" uchar*

@@ -15,7 +15,7 @@ let syscall_rfork flags =
   | Syscall.Fork (fork_flags, flags) ->
     let up = !(Globals.up) in
 
-    (* I prefer to inline Proc.alloc () here (I could use { alloc () with }) *)
+    (* I prefer to inline Proc.alloc () here *)
     let pid = Counter.gen Proc.pidcounter in
 
     let seg = Hashtbl.create 10 in
@@ -65,6 +65,7 @@ let syscall_rfork flags =
       in_syscall = false;
 
       (* todo: more misc *)
+      kproc = None;
     }
     in
     (* as in Proc.alloc() *)

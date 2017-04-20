@@ -47,7 +47,8 @@ let proc_of_pid pid =
   
 (* alloc() is sometimes better inlined in the caller (e.g., in sysrfork)
  * so it's easier to see if you setup everything.
- * Use { (alloc()) with ... } if you need to modify the non-mutable fields.
+ * less: use { (alloc()) with ... } if you need to modify the non-mutable
+ *  fields? but then need a rehash function.
  *)
 let alloc () =
   let pid = Counter.gen pidcounter in
@@ -65,13 +66,15 @@ let alloc () =
     seglock = Qlock.alloc ();
 
     name = "";
-    user = "";
+    user = "*nouser*";
     in_syscall = false;
 
     parent = None;
     nchild = 0;
     waitq = [];
     childlock = Spinlock.alloc ();
+
+    kproc = None;
   }
   in
   hash p

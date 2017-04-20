@@ -43,6 +43,7 @@ CMO= \
   memory/sysbrk.cmo\
   \
   processes/proc.cmo\
+  processes/kproc.cmo\
   processes/sysrfork.cmo\
   processes/sysexec.cmo\
   processes/sysawait.cmo\

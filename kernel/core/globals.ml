@@ -59,6 +59,7 @@ let fakeproc = { Proc_.
   waitq = [];
   childlock = fakelock;
   user = "";
+  kproc = None;
   
 }
 let fakeconf = { Conf.
@@ -83,3 +84,6 @@ let devtab = ref ([| |]: Device_.t array)
 
 let conf = ref fakeconf
 (* less: let config = Hashtbl.create 101 *)
+
+(* less: changed by writing in /dev/owner? *)
+let eve = ref ""

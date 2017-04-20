@@ -6,8 +6,8 @@ type state =
   | Running
 
   | Dead
-  | Broken
   | Moribund
+  | Broken
 
   | Ready
   | Scheding
@@ -83,6 +83,9 @@ type t = {
   mutable in_syscall: bool;
   (* todo: kstack!!
   *)
+
+  (* kernel process *)
+  kproc: (unit -> unit) option;
 
   (* less: debugging fields
    *  last_lock: Spinlock.t ref;

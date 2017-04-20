@@ -140,6 +140,7 @@ extern void caml_startup(char **argv);
 void
 main(void)
 {
+    // backward deps
     arch_coherence = arm_arch_coherence;
     print = screen_print;
     panic = screen_panic;
@@ -151,14 +152,26 @@ main(void)
     cpu = (Cpu*)CPUADDR;
     arch__cpu0init(); // cpu0 initialization (calls arch__cpuinit())
     mmuinit1((void*)L1); // finish mmu initialization started in mmuinit0
+    //less: machon(0);
 
+    // less: optionsinit, ataginit
     arch__confinit();     /* figures out amount of memory */
     xinit(); // less: can we get rid of xalloc? just have malloc?
+ 
+    // less: uartconsinit
 
     arch__screeninit(); // screenputs = swconsole_screenputs
     
     quotefmtinstall(); // libc printf initialization
     print("\nPlan 9 from Bell Labs\n"); // yeah!
+
+    // less: firmware printing 
+    // less: setclkrate
+    
+    arch__trapinit();
+    //todo: clockinit();
+
+
 
     void* x1;
     x1 = malloc(10000);
@@ -169,6 +182,10 @@ main(void)
     caml_startup(nil); // no arguments for now
 
     print("Done!"); // yeah!
-    assert(0);          /* shouldn't have returned */
+    //assert(0);          /* shouldn't have returned */
+
+    
+    *(byte*)13 = 1;
+    for(;;) ;
 }
 

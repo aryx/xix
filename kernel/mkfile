@@ -225,6 +225,10 @@ OBJ=\
     bcm/mmuinvalidate.$O\
 	bcm/spl.$O\
     bcm/raspi2.$O\
+    bcm/fault_helpers.$O\
+    bcm/exceptions.$O\
+    bcm/trap.$O\
+    bcm/syscall.$O\
     \
     bcm/vcore.$O\
     bcm/screen.$O\

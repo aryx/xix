@@ -52,6 +52,7 @@ CMO= \
   sysnop.cmo\
   syserrstr.cmo\
   syscall_dispatch.cmo\
+  test.cmo \
   main.cmo
 
 XXX=\

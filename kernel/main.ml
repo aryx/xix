@@ -1,33 +1,21 @@
-exception Exn1 of string
-exception Exn2 of string
-
-let bar x =
-  if true
-  then raise (Exn1 "bar")
-  else 1
-
-let foo x = 
-  bar x
 
 let main =
+  (* this works because of some special code in Byterun/io.c 
+   * to redirect printing to screenputs when printing on descriptor 1 or 2
+   *)
   Common._print := print_string;
 
-  let x = 1+1 in
-  let s = Printf.sprintf "hello world %d\n" x in
-  print_string s;
-  (try 
-    let x = foo 42 in
-    print_string (Printf.sprintf "res = %d" x);
-  with Exn1 s ->
-    print_string (Printf.sprintf "exn1 = %s" s);
-  );
+  Test.test ()
 (*
   let call = Syscall.Nop in
   Syscall_dispatch.dispatch call
 *)
     
-(* in C: confinit (); xinit();  screeninit ()
+(* in C: mmuinit1; confinit (); xinit();  screeninit (); trapinit();
  * todo:
- * Page.init ()
- * Proc.init ()
+ * Page.init_allocator ()
+ * Proc.init_allocator ()
+ * 
+ * arch_userinit()
+ * Scheduler.init()
 *)

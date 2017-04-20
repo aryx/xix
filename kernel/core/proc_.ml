@@ -36,7 +36,8 @@ type section =
  *)
 type wait_msg = {
   child_pid: pid;
-  child_exits: string;
+  (* less: child_execname: string so no need put it in string/ *)
+  child_exits: string; (* <execname> pid: <exitstr> *)
   (* less: time fields of child *)
 }
 

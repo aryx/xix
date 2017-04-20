@@ -11,8 +11,15 @@ module Scheduler = struct
     failwith "ready() not defined"
   )
   
+  (* todo: take rendez vous *)
   let (sleep: ((unit -> bool) -> unit) ref) = ref (fun _f ->
     failwith "sleep() not defined"
+  )
+
+  (* todo: take rendez vous *)
+  let (wakeup: (unit -> unit) ref) = ref (fun _rendezvous ->
+    failwith "wakeup() not defined"
+
   )
 end
 

@@ -150,11 +150,9 @@ mmul2empty(Proc* proc, bool clear)
         l1[page->daddr] = Fault;
         l2 = &page->next;
     }
-    /*s: [[mmul2empty()]] remember free pages(arm) */
     *l2 = proc->mmul2cache;
     proc->mmul2cache = proc->mmul2;
     proc->mmul2 = nil;
-    /*e: [[mmul2empty()]] remember free pages(arm) */
 }
 
 
@@ -172,10 +170,8 @@ arch_mmuswitch(Proc* proc)
 ***/
     cpu->mmupid = proc->pid;
 
-    /*s: [[arch_mmuswitch()]] write back and invalidate cache before switch(arm) */
     /* write back dirty and invalidate l1 caches */
     ///cacheuwbinv();
-    /*e: [[arch_mmuswitch()]] write back and invalidate cache before switch(arm) */
 
     if(proc->newtlb){
         mmul2empty(proc, 1);
@@ -196,11 +192,9 @@ arch_mmuswitch(Proc* proc)
             cpu->mmul1hi = x;
     }
 
-    /*s: [[arch_mmuswitch()]] write back cache after adjusting page tables(arm) */
     /* make sure map is in memory */
     /* could be smarter about how much? */
     ///cachedwbse(&l1[L1X(UZERO)], (L1hi - L1lo)*sizeof(PTE));
-    /*e: [[arch_mmuswitch()]] write back cache after adjusting page tables(arm) */
 
     /* lose any possible stale tlb entries */
     mmuinvalidate();

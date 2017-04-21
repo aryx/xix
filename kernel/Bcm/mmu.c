@@ -117,3 +117,91 @@ mmukmap(uintptr va, uintptr pa, usize size)
     //cachedwbse(pte0, (uintptr)pte - (uintptr)pte0);
     return va + o;
 }
+
+void
+arch_flushmmu(void)
+{
+    int s;
+
+    s = arch_splhi();
+    up->newtlb = true;
+    arch_mmuswitch(up);
+    arch_splx(s);
+}
+
+
+static void
+mmul1empty(void)
+{
+    memset(&cpu->mmul1[L1lo], 0, (L1hi - L1lo)*sizeof(PTE));
+}
+
+static void
+mmul2empty(Proc* proc, bool clear)
+{
+    PTE *l1;
+    Page **l2, *page;
+
+    l1 = cpu->mmul1;
+    l2 = &proc->mmul2;
+    for(page = *l2; page != nil; page = page->next){
+        if(clear)
+            memset(UINT2PTR(page->va), 0, BY2PG);
+        l1[page->daddr] = Fault;
+        l2 = &page->next;
+    }
+    /*s: [[mmul2empty()]] remember free pages(arm) */
+    *l2 = proc->mmul2cache;
+    proc->mmul2cache = proc->mmul2;
+    proc->mmul2 = nil;
+    /*e: [[mmul2empty()]] remember free pages(arm) */
+}
+
+
+void
+arch_mmuswitch(Proc* proc)
+{
+    int x;
+    PTE *l1;
+    Page *page;
+
+    /* do kprocs get here and if so, do they need to? */
+/*** "This is plausible, but wrong" - Charles Forsyth 1 Mar 2015
+    if(cpu->mmupid == proc->pid && !proc->newtlb)
+        return;
+***/
+    cpu->mmupid = proc->pid;
+
+    /*s: [[arch_mmuswitch()]] write back and invalidate cache before switch(arm) */
+    /* write back dirty and invalidate l1 caches */
+    ///cacheuwbinv();
+    /*e: [[arch_mmuswitch()]] write back and invalidate cache before switch(arm) */
+
+    if(proc->newtlb){
+        mmul2empty(proc, 1);
+        proc->newtlb = false;
+    }
+
+    mmul1empty();
+
+    /* move in new map */
+    l1 = cpu->mmul1;
+    for(page = proc->mmul2; page != nil; page = page->next){
+        x = page->daddr;
+        l1[x] = PPN(page->pa)|Dom0|Coarse;
+        /* know here that L1lo < x < L1hi */
+        if(x+1 - cpu->mmul1lo < cpu->mmul1hi - x)
+            cpu->mmul1lo = x+1;
+        else
+            cpu->mmul1hi = x;
+    }
+
+    /*s: [[arch_mmuswitch()]] write back cache after adjusting page tables(arm) */
+    /* make sure map is in memory */
+    /* could be smarter about how much? */
+    ///cachedwbse(&l1[L1X(UZERO)], (L1hi - L1lo)*sizeof(PTE));
+    /*e: [[arch_mmuswitch()]] write back cache after adjusting page tables(arm) */
+
+    /* lose any possible stale tlb entries */
+    mmuinvalidate();
+}

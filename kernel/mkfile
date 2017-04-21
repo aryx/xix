@@ -222,6 +222,10 @@ OBJ=\
     port/portscreen.$O\
     port/swconsole.$O\
 	port/print.$O\
+	port/portclock.$O\
+	port/error.$O\
+	port/mul64fract.$O\
+	port/tod.$O\
     \
     bcm/concurrency_raspi2.$O\
     bcm/tas_raspi2.$O\

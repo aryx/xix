@@ -164,7 +164,7 @@ main(void)
     // less: setclkrate
     
     arch__trapinit();
-    //todo: clockinit();
+    clockinit();
 
 
     // Some tests
@@ -175,12 +175,14 @@ main(void)
     print("Fuck yeah!%p, %p\n", x1, x2); // yeah!
 
     //*(byte*)13 = 1;
-    //for(;;) ;
 
     // Jump to OCaml!
     caml_startup(nil); // no arguments for now
 
     print("Done!"); // yeah!
+
+    for(;;) ;
+
     assert(0);          /* shouldn't have returned */
 }
 

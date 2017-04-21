@@ -9,15 +9,6 @@
 
 char* getconf(char *) { return nil; }
 
-Timer*
-addclock0link(void (*f)(void), Tms ms) { USED(f); USED(ms); return nil; }
-
-// used in debug code for EDF support in lock()
-vlong todget(vlong *) { 
-  panic("todget"); 
-  return 0; 
-}
-
 // Fake for ocamlrun
 
 long write(fdt fd, void*p, long n) {

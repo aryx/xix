@@ -124,17 +124,6 @@ clockintr(Ureg *ureg, void*)
 }
 /*e: function clockintr(arm) */
 
-/*s: function localclockintr(arm) */
-static void
-localclockintr(Ureg *ureg, void *)
-{
-    if(cpu->cpuno == 0)
-        panic("cpu0: Unexpected local generic timer interrupt");
-    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask|Enable);
-    timerintr(ureg, 0);
-}
-/*e: function localclockintr(arm) */
-
 /*s: function clockshutdown(arm) */
 void
 clockshutdown(void)
@@ -156,42 +145,42 @@ clockinit(void)
     u32int t0, t1, tstart, tend;
 
     /*s: [[clockinit()]] if many processors */
-    if(((cprdsc(0, CpID, CpIDfeat, 1) >> 16) & 0xF) != 0) {
-        /* generic timer supported */
-        if(cpu->cpuno == 0){
-            *(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
-            *(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
-        }
-        cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask);
-    }
+    //if(((cprdsc(0, CpID, CpIDfeat, 1) >> 16) & 0xF) != 0) {
+    //    /* generic timer supported */
+    //    if(cpu->cpuno == 0){
+    //        *(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
+    //        *(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
+    //    }
+    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask);
+    //}
     /*e: [[clockinit()]] if many processors */
 
     tn = (Systimers*)SYSTIMERS;
-    tstart = tn->clo;
-    do{
-        t0 = arch_lcycles();
-    }while(tn->clo == tstart); // PB QEMU
-    tend = tstart + 10000;
-    do{
-        t1 = arch_lcycles();
-    }while(tn->clo != tend); // PB QEMU
-    t1 -= t0;
+    //tstart = tn->clo;
+    //do{
+    //    t0 = arch_lcycles();
+    //}while(tn->clo == tstart); // PB QEMU
+    //tend = tstart + 10000;
+    //do{
+    //    t1 = arch_lcycles();
+    //}while(tn->clo != tend); // PB QEMU
+    //t1 -= t0;
 
-    cpu->cpuhz = 100 * t1;
-    cpu->cpumhz = (cpu->cpuhz + Mhz/2 - 1) / Mhz;
-
-    cpu->cyclefreq = cpu->cpuhz;
+    //cpu->cpuhz = 100 * t1;
+    //cpu->cpumhz = (cpu->cpuhz + Mhz/2 - 1) / Mhz;
+    //
+    //cpu->cyclefreq = cpu->cpuhz;
 
     if(cpu->cpuno == 0){
-        tn->c3 = tn->clo - 1;
+        //tn->c3 = tn->clo - 1;
         tm = (Armtimer*)ARMTIMER;
         tm->load = 0;
         tm->ctl = TmrPrescale1|CntEnable|CntWidth32;
         arch_intrenable(IRQtimer3, clockintr, nil, 0, "clock");
     }
     /*s: [[clockinit()]] if not cpu0 */
-    else
-        arch_intrenable(IRQcntpns, localclockintr, nil, 0, "clock");
+    //else
+    //    arch_intrenable(IRQcntpns, localclockintr, nil, 0, "clock");
     /*e: [[clockinit()]] if not cpu0 */
 }
 /*e: function clockinit(arm) */
@@ -211,10 +200,10 @@ arch_timerset(Tval next)
     else if(period > MaxPeriod)
         period = MaxPeriod;
     /*s: [[arch_timerset()]] if not cpu0 */
-    if(cpu->cpuno > 0){
-        cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, period);
-        cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
-    }
+    //if(cpu->cpuno > 0){
+    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, period);
+    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
+    //}
     /*e: [[arch_timerset()]] if not cpu0 */
     else{
         tn = (Systimers*)SYSTIMERS;

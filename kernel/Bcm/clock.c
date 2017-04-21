@@ -95,12 +95,14 @@ enum {
     CntPrescaleShift= 16,   /* freq is sys_clk/(prescale+1) */
     CntPrescaleMask = 0xFF,
     CntEnable   = 1<<9,
+
     TmrDbgHalt  = 1<<8,
     TmrEnable   = 1<<7,
     TmrIntEnable    = 1<<5,
     TmrPrescale1    = 0x00<<2,
     TmrPrescale16   = 0x01<<2,
     TmrPrescale256  = 0x02<<2,
+
     CntWidth16  = 0<<1,
     CntWidth32  = 1<<1,
 
@@ -155,7 +157,7 @@ clockinit(void)
     //}
     /*e: [[clockinit()]] if many processors */
 
-    tn = (Systimers*)SYSTIMERS;
+    //tn = (Systimers*)SYSTIMERS;
     //tstart = tn->clo;
     //do{
     //    t0 = arch_lcycles();

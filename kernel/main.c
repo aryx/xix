@@ -10,9 +10,10 @@
 
 // spl.s
 void arm_arch_coherence(void);
-// screen.c
-int screen_print(char *fmt, ...);
-void screen_panic(char *fmt, ...);
+// devcons.c
+int devcons_print(char *fmt, ...);
+int devcons_iprint(char *fmt, ...);
+void devcons_panic(char *fmt, ...);
 
 //*****************************************************************************
 // Cpu init
@@ -137,8 +138,9 @@ main(void)
 {
     // backward deps
     arch_coherence = arm_arch_coherence;
-    print = screen_print;
-    panic = screen_panic;
+    print = devcons_print;
+    iprint = devcons_iprint;
+    panic = devcons_panic;
 
     memset(edata, 0, end - edata);  /* clear bss */
 
@@ -181,7 +183,7 @@ main(void)
 
     print("Done!"); // yeah!
 
-    for(;;) ;
+    //for(;;) ;
 
     assert(0);          /* shouldn't have returned */
 }

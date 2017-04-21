@@ -222,6 +222,7 @@ OBJ=\
     port/portscreen.$O\
     port/swconsole.$O\
 	port/print.$O\
+	port/devcons.$O\
 	port/portclock.$O\
 	port/error.$O\
 	port/mul64fract.$O\

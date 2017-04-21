@@ -294,7 +294,7 @@ faultarm(Ureg *ureg, uintptr va, int user, bool read)
     char buf[ERRMAX];
 
     if(up == nil) {
-        //dumpregs(ureg);
+        dumpregs(ureg);
         panic("fault: nil up in faultarm, pc %#p accessing %#p", ureg->pc, va);
     }
     insyscall = up->insyscall;
@@ -655,13 +655,13 @@ dumpregs(Ureg* ureg)
     iprint("stack is at %#p\n", ureg);
     iprint("pc %#lux link %#lux\n", ureg->pc, ureg->link);
 
-    if(up)
-        iprint("user stack: %#p-%#p\n", up->kstack, up->kstack+KSTACK-4);
-    else
-        iprint("kernel stack: %8.8lux-%8.8lux\n",
-            (ulong)(cpu+1), (ulong)cpu+BY2PG-4);
-    dumplongs("stack", (ulong *)(ureg + 1), 16);
-    arch_delay(2000);
-    arch_dumpstack();
-    arch_splx(s);
+    //if(up)
+    //    iprint("user stack: %#p-%#p\n", up->kstack, up->kstack+KSTACK-4);
+    //else
+    //    iprint("kernel stack: %8.8lux-%8.8lux\n",
+    //        (ulong)(cpu+1), (ulong)cpu+BY2PG-4);
+    //dumplongs("stack", (ulong *)(ureg + 1), 16);
+    //arch_delay(2000);
+    //arch_dumpstack();
+    //arch_splx(s);
 }

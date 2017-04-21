@@ -5,10 +5,12 @@
 #include "dat.h"
 #include "fns.h"
 
-// for mainmem and imagmem
+// for mainmem and imagmem used in confinit
 #include <pool.h>
 
+// spl.s
 void arm_arch_coherence(void);
+// screen.c
 int screen_print(char *fmt, ...);
 void screen_panic(char *fmt, ...);
 
@@ -18,16 +20,16 @@ void screen_panic(char *fmt, ...);
 void
 arch__cpuinit(void)
 {
-    Cpu *m0;
+    Cpu *cpu0;
 
     cpu->ticks = 1;
     cpu->perf.period = 1;
 
-    m0 = CPUS(0);
+    cpu0 = CPUS(0);
     if (cpu->cpuno != 0) {
         /* synchronise with cpu 0 */
-        cpu->ticks = m0->ticks;
-        cpu->fastclock = m0->fastclock;
+        cpu->ticks = cpu0->ticks;
+        cpu->fastclock = cpu0->fastclock;
     }
 }
 
@@ -42,7 +44,7 @@ arch__cpu0init(void)
     arch__cpuinit();
     //active.exiting = 0;
 
-    up = nil;
+    up = nil; //todo: still need? done in ocaml context
 }
 
 //*****************************************************************************
@@ -56,24 +58,17 @@ void
 arch__confinit(void)
 {
     int i;
-    char *p;
     phys_addr pa;
     ulong kpages;
     ulong kmem;
 
-    if((p = getconf("*maxmem")) != nil){
-        memsize = strtoul(p, 0, 0);
-        if (memsize < 16*MB)        /* sanity */
-            memsize = 16*MB;
-    }
     // simpler than for x86 :)
     getramsize(&conf.mem[0]);
 
     if(conf.mem[0].limit == 0){
         conf.mem[0].base = 0;
         conf.mem[0].limit = memsize;
-    }else if(p != nil)
-        conf.mem[0].limit = conf.mem[0].base + memsize;
+    }
 
     conf.npage = 0;
     pa = PADDR(PGROUND(PTR2UINT(end)));
@@ -172,20 +167,20 @@ main(void)
     //todo: clockinit();
 
 
-
+    // Some tests
     void* x1;
     x1 = malloc(10000);
     void* x2;
     x2 = malloc(100);
     print("Fuck yeah!%p, %p\n", x1, x2); // yeah!
 
+    //*(byte*)13 = 1;
+    //for(;;) ;
+
+    // Jump to OCaml!
     caml_startup(nil); // no arguments for now
 
     print("Done!"); // yeah!
-    //assert(0);          /* shouldn't have returned */
-
-    
-    *(byte*)13 = 1;
-    for(;;) ;
+    assert(0);          /* shouldn't have returned */
 }
 

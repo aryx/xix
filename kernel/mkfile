@@ -1,7 +1,7 @@
+# -*- sh -*-
 #############################################################################
 # Src
 #############################################################################
-# less: take common.ml and a_out.ml from ../? 
 
 CMO= \
   commons/common.cmo\
@@ -55,8 +55,7 @@ CMO= \
   test.cmo \
   main.cmo
 
-XXX=\
- xx
+# less: take common.ml and a_out.ml from ../? 
 
 O=5
 
@@ -87,7 +86,9 @@ OBJ=\
     libc/port/memccpy.$O\
     libc/port/abs.$O\
     libc/port/qsort.$O\
+    \
     libc/port/pool.$O\
+    \
     libc/fmt/fmt.$O\
     libc/fmt/fmtquote.$O\
     libc/fmt/fmtprint.$O\
@@ -171,42 +172,45 @@ OBJ=\
     libmemlayer/unload.$O\
     \
     byterun/interp.$O\
-    byterun/misc.$O\
     byterun/stacks.$O\
     byterun/fix_code.$O\
     byterun/freelist.$O\
     byterun/major_gc.$O\
     byterun/minor_gc.$O\
+    byterun/compact.$O\
     byterun/memory.$O\
     byterun/alloc.$O\
     byterun/roots.$O\
     byterun/fail.$O\
     byterun/printexc.$O\
+    byterun/meta.$O\
+    byterun/startup.$O\
+    byterun/instrtrace.$O\
+    byterun/callback.$O\
+    byterun/debugger.$O\
+    byterun/misc.$O\
+    \
+    byterun/extern.$O\
+    byterun/intern.$O\
+    byterun/obj.$O\
+    byterun/hash.$O\
     byterun/compare.$O\
+    \
     byterun/ints.$O\
     byterun/floats.$O\
     byterun/str.$O\
     byterun/array.$O\
-    byterun/extern.$O\
-    byterun/intern.$O\
-    byterun/hash.$O\
-    byterun/meta.$O\
     byterun/parsing.$O\
-    byterun/gc_ctrl.$O\
+    byterun/lexing.$O\
     byterun/terminfo.$O\
     byterun/md5.$O\
-    byterun/obj.$O\
-    byterun/lexing.$O\
-    byterun/callback.$O\
-    byterun/debugger.$O\
     byterun/weak.$O\
-    byterun/compact.$O\
-    byterun/backtrace.$O\
+    byterun/io.$O\
     byterun/sys.$O\
     byterun/signals.$O\
-    byterun/io.$O\
-    byterun/startup.$O\
-    byterun/instrtrace.$O\
+    byterun/gc_ctrl.$O\
+    byterun/backtrace.$O\
+    \
     byterun/9.$O\
     \
     bcm/globals.$O\
@@ -229,6 +233,7 @@ OBJ=\
     bcm/exceptions.$O\
     bcm/trap.$O\
     bcm/syscall.$O\
+    bcm/clock.$O\
     \
     bcm/vcore.$O\
     bcm/screen.$O\

@@ -113,6 +113,3 @@ type t =
 
   (* todo? replace with a better error management comm between user/kernel?*)
   | Errstr
-
-
-

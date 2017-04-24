@@ -51,7 +51,11 @@ type open_flags = {
 (* stat result *)
 type dir_entry = unit (* todo: *)
 
-(* todo: a request type and an answer type? like plan9p? *)
+(* todo: a request type and an answer type? like plan9p?
+ * generalized interface for syscall is then
+ * syscall(char* bufin, int lenin, char* bufout, int lenout)
+ * where use marshall in and out for Syscall.req_t and Syscall.ans_t
+*)
 type t = 
   | Nop
 

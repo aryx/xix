@@ -239,11 +239,14 @@ OBJ=\
     bcm/trap.$O\
     bcm/syscall.$O\
     bcm/clock.$O\
+    bcm/coproc.$O\
+    bcm/misc.$O\
     \
     bcm/vcore.$O\
     bcm/screen.$O\
     \
 	fakes.$O\
+	test.$O\
 	main.$O\
     \
     ocaml.$O

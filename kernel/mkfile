@@ -121,6 +121,7 @@ OBJ=\
     libc/port/asin.$O\
     libc/port/atan.$O\
     libc/port/atan2.$O\
+    \
     libc/fmt/sprint.$O\
     libc/fmt/snprint.$O\
     libc/fmt/vsnprint.$O\
@@ -207,6 +208,7 @@ OBJ=\
     byterun/weak.$O\
     byterun/io.$O\
     byterun/sys.$O\
+    \
     byterun/signals.$O\
     byterun/gc_ctrl.$O\
     byterun/backtrace.$O\
@@ -239,6 +241,7 @@ OBJ=\
     bcm/trap.$O\
     bcm/syscall.$O\
     bcm/clock.$O\
+    bcm/time_raspi2.$O\
     bcm/coproc.$O\
     bcm/misc.$O\
     \

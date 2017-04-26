@@ -15,6 +15,8 @@
 #include "io.h"
 #include "arm.h"
 
+// kind of 'asm()' support in 5c for coprocessor instructions :)
+
 enum {
     /* alternates:  
      *  0xe12fff1e  BX (R14); last e is R14
@@ -96,113 +98,4 @@ void
 cpwrsc(int op1, int crn, int crm, int op2, ulong val)
 {
     cpwr(CpSC, op1, crn, crm, op2, val);
-}
-
-/* floating point */
-
-/* fp coproc control */
-static void
-setupfpctlop(ulong instr[2], int opcode, int fpctlreg)
-{
-    ulong instrsz[2];
-
-    fpctlreg &= Nfpctlregs - 1;
-    instr[0] = opcode | fpctlreg << 16 | 0 << 12 | CpFP << 8;
-    instr[1] = RETinst;
-
-    ///cachedwbse(instr, sizeof instrsz);
-    ///cacheiinv();
-}
-
-ulong
-fprd(int fpreg)
-{
-    int s, r;
-    volatile ulong instr[2];
-    Pufv fp;
-
-    if (!cpu->fpon) {
-        arch_dumpstack();
-        panic("fprd: cpu%d fpu off", cpu->cpuno);
-    }
-    s = arch_splhi();
-    /*
-     * VMRS.  return value will be in R0, which is convenient.
-     * Rt will be R0.
-     */
-    setupfpctlop(instr, 0xeef00010, fpreg);
-    fp = (Pufv)instr;
-    r = fp();
-    arch_splx(s);
-    return r;
-}
-
-void
-fpwr(int fpreg, ulong val)
-{
-    int s;
-    volatile ulong instr[2];
-    Pvfu fp;
-
-    /* fpu might be off and this VMSR might enable it */
-    s = arch_splhi();
-    setupfpctlop(instr, 0xeee00010, fpreg);     /* VMSR, Rt is R0 */
-    fp = (Pvfu)instr;
-    fp(val);
-    arch_coherence();
-    arch_splx(s);
-}
-
-/* fp register access; don't bother with single precision */
-static void
-setupfpop(ulong instr[2], int opcode, int fpreg)
-{
-    ulong instrsz[2];
-
-    instr[0] = opcode | 0 << 16 | (fpreg & (16 - 1)) << 12;
-    if (fpreg >= 16)
-        instr[0] |= 1 << 22;        /* high bit of dfp reg # */
-    instr[1] = RETinst;
-
-    ///cachedwbse(instr, sizeof instrsz);
-    ///cacheiinv();
-}
-
-ulong
-fpsavereg(int fpreg, uvlong *fpp)
-{
-    int s, r;
-    volatile ulong instr[2];
-    ulong (*fp)(uvlong *);
-
-    if (!cpu->fpon)
-        panic("fpsavereg: cpu%d fpu off", cpu->cpuno);
-    s = arch_splhi();
-    /*
-     * VSTR.  pointer will be in R0, which is convenient.
-     * Rt will be R0.
-     */
-    setupfpop(instr, 0xed000000 | CpDFP << 8, fpreg);
-    fp = (ulong (*)(uvlong *))instr;
-    r = fp(fpp);
-    arch_splx(s);
-    arch_coherence();
-    return r;           /* not too meaningful */
-}
-
-void
-fprestreg(int fpreg, uvlong val)
-{
-    int s;
-    volatile ulong instr[2];
-    void (*fp)(uvlong *);
-
-    if (!cpu->fpon)
-        panic("fprestreg: cpu%d fpu off", cpu->cpuno);
-    s = arch_splhi();
-    setupfpop(instr, 0xed100000 | CpDFP << 8, fpreg); /* VLDR, Rt is R0 */
-    fp = (void (*)(uvlong *))instr;
-    fp(&val);
-    arch_coherence();
-    arch_splx(s);
 }

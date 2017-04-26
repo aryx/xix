@@ -18,12 +18,14 @@
 #include "mem.h"
 #include "dat.h"
 #include "fns.h"
+
 #include "io.h"
 #include "ureg.h"
 #include "arm.h"
 
-#define SYSTIMERS (VIRTIO+0x3000)
-#define ARMTIMER (VIRTIO+0xB400)
+// does not work on QEMU!
+//#define SYSTIMERS (VIRTIO+0x3000)
+//#define ARMTIMER (VIRTIO+0xB400)
 //TODO factorize in mem.h
 #define ARMLOCAL    (VIRTIO+IOSIZE)
 
@@ -86,25 +88,50 @@ enum {
     Istatus = 1<<2,
 };
 
-static void
-clockintr(Ureg *ureg, void*)
-{
-    Systimers *tn;
+//static void
+//clockintr(Ureg *ureg, void*)
+//{
+//    Systimers *tn;
+//
+//    tn = (Systimers*)SYSTIMERS;
+//    /* dismiss interrupt */
+//    tn->cs = 1<<3;
+//    timerintr(ureg, 0);
+//}
 
-    tn = (Systimers*)SYSTIMERS;
-    /* dismiss interrupt */
-    tn->cs = 1<<3;
-    timerintr(ureg, 0);
+static void
+localclockintr(Ureg *ureg, void *)
+{
+    uvlong v;
+    unsigned int x;
+    print("localclockintr\n");
+
+    tmrget(&v);
+    print("val1: %lld\n", v);
+
+    x = (unsigned int) cprdsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval);
+    print("val2: %ud\n", x);
+
+
+    //if(cpu->cpuno == 0)
+    //    panic("cpu0: Unexpected local generic timer interrupt");
+    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask|Enable);
+
+    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, 62500000);
+    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
+    //timerintr(ureg, 0);
 }
+
 
 void
 clockshutdown(void)
 {
     Armtimer *tm;
+    panic("clockshutdown");
 
-    tm = (Armtimer*)ARMTIMER;
-    tm->ctl = 0;
-    //wdogoff();
+    //tm = (Armtimer*)ARMTIMER;
+    //tm->ctl = 0;
+    ////wdogoff();
 }
 
 void
@@ -113,16 +140,19 @@ clockinit(void)
     Systimers *tn;
     Armtimer *tm;
     u32int t0, t1, tstart, tend;
+    ulong volatile x;
 
-    //if(((cprdsc(0, CpID, CpIDfeat, 1) >> 16) & 0xF) != 0) {
-    //    /* generic timer supported */
-    //    if(cpu->cpuno == 0){
-    //        *(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
-    //        *(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
-    //    }
-    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask);
-    //}
+    if(((cprdsc(0, CpID, CpIDfeat, 1) >> 16) & 0xF) != 0) {
+        /* generic timer supported */
+        if(cpu->cpuno == 0){
+//            *(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
+//            *(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
+          // does not work either
+        }
+        cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask);
+    }
 
+    // Does not work under QEMU!
     //tn = (Systimers*)SYSTIMERS;
     //tstart = tn->clo;
     //do{
@@ -139,15 +169,17 @@ clockinit(void)
     //
     //cpu->cyclefreq = cpu->cpuhz;
 
-    if(cpu->cpuno == 0){
-        //tn->c3 = tn->clo - 1;
-        tm = (Armtimer*)ARMTIMER;
-        tm->load = 0;
-        tm->ctl = TmrPrescale1|CntEnable|CntWidth32;
-        arch_intrenable(IRQtimer3, clockintr, nil, 0, "clock");
-    }
+    // Does not work under QEMU!
+    //if(cpu->cpuno == 0){
+    //    tn->c3 = tn->clo - 1;
+    //    tm = (Armtimer*)ARMTIMER;
+    //    tm->load = 0;
+    //    tm->ctl = TmrPrescale1|CntEnable|CntWidth32;
+    //    arch_intrenable(IRQtimer3, clockintr, nil, 0, "clock");
+    //}
     //else
-    //    arch_intrenable(IRQcntpns, localclockintr, nil, 0, "clock");
+        //arch_intrenable(IRQcntpns, localclockintr, nil, 0, "clock"); // does not work, as mentioned at https://lists.gnu.org/archive/html/qemu-arm/2016-03/msg00256.html QEMU handles only Physical (IRQLOCAL+0) and Virt IRQLOCAL+3) timers
+        arch_intrenable(IRQcntps, localclockintr, nil, 0, "clock");
 }
 
 void
@@ -157,20 +189,22 @@ arch_timerset(Tval next)
     uvlong now;
     long period;
 
-    now = arch_fastticks(nil);
-    period = next - now;
-    if(period < MinPeriod)
-        period = MinPeriod;
-    else if(period > MaxPeriod)
-        period = MaxPeriod;
-    //if(cpu->cpuno > 0){
-    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, period);
-    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
-    //}
-    else{
-        tn = (Systimers*)SYSTIMERS;
-        tn->c3 = (ulong)(now + period);
-    }
+    panic("arch_timerset\n");
+
+//    now = arch_fastticks(nil);
+//    period = next - now;
+//    if(period < MinPeriod)
+//        period = MinPeriod;
+//    else if(period > MaxPeriod)
+//        period = MaxPeriod;
+//    //if(cpu->cpuno > 0){
+//    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, period);
+//    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
+//    //}
+//    else{
+//        tn = (Systimers*)SYSTIMERS;
+//        tn->c3 = (ulong)(now + period);
+//    }
 }
 
 uvlong
@@ -181,18 +215,21 @@ clock_arch_fastticks(uvlong *hz)
     uvlong now;
     int s;
 
-    if(hz)
-        *hz = SystimerFreq;
-    tn = (Systimers*)SYSTIMERS;
-    s = arch_splhi();
-    do{
-        hi = tn->chi;
-        lo = tn->clo;
-    }while(tn->chi != hi);
-    now = (uvlong)hi<<32 | lo;
-    cpu->fastclock = now;
-    arch_splx(s);
-    return cpu->fastclock;
+    panic("clock_arch_fastticks");
+    return 0;
+
+//    if(hz)
+//        *hz = SystimerFreq;
+//    tn = (Systimers*)SYSTIMERS;
+//    s = arch_splhi();
+//    do{
+//        hi = tn->chi;
+//        lo = tn->clo;
+//    }while(tn->chi != hi);
+//    now = (uvlong)hi<<32 | lo;
+//    cpu->fastclock = now;
+//    arch_splx(s);
+//    return cpu->fastclock;
 }
 
 ulong
@@ -200,32 +237,39 @@ arch_perfticks(void)
 {
     Armtimer *tm;
 
-    tm = (Armtimer*)ARMTIMER;
-    return tm->count;
+    panic("arch_perfticks");
+    return 0;
+
+    //tm = (Armtimer*)ARMTIMER;
+    //return tm->count;
 }
 
 void
 armtimerset(int n)
 {
     Armtimer *tm;
+    panic("armtimerset");
+    return;
 
-    tm = (Armtimer*)ARMTIMER;
-    if(n > 0){
-        tm->ctl |= TmrEnable|TmrIntEnable;
-        tm->load = n;
-    }else{
-        tm->load = 0;
-        tm->ctl &= ~(TmrEnable|TmrIntEnable);
-        tm->irq = 1;
-    }
+    //tm = (Armtimer*)ARMTIMER;
+    //if(n > 0){
+    //    tm->ctl |= TmrEnable|TmrIntEnable;
+    //    tm->load = n;
+    //}else{
+    //    tm->load = 0;
+    //    tm->ctl &= ~(TmrEnable|TmrIntEnable);
+    //    tm->irq = 1;
+    //}
 }
 
 ulong
 arch_us(void)
 {
-    if(SystimerFreq != 1*Mhz)
-        return fastticks2us(arch_fastticks(nil));
-    return arch_fastticks(nil);
+  panic("arch_us");
+  return 0;
+  //  if(SystimerFreq != 1*Mhz)
+  //      return fastticks2us(arch_fastticks(nil));
+  //  return arch_fastticks(nil);
 }
 
 void
@@ -233,12 +277,13 @@ clock_arch_microdelay(int n)
 {
     Systimers *tn;
     u32int now, diff;
-
-    diff = n + 1;
-    tn = (Systimers*)SYSTIMERS;
-    now = tn->clo;
-    while(tn->clo - now < diff) // PB QEMU
-        ;
+    
+    panic("clock_arch_microdelay");
+    //diff = n + 1;
+    //tn = (Systimers*)SYSTIMERS;
+    //now = tn->clo;
+    //while(tn->clo - now < diff) // PB QEMU
+    //    ;
 }
 
 void

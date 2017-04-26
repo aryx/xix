@@ -23,64 +23,73 @@
 #include "ureg.h"
 #include "arm.h"
 
-// does not work on QEMU!
+//pad: The problem is that under QEMU only the Cortex-a7 generic timers
+// are working and only the IRQcntps is connected. So I had to rewrite
+// the code to rely only on this generic timer. For more information see:
+// - https://lists.gnu.org/archive/html/qemu-arm/2016-03/msg00256.html
+// - https://github.com/tuxillo/minios-armv7
+// - http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ddi0464d/BABIGHII.html
+
+// does not work under QEMU
 //#define SYSTIMERS (VIRTIO+0x3000)
 //#define ARMTIMER (VIRTIO+0xB400)
+
 //TODO factorize in mem.h
 #define ARMLOCAL    (VIRTIO+IOSIZE)
 
-enum {
-    Localctl    = 0x00,
-    Prescaler   = 0x08,
+//enum {
+// does not work under QEMU
+//    Localctl    = 0x00,
+//    Prescaler   = 0x08,
 
-    SystimerFreq    = 1*Mhz,
+//    SystimerFreq    = 1*Mhz,
 
-    MaxPeriod   = SystimerFreq / Arch_HZ,
-    MinPeriod   = SystimerFreq / (100*Arch_HZ),
-};
+//    MaxPeriod   = SystimerFreq / Arch_HZ,
+//    MinPeriod   = SystimerFreq / (100*Arch_HZ),
+//};
 
-typedef struct Systimers Systimers;
-typedef struct Armtimer Armtimer;
+//typedef struct Systimers Systimers;
+//typedef struct Armtimer Armtimer;
 
 // The order matters! the fields match the memory-mapped external registers.
-struct Systimers {
-    u32int  cs;
-
-    u32int  clo;
-    u32int  chi;
-
-    u32int  c0;
-    u32int  c1;
-    u32int  c2;
-    u32int  c3;
-};
-
-struct Armtimer {
-    u32int  load;
-    u32int  val;
-    u32int  ctl;
-    u32int  irqack;
-    u32int  irq;
-    u32int  maskedirq;
-    u32int  reload;
-    u32int  predivider;
-    u32int  count;
-};
+//struct Systimers {
+//    u32int  cs;
+//
+//    u32int  clo;
+//    u32int  chi;
+//
+//    u32int  c0;
+//    u32int  c1;
+//    u32int  c2;
+//    u32int  c3;
+//};
+//
+//struct Armtimer {
+//    u32int  load;
+//    u32int  val;
+//    u32int  ctl;
+//    u32int  irqack;
+//    u32int  irq;
+//    u32int  maskedirq;
+//    u32int  reload;
+//    u32int  predivider;
+//    u32int  count;
+//};
 
 enum {
-    CntPrescaleShift= 16,   /* freq is sys_clk/(prescale+1) */
-    CntPrescaleMask = 0xFF,
-    CntEnable   = 1<<9,
-
-    TmrDbgHalt  = 1<<8,
-    TmrEnable   = 1<<7,
-    TmrIntEnable    = 1<<5,
-    TmrPrescale1    = 0x00<<2,
-    TmrPrescale16   = 0x01<<2,
-    TmrPrescale256  = 0x02<<2,
-
-    CntWidth16  = 0<<1,
-    CntWidth32  = 1<<1,
+//    CntPrescaleShift= 16,   /* freq is sys_clk/(prescale+1) */
+//    CntPrescaleMask = 0xFF,
+//    CntEnable   = 1<<9,
+//
+//    TmrDbgHalt  = 1<<8,
+//    TmrEnable   = 1<<7,
+//    TmrIntEnable    = 1<<5,
+//    TmrPrescale1    = 0x00<<2,
+//    TmrPrescale16   = 0x01<<2,
+//    TmrPrescale256  = 0x02<<2,
+//
+//    CntWidth16  = 0<<1,
+//    CntWidth32  = 1<<1,
 
     /* generic timer (cortex-a7) */
     Enable  = 1<<0,
@@ -112,22 +121,24 @@ localclockintr(Ureg *ureg, void *)
     x = (unsigned int) cprdsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval);
     print("val2: %ud\n", x);
 
-
+    //pad: we must use the generic timer also for cpu0 under QEMU
     //if(cpu->cpuno == 0)
     //    panic("cpu0: Unexpected local generic timer interrupt");
     cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask|Enable);
 
+    //to test:
     cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, 62500000);
     cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
-    //timerintr(ureg, 0);
+
+    //TODO: timerintr(ureg, 0);
 }
 
 
 void
 clockshutdown(void)
 {
-    Armtimer *tm;
     panic("clockshutdown");
+    //Armtimer *tm;
 
     //tm = (Armtimer*)ARMTIMER;
     //tm->ctl = 0;
@@ -137,19 +148,21 @@ clockshutdown(void)
 void
 clockinit(void)
 {
-    Systimers *tn;
-    Armtimer *tm;
-    u32int t0, t1, tstart, tend;
+    //Systimers *tn;
+    //Armtimer *tm;
+    //u32int t0, t1, tstart, tend;
     ulong volatile x;
 
     if(((cprdsc(0, CpID, CpIDfeat, 1) >> 16) & 0xF) != 0) {
         /* generic timer supported */
         if(cpu->cpuno == 0){
-//            *(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
-//            *(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
-          // does not work either
+            // does not work under QEMU
+         //*(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
+         //*(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
         }
         cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask);
+    } else {
+        panic("clockinit requires support for generic timer");
     }
 
     // Does not work under QEMU!
@@ -178,14 +191,17 @@ clockinit(void)
     //    arch_intrenable(IRQtimer3, clockintr, nil, 0, "clock");
     //}
     //else
-        //arch_intrenable(IRQcntpns, localclockintr, nil, 0, "clock"); // does not work, as mentioned at https://lists.gnu.org/archive/html/qemu-arm/2016-03/msg00256.html QEMU handles only Physical (IRQLOCAL+0) and Virt IRQLOCAL+3) timers
+        // does not work under QEMU. 
+        // seehttps://lists.gnu.org/archive/html/qemu-arm/2016-03/msg00256.html
+        // QEMU handles only Physical (IRQLOCAL+0) and Virt IRQLOCAL+3) timers
+        //arch_intrenable(IRQcntpns, localclockintr, nil, 0, "clock"); 
         arch_intrenable(IRQcntps, localclockintr, nil, 0, "clock");
 }
 
 void
 arch_timerset(Tval next)
 {
-    Systimers *tn;
+    //Systimers *tn;
     uvlong now;
     long period;
 
@@ -210,7 +226,7 @@ arch_timerset(Tval next)
 uvlong
 clock_arch_fastticks(uvlong *hz)
 {
-    Systimers *tn;
+    //Systimers *tn;
     ulong lo, hi;
     uvlong now;
     int s;
@@ -235,7 +251,7 @@ clock_arch_fastticks(uvlong *hz)
 ulong
 arch_perfticks(void)
 {
-    Armtimer *tm;
+    //Armtimer *tm;
 
     panic("arch_perfticks");
     return 0;
@@ -244,23 +260,22 @@ arch_perfticks(void)
     //return tm->count;
 }
 
-void
-armtimerset(int n)
-{
-    Armtimer *tm;
-    panic("armtimerset");
-    return;
-
-    //tm = (Armtimer*)ARMTIMER;
-    //if(n > 0){
-    //    tm->ctl |= TmrEnable|TmrIntEnable;
-    //    tm->load = n;
-    //}else{
-    //    tm->load = 0;
-    //    tm->ctl &= ~(TmrEnable|TmrIntEnable);
-    //    tm->irq = 1;
-    //}
-}
+//this is not used only in USB driver
+//void
+//armtimerset(int n)
+//{
+//    Armtimer *tm;
+//
+//    tm = (Armtimer*)ARMTIMER;
+//    if(n > 0){
+//        tm->ctl |= TmrEnable|TmrIntEnable;
+//        tm->load = n;
+//    }else{
+//        tm->load = 0;
+//        tm->ctl &= ~(TmrEnable|TmrIntEnable);
+//        tm->irq = 1;
+//    }
+//}
 
 ulong
 arch_us(void)
@@ -275,7 +290,7 @@ arch_us(void)
 void
 clock_arch_microdelay(int n)
 {
-    Systimers *tn;
+    //Systimers *tn;
     u32int now, diff;
     
     panic("clock_arch_microdelay");

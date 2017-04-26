@@ -57,7 +57,8 @@ extern int cas(ulong*, ulong, ulong);
 
 extern char *cputype2name(char *buf, int size);
 
-extern void armtimerset(int);
+extern void tmrget(uvlong*);
+//extern void armtimerset(int);
 
 // coproc.c
 extern ulong cprd(int cp, int op1, int crn, int crm, int op2);

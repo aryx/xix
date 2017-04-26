@@ -19,10 +19,8 @@ enum {
     Istatus = 1<<2,
 };
 
-extern uvlong tmrget(void);
 extern uvlong tmrcmpget(void);
 extern void   tmrcmpset(void);
-
 extern void   xxxset(void);
 extern int   xxxget(void);
 
@@ -36,7 +34,7 @@ void test(void) {
     x = cprdsc(0, CpTIMER, 0, 0);
     print("freq = %d\n", x);
 
-    v = tmrget();
+    tmrget(&v);
     print("val1: %lld\n", v);
 
     cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, 62500000);
@@ -53,12 +51,12 @@ void test3(void) {
     uvlong v;
     unsigned int x;
 
-    v = tmrget();
+    tmrget(&v);
     print("val1: %lld\n", v);
     while (v < 200 * 1000 * 1000) {
-      v = tmrget();
+      tmrget(&v);
     }
-    v = tmrget();
+    tmrget(&v);
     print("val2: %lld\n", v);
 
     tmrcmpset();
@@ -97,12 +95,12 @@ void test2(void) {
     x = cprdsc(0, CpTIMER, 0, 0);
     print("freq = %d\n", x);
 
-    v = tmrget();
+    tmrget(&v);
     print("val1: %lld\n", v);
     while (v < 200 * 1000 * 1000) {
-      v = tmrget();
+      tmrget(&v);
     }
-    v = tmrget();
+    tmrget(&v);
     print("val2: %lld\n", v);
 
     x = cprdsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval);

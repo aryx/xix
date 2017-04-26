@@ -37,16 +37,19 @@
 //TODO factorize in mem.h
 #define ARMLOCAL    (VIRTIO+IOSIZE)
 
-//enum {
+enum {
 // does not work under QEMU
 //    Localctl    = 0x00,
 //    Prescaler   = 0x08,
 
 //    SystimerFreq    = 1*Mhz,
+      // for QEMU
+      // less: use cprdsc(0, CpTIMER, 0, 0) to read timer frequency instead?
+      SystimerFreq = 62500000, // but really generic timer Freq
 
-//    MaxPeriod   = SystimerFreq / Arch_HZ,
-//    MinPeriod   = SystimerFreq / (100*Arch_HZ),
-//};
+    MaxPeriod   = SystimerFreq / Arch_HZ,
+    MinPeriod   = SystimerFreq / (100*Arch_HZ),
+};
 
 //typedef struct Systimers Systimers;
 //typedef struct Armtimer Armtimer;
@@ -117,33 +120,22 @@ localclockintr(Ureg *ureg, void *)
 
     tmrget(&v);
     print("val1: %lld\n", v);
-
     x = (unsigned int) cprdsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval);
     print("val2: %ud\n", x);
 
     //pad: we must use the generic timer also for cpu0 under QEMU
     //if(cpu->cpuno == 0)
     //    panic("cpu0: Unexpected local generic timer interrupt");
+    // acknowledge interrupt
     cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Imask|Enable);
 
     //to test:
-    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, 62500000);
-    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
+    //cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, 62500000);
+    //cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
 
-    //TODO: timerintr(ureg, 0);
+    timerintr(ureg, 0);
 }
 
-
-void
-clockshutdown(void)
-{
-    panic("clockshutdown");
-    //Armtimer *tm;
-
-    //tm = (Armtimer*)ARMTIMER;
-    //tm->ctl = 0;
-    ////wdogoff();
-}
 
 void
 clockinit(void)
@@ -151,12 +143,11 @@ clockinit(void)
     //Systimers *tn;
     //Armtimer *tm;
     //u32int t0, t1, tstart, tend;
-    ulong volatile x;
 
     if(((cprdsc(0, CpID, CpIDfeat, 1) >> 16) & 0xF) != 0) {
         /* generic timer supported */
         if(cpu->cpuno == 0){
-            // does not work under QEMU
+         // does not work under QEMU
          //*(ulong*)(ARMLOCAL + Localctl) = 0;             /* magic */
          //*(ulong*)(ARMLOCAL + Prescaler) = 0x06aaaaab;   /* magic for 1 Mhz */
         }
@@ -199,28 +190,43 @@ clockinit(void)
 }
 
 void
+clockshutdown(void)
+{
+    panic("clockshutdown");
+    //Armtimer *tm;
+
+    //tm = (Armtimer*)ARMTIMER;
+    //tm->ctl = 0;
+    ////wdogoff();
+}
+
+void
 arch_timerset(Tval next)
 {
     //Systimers *tn;
     uvlong now;
     long period;
 
-    panic("arch_timerset\n");
+    now = arch_fastticks(nil);
+    period = next - now;
+    // disabled for now to let more flexibility in timersinit()
+    //if(period < MinPeriod)
+    //    period = MinPeriod;
+    //else if(period > MaxPeriod)
+    //    period = MaxPeriod;
 
-//    now = arch_fastticks(nil);
-//    period = next - now;
-//    if(period < MinPeriod)
-//        period = MinPeriod;
-//    else if(period > MaxPeriod)
-//        period = MaxPeriod;
-//    //if(cpu->cpuno > 0){
-//    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, period);
-//    //    cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
-//    //}
-//    else{
-//        tn = (Systimers*)SYSTIMERS;
-//        tn->c3 = (ulong)(now + period);
-//    }
+    //panic("next = %lld, now = %ulld, period = %d \n", period);
+
+    // we must do that also for cpu0 under QEMU
+    //if(cpu->cpuno > 0)
+    {
+        cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysval, period);
+        cpwrsc(0, CpTIMER, CpTIMERphys, CpTIMERphysctl, Enable);
+    }
+    //else{
+    //    tn = (Systimers*)SYSTIMERS;
+    //    tn->c3 = (ulong)(now + period);
+    //}
 }
 
 uvlong
@@ -231,21 +237,22 @@ clock_arch_fastticks(uvlong *hz)
     uvlong now;
     int s;
 
-    panic("clock_arch_fastticks");
-    return 0;
+    if(hz)
+        *hz = SystimerFreq;
 
-//    if(hz)
-//        *hz = SystimerFreq;
-//    tn = (Systimers*)SYSTIMERS;
-//    s = arch_splhi();
-//    do{
-//        hi = tn->chi;
-//        lo = tn->clo;
-//    }while(tn->chi != hi);
-//    now = (uvlong)hi<<32 | lo;
-//    cpu->fastclock = now;
-//    arch_splx(s);
-//    return cpu->fastclock;
+    s = arch_splhi();
+    // does not work under QEMU
+    // tn = (Systimers*)SYSTIMERS;
+    //do{
+    //    hi = tn->chi;
+    //    lo = tn->clo;
+    //}while(tn->chi != hi);
+    //now = (uvlong)hi<<32 | lo;
+    tmrget(&now);    
+
+    cpu->fastclock = now;
+    arch_splx(s);
+    return cpu->fastclock;
 }
 
 ulong
@@ -280,11 +287,9 @@ arch_perfticks(void)
 ulong
 arch_us(void)
 {
-  panic("arch_us");
-  return 0;
-  //  if(SystimerFreq != 1*Mhz)
-  //      return fastticks2us(arch_fastticks(nil));
-  //  return arch_fastticks(nil);
+    if(SystimerFreq != 1*Mhz)
+        return fastticks2us(arch_fastticks(nil));
+    return arch_fastticks(nil);
 }
 
 void

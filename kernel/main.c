@@ -172,10 +172,12 @@ main(void)
     
     arch__trapinit();
     clockinit();
-    //timersinit();
-    //arch_spllo();
+    timersinit();
+    // where this is done in the original code? 
+    // when go to userspace of init process?
+    arch_spllo(); 
 
-    test();
+    //test();
 
     // Jump to OCaml!
     caml_startup(nil); // no arguments for now

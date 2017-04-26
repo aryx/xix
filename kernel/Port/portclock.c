@@ -231,7 +231,7 @@ timersinit(void)
         error(Enomem);
     t->tmode = Tperiodic;
     t->tt = nil;
-    t->tns = 1000000000 / Arch_HZ;
+    t->tns = 3000000000 / Arch_HZ; // TODO: put back 1000000000 here
     /*
      * T->tf == nil means the HZ clock for this processor.
      */
@@ -244,6 +244,7 @@ addclock0link(void (*f)(void), Tms ms)
 {
     Timer *nt;
     Tval when;
+    panic("TODO: addclock0link"); // disable for now to cleanup when get IRQ
 
     if(!timersinited)
         panic("addclock0link: timersinit not called yet");

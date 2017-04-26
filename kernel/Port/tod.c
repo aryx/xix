@@ -67,7 +67,7 @@ todinit(void)
     tod.last = arch_fastticks((uvlong *)&tod.hz);
     iunlock(&tod);
     todsetfreq(tod.hz);
-    addclock0link(todfix, 100);
+    //TODO: addclock0link(todfix, 100); // disable to remove noise with IRQs
 }
 
 /*

@@ -298,6 +298,11 @@ OCAMLCFLAGS=$OCAMLINCLUDES
 # use of -l so no automagic lib and no _main
 9minimal: $OBJ mkfile
 	$LD $LDFLAGS -o $target $OBJ
+    mk debug
+
+debug:QV:
+	$LD -n $LDFLAGS -o $target $OBJ > syms.list
+
 
 ocaml.c: $CMO mkfile
 	$OCAMLC -output-c $CMO -o ocaml.c

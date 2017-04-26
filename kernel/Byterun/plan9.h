@@ -89,3 +89,5 @@ void signal(int, void (*)());
 #define SIG_DFL ((void (*)())0)
 #define SIG_ERR ((void (*)())-1)
 #define SIG_IGN ((void (*)())1)
+
+extern void  (*panic)(char*, ...);

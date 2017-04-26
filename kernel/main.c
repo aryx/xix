@@ -137,6 +137,8 @@ arch__confinit(void)
 
 extern void caml_startup(char **argv);
 
+char* empty_argv[] = { 0 };
+
 void
 main(void)
 {
@@ -180,7 +182,7 @@ main(void)
     //test();
 
     // Jump to OCaml!
-    caml_startup(nil); // no arguments for now
+    caml_startup(empty_argv); // no arguments for now
 
     print("Done!"); // yeah!
 

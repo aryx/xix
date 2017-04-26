@@ -6,6 +6,11 @@
 CMO= \
   commons/common.cmo\
   \
+  threads/thread.cmo\
+  threads/mutex.cmo\
+  threads/condition.cmo\
+  threads/event.cmo\
+  \
   core/arch.cmo\
   core/types.cmo\
   core/error.cmo\
@@ -213,6 +218,7 @@ OBJ=\
     byterun/gc_ctrl.$O\
     byterun/backtrace.$O\
     \
+    Byterun/scheduler.$O\
     byterun/9.$O\
     \
     bcm/globals.$O\
@@ -280,7 +286,8 @@ LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
 # I removed -T because prims.c (a generated file) has wrong signatures 
 CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
-OCAMLINCLUDES=-I commons -I core -I concurrency -I memory -I processes
+OCAMLINCLUDES=-I commons -I threads \
+   -I core -I concurrency -I memory -I processes
 OCAMLCFLAGS=$OCAMLINCLUDES
 
 
@@ -303,7 +310,7 @@ run:V:
 	qemu-system-arm -M raspi2 -bios 9minimal
 
 depend:V:
-	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$'
+	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
 
 #############################################################################
 # Meta rules
@@ -317,6 +324,9 @@ depend:V:
 
 %.cmo: %.ml
 	$OCAMLC $OCAMLCFLAGS -c $stem.ml
+
+%.cmi: %.mli
+	$OCAMLC $OCAMLCFLAGS -c $stem.mli
 
 
 #############################################################################

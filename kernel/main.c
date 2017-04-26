@@ -14,6 +14,10 @@ void arm_arch_coherence(void);
 int devcons_print(char *fmt, ...);
 int devcons_iprint(char *fmt, ...);
 void devcons_panic(char *fmt, ...);
+// clock.c
+uvlong clock_arch_fastticks(uvlong *hz);
+
+extern void test(void); // test.c
 
 //*****************************************************************************
 // Cpu init
@@ -141,6 +145,7 @@ main(void)
     print = devcons_print;
     iprint = devcons_iprint;
     panic = devcons_panic;
+    arch_fastticks = clock_arch_fastticks;
 
     memset(edata, 0, end - edata);  /* clear bss */
 
@@ -167,23 +172,17 @@ main(void)
     
     arch__trapinit();
     clockinit();
+    //timersinit();
+    //arch_spllo();
 
-
-    // Some tests
-    void* x1;
-    x1 = malloc(10000);
-    void* x2;
-    x2 = malloc(100);
-    print("Fuck yeah!%p, %p\n", x1, x2); // yeah!
-
-    //*(byte*)13 = 1;
+    test();
 
     // Jump to OCaml!
     caml_startup(nil); // no arguments for now
 
     print("Done!"); // yeah!
 
-    //for(;;) ;
+    for(;;) ;
 
     assert(0);          /* shouldn't have returned */
 }

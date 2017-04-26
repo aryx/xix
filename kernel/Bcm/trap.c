@@ -7,6 +7,7 @@
 #include "mem.h"
 #include "dat.h"
 #include "fns.h"
+
 #include "io.h"
 #include "ureg.h"
 #include "arm.h"
@@ -160,6 +161,7 @@ irq(Ureg* ureg)
     Vctl *v;
     bool clockintr;
     bool found;
+    iprint("irq()\n");
 
     //TODO: cpu->perf.intrts = arch_perfticks();
     clockintr = false;
@@ -350,6 +352,7 @@ arch__trap(Ureg *ureg)
     //less: int rv;
 
     assert(!arch_islo());
+
     if(up != nil)
         rem = ((char*)ureg)-up->kstack;
     else

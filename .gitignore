@@ -52,3 +52,4 @@
 /kernel/ocaml.c
 /linker/garbage_ml
 /compiler/garbage_ml
+/debugger/ksym

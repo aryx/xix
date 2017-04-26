@@ -249,3 +249,25 @@ let rec take_safe n xs =
   | (0,_) -> []
   | (_,[]) -> []
   | (n,x::xs) -> x::take_safe (n-1) xs
+
+(* tail recursive efficient version *)
+let cat file =
+  let chan = open_in file in
+  let rec cat_aux acc ()  =
+      (* cant do input_line chan::aux() cos ocaml eval from right to left ! *)
+    let (b, l) = try (true, input_line chan) with End_of_file -> (false, "") in
+    if b
+    then cat_aux (l::acc) ()
+    else acc
+  in
+  cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)
+
+let sort_by_val_highfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
+let sort_by_val_lowfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare v1 v2) xs
+
+let sort_by_key_highfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare k2 k1) xs
+let sort_by_key_lowfirst xs =
+  List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs

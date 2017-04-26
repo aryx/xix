@@ -7,16 +7,21 @@
 #define PADDR(va)   (((va) & ~KSEGM))
 #define L1X(va)     (((((va))>>20) & 0x0fff)<<2)
 
+
+#define CpCACHEinvi 5           /* instruction, branch table */
+#define CpCACHEwait 4           /* wait (prefetch flush on cortex) */
+#define CpCACHEwb   10          /* writeback to PoC */
+
 /*
  * new instructions
  */
 // simplified caching and coherence for now: No cache!
 #define ISB \
     MOVW    $0, R0; \
-    //MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEinvi), CpCACHEwait
+    MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEinvi), CpCACHEwait
 #define DSB \
     MOVW    $0, R0; \
-    //MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEwb), CpCACHEwait
+    MCR CpSC, 0, R0, C(CpCACHE), C(CpCACHEwb), CpCACHEwait
 #define BARRIERS    ISB; DSB
 
 #define LDREX(fp,t)   WORD $(0xe<<28|0x01900f9f | (fp)<<16 | (t)<<12)

@@ -108,8 +108,7 @@ let preempt signal =
 
 (* Initialization of the scheduler *)
 
-(* TODO:
 let _ =
   Sys.signal Sys.sigvtalrm (Sys.Signal_handle preempt);
   thread_initialize()
-*)
+

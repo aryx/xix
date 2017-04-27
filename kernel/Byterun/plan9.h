@@ -90,4 +90,9 @@ void signal(int, void (*)());
 #define SIG_ERR ((void (*)())-1)
 #define SIG_IGN ((void (*)())1)
 
+// calling kernel devcons.c functions
 extern void  (*panic)(char*, ...);
+extern int  (*print)(char*, ...);
+
+// the only one we support
+#define SIGVTALRM 20

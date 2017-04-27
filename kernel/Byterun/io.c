@@ -153,7 +153,7 @@ int putblock(struct channel *channel, char *p, long int len)
   n = len >= INT_MAX ? INT_MAX : (int) len;
   free = channel->end - channel->curr;
   if (n <= free && 0) { // TODO!!!
-    print("putblock1\n");
+    //print("putblock1\n");
     /* Write request small enough to fit in buffer: transfer to buffer. */
     bcopy(p, channel->curr, n);
     channel->curr += n;
@@ -161,7 +161,7 @@ int putblock(struct channel *channel, char *p, long int len)
   } else {
     /* Write request overflows buffer: transfer whatever fits to buffer
        and write the buffer */
-    print("putblock2\n");
+    //print("putblock2\n");
     bcopy(p, channel->curr, free);
     towrite = channel->end - channel->buff;
     written = do_write(channel->fd, channel->buff, towrite);

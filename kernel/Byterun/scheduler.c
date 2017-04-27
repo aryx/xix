@@ -270,6 +270,7 @@ static value schedule_thread(void)
   curr_thread->stack_threshold = stack_threshold;
   curr_thread->sp = extern_sp;
   curr_thread->trapsp = trapsp;
+  //print("here1");
 
 try_again:
   /* Build fdsets and delay for select.
@@ -281,6 +282,7 @@ try_again:
   now = -1.0;
   need_select = 0;
   need_wait = 0;
+  //print("here2");
 
   FOREACH_THREAD(th)
     if (th->status & (BLOCKED_IO - 1)) {
@@ -290,6 +292,7 @@ try_again:
       need_select = 1;
     }
     if (th->status & (BLOCKED_DELAY - 1)) {
+      //print("here2bis");
       double th_delay;
       if (now < 0.0) now = timeofday();
       th_delay = Double_val(th->delay) - now;
@@ -323,14 +326,19 @@ waitpid(Int_val(th->waitpid), &status, WNOHANG);
     }
   END_FOREACH(th);
 
+  //print("here3");
+
   /* Find if a thread is runnable. */
   run_thread = NULL;
   FOREACH_THREAD(th)
     if (th->status == RUNNABLE) { run_thread = th; break; }
   END_FOREACH(th);
 
+  //print("here4");
+
   /* Do the select if needed */
   if (need_select || run_thread == NULL) {
+  //print("here4bis");
     struct timeval delay_tv, * delay_ptr;
     int retcode;
     /* If a thread is blocked on wait, don't block forever */
@@ -394,6 +402,7 @@ select(FD_SETSIZE, &readfds, &writefds, &exceptfds, delay_ptr);
         (delay != DELAY_INFTY || need_wait || retcode == -1))
       goto try_again;
   }
+  //print("here5");
 
   /* If we haven't something to run at that point, we're in big trouble. */
   if (run_thread == NULL) invalid_argument("Thread: deadlock");
@@ -405,6 +414,8 @@ select(FD_SETSIZE, &readfds, &writefds, &exceptfds, delay_ptr);
   Assign(run_thread->delay, NO_DELAY);
   Assign(run_thread->joining, NO_JOINING);
   run_thread->waitpid = NO_WAITPID;
+
+  //print("here6");
 
   /* Activate the thread */
   curr_thread = run_thread;

@@ -128,6 +128,7 @@ timerdel(Timer *dt)
     iunlock(dt);
 }
 
+extern void handle_signal(int signal_number);
 void
 hzclock(Ureg *ur)
 {
@@ -162,9 +163,10 @@ hzclock(Ureg *ur)
     //TODO:
     //if(up && up->state == Running)
     //    hzsched();  /* in proc.c */
+    //TODO: ocaml version!
+    handle_signal(20); // SIGVTALRM
 }
 
-// called via i8253clock
 void
 timerintr(Ureg *u, Tval)
 {

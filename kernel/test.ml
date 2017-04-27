@@ -1,5 +1,11 @@
 open Common
 
+let test_print () =
+  let x = 1+1 in
+  let s = Printf.sprintf "hello world %d\n" x in
+  print_string s
+
+
 exception Exn1 of string
 exception Exn2 of string
 
@@ -11,10 +17,7 @@ let bar x =
 let foo x = 
   bar x
 
-let test_print () =
-  let x = 1+1 in
-  let s = Printf.sprintf "hello world %d\n" x in
-  print_string s;
+let test_exn () =
   (try 
     let x = foo 42 in
     print_string (Printf.sprintf "res = %d" x);
@@ -40,18 +43,36 @@ let test_threads_cooperatively () =
     print_string "thread 2 bis\n";
   ) () in
   xt2 := Some t2;
+  Thread.sleep ()
 
-  Thread.sleep ();
+let test_threads_preemptively () =
 
-  while true do 
-    for i = 0 to 1000 do
-      ()
+  let loop () = 
+    while true do 
+      for i = 0 to 1000 do
+        ()
+      done
     done
-  done
+  in
 
+  let t1 = Thread.create (fun () ->
+    print_string "thread 1\n";
+    loop ()
+  ) () in
+  let t2 = Thread.create (fun () ->
+    print_string "thread 2\n";
+    loop ()
+  ) () in
+
+  print_string "main thread\n";
+  loop ()
 
 
 let test () =
-  (* test_print () *)
-  test_threads_cooperatively ();
+  (* 
+     test_print () 
+     test_exn ()
+     test_threads_cooperatively ();
+  *)
+  test_threads_preemptively ();
   ()

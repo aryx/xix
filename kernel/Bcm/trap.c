@@ -349,7 +349,7 @@ arch__trap(Ureg *ureg)
     ulong fsr;
     virt_addr va; // can be a kern_addr?
     ulong inst;
-    //less: int rv;
+    int rv;
 
     assert(!arch_islo());
 
@@ -394,8 +394,8 @@ arch__trap(Ureg *ureg)
             // else
             {
                 /* look for floating point instructions to interpret */
-                //less: rv = fpuemu(ureg);
-                //less: if(rv == 0)
+                rv = fpuemu(ureg);
+                if(rv == 0)
                 {
                     snprint(buf, sizeof buf,
                         "undefined instruction: pc %#lux\n",

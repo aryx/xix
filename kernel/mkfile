@@ -249,6 +249,7 @@ OBJ=\
     bcm/clock.$O\
     bcm/time_raspi2.$O\
     bcm/coproc.$O\
+    bcm/vfp3.$O\
     bcm/misc.$O\
     \
     bcm/vcore.$O\

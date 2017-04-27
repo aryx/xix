@@ -175,9 +175,13 @@ main(void)
     arch__trapinit();
     clockinit();
     timersinit();
+
     // where this is done in the original code? 
     // when go to userspace of init process?
     arch_spllo(); 
+    
+    // byterun/scheduler.c uses floats so we need to enable the VFP coprocessor
+    fpinit();
 
     //test();
 

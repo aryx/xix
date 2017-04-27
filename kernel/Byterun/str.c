@@ -107,7 +107,7 @@ value is_printable(value chr) /* ML */
 
   static int iso_charset = -1;
   if (iso_charset == -1) {
-    char * lc_ctype = (char *) getenv("LC_CTYPE");
+    char * lc_ctype = (char *) nil;  //TODO: getenv("LC_CTYPE");
     iso_charset = (lc_ctype != 0 && strcmp(lc_ctype, "iso_8859_1") == 0);
   }
   printable_chars = iso_charset ? printable_chars_iso : printable_chars_ascii;

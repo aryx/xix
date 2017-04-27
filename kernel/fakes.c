@@ -40,8 +40,8 @@ void	_exits(char*) {
   panic("_exits");
 }
 //char*   getenv(char*) {
-char* getenv(char*, char*, int) {
-  panic("getenv");
+char* getenv(char* x1, char*, int) {
+  panic("getenv: link = %lux", getcallerpc(&x1));
   return 0;
 }
 fdt		open(char*, int) {

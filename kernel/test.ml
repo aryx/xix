@@ -22,13 +22,25 @@ let test_print () =
     print_string (Printf.sprintf "exn1 = %s" s);
   )
 
-let test_threads () =
+let test_threads_cooperatively () =
+  let xt1 = ref None in
+  let xt2 = ref None in
+
   let t1 = Thread.create (fun () ->
     print_string "thread 1\n";
+    Thread.sleep ();
+    print_string "thread 1 bis\n";
+    !xt2 |> Common.if_some (fun t2 -> Thread.wakeup t2);
   ) () in
+  xt1 := Some t1;
   let t2 = Thread.create (fun () ->
     print_string "thread 2\n";
+    !xt1 |> Common.if_some (fun t1 -> Thread.wakeup t1);
+    Thread.sleep ();
+    print_string "thread 2 bis\n";
   ) () in
+  xt2 := Some t2;
+
   Thread.sleep ();
 
   while true do 
@@ -41,5 +53,5 @@ let test_threads () =
 
 let test () =
   (* test_print () *)
-  test_threads ();
+  test_threads_cooperatively ();
   ()

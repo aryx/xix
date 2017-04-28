@@ -57,28 +57,34 @@
 
 struct thread_struct {
   value ident;                  /* Unique id (for equality comparisons) */
+
   struct thread_struct * next;  /* Double linking of threads */
   struct thread_struct * prev;
+
   value * stack_low;            /* The execution stack for this thread */
   value * stack_high;
   value * stack_threshold;
   value * sp;
   value * trapsp;
+
   value status;                 /* RUNNABLE, KILLED. etc (see below) */
   value readfds, writefds, exceptfds;
                 /* Lists of file descriptors on which we're doing select() */
+
   value delay;                  /* Time until which this thread is blocked */
   value joining;                /* Thread we're trying to join */
   value waitpid;                /* PID of process we're waiting for */
+
   value retval;                 /* Value to return when thread resumes */
 };
-//pad: saved backtrace in recent ocaml
+//pad: todo: saved backtrace in recent ocaml
 
 typedef struct thread_struct * thread_t;
 
 #define RUNNABLE Val_int(0)
 #define KILLED Val_int(1)
 #define SUSPENDED Val_int(2)
+
 #define BLOCKED_IO Val_int(4)
 #define BLOCKED_DELAY Val_int(8)
 #define BLOCKED_JOIN Val_int(16)
@@ -137,11 +143,13 @@ value thread_initialize(value unit)       /* ML */
   next_ident = Val_int(Int_val(next_ident) + 1);
   curr_thread->next = curr_thread;
   curr_thread->prev = curr_thread;
+
   curr_thread->stack_low = stack_low;
   curr_thread->stack_high = stack_high;
   curr_thread->stack_threshold = stack_threshold;
   curr_thread->sp = extern_sp;
   curr_thread->trapsp = trapsp;
+
   curr_thread->status = RUNNABLE;
   curr_thread->readfds = NO_FDS;
   curr_thread->writefds = NO_FDS;
@@ -228,6 +236,8 @@ static double timeofday(void)
 }
 #else
 extern double timeofday(void); // see 9.c
+
+//TODO?
 struct timeval {
 	long	tv_sec;
 	long	tv_usec;
@@ -238,6 +248,8 @@ void FD_ZERO(fd_set*) {
 #define FD_SET(a,b)
 #define FD_CLR(a,b)
 #define FD_ISSET(a,b) 0
+
+#define FD_SETSIZE (sizeof(int) * 8) // from otherlibs/unix/select.c
 #endif
 
 /* Find a runnable thread and activate it */
@@ -249,10 +261,6 @@ void FD_ZERO(fd_set*) {
 static value alloc_process_status(int pid, int status);
 static void add_fdlist_to_set(value fdl, fd_set *set);
 static value inter_fdlist_set(value fdl, fd_set *set);
-
-#ifndef FD_SETSIZE // for plan9
-#define FD_SETSIZE (sizeof(int) * 8) // from otherlibs/unix/select.c
-#endif
 
 static value schedule_thread(void)
 {

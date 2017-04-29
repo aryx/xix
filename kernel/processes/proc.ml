@@ -75,6 +75,8 @@ let alloc () =
     childlock = Spinlock.alloc ();
 
     kproc = None;
+    
+    priority = Scheduler_.prioNormal;
   }
   in
   hash p

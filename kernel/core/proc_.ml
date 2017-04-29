@@ -41,6 +41,8 @@ type wait_msg = {
   (* less: time fields of child *)
 }
 
+
+
 type t = {
   pid: pid;
   mutable state: state;
@@ -71,6 +73,9 @@ type t = {
    *  or have a mutable seg: Segment_t.array Qlock_.locked; ?
    *)
   seglock: Qlock_.t;
+
+  priority: Scheduler_.priority;
+  (* less: mutable and then basepri and fixedpri *)
 
   slash: Chan_.t;
   mutable dot: Chan_.t;

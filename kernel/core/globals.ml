@@ -60,7 +60,8 @@ let fakeproc = { Proc_.
   childlock = fakelock;
   user = "";
   kproc = None;
-  
+  priority = Scheduler_.Prio 0;
+ 
 }
 let fakeconf = { Conf.
   ncpu = 0;

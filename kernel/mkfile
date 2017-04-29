@@ -25,6 +25,7 @@ CMO= \
   core/page_.cmo\
   core/pagetable_.cmo\
   core/segment_.cmo\
+  core/scheduler_.cmo\
   core/proc_.cmo\
   core/cpu.cmo\
   core/globals.cmo\
@@ -53,6 +54,8 @@ CMO= \
   processes/sysexec.cmo\
   processes/sysawait.cmo\
   processes/sysexits.cmo\
+  \
+  scheduler/scheduler.cmo\
   \
   sysnop.cmo\
   syserrstr.cmo\
@@ -302,7 +305,7 @@ OCAMLCFLAGS=$OCAMLINCLUDES
     mk debug
 
 debug:QV:
-	$LD -n $LDFLAGS -o $target $OBJ > syms.list
+	$LD -n $LDFLAGS -o /tmp/xxx $OBJ > syms.list
 
 
 ocaml.c: $CMO mkfile

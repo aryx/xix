@@ -66,6 +66,9 @@ let syscall_rfork flags =
 
       (* todo: more misc *)
       kproc = None;
+
+      (* less: basepri, fixedpri *)
+      priority = up.priority;
     }
     in
     (* as in Proc.alloc() *)

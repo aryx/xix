@@ -78,6 +78,8 @@ let alloc () =
     
     priority = Scheduler_.prioNormal;
     base_priority = Scheduler_.prioNormal;
+
+    thread = Thread.create (fun () -> failwith "todo: alloc().thread") ();
   }
   in
   hash p

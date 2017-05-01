@@ -44,6 +44,8 @@ let kproc name f =
     priority = Scheduler_.prioKproc;
     base_priority = Scheduler_.prioKproc;
 
+    thread = Thread.create (fun () -> failwith "TODO:kproc.thread?") ();
+
     (* todo: misc fields *)
   }
   in

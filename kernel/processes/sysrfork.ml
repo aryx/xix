@@ -67,9 +67,11 @@ let syscall_rfork flags =
       (* todo: more misc *)
       kproc = None;
 
-      (* less: fixedpri *)
       priority = up.base_priority;
       base_priority = up.base_priority;
+      (* less: fixedpri *)
+
+      thread = Thread.create (fun () -> failwith "TODO: sysrfork().thread")();
     }
     in
     (* as in Proc.alloc() *)

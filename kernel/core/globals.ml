@@ -55,6 +55,7 @@ let fakeproc = { Proc_.
   kproc = None;
   priority = Scheduler_.Prio 0;
   base_priority = Scheduler_.Prio 0;
+  thread = Thread.self ();
  
 }
 let fakeconf = { Conf.
@@ -74,7 +75,7 @@ let cpu = { Cpu.
   id = 0;
   proc = None;
   ticks = 0;
-  thread = Thread.self();
+  Cpu.thread = Thread.self();
 }
 (* less: cpus array *)
 (* less: active *)

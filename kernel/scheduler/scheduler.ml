@@ -85,31 +85,60 @@ let find_proc () =
     Spinlock.unlock runq.l;
     p
 
+(* How to write the scheduler written in OCaml? 
+ * You can have one thread for the scheduler (schedinit())
+ * and then only one active thread at a time. Then, the active
+ * thread can simply call wakeup on the scheduler and sleep which
+ * should automatically switch to the now only ready thread: scheduler.
+ * 
+ * alt: have a special kernel_thread in scheduler.c?
+ * the first one created? and delegate to him the scheduling policy?
+ *)
+
+
 (* the big one! *)
 let sched () =
   (* todo: check ilockdepth  *)
-  raise Todo
+  (* todo: splhi *)
+  (* less: cpu->cs stats *)
+
+  (* less: arch_procsave hooks *)
+  Thread.critical_section := true;
+  Thread.wakeup Globals.cpu.Cpu.thread;
+  Thread.sleep () (* reset Thread.critical_section *)
+
 
 let scheduler () =
+ assert (Thread.id (Thread.self ()) = Thread.id (Globals.cpu.Cpu.thread));
+ while true do 
+  Thread.critical_section := true;
   (* less: assert splhi? *)
   (* less: check ilockdepth  *)
-  (* todo: handle Moribund *)
-  (* todo: handle Ready? *)
+  let up = Globals.up () in
+  (match up.Proc_.state with
+  | Proc_.Running -> 
+    raise Todo
+  | Proc_.Moribund -> raise Todo
+  | _ -> raise (Impossible "can hve either Running or Moribund in scheduler()")
+  );
 
   (* from now on, up is nil *)
+  (* less: call sched()?? better put the logic in scheduler too no? *)
 
   let p = find_proc () in
   (* less: update priority *)
   (* less: adjust schedticks *)
   
   Globals.cpu.Cpu.proc <- Some p;
+  (* new up! *)
   let up = Globals.up () in
   up.Proc_.state <- Proc_.Running;
   (* less: up.Proc_.cpu <- cpu.id *)
 
   (* todo: mmuswitch *)
-  raise Todo
-
+  Thread.wakeup up.Proc_.thread;
+  Thread.sleep () (* reset Thread.critical_section *)
+ done
 
 (* from Running to Ready in right priority queue *)
 let ready p =

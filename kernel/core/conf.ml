@@ -13,8 +13,8 @@ type t = {
   nproc: int;
 
   (* set in Main.confinit *)
-  upages: int;
-  kpages: int;
+  user_pages: int;
+  kernel_pages: int;
 
   (* upage+kpage *)
   npages: int;

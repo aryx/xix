@@ -61,23 +61,24 @@ let fakeconf = { Conf.
   nproc = 0;
   mem = [];
 
-  upages = 0;
-  kpages = 0;
+  user_pages = 0;
+  kernel_pages = 0;
   npages = 0;
 }
  
 (* !!! The globals !!! *)
 
+(* less: opti: a special register (faster and local to a processor) *)
 let cpu = { Cpu.
   cpuno = 0;
   proc = None;
   ticks = 0;
   thread = Thread.self();
 }
-
 (* less: cpus array *)
 (* less: active *)
 
+(* less: opti: a special register (faster and local to a processor) *)
 let up () = 
   match cpu.proc with
   (* sentinel proc; convenient because need less if (up == nil) code *)

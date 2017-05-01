@@ -4,20 +4,20 @@ type pid = Types.pid
 
 type state = 
   | Running
+  | Ready
 
   | Dead
-  | Moribund
-  | Broken
+  | Moribund (* soon to be Dead but not Dead yet *)
+  | Broken (* to debug (=~ core dump) *)
 
-  | Ready
-  | Scheding
+  | Scheding (* soon to be Ready but not Ready yet *)
 
+  | Wakeme (* sleeping *)
   | Queueing of rw option
 (*
   | Stopped
   | Rendezvous
   | Waitrelease
-  | Wakeme
 *)
   and rw = Read | Write
 
@@ -44,6 +44,9 @@ type wait_msg = {
 
 
 type t = {
+  (* ---------------------------------------------------------------- *)
+  (* State *)
+  (* ---------------------------------------------------------------- *)
   pid: pid;
   mutable state: state;
 
@@ -51,6 +54,10 @@ type t = {
   user: string;
   (* executable name (can be also "*init*" for kernel processes) *)
   mutable name: string; 
+
+  (* ---------------------------------------------------------------- *)
+  (* Process hierarchy *)
+  (* ---------------------------------------------------------------- *)
 
   (* None when NoWait flag in sysrfork (also first proc has no parent) *)
   (* less: opti: direct link to parent *)
@@ -63,6 +70,10 @@ type t = {
   childlock: Spinlock_.t;
   (* todo: waitr: Rendezvous_.t; *)
 
+  (* ---------------------------------------------------------------- *)
+  (* Memory *)
+  (* ---------------------------------------------------------------- *)
+
   (* less: opti: should use Segment_.t array; but more tedious *)
   mutable seg: (section, Segment_.t) Hashtbl.t;
   (* seglock is useful only when you have a pager in a concurrent kernel
@@ -74,8 +85,16 @@ type t = {
    *)
   seglock: Qlock_.t;
 
+  (* ---------------------------------------------------------------- *)
+  (* Scheduling *)
+  (* ---------------------------------------------------------------- *)
+
   priority: Scheduler_.priority;
   (* less: mutable and then basepri and fixedpri *)
+
+  (* ---------------------------------------------------------------- *)
+  (* Files *)
+  (* ---------------------------------------------------------------- *)
 
   slash: Chan_.t;
   mutable dot: Chan_.t;
@@ -84,6 +103,9 @@ type t = {
    * - namespace
    *)
 
+  (* ---------------------------------------------------------------- *)
+  (* Misc *)
+  (* ---------------------------------------------------------------- *)
 
   mutable in_syscall: bool;
 

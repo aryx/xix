@@ -52,6 +52,9 @@ let aout_magic = -1 (* todo:!! *)
 (* TODO: for now, but should be more 100 *)
 let hz = 1
 
+(* todo: for now; anyway ocaml light is not multicore *)
+let max_cpus = 1
+
 (* less: need generic type?
 type t = {
   pg2by: int;

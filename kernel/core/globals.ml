@@ -10,13 +10,6 @@ open Qlock_
 
 (* less: could move the globals (and fakexxx) in their respective files *)
 
-let fakecpu = { Cpu.
-  cpuno = 0;
-  proc = ref None;
-  ticks = 0;
-  cpumhz = 0;
-}
-
 let fakelock = { Spinlock_.
   hold = ref false;
   p = 0; (* same than fakeproc.pid *)
@@ -75,12 +68,21 @@ let fakeconf = { Conf.
  
 (* !!! The globals !!! *)
 
-let cpu = ref fakecpu
+let cpu = { Cpu.
+  cpuno = 0;
+  proc = None;
+  ticks = 0;
+  thread = Thread.self();
+}
+
 (* less: cpus array *)
 (* less: active *)
 
-(* sentinel proc; convenent because need less if (up == nil) code *)
-let up = ref fakeproc
+let up () = 
+  match cpu.proc with
+  (* sentinel proc; convenient because need less if (up == nil) code *)
+  | None -> fakeproc (* todo? or failwith? *)
+  | Some x -> x
 
 let devtab = ref ([| |]: Device_.t array)
 

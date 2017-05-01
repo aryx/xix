@@ -14,7 +14,7 @@ end
  *)
 
 let kproc name f =
-  let up = !(Globals.up) in
+  let up = Globals.up () in
 
   (* I prefer to inline Proc.alloc () here *)
   let pid = Counter.gen Proc.pidcounter in

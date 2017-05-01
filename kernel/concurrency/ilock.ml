@@ -23,7 +23,7 @@ type t = {
 
 let lock x =
   let when_hold oldprio =
-    let up = !Globals.up in
+    let up = Globals.up () in
     (* less: 
      * - update up.last_ilock
      * - increment ilockdepths

@@ -3,7 +3,7 @@ open Types
 open Proc_
 
 let syscall_await () =
-  let up = !Globals.up in
+  let up = Globals.up () in
 
   (* sanity check *)  
   up.childlock |> Spinlock.with_lock (fun () ->

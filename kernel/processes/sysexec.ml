@@ -32,7 +32,7 @@ let parse_header str =
 end
 
 let syscall_exec cmd args =
-  let up = !Globals.up in
+  let up = Globals.up () in
 
   (* big call *)
   let chan = !Hooks.Chan.chan_of_filename cmd in

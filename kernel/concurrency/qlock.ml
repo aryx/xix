@@ -24,7 +24,7 @@ let lock q =
     q.locked <- true;
     Spinlock.unlock q.l;
   end else begin
-    let up = !Globals.up in
+    let up = Globals.up () in
     Queue.add up.Proc_.pid q.q;
     up.Proc_.state  <- Proc_.Queueing None;
     Spinlock.unlock q.l;

@@ -1,18 +1,19 @@
 open Types
 
-(* No need for Lock.t here: this structure is accessed by only 1 processor. *)
+(* No need for Spinock.t here: this record is accessed by only 1 processor. *)
 
 type t = {
   cpuno: int;
 
-  proc: Proc_.t option ref;
+  mutable proc: Proc_.t option;
 
   (* todo: Arch_cpu *)
 
   mutable ticks: t_ticks;
-  cpumhz: int;
+  (* less: cpumhz: int; *)
 
-  (* todo: stack? *)
+  thread: Thread.t;
+
   (* less: 
    * mutable ilock_depths: int;
    *)

@@ -5,7 +5,7 @@ open Proc_
 (* in C the str can be null pointer but better use empty string for that *)
 let syscall_exits str =
 
-  let up = !Globals.up in
+  let up = Globals.up () in
   (* in C the code looks if parent is nil, but I use only parentpid
    * and so parent is nil can also mean RFNOWAIT so I instead
    * look if pid is 1 to check if boot process.

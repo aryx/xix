@@ -3,7 +3,7 @@ open Types
 open User_memory (* for operators @<, @-, etc *)
 
 let change_segment_top addr section =
-  let up = !Globals.up in
+  let up = Globals.up () in
   let seg =
     try Hashtbl.find up.Proc_.seg section
     with Not_found -> raise Error.Ebadarg

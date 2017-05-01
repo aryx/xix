@@ -13,7 +13,7 @@ end
 let syscall_rfork flags =
   match flags with
   | Syscall.Fork (fork_flags, flags) ->
-    let up = !(Globals.up) in
+    let up = Globals.up () in
 
     (* I prefer to inline Proc.alloc () here *)
     let pid = Counter.gen Proc.pidcounter in
@@ -85,5 +85,5 @@ let syscall_rfork flags =
     pid
 
   | Syscall.NoFork (flags) -> 
-    let up = !(Globals.up) in
+    let up = Globals.up () in
     raise Todo

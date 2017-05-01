@@ -13,7 +13,7 @@ type t = Spinlock_.t
 
 let lock x =
   let when_hold () =
-    let up = !Globals.up in
+    let up = Globals.up () in
     (* less: 
      * - increment up.nlocks (but using low level atomic_inc) 
      * - update up.last_spinlock
@@ -47,7 +47,7 @@ let lock x =
 let unlock x =
   if not !(x.hold)
   then failwith "Spinlock.unlock: not locked";
-  let up = !Globals.up in
+  let up = Globals.up () in
   if up.Proc_.pid <> x.p
   then failwith "Spinlock.unlock: up changed";
 
@@ -58,7 +58,7 @@ let canlock x =
   if Tas.tas x.hold = false
   then begin
     (* coupling: copy paste of lock when_hold *) 
-    let up = !Globals.up in
+    let up = Globals.up () in
     x.p <- up.Proc_.pid;
     true
   end

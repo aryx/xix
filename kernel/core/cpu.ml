@@ -9,7 +9,7 @@ type t = {
 
   (* todo: Arch_cpu *)
 
-  mutable ticks: int64;
+  mutable ticks: t_ticks;
   cpumhz: int;
 
   (* todo: stack? *)

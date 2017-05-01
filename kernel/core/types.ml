@@ -57,9 +57,15 @@ type devid = int
 (*****************************************************************************)
 (* could be in time.ml *)
 (*****************************************************************************)
-type sec = int
+type t_s = int  (* seconds *)
+type t_ms = int (* milli seconds *)
+type t_us = int (* micro seconds *)
+type t_ns = int (* nano seconds *)
 
-type time = unit (* TODO float? no! no float in the kernel! *)
+(* incrementing arch.hz times per second (in hz_clock) *)
+type t_ticks = int64
+(* incrementing at system timer speed (62.5 Mhz for Raspberry Pi 2 under QEMU)*)
+type t_fastticks = int64
 
 
 (*****************************************************************************)

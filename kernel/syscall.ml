@@ -90,8 +90,8 @@ type t =
   | Umount
 
   (* time *)
-  | Sleep of sec
-  | Alarm of time
+  | Sleep of t_ms
+  | Alarm of t_ms
   (* less: Nsec *)
 
   (* IPC *)

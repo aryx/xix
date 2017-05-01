@@ -102,12 +102,27 @@ let sched () =
   (* todo: splhi *)
   (* less: cpu->cs stats *)
 
+  (* todo: delaysched and nlocks (and adjust unlocks to call sched sometimes *)
+
   (* less: arch_procsave hooks *)
   Thread.critical_section := true;
   Thread.wakeup Globals.cpu.Cpu.thread;
-  Thread.sleep () (* reset Thread.critical_section *)
+  Thread.sleep (); (* reset Thread.critical_section *)
+  (* less: arch_procrestore *)
+  (* todo: spllo *)
+  ()
 
 
+(* from Running to Ready in right priority queue *)
+let ready p =
+  (* less: splhi/splx? why? *)
+  (* less: cpu->readied *)
+  p.Proc_.state <- Proc_.Ready;
+  let prio = p.Proc_.priority in
+  (* less: adjust priority *)
+  add p prio
+
+(* The function finally executed by the main kernel thread (in cpu.thread) *)
 let scheduler () =
  assert (Thread.id (Thread.self ()) = Thread.id (Globals.cpu.Cpu.thread));
  while true do 
@@ -116,11 +131,11 @@ let scheduler () =
   (* less: check ilockdepth  *)
   let up = Globals.up () in
   (match up.Proc_.state with
-  | Proc_.Running -> 
-    raise Todo
+  | Proc_.Running -> ready up
   | Proc_.Moribund -> raise Todo
   | _ -> raise (Impossible "can hve either Running or Moribund in scheduler()")
   );
+  Globals.cpu.Cpu.proc <- None;
 
   (* from now on, up is nil *)
   (* less: call sched()?? better put the logic in scheduler too no? *)
@@ -140,9 +155,3 @@ let scheduler () =
   Thread.sleep () (* reset Thread.critical_section *)
  done
 
-(* from Running to Ready in right priority queue *)
-let ready p =
-  (* less: splhi/splx? why? *)
-  p.Proc_.state <- Proc_.Ready;
-  (* less: adjust priority *)
-  add p

@@ -1,5 +1,12 @@
 open Types
 
+(* The generalized interface for syscall is:
+ * syscall(char* bufin, int lenin, char* bufout, int lenout)
+ * where we use marshall in and out for Syscall.request and Syscall.answer.
+ * (like 9p does?)
+ *)
+
+
 (* Rfork *)
 
 (* Rfork has a complex interface
@@ -26,11 +33,7 @@ type rfork_flags =
 (* Await *)
 
 (* await result *)
-type wait_msg = {
-  wait_pid: pid;
-  wait_msg: string;
-  (* less: time information *)
-}
+type wait_msg = Proc_.wait_msg
 
 (* Open *)
 
@@ -51,11 +54,8 @@ type open_flags = {
 (* stat result *)
 type dir_entry = unit (* todo: *)
 
-(* todo: a request type and an answer type? like plan9p?
- * generalized interface for syscall is then
- * syscall(char* bufin, int lenin, char* bufout, int lenout)
- * where use marshall in and out for Syscall.req_t and Syscall.ans_t
-*)
+
+module Request = struct
 type t = 
   | Nop
 
@@ -114,6 +114,15 @@ type t =
 
   (* security *)
   (* less: Fversion | Fauth *) 
+end
 
-  (* todo? replace with a better error management comm between user/kernel?*)
-  | Errstr
+module Answer = struct
+type t =
+  | Void (* Nop, Exec, Exits, Brk? *)
+
+  | Rfork of pid
+  | Await of wait_msg
+
+  | Error of string
+
+end

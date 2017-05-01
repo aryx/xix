@@ -10,7 +10,7 @@ let prioKproc = Prio 13
 let prioRootProcess = Prio 13
 (* less: EDF priorities *)
 
-(* The function below is necessary in C because C has no array bound checking. 
+(* The function below is necessary in C because C has no array bound-checking. 
  * In OCaml it is less important.
  *)
 let mk_prio n =

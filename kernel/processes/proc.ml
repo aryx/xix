@@ -77,6 +77,7 @@ let alloc () =
     kproc = None;
     
     priority = Scheduler_.prioNormal;
+    base_priority = Scheduler_.prioNormal;
   }
   in
   hash p

@@ -42,6 +42,7 @@ let kproc name f =
     childlock = Spinlock.alloc ();
     
     priority = Scheduler_.prioKproc;
+    base_priority = Scheduler_.prioKproc;
 
     (* todo: misc fields *)
   }

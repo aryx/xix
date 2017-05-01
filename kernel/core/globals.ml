@@ -54,6 +54,7 @@ let fakeproc = { Proc_.
   user = "";
   kproc = None;
   priority = Scheduler_.Prio 0;
+  base_priority = Scheduler_.Prio 0;
  
 }
 let fakeconf = { Conf.
@@ -70,7 +71,7 @@ let fakeconf = { Conf.
 
 (* less: opti: a special register (faster and local to a processor) *)
 let cpu = { Cpu.
-  cpuno = 0;
+  id = 0;
   proc = None;
   ticks = 0;
   thread = Thread.self();

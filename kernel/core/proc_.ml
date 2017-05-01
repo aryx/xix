@@ -89,8 +89,9 @@ type t = {
   (* Scheduling *)
   (* ---------------------------------------------------------------- *)
 
-  priority: Scheduler_.priority;
-  (* less: mutable and then basepri and fixedpri *)
+  mutable priority: Scheduler_.priority;
+  base_priority: Scheduler_.priority;
+  (* less: fixedpri *)
 
   (* ---------------------------------------------------------------- *)
   (* Files *)

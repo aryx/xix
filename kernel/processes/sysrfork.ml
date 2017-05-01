@@ -72,6 +72,8 @@ let syscall_rfork flags =
       (* less: fixedpri *)
 
       thread = Thread.create (fun () -> failwith "TODO: sysrfork().thread")();
+
+      rdz = None; rdzlock = Spinlock.alloc ();
     }
     in
     (* as in Proc.alloc() *)

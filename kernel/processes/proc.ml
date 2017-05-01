@@ -62,8 +62,7 @@ let alloc () =
     slash = Globals.fakechan;
     dot = Globals.fakechan;
 
-    seg = Hashtbl.create 10;
-    seglock = Qlock.alloc ();
+    seg = Hashtbl.create 10; seglock = Qlock.alloc ();
 
     name = "";
     user = "*nouser*";
@@ -71,7 +70,7 @@ let alloc () =
 
     parent = None;
     nchild = 0;
-    waitq = [];
+    waitq = []; 
     childlock = Spinlock.alloc ();
 
     kproc = None;
@@ -80,6 +79,8 @@ let alloc () =
     base_priority = Scheduler_.prioNormal;
 
     thread = Thread.create (fun () -> failwith "todo: alloc().thread") ();
+
+    rdz = None; rdzlock = Spinlock.alloc ();
   }
   in
   hash p

@@ -20,6 +20,7 @@ CMO= \
   core/spinlock_.cmo\
   core/qlock_.cmo\
   core/ref_.cmo\
+  core/rendez_.cmo\
   core/chan_.cmo\
   core/device_.cmo\
   core/page_.cmo\
@@ -56,6 +57,7 @@ CMO= \
   processes/sysexits.cmo\
   \
   scheduler/scheduler.cmo\
+  scheduler/rendez.cmo\
   \
   sysnop.cmo\
   syscall_dispatch.cmo\
@@ -290,7 +292,8 @@ LDFLAGS= -H6 -R4096 -T0x80008000 -l -f
 CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
 OCAMLINCLUDES=-I commons -I threads \
-   -I core -I concurrency -I memory -I processes
+   -I core -I concurrency \
+   -I memory -I processes -I scheduler
 OCAMLCFLAGS=$OCAMLINCLUDES
 
 

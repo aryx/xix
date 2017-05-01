@@ -155,3 +155,10 @@ let scheduler () =
   Thread.sleep () (* reset Thread.critical_section *)
  done
 
+(* not super useful *)
+let yield () =
+  if any_ready () 
+  (* less: adjust lastupdate *)
+  then sched ()
+
+(* todo: adjust Hooks.Scheduler *)

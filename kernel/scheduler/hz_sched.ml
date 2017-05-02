@@ -5,7 +5,7 @@ open Scheduler_
 let any_higher () =
   raise Todo
 
-(* run in interrupt context from hz_clock () *)
+(* (interrupt) -> ... -> hz_clock -> <> *)
 let hz_sched () =
   if any_higher ()
      || (Globals.cpu.Cpu.ticks > Globals.cpu.Cpu.sched_ticks && 

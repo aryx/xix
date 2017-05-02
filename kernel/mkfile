@@ -60,6 +60,8 @@ CMO= \
   scheduler/rendez.cmo\
   scheduler/hz_sched.cmo\
   \
+  time/hz_clock.cmo\
+  \
   sysnop.cmo\
   syscall_dispatch.cmo\
   test.cmo \
@@ -294,7 +296,7 @@ CFLAGS=-FV -Iinclude/arm -Iinclude -Ibcm
 
 OCAMLINCLUDES=-I commons -I threads \
    -I core -I concurrency \
-   -I memory -I processes -I scheduler
+   -I memory -I processes -I scheduler -I time
 OCAMLCFLAGS=$OCAMLINCLUDES
 
 

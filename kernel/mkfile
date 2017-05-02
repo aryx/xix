@@ -60,6 +60,7 @@ CMO= \
   scheduler/rendez.cmo\
   scheduler/hz_sched.cmo\
   \
+  time/time.cmo\
   time/hz_clock.cmo\
   time/syssleep.cmo\
   time/sysalarm.cmo\

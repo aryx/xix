@@ -49,11 +49,14 @@ let ktzero = kzero + 0x8000 (* that's where the Raspberry Pi's ARM boots us *)
 (* _MAGIC(0, 20) where _MAGIC(f, b)	((f)|((((4*(b))+0)*(b))+7)) *)
 let aout_magic = -1 (* todo:!! *)
 
-(* TODO: for now, but should be more 100 *)
+(* ticks frequency TODO: 1 for now, but should be 100 *)
 let hz = 1
 
-(* todo: for now; anyway ocaml light is not multicore *)
+(* todo: for now; should be 4 for Raspi2 (anyway ocaml light is not multicore)*)
 let max_cpus = 1
+
+(* fastticks frequency *)
+let system_timer_hz = 62500000
 
 (* less: need generic type?
 type t = {

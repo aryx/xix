@@ -81,6 +81,7 @@ let cpu = { Cpu.
 }
 (* less: cpus array *)
 (* less: active *)
+(* see also Timers.timers global array *)
 
 (* less: opti: a special register (faster and local to a processor) *)
 let up () = 

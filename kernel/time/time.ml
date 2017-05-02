@@ -24,3 +24,14 @@ let ms_to_tick ms =
 let fastticks_frequency () =
   Arch.system_timer_hz
   
+(* todo:
+arch_us
+arch_fastticks
+*)
+
+let fastticks () =
+  raise Todo
+
+let ns_to_fastticks ns =
+  raise Todo
+

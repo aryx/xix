@@ -69,3 +69,8 @@ let unlock x =
   (* less: ilockdepth decrement, update last_ilock *)
   Spl.set oldprio
     
+
+let alloc () =
+  { hold = ref false;
+    saved_spl = Spl.Low;
+  }

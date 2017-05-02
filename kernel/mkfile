@@ -61,6 +61,8 @@ CMO= \
   scheduler/hz_sched.cmo\
   \
   time/time.cmo\
+  time/timer.cmo\
+  time/timers.cmo\
   time/hz_clock.cmo\
   time/syssleep.cmo\
   time/sysalarm.cmo\

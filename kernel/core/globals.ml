@@ -76,6 +76,7 @@ let cpu = { Cpu.
   id = 0;
   proc = None;
   ticks = 0;
+  sched_ticks = 0;
   Cpu.thread = Thread.self();
 }
 (* less: cpus array *)

@@ -11,6 +11,7 @@ type t = {
 
   mutable ticks: t_ticks;
   (* less: cpumhz: int; *)
+  mutable sched_ticks: t_ticks;
 
   thread: Thread.t;
 

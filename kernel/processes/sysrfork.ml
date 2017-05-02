@@ -87,7 +87,7 @@ let syscall_rfork flags =
     (* todo: arch_flushmmu, arch_forkchild *)
     !Hooks.Scheduler.ready pid;
     !Hooks.Scheduler.sched ();
-    pid
+    Some pid
 
   | Syscall.NoFork (flags) -> 
     let up = Globals.up () in

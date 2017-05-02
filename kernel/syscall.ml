@@ -120,8 +120,10 @@ module Answer = struct
 type t =
   | Void (* Nop, Exec, Exits, Brk? *)
 
-  | Rfork of pid
+  | Rfork of pid option (* pid for parent, None for child *)
   | Await of wait_msg
+
+  | Alarm of t_ms (* old alarm *)
 
   | Error of string
 

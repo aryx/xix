@@ -12,8 +12,8 @@ let dispatch syscall =
   | R.Brk x -> Sysbrk.syscall_brk x; A.Void
 
   | R.Rfork x -> 
-    let pid = Sysrfork.syscall_rfork x in
-    A.Rfork pid
+    let optpid = Sysrfork.syscall_rfork x in
+    A.Rfork optpid
 
   | R.Exec (cmd, args) -> Sysexec.syscall_exec cmd args; A.Void
 
@@ -24,6 +24,11 @@ let dispatch syscall =
   | R.Exits str ->
     (* no return from here ... *)
     Sysexits.syscall_exits str; A.Void
+
+  | R.Sleep ms -> Syssleep.syscall_sleep ms; A.Void
+  | R.Alarm ms -> 
+    let old = Sysalarm.syscall_alarm ms in 
+    A.Alarm old
 
   | _ -> raise Todo
  ) 

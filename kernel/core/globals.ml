@@ -1,4 +1,3 @@
-
 (* todo: delete once added the { Xxx. } feature in my ocaml light *)
 open Cpu 
 open Conf
@@ -81,7 +80,6 @@ let cpu = { Cpu.
 }
 (* less: cpus array *)
 (* less: active *)
-(* see also Timers.timers global array *)
 
 (* less: opti: a special register (faster and local to a processor) *)
 let up () = 
@@ -97,3 +95,8 @@ let conf = ref fakeconf
 
 (* less: changed by writing in /dev/owner? *)
 let eve = ref ""
+
+(* A few important globals spread in other files:
+ *  - Scheduler.runq priority queues
+ *  - Timers.timers array 
+ *)

@@ -1,10 +1,10 @@
 open Common
+open Types
+open Spl_
 
 (* Set Priority Level (=~ enable/disable interrupts) *)
 
-
-(* less: in plan9 there is really just high or low; no intermediate *)
-type prio = Low | High
+type prio = Spl_.prio
 
 let high () =
   raise Todo

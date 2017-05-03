@@ -3,7 +3,7 @@ open Types
 (* No need for Spinock.t here: this record is accessed by only 1 processor. *)
 
 (* between 0 and Arch.max_cpus - 1 *)
-type cpuid = int
+type cpuid = Types.cpuid
 
 type t = {
   id: cpuid; 

@@ -1,30 +1,17 @@
 open Common
 open Types
+open Timer_
 
-type t = {
-  mode: timer_mode;
-  ns: t_ns; (* of mode *)
+type t = Timer_.t
 
-  (* set in add *)
-  mutable fasttk: t_fastticks; (* ns converted to fastticks *)
-
-  (* less: opti: direct reference to Timers.t head *)
-  (* todo: cpu: cpuid? so can find back it in Timers.timers array *)
-
-  (* !lock ordering! lock(Timer.t); lock(Timers.t) *)
-  l: Ilock.t;
-}
-  and timer_mode = 
-    | Relative
-    | Periodic
-
-let alloc mode ns =
+let alloc mode ns f =
   { mode = mode;
     ns = ns;
     fasttk = 0;
+    f = Callback f;
+    cpu = None;
     l = Ilock.alloc ();
   }
-
 
 let add timer xs =
   (* less: assert timer is locked? *)

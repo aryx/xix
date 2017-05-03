@@ -5,11 +5,7 @@
 
 CMO= \
   commons/common.cmo\
-  \
   threads/thread.cmo\
-  threads/mutex.cmo\
-  threads/condition.cmo\
-  threads/event.cmo\
   \
   core/arch.cmo\
   core/types.cmo\
@@ -18,6 +14,8 @@ CMO= \
   core/conf.cmo\
   core/memory.cmo\
   core/spinlock_.cmo\
+  core/spl_.cmo\
+  core/ilock_.cmo\
   core/qlock_.cmo\
   core/ref_.cmo\
   core/rendez_.cmo\
@@ -27,6 +25,7 @@ CMO= \
   core/pagetable_.cmo\
   core/segment_.cmo\
   core/scheduler_.cmo\
+  core/timer_.cmo\
   core/proc_.cmo\
   core/cpu.cmo\
   core/globals.cmo\

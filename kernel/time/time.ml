@@ -18,6 +18,7 @@ let mhz = 1000 * 1000
 let tick_to_ms tk =
   tk * 1000 / Arch.hz
 
+(* + 500 to average up. 5ms is counted as 1 tick when Arch.hz is 100 *)
 let ms_to_tick ms =
   (ms * Arch.hz + 500) / 1000
 
@@ -34,4 +35,3 @@ let fastticks () =
 
 let ns_to_fastticks ns =
   raise Todo
-

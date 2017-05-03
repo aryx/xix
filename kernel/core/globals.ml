@@ -114,4 +114,5 @@ let eve = ref ""
 (* A few important globals spread in other files:
  *  - Scheduler.runq priority queues
  *  - Timers.timers array 
+ *  - Alarms.alarms list
  *)

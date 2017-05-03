@@ -11,6 +11,7 @@ type t = {
   (* less: opti: direct reference to Timers.t head *)
   (* todo: cpu: cpuid? so can find back it in Timers.timers array *)
 
+  (* !lock ordering! lock(Timer.t); lock(Timers.t) *)
   l: Ilock.t;
 }
   and timer_mode = 

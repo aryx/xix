@@ -72,4 +72,4 @@ let syscall_exits str =
 
   up.state <- Proc_.Moribund;
   !Hooks.Scheduler.sched ();
-  Error.panic "syscall_exits: should never each this point";
+  Error.panic "syscall_exits: should never each this point"

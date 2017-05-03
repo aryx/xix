@@ -15,6 +15,7 @@ let alloc mode ns f =
 
 let add timer xs =
   (* less: assert timer is locked? *)
+  assert (timer.cpu = None);
 
   (match timer.mode with
   | Relative -> 
@@ -32,4 +33,5 @@ let add timer xs =
   raise Todo
 
 let del timer xs =
+  (* less: assert timer is locked? *)
   raise Todo

@@ -2,6 +2,8 @@ open Common
 open Types
 open Proc_
 
+let (hooks: (Proc_.t -> unit) list ref) = ref []
+
 (* in C the str can be null pointer but better use empty string for that *)
 let syscall_exits str =
 
@@ -65,6 +67,7 @@ let syscall_exits str =
     );
     Hashtbl.clear up.seg;
   );
+  !hooks |> List.iter (fun f -> f up);
 
   (* todo: why need that?? coupling with sched *)
   Spinlock.lock Proc.allocator.Proc.l;

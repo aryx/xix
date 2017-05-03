@@ -60,3 +60,10 @@ let del timer =
     Ilock.unlock timer.Timer_.l;
     ()
 
+let _init =
+  Sysexits.hooks := (fun p -> 
+    p.Proc_.timer |> Common.if_some (fun timer ->
+      del timer
+    )
+  )::!Sysexits.hooks
+

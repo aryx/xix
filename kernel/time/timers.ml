@@ -4,6 +4,7 @@ open Types
 type t = {
   (* sorted by fasttk *)
   mutable elts: Timer.t list;
+  (* !lock ordering! lock(Timer.t); lock(Timers.t) *)
   l: Ilock.t;
  }
 
@@ -49,6 +50,9 @@ let del timer =
   | Some cpuid ->
     let timers = cpu_timers.(cpuid) in
     Ilock.lock timers.l;
+    (* todo: can have race where timer not anymore in elts
+     * because timer_interrupt removed it?
+     *)
     let (xs, new_head) = Timer.del timer timers.elts in
     new_head |> Common.if_some (fun fast ->
       let cpu = Globals.cpu () in

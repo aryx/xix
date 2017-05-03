@@ -10,6 +10,7 @@ type t = {
   mutable fasttk: t_fastticks; (* ns converted to fastticks *)
 
   (* less: opti: direct reference to Timers.t head *)
+  (* Some when active timer *)
   mutable cpu: cpuid option; (* index in Timers.timer[] *)
 
   (* !lock ordering! lock(Timer.t); lock(Timers.t) *)

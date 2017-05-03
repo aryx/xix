@@ -3,7 +3,8 @@ open Types
 open Proc_
 
 type allocator = {
-  (* less: an arena allocator? but then Proc.pid can not be a constant field.
+  (* less: opti: an arena allocator? 
+   * but then Proc.pid can not be a constant field.
    * I think an arena allocator is not necessary here 
    * (the Page arena allocator is necessary on the opposite).
    *)

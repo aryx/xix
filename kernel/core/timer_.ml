@@ -14,7 +14,7 @@ type t = {
   mutable cpu: cpuid option; (* index in Timers.timer[] *)
 
   (* !lock ordering! lock(Timer.t); lock(Timers.t) *)
-  l: Ilock.t;
+  l: Ilock_.t;
 }
   and mode = 
     | Relative

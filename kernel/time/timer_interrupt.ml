@@ -4,7 +4,7 @@ open Types
 (* less: pass Ureg? *)
 let timer_interrupt () =
   let cpu = Globals.cpu () in
-  let timers = Timers.cpu_timers.(cpu.Cpu.id) in
+  let timers = Timers.cpus_timers.(cpu.Cpu.id) in
   let now = Time.fastticks () in
   if now = 0
   then Error.panic "timerintr: zero fastticks";

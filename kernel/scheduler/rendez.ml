@@ -30,8 +30,9 @@ let sleep rdz f =
 
     (* similar to Scheduler.sched () but with extra unlocks *)
        (* less: arch_procsave hooks *)
+       let cpu = Globals.cpu () in
        Thread.critical_section := true;
-       Thread.wakeup Globals.cpu.Cpu.thread;
+       Thread.wakeup cpu.Cpu.thread;
     Spinlock.unlock up.Proc_.rdzlock;
     Spinlock.unlock rdz.l;
        Thread.sleep (); (* reset Thread.critical_section *)

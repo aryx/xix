@@ -81,6 +81,7 @@ let alloc () =
     thread = Thread.create (fun () -> failwith "todo: alloc().thread") ();
 
     rdz = None; rdzlock = Spinlock.alloc ();
+    timer = None;
   }
   in
   hash p

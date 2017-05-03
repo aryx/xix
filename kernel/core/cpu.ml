@@ -8,17 +8,20 @@ type cpuid = Types.cpuid
 type t = {
   id: cpuid; 
 
+  (* the scheduled proc on this processor! = Globals.up *)
   mutable proc: Proc_.t option;
 
-  (* todo: Arch_cpu *)
-
   mutable ticks: t_ticks;
-  (* less: cpumhz: int; *)
+  (* at which next ticks the current process should be scheduled out *)
   mutable sched_ticks: t_ticks;
 
+  (* the main kernel thread (Thread.self() from main()) *)
   thread: Thread.t;
 
-  (* less: 
-   * mutable ilock_depths: int;
+  (* todo: Arch_cpu
+   * less: 
+   *  - cpumhz: int;
+   *  - could put Timers.timers here since one list per-cpu
+   *  - mutable ilock_depths: int;
    *)
 }

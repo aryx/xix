@@ -7,6 +7,10 @@ open Spinlock_
 open Ref_
 open Qlock_
 
+(*****************************************************************************)
+(* Fakes *)
+(*****************************************************************************)
+
 (* less: could move the globals (and fakexxx) in their respective files *)
 
 let fakelock = { Spinlock_.
@@ -56,6 +60,7 @@ let fakeproc = { Proc_.
   base_priority = Scheduler_.Prio 0;
   thread = Thread.self ();
   rdz = None; rdzlock = fakelock;
+  timer = None;
  
 }
 let fakeconf = { Conf.
@@ -68,22 +73,33 @@ let fakeconf = { Conf.
   npages = 0;
 }
  
+(*****************************************************************************)
 (* !!! The globals !!! *)
+(*****************************************************************************)
 
-(* less: opti: a special register (faster and local to a processor) *)
-let cpu = { Cpu.
+let cpu0 = { Cpu.
   id = 0;
   proc = None;
   ticks = 0;
   sched_ticks = 0;
   Cpu.thread = Thread.self();
 }
-(* less: cpus array *)
+
+let cpus = 
+  Array.init Arch.max_cpus (fun i -> if i = 0 then Some cpu0 else None)
 (* less: active *)
 
 (* less: opti: a special register (faster and local to a processor) *)
+let cpu () = 
+  (* todo: handle multiple processors *)
+  match cpus.(0) with
+  | None -> Error.panic "cpu: no processor??"
+  | Some x -> x
+
+
+(* less: opti: a special register (faster and local to a processor) *)
 let up () = 
-  match cpu.proc with
+  match (cpu()).proc with
   (* sentinel proc; convenient because need less if (up == nil) code *)
   | None -> fakeproc (* todo? or failwith? *)
   | Some x -> x

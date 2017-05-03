@@ -1,7 +1,7 @@
 open Types
 
 type t = {
-  mode: timer_mode;
+  mode: mode;
   ns: t_ns; (* of mode *)
 
   f: callback;
@@ -15,7 +15,7 @@ type t = {
   (* !lock ordering! lock(Timer.t); lock(Timers.t) *)
   l: Ilock.t;
 }
-  and timer_mode = 
+  and mode = 
     | Relative
     | Periodic
   and callback = 

@@ -8,7 +8,7 @@ type state =
 
   | Dead
   | Moribund (* soon to be Dead but not Dead yet *)
-  | Broken (* to debug (=~ core dump) *)
+  | Broken   (* to debug (=~ core dump) *)
 
   | Scheding (* soon to be Ready but not Ready yet *)
 
@@ -52,14 +52,14 @@ type t = {
 
   (* less: 9 is not really a multi-user OS. No uid/gid. *)
   user: string;
-  (* executable name (can be also "*init*" for kernel processes) *)
+  (* executable name (can be also fake name like "*init*" for kernel procs) *)
   mutable name: string; 
 
   (* ---------------------------------------------------------------- *)
   (* Process hierarchy *)
   (* ---------------------------------------------------------------- *)
 
-  (* None when NoWait flag in sysrfork (also first proc has no parent) *)
+  (* None when NoWait flag in sysrfork (also when first (orphan) process) *)
   (* less: opti: direct link to parent *)
   parent: pid option; 
   mutable nchild: int;
@@ -93,7 +93,11 @@ type t = {
   base_priority: Scheduler_.priority;
   (* less: fixedpri *)
 
+  (* !!! kernel stack of process!!! *)
   thread: Thread.t;
+
+  (* kernel process *)
+  kproc: (unit -> unit) option;
 
   (* ---------------------------------------------------------------- *)
   (* Files *)
@@ -113,16 +117,16 @@ type t = {
   rdzlock: Spinlock_.t;
 
   (* ---------------------------------------------------------------- *)
+  (* Time *)
+  (* ---------------------------------------------------------------- *)
+  (* less: opti: always there to avoid allocate each time a new timer *)
+  mutable timer: Timer_.t option;
+
+  (* ---------------------------------------------------------------- *)
   (* Misc *)
   (* ---------------------------------------------------------------- *)
 
   mutable in_syscall: bool;
-
-  (* todo: kstack!! via Thread.t? 
-  *)
-
-  (* kernel process *)
-  kproc: (unit -> unit) option;
 
   (* less: debugging fields
    *  last_lock: Spinlock.t ref;

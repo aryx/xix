@@ -72,7 +72,6 @@ type t_ticks = int64
 (* incrementing at system timer speed (62.5 Mhz for Raspberry Pi 2 under QEMU)*)
 type t_fastticks = int64
 
-
 (*****************************************************************************)
 (* misc *)
 (*****************************************************************************)

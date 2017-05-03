@@ -1,5 +1,6 @@
 open Common
 
+(* less: count EDF real-time priorities *)
 let nb_priorities = 20
 
 (* between 0 and nb_priorities - 1; higher means higher priority *)

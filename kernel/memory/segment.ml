@@ -6,7 +6,7 @@ type t = Segment_.t
 
 let alloc kind base nb_pages =
   if nb_pages > Segment_.pagedir_size * Pagetable_.pagetab_size
-  then raise Error.Enovmem;
+  then Error.error Error.Enovmem;
 
   let top = match base with VU x -> VU (x + nb_pages * Memory.pg2by) in
   let pgdir_size = 

@@ -2,7 +2,6 @@ open Types
 
 (* we can not put this type in concurrency/ because of mutual deps
  * between locks and a proc.
- * less: use Mutex.t from thread library?
  *)
 type t = {
   mutable locked: bool;

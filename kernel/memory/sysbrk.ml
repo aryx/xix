@@ -6,7 +6,7 @@ let change_segment_top addr section =
   let up = Globals.up () in
   let seg =
     try Hashtbl.find up.Proc_.seg section
-    with Not_found -> raise Error.Ebadarg
+    with Not_found -> Error.error Error.Ebadarg
   in
   (* less: why need lock? who else will modify up.seg? the pager? *)
   seg.Segment_.ql |> Qlock.with_lock  (fun () ->
@@ -19,13 +19,13 @@ let change_segment_top addr section =
         if section2 <> section
         then
           if new_top >= seg2.Segment_.base && new_top < seg2.Segment_.top
-          then raise Error.Esoverlap
+          then Error.error Error.Esoverlap
       );
 
       let new_nb_pages = (new_top @- seg.Segment_.base) / Memory.pg2by in
       (* code similar in Segment.alloc *)
       if new_nb_pages > Segment_.pagedir_size * Pagetable_.pagetab_size
-      then raise Error.Enovmem;
+      then Error.error Error.Enovmem;
 
       let new_pgdir_size = 
         Common.roundup new_nb_pages Pagetable_.pagetab_size 

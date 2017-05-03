@@ -106,7 +106,8 @@ let sched () =
 
   (* less: arch_procsave hooks *)
   Thread.critical_section := true;
-  Thread.wakeup Globals.cpu.Cpu.thread;
+  let cpu = Globals.cpu () in
+  Thread.wakeup cpu.Cpu.thread;
   Thread.sleep (); (* reset Thread.critical_section *)
   (* less: arch_procrestore *)
   (* todo: spllo *)
@@ -124,7 +125,8 @@ let ready p =
 
 (* The function finally executed by the main kernel thread (in cpu.thread) *)
 let scheduler () =
- assert (Thread.id (Thread.self ()) = Thread.id (Globals.cpu.Cpu.thread));
+ let cpu = Globals.cpu () in
+ assert (Thread.id (Thread.self ()) = Thread.id (cpu.Cpu.thread));
  while true do 
   Thread.critical_section := true;
   (* less: assert splhi? *)
@@ -135,7 +137,7 @@ let scheduler () =
   | Proc_.Moribund -> raise Todo
   | _ -> raise (Impossible "can hve either Running or Moribund in scheduler()")
   );
-  Globals.cpu.Cpu.proc <- None;
+  cpu.Cpu.proc <- None;
 
   (* from now on, up is nil *)
   (* less: call sched()?? better put the logic in scheduler too no? *)
@@ -144,9 +146,9 @@ let scheduler () =
   (* less: update priority *)
   (* less: adjust unless readied process in which case use quantum of
    * process that readied it *)
-  Globals.cpu.Cpu.sched_ticks <- Globals.cpu.Cpu.ticks + (Arch.hz / 10);
+  cpu.Cpu.sched_ticks <- cpu.Cpu.ticks + (Arch.hz / 10);
   
-  Globals.cpu.Cpu.proc <- Some p;
+  cpu.Cpu.proc <- Some p;
   (* new up! *)
   let up = Globals.up () in
   up.Proc_.state <- Proc_.Running;

@@ -5,6 +5,7 @@ open Qlock_
 (* todo:
  * - use a monitor approach instead of fine-grained locks?
  * - statistics
+ * less: use Mutex.t from thread library?
  *)
 
 type t = Qlock_.t

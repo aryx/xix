@@ -1,10 +1,10 @@
 open Types
   
 (* The type below is different from Proc.section. We need to remember the
- * 'kind' of a segment in the segment because Segment.copy will do 
- * different things depending on the kind (same for fix_fault).
+ * 'kind' of a segment in the segment because Segment.copy() will do 
+ * different things depending on the kind (same for fix_fault()).
  * 
- * todo: maybe we can remove 'kind' if we inline the decision upwards and 
+ * less: maybe we can remove 'kind' if we inline the decision upwards and 
  *  if Proc_segment.segment_of_addr return a pair Segment * Proc_.segtype
  *  (or need anyway two types because of the TSEG of SG_DATA?)
  *)
@@ -24,8 +24,8 @@ type t = {
 
   (* Why not use 'Page_.t option array' directly? because we will
    * use page fault to populate this array, so this array will be sparse.
-   * It is better to save space by going through a pagedir/pagatab
-   * division. This division allows to implement efficiently a sparse array
+   * It is better to save space by going through a pagedir/pagatab division.
+   * This division allows to implement efficiently a sparse array
    * (an alternative is (int, Page_.t) Hashtbl.t).
    * less: opti: todo? impose length = pagedir_size = 1984 | 16 
   *)
@@ -35,7 +35,7 @@ type t = {
   (* use for reference count and for its lock *)
   refcnt: Ref_.t;
 
-  (* todo: when use this one? need again because of pager? like
+  (* todo: when do we use this one? Need again because of pager? like
    * Proc_.seglock? Can't just use refcnt lock for that too?
    *)
   ql: Qlock_.t;

@@ -45,10 +45,10 @@ let syscall_exec cmd args =
 
     (* sanity checks *)
     if n < 2
-    then raise Error.Ebadexec;
+    then Error.error Error.Ebadexec;
     (* less: handle #! *)
     if n < A_out.sizeof_header
-    then raise Error.Ebadexec;
+    then Error.error Error.Ebadexec;
 
     let header = A_out.parse_header buf in
     if header.A_out.magic <> Arch.aout_magic ||
@@ -56,7 +56,7 @@ let syscall_exec cmd args =
        header.A_out.entry @< (Memory.utzero @+ A_out.sizeof_header) ||
        header.A_out.entry @>= 
          (Memory.utzero @+ (A_out.sizeof_header + header.A_out.text_size))
-    then raise Error.Ebadexec;
+    then Error.error Error.Ebadexec;
 
     let end_text = User_memory.roundup_page
       (Memory.utzero @+ (A_out.sizeof_header + header.A_out.text_size))
@@ -75,7 +75,7 @@ let syscall_exec cmd args =
     if end_text @>= (VU Arch.kzero) || 
        end_data @>= (VU Arch.kzero) || 
        end_bss  @>= (VU Arch.kzero)
-    then raise Error.Ebadexec;
+    then Error.error Error.Ebadexec;
 
     (* less: build args count? *)
     (* todo: build temporary stack segment *)

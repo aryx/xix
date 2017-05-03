@@ -7,7 +7,6 @@ open Types
  * like the lack of saved pid here. Also avoid extra sanity checks
  * like calling (spin)unlock on an ilock.
  *)
-(* less: put in core/ too? or no mutual deps for Ilock.t with Proc? *)
 type t = {
   hold: bool ref;
   mutable saved_spl: Spl.prio;

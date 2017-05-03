@@ -47,6 +47,7 @@ let kproc name f =
     thread = Thread.create (fun () -> failwith "TODO:kproc.thread?") ();
 
     rdz = None; rdzlock = Spinlock.alloc ();
+    timer = None;
 
     (* todo: misc fields *)
   }

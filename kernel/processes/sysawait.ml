@@ -10,7 +10,7 @@ let syscall_await () =
     (* important to check waitq too! child might have exited before 
      * the parent await *)
     if up.nchild = 0 && List.length up.waitq = 0
-    then raise Error.Enochild;
+    then Error.error Error.Enochild;
   );
   
   !Hooks.Scheduler.sleep (* todo: up.wait_rendezvous *)  (fun () -> 

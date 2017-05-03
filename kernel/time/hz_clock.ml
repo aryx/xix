@@ -4,8 +4,9 @@ open Types
 (* (interrupt) -> ... -> <> *)
 (* less: take a Ureg? *)
 let hz_clock () =
+  let cpu = Globals.cpu () in
   (* incremented Arch.hz times per second *)
-  Globals.cpu.Cpu.ticks <- Globals.cpu.Cpu.ticks + 1;
+  cpu.Cpu.ticks <- cpu.Cpu.ticks + 1;
 
   (* less: adjust Proc.pc? flushmmu? accountime? kproftimer? active? *)
   (* todo: check alarms *)

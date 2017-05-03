@@ -7,9 +7,9 @@ let any_higher () =
 
 (* (interrupt) -> ... -> hz_clock -> <> *)
 let hz_sched () =
+  let cpu = Globals.cpu () in
   if any_higher ()
-     || (Globals.cpu.Cpu.ticks > Globals.cpu.Cpu.sched_ticks && 
-           Scheduler.any_ready())
+     || (cpu.Cpu.ticks > cpu.Cpu.sched_ticks && Scheduler.any_ready())
   then begin
     (* less: cpu.readied <- None; *)
     (* todo? why not call sched() instead? *)

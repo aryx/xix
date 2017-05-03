@@ -64,6 +64,7 @@ CMO= \
   time/timers.cmo\
   time/hz_clock.cmo\
   time/timer_interrupt.cmo\
+  time/time_rendez.cmo\
   time/syssleep.cmo\
   time/sysalarm.cmo\
   \

@@ -115,12 +115,16 @@ type t = {
   (* ---------------------------------------------------------------- *)
   mutable rdz: Rendez_.t option;
   rdzlock: Spinlock_.t;
+  (* less: opti: so no need allocate each time a new rendez vous 
+   *  sleepr: Rendez_.t; 
+   *)
 
   (* ---------------------------------------------------------------- *)
   (* Time *)
   (* ---------------------------------------------------------------- *)
-  (* less: opti: always there to avoid allocate each time a new timer *)
-  mutable timer: Timer_.t option;
+  (* less: opti: always there to avoid allocate each time a new timer 
+   *  mutable timer: Timer_.t option;
+  *)
 
   (* ---------------------------------------------------------------- *)
   (* Misc *)

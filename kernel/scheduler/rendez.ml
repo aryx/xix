@@ -2,7 +2,12 @@ open Common
 open Types
 open Rendez_
 
-let sleep rdz f =
+let alloc () = {
+  p = None;
+  l = Spinlock.alloc ();
+}
+
+let sleep rdz fcond =
   (* todo: splhi/splx *)
   (* less: sanity check nlocks *)
   let up = Globals.up () in
@@ -17,7 +22,7 @@ let sleep rdz f =
 
   rdz.p <- Some up.Proc_.pid;
 
-  let cond = f () in
+  let cond = fcond () in
   if cond (* less: up->notepending *)
   then begin
     rdz.p <- None;

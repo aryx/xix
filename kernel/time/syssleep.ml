@@ -1,5 +1,21 @@
 open Common
 open Types
 
+
 let syscall_sleep ms =
-  raise Todo
+  (* stricter: *)
+  match ms with
+  | x when x < 0 -> failwith "sleep: negative time";
+  | 0 -> Scheduler.yield ()
+  | x ->
+    (* sanitize *)
+    let ms = 
+      (* stricter? could warn the user *)
+      if x < Time.tick_to_ms 1
+      then Time.tick_to_ms 1
+      else ms
+    in
+    let up = Globals.up () in
+    (* less: opti: reuse up.sleep_rdz instead of alloc each time? more complex*)
+    let rdz = Rendez.alloc () in
+    Time_rendez.sleep rdz (fun _ -> false) ms

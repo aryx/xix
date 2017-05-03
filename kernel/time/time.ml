@@ -24,3 +24,6 @@ let ms_to_tick ms =
 
 let ns_to_fastticks ns =
   raise Todo
+
+let ms_to_ns ms =
+  ms * 100000

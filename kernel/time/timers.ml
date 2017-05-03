@@ -68,12 +68,16 @@ let del timer =
     Ilock.unlock timer.Timer_.l;
     ()
 
+(* less: used to a Proc_.timer option, but how can exits while sleeping?
+ * simpler to allocate process timer in each Time_rendez.sleep
 let _init =
   Sysexits.hooks := (fun p -> 
     p.Proc_.timer |> Common.if_some (fun timer ->
+      (* todo: could be inactive? because already ellapsed? *)
       del timer
     )
   )::!Sysexits.hooks
+*)
 
 let add_clock0_periodic_timer f ms =
   (* less: sanity check timersinit *)
@@ -82,7 +86,7 @@ let add_clock0_periodic_timer f ms =
     then Time.tick_to_ms 1
     else ms
   in
-  let timer = Timer.alloc Timer_.Periodic (ms * 100000) f in
+  let timer = Timer.alloc Timer_.Periodic (Time.ms_to_ns ms) f in
   (* mostly copy paste of end of add(), but no need lock timer, and use cpu0 *)
   let timers = cpus_timers.(0) in
   Ilock.lock timers.l;

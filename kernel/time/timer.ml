@@ -22,12 +22,12 @@ let add timer xs =
     (* stricter: *)
     if timer.ns <= 0
     then failwith "timer going in the past";
-    timer.fasttk <- Time.fastticks () + Time.ns_to_fastticks timer.ns;
+    timer.fasttk <- Arch.fastticks () + Time.ns_to_fastticks timer.ns;
   | Periodic ->
     if timer.ns < 100000
     then failwith "Periodic timer must be at least 100 micro seconds";
     (* less: combine with identical timer *)
-    timer.fasttk <- Time.fastticks () + Time.ns_to_fastticks timer.ns;
+    timer.fasttk <- Arch.fastticks () + Time.ns_to_fastticks timer.ns;
   );
   (* insert in sorted list *)
   raise Todo

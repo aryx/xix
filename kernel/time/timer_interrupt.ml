@@ -5,7 +5,7 @@ open Types
 let timer_interrupt () =
   let cpu = Globals.cpu () in
   let timers = Timers.cpus_timers.(cpu.Cpu.id) in
-  let now = Time.fastticks () in
+  let now = Arch.fastticks () in
   if now = 0
   then Error.panic "timerintr: zero fastticks";
   
@@ -22,7 +22,7 @@ let timer_interrupt () =
       let when_ = timer.Timer_.fasttk in
       if when_ > now
       then begin
-        (* todo: arch_timerset *)
+        Arch.timerset when_;
         timers.Timers.elts <- timer::xs;
         Ilock.unlock timers.Timers.l;
         if hzclock

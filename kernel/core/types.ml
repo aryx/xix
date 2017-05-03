@@ -70,7 +70,7 @@ type t_ns = int (* nano seconds *)
 (* incrementing arch.hz times per second (in hz_clock) *)
 type t_ticks = int64
 (* incrementing at system timer speed (62.5 Mhz for Raspberry Pi 2 under QEMU)*)
-type t_fastticks = int64
+type t_fastticks = Arch.t_fastticks
 
 (*****************************************************************************)
 (* misc *)

@@ -9,7 +9,7 @@ type t_ns = Types.t_ns
 (* incremented Arch.hz times per second in hz_clock () (kernel clock) *)
 type t_ticks = Types.t_ticks
 (* incremented at system timer frequency (system clock) *)
-type t_fastticks = Types.t_fastticks
+type t_fastticks = Types.t_fastticks (* itself an alias for Arch.t_fastticks *)
 
 let mhz = 1000 * 1000
 
@@ -21,17 +21,6 @@ let tick_to_ms tk =
 (* + 500 to average up. 5ms is counted as 1 tick when Arch.hz is 100 *)
 let ms_to_tick ms =
   (ms * Arch.hz + 500) / 1000
-
-let fastticks_frequency () =
-  Arch.system_timer_hz
-  
-(* todo:
-arch_us
-arch_fastticks
-*)
-
-let fastticks () =
-  raise Todo
 
 let ns_to_fastticks ns =
   raise Todo

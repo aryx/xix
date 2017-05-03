@@ -14,6 +14,7 @@ type t = {
   mutable cpu: cpuid option; (* index in Timers.timer[] *)
 
   (* !lock ordering! lock(Timer.t); lock(Timers.t) *)
+  (* todo: why need a lock on the timer itself? race on it? between who? *)
   l: Ilock_.t;
 }
   and mode = 

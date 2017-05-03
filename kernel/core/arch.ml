@@ -1,3 +1,4 @@
+open Common
 (* Arch-specific constants and types.
  *
  * todo: this file should be generated from an arch_arm.ml or arch_x86.ml file.
@@ -55,8 +56,36 @@ let hz = 1
 (* todo: for now; should be 4 for Raspi2 (anyway ocaml light is not multicore)*)
 let max_cpus = 1
 
+type t_fastticks = int64
+   (* todo: use Int32.t? *)
+   and int64 = int
+
 (* fastticks frequency *)
 let system_timer_hz = 62500000
+
+let fastticks_frequency () =
+  system_timer_hz
+  
+let fastticks () =
+  (* read timer counter *)
+  raise Todo
+
+let timerset next =
+  let now = fastticks () in
+  let period = next - now in
+  (* less: sanitize period *)
+  (* set timer counter *)
+  raise Todo
+
+let us () =
+  raise Todo
+
+(* less:
+let delay ms =
+   raise Todo
+let microdelay us =
+   raise Todo
+*)
 
 (* less: need generic type?
 type t = {

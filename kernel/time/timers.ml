@@ -62,13 +62,15 @@ let del timer =
       if cpuid = cpu.Cpu.id
       then Arch.timerset fasttk
     );
-    timer.Timer_.cpu <- None; (* todo: update its Proc_.timer to None? *)
+    (* todo: update its Proc_.timer to None? *)
+    timer.Timer_.cpu <- None; 
     timers.elts <- xs;
     Ilock.unlock timers.l;
     Ilock.unlock timer.Timer_.l;
     ()
 
-(* less: used to a Proc_.timer option, but how can exits while sleeping?
+(* todo: used to a Proc_.timer option, but how can exits while sleeping?
+ * todo: can exits when killed by note from someone else!
  * simpler to allocate process timer in each Time_rendez.sleep
 let _init =
   Sysexits.hooks := (fun p -> 

@@ -74,5 +74,6 @@ let syscall_exits str =
   Spinlock.lock Page.allocator.Page.l;
 
   up.state <- Proc_.Moribund;
+  (* todo: go directly to schedinit instead? *)
   !Hooks.Scheduler.sched ();
   Error.panic "syscall_exits: should never each this point"

@@ -35,6 +35,9 @@ let hash p =
 
 let unhash p =
   Spinlock.lock allocator.l;
+  (* this should garbage collect the Proc, unless it is still referenced
+   * in some globals (e.g., timers? alarms?)
+   *)
   Hashtbl.remove allocator.hpids p.Proc_.pid;
   Spinlock.unlock allocator.l
 
@@ -87,8 +90,9 @@ let alloc () =
   in
   hash p
 
-(* todo: sysexits just set to Moribund. Who really free?
- * pidunhash and the Gc?
+(* todo: sysexits just set to Moribund. 
+ * schedinit really frees!
+ * todo: pidunhash and let the Gc do its job?
  *)
 let free p =
   raise Todo

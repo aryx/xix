@@ -18,4 +18,11 @@ let syscall_alarm ms_opt =
   | Some ms ->
     let when_ = Time.ms_to_tick ms + cpu.Cpu.ticks in
     Qlock.lock Alarms.alarms.ql;
-    raise Todo
+    Alarms.del_proc up;
+    Alarms.add_proc up when_;
+    Qlock.unlock Alarms.alarms.ql;
+    remaining
+
+
+let _init =
+  Sysexits.hooks := (fun p -> p.Proc_.alarm <- None)::!Sysexits.hooks

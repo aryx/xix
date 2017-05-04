@@ -13,6 +13,7 @@ let syscall_alarm ms_opt =
   in
   match ms_opt with
   | None -> 
+    (* less: should remove it from Alarms *)
     up.Proc_.alarm <- None;
     remaining
   | Some ms ->
@@ -25,4 +26,7 @@ let syscall_alarm ms_opt =
 
 
 let _init =
-  Sysexits.hooks := (fun p -> p.Proc_.alarm <- None)::!Sysexits.hooks
+  Sysexits.hooks := (fun p -> 
+    (* less: we should remove it also from Alarms.alarms *)
+    p.Proc_.alarm <- None
+  )::!Sysexits.hooks

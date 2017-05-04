@@ -27,8 +27,8 @@ let dispatch syscall =
 
   | R.Sleep ms -> Syssleep.syscall_sleep ms; A.Void
   | R.Alarm ms -> 
-    let old = Sysalarm.syscall_alarm ms in 
-    A.Alarm old
+    let old_remaining = Sysalarm.syscall_alarm ms in 
+    A.Alarm old_remaining
 
   | _ -> raise Todo
  ) 

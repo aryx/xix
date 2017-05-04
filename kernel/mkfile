@@ -62,12 +62,14 @@ CMO= \
   time/time.cmo\
   time/timer.cmo\
   time/timers.cmo\
+  time/hz_alarms.cmo\
   time/hz_clock.cmo\
   time/timer_interrupt.cmo\
   time/time_rendez.cmo\
   time/syssleep.cmo\
   time/alarms.cmo\
   time/sysalarm.cmo\
+  time/alarms_kproc.cmo\
   \
   sysnop.cmo\
   syscall_dispatch.cmo\

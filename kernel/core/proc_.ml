@@ -125,6 +125,7 @@ type t = {
   (* less: opti: always there to avoid allocate each time a new timer 
    *  mutable timer: Timer_.t option;
   *)
+  mutable alarm: t_ticks option;
 
   (* ---------------------------------------------------------------- *)
   (* Misc *)

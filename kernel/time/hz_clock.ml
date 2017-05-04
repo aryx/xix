@@ -10,6 +10,7 @@ let hz_clock () =
 
   (* less: adjust Proc.pc? flushmmu? accountime? kproftimer? active? *)
   (* todo: check alarms *)
+
   let up = Globals.up () in
   if up.Proc_.state = Proc_.Running
   then Hz_sched.hz_sched ()

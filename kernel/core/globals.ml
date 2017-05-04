@@ -60,6 +60,7 @@ let fakeproc = { Proc_.
   base_priority = Scheduler_.Prio 0;
   thread = Thread.self ();
   rdz = None; rdzlock = fakelock;
+  alarm = None;
 }
 
 let fakeconf = { Conf.

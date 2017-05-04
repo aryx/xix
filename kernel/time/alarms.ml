@@ -12,5 +12,7 @@ let alarms = {
   ql = Qlock.alloc ();
 }
 
-
+(* for alarm_kproc and hz_checkalarms to sleep/wakeup *)
+let rendez = 
+  Rendez.alloc ()
   

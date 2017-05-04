@@ -91,7 +91,7 @@ type t =
 
   (* time *)
   | Sleep of t_ms
-  | Alarm of t_ms
+  | Alarm of t_ms option (* None means remove *)
   (* less: Nsec *)
 
   (* IPC *)
@@ -123,8 +123,9 @@ type t =
   | Rfork of pid option (* pid for parent, None for child *)
   | Await of wait_msg
 
-  | Alarm of t_ms (* old alarm *)
+  | Alarm of t_ms (* remaining time in old alarm *)
 
+  (* todo: Interrupted (* possible for Sleep *) *)
   | Error of string
 
 end

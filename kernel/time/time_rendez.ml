@@ -23,6 +23,7 @@ let sleep rdz fcond ms =
   Timers.add timer;
   (* less: pass by fn and tfn field?? *)
   (* todo: can have race between timer trigger and sleep? *)
+  (* todo: Common.finalize that del timer if interrupted! *)
   Rendez.sleep rdz fcond;
   (* less: when used to have a Proc_.timer. check if active? when can happen?
    * up.Proc_.timer <- None; 

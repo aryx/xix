@@ -1,5 +1,6 @@
+(* TODO: reuse plan9-ml/commons/common.ml at some point *)
 
-(* available by default since ocaml 4.01 but we use 1.07 for ocaml light *)
+(* available since ocaml 4.01 but we use 1.07 (ocaml light) for the kernel *)
 let (|>) o f = f o
 
 (* We could use print_string below, but it requires some hacks to make

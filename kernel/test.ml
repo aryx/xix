@@ -8,15 +8,12 @@ let test_print () =
 
 exception Exn1 of string
 exception Exn2 of string
-
 let bar x =
   if true
   then raise (Exn1 "bar")
   else 1
-
 let foo x = 
   bar x
-
 let test_exn () =
   (try 
     let x = foo 42 in

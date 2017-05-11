@@ -1,3 +1,5 @@
+(* TODO: reuse plan9-ml/commons/common.ml at some point *)
+
 (* available since ocaml 4.01 but we use 1.07 (ocaml light) for rio *)
 let (|>) o f = f o
 

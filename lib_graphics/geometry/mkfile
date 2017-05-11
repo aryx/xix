@@ -1,0 +1,55 @@
+# -*- sh -*-
+#############################################################################
+# Src
+#############################################################################
+
+CMO= point.cmo rectangle.cmo
+
+#############################################################################
+# Compilers
+#############################################################################
+
+OCAML=/home/pad/github/fork-ocaml
+OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
+OCAMLDEP=ocamldep
+
+#############################################################################
+# Config
+#############################################################################
+
+OCAMLINCLUDES=
+
+OCAMLCFLAGS=$OCAMLINCLUDES -thread
+OCAMLLDFLAGS=
+# for the linker
+#CAMLLIB=/usr/local/lib/ocaml
+CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
+
+#############################################################################
+# Toplevel targets
+#############################################################################
+
+all:V: geometry.cma
+
+geometry.cma: $CMO mkfile
+	$OCAMLC -a -o $target $CMO
+
+clean:V:
+	rm -f *.cma *.cmo *.cmi *.8
+
+depend:V:
+	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
+
+#############################################################################
+# Meta rules
+#############################################################################
+
+%.cmo: %.ml
+	$OCAMLC $OCAMLCFLAGS -c $stem.ml
+
+%.cmi: %.mli
+	$OCAMLC $OCAMLCFLAGS -c $stem.mli
+
+
+#############################################################################
+<.depend

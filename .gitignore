@@ -6,6 +6,8 @@
 *.o
 *.a
 
+*.5
+
 .depend
 .md5sum_*
 
@@ -56,3 +58,4 @@
 /kernel/syms.list
 /linker/tests/5.out
 /linker/tests/test_out
+/windows/rio

@@ -1,0 +1,56 @@
+# -*- sh -*-
+#############################################################################
+# Src
+#############################################################################
+
+CMO= common.cmo \
+  test.cmo main.cmo
+
+#############################################################################
+# Compilers
+#############################################################################
+
+OCAML=/home/pad/github/fork-ocaml
+OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
+OCAMLDEP=ocamldep
+
+#############################################################################
+# Config
+#############################################################################
+
+OCAMLINCLUDES=
+OCAMLCFLAGS=$OCAMLINCLUDES
+
+
+#############################################################################
+# Toplevel targets
+#############################################################################
+
+# use of -l so no automagic lib and no _main
+rio: $CMO mkfile
+	$OCAMLC $LDFLAGS -o $target $CMO
+
+clean:V:
+	rm -f $OBJ $CMO
+
+depend:V:
+	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
+
+ROOT=/home/pad/plan9/ROOT/
+test:V:
+	cp rio $ROOT/tests/xxx/
+    cd /home/pad/plan9; make disk; make run
+
+#############################################################################
+# Meta rules
+#############################################################################
+
+%.cmo: %.ml
+	$OCAMLC $OCAMLCFLAGS -c $stem.ml
+
+%.cmi: %.mli
+	$OCAMLC $OCAMLCFLAGS -c $stem.mli
+
+
+#############################################################################
+<.depend

@@ -71,6 +71,7 @@ let test () =
      test_print () 
      test_exn ()
      test_threads_cooperatively ();
-  *)
   test_threads_preemptively ();
+  *)
+     test_threads_cooperatively ();
   ()

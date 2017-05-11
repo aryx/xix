@@ -6,6 +6,8 @@
 CMO= common.cmo \
   test.cmo main.cmo
 
+LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma
+
 #############################################################################
 # Compilers
 #############################################################################
@@ -18,20 +20,33 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=
-OCAMLCFLAGS=$OCAMLINCLUDES
+OCAMLINCLUDES=-I ../lib_graphics/geometry -I ../lib_graphics/draw
 
+OCAMLCFLAGS=$OCAMLINCLUDES -thread
+OCAMLLDFLAGS=
+# for the linker
+#CAMLLIB=/usr/local/lib/ocaml
+CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 
 #############################################################################
 # Toplevel targets
 #############################################################################
 
+PROGS=rio hellodraw #hellorio
+all:V: $PROGS
+
 # use of -l so no automagic lib and no _main
-rio: $CMO mkfile
-	$OCAMLC $LDFLAGS -o $target $CMO
+rio: $CMO $LIBS mkfile
+	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target threads.cma $CMO $LIBS -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
+
+hellorio: hellorio.cmo mkfile
+	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target threads.cma $CMO $LIBS -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
+
+hellodraw: hellodraw.cmo mkfile
+	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target threads.cma $CMO $LIBS -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
 clean:V:
-	rm -f $OBJ $CMO
+	rm -f $PROGS *.cmo *.cmi *.8
 
 depend:V:
 	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend

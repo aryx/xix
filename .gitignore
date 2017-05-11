@@ -7,6 +7,7 @@
 *.a
 
 *.5
+*.8
 
 .depend
 .md5sum_*
@@ -59,3 +60,5 @@
 /linker/tests/5.out
 /linker/tests/test_out
 /windows/rio
+/windows/hellodraw
+/windows/hellorio

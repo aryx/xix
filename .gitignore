@@ -53,3 +53,6 @@
 /linker/garbage_ml
 /compiler/garbage_ml
 /debugger/ksym
+/kernel/syms.list
+/linker/tests/5.out
+/linker/tests/test_out

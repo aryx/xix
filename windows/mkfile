@@ -3,7 +3,7 @@
 # Src
 #############################################################################
 
-CMO= common.cmo \
+CMO= \
   test.cmo main.cmo
 
 LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma

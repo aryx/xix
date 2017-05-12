@@ -13,6 +13,7 @@ let main () =
   Draw.string view (Point.p 200 200) display.Display.black Point.zero 
     Font.default_font "Hello Graphical World";
   Draw.flush display true;
+  sleep 5;
 *)
   ()
 

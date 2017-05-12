@@ -262,12 +262,3 @@ let cat file =
   in
   cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)
 
-let sort_by_val_highfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
-let sort_by_val_lowfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare v1 v2) xs
-
-let sort_by_key_highfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare k2 k1) xs
-let sort_by_key_lowfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs

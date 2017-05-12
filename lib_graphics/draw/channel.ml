@@ -69,9 +69,9 @@ let channels_of_str str =
   
 
 
-
-let imgval_to_rgba img val_ =
+(* do not pass an img here otherwise mutually dependent modules *)
+let imgval_to_rgba chan val_ =
   raise Todo
 
-let rgba_to_imgval img rgba =
+let rgba_to_imgval chan rgba =
   raise Todo

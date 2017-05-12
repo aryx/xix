@@ -10,6 +10,7 @@ type t = Image.display
 let init () =
   (* less: OCEXEC *)
   let ctlfd = 
+    (* less: could use finalize to close if exn at least *)
     Unix.openfile "/dev/draw/new" [Unix.O_RDWR] 0o666 in
 
   let ninfo = 12 * 12 in
@@ -69,4 +70,6 @@ let init () =
   }
   in
   assert(image.id = 0);
+
+  (* todo: allocimage here? *)
   display

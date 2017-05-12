@@ -6,6 +6,7 @@ type t = {
   (* derives from chan *)
   depth: int;
 
+  (* mutable? *)
   clipr: Rectangle.t;
   repl: bool;
 
@@ -24,10 +25,11 @@ and display = {
   (* /dev/draw/x/data *)
   data: Unix.file_descr;
 
+(*
   white: t;
   black: t;
   opaque: t;
   transparent: t;
-
+*)
   mutable imageid: int;
 }

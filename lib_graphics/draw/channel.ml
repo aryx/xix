@@ -5,18 +5,38 @@ type chan_kind =
   | CGreen
   | CBlue
 
-  | CGrey
   | CAlpha
-(* less: Cmap *)
+
+  | CGrey
+  | CMap
 
 type chan = chan_kind * int (* nb bits *)
 
 (* less: opti: int because can fit all channels in 32 bits *)
 type t = chan list (* usually 4, like R8G8B8A8 *)
 
+let grey1 =
+  [ CGrey, 1]
+let rgb16 =
+  [ CRed, 5; CGreen, 6; CBlue, 6]
+let rgba32 =
+  [ CRed, 8; CGreen, 8; CBlue, 8; CAlpha, 8]
+let cmap8 =
+  [ CMap, 8]
+
+
+(* todo: sanity checks *)
+let depth_of_channels xs = 
+  xs |> List.map snd |> List.fold_left (+) 0
+
+
+
 (* when serializing to /dev/draw *)
 type chan_serial = int
 type channels_serial = int
+
+(* when reading from /dev/draw/new *)
+type channels_str = string
 
 (* deserializing *)
 let kind_of_chan_serial x =
@@ -32,6 +52,7 @@ let int_of_chan_kind = function
 
   | CGrey -> 3
   | CAlpha -> 4
+  | CMap -> 5
 
 let mk_chan_serial (kind, nbits) = 
   let i = int_of_chan_kind kind in
@@ -39,17 +60,14 @@ let mk_chan_serial (kind, nbits) =
 
 let mk_channels_serial xs = 
   raise Todo
-  
-let grey1 = 
-  [ CGrey, 1]
-let rgb16 = 
-  [ CRed, 5; CGreen, 6; CBlue, 6]
-let rgba32 =
-  [ CRed, 8; CGreen, 8; CBlue, 8; CAlpha, 8]
 
-(* todo: sanity checks *)
-let channels_to_depth xs = 
-  xs |> List.map snd |> List.fold_left (+) 0
+
+let channels_of_str str =
+  match str with
+  | "m8" -> cmap8
+  | _ -> failwith (spf "channels format not supported yet: %s" str)
+  
+
 
 
 let imgval_to_rgba img val_ =

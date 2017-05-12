@@ -1,5 +1,7 @@
+open Common
 
 let main () =
+  pr "Let's go";
   let display = Draw.init "Hello Draw" in
 (* TODO
   let color = 

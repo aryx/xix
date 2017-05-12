@@ -3,7 +3,9 @@
 # Src
 #############################################################################
 
-CMO= image.cmo display.cmo channel.cmo color.cmo \
+CMO= common.cmo \
+     channel.cmo color.cmo \
+     image.cmo display.cmo \
      draw.cmo
 
 #############################################################################

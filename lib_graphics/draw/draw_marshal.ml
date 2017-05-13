@@ -33,6 +33,11 @@ let bp_rect r =
 let bp_color c =
   bp_byte c.a ^ bp_byte c.b ^ bp_byte c.g ^ bp_byte c.r
 
+let bp_chans chans =
+  let i = Channel.mk_channels_serial chans in
+  bp_long i
+
+
 (* alt:
  * marshall full AST if kernel was written in OCaml:
  * 

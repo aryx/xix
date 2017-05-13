@@ -60,8 +60,19 @@ let mk_chan_serial (kind, nbits) =
   let i = int_of_chan_kind kind in
   ((i land 15) lsl 4) lor (nbits land 15)
 
-let mk_channels_serial xs = 
-  raise Todo
+let mk_channels_serial xs =
+  match xs with
+  | [x] -> mk_chan_serial x
+  | [x1; x2; x3] -> 
+    ((mk_chan_serial x1) lsl 16) lor
+    ((mk_chan_serial x2) lsl 8) lor
+    (mk_chan_serial x3)
+  | [x1; x2; x3; x4] -> 
+    ((mk_chan_serial x1) lsl 24) lor
+    ((mk_chan_serial x2) lsl 16) lor
+    ((mk_chan_serial x3) lsl 8) lor
+    (mk_chan_serial x4)
+  | _ -> raise Todo
 
 
 let channels_of_str str =

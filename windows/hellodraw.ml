@@ -4,6 +4,7 @@ let main () =
   pr "Let's go";
   let display = Draw.init "Hello Draw" in
   let view = display.Image.image in
+  Display.flush display;
   let color = 
     Image.alloc display (Rectangle.r 0 0 1 1) Channel.rgb24 true (* repl *)
       Color.magenta
@@ -21,4 +22,8 @@ let main () =
 
 
 let _ =
-  main ()
+  try 
+    main ()
+  with Unix.Unix_error (err, s1, s2) when s2 = "xxx" ->
+    failwith (spf "unix_error: %s, %s, %s" (Unix.error_message err) s1 s2)
+

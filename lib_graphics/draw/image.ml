@@ -50,7 +50,14 @@ let flush_buffer display =
   let n = display.bufp in
   if n <> 0
   then begin
-    let n2 = Unix.write display.data display.buf 0 n in
+    let n2 = 
+      try 
+        Unix.write display.data display.buf 0 n 
+      with Unix.Unix_error (err, _write, s2) ->
+        failwith (spf "error '%s(%s)' writing %d bytes |%s|" 
+                    (Unix.error_message err) s2
+                    n (String.escaped (String.sub display.buf 0 n)))
+    in
     (* less: only if drawdebug? *)
     if n2 <> n
     then failwith (spf "wrote only %d, not %d in /dev/draw/x/data" n2 n);
@@ -95,9 +102,12 @@ let alloc display r chans repl color =
     else r
   in
 
-  let str = "b" ^ M.bp_long id ^ M.bp_long screenid ^ M.bp_bool refresh ^
-    M.bp_rect r ^ M.bp_rect clipr ^ M.bp_color color
+  let str = "b" ^ M.bp_long id ^ M.bp_long screenid ^ 
+    M.bp_bool refresh ^ M.bp_chans chans ^ M.bp_bool repl ^
+    M.bp_rect r ^ M.bp_rect clipr ^ 
+    M.bp_color color
   in
+  pr (spf "size str = %d" (String.length str));
   add_buf display str;
 
   { id = id;

@@ -5,7 +5,7 @@
 
 CMO= common.cmo \
      channel.cmo color.cmo \
-     image.cmo display.cmo \
+     draw_marshal.ml image.cmo display.cmo \
      draw.cmo
 
 #############################################################################

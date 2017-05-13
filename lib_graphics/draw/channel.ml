@@ -19,6 +19,8 @@ let grey1 =
   [ CGrey, 1]
 let rgb16 =
   [ CRed, 5; CGreen, 6; CBlue, 6]
+let rgb24 =
+  [ CRed, 8; CGreen, 8; CBlue, 8]
 let rgba32 =
   [ CRed, 8; CGreen, 8; CBlue, 8; CAlpha, 8]
 let cmap8 =

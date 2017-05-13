@@ -6,6 +6,10 @@ open Image (* todo: delete once can do simplified qualified record *)
 
 type t = Image.display
 
+let flush display =
+  Image.flush_display display
+
+
 (* less: devdir? windir? errorfn? *)
 let init () =
   (* less: OCEXEC *)
@@ -67,6 +71,10 @@ let init () =
 
     image = image;
     imageid = 0;
+    (* +1 for space for 'v' when flush_display() *)
+    buf = String.make (Image.bufsize + 1) ' ';  
+    bufp = 0;
+
   }
   in
   assert(image.id = 0);

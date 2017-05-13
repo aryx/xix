@@ -22,7 +22,7 @@ OCAMLDEP=ocamldep
 
 OCAMLINCLUDES=-I ../geometry
 
-OCAMLCFLAGS=$OCAMLINCLUDES -thread
+OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 OCAMLLDFLAGS=
 # for the linker
 #CAMLLIB=/usr/local/lib/ocaml

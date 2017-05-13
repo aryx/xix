@@ -14,9 +14,9 @@ let main () =
     Line.Endsquare Line.Endsquare 10 display.Display.black Point.zero;
   Draw.string view (Point.p 200 200) display.Display.black Point.zero 
     Font.default_font "Hello Graphical World";
-  Draw.flush display true;
-  sleep 5;
 *)
+  Display.flush display;
+  Unix.sleep 5;
   ()
 
 

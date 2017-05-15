@@ -32,7 +32,7 @@ CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 # Toplevel targets
 #############################################################################
 
-PROGS=hellodraw #hellorio
+PROGS=hellodraw hellorio
 all:V: $PROGS
 
 # use of -l so no automagic lib and no _main
@@ -40,7 +40,7 @@ rio: $CMO $LIBS mkfile
 	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target threads.cma $LIBS $CMO -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
 hellorio: hellorio.cmo mkfile
-	$OCAMLC -verbose $OCAMLLDFLAGS -custom -o $target $LIBS hellorio.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
+	$OCAMLC -verbose $OCAMLLDFLAGS -custom -o $target unix.cma str.cma $LIBS hellorio.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
 hellodraw: hellodraw.cmo mkfile
 	$OCAMLC  -verbose $OCAMLLDFLAGS -custom -o $target unix.cma str.cma $LIBS hellodraw.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a -cclib /home/pad/github/fork-ocaml/byterun/main.8

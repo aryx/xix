@@ -21,8 +21,11 @@ let bp_long x =
 
 let bp_bool b =
   if b
-  then String.make 1 (Char.chr 0)
-  else String.make 1 (Char.chr 1)
+  then String.make 1 (Char.chr 1)
+  else String.make 1 (Char.chr 0)
+
+let bp_point pt =
+  bp_long pt.x ^ bp_long pt.y
 
 let bp_rect r =
   bp_long r.min.x ^ bp_long r.min.y ^ 

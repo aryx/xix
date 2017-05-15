@@ -14,7 +14,7 @@ type t = {
   clipr: Rectangle.t;
   repl: bool;
 
-  display: display;  
+  display: display;
 }
 
 and display = {
@@ -29,12 +29,12 @@ and display = {
   (* /dev/draw/x/data *)
   data: Unix.file_descr;
 
-(*
-  white: t;
-  black: t;
-  opaque: t;
-  transparent: t;
-*)
+  (* set later in Draw.init, not Display.init *)
+  mutable white: t;
+  mutable black: t;
+  mutable opaque: t;
+  mutable transparent: t;
+
   mutable imageid: int;
   
   (* size = Image.bufsize + 1 (* for 'v' *)  *)
@@ -58,7 +58,7 @@ let flush_buffer display =
                     (Unix.error_message err) s2
                     n (String.escaped (String.sub display.buf 0 n)))
     in
-    (* less: only if drawdebug? *)
+    (* stricter: not only if drawdebug but always *)
     if n2 <> n
     then failwith (spf "wrote only %d, not %d in /dev/draw/x/data" n2 n);
     display.bufp <- 0;
@@ -75,9 +75,6 @@ let add_buf display str =
   String.blit str 0 display.buf display.bufp len;
   display.bufp <- display.bufp + len
 
-let flush_display display =
-  add_buf display "v";
-  flush_buffer display
 
 
 (* less: _allocimage and initial image (and screenid and refresh) *)
@@ -107,7 +104,6 @@ let alloc display r chans repl color =
     M.bp_rect r ^ M.bp_rect clipr ^ 
     M.bp_color color
   in
-  pr (spf "size str = %d" (String.length str));
   add_buf display str;
 
   { id = id;

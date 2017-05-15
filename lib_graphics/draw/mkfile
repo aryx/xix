@@ -6,7 +6,9 @@
 CMO= common.cmo \
      channel.cmo color.cmo \
      draw_marshal.cmo image.cmo display.cmo \
-     draw.cmo
+     draw.cmo \
+     line.cmo poly.cmo ellipse.cmo arc.cmo \
+     
 
 #############################################################################
 # Compilers

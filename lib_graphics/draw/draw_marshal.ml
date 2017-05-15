@@ -3,7 +3,6 @@ open Point
 open Rectangle
 open Color
 
-
 let bp_byte x =
   String.make 1 (Char.chr x)
 
@@ -50,4 +49,3 @@ type msg =
   | Ellipse of int
   | Arc of int
  *)
-

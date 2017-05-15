@@ -3,12 +3,9 @@ open Point
 open Rectangle
 
 open Image (* todo: delete once can do simplified qualified record *)
+module M = Draw_marshal
 
 type t = Image.display
-
-let flush display =
-  Image.flush_display display
-
 
 (* less: devdir? windir? errorfn? *)
 let init () =
@@ -47,11 +44,12 @@ let init () =
 
   let datafd = 
     Unix.openfile (spf "/dev/draw/%d/data" clientnb) [Unix.O_RDWR] 0o666 in
-  (* less: refreshfd *)
+  let _reffdTODO =
+    Unix.openfile (spf "/dev/draw/%d/refresh" clientnb) [Unix.O_RDONLY] 0o666 in
 
   let chans = Channel.channels_of_str (str_at 2) in
 
-  let rec image = {
+  let rec image = { Image.
     id = int_at 1;
     chans = chans;
     depth = Channel.depth_of_channels chans;
@@ -75,9 +73,28 @@ let init () =
     buf = String.make (Image.bufsize + 1) ' ';  
     bufp = 0;
 
+    (* set in Draw.init *)
+    white = fake_image;
+    black = fake_image;
+    opaque = fake_image;
+    transparent = fake_image;
+  }
+  and fake_image = { Image.
+   id = -1; chans = []; depth = -1; repl = false;
+   r = Rectangle.zero; clipr =  Rectangle.zero; 
+   display = display;
   }
   in
   assert(image.id = 0);
 
   (* todo: allocimage here? *)
   display
+
+
+let flush display =
+  Image.add_buf display "v";
+  Image.flush_buffer display
+
+let debug display =
+  Image.add_buf display ("D" ^ M.bp_bool true);
+  Image.flush_buffer display

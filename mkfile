@@ -11,6 +11,8 @@ DIRS=\
   formats/executables linker\
   compiler
 
+# works only under plan9 for now: lib_graphics/draw windows
+# works only from scratch: kernel/
 
 all:V: all.directories
 opt:V: opt.directories

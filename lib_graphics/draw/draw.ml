@@ -1,6 +1,4 @@
 open Common
-open Point
-open Rectangle
 
 module D = Image (* display type is actually in image.ml *)
 module M = Draw_marshal

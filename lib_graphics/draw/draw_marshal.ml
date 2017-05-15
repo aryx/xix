@@ -1,4 +1,5 @@
 open Common
+
 open Point
 open Rectangle
 open Color

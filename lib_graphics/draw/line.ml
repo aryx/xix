@@ -1,8 +1,5 @@
 open Common
-open Point
-open Rectangle
 
-module D = Image
 module I = Image
 module M = Draw_marshal
 
@@ -28,4 +25,3 @@ let line_gen dst p0 p1 end0 end1 radius src sp op =
 
 let line dst p0 p1 end0 end1 radius src sp =
   line_gen dst p0 p1 end0 end1 radius src sp Draw.SoverD
-

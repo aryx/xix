@@ -13,7 +13,8 @@ let redraw display view loc bgcolor =
 let thread_main () =
   let display = Draw.init "Hello Rio" in
 
-  (* let mouse = 
+  let mouse = Mouse.init () in
+  (*
      let kbd = 
   *)
   let bgcolor = 
@@ -21,7 +22,12 @@ let thread_main () =
   in
   let mouseloc = ref (Point.p 10 10) in
 
-  redraw display display.I.image !mouseloc bgcolor
+  redraw display display.I.image !mouseloc bgcolor;
+
+  while true do
+    
+    ()
+  done
 
 let _ =
   thread_main ()

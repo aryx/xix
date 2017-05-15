@@ -5,6 +5,8 @@ let (|>) o f = f o
 
 let spf = Printf.sprintf
 
+type ('a, 'b) either = Left of 'a | Right of 'b
+
 let if_some f = function
   | None -> ()
   | Some x -> f x

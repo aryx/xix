@@ -23,8 +23,9 @@ let keyboard_thread ctl =
                      n (String.escaped buf));
     (* todo: runes *)
     for i = 0 to n - 1 do
-      pr (spf "sending %c" buf.[i]);
-      Event.send ctl.chan buf.[i]
+      (*pr (spf "sending %c" buf.[i]);*)
+      let ev = Event.send ctl.chan buf.[i] in
+      Event.sync ev
     done
   done
   

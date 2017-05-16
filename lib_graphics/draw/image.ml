@@ -118,3 +118,7 @@ let alloc display r chans repl color =
 
 let free img =
   raise Todo
+
+(* shortcuts *)
+let alloc_color display color =
+  alloc display (Rectangle.r  0 0 1 1) Channel.rgb24 true color

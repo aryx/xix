@@ -2,6 +2,9 @@ open Common
 
 module I = Image
 
+type event =
+  | Mouse of Mouse.t
+
 let redraw display view loc bgcolor =
   Draw.draw view view.I.r bgcolor None Point.zero;
   (* todo: Text.string *)
@@ -25,8 +28,14 @@ let thread_main () =
   redraw display display.I.image !mouseloc bgcolor;
 
   while true do
-    
-    ()
+    let ev = 
+      [Mouse.receive mouse |> (fun ev -> Event.wrap ev (fun x -> Mouse x))
+      ] |> Event.select
+    in
+    (match ev with
+    | Mouse m -> mouseloc := m.Mouse.xy
+    );
+    redraw display display.I.image !mouseloc bgcolor;
   done
 
 let _ =

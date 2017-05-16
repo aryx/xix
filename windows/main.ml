@@ -28,16 +28,22 @@ let thread_main () =
 
   (* Rio, a concurrent application *)
 
-  let (exit_chan: unit Event.channel) = Event.new_channel () in
+  let (exit_chan: int (* exit code *) Event.channel) = Event.new_channel () in
+
+  let _kbd_thread   = 
+    Thread.create Thread_keyboard.thread kbd in
+  let _mouse_thread = 
+    Thread.create Thread_mouse.thread mouse in
 
   (* Rio, a filesystem server *)
+  let fs = Fs.init () in
 
   (* Wait *)
 
-  Event.receive exit_chan |> Event.sync;
+  let exit_code = Event.receive exit_chan |> Event.sync in
   (* todo: kill all procs? all the winshell processes? *)
   (* todo: kill all threads? done when do exit no? *)
-  exit 0
+  exit exit_code
     
 
 let main () =

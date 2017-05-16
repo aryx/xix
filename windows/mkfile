@@ -4,6 +4,8 @@
 #############################################################################
 
 CMO= \
+  fid.cmo fs.cmo \
+  thread_keyboard.cmo thread_mouse.cmo \
   test.cmo main.cmo
 
 LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma \

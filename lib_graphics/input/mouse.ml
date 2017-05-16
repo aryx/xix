@@ -16,7 +16,7 @@ and buttons = {
   right: bool;
 }  
 
-type mousectl = {
+type ctl = {
   (* /dev/mouse *)
   fd: Unix.file_descr;
   (* streams of mouse events that can be received from mouse thread *)
@@ -85,4 +85,3 @@ let receive mousectl =
 
 let move_to mousectl pt =
   raise Todo
-

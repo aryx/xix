@@ -5,6 +5,7 @@ module I = Image
 type event =
   | Mouse of Mouse.t
   | Key of Keyboard.key
+  (* less: Resize *)
 
 let redraw display view loc bgcolor =
   Draw.draw view view.I.r bgcolor None Point.zero;
@@ -16,6 +17,8 @@ let redraw display view loc bgcolor =
 
 let thread_main () =
   let display = Draw.init "Hello Rio" in
+  (* less: getwindow? *)
+  let view = display.I.image in
 
   let kbd = Keyboard.init () in
   let mouse = Mouse.init () in
@@ -25,7 +28,7 @@ let thread_main () =
   in
   let mouseloc = ref (Point.p 10 10) in
 
-  redraw display display.I.image !mouseloc bgcolor;
+  redraw display view !mouseloc bgcolor;
 
   while true do
     let ev = 
@@ -35,11 +38,15 @@ let thread_main () =
       ] |> Event.select
     in
     (match ev with
-    | Mouse m -> mouseloc := m.Mouse.xy
+    | Mouse m -> 
+      mouseloc := m.Mouse.xy
     | Key c ->
       if c = 'q'
       then exit 0
       else pr (spf "%c" c)
+    (* less: 
+     * | Resize -> view := getwindow display
+     *)
     );
     redraw display display.I.image !mouseloc bgcolor;
   done

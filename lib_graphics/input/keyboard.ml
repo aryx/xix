@@ -12,7 +12,7 @@ type ctl = {
   consctl: Unix.file_descr;
 }
 
-let keyboard_thread ctl =
+let thread_keyboard ctl =
   (* less: threadsetname *)
   let bufsize = 20 in
   let buf = String.make bufsize ' ' in
@@ -41,7 +41,7 @@ let init () =
   if n <> String.length str
   then failwith ("Keyboard.init: can't turn on raw mode" );
   
-  let thread = Thread.create keyboard_thread ctl in
+  let thread = Thread.create thread_keyboard ctl in
   ctl
 
 let receive ctl =

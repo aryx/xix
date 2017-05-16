@@ -24,7 +24,7 @@ type ctl = {
   (* less: resize_chan: unit Event.channel; *) 
 }
 
-let mouse_thread mousectl =
+let thread_mouse mousectl =
   (* less: threadsetname? *)
   let bufsize = 1 + 4*12 in
   let buf = String.make bufsize ' ' in
@@ -77,7 +77,7 @@ let init () =
   let fd = Unix.openfile "/dev/mouse" [Unix.O_RDONLY] 0o666 in
   let mousectl = { fd = fd; chan = chan } in
 
-  let thread = Thread.create mouse_thread mousectl in
+  let thread = Thread.create thread_mouse mousectl in
   mousectl
 
 let receive mousectl =

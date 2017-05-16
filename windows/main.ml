@@ -4,6 +4,19 @@ let usage =
   "usage: rio [options]"
 
 let thread_main () =
+  let display = Draw.init "Rio" in
+  (* less: let view = Layer.window_init () in *)
+  let view = display.Image.image in
+
+  let kbd = Keyboard.init () in
+  let mouse = Mouse.init () in
+
+  let background = 
+    Image.alloc display in
+  let red = 
+    Image.alloc display in
+  
+  let desktop = Baselayer.alloc  in
   raise Todo
 
 let main () =

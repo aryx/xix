@@ -55,3 +55,8 @@ let rect_in_rect r1 r2 =
   r1.min.y >= r2.min.y && r1.max.y <= r2.max.y
 
 (* less: rectXrect?? *)
+
+let insetrect r n =
+  { min = { x = r.min.x + n; y = r.min.y + n };
+    max = { x = r.max.x - n; y = r.max.y - n };
+  }

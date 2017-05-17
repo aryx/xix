@@ -14,6 +14,12 @@ let if_some f = function
 exception Todo
 exception Impossible of string
 
+(* weird: if add this then get some suicide on hellorio/rio/etc
+let some = function
+  | None -> raise (Impossible "some: should have a Some here")
+  | Some x -> x
+*)
+
 let pr s =
   print_string (s ^ "\n");
   flush stdout

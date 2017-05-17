@@ -16,6 +16,10 @@ and buttons = {
   right: bool;
 }  
 
+let has_click m = 
+  let buttons = m.buttons in
+  buttons.left || buttons.middle || buttons.right
+
 type ctl = {
   (* /dev/mouse *)
   fd: Unix.file_descr;

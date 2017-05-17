@@ -59,6 +59,10 @@ let main () =
     " <initcmd>";
     "-k", Arg.String (fun s -> raise Todo),
     " <kbdcmd>";
+
+    (* pad: not in original *)
+    "-debug", Arg.Set Globals.debug,
+    " ";
   ]
   in
   Arg.parse options (fun _ -> Arg.usage options usage) usage;

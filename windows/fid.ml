@@ -1,3 +1,6 @@
+open Common
+
+(* todo: same than ninep.fid? *)
 type fid = int
 
 type t = {
@@ -11,3 +14,6 @@ type t = {
   (* todo: w: Window.t; or use wid? *)
 }
 
+
+let alloc fcall_fid =
+  raise Todo

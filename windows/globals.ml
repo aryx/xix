@@ -7,3 +7,5 @@ let (current: Window.t option ref)  = ref None
 (* a bit like cpu(), up() in the kernel, a convenient global *)
 let win () =
   !current
+
+let debug = ref false

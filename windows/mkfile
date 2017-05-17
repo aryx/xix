@@ -10,6 +10,7 @@ CMO= \
   windows.cmo wm.cmo \
   thread_keyboard.cmo thread_mouse.cmo \
   threads_window.cmo \
+  ninep.cmo worker_request.cmo thread_fileserver.cmo \
   test.cmo main.cmo
 
 LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma \

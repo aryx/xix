@@ -8,6 +8,10 @@ let thread kbd =
 
   while true do
     let key = Keyboard.receive kbd |> Event.sync in
+    (* temporary *)
+    if key = 'q' 
+    then exit 0;
+
     Globals.win () |> Common.if_some (fun win ->
       Event.send win.W.chan_keyboard key |> Event.sync
     )

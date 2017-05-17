@@ -9,6 +9,7 @@ CMO= \
   fid.cmo fs.cmo \
   windows.cmo wm.cmo \
   thread_keyboard.cmo thread_mouse.cmo \
+  threads_window.cmo \
   test.cmo main.cmo
 
 LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma \

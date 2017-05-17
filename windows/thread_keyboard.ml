@@ -1,4 +1,5 @@
 open Common
+open Keyboard
 
 module W = Window
 

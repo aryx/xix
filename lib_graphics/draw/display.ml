@@ -3,6 +3,10 @@ open Point
 open Rectangle
 
 open Image (* todo: delete once can do simplified qualified record *)
+(* todo: delete once threadUnix is not needed anymore *)
+module Unix1 = Unix
+module Unix2 = ThreadUnix
+
 module M = Draw_marshal
 
 type t = Image.display
@@ -12,12 +16,12 @@ let init () =
   (* less: OCEXEC *)
   let ctlfd = 
     (* less: could use finalize to close if exn at least *)
-    Unix.openfile "/dev/draw/new" [Unix.O_RDWR] 0o666 in
+    Unix1.openfile "/dev/draw/new" [Unix1.O_RDWR] 0o666 in
 
   let ninfo = 12 * 12 in
   let str = String.make ninfo ' ' in
 
-  let n = Unix.read ctlfd str 0 ninfo in
+  let n = Unix1.read ctlfd str 0 ninfo in
   if n <> ninfo && 
      (* less: not sure why but it reads only 143 characters *)
      n <> (ninfo - 1)
@@ -43,9 +47,9 @@ let init () =
   let clientnb = int_at 0 in
 
   let datafd = 
-    Unix.openfile (spf "/dev/draw/%d/data" clientnb) [Unix.O_RDWR] 0o666 in
+    Unix1.openfile (spf "/dev/draw/%d/data" clientnb) [Unix1.O_RDWR] 0o666 in
   let _reffdTODO =
-    Unix.openfile (spf "/dev/draw/%d/refresh" clientnb) [Unix.O_RDONLY] 0o666 in
+    Unix1.openfile (spf "/dev/draw/%d/refresh" clientnb) [Unix1.O_RDONLY] 0o666 in
 
   let chans = Channel.channels_of_str (str_at 2) in
 

@@ -1,7 +1,8 @@
 open Common
 open Point
 
-(* todo: remove once ocaml light threads emulates Unix directly *)
+(* todo: delete once threadUnix is not needed anymore *)
+module Unix1 = Unix
 module Unix2 = ThreadUnix
 
 type t = {
@@ -22,7 +23,7 @@ let has_click m =
 
 type ctl = {
   (* /dev/mouse *)
-  fd: Unix.file_descr;
+  fd: Unix1.file_descr;
   (* streams of mouse events that can be received from mouse thread *)
   chan: t Event.channel;
   (* less: resize_chan: unit Event.channel; *) 
@@ -78,7 +79,7 @@ let thread_mouse mousectl =
 (* less: image *)
 let init () =
   let (chan: t Event.channel) = Event.new_channel () in
-  let fd = Unix.openfile "/dev/mouse" [Unix.O_RDONLY] 0o666 in
+  let fd = Unix1.openfile "/dev/mouse" [Unix1.O_RDONLY] 0o666 in
   let mousectl = { fd = fd; chan = chan } in
 
   let thread = Thread.create thread_mouse mousectl in

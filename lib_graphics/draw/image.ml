@@ -1,5 +1,9 @@
 open Common
 
+(* todo: delete once threadUnix is not needed anymore *)
+module Unix1 = Unix
+module Unix2 = ThreadUnix
+
 module M = Draw_marshal
 
 type t = {
@@ -25,9 +29,9 @@ and display = {
   dirno: int;
 
   (* /dev/draw/x/ctl *)
-  ctl: Unix.file_descr;
+  ctl: Unix1.file_descr;
   (* /dev/draw/x/data *)
-  data: Unix.file_descr;
+  data: Unix1.file_descr;
 
   (* set later in Draw.init, not Display.init *)
   mutable white: t;
@@ -52,10 +56,10 @@ let flush_buffer display =
   then begin
     let n2 = 
       try 
-        Unix.write display.data display.buf 0 n 
-      with Unix.Unix_error (err, _write, s2) ->
+        Unix2.write display.data display.buf 0 n 
+      with Unix1.Unix_error (err, _write, s2) ->
         failwith (spf "error '%s(%s)' writing %d bytes |%s|" 
-                    (Unix.error_message err) s2
+                    (Unix1.error_message err) s2
                     n (String.escaped (String.sub display.buf 0 n)))
     in
     (* stricter: not only if drawdebug but always *)

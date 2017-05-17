@@ -1,5 +1,7 @@
 open Common
 
+(* todo: delete once threadUnix is not needed anymore *)
+module Unix1 = Unix
 module Unix2 = ThreadUnix
 
 type key = char
@@ -7,9 +9,9 @@ type key = char
 type ctl = {
   chan: key (* less: buffer 20? *) Event.channel;
   (* /dev/cons *)
-  fd: Unix.file_descr;
+  fd: Unix1.file_descr;
   (* /dev/consctl *)
-  consctl: Unix.file_descr;
+  consctl: Unix1.file_descr;
 }
 
 let thread_keyboard ctl =
@@ -31,13 +33,13 @@ let thread_keyboard ctl =
   
 let init () =
   let (chan: key Event.channel) = Event.new_channel () in
-  let fd = Unix.openfile "/dev/cons" [Unix.O_RDONLY] 0o666 in
-  let consctl = Unix.openfile "/dev/consctl" [Unix.O_WRONLY] 0o666 in
+  let fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
+  let consctl = Unix1.openfile "/dev/consctl" [Unix1.O_WRONLY] 0o666 in
 
   let ctl = { fd = fd; chan = chan; consctl = consctl } in
 
   let str = "rawon" in
-  let n = Unix.write consctl str 0 (String.length str) in
+  let n = Unix1.write consctl str 0 (String.length str) in
   if n <> String.length str
   then failwith ("Keyboard.init: can't turn on raw mode" );
   

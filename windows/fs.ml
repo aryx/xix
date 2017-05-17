@@ -1,5 +1,7 @@
 open Common
 
+(* todo: delete once threadUnix is not needed anymore *)
+module Unix1 = Unix
 module Unix2 = ThreadUnix
   
 (* Note that pipes created under plan9 are bidirectional! 
@@ -10,8 +12,8 @@ type t = {
   (* the pipe *)
 
   (* clients_fd will be shared by all the winshell processes *)
-  clients_fd: Unix.file_descr;
-  server_fd: Unix.file_descr;
+  clients_fd: Unix1.file_descr;
+  server_fd: Unix1.file_descr;
 
   (* for security *)
   user: string;

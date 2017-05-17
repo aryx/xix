@@ -60,7 +60,7 @@ let thread_mouse mousectl =
           | 1 -> { left = true; middle = false; right = false }
           | 2 -> { left = false; middle = true; right = false }
           | 4 -> { left = false; middle = false; right = true }
-          | _ -> raise Todo
+          | x -> failwith (spf "Mouse.thread_mouse: not handled %d" x)
           );
         msec = int_at 3;
       }

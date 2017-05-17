@@ -7,6 +7,17 @@ type event =
   | Mouse of Mouse.t
   (* less: Resize? other? *)
 
+let middle_click_system m mouse =
+  failwith "Todo: middle click"
+
+let right_click_system m mouse =
+  failwith "Todo: right click"
+
+
+type under_mouse =
+  | Nothing
+  | CurrentWin of Window.t
+  | OtherWin of Window.t
 
 let thread mouse =
   (* less: threadsetname *)
@@ -22,30 +33,29 @@ let thread mouse =
       (* less: wkeyboard and button 6 *)
       (* less: loop again *)
       (* less: wkeyboard and ptinrect *)
-      let sending =
+      (* todo? race on Globals.win? can change between? need store in local?*)
+      let sending_to_win =
         match Globals.win () with
         | Some w ->
-        (* todo: logical coordinates with winput.img.r and winput.screenr *)
+          (* less: logical coordinates with winput.img.r and winput.screenr *)
           let xy = m.Mouse.xy in
           (* less: goto scrolling if scroll buttons *)
-          let inside = 
-            Rectangle.pt_in_rect xy
-              (Rectangle.insetrect w.W.screenr Window.frame_border)
-          in
+          let inside = Window.pt_inside_frame xy w in
           (* todo: set scrolling *)
           (* todo: set moving *)
           if false
           then raise Todo
           else
              (* less: || scrolling *)
-            inside && (m.Mouse.buttons.Mouse.left || w.W.mouseopen)
+            inside && (w.W.mouseopen || m.Mouse.buttons.Mouse.left)
         | None -> false
       in
-      if sending
+      if sending_to_win
       then begin
         (* todo: set cursor *)
-        Globals.win () |> Common.if_some (fun win ->
-          Event.send win.W.chan_mouse m |> Event.sync
+        Globals.win () |> Common.if_some (fun w ->
+          (* less: send logical coordinates *)
+          Event.send w.W.chan_mouse m |> Event.sync
         )
       end else begin
         let wopt = Windows.window_at_point m.Mouse.xy in
@@ -53,11 +63,35 @@ let thread mouse =
         (* todo: if moving and buttons *)
         (* todo: set corner cursor again part2 *)
 
-        (* todo: if buttons *)
         if Mouse.has_click m
-        then begin
-          raise Todo
-        end
+        then 
+          let under_mouse =
+            match wopt, Globals.win () with
+            | None, _ -> Nothing
+            (* less: look if w2.topped > 0? seems useless *)
+            | Some w1, Some w2 when w1 == w2 -> CurrentWin w1
+            | Some w, _ -> OtherWin w
+          in
+          (match under_mouse, m.Mouse.buttons with
+          | (Nothing | CurrentWin _), { Mouse.left = true } -> 
+            ()
+          | Nothing,  { Mouse.middle = true } ->
+             middle_click_system m mouse
+          | CurrentWin w, { Mouse.middle = true } ->
+            if not w.W.mouseopen
+            then middle_click_system m mouse
+          | (Nothing | CurrentWin _), { Mouse.right = true } ->
+            right_click_system m mouse
+
+          | OtherWin w, { Mouse.left = true } ->
+            Wm.top_win w
+            (* less: should drain and wait that release up, unless winborder *)
+          | OtherWin w, ({ Mouse.middle = true } | {Mouse.right = true}) ->
+            Wm.top_win w
+            (* todo: should goto again *)
+            
+          | _ -> raise (Impossible "Mouse.has_click so one field is true")
+          );
         (* todo: reset moving *)
         (* less: drain *)
       end

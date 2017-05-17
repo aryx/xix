@@ -7,7 +7,7 @@ CMO= \
   window.cmo \
   globals.cmo \
   fid.cmo fs.cmo \
-  windows.cmo \
+  windows.cmo wm.cmo \
   thread_keyboard.cmo thread_mouse.cmo \
   test.cmo main.cmo
 

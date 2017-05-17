@@ -2,8 +2,6 @@ open Common
 
 type wid = int
 
-let frame_border = 4
-
 type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
@@ -32,6 +30,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Keyboard *)
   (* ---------------------------------------------------------------- *)
+  (* todo: need list of keys? not reactif enough if buffer one key only? *)
   chan_keyboard: Keyboard.key Event.channel;
 
   (* ---------------------------------------------------------------- *)
@@ -87,7 +86,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Misc *)
   (* ---------------------------------------------------------------- *)
-
+  mutable deleted: bool;
 
 }
 
@@ -95,3 +94,10 @@ let wid_counter =
   ref 0
 let topped_counter =
   ref 0
+
+let frame_border = 4
+
+let pt_inside_frame pt w =
+  Rectangle.pt_in_rect pt (Rectangle.insetrect w.screenr frame_border)
+let pt_on_frame pt w =
+  Rectangle.pt_in_rect pt w.screenr && not (pt_inside_frame pt w)

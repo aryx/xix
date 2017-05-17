@@ -11,4 +11,3 @@ let thread kbd =
       Event.send win.W.chan_keyboard key |> Event.sync
     )
   done
-

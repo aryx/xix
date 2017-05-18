@@ -11,9 +11,22 @@ type event =
 let middle_click_system m mouse =
   failwith "Todo: middle click"
 
-let right_click_system m mouse =
-  Mouse.set_cursor mouse Data.crosscursor;
-  failwith "Todo: right click"
+let right_click_system m mouse exitchan =
+  (* todo: set sweeping to true *)
+
+  let items = [
+    "New", (fun () -> raise Todo);
+    "Reshape", (fun () -> raise Todo);
+    "Move", (fun () -> raise Todo);
+    "Delete", (fun () -> raise Todo);
+    "Hide", (fun () -> raise Todo);
+    "Exit", (fun () ->
+      Event.send exitchan 0 |> Event.sync;
+    );
+  ] in
+  (* less: adjust menu with hidden windows *)
+  Menu_widgets.menu items
+
 
 
 type under_mouse =
@@ -21,7 +34,7 @@ type under_mouse =
   | CurrentWin of Window.t
   | OtherWin of Window.t
 
-let thread mouse =
+let thread (mouse, exitchan) =
   (* less: threadsetname *)
 
   while true do
@@ -83,7 +96,7 @@ let thread mouse =
             if not w.W.mouseopen
             then middle_click_system m mouse
           | (Nothing | CurrentWin _), { right = true } ->
-            right_click_system m mouse
+            right_click_system m mouse exitchan
 
           | OtherWin w, { left = true } ->
             Wm.top_win w

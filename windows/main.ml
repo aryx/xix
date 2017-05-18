@@ -33,7 +33,7 @@ let thread_main () =
   let _kbd_thread   = 
     Thread.create Thread_keyboard.thread kbd in
   let _mouse_thread = 
-    Thread.create Thread_mouse.thread mouse in
+    Thread.create Thread_mouse.thread (mouse, exit_chan) in
 
   (* Rio, a filesystem server *)
   let fs = Fs.init () in

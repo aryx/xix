@@ -1,6 +1,9 @@
 open Common
 
+module Unix1 = Unix
 module Unix2 = ThreadUnix
+
+(* todo: move out of windows/ at some point. where? *)
 
 type fcall = {
   fid: int;

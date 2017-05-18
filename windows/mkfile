@@ -15,7 +15,7 @@ CMO= \
   test.cmo main.cmo
 
 LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma \
-  ../lib_graphics/input/input.cma
+  ../lib_graphics/input/input.cma ../lib_graphics/widgets/widgets.cma
 
 #############################################################################
 # Compilers
@@ -29,7 +29,8 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I ../lib_graphics/geometry -I ../lib_graphics/draw -I ../lib_graphics/input
+OCAMLINCLUDES=-I ../lib_graphics/geometry -I ../lib_graphics/draw \
+ -I ../lib_graphics/input -I ../lib_graphics/widgets
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 

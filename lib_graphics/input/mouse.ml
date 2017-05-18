@@ -5,6 +5,9 @@ open Point
 module Unix1 = Unix
 module Unix2 = ThreadUnix
 
+module C = Cursor
+module M = Draw_marshal
+
 type t = {
   xy: Point.t;
   buttons: buttons;
@@ -27,6 +30,9 @@ type ctl = {
   (* streams of mouse events that can be received from mouse thread *)
   chan: t Event.channel;
   (* less: resize_chan: unit Event.channel; *) 
+
+  (* /dev/cursor *)
+  cursor_fd: Unix1.file_descr;
 }
 
 let thread_mouse mousectl =
@@ -80,7 +86,8 @@ let thread_mouse mousectl =
 let init () =
   let (chan: t Event.channel) = Event.new_channel () in
   let fd = Unix1.openfile "/dev/mouse" [Unix1.O_RDONLY] 0o666 in
-  let mousectl = { fd = fd; chan = chan } in
+  let cursor_fd = Unix1.openfile "/dev/cursor" [Unix1.O_RDWR] 0o666 in
+  let mousectl = { fd = fd; chan = chan; cursor_fd = cursor_fd } in
 
   let thread = Thread.create thread_mouse mousectl in
   mousectl
@@ -90,3 +97,13 @@ let receive mousectl =
 
 let move_to mousectl pt =
   raise Todo
+
+let set_cursor mousectl cursor =
+  let str = 
+    M.bp_point cursor.C.offset ^ 
+    (* a little bit inefficient probably *)
+    ([cursor.C.clr; cursor.C.set] 
+        |> Array.concat |> Array.to_list |> List.map (String.make 1)
+        |> String.concat "")
+  in
+  Unix2.write mousectl.cursor_fd str 0 (String.length str)

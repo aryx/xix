@@ -24,10 +24,14 @@ let init_colors display =
     border := Image.alloc_color display (Color.medgreen);
     text := display.I.black;
     highligted_text := !back;
-    raise Todo
   end
 
-let menu items button (m, mouse) (display, desktop, view) =
+let menu items button (m, mouse) (display, desktop, view, font) =
   init_colors display;
   (* less: reset clipr and repl on view? *)
+  let max_width = 
+    items |> List.map (fun (str, _f) -> Font.string_width font str)
+          |> List.fold_left max 0
+  in
+  (* pr (spf "size = %d" max_width) *)
   raise Todo

@@ -29,6 +29,8 @@ let thread_main () =
   (* less: let view = Layer.window_init () in *)
   let view = display.Image.image in
   (* less: let viewr save? *)
+  (* todo: *)
+  let font = Font.default_font () in
 
   let background = 
     Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
@@ -38,7 +40,7 @@ let thread_main () =
   let mouse = Mouse.init () in
   let kbd = Keyboard.init () in
 
-  let desktop = Baselayer.alloc view background in
+  let desktop = () (*TODO Baselayer.alloc view background*) in
   Draw.draw view view.I.r background None Point.zero;
   Display.flush display;
 
@@ -49,8 +51,8 @@ let thread_main () =
   let _kbd_thread   = 
     Thread.create Thread_keyboard.thread kbd in
   let _mouse_thread = 
-    Thread.create Thread_mouse.thread 
-      (exit_chan, mouse, (display, desktop, view)) in
+    Thread.create Thread_mouse.thread (exit_chan, 
+                                       mouse, (display, desktop, view, font)) in
 
   (* Rio, a filesystem server *)
   let fs = Fs.init () in

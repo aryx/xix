@@ -9,10 +9,12 @@ type event =
   (* less: Resize? other? *)
 
 let middle_click_system m mouse =
-  failwith "Todo: middle click"
+  pr "Todo: middle click"
 
-let right_click_system exitchan (m, mouse) (display, desktop, view) =
+let right_click_system exitchan 
+    (m, mouse) (display, desktop, view, font) =
   (* todo: set sweeping to true *)
+  pr "Right click";
 
   let items = [
     "New", (fun () -> raise Todo);
@@ -25,7 +27,8 @@ let right_click_system exitchan (m, mouse) (display, desktop, view) =
     );
   ] in
   (* less: adjust menu with hidden windows *)
-  Menu_widget.menu items Mouse.Right (m, mouse) (display, desktop, view)
+  Menu_widget.menu items Mouse.Right 
+    (m, mouse) (display, desktop, view, font)
 
 
 
@@ -34,7 +37,8 @@ type under_mouse =
   | CurrentWin of Window.t
   | OtherWin of Window.t
 
-let thread (exitchan, mouse, (display, desktop, view)) =
+let thread (exitchan, 
+            mouse, (display, desktop, view, font)) =
   (* less: threadsetname *)
 
   while true do
@@ -96,7 +100,8 @@ let thread (exitchan, mouse, (display, desktop, view)) =
             if not w.W.mouseopen
             then middle_click_system m mouse
           | (Nothing | CurrentWin _), { right = true } ->
-            right_click_system exitchan (m, mouse) (display, desktop, view)
+            right_click_system exitchan 
+              (m, mouse) (display, desktop, view, font)
 
           | OtherWin w, { left = true } ->
             Wm.top_win w

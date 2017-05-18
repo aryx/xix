@@ -11,6 +11,21 @@ module M = Draw_marshal
 
 type t = Image.display
 
+
+let rec fake_image = { Image.
+   id = -1; chans = []; depth = -1; repl = false;
+   r = Rectangle.zero; clipr =  Rectangle.zero; 
+   display = fake_display;
+}
+and fake_display = {  Image.
+  image = fake_image; dirno = -1; ctl = Unix1.stderr; data = Unix1.stderr;
+  white = fake_image; black = fake_image; 
+  opaque = fake_image; transparent = fake_image;
+  imageid = -1; buf = ""; bufp = -1;
+}
+
+
+
 (* less: devdir? windir? errorfn? *)
 let init () =
   (* less: OCEXEC *)
@@ -82,11 +97,6 @@ let init () =
     black = fake_image;
     opaque = fake_image;
     transparent = fake_image;
-  }
-  and fake_image = { Image.
-   id = -1; chans = []; depth = -1; repl = false;
-   r = Rectangle.zero; clipr =  Rectangle.zero; 
-   display = display;
   }
   in
   assert(image.id = 0);

@@ -56,6 +56,7 @@ let rect_in_rect r1 r2 =
 
 (* less: rectXrect?? *)
 
+(* reduce if n is positive, enlarge if negative *)
 let insetrect r n =
   { min = { x = r.min.x + n; y = r.min.y + n };
     max = { x = r.max.x - n; y = r.max.y - n };

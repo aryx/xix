@@ -11,4 +11,4 @@ let default_font () = {
 
 
 let string_width _font str =
-  String.length str * 10
+  String.length str * 6

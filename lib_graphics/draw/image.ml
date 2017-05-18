@@ -125,4 +125,5 @@ let free img =
 
 (* shortcuts *)
 let alloc_color display color =
+  (* less: opti: could also use view.chan as default channel as in menuhits *)
   alloc display (Rectangle.r  0 0 1 1) Channel.rgb24 true color

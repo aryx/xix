@@ -9,20 +9,32 @@ module C = Cursor
 module M = Draw_marshal
 
 type t = {
-  xy: Point.t;
+  pos: Point.t;
   buttons: buttons;
   msec: int;
 }
-(* less: opti: bitset *)
-and buttons = {
-  left: bool;
-  middle: bool;
-  right: bool;
-}  
+
+(* rio does not use the property that you can click multiple buttons 
+ * at the same time, but some application might, so we need to provide 
+ * the whole state.
+ * less: opti: bitset
+ *)
+and buttons = { left: bool; middle: bool; right: bool; }
+
+(* this type is sometimes more convenient to use *)
+type button = Left | Middle | Right
 
 let has_click m = 
   let buttons = m.buttons in
   buttons.left || buttons.middle || buttons.right
+
+let has_button m button =
+  let buttons = m.buttons in
+  match button with
+  | Left -> buttons.left
+  | Middle -> buttons.middle
+  | Right -> buttons.right
+  
 
 type ctl = {
   (* /dev/mouse *)
@@ -60,7 +72,7 @@ let thread_mouse mousectl =
     (match buf.[0] with
     | 'm' ->
       let m = {
-        xy = { x = int_at 0; y = int_at 1; };
+        pos = { x = int_at 0; y = int_at 1; };
         buttons = 
           (match int_at 2 with
           | 0 -> { left = false; middle = false; right = false }

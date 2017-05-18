@@ -25,7 +25,7 @@ let right_click_system exitchan (m, mouse) (display, desktop, view) =
     );
   ] in
   (* less: adjust menu with hidden windows *)
-  Menu_widget.menu items (m, mouse) (display, desktop, view)
+  Menu_widget.menu items Mouse.Right (m, mouse) (display, desktop, view)
 
 
 
@@ -53,7 +53,7 @@ let thread (exitchan, mouse, (display, desktop, view)) =
         match Globals.win () with
         | Some w ->
           (* less: logical coordinates with winput.img.r and winput.screenr *)
-          let xy = m.xy in
+          let xy = m.pos in
           (* less: goto scrolling if scroll buttons *)
           let inside = Window.pt_inside_frame xy w in
           (* todo: set scrolling *)
@@ -73,7 +73,7 @@ let thread (exitchan, mouse, (display, desktop, view)) =
           Event.send w.W.chan_mouse m |> Event.sync
         )
       end else begin
-        let wopt = Windows.window_at_point m.xy in
+        let wopt = Windows.window_at_point m.pos in
         (* todo: set corner cursor if on corner part1 else riosetcursor *)
         (* todo: if moving and buttons *)
         (* todo: set corner cursor again part2 *)

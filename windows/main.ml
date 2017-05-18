@@ -1,6 +1,22 @@
+(* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module I = Image
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* An OCaml port of rio, the Plan 9 windowing system.
+ *
+ * Main limitations compared to rio:
+ *  - no unicode
+ * 
+ * todo:
+ *  - you need to disable preempt? otherwise can have concurrent
+ *    read on mousectl between thread_mouse and read_mouse
+ *    in menuhit?
+ *)
+
 
 let usage = 
   "usage: rio [options]"

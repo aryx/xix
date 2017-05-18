@@ -14,7 +14,6 @@ let middle_click_system m mouse =
 let right_click_system exitchan 
     (m, mouse) (display, desktop, view, font) =
   (* todo: set sweeping to true *)
-  pr "Right click";
 
   let items = [
     "New", (fun () -> raise Todo);

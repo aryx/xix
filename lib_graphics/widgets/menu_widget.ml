@@ -1,4 +1,6 @@
 open Common
+open Point
+open Rectangle
 
 module I = Image
 
@@ -10,12 +12,16 @@ let vspacing   = 2 (* extra spacing between lines of text *)
 let margin     = 4 (* outside to text *)
 let border_size = 2 (* width of outlining border *)
 
-let background      = ref Display.fake_image
-let high            = ref Display.fake_image
-let border          = ref Display.fake_image
-let text            = ref Display.fake_image
-let highligted_text = ref Display.fake_image
-let menutext        = ref Display.fake_image
+let background             = ref Display.fake_image
+let background_highlighted = ref Display.fake_image
+let border_color           = ref Display.fake_image
+let text_color             = ref Display.fake_image
+let text_highlighted       = ref Display.fake_image
+(*let menutext        = ref Display.fake_image *)
+
+(* todo: remove once get List.iteri in 1.07 *)
+let list_iteri f xs =
+  xs |> Array.of_list |> Array.iteri f
 
 let init_colors display =
   if !background == Display.fake_image
@@ -24,11 +30,43 @@ let init_colors display =
     (* less: opti: use view->chan instead of rgb24 used by Image.alloc_color *)
     (* todo: allocimagemix? *)
     background := Image.alloc_color display (Color.palegreen);
-    high := Image.alloc_color display (Color.darkgreen);
-    border := Image.alloc_color display (Color.medgreen);
-    text := display.I.black;
-    highligted_text := !background;
+    background_highlighted := Image.alloc_color display (Color.darkgreen);
+    border_color := Image.alloc_color display (Color.medgreen);
+    text_color := display.I.black;
+    text_highlighted := !background;
   end
+
+(* "Text is the rectangle holding the text elements.
+ * Return the rectangle, including its black edge, holding element i."
+ *)
+let rect_of_menu_entry textr i font =
+  if i < 0
+  then failwith (spf "rect_of_menu_entry with negative entry %d" i);
+  let line_height = font.Font.height + vspacing in
+  let rminy = textr.min.y + i * line_height in
+  let r = { min = { textr.min with y = rminy };
+            max = { textr.max with y = rminy + line_height };
+          }
+  in
+  (* include black edge for selection *)
+  Rectangle.insetrect r (border_size - margin)
+
+
+let paint_item img str i textr font highlight =
+  (* todo: save and restore *)
+  let line_height = font.Font.height + vspacing in
+  let r = rect_of_menu_entry textr i font in
+  let pt = { x = (textr.min.x + textr.max.x - Font.string_width font str) / 2;
+             y = textr.min.y + i * line_height 
+           }
+  in
+  Draw.draw img r 
+    (if highlight then !background_highlighted else !background) None 
+    (*pt??*) Point.zero;
+  Text.string img pt 
+    (if highlight then !text_highlighted else !text_color) 
+    (*pt??*) Point.zero font str;
+  ()
 
 let menu items button (m, mouse) (display, desktop, view, font) =
   init_colors display;
@@ -66,7 +104,12 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   let img = view in
 
   Draw.draw img menur !background None Point.zero;
-  Polygon.border img menur border_size !border Point.zero;
+  Polygon.border img menur border_size !border_color Point.zero;
+
+  (* less: nitems_to_draw if scrolling *)
+  items |> list_iteri (fun i (str, _f) ->
+    paint_item img str i textr font false
+  );
 
   (* todo: Layer.free *)
   Display.flush display

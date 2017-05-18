@@ -3,8 +3,7 @@
 # Src
 #############################################################################
 
-CMO= cursor.cmo mouse.cmo keyboard.cmo
-
+CMO= menu_widget.cmo text_widget.cmo frame_widget.cmo
 
 #############################################################################
 # Compilers
@@ -18,7 +17,7 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I ../draw -I ../geometry 
+OCAMLINCLUDES=-I ../draw -I ../geometry -I ../input
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 OCAMLLDFLAGS=
@@ -30,9 +29,9 @@ CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 # Toplevel targets
 #############################################################################
 
-all:V: input.cma
+all:V: widgets.cma
 
-input.cma: $CMO mkfile
+widgets.cma: $CMO mkfile
 	$OCAMLC -a -o $target $CMO
 
 clean:V:

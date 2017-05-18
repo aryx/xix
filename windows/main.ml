@@ -22,7 +22,7 @@ let thread_main () =
   let mouse = Mouse.init () in
   let kbd = Keyboard.init () in
 
-  (*let desktop = Baselayer.alloc view background in*)
+  let desktop = Baselayer.alloc view background in
   Draw.draw view view.I.r background None Point.zero;
   Display.flush display;
 
@@ -33,7 +33,8 @@ let thread_main () =
   let _kbd_thread   = 
     Thread.create Thread_keyboard.thread kbd in
   let _mouse_thread = 
-    Thread.create Thread_mouse.thread (mouse, exit_chan) in
+    Thread.create Thread_mouse.thread 
+      (exit_chan, mouse, (display, desktop, view)) in
 
   (* Rio, a filesystem server *)
   let fs = Fs.init () in

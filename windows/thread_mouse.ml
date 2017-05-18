@@ -11,7 +11,7 @@ type event =
 let middle_click_system m mouse =
   failwith "Todo: middle click"
 
-let right_click_system m mouse exitchan =
+let right_click_system exitchan (m, mouse) (display, desktop, view) =
   (* todo: set sweeping to true *)
 
   let items = [
@@ -25,7 +25,7 @@ let right_click_system m mouse exitchan =
     );
   ] in
   (* less: adjust menu with hidden windows *)
-  Menu_widgets.menu items
+  Menu_widget.menu items (m, mouse) (display, desktop, view)
 
 
 
@@ -34,7 +34,7 @@ type under_mouse =
   | CurrentWin of Window.t
   | OtherWin of Window.t
 
-let thread (mouse, exitchan) =
+let thread (exitchan, mouse, (display, desktop, view)) =
   (* less: threadsetname *)
 
   while true do
@@ -96,7 +96,7 @@ let thread (mouse, exitchan) =
             if not w.W.mouseopen
             then middle_click_system m mouse
           | (Nothing | CurrentWin _), { right = true } ->
-            right_click_system m mouse exitchan
+            right_click_system exitchan (m, mouse) (display, desktop, view)
 
           | OtherWin w, { left = true } ->
             Wm.top_win w

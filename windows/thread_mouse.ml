@@ -12,6 +12,7 @@ let middle_click_system m mouse =
   failwith "Todo: middle click"
 
 let right_click_system m mouse =
+  Mouse.set_cursor mouse Data.crosscursor;
   failwith "Todo: right click"
 
 

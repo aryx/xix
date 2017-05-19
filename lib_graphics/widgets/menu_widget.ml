@@ -8,6 +8,12 @@ module I = Image
 type item = (string * (unit -> unit))
 type items = item list
 
+(* outside   | outline | space |  text ...
+ *           <-----------------> 
+ *               margin
+ *           <--------->
+ *            border size
+ *)
 let vspacing   = 2 (* extra spacing between lines of text *)
 let margin     = 4 (* outside to text *)
 let border_size = 2 (* width of outlining border *)
@@ -51,11 +57,21 @@ let rect_of_menu_entry textr i font =
   (* include black edge for selection *)
   Rectangle.insetrect r (border_size - margin)
 
+type action =
+  | SaveOn of Image.t
+  | RestoreFrom of Image.t
+  | Nothing
 
-let paint_item img str i textr font highlight =
-  (* todo: save and restore *)
+let paint_item (img:Image.t) (font:Font.t) (i:int) (entries: string array) textr highlight action =
   let line_height = font.Font.height + vspacing in
   let r = rect_of_menu_entry textr i font in
+  let str = entries.(i) in
+  
+  (match action with
+  | Nothing -> ()
+  | SaveOn save -> Draw.draw save save.I.r img None r.min 
+  | RestoreFrom save -> Draw.draw img r save None save.I.r.min
+  );
   let pt = { x = (textr.min.x + textr.max.x - Font.string_width font str) / 2;
              y = textr.min.y + i * line_height 
            }
@@ -68,8 +84,46 @@ let paint_item img str i textr font highlight =
     (*pt??*) Point.zero font str;
   ()
 
-let scan_items img mouse textr save =
-  raise Todo
+let paint_item_opt img font iopt entries textr highlight action =
+  iopt |> Common.if_some (fun i ->
+    paint_item img font i entries textr highlight action
+  )
+
+let menu_selection font textr p =
+  let line_height = font.Font.height + vspacing in
+  (* todo? insetrect Margin? *)
+  let r = textr in
+  if not (Rectangle.pt_in_rect p r)
+  then None
+  else
+    let i = (p.y - r.min.y) / line_height in
+    Some i
+
+
+let scan_items img font  mouse button  iopt entries textr  save =
+  paint_item_opt img font  iopt entries textr true (SaveOn save);
+  let rec loop_while_button m iopt =
+    if Mouse.has_button m button
+    then 
+    let i_opt = menu_selection font textr m.Mouse.pos in
+    (match i_opt with
+    | Some i when (Some i) = iopt -> 
+      loop_while_button (Mouse.receive mouse |> Event.sync) iopt
+    | None -> 
+      paint_item_opt img font iopt entries textr  false (RestoreFrom save);
+      None
+    | Some i ->
+      paint_item_opt img font  iopt entries textr  false(RestoreFrom save);
+      let iopt = Some i in
+      paint_item_opt img font iopt entries textr  true (SaveOn save);
+      loop_while_button (Mouse.receive mouse |> Event.sync) iopt
+    )
+    else iopt
+  in
+  loop_while_button (Mouse.receive mouse |> Event.sync) iopt
+      
+
+
 
 
 let menu items button (m, mouse) (display, desktop, view, font) =
@@ -83,7 +137,8 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   (* todo: if scrolling *)
   let width = max_width in
   let nitems_to_draw = List.length items in
-  (* less: save lasti *)
+  let entries = items |> List.map fst |> Array.of_list in
+  (* less: save lasthit between calls to menu and restore it here *)
   let lasti = 0 in
 
   let line_height = font.Font.height + vspacing in
@@ -91,7 +146,7 @@ let menu items button (m, mouse) (display, desktop, view, font) =
 
   let r = Rectangle.r 0 0 width height in
   let r = Rectangle.insetrect r (-margin) in
-  (* center on last entry *)
+  (* todo: center on lasti entry *)
   let r = Rectangle.sub_pt r 
     (Point.p (width / 2) (lasti * line_height + font.Font.height / 2)) in
   (* adjust to mouse position *)
@@ -106,39 +161,43 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   (* todo: Layer.alloc *)
   (* less: handle case where no desktop? *)
   let img = view in
-  (* todo: save *)
-  let save = () in
+  let save = 
+    Image.alloc display (rect_of_menu_entry textr 0 font) view.I.chans false
+      Color.black
+  in
 
   Draw.draw img menur !background None Point.zero;
   Polygon.border img menur border_size !border_color Point.zero;
 
   (* less: nitems_to_draw if scrolling *)
-  items |> list_iteri (fun i (str, _f) ->
-    paint_item img str i textr font false
+  items |> list_iteri (fun i (_str, _f) ->
+    paint_item img font i  entries textr false Nothing
   );
 
   let rec loop_while_button m acc =
     if Mouse.has_button m button
     then begin
-      let lasti_opt = scan_items img mouse textr save in
-      (match lasti_opt with
-      | Some x -> Some x
+      let acc = scan_items img font  mouse button  acc entries textr  save in
+      (match acc with
+      | Some _ -> acc
       | None ->
-        let rec loop_while_outside_textr_and_button m acc =
+        let rec loop_while_outside_textr_and_button m =
           if not (Rectangle.pt_in_rect m.Mouse.pos textr) &&
              Mouse.has_button m button
-          then begin
+          then
             (* less: if scrolling *)
             loop_while_outside_textr_and_button 
-              (Mouse.receive mouse |> Event.sync) acc
-          end
-          else loop_while_button m acc
+              (Mouse.receive mouse |> Event.sync)
+          else 
+            (* maybe back in the textr! *)
+            loop_while_button m None
         in
-        loop_while_outside_textr_and_button m acc
+        loop_while_outside_textr_and_button m
       )
     end else acc
   in
-  let lasti_opt = loop_while_button m (Some lasti) in
+  let iopt = loop_while_button m (Some lasti) in
+  (* todo: find lasti entry and call its callback *)
 
   (* todo: Layer.free *)
   Display.flush display

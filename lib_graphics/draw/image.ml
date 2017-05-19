@@ -81,7 +81,9 @@ let add_buf display str =
 
 
 
-(* less: _allocimage and initial image (and screenid and refresh) *)
+(* less: _allocimage and initial image (and screenid and refresh) and
+ *  optional color (can pass -1 mean no color to set)
+ *)
 let alloc display r chans repl color =
   let depth = Channel.depth_of_channels chans in
   if chans = [] || depth = 0

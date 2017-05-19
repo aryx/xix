@@ -68,6 +68,10 @@ let paint_item img str i textr font highlight =
     (*pt??*) Point.zero font str;
   ()
 
+let scan_items img mouse textr save =
+  raise Todo
+
+
 let menu items button (m, mouse) (display, desktop, view, font) =
   init_colors display;
   (* less: reset clipr and repl on view? *)
@@ -102,6 +106,8 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   (* todo: Layer.alloc *)
   (* less: handle case where no desktop? *)
   let img = view in
+  (* todo: save *)
+  let save = () in
 
   Draw.draw img menur !background None Point.zero;
   Polygon.border img menur border_size !border_color Point.zero;
@@ -110,6 +116,29 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   items |> list_iteri (fun i (str, _f) ->
     paint_item img str i textr font false
   );
+
+  let rec loop_while_button m acc =
+    if Mouse.has_button m button
+    then begin
+      let lasti_opt = scan_items img mouse textr save in
+      (match lasti_opt with
+      | Some x -> Some x
+      | None ->
+        let rec loop_while_outside_textr_and_button m acc =
+          if not (Rectangle.pt_in_rect m.Mouse.pos textr) &&
+             Mouse.has_button m button
+          then begin
+            (* less: if scrolling *)
+            loop_while_outside_textr_and_button 
+              (Mouse.receive mouse |> Event.sync) acc
+          end
+          else loop_while_button m acc
+        in
+        loop_while_outside_textr_and_button m acc
+      )
+    end else acc
+  in
+  let lasti_opt = loop_while_button m (Some lasti) in
 
   (* todo: Layer.free *)
   Display.flush display

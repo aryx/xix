@@ -1,4 +1,5 @@
 # -*- sh -*-
+TOP=..
 #############################################################################
 # Src
 #############################################################################
@@ -14,8 +15,9 @@ CMO= \
   ninep.cmo worker_request.cmo thread_fileserver.cmo \
   test.cmo main.cmo
 
-LIBS=../lib_graphics/geometry/geometry.cma ../lib_graphics/draw/draw.cma \
-  ../lib_graphics/input/input.cma ../lib_graphics/widgets/widgets.cma
+LIBS=$TOP/commons2/commons.cma \
+ $TOP/lib_graphics/geometry/geometry.cma $TOP/lib_graphics/draw/draw.cma \
+ $TOP/lib_graphics/input/input.cma $TOP/lib_graphics/widgets/widgets.cma
 
 #############################################################################
 # Compilers
@@ -29,8 +31,9 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I ../lib_graphics/geometry -I ../lib_graphics/draw \
- -I ../lib_graphics/input -I ../lib_graphics/widgets
+OCAMLINCLUDES=-I $TOP/commons2 -I $TOP/lib_graphics/geometry \
+ -I $TOP/lib_graphics/draw -I $TOP/lib_graphics/input \
+ -I $TOP/lib_graphics/widgets
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 
@@ -38,9 +41,14 @@ OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 #CAMLLIB=/usr/local/lib/ocaml
 CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 
-OCAMLLDFLAGS= -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
+OCAMLLDFLAGS= -thread -custom -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
+#-verbose
 
-
+SYSLIBS=unix.cma threads.cma str.cma
+CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
+        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a\
+        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
+        -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
 #############################################################################
 # Toplevel targets
@@ -51,7 +59,7 @@ all:V: $PROGS
 
 # use of -l so no automagic lib and no _main
 rio: $CMO $LIBS mkfile
-	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target unix.cma threads.cma str.cma $LIBS $CMO -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
+	$OCAMLC $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $CMO $CCLIBS
 
 hellorio: hellorio.cmo mkfile
 	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target unix.cma threads.cma str.cma $LIBS hellorio.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8

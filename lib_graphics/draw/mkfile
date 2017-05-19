@@ -1,10 +1,10 @@
 # -*- sh -*-
+TOP=../..
 #############################################################################
 # Src
 #############################################################################
 
-CMO= common.cmo \
-     channel.cmo color.cmo \
+CMO= channel.cmo color.cmo \
      draw_marshal.cmo image.cmo display.cmo \
      draw.cmo \
      line.cmo polygon.cmo ellipse.cmo arc.cmo \
@@ -23,7 +23,7 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I ../geometry
+OCAMLINCLUDES=-I $TOP/commons2 -I ../geometry
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 OCAMLLDFLAGS=

@@ -1,10 +1,9 @@
 # -*- sh -*-
-TOP=../..
 #############################################################################
 # Src
 #############################################################################
 
-CMO= menu_widget.cmo text_widget.cmo frame_widget.cmo
+CMO= common.cmo
 
 #############################################################################
 # Compilers
@@ -18,7 +17,7 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I $TOP/commons2 -I ../draw -I ../geometry -I ../input
+OCAMLINCLUDES=
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 OCAMLLDFLAGS=
@@ -30,9 +29,9 @@ CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 # Toplevel targets
 #############################################################################
 
-all:V: widgets.cma
+all:V: commons.cma
 
-widgets.cma: $CMO mkfile
+commons.cma: $CMO mkfile
 	$OCAMLC -a -o $target $CMO
 
 clean:V:

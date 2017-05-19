@@ -129,11 +129,13 @@ let scan_items img font  mouse button  iopt entries textr  save =
 let menu items button (m, mouse) (display, desktop, view, font) =
   init_colors display;
   (* less: reset clipr and repl on view? *)
+
+  (* compute width and height and basic config *)
+
   let max_width = 
     items |> List.map (fun (str, _f) -> Font.string_width font str)
           |> List.fold_left max 0
   in
-  (* pr (spf "size = %d" max_width) *)
   (* todo: if scrolling *)
   let width = max_width in
   let nitems_to_draw = List.length items in
@@ -144,9 +146,11 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   let line_height = font.Font.height + vspacing in
   let height = nitems_to_draw * line_height in
 
+  (* compute rectangles *)
+
   let r = Rectangle.r 0 0 width height in
   let r = Rectangle.insetrect r (-margin) in
-  (* todo: center on lasti entry *)
+  (* center on lasti entry *)
   let r = Rectangle.sub_pt r 
     (Point.p (width / 2) (lasti * line_height + font.Font.height / 2)) in
   (* adjust to mouse position *)
@@ -158,6 +162,8 @@ let menu items button (m, mouse) (display, desktop, view, font) =
 
   let textr = Rectangle.insetrect menur margin in
 
+  (* set images to draw on *)
+
   (* todo: Layer.alloc *)
   (* less: handle case where no desktop? *)
   let img = view in
@@ -166,6 +172,8 @@ let menu items button (m, mouse) (display, desktop, view, font) =
       Color.black
   in
 
+  (* painting *)
+
   Draw.draw img menur !background None Point.zero;
   Polygon.border img menur border_size !border_color Point.zero;
 
@@ -173,6 +181,8 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   items |> list_iteri (fun i (_str, _f) ->
     paint_item img font i  entries textr false Nothing
   );
+
+  (* interact *)
 
   let rec loop_while_button m acc =
     if Mouse.has_button m button
@@ -201,4 +211,3 @@ let menu items button (m, mouse) (display, desktop, view, font) =
 
   (* todo: Layer.free *)
   Display.flush display
-    

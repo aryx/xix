@@ -4,6 +4,7 @@ open Common
 module Unix1 = Unix
 module Unix2 = ThreadUnix
 
+(* todo: unicode! rune! *)
 type key = char
 
 type ctl = {
@@ -23,17 +24,16 @@ let thread_keyboard ctl =
     if n <= 0
     then failwith (spf "wrong format in /dev/cons; read %d chars (%s)" 
                      n (String.escaped buf));
-    (* todo: runes *)
+    (* todo: rune parsing *)
     for i = 0 to n - 1 do
       (*pr (spf "sending %c" buf.[i]);*)
-      let ev = Event.send ctl.chan buf.[i] in
-      Event.sync ev
+      Event.send ctl.chan buf.[i] |> Event.sync
     done
   done
   
 let init () =
   let (chan: key Event.channel) = Event.new_channel () in
-  let fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
+  let fd      = Unix1.openfile "/dev/cons"    [Unix1.O_RDONLY] 0o666 in
   let consctl = Unix1.openfile "/dev/consctl" [Unix1.O_WRONLY] 0o666 in
 
   let ctl = { fd = fd; chan = chan; consctl = consctl } in
@@ -48,5 +48,3 @@ let init () =
 
 let receive ctl =
   Event.receive ctl.chan
-
-    

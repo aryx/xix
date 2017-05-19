@@ -1,5 +1,5 @@
 
-(* todo: Int32.t *)
+(* less: opti: Int32.t *)
 type t = {
   r: int8;
   g: int8;
@@ -16,8 +16,8 @@ type rgba = t
 let mk r g b a =
   { r = r; g = g; b = b; a = a }
 
-let mk2 r g b =
-  { r = r; g = g; b = b; a = 0xFF }
+let mk2 r g b = 
+  mk r g b 0xFF
 
 let opaque = mk 0xFF 0xFF 0xFF 0xFF
 let transparent = mk 0x00 0x00 0x00 0x00

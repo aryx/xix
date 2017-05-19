@@ -109,6 +109,18 @@ let flush display =
   Image.add_buf display "v";
   Image.flush_buffer display
 
-let debug display =
-  Image.add_buf display ("D" ^ M.bp_bool true);
+
+
+let debug_set display b =
+  Image.add_buf display ("D" ^ M.bp_bool b);
   Image.flush_buffer display
+
+let debug display =
+  debug_set display true
+
+let with_debug display f =
+  debug_set display true;
+  f ();
+  debug_set display false;
+  ()
+

@@ -22,7 +22,9 @@ let init label =
   display.D.transparent <- display.D.black;
   
   (* less: atexit(drawshutdown) *)
-  (* todo: font, label, window *)
+  (* less: font, label, window?
+   *  or force caller to call separate functions for those?
+   *)
   display
 
 let adjust_str_for_op str op =

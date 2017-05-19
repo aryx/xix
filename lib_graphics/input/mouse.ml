@@ -11,11 +11,12 @@ module M = Draw_marshal
 type t = {
   pos: Point.t;
   buttons: buttons;
+  (* ?? *)
   msec: int;
 }
 
 (* rio does not use the property that you can click multiple buttons 
- * at the same time, but some application might, so we need to provide 
+ * at the same time, but some applications might, so we need to provide 
  * the whole state.
  * less: opti: bitset
  *)
@@ -41,18 +42,21 @@ type ctl = {
   fd: Unix1.file_descr;
   (* streams of mouse events that can be received from mouse thread *)
   chan: t Event.channel;
-  (* less: resize_chan: unit Event.channel; *) 
+  (* todo: resize_chan: unit Event.channel; *) 
 
   (* /dev/cursor *)
   cursor_fd: Unix1.file_descr;
+
+  (* less: image? *)
 }
 
-let thread_mouse mousectl =
+let thread_mouse ctl =
   (* less: threadsetname? *)
+  (* 'm':1 [xpos:4] [ypos:4] [button:4] [mseg:4] *)
   let bufsize = 1 + 4*12 in
   let buf = String.make bufsize ' ' in
   while true do
-    let n = Unix2.read mousectl.fd buf 0 bufsize in
+    let n = Unix2.read ctl.fd buf 0 bufsize in
     if n <> bufsize
     then failwith (spf "wrong format in /dev/mouse; read %d chars (%s)" 
                      n (String.escaped buf));
@@ -61,7 +65,7 @@ let thread_mouse mousectl =
       let s = String.sub buf (1 + (n * 12)) 12 in
       if s =~ "^[ ]*\\([^ ]+\\)[ ]*$"
       then Common.matched1 s
-      else failwith (spf "not a /dev/draw/new entry, got %s" s)
+      else failwith (spf "not a /dev/mouse entry, got %s" s)
     in
     let int_at n = 
       try int_of_string (str_at n)
@@ -74,19 +78,17 @@ let thread_mouse mousectl =
       let m = {
         pos = { x = int_at 0; y = int_at 1; };
         buttons = 
-          (match int_at 2 with
-          | 0 -> { left = false; middle = false; right = false }
-          | 1 -> { left = true; middle = false; right = false }
-          | 2 -> { left = false; middle = true; right = false }
-          | 4 -> { left = false; middle = false; right = true }
-          | x -> failwith (spf "Mouse.thread_mouse: not handled %d" x)
-          );
+          (let i = int_at 2 in
+           (* less: sanity check between 0 and 7 *)
+           { left   = (i land 1) <> 0; 
+             middle = (i land 2) <> 0; 
+             right  = (i land 4) <> 0;
+           });
         msec = int_at 3;
       }
       in
-      let ev = Event.send mousectl.chan m in
-      Event.sync ev
-    | 'r' -> raise Todo
+      Event.send ctl.chan m |> Event.sync
+    | 'r' -> failwith "Mouse.thread: resize event: Todo"
     | x -> failwith (spf "wrong format in /dev/mouse: %c (%s)" x 
                        (String.escaped buf))
     )
@@ -94,23 +96,25 @@ let thread_mouse mousectl =
 
   
 
-(* less: image *)
+(* less: take image parameter? *)
 let init () =
   let (chan: t Event.channel) = Event.new_channel () in
-  let fd = Unix1.openfile "/dev/mouse" [Unix1.O_RDONLY] 0o666 in
-  let cursor_fd = Unix1.openfile "/dev/cursor" [Unix1.O_RDWR] 0o666 in
-  let mousectl = { fd = fd; chan = chan; cursor_fd = cursor_fd } in
+  let fd        = Unix1.openfile "/dev/mouse"  [Unix1.O_RDWR] 0o666 in
+  let cursor_fd = Unix1.openfile "/dev/cursor" [Unix1.O_RDWR]   0o666 in
 
-  let thread = Thread.create thread_mouse mousectl in
-  mousectl
+  let ctl = { fd = fd; chan = chan; cursor_fd = cursor_fd } in
 
-let receive mousectl =
-  Event.receive mousectl.chan
+  let thread = Thread.create thread_mouse ctl in
+  ctl
 
-let move_to mousectl pt =
+let receive ctl =
+  Event.receive ctl.chan
+
+(* hence O_RDWR for /dev/mouse *)
+let move_to ctl pt =
   raise Todo
 
-let set_cursor mousectl cursor =
+let set_cursor ctl cursor =
   let str = 
     M.bp_point cursor.C.offset ^ 
     (* a little bit inefficient probably *)
@@ -118,4 +122,4 @@ let set_cursor mousectl cursor =
         |> Array.concat |> Array.to_list |> List.map (String.make 1)
         |> String.concat "")
   in
-  Unix2.write mousectl.cursor_fd str 0 (String.length str)
+  Unix2.write ctl.cursor_fd str 0 (String.length str)

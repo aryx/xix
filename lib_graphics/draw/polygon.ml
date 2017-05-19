@@ -27,4 +27,3 @@ let border dst r i color sp =
   Draw.draw dst (Rectangle.r (r.max.x - i) (r.min.y + i) r.max.x (r.max.y - i))
     color None sp;
   ()
-  

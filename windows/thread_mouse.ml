@@ -16,7 +16,7 @@ let right_click_system exitchan
   (* todo: set sweeping to true *)
 
   let items = [
-    "New", (fun () -> raise Todo);
+    "New", (fun () -> pr "New");
     "Reshape", (fun () -> raise Todo);
     "Move", (fun () -> raise Todo);
     "Delete", (fun () -> raise Todo);

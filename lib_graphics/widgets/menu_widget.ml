@@ -207,7 +207,10 @@ let menu items button (m, mouse) (display, desktop, view, font) =
     end else acc
   in
   let iopt = loop_while_button m (Some lasti) in
-  (* todo: find lasti entry and call its callback *)
+  iopt |> Common.if_some (fun i ->
+    let (_, f) = List.nth items i in
+    f ()
+  );
 
   (* todo: Layer.free *)
   Display.flush display

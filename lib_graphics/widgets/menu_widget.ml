@@ -108,7 +108,7 @@ let scan_items img font  mouse button  iopt entries textr  save =
     let i_opt = menu_selection font textr m.Mouse.pos in
     (match i_opt with
     | Some i when (Some i) = iopt -> 
-      loop_while_button (Mouse.receive mouse |> Event.sync) iopt
+      loop_while_button (Mouse.flush_and_read img.I.display mouse) iopt
     | None -> 
       paint_item_opt img font iopt entries textr  false (RestoreFrom save);
       None
@@ -116,11 +116,11 @@ let scan_items img font  mouse button  iopt entries textr  save =
       paint_item_opt img font  iopt entries textr  false(RestoreFrom save);
       let iopt = Some i in
       paint_item_opt img font iopt entries textr  true (SaveOn save);
-      loop_while_button (Mouse.receive mouse |> Event.sync) iopt
+      loop_while_button (Mouse.flush_and_read img.I.display mouse) iopt
     )
     else iopt
   in
-  loop_while_button (Mouse.receive mouse |> Event.sync) iopt
+  loop_while_button (Mouse.flush_and_read img.I.display mouse) iopt
       
 
 
@@ -197,7 +197,7 @@ let menu items button (m, mouse) (display, desktop, view, font) =
           then
             (* less: if scrolling *)
             loop_while_outside_textr_and_button 
-              (Mouse.receive mouse |> Event.sync)
+              (Mouse.flush_and_read display  mouse)
           else 
             (* maybe back in the textr! *)
             loop_while_button m None

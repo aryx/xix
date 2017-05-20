@@ -46,8 +46,6 @@ type ctl = {
 
   (* /dev/cursor *)
   cursor_fd: Unix1.file_descr;
-
-  (* less: image? *)
 }
 
 let thread_mouse ctl =
@@ -109,6 +107,10 @@ let init () =
 
 let receive ctl =
   Event.receive ctl.chan
+
+let flush_and_read display ctl =
+  Display.flush display;
+  receive ctl |> Event.sync
 
 (* hence O_RDWR for /dev/mouse *)
 let move_to ctl pt =

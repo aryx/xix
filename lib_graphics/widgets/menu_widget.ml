@@ -2,7 +2,8 @@ open Common
 open Point
 open Rectangle
 
-module I = Image
+module D = Display
+module I = Display
 
 (* inspiration is GToolbox in lablgtk *)
 type item = (string * (unit -> unit))

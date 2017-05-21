@@ -1,6 +1,7 @@
 open Common
 
-module D = Image (* display type is actually in image.ml *)
+module D = Display
+module I = Display (* Image.t is in display.ml *)
 module M = Draw_marshal
 
 type op =
@@ -35,17 +36,17 @@ let adjust_str_for_op str op =
 
 let draw_gen dst r src p0 mask p1 op =
   (* todo: set_drawop *)
-  let str = "d" ^ M.bp_long dst.Image.id ^ M.bp_long src.Image.id ^
-    M.bp_long mask.Image.id ^
+  let str = "d" ^ M.bp_long dst.I.id ^ M.bp_long src.I.id ^
+    M.bp_long mask.I.id ^
     M.bp_rect r ^ M.bp_point p0 ^ M.bp_point p1
   in
-  Image.add_buf dst.Image.display (adjust_str_for_op str op)
+  Display.add_buf dst.I.display (adjust_str_for_op str op)
 
 let draw dst r src mask_opt p =
   (* less: have src_opt? *)
   draw_gen dst r src p 
     (match mask_opt with
     | Some x -> x
-    | None -> dst.Image.display.Image.opaque
+    | None -> dst.I.display.D.opaque
     )
     p SoverD

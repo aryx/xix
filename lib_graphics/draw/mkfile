@@ -5,7 +5,7 @@ TOP=../..
 #############################################################################
 
 CMO= channel.cmo color.cmo \
-     draw_marshal.cmo image.cmo display.cmo \
+     draw_marshal.cmo display.cmo image.cmo \
      draw.cmo \
      line.cmo polygon.cmo ellipse.cmo arc.cmo \
      font.cmo text.cmo \

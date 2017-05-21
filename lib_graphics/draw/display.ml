@@ -2,28 +2,103 @@ open Common
 open Point
 open Rectangle
 
-open Image (* todo: delete once can do simplified qualified record *)
 (* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
 module Unix2 = ThreadUnix
 
 module M = Draw_marshal
 
-type t = Image.display
+type image = {
+  id: int;
+  r: Rectangle.t;
+
+  chans: Channel.t;
+  (* derives from chan *)
+  depth: int;
+
+  (* mutable? *)
+  clipr: Rectangle.t;
+  repl: bool;
+
+  display: display;
+}
+
+and display = {
+  (* the "screen" (or "view" when run inside a window) *)
+  image: image;
+
+  (* /dev/draw/x *)
+  dirno: int;
+
+  (* /dev/draw/x/ctl *)
+  ctl: Unix1.file_descr;
+  (* /dev/draw/x/data *)
+  data: Unix1.file_descr;
+
+  (* set later in Draw.init, not Display.init *)
+  mutable white: image;
+  mutable black: image;
+  mutable opaque: image;
+  mutable transparent: image;
+
+  mutable imageid: int;
+  
+  (* size = Image.bufsize + 1 (* for 'v' *)  *)
+  buf: string;
+  (* between 0 and String.length buf *)
+  mutable bufp: int;
+}
+
+type t = display
+
+(* Should be in display.ml, but t and display are mutually recursive
+ * which forces us to define those helpers here.
+ *)
+
+(* less: iounit(data)? *)
+let bufsize = 8000 (* actually 8000+1 for 'v' when flush_display  *)
+
+let flush_buffer display =
+  let n = display.bufp in
+  if n <> 0
+  then begin
+    let n2 = 
+      try 
+        Unix2.write display.data display.buf 0 n 
+      with Unix1.Unix_error (err, _write, s2) ->
+        failwith (spf "error '%s(%s)' writing %d bytes |%s|" 
+                    (Unix1.error_message err) s2
+                    n (String.escaped (String.sub display.buf 0 n)))
+    in
+    (* stricter: not only if drawdebug but always *)
+    if n2 <> n
+    then failwith (spf "wrote only %d, not %d in /dev/draw/x/data" n2 n);
+    display.bufp <- 0;
+  end
+
+let add_buf display str =
+  let len = String.length str in
+  if len >= bufsize
+  then failwith (spf "too big string (size = %d > bufsize)" len);
+  
+  if len + display.bufp >= bufsize
+  then flush_buffer display;
+
+  String.blit str 0 display.buf display.bufp len;
+  display.bufp <- display.bufp + len
 
 
-let rec fake_image = { Image.
+let rec fake_image = { 
    id = -1; chans = []; depth = -1; repl = false;
    r = Rectangle.zero; clipr =  Rectangle.zero; 
    display = fake_display;
 }
-and fake_display = {  Image.
+and fake_display = {  
   image = fake_image; dirno = -1; ctl = Unix1.stderr; data = Unix1.stderr;
   white = fake_image; black = fake_image; 
   opaque = fake_image; transparent = fake_image;
   imageid = -1; buf = ""; bufp = -1;
 }
-
 
 
 (* less: devdir? windir? errorfn? *)
@@ -68,7 +143,7 @@ let init () =
 
   let chans = Channel.channels_of_str (str_at 2) in
 
-  let rec image = { Image.
+  let rec image = {
     id = int_at 1;
     chans = chans;
     depth = Channel.depth_of_channels chans;
@@ -89,7 +164,7 @@ let init () =
     image = image;
     imageid = 0;
     (* +1 for space for 'v' when flush_display() *)
-    buf = String.make (Image.bufsize + 1) ' ';  
+    buf = String.make (bufsize + 1) ' ';  
     bufp = 0;
 
     (* set in Draw.init *)
@@ -106,14 +181,13 @@ let init () =
 
 
 let flush display =
-  Image.add_buf display "v";
-  Image.flush_buffer display
-
+  add_buf display "v";
+  flush_buffer display
 
 
 let debug_set display b =
-  Image.add_buf display ("D" ^ M.bp_bool b);
-  Image.flush_buffer display
+  add_buf display ("D" ^ M.bp_bool b);
+  flush_buffer display
 
 let debug display =
   debug_set display true

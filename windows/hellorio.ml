@@ -1,6 +1,6 @@
 open Common
 
-module I = Image
+module I = Display
 
 type event =
   | Mouse of Mouse.t

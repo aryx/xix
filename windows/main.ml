@@ -1,7 +1,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-module I = Image
+module I = Display
 
 (*****************************************************************************)
 (* Prelude *)
@@ -27,7 +27,7 @@ let thread_main () =
 
   let display = Draw.init "Rio" in
   (* less: let view = Layer.window_init () in *)
-  let view = display.Image.image in
+  let view = display.Display.image in
   (* less: let viewr save? *)
   (* todo: *)
   let font = Font.default_font () in

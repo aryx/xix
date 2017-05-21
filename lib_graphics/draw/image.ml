@@ -4,82 +4,10 @@ open Common
 module Unix1 = Unix
 module Unix2 = ThreadUnix
 
+open Display
 module M = Draw_marshal
 
-type t = {
-  id: int;
-  r: Rectangle.t;
-
-  chans: Channel.t;
-  (* derives from chan *)
-  depth: int;
-
-  (* mutable? *)
-  clipr: Rectangle.t;
-  repl: bool;
-
-  display: display;
-}
-
-and display = {
-  (* the "screen" (or "view" when run inside a window) *)
-  image: t;
-
-  (* /dev/draw/x *)
-  dirno: int;
-
-  (* /dev/draw/x/ctl *)
-  ctl: Unix1.file_descr;
-  (* /dev/draw/x/data *)
-  data: Unix1.file_descr;
-
-  (* set later in Draw.init, not Display.init *)
-  mutable white: t;
-  mutable black: t;
-  mutable opaque: t;
-  mutable transparent: t;
-
-  mutable imageid: int;
-  
-  (* size = Image.bufsize + 1 (* for 'v' *)  *)
-  buf: string;
-  (* between 0 and String.length buf *)
-  mutable bufp: int;
-}
-
-(* less: iounit(data)? *)
-let bufsize = 8000 (* actually 8000+1 for 'v' when flush_display  *)
-
-let flush_buffer display =
-  let n = display.bufp in
-  if n <> 0
-  then begin
-    let n2 = 
-      try 
-        Unix2.write display.data display.buf 0 n 
-      with Unix1.Unix_error (err, _write, s2) ->
-        failwith (spf "error '%s(%s)' writing %d bytes |%s|" 
-                    (Unix1.error_message err) s2
-                    n (String.escaped (String.sub display.buf 0 n)))
-    in
-    (* stricter: not only if drawdebug but always *)
-    if n2 <> n
-    then failwith (spf "wrote only %d, not %d in /dev/draw/x/data" n2 n);
-    display.bufp <- 0;
-  end
-
-let add_buf display str =
-  let len = String.length str in
-  if len >= bufsize
-  then failwith (spf "too big string (size = %d > bufsize)" len);
-  
-  if len + display.bufp >= bufsize
-  then flush_buffer display;
-
-  String.blit str 0 display.buf display.bufp len;
-  display.bufp <- display.bufp + len
-
-
+type t = Display.image
 
 (* less: _allocimage and initial image (and screenid and refresh) and
  *  optional color (can pass -1 mean no color to set)

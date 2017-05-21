@@ -6,3 +6,19 @@ open Common
  * it prevent some genericity?
  *)
 type t = Image.t
+
+(* less: refBackup? *)
+let alloc base r color =
+  raise Todo
+
+let free layer =
+  raise Todo
+
+
+let put_to_top layer =
+  raise Todo
+
+let put_to_bottom layer =
+  raise Todo
+
+(* todo? set_origin *)

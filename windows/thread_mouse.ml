@@ -26,7 +26,7 @@ let right_click_system exitchan
     );
   ] in
   (* less: adjust menu with hidden windows *)
-  Menu_widget.menu items Mouse.Right 
+  Menu_ui.menu items Mouse.Right 
     (m, mouse) (display, desktop, view, font)
 
 

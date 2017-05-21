@@ -17,7 +17,7 @@ CMO= \
 
 LIBS=$TOP/commons2/commons.cma \
  $TOP/lib_graphics/geometry/geometry.cma $TOP/lib_graphics/draw/draw.cma \
- $TOP/lib_graphics/input/input.cma $TOP/lib_graphics/widgets/widgets.cma
+ $TOP/lib_graphics/input/input.cma $TOP/lib_graphics/ui/ui.cma
 
 #############################################################################
 # Compilers
@@ -33,7 +33,7 @@ OCAMLDEP=ocamldep
 
 OCAMLINCLUDES=-I $TOP/commons2 -I $TOP/lib_graphics/geometry \
  -I $TOP/lib_graphics/draw -I $TOP/lib_graphics/input \
- -I $TOP/lib_graphics/widgets
+ -I $TOP/lib_graphics/ui
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 

@@ -4,7 +4,7 @@ TOP=../..
 # Src
 #############################################################################
 
-CMO= menu_widget.cmo text_widget.cmo frame_widget.cmo
+CMO= menu_ui.cmo text_ui.cmo frame_ui.cmo selection_ui.cmo
 
 #############################################################################
 # Compilers
@@ -30,9 +30,9 @@ CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 # Toplevel targets
 #############################################################################
 
-all:V: widgets.cma
+all:V: ui.cma
 
-widgets.cma: $CMO mkfile
+ui.cma: $CMO mkfile
 	$OCAMLC -a -o $target $CMO
 
 clean:V:

@@ -37,10 +37,11 @@ let thread_main () =
   let red = 
     Image.alloc_color display (Color.mk2 0xDD 0x00 0x00) in
 
+  let desktop = Baselayer.alloc view background in
+
   let mouse = Mouse.init () in
   let kbd = Keyboard.init () in
 
-  let desktop = () (*TODO Baselayer.alloc view background*) in
   Draw.draw view view.I.r background None Point.zero;
   Display.flush display;
 

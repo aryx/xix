@@ -142,3 +142,8 @@ let dump v = dump2 (repr v)
 
 (* end of dumper.ml *)
 *)
+
+(* todo: remove once get List.iteri in 1.07 *)
+let list_iteri f xs =
+  xs |> Array.of_list |> Array.iteri f
+

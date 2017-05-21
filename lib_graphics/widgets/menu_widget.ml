@@ -2,8 +2,8 @@ open Common
 open Point
 open Rectangle
 
+module I = Display (* image type is in display.ml *)
 module D = Display
-module I = Display
 
 (* inspiration is GToolbox in lablgtk *)
 type item = (string * (unit -> unit))
@@ -15,9 +15,9 @@ type items = item list
  *           <--------->
  *            border size
  *)
-let vspacing   = 2 (* extra spacing between lines of text *)
 let margin     = 4 (* outside to text *)
 let border_size = 2 (* width of outlining border *)
+let vspacing   = 2 (* extra spacing between lines of text *)
 
 let background             = ref Display.fake_image
 let background_highlighted = ref Display.fake_image
@@ -26,20 +26,16 @@ let text_color             = ref Display.fake_image
 let text_highlighted       = ref Display.fake_image
 (*let menutext        = ref Display.fake_image *)
 
-(* todo: remove once get List.iteri in 1.07 *)
-let list_iteri f xs =
-  xs |> Array.of_list |> Array.iteri f
-
 let init_colors display =
   if !background == Display.fake_image
   then begin
     (* less: could use try and default to black/white if can not alloc image*)
     (* less: opti: use view->chan instead of rgb24 used by Image.alloc_color *)
-    (* todo: allocimagemix? *)
+    (* less: allocimagemix? *)
     background := Image.alloc_color display (Color.palegreen);
     background_highlighted := Image.alloc_color display (Color.darkgreen);
     border_color := Image.alloc_color display (Color.medgreen);
-    text_color := display.I.black;
+    text_color := display.D.black;
     text_highlighted := !background;
   end
 
@@ -70,7 +66,7 @@ let paint_item (img:Image.t) (font:Font.t) (i:int) (entries: string array) textr
   
   (match action with
   | Nothing -> ()
-  | SaveOn save -> Draw.draw save save.I.r img None r.min 
+  | SaveOn      save -> Draw.draw save save.I.r img None r.min 
   | RestoreFrom save -> Draw.draw img r save None save.I.r.min
   );
   let pt = { x = (textr.min.x + textr.max.x - Font.string_width font str) / 2;
@@ -161,13 +157,13 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   let pt_adjust = Point.zero in
   let menur = Rectangle.add_pt r pt_adjust in
 
+  (* less: do the more complex calculation?*)
   let textr = Rectangle.insetrect menur margin in
 
   (* set images to draw on *)
 
-  (* todo: Layer.alloc *)
   (* less: handle case where no desktop? *)
-  let img = view in
+  let img = Layer.alloc desktop menur Color.white  in
   let save = 
     Image.alloc display (rect_of_menu_entry textr 0 font) view.I.chans false
       Color.black
@@ -179,9 +175,9 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   Polygon.border img menur border_size !border_color Point.zero;
 
   (* less: nitems_to_draw if scrolling *)
-  items |> list_iteri (fun i (_str, _f) ->
+  for i = 0 to nitems_to_draw - 1 do
     paint_item img font i  entries textr false Nothing
-  );
+  done;
 
   (* interact *)
 
@@ -213,5 +209,5 @@ let menu items button (m, mouse) (display, desktop, view, font) =
     f ()
   );
 
-  (* todo: Layer.free *)
+  Layer.free img;
   Display.flush display

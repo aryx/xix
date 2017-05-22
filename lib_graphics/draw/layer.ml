@@ -1,5 +1,9 @@
 open Common
 
+module D = Display
+module I = Display
+module B = Baselayer
+
 (* Most drawing functions takes either a layer or image as a parameter.
  * less: we could force the programmer to each time do layer.img to get
  * the image in the layer. This would be more explicit. Would
@@ -7,12 +11,16 @@ open Common
  *)
 type t = Image.t
 
-(* less: refBackup? *)
+(* less: refBackup? _allocwindow and initial image *)
 let alloc base r color =
-  raise Todo
+  let display = base.B.display in
+  (* less: have a display.screenimage? *)
+  Image.alloc_gen display r display.D.image.I.chans false color 
+    (Some base.B.id) Image.RefreshBackup
+
 
 let free layer =
-  raise Todo
+  Image.free layer
 
 
 let put_to_top layer =

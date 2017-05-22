@@ -9,10 +9,15 @@ module M = Draw_marshal
 
 type t = Display.image
 
-(* less: _allocimage and initial image (and screenid and refresh) and
+type refresh =
+  | RefreshNone
+  | RefreshBackup
+  (* less: RefreshMesg *)
+
+(* less: _allocimage and initial image  and
  *  optional color (can pass -1 mean no color to set)
  *)
-let alloc display r chans repl color =
+let alloc_gen display r chans repl color baseopt refopt =
   let depth = Channel.depth_of_channels chans in
   if chans = [] || depth = 0
   then failwith "bad channel descriptor";
@@ -24,8 +29,16 @@ let alloc display r chans repl color =
   let id = display.imageid in
 
   (* less: _allocimage with screenid, refresh *)
-  let screenid = 0 in
-  let refresh = false in
+  let screenid = 
+    match baseopt with
+    | None -> 0
+    | Some x -> x
+  in
+  let refresh = 
+    match refopt with
+    | RefreshNone -> 1
+    | RefreshBackup -> 0
+  in
 
   let clipr = 
     if repl
@@ -34,7 +47,7 @@ let alloc display r chans repl color =
   in
 
   let str = "b" ^ M.bp_long id ^ M.bp_long screenid ^ 
-    M.bp_bool refresh ^ M.bp_chans chans ^ M.bp_bool repl ^
+    M.bp_byte refresh ^ M.bp_chans chans ^ M.bp_bool repl ^
     M.bp_rect r ^ M.bp_rect clipr ^ 
     M.bp_color color
   in
@@ -47,11 +60,29 @@ let alloc display r chans repl color =
     depth = depth;
     repl = repl;
     display = display;
+    baseid = baseopt;
   }
+
+ 
+
+let alloc display r chans repl color =
+  alloc_gen display r chans repl color None RefreshNone
 
 
 let free img =
-  raise Todo
+  let display = img.display in
+
+  (* meh *)
+  flush_buffer display;
+
+  let str = "f" ^ M.bp_long img.id in
+  (* less: should flush display only if img is a layer, but
+   * for now I just always flush
+   *)
+  add_buf display str;
+  Display.flush display;
+  ()
+
 
 (* shortcuts *)
 let alloc_color display color =

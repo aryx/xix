@@ -21,11 +21,19 @@ type image = {
   repl: bool;
 
   display: display;
+
+  (* baselayer id when image is a layer, but the information is not
+   * really used client-side, so we could remove this field.
+   *)
+  baseid: int option;
 }
 
 and display = {
   (* the "screen" (or "view" when run inside a window) *)
   image: image;
+  (* less: have also a screenimage? or baselayerimage? or chans_reference?
+   * to be used in Layer.alloc
+   *)
 
   (* /dev/draw/x *)
   dirno: int;
@@ -47,6 +55,8 @@ and display = {
   buf: string;
   (* between 0 and String.length buf *)
   mutable bufp: int;
+
+  (* less: list of layers? why need that? when free display? *)
 }
 
 type t = display
@@ -91,7 +101,7 @@ let add_buf display str =
 let rec fake_image = { 
    id = -1; chans = []; depth = -1; repl = false;
    r = Rectangle.zero; clipr =  Rectangle.zero; 
-   display = fake_display;
+   display = fake_display; baseid = None;
 }
 and fake_display = {  
   image = fake_image; dirno = -1; ctl = Unix1.stderr; data = Unix1.stderr;
@@ -155,6 +165,7 @@ let init () =
               max = { x = int_at 10; y = int_at 11 };
             };
     display = display;
+    baseid = None;
   }
   and display = {
     dirno = clientnb;

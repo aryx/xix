@@ -72,7 +72,7 @@ type t = {
    *)
   mutable output_point: Editor.cursor;
 
-  mutable frame: Frame_widget.t;
+  mutable frame: Frame_ui.t;
   mutable scrollr: Rectangle.t;
   
   (* ---------------------------------------------------------------- *)

@@ -103,3 +103,8 @@ let pt_inside_frame pt w =
   Rectangle.pt_in_rect pt (Rectangle.insetrect w.screenr frame_border)
 let pt_on_frame pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_frame pt w)
+
+
+let alloc x =
+  raise Todo
+

@@ -9,3 +9,17 @@ let win () =
   !current
 
 let debug = ref false
+
+(* less: 
+ * mousectl
+ * kbdctl
+*)
+
+(*
+let display = ref Display.fake_display
+let view = ref Display.fake_image
+let font = ref Font.fake_font
+let desktop = ref Baselayer.fake_baselayer
+
+*)
+let red = ref Display.fake_image

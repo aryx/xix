@@ -34,8 +34,7 @@ let thread_main () =
 
   let background = 
     Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
-  let red = 
-    Image.alloc_color display (Color.mk2 0xDD 0x00 0x00) in
+  Globals.red := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
 
   let desktop = Baselayer.alloc view background in
 
@@ -54,7 +53,7 @@ let thread_main () =
   let _mouse_thread = 
     Thread.create Thread_mouse.thread (exit_chan, 
                                        mouse, (display, desktop, view, font)) in
-
+  
   (* Rio, a filesystem server *)
   let fs = Fs.init () in
 

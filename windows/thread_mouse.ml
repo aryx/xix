@@ -1,6 +1,6 @@
 open Common
-open Mouse
 
+open Mouse
 module I = Image
 module W = Window
 
@@ -11,12 +11,18 @@ type event =
 let middle_click_system m mouse =
   pr "Todo: middle click"
 
-let right_click_system exitchan 
+(* right click normally *)
+let system_menu button exitchan 
     (m, mouse) (display, desktop, view, font) =
-  (* todo: set sweeping to true *)
+  (* todo: set (and later restore) sweeping to true *)
 
   let items = [
+    (* todo: the first item get selected each time once *)
     "New", (fun () -> pr "New");
+    "New2", (fun () ->
+      let img = Mouse_action.sweep mouse (display, desktop, view, font) in 
+      ()
+    );
     "Reshape", (fun () -> raise Todo);
     "Move", (fun () -> raise Todo);
     "Delete", (fun () -> raise Todo);
@@ -26,7 +32,7 @@ let right_click_system exitchan
     );
   ] in
   (* less: adjust menu with hidden windows *)
-  Menu_ui.menu items Mouse.Right 
+  Menu_ui.menu items button
     (m, mouse) (display, desktop, view, font)
 
 
@@ -91,6 +97,11 @@ let thread (exitchan,
             | Some w, _ -> OtherWin w
           in
           (match under_mouse, m.buttons with
+          (* todo: to test under qemu on my laptop where right click is hard *)
+          | Nothing, { left = true } -> 
+            system_menu Mouse.Left exitchan
+              (m, mouse) (display, desktop, view, font)
+
           | (Nothing | CurrentWin _), { left = true } -> 
             ()
           | Nothing,  { middle = true } ->
@@ -99,7 +110,7 @@ let thread (exitchan,
             if not w.W.mouseopen
             then middle_click_system m mouse
           | (Nothing | CurrentWin _), { right = true } ->
-            right_click_system exitchan 
+            system_menu Mouse.Right exitchan 
               (m, mouse) (display, desktop, view, font)
 
           | OtherWin w, { left = true } ->

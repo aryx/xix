@@ -5,11 +5,11 @@ TOP=..
 #############################################################################
 
 CMO= \
-  data.cmo \
+  cursors.cmo \
   window.cmo \
   globals.cmo \
   fid.cmo fs.cmo \
-  windows.cmo wm.cmo \
+  windows.cmo mouse_action.cmo wm.cmo \
   thread_keyboard.cmo thread_mouse.cmo \
   threads_window.cmo \
   ninep.cmo worker_request.cmo thread_fileserver.cmo \
@@ -54,18 +54,13 @@ CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
 # Toplevel targets
 #############################################################################
 
-PROGS=rio hellodraw hellorio
+PROGS=rio
 all:V: $PROGS
 
 # use of -l so no automagic lib and no _main
 rio: $CMO $LIBS mkfile
 	$OCAMLC $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $CMO $CCLIBS
 
-hellorio: hellorio.cmo mkfile
-	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target unix.cma threads.cma str.cma $LIBS hellorio.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
-
-hellodraw: hellodraw.cmo mkfile
-	$OCAMLC  -verbose $OCAMLLDFLAGS -thread -custom -o $target unix.cma threads.cma str.cma $LIBS hellodraw.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
 clean:V:
 	rm -f $PROGS *.cmo *.cmi *.8

@@ -228,3 +228,4 @@ let l = {
     |];
 }
 
+(* less: type corner? *)

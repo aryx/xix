@@ -1,0 +1,17 @@
+# -*- sh -*-
+</$objtype/mkfile
+<mkconfig
+
+DIRS= geometry draw input ui
+
+all:V: all.directories
+opt:V: opt.directories
+clean:V: clean.directories
+depend:V: depend.directories
+
+%.directories:V:
+	for(i in $DIRS) @{
+		echo $i/
+		cd $i
+		mk $MKFLAGS $stem
+	}

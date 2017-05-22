@@ -199,15 +199,17 @@ let menu items button (m, mouse) (display, desktop, view, font) =
             (* maybe back in the textr! *)
             loop_while_button m None
         in
-        loop_while_outside_textr_and_button m
+        (* bugfix: need to read another 'm', not pass the old 'm' above *)
+        loop_while_outside_textr_and_button 
+          (Mouse.flush_and_read display mouse)
       )
     end else acc
   in
   let iopt = loop_while_button m (Some lasti) in
+  Layer.free img;
+  Display.flush display;
+  (* bugfix: must run callback after menu has been erased! *)
   iopt |> Common.if_some (fun i ->
     let (_, f) = List.nth items i in
     f ()
   );
-
-  Layer.free img;
-  Display.flush display

@@ -23,7 +23,7 @@ let sweep mouse (display, desktop, _view, font) =
 
   let rec transit = function
     | SweepInit ->
-      let m = Mouse.flush_and_read display mouse in
+      let m = Mouse.read mouse in
       if not (Mouse.has_click m)
       then transit SweepInit
       else 
@@ -77,8 +77,9 @@ let sweep mouse (display, desktop, _view, font) =
           Layer.free old_img;
           Polygon.border img r Window.frame_border !Globals.red Point.zero;
           (* todo: cornercursor? pos! *)
-          (* todo? Display.flush display; *)
           (* less: moveto to force cursor update? ugly ... *)
+          (* done in caller but more logical here I think *)
+          Display.flush display;
           (* less: menuing = false *)
           (* finally!! got an image *)
           Some img
@@ -90,7 +91,7 @@ let sweep mouse (display, desktop, _view, font) =
       then transit SweepDrain
       else None
     | SweepDrain ->
-      let m = Mouse.flush_and_read display mouse in
+      let m = Mouse.read mouse in
       if not (Mouse.has_click m)
       then None
       else transit SweepDrain

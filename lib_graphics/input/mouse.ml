@@ -112,6 +112,10 @@ let flush_and_read display ctl =
   Display.flush display;
   receive ctl |> Event.sync
 
+let read ctl =
+  receive ctl |> Event.sync
+  
+
 (* hence O_RDWR for /dev/mouse *)
 let move_to ctl pt =
   raise Todo

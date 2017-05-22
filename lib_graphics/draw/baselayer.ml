@@ -17,6 +17,8 @@ type t = {
   display: Display.t;
 }
 
+let fake_baselayer = { id = -1; display = Display.fake_display }
+
 let counter_id = 
   ref 0
 

@@ -10,12 +10,15 @@ type t = {
 }
 
 let r x1 y1  x2 y2 =
-  {
-    min = { x = x1; y = y1; };
+  { min = { x = x1; y = y1; };
     max = { x = x2; y = y2; };
   }
 
-(* less: canonrect? *)
+let canonical p1 p2 =
+  { min = { x = min p1.x p2.x; y = min p1.y p2.y; };
+    max = { x = max p1.x p2.x; y = max p1.y p2.y; };
+  }
+            
 
 let rp pt1 pt2 =
   { min = pt1; max = pt2 }

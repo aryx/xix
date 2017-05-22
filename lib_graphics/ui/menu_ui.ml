@@ -181,6 +181,8 @@ let menu items button (m, mouse) (display, desktop, view, font) =
 
   (* interact *)
 
+  (* todo? have a state machine instead? and inline code of scan_items? *)
+
   let rec loop_while_button m acc =
     if Mouse.has_button m button
     then begin
@@ -206,6 +208,7 @@ let menu items button (m, mouse) (display, desktop, view, font) =
     end else acc
   in
   let iopt = loop_while_button m (Some lasti) in
+
   Layer.free img;
   Display.flush display;
   (* bugfix: must run callback after menu has been erased! *)

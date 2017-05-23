@@ -29,8 +29,8 @@ let set_current_and_repaint_borders w =
   Globals.current := Some w;
   old |> Common.if_some (fun w2 ->
     if not (w2 == w)
-    (* less: could do directly: draw_border w W.Unseleted *)
-    then repaint_border w
+    (* less: could do directly: draw_border w2 W.Unseleted *)
+    then repaint_border w2
   );
   (* less: could do directly: draw_border w W.Seleted *)
   repaint_border w;

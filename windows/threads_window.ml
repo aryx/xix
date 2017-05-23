@@ -1,10 +1,12 @@
 open Common
 open Window
 
+module I = Display
+
 type event = 
-  | Key of Keyboard.key
+  | Key   of Keyboard.key
   | Mouse of Mouse.t
-  | Cmd of Window.cmd
+  | Cmd   of Window.cmd
 
 let key_control w key =
   (* less: if key = 0? *)
@@ -16,9 +18,10 @@ let key_control w key =
   end
 
 
-let thread w display =
+let thread w =
   
   (* less: threadsetname *)
+  let display = w.img.I.display in
 
   (* todo: channel creation *)
   while true do
@@ -32,7 +35,7 @@ let thread w display =
     (match ev with
     | Key key -> key_control w key
     | Mouse m -> 
-      (match w.mouseopen with
+      (match w.mouse_opened with
       | true -> raise Todo
       | false -> raise Todo
       )

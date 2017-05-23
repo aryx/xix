@@ -40,12 +40,16 @@ let has_button m button =
 type ctl = {
   (* /dev/mouse *)
   fd: Unix1.file_descr;
-  (* streams of mouse events that can be received from mouse thread *)
+  (* streams of mouse events that can be received from thread_mouse below *)
   chan: t Event.channel;
-  (* todo: resize_chan: unit Event.channel; *) 
 
   (* /dev/cursor *)
   cursor_fd: Unix1.file_descr;
+  (* todo: resize_chan: unit Event.channel; *) 
+
+  (* less: add also current state? can be convenient but less functional.
+   * mutable state: Mouse.t;
+   *)
 }
 
 let thread_mouse ctl =

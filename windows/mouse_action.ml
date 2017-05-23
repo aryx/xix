@@ -11,6 +11,8 @@ type sweep_state =
   | SweepMove of Point.t * Point.t * Image.t option
   (* release right click *)
   | SweepUnclicked of Image.t option
+  (* to factorize cornercursor *)
+  | SweepReturn of Image.t option
 
   (* error management when left or middle click or too small rectangle *)
   | SweepRescue of bool (* clicked state *) * Image.t option
@@ -31,7 +33,7 @@ let sweep mouse (display, desktop, _view, font) =
         (* todo: Mouse.Right at some point *)
         if Mouse.has_button m Mouse.Left
         then transit (SweepRightClicked m.Mouse.pos)
-        else transit (SweepDrain)
+        else transit (SweepRescue (true, None))
     | SweepRightClicked p0 ->
       (* less: onsceen (using clipr) *)
       transit (SweepMove (p0, p0, None))
@@ -66,7 +68,7 @@ let sweep mouse (display, desktop, _view, font) =
       )
     | SweepUnclicked (old_img_opt) ->
       (match old_img_opt with
-      | None -> None
+      | None -> transit (SweepReturn None)
       | Some old_img ->
         let r = old_img.I.r in
         if Rectangle.dx r < 100 || Rectangle.dy r < 3 * font.Font.height
@@ -76,24 +78,27 @@ let sweep mouse (display, desktop, _view, font) =
           let img = Layer.alloc desktop r Color.white in
           Layer.free old_img;
           Polygon.border img r Window.frame_border !Globals.red Point.zero;
-          (* todo: cornercursor? pos! *)
-          (* less: moveto to force cursor update? ugly ... *)
           (* done in caller but more logical here I think *)
           Display.flush display;
-          (* less: menuing = false *)
           (* finally!! got an image *)
-          Some img
+          transit (SweepReturn (Some img))
         end
       )
+    | SweepReturn img_opt ->
+      (* todo: cornercursor? pos! *)
+      (* less: moveto to force cursor update? ugly ... *)
+      (* less: menuing = false *)
+      img_opt
+
     | SweepRescue (clicked_state, old_img_opt) ->
       old_img_opt |> Common.if_some Layer.free;
       if clicked_state
       then transit SweepDrain
-      else None
+      else transit (SweepReturn None)
     | SweepDrain ->
       let m = Mouse.read mouse in
       if not (Mouse.has_click m)
-      then None
+      then transit (SweepReturn None)
       else transit SweepDrain
   in
   transit SweepInit

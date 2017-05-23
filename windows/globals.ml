@@ -23,3 +23,6 @@ let desktop = ref Baselayer.fake_baselayer
 
 *)
 let red = ref Display.fake_image
+
+let title_color = ref Display.fake_image
+let title_color_light = ref Display.fake_image

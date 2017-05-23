@@ -32,9 +32,10 @@ let thread_main () =
   (* todo: *)
   let font = Font.default_font () in
 
-  let background = 
-    Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
+  let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
   Globals.red := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
+  Globals.title_color := Image.alloc_color display Color.greygreen;
+  Globals.title_color_light := Image.alloc_color display Color.palegreygreen;
 
   let desktop = Baselayer.alloc view background in
 
@@ -66,9 +67,6 @@ let thread_main () =
     
 
 let main () =
-  (*
-  Test.test ()
-  *)
   let options = (*todo: Arg.align*) [
     "-s", Arg.Unit (fun () -> raise Todo),
     " ";
@@ -81,6 +79,8 @@ let main () =
 
     (* pad: not in original *)
     "-debug", Arg.Set Globals.debug,
+    " ";
+    "-test", Arg.Unit (fun () -> Test.test ()),
     " ";
   ]
   in

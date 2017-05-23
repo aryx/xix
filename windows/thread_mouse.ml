@@ -12,16 +12,17 @@ let middle_click_system m mouse =
   pr "Todo: middle click"
 
 (* right click normally *)
-let system_menu button exitchan 
+let wm_menu button exitchan 
     (m, mouse) (display, desktop, view, font) =
   (* todo: set (and later restore) sweeping to true *)
 
   let items = [
-    (* todo: the first item get selected each time once *)
-    "New", (fun () -> pr "New");
-    "New2", (fun () ->
-      let img = Mouse_action.sweep mouse (display, desktop, view, font) in 
-      ()
+    (* todo: the first item get selected the very first time; QEMU bug?  *)
+    "New", (fun () ->
+      let img_opt = Mouse_action.sweep mouse (display, desktop, view, font) in
+      img_opt |> Common.if_some (fun img ->
+        Wm.new_win img "/bin/rc" []
+      )
     );
     "Reshape", (fun () -> raise Todo);
     "Move", (fun () -> raise Todo);
@@ -71,7 +72,7 @@ let thread (exitchan,
           then raise Todo
           else
              (* less: || scrolling *)
-            inside && (w.W.mouseopen || m.buttons.left)
+            inside && (w.W.mouse_opened || m.buttons.left)
         | None -> false
       in
       if sending_to_win
@@ -97,9 +98,9 @@ let thread (exitchan,
             | Some w, _ -> OtherWin w
           in
           (match under_mouse, m.buttons with
-          (* todo: to test under qemu on my laptop where right click is hard *)
+          (* TODO: to test under qemu on my laptop where right click is hard *)
           | Nothing, { left = true } -> 
-            system_menu Mouse.Left exitchan
+            wm_menu Mouse.Left exitchan
               (m, mouse) (display, desktop, view, font)
 
           | (Nothing | CurrentWin _), { left = true } -> 
@@ -107,10 +108,10 @@ let thread (exitchan,
           | Nothing,  { middle = true } ->
              middle_click_system m mouse
           | CurrentWin w, { middle = true } ->
-            if not w.W.mouseopen
+            if not w.W.mouse_opened
             then middle_click_system m mouse
           | (Nothing | CurrentWin _), { right = true } ->
-            system_menu Mouse.Right exitchan 
+            wm_menu Mouse.Right exitchan 
               (m, mouse) (display, desktop, view, font)
 
           | OtherWin w, { left = true } ->
@@ -127,4 +128,3 @@ let thread (exitchan,
       end
     )
   done
-

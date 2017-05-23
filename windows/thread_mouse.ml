@@ -98,6 +98,12 @@ let thread (exitchan,
             | Some w, _ -> OtherWin w
           in
           (match under_mouse, m.buttons with
+          (* TODO: remove, just because hard right click on QEMU *)
+          | Nothing , { left = true } ->
+            wm_menu Mouse.Left exitchan 
+              (m, mouse) (display, desktop, view, font)
+
+
           | (Nothing | CurrentWin _), { left = true } ->
             ()
 

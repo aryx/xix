@@ -5,7 +5,7 @@ module I = Image
 module W = Window
 
 type event =
-  | Mouse of Mouse.t
+  | Mouse of Mouse.state
   (* less: Resize? other? *)
 
 let middle_click_system m mouse =
@@ -98,12 +98,7 @@ let thread (exitchan,
             | Some w, _ -> OtherWin w
           in
           (match under_mouse, m.buttons with
-          (* TODO: to test under qemu on my laptop where right click is hard *)
-          | Nothing, { left = true } -> 
-            wm_menu Mouse.Left exitchan
-              (m, mouse) (display, desktop, view, font)
-
-          | (Nothing | CurrentWin _), { left = true } -> 
+          | (Nothing | CurrentWin _), { left = true } ->
             ()
           | Nothing,  { middle = true } ->
              middle_click_system m mouse

@@ -8,7 +8,7 @@ module I = Display
 
 type event = 
   | Key   of Keyboard.key
-  | Mouse of Mouse.t
+  | Mouse of Mouse.state
   | Cmd   of Window.cmd
 
 let cnt = ref 0

@@ -8,19 +8,17 @@ module Unix2 = ThreadUnix
 module C = Cursor
 module M = Draw_marshal
 
-type t = {
+type state = {
   pos: Point.t;
   buttons: buttons;
   (* ?? *)
   msec: int;
 }
-
-(* rio does not use the property that you can click multiple buttons 
- * at the same time, but some applications might, so we need to provide 
- * the whole state.
- * less: opti: bitset
- *)
-and buttons = { left: bool; middle: bool; right: bool; }
+  (* rio does not use the possibility to click on multiple buttons at the same
+   *  time, but some applications might, so we need to provide the whole state.
+   * less: opti: bitset
+   *)
+  and buttons = { left: bool; middle: bool; right: bool; }
 
 (* this type is sometimes more convenient to use *)
 type button = Left | Middle | Right
@@ -41,15 +39,18 @@ type ctl = {
   (* /dev/mouse *)
   fd: Unix1.file_descr;
   (* streams of mouse events that can be received from thread_mouse below *)
-  chan: t Event.channel;
+  chan: state Event.channel;
 
   (* /dev/cursor *)
   cursor_fd: Unix1.file_descr;
   (* todo: resize_chan: unit Event.channel; *) 
 
-  (* less: add also current state? can be convenient but less functional.
-   * mutable state: Mouse.t;
+  (* having the state in the ctl is less functional that forcing the
+   * programmer to each time take a ctl and a mouse, but it can be
+   * tedious to pass and return around each time the last state. 
+   * todo: but where to set it? before send? in read? in receive?
    *)
+  (*mutable state: Mouse.t;*)
 }
 
 let thread_mouse ctl =
@@ -96,15 +97,21 @@ let thread_mouse ctl =
     )
   done
 
-  
+
+let fake_state = {
+  pos = Point.zero;
+  buttons = { left = false; middle = false; right = false };
+  msec = 0;
+}  
 
 (* less: take image parameter? *)
 let init () =
-  let (chan: t Event.channel) = Event.new_channel () in
+  let (chan: state Event.channel) = Event.new_channel () in
   let fd        = Unix1.openfile "/dev/mouse"  [Unix1.O_RDWR] 0o666 in
   let cursor_fd = Unix1.openfile "/dev/cursor" [Unix1.O_RDWR]   0o666 in
 
-  let ctl = { fd = fd; chan = chan; cursor_fd = cursor_fd } in
+  let ctl = 
+    { fd = fd; chan = chan; cursor_fd = cursor_fd; (*state = fake_state*) } in
 
   let thread = Thread.create thread_mouse ctl in
   ctl
@@ -112,12 +119,15 @@ let init () =
 let receive ctl =
   Event.receive ctl.chan
 
+let read ctl =
+  let m = receive ctl |> Event.sync in
+  (* ctl.state <- m; *)
+  m
+
 let flush_and_read display ctl =
   Display.flush display;
-  receive ctl |> Event.sync
+  read ctl
 
-let read ctl =
-  receive ctl |> Event.sync
   
 
 (* hence O_RDWR for /dev/mouse *)

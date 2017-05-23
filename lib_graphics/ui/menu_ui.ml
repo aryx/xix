@@ -52,7 +52,7 @@ let rect_of_menu_entry textr i font =
           }
   in
   (* include black edge for selection *)
-  Rectangle.insetrect r (border_size - margin)
+  Rectangle.insetrect (border_size - margin) r
 
 type action =
   | SaveOn of Image.t
@@ -145,20 +145,22 @@ let menu items button (m, mouse) (display, desktop, view, font) =
 
   (* compute rectangles *)
 
-  let r = Rectangle.r 0 0 width height in
-  let r = Rectangle.insetrect r (-margin) in
-  (* center on lasti entry *)
-  let r = Rectangle.sub_pt r 
-    (Point.p (width / 2) (lasti * line_height + font.Font.height / 2)) in
-  (* adjust to mouse position *)
-  let r = Rectangle.add_pt r m.Mouse.pos in
+  let r = 
+    Rectangle.r 0 0 width height 
+    |> Rectangle.insetrect (-margin)
+    (* center on lasti entry *)
+    |> Rectangle.sub_pt
+        (Point.p (width / 2) (lasti * line_height + font.Font.height / 2))
+    (* adjust to mouse position *)
+    |> Rectangle.add_pt m.Mouse.pos
+  in
   
   (* less: adjust if outside view *)
   let pt_adjust = Point.zero in
-  let menur = Rectangle.add_pt r pt_adjust in
+  let menur = Rectangle.add_pt pt_adjust r in
 
   (* less: do the more complex calculation?*)
-  let textr = Rectangle.insetrect menur margin in
+  let textr = Rectangle.insetrect margin menur in
 
   (* set images to draw on *)
 

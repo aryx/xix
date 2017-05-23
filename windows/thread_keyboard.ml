@@ -8,7 +8,8 @@ let thread kbd =
 
   while true do
     let key = Keyboard.receive kbd |> Event.sync in
-    (* temporary *)
+
+    (* TODO: remove, just for debug *)
     if key = 'q' 
     then exit 0;
 

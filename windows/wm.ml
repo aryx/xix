@@ -8,7 +8,7 @@ let draw_border w status =
   (* less: if holding? *)
   let color = 
     match status with
-    | W.Selected -> !Globals.title_color
+    | W.Selected   -> !Globals.title_color
     | W.Unselected -> !Globals.title_color_light
   in
   Polygon.border img img.I.r Window.frame_border color Point.zero
@@ -29,8 +29,10 @@ let set_current_and_repaint_borders w =
   Globals.current := Some w;
   old |> Common.if_some (fun w2 ->
     if not (w2 == w)
+    (* less: could do directly: draw_border w W.Unseleted *)
     then repaint_border w
   );
+  (* less: could do directly: draw_border w W.Seleted *)
   repaint_border w;
   (* less: wsetcursor *)
   (* todo: wakeup? why? *)

@@ -100,11 +100,13 @@ let thread (exitchan,
           (match under_mouse, m.buttons with
           | (Nothing | CurrentWin _), { left = true } ->
             ()
+
           | Nothing,  { middle = true } ->
              middle_click_system m mouse
           | CurrentWin w, { middle = true } ->
             if not w.W.mouse_opened
             then middle_click_system m mouse
+
           | (Nothing | CurrentWin _), { right = true } ->
             wm_menu Mouse.Right exitchan 
               (m, mouse) (display, desktop, view, font)
@@ -114,7 +116,7 @@ let thread (exitchan,
             (* less: should drain and wait that release up, unless winborder *)
           | OtherWin w, ({ middle = true } | { right = true}) ->
             Wm.top_win w
-            (* todo: should goto again *)
+            (* todo: should goto again, may need to send event *)
             
           | _ -> raise (Impossible "Mouse.has_click so one field is true")
           );

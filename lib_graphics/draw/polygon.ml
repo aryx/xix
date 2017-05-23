@@ -10,7 +10,7 @@ let border dst r i color sp =
     then r, sp, i
     else
       (* border goes outside the rectangle *)
-      let r = Rectangle.insetrect r i in
+      let r = Rectangle.insetrect i r in
       let sp = Point.add sp (Point.p i i) in
       let i = -1 in
       r, sp, i

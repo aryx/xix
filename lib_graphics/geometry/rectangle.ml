@@ -42,10 +42,10 @@ let binary_pt op r p =
   }
 
 (* less: add_vect? *)
-let add_pt r p =
+let add_pt p r =
   binary_pt (+) r p
 
-let sub_pt r p =
+let sub_pt p r =
   binary_pt (-) r p
 
 
@@ -60,7 +60,7 @@ let rect_in_rect r1 r2 =
 (* less: rectXrect?? *)
 
 (* reduce if n is positive, enlarge if negative *)
-let insetrect r n =
+let insetrect n r =
   { min = { x = r.min.x + n; y = r.min.y + n };
     max = { x = r.max.x - n; y = r.max.y - n };
   }

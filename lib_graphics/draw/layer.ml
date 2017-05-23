@@ -3,6 +3,7 @@ open Common
 module D = Display
 module I = Display
 module B = Baselayer
+module M = Draw_marshal
 
 (* Most drawing functions takes either a layer or image as a parameter.
  * less: we could force the programmer to each time do layer.img to get
@@ -22,11 +23,29 @@ let alloc base r color =
 let free layer =
   Image.free layer
 
+type direction = Up | Down
+
+(* less: more general and have a list? *)
+let stack_op_gen layer dir =
+  if layer.I.baseid = None
+  then failwith "the image is not a layer";
+
+  let display = layer.I.display in
+  (* less: not sure need more general *)
+  let n = 1 in
+  let str = "t" ^ M.bp_bool (match dir with Up -> true | Down -> false) ^
+    M.bp_short n ^ M.bp_long layer.I.id
+  in
+  Display.add_buf display str;
+  ()
+
+
+  
 
 let put_to_top layer =
-  raise Todo
+  stack_op_gen layer Up
 
 let put_to_bottom layer =
-  raise Todo
+  stack_op_gen layer Down
 
 (* todo? set_origin *)

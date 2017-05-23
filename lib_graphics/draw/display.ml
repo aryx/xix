@@ -24,6 +24,8 @@ type image = {
 
   (* baselayer id when image is a layer, but the information is not
    * really used client-side, so we could remove this field.
+   * Still useful as a way to sanity check that an image is a layer
+   * in layer.ml.
    *)
   baseid: int option;
 }

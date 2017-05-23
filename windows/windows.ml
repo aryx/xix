@@ -1,7 +1,7 @@
 open Common
 open Window
 
-
+(* old: was called wpointto in rio-C *)
 let window_at_point pt =
   let res = ref None in
   Globals.windows |> Hashtbl.iter (fun _k w ->

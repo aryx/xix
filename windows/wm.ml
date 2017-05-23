@@ -39,7 +39,16 @@ let set_current_and_repaint_borders w =
   ()
 
 let top_win w =
-  raise Todo
+  if w.W.topped = !Window.topped_counter
+  then ()
+  else begin
+    Layer.put_to_top w.W.img;
+    set_current_and_repaint_borders w;
+    Image.flush w.W.img;
+    incr Window.topped_counter;
+    w.W.topped <- !Window.topped_counter;
+  end
+
 
 
 (* less: hideit, pid, dir, scrolling *)

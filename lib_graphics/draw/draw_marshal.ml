@@ -6,6 +6,15 @@ open Color
 let bp_byte x =
   String.make 1 (Char.chr x)
 
+let bp_short x =
+  (* less: sanity check range? *)
+  let x1 = Char.chr (x land 0xFF) in
+  let x2 = Char.chr ((x asr 8) land 0xFF) in
+  let str = String.make 2 ' ' in
+  str.[0] <- x1;
+  str.[1] <- x2;
+  str
+
 (* less: use commons/byte_order.ml? *)
 let bp_long x =
   let x1 = Char.chr (x land 0xFF) in

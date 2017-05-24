@@ -20,11 +20,26 @@ type t = {
   (* /* n+1 character descriptors */? still need n+1 trick? *)
   chars: Fontchar.t array;
 
-(*
   (*/* max height of image, interline spacing */*)
   height : int;
   (*/* top of image to baseline */*)
   ascent: int;
-*)
 
+  (* less: refcounter ? *)
 }
+
+(* todo: h_subfonts *)
+
+let alloc name nfontchars height ascent fontchars img =
+  assert (Array.length fontchars = nfontchars + 1);
+  assert (height <> 0);
+  let sf = 
+    { name = name;
+      bits = img;
+      chars = fontchars;
+      height = height;
+      ascent = ascent;
+    }
+  in
+  (* less: install subfont if name? *)
+  sf

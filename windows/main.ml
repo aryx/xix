@@ -29,8 +29,7 @@ let thread_main () =
   (* less: let view = Layer.window_init () in *)
   let view = display.Display.image in
   (* less: let viewr save? *)
-  (* todo: *)
-  let font = Font.default_font () in
+  let font = Font_default.load_default_font display in
 
   let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
   Globals.red := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);

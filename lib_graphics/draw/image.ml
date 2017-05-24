@@ -64,7 +64,7 @@ let alloc_gen display r chans repl color baseopt refopt =
   }
 
  
-
+(* less: color opt *)
 let alloc display r chans repl color =
   alloc_gen display r chans repl color None RefreshNone
 
@@ -91,3 +91,6 @@ let alloc_color display color =
 
 let flush img =
   Display.flush img.display
+
+let load img r bytes =
+  raise Todo

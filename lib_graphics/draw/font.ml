@@ -25,16 +25,10 @@ and subfont_spec = {
   subfont_filename: Common.filename;
 }
 
-let default_font () = {
-  height = 10;
-  name = "";
-  ascent = 0;
-  subfont_spec = [];
-}
-
 let fake_font = 
   { height = -1; name = ""; ascent = 0; subfont_spec = [] }
 
+(* for default_font see font_default.ml *)
 
 let string_width _font str =
   String.length str * 6

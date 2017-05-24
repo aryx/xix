@@ -542,3 +542,17 @@ let lucm_latin_1_9_uncompressed_parsed =
 {xleft_in_bits = 2304 ; top = 0  ; bottom = 0  ; left = 0 ; width = 0 } ;
 |]
 )
+
+let load_default_subfont display = 
+  let (chans, r, bytes, nfontchars, height, ascent, fontchars) = 
+    lucm_latin_1_9_uncompressed_parsed
+  in
+  (* todo: finalize to free the image in case of pb *)
+  let img = Image.alloc display r chans false Color.transparent in
+  Image.load img r bytes;
+  
+  Subfont.alloc "*default*" nfontchars height ascent fontchars img
+
+let load_default_font display =
+  let default_subfont = load_default_subfont display in
+  raise Todo

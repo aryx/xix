@@ -8,7 +8,7 @@ CMO= channel.cmo color.cmo \
      draw_marshal.cmo display.cmo image.cmo \
      draw.cmo \
      line.cmo polygon.cmo ellipse.cmo arc.cmo \
-     subfont.cmo font.cmo font_default.cmo text.cmo \
+     fontchar.cmo subfont.cmo font.cmo font_default.cmo text.cmo \
      baselayer.cmo layer.cmo
 
 #############################################################################

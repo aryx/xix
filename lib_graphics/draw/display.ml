@@ -59,6 +59,7 @@ and display = {
   mutable bufp: int;
 
   (* less: list of layers? why need that? when free display? *)
+  (* less: defaultfont? defaultsubfont? seems unused *)
 }
 
 type t = display

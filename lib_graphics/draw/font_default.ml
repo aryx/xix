@@ -1,4 +1,4 @@
-open Font
+open Common
 
 let lucm_latin_1_9_uncompressed_raw = [|
 0x20;0x20;0x20;0x20;0x20;0x20;0x20;0x20;0x20;0x20;0x30;0x20;0x20;0x20;0x20;0x20;
@@ -377,3 +377,5 @@ let lucm_latin_1_9_uncompressed_raw = [|
 |]
 
 (* TODO: after processed lucm_latin_1_9_uncompressed *)
+let parse_subfont_raw arr = 
+  raise Todo

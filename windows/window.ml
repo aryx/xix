@@ -67,7 +67,7 @@ type t = {
   (* Textual Window *)
   (* ---------------------------------------------------------------- *)
   (* growing array *)
-  mutable text: Editor.rune array;
+  mutable text: Rune.t array;
   (* number of runes in window *)
   mutable nrunes: int;
 

@@ -21,7 +21,7 @@ let wm_menu button exitchan
     "New", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, view, font) in
       img_opt |> Common.if_some (fun img ->
-        Wm.new_win img "/bin/rc" []
+        Wm.new_win img "/bin/rc" [] mouse
       )
     );
     "Reshape", (fun () -> raise Todo);
@@ -77,14 +77,20 @@ let thread (exitchan,
       in
       if sending_to_win
       then begin
-        (* todo: set cursor *)
         Globals.win () |> Common.if_some (fun w ->
+          if not (Mouse.has_click m)
+          then Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
+          else Wm.window_cursor w mouse;
+          
           (* less: send logical coordinates *)
           Event.send w.W.chan_mouse m |> Event.sync
         )
       end else begin
         let wopt = Windows.window_at_point m.pos in
-        (* todo: set corner cursor if on corner part1 else riosetcursor *)
+        (match wopt with
+        | Some w -> Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
+        | None -> Mouse.reset_cursor mouse
+        );
         (* todo: if moving and buttons *)
         (* todo: set corner cursor again part2 *)
 
@@ -118,10 +124,10 @@ let thread (exitchan,
               (m, mouse) (display, desktop, view, font)
 
           | OtherWin w, { left = true } ->
-            Wm.top_win w
+            Wm.top_win w mouse
             (* less: should drain and wait that release up, unless winborder *)
           | OtherWin w, ({ middle = true } | { right = true}) ->
-            Wm.top_win w
+            Wm.top_win w mouse
             (* todo: should goto again, may need to send event *)
             
           | _ -> raise (Impossible "Mouse.has_click so one field is true")

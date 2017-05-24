@@ -1,7 +1,7 @@
 open Common
 open Cursor
 open Point
-
+open Rectangle
 
 (*****************************************************************************)
 (* classic cursors *)
@@ -228,4 +228,47 @@ let l = {
     |];
 }
 
-(* less: type corner? *)
+type corner = 
+  | TopLeft    | Top    | TopRight
+  | Left                | Right
+  | BottomLeft | Bottom | BottomRight
+
+type portion = Inf | Middle | Sup
+
+let portion x low high =
+  (* normalize to low *)
+  let x = x - low in
+  let high = high - low in
+  let low = 0 in
+
+  match () with
+  | _ when x < 20 -> Inf
+  | _ when x > high - 20 -> Sup
+  | _ -> Middle
+
+let which_corner r p =
+  let left_right = portion p.x r.min.x r.max.x in
+  let bottom_top = portion p.y r.min.y r.max.y in
+  match left_right, bottom_top with
+  | Inf, Inf -> TopLeft
+  | Inf, Middle -> Left
+  | Inf, Sup -> BottomLeft
+  | Middle, Inf -> Top
+  | Middle, Middle -> 
+    raise (Impossible "which_corner: pt_on_frame should not generate this")
+  | Middle, Sup -> Bottom
+  | Sup, Inf -> TopRight
+  | Sup, Middle -> Right
+  | Sup, Sup -> BottomRight
+
+let which_corner_cursor w p =
+  let corner = which_corner w p in
+  match corner with
+  | TopLeft -> tl
+  | Top -> t
+  | TopRight -> tr
+  | Left -> l
+  | Right -> r
+  | BottomLeft -> bl
+  | Bottom -> b
+  | BottomRight -> br

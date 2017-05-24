@@ -112,8 +112,10 @@ type border_status =
   | Selected
   | Unselected
 
+(* old: was not an helper, but should to be consistent with winborder *)
 let pt_inside_frame pt w =
   Rectangle.pt_in_rect pt (Rectangle.insetrect frame_border w.screenr)
+(* old: was called winborder *)
 let pt_on_frame pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_frame pt w)
 

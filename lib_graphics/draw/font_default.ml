@@ -3,6 +3,8 @@ open Point
 open Rectangle
 open Fontchar
 
+module I = Display
+
 (* comes from tests/testfont.ml and lucm_latin_1_9_uncompressed_raw *)
 let lucm_latin_1_9_uncompressed_parsed = 
 (Channel.grey1,
@@ -554,5 +556,21 @@ let load_default_subfont display =
   Subfont.alloc "*default*" nfontchars height ascent fontchars img
 
 let load_default_font display =
-  let default_subfont = load_default_subfont display in
-  raise Todo
+  let sf = load_default_subfont display in
+  let img = sf.Subfont.bits in
+
+  let f = 
+  { Font.name = "*default*";
+    Font.height = sf.Subfont.height;
+    Font.ascent = sf.Subfont.ascent;
+    (* TODO *)
+    Font.subfont_spec = [];
+    (* TODO: simplified cache_chars for now *)
+    Font.cache_img = 
+      Image.alloc display img.I.r img.I.chans false Color.transparent;
+    Font.subfont = Some sf;
+  }
+  in
+  (* TODO: simplified load_char working with simplified cache_chars *)
+  f
+

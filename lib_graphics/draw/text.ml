@@ -3,9 +3,16 @@ open Point
 
 module I = Display
 module M = Draw_marshal
+module F = Font
+module SF = Subfont
+module FC = Fontchar
 
 (* less: return subfontname? *)
 let cache_chars font str max_n =
+  (* TODO: this is a very simplified version of cache_chars that
+   * assumes a specific way to load the font in 
+   * Font_default.load_default_font
+   *)
   raise Todo
 
 (* less: str_or_rune len bp bgp *)

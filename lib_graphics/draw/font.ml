@@ -10,9 +10,13 @@ type t = {
   ascent: int;
 
   (* less: display?*)
+
   subfont_spec: subfont_spec list;
 
   cache_img: Image.t;
+
+  (* TODO: simplified font handling: just one subfont *)
+  subfont: Subfont.t option;
 }
 (* old: was called Cachefont in draw-C *)
 and subfont_spec = {
@@ -28,8 +32,8 @@ and subfont_spec = {
 }
 
 let fake_font = 
-  { height = -1; name = ""; ascent = 0; subfont_spec = []; 
-    cache_img = Display.fake_image 
+  { height = -1; name = ""; ascent = 0; subfont_spec = [];
+    subfont = None; cache_img = Display.fake_image 
   }
 
 (* for default_font see font_default.ml *)

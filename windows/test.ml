@@ -61,4 +61,10 @@ let test_display_default_font display view =
   let subfont = Font_default.load_default_subfont display in
   let img = subfont.Subfont.bits in
   Draw.draw view img.I.r img None Point.zero;
+  Image.flush view;
   ()
+
+let test_display_text display view font =
+  Text.string view (Point.p 100 100) !Globals.red Point.zero font "Hello world";
+  Image.flush view;
+  

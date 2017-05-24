@@ -10,11 +10,14 @@ module I = Display
  *
  * Main limitations compared to rio:
  *  - no unicode
+ *  - just a basic ascii font for now
  * 
  * todo:
  *  - you need to disable preempt? otherwise can have concurrent
  *    read on mousectl between thread_mouse and read_mouse
  *    in menuhit?
+ *  - more fonts
+ *  - unicode
  *)
 
 let usage = 
@@ -25,14 +28,14 @@ let thread_main () =
   (* Rio, a graphical application *)
 
   let display = Draw.init "Rio" in
-  (* less: let view = Layer.window_init () in *)
+  (* less: let view = Layer.window_init () in, if want rio in rio *)
   let view = display.Display.image in
   (* less: let viewr save? *)
   let font = Font_default.load_default_font display in
 
   let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
-  Globals.red := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
-  Globals.title_color := Image.alloc_color display Color.greygreen;
+  Globals.red   := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
+  Globals.title_color       := Image.alloc_color display Color.greygreen;
   Globals.title_color_light := Image.alloc_color display Color.palegreygreen;
 
   let desktop = Baselayer.alloc view background in
@@ -41,7 +44,11 @@ let thread_main () =
   let kbd = Keyboard.init () in
 
   Draw.draw view view.I.r background None Point.zero;
-  (* to test: Test.test_display_default_font display view *)
+  (* to test: 
+  *)
+  Test.test_display_default_font display view;
+  Test.test_display_text display view font;
+
   Display.flush display;
 
   (* Rio, a concurrent application *)
@@ -71,6 +78,7 @@ let main () =
     " ";
     "-font", Arg.String (fun s -> raise Todo),
     " <fontname>";
+
     "-i", Arg.String (fun s -> raise Todo),
     " <initcmd>";
     "-k", Arg.String (fun s -> raise Todo),

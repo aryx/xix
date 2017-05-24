@@ -147,3 +147,4 @@ let dump v = dump2 (repr v)
 let list_iteri f xs =
   xs |> Array.of_list |> Array.iteri f
 
+type filename = string

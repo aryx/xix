@@ -1,4 +1,6 @@
 open Common
+open Point
+open Rectangle
 
 (* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
@@ -92,5 +94,46 @@ let alloc_color display color =
 let flush img =
   Display.flush img.display
 
+(* less: move in channel.ml? *)
+let bytes_per_line r depth =
+  match depth with
+  | 1 -> Rectangle.dx r / 8
+  | _ -> raise Todo
+
 let load img r bytes =
-  raise Todo
+  let display = img.display in
+
+  if not (Rectangle.rect_in_rect r img.r)
+  then failwith "Image.load: bad rectangle";
+
+  (* note that Unix.write does already split in chunk of 16384 bytes *)
+  let chunk = Display.bufsize - 64 (* for 'y' id[4] ... header *) in
+
+  let bpl = bytes_per_line r img.depth in
+  let n = bpl * Rectangle.dy r in
+  if n > String.length bytes
+  then failwith "Image.load: insufficient data";
+
+  let r = ref r in
+  let ndata = ref 0 in
+  while !r.min.y < !r.max.y do
+    let dy = !r.max.y - !r.min.y in
+    let dy = 
+      if dy * bpl > chunk
+      then chunk / bpl
+      else dy
+    in
+    if dy <= 0
+    then failwith "Image.load: image too wide for buffer";
+    let n = dy * bpl in
+
+    let str = "y" ^ M.bp_long img.id ^ M.bp_rect 
+      { !r with max = { !r.max with y = !r.min.y + dy } } ^
+      (String.sub bytes !ndata n)
+    in
+    add_buf display str;
+    r := { !r with min = { !r.min with y = !r.min.y + dy } };
+    ndata := !ndata + n;
+  done;
+  !ndata
+

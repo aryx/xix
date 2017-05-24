@@ -1,3 +1,4 @@
+module I = Display
 
 let test_print () =
   let x = 1+1 in
@@ -54,4 +55,10 @@ let test () =
   test_threads_cooperatively ();
 *)
   test_threads_preemptively ();
+  ()
+
+let test_display_default_font display view =
+  let subfont = Font_default.load_default_subfont display in
+  let img = subfont.Subfont.bits in
+  Draw.draw view img.I.r img None Point.zero;
   ()

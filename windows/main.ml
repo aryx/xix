@@ -17,7 +17,6 @@ module I = Display
  *    in menuhit?
  *)
 
-
 let usage = 
   "usage: rio [options]"
 
@@ -42,6 +41,7 @@ let thread_main () =
   let kbd = Keyboard.init () in
 
   Draw.draw view view.I.r background None Point.zero;
+  (* to test: Test.test_display_default_font display view *)
   Display.flush display;
 
   (* Rio, a concurrent application *)

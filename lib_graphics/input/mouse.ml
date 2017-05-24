@@ -142,4 +142,14 @@ let set_cursor ctl cursor =
         |> Array.concat |> Array.to_list |> List.map (String.make 1)
         |> String.concat "")
   in
-  Unix2.write ctl.cursor_fd str 0 (String.length str)
+  (* less: sanity check ?*)
+  Unix2.write ctl.cursor_fd str 0 (String.length str) |> ignore
+
+let reset_cursor ctl =
+  (* todo: this does not work because ocaml/unix/write.c call write
+   * only when len > 0.
+   *)
+  (* Unix2.write ctl.cursor_fd "" 0 0 |> ignore *)
+  set_cursor ctl Cursor.arrow
+
+

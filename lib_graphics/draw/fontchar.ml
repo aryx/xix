@@ -4,7 +4,7 @@ type t = {
   (* character coordinates in Subfont.bits *)
 
   (*/* left edge of bits */*)
-  x: int;
+  xleft_in_bits: int;
   (* /* first non-zero scan-line */ *)
   top: int;
   (* /* last non-zero scan-line + 1 */*)

@@ -1,16 +1,46 @@
 open Common
 open Point
 
-module I = Image
+module I = Display
+module M = Draw_marshal
 
-let string_gen dst pt src sp ft str_or_rune len clipr bg bgp op =
-  failwith "string_gen: Todo"
+(* less: return subfontname? *)
+let cache_chars font str max_n =
+  raise Todo
 
-let string dst pt src sp font str =
-(*
-  string_gen dst pt src sp ft (Left str) (String.length str) 
-    dst.I.clipr None Point.zero Draw.SoverD
-*)
+(* less: str_or_rune len bp bgp *)
+let string_gen dst pt color sp font s clipr op =
+  
+  let s = ref s in
+  let pt = ref pt in
+
+  while String.length !s > 0 do
+    (* todo: if subfontname? *)
+    let xs, rest_s, width  = cache_chars font !s (min (String.length !s) 100) in
+    let n = List.length xs in
+    (* todo: if bg *)
+    if n > 0 then begin
+      let str = "s" ^ M.bp_long dst.I.id ^ M.bp_long color.I.id ^ 
+        M.bp_long font.Font.cache_img.I.id ^ 
+        M.bp_point !pt ^ M.bp_rect clipr ^ M.bp_point sp ^
+        M.bp_short n ^
+        (xs |> List.map M.bp_short |> String.concat "")
+      in
+      Display.add_buf dst.I.display (Draw.adjust_str_for_op str op);
+
+      s := rest_s;
+      pt := { !pt with x = !pt.x + width };
+      (* less: agefont font *)
+    end
+   (* less: if subfontmame *)
+  done;
+  !pt
+    
+  
+
+let string dst pt color sp font str =
+  string_gen dst pt color sp font str dst.I.clipr Draw.SoverD
+(* to test ui when no font support:
   Draw.draw dst
     (Rectangle.r 
        pt.x 
@@ -19,4 +49,33 @@ let string dst pt src sp font str =
        (pt.y + font.Font.height)
     )
     src None sp
+*)
 
+(* less: str_or_rune len *)
+let string_width_gen font s =
+
+  let s = ref s in
+  let total_width = ref 0 in
+
+  while String.length !s > 0 do
+    (* todo: if subfontname? *)
+    let xs, rest_s, width  = cache_chars font !s (min (String.length !s) 100) in
+    let n = List.length xs in
+    (* todo: if cachechars failed? *)
+    if n > 0 then begin
+      s := rest_s;
+      total_width := !total_width + width
+      (* less: agefont font *)
+    end
+   (* less: if subfontmame *)
+  done;
+  !total_width
+
+let string_width font str =
+  (* to test ui when no font support:
+     String.length str * 6
+  *)
+  string_width_gen font str
+
+let string_size font str =
+  Point.p (string_width font str) font.Font.height

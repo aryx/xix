@@ -10,8 +10,8 @@ type end_line =
 
 let bp_end_line = function
   | EndSquare -> M.bp_long 0
-  | EndDisc -> M.bp_long 1
-  | EndArrow -> M.bp_long 2
+  | EndDisc   -> M.bp_long 1
+  | EndArrow  -> M.bp_long 2
 
 
 let line_gen dst p0 p1 end0 end1 radius src sp op =

@@ -69,7 +69,7 @@ let paint_item (img:Image.t) (font:Font.t) (i:int) (entries: string array) textr
   | SaveOn      save -> Draw.draw save save.I.r img None r.min 
   | RestoreFrom save -> Draw.draw img r save None save.I.r.min
   );
-  let pt = { x = (textr.min.x + textr.max.x - Font.string_width font str) / 2;
+  let pt = { x = (textr.min.x + textr.max.x - Text.string_width font str) / 2;
              y = textr.min.y + i * line_height 
            }
   in
@@ -130,7 +130,7 @@ let menu items button (m, mouse) (display, desktop, view, font) =
   (* compute width and height and basic config *)
 
   let max_width = 
-    items |> List.map (fun (str, _f) -> Font.string_width font str)
+    items |> List.map (fun (str, _f) -> Text.string_width font str)
           |> List.fold_left max 0
   in
   (* todo: if scrolling *)

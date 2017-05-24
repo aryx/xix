@@ -4,7 +4,7 @@ module I = Display
 module W = Window
 
 (* less: a rio_cursor? with lastcursor opti? and force parameter? *)
-let window_cursor w mouse =
+let window_cursor _w mouse =
   (* TODO: use w.cursor *)
   (* less: if menuing? or use corner_cursor() so no need this global? *)
   (* less: if holding *)

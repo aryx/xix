@@ -52,9 +52,11 @@ let string_gen dst pt color sp font s clipr op =
     let n = List.length xs in
     (* todo: if bg *)
     if n > 0 then begin
+      (* bugfix: important to adjust pt! *)
+      let adjusted_pt = {!pt with y = !pt.y + font.Font.ascent } in
       let str = "s" ^ M.bp_long dst.I.id ^ M.bp_long color.I.id ^ 
         M.bp_long font.Font.cache_img.I.id ^ 
-        M.bp_point !pt ^ M.bp_rect clipr ^ M.bp_point sp ^
+        M.bp_point adjusted_pt ^ M.bp_rect clipr ^ M.bp_point sp ^
         M.bp_short n ^
         (xs |> List.map M.bp_short |> String.concat "")
       in

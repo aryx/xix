@@ -585,6 +585,11 @@ let load_default_font display =
   (* TODO: simplified load_char working with simplified cache_chars *)
   let fcs = sf.Subfont.chars in 
   for i = 0 to Array.length fcs - 2 do
+  (* to debug load_char and compare with on-demand load_char in draw-C: 
+    let str = "Hello world" in 
+    for j=0 to String.length str - 1 do 
+    let i = Char.code str.[j] in
+  *)
     let fc = fcs.(i) in
     let x_fc_after = fcs.(i+1).Fontchar.xleft_in_bits in
     Font.load_char cache_img subfont_img i fc x_fc_after;

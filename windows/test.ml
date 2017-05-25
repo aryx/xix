@@ -49,14 +49,6 @@ let test_threads_preemptively () =
   flush stdout;
   loop ()
 
-let test () =
-(*
-  test_print ();
-  test_threads_cooperatively ();
-*)
-  test_threads_preemptively ();
-  ()
-
 let test_display_default_font display view =
   let subfont = Font_default.load_default_subfont display in
   let img = subfont.Subfont.bits in
@@ -75,3 +67,12 @@ let test_display_text display view font =
   Image.flush view;
   while true do () done
   
+
+let test () =
+(*
+  test_print ();
+  test_threads_cooperatively ();
+*)
+  test_threads_preemptively ();
+  ()
+

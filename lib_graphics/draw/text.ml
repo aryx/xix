@@ -14,12 +14,31 @@ let cache_chars font str max_n =
   (* TODO: this is a very simplified version of cache_chars that
    * assumes a specific way to load the font in Font_default.load_default_font
    *)
+  assert (max_n <= String.length str);
   let sf = 
     match font.Font.subfont with
     | None -> failwith "subfont not loaded"
     | Some sf -> sf
   in
-  raise Todo
+  let xs = ref [] in
+  let width = ref 0 in
+  for i = 0 to max_n - 1 do
+    let c = str.[i] in
+
+    (* TODO: simplified version *)
+    let h = Char.code c in
+    (* Common.push *)
+    xs := h::!xs;
+    let fc = sf.Subfont.chars.(h) in
+    width := !width + fc.Fontchar.width;
+  done;
+  let rest_str =
+    if max_n < String.length str
+    then raise Todo
+    else ""
+  in
+  List.rev !xs, rest_str, !width 
+    
 
 (* less: str_or_rune len bp bgp *)
 let string_gen dst pt color sp font s clipr op =

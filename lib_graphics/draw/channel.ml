@@ -17,6 +17,8 @@ type t = chan list (* usually 4, like R8G8B8A8 *)
 
 let grey1 =
   [ CGrey, 1]
+let grey8 =
+  [ CGrey, 8]
 let rgb16 =
   [ CRed, 5; CGreen, 6; CBlue, 6]
 let rgb24 =

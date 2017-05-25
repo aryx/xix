@@ -23,10 +23,11 @@ let canonical p1 p2 =
 let rp pt1 pt2 =
   { min = pt1; max = pt2 }
 
-let zero =
+let r_empty =
   { min = Point.zero;
     max = Point.zero;
   }
+let r_1x1 = r 0 0 1 1
 
 (* width, delta x *)
 let dx r = 

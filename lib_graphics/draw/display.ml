@@ -103,7 +103,7 @@ let add_buf display str =
 
 let rec fake_image = { 
    id = -1; chans = []; depth = -1; repl = false;
-   r = Rectangle.zero; clipr =  Rectangle.zero; 
+   r = Rectangle.r_empty; clipr =  Rectangle.r_empty; 
    display = fake_display; baseid = None;
 }
 and fake_display = {  

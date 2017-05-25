@@ -148,3 +148,11 @@ let list_iteri f xs =
   xs |> Array.of_list |> Array.iteri f
 
 type filename = string
+
+let once aref f =
+  match !aref with
+  | Some x -> x
+  | None ->
+    let x = f () in
+    aref := Some x;
+    x

@@ -147,7 +147,7 @@ let alloc img =
     output_point = 0;
 
     frame = ();
-    scrollr = Rectangle.zero;
+    scrollr = Rectangle.r_empty;
 
     mouse_opened = false;
     deleted = false;

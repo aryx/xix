@@ -50,3 +50,29 @@ let draw dst r src mask_opt p =
     | None -> dst.I.display.D.opaque
     )
     p SoverD
+
+(* in draw_utils? *)
+let qmask = ref None
+let alloc_mix display color1 color2 =
+  let mask = Common.once qmask (fun () -> 
+    Image.alloc display Rectangle.r_1x1 Channel.grey8 true
+      (Color.mk2 0x3F 0x3F 0x3F)
+  )
+  in
+  let chans = display.D.image.I.chans in
+  (* less: if depth <= 8 *)
+  if Channel.depth_of_channels chans <= 8 then begin
+    (* todo: finalize tmp! *)
+    let tmp = Image.alloc display Rectangle.r_1x1 chans false color1 in
+    let img = Image.alloc display (Rectangle.r 0 0 2 2) chans true color2 in
+    draw img Rectangle.r_1x1 tmp None Point.zero;
+    Image.free tmp;
+    img
+  end else begin
+    (* todo: finalize tmp! *)
+    let tmp = Image.alloc display Rectangle.r_1x1 chans true color1 in
+    let img = Image.alloc display Rectangle.r_1x1 chans true color2 in
+    draw img img.I.r tmp (Some mask) Point.zero;
+    Image.free tmp;
+    img
+  end

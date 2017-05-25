@@ -4,6 +4,7 @@ open Rectangle
 open Fontchar
 
 module I = Display
+module M = Draw_marshal
 
 (* comes from tests/testfont.ml and lucm_latin_1_9_uncompressed_raw *)
 let lucm_latin_1_9_uncompressed_parsed = 
@@ -555,9 +556,18 @@ let load_default_subfont display =
   
   Subfont.alloc "*default*" nfontchars height ascent fontchars img
 
+
+
 let load_default_font display =
   let sf = load_default_subfont display in
-  let img = sf.Subfont.bits in
+  let subfont_img = 
+    sf.Subfont.bits in
+  (* TODO: simplified cache_chars for now *)
+  let cache_img = 
+    Image.alloc display subfont_img.I.r subfont_img.I.chans false 
+      Color.transparent in
+  (* meh *)
+  Display.flush display;
 
   let f = 
   { Font.name = "*default*";
@@ -565,12 +575,20 @@ let load_default_font display =
     Font.ascent = sf.Subfont.ascent;
     (* TODO *)
     Font.subfont_spec = [];
-    (* TODO: simplified cache_chars for now *)
-    Font.cache_img = 
-      Image.alloc display img.I.r img.I.chans false Color.transparent;
+    Font.cache_img = cache_img;
     Font.subfont = Some sf;
   }
   in
+  (* TODO: simplified font initialize *)
+  Font.initialize cache_img 256 sf.Subfont.ascent;
+
   (* TODO: simplified load_char working with simplified cache_chars *)
+  let fcs = sf.Subfont.chars in 
+  for i = 0 to Array.length fcs - 2 do
+    let fc = fcs.(i) in
+    let x_fc_after = fcs.(i+1).Fontchar.xleft_in_bits in
+    Font.load_char cache_img subfont_img i fc x_fc_after;
+  done;
+
   f
 

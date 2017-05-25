@@ -1,11 +1,14 @@
 open Common
 open Point
+open Rectangle
 
 module I = Display
 module M = Draw_marshal
 module F = Font
 module SF = Subfont
 module FC = Fontchar
+
+
 
 (* less: return subfontname? *)
 let cache_chars font str max_n =

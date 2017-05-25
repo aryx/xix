@@ -33,6 +33,9 @@ let thread_main () =
   (* less: let viewr save? *)
   let font = Font_default.load_default_font display in
 
+  if !Globals.debug
+  then Display.debug display;
+
   let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
   Globals.red   := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
   Globals.title_color       := Image.alloc_color display Color.greygreen;

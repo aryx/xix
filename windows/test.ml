@@ -65,6 +65,9 @@ let test_display_default_font display view =
   ()
 
 let test_display_text display view font =
-  Text.string view (Point.p 100 100) !Globals.red Point.zero font "Hello world";
+  let p = Point.p 100 100 in
+  let r = Rectangle.r 100 100 200 200 in
+  Polygon.border view r 1 !Globals.title_color Point.zero;
+  Text.string view p !Globals.red Point.zero font "Hello world";
   Image.flush view;
   

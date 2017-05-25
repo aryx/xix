@@ -47,7 +47,16 @@ let fake_font =
 
 (* TODO: simplified to work with simplified cachec_chars and font_default.ml*)
 let initialize cache_img ncache ascent =
-  raise Todo
+  let display = cache_img.I.display in
+  (* meh *)
+  Display.flush_buffer display;
+  let str = "i" ^ M.bp_long cache_img.I.id ^ M.bp_long ncache ^
+    M.bp_byte ascent
+  in
+  Display.add_buf display str;
+  Display.flush_buffer display;
+  ()
+
 
 (* TODO: simplified to work with simplified cache_chars and font_default.ml *)
 let load_char cache_img subfont_img index fc x_fc_after =

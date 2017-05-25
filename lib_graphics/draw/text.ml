@@ -9,13 +9,16 @@ module SF = Subfont
 module FC = Fontchar
 
 
-
 (* less: return subfontname? *)
 let cache_chars font str max_n =
   (* TODO: this is a very simplified version of cache_chars that
-   * assumes a specific way to load the font in 
-   * Font_default.load_default_font
+   * assumes a specific way to load the font in Font_default.load_default_font
    *)
+  let sf = 
+    match font.Font.subfont with
+    | None -> failwith "subfont not loaded"
+    | Some sf -> sf
+  in
   raise Todo
 
 (* less: str_or_rune len bp bgp *)

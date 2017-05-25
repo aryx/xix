@@ -20,7 +20,7 @@ OCAMLLDFLAGS=-thread -custom -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
 
 # for the linker
 #CAMLLIB=/usr/local/lib/ocaml
-#CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
+CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 
 LIBS=$TOP/commons2/commons.cma $TOP/lib_graphics/geometry/geometry.cma \
  $TOP/lib_graphics/draw/draw.cma
@@ -35,17 +35,20 @@ CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
 # Toplevel targets
 #############################################################################
 
-PROGS=testfont
-#hellodraw
+PROGS=hellodraw test_font
+#gen_font_default
 
 all:V: $PROGS
 
 hellodraw: hellodraw.cmo mkfile
 	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS hellodraw.cmo $CCLIBS
 
+test_font: test_font.cmo
+	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
+
 # need to unset CAMLLIB above to be able to compile this program
-testfont: testfont.ml ../font_default.ml
-	ocamlc -g -I $TOP/commons -I ../ str.cma $TOP/commons/lib.cma ../font_default.ml testfont.ml  -o testfont
+gen_font_default: gen_font_default.ml ../font_default.ml
+	ocamlc -g -I $TOP/commons -I ../ str.cma $TOP/commons/lib.cma ../font_default.ml gen_font_default.ml  -o testfont
 
 clean:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS

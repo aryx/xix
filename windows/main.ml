@@ -48,8 +48,8 @@ let thread_main () =
 
   Draw.draw view view.I.r background None Point.zero;
   (* to test: 
-  *)
   Test.test_display_default_font display view;
+  *)
   Test.test_display_text display view font;
 
   Display.flush display;

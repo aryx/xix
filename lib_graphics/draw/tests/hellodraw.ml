@@ -28,4 +28,3 @@ let _ =
     main ()
   with Unix.Unix_error (err, s1, s2) when s2 = "xxx" ->
     failwith (spf "unix_error: %s, %s, %s" (Unix.error_message err) s1 s2)
-

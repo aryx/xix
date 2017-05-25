@@ -31,7 +31,7 @@ let init_colors display =
   then begin
     (* less: could use try and default to black/white if can not alloc image*)
     (* less: opti: use view->chan instead of rgb24 used by Image.alloc_color *)
-    background := Draw.alloc_mix display Color.palegreen Color.white;
+    background := Draw.alloc_mix_colors display Color.palegreen Color.white;
     background_highlighted := Image.alloc_color display (Color.darkgreen);
     border_color           := Image.alloc_color display (Color.medgreen);
     text_color       := display.D.black;

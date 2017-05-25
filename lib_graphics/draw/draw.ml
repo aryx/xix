@@ -53,7 +53,7 @@ let draw dst r src mask_opt p =
 
 (* in draw_utils? *)
 let qmask = ref None
-let alloc_mix display color1 color2 =
+let alloc_mix_colors display color1 color2 =
   let mask = Common.once qmask (fun () -> 
     Image.alloc display Rectangle.r_1x1 Channel.grey8 true
       (Color.mk2 0x3F 0x3F 0x3F)

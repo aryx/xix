@@ -26,6 +26,7 @@ let key_control w key =
       |> Rectangle.add_pt (Vector.v 0 !cnt)
     in
     Draw.draw w.img r !Globals.red None Point.zero;
+    (*Text.string w.img r.min !Globals.red Point.zero !Globals.font;*)
     
     (* less: navigation keys *)
     (* todo: if rawing *)

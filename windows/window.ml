@@ -6,9 +6,12 @@ type wid = int
 
 type cmd =
   | Delete
+  (* for resize event but also for hide/unhide *)
+  | Reshape of 
+      Image.t (* can be Layer.t or an off-screen Image.t when hidden *) *
+      Mouse.ctl
 (*
-  | Resize of unit
-  | Move of unit
+  | Move of Image.t * Rectangle.t
   | Refresh
   | Wakeup
 *)
@@ -19,8 +22,8 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* visible in /mnt/wsys/winid *)
   id: wid;
-  (* visible in /mnt/wsys/winname *)
-  name: string;
+  (* public named image, visible in /mnt/wsys/winname, change when resize *)
+  mutable name: string;
 
   (* writable through /mnt/wsys/label *)
   mutable label: string;
@@ -29,12 +32,12 @@ type t = {
   (* Graphics *)
   (* ---------------------------------------------------------------- *)
   (* todo: option? when delete the window structure and thread is still
-   * out there because we wait for the process to terminate
+   * out there because we wait for the process to terminate?
    *)
   mutable img: Layer.t;
 
   (* less: used to be equivalent to img.r *)
-  screenr: Rectangle.t;
+  mutable screenr: Rectangle.t;
 
   (* ---------------------------------------------------------------- *)
   (* Mouse *)

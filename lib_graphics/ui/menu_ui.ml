@@ -122,7 +122,7 @@ let scan_items img font  mouse button  iopt entries textr  save =
 
 
 
-let menu items button (m, mouse) (display, desktop, view, font) =
+let menu items pos button mouse (display, desktop, view, font) =
   init_colors display;
   (* less: reset clipr and repl on view? *)
 
@@ -151,7 +151,7 @@ let menu items button (m, mouse) (display, desktop, view, font) =
     |> Rectangle.sub_pt
         (Point.p (width / 2) (lasti * line_height + font.Font.height / 2))
     (* adjust to mouse position *)
-    |> Rectangle.add_pt m.Mouse.pos
+    |> Rectangle.add_pt pos
   in
   
   (* less: adjust if outside view *)
@@ -208,7 +208,7 @@ let menu items button (m, mouse) (display, desktop, view, font) =
       )
     end else acc
   in
-  let iopt = loop_while_button m (Some lasti) in
+  let iopt = loop_while_button (Mouse.mk pos button) (Some lasti) in
 
   Layer.free img;
   Display.flush display;

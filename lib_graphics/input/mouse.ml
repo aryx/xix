@@ -8,6 +8,10 @@ module Unix2 = ThreadUnix
 module C = Cursor
 module M = Draw_marshal
 
+(*****************************************************************************)
+(* Mouse state *)
+(*****************************************************************************)
+
 type state = {
   pos: Point.t;
   buttons: buttons;
@@ -19,6 +23,9 @@ type state = {
    * less: opti: bitset
    *)
   and buttons = { left: bool; middle: bool; right: bool; }
+
+let nobuttons = 
+  { left = false; middle = false; right = false }
 
 (* this type is sometimes more convenient to use *)
 type button = Left | Middle | Right
@@ -33,7 +40,27 @@ let has_button m button =
   | Left -> buttons.left
   | Middle -> buttons.middle
   | Right -> buttons.right
-  
+
+let mk pos button = 
+  { pos = pos;
+    buttons = 
+      (match button with
+      | Left -> { nobuttons with left = true }
+      | Middle -> { nobuttons with middle = true }
+      | Right -> { nobuttons with right = true }
+      );
+    msec = -1;
+  }
+
+let fake_state = {
+  pos = Point.zero;
+  buttons = { left = false; middle = false; right = false };
+  msec = 0;
+}  
+       
+(*****************************************************************************)
+(* Mouse device controller *)
+(*****************************************************************************)
 
 type ctl = {
   (* /dev/mouse *)
@@ -98,11 +125,6 @@ let thread_mouse ctl =
   done
 
 
-let fake_state = {
-  pos = Point.zero;
-  buttons = { left = false; middle = false; right = false };
-  msec = 0;
-}  
 
 (* less: take image parameter? *)
 let init () =
@@ -151,5 +173,3 @@ let reset_cursor ctl =
    *)
   (* Unix2.write ctl.cursor_fd "" 0 0 |> ignore *)
   set_cursor ctl Cursor.arrow
-
-

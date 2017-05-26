@@ -50,21 +50,26 @@ let repaint_border w =
   | _ -> 
     draw_border w W.Unselected
 
-let set_current_and_repaint_borders w mouse =
+(* old: was called wcurrent *)
+let set_current_and_repaint_borders wopt mouse =
   (* less: if wkeyboard *)
   let old = !Globals.current in
-  Globals.current := Some w;
-  old |> Common.if_some (fun w2 ->
-    if not (w2 == w)
+  Globals.current := wopt;
+  (match old, wopt with
+  | Some w2, Some w when not (w2 == w) ->
     (* less: could do directly: draw_border w2 W.Unseleted *)
     (* bugfix: was doing repaint_border w, hmm *)
-    then repaint_border w2
+    repaint_border w2
+  | _ -> ()
   );
-  (* less: could do directly: draw_border w W.Seleted *)
-  repaint_border w;
-  window_cursor w mouse;
-  (* todo: wakeup? why? *)
-  ()
+  wopt |> Common.if_some (fun w ->
+    (* less: could do directly: draw_border w W.Seleted *)
+    repaint_border w;
+    window_cursor w mouse;
+    (* todo: wakeup? why? *)
+
+    ()
+  )
 
 (*****************************************************************************)
 (* Wm *)
@@ -75,7 +80,7 @@ let top_win w mouse =
   then ()
   else begin
     Layer.put_to_top w.W.img;
-    set_current_and_repaint_borders w mouse;
+    set_current_and_repaint_borders (Some w) mouse;
     Image.flush w.W.img;
 
     incr Window.topped_counter;
@@ -102,7 +107,7 @@ let new_win img _cmd _argv mouse =
   let _win_thread = Thread.create !threads_window_thread_func w in
 
   (* less: if not hideit *)
-  set_current_and_repaint_borders w mouse;
+  set_current_and_repaint_borders (Some w) mouse;
   Image.flush img;
 
   (* todo: create a new process! *)
@@ -119,8 +124,57 @@ let close_win w =
   | _ -> ()
   );
   (* less: if wkeyboard *)
-  (* less: remove w from hidden set *)
+  Hashtbl.remove Globals.hidden w.W.id;
   Hashtbl.remove Globals.windows w.W.id;
   Layer.free w.W.img;
   w.W.img <- Image.fake_image;
+  ()
+
+let hide_win w mouse =
+  if Hashtbl.mem Globals.hidden w.W.id
+  (* less: return -1? can happen if window thread take too much time
+   * to respond to the Reshape command?
+   *)
+  then raise (Impossible "window already hidden");
+  let old_layer = w.W.img in
+  let display = old_layer.I.display in
+  (* this is an image! not a layer, so it will not be visible on screen *)
+  let img = 
+    Image.alloc display w.W.screenr old_layer.I.chans false Color.white in
+  (* less: return 0 or 1 if can or can not allocate? *)
+  Hashtbl.add Globals.hidden w.W.id w;
+  let cmd = W.Reshape (img, mouse) in
+  Event.send w.W.chan_cmd cmd |> Event.sync;
+  ()
+
+let unhide_win w desktop mouse =
+  let old_img = w.W.img in
+  let layer = Layer.alloc desktop old_img.I.r Color.white in
+  Hashtbl.remove Globals.hidden w.W.id;
+  let cmd = W.Reshape (layer, mouse) in
+  Event.send w.W.chan_cmd cmd |> Event.sync;
+  ()
+
+
+(* less: move boolean parameter, useless opti test dx/dy below catch it *)
+let resize_win w new_img =
+  let old_img = w.W.img in
+  let old_r = old_img.I.r in
+  let new_r = new_img.I.r in
+  if Rectangle.dx old_r = Rectangle.dx new_r && 
+     Rectangle.dy old_r = Rectangle.dy new_r
+  then Draw.draw new_img new_r old_img None old_r.Rectangle.min;
+  (* a layer or image, so when hiding this should make disappear the window *)
+  Image.free old_img;
+  (* less: screenr set in caller, but could do it here *)
+  w.W.img <- new_img;
+  (* todo: wsetname *)
+
+  (* todo: textual window update *)
+  draw_border w W.Selected;
+  incr Window.topped_counter;
+  w.W.topped <- !Window.topped_counter;
+
+  (* todo: w.W.resized <- true *)
+  (* todo: mouse counter ++ so transmit resize event *)
   ()

@@ -56,6 +56,30 @@ let cmd_control w cmd =
     (* todo: delete timeout process *)
     Wm.close_win w
 
+  | Reshape (new_img, mouse) ->
+    (* less: put all of that in Wm.resize_win ? *)
+    if w.W.deleted
+    (* less: free new_img if deleted, but when can happen? *)
+    then failwith "window already deleted";
+    let r = new_img.I.r in
+    w.W.screenr <- r;
+    Wm.resize_win w new_img;
+    (* less: set wctlready to true *)
+    (* todo: delete timeout proc for old name of window *)
+    (match Rectangle.dx r, Globals.win () with
+    | 0, Some w2 when w2 == w ->
+      Wm.set_current_and_repaint_borders None mouse
+    | n, Some w2 when (w2 == w) -> 
+      (* less: could Wm.set_current_and_repaint_borders (Some w) mouse,
+       * useless opti I think to special case here w2 == w
+       *)
+      ()
+    | n, (Some _ | None) ->
+      Wm.set_current_and_repaint_borders (Some w) mouse
+    );
+    (* less: Image.flush new_img, but useless cos done in thread () *)
+    ()
+
 
 
 

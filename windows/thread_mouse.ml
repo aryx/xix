@@ -12,8 +12,8 @@ let middle_click_system m mouse =
   pr "Todo: middle click"
 
 (* right click normally *)
-let wm_menu button exitchan 
-    (m, mouse) (display, desktop, view, font) =
+let wm_menu pos button exitchan 
+    mouse (display, desktop, view, font) =
   (* todo: set (and later restore) sweeping to true *)
 
   let items = [
@@ -24,7 +24,8 @@ let wm_menu button exitchan
         Wm.new_win img "/bin/rc" [] mouse
       )
     );
-    "Reshape", (fun () -> raise Todo);
+    (* old: was Reshape but here it's really resizing *)
+    "Resize", (fun () -> raise Todo);
     "Move", (fun () -> raise Todo);
     "Delete", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
@@ -32,14 +33,24 @@ let wm_menu button exitchan
         let cmd = W.Delete in
         Event.send w.W.chan_cmd cmd |> Event.sync;
       ));
-    "Hide", (fun () -> raise Todo);
+    "Hide", (fun () -> 
+      let wopt = Mouse_action.point_to mouse in
+      wopt |> Common.if_some (fun w ->
+        Wm.hide_win w mouse
+      ));
     "Exit", (fun () ->
       Event.send exitchan 0 |> Event.sync;
     );
-  ] in
+  ] @
+  (Globals.hidden |> Common.hash_to_list |> List.map (fun (_wid, w) ->
+    (* less: could sort *)
+    w.W.label, (fun () -> 
+      Wm.unhide_win w desktop mouse
+    )))
+  in
   (* less: adjust menu with hidden windows *)
-  Menu_ui.menu items button
-    (m, mouse) (display, desktop, view, font)
+  Menu_ui.menu items pos button
+    mouse (display, desktop, view, font)
 
 
 
@@ -111,8 +122,8 @@ let thread (exitchan,
           (match under_mouse, m.buttons with
           (* TODO: remove, just because hard right click on QEMU *)
           | Nothing , { left = true } ->
-            wm_menu Mouse.Left exitchan 
-              (m, mouse) (display, desktop, view, font)
+            wm_menu m.Mouse.pos Mouse.Left exitchan 
+              mouse (display, desktop, view, font)
 
 
           | (Nothing | CurrentWin _), { left = true } ->
@@ -125,8 +136,8 @@ let thread (exitchan,
             then middle_click_system m mouse
 
           | (Nothing | CurrentWin _), { right = true } ->
-            wm_menu Mouse.Right exitchan 
-              (m, mouse) (display, desktop, view, font)
+            wm_menu m.Mouse.pos Mouse.Right exitchan 
+              mouse (display, desktop, view, font)
 
           | OtherWin w, { left = true } ->
             Wm.top_win w mouse

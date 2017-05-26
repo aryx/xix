@@ -3,6 +3,12 @@ open Common
 module I = Display
 module W = Window
 
+(*****************************************************************************)
+(* Cursors *)
+(*****************************************************************************)
+
+(* less? move those cursor functions in cursors.ml? *)
+
 (* less: a rio_cursor? with lastcursor opti? and force parameter? *)
 let window_cursor _w mouse =
   (* TODO: use w.cursor *)
@@ -20,6 +26,9 @@ let corner_cursor w pt mouse =
   if Window.pt_on_frame pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
 
+(*****************************************************************************)
+(* Border *)
+(*****************************************************************************)
 
 let draw_border w status =
   let img = w.W.img in
@@ -57,6 +66,10 @@ let set_current_and_repaint_borders w mouse =
   (* todo: wakeup? why? *)
   ()
 
+(*****************************************************************************)
+(* Wm *)
+(*****************************************************************************)
+
 let top_win w mouse =
   if w.W.topped = !Window.topped_counter
   then ()
@@ -69,7 +82,9 @@ let top_win w mouse =
     w.W.topped <- !Window.topped_counter;
   end
 
-
+let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
+  failwith "threads_window_thread_func undefined"
+)
 
 (* less: hideit, pid, dir, scrolling *)
 let new_win img _cmd _argv mouse =
@@ -84,7 +99,7 @@ let new_win img _cmd _argv mouse =
    *)
 
   Hashtbl.add Globals.windows w.W.id w;
-  let _win_thread = Thread.create Threads_window.thread w in
+  let _win_thread = Thread.create !threads_window_thread_func w in
 
   (* less: if not hideit *)
   set_current_and_repaint_borders w mouse;
@@ -92,4 +107,20 @@ let new_win img _cmd _argv mouse =
 
   (* todo: create a new process! *)
   (* todo: wsetname *)
+  ()
+
+
+let close_win w =
+  w.W.deleted <- true;
+  (match Globals.win () with
+  | Some w2 when w == w2 ->
+    Globals.current := None;
+    (* less: window_cursor  ?*)
+  | _ -> ()
+  );
+  (* less: if wkeyboard *)
+  (* less: remove w from hidden set *)
+  Hashtbl.remove Globals.windows w.W.id;
+  Layer.free w.W.img;
+  w.W.img <- Image.fake_image;
   ()

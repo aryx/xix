@@ -92,9 +92,10 @@ let alloc_color display color =
   alloc display (Rectangle.r  0 0 1 1) Channel.rgb24 true color
 
   
-
 let flush img =
   Display.flush img.display
+let fake_image = 
+  Display.fake_image
 
 (* less: move in channel.ml? *)
 let bytes_per_line r depth =
@@ -138,4 +139,3 @@ let load img r bytes =
     ndata := !ndata + n;
   done;
   !ndata
-

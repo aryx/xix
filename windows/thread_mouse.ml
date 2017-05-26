@@ -26,7 +26,12 @@ let wm_menu button exitchan
     );
     "Reshape", (fun () -> raise Todo);
     "Move", (fun () -> raise Todo);
-    "Delete", (fun () -> raise Todo);
+    "Delete", (fun () -> 
+      let wopt = Mouse_action.point_to mouse in
+      wopt |> Common.if_some (fun w ->
+        let cmd = W.Delete in
+        Event.send w.W.chan_cmd cmd |> Event.sync;
+      ));
     "Hide", (fun () -> raise Todo);
     "Exit", (fun () ->
       Event.send exitchan 0 |> Event.sync;

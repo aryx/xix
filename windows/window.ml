@@ -5,11 +5,13 @@ module I = Display
 type wid = int
 
 type cmd =
+  | Delete
+(*
   | Resize of unit
   | Move of unit
   | Refresh
   | Wakeup
-
+*)
 
 type t = {
   (* ---------------------------------------------------------------- *)
@@ -26,6 +28,9 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Graphics *)
   (* ---------------------------------------------------------------- *)
+  (* todo: option? when delete the window structure and thread is still
+   * out there because we wait for the process to terminate
+   *)
   mutable img: Layer.t;
 
   (* less: used to be equivalent to img.r *)

@@ -2,6 +2,7 @@ open Common
 
 module I = Display
 
+(* less: maybe the ref m approach of point_to is simpler for sweep too *)
 type sweep_state = 
   (* start, no buttons *)
   | SweepInit
@@ -102,3 +103,26 @@ let sweep mouse (display, desktop, _view, font) =
       else transit SweepDrain
   in
   transit SweepInit
+
+let point_to mouse =
+  (* todo: menuing? but not sweeping? *)
+  Mouse.set_cursor mouse Cursors.sightcursor;
+
+  let m = ref (Mouse.read mouse) in
+  while not (Mouse.has_click !m) do
+    m := Mouse.read mouse;
+  done;
+  let wopt =
+    if Mouse.has_button !m Mouse.Right
+    then Windows.window_at_point !m.Mouse.pos
+    else None
+  in
+  (* less: wait and cancel option? *)
+  while (Mouse.has_click !m) do
+    m := Mouse.read mouse;
+  done;
+  Globals.win () |> Common.if_some (fun w ->
+    Wm.corner_cursor_or_window_cursor w !m.Mouse.pos mouse
+  );
+  wopt
+

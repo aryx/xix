@@ -4,6 +4,7 @@ open Rectangle
 
 open Window
 
+module W = Window
 module I = Display
 
 type event = 
@@ -47,6 +48,16 @@ let mouse_control w m =
   ()
 
 
+let cmd_control w cmd =
+  match cmd with
+  | Delete -> 
+    (* less: break if window already deleted *)
+    (* todo: delete timeout process *)
+    Wm.close_win w
+
+
+
+
 let thread w =
   
   (* less: threadsetname *)
@@ -58,13 +69,13 @@ let thread w =
     [ 
       Event.receive w.chan_keyboard |> (fun ev->Event.wrap ev(fun x-> Key x));
       Event.receive w.chan_mouse    |> (fun ev->Event.wrap ev(fun x-> Mouse x));
-      Event.receive w.chan_cmd      |> (fun ev->Event.wrap ev(fun x -> Cmd x));
+      Event.receive w.chan_cmd      |> (fun ev->Event.wrap ev(fun x-> Cmd x));
     ] |> Event.select
     in
     (match ev with
     | Key key -> key_control w key
     | Mouse m -> mouse_control w m
-    | Cmd cmd -> raise Todo
+    | Cmd cmd -> cmd_control w cmd
     );
     if not w.deleted
     then Image.flush w.img;

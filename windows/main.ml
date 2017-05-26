@@ -56,6 +56,9 @@ let thread_main () =
 
   (* Rio, a concurrent application *)
 
+  (* to break some mutual dependencies *)
+  Wm.threads_window_thread_func := Threads_window.thread;
+
   let (exit_chan: int (* exit code *) Event.channel) = Event.new_channel () in
 
   let _kbd_thread   = 

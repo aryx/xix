@@ -19,6 +19,7 @@ let lput chan word =
   if word < 0 
   then raise (Impossible (spf "should call lput with a uint not %d" word));
 
+  (* could also use land 0xFF ? what about negative numbers? *)
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in
   let x3 = Char.chr ((word lsr 16) mod 256) in

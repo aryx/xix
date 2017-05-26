@@ -156,3 +156,6 @@ let once aref f =
     let x = f () in
     aref := Some x;
     x
+
+let hash_to_list h =
+  Hashtbl.fold (fun k v acc -> (k,v)::acc) h []

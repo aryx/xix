@@ -1,7 +1,8 @@
 # -*- sh -*-
 
 dir: lib_core/unused
-dir: collections/orig
+dir: lib_core/collections/orig
+dir: lib_parsing/orig
 
 #dir: linker
 #dir: assembler

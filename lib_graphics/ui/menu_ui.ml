@@ -5,6 +5,17 @@ open Rectangle
 module I = Display (* image type is in display.ml *)
 module D = Display
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* old: called menuhit.c in draw-C
+*)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+
 (* inspiration is GToolbox in lablgtk *)
 type item = (string * (unit -> unit))
 type items = item list
@@ -25,6 +36,10 @@ let border_color           = ref Display.fake_image
 let text_color             = ref Display.fake_image
 let text_highlighted       = ref Display.fake_image
 (*let menutext        = ref Display.fake_image *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let init_colors display =
   if !background == Display.fake_image
@@ -120,7 +135,9 @@ let scan_items img font  mouse button  iopt entries textr  save =
       
 
 
-
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let menu items pos button mouse (display, desktop, view, font) =
   init_colors display;

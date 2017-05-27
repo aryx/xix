@@ -1,3 +1,3 @@
 Yoann Padioleau
 
-except lex/ by Xavier Leroy.
+except lex/ and lib_core/stdlib/ by Xavier Leroy.

@@ -1,5 +1,8 @@
 # -*- sh -*-
 
+dir: lib_core/unused
+dir: collections/orig
+
 #dir: linker
 #dir: assembler
 #dir: formats

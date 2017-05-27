@@ -1,42 +1,33 @@
 (***********************************************************************)
 (*                                                                     *)
-(*                                OCaml                                *)
+(*                           Objective Caml                            *)
 (*                                                                     *)
 (*            Xavier Leroy, projet Cristal, INRIA Rocquencourt         *)
 (*                                                                     *)
 (*  Copyright 1996 Institut National de Recherche en Informatique et   *)
-(*  en Automatique.  All rights reserved.  This file is distributed    *)
-(*  under the terms of the GNU Library General Public License, with    *)
-(*  the special exception on linking described in file ../LICENSE.     *)
+(*  Automatique.  Distributed only by permission.                      *)
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: sys.mlp 12210 2012-03-08 19:52:03Z doligez $ *)
-
-(* WARNING: sys.ml is generated from sys.mlp.  DO NOT EDIT sys.ml or
-   your changes will be lost.
-*)
+(* $Id: sys.ml,v 1.13 1997/09/11 15:10:23 doligez Exp $ *)
 
 (* System interface *)
 
-external get_config: unit -> string * int * bool = "caml_sys_get_config"
-external get_argv: unit -> string * string array = "caml_sys_get_argv"
+external get_config: unit -> string * int = "sys_get_config"
+external get_argv: unit -> string array = "sys_get_argv"
 
-let (executable_name, argv) = get_argv()
-let (os_type, word_size, big_endian) = get_config()
+let argv = get_argv()
+let (os_type, word_size) = get_config()
 let max_array_length = (1 lsl (word_size - 10)) - 1;;
 let max_string_length = word_size / 8 * max_array_length - 1;;
 
-external file_exists: string -> bool = "caml_sys_file_exists"
-external is_directory : string -> bool = "caml_sys_is_directory"
-external remove: string -> unit = "caml_sys_remove"
-external rename : string -> string -> unit = "caml_sys_rename"
-external getenv: string -> string = "caml_sys_getenv"
-external command: string -> int = "caml_sys_system_command"
-external time: unit -> float = "caml_sys_time"
-external chdir: string -> unit = "caml_sys_chdir"
-external getcwd: unit -> string = "caml_sys_getcwd"
-external readdir : string -> string array = "caml_sys_read_directory"
+external file_exists: string -> bool = "sys_file_exists"
+external remove: string -> unit = "sys_remove"
+external rename : string -> string -> unit = "sys_rename"
+external getenv: string -> string = "sys_getenv"
+external command: string -> int = "sys_system_command"
+external chdir: string -> unit = "sys_chdir"
+external getcwd: unit -> string = "sys_getcwd"
 
 let interactive = ref false
 
@@ -45,10 +36,11 @@ type signal_behavior =
   | Signal_ignore
   | Signal_handle of (int -> unit)
 
-external signal : int -> signal_behavior -> signal_behavior
-                = "caml_install_signal_handler"
+external signal: int -> signal_behavior -> unit = "install_signal_handler"
 
+(* ported from 3.12 *)
 let set_signal sig_num sig_beh = ignore(signal sig_num sig_beh)
+
 
 let sigabrt = -1
 let sigalrm = -2
@@ -76,11 +68,6 @@ exception Break
 
 let catch_break on =
   if on then
-    set_signal sigint (Signal_handle(fun _ -> raise Break))
+    signal sigint (Signal_handle(fun _ -> raise Break))
   else
-    set_signal sigint Signal_default
-
-
-(* The version string is found in file ../VERSION *)
-
-let ocaml_version = "4.00.1";;
+    signal sigint Signal_default

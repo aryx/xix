@@ -9,7 +9,7 @@ type cmd =
   (* for resize event but also for hide/unhide *)
   | Reshape of 
       Image.t (* can be Layer.t or an off-screen Image.t when hidden *) *
-      Mouse.ctl
+      Mouse.ctl (* needed for window_cursor when repaint border *)
 (*
   | Move of Image.t * Rectangle.t
   | Refresh
@@ -20,7 +20,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
   (* ---------------------------------------------------------------- *)
-  (* visible in /mnt/wsys/winid *)
+  (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
   id: wid;
   (* public named image, visible in /mnt/wsys/winname, change when resize *)
   mutable name: string;
@@ -33,11 +33,16 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* todo: option? when delete the window structure and thread is still
    * out there because we wait for the process to terminate?
+   * This is most of the time a layer, but it also a plain Image.t when
+   * the window is hidden.
    *)
-  mutable img: Layer.t;
+  mutable img: Image.t;
 
   (* less: used to be equivalent to img.r *)
   mutable screenr: Rectangle.t;
+
+  (* writable through /mnt/wsys/cursor *)
+  mutable mouse_cursor: Cursor.t option;
 
   (* ---------------------------------------------------------------- *)
   (* Mouse *)
@@ -47,19 +52,20 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Keyboard *)
   (* ---------------------------------------------------------------- *)
-  (* todo: need list of keys? not reactif enough if buffer one key only? *)
+  (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
   chan_keyboard: Keyboard.key Event.channel;
 
   (* ---------------------------------------------------------------- *)
   (* Command *)
   (* ---------------------------------------------------------------- *)
+  (* less: also list of cmds? [20]? *)
   chan_cmd: cmd Event.channel;
 
   (* ---------------------------------------------------------------- *)
   (* Process *)
   (* ---------------------------------------------------------------- *)
 
-  (* dir: Common.filename; *)
+  (* pwd: Common.filename; *)
 
   (* ---------------------------------------------------------------- *)
   (* Config *)
@@ -80,7 +86,7 @@ type t = {
   mutable nrunes: int;
 
   (* where entered text go (and selection start) (q0 in rio-C) *)
-  mutable cursor: Editor.cursor;
+  mutable text_cursor: Editor.cursor;
   mutable end_selection: Editor.cursor option; (* q1 in rio-C) *)
 
   (* Division between characters the host has seen and characters not 
@@ -100,7 +106,9 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
   (* ---------------------------------------------------------------- *)
-  (* less: a Ref (Mutex.t? atomic anyway in ocaml), a Qlock (Condition.t?) *)
+  (* less: a Ref (Mutex.t? atomic anyway in ocaml), a Qlock (Condition.t?) 
+   * or simply a counter as there is no race issue for rio-ocaml.
+   *)
 
   (* ---------------------------------------------------------------- *)
   (* Misc *)
@@ -140,6 +148,7 @@ let alloc img =
 
     img = img;
     screenr = img.I.r;
+    mouse_cursor = None;
 
     chan_mouse    = Event.new_channel ();
     chan_keyboard = Event.new_channel ();
@@ -150,7 +159,7 @@ let alloc img =
     text = [||];
     nrunes = 0;
 
-    cursor = 0;
+    text_cursor = 0;
     end_selection = None;
     output_point = 0;
 

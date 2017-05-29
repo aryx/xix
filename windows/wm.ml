@@ -10,21 +10,29 @@ module W = Window
 (* less? move those cursor functions in cursors.ml? *)
 
 (* less: a rio_cursor? with lastcursor opti? and force parameter? *)
-let window_cursor _w mouse =
-  (* TODO: use w.cursor *)
+let window_cursor w pt mouse =
+  let cursoropt = 
+    (* less: if img is nil? if screenr is 0? *)
+    match Windows.window_at_point pt with
+    | Some w2 when w2  == w -> w.W.mouse_cursor
+    | _ -> None
+  in
   (* less: if menuing? or use corner_cursor() so no need this global? *)
   (* less: if holding *)
-  Mouse.reset_cursor mouse
+  match cursoropt with
+  | Some x -> Mouse.set_cursor mouse x
+  | None -> Mouse.reset_cursor mouse
 
-
-let corner_cursor_or_window_cursor w pt mouse =
-  if Window.pt_on_frame pt w
-  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
-  else window_cursor w mouse
 
 let corner_cursor w pt mouse =
   if Window.pt_on_frame pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
+
+let corner_cursor_or_window_cursor w pt mouse =
+  if Window.pt_on_frame pt w
+  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
+  else window_cursor w pt mouse
+
 
 (*****************************************************************************)
 (* Border *)
@@ -65,9 +73,9 @@ let set_current_and_repaint_borders wopt mouse =
   wopt |> Common.if_some (fun w ->
     (* less: could do directly: draw_border w W.Seleted *)
     repaint_border w;
-    window_cursor w mouse;
+    (* TODO: do that in caller? so no need pass mouse? *)
+    (*window_cursor w ptTODO mouse;*)
     (* todo: wakeup? why? *)
-
     ()
   )
 
@@ -91,8 +99,10 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
 )
 
-(* less: hideit, pid, dir, scrolling *)
-let new_win img _cmd _argv mouse =
+(* less: hideit, pid, pwd(dir), scrolling *)
+let new_win img cmd argv mouse =
+
+  (* A new Window.t *)
 
   (* less: cpid channel *)
   (* less: scrollit *)
@@ -103,6 +113,8 @@ let new_win img _cmd _argv mouse =
    * but done already later in set_current_and_repaint_borders
    *)
 
+  (* A new window thread *)
+
   Hashtbl.add Globals.windows w.W.id w;
   let _win_thread = Thread.create !threads_window_thread_func w in
 
@@ -110,7 +122,10 @@ let new_win img _cmd _argv mouse =
   set_current_and_repaint_borders (Some w) mouse;
   Image.flush img;
 
+  (* A new window process *)
+
   (* todo: create a new process! *)
+  
   (* todo: wsetname *)
   ()
 

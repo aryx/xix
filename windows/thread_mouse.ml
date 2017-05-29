@@ -21,7 +21,7 @@ let wm_menu pos button exitchan
     "New", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, view, font) in
       img_opt |> Common.if_some (fun img ->
-        Wm.new_win img "/bin/rc" [] mouse
+        Wm.new_win img "/bin/rc" [||] mouse
       )
     );
     (* old: was Reshape but here it's really resizing *)
@@ -96,7 +96,7 @@ let thread (exitchan,
         Globals.win () |> Common.if_some (fun w ->
           if not (Mouse.has_click m)
           then Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
-          else Wm.window_cursor w mouse;
+          else Wm.window_cursor w m.Mouse.pos  mouse;
           
           (* less: send logical coordinates *)
           Event.send w.W.chan_mouse m |> Event.sync

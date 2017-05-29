@@ -65,7 +65,9 @@ type t = {
   (* Process *)
   (* ---------------------------------------------------------------- *)
 
-  (* pwd: Common.filename; *)
+  (* can be changed? through /mnt/wsys/wdir *)
+  mutable pwd: Common.filename;
+  mutable pid: int;
 
   (* ---------------------------------------------------------------- *)
   (* Config *)
@@ -170,6 +172,9 @@ let alloc img =
     deleted = false;
 
     auto_scroll = false;
+
+    pwd = Sys.getcwd ();
+    pid = -1;
   }
   in
   w

@@ -1,5 +1,8 @@
 open Common
 
+module Unix1 = Unix
+module Unix2 = ThreadUnix
+
 module I = Display
 module W = Window
 
@@ -99,8 +102,8 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
 )
 
-(* less: hideit, pid, pwd(dir), scrolling *)
-let new_win img cmd argv mouse =
+(* less: hideit, pid (but 0, or if != 0 -> use another func), scrolling *)
+let new_win img cmd argv pwd_opt mouse =
 
   (* A new Window.t *)
 
@@ -124,10 +127,35 @@ let new_win img cmd argv mouse =
 
   (* A new window process *)
 
-  (* todo: create a new process! *)
-  
-  (* todo: wsetname *)
-  ()
+  pwd_opt |> Common.if_some (fun str -> w.W.pwd <- str);
+
+  Thread.critical_section := true;
+  let res = Unix.fork () in
+  (match res with
+  | -1 -> failwith "fork returnd -1"
+  | 0 ->
+    (* child *)
+    Unix1.chdir w.W.pwd;
+    (* todo: close on exec *)
+    (* less: rfork for copy of namespace/fd/env, but ape fork does that? *)
+    (* todo: filsysmount *)
+
+    (* less: wclose for ref counting *)
+    (* todo: reassin STDIN/STDOUT *)
+    (* less: notify nil *)
+    Unix2.execv cmd argv;
+    failwith "exec failed"
+  | pid -> 
+    Thread.critical_section := false;
+    w.W.pid <- pid;
+
+    (* old: was in wsetpid() *)
+    w.W.label <- spf "rc %d" pid;
+    (* less: notefd *)
+
+    (* todo: wsetname *)
+  )
+
 
 
 let close_win w =

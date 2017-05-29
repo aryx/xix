@@ -88,4 +88,3 @@ let get_named_image display name =
   in
   assert (img.id = id);
   img
-

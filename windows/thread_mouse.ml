@@ -21,7 +21,9 @@ let wm_menu pos button exitchan
     "New", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, view, font) in
       img_opt |> Common.if_some (fun img ->
-        Wm.new_win img "/bin/rc" [|"rc"; "-i"|] None mouse
+        (* Wm.new_win img "/bin/rc" [|"rc"; "-i"|] None mouse *)
+        Wm.new_win img "/tests/xxx/test_rio_graph_app1" 
+          [|"/tests/xxx/test_rio_graph_app1"|] None mouse
       )
     );
     (* old: was Reshape but here it's really resizing *)

@@ -9,7 +9,8 @@ CMO= channel.cmo color.cmo \
      draw.cmo \
      line.cmo polygon.cmo ellipse.cmo arc.cmo \
      fontchar.cmo subfont.cmo font.cmo font_default.cmo text.cmo \
-     baselayer.cmo layer.cmo
+     baselayer.cmo layer.cmo \
+     draw_ipc.cmo
 
 #############################################################################
 # Compilers

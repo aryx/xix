@@ -8,7 +8,7 @@ LIB=libplan9.a
 
 OFILES=\
  plan9support.$O\
- bind.$O mount.$O
+ bind.$O mount.$O errstr.$O
 
 OCAML=/home/pad/github/fork-ocaml
 INCLUDES=-I$OCAML/byterun

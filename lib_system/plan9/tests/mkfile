@@ -37,11 +37,14 @@ CCLIBS= \
 # Toplevel targets
 #############################################################################
 
-PROGS=test_bind
+PROGS=test_bind test_mount
 
 all:V: $PROGS
 
 test_bind: test_bind.cmo
+	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
+
+test_mount: test_mount.cmo
 	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
 
 clean:V:
@@ -49,6 +52,11 @@ clean:V:
 
 depend:V:
 	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
+
+ROOT=/home/pad/plan9/ROOT/
+test:V:
+	cp $PROGS $ROOT/tests/xxx/
+    cd /home/pad/plan9; make disk; make run
 
 #############################################################################
 # Meta rules

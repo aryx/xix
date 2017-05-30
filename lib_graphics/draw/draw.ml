@@ -11,7 +11,7 @@ let bp_op op =
   raise Todo
 
 (* less: errorfn? fontname? *)
-let init label =
+let init _label =
   (* less: sanity check /dev/draw/new exists and bind("#i", "/dev") *)
   let display = Display.init () in
   (* I prefer to do the allocimage here *)

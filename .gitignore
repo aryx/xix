@@ -68,3 +68,4 @@
 /lib_graphics/draw/tests/testfont
 /lib_graphics/draw/tests/test_font
 /windows/tests/test_rio_graph_app1
+/lib_system/plan9/tests/test_plan9

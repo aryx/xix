@@ -37,11 +37,11 @@ CCLIBS= \
 # Toplevel targets
 #############################################################################
 
-PROGS=test_plan9
+PROGS=test_bind
 
 all:V: $PROGS
 
-test_plan9: test_plan9.cmo
+test_bind: test_bind.cmo
 	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
 
 clean:V:

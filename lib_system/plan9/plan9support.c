@@ -6,9 +6,11 @@
 
 #include "plan9support.h"
 
+#include <lib9.h>
+
 static value * plan9_error_exn = NULL;
 
-void plan9_error(int errcode, char *cmdname, value cmdarg)
+void plan9_error(char *cmdname, value cmdarg)
 {
   value res;
   value name = Val_unit, arg = Val_unit;
@@ -19,22 +21,20 @@ void plan9_error(int errcode, char *cmdname, value cmdarg)
       if (plan9_error_exn == NULL)
         invalid_argument("Exception Plan9.Plan9_error not initialized, please link plan9.cma");
     }
-    arg = cmdarg == Nothing ? copy_string("") : cmdarg;
+    arg = (cmdarg == Nothing) ? copy_string("") : cmdarg;
     name = copy_string(cmdname);
-    res = alloc(4, 0);
+    res = alloc(3, 0);
     Field(res, 0) = *plan9_error_exn;
-    Field(res, 1) = Val_int(errcode);
-//      cst_to_constr(errcode, error_table, sizeof(error_table)/sizeof(int),
-//                    sizeof(error_table)/sizeof(int));
-    Field(res, 2) = name;
-    Field(res, 3) = arg;
+    Field(res, 1) = name;
+    Field(res, 2) = arg;
   End_roots();
   mlraise(res);
 }
 
-//TODO: use errstr! 
-void p9error(char *cmdname, value cmdarg)
+void p9error(char *cmdname)
 {
-  plan9_error(1/*errno*/, cmdname, cmdarg);
+  char buf[ERRMAX];
+  buf[0] = '\0';
+  errstr(buf, ERRMAX);
+  plan9_error(cmdname, copy_string(buf));
 }
-

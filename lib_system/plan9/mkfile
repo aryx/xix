@@ -57,7 +57,7 @@ OCAMLLDFLAGS=
 #############################################################################
 
 plan9.cma: $CMO mkfile
-	$OCAMLC -a -o $target $CMO
+	$OCAMLC -g -a -o $target $CMO
 
 depend:V:
 	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend

@@ -41,11 +41,11 @@ PROGS=test_bind test_mount
 
 all:V: $PROGS
 
-test_bind: test_bind.cmo
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
+test_bind: $LIBS test_bind.cmo
+	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
-test_mount: test_mount.cmo
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
+test_mount: $LIBS test_mount.cmo
+	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
 clean:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS

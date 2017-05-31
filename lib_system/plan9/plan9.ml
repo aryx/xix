@@ -1,6 +1,19 @@
 
-(* todo: type qid *)
-(* todo: type qid_kind *)
+(* todo: use Int64.t *)
+type int64 = int
+
+type qid = {
+  path: int64;
+  vers: int;
+  (* less: bitset *)
+  typ: qid_type;
+  (* less: flags? *)
+}
+and qid_type =
+  | QTFile
+  | QTDir
+(* | QTMount | QTAuth | QTAppend | QTExcl *)
+
 
 (* todo: type dir_entry *)
 

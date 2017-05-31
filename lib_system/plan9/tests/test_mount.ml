@@ -1,5 +1,7 @@
 open Common
 
+module P = Protocol_9P
+
 let main () =
   let (clients_fd, server_fd) = Unix.pipe () in
   
@@ -13,14 +15,11 @@ let main () =
     done
 
   | pid ->
-    let buf = String.make 1024 ' ' in
     while true do
-      let n = Unix.read server_fd buf 0 1024 in
-      pr (spf "S: read %d, str = %s" n (String.sub buf 0 n));
+      let msg = P.read_9P_msg server_fd in
+      pr (P.str_of_msg msg)
     done
   )
-
-    
 
 let _ =
   main ()

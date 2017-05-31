@@ -28,11 +28,13 @@ install:V: libunix.a
 clean:V:
 	rm -f *.[58] y.tab.? y.output y.error $CLEANFILES
 	rm -f *.a
+    rm -f *.cm*
 
+TOP=../..
 #############################################################################
 # Src
 #############################################################################
-CMO= plan9.cmo
+CMO= plan9.cmo protocol_9P.cmo
 
 #############################################################################
 # Compilers
@@ -45,7 +47,7 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=
+OCAMLINCLUDES=-I $TOP/commons2
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 OCAMLLDFLAGS=

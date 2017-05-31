@@ -25,11 +25,11 @@ let main () =
       let req = P.read_9P_msg server_fd in
       pr (P.str_of_msg req);
       (match req.P.msg with
-      | P.Request (P.Q.Version (msize, str)) ->
-        let res = { req with P.msg = P.Response (P.R.Version (msize, str)) } in
+      | P.T (P.T.Version (msize, str)) ->
+        let res = { req with P.msg = P.R (P.R.Version (msize, str)) } in
         P.write_9P_msg res server_fd;
         ()
-      | P.Request (P.Q.Attach (afid, uname, aname)) -> 
+      | P.T (P.T.Attach (afid, uname, aname)) -> 
         pr "HERE";
         raise Todo
       )

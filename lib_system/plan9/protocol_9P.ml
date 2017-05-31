@@ -6,19 +6,20 @@ module Unix2  = ThreadUnix
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-
-(* todo? copy https://github.com/mirage/ocaml-9p? but seems heavy
- * on the use of external libraries and modules ...
+(* A port of the 9P protocol in OCaml.
  * 
- * The format of a 9p message is 
- *  - 32bits int containing the size of the following message
- *  - 8bits type of message
+ * The format of a 9P message is 
+ *  - 32bits int containing the size of what follows
+ *  - 8bits type of message (Txxx or Rxxx)
  *  - 16bits tag
  *  - variable bytes depending on the type of the message
  * 
  * later: at some point can replace all the parsing by just using
  * Marshal instead of specialized serialization format
  * (but then can not interact with 9-in-C)
+ * 
+ * todo? copy https://github.com/mirage/ocaml-9p? but seems heavy
+ * on the use of external libraries and modules ...
  *)
 
 (*****************************************************************************)
@@ -76,12 +77,13 @@ module Response = struct
     | Auth of unit
 end
 
-module Q = Request
+(* old: the requests are prefixed with a T *)
+module T = Request
 module R = Response
 
 type message_type =
-  | Request of Request.t
-  | Response of Response.t
+  | T of Request.t
+  | R of Response.t
 
 (* old: was called Fcall in libcore-C *)
 type message = {
@@ -110,15 +112,15 @@ let debug = ref true
 (* todo: use ocamltarzan at some point and ocaml.ml *)
 let str_of_msg msg = 
   (match msg.msg with
-  | Request r -> "Q:" ^ 
+  | T r -> "Q:" ^ 
     (match r with
-    | Q.Version (msize, version) -> 
+    | T.Version (msize, version) -> 
       spf "Version: %d %s" msize version
-    | Q.Attach (afid, uname, aname) -> 
+    | T.Attach (afid, uname, aname) -> 
       spf "Attach: auth_fid = %d uname = %s aname = %s" afid uname aname
     | _ -> raise Todo
     )
-  | Response r -> "R:" ^
+  | R r -> "R:" ^
     (match r with
     | R.Version (msize, version) -> spf "Version: %d %s" msize version
     | _ -> raise Todo
@@ -210,18 +212,18 @@ let read_9P_msg fd =
   let offset = offset + bit8sz in
   let tag   = gbit16 buf 1 in
   let offset = offset + bit16sz in
-  let res = { fid = -1; tag = tag; msg = Response (R.Error "TODO") } in
+  let res = { fid = -1; tag = tag; msg = R (R.Error "TODO") } in
   try (
     match type_ with
     (* Version *)
     | 100 ->
       let msize = gbit32 buf offset in
       let version = gstring buf (offset + 4) in
-      { res with msg = Request (Q.Version (msize, version)) }
+      { res with msg = T (T.Version (msize, version)) }
     | 101 ->
       let msize = gbit32 buf offset in
       let version = gstring buf (offset + 4) in
-      { res with msg = Response (R.Version (msize, version)) }
+      { res with msg = R (R.Version (msize, version)) }
     (* Auth *)
     | 102 -> raise (Error (spf "R: %d" type_))
     (* Attach *)
@@ -231,7 +233,7 @@ let read_9P_msg fd =
       let uname = gstring buf (offset + 8) in
       let offset = (offset + 8 + String.length uname + bit16sz) in
       let aname = gstring buf offset in
-      { res with fid = fid; msg = Request (Q.Attach (afid, uname, aname)) }
+      { res with fid = fid; msg = T (T.Attach (afid, uname, aname)) }
     (* Error *)
     | 106 -> raise (Error (spf "R: %d" type_))
     (* Flush *)
@@ -263,34 +265,34 @@ let read_9P_msg fd =
 
 let type_of_msg msg = 
   match msg with
-  | Request  (Q.Version _) -> 100
-  | Response (R.Version _) -> 101
-  | Request  (Q.Auth _) -> 102
-  | Response (R.Auth _) -> 103
-  | Request  (Q.Attach _) -> 104
-  | Response (R.Attach _) -> 105
-(*  | Request  (Q.Error _) -> 106 *)
-  | Response (R.Error _) -> 107
-  | Request  (Q.Flush _) -> 108
-  | Response (R.Flush _) -> 109
-  | Request  (Q.Walk _) -> 110
-  | Response (R.Walk _) -> 111
-  | Request  (Q.Open _) -> 112
-  | Response (R.Open _) -> 113
-  | Request  (Q.Create _) -> 114
-  | Response (R.Create _) -> 115
-  | Request  (Q.Read _) -> 116
-  | Response (R.Read _) -> 117
-  | Request  (Q.Write _) -> 118
-  | Response (R.Write _) -> 119
-  | Request  (Q.Clunk _) -> 120
-  | Response (R.Clunk _) -> 121
-  | Request  (Q.Remove _) -> 122
-  | Response (R.Remove _) -> 123
-  | Request  (Q.Stat _) -> 124
-  | Response (R.Stat _) -> 125
-  | Request  (Q.Wstat _) -> 126
-  | Response (R.Wstat _) -> 126
+  | T  (T.Version _) -> 100
+  | R (R.Version _) -> 101
+  | T  (T.Auth _) -> 102
+  | R (R.Auth _) -> 103
+  | T  (T.Attach _) -> 104
+  | R (R.Attach _) -> 105
+(*  | T  (T.Error _) -> 106 *)
+  | R (R.Error _) -> 107
+  | T  (T.Flush _) -> 108
+  | R (R.Flush _) -> 109
+  | T  (T.Walk _) -> 110
+  | R (R.Walk _) -> 111
+  | T  (T.Open _) -> 112
+  | R (R.Open _) -> 113
+  | T  (T.Create _) -> 114
+  | R (R.Create _) -> 115
+  | T  (T.Read _) -> 116
+  | R (R.Read _) -> 117
+  | T  (T.Write _) -> 118
+  | R (R.Write _) -> 119
+  | T  (T.Clunk _) -> 120
+  | R (R.Clunk _) -> 121
+  | T  (T.Remove _) -> 122
+  | R (R.Remove _) -> 123
+  | T  (T.Stat _) -> 124
+  | R (R.Stat _) -> 125
+  | T  (T.Wstat _) -> 126
+  | R (R.Wstat _) -> 126
 
 (* less: opti: use a string buffer instead of all those concatenations *)
 let write_9P_msg msg fd =
@@ -299,12 +301,12 @@ let write_9P_msg msg fd =
     pbit8 type_ ^ 
     pbit16 msg.tag ^ 
     (match msg.msg with
-    | Request x ->
+    | T x ->
       (match x with
-      | Q.Version (msize, version) -> raise (Error (spf "%d" type_))
+      | T.Version (msize, version) -> raise (Error (spf "%d" type_))
       | _ -> raise (Error (spf "W: %d" type_))
       )
-    | Response x ->
+    | R x ->
       (match x with 
       | R.Version (msize, version) -> 
         pbit32 msize ^ pstring version

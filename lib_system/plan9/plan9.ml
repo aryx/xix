@@ -27,6 +27,12 @@ type namespace_flag =
 (* for errstr() *)
 let errmax = 128
 
+exception Plan9_error of string (* cmd *) * string (* errstr *)
+
+let _ = Callback.register_exception "Plan9.Plan9_error"
+                                    (Plan9_error("", ""))
+
+
 external plan9_bind: string -> string -> int -> int = 
   "plan9_bind"
 

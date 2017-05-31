@@ -1,6 +1,9 @@
 -*- org -*-
 
-* 0.6 (Q2 2017) (???)
+* 0.6 (Q2 2017) (rio and libdraw)
+
+port of rio using ocaml threads but relying on the original plan9 kernel.
+port of draw, the userspace part, again relying on the original plan9 kernel.
 
 * 0.5 (Q1 2017) (kernel start)
 

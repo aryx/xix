@@ -3,6 +3,7 @@ open Point
 open Rectangle
 open Color
 
+(* todo: sanity check range *)
 let bp_byte x =
   String.make 1 (Char.chr x)
 

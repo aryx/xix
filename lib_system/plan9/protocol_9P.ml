@@ -35,7 +35,7 @@ let max_welem = 16
 module Request = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach of unit
+    | Attach of int32 (* auth fid *) * string (* uname *) * string (* aname *)
 
     | Open  of unit
     | Read  of unit
@@ -93,6 +93,7 @@ type message = {
   
 }
 
+(* less: could remove, faster to do '+ 4' than '+ bit32sz' *)
 let bit8sz = 1
 let bit16sz = 2
 let bit32sz = 4
@@ -111,7 +112,10 @@ let str_of_msg msg =
   (match msg.msg with
   | Request r -> "Q:" ^ 
     (match r with
-    | Q.Version (msize, version) -> spf "Version: %d %s" msize version
+    | Q.Version (msize, version) -> 
+      spf "Version: %d %s" msize version
+    | Q.Attach (afid, uname, aname) -> 
+      spf "Attach: auth_fid = %d uname = %s aname = %s" afid uname aname
     | _ -> raise Todo
     )
   | Response r -> "R:" ^
@@ -119,7 +123,7 @@ let str_of_msg msg =
     | R.Version (msize, version) -> spf "Version: %d %s" msize version
     | _ -> raise Todo
     )
-  ) ^ spf "(tag = %d, fid = %d)\n" msg.tag msg.fid
+  ) ^ spf " (tag = %d, fid = %d)\n" msg.tag msg.fid
     
 
 (*****************************************************************************)
@@ -221,7 +225,13 @@ let read_9P_msg fd =
     (* Auth *)
     | 102 -> raise (Error (spf "R: %d" type_))
     (* Attach *)
-    | 104 -> raise (Error (spf "R: %d" type_))
+    | 104 -> 
+      let fid = gbit32 buf offset in
+      let afid = gbit32 buf (offset + 4) in
+      let uname = gstring buf (offset + 8) in
+      let offset = (offset + 8 + String.length uname + bit16sz) in
+      let aname = gstring buf offset in
+      { res with fid = fid; msg = Request (Q.Attach (afid, uname, aname)) }
     (* Error *)
     | 106 -> raise (Error (spf "R: %d" type_))
     (* Flush *)

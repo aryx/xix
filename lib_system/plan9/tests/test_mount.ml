@@ -10,7 +10,7 @@ let main () =
   (* child, client *)
   | 0 ->
     (try 
-      Plan9.mount clients_fd (-1) "/mnt/wsys" Plan9.MRepl "1" |> ignore
+      Plan9.mount clients_fd (-1) "/mnt/wsys" Plan9.MRepl "win1" |> ignore
     with Plan9.Plan9_error (cmd, str) ->
       pr (spf "exn: %s, %s" cmd str);
     ); 
@@ -29,7 +29,9 @@ let main () =
         let res = { req with P.msg = P.Response (P.R.Version (msize, str)) } in
         P.write_9P_msg res server_fd;
         ()
-      | _ -> raise Todo
+      | P.Request (P.Q.Attach (afid, uname, aname)) -> 
+        pr "HERE";
+        raise Todo
       )
     done
   )

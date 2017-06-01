@@ -1,6 +1,6 @@
 open Common
 
-module P9 = Plan9
+module N = Plan9
 
 module Unix1 = Unix
 module Unix2  = ThreadUnix
@@ -11,10 +11,10 @@ module Unix2  = ThreadUnix
 (* A port of the 9P protocol in OCaml.
  * 
  * The format of a 9P message is 
- *  - 32bits int containing the size of what follows
- *  - 8bits type of message (Txxx or Rxxx)
- *  - 16bits tag
- *  - variable bytes depending on the type of the message
+ *  - 32 bits: size of what follows
+ *  - 8 bits: type of the message (Txxx or Rxxx)
+ *  - 16 bits: tag of the message
+ *  - variable bytes: depends on the type of the message
  * 
  * later: at some point we can replace all the parsing by just using
  * Marshal instead of specialized serialization format
@@ -40,6 +40,7 @@ type tag = int16
 type qid = Plan9.qid
 type perm = int32
 
+(* less: reuse Unix.open_flag? *)
 type open_mode = int
 
 let max_welem = 16
@@ -47,10 +48,10 @@ let max_welem = 16
 module Request = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach of fid * fid (* auth_fid *) * string (* uname *) * string (*aname*)
+    | Attach of fid * fid (* auth_fid *) * string (* user *) * string (*aname*)
 
-    | Flush of tag (* oldtag *)
-    | Auth of fid (* auth_fid *) * string (* uname *) * string (* aname *)
+    | Flush of tag (* old_tag *)
+    | Auth of fid (* auth_fid *) * string (* user *) * string (* aname *)
     (* Note that Error is not here (it can just be a Response, not a Request) *)
 
     | Open of fid * open_mode
@@ -58,7 +59,7 @@ module Request = struct
     | Write of fid * int64 (* offset *) * string (* data *)
     | Clunk of fid
 
-    | Walk  of fid * fid (* newfid *) * string array (* < max_welem *)
+    | Walk  of fid * fid (* newfid *) * string list (* < max_welem *)
     | Create of fid * string * open_mode * perm
     | Remove of fid
     | Stat of fid
@@ -74,14 +75,14 @@ module Response = struct
     | Error of string
     | Flush of unit
 
-    | Auth of qid (* auth qid *)
+    | Auth of qid (* auth_qid *)
 
     | Open of qid * int (* iounit *)
     | Read of string (* data *)
     | Write of int (* count *)
     | Clunk of unit
 
-    | Walk of qid array (* < max_welem *)
+    | Walk of qid list (* < max_welem *)
     | Create of qid * int (* iounit *)
     | Remove of unit
     | Stat of string (* data, todo: Direntry list *)
@@ -89,7 +90,7 @@ module Response = struct
 
 end
 
-(* old: the requests are prefixed with a T *)
+(* old: the requests are prefixed with a T in libcore-C *)
 module T = Request
 module R = Response
 
@@ -117,9 +118,10 @@ let debug = ref false
 (*****************************************************************************)
 (* Dumper *)
 (*****************************************************************************)
+(* less: 'd', 'a', 'l', 'A' instead of integer for qid type *)
 let str_of_qid qid =
-  spf "path = %d, vers = %d, type = %d" qid.P9.path qid.P9.vers
-    (P9.int_of_qid_type qid.P9.typ)
+  spf "path = %d, vers = %d, type = %d" qid.N.path qid.N.vers
+    (N.int_of_qid_type qid.N.typ)
 
 let str_of_mode x =
   spf "%d" x
@@ -141,9 +143,9 @@ let str_of_msg msg =
       spf "Auth: auth_fid = %d uname = %s aname = %s" afid uname aname
     | T.Flush oldtag -> 
       spf "Flush: old_tag = %d" oldtag
-    | T.Walk (fid, newfid, arr) -> 
-      spf "Walk: fid = %d new_fid = %d [|%s|]" fid newfid 
-        (arr |> Array.to_list |> String.concat ", ")
+    | T.Walk (fid, newfid, xs) -> 
+      spf "Walk: fid = %d new_fid = %d [%s]" fid newfid 
+        (xs |> String.concat ", ")
     | T.Open (fid, mode) -> 
       spf "Walk: fid = %d mode = %s" fid (str_of_mode mode)
     | T.Create (fid, name, mode, perm) -> 
@@ -188,9 +190,9 @@ let str_of_msg msg =
       spf  "Write: %d" count
     | R.Clunk () -> 
       spf  "Clunk:"
-    | R.Walk (arr) -> 
-      spf "Walk: [|%s|]"
-        (arr |> Array.to_list |> List.map str_of_qid |> String.concat ", ")
+    | R.Walk (xs) -> 
+      spf "Walk: [%s]"
+        (xs |> List.map str_of_qid |> String.concat ", ")
     | R.Remove () -> 
       spf  "Remove:"
     | R.Stat str -> 
@@ -215,6 +217,18 @@ let gbit16 buf off =
 let gbit32 buf off =
   (i buf.[0+off])        lor (i buf.[1+off] lsl 8) lor
   (i buf.[2+off] lsl 16) lor (i buf.[3+off] lsl 24)
+
+(* todo: use Int64 *)
+let gbit64 buf off =
+  let n = 
+  (i buf.[0+off])        lor (i buf.[1+off] lsl 8) lor
+  (i buf.[2+off] lsl 16) lor (i buf.[3+off] lsl 24)
+  in
+  (match buf.[4], buf.[5], buf.[6], buf.[7] with
+  | '\000', '\000', '\000', '\000' -> 
+    n
+  | _ -> failwith "TODO: gbit64 overflow"
+  )
 
 let gstring buf off =
   let n = gbit16 buf off in
@@ -274,9 +288,9 @@ let pstring s =
   pbit16 len ^ s
 
 let pqid qid = 
-  pbit8 (Plan9.int_of_qid_type qid.P9.typ) ^
-  pbit32 qid.P9.vers ^
-  pbit64 qid.P9.path
+  pbit8 (Plan9.int_of_qid_type qid.N.typ) ^
+  pbit32 qid.N.vers ^
+  pbit64 qid.N.path
 
 (*****************************************************************************)
 (* Entry points *)
@@ -310,50 +324,121 @@ let read_9P_msg fd =
   let offset = 0 in
   let type_ = gbit8 buf offset in
   let offset = offset + bit8sz in
-  let tag   = gbit16 buf 1 in
+  let tag   = gbit16 buf offset in
   let offset = offset + bit16sz in
   let res = { tag = tag; typ = R (R.Error "TODO") } in
   try (
+    let msg, final_offset = 
     match type_ with
     (* Version *)
     | 100 ->
       let msize = gbit32 buf offset in
       let version = gstring buf (offset + 4) in
-      { res with typ = T (T.Version (msize, version)) }
+      { res with typ = T (T.Version (msize, version)) },
+      offset + 4 + String.length version + bit16sz
     (* Auth *)
-    | 102 -> raise (Error (spf "R: %d" type_))
+    | 102 -> 
+      let afid = gbit32 buf offset in
+      let uname = gstring buf (offset + 4) in
+      let offset = offset + 4 + String.length uname + bit16sz in
+      let aname = gstring buf offset in
+      { res with typ = T (T.Auth (afid, uname, aname)) },
+      offset + String.length aname + bit16sz
     (* Attach *)
     | 104 -> 
       let fid = gbit32 buf offset in
       let afid = gbit32 buf (offset + 4) in
       let uname = gstring buf (offset + 8) in
-      let offset = (offset + 8 + String.length uname + bit16sz) in
+      let offset = offset + 8 + String.length uname + bit16sz in
       let aname = gstring buf offset in
-      { res with typ = T (T.Attach (fid, afid, uname, aname)) }
+      { res with typ = T (T.Attach (fid, afid, uname, aname)) },
+      offset + String.length aname + bit16sz
     (* Error *)
-    | 106 -> raise (Error (spf "T: %d" type_))
+    | 106 -> raise (Impossible "There is no T.Error")
     (* Flush *)
-    | 108 -> raise (Error (spf "T: %d" type_))
+    | 108 -> 
+      let oldtag = gbit16 buf offset in
+      { res with typ = T (T.Flush (oldtag)) },
+      offset + 2
     (* Walk *)
-    | 110 -> raise (Error (spf "T: %d" type_))
+    | 110 -> 
+      let fid = gbit32 buf offset in
+      let newfid = gbit32 buf (offset + 4) in
+      let nwname = gbit16 buf (offset + 8) in
+      if nwname > max_welem
+      then failwith "too many names";
+      let xs = ref [] in
+      let offset = ref (offset + 10) in
+      for i = 0 to nwname - 1 do
+        let str = gstring buf !offset in
+        let len = String.length str + bit16sz in
+        offset := !offset + len;
+        xs := str::!xs;
+      done;
+      { res with typ = T (T.Walk (fid, newfid, List.rev !xs)) },
+      !offset
     (* Open *)
-    | 112 -> raise (Error (spf "T: %d" type_))
-    (* Create *)
-    | 114 -> raise (Error (spf "T: %d" type_))
+    | 112 -> 
+      let fid = gbit32 buf offset in
+      let mode = gbit8 buf (offset + 4) in
+      { res with typ = T (T.Open (fid, mode)) },
+      offset + 5
+    (* create *)
+    | 114 -> 
+      let fid = gbit32 buf offset in
+      let name = gstring buf (offset + 4) in
+      let offset = offset + 4 + String.length name + bit16sz in
+      let perm = gbit32 buf offset in
+      let mode = gbit8 buf (offset + 4) in
+      (* I reverse the order between mode and perm in Create, to match
+       * more closely Unix.open *)
+      { res with typ = T (T.Create (fid, name, mode, perm)) },
+      offset + 5
     (* Read *)
-    | 116 -> raise (Error (spf "T: %d" type_))
+    | 116 -> 
+      let fid = gbit32 buf offset in
+      let offset = gbit64 buf (offset + 4) in
+      let count = gbit32 buf (offset + 12) in
+      { res with typ = T (T.Read (fid, offset, count)) },
+      offset + 16
     (* Write *)
-    | 118 -> raise (Error (spf "T: %d" type_))
+    | 118 -> 
+      let fid = gbit32 buf offset in
+      let offset = gbit64 buf (offset + 4) in
+      let count = gbit32 buf (offset + 12) in
+      let data = String.sub buf (offset + 16) count in
+      { res with typ = T (T.Write (fid, offset, data)) },
+      offset + 16 + count
     (* Clunk *)
-    | 120 -> raise (Error (spf "T: %d" type_))
+    | 120 -> 
+      let fid = gbit32 buf offset in
+      { res with typ = T (T.Clunk (fid)) },
+      offset + 4
     (* Remove *)
-    | 122 -> raise (Error (spf "T: %d" type_))
+    | 122 -> 
+      let fid = gbit32 buf offset in
+      { res with typ = T (T.Remove (fid)) },
+      offset + 4
     (* Stat *)
-    | 124 -> raise (Error (spf "T: %d" type_))
+    | 124 -> 
+      let fid = gbit32 buf offset in
+      { res with typ = T (T.Stat (fid)) },
+      offset + 4
     (* Wstat *)
-    | 126 -> raise (Error (spf "T: %d" type_))
+    | 126 -> 
+      let fid = gbit32 buf offset in
+      let nstat = gbit16 buf (offset + 4) in
+      let data = String.sub buf (offset + 6) nstat in
+      { res with typ = T (T.Wstat (fid, data)) },
+      offset + 6 + nstat
 
     | n -> raise (Error (spf "unrecognized message type: %d" n))
+    in
+    if final_offset < len
+    then raise (Error "did not read enough bytes");
+    if final_offset > len
+    then raise (Error "read to many bytes");
+    msg
   )
   with (Invalid_argument s) ->
     raise (Error (spf "access out of range: %s" s))

@@ -28,18 +28,18 @@ let main () =
     while true do
       let req = P.read_9P_msg server_fd in
       pr (P.str_of_msg req);
-      (match req.P.msg with
+      (match req.P.typ with
       | P.T x ->
         (match x with
         (* for Plan9.mount *)
         | P.T.Version (msize, str) ->
-          let res = { req with P.msg = P.R (P.R.Version (msize, str)) } in
+          let res = { req with P.typ = P.R (P.R.Version (msize, str)) } in
           pr (P.str_of_msg res);
           P.write_9P_msg res server_fd;
           ()
-        | P.T.Attach (afid, uname, aname) -> 
+        | P.T.Attach (fid, afid, uname, aname) -> 
           let qid = { N.path = 0; N.vers = 0; N.typ = N.QTDir } in
-          let res = { req with P.msg = P.R (P.R.Attach qid) } in
+          let res = { req with P.typ = P.R (P.R.Attach qid) } in
           pr (P.str_of_msg res);
           P.write_9P_msg res server_fd;
 

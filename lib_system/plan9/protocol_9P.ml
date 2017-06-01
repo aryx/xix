@@ -1,6 +1,6 @@
 open Common
 
-module N = Plan9
+module P9 = Plan9
 
 module Unix1 = Unix
 module Unix2  = ThreadUnix
@@ -16,7 +16,7 @@ module Unix2  = ThreadUnix
  *  - 16bits tag
  *  - variable bytes depending on the type of the message
  * 
- * later: at some point can replace all the parsing by just using
+ * later: at some point we can replace all the parsing by just using
  * Marshal instead of specialized serialization format
  * (but then can not interact with 9-in-C)
  * 
@@ -47,43 +47,41 @@ let max_welem = 16
 module Request = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach of fid (* auth_fid(opt) *) * string (* uname *) * string (*aname *)
+    | Attach of fid * fid (* auth_fid *) * string (* uname *) * string (*aname*)
 
-    (* Illegal: Error *)
-    | Flush  of tag (* oldtag *)
-    | Auth  of fid (* auth_fid *) * string (* uname *) * string (* aname *)
+    | Flush of tag (* oldtag *)
+    | Auth of fid (* auth_fid *) * string (* uname *) * string (* aname *)
+    (* Note that Error is not here (it can just be a Response, not a Request) *)
 
-    (* uses fid in message.fid *)
+    | Open of fid * open_mode
+    | Read of fid * int64 (* offset *) * int32 (* count *)
+    | Write of fid * int64 (* offset *) * string (* data *)
+    | Clunk of fid
 
-    | Open  of open_mode
-    | Read  of int64 (* offset *) * int32 (* count *)
-    | Write  of int64 (* offset *) * string (* data *)
-    | Clunk of unit
-
-    | Walk   of fid (* newfid *) * string array (* < max_welem *)
-    | Create  of string * open_mode * perm
-    | Remove  of unit
-    | Stat  of unit
-    | Wstat  of string (* todo: Direntry list *)
+    | Walk  of fid * fid (* newfid *) * string array (* < max_welem *)
+    | Create of fid * string * open_mode * perm
+    | Remove of fid
+    | Stat of fid
+    | Wstat of fid * string (* todo: Direntry list *)
 
 end 
 
 module Response = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach  of qid
+    | Attach of qid
 
     | Error of string
     | Flush of unit
 
     | Auth of qid (* auth qid *)
 
-    | Open  of qid * int (* iounit *)
-    | Read  of string (* data *)
-    | Write  of int (* count *)
-    | Clunk  of unit
+    | Open of qid * int (* iounit *)
+    | Read of string (* data *)
+    | Write of int (* count *)
+    | Clunk of unit
 
-    | Walk  of qid array (* < max_welem *)
+    | Walk of qid array (* < max_welem *)
     | Create of qid * int (* iounit *)
     | Remove of unit
     | Stat of string (* data, todo: Direntry list *)
@@ -101,12 +99,8 @@ type message_type =
 
 (* old: was called Fcall in libcore-C *)
 type message = {
-
-  fid: fid;
   tag: tag;
-
-  msg: message_type;
-  
+  typ: message_type;
 }
 
 (* less: could remove, faster to do '+ 4' than '+ bit32sz' *)
@@ -124,8 +118,8 @@ let debug = ref false
 (* Dumper *)
 (*****************************************************************************)
 let str_of_qid qid =
-  spf "path = %d, vers = %d, type = %d" qid.N.path qid.N.vers
-    (N.int_of_qid_type qid.N.typ)
+  spf "path = %d, vers = %d, type = %d" qid.P9.path qid.P9.vers
+    (P9.int_of_qid_type qid.P9.typ)
 
 let str_of_mode x =
   spf "%d" x
@@ -135,38 +129,40 @@ let str_of_perm x =
 
 (* todo: use ocamltarzan at some point and ocaml.ml *)
 let str_of_msg msg = 
-  (match msg.msg with
+  (match msg.typ with
   | T r -> "Q:" ^ 
     (match r with
     | T.Version (msize, version) -> 
-      spf "Version: %d %s" msize version
-    | T.Attach (afid, uname, aname) -> 
-      spf "Attach: auth_fid = %d uname = %s aname = %s" afid uname aname
+      spf "Version: msize = %d version = %s" msize version
+    | T.Attach (fid, afid, uname, aname) -> 
+      spf "Attach: fid = %d auth_fid = %d uname = %s aname = %s" 
+        fid afid uname aname
     | T.Auth (afid, uname, aname) -> 
       spf "Auth: auth_fid = %d uname = %s aname = %s" afid uname aname
     | T.Flush oldtag -> 
       spf "Flush: old_tag = %d" oldtag
-    | T.Walk (newfid, arr) -> 
-      spf "Walk: new_fid = %d, [|%s|]" newfid 
+    | T.Walk (fid, newfid, arr) -> 
+      spf "Walk: fid = %d new_fid = %d [|%s|]" fid newfid 
         (arr |> Array.to_list |> String.concat ", ")
-    | T.Open mode -> 
-      spf "Walk: mode = %s" (str_of_mode mode)
-    | T.Create (name, mode, perm) -> 
-      spf "Create: %s, mode = %s, perm = %s" name (str_of_mode mode) 
+    | T.Open (fid, mode) -> 
+      spf "Walk: fid = %d mode = %s" fid (str_of_mode mode)
+    | T.Create (fid, name, mode, perm) -> 
+      spf "Create: fid = %d, name = %s, mode = %s, perm = %s" 
+        fid name (str_of_mode mode) 
         (str_of_perm perm)
-    | T.Read (offset, count) ->
-      spf "Read: offset = %d, count = %d" offset count
-    | T.Write (offset, data) ->
-      spf "Write: offset = %d, data = %s" offset
+    | T.Read (fid, offset, count) ->
+      spf "Read: fid = %d offset = %d, count = %d" fid offset count
+    | T.Write (fid, offset, data) ->
+      spf "Write: fid = %d offset = %d, data = %s" fid offset
         (if String.length data > 10 then String.sub data 0 10 else data)
-    | T.Clunk () ->
-      spf "Clunk: "
-    | T.Remove () ->
-      spf "Remove: "
-    | T.Stat () ->
-      spf "Stat: "
-    | T.Wstat str -> 
-      spf  "Wstat: %s"
+    | T.Clunk fid ->
+      spf "Clunk: %d" fid
+    | T.Remove fid ->
+      spf "Remove: %d" fid
+    | T.Stat fid ->
+      spf "Stat: %d" fid
+    | T.Wstat (fid, str) -> 
+      spf  "Wstat: fid = %d, %s" fid
         (if String.length str > 10 then String.sub str 0 10 else str)
     )
   | R r -> "R:" ^
@@ -203,7 +199,7 @@ let str_of_msg msg =
     | R.Wstat () -> 
       spf  "Wstat:"
     )
-  ) ^ spf " (tag = %d, fid = %d)" msg.tag msg.fid
+  ) ^ spf " (tag = %d)" msg.tag
     
 
 (*****************************************************************************)
@@ -278,9 +274,9 @@ let pstring s =
   pbit16 len ^ s
 
 let pqid qid = 
-  pbit8 (Plan9.int_of_qid_type qid.N.typ) ^
-  pbit32 qid.N.vers ^
-  pbit64 qid.N.path
+  pbit8 (Plan9.int_of_qid_type qid.P9.typ) ^
+  pbit32 qid.P9.vers ^
+  pbit64 qid.P9.path
 
 (*****************************************************************************)
 (* Entry points *)
@@ -316,14 +312,14 @@ let read_9P_msg fd =
   let offset = offset + bit8sz in
   let tag   = gbit16 buf 1 in
   let offset = offset + bit16sz in
-  let res = { fid = -1; tag = tag; msg = R (R.Error "TODO") } in
+  let res = { tag = tag; typ = R (R.Error "TODO") } in
   try (
     match type_ with
     (* Version *)
     | 100 ->
       let msize = gbit32 buf offset in
       let version = gstring buf (offset + 4) in
-      { res with msg = T (T.Version (msize, version)) }
+      { res with typ = T (T.Version (msize, version)) }
     (* Auth *)
     | 102 -> raise (Error (spf "R: %d" type_))
     (* Attach *)
@@ -333,7 +329,7 @@ let read_9P_msg fd =
       let uname = gstring buf (offset + 8) in
       let offset = (offset + 8 + String.length uname + bit16sz) in
       let aname = gstring buf offset in
-      { res with fid = fid; msg = T (T.Attach (afid, uname, aname)) }
+      { res with typ = T (T.Attach (fid, afid, uname, aname)) }
     (* Error *)
     | 106 -> raise (Error (spf "T: %d" type_))
     (* Flush *)
@@ -363,7 +359,7 @@ let read_9P_msg fd =
     raise (Error (spf "access out of range: %s" s))
 
 
-let type_of_msg msg = 
+let code_of_msg msg = 
   match msg with
   | T  (T.Version _) -> 100
   | R (R.Version _) -> 101
@@ -396,22 +392,22 @@ let type_of_msg msg =
 
 (* less: opti: use a string buffer instead of all those concatenations *)
 let write_9P_msg msg fd =
-  let type_ = type_of_msg msg.msg in
+  let code = code_of_msg msg.typ in
   let str = 
-    pbit8 type_ ^ 
+    pbit8 code ^ 
     pbit16 msg.tag ^ 
-    (match msg.msg with
+    (match msg.typ with
     | R x ->
       (match x with 
       | R.Version (msize, version) -> 
         pbit32 msize ^ pstring version
       | R.Attach qid ->
         pqid qid
-      | _ -> raise (Error (spf "W: %d" type_))
+      | _ -> raise (Error (spf "W: %d" code))
       )
     | T x ->
       (match x with
-      | _ -> raise (Error (spf "W: %d" type_))
+      | _ -> raise (Error (spf "W: %d" code))
       )
     )
   in

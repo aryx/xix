@@ -484,11 +484,28 @@ let write_9P_msg msg fd =
     (match msg.typ with
     | R x ->
       (match x with 
-      | R.Version (msize, version) -> 
-        pbit32 msize ^ pstring version
-      | R.Attach qid ->
-        pqid qid
-      | _ -> raise (Error (spf "W: %d" code))
+
+      | R.Version (msize, version) -> pbit32 msize ^ pstring version
+      | R.Attach qid -> pqid qid
+      | R.Error str -> pstring str
+      | R.Flush () -> ""
+      | R.Auth auth_qid -> pqid auth_qid
+      | R.Open (qid, iounit) -> pqid qid ^ pbit32 iounit
+      | R.Create (qid, iounit) -> pqid qid ^ pbit32 iounit
+      | R.Read data -> 
+        let len = String.length data in
+        pbit32 len ^ data
+      | R.Write count -> pbit32 count
+      | R.Clunk () -> ""
+      | R.Walk xs -> 
+        let len = List.length xs in
+        assert (len < max_welem);
+        pbit16 len ^ (xs |> List.map pqid |> String.concat "")
+      | R.Remove () -> ""
+      | R.Stat data -> 
+        let nstat = String.length data in
+        pbit16 nstat ^ data
+      | R.Wstat () -> ""
       )
     | T x ->
       (match x with

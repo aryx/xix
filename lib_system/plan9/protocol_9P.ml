@@ -26,55 +26,64 @@ module Unix2  = ThreadUnix
 (* Types and constants *)
 (*****************************************************************************)
 
+(* todo: constructor to sanity check *)
+type int16 = int
 (* todo: use Int32.t *)
 type int32 = int
 (* todo: use Int64.t *)
 type int64 = int
+
+type fid = int32
+type tag = int16
+type qid = Plan9.qid
+type perm = int32
+
+type open_mode = int
 
 let max_welem = 16
 
 module Request = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach of int32 (* auth fid *) * string (* uname *) * string (* aname *)
+    | Attach of fid (* auth fid *) * string (* uname *) * string (* aname *)
 
-    | Open  of unit
-    | Read  of unit
-    | Write  of unit
-    | Clunk  of unit
+    | Open  of open_mode
+    | Read  of int64 (* offset *) * int32 (* count *)
+    | Write  of int64 (* offset *) * string (* data *)
+    | Clunk of unit
 
-    | Walk   of unit
-    | Create  of unit
+    | Walk   of fid (* newfid *) * string array (* < max_welem *)
+    | Create  of string * open_mode * perm
     | Remove  of unit
     | Stat  of unit
-    | Wstat  of unit
+    | Wstat  of string (* data, todo: Direntry list *)
 
     (* Illegal: Error *)
-    | Flush  of unit
+    | Flush  of tag (* oldtag *)
 
-    | Auth  of unit
+    | Auth  of fid (* auth fid *) * string (* uname *) * string (* aname *)
 end 
 
 module Response = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach  of unit
+    | Attach  of qid
 
-    | Open  of unit
-    | Read  of unit
-    | Write  of unit
+    | Open  of qid * int (* iounit *)
+    | Read  of string (* data *)
+    | Write  of int (* count *)
     | Clunk  of unit
 
-    | Walk  of unit
-    | Create of unit
+    | Walk  of qid array (* < max_welem *)
+    | Create of qid * int (* iounit *)
     | Remove of unit
-    | Stat of unit
+    | Stat of string (* data, todo: Direntry list *)
     | Wstat of unit
 
     | Error of string
     | Flush of unit
 
-    | Auth of unit
+    | Auth of qid (* auth qid *)
 end
 
 (* old: the requests are prefixed with a T *)
@@ -82,14 +91,14 @@ module T = Request
 module R = Response
 
 type message_type =
-  | T of Request.t
-  | R of Response.t
+  | T of T.t
+  | R of R.t
 
 (* old: was called Fcall in libcore-C *)
 type message = {
 
-  fid: int32;
-  tag: int;
+  fid: fid;
+  tag: tag;
 
   msg: message_type;
   
@@ -109,6 +118,14 @@ let debug = ref true
 (*****************************************************************************)
 (* Dumper *)
 (*****************************************************************************)
+let str_of_qid x =
+  raise Todo
+let str_of_mode x =
+  raise Todo
+let str_of_perm x =
+  spf "%d" x
+
+
 (* todo: use ocamltarzan at some point and ocaml.ml *)
 let str_of_msg msg = 
   (match msg.msg with
@@ -118,12 +135,66 @@ let str_of_msg msg =
       spf "Version: %d %s" msize version
     | T.Attach (afid, uname, aname) -> 
       spf "Attach: auth_fid = %d uname = %s aname = %s" afid uname aname
-    | _ -> raise Todo
+    | T.Auth (afid, uname, aname) -> 
+      spf "Auth: auth_fid = %d uname = %s aname = %s" afid uname aname
+    | T.Flush oldtag -> 
+      spf "Flush: old_tag = %d" oldtag
+    | T.Walk (newfid, arr) -> 
+      spf "Walk: new_fid = %d, [|%s|]" newfid 
+        (arr |> Array.to_list |> String.concat ", ")
+    | T.Open mode -> 
+      spf "Walk: mode = %s" (str_of_mode mode)
+    | T.Create (name, mode, perm) -> 
+      spf "Create: %s, mode = %s, perm = %s" name (str_of_mode mode) 
+        (str_of_perm perm)
+    | T.Read (offset, count) ->
+      spf "Read: offset = %d, count = %d" offset count
+    | T.Write (offset, data) ->
+      spf "Write: offset = %d, data = %s" offset
+        (if String.length data > 10 then String.sub data 0 10 else data)
+    | T.Clunk () ->
+      spf "Clunk: "
+    | T.Remove () ->
+      spf "Remove: "
+    | T.Stat () ->
+      spf "Stat: "
+    | T.Wstat str -> 
+      spf  "Wstat: %s"
+        (if String.length str > 10 then String.sub str 0 10 else str)
     )
   | R r -> "R:" ^
     (match r with
-    | R.Version (msize, version) -> spf "Version: %d %s" msize version
-    | _ -> raise Todo
+    | R.Version (msize, version) -> 
+      spf "Version: %d %s" msize version
+    | R.Attach qid -> 
+      spf "Attach: %s" (str_of_qid qid)
+    | R.Auth qid -> 
+      spf "Auth: %s" (str_of_qid qid)
+    | R.Error str -> 
+      spf "Error: %s" str
+    | R.Flush () -> 
+      spf "Flush:"
+    | R.Open (qid, iounit) -> 
+      spf "Open: qid = %s, iounit = %d" (str_of_qid qid) iounit
+    | R.Create (qid, iounit) -> 
+      spf "Create: qid = %s, iounit = %d" (str_of_qid qid) iounit
+    | R.Read str ->
+      spf "Read: %s" 
+        (if String.length str > 10 then String.sub str 0 10 else str)
+    | R.Write count -> 
+      spf  "Write: %d" count
+    | R.Clunk () -> 
+      spf  "Clunk:"
+    | R.Walk (arr) -> 
+      spf "Walk: [|%s|]"
+        (arr |> Array.to_list |> List.map str_of_qid |> String.concat ", ")
+    | R.Remove () -> 
+      spf  "Remove:"
+    | R.Stat str -> 
+      spf  "Stat: %s"
+        (if String.length str > 10 then String.sub str 0 10 else str)
+    | R.Wstat () -> 
+      spf  "Wstat:"
     )
   ) ^ spf " (tag = %d, fid = %d)\n" msg.tag msg.fid
     
@@ -146,6 +217,10 @@ let gstring buf off =
   let n = gbit16 buf off in
   let off = off + bit16sz in
   String.sub buf off n
+
+
+
+
 
 (* less: factorize with draw_marshal.ml? and formats/executables/a_out.ml ?
  * put in commons/? 
@@ -179,7 +254,7 @@ let pstring s =
   pbit16 len ^ s
 
 (*****************************************************************************)
-(* Entry point *)
+(* Entry points *)
 (*****************************************************************************)
 
 (* less: opti: go though a string buffer and size? and convS2M? 

@@ -1,10 +1,12 @@
 open Common
 open Fs
 
+module P = Protocol_9P
+
 module Unix2 = ThreadUnix
 module R = Worker_request
 
-let dispatch fs fcall fid =
+let dispatch fs req fid =
   raise Todo
 
 (* the master *)
@@ -12,20 +14,13 @@ let thread fs =
   (* less: threadsetname *)
   
   while true do
-    (* less: + IOHDRSZ + UTFmax *)
-    let bufsize = 8192 in
-    let buf = String.make bufsize ' ' in
-    let n = Ninep.read fs.server_fd buf in
+    (* less: care about messagesize? *)
+    let req = P.read_9P_msg fs.server_fd in
 
-    if n <= 0
-    then begin
-      (* todo: should exit the whole proc *)
-      failwith (spf "Ninep.read %d" n);
-    end;
+    (* todo: should exit the whole proc if error *)
     
-    let fcall = Ninep.parse buf n in
     (* less: dump fcall if debug *)
 
-    let fid = Fid.alloc fcall.Ninep.fid in
-    dispatch fs fcall fid
+    let fid = Fid.alloc req.P.fid in
+    dispatch fs req fid
   done

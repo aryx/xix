@@ -1,7 +1,7 @@
 open Common
 
 (* todo: same than ninep.fid? *)
-type fid = int
+type fid = Protocol_9P.fid
 
 type t = {
   fid: fid;

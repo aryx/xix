@@ -68,6 +68,7 @@ let thread_main () =
                                        mouse, (display, desktop, view, font)) in
   
   (* Rio, a filesystem server *)
+
   let fs = Fs.init () in
 
   (* Wait *)

@@ -12,10 +12,10 @@ CMO= \
   windows.cmo wm.cmo threads_window.cmo  \
   thread_keyboard.cmo mouse_action.cmo thread_mouse.cmo \
    \
-  ninep.cmo worker_request.cmo thread_fileserver.cmo \
+  worker_request.cmo thread_fileserver.cmo \
   test.cmo main.cmo
 
-LIBS=$TOP/commons2/commons.cma \
+LIBS=$TOP/commons2/commons.cma $TOP/lib_system/plan9/plan9.cma \
  $TOP/lib_graphics/geometry/geometry.cma $TOP/lib_graphics/draw/draw.cma \
  $TOP/lib_graphics/input/input.cma $TOP/lib_graphics/ui/ui.cma
 
@@ -31,9 +31,9 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I $TOP/commons2 -I $TOP/lib_graphics/geometry \
- -I $TOP/lib_graphics/draw -I $TOP/lib_graphics/input \
- -I $TOP/lib_graphics/ui
+OCAMLINCLUDES=-I $TOP/commons2 -I $TOP/lib_system/plan9 \
+ -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
+ -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 

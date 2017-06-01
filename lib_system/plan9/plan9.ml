@@ -5,15 +5,19 @@ type int64 = int
 type qid = {
   path: int64;
   vers: int;
-  (* less: bitset *)
+  (* less: opti: bitset *)
   typ: qid_type;
-  (* less: flags? *)
+  (* less: extra flags? *)
 }
 and qid_type =
   | QTFile
   | QTDir
 (* | QTMount | QTAuth | QTAppend | QTExcl *)
 
+let int_of_qid_type = function
+  | QTFile -> 0x00
+  | QTDir -> 0x80
+  
 
 (* todo: type dir_entry *)
 

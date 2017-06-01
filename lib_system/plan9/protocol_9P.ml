@@ -1,5 +1,7 @@
 open Common
 
+module N = Plan9
+
 module Unix1 = Unix
 module Unix2  = ThreadUnix
 
@@ -45,7 +47,13 @@ let max_welem = 16
 module Request = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach of fid (* auth fid *) * string (* uname *) * string (* aname *)
+    | Attach of fid (* auth_fid(opt) *) * string (* uname *) * string (*aname *)
+
+    (* Illegal: Error *)
+    | Flush  of tag (* oldtag *)
+    | Auth  of fid (* auth_fid *) * string (* uname *) * string (* aname *)
+
+    (* uses fid in message.fid *)
 
     | Open  of open_mode
     | Read  of int64 (* offset *) * int32 (* count *)
@@ -56,18 +64,19 @@ module Request = struct
     | Create  of string * open_mode * perm
     | Remove  of unit
     | Stat  of unit
-    | Wstat  of string (* data, todo: Direntry list *)
+    | Wstat  of string (* todo: Direntry list *)
 
-    (* Illegal: Error *)
-    | Flush  of tag (* oldtag *)
-
-    | Auth  of fid (* auth fid *) * string (* uname *) * string (* aname *)
 end 
 
 module Response = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
     | Attach  of qid
+
+    | Error of string
+    | Flush of unit
+
+    | Auth of qid (* auth qid *)
 
     | Open  of qid * int (* iounit *)
     | Read  of string (* data *)
@@ -80,10 +89,6 @@ module Response = struct
     | Stat of string (* data, todo: Direntry list *)
     | Wstat of unit
 
-    | Error of string
-    | Flush of unit
-
-    | Auth of qid (* auth qid *)
 end
 
 (* old: the requests are prefixed with a T *)
@@ -113,15 +118,17 @@ let bit64sz = 8
 (* different from Response.Error *)
 exception Error of string
 
-let debug = ref true
+let debug = ref false
 
 (*****************************************************************************)
 (* Dumper *)
 (*****************************************************************************)
-let str_of_qid x =
-  raise Todo
+let str_of_qid qid =
+  spf "path = %d, vers = %d, type = %d" qid.N.path qid.N.vers
+    (N.int_of_qid_type qid.N.typ)
+
 let str_of_mode x =
-  raise Todo
+  spf "%d" x
 let str_of_perm x =
   spf "%d" x
 
@@ -249,9 +256,31 @@ let pbit32 x =
   str.[3] <- x4;
   str
 
+(* todo: sanity check range *)
+let pbit64 x =
+  let x1 = Char.chr (x land 0xFF) in
+  let x2 = Char.chr ((x asr 8) land 0xFF) in
+  let x3 = Char.chr ((x asr 16) land 0xFF) in
+  let x4 = Char.chr ((x asr 24) land 0xFF) in
+  let str = String.make 8 ' ' in
+  str.[0] <- x1;
+  str.[1] <- x2;
+  str.[2] <- x3;
+  str.[3] <- x4;
+  str.[4] <- Char.chr 0;
+  str.[5] <- Char.chr 0;
+  str.[6] <- Char.chr 0;
+  str.[7] <- Char.chr 0;
+  str
+
 let pstring s =
   let len = String.length s in
   pbit16 len ^ s
+
+let pqid qid = 
+  pbit8 (Plan9.int_of_qid_type qid.N.typ) ^
+  pbit32 qid.N.vers ^
+  pbit64 qid.N.path
 
 (*****************************************************************************)
 (* Entry points *)
@@ -295,10 +324,6 @@ let read_9P_msg fd =
       let msize = gbit32 buf offset in
       let version = gstring buf (offset + 4) in
       { res with msg = T (T.Version (msize, version)) }
-    | 101 ->
-      let msize = gbit32 buf offset in
-      let version = gstring buf (offset + 4) in
-      { res with msg = R (R.Version (msize, version)) }
     (* Auth *)
     | 102 -> raise (Error (spf "R: %d" type_))
     (* Attach *)
@@ -376,15 +401,16 @@ let write_9P_msg msg fd =
     pbit8 type_ ^ 
     pbit16 msg.tag ^ 
     (match msg.msg with
-    | T x ->
-      (match x with
-      | T.Version (msize, version) -> raise (Error (spf "%d" type_))
-      | _ -> raise (Error (spf "W: %d" type_))
-      )
     | R x ->
       (match x with 
       | R.Version (msize, version) -> 
         pbit32 msize ^ pstring version
+      | R.Attach qid ->
+        pqid qid
+      | _ -> raise (Error (spf "W: %d" type_))
+      )
+    | T x ->
+      (match x with
       | _ -> raise (Error (spf "W: %d" type_))
       )
     )

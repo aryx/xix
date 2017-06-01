@@ -203,7 +203,7 @@ let str_of_msg msg =
     | R.Wstat () -> 
       spf  "Wstat:"
     )
-  ) ^ spf " (tag = %d, fid = %d)\n" msg.tag msg.fid
+  ) ^ spf " (tag = %d, fid = %d)" msg.tag msg.fid
     
 
 (*****************************************************************************)
@@ -335,27 +335,27 @@ let read_9P_msg fd =
       let aname = gstring buf offset in
       { res with fid = fid; msg = T (T.Attach (afid, uname, aname)) }
     (* Error *)
-    | 106 -> raise (Error (spf "R: %d" type_))
+    | 106 -> raise (Error (spf "T: %d" type_))
     (* Flush *)
-    | 108 -> raise (Error (spf "R: %d" type_))
+    | 108 -> raise (Error (spf "T: %d" type_))
     (* Walk *)
-    | 110 -> raise (Error (spf "R: %d" type_))
+    | 110 -> raise (Error (spf "T: %d" type_))
     (* Open *)
-    | 112 -> raise (Error (spf "R: %d" type_))
+    | 112 -> raise (Error (spf "T: %d" type_))
     (* Create *)
-    | 114 -> raise (Error (spf "R: %d" type_))
+    | 114 -> raise (Error (spf "T: %d" type_))
     (* Read *)
-    | 116 -> raise (Error (spf "R: %d" type_))
+    | 116 -> raise (Error (spf "T: %d" type_))
     (* Write *)
-    | 118 -> raise (Error (spf "R: %d" type_))
+    | 118 -> raise (Error (spf "T: %d" type_))
     (* Clunk *)
-    | 120 -> raise (Error (spf "R: %d" type_))
+    | 120 -> raise (Error (spf "T: %d" type_))
     (* Remove *)
-    | 122 -> raise (Error (spf "R: %d" type_))
+    | 122 -> raise (Error (spf "T: %d" type_))
     (* Stat *)
-    | 124 -> raise (Error (spf "R: %d" type_))
+    | 124 -> raise (Error (spf "T: %d" type_))
     (* Wstat *)
-    | 126 -> raise (Error (spf "R: %d" type_))
+    | 126 -> raise (Error (spf "T: %d" type_))
 
     | n -> raise (Error (spf "unrecognized message type: %d" n))
   )

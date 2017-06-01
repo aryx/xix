@@ -11,7 +11,10 @@ let main () =
   (* child, client *)
   | 0 ->
     (try 
-      Plan9.mount clients_fd (-1) "/mnt/wsys" Plan9.MRepl "win1" |> ignore
+      Plan9.mount clients_fd (-1) "/mnt/wsys" Plan9.MRepl "win1" |> ignore;
+      let dir = Unix.opendir "/mnt/wsys" in
+      let str = Unix.readdir dir in
+      pr (spf "dir: %s" str)
     with Plan9.Plan9_error (cmd, str) ->
       pr (spf "exn: %s, %s" cmd str);
     ); 
@@ -28,14 +31,22 @@ let main () =
       (match req.P.msg with
       | P.T x ->
         (match x with
+        (* for Plan9.mount *)
         | P.T.Version (msize, str) ->
           let res = { req with P.msg = P.R (P.R.Version (msize, str)) } in
+          pr (P.str_of_msg res);
           P.write_9P_msg res server_fd;
           ()
         | P.T.Attach (afid, uname, aname) -> 
           let qid = { N.path = 0; N.vers = 0; N.typ = N.QTDir } in
           let res = { req with P.msg = P.R (P.R.Attach qid) } in
+          pr (P.str_of_msg res);
           P.write_9P_msg res server_fd;
+
+        (* for Unix.opendir *)
+
+        (* for Unix.readdir *)
+
         | _ -> raise Todo
         )
       | P.R x ->

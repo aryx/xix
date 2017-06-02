@@ -1,4 +1,8 @@
 
+(* todo: constructor to sanity check *)
+type int16 = int
+(* todo: use Int32.t *)
+type int32 = int
 (* todo: use Int64.t *)
 type int64 = int
 
@@ -17,19 +21,48 @@ and qid_type =
 let int_of_qid_type = function
   | QTFile -> 0x00
   | QTDir -> 0x80
+
+(* todo: better type? rwx? *)
+type perm = int
+
+(* old: called only Dir in libcore-C but this is wrong *)
+type dir_entry = {
+  (* file data *)
+  name: string;
+  qid: qid;
+  mode: perm;
+  length: int64;
   
+  atime: int;
+  mtime: int;
 
-(* todo: type dir_entry *)
+  uid: string;
+  gid: string;
+  muid: string;
 
+  (* system-modified data *)
+  _typ: int16;
+  _dev: int;
+}
+
+  
 
 (* M for mount, but also used for bind *)
 type namespace_flag = 
   | MRepl
   | MBefore
   | MAfter
+  (* | MCreate | MCache | MOrder *)
+
+(* less: reuse Unix.open_flag? *)
+type open_flag = int
+ (* ORead | OWrite | ORdwr | OExec | OTrunc | OCExec | ORClose | OExcl *)
 
 (* for errstr() *)
 let errmax = 128
+
+
+
 
 exception Plan9_error of string (* cmd *) * string (* errstr *)
 

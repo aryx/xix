@@ -15,8 +15,11 @@ let main () =
       let dir = Unix.opendir "/mnt/wsys" in
       let str = Unix.readdir dir in
       pr (spf "dir: %s" str)
-    with Plan9.Plan9_error (cmd, str) ->
-      pr (spf "exn: %s, %s" cmd str);
+    with 
+      | Plan9.Plan9_error (cmd, str) ->
+        pr (spf "exn: %s, %s" cmd str);
+      | Unix.Unix_error (err, cmd, args) ->
+        pr (spf "exn: %s (%s, %s)" (Unix.error_message err) cmd args)
     ); 
     while true do
       for i = 0 to 100 do
@@ -44,6 +47,21 @@ let main () =
           P.write_9P_msg res server_fd;
 
         (* for Unix.opendir *)
+        | P.T.Walk (fid, new_fid, []) -> 
+          let res = { req with P.typ = P.R (P.R.Walk []) } in
+          pr (P.str_of_msg res);
+          P.write_9P_msg res server_fd;
+
+        | P.T.Stat (new_fid) -> 
+          (* TODO!!! *)
+          let res = { req with P.typ = P.R (P.R.Stat "TODO") } in
+          pr (P.str_of_msg res);
+          P.write_9P_msg res server_fd;
+
+        | P.T.Clunk (new_fid) -> 
+          let res = { req with P.typ = P.R (P.R.Clunk ()) } in
+          pr (P.str_of_msg res);
+          P.write_9P_msg res server_fd;
 
         (* for Unix.readdir *)
 

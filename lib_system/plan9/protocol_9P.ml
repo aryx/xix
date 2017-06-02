@@ -16,6 +16,8 @@ module Unix2  = ThreadUnix
  *  - 16 bits: tag of the message
  *  - variable bytes: depends on the type of the message
  * 
+ * See 0intro(5) in the man page of Plan9 for more information on 9P.
+ * 
  * later: at some point we can replace all the parsing by just using
  * Marshal instead of specialized serialization format
  * (but then can not interact with 9-in-C)
@@ -38,10 +40,8 @@ type int64 = int
 type fid = int32
 type tag = int16
 type qid = Plan9.qid
-type perm = int32
 
-(* less: reuse Unix.open_flag? *)
-type open_mode = int
+
 
 let max_welem = 16
 
@@ -50,21 +50,20 @@ module Request = struct
     | Version of int (* message size *) * string (* "9P2000" *)
     | Attach of fid * fid (* auth_fid *) * string (* user *) * string (*aname*)
 
-    | Flush of tag (* old_tag *)
-    | Auth of fid (* auth_fid *) * string (* user *) * string (* aname *)
-    (* Note that Error is not here (it can just be a Response, not a Request) *)
-
-    | Open of fid * open_mode
+    | Open of fid * Plan9.open_flag
     | Read of fid * int64 (* offset *) * int32 (* count *)
     | Write of fid * int64 (* offset *) * string (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid (* newfid *) * string list (* < max_welem *)
-    | Create of fid * string * open_mode * perm
+    | Create of fid * string * Plan9.open_flag * Plan9.perm
     | Remove of fid
     | Stat of fid
     | Wstat of fid * string (* todo: Direntry list *)
 
+    | Flush of tag (* old_tag *)
+    | Auth of fid (* auth_fid *) * string (* user *) * string (* aname *)
+    (* Note that Error is not here (it can just be a Response, not a Request) *)
 end 
 
 module Response = struct
@@ -208,6 +207,8 @@ let str_of_msg msg =
 (* Helpers *)
 (*****************************************************************************)
 let i c = Char.code c
+
+(* 9P uses little-endian order (least significant byte first) *)
 
 (* todo: overflow check! or use Int32 *)
 let gbit8 buf off = 

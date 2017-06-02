@@ -8,6 +8,8 @@
 
 #include <lib9.h>
 
+// mostly a copy paste of otherlibs/unix/unixsupport.c adapted for plan9
+
 static value * plan9_error_exn = NULL;
 
 void plan9_error(char *cmdname, value cmdarg)

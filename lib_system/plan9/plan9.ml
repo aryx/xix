@@ -30,7 +30,7 @@ type dir_entry = {
   (* file data *)
   name: string;
   qid: qid;
-  mode: perm;
+  mode: perm * dir_entry_mode;
   length: int64;
   
   atime: int;
@@ -44,6 +44,19 @@ type dir_entry = {
   _typ: int16;
   _dev: int;
 }
+ (* ugly hack because I don't have Int32 yet and DMDIR requires 32 bits *)
+  and dir_entry_mode =
+    | DMDir (* 0x80000000 *)
+    | DMFile
+
+let mk_dir_entry name qid perm = 
+  { name = name; qid = qid; mode = perm;
+    length = 0;
+    atime = 0; mtime = 0;
+    uid = ""; gid = ""; muid = "";
+    _typ = 0; _dev = 0;
+  }
+
 
   
 

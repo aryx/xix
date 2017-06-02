@@ -53,8 +53,9 @@ let main () =
           P.write_9P_msg res server_fd;
 
         | P.T.Stat (new_fid) -> 
-          (* TODO!!! *)
-          let res = { req with P.typ = P.R (P.R.Stat "TODO") } in
+          let qid = { N.path = 0; N.vers = 0; N.typ = N.QTDir } in
+          let entry = N.mk_dir_entry "/" qid (0o500, N.DMDir) in
+          let res = { req with P.typ = P.R (P.R.Stat entry) } in
           pr (P.str_of_msg res);
           P.write_9P_msg res server_fd;
 

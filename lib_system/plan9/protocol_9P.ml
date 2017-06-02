@@ -59,7 +59,7 @@ module Request = struct
     | Create of fid * string * Plan9.open_flag * Plan9.perm
     | Remove of fid
     | Stat of fid
-    | Wstat of fid * string (* todo: Direntry list *)
+    | Wstat of fid * Plan9.dir_entry
 
     | Flush of tag (* old_tag *)
     | Auth of fid (* auth_fid *) * string (* user *) * string (* aname *)
@@ -84,7 +84,7 @@ module Response = struct
     | Walk of qid list (* < max_welem *)
     | Create of qid * int (* iounit *)
     | Remove of unit
-    | Stat of string (* data, todo: Direntry list *)
+    | Stat of Plan9.dir_entry
     | Wstat of unit
 
 end
@@ -146,7 +146,7 @@ let str_of_msg msg =
       spf "Walk: fid = %d new_fid = %d [%s]" fid newfid 
         (xs |> String.concat ", ")
     | T.Open (fid, mode) -> 
-      spf "Walk: fid = %d mode = %s" fid (str_of_mode mode)
+      spf "Open: fid = %d mode = %s" fid (str_of_mode mode)
     | T.Create (fid, name, mode, perm) -> 
       spf "Create: fid = %d, name = %s, mode = %s, perm = %s" 
         fid name (str_of_mode mode) 
@@ -162,9 +162,8 @@ let str_of_msg msg =
       spf "Remove: %d" fid
     | T.Stat fid ->
       spf "Stat: %d" fid
-    | T.Wstat (fid, str) -> 
-      spf  "Wstat: fid = %d, %s" fid
-        (if String.length str > 10 then String.sub str 0 10 else str)
+    | T.Wstat (fid, entry) -> 
+      spf  "Wstat: fid = %d, name = %s" fid entry.N.name
     )
   | R r -> "R:" ^
     (match r with
@@ -194,9 +193,8 @@ let str_of_msg msg =
         (xs |> List.map str_of_qid |> String.concat ", ")
     | R.Remove () -> 
       spf  "Remove:"
-    | R.Stat str -> 
-      spf  "Stat: %s"
-        (if String.length str > 10 then String.sub str 0 10 else str)
+    | R.Stat entry -> 
+      spf  "Stat: name = %s" entry.N.name
     | R.Wstat () -> 
       spf  "Wstat:"
     )
@@ -236,7 +234,8 @@ let gstring buf off =
   let off = off + bit16sz in
   String.sub buf off n
 
-
+let gdir_entry buf =
+  raise Todo
 
 
 
@@ -267,6 +266,23 @@ let pbit32 x =
   str.[3] <- x4;
   str
 
+let pbit32_special (x, dm) =
+  let x1 = Char.chr (x land 0xFF) in
+  let x2 = Char.chr ((x asr 8) land 0xFF) in
+  let x3 = Char.chr ((x asr 16) land 0xFF) in
+  let x4 = 
+    match dm with
+    | N.DMDir -> Char.chr  (((x asr 24) land 0xFF) lor 128)
+    | N.DMFile -> Char.chr ((x asr 24) land 0xFF)
+  in
+  let str = String.make 4 ' ' in
+  str.[0] <- x1;
+  str.[1] <- x2;
+  str.[2] <- x3;
+  str.[3] <- x4;
+  str
+  
+
 (* todo: sanity check range *)
 let pbit64 x =
   let x1 = Char.chr (x land 0xFF) in
@@ -292,6 +308,32 @@ let pqid qid =
   pbit8 (Plan9.int_of_qid_type qid.N.typ) ^
   pbit32 qid.N.vers ^
   pbit64 qid.N.path
+
+
+let qidsz = bit8sz + bit32sz + bit64sz
+let stat_fixed_sz = bit16sz + qidsz + 5 * bit16sz + 4 * bit32sz + 1 * bit64sz
+
+let pdir_entry entry =
+  let fixed_sz = stat_fixed_sz in
+  let variable_sz = 
+    String.length entry.N.name +
+    String.length entry.N.uid +
+    String.length entry.N.gid +
+    String.length entry.N.muid
+  in
+  let total_sz = fixed_sz + variable_sz in
+  (* the count does not include the size of the count itself *)
+  pbit16 (total_sz - bit16sz) ^
+  pbit16 entry.N._typ ^ 
+  pbit32 entry.N._dev ^
+  pqid entry.N.qid ^
+  pbit32_special entry.N.mode ^
+  pbit32 entry.N.atime ^
+  pbit32 entry.N.mtime ^
+  pbit64 entry.N.length ^
+  ([entry.N.name; entry.N.uid; entry.N.gid; entry.N.muid] |>
+   List.map (fun str -> pbit16 (String.length str) ^ str) |> String.concat "")
+
 
 (*****************************************************************************)
 (* Entry points *)
@@ -430,7 +472,8 @@ let read_9P_msg fd =
       let fid = gbit32 buf offset in
       let nstat = gbit16 buf (offset + 4) in
       let data = String.sub buf (offset + 6) nstat in
-      { res with typ = T (T.Wstat (fid, data)) },
+      let entry = gdir_entry data in
+      { res with typ = T (T.Wstat (fid, entry)) },
       offset + 6 + nstat
 
     | n -> raise (Error (spf "unrecognized message type: %d" n))
@@ -503,7 +546,8 @@ let write_9P_msg msg fd =
         assert (len < max_welem);
         pbit16 len ^ (xs |> List.map pqid |> String.concat "")
       | R.Remove () -> ""
-      | R.Stat data -> 
+      | R.Stat entry -> 
+        let data = pdir_entry entry in
         let nstat = String.length data in
         pbit16 nstat ^ data
       | R.Wstat () -> ""

@@ -5,6 +5,7 @@ module Unix2 = ThreadUnix
 
 module I = Display
 module W = Window
+module FS = Fileserver
 
 (*****************************************************************************)
 (* Cursors *)
@@ -103,7 +104,7 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
 )
 
 (* less: hideit, pid (but 0, or if != 0 -> use another func), scrolling *)
-let new_win img cmd argv pwd_opt mouse =
+let new_win img cmd argv pwd_opt mouse fs =
 
   (* A new Window.t *)
 
@@ -138,10 +139,14 @@ let new_win img cmd argv pwd_opt mouse =
     Unix1.chdir w.W.pwd;
     (* todo: close on exec *)
     (* less: rfork for copy of namespace/fd/env, but ape fork does that? *)
-    (* todo: filsysmount *)
+    
+    (*/* close server end so mount won't hang if exiting */*)
+    Unix1.close fs.FS.server_fd;
+    Plan9.mount fs.FS.clients_fd (-1) "/mnt/wsys" Plan9.MRepl (spf "%d" w.W.id);
+    Plan9.bind "/mnt/wsys" "/dev" Plan9.MBefore;
 
     (* less: wclose for ref counting *)
-    (* todo: reassin STDIN/STDOUT *)
+    (* todo: reassign STDIN/STDOUT *)
     (* less: notify nil *)
     Unix2.execv cmd argv;
     failwith "exec failed"

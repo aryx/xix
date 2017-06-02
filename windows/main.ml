@@ -13,11 +13,9 @@ module I = Display
  *  - just a basic ascii font for now
  * 
  * todo:
- *  - you need to disable preempt? otherwise can have concurrent
- *    read on mousectl between thread_mouse and read_mouse
- *    in menuhit?
  *  - more fonts
  *  - unicode
+ *  - need to disable preempt?
  *)
 
 let usage = 
@@ -54,6 +52,10 @@ let thread_main () =
 
   Display.flush display;
 
+  (* Rio, a filesystem server *)
+
+  let fs = Fileserver.init () in
+
   (* Rio, a concurrent application *)
 
   (* to break some mutual dependencies *)
@@ -65,12 +67,12 @@ let thread_main () =
     Thread.create Thread_keyboard.thread kbd in
   let _mouse_thread = 
     Thread.create Thread_mouse.thread (exit_chan, 
-                                       mouse, (display, desktop, view, font)) in
+                                       mouse, (display, desktop, view, font),
+                                       fs) in
+
+  let _fileserver_thread =
+    Thread.create Thread_fileserver.thread fs in
   
-  (* Rio, a filesystem server *)
-
-  let fs = Fileserver.init () in
-
   (* Wait *)
 
   let exit_code = Event.receive exit_chan |> Event.sync in

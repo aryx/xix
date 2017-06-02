@@ -13,7 +13,7 @@ let middle_click_system m mouse =
 
 (* right click normally *)
 let wm_menu pos button exitchan 
-    mouse (display, desktop, view, font) =
+    mouse (display, desktop, view, font) fs =
   (* todo: set (and later restore) sweeping to true *)
 
   let items = [
@@ -23,7 +23,7 @@ let wm_menu pos button exitchan
       img_opt |> Common.if_some (fun img ->
         (* Wm.new_win img "/bin/rc" [|"rc"; "-i"|] None mouse *)
         Wm.new_win img "/tests/xxx/test_rio_graph_app1" 
-          [|"/tests/xxx/test_rio_graph_app1"|] None mouse
+          [|"/tests/xxx/test_rio_graph_app1"|] None mouse fs
       )
     );
     (* old: was Reshape but here it's really resizing *)
@@ -62,7 +62,7 @@ type under_mouse =
   | OtherWin of Window.t
 
 let thread (exitchan, 
-            mouse, (display, desktop, view, font)) =
+            mouse, (display, desktop, view, font), fs) =
   (* less: threadsetname *)
 
   while true do
@@ -125,7 +125,7 @@ let thread (exitchan,
           (* TODO: remove, just because hard right click on QEMU *)
           | Nothing , { left = true } ->
             wm_menu m.Mouse.pos Mouse.Left exitchan 
-              mouse (display, desktop, view, font)
+              mouse (display, desktop, view, font) fs
 
 
           | (Nothing | CurrentWin _), { left = true } ->
@@ -139,7 +139,7 @@ let thread (exitchan,
 
           | (Nothing | CurrentWin _), { right = true } ->
             wm_menu m.Mouse.pos Mouse.Right exitchan 
-              mouse (display, desktop, view, font)
+              mouse (display, desktop, view, font) fs
 
           | OtherWin w, { left = true } ->
             Wm.top_win w mouse

@@ -1,6 +1,5 @@
 open Common
 
-(* todo: same than ninep.fid? *)
 type fid = Protocol_9P.fid
 
 type t = {
@@ -15,5 +14,5 @@ type t = {
 }
 
 
-let alloc fcall_fid =
+let alloc fid =
   raise Todo

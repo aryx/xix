@@ -7,7 +7,7 @@ TOP=..
 CMO= \
   cursors.cmo \
   window.cmo \
-  fid.cmo fs.cmo \
+  fid.cmo fileserver.cmo \
   globals.cmo \
   windows.cmo wm.cmo threads_window.cmo  \
   thread_keyboard.cmo mouse_action.cmo thread_mouse.cmo \

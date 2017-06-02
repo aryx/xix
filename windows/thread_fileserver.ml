@@ -1,5 +1,5 @@
 open Common
-open Fs
+open Fileserver
 
 module P = Protocol_9P
 
@@ -21,6 +21,9 @@ let thread fs =
     
     (* less: dump fcall if debug *)
 
-    let fid = Fid.alloc req.P.fid in
+    let fid = 
+      (* Fid.alloc req.P.fid *)
+      raise Todo
+    in
     dispatch fs req fid
   done

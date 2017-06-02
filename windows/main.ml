@@ -69,7 +69,7 @@ let thread_main () =
   
   (* Rio, a filesystem server *)
 
-  let fs = Fs.init () in
+  let fs = Fileserver.init () in
 
   (* Wait *)
 

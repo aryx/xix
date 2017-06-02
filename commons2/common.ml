@@ -159,3 +159,16 @@ let once aref f =
 
 let hash_to_list h =
   Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
+
+(* tail recursive efficient version *)
+(* TODO: seems to not work when reading /dev/winname in test_rio_graph_app1 *)
+let cat file =
+  let chan = open_in file in
+  let rec cat_aux acc ()  =
+      (* cant do input_line chan::aux() cos ocaml eval from right to left ! *)
+    let (b, l) = try (true, input_line chan) with End_of_file -> (false, "") in
+    if b
+    then cat_aux (l::acc) ()
+    else acc
+  in
+  cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)

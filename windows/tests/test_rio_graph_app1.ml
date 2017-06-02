@@ -7,7 +7,21 @@ let main () =
 
   let display = Draw.init "Hello Draw" in
 
-  let winname = "window.1" in
+  let winname = 
+    (* "window.1"  *)
+    (* TODO: does not work?
+    match Common.cat "/dev/winname" with
+    | [x] -> x
+    | xs -> failwith (spf "wrong format in /dev/winname: %s"
+                        (String.concat "," xs))
+    *)
+    let buf = String.make 256 ' ' in
+    let chan = open_in "/dev/winname" in
+    let n = input chan buf 0 256 in
+    if n < 256
+    then String.sub buf 0 n
+    else failwith "buffer too short for /dev/winname"
+  in
   let view = 
     try Draw_ipc.get_named_image display winname
     with Failure _ -> 

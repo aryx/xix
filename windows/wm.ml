@@ -107,7 +107,7 @@ let new_win img cmd argv pwd_opt mouse =
 
   (* A new Window.t *)
 
-  (* less: cpid channel *)
+  (* less: cpid channel? no need I think because no procexec *)
   (* less: scrollit *)
   let w = Window.alloc img in
   (* less: wscrdraw here? *)
@@ -132,7 +132,7 @@ let new_win img cmd argv pwd_opt mouse =
   Thread.critical_section := true;
   let res = Unix.fork () in
   (match res with
-  | -1 -> failwith "fork returnd -1"
+  | -1 -> failwith "fork returned -1"
   | 0 ->
     (* child *)
     Unix1.chdir w.W.pwd;
@@ -145,7 +145,9 @@ let new_win img cmd argv pwd_opt mouse =
     (* less: notify nil *)
     Unix2.execv cmd argv;
     failwith "exec failed"
+
   | pid -> 
+    (* parent *)
     Thread.critical_section := false;
     w.W.pid <- pid;
 

@@ -44,7 +44,9 @@ type dir_entry = {
   _typ: int16;
   _dev: int;
 }
- (* ugly hack because I don't have Int32 yet and DMDIR requires 32 bits *)
+ (* hack because I don't have Int32 yet and DMDIR requires 32 bits,
+  * but good to separate the perm from this information I think
+  *)
   and dir_entry_mode =
     | DMDir (* 0x80000000 *)
     | DMFile

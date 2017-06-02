@@ -35,7 +35,7 @@ type int16 = int
 (* todo: use Int32.t *)
 type int32 = int
 (* todo: use Int64.t *)
-type int64 = int
+type int64 = int * int
 
 type fid = int32
 type tag = int16
@@ -152,9 +152,11 @@ let str_of_msg msg =
         fid name (str_of_mode mode) 
         (str_of_perm perm)
     | T.Read (fid, offset, count) ->
-      spf "Read: fid = %d offset = %d, count = %d" fid offset count
+      let (off1, off2) = offset in
+      spf "Read: fid = %d offset = (%d,%d), count = %d" fid off1 off2 count
     | T.Write (fid, offset, data) ->
-      spf "Write: fid = %d offset = %d, data = %s" fid offset
+      let (off1, off2) = offset in
+      spf "Write: fid = %d offset = (%d,%d), data = %s" fid off1 off2
         (if String.length data > 10 then String.sub data 0 10 else data)
     | T.Clunk fid ->
       spf "Clunk: %d" fid
@@ -219,15 +221,15 @@ let gbit32 buf off =
 
 (* todo: use Int64 *)
 let gbit64 buf off =
-  let n = 
+  let n1 = 
   (i buf.[0+off])        lor (i buf.[1+off] lsl 8) lor
   (i buf.[2+off] lsl 16) lor (i buf.[3+off] lsl 24)
   in
-  (match buf.[4], buf.[5], buf.[6], buf.[7] with
-  | '\000', '\000', '\000', '\000' -> 
-    n
-  | _ -> failwith "TODO: gbit64 overflow"
-  )
+  let n2 = 
+  (i buf.[4+off])        lor (i buf.[5+off] lsl 8) lor
+  (i buf.[6+off] lsl 16) lor (i buf.[7+off] lsl 24)
+  in
+  n1, n2
 
 let gstring buf off =
   let n = gbit16 buf off in
@@ -440,17 +442,18 @@ let read_9P_msg fd =
     (* Read *)
     | 116 -> 
       let fid = gbit32 buf offset in
-      let offset = gbit64 buf (offset + 4) in
+      (* bugfix: not to confuse with 'offset' used to index buf *)
+      let read_offset = gbit64 buf (offset + 4) in
       let count = gbit32 buf (offset + 12) in
-      { res with typ = T (T.Read (fid, offset, count)) },
+      { res with typ = T (T.Read (fid, read_offset, count)) },
       offset + 16
     (* Write *)
     | 118 -> 
       let fid = gbit32 buf offset in
-      let offset = gbit64 buf (offset + 4) in
+      let write_offset = gbit64 buf (offset + 4) in
       let count = gbit32 buf (offset + 12) in
       let data = String.sub buf (offset + 16) count in
-      { res with typ = T (T.Write (fid, offset, data)) },
+      { res with typ = T (T.Write (fid, write_offset, data)) },
       offset + 16 + count
     (* Clunk *)
     | 120 -> 
@@ -479,9 +482,13 @@ let read_9P_msg fd =
     | n -> raise (Error (spf "unrecognized message type: %d" n))
     in
     if final_offset < len
-    then raise (Error "did not read enough bytes");
+    then raise (Error 
+      (spf "did not read enough bytes, final = %d < len = %d (op = %d)"
+         final_offset len type_));
     if final_offset > len
-    then raise (Error "read to many bytes");
+    then raise (Error 
+      (spf "read to many bytes, final = %d > len = %d (op = %d)"
+         final_offset len type_));
     msg
   )
   with (Invalid_argument s) ->

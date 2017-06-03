@@ -17,6 +17,29 @@ let error fs req str =
   let res = { req with P.typ = P.R (P.R.Error str) } in
   answer fs res
 
+let first_message = ref true
+
+let dispatch fs req request_typ =
+  match request_typ with
+  | P.T.Version (msize, str) -> 
+    (* less: should sanity check that it's the first message *)
+    (match () with
+    | _ when not !first_message ->
+      error fs req "version request not first message"
+    | _ when msize < 256 ->
+      error fs req "version: message size too small";
+    | _ when str <> "9P2000" ->
+      error fs req "unrecognized 9P version";
+    | _ ->
+      answer fs {req with P.typ = P.R (P.R.Version (msize, str)) }
+    )
+
+  | P.T.Attach (rootfid, _auth_fid, uname, aname) ->
+    raise Todo
+  | _ -> 
+    failwith (spf "TODO: req = %s" (P.str_of_msg req))
+
+
 (* the master *)
 let thread fs =
   (* less: threadsetname *)
@@ -24,29 +47,15 @@ let thread fs =
   while true do
     (* less: care about messagesize? *)
     let req = P.read_9P_msg fs.FS.server_fd in
-
     (* todo: should exit the whole proc if error *)
-    
     if !Globals.debug
     then pr (P.str_of_msg req);
 
     (match req.P.typ with
-    | P.T x -> 
-      (match x with
-      | P.T.Version (msize, str) -> 
-        (* less: should sanity check that it's the first message *)
-        (match () with
-        | _ when msize < 256 ->
-          error fs req "version: message size too small";
-        | _ when str <> "9P2000" ->
-          error fs req "unrecognized 9P version";
-        | _ ->
-          answer fs {req with P.typ = P.R (P.R.Version (msize, str)) }
-        )
-      | _ -> 
-        failwith (spf "TODO: req = %s" (P.str_of_msg req))
-      )
+    | P.T x -> dispatch fs req x
     | P.R x ->
+      (* less: Ebadfcall *)
       raise (Impossible (spf "got a response request: %s" (P.str_of_msg req)))
-    )
+    );
+    first_message := false
   done

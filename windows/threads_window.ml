@@ -100,7 +100,11 @@ let thread w =
     (match ev with
     | Key key -> key_control w key
     | Mouse m -> mouse_control w m
-    | Cmd cmd -> cmd_control w cmd
+    | Cmd cmd -> 
+      (* todo: if return Exited then threadsexit and free channels.
+       * When answer Exited? when Cmd is Exited?
+       *)
+      cmd_control w cmd
     );
     if not w.deleted
     then Image.flush w.img;

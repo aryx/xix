@@ -108,10 +108,11 @@ let new_win img cmd argv pwd_opt mouse fs =
 
   (* A new Window.t *)
 
-  (* less: cpid channel? no need I think because no procexec *)
+  (* less: cpid channel?  *)
   (* less: scrollit *)
   let w = Window.alloc img in
-  (* less: wscrdraw here? *)
+  (* less: wscrdraw here? (instead of in alloc, ugly) *)
+  (* less: incref? *)
 
   (* simpler: draw_border w Window.Selected;
    * but done already later in set_current_and_repaint_borders
@@ -138,6 +139,11 @@ let new_win img cmd argv pwd_opt mouse fs =
     (* child *)
     Processes_winshell.child_of_fork w fs cmd argv
   | pid -> 
+
+    (* todo: how know if pb in child that require us then from
+     * delete the window? need a cpid!
+     *)
+
     (* parent *)
     Thread.critical_section := false;
     w.W.pid <- pid;

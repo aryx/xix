@@ -23,7 +23,7 @@ type t = {
   (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
   id: wid;
   (* public named image, visible in /mnt/wsys/winname, change when resize *)
-  mutable name: string;
+  mutable winname: string;
 
   (* writable through /mnt/wsys/label *)
   mutable label: string;
@@ -108,8 +108,10 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
   (* ---------------------------------------------------------------- *)
-  (* less: a Ref (Mutex.t? atomic anyway in ocaml), a Qlock (Condition.t?) 
-   * or simply a counter as there is no race issue for rio-ocaml.
+  (* less: 
+   * - a Ref (Mutex.t? atomic anyway in ocaml), ref counting
+   *   or simply a counter as there is no race issue for rio-ocaml.
+   * - Qlock (Condition.t?), needed for?
    *)
 
   (* ---------------------------------------------------------------- *)
@@ -145,7 +147,7 @@ let alloc img =
   let w = 
   { 
     id = !wid_counter;
-    name = "TODO";
+    winname = "TODO";
     label = "<unnamed>";
 
     img = img;

@@ -2,15 +2,17 @@ open Common
 
 type fid = Protocol_9P.fid
 
+(* fid server-side state *)
 type t = {
   fid: fid;
 
+  qid: Plan9.qid;
+
   mutable opened: bool;
-  mutable mode: Unix.open_flag list;
+  mutable flag: Plan9.open_flag;
 
-  (* todo: qid: *)
-
-  (* todo: w: Window.t; or use wid? *)
+  (* less: could also use a wid *)
+  w: Window.t;
 }
 
 

@@ -35,7 +35,7 @@ let dispatch fs req request_typ =
     )
 
   | P.T.Attach (rootfid, _auth_fid, uname, aname) ->
-    raise Todo
+    failwith (spf "Todo: %s" (P.str_of_msg req))
   | _ -> 
     failwith (spf "TODO: req = %s" (P.str_of_msg req))
 

@@ -2,7 +2,7 @@
 </$objtype/mkfile
 <mkconfig
 
-DIRS=\
+DIRS1=\
   lib_core/collections commons\
   mk shell\
   lib_parsing lex yacc\
@@ -11,8 +11,13 @@ DIRS=\
   formats/executables linker\
   compiler
 
-# works only under plan9 for now: lib_graphics/* windows/ (and commons2/)
-# works only from scratch: kernel/
+# works only under plan9 for now: 
+DIRS2=commons2 lib_system/plan9 lib_graphics windows
+
+# works only from scratch:
+DIRS3=kernel
+
+DIRS=$DIRS1 $DIRS2
 
 all:V: all.directories
 opt:V: opt.directories

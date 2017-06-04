@@ -1,18 +1,24 @@
 (* TODO: reuse plan9-ml/commons/common.ml at some point *)
 
+type filename = string
+
+type ('a, 'b) either = Left of 'a | Right of 'b
+
+exception Todo
+exception Impossible of string
+
 (* available since ocaml 4.01 but we use 1.07 (ocaml light) for rio *)
 let (|>) o f = f o
 
 let spf = Printf.sprintf
 
-type ('a, 'b) either = Left of 'a | Right of 'b
+let pr s =
+  print_string (s ^ "\n");
+  flush stdout
 
 let if_some f = function
   | None -> ()
   | Some x -> f x
-
-exception Todo
-exception Impossible of string
 
 (* weird: if add this then get some suicide on hellorio/rio/etc
 let some = function
@@ -20,10 +26,16 @@ let some = function
   | Some x -> x
 *)
 
-let pr s =
-  print_string (s ^ "\n");
-  flush stdout
+let once aref f =
+  match !aref with
+  | Some x -> x
+  | None ->
+    let x = f () in
+    aref := Some x;
+    x
 
+
+module Regexp = struct
 
 let (matched: int -> string -> string) = fun i s ->
   Str.matched_group i s
@@ -46,11 +58,14 @@ let candidate_match_func s re =
   Str.string_match compile_re s 0
 *)
 let split sep s = Str.split (Str.regexp sep) s
+end
 
 let (=~) s re =
   Str.string_match (Str.regexp re) s 0
   (*candidate_match_func s re*)
 
+
+module Obj_ = struct
 
 (*
 (* start of dumper.ml *)
@@ -142,23 +157,21 @@ let dump v = dump2 (repr v)
 
 (* end of dumper.ml *)
 *)
+end
+
+module List_ = struct
 
 (* todo: remove once get List.iteri in 1.07 *)
-let list_iteri f xs =
+let iteri f xs =
   xs |> Array.of_list |> Array.iteri f
+end
 
-type filename = string
+module Hashtbl_ = struct
 
-let once aref f =
-  match !aref with
-  | Some x -> x
-  | None ->
-    let x = f () in
-    aref := Some x;
-    x
-
-let hash_to_list h =
+let to_list h =
   Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
+
+end
 
 (* tail recursive efficient version *)
 (* TODO: seems to not work when reading /dev/winname in test_rio_graph_app1 *)

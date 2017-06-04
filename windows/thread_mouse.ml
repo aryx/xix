@@ -44,7 +44,7 @@ let wm_menu pos button exitchan
       Event.send exitchan 0 |> Event.sync;
     );
   ] @
-  (Globals.hidden |> Common.hash_to_list |> List.map (fun (_wid, w) ->
+  (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, w) ->
     (* less: could sort *)
     w.W.label, (fun () -> 
       Wm.unhide_win w desktop mouse

@@ -1,8 +1,9 @@
 # -*- sh -*-
 </$objtype/mkfile
-<$TOP/mkconfig
+#<$TOP/mkconfig
 
-# assumes the "includer" has defined TOP, SRC, INCLUDES, LIBS, SYSLIBS, and PROG
+# assumes the "includer" has defined:
+#  TOP, SRC, INCLUDES, LIBS, SYSLIBS, CCLIBS, and PROG
 
 OBJS=${SRC:%.ml=%.cmo}
 
@@ -10,7 +11,7 @@ all:V: $PROG
 opt:V: $PROG.opt
 
 $PROG: $OBJS $LIBS
-	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq -o $target
+	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
 
 SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}
 LIBSOPT=${LIBS:%.cma=%.cmxa}

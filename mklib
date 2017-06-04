@@ -1,6 +1,6 @@
 # -*- sh -*-
 </$objtype/mkfile
-<$TOP/mkconfig
+#<$TOP/mkconfig
 
 # assumes the "includer" has defined TOP, SRC and INCLUDES
 

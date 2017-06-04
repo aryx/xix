@@ -30,20 +30,9 @@ module Unix2  = ThreadUnix
 (* Types and constants *)
 (*****************************************************************************)
 
-(* todo: constructor to sanity check *)
-type int16 = int
-(* todo: use Int32.t *)
-type int32 = int
-(* todo: use Int64.t *)
-type int64 = int * int
-
-type bytes = string
-
 type fid = int32
 type tag = int16
 type qid = Plan9.qid
-
-
 
 let max_welem = 16
 
@@ -53,8 +42,8 @@ module Request = struct
     | Attach of fid * fid (* auth_fid *) * string (* user *) * string (*aname*)
 
     | Open of fid * Plan9.open_flag
-    | Read of fid * int64 (* offset *) * int32 (* count *)
-    | Write of fid * int64 (* offset *) * bytes (* data *)
+    | Read of fid * int64_special (* offset *) * int32 (* count *)
+    | Write of fid * int64_special (* offset *) * bytes (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid (* newfid *) * string list (* < max_welem *)

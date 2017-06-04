@@ -1,10 +1,4 @@
-
-(* todo: constructor to sanity check *)
-type int16 = int
-(* todo: use Int32.t *)
-type int32 = int
-(* todo: use Int64.t *)
-type int64 = int
+open Common
 
 type qid = {
   path: int64;

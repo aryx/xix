@@ -1,5 +1,19 @@
 (* TODO: reuse plan9-ml/commons/common.ml at some point *)
 
+(* todo: constructor to sanity check *)
+type int8 = int
+(* todo: constructor to sanity check *)
+type int16 = int
+(* todo: use Int32.t *)
+type int32 = int
+(* todo: use Int64.t *)
+type int64 = int
+
+type int64_special = int * int
+
+type byte = char
+type bytes = string
+
 type filename = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b

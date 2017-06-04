@@ -180,7 +180,5 @@ let alloc img =
   }
   in
   w
-  (* todo: wscrdraw *)
-  (* less: incref? *)
-
-
+  (* todo: wscrdraw? in caller? *)
+  (* less: incref? in caller? *)

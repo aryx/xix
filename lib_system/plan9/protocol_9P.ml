@@ -37,6 +37,8 @@ type int32 = int
 (* todo: use Int64.t *)
 type int64 = int * int
 
+type bytes = string
+
 type fid = int32
 type tag = int16
 type qid = Plan9.qid
@@ -52,7 +54,7 @@ module Request = struct
 
     | Open of fid * Plan9.open_flag
     | Read of fid * int64 (* offset *) * int32 (* count *)
-    | Write of fid * int64 (* offset *) * string (* data *)
+    | Write of fid * int64 (* offset *) * bytes (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid (* newfid *) * string list (* < max_welem *)
@@ -77,7 +79,7 @@ module Response = struct
     | Auth of qid (* auth_qid *)
 
     | Open of qid * int (* iounit *)
-    | Read of string (* data *)
+    | Read of bytes (* data *)
     | Write of int (* count *)
     | Clunk of unit
 

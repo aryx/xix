@@ -1,7 +1,7 @@
 # -*- sh -*-
 
 TOP=..
-INCLUDES=-I $TOP/commons -I $TOP/lib_core \
+INCLUDES=-I $TOP/commons -I $TOP/lib_core/collections \
   -I $TOP/macroprocessor \
   -I $TOP/formats/objects
 
@@ -19,7 +19,7 @@ SRC= flags.ml \
   main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/lib_core/lib.cma $TOP/commons/lib.cma \
+LIBS=$TOP/lib_core/collections/lib.cma $TOP/commons/lib.cma \
  $TOP/macroprocessor/lib.cma \
  $TOP/formats/objects/lib.cma
 

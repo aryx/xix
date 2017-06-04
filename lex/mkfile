@@ -2,7 +2,7 @@
 # The lexer generator
 
 TOP=..
-INCLUDES=-I $TOP/lib_core
+INCLUDES=-I $TOP/lib_core/collections
 
 SRC= ast.ml \
  parser.ml lexer.ml \
@@ -10,7 +10,7 @@ SRC= ast.ml \
  main.ml
 
 SYSLIBS=
-LIBS=$TOP/lib_core/lib.cma
+LIBS=$TOP/lib_core/collections/lib.cma
 
 PROG=ocamllex
 

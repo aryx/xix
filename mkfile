@@ -3,7 +3,7 @@
 <mkconfig
 
 DIRS=\
-  lib_core commons\
+  lib_core/collections commons\
   mk shell\
   lib_parsing lex yacc\
   macroprocessor\

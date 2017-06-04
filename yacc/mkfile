@@ -2,7 +2,7 @@
 # The parser generator
 
 TOP=..
-INCLUDES=-I $TOP/lib_core -I $TOP/lib_parsing
+INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_parsing
 
 SRC= ast.ml\
  parser.ml lexer.ml\
@@ -12,7 +12,7 @@ SRC= ast.ml\
  tests.ml main.ml
 
 #SYSLIBS=
-LIBS=$TOP/lib_core/lib.cma $TOP/lib_parsing/lib.cma
+LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_parsing/lib.cma
 
 PROG=ocamlyacc
 

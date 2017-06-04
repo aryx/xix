@@ -1,7 +1,4 @@
 # -*- sh -*-
-</$objtype/mkfile
-<mkconfig
-
 DIRS= geometry draw input ui
 
 all:V: all.directories
@@ -15,3 +12,4 @@ depend:V: depend.directories
 		cd $i
 		mk $MKFLAGS $stem
 	}
+

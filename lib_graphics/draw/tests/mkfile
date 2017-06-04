@@ -1,35 +1,20 @@
+# -*- sh -*-
 TOP=../../..
-#############################################################################
-# Compilers
-#############################################################################
 
-OCAML=/home/pad/github/fork-ocaml
-OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
-OCAMLDEP=ocamldep
-
-#############################################################################
-# Config
-#############################################################################
-
-OCAMLINCLUDES=-I $TOP/commons2 \
+INCLUDES=-I $TOP/commons2 \
   -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw
 
-OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
-
-OCAMLLDFLAGS=-thread -custom -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
-
-# for the linker
-#CAMLLIB=/usr/local/lib/ocaml
-CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
-
-LIBS=$TOP/commons2/commons.cma $TOP/lib_graphics/geometry/geometry.cma \
- $TOP/lib_graphics/draw/draw.cma
+LIBS=$TOP/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
+ $TOP/lib_graphics/draw/lib.cma
 
 SYSLIBS=unix.cma threads.cma str.cma
 CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
         -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a\
         -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
         -cclib /home/pad/github/fork-ocaml/byterun/main.8
+
+<$TOP/mkconfig2
+</$objtype/mkfile
 
 #############################################################################
 # Toplevel targets
@@ -40,11 +25,11 @@ PROGS=hellodraw test_font
 
 all:V: $PROGS
 
-hellodraw: hellodraw.cmo mkfile
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS hellodraw.cmo $CCLIBS
+hellodraw: $LIBS hellodraw.cmo
+	$OCAMLC  -verbose $LINKFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
-test_font: test_font.cmo
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
+test_font: $LIBS test_font.cmo
+	$OCAMLC  -verbose $LINKFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
 # need to unset CAMLLIB above to be able to compile this program
 gen_font_default: gen_font_default.ml ../font_default.ml
@@ -53,19 +38,4 @@ gen_font_default: gen_font_default.ml ../font_default.ml
 clean:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS
 
-depend:V:
-	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
-
-#############################################################################
-# Meta rules
-#############################################################################
-
-%.cmo: %.ml
-	$OCAMLC $OCAMLCFLAGS -c $stem.ml
-
-%.cmi: %.mli
-	$OCAMLC $OCAMLCFLAGS -c $stem.mli
-
-
-#############################################################################
-<.depend
+<$TOP/mkcommon

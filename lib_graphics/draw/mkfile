@@ -1,62 +1,16 @@
 # -*- sh -*-
 TOP=../..
-#############################################################################
-# Src
-#############################################################################
 
-CMO= channel.cmo color.cmo \
-     draw_marshal.cmo display.cmo image.cmo \
-     draw.cmo \
-     line.cmo polygon.cmo ellipse.cmo arc.cmo \
-     fontchar.cmo subfont.cmo font.cmo font_default.cmo text.cmo \
-     baselayer.cmo layer.cmo \
-     draw_ipc.cmo
+INCLUDES=-I $TOP/commons2 -I ../geometry
 
-#############################################################################
-# Compilers
-#############################################################################
+SRC= channel.ml color.ml \
+     draw_marshal.ml display.ml image.ml \
+     draw.ml \
+     line.ml polygon.ml ellipse.ml arc.ml \
+     fontchar.ml subfont.ml font.ml font_default.ml text.ml \
+     baselayer.ml layer.ml \
+     draw_ipc.ml
 
-OCAML=/home/pad/github/fork-ocaml
-OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
-OCAMLDEP=ocamldep
+<$TOP/mkconfig2
+<$TOP/mklib
 
-#############################################################################
-# Config
-#############################################################################
-
-OCAMLINCLUDES=-I $TOP/commons2 -I ../geometry
-
-OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
-OCAMLLDFLAGS=
-# for the linker
-#CAMLLIB=/usr/local/lib/ocaml
-CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
-
-#############################################################################
-# Toplevel targets
-#############################################################################
-
-all:V: draw.cma
-
-draw.cma: $CMO mkfile
-	$OCAMLC -a -o $target $CMO
-
-clean:V:
-	rm -f *.cma *.cmo *.cmi *.8
-
-depend:V:
-	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
-
-#############################################################################
-# Meta rules
-#############################################################################
-
-%.cmo: %.ml
-	$OCAMLC $OCAMLCFLAGS -c $stem.ml
-
-%.cmi: %.mli
-	$OCAMLC $OCAMLCFLAGS -c $stem.mli
-
-
-#############################################################################
-<.depend

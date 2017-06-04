@@ -1,29 +1,13 @@
+# -*- sh -*-
 TOP=../..
-#############################################################################
-# Compilers
-#############################################################################
 
-OCAML=/home/pad/github/fork-ocaml
-OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
-OCAMLDEP=ocamldep
+SRC=
 
-#############################################################################
-# Config
-#############################################################################
-
-OCAMLINCLUDES=-I $TOP/commons2 \
+INCLUDES=-I $TOP/commons2 \
   -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw
 
-OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
-
-OCAMLLDFLAGS=-thread -custom -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
-
-# for the linker
-#CAMLLIB=/usr/local/lib/ocaml
-CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
-
-LIBS=$TOP/commons2/commons.cma $TOP/lib_graphics/geometry/geometry.cma \
- $TOP/lib_graphics/draw/draw.cma
+LIBS=$TOP/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
+ $TOP/lib_graphics/draw/lib.cma
 
 SYSLIBS=unix.cma threads.cma str.cma
 CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
@@ -31,33 +15,7 @@ CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
         -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
         -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
-#############################################################################
-# Toplevel targets
-#############################################################################
+PROG=test_rio_graph_app1
 
-PROGS=test_rio_graph_app1
-
-all:V: $PROGS
-
-test_rio_graph_app1: test_rio_graph_app1.cmo
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $LIBS $prereq $CCLIBS
-
-clean:V:
-	rm -f *.cma *.cmo *.cmi *.8 $PROGS
-
-depend:V:
-	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
-
-#############################################################################
-# Meta rules
-#############################################################################
-
-%.cmo: %.ml
-	$OCAMLC $OCAMLCFLAGS -c $stem.ml
-
-%.cmi: %.mli
-	$OCAMLC $OCAMLCFLAGS -c $stem.mli
-
-
-#############################################################################
-<.depend
+<$TOP/mkconfig2
+<$TOP/mkprog

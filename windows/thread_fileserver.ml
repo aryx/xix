@@ -10,6 +10,7 @@ module Unix2 = ThreadUnix
 let answer fs res =
   if !Globals.debug
   then pr (P.str_of_msg res);
+
   P.write_9P_msg res fs.FS.server_fd
 
 

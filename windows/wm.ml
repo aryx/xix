@@ -137,7 +137,7 @@ let new_win img cmd argv pwd_opt mouse fs =
   | -1 -> failwith "fork returned -1"
   | 0 ->
     (* child *)
-    Processes_winshell.child_of_fork w fs cmd argv
+    Processes_winshell.run_cmd_in_window_in_child_of_fork cmd argv w fs
   | pid -> 
 
     (* todo: how know if pb in child that require us then from

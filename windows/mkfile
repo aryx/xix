@@ -7,8 +7,8 @@ SRC= \
   fid.ml fileserver.ml \
   globals.ml \
   processes_winshell.ml windows.ml wm.ml threads_window.ml  \
-  thread_keyboard.ml mouse_action.ml thread_mouse.ml \
-   \
+  mouse_action.ml thread_mouse.ml \
+  thread_keyboard.ml \
   thread_fileserver.ml \
   test.ml main.ml
 

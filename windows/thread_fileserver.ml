@@ -47,11 +47,13 @@ let dispatch fs req request_typ =
     (try
        let wid = int_of_string aname in
        let w = Hashtbl.find Globals.windows wid in
-       let (_, (qxxx, typ, perm)) = File.root_entry in
-       let file_id = qxxx, wid in
-       let qid = File.qid_of_fileid file_id typ in
+       let entry = File.root_entry in
+       let file_id = entry.F.code, wid in
+       let qid = File.qid_of_fileid file_id entry.F.type_ in
        let file = { 
-         F.fid = rootfid; F.qid = qid; F.entry = File.root_entry;
+         F.fid = rootfid; 
+         F.qid = qid; 
+         F.entry = entry;
          F.opened = None;
          F.w = w;
        } in

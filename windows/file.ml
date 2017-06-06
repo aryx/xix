@@ -11,18 +11,24 @@ open Plan9 (* for the fields *)
 
 type fid = Protocol_9P.fid
 
-type filename =
+type filecode =
   (* old: was called Qdir in rio-C *)
   | Qroot
 
   | Qwinname
 
 (* will generate Qid.path *)
-type fileid = filename * Window.wid
+type fileid = filecode * Window.wid
 
 (* simpler than Plan9.dir_entry *)
-type dir_entry_short = 
-  string * (filename * Plan9.qid_type * Plan9.perm_property)
+type dir_entry_short = { 
+  name: string;
+  code: filecode;
+  type_: Plan9.qid_type;
+  (* just for the user, group and other are noperm *)
+  perm: Plan9.perm_property;
+}
+
 
 let r  = { r = true; w = false; x = false }
 let w  = { r = false; w = true; x = false }
@@ -30,9 +36,9 @@ let rw = { r = true; w = true; x = false }
 let rx = { r = true; w = false; x = true }
 
 let root_entry = 
-  ".", (Qroot, Plan9.QTDir, rx)
+  { name = "."; code = Qroot; type_ = Plan9.QTDir; perm =  rx }
 let top_entries = [
-  "winname", (Qwinname, Plan9.QTFile, r)
+  { name = "winname"; code = Qwinname; type_ = Plan9.QTFile; perm = r };
 ]
 
 (* fid server-side state (a file) *)
@@ -57,13 +63,13 @@ type t = {
 (* Helpers *)
 (*****************************************************************************)
 
-let int_of_qxxx = function
+let int_of_filecode = function
   | Qroot -> 0
   | Qwinname -> 1
 
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor
-  int_of_qxxx qxxx
+  int_of_filecode qxxx
 
 let qid_of_fileid file_id typ =
   { path = int_of_fileid file_id;

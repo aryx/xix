@@ -57,6 +57,8 @@ type t = {
 
   (* less: we could also use a wid *)
   w: Window.t;
+
+  (* less: nrpart for runes *)
 }
 
 (*****************************************************************************)

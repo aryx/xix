@@ -4,7 +4,7 @@ TOP=..
 SRC= \
   cursors.ml \
   window.ml \
-  fid.ml fileserver.ml \
+  file.ml fileserver.ml \
   globals.ml \
   processes_winshell.ml windows.ml wm.ml threads_window.ml  \
   mouse_action.ml thread_mouse.ml \
@@ -35,5 +35,5 @@ PROG=rio
 
 ROOT=/home/pad/plan9/ROOT/
 test:V:
-	cp $PROGS $ROOT/tests/xxx/
+	cp $PROG $ROOT/tests/xxx/
     cd /home/pad/plan9; make disk; make run

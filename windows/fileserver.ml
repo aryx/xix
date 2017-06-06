@@ -18,7 +18,7 @@ type t = {
   (* for security *)
   user: string;
 
-  fids: (Fid.fid, Fid.t) Hashtbl.t;
+  fids: (File.fid, File.t) Hashtbl.t;
 }
 
 let init () =
@@ -31,7 +31,7 @@ let init () =
   Unix.set_nonblock fd1;
   (* todo? record fd2 as close_on exec? *)
   
-  (* less: let user = Common.cat "/dev/user" |> String.concat "" in *)
+  (* todo: let user = Common.cat "/dev/user" |> String.concat "" in *)
   
   { clients_fd = fd1;
     server_fd = fd2;
@@ -39,3 +39,7 @@ let init () =
     user = "pad";
     fids = Hashtbl.create 101;
   }
+
+
+let alloc_fid fid fs =
+  raise Todo

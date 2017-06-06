@@ -41,13 +41,17 @@ module Request = struct
     | Version of int (* message size *) * string (* "9P2000" *)
     | Attach of fid * fid (* auth_fid *) * string (* user *) * string (*aname*)
 
+    (* note that it's open of fid! so you need to have 'walked' before
+     * that fid to the path you want.
+     *)
     | Open of fid * Plan9.open_flag
     | Read of fid * int64_special (* offset *) * int32 (* count *)
     | Write of fid * int64_special (* offset *) * bytes (* data *)
     | Clunk of fid
 
-    | Walk  of fid * fid (* newfid *) * string list (* < max_welem *)
-    | Create of fid * string * Plan9.open_flag * Plan9.perm
+    | Walk  of fid * fid option (* newfid when clone *) * 
+               string list (* < max_welem *)
+    | Create of fid * string * Plan9.open_flag * Plan9.perm_int
     | Remove of fid
     | Stat of fid
     | Wstat of fid * Plan9.dir_entry
@@ -133,8 +137,9 @@ let str_of_msg msg =
       spf "Auth: auth_fid = %d uname = %s aname = %s" afid uname aname
     | T.Flush oldtag -> 
       spf "Flush: old_tag = %d" oldtag
-    | T.Walk (fid, newfid, xs) -> 
-      spf "Walk: fid = %d new_fid = %d [%s]" fid newfid 
+    | T.Walk (fid, newfid_opt, xs) -> 
+      spf "Walk: fid = %d new_fid = %d [%s]" fid 
+        (match newfid_opt with None -> fid | Some x -> x)
         (xs |> String.concat ", ")
     | T.Open (fid, mode) -> 
       spf "Open: fid = %d mode = %s" fid (str_of_mode mode)
@@ -411,7 +416,8 @@ let read_9P_msg fd =
         offset := !offset + len;
         xs := str::!xs;
       done;
-      { res with typ = T (T.Walk (fid, newfid, List.rev !xs)) },
+      let newfid_opt = if newfid = fid then None else Some newfid in
+      { res with typ = T (T.Walk (fid, newfid_opt, List.rev !xs)) },
       !offset
     (* Open *)
     | 112 -> 

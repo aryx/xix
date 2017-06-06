@@ -23,20 +23,29 @@ let first_message = ref true
 let dispatch fs req request_typ =
   match request_typ with
   | P.T.Version (msize, str) -> 
-    (* less: should sanity check that it's the first message *)
     (match () with
     | _ when not !first_message ->
-      error fs req "version request not first message"
+      error fs req "version: request not first message"
     | _ when msize < 256 ->
       error fs req "version: message size too small";
     | _ when str <> "9P2000" ->
-      error fs req "unrecognized 9P version";
+      error fs req "version: unrecognized 9P version";
     | _ ->
       answer fs {req with P.typ = P.R (P.R.Version (msize, str)) }
     )
 
   | P.T.Attach (rootfid, _auth_fid, uname, aname) ->
-    failwith (spf "Todo: %s" (P.str_of_msg req))
+    if uname <> fs.FS.user
+    then error fs req (spf "permission defined, %s <> %s" uname fs.FS.user);
+    (* less: newlymade, qlock all *)
+    (try
+       let wid = int_of_string aname in
+       let _w = Hashtbl.find Globals.windows wid in
+       raise Todo
+     with exn ->
+       error fs req (spf "unknown id in attach: %s" aname)
+    )
+    (* less: incref, qunlock *)
   | _ -> 
     failwith (spf "TODO: req = %s" (P.str_of_msg req))
 

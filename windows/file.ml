@@ -1,28 +1,33 @@
 open Common
+open Plan9 (* for the fields *)
 
 type fid = Protocol_9P.fid
 
-type qid_file =
+type filename =
+  (* old: was called Qdir in rio-C *)
   | Qroot
 
   | Qwinname
 
-type qid_parsed_path = qid_file * Window.wid
+(* will generate Qid.path *)
+type file_id = filename * Window.wid
 
 (* simpler than Plan9.dir_entry *)
-type dir_entry_short = {
-  name: string;
-  file: qid_file;
-  typ: Plan9.qid_type;
-  (* less: dir_entry_mode seems redundant with typ *)
-  mode: Plan9.perm * Plan9.dir_entry_mode;
-}
+type dir_entry_short = 
+  string * (filename * Plan9.qid_type * Plan9.perm_property)
 
+let r  = { r = true; w = false; x = false }
+let w  = { r = false; w = true; x = false }
+let rw = { r = true; w = true; x = false }
+let rx = { r = true; w = false; x = true }
+
+let root_entry = 
+  ".", (Qroot, Plan9.QTDir, rx)
 let entries = [
-  { name = "."; file = Qroot; typ = Plan9.QTDir; mode = (0o500, Plan9.DMDir) };
+  "winname", (Qwinname, Plan9.QTFile, r)
 ]
 
-(* fid server-side state *)
+(* fid server-side state (a file) *)
 type t = {
   (* the key *)
   fid: fid;
@@ -37,7 +42,7 @@ type t = {
   w: Window.t;
 }
 
-let qid_parsed_path_of_qid qid =
+let path_of_qid qid =
   raise Todo
 
 let alloc fid =

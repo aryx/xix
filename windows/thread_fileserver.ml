@@ -1,5 +1,6 @@
 open Common
 
+module F = File
 module FS = Fileserver
 module N = Plan9
 module P = Protocol_9P
@@ -38,14 +39,28 @@ let dispatch fs req request_typ =
     if uname <> fs.FS.user
     then error fs req (spf "permission defined, %s <> %s" uname fs.FS.user);
     (* less: newlymade, qlock all *)
+
+    (* stricter: *)
+    if Hashtbl.mem fs.FS.fids rootfid
+    then failwith (spf "fid already used: %d" rootfid);
+
     (try
        let wid = int_of_string aname in
-       let _w = Hashtbl.find Globals.windows wid in
-       raise Todo
+       let w = Hashtbl.find Globals.windows wid in
+       let (_, (qxxx, typ, perm)) = File.root_entry in
+       let file_id = qxxx, wid in
+       let qid = File.qid_of_fileid file_id typ in
+       let file = { 
+         F.fid = rootfid; F.qid = qid; F.entry = File.root_entry;
+         F.opened = None;
+         F.w = w;
+       } in
+       Hashtbl.add fs.FS.fids rootfid file;
+       answer fs {req with P.typ = P.R (P.R.Attach qid) }
      with exn ->
-       error fs req (spf "unknown id in attach: %s" aname)
-    )
+        error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
+    )
   | _ -> 
     failwith (spf "TODO: req = %s" (P.str_of_msg req))
 

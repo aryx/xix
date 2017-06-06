@@ -1,6 +1,14 @@
 open Common
 open Plan9 (* for the fields *)
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 type fid = Protocol_9P.fid
 
 type filename =
@@ -10,7 +18,7 @@ type filename =
   | Qwinname
 
 (* will generate Qid.path *)
-type file_id = filename * Window.wid
+type fileid = filename * Window.wid
 
 (* simpler than Plan9.dir_entry *)
 type dir_entry_short = 
@@ -23,27 +31,49 @@ let rx = { r = true; w = false; x = true }
 
 let root_entry = 
   ".", (Qroot, Plan9.QTDir, rx)
-let entries = [
+let top_entries = [
   "winname", (Qwinname, Plan9.QTFile, r)
 ]
 
 (* fid server-side state (a file) *)
 type t = {
-  (* the key *)
+  (* the fid is maintained by the "client" (the kernel on behalf of winshell) *)
   fid: fid;
+  (* The qid is what is returned by the "server" to identify a file (or dir).
+   * It is mutable because a fid can be 'walked' to point to another file
+   * on the server.
+   *)
+  mutable qid: Plan9.qid;
+  (* for stat, mutable for the same reason *)
+  mutable entry: dir_entry_short;
 
-  qid: Plan9.qid;
-  entry: dir_entry_short;
+  mutable opened: Plan9.open_flag option;
 
-  mutable opened: bool;
-  mutable flag: Plan9.open_flag;
-
-  (* less: could also use a wid *)
+  (* less: we could also use a wid *)
   w: Window.t;
 }
 
-let path_of_qid qid =
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let int_of_qxxx = function
+  | Qroot -> 0
+  | Qwinname -> 1
+
+let int_of_fileid (qxxx, wid) = 
+  (wid lsl 8) lor
+  int_of_qxxx qxxx
+
+let qid_of_fileid file_id typ =
+  { path = int_of_fileid file_id;
+    typ = typ;
+    vers = 0;
+  }
+
+let fileid_of_qid qid =
   raise Todo
+
 
 let alloc fid =
   raise Todo

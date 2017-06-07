@@ -53,7 +53,7 @@ type t = {
   (* for stat, mutable for the same reason *)
   mutable entry: dir_entry_short;
 
-  mutable opened: Plan9.open_flag option;
+  mutable opened: Plan9.open_flags option;
 
   (* less: we could also use a wid *)
   w: Window.t;
@@ -78,10 +78,3 @@ let qid_of_fileid file_id typ =
     typ = typ;
     vers = 0;
   }
-
-let fileid_of_qid qid =
-  raise Todo
-
-
-let alloc fid =
-  raise Todo

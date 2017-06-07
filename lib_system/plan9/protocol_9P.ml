@@ -44,14 +44,14 @@ module Request = struct
     (* note that it's open of fid! so you need to have 'walked' before
      * that fid to the path you want.
      *)
-    | Open of fid * Plan9.open_flag
+    | Open of fid * Plan9.open_flags
     | Read of fid * int64_special (* offset *) * int32 (* count *)
     | Write of fid * int64_special (* offset *) * bytes (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid option (* newfid when clone *) * 
                string list (* < max_welem *)
-    | Create of fid * string * Plan9.open_flag * Plan9.perm_int
+    | Create of fid * string * Plan9.open_flags * Plan9.perm_int
     | Remove of fid
     | Stat of fid
     | Wstat of fid * Plan9.dir_entry
@@ -118,8 +118,11 @@ let str_of_qid qid =
     (N.int_of_qid_type qid.N.typ)
 
 let str_of_mode x =
-  spf "%d" x
-let str_of_perm x =
+  spf "%c%c%c" 
+    (if x.N.r then 'r' else '_')
+    (if x.N.w then 'w' else '_')
+    (if x.N.x then 'x' else '_')
+let str_of_perm_int x =
   spf "%d" x
 
 
@@ -146,7 +149,7 @@ let str_of_msg msg =
     | T.Create (fid, name, mode, perm) -> 
       spf "Create: fid = %d, name = %s, mode = %s, perm = %s" 
         fid name (str_of_mode mode) 
-        (str_of_perm perm)
+        (str_of_perm_int perm)
     | T.Read (fid, offset, count) ->
       let (off1, off2) = offset in
       spf "Read: fid = %d offset = (%d,%d), count = %d" fid off1 off2 count
@@ -234,6 +237,19 @@ let gstring buf off =
 
 let gdir_entry buf =
   raise Todo
+
+let open_flags_of_int mode =
+  match mode with
+  (* OREAD *)
+  | 0 -> { N.r = true; N.w = false; N.x = false }
+  (* OWRITE *)
+  | 1 -> { N.r = false; N.w = true; N.x = false }
+  (* ORDWR *)
+  | 2 -> { N.r = true; N.w = true; N.x = false }
+  (* OEXEC *)
+  | 3 -> { N.r = false; N.w = false; N.x = true }
+  | _ -> failwith (spf "mode not yet supported: %d" mode)
+
 
 
 
@@ -423,7 +439,8 @@ let read_9P_msg fd =
     | 112 -> 
       let fid = gbit32 buf offset in
       let mode = gbit8 buf (offset + 4) in
-      { res with typ = T (T.Open (fid, mode)) },
+      let flags = open_flags_of_int mode in
+      { res with typ = T (T.Open (fid, flags)) },
       offset + 5
     (* create *)
     | 114 -> 
@@ -432,9 +449,10 @@ let read_9P_msg fd =
       let offset = offset + 4 + String.length name + bit16sz in
       let perm = gbit32 buf offset in
       let mode = gbit8 buf (offset + 4) in
+      let flags = open_flags_of_int mode in
       (* I reverse the order between mode and perm in Create, to match
        * more closely Unix.open *)
-      { res with typ = T (T.Create (fid, name, mode, perm)) },
+      { res with typ = T (T.Create (fid, name, flags, perm)) },
       offset + 5
     (* Read *)
     | 116 -> 

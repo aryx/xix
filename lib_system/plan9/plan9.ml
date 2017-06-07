@@ -11,16 +11,22 @@ open Common
 type qid = {
   path: int64;
   vers: int;
-  (* less: opti: bitset *)
   typ: qid_type;
   (* less: extra flags? *)
 }
-and qid_type =
-  | QTFile
-  | QTDir
- (* less: | QTMount | QTAuth | QTAppend | QTExcl *)
+  (* less: opti: bitset *)
+  and qid_type =
+    | QTFile
+    | QTDir
+   (* less: | QTMount | QTAuth | QTAppend | QTExcl *)
 
-(* old: was called only 'Dir' in libcore-C but this was wrong *)
+(* read/write/execute (DMExec: 0x1 DMWrite: 0x2 DMRead: 0x4) *)
+type perm_property = { r: bool; w: bool; x: bool }
+
+(* user/group/other (0oUGO) *)
+type perm = { u: perm_property; g: perm_property; o: perm_property }
+
+(* old: was called only 'Dir' in libcore-C but misleading *)
 type dir_entry = {
   (* file data *)
   name: string;
@@ -42,12 +48,8 @@ type dir_entry = {
   _typ: int16;
   _dev: int;
 }
-   (* todo: better type? rwx? *)
+   (* less: use 'perm' at some point *)
    and perm_int = int
-   (* user/group/other (0oUGO) *)
-   and perm = { u: perm_property; g: perm_property; o: perm_property }
-   (* read/write/execute (DMExec: 0x1 DMWrite: 0x2 DMRead: 0x4) *)
-   and perm_property = { r: bool; w: bool; x: bool }
  (* hack because I don't have Int32 yet and DMDIR requires 32 bits,
   * but good to separate the perm from this information I think.
   * less: seems redundant with qid_type?
@@ -65,8 +67,8 @@ type namespace_flag =
   (* | MCreate | MCache | MOrder *)
 
 (* less: reuse Unix.open_flag? *)
-type open_flag = int
- (* ORead | OWrite | ORdwr | OExec | OTrunc | OCExec | ORClose | OExcl *)
+type open_flags = perm_property (* ORead | OWrite | ORdwr | OExec *)
+ (* less: OTrunc | OCExec | ORClose | OExcl *)
 
 (* for errstr() *)
 let errmax = 128

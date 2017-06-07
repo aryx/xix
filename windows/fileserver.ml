@@ -39,7 +39,3 @@ let init () =
     user = "pad";
     fids = Hashtbl.create 101;
   }
-
-
-let alloc_fid fid fs =
-  raise Todo

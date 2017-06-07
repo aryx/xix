@@ -5,6 +5,7 @@ module FS = Fileserver
 module N = Plan9
 module P = Protocol_9P
 module W = Window
+module V = Virtual_devices
 
 let answer fs res =
   if !Globals.debug
@@ -30,7 +31,7 @@ let dispatch fs req request_typ =
     | _ when str <> "9P2000" ->
       error fs req "version: unrecognized 9P version";
     | _ ->
-      (* less: update fs.message_size? *)
+      fs.FS.message_size <- msize;
       answer fs {req with P.typ = P.R (P.R.Version (msize, str)) }
     )
 
@@ -44,6 +45,7 @@ let dispatch fs req request_typ =
     | _ when uname <> fs.FS.user ->
       error fs req (spf "permission denied, %s <> %s" uname fs.FS.user)
     | _ ->
+    (* less: could do that in a worker thread *)
     (* less: newlymade, qlock all *)
     (try
        let wid = int_of_string aname in
@@ -70,7 +72,7 @@ let dispatch fs req request_typ =
   | P.T.Walk (fid, newfid_opt, xs) ->
     (* stricter: *)
     if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "unknown fid %d" fid);
+    then failwith (spf "Walk: unknown fid %d" fid);
 
     let file = Hashtbl.find fs.FS.fids fid in
     let wid = file.F.w.W.id in
@@ -89,7 +91,9 @@ let dispatch fs req request_typ =
         | Some newfid ->
           (* clone *)
           (* less: incref on file.w *)
-          { file with F.fid = newfid; F.opened = None }
+          let newfile = { file with F.fid = newfid; F.opened = None } in
+          Hashtbl.add fs.FS.fids newfid newfile;
+          newfile
       in
       let rec walk qid entry acc xs =
         match xs with
@@ -138,13 +142,35 @@ let dispatch fs req request_typ =
   | P.T.Open (fid, flags) ->
     (* stricter: *)
     if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "unknown fid %d" fid);
+    then failwith (spf "Open: unknown fid %d" fid);
 
     let file = Hashtbl.find fs.FS.fids fid in
-    raise Todo
+    let w = file.F.w in
+    (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
+    (match flags, file.F.entry.F.perm with
+    | { N.x = true}, _ 
+    | { N.r = true}, { N.r = false}
+    | { N.w = true}, { N.w = false}
+      -> error fs req "permission denied"
+    | _, _ when w.W.deleted ->
+      error fs req "window deleted"
+    | _ ->
+      (* less: could do that in a worker thread *)
+      (try 
+         V.dispatch_open file;
+         file.F.opened <- Some flags;
+         let iounit = fs.FS.message_size - P.io_header_size in
+         answer fs { req with P.typ = P.R (P.R.Open (file.F.qid, iounit)) }
+       with V.Error str ->
+         error fs req str
+      )
+    )
+
+  (* Clunk *)
 
   (* Read *)
-  (* Clunk *)
+
+  (* Write *)
 
   (* Other *)
   | _ -> 

@@ -105,6 +105,8 @@ let bit16sz = 2
 let bit32sz = 4
 let bit64sz = 8
 
+let io_header_size = 24
+
 (* different from Response.Error *)
 exception Error of string
 

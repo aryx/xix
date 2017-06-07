@@ -143,14 +143,13 @@ let new_win img cmd argv pwd_opt mouse fs =
     (* child *)
     Processes_winshell.run_cmd_in_window_in_child_of_fork cmd argv w fs
   | pid -> 
+    (* parent *)
+    Thread.critical_section := false;
+    w.W.pid <- pid;
 
     (* todo: how know if pb in child that require us then from
      * delete the window? need a cpid!
      *)
-
-    (* parent *)
-    Thread.critical_section := false;
-    w.W.pid <- pid;
 
     (* old: was in wsetpid() *)
     w.W.label <- spf "rc %d" pid;
@@ -159,7 +158,6 @@ let new_win img cmd argv pwd_opt mouse fs =
     let winname = spf "window.%d" w.W.id in
     Draw_ipc.name_image w.W.img winname;
     (* less: namecount and retry again if already used *)
-       
   )
 
 
@@ -199,12 +197,17 @@ let hide_win w mouse =
 
 let unhide_win w desktop mouse =
   let old_img = w.W.img in
+  (* back to a layer *)
   let layer = Layer.alloc desktop old_img.I.r Color.white in
   Hashtbl.remove Globals.hidden w.W.id;
   let cmd = W.Reshape (layer, mouse) in
   Event.send w.W.chan_cmd cmd |> Event.sync;
   ()
 
+
+(*****************************************************************************)
+(* Helper for? *)
+(*****************************************************************************)
 
 (* less: move boolean parameter, useless opti test dx/dy below catch it *)
 let resize_win w new_img =

@@ -17,6 +17,8 @@ type t = {
 
   (* for security *)
   user: string;
+  (* refined after Tversion first message *)
+  mutable message_size: int;
 
   fids: (File.fid, File.t) Hashtbl.t;
 }
@@ -38,4 +40,6 @@ let init () =
 
     user = "pad";
     fids = Hashtbl.create 101;
+
+    message_size = 8192 + Protocol_9P.io_header_size;
   }

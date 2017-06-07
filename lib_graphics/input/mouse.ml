@@ -128,15 +128,19 @@ let thread_mouse ctl =
 
 (* less: take image parameter? *)
 let init () =
-  let (chan: state Event.channel) = Event.new_channel () in
-  let fd        = Unix1.openfile "/dev/mouse"  [Unix1.O_RDWR] 0o666 in
-  let cursor_fd = Unix1.openfile "/dev/cursor" [Unix1.O_RDWR]   0o666 in
+  try 
+   let (chan: state Event.channel) = Event.new_channel () in
+   let fd        = Unix1.openfile "/dev/mouse"  [Unix1.O_RDWR] 0o666 in
+   let cursor_fd = Unix1.openfile "/dev/cursor" [Unix1.O_RDWR]   0o666 in
 
-  let ctl = 
+   let ctl = 
     { fd = fd; chan = chan; cursor_fd = cursor_fd; (*state = fake_state*) } in
 
-  let thread = Thread.create thread_mouse ctl in
-  ctl
+   let thread = Thread.create thread_mouse ctl in
+   ctl
+  with Unix.Unix_error (err, cmd, arg) ->
+    failwith (spf "Mouse.init: unix error '%s' while executing '%s' with '%s'"
+      (Unix.error_message err) cmd arg)
 
 let receive ctl =
   Event.receive ctl.chan

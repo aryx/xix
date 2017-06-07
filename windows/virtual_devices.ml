@@ -13,6 +13,15 @@ let dispatch_open file =
   | F.Qwinname 
     -> ()
 
+let dispatch_close file =
+  let filecode = file.F.entry.F.code in
+  match filecode with
+  | F.Qroot
+  | F.Qwinname 
+    -> ()
+
+
+
 let dispatch_read file =
   let filecode = file.F.entry.F.code in
   let w = file.F.w in

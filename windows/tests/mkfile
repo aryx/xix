@@ -1,13 +1,13 @@
 # -*- sh -*-
 TOP=../..
 
-SRC=
-
 INCLUDES=-I $TOP/commons2 \
-  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw
+  -I $TOP/lib_graphics/geometry \
+  -I $TOP/lib_graphics/draw \
+  -I $TOP/lib_graphics/input
 
 LIBS=$TOP/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
- $TOP/lib_graphics/draw/lib.cma
+ $TOP/lib_graphics/draw/lib.cma $TOP/lib_graphics/input/lib.cma
 
 SYSLIBS=unix.cma threads.cma str.cma
 CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
@@ -15,7 +15,30 @@ CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
         -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
         -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
-PROG=test_rio_graph_app1
+PROGS=test_rio_graph_app1 hellorio
 
 <$TOP/mkconfig2
-<$TOP/mkprog
+
+#essentially a copy-paste of <$TOP/mkprog but handling multiple progs
+</$objtype/mkfile
+
+all:V: $PROGS
+
+test_rio_graph_app1: test_rio_graph_app1.cmo
+	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
+
+hellorio: hellorio.cmo
+	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
+
+clean:V:
+	rm -f $PROGS *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
+	rm -f *~ .*~ *.exe gmon.out *.output
+
+ROOT=/home/pad/plan9/ROOT/
+test:V:
+	cp $PROGS $ROOT/tests/xxx/
+    cd /home/pad/plan9; make disk; make run
+
+
+<$TOP/mkcommon
+<.depend

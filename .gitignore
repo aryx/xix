@@ -71,3 +71,4 @@
 /lib_system/plan9/tests/test_plan9
 /lib_system/plan9/tests/test_bind
 /lib_system/plan9/tests/test_mount
+/windows/tests/hellorio

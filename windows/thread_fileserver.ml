@@ -170,6 +170,22 @@ let dispatch fs req request_typ =
     )
 
   (* Clunk *)
+  | P.T.Clunk (fid) ->
+    (* stricter? *)
+    if not (Hashtbl.mem fs.FS.fids fid)
+    then failwith (spf "Open: unknown fid %d" fid);
+
+    let file = Hashtbl.find fs.FS.fids fid in
+    (match file.F.opened with
+    (* todo? can clunk unopened file?? *)
+    | Some _flags ->
+      V.dispatch_close file;
+    | None ->
+      (* todo: winclosechan *)
+      ()
+    );
+    Hashtbl.remove fs.FS.fids fid;
+    answer fs { req with P.typ = P.R (P.R.Clunk) }
 
   (* Read *)
   | P.T.Read (fid, offset, count) ->

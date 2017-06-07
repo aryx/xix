@@ -3,11 +3,20 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Port (partial) of the Plan9 API to OCaml.
+ * This is similar to unix.ml, but for Plan9.
+ *  
+ * I just binded the necessary API for rio to work:
+ * bind, mount, errstr, and a few types for protocol_9P.ml.
+ * 
+ * less: provide full API in syscall.h and libc.h not in unix.ml
+ *)
 
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
 
+(* uniQue file identifier (fileserver entity) *)
 type qid = {
   path: int64;
   vers: int;
@@ -95,10 +104,30 @@ let int_of_qid_type = function
   | QTDir -> 0x80
 
 (* less: use convert_flag_list strategy used in unix.ml? *)
-let namespace_flag_to_int = function
+let int_of_namespace_flag = function
   | MRepl -> 0x0000
   | MBefore -> 0x0001
   | MAfter -> 0x0002
+
+(* common properties *)
+let r  = { r = true; w = false; x = false }
+let w  = { r = false; w = true; x = false }
+let rw = { r = true; w = true; x = false }
+let rx = { r = true; w = false; x = true }
+let rwx = { r = true; w = true; x = true }
+
+let open_flags_of_int mode =
+  match mode with
+  (* OREAD *)
+  | 0 -> r
+  (* OWRITE *)
+  | 1 -> w
+  (* ORDWR *)
+  | 2 -> rw
+  (* OEXEC *)
+  | 3 -> { r = false; w = false; x = true }
+  | _ -> failwith (spf "mode not yet supported: %d" mode)
+
 
 (*****************************************************************************)
 (* FFI *)
@@ -117,7 +146,7 @@ external errstr: string -> int -> unit =
 
 (* less: flags? and a namespace_flags_to_int that fold lor? *)
 let bind src dst flag =
-  plan9_bind src dst (namespace_flag_to_int flag)
+  plan9_bind src dst (int_of_namespace_flag flag)
 
 let mount fd int1 dst flag args =
-  plan9_mount fd int1 dst (namespace_flag_to_int flag) args
+  plan9_mount fd int1 dst (int_of_namespace_flag flag) args

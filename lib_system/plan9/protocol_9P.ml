@@ -39,10 +39,11 @@ let max_welem = 16
 module Request = struct
   type t = 
     | Version of int (* message size *) * string (* "9P2000" *)
-    | Attach of fid * fid (* auth_fid *) * string (* user *) * string (*aname*)
+    | Attach of fid * fid option (* auth_fid *) * 
+                string (* user *) * string (*aname*)
 
-    (* note that it's open of fid! so you need to have 'walked' before
-     * that fid to the path you want.
+    (* note that it's Open of fid not string, so you need to have 'walked'
+     * before that fid to the path you want.
      *)
     | Open of fid * Plan9.open_flags
     | Read of fid * int64_special (* offset *) * int32 (* count *)
@@ -67,20 +68,20 @@ module Response = struct
     | Attach of qid
 
     | Error of string
-    | Flush of unit
-
-    | Auth of qid (* auth_qid *)
 
     | Open of qid * int (* iounit *)
     | Read of bytes (* data *)
     | Write of int (* count *)
-    | Clunk of unit
+    | Clunk
 
     | Walk of qid list (* < max_welem *)
     | Create of qid * int (* iounit *)
-    | Remove of unit
+    | Remove
     | Stat of Plan9.dir_entry
-    | Wstat of unit
+    | Wstat
+
+    | Flush
+    | Auth of qid (* auth_qid *)
 
 end
 
@@ -135,7 +136,7 @@ let str_of_msg msg =
       spf "Version: msize = %d version = %s" msize version
     | T.Attach (fid, afid, uname, aname) -> 
       spf "Attach: fid = %d auth_fid = %d uname = %s aname = %s" 
-        fid afid uname aname
+        fid (match afid with None -> -1 | Some x -> x) uname aname
     | T.Auth (afid, uname, aname) -> 
       spf "Auth: auth_fid = %d uname = %s aname = %s" afid uname aname
     | T.Flush oldtag -> 
@@ -176,7 +177,7 @@ let str_of_msg msg =
       spf "Auth: %s" (str_of_qid qid)
     | R.Error str -> 
       spf "Error: %s" str
-    | R.Flush () -> 
+    | R.Flush -> 
       spf "Flush:"
     | R.Open (qid, iounit) -> 
       spf "Open: qid = %s, iounit = %d" (str_of_qid qid) iounit
@@ -187,16 +188,16 @@ let str_of_msg msg =
         (if String.length str > 10 then String.sub str 0 10 else str)
     | R.Write count -> 
       spf  "Write: %d" count
-    | R.Clunk () -> 
+    | R.Clunk -> 
       spf  "Clunk:"
     | R.Walk (xs) -> 
       spf "Walk: [%s]"
         (xs |> List.map str_of_qid |> String.concat ", ")
-    | R.Remove () -> 
+    | R.Remove -> 
       spf  "Remove:"
     | R.Stat entry -> 
       spf  "Stat: name = %s" entry.N.name
-    | R.Wstat () -> 
+    | R.Wstat -> 
       spf  "Wstat:"
     )
   ) ^ spf " (tag = %d)" msg.tag
@@ -238,17 +239,6 @@ let gstring buf off =
 let gdir_entry buf =
   raise Todo
 
-let open_flags_of_int mode =
-  match mode with
-  (* OREAD *)
-  | 0 -> { N.r = true; N.w = false; N.x = false }
-  (* OWRITE *)
-  | 1 -> { N.r = false; N.w = true; N.x = false }
-  (* ORDWR *)
-  | 2 -> { N.r = true; N.w = true; N.x = false }
-  (* OEXEC *)
-  | 3 -> { N.r = false; N.w = false; N.x = true }
-  | _ -> failwith (spf "mode not yet supported: %d" mode)
 
 
 
@@ -405,10 +395,11 @@ let read_9P_msg fd =
     | 104 -> 
       let fid = gbit32 buf offset in
       let afid = gbit32 buf (offset + 4) in
+      let afidopt = if afid = -1 then None else Some afid in
       let uname = gstring buf (offset + 8) in
       let offset = offset + 8 + String.length uname + bit16sz in
       let aname = gstring buf offset in
-      { res with typ = T (T.Attach (fid, afid, uname, aname)) },
+      { res with typ = T (T.Attach (fid, afidopt, uname, aname)) },
       offset + String.length aname + bit16sz
     (* Error *)
     | 106 -> raise (Impossible "There is no T.Error")
@@ -439,7 +430,7 @@ let read_9P_msg fd =
     | 112 -> 
       let fid = gbit32 buf offset in
       let mode = gbit8 buf (offset + 4) in
-      let flags = open_flags_of_int mode in
+      let flags = N.open_flags_of_int mode in
       { res with typ = T (T.Open (fid, flags)) },
       offset + 5
     (* create *)
@@ -449,7 +440,7 @@ let read_9P_msg fd =
       let offset = offset + 4 + String.length name + bit16sz in
       let perm = gbit32 buf offset in
       let mode = gbit8 buf (offset + 4) in
-      let flags = open_flags_of_int mode in
+      let flags = N.open_flags_of_int mode in
       (* I reverse the order between mode and perm in Create, to match
        * more closely Unix.open *)
       { res with typ = T (T.Create (fid, name, flags, perm)) },
@@ -521,7 +512,7 @@ let code_of_msg msg =
 (*  | T  (T.Error _) -> 106 *)
   | R (R.Error _) -> 107
   | T  (T.Flush _) -> 108
-  | R (R.Flush _) -> 109
+  | R (R.Flush) -> 109
   | T  (T.Walk _) -> 110
   | R (R.Walk _) -> 111
   | T  (T.Open _) -> 112
@@ -533,13 +524,13 @@ let code_of_msg msg =
   | T  (T.Write _) -> 118
   | R (R.Write _) -> 119
   | T  (T.Clunk _) -> 120
-  | R (R.Clunk _) -> 121
+  | R (R.Clunk) -> 121
   | T  (T.Remove _) -> 122
-  | R (R.Remove _) -> 123
+  | R (R.Remove) -> 123
   | T  (T.Stat _) -> 124
   | R (R.Stat _) -> 125
   | T  (T.Wstat _) -> 126
-  | R (R.Wstat _) -> 126
+  | R (R.Wstat) -> 126
 
 (* less: opti: use a string buffer instead of all those concatenations *)
 let write_9P_msg msg fd =
@@ -554,7 +545,7 @@ let write_9P_msg msg fd =
       | R.Version (msize, version) -> pbit32 msize ^ pstring version
       | R.Attach qid -> pqid qid
       | R.Error str -> pstring str
-      | R.Flush () -> ""
+      | R.Flush -> ""
       | R.Auth auth_qid -> pqid auth_qid
       | R.Open (qid, iounit) -> pqid qid ^ pbit32 iounit
       | R.Create (qid, iounit) -> pqid qid ^ pbit32 iounit
@@ -562,17 +553,17 @@ let write_9P_msg msg fd =
         let len = String.length data in
         pbit32 len ^ data
       | R.Write count -> pbit32 count
-      | R.Clunk () -> ""
+      | R.Clunk -> ""
       | R.Walk xs -> 
         let len = List.length xs in
         assert (len < max_welem);
         pbit16 len ^ (xs |> List.map pqid |> String.concat "")
-      | R.Remove () -> ""
+      | R.Remove -> ""
       | R.Stat entry -> 
         let data = pdir_entry entry in
         let nstat = String.length data in
         pbit16 nstat ^ data
-      | R.Wstat () -> ""
+      | R.Wstat -> ""
       )
     | T x ->
       (match x with

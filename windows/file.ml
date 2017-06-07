@@ -30,11 +30,6 @@ type dir_entry_short = {
 }
 
 
-let r  = { r = true; w = false; x = false }
-let w  = { r = false; w = true; x = false }
-let rw = { r = true; w = true; x = false }
-let rx = { r = true; w = false; x = true }
-
 let root_entry = 
   { name = "."; code = Qroot; type_ = Plan9.QTDir; perm =  rx }
 let toplevel_entries = [

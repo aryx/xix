@@ -6,9 +6,6 @@ module N = Plan9
 module P = Protocol_9P
 module W = Window
 
-module Unix1 = Unix
-module Unix2 = ThreadUnix
-
 let answer fs res =
   if !Globals.debug
   then pr (P.str_of_msg res);
@@ -33,19 +30,21 @@ let dispatch fs req request_typ =
     | _ when str <> "9P2000" ->
       error fs req "version: unrecognized 9P version";
     | _ ->
+      (* less: update fs.message_size? *)
       answer fs {req with P.typ = P.R (P.R.Version (msize, str)) }
     )
 
   (* Attach *)
-  | P.T.Attach (rootfid, _auth_fid, uname, aname) ->
-    if uname <> fs.FS.user
-    then error fs req (spf "permission defined, %s <> %s" uname fs.FS.user);
-    (* less: newlymade, qlock all *)
-
+  | P.T.Attach (rootfid, auth_fid_opt, uname, aname) ->
     (* stricter: *)
     if Hashtbl.mem fs.FS.fids rootfid
     then failwith (spf "fid already used: %d" rootfid);
 
+    (match () with
+    | _ when uname <> fs.FS.user ->
+      error fs req (spf "permission denied, %s <> %s" uname fs.FS.user)
+    | _ ->
+    (* less: newlymade, qlock all *)
     (try
        let wid = int_of_string aname in
        let w = Hashtbl.find Globals.windows wid in
@@ -64,6 +63,7 @@ let dispatch fs req request_typ =
      with exn ->
         error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
+    )
     )
 
   (* Walk *)
@@ -91,36 +91,31 @@ let dispatch fs req request_typ =
           (* less: incref on file.w *)
           { file with F.fid = newfid; F.opened = None }
       in
-      let rec aux qid entry acc xs =
+      let rec walk qid entry acc xs =
         match xs with
         | [] -> qid, entry, List.rev acc
         | x::xs ->
           if qid.N.typ <> N.QTDir
+          (* will be catched below and transformed in an 9P Error message *)
           then failwith "not a directory";
-          (try 
-            (match entry.F.code, x with
-            | _Qwsys, ".." -> raise Todo
-            | F.Qroot, x ->
-              let entry = 
-                File.toplevel_entries |> List.find (fun entry -> 
-                  entry.F.name = x
-                )
-              in
-              let file_id = entry.F.code, wid in
-              let qid = File.qid_of_fileid file_id entry.F.type_ in
-              (* continue with other path elements *)
-              aux qid entry (qid::acc) xs
+          (match entry.F.code, x with
+          | _Qwsys, ".." -> raise Todo
+          | F.Qroot, x ->
+            let entry = 
+              File.toplevel_entries |> List.find (fun entry -> entry.F.name = x)
+            in
+            let file_id = entry.F.code, wid in
+            let qid = File.qid_of_fileid file_id entry.F.type_ in
+            (* continue with other path elements *)
+            walk qid entry (qid::acc) xs
             (* todo: Wsys, snarf *)
-            | _ -> 
-              raise (Impossible "Not a directory")
-            )
-          with Not_found ->
-            raise Not_found
+          | _ -> 
+            raise (Impossible "should be catched by 'not a directory' above")
           )
       in
       (try 
         let final_qid, final_entry, qids = 
-          aux file.F.qid file.F.entry [] xs
+          walk file.F.qid file.F.entry [] xs
         in
         file.F.qid <- final_qid;
         file.F.entry <- final_entry;
@@ -140,12 +135,21 @@ let dispatch fs req request_typ =
     )
 
   (* Open *)
+  | P.T.Open (fid, flags) ->
+    (* stricter: *)
+    if not (Hashtbl.mem fs.FS.fids fid)
+    then failwith (spf "unknown fid %d" fid);
+
+    let file = Hashtbl.find fs.FS.fids fid in
+    raise Todo
+
   (* Read *)
   (* Clunk *)
 
   (* Other *)
   | _ -> 
     failwith (spf "TODO: req = %s" (P.str_of_msg req))
+
 
 (* the master *)
 let thread fs =

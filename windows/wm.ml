@@ -8,6 +8,10 @@ module W = Window
 module FS = Fileserver
 
 (*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
 (* Cursors *)
 (*****************************************************************************)
 
@@ -17,7 +21,7 @@ module FS = Fileserver
 let window_cursor w pt mouse =
   let cursoropt = 
     (* less: if img is nil? if screenr is 0? *)
-    match Windows.window_at_point pt with
+    match Globals.window_at_point pt with
     | Some w2 when w2  == w -> w.W.mouse_cursor
     | _ -> None
   in
@@ -175,6 +179,7 @@ let close_win w =
   w.W.img <- Image.fake_image;
   ()
 
+(* less: ugly that need to pass mouse needed for Reshape *)
 let hide_win w mouse =
   if Hashtbl.mem Globals.hidden w.W.id
   (* less: return -1? can happen if window thread take too much time

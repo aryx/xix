@@ -114,13 +114,14 @@ let point_to mouse =
   done;
   let wopt =
     if Mouse.has_button !m Mouse.Right
-    then Windows.window_at_point !m.Mouse.pos
+    then Globals.window_at_point !m.Mouse.pos
     else None
   in
   (* less: wait and cancel option? *)
   while (Mouse.has_click !m) do
     m := Mouse.read mouse;
   done;
+  (* restore cursor state *)
   Globals.win () |> Common.if_some (fun w ->
     Wm.corner_cursor_or_window_cursor w !m.Mouse.pos mouse
   );

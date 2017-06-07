@@ -7,7 +7,7 @@ open Rectangle
 (* classic cursors *)
 (*****************************************************************************)
 
-(* also arrow_cursor default defined in kernel? (swcursor?) *)
+(* See also 'arrow' defined in kernel and in lib_graphics/input/cursor.ml *)
 
 (* when create new window (sweep()) *)
 let crosscursor = {

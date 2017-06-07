@@ -2,6 +2,14 @@ open Common
 
 module I = Display
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 type wid = int
 
 type cmd =
@@ -16,13 +24,14 @@ type cmd =
   | Wakeup
 *)
 
+(* The window type! *)
 type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
   (* ---------------------------------------------------------------- *)
   (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
   id: wid;
-  (* public named image, visible in /mnt/wsys/winname, change when resize *)
+  (* public named image, visible in /mnt/wsys/winname; change when resize *)
   mutable winname: string;
 
   (* writable through /mnt/wsys/label *)
@@ -33,6 +42,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* todo: option? when delete the window structure and thread is still
    * out there because we wait for the process to terminate?
+   * 
    * This is most of the time a layer, but it also a plain Image.t when
    * the window is hidden.
    *)
@@ -131,6 +141,10 @@ let frame_border = 4
 type border_status = 
   | Selected
   | Unselected
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (* old: was not an helper, but should to be consistent with winborder *)
 let pt_inside_frame pt w =

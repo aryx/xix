@@ -104,7 +104,7 @@ let thread (exitchan,
           Event.send w.W.chan_mouse m |> Event.sync
         )
       end else begin
-        let wopt = Windows.window_at_point m.pos in
+        let wopt = Globals.window_at_point m.pos in
         (match wopt with
         | Some w -> Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
         | None -> Mouse.reset_cursor mouse

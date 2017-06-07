@@ -6,7 +6,7 @@ SRC= \
   window.ml \
   file.ml fileserver.ml \
   globals.ml \
-  processes_winshell.ml windows.ml wm.ml threads_window.ml  \
+  processes_winshell.ml wm.ml threads_window.ml  \
   mouse_action.ml thread_mouse.ml \
   thread_keyboard.ml \
   thread_fileserver.ml \

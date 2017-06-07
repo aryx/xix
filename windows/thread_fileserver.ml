@@ -180,6 +180,7 @@ let dispatch fs req request_typ =
     (* todo? can clunk unopened file?? *)
     | Some _flags ->
       V.dispatch_close file;
+     (* todo: wclose? *)
     | None ->
       (* todo: winclosechan *)
       ()

@@ -1,6 +1,8 @@
 open Common
 open Plan9 (* for the fields *)
 
+module N = Plan9
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -12,9 +14,9 @@ open Plan9 (* for the fields *)
 type fid = Protocol_9P.fid
 
 type filecode =
-  (* old: was called Qdir in rio-C *)
+  (* '/' old: was called Qdir in rio-C *)
   | Qroot
-
+  (* '/xxx' *)
   | Qwinname
 
 (* will generate Qid.path *)
@@ -25,15 +27,15 @@ type dir_entry_short = {
   name: string;
   code: filecode;
   type_: Plan9.qid_type;
-  (* just for the user, group and other are noperm *)
+  (* just for the user; group and other are 'noperm' *)
   perm: Plan9.perm_property;
 }
 
 
 let root_entry = 
-  { name = "."; code = Qroot; type_ = Plan9.QTDir; perm =  rx }
+  { name = "."; code = Qroot; type_ = N.QTDir; perm =  N.rx }
 let toplevel_entries = [
-  { name = "winname"; code = Qwinname; type_ = Plan9.QTFile; perm = r };
+  { name = "winname"; code = Qwinname; type_ = N.QTFile; perm = N.r };
 ]
 
 (* fid server-side state (a file) *)
@@ -45,7 +47,7 @@ type t = {
    * on the server.
    *)
   mutable qid: Plan9.qid;
-  (* for stat, mutable for the same reason *)
+  (* for stat (mutable for the same reason than qid above) *)
   mutable entry: dir_entry_short;
 
   mutable opened: Plan9.open_flags option;

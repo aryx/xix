@@ -161,7 +161,7 @@ let alloc img =
   let w = 
   { 
     id = !wid_counter;
-    winname = "TODO";
+    winname = "";
     label = "<unnamed>";
 
     img = img;

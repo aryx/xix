@@ -13,4 +13,16 @@ let dispatch_open file =
   | F.Qwinname 
     -> ()
 
+let dispatch_read file =
+  let filecode = file.F.entry.F.code in
+  let w = file.F.w in
 
+  match filecode with
+  | F.Qroot -> raise (Impossible "directories are handled in caller dispatch()")
+  | F.Qwinname -> 
+    let str = w.W.winname in
+    if str = ""
+    then raise (Error "window has no name")
+    else str
+    
+  

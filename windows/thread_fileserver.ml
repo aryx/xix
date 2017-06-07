@@ -39,7 +39,7 @@ let dispatch fs req request_typ =
   | P.T.Attach (rootfid, auth_fid_opt, uname, aname) ->
     (* stricter: *)
     if Hashtbl.mem fs.FS.fids rootfid
-    then failwith (spf "fid already used: %d" rootfid);
+    then failwith (spf "Attach: fid already used: %d" rootfid);
 
     (match () with
     | _ when uname <> fs.FS.user ->
@@ -129,6 +129,9 @@ let dispatch fs req request_typ =
           Hashtbl.remove fs.FS.fids newfid
         );
         (match exn with
+        (* this can happen many times because /dev is union-mount so
+         * we get requests also for /dev/draw/... and other devices
+         *)
         | Not_found -> 
           error fs req "file does not exist"
         | Failure "not a directory" ->
@@ -169,6 +172,38 @@ let dispatch fs req request_typ =
   (* Clunk *)
 
   (* Read *)
+  | P.T.Read (fid, offset, count) ->
+    (* stricter: *)
+    if not (Hashtbl.mem fs.FS.fids fid)
+    then failwith (spf "Read: unknown fid %d" fid);
+
+    let file = Hashtbl.find fs.FS.fids fid in
+    let w = file.F.w in
+
+    (match file.F.entry.F.type_ with
+    | _ when w.W.deleted ->
+      error fs req "window deleted"
+    | N.QTFile ->
+      (* less: getclock? *)
+      (try 
+         let data = V.dispatch_read file in
+         let len = String.length data in
+         let (offhi, offlo) = offset in
+         let data = 
+           match () with
+           | _ when offhi > 0 || offlo > len -> ""
+           | _ when offlo + count > len ->
+             String.sub data offlo (len - offlo)
+           | _ -> data
+         in
+         answer fs { req with P.typ = P.R (P.R.Read data) }
+       with 
+         | V.Error str ->
+           error fs req str
+      )
+    | N.QTDir ->
+      failwith "TODO: readdir"
+    )
 
   (* Write *)
 

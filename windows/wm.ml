@@ -155,7 +155,9 @@ let new_win img cmd argv pwd_opt mouse fs =
     w.W.label <- spf "rc %d" pid;
     (* less: notefd *)
 
+    (* less: not too late? race with child to access /dev/winname? *)
     let winname = spf "window.%d" w.W.id in
+    w.W.winname <- winname;
     Draw_ipc.name_image w.W.img winname;
     (* less: namecount and retry again if already used *)
   )

@@ -13,6 +13,7 @@ module N = Plan9
 
 type fid = Protocol_9P.fid
 
+(* less: could have a Dir of ... | Device of ... *)
 type filecode =
   (* '/' old: was called Qdir in rio-C *)
   | Qroot

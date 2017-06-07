@@ -37,7 +37,7 @@ let rx = { r = true; w = false; x = true }
 
 let root_entry = 
   { name = "."; code = Qroot; type_ = Plan9.QTDir; perm =  rx }
-let top_entries = [
+let toplevel_entries = [
   { name = "winname"; code = Qwinname; type_ = Plan9.QTFile; perm = r };
 ]
 

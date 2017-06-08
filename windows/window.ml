@@ -10,6 +10,7 @@ module I = Display
 (* Types and constants *)
 (*****************************************************************************)
 
+(* window id *)
 type wid = int
 
 type cmd =
@@ -23,6 +24,8 @@ type cmd =
   | Refresh
   | Wakeup
 *)
+
+type mouse_counter = int
 
 (* The window type! *)
 type t = {
@@ -40,11 +43,10 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Graphics *)
   (* ---------------------------------------------------------------- *)
-  (* todo: option? when delete the window structure and thread is still
-   * out there because we wait for the process to terminate?
-   * 
-   * This is most of the time a layer, but it also a plain Image.t when
+  (* This is most of the time a layer, but it also a plain Image.t when
    * the window is hidden.
+   * less: option? when delete the window structure and thread is still
+   * out there because we wait for the process to terminate?
    *)
   mutable img: Image.t;
 
@@ -57,19 +59,37 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Mouse *)
   (* ---------------------------------------------------------------- *)
+  (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
   chan_mouse: Mouse.state Event.channel;
+  mutable last_mouse: Mouse.state;
+
+  (* Threads_window.thread --> Thread_fileserver.dispatch(Read) *)
+  chan_devmouse_read: Mouse.state Event.channel Event.channel;
+
+  (* max size = ? less: mutex around? recent queue.mli sayds not thread-safe *)
+  mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
+  (* less: could have simpler mouse_new_event: bool? *)
+  mutable mouse_counter: mouse_counter;
+  mutable last_count_sent: mouse_counter;
+  mutable last_buttons: Mouse.buttons;
 
   (* ---------------------------------------------------------------- *)
   (* Keyboard *)
   (* ---------------------------------------------------------------- *)
+  (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
   (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
   chan_keyboard: Keyboard.key Event.channel;
 
   (* ---------------------------------------------------------------- *)
   (* Command *)
   (* ---------------------------------------------------------------- *)
+  (* Threads_window.thread <-- Thread_mouse.thread? | ?? *)
   (* less: also list of cmds? [20]? *)
   chan_cmd: cmd Event.channel;
+
+  (* ---------------------------------------------------------------- *)
+  (* Resize *)
+  (* ---------------------------------------------------------------- *)
 
   (* ---------------------------------------------------------------- *)
   (* Process *)
@@ -88,6 +108,11 @@ type t = {
   (* Wm *)
   (* ---------------------------------------------------------------- *)
   mutable topped: int;
+
+  (* ---------------------------------------------------------------- *)
+  (* Graphical Window *)
+  (* ---------------------------------------------------------------- *)
+  mutable mouse_opened: bool;
 
   (* ---------------------------------------------------------------- *)
   (* Textual Window *)
@@ -109,11 +134,6 @@ type t = {
 
   mutable frame: Frame_ui.t;
   mutable scrollr: Rectangle.t;
-  
-  (* ---------------------------------------------------------------- *)
-  (* Graphical Window *)
-  (* ---------------------------------------------------------------- *)
-  mutable mouse_opened: bool;
 
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
@@ -171,6 +191,13 @@ let alloc img =
     chan_mouse    = Event.new_channel ();
     chan_keyboard = Event.new_channel ();
     chan_cmd      = Event.new_channel ();
+
+    chan_devmouse_read = Event.new_channel ();
+    mouseclicks_queue = Queue.create ();
+    last_mouse = Mouse.fake_state;
+    mouse_counter = 0;
+    last_count_sent = 0;
+    last_buttons = Mouse.nobuttons;
 
     topped = !topped_counter;
 

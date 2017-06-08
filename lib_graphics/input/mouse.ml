@@ -57,7 +57,21 @@ let fake_state = {
   buttons = { left = false; middle = false; right = false };
   msec = 0;
 }  
+
+(*****************************************************************************)
+(* Parsers *)
+(*****************************************************************************)
        
+let buttons_of_int i =
+  (* less: sanity check between 0 and 7 *)
+  { left   = (i land 1) <> 0; 
+    middle = (i land 2) <> 0; 
+    right  = (i land 4) <> 0;
+  }
+
+let int_of_buttons buttons =
+  raise Todo
+
 (*****************************************************************************)
 (* Mouse device controller *)
 (*****************************************************************************)
@@ -101,19 +115,12 @@ let thread_mouse ctl =
       try int_of_string (str_at n)
       with Failure _ -> failwith (spf "not an int at %d (%s)" n (str_at n))
     in
-
     
     (match buf.[0] with
     | 'm' ->
       let m = {
         pos = { x = int_at 0; y = int_at 1; };
-        buttons = 
-          (let i = int_at 2 in
-           (* less: sanity check between 0 and 7 *)
-           { left   = (i land 1) <> 0; 
-             middle = (i land 2) <> 0; 
-             right  = (i land 4) <> 0;
-           });
+        buttons = buttons_of_int (int_at 2);
         msec = int_at 3;
       }
       in
@@ -142,6 +149,7 @@ let init () =
     failwith (spf "Mouse.init: unix error '%s' while executing '%s' with '%s'"
       (Unix.error_message err) cmd arg)
 
+
 let receive ctl =
   Event.receive ctl.chan
 
@@ -159,6 +167,10 @@ let flush_and_read display ctl =
 (* hence O_RDWR for /dev/mouse *)
 let move_to ctl pt =
   raise Todo
+
+(*****************************************************************************)
+(* Cursor *)
+(*****************************************************************************)
 
 let set_cursor ctl cursor =
   let str = 

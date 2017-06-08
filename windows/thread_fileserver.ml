@@ -103,7 +103,7 @@ let dispatch fs req request_typ =
           (* will be catched below and transformed in an 9P Error message *)
           then failwith "not a directory";
           (match entry.F.code, x with
-          | _Qwsys, ".." -> raise Todo
+          | _Qwsys, ".." -> failwith "walk: Todo '..'"
           | F.Qroot, x ->
             let entry = 
               File.toplevel_entries |> List.find (fun entry -> entry.F.name = x)
@@ -201,9 +201,10 @@ let dispatch fs req request_typ =
     | _ when w.W.deleted ->
       error fs req "window deleted"
     | N.QTFile ->
-      (* less: getclock? *)
-      (try 
-         let data = V.dispatch_read file in
+      Thread.create (fun () ->
+       (* less: getclock? *)
+       (try 
+         let data = V.threaded_dispatch_read file in
          let len = String.length data in
          let (offhi, offlo) = offset in
          let data = 
@@ -217,7 +218,7 @@ let dispatch fs req request_typ =
        with 
          | V.Error str ->
            error fs req str
-      )
+      )) () |> ignore
     | N.QTDir ->
       failwith "TODO: readdir"
     )

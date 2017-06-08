@@ -6,7 +6,7 @@ module W = Window
 
 type event =
   | Mouse of Mouse.state
-  (* less: Resize? other? *)
+  (* less: Resize? other? or use other thread and device? (cleaner) *)
 
 let middle_click_system m mouse =
   pr "Todo: middle click"

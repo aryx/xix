@@ -49,7 +49,7 @@ let thread_main () =
      * | Resize -> view := getwindow display
      *)
     );
-    redraw display display.I.image !mousepos bgcolor;
+    redraw display view !mousepos bgcolor;
   done
 
 let _ =

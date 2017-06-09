@@ -31,7 +31,7 @@ let thread_main () =
   (* less: let viewr save? *)
   let font = Font_default.load_default_font display in
 
-  if !Globals.debug
+  if !Globals.debug_draw
   then Display.debug display;
 
   let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
@@ -94,7 +94,9 @@ let main () =
     " <kbdcmd>";
 
     (* pad: not in original *)
-    "-debug", Arg.Set Globals.debug,
+    "-debug_9P", Arg.Set Globals.debug_9P,
+    " ";
+    "-debug_draw", Arg.Set Globals.debug_draw,
     " ";
     "-test", Arg.Unit (fun () -> Test.test ()),
     " ";

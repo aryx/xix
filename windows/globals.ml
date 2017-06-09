@@ -27,7 +27,8 @@ let window_at_point pt =
   );
   !res
 
-let debug = ref false
+let debug_9P = ref false
+let debug_draw = ref false
 
 (* less: could be in global, or could pass it around so more functional
  * mousectl

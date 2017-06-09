@@ -8,7 +8,7 @@ module W = Window
 module V = Virtual_devices
 
 let answer fs res =
-  if !Globals.debug
+  if !Globals.debug_9P
   then pr (P.str_of_msg res);
 
   P.write_9P_msg res fs.FS.server_fd
@@ -238,7 +238,7 @@ let thread fs =
     (* less: care about messagesize? *)
     let req = P.read_9P_msg fs.FS.server_fd in
     (* todo: should exit the whole proc if error *)
-    if !Globals.debug
+    if !Globals.debug_9P
     then pr (P.str_of_msg req);
 
     (match req.P.typ with

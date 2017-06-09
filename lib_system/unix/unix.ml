@@ -451,65 +451,7 @@ external getservbyname : string -> string -> service_entry
                                          = "unix_getservbyname"
 external getservbyport : int -> string -> service_entry
                                          = "unix_getservbyport"
-type terminal_io = {
-    mutable c_ignbrk: bool;
-    mutable c_brkint: bool;
-    mutable c_ignpar: bool;
-    mutable c_parmrk: bool;
-    mutable c_inpck: bool;
-    mutable c_istrip: bool;
-    mutable c_inlcr: bool;
-    mutable c_igncr: bool;
-    mutable c_icrnl: bool;
-    mutable c_ixon: bool;
-    mutable c_ixoff: bool;
-    mutable c_opost: bool;
-    mutable c_obaud: int;
-    mutable c_ibaud: int;
-    mutable c_csize: int;
-    mutable c_cstopb: int;
-    mutable c_cread: bool;
-    mutable c_parenb: bool;
-    mutable c_parodd: bool;
-    mutable c_hupcl: bool;
-    mutable c_clocal: bool;
-    mutable c_isig: bool;
-    mutable c_icanon: bool;
-    mutable c_noflsh: bool;
-    mutable c_echo: bool;
-    mutable c_echoe: bool;
-    mutable c_echok: bool;
-    mutable c_echonl: bool;
-    mutable c_vintr: char;
-    mutable c_vquit: char;
-    mutable c_verase: char;
-    mutable c_vkill: char;
-    mutable c_veof: char;
-    mutable c_veol: char;
-    mutable c_vmin: int;
-    mutable c_vtime: int;
-    mutable c_vstart: char;
-    mutable c_vstop: char
-  }
 
-external tcgetattr: file_descr -> terminal_io = "unix_tcgetattr"
-
-type setattr_when = TCSANOW | TCSADRAIN | TCSAFLUSH
-
-external tcsetattr: file_descr -> setattr_when -> terminal_io -> unit
-               = "unix_tcsetattr"
-external tcsendbreak: file_descr -> int -> unit = "unix_tcsendbreak"
-external tcdrain: file_descr -> unit = "unix_tcdrain"
-
-type flush_queue = TCIFLUSH | TCOFLUSH | TCIOFLUSH
-
-external tcflush: file_descr -> flush_queue -> unit = "unix_tcflush"
-
-type flow_action = TCOOFF | TCOON | TCIOFF | TCION
-
-external tcflow: file_descr -> flow_action -> unit = "unix_tcflow"
-
-external setsid : unit -> int = "unix_setsid"
 
 (* High-level process management (system, popen) *)
 

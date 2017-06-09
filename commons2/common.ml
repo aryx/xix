@@ -8,10 +8,12 @@ type int16 = int
 type int32 = int
 (* todo: use Int64.t *)
 type int64 = int
-
-type int64_special = int * int
+(* if you really need to represent high values use: 
+ * type int64_special = int * int 
+ *)
 
 type byte = char
+(* ocaml 4.xx has a separate type for bytes and (immutable) strings *)
 type bytes = string
 
 type filename = string

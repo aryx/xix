@@ -44,11 +44,10 @@ let threaded_dispatch_read offset count file =
 
   let honor_offset_and_count data =
     let len = String.length data in
-    let (offhi, offlo) = offset in
     match () with
-    | _ when offhi > 0 || offlo > len -> ""
-    | _ when offlo + count > len ->
-      String.sub data offlo (len - offlo)
+    | _ when offset > len -> ""
+    | _ when offset + count > len ->
+      String.sub data offset (len - offset)
     | _ -> data
   in
   let honor_count data =

@@ -10,7 +10,7 @@ let thread kbd =
     let key = Keyboard.receive kbd |> Event.sync in
 
     (* TODO: remove, just for debug *)
-    if key = 'q' 
+    if key = 'Q' 
     then exit 0;
 
     Globals.win () |> Common.if_some (fun win ->

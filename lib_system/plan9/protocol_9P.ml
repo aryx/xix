@@ -46,8 +46,8 @@ module Request = struct
      * before that fid to the path you want.
      *)
     | Open of fid * Plan9.open_flags
-    | Read of fid * int64_special (* offset *) * int32 (* count *)
-    | Write of fid * int64_special (* offset *) * bytes (* data *)
+    | Read of fid * int64 (* offset *) * int32 (* count *)
+    | Write of fid * int64 (* offset *) * bytes (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid option (* newfid when clone *) * 
@@ -154,11 +154,9 @@ let str_of_msg msg =
         fid name (str_of_mode mode) 
         (str_of_perm_int perm)
     | T.Read (fid, offset, count) ->
-      let (off1, off2) = offset in
-      spf "Read: fid = %d offset = (%d,%d), count = %d" fid off1 off2 count
+      spf "Read: fid = %d offset = %d, count = %d" fid offset count
     | T.Write (fid, offset, data) ->
-      let (off1, off2) = offset in
-      spf "Write: fid = %d offset = (%d,%d), data = %s" fid off1 off2
+      spf "Write: fid = %d offset = %d, data = %s" fid offset
         (if String.length data > 10 then String.sub data 0 10 else data)
     | T.Clunk fid ->
       spf "Clunk: %d" fid
@@ -212,15 +210,14 @@ let i c = Char.code c
 
 (* 9P uses little-endian order (least significant byte first) *)
 
-(* todo: overflow check! or use Int32 *)
 let gbit8 buf off = 
   i buf.[0+off]
 let gbit16 buf off =
   (i buf.[0+off])        lor (i buf.[1+off] lsl 8)
+(* todo: overflow check! or use Int32 *)
 let gbit32 buf off =
   (i buf.[0+off])        lor (i buf.[1+off] lsl 8) lor
   (i buf.[2+off] lsl 16) lor (i buf.[3+off] lsl 24)
-
 (* todo: use Int64 *)
 let gbit64 buf off =
   let n1 = 
@@ -232,7 +229,11 @@ let gbit64 buf off =
   (i buf.[6+off] lsl 16) lor (i buf.[7+off] lsl 24)
   in
   (* bugfix: n2, n1,   not n1, n2!  assume later do 'let (high,low) = offset'*)
-  n2, n1
+  (* old: n2, n1 *)
+  if n2 > 0
+  then failwith "gbit64: TODO support for high value with Int64";
+  (* todo: what about negative values where n2 is just 0b1111111111... ? *)
+  n1
 
 let gstring buf off =
   let n = gbit16 buf off in

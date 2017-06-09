@@ -9,7 +9,8 @@ open Common
  * I just binded the necessary API for rio to work:
  * bind, mount, errstr, and a few types for protocol_9P.ml.
  * 
- * less: provide full API in syscall.h and libc.h not in unix.ml
+ * less: provide full API in syscall.h and libc.h that is not
+ *  already provided by unix.ml
  *)
 
 (*****************************************************************************)

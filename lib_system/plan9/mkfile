@@ -22,8 +22,8 @@ LDFLAGS=
 
 ROOT=/home/pad/plan9/ROOT
 
-install:V: libunix.a
-	cp libunix.a $ROOT/$objtype/lib/ocaml
+install:V: $LIB
+	cp $LIB $ROOT/$objtype/lib/ocaml
 
 clean:V:
 	rm -f *.[58] y.tab.? y.output y.error $CLEANFILES

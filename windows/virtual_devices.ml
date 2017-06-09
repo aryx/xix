@@ -56,7 +56,7 @@ let threaded_dispatch_read file =
     let m    = Event.receive chan |> Event.sync in
     (* less: resize message *)
     spf "%c%11d %11d %11d %11d " 
-      'c' m.Mouse.pos.Point.x m.Mouse.pos.Point.y 
+      'm' m.Mouse.pos.Point.x m.Mouse.pos.Point.y 
       (Mouse.int_of_buttons m.Mouse.buttons) m.Mouse.msec
 
     

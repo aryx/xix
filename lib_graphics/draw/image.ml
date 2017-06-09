@@ -101,7 +101,7 @@ let fake_image =
 let bytes_per_line r depth =
   match depth with
   | 1 -> Rectangle.dx r / 8
-  | _ -> raise Todo
+  | _ -> failwith (spf "bytes_per_line: TODO %d" depth)
 
 let load img r bytes =
   let display = img.display in

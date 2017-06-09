@@ -8,7 +8,7 @@ type op =
   | SoverD
 
 let bp_op op =
-  raise Todo
+  failwith "bp_op: TODO"
 
 (* less: errorfn? fontname? *)
 let init _label =

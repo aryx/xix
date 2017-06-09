@@ -74,7 +74,8 @@ let mk_channels_serial xs =
     ((mk_chan_serial x2) lsl 16) lor
     ((mk_chan_serial x3) lsl 8) lor
     (mk_chan_serial x4)
-  | _ -> raise Todo
+  | _ -> failwith (spf "mk_channels_serial: TODO: length = %d" 
+                     (List.length xs))
 
 
 let channels_of_str str =
@@ -86,7 +87,7 @@ let channels_of_str str =
 
 (* do not pass an img here otherwise mutually dependent modules *)
 let imgval_to_rgba chan val_ =
-  raise Todo
+  failwith "imgval_to_rgba: TODO"
 
 let rgba_to_imgval chan rgba =
-  raise Todo
+  failwith "rgba_to_imgval: TODO"

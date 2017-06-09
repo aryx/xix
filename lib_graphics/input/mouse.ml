@@ -70,7 +70,10 @@ let buttons_of_int i =
   }
 
 let int_of_buttons buttons =
-  raise Todo
+  (if buttons.left then 1 else 0) lor
+  (if buttons.middle then 2 else 0) lor
+  (if buttons.right then 4 else 0)
+
 
 (*****************************************************************************)
 (* Mouse device controller *)
@@ -125,7 +128,7 @@ let thread_mouse ctl =
       }
       in
       Event.send ctl.chan m |> Event.sync
-    | 'r' -> failwith "Mouse.thread: resize event: Todo"
+    | 'r' -> failwith "Mouse.thread: resize event: TODO"
     | x -> failwith (spf "wrong format in /dev/mouse: %c (%s)" x 
                        (String.escaped buf))
     )
@@ -166,7 +169,7 @@ let flush_and_read display ctl =
 
 (* hence O_RDWR for /dev/mouse *)
 let move_to ctl pt =
-  raise Todo
+  failwith "Mouse.move_to: TODO"
 
 (*****************************************************************************)
 (* Cursor *)

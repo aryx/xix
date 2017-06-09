@@ -59,6 +59,6 @@ let alloc img background =
 
 
 let free baselayer =
-  raise Todo
+  failwith "Baselayer.free: TODO"
 
 (* less: let get_public  *)

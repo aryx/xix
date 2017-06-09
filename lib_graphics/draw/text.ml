@@ -34,7 +34,7 @@ let cache_chars font str max_n =
   done;
   let rest_str =
     if max_n < String.length str
-    then raise Todo
+    then failwith (spf "cache_chars: TODO %d" max_n)
     else ""
   in
   List.rev !xs, rest_str, !width 

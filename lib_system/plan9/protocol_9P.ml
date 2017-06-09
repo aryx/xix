@@ -231,7 +231,8 @@ let gbit64 buf off =
   (i buf.[4+off])        lor (i buf.[5+off] lsl 8) lor
   (i buf.[6+off] lsl 16) lor (i buf.[7+off] lsl 24)
   in
-  n1, n2
+  (* bugfix: n2, n1,   not n1, n2!  assume later do 'let (high,low) = offset'*)
+  n2, n1
 
 let gstring buf off =
   let n = gbit16 buf off in

@@ -204,16 +204,7 @@ let dispatch fs req request_typ =
       Thread.create (fun () ->
        (* less: getclock? *)
        (try 
-         let data = V.threaded_dispatch_read file in
-         let len = String.length data in
-         let (offhi, offlo) = offset in
-         let data = 
-           match () with
-           | _ when offhi > 0 || offlo > len -> ""
-           | _ when offlo + count > len ->
-             String.sub data offlo (len - offlo)
-           | _ -> data
-         in
+         let data = V.threaded_dispatch_read offset count file in
          answer fs { req with P.typ = P.R (P.R.Read data) }
        with 
          | V.Error str ->

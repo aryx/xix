@@ -26,8 +26,8 @@ let thread_main () =
   (* Rio, a graphical application *)
 
   let display = Draw.init "Rio" in
-  (* less: let view = Layer.window_init () in, if want rio in rio *)
-  let view = display.Display.image in
+  (* TODO let view = Draw.getview display in *)
+  let view = display.I.image in
   (* less: let viewr save? *)
   let font = Font_default.load_default_font display in
 

@@ -18,8 +18,7 @@ let redraw display view pos bgcolor =
 (* the Keyboard.init() and Mouse.init() below create other threads *)
 let thread_main () =
   let display = Draw.init "Hello Rio" in
-  (* less: getwindow? *)
-  let view = display.I.image in
+  let view = Draw.getview display in
 
   let kbd = Keyboard.init () in
   let mouse = Mouse.init () in
@@ -27,7 +26,8 @@ let thread_main () =
   let bgcolor = 
     Image.alloc display (Rectangle.r 0 0 1 1) Channel.rgba32 true Color.magenta
   in
-  let mousepos = ref (Point.p 10 10) in
+  (* if does not use originwindow, then need to add view.r.min *)
+  let mousepos = ref (Point.add view.I.r.Rectangle.min (Point.p 10 10)) in
 
   redraw display view !mousepos bgcolor;
 

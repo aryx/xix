@@ -18,7 +18,7 @@ let redraw display view pos bgcolor =
 (* the Keyboard.init() and Mouse.init() below create other threads *)
 let thread_main () =
   let display = Draw.init "Hello Rio" in
-  let view = Draw.getview display in
+  let view = Draw_rio.get_view display in
 
   let kbd = Keyboard.init () in
   let mouse = Mouse.init () in

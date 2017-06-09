@@ -5,11 +5,12 @@ INCLUDES=-I $TOP/commons2 -I ../geometry
 
 SRC= channel.ml color.ml \
      draw_marshal.ml display.ml image.ml \
-     draw_ipc.ml draw_rio.ml \
+     draw_ipc.ml \
      draw.ml \
      line.ml polygon.ml ellipse.ml arc.ml \
      fontchar.ml subfont.ml font.ml font_default.ml text.ml \
      baselayer.ml layer.ml \
+     draw_rio.ml
 
 <$TOP/mkconfig2
 <$TOP/mklib

@@ -3,9 +3,19 @@ open Common
 module I = Display
 module M = Draw_marshal
 
-(* less: rename file desktop.ml? no, general mechanism that can be used
- * not only for windowing system (e.g., in GIMP for layers)
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Base layer on top of which other layers (see layer.ml) can be drawn.
+ *
+ * We could rename this file desktop.ml, but the code below provides 
+ * a general mechanism that can be used not only for windowing system 
+ * (e.g., in GIMP for layers)
  *)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 type t = {
   id: int;
@@ -21,6 +31,10 @@ let fake_baselayer = { id = -1; display = Display.fake_display }
 
 let counter_id = 
   ref 0
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
 
 let alloc img background =
   (* less: public bool parameter? *)
@@ -39,8 +53,7 @@ let alloc img background =
   let try_ = ref 0 in
   incr counter_id;
   while not !ok && !try_ < 25 do
-    let id = !counter_id in
-    let str = "A" ^ M.bp_long id ^ 
+    let str = "A" ^ M.bp_long !counter_id ^ 
       M.bp_long img.I.id ^ M.bp_long background.I.id ^
       M.bp_bool public 
     in

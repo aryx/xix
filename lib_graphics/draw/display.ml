@@ -73,6 +73,11 @@ let bufsize = 8000 (* actually 8000+1 for 'v' when flush_display  *)
 
 let flush_buffer display =
   let n = display.bufp in
+  (* bugfix: important to do that before the exn, otherwise will
+   * get into a loop and resend again and again the same
+   * message (e.g., in Baselayer.alloc with the retry)
+   *)
+  display.bufp <- 0;
   if n <> 0
   then begin
     let n2 = 
@@ -86,7 +91,6 @@ let flush_buffer display =
     (* stricter: not only if drawdebug but always *)
     if n2 <> n
     then failwith (spf "wrote only %d, not %d in /dev/draw/x/data" n2 n);
-    display.bufp <- 0;
   end
 
 let add_buf display str =

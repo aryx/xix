@@ -156,7 +156,7 @@ let wid_counter =
 let topped_counter =
   ref 0
 
-let frame_border = 4
+let window_border_size = Draw_rio.window_border_size (* 4 *)
 
 type border_status = 
   | Selected
@@ -166,12 +166,14 @@ type border_status =
 (* Helpers *)
 (*****************************************************************************)
 
-(* old: was not an helper, but should to be consistent with winborder *)
-let pt_inside_frame pt w =
-  Rectangle.pt_in_rect pt (Rectangle.insetrect frame_border w.screenr)
+(* old: was not an helper, but should to be consistent with winborder.
+ * alt: pt_on_content (window border vs window content in Windows.nw)
+ *)
+let pt_inside_border pt w =
+  Rectangle.pt_in_rect pt (Rectangle.insetrect window_border_size w.screenr)
 (* old: was called winborder *)
-let pt_on_frame pt w =
-  Rectangle.pt_in_rect pt w.screenr && not (pt_inside_frame pt w)
+let pt_on_border pt w =
+  Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
 
 
 let alloc img = 

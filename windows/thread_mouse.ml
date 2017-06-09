@@ -89,7 +89,7 @@ let thread (exitchan,
           (* less: logical coordinates with winput.img.r and winput.screenr *)
           let xy = m.pos in
           (* less: goto scrolling if scroll buttons *)
-          let inside = Window.pt_inside_frame xy w in
+          let inside = Window.pt_inside_border xy w in
           (* todo: set scrolling *)
           (* todo: set moving *)
           if false

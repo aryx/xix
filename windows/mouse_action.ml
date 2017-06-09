@@ -56,7 +56,8 @@ let sweep mouse (display, desktop, _view, font) =
             (* todo? RefreshNothing? *)
             let img = Layer.alloc desktop r grey in
             old_img_opt |> Common.if_some Layer.free;
-            Polygon.border img r Window.frame_border !Globals.red Point.zero;
+            Polygon.border img r Window.window_border_size 
+              !Globals.red Point.zero;
             Display.flush display;
             transit (SweepMove (p0, p1, Some img))
           end
@@ -78,7 +79,8 @@ let sweep mouse (display, desktop, _view, font) =
           (* todo? RefreshBackup? *)
           let img = Layer.alloc desktop r Color.white in
           Layer.free old_img;
-          Polygon.border img r Window.frame_border !Globals.red Point.zero;
+          Polygon.border img r Window.window_border_size 
+            !Globals.red Point.zero;
           (* done in caller but more logical here I think *)
           Display.flush display;
           (* finally!! got an image *)

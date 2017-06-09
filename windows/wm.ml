@@ -33,11 +33,11 @@ let window_cursor w pt mouse =
 
 
 let corner_cursor w pt mouse =
-  if Window.pt_on_frame pt w
+  if Window.pt_on_border pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
 
 let corner_cursor_or_window_cursor w pt mouse =
-  if Window.pt_on_frame pt w
+  if Window.pt_on_border pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
   else window_cursor w pt mouse
 
@@ -54,7 +54,7 @@ let draw_border w status =
     | W.Selected   -> !Globals.title_color
     | W.Unselected -> !Globals.title_color_light
   in
-  Polygon.border img img.I.r Window.frame_border color Point.zero
+  Polygon.border img img.I.r Window.window_border_size color Point.zero
 
 let repaint_border w =
   (* todo: update cols *)

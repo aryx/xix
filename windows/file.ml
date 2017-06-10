@@ -39,9 +39,6 @@ type dir_entry_short = {
 let root_entry = 
   { name = "."; code = Qroot; type_ = N.QTDir; perm =  N.rx }
 let toplevel_entries = [
-  { name = "winname"; code = Qwinname; type_ = N.QTFile; perm = N.r };
-  { name = "mouse";   code = Qmouse;   type_ = N.QTFile; perm = N.rw };
-  { name = "cons";    code = Qcons;    type_ = N.QTFile; perm = N.rw };
 ]
 
 (* fid server-side state (a file) *)

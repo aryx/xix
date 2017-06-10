@@ -9,7 +9,8 @@ SRC= \
   processes_winshell.ml wm.ml threads_window.ml  \
   mouse_action.ml             thread_mouse.ml \
                               thread_keyboard.ml \
-  virtual_devices.ml          thread_fileserver.ml \
+  virtual_cons.ml virtual_mouse.ml virtual_winname.ml virtual_devices.ml\
+                              thread_fileserver.ml \
   test.ml main.ml
 
 INCLUDES=-I $TOP/commons2 -I $TOP/lib_system/plan9 \

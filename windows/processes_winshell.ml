@@ -19,7 +19,16 @@ let run_cmd_in_window_in_child_of_fork cmd argv w fs =
   Plan9.bind "/mnt/wsys" "/dev" Plan9.MBefore;
 
   (* less: wclose for ref counting *)
-  (* todo: reassign STDIN/STDOUT *)
+  (* todo: handle errors? Unix_error? then communicate failure to parent? *)
+  Unix1.close Unix1.stdin;
+  let _ = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] in
+
+(* TODO
+  Unix1.close Unix1.stdout;
+  let _ = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] in
+  Unix1.dup2 Unix1.stdout Unix1.stderr;
+*)
+
   (* less: notify nil *)
   Unix2.execv cmd argv;
   failwith "exec failed"

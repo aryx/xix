@@ -17,6 +17,8 @@ type event =
 
   (* producing for thread_fileserver(Read Qmouse) *)
   | SentChannelForMouseRead
+  (* producing for thread_fileserver(Read Qcons) *)
+  | SentChannelsForConsRead
 
 let debug = ref false
 let cnt = ref 0
@@ -27,6 +29,7 @@ let key_in w key =
   if not w.deleted then begin
 
     if !debug then begin
+      (* when did not even have support for drawing text ... *)
       incr cnt;
       let len = Char.code key in
       let r = Rectangle.r 0 0 len 1 
@@ -38,9 +41,14 @@ let key_in w key =
     end;
     
     (* less: navigation keys *)
-    (* todo: if rawing *)
-    (* todo: if holding *)
-    ()
+    match () with
+    | _ when w.raw_mode && w.mouse_opened (* less: || q0 == nr *) ->
+
+      Queue.add key w.raw_keys 
+    | _ -> 
+      (* todo: if holding *)
+      (* todo: if not raw mode *)
+      ()
   end
 
 let mouse_in w m =
@@ -75,6 +83,24 @@ let mouse_out w chan =
   in
   w.last_count_sent <- counter;
   Event.send chan m |> Event.sync
+
+
+let keys_out w (chan_count, chan_bytes) =
+  let cnt = Event.receive chan_count |> Event.sync in
+  let buf = String.create cnt in
+  let i = ref 0 in
+  while !i < cnt && Queue.length w.raw_keys > 0 (* less: qh vs nr *) do
+    (* less: runetochar and wid adjustments *)
+    buf.[!i] <- Queue.take w.raw_keys;
+    incr i;
+  done;
+  let str =
+    if !i < cnt
+    then String.sub buf 0 !i
+    else buf
+  in
+  Event.send chan_bytes str |> Event.sync
+
 
 
 let cmd_in w cmd =
@@ -116,8 +142,9 @@ let thread w =
   
   (* less: threadsetname *)
 
-  (* less: extra channel creation? *)
   let chan_devmouse = Event.new_channel () in
+  let chan_devcons_count = Event.new_channel () in
+  let chan_devcons_bytes = Event.new_channel () in
 
   while true do
     (* less: adjust event set *)
@@ -128,11 +155,19 @@ let thread w =
       Event.receive w.chan_mouse    |> wrap (fun x-> Mouse x);
       Event.receive w.chan_cmd      |> wrap (fun x-> Cmd x);
     ] @
-    (* sending *)
-    if w.mouse_counter <> w.last_count_sent 
-    then [Event.send w.chan_devmouse_read chan_devmouse 
-           |> wrap (fun () -> SentChannelForMouseRead)]
-    else []
+      (* sending *)
+      (if w.mouse_counter <> w.last_count_sent 
+       then [Event.send w.chan_devmouse_read chan_devmouse 
+              |> wrap (fun () -> SentChannelForMouseRead)]
+       else []
+      ) @
+      (* less: npart *)
+      (if w.raw_mode && Queue.length w.raw_keys > 0
+       then [Event.send w.chan_devcons_read 
+                (chan_devcons_count, chan_devcons_bytes)
+              |> wrap (fun () -> SentChannelsForConsRead)]
+       else []
+      )
     ) |> Event.select
     in
     (match ev with
@@ -143,7 +178,10 @@ let thread w =
        * When answer Exited? when Cmd is Exited?
        *)
       cmd_in w cmd
-    | SentChannelForMouseRead -> mouse_out w chan_devmouse
+    | SentChannelForMouseRead -> 
+      mouse_out w chan_devmouse
+    | SentChannelsForConsRead -> 
+      keys_out w (chan_devcons_count, chan_devcons_bytes)
     );
     if not w.deleted
     then Image.flush w.img;

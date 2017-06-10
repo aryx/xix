@@ -12,6 +12,7 @@ let dispatch_open file =
   match filecode with
   | F.Qroot
   | F.Qwinname 
+  | F.Qcons
     -> ()
   | F.Qmouse -> 
     if w.W.mouse_opened
@@ -26,6 +27,7 @@ let dispatch_close file =
   match filecode with
   | F.Qroot
   | F.Qwinname 
+  | F.Qcons
     -> ()
   | F.Qmouse -> 
     (* less: stricter? check that was opened indeed? *)
@@ -67,6 +69,7 @@ let threaded_dispatch_read offset count file =
       else str
     in
     honor_offset_and_count str
+
   (* a process is reading on its /dev/mouse; we must read from mouse
    * events coming to the window, events sent from the mouse thread.
    *)
@@ -85,5 +88,17 @@ let threaded_dispatch_read offset count file =
     (* bugfix: note that we do not honor_offset. /dev/mouse is a dynamic file *)
     honor_count str
 
-    
-  
+  (* a process is reading on its /dev/cons; we must read from key
+   * events coming to the window, events sent from the keyboard thread.
+   *)
+  | F.Qcons ->
+    (* less: flushtag *)
+    (* less: handle unicode partial runes *)
+    let (chan_count_out, chan_bytes_in) = 
+      Event.receive w.W.chan_devcons_read |> Event.sync in
+    Event.send chan_count_out count |> Event.sync;
+    (* less: handle if flushing *)
+    (* less: qlock active *)
+    let bytes = Event.receive chan_bytes_in |> Event.sync in
+    (* we asked for count so honor_count is redundant *)
+    honor_count bytes

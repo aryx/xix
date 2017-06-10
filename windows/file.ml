@@ -20,6 +20,7 @@ type filecode =
   (* '/xxx' *)
   | Qwinname
   | Qmouse
+  | Qcons
   (* less: '/wsys/' *)
 
 (* will generate Qid.path *)
@@ -40,6 +41,7 @@ let root_entry =
 let toplevel_entries = [
   { name = "winname"; code = Qwinname; type_ = N.QTFile; perm = N.r };
   { name = "mouse";   code = Qmouse;   type_ = N.QTFile; perm = N.rw };
+  { name = "cons";    code = Qcons;    type_ = N.QTFile; perm = N.rw };
 ]
 
 (* fid server-side state (a file) *)
@@ -70,6 +72,7 @@ let int_of_filecode = function
   | Qroot -> 0
   | Qwinname -> 1
   | Qmouse -> 2
+  | Qcons -> 3
 
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor

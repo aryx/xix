@@ -5,6 +5,8 @@ module I = Display
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* The data structures to store all the information about a window!
+*)
 
 (*****************************************************************************)
 (* Types and constants *)
@@ -61,16 +63,21 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
   chan_mouse: Mouse.state Event.channel;
-  mutable last_mouse: Mouse.state;
 
   (* Threads_window.thread --> Thread_fileserver.dispatch(Read) *)
   chan_devmouse_read: Mouse.state Event.channel Event.channel;
 
-  (* max size = ? less: mutex around? recent queue.mli sayds not thread-safe *)
+  (* less: max size = ? mutex around? recent queue.mli sayds not thread-safe *)
   mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
   (* less: could have simpler mouse_new_event: bool? *)
   mutable mouse_counter: mouse_counter;
   mutable last_count_sent: mouse_counter;
+
+  (* we do not queue all mouse states; we just queue the clicks/releases.
+   * for the rest (moving the mouse) we just keep the last state.
+   *)
+  mutable last_mouse: Mouse.state;
+
   mutable last_buttons: Mouse.buttons;
 
   (* ---------------------------------------------------------------- *)
@@ -79,6 +86,12 @@ type t = {
   (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
   (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
   chan_keyboard: Keyboard.key Event.channel;
+
+  (* Threads_window.thread --> Thread_fileserver.dispatch(Read) *)
+  chan_devcons_read: (int Event.channel * bytes Event.channel) Event.channel;
+
+  (* see also Window.text below for keys when in non-raw (buffered) mode *)
+  raw_keys: Keyboard.key Queue.t;
 
   (* ---------------------------------------------------------------- *)
   (* Command *)
@@ -95,9 +108,10 @@ type t = {
   (* Process *)
   (* ---------------------------------------------------------------- *)
 
-  (* can be changed? through /mnt/wsys/wdir *)
-  mutable pwd: Common.filename;
+  (* not really mutable, but set after Window.alloc *)
   mutable pid: int;
+  (* can be changed through /mnt/wsys/wdir *)
+  mutable pwd: Common.filename;
 
   (* ---------------------------------------------------------------- *)
   (* Config *)
@@ -113,6 +127,8 @@ type t = {
   (* Graphical Window *)
   (* ---------------------------------------------------------------- *)
   mutable mouse_opened: bool;
+  (* can also be used in textual windows, but more rare *)
+  mutable raw_mode: bool;
 
   (* ---------------------------------------------------------------- *)
   (* Textual Window *)
@@ -201,6 +217,9 @@ let alloc img =
     last_count_sent = 0;
     last_buttons = Mouse.nobuttons;
 
+    chan_devcons_read = Event.new_channel ();
+    raw_keys = Queue.create ();
+
     topped = !topped_counter;
 
     text = [||];
@@ -214,6 +233,8 @@ let alloc img =
     scrollr = Rectangle.r_empty;
 
     mouse_opened = false;
+    raw_mode = true; (* TODO false by default! *)
+
     deleted = false;
 
     auto_scroll = false;

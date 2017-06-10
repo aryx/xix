@@ -201,6 +201,7 @@ let dispatch fs req request_typ =
     | _ when w.W.deleted ->
       error fs req "window deleted"
     | N.QTFile ->
+      (* a worker thread (less: opti: arena of workers? *)
       Thread.create (fun () ->
        (* less: getclock? *)
        (try 

@@ -4,12 +4,12 @@ TOP=..
 SRC= \
   cursors.ml \
   window.ml \
-  file.ml fileserver.ml \
+  file.ml device.ml fileserver.ml \
   globals.ml \
   processes_winshell.ml wm.ml threads_window.ml  \
-  mouse_action.ml thread_mouse.ml \
-  thread_keyboard.ml \
-  virtual_devices.ml thread_fileserver.ml \
+  mouse_action.ml             thread_mouse.ml \
+                              thread_keyboard.ml \
+  virtual_devices.ml          thread_fileserver.ml \
   test.ml main.ml
 
 INCLUDES=-I $TOP/commons2 -I $TOP/lib_system/plan9 \

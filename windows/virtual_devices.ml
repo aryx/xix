@@ -3,6 +3,8 @@ open Common
 module F = File
 module W = Window
 
+(* todo? could spread in different virtual_cons.ml, virtual_mouse.ml, etc. *)
+
 (* to be catched in thread_fileserver.ml and transformed in an Error 9P msg *)
 exception Error of string
 

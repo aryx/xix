@@ -11,17 +11,23 @@ module N = Plan9
 (* Types and constants *)
 (*****************************************************************************)
 
+(* This is maintained by the "client" (the kernel on behalf of a winshell) *)
 type fid = Protocol_9P.fid
 
-(* less: could have a Dir of ... | Device of ... *)
-type filecode =
-  (* '/' old: was called Qdir in rio-C *)
-  | Qroot
+(* This is returned by the server (rio) to identify a file of the server *)
+type filecode = 
+  | Dir of dir
+  | File of devid
+  and dir = 
+    (* '/' old: was called Qdir in rio-C *)
+    | Root
+    (* less: '/wsys/' *)
   (* '/xxx' *)
-  | Qwinname
-  | Qmouse
-  | Qcons
-  (* less: '/wsys/' *)
+  and devid = 
+    | Winname
+    | Mouse
+    | Cons
+    (* todo: Consctl Cursor ... *)
 
 (* will generate Qid.path *)
 type fileid = filecode * Window.wid
@@ -35,16 +41,18 @@ type dir_entry_short = {
   perm: Plan9.perm_property;
 }
 
-
 let root_entry = 
-  { name = "."; code = Qroot; type_ = N.QTDir; perm =  N.rx }
-let toplevel_entries = [
-]
+  { name = "."; code = Dir Root; type_ = N.QTDir; perm =  N.rx }
 
 (* fid server-side state (a file) *)
 type t = {
-  (* the fid is maintained by the "client" (the kernel on behalf of winshell) *)
+  (* The fid is maintained by the "client" (the kernel on behalf of winshell).
+   * It is the key used to access information about a file used by
+   * the client (it's redundant in File.t because it is also the key in
+   * Fileserver.t.fids)
+   *)
   fid: fid;
+
   (* The qid is what is returned by the "server" to identify a file (or dir).
    * It is mutable because a fid can be 'walked' to point to another file
    * on the server.
@@ -66,10 +74,10 @@ type t = {
 (*****************************************************************************)
 
 let int_of_filecode = function
-  | Qroot -> 0
-  | Qwinname -> 1
-  | Qmouse -> 2
-  | Qcons -> 3
+  | Dir Root -> 0
+  | File Winname -> 1
+  | File Mouse -> 2
+  | File Cons -> 3
 
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor

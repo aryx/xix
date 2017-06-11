@@ -1,11 +1,30 @@
 open Common
 
 module F = File
+module D = Device
 module FS = Fileserver
 module N = Plan9
 module P = Protocol_9P
 module W = Window
-module V = Virtual_devices
+
+let all_devices = [
+  F.Winname, Virtual_winname.dev;
+  F.Mouse, Virtual_mouse.dev;
+  F.Cons, Virtual_cons.dev;
+]
+
+let device_of_devid devid =
+  List.assoc devid all_devices
+
+let toplevel_entries =
+  all_devices |> List.map (fun (devid, dev) ->
+    { F.name = dev.D.name;
+      F.code = F.File devid;
+      F.type_ = Plan9.QTFile;
+      F.perm = dev.D.perm;
+    }
+  )
+
 
 let answer fs res =
   if !Globals.debug_9P
@@ -104,9 +123,9 @@ let dispatch fs req request_typ =
           then failwith "not a directory";
           (match entry.F.code, x with
           | _Qwsys, ".." -> failwith "walk: Todo '..'"
-          | F.Qroot, x ->
+          | F.Dir (F.Root), x ->
             let entry = 
-              File.toplevel_entries |> List.find (fun entry -> entry.F.name = x)
+              toplevel_entries |> List.find (fun entry -> entry.F.name = x)
             in
             let file_id = entry.F.code, wid in
             let qid = File.qid_of_fileid file_id entry.F.type_ in
@@ -160,11 +179,17 @@ let dispatch fs req request_typ =
     | _ ->
       (* less: could do that in a worker thread *)
       (try 
-         V.dispatch_open file;
+         (match file.F.entry.F.code with
+         | F.File devid ->
+           let dev = device_of_devid devid in
+           dev.D.open_ w
+         | F.Dir dir ->
+           ()
+         );
          file.F.opened <- Some flags;
          let iounit = fs.FS.message_size - P.io_header_size in
          answer fs { req with P.typ = P.R (P.R.Open (file.F.qid, iounit)) }
-       with V.Error str ->
+       with Device.Error str ->
          error fs req str
       )
     )
@@ -179,8 +204,14 @@ let dispatch fs req request_typ =
     (match file.F.opened with
     (* todo? can clunk unopened file?? *)
     | Some _flags ->
-      V.dispatch_close file;
-     (* todo: wclose? *)
+      (match file.F.entry.F.code with
+      | F.File devid ->
+        let dev = device_of_devid devid in
+        dev.D.close file.F.w
+        (* todo: wclose? *)
+      | F.Dir _ ->
+        ()
+      )
     | None ->
       (* todo: winclosechan *)
       ()
@@ -197,21 +228,22 @@ let dispatch fs req request_typ =
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
 
-    (match file.F.entry.F.type_ with
+    (match file.F.entry.F.code with
     | _ when w.W.deleted ->
       error fs req "window deleted"
-    | N.QTFile ->
+    | F.File devid ->
       (* a worker thread (less: opti: arena of workers? *)
       Thread.create (fun () ->
        (* less: getclock? *)
        (try 
-         let data = V.threaded_dispatch_read offset count file in
+         let dev = device_of_devid devid in
+         let data = dev.D.read_threaded offset count w in
          answer fs { req with P.typ = P.R (P.R.Read data) }
        with 
-         | V.Error str ->
+         | Device.Error str ->
            error fs req str
       )) () |> ignore
-    | N.QTDir ->
+    | F.Dir _ ->
       failwith "TODO: readdir"
     )
 

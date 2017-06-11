@@ -10,7 +10,7 @@ SRC= \
   mouse_action.ml             thread_mouse.ml \
                               thread_keyboard.ml \
   virtual_winname.ml virtual_mouse.ml virtual_cons.ml \
-                              thread_fileserver.ml \
+                              threads_fileserver.ml \
   test.ml main.ml
 
 INCLUDES=-I $TOP/commons2 -I $TOP/lib_system/plan9 \

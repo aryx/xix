@@ -72,8 +72,8 @@ let thread_main () =
                                        mouse, (display, desktop, view, font),
                                        fs) in
 
-  let _fileserver_thread =
-    Thread.create Thread_fileserver.thread fs in
+  let _fileserver_master_thread =
+    Thread.create Threads_fileserver.thread fs in
   
   (* Wait *)
 

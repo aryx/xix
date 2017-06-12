@@ -24,3 +24,43 @@ let dev_cons = { Device.default with
     Device.honor_count count bytes
   );
 }
+
+let dev_consctl = { Device.default with
+  name = "consctl";
+  perm = Plan9.w;
+  
+  open_ = (fun w ->
+    if w.W.consctl_opened
+    then raise (Error "file in use");
+    w.W.consctl_opened <- true;
+  );
+  close = (fun w ->
+    (* less: if holding *)
+    if w.W.raw_mode
+    then begin
+      w.W.raw_mode <- false;
+      (* less: send RawOff? but nop in Threads_window anyway *)
+    end;
+    w.W.consctl_opened <- false;
+  );
+    
+  write_threaded = (fun offset str w ->
+    match str with
+    | "rawon" -> 
+      (* less: holding *)
+      (* stricter: set to bool, not increment, so no support 
+       *  for multiple rawon *)
+      (* stricter? exn if already on? *)
+      w.W.raw_mode <- true;
+      (* less: send RawOn? *)
+    | "rawoff" ->
+      (* less: send RawOff? *)
+      w.W.raw_mode <- false;
+    | "holdon" ->
+      failwith ("TODO: holdon")
+    | "holdoff" ->
+      failwith ("TODO: holdoff")
+    | _ -> 
+      raise (Error (spf "unknown control message: %s" str));
+  );
+}

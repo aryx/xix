@@ -11,6 +11,7 @@ let all_devices = [
   F.Winname, Virtual_draw.dev_winname;
   F.Mouse, Virtual_mouse.dev_mouse;
   F.Cons, Virtual_cons.dev_cons;
+  F.Consctl, Virtual_cons.dev_consctl;
 ]
 
 let device_of_devid devid =
@@ -248,6 +249,32 @@ let dispatch fs req request_typ =
     )
 
   (* Write *)
+  | P.T.Write (fid, offset, data) ->
+    if not (Hashtbl.mem fs.FS.fids fid)
+    then failwith (spf "Write: unknown fid %d" fid);
+
+    let file = Hashtbl.find fs.FS.fids fid in
+    let w = file.F.w in
+
+    (match file.F.entry.F.code with
+    | _ when w.W.deleted ->
+      error fs req "window deleted"
+    | F.File devid ->
+      (* a worker thread (less: opti: arena of workers? *)
+      Thread.create (fun () ->
+       (try 
+         let dev = device_of_devid devid in
+         (* less: case where want to let device return different count? *)
+         let count = String.length data in
+         dev.D.write_threaded offset data w;
+         answer fs { req with P.typ = P.R (P.R.Write count) }
+       with 
+         | Device.Error str ->
+           error fs req str
+      )) () |> ignore
+    | F.Dir _ ->
+      raise (Impossible "kernel should not call write on fid of a directory")
+    )
 
   (* Other *)
   | _ -> 

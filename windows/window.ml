@@ -25,6 +25,7 @@ type cmd =
   | Move of Image.t * Rectangle.t
   | Refresh
   | Wakeup
+  (* less: RawOff | RawOn? HoldOn | HoldOff *)
 *)
 
 type mouse_counter = int
@@ -128,6 +129,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   mutable mouse_opened: bool;
   (* can also be used in textual windows, but more rare *)
+  mutable consctl_opened: bool;
   mutable raw_mode: bool;
 
   (* ---------------------------------------------------------------- *)
@@ -233,7 +235,8 @@ let alloc img =
     scrollr = Rectangle.r_empty;
 
     mouse_opened = false;
-    raw_mode = true; (* TODO false by default! *)
+    consctl_opened = false;
+    raw_mode = false;
 
     deleted = false;
 

@@ -15,6 +15,7 @@ type t = {
    * /dev/mouse does not honor offset but /dev/winname does.
    *)
   read_threaded: int64 -> int -> Window.t -> bytes;
+  write_threaded: int64 -> bytes -> Window.t -> unit;
 }
 
 let default = {
@@ -23,6 +24,7 @@ let default = {
   open_ = (fun _ -> ());
   close = (fun _ -> ());
   read_threaded = (fun _ _ _ -> "");
+  write_threaded = (fun _ _ _ -> ());
 }
 
 (* This will be catched up by thread_fileserver to transform the

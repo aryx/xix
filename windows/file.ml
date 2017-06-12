@@ -27,7 +27,8 @@ type filecode =
     | Winname
     | Mouse
     | Cons
-    (* todo: Consctl Cursor ... *)
+    | Consctl
+    (* todo: Cursor ... *)
 
 (* will generate Qid.path *)
 type fileid = filecode * Window.wid
@@ -78,6 +79,7 @@ let int_of_filecode = function
   | File Winname -> 1
   | File Mouse -> 2
   | File Cons -> 3
+  | File Consctl -> 4
 
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor

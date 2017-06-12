@@ -4,7 +4,7 @@ open Device
 module F = File
 module W = Window
 
-let dev = { Device.default with
+let dev_mouse = { Device.default with
   name = "mouse";
   perm = Plan9.rw;
   open_ = (fun w ->

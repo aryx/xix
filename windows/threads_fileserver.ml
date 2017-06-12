@@ -8,9 +8,9 @@ module P = Protocol_9P
 module W = Window
 
 let all_devices = [
-  F.Winname, Virtual_winname.dev;
-  F.Mouse, Virtual_mouse.dev;
-  F.Cons, Virtual_cons.dev;
+  F.Winname, Virtual_draw.dev_winname;
+  F.Mouse, Virtual_mouse.dev_mouse;
+  F.Cons, Virtual_cons.dev_cons;
 ]
 
 let device_of_devid devid =

@@ -9,7 +9,7 @@ SRC= \
   processes_winshell.ml wm.ml threads_window.ml  \
   mouse_action.ml             thread_mouse.ml \
                               thread_keyboard.ml \
-  virtual_winname.ml virtual_mouse.ml virtual_cons.ml \
+  virtual_draw.ml virtual_mouse.ml virtual_cons.ml \
                               threads_fileserver.ml \
   test.ml main.ml
 

@@ -4,7 +4,7 @@ open Device
 module F = File
 module W = Window
 
-let dev = { Device.default with
+let dev_cons = { Device.default with
   name = "cons";
   perm = Plan9.rw;
 

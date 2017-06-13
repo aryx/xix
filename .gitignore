@@ -72,3 +72,4 @@
 /lib_system/plan9/tests/test_bind
 /lib_system/plan9/tests/test_mount
 /windows/tests/hellorio
+/windows/tests/test_rio_console_app1

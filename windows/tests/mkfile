@@ -15,7 +15,7 @@ CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
         -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
         -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
-PROGS=test_rio_graph_app1 hellorio
+PROGS=test_rio_graph_app1 hellorio test_rio_console_app1
 
 <$TOP/mkconfig2
 
@@ -25,6 +25,9 @@ PROGS=test_rio_graph_app1 hellorio
 all:V: $PROGS
 
 test_rio_graph_app1: test_rio_graph_app1.cmo
+	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
+
+test_rio_console_app1: test_rio_console_app1.cmo
 	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
 
 hellorio: hellorio.cmo

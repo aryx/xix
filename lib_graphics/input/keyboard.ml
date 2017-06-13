@@ -4,8 +4,7 @@ open Common
 module Unix1 = Unix
 module Unix2 = ThreadUnix
 
-(* todo: unicode! rune! *)
-type key = char
+type key = Rune.t
 
 type ctl = {
   chan: key (* less: buffer 20? *) Event.channel;

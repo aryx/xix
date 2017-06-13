@@ -23,7 +23,7 @@ let dev_mouse = { Device.default with
   (* a process is reading on its /dev/mouse; we must read from mouse
    * events coming to the window, events sent from the mouse thread.
    *)
-  read_threaded = (fun offset count w ->
+  read_threaded = (fun _offset count w ->
     (* less: flushtag *)
     (* less: qlock active *)
     (* less: qlock unactive after answer? so need reorg this func? *)

@@ -65,7 +65,10 @@ type t = {
   (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
   chan_mouse: Mouse.state Event.channel;
 
-  (* Threads_window.thread --> Thread_fileserver.dispatch(Read) *)
+  (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+   * The channel inside the channel will be used to write a mouse state
+   * to thread_fileserver.
+  *)
   chan_devmouse_read: Mouse.state Event.channel Event.channel;
 
   (* less: max size = ? mutex around? recent queue.mli sayds not thread-safe *)
@@ -88,11 +91,23 @@ type t = {
   (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
   chan_keyboard: Keyboard.key Event.channel;
 
-  (* Threads_window.thread --> Thread_fileserver.dispatch(Read) *)
+  (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+   * The first channel will be used by thread_fileserver to indicate the
+   * number of bytes the process wants to read from its /dev/cons. The second
+   * channel will be used to send the bytes to thread_fileserver.
+   * Note that we send bytes, even though we read keys.
+  *)
   chan_devcons_read: (int Event.channel * bytes Event.channel) Event.channel;
 
   (* see also Window.text below for keys when in non-raw (buffered) mode *)
   raw_keys: Keyboard.key Queue.t;
+
+  (* Threads_window.thread --> Thread_fileserver.dispatch(Write).
+   * Note that we send full runes, not bytes.
+   * The channel inside will be used to read from thread_fileserver(Write)
+   * the data the process wrote to its /dev/cons.
+   *)
+  chan_devcons_write: (Rune.t list Event.channel) Event.channel;
 
   (* ---------------------------------------------------------------- *)
   (* Command *)
@@ -153,6 +168,8 @@ type t = {
   mutable frame: Frame_ui.t;
   mutable scrollr: Rectangle.t;
 
+  font: Font.t;
+
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
   (* ---------------------------------------------------------------- *)
@@ -194,7 +211,7 @@ let pt_on_border pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
 
 
-let alloc img = 
+let alloc img font = 
   incr wid_counter;
   incr topped_counter;
 
@@ -220,7 +237,9 @@ let alloc img =
     last_buttons = Mouse.nobuttons;
 
     chan_devcons_read = Event.new_channel ();
+    chan_devcons_write = Event.new_channel ();
     raw_keys = Queue.create ();
+    font = font;
 
     topped = !topped_counter;
 

@@ -31,7 +31,7 @@ let init () =
    * both file descriptors.
    *)
   Unix.set_nonblock fd1;
-  (* todo? record fd2 as close_on exec? *)
+  (* todo? record fd2 as close_on exec? Unix.set_close_on_exec *)
   
   (* todo: let user = Common.cat "/dev/user" |> String.concat "" in *)
   

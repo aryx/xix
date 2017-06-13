@@ -108,13 +108,14 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
 )
 
 (* less: hideit, pid (but 0, or if != 0 -> use another func), scrolling *)
-let new_win img cmd argv pwd_opt mouse fs =
+let new_win img cmd argv pwd_opt 
+    (mouse, fs, font) =
 
   (* A new Window.t *)
 
   (* less: cpid channel?  *)
   (* less: scrollit *)
-  let w = Window.alloc img in
+  let w = Window.alloc img font in
   (* less: wscrdraw here? (instead of in alloc, ugly) *)
   (* less: incref? *)
 

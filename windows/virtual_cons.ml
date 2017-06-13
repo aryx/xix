@@ -4,6 +4,8 @@ open Device
 module F = File
 module W = Window
 
+
+
 let dev_cons = { Device.default with
   name = "cons";
   perm = Plan9.rw;
@@ -11,7 +13,7 @@ let dev_cons = { Device.default with
   (* a process is reading on its /dev/cons; we must read from key
    * events coming to the window, events sent from the keyboard thread.
    *)
-  read_threaded = (fun offset count w ->
+  read_threaded = (fun _offset count w ->
     (* less: flushtag *)
     (* less: handle unicode partial runes *)
     let (chan_count_out, chan_bytes_in) = 
@@ -22,6 +24,18 @@ let dev_cons = { Device.default with
     let bytes = Event.receive chan_bytes_in |> Event.sync in
     (* we asked for count so honor_count is redundant *)
     Device.honor_count count bytes
+  );
+  (* a process is writing on its /dev/cons; it wants to output strings
+   * on the terminal
+   *)
+  write_threaded = (fun _offset str w ->
+    (* todo: partial runes *)
+    let runes = Rune.bytes_to_runes str in
+    (* less: flushtag *)
+    let chan_runes_out = Event.receive w.W.chan_devcons_write |> Event.sync in
+    (* less: handle if flushing *)
+    (* less: qlock active *)
+    Event.send chan_runes_out runes |> Event.sync;
   );
 }
 

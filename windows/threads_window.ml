@@ -7,6 +7,14 @@ open Window
 module W = Window
 module I = Display
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 type event = 
   (* reading from keyboard thread *)
   | Key   of Keyboard.key
@@ -19,10 +27,15 @@ type event =
   | SentChannelForMouseRead
   (* producing for thread_fileserver(Read Qcons) *)
   | SentChannelsForConsRead
+  (* producing and then consuming for thread_fileserver(Write Qcons) *)
+  | SentChannelForConsWrite
 
 let debug = ref false
 let cnt = ref 0
 
+(*****************************************************************************)
+(* In and out helpers *)
+(*****************************************************************************)
 
 let key_in w key =
   (* less: if key = 0? *)
@@ -43,13 +56,27 @@ let key_in w key =
     (* less: navigation keys *)
     match () with
     | _ when w.raw_mode && w.mouse_opened (* less: || q0 == nr *) ->
-
       Queue.add key w.raw_keys 
+    | _ when w.raw_mode  ->
+      failwith "key_in: TODO: raw mode in textual window"
+    (* todo: if holding *)
     | _ -> 
-      (* todo: if holding *)
-      (* todo: if not raw mode *)
-      ()
+      assert (not w.raw_mode);
+      (* less: snarf *)
+      (* less: special keys *)
+
+      failwith "key_in: TODO "
   end
+
+let runes_in (w: Window.t) chan =
+  let runes = Event.receive chan |> Event.sync in
+  failwith (spf "runes_in: %d" (List.length runes));
+  let pt = ref w.screenr.min in
+  runes |> List.iter (fun rune ->
+    pt := Text.string w.img !pt !Globals.red Point.zero w.font 
+      (String.make 1 rune);
+  );
+  ()
 
 let mouse_in w m =
   if !debug then begin
@@ -135,6 +162,10 @@ let cmd_in w cmd =
     ()
 
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 let wrap f = 
   fun ev -> Event.wrap ev f
 
@@ -143,8 +174,9 @@ let thread w =
   (* less: threadsetname *)
 
   let chan_devmouse = Event.new_channel () in
-  let chan_devcons_count = Event.new_channel () in
-  let chan_devcons_bytes = Event.new_channel () in
+  let chan_devcons_read_count = Event.new_channel () in
+  let chan_devcons_read_bytes = Event.new_channel () in
+  let chan_devcons_write_runes = Event.new_channel () in
 
   while true do
     (* less: adjust event set *)
@@ -164,15 +196,23 @@ let thread w =
       (* less: npart *)
       (if w.raw_mode && Queue.length w.raw_keys > 0
        then [Event.send w.chan_devcons_read 
-                (chan_devcons_count, chan_devcons_bytes)
+                (chan_devcons_read_count, chan_devcons_read_bytes)
               |> wrap (fun () -> SentChannelsForConsRead)]
+       else []
+      ) @
+      (* less: scrolling, mouseopen?? *)
+      (if true
+       then [Event.send w.chan_devcons_write chan_devcons_write_runes
+            |> wrap (fun () -> SentChannelForConsWrite);]
        else []
       )
     ) |> Event.select
     in
     (match ev with
-    | Key key -> key_in w key
-    | Mouse m -> mouse_in w m
+    | Key key -> 
+      key_in w key
+    | Mouse m -> 
+      mouse_in w m
     | Cmd cmd -> 
       (* todo: if return Exited then threadsexit and free channels.
        * When answer Exited? when Cmd is Exited?
@@ -181,7 +221,10 @@ let thread w =
     | SentChannelForMouseRead -> 
       mouse_out w chan_devmouse
     | SentChannelsForConsRead -> 
-      keys_out w (chan_devcons_count, chan_devcons_bytes)
+      keys_out w (chan_devcons_read_count, chan_devcons_read_bytes)
+    | SentChannelForConsWrite ->
+      runes_in w chan_devcons_write_runes
+      
     );
     if not w.deleted
     then Image.flush w.img;

@@ -272,12 +272,44 @@ let dispatch fs req request_typ =
   | P.T.Stat (fid) ->
     check_fid "stat" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
-    raise Todo
+    let short = file.F.entry in
+    (* less: getclock *)
+    let clock = 0 in
+    let dir_entry = {
+      N.name = short.F.name;
+      (* less: adjust version for snarf *)
+      N.qid = file.F.qid;
+      N.mode = (N.int_of_perm_property short.F.perm, 
+        match file.F.qid.N.typ with
+        | N.QTDir -> N.DMDir
+        | N.QTFile -> N.DMFile
+      );
+      N.length = 0; (*/* would be nice to do better */*)
+
+      N.atime = clock;
+      N.mtime = clock;
+
+      N.uid = fs.FS.user;
+      N.gid = fs.FS.user;
+      N.muid = fs.FS.user;
+
+      N._typ = 0;
+      N._dev = 0;
+    }
+    in
+    answer fs { req with P.typ = P.R (P.R.Stat dir_entry) }
 
   (* Other *)
-  | _ -> 
-    failwith (spf "TODO: req = %s" (P.str_of_msg req))
+  | P.T.Create _ 
+  | P.T.Remove _
+  | P.T.Wstat _
+      -> error fs req "permission denied"
 
+  (* todo: handle those one? *)
+  | P.T.Flush _
+  | P.T.Auth _
+    -> 
+    failwith (spf "TODO: req = %s" (P.str_of_msg req))
 
 (* the master *)
 let thread fs =

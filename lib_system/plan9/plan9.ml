@@ -129,6 +129,12 @@ let open_flags_of_int mode =
   | 3 -> { r = false; w = false; x = true }
   | _ -> failwith (spf "mode not yet supported: %d" mode)
 
+let int_of_perm_property perm =
+  (if perm.r then 0x4 else 0) lor
+  (if perm.w then 0x2 else 0) lor
+  (if perm.x then 0x1 else 0) lor
+  0
+  
 
 (*****************************************************************************)
 (* FFI *)

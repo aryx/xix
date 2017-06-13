@@ -70,7 +70,6 @@ let key_in w key =
 
 let runes_in (w: Window.t) chan =
   let runes = Event.receive chan |> Event.sync in
-  failwith (spf "runes_in: %d" (List.length runes));
   let pt = ref w.screenr.min in
   runes |> List.iter (fun rune ->
     pt := Text.string w.img !pt !Globals.red Point.zero w.font 

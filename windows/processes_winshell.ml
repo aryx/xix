@@ -20,23 +20,15 @@ let run_cmd_in_window_in_child_of_fork cmd argv w fs =
 
   (* less: wclose for ref counting *)
   (* todo: handle errors? Unix_error? then communicate failure to parent? *)
+  (* bugfix: do not forgot the last perm argument! otherwise partial
+   * application and stdin/stdout are never reopened (in fact the dup
+   * below then crash the plan9 kernel
+   *)
   Unix1.close Unix1.stdin;
   let fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
-  if fd <> Unix1.stdin
-  then failwith "could not reassign stdin";
-
   Unix1.close Unix1.stdout;
   let fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
-  if fd <> Unix1.stdout
-  then failwith "could not reassign stdout";
-  
-  (* todo: Unix1.dup2 Unix1.stdout Unix1.stderr; 
-   * this creates a kernel crash! 'double sleep' error.
-  *)
-(*
-  Unix1.close Unix1.stderr;
-  let _ = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
-*)  
+  Unix1.dup2 Unix1.stdout Unix1.stderr; 
 
   (* less: notify nil *)
   Unix2.execv cmd argv;

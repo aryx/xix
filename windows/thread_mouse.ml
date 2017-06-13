@@ -26,13 +26,13 @@ let wm_menu pos button exitchan
              [|"/tests/xxx/test_rio_graph_app1"|] None (mouse, fs, font)
            Wm.new_win img "/tests/rio/8.out" 
              [|"/tests/rio/8.out"|] None (mouse, fs, font)
-           Wm.new_win img "/bin/rc" 
-             [|"rc"; "-i"|] None (mouse, fs, font)
            Wm.new_win img "/tests/xxx/hellorio" 
              [|"/tests/xxx/hellorio"|] None (mouse, fs, font)
-        *)
            Wm.new_win img "/tests/xxx/test_rio_console_app1" 
              [|"/tests/xxx/test_rio_console_app1"|] None (mouse, fs, font)
+        *)
+           Wm.new_win img "/bin/rc" 
+             [|"rc"; "-i"|] None (mouse, fs, font)
       )
     );
     (* old: was Reshape but here it's really resizing *)

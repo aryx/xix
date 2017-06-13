@@ -8,10 +8,10 @@ module P = Protocol_9P
 module W = Window
 
 let all_devices = [
-  F.Winname, Virtual_draw.dev_winname;
-  F.Mouse, Virtual_mouse.dev_mouse;
-  F.Cons, Virtual_cons.dev_cons;
-  F.Consctl, Virtual_cons.dev_consctl;
+  F.Winname , Virtual_draw.dev_winname;
+  F.Mouse   , Virtual_mouse.dev_mouse;
+  F.Cons    , Virtual_cons.dev_cons;
+  F.Consctl , Virtual_cons.dev_consctl;
 ]
 
 let device_of_devid devid =
@@ -36,6 +36,12 @@ let answer fs res =
 let error fs req str =
   let res = { req with P.typ = P.R (P.R.Error str) } in
   answer fs res
+
+let check_fid op fid fs =
+  (* stricter: *)
+  if not (Hashtbl.mem fs.FS.fids fid)
+  then failwith (spf "%s: unknown fid %d" op fid)
+  
 
 let first_message = ref true
 
@@ -90,9 +96,7 @@ let dispatch fs req request_typ =
 
   (* Walk *)
   | P.T.Walk (fid, newfid_opt, xs) ->
-    (* stricter: *)
-    if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "Walk: unknown fid %d" fid);
+    check_fid "walk" fid fs;
 
     let file = Hashtbl.find fs.FS.fids fid in
     let wid = file.F.w.W.id in
@@ -163,10 +167,7 @@ let dispatch fs req request_typ =
 
   (* Open *)
   | P.T.Open (fid, flags) ->
-    (* stricter: *)
-    if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "Open: unknown fid %d" fid);
-
+    check_fid "open" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
     (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
@@ -197,10 +198,7 @@ let dispatch fs req request_typ =
 
   (* Clunk *)
   | P.T.Clunk (fid) ->
-    (* stricter? *)
-    if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "Open: unknown fid %d" fid);
-
+    check_fid "clunk" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     (match file.F.opened with
     (* todo? can clunk unopened file?? *)
@@ -222,10 +220,7 @@ let dispatch fs req request_typ =
 
   (* Read *)
   | P.T.Read (fid, offset, count) ->
-    (* stricter: *)
-    if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "Read: unknown fid %d" fid);
-
+    check_fid "read" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
 
@@ -250,9 +245,7 @@ let dispatch fs req request_typ =
 
   (* Write *)
   | P.T.Write (fid, offset, data) ->
-    if not (Hashtbl.mem fs.FS.fids fid)
-    then failwith (spf "Write: unknown fid %d" fid);
-
+    check_fid "write" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
 
@@ -275,6 +268,11 @@ let dispatch fs req request_typ =
     | F.Dir _ ->
       raise (Impossible "kernel should not call write on fid of a directory")
     )
+  (* Stat *)
+  | P.T.Stat (fid) ->
+    check_fid "stat" fid fs;
+    let file = Hashtbl.find fs.FS.fids fid in
+    raise Todo
 
   (* Other *)
   | _ -> 

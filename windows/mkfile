@@ -2,7 +2,7 @@
 TOP=..
 
 SRC= \
-  cursors.ml \
+  cursors.ml terminal.ml \
   window.ml \
   file.ml device.ml fileserver.ml \
   globals.ml \

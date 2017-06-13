@@ -156,14 +156,14 @@ type t = {
   mutable nrunes: int;
 
   (* where entered text go (and selection start) (q0 in rio-C) *)
-  mutable text_cursor: Editor.cursor;
-  mutable end_selection: Editor.cursor option; (* q1 in rio-C) *)
+  mutable text_cursor: Terminal.cursor;
+  mutable end_selection: Terminal.cursor option; (* q1 in rio-C) *)
 
   (* Division between characters the host has seen and characters not 
    * yet transmitted. The position in the text that separates 
    * output from input.
    *)
-  mutable output_point: Editor.cursor;
+  mutable output_point: Terminal.cursor;
 
   mutable frame: Frame_ui.t;
   mutable scrollr: Rectangle.t;

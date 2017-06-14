@@ -262,8 +262,8 @@ let which_corner r p =
   | Sup, Middle -> Right
   | Sup, Sup -> BottomRight
 
-let which_corner_cursor w p =
-  let corner = which_corner w p in
+let which_corner_cursor rect p =
+  let corner = which_corner rect p in
   match corner with
   | TopLeft -> tl
   | Top -> t

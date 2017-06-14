@@ -198,7 +198,7 @@ let hide_win w mouse =
   Event.send w.W.chan_cmd cmd |> Event.sync;
   ()
 
-let unhide_win w desktop mouse =
+let show_win w desktop mouse =
   let old_img = w.W.img in
   (* back to a layer *)
   let layer = Layer.alloc desktop old_img.I.r Color.white in

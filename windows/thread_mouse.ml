@@ -19,7 +19,7 @@ let wm_menu pos button exitchan
   let items = [
     (* todo: the first item get selected the very first time; QEMU bug?  *)
     "New", (fun () ->
-      let img_opt = Mouse_action.sweep mouse (display, desktop, view, font) in
+      let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
       img_opt |> Common.if_some (fun img ->
         (* 
            Wm.new_win img "/tests/xxx/test_rio_graph_app1" 
@@ -56,7 +56,7 @@ let wm_menu pos button exitchan
   (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, w) ->
     (* less: could sort *)
     w.W.label, (fun () -> 
-      Wm.unhide_win w desktop mouse
+      Wm.show_win w desktop mouse
     )))
   in
   (* less: adjust menu with hidden windows *)

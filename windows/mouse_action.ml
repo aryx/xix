@@ -20,7 +20,7 @@ type sweep_state =
   (* wait until no buttons *)
   | SweepDrain
 
-let sweep mouse (display, desktop, _view, font) =
+let sweep mouse (display, desktop, font) =
   (* todo: menuing? but not sweeping? *)
   Mouse.set_cursor mouse Cursors.crosscursor;
 

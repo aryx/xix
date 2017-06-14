@@ -68,7 +68,7 @@ let dev_consctl = { Device.default with
       w.W.raw_mode <- true;
       (* less: send RawOn? *)
     | "rawoff" ->
-      (* less: send RawOff? *)
+      (* todo: send RawOff so terminal can process remaining queued raw keys *)
       w.W.raw_mode <- false;
     | "holdon" ->
       failwith ("TODO: holdon")

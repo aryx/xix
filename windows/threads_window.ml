@@ -6,6 +6,7 @@ open Window
 
 module W = Window
 module I = Display
+module T = Terminal
 
 (*****************************************************************************)
 (* Prelude *)
@@ -37,10 +38,12 @@ let cnt = ref 0
 (* In and out helpers *)
 (*****************************************************************************)
 
+(* input from user *)
 let key_in w key =
   (* less: if key = 0? *)
   if not w.deleted then begin
 
+    (*
     if !debug then begin
       (* when did not even have support for drawing text ... *)
       incr cnt;
@@ -52,8 +55,9 @@ let key_in w key =
       Draw.draw w.img r !Globals.red None Point.zero;
     (*Text.string w.img r.min !Globals.red Point.zero !Globals.font;*)
     end;
+    *)
     
-    (* less: navigation keys *)
+    (* less: navigation keys (when mouse not opened) *)
     match () with
     | _ when w.raw_mode && w.mouse_opened (* less: || q0 == nr *) ->
       Queue.add key w.raw_keys 
@@ -65,19 +69,26 @@ let key_in w key =
       (* less: snarf *)
       (* less: special keys *)
 
+      (* "When newline, chars between output point and newline are sent."*)
+
       failwith "key_in: TODO "
   end
 
+(* Output from application.
+ * "when characters are sent from the host, they are inserted at
+ * the output point and the output point is advanced."
+ *)
 let runes_in (w: Window.t) chan =
   let runes = Event.receive chan |> Event.sync in
   let pt = ref w.screenr.min in
   runes |> List.iter (fun rune ->
-    pt := Text.string w.img !pt !Globals.red Point.zero w.font 
+    pt := Text.string w.img !pt !Globals.red Point.zero w.terminal.T.font 
       (String.make 1 rune);
   );
   ()
 
 let mouse_in w m =
+  (*
   if !debug then begin
     let r = Rectangle.r 0 0 1 1 
       |> Rectangle.add_pt m.Mouse.pos
@@ -85,6 +96,7 @@ let mouse_in w m =
     in
     Draw.draw w.img r !Globals.red None Point.zero;
   end;
+  *)
   w.last_mouse <- m;
   match w.mouse_opened with
   | true -> 
@@ -111,6 +123,7 @@ let mouse_out w chan =
   Event.send chan m |> Event.sync
 
 
+(* could rename bytes_out *)
 let keys_out w (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
   let buf = String.create cnt in
@@ -199,7 +212,7 @@ let thread w =
               |> wrap (fun () -> SentChannelsForConsRead)]
        else []
       ) @
-      (* less: scrolling, mouseopen?? *)
+      (* less: scrolling, mouseopen?? qh vs org and nchars *)
       (if true
        then [Event.send w.chan_devcons_write chan_devcons_write_runes
             |> wrap (fun () -> SentChannelForConsWrite);]

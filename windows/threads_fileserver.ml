@@ -71,7 +71,7 @@ let dispatch fs req request_typ =
     | _ when uname <> fs.FS.user ->
       error fs req (spf "permission denied, %s <> %s" uname fs.FS.user)
     | _ ->
-    (* less: could do that in a worker thread *)
+    (* less: could do that in a worker thread (if use qlock) *)
     (* less: newlymade, qlock all *)
     (try
        let wid = int_of_string aname in
@@ -103,8 +103,8 @@ let dispatch fs req request_typ =
     (match file, newfid_opt with
     | { F.opened = Some _ }, _ ->
       error fs req "walk of open file"
+    (* be stricter? failwith or error? *)
     | _, Some newfid when Hashtbl.mem fs.FS.fids newfid ->
-      (* stricter? failwith or error? *)
       error fs req (spf "clone to busy fid: %d" newfid)
     | _ when List.length xs > P.max_welem ->
       error fs req (spf "name too long: [%s]" (String.concat ";" xs))
@@ -115,7 +115,11 @@ let dispatch fs req request_typ =
         | Some newfid ->
           (* clone *)
           (* less: incref on file.w *)
-          let newfile = { file with F.fid = newfid; F.opened = None } in
+          let newfile = { file with 
+            F.fid = newfid; 
+            F.opened = None 
+            (* todo: nrpart? *)
+          } in
           Hashtbl.add fs.FS.fids newfid newfile;
           newfile
       in
@@ -211,6 +215,7 @@ let dispatch fs req request_typ =
       | F.Dir _ ->
         ()
       )
+    (* stricter? can clunk a file not opened? *)
     | None ->
       (* todo: winclosechan *)
       ()

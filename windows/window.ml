@@ -128,6 +128,7 @@ type t = {
   mutable pid: int;
   (* can be changed through /mnt/wsys/wdir *)
   mutable pwd: Common.filename;
+  (* todo? notefd *)
 
   (* ---------------------------------------------------------------- *)
   (* Config *)
@@ -150,25 +151,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Textual Window *)
   (* ---------------------------------------------------------------- *)
-  (* growing array *)
-  mutable text: Rune.t array;
-  (* number of runes in window *)
-  mutable nrunes: int;
-
-  (* where entered text go (and selection start) (q0 in rio-C) *)
-  mutable text_cursor: Terminal.cursor;
-  mutable end_selection: Terminal.cursor option; (* q1 in rio-C) *)
-
-  (* Division between characters the host has seen and characters not 
-   * yet transmitted. The position in the text that separates 
-   * output from input.
-   *)
-  mutable output_point: Terminal.cursor;
-
-  mutable frame: Frame_ui.t;
-  mutable scrollr: Rectangle.t;
-
-  font: Font.t;
+  terminal: Terminal.t;
 
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
@@ -239,19 +222,10 @@ let alloc img font =
     chan_devcons_read = Event.new_channel ();
     chan_devcons_write = Event.new_channel ();
     raw_keys = Queue.create ();
-    font = font;
+
+    terminal = Terminal.alloc img font;
 
     topped = !topped_counter;
-
-    text = [||];
-    nrunes = 0;
-
-    text_cursor = 0;
-    end_selection = None;
-    output_point = 0;
-
-    frame = ();
-    scrollr = Rectangle.r_empty;
 
     mouse_opened = false;
     consctl_opened = false;

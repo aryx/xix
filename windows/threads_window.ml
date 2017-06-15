@@ -40,7 +40,7 @@ let cnt = ref 0
 
 (* input from user *)
 let key_in w key =
-  (* less: if key = 0? *)
+  (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
 
     (*
@@ -68,24 +68,13 @@ let key_in w key =
       assert (not w.raw_mode);
       (* less: snarf *)
       (* less: special keys *)
-
-      (* "When newline, chars between output point and newline are sent."*)
-
-      failwith "key_in: TODO "
+      Terminal.key_in w.W.terminal key
   end
 
-(* Output from application.
- * "when characters are sent from the host, they are inserted at
- * the output point and the output point is advanced."
- *)
+(* output from application *)
 let runes_in (w: Window.t) chan =
   let runes = Event.receive chan |> Event.sync in
-  let pt = ref w.screenr.min in
-  runes |> List.iter (fun rune ->
-    pt := Text.string w.img !pt !Globals.red Point.zero w.terminal.T.font 
-      (String.make 1 rune);
-  );
-  ()
+  Terminal.runes_in w.W.terminal runes
 
 let mouse_in w m =
   (*

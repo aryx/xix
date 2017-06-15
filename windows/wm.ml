@@ -56,6 +56,7 @@ let draw_border w status =
   in
   Polygon.border img img.I.r Window.window_border_size color Point.zero
 
+(* old: was called wrepaint in rio-C *)
 let repaint_border w =
   (* todo: update cols *)
   (* todo: if mouse not opened *)
@@ -66,7 +67,7 @@ let repaint_border w =
   | _ -> 
     draw_border w W.Unselected
 
-(* old: was called wcurrent *)
+(* old: was called wcurrent in rio-Cx *)
 let set_current_and_repaint_borders wopt mouse =
   (* less: if wkeyboard *)
   let old = !Globals.current in
@@ -116,7 +117,7 @@ let new_win img cmd argv pwd_opt
   (* less: cpid channel?  *)
   (* less: scrollit *)
   let w = Window.alloc img font in
-  (* less: wscrdraw here? (instead of in alloc, ugly) *)
+  (* less: wscrdraw here? (instead of in alloc, ugly) and draw(cols[BACK])? *)
   (* less: incref? *)
 
   (* simpler: draw_border w Window.Selected;

@@ -240,5 +240,5 @@ let alloc img font =
   }
   in
   w
-  (* todo: wscrdraw? in caller? *)
+  (* todo: wscrdraw? in caller? and draw(cols[BACK])? *)
   (* less: incref? in caller? *)

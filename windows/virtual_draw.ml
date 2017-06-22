@@ -8,8 +8,8 @@ module W = Window
  * which was more elegant but also more inefficient than the
  * /dev/winname and /dev/draw/x/ approach used by rio.
  * 
- * alt: we could also pass the information through the environment instead
- * of through a /dev virtual file.
+ * alt: we could also pass the information of winname through 
+ * the environment instead of through a /dev virtual file.
  *)
 
 let dev_winname = { Device.default with

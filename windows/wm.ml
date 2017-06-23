@@ -67,7 +67,16 @@ let repaint_border w =
   | _ -> 
     draw_border w W.Unselected
 
-(* old: was called wcurrent in rio-Cx *)
+(* old: was called wcurrent() in rio-C.
+ * alt: this function also sets the window cursor in rio-C, but this
+ * requires then to pass a mouse parameter, which in turn requires to
+ * pass the mouse in Reshape, which then requires to pass the mouse
+ * parameter to hide_win and show_win and other functions which is
+ * not super elegant. This is why I prefer to not pass a mouse parameter
+ * which means the user may have to move the mouse to see the cursor
+ * correctly updated after certain wm operations. I think this
+ * tradeoff is ok.
+ *)
 let set_current_and_repaint_borders wopt (*mouse*) =
   (* less: if wkeyboard *)
   let old = !Globals.current in

@@ -7,6 +7,13 @@ module D = Display
 (* Prelude *)
 (*****************************************************************************)
 (* Routines to support a simple terminal emulator.
+ *  
+ * A terminal has many features in common with an editor. You can enter
+ * text, move around the cursor, copy, cut, paste, etc. The situation
+ * is simpler than in Efuns though. We need less a gap buffer because
+ * most insertions are at the end of the "file". A growing array
+ * is good enough. Like in Efuns, we have a few "cursors" that need
+ * to be updated once you insert text.
  * 
  * todo:
  *  - scroll bar
@@ -20,7 +27,8 @@ module D = Display
 (* Types and globals *)
 (*****************************************************************************)
 
-(* called point in efuns, but confusing with Point.t
+(* The type below is called a 'point' in Efuns, but it would be
+ * confusing with the Point.t of lib_graphics/geometry.
  * less: make mutable instead of the fields in 't' below?
  *)
 type position = {
@@ -32,10 +40,14 @@ let zero =
 type t = {
   (* the model *)
 
-  (* growing array *)
+  (* growing array (simpler than a gap buffer).
+   * alt: a growing string, like in Efuns.
+   *)
   mutable text: Rune.t array;
   (* number of runes used in text *)
   mutable nrunes: int;
+
+  (* less: lines? like in Efuns? *)
 
   (* where entered text go (and selection start) (old: q0 in rio-C) *)
   mutable cursor: position;
@@ -72,14 +84,14 @@ type t = {
 type colors = {
   mutable background             : Image.t;
   mutable border                 : Image.t;
-  mutable color_text             : Image.t;
+  mutable text_color             : Image.t;
   mutable background_highlighted : Image.t;
   mutable text_highlighted       : Image.t;
 }
 let default_colors = {
   background             = Display.fake_image;
   border                 = Display.fake_image;
-  color_text             = Display.fake_image;
+  text_color             = Display.fake_image;
   background_highlighted = Display.fake_image;
   text_highlighted       = Display.fake_image;
 }
@@ -95,7 +107,7 @@ let init_colors display =
       Image.alloc_color display (Color.mk2 0xCC 0xCC 0xCC);
     default_colors.border <-
       Image.alloc_color display (Color.mk2 0x99 0x99 0x99);
-    default_colors.color_text <- display.D.black;
+    default_colors.text_color <- display.D.black;
     default_colors.text_highlighted <- display.D.black;
   end
 
@@ -108,7 +120,7 @@ let alloc img font =
   let r =
     Rectangle.insetrect (Draw_rio.window_border_size + 1) img.I.r
   in
-  (* TODO *)
+  (* less: remove bottom line *)
   let textr = r in
   {
     text = [||];
@@ -146,7 +158,7 @@ let insert_runes term runes pos =
     Array.blit old 0 term.text 0 oldlen;
   end;
 
-  assert (pos.i < term.nrunes);
+  assert (pos.i <= term.nrunes);
   (* move to the right the runes after the cursor pos to make some space *)
   Array.blit term.text pos.i term.text (pos.i + n) (term.nrunes - pos.i);
   (* fill the space *)

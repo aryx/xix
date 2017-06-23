@@ -4,9 +4,9 @@ open Device
 module F = File
 module W = Window
 
-(* The ancestor of rio, 8 1/2, was serving also a virtual /dev/draw,
+(* The ancestor of rio (8 1/2) was serving a virtual /dev/draw,
  * which was more elegant but also more inefficient than the
- * /dev/winname and /dev/draw/x/ approach used by rio.
+ * /dev/winname (and associated /dev/draw/x/) approach used by rio.
  * 
  * alt: we could also pass the information of winname through 
  * the environment instead of through a /dev virtual file.
@@ -15,7 +15,6 @@ module W = Window
 let dev_winname = { Device.default with
   name = "winname";
   perm = Plan9.r;
-
   
   read_threaded = (fun offset count w ->
     let str = w.W.winname in

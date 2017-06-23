@@ -1,7 +1,7 @@
 open Common
+
 open Point
 open Rectangle
-
 open Window
 
 module W = Window
@@ -108,6 +108,9 @@ let mouse_out w chan =
     then Queue.take w.mouseclicks_queue 
     else w.last_mouse, w.mouse_counter
   in
+  (* we use last_count_sent later to know if we are ready to send mouse
+   * states to someone
+   *)
   w.last_count_sent <- counter;
   Event.send chan m |> Event.sync
 
@@ -117,7 +120,7 @@ let keys_out w (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
   let buf = String.create cnt in
   let i = ref 0 in
-  while !i < cnt && Queue.length w.raw_keys > 0 (* less: qh vs nr *) do
+  while !i < cnt && Queue.length w.raw_keys > 0 (* todo: qh vs nr *) do
     (* less: runetochar and wid adjustments *)
     buf.[!i] <- Queue.take w.raw_keys;
     incr i;
@@ -138,7 +141,7 @@ let cmd_in w cmd =
     (* todo: delete timeout process *)
     Wm.close_win w
 
-  | Reshape (new_img, mouse) ->
+  | Reshape (new_img) ->
     (* less: put all of that in Wm.resize_win ? *)
     if w.W.deleted
     (* less: free new_img if deleted, but when can happen? *)
@@ -150,14 +153,14 @@ let cmd_in w cmd =
     (* todo: delete timeout proc for old name of window *)
     (match Rectangle.dx r, Globals.win () with
     | 0, Some w2 when w2 == w ->
-      Wm.set_current_and_repaint_borders None mouse
+      Wm.set_current_and_repaint_borders None
     | n, Some w2 when (w2 == w) -> 
       (* less: could Wm.set_current_and_repaint_borders (Some w) mouse,
        * useless opti I think to special case here w2 == w
        *)
       ()
     | n, (Some _ | None) ->
-      Wm.set_current_and_repaint_borders (Some w) mouse
+      Wm.set_current_and_repaint_borders (Some w)
     );
     (* less: Image.flush new_img, but useless cos done in thread () *)
     ()
@@ -180,13 +183,12 @@ let thread w =
   let chan_devcons_write_runes = Event.new_channel () in
 
   while true do
-    (* less: adjust event set *)
     let ev = (
     (* receive *)
     [ 
-      Event.receive w.chan_keyboard |> wrap (fun x-> Key x);
-      Event.receive w.chan_mouse    |> wrap (fun x-> Mouse x);
-      Event.receive w.chan_cmd      |> wrap (fun x-> Cmd x);
+      Event.receive w.chan_keyboard |> wrap (fun x -> Key x);
+      Event.receive w.chan_mouse    |> wrap (fun x -> Mouse x);
+      Event.receive w.chan_cmd      |> wrap (fun x -> Cmd x);
     ] @
       (* sending *)
       (if w.mouse_counter <> w.last_count_sent 
@@ -196,12 +198,14 @@ let thread w =
       ) @
       (* less: npart *)
       (if w.raw_mode && Queue.length w.raw_keys > 0
+       (* todo: or qh vs nr that contains a newline? *)
        then [Event.send w.chan_devcons_read 
                 (chan_devcons_read_count, chan_devcons_read_bytes)
               |> wrap (fun () -> SentChannelsForConsRead)]
        else []
       ) @
-      (* less: scrolling, mouseopen?? qh vs org and nchars *)
+      (* less: scrolling, mouseopen?? 
+       * todo: qh vs org and nchars *)
       (if true
        then [Event.send w.chan_devcons_write chan_devcons_write_runes
             |> wrap (fun () -> SentChannelForConsWrite);]

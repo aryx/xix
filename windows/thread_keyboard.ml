@@ -9,10 +9,11 @@ let thread kbd =
   while true do
     let key = Keyboard.receive kbd |> Event.sync in
 
-    (* TODO: remove, just for debug *)
+    (* TODO: remove; just for debug *)
     if key = 'Q' 
     then exit 0;
 
+    (* less: do that in other thread? so can start reading more keys? *)
     Globals.win () |> Common.if_some (fun win ->
       Event.send win.W.chan_keyboard key |> Event.sync
     )

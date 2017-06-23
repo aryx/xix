@@ -5,12 +5,12 @@ open Point
 open Rectangle
 
 (*****************************************************************************)
-(* classic cursors *)
+(* Classic cursors *)
 (*****************************************************************************)
 
-(* See also 'arrow' defined in kernel and in lib_graphics/input/cursor.ml *)
+(* See also 'arrow' defined in the kernel and in lib_graphics/input/cursor.ml *)
 
-(* when create new window (sweep()) *)
+(* when create a new window (sweep()) *)
 let crosscursor = {
   offset = { x = -7; y = -7; };
   clr = Cursor.ints_to_bytes
@@ -27,7 +27,7 @@ let crosscursor = {
     |];
 }
 
-(* when move (drag()) *)
+(* when move a window (drag()) *)
 let boxcursor = {
   offset =  {x = -7; y = -7; };
   clr = Cursor.ints_to_bytes
@@ -45,7 +45,7 @@ let boxcursor = {
 }
 
 
-(* when select delete in system menu *)
+(* when select a window (point_to()) *)
 let sightcursor = {
   offset =  {x = -7; y = -7; };
   clr = Cursor.ints_to_bytes
@@ -98,8 +98,42 @@ let query = {
 }
 
 (*****************************************************************************)
-(* border and corner cursors *)
+(* Border and corner cursors *)
 (*****************************************************************************)
+
+type corner = 
+  | TopLeft    | Top    | TopRight
+  | Left                | Right
+  | BottomLeft | Bottom | BottomRight
+
+type portion = Inf | Middle | Sup
+
+let portion x low high =
+  (* normalize to low *)
+  let x = x - low in
+  let high = high - low in
+  let low = 0 in
+
+  match () with
+  | _ when x < 20 -> Inf
+  | _ when x > high - 20 -> Sup
+  | _ -> Middle
+
+let which_corner r p =
+  let left_right = portion p.x r.min.x r.max.x in
+  let bottom_top = portion p.y r.min.y r.max.y in
+  match left_right, bottom_top with
+  | Inf, Inf -> TopLeft
+  | Inf, Middle -> Left
+  | Inf, Sup -> BottomLeft
+  | Middle, Inf -> Top
+  | Middle, Middle -> 
+    raise (Impossible "which_corner: pt_on_frame should not generate this")
+  | Middle, Sup -> Bottom
+  | Sup, Inf -> TopRight
+  | Sup, Middle -> Right
+  | Sup, Sup -> BottomRight
+
 
 let tl = {
   offset =  {x = -4; y = -4; };
@@ -228,39 +262,6 @@ let l = {
        0x01; 0xc0; 0x01; 0xc0; 0x01; 0xc0; 0x00; 0x00; 
     |];
 }
-
-type corner = 
-  | TopLeft    | Top    | TopRight
-  | Left                | Right
-  | BottomLeft | Bottom | BottomRight
-
-type portion = Inf | Middle | Sup
-
-let portion x low high =
-  (* normalize to low *)
-  let x = x - low in
-  let high = high - low in
-  let low = 0 in
-
-  match () with
-  | _ when x < 20 -> Inf
-  | _ when x > high - 20 -> Sup
-  | _ -> Middle
-
-let which_corner r p =
-  let left_right = portion p.x r.min.x r.max.x in
-  let bottom_top = portion p.y r.min.y r.max.y in
-  match left_right, bottom_top with
-  | Inf, Inf -> TopLeft
-  | Inf, Middle -> Left
-  | Inf, Sup -> BottomLeft
-  | Middle, Inf -> Top
-  | Middle, Middle -> 
-    raise (Impossible "which_corner: pt_on_frame should not generate this")
-  | Middle, Sup -> Bottom
-  | Sup, Inf -> TopRight
-  | Sup, Middle -> Right
-  | Sup, Sup -> BottomRight
 
 let which_corner_cursor rect p =
   let corner = which_corner rect p in

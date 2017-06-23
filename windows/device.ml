@@ -1,5 +1,13 @@
 open Common
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 type t = {
   name: string;
   perm: Plan9.perm_property;
@@ -7,12 +15,12 @@ type t = {
   open_: Window.t -> unit;
   close: Window.t -> unit;
   
-  (* we need to thread 'read' because this operation may spend some
-   * time waiting while receiving and sending information on channels.
+  (* we need to thread 'read' (and 'write') because this operation may spend
+   * some time waiting while receiving and sending information on channels.
    * 
    * Note that 'read' takes an offset (and count) because each device 
-   * can honor or not the offset requirements. For instance 
-   * /dev/mouse does not honor offset but /dev/winname does.
+   * can honor or not the offset requirements. For instance,
+   * /dev/winname does honor offset but /dev/mouse does not.
    *)
   read_threaded: int64 -> int -> Window.t -> bytes;
   write_threaded: int64 -> bytes -> Window.t -> unit;
@@ -32,7 +40,10 @@ let default = {
  *)
 exception Error of string
 
-(* helpers *)
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let honor_offset_and_count offset count data =
   let len = String.length data in
   match () with

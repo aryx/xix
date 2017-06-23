@@ -3,6 +3,14 @@ open Common
 (* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
 module Unix2 = ThreadUnix
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
   
 (* Note that pipes created under plan9 are bidirectional! 
  * No need to create 2 pipes for 2-way communication.
@@ -20,28 +28,31 @@ type t = {
   (* refined after Tversion first message *)
   mutable message_size: int;
 
+  (* the files managed by the server currently-in-use by the client *)
   fids: (File.fid, File.t) Hashtbl.t;
 }
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 let init () =
-  (* less: close on exec flag, or need to do it when exec in winshell *)
   let (fd1, fd2) = Unix2.pipe () in
-  (* todo: default threadUnix implementation just set non_block for fd2, but
-   * the in_fd, but in plan9 pipes are bidirectional so need non_block for
-   * both file descriptors.
+  (* the default threadUnix implementation just set non_block for fd2
+   * (the 'in_fd'), but in plan9 pipes are bidirectional so we need 
+   * to set non_block for fd1 too.
    *)
   Unix.set_nonblock fd1;
   (* todo? record fd2 as close_on exec? 
-   * Unix.set_close_on_exec? but when it's useful really? 
+   * Unix.set_close_on_exec? but when it's useful really? just cleaner/safer?
    *)
-  
-  (* todo: let user = Common.cat "/dev/user" |> String.concat "" in *)
-  
+ 
   { clients_fd = fd1;
     server_fd = fd2;
 
+    (* todo: let user = Common.cat "/dev/user" |> String.concat "" in *)
     user = "pad";
-    fids = Hashtbl.create 101;
-
     message_size = 8192 + Protocol_9P.io_header_size;
+
+    fids = Hashtbl.create 101;
   }

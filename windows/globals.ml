@@ -3,10 +3,11 @@ open Common
 module W = Window
 
 let (windows: (Window.wid, Window.t) Hashtbl.t) = Hashtbl.create 11
+(* a subset of 'windows' *)
 let (hidden: (Window.wid, Window.t) Hashtbl.t) = Hashtbl.create 11
 
 (* the man page of rio (rio(1)) uses the term 'current' 
- * old: was called input in rio-C
+ * old: was called 'input' in rio-C
  *)
 let (current: Window.t option ref)  = ref None
 
@@ -22,7 +23,7 @@ let window_at_point pt =
     then
       match !res with
       | None -> res := Some w
-      | Some x when w.W.topped > x.W.topped -> res := Some w
+      | Some w2 when w.W.topped > w2.W.topped -> res := Some w
       | _ -> ()
   );
   !res
@@ -34,16 +35,15 @@ let debug_draw = ref false
  * mousectl
  * kbdctl
  * fs
-*)
-
-(* less: could be in global, or could pass it explicitely so more functional
-let display = ref Display.fake_display
-let view = ref Display.fake_image
-let font = ref Font.fake_font
-let desktop = ref Baselayer.fake_baselayer
-*)
+ * 
+ * less: could be in global, or could pass it explicitely so more functional
+ * let display = ref Display.fake_display
+ * let view = ref Display.fake_image
+ * let font = ref Font.fake_font
+ * let desktop = ref Baselayer.fake_baselayer
+ *)
 
 (* this is just too annoying to pass around *)
-let red = ref Display.fake_image
-let title_color = ref Display.fake_image
+let red               = ref Display.fake_image
+let title_color       = ref Display.fake_image
 let title_color_light = ref Display.fake_image

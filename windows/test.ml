@@ -75,4 +75,3 @@ let test () =
 *)
   test_threads_preemptively ();
   ()
-

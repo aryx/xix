@@ -1,7 +1,7 @@
 
-val crosscursor: Cursor.t
-val boxcursor: Cursor.t
-val sightcursor: Cursor.t
+val crosscursor : Cursor.t
+val boxcursor   : Cursor.t
+val sightcursor : Cursor.t
 (*
 val whitearrow: Cursor.t
 val query: Cursor.t

@@ -43,7 +43,7 @@ let corner_cursor_or_window_cursor w pt mouse =
 
 
 (*****************************************************************************)
-(* Border *)
+(* Borders *)
 (*****************************************************************************)
 
 let draw_border w status =
@@ -68,7 +68,7 @@ let repaint_border w =
     draw_border w W.Unselected
 
 (* old: was called wcurrent in rio-Cx *)
-let set_current_and_repaint_borders wopt mouse =
+let set_current_and_repaint_borders wopt (*mouse*) =
   (* less: if wkeyboard *)
   let old = !Globals.current in
   Globals.current := wopt;
@@ -83,7 +83,7 @@ let set_current_and_repaint_borders wopt mouse =
     (* less: could do directly: draw_border w W.Seleted *)
     repaint_border w;
     (* TODO: do that in caller? so no need pass mouse? *)
-    (*window_cursor w ptTODO mouse;*)
+    (* window_cursor w ptTODO mouse;*)
     (* todo: wakeup? why? *)
     ()
   )
@@ -92,12 +92,12 @@ let set_current_and_repaint_borders wopt mouse =
 (* Wm *)
 (*****************************************************************************)
 
-let top_win w mouse =
+let top_win w =
   if w.W.topped = !Window.topped_counter
   then ()
   else begin
     Layer.put_to_top w.W.img;
-    set_current_and_repaint_borders (Some w) mouse;
+    set_current_and_repaint_borders (Some w);
     Image.flush w.W.img;
 
     incr Window.topped_counter;
@@ -130,7 +130,7 @@ let new_win img cmd argv pwd_opt
   let _win_thread = Thread.create !threads_window_thread_func w in
 
   (* less: if not hideit *)
-  set_current_and_repaint_borders (Some w) mouse;
+  set_current_and_repaint_borders (Some w);
   Image.flush img;
 
   (* A new window process *)
@@ -168,11 +168,10 @@ let new_win img cmd argv pwd_opt
 
 let close_win w =
   w.W.deleted <- true;
-  (match Globals.win () with
-  | Some w2 when w == w2 ->
-    Globals.current := None;
+  Globals.win () |> Common.if_some (fun w2 ->
+    if w2 == w
+    then Globals.current := None;
     (* less: window_cursor  ?*)
-  | _ -> ()
   );
   (* less: if wkeyboard *)
   Hashtbl.remove Globals.hidden w.W.id;
@@ -181,8 +180,7 @@ let close_win w =
   w.W.img <- Image.fake_image;
   ()
 
-(* less: ugly that need to pass mouse needed for Reshape *)
-let hide_win w mouse =
+let hide_win w =
   if Hashtbl.mem Globals.hidden w.W.id
   (* less: return -1? can happen if window thread take too much time
    * to respond to the Reshape command?
@@ -195,16 +193,16 @@ let hide_win w mouse =
     Image.alloc display w.W.screenr old_layer.I.chans false Color.white in
   (* less: return 0 or 1 if can or can not allocate? *)
   Hashtbl.add Globals.hidden w.W.id w;
-  let cmd = W.Reshape (img, mouse) in
+  let cmd = W.Reshape (img) in
   Event.send w.W.chan_cmd cmd |> Event.sync;
   ()
 
-let show_win w desktop mouse =
+let show_win w desktop =
   let old_img = w.W.img in
   (* back to a layer *)
   let layer = Layer.alloc desktop old_img.I.r Color.white in
   Hashtbl.remove Globals.hidden w.W.id;
-  let cmd = W.Reshape (layer, mouse) in
+  let cmd = W.Reshape (layer) in
   Event.send w.W.chan_cmd cmd |> Event.sync;
   ()
 

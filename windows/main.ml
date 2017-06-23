@@ -46,7 +46,7 @@ let thread_main () =
   let mouse = Mouse.init () in
   let kbd = Keyboard.init () in
 
-  Draw.draw view view.I.r background None Point.zero;
+  Draw.draw_color view view.I.r background;
   (* to test: alternative to -test that leverages work done above
   Test.test_display_default_font display view;
   Test.test_display_text display view font;

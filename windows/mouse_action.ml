@@ -2,7 +2,7 @@ open Common
 
 module I = Display
 
-(* less: maybe the ref m approach of point_to is simpler for sweep too *)
+(* less: maybe the 'ref m' approach of point_to() is simpler for sweep() too *)
 type sweep_state = 
   (* start, no buttons *)
   | SweepInit
@@ -106,6 +106,7 @@ let sweep mouse (display, desktop, font) =
   in
   transit SweepInit
 
+
 let point_to mouse =
   (* todo: menuing? but not sweeping? *)
   Mouse.set_cursor mouse Cursors.sightcursor;
@@ -128,4 +129,3 @@ let point_to mouse =
     Wm.corner_cursor_or_window_cursor w !m.Mouse.pos mouse
   );
   wopt
-

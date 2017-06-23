@@ -7,6 +7,14 @@ module N = Plan9
 module P = Protocol_9P
 module W = Window
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Constants *)
+(*****************************************************************************)
+
 let all_devices = [
   F.Winname , Virtual_draw.dev_winname;
   F.Mouse   , Virtual_mouse.dev_mouse;
@@ -14,8 +22,16 @@ let all_devices = [
   F.Consctl , Virtual_cons.dev_consctl;
 ]
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let device_of_devid devid =
-  List.assoc devid all_devices
+  try 
+    List.assoc devid all_devices
+  with Not_found ->
+    raise (Impossible (spf "all_devices is not correctly set; missing code %d"
+             (File.int_of_filecode (F.File devid))))
 
 let toplevel_entries =
   all_devices |> List.map (fun (devid, dev) ->
@@ -25,7 +41,6 @@ let toplevel_entries =
       F.perm = dev.D.perm;
     }
   )
-
 
 let answer fs res =
   if !Globals.debug_9P
@@ -37,12 +52,18 @@ let error fs req str =
   let res = { req with P.typ = P.R (P.R.Error str) } in
   answer fs res
 
+(* less: could be check_and_find_fid to factorize more code in dispatch() *)
 let check_fid op fid fs =
   (* stricter: *)
   if not (Hashtbl.mem fs.FS.fids fid)
   then failwith (spf "%s: unknown fid %d" op fid)
   
 
+(*****************************************************************************)
+(* Dispatch *)
+(*****************************************************************************)
+
+(* for Version *)
 let first_message = ref true
 
 let dispatch fs req request_typ =
@@ -76,9 +97,11 @@ let dispatch fs req request_typ =
     (try
        let wid = int_of_string aname in
        let w = Hashtbl.find Globals.windows wid in
+
        let entry = File.root_entry in
        let file_id = entry.F.code, wid in
        let qid = File.qid_of_fileid file_id entry.F.type_ in
+
        let file = { 
          F.fid = rootfid; 
          F.qid = qid; 
@@ -91,19 +114,17 @@ let dispatch fs req request_typ =
      with exn ->
         error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
-    )
-    )
+    ))
 
   (* Walk *)
   | P.T.Walk (fid, newfid_opt, xs) ->
     check_fid "walk" fid fs;
-
     let file = Hashtbl.find fs.FS.fids fid in
     let wid = file.F.w.W.id in
     (match file, newfid_opt with
     | { F.opened = Some _ }, _ ->
       error fs req "walk of open file"
-    (* be stricter? failwith or error? *)
+    (* stricter? failwith or error? *)
     | _, Some newfid when Hashtbl.mem fs.FS.fids newfid ->
       error fs req (spf "clone to busy fid: %d" newfid)
     | _ when List.length xs > P.max_welem ->
@@ -128,7 +149,7 @@ let dispatch fs req request_typ =
         | [] -> qid, entry, List.rev acc
         | x::xs ->
           if qid.N.typ <> N.QTDir
-          (* will be catched below and transformed in an 9P Error message *)
+          (* will be catched below and transformed in an 9P Rerror message *)
           then failwith "not a directory";
           (match entry.F.code, x with
           | _Qwsys, ".." -> failwith "walk: Todo '..'"
@@ -140,7 +161,7 @@ let dispatch fs req request_typ =
             let qid = File.qid_of_fileid file_id entry.F.type_ in
             (* continue with other path elements *)
             walk qid entry (qid::acc) xs
-            (* todo: Wsys, snarf *)
+          (* todo: Wsys, snarf *)
           | _ -> 
             raise (Impossible "should be catched by 'not a directory' above")
           )
@@ -157,13 +178,14 @@ let dispatch fs req request_typ =
           Hashtbl.remove fs.FS.fids newfid
         );
         (match exn with
-        (* this can happen many times because /dev is union-mount so
-         * we get requests also for /dev/draw/... and other devices
+        (* this can happen many times because /dev is a union-mount so
+         * we get walk requests also for /dev/draw/... and other devices
          *)
         | Not_found -> 
           error fs req "file does not exist"
         | Failure "not a directory" ->
           error fs req "not a directory"
+        (* internal error then *)
         | _ -> raise exn
         )
       )
@@ -190,6 +212,7 @@ let dispatch fs req request_typ =
            let dev = device_of_devid devid in
            dev.D.open_ w
          | F.Dir dir ->
+           (* todo: nothing to do for dir? ok to open a dir? *)
            ()
          );
          file.F.opened <- Some flags;
@@ -205,7 +228,6 @@ let dispatch fs req request_typ =
     check_fid "clunk" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     (match file.F.opened with
-    (* todo? can clunk unopened file?? *)
     | Some _flags ->
       (match file.F.entry.F.code with
       | F.File devid ->
@@ -240,9 +262,8 @@ let dispatch fs req request_typ =
          let dev = device_of_devid devid in
          let data = dev.D.read_threaded offset count w in
          answer fs { req with P.typ = P.R (P.R.Read data) }
-       with 
-         | Device.Error str ->
-           error fs req str
+       with Device.Error str ->
+         error fs req str
       )) () |> ignore
     | F.Dir _ ->
       failwith "TODO: readdir"
@@ -266,9 +287,8 @@ let dispatch fs req request_typ =
          let count = String.length data in
          dev.D.write_threaded offset data w;
          answer fs { req with P.typ = P.R (P.R.Write count) }
-       with 
-         | Device.Error str ->
-           error fs req str
+       with Device.Error str ->
+         error fs req str
       )) () |> ignore
     | F.Dir _ ->
       raise (Impossible "kernel should not call write on fid of a directory")
@@ -316,13 +336,17 @@ let dispatch fs req request_typ =
     -> 
     failwith (spf "TODO: req = %s" (P.str_of_msg req))
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (* the master *)
 let thread fs =
   (* less: threadsetname *)
   
   while true do
-    (* less: care about messagesize? *)
     let req = P.read_9P_msg fs.FS.server_fd in
+
     (* todo: should exit the whole proc if error *)
     if !Globals.debug_9P
     then pr (P.str_of_msg req);
@@ -333,5 +357,6 @@ let thread fs =
       (* less: Ebadfcall *)
       raise (Impossible (spf "got a response request: %s" (P.str_of_msg req)))
     );
+    (* for Version first-message check *)
     first_message := false
   done

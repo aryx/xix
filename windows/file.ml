@@ -1,6 +1,6 @@
 open Common
-open Plan9 (* for the fields *)
 
+open Plan9 (* for the fields *)
 module N = Plan9
 
 (*****************************************************************************)
@@ -30,7 +30,7 @@ type filecode =
     | Consctl
     (* todo: Cursor ... *)
 
-(* will generate Qid.path *)
+(* will generate a Qid.path *)
 type fileid = filecode * Window.wid
 
 (* simpler than Plan9.dir_entry *)
@@ -84,6 +84,10 @@ let int_of_filecode = function
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor
   int_of_filecode qxxx
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let qid_of_fileid file_id typ =
   { path = int_of_fileid file_id;

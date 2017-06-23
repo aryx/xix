@@ -4,20 +4,36 @@ open Mouse
 module I = Image
 module W = Window
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 type event =
   | Mouse of Mouse.state
-  (* less: Resize? other? or use other thread and device? (cleaner) *)
+  (* less: Resize? other? or use other thread and device? (cleaner) in which
+   * no need for event type here.
+   *)
 
-let middle_click_system m mouse =
-  pr "Todo: middle click"
+type under_mouse =
+  | Nothing
+  | CurrentWin of Window.t
+  | OtherWin   of Window.t
 
-(* right click normally *)
+(*****************************************************************************)
+(* Menus *)
+(*****************************************************************************)
+
+(* bind to right-click *)
 let wm_menu pos button exitchan 
     mouse (display, desktop, view, font) fs =
   (* todo: set (and later restore) sweeping to true *)
 
   let items = [
-    (* todo: the first item get selected the very first time; QEMU bug?  *)
+    (* less: the first item get selected the very first time; QEMU bug?  *)
     "New", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
       img_opt |> Common.if_some (fun img ->
@@ -31,8 +47,7 @@ let wm_menu pos button exitchan
            Wm.new_win img "/tests/xxx/test_rio_console_app1" 
              [|"/tests/xxx/test_rio_console_app1"|] None (mouse, fs, font)
         *)
-           Wm.new_win img "/bin/rc" 
-             [|"rc"; "-i"|] None (mouse, fs, font)
+           Wm.new_win img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
       )
     );
     (* old: was Reshape but here it's really resizing *)
@@ -47,28 +62,27 @@ let wm_menu pos button exitchan
     "Hide", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
       wopt |> Common.if_some (fun w ->
-        Wm.hide_win w mouse
+        Wm.hide_win w
       ));
     "Exit", (fun () ->
       Event.send exitchan 0 |> Event.sync;
     );
   ] @
   (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, w) ->
-    (* less: could sort *)
+    (* less: could sort by name, or time it was put in hidden hash *)
     w.W.label, (fun () -> 
-      Wm.show_win w desktop mouse
+      Wm.show_win w desktop
     )))
   in
-  (* less: adjust menu with hidden windows *)
   Menu_ui.menu items pos button
     mouse (display, desktop, view, font)
 
+let middle_click_system m mouse =
+  pr "Todo: middle click"
 
-
-type under_mouse =
-  | Nothing
-  | CurrentWin of Window.t
-  | OtherWin of Window.t
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let thread (exitchan, 
             mouse, (display, desktop, view, font), fs) =
@@ -95,24 +109,23 @@ let thread (exitchan,
           let inside = Window.pt_inside_border xy w in
           (* todo: set scrolling *)
           (* todo: set moving *)
-          if false
-          then raise Todo
-          else
-             (* less: || scrolling *)
-            inside && (w.W.mouse_opened || m.buttons.left)
+          (* less: || scrolling *)
+          inside && (w.W.mouse_opened || m.buttons.left)
         | None -> false
       in
-      if sending_to_win
-      then begin
+      (match sending_to_win with
+      | true ->
+        (* could assert that Globals.win() <> None *)
         Globals.win () |> Common.if_some (fun w ->
-          if not (Mouse.has_click m)
+          (if not (Mouse.has_click m)
           then Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
-          else Wm.window_cursor w m.Mouse.pos  mouse;
-          
+          (* todo: why if click then not corner cursor? *)
+          else Wm.window_cursor w m.Mouse.pos  mouse
+          );
           (* less: send logical coordinates *)
           Event.send w.W.chan_mouse m |> Event.sync
         )
-      end else begin
+      | false ->
         let wopt = Globals.window_at_point m.pos in
         (match wopt with
         | Some w -> Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
@@ -131,7 +144,7 @@ let thread (exitchan,
             | Some w, _ -> OtherWin w
           in
           (match under_mouse, m.buttons with
-          (* TODO: remove, just because hard right click on QEMU *)
+          (* TODO: remove; just because hard to right click on QEMU and laptop*)
           | Nothing , { left = true } ->
             wm_menu m.Mouse.pos Mouse.Left exitchan 
               mouse (display, desktop, view, font) fs
@@ -151,16 +164,16 @@ let thread (exitchan,
               mouse (display, desktop, view, font) fs
 
           | OtherWin w, { left = true } ->
-            Wm.top_win w mouse
+            Wm.top_win w
             (* less: should drain and wait that release up, unless winborder *)
           | OtherWin w, ({ middle = true } | { right = true}) ->
-            Wm.top_win w mouse
+            Wm.top_win w
             (* todo: should goto again, may need to send event *)
             
           | _ -> raise (Impossible "Mouse.has_click so one field is true")
           );
         (* todo: reset moving *)
         (* less: drain *)
-      end
+      )
     )
   done

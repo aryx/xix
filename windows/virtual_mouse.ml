@@ -1,12 +1,16 @@
 open Common
-open Device
 
+open Device
+open Point
+
+module M = Mouse
 module F = File
 module W = Window
 
 let dev_mouse = { Device.default with
   name = "mouse";
   perm = Plan9.rw;
+
   open_ = (fun w ->
     if w.W.mouse_opened
     then raise (Error "file in use");
@@ -15,7 +19,7 @@ let dev_mouse = { Device.default with
     ()
   );
   close = (fun w ->
-    (* less: stricter? check that was opened indeed? *)
+    (* stricter? check that was opened indeed? *)
     w.W.mouse_opened <- false;
     (* todo: resized? Refresh message?*)
     ()
@@ -32,8 +36,7 @@ let dev_mouse = { Device.default with
     (* less: resize message *)
     let str = 
       spf "%c%11d %11d %11d %11d " 
-        'm' m.Mouse.pos.Point.x m.Mouse.pos.Point.y 
-        (Mouse.int_of_buttons m.Mouse.buttons) m.Mouse.msec
+        'm' m.M.pos.x m.M.pos.y (Mouse.int_of_buttons m.M.buttons) m.M.msec
     in
     (* bugfix: note that we do not honor_offset. /dev/mouse is a dynamic file *)
     Device.honor_count count str
@@ -41,13 +44,12 @@ let dev_mouse = { Device.default with
   write_threaded = (fun _offset str w ->
     failwith "TODO: virtual_mouse.write_threaded"
   );
-
-
 }
 
 let dev_cursor = { Device.default with
   name = "cursor";
   perm = Plan9.rw;
+
   open_ = (fun w ->
     raise Todo
   );

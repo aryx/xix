@@ -54,6 +54,11 @@ let draw dst r src mask_opt p =
     )
     p SoverD
 
+(* even more specialized but often used *)
+let draw_color dst r color =
+  (* less: assert it's 1x1 *)
+  draw dst r color None Point.zero
+
 (* in draw_utils? *)
 let qmask = ref None
 let alloc_mix_colors display color1 color2 =

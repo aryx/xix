@@ -3,7 +3,9 @@ open Point
 open Rectangle
 
 
-(* special polygon *)
+(* special polygon 
+ * less: remove sp? always use Point.zero? anyway src is a 1x1  repl color
+ *)
 let border dst r i color sp =
   let r, sp, i =
     if i >= 0

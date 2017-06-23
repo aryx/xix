@@ -8,6 +8,7 @@ val new_win:
 val close_win:
   Window.t -> unit
 
+(* (those actions used to have a mouse parameter to also update the cursor) *)
 val hide_win:
   Window.t ->  unit
 val show_win:
@@ -22,6 +23,9 @@ val resize_win:
 
 (* helpers for borders *)
 
+(* this also used to have a mouse parameter (should be renamed then
+ * set_current_and_repaint_borders_content_and_cursor)
+ *)
 val set_current_and_repaint_borders:
   Window.t option -> unit
 

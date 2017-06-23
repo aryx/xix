@@ -19,11 +19,8 @@ let dev_winname = { Device.default with
   
   read_threaded = (fun offset count w ->
     let str = w.W.winname in
-    let str = 
-      if str = ""
-      then raise (Error "window has no name")
-      else str
-    in
+    if str = ""
+    then raise (Error "window has no name");
     Device.honor_offset_and_count offset count str
   );
 }

@@ -13,7 +13,13 @@ let thread kbd =
     if key = 'Q' 
     then exit 0;
 
-    (* less: do that in other thread? so can start reading more keys? *)
+    (* less: 
+     *  - do that in other thread? so can start reading more keys? 
+     *  - have sendp?
+     *  - receive array of keys? nbrecv?
+     *  - use double array of keys so can send and then receive without
+     *    losing anything?
+    *)
     Globals.win () |> Common.if_some (fun win ->
       Event.send win.W.chan_keyboard key |> Event.sync
     )

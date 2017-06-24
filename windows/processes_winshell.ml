@@ -9,7 +9,7 @@ module W = Window
 
 let run_cmd_in_window_in_child_of_fork cmd argv w fs =
   Unix1.chdir w.W.pwd;
-  (* less: rfork for copy of namespace/fd/env, but ape fork does that? *)
+  (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
     
   (*/* close server end so mount won't hang if exiting */*)
   Unix1.close fs.FS.server_fd;

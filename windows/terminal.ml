@@ -8,7 +8,7 @@ module D = Display
 (*****************************************************************************)
 (* Routines to support a simple terminal emulator.
  *  
- * A terminal has many features in common with an editor. You can enter
+ * A terminal has many features in common with an editor: you can enter
  * text, move around the cursor, copy, cut, paste, etc. The situation
  * is simpler than in Efuns though. We need less a gap buffer because
  * most insertions are at the end of the "file". A growing array
@@ -28,7 +28,9 @@ module D = Display
 (*****************************************************************************)
 
 (* The type below is called a 'point' in Efuns, but it would be
- * confusing with the Point.t of lib_graphics/geometry.
+ * confusing with the Point.t of lib_graphics/geometry/point.ml.
+ * We could also call it 'cursor', but this would be 
+ * confusing with the Cursor.t of lib_graphics/input/cursor.ml
  * less: make mutable instead of the fields in 't' below?
  *)
 type position = {
@@ -47,15 +49,14 @@ type t = {
   (* number of runes used in text *)
   mutable nrunes: int;
 
-  (* less: lines? like in Efuns? *)
+  (* less: lines? like in Efuns? with EOF sentinel to simplify code? *)
 
   (* where entered text go (and selection start) (old: q0 in rio-C) *)
   mutable cursor: position;
   mutable end_selection: position option; (* old: q1 in rio-C) *)
 
   (* Division between characters the host has seen and characters not 
-   * yet transmitted. The position in the text that separates 
-   * output from input.
+   * yet transmitted. The position in the text that separates output from input.
    * old: qh in rio-C
    *)
   mutable output_point: position;
@@ -63,10 +64,15 @@ type t = {
   (* the view *)
 
   img: Image.t;
+
   (* img.r without border and some extra space *)
   r: Rectangle.t;
-  (* r without a bottom rectangle covering a line of text with font below *)
+  (* right side of r, and no bottom rectangle covering a line of
+   * text with font below 
+   *)
   textr: Rectangle.t;
+  (* left side of r *)
+  scrollr: Rectangle.t;
 
   (* first character visible in window from 'text' *)
   mutable origin_visible: position;
@@ -74,11 +80,6 @@ type t = {
   font: Font.t;
 
   (* todo? colors? *)
-
-  (* todo:
-  mutable frame: Frame_ui.t;
-  mutable scrollr: Rectangle.t;
-  *)
 }
 
 type colors = {
@@ -99,6 +100,7 @@ let default_colors = {
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
 let init_colors display =
   if default_colors.background == Display.fake_image
   then begin
@@ -119,6 +121,9 @@ let alloc img font =
   init_colors img.I.display;
   let r =
     Rectangle.insetrect (Draw_rio.window_border_size + 1) img.I.r
+  in
+  let scrollr =
+    raise Todo
   in
   (* less: remove bottom line *)
   let textr = r in
@@ -204,6 +209,7 @@ let show_pos term pos =
 (*****************************************************************************)
 (* External events *)
 (*****************************************************************************)
+
 (* "When newline, chars between output point and newline are sent."*)
 let key_in term key =
   failwith "Terminal.key_in: TODO"

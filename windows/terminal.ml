@@ -81,6 +81,7 @@ type t = {
 
   (* first character visible in window from 'text' *)
   mutable origin_visible: position;
+  mutable runes_visible: int;
 
   font: Font.t;
 
@@ -107,8 +108,10 @@ let scrollbar_width = 12
 (* gap right of scrollbar *)
 let scrollbar_gap = 4
 
+let scrollbar_temp = ref Display.fake_image
+
 (*****************************************************************************)
-(* Helpers *)
+(* Colors *)
 (*****************************************************************************)
 
 let init_colors display =
@@ -131,6 +134,68 @@ let colors_focused_window () =
 let colors_unfocused_window () = 
   { default_colors with text_color = !dark_grey; text_highlighted = !dark_grey}
 
+(*****************************************************************************)
+(* Scrollbar *)
+(*****************************************************************************)
+
+let init_scrollbar display =
+  if !scrollbar_temp == Display.fake_image
+  then begin
+    (* /*factor by which window dimension can exceed screen*/ *)
+    let big = 3 in
+    let view = display.D.image in
+    let h = big * Rectangle.dy view.I.r in
+    let r = Rectangle.r 0 0 32 h in
+    scrollbar_temp := Image.alloc display r view.I.chans false Color.white;
+  end
+  
+
+let scroll_pos r p0 p1 total =
+  if total = 0 
+  then r 
+  else
+    let h = Rectangle.dy r in
+    let miny = r.min.y + 
+      if p0.i > 0
+      then p0.i * h / total
+      else 0
+    in
+    let maxy = r.max.y - 
+      if p1.i < total
+      then (total - p1.i) * h / total
+      else 0
+    in
+    let maxy, miny =
+      if maxy < miny + 2
+      then 
+        if miny+2 <= r.max.y
+        then miny+2, miny
+        else maxy, maxy-2
+      else maxy, miny
+    in
+    Rectangle.r r.min.x miny r.max.x maxy
+    
+  
+let repaint_scrollbar term =
+  init_scrollbar term.img.I.display;
+  let r = term.scrollr in
+  
+  let v = Point.p (Rectangle.dx r) 0 in
+  let r1 = Rectangle.sub_pt v r in
+  let r2 = scroll_pos r1 
+    term.origin_visible 
+    { i = term.origin_visible.i + term.runes_visible }
+    term.nrunes
+  in
+  let r2 = Rectangle.sub_pt r1.min r2 in
+  let r1 = Rectangle.sub_pt r1.min r1 in
+  let tmp = !scrollbar_temp in
+  Draw.draw_color tmp r1 default_colors.border;
+  Draw.draw_color tmp r2 default_colors.background;
+  let r3 = { r2 with min = { r2.min with x = r2.max.x - 1 } } in
+  Draw.draw_color tmp r3 default_colors.border;
+
+  Draw.draw term.img term.scrollr tmp None (Point.p 0 r1.min.y)
 
 (*****************************************************************************)
 (* Entry points *)
@@ -155,6 +220,8 @@ let alloc img font =
     output_point = zero;
 
     origin_visible = zero;
+    runes_visible = 0;
+
     font = font;
     img = img;
     r = r;
@@ -221,6 +288,11 @@ let show_pos term pos =
     (* pos out of scope *)
     failwith "TODO: show_pos out of scope"
 *)
+
+let repaint term _is_selected =
+  repaint_scrollbar term
+  
+
 
 (*****************************************************************************)
 (* External events *)

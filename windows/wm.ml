@@ -59,14 +59,16 @@ let draw_border w status =
 (* repaint border, content for textual window, (and todo cursor?) *)
 (* old: was called wrepaint in rio-C *)
 let repaint w =
-  (* todo: update cols *)
   (* todo: if mouse not opened, draw terminal *)
-  match Globals.win () with
-  | Some w2 when w2 == w -> 
-    draw_border w W.Selected
-    (* less: wsetcursor again? *)
-  | _ -> 
-    draw_border w W.Unselected
+  let status = 
+    match Globals.win () with
+    | Some w2 when w2 == w -> W.Selected
+    | _ -> W.Unselected
+  in
+  draw_border w status;
+  (* less: wsetcursor again? *)
+  if not w.W.mouse_opened 
+  then Terminal.repaint w.W.terminal (status = W.Selected)
 
 (* old: was called wcurrent() in rio-C.
  * alt: this function also sets the window cursor in rio-C, but this

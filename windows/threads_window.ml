@@ -153,14 +153,14 @@ let cmd_in w cmd =
     (* todo: delete timeout proc for old name of window *)
     (match Rectangle.dx r, Globals.win () with
     | 0, Some w2 when w2 == w ->
-      Wm.set_current_and_repaint_borders None
+      Wm.set_current_and_repaint None
     | n, Some w2 when (w2 == w) -> 
       (* less: could Wm.set_current_and_repaint_borders (Some w) mouse,
        * useless opti I think to special case here w2 == w
        *)
       ()
     | n, (Some _ | None) ->
-      Wm.set_current_and_repaint_borders (Some w)
+      Wm.set_current_and_repaint (Some w)
     );
     (* less: Image.flush new_img, but useless cos done in thread () *)
     ()

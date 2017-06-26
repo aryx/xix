@@ -26,7 +26,7 @@ val resize_win:
 (* this also used to have a mouse parameter (should be renamed then
  * set_current_and_repaint_borders_content_and_cursor)
  *)
-val set_current_and_repaint_borders:
+val set_current_and_repaint:
   Window.t option -> unit
 
 (* helpers for cursors *)

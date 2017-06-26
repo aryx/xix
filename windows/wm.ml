@@ -56,10 +56,11 @@ let draw_border w status =
   in
   Polygon.border img img.I.r Window.window_border_size color Point.zero
 
+(* repaint border, content for textual window, (and todo cursor?) *)
 (* old: was called wrepaint in rio-C *)
-let repaint_border w =
+let repaint w =
   (* todo: update cols *)
-  (* todo: if mouse not opened *)
+  (* todo: if mouse not opened, draw terminal *)
   match Globals.win () with
   | Some w2 when w2 == w -> 
     draw_border w W.Selected
@@ -77,22 +78,21 @@ let repaint_border w =
  * correctly updated after certain wm operations. I think this
  * tradeoff is ok.
  *)
-let set_current_and_repaint_borders wopt (*mouse*) =
+let set_current_and_repaint wopt (*mouse*) =
   (* less: if wkeyboard *)
   let old = !Globals.current in
   Globals.current := wopt;
   (match old, wopt with
   | Some w2, Some w when not (w2 == w) ->
-    (* less: could do directly: draw_border w2 W.Unseleted *)
-    (* bugfix: was doing repaint_border w, hmm *)
-    repaint_border w2
+    (* bugfix: was doing repaint w, hmm *)
+    repaint w2
   | _ -> ()
   );
   wopt |> Common.if_some (fun w ->
-    (* less: could do directly: draw_border w W.Seleted *)
-    repaint_border w;
+    repaint w;
     (* TODO: do that in caller? so no need pass mouse? *)
     (* window_cursor w ptTODO mouse;*)
+
     (* todo: wakeup? why? *)
     ()
   )
@@ -106,7 +106,7 @@ let top_win w =
   then ()
   else begin
     Layer.put_to_top w.W.img;
-    set_current_and_repaint_borders (Some w);
+    set_current_and_repaint (Some w);
     Image.flush w.W.img;
 
     incr Window.topped_counter;
@@ -139,7 +139,7 @@ let new_win img cmd argv pwd_opt
   let _win_thread = Thread.create !threads_window_thread_func w in
 
   (* less: if not hideit *)
-  set_current_and_repaint_borders (Some w);
+  set_current_and_repaint (Some w);
   Image.flush img;
 
   (* A new window process *)

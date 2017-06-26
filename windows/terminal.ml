@@ -140,10 +140,7 @@ let alloc img font =
     img = img;
     r = r;
     textr = textr;
-    (*
-    frame = ();
-    scrollr = Rectangle.r_empty;
-    *)
+    scrollr = scrollr;
   }
 
 (* less: return pos? used only when delete lines in term.text? *)

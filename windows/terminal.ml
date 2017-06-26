@@ -1,5 +1,8 @@
 open Common
 
+open Point
+open Rectangle
+
 module I = Display
 module D = Display
 
@@ -10,13 +13,13 @@ module D = Display
  *  
  * A terminal has many features in common with an editor: you can enter
  * text, move around the cursor, copy, cut, paste, etc. The situation
- * is simpler than in Efuns though. We need less a gap buffer because
+ * is simpler than in Efuns though. There is no need for a gap buffer because
  * most insertions are at the end of the "file". A growing array
  * is good enough. Like in Efuns, we have a few "cursors" that need
  * to be updated once you insert text.
  * 
  * todo:
- *  - scroll bar
+ *  - interactive scroll bar
  *  - selection and highlited text
  * less: 
  *  - extract independent stuff and put in lib_graphics/ui/text_ui.ml?  
@@ -24,13 +27,14 @@ module D = Display
  *)
 
 (*****************************************************************************)
-(* Types and globals *)
+(* Types, constants, and globals *)
 (*****************************************************************************)
 
 (* The type below is called a 'point' in Efuns, but it would be
  * confusing with the Point.t of lib_graphics/geometry/point.ml.
  * We could also call it 'cursor', but this would be 
  * confusing with the Cursor.t of lib_graphics/input/cursor.ml
+ * 
  * less: make mutable instead of the fields in 't' below?
  *)
 type position = {
@@ -38,6 +42,7 @@ type position = {
 }
 let zero = 
   { i = 0 }
+
 
 type t = {
   (* the model *)
@@ -96,6 +101,11 @@ let default_colors = {
   background_highlighted = Display.fake_image;
   text_highlighted       = Display.fake_image;
 }
+let dark_grey = ref Display.fake_image
+
+let scrollbar_width = 12
+(* gap right of scrollbar *)
+let scrollbar_gap = 4
 
 (*****************************************************************************)
 (* Helpers *)
@@ -111,7 +121,16 @@ let init_colors display =
       Image.alloc_color display (Color.mk2 0x99 0x99 0x99);
     default_colors.text_color <- display.D.black;
     default_colors.text_highlighted <- display.D.black;
+
+    (*/* greys are multiples of 0x11111100+0xFF, 14* being palest */*)
+    dark_grey := Image.alloc_color display (Color.mk2 0x66 0x66 0x66);
   end
+
+let colors_focused_window () = 
+  default_colors
+let colors_unfocused_window () = 
+  { default_colors with text_color = !dark_grey; text_highlighted = !dark_grey}
+
 
 (*****************************************************************************)
 (* Entry points *)
@@ -119,14 +138,14 @@ let init_colors display =
 
 let alloc img font =
   init_colors img.I.display;
-  let r =
-    Rectangle.insetrect (Draw_rio.window_border_size + 1) img.I.r
-  in
-  let scrollr =
-    raise Todo
-  in
-  (* less: remove bottom line *)
-  let textr = r in
+  let r = 
+    Rectangle.insetrect (Draw_rio.window_border_size + 1) img.I.r in
+  let scrollr = 
+    { r with max = { r.max with x = r.min.x + scrollbar_width } } in
+  let textr = 
+    { r with min = { r.min with x = r.min.x + scrollbar_width+scrollbar_gap}} in
+  (* less: remove bottom line? *)
+  
   {
     text = [||];
     nrunes = 0;

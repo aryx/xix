@@ -43,7 +43,7 @@ let corner_cursor_or_window_cursor w pt mouse =
 
 
 (*****************************************************************************)
-(* Borders *)
+(* Borders and content *)
 (*****************************************************************************)
 
 let draw_border w status =
@@ -59,7 +59,6 @@ let draw_border w status =
 (* repaint border, content for textual window, (and todo cursor?) *)
 (* old: was called wrepaint in rio-C *)
 let repaint w =
-  (* todo: if mouse not opened, draw terminal *)
   let status = 
     match Globals.win () with
     | Some w2 when w2 == w -> W.Selected
@@ -67,8 +66,10 @@ let repaint w =
   in
   draw_border w status;
   (* less: wsetcursor again? *)
+  w.W.terminal.Terminal.is_selected <- (status = W.Selected);
   if not w.W.mouse_opened 
-  then Terminal.repaint w.W.terminal (status = W.Selected)
+  then Terminal.repaint w.W.terminal 
+
 
 (* old: was called wcurrent() in rio-C.
  * alt: this function also sets the window cursor in rio-C, but this
@@ -102,18 +103,6 @@ let set_current_and_repaint wopt (*mouse*) =
 (*****************************************************************************)
 (* Wm *)
 (*****************************************************************************)
-
-let top_win w =
-  if w.W.topped = !Window.topped_counter
-  then ()
-  else begin
-    Layer.put_to_top w.W.img;
-    set_current_and_repaint (Some w);
-    Image.flush w.W.img;
-
-    incr Window.topped_counter;
-    w.W.topped <- !Window.topped_counter;
-  end
 
 let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
@@ -190,6 +179,20 @@ let close_win w =
   Layer.free w.W.img;
   w.W.img <- Image.fake_image;
   ()
+
+
+let top_win w =
+  if w.W.topped = !Window.topped_counter
+  then ()
+  else begin
+    Layer.put_to_top w.W.img;
+    set_current_and_repaint (Some w);
+    Image.flush w.W.img;
+
+    incr Window.topped_counter;
+    w.W.topped <- !Window.topped_counter;
+  end
+
 
 let hide_win w =
   if Hashtbl.mem Globals.hidden w.W.id

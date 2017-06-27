@@ -120,11 +120,23 @@ let keys_out w (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
   let buf = String.create cnt in
   let i = ref 0 in
-  while !i < cnt && Queue.length w.raw_keys > 0 (* todo: qh vs nr *) do
-    (* less: runetochar and wid adjustments *)
-    buf.[!i] <- Queue.take w.raw_keys;
-    incr i;
-  done;
+
+  (match w.raw_mode with
+  | true ->
+    while !i < cnt && Queue.length w.raw_keys > 0 do
+      buf.[!i] <- Queue.take w.raw_keys;
+      incr i;
+    done
+  | false ->
+    let term = w.W.terminal in
+    while !i < cnt && term.T.output_point.T.i < term.T.nrunes do
+      let pos = term.T.output_point.T.i in
+      buf.[!i] <- term.T.text.(pos);
+      term.T.output_point <- { T.i = pos + 1};
+      incr i;
+    done
+  );
+
   let str =
     if !i < cnt
     then String.sub buf 0 !i
@@ -197,14 +209,14 @@ let thread w =
        else []
       ) @
       (* less: npart *)
-      (if w.raw_mode && Queue.length w.raw_keys > 0
-       (* todo: or qh vs nr that contains a newline? *)
+      (if (w.raw_mode && Queue.length w.raw_keys > 0) ||
+          (not w.raw_mode && Terminal.newline_after_output_point w.W.terminal)
        then [Event.send w.chan_devcons_read 
                 (chan_devcons_read_count, chan_devcons_read_bytes)
               |> wrap (fun () -> SentChannelsForConsRead)]
        else []
       ) @
-      (* less: scrolling, mouseopen?? 
+      (* less: auto_scroll, mouseopen?? 
        * todo: qh vs org and nchars *)
       (if true
        then [Event.send w.chan_devcons_write chan_devcons_write_runes

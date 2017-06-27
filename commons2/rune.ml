@@ -1,3 +1,4 @@
+open Common
 
 (* todo: use unicode! *)
 type t = char
@@ -9,3 +10,10 @@ let bytes_to_runes str =
     res := str.[i] :: !res;
   done;
   List.rev !res
+
+let string_of_runes xs =
+  let str = String.create (List.length xs) in
+  xs |> List_.iteri (fun i c ->
+    str.[i] <- c
+  );
+  str

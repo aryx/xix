@@ -85,6 +85,9 @@ type t = {
 
   font: Font.t;
 
+  (* this will alter how the text is rendered *)
+  mutable is_selected: bool;
+
   (* todo? colors? *)
 }
 
@@ -198,7 +201,55 @@ let repaint_scrollbar term =
   Draw.draw term.img term.scrollr tmp None (Point.p 0 r1.min.y)
 
 (*****************************************************************************)
-(* Entry points *)
+(* Text content *)
+(*****************************************************************************)
+
+let visible_lines term =
+  let maxlines = Rectangle.dy term.textr / term.font.Font.height in
+  
+  let rec aux acc_lines acc_str nblines_done p =
+    if p.i >= term.nrunes || nblines_done >= maxlines
+    then Rune.string_of_runes (List.rev acc_str)::acc_lines
+    else 
+      match term.text.(p.i) with
+      | '\n' -> 
+        aux ((Rune.string_of_runes (List.rev acc_str))::acc_lines) []
+          (nblines_done + 1) { i = p.i + 1 }
+      | c ->
+        aux acc_lines (c::acc_str) nblines_done { i = p.i + 1 }
+  in
+  let xs = aux [] [] 0 term.origin_visible in
+  List.rev xs
+
+
+let repaint_content term colors =
+  let xs = visible_lines term in
+
+  let p = ref term.textr.min in
+  xs |> List.iter (fun s ->
+    let _endpt = 
+      Text.string term.img !p colors.text_color Point.zero term.font s
+    in
+    p := { term.textr.min with y = !p.y + term.font.Font.height };
+  )
+
+(* used to know if should send on channel of app *)
+let newline_after_output_point term =
+  (* todo: more elegant way? way to iter over array and stop until cond? *)
+  let rec aux p =
+    if p.i < term.nrunes
+    then 
+      let c = term.text.(p.i) in
+      if c = '\n'
+      then true
+      else aux { i = p.i + 1 }
+    else false
+  in
+  aux term.output_point
+  
+
+(*****************************************************************************)
+(* entry points *)
 (*****************************************************************************)
 
 let alloc img font =
@@ -208,7 +259,7 @@ let alloc img font =
   let scrollr = 
     { r with max = { r.max with x = r.min.x + scrollbar_width } } in
   let textr = 
-    { r with min = { r.min with x = r.min.x + scrollbar_width+scrollbar_gap}} in
+    { r with min = { r.min with x = scrollr.max.x + scrollbar_gap } } in
   (* less: remove bottom line? *)
   
   {
@@ -227,6 +278,7 @@ let alloc img font =
     r = r;
     textr = textr;
     scrollr = scrollr;
+    is_selected = true;
   }
 
 (* less: return pos? used only when delete lines in term.text? *)
@@ -265,34 +317,18 @@ let insert_runes term runes pos =
   (* note the '<' here, not '<=' ! *)
   if pos.i < term.output_point.i
   then term.output_point <- { i = term.output_point.i + n };
+  if pos.i < term.origin_visible.i
+  then term.origin_visible <- { i = term.origin_visible.i + n };
+  ()
 
-  (match () with
-  | _ when pos.i < term.origin_visible.i ->
-    term.origin_visible <- { i = term.origin_visible.i + n }
-(*
-  | _ when pos.i <= term.origin_visible.i + term.nbrunes_visible ->
-    (* todo: frinsert *)
-    ()
-*)
-  | _ -> ()
-  )
-
-(*
-let show_pos term pos =
-  let endpos = term.origin_visible.i + term.nbrunes_visible in
-  if term.origin_visible.i <= pos.i && 
-     (pos.i < endpos || (pos.i = endpos && endpos = term.nrunes))
-  then 
-    draw term
-  else
-    (* pos out of scope *)
-    failwith "TODO: show_pos out of scope"
-*)
-
-let repaint term _is_selected =
-  repaint_scrollbar term
-  
-
+let repaint term =
+  repaint_scrollbar term;
+  let colors = 
+    if term.is_selected
+    then colors_focused_window ()
+    else colors_unfocused_window ()
+  in
+  repaint_content term colors
 
 (*****************************************************************************)
 (* External events *)
@@ -300,14 +336,16 @@ let repaint term _is_selected =
 
 (* "When newline, chars between output point and newline are sent."*)
 let key_in term key =
-  failwith "Terminal.key_in: TODO"
+  (* this will adjust term.cursor *)
+  insert_runes term [key] term.cursor;
+  repaint term
 
 
 (* "when characters are sent from the host, they are inserted at
  * the output point and the output point is advanced."
  *)
 let runes_in term runes =
-(*  
+(* if !debug
   let pt = ref w.screenr.min in
   runes |> List.iter (fun rune ->
     pt := Text.string w.img !pt !Globals.red Point.zero w.terminal.T.font 
@@ -315,6 +353,9 @@ let runes_in term runes =
   );
   ()
 *)
+  insert_runes term runes term.output_point;
+  term.output_point <- { i = term.output_point.i + List.length runes };
+  repaint term;
   ()
 
 let bytes_out term =

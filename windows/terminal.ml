@@ -209,7 +209,7 @@ let visible_lines term =
   
   let rec aux acc_lines acc_str nblines_done p =
     if p.i >= term.nrunes || nblines_done >= maxlines
-    then Rune.string_of_runes (List.rev acc_str)::acc_lines
+    then Rune.string_of_runes (List.rev acc_str)::acc_lines, p
     else 
       match term.text.(p.i) with
       | '\n' -> 
@@ -218,12 +218,13 @@ let visible_lines term =
       | c ->
         aux acc_lines (c::acc_str) nblines_done { i = p.i + 1 }
   in
-  let xs = aux [] [] 0 term.origin_visible in
-  List.rev xs
+  let xs, lastp = aux [] [] 0 term.origin_visible in
+  List.rev xs, lastp
 
 
 let repaint_content term colors =
-  let xs = visible_lines term in
+  let xs, lastp = visible_lines term in
+  term.runes_visible <- lastp.i - term.origin_visible.i;
 
   let p = ref term.textr.min in
   xs |> List.iter (fun s ->
@@ -322,13 +323,17 @@ let insert_runes term runes pos =
   ()
 
 let repaint term =
-  repaint_scrollbar term;
   let colors = 
     if term.is_selected
     then colors_focused_window ()
     else colors_unfocused_window ()
   in
-  repaint_content term colors
+  (* this needs to be before repaint_scrollbar because it updates
+   * runes_visible used by repaint_scrollbar
+   *)
+  repaint_content term colors;
+  repaint_scrollbar term;
+  ()
 
 (*****************************************************************************)
 (* External events *)

@@ -88,8 +88,7 @@ let mouse_out w chan =
   Event.send chan m |> Event.sync
 
 
-(* could rename bytes_out *)
-let keys_out w (chan_count, chan_bytes) =
+let bytes_out w (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
   let buf = String.create cnt in
   let i = ref 0 in
@@ -102,6 +101,7 @@ let keys_out w (chan_count, chan_bytes) =
     done
   | false ->
     let term = w.W.terminal in
+    (* "When newline, chars between output point and newline are sent."*)
     while !i < cnt && term.T.output_point.T.i < term.T.nrunes do
       let pos = term.T.output_point.T.i in
       buf.[!i] <- term.T.text.(pos);
@@ -211,10 +211,9 @@ let thread w =
     | SentChannelForMouseRead -> 
       mouse_out w chan_devmouse
     | SentChannelsForConsRead -> 
-      keys_out w (chan_devcons_read_count, chan_devcons_read_bytes)
+      bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
     | SentChannelForConsWrite ->
       runes_in w chan_devcons_write_runes
-      
     );
     if not w.deleted
     then Image.flush w.img;

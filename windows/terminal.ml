@@ -13,9 +13,9 @@ module D = Display
  *  
  * A terminal has many features in common with an editor: you can enter
  * text, move around the cursor, copy, cut, paste, etc. The situation
- * is simpler than in Efuns though. There is no need for a gap buffer because
+ * is simpler than in Efuns though; there is no need for a gap buffer because
  * most insertions are at the end of the "file". A growing array
- * is good enough. Like in Efuns, we have a few "cursors" that need
+ * is good enough. Like in Efuns, we have also a few "cursors" that need
  * to be updated once you insert text.
  * 
  * todo:
@@ -58,7 +58,7 @@ type t = {
 
   (* where entered text go (and selection start) (old: q0 in rio-C) *)
   mutable cursor: position;
-  mutable end_selection: position option; (* old: q1 in rio-C) *)
+  mutable end_selection: position option;      (* old: q1 in rio-C) *)
 
   (* Division between characters the host has seen and characters not 
    * yet transmitted. The position in the text that separates output from input.
@@ -85,16 +85,16 @@ type t = {
 
   font: Font.t;
 
-  (* this will alter how the text is rendered *)
+  (* this will alter which color to use to render the text *)
   mutable is_selected: bool;
-
-  (* todo? colors? *)
+  (* alt: mutable colors: colors; *)
 }
 
 type colors = {
   mutable background             : Image.t;
   mutable border                 : Image.t;
   mutable text_color             : Image.t;
+
   mutable background_highlighted : Image.t;
   mutable text_highlighted       : Image.t;
 }
@@ -111,7 +111,10 @@ let scrollbar_width = 12
 (* gap right of scrollbar *)
 let scrollbar_gap = 4
 
-let scrollbar_temp = ref Display.fake_image
+let scrollbar_img = ref None
+
+let tick_width = 3
+let tick_img = ref None
 
 (*****************************************************************************)
 (* Colors *)
@@ -141,18 +144,6 @@ let colors_unfocused_window () =
 (* Scrollbar *)
 (*****************************************************************************)
 
-let init_scrollbar display =
-  if !scrollbar_temp == Display.fake_image
-  then begin
-    (* /*factor by which window dimension can exceed screen*/ *)
-    let big = 3 in
-    let view = display.D.image in
-    let h = big * Rectangle.dy view.I.r in
-    let r = Rectangle.r 0 0 32 h in
-    scrollbar_temp := Image.alloc display r view.I.chans false Color.white;
-  end
-  
-
 let scroll_pos r p0 p1 total =
   if total = 0 
   then r 
@@ -180,7 +171,6 @@ let scroll_pos r p0 p1 total =
     
   
 let repaint_scrollbar term =
-  init_scrollbar term.img.I.display;
   let r = term.scrollr in
   
   let v = Point.p (Rectangle.dx r) 0 in
@@ -192,13 +182,23 @@ let repaint_scrollbar term =
   in
   let r2 = Rectangle.sub_pt r1.min r2 in
   let r1 = Rectangle.sub_pt r1.min r1 in
-  let tmp = !scrollbar_temp in
-  Draw.draw_color tmp r1 default_colors.border;
-  Draw.draw_color tmp r2 default_colors.background;
-  let r3 = { r2 with min = { r2.min with x = r2.max.x - 1 } } in
-  Draw.draw_color tmp r3 default_colors.border;
 
-  Draw.draw term.img term.scrollr tmp None (Point.p 0 r1.min.y)
+  let img = Common.once scrollbar_img (fun () ->
+    let display = term.img.I.display in
+    let view = display.D.image in
+    (* /*factor by which window dimension can exceed screen*/ *)
+    let big = 3 in
+    let h = big * Rectangle.dy view.I.r in
+    let r = Rectangle.r 0 0 32 h in
+    Image.alloc display r view.I.chans false Color.white
+  )
+  in
+  Draw.draw_color img r1 default_colors.border;
+  Draw.draw_color img r2 default_colors.background;
+  let r3 = { r2 with min = { r2.min with x = r2.max.x - 1 } } in
+  Draw.draw_color img r3 default_colors.border;
+
+  Draw.draw term.img term.scrollr img None (Point.p 0 r1.min.y)
 
 (*****************************************************************************)
 (* Text content *)
@@ -234,7 +234,8 @@ let repaint_content term colors =
     p := { term.textr.min with y = !p.y + term.font.Font.height };
   )
 
-(* used to know if should send on channel of app *)
+(* helper to know if we should send runes on channel connected to an app *)
+(* "When newline, chars between output point and newline are sent."*)
 let newline_after_output_point term =
   (* todo: more elegant way? way to iter over array and stop until cond? *)
   let rec aux p =
@@ -247,6 +248,69 @@ let newline_after_output_point term =
     else false
   in
   aux term.output_point
+  
+(*****************************************************************************)
+(* Tick (cursor) *)
+(*****************************************************************************)
+
+let point_of_position term pos =
+  if pos.i >= term.origin_visible.i && 
+     pos.i <=  term.origin_visible.i + term.runes_visible
+  then 
+    (* some of the logic below is similar in visible_lines *)
+    let rec aux pt current_pos =
+      if current_pos = pos
+      then pt
+      else
+        let next_pos = { i = current_pos.i + 1 } in
+        match term.text.(current_pos.i) with
+        | '\n' -> 
+          aux (Point.p term.textr.min.x (pt.y + term.font.Font.height)) next_pos
+        | c ->
+          let width = Text.string_width term.font (spf "%c" c) in
+          aux { pt with x = pt.x + width } next_pos
+    in
+    aux term.textr.min term.origin_visible
+  else 
+  (* anything out of textr  *)
+  term.textr.max
+
+
+
+let repaint_tick term colors =
+  let img = Common.once tick_img (fun () ->
+    let display = term.img.I.display in
+    let view = display.D.image in
+    let font = term.font in
+    let height = font.Font.height in
+
+    let r = Rectangle.r 0 0 tick_width height in
+    let img = Image.alloc display r view.I.chans false Color.white in
+    (*/* background color */*)
+    Draw.draw_color img r colors.background;
+    (*/* vertical line */*)
+    Draw.draw_color img
+      (Rectangle.r (tick_width / 2) 0 (tick_width / 2 + 1) height) 
+      colors.text_color;
+    (*/* box on each end */*)
+    Draw.draw_color img (Rectangle.r 0 0 tick_width tick_width) 
+      colors.text_color;
+    Draw.draw_color img (Rectangle.r 0 (height - tick_width) tick_width height)
+      colors.text_color;
+    img
+  )
+  in
+  let pt = point_of_position term term.cursor in
+  if Rectangle.pt_in_rect pt term.textr then begin
+    (*/* looks best just left of where requested */*)
+    let pt = { pt with x = pt.x - 1 } in
+    (*/* can go into left border but not right */*)
+    let maxx = min (pt.x + tick_width) term.textr.max.x in
+    let r = Rectangle.r pt.x pt.y 
+                        maxx (pt.y + term.font.Font.height) 
+    in
+    Draw.draw term.img r img None Point.zero
+  end
   
 
 (*****************************************************************************)
@@ -328,18 +392,19 @@ let repaint term =
     then colors_focused_window ()
     else colors_unfocused_window ()
   in
+  Draw.draw_color term.img term.r colors.background;
   (* this needs to be before repaint_scrollbar because it updates
    * runes_visible used by repaint_scrollbar
    *)
   repaint_content term colors;
   repaint_scrollbar term;
+  repaint_tick term colors;
   ()
 
 (*****************************************************************************)
 (* External events *)
 (*****************************************************************************)
 
-(* "When newline, chars between output point and newline are sent."*)
 let key_in term key =
   (* this will adjust term.cursor *)
   insert_runes term [key] term.cursor;
@@ -355,5 +420,9 @@ let runes_in term runes =
   repaint term;
   ()
 
-let bytes_out term =
-  failwith "Terminal.bytes_out: TODO"
+(* "When newline, chars between output point and newline are sent."
+ * let bytes_out term =
+ * but the logic is in Threads_window.bytes_out to factorize code
+ * with the logic when in raw-mode.
+ *)
+

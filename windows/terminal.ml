@@ -345,14 +345,6 @@ let key_in term key =
  * the output point and the output point is advanced."
  *)
 let runes_in term runes =
-(* if !debug
-  let pt = ref w.screenr.min in
-  runes |> List.iter (fun rune ->
-    pt := Text.string w.img !pt !Globals.red Point.zero w.terminal.T.font 
-      (String.make 1 rune);
-  );
-  ()
-*)
   insert_runes term runes term.output_point;
   term.output_point <- { i = term.output_point.i + List.length runes };
   repaint term;

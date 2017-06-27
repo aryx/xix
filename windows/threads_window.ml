@@ -31,9 +31,6 @@ type event =
   (* producing and then consuming for thread_fileserver(Write Qcons) *)
   | SentChannelForConsWrite
 
-let debug = ref false
-let cnt = ref 0
-
 (*****************************************************************************)
 (* In and out helpers *)
 (*****************************************************************************)
@@ -42,21 +39,6 @@ let cnt = ref 0
 let key_in w key =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
-
-    (*
-    if !debug then begin
-      (* when did not even have support for drawing text ... *)
-      incr cnt;
-      let len = Char.code key in
-      let r = Rectangle.r 0 0 len 1 
-        |> Rectangle.add_pt w.screenr.min 
-        |> Rectangle.add_pt (Vector.v 0 !cnt)
-      in
-      Draw.draw w.img r !Globals.red None Point.zero;
-    (*Text.string w.img r.min !Globals.red Point.zero !Globals.font;*)
-    end;
-    *)
-    
     (* less: navigation keys (when mouse not opened) *)
     match () with
     | _ when w.raw_mode && w.mouse_opened (* less: || q0 == nr *) ->
@@ -77,15 +59,6 @@ let runes_in (w: Window.t) chan =
   Terminal.runes_in w.W.terminal runes
 
 let mouse_in w m =
-  (*
-  if !debug then begin
-    let r = Rectangle.r 0 0 1 1 
-      |> Rectangle.add_pt m.Mouse.pos
-      |> Rectangle.add_pt (Vector.v 10 10)
-    in
-    Draw.draw w.img r !Globals.red None Point.zero;
-  end;
-  *)
   w.last_mouse <- m;
   match w.mouse_opened with
   | true -> 

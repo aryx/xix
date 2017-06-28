@@ -23,7 +23,7 @@ let thread_keyboard ctl =
     if n <= 0
     then failwith (spf "wrong format in /dev/cons; read %d chars (%s)" 
                      n (String.escaped buf));
-    (* todo: rune parsing *)
+    (* todo: rune parsing, so return runes instead of series of bytes (utf8) *)
     for i = 0 to n - 1 do
       (*pr (spf "sending %c" buf.[i]);*)
       Event.send ctl.chan buf.[i] |> Event.sync

@@ -39,17 +39,17 @@ type event =
 let key_in w key =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
-    (* less: navigation keys (when mouse not opened) *)
-    match () with
-    | _ when w.raw_mode && w.mouse_opened (* less: || q0 == nr *) ->
+    match w.raw_mode, w.mouse_opened with
+    | true, true (* less: || q0 == nr *) ->
       Queue.add key w.raw_keys 
-    | _ when w.raw_mode  ->
+    (* less: in theory we should allow also special navigation keys here *)
+    | true, false  ->
       failwith "key_in: TODO: raw mode in textual window"
+    | false, true  ->
+      failwith "key_in: TODO: buffered mode in graphical window"
     (* todo: if holding *)
-    | _ -> 
-      assert (not w.raw_mode);
+    | false, false -> 
       (* less: snarf *)
-      (* less: special keys *)
       Terminal.key_in w.W.terminal key
   end
 

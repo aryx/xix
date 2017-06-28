@@ -116,6 +116,8 @@ let scrollbar_img = ref None
 let tick_width = 3
 let tick_img = ref None
 
+let debug_keys = ref true
+
 (*****************************************************************************)
 (* Colors *)
 (*****************************************************************************)
@@ -248,6 +250,12 @@ let newline_after_output_point term =
     else false
   in
   aux term.output_point
+
+let move_origin_to_see term pos =
+  if pos.i >= term.origin_visible.i &&
+     pos.i <= term.origin_visible.i + term.runes_visible
+  then ()
+  else failwith "TODO: move_origin_to_see out of range"
   
 (*****************************************************************************)
 (* Tick (cursor) *)
@@ -347,7 +355,7 @@ let alloc img font =
   }
 
 (* less: return pos? used only when delete lines in term.text? *)
-let insert_runes term runes pos =
+let insert_runes term pos runes =
   let n = List.length runes in
   (* stricter: *)
   if n = 0
@@ -386,6 +394,9 @@ let insert_runes term runes pos =
   then term.origin_visible <- { i = term.origin_visible.i + n };
   ()
 
+let delete_runes term pos nb =
+  raise Todo
+
 let repaint term =
   let colors = 
     if term.is_selected
@@ -405,17 +416,69 @@ let repaint term =
 (* External events *)
 (*****************************************************************************)
 
+(* todo: right now key is a byte (a char), but it should be a rune.
+ * so for now we need to reconstruct a rune from a series of chars
+ * (the utf8 encoding of the rune)
+ *)
 let key_in term key =
-  (* this will adjust term.cursor *)
-  insert_runes term [key] term.cursor;
-  repaint term
+  (match Char.code key with
+
+  (* less: navigation keys are handled in the caller in rio-C, to allow keys
+   * navigation even in raw mode, but more cohesion by putting it here.
+   *)
+  (* Left arrow *)
+  | 0x91 ->
+    let cursor = term.cursor in
+    if cursor.i > 0
+    then term.cursor <- { i = cursor.i - 1 };
+    move_origin_to_see term term.cursor
+    
+  (* Right arrow *)
+  | 0x92 ->
+    (* less: use end_position cursor instead? *)
+    let cursor = term.cursor in
+    if cursor.i < term.nrunes
+    then term.cursor <- { i = cursor.i + 1 };
+    move_origin_to_see term term.cursor
+
+  (* End of line ^E *)
+  | 0x5 ->
+    ()
+  (* Beginning of line ^A *)
+  | 0x1 ->
+    ()
+
+  (* Erase character ^H  (Backspace or Delete) *)
+  | 0x8 ->
+    let cursor = term.cursor in
+    if cursor.i = 0 || cursor = term.output_point
+    then ()
+    else begin
+      (* less: adjust if cursor = term.origin_visible *)
+      (* this will adjust term.cursor *)
+      delete_runes term { i = cursor.i - 1 } 1
+    end
+
+  (* ordinary characters *)
+  | _ ->
+    (* this will adjust term.cursor *)
+    insert_runes term term.cursor [key] 
+  );
+  repaint term;
+  if !debug_keys
+  then 
+    let display = term.img.I.display in
+    let pt = Point.sub term.textr.max (Point.p 30 10) in
+    Text.string term.img pt display.D.black  Point.zero term.font 
+      (spf "%X" (Char.code key)) |> ignore
+
 
 
 (* "when characters are sent from the host, they are inserted at
  * the output point and the output point is advanced."
  *)
 let runes_in term runes =
-  insert_runes term runes term.output_point;
+  insert_runes term term.output_point runes;
   term.output_point <- { i = term.output_point.i + List.length runes };
   repaint term;
   ()
@@ -425,4 +488,3 @@ let runes_in term runes =
  * but the logic is in Threads_window.bytes_out to factorize code
  * with the logic when in raw-mode.
  *)
-

@@ -51,7 +51,7 @@ type t = {
    * alt: a growing string, like in Efuns.
    *)
   mutable text: Rune.t array;
-  (* number of runes used in text *)
+  (* number of runes used in text (<= Array.length term.text) *)
   mutable nrunes: int;
 
   (* less: lines? like in Efuns? with EOF sentinel to simplify code? *)
@@ -394,8 +394,37 @@ let insert_runes term pos runes =
   then term.origin_visible <- { i = term.origin_visible.i + n };
   ()
 
-let delete_runes term pos nb =
-  raise Todo
+let delete_runes term pos n =
+  (* stricter: *)
+  if n = 0
+  then failwith "delete_runes: empty delete";
+  let pos2 = { i = pos.i + n } in
+
+  Array.blit term.text pos2.i term.text pos.i (term.nrunes - pos2.i);
+  term.nrunes <- term.nrunes - n;
+
+  (* adjust cursors *)
+  if pos.i < term.cursor.i
+  then term.cursor <- { i = term.cursor.i - min n (term.cursor.i - pos.i) };
+  term.end_selection |> Common.if_some (fun ends ->
+    if pos.i < ends.i
+    then term.end_selection <- Some ({ i = ends.i - min n (ends.i - pos.i)});
+  );
+
+  (match () with
+  | _ when term.output_point.i > pos2.i ->
+    term.output_point <- { i = term.output_point.i - n };
+  | _ when term.output_point.i > pos.i -> 
+    term.output_point <- pos;
+  | _ ->
+     assert(term.output_point.i <= pos.i);
+    ()
+  );
+
+  if pos2.i <= term.origin_visible.i
+  then term.origin_visible <- { i = term.origin_visible.i -n };
+  ()
+  
 
 let repaint term =
   let colors = 
@@ -405,7 +434,7 @@ let repaint term =
   in
   Draw.draw_color term.img term.r colors.background;
   (* this needs to be before repaint_scrollbar because it updates
-   * runes_visible used by repaint_scrollbar
+   * term.runes_visible used by repaint_scrollbar()
    *)
   repaint_content term colors;
   repaint_scrollbar term;
@@ -416,9 +445,9 @@ let repaint term =
 (* External events *)
 (*****************************************************************************)
 
-(* todo: right now key is a byte (a char), but it should be a rune.
- * so for now we need to reconstruct a rune from a series of chars
- * (the utf8 encoding of the rune)
+(* todo: right now 'key' is a byte (a char), but it should be a rune.
+ * So for now we need to reconstruct a rune from a series of chars
+ * (the utf8 encoding of the rune).
  *)
 let key_in term key =
   (match Char.code key with
@@ -448,7 +477,7 @@ let key_in term key =
   | 0x1 ->
     ()
 
-  (* Erase character ^H  (Backspace or Delete) *)
+  (* Erase character ^H  (or Backspace or Delete) *)
   | 0x8 ->
     let cursor = term.cursor in
     if cursor.i = 0 || cursor = term.output_point
@@ -465,6 +494,7 @@ let key_in term key =
     insert_runes term term.cursor [key] 
   );
   repaint term;
+
   if !debug_keys
   then 
     let display = term.img.I.display in

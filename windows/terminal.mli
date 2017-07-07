@@ -9,7 +9,7 @@ type t = {
   mutable nrunes: int;
 
   mutable cursor: position;
-  mutable end_selection: position option;      (* old: q1 in rio-C) *)
+  mutable end_selection: position option;
 
   mutable output_point: position;
 

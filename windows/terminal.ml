@@ -111,12 +111,30 @@ let scrollbar_width = 12
 (* gap right of scrollbar *)
 let scrollbar_gap = 4
 
-let scrollbar_img = ref None
-
 let tick_width = 3
+
+(* temporary images *)
+let scrollbar_img = ref None
 let tick_img = ref None
 
-let debug_keys = ref true
+(*****************************************************************************)
+(* Debug *)
+(*****************************************************************************)
+
+let debug_keys_flag = ref false
+let debug_keys_pt = ref Point.zero
+let debug_keys term key =
+  if !debug_keys_flag
+  then begin
+    let display = term.img.I.display in
+    (* todo: why cant use display.image? does not draw ... cos desktop? *)
+    let img = term.img in
+    if !debug_keys_pt = Point.zero
+    then debug_keys_pt := Point.sub img.I.r.max (Point.p 200 15);
+    debug_keys_pt := 
+      Text.string term.img !debug_keys_pt display.D.black Point.zero term.font
+      (spf "%X" (Char.code key))
+  end
 
 (*****************************************************************************)
 (* Colors *)
@@ -432,9 +450,16 @@ let repaint term =
     then colors_focused_window ()
     else colors_unfocused_window ()
   in
-  Draw.draw_color term.img term.r colors.background;
-  (* this needs to be before repaint_scrollbar because it updates
-   * term.runes_visible used by repaint_scrollbar()
+
+  (* start from scratch with blank image, otherwise tick will be
+   * paint all over the place.
+   * alt: save what was under the tick image.
+   *)
+  if not !debug_keys_flag
+  then Draw.draw_color term.img term.r colors.background;
+
+  (* repaint_content() needs to be before repaint_scrollbar() because it
+   * updates term.runes_visible used by repaint_scrollbar().
    *)
   repaint_content term colors;
   repaint_scrollbar term;
@@ -449,21 +474,24 @@ let repaint term =
  * So for now we need to reconstruct a rune from a series of chars
  * (the utf8 encoding of the rune).
  *)
+let previous_code = ref 0
+
 let key_in term key =
   (match Char.code key with
 
   (* less: navigation keys are handled in the caller in rio-C, to allow keys
    * navigation even in raw mode, but more cohesion by putting it here.
    *)
+
   (* Left arrow *)
-  | 0x91 ->
+  | 0x91 when !previous_code = 0x80 (* less: and previous_previous = 0xEF *) ->
     let cursor = term.cursor in
     if cursor.i > 0
     then term.cursor <- { i = cursor.i - 1 };
     move_origin_to_see term term.cursor
     
   (* Right arrow *)
-  | 0x92 ->
+  | 0x92 when !previous_code = 0x80 ->
     (* less: use end_position cursor instead? *)
     let cursor = term.cursor in
     if cursor.i < term.nrunes
@@ -488,20 +516,21 @@ let key_in term key =
       delete_runes term { i = cursor.i - 1 } 1
     end
 
+  (* todo: should remove once key is directly a rune.
+   * less: the sequence we get for Left arrow is really
+   * 0xEF 0x80 0x91, but we just check if previous code is 0x80.
+   *)
+  | 0xEF -> ()
+  | 0x80 -> ()
+
   (* ordinary characters *)
   | _ ->
+    debug_keys term key;
     (* this will adjust term.cursor *)
     insert_runes term term.cursor [key] 
   );
-  repaint term;
-
-  if !debug_keys
-  then 
-    let display = term.img.I.display in
-    let pt = Point.sub term.textr.max (Point.p 30 10) in
-    Text.string term.img pt display.D.black  Point.zero term.font 
-      (spf "%X" (Char.code key)) |> ignore
-
+  previous_code := Char.code key;
+  repaint term
 
 
 (* "when characters are sent from the host, they are inserted at

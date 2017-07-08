@@ -153,7 +153,8 @@ external errstr: string -> int -> unit =
 
 (* less: flags? and a namespace_flags_to_int that fold lor? *)
 let bind src dst flag =
-  plan9_bind src dst (int_of_namespace_flag flag)
+  plan9_bind src dst (int_of_namespace_flag flag) |> ignore
 
 let mount fd int1 dst flag args =
-  plan9_mount fd int1 dst (int_of_namespace_flag flag) args
+  plan9_mount fd int1 dst (int_of_namespace_flag flag) args |> ignore
+

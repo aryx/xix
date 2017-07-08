@@ -434,8 +434,7 @@ let delete_runes term pos n =
     term.output_point <- { i = term.output_point.i - n };
   | _ when term.output_point.i > pos.i -> 
     term.output_point <- pos;
-  | _ ->
-     assert(term.output_point.i <= pos.i);
+  | _ -> assert(term.output_point.i <= pos.i);
     ()
   );
 
@@ -530,6 +529,9 @@ let key_in term key =
     insert_runes term term.cursor [key] 
   );
   previous_code := Char.code key;
+  if !previous_code = 0xEF || !previous_code = 0x80
+  then ()
+  else 
   repaint term
 
 

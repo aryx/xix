@@ -24,10 +24,12 @@ type filecode =
     (* less: '/wsys/' *)
   (* '/xxx' *)
   and devid = 
-    | Winname
+    | WinName
     | Mouse
     | Cons
-    | Consctl
+    | ConsCtl
+
+    | WinId
     (* todo: Cursor ... *)
 
 (* will generate a Qid.path *)
@@ -76,10 +78,11 @@ type t = {
 
 let int_of_filecode = function
   | Dir Root -> 0
-  | File Winname -> 1
+  | File WinName -> 1
   | File Mouse -> 2
   | File Cons -> 3
-  | File Consctl -> 4
+  | File ConsCtl -> 4
+  | File WinId -> 5
 
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor

@@ -16,10 +16,12 @@ module W = Window
 (*****************************************************************************)
 
 let all_devices = [
-  F.Winname , Virtual_draw.dev_winname;
+  F.WinName , Virtual_draw.dev_winname;
   F.Mouse   , Virtual_mouse.dev_mouse;
   F.Cons    , Virtual_cons.dev_cons;
-  F.Consctl , Virtual_cons.dev_consctl;
+  F.ConsCtl , Virtual_cons.dev_consctl;
+  
+  F.WinId   , Dev_winid.dev;
 ]
 
 (*****************************************************************************)

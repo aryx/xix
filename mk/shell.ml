@@ -28,7 +28,7 @@ let execsh shellenv flags inputs interactive =
         * Note however that there is no problem with mk-sh.byte, so
         * this is an rc issue.
         *)
-       |> Common.exclude (fun (s, xs) -> xs = [])
+       |> List_.exclude (fun (s, xs) -> xs = [])
 
        |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat iws xs))
     in

@@ -259,13 +259,13 @@ let rec check_ambiguous node =
   | 1 -> ()
   | 2 | _ -> 
     let groups_with_simple_rule =
-      groups_by_rule |> Common.exclude (fun (r, _) -> R.is_meta r) 
+      groups_by_rule |> List_.exclude (fun (r, _) -> R.is_meta r) 
     in
     (match List.length groups_with_simple_rule with
     | 0 -> error_ambiguous node groups_by_rule
     | 1 ->
       (* update graph *)
-      node.arcs <- Common.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
+      node.arcs <- List_.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
     | 2 | _ -> error_ambiguous node groups_with_simple_rule
     )
 
@@ -290,7 +290,7 @@ let rec propagate_attributes node =
 let rec vacuous node =
   let vacuous_node = ref (not node.probable) in
   
-  node.arcs <- node.arcs |> Common.exclude (fun arc ->
+  node.arcs <- node.arcs |> List_.exclude (fun arc ->
     match arc.dest with
     | Some node2 -> 
         if vacuous node2 && R.is_meta arc.rule

@@ -161,7 +161,7 @@ let main () =
     "-D", Arg.String (fun s ->
       let (var, val_) = 
         if s =~ "\\(.*\\)=\\(.*\\)"
-        then Common.matched2 s
+        then Regexp_.matched2 s
         else (s, "1")
       in
       defs := (var, val_)::!defs
@@ -241,7 +241,7 @@ let main () =
           if outfile = ""
           then
             if base =~ "\\(.*\\)\\.c"
-            then Common.matched1 base ^ (spf ".%c" thechar)
+            then Regexp_.matched1 base ^ (spf ".%c" thechar)
             else base ^ (spf ".%c" thechar)
           else outfile
         in

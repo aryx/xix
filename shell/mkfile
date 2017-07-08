@@ -21,6 +21,7 @@ LIBS=$TOP/lib_core/collections/lib.cma $TOP/commons/lib.cma
 
 PROG=rc
 
+<$TOP/mkconfig
 <$TOP/mkprog
 
 beforedepend:V: lexer.ml parser.ml parser.mli

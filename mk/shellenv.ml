@@ -7,7 +7,7 @@ let read_environment () =
   Unix.environment () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"
     then
-      let (var, str) = Common.matched2 s in
-      var, Common.split "[ \t]+" str
+      let (var, str) = Regexp_.matched2 s in
+      var, Regexp_.split "[ \t]+" str
     else failwith (spf "wrong format for environment variable: %s" s)
   )

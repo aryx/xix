@@ -54,7 +54,7 @@ let main () =
     "-D", Arg.String (fun s ->
       let (var, val_) = 
         if s =~ "\\(.*\\)=\\(.*\\)"
-        then Common.matched2 s
+        then Regexp_.matched2 s
         else (s, "1")
       in
       macro_defs := (var, val_)::!macro_defs
@@ -87,7 +87,7 @@ let main () =
     then
       let b = Filename.basename !infile in
       if b =~ "\\(.*\\)\\.s"
-      then Common.matched1 b ^ (spf ".%c" thechar)
+      then Regexp_.matched1 b ^ (spf ".%c" thechar)
       else b ^ (spf ".%c" thechar)
     else !outfile
   in

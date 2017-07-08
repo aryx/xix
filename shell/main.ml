@@ -211,7 +211,7 @@ let main () =
   Sys.argv |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"
     then begin
-      let letter = Common.matched1 s in
+      let letter = Regexp_.matched1 s in
       let char = String.get letter 0 in
       Hashtbl.add Flags.hflags char true
     end

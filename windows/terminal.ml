@@ -479,7 +479,8 @@ let key_in term key =
   (match Char.code key with
 
   (* less: navigation keys are handled in the caller in rio-C, to allow keys
-   * navigation even in raw mode, but more cohesion by putting it here.
+   * navigation even in raw mode, but it's more cohesive to put such
+   * code here.
    *)
 
   (* Left arrow *)
@@ -499,10 +500,26 @@ let key_in term key =
 
   (* End of line ^E *)
   | 0x5 ->
-    ()
+    (* alt: have term.newlines as in Efuns so easier *)
+    let rec find_eol_or_end pos = 
+      if pos.i = term.nrunes || term.text.(pos.i) = '\n'
+      then pos
+      else find_eol_or_end { i = pos.i + 1 }
+    in
+    term.cursor <- find_eol_or_end term.cursor;
+    move_origin_to_see term term.cursor
   (* Beginning of line ^A *)
   | 0x1 ->
-    ()
+    (* alt: have term.newlines as in Efuns so easier *)
+    let rec find_bol_or_start pos = 
+      if pos.i = 0 || pos.i = term.output_point.i ||
+         term.text.(pos.i - 1) = '\n'
+      then pos
+      else find_bol_or_start { i = pos.i - 1 }
+    in
+    term.cursor <- find_bol_or_start term.cursor;
+    move_origin_to_see term term.cursor
+
 
   (* Erase character ^H  (or Backspace or Delete) *)
   | 0x8 ->

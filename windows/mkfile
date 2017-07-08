@@ -10,7 +10,8 @@ SRC= \
   mouse_action.ml             thread_mouse.ml \
                               thread_keyboard.ml \
   virtual_draw.ml virtual_mouse.ml virtual_cons.ml \
-  dev_winid.ml \
+  dev_wm.ml \
+  dev_textual_window.ml dev_graphical_window.ml \
                               threads_fileserver.ml \
   test.ml main.ml
 

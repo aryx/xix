@@ -3,7 +3,7 @@ open Common
 open Device
 module W = Window
 
-let dev = { Device.default with
+let dev_winid = { Device.default with
   name = "winid";
   perm = Plan9.r;
   read_threaded = (fun offset count w ->
@@ -11,5 +11,3 @@ let dev = { Device.default with
     Device.honor_offset_and_count offset count str
   );
 }
-
-

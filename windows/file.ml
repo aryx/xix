@@ -26,11 +26,12 @@ type filecode =
   and devid = 
     | WinName
     | Mouse
+    (* todo: Cursor ... *)
     | Cons
     | ConsCtl
 
     | WinId
-    (* todo: Cursor ... *)
+    | Text
 
 (* will generate a Qid.path *)
 type fileid = filecode * Window.wid
@@ -83,6 +84,7 @@ let int_of_filecode = function
   | File Cons -> 3
   | File ConsCtl -> 4
   | File WinId -> 5
+  | File Text -> 6
 
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor

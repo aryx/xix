@@ -21,7 +21,8 @@ let all_devices = [
   F.Cons    , Virtual_cons.dev_cons;
   F.ConsCtl , Virtual_cons.dev_consctl;
   
-  F.WinId   , Dev_winid.dev;
+  F.WinId   , Dev_wm.dev_winid;
+  F.Text    , Dev_textual_window.dev_text;
 ]
 
 (*****************************************************************************)

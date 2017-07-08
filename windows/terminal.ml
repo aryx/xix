@@ -350,8 +350,10 @@ let alloc img font =
   let scrollr = 
     { r with max = { r.max with x = r.min.x + scrollbar_width } } in
   let textr = 
-    { r with min = { r.min with x = scrollr.max.x + scrollbar_gap } } in
-  (* less: remove bottom line? *)
+    { min = { r.min with x = scrollr.max.x + scrollbar_gap };
+      (* can not use last lines if not enough pixels for a character *)
+      max = { r.max with y = r.max.y - (Rectangle.dy r mod font.Font.height) };
+    } in
   
   {
     text = [||];

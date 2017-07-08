@@ -1,12 +1,22 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 
-(* |> now included by default in OCaml (and optimized) *)
+(* '|>' is now included by default in OCaml (and optimized) *)
 
 type filename = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b
 
 let spf = Printf.sprintf
+
+let pr s =
+  print_string s;
+  print_string "\n";
+  flush stdout
+
+let pr2 s =
+  prerr_string s;
+  prerr_string "\n";
+  flush stderr
 
 
 let with_file_out f file = 
@@ -33,7 +43,7 @@ let rec rnd x v =
   else rnd (x+1) v
 
 
-(* used to be called do_option, or opt *)
+(* old: used to be called do_option, or just opt *)
 let if_some f = function
   | None -> ()
   | Some x -> f x
@@ -46,10 +56,6 @@ let rec filter_some = function
 let map_filter f xs = xs |> List.map f |> filter_some
 
 
-
-let exclude p xs =
-  xs |> List.filter (fun x -> not (p x))
-
 let sort_by_val_highfirst xs =
   List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
 let sort_by_val_lowfirst xs =
@@ -59,6 +65,20 @@ let sort_by_key_highfirst xs =
   List.sort (fun (k1,v1) (k2,v2) -> compare k2 k1) xs
 let sort_by_key_lowfirst xs =
   List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs
+
+let group_by f xs =
+  (* use Hashtbl.find_all property *)
+  let h = Hashtbl.create 101 in
+
+  (* could use Set *)
+  let hkeys = Hashtbl.create 101 in
+  
+  xs |> List.iter (fun x ->
+    let k = f x in
+    Hashtbl.replace hkeys k true;
+    Hashtbl.add h k x
+  );
+  Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
 
 
 let memoized ?(use_cache=true) h k f =
@@ -74,6 +94,21 @@ let memoized ?(use_cache=true) h k f =
       end
 
 
+(* tail recursive efficient version *)
+let cat file =
+  let chan = open_in file in
+  let rec cat_aux acc ()  =
+      (* cant do input_line chan::aux() cos ocaml eval from right to left ! *)
+    let (b, l) = try (true, input_line chan) with End_of_file -> (false, "") in
+    if b
+    then cat_aux (l::acc) ()
+    else acc
+  in
+  cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)
+
+
+
+module Regexp_ = struct
 
 let (matched: int -> string -> string) = fun i s ->
   Str.matched_group i s
@@ -96,13 +131,48 @@ let candidate_match_func s re =
 
 let split sep s = Str.split (Str.regexp sep) s
 
+end
+
 let (=~) s re =
-  candidate_match_func s re
+  Regexp_.candidate_match_func s re
+
+
+module List_ = struct
+
+let exclude p xs =
+  xs |> List.filter (fun x -> not (p x))
+
+let take n xs =
+  let rec next n xs acc =
+    match (n,xs) with
+    | (0,_) -> List.rev acc
+    | (_,[]) -> failwith "Common.take: not enough"
+    | (n,x::xs) -> next (n-1) xs (x::acc) in
+  next n xs []
+
+let rec take_safe n xs =
+  match (n,xs) with
+  | (0,_) -> []
+  | (_,[]) -> []
+  | (n,x::xs) -> x::take_safe (n-1) xs
+
+end
+
+
+module Hashtbl_ = struct    
+
+let of_list xs =
+  let h = Hashtbl.create 101 in
+  xs |> List.iter (fun (k, v) -> Hashtbl.replace h k v);
+  h
+
+let to_list h =
+  Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
+end
 
 
 
-
-
+module Obj_ = struct
 (* start of dumper.ml *)
 
 (* Dump an OCaml value into a printable string.
@@ -188,7 +258,9 @@ let rec dump2 r =
     else failwith ("dump: impossible tag (" ^ string_of_int t ^ ")")
   )
 
-let dump v = dump2 (repr v)
+end
+
+let dump v = Obj_.dump2 (Obj.repr v)
 
 (* end of dumper.ml *)
 
@@ -196,69 +268,4 @@ let dump v = dump2 (repr v)
 let (dump : 'a -> string) = fun x ->
   Dumper.dump x
 *)
-
-
-
-let pr s =
-  print_string s;
-  print_string "\n";
-  flush stdout
-
-let pr2 s =
-  prerr_string s;
-  prerr_string "\n";
-  flush stderr
-
 let pr2_gen x = pr2 (dump x)
-
-
-
-let group_by f xs =
-  (* use Hashtbl.find_all property *)
-  let h = Hashtbl.create 101 in
-
-  (* could use Set *)
-  let hkeys = Hashtbl.create 101 in
-  
-  xs |> List.iter (fun x ->
-    let k = f x in
-    Hashtbl.replace hkeys k true;
-    Hashtbl.add h k x
-  );
-  Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
-    
-
-let hash_of_list xs =
-  let h = Hashtbl.create 101 in
-  xs |> List.iter (fun (k, v) -> Hashtbl.replace h k v);
-  h
-
-let hash_to_list h =
-  Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
-
-let take n xs =
-  let rec next n xs acc =
-    match (n,xs) with
-    | (0,_) -> List.rev acc
-    | (_,[]) -> failwith "Common.take: not enough"
-    | (n,x::xs) -> next (n-1) xs (x::acc) in
-  next n xs []
-
-let rec take_safe n xs =
-  match (n,xs) with
-  | (0,_) -> []
-  | (_,[]) -> []
-  | (n,x::xs) -> x::take_safe (n-1) xs
-
-(* tail recursive efficient version *)
-let cat file =
-  let chan = open_in file in
-  let rec cat_aux acc ()  =
-      (* cant do input_line chan::aux() cos ocaml eval from right to left ! *)
-    let (b, l) = try (true, input_line chan) with End_of_file -> (false, "") in
-    if b
-    then cat_aux (l::acc) ()
-    else acc
-  in
-  cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)
-

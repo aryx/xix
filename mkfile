@@ -17,7 +17,7 @@ DIRS2=commons2 lib_system/plan9 lib_graphics windows
 # works only from scratch:
 DIRS3=kernel
 
-DIRS=$DIRS1 $DIRS2
+DIRS=$DIRS1 $DIRS2 #DIRS3
 
 all:V: all.directories
 opt:V: opt.directories

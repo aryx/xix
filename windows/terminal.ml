@@ -269,6 +269,10 @@ let newline_after_output_point term =
   in
   aux term.output_point
 
+(* assumes term.runes_visible is up to date, so 
+ * !!do not call this function if you modified term.textr since the last 
+ * repaint_content!!
+ *)
 let move_origin_to_see term pos =
   if pos.i >= term.origin_visible.i &&
      pos.i <= term.origin_visible.i + term.runes_visible

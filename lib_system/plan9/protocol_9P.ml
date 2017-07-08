@@ -14,7 +14,7 @@ module Unix2  = ThreadUnix
  *  - 32 bits: size of what follows
  *  - 8 bits: type of the message (Txxx or Rxxx)
  *  - 16 bits: tag of the message
- *  - variable bytes: depends on the type of the message
+ *  - the rest depends on the type of the message
  * 
  * See 0intro(5) in the man page of Plan9 for more information on 9P.
  * 

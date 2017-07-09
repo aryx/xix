@@ -3,9 +3,11 @@ open Common
 module F = File
 module D = Device
 module FS = Fileserver
+module W = Window
 module N = Plan9
 module P = Protocol_9P
-module W = Window
+module T = P.Request
+module R = P.Response
 
 (*****************************************************************************)
 (* Prelude *)
@@ -52,7 +54,7 @@ let answer fs res =
   P.write_9P_msg res fs.FS.server_fd
 
 let error fs req str =
-  let res = { req with P.typ = P.R (P.R.Error str) } in
+  let res = { req with P.typ = P.R (R.Error str) } in
   answer fs res
 
 (* less: could be check_and_find_fid to factorize more code in dispatch() *)
@@ -72,7 +74,7 @@ let first_message = ref true
 let dispatch fs req request_typ =
   match request_typ with
   (* Version *)
-  | P.T.Version (msize, str) -> 
+  | T.Version (msize, str) -> 
     (match () with
     | _ when not !first_message ->
       error fs req "version: request not first message"
@@ -82,11 +84,11 @@ let dispatch fs req request_typ =
       error fs req "version: unrecognized 9P version";
     | _ ->
       fs.FS.message_size <- msize;
-      answer fs {req with P.typ = P.R (P.R.Version (msize, str)) }
+      answer fs {req with P.typ = P.R (R.Version (msize, str)) }
     )
 
   (* Attach *)
-  | P.T.Attach (rootfid, auth_fid_opt, uname, aname) ->
+  | T.Attach (rootfid, auth_fid_opt, uname, aname) ->
     (* stricter: *)
     if Hashtbl.mem fs.FS.fids rootfid
     then failwith (spf "Attach: fid already used: %d" rootfid);
@@ -113,14 +115,14 @@ let dispatch fs req request_typ =
          F.w = w;
        } in
        Hashtbl.add fs.FS.fids rootfid file;
-       answer fs {req with P.typ = P.R (P.R.Attach qid) }
+       answer fs {req with P.typ = P.R (R.Attach qid) }
      with exn ->
         error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
     ))
 
   (* Walk *)
-  | P.T.Walk (fid, newfid_opt, xs) ->
+  | T.Walk (fid, newfid_opt, xs) ->
     check_fid "walk" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let wid = file.F.w.W.id in
@@ -175,7 +177,7 @@ let dispatch fs req request_typ =
         in
         file.F.qid <- final_qid;
         file.F.entry <- final_entry;
-        answer fs { req with P.typ = P.R (P.R.Walk qids) }
+        answer fs { req with P.typ = P.R (R.Walk qids) }
       with exn ->
         newfid_opt |> Common.if_some (fun newfid ->
           Hashtbl.remove fs.FS.fids newfid
@@ -195,7 +197,7 @@ let dispatch fs req request_typ =
     )
 
   (* Open *)
-  | P.T.Open (fid, flags) ->
+  | T.Open (fid, flags) ->
     check_fid "open" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
@@ -220,14 +222,14 @@ let dispatch fs req request_typ =
          );
          file.F.opened <- Some flags;
          let iounit = fs.FS.message_size - P.io_header_size in
-         answer fs { req with P.typ = P.R (P.R.Open (file.F.qid, iounit)) }
+         answer fs { req with P.typ = P.R (R.Open (file.F.qid, iounit)) }
        with Device.Error str ->
          error fs req str
       )
     )
 
   (* Clunk *)
-  | P.T.Clunk (fid) ->
+  | T.Clunk (fid) ->
     check_fid "clunk" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     (match file.F.opened with
@@ -246,10 +248,10 @@ let dispatch fs req request_typ =
       ()
     );
     Hashtbl.remove fs.FS.fids fid;
-    answer fs { req with P.typ = P.R (P.R.Clunk) }
+    answer fs { req with P.typ = P.R (R.Clunk) }
 
   (* Read *)
-  | P.T.Read (fid, offset, count) ->
+  | T.Read (fid, offset, count) ->
     check_fid "read" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
@@ -264,7 +266,7 @@ let dispatch fs req request_typ =
        (try 
          let dev = device_of_devid devid in
          let data = dev.D.read_threaded offset count w in
-         answer fs { req with P.typ = P.R (P.R.Read data) }
+         answer fs { req with P.typ = P.R (R.Read data) }
        with Device.Error str ->
          error fs req str
       )) () |> ignore
@@ -273,7 +275,7 @@ let dispatch fs req request_typ =
     )
 
   (* Write *)
-  | P.T.Write (fid, offset, data) ->
+  | T.Write (fid, offset, data) ->
     check_fid "write" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let w = file.F.w in
@@ -289,7 +291,7 @@ let dispatch fs req request_typ =
          (* less: case where want to let device return different count? *)
          let count = String.length data in
          dev.D.write_threaded offset data w;
-         answer fs { req with P.typ = P.R (P.R.Write count) }
+         answer fs { req with P.typ = P.R (R.Write count) }
        with Device.Error str ->
          error fs req str
       )) () |> ignore
@@ -297,7 +299,7 @@ let dispatch fs req request_typ =
       raise (Impossible "kernel should not call write on fid of a directory")
     )
   (* Stat *)
-  | P.T.Stat (fid) ->
+  | T.Stat (fid) ->
     check_fid "stat" fid fs;
     let file = Hashtbl.find fs.FS.fids fid in
     let short = file.F.entry in
@@ -325,17 +327,17 @@ let dispatch fs req request_typ =
       N._dev = 0;
     }
     in
-    answer fs { req with P.typ = P.R (P.R.Stat dir_entry) }
+    answer fs { req with P.typ = P.R (R.Stat dir_entry) }
 
   (* Other *)
-  | P.T.Create _ 
-  | P.T.Remove _
-  | P.T.Wstat _
+  | T.Create _ 
+  | T.Remove _
+  | T.Wstat _
       -> error fs req "permission denied"
 
   (* todo: handle those one? *)
-  | P.T.Flush _
-  | P.T.Auth _
+  | T.Flush _
+  | T.Auth _
     -> 
     failwith (spf "TODO: req = %s" (P.str_of_msg req))
 

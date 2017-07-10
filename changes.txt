@@ -2,8 +2,22 @@
 
 * 0.6 (Q2 2017) (rio and libdraw)
 
-port of rio using ocaml threads but relying on the original plan9 kernel.
-port of draw, the userspace part, again relying on the original plan9 kernel.
+port of rio using ocaml threads but relying on the original plan9 kernel
+with basic terminal emulator.
+
+port of libdraw, the userspace part, again relying on the original plan9 kernel
+(draw/, geometry/, input/, and basic ui/ for menus)
+
+binding to plan9 mount/bind and port of 9P protocol to ocaml (for rio)
+(lib_system/)
+
+import stdlib and organize better lib_core/ (collections/, string/, etc).
+
+port more of the kernel C code to ocaml 
+(core DS, concurrency, memory, process, interrupts, virtual memory,
+scheduling, and timing chapters).
+
+started lib_core/ 
 
 * 0.5 (Q1 2017) (kernel start)
 

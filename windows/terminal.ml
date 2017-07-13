@@ -24,6 +24,7 @@ module D = Display
  * less: 
  *  - extract independent stuff and put in lib_graphics/ui/text_ui.ml?  
  *  - extract even more independent stuff in editor.ml somewhere?
+ *  - take code from zed opam package?
  *)
 
 (*****************************************************************************)

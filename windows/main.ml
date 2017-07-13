@@ -1,8 +1,6 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-module I = Display
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -46,7 +44,7 @@ let thread_main () =
   let mouse = Mouse.init () in
   let kbd = Keyboard.init () in
 
-  Draw.draw_color view view.I.r background;
+  Draw.draw_color view view.Display.r background;
   (* to test: alternative to -test that leverages work done above
   Test.test_display_default_font display view;
   Test.test_display_text display view font;

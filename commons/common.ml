@@ -2,6 +2,10 @@
 
 (* '|>' is now included by default in OCaml (and optimized) *)
 
+type byte = char
+(* ocaml 4.xx has a separate type for bytes and (immutable) strings *)
+type bytes = string
+
 type filename = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b

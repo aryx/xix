@@ -1,0 +1,17 @@
+# -*- sh -*-
+TOP=..
+
+SRC= sha.ml hexsha.ml \
+     cmd.ml \
+     cmd_test.ml main.ml
+
+INCLUDES=-I $TOP/commons
+
+LIBS=$TOP/commons/lib.cma
+
+SYSLIBS=unix.cma str.cma
+
+PROG=ogit
+
+<$TOP/mkconfig
+<$TOP/mkprog

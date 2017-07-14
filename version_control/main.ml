@@ -15,8 +15,8 @@ open Common
  * The code of ogit uses code from 
  *  - ocaml-git
  *  - ocaml-hex
- *  - decompress, 
- *  - a few other sources. 
+ *  - decompress
+ *  - a few other sources.
  * 
  * Compared to ocaml-git, ogit is simpler because:
  *  - no use of functor
@@ -25,6 +25,8 @@ open Common
  *  - no support for mirage, so no need to parametrize many things
  *  - hardcoded use of SHA1, so no need functors taking Git.DIGEST
  *  - hardcoded use of zlib
+ *  - no use of Cstruct or Mstruct or Bigarray (simply use String)
+ *  - no use of lwt
  *  - no logs
  *  - no pp
  *  - ...

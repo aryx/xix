@@ -31,7 +31,9 @@ type t = string
 
 let is_hexsha x =
  String.length x = 40
- (* less: could also check every chars is between 0 and F *)
+ (* less: could also check every chars is between 0 and F,
+  * or just call to_sha and catch if any exn.
+  *)
 
 
 (*****************************************************************************)
@@ -74,6 +76,39 @@ let of_string_fast s =
   done;
   (*pad:`Hex*) buf
 
+
+let invalid_arg fmt =
+  Printf.ksprintf (fun str -> raise (Invalid_argument str)) fmt
+
+let to_char x y =
+  let code c = match c with
+    | '0'..'9' -> Char.code c - 48 (* Char.code '0' *)
+    | 'A'..'F' -> Char.code c - 55 (* Char.code 'A' + 10 *)
+    | 'a'..'f' -> Char.code c - 87 (* Char.code 'a' + 10 *)
+    | _ -> invalid_arg "Hex.to_char: %d is an invalid char" (Char.code c)
+  in
+  Char.chr (code x lsl 4 + code y)
+
+let to_helper ~empty_return ~create ~set ((*`Hex*) s) =
+  if s = "" then empty_return
+  else
+    let n = String.length s in
+    let buf = create (n/2) in
+    let rec aux i j =
+      if i >= n then ()
+      else if j >= n then invalid_arg "hex conversion: invalid hex string"
+      else (
+        set buf (i/2) (to_char s.[i] s.[j]);
+        aux (j+1) (j+2)
+      )
+    in
+    aux 0 1;
+    buf
+
+let to_string hex =
+  to_helper ~empty_return:"" ~create:Bytes.create ~set:Bytes.set hex
+
+
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
@@ -83,5 +118,4 @@ let of_sha x =
   of_string_fast x
 
 let to_sha x =
-  raise Todo
-
+  to_string x

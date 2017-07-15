@@ -1,3 +1,8 @@
 Yoann Padioleau
 
-except lex/ and lib_core/stdlib/ by Xavier Leroy.
+except 
+ - lex/ by Xavier Leroy (from ocaml)
+ - lib_core/stdlib/ by Xavier Leroy (from ocaml)
+ - version_control/sha.ml by Daniel Bunzli (from uuidm)
+ - version_control/zlib.ml by Xavier Leroy (from camlzip)
+ - commons/IO.ml by Nicolas Canasse (from exblib)

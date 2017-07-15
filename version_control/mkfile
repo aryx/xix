@@ -2,6 +2,7 @@
 TOP=..
 
 SRC= sha.ml hexsha.ml \
+     zlib.ml \
      cmd.ml \
      cmd_test.ml main.ml
 
@@ -14,4 +15,39 @@ SYSLIBS=unix.cma str.cma
 PROG=ogit
 
 <$TOP/mkconfig
-<$TOP/mkprog
+
+COBJS=zlibstubs.o
+CCLIBS=-cclib -lz
+
+%.o: %.c
+	$OCAMLC -c $stem.c
+
+#<$TOP/mkprog
+# include  of mkprog:
+</$objtype/mkfile
+#<$TOP/mkconfig
+
+# assumes the "includer" has defined:
+#  TOP, SRC, INCLUDES, LIBS, SYSLIBS, CCLIBS, and PROG
+
+OBJS=${SRC:%.ml=%.cmo}
+
+all:V: $PROG
+opt:V: $PROG.opt
+
+$PROG: $OBJS $COBJS $LIBS
+	$OCAMLC -custom $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
+
+SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}
+LIBSOPT=${LIBS:%.cma=%.cmxa}
+
+$PROG.opt: ${OBJS:%.cmo=%.cmx}
+	$OCAMLOPT $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq -o $target
+
+clean:V:
+	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
+	rm -f *~ .*~ *.exe gmon.out *.output
+
+<$TOP/mkcommon
+<.depend
+

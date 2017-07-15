@@ -35,13 +35,6 @@ open Common
 (* Compatibility *)
 (*****************************************************************************)
 
-(* Only since ocaml 4.0?? *)
-module Bytes = String
-module Bytes_ = struct
-  let blit_string a b c d e = String.blit a b c d e
-  let unsafe_to_string x = x
-end
-
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
@@ -66,7 +59,7 @@ let sha1 s =
     let rem = len mod 64 in
     let mlen = if rem > 55 then len + 128 - rem else len + 64 - rem in
     let m = Bytes.create mlen in
-    Bytes_.blit_string s 0 m 0 len;
+    Bytes.blit_string s 0 m 0 len;
     Bytes.fill m len (mlen - len) '\x00';
     Bytes.set m len '\x80';
     if Sys.word_size > 32 then begin
@@ -160,4 +153,4 @@ let sha1 s =
   i2s h 8 !h2;
   i2s h 12 !h3;
   i2s h 16 !h4;
-  Bytes_.unsafe_to_string h
+  Bytes.unsafe_to_string h

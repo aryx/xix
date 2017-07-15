@@ -35,18 +35,6 @@ let is_hexsha x =
   * or just call to_sha and catch if any exn.
   *)
 
-
-(*****************************************************************************)
-(* Compatibility *)
-(*****************************************************************************)
-
-(* Only since ocaml 4.0?? *)
-module Bytes = String
-module Bytes_ = struct
-  let blit_string a b c d e = String.blit a b c d e
-  let unsafe_to_string x = x
-end
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)

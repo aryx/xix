@@ -1,14 +1,17 @@
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
-
-(* '|>' is now included by default in OCaml (and optimized) *)
+(* Copyright 2015, 2016, 2017 Yoann Padioleau, see copyright.txt *)
 
 type byte = char
-(* ocaml 4.xx has a separate type for bytes and (immutable) strings *)
+
 type bytes = string
+(* builtin since OCaml 4.02 (bytes are mutable strings) *)
 
 type filename = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b
+
+(* let (|>) o f = f o
+   builtin since OCaml 4.01 (builtin and optimized) 
+*)
 
 let spf = Printf.sprintf
 

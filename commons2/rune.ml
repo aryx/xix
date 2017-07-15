@@ -1,5 +1,12 @@
 open Common
 
+(*
+ * alternatives:
+ *  - extlib/utf8.ml ?
+ *  - batteries?
+ *  - camomile?
+ *)
+
 (* todo: use unicode! *)
 type t = char
 

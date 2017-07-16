@@ -2,6 +2,7 @@
 TOP=..
 
 SRC= sha.ml hexsha.ml \
+     unzip.ml \
      zlib.ml \
      cmd.ml \
      cmd_test.ml main.ml

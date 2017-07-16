@@ -2,7 +2,9 @@ Yoann Padioleau
 
 except 
  - lex/ by Xavier Leroy (from ocaml)
- - lib_core/stdlib/ by Xavier Leroy (from ocaml)
+ - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)
  - version_control/sha.ml by Daniel Bunzli (from uuidm)
+ - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)
  - version_control/zlib.ml by Xavier Leroy (from camlzip)
- - commons/genio.ml by Nicolas Canasse (from exblib)
+ - version_control/unzip.ml by Nicolas Canasse (from extlib)
+ - commons/IO.ml by Nicolas Canasse (from exblib)

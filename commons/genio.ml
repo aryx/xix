@@ -28,13 +28,15 @@
  * 
  * alternatives:
  *  - in_channel/out_channel in pervasives.ml
- *    no function for little/big endian binary IO, and no in_channel_of_string()
- *  - batIO.ml from batteries-included comes from extLib's IO.ml
+ *    no function for little/big-endian binary IO. We could add those functions,
+ *    but still there is no inchannel_of_string() or outchannel_of_buffer()
+ *    so not general enough.
+ *  - batIO.ml from batteries-included (comes from extLib's IO.ml)
  *    complexified
  *  - mstruct/cstruct
  *    good when have .h declarations of struct, 
- *    but more complex than IO.ml. Bytes and Buffer with a small wrapper
- *    around (IO.ml) for little/big endian stuff is good enough.
+ *    but more complex than IO.ml. Bytes and Buffer with small wrappers
+ *    around (e.g., IO.ml) for little/big endian stuff is good enough.
  *  - scanf/printf? good for binary IO?
  *  - bitstring (was called bitmatch)
  *    Erlang style binary IO. Very declarative, very powerful, but
@@ -61,6 +63,7 @@ type 'a output = {
 }
 
 exception No_more_input
+
 exception Input_closed
 exception Output_closed
 

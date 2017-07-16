@@ -19,7 +19,7 @@ open Common
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * Most of the code below comes from src: https://github.com/dbuenzli/uuidm 
+ * Most of the code below comes from: https://github.com/dbuenzli/uuidm 
  * (this code is also copy-pasted and used in git-mirage)
  * 
  * alternatives:
@@ -30,10 +30,6 @@ open Common
  *  - nocrypto
  *    also uses C code
  *)
-
-(*****************************************************************************)
-(* Compatibility *)
-(*****************************************************************************)
 
 (*****************************************************************************)
 (* Types *)

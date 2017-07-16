@@ -24,7 +24,6 @@
  * 
  * Most of the code below comes from: 
  * https://github.com/ygrek/ocaml-extlib/blob/master/src/IO.ml
- * This file was called IO.ml (Abstract input/output)
  * 
  * alternatives:
  *  - in_channel/out_channel in pervasives.ml

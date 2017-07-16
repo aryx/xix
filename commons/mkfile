@@ -5,6 +5,7 @@ INCLUDES=-I .
 SRC=common.ml\
  common2.ml\
  ocaml.ml\
+ genio.ml\
 
 <$TOP/mkconfig
 <$TOP/mklib

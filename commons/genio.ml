@@ -27,12 +27,25 @@
  * This file was called IO.ml (Abstract input/output)
  * 
  * alternatives:
- *
+ *  - in_channel/out_channel in pervasives.ml
+ *    no function for little/big endian binary IO, and no in_channel_of_string()
+ *  - batIO.ml from batteries-included comes from extLib's IO.ml
+ *    complexified
+ *  - mstruct/cstruct
+ *    good when have .h declarations of struct, 
+ *    but more complex than IO.ml. Bytes and Buffer with a small wrapper
+ *    around (IO.ml) for little/big endian stuff is good enough.
+ *  - scanf/printf? good for binary IO?
+ *  - bitstring (was called bitmatch)
+ *    Erlang style binary IO. Very declarative, very powerful, but
+ *    requires camlp4 or ppx.
  *)
 
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
+
+(* start of copy-pasted code from extLib/IO.ml *)
 
 type input = {
   mutable in_read : unit -> char;
@@ -56,6 +69,7 @@ exception Output_closed
 
 let default_close = (fun () -> ())
 
+(* pad: could use intermediate struct instead of keyword arguments *)
 let create_in ~read ~input ~close =
   {
     in_read = read;
@@ -70,6 +84,7 @@ let create_out ~write ~output ~flush ~close =
     out_close = close;
     out_flush = flush;
   }
+
 
 let read i = i.in_read()
 
@@ -418,11 +433,12 @@ let read_string_into_buffer i =
   loop();
   b
 
-let read_string i =
+(* pad: added the c_ prefix *)
+let read_c_string i =
   Buffer.contents
     (read_string_into_buffer i)
 
-let read_bytes i =
+let read_c_bytes i =
   Buffer.to_bytes
     (read_string_into_buffer i)
 
@@ -462,11 +478,11 @@ let write_byte o n =
   (* doesn't test bounds of n in order to keep semantics of Pervasives.output_byte *)
   write o (Char.unsafe_chr (n land 0xFF))
 
-let write_string o s =
+let write_c_string o s =
   nwrite_string o s;
   write o '\000'
 
-let write_bytes o s =
+let write_c_bytes o s =
   nwrite o s;
   write o '\000'
 
@@ -741,4 +757,3 @@ let rec write_bits b ~nbits x =
 
 let flush_bits b =
   if b.nbits > 0 then write_bits b (8 - b.nbits) 0
-

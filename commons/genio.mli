@@ -55,13 +55,13 @@ val nread : input -> int -> bytes
   The function will raise [No_more_input] if no input is available.
   It will raise [Invalid_argument] if [n] < 0. *)
 
+val nread_string : input -> int -> string
+(** as [nread], but reads a string. *)
+
 val really_nread : input -> int -> bytes
 (** [really_nread i n] reads a byte sequence of exactly [n] characters
   from the input. Raises [No_more_input] if at least [n] characters are
   not available. Raises [Invalid_argument] if [n] < 0. *)
-
-val nread_string : input -> int -> string
-(** as [nread], but reads a string. *)
 
 val really_nread_string : input -> int -> string
 (** as [really_nread], but reads a string. *)
@@ -195,19 +195,16 @@ external cast_output : 'a output -> unit output = "%identity"
   operations with other encoding.
 *)
 
-exception Overflow of string
-(** Exception raised when a read or write operation cannot be completed. *)
-
 val read_byte : input -> int
 (** Read an unsigned 8-bit integer. *)
 
 val read_signed_byte : input -> int
 (** Read an signed 8-bit integer. *)
 
-val read_string : input -> string
+val read_c_string : input -> string
 (** Read a null-terminated string. *)
 
-val read_bytes : input -> bytes
+val read_c_bytes : input -> bytes
 (** Read a null-terminated byte sequence. *)
 
 val read_line : input -> string
@@ -218,16 +215,20 @@ val read_line : input -> string
 val write_byte : 'a output -> int -> unit
 (** Write an unsigned 8-bit byte. *)
 
-val write_string : 'a output -> string -> unit
+val write_c_string : 'a output -> string -> unit
 (** Write a string and append an null character. *)
 
-val write_bytes : 'a output -> bytes -> unit
+val write_c_bytes : 'a output -> bytes -> unit
 (** Write a byte sequence and append an null character. *)
 
 val write_line : 'a output -> string -> unit
 (** Write a line and append a LF (it might be converted
   to CRLF on some systems depending on the underlying IO). *)
 
+
+
+exception Overflow of string
+(** Exception raised when a read or write operation cannot be completed. *)
 
 module LittleEndian :
 sig
@@ -253,6 +254,7 @@ val read_float32 : input -> float
 
 val read_double : input -> float
 (** Read an IEEE double precision floating point value (64 bits). *)
+
 
 val write_ui16 : 'a output -> int -> unit
 (** Write an unsigned 16-bit word. *)

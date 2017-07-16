@@ -4,16 +4,18 @@
 type int8 = int
 (* todo: constructor to sanity check *)
 type int16 = int
-(* todo: use Int32.t *)
+
+(* todo: use Int32.t, builtin since OCaml ?? *)
 type int32 = int
-(* todo: use Int64.t *)
+(* todo: use Int64.t, builtin since OCaml ?? *)
 type int64 = int
 (* if you really need to represent high values use: 
  * type int64_special = int * int 
  *)
 
 type byte = char
-(* ocaml 4.xx has a separate type for bytes and (immutable) strings *)
+
+(* builtin since OCaml 4.02 *)
 type bytes = string
 
 type filename = string
@@ -23,7 +25,7 @@ type ('a, 'b) either = Left of 'a | Right of 'b
 exception Todo
 exception Impossible of string
 
-(* available since ocaml 4.01 but we use 1.07 (ocaml light) for rio *)
+(* builtin since ocaml 4.01 (and optimized) *)
 let (|>) o f = f o
 
 let spf = Printf.sprintf

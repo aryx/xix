@@ -96,13 +96,12 @@ let to_helper ~empty_return ~create ~set ((*`Hex*) s) =
 let to_string hex =
   to_helper ~empty_return:"" ~create:Bytes.create ~set:Bytes.set hex
 
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
 let of_sha x =
-  assert (Sha.is_sha x);
+  assert (Sha1.is_sha x);
   of_string_fast x
 
 let to_sha x =

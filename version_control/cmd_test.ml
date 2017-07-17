@@ -8,7 +8,7 @@ let test_sha1 () =
   let header = "blob 16\000" in
   let store = header ^ content in
 
-  let sha = Sha.sha1 store in
+  let sha = Sha1.sha1 store in
   pr (spf "len = %d, raw = %s" (String.length sha) sha);
   let hexsha = Hexsha.of_sha sha in
   pr (spf "len = %d, str = %s" (String.length hexsha) hexsha);

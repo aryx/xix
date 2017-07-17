@@ -28,7 +28,7 @@ open Common
  *  - https://github.com/xavierleroy/cryptokit/
  *    by Xavier Leroy, but also uses C code
  *  - nocrypto
- *    also uses C code
+ *    seems like the official crypto lib, but also uses C code
  *)
 
 (*****************************************************************************)
@@ -41,8 +41,11 @@ let is_sha x =
   Bytes.length x = 20
 
 (*****************************************************************************)
-(* Entry point *)
+(* Entry points *)
 (*****************************************************************************)
+let read ch =
+  IO.really_nread ch 20
+
 
 (* start of copy-pasted code from uuidm *)
 

@@ -22,7 +22,7 @@ let dump_object file =
   with Unzip.Error _err ->
     failwith "unzip error"
 
-(* =~ dulwich dump-index *)
+(* =~ dulwich dump-index, =~ git ls-files --stage *)
 let dump_index file =
   let chan = open_in file in
   let input = IO.input_channel chan in

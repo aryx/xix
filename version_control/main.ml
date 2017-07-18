@@ -25,7 +25,7 @@ open Common
  * ogit uses lots of code from ocaml-git. However, ogit is simpler because
  * it does not use fancy features of OCaml or fancy libraries:
  *  - no functor, include, module types, polymorphic variants, keyword args,
- *    or useless nested modules. KISS.
+ *    or excessive nested modules. KISS.
  *  - no functorized Set and Map so no need for hash(), compare(), and equal()
  *    boilerplate functions everywhere
  *  - hardcoded use of SHA1, so no need functors taking Git.DIGEST and HashIO

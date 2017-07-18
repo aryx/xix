@@ -7,6 +7,7 @@ SRC= IO_utils.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
      index.ml \
+     repository.ml \
      cmd.ml \
      dump.ml cmd_dump.ml \
      cmd_test.ml main.ml

@@ -43,7 +43,7 @@ type t = {
 (*****************************************************************************)
 
 let read_parents ch =
-  (* todo: handle multiple parents, now? *)
+  (* todo: handle multiple parents, how? need read another line ... *)
   let parent = IO_utils.read_key_space_value_newline ch "parent" Hexsha.read in
   [parent]
 

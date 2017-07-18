@@ -19,23 +19,21 @@ open Common
  *  - camlzip
  *  - extlib
  *  - uuidm
- *  - a few other sources.
  * 
  * Compared to ocaml-git, ogit is simpler because:
- *  - no use of functor, include, module types. KISS.
+ *  - no functor, include, module types, polymorphic variants, keyword args,
+ *    or useless nested modules. KISS.
  *  - no functorized Set and Map so no need to hash, compare, and equal 
  *    boilerplate functions everywhere
- *  - hardcoded use of SHA1, so no need functors taking Git.DIGEST
+ *  - hardcoded use of SHA1, so no need functors taking Git.DIGEST and HashIO
  *  - no support for mirage, so no need to parametrize many things,
  *    no need Fs module, no need lwt
  *  - no disk vs mem, just disk, so again need less functors
- *  - hardcoded use of zlib
+ *  - hardcoded use of zlib so no need functors taking inflate signature
  *  - no support for filename requiring special escapes
- *  - no use of polymorphic variants
- *  - no use of keyword arguments, or default arguments
  *  - no use of Cstruct or Mstruct or Bigarray (simply use IO.ml and Bytes)
  *  - no logs
- *  - no fmt, just dump_gen or ocamldebug
+ *  - no fmt (use ocamldebug or ocamltarzan dumpers)
  *  - no sexplib
  * 
  * good stuff I took from ocaml-git:
@@ -79,6 +77,5 @@ let main () =
       | Arg.Bad str ->
         failwith str
         
-
 let _ =
   main ()

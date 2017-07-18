@@ -5,4 +5,7 @@ type t = string
 val of_sha: Sha1.t -> t
 val to_sha: t -> Sha1.t
 
+val read: IO.input -> t
+
 val is_hexsha: t -> bool
+

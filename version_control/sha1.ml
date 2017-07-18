@@ -38,13 +38,16 @@ open Common
 type t = bytes
 
 let is_sha x =
+  (* less: extra check? forbidden characters? *)
   Bytes.length x = 20
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 let read ch =
-  IO.really_nread ch 20
+  let s = IO.really_nread ch 20 in
+  assert (is_sha s);
+  s
 
 
 (* start of copy-pasted code from uuidm *)

@@ -105,4 +105,10 @@ let of_sha x =
   of_string_fast x
 
 let to_sha x =
+  assert (is_hexsha x);
   to_string x
+
+let read ch =
+  let s = IO.really_nread ch 40 in
+  assert (is_hexsha s);
+  s

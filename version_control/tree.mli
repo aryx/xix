@@ -15,6 +15,8 @@ type entry = {
 
 type t = entry list
 
+type hash = Sha1.t
+
 
 (* assumes have already read the 'tree <size>\000' header from input *)
 val read: IO.input -> t

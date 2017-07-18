@@ -4,7 +4,7 @@ TOP=..
 SRC= IO_utils.ml \
      sha1.ml hexsha.ml \
      unzip.ml zlib.ml \
-     blob.ml tree.ml commit.ml    objects.ml \
+     blob.ml tree.ml  user.ml commit.ml    objects.ml \
      cmd.ml \
      dump.ml cmd_dump.ml \
      cmd_test.ml main.ml

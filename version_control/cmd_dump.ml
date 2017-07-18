@@ -22,7 +22,11 @@ let dump_object file =
     failwith "unzip error"
 
 let dump_index file =
-  raise Todo
+  let chan = open_in file in
+  let input = IO.input_channel chan in
+  let index = Index.read input in
+  let v = Dump.vof_index index in
+  pr (Ocaml.string_of_v v)
 
 let dump file =
   if !index

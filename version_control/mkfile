@@ -6,6 +6,7 @@ SRC= IO_utils.ml \
      unzip.ml zlib.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
+     index.ml \
      cmd.ml \
      dump.ml cmd_dump.ml \
      cmd_test.ml main.ml

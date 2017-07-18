@@ -3,6 +3,7 @@ open Common
 let raw = ref false
 let index = ref false
 
+(* =~ git cat-file -p *)
 let dump_object file =
   let chan = open_in file in
   let input = IO.input_channel chan in
@@ -21,6 +22,7 @@ let dump_object file =
   with Unzip.Error _err ->
     failwith "unzip error"
 
+(* =~ dulwich dump-index *)
 let dump_index file =
   let chan = open_in file in
   let input = IO.input_channel chan in
@@ -47,4 +49,3 @@ let cmd = { Cmd.
                        (String.concat ";" args))
   );
 }
-

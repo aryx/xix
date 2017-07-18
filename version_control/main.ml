@@ -4,10 +4,12 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of dulwich, itself a Python port of git, 
- * a distributed version control system.
+(* An OCaml port of git, a distributed version control system.
  *
- * Main limitations compared to dulwich/git:
+ * Some of the code of ogit derives from dulwich (a clone of git in Python)
+ * and ocaml-git (a clone of git in OCaml).
+ *
+ * Main limitations compared to git/dulwich/ocaml-git:
  *  -??
  * 
  * todo:
@@ -20,10 +22,11 @@ open Common
  *  - extlib
  *  - uuidm
  * 
- * Compared to ocaml-git, ogit is simpler because:
+ * ogit uses lots of code from ocaml-git. However, ogit is simpler because
+ * it does not use fancy features of OCaml or fancy libraries:
  *  - no functor, include, module types, polymorphic variants, keyword args,
  *    or useless nested modules. KISS.
- *  - no functorized Set and Map so no need to hash, compare, and equal 
+ *  - no functorized Set and Map so no need for hash(), compare(), and equal()
  *    boilerplate functions everywhere
  *  - hardcoded use of SHA1, so no need functors taking Git.DIGEST and HashIO
  *  - no support for mirage, so no need to parametrize many things,
@@ -39,7 +42,8 @@ open Common
  * good stuff I took from ocaml-git:
  *  - dotgit (more readable than commondir in dulwich)
  *  - '/' operator (more readable than all those os.path.join in dulwich)
- *  - Hash.Tree.t, Hash.Commit.t, Hash.Blob.t precise hash type?
+ *  - Hash.Tree.t, Hash.Commit.t, Hash.Blob.t more precise hash types
+ *    (but they are not statically checked in ogit)
  *  - TODO GRI (generalization of URI)
  *)
 

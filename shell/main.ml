@@ -16,8 +16,8 @@ module O = Opcode
  *    (used by rcmain. But can do the same by using '. rcmain')
  * 
  * Improvements (IMHO):
- *  - a strict mode where we report when deleting undefined function,
- *    more?
+ *  - a strict mode where we report when deleting undefined function
+ *  - more?
  * 
  * todo:
  *  - read environment variables and export variables

@@ -8,7 +8,8 @@ open Common
  *
  * Main limitations compared to rio:
  *  - no unicode
- *  - just a basic ascii font for now
+ *  - just a basic ASCII font for now
+ *  - the terminal does not have many features
  * 
  * todo:
  *  - more fonts

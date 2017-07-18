@@ -20,7 +20,10 @@ open Ast
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(*
+(* An OCaml port of yacc.
+ *   
+ * The original yacc is written in old C. ocamlyacc in the OCaml
+ * distribution is actually also written in C.
  *
  * todo:
  *  - handle priorities, precedences

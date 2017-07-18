@@ -36,6 +36,9 @@
  *    good when have .h declarations of struct, 
  *    but more complex than IO.ml. Bytes and Buffer with small wrappers
  *    around (e.g., IO.ml) for little/big endian stuff is good enough.
+ *    Still mstruct/cstruct allows to compute the length, offset, or 
+ *    to backtrack (shift). Some of those features can be implemented
+ *    with IO.ml thx to IO.pos_in but not all of them.
  *  - scanf/printf? good for binary IO?
  *  - bitstring (was called bitmatch)
  *    Erlang style binary IO. Very declarative, very powerful, but

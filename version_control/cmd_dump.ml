@@ -1,8 +1,9 @@
 open Common
 
 let raw = ref false
+let index = ref false
 
-let dump file =
+let dump_object file =
   let chan = open_in file in
   let input = IO.input_channel chan in
   let unzipped = Unzip.inflate input in
@@ -20,10 +21,21 @@ let dump file =
   with Unzip.Error _err ->
     failwith "unzip error"
 
+let dump_index file =
+  raise Todo
+
+let dump file =
+  if !index
+  then dump_index file
+  else dump_object file
+
 let cmd = { Cmd.
   name = "dump";
   help = "";
-  options = ["-raw", Arg.Set raw, " "];
+  options = [
+    "-raw", Arg.Set raw, " ";
+    "-index", Arg.Set index, " ";
+  ];
   f = (fun args ->
     match args with
     | [file] -> dump file

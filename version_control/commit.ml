@@ -42,26 +42,24 @@ type t = {
 (* IO *)
 (*****************************************************************************)
 
-let read_parents ch =
-  (* todo: handle multiple parents, how? need read another line ... *)
-  let parent = IO_utils.read_key_space_value_newline ch "parent" Hexsha.read in
-  [parent]
-
 let read ch =
   let tree = 
     IO_utils.read_key_space_value_newline ch "tree" Hexsha.read in
-  let parents = 
-    read_parents ch in
+  let parent = 
+    IO_utils.read_key_space_value_newline ch "parent" Hexsha.read in
+  (* todo: read "parent" or "author" *)
+  let other_parents = [] in
   let author   = 
     IO_utils.read_key_space_value_newline ch "author" User.read in
+
   let committer = 
     IO_utils.read_key_space_value_newline ch "committer" User.read in
   let c = IO.read ch in
   if c <> '\n'
-  then failwith "Commit.read: no newline before message";
+  then failwith "Commit.read: missing newline before message";
   let msg = IO.read_all ch in
   { tree = Hexsha.to_sha tree; 
-    parents = parents |> List.map Hexsha.to_sha; 
+    parents = (parent::other_parents) |> List.map Hexsha.to_sha; 
     author = author; committer = committer;
     message = msg;
   }

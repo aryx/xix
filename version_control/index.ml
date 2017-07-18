@@ -48,7 +48,6 @@ type stat_info = {
     lsb32: Int32.t;
     nsec : Int32.t;
   }
-(* with tarzan *)
     
 (** The type for a Git index entry. *)
 type entry = {
@@ -57,12 +56,10 @@ type entry = {
   stage : int;
   name  : string;
 }
-(* with tarzan *)
 
 (* less: extensions *)
 
 type t = entry list
-(* with tarzan *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -154,6 +151,6 @@ let read ch =
   if version <> 2
   then failwith "Index.read: expecting version 2";
   let entries = read_entries ch in
-  (* less: extensions and check no more chars *)
-  (* todo: check hash correctly *)
+  (* todo: read_extensions but need know when reach last 20 bytes *)
+  (* todo: check hash correctly stored in last 20 bytes *)
   entries

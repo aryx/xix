@@ -38,3 +38,5 @@ let read ch =
   (* less: assert finished ch2? *)
   | str -> failwith (spf "Objects.read: invalid header: %s" str)
 
+let write obj ch =
+  raise Todo

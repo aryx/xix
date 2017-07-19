@@ -64,6 +64,7 @@ let add_ref r aref refval =
 
 (* old: called follow() in dulwich *)
 let resolve_ref r aref =
+  (* less: check if depth > 5? *)
   raise Todo
 
 let test_and_set_ref r aref refval =

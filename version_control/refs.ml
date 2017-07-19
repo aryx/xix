@@ -28,6 +28,10 @@ let is_valid_refname str =
 (* IO *)
 (*****************************************************************************)
 
+let read ch =
+  (* less: should check end of buffer, or just call IO.read_all! *)
+  raise Todo
+
 let write content ch =
   match content with
   | Hash h -> 

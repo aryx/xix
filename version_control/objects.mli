@@ -6,3 +6,5 @@ type t =
 
 (* assumes input is in decompressed form *)
 val read: IO.input -> t
+
+val write: t -> unit IO.output -> unit

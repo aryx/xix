@@ -9,6 +9,13 @@ open Common
 (* Entry points *)
 (*****************************************************************************)
 
+let with_close_out f ch =
+  f ch;
+  let res = IO.close_out ch in
+  res
+ 
+
+
 let read_string_and_stop_char ch stop_char =
   let b = Buffer.create 8 in
   let rec loop() =

@@ -3,14 +3,14 @@ open Common
 
 let list_extra = ref false
 
-let cmd = { Cmd.
+let rec cmd = { Cmd.
   name = "help";
   help = "";
   options = ["-a", Arg.Set list_extra, " see all commands"];
   f = (fun args ->
     let xs = 
       if !list_extra
-      then Cmds.main_commands @ Cmds.extra_commands
+      then Cmds.main_commands @ Cmds.extra_commands @ [cmd]
       else Cmds.main_commands
     in
     pr ("Available commands: ");

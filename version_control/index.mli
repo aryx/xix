@@ -32,4 +32,8 @@ type entry = {
 (* the entries are sorted *)
 type t = entry list
 
+val empty: t
+
 val read: IO.input -> t
+
+val write: t -> unit IO.output -> unit

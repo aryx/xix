@@ -38,6 +38,10 @@ let ref_to_filename r aref =
   (* less: win32: should actually replace '/' in name *)
   | Refs.Ref name -> r.dotgit / name
 
+let index_to_filename r =
+  r.dotgit / "index"
+
+(* todo: see code of _Gitfile.__init__ O_EXCL ... *)
 let with_file_out_with_lock f file =
   (* todo: create .lock file and then rename *)
   Common.with_file_out f file
@@ -56,10 +60,10 @@ let add_ref r aref refval =
   let file = ref_to_filename r aref in
   file |> with_file_out_with_lock (fun ch ->
     ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
-    
   )
 
-let follow_ref r aref =
+(* old: called follow() in dulwich *)
+let resolve_ref r aref =
   raise Todo
 
 let test_and_set_ref r aref refval =
@@ -71,7 +75,6 @@ let test_and_set_ref r aref refval =
 (*****************************************************************************)
 let read_obj r h =
   (* todo: look for packed obj *)
-
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
   path |> Common.with_file_in (fun ch ->
     ch |> IO.input_channel |> Objects.read
@@ -91,7 +94,10 @@ let read_index r =
   raise Todo
 
 let write_index r idx =
-  raise Todo
+  let path = index_to_filename r in
+  path |> with_file_out_with_lock (fun ch ->
+    ch |> IO.output_channel |> IO_utils.with_close_out (Index.write idx)
+  )
 
 (*****************************************************************************)
 (* Packs *)
@@ -123,15 +129,21 @@ let init root =
     (* less: exn if already there? *)
     Unix.mkdir (root / dir) perm;
   );
-  (* less: create empty index? *)
   let r = {
     worktree = root;
     dotgit = root / ".git";
   } in
   add_ref r Refs.Head Refs.default_head_content;
+
+  (* stricter: git and dulwich do no create empty index but I think it
+   * simplifies things by not having to check later if the index already exists
+   * or not.
+   *)
+  write_index r Index.empty;
+
   (* less: config file, description, hooks, etc *)
-  pr (spf "Initialized empty Git repository in %s" (root / ".git"));
-  ()
+  pr (spf "Initialized empty Git repository in %s" (root / ".git"))
+
 
 let open_ root = 
   let path = root / ".git" in

@@ -62,6 +62,8 @@ type entry = {
 (* the entries are sorted (see compare_entries below) *)
 type t = entry list
 
+let empty = []
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -155,3 +157,7 @@ let read ch =
   (* todo: read_extensions but need know when reach last 20 bytes *)
   (* todo: check hash correctly stored in last 20 bytes *)
   entries
+
+
+let write idx ch =
+  raise Todo

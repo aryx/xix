@@ -36,6 +36,8 @@ type t = {
   author   : User.t;
   committer: User.t;
 
+  (* less: encoding, gpgsig, mergetag, extra *)
+
   message  : string;
 }
 

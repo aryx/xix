@@ -75,24 +75,28 @@ let main () =
   if Array.length Sys.argv < 2
   then begin
     pr2 (usage ());
-    exit (-1);
+    exit 1;
   end
-  else
-    try 
-      let cmd = Hashtbl.find hcommands Sys.argv.(1) in
-      let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
-      let usage_msg_cmd = spf "%s [options]" cmd.Cmd.name in
-      (* todo: look if --help and factorize treatment of usage for subcmds *)
-      let remaining_args = ref [] in
+  else begin
+    let cmd = 
+      try 
+        Hashtbl.find hcommands Sys.argv.(1) 
+      with Not_found ->
+        pr2 (usage ());
+        exit 1
+    in
+    let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
+    let usage_msg_cmd = spf "%s [options]" cmd.Cmd.name in
+    (* todo: look if --help and factorize treatment of usage for subcmds *)
+    let remaining_args = ref [] in
+    (try 
       Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
         (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
-      cmd.Cmd.f (List.rev !remaining_args)
-    with 
-      | Not_found ->
-        pr2 (usage ());
-        exit (-1);
-      | Arg.Bad str ->
-        failwith str
+    with Arg.Bad str -> failwith str 
+    );
+    (* finally! *)
+    cmd.Cmd.f (List.rev !remaining_args)
+  end
         
 let _ =
   main ()

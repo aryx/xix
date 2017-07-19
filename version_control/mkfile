@@ -10,6 +10,7 @@ SRC= IO_utils.ml \
      repository.ml \
      cmd.ml \
      dump.ml cmd_dump.ml \
+     cmd_init.ml \
      cmd_test.ml cmds.ml cmd_help.ml main.ml
 
 INCLUDES=-I $TOP/commons

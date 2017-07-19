@@ -32,14 +32,82 @@ let hexsha_to_filename r hexsha =
   let file = String.sub hexsha 2 (String.length hexsha - 2) in
   r.dotgit / "objects" / dir / file
 
-let with_file_out_with_lock file f =
+let ref_to_filename r aref =
+  match aref with
+  | Refs.Head -> r.dotgit / "HEAD"
+  (* less: win32: should actually replace '/' in name *)
+  | Refs.Ref name -> r.dotgit / name
+
+let with_file_out_with_lock f file =
+  (* todo: create .lock file and then rename *)
+  Common.with_file_out f file
+
+(*****************************************************************************)
+(* Refs *)
+(*****************************************************************************)
+let read_ref r aref =
   raise Todo
+
+let remove_ref r aref =
+  raise Todo
+
+let add_ref r aref refval =
+  (* less: check refval? *)
+  let file = ref_to_filename r aref in
+  file |> with_file_out_with_lock (fun ch ->
+    ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
+    
+  )
+
+let follow_ref r aref =
+  raise Todo
+
+let test_and_set_ref r aref refval =
+  raise Todo
+
+
+(*****************************************************************************)
+(* Objects *)
+(*****************************************************************************)
+let read_obj r h =
+  (* todo: look for packed obj *)
+
+  let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
+  path |> Common.with_file_in (fun ch ->
+    ch |> IO.input_channel |> Objects.read
+  )
+
+let mem_obj r h =
+  raise Todo
+
+let write_obj r h obj =
+  raise Todo
+
+
+(*****************************************************************************)
+(* Index *)
+(*****************************************************************************)
+let read_index r =
+  raise Todo
+
+let write_index r idx =
+  raise Todo
+
+(*****************************************************************************)
+(* Packs *)
+(*****************************************************************************)
 
 (*****************************************************************************)
 (* Repo create/open/close *)
 (*****************************************************************************)
 
 let init root =
+  (* rwxr-x--- *)
+  let perm = 0o750 in
+  if not (Sys.file_exists root)
+  then Unix.mkdir root perm;
+
+  (* less: bare argument? so no .git/ prefix? *)
   let dirs = [
     ".git";
     ".git/objects";
@@ -51,8 +119,19 @@ let init root =
     ".git/hooks";
     ".git/info";
   ] in
-  raise Todo
+  dirs |> List.iter (fun dir ->
+    (* less: exn if already there? *)
+    Unix.mkdir (root / dir) perm;
+  );
   (* less: create empty index? *)
+  let r = {
+    worktree = root;
+    dotgit = root / ".git";
+  } in
+  add_ref r Refs.Head Refs.default_head_content;
+  (* less: config file, description, hooks, etc *)
+  pr (spf "Initialized empty Git repository in %s" (root / ".git"));
+  ()
 
 let open_ root = 
   let path = root / ".git" in
@@ -73,50 +152,3 @@ let with_repo root =
 let clone r dst =
   raise Todo
 
-(*****************************************************************************)
-(* Objects *)
-(*****************************************************************************)
-let read_obj r h =
-  (* todo: look for packed obj *)
-
-  let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
-  path |> Common.with_file_in (fun ch ->
-    ch |> IO.input_channel |> Objects.read
-  )
-
-let mem_obj r h =
-  raise Todo
-
-let write_obj r h obj =
-  raise Todo
-
-(*****************************************************************************)
-(* Refs *)
-(*****************************************************************************)
-let read_ref r aref =
-  raise Todo
-
-let remove_ref r aref =
-  raise Todo
-
-let add_ref r aref refval =
-  raise Todo
-
-let follow_ref r aref =
-  raise Todo
-
-let test_and_set_ref r aref refval =
-  raise Todo
-
-(*****************************************************************************)
-(* Index *)
-(*****************************************************************************)
-let read_index r =
-  raise Todo
-
-let write_index r idx =
-  raise Todo
-
-(*****************************************************************************)
-(* Packs *)
-(*****************************************************************************)

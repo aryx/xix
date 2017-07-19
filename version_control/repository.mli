@@ -5,7 +5,7 @@ type t = {
 }
 
 (* repo *)
-val init: Common.filename -> t
+val init: Common.filename -> unit
 val clone: t -> Common.filename -> unit
 val open_: Common.filename -> t
 

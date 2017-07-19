@@ -32,6 +32,7 @@ type hash = Sha1.t
 type t = {
   tree     : Tree.hash;
   parents  : hash list;
+  (* note that User.t contains a time *)
   author   : User.t;
   committer: User.t;
 

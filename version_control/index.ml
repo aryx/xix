@@ -59,6 +59,7 @@ type entry = {
 
 (* less: extensions *)
 
+(* the entries are sorted (see compare_entries below) *)
 type t = entry list
 
 (*****************************************************************************)

@@ -36,12 +36,13 @@ type perm =
 
 type entry = {
   perm: perm;
-  (* relative to tree, so does not contain any '/' *)
+  (* relative to tree, so does not contain any '/', or '.' or '..' *)
   name: string;
   (* blob or tree *)
   node: Sha1.t;
 }
 
+(* todo: entries must be sorted! and each name must be unique *)
 type t = entry list
 
 

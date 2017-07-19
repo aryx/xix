@@ -29,6 +29,7 @@ type entry = {
   name  : string;
 }
 
+(* the entries are sorted *)
 type t = entry list
 
 val read: IO.input -> t

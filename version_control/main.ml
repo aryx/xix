@@ -45,6 +45,9 @@ open Common
  *  - Hash.Tree.t, Hash.Commit.t, Hash.Blob.t more precise hash types
  *    (but they are not statically checked in ogit)
  *  - TODO GRI (generalization of URI)
+ * good stuff I wish I could take from dulwich:
+ *  - hashtbl [] overloading, so can do r.refs["refs/tags/"+tag] = obj.id
+ *    (thx to __setitem__ and __getitem__)
  *)
 
 let commands = [

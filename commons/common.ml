@@ -32,6 +32,7 @@ let with_file_out f file =
   close_out chan;
   res
 
+(* less: unwind_protect? *)
 let with_file_in f file = 
   let chan = open_in file in
   let res = f chan in

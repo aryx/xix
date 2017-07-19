@@ -1,3 +1,4 @@
+(* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
 let raw = ref false

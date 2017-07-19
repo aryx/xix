@@ -1,3 +1,4 @@
+(* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (* see https://git-scm.com/book/en/v2/Git-Internals-Git-Objects *)

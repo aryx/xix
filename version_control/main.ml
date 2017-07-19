@@ -50,16 +50,26 @@ open Common
  *    (thx to __setitem__ and __getitem__)
  *)
 
-let commands = [
-  Cmd_test.cmd;
-  Cmd_dump.cmd;
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let commands = List.flatten [
+  Cmds.main_commands;
+  Cmds.extra_commands;
+  [Cmd_help.cmd];
 ]
+
 let hcommands = 
   commands |> List.map (fun cmd -> cmd.Cmd.name, cmd) |> Hashtbl_.of_list
 
 let usage () =
   spf "usage: ogit <%s> [options]"
     (String.concat "|" (commands |> List.map (fun cmd -> cmd.Cmd.name)))
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 let main () =
   if Array.length Sys.argv < 2
@@ -72,7 +82,7 @@ let main () =
       let cmd = Hashtbl.find hcommands Sys.argv.(1) in
       let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
       let usage_msg_cmd = spf "%s [options]" cmd.Cmd.name in
-      (* less: look if --help and factorize treatment of usage for subcmds *)
+      (* todo: look if --help and factorize treatment of usage for subcmds *)
       let remaining_args = ref [] in
       Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
         (fun arg -> Common.push arg remaining_args) usage_msg_cmd;

@@ -35,9 +35,11 @@ type t = entry list
 
 val empty: t
 
+val entry_of_stat: Unix.stats -> Common.filename -> Sha1.t -> entry
+
 val read: IO.input -> t
 (* will write the header, and sha checksum at the end *)
 val write: t -> unit IO.output -> unit
 
 val remove: t -> Common.filename -> t
-val add: t -> Common.filename -> Blob.hash -> t
+val add: t -> entry -> t

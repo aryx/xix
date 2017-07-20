@@ -3,7 +3,7 @@ open Common
 
 (* less: let bare = ref false *)
 
-let rec cmd = { Cmd.
+let cmd = { Cmd.
   name = "init";
   help = "";
   options = [(*less: -bare *)];

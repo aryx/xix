@@ -14,7 +14,7 @@ val open_: Common.filename -> t
 (* objects *)
 val read_obj: t -> Sha1.t -> Objects.t
 val mem_obj: t -> Sha1.t -> bool
-val write_obj: t -> Objects.t -> Sha1.t
+val add_obj: t -> Objects.t -> Sha1.t
 
 (* refs *)
 val read_ref: t -> Refs.t -> Refs.ref_content
@@ -25,7 +25,7 @@ val resolve_ref: t -> Refs.t -> Commit.hash
 
 (* index *)
 val read_index: t -> Index.t
-val write_index: t -> Index.t -> unit
+val write_index: t -> unit
 val add_in_index: t -> Common.filename list -> unit
 
 (* packs *)

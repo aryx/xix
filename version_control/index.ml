@@ -79,13 +79,16 @@ let compare_entries e1 e2 =
   | i -> i
 *)
 
+let entry_of_stat stat relpath sha =
+  raise Todo
+
 (*****************************************************************************)
 (* Add/Del *)
 (*****************************************************************************)
 let remove idx name =
   raise Todo
 
-let add idx name h =
+let add idx entry =
   raise Todo
 
 (*****************************************************************************)

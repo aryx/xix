@@ -1,16 +1,18 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-let rec cmd = { Cmd.
+let cmd = { Cmd.
   name = "rm";
   help = "";
   (* todo: -f *)
   options = [];
   f = (fun args ->
     match args with
-    | [] -> failwith "Nothing specified, nothing added."
+    | [] -> 
+      (* less: print help message instead *)
+      failwith "Nothing specified, nothing removed."
     | xs ->
-      (* todo: allow git add from different location *)
+      (* todo: allow git rm from different location *)
       let r = Repository.open_ "." in
       (* less: support absolute paths, directories *)
       let relpaths = xs |> List.map (fun path ->
@@ -23,11 +25,11 @@ let rec cmd = { Cmd.
        * the object store, so can just use functions from Index
        *)
       (* less: not super efficient, could use hashes to speedup things*)
-      let final_index = 
+      r.Repository.index <-
         relpaths |> List.fold_left (fun idx relpath ->
+          (* todo: -f? remove also file *)
           Index.remove idx relpath
-        ) r.Repository.index
-      in
-      Repository.write_index r final_index
+        ) r.Repository.index;
+      Repository.write_index r
   );
 }

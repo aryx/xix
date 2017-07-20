@@ -85,7 +85,7 @@ let read_obj r h =
     ch |> IO.input_channel |> Unzip.inflate |> Objects.read
   )
 
-let write_obj r obj =
+let add_obj r obj =
   (* compute sha, compress, return sha! *)
   raise Todo
 
@@ -100,17 +100,41 @@ let mem_obj r h =
 let read_index r =
   r.index
 
-let write_index r idx =
+let write_index r =
   let path = index_to_filename r in
   path |> with_file_out_with_lock (fun ch ->
-    ch |> IO.output_channel |> IO_utils.with_close_out (Index.write idx)
-  );
-  r.index <- idx
+    ch |> IO.output_channel |> IO_utils.with_close_out (Index.write r.index)
+  )
 
-let add_in_index r paths =
-  assert (paths |> List.for_all Filename.is_relative);
-  
-  raise Todo
+(* old: was called stage() in dulwich *)
+let add_in_index r relpaths =
+  assert (relpaths |> List.for_all Filename.is_relative);
+  relpaths |> List.iter (fun relpath ->
+    let full_path = r.worktree / relpath in
+    let stat = 
+      try Unix.lstat full_path 
+      with Unix.Unix_error _ ->
+        failwith (spf "Repository.add_in_index: %s does not exist anymore"
+                    relpath)
+    in
+    let data = 
+      match stat.Unix.st_kind with
+      | Unix.S_REG -> 
+        full_path |> Common.with_file_in (fun ch ->
+          ch |> IO.input_channel |> IO.read_all
+        )
+      | Unix.S_LNK ->
+        Unix.readlink full_path
+      | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
+                         relpath)
+    in
+    let obj = Objects.Blob data in
+    let sha = add_obj r obj in
+    let entry = Index.entry_of_stat stat relpath sha in
+    r.index <- Index.add r.index entry;
+  );
+  write_index r
+
 
 (*****************************************************************************)
 (* Packs *)

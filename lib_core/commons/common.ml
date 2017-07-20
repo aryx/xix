@@ -166,6 +166,46 @@ let rec take_safe n xs =
 
 end
 
+module Stack_ = struct
+
+(* not in ocaml 1.07 but came later 
+let top s =  
+  match s.c with
+  | [] -> raise Empty
+  | x::xs -> x
+*)
+
+let top_opt s =
+  try 
+    Some (Stack.top s)
+  with Stack.Empty -> None
+
+(* If have access to internal implementation of a stack:
+let nth i s =
+  List.nth s.c i
+*)
+exception Found
+let nth i st =
+  if i < 0 
+  then raise (Invalid_argument "Stack_.nth");
+  let res = ref None in
+  let cnt = ref 0 in
+  (try 
+    st |> Stack.iter (fun e ->
+      if i = !cnt
+      then begin 
+        res := Some e; 
+        raise Found 
+      end else incr cnt
+    );
+  with Found -> ()
+  );
+  match !res with
+  | None -> failwith "Stack_.nth"
+  | Some x -> x
+    
+
+end
 
 module Hashtbl_ = struct    
 

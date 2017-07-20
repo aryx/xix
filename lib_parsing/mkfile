@@ -4,7 +4,8 @@ TOP=..
 # We could have lexing.ml and parsing.ml. It would work with ocamlc,
 # but not with ocamlopt :(
 
-INCLUDES=-I $TOP/lib_core/collections
+INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_core/commons
 SRC=lexing_.ml parsing_.ml
 
+<$TOP/mkconfig
 <$TOP/mklib

@@ -11,11 +11,15 @@ SRC= ast.ml\
  output.ml dump.ml \
  tests.ml main.ml
 
-#SYSLIBS=
-LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_parsing/lib.cma
+# need str.cma and commons/lib.cma because of Common.Stack_.nth
+# but we could inline this function in parsing_.ml to avoid those deps.
+SYSLIBS=str.cma
+LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma \
+  $TOP/lib_parsing/lib.cma
 
 PROG=ocamlyacc
 
+<$TOP/mkconfig
 <$TOP/mkprog
 
 beforedepend:V: lexer.ml parser.ml parser.mli

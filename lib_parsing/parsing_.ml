@@ -266,8 +266,6 @@ type 'tok lr_tables = {
 }
 (*e: type Parsing.lr_tables (yacc) *)
 
-module Stack = Stack_
-
 (*s: type Parsing.parser_env_simple (yacc) *)
 type parser_env_simple = {
   states: stateid Stack.t;
@@ -305,7 +303,7 @@ let log x =
 let peek_val_simple env i =
   if i < 1 && i >= env.current_rule_len
   then failwith (spf "peek_val_simple invalid argument %d" i)
-  else Obj.magic (Stack.nth (env.current_rule_len - i) env.values)
+  else Obj.magic (Common.Stack_.nth (env.current_rule_len - i) env.values)
 (*e: function Parsing.peek_val_simple (yacc) *)
 
 (*s: function Parsing.value_of_tok (yacc) *)

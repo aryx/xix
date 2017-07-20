@@ -10,10 +10,8 @@ val spf : ('a, unit, string) format -> 'a
 val pr : string -> unit
 val pr2 : string -> unit
 
-val with_file_out : (out_channel -> 'a) -> string -> 'a
-val with_file_in : (in_channel -> 'a) -> string -> 'a
-
-val push : 'a -> 'a list ref -> unit
+val with_file_out : (out_channel -> 'a) -> filename -> 'a
+val with_file_in : (in_channel -> 'a) -> filename -> 'a
 
 exception Todo
 exception Impossible of string
@@ -61,12 +59,24 @@ module List_ :
     val take_safe : int -> 'a list -> 'a list
   end
 
+val push : 'a -> 'a list ref -> unit
+
+module Stack_ :
+  sig
+    val top_opt: 'a Stack.t -> 'a option
+    val nth: int -> 'a Stack.t -> 'a
+  end
+
 module Hashtbl_ :
   sig
     val of_list : ('a * 'b) list -> ('a, 'b) Hashtbl.t
     val to_list : ('a, 'b) Hashtbl.t -> ('a * 'b) list
   end
 
-module Obj_ : sig val dump2 : Obj.t -> string end
+module Obj_ : 
+  sig 
+    val dump2 : Obj.t -> string 
+  end
+
 val dump : 'a -> string
 val pr2_gen : 'a -> unit

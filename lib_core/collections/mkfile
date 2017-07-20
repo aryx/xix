@@ -2,9 +2,10 @@
 TOP=../..
 
 # We could have set.ml and map.ml. It would work with ocamlc, but 
-# not with ocamlopt :( so not worth the trouble
+# not with ocamlopt :( so not worth the trouble.
+# Also it makes it easier to see what is non-standard.
 
 INCLUDES=
-SRC= set_.ml map_.ml stack_.ml
+SRC= set_.ml map_.ml
 
 <$TOP/mklib

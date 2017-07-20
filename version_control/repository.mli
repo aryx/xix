@@ -2,6 +2,8 @@
 type t = {
   worktree: Common.filename;
   dotgit: Common.filename;
+
+  mutable index: Index.t;
 }
 
 (* repo *)

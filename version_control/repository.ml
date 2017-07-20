@@ -18,7 +18,9 @@ type t = {
   (* less: on bare repo this could be the toplevel dir *)
   dotgit: Common.filename;
 
-  (* less: compression level? *)
+  mutable index: Index.t;
+
+  (* less: compression level config field? *)
 }
 
 let (/) = Filename.concat
@@ -96,20 +98,21 @@ let mem_obj r h =
 (* Index *)
 (*****************************************************************************)
 let read_index r =
-  raise Todo
+  r.index
 
 let write_index r idx =
   let path = index_to_filename r in
   path |> with_file_out_with_lock (fun ch ->
     ch |> IO.output_channel |> IO_utils.with_close_out (Index.write idx)
-  )
+  );
+  r.index <- idx
 
 (*****************************************************************************)
 (* Packs *)
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Repo create/open/close *)
+(* Repo init/open *)
 (*****************************************************************************)
 
 let init root =
@@ -137,13 +140,9 @@ let init root =
   let r = {
     worktree = root;
     dotgit = root / ".git";
+    index = Index.empty;
   } in
   add_ref r Refs.Head Refs.default_head_content;
-
-  (* stricter: git and dulwich do no create empty index but seems
-   * more consistent to do so.
-   *)
-  write_index r Index.empty;
 
   (* less: config file, description, hooks, etc *)
   pr (spf "Initialized empty Git repository in %s" (root / ".git"))
@@ -158,13 +157,18 @@ let open_ root =
       dotgit = path;
       (* less: initialize obj store and refs container? *)
       (* less: grafts, hooks *)
-      (* todo: index! if no file then empty index? or be stricter? *)
+      index = 
+        if Sys.file_exists (path / "index")
+        then 
+          (path / "index") |> Common.with_file_in (fun ch ->
+            ch |> IO.input_channel |> Index.read)
+        else Index.empty
     }
-  else failwith (spf "No git repository was found at %s" path)
+  else failwith (spf "Not a git repository at %s" root)
 
-
-let with_repo root =
-  raise Todo
+(*****************************************************************************)
+(* Cloning *)
+(*****************************************************************************)
 
 let clone r dst =
   raise Todo

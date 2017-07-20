@@ -2,7 +2,7 @@
 
 TOP=../..
 
-INCLUDES=-I $TOP/commons
+INCLUDES=-I $TOP/lib_core/commons
 SRC=a_out.ml
 
 <$TOP/mklib

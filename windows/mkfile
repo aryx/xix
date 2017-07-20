@@ -15,11 +15,11 @@ SRC= \
                               threads_fileserver.ml \
   test.ml main.ml
 
-INCLUDES=-I $TOP/commons2 -I $TOP/lib_system/plan9 \
+INCLUDES=-I $TOP/lib_core/commons2 -I $TOP/lib_system/plan9 \
  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
  -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
 
-LIBS=$TOP/commons2/lib.cma $TOP/lib_system/plan9/plan9.cma \
+LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_system/plan9/plan9.cma \
  $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
  $TOP/lib_graphics/input/lib.cma $TOP/lib_graphics/ui/lib.cma
 

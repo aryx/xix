@@ -1,7 +1,7 @@
 # -*- sh -*-
 
 TOP=..
-INCLUDES=-I $TOP/commons
+INCLUDES=-I $TOP/lib_core/commons
 
 SRC= flags_cpp.ml location_cpp.ml ast_cpp.ml lexer_cpp.ml preprocessor.ml \
  parse_cpp.ml

@@ -13,9 +13,9 @@ SRC= IO_utils.ml \
      cmd_init.ml \
      cmd_test.ml cmds.ml cmd_help.ml main.ml
 
-INCLUDES=-I $TOP/commons
+INCLUDES=-I $TOP/lib_core/commons
 
-LIBS=$TOP/commons/lib.cma
+LIBS=$TOP/lib_core/commons/lib.cma
 
 SYSLIBS=unix.cma str.cma
 

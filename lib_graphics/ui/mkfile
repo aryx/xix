@@ -1,7 +1,7 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES=-I $TOP/commons2 -I ../draw -I ../geometry -I ../input
+INCLUDES=-I $TOP/lib_core/commons2 -I ../draw -I ../geometry -I ../input
 SRC= menu_ui.ml text_ui.ml frame_ui.ml selection_ui.ml
 
 <$TOP/mkconfig2

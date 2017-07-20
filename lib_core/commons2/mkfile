@@ -1,5 +1,5 @@
 # -*- sh -*-
-TOP=..
+TOP=../..
 INCLUDES=
 
 SRC=common.ml rune.ml

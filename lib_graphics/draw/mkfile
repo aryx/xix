@@ -1,7 +1,7 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES=-I $TOP/commons2 -I ../geometry
+INCLUDES=-I $TOP/lib_core/commons2 -I ../geometry
 
 SRC= channel.ml color.ml \
      draw_marshal.ml display.ml image.ml \

@@ -3,7 +3,7 @@
 <mkconfig
 
 DIRS1=\
-  lib_core/collections commons\
+  lib_core/collections lib_core/commons\
   mk shell\
   lib_parsing lex yacc\
   macroprocessor\
@@ -12,7 +12,7 @@ DIRS1=\
   compiler
 
 # works only under plan9 for now: 
-DIRS2=commons2 lib_system/plan9 lib_graphics windows
+DIRS2=lib_core/commons2 lib_system/plan9 lib_graphics windows
 
 # works only from scratch:
 DIRS3=kernel

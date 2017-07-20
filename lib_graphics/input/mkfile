@@ -1,7 +1,7 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES=-I $TOP/commons2 -I ../draw -I ../geometry 
+INCLUDES=-I $TOP/lib_core/commons2 -I ../draw -I ../geometry 
 SRC= cursor.ml mouse.ml keyboard.ml
 
 <$TOP/mkconfig2

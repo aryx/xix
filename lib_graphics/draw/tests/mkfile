@@ -1,10 +1,10 @@
 # -*- sh -*-
 TOP=../../..
 
-INCLUDES=-I $TOP/commons2 \
+INCLUDES=-I $TOP/lib_core/commons2 \
   -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw
 
-LIBS=$TOP/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
+LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
  $TOP/lib_graphics/draw/lib.cma
 
 SYSLIBS=unix.cma threads.cma str.cma
@@ -33,7 +33,7 @@ test_font: $LIBS test_font.cmo
 
 # need to unset CAMLLIB above to be able to compile this program
 gen_font_default: gen_font_default.ml ../font_default.ml
-	ocamlc -g -I $TOP/commons -I ../ str.cma $TOP/commons/lib.cma ../font_default.ml gen_font_default.ml  -o testfont
+	ocamlc -g -I $TOP/lib_core/commons -I ../ str.cma $TOP/lib_core/commons/lib.cma ../font_default.ml gen_font_default.ml  -o testfont
 
 clean:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS

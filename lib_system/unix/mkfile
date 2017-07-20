@@ -45,7 +45,7 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I $TOP/commons2
+OCAMLINCLUDES=-I $TOP/lib_core/commons2
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
 OCAMLLDFLAGS=

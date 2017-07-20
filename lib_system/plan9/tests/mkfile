@@ -12,7 +12,7 @@ OCAMLDEP=ocamldep
 # Config
 #############################################################################
 
-OCAMLINCLUDES=-I $TOP/commons2 -I $TOP/lib_system/plan9
+OCAMLINCLUDES=-I $TOP/lib_core/commons2 -I $TOP/lib_system/plan9
 
 
 OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
@@ -23,7 +23,7 @@ OCAMLLDFLAGS=-thread -custom -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
 #CAMLLIB=/usr/local/lib/ocaml
 CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
 
-LIBS=$TOP/commons2/commons.cma $TOP/lib_system/plan9/plan9.cma
+LIBS=$TOP/lib_core/commons2/lib_core/commons.cma $TOP/lib_system/plan9/plan9.cma
 
 SYSLIBS=unix.cma threads.cma str.cma
 CCLIBS= \

@@ -83,3 +83,6 @@ let read ch =
       List.rev acc
   in
   aux []
+
+let write t ch =
+  raise Todo

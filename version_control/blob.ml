@@ -19,3 +19,7 @@ type hash = Sha1.t
 
 let read ch =
   IO.read_all ch
+
+let write blob ch =
+  IO.nwrite ch blob
+

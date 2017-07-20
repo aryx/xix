@@ -78,14 +78,18 @@ let read_obj r h =
   (* todo: look for packed obj *)
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
   path |> Common.with_file_in (fun ch ->
-    ch |> IO.input_channel |> Objects.read
+    (* less: check read everything from channel? *)
+    (* todo: check if sha consistent? *)
+    ch |> IO.input_channel |> Unzip.inflate |> Objects.read
   )
+
+let write_obj r obj =
+  (* compute sha, compress, return sha! *)
+  raise Todo
 
 let mem_obj r h =
   raise Todo
 
-let write_obj r h obj =
-  raise Todo
 
 
 (*****************************************************************************)

@@ -66,3 +66,6 @@ let read ch =
     author = author; committer = committer;
     message = msg;
   }
+
+let write c ch =
+  raise Todo

@@ -7,4 +7,5 @@ type t =
 (* assumes input is in decompressed form *)
 val read: IO.input -> t
 
-val write: t -> unit IO.output -> unit
+(* will not compress, will return unserialized content for sha1 computation *)
+val write: t -> bytes IO.output -> unit

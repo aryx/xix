@@ -36,4 +36,5 @@ val empty: t
 
 val read: IO.input -> t
 
+(* will write the header, and sha checksum at the end *)
 val write: t -> unit IO.output -> unit

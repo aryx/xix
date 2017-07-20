@@ -12,7 +12,7 @@ val open_: Common.filename -> t
 (* objects *)
 val read_obj: t -> Sha1.t -> Objects.t
 val mem_obj: t -> Sha1.t -> bool
-val write_obj: t -> Sha1.t -> Objects.t -> unit
+val write_obj: t -> Objects.t -> Sha1.t
 
 (* refs *)
 val read_ref: t -> Refs.t -> Refs.ref_content

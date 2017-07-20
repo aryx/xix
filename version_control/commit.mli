@@ -10,5 +10,7 @@ type t = {
   message  : string;
 }
 
-(* assumes have already read the 'commit <size>\000' header from input *)
+(* assumes have already read the 'commit <size>\000' hdr from unzipped input *)
 val read: IO.input -> t
+(* does not write the header, does not compress *)
+val write: t -> bytes IO.output -> unit

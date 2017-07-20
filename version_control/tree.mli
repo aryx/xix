@@ -18,5 +18,7 @@ type t = entry list
 type hash = Sha1.t
 
 
-(* assumes have already read the 'tree <size>\000' header from input *)
+(* assumes have already read the 'tree <size>\000' header from unzipped input *)
 val read: IO.input -> t
+(* does not write the header, does not compress *)
+val write: t -> bytes IO.output -> unit

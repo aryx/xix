@@ -140,9 +140,8 @@ let init root =
   } in
   add_ref r Refs.Head Refs.default_head_content;
 
-  (* stricter: git and dulwich do no create empty index but I think it
-   * simplifies things by not having to check later if the index already exists
-   * or not.
+  (* stricter: git and dulwich do no create empty index but seems
+   * more consistent to do so.
    *)
   write_index r Index.empty;
 
@@ -159,6 +158,7 @@ let open_ root =
       dotgit = path;
       (* less: initialize obj store and refs container? *)
       (* less: grafts, hooks *)
+      (* todo: index! if no file then empty index? or be stricter? *)
     }
   else failwith (spf "No git repository was found at %s" path)
 

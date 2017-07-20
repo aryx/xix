@@ -107,6 +107,11 @@ let write_index r idx =
   );
   r.index <- idx
 
+let add_in_index r paths =
+  assert (paths |> List.for_all Filename.is_relative);
+  
+  raise Todo
+
 (*****************************************************************************)
 (* Packs *)
 (*****************************************************************************)

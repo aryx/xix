@@ -54,7 +54,8 @@ type entry = {
   stats : stat_info;
   id    : Blob.hash;
   stage : int;
-  name  : string;
+  (* relative path *)
+  name  : Common.filename;
 }
 
 (* less: extensions *)
@@ -77,6 +78,15 @@ let compare_entries e1 e2 =
   | 0 -> Hash.Blob.compare e2.id e1.id
   | i -> i
 *)
+
+(*****************************************************************************)
+(* Add/Del *)
+(*****************************************************************************)
+let remove idx name =
+  raise Todo
+
+let add idx name h =
+  raise Todo
 
 (*****************************************************************************)
 (* IO *)

@@ -26,5 +26,6 @@ val resolve_ref: t -> Refs.t -> Commit.hash
 (* index *)
 val read_index: t -> Index.t
 val write_index: t -> Index.t -> unit
+val add_in_index: t -> Common.filename list -> unit
 
 (* packs *)

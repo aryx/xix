@@ -11,11 +11,15 @@ let rec cmd = { Cmd.
     | xs ->
       (* todo: allow git add from different location *)
       let r = Repository.open_ "." in
-      (* less: support absolute paths, directories *)
-      let relatives =
-        raise Todo
-      in
       
-      raise Todo
+      (* less: support absolute paths, directories *)
+      let relpaths = xs |> List.map (fun path ->
+        if Filename.is_relative path
+        then path
+        else failwith (spf "Not a relative path: %s" path)
+      )
+      in
+      (* this will also add some blobs to the object store *)
+      Repository.add_in_index r relpaths
   );
 }

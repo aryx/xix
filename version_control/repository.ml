@@ -108,8 +108,12 @@ let add_obj r obj =
       let ic = IO.input_bytes bytes in
       let oc = IO.output_channel ch in
       Zlib.compress 
-        (fun buf -> IO.input ic buf 0 (Bytes.length buf))
-        (fun buf len -> IO.output oc buf 0 len |> ignore);
+        (fun buf -> 
+          try IO.input ic buf 0 (Bytes.length buf)
+          with IO.No_more_input -> 0
+        )
+        (fun buf len -> 
+          IO.output oc buf 0 len |> ignore);
       IO.close_out oc;
     );
     sha

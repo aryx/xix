@@ -50,11 +50,11 @@ let write obj ch =
   let header = 
     spf "%s %d\000"
       (match obj with
-      | Blob _   -> "blob "
-      | Commit _ -> "commit "
-      | Tree  _  ->  "tree "
+      | Blob _   -> "blob"
+      | Commit _ -> "commit"
+      | Tree  _  ->  "tree"
       ) 
       (Bytes.length body)
   in
-  IO.nwrite_string ch header;
+  IO.nwrite ch header;
   IO.nwrite ch body

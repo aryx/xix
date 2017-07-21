@@ -49,12 +49,27 @@ let read ch =
   let tree = 
     IO_utils.read_key_space_value_newline ch "tree" Hexsha.read in
   (* todo: read "parent" or "author", because first commit has no parent *)
-  let parent = 
-    IO_utils.read_key_space_value_newline ch "parent" Hexsha.read in
-  let other_parents = [] in
-  let author   = 
-    IO_utils.read_key_space_value_newline ch "author" User.read in
-
+  let parents, author = 
+    let rec loop parents =
+      let str = IO_utils.read_string_and_stop_char ch ' ' in
+      match str with
+      | "parent" -> 
+        let v = Hexsha.read ch in
+        let c = IO.read ch in
+        if c <> '\n'
+        then failwith "Commit.read: missing newline after parent";
+        loop (v::parents)
+      | "author" ->
+        let v = User.read ch in
+        let c = IO.read ch in
+        if c <> '\n'
+        then failwith "Commit.read: missing newline after author";
+        List.rev parents, v
+      | _ -> failwith (spf "Commit.read: was expecting parent or author not %s"
+                         str)
+    in
+    loop []
+  in
   let committer = 
     IO_utils.read_key_space_value_newline ch "committer" User.read in
   let c = IO.read ch in
@@ -62,7 +77,7 @@ let read ch =
   then failwith "Commit.read: missing newline before message";
   let msg = IO.read_all ch in
   { tree = Hexsha.to_sha tree; 
-    parents = (parent::other_parents) |> List.map Hexsha.to_sha; 
+    parents = parents |> List.map Hexsha.to_sha; 
     author = author; committer = committer;
     message = msg;
   }

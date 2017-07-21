@@ -10,9 +10,9 @@ open Common
 (*****************************************************************************)
 
 type t = 
-  | Blob of Blob.t
+  | Blob   of Blob.t
   | Commit of Commit.t
-  | Tree of Tree.t
+  | Tree   of Tree.t
 (*  | Tag of Tag.t *)
 
 (*****************************************************************************)
@@ -39,4 +39,22 @@ let read ch =
   | str -> failwith (spf "Objects.read: invalid header: %s" str)
 
 let write obj ch =
-  raise Todo
+  let body = 
+    IO.output_bytes () |> IO_utils.with_close_out (fun ch ->
+      match obj with
+      | Blob x   -> Blob.write x ch
+      | Commit x -> Commit.write x ch
+      | Tree x   -> Tree.write x ch
+    )
+  in
+  let header = 
+    spf "%s %d\000"
+      (match obj with
+      | Blob _   -> "blob "
+      | Commit _ -> "commit "
+      | Tree  _  ->  "tree "
+      ) 
+      (Bytes.length body)
+  in
+  IO.nwrite_string ch header;
+  IO.nwrite ch body

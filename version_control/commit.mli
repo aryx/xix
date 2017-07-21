@@ -1,6 +1,4 @@
 
-type hash = Sha1.t
-
 type t = {
   tree     : Tree.hash;
   parents  : hash list;
@@ -9,6 +7,8 @@ type t = {
 
   message  : string;
 }
+and hash = Sha1.t
+
 
 (* assumes have already read the 'commit <size>\000' hdr from unzipped input *)
 val read: IO.input -> t

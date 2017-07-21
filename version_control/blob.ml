@@ -22,4 +22,3 @@ let read ch =
 
 let write blob ch =
   IO.nwrite ch blob
-

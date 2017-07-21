@@ -25,6 +25,9 @@ type t = {
 
 let (/) = Filename.concat
 
+(* rwxr-x--- *)
+let dirperm = 0o750
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -33,6 +36,10 @@ let hexsha_to_filename r hexsha =
   let dir = String.sub hexsha 0 2 in
   let file = String.sub hexsha 2 (String.length hexsha - 2) in
   r.dotgit / "objects" / dir / file
+
+let hexsha_to_dirname r hexsha =
+  let dir = String.sub hexsha 0 2 in
+  r.dotgit / "objects" / dir
 
 let ref_to_filename r aref =
   match aref with
@@ -86,13 +93,30 @@ let read_obj r h =
   )
 
 let add_obj r obj =
-  (* compute sha, compress, return sha! *)
-  raise Todo
+  let bytes = 
+    IO.output_bytes () |> IO_utils.with_close_out (Objects.write obj) in
+  let sha = Sha1.sha1 bytes in
+  let hexsha = Hexsha.of_sha sha in
+  let dir = hexsha_to_dirname r hexsha in
+  if not (Sys.file_exists dir)
+  then Unix.mkdir dir dirperm;
+  let file = hexsha_to_filename r hexsha in
+  if (Sys.file_exists file)
+  then sha (* deduplication! nothing to write, can share objects *)
+  else begin
+    file |> with_file_out_with_lock (fun ch ->
+      let ic = IO.input_bytes bytes in
+      let oc = IO.output_channel ch in
+      Zlib.compress 
+        (fun buf -> IO.input ic buf 0 (Bytes.length buf))
+        (fun buf len -> IO.output oc buf 0 len |> ignore);
+      IO.close_out oc;
+    );
+    sha
+  end
 
 let mem_obj r h =
   raise Todo
-
-
 
 (*****************************************************************************)
 (* Index *)
@@ -145,10 +169,8 @@ let add_in_index r relpaths =
 (*****************************************************************************)
 
 let init root =
-  (* rwxr-x--- *)
-  let perm = 0o750 in
   if not (Sys.file_exists root)
-  then Unix.mkdir root perm;
+  then Unix.mkdir root dirperm;
 
   (* less: bare argument? so no .git/ prefix? *)
   let dirs = [
@@ -164,7 +186,7 @@ let init root =
   ] in
   dirs |> List.iter (fun dir ->
     (* less: exn if already there? *)
-    Unix.mkdir (root / dir) perm;
+    Unix.mkdir (root / dir) dirperm;
   );
   let r = {
     worktree = root;

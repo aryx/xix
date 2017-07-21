@@ -119,9 +119,6 @@ let add_obj r obj =
     sha
   end
 
-let mem_obj r h =
-  raise Todo
-
 (*****************************************************************************)
 (* Index *)
 (*****************************************************************************)
@@ -163,7 +160,13 @@ let add_in_index r relpaths =
   );
   write_index r
 
-let commit r author committer message =
+(*****************************************************************************)
+(* Commit *)
+(*****************************************************************************)
+
+let commit_index r author committer message =
+  let aref = Refs.Head in
+  (* less: merge_heads from .git/MERGE_HEADS *)
   raise Todo
 
 (*****************************************************************************)

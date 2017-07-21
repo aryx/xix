@@ -43,7 +43,7 @@ let cmd = { Cmd.
         then author
         else raise Todo
       in
-      Repository.commit r author committer !message
+      Repository.commit_index r author committer !message
     | xs -> 
       (* less: usage message? *)
       failwith "usage: git commit"

@@ -29,6 +29,7 @@ open Common
  *    by Xavier Leroy, but also uses C code
  *  - nocrypto
  *    seems like the official crypto lib, but also uses C code
+ *  - md5sum, produces 128-bit hash value (sha1 is 20 bytes so 160 bits)
  *)
 
 (*****************************************************************************)

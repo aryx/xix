@@ -29,6 +29,7 @@ open Common
 
 type t = {
   tree     : Tree.hash;
+  (* first commit has no parent, and merge commits have 2 parents *)
   parents  : hash list;
   (* note that User.t contains a time *)
   author   : User.t;
@@ -47,9 +48,9 @@ and hash = Sha1.t
 let read ch =
   let tree = 
     IO_utils.read_key_space_value_newline ch "tree" Hexsha.read in
+  (* todo: read "parent" or "author", because first commit has no parent *)
   let parent = 
     IO_utils.read_key_space_value_newline ch "parent" Hexsha.read in
-  (* todo: read "parent" or "author" *)
   let other_parents = [] in
   let author   = 
     IO_utils.read_key_space_value_newline ch "author" User.read in

@@ -163,6 +163,8 @@ let add_in_index r relpaths =
   );
   write_index r
 
+let commit r author committer message =
+  raise Todo
 
 (*****************************************************************************)
 (* Packs *)

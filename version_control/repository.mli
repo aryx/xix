@@ -28,4 +28,8 @@ val read_index: t -> Index.t
 val write_index: t -> unit
 val add_in_index: t -> Common.filename list -> unit
 
+val commit: t -> User.t -> User.t -> string -> unit
+
 (* packs *)
+
+

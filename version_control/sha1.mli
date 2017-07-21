@@ -5,5 +5,6 @@ type t = bytes
 val sha1: bytes -> t
 
 val read: IO.input -> t
+val write: 'a IO.output -> t -> unit
 
 val is_sha: t -> bool

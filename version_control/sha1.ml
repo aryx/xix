@@ -49,6 +49,8 @@ let read ch =
   assert (is_sha s);
   s
 
+let write ch x =
+  IO.nwrite ch x
 
 (* start of copy-pasted code from uuidm *)
 

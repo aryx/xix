@@ -21,6 +21,7 @@ open Common
 (* 
  * 
  * Most of the code below derives from: https://github.com/mirage/ocaml-git
+ * in index.ml and git_unix.ml
  *)
 
 (*****************************************************************************)
@@ -79,17 +80,60 @@ let compare_entries e1 e2 =
   | i -> i
 *)
 
-let entry_of_stat stat relpath sha =
-  raise Todo
+let entry_of_stat stats relpath sha =
+  let stat_info = 
+    { ctime = { lsb32 = Int32.of_float stats.Unix.st_ctime; nsec = 0l };
+      mtime = { lsb32 = Int32.of_float stats.Unix.st_mtime; nsec = 0l };
+      dev = Int32.of_int stats.Unix.st_dev;
+      inode = Int32.of_int stats.Unix.st_ino;
+      mode = 
+        (match stats.Unix.st_kind, stats.Unix.st_perm with
+        | Unix.S_REG, p -> 
+          if p land 0o100 = 0o100 
+          then Exec 
+          else Normal
+        | Unix.S_LNK, _ -> Link
+        | _ -> failwith (spf "unsupported file type %s" relpath)
+        );
+      uid = Int32.of_int stats.Unix.st_uid;
+      gid = Int32.of_int stats.Unix.st_gid;
+      size = Int32.of_int stats.Unix.st_size;
+    }
+  in
+  { stats = stat_info;
+    id = sha;
+    stage = 0; (* TODO? *)
+    name = relpath
+  }
 
 (*****************************************************************************)
 (* Add/Del *)
 (*****************************************************************************)
-let remove idx name =
-  raise Todo
+let rec remove idx name =
+  match idx with
+  | [] -> failwith (spf "The file %s is not in the index" name)
+  | x::xs ->
+    (match compare name x.name with
+    | 1 -> x::(remove xs name)
+    | 0 -> xs
+    (* the entries are sorted *)
+    | -1 -> failwith (spf "The file %s is not in the index" name)
+    | x -> raise (Impossible (spf "compare can not return %d" x))
+    )
 
-let add idx entry =
-  raise Todo
+let rec add idx entry =
+  match idx with
+  | [] -> [entry]
+  | x::xs ->
+    (match compare entry.name x.name with
+    | 1 -> x::(add xs entry)
+    (* replace old entry is ok *)
+    | 0 -> entry::xs
+    (* the entries are sorted *)
+    | -1 -> entry::x::xs
+    | x -> raise (Impossible (spf "compare can not return %d" x))
+    )
+
 
 (*****************************************************************************)
 (* IO *)
@@ -100,6 +144,10 @@ let read_time ch =
   let lsb32 = IO.BigEndian.read_real_i32 ch in
   let nsec = IO.BigEndian.read_real_i32 ch in
   { lsb32; nsec }
+
+let write_time ch time =
+  IO.BigEndian.write_real_i32 ch time.lsb32;
+  IO.BigEndian.write_real_i32 ch time.nsec
 
 let read_mode ch =
   let _zero = IO.BigEndian.read_ui16 ch in
@@ -115,6 +163,17 @@ let read_mode ch =
     )
   | m -> failwith (spf "Index.mode: invalid (%d)" m)
 
+let write_mode ch mode =
+  IO.BigEndian.write_ui16 ch 0;
+  let n = 
+    match mode with
+    | Exec    -> 0b1000__000__111_101_101
+    | Normal  -> 0b1000__000__110_100_100
+    | Link    -> 0b1010__000__000_000_000
+    | Gitlink -> 0b1110__000__000_000_000 
+  in
+  IO.BigEndian.write_ui16 ch n
+
 let read_stat_info ch =
   let ctime = read_time ch in
   let mtime = read_time ch in
@@ -126,6 +185,18 @@ let read_stat_info ch =
   let gid = IO.BigEndian.read_real_i32 ch in
   let size = IO.BigEndian.read_real_i32 ch in
   { mtime; ctime; dev; inode; mode; uid; gid; size }
+
+let write_stat_info ch stats =
+  write_time ch stats.ctime;
+  write_time ch stats.mtime;
+  IO.BigEndian.write_real_i32 ch stats.dev;
+  IO.BigEndian.write_real_i32 ch stats.inode;
+  write_mode ch stats.mode;
+  IO.BigEndian.write_real_i32 ch stats.uid;
+  IO.BigEndian.write_real_i32 ch stats.gid;
+  IO.BigEndian.write_real_i32 ch stats.size;
+  ()
+ 
 
 let read_entry ch =
   let stats = read_stat_info ch in
@@ -148,6 +219,24 @@ let read_entry ch =
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
   { stats; id; stage; name }
+
+let write_entry ch e =
+  write_stat_info ch e.stats;
+  Sha1.write ch e.id;
+  let flags = (e.stage lsl 12 + String.length e.name) land 0x3FFF in
+  IO.BigEndian.write_ui16 ch flags;
+  IO.nwrite ch e.name;
+  let len = 63 + String.length e.name in
+  let pad = 
+    match len mod 8 with
+    | 0 -> 0
+    | n -> 8-n 
+  in
+  IO.nwrite ch (Bytes.make pad '\000');
+  IO.write ch '\000'
+
+
+
 
 let read_entries ch =
   let n = IO.BigEndian.read_i32 ch in
@@ -173,4 +262,15 @@ let read ch =
 
 
 let write idx ch =
-  raise Todo
+  let n = List.length idx in
+  let body =
+    IO.output_bytes () |> IO_utils.with_close_out (fun ch ->
+      IO.nwrite ch "DIRC";
+      IO.BigEndian.write_i32 ch 2;
+      IO.BigEndian.write_i32 ch n;
+      idx |> List.iter (write_entry ch)
+    )
+  in
+  let sha = Sha1.sha1 body in
+  IO.nwrite ch body;
+  Sha1.write ch sha

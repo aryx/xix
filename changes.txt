@@ -1,9 +1,15 @@
 -*- org -*-
 
-* 0.6 (Q2 2017) (rio and libdraw)
+* 0.7 (Q3 2017) (git)
 
-port of rio using ocaml threads but relying on the original plan9 kernel
-with basic terminal emulator.
+port of dulwich and ocaml-git, 2 clones of git, to ocaml(light). 
+Simplify code in ocaml-git by not using functors/lwt/mstruct/... 
+and complete with new code derived from dulwich (clone of git in python).
+
+* 0.6 (Q2 2017) (rio and libdraw, import lib_core, lib_system)
+
+port of rio using ocaml threads but relying on the original plan9 kernel.
+basic terminal emulator.
 
 port of libdraw, the userspace part, again relying on the original plan9 kernel
 (draw/, geometry/, input/, and basic ui/ for menus)
@@ -57,5 +63,4 @@ finish 5a
 port of 5a
 import of yacc that I ported in may 2015
 import of lex from OCaml.
-import of lib_parsing/ from the modifications I made to lex (and yacc).
-
+import of lib_parsing/ from the modifications I made to lex and yacc.

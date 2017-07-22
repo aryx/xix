@@ -56,6 +56,7 @@ let read ch =
   let email = IO_utils.read_string_and_stop_char ch '>' in
   let c = IO.read ch in
   if c <> ' ' then failwith "User.read: wrong format, missing space";
+
   let seconds = IO_utils.read_string_and_stop_char ch ' ' in
   let sign = IO.read ch in
   let hours = IO.nread_string ch 2 in
@@ -69,3 +70,14 @@ let read ch =
               min = int_of_string mins;
             });
   }
+
+let write_date ch (date, tz) =
+  IO.nwrite ch (Int64.to_string date);
+  IO.write ch ' ';
+  let sign = match tz.sign with Plus -> "+" | Minus -> "-" in
+  IO.nwrite ch (spf "%s%02d%02d" sign tz.hours tz.min)
+
+let write ch user =
+  IO.nwrite ch (spf "%s <%s> " user.name user.email);
+  write_date ch user.date
+

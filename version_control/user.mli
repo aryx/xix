@@ -14,3 +14,4 @@ type t = {
 }
 
 val read: IO.input -> t
+val write: 'a IO.output -> t -> unit

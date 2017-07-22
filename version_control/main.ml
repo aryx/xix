@@ -13,6 +13,8 @@ open Common
  *  -??
  * 
  * todo:
+ *  - a simplified version where just Marshall data instead of using
+ *    the specific git format. Save many LOC?
  *  - ??
  * 
  * The code of ogit uses code from 

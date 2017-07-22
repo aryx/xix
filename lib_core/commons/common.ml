@@ -63,6 +63,9 @@ let rec filter_some = function
 
 let map_filter f xs = xs |> List.map f |> filter_some
 
+let optionize f =
+  try Some (f ()) with Not_found -> None
+
 
 let sort_by_val_highfirst xs =
   List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs

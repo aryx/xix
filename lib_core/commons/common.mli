@@ -21,6 +21,7 @@ val rnd : int -> int -> int
 val if_some : ('a -> unit) -> 'a option -> unit
 val filter_some : 'a option list -> 'a list
 val map_filter : ('a -> 'b option) -> 'a list -> 'b list
+val optionize: (unit -> 'a) -> 'a option
 
 val sort_by_val_highfirst : ('a * 'b) list -> ('a * 'b) list
 val sort_by_val_lowfirst : ('a * 'b) list -> ('a * 'b) list

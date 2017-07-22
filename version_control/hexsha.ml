@@ -112,3 +112,5 @@ let read ch =
   let s = IO.really_nread ch 40 in
   assert (is_hexsha s);
   s
+let write ch x =
+  IO.nwrite ch x

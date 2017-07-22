@@ -134,6 +134,71 @@ let rec add_entry idx entry =
     | x -> raise (Impossible (spf "compare can not return %d" x))
     )
 
+(*****************************************************************************)
+(* tree of index *)
+(*****************************************************************************)
+
+type dir = dir_entry list ref
+  and dir_entry =
+    | Subdir of string (* base *)
+    | File of string (* base *) * entry
+type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
+
+(* the code in this section derives from dulwich *)
+
+let rec add_dir dirs dirpath =
+  try 
+    Hashtbl.find dirs dirpath
+  with Not_found ->
+    let newdir = ref [] in
+    Hashtbl.add dirs dirpath newdir;
+    let (parent, base) = 
+      Filename.dirname dirpath, Filename.basename dirpath in
+    (* !recursive call! should stop at some point because "." is in dirs *)
+    let dir = add_dir dirs parent in
+    dir := Subdir (base)::!dir;
+    newdir
+
+let rec build_trees dirs dirpath add_tree_obj =
+  let dir = Hashtbl.find dirs dirpath in
+  (* entries of a Tree.t must be sorted, but entries of an index too,
+   * so we can assume add_dir was called in sorted order
+   *)
+  let xs = List.rev !dir in
+  let tree = 
+    xs |> List.map (function
+      | File (base, entry) ->
+        {Tree.name = base; node = entry.id; 
+         perm = 
+            (match entry.stats.mode with
+            | Normal -> Tree.Normal
+            | Exec -> Tree.Exec
+            | Link -> Tree.Link
+            | Gitlink -> raise Todo
+            );
+        }
+      | Subdir base ->
+        let sha = 
+          build_trees dirs (Filename.concat dirpath base) add_tree_obj in
+        {Tree. perm = Tree.Dir; name = base; node = sha }
+    )
+  in
+  add_tree_obj tree
+
+
+let tree_of_index idx add_tree_obj =
+  let (dirs: dirs) = Hashtbl.create 11 in
+  Hashtbl.add dirs "." (ref []);
+  (* populate dirs *)
+  idx |> List.iter (fun entry ->
+    let relpath = entry.name in
+    let (dir, base) = Filename.dirname relpath, Filename.basename relpath in
+    let dir = add_dir dirs dir in
+    dir := (File (base, entry))::!dir
+  );
+  (* build trees *)
+  build_trees dirs "." add_tree_obj
+
 
 (*****************************************************************************)
 (* IO *)

@@ -61,24 +61,21 @@ let with_file_out_with_lock f file =
 let read_ref r aref =
   raise Todo
 
-let remove_ref r aref =
-  raise Todo
-
-let add_ref r aref refval =
-  (* less: check refval? *)
-  let file = ref_to_filename r aref in
-  file |> with_file_out_with_lock (fun ch ->
-    ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
-  )
-
-(* old: called follow() in dulwich *)
-let resolve_ref r aref =
+let follow_ref r aref =
   (* less: check if depth > 5? *)
   raise Todo
 
-let test_and_set_ref r aref refval =
-  raise Todo
+let add_ref_if_new r aref refval =
+  (* less: check refval? *)
+  let file = ref_to_filename r aref in
+  file |> with_file_out_with_lock (fun ch ->
+    (* todo: check file does not exist aleady *)
+    ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
+  );
+  true
 
+let set_ref_if_same_old r aref oldh newh =
+  raise Todo
 
 (*****************************************************************************)
 (* Objects *)
@@ -155,8 +152,8 @@ let add_in_index r relpaths =
     in
     let obj = Objects.Blob data in
     let sha = add_obj r obj in
-    let entry = Index.entry_of_stat stat relpath sha in
-    r.index <- Index.add r.index entry;
+    let entry = Index.mk_entry relpath sha stat in
+    r.index <- Index.add_entry r.index entry;
   );
   write_index r
 
@@ -166,8 +163,37 @@ let add_in_index r relpaths =
 
 let commit_index r author committer message =
   let aref = Refs.Head in
-  (* less: merge_heads from .git/MERGE_HEADS *)
-  raise Todo
+  let tree = Index.tree_of_index r.index 
+    (fun t -> add_obj r (Objects.Tree t)) 
+  in
+  (* todo: execute pre-commit hook *)
+
+  (* less: Try to read commit message from .git/MERGE_MSG *)
+  let message = message in
+  (* todo: execute commit-msg hook *)
+
+  let commit = { Commit. parents = []; tree; author; committer; message } in
+
+  let ok =
+    match follow_ref r aref |> snd with
+    | Some old_head ->
+      (* less: merge_heads from .git/MERGE_HEADS *)
+      let merge_heads = [] in
+      let commit = { commit with Commit.parents = old_head :: merge_heads } in
+      let sha = add_obj r (Objects.Commit commit) in
+      set_ref_if_same_old r aref old_head sha
+    | None ->
+      (* maybe first commit so refs/heads/master may not even exist yet *)
+      let commit = { commit with Commit.parents = [] } in
+      let sha = add_obj r (Objects.Commit commit) in
+      pr2_gen (Hexsha.of_sha sha);
+      add_ref_if_new r aref (Refs.Hash sha)
+  in
+  if not ok
+  then failwith (spf "%s changed during commit" (Refs.string_of_ref aref));
+  (* todo: execute post-commit hook *)
+  ()
+  
 
 (*****************************************************************************)
 (* Packs *)
@@ -202,7 +228,7 @@ let init root =
     dotgit = root / ".git";
     index = Index.empty;
   } in
-  add_ref r Refs.Head Refs.default_head_content;
+  add_ref_if_new r Refs.Head Refs.default_head_content |> ignore;
 
   (* less: config file, description, hooks, etc *)
   pr (spf "Initialized empty Git repository in %s" (root / ".git"))

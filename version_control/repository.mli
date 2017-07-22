@@ -8,8 +8,8 @@ type t = {
 
 (* repo *)
 val init: Common.filename -> unit
-val clone: t -> Common.filename -> unit
 val open_: Common.filename -> t
+val clone: t -> Common.filename -> unit
 
 (* objects *)
 val read_obj: t -> Sha1.t -> Objects.t
@@ -17,10 +17,7 @@ val add_obj: t -> Objects.t -> Sha1.t
 
 (* refs *)
 val read_ref: t -> Refs.t -> Refs.ref_content
-val remove_ref: t -> Refs.t -> unit
-val resolve_ref: t -> Refs.t -> Commit.hash
-val add_ref: t -> Refs.t -> Refs.ref_content -> unit
-(*val test_and_set_ref: t -> Refs.t ->  *)
+val follow_ref: t -> Refs.t -> Refs.t list * Commit.hash option
 
 (* index *)
 val read_index: t -> Index.t

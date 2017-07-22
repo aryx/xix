@@ -16,3 +16,5 @@ val is_valid_refname: refname -> bool
 
 val read: IO.input -> ref_content
 val write: ref_content -> unit IO.output -> unit
+
+val string_of_ref: t -> string

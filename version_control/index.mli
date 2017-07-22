@@ -1,11 +1,11 @@
 
 (** The type for file-system stat information. *)
 type stat_info = {
+  mode : mode;
   ctime: time;
   mtime: time;
   dev  : Int32.t;
   inode: Int32.t;
-  mode : mode;
   uid  : Int32.t;
   gid  : Int32.t;
   size : Int32.t;
@@ -23,23 +23,25 @@ type stat_info = {
     
 (** The type for a Git index entry. *)
 type entry = {
-  stats : stat_info;
-  id    : Blob.hash;
-  stage : int;
   (* relative path *)
   name  : Common.filename;
+  id    : Blob.hash;
+  stats : stat_info;
+  stage : int;
 }
 
 (* the entries are sorted *)
 type t = entry list
 
 val empty: t
-
-val entry_of_stat: Unix.stats -> Common.filename -> Sha1.t -> entry
+val mk_entry: Common.filename -> Sha1.t -> Unix.stats -> entry
 
 val read: IO.input -> t
 (* will write the header, and sha checksum at the end *)
 val write: t -> unit IO.output -> unit
 
-val remove: t -> Common.filename -> t
-val add: t -> entry -> t
+val remove_entry: t -> Common.filename -> t
+val add_entry: t -> entry -> t
+
+val tree_of_index: t -> (* add_obj *)(Tree.t -> Tree.hash) -> Tree.hash
+(* todo: index_of_tree *)

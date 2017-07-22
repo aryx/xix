@@ -28,7 +28,7 @@ let cmd = { Cmd.
       r.Repository.index <-
         relpaths |> List.fold_left (fun idx relpath ->
           (* todo: -f? remove also file *)
-          Index.remove idx relpath
+          Index.remove_entry idx relpath
         ) r.Repository.index;
       Repository.write_index r
   );

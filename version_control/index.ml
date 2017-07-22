@@ -30,11 +30,11 @@ open Common
 
 (** The type for file-system stat information. *)
 type stat_info = {
+  mode : mode;
   ctime: time;
   mtime: time;
   dev  : Int32.t;
   inode: Int32.t;
-  mode : mode;
   uid  : Int32.t;
   gid  : Int32.t;
   size : Int32.t;
@@ -43,7 +43,7 @@ type stat_info = {
     | Normal
     | Exec
     | Link
-    | Gitlink
+    | Gitlink (*?? submodule? *)
   (** The type for a time represented by its [lsb32] and [nsec] parts. *)
   and time = {
     lsb32: Int32.t;
@@ -52,11 +52,11 @@ type stat_info = {
     
 (** The type for a Git index entry. *)
 type entry = {
-  stats : stat_info;
-  id    : Blob.hash;
-  stage : int;
   (* relative path *)
   name  : Common.filename;
+  id    : Blob.hash;
+  stats : stat_info;
+  stage : int; (*?? *)
 }
 
 (* less: extensions *)
@@ -80,7 +80,7 @@ let compare_entries e1 e2 =
   | i -> i
 *)
 
-let entry_of_stat stats relpath sha =
+let mk_entry relpath sha stats =
   let stat_info = 
     { ctime = { lsb32 = Int32.of_float stats.Unix.st_ctime; nsec = 0l };
       mtime = { lsb32 = Int32.of_float stats.Unix.st_mtime; nsec = 0l };
@@ -109,24 +109,24 @@ let entry_of_stat stats relpath sha =
 (*****************************************************************************)
 (* Add/Del *)
 (*****************************************************************************)
-let rec remove idx name =
+let rec remove_entry idx name =
   match idx with
   | [] -> failwith (spf "The file %s is not in the index" name)
   | x::xs ->
     (match compare name x.name with
-    | 1 -> x::(remove xs name)
+    | 1 -> x::(remove_entry xs name)
     | 0 -> xs
     (* the entries are sorted *)
     | -1 -> failwith (spf "The file %s is not in the index" name)
     | x -> raise (Impossible (spf "compare can not return %d" x))
     )
 
-let rec add idx entry =
+let rec add_entry idx entry =
   match idx with
   | [] -> [entry]
   | x::xs ->
     (match compare entry.name x.name with
-    | 1 -> x::(add xs entry)
+    | 1 -> x::(add_entry xs entry)
     (* replace old entry is ok *)
     | 0 -> entry::xs
     (* the entries are sorted *)

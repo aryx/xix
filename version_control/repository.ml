@@ -59,23 +59,59 @@ let with_file_out_with_lock f file =
 (* Refs *)
 (*****************************************************************************)
 let read_ref r aref =
-  raise Todo
+  (* less: packed refs *)
+  let file = ref_to_filename r aref in
+  let ch = open_in file in
+  let input = IO.input_channel ch in
+  Refs.read input
 
-let follow_ref r aref =
+let rec follow_ref r aref =
   (* less: check if depth > 5? *)
-  raise Todo
+  try (
+  let content = read_ref r aref in
+  match content with
+  | Refs.Hash sha -> [aref], Some sha
+  | Refs.OtherRef refname ->
+    let (xs, shaopt) = follow_ref r (Refs.Ref refname) in
+    aref::xs, shaopt
+  ) 
+  (* inexistent ref file, can happen at the beginning when have .git/HEAD
+   * pointing to an inexistent .git/refs/heads/master
+   *)
+  with Sys_error _ (* no such file or directory *) -> [aref], None
 
 let add_ref_if_new r aref refval =
-  (* less: check refval? *)
-  let file = ref_to_filename r aref in
-  file |> with_file_out_with_lock (fun ch ->
-    (* todo: check file does not exist aleady *)
-    ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
-  );
-  true
+  let (refs, shaopt) = follow_ref r aref in
+  if shaopt <> None
+  then false
+  else begin
+    let lastref = List.hd (List.rev refs) in
+    let file = ref_to_filename r lastref in
+    (* todo: ensure dirname exists *)
+    file |> with_file_out_with_lock (fun ch ->
+      (* todo: check file does not exist aleady *)
+      ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
+    );
+    true
+  end
 
 let set_ref_if_same_old r aref oldh newh =
-  raise Todo
+  let (refs, _) = follow_ref r aref in
+  let lastref = List.hd (List.rev refs) in
+  let file = ref_to_filename r lastref in
+  try 
+    file |> with_file_out_with_lock (fun ch ->
+      (* TODO generate some IO.No_more_input 
+      let prev = read_ref r lastref in
+      if prev <> (Refs.Hash oldh)
+      then raise Not_found
+      else 
+      *)
+        ch |> IO.output_channel |> IO_utils.with_close_out 
+            (Refs.write (Refs.Hash newh))
+    );
+    true
+  with Not_found -> false
 
 (*****************************************************************************)
 (* Objects *)
@@ -186,7 +222,6 @@ let commit_index r author committer message =
       (* maybe first commit so refs/heads/master may not even exist yet *)
       let commit = { commit with Commit.parents = [] } in
       let sha = add_obj r (Objects.Commit commit) in
-      pr2_gen (Hexsha.of_sha sha);
       add_ref_if_new r aref (Refs.Hash sha)
   in
   if not ok

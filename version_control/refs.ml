@@ -36,8 +36,11 @@ let string_of_ref = function
 (*****************************************************************************)
 
 let read ch =
-  (* less: should check end of buffer, or just call IO.read_all! *)
-  raise Todo
+  let str = IO.read_all ch in
+  (* less: check finish by newline? *)
+  match str with
+  | _ when str =~ "^ref: \\(.*\\)$" -> OtherRef (Regexp_.matched1 str)
+  | _ -> Hash (str |> IO.input_string |> Hexsha.read |> Hexsha.to_sha)
 
 let write content ch =
   match content with

@@ -82,5 +82,21 @@ let read ch =
     message = msg;
   }
 
-let write c ch =
-  raise Todo
+let write commit ch =
+  IO.nwrite ch "tree ";
+  Hexsha.write ch (Hexsha.of_sha commit.tree);
+  IO.write ch '\n';
+  commit.parents |> List.iter (fun parent ->
+    IO.nwrite ch "parent ";
+    Hexsha.write ch (Hexsha.of_sha parent);
+    IO.write ch '\n';
+  );
+  IO.nwrite ch "author ";
+  User.write ch commit.author;
+  IO.write ch '\n';
+  IO.nwrite ch "committer ";
+  User.write ch commit.committer;
+  IO.write ch '\n';
+
+  IO.write ch '\n';
+  IO.nwrite ch commit.message

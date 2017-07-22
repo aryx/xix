@@ -13,4 +13,4 @@ and hash = Sha1.t
 (* assumes have already read the 'commit <size>\000' hdr from unzipped input *)
 val read: IO.input -> t
 (* does not write the header, does not compress *)
-val write: t -> bytes IO.output -> unit
+val write: t -> 'a IO.output -> unit

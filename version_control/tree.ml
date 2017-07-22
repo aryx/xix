@@ -32,7 +32,7 @@ type perm =
   | Exec
   | Link
   | Dir
-  | Commit
+  | Commit (* ?? submodule? *)
 
 type entry = {
   perm: perm;
@@ -61,15 +61,31 @@ let perm_of_string = function
   | "160000" -> Commit
   | x        -> failwith (spf "Tree.perm_of_string: %s is not a valid perm." x)
 
+let string_of_perm = function
+  | Normal -> "100644"
+  | Exec   -> "100755"
+  | Link   -> "120000"
+  | Dir    -> "40000"
+  | Commit -> "160000"
+
 (* todo: should transform some No_more_input exn in something bad,
  * on first one it's ok, but after it means incomplete entry.
  *)
 let read_entry ch =
   let perm = IO_utils.read_string_and_stop_char ch ' ' in
-(* todo: handle escape char in filenames? encode/decode *)
+  (* todo: handle escape char in filenames? encode/decode *)
   let name = IO_utils.read_string_and_stop_char ch '\000' in
   let hash = Sha1.read ch in
   { perm = perm_of_string perm; name = name; node = hash }
+
+let write_entry ch e =
+  IO.nwrite ch (string_of_perm e.perm);
+  IO.write ch ' ';
+  (* todo: handle escape char in filenames? encode/decode *)
+  IO.nwrite ch e.name;
+  IO.write ch '\000';
+  Sha1.write ch e.node
+  
 
 let read ch =
   let rec aux acc =
@@ -86,4 +102,5 @@ let read ch =
 
 
 let write t ch =
-  raise Todo
+  t |> List.iter (write_entry ch)
+

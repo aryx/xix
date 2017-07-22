@@ -23,8 +23,8 @@ let cmd = { Cmd.
         (Int64.of_float (Unix.time ()),
          { User.
            (* todo: use localtime vs gmtime? *)
-           sign = User.Plus;
-           hours = 0;
+           sign = User.Minus;
+           hours = 7; (* SF *)
            min = 0;
          })
       in
@@ -33,7 +33,7 @@ let cmd = { Cmd.
         if !author = ""
         then { User.
                name = Unix.getlogin ();
-               email = "<todo@todo>";
+               email = "todo@todo";
                date = today;
              }
         else raise Todo (* need parse author string *)
@@ -43,6 +43,11 @@ let cmd = { Cmd.
         then author
         else raise Todo
       in
+      (* todo: imitate git output
+       *   [master 0b50159] xxx
+       *   1 file changed, 0 insertions(+), 0 deletions(-)
+       *   create mode 100644 foobar.txt
+       *)
       Repository.commit_index r author committer !message
     | xs -> 
       (* less: usage message? *)

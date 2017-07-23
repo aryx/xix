@@ -1,7 +1,7 @@
 # -*- sh -*-
 TOP=..
 
-SRC= IO_utils.ml \
+SRC= IO_.ml \
      sha1.ml hexsha.ml \
      unzip.ml zlib.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \

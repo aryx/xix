@@ -72,9 +72,9 @@ let string_of_perm = function
  * on first one it's ok, but after it means incomplete entry.
  *)
 let read_entry ch =
-  let perm = IO_utils.read_string_and_stop_char ch ' ' in
+  let perm = IO_.read_string_and_stop_char ch ' ' in
   (* todo: handle escape char in filenames? encode/decode *)
-  let name = IO_utils.read_string_and_stop_char ch '\000' in
+  let name = IO_.read_string_and_stop_char ch '\000' in
   let hash = Sha1.read ch in
   { perm = perm_of_string perm; name = name; node = hash }
 

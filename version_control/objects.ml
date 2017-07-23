@@ -24,8 +24,8 @@ type t =
 (*****************************************************************************)
 
 let read ch =
-  let str = IO_utils.read_string_and_stop_char ch ' ' in
-  let n = IO_utils.read_int_and_nullbyte ch in
+  let str = IO_.read_string_and_stop_char ch ' ' in
+  let n = IO_.read_int_and_nullbyte ch in
   let raw = IO.really_nread ch n in
   (* less: assert finished ch? use IO.pos_in? *)
   let ch2 = IO.input_bytes raw in
@@ -40,7 +40,7 @@ let read ch =
 
 let write obj ch =
   let body = 
-    IO.output_bytes () |> IO_utils.with_close_out (fun ch ->
+    IO.output_bytes () |> IO_.with_close_out (fun ch ->
       match obj with
       | Blob x   -> Blob.write x ch
       | Commit x -> Commit.write x ch

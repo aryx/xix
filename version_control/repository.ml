@@ -90,7 +90,7 @@ let add_ref_if_new r aref refval =
     (* todo: ensure dirname exists *)
     file |> with_file_out_with_lock (fun ch ->
       (* todo: check file does not exist aleady *)
-      ch |> IO.output_channel |> IO_utils.with_close_out (Refs.write refval)
+      ch |> IO.output_channel |> IO_.with_close_out (Refs.write refval)
     );
     true
   end
@@ -107,7 +107,7 @@ let set_ref_if_same_old r aref oldh newh =
       then raise Not_found
       else 
       *)
-        ch |> IO.output_channel |> IO_utils.with_close_out 
+        ch |> IO.output_channel |> IO_.with_close_out 
             (Refs.write (Refs.Hash newh))
     );
     true
@@ -127,7 +127,7 @@ let read_obj r h =
 
 let add_obj r obj =
   let bytes = 
-    IO.output_bytes () |> IO_utils.with_close_out (Objects.write obj) in
+    IO.output_bytes () |> IO_.with_close_out (Objects.write obj) in
   let sha = Sha1.sha1 bytes in
   let hexsha = Hexsha.of_sha sha in
   let dir = hexsha_to_dirname r hexsha in
@@ -161,7 +161,7 @@ let read_index r =
 let write_index r =
   let path = index_to_filename r in
   path |> with_file_out_with_lock (fun ch ->
-    ch |> IO.output_channel |> IO_utils.with_close_out (Index.write r.index)
+    ch |> IO.output_channel |> IO_.with_close_out (Index.write r.index)
   )
 
 (* old: was called stage() in dulwich *)

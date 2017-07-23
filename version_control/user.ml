@@ -52,12 +52,12 @@ let sign_of_char = function
   | c -> failwith (spf "User.sign_of_string: not a sign, got %c" c)
 
 let read ch =
-  let name = IO_utils.read_string_and_stop_char ch '<' in
-  let email = IO_utils.read_string_and_stop_char ch '>' in
+  let name = IO_.read_string_and_stop_char ch '<' in
+  let email = IO_.read_string_and_stop_char ch '>' in
   let c = IO.read ch in
   if c <> ' ' then failwith "User.read: wrong format, missing space";
 
-  let seconds = IO_utils.read_string_and_stop_char ch ' ' in
+  let seconds = IO_.read_string_and_stop_char ch ' ' in
   let sign = IO.read ch in
   let hours = IO.nread_string ch 2 in
   let mins = IO.nread_string ch 2 in

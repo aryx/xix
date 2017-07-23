@@ -47,11 +47,11 @@ and hash = Sha1.t
 
 let read ch =
   let tree = 
-    IO_utils.read_key_space_value_newline ch "tree" Hexsha.read in
+    IO_.read_key_space_value_newline ch "tree" Hexsha.read in
   (* todo: read "parent" or "author", because first commit has no parent *)
   let parents, author = 
     let rec loop parents =
-      let str = IO_utils.read_string_and_stop_char ch ' ' in
+      let str = IO_.read_string_and_stop_char ch ' ' in
       match str with
       | "parent" -> 
         let v = Hexsha.read ch in
@@ -71,7 +71,7 @@ let read ch =
     loop []
   in
   let committer = 
-    IO_utils.read_key_space_value_newline ch "committer" User.read in
+    IO_.read_key_space_value_newline ch "committer" User.read in
   let c = IO.read ch in
   if c <> '\n'
   then failwith "Commit.read: missing newline before message";

@@ -329,7 +329,7 @@ let read ch =
 let write idx ch =
   let n = List.length idx in
   let body =
-    IO.output_bytes () |> IO_utils.with_close_out (fun ch ->
+    IO.output_bytes () |> IO_.with_close_out (fun ch ->
       IO.nwrite ch "DIRC";
       IO.BigEndian.write_i32 ch 2;
       IO.BigEndian.write_i32 ch n;

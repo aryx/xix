@@ -13,8 +13,6 @@ let with_close_out f ch =
   f ch;
   let res = IO.close_out ch in
   res
- 
-
 
 let read_string_and_stop_char ch stop_char =
   let b = Buffer.create 8 in
@@ -43,5 +41,3 @@ let read_key_space_value_newline ch k f =
   if c <> '\n'
   then failwith "read_key_space_value_newline: wrong format, no newline";
   v
-
-  

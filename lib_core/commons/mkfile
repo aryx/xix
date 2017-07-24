@@ -6,6 +6,7 @@ SRC=common.ml\
  common2.ml\
  ocaml.ml\
  IO.ml\
+ date.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

@@ -89,40 +89,12 @@ let write ch user =
 (* Show *)
 (*****************************************************************************)
 
-(* could be in common.ml *)
-(* less: i18n *)
-let string_of_day = function
-  | 0 -> "Sun"
-  | 1 -> "Mon"
-  | 2 -> "Tue"
-  | 3 -> "Wed"
-  | 4 -> "Thu"
-  | 5 -> "Fri"
-  | 6 -> "Sat"
-  | x -> raise (Impossible (spf "string_of_day not in range %d" x))
-
-let string_of_month = function
-  | 0 -> "Jan"
-  | 1 -> "Feb"
-  | 2 -> "Mar"
-  | 3 -> "Apr"
-  | 4 -> "May"
-  | 5 -> "Jun"
-  | 6 -> "Jul"
-  | 7 -> "Aug"
-  | 8 -> "Sep"
-  | 9 -> "Oct"
-  | 10 -> "Nov"
-  | 11 -> "Dec"
-  | x -> raise (Impossible (spf "string_of_month not in range %d" x))
-
 let string_of_date (date, tz) =
   let f = Int64.to_float date in
   let tm = Unix.localtime f in
-  
 
   spf "%s %s %d %02d:%02d:%02d %d %c%02d%02d"
-    (string_of_day tm.Unix.tm_wday) (string_of_month tm.Unix.tm_mon) 
+    (Date.string_of_day tm.Unix.tm_wday) (Date.string_of_month tm.Unix.tm_mon) 
     tm.Unix.tm_mday 
     tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec (tm.Unix.tm_year + 1900)
     (char_of_sign tz.sign) tz.hours tz.min

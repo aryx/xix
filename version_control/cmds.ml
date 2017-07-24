@@ -5,6 +5,8 @@ let main_commands = [
   Cmd_rm.cmd;
   Cmd_commit.cmd;
 
+  Cmd_branch.cmd;
+  
   Cmd_show.cmd;
 ]
 

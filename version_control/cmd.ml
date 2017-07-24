@@ -9,3 +9,6 @@ type t = {
   options: (Arg.key * Arg.spec * Arg.doc) list;
   f: string list -> unit;
 }
+
+(* f can raise ShowUsage which will be catched by caller *)
+exception ShowUsage

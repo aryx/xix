@@ -88,16 +88,23 @@ let main () =
         exit 1
     in
     let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
-    let usage_msg_cmd = spf "%s [options]" cmd.Cmd.name in
-    (* todo: look if --help and factorize treatment of usage for subcmds *)
+    let usage_msg_cmd = spf "%s %s [options]" 
+      Sys.argv.(0)
+      cmd.Cmd.name 
+    in
     let remaining_args = ref [] in
     (try 
-      Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
-        (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
-    with Arg.Bad str -> failwith str 
+     (* todo: look if --help and factorize treatment of usage for subcmds *)
+       Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
+         (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
+     with Arg.Bad str -> failwith str 
     );
     (* finally! *)
-    cmd.Cmd.f (List.rev !remaining_args)
+    try 
+      cmd.Cmd.f (List.rev !remaining_args)
+    with Cmd.ShowUsage ->
+      Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
+      exit 1
   end
         
 let _ =

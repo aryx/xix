@@ -15,3 +15,6 @@ type t = {
 
 val read: IO.input -> t
 val write: 'a IO.output -> t -> unit
+
+(* for show *)
+val string_of_date: (int64 * tz_offset) -> string

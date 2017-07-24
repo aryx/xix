@@ -100,3 +100,16 @@ let write commit ch =
 
   IO.write ch '\n';
   IO.nwrite ch commit.message
+
+(*****************************************************************************)
+(* Show *)
+(*****************************************************************************)
+
+let show x =
+  pr (spf "Author: %s <%s>" x.author.User.name x.author.User.email);
+  (* less: date of author or committer? *)
+  let date = x.author.User.date in
+  pr (spf "Date: %s" (User.string_of_date date));
+  pr "";
+  pr ("    " ^ x.message)
+  (* showing diff done in caller in Cmd_show.show *)        

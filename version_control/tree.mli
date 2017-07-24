@@ -22,3 +22,5 @@ type hash = Sha1.t
 val read: IO.input -> t
 (* does not write the header, does not compress *)
 val write: t -> bytes IO.output -> unit
+
+val show: t -> unit

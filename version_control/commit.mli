@@ -14,3 +14,5 @@ and hash = Sha1.t
 val read: IO.input -> t
 (* does not write the header, does not compress *)
 val write: t -> 'a IO.output -> unit
+
+val show: t -> unit

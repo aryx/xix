@@ -4,6 +4,8 @@ let main_commands = [
   Cmd_add.cmd;
   Cmd_rm.cmd;
   Cmd_commit.cmd;
+
+  Cmd_show.cmd;
 ]
 
 let extra_commands = [

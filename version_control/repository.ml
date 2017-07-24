@@ -28,6 +28,12 @@ let (/) = Filename.concat
 (* rwxr-x--- *)
 let dirperm = 0o750
 
+(* todo: handle ^ like HEAD^, so need more complex objectish parser *)
+type objectish =
+  | ObjByRef of Refs.t
+  | ObjByHex of Hexsha.t
+  (* ObjByTag *)
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -124,6 +130,18 @@ let read_obj r h =
     (* todo: check if sha consistent? *)
     ch |> IO.input_channel |> Unzip.inflate |> Objects.read
   )
+
+let read_objectish r objectish =
+  match objectish with
+  | ObjByRef aref -> 
+    (match follow_ref r aref |> snd with
+    | None -> failwith (spf "could not resolve %s" (Refs.string_of_ref aref))
+    | Some sha -> 
+      read_obj r sha
+    )
+  | ObjByHex hexsha ->
+    let sha = Hexsha.to_sha hexsha in
+    read_obj r sha
 
 let add_obj r obj =
   let bytes = 

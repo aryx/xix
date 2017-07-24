@@ -104,3 +104,15 @@ let read ch =
 let write t ch =
   t |> List.iter (write_entry ch)
 
+(*****************************************************************************)
+(* Show *)
+(*****************************************************************************)
+
+let show xs =
+  xs |> List.iter (fun entry ->
+    pr (spf "%s%s" entry.name
+          (match entry.perm with
+          | Dir -> "/"
+          | _ -> ""
+          ))
+  )

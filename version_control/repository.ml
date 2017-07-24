@@ -61,6 +61,42 @@ let with_file_out_with_lock f file =
   (* todo: create .lock file and then rename *)
   Common.with_file_out f file
 
+
+(* move in common.ml? *)
+(* less: use finalize *)
+let with_opendir f dir =
+  let handle = Unix.opendir dir in
+  let res = f handle in
+  Unix.closedir handle;
+  res
+    
+(* move in common.ml? *)
+(* inspired from os.path.walk in Python *)
+let rec walk_dir f dir =
+  dir |> with_opendir (fun handle ->
+    let dirs = ref [] in
+    let files = ref [] in
+    try 
+      while true do
+        let s = Unix.readdir handle in
+        if s <> "." && s <> ".." then begin
+          let path = Filename.concat dir s in
+          let st = Unix.lstat path in
+          (match st.Unix.st_kind with
+          | Unix.S_DIR -> Common.push s dirs
+          | _ -> Common.push s files
+          )
+        end
+      done
+    with End_of_file ->
+      let dirs = List.rev !dirs in
+      let files = List.rev !files in
+      f dir dirs files;
+      dirs |> List.iter (fun s ->
+        walk_dir f (Filename.concat dir s)
+      )
+  )
+
 (*****************************************************************************)
 (* Refs *)
 (*****************************************************************************)
@@ -120,7 +156,18 @@ let set_ref_if_same_old r aref oldh newh =
   with Not_found -> false
 
 let all_refs r =
-  []
+  let root = r.dotgit ^ "/" in
+  let rootlen = String.length root in
+  let res = ref [] in
+  (root / "refs") |> walk_dir (fun path dirs files ->
+    files |> List.iter (fun file ->
+      (* less: replace os.path.sep *)
+      let dir = String.sub path rootlen (String.length path - rootlen) in
+      let refname = dir / file in
+      Common.push refname res
+    );
+   );
+  List.rev !res
 
 (*****************************************************************************)
 (* Objects *)

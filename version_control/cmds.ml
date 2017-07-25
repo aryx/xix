@@ -6,6 +6,7 @@ let main_commands = [
   Cmd_commit.cmd;
 
   Cmd_branch.cmd;
+  Cmd_checkout.cmd;
   
   Cmd_show.cmd;
 ]

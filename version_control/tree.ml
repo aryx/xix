@@ -45,8 +45,19 @@ type entry = {
 (* todo: entries must be sorted! and each name must be unique *)
 type t = entry list
 
-
 type hash = Sha1.t
+
+(*****************************************************************************)
+(* Walk *)
+(*****************************************************************************)
+(* we must visit in sorted order, so caller can rely on f being
+ * called in order (so can for instance create sorted index entries for free)
+ *)
+let rec walk_tree read_tree dirpath f xs =
+  xs |> List.iter (fun entry ->
+    raise Todo
+  )
+  
 
 (*****************************************************************************)
 (* IO *)

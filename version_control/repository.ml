@@ -166,6 +166,11 @@ let set_ref_if_same_old r aref oldh newh =
     true
   with Not_found -> false
 
+let write_ref r aref content =
+  let file = ref_to_filename r aref in
+  file |> with_file_out_with_lock (fun ch ->
+    ch |> IO.output_channel |> IO_.with_close_out (Refs.write content))
+
 let all_refs r =
   let root = r.dotgit ^ "/" in
   let rootlen = String.length root in
@@ -180,7 +185,6 @@ let all_refs r =
    );
   List.rev !res
 
-
 (*****************************************************************************)
 (* Objects *)
 (*****************************************************************************)
@@ -192,6 +196,19 @@ let read_obj r h =
     (* todo: check if sha consistent? *)
     ch |> IO.input_channel |> Unzip.inflate |> Objects.read
   )
+
+let read_commit r h =
+  match read_obj r h with
+  | Objects.Commit x -> x
+  | _ -> failwith "read_commit: was expecting a commit"
+let read_tree r h =
+  match read_obj r h with
+  | Objects.Tree x -> x
+  | _ -> failwith "read_commit: was expecting a tree"
+let read_blob r h =
+  match read_obj r h with
+  | Objects.Blob x -> x
+  | _ -> failwith "read_commit: was expecting a blob"
 
 let read_objectish r objectish =
   match objectish with
@@ -244,6 +261,22 @@ let write_index r =
     ch |> IO.output_channel |> IO_.with_close_out (Index.write r.index)
   )
 
+    
+let blob_from_path_and_stat full_path stat =
+  let data = 
+    match stat.Unix.st_kind with
+    | Unix.S_REG -> 
+      full_path |> Common.with_file_in (fun ch ->
+        ch |> IO.input_channel |> IO.read_all
+      )
+    | Unix.S_LNK ->
+      Unix.readlink full_path
+    | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
+                       full_path)
+  in
+  Objects.Blob data
+
+
 (* old: was called stage() in dulwich *)
 let add_in_index r relpaths =
   assert (relpaths |> List.for_all Filename.is_relative);
@@ -255,19 +288,8 @@ let add_in_index r relpaths =
         failwith (spf "Repository.add_in_index: %s does not exist anymore"
                     relpath)
     in
-    let data = 
-      match stat.Unix.st_kind with
-      | Unix.S_REG -> 
-        full_path |> Common.with_file_in (fun ch ->
-          ch |> IO.input_channel |> IO.read_all
-        )
-      | Unix.S_LNK ->
-        Unix.readlink full_path
-      | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
-                         relpath)
-    in
-    let obj = Objects.Blob data in
-    let sha = add_obj r obj in
+    let blob = blob_from_path_and_stat full_path stat in
+    let sha = add_obj r blob in
     let entry = Index.mk_entry relpath sha stat in
     r.index <- Index.add_entry r.index entry;
   );
@@ -309,6 +331,47 @@ let commit_index r author committer message =
   (* todo: execute post-commit hook *)
   ()
   
+(*****************************************************************************)
+(* Checkout and reset *)
+(*****************************************************************************)
+
+let build_file_from_blob fullpath blob perm =
+  raise Todo
+
+let set_worktree_and_index_to_tree r tree =
+  (* todo: need lock on index? on worktree? *)
+  let hcurrent = 
+    r.index |> List.map (fun e -> e.Index.name, false) |> Hashtbl_.of_list in
+  let new_index = ref [] in
+  (* less: honor file mode from config file? *)
+  tree |> Tree.walk_tree (read_tree r) "" (fun relpath entry ->
+    let perm = entry.Tree.perm in
+    match perm with
+    | Tree.Dir -> ()
+    | Tree.Commit -> failwith "submodule not yet supported"
+    | Tree.Normal | Tree.Exec | Tree.Link ->
+      (* less: validate_path? *)
+      let fullpath = r.worktree / entry.Tree.name in
+      if not (Sys.file_exists (Filename.dirname fullpath))
+      then Unix.mkdir (Filename.dirname fullpath) dirperm;
+      let sha = entry.Tree.node in
+      let blob = read_blob r sha in
+      let stat = build_file_from_blob fullpath blob perm in
+      Hashtbl.replace hcurrent relpath true;
+      Common.push (Index.mk_entry relpath sha stat) new_index;
+  );
+  let index = List.rev !new_index in
+  r.index <- index;
+  write_index r;
+  hcurrent |> Hashtbl.iter (fun file used ->
+    if not used
+    then 
+      (* todo: should check if modified? otherwise lose modif! *)
+      let fullpath = r.worktree / file in
+      Unix.unlink fullpath
+  )
+  
+
 
 (*****************************************************************************)
 (* Packs *)

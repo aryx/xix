@@ -11,6 +11,7 @@ type stat_info = {
   size : Int32.t;
 }
   and mode =
+    (* no directory here *)
     | Normal
     | Exec
     | Link

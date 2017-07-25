@@ -11,7 +11,7 @@ SRC= IO_.ml \
      cmd.ml \
      cmd_init.ml \
      cmd_add.ml cmd_rm.ml cmd_commit.ml \
-     cmd_branch.ml \
+     cmd_branch.ml cmd_checkout.ml \
      cmd_show.ml \
      dump.ml cmd_dump.ml cmd_test.ml \
      cmds.ml cmd_help.ml \

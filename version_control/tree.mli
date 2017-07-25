@@ -4,7 +4,7 @@ type perm =
   | Exec
   | Link
   | Dir
-  | Commit
+  | Commit (* submodule? *)
 
 type entry = {
   perm: perm;
@@ -24,3 +24,7 @@ val read: IO.input -> t
 val write: t -> bytes IO.output -> unit
 
 val show: t -> unit
+
+val walk_tree: 
+  (hash -> t) -> Common.filename (* dir *) -> 
+  (Common.filename -> entry -> unit) -> t -> unit

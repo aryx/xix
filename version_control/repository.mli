@@ -18,11 +18,15 @@ val clone: t -> Common.filename -> unit
 
 (* objects *)
 val read_obj: t -> Sha1.t -> Objects.t
-val add_obj: t -> Objects.t -> Sha1.t
 val read_objectish: t -> objectish -> Objects.t
+val read_commit: t -> Sha1.t -> Commit.t
+val read_tree: t -> Sha1.t -> Tree.t
+val read_blob: t -> Sha1.t -> Blob.t
+val add_obj: t -> Objects.t -> Sha1.t
 
 (* refs *)
 val read_ref: t -> Refs.t -> Refs.ref_content
+val write_ref: t -> Refs.t -> Refs.ref_content -> unit
 val follow_ref: t -> Refs.t -> Refs.t list * Commit.hash option
 val follow_ref_some: t -> Refs.t -> Commit.hash
 val all_refs: t -> Refs.refname list
@@ -36,7 +40,10 @@ val read_index: t -> Index.t
 val write_index: t -> unit
 val add_in_index: t -> Common.filename list -> unit
 
-val commit_index: t -> User.t -> User.t -> string -> unit
+val commit_index: 
+  t -> User.t (* author *) -> User.t (* committer *) -> string (* msg *) -> unit
+val set_worktree_and_index_to_tree:
+  t -> Tree.t -> unit
 
 (* packs *)
 

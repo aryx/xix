@@ -404,6 +404,7 @@ let set_worktree_and_index_to_tree r tree =
       let fullpath = r.worktree / file in
       Unix.unlink fullpath
   )
+  (* less: delete if a dir became empty, just walk_dir? *)
 
 (*****************************************************************************)
 (* Packs *)

@@ -336,7 +336,41 @@ let commit_index r author committer message =
 (*****************************************************************************)
 
 let build_file_from_blob fullpath blob perm =
-  raise Todo
+  let oldstat =
+    try 
+      Some (Unix.lstat fullpath)
+    with Unix.Unix_error _ -> None
+  in
+  (match perm with 
+  | Tree.Link -> 
+    if oldstat <> None
+    then Unix.unlink fullpath;
+    Unix.symlink blob fullpath;
+  | Tree.Normal | Tree.Exec ->
+    (match oldstat with
+    (* opti: if same content, no need to write anything *)
+    | Some { Unix.st_size = x } when x = Bytes.length blob && 
+      (fullpath |> Common.with_file_in (fun ch -> 
+        (ch |> IO.input_channel |> IO.read_all ) = blob
+       )) ->
+      ()
+    | _ ->
+      fullpath |> Common.with_file_out (fun ch ->
+        output_bytes ch blob
+      );
+      (* less: honor filemode? *)
+      Unix.chmod fullpath 
+        (match perm with 
+        | Tree.Normal -> 0o644
+        | Tree.Exec -> 0o755
+        | _ -> raise (Impossible "matched before")
+        )
+    )
+  | Tree.Dir -> raise (Impossible "dirs filtered in walk_tree iteration")
+  | Tree.Commit -> failwith "submodule not yet supported"
+  );
+  Unix.lstat fullpath
+
 
 let set_worktree_and_index_to_tree r tree =
   (* todo: need lock on index? on worktree? *)
@@ -351,7 +385,7 @@ let set_worktree_and_index_to_tree r tree =
     | Tree.Commit -> failwith "submodule not yet supported"
     | Tree.Normal | Tree.Exec | Tree.Link ->
       (* less: validate_path? *)
-      let fullpath = r.worktree / entry.Tree.name in
+      let fullpath = r.worktree / relpath in
       if not (Sys.file_exists (Filename.dirname fullpath))
       then Unix.mkdir (Filename.dirname fullpath) dirperm;
       let sha = entry.Tree.node in
@@ -370,8 +404,6 @@ let set_worktree_and_index_to_tree r tree =
       let fullpath = r.worktree / file in
       Unix.unlink fullpath
   )
-  
-
 
 (*****************************************************************************)
 (* Packs *)

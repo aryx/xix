@@ -11,8 +11,8 @@ let checkout r str =
     let treeid = commit.Commit.tree in
     let tree = Repository.read_tree r treeid in
     (* todo: order of operation? set ref before index? reverse? *)
-    Repository.set_worktree_and_index_to_tree r tree;
     Repository.write_ref r (Refs.Head) (Refs.OtherRef refname);
+    Repository.set_worktree_and_index_to_tree r tree;
   end else 
     (* checkout an sha? detached head? *)
     raise Todo

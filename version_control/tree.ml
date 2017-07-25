@@ -50,12 +50,20 @@ type hash = Sha1.t
 (*****************************************************************************)
 (* Walk *)
 (*****************************************************************************)
-(* we must visit in sorted order, so caller can rely on f being
- * called in order (so can for instance create sorted index entries for free)
+(* we must visit in sorted order, so caller can rely on 'f' being
+ * called in order (so can for instance create sorted index entries 
+ * while visiting a tree for free)
  *)
 let rec walk_tree read_tree dirpath f xs =
   xs |> List.iter (fun entry ->
-    raise Todo
+    let relpath = Filename.concat dirpath entry.name in
+    f relpath entry;
+    match entry.perm with
+    | Dir ->
+      walk_tree read_tree relpath f (read_tree entry.node)
+    | Commit ->
+      failwith "submodule not supported yet"
+    | Normal | Exec | Link -> ()
   )
   
 

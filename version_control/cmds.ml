@@ -7,6 +7,7 @@ let main_commands = [
 
   Cmd_branch.cmd;
   Cmd_checkout.cmd;
+  Cmd_reset.cmd;
   
   Cmd_show.cmd;
 ]

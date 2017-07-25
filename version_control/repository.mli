@@ -24,7 +24,12 @@ val read_objectish: t -> objectish -> Objects.t
 (* refs *)
 val read_ref: t -> Refs.t -> Refs.ref_content
 val follow_ref: t -> Refs.t -> Refs.t list * Commit.hash option
+val follow_ref_some: t -> Refs.t -> Commit.hash
 val all_refs: t -> Refs.refname list
+val del_ref: t -> Refs.t -> unit
+(* atomic op *)
+val add_ref_if_new: t -> Refs.t -> Refs.ref_content -> bool
+val set_ref_if_same_old: t -> Refs.t -> Sha1.t -> Sha1.t -> bool
 
 (* index *)
 val read_index: t -> Index.t

@@ -17,15 +17,31 @@ let list_branches r =
   )
 
 let create_branch r name (* sha *) =
-  raise Todo
-
+  let all_refs = Repository.all_refs r in
+  let refname = "refs/heads/" ^ name in
+  if List.mem refname all_refs
+  (* less: unless -force *)
+  then failwith (spf "A branch named '%s' already exists." name);
+  let sha = Repository.follow_ref_some r (Refs.Head) in
+  let ok = Repository.add_ref_if_new r (Refs.Ref refname) (Refs.Hash sha) in
+  if not ok
+  then failwith (spf "could not create branch '%s'" name)
+    
 let delete_branch r name =
-  raise Todo
+  let refname = "refs/heads/" ^ name in
+  let aref = Refs.Ref refname in
+  let sha = Repository.follow_ref_some r aref in
+  Repository.del_ref r aref;
+  (* todo: check if still have unmerged commit? *)
+  pr (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
+
+
+let del_flag = ref false
 
 let cmd = { Cmd.
   name = "branch";
   help = "";
-  options = [];
+  options = ["-d", Arg.Set del_flag, "delete a branch"];
   f = (fun args ->
     (* todo: allow git rm from different location *)
     let r = Repository.open_ "." in
@@ -33,7 +49,9 @@ let cmd = { Cmd.
     | [] -> 
       list_branches r
     | [name] ->
-      create_branch r name
+      if !del_flag
+      then delete_branch r name
+      else create_branch r name
     | [name;objectish] ->
       raise Todo
     | _ -> raise Cmd.ShowUsage

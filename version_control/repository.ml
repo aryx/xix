@@ -32,7 +32,9 @@ let dirperm = 0o750
 type objectish =
   | ObjByRef of Refs.t
   | ObjByHex of Hexsha.t
-  (* ObjByTag *)
+  (* ObjByTag 
+     ObjByBranch
+  *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -122,6 +124,11 @@ let rec follow_ref r aref =
    *)
   with Sys_error _ (* no such file or directory *) -> [aref], None
 
+let follow_ref_some r aref =
+  match follow_ref r aref |> snd with
+  | Some sha -> sha
+  | None -> failwith (spf "could not follow %s" (Refs.string_of_ref aref))
+
 let add_ref_if_new r aref refval =
   let (refs, shaopt) = follow_ref r aref in
   if shaopt <> None
@@ -136,6 +143,10 @@ let add_ref_if_new r aref refval =
     );
     true
   end
+
+let del_ref r aref =
+  let file = ref_to_filename r aref in
+  Unix.unlink file
 
 let set_ref_if_same_old r aref oldh newh =
   let (refs, _) = follow_ref r aref in
@@ -168,6 +179,7 @@ let all_refs r =
     );
    );
   List.rev !res
+
 
 (*****************************************************************************)
 (* Objects *)

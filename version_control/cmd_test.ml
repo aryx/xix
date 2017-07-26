@@ -17,7 +17,7 @@ let test_sha1 () =
 
 let cmd = { Cmd.
   name = "test";
-  help = "";
+  help = " ";
   options = [];
   f = (fun args ->
     match args with

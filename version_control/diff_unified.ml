@@ -5,12 +5,16 @@ open Common
 (* Prelude *)
 (*****************************************************************************)
 (* Show differences between 2 files.
+ *
+ * Short explanation of unified format:
+ *  - https://www.gnu.org/software/diffutils/manual/html_node/Detailed-Unified.html
+ *  - http://www.artima.com/weblogs/viewpost.jsp?thread=164293  
  * 
  * alternatives:
- *  - parse and display diffs:
- *    http://zoggy.github.io/ocamldiff/
- *  - parse
- *    https://github.com/gildor478/ocaml-unidiff
+ *  - ocamldiff: https://github.com/zoggy/ocamldiff 
+ *    parse and display unified diffs
+ *  - unidiff: https://github.com/gildor478/ocaml-unidiff
+ *    parse 
  *  - call diff -u (as I did in pfff) directly via Sys.command
  *)
 

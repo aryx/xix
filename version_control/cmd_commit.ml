@@ -7,12 +7,15 @@ let message = ref ""
 
 let cmd = { Cmd.
   name = "commit";
-  help = "";
+  help = " [options]"; (* less: <pathspec>... *)
   options = [
-    "-m", Arg.Set_string message, " ";
-    "--message", Arg.Set_string message, " ";
-    "--author", Arg.Set_string author, " ";
+    "-m",        Arg.Set_string message, " commit message";
+    "--message", Arg.Set_string message, " commit message";
+    "--author", Arg.Set_string author, " override author";
     "--committer", Arg.Set_string author, " ";
+    (* less: commit mesg option: --file, --date, --signoff *)
+    (* less: commit content options: -a, --interactive, --patch *)
+    (* todo: --amend *)
   ];
   f = (fun args ->
     match args with
@@ -48,9 +51,8 @@ let cmd = { Cmd.
        *   1 file changed, 0 insertions(+), 0 deletions(-)
        *   create mode 100644 foobar.txt
        *)
+      (* todo: nothing to commit, working directory clean *)
       Repository.commit_index r author committer !message
-    | xs -> 
-      (* less: usage message? *)
-      failwith "usage: git commit"
+    | xs -> raise Cmd.ShowUsage
   );
 }

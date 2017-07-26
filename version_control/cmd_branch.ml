@@ -26,22 +26,32 @@ let create_branch r name (* sha *) =
   let ok = Repository.add_ref_if_new r (Refs.Ref refname) (Refs.Hash sha) in
   if not ok
   then failwith (spf "could not create branch '%s'" name)
-    
-let delete_branch r name =
+
+let delete_branch r name force =
   let refname = "refs/heads/" ^ name in
   let aref = Refs.Ref refname in
   let sha = Repository.follow_ref_some r aref in
+  if not force
+  (* todo: detect if fully merged branch! *)    
+  then ();
   Repository.del_ref r aref;
-  (* todo: check if still have unmerged commit? *)
   pr (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
 
 
 let del_flag = ref false
+let del_force = ref false
 
 let cmd = { Cmd.
   name = "branch";
-  help = "";
-  options = ["-d", Arg.Set del_flag, "delete a branch"];
+  help = " [options]
+   or: ogit branch [options] <branchname>
+   or: ogit branch [options] -d <branchname>
+";
+  options = [
+    "-d", Arg.Set del_flag, " delete fully merged branch";
+    "--delete", Arg.Set del_flag, " delete fully merged branch";
+    "-D", Arg.Set del_force, " delete branch (even if not merged)";
+  ];
   f = (fun args ->
     (* todo: allow git rm from different location *)
     let r = Repository.open_ "." in
@@ -49,9 +59,11 @@ let cmd = { Cmd.
     | [] -> 
       list_branches r
     | [name] ->
-      if !del_flag
-      then delete_branch r name
-      else create_branch r name
+      (match () with
+      | _ when !del_flag  -> delete_branch r name false
+      | _ when !del_force -> delete_branch r name true
+      | _ -> create_branch r name
+      )
     | [name;objectish] ->
       raise Todo
     | _ -> raise Cmd.ShowUsage

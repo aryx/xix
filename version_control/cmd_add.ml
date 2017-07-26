@@ -3,11 +3,13 @@ open Common
 
 let cmd = { Cmd.
   name = "add";
-  help = "";
-  options = [];
+  help = " <file>..."; (* less: pathspec? *)
+  options = [
+    (* todo: --interactive, --patch for picking *)
+  ];
   f = (fun args ->
     match args with
-    | [] -> failwith "Nothing specified, nothing added."
+    | [] -> pr2 "Nothing specified, nothing added."
     | xs ->
       (* todo: allow git add from different location *)
       let r = Repository.open_ "." in

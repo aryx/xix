@@ -17,12 +17,13 @@ let mixed = ref false
 
 let cmd = { Cmd.
   name = "reset";
-  help = "";
+  help = " [options] ";
+(* less: or: git reset paths *)
   options = [
-    "--hard", Arg.Set hard, "";
-    "--soft", Arg.Set soft, "";
-    "--mixed", Arg.Set mixed, "";
-    
+    "--hard", Arg.Set hard, " reset HEAD, index and working tree";
+    "--soft", Arg.Set soft, " reset only HEAD";
+    "--mixed", Arg.Set mixed, " reset HEAD and index";
+    (* less: --patch, --quiet, --merge *)
   ];
   f = (fun args ->
     (* todo: allow git rm from different location *)
@@ -30,7 +31,10 @@ let cmd = { Cmd.
     match args with
     | [] -> 
       if !soft || !mixed || not !hard
-      then failwith "only --hard supported";
+      then begin
+        pr2 "only --hard supported";
+        raise Cmd.ShowUsage
+      end;
       reset_hard r
     | _ -> raise Cmd.ShowUsage
   );

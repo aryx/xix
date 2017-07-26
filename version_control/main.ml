@@ -88,23 +88,27 @@ let main () =
         exit 1
     in
     let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
-    let usage_msg_cmd = spf "%s %s [options]" 
-      Sys.argv.(0)
-      cmd.Cmd.name 
+    let usage_msg_cmd = spf "usage: %s %s%s"
+      (Filename.basename Sys.argv.(0))
+      cmd.Cmd.name
+      cmd.Cmd.help
     in
     let remaining_args = ref [] in
     (try 
      (* todo: look if --help and factorize treatment of usage for subcmds *)
        Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
          (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
-     with Arg.Bad str -> failwith str 
+     with Arg.Bad str | Arg.Help str->  
+       prerr_string str;
+       exit 1
     );
     (* finally! *)
     try 
       cmd.Cmd.f (List.rev !remaining_args)
-    with Cmd.ShowUsage ->
-      Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
-      exit 1
+    with 
+      | Cmd.ShowUsage ->
+        Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
+        exit 1
   end
         
 let _ =

@@ -5,14 +5,16 @@ open Common
 
 let cmd = { Cmd.
   name = "init";
-  help = "";
-  options = [(*less: -bare *)];
+  help = " [directory]";
+  options = [
+   (* less: -bare, --quiet *)
+  ];
   f = (fun args ->
     match args with
     | [] ->
       Repository.init "."
     | [dir] ->
       Repository.init dir
-    | _ -> failwith "init: too many arguments"
+    | _ -> raise Cmd.ShowUsage
   );
 }

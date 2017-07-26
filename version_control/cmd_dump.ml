@@ -38,10 +38,10 @@ let dump file =
 
 let cmd = { Cmd.
   name = "dump";
-  help = "";
+  help = " <file>";
   options = [
-    "-raw", Arg.Set raw, " ";
-    "-index", Arg.Set index, " ";
+    "-raw", Arg.Set raw, " do not pretty print";
+    "-index", Arg.Set index, " pretty print index content";
   ];
   f = (fun args ->
     match args with

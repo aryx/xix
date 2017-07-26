@@ -16,7 +16,7 @@ let show r objectish =
 
 let cmd = { Cmd.
   name = "show";
-  help = "";
+  help = " <objectish>";
   (* less: --oneline *)
   options = [];
   f = (fun args ->

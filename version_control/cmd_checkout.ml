@@ -34,8 +34,13 @@ let update r =
 
 let cmd = { Cmd.
   name = "checkout";
-  help = "";
-  options = [];
+  help = " [options] <branch>
+   or: ogit checkout [options] <commitid>
+   or: ogit checkout [options]
+";
+  options = [
+    (* less: --detach, --patch *)
+  ];
   f = (fun args ->
     (* todo: allow git rm from different location *)
     let r = Repository.open_ "." in

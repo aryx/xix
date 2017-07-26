@@ -3,14 +3,13 @@ open Common
 
 let cmd = { Cmd.
   name = "rm";
-  help = "";
-  (* todo: -f *)
-  options = [];
+  help = " [options] <file>...";
+  options = [
+  (* less: -f force, -r recursive, --quiet *)
+  ];
   f = (fun args ->
     match args with
-    | [] -> 
-      (* less: print help message instead *)
-      failwith "Nothing specified, nothing removed."
+    | [] -> raise Cmd.ShowUsage
     | xs ->
       (* todo: allow git rm from different location *)
       let r = Repository.open_ "." in

@@ -17,8 +17,7 @@ let show r objectish =
     let parent1 = Repository.read_commit r (List.hd x.Commit.parents) in
     let tree1 = Repository.read_tree r parent1.Commit.tree in
     let changes = Diff_tree.tree_changes (Repository.read_tree r) tree1 tree2 in
-    pr2_gen changes;
-    changes |> List.iter Diff_unified.show_change
+    changes |> List.iter (Diff_unified.show_change (Repository.read_blob r))
 
 let cmd = { Cmd.
   name = "show";

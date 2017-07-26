@@ -9,7 +9,10 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(* entry below refers only to files (not dirs) *)
+(* entry below refers only to files (not dirs), and their name
+ * are adjusted to show a relative path from the root of the
+ * project.
+ *)
 type t = 
   | Add of Tree.entry
   | Del of Tree.entry

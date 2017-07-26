@@ -4,6 +4,10 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* 
+ * todo: 
+ *  - rename detection
+ *)
 
 (*****************************************************************************)
 (* Types *)
@@ -12,10 +16,12 @@ open Common
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-let skip_tree entry_opt =
+let skip_tree_and_adjust_path dirpath entry_opt =
   match entry_opt with
   | Some { Tree.perm = Tree.Dir } -> None
-  | x -> x
+  | Some { Tree.perm = Tree.Commit } -> failwith "submodule not supported"
+  | Some x -> Some { x with Tree.name = Filename.concat dirpath x.Tree.name }
+  | None -> None
 
 (*****************************************************************************)
 (* Entry points *)
@@ -28,8 +34,8 @@ let tree_changes read_tree tree1 tree2 =
     (* if entries are directories, then we would be called again
      * with their individual files, so safe to skip the dir entries.
      *)
-    let entry1_opt = skip_tree entry1_opt in
-    let entry2_opt = skip_tree entry2_opt in
+    let entry1_opt = skip_tree_and_adjust_path dirpath entry1_opt in
+    let entry2_opt = skip_tree_and_adjust_path dirpath entry2_opt in
     
     match entry1_opt, entry2_opt with
     | a, b when a = b -> () (* Identical *)

@@ -65,7 +65,52 @@ let rec walk_tree read_tree dirpath f xs =
       failwith "submodule not supported yet"
     | Normal | Exec | Link -> ()
   )
-  
+
+let rec walk_trees read_tree dirpath f xs ys =
+  let g dirpath entry1_opt entry2_opt =
+    f dirpath entry1_opt entry2_opt;
+    (match entry1_opt, entry2_opt with
+    | Some { perm = Dir; name = str; node = sha }, None ->
+      walk_trees read_tree (Filename.concat dirpath str) f
+        (read_tree sha) []
+    | None, Some { perm = Dir; name = str; node = sha } ->
+      walk_trees read_tree (Filename.concat dirpath str) f
+        [] (read_tree sha)
+    | Some { perm = Dir; name = str1; node = sha1 },
+      Some { perm = Dir; name = str2; node = sha2 } ->
+      assert (str1 = str2);
+        (* todo: could skip if sha1 = sha2 here, useful opti *)
+        walk_trees read_tree (Filename.concat dirpath str1) f
+          (read_tree sha1) (read_tree sha2)
+    | None, None -> raise (Impossible "two None in walk_trees.g")
+    (* no directories, no need to recurse *)
+    | Some _, None
+    | None, Some _
+    | Some _, Some _
+      -> ()
+    )
+  in
+  match xs, ys with
+  | [], [] -> ()
+  | x::xs, [] ->
+    g dirpath (Some x) None;
+    walk_trees read_tree dirpath f xs ys
+  | [], y::ys ->
+    g dirpath None (Some y);
+    walk_trees read_tree dirpath f xs ys
+  | x::xs, y::ys ->
+    (match compare x.name y.name with
+    | 0 -> 
+      g dirpath (Some x) (Some y)
+    | -1 -> 
+      g dirpath (Some x) None;
+      walk_trees read_tree dirpath f xs (y::ys)
+    | 1 ->
+      g dirpath None (Some y);
+      walk_trees read_tree dirpath f (x::xs) ys
+    | _ -> raise (Impossible "compare result is either -1, 0, or 1")
+    )
+
 
 (*****************************************************************************)
 (* IO *)

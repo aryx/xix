@@ -1,2 +1,4 @@
 
-val tree_changes: Tree.t -> Tree.t -> Change.t list
+val tree_changes: 
+  (Tree.hash -> Tree.t) ->
+  Tree.t -> Tree.t -> Change.t list

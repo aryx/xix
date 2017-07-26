@@ -10,8 +10,39 @@ open Common
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+let skip_tree entry_opt =
+  match entry_opt with
+  | Some { Tree.perm = Tree.Dir } -> None
+  | x -> x
+
+(*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
-let tree_changes tree1 tree2 =
-  raise Todo
+let tree_changes read_tree tree1 tree2 =
+  let changes = ref [] in
+  let add x = Common.push x changes in
+  Tree.walk_trees read_tree "" (fun dirpath entry1_opt entry2_opt ->
+    (* if entries are directories, then we would be called again
+     * with their individual files, so safe to skip the dir entries.
+     *)
+    let entry1_opt = skip_tree entry1_opt in
+    let entry2_opt = skip_tree entry2_opt in
+    
+    match entry1_opt, entry2_opt with
+    | a, b when a = b -> () (* Identical *)
+    | Some a, Some b ->
+      (* file type changed reported as delete/add *)
+      if a.Tree.perm <> b.Tree.perm 
+      then begin 
+        add (Change.Del a);
+        add (Change.Add b);
+      end
+      else add (Change.Modify (a, b))
+    | Some a, None -> add (Change.Del a)
+    | None, Some b -> add (Change.Add b)
+    | None, None -> raise (Impossible "cover by a = b above")
+  ) tree1 tree2 ;
+  List.rev !changes

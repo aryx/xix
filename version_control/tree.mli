@@ -28,3 +28,8 @@ val show: t -> unit
 val walk_tree: 
   (hash -> t) -> Common.filename (* dir *) -> 
   (Common.filename -> entry -> unit) -> t -> unit
+
+val walk_trees:
+  (hash -> t) -> Common.filename (* dir *) ->
+  (Common.filename -> entry option -> entry option -> unit) -> t -> t -> unit
+

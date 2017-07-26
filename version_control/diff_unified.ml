@@ -9,12 +9,27 @@ open Common
  * alternatives:
  *  - parse and display diffs:
  *    http://zoggy.github.io/ocamldiff/
+ *  - parse
+ *    https://github.com/gildor478/ocaml-unidiff
  *  - call diff -u (as I did in pfff) directly via Sys.command
  *)
 
 (*****************************************************************************)
-(* Types *)
+(* Helpers *)
 (*****************************************************************************)
+
+let show_unified_diff old_content new_content =
+  let diffs = Diff.diff old_content new_content in
+  (* todo: contextual diff! *)
+  diffs |> List.iter (function
+    | Diff.Equal xs -> 
+      xs |> List.iter (fun s -> print_string (" " ^ s))
+    | Diff.Deleted xs -> 
+      xs |> List.iter (fun s -> print_string ("-" ^ s))
+    | Diff.Added xs -> 
+      xs |> List.iter (fun s -> print_string ("+" ^ s))
+  )
+
 
 (*****************************************************************************)
 (* Entry points *)
@@ -36,4 +51,5 @@ let show_change read_blob change =
   in
   pr (spf "diff --git %s %s" old_path new_path);
   (* less: display change of modes *)
-  ()
+  show_unified_diff old_content new_content
+

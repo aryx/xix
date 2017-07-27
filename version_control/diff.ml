@@ -60,12 +60,15 @@ let split_lines str =
 (* Entry point *)
 (*****************************************************************************)
 
-module SimpleDiff = Simple_diff.Make(String)
+module SimpleDiff = Diff_simple.Make(String)
 
 let diff str1 str2 =
   let xs = split_lines str1 in
   let ys = split_lines str2 in
+  pr2_gen xs;
+  pr2_gen ys;
   let res = SimpleDiff.get_diff (Array.of_list xs) (Array.of_list ys) in
+  pr2_gen res;
   res |> List.map (function
     | SimpleDiff.Equal arr   -> Equal (Array.to_list arr)
     | SimpleDiff.Deleted arr -> Deleted (Array.to_list arr)

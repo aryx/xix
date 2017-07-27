@@ -16,11 +16,16 @@ open Common
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
 let skip_tree_and_adjust_path dirpath entry_opt =
   match entry_opt with
   | Some { Tree.perm = Tree.Dir } -> None
   | Some { Tree.perm = Tree.Commit } -> failwith "submodule not supported"
-  | Some x -> Some { x with Tree.name = Filename.concat dirpath x.Tree.name }
+  | Some x -> Some { Change.
+    path = Filename.concat dirpath x.Tree.name;
+    mode = Index.mode_of_perm x.Tree.perm;
+    content = x.Tree.node;
+  }
   | None -> None
 
 (*****************************************************************************)
@@ -41,7 +46,7 @@ let tree_changes read_tree tree1 tree2 =
     | a, b when a = b -> () (* Identical *)
     | Some a, Some b ->
       (* file type changed reported as delete/add *)
-      if a.Tree.perm <> b.Tree.perm 
+      if a.Change.mode <> b.Change.mode 
       then begin 
         add (Change.Del a);
         add (Change.Add b);

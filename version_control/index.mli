@@ -37,6 +37,10 @@ type t = entry list
 val empty: t
 val mk_entry: Common.filename -> Sha1.t -> Unix.stats -> entry
 
+val stat_info_of_lstats: Unix.stats -> stat_info
+val mode_of_perm: Tree.perm -> mode
+val perm_of_mode: mode -> Tree.perm
+
 val read: IO.input -> t
 (* will write the header, and sha checksum at the end *)
 val write: t -> unit IO.output -> unit

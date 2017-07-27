@@ -8,14 +8,19 @@ open Common
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
+type entry = {
+  path: string;
+  mode: Index.mode;
+  content: Sha1.t;
+}
 
 (* entry below refers only to files (not dirs), and their name
  * are adjusted to show a relative path from the root of the
  * project.
  *)
 type t = 
-  | Add of Tree.entry
-  | Del of Tree.entry
-  | Modify of Tree.entry * Tree.entry
+  | Add of entry
+  | Del of entry
+  | Modify of entry * entry
   (* less: Rename, Copy *)
   (*| Identical of Tree.entry *)

@@ -80,8 +80,7 @@ let compare_entries e1 e2 =
   | i -> i
 *)
 
-let mk_entry relpath sha stats =
-  let stat_info = 
+let stat_info_of_lstats stats = 
     { ctime = { lsb32 = Int32.of_float stats.Unix.st_ctime; nsec = 0l };
       mtime = { lsb32 = Int32.of_float stats.Unix.st_mtime; nsec = 0l };
       dev = Int32.of_int stats.Unix.st_dev;
@@ -93,18 +92,35 @@ let mk_entry relpath sha stats =
           then Exec 
           else Normal
         | Unix.S_LNK, _ -> Link
-        | _ -> failwith (spf "unsupported file type %s" relpath)
+        | _ -> failwith (spf "unsupported file type")
         );
       uid = Int32.of_int stats.Unix.st_uid;
       gid = Int32.of_int stats.Unix.st_gid;
       size = Int32.of_int stats.Unix.st_size;
     }
-  in
-  { stats = stat_info;
+
+let mk_entry relpath sha stats =
+  { stats = stat_info_of_lstats stats;
     id = sha;
     stage = 0; (* TODO? *)
     name = relpath
   }
+
+let perm_of_mode mode = 
+  match mode with
+  | Normal -> Tree.Normal
+  | Exec -> Tree.Exec
+  | Link -> Tree.Link
+  | Gitlink -> Tree.Commit (* sure? *)
+
+let mode_of_perm perm = 
+  match perm with
+  | Tree.Normal -> Normal
+  | Tree.Exec -> Exec
+  | Tree.Link -> Link
+  | Tree.Commit -> Gitlink
+  | Tree.Dir -> failwith "index entry does not support Tree.dir perm"
+
 
 (*****************************************************************************)
 (* Add/Del *)
@@ -168,14 +184,10 @@ let rec build_trees dirs dirpath add_tree_obj =
   let tree = 
     xs |> List.map (function
       | File (base, entry) ->
-        {Tree.name = base; node = entry.id; 
-         perm = 
-            (match entry.stats.mode with
-            | Normal -> Tree.Normal
-            | Exec -> Tree.Exec
-            | Link -> Tree.Link
-            | Gitlink -> raise Todo
-            );
+        {Tree.
+         name = base; 
+         node = entry.id; 
+         perm = perm_of_mode entry.stats.mode;
         }
       | Subdir base ->
         let sha = 

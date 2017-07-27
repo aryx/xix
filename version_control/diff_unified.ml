@@ -39,19 +39,19 @@ let show_unified_diff old_content new_content =
 (* Entry points *)
 (*****************************************************************************)
 
-let show_change read_blob change =
+let show_change read_content change =
   (* less: if mode is gitlink? *)
   let (old_path, old_content), (new_path, new_content) = 
     match change with
     | Change.Add entry ->
       ("dev/null", ""), 
-      ("b/" ^ entry.Tree.name, read_blob entry.Tree.node)
+      ("b/" ^ entry.Change.path, read_content entry.Change.content)
     | Change.Del entry ->
-      ("a/" ^ entry.Tree.name, read_blob entry.Tree.node), 
+      ("a/" ^ entry.Change.path, read_content entry.Change.content), 
       ("dev/null", "")
     | Change.Modify (entry1, entry2) ->
-      ("a/" ^ entry1.Tree.name, read_blob entry1.Tree.node), 
-      ("b/" ^ entry2.Tree.name, read_blob entry2.Tree.node)
+      ("a/" ^ entry1.Change.path, read_content entry1.Change.content), 
+      ("b/" ^ entry2.Change.path, read_content entry2.Change.content)
   in
   pr (spf "diff --git %s %s" old_path new_path);
   (* less: display change of modes *)

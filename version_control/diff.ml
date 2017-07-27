@@ -62,7 +62,33 @@ let split_lines str =
 
 module SimpleDiff = Diff_simple.Make(String)
 
-let diff str1 str2 =
+(*
+SimpleDiff is buggy!
+Here is an example of output after an ogit diff (with some debugging 
+information):
+
+diff --git a/authors.txt b/authors.txt
+["Yoann Padioleau\n"; "\n"; "except \n"; " - lex/ by Xavier Leroy (from ocaml)\n"; " - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)\n"; " - version_control/sha.ml by Daniel Bunzli (from uuidm)\n"; " - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)\n"; " - version_control/zlib.ml by Xavier Leroy (from camlzip)\n"; " - version_control/unzip.ml by Nicolas Canasse (from extlib)\n"; " - commons/IO.ml by Nicolas Canasse (from exblib)\n"]
+["Yoann Padioleau\n"; "\n"; "xxx\n"; "except \n"; " - lex/ by Xavier Leroy (from ocaml)\n"; " - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)\n"; " - version_control/sha.ml by Daniel Bunzli (from uuidm)\n"; " - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)\n"; " - version_control/zlib.ml by Xavier Leroy (from camlzip)\n"; " - version_control/unzip.ml by Nicolas Canasse (from extlib)\n"; " - commons/IO.ml by Nicolas Canasse (from exblib)\n"]
+[(()); Tag1 (("Yoann Padioleau\n")); Tag2 (("\n", "xxx\n", "except \n", " - lex/ by Xavier Leroy (from ocaml)\n", " - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)\n", " - version_control/sha.ml by Daniel Bunzli (from uuidm)\n", " - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)\n", " - version_control/zlib.ml by Xavier Leroy (from camlzip)\n", " - version_control/unzip.ml by Nicolas Canasse (from extlib)\n", " - commons/IO.ml by Nicolas Canasse (from exblib)\n"))]
++Yoann Padioleau
+ 
+ xxx
+ except 
+  - lex/ by Xavier Leroy (from ocaml)
+  - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)
+  - version_control/sha.ml by Daniel Bunzli (from uuidm)
+  - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)
+  - version_control/zlib.ml by Xavier Leroy (from camlzip)
+  - version_control/unzip.ml by Nicolas Canasse (from extlib)
+  - commons/IO.ml by Nicolas Canasse (from exblib)
+
+-----------
+SimpleDiff says the diff is the addition of 'Yoann Padioleau' but it's not!
+It's in both content. The diff should be the addition of 'xxx'.
+*)
+
+let diff_buggy str1 str2 =
   let xs = split_lines str1 in
   let ys = split_lines str2 in
   pr2_gen xs;
@@ -73,4 +99,22 @@ let diff str1 str2 =
     | SimpleDiff.Equal arr   -> Equal (Array.to_list arr)
     | SimpleDiff.Deleted arr -> Deleted (Array.to_list arr)
     | SimpleDiff.Added arr   -> Added (Array.to_list arr)
+  )
+
+module StringDiff = Diff_myers.Make(struct
+  type t = string array
+  type elem = string
+  let get t i = Array.get t i
+  let length t = Array.length t
+end)
+
+(* seems correct *)
+let diff str1 str2 =
+  let xs = split_lines str1 in
+  let ys = split_lines str2 in
+  let res = StringDiff.diff (Array.of_list xs) (Array.of_list ys) in
+  res |> List.rev |> List.map (function
+    | `Common (_, _, s) -> Equal [s]
+    | `Removed (_, s) -> Deleted [s]
+    | `Added (_, s) -> Added [s]
   )

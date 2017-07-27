@@ -7,7 +7,7 @@ SRC= IO_.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
      index.ml \
-     diff_simple.ml \
+     diff_simple.ml diff_myers.ml \
      change.ml diff.ml diff_unified.ml diff_tree.ml \
      repository.ml \
      cmd.ml \

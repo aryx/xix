@@ -43,6 +43,7 @@ type stat_info = {
     | Normal
     | Exec
     | Link
+
     | Gitlink (*?? submodule? *)
   (** The type for a time represented by its [lsb32] and [nsec] parts. *)
   and time = {

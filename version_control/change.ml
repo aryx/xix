@@ -8,11 +8,11 @@ open Common
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-type content = string
+type content = bytes
 
 type entry = {
   (* relative path *)
-  path: string;
+  path: Common.filename;
   mode: Index.mode;
   content: content;
 }

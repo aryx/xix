@@ -34,6 +34,7 @@ type objectish =
   | ObjByHex of Hexsha.t
   (* ObjByTag 
      ObjByBranch
+     ObjByShortHex
   *)
 
 (*****************************************************************************)

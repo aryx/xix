@@ -1,8 +1,8 @@
 
-type content = string
+type content = bytes
 
 type entry = {
-  path: string;
+  path: Common.filename;
   mode: Index.mode;
   content: content;
 }

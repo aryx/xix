@@ -12,6 +12,7 @@ let read_file path stat_info =
       )
   | Index.Gitlink -> failwith "submodule not supported"
 
+
 let diff_index_vs_worktree r =
   r.Repository.index |> List.iter (fun entry ->
     let old_stat = entry.Index.stats in

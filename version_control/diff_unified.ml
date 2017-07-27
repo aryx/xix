@@ -56,4 +56,3 @@ let show_change change =
   pr (spf "diff --git %s %s" old_path new_path);
   (* less: display change of modes *)
   show_unified_diff old_content new_content
-

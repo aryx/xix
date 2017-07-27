@@ -10,11 +10,14 @@ open Common
  *  - simple diff: https://github.com/gjaldon/simple-diff
  *    (an ocaml port of https://github.com/paulgb/simplediff )
  *    http://collaboration.cmc.ec.gc.ca/science/rpn/biblio/ddj/Website/articles/DDJ/1988/8807/8807c/8807c.htm
- *    simple, nice, but no diff -u support by default
- *  - myers: https://github.com/leque/ocaml-diff
+ *    simple, but no diff -u support by default
+ *    and seems buggy!
+ *  - myers: https://github.com/leque/ocaml-diff port of
+ *    "Eugene Myers, An O(ND) Difference Algorithm and Its Variations, 
+ *    Algorithmica Vol. 1 No. 2, pp. 251-266, 1986."
  *  - patience diff: https://github.com/janestreet/patdiff
  *  https://stackoverflow.com/questions/42635889/myers-diff-algorithm-vs-hunt-mcilroy-algorithm
- *    support also colored output, and word diff
+ *    support also colored output, and word diff, but heavily modularized
  *  - plan9 diff (in plan9/utilities/string/diff/)
  *    not myers's diff
  *  - gnu diff (in plan9/ape_cmd/diff)

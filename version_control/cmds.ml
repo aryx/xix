@@ -10,6 +10,7 @@ let main_commands = [
   Cmd_reset.cmd;
   
   Cmd_show.cmd;
+  Cmd_diff.cmd;
 ]
 
 let extra_commands = [

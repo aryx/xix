@@ -8,10 +8,13 @@ open Common
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
+type content = string
+
 type entry = {
+  (* relative path *)
   path: string;
   mode: Index.mode;
-  content: Sha1.t;
+  content: content;
 }
 
 (* entry below refers only to files (not dirs), and their name

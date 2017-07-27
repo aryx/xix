@@ -17,14 +17,15 @@ open Common
 (* Helpers *)
 (*****************************************************************************)
 
-let skip_tree_and_adjust_path dirpath entry_opt =
+let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   match entry_opt with
   | Some { Tree.perm = Tree.Dir } -> None
   | Some { Tree.perm = Tree.Commit } -> failwith "submodule not supported"
   | Some x -> Some { Change.
     path = Filename.concat dirpath x.Tree.name;
     mode = Index.mode_of_perm x.Tree.perm;
-    content = x.Tree.node;
+    (* todo: do that later? once know we will return a change with this entry *)
+    content = (read_blob x.Tree.node);
   }
   | None -> None
 
@@ -32,15 +33,15 @@ let skip_tree_and_adjust_path dirpath entry_opt =
 (* Entry points *)
 (*****************************************************************************)
 
-let tree_changes read_tree tree1 tree2 =
+let tree_changes read_tree read_blob tree1 tree2 =
   let changes = ref [] in
   let add x = Common.push x changes in
   Tree.walk_trees read_tree "" (fun dirpath entry1_opt entry2_opt ->
     (* if entries are directories, then we would be called again
      * with their individual files, so safe to skip the dir entries.
      *)
-    let entry1_opt = skip_tree_and_adjust_path dirpath entry1_opt in
-    let entry2_opt = skip_tree_and_adjust_path dirpath entry2_opt in
+    let entry1_opt = skip_tree_and_adjust_path read_blob dirpath entry1_opt in
+    let entry2_opt = skip_tree_and_adjust_path read_blob dirpath entry2_opt in
     
     match entry1_opt, entry2_opt with
     | a, b when a = b -> () (* Identical *)

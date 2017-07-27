@@ -1,7 +1,10 @@
+
+type content = string
+
 type entry = {
   path: string;
   mode: Index.mode;
-  content: Sha1.t;
+  content: content;
 }
 
 type t = 

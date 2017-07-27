@@ -39,19 +39,19 @@ let show_unified_diff old_content new_content =
 (* Entry points *)
 (*****************************************************************************)
 
-let show_change read_content change =
+let show_change change =
   (* less: if mode is gitlink? *)
   let (old_path, old_content), (new_path, new_content) = 
     match change with
     | Change.Add entry ->
       ("dev/null", ""), 
-      ("b/" ^ entry.Change.path, read_content entry.Change.content)
+      ("b/" ^ entry.Change.path, entry.Change.content)
     | Change.Del entry ->
-      ("a/" ^ entry.Change.path, read_content entry.Change.content), 
+      ("a/" ^ entry.Change.path, entry.Change.content), 
       ("dev/null", "")
     | Change.Modify (entry1, entry2) ->
-      ("a/" ^ entry1.Change.path, read_content entry1.Change.content), 
-      ("b/" ^ entry2.Change.path, read_content entry2.Change.content)
+      ("a/" ^ entry1.Change.path, entry1.Change.content), 
+      ("b/" ^ entry2.Change.path, entry2.Change.content)
   in
   pr (spf "diff --git %s %s" old_path new_path);
   (* less: display change of modes *)

@@ -195,7 +195,7 @@ let read_obj r h =
   path |> Common.with_file_in (fun ch ->
     (* less: check read everything from channel? *)
     (* todo: check if sha consistent? *)
-    ch |> IO.input_channel |> Unzip.inflate |> Objects.read
+    ch |> IO.input_channel |> Compression.decompress |> Objects.read
   )
 
 let read_commit r h =
@@ -238,13 +238,7 @@ let add_obj r obj =
     file |> with_file_out_with_lock (fun ch ->
       let ic = IO.input_bytes bytes in
       let oc = IO.output_channel ch in
-      Zlib.compress 
-        (fun buf -> 
-          try IO.input ic buf 0 (Bytes.length buf)
-          with IO.No_more_input -> 0
-        )
-        (fun buf len -> 
-          IO.output oc buf 0 len |> ignore);
+      Compression.compress ic oc;
       IO.close_out oc;
     );
     sha

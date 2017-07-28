@@ -2,9 +2,9 @@
 type item = string
 
 type diff_elem = 
-  | Deleted of item list
-  | Added of item list
-  | Equal of item list
+  | Deleted of item
+  | Added of item
+  | Equal of item
 
 type diff = diff_elem list
 

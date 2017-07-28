@@ -24,6 +24,10 @@ open Common
  *    use myers?
  *  - http://pynash.org/2013/02/26/diff-in-50-lines/ 
  *    (in python, and talk about python difflib)
+ *  - Heckle diff mentionned in diff3.py
+ *    "P. Heckel. ``A technique for isolating differences between files.''
+ *     Communications of the ACM, Vol. 21, No. 4, page 264, April 1978."
+ * 
  *)
 
 (*****************************************************************************)
@@ -33,9 +37,9 @@ open Common
 type item = string
 
 type diff_elem = 
-  | Deleted of item list
-  | Added of item list
-  | Equal of item list
+  | Deleted of item
+  | Added of item
+  | Equal of item
 
 type diff = diff_elem list
 
@@ -96,9 +100,12 @@ let diff_buggy str1 str2 =
   let res = SimpleDiff.get_diff (Array.of_list xs) (Array.of_list ys) in
   pr2_gen res;
   res |> List.map (function
-    | SimpleDiff.Equal arr   -> Equal (Array.to_list arr)
-    | SimpleDiff.Deleted arr -> Deleted (Array.to_list arr)
-    | SimpleDiff.Added arr   -> Added (Array.to_list arr)
+    | SimpleDiff.Equal arr   -> 
+      arr |> Array.to_list |> List.map (fun x -> Equal x)
+    | SimpleDiff.Deleted arr -> 
+      arr |> Array.to_list |> List.map (fun x -> Deleted x)
+    | SimpleDiff.Added arr   -> 
+      arr |> Array.to_list |> List.map (fun x -> Added x)
   )
 
 module StringDiff = Diff_myers.Make(struct
@@ -114,7 +121,7 @@ let diff str1 str2 =
   let ys = split_lines str2 in
   let res = StringDiff.diff (Array.of_list xs) (Array.of_list ys) in
   res |> List.rev |> List.map (function
-    | `Common (_, _, s) -> Equal [s]
-    | `Removed (_, s) -> Deleted [s]
-    | `Added (_, s) -> Added [s]
+    | `Common (_, _, s) -> Equal s
+    | `Removed (_, s) -> Deleted s
+    | `Added (_, s) -> Added s
   )

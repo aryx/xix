@@ -21,6 +21,7 @@ let diff_index_vs_worktree r =
       try Some (Unix.lstat path |> Index.stat_info_of_lstats)
       with Unix.Unix_error _ -> None
     in
+    (* less: put in helper function? *)
     let changes = 
       match new_stat_opt with
       | None -> 

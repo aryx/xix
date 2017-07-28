@@ -1,6 +1,19 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+let rm r relpaths =
+  (* removing is simpler than adding; no need to add blobs in
+   * the object store, so can just use functions from Index
+   *)
+  (* less: not super efficient, could use hashes to speedup things*)
+  r.Repository.index <-
+    relpaths |> List.fold_left (fun idx relpath ->
+          (* todo: -f? remove also file *)
+      Index.remove_entry idx relpath
+    ) r.Repository.index;
+  Repository.write_index r
+
+
 let cmd = { Cmd.
   name = "rm";
   help = " [options] <file>...";
@@ -20,15 +33,6 @@ let cmd = { Cmd.
         else failwith (spf "Not a relative path: %s" path)
       )
       in
-      (* removing is simpler than adding; no need to add blobs in
-       * the object store, so can just use functions from Index
-       *)
-      (* less: not super efficient, could use hashes to speedup things*)
-      r.Repository.index <-
-        relpaths |> List.fold_left (fun idx relpath ->
-          (* todo: -f? remove also file *)
-          Index.remove_entry idx relpath
-        ) r.Repository.index;
-      Repository.write_index r
+      rm r relpaths
   );
 }

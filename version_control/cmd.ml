@@ -10,5 +10,5 @@ type t = {
   f: string list -> unit;
 }
 
-(* f can raise ShowUsage which will be catched by caller *)
+(* f can raise ShowUsage which will be catched by caller in main.ml *)
 exception ShowUsage

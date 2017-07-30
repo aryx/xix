@@ -9,7 +9,9 @@ let cmd = { Cmd.
   name = "add";
   help = " <file>..."; (* less: pathspec? *)
   options = [
-    (* todo: --interactive, --patch for picking *)
+    (* todo: --interactive, --patch for picking, --force (if ignored) 
+     * --all
+    *)
   ];
   f = (fun args ->
     match args with

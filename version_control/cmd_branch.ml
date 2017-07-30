@@ -1,6 +1,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(* less: remote_flag set with --all to also list remote refs *)
 let list_branches r =
   let head_branch = Repository.read_ref r (Refs.Head) in
   let all_refs = Repository.all_refs r in
@@ -37,6 +38,8 @@ let delete_branch r name force =
   Repository.del_ref r aref;
   pr (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
 
+(* less: rename_branch *)
+
 
 let del_flag = ref false
 let del_force = ref false
@@ -45,12 +48,16 @@ let cmd = { Cmd.
   name = "branch";
   help = " [options]
    or: ogit branch [options] <branchname>
-   or: ogit branch [options] -d <branchname>
+   or: ogit branch [options] (-d | -D) <branchname>
 ";
   options = [
-    "-d", Arg.Set del_flag, " delete fully merged branch";
+    "-d",       Arg.Set del_flag, " delete fully merged branch";
     "--delete", Arg.Set del_flag, " delete fully merged branch";
-    "-D", Arg.Set del_force, " delete branch (even if not merged)";
+    "-D",       Arg.Set del_force, " delete branch (even if not merged)";
+    (* less: --merged, --no-merged, --all for listing 
+     *  --move to rename branch
+     *  --force (force creation, deletion, rename)
+    *)
   ];
   f = (fun args ->
     (* todo: allow git rm from different location *)

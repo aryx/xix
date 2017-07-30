@@ -11,7 +11,7 @@ let cmd = { Cmd.
   options = [
     "-m",        Arg.Set_string message, " commit message";
     "--message", Arg.Set_string message, " commit message";
-    "--author", Arg.Set_string author, " override author";
+    "--author", Arg.Set_string author, " <author> override author";
     "--committer", Arg.Set_string author, " ";
     (* less: commit mesg option: --file, --date, --signoff *)
     (* less: commit content options: -a, --interactive, --patch *)

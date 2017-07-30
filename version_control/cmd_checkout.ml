@@ -39,7 +39,9 @@ let cmd = { Cmd.
    or: ogit checkout [options]
 ";
   options = [
-    (* less: --detach, --patch *)
+    (* less: --detach, --patch?
+     * -b create and checkout a branch
+     *)
   ];
   f = (fun args ->
     (* todo: allow git rm from different location *)

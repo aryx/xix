@@ -18,7 +18,7 @@ let mixed = ref false
 let cmd = { Cmd.
   name = "reset";
   help = " [options] ";
-(* less: or: git reset paths *)
+(* less: or: git reset <paths>... *)
   options = [
     "--hard", Arg.Set hard, " reset HEAD, index and working tree";
     "--soft", Arg.Set soft, " reset only HEAD";

@@ -11,6 +11,7 @@ let main_commands = [
   
   Cmd_show.cmd;
   Cmd_diff.cmd;
+  Cmd_log.cmd;
 ]
 
 let extra_commands = [

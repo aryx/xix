@@ -85,16 +85,16 @@ let show_change change =
   let (old_path, old_content), (new_path, new_content) = 
     match change with
     | Change.Add entry ->
-      ("dev/null", ""), 
+      ("dev/null", lazy ""), 
       ("b/" ^ entry.Change.path, entry.Change.content)
     | Change.Del entry ->
       ("a/" ^ entry.Change.path, entry.Change.content), 
-      ("dev/null", "")
+      ("dev/null", lazy "")
     | Change.Modify (entry1, entry2) ->
       ("a/" ^ entry1.Change.path, entry1.Change.content), 
       ("b/" ^ entry2.Change.path, entry2.Change.content)
   in
-  let diffs = Diff.diff old_content new_content in
+  let diffs = Diff.diff (Lazy.force old_content) (Lazy.force new_content) in
   if not (diffs |> List.for_all (function Diff.Equal _ -> true | _ -> false))
   then begin
     pr (spf "diff --git %s %s" old_path new_path);

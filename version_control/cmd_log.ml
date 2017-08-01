@@ -40,7 +40,7 @@ let walk_history r f sha =
       Hashtbl.add hdone sha true;
       let commit = Repository.read_commit r sha in
       (* todo: path matching *)
-      f commit;
+      f sha commit;
       commit.Commit.parents |> List.iter aux
     end
   in
@@ -53,8 +53,8 @@ let name_status = ref false
  *)
 let log r =
   let start = Repository.follow_ref_some r (Refs.Head) in
-  start |> walk_history r (fun commit ->
-    print_commit start commit;
+  start |> walk_history r (fun sha commit ->
+    print_commit sha commit;
     if !name_status
     then begin
       let tree1 = Repository.read_tree r commit.Commit.tree in

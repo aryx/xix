@@ -4,7 +4,7 @@ type content = bytes
 type entry = {
   path: Common.filename;
   mode: Index.mode;
-  content: content;
+  content: content Lazy.t;
 }
 
 type t = 

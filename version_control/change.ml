@@ -14,7 +14,7 @@ type entry = {
   (* relative path *)
   path: Common.filename;
   mode: Index.mode;
-  content: content;
+  content: content Lazy.t;
 }
 
 (* entry below refers only to files (not dirs), and their name

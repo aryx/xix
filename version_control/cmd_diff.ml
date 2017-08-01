@@ -27,7 +27,7 @@ let diff_index_vs_worktree r =
       | None -> 
         [Change.Del { Change.path = entry.Index.name;
                       mode = old_stat.Index.mode;
-                      content = (Repository.read_blob r entry.Index.id);
+                      content = lazy (Repository.read_blob r entry.Index.id);
                     }]
       | Some new_stat ->
         (match () with
@@ -36,19 +36,19 @@ let diff_index_vs_worktree r =
         | _ when new_stat.Index.mode <> old_stat.Index.mode ->
           [Change.Del { Change.path = entry.Index.name;
                         mode = old_stat.Index.mode;
-                        content = (Repository.read_blob r entry.Index.id) };
+                        content = lazy (Repository.read_blob r entry.Index.id)};
            Change.Add { Change.path = entry.Index.name;
                         mode = new_stat.Index.mode;
-                        content = read_file path new_stat }
+                        content = lazy (read_file path new_stat) }
           ]
         | _ -> 
           [Change.Modify (
             { Change.path = entry.Index.name;
               mode = old_stat.Index.mode;
-              content = (Repository.read_blob r entry.Index.id) },
+              content = lazy (Repository.read_blob r entry.Index.id) },
             { Change.path = entry.Index.name;
               mode = new_stat.Index.mode;
-              content = read_file path new_stat }
+              content = lazy (read_file path new_stat) }
            )]
         )
     in

@@ -21,12 +21,15 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   match entry_opt with
   | Some { Tree.perm = Tree.Dir } -> None
   | Some { Tree.perm = Tree.Commit } -> failwith "submodule not supported"
-  | Some x -> Some { Change.
+  | Some x -> Some ({ Change.
     path = Filename.concat dirpath x.Tree.name;
     mode = Index.mode_of_perm x.Tree.perm;
-    (* todo: do that later? once know we will return a change with this entry *)
-    content = (read_blob x.Tree.node);
-  }
+    
+    (* todo: do that later? once know we will return a change with this entry?
+     * make it lazy?
+     *)
+    content = lazy (read_blob x.Tree.node);
+  }, x.Tree.node)
   | None -> None
 
 (*****************************************************************************)
@@ -44,17 +47,18 @@ let tree_changes read_tree read_blob tree1 tree2 =
     let entry2_opt = skip_tree_and_adjust_path read_blob dirpath entry2_opt in
     
     match entry1_opt, entry2_opt with
-    | a, b when a = b -> () (* Identical *)
-    | Some a, Some b ->
+    | None, None -> ()
+    | Some (a, asha), Some (b, bsha) ->
+      (match () with
       (* file type changed reported as delete/add *)
-      if a.Change.mode <> b.Change.mode 
-      then begin 
+      | _ when a.Change.mode <> b.Change.mode ->
         add (Change.Del a);
         add (Change.Add b);
-      end
-      else add (Change.Modify (a, b))
-    | Some a, None -> add (Change.Del a)
-    | None, Some b -> add (Change.Add b)
-    | None, None -> raise (Impossible "cover by a = b above")
+      | _ when asha <> bsha ->
+        add (Change.Modify (a, b))
+      | _ -> ()
+      )
+    | Some (a,_), None -> add (Change.Del a)
+    | None, Some (b,_) -> add (Change.Add b)
   ) tree1 tree2 ;
   List.rev !changes

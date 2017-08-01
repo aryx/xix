@@ -25,13 +25,26 @@ let print_commit sha commit =
 let print_name_status change =
   raise Todo
 
-let rec walk_history r f sha =
-  let commit = Repository.read_commit r sha in
-  (* todo: path matching *)
-  f commit;
-  (* naive: but will print duplicate when merge and before branch *)
-  commit.Commit.parents |> List.iter (walk_history r f)
+(* less: sort by time? so have a sorted queue of commits *)
+let walk_history r f sha =
+  (* we are walking a DAG, so we need to remember already processed nodes *)
+  let hdone = Hashtbl.create 101 in
+  let rec aux sha =
+    if Hashtbl.mem hdone sha
+    then ()
+    else begin
+      Hashtbl.add hdone sha true;
+      let commit = Repository.read_commit r sha in
+      (* todo: path matching *)
+      f commit;
+      commit.Commit.parents |> List.iter aux
+    end
+  in
+  aux sha
 
+(* todo: track only selected paths 
+ * (and then rename detection to track correctly)
+ *)
 let log r =
   let start = Repository.follow_ref_some r (Refs.Head) in
   start |> walk_history r (fun commit ->
@@ -45,6 +58,7 @@ let cmd = { Cmd.
   options = [
     "--name-status", Arg.Set name_status, 
     " print name/status for each changed file";
+    (* less: --reverse *)
   ];
   f = (fun args ->
     (* todo: allow git rm from different location *)

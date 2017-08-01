@@ -4,7 +4,9 @@
 
 port of dulwich and ocaml-git, 2 clones of git, to ocaml(light). 
 Simplify code in ocaml-git by not using functors/lwt/mstruct/... 
-and complete with new code derived from dulwich (clone of git in python).
+and complete with new code derived from dulwich (clone of git in python)
+or from entirely new code for the features not implemented by dulwich.
+
 
 * 0.6 (Q2 2017) (rio and libdraw, import lib_core, lib_system)
 

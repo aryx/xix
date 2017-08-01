@@ -56,7 +56,7 @@ let log r =
   start |> walk_history r (fun commit ->
     print_commit start commit;
     if !name_status
-    then 
+    then begin
       let tree1 = Repository.read_tree r commit.Commit.tree in
       let tree2 =
         match commit.Commit.parents with
@@ -73,8 +73,9 @@ let log r =
         tree2
         tree1
       in
-      changes |> List.iter print_change
-          
+      changes |> List.iter print_change;
+      pr "";
+    end
   )
 
 let cmd = { Cmd.

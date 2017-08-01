@@ -1,8 +1,6 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-let name_status = ref false
-
 let print_commit sha commit =
   pr (spf "commit: %s" (Hexsha.of_sha sha));
   (match commit.Commit.parents with
@@ -22,8 +20,14 @@ let print_commit sha commit =
   pr ("    " ^ commit.Commit.message);
   ()
 
-let print_name_status change =
-  raise Todo
+let print_change change =
+  match change with
+  | Change.Add entry ->
+    pr (spf "A       %s" entry.Change.path)
+  | Change.Del entry ->
+    pr (spf "D       %s" entry.Change.path)
+  | Change.Modify (entry1, entry2) ->
+    pr (spf "M       %s" entry1.Change.path)
 
 (* less: sort by time? so have a sorted queue of commits *)
 let walk_history r f sha =
@@ -42,13 +46,35 @@ let walk_history r f sha =
   in
   aux sha
 
+let name_status = ref false
+
 (* todo: track only selected paths 
  * (and then rename detection to track correctly)
  *)
 let log r =
   let start = Repository.follow_ref_some r (Refs.Head) in
   start |> walk_history r (fun commit ->
-    print_commit start commit
+    print_commit start commit;
+    if !name_status
+    then 
+      let tree1 = Repository.read_tree r commit.Commit.tree in
+      let tree2 =
+        match commit.Commit.parents with
+        | [] -> []
+        | [sha] -> 
+          let commit2 = Repository.read_commit r sha in
+          Repository.read_tree r commit2.Commit.tree
+        | x::y::xs ->
+          failwith "TODO: log: handle merge"
+      in
+      let changes = Diff_tree.tree_changes
+        (Repository.read_tree r)
+        (Repository.read_blob r)
+        tree2
+        tree1
+      in
+      changes |> List.iter print_change
+          
   )
 
 let cmd = { Cmd.

@@ -6,6 +6,11 @@ type filename = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b
 
+type compare = Equal | Inf | Sup
+
+exception Todo
+exception Impossible of string
+
 val spf : ('a, unit, string) format -> 'a
 val pr : string -> unit
 val pr2 : string -> unit
@@ -13,15 +18,14 @@ val pr2 : string -> unit
 val with_file_out : (out_channel -> 'a) -> filename -> 'a
 val with_file_in : (in_channel -> 'a) -> filename -> 'a
 
-exception Todo
-exception Impossible of string
-
 val rnd : int -> int -> int
 
 val if_some : ('a -> unit) -> 'a option -> unit
 val filter_some : 'a option list -> 'a list
 val map_filter : ('a -> 'b option) -> 'a list -> 'b list
 val optionize: (unit -> 'a) -> 'a option
+
+val (<=>): 'a -> 'a -> compare
 
 val sort_by_val_highfirst : ('a * 'b) list -> ('a * 'b) list
 val sort_by_val_lowfirst : ('a * 'b) list -> ('a * 'b) list

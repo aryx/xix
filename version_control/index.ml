@@ -130,25 +130,23 @@ let rec remove_entry idx name =
   match idx with
   | [] -> failwith (spf "The file %s is not in the index" name)
   | x::xs ->
-    (match compare name x.name with
-    | 1 -> x::(remove_entry xs name)
-    | 0 -> xs
+    (match name <=> x.name with
+    | Sup -> x::(remove_entry xs name)
+    | Equal -> xs
     (* the entries are sorted *)
-    | -1 -> failwith (spf "The file %s is not in the index" name)
-    | x -> raise (Impossible (spf "compare can not return %d" x))
+    | Inf -> failwith (spf "The file %s is not in the index" name)
     )
 
 let rec add_entry idx entry =
   match idx with
   | [] -> [entry]
   | x::xs ->
-    (match compare entry.name x.name with
-    | 1 -> x::(add_entry xs entry)
+    (match entry.name <=> x.name with
+    | Sup -> x::(add_entry xs entry)
     (* replace old entry is ok *)
-    | 0 -> entry::xs
+    | Equal -> entry::xs
     (* the entries are sorted *)
-    | -1 -> entry::x::xs
-    | x -> raise (Impossible (spf "compare can not return %d" x))
+    | Inf -> entry::x::xs
     )
 
 (*****************************************************************************)

@@ -99,17 +99,16 @@ let rec walk_trees read_tree dirpath f xs ys =
     g dirpath None (Some y);
     walk_trees read_tree dirpath f xs ys
   | x::xs, y::ys ->
-    (match compare x.name y.name with
-    | 0 -> 
+    (match x.name <=> y.name with
+    | Equal -> 
       g dirpath (Some x) (Some y);
       walk_trees read_tree dirpath f xs ys
-    | -1 -> 
+    | Inf -> 
       g dirpath (Some x) None;
       walk_trees read_tree dirpath f xs (y::ys)
-    | 1 ->
+    | Sup ->
       g dirpath None (Some y);
       walk_trees read_tree dirpath f (x::xs) ys
-    | _ -> raise (Impossible "compare result is either -1, 0, or 1")
     )
 
 

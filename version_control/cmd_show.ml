@@ -17,7 +17,7 @@ let show r objectish =
     let parent1 = Repository.read_commit r (List.hd x.Commit.parents) in
     let tree1 = Repository.read_tree r parent1.Commit.tree in
     let changes = 
-      Diff_tree.tree_changes 
+      Diff_tree.changes_tree_vs_tree 
         (Repository.read_tree r) 
         (Repository.read_blob r)
         tree1 tree2 

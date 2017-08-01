@@ -67,6 +67,15 @@ let optionize f =
   try Some (f ()) with Not_found -> None
 
 
+type compare = Equal | Inf | Sup
+let (<=>) a b = 
+  if a = b 
+  then Equal 
+  else 
+    if a < b 
+    then Inf 
+    else Sup
+
 let sort_by_val_highfirst xs =
   List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
 let sort_by_val_lowfirst xs =

@@ -36,8 +36,8 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
 (* Entry points *)
 (*****************************************************************************)
 
-(* see also Cmd_diff.diff_index_vs_worktree *)
-let tree_changes read_tree read_blob tree1 tree2 =
+(* see also Cmd_diff.changes_index_vs_worktree *)
+let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
   let changes = ref [] in
   let add x = Common.push x changes in
   Tree.walk_trees read_tree "" (fun dirpath entry1_opt entry2_opt ->

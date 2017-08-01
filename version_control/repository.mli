@@ -46,5 +46,3 @@ val set_worktree_and_index_to_tree:
   t -> Tree.t -> unit
 
 (* packs *)
-
-

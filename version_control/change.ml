@@ -24,6 +24,6 @@ type entry = {
 type t = 
   | Add of entry
   | Del of entry
-  | Modify of entry * entry
+  | Modify of entry * entry (* before / after *)
   (* less: Rename, Copy *)
   (*| Identical of Tree.entry *)

@@ -1,8 +1,8 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-(* similar to Repository.blob_from_path_and_stat *)
-let content_from_path_and_stat path stat_info =
+(* similar to Repository.content_from_path_and_unix_stat *)
+let content_from_path_and_stat_index path stat_info =
   match stat_info.Index.mode with
   | Index.Link ->
     Unix.readlink path
@@ -16,7 +16,7 @@ let content_from_path_and_stat path stat_info =
  * to generate flat list of files (but then less opti opportunity
  * in changes_tree_vs_tree when hash for a whole subtree is the same)
  *)
-let changes_index_vs_worktree r =
+let changes_worktree_vs_index r =
   r.Repository.index |> List.map (fun entry ->
     let old_stat = entry.Index.stats in
     let path = Filename.concat r.Repository.worktree entry.Index.name in
@@ -41,7 +41,8 @@ let changes_index_vs_worktree r =
                       content = lazy (Repository.read_blob r entry.Index.id)};
          Change.Add { Change.path = entry.Index.name;
                       mode = new_stat.Index.mode;
-                      content = lazy (content_from_path_and_stat path new_stat)}
+                      content = lazy 
+                        (content_from_path_and_stat_index path new_stat)}
           ]
       | _ -> 
         [Change.Modify (
@@ -50,13 +51,14 @@ let changes_index_vs_worktree r =
             content = lazy (Repository.read_blob r entry.Index.id) },
           { Change.path = entry.Index.name;
             mode = new_stat.Index.mode;
-            content = lazy (content_from_path_and_stat path new_stat) }
+            content = lazy 
+              (content_from_path_and_stat_index path new_stat) }
         )]
       )
   ) |> List.flatten
 
-let diff_index_vs_worktree r =
-  let changes = changes_index_vs_worktree r in
+let diff_worktree_vs_index r =
+  let changes = changes_worktree_vs_index r in
   changes |> List.iter Diff_unified.show_change
 
 let cmd = { Cmd.
@@ -67,7 +69,7 @@ let cmd = { Cmd.
     (* todo: allow git rm from different location *)
     let r = Repository.open_ "." in
     match args with
-    | [] -> diff_index_vs_worktree r
+    | [] -> diff_worktree_vs_index r
     | xs -> raise Cmd.ShowUsage
   );
 }

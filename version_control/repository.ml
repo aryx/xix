@@ -4,7 +4,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(*
+(* API to access repository data (objects, index, refs, packs).
  *
  * less: use nested modules for objects, index, refs below?
  *)
@@ -73,7 +73,7 @@ let with_opendir f dir =
   Unix.closedir handle;
   res
     
-(* move in common.ml? *)
+(* move in common.ml? (but remove .git specific stuff) *)
 (* inspired from os.path.walk in Python *)
 let rec walk_dir f dir =
   dir |> with_opendir (fun handle ->
@@ -82,7 +82,8 @@ let rec walk_dir f dir =
     try 
       while true do
         let s = Unix.readdir handle in
-        if s <> "." && s <> ".." then begin
+        (* git specific here *)
+        if s <> "." && s <> ".." && s <> ".git" then begin
           let path = Filename.concat dir s in
           let st = Unix.lstat path in
           (match st.Unix.st_kind with
@@ -257,20 +258,16 @@ let write_index r =
   )
 
     
-let blob_from_path_and_stat full_path stat =
-  let data = 
-    match stat.Unix.st_kind with
-    | Unix.S_REG -> 
-      full_path |> Common.with_file_in (fun ch ->
-        ch |> IO.input_channel |> IO.read_all
-      )
-    | Unix.S_LNK ->
-      Unix.readlink full_path
-    | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
-                       full_path)
-  in
-  Objects.Blob data
-
+let content_from_path_and_unix_stat full_path stat =
+  match stat.Unix.st_kind with
+  | Unix.S_LNK ->
+    Unix.readlink full_path
+  | Unix.S_REG -> 
+    full_path |> Common.with_file_in (fun ch ->
+      ch |> IO.input_channel |> IO.read_all
+    )
+  | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
+                     full_path)
 
 (* old: was called stage() in dulwich *)
 let add_in_index r relpaths =
@@ -283,7 +280,7 @@ let add_in_index r relpaths =
         failwith (spf "Repository.add_in_index: %s does not exist anymore"
                     relpath)
     in
-    let blob = blob_from_path_and_stat full_path stat in
+    let blob = Objects.Blob (content_from_path_and_unix_stat full_path stat) in
     let sha = add_obj r blob in
     let entry = Index.mk_entry relpath sha stat in
     r.index <- Index.add_entry r.index entry;

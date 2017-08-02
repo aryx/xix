@@ -46,3 +46,10 @@ val set_worktree_and_index_to_tree:
   t -> Tree.t -> unit
 
 (* packs *)
+
+(* misc *)
+val walk_dir: 
+  (Common.filename -> Common.filename list -> Common.filename list -> unit) ->
+  Common.filename ->
+  unit
+

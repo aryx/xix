@@ -13,6 +13,8 @@ let main_commands = [
   Cmd_diff.cmd;
   Cmd_log.cmd;
   Cmd_status.cmd;
+
+  Cmd_pull.cmd;
 ]
 
 let extra_commands = [

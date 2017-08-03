@@ -43,7 +43,7 @@ let show_unified_diff diffs =
   (* naive: no contextual:  diffs |> List.iter print *)
   let rec aux context_lines nctx_before nctx_after nold nnew diffs =
     match diffs with
-    (* todo: No newline at end of file *)
+    (* todo: say if 'No newline at end of file' *)
     | [] -> ()
     | x::xs ->
       (match x with

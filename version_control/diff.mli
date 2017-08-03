@@ -9,4 +9,3 @@ type diff_elem =
 type diff = diff_elem list
 
 val diff: string -> string -> diff
-

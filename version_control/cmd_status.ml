@@ -61,6 +61,7 @@ let changes_index_vs_HEAD r =
   (* less: sort by path *)
   List.rev !changes
 
+(* todo: need parse .gitignore *)
 let untracked r =
   let h = r.Repository.index 
       |> List.map (fun entry -> entry.Index.name, true) 

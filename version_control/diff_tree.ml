@@ -53,7 +53,7 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
     | None, None -> ()
     | Some (a, asha), Some (b, bsha) ->
       (match () with
-      (* file type changed reported as delete/add *)
+      (* file type changed reported as delete/add (meh) *)
       | _ when a.Change.mode <> b.Change.mode ->
         add (Change.Del a);
         add (Change.Add b);

@@ -15,6 +15,8 @@ let content_from_path_and_stat_index path stat_info =
 (* less: could factorize with Diff_tree.changes_tree_vs_tree? would need
  * to generate flat list of files (but then less opti opportunity
  * in changes_tree_vs_tree when hash for a whole subtree is the same)
+ * and then just do set differences to compute new, deleted, and
+ * for changes just look intersection and check if same content.
  *)
 let changes_worktree_vs_index r =
   r.Repository.index |> List.map (fun entry ->

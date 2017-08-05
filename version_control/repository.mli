@@ -23,6 +23,7 @@ val read_commit: t -> Sha1.t -> Commit.t
 val read_tree: t -> Sha1.t -> Tree.t
 val read_blob: t -> Sha1.t -> Blob.t
 val add_obj: t -> Objects.t -> Sha1.t
+val has_obj: t -> Sha1.t -> bool
 
 (* refs *)
 val read_ref: t -> Refs.t -> Refs.ref_content

@@ -31,6 +31,7 @@ let print_change change =
   | Change.Modify (entry1, entry2) ->
     pr (spf "M       %s" entry1.Change.path)
 
+(* todo? move in repository.ml? *)
 (* less: sort by time? so have a sorted queue of commits *)
 let walk_history r f sha =
   (* we are walking a DAG, so we need to remember already processed nodes *)
@@ -47,6 +48,20 @@ let walk_history r f sha =
     end
   in
   aux sha
+
+(* 
+let walk_graph r f =
+  let heads = 
+    Repository.all_refs r |> Common.map_filter (fun aref ->
+      if aref =~ "refs/heads/"
+      then Some (Repository.follow_ref_some r (Refs.Ref aref))
+      else None
+    )
+  in
+  ...
+  heads |> List.iter aux
+*)
+
 
 let name_status = ref false
 

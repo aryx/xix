@@ -245,6 +245,10 @@ let add_obj r obj =
     sha
   end
 
+let has_obj r h =
+  let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
+  Sys.file_exists path
+
 (*****************************************************************************)
 (* Index *)
 (*****************************************************************************)

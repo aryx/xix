@@ -469,11 +469,3 @@ let open_ root =
         else Index.empty
     }
   else failwith (spf "Not a git repository at %s" root)
-
-(*****************************************************************************)
-(* Cloning *)
-(*****************************************************************************)
-
-let clone r dst =
-  raise Todo
-

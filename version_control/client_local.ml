@@ -118,8 +118,12 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* less: split_commits_and_tags? *)
   let all_common_commits = 
     collect_ancestors src top_common_commits (Hashtbl.create 101) in
+  (* bugfix: do not forget Hashtbl.copy because collect_ancestors modify 
+   * the second parameter by side effect
+   *)
   let missing_commits = 
-    collect_ancestors src top_wanted_commits all_common_commits in
+    collect_ancestors src top_wanted_commits (Hashtbl.copy all_common_commits)
+  in
 
   (* let's iterate over all common commits *)
   
@@ -154,7 +158,8 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
           tree |> List.iter (fun entry ->
             if entry.Tree.perm = Tree.Commit
             then failwith "submodule not supported";
-            missing entry.Tree.node (entry.Tree.perm = Tree.Dir)
+            (* bugfix: it's <>, not = *)
+            missing entry.Tree.node (entry.Tree.perm <> Tree.Dir)
           )
         | Objects.Blob _ ->
           raise (Impossible "is_blob guard")
@@ -183,6 +188,8 @@ let fetch_objects src dst =
       | None -> Repository.read_obj src sha1
       | Some obj -> obj
     in
+    (* todo: count objects progress *)
+    (* pr2 (spf "adding %s" (Hexsha.of_sha sha1)); *)
     let sha2 = Repository.add_obj dst obj in
     assert (sha1 = sha2)
   )

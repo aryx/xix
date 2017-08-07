@@ -4,9 +4,10 @@
  pad-ocaml-project-path p
  pad-ocaml-project-subdirs 
  (split-string 
-  "commons
+  "lib_core/commons
    formats/objects formats/executables
    assembler linker mk shell compiler macroprocessor
+   version_control
    "
   ))
 
@@ -65,4 +66,16 @@
      )
    )))
 
+
+(setq
+ pad-ocaml-project-prog     "version_control/ogit"
+ pad-ocaml-project-args 
+ (join-string 
+  (list 
+   ""
+   (case 1
+     (1 (concat "clone /home/pad/tmp/t1 /home/pad/tmp/t2"))
+     (3 "-debugger -f /home/pad/plan9/windows/rio/mkfile")
+     )
+   )))
 

@@ -14,7 +14,6 @@ type objectish =
 (* repo *)
 val init: Common.filename -> unit
 val open_: Common.filename -> t
-val clone: t -> Common.filename -> unit
 
 (* objects *)
 val read_obj: t -> Sha1.t -> Objects.t

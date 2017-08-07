@@ -5,6 +5,7 @@ open Common
 let pull dst url =
   (* todo: detect if clean repo? status is empty? *)
   let client = Clients.client_of_url url in
+
   (* less: allow to grab from multiple heads, not just HEAD *)
   let remote_HEAD_sha = client.Client.fetch dst in
   
@@ -14,16 +15,17 @@ let pull dst url =
     Commit.collect_ancestors (Repository.read_commit dst) [remote_HEAD_sha]
       (Hashtbl.create 101)
   in
-  if Hashtbl.mem ancestors_remote_HEAD current_HEAD_sha
-  then begin
+  (match () with
+  | _ when remote_HEAD_sha = current_HEAD_sha -> ()
+  | _ when Hashtbl.mem ancestors_remote_HEAD current_HEAD_sha ->
     (* easy case *)
     pr (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
     Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in
     Repository.set_worktree_and_index_to_tree dst tree
-  end
-  else failwith "TODO: git pull need merge"
+  | _ -> failwith "TODO: git pull need merge"
+  )
 
 
 let cmd = { Cmd.

@@ -10,56 +10,13 @@ type status = {
   untracked: Common.filename list;
 }
 
-(* some commonalities with Repository.set_worktree_and_index_to_tree *)
 let changes_index_vs_HEAD r =
   let commitid = Repository.follow_ref_some r (Refs.Head) in
   let commit = Repository.read_commit r commitid in
   let treeid = commit.Commit.tree in
-  let tree = Repository.read_tree r treeid in
-
-  let h_in_index_and_head = Hashtbl.create 101 in
-  let hindex = 
-    r.Repository.index 
-    |> List.map (fun entry -> entry.Index.name, entry)
-    |> Hashtbl_.of_list
-  in
-  let changes = ref [] in
-
-  tree |> Tree.walk_tree (Repository.read_tree r) "" (fun relpath entry_head ->
-    let perm = entry_head.Tree.perm in
-    match perm with
-    | Tree.Dir -> ()
-    | Tree.Commit -> failwith "submodule not yet supported"
-    | Tree.Normal | Tree.Exec | Tree.Link ->
-      try
-        let entry_index = Hashtbl.find hindex relpath in
-        Hashtbl.add h_in_index_and_head relpath true;
-        (* less: if change mode, then report as del/add *)
-        if entry_head.Tree.node <> entry_index.Index.id
-        then changes |> Common.push (Change.Modify (
-          { Change.path = relpath; 
-            mode = Index.mode_of_perm perm; 
-            content = lazy (raise (Impossible "not called")); },
-          { Change.path = relpath; 
-            mode = entry_index.Index.stats.Index.mode;
-            content = lazy (raise (Impossible "not called")); }
-        ))
-      with Not_found ->
-        changes |> Common.push (Change.Del { Change.
-             path = relpath;
-             mode = Index.mode_of_perm perm;
-             content = lazy (raise (Impossible "not called"));
-                                           });
-  );
-  r.Repository.index |> List.iter (fun entry ->
-    if not (Hashtbl.mem h_in_index_and_head entry.Index.name)
-    then changes |> Common.push (Change.Add { Change.
-             path = entry.Index.name;
-             mode = entry.Index.stats.Index.mode;                                            content = lazy (raise (Impossible "not called")); }
-    )
-  );
-  (* less: sort by path *)
-  List.rev !changes
+  Changes.changes_index_vs_tree (Repository.read_tree r) 
+    r.Repository.index
+    treeid
 
 (* todo: need parse .gitignore *)
 let untracked r =
@@ -85,7 +42,11 @@ let untracked r =
 
 let status_of_repository r =
   { staged = changes_index_vs_HEAD r;
-    unstaged = Cmd_diff.changes_worktree_vs_index r;
+    unstaged = 
+      Changes.changes_worktree_vs_index 
+        (Repository.read_blob r)
+        r.Repository.worktree 
+        r.Repository.index;
     untracked = untracked r;
   }
 

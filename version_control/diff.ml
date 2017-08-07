@@ -36,9 +36,10 @@ open Common
 
 type item = string
 
+(* similar to change.ml, but for content of the file *)
 type diff_elem = 
-  | Deleted of item
   | Added of item
+  | Deleted of item
   | Equal of item
 
 type diff = diff_elem list

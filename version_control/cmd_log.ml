@@ -53,7 +53,7 @@ let log r =
         | x::y::xs ->
           failwith "TODO: log: handle merge"
       in
-      let changes = Diff_tree.changes_tree_vs_tree
+      let changes = Changes.changes_tree_vs_tree
         (Repository.read_tree r)
         (Repository.read_blob r)
         tree2

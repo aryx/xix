@@ -2,8 +2,8 @@
 type item = string
 
 type diff_elem = 
-  | Deleted of item
   | Added of item
+  | Deleted of item
   | Equal of item
 
 type diff = diff_elem list

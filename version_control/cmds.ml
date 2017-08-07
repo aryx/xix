@@ -15,6 +15,7 @@ let main_commands = [
   Cmd_status.cmd;
 
   Cmd_pull.cmd;
+  Cmd_push.cmd;
   Cmd_clone.cmd;
 ]
 

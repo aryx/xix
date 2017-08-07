@@ -17,6 +17,8 @@ let clone url path_dst =
   let tree = Repository.read_tree dst (commit.Commit.tree) in
   Repository.set_worktree_and_index_to_tree dst tree
 
+  (* todo: when clone then repo should have a "refs/remotes/origin/master" *)
+
 
 let cmd = { Cmd.
   name = "clone";
@@ -33,8 +35,3 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-
-(* when clone then repo has a "refs/remotes/origin/master"
-let remote r =
-  None
-*)

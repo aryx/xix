@@ -1,6 +1,15 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+let commit r author committer message =
+  (* todo: imitate git output
+   *   [master 0b50159] xxx
+   *   1 file changed, 0 insertions(+), 0 deletions(-)
+   *   create mode 100644 foobar.txt
+   *)
+  (* todo: nothing to commit, working directory clean *)
+  Repository.commit_index r author committer message
+
 let author = ref ""
 let committer = ref ""
 let message = ref ""
@@ -25,7 +34,7 @@ let cmd = { Cmd.
       let today = 
         (Int64.of_float (Unix.time ()),
          { User.
-           (* todo: use localtime vs gmtime? *)
+       (* todo: use localtime vs gmtime? *)
            sign = User.Minus;
            hours = 7; (* SF *)
            min = 0;
@@ -46,13 +55,8 @@ let cmd = { Cmd.
         then author
         else raise Todo
       in
-      (* todo: imitate git output
-       *   [master 0b50159] xxx
-       *   1 file changed, 0 insertions(+), 0 deletions(-)
-       *   create mode 100644 foobar.txt
-       *)
-      (* todo: nothing to commit, working directory clean *)
-      Repository.commit_index r author committer !message
+      commit r author committer !message
+
     | xs -> raise Cmd.ShowUsage
   );
 }

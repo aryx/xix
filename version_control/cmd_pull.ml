@@ -2,6 +2,7 @@
 open Common
 
 (* old: was called get_transport_and_path (and xxx_from_url in dulwich *)
+(* less: move in clients.ml? a bit like cmd.ml and cmds.ml *)
 let client_of_url url =
   match url with
   (* less: should use URL parsing library *)
@@ -16,17 +17,18 @@ let client_of_url url =
     then Client_local.mk_client url
     else failwith (spf "remote repository url not supported: %s" url)
 
+(* =~ git fetch + git merge *)
 let pull dst url =
   let client = client_of_url url in
   (* less: allow to grab from multiple heads, not just HEAD *)
   let remote_HEAD_sha = client.Client.fetch dst in
 
   (* todo: detect if need merge, if current HEAD not parent of new HEAD *)
-  Repository.write_ref dst (Refs.Head) (Refs.Hash remote_HEAD_sha);
+  Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
 
   let commit = Repository.read_commit dst remote_HEAD_sha in
   let tree = Repository.read_tree dst (commit.Commit.tree) in
-  (* todo: detect if need merge *)
+  (* todo: detect if need merge, or fast-forward *)
   Repository.set_worktree_and_index_to_tree dst tree
 
 

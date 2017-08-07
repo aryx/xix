@@ -31,6 +31,8 @@ val write_ref: t -> Refs.t -> Refs.ref_content -> unit
 val follow_ref: t -> Refs.t -> Refs.t list * Commit.hash option
 val follow_ref_some: t -> Refs.t -> Commit.hash
 val all_refs: t -> Refs.refname list
+(* better than write_ref, will follow symbolic ref *)
+val set_ref: t -> Refs.t -> Commit.hash -> unit
 val del_ref: t -> Refs.t -> unit
 (* atomic op *)
 val add_ref_if_new: t -> Refs.t -> Refs.ref_content -> bool

@@ -168,6 +168,17 @@ let set_ref_if_same_old r aref oldh newh =
     true
   with Not_found -> false
 
+let set_ref r aref newh =
+  let (refs, _) = follow_ref r aref in
+  let lastref = List.hd (List.rev refs) in
+  let file = ref_to_filename r lastref in
+  file |> with_file_out_with_lock (fun ch ->
+    ch |> IO.output_channel |> IO_.with_close_out 
+        (Refs.write (Refs.Hash newh))
+  )
+  
+
+(* low-level *)
 let write_ref r aref content =
   let file = ref_to_filename r aref in
   file |> with_file_out_with_lock (fun ch ->

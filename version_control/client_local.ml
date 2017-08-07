@@ -18,7 +18,7 @@ type graph_walker = {
   ack: Commit.hash -> unit;
 }
 
-let mk_graph_walker r =
+let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
   (* less: start just from HEAD? *)
   let heads = 
     Repository.all_refs r |> Common.map_filter (fun aref ->
@@ -28,35 +28,68 @@ let mk_graph_walker r =
     )
   in
   let todos = ref heads in
-  (* acts as an 'hdone' too *)
-  let hparents = Hashtbl.create 101 in
+  let todos_next_round = ref [] in
+  let last_round = ref None in
+  let hdone = Hashtbl.create 101 in
   { next = (fun () ->
+    todos := !todos_next_round @ !todos;
+    todos_next_round := [];
     match !todos with
     | [] -> None
     | x::xs ->
       todos := xs;
+      Hashtbl.add hdone x true;
+      last_round := Some x;
       let commit = Repository.read_commit r x in
       let parents = commit.Commit.parents in
-      Hashtbl.add hparents x parents;
       parents |> List.iter (fun parent ->
-        if Hashtbl.mem hparents parent
+        if Hashtbl.mem hdone parent
         then ()
-        else todos := parent::!todos
+        else todos_next_round := parent::!todos_next_round;
       );
       Some x
     );
     ack = (fun commit_sha ->
       (* less: do weird loop where recurse also over parents as in dulwich? *)
-      raise Todo
+      match !last_round with
+      | None -> raise (Impossible "ack always after at least one next");
+      | Some x ->
+        if x <> commit_sha
+        then raise (Impossible "'ack(x)' should follow 'x = next()'");
+        (* skip those one then because parent already in common *)
+        todos_next_round := []
     );
   }
 
+(* similar to Cmd_log.walk_history but with exposed hdone hash *)
+let collect_ancestors r top_commits hdone =
+  let hcommits = Hashtbl.create 101 in
+  let rec aux sha =
+    if Hashtbl.mem hdone sha
+    then ()
+    else begin
+      Hashtbl.add hdone sha true;
+      Hashtbl.add hcommits sha true;
+      let commit = Repository.read_commit r sha in
+      commit.Commit.parents |> List.iter aux
+    end
+  in
+  top_commits |> List.iter aux;
+  hcommits
 
-let collect_ancestors commits hdone =
-  raise Todo
 
-let collect_filetree read_tree tree have_sha =
-  raise Todo
+let rec collect_filetree read_tree treeid have_sha =
+  let tree = read_tree treeid in
+  tree |> List.iter (fun entry ->
+    let sha = entry.Tree.node in
+    if not (Hashtbl.mem have_sha sha) then begin
+      Hashtbl.add have_sha sha true;
+      match entry.Tree.perm with
+      | Tree.Normal | Tree.Exec | Tree.Link -> ()
+      | Tree.Dir ->  collect_filetree read_tree sha have_sha
+      | Tree.Commit -> failwith "submodule not supported yet"
+    end
+  )
     
 (*****************************************************************************)
 (* Helpers *)
@@ -78,15 +111,15 @@ let find_top_common_commits src dst =
     )
   in
   loop_while_sha (walker.next ());
-  top_commons
+  top_commons |> Hashtbl_.to_list |> List.map fst
 
 
 let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* less: split_commits_and_tags? *)
   let all_common_commits = 
-    collect_ancestors top_common_commits (Hashtbl.create 101) in
+    collect_ancestors src top_common_commits (Hashtbl.create 101) in
   let missing_commits = 
-    collect_ancestors top_wanted_commits all_common_commits in
+    collect_ancestors src top_wanted_commits all_common_commits in
 
   (* let's iterate over all common commits *)
   
@@ -95,7 +128,7 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
    * common_commits different from all_ancestors in VCS.nw? 
    *)
   (* expensive loop below? so use parallel threads? *)
-  all_common_commits |> List.iter (fun commit_sha ->
+  all_common_commits |> Hashtbl.iter (fun commit_sha _true ->
     Hashtbl.add dst_have_sha commit_sha true;
     let commit = Repository.read_commit src commit_sha in
     collect_filetree (Repository.read_tree src) commit.Commit.tree dst_have_sha
@@ -104,7 +137,7 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* and now let's iterate over all missing commits *)
 
   (* less: tags handling *)
-  let rec aux sha is_blob = 
+  let rec missing sha is_blob = 
     if Hashtbl.mem dst_have_sha sha
     then ()
     else begin
@@ -116,12 +149,12 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
         f sha (Some obj);
         (match obj with
         | Objects.Commit commit ->
-          aux commit.tree false
+          missing commit.Commit.tree false
         | Objects.Tree tree ->
           tree |> List.iter (fun entry ->
             if entry.Tree.perm = Tree.Commit
             then failwith "submodule not supported";
-            aux entry.Tree.node (entry.Tree.perm = Tree.Dir)
+            missing entry.Tree.node (entry.Tree.perm = Tree.Dir)
           )
         | Objects.Blob _ ->
           raise (Impossible "is_blob guard")
@@ -131,7 +164,7 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
     end
   in
   missing_commits |> Hashtbl.iter (fun commit_sha _true ->
-    aux commit_sha false
+    missing commit_sha false
   )
 
   

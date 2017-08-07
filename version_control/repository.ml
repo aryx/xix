@@ -388,8 +388,13 @@ let set_worktree_and_index_to_tree r tree =
   tree |> Tree.walk_tree (read_tree r) "" (fun relpath entry ->
     let perm = entry.Tree.perm in
     match perm with
-    | Tree.Dir -> ()
-    | Tree.Commit -> failwith "submodule not yet supported"
+    | Tree.Dir -> 
+      (* bugfix: need also here to mkdir; doing it below is not enough
+       * when a dir has no file but only subdirs
+       *)
+      let fullpath = r.worktree / relpath in
+      if not (Sys.file_exists fullpath)
+      then Unix.mkdir fullpath dirperm;
     | Tree.Normal | Tree.Exec | Tree.Link ->
       (* less: validate_path? *)
       let fullpath = r.worktree / relpath in
@@ -400,6 +405,7 @@ let set_worktree_and_index_to_tree r tree =
       let stat = build_file_from_blob fullpath blob perm in
       Hashtbl.replace hcurrent relpath true;
       Common.push (Index.mk_entry relpath sha stat) new_index;
+    | Tree.Commit -> failwith "submodule not yet supported"
   );
   let index = List.rev !new_index in
   r.index <- index;

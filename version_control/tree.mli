@@ -32,3 +32,4 @@ val walk_tree:
 val walk_trees:
   (hash -> t) -> Common.filename (* dir *) ->
   (Common.filename -> entry option -> entry option -> unit) -> t -> t -> unit
+

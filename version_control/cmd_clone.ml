@@ -3,7 +3,7 @@ open Common
 
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)
 let clone url path_dst =
-  let client = Cmd_pull.client_of_url url in
+  let client = Clients.client_of_url url in
   
   Repository.init path_dst;
   let dst = Repository.open_ path_dst in

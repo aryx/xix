@@ -42,6 +42,59 @@ type t = {
 and hash = Sha1.t
 
 (*****************************************************************************)
+(* API *)
+(*****************************************************************************)
+
+(* for git log *)
+
+(* less: sort by time? so have a sorted queue of commits *)
+let walk_history read_commit f sha =
+  (* we are walking a DAG, so we need to remember already processed nodes *)
+  let hdone = Hashtbl.create 101 in
+  let rec aux sha =
+    if Hashtbl.mem hdone sha
+    then ()
+    else begin
+      Hashtbl.add hdone sha true;
+      let commit = read_commit sha in
+      (* todo: path matching *)
+      f sha commit;
+      commit.parents |> List.iter aux
+    end
+  in
+  aux sha
+(* 
+let walk_graph r f =
+  let heads = 
+    Repository.all_refs r |> Common.map_filter (fun aref ->
+      if aref =~ "refs/heads/"
+      then Some (Repository.follow_ref_some r (Refs.Ref aref))
+      else None
+    )
+  in
+  ...
+  heads |> List.iter aux
+*)
+
+(* for git pull *)
+(* similar to walk_history but with exposed hdone hash *)
+let collect_ancestors read_commit top_commits hdone =
+  let hcommits = Hashtbl.create 101 in
+  let rec aux sha =
+    if Hashtbl.mem hdone sha
+    then ()
+    else begin
+      Hashtbl.add hdone sha true;
+      Hashtbl.add hcommits sha true;
+      let commit = read_commit sha in
+      commit.parents |> List.iter aux
+    end
+  in
+  top_commits |> List.iter aux;
+  hcommits
+
+
+(*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
 

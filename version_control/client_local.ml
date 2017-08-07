@@ -61,21 +61,6 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
     );
   }
 
-(* similar to Cmd_log.walk_history but with exposed hdone hash *)
-let collect_ancestors r top_commits hdone =
-  let hcommits = Hashtbl.create 101 in
-  let rec aux sha =
-    if Hashtbl.mem hdone sha
-    then ()
-    else begin
-      Hashtbl.add hdone sha true;
-      Hashtbl.add hcommits sha true;
-      let commit = Repository.read_commit r sha in
-      commit.Commit.parents |> List.iter aux
-    end
-  in
-  top_commits |> List.iter aux;
-  hcommits
 
 
 let rec collect_filetree read_tree treeid have_sha =
@@ -117,12 +102,14 @@ let find_top_common_commits src dst =
 let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* less: split_commits_and_tags? *)
   let all_common_commits = 
-    collect_ancestors src top_common_commits (Hashtbl.create 101) in
+    Commit.collect_ancestors (Repository.read_commit src) top_common_commits 
+      (Hashtbl.create 101) in
   (* bugfix: do not forget Hashtbl.copy because collect_ancestors modify 
    * the second parameter by side effect
    *)
   let missing_commits = 
-    collect_ancestors src top_wanted_commits (Hashtbl.copy all_common_commits)
+    Commit.collect_ancestors (Repository.read_commit src) top_wanted_commits 
+      (Hashtbl.copy all_common_commits)
   in
 
   (* let's iterate over all common commits *)

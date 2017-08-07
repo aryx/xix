@@ -16,3 +16,15 @@ val read: IO.input -> t
 val write: t -> 'a IO.output -> unit
 
 val show: t -> unit
+
+val collect_ancestors: 
+  (hash -> t) ->
+  hash list -> (hash, bool) Hashtbl.t -> 
+  (hash, bool) Hashtbl.t
+
+val walk_history:  
+  (hash -> t) ->
+  (hash -> t -> unit) ->
+  hash ->
+  unit
+

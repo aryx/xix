@@ -27,6 +27,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(* very similar to Index.mode, but with also a 'Dir' *)
 type perm = 
   | Normal
   | Exec
@@ -50,9 +51,9 @@ type hash = Sha1.t
 (*****************************************************************************)
 (* Walk *)
 (*****************************************************************************)
-(* we must visit in sorted order, so caller can rely on 'f' being
- * called in order (so can for instance create sorted index entries 
- * while visiting a tree for free)
+(* we must visit in sorted order, so the caller of walk_tree can rely on 'f'
+ * being called in order (so it can easily create for example sorted 
+ * index entries while visiting a tree)
  *)
 let rec walk_tree read_tree dirpath f xs =
   xs |> List.iter (fun entry ->

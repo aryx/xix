@@ -9,7 +9,8 @@ DIRS1=\
   macroprocessor\
   formats/objects assembler\
   formats/executables linker\
-  compiler
+  compiler \
+  version_control
 
 # works only under plan9 for now: 
 DIRS2=lib_core/commons2 lib_system/plan9 lib_graphics windows

@@ -8,6 +8,5 @@ except:
  - version_control/hexsha.ml           by Thomas Gazagnaire   (from ocaml-hex)
  - version_control/zlib.ml             by Xavier Leroy        (from camlzip)
  - version_control/unzip.ml            by Nicolas Canasse     (from extlib)
- - version_control/diff_simple.ml      by Gabriel Jaldon      (from simple-diff)
  - version_control/diff_myers.ml       by OOHASHI Daichi      (from ocaml-diff)
  - version_control/{index,user,...}.ml by Thomas Gazagnaire   (from ocaml-git)

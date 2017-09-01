@@ -67,10 +67,10 @@ let log r =
 let cmd = { Cmd.
   name = "log";
   help = " [options]";
-  (* todo: -1, -10 *)
   options = [
     "--name-status", Arg.Set name_status, 
     " print name/status for each changed file";
+    (* todo: -1, -10 *)
     (* less: --reverse *)
   ];
   f = (fun args ->

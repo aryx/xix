@@ -1,3 +1,4 @@
+(*s: version_control/client.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -7,6 +8,7 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
+(*s: type Client.t *)
 (*****************************************************************************)
 type t = {
   (* path to remote (e.g., /path/other/repo, or git://github.com/foo/bar) *)
@@ -19,3 +21,5 @@ type t = {
   fetch: Repository.t -> Commit.hash;
   (* less: progress *)
 }
+(*e: type Client.t *)
+(*e: version_control/client.ml *)

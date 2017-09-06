@@ -1,3 +1,4 @@
+(*s: version_control/diff.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -32,20 +33,27 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
+(*s: type Diff.item *)
 (*****************************************************************************)
 
 type item = string
+(*e: type Diff.item *)
 
+(*s: type Diff.diff_elem *)
 (* similar to change.ml, but for content of the file *)
 type diff_elem = 
   | Added of item
   | Deleted of item
   | Equal of item
+(*e: type Diff.diff_elem *)
 
+(*s: type Diff.diff *)
 type diff = diff_elem list
+(*e: type Diff.diff *)
 
 (*****************************************************************************)
 (* Helpers *)
+(*s: function Diff.split_lines *)
 (*****************************************************************************)
 let split_lines str =
   (* alt: let xs = Str.full_split (Str.regexp "\n") str in *)
@@ -60,6 +68,7 @@ let split_lines str =
       else [String.sub str start (String.length str - start)]
   in
   aux 0
+(*e: function Diff.split_lines *)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -67,6 +76,7 @@ let split_lines str =
 
 module SimpleDiff = Diff_simple.Make(String)
 
+(*s: function Diff.diff_buggy *)
 (*
 SimpleDiff is buggy!
 Here is an example of output after an ogit diff (with some debugging 
@@ -108,6 +118,7 @@ let diff_buggy str1 str2 =
     | SimpleDiff.Added arr   -> 
       arr |> Array.to_list |> List.map (fun x -> Added x)
   )
+(*e: function Diff.diff_buggy *)
 
 module StringDiff = Diff_myers.Make(struct
   type t = string array
@@ -116,6 +127,7 @@ module StringDiff = Diff_myers.Make(struct
   let length t = Array.length t
 end)
 
+(*s: function Diff.diff *)
 (* seems correct *)
 let diff str1 str2 =
   let xs = split_lines str1 in
@@ -126,3 +138,5 @@ let diff str1 str2 =
     | `Removed (_, s) -> Deleted s
     | `Added (_, s) -> Added s
   )
+(*e: function Diff.diff *)
+(*e: version_control/diff.ml *)

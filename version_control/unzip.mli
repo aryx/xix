@@ -1,3 +1,4 @@
+(*s: version_control/unzip.mli *)
 (*
  * Unzip - inflate format decompression algorithm
  * Copyright (C) 2004 Nicolas Cannasse
@@ -19,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*s: type Unzip.error_msg (version_control/unzip.mli) *)
 (** Decompression algorithm.
 
   Unzip decompression algorithm is compliant with RFC 1950 and 1951 which
@@ -32,14 +34,24 @@ type error_msg =
   | Invalid_crc
   | Truncated_data
   | Unsupported_dictionary
+(*e: type Unzip.error_msg (version_control/unzip.mli) *)
 
+(*s: exception Unzip.Error (version_control/unzip.mli) *)
 exception Error of error_msg
+(*e: exception Unzip.Error (version_control/unzip.mli) *)
 
+(*s: signature Unzip.inflate *)
 val inflate : ?header:bool -> IO.input -> IO.input
 (** wrap an input using "inflate" decompression algorithm. raises [Error] if
   an error occurs (this can only be caused by malformed input data). *)
+(*e: signature Unzip.inflate *)
 
 type t
 
+(*s: signature Unzip.inflate_init *)
 val inflate_init : ?header:bool -> IO.input -> t
+(*e: signature Unzip.inflate_init *)
+(*s: signature Unzip.inflate_data *)
 val inflate_data : t -> bytes -> int -> int -> int
+(*e: signature Unzip.inflate_data *)
+(*e: version_control/unzip.mli *)

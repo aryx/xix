@@ -1,7 +1,9 @@
+(*s: version_control/cmd_diff.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
 
+(*s: function Cmd_diff.diff_worktree_vs_index *)
 let diff_worktree_vs_index r =
   let changes = 
     Changes.changes_worktree_vs_index 
@@ -10,7 +12,9 @@ let diff_worktree_vs_index r =
       r.Repository.index 
   in
   changes |> List.iter Diff_unified.show_change
+(*e: function Cmd_diff.diff_worktree_vs_index *)
 
+(*s: constant Cmd_diff.cmd *)
 let cmd = { Cmd.
   name = "diff";
   help = " ";
@@ -23,3 +27,5 @@ let cmd = { Cmd.
     | xs -> raise Cmd.ShowUsage
   );
 }
+(*e: constant Cmd_diff.cmd *)
+(*e: version_control/cmd_diff.ml *)

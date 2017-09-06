@@ -1,3 +1,4 @@
+(*s: version_control/zlib.mli *)
 open Common
 (***********************************************************************)
 (*                                                                     *)
@@ -12,28 +13,38 @@ open Common
 (*                                                                     *)
 (***********************************************************************)
 
+(*s: exception Zlib.Error (version_control/zlib.mli) *)
 (* $Id$ *)
 
 exception Error of string * string
+(*e: exception Zlib.Error (version_control/zlib.mli) *)
 
+(*s: signature Zlib.compress *)
 val compress:
   ?level: int -> ?header: bool -> 
   (bytes -> int) -> (bytes -> int -> unit) -> unit
+(*e: signature Zlib.compress *)
 
+(*s: signature Zlib.compress_direct *)
 val compress_direct:
   ?level: int -> ?header: bool -> (bytes -> int -> unit) ->
   (bytes -> int -> int -> unit) * (unit -> unit)
+(*e: signature Zlib.compress_direct *)
 
+(*s: signature Zlib.uncompress *)
 val uncompress:
   ?header: bool -> (bytes -> int) -> (bytes -> int -> unit) -> unit
+(*e: signature Zlib.uncompress *)
 
 type stream
 
+(*s: type Zlib.flush_command (version_control/zlib.mli) *)
 type flush_command =
     Z_NO_FLUSH
   | Z_SYNC_FLUSH
   | Z_FULL_FLUSH
   | Z_FINISH
+(*e: type Zlib.flush_command (version_control/zlib.mli) *)
 
 external deflate_init: int -> bool -> stream = "camlzip_deflateInit"
 external deflate:
@@ -53,3 +64,4 @@ external update_crc: int32 -> bytes -> int -> int -> int32
                    = "camlzip_update_crc32"
 external update_crc_string: int32 -> string -> int -> int -> int32
                    = "camlzip_update_crc32"
+(*e: version_control/zlib.mli *)

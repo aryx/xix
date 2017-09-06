@@ -1,3 +1,4 @@
+(*s: version_control/main.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -54,6 +55,7 @@ open Common
 
 (*****************************************************************************)
 (* Helpers *)
+(*s: constant Main.commands *)
 (*****************************************************************************)
 
 let commands = List.flatten [
@@ -61,16 +63,22 @@ let commands = List.flatten [
   Cmds.extra_commands;
   [Cmd_help.cmd];
 ]
+(*e: constant Main.commands *)
 
+(*s: constant Main.hcommands *)
 let hcommands = 
   commands |> List.map (fun cmd -> cmd.Cmd.name, cmd) |> Hashtbl_.of_list
+(*e: constant Main.hcommands *)
 
+(*s: function Main.usage *)
 let usage () =
   spf "usage: ogit <%s> [options]"
     (String.concat "|" (commands |> List.map (fun cmd -> cmd.Cmd.name)))
+(*e: function Main.usage *)
 
 (*****************************************************************************)
 (* Entry point *)
+(*s: function Main.main *)
 (*****************************************************************************)
 
 let main () =
@@ -110,6 +118,10 @@ let main () =
         Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
         exit 1
   end
+(*e: function Main.main *)
         
+(*s: toplevel Main._1 *)
 let _ =
   main ()
+(*e: toplevel Main._1 *)
+(*e: version_control/main.ml *)

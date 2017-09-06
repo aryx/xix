@@ -1,3 +1,5 @@
+(*s: version_control/diff_myers.ml *)
+(*s: type Diff_myers.common *)
 (*
  * Copyright (C) 2016 OOHASHI Daichi
  *
@@ -20,9 +22,12 @@
  *)
 
 type 'a common =
+(*e: type Diff_myers.common *)
   [ `Common of int * int * 'a ]
 
+(*s: type Diff_myers.edit *)
 type 'a edit =
+(*e: type Diff_myers.edit *)
   [ `Added of int * 'a
   | `Removed of int * 'a
   | 'a common
@@ -154,3 +159,4 @@ module Make(M : SeqType) : (S with type t = M.t and type elem = M.elem) = struct
       ~f:(fun () x -> f x)
       ~init:()
 end
+(*e: version_control/diff_myers.ml *)

@@ -1,3 +1,4 @@
+(*s: version_control/hexsha.ml *)
 (*
  * Copyright (c) 2015 Trevor Summers Smith <trevorsummerssmith@gmail.com>
  * Copyright (c) 2014 Thomas Gazagnaire <thomas@gazagnaire.org>
@@ -25,15 +26,19 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
+(*s: type Hexsha.t *)
 (*****************************************************************************)
 
 type t = string
+(*e: type Hexsha.t *)
 
+(*s: function Hexsha.is_hexsha *)
 let is_hexsha x =
  String.length x = 40
  (* less: could also check every chars is between 0 and F,
   * or just call to_sha and catch if any exn.
   *)
+(*e: function Hexsha.is_hexsha *)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -53,6 +58,7 @@ and hexa2 =
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
+(*s: function Hexsha.of_string_fast *)
 let of_string_fast s =
   let len = String.length s in
   let buf = Bytes.create (len * 2) in
@@ -63,11 +69,15 @@ let of_string_fast s =
       (String.unsafe_get hexa2 (Char.code (String.unsafe_get s i)));
   done;
   (*pad:`Hex*) buf
+(*e: function Hexsha.of_string_fast *)
 
 
+(*s: function Hexsha.invalid_arg *)
 let invalid_arg fmt =
   Printf.ksprintf (fun str -> raise (Invalid_argument str)) fmt
+(*e: function Hexsha.invalid_arg *)
 
+(*s: function Hexsha.to_char *)
 let to_char x y =
   let code c = match c with
     | '0'..'9' -> Char.code c - 48 (* Char.code '0' *)
@@ -76,7 +86,9 @@ let to_char x y =
     | _ -> invalid_arg "Hex.to_char: %d is an invalid char" (Char.code c)
   in
   Char.chr (code x lsl 4 + code y)
+(*e: function Hexsha.to_char *)
 
+(*s: function Hexsha.to_helper *)
 let to_helper ~empty_return ~create ~set ((*`Hex*) s) =
   if s = "" then empty_return
   else
@@ -92,25 +104,37 @@ let to_helper ~empty_return ~create ~set ((*`Hex*) s) =
     in
     aux 0 1;
     buf
+(*e: function Hexsha.to_helper *)
 
+(*s: function Hexsha.to_string *)
 let to_string hex =
   to_helper ~empty_return:"" ~create:Bytes.create ~set:Bytes.set hex
+(*e: function Hexsha.to_string *)
 
 (*****************************************************************************)
 (* Entry point *)
+(*s: function Hexsha.of_sha *)
 (*****************************************************************************)
 
 let of_sha x =
   assert (Sha1.is_sha x);
   of_string_fast x
+(*e: function Hexsha.of_sha *)
 
+(*s: function Hexsha.to_sha *)
 let to_sha x =
   assert (is_hexsha x);
   to_string x
+(*e: function Hexsha.to_sha *)
 
+(*s: function Hexsha.read *)
 let read ch =
   let s = IO.really_nread ch 40 in
   assert (is_hexsha s);
   s
+(*e: function Hexsha.read *)
+(*s: function Hexsha.write *)
 let write ch x =
   IO.nwrite ch x
+(*e: function Hexsha.write *)
+(*e: version_control/hexsha.ml *)

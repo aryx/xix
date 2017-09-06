@@ -1,3 +1,4 @@
+(*s: version_control/commit.ml *)
 (*
  * Copyright (c) 2013-2017 Thomas Gazagnaire <thomas@gazagnaire.org>
  *
@@ -27,6 +28,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(*s: type Commit.t *)
 type t = {
   tree     : Tree.hash;
   (* first commit has no parent, and merge commits have 2 parents *)
@@ -39,7 +41,10 @@ type t = {
 
   message  : string;
 }
+(*e: type Commit.t *)
+(*s: type Commit.hash *)
 and hash = Sha1.t
+(*e: type Commit.hash *)
 
 (*****************************************************************************)
 (* API *)
@@ -47,6 +52,7 @@ and hash = Sha1.t
 
 (* for git log *)
 
+(*s: function Commit.walk_history *)
 (* less: sort by time? so have a sorted queue of commits *)
 let walk_history read_commit f sha =
   (* we are walking a DAG, so we need to remember already processed nodes *)
@@ -75,8 +81,10 @@ let walk_graph r f =
   ...
   heads |> List.iter aux
 *)
+(*e: function Commit.walk_history *)
 
 (* for git pull *)
+(*s: function Commit.collect_ancestors *)
 (* similar to walk_history but with exposed hdone hash *)
 let collect_ancestors read_commit top_commits hdone =
   let hcommits = Hashtbl.create 101 in
@@ -92,10 +100,12 @@ let collect_ancestors read_commit top_commits hdone =
   in
   top_commits |> List.iter aux;
   hcommits
+(*e: function Commit.collect_ancestors *)
 
 
 (*****************************************************************************)
 (* IO *)
+(*s: function Commit.read *)
 (*****************************************************************************)
 
 let read ch =
@@ -134,7 +144,9 @@ let read ch =
     author = author; committer = committer;
     message = msg;
   }
+(*e: function Commit.read *)
 
+(*s: function Commit.write *)
 let write commit ch =
   IO.nwrite ch "tree ";
   Hexsha.write ch (Hexsha.of_sha commit.tree);
@@ -153,9 +165,11 @@ let write commit ch =
 
   IO.write ch '\n';
   IO.nwrite ch commit.message
+(*e: function Commit.write *)
 
 (*****************************************************************************)
 (* Show *)
+(*s: function Commit.show *)
 (*****************************************************************************)
 
 let show x =
@@ -166,3 +180,5 @@ let show x =
   pr "";
   pr ("    " ^ x.message)
   (* showing diff done in caller in Cmd_show.show *)        
+(*e: function Commit.show *)
+(*e: version_control/commit.ml *)

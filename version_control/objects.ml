@@ -1,3 +1,4 @@
+(*s: version_control/objects.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -7,6 +8,7 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
+(*s: type Objects.t *)
 (*****************************************************************************)
 
 type t = 
@@ -14,6 +16,7 @@ type t =
   | Commit of Commit.t
   | Tree   of Tree.t
 (*  | Tag of Tag.t *)
+(*e: type Objects.t *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -21,6 +24,7 @@ type t =
 
 (*****************************************************************************)
 (* IO *)
+(*s: function Objects.read *)
 (*****************************************************************************)
 
 let read ch =
@@ -37,7 +41,9 @@ let read ch =
   (* "tag" -> Tag (Tag.read raw) *)
   (* less: assert finished ch2? *)
   | str -> failwith (spf "Objects.read: invalid header: %s" str)
+(*e: function Objects.read *)
 
+(*s: function Objects.write *)
 let write obj ch =
   let body = 
     IO.output_bytes () |> IO_.with_close_out (fun ch ->
@@ -58,3 +64,5 @@ let write obj ch =
   in
   IO.nwrite ch header;
   IO.nwrite ch body
+(*e: function Objects.write *)
+(*e: version_control/objects.ml *)

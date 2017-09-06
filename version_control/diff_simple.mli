@@ -1,3 +1,4 @@
+(*s: version_control/diff_simple.mli *)
 (** A simple diffing algorithm *)
 
 module type Comparable =
@@ -30,3 +31,4 @@ module type S =
   end
 
 module Make (Item: Comparable) : S with type item = Item.t
+(*e: version_control/diff_simple.mli *)

@@ -1,6 +1,8 @@
+(*s: version_control/cmd_rm.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: function Cmd_rm.rm *)
 let rm r relpaths =
   (* removing is simpler than adding; no need to add blobs in
    * the object store, so can just use functions from Index
@@ -12,8 +14,10 @@ let rm r relpaths =
       Index.remove_entry idx relpath
     ) r.Repository.index;
   Repository.write_index r
+(*e: function Cmd_rm.rm *)
 
 
+(*s: constant Cmd_rm.cmd *)
 let cmd = { Cmd.
   name = "rm";
   help = " [options] <file>...";
@@ -36,3 +40,5 @@ let cmd = { Cmd.
       rm r relpaths
   );
 }
+(*e: constant Cmd_rm.cmd *)
+(*e: version_control/cmd_rm.ml *)

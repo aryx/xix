@@ -1,6 +1,8 @@
+(*s: version_control/cmd_log.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: function Cmd_log.print_commit *)
 (* todo: git log --graph --oneline --decorate --all *)
 
 let print_commit sha commit =
@@ -21,7 +23,9 @@ let print_commit sha commit =
   pr "";
   pr ("    " ^ commit.Commit.message);
   ()
+(*e: function Cmd_log.print_commit *)
 
+(*s: function Cmd_log.print_change *)
 let print_change change =
   match change with
   | Change.Add entry ->
@@ -30,10 +34,14 @@ let print_change change =
     pr (spf "D       %s" entry.Change.path)
   | Change.Modify (entry1, entry2) ->
     pr (spf "M       %s" entry1.Change.path)
+(*e: function Cmd_log.print_change *)
 
 
+(*s: constant Cmd_log.name_status *)
 let name_status = ref false
+(*e: constant Cmd_log.name_status *)
 
+(*s: function Cmd_log.log *)
 (* todo: track only selected paths 
  * (and then rename detection to track correctly)
  *)
@@ -63,7 +71,9 @@ let log r =
       pr "";
     end
   )
+(*e: function Cmd_log.log *)
 
+(*s: constant Cmd_log.cmd *)
 let cmd = { Cmd.
   name = "log";
   help = " [options]";
@@ -83,3 +93,5 @@ let cmd = { Cmd.
     | xs -> raise Cmd.ShowUsage
   );
 }
+(*e: constant Cmd_log.cmd *)
+(*e: version_control/cmd_log.ml *)

@@ -1,3 +1,4 @@
+(*s: version_control/user.ml *)
 (*
  * Copyright (c) 2013-2017 Thomas Gazagnaire <thomas@gazagnaire.org>
  *
@@ -25,36 +26,47 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
+(*s: type User.sign *)
 (*****************************************************************************)
 
 type sign = Plus | Minus
+(*e: type User.sign *)
 
+(*s: type User.tz_offset *)
 type tz_offset = {
   sign: sign;
   hours: int;
   min: int;
 }
+(*e: type User.tz_offset *)
 
+(*s: type User.t *)
 type t = {
   name : string;
   email: string;
   date : int64 * tz_offset(*option*);
 }
+(*e: type User.t *)
 
 (* less: default_tz_offset ? *)
 
 (*****************************************************************************)
 (* IO *)
+(*s: function User.sign_of_char *)
 (*****************************************************************************)
 let sign_of_char = function
   | '+' -> Plus
   | '-' -> Minus
   | c -> failwith (spf "User.sign_of_string: not a sign, got %c" c)
+(*e: function User.sign_of_char *)
 
+(*s: function User.char_of_sign *)
 let char_of_sign = function
   | Plus -> '+'
   | Minus -> '-'
+(*e: function User.char_of_sign *)
 
+(*s: function User.read *)
 let read ch =
   let name = IO_.read_string_and_stop_char ch '<' in
   let email = IO_.read_string_and_stop_char ch '>' in
@@ -74,19 +86,25 @@ let read ch =
               min = int_of_string mins;
             });
   }
+(*e: function User.read *)
 
+(*s: function User.write_date *)
 let write_date ch (date, tz) =
   IO.nwrite ch (Int64.to_string date);
   IO.write ch ' ';
   let sign = match tz.sign with Plus -> "+" | Minus -> "-" in
   IO.nwrite ch (spf "%s%02d%02d" sign tz.hours tz.min)
+(*e: function User.write_date *)
 
+(*s: function User.write *)
 let write ch user =
   IO.nwrite ch (spf "%s <%s> " user.name user.email);
   write_date ch user.date
+(*e: function User.write *)
 
 (*****************************************************************************)
 (* Show *)
+(*s: function User.string_of_date *)
 (*****************************************************************************)
 
 let string_of_date (date, tz) =
@@ -98,4 +116,6 @@ let string_of_date (date, tz) =
     tm.Unix.tm_mday 
     tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec (tm.Unix.tm_year + 1900)
     (char_of_sign tz.sign) tz.hours tz.min
+(*e: function User.string_of_date *)
 
+(*e: version_control/user.ml *)

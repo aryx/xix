@@ -1,8 +1,12 @@
+(*s: version_control/cmd_help.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: constant Cmd_help.list_extra *)
 let list_extra = ref false
+(*e: constant Cmd_help.list_extra *)
 
+(*s: constant Cmd_help.cmd *)
 let rec cmd = { Cmd.
   name = "help";
   help = "";
@@ -19,3 +23,5 @@ let rec cmd = { Cmd.
     );
   );
 }
+(*e: constant Cmd_help.cmd *)
+(*e: version_control/cmd_help.ml *)

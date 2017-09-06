@@ -1,3 +1,5 @@
+(*s: version_control/unzip.ml *)
+(*s: type Unzip.huffman *)
 (*
  * Unzip - inflate format decompression algorithm
  * Copyright (C) 2004 Nicolas Cannasse
@@ -23,19 +25,25 @@ type huffman =
   | Found of int
   | NeedBit of huffman * huffman
   | NeedBits of int * huffman array
+(*e: type Unzip.huffman *)
 
 
+(*s: type Unzip.adler32 *)
 type adler32 = {
   mutable a1 : int;
   mutable a2 : int;
 }
+(*e: type Unzip.adler32 *)
 
+(*s: type Unzip.window *)
 type window = {
   mutable wbuffer : bytes;
   mutable wpos : int;
   wcrc : adler32;
 }
+(*e: type Unzip.window *)
 
+(*s: type Unzip.state *)
 type state =
   | Head
   | Block
@@ -45,7 +53,9 @@ type state =
   | Dist
   | DistOne
   | Done
+(*e: type Unzip.state *)
 
+(*s: type Unzip.t *)
 type t = {
   mutable znbits : int;
   mutable zbits : int;
@@ -62,19 +72,27 @@ type t = {
   zlengths : int array;
   zwindow : window;
 }
+(*e: type Unzip.t *)
 
+(*s: type Unzip.error_msg *)
 type error_msg =
   | Invalid_huffman
   | Invalid_data
   | Invalid_crc
   | Truncated_data
   | Unsupported_dictionary
+(*e: type Unzip.error_msg *)
 
+(*s: exception Unzip.Error *)
 exception Error of error_msg
+(*e: exception Unzip.Error *)
 
+(*s: function Unzip.error *)
 let error msg = raise (Error msg)
+(*e: function Unzip.error *)
 
 (* ************************************************************************ *)
+(*s: function Unzip.tree_depth *)
 (* HUFFMAN TREES *)
 
 let rec tree_depth = function
@@ -82,6 +100,7 @@ let rec tree_depth = function
   | NeedBits _ -> assert false
   | NeedBit (a,b) ->
     1 + min (tree_depth a) (tree_depth b)
+(*e: function Unzip.tree_depth *)
 
 let rec tree_compress t =
   match tree_depth t with
@@ -103,6 +122,7 @@ and tree_walk tbl p cd d = function
   | t ->
     Array.set tbl p (tree_compress t)
 
+(*s: function Unzip.make_huffman *)
 let make_huffman lengths pos nlengths maxbits =
   let counts = Array.make maxbits 0 in
   for i = 0 to nlengths - 1 do
@@ -134,15 +154,19 @@ let make_huffman lengths pos nlengths maxbits =
         NeedBit (tree_make (v lsl 1) (l + 1) , tree_make (v lsl 1 lor 1) (l + 1))
   in
   tree_compress (NeedBit (tree_make 0 1 , tree_make 1 1))
+(*e: function Unzip.make_huffman *)
 
 (* ************************************************************************ *)
+(*s: function Unzip.adler32_create *)
 (* ADLER32 (CRC) *)
 
 let adler32_create() = {
   a1 = 1;
   a2 = 0;
 }
+(*e: function Unzip.adler32_create *)
 
+(*s: function Unzip.adler32_update *)
 let adler32_update a s p l =
   let p = ref p in
   for i = 0 to l - 1 do
@@ -151,7 +175,9 @@ let adler32_update a s p l =
     a.a2 <- (a.a2 + a.a1) mod 65521;
     incr p;
   done
+(*e: function Unzip.adler32_update *)
 
+(*s: function Unzip.adler32_read *)
 let adler32_read ch =
   let a2a = IO.read_byte ch in
   let a2b = IO.read_byte ch in
@@ -161,61 +187,93 @@ let adler32_read ch =
     a1 = (a1a lsl 8) lor a1b;
     a2 = (a2a lsl 8) lor a2b;
   }
+(*e: function Unzip.adler32_read *)
 
 (* ************************************************************************ *)
+(*s: constant Unzip.window_size *)
 (* WINDOW *)
 
 let window_size = 1 lsl 15
+(*e: constant Unzip.window_size *)
+(*s: constant Unzip.buffer_size *)
 let buffer_size = 1 lsl 16
+(*e: constant Unzip.buffer_size *)
 
+(*s: function Unzip.window_create *)
 let window_create size = {
     wbuffer = Bytes.create buffer_size;
     wpos = 0;
     wcrc = adler32_create()
   }
+(*e: function Unzip.window_create *)
 
+(*s: function Unzip.window_slide *)
 let window_slide w = 
   adler32_update w.wcrc w.wbuffer 0 window_size;
   let b = Bytes.create buffer_size in
   w.wpos <- w.wpos - window_size;
   Bytes.unsafe_blit w.wbuffer window_size b 0 w.wpos;
   w.wbuffer <- b
+(*e: function Unzip.window_slide *)
 
+(*s: function Unzip.window_add_bytes *)
 let window_add_bytes w s p len =
   if w.wpos + len > buffer_size then window_slide w;
   Bytes.unsafe_blit s p w.wbuffer w.wpos len;
   w.wpos <- w.wpos + len
+(*e: function Unzip.window_add_bytes *)
 
+(*s: function Unzip.window_add_char *)
 let window_add_char w c =
   if w.wpos = buffer_size then window_slide w;
   Bytes.unsafe_set w.wbuffer w.wpos c;
   w.wpos <- w.wpos + 1
+(*e: function Unzip.window_add_char *)
 
+(*s: function Unzip.window_get_last_char *)
 let window_get_last_char w =
   Bytes.unsafe_get w.wbuffer (w.wpos - 1)
+(*e: function Unzip.window_get_last_char *)
 
+(*s: function Unzip.window_available *)
 let window_available w =
   w.wpos
+(*e: function Unzip.window_available *)
 
+(*s: function Unzip.window_checksum *)
 let window_checksum w =
   adler32_update w.wcrc w.wbuffer 0 w.wpos;
   w.wcrc
+(*e: function Unzip.window_checksum *)
 
+(*s: constant Unzip.len_extra_bits_tbl *)
 (* ************************************************************************ *)
 
 let len_extra_bits_tbl = [|0;0;0;0;0;0;0;0;1;1;1;1;2;2;2;2;3;3;3;3;4;4;4;4;5;5;5;5;0;-1;-1|]
+(*e: constant Unzip.len_extra_bits_tbl *)
+(*s: constant Unzip.len_base_val_tbl *)
 let len_base_val_tbl = [|3;4;5;6;7;8;9;10;11;13;15;17;19;23;27;31;35;43;51;59;67;83;99;115;131;163;195;227;258|]
+(*e: constant Unzip.len_base_val_tbl *)
+(*s: constant Unzip.dist_extra_bits_tbl *)
 let dist_extra_bits_tbl = [|0;0;0;0;1;1;2;2;3;3;4;4;5;5;6;6;7;7;8;8;9;9;10;10;11;11;12;12;13;13;-1;-1|]
+(*e: constant Unzip.dist_extra_bits_tbl *)
+(*s: constant Unzip.dist_base_val_tbl *)
 let dist_base_val_tbl = [|1;2;3;4;5;7;9;13;17;25;33;49;65;97;129;193;257;385;513;769;1025;1537;2049;3073;4097;6145;8193;12289;16385;24577|]
+(*e: constant Unzip.dist_base_val_tbl *)
+(*s: constant Unzip.code_lengths_pos *)
 let code_lengths_pos = [|16;17;18;0;8;7;9;6;10;5;11;4;12;3;13;2;14;1;15|]
+(*e: constant Unzip.code_lengths_pos *)
 
+(*s: constant Unzip.fixed_huffman *)
 let fixed_huffman = make_huffman (Array.init 288 (fun n ->
                   if n <= 143 then 8
                   else if n <= 255 then 9
                   else if n <= 279 then 7
                   else 8
                 )) 0 288 10
+(*e: constant Unzip.fixed_huffman *)
 
+(*s: function Unzip.get_bits *)
 let get_bits z n =
   while z.znbits < n do
     z.zbits <- z.zbits lor ((IO.read_byte z.zinput) lsl z.znbits);
@@ -225,7 +283,9 @@ let get_bits z n =
   z.znbits <- z.znbits - n;
   z.zbits <- z.zbits lsr n;
   b
+(*e: function Unzip.get_bits *)
 
+(*s: function Unzip.get_bit *)
 let get_bit z =
   if z.znbits = 0 then begin
     z.znbits <- 8;
@@ -235,7 +295,9 @@ let get_bit z =
   z.znbits <- z.znbits - 1;
   z.zbits <- z.zbits lsr 1;
   b
+(*e: function Unzip.get_bit *)
 
+(*s: function Unzip.get_rev_bits *)
 let rec get_rev_bits z n =
   if n = 0 then
     0
@@ -243,36 +305,50 @@ let rec get_rev_bits z n =
     (1 lsl (n - 1)) lor (get_rev_bits z (n-1))
   else
     get_rev_bits z (n-1)
+(*e: function Unzip.get_rev_bits *)
 
+(*s: function Unzip.reset_bits *)
 let reset_bits z =
   z.zbits <- 0;
   z.znbits <- 0
+(*e: function Unzip.reset_bits *)
 
+(*s: function Unzip.add_bytes *)
 let add_bytes z s p l =
   window_add_bytes z.zwindow s p l;
   Bytes.unsafe_blit s p z.zoutput z.zoutpos l;
   z.zneeded <- z.zneeded - l;
   z.zoutpos <- z.zoutpos + l
+(*e: function Unzip.add_bytes *)
 
+(*s: function Unzip.add_char *)
 let add_char z c =
   window_add_char z.zwindow c;
   Bytes.unsafe_set z.zoutput z.zoutpos c;
   z.zneeded <- z.zneeded - 1;
   z.zoutpos <- z.zoutpos + 1
+(*e: function Unzip.add_char *)
 
+(*s: function Unzip.add_dist_one *)
 let add_dist_one z n =
   let c = window_get_last_char z.zwindow in
   let s = Bytes.make n c in
   add_bytes z s 0 n
+(*e: function Unzip.add_dist_one *)
 
+(*s: function Unzip.add_dist *)
 let add_dist z d l =
   add_bytes z z.zwindow.wbuffer (z.zwindow.wpos - d) l
+(*e: function Unzip.add_dist *)
 
+(*s: function Unzip.apply_huffman *)
 let rec apply_huffman z = function
   | Found n -> n
   | NeedBit (a,b) -> apply_huffman z (if get_bit z then b else a)
   | NeedBits (n,t) -> apply_huffman z (Array.unsafe_get t (get_bits z n))
+(*e: function Unzip.apply_huffman *)
 
+(*s: function Unzip.inflate_lengths *)
 let inflate_lengths z a max =
   let i = ref 0 in
   let prev = ref 0 in
@@ -300,7 +376,9 @@ let inflate_lengths z a max =
     | _ ->
       error Invalid_data
   done
+(*e: function Unzip.inflate_lengths *)
 
+(*s: function Unzip.inflate_loop *)
 let rec inflate_loop z =
   match z.zstate with
   | Head ->
@@ -401,7 +479,9 @@ let rec inflate_loop z =
       if z.zdist > window_available z.zwindow then error Invalid_data;
       z.zstate <- (if z.zdist = 1 then DistOne else Dist);
       inflate_loop z
+(*e: function Unzip.inflate_loop *)
 
+(*s: function Unzip.inflate_data *)
 let inflate_data z s pos len =
   if pos < 0 || len < 0 || pos + len > Bytes.length s then invalid_arg "inflate_data";
   z.zneeded <- len;
@@ -412,7 +492,9 @@ let inflate_data z s pos len =
     len - z.zneeded
   with
     IO.No_more_input -> error Truncated_data
+(*e: function Unzip.inflate_data *)
 
+(*s: function Unzip.inflate_init *)
 let inflate_init ?(header=true) ch = 
   {
     zfinal = false;
@@ -430,7 +512,9 @@ let inflate_init ?(header=true) ch =
     zlengths = Array.make 19 (-1);
     zwindow = window_create (1 lsl 15)
   }
+(*e: function Unzip.inflate_init *)
 
+(*s: function Unzip.inflate *)
 let inflate ?(header=true) ch =
   let z = inflate_init ~header ch in
   let s = Bytes.create 1 in
@@ -447,3 +531,5 @@ let inflate ?(header=true) ch =
     ~close:(fun () ->
       IO.close_in ch
     )
+(*e: function Unzip.inflate *)
+(*e: version_control/unzip.ml *)

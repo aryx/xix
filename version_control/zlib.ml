@@ -1,3 +1,4 @@
+(*s: version_control/zlib.ml *)
 (***********************************************************************)
 (*                                                                     *)
 (*                         The CamlZip library                         *)
@@ -11,20 +12,26 @@
 (*                                                                     *)
 (***********************************************************************)
 
+(*s: exception Zlib.Error *)
 (* $Id$ *)
 
 exception Error of string * string
+(*e: exception Zlib.Error *)
 
+(*s: toplevel Zlib._1 *)
 let _ =
   Callback.register_exception "Zlib.Error" (Error("",""))
+(*e: toplevel Zlib._1 *)
 
 type stream
 
+(*s: type Zlib.flush_command *)
 type flush_command =
     Z_NO_FLUSH
   | Z_SYNC_FLUSH
   | Z_FULL_FLUSH
   | Z_FINISH
+(*e: type Zlib.flush_command *)
 
 external deflate_init: int -> bool -> stream = "camlzip_deflateInit"
 external deflate:
@@ -45,8 +52,11 @@ external update_crc: int32 -> bytes -> int -> int -> int32
 external update_crc_string: int32 -> string -> int -> int -> int32
                    = "camlzip_update_crc32"
 
+(*s: constant Zlib.buffer_size *)
 let buffer_size = 1024
+(*e: constant Zlib.buffer_size *)
 
+(*s: function Zlib.compress *)
 let compress ?(level = 6) ?(header = true) refill flush =
   let inbuf = Bytes.create buffer_size
   and outbuf = Bytes.create buffer_size in
@@ -69,7 +79,9 @@ let compress ?(level = 6) ?(header = true) refill flush =
   in
     compr 0 0;
     deflate_end zs
+(*e: function Zlib.compress *)
 
+(*s: function Zlib.compress_direct *)
 let compress_direct  ?(level = 6) ?(header = true) flush =
   let outbuf = Bytes.create buffer_size in
   let zs = deflate_init level header in
@@ -89,7 +101,9 @@ let compress_direct  ?(level = 6) ?(header = true) flush =
     if not finished then compr_finish()
   in
   compr, compr_finish
+(*e: function Zlib.compress_direct *)
 
+(*s: function Zlib.uncompress *)
 let uncompress ?(header = true) refill flush =
   let inbuf = Bytes.create buffer_size
   and outbuf = Bytes.create buffer_size in
@@ -116,3 +130,5 @@ let uncompress ?(header = true) refill flush =
   in
     uncompr 0 0;
     inflate_end zs
+(*e: function Zlib.uncompress *)
+(*e: version_control/zlib.ml *)

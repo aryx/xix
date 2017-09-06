@@ -1,3 +1,4 @@
+(*s: version_control/sha1.ml *)
 (*
 Copyright (c) 2008 Daniel C. Bünzli
 
@@ -34,27 +35,36 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
+(*s: type Sha1.t *)
 (*****************************************************************************)
 
 type t = bytes
+(*e: type Sha1.t *)
 
+(*s: function Sha1.is_sha *)
 let is_sha x =
   (* less: extra check? forbidden characters? *)
   Bytes.length x = 20
+(*e: function Sha1.is_sha *)
 
 (*****************************************************************************)
 (* Entry points *)
+(*s: function Sha1.read *)
 (*****************************************************************************)
 let read ch =
   let s = IO.really_nread ch 20 in
   assert (is_sha s);
   s
+(*e: function Sha1.read *)
 
+(*s: function Sha1.write *)
 let write ch x =
   IO.nwrite ch x
+(*e: function Sha1.write *)
 
 (* start of copy-pasted code from uuidm *)
 
+(*s: function Sha1.sha1 *)
 (* sha-1 digest. Based on pseudo-code of RFC 3174.
    Slow and ugly but does the job. *)
 let sha1 s =
@@ -159,3 +169,5 @@ let sha1 s =
   i2s h 12 !h3;
   i2s h 16 !h4;
   Bytes.unsafe_to_string h
+(*e: function Sha1.sha1 *)
+(*e: version_control/sha1.ml *)

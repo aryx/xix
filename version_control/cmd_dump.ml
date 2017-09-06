@@ -1,9 +1,15 @@
+(*s: version_control/cmd_dump.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: constant Cmd_dump.raw *)
 let raw = ref false
+(*e: constant Cmd_dump.raw *)
+(*s: constant Cmd_dump.index *)
 let index = ref false
+(*e: constant Cmd_dump.index *)
 
+(*s: function Cmd_dump.dump_object *)
 (* =~ git cat-file -p *)
 let dump_object file =
   let chan = open_in file in
@@ -22,7 +28,9 @@ let dump_object file =
     end
   with Unzip.Error _err ->
     failwith "unzip error"
+(*e: function Cmd_dump.dump_object *)
 
+(*s: function Cmd_dump.dump_index *)
 (* =~ dulwich dump-index, =~ git ls-files --stage *)
 let dump_index file =
   let chan = open_in file in
@@ -30,12 +38,16 @@ let dump_index file =
   let index = Index.read input in
   let v = Dump.vof_index index in
   pr (Ocaml.string_of_v v)
+(*e: function Cmd_dump.dump_index *)
 
+(*s: function Cmd_dump.dump *)
 let dump file =
   if !index
   then dump_index file
   else dump_object file
+(*e: function Cmd_dump.dump *)
 
+(*s: constant Cmd_dump.cmd *)
 let cmd = { Cmd.
   name = "dump";
   help = " <file>";
@@ -50,3 +62,5 @@ let cmd = { Cmd.
                        (String.concat ";" args))
   );
 }
+(*e: constant Cmd_dump.cmd *)
+(*e: version_control/cmd_dump.ml *)

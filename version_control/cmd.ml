@@ -1,4 +1,6 @@
+(*s: version_control/cmd.ml *)
 
+(*s: type Cmd.t *)
 (* alt: 
  *  - in ocaml-git, use of Term.() and $ to not require
  *    globals for flags?
@@ -10,6 +12,10 @@ type t = {
   f: string list -> unit;
   (* less: man: when do git -help get short help, and with --help man page *)
 }
+(*e: type Cmd.t *)
 
+(*s: exception Cmd.ShowUsage *)
 (* f can raise ShowUsage which will be catched by caller in main.ml *)
 exception ShowUsage
+(*e: exception Cmd.ShowUsage *)
+(*e: version_control/cmd.ml *)

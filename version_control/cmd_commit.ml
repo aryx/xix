@@ -1,6 +1,8 @@
+(*s: version_control/cmd_commit.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: function Cmd_commit.commit *)
 let commit r author committer message =
   (* todo: imitate git output
    *   [master 0b50159] xxx
@@ -9,11 +11,19 @@ let commit r author committer message =
    *)
   (* todo: nothing to commit, working directory clean *)
   Repository.commit_index r author committer message
+(*e: function Cmd_commit.commit *)
 
+(*s: constant Cmd_commit.author *)
 let author = ref ""
+(*e: constant Cmd_commit.author *)
+(*s: constant Cmd_commit.committer *)
 let committer = ref ""
+(*e: constant Cmd_commit.committer *)
+(*s: constant Cmd_commit.message *)
 let message = ref ""
+(*e: constant Cmd_commit.message *)
 
+(*s: constant Cmd_commit.cmd *)
 let cmd = { Cmd.
   name = "commit";
   help = " [options]"; (* less: <pathspec>... *)
@@ -60,3 +70,5 @@ let cmd = { Cmd.
     | xs -> raise Cmd.ShowUsage
   );
 }
+(*e: constant Cmd_commit.cmd *)
+(*e: version_control/cmd_commit.ml *)

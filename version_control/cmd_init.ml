@@ -1,6 +1,8 @@
+(*s: version_control/cmd_init.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: constant Cmd_init.cmd *)
 (* less: let bare = ref false *)
 
 let cmd = { Cmd.
@@ -18,3 +20,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
+(*e: constant Cmd_init.cmd *)
+(*e: version_control/cmd_init.ml *)

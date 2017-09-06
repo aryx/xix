@@ -1,3 +1,4 @@
+(*s: version_control/diff_simple.ml *)
 module type Comparable =
   sig
     type t
@@ -107,3 +108,4 @@ module Make(Item : Comparable) = struct
         [Equal unchanged_lines] @
         get_diff old_lines_postsubseq new_lines_postsubseq
 end
+(*e: version_control/diff_simple.ml *)

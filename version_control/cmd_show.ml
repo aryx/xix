@@ -1,6 +1,8 @@
+(*s: version_control/cmd_show.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*s: function Cmd_show.show *)
 let show r objectish =
   let obj = Repository.read_objectish r objectish in
   match obj with
@@ -23,7 +25,9 @@ let show r objectish =
         tree1 tree2 
     in
     changes |> List.iter Diff_unified.show_change
+(*e: function Cmd_show.show *)
 
+(*s: constant Cmd_show.cmd *)
 let cmd = { Cmd.
   name = "show";
   help = " <objectish>";
@@ -40,3 +44,5 @@ let cmd = { Cmd.
       )
   );
 }
+(*e: constant Cmd_show.cmd *)
+(*e: version_control/cmd_show.ml *)

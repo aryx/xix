@@ -1,5 +1,7 @@
+(*s: version_control/index.mli *)
 
 (** The type for file-system stat information. *)
+(*s: type Index.stat_info (version_control/index.mli) *)
 type stat_info = {
   mode : mode;
   ctime: time;
@@ -10,6 +12,8 @@ type stat_info = {
   gid  : Int32.t;
   size : Int32.t;
 }
+(*e: type Index.stat_info (version_control/index.mli) *)
+(*s: type Index.mode (version_control/index.mli) *)
   and mode =
     (* no directory here *)
     | Normal
@@ -17,11 +21,15 @@ type stat_info = {
     | Link
     | Gitlink
   (** The type for a time represented by its [lsb32] and [nsec] parts. *)
+(*e: type Index.mode (version_control/index.mli) *)
+(*s: type Index.time (version_control/index.mli) *)
   and time = {
     lsb32: Int32.t;
     nsec : Int32.t;
   }
+(*e: type Index.time (version_control/index.mli) *)
     
+(*s: type Index.entry (version_control/index.mli) *)
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
@@ -30,23 +38,48 @@ type entry = {
   stats : stat_info;
   stage : int;
 }
+(*e: type Index.entry (version_control/index.mli) *)
 
+(*s: type Index.t (version_control/index.mli) *)
 (* the entries are sorted *)
 type t = entry list
+(*e: type Index.t (version_control/index.mli) *)
 
+(*s: signature Index.empty *)
 val empty: t
+(*e: signature Index.empty *)
+(*s: signature Index.mk_entry *)
 val mk_entry: Common.filename -> Sha1.t -> Unix.stats -> entry
+(*e: signature Index.mk_entry *)
 
+(*s: signature Index.stat_info_of_lstats *)
 val stat_info_of_lstats: Unix.stats -> stat_info
+(*e: signature Index.stat_info_of_lstats *)
+(*s: signature Index.mode_of_perm *)
 val mode_of_perm: Tree.perm -> mode
+(*e: signature Index.mode_of_perm *)
+(*s: signature Index.perm_of_mode *)
 val perm_of_mode: mode -> Tree.perm
+(*e: signature Index.perm_of_mode *)
 
+(*s: signature Index.read *)
 val read: IO.input -> t
 (* will write the header, and sha checksum at the end *)
+(*e: signature Index.read *)
+(*s: signature Index.write *)
+(* will write the header, and sha checksum at the end *)
 val write: t -> unit IO.output -> unit
+(*e: signature Index.write *)
 
+(*s: signature Index.remove_entry *)
 val remove_entry: t -> Common.filename -> t
+(*e: signature Index.remove_entry *)
+(*s: signature Index.add_entry *)
 val add_entry: t -> entry -> t
+(*e: signature Index.add_entry *)
 
+(*s: signature Index.tree_of_index *)
 val tree_of_index: t -> (* add_obj *)(Tree.t -> Tree.hash) -> Tree.hash
 (* todo: index_of_tree *)
+(*e: signature Index.tree_of_index *)
+(*e: version_control/index.mli *)

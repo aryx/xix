@@ -1,3 +1,4 @@
+(*s: version_control/index.ml *)
 (*
  * Copyright (c) 2013-2017 Thomas Gazagnaire <thomas@gazagnaire.org>
  *
@@ -29,6 +30,7 @@ open Common
 (*****************************************************************************)
 
 (** The type for file-system stat information. *)
+(*s: type Index.stat_info *)
 type stat_info = {
   mode : mode;
   ctime: time;
@@ -39,18 +41,24 @@ type stat_info = {
   gid  : Int32.t;
   size : Int32.t;
 }
+(*e: type Index.stat_info *)
+(*s: type Index.mode *)
   and mode =
     | Normal
     | Exec
     | Link
 
     | Gitlink (*?? submodule? *)
+(*e: type Index.mode *)
   (** The type for a time represented by its [lsb32] and [nsec] parts. *)
+(*s: type Index.time *)
   and time = {
     lsb32: Int32.t;
     nsec : Int32.t;
   }
+(*e: type Index.time *)
     
+(*s: type Index.entry *)
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
@@ -59,18 +67,24 @@ type entry = {
   stats : stat_info;
   stage : int; (*?? *)
 }
+(*e: type Index.entry *)
 
 (* less: extensions *)
 
+(*s: type Index.t *)
 (* the entries are sorted (see compare_entries below) *)
 type t = entry list
+(*e: type Index.t *)
 
+(*s: constant Index.empty *)
 let empty = []
+(*e: constant Index.empty *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function Index.stat_info_of_lstats *)
 (*
 (* Index entries are sorted by the byte sequence that comprises the
    entry name; with a secondary comparison of the stage bits from the
@@ -99,21 +113,27 @@ let stat_info_of_lstats stats =
       gid = Int32.of_int stats.Unix.st_gid;
       size = Int32.of_int stats.Unix.st_size;
     }
+(*e: function Index.stat_info_of_lstats *)
 
+(*s: function Index.mk_entry *)
 let mk_entry relpath sha stats =
   { stats = stat_info_of_lstats stats;
     id = sha;
     stage = 0; (* TODO? *)
     name = relpath
   }
+(*e: function Index.mk_entry *)
 
+(*s: function Index.perm_of_mode *)
 let perm_of_mode mode = 
   match mode with
   | Normal -> Tree.Normal
   | Exec -> Tree.Exec
   | Link -> Tree.Link
   | Gitlink -> Tree.Commit (* sure? *)
+(*e: function Index.perm_of_mode *)
 
+(*s: function Index.mode_of_perm *)
 let mode_of_perm perm = 
   match perm with
   | Tree.Normal -> Normal
@@ -121,10 +141,12 @@ let mode_of_perm perm =
   | Tree.Link -> Link
   | Tree.Commit -> Gitlink
   | Tree.Dir -> failwith "index entry does not support Tree.dir perm"
+(*e: function Index.mode_of_perm *)
 
 
 (*****************************************************************************)
 (* Add/Del *)
+(*s: function Index.remove_entry *)
 (*****************************************************************************)
 let rec remove_entry idx name =
   match idx with
@@ -136,7 +158,9 @@ let rec remove_entry idx name =
     (* the entries are sorted *)
     | Inf -> failwith (spf "The file %s is not in the index" name)
     )
+(*e: function Index.remove_entry *)
 
+(*s: function Index.add_entry *)
 let rec add_entry idx entry =
   match idx with
   | [] -> [entry]
@@ -148,17 +172,25 @@ let rec add_entry idx entry =
     (* the entries are sorted *)
     | Inf -> entry::x::xs
     )
+(*e: function Index.add_entry *)
 
 (*****************************************************************************)
 (* tree of index *)
 (*****************************************************************************)
 
+(*s: type Index.dir *)
 type dir = dir_entry list ref
+(*e: type Index.dir *)
+(*s: type Index.dir_entry *)
   and dir_entry =
     | Subdir of string (* base *)
     | File of string (* base *) * entry
+(*e: type Index.dir_entry *)
+(*s: type Index.dirs *)
 type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
+(*e: type Index.dirs *)
 
+(*s: function Index.add_dir *)
 (* the code in this section derives from dulwich *)
 
 let rec add_dir dirs dirpath =
@@ -173,7 +205,9 @@ let rec add_dir dirs dirpath =
     let dir = add_dir dirs parent in
     dir := Subdir (base)::!dir;
     newdir
+(*e: function Index.add_dir *)
 
+(*s: function Index.build_trees *)
 let rec build_trees dirs dirpath add_tree_obj =
   let dir = Hashtbl.find dirs dirpath in
   (* entries of a Tree.t must be sorted, but entries of an index too,
@@ -195,8 +229,10 @@ let rec build_trees dirs dirpath add_tree_obj =
     )
   in
   add_tree_obj tree
+(*e: function Index.build_trees *)
 
 
+(*s: function Index.tree_of_index *)
 let tree_of_index idx add_tree_obj =
   let (dirs: dirs) = Hashtbl.create 11 in
   Hashtbl.add dirs "." (ref []);
@@ -209,6 +245,7 @@ let tree_of_index idx add_tree_obj =
   );
   (* build trees *)
   build_trees dirs "." add_tree_obj
+(*e: function Index.tree_of_index *)
 
 (*****************************************************************************)
 (* index of tree *)
@@ -217,6 +254,7 @@ let tree_of_index idx add_tree_obj =
 
 (*****************************************************************************)
 (* IO *)
+(*s: function Index.read_time *)
 (*****************************************************************************)
 
 let read_time ch =
@@ -224,11 +262,15 @@ let read_time ch =
   let lsb32 = IO.BigEndian.read_real_i32 ch in
   let nsec = IO.BigEndian.read_real_i32 ch in
   { lsb32; nsec }
+(*e: function Index.read_time *)
 
+(*s: function Index.write_time *)
 let write_time ch time =
   IO.BigEndian.write_real_i32 ch time.lsb32;
   IO.BigEndian.write_real_i32 ch time.nsec
+(*e: function Index.write_time *)
 
+(*s: function Index.read_mode *)
 let read_mode ch =
   let _zero = IO.BigEndian.read_ui16 ch in
   let n = IO.BigEndian.read_ui16 ch in
@@ -242,7 +284,9 @@ let read_mode ch =
     | d     -> failwith (spf "Index.mode: invalid permission (%d)" d)
     )
   | m -> failwith (spf "Index.mode: invalid (%d)" m)
+(*e: function Index.read_mode *)
 
+(*s: function Index.write_mode *)
 let write_mode ch mode =
   IO.BigEndian.write_ui16 ch 0;
   let n = 
@@ -253,7 +297,9 @@ let write_mode ch mode =
     | Gitlink -> 0b1110__000__000_000_000 
   in
   IO.BigEndian.write_ui16 ch n
+(*e: function Index.write_mode *)
 
+(*s: function Index.read_stat_info *)
 let read_stat_info ch =
   let ctime = read_time ch in
   let mtime = read_time ch in
@@ -265,7 +311,9 @@ let read_stat_info ch =
   let gid = IO.BigEndian.read_real_i32 ch in
   let size = IO.BigEndian.read_real_i32 ch in
   { mtime; ctime; dev; inode; mode; uid; gid; size }
+(*e: function Index.read_stat_info *)
 
+(*s: function Index.write_stat_info *)
 let write_stat_info ch stats =
   write_time ch stats.ctime;
   write_time ch stats.mtime;
@@ -276,8 +324,10 @@ let write_stat_info ch stats =
   IO.BigEndian.write_real_i32 ch stats.gid;
   IO.BigEndian.write_real_i32 ch stats.size;
   ()
+(*e: function Index.write_stat_info *)
  
 
+(*s: function Index.read_entry *)
 let read_entry ch =
   let stats = read_stat_info ch in
   let id = Sha1.read ch in
@@ -299,7 +349,9 @@ let read_entry ch =
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
   { stats; id; stage; name }
+(*e: function Index.read_entry *)
 
+(*s: function Index.write_entry *)
 let write_entry ch e =
   write_stat_info ch e.stats;
   Sha1.write ch e.id;
@@ -314,10 +366,12 @@ let write_entry ch e =
   in
   IO.nwrite ch (Bytes.make pad '\000');
   IO.write ch '\000'
+(*e: function Index.write_entry *)
 
 
 
 
+(*s: function Index.read_entries *)
 let read_entries ch =
   let n = IO.BigEndian.read_i32 ch in
   let rec loop acc n =
@@ -327,7 +381,9 @@ let read_entries ch =
       let entry = read_entry ch in
       loop (entry :: acc) (n - 1) in
   loop [] n
+(*e: function Index.read_entries *)
 
+(*s: function Index.read *)
 let read ch =
   let header = IO.really_nread_string ch 4 in
   if header <> "DIRC"
@@ -339,8 +395,10 @@ let read ch =
   (* todo: read_extensions but need know when reach last 20 bytes *)
   (* todo: check hash correctly stored in last 20 bytes *)
   entries
+(*e: function Index.read *)
 
 
+(*s: function Index.write *)
 let write idx ch =
   let n = List.length idx in
   let body =
@@ -354,3 +412,5 @@ let write idx ch =
   let sha = Sha1.sha1 body in
   IO.nwrite ch body;
   Sha1.write ch sha
+(*e: function Index.write *)
+(*e: version_control/index.ml *)

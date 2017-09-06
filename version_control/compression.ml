@@ -1,3 +1,4 @@
+(*s: version_control/compression.ml *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -26,11 +27,14 @@ open Common
 
 (*****************************************************************************)
 (* Entry points *)
+(*s: function Compression.decompress *)
 (*****************************************************************************)
 
 let decompress ch = 
   Unzip.inflate ch
+(*e: function Compression.decompress *)
 
+(*s: function Compression.compress *)
 let compress ic oc =
   Zlib.compress 
     (fun buf -> 
@@ -39,3 +43,5 @@ let compress ic oc =
     )
     (fun buf len -> 
       IO.output oc buf 0 len |> ignore)
+(*e: function Compression.compress *)
+(*e: version_control/compression.ml *)

@@ -55,9 +55,9 @@ open Common
 
 (*****************************************************************************)
 (* Helpers *)
-(*s: constant Main.commands *)
 (*****************************************************************************)
 
+(*s: constant Main.commands *)
 let commands = List.flatten [
   Cmds.main_commands;
   Cmds.extra_commands;
@@ -78,9 +78,9 @@ let usage () =
 
 (*****************************************************************************)
 (* Entry point *)
-(*s: function Main.main *)
 (*****************************************************************************)
 
+(*s: function Main.main *)
 let main () =
   if Array.length Sys.argv < 2
   then begin

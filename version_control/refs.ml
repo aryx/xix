@@ -37,8 +37,9 @@ let is_valid_refname str =
 
 (*****************************************************************************)
 (* Dumper *)
-(*s: function Refs.string_of_ref *)
 (*****************************************************************************)
+
+(*s: function Refs.string_of_ref *)
 let string_of_ref = function
   | Head -> "HEAD"
   | Ref x -> x
@@ -46,9 +47,9 @@ let string_of_ref = function
 
 (*****************************************************************************)
 (* IO *)
-(*s: function Refs.read *)
 (*****************************************************************************)
 
+(*s: function Refs.read *)
 let read ch =
   let str = IO.read_all ch in
   (* less: check finish by newline? *)

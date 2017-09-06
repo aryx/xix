@@ -1,5 +1,4 @@
 (*s: version_control/diff_myers.ml *)
-(*s: type Diff_myers.common *)
 (*
  * Copyright (C) 2016 OOHASHI Daichi
  *
@@ -21,17 +20,18 @@
  * THE SOFTWARE.
  *)
 
+(*s: type Diff_myers.common *)
 type 'a common =
-(*e: type Diff_myers.common *)
   [ `Common of int * int * 'a ]
+(*e: type Diff_myers.common *)
 
 (*s: type Diff_myers.edit *)
 type 'a edit =
-(*e: type Diff_myers.edit *)
   [ `Added of int * 'a
   | `Removed of int * 'a
   | 'a common
   ]
+(*e: type Diff_myers.edit *)
 
 module type SeqType = sig
   type t

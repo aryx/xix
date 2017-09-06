@@ -84,7 +84,6 @@ let empty = []
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Index.stat_info_of_lstats *)
 (*
 (* Index entries are sorted by the byte sequence that comprises the
    entry name; with a secondary comparison of the stage bits from the
@@ -95,6 +94,7 @@ let compare_entries e1 e2 =
   | i -> i
 *)
 
+(*s: function Index.stat_info_of_lstats *)
 let stat_info_of_lstats stats = 
     { ctime = { lsb32 = Int32.of_float stats.Unix.st_ctime; nsec = 0l };
       mtime = { lsb32 = Int32.of_float stats.Unix.st_mtime; nsec = 0l };
@@ -146,8 +146,9 @@ let mode_of_perm perm =
 
 (*****************************************************************************)
 (* Add/Del *)
-(*s: function Index.remove_entry *)
 (*****************************************************************************)
+
+(*s: function Index.remove_entry *)
 let rec remove_entry idx name =
   match idx with
   | [] -> failwith (spf "The file %s is not in the index" name)
@@ -254,9 +255,9 @@ let tree_of_index idx add_tree_obj =
 
 (*****************************************************************************)
 (* IO *)
-(*s: function Index.read_time *)
 (*****************************************************************************)
 
+(*s: function Index.read_time *)
 let read_time ch =
   (* less: unsigned actually *)
   let lsb32 = IO.BigEndian.read_real_i32 ch in

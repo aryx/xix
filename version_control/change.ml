@@ -8,8 +8,8 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
-(*s: type Change.content *)
 (*****************************************************************************)
+(*s: type Change.content *)
 type content = bytes
 (*e: type Change.content *)
 
@@ -31,7 +31,7 @@ type t =
   | Add of entry
   | Del of entry
   | Modify of entry * entry (* before / after *)
-(*e: type Change.t *)
   (* less: Rename, Copy *)
   (*| Identical of Tree.entry *)
+(*e: type Change.t *)
 (*e: version_control/change.ml *)

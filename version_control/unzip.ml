@@ -1,5 +1,4 @@
 (*s: version_control/unzip.ml *)
-(*s: type Unzip.huffman *)
 (*
  * Unzip - inflate format decompression algorithm
  * Copyright (C) 2004 Nicolas Cannasse
@@ -21,6 +20,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
+(*s: type Unzip.huffman *)
 type huffman =
   | Found of int
   | NeedBit of huffman * huffman
@@ -246,9 +246,9 @@ let window_checksum w =
   w.wcrc
 (*e: function Unzip.window_checksum *)
 
-(*s: constant Unzip.len_extra_bits_tbl *)
 (* ************************************************************************ *)
 
+(*s: constant Unzip.len_extra_bits_tbl *)
 let len_extra_bits_tbl = [|0;0;0;0;0;0;0;0;1;1;1;1;2;2;2;2;3;3;3;3;4;4;4;4;5;5;5;5;0;-1;-1|]
 (*e: constant Unzip.len_extra_bits_tbl *)
 (*s: constant Unzip.len_base_val_tbl *)

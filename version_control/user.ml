@@ -52,8 +52,9 @@ type t = {
 
 (*****************************************************************************)
 (* IO *)
-(*s: function User.sign_of_char *)
 (*****************************************************************************)
+
+(*s: function User.sign_of_char *)
 let sign_of_char = function
   | '+' -> Plus
   | '-' -> Minus
@@ -104,9 +105,9 @@ let write ch user =
 
 (*****************************************************************************)
 (* Show *)
-(*s: function User.string_of_date *)
 (*****************************************************************************)
 
+(*s: function User.string_of_date *)
 let string_of_date (date, tz) =
   let f = Int64.to_float date in
   let tm = Unix.localtime f in

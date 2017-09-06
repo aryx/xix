@@ -27,9 +27,9 @@ open Common
 
 (*****************************************************************************)
 (* Entry points *)
-(*s: function Compression.decompress *)
 (*****************************************************************************)
 
+(*s: function Compression.decompress *)
 let decompress ch = 
   Unzip.inflate ch
 (*e: function Compression.decompress *)

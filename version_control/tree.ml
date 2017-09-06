@@ -128,9 +128,9 @@ let rec walk_trees read_tree dirpath f xs ys =
 
 (*****************************************************************************)
 (* IO *)
-(*s: function Tree.perm_of_string *)
 (*****************************************************************************)
 
+(*s: function Tree.perm_of_string *)
 let perm_of_string = function
   | "44"
   | "100644" -> Normal
@@ -196,9 +196,9 @@ let write t ch =
 
 (*****************************************************************************)
 (* Show *)
-(*s: function Tree.show *)
 (*****************************************************************************)
 
+(*s: function Tree.show *)
 let show xs =
   xs |> List.iter (fun entry ->
     pr (spf "%s%s" entry.name

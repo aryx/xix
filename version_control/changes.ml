@@ -16,9 +16,9 @@ open Common
 
 (*****************************************************************************)
 (* Helpers *)
-(*s: function Changes.skip_tree_and_adjust_path *)
 (*****************************************************************************)
 
+(*s: function Changes.skip_tree_and_adjust_path *)
 let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   match entry_opt with
   | Some { Tree.perm = Tree.Dir } -> None

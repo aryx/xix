@@ -21,9 +21,9 @@ open Common
 
 (*****************************************************************************)
 (* Helpers *)
-(*s: function Diff_unified.print *)
 (*****************************************************************************)
 
+(*s: function Diff_unified.print *)
 let print = function
   | Diff.Equal s -> 
     print_string (" " ^ s)
@@ -87,9 +87,9 @@ let show_unified_diff diffs =
 
 (*****************************************************************************)
 (* Entry points *)
-(*s: function Diff_unified.show_change *)
 (*****************************************************************************)
 
+(*s: function Diff_unified.show_change *)
 let show_change change =
   (* less: if mode is gitlink? *)
   let (old_path, old_content), (new_path, new_content) = 

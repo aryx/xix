@@ -21,6 +21,7 @@ type graph_walker = {
 }
 (*e: type Client_local.graph_walker *)
 
+(*s: function Client_local.ml_graph_walker *)
 let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
   (* less: start just from HEAD? *)
   let heads = 
@@ -63,8 +64,7 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
         todos_next_round := []
     );
   }
-
-
+(*e: function Client_local.ml_graph_walker *)
 
 (*s: function Client_local.collect_filetree *)
 let rec collect_filetree read_tree treeid have_sha =
@@ -194,9 +194,9 @@ let fetch_objects src dst =
 
 (*****************************************************************************)
 (* Entry point *)
-(*s: function Client_local.mk_client *)
 (*****************************************************************************)
 
+(*s: function Client_local.mk_client *)
 let mk_client path =
   { Client.
     url = path;

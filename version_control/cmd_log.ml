@@ -2,9 +2,9 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-(*s: function Cmd_log.print_commit *)
 (* todo: git log --graph --oneline --decorate --all *)
 
+(*s: function Cmd_log.print_commit *)
 let print_commit sha commit =
   pr (spf "commit: %s" (Hexsha.of_sha sha));
   (match commit.Commit.parents with

@@ -8,9 +8,9 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
-(*s: type Objects.t *)
 (*****************************************************************************)
 
+(*s: type Objects.t *)
 type t = 
   | Blob   of Blob.t
   | Commit of Commit.t
@@ -24,9 +24,9 @@ type t =
 
 (*****************************************************************************)
 (* IO *)
-(*s: function Objects.read *)
 (*****************************************************************************)
 
+(*s: function Objects.read *)
 let read ch =
   let str = IO_.read_string_and_stop_char ch ' ' in
   let n = IO_.read_int_and_nullbyte ch in

@@ -105,9 +105,9 @@ let collect_ancestors read_commit top_commits hdone =
 
 (*****************************************************************************)
 (* IO *)
-(*s: function Commit.read *)
 (*****************************************************************************)
 
+(*s: function Commit.read *)
 let read ch =
   let tree = 
     IO_.read_key_space_value_newline ch "tree" Hexsha.read in
@@ -169,9 +169,9 @@ let write commit ch =
 
 (*****************************************************************************)
 (* Show *)
-(*s: function Commit.show *)
 (*****************************************************************************)
 
+(*s: function Commit.show *)
 let show x =
   pr (spf "Author: %s <%s>" x.author.User.name x.author.User.email);
   (* less: date of author or committer? *)

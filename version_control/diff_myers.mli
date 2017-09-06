@@ -1,5 +1,4 @@
 (*s: version_control/diff_myers.mli *)
-(*s: type Diff_myers.common (version_control/diff_myers.mli) *)
 (**
    An implementation of Eugene Myers' O(ND) Difference Algorithm\[1\].
    This implementation is a port of util.lcs module of
@@ -8,19 +7,22 @@
    - \[1\] Eugene Myers, An O(ND) Difference Algorithm and Its Variations, Algorithmica Vol. 1 No. 2, pp. 251-266, 1986.
  *)
 
+(*s: type Diff_myers.common (version_control/diff_myers.mli) *)
 type 'a common = [
-(*e: type Diff_myers.common (version_control/diff_myers.mli) *)
     `Common of int * int * 'a
   ]
-(*s: type Diff_myers.edit (version_control/diff_myers.mli) *)
+(*e: type Diff_myers.common (version_control/diff_myers.mli) *)
+
 (** an element of lcs of seq1 and seq2 *)
 
+(*s: type Diff_myers.edit (version_control/diff_myers.mli) *)
 type 'a edit =
-(*e: type Diff_myers.edit (version_control/diff_myers.mli) *)
   [ `Removed of int * 'a
   | `Added of int * 'a
   | 'a common
   ]
+(*e: type Diff_myers.edit (version_control/diff_myers.mli) *)
+
 (** an element of diff of seq1 and seq2. *)
 
 module type SeqType = sig

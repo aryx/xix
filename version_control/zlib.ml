@@ -13,8 +13,6 @@
 (***********************************************************************)
 
 (*s: exception Zlib.Error *)
-(* $Id$ *)
-
 exception Error of string * string
 (*e: exception Zlib.Error *)
 

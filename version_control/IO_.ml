@@ -8,9 +8,9 @@ open Common
 
 (*****************************************************************************)
 (* Entry points *)
-(*s: function IO_.with_close_out *)
 (*****************************************************************************)
 
+(*s: function IO_.with_close_out *)
 let with_close_out f ch =
   f ch;
   let res = IO.close_out ch in

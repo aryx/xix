@@ -12,8 +12,9 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
-(*s: type Repository.t *)
 (*****************************************************************************)
+
+(*s: type Repository.t *)
 type t = {
   (* less: on bare repo, this could be None *)
   worktree: Common.filename;
@@ -49,6 +50,7 @@ type objectish =
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
 (*s: function Repository.hexsha_to_filename *)
 (* for loose objects *)
 let hexsha_to_filename r hexsha =
@@ -126,8 +128,9 @@ let rec walk_dir f dir =
 
 (*****************************************************************************)
 (* Refs *)
-(*s: function Repository.read_ref *)
 (*****************************************************************************)
+
+(*s: function Repository.read_ref *)
 let read_ref r aref =
   (* less: packed refs *)
   let file = ref_to_filename r aref in
@@ -241,8 +244,9 @@ let all_refs r =
 
 (*****************************************************************************)
 (* Objects *)
-(*s: function Repository.read_obj *)
 (*****************************************************************************)
+
+(*s: function Repository.read_obj *)
 let read_obj r h =
   (* todo: look for packed obj *)
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
@@ -317,8 +321,9 @@ let has_obj r h =
 
 (*****************************************************************************)
 (* Index *)
-(*s: function Repository.read_index *)
 (*****************************************************************************)
+
+(*s: function Repository.read_index *)
 let read_index r =
   r.index
 (*e: function Repository.read_index *)
@@ -367,9 +372,9 @@ let add_in_index r relpaths =
 
 (*****************************************************************************)
 (* Commit *)
-(*s: function Repository.commit_index *)
 (*****************************************************************************)
 
+(*s: function Repository.commit_index *)
 let commit_index r author committer message =
   let aref = Refs.Head in
   let tree = Index.tree_of_index r.index 
@@ -405,9 +410,9 @@ let commit_index r author committer message =
   
 (*****************************************************************************)
 (* Checkout and reset *)
-(*s: function Repository.build_file_from_blob *)
 (*****************************************************************************)
 
+(*s: function Repository.build_file_from_blob *)
 let build_file_from_blob fullpath blob perm =
   let oldstat =
     try 
@@ -494,9 +499,9 @@ let set_worktree_and_index_to_tree r tree =
 
 (*****************************************************************************)
 (* Repo init/open *)
-(*s: function Repository.init *)
 (*****************************************************************************)
 
+(*s: function Repository.init *)
 let init root =
   if not (Sys.file_exists root)
   then Unix.mkdir root dirperm;

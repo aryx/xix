@@ -33,9 +33,9 @@ open Common
 
 (*****************************************************************************)
 (* Types *)
-(*s: type Diff.item *)
 (*****************************************************************************)
 
+(*s: type Diff.item *)
 type item = string
 (*e: type Diff.item *)
 
@@ -53,8 +53,9 @@ type diff = diff_elem list
 
 (*****************************************************************************)
 (* Helpers *)
-(*s: function Diff.split_lines *)
 (*****************************************************************************)
+
+(*s: function Diff.split_lines *)
 let split_lines str =
   (* alt: let xs = Str.full_split (Str.regexp "\n") str in *)
   let rec aux start = 

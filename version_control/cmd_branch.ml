@@ -45,10 +45,9 @@ let delete_branch r name force =
   pr (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
 (*e: function Cmd_branch.delete_branch *)
 
-(*s: constant Cmd_branch.del_flag *)
 (* less: rename_branch *)
 
-
+(*s: constant Cmd_branch.del_flag *)
 let del_flag = ref false
 (*e: constant Cmd_branch.del_flag *)
 (*s: constant Cmd_branch.del_force *)

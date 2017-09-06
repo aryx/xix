@@ -2,9 +2,9 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
-(*s: constant Cmd_init.cmd *)
 (* less: let bare = ref false *)
 
+(*s: constant Cmd_init.cmd *)
 let cmd = { Cmd.
   name = "init";
   help = " [directory]";

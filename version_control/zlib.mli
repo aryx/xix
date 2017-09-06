@@ -14,8 +14,6 @@ open Common
 (***********************************************************************)
 
 (*s: exception Zlib.Error (version_control/zlib.mli) *)
-(* $Id$ *)
-
 exception Error of string * string
 (*e: exception Zlib.Error (version_control/zlib.mli) *)
 

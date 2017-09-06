@@ -1,4 +1,5 @@
 (*s: version_control/hexsha.ml *)
+(*s: copyright ocaml-hex *)
 (*
  * Copyright (c) 2015 Trevor Summers Smith <trevorsummerssmith@gmail.com>
  * Copyright (c) 2014 Thomas Gazagnaire <thomas@gazagnaire.org>
@@ -15,6 +16,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
+(*e: copyright ocaml-hex *)
 open Common
 
 (*****************************************************************************)
@@ -29,6 +31,7 @@ open Common
 (*****************************************************************************)
 
 (*s: type Hexsha.t *)
+(* a 40 characters string, e.g. "d670460b4b4aece5915caf5c68d12f560a9fe3e4" *)
 type t = string
 (*e: type Hexsha.t *)
 

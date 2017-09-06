@@ -1,5 +1,7 @@
 (*s: version_control/client_local.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*****************************************************************************)
@@ -105,7 +107,6 @@ let find_top_common_commits src dst =
   top_commons |> Hashtbl_.to_list |> List.map fst
 (*e: function Client_local.find_top_common_commits *)
 
-
 (*s: function Client_local.iter_missing_objects *)
 let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* less: split_commits_and_tags? *)
@@ -168,8 +169,6 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
   )
 (*e: function Client_local.iter_missing_objects *)
 
-  
-  
 
 (*s: function Client_local.fetch_objects *)
 let fetch_objects src dst =

@@ -1,5 +1,7 @@
 (*s: version_control/cmd_rm.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*s: function Cmd_rm.rm *)
@@ -15,7 +17,6 @@ let rm r relpaths =
     ) r.Repository.index;
   Repository.write_index r
 (*e: function Cmd_rm.rm *)
-
 
 (*s: constant Cmd_rm.cmd *)
 let cmd = { Cmd.

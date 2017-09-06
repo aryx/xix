@@ -20,7 +20,6 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
 
-(*s: type Unzip.error_msg (version_control/unzip.mli) *)
 (** Decompression algorithm.
 
   Unzip decompression algorithm is compliant with RFC 1950 and 1951 which
@@ -28,17 +27,18 @@
   This format is also the one used by the popular ZLib library.  
 *)
 
+(*s: type Unzip.error_msg *)
 type error_msg =
   | Invalid_huffman
   | Invalid_data
   | Invalid_crc
   | Truncated_data
   | Unsupported_dictionary
-(*e: type Unzip.error_msg (version_control/unzip.mli) *)
+(*e: type Unzip.error_msg *)
 
-(*s: exception Unzip.Error (version_control/unzip.mli) *)
+(*s: exception Unzip.Error *)
 exception Error of error_msg
-(*e: exception Unzip.Error (version_control/unzip.mli) *)
+(*e: exception Unzip.Error *)
 
 (*s: signature Unzip.inflate *)
 val inflate : ?header:bool -> IO.input -> IO.input

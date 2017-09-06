@@ -1,5 +1,7 @@
 (*s: version_control/cmd_checkout.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*s: function Cmd_checkout.checkout *)
@@ -29,7 +31,6 @@ let checkout r str =
     pr ("You are in 'detached HEAD' state");
   | _ -> raise Cmd.ShowUsage
 (*e: function Cmd_checkout.checkout *)
-
 
 (*s: function Cmd_checkout.update *)
 (* Your branch is up-to-date with 'origin/master'. *)

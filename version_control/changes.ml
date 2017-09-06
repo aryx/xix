@@ -1,5 +1,7 @@
 (*s: version_control/changes.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*****************************************************************************)
@@ -84,8 +86,6 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
   List.rev !changes
 (*e: function Changes.changes_tree_vs_tree *)
 
-
-
 (*s: function Changes.changes_worktree_vs_index *)
 (* less: could factorize with Diff_tree.changes_tree_vs_tree? would need
  * to generate flat list of files (but then less opti opportunity
@@ -134,7 +134,6 @@ let changes_worktree_vs_index read_blob worktree index =
       )
   ) |> List.flatten
 (*e: function Changes.changes_worktree_vs_index *)
-
 
 (*s: function Changes.changes_index_vs_tree *)
 (* some commonalities with Repository.set_worktree_and_index_to_tree *)

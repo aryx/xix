@@ -1,31 +1,40 @@
 (*s: version_control/repository.mli *)
 
-(*s: type Repository.t (version_control/repository.mli) *)
+(*s: type Repository.t *)
 type t = {
+  (* less: on bare repo, this could be None *)
   worktree: Common.filename;
+  (* less: on bare repo this could be the toplevel dir *)
   dotgit: Common.filename;
 
   mutable index: Index.t;
-}
-(*e: type Repository.t (version_control/repository.mli) *)
 
-(*s: type Repository.objectish (version_control/repository.mli) *)
+  (* less: compression level config field? *)
+}
+(*e: type Repository.t *)
+
+(*s: type Repository.objectish *)
+(* todo: handle ^ like HEAD^, so need more complex objectish parser *)
 type objectish =
   | ObjByRef of Refs.t
   | ObjByHex of Hexsha.t
-(*e: type Repository.objectish (version_control/repository.mli) *)
+  (* ObjByTag 
+     ObjByBranch
+     ObjByShortHex
+  *)
+(*e: type Repository.objectish *)
 
 
-(*s: signature Repository.init *)
 (* repo *)
+(*s: signature Repository.init *)
 val init: Common.filename -> unit
 (*e: signature Repository.init *)
 (*s: signature Repository.open_ *)
 val open_: Common.filename -> t
 (*e: signature Repository.open_ *)
 
-(*s: signature Repository.read_obj *)
 (* objects *)
+(*s: signature Repository.read_obj *)
 val read_obj: t -> Sha1.t -> Objects.t
 (*e: signature Repository.read_obj *)
 (*s: signature Repository.read_objectish *)
@@ -47,8 +56,8 @@ val add_obj: t -> Objects.t -> Sha1.t
 val has_obj: t -> Sha1.t -> bool
 (*e: signature Repository.has_obj *)
 
-(*s: signature Repository.read_ref *)
 (* refs *)
+(*s: signature Repository.read_ref *)
 val read_ref: t -> Refs.t -> Refs.ref_content
 (*e: signature Repository.read_ref *)
 (*s: signature Repository.write_ref *)
@@ -70,18 +79,17 @@ val set_ref: t -> Refs.t -> Commit.hash -> unit
 (*e: signature Repository.set_ref *)
 (*s: signature Repository.del_ref *)
 val del_ref: t -> Refs.t -> unit
-(* atomic op *)
 (*e: signature Repository.del_ref *)
-(*s: signature Repository.add_ref_if_new *)
 (* atomic op *)
+(*s: signature Repository.add_ref_if_new *)
 val add_ref_if_new: t -> Refs.t -> Refs.ref_content -> bool
 (*e: signature Repository.add_ref_if_new *)
 (*s: signature Repository.set_ref_if_same_old *)
 val set_ref_if_same_old: t -> Refs.t -> Sha1.t -> Sha1.t -> bool
 (*e: signature Repository.set_ref_if_same_old *)
 
-(*s: signature Repository.read_index *)
 (* index *)
+(*s: signature Repository.read_index *)
 val read_index: t -> Index.t
 (*e: signature Repository.read_index *)
 (*s: signature Repository.write_index *)
@@ -102,8 +110,8 @@ val set_worktree_and_index_to_tree:
 
 (* packs *)
 
-(*s: signature Repository.walk_dir *)
 (* misc *)
+(*s: signature Repository.walk_dir *)
 val walk_dir: 
   (Common.filename -> Common.filename list -> Common.filename list -> unit) ->
   Common.filename ->

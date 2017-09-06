@@ -1,8 +1,8 @@
 (*s: version_control/sha1.mli *)
-(*s: type Sha1.t (version_control/sha1.mli) *)
+(*s: type Sha1.t *)
 (* a 20 bytes number (really a string of length 20) *)
 type t = bytes
-(*e: type Sha1.t (version_control/sha1.mli) *)
+(*e: type Sha1.t *)
 
 (*s: signature Sha1.sha1 *)
 (* computes SHA1 of a series of bytes *) 

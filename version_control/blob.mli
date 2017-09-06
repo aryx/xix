@@ -1,12 +1,12 @@
 (*s: version_control/blob.mli *)
 
-(*s: type Blob.t (version_control/blob.mli) *)
+(*s: type Blob.t *)
 type t = bytes
-(*e: type Blob.t (version_control/blob.mli) *)
+(*e: type Blob.t *)
 
-(*s: type Blob.hash (version_control/blob.mli) *)
+(*s: type Blob.hash *)
 type hash = Sha1.t
-(*e: type Blob.hash (version_control/blob.mli) *)
+(*e: type Blob.hash *)
 
 (*s: signature Blob.read *)
 (* assumes have already read the 'blob <size>\000' header from unzipped input *)

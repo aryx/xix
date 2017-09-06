@@ -1,8 +1,8 @@
 (*s: version_control/hexsha.mli *)
-(*s: type Hexsha.t (version_control/hexsha.mli) *)
+(*s: type Hexsha.t *)
 (* a 40 characters string, e.g. "d670460b4b4aece5915caf5c68d12f560a9fe3e4" *)
 type t = string
-(*e: type Hexsha.t (version_control/hexsha.mli) *)
+(*e: type Hexsha.t *)
 
 (*s: signature Hexsha.of_sha *)
 val of_sha: Sha1.t -> t

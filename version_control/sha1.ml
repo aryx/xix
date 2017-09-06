@@ -1,4 +1,5 @@
 (*s: version_control/sha1.ml *)
+(*s: copyright uuidm *)
 (*
 Copyright (c) 2008 Daniel C. Bünzli
 
@@ -14,6 +15,7 @@ WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 *)
+(*e: copyright uuidm *)
 open Common
 
 (*****************************************************************************)
@@ -38,6 +40,7 @@ open Common
 (*****************************************************************************)
 
 (*s: type Sha1.t *)
+(* a 20 bytes number (really a string of length 20) *)
 type t = bytes
 (*e: type Sha1.t *)
 

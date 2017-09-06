@@ -1,5 +1,7 @@
 (*s: version_control/cmd_add.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*s: function Cmd_add.add *)

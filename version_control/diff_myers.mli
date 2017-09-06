@@ -7,21 +7,20 @@
    - \[1\] Eugene Myers, An O(ND) Difference Algorithm and Its Variations, Algorithmica Vol. 1 No. 2, pp. 251-266, 1986.
  *)
 
-(*s: type Diff_myers.common (version_control/diff_myers.mli) *)
-type 'a common = [
-    `Common of int * int * 'a
-  ]
-(*e: type Diff_myers.common (version_control/diff_myers.mli) *)
+(*s: type Diff_myers.common *)
+type 'a common =
+  [ `Common of int * int * 'a ]
+(*e: type Diff_myers.common *)
 
 (** an element of lcs of seq1 and seq2 *)
 
-(*s: type Diff_myers.edit (version_control/diff_myers.mli) *)
+(*s: type Diff_myers.edit *)
 type 'a edit =
-  [ `Removed of int * 'a
-  | `Added of int * 'a
+  [ `Added of int * 'a
+  | `Removed of int * 'a
   | 'a common
   ]
-(*e: type Diff_myers.edit (version_control/diff_myers.mli) *)
+(*e: type Diff_myers.edit *)
 
 (** an element of diff of seq1 and seq2. *)
 

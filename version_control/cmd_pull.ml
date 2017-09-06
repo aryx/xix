@@ -1,5 +1,7 @@
 (*s: version_control/cmd_pull.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*s: function Cmd_pull.pull *)
@@ -29,7 +31,6 @@ let pull dst url =
   | _ -> failwith "TODO: git pull need merge"
   )
 (*e: function Cmd_pull.pull *)
-
 
 (*s: constant Cmd_pull.cmd *)
 let cmd = { Cmd.

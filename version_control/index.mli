@@ -1,7 +1,7 @@
 (*s: version_control/index.mli *)
 
+(*s: type Index.stat_info *)
 (** The type for file-system stat information. *)
-(*s: type Index.stat_info (version_control/index.mli) *)
 type stat_info = {
   mode : mode;
   ctime: time;
@@ -12,38 +12,39 @@ type stat_info = {
   gid  : Int32.t;
   size : Int32.t;
 }
-(*e: type Index.stat_info (version_control/index.mli) *)
-(*s: type Index.mode (version_control/index.mli) *)
+(*e: type Index.stat_info *)
+(*s: type Index.mode *)
   and mode =
     (* no directory here *)
     | Normal
     | Exec
     | Link
-    | Gitlink
+
+    | Gitlink (*?? submodule? *)
+(*e: type Index.mode *)
+(*s: type Index.time *)
   (** The type for a time represented by its [lsb32] and [nsec] parts. *)
-(*e: type Index.mode (version_control/index.mli) *)
-(*s: type Index.time (version_control/index.mli) *)
   and time = {
     lsb32: Int32.t;
     nsec : Int32.t;
   }
-(*e: type Index.time (version_control/index.mli) *)
+(*e: type Index.time *)
     
-(*s: type Index.entry (version_control/index.mli) *)
+(*s: type Index.entry *)
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
   name  : Common.filename;
   id    : Blob.hash;
   stats : stat_info;
-  stage : int;
+  stage : int; (*?? *)
 }
-(*e: type Index.entry (version_control/index.mli) *)
+(*e: type Index.entry *)
 
-(*s: type Index.t (version_control/index.mli) *)
-(* the entries are sorted *)
+(*s: type Index.t *)
+(* the entries are sorted (see compare_entries below) *)
 type t = entry list
-(*e: type Index.t (version_control/index.mli) *)
+(*e: type Index.t *)
 
 (*s: signature Index.empty *)
 val empty: t

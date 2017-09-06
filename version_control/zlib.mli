@@ -1,5 +1,5 @@
 (*s: version_control/zlib.mli *)
-open Common
+(*s: copyright camlzip *)
 (***********************************************************************)
 (*                                                                     *)
 (*                         The CamlZip library                         *)
@@ -12,10 +12,12 @@ open Common
 (*  the special exception on linking described in file LICENSE.        *)
 (*                                                                     *)
 (***********************************************************************)
+(*e: copyright camlzip *)
+open Common
 
-(*s: exception Zlib.Error (version_control/zlib.mli) *)
+(*s: exception Zlib.Error *)
 exception Error of string * string
-(*e: exception Zlib.Error (version_control/zlib.mli) *)
+(*e: exception Zlib.Error *)
 
 (*s: signature Zlib.compress *)
 val compress:
@@ -36,13 +38,13 @@ val uncompress:
 
 type stream
 
-(*s: type Zlib.flush_command (version_control/zlib.mli) *)
+(*s: type Zlib.flush_command *)
 type flush_command =
     Z_NO_FLUSH
   | Z_SYNC_FLUSH
   | Z_FULL_FLUSH
   | Z_FINISH
-(*e: type Zlib.flush_command (version_control/zlib.mli) *)
+(*e: type Zlib.flush_command *)
 
 external deflate_init: int -> bool -> stream = "camlzip_deflateInit"
 external deflate:

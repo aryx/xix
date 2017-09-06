@@ -1,18 +1,22 @@
 (*s: version_control/commit.mli *)
 
-(*s: type Commit.t (version_control/commit.mli) *)
+(*s: type Commit.t *)
 type t = {
   tree     : Tree.hash;
+  (* first commit has no parent, and merge commits have 2 parents *)
   parents  : hash list;
+  (* note that User.t contains a time *)
   author   : User.t;
   committer: User.t;
 
+  (* less: encoding, gpgsig, mergetag, extra *)
+
   message  : string;
 }
-(*e: type Commit.t (version_control/commit.mli) *)
-(*s: type Commit.hash (version_control/commit.mli) *)
+(*e: type Commit.t *)
+(*s: type Commit.hash *)
 and hash = Sha1.t
-(*e: type Commit.hash (version_control/commit.mli) *)
+(*e: type Commit.hash *)
 
 
 (*s: signature Commit.read *)

@@ -1,4 +1,5 @@
 (*s: version_control/index.ml *)
+(*s: copyright ocaml-git *)
 (*
  * Copyright (c) 2013-2017 Thomas Gazagnaire <thomas@gazagnaire.org>
  *
@@ -14,13 +15,13 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
+(*e: copyright ocaml-git *)
 open Common
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * 
  * Most of the code below derives from: https://github.com/mirage/ocaml-git
  * in index.ml and git_unix.ml
  *)
@@ -29,8 +30,8 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(** The type for file-system stat information. *)
 (*s: type Index.stat_info *)
+(** The type for file-system stat information. *)
 type stat_info = {
   mode : mode;
   ctime: time;
@@ -44,14 +45,15 @@ type stat_info = {
 (*e: type Index.stat_info *)
 (*s: type Index.mode *)
   and mode =
+    (* no directory here *)
     | Normal
     | Exec
     | Link
 
     | Gitlink (*?? submodule? *)
 (*e: type Index.mode *)
-  (** The type for a time represented by its [lsb32] and [nsec] parts. *)
 (*s: type Index.time *)
+  (** The type for a time represented by its [lsb32] and [nsec] parts. *)
   and time = {
     lsb32: Int32.t;
     nsec : Int32.t;

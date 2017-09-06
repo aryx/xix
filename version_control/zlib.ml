@@ -1,4 +1,5 @@
 (*s: version_control/zlib.ml *)
+(*s: copyright camlzip *)
 (***********************************************************************)
 (*                                                                     *)
 (*                         The CamlZip library                         *)
@@ -11,6 +12,7 @@
 (*  the special exception on linking described in file LICENSE.        *)
 (*                                                                     *)
 (***********************************************************************)
+(*e: copyright camlzip *)
 
 (*s: exception Zlib.Error *)
 exception Error of string * string

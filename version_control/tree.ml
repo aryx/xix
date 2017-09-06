@@ -1,4 +1,5 @@
 (*s: version_control/tree.ml *)
+(*s: copyright ocaml-git *)
 (*
  * Copyright (c) 2013-2017 Thomas Gazagnaire <thomas@gazagnaire.org>
  *
@@ -14,6 +15,7 @@
  * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
+(*e: copyright ocaml-git *)
 open Common
 
 (*****************************************************************************)

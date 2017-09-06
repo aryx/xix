@@ -1,4 +1,5 @@
 (*s: version_control/diff_myers.ml *)
+(*s: copyright ocaml-diff-myers *)
 (*
  * Copyright (C) 2016 OOHASHI Daichi
  *
@@ -19,6 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  *)
+(*e: copyright ocaml-diff-myers *)
 
 (*s: type Diff_myers.common *)
 type 'a common =

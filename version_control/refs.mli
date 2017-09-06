@@ -1,21 +1,23 @@
 (*s: version_control/refs.mli *)
 
-(*s: type Refs.refname (version_control/refs.mli) *)
+(*s: type Refs.refname *)
+(* should always start with "refs/", see is_valid_refname later *)
 type refname = string (* e.g. "refs/heads/master" *)
-(*e: type Refs.refname (version_control/refs.mli) *)
+(*e: type Refs.refname *)
 
-(*s: type Refs.t (version_control/refs.mli) *)
+(*s: type Refs.t *)
 type t =
   | Head
   | Ref of refname
-(*e: type Refs.t (version_control/refs.mli) *)
+(*e: type Refs.t *)
 
-(*s: type Refs.ref_content (version_control/refs.mli) *)
+(*s: type Refs.ref_content *)
 type ref_content =
+  (* the final value when follow all the pointers *)
   | Hash of Commit.hash
   (* pointer (may contain sha1 or another pointer again) *)
   | OtherRef of refname
-(*e: type Refs.ref_content (version_control/refs.mli) *)
+(*e: type Refs.ref_content *)
 
 (*s: signature Refs.default_head_content *)
 val default_head_content: ref_content

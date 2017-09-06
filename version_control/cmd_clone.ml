@@ -1,5 +1,7 @@
 (*s: version_control/cmd_clone.ml *)
+(*s: copyright gut *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(*e: copyright gut *)
 open Common
 
 (*s: function Cmd_clone.clone *)
@@ -21,7 +23,6 @@ let clone url path_dst =
 (*e: function Cmd_clone.clone *)
 
   (* todo: when clone then repo should have a "refs/remotes/origin/master" *)
-
 
 (*s: constant Cmd_clone.cmd *)
 let cmd = { Cmd.

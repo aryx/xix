@@ -7,8 +7,9 @@ type t = {
   (* less: on bare repo this could be the toplevel dir *)
   dotgit: Common.filename;
 
+  (*s: [[Repository.t]] other fields *)
   mutable index: Index.t;
-
+  (*e: [[Repository.t]] other fields *)
   (* less: compression level config field? *)
 }
 (*e: type Repository.t *)
@@ -71,7 +72,6 @@ val follow_ref_some: t -> Refs.t -> Commit.hash
 (*e: signature Repository.follow_ref_some *)
 (*s: signature Repository.all_refs *)
 val all_refs: t -> Refs.refname list
-(* better than write_ref, will follow symbolic ref *)
 (*e: signature Repository.all_refs *)
 (*s: signature Repository.set_ref *)
 (* better than write_ref, will follow symbolic ref *)

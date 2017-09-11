@@ -8,6 +8,7 @@ open Common
 let checkout r str =
   let all_refs = Repository.all_refs r in
   let refname = "refs/heads/" ^ str in
+
   match () with
   | _ when List.mem refname all_refs ->
     let commitid = Repository.follow_ref_some r (Refs.Ref refname) in
@@ -19,6 +20,7 @@ let checkout r str =
     Repository.set_worktree_and_index_to_tree r tree;
     pr (spf "Switched to branch '%s'" str);
     (* less: if master, then check if up-to-date with origin/master *)
+
   | _ when Hexsha.is_hexsha str ->
     let commitid = Hexsha.to_sha str in
     let commit = Repository.read_commit r commitid in
@@ -29,6 +31,7 @@ let checkout r str =
     Repository.set_worktree_and_index_to_tree r tree;
     pr (spf "Note: checking out '%s'." str);
     pr ("You are in 'detached HEAD' state");
+
   | _ -> raise Cmd.ShowUsage
 (*e: function Cmd_checkout.checkout *)
 

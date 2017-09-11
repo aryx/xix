@@ -23,8 +23,9 @@ type t = {
   (* less: on bare repo this could be the toplevel dir *)
   dotgit: Common.filename;
 
+  (*s: [[Repository.t]] other fields *)
   mutable index: Index.t;
-
+  (*e: [[Repository.t]] other fields *)
   (* less: compression level config field? *)
 }
 (*e: type Repository.t *)

@@ -11,7 +11,6 @@ type hash = Sha1.t
 (*s: signature Blob.read *)
 (* assumes have already read the 'blob <size>\000' header from unzipped input *)
 val read: IO.input -> t
-(* does not write the header, does not compress *)
 (*e: signature Blob.read *)
 (*s: signature Blob.write *)
 (* does not write the header, does not compress *)

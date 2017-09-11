@@ -56,7 +56,6 @@ type diff = diff_elem list
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function Diff.split_lines *)
 let split_lines str =
   (* alt: let xs = Str.full_split (Str.regexp "\n") str in *)
@@ -77,58 +76,14 @@ let split_lines str =
 (* Entry point *)
 (*****************************************************************************)
 
-module SimpleDiff = Diff_simple.Make(String)
-
-(*s: function Diff.diff_buggy *)
-(*
-SimpleDiff is buggy!
-Here is an example of output after an ogit diff (with some debugging 
-information):
-
-diff --git a/authors.txt b/authors.txt
-["Yoann Padioleau\n"; "\n"; "except \n"; " - lex/ by Xavier Leroy (from ocaml)\n"; " - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)\n"; " - version_control/sha.ml by Daniel Bunzli (from uuidm)\n"; " - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)\n"; " - version_control/zlib.ml by Xavier Leroy (from camlzip)\n"; " - version_control/unzip.ml by Nicolas Canasse (from extlib)\n"; " - commons/IO.ml by Nicolas Canasse (from exblib)\n"]
-["Yoann Padioleau\n"; "\n"; "xxx\n"; "except \n"; " - lex/ by Xavier Leroy (from ocaml)\n"; " - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)\n"; " - version_control/sha.ml by Daniel Bunzli (from uuidm)\n"; " - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)\n"; " - version_control/zlib.ml by Xavier Leroy (from camlzip)\n"; " - version_control/unzip.ml by Nicolas Canasse (from extlib)\n"; " - commons/IO.ml by Nicolas Canasse (from exblib)\n"]
-[(()); Tag1 (("Yoann Padioleau\n")); Tag2 (("\n", "xxx\n", "except \n", " - lex/ by Xavier Leroy (from ocaml)\n", " - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)\n", " - version_control/sha.ml by Daniel Bunzli (from uuidm)\n", " - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)\n", " - version_control/zlib.ml by Xavier Leroy (from camlzip)\n", " - version_control/unzip.ml by Nicolas Canasse (from extlib)\n", " - commons/IO.ml by Nicolas Canasse (from exblib)\n"))]
-+Yoann Padioleau
- 
- xxx
- except 
-  - lex/ by Xavier Leroy (from ocaml)
-  - lib_core/stdlib/ by Xavier Leroy et al. (from ocaml)
-  - version_control/sha.ml by Daniel Bunzli (from uuidm)
-  - version_control/hexsha.ml by Thomas Gazagnaire (from ocaml-hex)
-  - version_control/zlib.ml by Xavier Leroy (from camlzip)
-  - version_control/unzip.ml by Nicolas Canasse (from extlib)
-  - commons/IO.ml by Nicolas Canasse (from exblib)
-
------------
-SimpleDiff says the diff is the addition of 'Yoann Padioleau' but it's not!
-It's in both content. The diff should be the addition of 'xxx'.
-*)
-
-let diff_buggy str1 str2 =
-  let xs = split_lines str1 in
-  let ys = split_lines str2 in
-  pr2_gen xs;
-  pr2_gen ys;
-  let res = SimpleDiff.get_diff (Array.of_list xs) (Array.of_list ys) in
-  pr2_gen res;
-  res |> List.map (function
-    | SimpleDiff.Equal arr   -> 
-      arr |> Array.to_list |> List.map (fun x -> Equal x)
-    | SimpleDiff.Deleted arr -> 
-      arr |> Array.to_list |> List.map (fun x -> Deleted x)
-    | SimpleDiff.Added arr   -> 
-      arr |> Array.to_list |> List.map (fun x -> Added x)
-  )
-(*e: function Diff.diff_buggy *)
-
+(*s: module Diff.StringDiff *)
 module StringDiff = Diff_myers.Make(struct
   type t = string array
   type elem = string
   let get t i = Array.get t i
   let length t = Array.length t
 end)
+(*e: module Diff.StringDiff *)
 
 (*s: function Diff.diff *)
 (* seems correct *)

@@ -22,7 +22,6 @@ and hash = Sha1.t
 (*s: signature Commit.read *)
 (* assumes have already read the 'commit <size>\000' hdr from unzipped input *)
 val read: IO.input -> t
-(* does not write the header, does not compress *)
 (*e: signature Commit.read *)
 (*s: signature Commit.write *)
 (* does not write the header, does not compress *)

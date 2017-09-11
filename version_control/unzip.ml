@@ -94,9 +94,9 @@ let error msg = raise (Error msg)
 (*e: function Unzip.error *)
 
 (* ************************************************************************ *)
-(*s: function Unzip.tree_depth *)
 (* HUFFMAN TREES *)
 
+(*s: function Unzip.tree_depth *)
 let rec tree_depth = function
   | Found _ -> 0
   | NeedBits _ -> assert false
@@ -104,6 +104,7 @@ let rec tree_depth = function
     1 + min (tree_depth a) (tree_depth b)
 (*e: function Unzip.tree_depth *)
 
+(*s: function Unzip.tree_compress *)
 let rec tree_compress t =
   match tree_depth t with
   | 0 -> t
@@ -123,6 +124,7 @@ and tree_walk tbl p cd d = function
     tree_walk tbl (p lor (1 lsl cd)) (cd + 1) (d-1) b;
   | t ->
     Array.set tbl p (tree_compress t)
+(*e: function Unzip.tree_compress *)
 
 (*s: function Unzip.make_huffman *)
 let make_huffman lengths pos nlengths maxbits =
@@ -159,9 +161,9 @@ let make_huffman lengths pos nlengths maxbits =
 (*e: function Unzip.make_huffman *)
 
 (* ************************************************************************ *)
-(*s: function Unzip.adler32_create *)
 (* ADLER32 (CRC) *)
 
+(*s: function Unzip.adler32_create *)
 let adler32_create() = {
   a1 = 1;
   a2 = 0;
@@ -192,9 +194,9 @@ let adler32_read ch =
 (*e: function Unzip.adler32_read *)
 
 (* ************************************************************************ *)
-(*s: constant Unzip.window_size *)
 (* WINDOW *)
 
+(*s: constant Unzip.window_size *)
 let window_size = 1 lsl 15
 (*e: constant Unzip.window_size *)
 (*s: constant Unzip.buffer_size *)

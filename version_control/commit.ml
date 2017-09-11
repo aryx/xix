@@ -22,7 +22,6 @@ open Common
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * 
  * Most of the code below derives from: https://github.com/mirage/ocaml-git
  *)
 

@@ -34,12 +34,16 @@ open Common
 (** The type for file-system stat information. *)
 type stat_info = {
   mode : mode;
+
   ctime: time;
   mtime: time;
+
   dev  : Int32.t;
   inode: Int32.t;
+
   uid  : Int32.t;
   gid  : Int32.t;
+
   size : Int32.t;
 }
 (*e: type Index.stat_info *)
@@ -119,10 +123,10 @@ let stat_info_of_lstats stats =
 
 (*s: function Index.mk_entry *)
 let mk_entry relpath sha stats =
-  { stats = stat_info_of_lstats stats;
+  { name = relpath;
     id = sha;
+    stats = stat_info_of_lstats stats;
     stage = 0; (* TODO? *)
-    name = relpath
   }
 (*e: function Index.mk_entry *)
 
@@ -170,7 +174,7 @@ let rec add_entry idx entry =
   | x::xs ->
     (match entry.name <=> x.name with
     | Sup -> x::(add_entry xs entry)
-    (* replace old entry is ok *)
+    (* replacing old entry is ok *)
     | Equal -> entry::xs
     (* the entries are sorted *)
     | Inf -> entry::x::xs
@@ -193,9 +197,9 @@ type dir = dir_entry list ref
 type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
 (*e: type Index.dirs *)
 
-(*s: function Index.add_dir *)
 (* the code in this section derives from dulwich *)
 
+(*s: function Index.add_dir *)
 let rec add_dir dirs dirpath =
   try 
     Hashtbl.find dirs dirpath

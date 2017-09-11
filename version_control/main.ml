@@ -74,7 +74,7 @@ let hcommands =
 
 (*s: function Main.usage *)
 let usage () =
-  spf "usage: ogit <%s> [options]"
+  spf "usage: ocamlgit <%s> [options]"
     (String.concat "|" (commands |> List.map (fun cmd -> cmd.Cmd.name)))
 (*e: function Main.usage *)
 
@@ -84,19 +84,26 @@ let usage () =
 
 (*s: function Main.main *)
 let main () =
+  (*s: [[Main.main()]] sanity check arguments *)
   if Array.length Sys.argv < 2
   then begin
+    (*s: [[Main.main()]] print usage and exit *)
     pr2 (usage ());
-    exit 1;
+    exit 1
+    (*e: [[Main.main()]] print usage and exit *)
   end
+  (*e: [[Main.main()]] sanity check arguments *)
   else begin
     let cmd = 
       try 
         Hashtbl.find hcommands Sys.argv.(1) 
       with Not_found ->
+        (*s: [[Main.main()]] print usage and exit *)
         pr2 (usage ());
         exit 1
+        (*e: [[Main.main()]] print usage and exit *)
     in
+    (*s: [[Main.main()]] execute [[cmd]] *)
     let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
     let usage_msg_cmd = spf "usage: %s %s%s"
       (Filename.basename Sys.argv.(0))
@@ -104,6 +111,7 @@ let main () =
       cmd.Cmd.help
     in
     let remaining_args = ref [] in
+    (*s: [[Main.main()]] parse [[argv]] for [[cmd]] options and remaining args *)
     (try 
      (* todo: look if --help and factorize treatment of usage for subcmds *)
        Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
@@ -112,6 +120,7 @@ let main () =
        prerr_string str;
        exit 1
     );
+    (*e: [[Main.main()]] parse [[argv]] for [[cmd]] options and remaining args *)
     (* finally! *)
     try 
       cmd.Cmd.f (List.rev !remaining_args)
@@ -119,6 +128,7 @@ let main () =
       | Cmd.ShowUsage ->
         Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
         exit 1
+    (*e: [[Main.main()]] execute [[cmd]] *)
   end
 (*e: function Main.main *)
         

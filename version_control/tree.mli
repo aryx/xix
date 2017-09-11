@@ -15,7 +15,7 @@ type entry = {
   perm: perm;
   (* relative to tree, so does not contain any '/', or '.' or '..' *)
   name: string;
-  (* blob or tree *)
+  (* Blob.hash or Tree.hash *)
   node: Sha1.t;
 }
 (*e: type Tree.entry *)

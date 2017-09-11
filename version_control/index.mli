@@ -4,12 +4,16 @@
 (** The type for file-system stat information. *)
 type stat_info = {
   mode : mode;
+
   ctime: time;
   mtime: time;
+
   dev  : Int32.t;
   inode: Int32.t;
+
   uid  : Int32.t;
   gid  : Int32.t;
+
   size : Int32.t;
 }
 (*e: type Index.stat_info *)
@@ -65,7 +69,6 @@ val perm_of_mode: mode -> Tree.perm
 
 (*s: signature Index.read *)
 val read: IO.input -> t
-(* will write the header, and sha checksum at the end *)
 (*e: signature Index.read *)
 (*s: signature Index.write *)
 (* will write the header, and sha checksum at the end *)

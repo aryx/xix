@@ -22,7 +22,7 @@ let clone url path_dst =
   Repository.set_worktree_and_index_to_tree dst tree
 (*e: function Cmd_clone.clone *)
 
-  (* todo: when clone then repo should have a "refs/remotes/origin/master" *)
+(* todo: when clone then repo should have a "refs/remotes/origin/master" *)
 
 (*s: constant Cmd_clone.cmd *)
 let cmd = { Cmd.

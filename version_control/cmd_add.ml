@@ -17,7 +17,7 @@ let cmd = { Cmd.
   options = [
     (* todo: --interactive, --patch for picking, --force (if ignored) 
      * --all
-    *)
+     *)
   ];
   f = (fun args ->
     match args with

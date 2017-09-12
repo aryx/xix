@@ -1,7 +1,7 @@
 (*s: version_control/main.ml *)
-(*s: copyright gut *)
+(*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
-(*e: copyright gut *)
+(*e: copyright ocamlgit *)
 open Common
 
 (*****************************************************************************)
@@ -9,8 +9,8 @@ open Common
 (*****************************************************************************)
 (* An OCaml port of git, a distributed version control system.
  *
- * Some of the code of ogit derives from dulwich (a clone of git in Python)
- * and ocaml-git (a clone of git in OCaml).
+ * Some of the code derives from dulwich (a clone of git in Python)
+ * and ocaml-git (another clone of git in OCaml).
  *
  * Main limitations compared to git/dulwich/ocaml-git:
  *  -??

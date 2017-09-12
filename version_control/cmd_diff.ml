@@ -1,7 +1,7 @@
 (*s: version_control/cmd_diff.ml *)
-(*s: copyright gut *)
+(*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
-(*e: copyright gut *)
+(*e: copyright ocamlgit *)
 open Common
 
 (*s: function Cmd_diff.diff_worktree_vs_index *)

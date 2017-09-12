@@ -1,7 +1,7 @@
 (*s: version_control/client_local.ml *)
-(*s: copyright gut *)
+(*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
-(*e: copyright gut *)
+(*e: copyright ocamlgit *)
 open Common
 
 (*****************************************************************************)
@@ -37,6 +37,7 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
   let todos_next_round = ref [] in
   let last_round = ref None in
   let hdone = Hashtbl.create 101 in
+
   { next = (fun () ->
     todos := !todos_next_round @ !todos;
     todos_next_round := [];
@@ -55,6 +56,7 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
       );
       Some x
     );
+
     ack = (fun commit_sha ->
       (* less: do weird loop where recurse also over parents as in dulwich? *)
       match !last_round with

@@ -1,7 +1,7 @@
 (*s: version_control/cmd_clone.ml *)
-(*s: copyright gut *)
+(*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
-(*e: copyright gut *)
+(*e: copyright ocamlgit *)
 open Common
 
 (*s: function Cmd_clone.clone *)

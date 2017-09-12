@@ -85,6 +85,7 @@ let walk_graph r f =
 (*e: function Commit.walk_history *)
 
 (* for git pull *)
+
 (*s: function Commit.collect_ancestors *)
 (* similar to walk_history but with exposed hdone hash *)
 let collect_ancestors read_commit top_commits hdone =

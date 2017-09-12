@@ -149,7 +149,6 @@ let mode_of_perm perm =
   | Tree.Dir -> failwith "index entry does not support Tree.dir perm"
 (*e: function Index.mode_of_perm *)
 
-
 (*****************************************************************************)
 (* Add/Del *)
 (*****************************************************************************)

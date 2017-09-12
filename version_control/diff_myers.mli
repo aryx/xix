@@ -8,13 +8,13 @@
  *)
 
 (*s: type Diff_myers.common *)
+(** an element of lcs of seq1 and seq2 *)
 type 'a common =
   [ `Common of int * int * 'a ]
 (*e: type Diff_myers.common *)
 
-(** an element of lcs of seq1 and seq2 *)
-
 (*s: type Diff_myers.edit *)
+(** an element of diff of seq1 and seq2. *)
 type 'a edit =
   [ `Added of int * 'a
   | `Removed of int * 'a
@@ -22,8 +22,7 @@ type 'a edit =
   ]
 (*e: type Diff_myers.edit *)
 
-(** an element of diff of seq1 and seq2. *)
-
+(*s: signature Diff_myers.SeqType *)
 module type SeqType = sig
   type t
   (** The type of the sequence. *)
@@ -38,7 +37,9 @@ module type SeqType = sig
   (** [length t] returns the length of the sequence [t]. *)
 end
 (** Input signature of {!Diff.Make}. *)
+(*e: signature Diff_myers.SeqType *)
 
+(*s: signature Diff_myers.S *)
 module type S = sig
   type t
   (** The type of input sequence. *)
@@ -99,9 +100,12 @@ module type S = sig
    *)
 end
 (** Output signature of {!Diff.Make}. *)
+(*e: signature Diff_myers.S *)
 
+(*s: signature Diff_myers.Make *)
 module Make :
   functor (M : SeqType) -> (S with type t = M.t and type elem = M.elem)
 (** Functor building an implementation of the diff structure
     given a sequence type.  *)
+(*e: signature Diff_myers.Make *)
 (*e: version_control/diff_myers.mli *)

@@ -1,7 +1,7 @@
 (*s: version_control/objects.ml *)
-(*s: copyright gut *)
+(*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
-(*e: copyright gut *)
+(*e: copyright ocamlgit *)
 open Common
 
 (*****************************************************************************)
@@ -19,10 +19,6 @@ type t =
   | Tree   of Tree.t
 (*  | Tag of Tag.t *)
 (*e: type Objects.t *)
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
 
 (*****************************************************************************)
 (* IO *)

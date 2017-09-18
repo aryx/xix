@@ -37,10 +37,7 @@ type t = string
 
 (*s: function Hexsha.is_hexsha *)
 let is_hexsha x =
- String.length x = 40
- (* less: could also check every chars is between 0 and F,
-  * or just call to_sha and catch if any exn.
-  *)
+ String.length x = 40 && x =~ "^[0-9a-fA-F]+$"
 (*e: function Hexsha.is_hexsha *)
 
 (*****************************************************************************)
@@ -74,44 +71,39 @@ let of_string_fast s =
   (*pad:`Hex*) buf
 (*e: function Hexsha.of_string_fast *)
 
-
-(*s: function Hexsha.invalid_arg *)
-let invalid_arg fmt =
-  Printf.ksprintf (fun str -> raise (Invalid_argument str)) fmt
-(*e: function Hexsha.invalid_arg *)
-
 (*s: function Hexsha.to_char *)
 let to_char x y =
-  let code c = match c with
+  let code c = 
+    match c with
     | '0'..'9' -> Char.code c - 48 (* Char.code '0' *)
     | 'A'..'F' -> Char.code c - 55 (* Char.code 'A' + 10 *)
     | 'a'..'f' -> Char.code c - 87 (* Char.code 'a' + 10 *)
-    | _ -> invalid_arg "Hex.to_char: %d is an invalid char" (Char.code c)
+    | _ -> 
+      raise (Invalid_argument 
+              (spf "Hex.to_char: %d is an invalid char" (Char.code c)))
   in
   Char.chr (code x lsl 4 + code y)
 (*e: function Hexsha.to_char *)
 
-(*s: function Hexsha.to_helper *)
-let to_helper ~empty_return ~create ~set ((*`Hex*) s) =
-  if s = "" then empty_return
+(*s: function Hexsha.to_string *)
+let to_string ((*`Hex*) s) =
+  if s = "" 
+  then ""
   else
     let n = String.length s in
-    let buf = create (n/2) in
+    let buf = Bytes.create (n/2) in
     let rec aux i j =
-      if i >= n then ()
-      else if j >= n then invalid_arg "hex conversion: invalid hex string"
+      if i >= n 
+      then ()
+      else if j >= n 
+           then raise (Invalid_argument "hex conversion: invalid hex string")
       else (
-        set buf (i/2) (to_char s.[i] s.[j]);
+        Bytes.set buf (i/2) (to_char s.[i] s.[j]);
         aux (j+1) (j+2)
       )
     in
     aux 0 1;
     buf
-(*e: function Hexsha.to_helper *)
-
-(*s: function Hexsha.to_string *)
-let to_string hex =
-  to_helper ~empty_return:"" ~create:Bytes.create ~set:Bytes.set hex
 (*e: function Hexsha.to_string *)
 
 (*****************************************************************************)

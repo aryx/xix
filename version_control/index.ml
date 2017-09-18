@@ -48,20 +48,21 @@ type stat_info = {
 }
 (*e: type Index.stat_info *)
 (*s: type Index.mode *)
-  and mode =
-    (* no directory here *)
-    | Normal
-    | Exec
-    | Link
-
-    | Gitlink (*?? submodule? *)
+and mode =
+  (* no directory here *)
+  | Normal
+  | Exec
+  | Link
+  (*s: [[Index.mode]] cases *)
+  | Gitlink (*?? submodule? *)
+  (*e: [[Index.mode]] cases *)
 (*e: type Index.mode *)
 (*s: type Index.time *)
-  (** The type for a time represented by its [lsb32] and [nsec] parts. *)
-  and time = {
-    lsb32: Int32.t;
-    nsec : Int32.t;
-  }
+(** The type for a time represented by its [lsb32] and [nsec] parts. *)
+and time = {
+  lsb32: Int32.t;
+  nsec : Int32.t;
+}
 (*e: type Index.time *)
     
 (*s: type Index.entry *)
@@ -71,7 +72,6 @@ type entry = {
   name  : Common.filename;
   id    : Blob.hash;
   stats : stat_info;
-  stage : int; (*?? *)
 }
 (*e: type Index.entry *)
 
@@ -113,7 +113,7 @@ let stat_info_of_lstats stats =
           then Exec 
           else Normal
         | Unix.S_LNK, _ -> Link
-        | _ -> failwith (spf "unsupported file type")
+        | _ -> failwith ("unsupported file type")
         );
       uid = Int32.of_int stats.Unix.st_uid;
       gid = Int32.of_int stats.Unix.st_gid;
@@ -126,7 +126,6 @@ let mk_entry relpath sha stats =
   { name = relpath;
     id = sha;
     stats = stat_info_of_lstats stats;
-    stage = 0; (* TODO? *)
   }
 (*e: function Index.mk_entry *)
 
@@ -136,7 +135,9 @@ let perm_of_mode mode =
   | Normal -> Tree.Normal
   | Exec -> Tree.Exec
   | Link -> Tree.Link
+  (*s: [[Index.perm_of_mode()]] match mode cases *)
   | Gitlink -> Tree.Commit (* sure? *)
+  (*e: [[Index.perm_of_mode()]] match mode cases *)
 (*e: function Index.perm_of_mode *)
 
 (*s: function Index.mode_of_perm *)
@@ -145,7 +146,9 @@ let mode_of_perm perm =
   | Tree.Normal -> Normal
   | Tree.Exec -> Exec
   | Tree.Link -> Link
+  (*s: [[Index.mode_of_perm()]] match perm cases *)
   | Tree.Commit -> Gitlink
+  (*e: [[Index.mode_of_perm()]] match perm cases *)
   | Tree.Dir -> failwith "index entry does not support Tree.dir perm"
 (*e: function Index.mode_of_perm *)
 
@@ -189,8 +192,8 @@ type dir = dir_entry list ref
 (*e: type Index.dir *)
 (*s: type Index.dir_entry *)
   and dir_entry =
-    | Subdir of string (* base *)
-    | File of string (* base *) * entry
+    | Subdir of string (* basename *)
+    | File of string (* basename *) * entry
 (*e: type Index.dir_entry *)
 (*s: type Index.dirs *)
 type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
@@ -225,13 +228,13 @@ let rec build_trees dirs dirpath add_tree_obj =
       | File (base, entry) ->
         {Tree.
          name = base; 
-         node = entry.id; 
+         id = entry.id; 
          perm = perm_of_mode entry.stats.mode;
         }
       | Subdir base ->
         let sha = 
           build_trees dirs (Filename.concat dirpath base) add_tree_obj in
-        {Tree. perm = Tree.Dir; name = base; node = sha }
+        {Tree. perm = Tree.Dir; name = base; id = sha }
     )
   in
   add_tree_obj tree
@@ -282,7 +285,9 @@ let read_mode ch =
   let n = IO.BigEndian.read_ui16 ch in
   match n lsr 12 with
   | 0b1010 -> Link
+  (*s: [[Index.read_mode()]] match [[n lsr 12]] cases *)
   | 0b1110 -> Gitlink
+  (*e: [[Index.read_mode()]] match [[n lsr 12]] cases *)
   | 0b1000 ->
     (match n land 0x1FF with
     | 0o755 -> Exec
@@ -300,7 +305,9 @@ let write_mode ch mode =
     | Exec    -> 0b1000__000__111_101_101
     | Normal  -> 0b1000__000__110_100_100
     | Link    -> 0b1010__000__000_000_000
+    (*s: [[Index.write_mode()]] match mode cases *)
     | Gitlink -> 0b1110__000__000_000_000 
+    (*e: [[Index.write_mode()]] match mode cases *)
   in
   IO.BigEndian.write_ui16 ch n
 (*e: function Index.write_mode *)
@@ -342,6 +349,8 @@ let read_entry ch =
     (i land 0x3000) lsr 12,
     (i land 0x0FFF)
   in
+  if (stage <> 0)
+  then failwith (spf "stage is not 0: %d" stage);
   let name = IO.really_nread_string ch len in
   let c = IO.read ch in
   if c <> '\000'
@@ -354,14 +363,14 @@ let read_entry ch =
   in
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
-  { stats; id; stage; name }
+  { stats; id; name }
 (*e: function Index.read_entry *)
 
 (*s: function Index.write_entry *)
 let write_entry ch e =
   write_stat_info ch e.stats;
   Sha1.write ch e.id;
-  let flags = (e.stage lsl 12 + String.length e.name) land 0x3FFF in
+  let flags = (0 lsl 12 + String.length e.name) land 0x3FFF in
   IO.BigEndian.write_ui16 ch flags;
   IO.nwrite ch e.name;
   let len = 63 + String.length e.name in

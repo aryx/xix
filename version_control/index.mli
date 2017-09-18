@@ -18,20 +18,21 @@ type stat_info = {
 }
 (*e: type Index.stat_info *)
 (*s: type Index.mode *)
-  and mode =
-    (* no directory here *)
-    | Normal
-    | Exec
-    | Link
-
-    | Gitlink (*?? submodule? *)
+and mode =
+  (* no directory here *)
+  | Normal
+  | Exec
+  | Link
+  (*s: [[Index.mode]] cases *)
+  | Gitlink (*?? submodule? *)
+  (*e: [[Index.mode]] cases *)
 (*e: type Index.mode *)
 (*s: type Index.time *)
-  (** The type for a time represented by its [lsb32] and [nsec] parts. *)
-  and time = {
-    lsb32: Int32.t;
-    nsec : Int32.t;
-  }
+(** The type for a time represented by its [lsb32] and [nsec] parts. *)
+and time = {
+  lsb32: Int32.t;
+  nsec : Int32.t;
+}
 (*e: type Index.time *)
     
 (*s: type Index.entry *)
@@ -41,7 +42,6 @@ type entry = {
   name  : Common.filename;
   id    : Blob.hash;
   stats : stat_info;
-  stage : int; (*?? *)
 }
 (*e: type Index.entry *)
 
@@ -84,6 +84,5 @@ val add_entry: t -> entry -> t
 
 (*s: signature Index.tree_of_index *)
 val tree_of_index: t -> (* add_obj *)(Tree.t -> Tree.hash) -> Tree.hash
-(* todo: index_of_tree *)
 (*e: signature Index.tree_of_index *)
 (*e: version_control/index.mli *)

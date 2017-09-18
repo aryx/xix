@@ -8,12 +8,15 @@ open Common
 let show r objectish =
   let obj = Repository.read_objectish r objectish in
   match obj with
+  (*s: [[Cmd_show.show()]] match obj cases *)
   | Objects.Blob x -> 
     Blob.show x
+  (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Tree x ->
     (* =~ git ls-tree --names-only *)
     pr "tree\n"; (* less: put sha of tree *)
     Tree.show x
+  (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Commit x -> 
     pr "commit"; (* less: put sha of commit *)
     Commit.show x;
@@ -27,6 +30,8 @@ let show r objectish =
         tree1 tree2 
     in
     changes |> List.iter Diff_unified.show_change
+  (*x: [[Cmd_show.show()]] match obj cases *)
+  (*e: [[Cmd_show.show()]] match obj cases *)
 (*e: function Cmd_show.show *)
 
 (*s: constant Cmd_show.cmd *)
@@ -36,8 +41,7 @@ let cmd = { Cmd.
   (* less: --oneline *)
   options = [];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let r = Repository.open_ "." in
+    let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> show r (Repository.ObjByRef (Refs.Head))
     | xs ->

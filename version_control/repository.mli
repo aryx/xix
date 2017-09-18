@@ -19,10 +19,14 @@ type t = {
 type objectish =
   | ObjByRef of Refs.t
   | ObjByHex of Hexsha.t
-  (* ObjByTag 
-     ObjByBranch
-     ObjByShortHex
-  *)
+  (*s: [[Repository.objectish]] cases *)
+  (* todo:
+   *  ObjByBranch
+   *  ObjByShortHex
+   *)
+  (*x: [[Repository.objectish]] cases *)
+  (* ObjByTag *)
+  (*e: [[Repository.objectish]] cases *)
 (*e: type Repository.objectish *)
 
 
@@ -33,6 +37,10 @@ val init: Common.filename -> unit
 (*s: signature Repository.open_ *)
 val open_: Common.filename -> t
 (*e: signature Repository.open_ *)
+(*s: signature Repository.find_dotgit_root_and_open *)
+val find_root_open_and_adjust_paths: 
+ Common.filename list -> t * Common.filename list
+(*e: signature Repository.find_dotgit_root_and_open *)
 
 (* objects *)
 (*s: signature Repository.read_obj *)

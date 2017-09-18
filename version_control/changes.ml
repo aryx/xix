@@ -32,8 +32,8 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
     (* todo: do that later? once know we will return a change with this entry?
      * make it lazy?
      *)
-    content = lazy (read_blob x.Tree.node);
-  }, x.Tree.node)
+    content = lazy (read_blob x.Tree.id);
+  }, x.Tree.id)
   | None -> None
 (*e: function Changes.skip_tree_and_adjust_path *)
 
@@ -47,7 +47,9 @@ let content_from_path_and_stat_index path stat_info =
       path |> Common.with_file_in (fun ch ->
         ch |> IO.input_channel |> IO.read_all
       )
+  (*s: [[Changes.content_from_path_and_stat_index()]] match mode cases *)
   | Index.Gitlink -> failwith "submodule not supported"
+  (*e: [[Changes.content_from_path_and_stat_index()]] match mode cases *)
 (*e: function Changes.content_from_path_and_stat_index *)
 
 (*****************************************************************************)
@@ -158,7 +160,7 @@ let changes_index_vs_tree read_tree index treeid =
         let entry_index = Hashtbl.find hindex relpath in
         Hashtbl.add h_in_index_and_head relpath true;
         (* less: if change mode, then report as del/add *)
-        if entry_head.Tree.node <> entry_index.Index.id
+        if entry_head.Tree.id <> entry_index.Index.id
         then changes |> Common.push (Change.Modify (
           { Change.path = relpath; 
             mode = Index.mode_of_perm perm; 

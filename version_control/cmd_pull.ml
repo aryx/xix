@@ -39,8 +39,7 @@ let cmd = { Cmd.
   options = [
   ];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let dst = Repository.open_ "." in
+    let dst, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 
       failwith "TODO: use remote information in config file"

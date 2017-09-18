@@ -7,16 +7,18 @@ type perm =
   | Exec
   | Link
   | Dir
+  (*s: [[Tree.perm]] cases *)
   | Commit (* ?? submodule? *)
+  (*e: [[Tree.perm]] cases *)
 (*e: type Tree.perm *)
 
 (*s: type Tree.entry *)
 type entry = {
-  perm: perm;
   (* relative to tree, so does not contain any '/', or '.' or '..' *)
   name: string;
   (* Blob.hash or Tree.hash *)
-  node: Sha1.t;
+  id: Sha1.t;
+  perm: perm;
 }
 (*e: type Tree.entry *)
 
@@ -33,7 +35,6 @@ type hash = Sha1.t
 (*s: signature Tree.read *)
 (* assumes have already read the 'tree <size>\000' header from unzipped input *)
 val read: IO.input -> t
-(* does not write the header, does not compress *)
 (*e: signature Tree.read *)
 (*s: signature Tree.write *)
 (* does not write the header, does not compress *)

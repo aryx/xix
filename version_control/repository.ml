@@ -44,10 +44,14 @@ let dirperm = 0o750
 type objectish =
   | ObjByRef of Refs.t
   | ObjByHex of Hexsha.t
-  (* ObjByTag 
-     ObjByBranch
-     ObjByShortHex
-  *)
+  (*s: [[Repository.objectish]] cases *)
+  (* todo:
+   *  ObjByBranch
+   *  ObjByShortHex
+   *)
+  (*x: [[Repository.objectish]] cases *)
+  (* ObjByTag *)
+  (*e: [[Repository.objectish]] cases *)
 (*e: type Repository.objectish *)
 
 (*****************************************************************************)
@@ -137,9 +141,9 @@ let rec walk_dir f dir =
 let read_ref r aref =
   (* less: packed refs *)
   let file = ref_to_filename r aref in
-  let ch = open_in file in
-  let input = IO.input_channel ch in
-  Refs.read input
+  file |> Common.with_file_in (fun ch ->
+    ch |> IO.input_channel |> Refs.read
+  )
 (*e: function Repository.read_ref *)
 
 (*s: function Repository.follow_ref *)
@@ -448,7 +452,9 @@ let build_file_from_blob fullpath blob perm =
         )
     )
   | Tree.Dir -> raise (Impossible "dirs filtered in walk_tree iteration")
+  (*s: [[Repository.build_file_from_blob()]] match perm cases *)
   | Tree.Commit -> failwith "submodule not yet supported"
+  (*e: [[Repository.build_file_from_blob()]] match perm cases *)
   );
   Unix.lstat fullpath
 (*e: function Repository.build_file_from_blob *)
@@ -476,12 +482,14 @@ let set_worktree_and_index_to_tree r tree =
       let fullpath = r.worktree / relpath in
       if not (Sys.file_exists (Filename.dirname fullpath))
       then Unix.mkdir (Filename.dirname fullpath) dirperm;
-      let sha = entry.Tree.node in
+      let sha = entry.Tree.id in
       let blob = read_blob r sha in
       let stat = build_file_from_blob fullpath blob perm in
       Hashtbl.replace hcurrent relpath true;
       Common.push (Index.mk_entry relpath sha stat) new_index;
+    (*s: [[Repository.set_worktree_and_index_to_tree()]] walk tree cases *)
     | Tree.Commit -> failwith "submodule not yet supported"
+    (*e: [[Repository.set_worktree_and_index_to_tree()]] walk tree cases *)
   );
   let index = List.rev !new_index in
   r.index <- index;
@@ -536,7 +544,6 @@ let init root =
   pr (spf "Initialized empty Git repository in %s" (root / ".git"))
 (*e: function Repository.init *)
 
-
 (*s: function Repository.open_ *)
 let open_ root = 
   let path = root / ".git" in
@@ -545,7 +552,6 @@ let open_ root =
   then 
     { worktree = root;
       dotgit = path;
-      (* less: initialize obj store and refs container? *)
       (* less: grafts, hooks *)
       index = 
         if Sys.file_exists (path / "index")
@@ -556,4 +562,20 @@ let open_ root =
     }
   else failwith (spf "Not a git repository at %s" root)
 (*e: function Repository.open_ *)
+
+(*s: function Repository.find_dotgit_root_and_open *)
+let find_root_open_and_adjust_paths paths = 
+  (* todo: allow git from different location *)
+  let r = open_ "." in
+  (* todo: support also absolute paths and transform in relpaths *)
+  let relpaths = paths |> List.map (fun path ->
+    if Filename.is_relative path
+    then 
+      (* todo: may have to adjust if root was not pwd *)
+      path
+    else failwith (spf "TODO: Not a relative path: %s" path)
+    )
+  in
+  r, relpaths
+(*e: function Repository.find_dotgit_root_and_open *)
 (*e: version_control/repository.ml *)

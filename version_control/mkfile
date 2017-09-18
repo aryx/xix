@@ -66,3 +66,5 @@ clean:V:
 <$TOP/mkcommon
 <.depend
 
+loc:V:
+   wc -l $SRC *.mli

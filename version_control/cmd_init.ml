@@ -15,10 +15,8 @@ let cmd = { Cmd.
   ];
   f = (fun args ->
     match args with
-    | [] ->
-      Repository.init "."
-    | [dir] ->
-      Repository.init dir
+    | []    -> Repository.init "."
+    | [dir] -> Repository.init dir
     | _ -> raise Cmd.ShowUsage
   );
 }

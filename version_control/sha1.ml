@@ -46,7 +46,6 @@ type t = bytes
 
 (*s: function Sha1.is_sha *)
 let is_sha x =
-  (* less: extra check? forbidden bytes? *)
   Bytes.length x = 20
 (*e: function Sha1.is_sha *)
 

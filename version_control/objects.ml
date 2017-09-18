@@ -17,7 +17,9 @@ type t =
   | Blob   of Blob.t
   | Commit of Commit.t
   | Tree   of Tree.t
-(*  | Tag of Tag.t *)
+  (*s: [[Objects.t]] cases *)
+  (*  | Tag of Tag.t *)
+  (*e: [[Objects.t]] cases *)
 (*e: type Objects.t *)
 
 (*****************************************************************************)
@@ -33,10 +35,15 @@ let read ch =
   let ch2 = IO.input_bytes raw in
   (* less: just reuse ch so avoid use of intermediate strings? *)
   match str with
+  (*s: [[Objects.read()]] match str cases *)
   | "blob"   -> Blob   (Blob.read ch2)
-  | "commit" -> Commit (Commit.read ch2)
+  (*x: [[Objects.read()]] match str cases *)
   | "tree"   -> Tree   (Tree.read ch2)
+  (*x: [[Objects.read()]] match str cases *)
+  | "commit" -> Commit (Commit.read ch2)
+  (*x: [[Objects.read()]] match str cases *)
   (* "tag" -> Tag (Tag.read raw) *)
+  (*e: [[Objects.read()]] match str cases *)
   (* less: assert finished ch2? *)
   | str -> failwith (spf "Objects.read: invalid header: %s" str)
 (*e: function Objects.read *)
@@ -49,6 +56,8 @@ let write obj ch =
       | Blob x   -> Blob.write x ch
       | Commit x -> Commit.write x ch
       | Tree x   -> Tree.write x ch
+      (*s: [[Objects.write()]] match obj cases *)
+      (*e: [[Objects.write()]] match obj cases *)
     )
   in
   let header = 
@@ -57,6 +66,8 @@ let write obj ch =
       | Blob _   -> "blob"
       | Commit _ -> "commit"
       | Tree  _  ->  "tree"
+      (*s: [[Objects.write()]] return header, match obj cases *)
+      (*e: [[Objects.write()]] return header, match obj cases *)
       ) 
       (Bytes.length body)
   in

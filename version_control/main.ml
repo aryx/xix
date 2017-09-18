@@ -20,21 +20,21 @@ open Common
  *    the specific git format. Save many LOC?
  *  - ??
  * 
- * The code of ogit uses code from 
+ * The code of ocamlgit uses code from 
  *  - ocaml-git
  *  - ocaml-hex
  *  - camlzip
  *  - extlib
  *  - uuidm
  * 
- * ogit uses lots of code from ocaml-git. However, ogit is simpler because
+ * ocamlgit uses code from ocaml-git. However, ocamlgit is simpler because
  * it does not use fancy features of OCaml or fancy libraries:
  *  - no functor, include, module types, polymorphic variants, keyword args,
  *    or excessive nested modules. KISS.
  *  - no functorized Set and Map so no need for hash(), compare(), and equal()
  *    boilerplate functions everywhere
  *  - hardcoded use of SHA1, so no need functors taking Git.DIGEST and HashIO
- *  - no support for mirage, so no need to parametrize many things,
+ *  - no support for Mirage, so no need to parametrize many things,
  *    no need Fs module, no need lwt
  *  - no disk vs mem, just disk, so again need less functors
  *  - hardcoded use of zlib so no need functors taking inflate signature
@@ -48,11 +48,12 @@ open Common
  *  - dotgit (more readable than commondir in dulwich)
  *  - '/' operator (more readable than all those os.path.join in dulwich)
  *  - Hash.Tree.t, Hash.Commit.t, Hash.Blob.t more precise hash types
- *    (but they are not statically checked in ogit)
+ *    (but they are not statically checked in ocamlgit)
  *  - TODO GRI (generalization of URI)
  * good stuff I wish I could take from dulwich:
  *  - hashtbl [] overloading, so can do r.refs["refs/tags/"+tag] = obj.id
- *    (thx to __setitem__ and __getitem__)
+ *    (thx to __setitem__ and __getitem__, but true that it also entails
+ *     lots of boilerplate code)
  *)
 
 (*****************************************************************************)

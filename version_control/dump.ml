@@ -33,10 +33,10 @@ let vof_perm =
   | Dir -> Ocaml.VSum (("Dir", []))
   | Commit -> Ocaml.VSum (("Commit", []))
   
-let vof_entry { perm = v_perm; name = v_name; node = v_node } =
+let vof_entry { perm = v_perm; name = v_name; id = v_node } =
   let bnds = [] in
   let arg = Sha1.vof_t v_node in
-  let bnd = ("node", arg) in
+  let bnd = ("id", arg) in
   let bnds = bnd :: bnds in
   let arg = Ocaml.vof_string v_name in
   let bnd = ("name", arg) in
@@ -172,14 +172,11 @@ and vof_time { lsb32 = v_lsb32; nsec = v_nsec } =
   let bnd = ("lsb32", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   
 
-let vof_entry { stats = v_stats; id = v_id; stage = v_stage; name = v_name }
+let vof_entry { stats = v_stats; id = v_id; name = v_name }
               =
   let bnds = [] in
   let arg = Ocaml.vof_string v_name in
   let bnd = ("name", arg) in
-  let bnds = bnd :: bnds in
-  let arg = Ocaml.vof_int v_stage in
-  let bnd = ("stage", arg) in
   let bnds = bnd :: bnds in
   let arg = Sha1.vof_t v_id in
   let bnd = ("id", arg) in

@@ -33,10 +33,8 @@ let cmd = { Cmd.
   ];
   f = (fun args ->
     match args with
-    | [url] -> 
-      clone url "."
-    | [url;dst] ->
-      clone url dst
+    | [url]     -> clone url "."
+    | [url;dst] -> clone url dst
     | _ -> raise Cmd.ShowUsage
   );
 }

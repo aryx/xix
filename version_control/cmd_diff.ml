@@ -21,8 +21,7 @@ let cmd = { Cmd.
   help = " ";
   options = [];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let r = Repository.open_ "." in
+    let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> diff_worktree_vs_index r
     | xs -> raise Cmd.ShowUsage

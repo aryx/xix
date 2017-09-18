@@ -38,8 +38,7 @@ let cmd = { Cmd.
     (* less: --patch, --quiet, --merge *)
   ];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let r = Repository.open_ "." in
+    let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 
       if !soft || !mixed || not !hard

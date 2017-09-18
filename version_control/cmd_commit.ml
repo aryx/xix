@@ -41,8 +41,8 @@ let cmd = { Cmd.
   f = (fun args ->
     match args with
     | [] -> 
-      (* todo: allow cmd from different location *)
-      let r = Repository.open_ "." in
+      let r, _ = Repository.find_root_open_and_adjust_paths [] in
+      (*s: [[Cmd_commit.cmd]] compute [[today]] *)
       let today = 
         (Int64.of_float (Unix.time ()),
          { User.
@@ -52,6 +52,8 @@ let cmd = { Cmd.
            min = 0;
          })
       in
+      (*e: [[Cmd_commit.cmd]] compute [[today]] *)
+      (*s: [[Cmd_commit.cmd]] compute [[author]] *)
       (* todo: read from .git/config or ~/.gitconfig *)
       let author = 
         if !author = ""
@@ -62,11 +64,14 @@ let cmd = { Cmd.
              }
         else raise Todo (* need parse author string *)
       in
+      (*e: [[Cmd_commit.cmd]] compute [[author]] *)
+      (*s: [[Cmd_commit.cmd]] compute [[comitter]] *)
       let committer =
         if !committer = ""
         then author
         else raise Todo
       in
+      (*e: [[Cmd_commit.cmd]] compute [[comitter]] *)
       commit r author committer !message
 
     | xs -> raise Cmd.ShowUsage

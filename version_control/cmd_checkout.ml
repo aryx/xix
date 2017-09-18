@@ -20,7 +20,7 @@ let checkout r str =
     Repository.set_worktree_and_index_to_tree r tree;
     pr (spf "Switched to branch '%s'" str);
     (* less: if master, then check if up-to-date with origin/master *)
-
+  (*s: [[Cmd_checkout.checkout()]] cases *)
   | _ when Hexsha.is_hexsha str ->
     let commitid = Hexsha.to_sha str in
     let commit = Repository.read_commit r commitid in
@@ -31,7 +31,7 @@ let checkout r str =
     Repository.set_worktree_and_index_to_tree r tree;
     pr (spf "Note: checking out '%s'." str);
     pr ("You are in 'detached HEAD' state");
-
+  (*e: [[Cmd_checkout.checkout()]] cases *)
   | _ -> raise Cmd.ShowUsage
 (*e: function Cmd_checkout.checkout *)
 
@@ -45,8 +45,8 @@ let update r =
 let cmd = { Cmd.
   name = "checkout";
   help = " [options] <branch>
-   or: ogit checkout [options] <commitid>
-   or: ogit checkout [options]
+   or: ocamlgit checkout [options] <commitid>
+   or: ocamlgit checkout [options]
 ";
   options = [
     (* less: --detach, --patch?
@@ -54,8 +54,7 @@ let cmd = { Cmd.
      *)
   ];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let r = Repository.open_ "." in
+    let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> update r
     | [str] -> checkout r str

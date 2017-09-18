@@ -26,9 +26,11 @@ let list_branches r =
 let create_branch r name (* sha *) =
   let all_refs = Repository.all_refs r in
   let refname = "refs/heads/" ^ name in
+  (*s: [[Cmd_branch.create_branch()]] sanity check refname *)
   if List.mem refname all_refs
   (* less: unless -force *)
   then failwith (spf "A branch named '%s' already exists." name);
+  (*e: [[Cmd_branch.create_branch()]] sanity check refname *)
   let sha = Repository.follow_ref_some r (Refs.Head) in
   let ok = Repository.add_ref_if_new r (Refs.Ref refname) (Refs.Hash sha) in
   if not ok
@@ -60,8 +62,8 @@ let del_force = ref false
 let cmd = { Cmd.
   name = "branch";
   help = " [options]
-   or: ogit branch [options] <branchname>
-   or: ogit branch [options] (-d | -D) <branchname>
+   or: ocamlgit branch [options] <branchname>
+   or: ocamlgit branch [options] (-d | -D) <branchname>
 ";
   options = [
     "-d",       Arg.Set del_flag, " delete fully merged branch";
@@ -73,11 +75,9 @@ let cmd = { Cmd.
     *)
   ];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let r = Repository.open_ "." in
+    let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
-    | [] -> 
-      list_branches r
+    | [] -> list_branches r
     | [name] ->
       (match () with
       | _ when !del_flag  -> delete_branch r name false

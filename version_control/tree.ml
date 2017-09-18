@@ -37,16 +37,18 @@ type perm =
   | Exec
   | Link
   | Dir
+  (*s: [[Tree.perm]] cases *)
   | Commit (* ?? submodule? *)
+  (*e: [[Tree.perm]] cases *)
 (*e: type Tree.perm *)
 
 (*s: type Tree.entry *)
 type entry = {
-  perm: perm;
   (* relative to tree, so does not contain any '/', or '.' or '..' *)
   name: string;
   (* Blob.hash or Tree.hash *)
-  node: Sha1.t;
+  id: Sha1.t;
+  perm: perm;
 }
 (*e: type Tree.entry *)
 
@@ -73,10 +75,12 @@ let rec walk_tree read_tree dirpath f xs =
     f relpath entry;
     match entry.perm with
     | Dir ->
-      walk_tree read_tree relpath f (read_tree entry.node)
+      walk_tree read_tree relpath f (read_tree entry.id)
+    | Normal | Exec | Link -> ()
+    (*s: [[Tree.walk_tree()]] match perm cases *)
     | Commit ->
       failwith "submodule not supported yet"
-    | Normal | Exec | Link -> ()
+    (*e: [[Tree.walk_tree()]] match perm cases *)
   )
 (*e: function Tree.walk_tree *)
 
@@ -85,14 +89,14 @@ let rec walk_trees read_tree dirpath f xs ys =
   let g dirpath entry1_opt entry2_opt =
     f dirpath entry1_opt entry2_opt;
     (match entry1_opt, entry2_opt with
-    | Some { perm = Dir; name = str; node = sha }, None ->
+    | Some { perm = Dir; name = str; id = sha }, None ->
       walk_trees read_tree (Filename.concat dirpath str) f
         (read_tree sha) []
-    | None, Some { perm = Dir; name = str; node = sha } ->
+    | None, Some { perm = Dir; name = str; id = sha } ->
       walk_trees read_tree (Filename.concat dirpath str) f
         [] (read_tree sha)
-    | Some { perm = Dir; name = str1; node = sha1 },
-      Some { perm = Dir; name = str2; node = sha2 } ->
+    | Some { perm = Dir; name = str1; id = sha1 },
+      Some { perm = Dir; name = str2; id = sha2 } ->
       assert (str1 = str2);
         (* todo: could skip if sha1 = sha2 here, useful opti *)
         walk_trees read_tree (Filename.concat dirpath str1) f
@@ -139,7 +143,9 @@ let perm_of_string = function
   | "100755" -> Exec
   | "120000" -> Link
   | "40000"  -> Dir
+  (*s: [[Tree.perm_of_string()]] match str cases *)
   | "160000" -> Commit
+  (*e: [[Tree.perm_of_string()]] match str cases *)
   | x        -> failwith (spf "Tree.perm_of_string: %s is not a valid perm." x)
 (*e: function Tree.perm_of_string *)
 
@@ -149,7 +155,9 @@ let string_of_perm = function
   | Exec   -> "100755"
   | Link   -> "120000"
   | Dir    -> "40000"
+  (*s: [[Tree.string_of_perm()]] match perm cases *)
   | Commit -> "160000"
+  (*e: [[Tree.string_of_perm()]] match perm cases *)
 (*e: function Tree.string_of_perm *)
 
 (*s: function Tree.read_entry *)
@@ -161,7 +169,7 @@ let read_entry ch =
   (* todo: handle escape char in filenames? encode/decode *)
   let name = IO_.read_string_and_stop_char ch '\000' in
   let hash = Sha1.read ch in
-  { perm = perm_of_string perm; name = name; node = hash }
+  { perm = perm_of_string perm; name = name; id = hash }
 (*e: function Tree.read_entry *)
 
 (*s: function Tree.write_entry *)
@@ -171,7 +179,7 @@ let write_entry ch e =
   (* todo: handle escape char in filenames? encode/decode *)
   IO.nwrite ch e.name;
   IO.write ch '\000';
-  Sha1.write ch e.node
+  Sha1.write ch e.id
 (*e: function Tree.write_entry *)
   
 

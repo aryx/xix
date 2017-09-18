@@ -74,7 +74,7 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
 let rec collect_filetree read_tree treeid have_sha =
   let tree = read_tree treeid in
   tree |> List.iter (fun entry ->
-    let sha = entry.Tree.node in
+    let sha = entry.Tree.id in
     if not (Hashtbl.mem have_sha sha) then begin
       Hashtbl.add have_sha sha true;
       match entry.Tree.perm with
@@ -157,7 +157,7 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
             if entry.Tree.perm = Tree.Commit
             then failwith "submodule not supported";
             (* bugfix: it's <>, not = *)
-            missing entry.Tree.node (entry.Tree.perm <> Tree.Dir)
+            missing entry.Tree.id (entry.Tree.perm <> Tree.Dir)
           )
         | Objects.Blob _ ->
           raise (Impossible "is_blob guard")

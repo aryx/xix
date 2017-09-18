@@ -86,9 +86,8 @@ let cmd = { Cmd.
     (* less: --reverse *)
   ];
   f = (fun args ->
-    (* todo: allow git rm from different location *)
-    let r = Repository.open_ "." in
-    match args with
+    let r, relpaths = Repository.find_root_open_and_adjust_paths args in
+    match relpaths with
     | [] -> log r
     (* todo: git log path *)
     (* less: revision range *)

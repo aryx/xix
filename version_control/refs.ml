@@ -6,7 +6,7 @@ open Common
 (*****************************************************************************)
 
 (*s: type Refs.refname *)
-(* should always start with "refs/", see is_valid_refname later *)
+(* should always start with "refs/", see is_valid_refname() later *)
 type refname = string (* e.g. "refs/heads/master" *)
 (*e: type Refs.refname *)
 

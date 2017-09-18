@@ -5,7 +5,9 @@ type t =
   | Blob   of Blob.t
   | Commit of Commit.t
   | Tree   of Tree.t
-(*  | Tag of Tag.t *)
+  (*s: [[Objects.t]] cases *)
+  (*  | Tag of Tag.t *)
+  (*e: [[Objects.t]] cases *)
 (*e: type Objects.t *)
 
 (*s: signature Objects.read *)

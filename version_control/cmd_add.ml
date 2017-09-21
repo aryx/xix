@@ -16,7 +16,8 @@ let cmd = { Cmd.
   help = " <file>..."; (* less: pathspec? *)
   options = [
     (* todo: --interactive, --patch for picking, --force (if ignored) 
-     * --all
+     * --all, 
+     * --recursive
      *)
   ];
   f = (fun args ->

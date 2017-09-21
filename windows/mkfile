@@ -40,3 +40,6 @@ ROOT=/home/pad/plan9/ROOT/
 test:V:
 	cp $PROG $ROOT/tests/xxx/
     cd /home/pad/plan9; make disk; make run
+
+loc:V:
+	wc -l *.ml*

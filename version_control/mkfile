@@ -7,7 +7,7 @@ SRC= IO_.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
      index.ml \
-     diff_simple.ml diff_myers.ml \
+     diff_myers.ml \
      change.ml diff.ml diff_unified.ml changes.ml \
      repository.ml \
      client.ml client_local.ml client_git.ml clients.ml \
@@ -20,6 +20,8 @@ SRC= IO_.ml \
      dump.ml cmd_dump.ml cmd_test.ml \
      cmds.ml cmd_help.ml \
      main.ml
+
+#diff_simple.ml 
 
 INCLUDES=-I $TOP/lib_core/commons
 
@@ -61,10 +63,20 @@ $PROG.opt: ${OBJS:%.cmo=%.cmx}
 
 clean:V:
 	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
-	rm -f *~ .*~ *.exe gmon.out *.output
+	rm -f *~ .*~ *.exe gmon.out *.output ocamldoc.out
 
 <$TOP/mkcommon
 <.depend
 
 loc:V:
    wc -l $SRC *.mli
+
+#PP1=-pp camlp4o
+#DOTCOLORS=green,darkgoldenrod2,cyan,red,magenta,yellow,burlywood1,aquamarine,purple,lightpink,salmon,mediumturquoise,black,slategray3
+
+archi.ps: $SRC
+	ocamldoc $INCLUDES $SRC -dot #-dot-reduce #-dot-colors $DOTCOLORS
+    dot -Tps ocamldoc.out -o archi.ps
+
+archi.pdf: archi.ps
+    ps2pdf archi.ps

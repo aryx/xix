@@ -47,7 +47,7 @@ val find_root_open_and_adjust_paths:
 val read_obj: t -> Sha1.t -> Objects.t
 (*e: signature Repository.read_obj *)
 (*s: signature Repository.read_objectish *)
-val read_objectish: t -> objectish -> Objects.t
+val read_objectish: t -> objectish -> Sha1.t * Objects.t
 (*e: signature Repository.read_objectish *)
 (*s: signature Repository.read_commit *)
 val read_commit: t -> Sha1.t -> Commit.t

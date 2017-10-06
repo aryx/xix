@@ -6,7 +6,7 @@ open Common
 
 (*s: function Cmd_show.show *)
 let show r objectish =
-  let obj = Repository.read_objectish r objectish in
+  let sha, obj = Repository.read_objectish r objectish in
   match obj with
   (*s: [[Cmd_show.show()]] match obj cases *)
   | Objects.Blob x -> 
@@ -14,15 +14,21 @@ let show r objectish =
   (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Tree x ->
     (* =~ git ls-tree --names-only *)
-    pr "tree\n"; (* less: put sha of tree *)
+    pr (spf "tree %s\n" (Hexsha.of_sha sha));
     Tree.show x
   (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Commit x -> 
-    pr "commit"; (* less: put sha of commit *)
+    pr (spf "commit %s" (Hexsha.of_sha sha));
     Commit.show x;
     let tree2 = Repository.read_tree r x.Commit.tree in
-    let parent1 = Repository.read_commit r (List.hd x.Commit.parents) in
-    let tree1 = Repository.read_tree r parent1.Commit.tree in
+    let tree1 = 
+      try 
+        let parent1 = Repository.read_commit r (List.hd x.Commit.parents) in
+        Repository.read_tree r parent1.Commit.tree 
+      with Failure _ ->
+      (* no parent *)
+        []
+    in
     let changes = 
       Changes.changes_tree_vs_tree 
         (Repository.read_tree r) 

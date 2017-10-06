@@ -290,11 +290,11 @@ let read_objectish r objectish =
     (match follow_ref r aref |> snd with
     | None -> failwith (spf "could not resolve %s" (Refs.string_of_ref aref))
     | Some sha -> 
-      read_obj r sha
+      sha, read_obj r sha
     )
   | ObjByHex hexsha ->
     let sha = Hexsha.to_sha hexsha in
-    read_obj r sha
+    sha, read_obj r sha
 (*e: function Repository.read_objectish *)
 
 (*s: function Repository.add_obj *)
@@ -381,6 +381,7 @@ let add_in_index r relpaths =
 (* Commit *)
 (*****************************************************************************)
 
+(* less: move to cmd_commit.ml? *)
 (*s: function Repository.commit_index *)
 let commit_index r author committer message =
   let aref = Refs.Head in

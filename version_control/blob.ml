@@ -40,6 +40,6 @@ let write blob ch =
 
 (*s: function Blob.show *)
 let show x =
-  pr x
+  print_string x
 (*e: function Blob.show *)
 (*e: version_control/blob.ml *)

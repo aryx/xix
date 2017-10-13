@@ -5,7 +5,7 @@ open Common
 (*****************************************************************************)
 
 (* Basic Diff algorithm based on the computation of the edit distance between
- * two strings (also known as the longuest common subsequence (LCS) problem).
+ * two strings (also known as the Longuest Common Subsequence (LCS) problem).
  * 
  * reference: 
  * "Algorithms on Strings, Trees, and Sequences" by Dan Gusfield, P217.
@@ -37,6 +37,11 @@ open Common
  *       t(i,j) 
  * 
  * history: done in summer 2007 for Julia Lawall
+ * 
+ * complexity: O(nm) in time and space, so if you want to diff two
+ * sequences of more than 10 000 elts, it will requires a matrix with
+ * 100 M and 100 M operations, so this is not very scalable 
+ * (see Myers's algorithm used in GNU diff for a more scalable algorithm).
  *)
 
 (*****************************************************************************)
@@ -46,6 +51,7 @@ open Common
 let matrix_distance arr1 arr2 = 
   let n = Array.length arr1 in
   let m = Array.length arr2 in 
+  (* this can be big ... *)
   let mat = Array.make_matrix (n+1) (m+1) 0 in
   let t i j = 
     if Array.get arr1 (i-1) = Array.get arr2 (j-1)
@@ -61,6 +67,7 @@ let matrix_distance arr1 arr2 =
     for j = 0 to m do
       mat.(0).(j) <- j;
     done;
+    (* this can be long ... *)
     for i = 1 to n do
       for j = 1 to m do
         mat.(i).(j) <- 
@@ -98,20 +105,67 @@ let traceback_transcript arr1 arr2 mat =
   aux n m
 
 (*****************************************************************************)
-(* Optimizations *)
+(* Optimization *)
 (*****************************************************************************)
+(* Actually this is not a big win. On files of 20 000 LOC, you
+ * go from 125s to 118s, so the string comparison in matrix_distance()
+ * is not the bottleneck.
+ * Actually in native mode you go from 33s to 35s so this is even
+ * slowing things down, weird.
+ *)
+let hash_strings arr1 arr2 =
+  let cnt = ref 0 in
+  let h = Hashtbl.create (Array.length arr1 / 3) in
+  Array.concat [arr1; arr2] |> Array.iter (fun s ->
+    if not (Hashtbl.mem h s)
+    then begin
+      Hashtbl.add h s !cnt;
+      incr cnt;
+    end
+  );
+  let revh = Array.make !cnt ("INCORRECT") in
+  h |> Hashtbl.iter (fun k v ->
+    revh.(v) <- k
+  );
+  arr1 |> Array.map (fun s -> Hashtbl.find h s),
+  arr2 |> Array.map (fun s -> Hashtbl.find h s),
+  revh
+  
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 let diff arr1 arr2 =
+  (* opti: string to int *)
+
   let mat = matrix_distance arr1 arr2 in
   let trace = traceback_transcript arr1 arr2 mat in
   List.rev trace
 
+  (* opti: get back string from int *)
+(*
+  let arr1, arr2, revh = hash_strings arr1 arr2 in
+  |> List.map (function 
+      | Diff.Added i -> Diff.Added (revh.(i))
+      | Diff.Deleted i -> Diff.Deleted (revh.(i))
+      | Diff.Equal i -> Diff.Equal (revh.(i))
+  )
+*)
+
 (*****************************************************************************)
-(* Tests *)
+(* Tests/Bench *)
 (*****************************************************************************)
+(* good bench: sqlite aggalmation, more than 200 000 LOC 
+ * time ./ogit test diff /tmp/test1.c /tmp/test2.c 
+ *  (where test[12].c = sqlite.c or shorter version of sqlite.c)
+ *  on my Macbook Air (from around 2014).
+ * 200 000LOC:
+ * - Myers: 1.4s (in ocaml bytecode mode)
+ * - Basic: ???
+ * 20 000 LOC: (matrix_distance requires a matrix of 400M elements)
+ * - Myers: 0.1s 
+ * - Basic: 104s in bytecode, 33s in native
+ *)
 
 (*
 let edit_distance s1 s2 = 

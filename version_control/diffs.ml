@@ -78,9 +78,9 @@ let diff str1 str2 =
 (*
   let res = StringDiff.diff (Array.of_list xs) (Array.of_list ys) in
   res |> List.rev |> List.map (function
-    | `Common (_, _, s) -> Equal s
-    | `Removed (_, s) -> Deleted s
-    | `Added (_, s) -> Added s
+    | `Common (_, _, s) -> Diff.Equal s
+    | `Removed (_, s) -> Diff.Deleted s
+    | `Added (_, s) -> Diff.Added s
   )
 *)
 (*e: function Diffs.diff *)

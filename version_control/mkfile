@@ -59,8 +59,8 @@ $PROG: $OBJS $COBJS $LIBS
 SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}
 LIBSOPT=${LIBS:%.cma=%.cmxa}
 
-$PROG.opt: ${OBJS:%.cmo=%.cmx}
-	$OCAMLOPT $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq -o $target
+$PROG.opt: ${OBJS:%.cmo=%.cmx} $COBJS $LIBSOPT
+	$OCAMLOPT $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq $CCLIBS -o $target
 
 clean:V:
 	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*

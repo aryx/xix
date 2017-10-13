@@ -85,6 +85,7 @@ let usage () =
 
 (*s: function Main.main *)
 let main () =
+  Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
   (*s: [[Main.main()]] sanity check arguments *)
   if Array.length Sys.argv < 2
   then begin

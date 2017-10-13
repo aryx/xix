@@ -79,21 +79,21 @@ let traceback_transcript arr1 arr2 mat =
   let get_orig_arr arr i = arr.(i-1) in
   (* you need Figure 11.3 P222 of Gusfield book to understand the code below *)
   let rec aux i j =
-    if i = 0 || j = 0
-    then []
-    else
-      let x = mat.(i).(j) in
-      match () with
-      | _ when x = mat.(i-1).(j) + 1 -> 
-        (Diff.Deleted (get_orig_arr arr1 i))::aux (i-1) (j)
-      | _ when x = mat.(i).(j-1) + 1 -> 
-        (Diff.Added (get_orig_arr arr2 j))::aux (i) (j-1)
-      | _ -> 
-        if x = mat.(i-1).(j-1)
-        then Diff.Equal (get_orig_arr arr1 (i))::aux (i-1) (j-1)
-        else (Diff.Deleted (get_orig_arr arr1 i))::
-              (Diff.Added (get_orig_arr arr2 j))::
-              aux (i-1) (j-1)
+    let x = mat.(i).(j) in
+    match () with
+    | _ when i = 0 && j = 0 -> []
+    | _ when i = 0 -> (Diff.Added (get_orig_arr arr2 j))::aux (i) (j-1)
+    | _ when j = 0 -> (Diff.Deleted (get_orig_arr arr1 i))::aux (i-1) (j)
+    | _ when x = mat.(i-1).(j) + 1 -> 
+      (Diff.Deleted (get_orig_arr arr1 i))::aux (i-1) (j)
+    | _ when x = mat.(i).(j-1) + 1 -> 
+      (Diff.Added (get_orig_arr arr2 j))::aux (i) (j-1)
+    | _ -> 
+      if x = mat.(i-1).(j-1)
+      then Diff.Equal (get_orig_arr arr1 (i))::aux (i-1) (j-1)
+      else (Diff.Deleted (get_orig_arr arr1 i))::
+           (Diff.Added (get_orig_arr arr2 j))::
+           aux (i-1) (j-1)
   in
   aux n m
 

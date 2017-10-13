@@ -23,9 +23,9 @@ type t = {
   (* less: on bare repo this could be the toplevel dir *)
   dotgit: Common.filename;
 
-  (*s: [[Repository.t]] other fields *)
+  (*s: [[Repository.t]] index field *)
   mutable index: Index.t;
-  (*e: [[Repository.t]] other fields *)
+  (*e: [[Repository.t]] index field *)
   (* less: compression level config field? *)
 }
 (*e: type Repository.t *)
@@ -542,7 +542,9 @@ let init root =
   add_ref_if_new r Refs.Head Refs.default_head_content |> ignore;
 
   (* less: config file, description, hooks, etc *)
-  pr (spf "Initialized empty Git repository in %s" (root / ".git"))
+  Sys.chdir root;
+  let absolute = Sys.getcwd () in
+  pr (spf "Initialized empty Git repository in %s" (absolute / ".git/"))
 (*e: function Repository.init *)
 
 (*s: function Repository.open_ *)

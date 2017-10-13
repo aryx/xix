@@ -51,6 +51,7 @@ let log r =
   let start = Repository.follow_ref_some r (Refs.Head) in
   start |> Commit.walk_history (Repository.read_commit r) (fun sha commit ->
     print_commit sha commit;
+    (*s: [[Cmd_log.log()]] if [[--name-status]] flag *)
     if !name_status
     then begin
       let tree1 = Repository.read_tree r commit.Commit.tree in
@@ -71,6 +72,7 @@ let log r =
       in
       changes |> List.iter print_change;
       pr "";
+    (*e: [[Cmd_log.log()]] if [[--name-status]] flag *)
     end
   )
 (*e: function Cmd_log.log *)

@@ -18,13 +18,15 @@ open Common
  *  - myers: https://github.com/leque/ocaml-diff port of
  *    "Eugene Myers, An O(ND) Difference Algorithm and Its Variations, 
  *    Algorithmica Vol. 1 No. 2, pp. 251-266, 1986."
+ *    https://stackoverflow.com/questions/42635889/myers-diff-algorithm-vs-hunt-mcilroy-algorithm
  *  - patience diff: https://github.com/janestreet/patdiff
- *  https://stackoverflow.com/questions/42635889/myers-diff-algorithm-vs-hunt-mcilroy-algorithm
  *    support also colored output, and word diff, but heavily modularized
+ *    https://blog.jcoglan.com/2017/09/19/the-patience-diff-algorithm/
+ *    https://blog.jcoglan.com/2017/09/28/implementing-patience-diff/
  *  - plan9 diff (in plan9/utilities/string/diff/)
- *    not myers's diff
+ *    not Myers's diff
  *  - gnu diff (in plan9/ape_cmd/diff)
- *    use myers?
+ *    use Myers?
  *  - http://pynash.org/2013/02/26/diff-in-50-lines/ 
  *    (in python, and talk about python difflib)
  *  - Heckle diff mentionned in diff3.py

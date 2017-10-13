@@ -23,6 +23,7 @@ open Common
  *    copy-pasted in decompress, but too simple. Does not
  *    support right API where can compress/decompress strings.
  *  - libflate in plan9 :)
+ *  - ocamlgz from ocamlplot, but just an OCaml binding to C lib
  * 
  * Currently used solutions are marked with a '*' above.
  *)

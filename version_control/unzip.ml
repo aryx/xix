@@ -24,9 +24,14 @@
 
 (*s: type Unzip.huffman *)
 type huffman =
-  | Found of int
+  (** Leaf *)
+  | Found of int (** 0..288 *)
+  (** Node *)
   | NeedBit of huffman * huffman
+  (*s: [[Unzip.huffman]] cases *)
+  (** Opti *)
   | NeedBits of int * huffman array
+  (*e: [[Unzip.huffman]] cases *)
 (*e: type Unzip.huffman *)
 
 
@@ -41,38 +46,62 @@ type adler32 = {
 type window = {
   mutable wbuffer : bytes;
   mutable wpos : int;
+  (*s: [[Unzip.window]] other fields *)
   wcrc : adler32;
+  (*e: [[Unzip.window]] other fields *)
 }
 (*e: type Unzip.window *)
 
 (*s: type Unzip.state *)
 type state =
   | Head
+
   | Block
   | CData
-  | Flat
-  | Crc
-  | Dist
-  | DistOne
+
   | Done
+  (*s: [[Unzip.state]] other cases *)
+  | Dist
+  (*x: [[Unzip.state]] other cases *)
+  | DistOne
+  (*x: [[Unzip.state]] other cases *)
+  | Crc
+  (*x: [[Unzip.state]] other cases *)
+  | Flat
+  (*e: [[Unzip.state]] other cases *)
 (*e: type Unzip.state *)
 
 (*s: type Unzip.t *)
 type t = {
-  mutable znbits : int;
-  mutable zbits : int;
-  mutable zstate : state;
-  mutable zfinal : bool;
-  mutable zhuffman : huffman;
-  mutable zhuffdist : huffman option;
-  mutable zlen : int;
-  mutable zdist : int;
-  mutable zneeded : int;
-  mutable zoutput : bytes;
-  mutable zoutpos : int;
-  zinput : IO.input;
+  mutable zstate    : state;
+
+  mutable zhuffman  : huffman;
+  zwindow  : window;
+
+  (** input *)
+  zinput   : IO.input;
+  mutable zneeded   : int;
+
+  (** output *)
+  mutable zoutput   : bytes;
+  mutable zoutpos   : int;
+
+  (*s: [[Unzip.t]] other fields *)
+  mutable zfinal    : bool;
+  (*x: [[Unzip.t]] other fields *)
+  (** usually a byte, but can contained more *)
+  mutable zbits     : int;
+  (** unread (not consumed) bits in zbits (usually 0..8, but can be more) *)
+  mutable znbits    : int;
+  (*x: [[Unzip.t]] other fields *)
+  mutable zlen      : int;
+  (*x: [[Unzip.t]] other fields *)
+  mutable zdist     : int;
+  (*x: [[Unzip.t]] other fields *)
   zlengths : int array;
-  zwindow : window;
+  (*x: [[Unzip.t]] other fields *)
+  mutable zhuffdist : huffman option;
+  (*e: [[Unzip.t]] other fields *)
 }
 (*e: type Unzip.t *)
 
@@ -99,9 +128,9 @@ let error msg = raise (Error msg)
 (*s: function Unzip.tree_depth *)
 let rec tree_depth = function
   | Found _ -> 0
-  | NeedBits _ -> assert false
   | NeedBit (a,b) ->
     1 + min (tree_depth a) (tree_depth b)
+  | NeedBits _ -> assert false
 (*e: function Unzip.tree_depth *)
 
 (*s: function Unzip.tree_compress *)
@@ -128,18 +157,23 @@ and tree_walk tbl p cd d = function
 
 (*s: function Unzip.make_huffman *)
 let make_huffman lengths pos nlengths maxbits =
+
   let counts = Array.make maxbits 0 in
   for i = 0 to nlengths - 1 do
     let p = Array.unsafe_get lengths (i + pos) in
+    (*s: [[Unzip.make_huffman()]] sanity check codelength [[p]] *)
     if p >= maxbits then error Invalid_huffman;
+    (*e: [[Unzip.make_huffman()]] sanity check codelength [[p]] *)
     Array.unsafe_set counts p (Array.unsafe_get counts p + 1);
   done;
+
   let code = ref 0 in
   let tmp = Array.make maxbits 0 in
   for i = 1 to maxbits - 2 do
     code := (!code + Array.unsafe_get counts i) lsl 1;
     Array.unsafe_set tmp i !code;
   done;
+
   let bits = Hashtbl.create 0 in
   for i = 0 to nlengths - 1 do
     let l = Array.unsafe_get lengths (i + pos) in
@@ -149,15 +183,21 @@ let make_huffman lengths pos nlengths maxbits =
       Hashtbl.add bits (n,l) i;
     end;
   done;
+
+  (*s: function Unzip.tree_make *)
   let rec tree_make v l =
+    (*s: [[Unzip.tree_make()]] sanity check [[l]] *)
     if l > maxbits then error Invalid_huffman;
+    (*e: [[Unzip.tree_make()]] sanity check [[l]] *)
     try
       Found (Hashtbl.find bits (v,l))
     with
       Not_found ->
         NeedBit (tree_make (v lsl 1) (l + 1) , tree_make (v lsl 1 lor 1) (l + 1))
   in
-  tree_compress (NeedBit (tree_make 0 1 , tree_make 1 1))
+  (*e: function Unzip.tree_make *)
+  tree_compress 
+    (NeedBit (tree_make 0 1, tree_make 1 1))
 (*e: function Unzip.make_huffman *)
 
 (* ************************************************************************ *)
@@ -204,16 +244,20 @@ let buffer_size = 1 lsl 16
 (*e: constant Unzip.buffer_size *)
 
 (*s: function Unzip.window_create *)
-let window_create size = {
+let window_create () = {
     wbuffer = Bytes.create buffer_size;
     wpos = 0;
-    wcrc = adler32_create()
+    (*s: [[Unzip.window_create()]] set other fields *)
+    wcrc = adler32_create();
+    (*e: [[Unzip.window_create()]] set other fields *)
   }
 (*e: function Unzip.window_create *)
 
 (*s: function Unzip.window_slide *)
 let window_slide w = 
+  (*s: Unzip.window_slide()]] update crc before blit *)
   adler32_update w.wcrc w.wbuffer 0 window_size;
+  (*e: Unzip.window_slide()]] update crc before blit *)
   let b = Bytes.create buffer_size in
   w.wpos <- w.wpos - window_size;
   Bytes.unsafe_blit w.wbuffer window_size b 0 w.wpos;
@@ -222,14 +266,20 @@ let window_slide w =
 
 (*s: function Unzip.window_add_bytes *)
 let window_add_bytes w s p len =
-  if w.wpos + len > buffer_size then window_slide w;
+  (*s: [[Unzip.window_add_bytes()]] slide window if reached end of buffer *)
+  if w.wpos + len > buffer_size 
+  then window_slide w;
+  (*e: [[Unzip.window_add_bytes()]] slide window if reached end of buffer *)
   Bytes.unsafe_blit s p w.wbuffer w.wpos len;
   w.wpos <- w.wpos + len
 (*e: function Unzip.window_add_bytes *)
 
 (*s: function Unzip.window_add_char *)
 let window_add_char w c =
-  if w.wpos = buffer_size then window_slide w;
+  (*s: [[Unzip.window_add_char()]] slide window if reached end of buffer *)
+  if w.wpos = buffer_size 
+  then window_slide w;
+  (*e: [[Unzip.window_add_char()]] slide window if reached end of buffer *)
   Bytes.unsafe_set w.wbuffer w.wpos c;
   w.wpos <- w.wpos + 1
 (*e: function Unzip.window_add_char *)
@@ -269,12 +319,13 @@ let code_lengths_pos = [|16;17;18;0;8;7;9;6;10;5;11;4;12;3;13;2;14;1;15|]
 (*e: constant Unzip.code_lengths_pos *)
 
 (*s: constant Unzip.fixed_huffman *)
-let fixed_huffman = make_huffman (Array.init 288 (fun n ->
-                  if n <= 143 then 8
-                  else if n <= 255 then 9
-                  else if n <= 279 then 7
-                  else 8
-                )) 0 288 10
+let fixed_huffman = 
+  make_huffman (Array.init 288 (fun n ->
+    if n <= 143 then 8
+    else if n <= 255 then 9
+    else if n <= 279 then 7
+    else 8
+  )) 0 288 10
 (*e: constant Unzip.fixed_huffman *)
 
 (*s: function Unzip.get_bits *)
@@ -319,7 +370,9 @@ let reset_bits z =
 
 (*s: function Unzip.add_bytes *)
 let add_bytes z s p l =
+  (*s: [[Unzip.add_bytes()]] add bytes to window *)
   window_add_bytes z.zwindow s p l;
+  (*e: [[Unzip.add_bytes()]] add bytes to window *)
   Bytes.unsafe_blit s p z.zoutput z.zoutpos l;
   z.zneeded <- z.zneeded - l;
   z.zoutpos <- z.zoutpos + l
@@ -327,7 +380,9 @@ let add_bytes z s p l =
 
 (*s: function Unzip.add_char *)
 let add_char z c =
+  (*s: [[Unzip.add_char()]] add character to window *)
   window_add_char z.zwindow c;
+  (*e: [[Unzip.add_char()]] add character to window *)
   Bytes.unsafe_set z.zoutput z.zoutpos c;
   z.zneeded <- z.zneeded - 1;
   z.zoutpos <- z.zoutpos + 1
@@ -349,7 +404,9 @@ let add_dist z d l =
 let rec apply_huffman z = function
   | Found n -> n
   | NeedBit (a,b) -> apply_huffman z (if get_bit z then b else a)
-  | NeedBits (n,t) -> apply_huffman z (Array.unsafe_get t (get_bits z n))
+ (*s: [[Unzip.apply_huffman()]] other cases *)
+ | NeedBits (n,t) -> apply_huffman z (Array.unsafe_get t (get_bits z n))
+ (*e: [[Unzip.apply_huffman()]] other cases *)
 (*e: function Unzip.apply_huffman *)
 
 (*s: function Unzip.inflate_lengths *)
@@ -385,43 +442,46 @@ let inflate_lengths z a max =
 (*s: function Unzip.inflate_loop *)
 let rec inflate_loop z =
   match z.zstate with
+  (*s: [[Unzip.inflate_loop()]] match state cases *)
   | Head ->
     let cmf = IO.read_byte z.zinput in
-    let cm = cmf land 15 in
-    let cinfo = cmf lsr 4 in
-    if cm <> 8 || cinfo <> 7 then error Invalid_data;
+    (*s: [[Unzip.inflate_loop()]] when in Head state, sanity check [[cmf]] *)
+    let cm     = cmf land 15 in
+    let cinfo  = cmf lsr 4 in
+    if cm <> 8 || cinfo <> 7 
+    then error Invalid_data;
+    (*e: [[Unzip.inflate_loop()]] when in Head state, sanity check [[cmf]] *)
     let flg = IO.read_byte z.zinput in
-    (*let fcheck = flg land 31 in*)
+    (*s: [[Unzip.inflate_loop()]] when in Head state, sanity check [[flg]] *)
     let fdict = flg land 32 <> 0 in
-    (*let flevel = flg lsr 6 in*)
-    if (cmf lsl 8 + flg) mod 31 <> 0 then error Invalid_data;
-    if fdict then error Unsupported_dictionary;
+    if (cmf lsl 8 + flg) mod 31 <> 0 
+    then error Invalid_data;
+    if fdict 
+    then error Unsupported_dictionary;
+    (*e: [[Unzip.inflate_loop()]] when in Head state, sanity check [[flg]] *)
     z.zstate <- Block;
     inflate_loop z
-  | Crc ->
-    let calc = window_checksum z.zwindow in
-    let crc = adler32_read z.zinput in
-    if calc <> crc then error Invalid_crc;
-    z.zstate <- Done;
-    inflate_loop z
-  | Done ->
-    ()
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
   | Block ->
     z.zfinal <- get_bit z;
     let btype = get_bits z 2 in
     (match btype with
-    | 0 -> (* no compression *)
-      z.zlen <- IO.LittleEndian.read_ui16 z.zinput;
-      let nlen = IO.LittleEndian.read_ui16 z.zinput in
-      if nlen <> 0xffff - z.zlen then error Invalid_data;
-      z.zstate <- Flat;
-      inflate_loop z;
-      reset_bits z
+    (*s: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
     | 1 -> (* fixed Huffman *)
       z.zhuffman <- fixed_huffman;
       z.zhuffdist <- None;
       z.zstate <- CData;
       inflate_loop z
+    (*x: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
+    | 0 -> (* no compression *)
+      z.zlen <- IO.LittleEndian.read_ui16 z.zinput;
+      let nlen = IO.LittleEndian.read_ui16 z.zinput in
+      if nlen <> 0xffff - z.zlen 
+      then error Invalid_data;
+      z.zstate <- Flat;
+      inflate_loop z;
+      reset_bits z
+    (*x: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
     | 2 -> (* dynamic Huffman *)
       let hlit = get_bits z 5 + 257 in
       let hdist = get_bits z 5 + 1 in
@@ -439,82 +499,137 @@ let rec inflate_loop z =
       z.zhuffman <- make_huffman lengths 0 hlit 16;      
       z.zstate <- CData;
       inflate_loop z
+    (*e: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
     | _ ->
-      error Invalid_data)
-  | Flat ->
-    let rlen = min z.zlen z.zneeded in
-    let str = IO.nread z.zinput rlen in
-    let len = Bytes.length str in
-    z.zlen <- z.zlen - len;
-    add_bytes z str 0 len;
-    if z.zlen = 0 then z.zstate <- (if z.zfinal then Crc else Block);
-    if z.zneeded > 0 then inflate_loop z
-  | DistOne ->
-    let len = min z.zlen z.zneeded in
-    add_dist_one z len;
-    z.zlen <- z.zlen - len;
-    if z.zlen = 0 then z.zstate <- CData;
-    if z.zneeded > 0 then inflate_loop z
+      error Invalid_data
+    )
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
+  | CData ->
+    (match apply_huffman z z.zhuffman with
+    (*s: [[Unzip.inflate_loop()]] when in CData state, match apply huffman cases *)
+    | n when n < 256 ->
+      add_char z (Char.unsafe_chr n);
+      if z.zneeded > 0  
+      then inflate_loop z
+    (*x: [[Unzip.inflate_loop()]] when in CData state, match apply huffman cases *)
+    | 256 ->
+      z.zstate <- if z.zfinal then Crc else Block;
+      inflate_loop z
+    (*x: [[Unzip.inflate_loop()]] when in CData state, match apply huffman cases *)
+    | n ->
+      let n = n - 257 in
+      (*s: [[Unzip.inflate_loop()]] when in CData state, when backref, compute zlen *)
+      let extra_bits = Array.unsafe_get len_extra_bits_tbl n in
+      if extra_bits = -1 
+      then error Invalid_data;
+      z.zlen <- (Array.unsafe_get len_base_val_tbl n) + (get_bits z extra_bits);
+      (*e: [[Unzip.inflate_loop()]] when in CData state, when backref, compute zlen *)
+      (*s: [[Unzip.inflate_loop()]] when in CData state, when backref, compute zdist *)
+      let dist_code = 
+        match z.zhuffdist with 
+        | None -> get_rev_bits z 5 
+        (*s: [[Unzip.inflate_loop()]] compute dist_code, match [[zhuffdist]] cases *)
+        | Some h -> 
+          apply_huffman z h
+        (*e: [[Unzip.inflate_loop()]] compute dist_code, match [[zhuffdist]] cases *)
+      in
+      let extra_bits = Array.unsafe_get dist_extra_bits_tbl dist_code in
+      if extra_bits = -1 
+      then error Invalid_data;
+      z.zdist <- (Array.unsafe_get dist_base_val_tbl dist_code) + (get_bits z extra_bits);
+      (*e: [[Unzip.inflate_loop()]] when in CData state, when backref, compute zdist *)
+
+      if z.zdist > window_available z.zwindow 
+      then error Invalid_data;
+      z.zstate <- (if z.zdist = 1 then DistOne else Dist);
+      inflate_loop z
+    (*e: [[Unzip.inflate_loop()]] when in CData state, match apply huffman cases *)
+    )
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
   | Dist ->
     while z.zlen > 0 && z.zneeded > 0 do
       let len = min z.zneeded (min z.zlen z.zdist) in
       add_dist z z.zdist len;
       z.zlen <- z.zlen - len;
     done;
-    if z.zlen = 0 then z.zstate <- CData;
-    if z.zneeded > 0 then inflate_loop z
-  | CData ->
-    match apply_huffman z z.zhuffman with
-    | n when n < 256 ->
-      add_char z (Char.unsafe_chr n);
-      if z.zneeded > 0 then inflate_loop z
-    | 256 ->
-      z.zstate <- if z.zfinal then Crc else Block;
-      inflate_loop z
-    | n ->
-      let n = n - 257 in
-      let extra_bits = Array.unsafe_get len_extra_bits_tbl n in
-      if extra_bits = -1 then error Invalid_data;
-      z.zlen <- (Array.unsafe_get len_base_val_tbl n) + (get_bits z extra_bits);
-      let dist_code = (match z.zhuffdist with None -> get_rev_bits z 5 | Some h -> apply_huffman z h) in
-      let extra_bits = Array.unsafe_get dist_extra_bits_tbl dist_code in
-      if extra_bits = -1 then error Invalid_data;
-      z.zdist <- (Array.unsafe_get dist_base_val_tbl dist_code) + (get_bits z extra_bits);
-      if z.zdist > window_available z.zwindow then error Invalid_data;
-      z.zstate <- (if z.zdist = 1 then DistOne else Dist);
-      inflate_loop z
+    if z.zlen = 0 
+    then z.zstate <- CData;
+    if z.zneeded > 0 
+    then inflate_loop z
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
+  | DistOne ->
+    let len = min z.zlen z.zneeded in
+    add_dist_one z len;
+    z.zlen <- z.zlen - len;
+    if z.zlen = 0 
+    then z.zstate <- CData;
+    if z.zneeded > 0 
+    then inflate_loop z
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
+  | Crc ->
+    (*s: [[Unzip.inflate_loop()]] when in Crc state, check adler32 checksum *)
+    let calc = window_checksum z.zwindow in
+    let crc = adler32_read z.zinput in
+    if calc <> crc 
+    then error Invalid_crc;
+    (*e: [[Unzip.inflate_loop()]] when in Crc state, check adler32 checksum *)
+    z.zstate <- Done;
+    inflate_loop z
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
+  | Done ->
+    ()
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
+  | Flat ->
+    let rlen = min z.zlen z.zneeded in
+    let str = IO.nread z.zinput rlen in
+    let len = Bytes.length str in
+    z.zlen <- z.zlen - len;
+    add_bytes z str 0 len;
+    if z.zlen = 0 
+    then z.zstate <- (if z.zfinal then Crc else Block);
+    if z.zneeded > 0 
+    then inflate_loop z
+  (*e: [[Unzip.inflate_loop()]] match state cases *)
 (*e: function Unzip.inflate_loop *)
 
 (*s: function Unzip.inflate_data *)
 let inflate_data z s pos len =
-  if pos < 0 || len < 0 || pos + len > Bytes.length s then invalid_arg "inflate_data";
+  (*s: [[Unzip.inflate_data()]] sanity check parameters *)
+  if pos < 0 || len < 0 || pos + len > Bytes.length s 
+  then invalid_arg "inflate_data";
+  (*e: [[Unzip.inflate_data()]] sanity check parameters *)
   z.zneeded <- len;
   z.zoutpos <- pos;
   z.zoutput <- s;
   try
-    if len > 0 then inflate_loop z;
+    if len > 0 
+    then inflate_loop z;
     len - z.zneeded
-  with
-    IO.No_more_input -> error Truncated_data
+  with IO.No_more_input -> error Truncated_data
 (*e: function Unzip.inflate_data *)
 
 (*s: function Unzip.inflate_init *)
 let inflate_init ?(header=true) ch = 
   {
-    zfinal = false;
-    zhuffman = fixed_huffman;
-    zhuffdist = None;
-    zlen = 0;
-    zdist = 0;
     zstate = (if header then Head else Block);
     zinput = ch;
-    zbits = 0;
-    znbits = 0;
     zneeded = 0;
+    zfinal = false;
+
     zoutput = Bytes.empty;
     zoutpos = 0;
+
+    zhuffman = fixed_huffman;
+    zhuffdist = None;
+
+    zwindow = window_create ();
+
+    zbits = 0;
+    znbits = 0;
+
+    zlen = 0;
+    zdist = 0;
     zlengths = Array.make 19 (-1);
-    zwindow = window_create (1 lsl 15)
   }
 (*e: function Unzip.inflate_init *)
 
@@ -523,17 +638,21 @@ let inflate ?(header=true) ch =
   let z = inflate_init ~header ch in
   let s = Bytes.create 1 in
   IO.create_in
-    ~read:(fun() ->
-      let l = inflate_data z s 0 1 in
-      if l = 1 then Bytes.unsafe_get s 0 else raise IO.No_more_input
-    )
     ~input:(fun s p l ->
       let n = inflate_data z s p l in
-      if n = 0 then raise IO.No_more_input;
+      if n = 0 
+      then raise IO.No_more_input;
       n
     )
     ~close:(fun () ->
       IO.close_in ch
+    )
+    (** special case of ~input for 1 byte *)
+    ~read:(fun() ->
+      let l = inflate_data z s 0 1 in
+      if l = 1 
+      then Bytes.unsafe_get s 0 
+      else raise IO.No_more_input
     )
 (*e: function Unzip.inflate *)
 (*e: version_control/unzip.ml *)

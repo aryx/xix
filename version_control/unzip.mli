@@ -54,4 +54,8 @@ val inflate_init : ?header:bool -> IO.input -> t
 (*s: signature Unzip.inflate_data *)
 val inflate_data : t -> bytes -> int -> int -> int
 (*e: signature Unzip.inflate_data *)
+
+(* internal *)
+val debug: bool ref
+
 (*e: version_control/unzip.mli *)

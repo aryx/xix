@@ -7,8 +7,9 @@ SRC= IO_.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
      index.ml \
-     diff_myers.ml \
-     change.ml diff.ml diff_unified.ml changes.ml \
+     change.ml diff.ml \
+     diff_basic.ml diff_myers.ml \
+     diffs.ml diff_unified.ml changes.ml \
      repository.ml \
      client.ml client_local.ml client_git.ml clients.ml \
      cmd.ml \

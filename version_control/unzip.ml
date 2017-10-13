@@ -22,6 +22,8 @@
  *)
 (*e: copyright ocaml-unzip *)
 
+let debug = ref false
+
 (*s: type Unzip.huffman *)
 type huffman =
   (** Leaf *)
@@ -63,11 +65,11 @@ type state =
   (*s: [[Unzip.state]] other cases *)
   | Dist
   (*x: [[Unzip.state]] other cases *)
-  | DistOne
-  (*x: [[Unzip.state]] other cases *)
   | Crc
   (*x: [[Unzip.state]] other cases *)
   | Flat
+  (*x: [[Unzip.state]] other cases *)
+  | DistOne
   (*e: [[Unzip.state]] other cases *)
 (*e: type Unzip.state *)
 
@@ -196,7 +198,6 @@ let make_huffman lengths pos nlengths maxbits =
         NeedBit (tree_make (v lsl 1) (l + 1) , tree_make (v lsl 1 lor 1) (l + 1))
   in
   (*e: function Unzip.tree_make *)
-  tree_compress 
     (NeedBit (tree_make 0 1, tree_make 1 1))
 (*e: function Unzip.make_huffman *)
 
@@ -468,12 +469,14 @@ let rec inflate_loop z =
     (match btype with
     (*s: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
     | 1 -> (* fixed Huffman *)
+      if !debug then print_string "Unzip: Fixed Huffman\n";
       z.zhuffman <- fixed_huffman;
       z.zhuffdist <- None;
       z.zstate <- CData;
       inflate_loop z
     (*x: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
     | 0 -> (* no compression *)
+      if !debug then print_string "Unzip: no compression\n";
       z.zlen <- IO.LittleEndian.read_ui16 z.zinput;
       let nlen = IO.LittleEndian.read_ui16 z.zinput in
       if nlen <> 0xffff - z.zlen 
@@ -483,6 +486,7 @@ let rec inflate_loop z =
       reset_bits z
     (*x: [[Unzip.inflate_loop()]] when in Block state, match block type cases *)
     | 2 -> (* dynamic Huffman *)
+      if !debug then print_string "Unzip: Dynamic Huffman\n";
       let hlit = get_bits z 5 + 257 in
       let hdist = get_bits z 5 + 1 in
       let hclen = get_bits z 4 + 4 in
@@ -541,7 +545,7 @@ let rec inflate_loop z =
 
       if z.zdist > window_available z.zwindow 
       then error Invalid_data;
-      z.zstate <- (if z.zdist = 1 then DistOne else Dist);
+      z.zstate <- Dist;
       inflate_loop z
     (*e: [[Unzip.inflate_loop()]] when in CData state, match apply huffman cases *)
     )
@@ -552,15 +556,6 @@ let rec inflate_loop z =
       add_dist z z.zdist len;
       z.zlen <- z.zlen - len;
     done;
-    if z.zlen = 0 
-    then z.zstate <- CData;
-    if z.zneeded > 0 
-    then inflate_loop z
-  (*x: [[Unzip.inflate_loop()]] match state cases *)
-  | DistOne ->
-    let len = min z.zlen z.zneeded in
-    add_dist_one z len;
-    z.zlen <- z.zlen - len;
     if z.zlen = 0 
     then z.zstate <- CData;
     if z.zneeded > 0 
@@ -587,6 +582,16 @@ let rec inflate_loop z =
     add_bytes z str 0 len;
     if z.zlen = 0 
     then z.zstate <- (if z.zfinal then Crc else Block);
+    if z.zneeded > 0 
+    then inflate_loop z
+  (*x: [[Unzip.inflate_loop()]] match state cases *)
+  | DistOne ->
+    if !debug then print_string "Unzip: DistOne\n";
+    let len = min z.zlen z.zneeded in
+    add_dist_one z len;
+    z.zlen <- z.zlen - len;
+    if z.zlen = 0 
+    then z.zstate <- CData;
     if z.zneeded > 0 
     then inflate_loop z
   (*e: [[Unzip.inflate_loop()]] match state cases *)

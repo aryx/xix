@@ -7,20 +7,26 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Compute the differences between 2 files line-wise.
+(* Compute the differences between two files line-wise.
  *
  * alternatives:
+ *  - Basic diff using simple edit distance algorithm
+ *    but O(nm) time and space complexity (space especially is bad)
  *  - Simple diff: https://github.com/gjaldon/simple-diff
- *    (an ocaml port of https://github.com/paulgb/simplediff )
+ *    (an OCaml port of https://github.com/paulgb/simplediff )
  *    http://collaboration.cmc.ec.gc.ca/science/rpn/biblio/ddj/Website/articles/DDJ/1988/8807/8807c/8807c.htm
  *    simple, but no diff -u support by default
  *    and seems buggy!
  *  - Hunt and Mcilroy UNIX diff, the original diff program
+ *    rely on pair of lines which are the same in both files
+ *    (but if the two files contain blank lines, then very bad complexity)
  *  - Myers's diff: https://github.com/leque/ocaml-diff port of
  *    "Eugene Myers, An O(ND) Difference Algorithm and Its Variations, 
  *    Algorithmica Vol. 1 No. 2, pp. 251-266, 1986."
  *    https://stackoverflow.com/questions/42635889/myers-diff-algorithm-vs-hunt-mcilroy-algorithm
  *    Apparently Ukkonen discovered independently the same algorithm
+ *    Good if the edit distance is small, but very bad if both files are
+ *    very different.
  *  - Bram Cohen's Patience diff: https://github.com/janestreet/patdiff
  *    support also colored output, and word diff, but heavily modularized
  *    https://blog.jcoglan.com/2017/09/19/the-patience-diff-algorithm/
@@ -30,7 +36,7 @@ open Common
  *  - GNU diff (in plan9/ape_cmd/diff)
  *    is based on Myers's algorithm
  *  - http://pynash.org/2013/02/26/diff-in-50-lines/ 
- *    (in python, and talk about python difflib)
+ *    implement Mcilroy in Python (also talk about Python difflib)
  *  - Heckle diff mentionned in diff3.py
  *    "P. Heckel. ``A technique for isolating differences between files.''
  *     Communications of the ACM, Vol. 21, No. 4, page 264, April 1978."

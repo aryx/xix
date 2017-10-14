@@ -130,7 +130,14 @@ let hash_strings arr1 arr2 =
   arr1 |> Array.map (fun s -> Hashtbl.find h s),
   arr2 |> Array.map (fun s -> Hashtbl.find h s),
   revh
-  
+
+(* other optimizations:
+ *  - strip common lines in the front and end (McIlroy diff was doing that)
+ *    so can reduce significantly the size of the matrix
+ *  - Use Hirschberg space opti of storing only the last row.
+ *    No need for full matrix to determine the next row (but then
+ *    need to be clever to get the traceback).
+ *)
 
 (*****************************************************************************)
 (* Entry point *)

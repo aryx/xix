@@ -68,28 +68,11 @@ let split_lines str =
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: module Diffs.StringDiff *)
-module StringDiff = Diff_myers.Make(struct
-  type t = string array
-  type elem = string
-  let get t i = Array.get t i
-  let length t = Array.length t
-end)
-(*e: module Diffs.StringDiff *)
-
 (*s: function Diffs.diff *)
 (* seems correct *)
 let diff str1 str2 =
   let xs = split_lines str1 in
   let ys = split_lines str2 in
-  Diff_basic.diff (Array.of_list xs) (Array.of_list ys)
-(*
-  let res = StringDiff.diff (Array.of_list xs) (Array.of_list ys) in
-  res |> List.rev |> List.map (function
-    | `Common (_, _, s) -> Diff.Equal s
-    | `Removed (_, s) -> Diff.Deleted s
-    | `Added (_, s) -> Diff.Added s
-  )
-*)
+  Diff_myers.diff (Array.of_list xs) (Array.of_list ys)
 (*e: function Diffs.diff *)
 (*e: version_control/diffs.ml *)

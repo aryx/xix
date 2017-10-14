@@ -159,9 +159,9 @@ let diff arr1 arr2 =
 (*
   let arr1, arr2, revh = hash_strings arr1 arr2 in
   |> List.map (function 
-      | Diff.Added i -> Diff.Added (revh.(i))
+      | Diff.Added i   -> Diff.Added   (revh.(i))
       | Diff.Deleted i -> Diff.Deleted (revh.(i))
-      | Diff.Equal i -> Diff.Equal (revh.(i))
+      | Diff.Equal i   -> Diff.Equal   (revh.(i))
   )
 *)
 (*e: function Diff_basic.diff *)

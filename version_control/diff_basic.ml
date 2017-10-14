@@ -1,3 +1,4 @@
+(*s: version_control/diff_basic.ml *)
 open Common
 
 (*****************************************************************************)
@@ -183,3 +184,5 @@ let test = edit_distance "vintner" "writers"
 let _ = assert (edit_distance "winter" "winter" = 0)
 let _ = assert (edit_distance "vintner" "writers" = 5)
 *)
+
+(*e: version_control/diff_basic.ml *)

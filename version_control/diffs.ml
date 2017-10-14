@@ -12,11 +12,7 @@ open Common
  * alternatives:
  *  - Basic diff using simple edit distance algorithm
  *    but O(nm) time and space complexity (space especially is bad)
- *  - Simple diff: https://github.com/gjaldon/simple-diff
- *    (an OCaml port of https://github.com/paulgb/simplediff )
- *    http://collaboration.cmc.ec.gc.ca/science/rpn/biblio/ddj/Website/articles/DDJ/1988/8807/8807c/8807c.htm
- *    simple, but no diff -u support by default
- *    and seems buggy!
+ *  - Hirshberg invented a linear space optimization of basic diff
  *  - Hunt and Mcilroy UNIX diff, the original diff program
  *    rely on pair of lines which are the same in both files
  *    (but if the two files contain blank lines, then very bad complexity)
@@ -27,6 +23,12 @@ open Common
  *    Apparently Ukkonen discovered independently the same algorithm
  *    Good if the edit distance is small, but very bad if both files are
  *    very different.
+ *  - Simple diff: https://github.com/gjaldon/simple-diff
+ *    (an OCaml port of https://github.com/paulgb/simplediff )
+ *    http://collaboration.cmc.ec.gc.ca/science/rpn/biblio/ddj/Website/articles/DDJ/1988/8807/8807c/8807c.htm article explaining but assembly code (wtf)
+ *    based on Ratcliff/Obershelp pattern-matching algorithm
+ *    seems simple, but not optimal (but "looks right" to people)
+ *    but ocaml version seems buggy!
  *  - Bram Cohen's Patience diff: https://github.com/janestreet/patdiff
  *    support also colored output, and word diff, but heavily modularized
  *    https://blog.jcoglan.com/2017/09/19/the-patience-diff-algorithm/

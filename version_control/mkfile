@@ -22,8 +22,6 @@ SRC= IO_.ml \
      cmds.ml cmd_help.ml \
      main.ml
 
-#diff_simple.ml 
-
 INCLUDES=-I $TOP/lib_core/commons
 
 LIBS=$TOP/lib_core/commons/lib.cma

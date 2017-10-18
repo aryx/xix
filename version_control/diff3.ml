@@ -135,6 +135,29 @@ let final_chunks oxs axs bxs chunks =
 (*****************************************************************************)
 (* Output *)
 (*****************************************************************************)
+let merge filea fileb chunks =
+  let rec aux xs =
+    match xs with
+    | [] -> []
+    | x::xs ->
+      (match x with
+      | Stable s -> [s]
+      | ChangedA (_, items)
+      | ChangedB (_, items)
+      | FalseConflict (items) ->
+        items
+      | TrueConflict (_orig, a, b) ->
+        (* less: fix a and b if no trailing \n *)
+        [(spf "<<<<<<< %s\n" filea);] @
+         a @
+        ["=======\n"] @
+         b @
+        [(spf ">>>>>>> %s\n" fileb);]
+      ):: aux xs
+  in
+  let xxs = aux chunks in
+  let all_lines = List.flatten xxs in
+  String.concat "" all_lines
 
 (*****************************************************************************)
 (* Entry point *)

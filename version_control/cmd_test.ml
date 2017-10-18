@@ -66,7 +66,8 @@ let test_diff3 fileo filea fileb =
   let contentb = read_all fileb in
 
   let chunks = Diff3.diff3 contento contenta contentb in
-  pr2_gen chunks
+  let str = Diff3.merge filea fileb chunks in
+  print_string str
 
 (*s: constant Cmd_test.cmd *)
 let cmd = { Cmd.

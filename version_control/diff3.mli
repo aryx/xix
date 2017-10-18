@@ -1,6 +1,6 @@
 
 type chunk =
-  | Stable of Diff.item list
+  | Stable of Diff.item
   | ChangedA of Diff.item list (* Orig *) * Diff.item list (* A *)
   | ChangedB of Diff.item list (* Orig *) * Diff.item list (* B *)
   | FalseConflict of Diff.item list

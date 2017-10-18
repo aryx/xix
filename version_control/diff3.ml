@@ -18,6 +18,10 @@ module D = Diff
  * Pierce et al. formalized the diff3 algorithm in 
  * "A formal Investigation of Diff3" - FSTTCS 2007
  * Foundations of Software Technology and Theoretical Computer Science
+ * 
+ * The code below uses 0-based indexing of arrays (OCaml arrays uses that)
+ * which is different than the 1-based indexing used in the paper
+ * referenced above.
  *)
 
 (*****************************************************************************)
@@ -26,7 +30,7 @@ module D = Diff
 
 (* Final result (see Pierce et al. paper *)
 type chunk =
-  | Stable of Diff.item list
+  | Stable of Diff.item (* less could be a list here *)
   | ChangedA of Diff.item list (* Orig *) * Diff.item list (* A *)
   | ChangedB of Diff.item list (* Orig *) * Diff.item list (* B *)
   | FalseConflict of Diff.item list
@@ -71,10 +75,10 @@ let rec identical_lines xs ys =
   | x::xs, [] -> []
   | [], y::ys -> []
   | (o1,a)::xs, (o2,b)::ys ->
-    (match () with
-    | _ when o1 = o2 -> (o1, a, b)::identical_lines xs ys
-    | _ when o1 < o2 -> identical_lines xs ((o2,b)::ys)
-    | _ (*   o1 > 02*) -> identical_lines ((o1,a)::xs) ys
+    (match o1 <=> o2 with
+    | Equal -> (o1, a, b)::identical_lines xs ys
+    | Inf -> identical_lines xs ((o2,b)::ys)
+    | Sup -> identical_lines ((o1,a)::xs) ys
     )
 
 let basic_chunks (leno, lena, lenb) identical =
@@ -104,7 +108,7 @@ let final_chunks oxs axs bxs chunks =
   | x::xs ->
     let chunk = 
       (match x with
-      | Same o -> Stable [oxs.(o)]
+      | Same o -> Stable (oxs.(o))
       | Changed ((o1, o2),(a1, a2), (b1, b2)) ->
         let oh = span_range oxs o1 o2 in
         let ah = span_range axs a1 a2 in

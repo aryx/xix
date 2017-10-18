@@ -13,7 +13,8 @@ module D = Diff
  * 
  * alternatives:
  *  - diff3.c by Randy Smith (original author of the diff3 algorithm)
- *  - diff3.py
+ *  - Text::Diff3 in Perl and its Python port diff3.py
+ *    short, but hard to understand
  *  - https://blog.jcoglan.com/2017/05/08/merging-with-diff3/
  *    based on Pierce's paper
  *  - Diff3 in Javascript
@@ -72,6 +73,7 @@ let matching_lines_of_diff diff =
   in
   aux 0 0 diff
 
+(* unchanged in both diffs *)
 let rec identical_lines xs ys =
   match xs, ys with
   | [], [] -> []
@@ -84,6 +86,7 @@ let rec identical_lines xs ys =
     | Sup -> identical_lines ((o1,a)::xs) ys
     )
 
+(* aligning *)
 let basic_chunks (leno, lena, lenb) identical =
   let rec aux lo la lb xs =
   match xs with
@@ -135,6 +138,8 @@ let final_chunks oxs axs bxs chunks =
 (*****************************************************************************)
 (* Output *)
 (*****************************************************************************)
+
+(* less: have an option where show also the original inside a ||||||| *)
 let merge filea fileb chunks =
   let rec aux xs =
     match xs with
@@ -148,6 +153,7 @@ let merge filea fileb chunks =
         items
       | TrueConflict (_orig, a, b) ->
         (* less: fix a and b if no trailing \n *)
+        (* see -m and https://www.gnu.org/software/diffutils/manual/html_node/Merging-Incomplete-Lines.html#Merging-Incomplete-Lines *)
         [(spf "<<<<<<< %s\n" filea);] @
          a @
         ["=======\n"] @

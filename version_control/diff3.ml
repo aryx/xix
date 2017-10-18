@@ -7,17 +7,19 @@ module D = Diff
 (*****************************************************************************)
 (* Merge of files (aka diff3).
  *
- * alternatives:
- *  - diff3.c by Randy Smith (original author of diff3 algorithm)
- *  - diff3.py
- *  - https://blog.jcoglan.com/2017/05/08/merging-with-diff3/
- *  - Diff3 in Javascript
- *    http://homepages.kcbbs.gen.nz/tonyg/projects/synchrotron.html
- *    https://github.com/tonyg/synchrotron/blob/master/diff.js
- *
  * Pierce et al. formalized the diff3 algorithm in 
  * "A formal Investigation of Diff3" - FSTTCS 2007
  * Foundations of Software Technology and Theoretical Computer Science
+ * 
+ * alternatives:
+ *  - diff3.c by Randy Smith (original author of the diff3 algorithm)
+ *  - diff3.py
+ *  - https://blog.jcoglan.com/2017/05/08/merging-with-diff3/
+ *    based on Pierce's paper
+ *  - Diff3 in Javascript
+ *    http://homepages.kcbbs.gen.nz/tonyg/projects/synchrotron.html
+ *    https://github.com/tonyg/synchrotron/blob/master/diff.js
+ *    also based on Pierce's paper
  * 
  * The code below uses 0-based indexing of arrays (OCaml arrays uses that)
  * which is different than the 1-based indexing used in the paper
@@ -30,7 +32,7 @@ module D = Diff
 
 (* Final result (see Pierce et al. paper *)
 type chunk =
-  | Stable of Diff.item (* less could be a list here *)
+  | Stable of Diff.item (* less: could be a list here *)
   | ChangedA of Diff.item list (* Orig *) * Diff.item list (* A *)
   | ChangedB of Diff.item list (* Orig *) * Diff.item list (* B *)
   | FalseConflict of Diff.item list
@@ -39,7 +41,8 @@ type chunk =
 
 (* intermediate types *)
 type matching_lines = 
-    (int (* line# in original *) * int (* line# in modified file *)) 
+    (int (* line# in original *) * 
+     int (* corresponding line# in modified file *))
     list
 
 type identical_lines =

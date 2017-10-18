@@ -73,9 +73,14 @@
  (join-string 
   (list 
    ""
-   (case 1
+   (case 4
      (1 (concat "clone /home/pad/tmp/t1 /home/pad/tmp/t2"))
      (3 "-debugger -f /home/pad/plan9/windows/rio/mkfile")
+     (4 (concat "test diff3 " 
+                p "/version_control/tests/file_origin  " 
+                p "/version_control/tests/file_a  " 
+                p "/version_control/tests/file_b "
+                ))
      )
    )))
 

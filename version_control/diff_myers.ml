@@ -103,6 +103,6 @@ let diff a b =
         |> append_map added   b bpos boff
         |> (fun y -> (Diff.Equal x)::y)
         |> loop rest (aoff + 1) (boff + 1)
-  in loop (lcs a b) 0 0 []
+  in loop (lcs a b) 0 0 [] |> List.rev
 (*e: function Diff_myers.diff *)
 (*e: version_control/diff_myers.ml *)

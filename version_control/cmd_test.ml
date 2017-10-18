@@ -55,6 +55,19 @@ let test_diff file1 file2 =
     Diff_unified.show_unified_diff diffs
   end
 
+let test_diff3 fileo filea fileb =
+  let read_all path = 
+      path |> Common.with_file_in (fun ch ->
+        ch |> IO.input_channel |> IO.read_all
+      )
+  in
+  let contento = read_all fileo in
+  let contenta = read_all filea in
+  let contentb = read_all fileb in
+
+  let chunks = Diff3.diff3 contento contenta contentb in
+  pr2_gen chunks
+
 (*s: constant Cmd_test.cmd *)
 let cmd = { Cmd.
   name = "test";
@@ -65,7 +78,11 @@ let cmd = { Cmd.
     | ["sha1"] -> test_sha1 ()
     | ["unzip"] -> test_unzip ()
     | ["diff";file1;file2] -> test_diff file1 file2
-    | ["diff"] -> failwith "missing arguments to diff (diff <file1> <file2>)"
+    | ["diff"] -> 
+      failwith "missing arguments to diff (diff <file1> <file2>)"
+    | ["diff3";file1;file2;file3] -> test_diff3 file1 file2 file3
+    | ["diff3"] -> 
+      failwith "missing arguments to diff3 (diff3 <orig> <filea> <fileb>)"
     | _ -> failwith (spf "test command [%s] not supported"
                        (String.concat ";" args))
   );

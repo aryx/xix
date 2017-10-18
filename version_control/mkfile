@@ -10,6 +10,7 @@ SRC= IO_.ml \
      change.ml diff.ml \
      diff_basic.ml diff_myers.ml \
      diffs.ml diff_unified.ml changes.ml \
+     diff3.ml \
      repository.ml \
      client.ml client_local.ml client_git.ml clients.ml \
      cmd.ml \

@@ -1,7 +1,7 @@
 # -*- sh -*-
 
 OPT=.opt
-COMPFLAGS=-g -dtypes -bin-annot
+COMPFLAGS=-g -dtypes -bin-annot -absname
 #WARNING_FLAGS?=-w +A-4-29-6-45-41-44-48 -warn-error +a 
 #OCAMLCFLAGS=-g -thread -dtypes $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA) 
 LINKFLAGS=-g

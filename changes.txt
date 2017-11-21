@@ -1,5 +1,10 @@
 -*- org -*-
 
+* 0.8 (Q5 2017) (git algorithms)
+
+diff3.ml
+simpler diff_myers.ml
+
 * 0.7 (Q3 2017) (git)
 
 port of dulwich and ocaml-git, 2 clones of git, to ocaml(light). 

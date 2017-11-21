@@ -6,6 +6,7 @@ type bytes = string
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
 
 type filename = string
+type dirname = string
 
 type ('a, 'b) either = Left of 'a | Right of 'b
 

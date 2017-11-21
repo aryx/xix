@@ -22,8 +22,9 @@ and mode =
   (* no directory here *)
   | Normal
   | Exec
-  | Link
   (*s: [[Index.mode]] cases *)
+  | Link
+  (*x: [[Index.mode]] cases *)
   | Gitlink (*?? submodule? *)
   (*e: [[Index.mode]] cases *)
 (*e: type Index.mode *)
@@ -39,8 +40,9 @@ and time = {
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
-  name  : Common.filename;
+  path  : Common.filename;
   id    : Blob.hash;
+
   stats : stat_info;
 }
 (*e: type Index.entry *)

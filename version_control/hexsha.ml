@@ -47,79 +47,74 @@ let is_hexsha x =
 (* start of copy-pasted code from ocaml-hex *)
 
 let hexa = "0123456789abcdef"
+(*s: constant Hexsha.hexa1 *)
 and hexa1 =
   "0000000000000000111111111111111122222222222222223333333333333333\
    4444444444444444555555555555555566666666666666667777777777777777\
    88888888888888889999999999999999aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb\
    ccccccccccccccccddddddddddddddddeeeeeeeeeeeeeeeeffffffffffffffff"
+(*e: constant Hexsha.hexa1 *)
+(*s: constant Hexsha.hexa2 *)
 and hexa2 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-
-(*s: function Hexsha.of_string_fast *)
-let of_string_fast s =
-  let len = String.length s in
-  let buf = Bytes.create (len * 2) in
-  for i = 0 to len - 1 do
-    Bytes.unsafe_set buf (i * 2)
-      (String.unsafe_get hexa1 (Char.code (String.unsafe_get s i)));
-    Bytes.unsafe_set buf (succ (i * 2))
-      (String.unsafe_get hexa2 (Char.code (String.unsafe_get s i)));
-  done;
-  (*pad:`Hex*) buf
-(*e: function Hexsha.of_string_fast *)
+(*e: constant Hexsha.hexa2 *)
 
 (*s: function Hexsha.to_char *)
-let to_char x y =
-  let code c = 
-    match c with
-    | '0'..'9' -> Char.code c - 48 (* Char.code '0' *)
-    | 'A'..'F' -> Char.code c - 55 (* Char.code 'A' + 10 *)
-    | 'a'..'f' -> Char.code c - 87 (* Char.code 'a' + 10 *)
+let to_byte hex1 hex2 =
+  let code hex = 
+    match hex with
+    | '0'..'9' -> Char.code hex - Char.code '0'
+    | 'A'..'F' -> Char.code hex - (Char.code 'A' + 10)
+    | 'a'..'f' -> Char.code hex - (Char.code 'a' + 10)
     | _ -> 
       raise (Invalid_argument 
-              (spf "Hex.to_char: %d is an invalid char" (Char.code c)))
+              (spf "Hex.to_byte: %d is an invalid hexadecimal digit" (Char.code hex)))
   in
-  Char.chr (code x lsl 4 + code y)
+  Char.chr (((code hex1) lsl 4) + (code hex2))
 (*e: function Hexsha.to_char *)
-
-(*s: function Hexsha.to_string *)
-let to_string ((*`Hex*) s) =
-  if s = "" 
-  then ""
-  else
-    let n = String.length s in
-    let buf = Bytes.create (n/2) in
-    let rec aux i j =
-      if i >= n 
-      then ()
-      else if j >= n 
-           then raise (Invalid_argument "hex conversion: invalid hex string")
-      else (
-        Bytes.set buf (i/2) (to_char s.[i] s.[j]);
-        aux (j+1) (j+2)
-      )
-    in
-    aux 0 1;
-    buf
-(*e: function Hexsha.to_string *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
 (*s: function Hexsha.of_sha *)
-let of_sha x =
-  assert (Sha1.is_sha x);
-  of_string_fast x
+let of_sha s =
+  assert (Sha1.is_sha s);
+  let n = String.length s in
+  let buf = Bytes.create (n * 2) in
+  (*s: [[Hexsha.of_sha()]] fill [[buf]] *)
+  for i = 0 to n - 1 do
+    buf.[i * 2]       <- hexa1.[Char.code (s.[i])];
+    buf.[(i * 2) + 1] <- hexa2.[Char.code (s.[i])];
+  done;
+  (*e: [[Hexsha.of_sha()]] fill [[buf]] *)
+  buf
 (*e: function Hexsha.of_sha *)
 
 (*s: function Hexsha.to_sha *)
-let to_sha x =
-  assert (is_hexsha x);
-  to_string x
+let to_sha s =
+  assert (is_hexsha s);
+  let n = String.length s in
+  let buf = Bytes.create (n/2) in
+  (*s: [[Hexsha.to_sha()]] fill [[buf]] *)
+  let rec aux i =
+    if i >= n 
+    then ()
+    else begin
+      (*s: [[hexsha.to_sha()]] double sanity check range i *)
+      if i+1 >= n 
+      then raise (Invalid_argument "hex conversion: invalid hex string")
+      (*e: [[hexsha.to_sha()]] double sanity check range i *)
+      Bytes.set buf (i/2) (to_byte s.[i] s.[i+1]);
+      aux (i+2)
+    end
+  in
+  aux 0;
+  (*e: [[Hexsha.to_sha()]] fill [[buf]] *)
+  buf
 (*e: function Hexsha.to_sha *)
 
 (*s: function Hexsha.read *)

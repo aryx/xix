@@ -98,14 +98,14 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
 let changes_worktree_vs_index read_blob worktree index =
   index |> List.map (fun entry ->
     let old_stat = entry.Index.stats in
-    let path = Filename.concat worktree entry.Index.name in
+    let path = Filename.concat worktree entry.Index.path in
     let new_stat_opt = 
       try Some (Unix.lstat path |> Index.stat_info_of_lstats)
       with Unix.Unix_error _ -> None
     in
     match new_stat_opt with
     | None -> 
-      [Change.Del { Change.path = entry.Index.name;
+      [Change.Del { Change.path = entry.Index.path;
                     mode = old_stat.Index.mode;
                     content = lazy (read_blob entry.Index.id);
                   }]
@@ -115,20 +115,20 @@ let changes_worktree_vs_index read_blob worktree index =
       | _ when new_stat.Index.mtime = old_stat.Index.mtime -> []
       (* a change of mode is converted in a del/add *)
       | _ when new_stat.Index.mode <> old_stat.Index.mode ->
-        [Change.Del { Change.path = entry.Index.name;
+        [Change.Del { Change.path = entry.Index.path;
                       mode = old_stat.Index.mode;
                       content = lazy (read_blob entry.Index.id)};
-         Change.Add { Change.path = entry.Index.name;
+         Change.Add { Change.path = entry.Index.path;
                       mode = new_stat.Index.mode;
                       content = lazy 
                         (content_from_path_and_stat_index path new_stat)}
           ]
       | _ -> 
         [Change.Modify (
-          { Change.path = entry.Index.name;
+          { Change.path = entry.Index.path;
             mode = old_stat.Index.mode;
             content = lazy (read_blob entry.Index.id) },
-          { Change.path = entry.Index.name;
+          { Change.path = entry.Index.path;
             mode = new_stat.Index.mode;
             content = lazy 
               (content_from_path_and_stat_index path new_stat) }
@@ -145,7 +145,7 @@ let changes_index_vs_tree read_tree index treeid =
   let h_in_index_and_head = Hashtbl.create 101 in
   let hindex = 
     index 
-    |> List.map (fun entry -> entry.Index.name, entry)
+    |> List.map (fun entry -> entry.Index.path, entry)
     |> Hashtbl_.of_list
   in
   let changes = ref [] in
@@ -177,9 +177,9 @@ let changes_index_vs_tree read_tree index treeid =
                                            });
   );
   index |> List.iter (fun entry ->
-    if not (Hashtbl.mem h_in_index_and_head entry.Index.name)
+    if not (Hashtbl.mem h_in_index_and_head entry.Index.path)
     then changes |> Common.push (Change.Add { Change.
-             path = entry.Index.name;
+             path = entry.Index.path;
              mode = entry.Index.stats.Index.mode;                                            content = lazy (raise (Impossible "not called")); }
     )
   );

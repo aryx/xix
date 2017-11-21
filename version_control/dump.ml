@@ -49,21 +49,8 @@ end
 
 module User = struct
 open User
-let vof_sign =
-  function
-  | Plus -> Ocaml.VSum (("Plus", []))
-  | Minus -> Ocaml.VSum (("Minus", []))
-  
-let vof_tz_offset { sign = v_sign; hours = v_hours; min = v_min } =
-  let bnds = [] in
-  let arg = Ocaml.vof_int v_min in
-  let bnd = ("min", arg) in
-  let bnds = bnd :: bnds in
-  let arg = Ocaml.vof_int v_hours in
-  let bnd = ("hours", arg) in
-  let bnds = bnd :: bnds in
-  let arg = vof_sign v_sign in
-  let bnd = ("sign", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
+
+let vof_tz_offset x = Ocaml.vof_int x
 
 let vof_t { name = v_name; email = v_email; date = v_date } =
   let bnds = [] in
@@ -172,11 +159,11 @@ and vof_time { lsb32 = v_lsb32; nsec = v_nsec } =
   let bnd = ("lsb32", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
   
 
-let vof_entry { stats = v_stats; id = v_id; name = v_name }
+let vof_entry { stats = v_stats; id = v_id; path = v_name }
               =
   let bnds = [] in
   let arg = Ocaml.vof_string v_name in
-  let bnd = ("name", arg) in
+  let bnd = ("path", arg) in
   let bnds = bnd :: bnds in
   let arg = Sha1.vof_t v_id in
   let bnd = ("id", arg) in

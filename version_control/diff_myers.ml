@@ -31,11 +31,14 @@ let lcs a b =
   let m = Array.length b in
   let mn = m + n in
   let sz = 2 * mn + 1 in
+
   let vd = Array.make sz 0 in
   let vl = Array.make sz 0 in
   let vr = Array.make sz [] in
+
   let get v i = v.(i + mn) in
   let set v i x = v.(i + mn) <- x in
+  (*s: function Diff_myers.finish *)
   let finish () =
     let rec loop i maxl r =
       match () with
@@ -44,6 +47,7 @@ let lcs a b =
       | _ -> loop (i + 1) maxl r
     in loop (- mn) 0 []
   in
+  (*e: function Diff_myers.finish *)
   if mn = 0 
   then []
   else
@@ -51,6 +55,7 @@ let lcs a b =
     let rec dloop d =
       assert (d <= mn);
       (* For k <- -d to d in steps of 2 Do *)
+      (*s: function Diff_myers.kloop *)
       let rec kloop k =
         if k > d 
         then dloop (d + 1)
@@ -61,11 +66,14 @@ let lcs a b =
             else get vd (k - 1) + 1, get vl (k - 1), get vr (k - 1)
           in
           let x, y, l, r =
+            (*s: function Diff_myers.xyloop *)
             let rec xyloop x y l r =
               if x < n && y < m && equal a.(x) b.(y)
               then xyloop (x + 1) (y + 1) (l + 1) (`Common(x, y, a.(x))::r)
               else x, y, l, r
-            in xyloop x (x - k) l r
+            in 
+            (*e: function Diff_myers.xyloop *)
+            xyloop x (x - k) l r
           in
           set vd k x;
           set vl k l;
@@ -76,6 +84,7 @@ let lcs a b =
             finish ()
           else
             kloop (k + 2)
+      (*e: function Diff_myers.kloop *)
       in kloop (-d)
     in dloop 0
 (*e: function Diff_myers.lcs *)

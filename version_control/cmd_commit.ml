@@ -45,12 +45,7 @@ let cmd = { Cmd.
       (*s: [[Cmd_commit.cmd]] compute [[today]] *)
       let today = 
         (Int64.of_float (Unix.time ()),
-         { User.
-       (* todo: use localtime vs gmtime? *)
-           sign = User.Minus;
-           hours = 7; (* SF *)
-           min = 0;
-         })
+         (* todo: use localtime vs gmtime? *) -7 (* SF *))
       in
       (*e: [[Cmd_commit.cmd]] compute [[today]] *)
       (*s: [[Cmd_commit.cmd]] compute [[author]] *)
@@ -65,13 +60,13 @@ let cmd = { Cmd.
         else raise Todo (* need parse author string *)
       in
       (*e: [[Cmd_commit.cmd]] compute [[author]] *)
-      (*s: [[Cmd_commit.cmd]] compute [[comitter]] *)
+      (*s: [[Cmd_commit.cmd]] compute [[committer]] *)
       let committer =
         if !committer = ""
         then author
         else raise Todo
       in
-      (*e: [[Cmd_commit.cmd]] compute [[comitter]] *)
+      (*e: [[Cmd_commit.cmd]] compute [[committer]] *)
       commit r author committer !message
 
     | xs -> raise Cmd.ShowUsage

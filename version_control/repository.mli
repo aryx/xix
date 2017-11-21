@@ -2,15 +2,12 @@
 
 (*s: type Repository.t *)
 type t = {
-  (* less: on bare repo, this could be None *)
-  worktree: Common.filename;
-  (* less: on bare repo this could be the toplevel dir *)
-  dotgit: Common.filename;
+  worktree: Common.dirname;
+  dotgit: Common.dirname;
 
   (*s: [[Repository.t]] index field *)
   mutable index: Index.t;
   (*e: [[Repository.t]] index field *)
-  (* less: compression level config field? *)
 }
 (*e: type Repository.t *)
 
@@ -19,9 +16,9 @@ type t = {
 type objectish =
   | ObjByRef of Refs.t
   | ObjByHex of Hexsha.t
+  | ObjByBranch of string
   (*s: [[Repository.objectish]] cases *)
   (* todo:
-   *  ObjByBranch
    *  ObjByShortHex
    *)
   (*x: [[Repository.objectish]] cases *)
@@ -32,10 +29,10 @@ type objectish =
 
 (* repo *)
 (*s: signature Repository.init *)
-val init: Common.filename -> unit
+val init: Common.dirname -> unit
 (*e: signature Repository.init *)
 (*s: signature Repository.open_ *)
-val open_: Common.filename -> t
+val open_: Common.dirname -> t
 (*e: signature Repository.open_ *)
 (*s: signature Repository.find_dotgit_root_and_open *)
 val find_root_open_and_adjust_paths: 

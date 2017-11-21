@@ -15,8 +15,8 @@ open Common
 (*s: type Objects.t *)
 type t = 
   | Blob   of Blob.t
-  | Commit of Commit.t
   | Tree   of Tree.t
+  | Commit of Commit.t
   (*s: [[Objects.t]] cases *)
   (*  | Tag of Tag.t *)
   (*e: [[Objects.t]] cases *)

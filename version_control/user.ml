@@ -30,23 +30,15 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type User.sign *)
-type sign = Plus | Minus
-(*e: type User.sign *)
-
 (*s: type User.tz_offset *)
-type tz_offset = {
-  sign: sign;
-  hours: int;
-  min: int;
-}
+type timezone_offset = int (* +/- hours, [-12, +12] *)
 (*e: type User.tz_offset *)
 
 (*s: type User.t *)
 type t = {
   name : string;
   email: string;
-  date : int64 * tz_offset(*option*);
+  date : int64 (* seconds *) * timezone_offset;
 }
 (*e: type User.t *)
 
@@ -58,15 +50,15 @@ type t = {
 
 (*s: function User.sign_of_char *)
 let sign_of_char = function
-  | '+' -> Plus
-  | '-' -> Minus
+  | '+' -> (fun x -> +x )
+  | '-' -> (fun x -> - x)
   | c -> failwith (spf "User.sign_of_string: not a sign, got %c" c)
 (*e: function User.sign_of_char *)
 
 (*s: function User.char_of_sign *)
 let char_of_sign = function
-  | Plus -> '+'
-  | Minus -> '-'
+  | x when x >= 0 -> '+'
+  | _ -> '-'
 (*e: function User.char_of_sign *)
 
 (*s: function User.read *)
@@ -80,14 +72,13 @@ let read ch =
   let sign = IO.read ch in
   let hours = IO.nread_string ch 2 in
   let mins = IO.nread_string ch 2 in
+  (* stricter: *)
+  if int_of_string mins <> 0
+  then failwith "User.read: timezeone with minutes not supported";
+
   { name = String.sub name 0 (String.length name - 1);
     email = email;
-    date = (Int64.of_string seconds,
-            {
-              sign = sign_of_char sign;
-              hours = int_of_string hours;
-              min = int_of_string mins;
-            });
+    date = (Int64.of_string seconds, (sign_of_char sign) (int_of_string hours));
   }
 (*e: function User.read *)
 
@@ -95,8 +86,7 @@ let read ch =
 let write_date ch (date, tz) =
   IO.nwrite ch (Int64.to_string date);
   IO.write ch ' ';
-  let sign = match tz.sign with Plus -> "+" | Minus -> "-" in
-  IO.nwrite ch (spf "%s%02d%02d" sign tz.hours tz.min)
+  IO.nwrite ch (spf "%c%02d%02d" (char_of_sign tz) (abs tz) 0)
 (*e: function User.write_date *)
 
 (*s: function User.write *)
@@ -118,7 +108,7 @@ let string_of_date (date, tz) =
     (Date.string_of_day tm.Unix.tm_wday) (Date.string_of_month tm.Unix.tm_mon) 
     tm.Unix.tm_mday 
     tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec (tm.Unix.tm_year + 1900)
-    (char_of_sign tz.sign) tz.hours tz.min
+    (char_of_sign tz) (abs tz) 0
 (*e: function User.string_of_date *)
 
 (*e: version_control/user.ml *)

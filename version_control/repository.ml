@@ -18,21 +18,18 @@ open Common
 
 (*s: type Repository.t *)
 type t = {
-  (* less: on bare repo, this could be None *)
-  worktree: Common.filename;
-  (* less: on bare repo this could be the toplevel dir *)
-  dotgit: Common.filename;
+  worktree: Common.dirname;
+  dotgit: Common.dirname;
 
   (*s: [[Repository.t]] index field *)
   mutable index: Index.t;
   (*e: [[Repository.t]] index field *)
-  (* less: compression level config field? *)
 }
 (*e: type Repository.t *)
 
-(*s: constant Repository.TODOOPERATOR *)
+(*s: constant Repository.SlashOperator *)
 let (/) = Filename.concat
-(*e: constant Repository.TODOOPERATOR *)
+(*e: constant Repository.SlashOperator *)
 
 (*s: constant Repository.dirperm *)
 (* rwxr-x--- *)
@@ -44,9 +41,9 @@ let dirperm = 0o750
 type objectish =
   | ObjByRef of Refs.t
   | ObjByHex of Hexsha.t
+  | ObjByBranch of string
   (*s: [[Repository.objectish]] cases *)
   (* todo:
-   *  ObjByBranch
    *  ObjByShortHex
    *)
   (*x: [[Repository.objectish]] cases *)
@@ -284,7 +281,7 @@ let read_blob r h =
 (*e: function Repository.read_blob *)
 
 (*s: function Repository.read_objectish *)
-let read_objectish r objectish =
+let rec read_objectish r objectish =
   match objectish with
   | ObjByRef aref -> 
     (match follow_ref r aref |> snd with
@@ -295,6 +292,8 @@ let read_objectish r objectish =
   | ObjByHex hexsha ->
     let sha = Hexsha.to_sha hexsha in
     sha, read_obj r sha
+  | ObjByBranch str ->
+    read_objectish r (ObjByRef (Refs.Ref ("refs/heads/" ^ str)))
 (*e: function Repository.read_objectish *)
 
 (*s: function Repository.add_obj *)
@@ -347,8 +346,10 @@ let write_index r =
 (*s: function Repository.content_from_path_and_unix_stat *)
 let content_from_path_and_unix_stat full_path stat =
   match stat.Unix.st_kind with
+  (*s: [[Repository.content_from_path_and_unix_stat()]] match kind cases *)
   | Unix.S_LNK ->
     Unix.readlink full_path
+  (*e: [[Repository.content_from_path_and_unix_stat()]] match kind cases *)
   | Unix.S_REG -> 
     full_path |> Common.with_file_in (fun ch ->
       ch |> IO.input_channel |> IO.read_all
@@ -465,7 +466,7 @@ let build_file_from_blob fullpath blob perm =
 let set_worktree_and_index_to_tree r tree =
   (* todo: need lock on index? on worktree? *)
   let hcurrent = 
-    r.index |> List.map (fun e -> e.Index.name, false) |> Hashtbl_.of_list in
+    r.index |> List.map (fun e -> e.Index.path, false) |> Hashtbl_.of_list in
   let new_index = ref [] in
   (* less: honor file mode from config file? *)
   tree |> Tree.walk_tree (read_tree r) "" (fun relpath entry ->

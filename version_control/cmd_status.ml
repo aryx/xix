@@ -29,7 +29,7 @@ let changes_index_vs_HEAD r =
 (* todo: need parse .gitignore *)
 let untracked r =
   let h = r.Repository.index 
-      |> List.map (fun entry -> entry.Index.name, true) 
+      |> List.map (fun entry -> entry.Index.path, true) 
       |> Hashtbl_.of_list 
   in
   let res = ref [] in

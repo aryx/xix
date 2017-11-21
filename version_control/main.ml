@@ -68,11 +68,6 @@ let commands = List.flatten [
 ]
 (*e: constant Main.commands *)
 
-(*s: constant Main.hcommands *)
-let hcommands = 
-  commands |> List.map (fun cmd -> cmd.Cmd.name, cmd) |> Hashtbl_.of_list
-(*e: constant Main.hcommands *)
-
 (*s: function Main.usage *)
 let usage () =
   spf "usage: ocamlgit <%s> [options]"
@@ -85,7 +80,9 @@ let usage () =
 
 (*s: function Main.main *)
 let main () =
+  (*s: [[Main.main()]] GC settings *)
   Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
+  (*e: [[Main.main()]] GC settings *)
   (*s: [[Main.main()]] sanity check arguments *)
   if Array.length Sys.argv < 2
   then begin
@@ -98,14 +95,14 @@ let main () =
   else begin
     let cmd = 
       try 
-        Hashtbl.find hcommands Sys.argv.(1) 
+        commands |> List.find (fun cmd -> cmd.Cmd.name = Sys.argv.(1))
       with Not_found ->
         (*s: [[Main.main()]] print usage and exit *)
         pr2 (usage ());
         exit 1
         (*e: [[Main.main()]] print usage and exit *)
     in
-    (*s: [[Main.main()]] execute [[cmd]] *)
+    (*s: [[Main.main()]] execute [[cmd.f]] *)
     let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
     let usage_msg_cmd = spf "usage: %s %s%s"
       (Filename.basename Sys.argv.(0))
@@ -130,7 +127,7 @@ let main () =
       | Cmd.ShowUsage ->
         Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
         exit 1
-    (*e: [[Main.main()]] execute [[cmd]] *)
+    (*e: [[Main.main()]] execute [[cmd.f]] *)
   end
 (*e: function Main.main *)
         

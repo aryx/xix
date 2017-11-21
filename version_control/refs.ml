@@ -6,7 +6,7 @@ open Common
 (*****************************************************************************)
 
 (*s: type Refs.refname *)
-(* should always start with "refs/", see is_valid_refname() later *)
+(* should always start with "refs/", see is_refname() later *)
 type refname = string (* e.g. "refs/heads/master" *)
 (*e: type Refs.refname *)
 
@@ -30,7 +30,7 @@ let default_head_content =
 (*e: constant Refs.default_head_content *)
 
 (*s: function Refs.is_valid_refname *)
-let is_valid_refname str =
+let is_refname str =
   str =~ "^refs/"
   (* todo: git-check-ref-format *)
 (*e: function Refs.is_valid_refname *)

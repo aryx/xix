@@ -52,8 +52,9 @@ and mode =
   (* no directory here *)
   | Normal
   | Exec
-  | Link
   (*s: [[Index.mode]] cases *)
+  | Link
+  (*x: [[Index.mode]] cases *)
   | Gitlink (*?? submodule? *)
   (*e: [[Index.mode]] cases *)
 (*e: type Index.mode *)
@@ -69,8 +70,9 @@ and time = {
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
-  name  : Common.filename;
+  path  : Common.filename;
   id    : Blob.hash;
+
   stats : stat_info;
 }
 (*e: type Index.entry *)
@@ -112,7 +114,9 @@ let stat_info_of_lstats stats =
           if p land 0o100 = 0o100 
           then Exec 
           else Normal
+        (*s: [[Index.stat_info_of_lstats()]] match kind and perm cases *)
         | Unix.S_LNK, _ -> Link
+        (*e: [[Index.stat_info_of_lstats()]] match kind and perm cases *)
         | _ -> failwith ("unsupported file type")
         );
       uid = Int32.of_int stats.Unix.st_uid;
@@ -123,7 +127,7 @@ let stat_info_of_lstats stats =
 
 (*s: function Index.mk_entry *)
 let mk_entry relpath sha stats =
-  { name = relpath;
+  { path = relpath;
     id = sha;
     stats = stat_info_of_lstats stats;
   }
@@ -161,7 +165,7 @@ let rec remove_entry idx name =
   match idx with
   | [] -> failwith (spf "The file %s is not in the index" name)
   | x::xs ->
-    (match name <=> x.name with
+    (match name <=> x.path with
     | Sup -> x::(remove_entry xs name)
     | Equal -> xs
     (* the entries are sorted *)
@@ -174,7 +178,7 @@ let rec add_entry idx entry =
   match idx with
   | [] -> [entry]
   | x::xs ->
-    (match entry.name <=> x.name with
+    (match entry.path <=> x.path with
     | Sup -> x::(add_entry xs entry)
     (* replacing old entry is ok *)
     | Equal -> entry::xs
@@ -247,7 +251,7 @@ let tree_of_index idx add_tree_obj =
   Hashtbl.add dirs "." (ref []);
   (* populate dirs *)
   idx |> List.iter (fun entry ->
-    let relpath = entry.name in
+    let relpath = entry.path in
     let (dir, base) = Filename.dirname relpath, Filename.basename relpath in
     let dir = add_dir dirs dir in
     dir := (File (base, entry))::!dir
@@ -351,11 +355,11 @@ let read_entry ch =
   in
   if (stage <> 0)
   then failwith (spf "stage is not 0: %d" stage);
-  let name = IO.really_nread_string ch len in
+  let path = IO.really_nread_string ch len in
   let c = IO.read ch in
   if c <> '\000'
   then failwith "Index.read_entry: expecting null char after name";
-  let len = 63 + String.length name in
+  let len = 63 + String.length path in
   let pad = 
     match len mod 8 with
     | 0 -> 0
@@ -363,17 +367,17 @@ let read_entry ch =
   in
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
-  { stats; id; name }
+  { stats; id; path }
 (*e: function Index.read_entry *)
 
 (*s: function Index.write_entry *)
 let write_entry ch e =
   write_stat_info ch e.stats;
   Sha1.write ch e.id;
-  let flags = (0 lsl 12 + String.length e.name) land 0x3FFF in
+  let flags = (0 lsl 12 + String.length e.path) land 0x3FFF in
   IO.BigEndian.write_ui16 ch flags;
-  IO.nwrite ch e.name;
-  let len = 63 + String.length e.name in
+  IO.nwrite ch e.path;
+  let len = 63 + String.length e.path in
   let pad = 
     match len mod 8 with
     | 0 -> 0

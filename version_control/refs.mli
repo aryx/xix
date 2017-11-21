@@ -1,7 +1,7 @@
 (*s: version_control/refs.mli *)
 
 (*s: type Refs.refname *)
-(* should always start with "refs/", see is_valid_refname() later *)
+(* should always start with "refs/", see is_refname() later *)
 type refname = string (* e.g. "refs/heads/master" *)
 (*e: type Refs.refname *)
 
@@ -24,7 +24,7 @@ val default_head_content: ref_content
 (*e: signature Refs.default_head_content *)
 
 (*s: signature Refs.is_valid_refname *)
-val is_valid_refname: refname -> bool
+val is_refname: refname -> bool
 (*e: signature Refs.is_valid_refname *)
 
 (*s: signature Refs.read *)

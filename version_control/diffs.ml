@@ -69,7 +69,6 @@ let split_lines str =
 (*****************************************************************************)
 
 (*s: function Diffs.diff *)
-(* seems correct *)
 let diff str1 str2 =
   let xs = split_lines str1 in
   let ys = split_lines str2 in

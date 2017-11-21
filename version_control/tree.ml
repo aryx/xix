@@ -34,10 +34,11 @@ open Common
 (* very similar to Index.mode, but with also a 'Dir' *)
 type perm = 
   | Normal
-  | Exec
-  | Link
   | Dir
+  | Exec
   (*s: [[Tree.perm]] cases *)
+  | Link
+  (*x: [[Tree.perm]] cases *)
   | Commit (* ?? submodule? *)
   (*e: [[Tree.perm]] cases *)
 (*e: type Tree.perm *)
@@ -48,6 +49,7 @@ type entry = {
   name: string;
   (* Blob.hash or Tree.hash *)
   id: Sha1.t;
+
   perm: perm;
 }
 (*e: type Tree.entry *)

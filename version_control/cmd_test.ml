@@ -4,15 +4,20 @@
 (*e: copyright ocamlgit *)
 open Common
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let (/) = Filename.concat
+
+(*****************************************************************************)
+(* Algorithm tests *)
+(*****************************************************************************)
 
 (*s: function Cmd_test.test_sha1 *)
 (* see https://git-scm.com/book/en/v2/Git-Internals-Git-Objects *)
-let test_sha1 () =
-  let content = "what is up, doc?"
-    (*"test content\n"  *)
-  in
-  let header = "blob 16\000" in
+let test_sha1 content =
+  let header = spf "blob %d\000" (String.length content) in
   let store = header ^ content in
 
   let sha = Sha1.sha1 store in
@@ -21,22 +26,6 @@ let test_sha1 () =
   pr (spf "len = %d, str = %s" (String.length hexsha) hexsha);
   ()
 (*e: function Cmd_test.test_sha1 *)
-
-let test_unzip () =
-  Unzip.debug := true;
-  let dir = ".git/objects" in
-  dir |> Repository.walk_dir (fun path dirs files ->
-    files |> List.iter (fun file ->
-      let file = path / file in
-      pr file;
-      let chan = open_in file in
-      let input = IO.input_channel chan in
-      let unzipped = Unzip.inflate input in
-      let _str = IO.read_all unzipped in 
-      ()
-    )
-  )
-
 
 let test_diff file1 file2 =
   let read_all path = 
@@ -69,6 +58,46 @@ let test_diff3 fileo filea fileb =
   let str = Diff3.merge filea fileb chunks in
   print_string str
 
+let test_unzip file =
+  let chan = open_in file in
+  let input = IO.input_channel chan in
+  let unzipped = Unzip.inflate input in
+  let str = IO.read_all unzipped in
+  print_string str
+
+let test_zip file =
+  let chan = open_in file in
+  let input = IO.input_channel chan in
+  let zipped = Zip.deflate input in
+  let str = IO.read_all zipped in
+
+  let dst = file ^ ".deflate" in
+  let chan = open_out dst in
+  let output = IO.output_channel chan in
+  IO.nwrite_string output str;
+  IO.close_out output
+
+  
+
+let test_unzip_all_objects () =
+  Unzip.debug := true;
+  let dir = ".git/objects" in
+  dir |> Repository.walk_dir (fun path dirs files ->
+    files |> List.iter (fun file ->
+      let file = path / file in
+      pr file;
+      let chan = open_in file in
+      let input = IO.input_channel chan in
+      let unzipped = Unzip.inflate input in
+      let _str = IO.read_all unzipped in 
+      ()
+    )
+  )
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (*s: constant Cmd_test.cmd *)
 let cmd = { Cmd.
   name = "test";
@@ -76,14 +105,22 @@ let cmd = { Cmd.
   options = [];
   f = (fun args ->
     match args with
-    | ["sha1"] -> test_sha1 ()
-    | ["unzip"] -> test_unzip ()
+    | ["sha1"; str] -> test_sha1 str
+    | ["sha1"] -> test_sha1 "what is up, doc?"
+
     | ["diff";file1;file2] -> test_diff file1 file2
     | ["diff"] -> 
       failwith "missing arguments to diff (diff <file1> <file2>)"
+
     | ["diff3";file1;file2;file3] -> test_diff3 file1 file2 file3
     | ["diff3"] -> 
       failwith "missing arguments to diff3 (diff3 <orig> <filea> <fileb>)"
+
+    | ["unzip"; file] -> test_unzip file
+    | ["zip"; file] -> test_zip file
+
+    | ["unzip_all_objects"] -> test_unzip_all_objects ()
+
     | _ -> failwith (spf "test command [%s] not supported"
                        (String.concat ";" args))
   );

@@ -3,7 +3,7 @@ TOP=..
 
 SRC= IO_.ml \
      sha1.ml hexsha.ml \
-     unzip.ml zlib.ml compression.ml \
+     unzip.ml zip.ml zlib.ml compression.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
      index.ml \

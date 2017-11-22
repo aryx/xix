@@ -70,13 +70,14 @@ let test_zip file =
   let input = IO.input_channel chan in
   let zipped = Zip.deflate input in
   let str = IO.read_all zipped in
-
+  pr str
+(* TODO
   let dst = file ^ ".deflate" in
   let chan = open_out dst in
   let output = IO.output_channel chan in
   IO.nwrite_string output str;
   IO.close_out output
-
+*)
   
 
 let test_unzip_all_objects () =

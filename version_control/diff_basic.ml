@@ -4,7 +4,6 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-
 (* Basic Diff algorithm based on the computation of the edit distance between
  * two strings (also known as the Longuest Common Subsequence (LCS) problem).
  * 
@@ -173,7 +172,7 @@ let diff arr1 arr2 =
  * time ./ogit test diff /tmp/test1.c /tmp/test2.c 
  *  (where test[12].c = sqlite.c or shorter version of sqlite.c)
  *  on my Macbook Air (from around 2014).
- * 200 000LOC:
+ * 200 000 LOC:
  * - Myers: 1.4s (in ocaml bytecode mode)
  * - Basic: ???
  * 20 000 LOC: (matrix_distance requires a matrix of 400M elements)

@@ -22,6 +22,10 @@
  *)
 (*e: copyright ocaml-unzip *)
 
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 let debug = ref false
 
 (*s: type Unzip.huffman *)
@@ -638,13 +642,17 @@ let inflate_init ?(header=true) ch =
   }
 (*e: function Unzip.inflate_init *)
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (*s: function Unzip.inflate *)
 let inflate ?(header=true) ch =
   let z = inflate_init ~header ch in
-  let s = Bytes.create 1 in
+  let tmp = Bytes.create 1 in
   IO.create_in
-    ~input:(fun s p l ->
-      let n = inflate_data z s p l in
+    ~input:(fun s pos len ->
+      let n = inflate_data z s pos len in
       if n = 0 
       then raise IO.No_more_input;
       n
@@ -654,9 +662,9 @@ let inflate ?(header=true) ch =
     )
     (** special case of ~input for 1 byte *)
     ~read:(fun() ->
-      let l = inflate_data z s 0 1 in
+      let l = inflate_data z tmp 0 1 in
       if l = 1 
-      then Bytes.unsafe_get s 0 
+      then Bytes.unsafe_get tmp 0 
       else raise IO.No_more_input
     )
 (*e: function Unzip.inflate *)

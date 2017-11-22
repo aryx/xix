@@ -46,6 +46,9 @@ val inflate : ?header:bool -> IO.input -> IO.input
   an error occurs (this can only be caused by malformed input data). *)
 (*e: signature Unzip.inflate *)
 
+
+
+(* internals *)
 type t
 
 (*s: signature Unzip.inflate_init *)
@@ -55,7 +58,6 @@ val inflate_init : ?header:bool -> IO.input -> t
 val inflate_data : t -> bytes -> int -> int -> int
 (*e: signature Unzip.inflate_data *)
 
-(* internal *)
 val debug: bool ref
 
 (*e: version_control/unzip.mli *)

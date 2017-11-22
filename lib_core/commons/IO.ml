@@ -53,7 +53,7 @@
 
 type input = {
   mutable in_read : unit -> char;
-  mutable in_input : bytes -> int -> int -> int;
+  mutable in_input : bytes -> int (** pos *) -> int (** len *) -> int;
   mutable in_close : unit -> unit;
 }
 

@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_rm.rm *)
+(*s: function [[Cmd_rm.rm]] *)
 let rm r relpaths =
   (* less: not super efficient, could use hashes to speedup things *)
   r.Repository.index <-
@@ -13,9 +13,9 @@ let rm r relpaths =
       Index.remove_entry idx relpath
     ) r.Repository.index;
   Repository.write_index r
-(*e: function Cmd_rm.rm *)
+(*e: function [[Cmd_rm.rm]] *)
 
-(*s: constant Cmd_rm.cmd *)
+(*s: constant [[Cmd_rm.cmd]] *)
 let cmd = { Cmd.
   name = "rm";
   usage = " [options] <file>...";
@@ -32,5 +32,5 @@ let cmd = { Cmd.
       rm r relpaths
   );
 }
-(*e: constant Cmd_rm.cmd *)
+(*e: constant [[Cmd_rm.cmd]] *)
 (*e: version_control/cmd_rm.ml *)

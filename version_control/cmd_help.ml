@@ -4,11 +4,11 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: constant Cmd_help.list_extra *)
+(*s: constant [[Cmd_help.list_extra]] *)
 let list_extra = ref false
-(*e: constant Cmd_help.list_extra *)
+(*e: constant [[Cmd_help.list_extra]] *)
 
-(*s: constant Cmd_help.cmd *)
+(*s: constant [[Cmd_help.cmd]] *)
 let rec cmd = { Cmd.
   name = "help";
   usage = "";
@@ -25,5 +25,5 @@ let rec cmd = { Cmd.
     );
   );
 }
-(*e: constant Cmd_help.cmd *)
+(*e: constant [[Cmd_help.cmd]] *)
 (*e: version_control/cmd_help.ml *)

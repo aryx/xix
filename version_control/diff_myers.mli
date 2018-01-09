@@ -7,7 +7,7 @@
    - \[1\] Eugene Myers, An O(ND) Difference Algorithm and Its Variations, Algorithmica Vol. 1 No. 2, pp. 251-266, 1986.
  *)
 
-(*s: signature Diff_myers.diff *)
+(*s: signature [[Diff_myers.diff]] *)
 val diff: string array -> string array -> Diff.diff
-(*e: signature Diff_myers.diff *)
+(*e: signature [[Diff_myers.diff]] *)
 (*e: version_control/diff_myers.mli *)

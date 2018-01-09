@@ -15,36 +15,36 @@
 (*e: copyright camlzip *)
 open Common
 
-(*s: exception Zlib.Error *)
+(*s: exception [[Zlib.Error]] *)
 exception Error of string * string
-(*e: exception Zlib.Error *)
+(*e: exception [[Zlib.Error]] *)
 
-(*s: signature Zlib.compress *)
+(*s: signature [[Zlib.compress]] *)
 val compress:
   ?level: int -> ?header: bool -> 
   (bytes -> int) -> (bytes -> int -> unit) -> unit
-(*e: signature Zlib.compress *)
+(*e: signature [[Zlib.compress]] *)
 
-(*s: signature Zlib.compress_direct *)
+(*s: signature [[Zlib.compress_direct]] *)
 val compress_direct:
   ?level: int -> ?header: bool -> (bytes -> int -> unit) ->
   (bytes -> int -> int -> unit) * (unit -> unit)
-(*e: signature Zlib.compress_direct *)
+(*e: signature [[Zlib.compress_direct]] *)
 
-(*s: signature Zlib.uncompress *)
+(*s: signature [[Zlib.uncompress]] *)
 val uncompress:
   ?header: bool -> (bytes -> int) -> (bytes -> int -> unit) -> unit
-(*e: signature Zlib.uncompress *)
+(*e: signature [[Zlib.uncompress]] *)
 
 type stream
 
-(*s: type Zlib.flush_command *)
+(*s: type [[Zlib.flush_command]] *)
 type flush_command =
     Z_NO_FLUSH
   | Z_SYNC_FLUSH
   | Z_FULL_FLUSH
   | Z_FINISH
-(*e: type Zlib.flush_command *)
+(*e: type [[Zlib.flush_command]] *)
 
 external deflate_init: int -> bool -> stream = "camlzip_deflateInit"
 external deflate:

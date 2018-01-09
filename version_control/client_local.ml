@@ -12,7 +12,7 @@ open Common
 (* Graph walkers *)
 (*****************************************************************************)
 
-(*s: type Client_local.graph_walker *)
+(*s: type [[Client_local.graph_walker]] *)
 (* will start from the heads and iterate over the ancestry of heads
  * until the caller ack that some top commits are already known and
  * do not need to be iterated furthermore.
@@ -21,9 +21,9 @@ type graph_walker = {
   next: unit -> Commit.hash option;
   ack: Commit.hash -> unit;
 }
-(*e: type Client_local.graph_walker *)
+(*e: type [[Client_local.graph_walker]] *)
 
-(*s: function Client_local.ml_graph_walker *)
+(*s: function [[Client_local.ml_graph_walker]] *)
 let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
   (* less: start just from HEAD? *)
   let heads = 
@@ -68,9 +68,9 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
         todos_next_round := []
     );
   }
-(*e: function Client_local.ml_graph_walker *)
+(*e: function [[Client_local.ml_graph_walker]] *)
 
-(*s: function Client_local.collect_filetree *)
+(*s: function [[Client_local.collect_filetree]] *)
 let rec collect_filetree read_tree treeid have_sha =
   let tree = read_tree treeid in
   tree |> List.iter (fun entry ->
@@ -83,13 +83,13 @@ let rec collect_filetree read_tree treeid have_sha =
       | Tree.Commit -> failwith "submodule not supported yet"
     end
   )
-(*e: function Client_local.collect_filetree *)
+(*e: function [[Client_local.collect_filetree]] *)
     
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
  
-(*s: function Client_local.find_top_common_commits *)
+(*s: function [[Client_local.find_top_common_commits]] *)
 (* find the common frontline *)
 let find_top_common_commits src dst =
   let top_commons = Hashtbl.create 101 in
@@ -107,9 +107,9 @@ let find_top_common_commits src dst =
   in
   loop_while_sha (walker.next ());
   top_commons |> Hashtbl_.to_list |> List.map fst
-(*e: function Client_local.find_top_common_commits *)
+(*e: function [[Client_local.find_top_common_commits]] *)
 
-(*s: function Client_local.iter_missing_objects *)
+(*s: function [[Client_local.iter_missing_objects]] *)
 let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* less: split_commits_and_tags? *)
   let all_common_commits = 
@@ -169,10 +169,10 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
   missing_commits |> Hashtbl.iter (fun commit_sha _true ->
     missing commit_sha false
   )
-(*e: function Client_local.iter_missing_objects *)
+(*e: function [[Client_local.iter_missing_objects]] *)
 
 
-(*s: function Client_local.fetch_objects *)
+(*s: function [[Client_local.fetch_objects]] *)
 let fetch_objects src dst =
   (* less: determine_wants from pull command *)
   let top_wanted_commits = [Repository.follow_ref_some src Refs.Head] in
@@ -191,13 +191,13 @@ let fetch_objects src dst =
     let sha2 = Repository.add_obj dst obj in
     assert (sha1 = sha2)
   )
-(*e: function Client_local.fetch_objects *)
+(*e: function [[Client_local.fetch_objects]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: function Client_local.mk_client *)
+(*s: function [[Client_local.mk_client]] *)
 let mk_client path =
   { Client.
     url = path;
@@ -208,5 +208,5 @@ let mk_client path =
       Repository.follow_ref_some src Refs.Head
    );
   }
-(*e: function Client_local.mk_client *)
+(*e: function [[Client_local.mk_client]] *)
 (*e: version_control/client_local.ml *)

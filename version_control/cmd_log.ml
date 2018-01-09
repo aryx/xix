@@ -6,7 +6,7 @@ open Common
 
 (* todo: git log --graph --oneline --decorate --all *)
 
-(*s: function Cmd_log.print_commit *)
+(*s: function [[Cmd_log.print_commit]] *)
 let print_commit sha commit =
   pr (spf "commit: %s" (Hexsha.of_sha sha));
   (match commit.Commit.parents with
@@ -25,9 +25,9 @@ let print_commit sha commit =
   pr "";
   pr ("    " ^ commit.Commit.message);
   ()
-(*e: function Cmd_log.print_commit *)
+(*e: function [[Cmd_log.print_commit]] *)
 
-(*s: function Cmd_log.print_change *)
+(*s: function [[Cmd_log.print_change]] *)
 let print_change change =
   match change with
   | Change.Add entry ->
@@ -36,14 +36,14 @@ let print_change change =
     pr (spf "D       %s" entry.Change.path)
   | Change.Modify (entry1, entry2) ->
     pr (spf "M       %s" entry1.Change.path)
-(*e: function Cmd_log.print_change *)
+(*e: function [[Cmd_log.print_change]] *)
 
 
-(*s: constant Cmd_log.name_status *)
+(*s: constant [[Cmd_log.name_status]] *)
 let name_status = ref false
-(*e: constant Cmd_log.name_status *)
+(*e: constant [[Cmd_log.name_status]] *)
 
-(*s: function Cmd_log.log *)
+(*s: function [[Cmd_log.log]] *)
 (* todo: track only selected paths 
  * (and then rename detection to track correctly)
  *)
@@ -75,9 +75,9 @@ let log r =
     (*e: [[Cmd_log.log()]] if [[--name-status]] flag *)
     end
   )
-(*e: function Cmd_log.log *)
+(*e: function [[Cmd_log.log]] *)
 
-(*s: constant Cmd_log.cmd *)
+(*s: constant [[Cmd_log.cmd]] *)
 let cmd = { Cmd.
   name = "log";
   usage = " [options]";
@@ -96,5 +96,5 @@ let cmd = { Cmd.
     | xs -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_log.cmd *)
+(*e: constant [[Cmd_log.cmd]] *)
 (*e: version_control/cmd_log.ml *)

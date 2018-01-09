@@ -32,12 +32,12 @@ open Common
 (* Entry points *)
 (*****************************************************************************)
 
-(*s: function Compression.decompress *)
+(*s: function [[Compression.decompress]] *)
 let decompress ch = 
   Unzip.inflate ch
-(*e: function Compression.decompress *)
+(*e: function [[Compression.decompress]] *)
 
-(*s: function Compression.compress *)
+(*s: function [[Compression.compress]] *)
 let compress ic oc =
   Zlib.compress 
     (fun buf -> 
@@ -46,5 +46,5 @@ let compress ic oc =
     )
     (fun buf len -> 
       IO.output oc buf 0 len |> ignore)
-(*e: function Compression.compress *)
+(*e: function [[Compression.compress]] *)
 (*e: version_control/compression.ml *)

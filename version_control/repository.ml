@@ -16,7 +16,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Repository.t *)
+(*s: type [[Repository.t]] *)
 type t = {
   worktree: Common.dirname;
   dotgit: Common.dirname; (* usually <worktree>/.git *)
@@ -25,18 +25,18 @@ type t = {
   mutable index: Index.t;
   (*e: [[Repository.t]] index field *)
 }
-(*e: type Repository.t *)
+(*e: type [[Repository.t]] *)
 
-(*s: constant Repository.SlashOperator *)
+(*s: constant [[Repository.SlashOperator]] *)
 let (/) = Filename.concat
-(*e: constant Repository.SlashOperator *)
+(*e: constant [[Repository.SlashOperator]] *)
 
-(*s: constant Repository.dirperm *)
+(*s: constant [[Repository.dirperm]] *)
 (* rwxr-x--- *)
 let dirperm = 0o750
-(*e: constant Repository.dirperm *)
+(*e: constant [[Repository.dirperm]] *)
 
-(*s: type Repository.objectish *)
+(*s: type [[Repository.objectish]] *)
 (* todo: handle ^ like HEAD^, so need more complex objectish parser *)
 type objectish =
   | ObjByRef of Refs.t
@@ -47,53 +47,53 @@ type objectish =
   (*x: [[Repository.objectish]] cases *)
   (* ObjByTag *)
   (*e: [[Repository.objectish]] cases *)
-(*e: type Repository.objectish *)
+(*e: type [[Repository.objectish]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Repository.hexsha_to_filename *)
+(*s: function [[Repository.hexsha_to_filename]] *)
 (* for loose objects *)
 let hexsha_to_filename r hexsha =
   let dir = String.sub hexsha 0 2 in
   let file = String.sub hexsha 2 (String.length hexsha - 2) in
   r.dotgit / "objects" / dir / file
-(*e: function Repository.hexsha_to_filename *)
+(*e: function [[Repository.hexsha_to_filename]] *)
 
-(*s: function Repository.ref_to_filename *)
+(*s: function [[Repository.ref_to_filename]] *)
 let ref_to_filename r aref =
   match aref with
   | Refs.Head -> r.dotgit / "HEAD"
   (* less: win32: should actually replace '/' in name *)
   | Refs.Ref name -> r.dotgit / name
-(*e: function Repository.ref_to_filename *)
+(*e: function [[Repository.ref_to_filename]] *)
 
-(*s: function Repository.index_to_filename *)
+(*s: function [[Repository.index_to_filename]] *)
 let index_to_filename r =
   r.dotgit / "index"
-(*e: function Repository.index_to_filename *)
+(*e: function [[Repository.index_to_filename]] *)
 
-(*s: function Repository.with_file_out_with_lock *)
+(*s: function [[Repository.with_file_out_with_lock]] *)
 (* todo: see code of _Gitfile.__init__ O_EXCL ... *)
 let with_file_out_with_lock f file =
   (* todo: create .lock file and then rename *)
   Common.with_file_out f file
-(*e: function Repository.with_file_out_with_lock *)
+(*e: function [[Repository.with_file_out_with_lock]] *)
 
 
 (* move in common.ml? *)
-(*s: function Repository.with_opendir *)
+(*s: function [[Repository.with_opendir]] *)
 (* less: use finalize *)
 let with_opendir f dir =
   let handle = Unix.opendir dir in
   let res = f handle in
   Unix.closedir handle;
   res
-(*e: function Repository.with_opendir *)
+(*e: function [[Repository.with_opendir]] *)
     
 (* move in common.ml? (but remove .git specific stuff) *)
-(*s: function Repository.walk_dir *)
+(*s: function [[Repository.walk_dir]] *)
 (* inspired from os.path.walk in Python *)
 let rec walk_dir f dir =
   dir |> with_opendir (fun handle ->
@@ -120,22 +120,22 @@ let rec walk_dir f dir =
         walk_dir f (Filename.concat dir s)
       )
   )
-(*e: function Repository.walk_dir *)
+(*e: function [[Repository.walk_dir]] *)
 
 (*****************************************************************************)
 (* Refs *)
 (*****************************************************************************)
 
-(*s: function Repository.read_ref *)
+(*s: function [[Repository.read_ref]] *)
 let read_ref r aref =
   (* less: packed refs *)
   let file = ref_to_filename r aref in
   file |> Common.with_file_in (fun ch ->
     ch |> IO.input_channel |> Refs.read
   )
-(*e: function Repository.read_ref *)
+(*e: function [[Repository.read_ref]] *)
 
-(*s: function Repository.follow_ref *)
+(*s: function [[Repository.follow_ref]] *)
 let rec follow_ref r aref =
   (* less: check if depth > 5? *)
   try (
@@ -150,16 +150,16 @@ let rec follow_ref r aref =
    * pointing to an inexistent .git/refs/heads/master
    *)
   with Sys_error _ (* no such file or directory *) -> [aref], None
-(*e: function Repository.follow_ref *)
+(*e: function [[Repository.follow_ref]] *)
 
-(*s: function Repository.follow_ref_some *)
+(*s: function [[Repository.follow_ref_some]] *)
 let follow_ref_some r aref =
   match follow_ref r aref |> snd with
   | Some sha -> sha
   | None -> failwith (spf "could not follow %s" (Refs.string_of_ref aref))
-(*e: function Repository.follow_ref_some *)
+(*e: function [[Repository.follow_ref_some]] *)
 
-(*s: function Repository.add_ref_if_new *)
+(*s: function [[Repository.add_ref_if_new]] *)
 let add_ref_if_new r aref refval =
   let (refs, shaopt) = follow_ref r aref in
   if shaopt <> None
@@ -174,15 +174,15 @@ let add_ref_if_new r aref refval =
       true
     )
   end
-(*e: function Repository.add_ref_if_new *)
+(*e: function [[Repository.add_ref_if_new]] *)
 
-(*s: function Repository.del_ref *)
+(*s: function [[Repository.del_ref]] *)
 let del_ref r aref =
   let file = ref_to_filename r aref in
   Unix.unlink file
-(*e: function Repository.del_ref *)
+(*e: function [[Repository.del_ref]] *)
 
-(*s: function Repository.set_ref_if_same_old *)
+(*s: function [[Repository.set_ref_if_same_old]] *)
 let set_ref_if_same_old r aref oldh newh =
   let (refs, _) = follow_ref r aref in
   let lastref = List.hd (List.rev refs) in
@@ -200,9 +200,9 @@ let set_ref_if_same_old r aref oldh newh =
     );
     true
   with Not_found -> false
-(*e: function Repository.set_ref_if_same_old *)
+(*e: function [[Repository.set_ref_if_same_old]] *)
 
-(*s: function Repository.set_ref *)
+(*s: function [[Repository.set_ref]] *)
 let set_ref r aref newh =
   let (refs, _) = follow_ref r aref in
   let lastref = List.hd (List.rev refs) in
@@ -211,18 +211,18 @@ let set_ref r aref newh =
     ch |> IO.output_channel |> IO_.with_close_out 
         (Refs.write (Refs.Hash newh))
   )
-(*e: function Repository.set_ref *)
+(*e: function [[Repository.set_ref]] *)
   
 
-(*s: function Repository.write_ref *)
+(*s: function [[Repository.write_ref]] *)
 (* low-level *)
 let write_ref r aref content =
   let file = ref_to_filename r aref in
   file |> with_file_out_with_lock (fun ch ->
     ch |> IO.output_channel |> IO_.with_close_out (Refs.write content))
-(*e: function Repository.write_ref *)
+(*e: function [[Repository.write_ref]] *)
 
-(*s: function Repository.all_refs *)
+(*s: function [[Repository.all_refs]] *)
 let all_refs r =
   let root = r.dotgit ^ "/" in
   let rootlen = String.length root in
@@ -236,13 +236,13 @@ let all_refs r =
     );
    );
   List.rev !res
-(*e: function Repository.all_refs *)
+(*e: function [[Repository.all_refs]] *)
 
 (*****************************************************************************)
 (* Objects *)
 (*****************************************************************************)
 
-(*s: function Repository.read_obj *)
+(*s: function [[Repository.read_obj]] *)
 let read_obj r h =
   (* todo: look for packed obj *)
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
@@ -251,28 +251,28 @@ let read_obj r h =
     (* todo: check if sha consistent? *)
     ch |> IO.input_channel |> Compression.decompress |> Objects.read
   )
-(*e: function Repository.read_obj *)
+(*e: function [[Repository.read_obj]] *)
 
-(*s: function Repository.read_commit *)
+(*s: function [[Repository.read_commit]] *)
 let read_commit r h =
   match read_obj r h with
   | Objects.Commit x -> x
   | _ -> failwith "read_commit: was expecting a commit"
-(*e: function Repository.read_commit *)
-(*s: function Repository.read_tree *)
+(*e: function [[Repository.read_commit]] *)
+(*s: function [[Repository.read_tree]] *)
 let read_tree r h =
   match read_obj r h with
   | Objects.Tree x -> x
   | _ -> failwith "read_tree: was expecting a tree"
-(*e: function Repository.read_tree *)
-(*s: function Repository.read_blob *)
+(*e: function [[Repository.read_tree]] *)
+(*s: function [[Repository.read_blob]] *)
 let read_blob r h =
   match read_obj r h with
   | Objects.Blob x -> x
   | _ -> failwith "read_blob: was expecting a blob"
-(*e: function Repository.read_blob *)
+(*e: function [[Repository.read_blob]] *)
 
-(*s: function Repository.read_objectish *)
+(*s: function [[Repository.read_objectish]] *)
 let rec read_objectish r objectish =
   match objectish with
   | ObjByRef aref -> 
@@ -286,9 +286,9 @@ let rec read_objectish r objectish =
     sha, read_obj r sha
   | ObjByBranch str ->
     read_objectish r (ObjByRef (Refs.Ref ("refs/heads/" ^ str)))
-(*e: function Repository.read_objectish *)
+(*e: function [[Repository.read_objectish]] *)
 
-(*s: function Repository.add_obj *)
+(*s: function [[Repository.add_obj]] *)
 let add_obj r obj =
   let bytes = 
     IO.output_bytes () |> IO_.with_close_out (Objects.write obj) in
@@ -311,33 +311,33 @@ let add_obj r obj =
     );
     sha
   end
-(*e: function Repository.add_obj *)
+(*e: function [[Repository.add_obj]] *)
 
-(*s: function Repository.has_obj *)
+(*s: function [[Repository.has_obj]] *)
 let has_obj r h =
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
   Sys.file_exists path
-(*e: function Repository.has_obj *)
+(*e: function [[Repository.has_obj]] *)
 
 (*****************************************************************************)
 (* Index *)
 (*****************************************************************************)
 
-(*s: function Repository.read_index *)
+(*s: function [[Repository.read_index]] *)
 let read_index r =
   r.index
-(*e: function Repository.read_index *)
+(*e: function [[Repository.read_index]] *)
 
-(*s: function Repository.write_index *)
+(*s: function [[Repository.write_index]] *)
 let write_index r =
   let path = index_to_filename r in
   path |> with_file_out_with_lock (fun ch ->
     ch |> IO.output_channel |> IO_.with_close_out (Index.write r.index)
   )
-(*e: function Repository.write_index *)
+(*e: function [[Repository.write_index]] *)
 
     
-(*s: function Repository.content_from_path_and_unix_stat *)
+(*s: function [[Repository.content_from_path_and_unix_stat]] *)
 let content_from_path_and_unix_stat full_path stat =
   match stat.Unix.st_kind with
   (*s: [[Repository.content_from_path_and_unix_stat()]] match kind cases *)
@@ -350,9 +350,9 @@ let content_from_path_and_unix_stat full_path stat =
     )
   | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
                      full_path)
-(*e: function Repository.content_from_path_and_unix_stat *)
+(*e: function [[Repository.content_from_path_and_unix_stat]] *)
 
-(*s: function Repository.add_in_index *)
+(*s: function [[Repository.add_in_index]] *)
 let add_in_index r relpaths =
   (*s: [[Repository.add_in_index()]] sanity check [[relpaths]] *)
   assert (relpaths |> List.for_all Filename.is_relative);
@@ -373,14 +373,14 @@ let add_in_index r relpaths =
     (*e: [[Repository.add_in_index()]] adding [[relpath]] *)
   );
   write_index r
-(*e: function Repository.add_in_index *)
+(*e: function [[Repository.add_in_index]] *)
 
 (*****************************************************************************)
 (* Commit *)
 (*****************************************************************************)
 
 (* less: move to cmd_commit.ml? *)
-(*s: function Repository.commit_index *)
+(*s: function [[Repository.commit_index]] *)
 let commit_index r author committer message =
   let aref = Refs.Head in
   let root_tree = Index.trees_of_index r.index 
@@ -417,13 +417,13 @@ let commit_index r author committer message =
   then failwith (spf "%s changed during commit" (Refs.string_of_ref aref));
   (* todo: execute post-commit hook *)
   ()
-(*e: function Repository.commit_index *)
+(*e: function [[Repository.commit_index]] *)
   
 (*****************************************************************************)
 (* Checkout and reset *)
 (*****************************************************************************)
 
-(*s: function Repository.build_file_from_blob *)
+(*s: function [[Repository.build_file_from_blob]] *)
 let build_file_from_blob fullpath blob perm =
   let oldstat =
     try 
@@ -461,10 +461,10 @@ let build_file_from_blob fullpath blob perm =
   (*e: [[Repository.build_file_from_blob()]] match perm cases *)
   );
   Unix.lstat fullpath
-(*e: function Repository.build_file_from_blob *)
+(*e: function [[Repository.build_file_from_blob]] *)
 
 
-(*s: function Repository.set_worktree_and_index_to_tree *)
+(*s: function [[Repository.set_worktree_and_index_to_tree]] *)
 let set_worktree_and_index_to_tree r tree =
   (* todo: need lock on index? on worktree? *)
   let hcurrent = 
@@ -506,7 +506,7 @@ let set_worktree_and_index_to_tree r tree =
       Unix.unlink fullpath
   )
   (* less: delete if a dir became empty, just walk_dir? *)
-(*e: function Repository.set_worktree_and_index_to_tree *)
+(*e: function [[Repository.set_worktree_and_index_to_tree]] *)
 
 (*****************************************************************************)
 (* Packs *)
@@ -516,7 +516,7 @@ let set_worktree_and_index_to_tree r tree =
 (* Repo init/open *)
 (*****************************************************************************)
 
-(*s: function Repository.init *)
+(*s: function [[Repository.init]] *)
 let init root =
   if not (Sys.file_exists root)
   then Unix.mkdir root dirperm;
@@ -550,9 +550,9 @@ let init root =
   Sys.chdir root;
   let absolute = Sys.getcwd () in
   pr (spf "Initialized empty Git repository in %s" (absolute / ".git/"))
-(*e: function Repository.init *)
+(*e: function [[Repository.init]] *)
 
-(*s: function Repository.open_ *)
+(*s: function [[Repository.open_]] *)
 let open_ root = 
   let path = root / ".git" in
   if Sys.file_exists path &&
@@ -573,9 +573,9 @@ let open_ root =
       (*e: [[Repository.open_()]] other fields settings *)
     }
   else failwith (spf "Not a git repository at %s" root)
-(*e: function Repository.open_ *)
+(*e: function [[Repository.open_]] *)
 
-(*s: function Repository.find_dotgit_root_and_open *)
+(*s: function [[Repository.find_dotgit_root_and_open]] *)
 let find_root_open_and_adjust_paths paths = 
   (* todo: allow git from different location *)
   let r = open_ "." in
@@ -589,7 +589,7 @@ let find_root_open_and_adjust_paths paths =
     )
   in
   r, relpaths
-(*e: function Repository.find_dotgit_root_and_open *)
+(*e: function [[Repository.find_dotgit_root_and_open]] *)
 
 let parse_objectish str = 
   raise Todo

@@ -40,39 +40,39 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Sha1.t *)
+(*s: type [[Sha1.t]] *)
 (* a 20 bytes number (really a string of length 20) *)
 type t = bytes
-(*e: type Sha1.t *)
+(*e: type [[Sha1.t]] *)
 
-(*s: function Sha1.is_sha *)
+(*s: function [[Sha1.is_sha]] *)
 let is_sha x =
   Bytes.length x = 20
-(*e: function Sha1.is_sha *)
+(*e: function [[Sha1.is_sha]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
-(*s: function Sha1.read *)
+(*s: function [[Sha1.read]] *)
 let read ch =
   let s = IO.really_nread ch 20 in
   assert (is_sha s);
   s
-(*e: function Sha1.read *)
+(*e: function [[Sha1.read]] *)
 
-(*s: function Sha1.write *)
+(*s: function [[Sha1.write]] *)
 let write ch x =
   IO.nwrite ch x
-(*e: function Sha1.write *)
+(*e: function [[Sha1.write]] *)
 
 (* start of copy-pasted code from uuidm *)
 
-(*s: function Sha1.sha1 *)
+(*s: function [[Sha1.sha1]] *)
 (* sha-1 digest. Based on pseudo-code of RFC 3174.
    Slow and ugly but does the job. *)
 let sha1 s =
-  (*s: function sha_1_pad *)
+  (*s: function [[sha_1_pad]] *)
   let sha_1_pad s =
     let len = String.length s in
     let blen = 8 * len in
@@ -94,7 +94,7 @@ let sha1 s =
     Bytes.set m (mlen - 1) (Char.unsafe_chr (blen land 0xFF));
     m
   in
-  (*e: function sha_1_pad *)
+  (*e: function [[sha_1_pad]] *)
   let ( &&& ) = ( land ) in
   (* Operations on int32 *)
   (*s: [[Sha1.sha1()]] operator shortcuts for Int32 *)
@@ -176,19 +176,19 @@ let sha1 s =
 
   (** the result hash number of 20 bytes *)
   let h = Bytes.create 20 in
-  (*s: function i2s *)
+  (*s: function [[i2s]] *)
   let i2s h k i =
     Bytes.set h k       (Char.unsafe_chr ((Int32.to_int (sr i 24)) &&& 0xFF));
     Bytes.set h (k + 1) (Char.unsafe_chr ((Int32.to_int (sr i 16)) &&& 0xFF));
     Bytes.set h (k + 2) (Char.unsafe_chr ((Int32.to_int (sr i 8))  &&& 0xFF));
     Bytes.set h (k + 3) (Char.unsafe_chr ((Int32.to_int i)         &&& 0xFF));
   in
-  (*e: function i2s *)
+  (*e: function [[i2s]] *)
   i2s h 0 !h0;
   i2s h 4 !h1;
   i2s h 8 !h2;
   i2s h 12 !h3;
   i2s h 16 !h4;
   Bytes.unsafe_to_string h
-(*e: function Sha1.sha1 *)
+(*e: function [[Sha1.sha1]] *)
 (*e: version_control/sha1.ml *)

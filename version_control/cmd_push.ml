@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_push.push *)
+(*s: function [[Cmd_push.push]] *)
 (* =~ git fetch + git merge but inverting dst and src  *)
 let push src_repo url_dst =
   let url = src_repo.Repository.worktree in
@@ -33,9 +33,9 @@ let push src_repo url_dst =
     Repository.set_worktree_and_index_to_tree dst tree
   | _ -> failwith "TODO: git pull need merge"
   )
-(*e: function Cmd_push.push *)
+(*e: function [[Cmd_push.push]] *)
 
-(*s: constant Cmd_push.cmd *)
+(*s: constant [[Cmd_push.cmd]] *)
 let cmd = { Cmd.
   name = "push";
   usage = " [options] [<url repository>]";
@@ -52,5 +52,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_push.cmd *)
+(*e: constant [[Cmd_push.cmd]] *)
 (*e: version_control/cmd_push.ml *)

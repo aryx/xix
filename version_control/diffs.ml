@@ -48,7 +48,7 @@ open Common
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-(*s: function Diffs.split_lines *)
+(*s: function [[Diffs.split_lines]] *)
 let split_lines str =
   (* alt: let xs = Str.full_split (Str.regexp "\n") str in *)
   let rec aux start = 
@@ -62,16 +62,16 @@ let split_lines str =
       else [String.sub str start (String.length str - start)]
   in
   aux 0
-(*e: function Diffs.split_lines *)
+(*e: function [[Diffs.split_lines]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: function Diffs.diff *)
+(*s: function [[Diffs.diff]] *)
 let diff str1 str2 =
   let xs = split_lines str1 in
   let ys = split_lines str2 in
   Diff_myers.diff (Array.of_list xs) (Array.of_list ys)
-(*e: function Diffs.diff *)
+(*e: function [[Diffs.diff]] *)
 (*e: version_control/diffs.ml *)

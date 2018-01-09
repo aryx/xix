@@ -60,25 +60,25 @@ open Common
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: constant Main.commands *)
+(*s: constant [[Main.commands]] *)
 let commands = List.flatten [
   Cmds.main_commands;
   Cmds.extra_commands;
   [Cmd_help.cmd];
 ]
-(*e: constant Main.commands *)
+(*e: constant [[Main.commands]] *)
 
-(*s: function Main.usage *)
+(*s: function [[Main.usage]] *)
 let usage () =
   spf "usage: ocamlgit <%s> [options]"
     (String.concat "|" (commands |> List.map (fun cmd -> cmd.Cmd.name)))
-(*e: function Main.usage *)
+(*e: function [[Main.usage]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: function Main.main *)
+(*s: function [[Main.main]] *)
 let main () =
   (*s: [[Main.main()]] GC settings *)
   Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
@@ -129,10 +129,10 @@ let main () =
         exit 1
     (*e: [[Main.main()]] execute [[cmd.f]] *)
   end
-(*e: function Main.main *)
+(*e: function [[Main.main]] *)
         
-(*s: toplevel Main._1 *)
+(*s: toplevel [[Main._1]] *)
 let _ =
   main ()
-(*e: toplevel Main._1 *)
+(*e: toplevel [[Main._1]] *)
 (*e: version_control/main.ml *)

@@ -25,7 +25,7 @@ open Common
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Diff_unified.print *)
+(*s: function [[Diff_unified.print]] *)
 let print = function
   | Diff.Equal s -> 
     print_string (" " ^ s)
@@ -33,22 +33,22 @@ let print = function
     print_string ("-" ^ s)
   | Diff.Added s -> 
     print_string ("+" ^ s)
-(*e: function Diff_unified.print *)
+(*e: function [[Diff_unified.print]] *)
 
-(*s: function Diff_unified.print_header *)
+(*s: function [[Diff_unified.print_header]] *)
 let print_header nctx_before nold nnew =
   (* todo: should print size of hunk also here, but then
    * need to wait we finished processing this hunk
    *)
   print_string (spf "@@ -%d, +%d, @@\n"
                   (nold - nctx_before) (nnew - nctx_before))
-(*e: function Diff_unified.print_header *)
+(*e: function [[Diff_unified.print_header]] *)
 
-(*s: constant Diff_unified.nContext *)
+(*s: constant [[Diff_unified.nContext]] *)
 let nContext = 3
-(*e: constant Diff_unified.nContext *)
+(*e: constant [[Diff_unified.nContext]] *)
 
-(*s: function Diff_unified.show_unified_diff *)
+(*s: function [[Diff_unified.show_unified_diff]] *)
 let show_unified_diff diffs =
   (* naive: no contextual:  diffs |> List.iter print *)
   let rec aux context_lines nctx_before nctx_after nold nnew diffs =
@@ -84,14 +84,14 @@ let show_unified_diff diffs =
       )
   in
   aux [] 0 0 1 1 diffs
-(*e: function Diff_unified.show_unified_diff *)
+(*e: function [[Diff_unified.show_unified_diff]] *)
 
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
-(*s: function Diff_unified.show_change *)
+(*s: function [[Diff_unified.show_change]] *)
 let show_change change =
   (* less: if mode is gitlink? *)
   let (old_path, old_content), (new_path, new_content) = 
@@ -113,5 +113,5 @@ let show_change change =
     (* less: display change of modes *)
     show_unified_diff diffs
   end
-(*e: function Diff_unified.show_change *)
+(*e: function [[Diff_unified.show_change]] *)
 (*e: version_control/diff_unified.ml *)

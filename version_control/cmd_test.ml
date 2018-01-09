@@ -14,7 +14,7 @@ let (/) = Filename.concat
 (* Algorithm tests *)
 (*****************************************************************************)
 
-(*s: function Cmd_test.test_sha1 *)
+(*s: function [[Cmd_test.test_sha1]] *)
 (* see https://git-scm.com/book/en/v2/Git-Internals-Git-Objects *)
 let test_sha1 content =
   let header = spf "blob %d\000" (String.length content) in
@@ -25,7 +25,7 @@ let test_sha1 content =
   let hexsha = Hexsha.of_sha sha in
   pr (spf "len = %d, str = %s" (String.length hexsha) hexsha);
   ()
-(*e: function Cmd_test.test_sha1 *)
+(*e: function [[Cmd_test.test_sha1]] *)
 
 let test_diff file1 file2 =
   let read_all path = 
@@ -99,7 +99,7 @@ let test_unzip_all_objects () =
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: constant Cmd_test.cmd *)
+(*s: constant [[Cmd_test.cmd]] *)
 let cmd = { Cmd.
   name = "test";
   usage = " ";
@@ -126,6 +126,6 @@ let cmd = { Cmd.
                        (String.concat ";" args))
   );
 }
-(*e: constant Cmd_test.cmd *)
+(*e: constant [[Cmd_test.cmd]] *)
 
 (*e: version_control/cmd_test.ml *)

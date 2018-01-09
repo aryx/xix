@@ -30,17 +30,17 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type User.tz_offset *)
+(*s: type [[User.tz_offset]] *)
 type timezone_offset = int (* +/- hours, [-12, +12] *)
-(*e: type User.tz_offset *)
+(*e: type [[User.tz_offset]] *)
 
-(*s: type User.t *)
+(*s: type [[User.t]] *)
 type t = {
   name : string;
   email: string;
   date : int64 (* seconds *) * timezone_offset;
 }
-(*e: type User.t *)
+(*e: type [[User.t]] *)
 
 (* less: default_tz_offset ? *)
 
@@ -48,20 +48,20 @@ type t = {
 (* IO *)
 (*****************************************************************************)
 
-(*s: function User.sign_of_char *)
+(*s: function [[User.sign_of_char]] *)
 let sign_of_char = function
   | '+' -> (fun x -> +x )
   | '-' -> (fun x -> - x)
   | c -> failwith (spf "User.sign_of_string: not a sign, got %c" c)
-(*e: function User.sign_of_char *)
+(*e: function [[User.sign_of_char]] *)
 
-(*s: function User.char_of_sign *)
+(*s: function [[User.char_of_sign]] *)
 let char_of_sign = function
   | x when x >= 0 -> '+'
   | _ -> '-'
-(*e: function User.char_of_sign *)
+(*e: function [[User.char_of_sign]] *)
 
-(*s: function User.read *)
+(*s: function [[User.read]] *)
 let read ch =
   let name = IO_.read_string_and_stop_char ch '<' in
   let email = IO_.read_string_and_stop_char ch '>' in
@@ -80,26 +80,26 @@ let read ch =
     email = email;
     date = (Int64.of_string seconds, (sign_of_char sign) (int_of_string hours));
   }
-(*e: function User.read *)
+(*e: function [[User.read]] *)
 
-(*s: function User.write_date *)
+(*s: function [[User.write_date]] *)
 let write_date ch (date, tz) =
   IO.nwrite ch (Int64.to_string date);
   IO.write ch ' ';
   IO.nwrite ch (spf "%c%02d%02d" (char_of_sign tz) (abs tz) 0)
-(*e: function User.write_date *)
+(*e: function [[User.write_date]] *)
 
-(*s: function User.write *)
+(*s: function [[User.write]] *)
 let write ch user =
   IO.nwrite ch (spf "%s <%s> " user.name user.email);
   write_date ch user.date
-(*e: function User.write *)
+(*e: function [[User.write]] *)
 
 (*****************************************************************************)
 (* Show *)
 (*****************************************************************************)
 
-(*s: function User.string_of_date *)
+(*s: function [[User.string_of_date]] *)
 let string_of_date (date, tz) =
   let f = Int64.to_float date in
   let tm = Unix.localtime f in
@@ -109,6 +109,6 @@ let string_of_date (date, tz) =
     tm.Unix.tm_mday 
     tm.Unix.tm_hour tm.Unix.tm_min tm.Unix.tm_sec (tm.Unix.tm_year + 1900)
     (char_of_sign tz) (abs tz) 0
-(*e: function User.string_of_date *)
+(*e: function [[User.string_of_date]] *)
 
 (*e: version_control/user.ml *)

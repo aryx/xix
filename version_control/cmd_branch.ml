@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_branch.list_branches *)
+(*s: function [[Cmd_branch.list_branches]] *)
 (* less: remote_flag set with --all to also list remote refs *)
 let list_branches r =
   let head_branch = Repository.read_ref r (Refs.Head) in
@@ -20,9 +20,9 @@ let list_branches r =
       in
       pr (spf "%s%s" prefix short)
   )
-(*e: function Cmd_branch.list_branches *)
+(*e: function [[Cmd_branch.list_branches]] *)
 
-(*s: function Cmd_branch.create_branch *)
+(*s: function [[Cmd_branch.create_branch]] *)
 let create_branch r name (* sha *) =
   let refname = "refs/heads/" ^ name in
   (*s: [[Cmd_branch.create_branch()]] sanity check refname *)
@@ -35,9 +35,9 @@ let create_branch r name (* sha *) =
   let ok = Repository.add_ref_if_new r (Refs.Ref refname) (Refs.Hash sha) in
   if not ok
   then failwith (spf "could not create branch '%s'" name)
-(*e: function Cmd_branch.create_branch *)
+(*e: function [[Cmd_branch.create_branch]] *)
 
-(*s: function Cmd_branch.delete_branch *)
+(*s: function [[Cmd_branch.delete_branch]] *)
 let delete_branch r name force =
   let refname = "refs/heads/" ^ name in
   let aref = Refs.Ref refname in
@@ -49,18 +49,18 @@ let delete_branch r name force =
   (*e: [[Cmd_branch.delete_branch()]] sanity check if branch merged unless force *)
   Repository.del_ref r aref;
   pr (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
-(*e: function Cmd_branch.delete_branch *)
+(*e: function [[Cmd_branch.delete_branch]] *)
 
 (* less: rename_branch *)
 
-(*s: constant Cmd_branch.del_flag *)
+(*s: constant [[Cmd_branch.del_flag]] *)
 let del_flag = ref false
-(*e: constant Cmd_branch.del_flag *)
-(*s: constant Cmd_branch.del_force *)
+(*e: constant [[Cmd_branch.del_flag]] *)
+(*s: constant [[Cmd_branch.del_force]] *)
 let del_force = ref false
-(*e: constant Cmd_branch.del_force *)
+(*e: constant [[Cmd_branch.del_force]] *)
 
-(*s: constant Cmd_branch.cmd *)
+(*s: constant [[Cmd_branch.cmd]] *)
 let cmd = { Cmd.
   name = "branch";
   usage = " [options]
@@ -103,5 +103,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_branch.cmd *)
+(*e: constant [[Cmd_branch.cmd]] *)
 (*e: version_control/cmd_branch.ml *)

@@ -25,7 +25,7 @@
 (* was functorized and parametrized before *)
 let equal = (=)
 
-(*s: function Diff_myers.lcs *)
+(*s: function [[Diff_myers.lcs]] *)
 let lcs a b =
   let n = Array.length a in
   let m = Array.length b in
@@ -38,7 +38,7 @@ let lcs a b =
 
   let get v i = v.(i + mn) in
   let set v i x = v.(i + mn) <- x in
-  (*s: function Diff_myers.finish *)
+  (*s: function [[Diff_myers.finish]] *)
   let finish () =
     let rec loop i maxl r =
       match () with
@@ -47,7 +47,7 @@ let lcs a b =
       | _ -> loop (i + 1) maxl r
     in loop (- mn) 0 []
   in
-  (*e: function Diff_myers.finish *)
+  (*e: function [[Diff_myers.finish]] *)
   if mn = 0 
   then []
   else
@@ -55,7 +55,7 @@ let lcs a b =
     let rec dloop d =
       assert (d <= mn);
       (* For k <- -d to d in steps of 2 Do *)
-      (*s: function Diff_myers.kloop *)
+      (*s: function [[Diff_myers.kloop]] *)
       let rec kloop k =
         if k > d 
         then dloop (d + 1)
@@ -66,13 +66,13 @@ let lcs a b =
             else get vd (k - 1) + 1, get vl (k - 1), get vr (k - 1)
           in
           let x, y, l, r =
-            (*s: function Diff_myers.xyloop *)
+            (*s: function [[Diff_myers.xyloop]] *)
             let rec xyloop x y l r =
               if x < n && y < m && equal a.(x) b.(y)
               then xyloop (x + 1) (y + 1) (l + 1) (`Common(x, y, a.(x))::r)
               else x, y, l, r
             in 
-            (*e: function Diff_myers.xyloop *)
+            (*e: function [[Diff_myers.xyloop]] *)
             xyloop x (x - k) l r
           in
           set vd k x;
@@ -84,12 +84,12 @@ let lcs a b =
             finish ()
           else
             kloop (k + 2)
-      (*e: function Diff_myers.kloop *)
+      (*e: function [[Diff_myers.kloop]] *)
       in kloop (-d)
     in dloop 0
-(*e: function Diff_myers.lcs *)
+(*e: function [[Diff_myers.lcs]] *)
 
-(*s: function Diff_myers.diff *)
+(*s: function [[Diff_myers.diff]] *)
 let diff a b =
   let append_map g arr from to_ init =
     let rec loop i init =
@@ -113,5 +113,5 @@ let diff a b =
         |> (fun y -> (Diff.Equal x)::y)
         |> loop rest (aoff + 1) (boff + 1)
   in loop (lcs a b) 0 0 [] |> List.rev
-(*e: function Diff_myers.diff *)
+(*e: function [[Diff_myers.diff]] *)
 (*e: version_control/diff_myers.ml *)

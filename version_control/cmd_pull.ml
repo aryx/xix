@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_pull.pull *)
+(*s: function [[Cmd_pull.pull]] *)
 (* =~ git fetch + git merge *)
 let pull dst url =
   (* todo: detect if clean repo? status is empty? *)
@@ -30,9 +30,9 @@ let pull dst url =
     Repository.set_worktree_and_index_to_tree dst tree
   | _ -> failwith "TODO: git pull need merge"
   )
-(*e: function Cmd_pull.pull *)
+(*e: function [[Cmd_pull.pull]] *)
 
-(*s: constant Cmd_pull.cmd *)
+(*s: constant [[Cmd_pull.cmd]] *)
 let cmd = { Cmd.
   name = "pull";
   usage = " [options] [<url repository>]";
@@ -48,5 +48,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_pull.cmd *)
+(*e: constant [[Cmd_pull.cmd]] *)
 (*e: version_control/cmd_pull.ml *)

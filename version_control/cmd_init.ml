@@ -6,7 +6,7 @@ open Common
 
 (* less: let bare = ref false *)
 
-(*s: constant Cmd_init.cmd *)
+(*s: constant [[Cmd_init.cmd]] *)
 let cmd = { Cmd.
   name = "init";
   usage = " [directory]";
@@ -22,5 +22,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_init.cmd *)
+(*e: constant [[Cmd_init.cmd]] *)
 (*e: version_control/cmd_init.ml *)

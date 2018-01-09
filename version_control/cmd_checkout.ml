@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_checkout.checkout *)
+(*s: function [[Cmd_checkout.checkout]] *)
 let checkout r str =
   let all_refs = Repository.all_refs r in
   let refname = "refs/heads/" ^ str in
@@ -34,15 +34,15 @@ let checkout r str =
     pr ("You are in 'detached HEAD' state");
   (*e: [[Cmd_checkout.checkout()]] cases *)
   | _ -> raise Cmd.ShowUsage
-(*e: function Cmd_checkout.checkout *)
+(*e: function [[Cmd_checkout.checkout]] *)
 
-(*s: function Cmd_checkout.update *)
+(*s: function [[Cmd_checkout.update]] *)
 (* Your branch is up-to-date with 'origin/master'. *)
 let update r =
   raise Todo
-(*e: function Cmd_checkout.update *)
+(*e: function [[Cmd_checkout.update]] *)
 
-(*s: constant Cmd_checkout.cmd *)
+(*s: constant [[Cmd_checkout.cmd]] *)
 let cmd = { Cmd.
   name = "checkout";
   usage = " [options] <branch>
@@ -67,5 +67,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_checkout.cmd *)
+(*e: constant [[Cmd_checkout.cmd]] *)
 (*e: version_control/cmd_checkout.ml *)

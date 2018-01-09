@@ -87,7 +87,7 @@ let main () =
   if Array.length Sys.argv < 2
   then begin
     (*s: [[Main.main()]] print usage and exit *)
-    pr2 (usage ());
+    pr (usage ());
     exit 1
     (*e: [[Main.main()]] print usage and exit *)
   end
@@ -98,7 +98,7 @@ let main () =
         commands |> List.find (fun cmd -> cmd.Cmd.name = Sys.argv.(1))
       with Not_found ->
         (*s: [[Main.main()]] print usage and exit *)
-        pr2 (usage ());
+        pr (usage ());
         exit 1
         (*e: [[Main.main()]] print usage and exit *)
     in
@@ -107,10 +107,10 @@ let main () =
     let usage_msg_cmd = spf "usage: %s %s%s"
       (Filename.basename Sys.argv.(0))
       cmd.Cmd.name
-      cmd.Cmd.help
+      cmd.Cmd.usage
     in
     let remaining_args = ref [] in
-    (*s: [[Main.main()]] parse [[argv]] for [[cmd]] options and remaining args *)
+    (*s: [[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]] *)
     (try 
      (* todo: look if --help and factorize treatment of usage for subcmds *)
        Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
@@ -119,7 +119,7 @@ let main () =
        prerr_string str;
        exit 1
     );
-    (*e: [[Main.main()]] parse [[argv]] for [[cmd]] options and remaining args *)
+    (*e: [[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]] *)
     (* finally! *)
     try 
       cmd.Cmd.f (List.rev !remaining_args)

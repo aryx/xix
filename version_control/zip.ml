@@ -35,7 +35,7 @@ type elt =
 
 type elts = elt list
 
-let max_window = 32 * 1024 (* 1 lst 15 *)
+let window_size = 32 * 1024 (* 1 lsl 15 *)
 let buffer_size = 1 lsl 16
 
 type window = {
@@ -54,13 +54,14 @@ let window_create () = {
 type t = {
   (** input *)
   zinput: IO.input;
-  mutable zneeded: int;
 
   (** output *)
   mutable zoutput   : bytes;
   mutable zoutpos   : int;
+  mutable zneeded: int;
 
   (* todo: zhuffman and zhuffman_dist *)
+  (* buffered input *)
   zwindow  : window;
 }
 
@@ -113,11 +114,13 @@ let compress_offset tbl buf off =
   let rec aux acc = function
     | []   -> acc
     | i::t ->
-      if i >= off || off - i > max_window then
-        acc
-      else match longuest_substring buf i off with
+      if i >= off || off - i > window_size 
+      then acc
+      else 
+        (match longuest_substring buf i off with
         | None     -> aux acc t
         | Some len -> aux (max_insert acc (Some (i, len))) t
+        )
   in
   match aux None candidates with
   | None          -> None
@@ -162,10 +165,10 @@ let compress buf =
 let deflate_init ch = 
   { 
     zinput = ch;
-    zneeded = 0;
     
     zoutput = Bytes.empty;
     zoutpos = 0;
+    zneeded = 0;
     
     zwindow = window_create ();
   }

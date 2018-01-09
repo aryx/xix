@@ -19,7 +19,7 @@ open Common
 (*s: type Repository.t *)
 type t = {
   worktree: Common.dirname;
-  dotgit: Common.dirname;
+  dotgit: Common.dirname; (* usually <worktree>/.git *)
 
   (*s: [[Repository.t]] index field *)
   mutable index: Index.t;
@@ -43,9 +43,7 @@ type objectish =
   | ObjByHex of Hexsha.t
   | ObjByBranch of string
   (*s: [[Repository.objectish]] cases *)
-  (* todo:
-   *  ObjByShortHex
-   *)
+  (* todo:  ObjByShortHex *)
   (*x: [[Repository.objectish]] cases *)
   (* ObjByTag *)
   (*e: [[Repository.objectish]] cases *)
@@ -62,12 +60,6 @@ let hexsha_to_filename r hexsha =
   let file = String.sub hexsha 2 (String.length hexsha - 2) in
   r.dotgit / "objects" / dir / file
 (*e: function Repository.hexsha_to_filename *)
-
-(*s: function Repository.hexsha_to_dirname *)
-let hexsha_to_dirname r hexsha =
-  let dir = String.sub hexsha 0 2 in
-  r.dotgit / "objects" / dir
-(*e: function Repository.hexsha_to_dirname *)
 
 (*s: function Repository.ref_to_filename *)
 let ref_to_filename r aref =
@@ -177,10 +169,10 @@ let add_ref_if_new r aref refval =
     let file = ref_to_filename r lastref in
     (* todo: ensure dirname exists *)
     file |> with_file_out_with_lock (fun ch ->
-      (* todo: check file does not exist aleady *)
-      ch |> IO.output_channel |> IO_.with_close_out (Refs.write refval)
-    );
-    true
+      (* todo: check file does not exist aleady; then return false! *)
+      ch |> IO.output_channel |> IO_.with_close_out (Refs.write refval);
+      true
+    )
   end
 (*e: function Repository.add_ref_if_new *)
 
@@ -235,7 +227,7 @@ let all_refs r =
   let root = r.dotgit ^ "/" in
   let rootlen = String.length root in
   let res = ref [] in
-  (root / "refs") |> walk_dir (fun path dirs files ->
+  (root / "refs") |> walk_dir (fun path _dirs files ->
     files |> List.iter (fun file ->
       (* less: replace os.path.sep *)
       let dir = String.sub path rootlen (String.length path - rootlen) in
@@ -271,13 +263,13 @@ let read_commit r h =
 let read_tree r h =
   match read_obj r h with
   | Objects.Tree x -> x
-  | _ -> failwith "read_commit: was expecting a tree"
+  | _ -> failwith "read_tree: was expecting a tree"
 (*e: function Repository.read_tree *)
 (*s: function Repository.read_blob *)
 let read_blob r h =
   match read_obj r h with
   | Objects.Blob x -> x
-  | _ -> failwith "read_commit: was expecting a blob"
+  | _ -> failwith "read_blob: was expecting a blob"
 (*e: function Repository.read_blob *)
 
 (*s: function Repository.read_objectish *)
@@ -302,10 +294,12 @@ let add_obj r obj =
     IO.output_bytes () |> IO_.with_close_out (Objects.write obj) in
   let sha = Sha1.sha1 bytes in
   let hexsha = Hexsha.of_sha sha in
-  let dir = hexsha_to_dirname r hexsha in
+  let file = hexsha_to_filename r hexsha in
+  (*s: [[Repository.add_obj()]] create directory if it does not exist *)
+  let dir = Filename.dirname file in
   if not (Sys.file_exists dir)
   then Unix.mkdir dir dirperm;
-  let file = hexsha_to_filename r hexsha in
+  (*e: [[Repository.add_obj()]] create directory if it does not exist *)
   if (Sys.file_exists file)
   then sha (* deduplication! nothing to write, can share objects *)
   else begin
@@ -359,10 +353,12 @@ let content_from_path_and_unix_stat full_path stat =
 (*e: function Repository.content_from_path_and_unix_stat *)
 
 (*s: function Repository.add_in_index *)
-(* old: was called stage() in dulwich *)
 let add_in_index r relpaths =
+  (*s: [[Repository.add_in_index()]] sanity check [[relpaths]] *)
   assert (relpaths |> List.for_all Filename.is_relative);
+  (*e: [[Repository.add_in_index()]] sanity check [[relpaths]] *)
   relpaths |> List.iter (fun relpath ->
+    (*s: [[Repository.add_in_index()]] adding [[relpath]] *)
     let full_path = r.worktree / relpath in
     let stat = 
       try Unix.lstat full_path 
@@ -374,6 +370,7 @@ let add_in_index r relpaths =
     let sha = add_obj r blob in
     let entry = Index.mk_entry relpath sha stat in
     r.index <- Index.add_entry r.index entry;
+    (*e: [[Repository.add_in_index()]] adding [[relpath]] *)
   );
   write_index r
 (*e: function Repository.add_in_index *)
@@ -386,30 +383,35 @@ let add_in_index r relpaths =
 (*s: function Repository.commit_index *)
 let commit_index r author committer message =
   let aref = Refs.Head in
-  let tree = Index.tree_of_index r.index 
+  let root_tree = Index.trees_of_index r.index 
     (fun t -> add_obj r (Objects.Tree t)) 
   in
   (* todo: execute pre-commit hook *)
-
+  (*s: [[Repository.commit_index()]] read merge message if needed *)
   (* less: Try to read commit message from .git/MERGE_MSG *)
-  let message = message in
+  (*e: [[Repository.commit_index()]] read merge message if needed *)
   (* todo: execute commit-msg hook *)
-
-  let commit = { Commit. parents = []; tree; author; committer; message } in
+  let commit = { Commit. parents = []; tree = root_tree; 
+                 author; committer; message } in
 
   let ok =
     match follow_ref r aref |> snd with
+    | None ->
+      (* first commit so refs/heads/master does not even exist yet *)
+      let sha = add_obj r (Objects.Commit commit) in
+      (*s: [[Repository.commit_index()]] add ref when first commit *)
+      add_ref_if_new r aref (Refs.Hash sha)
+      (*e: [[Repository.commit_index()]] add ref when first commit *)
     | Some old_head ->
+      (*s: [[Repository.commit_index()]] set [[merge_heads]] *)
       (* less: merge_heads from .git/MERGE_HEADS *)
       let merge_heads = [] in
+      (*e: [[Repository.commit_index()]] set [[merge_heads]] *)
       let commit = { commit with Commit.parents = old_head :: merge_heads } in
       let sha = add_obj r (Objects.Commit commit) in
+      (*s: [[Repository.commit_index()]] update ref when not first commit *)
       set_ref_if_same_old r aref old_head sha
-    | None ->
-      (* maybe first commit so refs/heads/master may not even exist yet *)
-      let commit = { commit with Commit.parents = [] } in
-      let sha = add_obj r (Objects.Commit commit) in
-      add_ref_if_new r aref (Refs.Hash sha)
+      (*e: [[Repository.commit_index()]] update ref when not first commit *)
   in
   if not ok
   then failwith (spf "%s changed during commit" (Refs.string_of_ref aref));
@@ -535,12 +537,14 @@ let init root =
     (* less: exn if already there? *)
     Unix.mkdir (root / dir) dirperm;
   );
+  (*s: [[Repository.init()]] create [[.git/HEAD]] *)
   let r = {
     worktree = root;
     dotgit = root / ".git";
     index = Index.empty;
   } in
   add_ref_if_new r Refs.Head Refs.default_head_content |> ignore;
+  (*e: [[Repository.init()]] create [[.git/HEAD]] *)
 
   (* less: config file, description, hooks, etc *)
   Sys.chdir root;
@@ -556,13 +560,17 @@ let open_ root =
   then 
     { worktree = root;
       dotgit = path;
-      (* less: grafts, hooks *)
+      (*s: [[Repository.open_()]] other fields settings *)
       index = 
-        if Sys.file_exists (path / "index")
-        then 
+        (if Sys.file_exists (path / "index")
+         then 
           (path / "index") |> Common.with_file_in (fun ch ->
             ch |> IO.input_channel |> Index.read)
-        else Index.empty
+         else Index.empty
+        );
+      (*x: [[Repository.open_()]] other fields settings *)
+      (* less: grafts, hooks *)
+      (*e: [[Repository.open_()]] other fields settings *)
     }
   else failwith (spf "Not a git repository at %s" root)
 (*e: function Repository.open_ *)
@@ -582,4 +590,8 @@ let find_root_open_and_adjust_paths paths =
   in
   r, relpaths
 (*e: function Repository.find_dotgit_root_and_open *)
+
+let parse_objectish str = 
+  raise Todo
+
 (*e: version_control/repository.ml *)

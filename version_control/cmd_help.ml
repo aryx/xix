@@ -11,7 +11,7 @@ let list_extra = ref false
 (*s: constant Cmd_help.cmd *)
 let rec cmd = { Cmd.
   name = "help";
-  help = "";
+  usage = "";
   options = ["-a", Arg.Set list_extra, " see all commands"];
   f = (fun args ->
     let xs = 

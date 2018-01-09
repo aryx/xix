@@ -43,7 +43,7 @@ let show r objectish =
 (*s: constant Cmd_show.cmd *)
 let cmd = { Cmd.
   name = "show";
-  help = " <objectish>";
+  usage = " <objectish>";
   (* less: --oneline *)
   options = [];
   f = (fun args ->
@@ -52,7 +52,7 @@ let cmd = { Cmd.
     | [] -> show r (Repository.ObjByRef (Refs.Head))
     | xs ->
       xs |> List.iter (fun str ->
-        show r (Repository.ObjByHex (str))
+        show r (Repository.parse_objectish str)
       )
   );
 }

@@ -102,7 +102,7 @@ let test_unzip_all_objects () =
 (*s: constant Cmd_test.cmd *)
 let cmd = { Cmd.
   name = "test";
-  help = " ";
+  usage = " ";
   options = [];
   f = (fun args ->
     match args with

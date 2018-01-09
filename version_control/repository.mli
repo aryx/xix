@@ -3,7 +3,7 @@
 (*s: type Repository.t *)
 type t = {
   worktree: Common.dirname;
-  dotgit: Common.dirname;
+  dotgit: Common.dirname; (* usually <worktree>/.git *)
 
   (*s: [[Repository.t]] index field *)
   mutable index: Index.t;
@@ -18,9 +18,7 @@ type objectish =
   | ObjByHex of Hexsha.t
   | ObjByBranch of string
   (*s: [[Repository.objectish]] cases *)
-  (* todo:
-   *  ObjByShortHex
-   *)
+  (* todo:  ObjByShortHex *)
   (*x: [[Repository.objectish]] cases *)
   (* ObjByTag *)
   (*e: [[Repository.objectish]] cases *)
@@ -118,9 +116,11 @@ val set_worktree_and_index_to_tree:
 (* misc *)
 (*s: signature Repository.walk_dir *)
 val walk_dir: 
-  (Common.filename -> Common.filename list -> Common.filename list -> unit) ->
+  (Common.dirname -> Common.dirname list -> Common.filename list -> unit) ->
   Common.filename ->
   unit
 (*e: signature Repository.walk_dir *)
+
+val parse_objectish: string -> objectish
 
 (*e: version_control/repository.mli *)

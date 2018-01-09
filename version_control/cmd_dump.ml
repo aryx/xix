@@ -52,7 +52,7 @@ let dump file =
 (*s: constant Cmd_dump.cmd *)
 let cmd = { Cmd.
   name = "dump";
-  help = " <file>";
+  usage = " <file>";
   options = [
     "-raw", Arg.Set raw, " do not pretty print";
     "-index", Arg.Set index, " pretty print index content";

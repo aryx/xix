@@ -86,11 +86,11 @@ type t = {
 
   (** input *)
   zinput   : IO.input;
-  mutable zneeded   : int;
 
   (** output *)
   mutable zoutput   : bytes;
   mutable zoutpos   : int;
+  mutable zneeded   : int;
 
   (*s: [[Unzip.t]] other fields *)
   mutable zfinal    : bool;
@@ -602,14 +602,14 @@ let rec inflate_loop z =
 (*e: function Unzip.inflate_loop *)
 
 (*s: function Unzip.inflate_data *)
-let inflate_data z s pos len =
+let inflate_data z buf_dst pos_in_buf len =
   (*s: [[Unzip.inflate_data()]] sanity check parameters *)
-  if pos < 0 || len < 0 || pos + len > Bytes.length s 
+  if pos_in_buf < 0 || len < 0 || pos_in_buf + len > Bytes.length buf_dst 
   then invalid_arg "inflate_data";
   (*e: [[Unzip.inflate_data()]] sanity check parameters *)
   z.zneeded <- len;
-  z.zoutpos <- pos;
-  z.zoutput <- s;
+  z.zoutpos <- pos_in_buf;
+  z.zoutput <- buf_dst;
   try
     if len > 0 
     then inflate_loop z;
@@ -622,11 +622,11 @@ let inflate_init ?(header=true) ch =
   {
     zstate = (if header then Head else Block);
     zinput = ch;
-    zneeded = 0;
     zfinal = false;
 
     zoutput = Bytes.empty;
     zoutpos = 0;
+    zneeded = 0;
 
     zhuffman = fixed_huffman;
     zhuffdist = None;
@@ -651,8 +651,8 @@ let inflate ?(header=true) ch =
   let z = inflate_init ~header ch in
   let tmp = Bytes.create 1 in
   IO.create_in
-    ~input:(fun s pos len ->
-      let n = inflate_data z s pos len in
+    ~input:(fun buf_dst pos_in_buf len ->
+      let n = inflate_data z buf_dst pos_in_buf len in
       if n = 0 
       then raise IO.No_more_input;
       n

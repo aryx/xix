@@ -28,15 +28,20 @@ let message = ref ""
 (*s: constant Cmd_commit.cmd *)
 let cmd = { Cmd.
   name = "commit";
-  help = " [options]"; (* less: <pathspec>... *)
+  usage = " [options]"; (* less: <pathspec>... *)
   options = [
-    "-m",        Arg.Set_string message, " commit message";
-    "--message", Arg.Set_string message, " commit message";
-    "--author", Arg.Set_string author, " <author> override author";
-    "--committer", Arg.Set_string author, " ";
+    (*s: [[Cmd_commit.cmd]] command-line options *)
     (* less: commit mesg option: --file, --date, --signoff *)
     (* less: commit content options: -a, --interactive, --patch *)
     (* todo: --amend *)
+    (*x: [[Cmd_commit.cmd]] command-line options *)
+    "--author",    Arg.Set_string author, " <author>";
+    (*x: [[Cmd_commit.cmd]] command-line options *)
+    "--committer", Arg.Set_string committer, " <author>";
+    (*x: [[Cmd_commit.cmd]] command-line options *)
+    "-m",        Arg.Set_string message, " <msg> commit message";
+    "--message", Arg.Set_string message, " <msg> commit message";
+    (*e: [[Cmd_commit.cmd]] command-line options *)
   ];
   f = (fun args ->
     match args with
@@ -48,7 +53,7 @@ let cmd = { Cmd.
          (* todo: use localtime vs gmtime? *) -7 (* SF *))
       in
       (*e: [[Cmd_commit.cmd]] compute [[today]] *)
-      (*s: [[Cmd_commit.cmd]] compute [[author]] *)
+      (*s: [[Cmd_commit.cmd]] compute [[author]] user *)
       (* todo: read from .git/config or ~/.gitconfig *)
       let author = 
         if !author = ""
@@ -59,16 +64,15 @@ let cmd = { Cmd.
              }
         else raise Todo (* need parse author string *)
       in
-      (*e: [[Cmd_commit.cmd]] compute [[author]] *)
-      (*s: [[Cmd_commit.cmd]] compute [[committer]] *)
+      (*e: [[Cmd_commit.cmd]] compute [[author]] user *)
+      (*s: [[Cmd_commit.cmd]] compute [[committer]] user *)
       let committer =
         if !committer = ""
         then author
         else raise Todo
       in
-      (*e: [[Cmd_commit.cmd]] compute [[committer]] *)
+      (*e: [[Cmd_commit.cmd]] compute [[committer]] user *)
       commit r author committer !message
-
     | xs -> raise Cmd.ShowUsage
   );
 }

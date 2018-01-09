@@ -3,7 +3,7 @@
 (*s: type Cmd.t *)
 type t = {
   name: string;
-  help: string;
+  usage: string;
   options: (Arg.key * Arg.spec * Arg.doc) list;
 
   (* the command! *)
@@ -13,7 +13,7 @@ type t = {
 (*e: type Cmd.t *)
 
 (*s: exception Cmd.ShowUsage *)
-(* f can raise ShowUsage which will be catched by caller in main.ml *)
+(* Cmd.f can raise ShowUsage. It will be catched by Main.main *)
 exception ShowUsage
 (*e: exception Cmd.ShowUsage *)
 (*e: version_control/cmd.ml *)

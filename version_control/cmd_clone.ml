@@ -27,7 +27,7 @@ let clone url path_dst =
 (*s: constant Cmd_clone.cmd *)
 let cmd = { Cmd.
   name = "clone";
-  help = " [options] <repo> [<dir>]";
+  usage = " [options] <repo> [<dir>]";
   options = [
     (* less: --bare, --progress, --depth *)
   ];

@@ -9,9 +9,10 @@ type t = {
   author   : User.t;
   message  : string;
   (*s: [[Commit.t]] extra fields *)
+  (* less: encoding, gpgsig, mergetag, extra *)
+  (*x: [[Commit.t]] extra fields *)
   committer: User.t;
   (*e: [[Commit.t]] extra fields *)
-  (* less: encoding, gpgsig, mergetag, extra *)
 }
 (*e: type Commit.t *)
 (*s: type Commit.hash *)

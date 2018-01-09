@@ -9,9 +9,11 @@ open Common
 (*s: constant Cmd_init.cmd *)
 let cmd = { Cmd.
   name = "init";
-  help = " [directory]";
+  usage = " [directory]";
   options = [
+   (*s: [[Cmd_init.cmd]] command-line options *)
    (* less: -bare, --quiet *)
+   (*e: [[Cmd_init.cmd]] command-line options *)
   ];
   f = (fun args ->
     match args with

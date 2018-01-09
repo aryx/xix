@@ -180,9 +180,9 @@ let rec add_entry idx entry =
   | x::xs ->
     (match entry.path <=> x.path with
     | Sup -> x::(add_entry xs entry)
-    (* replacing old entry is ok *)
+    (* replacing old entry, new version of tracked file  *)
     | Equal -> entry::xs
-    (* the entries are sorted *)
+    (* new file (the entries are sorted, no need to go through xs) *)
     | Inf -> entry::x::xs
     )
 (*e: function Index.add_entry *)
@@ -206,17 +206,19 @@ type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
 (* the code in this section derives from dulwich *)
 
 (*s: function Index.add_dir *)
-let rec add_dir dirs dirpath =
+let rec find_dir dirs dirpath =
   try 
     Hashtbl.find dirs dirpath
   with Not_found ->
     let newdir = ref [] in
     Hashtbl.add dirs dirpath newdir;
+    (*s: [[Index.add_dir()]] recurse on parent of [[dirpath]] *)
     let (parent, base) = 
       Filename.dirname dirpath, Filename.basename dirpath in
     (* !recursive call! should stop at some point because "." is in dirs *)
-    let dir = add_dir dirs parent in
+    let dir = find_dir dirs parent in
     dir := Subdir (base)::!dir;
+    (*e: [[Index.add_dir()]] recurse on parent of [[dirpath]] *)
     newdir
 (*e: function Index.add_dir *)
 
@@ -236,6 +238,7 @@ let rec build_trees dirs dirpath add_tree_obj =
          perm = perm_of_mode entry.stats.mode;
         }
       | Subdir base ->
+        (* recurse *)
         let sha = 
           build_trees dirs (Filename.concat dirpath base) add_tree_obj in
         {Tree. perm = Tree.Dir; name = base; id = sha }
@@ -246,18 +249,22 @@ let rec build_trees dirs dirpath add_tree_obj =
 
 
 (*s: function Index.tree_of_index *)
-let tree_of_index idx add_tree_obj =
+let trees_of_index idx add_tree_obj =
   let (dirs: dirs) = Hashtbl.create 11 in
-  Hashtbl.add dirs "." (ref []);
   (* populate dirs *)
+  (*s: [[Index.tree_of_index()]] populate [[dirs]] *)
+  Hashtbl.add dirs "." (ref []);
   idx |> List.iter (fun entry ->
     let relpath = entry.path in
-    let (dir, base) = Filename.dirname relpath, Filename.basename relpath in
-    let dir = add_dir dirs dir in
+    let (dirpath, base) = Filename.dirname relpath, Filename.basename relpath in
+    let dir = find_dir dirs dirpath in
     dir := (File (base, entry))::!dir
   );
+  (*e: [[Index.tree_of_index()]] populate [[dirs]] *)
   (* build trees *)
+  (*s: [[Index.tree_of_index()]] build trees from [[dirs]] *)
   build_trees dirs "." add_tree_obj
+  (*e: [[Index.tree_of_index()]] build trees from [[dirs]] *)
 (*e: function Index.tree_of_index *)
 
 (*****************************************************************************)

@@ -38,7 +38,7 @@ let push src_repo url_dst =
 (*s: constant Cmd_push.cmd *)
 let cmd = { Cmd.
   name = "push";
-  help = " [options] [<url repository>]";
+  usage = " [options] [<url repository>]";
   options = [
     (* less: --all, --force, --progress *)
   ];

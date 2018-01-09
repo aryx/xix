@@ -13,13 +13,14 @@ let checkout r str =
   | _ when List.mem refname all_refs ->
     let commitid = Repository.follow_ref_some r (Refs.Ref refname) in
     let commit = Repository.read_commit r commitid in
-    let treeid = commit.Commit.tree in
-    let tree = Repository.read_tree r treeid in
+    let tree = Repository.read_tree r commit.Commit.tree in
+
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.OtherRef refname);
     Repository.set_worktree_and_index_to_tree r tree;
     pr (spf "Switched to branch '%s'" str);
     (* less: if master, then check if up-to-date with origin/master *)
+
   (*s: [[Cmd_checkout.checkout()]] cases *)
   | _ when Hexsha.is_hexsha str ->
     let commitid = Hexsha.to_sha str in
@@ -44,20 +45,25 @@ let update r =
 (*s: constant Cmd_checkout.cmd *)
 let cmd = { Cmd.
   name = "checkout";
-  help = " [options] <branch>
+  usage = " [options] <branch>
    or: ocamlgit checkout [options] <commitid>
    or: ocamlgit checkout [options]
 ";
   options = [
+   (*s: [[Cmd_checkout.cmd]] command-line options *)
     (* less: --detach, --patch?
      * -b create and checkout a branch
      *)
+   (*e: [[Cmd_checkout.cmd]] command-line options *)
   ];
   f = (fun args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
-    | [] -> update r
+    (*s: [[Cmd_checkout.cmd]] match args cases *)
     | [str] -> checkout r str
+    (*x: [[Cmd_checkout.cmd]] match args cases *)
+    | [] -> update r
+    (*e: [[Cmd_checkout.cmd]] match args cases *)
     | _ -> raise Cmd.ShowUsage
   );
 }

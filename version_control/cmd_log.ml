@@ -80,7 +80,7 @@ let log r =
 (*s: constant Cmd_log.cmd *)
 let cmd = { Cmd.
   name = "log";
-  help = " [options]";
+  usage = " [options]";
   options = [
     "--name-status", Arg.Set name_status, 
     " print name/status for each changed file";

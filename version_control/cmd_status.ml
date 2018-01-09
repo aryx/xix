@@ -129,7 +129,7 @@ let status r =
 (*s: constant Cmd_status.cmd *)
 let cmd = { Cmd.
   name = "status";
-  help = " [options]"; (* less: <pathspec> *)
+  usage = " [options]"; (* less: <pathspec> *)
   options = [
     "--short", Arg.Set short_format, " show status concisely";
     "--long", Arg.Clear short_format, " show status in long format (default)";

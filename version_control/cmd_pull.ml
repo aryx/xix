@@ -35,7 +35,7 @@ let pull dst url =
 (*s: constant Cmd_pull.cmd *)
 let cmd = { Cmd.
   name = "pull";
-  help = " [options] [<url repository>]";
+  usage = " [options] [<url repository>]";
   options = [
   ];
   f = (fun args ->

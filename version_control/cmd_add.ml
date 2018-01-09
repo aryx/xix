@@ -13,12 +13,14 @@ let add r relpaths =
 (*s: constant Cmd_add.cmd *)
 let cmd = { Cmd.
   name = "add";
-  help = " <file>..."; (* less: pathspec? *)
+  usage = " <file>..."; (* less: pathspec? *)
   options = [
+    (*s: [[Cmd_add.cmd]] command-line options *)
     (* todo: --interactive, --patch for picking, --force (if ignored) 
      * --all, 
      * --recursive
      *)
+    (*e: [[Cmd_add.cmd]] command-line options *)
   ];
   f = (fun args ->
     match args with

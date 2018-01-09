@@ -31,7 +31,7 @@ open Common
 (*****************************************************************************)
 
 (*s: type Tree.perm *)
-(* very similar to Index.mode, but with also a 'Dir' *)
+(* similar to Index.mode, but with also a 'Dir' *)
 type perm = 
   | Normal
   | Dir

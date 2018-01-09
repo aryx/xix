@@ -6,9 +6,6 @@ open Common
 
 (*s: function Cmd_rm.rm *)
 let rm r relpaths =
-  (* removing is simpler than adding; no need to add blobs in
-   * the object store, so can just use functions from Index
-   *)
   (* less: not super efficient, could use hashes to speedup things *)
   r.Repository.index <-
     relpaths |> List.fold_left (fun idx relpath ->
@@ -21,9 +18,11 @@ let rm r relpaths =
 (*s: constant Cmd_rm.cmd *)
 let cmd = { Cmd.
   name = "rm";
-  help = " [options] <file>...";
+  usage = " [options] <file>...";
   options = [
-  (* less: -f force, -r recursive, --quiet *)
+    (*s: [[Cmd_rm.cmd]] command-line options *)
+    (* less: -f force, -r recursive, --quiet *)
+    (*e: [[Cmd_rm.cmd]] command-line options *)
   ];
   f = (fun args ->
     match args with

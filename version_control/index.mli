@@ -85,6 +85,6 @@ val add_entry: t -> entry -> t
 (*e: signature Index.add_entry *)
 
 (*s: signature Index.tree_of_index *)
-val tree_of_index: t -> (* add_obj *)(Tree.t -> Tree.hash) -> Tree.hash
+val trees_of_index: t -> (* add_obj *)(Tree.t -> Tree.hash) -> Tree.hash
 (*e: signature Index.tree_of_index *)
 (*e: version_control/index.mli *)

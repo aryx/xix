@@ -1,4 +1,5 @@
 # -*- sh -*-
+
 TOP=../..
 
 # We could have set.ml and map.ml. It would work with ocamlc, but 
@@ -8,4 +9,6 @@ TOP=../..
 INCLUDES=
 SRC= set_.ml map_.ml
 
+<$TOP/mkconfig
 <$TOP/mklib
+

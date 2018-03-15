@@ -30,15 +30,15 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Hexsha.t *)
+(*s: type [[Hexsha.t]] *)
 (* a 40 characters string, e.g. "d670460b4b4aece5915caf5c68d12f560a9fe3e4" *)
 type t = string
-(*e: type Hexsha.t *)
+(*e: type [[Hexsha.t]] *)
 
-(*s: function Hexsha.is_hexsha *)
+(*s: function [[Hexsha.is_hexsha]] *)
 let is_hexsha x =
  String.length x = 40 && x =~ "^[0-9a-fA-F]+$"
-(*e: function Hexsha.is_hexsha *)
+(*e: function [[Hexsha.is_hexsha]] *)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -47,22 +47,22 @@ let is_hexsha x =
 (* start of copy-pasted code from ocaml-hex *)
 
 let hexa = "0123456789abcdef"
-(*s: constant Hexsha.hexa1 *)
+(*s: constant [[Hexsha.hexa1]] *)
 and hexa1 =
   "0000000000000000111111111111111122222222222222223333333333333333\
    4444444444444444555555555555555566666666666666667777777777777777\
    88888888888888889999999999999999aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbb\
    ccccccccccccccccddddddddddddddddeeeeeeeeeeeeeeeeffffffffffffffff"
-(*e: constant Hexsha.hexa1 *)
-(*s: constant Hexsha.hexa2 *)
+(*e: constant [[Hexsha.hexa1]] *)
+(*s: constant [[Hexsha.hexa2]] *)
 and hexa2 =
   "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef\
    0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-(*e: constant Hexsha.hexa2 *)
+(*e: constant [[Hexsha.hexa2]] *)
 
-(*s: function Hexsha.to_char *)
+(*s: function [[Hexsha.to_char]] *)
 let to_byte hex1 hex2 =
   let code hex = 
     match hex with
@@ -74,13 +74,13 @@ let to_byte hex1 hex2 =
               (spf "Hex.to_byte: %d is an invalid hexadecimal digit" (Char.code hex)))
   in
   Char.chr (((code hex1) lsl 4) + (code hex2))
-(*e: function Hexsha.to_char *)
+(*e: function [[Hexsha.to_char]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: function Hexsha.of_sha *)
+(*s: function [[Hexsha.of_sha]] *)
 let of_sha s =
   assert (Sha1.is_sha s);
   let n = String.length s in
@@ -92,9 +92,9 @@ let of_sha s =
   done;
   (*e: [[Hexsha.of_sha()]] fill [[buf]] *)
   buf
-(*e: function Hexsha.of_sha *)
+(*e: function [[Hexsha.of_sha]] *)
 
-(*s: function Hexsha.to_sha *)
+(*s: function [[Hexsha.to_sha]] *)
 let to_sha s =
   assert (is_hexsha s);
   let n = String.length s in
@@ -115,16 +115,16 @@ let to_sha s =
   aux 0;
   (*e: [[Hexsha.to_sha()]] fill [[buf]] *)
   buf
-(*e: function Hexsha.to_sha *)
+(*e: function [[Hexsha.to_sha]] *)
 
-(*s: function Hexsha.read *)
+(*s: function [[Hexsha.read]] *)
 let read ch =
   let s = IO.really_nread ch 40 in
   assert (is_hexsha s);
   s
-(*e: function Hexsha.read *)
-(*s: function Hexsha.write *)
+(*e: function [[Hexsha.read]] *)
+(*s: function [[Hexsha.write]] *)
 let write ch x =
   IO.nwrite ch x
-(*e: function Hexsha.write *)
+(*e: function [[Hexsha.write]] *)
 (*e: version_control/hexsha.ml *)

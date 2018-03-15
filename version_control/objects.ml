@@ -12,7 +12,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Objects.t *)
+(*s: type [[Objects.t]] *)
 type t = 
   | Blob   of Blob.t
   | Tree   of Tree.t
@@ -20,13 +20,13 @@ type t =
   (*s: [[Objects.t]] cases *)
   (*  | Tag of Tag.t *)
   (*e: [[Objects.t]] cases *)
-(*e: type Objects.t *)
+(*e: type [[Objects.t]] *)
 
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
 
-(*s: function Objects.read *)
+(*s: function [[Objects.read]] *)
 let read ch =
   let str = IO_.read_string_and_stop_char ch ' ' in
   let n = IO_.read_int_and_nullbyte ch in
@@ -46,9 +46,9 @@ let read ch =
   (*e: [[Objects.read()]] match str cases *)
   (* less: assert finished ch2? *)
   | str -> failwith (spf "Objects.read: invalid header: %s" str)
-(*e: function Objects.read *)
+(*e: function [[Objects.read]] *)
 
-(*s: function Objects.write *)
+(*s: function [[Objects.write]] *)
 let write obj ch =
   let body = 
     IO.output_bytes () |> IO_.with_close_out (fun ch ->
@@ -73,5 +73,5 @@ let write obj ch =
   in
   IO.nwrite ch header;
   IO.nwrite ch body
-(*e: function Objects.write *)
+(*e: function [[Objects.write]] *)
 (*e: version_control/objects.ml *)

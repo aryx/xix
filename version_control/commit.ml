@@ -29,7 +29,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Commit.t *)
+(*s: type [[Commit.t]] *)
 type t = {
   tree     : Tree.hash; (* the root *)
   (* first commit has no parent, and merge commits have 2 parents *)
@@ -43,10 +43,10 @@ type t = {
   committer: User.t;
   (*e: [[Commit.t]] extra fields *)
 }
-(*e: type Commit.t *)
-(*s: type Commit.hash *)
+(*e: type [[Commit.t]] *)
+(*s: type [[Commit.hash]] *)
 and hash = Sha1.t
-(*e: type Commit.hash *)
+(*e: type [[Commit.hash]] *)
 
 (*****************************************************************************)
 (* API *)
@@ -54,7 +54,7 @@ and hash = Sha1.t
 
 (* for git log *)
 
-(*s: function Commit.walk_history *)
+(*s: function [[Commit.walk_history]] *)
 (* less: sort by time? so have a sorted queue of commits *)
 let walk_history read_commit f sha =
   (* we are walking a DAG, so we need to remember already processed nodes *)
@@ -83,11 +83,11 @@ let walk_graph r f =
   ...
   heads |> List.iter aux
 *)
-(*e: function Commit.walk_history *)
+(*e: function [[Commit.walk_history]] *)
 
 (* for git pull *)
 
-(*s: function Commit.collect_ancestors *)
+(*s: function [[Commit.collect_ancestors]] *)
 (* similar to walk_history but with exposed hdone hash *)
 let collect_ancestors read_commit top_commits hdone =
   let hcommits = Hashtbl.create 101 in
@@ -103,14 +103,14 @@ let collect_ancestors read_commit top_commits hdone =
   in
   top_commits |> List.iter aux;
   hcommits
-(*e: function Commit.collect_ancestors *)
+(*e: function [[Commit.collect_ancestors]] *)
 
 
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
 
-(*s: function Commit.read *)
+(*s: function [[Commit.read]] *)
 let read ch =
   let tree = 
     IO_.read_key_space_value_newline ch "tree" Hexsha.read in
@@ -147,9 +147,9 @@ let read ch =
     author = author; committer = committer;
     message = msg;
   }
-(*e: function Commit.read *)
+(*e: function [[Commit.read]] *)
 
-(*s: function Commit.write *)
+(*s: function [[Commit.write]] *)
 let write commit ch =
   IO.nwrite ch "tree ";
   Hexsha.write ch (Hexsha.of_sha commit.tree);
@@ -168,13 +168,13 @@ let write commit ch =
 
   IO.write ch '\n';
   IO.nwrite ch commit.message
-(*e: function Commit.write *)
+(*e: function [[Commit.write]] *)
 
 (*****************************************************************************)
 (* Show *)
 (*****************************************************************************)
 
-(*s: function Commit.show *)
+(*s: function [[Commit.show]] *)
 let show x =
   pr (spf "Author: %s <%s>" x.author.User.name x.author.User.email);
   (* less: date of author or committer? *)
@@ -183,5 +183,5 @@ let show x =
   pr "";
   pr ("    " ^ x.message)
   (* showing diff done in caller in Cmd_show.show *)        
-(*e: function Commit.show *)
+(*e: function [[Commit.show]] *)
 (*e: version_control/commit.ml *)

@@ -12,7 +12,7 @@ open Common
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: function Clients.client_of_url *)
+(*s: function [[Clients.client_of_url]] *)
 (* old: was called get_transport_and_path (and xxx_from_url) in dulwich *)
 let client_of_url url =
   match url with
@@ -31,5 +31,5 @@ let client_of_url url =
     if Sys.file_exists s
     then Client_local.mk_client url
     else failwith (spf "remote repository URL not supported: %s" url)
-(*e: function Clients.client_of_url *)
+(*e: function [[Clients.client_of_url]] *)
 (*e: version_control/clients.ml *)

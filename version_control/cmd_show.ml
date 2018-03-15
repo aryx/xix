@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_show.show *)
+(*s: function [[Cmd_show.show]] *)
 let show r objectish =
   let sha, obj = Repository.read_objectish r objectish in
   match obj with
@@ -38,9 +38,9 @@ let show r objectish =
     changes |> List.iter Diff_unified.show_change
   (*x: [[Cmd_show.show()]] match obj cases *)
   (*e: [[Cmd_show.show()]] match obj cases *)
-(*e: function Cmd_show.show *)
+(*e: function [[Cmd_show.show]] *)
 
-(*s: constant Cmd_show.cmd *)
+(*s: constant [[Cmd_show.cmd]] *)
 let cmd = { Cmd.
   name = "show";
   usage = " <objectish>";
@@ -56,5 +56,5 @@ let cmd = { Cmd.
       )
   );
 }
-(*e: constant Cmd_show.cmd *)
+(*e: constant [[Cmd_show.cmd]] *)
 (*e: version_control/cmd_show.ml *)

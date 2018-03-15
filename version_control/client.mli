@@ -1,6 +1,6 @@
 (*s: version_control/client.mli *)
 
-(*s: type Client.t *)
+(*s: type [[Client.t]] *)
 type t = {
   (* path to remote (e.g., /path/other/repo, or git://github.com/foo/bar) *)
   url: string;
@@ -12,5 +12,5 @@ type t = {
   fetch: Repository.t -> Commit.hash;
   (* less: progress *)
 }
-(*e: type Client.t *)
+(*e: type [[Client.t]] *)
 (*e: version_control/client.mli *)

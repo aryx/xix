@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: type Cmd_status.status *)
+(*s: type [[Cmd_status.status]] *)
 type status = {
   (* diff index vs HEAD *)
   staged: Change.t list;
@@ -13,9 +13,9 @@ type status = {
   (* other *)
   untracked: Common.filename list;
 }
-(*e: type Cmd_status.status *)
+(*e: type [[Cmd_status.status]] *)
 
-(*s: function Cmd_status.changes_index_vs_HEAD *)
+(*s: function [[Cmd_status.changes_index_vs_HEAD]] *)
 let changes_index_vs_HEAD r =
   let commitid = Repository.follow_ref_some r (Refs.Head) in
   let commit = Repository.read_commit r commitid in
@@ -23,9 +23,9 @@ let changes_index_vs_HEAD r =
   Changes.changes_index_vs_tree (Repository.read_tree r) 
     r.Repository.index
     treeid
-(*e: function Cmd_status.changes_index_vs_HEAD *)
+(*e: function [[Cmd_status.changes_index_vs_HEAD]] *)
 
-(*s: function Cmd_status.untracked *)
+(*s: function [[Cmd_status.untracked]] *)
 (* todo: need parse .gitignore *)
 let untracked r =
   let h = r.Repository.index 
@@ -46,10 +46,10 @@ let untracked r =
     );
   );
   List.rev !res
-(*e: function Cmd_status.untracked *)
+(*e: function [[Cmd_status.untracked]] *)
 
 
-(*s: function Cmd_status.status_of_repository *)
+(*s: function [[Cmd_status.status_of_repository]] *)
 let status_of_repository r =
   { staged = changes_index_vs_HEAD r;
     unstaged = 
@@ -59,9 +59,9 @@ let status_of_repository r =
         r.Repository.index;
     untracked = untracked r;
   }
-(*e: function Cmd_status.status_of_repository *)
+(*e: function [[Cmd_status.status_of_repository]] *)
 
-(*s: function Cmd_status.print_change_long *)
+(*s: function [[Cmd_status.print_change_long]] *)
 (* very similar to Cmd_log.print_change, but with more indentation *)
 let print_change_long change =
   match change with
@@ -71,10 +71,10 @@ let print_change_long change =
     pr (spf "	deleted:	%s" entry.Change.path)
   | Change.Modify (entry1, entry2) ->
     pr (spf "	modified:	%s" entry1.Change.path)
-(*e: function Cmd_status.print_change_long *)
+(*e: function [[Cmd_status.print_change_long]] *)
 
 
-(*s: function Cmd_status.print_status_long *)
+(*s: function [[Cmd_status.print_status_long]] *)
 let print_status_long st =
   if st.staged <> []
   then begin
@@ -106,27 +106,27 @@ let print_status_long st =
     );
     pr "";
   end
-(*e: function Cmd_status.print_status_long *)
+(*e: function [[Cmd_status.print_status_long]] *)
     
 
-(*s: function Cmd_status.print_status_short *)
+(*s: function [[Cmd_status.print_status_short]] *)
 let print_status_short st =
   raise Todo
-(*e: function Cmd_status.print_status_short *)
+(*e: function [[Cmd_status.print_status_short]] *)
 
-(*s: constant Cmd_status.short_format *)
+(*s: constant [[Cmd_status.short_format]] *)
 let short_format = ref false
-(*e: constant Cmd_status.short_format *)
+(*e: constant [[Cmd_status.short_format]] *)
 
-(*s: function Cmd_status.status *)
+(*s: function [[Cmd_status.status]] *)
 let status r =
   let st = status_of_repository r in
   if !short_format
   then print_status_short st
   else print_status_long st
-(*e: function Cmd_status.status *)
+(*e: function [[Cmd_status.status]] *)
 
-(*s: constant Cmd_status.cmd *)
+(*s: constant [[Cmd_status.cmd]] *)
 let cmd = { Cmd.
   name = "status";
   usage = " [options]"; (* less: <pathspec> *)
@@ -142,5 +142,5 @@ let cmd = { Cmd.
     | xs -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_status.cmd *)
+(*e: constant [[Cmd_status.cmd]] *)
 (*e: version_control/cmd_status.ml *)

@@ -55,7 +55,11 @@ let execsh shellenv flags inputs interactive =
            (Array.of_list (flags @ shellflags @ [tmpfile]))
            (Array.of_list env)
           |> ignore;
-      with Unix.Unix_error _ -> failwith "Could not execute a shell command"
+      with Unix.Unix_error (err, fm, argm) -> 
+        if not (Sys.file_exists shellpath)
+        then failwith (spf "could not find shell %s" shellpath)
+        else failwith (spf "Could not execute a shell command: %s %s %s"
+                         (Unix.error_message err) fm argm)
       );
       (* unreachable *)
       exit (-2);
@@ -79,7 +83,11 @@ let execsh shellenv flags inputs interactive =
            (Array.of_list (flags @ shellflags))
            (Array.of_list env)
           |> ignore;
-      with Unix.Unix_error _ -> failwith "Could not execute a shell command"
+      with Unix.Unix_error (err, fm, argm) -> 
+        if not (Sys.file_exists shellpath)
+        then failwith (spf "could not find shell %s" shellpath)
+        else failwith (spf "Could not execute a shell command: %s %s %s"
+                         (Unix.error_message err) fm argm)
       );
       (* unreachable *)
       exit (-2);

@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_clone.clone *)
+(*s: function [[Cmd_clone.clone]] *)
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)
 let clone url path_dst =
   let client = Clients.client_of_url url in
@@ -20,11 +20,11 @@ let clone url path_dst =
   let commit = Repository.read_commit dst remote_HEAD_sha in
   let tree = Repository.read_tree dst (commit.Commit.tree) in
   Repository.set_worktree_and_index_to_tree dst tree
-(*e: function Cmd_clone.clone *)
+(*e: function [[Cmd_clone.clone]] *)
 
 (* todo: when clone then repo should have a "refs/remotes/origin/master" *)
 
-(*s: constant Cmd_clone.cmd *)
+(*s: constant [[Cmd_clone.cmd]] *)
 let cmd = { Cmd.
   name = "clone";
   usage = " [options] <repo> [<dir>]";
@@ -38,5 +38,5 @@ let cmd = { Cmd.
     | _ -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_clone.cmd *)
+(*e: constant [[Cmd_clone.cmd]] *)
 (*e: version_control/cmd_clone.ml *)

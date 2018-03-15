@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 
-(*s: function Cmd_diff.diff_worktree_vs_index *)
+(*s: function [[Cmd_diff.diff_worktree_vs_index]] *)
 let diff_worktree_vs_index r =
   let changes = 
     Changes.changes_worktree_vs_index 
@@ -13,9 +13,9 @@ let diff_worktree_vs_index r =
       r.Repository.index 
   in
   changes |> List.iter Diff_unified.show_change
-(*e: function Cmd_diff.diff_worktree_vs_index *)
+(*e: function [[Cmd_diff.diff_worktree_vs_index]] *)
 
-(*s: constant Cmd_diff.cmd *)
+(*s: constant [[Cmd_diff.cmd]] *)
 let cmd = { Cmd.
   name = "diff";
   usage = " ";
@@ -27,5 +27,5 @@ let cmd = { Cmd.
     | xs -> raise Cmd.ShowUsage
   );
 }
-(*e: constant Cmd_diff.cmd *)
+(*e: constant [[Cmd_diff.cmd]] *)
 (*e: version_control/cmd_diff.ml *)

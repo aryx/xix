@@ -48,7 +48,7 @@ open Common
 (* Algorithm *)
 (*****************************************************************************)
 
-(*s: function Diff_basic.matrix_distance *)
+(*s: function [[Diff_basic.matrix_distance]] *)
 let matrix_distance arr1 arr2 = 
   let n = Array.length arr1 in
   let m = Array.length arr2 in 
@@ -79,9 +79,9 @@ let matrix_distance arr1 arr2 =
     done;
     mat
   end
-(*e: function Diff_basic.matrix_distance *)
+(*e: function [[Diff_basic.matrix_distance]] *)
 
-(*s: function Diff_basic.traceback_transcript *)
+(*s: function [[Diff_basic.traceback_transcript]] *)
 (* extract the traceback from the matrice (Gusfield P221) *)
 let traceback_transcript arr1 arr2 mat =
   let n = Array.length arr1 in
@@ -106,7 +106,7 @@ let traceback_transcript arr1 arr2 mat =
            aux (i-1) (j-1)
   in
   aux n m
-(*e: function Diff_basic.traceback_transcript *)
+(*e: function [[Diff_basic.traceback_transcript]] *)
 
 (*****************************************************************************)
 (* Optimization *)
@@ -146,7 +146,7 @@ let hash_strings arr1 arr2 =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-(*s: function Diff_basic.diff *)
+(*s: function [[Diff_basic.diff]] *)
 let diff arr1 arr2 =
   (* opti: string to int *)
 
@@ -163,7 +163,7 @@ let diff arr1 arr2 =
       | Diff.Equal i   -> Diff.Equal   (revh.(i))
   )
 *)
-(*e: function Diff_basic.diff *)
+(*e: function [[Diff_basic.diff]] *)
 
 (*****************************************************************************)
 (* Tests/Bench *)

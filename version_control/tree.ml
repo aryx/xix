@@ -30,7 +30,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Tree.perm *)
+(*s: type [[Tree.perm]] *)
 (* similar to Index.mode, but with also a 'Dir' *)
 type perm = 
   | Normal
@@ -41,9 +41,9 @@ type perm =
   (*x: [[Tree.perm]] cases *)
   | Commit (* ?? submodule? *)
   (*e: [[Tree.perm]] cases *)
-(*e: type Tree.perm *)
+(*e: type [[Tree.perm]] *)
 
-(*s: type Tree.entry *)
+(*s: type [[Tree.entry]] *)
 type entry = {
   (* relative to tree, so does not contain any '/', or '.' or '..' *)
   name: string;
@@ -52,21 +52,21 @@ type entry = {
 
   perm: perm;
 }
-(*e: type Tree.entry *)
+(*e: type [[Tree.entry]] *)
 
-(*s: type Tree.t *)
+(*s: type [[Tree.t]] *)
 (* todo: entries must be sorted! and each name must be unique *)
 type t = entry list
-(*e: type Tree.t *)
+(*e: type [[Tree.t]] *)
 
-(*s: type Tree.hash *)
+(*s: type [[Tree.hash]] *)
 type hash = Sha1.t
-(*e: type Tree.hash *)
+(*e: type [[Tree.hash]] *)
 
 (*****************************************************************************)
 (* Walk *)
 (*****************************************************************************)
-(*s: function Tree.walk_tree *)
+(*s: function [[Tree.walk_tree]] *)
 (* we must visit in sorted order, so the caller of walk_tree can rely on 'f'
  * being called in order (so it can easily create for example sorted 
  * index entries while visiting a tree)
@@ -84,9 +84,9 @@ let rec walk_tree read_tree dirpath f xs =
       failwith "submodule not supported yet"
     (*e: [[Tree.walk_tree()]] match perm cases *)
   )
-(*e: function Tree.walk_tree *)
+(*e: function [[Tree.walk_tree]] *)
 
-(*s: function Tree.walk_trees *)
+(*s: function [[Tree.walk_trees]] *)
 let rec walk_trees read_tree dirpath f xs ys =
   let g dirpath entry1_opt entry2_opt =
     f dirpath entry1_opt entry2_opt;
@@ -131,13 +131,13 @@ let rec walk_trees read_tree dirpath f xs ys =
       g dirpath None (Some y);
       walk_trees read_tree dirpath f (x::xs) ys
     )
-(*e: function Tree.walk_trees *)
+(*e: function [[Tree.walk_trees]] *)
 
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
 
-(*s: function Tree.perm_of_string *)
+(*s: function [[Tree.perm_of_string]] *)
 let perm_of_string = function
   | "44"
   | "100644" -> Normal
@@ -148,9 +148,9 @@ let perm_of_string = function
   | "160000" -> Commit
   (*e: [[Tree.perm_of_string()]] match str cases *)
   | x        -> failwith (spf "Tree.perm_of_string: %s is not a valid perm." x)
-(*e: function Tree.perm_of_string *)
+(*e: function [[Tree.perm_of_string]] *)
 
-(*s: function Tree.string_of_perm *)
+(*s: function [[Tree.string_of_perm]] *)
 let string_of_perm = function
   | Normal -> "100644"
   | Exec   -> "100755"
@@ -159,9 +159,9 @@ let string_of_perm = function
   (*s: [[Tree.string_of_perm()]] match perm cases *)
   | Commit -> "160000"
   (*e: [[Tree.string_of_perm()]] match perm cases *)
-(*e: function Tree.string_of_perm *)
+(*e: function [[Tree.string_of_perm]] *)
 
-(*s: function Tree.read_entry *)
+(*s: function [[Tree.read_entry]] *)
 (* todo: should transform some No_more_input exn in something bad,
  * on first one it's ok, but after it means incomplete entry.
  *)
@@ -171,9 +171,9 @@ let read_entry ch =
   let name = IO_.read_string_and_stop_char ch '\000' in
   let hash = Sha1.read ch in
   { perm = perm_of_string perm; name = name; id = hash }
-(*e: function Tree.read_entry *)
+(*e: function [[Tree.read_entry]] *)
 
-(*s: function Tree.write_entry *)
+(*s: function [[Tree.write_entry]] *)
 let write_entry ch e =
   IO.nwrite ch (string_of_perm e.perm);
   IO.write ch ' ';
@@ -181,10 +181,10 @@ let write_entry ch e =
   IO.nwrite ch e.name;
   IO.write ch '\000';
   Sha1.write ch e.id
-(*e: function Tree.write_entry *)
+(*e: function [[Tree.write_entry]] *)
   
 
-(*s: function Tree.read *)
+(*s: function [[Tree.read]] *)
 let read ch =
   let rec aux acc =
     try 
@@ -197,19 +197,19 @@ let read ch =
       List.rev acc
   in
   aux []
-(*e: function Tree.read *)
+(*e: function [[Tree.read]] *)
 
 
-(*s: function Tree.write *)
+(*s: function [[Tree.write]] *)
 let write t ch =
   t |> List.iter (write_entry ch)
-(*e: function Tree.write *)
+(*e: function [[Tree.write]] *)
 
 (*****************************************************************************)
 (* Show *)
 (*****************************************************************************)
 
-(*s: function Tree.show *)
+(*s: function [[Tree.show]] *)
 let show xs =
   xs |> List.iter (fun entry ->
     pr (spf "%s%s" entry.name
@@ -218,5 +218,5 @@ let show xs =
           | _ -> ""
           ))
   )
-(*e: function Tree.show *)
+(*e: function [[Tree.show]] *)
 (*e: version_control/tree.ml *)

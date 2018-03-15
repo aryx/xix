@@ -20,7 +20,7 @@ open Common
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Changes.skip_tree_and_adjust_path *)
+(*s: function [[Changes.skip_tree_and_adjust_path]] *)
 let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   match entry_opt with
   | Some { Tree.perm = Tree.Dir } -> None
@@ -35,9 +35,9 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
     content = lazy (read_blob x.Tree.id);
   }, x.Tree.id)
   | None -> None
-(*e: function Changes.skip_tree_and_adjust_path *)
+(*e: function [[Changes.skip_tree_and_adjust_path]] *)
 
-(*s: function Changes.content_from_path_and_stat_index *)
+(*s: function [[Changes.content_from_path_and_stat_index]] *)
 (* similar to Repository.content_from_path_and_unix_stat *)
 let content_from_path_and_stat_index path stat_info =
   match stat_info.Index.mode with
@@ -50,13 +50,13 @@ let content_from_path_and_stat_index path stat_info =
   (*s: [[Changes.content_from_path_and_stat_index()]] match mode cases *)
   | Index.Gitlink -> failwith "submodule not supported"
   (*e: [[Changes.content_from_path_and_stat_index()]] match mode cases *)
-(*e: function Changes.content_from_path_and_stat_index *)
+(*e: function [[Changes.content_from_path_and_stat_index]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
-(*s: function Changes.changes_tree_vs_tree *)
+(*s: function [[Changes.changes_tree_vs_tree]] *)
 (* see also Cmd_diff.changes_index_vs_worktree
  *     and  Cmd_status.changes_index_vs_HEAD
  *)
@@ -86,9 +86,9 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
     | None, Some (b,_) -> add (Change.Add b)
   ) tree1 tree2 ;
   List.rev !changes
-(*e: function Changes.changes_tree_vs_tree *)
+(*e: function [[Changes.changes_tree_vs_tree]] *)
 
-(*s: function Changes.changes_worktree_vs_index *)
+(*s: function [[Changes.changes_worktree_vs_index]] *)
 (* less: could factorize with Diff_tree.changes_tree_vs_tree? would need
  * to generate flat list of files (but then less opti opportunity
  * in changes_tree_vs_tree when hash for a whole subtree is the same)
@@ -135,9 +135,9 @@ let changes_worktree_vs_index read_blob worktree index =
         )]
       )
   ) |> List.flatten
-(*e: function Changes.changes_worktree_vs_index *)
+(*e: function [[Changes.changes_worktree_vs_index]] *)
 
-(*s: function Changes.changes_index_vs_tree *)
+(*s: function [[Changes.changes_index_vs_tree]] *)
 (* some commonalities with Repository.set_worktree_and_index_to_tree *)
 let changes_index_vs_tree read_tree index treeid =
   let tree = read_tree treeid in
@@ -185,5 +185,5 @@ let changes_index_vs_tree read_tree index treeid =
   );
   (* less: sort by path *)
   List.rev !changes
-(*e: function Changes.changes_index_vs_tree *)
+(*e: function [[Changes.changes_index_vs_tree]] *)
 (*e: version_control/changes.ml *)

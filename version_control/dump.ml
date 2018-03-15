@@ -103,9 +103,9 @@ let vof_t =
   | Commit v1 -> let v1 = Commit.vof_t v1 in Ocaml.VSum (("Commit", [ v1 ]))
   | Tree v1 -> let v1 = Tree.vof_t v1 in Ocaml.VSum (("Tree", [ v1 ]))
 end
-(*s: constant Dump.vof_obj *)
+(*s: constant [[Dump.vof_obj]] *)
 let vof_obj = Objects.vof_t
-(*e: constant Dump.vof_obj *)
+(*e: constant [[Dump.vof_obj]] *)
 
 module Index = struct
 open Index
@@ -173,7 +173,7 @@ let vof_entry { stats = v_stats; id = v_id; path = v_name }
 
 let vof_t v = Ocaml.vof_list vof_entry v
 end
-(*s: constant Dump.vof_index *)
+(*s: constant [[Dump.vof_index]] *)
 let vof_index = Index.vof_t
-(*e: constant Dump.vof_index *)
+(*e: constant [[Dump.vof_index]] *)
 (*e: version_control/dump.ml *)

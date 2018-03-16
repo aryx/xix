@@ -141,7 +141,7 @@ word_elem:
 | TQuoted     { String $1 }
 | TBackquoted { Backquoted $1 }
 | TVar        { Var (SimpleVar $1) }
-| TVarColon word TEq word TCBrace { Var (SubstVar ($1, W $2, W $4)) }
+| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
 
 /*(* the lexer agglomerates spaces in one TSpace token, but then the escaped
    * newline are not agglomerated so we may have multiple TSpace so

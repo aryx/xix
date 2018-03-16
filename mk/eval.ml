@@ -35,8 +35,8 @@ let warning loc s =
  *)
 let rec (eval_word: Ast.loc -> Env.t -> Ast.word -> 
           (Env.values, Percent.pattern) Common.either)= fun loc env (A.W word)->
-  let rec aux acc xs =
-    match xs with
+  let rec aux acc word_elements =
+    match word_elements with
     | [] -> 
         if acc = []
         then Left []
@@ -65,18 +65,27 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
          let ys =
            match vkind with
            | A.SimpleVar _ -> ys
-           | A.SubstVar (_, pattern, subst) -> 
+           | A.SubstVar (_, pattern, substs) -> 
                (* recurse! pattern can contain some variable *)
                let pattern = eval_word loc env pattern in
-               let subst   = eval_word loc env subst in
+               let subst   = substs |> List.map (eval_word loc env) in
                (match pattern, subst with
-               | Right pattern, Right subst ->
+               | Right pattern, [Right subst] ->
                    ys |> List.map (fun s -> 
                      Percent.match_and_subst pattern subst s
                    )
+               (* todo: ugly, should be more general, works only for 
+                * subst like ${OPAM_LIBS:%=-I $OPAM/%}
+               *)
+               | Right pattern, [Right (P [PStr x]); Right subst] ->
+                   ys |> List.map (fun s -> 
+                     [x;Percent.match_and_subst pattern subst s]
+                   ) |> List.flatten
                (* stricter? what does mk?*)
-               | _ -> error loc 
-                 "pattern or subst does not resolve to a single string"
+               | _ -> 
+                 pr2_gen subst;
+                 error loc 
+                   "pattern or subst does not resolve to a single string"
                )
          in
          (match ys, acc, xs with

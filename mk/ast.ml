@@ -23,7 +23,7 @@ type word = W of word_element list
       (* $name or ${name} (the string does not contain the $ or {}) *)
       | SimpleVar of string
       (* ${name:a%b=c%d} *)
-      | SubstVar of (string * word * word)
+      | SubstVar of (string * word * word list)
 
 (* separated by spaces *)
 type words = word list

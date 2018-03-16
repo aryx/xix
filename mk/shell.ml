@@ -6,10 +6,9 @@ let shellpath = "/bin/sh"
 let shellflags = []
 let iws = " "
 *)
-let shellpath = "/bin/rc"
+let shellpath = "/usr/bin/rc"
 let shellflags = ["-I"] (* non interactive, so? todo: no prompt? *)
 let iws = "\001"
-
 
 let execsh shellenv flags inputs interactive =
 

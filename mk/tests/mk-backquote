@@ -1,0 +1,4 @@
+X=`ls *.c`
+
+all:VQ:
+        echo $X

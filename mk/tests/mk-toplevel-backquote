@@ -1,0 +1,3 @@
+# forbidden in mk-ocaml
+
+`echo '<make-cycle'`

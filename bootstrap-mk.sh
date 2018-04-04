@@ -5,7 +5,8 @@
 # any error should abort the script
 set -x
 
-CUSTOM=-custom
+# for windows under cygwin
+#EXTRALINKFLAGS=-custom
 
 TOP=`pwd`
 
@@ -60,7 +61,7 @@ ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/
 ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/collections -c scheduler.ml
 ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/collections -c outofdate.ml
 ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/collections -c main.ml
-ocamlc.opt -g $EXTRALINKFLAGS $CUSTOM -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma globals.cmo flags.cmo ast.cmo parser.cmo lexer.cmo parse.cmo shellenv.cmo shell.cmo percent.cmo env.cmo rules.cmo eval.cmo file.cmo graph.cmo job.cmo scheduler.cmo outofdate.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma $CCLIBS -o mk
+ocamlc.opt -g $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma globals.cmo flags.cmo ast.cmo parser.cmo lexer.cmo parse.cmo shellenv.cmo shell.cmo percent.cmo env.cmo rules.cmo eval.cmo file.cmo graph.cmo job.cmo scheduler.cmo outofdate.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
 
 cd $TOP/shell/
 ocamlyacc parser.mly
@@ -104,7 +105,7 @@ ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/
 ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/collections -c main.ml
 ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/collections -c parse.ml
 ocamlc.opt -g -dtypes -bin-annot -absname -I ../lib_core/commons -I ../lib_core/collections -c interpreter.ml
-ocamlc.opt -g $EXTRALINKFLAGS $CUSTOM -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma flags.cmo globals.cmo ast.cmo meta_ast.cmo opcode.cmo meta_opcode.cmo dumper.cmo compile.cmo runtime.cmo pattern.cmo fn.cmo var.cmo prompt.cmo status.cmo path.cmo process.cmo error.cmo parser.cmo lexer.cmo parse.cmo builtin.cmo op_repl.cmo op_process.cmo interpreter.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma $CCLIBS -o rc
+ocamlc.opt -g $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma flags.cmo globals.cmo ast.cmo meta_ast.cmo opcode.cmo meta_opcode.cmo dumper.cmo compile.cmo runtime.cmo pattern.cmo fn.cmo var.cmo prompt.cmo status.cmo path.cmo process.cmo error.cmo parser.cmo lexer.cmo parse.cmo builtin.cmo op_repl.cmo op_process.cmo interpreter.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP
 cp mk/mk shell/rc BOOTSTRAP/

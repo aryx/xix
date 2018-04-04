@@ -53,6 +53,7 @@ let dorecipe env node did =
     in
     let master_rule = master_arc.G.rule in
     
+    let main_target = node.G.name in
     let all_targets = master_rule.R.all_targets in
     (* less: outofdate_targets (aka target) *)
     let nodes =
@@ -99,7 +100,7 @@ let dorecipe env node did =
                     rule = master_rule;
                     target_nodes = nodes;
                     env = env;
-                    
+                    main_target = main_target;
                     all_targets = all_targets;
                     all_prereqs = List.rev !all_prereqs;
                   };

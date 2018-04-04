@@ -33,7 +33,7 @@ let adjust_env job =
   let env = job.J.env in
 
   (* less: should be all_target *)
-  Hashtbl.replace env.E.internal_vars "target" job.J.all_targets;
+  Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
   (* less: newprereqs *)
   Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
   job.J.rule.R.stem |> Common.if_some (fun s ->
@@ -116,7 +116,7 @@ let sched () =
     )
     else begin
       let pid = 
-        Shell.execsh 
+        Shell.exec_recipe 
           (Env.shellenv_of_env env)
           ["-e"]
           recipe 

@@ -1,12 +1,15 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
+(* for error reporting *)
 type loc = {
-  file: Common.filename;
+  file: Common.filename; (* an mkfile *)
   line: int;
 }
 
-(* No separator, direct concatenation (hence the need for ${name} below).
+(* The elements below are not separated by any separator; they are direct
+ * concatenations of elements (hence the need for ${name} below).
  * The list must contain at least one element.
+ * ex: '%.c' -> W [Percent; String ".c"]
  *)
 type word = W of word_element list
 
@@ -16,6 +19,8 @@ type word = W of word_element list
   
     (* evaluated in eval.ml just after parsing *)
     | Var of var
+     (* stricter: backquotes are allowed only in word context, not at toplevel
+      * so no `echo '<foo.c'` *)
      (* `...` or `{...} (the string does not include the backquote or braces) *)
     | Backquoted of string
 
@@ -25,14 +30,14 @@ type word = W of word_element list
       (* ${name:a%b=c%d} *)
       | SubstVar of (string * word * word list)
 
-(* separated by spaces *)
+(* Words are separated by spaces. See also Env.values *)
 type words = word list
 
 
 (* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = R of string list
 
-
+(* See also Rules.rule_exec *)
 type rule = {
   targets: words;
   prereqs: words;
@@ -53,8 +58,13 @@ type instr = {
 }
 
   and instr_kind =
-    (* should resolve to a single filename, less: could enforce of word? *)
+    (* should resolve to a single filename
+     * less: could enforce of word? *)
     | Include of words
+    (* todo: PipeInclude *)
+
     | Rule of rule
-    (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR *)
+
+    (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
+     * so 'string' below, not 'word' *)
     | Definition of string * words

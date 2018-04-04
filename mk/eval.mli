@@ -7,7 +7,7 @@
  * in the file if it was not set already.
  * 
  * Note that eval() will call parse() internally as well as eval() itself
- * recursively to process <file instructions.
+ * recursively to process '<file' instructions.
  *)
 val eval: 
   Env.t -> (string list ref) -> Ast.instr list -> 

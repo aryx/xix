@@ -77,7 +77,7 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
                (* todo: ugly, should be more general, works only for 
                 * subst like ${OPAM_LIBS:%=-I $OPAM/%}
                *)
-               | Right pattern, [Right (P [PStr x]); Right subst] ->
+               | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
                    ys |> List.map (fun s -> 
                      [x;Percent.match_and_subst pattern subst s]
                    ) |> List.flatten
@@ -110,7 +110,15 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
              error loc (spf "use of list variable '%s' in scalar context" v)
          )
 
-      | A.Backquoted _ -> error loc "TODO: Backquoted not supported yet in eval"
+      | A.Backquoted cmd -> 
+        let shellenv = Env.shellenv_of_env env in
+        let s = Shell.exec_backquote shellenv cmd in
+        let ys = Str.split (Str.regexp "[ \t\n]+") s in
+        (match acc, xs with
+        | [], []  -> Left ys
+        (* stricter: *)
+        | _ -> error loc (spf "use of `%s` in scalar context" cmd)
+        )
       )
   in
   aux [] word

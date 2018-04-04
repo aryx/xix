@@ -1,16 +1,45 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-(*
-let shellpath = "/bin/sh"
-let shellflags = []
-let iws = " "
-*)
-let shellpath = "/usr/bin/rc"
-let shellflags = ["-I"] (* non interactive, so? todo: no prompt? *)
-let iws = "\001"
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
 
-let execsh shellenv flags inputs interactive =
+(*****************************************************************************)
+(* Constants *)
+(*****************************************************************************)
+
+type t = { 
+  path: Common.filename;
+  flags: string list;
+  iws: string;
+  debug_flags: unit -> string list;
+}
+
+let sh = {
+  path = "/bin/sh";
+  flags = [];
+  iws = " ";
+  debug_flags = (fun () -> []);
+}
+
+let rc = {
+  path = "/usr/bin/rc";
+  flags = ["-I"]; (* non interactive, so? todo: no prompt? *)
+  iws = "\001";
+  debug_flags = (fun () -> if !Flags.verbose then ["-v"] else []);
+}
+
+(*
+todo: use MKSHELL
+*)
+let shell = rc
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+let exec_recipe shellenv flags inputs interactive =
 
   let pid = Unix.fork () in
   
@@ -29,7 +58,7 @@ let execsh shellenv flags inputs interactive =
         *)
        |> List_.exclude (fun (s, xs) -> xs = [])
 
-       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat iws xs))
+       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
     in
 
     (* pad: I added this feature so mk can call interactive program
@@ -51,13 +80,13 @@ let execsh shellenv flags inputs interactive =
       ); 
       (try 
          Unix.execve 
-           shellpath 
-           (Array.of_list (flags @ shellflags @ [tmpfile]))
+           shell.path 
+           (Array.of_list (flags @ shell.flags @ [tmpfile]))
            (Array.of_list env)
           |> ignore;
       with Unix.Unix_error (err, fm, argm) -> 
-        if not (Sys.file_exists shellpath)
-        then failwith (spf "could not find shell %s" shellpath)
+        if not (Sys.file_exists shell.path)
+        then failwith (spf "could not find shell %s" shell.path)
         else failwith (spf "Could not execute a shell command: %s %s %s"
                          (Unix.error_message err) fm argm)
       );
@@ -79,13 +108,13 @@ let execsh shellenv flags inputs interactive =
 
       (try 
          Unix.execve 
-           shellpath 
-           (Array.of_list (flags @ shellflags))
+           shell.path 
+           (Array.of_list (flags @ shell.flags @ shell.debug_flags ()))
            (Array.of_list env)
           |> ignore;
       with Unix.Unix_error (err, fm, argm) -> 
-        if not (Sys.file_exists shellpath)
-        then failwith (spf "could not find shell %s" shellpath)
+        if not (Sys.file_exists shell.path)
+        then failwith (spf "could not find shell %s" shell.path)
         else failwith (spf "Could not execute a shell command: %s %s %s"
                          (Unix.error_message err) fm argm)
       );
@@ -111,3 +140,75 @@ let execsh shellenv flags inputs interactive =
 
   (* parent case *)
   else pid (* pid of child1 *)
+
+
+
+(* I could factorize some code with exec_recipe, but not worth it *)
+let exec_backquote shellenv input =
+  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
+  let (pipe_read_output, pipe_write_output) = Unix.pipe () in
+
+  let pid = Unix.fork () in
+
+  (* child case *)
+  if pid = 0
+  then begin
+    let env = 
+      shellenv 
+       |> List_.exclude (fun (s, xs) -> xs = [])
+       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
+    in
+    Unix.dup2 pipe_read_input Unix.stdin;
+    Unix.dup2 pipe_write_output Unix.stdout;
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_input;
+    Unix.close pipe_read_output;
+    Unix.close pipe_write_output;
+    (try 
+       Unix.execve 
+         shell.path 
+         (Array.of_list (shell.flags @ shell.debug_flags ()))
+         (Array.of_list env)
+        |> ignore;
+     with Unix.Unix_error (err, fm, argm) -> 
+       if not (Sys.file_exists shell.path)
+       then failwith (spf "could not find shell %s" shell.path)
+       else failwith (spf "Could not execute a shell command: %s %s %s"
+                        (Unix.error_message err) fm argm)
+    );
+    (* unreachable *)
+    exit (-2);
+  end else begin
+    (* parent case *)
+
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_output;
+
+    (* feed the shell with inputs through a pipe *)
+    [input] |> List.iter (fun str ->
+      let n = Unix.write pipe_write_input str 0 (String.length str) in
+      if n < 0
+      then failwith "Could not write in pipe to shell";
+      let n = Unix.write pipe_write_input "\n" 0 1 in
+      if n < 0
+      then failwith "Could not write in pipe to shell";
+    );
+    (* to flush *)
+    Unix.close pipe_write_input;
+
+    (* read the shell output through the other pipe *)
+    let buffer = String.create 1024 in
+    let rec loop_read () =
+      let n = Unix.read pipe_read_output buffer 0 1024 in
+      match n with
+      | 0 -> ""
+      | _ when n < 0 ->
+        failwith "Could not read from pipe to shell";
+      | _ -> 
+        let s = String.sub buffer 0 n in
+        s ^ loop_read ()
+    in
+    let output = loop_read () in
+    Unix.waitpid [] pid |> ignore;
+    output
+  end

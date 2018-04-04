@@ -7,7 +7,9 @@ open Ast
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 
+(* Limitations compared to mk:
+ *  - backquote only in words context, not at toplevel
+ *    (you can not do  `echo '<foo.c'` and expect it to include foo.c)
  * todo:
  *  - good parsing error messages, right now hard.
       "missing include file name\n"    < no words.

@@ -1,5 +1,4 @@
 
-
 (* The list must contain at least one element *)
 type pattern = P of pattern_elem list
   and pattern_elem =

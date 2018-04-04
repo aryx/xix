@@ -11,7 +11,7 @@ type 'a rule = {
 
 
 type rules = {
-  (* use Hashtbl.find_all since a target can be associated to multiple rules *)
+  (* use Hashtbl.find_all because a target can be associated to many rules *)
   simples: (string, string rule) Hashtbl.t;
 
   metas: (Percent.pattern rule) list;
@@ -26,10 +26,9 @@ type rule_exec = {
 
   all_targets: string list;
   all_prereqs: string list;
-
 }
 
-
+(* helpers *)
 let has_recipe re =
   re.recipe2 <> None
 

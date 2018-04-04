@@ -1,4 +1,4 @@
-Plan 9 software ported to OCaml.
+Plan 9 programs ported to OCaml.
 
 export ROOT=`pwd`
 export objtype=386

@@ -11,7 +11,7 @@ module R = Rules
  *
  * Main limitations compared to mk:
  *  - no regexp rules
- *    (not worth it, % are good enough)
+ *    (not worth it, '%' are good enough)
  *  - no special handling for archives
  *    (fast enough nowadays to recreate full archives from scratch)
  *  - no :P:
@@ -19,7 +19,7 @@ module R = Rules
  *  - no private variables
  *    (I never saw mkfiles using it, and it complicates the parsing of '=')
  *  - no &
- *    (rarely found used, % is enough)
+ *    (rarely found used, '%' is enough again)
  *  - only one -f is supported, not an array of up to 256 mkfiles
  *    (who uses that? maybe to have mk -f varfile -f mkfile)
  *  - no sequential vs parallel mode, and no parallel for multi targets
@@ -30,6 +30,9 @@ module R = Rules
  *    (harder to read, who uses that?)
  *  - disallow dynamic patterns like X=%.o  $X: %.c
  *    (harder to read)
+ *  - allow backquote only in word context, not at the very toplevel,
+ *    so you can not do `echo <foo.txt`
+ *    (harder to read and never used I think)
  *  - no opti like missing intermediate (mk -i)
  *    (I barely understand the algorithm anyway)
  *  - no unicode support
@@ -231,6 +234,12 @@ let main () =
     " dump the generated graph (in graphviz dot format)";
     "-dump_jobs", Arg.Set Flags.dump_jobs,
     " ";
+    
+    (* useful for debugging when there is an error in recursive mk *)
+    "-print_pwd", Arg.Unit (fun () ->
+      pr2 (spf "(in %s)" (Sys.getcwd ()));
+    ),
+    " print the pwd (useful to debug recursive mk)";
 
     "-trace", Arg.Unit (fun () ->
       Flags.trace := true;

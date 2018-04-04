@@ -11,8 +11,8 @@
 %.cmx: %.ml
 	$OCAMLOPT $COMPFLAGS $INCLUDES -c $stem.ml
 
-%.$O: %.c
-	$CC $CFLAGS -v -c $stem.c -o $stem.$O
+%.o: %.c
+	$CC $CFLAGS -v -c $stem.c -o $stem.o
 
 depend:V:
 	$OCAMLDEP $INCLUDES *.ml *.mli  > .depend

@@ -1,6 +1,4 @@
 # -*- sh -*-
-</$objtype/mkfile
-#<$TOP/mkconfig
 
 # assumes the "includer" has defined:
 #  TOP, SRC, INCLUDES, LIBS, SYSLIBS, CCLIBS, and PROG

@@ -41,7 +41,6 @@ CCLIBS=-cclib -lz
 
 #<$TOP/mkprog
 # include  of mkprog:
-</$objtype/mkfile
 #<$TOP/mkconfig
 
 # assumes the "includer" has defined:
@@ -80,4 +79,3 @@ archi.ps: $SRC
 
 archi.pdf: archi.ps
     ps2pdf archi.ps
-

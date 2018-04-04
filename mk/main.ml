@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module G = Graph
@@ -30,7 +30,7 @@ module R = Rules
  *    (harder to read, who uses that?)
  *  - disallow dynamic patterns like X=%.o  $X: %.c
  *    (harder to read)
- *  - allow backquote only in word context, not at the very toplevel,
+ *  - disallow backquote outside word context (e.g., at the toplevel)
  *    so you can not do `echo <foo.txt`
  *    (harder to read and never used I think)
  *  - no opti like missing intermediate (mk -i)
@@ -43,6 +43,8 @@ module R = Rules
  *  - forbid to use list variables in a scalar context (error prone I think)
  *  - a new Interactive attribute :I: so one can call interactive program
  *    in a recipe (e.g., syncweb)
+ *  - use of MKSHELL to configure which shell to use
+ *    (original mk was doing that but only if MKSHELL was set in an mkfile)
  *  - simplifications by not supporting the features mentioned above
  *  - be more relaxing on date (or TODO use nanosec); if equal time then ok
  *    (modern machines can generate the .o and a.out in the same second)
@@ -55,6 +57,7 @@ module R = Rules
  *     also message at the end that something went wrong)
  *  - TODO a luisa mode, more synthetic, just DONE
  *  - TODO: like in buck, show all processors and IDLE or active (GUI?)
+ * 
  * Internal improvements (IMHO):
  *  - different approach to parsing. Separate more clearly lexing, parsing,
  *    and evaluating, so avoid duplicate work like handling quoted characters

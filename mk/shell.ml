@@ -30,10 +30,15 @@ let rc = {
   debug_flags = (fun () -> if !Flags.verbose then ["-v"] else []);
 }
 
-(*
-todo: use MKSHELL
-*)
-let shell = rc
+let shell = 
+  try 
+    let path = Sys.getenv "MKSHELL" in
+    if !Flags.verbose 
+    then pr2 (spf "using shell %s" path);
+    match path with
+    | s when s =~ ".*/rc$" -> { rc with path = path }
+    | _ -> { sh with path = path }
+  with Not_found -> sh
 
 (*****************************************************************************)
 (* Entry points *)

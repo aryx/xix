@@ -190,7 +190,8 @@ and backquote = parse
 
   | [^ '\\' '\'' '`' '\n']+ 
       { let x = Lexing.lexeme lexbuf in x ^ backquote lexbuf }
-  | "'" { let s = quote lexbuf in s ^ backquote lexbuf }
+  (* bugfix: we want to preserve the quote here! *)
+  | "'" { let s = quote lexbuf in "'" ^ s ^ "'" ^ backquote lexbuf }
 
   (* new: instead of "missing closing `"  *)
   | eof  { error "end of file in backquoted string" }
@@ -206,7 +207,8 @@ and backquote2 = parse
 
   | [^ '\\' '\'' '}' '\n']+ 
       { let x = Lexing.lexeme lexbuf in x ^ backquote2 lexbuf }
-  | "'" { let s = quote lexbuf in s ^ backquote2 lexbuf }
+  (* bugfix: we want to preserve the quote here! *)
+  | "'" { let s = quote lexbuf in "'" ^ s ^ "'" ^ backquote2 lexbuf }
 
   (* new: instead of "missing closing `"  *)
   | eof  { error "end of file in backquoted string" }

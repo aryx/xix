@@ -1,4 +1,6 @@
 X=`ls *.c`
+Y=`ls *.c | sed 's/..$//'`
 
 all:VQ:
         echo $X
+        echo $Y

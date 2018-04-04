@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -14,6 +14,9 @@ type t = {
   flags: string list;
   iws: string;
   debug_flags: unit -> string list;
+  (* less: in theory the escaping and quoting rules are different between
+   * shells, so this should be part of the interface.
+   *)
 }
 
 let sh = {
@@ -25,7 +28,7 @@ let sh = {
 
 let rc = {
   path = "/usr/bin/rc";
-  flags = ["-I"]; (* non interactive, so? todo: no prompt? *)
+  flags = ["-I"]; (* non-interactive so does not display a prompt *)
   iws = "\001";
   debug_flags = (fun () -> if !Flags.verbose then ["-v"] else []);
 }

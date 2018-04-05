@@ -19,8 +19,12 @@ module Set = Set_
 let running = Hashtbl.create 101
 let nrunning = ref 0
 
-(* todo: use environemt to set it *)
-let nproclimit = ref 2
+let nproclimit = ref 
+  (try 
+    let s = Sys.getenv "NPROC" in
+    int_of_string s
+   with Not_found | _ -> 2
+  )
 
 let jobs = Queue.create ()
 

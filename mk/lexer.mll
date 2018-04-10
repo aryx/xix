@@ -106,8 +106,9 @@ rule token = parse
             TEq (loc()) 
           end
        }
-  | '<' { TInf (loc()) }
-  | '%' { TPercent }
+  | '<'  { TInf (loc()) }
+  | "<|" { TInfPipe (loc()) }
+  | '%'  { TPercent }
 
   (* ----------------------------------------------------------------------- *)
   (* Variables *)

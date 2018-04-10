@@ -175,14 +175,27 @@ let eval env targets_ref xs =
                 let xs = Parse.parse file in
                 (* recurse *)
                 instrs xs
-
           (* new? what does mk does? *)
           | Left [] -> error loc "missing include file"
-
           (* stricter: force use quotes for filename with spaces or percent *)
           | Right _ | Left (_::_) -> 
               error loc "use quotes for filenames with spaces or %%"
           )
+
+      | A.PipeInclude ws ->
+        let res = eval_words loc env ws in
+        let recipe = 
+          match res with
+          | Left xs -> String.concat " " xs
+          | Right xs -> raise Todo
+        in
+        if recipe = ""
+        then failwith "missing include program name";
+        let shellenv = Env.shellenv_of_env env in
+        let tmpfile = Shell.exec_pipecmd shellenv recipe in
+        let xs = Parse.parse tmpfile in
+        (* recurse *)
+        instrs xs
 
       | A.Definition (s, ws) ->
           (* todo: handle override variables *)

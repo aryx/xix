@@ -6,12 +6,13 @@ open Common
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Constants *)
+(* Types and constants *)
 (*****************************************************************************)
 
 type t = { 
   path: Common.filename;
   flags: string list;
+  (* environment word separator *)
   iws: string;
   debug_flags: unit -> string list;
   (* less: in theory the escaping and quoting rules are different between
@@ -42,6 +43,10 @@ let shell =
     | s when s =~ ".*/rc$" -> { rc with path = path }
     | _ -> { sh with path = path }
   with Not_found -> sh
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (*****************************************************************************)
 (* Entry points *)
@@ -87,6 +92,7 @@ let exec_recipe shellenv flags inputs interactive =
          failwith (spf "Could not create temporary file (error = %s)" s)
       ); 
       (try 
+
          Unix.execve 
            shell.path 
            (Array.of_list (flags @ shell.flags @ [tmpfile]))
@@ -132,6 +138,7 @@ let exec_recipe shellenv flags inputs interactive =
     (* child 2, feeding the shell with inputs through a pipe *)
     end else begin
       Unix.close pipe_read;
+
       inputs |> List.iter (fun str ->
         let n = Unix.write pipe_write str 0 (String.length str) in
         if n < 0
@@ -142,6 +149,7 @@ let exec_recipe shellenv flags inputs interactive =
       );
       (* will flush *)
       Unix.close pipe_write;
+
       exit 0;
     end
   end
@@ -151,7 +159,9 @@ let exec_recipe shellenv flags inputs interactive =
 
 
 
-(* I could factorize some code with exec_recipe, but not worth it *)
+(* less: factorize some code with exec_recipe, at least error management
+ * and input feeding
+ *)
 let exec_backquote shellenv input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
@@ -161,17 +171,17 @@ let exec_backquote shellenv input =
   (* child case *)
   if pid = 0
   then begin
-    let env = 
-      shellenv 
-       |> List_.exclude (fun (s, xs) -> xs = [])
-       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
-    in
     Unix.dup2 pipe_read_input Unix.stdin;
     Unix.dup2 pipe_write_output Unix.stdout;
     Unix.close pipe_read_input;
     Unix.close pipe_write_input;
     Unix.close pipe_read_output;
     Unix.close pipe_write_output;
+    let env = 
+      shellenv 
+       |> List_.exclude (fun (s, xs) -> xs = [])
+       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
+    in
     (try 
        Unix.execve 
          shell.path 
@@ -205,7 +215,7 @@ let exec_backquote shellenv input =
     Unix.close pipe_write_input;
 
     (* read the shell output through the other pipe *)
-    let buffer = String.create 1024 in
+    let buffer = Bytes.create 1024 in
     let rec loop_read () =
       let n = Unix.read pipe_read_output buffer 0 1024 in
       match n with
@@ -220,3 +230,68 @@ let exec_backquote shellenv input =
     Unix.waitpid [] pid |> ignore;
     output
   end
+
+
+(* less: factorize some code with other exec_xxx *)
+let exec_pipecmd shellenv input =
+  let tmpfile = Filename.temp_file "mk" "sh" in
+  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
+
+  let pid = Unix.fork () in
+
+  (* child case *)
+  if pid = 0
+  then begin
+    Unix.dup2 pipe_read_input Unix.stdin;
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_input;
+    let fd = Unix.openfile tmpfile [Unix.O_WRONLY] 0o640 in
+    Unix.dup2 fd Unix.stdout;
+    Unix.close fd;
+
+    let env = 
+      shellenv 
+       |> List_.exclude (fun (s, xs) -> xs = [])
+       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
+    in
+    (try 
+       Unix.execve 
+         shell.path 
+         (Array.of_list (shell.flags @ shell.debug_flags ()))
+         (Array.of_list env)
+        |> ignore;
+     with Unix.Unix_error (err, fm, argm) -> 
+       if not (Sys.file_exists shell.path)
+       then failwith (spf "could not find shell %s" shell.path)
+       else failwith (spf "Could not execute a shell command: %s %s %s"
+                        (Unix.error_message err) fm argm)
+    );
+    (* unreachable *)
+    exit (-2);
+  end else begin
+    (* parent case *)
+
+    Unix.close pipe_read_input;
+
+    (* feed the shell with inputs through a pipe *)
+    [input] |> List.iter (fun str ->
+      let n = Unix.write pipe_write_input str 0 (String.length str) in
+      if n < 0
+      then failwith "Could not write in pipe to shell";
+      let n = Unix.write pipe_write_input "\n" 0 1 in
+      if n < 0
+      then failwith "Could not write in pipe to shell";
+    );
+    (* to flush *)
+    Unix.close pipe_write_input;
+
+    let (pid2, status) = Unix.waitpid [] pid in
+    if pid <> pid2
+    then raise (Impossible "waitpid takes the specific pid");
+    (match status with
+    | WEXITED 0 -> tmpfile
+    (* stricter: fail fast, no "warning: skipping missing program file: " *)
+    | _ -> failwith "bad include program status"
+    )
+  end
+

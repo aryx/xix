@@ -47,7 +47,7 @@ let attrs_of_string loc s =
 %token <string> TSpace
 %token TNewline
 
-%token <Ast.loc> TColon TEq TInf
+%token <Ast.loc> TColon TEq TInf TInfPipe
 %token TPercent
 
 %token <string> TVar TVarColon
@@ -86,6 +86,7 @@ instrs:
 instr:
  | TNewline             { [] }
  | TInf words TNewline  { [{instr = Include $2; loc = $1}] }
+ | TInfPipe words TNewline  { [{instr = PipeInclude $2; loc = $1}] }
 
  /*(* stricter: no space after variable name, no private var syntax *)*/
  | TOther TEq words_opt TNewline        

@@ -61,7 +61,9 @@ type instr = {
     (* should resolve to a single filename
      * less: could enforce of word? *)
     | Include of words
-    (* todo: PipeInclude *)
+    (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
+     * less: we could also do PipeInclude of recipe I think *)
+    | PipeInclude of words
 
     | Rule of rule
 

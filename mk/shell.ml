@@ -51,22 +51,22 @@ let shell =
 let exec_shell shellenv flags extra_params =
   let env = 
     shellenv 
-       (* bug: I exclude empty variables
-        * otherwise rc does strange things. Indeed, programs
-        * such as ocamlc get confused by empty variables
-        * used in shell commands such as ocamlc $FLAG where FLAG is empty.
-        * I get the problem also with mk-plan9port.
-        * Note however that there is no problem with mk-sh.byte, so
-        * this is an rc issue.
-        *)
-       |> List_.exclude (fun (s, xs) -> xs = [])
+    (* bug: I exclude empty variables
+     * otherwise rc does strange things. Indeed, programs
+     * such as ocamlc get confused by empty variables
+     * used in shell commands such as ocamlc $FLAG where FLAG is empty.
+     * I get the problem also with mk-plan9port.
+     * Note however that there is no problem with mk-sh.byte, so
+     * this is an rc issue.
+     *)
+    |> List_.exclude (fun (s, xs) -> xs = [])
 
-       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
+    |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
   in
   (try 
      Unix.execve 
        shell.path 
-       (Array.of_list (flags @ shell.flags @ extra_params))
+       (Array.of_list (flags @ shell.flags @ shell.debug_flags() @extra_params))
        (Array.of_list env)
       |> ignore;
    with Unix.Unix_error (err, fm, argm) -> 
@@ -120,6 +120,7 @@ let exec_recipe shellenv flags inputs interactive =
          failwith (spf "Could not create temporary file (error = %s)" s)
       ); 
       exec_shell shellenv flags [tmpfile]
+    (* unreachable *)
     end else begin
 
     let (pipe_read, pipe_write) = Unix.pipe () in
@@ -132,6 +133,7 @@ let exec_recipe shellenv flags inputs interactive =
       Unix.close pipe_read;
       Unix.close pipe_write;
       exec_shell shellenv flags []
+      (* unreachable *)
 
     (* child 2, feeding the shell with inputs through a pipe *)
     end else begin
@@ -145,10 +147,6 @@ let exec_recipe shellenv flags inputs interactive =
   else pid (* pid of child1 *)
 
 
-
-(* less: factorize some code with exec_recipe, at least error management
- * and input feeding
- *)
 let exec_backquote shellenv input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
@@ -164,42 +162,16 @@ let exec_backquote shellenv input =
     Unix.close pipe_write_input;
     Unix.close pipe_read_output;
     Unix.close pipe_write_output;
-    let env = 
-      shellenv 
-       |> List_.exclude (fun (s, xs) -> xs = [])
-       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
-    in
-    (try 
-       Unix.execve 
-         shell.path 
-         (Array.of_list (shell.flags @ shell.debug_flags ()))
-         (Array.of_list env)
-        |> ignore;
-     with Unix.Unix_error (err, fm, argm) -> 
-       if not (Sys.file_exists shell.path)
-       then failwith (spf "could not find shell %s" shell.path)
-       else failwith (spf "Could not execute a shell command: %s %s %s"
-                        (Unix.error_message err) fm argm)
-    );
+
+    exec_shell shellenv [] [] 
     (* unreachable *)
-    exit (-2);
   end else begin
     (* parent case *)
 
     Unix.close pipe_read_input;
     Unix.close pipe_write_output;
 
-    (* feed the shell with inputs through a pipe *)
-    [input] |> List.iter (fun str ->
-      let n = Unix.write pipe_write_input str 0 (String.length str) in
-      if n < 0
-      then failwith "Could not write in pipe to shell";
-      let n = Unix.write pipe_write_input "\n" 0 1 in
-      if n < 0
-      then failwith "Could not write in pipe to shell";
-    );
-    (* to flush *)
-    Unix.close pipe_write_input;
+    feed_shell_input [input] pipe_write_input;
 
     (* read the shell output through the other pipe *)
     let buffer = Bytes.create 1024 in
@@ -219,7 +191,6 @@ let exec_backquote shellenv input =
   end
 
 
-(* less: factorize some code with other exec_xxx *)
 let exec_pipecmd shellenv input =
   let tmpfile = Filename.temp_file "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
@@ -236,49 +207,21 @@ let exec_pipecmd shellenv input =
     Unix.dup2 fd Unix.stdout;
     Unix.close fd;
 
-    let env = 
-      shellenv 
-       |> List_.exclude (fun (s, xs) -> xs = [])
-       |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
-    in
-    (try 
-       Unix.execve 
-         shell.path 
-         (Array.of_list (shell.flags @ shell.debug_flags ()))
-         (Array.of_list env)
-        |> ignore;
-     with Unix.Unix_error (err, fm, argm) -> 
-       if not (Sys.file_exists shell.path)
-       then failwith (spf "could not find shell %s" shell.path)
-       else failwith (spf "Could not execute a shell command: %s %s %s"
-                        (Unix.error_message err) fm argm)
-    );
+    exec_shell shellenv [] [];
     (* unreachable *)
-    exit (-2);
   end else begin
     (* parent case *)
 
     Unix.close pipe_read_input;
-
-    (* feed the shell with inputs through a pipe *)
-    [input] |> List.iter (fun str ->
-      let n = Unix.write pipe_write_input str 0 (String.length str) in
-      if n < 0
-      then failwith "Could not write in pipe to shell";
-      let n = Unix.write pipe_write_input "\n" 0 1 in
-      if n < 0
-      then failwith "Could not write in pipe to shell";
-    );
-    (* to flush *)
-    Unix.close pipe_write_input;
+    
+    feed_shell_input [input] pipe_write_input;
 
     let (pid2, status) = Unix.waitpid [] pid in
     if pid <> pid2
     then raise (Impossible "waitpid takes the specific pid");
     (match status with
-    | WEXITED 0 -> tmpfile
+    | Unix.WEXITED 0 -> tmpfile
     (* stricter: fail fast, no "warning: skipping missing program file: " *)
     | _ -> failwith "bad include program status"
     )
   end
-

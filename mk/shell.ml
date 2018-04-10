@@ -48,19 +48,9 @@ let shell =
 (* Helpers *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Entry points *)
-(*****************************************************************************)
-
-let exec_recipe shellenv flags inputs interactive =
-
-  let pid = Unix.fork () in
-  
-  (* children case *)
-  if pid = 0
-  then
-    let env = 
-      shellenv 
+let exec_shell shellenv flags extra_params =
+  let env = 
+    shellenv 
        (* bug: I exclude empty variables
         * otherwise rc does strange things. Indeed, programs
         * such as ocamlc get confused by empty variables
@@ -72,7 +62,45 @@ let exec_recipe shellenv flags inputs interactive =
        |> List_.exclude (fun (s, xs) -> xs = [])
 
        |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
-    in
+  in
+  (try 
+     Unix.execve 
+       shell.path 
+       (Array.of_list (flags @ shell.flags @ extra_params))
+       (Array.of_list env)
+      |> ignore;
+   with Unix.Unix_error (err, fm, argm) -> 
+     if not (Sys.file_exists shell.path)
+     then failwith (spf "could not find shell %s" shell.path)
+     else failwith (spf "Could not execute a shell command: %s %s %s"
+                      (Unix.error_message err) fm argm)
+  );
+  (* unreachable *)
+  exit (-2)
+
+let feed_shell_input inputs pipe_write =
+  inputs |> List.iter (fun str ->
+    let n = Unix.write pipe_write str 0 (String.length str) in
+    if n < 0
+    then failwith "Could not write in pipe to shell";
+    let n = Unix.write pipe_write "\n" 0 1 in
+    if n < 0
+    then failwith "Could not write in pipe to shell";
+  );
+  (* will flush *)
+  Unix.close pipe_write
+
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+let exec_recipe shellenv flags inputs interactive =
+  let pid = Unix.fork () in
+  
+  (* children case *)
+  if pid = 0
+  then
 
     (* pad: I added this feature so mk can call interactive program
      * such as syncweb. Otherwise stdin is used to feed the shell
@@ -91,26 +119,10 @@ let exec_recipe shellenv flags inputs interactive =
        with Sys_error s -> 
          failwith (spf "Could not create temporary file (error = %s)" s)
       ); 
-      (try 
-
-         Unix.execve 
-           shell.path 
-           (Array.of_list (flags @ shell.flags @ [tmpfile]))
-           (Array.of_list env)
-          |> ignore;
-      with Unix.Unix_error (err, fm, argm) -> 
-        if not (Sys.file_exists shell.path)
-        then failwith (spf "could not find shell %s" shell.path)
-        else failwith (spf "Could not execute a shell command: %s %s %s"
-                         (Unix.error_message err) fm argm)
-      );
-      (* unreachable *)
-      exit (-2);
-      
+      exec_shell shellenv flags [tmpfile]
     end else begin
 
     let (pipe_read, pipe_write) = Unix.pipe () in
-
     let pid2 = Unix.fork () in
 
     (* child 1, the shell interpeter, the process with pid returned by execsh *)
@@ -119,37 +131,12 @@ let exec_recipe shellenv flags inputs interactive =
       Unix.dup2 pipe_read Unix.stdin;
       Unix.close pipe_read;
       Unix.close pipe_write;
-
-      (try 
-         Unix.execve 
-           shell.path 
-           (Array.of_list (flags @ shell.flags @ shell.debug_flags ()))
-           (Array.of_list env)
-          |> ignore;
-      with Unix.Unix_error (err, fm, argm) -> 
-        if not (Sys.file_exists shell.path)
-        then failwith (spf "could not find shell %s" shell.path)
-        else failwith (spf "Could not execute a shell command: %s %s %s"
-                         (Unix.error_message err) fm argm)
-      );
-      (* unreachable *)
-      exit (-2);
+      exec_shell shellenv flags []
 
     (* child 2, feeding the shell with inputs through a pipe *)
     end else begin
       Unix.close pipe_read;
-
-      inputs |> List.iter (fun str ->
-        let n = Unix.write pipe_write str 0 (String.length str) in
-        if n < 0
-        then failwith "Could not write in pipe to shell";
-        let n = Unix.write pipe_write "\n" 0 1 in
-        if n < 0
-        then failwith "Could not write in pipe to shell";
-      );
-      (* will flush *)
-      Unix.close pipe_write;
-
+      feed_shell_input inputs pipe_write;
       exit 0;
     end
   end

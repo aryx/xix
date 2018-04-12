@@ -33,11 +33,13 @@ let rc = {
   debug_flags = (fun () -> if !Flags.verbose then ["-v"] else []);
 }
 
+(* note that this is a toplevel entity, so the code below is executed even
+ * before main, so you can not rely on the value in Flags as they have
+ * not been set yet.
+ *)
 let shell = 
   try 
     let path = Sys.getenv "MKSHELL" in
-    if !Flags.verbose 
-    then pr2 (spf "using shell %s" path);
     match path with
     | s when s =~ ".*/rc$" -> { rc with path = path }
     | _ -> { sh with path = path }

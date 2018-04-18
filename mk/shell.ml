@@ -65,10 +65,13 @@ let exec_shell shellenv flags extra_params =
 
     |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
   in
+  let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
+  if !Flags.verbose
+  then pr2 (spf "exec_shell: %s %s" shell.path (String.concat " " args));
   (try 
      Unix.execve 
        shell.path 
-       (Array.of_list (flags @ shell.flags @ shell.debug_flags() @extra_params))
+       (Array.of_list args)
        (Array.of_list env)
       |> ignore;
    with Unix.Unix_error (err, fm, argm) -> 

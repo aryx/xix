@@ -1,6 +1,5 @@
-# -*- sh -*-
-
 TOP=..
+
 INCLUDES=-I $TOP/lib_core/commons
 
 SRC= flags_cpp.ml location_cpp.ml ast_cpp.ml lexer_cpp.ml preprocessor.ml \
@@ -8,17 +7,13 @@ SRC= flags_cpp.ml location_cpp.ml ast_cpp.ml lexer_cpp.ml preprocessor.ml \
 
 <$TOP/mklib
 
-beforedepend:V: lexer_cpp.ml
+#<$TOP/mkparser
 
+AUTOGEN=lexer_cpp.ml
+NUKEFILES=$AUTOGEN
+
+beforedepend:V: $AUTOGEN
 depend:V: beforedepend
-
-distclean:V: clean
-	rm -f lexer_cpp.ml
 
 lexer_cpp.ml:D: lexer_cpp.mll
 	$OCAMLLEX $prereq
-
-
-loc:V:
-	mk distclean
-	wc -l *.ml*

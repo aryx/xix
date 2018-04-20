@@ -13,9 +13,12 @@ lib.cma: $OBJS
 lib.cmxa: ${OBJS:%.cmo=%.cmx}
 	$OCAMLOPT $INCLUDES $prereq -a -o $target
 
-clean nuke:V:
-	rm -f *.cm[ioxa] *.cmxa *.o *.a  *.annot *.cmt*
+clean:V:
+	rm -f *.cm[ioxa] *.cmxa *.[oa]  *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out
+
+nuke:V: clean
+	rm -f $NUKEFILES
 
 <$TOP/mkcommon
 <.depend

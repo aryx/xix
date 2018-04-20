@@ -1,0 +1,12 @@
+
+AUTOGEN=lexer.ml parser.ml parser.mli
+
+beforedepend:V: $AUTOGEN
+depend:V: beforedepend
+
+lexer.ml:D: lexer.mll
+	$OCAMLLEX $prereq
+parser.ml parser.mli: parser.mly
+	$OCAMLYACC $prereq
+
+NUKEFILES=$AUTOGEN

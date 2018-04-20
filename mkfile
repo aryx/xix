@@ -1,4 +1,3 @@
-# -*- sh -*-
 <mkconfig
 
 DIRS1=\
@@ -21,12 +20,17 @@ DIRS=$DIRS1 #$DIRS2 #DIRS3
 
 all:V: all.directories
 opt:V: opt.directories
-clean:V: clean.directories
-depend:V: depend.directories
 
 %.directories:V:
 	for(i in $DIRS) @{
 		echo $i/
 		cd $i
 		mk $MKFLAGS $stem
+	}
+
+# alternate style to the %.directories trick; even simpler
+clean nuke depend:V:
+	for(i in $DIRS) @{
+		cd $i
+		mk $MKFLAGS $target
 	}

@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=..
 
 SRC= IO_.ml \
@@ -60,7 +59,7 @@ LIBSOPT=${LIBS:%.cma=%.cmxa}
 $PROG.opt: ${OBJS:%.cmo=%.cmx} $COBJS $LIBSOPT
 	$OCAMLOPT $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq $CCLIBS -o $target
 
-clean:V:
+clean nuke:V:
 	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out *.output ocamldoc.out
 

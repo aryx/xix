@@ -18,8 +18,17 @@ $PROG.opt: ${OBJS:%.cmo=%.cmx}
 	$OCAMLOPT $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq -o $target
 
 clean:V:
-	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
+	rm -f *.cm[ioxa] *.cmxa  *.[oa]  *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out *.output
+	rm -f $PROG $PROG.opt 
+
+nuke:V: clean
+	rm -f $NUKEFILES
+
+loc:V:
+	mk nuke
+	wc -l *.ml*
+
 
 <$TOP/mkcommon
 <.depend

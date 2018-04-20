@@ -1,7 +1,7 @@
-# -*- sh -*-
 # The lexer generator
 
 TOP=..
+
 INCLUDES=-I $TOP/lib_core/collections
 
 SRC= ast.ml \
@@ -17,11 +17,13 @@ PROG=ocamllex
 <$TOP/mkconfig
 <$TOP/mkprog
 
-beforedepend:V: lexer.ml parser.ml parser.mli
-depend:V: beforedepend
+#<$TOP/mkparser
 
-distclean:V: clean
-	rm -f lexer.ml parser.ml parser.mli 
+AUTOGEN=lexer.ml parser.ml parser.mli
+NUKEFILES=$AUTOGEN
+
+beforedepend:V: $AUTOGEN
+depend:V: beforedepend
 
 lexer.ml:D: lexer.mll
 	$OCAMLLEX $prereq

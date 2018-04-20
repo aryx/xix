@@ -1,6 +1,5 @@
-# -*- sh -*-
-
 TOP=..
+
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections
 
 SRC= globals.ml flags.ml \
@@ -18,23 +17,4 @@ PROG=mk
 
 <$TOP/mkconfig
 <$TOP/mkprog
-
-beforedepend:V: lexer.ml parser.ml parser.mli
-
-
-depend:V: beforedepend
-
-distclean:V: clean
-	rm -f lexer.ml
-	rm -f parser.ml parser.mli parser.output
-
-lexer.ml:D: lexer.mll
-	$OCAMLLEX $prereq
-
-parser.ml parser.mli: parser.mly
-	$OCAMLYACC $prereq
-
-
-loc:V:
-	mk distclean
-	wc -l *.ml*
+<$TOP/mkparser

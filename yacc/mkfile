@@ -22,15 +22,16 @@ PROG=ocamlyacc
 <$TOP/mkconfig
 <$TOP/mkprog
 
-beforedepend:V: lexer.ml parser.ml parser.mli
-depend:V: beforedepend
+#<$TOP/mkparser
 
-distclean:V: clean
-	rm -f lexer.ml parser.ml parser.mli 
+AUTOGEN=lexer.ml parser.ml parser.mli
+NUKEFILES=$AUTOGEN
+
+beforedepend:V: $AUTOGEN
+depend:V: beforedepend
 
 lexer.ml:D: lexer.mll
 	$OCAMLLEX $prereq
-
 parser.ml parser.mli: parser.mly
 	$OCAMLYACC $prereq
 	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml

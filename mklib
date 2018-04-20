@@ -13,7 +13,7 @@ lib.cma: $OBJS
 lib.cmxa: ${OBJS:%.cmo=%.cmx}
 	$OCAMLOPT $INCLUDES $prereq -a -o $target
 
-clean:V:
+clean nuke:V:
 	rm -f *.cm[ioxa] *.cmxa *.o *.a  *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out
 

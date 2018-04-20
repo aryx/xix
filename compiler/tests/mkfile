@@ -1,4 +1,2 @@
 clean:V:
         rm -f *.5 *.out *.s
-
-

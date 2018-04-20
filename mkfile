@@ -18,8 +18,14 @@ DIRS3=kernel
 
 DIRS=$DIRS1 #$DIRS2 #DIRS3
 
+TESTDIRS=\
+  assembler/tests compiler/tests linker/tests \
+  mk/tests windows/tests \
+  lib_system/plan9/tests
+
 all:V: all.directories
 opt:V: opt.directories
+depend:V: depend.directories
 
 %.directories:V:
 	for(i in $DIRS) @{
@@ -29,8 +35,8 @@ opt:V: opt.directories
 	}
 
 # alternate style to the %.directories trick; even simpler
-clean nuke depend:V:
-	for(i in $DIRS) @{
+clean nuke:V:
+	for(i in $DIRS $TESTDIRS) @{
 		cd $i
 		mk $MKFLAGS $target
 	}

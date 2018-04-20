@@ -1,2 +1,2 @@
-clean:V:
+clean nuke:V:
 	rm -f *.5

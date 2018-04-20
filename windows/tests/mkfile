@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons2 \
@@ -33,7 +32,7 @@ test_rio_console_app1: test_rio_console_app1.cmo
 hellorio: hellorio.cmo
 	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
 
-clean:V:
+clean nuke:V:
 	rm -f $PROGS *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out *.output
 

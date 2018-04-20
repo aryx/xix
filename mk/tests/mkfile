@@ -4,5 +4,5 @@ MK=../mk -v
 %:V:
 	$MK -f $target
 
-clean:V:
+clean nuke:V:
         rm -f *.5 foo

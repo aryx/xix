@@ -1,5 +1,5 @@
-# -*- sh -*-
 TOP=../../..
+
 #############################################################################
 # Compilers
 #############################################################################
@@ -47,7 +47,7 @@ test_bind: $LIBS test_bind.cmo
 test_mount: $LIBS test_mount.cmo
 	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
-clean:V:
+clean nuke:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS
 
 depend:V:

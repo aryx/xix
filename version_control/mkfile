@@ -79,3 +79,4 @@ archi.ps: $SRC
 
 archi.pdf: archi.ps
     ps2pdf archi.ps
+

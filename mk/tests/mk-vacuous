@@ -1,3 +1,4 @@
+# run with -v to see mk detecting vacuous nodes
 
 all: foo.o
 

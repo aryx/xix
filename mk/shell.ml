@@ -11,6 +11,7 @@ open Common
 
 type t = { 
   path: Common.filename;
+  name: string;
   flags: string list;
   (* environment word separator *)
   iws: string;
@@ -22,6 +23,7 @@ type t = {
 
 let sh = {
   path = "/bin/sh";
+  name = "sh";
   flags = [];
   iws = " ";
   debug_flags = (fun () -> []);
@@ -29,6 +31,7 @@ let sh = {
 
 let rc = {
   path = "/usr/bin/rc";
+  name = "rc";
   flags = ["-I"]; (* non-interactive so does not display a prompt *)
   iws = "\001";
   debug_flags = (fun () -> if !Flags.verbose then ["-v"] else []);
@@ -69,9 +72,14 @@ let exec_shell shellenv flags extra_params =
   if !Flags.verbose
   then pr2 (spf "exec_shell: %s %s" shell.path (String.concat " " args));
   (try 
+     (* to debug pass instead "/usr/bin/strace" 
+        (Array.of_list ("strace"::shell.path::args)) *)
      Unix.execve 
-       shell.path 
-       (Array.of_list args)
+       (* bugfix: need to pass shell.name too! otherwise the first elt
+        * in args (usually '-e') will be taken for the prog name and skipped
+        * by the shell (and mk will not stop at the first error)
+        *)
+       shell.path (Array.of_list (shell.name::args))
        (Array.of_list env)
       |> ignore;
    with Unix.Unix_error (err, fm, argm) -> 
@@ -125,6 +133,7 @@ let exec_recipe shellenv flags inputs interactive =
          failwith (spf "Could not create temporary file (error = %s)" s)
       ); 
       exec_shell shellenv flags [tmpfile]
+      (* less: delete tmpfile *)
     (* unreachable *)
     end else begin
 

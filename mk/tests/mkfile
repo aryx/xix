@@ -1,2 +1,8 @@
+MKSHELL=/home/pad/packages/stow/plan9port/bin/rc
+MK=../mk -v
+
+%:V:
+	$MK -f $target
+
 clean:V:
         rm -f *.5 foo

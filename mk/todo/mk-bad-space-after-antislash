@@ -1,0 +1,8 @@
+X1=\
+   foo1.c\
+   foo2.c\
+   foo3.c\ 
+   bad_space_prev_line.c
+
+xx:
+	echo $X1        

@@ -327,7 +327,7 @@ ocaml.c: $CMO mkfile
 
 
 clean:V:
-	rm -f $OBJ $CMO ocaml.c 9minimal */*.cmi
+	rm -f $OBJ $CMO ocaml.c 9minimal */*.cmi *.cmi
 
 run:V:
 	qemu-system-arm -M raspi2 -bios 9minimal

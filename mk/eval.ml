@@ -198,26 +198,18 @@ let eval env targets_ref xs =
         instrs xs
 
       | A.Definition (s, ws) ->
-          (* todo: handle override variables *)
-
-          (* stricter: forbid redefinitions.
-           * (bug: but ok to redefine variable from environment, otherwise
-           *  hard to use mk recursively, hence the use of vars_we_set below)
-           * less: could allow to redefine in strict mode if previous
-           *  def was empty.
-           *)
-          if Hashtbl.mem env.E.vars s && Hashtbl.mem env.E.vars_we_set s 
-             && !Flags.strict_mode
-          then error loc (spf "redefinition of %s" s);
-
-          Hashtbl.add env.E.vars_we_set s true;
-
-          let res = eval_words loc env ws in
-          (match res with
-          | Left xs -> Hashtbl.replace env.E.vars s xs
+        let xs = 
+          match eval_words loc env ws with
+          | Left xs -> xs
           (* stricter: no dynamic patterns *)
           | Right _ -> error loc "use quotes for variable definitions with %"
-          )
+        in
+        (try 
+          Env.add_var env s xs
+         with Env.Redefinition s ->
+           error loc (spf "redefinition of %s" s)
+        );
+        Hashtbl.add env.E.vars_we_set s true;
 
       | A.Rule r -> 
           let targets = eval_words loc env r.A.targets in

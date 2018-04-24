@@ -15,9 +15,12 @@ open Common
 type values = string list
 
 type t = {
+  (* use Env.add_var to add a var (to check if it's ok) *)
   vars         : (string, values) Hashtbl.t;
   internal_vars: (string, values) Hashtbl.t;
 
+  (* those vars can not be overriden by the mkfile *)
+  vars_commandline: (string, bool) Hashtbl.t;
   vars_we_set: (string, bool) Hashtbl.t;
 }
 
@@ -36,7 +39,29 @@ let check_values xs =
     if s = ""
     then raise (Impossible (spf "empty string in values"))
   )
-  
+
+exception Redefinition of string
+let add_var env s xs = 
+  match () with
+  | _ when Hashtbl.mem env.vars_commandline s ->
+    (* we do not override those vars *)
+    if !Flags.verbose
+    then pr2 (spf "ignoring definition of %s specified on the command-line" s);
+    ()
+
+  (* stricter: forbid redefinitions.
+   * (bug: but ok to redefine variable from environment, otherwise
+   *  hard to use mk recursively, hence the use of vars_we_set below)
+   * less: could allow to redefine in strict mode if previous
+   *  def was empty.
+   *)
+  | _ when Hashtbl.mem env.vars s && Hashtbl.mem env.vars_we_set s 
+      && !Flags.strict_mode ->
+    raise (Redefinition s)
+  | _ ->
+    Hashtbl.replace env.vars s xs
+
+
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
@@ -66,7 +91,7 @@ let initenv () =
   (* for recursive mk *)
   let mkflags = 
     Sys.argv |> Array.fold_left (fun acc s ->
-      if s =~ "^-"
+      if s =~ "^-" || s=~ ".*=.*"
       then s::acc
       else acc
     ) []
@@ -77,6 +102,7 @@ let initenv () =
   { vars          = vars;
     internal_vars = internal;
     vars_we_set   = Hashtbl.create 101;
+    vars_commandline   = Hashtbl.create 101;
   }
 
 let shellenv_of_env env =

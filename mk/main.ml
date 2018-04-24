@@ -74,7 +74,6 @@ module R = Rules
  *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja),
  *    or foo.cmo <- foo.ml, foo.byte <- foo.cmo bar.cmo ...
  *  - some flags (-a, etc)
- *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS
  *  - improve speed:
  *    * -u
  *    * use nproc for environment
@@ -157,15 +156,23 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 
 
-let (build_targets: Common.filename -> string list ref -> unit) = 
- fun infile targets ->
+let (build_targets: Common.filename -> string list ref -> (string*string) list
+     -> unit) = 
+ fun infile targets vars ->
 
     (* initialisation *)
     let env = Env.initenv() in
+    vars |> List.iter (fun (var, value) ->
+     (* stricter: we do not allow list of strings for value for command-line
+      * vars, but anyway I'm not sure how they could be parsed by Arg
+      *)
+      Env.add_var env var [value];
+      Hashtbl.add env.Env.vars_commandline var true;
+    );
     
     if !Flags.debugger then begin
       Sys.chdir (Filename.dirname infile);
-      Hashtbl.add env.Env.vars "objtype" ["386"]
+      Env.add_var env "objtype" ["386"]
     end;
 
     (* parsing (and evaluating) *)
@@ -197,6 +204,7 @@ let (build_targets: Common.filename -> string list ref -> unit) =
 let main () =
   let infile  = ref "mkfile" in
   let targets = ref [] in
+  let vars = ref [] in
 
   (* for debugging *)
   let action = ref "" in
@@ -253,8 +261,12 @@ let main () =
   ]
   in
   Arg.parse (Arg.align options) (fun t -> 
-    (* less: handle also xx=yy *)
-    targets := t :: !targets
+    match t with
+    | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
+      let (var, value) = Regexp_.matched2 t in
+      vars := (var, value)::!vars;
+    | _ ->
+      targets := t :: !targets
   ) usage;
 
   (* to test and debug components of mk *)
@@ -264,7 +276,7 @@ let main () =
   end;
 
   try 
-    build_targets !infile targets
+    build_targets !infile targets !vars
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn

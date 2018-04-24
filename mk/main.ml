@@ -65,9 +65,6 @@ module R = Rules
  *  - less use of globals, pass them around
  * 
  * todo:
- *  - bug: mk does not stop when error in subdir
- *    mk recursive should stop at first dir with pb! rc -e works?
- *    mk-sh works? rewrite for loop for sh?
  *  - store all output of children process and output only
  *    command that generates error! luisa will be happier :) no more long
  *    command line scrolling
@@ -77,7 +74,6 @@ module R = Rules
  *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja),
  *    or foo.cmo <- foo.ml, foo.byte <- foo.cmo bar.cmo ...
  *  - some flags (-a, etc)
- *  - dynamic mkfile? to makeup for lack of ifdef?
  *  - xx=yyy overriding and S_OVERRIDE, and also MKARGS
  *  - improve speed:
  *    * -u

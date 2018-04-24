@@ -248,11 +248,11 @@ let rec build_trees dirs dirpath add_tree_obj =
 (*e: function [[Index.build_trees]] *)
 
 
-(*s: function [[Index.tree_of_index]] *)
+(*s: function [[Index.trees_of_index]] *)
 let trees_of_index idx add_tree_obj =
   let (dirs: dirs) = Hashtbl.create 11 in
   (* populate dirs *)
-  (*s: [[Index.tree_of_index()]] populate [[dirs]] *)
+  (*s: [[Index.trees_of_index()]] populate [[dirs]] *)
   Hashtbl.add dirs "." (ref []);
   idx |> List.iter (fun entry ->
     let relpath = entry.path in
@@ -260,12 +260,12 @@ let trees_of_index idx add_tree_obj =
     let dir = find_dir dirs dirpath in
     dir := (File (base, entry))::!dir
   );
-  (*e: [[Index.tree_of_index()]] populate [[dirs]] *)
+  (*e: [[Index.trees_of_index()]] populate [[dirs]] *)
   (* build trees *)
-  (*s: [[Index.tree_of_index()]] build trees from [[dirs]] *)
+  (*s: [[Index.trees_of_index()]] build trees from [[dirs]] *)
   build_trees dirs "." add_tree_obj
-  (*e: [[Index.tree_of_index()]] build trees from [[dirs]] *)
-(*e: function [[Index.tree_of_index]] *)
+  (*e: [[Index.trees_of_index()]] build trees from [[dirs]] *)
+(*e: function [[Index.trees_of_index]] *)
 
 (*****************************************************************************)
 (* index of tree *)

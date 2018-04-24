@@ -84,7 +84,7 @@ val remove_entry: t -> Common.filename -> t
 val add_entry: t -> entry -> t
 (*e: signature [[Index.add_entry]] *)
 
-(*s: signature [[Index.tree_of_index]] *)
+(*s: signature [[Index.trees_of_index]] *)
 val trees_of_index: t -> (* add_obj *)(Tree.t -> Tree.hash) -> Tree.hash
-(*e: signature [[Index.tree_of_index]] *)
+(*e: signature [[Index.trees_of_index]] *)
 (*e: version_control/index.mli *)

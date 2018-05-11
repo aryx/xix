@@ -22,14 +22,14 @@ open Parser
 
 exception Lexical_error of string
 
-(*s: Lexer helper functions and globals (yacc) *)
+(*s: Lexer helper functions and globals(yacc) *)
 let comment_depth = ref 0
-(*x: Lexer helper functions and globals (yacc) *)
+(*x: Lexer helper functions and globals(yacc) *)
 let brace_depth = ref 0
-(*e: Lexer helper functions and globals (yacc) *)
+(*e: Lexer helper functions and globals(yacc) *)
 }
 
-(*s: rule Lexer.main (yacc) *)
+(*s: rule Lexer.main(yacc) *)
 rule main = parse
   (*s: [[Lexer.main()]] space case (yacc) *)
   | [' ' '\010' '\013' '\009' '\012' ] + 
@@ -89,9 +89,9 @@ rule main = parse
 | _
     { raise(Lexical_error
              ("illegal character " ^ String.escaped(Lexing.lexeme lexbuf))) }
-(*e: rule Lexer.main (yacc) *)
+(*e: rule Lexer.main(yacc) *)
 
-(*s: rule Lexer.action (yacc) *)
+(*s: rule Lexer.action(yacc) *)
 (* TODO: handle $x *)
 and action = parse
 | '{' 
@@ -109,9 +109,9 @@ and action = parse
 
 | eof { raise (Lexical_error "unterminated action") }
 | _   { action lexbuf }
-(*e: rule Lexer.action (yacc) *)
+(*e: rule Lexer.action(yacc) *)
 
-(*s: rule Lexer.comment (yacc) *)
+(*s: rule Lexer.comment(yacc) *)
 and comment = parse
 | "(*" 
     { incr comment_depth; 
@@ -124,17 +124,17 @@ and comment = parse
 
 | eof { raise(Lexical_error "unterminated comment") }
 | _ { comment lexbuf }
-(*e: rule Lexer.comment (yacc) *)
+(*e: rule Lexer.comment(yacc) *)
 
-(*s: rule Lexer.angle (yacc) *)
+(*s: rule Lexer.angle(yacc) *)
 and angle = parse
 | '>' { "" }
 | eof { raise(Lexical_error "unterminated type") }
 | [^'>']+ { let s = Lexing.lexeme lexbuf in s ^ angle lexbuf }
 | _ { let s = Lexing.lexeme lexbuf in s ^ angle lexbuf }
-(*e: rule Lexer.angle (yacc) *)
+(*e: rule Lexer.angle(yacc) *)
 
-(*s: backward compatible lexing rules (yacc) *)
+(*s: backward compatible lexing rules(yacc) *)
 (* to be backward compatible with ocamlyacc *)
 and action2 = parse
 | '{' 
@@ -164,5 +164,5 @@ and comment2 = parse
 | ['*''/']+ { comment2 lexbuf }
 | eof { raise (Lexical_error "unterminated C comment") }
 | _   { comment2 lexbuf }
-(*e: backward compatible lexing rules (yacc) *)
+(*e: backward compatible lexing rules(yacc) *)
 (*e: yacc/lexer.mll *)

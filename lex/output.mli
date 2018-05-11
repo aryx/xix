@@ -11,7 +11,7 @@
 (*                                                                     *)
 (***********************************************************************)
 (*e: copyright ocamllex *)
-(*s: signature Output.output_lexdef *)
+(*s: signature [[Output.output_lexdef]] *)
 (* Output the DFA tables and its entry points *)
 
 val output_lexdef:
@@ -21,7 +21,7 @@ val output_lexdef:
       Lexgen.automata_entry list ->
       Ast.location (* trailer *) ->
       unit
-(*e: signature Output.output_lexdef *)
+(*e: signature [[Output.output_lexdef]] *)
 
 val output_lexdef_simple:
       in_channel -> out_channel ->

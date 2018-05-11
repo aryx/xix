@@ -33,29 +33,29 @@ open Ast
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Check.error (yacc) *)
+(*s: type [[Check.error]](yacc) *)
 type error = unit
-(*e: type Check.error (yacc) *)
+(*e: type [[Check.error]](yacc) *)
 
-(*s: exception Check.Error (yacc) *)
+(*s: exception [[Check.Error]](yacc) *)
 exception Error of error
-(*e: exception Check.Error (yacc) *)
+(*e: exception [[Check.Error]](yacc) *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Check.report_error (yacc) *)
+(*s: function [[Check.report_error]](yacc) *)
 let report_error err =
   failwith "TODO"
-(*e: function Check.report_error (yacc) *)
+(*e: function [[Check.report_error]](yacc) *)
 
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
-(*s: function Check.check (yacc) *)
+(*s: function [[Check.check]](yacc) *)
 let check def =
   failwith "TODO"
-(*e: function Check.check (yacc) *)
+(*e: function [[Check.check]](yacc) *)
 
 (*e: yacc/check.ml *)

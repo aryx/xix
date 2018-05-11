@@ -11,7 +11,7 @@
 (*                                                                     *)
 (***********************************************************************)
 (*e: copyright ocamllex *)
-(*s: type Compact.lex_tables *)
+(*s: type [[Compact.lex_tables]] *)
 (* Compaction of an automata *)
 
 type lex_tables =
@@ -25,9 +25,9 @@ type lex_tables =
     tbl_trans: int array;                (* Transitions (compacted) *)
     tbl_check: int array;                (* Check (compacted) *)
   }
-(*e: type Compact.lex_tables *)
+(*e: type [[Compact.lex_tables]] *)
 
-(*s: signature Compact.compact_tables *)
+(*s: signature [[Compact.compact_tables]] *)
 val compact_tables: Lexgen.automata_matrix -> lex_tables
-(*e: signature Compact.compact_tables *)
+(*e: signature [[Compact.compact_tables]] *)
 (*e: lex/compact.mli *)

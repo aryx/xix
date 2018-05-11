@@ -31,37 +31,37 @@ module Map = Map_
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Lr0.ruleidx (yacc) *)
+(*s: type [[Lr0.ruleidx]](yacc) *)
 (* the index of the rule in env.g *)
 type ruleidx = R of int
-(*e: type Lr0.ruleidx (yacc) *)
-(*s: type Lr0.dotidx (yacc) *)
+(*e: type [[Lr0.ruleidx]](yacc) *)
+(*s: type [[Lr0.dotidx]](yacc) *)
 (* the dot position in the rhs of a rule *)
 type dotidx = D of int
-(*e: type Lr0.dotidx (yacc) *)
+(*e: type [[Lr0.dotidx]](yacc) *)
 
-(*s: type Lr0.stateid (yacc) *)
+(*s: type [[Lr0.stateid]](yacc) *)
 type stateid = S of int
-(*e: type Lr0.stateid (yacc) *)
+(*e: type [[Lr0.stateid]](yacc) *)
 
-(*s: type Lr0.item (yacc) *)
+(*s: type [[Lr0.item]](yacc) *)
 (* as mentionned in the dragon book *)
 type item = ruleidx * dotidx
-(*e: type Lr0.item (yacc) *)
+(*e: type [[Lr0.item]](yacc) *)
 
-(*s: type Lr0.items (yacc) *)
+(*s: type [[Lr0.items]](yacc) *)
 (* a.k.a an LR0 state *)
 type items = item Set_.t
-(*e: type Lr0.items (yacc) *)
+(*e: type [[Lr0.items]](yacc) *)
 
-(*s: type Lr0.env (yacc) *)
+(*s: type [[Lr0.env]](yacc) *)
 type env = {
   (* augmented grammar where r0 is $S -> start_original_grammar *)
   g: Ast.rule array;
 }
-(*e: type Lr0.env (yacc) *)
+(*e: type [[Lr0.env]](yacc) *)
 
-(*s: type Lr0.automaton (yacc) *)
+(*s: type [[Lr0.automaton]](yacc) *)
 type automaton = {
   states: items Set_.t;
   (* state 0 is the starting state *)
@@ -70,20 +70,20 @@ type automaton = {
   (* goto mapping *)
   trans: (items * Ast.symbol, items) Map_.t;
 }
-(*e: type Lr0.automaton (yacc) *)
+(*e: type [[Lr0.automaton]](yacc) *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Lr0.mk_env_augmented_grammar (yacc) *)
+(*s: function [[Lr0.mk_env_augmented_grammar]](yacc) *)
 let mk_env_augmented_grammar start xs =
   let noloc = Location (0, 0) in
   let start = {lhs = Ast.start_nonterminal; rhs =[Nonterm start]; act=noloc} in
   { g = Array.of_list (start::xs) }
-(*e: function Lr0.mk_env_augmented_grammar (yacc) *)
+(*e: function [[Lr0.mk_env_augmented_grammar]](yacc) *)
 
-(*s: function Lr0.rules_of (yacc) *)
+(*s: function [[Lr0.rules_of]](yacc) *)
 let rules_of nt env =
   let res = ref [] in
   env.g |> Array.iteri (fun idx r ->
@@ -91,34 +91,34 @@ let rules_of nt env =
     then res := (R idx) :: !res
   );
   List.rev !res
-(*e: function Lr0.rules_of (yacc) *)
+(*e: function [[Lr0.rules_of]](yacc) *)
 
-(*s: function Lr0.after_dot (yacc) *)
+(*s: function [[Lr0.after_dot]](yacc) *)
 let after_dot r (D idx) =
   try Some (List.nth r.rhs idx)
   with Failure _ -> None
-(*e: function Lr0.after_dot (yacc) *)
+(*e: function [[Lr0.after_dot]](yacc) *)
 
-(*s: function Lr0.move_dot_right (yacc) *)
+(*s: function [[Lr0.move_dot_right]](yacc) *)
 let move_dot_right (D idx) = 
   (D (idx + 1))
-(*e: function Lr0.move_dot_right (yacc) *)
+(*e: function [[Lr0.move_dot_right]](yacc) *)
 
-(*s: function Lr0.all_symbols (yacc) *)
+(*s: function [[Lr0.all_symbols]](yacc) *)
 let all_symbols env =
   env.g |> Array.fold_left (fun acc r ->
     ((Nonterm r.lhs)::r.rhs) |> List.fold_left (fun acc symbol ->
       Set.add symbol acc
       ) acc
   ) Set.empty
-(*e: function Lr0.all_symbols (yacc) *)
+(*e: function [[Lr0.all_symbols]](yacc) *)
 
 
 (*****************************************************************************)
 (* Algorithms *)
 (*****************************************************************************)
 
-(*s: function Lr0.closure (yacc) *)
+(*s: function [[Lr0.closure]](yacc) *)
 (* todo: opti: use kernel items *)
 let closure env items =
   let result = ref items in
@@ -145,9 +145,9 @@ let closure env items =
     )
   done;
   !result
-(*e: function Lr0.closure (yacc) *)
+(*e: function [[Lr0.closure]](yacc) *)
 
-(*s: function Lr0.goto (yacc) *)
+(*s: function [[Lr0.goto]](yacc) *)
 let goto env items symbol =
   let start =
     Set.fold (fun item acc ->
@@ -160,13 +160,13 @@ let goto env items symbol =
     ) items Set.empty
   in
   closure env start
-(*e: function Lr0.goto (yacc) *)
+(*e: function [[Lr0.goto]](yacc) *)
 
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
 
-(*s: function Lr0.canonical_lr0_automaton (yacc) *)
+(*s: function [[Lr0.canonical_lr0_automaton]](yacc) *)
 let canonical_lr0_automaton env =
   let start_item = (R 0, D 0) in
   let start_items = closure env (Set.singleton start_item) in
@@ -212,5 +212,5 @@ let canonical_lr0_automaton env =
     state_to_int = items_to_int;
     trans = trans
   }
-(*e: function Lr0.canonical_lr0_automaton (yacc) *)
+(*e: function [[Lr0.canonical_lr0_automaton]](yacc) *)
 (*e: yacc/lr0.ml *)

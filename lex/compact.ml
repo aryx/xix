@@ -15,7 +15,7 @@
 
 open Lexgen
 
-(*s: function Compact.most_frequent_elt *)
+(*s: function [[Compact.most_frequent_elt]] *)
 (* Determine the integer occurring most frequently in an array *)
 
 let most_frequent_elt v =
@@ -37,9 +37,9 @@ let most_frequent_elt v =
     end
   done;
   !most_freq
-(*e: function Compact.most_frequent_elt *)
+(*e: function [[Compact.most_frequent_elt]] *)
 
-(*s: function Compact.non_default_elements *)
+(*s: function [[Compact.non_default_elements]] *)
 (* Transform an array into a list of (position, non-default element) *)
 
 let non_default_elements def v =
@@ -51,22 +51,22 @@ let non_default_elements def v =
       if e = def then nondef(i+1) else (i, e) :: nondef(i+1)
     end in
   nondef 0
-(*e: function Compact.non_default_elements *)
+(*e: function [[Compact.non_default_elements]] *)
 
 (* Compact the transition and check arrays *)
 
-(*s: global Compact.trans *)
+(*s: global [[Compact.trans]] *)
 let trans = ref(Array.create 1024 0)
-(*e: global Compact.trans *)
-(*s: global Compact.check *)
+(*e: global [[Compact.trans]] *)
+(*s: global [[Compact.check]] *)
 let check = ref(Array.create 1024 (-1))
-(*e: global Compact.check *)
-(*s: global Compact.last_used *)
+(*e: global [[Compact.check]] *)
+(*s: global [[Compact.last_used]] *)
 let last_used = ref 0
-(*e: global Compact.last_used *)
+(*e: global [[Compact.last_used]] *)
 
 
-(*s: function Compact.grow_transitions *)
+(*s: function [[Compact.grow_transitions]] *)
 let grow_transitions () =
   let old_trans = !trans
   and old_check = !check in
@@ -75,9 +75,9 @@ let grow_transitions () =
   Array.blit old_trans 0 !trans 0 !last_used;
   check := Array.create (2*n) (-1);
   Array.blit old_check 0 !check 0 !last_used
-(*e: function Compact.grow_transitions *)
+(*e: function [[Compact.grow_transitions]] *)
 
-(*s: function Compact.pack_moves *)
+(*s: function [[Compact.pack_moves]] *)
 let pack_moves state_num move_t =
   let move_v = Array.create 257 0 in
   for i = 0 to 256 do
@@ -109,9 +109,9 @@ let pack_moves state_num move_t =
   if base + 257 > !last_used 
   then last_used := base + 257;
   (base, default)
-(*e: function Compact.pack_moves *)
+(*e: function [[Compact.pack_moves]] *)
 
-(*s: type Compact.lex_tables *)
+(*s: type [[Compact.lex_tables]] *)
 (* Compaction of an automata *)
 
 type lex_tables =
@@ -125,9 +125,9 @@ type lex_tables =
     tbl_trans: int array;                (* Transitions (compacted) *)
     tbl_check: int array;                (* Check (compacted) *)
   }
-(*e: type Compact.lex_tables *)
+(*e: type [[Compact.lex_tables]] *)
 
-(*s: function Compact.compact_tables *)
+(*s: function [[Compact.compact_tables]] *)
 let compact_tables state_v =
   let n = Array.length state_v in
 
@@ -155,6 +155,6 @@ let compact_tables state_v =
     tbl_trans = Array.sub !trans 0 !last_used;
     tbl_check = Array.sub !check 0 !last_used;
   }
-(*e: function Compact.compact_tables *)
+(*e: function [[Compact.compact_tables]] *)
 
 (*e: lex/compact.ml *)

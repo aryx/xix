@@ -18,13 +18,13 @@ open Ast
 open Lexgen
 open Compact
 
-(*s: constant Output.copy_buffer *)
+(*s: constant [[Output.copy_buffer]] *)
 (* To copy the ML code fragments *)
 
 let copy_buffer = String.create 1024
-(*e: constant Output.copy_buffer *)
+(*e: constant [[Output.copy_buffer]] *)
 
-(*s: function Output.copy_chunk *)
+(*s: function [[Output.copy_chunk]] *)
 let copy_chunk ic oc (Location(start,stop)) =
   seek_in ic start;
   let n = ref (stop - start) in
@@ -33,9 +33,9 @@ let copy_chunk ic oc (Location(start,stop)) =
     output oc copy_buffer 0 m;
     n := !n - m
   done
-(*e: function Output.copy_chunk *)
+(*e: function [[Output.copy_chunk]] *)
 
-(*s: function Output.output_byte *)
+(*s: function [[Output.output_byte]] *)
 (* To output an array of short ints, encoded as a string *)
 
 let output_byte oc b =
@@ -43,9 +43,9 @@ let output_byte oc b =
   output_char oc (Char.chr(48 + b / 100));
   output_char oc (Char.chr(48 + (b / 10) mod 10));
   output_char oc (Char.chr(48 + b mod 10))
-(*e: function Output.output_byte *)
+(*e: function [[Output.output_byte]] *)
 
-(*s: function Output.output_array *)
+(*s: function [[Output.output_array]] *)
 let output_array oc v =
   output_string oc "   \"";
   for i = 0 to Array.length v - 1 do
@@ -54,9 +54,9 @@ let output_array oc v =
     if i land 7 = 7 then output_string oc "\\\n    "
   done;
   output_string oc "\""
-(*e: function Output.output_array *)
+(*e: function [[Output.output_array]] *)
 
-(*s: function Output.output_tables *)
+(*s: function [[Output.output_tables]] *)
 (* Output the tables *)
 
 let output_tables oc tbl =
@@ -67,9 +67,9 @@ let output_tables oc tbl =
   fprintf oc "  Lexing.lex_trans = \n%a;\n" output_array tbl.tbl_trans;
   fprintf oc "  Lexing.lex_check = \n%a\n" output_array tbl.tbl_check;
   output_string oc "}\n\n"
-(*e: function Output.output_tables *)
+(*e: function [[Output.output_tables]] *)
 
-(*s: function Output.output_entry *)
+(*s: function [[Output.output_entry]] *)
 (* Output the entries *)
 
 let output_entry ic oc e =
@@ -88,9 +88,9 @@ let output_entry ic oc e =
   );
   fprintf oc "  | n -> lexbuf.Lexing.refill_buff lexbuf; %s_rec lexbuf n\n\n"
           e.auto_name
-(*e: function Output.output_entry *)
+(*e: function [[Output.output_entry]] *)
 
-(*s: function Output.output_lexdef *)
+(*s: function [[Output.output_lexdef]] *)
 (* Main output function *)
 
 let output_lexdef ic oc header tables entry_points trailer =
@@ -118,7 +118,7 @@ let output_lexdef ic oc header tables entry_points trailer =
   );
   (*e: [[Output.output_lexdef()]] generate entry points *)
   copy_chunk ic oc trailer
-(*e: function Output.output_lexdef *)
+(*e: function [[Output.output_lexdef]] *)
 
 (*****************************************************************************)
 (* Simpler version *)

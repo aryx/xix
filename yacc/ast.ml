@@ -20,55 +20,55 @@
 (* Types *)
 (*****************************************************************************)
 
-(*s: type Ast.term (yacc) *)
+(*s: type [[Ast.term]](yacc) *)
 (* uppercase string *)
 type term = T of string
-(*e: type Ast.term (yacc) *)
-(*s: type Ast.nonterm (yacc) *)
+(*e: type [[Ast.term]](yacc) *)
+(*s: type [[Ast.nonterm]](yacc) *)
 (* lowercase string *)
 type nonterm = NT of string
-(*e: type Ast.nonterm (yacc) *)
+(*e: type [[Ast.nonterm]](yacc) *)
 
-(*s: type Ast.symbol (yacc) *)
+(*s: type [[Ast.symbol]](yacc) *)
 type symbol = Term of term | Nonterm of nonterm
-(*e: type Ast.symbol (yacc) *)
+(*e: type [[Ast.symbol]](yacc) *)
 
-(*s: type Ast.charpos (yacc) *)
+(*s: type [[Ast.charpos]](yacc) *)
 type charpos = int
-(*e: type Ast.charpos (yacc) *)
-(*s: type Ast.location (yacc) *)
+(*e: type [[Ast.charpos]](yacc) *)
+(*s: type [[Ast.location]](yacc) *)
 type location =
     Location of charpos * charpos
-(*e: type Ast.location (yacc) *)
-(*s: type Ast.action (yacc) *)
+(*e: type [[Ast.location]](yacc) *)
+(*s: type [[Ast.action]](yacc) *)
 (* the slice may contain the special $<digit> markers *)
 type action = location
-(*e: type Ast.action (yacc) *)
+(*e: type [[Ast.action]](yacc) *)
 
-(*s: type Ast.grammar (yacc) *)
+(*s: type [[Ast.grammar]](yacc) *)
 type grammar = rule list
-(*e: type Ast.grammar (yacc) *)
-(*s: type Ast.rule_ (yacc) *)
+(*e: type [[Ast.grammar]](yacc) *)
+(*s: type [[Ast.rule_]](yacc) *)
   and rule = {
     lhs: nonterm;
     rhs: symbol list;
     act: action;
   }
-(*e: type Ast.rule_ (yacc) *)
+(*e: type [[Ast.rule_]](yacc) *)
 
-(*s: type Ast.directive (yacc) *)
+(*s: type [[Ast.directive]](yacc) *)
 type directive =
   | Token of type_ option * term
   | Start of nonterm
   | Type of type_ * nonterm
   | Prec of unit (* TODO *)
-(*e: type Ast.directive (yacc) *)
+(*e: type [[Ast.directive]](yacc) *)
 
-(*s: type Ast.type_ (yacc) *)
+(*s: type [[Ast.type_]](yacc) *)
   and type_ = string
-(*e: type Ast.type_ (yacc) *)
+(*e: type [[Ast.type_]](yacc) *)
 
-(*s: type Ast.parser_definition (yacc) *)
+(*s: type [[Ast.parser_definition]](yacc) *)
 (* main data structure *)
 type parser_definition = {
   header: location;
@@ -76,31 +76,31 @@ type parser_definition = {
   grm: grammar;
   trailer: location;
 }
-(*e: type Ast.parser_definition (yacc) *)
+(*e: type [[Ast.parser_definition]](yacc) *)
 
-(*s: constant Ast.noloc (yacc) *)
+(*s: constant [[Ast.noloc]](yacc) *)
 let noloc = Location(0, 0)
-(*e: constant Ast.noloc (yacc) *)
+(*e: constant [[Ast.noloc]](yacc) *)
 
 (* for the augmented grammar *)
 
-(*s: constant Ast.start_nonterminal (yacc) *)
+(*s: constant [[Ast.start_nonterminal]](yacc) *)
 (* They should not conflict with user-defined terminals or non terminals
  * because nonterminals cannot contain '$' according to lexer.mll and 
  * terminals must start with an uppercase letter according again
  * to lexer.mll
  *)
 let start_nonterminal = NT "S$"
-(*e: constant Ast.start_nonterminal (yacc) *)
-(*s: constant Ast.dollar_terminal (yacc) *)
+(*e: constant [[Ast.start_nonterminal]](yacc) *)
+(*s: constant [[Ast.dollar_terminal]](yacc) *)
 let dollar_terminal = T "$"
-(*e: constant Ast.dollar_terminal (yacc) *)
+(*e: constant [[Ast.dollar_terminal]](yacc) *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
-(*s: function Ast.start_symbol (yacc) *)
+(*s: function [[Ast.start_symbol]](yacc) *)
 let start_symbol def =
   try 
     (match
@@ -113,5 +113,5 @@ let start_symbol def =
      | _ -> failwith "impossible"
     )
   with Not_found -> failwith "no start symbol found"
-(*e: function Ast.start_symbol (yacc) *)
+(*e: function [[Ast.start_symbol]](yacc) *)
 (*e: yacc/ast.ml *)

@@ -34,7 +34,7 @@ open Ast
 (* Main entry point *)
 (*****************************************************************************)
 
-(*s: function Main.main (yacc) *)
+(*s: function [[Main.main]](yacc) *)
 let main () =
 
   if Array.length Sys.argv != 2 then begin
@@ -86,9 +86,9 @@ let main () =
   Output.output_parser def env tables ic oc;
   close_out oc;
   ()
-(*e: function Main.main (yacc) *)
+(*e: function [[Main.main]](yacc) *)
 
-(*s: toplevel Main._1 (yacc) *)
+(*s: toplevel [[Main._1]](yacc) *)
 let _ = 
 (*
   Tests.test_lr0 ();
@@ -98,5 +98,5 @@ let _ =
 *)
   Printexc.catch main (); 
   exit 0
-(*e: toplevel Main._1 (yacc) *)
+(*e: toplevel [[Main._1]](yacc) *)
 (*e: yacc/main.ml *)

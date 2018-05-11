@@ -36,11 +36,11 @@ module Map = Map_
 (*****************************************************************************)
 
 (* common.ml *)
-(*s: type Dump.either (yacc) *)
+(*s: type [[Dump.either]](yacc) *)
 type ('a,'b) either = Left of 'a | Right of 'b
-(*e: type Dump.either (yacc) *)
+(*e: type [[Dump.either]](yacc) *)
 
-(*s: function Dump.partition_either (yacc) *)
+(*s: function [[Dump.partition_either]](yacc) *)
 let partition_either f l =
   let rec part_either left right = function
   | [] -> (List.rev left, List.rev right)
@@ -49,18 +49,18 @@ let partition_either f l =
       | Left  e -> part_either (e :: left) right l
       | Right e -> part_either left (e :: right) l) in
   part_either [] [] l
-(*e: function Dump.partition_either (yacc) *)
+(*e: function [[Dump.partition_either]](yacc) *)
 
-(*s: function Dump.hash_of_list (yacc) *)
+(*s: function [[Dump.hash_of_list]](yacc) *)
 let hash_of_list xs =
   let h = Hashtbl.create 101 in
   xs |> List.iter (fun (k, v) -> Hashtbl.replace h k v);
   h
-(*e: function Dump.hash_of_list (yacc) *)
+(*e: function [[Dump.hash_of_list]](yacc) *)
 
 
 
-(*s: function Dump.string_of_symbol (yacc) *)
+(*s: function [[Dump.string_of_symbol]](yacc) *)
 let string_of_symbol s =
   match s with
   (* in ocamlyacc terminals are constructors and so are uppercase and
@@ -80,35 +80,35 @@ let string_of_symbol s =
 
     | _ -> String.lowercase s
     )
-(*e: function Dump.string_of_symbol (yacc) *)
+(*e: function [[Dump.string_of_symbol]](yacc) *)
 
-(*s: constant Dump.pf (yacc) *)
+(*s: constant [[Dump.pf]](yacc) *)
 let pf = Printf.printf
-(*e: constant Dump.pf (yacc) *)
-(*s: constant Dump.spf (yacc) *)
+(*e: constant [[Dump.pf]](yacc) *)
+(*s: constant [[Dump.spf]](yacc) *)
 let spf = Printf.sprintf
-(*e: constant Dump.spf (yacc) *)
+(*e: constant [[Dump.spf]](yacc) *)
 
-(*s: function Dump.string_of_action (yacc) *)
+(*s: function [[Dump.string_of_action]](yacc) *)
 let string_of_action x =
   match x with
   | Lrtables.Shift (S d) -> spf "s%d" d
   | Lrtables.Reduce (R d) -> spf "r%d" d
   | Lrtables.Accept -> spf "acc"
   | Lrtables.Error -> ""
-(*e: function Dump.string_of_action (yacc) *)
+(*e: function [[Dump.string_of_action]](yacc) *)
 
 
 (*****************************************************************************)
 (* Dumpers *)
 (*****************************************************************************)
 
-(*s: function Dump.dump_symbol (yacc) *)
+(*s: function [[Dump.dump_symbol]](yacc) *)
 let dump_symbol s =
   print_string (string_of_symbol s)
-(*e: function Dump.dump_symbol (yacc) *)
+(*e: function [[Dump.dump_symbol]](yacc) *)
 
-(*s: function Dump.dump_item (yacc) *)
+(*s: function [[Dump.dump_item]](yacc) *)
 let dump_item env item =
   let (R idx, D didx) = item in
   let r = env.g.(idx) in
@@ -134,9 +134,9 @@ let dump_item env item =
   close_box ();
 (*  print_space (); print_string "(R"; print_int idx; print_string ")" *)
   ()
-(*e: function Dump.dump_item (yacc) *)
+(*e: function [[Dump.dump_item]](yacc) *)
 
-(*s: function Dump.dump_items (yacc) *)
+(*s: function [[Dump.dump_items]](yacc) *)
 let dump_items env items =
   items 
   |> Set.elements |> List.sort (fun (R a, _) (R b, _) -> a - b)
@@ -146,9 +146,9 @@ let dump_items env items =
     close_box ();
     print_newline ();
   )
-(*e: function Dump.dump_items (yacc) *)
+(*e: function [[Dump.dump_items]](yacc) *)
 
-(*s: function Dump.dump_lr0_automaton (yacc) *)
+(*s: function [[Dump.dump_lr0_automaton]](yacc) *)
 let dump_lr0_automaton env auto =
 
   open_box 0;
@@ -173,10 +173,10 @@ let dump_lr0_automaton env auto =
   );
 
   close_box ()
-(*e: function Dump.dump_lr0_automaton (yacc) *)
+(*e: function [[Dump.dump_lr0_automaton]](yacc) *)
 
 
-(*s: function Dump.dump_lrtables (yacc) *)
+(*s: function [[Dump.dump_lrtables]](yacc) *)
 let dump_lrtables env lrtables =
   let symbols = Lr0.all_symbols env in
   let (action_table, goto_table) = lrtables in
@@ -239,6 +239,6 @@ let dump_lrtables env lrtables =
   pf "%d conflicts\n" (List.length !conflicts);
   pf "\n";
   ()
-(*e: function Dump.dump_lrtables (yacc) *)
+(*e: function [[Dump.dump_lrtables]](yacc) *)
 
 (*e: yacc/dump.ml *)

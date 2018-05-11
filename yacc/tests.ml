@@ -5,7 +5,7 @@ open Lr0
 module Set = Set_
 module Map = Map_
 
-(*s: constant Tests.arith (yacc) *)
+(*s: constant [[Tests.arith]](yacc) *)
 (* from tests/yacc/arith.mly which is a copy of the representative grammar in
  * the dragon book in 4.1
  * $S -> E         (R0)
@@ -35,8 +35,8 @@ let arith =
 let augmented_arith =
   {lhs = NT "$S"; rhs = [Nonterm (NT "e")]; act = noloc} :: arith
 *)
-(*e: constant Tests.arith (yacc) *)
-(*s: function Tests.test_lr0 (yacc) *)
+(*e: constant [[Tests.arith]](yacc) *)
+(*s: function [[Tests.test_lr0]](yacc) *)
 let test_lr0 () =
   let env = Lr0.mk_env_augmented_grammar (NT "e") arith in
 
@@ -53,9 +53,9 @@ let test_lr0 () =
   let _xs = Set.elements i6 in
   (* [(R 1, D 2); (R 3, D 0); (R 4, D 0); (R 5, D 0); (R 6, D 0)] *)
   ()
-(*e: function Tests.test_lr0 (yacc) *)
+(*e: function [[Tests.test_lr0]](yacc) *)
   
-(*s: function Tests.test_slr (yacc) *)
+(*s: function [[Tests.test_slr]](yacc) *)
 let test_slr () =
   let env = Lr0.mk_env_augmented_grammar (NT "e") arith in
 
@@ -71,10 +71,10 @@ let test_slr () =
 
   Dump.dump_lrtables env tables;
   ()
-(*e: function Tests.test_slr (yacc) *)
+(*e: function [[Tests.test_slr]](yacc) *)
 
 
-(*s: constant Tests.arith_ll (yacc) *)
+(*s: constant [[Tests.arith_ll]](yacc) *)
 (*
  * E -> E E'
  * E' -> + T E' | epsilon
@@ -108,9 +108,9 @@ let arith_ll =
      {lhs = NT "f"; 
       rhs = [Term (T "ID")];
       act = noloc}]
-(*e: constant Tests.arith_ll (yacc) *)
+(*e: constant [[Tests.arith_ll]](yacc) *)
 
-(*s: function Tests.test_first_follow (yacc) *)
+(*s: function [[Tests.test_first_follow]](yacc) *)
 let test_first_follow () =
   let (first, eps) = First_follow.compute_first arith_ll in
   let _first' = first |> Map.to_list |> List.map (fun (t, set) -> 
@@ -124,17 +124,17 @@ let test_first_follow () =
     t, Set.elements set)
   in
   ()
-(*e: function Tests.test_first_follow (yacc) *)
+(*e: function [[Tests.test_first_follow]](yacc) *)
 
 open Parsing_
 
-(*s: type Tests.token (yacc) *)
+(*s: type [[Tests.token]](yacc) *)
 type token =
   | T0
   | TEOF
-(*e: type Tests.token (yacc) *)
+(*e: type [[Tests.token]](yacc) *)
 
-(*s: function Tests.test_lr_engine (yacc) *)
+(*s: function [[Tests.test_lr_engine]](yacc) *)
 (* what we should generate *)
 let test_lr_engine () =
   let tokens = ref [T0; TEOF] in
@@ -165,7 +165,7 @@ let test_lr_engine () =
   let string_of_tok = function | T0 -> "T0" | TEOF -> "TEOF" in
   
   Parsing_.yyparse_simple lrtables rules_action lexfun string_of_tok lexbuf
-(*e: function Tests.test_lr_engine (yacc) *)
+(*e: function [[Tests.test_lr_engine]](yacc) *)
 
 
 (*e: yacc/tests.ml *)

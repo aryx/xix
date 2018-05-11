@@ -17,7 +17,7 @@ open Ast
 open Lexgen
 open Output
 
-(*s: function Main.main *)
+(*s: function [[Main.main]] *)
 let main () =
   (*s: [[Main.main()]] print lex usage if wrong number of arguments *)
   if Array.length Sys.argv != 2 then begin
@@ -72,12 +72,12 @@ let main () =
   Output.output_lexdef ic oc def.header tables entries def.trailer;
   close_in ic;
   close_out oc
-(*e: function Main.main *)
+(*e: function [[Main.main]] *)
 
-(*s: toplevel Main._1 *)
+(*s: toplevel [[Main._1]] *)
 let _ = 
   Printexc.catch main (); 
   exit 0
-(*e: toplevel Main._1 *)
+(*e: toplevel [[Main._1]] *)
 
 (*e: lex/main.ml *)

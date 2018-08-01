@@ -1,0 +1,8 @@
+TOP=..
+
+INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_core/commons
+SRC=widget.ml \
+  label.ml
+
+<$TOP/mkconfig
+<$TOP/mklib

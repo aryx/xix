@@ -1,0 +1,13 @@
+TOP=../..
+
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_gui
+
+SRC= hellogui.ml
+
+SYSLIBS=str.cma graphics.cma
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_gui/lib.cma
+
+PROG=hellogui
+
+<$TOP/mkconfig
+<$TOP/mkprog

@@ -1,4 +1,3 @@
-# -*- sh -*-
 DIRS= geometry draw input ui
 
 all:V: all.directories

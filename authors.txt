@@ -10,3 +10,5 @@ except:
  - version_control/unzip.ml            by Nicolas Canasse     (from extlib)
  - version_control/diff_myers.ml       by OOHASHI Daichi      (from ocaml-diff)
  - version_control/{index,user,...}.ml by Thomas Gazagnaire   (from ocaml-git)
+
+Note that most of the remaining code is inspired from code from Plan 9.

@@ -109,4 +109,4 @@ ocamlc.opt -g $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections 
 
 cd $TOP
 cp mk/mk shell/rc BOOTSTRAP/
-echo 'Copy mk/mk somewhere in your PATH. It assumes there is a /usr/bin/rc.'
+echo 'Copy BOOTSTRAP/mk somewhere in your PATH and sets MKSHELL to point to rc.'

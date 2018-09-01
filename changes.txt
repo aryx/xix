@@ -1,10 +1,15 @@
--*- org -*-
+# -*- org -*-
 
 * 0.11 (Q3 2018) (lib_gui?)
 
+internals: use of merlin (mk .merlin) via Efuns
+
 * 0.10 (Q2 2018) ()
 
-* 0.9 (Q1 2018) (GioGio at home a lot)
+* 0.9 (Q1 2018) ()
+GioGio at home a lot
+
+(work on syncweb -web_to_tex and code indexing)
 
 * -----------------------------------------------------------
 

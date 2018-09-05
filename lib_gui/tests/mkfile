@@ -1,13 +1,17 @@
 TOP=../..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_gui
+DEPS=lib_core/commons \
+ lib_gui/lib_graphics/geometry lib_gui/lib_graphics/input\
+ lib_gui/lib_graphics/draw \
+ lib_gui
 
 SRC= hellogui.ml
 
-SYSLIBS=str.cma graphics.cma
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_gui/lib.cma
-
 PROG=hellogui
+SYSLIBS=str.cma graphics.cma
+
+INCLUDES=${DEPS:%=-I $TOP/%}
+LIBS=${DEPS:%=$TOP/%/lib.cma}
 
 <$TOP/mkconfig
 <$TOP/mkprog

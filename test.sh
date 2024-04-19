@@ -1,5 +1,8 @@
 #!/bin/sh
-# Basic testing
+# Basic testing.
+# 
+# This script assume you ran first ./bootstrap-mk.sh before.
+#
 # LATER: ideally later we could switch to rc instead of sh
 
 # any error should abort the script
@@ -9,6 +12,5 @@ set -x
 
 # Just make sure at least the programs are not segfaulting
 # or dynamic linking errors
-
-./BOOTSTRAP/mk --help
-./BOOTSTRAP/rc --help
+./bin/mk --help
+./bin/rc --help

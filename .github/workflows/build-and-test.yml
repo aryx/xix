@@ -23,6 +23,7 @@ jobs:
         ocaml-compiler:
           - 3.10.0
           - 4.04.1
+          - 4.14.1
         os:
           - ubuntu-latest
 name: build-and-test

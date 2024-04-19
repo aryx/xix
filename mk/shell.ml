@@ -94,10 +94,10 @@ let exec_shell shellenv flags extra_params =
 
 let feed_shell_input inputs pipe_write =
   inputs |> List.iter (fun str ->
-    let n = Unix.write pipe_write str 0 (String.length str) in
+    let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
     if n < 0
     then failwith "Could not write in pipe to shell";
-    let n = Unix.write pipe_write "\n" 0 1 in
+    let n = Unix.write pipe_write (Bytes.of_string "\n") 0 1 in
     if n < 0
     then failwith "Could not write in pipe to shell";
   );
@@ -197,7 +197,7 @@ let exec_backquote shellenv input =
       | _ when n < 0 ->
         failwith "Could not read from pipe to shell";
       | _ -> 
-        let s = String.sub buffer 0 n in
+        let s = Bytes.sub_string buffer 0 n in
         s ^ loop_read ()
     in
     let output = loop_read () in

@@ -1,3 +1,5 @@
+// Build and test using setup-ocaml@v2 mostly.
+
 // ----------------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------------
@@ -6,75 +8,47 @@ local checkout = {
   uses: 'actions/checkout@v3',
 };
 
-local build_script = |||
-        ./configure
-        . ./env
-        mk
-        mk install
-|||;
-
 // ----------------------------------------------------------------------------
-// The jobs
+// The job
 // ----------------------------------------------------------------------------
 
-// Arch
-local build_x86_linux_arch_job = {
-  'runs-on': 'ubuntu-latest',
-  container: 'archlinux',
-  steps: [
-    checkout,
-    {
-      name: 'Install dependencies',
-      run: |||
-	pacman -Sy --noconfirm gcc lib32-glibc lib32-gcc-libs
-      |||,
-    },
-    {
-      name: 'Build',
-      run: build_script,
-    }
-  ]
-};
-
-// Alpine
-//local build_x86_linux_alpine_job = {
-//  'runs-on': 'ubuntu-latest',
-//  // alpine does not support gcc-multilib like ubuntu/arch
-//  // so simpler to start from a 32 bits alpine image
-//  // But this does not seem to work well with GHA :(
-//  container: 'i386/alpine',
-//  steps: [
-//    checkout,
-//    {
-//      name: 'Install dependencies',
-//      run: |||
-//	apk add bash gcc
-//      |||,
-//    },
-//    {
-//      name: 'Build',
-//      run: build_script,
-//    }
-//  ]
-//};
-
-// Ubuntu
-local build_x86_linux_ubuntu_job = {
+local job = {
+  // LATER:
+  //  strategy:
+  //    fail-fast: false
+  //    matrix:
+  //      os:
+  //        - macos-latest
+  //        - ubuntu-latest
+  //        - windows-latest
+  //      ocaml-compiler:
+  //        - "5.1"
+  //
+  //  runs-on: ${{ matrix.os }}
   'runs-on': 'ubuntu-latest',
   steps: [
     checkout,
     {
+      uses: "ocaml/setup-ocaml@v2",
+      with: {
+	// TODO: ${{ matrix.ocaml-compiler }}
+	'ocaml-compiler': "4.02.1",
+      }
+    },
+    {
       name: 'Install dependencies',
       run: |||
-	sudo apt update
-	sudo apt-get install -y gcc-multilib
+        echo No dependencies! This is xix! It does not need anything!
       |||,
     },
     {
-      name: 'Build',
-      run: build_script,
-    }
-  ]
+      name: 'Build mk/rc',
+      run: |||
+        eval $(opam env)
+        ./bootstrap-mk.sh
+      |||,
+    },
+  ],
 };
 
 // ----------------------------------------------------------------------------
@@ -93,10 +67,14 @@ local build_x86_linux_ubuntu_job = {
         'master',
       ],
     },
+    schedule: [
+      {
+        // every day at 12:59
+        cron: '59 12 * * *',
+      },
+    ],
   },
   jobs: {
-    'build-x86-linux-arch': build_x86_linux_arch_job,
-    //'build-x86-linux-alpine': build_x86_linux_alpine_job,
-    'build-x86-linux-ubuntu': build_x86_linux_ubuntu_job,
+    job: job,
   },
 }

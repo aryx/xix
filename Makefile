@@ -23,7 +23,7 @@ all:
 	@echo use ./bootstrap-mk.sh and then BOOTSTRAP/mk instead of make
 
 clean:
-	echo TODO: git clean -fX
+	git clean -fX
 
 ###############################################################################
 # Developer targets

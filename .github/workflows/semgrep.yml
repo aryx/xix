@@ -1,0 +1,25 @@
+jobs:
+  job:
+    runs-on: ubuntu-20.04
+    container:
+      # living on the edge!
+      image: semgrep/semgrep:develop
+    #TODO: at some point
+    #env:
+    #  SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+    # ...
+    # run: semgrep ci
+    steps:
+      - uses: actions/checkout@v3
+      # coupling: with Makefile 'make check' target
+      - run: semgrep scan --experimental --config semgrep.jsonnet --strict --error
+
+name: semgrep
+on:
+  pull_request_target: {}
+  workflow_dispatch: null
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: 50 15 * * *

@@ -1,8 +1,12 @@
 # -*- org -*-
 
-* 0.13 (Q2 2024) ()
+* 0.13 (Q2 2024) (GHA and semgrep checks (devops))
 # resume after long hiatus (2019-2023) due to our move to Italy,
 # the birth of Nathalie, and especially my work for Semgrep.
+
+** internals
+Started to use stdcompat for backward compatibility with
+old versions of OCaml.
 
 ** devops
 Github actions (GHA) checks to make sure xix compiles.

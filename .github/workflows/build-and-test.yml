@@ -7,9 +7,10 @@ jobs:
       - uses: ocaml/setup-ocaml@v2
         with:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          opam-depext: false
       - name: Install dependencies
         run: |
-          echo No dependencies! This is xix! It does not need anything!
+          opam install --deps-only .
       - name: Build mk/rc
         run: |
           eval $(opam env)
@@ -20,7 +21,7 @@ jobs:
     strategy:
       matrix:
         ocaml-compiler:
-          - 4.02.1
+          - 3.10.0
           - 4.04.1
         os:
           - ubuntu-latest

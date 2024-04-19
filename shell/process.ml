@@ -1,3 +1,4 @@
+open Stdcompat (* for |> *)
 open Common
 
 module R = Runtime

@@ -22,11 +22,14 @@ local job = {
 	//TODO: 'windows-latest'
 	],
       'ocaml-compiler': [
-	// Old version with |> builtin but ideally we would like even before
-	'4.02.1',
-	// first version with valid ocamlformat
+	// Old OCaml version where I ported ocamlrun to plan9
+	// This needs stdcompat so we can use |> and bytes type without issues.
+	// The |> operator was introduced in 4.02.0, that we could add in
+	// the matrix, but stdcompat does not compile with it.
+	'3.10.0',
+	// First OCaml version with a working ocamlformat OPAM package
 	'4.04.1',
-	//TODO: 3.10.0, but pb with |> 
+	//TODO: Ideally 4.14.1 and ocaml latest (5.2.0)
 	],
     }
   },
@@ -37,12 +40,14 @@ local job = {
       uses: "ocaml/setup-ocaml@v2",
       with: {
 	'ocaml-compiler': '${{ matrix.ocaml-compiler }}',
+	// available only for OCaml >= 4.0.0 and we want also 3.10.0
+	'opam-depext': false,
       }
     },
     {
       name: 'Install dependencies',
       run: |||
-        echo No dependencies! This is xix! It does not need anything!
+        opam install --deps-only .
       |||,
     },
     {

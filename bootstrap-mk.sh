@@ -6,6 +6,7 @@
 #
 # Note that right now to boostrap Xix we still need:
 #  - OCaml (which itself requires to bootstrap ocamllex, ocamlyacc and C)
+#  - the ocamlfind tool and stdcompat library
 #  - a C compiler
 #  - /bin/sh
 #
@@ -20,11 +21,18 @@ set -e
 # for showing the executed commands (verbose)
 set -x
 
-#TODO? -bin-annot -absname -dtypes -g
-OCAMLCFLAGS=
+# Limit to just stdcompat! This is Xix!
+EXTERNAL_LIB=`ocamlfind query stdcompat`
 
+#TODO? -bin-annot -absname -dtypes -g
+OCAMLCFLAGS="-I $EXTERNAL_LIB"
+
+# We need -custom below because of dllstdcompat__stubs, otherwise
+# we would need to set CAML_LD_LIBRARY_PATH before running the programs.
+# LATER: would be good to remove if one day we want to store
+# a BOOTSTRAP/mk and we want a really portable bytecode across platforms.
 #TODO? for windows under cygwin might need -custom
-EXTRALINKFLAGS=
+EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom"
 
 TOP=`pwd`
 

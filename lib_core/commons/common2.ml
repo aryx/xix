@@ -1,3 +1,4 @@
+open Stdcompat
 
 let rec join_gen a = function
   | [] -> []

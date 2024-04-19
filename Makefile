@@ -29,6 +29,9 @@ clean:
 # Developer targets
 ###############################################################################
 
+check:
+	~/yy/bin/osemgrep --experimental --config semgrep.jsonnet --strict --error
+
 pr:
 	git push origin `git rev-parse --abbrev-ref HEAD`
 	hub pull-request -b master

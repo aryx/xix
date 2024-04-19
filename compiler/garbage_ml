@@ -1,0 +1,85 @@
+
+type qstc = {
+  q: Type.qualifier list;
+  s: Type.sign option;
+  t: Type.t option;
+
+  c: (Storage.t, unit (* typedef *)) Common.either option;
+}
+
+let add_q q x =
+  raise Todo
+let add_s s x =
+  raise Todo
+let add_t t x =
+  raise Todo
+let add_c c x =
+  raise Todo
+
+let add_st s_or_t x =
+  raise Todo
+
+zctlist:
+   /*(* stricter: forbid empty here *)*/
+ | /*(*empty*)*/ { error "empty declaration" }
+ | ctlist        { $1 }
+
+ctlist: storage_and_type { $1 }
+
+gcname:
+ | gname { }
+ | cname { }
+
+gcnlist:
+ | gcname { }
+ | gcnlist gcname { }
+
+
+ |         complex             { }
+ | gcnlist complex zgnlist { }
+
+ | gcnlist { }
+ | tname gctnlist { }
+ | gcnlist tname gctnlist { }
+ | complex gctnlist { }
+
+gctnlist: 
+ | gctname { }
+ | gctnlist gctname { }
+
+gctname:
+ | tname { }
+ | gname { }
+ | cname { }
+
+
+
+/*(* ugly, allow also class *)*/
+tlist: storage_and_type { }
+
+zgnlist:
+ | /*(*empty*)*/ { }
+ | zgnlist gname { }
+
+tag: ltag
+
+/*(* ??? useful intermediate *)*/
+lexpr: expr { $1 }
+
+
+ilist:
+ | qlist      { }
+ |       init { }
+ | qlist init { }
+
+qlist:
+ |       qual { }
+ | qlist qual { } 
+
+ |       init TComma { }
+ | qlist init TComma { }
+
+qual:
+ | TOBra expr TCBra { }
+ | TDot tag { }
+ | qual TEq { }

@@ -316,7 +316,8 @@ let rec dump2 r =
     )
     else if t = abstract_tag then opaque "abstract"
     else if t = custom_tag then opaque "custom"
-    else if t = final_tag then opaque "final"
+    (* Not in OCaml 5 *)    
+    (*    else if t = final_tag then opaque "final" *)
     else failwith ("dump: impossible tag (" ^ string_of_int t ^ ")")
   )
 

@@ -20,7 +20,7 @@
 ###############################################################################
 
 all:
-	@echo use ./bootstrap-mk.sh and then BOOTSTRAP/mk instead of make
+	@echo use ./bootstrap-mk.sh and then ./bin/mk instead of make
 
 clean:
 	git clean -fX

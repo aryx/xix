@@ -48,6 +48,12 @@ local job = {
         ./bootstrap-mk.sh
       |||,
     },
+    {
+      name: 'Basic test',
+      run: |||
+        ./test.sh
+      |||,
+    },
   ],
 };
 

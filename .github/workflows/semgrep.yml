@@ -17,10 +17,9 @@ jobs:
 name: semgrep
 on:
   pull_request_target: {}
+  workflow_dispatch: null
   push:
     branches:
       - master
-    paths:
-      - .github/workflows/semgrep.yml
   schedule:
     - cron: 50 15 * * *

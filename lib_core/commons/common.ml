@@ -1,9 +1,10 @@
 (* Copyright 2015, 2016, 2017 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 
 type byte = char
 
-type bytes = string
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
+(* type bytes = string *)
 
 type filename = string
 type dirname = string

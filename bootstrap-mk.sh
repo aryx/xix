@@ -28,7 +28,7 @@ EXTERNAL_LIB=`ocamlfind query stdcompat`
 OCAMLCFLAGS="-I $EXTERNAL_LIB"
 
 #TODO? for windows under cygwin might need -custom
-EXTRALINKFLAGS=
+EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma"
 
 TOP=`pwd`
 

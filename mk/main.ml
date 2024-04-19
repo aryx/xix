@@ -1,4 +1,5 @@
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 module G = Graph

@@ -22,11 +22,14 @@ local job = {
 	//TODO: 'windows-latest'
 	],
       'ocaml-compiler': [
-	// Old version with |> builtin but ideally we would like even before
+	// Version that I ported ocamlrun to plan9 (need stdcompat
+	// so we can use |> and bytes type without issues)
+	'3.10.0',
+	// Old version with |> builtin
 	'4.02.1',
 	// first version with valid ocamlformat
 	'4.04.1',
-	//TODO: 3.10.0, but pb with |> 
+	//TODO: Ideally 4.14.1 and ocaml latest (5.2.0)
 	],
     }
   },

@@ -1,6 +1,6 @@
 
 type byte = char
-type bytes = string
+(* type bytes = string *)
 
 type filename = string
 type dirname = string

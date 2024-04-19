@@ -40,6 +40,8 @@ local job = {
       uses: "ocaml/setup-ocaml@v2",
       with: {
 	'ocaml-compiler': '${{ matrix.ocaml-compiler }}',
+	// available only for OCaml >= 4.0.0 and we want also 3.10.0
+	'opam-depext': false,
       }
     },
     {

@@ -22,12 +22,12 @@ local job = {
 	//TODO: 'windows-latest'
 	],
       'ocaml-compiler': [
-	// Version that I ported ocamlrun to plan9 (need stdcompat
-	// so we can use |> and bytes type without issues)
+	// Old OCaml version where I ported ocamlrun to plan9
+	// This needs stdcompat so we can use |> and bytes type without issues.
+	// The |> operator was introduced in 4.02.0, that we could add in
+	// the matrix, but stdcompat does not compile with it.
 	'3.10.0',
-	// Old version with |> builtin
-	'4.02.1',
-	// first version with valid ocamlformat
+	// First OCaml version with a working ocamlformat OPAM package
 	'4.04.1',
 	//TODO: Ideally 4.14.1 and ocaml latest (5.2.0)
 	],

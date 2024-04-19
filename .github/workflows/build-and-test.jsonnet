@@ -13,26 +13,30 @@ local checkout = {
 // ----------------------------------------------------------------------------
 
 local job = {
-  // LATER:
-  //  strategy:
-  //    fail-fast: false
-  //    matrix:
-  //      os:
-  //        - macos-latest
-  //        - ubuntu-latest
-  //        - windows-latest
-  //      ocaml-compiler:
-  //        - "5.1"
-  //
-  //  runs-on: ${{ matrix.os }}
-  'runs-on': 'ubuntu-latest',
+  strategy: {
+    //'fail-fast': false,
+    matrix: {
+      os: [
+	'ubuntu-latest',
+	//TODO: 'macos-latest'
+	//TODO: 'windows-latest'
+	],
+      'ocaml-compiler': [
+	// Old version with |> builtin but ideally we would like even before
+	'4.02.1',
+	// first version with valid ocamlformat
+	'4.04.1',
+	//TODO: 3.10.0, but pb with |> 
+	],
+    }
+  },
+  'runs-on': '${{ matrix.os }}',
   steps: [
     checkout,
     {
       uses: "ocaml/setup-ocaml@v2",
       with: {
-	// TODO: ${{ matrix.ocaml-compiler }}
-	'ocaml-compiler': "4.02.1",
+	'ocaml-compiler': '${{ matrix.ocaml-compiler }}',
       }
     },
     {

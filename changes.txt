@@ -5,11 +5,13 @@
 # the birth of Nathalie, and especially my work for Semgrep.
 
 ** devops
-Add Github actions (GHA) checks to make sure xix compiles,
-at least compiles with 4.02.1 (use of |> so harder to compile
+Github actions (GHA) checks to make sure xix compiles.
+At least it compiles with 4.02.1 (use of |> so harder to compile
 for 3.10.0).
 
-Added some basic tests (also enforced in GHA).
+First semgrep checks in semgrep.jsonnet :)
+
+Some basic tests (also enforced in GHA) in test.sh
 
 * -----------------------------------------------------------
 

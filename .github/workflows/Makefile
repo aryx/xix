@@ -13,6 +13,9 @@ all: $(OBJS)
 clean:
 	rm -f $(OBJS)
 
+format:
+	jsonnetfmt -i *.jsonnet
+
 # for pad's codemap
 .PHONY: gen-codemapignore
 gen-codemapignore: $(OBJS)

@@ -24,7 +24,8 @@ local job = {
       'ocaml-compiler': [
 	// Old version with |> builtin but ideally we would like even before
 	'4.02.1',
-	//TODO: 4.04.1 is first version with valid ocamlformat
+	// first version with valid ocamlformat
+	'4.04.1',
 	//TODO: 3.10.0, but pb with |> 
 	],
     }

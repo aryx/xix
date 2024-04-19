@@ -1,5 +1,26 @@
 # -*- org -*-
 
+* 0.13 (Q2 2024) ()
+# resume after long hiatus (2019-2023) due to our move to Italy,
+# the birth of Nathalie, and especially my work for Semgrep.
+
+** devops
+Add Github actions (GHA) checks to make sure xix compiles,
+at least compiles with 4.02.1 (use of |> so harder to compile
+for 3.10.0).
+
+Added some basic tests (also enforced in GHA).
+
+* -----------------------------------------------------------
+
+* No work in 2019, 2020, 2021, 2022, 2023
+
+* -----------------------------------------------------------
+
+
+* 0.12 (Q4 2018) ()
+# Move to Italy
+
 * 0.11 (Q3 2018) (lib_gui?)
 
 internals: use of merlin (mk .merlin) via Efuns
@@ -7,7 +28,7 @@ internals: use of merlin (mk .merlin) via Efuns
 * 0.10 (Q2 2018) ()
 
 * 0.9 (Q1 2018) ()
-GioGio at home a lot
+#GioGio at home a lot
 
 (work on syncweb -web_to_tex and code indexing)
 
@@ -46,6 +67,7 @@ scheduling, and timing chapters).
 started lib_core/ 
 
 * 0.5 (Q1 2017) (kernel start)
+# Giogio birth!
 
 minimal C kernel for Raspberry Pi (boot, malloc, libc, print) by
  selecting subset of 9/bcm/ and 9/port in plan9

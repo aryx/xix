@@ -1,6 +1,8 @@
 # -*- org -*-
 
-* 0.13 (Q2 2024) (GHA and semgrep checks (devops))
+* 0.14 (Q2 2024) ()
+
+* 0.13 (Q1 2024) (GHA and semgrep checks (devops))
 # resume after long hiatus (2019-2023) due to our move to Italy,
 # the birth of Nathalie, and especially my work for Semgrep.
 
@@ -10,8 +12,8 @@ old versions of OCaml.
 
 ** devops
 Github actions (GHA) checks to make sure xix compiles.
-At least it compiles with 4.02.1 (use of |> so harder to compile
-for 3.10.0).
+At least it compiles with 3.10.0 (thx to stdcompat), 4.04.0,
+and 4.14.0.
 
 First semgrep checks in semgrep.jsonnet :)
 

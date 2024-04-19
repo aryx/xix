@@ -31,7 +31,8 @@ local job = {
 	'4.04.1',
 	// Current version I usually work with
 	'4.14.1',
-	//TODO: Ideally 4.14.1 and ocaml latest (5.2.0)
+	// Why not, living on the edge!
+	'5.1.0',
 	],
     }
   },

@@ -9,7 +9,7 @@ jobs:
           ocaml-compiler: ${{ matrix.ocaml-compiler }}
       - name: Install dependencies
         run: |
-          echo No dependencies! This is xix! It does not need anything!
+          opam install --deps-only .
       - name: Build mk/rc
         run: |
           eval $(opam env)

@@ -1,0 +1,26 @@
+opam-version: "2.0"
+version: "0.13"
+synopsis:
+  "Xix is Xix"
+description: """
+Xix is Xix
+
+For more information see https://github.com/aryx/xix
+"""
+maintainer: ["Yoann Padioleau <yoann.padioleau@gmail.com>"]
+authors: ["Yoann Padioleau <yoann.padioleau@gmail.com>"]
+license: "LGPL-2.1"
+homepage: "https://github.com/aryx/xix"
+bug-reports: "https://github.com/aryx/xix/issues"
+depends: [
+  "ocaml" {>= "3.10.0"}
+  # Do not depend on anything except those 2! Xix should limit
+  # its external dependencies as much as possible, so it
+  # can boostrap itself more easily.
+  "stdcompat"
+  "ocamlfind"
+]
+build: [
+  "echo todo"
+]
+dev-repo: "git+https://github.com/aryx/xix.git"

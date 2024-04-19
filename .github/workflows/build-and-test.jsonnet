@@ -42,7 +42,7 @@ local job = {
     {
       name: 'Install dependencies',
       run: |||
-        echo No dependencies! This is xix! It does not need anything!
+        opam install --deps-only .
       |||,
     },
     {

@@ -1,0 +1,2 @@
+Mostly copy paste from ../../lib_graphics but relying on OCaml Graphics
+module rather than the Plan 9 draw server.

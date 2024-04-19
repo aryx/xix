@@ -1,0 +1,7 @@
+TOP=../../..
+
+INCLUDES=
+SRC= point.ml vector.ml rectangle.ml
+
+<$TOP/mkconfig
+<$TOP/mklib

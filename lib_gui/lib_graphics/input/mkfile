@@ -1,0 +1,7 @@
+TOP=../../..
+
+INCLUDES=-I $TOP/lib_core/commons -I ../geometry 
+SRC= rune.ml cursor.ml mouse.ml keyboard.ml
+
+<$TOP/mkconfig
+<$TOP/mklib

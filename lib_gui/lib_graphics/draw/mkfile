@@ -1,0 +1,12 @@
+TOP=../../..
+
+INCLUDES=-I $TOP/lib_core/commons -I ../geometry
+
+SRC= channel.ml color.ml \
+     image.ml display.ml \
+     draw_graphics.ml draw.ml \
+     line.ml polygon.ml ellipse.ml arc.ml \
+     font.ml text.ml \
+
+<$TOP/mkconfig
+<$TOP/mklib

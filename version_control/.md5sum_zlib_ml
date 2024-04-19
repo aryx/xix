@@ -1,0 +1,9 @@
+version_control/zlib.ml |532e76d28d5d6ad09d4fe7aee0c588a0
+copyright camlzip |0805ac4c8d5509f5bcf54988b18cd3ce
+exception [[Zlib.Error]] |56c4f0b0eba09f494816d60490649339
+toplevel [[Zlib._1]] |3e68fe2a70757ebfe921b47843c0c5c5
+type [[Zlib.flush_command]] |84e05c15eae37deae7eed60cd6d305ea
+constant [[Zlib.buffer_size]] |b83d058429dfd187ffc88188c5056d59
+function [[Zlib.compress]] |1af81e922ea7b233945c872de4e6f6d0
+function [[Zlib.compress_direct]] |507b84a737b8c83c675f37224aeb48ae
+function [[Zlib.uncompress]] |2b56746435885e9353d34f8a954259f2

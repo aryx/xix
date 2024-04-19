@@ -1,0 +1,4 @@
+version_control/cmd_pull.ml |29c23391fa91a67d4b8f802e5cb53681
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Cmd_pull.pull]] |35a92e8bcc3660a5f5fd3354160ff238
+constant [[Cmd_pull.cmd]] |7b62805ac201fe829866e1a698265f10

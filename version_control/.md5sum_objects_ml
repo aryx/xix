@@ -1,0 +1,12 @@
+version_control/objects.ml |9ce9418f5ede56dcc0eb62df430d79c9
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+type [[Objects.t]] |0943e5cdcc79bea3917058d20ae8a94c
+[[Objects.t]] cases |415887c76873be72a20cd330a20ead4a
+function [[Objects.read]] |97ea09b7fa67a47b29880f867c5ebdb5
+[[Objects.read()]] match str cases |4acd2ea54bd131f0bd617911590d80c4
+[[Objects.read()]] match str cases |b7be776e3ffdc7b2e9c45fc3434dee7c
+[[Objects.read()]] match str cases |f708d594cdce66074f69b36e62e6db65
+[[Objects.read()]] match str cases |bb616909d5f929a0c152c50e266c05d3
+function [[Objects.write]] |e5dabfc2960d79ede296e90475acaca9
+[[Objects.write()]] match obj cases |68b329da9893e34099c7d8ad5cb9c940
+[[Objects.write()]] return header, match obj cases |68b329da9893e34099c7d8ad5cb9c940

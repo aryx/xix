@@ -1,0 +1,14 @@
+yacc/dump.ml |29b1805b4532ecf82a5f98c38698cd89
+copyright ocamlyacc |6300f84965785200159d748c8d5fa133
+type [[Dump.either]](yacc) |90677cd07dadb9959269e938c5b49b33
+function [[Dump.partition_either]](yacc) |6f8239661af545afc920ad84a013a9fd
+function [[Dump.hash_of_list]](yacc) |415542f82068b8da2857c388460ed45b
+function [[Dump.string_of_symbol]](yacc) |687958a79220616bc7d37bf10eff17bf
+constant [[Dump.pf]](yacc) |8f4e9f6286bf2d92f57ed45127e4c0a2
+constant [[Dump.spf]](yacc) |dc4dfa675208ad38be7569c6465d5d0f
+function [[Dump.string_of_action]](yacc) |f1185344a5bcf094b5ba139edad89c5c
+function [[Dump.dump_symbol]](yacc) |f916f01f4c09468acb23bf063e1a1f3c
+function [[Dump.dump_item]](yacc) |e8f6bc2c58829f847b0f5febb340d34a
+function [[Dump.dump_items]](yacc) |3890f4828da8ed3418c901b7c3737632
+function [[Dump.dump_lr0_automaton]](yacc) |7c62be5629b135bbbf4d383310b33a4e
+function [[Dump.dump_lrtables]](yacc) |024367d2de3046545aa8a72ed9038d9a

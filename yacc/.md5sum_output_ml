@@ -1,0 +1,10 @@
+yacc/output.ml |7f76b1145bf52b02012c79ce6368de94
+copyright ocamlyacc |6300f84965785200159d748c8d5fa133
+constant [[Output.copy_buffer]](yacc) |6ee65b3ff3dc06fcaad1467db7a26157
+function [[Output.get_chunk]](yacc) |f4d57b6e8e317203df3beba11ea75b3b
+function [[Output.copy_chunk]](yacc) |bb39dbf017d32554c8547476f53cb470
+function [[Output.replace_dollar_underscore]](yacc) |1cc81d3e213f6331c6791d19368ecbb5
+constant [[Output.spf]](yacc) |dc4dfa675208ad38be7569c6465d5d0f
+function [[Output.int_of_char]](yacc) |4cdfe8542a7ebbc1350b7bc8c69607e6
+function [[Output.extract_dollars_set]](yacc) |5903809cb729163e06c91fd1d6f55efc
+function [[Output.output_parser]](yacc) |c75600ad5056746d77e32a8c7965955b

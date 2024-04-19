@@ -1,0 +1,9 @@
+yacc/first_follow.ml |040d854346eea727aaf0f5973986134c
+copyright ocamlyacc |6300f84965785200159d748c8d5fa133
+type [[First_follow.first]](yacc) |c3ec7efac5779358b0749070e292a06e
+type [[First_follow.epsilon]](yacc) |a1d3bbe85ba131ded81ad13b9e32bc19
+type [[First_follow.follow]](yacc) |d4b6604df045804b6948670d0d0d8386
+function [[First_follow.first_of_sequence]](yacc) |e16fc31a3dc903921237682057273ed0
+function [[First_follow.epsilon_of_sequence]](yacc) |793e87878ff65d1156666b4e9e540b23
+function [[First_follow.compute_first]](yacc) |80154758eebadb4c29d87f7e3274bfa7
+function [[First_follow.compute_follow]](yacc) |7cf01900dc2461fd6b07eaeb1df3a2e0

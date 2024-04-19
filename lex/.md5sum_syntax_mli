@@ -1,0 +1,9 @@
+lex/syntax.mli |efb35e4fc69275e3004a0309c56376d3
+copyright ocamllex |aeb85651859a39a4b0e26e284b17fa83
+type Syntax.charpos |ec4cc7ad048dd742bb5396431ec7abb5
+type Syntax.location |11eab88b0bbf2d09597d931c5d92553b
+type Syntax.char_ |e6075e3c2f82c4ebc211af835dc721bd
+type Syntax.regular_expression |6a4e5377f75e8c40747313ed545f01fe
+type Syntax.action |411e3091fa5d80ee6b781d092df8929d
+type Syntax.rule |07f5252f4c80239c0df83377e8693199
+type Syntax.lexer_definition |dbe5f3c2d4f06b7a11a29e8af1af3de1

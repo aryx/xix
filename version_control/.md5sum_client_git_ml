@@ -1,0 +1,3 @@
+version_control/client_git.ml |36f908c83f6c6d71f07cbb12c0829883
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Client_git.mk_client]] |e086d1f4f88ae1aa10505c708bb69b26

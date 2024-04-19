@@ -1,0 +1,6 @@
+lex/main.ml |cad7f09e3d59d2177bbe876249bd4013
+copyright ocamllex |76f927ba746140f058e7a122cb271d1b
+function [[Main.main]] |f6722f6ac9b64915692034ea71819bbe
+[[Main.main()]] print lex usage if wrong number of arguments |fee3f89798a7f23c7d42ae2792d86aab
+[[Main.main()]] report error exn |bae395d9576b3770d13ecf07758dc07b
+toplevel [[Main._1]] |163329799ff23048389b44ee4f071679

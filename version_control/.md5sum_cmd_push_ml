@@ -1,0 +1,4 @@
+version_control/cmd_push.ml |6a4f8404a8d800ad8208f8f8b591f677
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Cmd_push.push]] |2308f421e75b21dd539c0077d7c902ac
+constant [[Cmd_push.cmd]] |44d38d3609b25a2693b760163f36c625

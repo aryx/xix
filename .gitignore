@@ -10,7 +10,9 @@
 *.a
 
 # syncweb objects
-.md5sum_*
+#TODO: uncomment at some point, but make sure 'make sync'
+# is working in principia for lex/ yacc/ lib_parsing/ and version_control/ 
+#.md5sum_*
 
 # kencc objects
 *.[58]

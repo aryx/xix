@@ -1,0 +1,15 @@
+yacc/parser.mly |cd7d1d55cc9b966b8ff5eaf2dc9dc726
+copyright ocamlyacc |32e668062d3d7ddbbbc294be9ec635d6
+type Parser.token (yacc) |c23e6360f76cd0888746deb2cd729c76
+Parser entry point definition (yacc) |f2cbf414a06f57c8103be987fbf7f868
+grammar (yacc) |b5f4d4c455031a4d43ed1c5dda6f2f7e
+yacc top rule |f9c663f7dcad5ef4382e982fc56c36d7
+yacc header rule |c5ae64466f454a794d6d3e0787d93f2d
+yacc directive rule |5c857c978db9734ba6dd4d9225cd4c8d
+yacc grammar rule |0ceef39a458b6715b30323183a05da75
+yacc rule rule |5015f0557e3ac4cefa4aaa714cb52dc3
+yacc rule rule |593d1db89f63e90ff8883e0511f87cd3
+yacc rule rule |778d27ed8a2be2e49f924289b55c585d
+yacc extra rules |4cfe14e9d1b8937675bc82d1aab2db21
+yacc extra rules |c4bc6e999b018433ada601084b379a5b
+yacc extra rules |22166791ce17864553d926c94b173bde

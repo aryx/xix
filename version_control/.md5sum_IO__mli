@@ -1,0 +1,5 @@
+version_control/IO_.mli |21e89161b04a7b382423469a3f6896b0
+signature [[IO_.read_string_and_stop_char]] |e9500157b0fe540c3b91cdf3f73dca4e
+signature [[IO_.read_int_and_nullbyte]] |9987b1542ac5f2dacbcf678c6d72d3d7
+signature [[IO_.read_key_space_value_newline]] |b52cdaf24e078c0157700b39d1f38645
+signature [[IO_.with_close_out]] |52b8380378885c6ea8a0b124cb697e65

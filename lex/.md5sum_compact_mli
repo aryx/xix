@@ -1,0 +1,4 @@
+lex/compact.mli |075d0ef4e018f2059ecad6aa3d1b7f58
+copyright ocamllex |76f927ba746140f058e7a122cb271d1b
+type [[Compact.lex_tables]] |6f511f69a7a68d9408dfb06f1f119407
+signature [[Compact.compact_tables]] |a8067ae1d9216af113ac75f7a90d3099

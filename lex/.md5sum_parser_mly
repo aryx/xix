@@ -1,0 +1,22 @@
+lex/parser.mly |fde1ab757ba66783161f6b99c5131496
+copyright ocamllex bis |50cb538fe40c3454b720e9fa448c6600
+parser helper functions and globals |e1c06d85ae7b8b032bef47e42e4c08f9
+parser helper functions and globals |e1c06d85ae7b8b032bef47e42e4c08f9
+parser helper functions and globals |e0b05036b9992eea468fa2cbc938ad13
+parser helper functions and globals |b8e3f32eda2e907ec409dac4de699cd8
+parser helper functions and globals |8a319ea7aa5b8d15b3badf7478728af2
+type Parser.token |968745fee0ba1642a54bed347bf71202
+Parser precedences and associativities |7d69426877d1f76e5870d3cf0d2a264e
+Parser entry points types |81a9cd8fdd44c9d48211cfac1bf1b7f5
+grammar (lex) |c50ceb4bd8adf32f9af8f2e43d0084e3
+lex top rule |a775cc4df5c05aa5e3e8b623670cb991
+lex header rule |6748edfddf4b65061f322eb8ab64d7fa
+lex named regexp rule |43c16c4b3ec4b61eb2f424dbf51b1dc4
+lex rule rule |f672c02d7e5d59042f6571d5ce1f61ef
+lex regexp rule |798d37d25d486748396756543e6161ad
+rule regexp cases |5f4e75c79c6e62c65ed6e69ffb9a83d4
+rule regexp cases |77b82e1ac22d8d08e3044855ab170a45
+rule regexp cases |7ee4f219984987e4dcca36d9b1900ebe
+rule regexp cases |aaf12fa505f684715c11099c76c8fb49
+rule regexp cases |c60a9c833889176e34e7132bfcfcf4f5
+lex regexp rule |fe0e670f3dabcf346e8cb4ab3e4f62a2

@@ -1,0 +1,4 @@
+version_control/cmd_init.ml |3f51ea92b52b0932b98d2cbeff7ca584
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+constant [[Cmd_init.cmd]] |dc73c22ec689763de91eb1a9727cb03f
+[[Cmd_init.cmd]] command-line options |fc670b7811016ee657da4f11f283b397

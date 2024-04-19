@@ -1,0 +1,10 @@
+version_control/user.ml |8ffc2836b2f773f5af4e503427ace38b
+copyright ocaml-git |5396b2bac5d917e84cc2219687b559e7
+type [[User.tz_offset]] |e5ff6d2bd8cd5050e64df927680045ad
+type [[User.t]] |55e8137cff269bfee95fb9c7b0878e41
+function [[User.sign_of_char]] |4583bab4aff90445ec7ac71fa87ebd45
+function [[User.char_of_sign]] |12ef091eade2fc5dfe6cf2b162a0aa09
+function [[User.read]] |b8098a3d969952f3967d182d398534a4
+function [[User.write_date]] |4b353e5502c7ccd374639dab909595ba
+function [[User.write]] |057349130b48aebccd221eedd9f22230
+function [[User.string_of_date]] |fc0602249b2ebf4fbe8cf2a11aa5afa3

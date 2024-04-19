@@ -1,0 +1,88 @@
+version_control/unzip.ml |83ff94bd02add66c8406d638b80fd5a6
+copyright ocaml-unzip |b1b6f3e3801973ec819af0ebf4a0b02f
+type [[Unzip.huffman]] |4f844b08f66bba3ebf12d9df06c29c41
+[[Unzip.huffman]] cases |9a2a93fb3431945c20d340f2ea4ae4db
+type [[Unzip.adler32]] |8ccb01adca45d60a3282d0b5f218364d
+type [[Unzip.window]] |2e37ac60a0d831e3d0bb1fb5b1dceb31
+[[Unzip.window]] other fields |0b1809af8be8239d7ff160553b919776
+type [[Unzip.state]] |bffd1e0262b9afb8f9ec209248ab0cb3
+[[Unzip.state]] other cases |92f051ee498ff4304afb5ef8fe9a19e7
+[[Unzip.state]] other cases |9be1278010cd807633d12b4d6a61db2d
+[[Unzip.state]] other cases |83bdf9b00fa6cf3836fa000214443bc5
+[[Unzip.state]] other cases |e23ffd7895029c7d22185367f17fa9c3
+type [[Unzip.t]] |ce4354b9466ff56b81ac394a2f5e636c
+[[Unzip.t]] other fields |75797d9e93a233f5d9018de6f2966a40
+[[Unzip.t]] other fields |8c55f2e947fe513184d16e9017138b44
+[[Unzip.t]] other fields |b62ca429a64336ac965ce24c3ff42f11
+[[Unzip.t]] other fields |5b7e7120e419e43c33a6f1a97e74ba95
+[[Unzip.t]] other fields |af33e92ede5988ee7bb83e5135f52c4e
+[[Unzip.t]] other fields |63e9e24ee9c124a241619c171bd6dfda
+type [[Unzip.error_msg]] |c5687fcb12a091ef50bb04a043bfaf24
+exception [[Unzip.Error]] |f8921dc5c0f2db5f1c467be5bef6236f
+function [[Unzip.error]] |beb5f83fe18a3f2c2043309934c83d80
+function [[Unzip.tree_depth]] |0c1e65fba6276eb2b767a7b3571ff0ed
+function [[Unzip.tree_compress]] |5e138fcf9f14a9912db887bbea46480a
+function [[Unzip.make_huffman]] |426074732cee7aaf4d91bcdb0c96d62f
+[[Unzip.make_huffman()]] sanity check codelength [[p]] |ce0f233cacbbacf57ee67553a9530eee
+function [[Unzip.tree_make]] |47dc7b4c9d92ec6ab2c1d2ec74d99ec1
+[[Unzip.tree_make()]] sanity check [[l]] |11c3639e965015f4d959cab1b476a599
+function [[Unzip.adler32_create]] |9007ad0e99ae27f1a6362670fd84d7ed
+function [[Unzip.adler32_update]] |05df1a8ea463daf5d9c69e031dc1ca95
+function [[Unzip.adler32_read]] |aeafd230e62bc3a5d3c4bbe7610e54b4
+constant [[Unzip.window_size]] |e223e069705c259be77f70d2708a99a3
+constant [[Unzip.buffer_size]] |d294d42927b93441eb68305a3c4ec996
+function [[Unzip.window_create]] |b129443729a5aa1788bb4e3da9f3c2b7
+[[Unzip.window_create()]] set other fields |fb3d1b12042ca6ad2dd86bdb3eaae10a
+function [[Unzip.window_slide]] |cab60d8074ee83ca34f4c8c7d16ead0c
+[[Unzip.window_slide()]] update crc before blit |35e5f08b06d01ef4633f84ad1036a0bb
+function [[Unzip.window_add_bytes]] |b77d4dcb3b372086b60fd4eb30afc6ee
+[[Unzip.window_add_bytes()]] slide window if reached end of buffer |7ede6178d43806de6f94280c8a7685b6
+function [[Unzip.window_add_char]] |2eadb35433e666daecb29f3f81135851
+[[Unzip.window_add_char()]] slide window if reached end of buffer |1b13b47611ba99944a54ee07d784d358
+function [[Unzip.window_get_last_char]] |892c0421246742d9c3b871ace04e0af7
+function [[Unzip.window_available]] |eebea07ab066b7a260e7083a487eee2c
+function [[Unzip.window_checksum]] |ae132ee278c718633bca097f9fe7a549
+constant [[Unzip.len_extra_bits_tbl]] |e0a8f5a82f5e31805bfbd21c6d6e50e7
+constant [[Unzip.len_base_val_tbl]] |e9287411efcecb551af6f90d053f8951
+constant [[Unzip.dist_extra_bits_tbl]] |2c1e663a597e713b27f7ba93bf230199
+constant [[Unzip.dist_base_val_tbl]] |d2c4f90985a6e37840130ccd4611d802
+constant [[Unzip.code_lengths_pos]] |a5af79b72870c7f1d0289f85f200dd6d
+constant [[Unzip.fixed_huffman]] |9d6115e8369078420581e60e888f02cf
+function [[Unzip.get_bits]] |ad70f3c43329855a9c3e2064d42ef1d1
+function [[Unzip.get_bit]] |16793e438df03f002e5316250698af4d
+function [[Unzip.get_rev_bits]] |d2622f14fa4211cfc5dae717b9823eb5
+function [[Unzip.reset_bits]] |99df7461ab71c8af71d14efb6ed2d9e7
+function [[Unzip.add_bytes]] |7d603ffb0940d27669d5d5223b953da3
+[[Unzip.add_bytes()]] add bytes to window |154a7d8680d7451aa9ed4fb99f9010ea
+function [[Unzip.add_char]] |3bad286bf240d9634e0fd0257a238e0e
+[[Unzip.add_char()]] add character to window |787079dac28f1c7e99da1dc56c2756f1
+function [[Unzip.add_dist_one]] |03bbc467b3558a0069439bb5cf85e611
+function [[Unzip.add_dist]] |276acd36165f477e09848d32a7aeb372
+function [[Unzip.apply_huffman]] |44faa37fe139f3d6b199df21df25fbe0
+[[Unzip.apply_huffman()]] other cases |497c8d87ec857d14d17c1a067296bee7
+function [[Unzip.inflate_lengths]] |81bc87f9c980927f842a6e83ea70c215
+function [[Unzip.inflate_loop]] |eaf12cbdd94c5f1e41fc385c16b860ca
+[[Unzip.inflate_loop()]] match state cases |68b2d0fd901c9c8283271de5a0d956bd
+[[Unzip.inflate_loop()]] when in Head state, sanity check [[cmf]] |fd5858961820e533d583328ccb09651a
+[[Unzip.inflate_loop()]] when in Head state, sanity check [[flg]] |e9291207ed467e86b394a36ba5465bb6
+[[Unzip.inflate_loop()]] match state cases |19d61cf77d4a0e976d41f5f2d387c42b
+[[Unzip.inflate_loop()]] when in Block state, match block type cases |b4b4dedc127da61ba77c8d1a994c7b21
+[[Unzip.inflate_loop()]] when in Block state, match block type cases |3c601f7091c9bc18b2c9a42a276b0d4f
+[[Unzip.inflate_loop()]] when in Block state, match block type cases |6986258495f7f1d262fb447e51ff16b1
+[[Unzip.inflate_loop()]] match state cases |89a95a018172b54ee36c5f31d0b83e80
+[[Unzip.inflate_loop()]] when in CData state, match apply huffman cases |742a33c609cde1362e2be8de11e26e47
+[[Unzip.inflate_loop()]] when in CData state, match apply huffman cases |52c4076806efe20b2af7a8ec0406da4f
+[[Unzip.inflate_loop()]] when in CData state, match apply huffman cases |1c3a667eea35d266e13ac5f61c495fe9
+[[Unzip.inflate_loop()]] when in CData state, when backref, compute zlen |376052ebbca93bf6b5451808ecb01220
+[[Unzip.inflate_loop()]] when in CData state, when backref, compute zdist |5bb001b9551fce5392d7efc00de35122
+[[Unzip.inflate_loop()]] compute [[dist_code]], match [[zhuffdist]] cases |50a8c698c99148f2935a4f86628db497
+[[Unzip.inflate_loop()]] match state cases |a431879c458cf5554502b54ab3736d17
+[[Unzip.inflate_loop()]] match state cases |53480913e9e4de521af359d63168f7a1
+[[Unzip.inflate_loop()]] when in Crc state, check adler32 checksum |e0e59204b0d508b02edfe70c1d75bf80
+[[Unzip.inflate_loop()]] match state cases |92430a454ec302daefff435cb3065895
+[[Unzip.inflate_loop()]] match state cases |5e664abdd661f2c8c1b803eb802f6947
+[[Unzip.inflate_loop()]] match state cases |a9daa743db728e93d7aed4edef19ab42
+function [[Unzip.inflate_data]] |375306e2e83235aeedb9df9b17ea8214
+[[Unzip.inflate_data()]] sanity check parameters |c45d507dbc85bb805facfae98d2ee786
+function [[Unzip.inflate_init]] |dc6363825cff3ef4bc246602b92f4c8f
+function [[Unzip.inflate]] |403a58dcbfcb57d11018fde775ca4b44

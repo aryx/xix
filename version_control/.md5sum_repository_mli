@@ -1,0 +1,31 @@
+version_control/repository.mli |75558bdf14c7020e263d7a5764cd6957
+type [[Repository.t]] |3fbcf224a41ef801b8ac7391408589da
+[[Repository.t]] index field |51dc5a5f046db7ce27c74ade3c8ea2f4
+type [[Repository.objectish]] |d6cc9a92ef634eb93d4726d44456220c
+[[Repository.objectish]] cases |1b3cbfff6e92c7c4a882fddcbfb3e08c
+[[Repository.objectish]] cases |0a4354955c579a118ce5c11394d8f8c1
+signature [[Repository.init]] |ac5f8eb56b3b4aa6a33e3a2f554a845a
+signature [[Repository.open_]] |4a6b5b21fdc5dbffe2d5c12e8ff09062
+signature [[Repository.find_dotgit_root_and_open]] |9309bb100c564ce9ac6ecb546db02c2e
+signature [[Repository.read_obj]] |6b0a68bedfab7442b6576ad714552868
+signature [[Repository.read_objectish]] |e59f73cb6738d140bf6c076993e10d7e
+signature [[Repository.read_commit]] |2f3613d656ba0bc785a74b2028d651e3
+signature [[Repository.read_tree]] |1956f8d1b8c4246e0a00d18a960df59d
+signature [[Repository.read_blob]] |6bef681c0fee0d7e96a4ac7a9c3cefb9
+signature [[Repository.add_obj]] |801255991f12fe4d6f79d4320919fe36
+signature [[Repository.has_obj]] |e0f7bb0c76feacc9b7d0b66f0bf9f67f
+signature [[Repository.read_ref]] |b761536c0801988101dae5c75a644800
+signature [[Repository.write_ref]] |02c172b06a307482cfc89cf764938842
+signature [[Repository.follow_ref]] |48eabccc58f2ad71781ea7761a62c35f
+signature [[Repository.follow_ref_some]] |79808c5194467a8bf5891e79effcd634
+signature [[Repository.all_refs]] |4efac2af170c231d9e25a3d1f3f84ace
+signature [[Repository.set_ref]] |86e0a2ccfc3c964dd3ac976111497bf1
+signature [[Repository.del_ref]] |90f0717999174a4ab843cc9e5d5be6b6
+signature [[Repository.add_ref_if_new]] |d8266cfd46b18046a09025906f0ce9d1
+signature [[Repository.set_ref_if_same_old]] |65281d84eefc4c117de1dc8d1812d4ad
+signature [[Repository.read_index]] |7ce373c19c7fc4aa315ae3ef9961b737
+signature [[Repository.write_index]] |eb23240809f39d8f5a5764904bc633e0
+signature [[Repository.add_in_index]] |845f36cb799243583254f5bd3c352367
+signature [[Repository.commit_index]] |697f26652809225e184b322306a2c00d
+signature [[Repository.set_worktree_and_index_to_tree]] |4920c6e655dd48676d723da89550c11c
+signature [[Repository.walk_dir]] |83af6542b428643329706814f29592c8

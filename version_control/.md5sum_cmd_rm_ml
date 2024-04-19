@@ -1,0 +1,5 @@
+version_control/cmd_rm.ml |720ebf681e0efebf601efeee597224cc
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Cmd_rm.rm]] |6653cc926bdbdbf019b2406c25018139
+constant [[Cmd_rm.cmd]] |5088e93ab042db2ca477b8a6a835e980
+[[Cmd_rm.cmd]] command-line options |0a07c8506674d0e66c6cce91d16268be

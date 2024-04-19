@@ -1,0 +1,9 @@
+version_control/client_local.ml |4e6229ea3d4fc042031e9f157441c26e
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+type [[Client_local.graph_walker]] |5ffacdd16e68897fd21363ad7598bfe8
+function [[Client_local.ml_graph_walker]] |d87301cb703d643ef9f42dd24893c8e9
+function [[Client_local.collect_filetree]] |05cab771fe97746cf258b421abc29c6a
+function [[Client_local.find_top_common_commits]] |29e5e22789f2e36b177ff54e2452a591
+function [[Client_local.iter_missing_objects]] |67106f57d9ed75969f8d278dc447bfcd
+function [[Client_local.fetch_objects]] |a065ee28f1134dc559a800002b24c055
+function [[Client_local.mk_client]] |81e2f52a2344fe33093c9dbe9747b559

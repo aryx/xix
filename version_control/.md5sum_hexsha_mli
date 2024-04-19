@@ -1,0 +1,7 @@
+version_control/hexsha.mli |771f16b765bd970cb3db5938ecd65b8d
+type [[Hexsha.t]] |e8a7ee49c14598b4e7f5d116999f99de
+signature [[Hexsha.of_sha]] |23d106121b8a2bc3e8168c2b880d2b30
+signature [[Hexsha.to_sha]] |3872a61beaef273bde138734642ff484
+signature [[Hexsha.read]] |8e0e659130a934b7c4fa5c422c39841e
+signature [[Hexsha.write]] |785d7370daba45a0ac1a7e6a3a0f906a
+signature [[Hexsha.is_hexsha]] |0f00d5d19e030f7b758ed15ce525c742

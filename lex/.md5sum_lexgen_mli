@@ -1,0 +1,9 @@
+lex/lexgen.mli |443f735abdc39bac594615196e61d980
+copyright ocamllex |76f927ba746140f058e7a122cb271d1b
+type [[Lexgen.action_id]] |e8b4b6b79526858737f3857bb65c1ff6
+type [[Lexgen.automata]] |fe2e044d057fe1577de813c6d5b40f64
+type [[Lexgen.automata_trans]] |10ddfff6038a87ea274b9903ed7615db
+type [[Lexgen.automata_move]] |c75f97912acb36f28b7362f8bf6bd629
+type [[Lexgen.automata_entry]] |563f8b761b81c2a891a7659c77e173e0
+type [[Lexgen.automata_matrix]] |aa7b58e72973de9a1a239d95228a9bcf
+signature [[Lexgen.make_dfa]] |c9e1fc4e21f99279af37cb87834ee633

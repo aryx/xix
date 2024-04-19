@@ -1,0 +1,3 @@
+version_control/client.ml |b929c2294f0edb7eba3510bb6a446a10
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+type [[Client.t]] |0ae29204f2a8f96c154290d7d9aa4b6e

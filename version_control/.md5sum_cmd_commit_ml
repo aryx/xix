@@ -1,0 +1,14 @@
+version_control/cmd_commit.ml |5ebf63a8fad01c05fa40a9ed6ef0f2d5
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Cmd_commit.commit]] |526d8eda64a5a7ec14ab0a9fc0e8abbb
+constant [[Cmd_commit.author]] |21d85e35d08b169453a6c5fb256d7113
+constant [[Cmd_commit.committer]] |c9718eec350a1705223ebc7d80f47f8e
+constant [[Cmd_commit.message]] |63c74a89fba38a28d23be2e8a94d56ee
+constant [[Cmd_commit.cmd]] |0698000165543a963afe525b1f212f53
+[[Cmd_commit.cmd]] command-line options |4e0d3ed3cdbc28351d2bb80b323e66f8
+[[Cmd_commit.cmd]] command-line options |e488d2ed939805d903ac844411df8420
+[[Cmd_commit.cmd]] command-line options |679c81feb55535457a8b738e1f8b84b6
+[[Cmd_commit.cmd]] command-line options |f2c17d4ef17571acf482f18ce770a2ab
+[[Cmd_commit.cmd]] compute [[today]] |281df25305b72cc59f2319308bf1aa8d
+[[Cmd_commit.cmd]] compute [[author]] user |f8a3d207781b83cca9c75a460d52f84d
+[[Cmd_commit.cmd]] compute [[committer]] user |eed7b29aacba0b66c269a50af8a2985d

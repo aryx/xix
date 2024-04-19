@@ -1,0 +1,26 @@
+lex/lexer.mll |e1d93c351d56d905ecbd420c61321aca
+copyright ocamllex |76f927ba746140f058e7a122cb271d1b
+Lexer helper functions and globals |2c90e2a68baf3bd504ae8f176efd7f11
+Lexer helper functions and globals |27632fd899fa00f385166aa653ccb39d
+Lexer helper functions and globals |c7114494d4902f1d82d50a26f30ec9af
+Lexer helper functions and globals |cac21f5dfb1bfb2a2dcffb576db3d24c
+Lexer helper functions and globals |6e677de2acf6ef17c1ff5d38740b1b70
+Lexer helper functions and globals |1d52d50f8ac46949abd4a46aef128576
+Lexer helper functions and globals |1d1e37e5cd58759519c0676b034f2d14
+Lexer helper functions and globals |0884c3b638b41dbce1a38a4fa8f4c1ea
+rule Lexer.main |3abc6d337e820eb93817e491dc134b4d
+[[Lexer.main()]] space case |0bc7ed6f908081bd55e216c5fb408bf7
+[[Lexer.main()]] comment case |4057365f31cd21c604fb8b30a4be059d
+[[Lexer.main()]] keyword or identifier case |edddc6fe7fce7f1add9c6d8acdb08996
+[[Lexer.main()]] string start case |db77f3aecc4764ad94a508d9340a0788
+[[Lexer.main()]] character cases |15dc750d81978d308ce72c54c7a26e1d
+[[Lexer.main()]] operator cases |da223334e77d8553d8a1b97ce9e9b4e9
+[[Lexer.main()]] operator cases |3b580217094cb72169f42791091056f8
+[[Lexer.main()]] operator cases |67a0b314ad14ff64e09d95fe9d1b1994
+[[Lexer.main()]] operator cases |2bb8c2e9d16aec5d4934db87c26b574c
+[[Lexer.main()]] operator cases |c900cab08a259a073aee62e43d2bf449
+[[Lexer.main()]] operator cases |0b2fc0f5a92b4c2cdbbbed0e64a8fb44
+[[Lexer.main()]] action case |fecf0c8d168533ba7d107e4cc5a48ea7
+rule Lexer.action |8a52c43edfb1814dce9a860c380c1f61
+rule Lexer.string |da253e226d1f2171a122e6350e85935e
+rule Lexer.comment |a98093c946e394f23d525e40ee394c28

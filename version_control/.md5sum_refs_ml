@@ -1,0 +1,9 @@
+version_control/refs.ml |be48f45a6eb8cc74f416ead4b2df8f3a
+type [[Refs.refname]] |16313bc5d817281faf9ae0707e89502b
+type [[Refs.t]] |105c4a30e495337bbefb14dcf495e97f
+type [[Refs.ref_content]] |035df194c634afe5afd5f881fbc17f18
+constant [[Refs.default_head_content]] |835db891d6628f19255110eecef9e73a
+function [[Refs.is_valid_refname]] |f40052414d733223d4dca561a84eaea4
+function [[Refs.string_of_ref]] |fde2e46db84be67b42ea72c181efc6d4
+function [[Refs.read]] |ef615ad8e04c04ce678b5c80cb167559
+function [[Refs.write]] |c5e287c2c8db16f365ded9faadc4aa16

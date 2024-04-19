@@ -1,0 +1,11 @@
+lex/output.ml |60ea7af90890f3f032269fa0efa7c7a1
+copyright ocamllex |76f927ba746140f058e7a122cb271d1b
+constant [[Output.copy_buffer]] |ab25629f64f5df2003f566b9f37d11a5
+function [[Output.copy_chunk]] |bb39dbf017d32554c8547476f53cb470
+function [[Output.output_byte]] |b12e3293822fb33f82322d907aca0613
+function [[Output.output_array]] |1d57623d3410c647ed28dcce475a4f98
+function [[Output.output_tables]] |0ccb0ce3e2d1021e87c3e00a3a7aa58a
+function [[Output.output_entry]] |efa2c155296145c4eb54a2ee16468f65
+function [[Output.output_lexdef]] |70671e0016d3c507eeee3ccce14da952
+[[Output.output_lexdef()]] print statistics |7480944ba5de6ff5fbdd5115d2844e19
+[[Output.output_lexdef()]] generate entry points |a8c321157d80971942f5ddf920f6fba2

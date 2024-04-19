@@ -1,0 +1,12 @@
+version_control/sha1.ml |2fc233c4b851c607d5489216511ffc4e
+copyright uuidm |09cb3e0771a74fd6deaa1f99abaf21da
+type [[Sha1.t]] |f0566159e920da62317a6f24ec809cf4
+function [[Sha1.is_sha]] |98a9efbee857d0e7e9c19b882d0c22a5
+function [[Sha1.read]] |89e97337393c20e8d68f780809b57b26
+function [[Sha1.write]] |77550fd4bd19dff80a6a1094f077909b
+function [[Sha1.sha1]] |36002614209048d2ba3381ca6b772c76
+function [[sha_1_pad]] |7d2cb5d4cefca7a3436b4af516a6f699
+[[Sha1.sha1()]] operator shortcuts for Int32 |0059a7fe2157d9519355c9b563e8e18a
+[[Sha1.sha1()]] fill [[w]] for each block [[i]] |f3e44b022dece09b2a550f4717ca96a5
+[[Sha1.sha1()]] loop from 0 to 79 for each block [[i]] |fdd9445deede40c1241ed8e8ff72e474
+function [[i2s]] |a953835ab42ffe0e60a352d194ba8b96

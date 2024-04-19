@@ -1,0 +1,8 @@
+version_control/cmd_show.ml |073f05dc6a20c79ccd42edb075f7b365
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Cmd_show.show]] |02b17d4f172c094690111b38bad2467f
+[[Cmd_show.show()]] match obj cases |51e2fcde437fb5e0033890e4e27c7ca3
+[[Cmd_show.show()]] match obj cases |a9d4ec6641429c9e1fb8b64170188cb8
+[[Cmd_show.show()]] match obj cases |540b175fc980a7c55c94bf074c4044a2
+[[Cmd_show.show()]] match obj cases |68b329da9893e34099c7d8ad5cb9c940
+constant [[Cmd_show.cmd]] |0db13676ad50d9c2055a3c15c4f98052

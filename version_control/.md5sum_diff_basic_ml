@@ -1,0 +1,4 @@
+version_control/diff_basic.ml |e446b24af8e5c4298e682c74160a9133
+function [[Diff_basic.matrix_distance]] |48fcb6295bb910f7d432c6a07290f47a
+function [[Diff_basic.traceback_transcript]] |751f4709fb1b099e34b8dd022b41aa4e
+function [[Diff_basic.diff]] |2690b9f38c2af8b84fba4537e7bb31a3

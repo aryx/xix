@@ -1,0 +1,7 @@
+version_control/diff_myers.ml |fe6d114227af48dbdddd2252606b6004
+copyright ocaml-diff-myers |4b99c40c597830886e90f2f1011b31b0
+function [[Diff_myers.lcs]] |da6a49d0b02bf32e41ea951347bbcb03
+function [[Diff_myers.finish]] |9ba7b182d68f1f91417bd064644febf4
+function [[Diff_myers.kloop]] |e777e17f4c14d9c11c97780056d6bc3d
+function [[Diff_myers.xyloop]] |be2d0f02f4c21bdc3b4e9b53ef2d4bd4
+function [[Diff_myers.diff]] |1c1aade02cc9baf8c77ba8de22f2ef9c

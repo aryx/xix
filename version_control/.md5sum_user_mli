@@ -1,0 +1,6 @@
+version_control/user.mli |62cf65c1eafbdcf57596ded1e53f2ae1
+type [[User.tz_offset]] |e5ff6d2bd8cd5050e64df927680045ad
+type [[User.t]] |55e8137cff269bfee95fb9c7b0878e41
+signature [[User.read]] |8e0e659130a934b7c4fa5c422c39841e
+signature [[User.write]] |785d7370daba45a0ac1a7e6a3a0f906a
+signature [[User.string_of_date]] |15031211d5f211bf4ac2dd6d0b464309

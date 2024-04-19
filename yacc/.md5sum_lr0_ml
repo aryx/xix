@@ -1,0 +1,17 @@
+yacc/lr0.ml |0632a5c6e8e1f5d8ec3630c29645bbab
+copyright ocamlyacc |6300f84965785200159d748c8d5fa133
+type [[Lr0.ruleidx]](yacc) |6482dc743d0d1b3710f7de9631127fab
+type [[Lr0.dotidx]](yacc) |b4a0ef8d18ce4529dac2fc49cbf5a822
+type [[Lr0.stateid]](yacc) |10c4c44e8334ef8798d66e78e807a236
+type [[Lr0.item]](yacc) |89500d24c2d32434ec58fbd44ef218f3
+type [[Lr0.items]](yacc) |ed9aa504648c7d0b6a0a284b957ae69d
+type [[Lr0.env]](yacc) |25f47acd6606fbe2ee7877b6eac4878c
+type [[Lr0.automaton]](yacc) |03bb2737bc3b11c22c9eb6d98c33e0db
+function [[Lr0.mk_env_augmented_grammar]](yacc) |c42e0590e55d0c8e41721570f57b0bc8
+function [[Lr0.rules_of]](yacc) |abb9fb8bce0e066ef4fbd5aea3ec43cd
+function [[Lr0.after_dot]](yacc) |6ffb8b0b727c4f46717efbb981fc1d13
+function [[Lr0.move_dot_right]](yacc) |d61d7592dd665a9965a98b81c27967b0
+function [[Lr0.all_symbols]](yacc) |a52868ecbc3c33698f2eb72f2caf1a02
+function [[Lr0.closure]](yacc) |27b388dc3ef406d5838286ad9b34abcb
+function [[Lr0.goto]](yacc) |9d19873902ecdb17f9d1f3f056b1c776
+function [[Lr0.canonical_lr0_automaton]](yacc) |e592e419e1094abf2850e84a221c8256

@@ -1,0 +1,10 @@
+version_control/commit.mli |a69de886640cff578e647e5cd4e1085d
+type [[Commit.t]] |744481103a9f87e0055e030f637d75c6
+[[Commit.t]] extra fields |a4ae58cab675d3f46734881f2a4d5050
+[[Commit.t]] extra fields |78ebb756409bad7cd3b30099fd7c63d0
+type [[Commit.hash]] |61f76d5f6fc6350067da9e33ac706b39
+signature [[Commit.read]] |69131d437abaad7d9a67c3c0dd9b9529
+signature [[Commit.write]] |178eb49781502a738b27400d35128aed
+signature [[Commit.show]] |b69210f4d339d5e959d480aca7cbde24
+signature [[Commit.collect_ancestors]] |5130c54382cfe615f083a93a7bd9527b
+signature [[Commit.walk_history]] |0d163ae700c309e19a647435017fedcb

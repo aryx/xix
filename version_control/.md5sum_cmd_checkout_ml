@@ -1,0 +1,9 @@
+version_control/cmd_checkout.ml |c69a9027cdd9c11578806ed17d50a255
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Cmd_checkout.checkout]] |a1f5d22b0b13fd4d32741b8c1aee2dd0
+[[Cmd_checkout.checkout()]] cases |82daa2c0c45c37e1fea71832559b748b
+function [[Cmd_checkout.update]] |224616e495ef83ec828ff1cae07dbbf7
+constant [[Cmd_checkout.cmd]] |dafd65bf0bc68b99b2163a15ab334935
+[[Cmd_checkout.cmd]] command-line options |b81a554813828d8e98ec121be6fa1339
+[[Cmd_checkout.cmd]] match args cases |cca24da04013cd0e35b4774ecb7e19cd
+[[Cmd_checkout.cmd]] match args cases |7847bdc47d0f668ea500301970ca09e3

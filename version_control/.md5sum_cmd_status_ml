@@ -1,0 +1,12 @@
+version_control/cmd_status.ml |192ae10eaff6a668d221cc8c4bb4ac8d
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+type [[Cmd_status.status]] |94a63ee82d108aa2b953a50d5e61b97e
+function [[Cmd_status.changes_index_vs_HEAD]] |93f903beface70cfc40715464b44f149
+function [[Cmd_status.untracked]] |7f3228b568de0548a9d61de77f217e78
+function [[Cmd_status.status_of_repository]] |c604dce2ae0bb2f42d65b864389f56b2
+function [[Cmd_status.print_change_long]] |9dc9d1bef81b6fb74a8119081e235b49
+function [[Cmd_status.print_status_long]] |9470a874d439b8cf310e03863263b96f
+function [[Cmd_status.print_status_short]] |c0a18ead2bdf5bf8eaf073c820c2b86d
+constant [[Cmd_status.short_format]] |08eff529b5fe54822b4d75dd388443fc
+function [[Cmd_status.status]] |6aa1204e1208fd3d9236803209820486
+constant [[Cmd_status.cmd]] |bc4227bd7d94cce38f7f0d83f36925c7

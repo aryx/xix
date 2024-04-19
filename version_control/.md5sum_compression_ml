@@ -1,0 +1,4 @@
+version_control/compression.ml |793123dbf5011a433ae8984e4046f9d7
+copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
+function [[Compression.decompress]] |dc0765042491a95f5ff99d58bec08368
+function [[Compression.compress]] |4c0a14c7482ab161fdd5cde7901e0104

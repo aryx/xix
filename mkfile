@@ -49,3 +49,6 @@ SUBDIRS=$DIRS $TESTDIRS
 	for (i in $SUBDIRS) { echo S $i >> .merlin || exit 1 }
 	for (i in $SUBDIRS) { echo B $i >> .merlin || exit 1 }
 
+# too many dupes for now (e.g., ast.ml in mutliple dirs)
+graph:QV:
+	/home/pad/pfff/codegraph_build -symlinks -lang cmt -verbose .

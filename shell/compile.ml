@@ -285,7 +285,7 @@ let compile seq =
   (* pointer in codebuf *)
   let idx = ref 0 in
 
-  let codebuf_template = Array.create 100 (O.I 0) in
+  let codebuf_template = Array.make 100 (O.I 0) in
 
   let emit x =
     (* grow the array if needed *)

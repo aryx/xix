@@ -1,4 +1,4 @@
-
+# -*- sh -*-
 # ocaml objects
 *.cm*
 *.annot
@@ -73,9 +73,7 @@
 /windows/tests/test_rio_console_app1
 /linker/tests/5.out
 /linker/tests/test_out
+/lib_gui/tests/hellogui
 
 # ????
 
-
-
-/lib_gui/tests/hellogui

@@ -106,7 +106,7 @@ let to_sha s =
     else begin
       (*s: [[hexsha.to_sha()]] double sanity check range i *)
       if i+1 >= n 
-      then raise (Invalid_argument "hex conversion: invalid hex string")
+      then raise (Invalid_argument "hex conversion: invalid hex string");
       (*e: [[hexsha.to_sha()]] double sanity check range i *)
       Bytes.set buf (i/2) (to_byte s.[i] s.[i+1]);
       aux (i+2)

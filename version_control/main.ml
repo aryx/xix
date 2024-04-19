@@ -54,6 +54,9 @@ open Common
  *  - hashtbl [] overloading, so can do r.refs["refs/tags/"+tag] = obj.id
  *    (thx to __setitem__ and __getitem__, but true that it also entails
  *     lots of boilerplate code)
+ *
+ * TODO:
+ *  - look go-git, better basis? more complete than ocamlgit?
  *)
 
 (*****************************************************************************)

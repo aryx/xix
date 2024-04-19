@@ -1,0 +1,758 @@
+# -*- org -*-
+
+for the kernel in ocaml, use https://github.com/mirage/ocaml-freestanding ?
+
+* LAST, was in GTD.org
+
+** augment rc-in-ocaml now that understand better some issues
+get enough again to compile plan9
+
+** mk divergence
+if an HFILES does not exist, then mk-in-ocaml does not say anything
+but original (rightfully) complain about 'dont know how to make xxx.h'
+
+** lib_gui/lib_graphics
+
+*** basic line drawing, basic porting of draw to use Graphics of OCaml
+
+*** better Vector type? separate from Point?
+same for Size? meh.
+
+** lib_gui
+
+*** basic label
+
+* Misc
+
+** all  
+
+*** EASY factorize a few things with bit vs little endian stuff
+so factorize code in protocol_9P and linker exec generation
+and a_out header generation.
+
+need genio.ml in commons2/ then, so need remove keyword arg
+stuff first?
+
+*** factorize little/big endian and generation of int
+in a module? then reference cstruct and mstruct.
+Why need bigarray? simple API on top of string (now called
+bytes in recent ocaml) not enough?
+
+*** use camomile for unicode?
+or extlib/utf8.ml good enough?
+
+*** EASY add .mli in lib_graphics/geometry
+
+*** EASY add .mli in lib_graphics/draw
+
+*** port mkfile to mkfile-ocaml for lib_system/plan9
+pb when try build .a because need mk-C extension for libs.
+
+*** merge commons/ and commons2/? 
+
+*** can use ocaml.ml with ocaml light?
+
+*** can have more recent obj.ml?
+replace all stdlib.cma by my own?
+=> can use ocamltarzan for dumping kernel stuff?
+
+** send patches
+
+*** send patch to github for esthetic changes in ocaml :)
+remove useless file I spotted
+
+*** send patch to github for dulwich?
+
+*** less: report bug on simple-diff
+see diff.ml for example of problematic input
+
+* Ported (partially working)
+
+** git in ocaml 
+(start from dulwich? ocaml-git?), so self sustaining, can use it
+ to communicate with github! can use it to do stuff under plan9 itself!
+
+*** port zip so can skip camlzip from Leroy 
+and simplify soft archi (no extern C lib dependencies)
+
+**** basic unzip that bytes -> bytes?
+simpler code? using IO.ml is complicated?
+
+**** deflate_data() and call as you need
+need to duplicate what was done for unzip.ml
+z.zneeded
+
+understand window? why double size of sliding window? (64K instead of 32K)
+
+**** try naive zip? 
+generate format with uncompressed (Flat) blocks!
+still need generate right bits and bytes!
+can assert unzip (zip s) = s
+
+**** try using lz77 and fixed huffman? works? 
+generate good format?
+
+**** look code of libflate?
+incorporate some opti from there?
+
+**** less: get rid of camlzip at this point?
+or nice to keep to compare
+
+**** less: incorporate decompress pure zlib implem?
+less important maybe, because can still use libflate
+when port my git to plan9!
+or even use my own simplified non-compressed simply marshalled
+format for gitfiles.
+
+**** try do same for jpeg?
+there was a nice paper or literate paper about jpeg, a pearl maybe
+
+*** EASY support --author for cmd_commit.ml
+
+*** timezone inference in cmd_commit.ml
+
+*** look at packing code, start implement pack.ml
+
+**** port code from dulwich and ocamlgit?
+
+*** git merge
+
+**** merge trees! 
+easy cases version where do not require diff3
+
+**** merge files
+
+**** fix conflict and do the merge
+MERGE_HEADS?
+
+**** look how done in C version (dulwich did not have merge)
+
+*** ------------------------------
+
+*** less: look code of gat, gitlet, cmtcontrol, etc.
+
+*** less: write refs atomically
+bugfix where No_more_input when commit with set_new_if_same_old
+after second commit in new repo
+
+*** less: git status --short
+
+*** less: git log <path>
+useful, so need filter when walk_history on diff (so need
+do tree_changes)
+
+*** less: read tags
+
+
+** rio in ocaml
+Now that I understand better the ocaml thread implementation, I can port 
+rio to ocaml and test it under qemu-system-386 (or even qemu-system-arm?)
+
+Test with plan9port? with drawterm? 9wm? possible?
+
+*** EASY implement readdir, so can ls /dev
+
+*** EASY /mnt/wsys/label
+need hide window to test if works and make special app writing on 
+/mnt/wsys/label (test_graph_app2?)
+
+*** up/down keys? or automatic scroll?
+in any case, need to move origin
+
+*** finish delete window, delete timeout proc, winclosechan
+and exitchan and deletechan
+
+**** remove window once child has finished
+
+*** how to handle when process die?
+non blocking waitpid! ThreadUnix has one!
+
+*** less: get the refcount right to windows, wclose, winclosechan
+
+*** -------------------------------------------------
+
+*** implement stuff in section{Window borders click}
+
+*** move
+backend part done when I did the hide/unhide
+
+*** resize
+backend part done when I did the hide/unhide
+
+*** /mnt/wsys/cursor
+can put with virtual_mouse.ml
+
+*** later: /mnt/wsys/resize? 
+instead of abusing /dev/mouse?
+
+
+*** improve terminal
+
+**** less: ^D
+delete_runes too, but different cursor
+
+**** less: wrong tab 8 vs ?
+see when type 'lc'
+actually, how lc knows width of window? read /dev/window?
+
+**** less: copy stuff from Efuns? simplify the code?
+action should just move cursor and the rest should follow
+and be updated automatically
+hmm actually no, can have cursor at the end but still origin high
+(so no need less)
+
+sentinel to simplify code for EOF?
+
+*** bugfix: when I quit rio-ocaml, terminal is weird
+need atexit  draw shutdown? kernel does not do it?
+rio-c seems to not have this pb
+same when I run hellorio-ocaml outside rio and I quit it.
+
+because of raw mode on /dev/consctl probably!
+
+*** still? bugfix: display chars on screen for hellorio? why?
+because did not reassign stdout? but why echo because
+asked raw mode?
+
+still? hellorio-ocaml or hellorio-c?
+
+*** less: bugfix: weird crash and debug trace output after reassigned stderr
+in processes_winshell.ml 
+
+less because I fixed it by calling correctly openfile (but still it would
+be nice to not crash ...)
+
+"double sleep" kernel error
+I got it fixed by not using dup2, but dup2 should work! we should
+not be able to crash the kernel
+
+it was when I was duping something that I closed and not reopened?
+(I forgot the perm argument to openfile, so I was doing something wrong
+and not reopening)
+
+  Unix1.close Unix1.stdin;
+  let fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
+  if fd <> Unix1.stdin
+  then failwith "could not reassign stdin";
+
+  Unix1.close Unix1.stdout;
+  let fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
+  if fd <> Unix1.stdout
+  then failwith "could not reassign stdout";
+  
+  (* todo: Unix1.dup2 Unix1.stdout Unix1.stderr; 
+   * this creates a kernel crash! 'double sleep' error.
+  *)
+ (*
+  Unix1.close Unix1.stderr;
+  let _ = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
+ *)  
+
+
+*** bugfix: it selects immediately the first entry, why?
+QEMU issue with mouse? because does not happen after
+
+*** less: complex channels for cpid 
+needed if pb when mount and bind, but then
+internal pb no?
+how to handle when pb in child process when mount, bind,
+this is why need cpid? how do that with ocaml model of threads and fork?
+How communicate information?
+
+*** less: sanitize integer values with a constructor like the one for Int32.xx
+so can check if overflow
+
+*** less: cornercursor
+need return pos in sweep? then need pass pos to callback? more functional?
+more tedious?
+alt: store mouse state in mousectl
+
+*** less: port preemptive feature of threads library to plan9?
+replace setitimer by equivalent under plan9?
+maybe also use APE so can use select and so can use threadUnix.ml.
+
+use APE alarm? but then granularity is second. Ok? Anyway
+rio should need only cooperative scheduling?
+
+actually might be bad. Maybe better to be fully cooperative,
+otherwise may need some mutex at a few places (e.g. for
+atomic access to the queue)
+
+
+** rc in ocaml
+
+*** read environment, Vinit
+
+*** subshell
+
+*** Vinit
+use IFS?
+
+*** read environment variables
+and transform for PATH
+
+*** export environment variables
+only when change?
+
+
+*** try plug rc.byte to be used by mk-rc.byte :)
+use a ROOT? so make it works also with bootstrap?
+
+so can dogfood more!
+can use it to compile plan9/ itself?
+
+*** implement all rcmain?
+function definition
+
+*** => can run 95% of what I need?
+well, not really, cos miss arrow for history, and TAB for completion.
+
+*** implicit caret insertion (lastword global)
+
+*** ------------------------------- 
+
+*** less: isatty auto detection interactive
+right now have to use -i explicitely
+
+*** signals stuff!
+and signal debugging! pr2 when something happens related to signals
+
+*** less: why wrong status when do  ls | foo
+why not |1 
+?
+still pb?
+
+*** less: look if cover all error messages in lexer and parser
+
+*** less: other lexing tricks
+$foo(...) SUB
+lastdol? for caret insertion?
+
+** mk in ocaml
+
+*** mk: don't know how to make 'screen.h' in /Users/pad/github/fork-plan9/sys/src/9/pc
+=> improve error! at least say where this screen.h come from
+
+*** pb infinite mk when have rules like
+%: %.cmo (see windows/tests/)
+
+*** warn when use prereqs instead of prereq?
+could detect also by use of undefined variable in command?
+or edit distance with builtin?
+
+*** seems slow in plan9-ml/kernel
+use -trace, nothing abnormal?
+add a -profile?
+
+*** substitution variables
+so can remove CMI in plan9-ml/kernel/
+update: but I added support for subst variables already no?
+
+*** mk-ocaml: 'default' is already up-to-date ->
+'mk' (<- default <- "") is already up to date)
+
+*** infinite rule detection or restriction
+so mk does not loop forever on mk-infinite
+
+
+*** see PB_WITH_MKDEBUG also for dependencies
+wrong. mk depend does not solve the issue.
+
+*** quiet mode, and maybe buffer output and a very synthetic
+DONE xxx.pdf :)
+luisa will be happy :)
+
+mk -quiet
+mk -loud
+
+** 5c in ocaml
+5c -w -I/arm/include -I/sys/include
+
+*** branch 5c_todo for test files to commit
+now only in my macbook air repo? in IN_SURFACE_BOOK2/prev_github
+
+*** -depend
+to generate .depend! better than plan9!
+
+*** useless-include detector! finally :)
+alexandrescu would be proud
+
+*** precise codegraph using 5c frontend! finally!
+
+*** support ## in macro (as in ocaml/.../memory.h)
+so can use recent ocaml macros
+
+*** --------------------
+
+*** void vs non void
+void (*hook_ioalloc)(void);
+vs
+void (*hook_ioalloc)();
+
+one is old style proto without argument checking
+
+*** unreachable code analysis
+
+*** typecheck rio!
+allow redundant typedefs?
+(just warn)
+
+
+*** ---------------------------------
+
+*** test 5c-ocaml on plan9/buiders/mk
+need modify bio.h to remove anon field though.
+pb in regexp.h then
+anon union subelement
+
+*** support anon subelements?
+clang seems to have some support for it
+
+
+*** dereference pointer and assign
+reglcgen 
+see pointer.c
+
+*** what can generate an INDREG? since anyway can not
+generate OREGISTER so easily.
+look opportunities in mov_operand() converter
+
+*** deadheads?
+
+*** EASY handle strings, at least OSTRING
+
+*** -------------------------------------------------- 
+
+*** x = y = z  parsed as?
+result of x = y  is still an lvalue??
+add comment in Compiler.nw
+
+*** EASY put back pragma code?
+put it next to relevant section? e.g., format checking?
+
+*** EASY assembly pretty printer from ast_asm5.ml
+
+*** typedef and tcopy??
+write test case
+why need that?? forbid cases mentioned (typedef to incomplete array)
+
+*** -------------------------------------------------- 
+
+*** valid break/continue
+in check.ml? during unreachable analysis?
+
+*** unreachable code?
+aspectize code to manage canreach, oldreach, warnreach, etc.
+
+deadheads?
+and supgen?
+nbreak, ncontinue
+
+*** unused result op check
+
+*** const checking
+should be easy
+
+*** -------------------------------------------------- 
+
+*** add casts, finish port arith()
+or just adjust return types as said in Compiler.nw
+
+*** do FIGURE so can brain dump what I learned (otherwise
+next time will have to redo that again)
+
+also try to find/add a -dump_ast option so can put FIGURE
+with just AST and then show the dump.
+
+**** how store in symbol table nested things when backtrack?
+nested struct defs? field point to which thing in the symbol table?
+Because return newly allocated type for struct, that is filled later.
+Because dont really use symbol table to store permanently things!
+Copy to node the information, or fill later. Symbol table used
+really just for scope.
+
+*** replace string messages with constructor, so
+localize error reporting in one place, and avoid noise in code
+
+*** HARD bugfix error location on archive.c
+compare with regular 5c
+maybe explain the code in Compiler.nw so good basis to port in ocaml.
+
+need to take pen and paper! I never get it right.
+look at (correct) original code to report error in 5c
+
+*** fix shift/reduce conflict? still 6
+original had 3?
+
+** 5a in ocaml
+
+*** give better error message on quote.s and accept '\''
+
+
+** ocamlyacc
+opportunity to add EBNF to yacc!
+
+*** try ocamllex and ocamlyacc bootstrap? :)
+need lalr? conflicts?
+
+*** try ocamllex and ocamlyacc on tiger?
+
+** ocamllex
+opportunity to have a debug mode where better see the lexer
+ and parser actions and what's going on!
+
+*** ocamllex: read dragon book, confusing 'pos'
+firstpos, followpos, etc
+
+do different algo first?
+
+*** ocamllex: understand followpos and the whole algorithm
+
+*** ocamllex: eof handled correctly in Lexing.ml??
+port old lexing.ml? Lexing.of_string should append '\000'
+
+*** later: ocamllex: understand fully compaction
+it's an optimisation
+
+*** later: ocamllex: understand lex running, lex_engine
+it's an optimisation
+
+
+** ocaml in ocaml (ocaml light)
+
+*** library
+would be good to port to latest convention so caml_xxx 
+so at least easy to get library from recent ocaml versions
+working also under ocaml 1.07
+
+**** Arg.align
+
+**** List.iteri
+
+*** support for qualifier just for first field that propagates to
+other fields so can do
+
+{ Xxx.foo = 1; bar = 2; ... } without having to repeat Xxx (which helps
+to avoid some open)
+
+just cherry pick the patch that did that in original ocaml
+
+*** "Some labels are undefined" error
+well nice, which one! Improve error message, give at least one label name.
+or better, give all of them
+
+*** missing errors!
+
+failwith "Unix error: %s while executing %s with %s"
+      (Unix.error_message err) cmd arg
+
+  I forgot 'spf' but ocaml light says nothing
+
+Unix1.openfile "/dev/cons" [Unix1.O_RDONLY];
+
+  I forgot the perm parameter, but ocaml light said nothing
+
+*** -annot!
+
+*** unused variable check 
+and the _xxx prefix to invalidate it
+
+*** check result ignored
+see in lib_graphics/input/keyboard.ml
+I was doing    Event.send ctl.chan buf.[i];
+but this is not unit!
+
+*** support { x; y } when x and y are locals
+
+
+* Partially ported
+
+** draw in ocaml?
+
+*** use camlidl? or implement low-level stuff that writes
+into /dev/draw/x/ directly?
+
+***  client/server with simple marshalling protocol?
+type msg = Draw of ... | Line of ... | Alloc of ...
+
+*** memdraw in ocaml
+do no need kernel to have memdraw or memlayer. Can be used entirely
+in userspace
+
+can port memdraw first and can even test under qemu thx to 9 in ocaml
+DONE can also port draw first and test for rio. 2 independent halves.
+
+**** continue go through Graphics.nw; add %ocaml
+
+
+** Kernel in ocaml
+So can do draw and then rio in ocaml? How?
+Need full understanding of ocamlrun before I think. Will need still to
+have part in C to setup for ocamlrun. How to deal with stdlib for ocamlrun?
+Need to forbid most functions in pervasives.mli. Have a -nopervasives and then 
+another specific pervasives.mli ?
+
+need to understand C code in ocaml to check whether I could use
+ocaml to do the plan9 kernel in ocaml!
+
+Gain deeper understanding of ocamlrun and its GC! And also of FFI.
+Gain also far deeper understanding of 9 in C.
+
+panic("pc = %lux, link = %lux", &sys_get_argv, getcallerpc(&unit));
+
+*** alarmkproc
+
+*** hz_checkalarms
+
+*** read sleep.ps and subtle condition for rendez vous
+
+*** continue user_addr, phys_addr'fication
+
+
+*** test Thread.thread_delay
+my gettimeofday is working?
+
+*** connect mutex to tas or spinlock?
+Threads.critical_section := true?
+
+*** ocaml threads and processes
+
+**** archi?
+
+Maybe disable interrupt at each instruction boundaries and
+also when enter Gc. Then reenable and look if
+interrupt in the mean time (just like look if signal in the mean time)
+and then dispatch interrupt upper-half handler.
+Bottom-half interrupt just set a global flag.
+
+use Thread.t and scheduler.c from otherlibs/threads/ ?
+but use interrupt instead of signal for timer and
+and use splhi before reseting the pending_signal.
+Also use Mutex.lock? or just imitate Mutex.lock in my
+Qlock?
+
+**** new thread for process, how? in newproc, sysrfork, but how?
+just have s cheding and then Critical_section:=true; wakeup schedinit; sleep
+and schedinit when up is s cheding can just ready it too, like
+for Running
+
+**** modify scheduler it to have reference to process Ureg?
+
+**** find archi design for preempt when not in kernel mode
+thread RFE? how get back thread to execute on behalf of proc?
+execute back thread closure? thread clos should be either
+syscall handler or fault handler?
+
+*** first user process
+
+**** try first user process, manual text, data, bss, initcode
+SWI
+
+**** try sysnop! and maybe a syssleep in 2 processes that print A, B!
+syscall is a different kind of signal
+
+**** syscall interface:
+2 strings pointers, 2 ints, one for arg in, one for arg out,
+and ints for size of those buffers
+then marshal in/out both.
+(and do same later for 9p?)
+
+**** try start main.ml calling init functions?
+
+*** finalize
+take care of TODOs in Byterun/!! Bcm/ Port/
+take care to update mem.h to agree with memory.ml lower limits
+
+*** less: remove coproc.c? write 2 functions needed in asm?
+
+*** rendez vous type and sleep hook
+also modif relevant section in Kernel.nw
+understand how locking and rendez vous works?
+
+*** env_.ml
+and adjust sysrfork
+
+*** namespace_.ml ? (complicated probably)
+and adjust sysrfork
+
+*** EASY rwlock.ml
+
+*** EASY nspinlocks in ocaml
+
+*** EASY ilockdepth in ocaml
+
+*** EASY okaddr
+
+*** EASY vmemchr (user_memory.ml)
+
+*** less: mk depend for C code? use 5c-ocaml to generate .depend?
+less important because we should not modify much C code. Most of the
+modifs are on ocaml code and mk depend works for that
+
+*** look other OS or programs
+
+**** look how done in Rust? Maybe give ideas on how to separate
+code between ocaml and C and asm.
+https://os.phil-opp.com/handling-exceptions.html
+
+**** less: look redox kernel?
+look paper about RUST and kernel programming
+
+**** how map low-level structures?
+mirage?
+cstruct? can reuse portable part of cstruct? need bigarray then also!
+need port back bigarray to ocaml 1.07
+
+**** look other kernels to get some good ideas?
+mezzano OS?
+stuff embedding scheme interpreter I saw recently, femtolisp?
+minoca OS?
+redox?
+
+
+** xv6 in ocaml for ARM?
+Can learn another way to write an OS. 
+Can contrast some of the design decisions in plan9 and also compare 
+the choice of variable names (e.g., xv6 also use a cpu and up), but it seems
+xv6 is quite similar to 9 (ken thompson wrote both in some sense so normal)
+
+*** how xv6_rpi_port handle the keyboard?
+seems it does not handle it ... it uses UART?
+
+* To port
+
+** EASY tree in ocaml
+http://blog.shaynefletcher.org/2017/10/how-to-render-trees-like-unix-tree.html
+plan9-ml/utilities/misc/tree.ml
+
+copy paste walk_dir? or move in lib_system? or Common.Sys_ ?
+
+** lib_gui/ in ocaml?
+#step towards better mmm?
+
+** Tiger backend for ARM :)
+maybe good to transition to book on 5c?
+but then need 5i in ocaml
+
+*** resume, compile, still works? make sync?
+
+*** understand Tiger.nw, add explanations? more LP split? more aspectize?
+
+*** generate assembly file from .tig? need extra phase?
+register allocation? read Appel?
+
+*** port gc?
+
+*** generate assembly via ast_asm5.ml directly?
+Once I have 5l in ocaml! which can codegen!!! and
+run on 5i!! woohoo! will have 8 queens in Tiger running!
+
+Can even generate directly Asm5 using OCaml constructor and ast_asm5.ml!
+Safer than generating strings (similar to 5c in the end).
+
+** 5i in ocaml
+
+so can try to run things directly on my mac (but need 5c-ocaml before
+ to get interesting program to test on). Also can be used by Tiger-ARM!
+
+

@@ -1,0 +1,339 @@
+# -*- org -*-
+
+* Elm playground Last
+
+https://github.com/KDE/kde1-kdegames
+
+** Web version
+
+*** words (for pong and when crash in snake)
+
+*** polygons (for asteroid)
+
+*** WEIRD stalling Tetris, not even an element
+
+*** WEIRD fix bounding box not always the right one, which leads to 
+flickering on Mouse.html
+also on Mario.html
+
+*** port fps function?
+
+** publish
+
+*** publish some games via pages.github.com (for access at xxx.github.io)
+just put the .html and generated .bc.js!
+
+*** announce ocaml-elm-playground on discuss! and OPAM!
+https://discuss.ocaml.org/t/it-there-a-tutorial-for-js-of-ocaml-with-simple-graphics/4636/3
+
+add comment here:
+https://discuss.ocaml.org/t/suggestions-for-a-simple-portable-graphics-library/6413
+
+also here:
+https://discuss.ocaml.org/t/it-there-a-tutorial-for-js-of-ocaml-with-simple-graphics/4636/4
+
+** Finish Playground.ml
+
+*** MouseClick reset at Tick, but after ran update_memory callback
+
+*** Keyboard issues
+
+**** Keyboard reset at Tick?
+do same with certian keys? like space?
+alt: or just augment Tick? so less fps but less run of update_state?
+alt: make keyboard stuff mutable?
+
+add delta also in computer? or again just rely on a better Tick?
+
+**** finish keyboard handling, too fast!
+why? need reset the down? nah
+
+reduce Tick to less frames! 60 fps max!
+call new view only when animationFrame/Tick!
+
+How does Elm do?
+
+**** make keyboard stuff mutable? so when read the key, can reset
+it to emulate keydown/keyup?
+not pure, but would work :) or need use ref instead of mutable?
+how does Playground.elm handles that?
+
+**** why get multiple keydown SDL event when I keep the key pressed?
+
+** read more about physics
+physics explanations, looks really great tutorials
+http://gamemechanicexplorer.com/
+or physics for games book oreilly?
+
+** docs on game libs
+http://phaser.io/ framework for games, helps to see the important concepts
+needed in a game
+
+** port more games to my ocaml-elm-playground
+# port enough games to battle-test ocaml-elm-playground and be feature-rich
+#  enough to announce it at christmas :)
+#see-also: todo/games.txt
+
+*** finish asteroids
+
+**** polygon shape collision detection
+https://stackoverflow.com/questions/1560492/how-to-tell-whether-a-point-is-to-the-right-or-left-side-of-a-line
+
+**** maybe black background and random stars drawn
+
+*** port raycaster?
+
+*** port breakout
+the atari 2600 clone looks good
+
+*** fix alpha bug with turtle.png from imagelib
+#at least web version should work
+
+use git latest, they said they fixed the alpha for PNG!:
+install from source: https://github.com/rlepigre/ocaml-imagelib
+
+see https://github.com/rlepigre/ocaml-imagelib/issues/42#issuecomment-752053204
+
+*** WAITING pbs with loading gif from internet, 
+#at least web version should work
+
+get convert backend of imagelib working? Do it myself? 
+also size seems wrong for mario gif when displayed on screen
+
+** write toy app using Revery using OCaml syntax?
+#or maybe ok to write a bit of ReasonML, just for the UI anyway
+# especially when efuns with merlin offers type-hover info and goto-def
+
+** try compile efuns for revery?
+=> can use the fancy 80's syntwave fonts!
+#a pain though to install. super big, does not work with opam (at least
+#works with dune)
+
+** link pfff code with revery?
+=> can use efuns/codemap on my mac! finally!
+better code? easier UI? FRP/ELM wins?
+
+** less: look at SAFE for F#, which darklang is prototyping things in
+install dotnet?
+
+* Elm playground
+
+** finish Playground.ml
+
+*** less: add delta time in Playground.elm in computer in addition to time?
+
+*** port Time.every tickFrequency?
+
+** Go beyond Playground.ml
+
+*** how create initial game page in native? stuff that would be trivial
+in html with on Click event.
+=> need port HTML/VDom to native?
+
+or just have first page explaining stuff using Cairo.draw_text
+and the rest the game.
+
+*** cross-platform GUI? Html/VDom port in native!
+Need cross-platform gui? a la vdom?
+vbox, hbox, button, etc? and generate either raw cairo or SDL
+or html?
+
+https://github.com/sanette/bogue
+for OCaml and SDL2! perfect. Use tsdl.
+
+port the one in plan9? another xix brick! :)
+
+https://github.com/actsl/kiss_sdl
+
+ocaml-raylib better?
+
+https://eugenkiss.github.io/7guis/tasks !!!
+ nice bench, like todomvc a bit
+
+*** cross-platform physics library
+needed for rolling_moon
+
+port that simple elm library? https://github.com/jastice/boxes-and-bubbles !!
+
+** Native version
+
+*** still bugs with translate/rotate/scale of forms?
+
+** Web version
+
+*** less: onResize subscription?
+in Picture Animation and Game
+
+* Porting games
+
+** port more games to my ocaml-elm-playground
+
+*** port space invaders
+the first one on rofl-elm looks good, but svg
+weird paths to define the ufo
+
+will need load png? 
+OR define sprite library!
+define sprite via array, inline, and
+then scale that to the screen appropriately.
+draw lots of little squares :)
+16x16? simple. can even draw it in picture mode?
+https://en.wikipedia.org/wiki/Sprite_(computer_graphics)
+
+read yampa arcade?
+
+*** port pacman
+not listed on rofl-elm-games: https://github.com/kghandhi/pacman
+
+will definitely need load png!
+
+*** port turtle-like API a la Logo and draw
+classic set of pictures (fractals, square, etc.)
+
+*** port karel the robot stuff?
+
+*** see mini-sdl2-games by fccm
+just pong (just pong0), snake, shmup, chainrxn
+
+*** rolling moon?
+physics engine?
+need understand the code first
+see the easy engine in ELM circles and boxes
+
+*** RELAX see software-src/games/  educational games especially
+haskell games, ocaml games, elm games
+
+look mamedb page, with the different categories
+
+** port more (elm) games
+#use philip2 to translate?
+https://github.com/rofrol/elm-games
+#see also
+https://github.com/fccm/awesome-gamedev-ocaml
+
+hangman (text)
+
+DONE snake! https://github.com/amarantedaniel/snek nice mode, very simple
+DONE pong! https://elm-lang.org/news/making-pong
+breakout
+tron! bike-wars
+
+SEMI asteroid
+space invaders
+ https://marmelab.com/blog/2020/02/21/ocaml-and-opengl-in-practice.html
+xpilot https://github.com/mpdairy/xpilot.io !!!
+ he actually says it was complicated and wished he had a language
+ with side effects! so maybe ocaml great for that!
+
+tic tac toe
+15 puzzle
+minesweeper: https://rundis.github.io/blog/2015/elm_sweeper.html
+ meh code, matrix of enum would be simpler than those list of tiles
+ can salvage icons?
+memory: https://alpacaaa.net/blog/post/elm-memory-game-from-scratch/
+2048
+sudoku
+battleship
+game of life: https://sonnym.github.io/2014/05/05/writing-game-of-life-in-elm/
+
+reversi (remember I did that during ski trip with pixel) or was it go?
+chess
+  https://erikbern.com/2014/11/29/deep-learning-for-chess
+  sunfish
+  twitchchess by geohotz (but seems poor rating)
+  tomek chess engine in OCaml
+
+DONE tetris! (flatris ELM clone is good, by w0rm)
+pacman?
+sokoban (the one of plan9?)
+boulder dash (tile code ex?)
+shoot em up
+zelda (or Atari adventure game on my retro console, pretty basic :) )
+ https://github.com/stephanvd/hero-elm ?
+shuffle-puck cafe
+ cube slam?
+
+vessel!
+side scroller  elm-shooter
+flappy bird? elm-plane?
+  https://news.ycombinator.com/item?id=25251518 258 bytes of JS
+   rectangles :)
+  https://www.odedwelgreen.com/blog/elm-plane/
+  https://github.com/odedw/elm-plane
+raycaster (not really a game)
+chain reaction (see fccm game), very simple nice idea
+ https://yvoschaap.com/chainrxn/
+
+doom! ocamldoom?
+quake: ocamlquake, or in elm
+ https://github.com/passiomatic/elm-quake3-renderer
+mario (take the ocaml version and adapt to playground and FRP style?)
+ not that big actually, map procedurally randomly generated :)
+Soldat! physics engine
+
+rolling_moon!
+take more games from the contest that Haxe creator won sometimes where
+ they code a game in 24h: ludum dare
+
+more games:
+circuit breaker: https://gitlab.com/MartinSStewart/hackman
+ https://discourse.elm-lang.org/t/ive-created-a-game-in-elm/4844
+
+one-liner nice pictures:
+ https://www.dwitter.net/
+
+related work:
+ - https://dev.to/bijanbwb/recreating-classic-games-for-the-web-series-intro-4pm7
+ - https://ebiten.org/
+
+misc:
+ - list of games on github (2018):  https://github.com/leereilly/games
+
+** old classic list
+pong
+
+tron
+
+tetris (from nand to tetris)
+
+breakout
+
+pacman
+
+bomberman
+
+boulder dash
+
+chess (tomek)
+
+xpilot
+
+soldat/worms
+
+mario
+
+doom/quake/descent
+ (ocamldoom revival? ocamlquake?)
+
+* Later
+
+** later: write Games.nw!!
+publish via stog? or plain jekyll
+new backend for syncweb ? -to_html? medium style? jekyll enough?
+markdown enough?
+
+** later: write Soldat using Playground.elm!
+need port also elm 2d engine? pixelengine? poco8?
+
+see todo/soldat.txt
+
+** later: port also openGL/webGL
+for native use tgls?
+https://github.com/dbuenzli/tgls/blob/master/test/trigl3.ml
+
+https://github.com/lucamug/elm-playground-3d
+https://medium.com/@l.mugnaini/basic-3d-rendering-in-svg-elm-playground-3d-d1e8846cd06e
+ but seems a hack, it projects on 2d surface, does not provide
+ automatic shadows etc.
+
+or https://github.com/Schmavery/reprocessing ?

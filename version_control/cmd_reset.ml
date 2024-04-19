@@ -48,6 +48,7 @@ let cmd = { Cmd.
       (*s: [[Cmd_reset.cmd.f()]] when no args, cases *)
       | _ when !hard -> reset_hard r
       (*e: [[Cmd_reset.cmd.f()]] when no args, cases *)
+      | _ -> raise Cmd.ShowUsage
       )
     | _ -> raise Cmd.ShowUsage
   );

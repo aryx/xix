@@ -1,4 +1,7 @@
-requirements:
- - ocaml (ocamlrun, ocamlc, ocaml stdlib)
- - kencc for kernel/ (until can bootstrap it from 5a/5c/5l provided by
-   plan9-ml)
+Requirements:
+ - OCaml (ocamlrun, ocamlc, OCaml stdlib)
+ - kencc for kernel/ (until we can bootstrap it from the 5a/5c/5l in xix)
+
+Then:
+	$ ./bootstrap-mk.sh
+	$ MKSHELL=bin/rc ./bin/mk

@@ -1,2 +1,5 @@
 Imported from ocaml-light/lex.
-The literate document is in plan9/generators/CompilerGenerator.nw
+The literate document is in plan9/generators/CompilerGenerator.nw.
+This literate document is using syncweb https://github.com/aryx/syncweb
+hence the presence of those .md5sum_xxx files.
+

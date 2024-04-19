@@ -1,0 +1,10 @@
+# -*- sh -*-
+
+#lib_core/unused/
+#lib_core/collections/orig/
+#lib_parsing/orig/
+
+#linker/
+#assembler/
+#formats/
+#mk/

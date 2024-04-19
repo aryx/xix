@@ -1,6 +1,5 @@
-Plan 9 programs ported to OCaml.
+Xix is Xix.
 
-export ROOT=`pwd`
-export objtype=386
-ocamlrun ./bootstrap/mk depend
-ocamlrun ./bootstrap/mk
+This is the first fully recursive acronym.
+
+This repository contains mostly Plan 9 programs ported to OCaml.

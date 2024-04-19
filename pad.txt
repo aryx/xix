@@ -1,3 +1,4 @@
 At some point I want to compile and run this under Plan 9 with my own
 OCaml Light, so don't use advanced features such as labels, objects, functors!
 Keep it simple.
+TODO: make some semgrep rules to enforce it.

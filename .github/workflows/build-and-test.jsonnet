@@ -17,12 +17,15 @@ local job = {
     //'fail-fast': false,
     matrix: {
       os: [
-	'ubuntu-lateet',
-	// 'macos-latest'
-	// 'windows-latest'
+	'ubuntu-latest',
+	//TODO: 'macos-latest'
+	//TODO: 'windows-latest'
 	],
       'ocaml-compiler': [
+	// Old version with |> builtin but ideally we would like even before
 	'4.02.1',
+	//TODO: 4.04.1 is first version with valid ocamlformat
+	//TODO: 3.10.0, but pb with |> 
 	],
     }
   },

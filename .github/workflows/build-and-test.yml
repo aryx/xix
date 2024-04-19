@@ -22,7 +22,7 @@ jobs:
         ocaml-compiler:
           - 4.02.1
         os:
-          - ubuntu-lateet
+          - ubuntu-latest
 name: build-and-test
 on:
   pull_request: null

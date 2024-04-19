@@ -8,6 +8,7 @@ set -e
 set -x
 
 # Just make sure at least the programs are not segfaulting
+# or dynamic linking errors
 
 ./BOOTSTRAP/mk --help
 ./BOOTSTRAP/rc --help

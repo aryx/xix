@@ -37,23 +37,25 @@ EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom"
 TOP=`pwd`
 
 cd $TOP/lib_core/collections/
-ocamlc.opt $OCAMLCFLAGS  -c set_.mli
-ocamlc.opt $OCAMLCFLAGS  -c map_.mli
-ocamlc.opt $OCAMLCFLAGS  -c set_.ml
-ocamlc.opt $OCAMLCFLAGS  -c map_.ml
+ocamlc.opt $OCAMLCFLAGS -c set_.mli
+ocamlc.opt $OCAMLCFLAGS -c map_.mli
+ocamlc.opt $OCAMLCFLAGS -c set_.ml
+ocamlc.opt $OCAMLCFLAGS -c map_.ml
 ocamlc.opt  set_.cmo map_.cmo -a -o lib.cma
 
 cd $TOP/lib_core/commons/
-ocamlc.opt $OCAMLCFLAGS -I . -c common.mli
-ocamlc.opt $OCAMLCFLAGS -I . -c common2.ml
-ocamlc.opt $OCAMLCFLAGS -I . -c IO.mli
-ocamlc.opt $OCAMLCFLAGS -I . -c date.mli
-ocamlc.opt $OCAMLCFLAGS -I . -c common.ml
-ocamlc.opt $OCAMLCFLAGS -I . -c ocaml.mli
-ocamlc.opt $OCAMLCFLAGS -I . -c date.ml
-ocamlc.opt $OCAMLCFLAGS -I . -c IO.ml
-ocamlc.opt $OCAMLCFLAGS -I . -c ocaml.ml
-ocamlc.opt -I . common.cmo common2.cmo ocaml.cmo IO.cmo date.cmo -a -o lib.cma
+ocamlc.opt $OCAMLCFLAGS -c common.mli
+ocamlc.opt $OCAMLCFLAGS -c common2.ml
+ocamlc.opt $OCAMLCFLAGS -c IO.mli
+ocamlc.opt $OCAMLCFLAGS -c Logs.mli
+ocamlc.opt $OCAMLCFLAGS -c date.mli
+ocamlc.opt $OCAMLCFLAGS -c common.ml
+ocamlc.opt $OCAMLCFLAGS -c ocaml.mli
+ocamlc.opt $OCAMLCFLAGS -c Logs.ml
+ocamlc.opt $OCAMLCFLAGS -c date.ml
+ocamlc.opt $OCAMLCFLAGS -c IO.ml
+ocamlc.opt $OCAMLCFLAGS -c ocaml.ml
+ocamlc.opt -I . common.cmo common2.cmo ocaml.cmo IO.cmo Logs.cmo date.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc parser.mly
@@ -87,7 +89,7 @@ ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c sch
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c scheduler.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c outofdate.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c main.ml
-ocamlc.opt -g $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma globals.cmo flags.cmo ast.cmo parser.cmo lexer.cmo parse.cmo shellenv.cmo shell.cmo percent.cmo env.cmo rules.cmo eval.cmo file.cmo graph.cmo job.cmo scheduler.cmo outofdate.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
+ocamlc.opt $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma globals.cmo flags.cmo ast.cmo parser.cmo lexer.cmo parse.cmo shellenv.cmo shell.cmo percent.cmo env.cmo rules.cmo eval.cmo file.cmo graph.cmo job.cmo scheduler.cmo outofdate.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
 
 cd $TOP/shell/
 ocamlyacc parser.mly
@@ -131,7 +133,7 @@ ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c op_
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c main.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c parse.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c interpreter.ml
-ocamlc.opt -g $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma flags.cmo globals.cmo ast.cmo meta_ast.cmo opcode.cmo meta_opcode.cmo dumper.cmo compile.cmo runtime.cmo pattern.cmo fn.cmo var.cmo prompt.cmo status.cmo path.cmo process.cmo error.cmo parser.cmo lexer.cmo parse.cmo builtin.cmo op_repl.cmo op_process.cmo interpreter.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
+ocamlc.opt $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma flags.cmo globals.cmo ast.cmo meta_ast.cmo opcode.cmo meta_opcode.cmo dumper.cmo compile.cmo runtime.cmo pattern.cmo fn.cmo var.cmo prompt.cmo status.cmo path.cmo process.cmo error.cmo parser.cmo lexer.cmo parse.cmo builtin.cmo op_repl.cmo op_process.cmo interpreter.cmo main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP
 cp mk/mk shell/rc bin/

@@ -1,3 +1,4 @@
+Most of the code in this repository was written by
 Yoann Padioleau
 
 except:

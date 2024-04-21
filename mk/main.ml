@@ -224,8 +224,6 @@ let main () =
     (* less: -a, etc *)
     "-strict", Arg.Set Flags.strict_mode,
     " strict mode";
-    "-v", Arg.Set Flags.verbose,
-    " verbose mode";
 
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
@@ -242,18 +240,31 @@ let main () =
     " dump the generated graph (in graphviz dot format)";
     "-dump_jobs", Arg.Set Flags.dump_jobs,
     " ";
+
+    (* TODO: move in a CLI_common.ml *)
+    "-v", Arg.Set Flags.verbose,
+    " verbose mode";
+    "-verbose", Arg.Unit (fun () -> 
+        Flags.verbose := true;
+        Logs.set_level (Some Logs.Info)
+    ),
+    " verbose mode";
+    "-quiet", Arg.Unit (fun () ->
+      Logs.set_level None;
+    ),
+    " ";
+    "-debug", Arg.Unit (fun () ->
+      Flags.trace := true;
+      Flags.explain_mode := true;
+      Logs.set_level (Some Logs.Debug);
+    ),
+    " trace the main functions";
     
     (* useful for debugging when there is an error in recursive mk *)
     "-print_pwd", Arg.Unit (fun () ->
       pr2 (spf "(in %s)" (Sys.getcwd ()));
     ),
     " print the pwd (useful to debug recursive mk)";
-
-    "-trace", Arg.Unit (fun () ->
-      Flags.trace := true;
-      Flags.explain_mode := true;
-    ),
-    " trace the main functions";
 
     "-debugger", Arg.Set Flags.debugger,
     " ";
@@ -269,6 +280,7 @@ let main () =
     | _ ->
       targets := t :: !targets
   ) usage;
+  Logs.debug (fun m -> m "mk main");
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 

@@ -37,7 +37,16 @@ type level = App | Error | Warning | Info | Debug
 
 val set_level : level option -> unit
 
-type 'a log = ((('a, Format.formatter, unit, unit) format4 -> 'a) -> unit) -> unit
+type 'a msgf = (('a, out_channel, unit) format -> 'a) -> unit
+
+(* The type of the logging functions (e.g., Logs.err) is ['a log]
+ * and a call usually looks like [Logs.err (fun m -> m "this is bad %s" err)]
+ * meaning the first parameter is a function taking a 'm' which will is
+ * a "messaging function" (msgf) taking a format string and some
+ * extra parameters in 'a and returning unit.
+ * The 'a is really more a 'types_of_remaining_args_after_fmt_string
+ *)
+type 'a log = 'a msgf -> unit
 
 val app : 'a log
 val err : 'a log

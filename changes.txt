@@ -1,8 +1,34 @@
 # -*- org -*-
 
-* 0.14 (Q2 2024) ()
+* 0.14 (Q2 2024) (Works again, Logging, Testing, CI)
 
-* 0.13 (Q1 2024) (GHA and semgrep checks (devops))
+** rc/mk
+TODO Resume work and make it work again! Can build itself.
+
+Can use it on principia and build and syncweb as well Editor.nw
+(efuns), Codemap.nw
+
+** internals
+TODO Renamed module to capitalized form (Common.ml), like in Semgrep
+(thx Martin)
+
+TODO Logging using poor's man Logs.ml
+
+TODO Testing library using Testo? (only built and run on 4.14.0)
+
+TODO Switch from Common.filelame to (our poor's man) Fpath.t
+
+** devops
+
+TODO started to use Nix to define the development environment for Xix.
+
+TODO? switch to precommit and ocamlformat?
+
+TODO more semgrep rules (forbid functors, labels, etc.)
+
+TODO compile again for ocaml light (my own fork of caml-special-light 1.07)
+
+* 0.13 (Q1 2024) (CI build and test and semgrep checks (devops))
 # resume after long hiatus (2019-2023) due to our move to Italy,
 # the birth of Nathalie, and especially my work for Semgrep.
 
@@ -21,7 +47,7 @@ Some basic tests (also enforced in GHA) in test.sh
 
 * -----------------------------------------------------------
 
-* No work in 2019, 2020, 2021, 2022, 2023
+* Big pause to work on semgrep for 2019/2020/2021/2022/2023
 
 * -----------------------------------------------------------
 
@@ -36,7 +62,7 @@ internals: use of merlin (mk .merlin) via Efuns
 * 0.10 (Q2 2018) ()
 
 * 0.9 (Q1 2018) ()
-#GioGio at home a lot
+# GioGio at home a lot, big ear infections
 
 (work on syncweb -web_to_tex and code indexing)
 
@@ -49,7 +75,8 @@ simpler diff_myers.ml
 
 * 0.7 (Q3 2017) (git)
 
-port of dulwich and ocaml-git, 2 clones of git, to ocaml(light). 
+port of dulwich and ocaml-git, 2 clones of git, to ocaml(light).
+
 Simplify code in ocaml-git by not using functors/lwt/mstruct/... 
 and complete with new code derived from dulwich (clone of git in python)
 or from entirely new code for the features not implemented by dulwich.
@@ -79,6 +106,7 @@ started lib_core/
 
 minimal C kernel for Raspberry Pi (boot, malloc, libc, print) by
  selecting subset of 9/bcm/ and 9/port in plan9
+
 minimal ocaml hello world linked in kernel
  by linking the byterun interpreter from ocaml light 1.07 to the
  minimal C kernel (incorporate more libc)

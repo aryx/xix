@@ -69,6 +69,15 @@ local job = {
         ./test.sh
       |||,
     },
+    {
+      name: 'Build all xix',
+      run: |||
+        export MKSHELL=`which rc`
+        export PATH=`pwd`/bin:$PATH
+        mk depend
+        mk
+      |||,
+    },
   ],
 };
 

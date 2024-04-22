@@ -1,7 +1,12 @@
 Requirements:
- - OCaml (ocamlrun, ocamlc, OCaml stdlib)
- - kencc for kernel/ (until we can bootstrap it from the 5a/5c/5l in xix)
+ - OCaml (ocamlrun, ocamlc, OCaml stdlib), and OPAM
+ - The stdcompat and ocamlfind OPAM packages
+ - rc, the plan9 shell (until we can boostrap it from rc in xix)
+ - OPTIONAL: kencc for kernel/ (until we can bootstrap it from the 5a/5c/5l in xix)
 
 Then:
 	$ ./bootstrap-mk.sh
-	$ MKSHELL=bin/rc ./bin/mk
+	$ export PATH=`pwd`/bin
+	$ export MKSHELL=/path/to/rc
+	$ mk depend
+	$ mk

@@ -26,7 +26,7 @@ EXTERNAL_LIB=`ocamlfind query stdcompat`
 
 #TODO? -bin-annot -absname -dtypes
 # -g so we can get good backtrace
-OCAMLCFLAGS="-I $EXTERNAL_LIB -g -absname"
+OCAMLCFLAGS="-I $EXTERNAL_LIB -g"
 
 # We need -g for good backtrace.
 # We need -custom because of dllstdcompat__stubs, otherwise

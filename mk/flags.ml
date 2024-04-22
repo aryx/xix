@@ -3,7 +3,6 @@ let explain_mode = ref false
 
 (* pad: I added this one *)
 let strict_mode = ref false
-let verbose = ref false
 
 let dump_tokens = ref false
 let dump_ast = ref false

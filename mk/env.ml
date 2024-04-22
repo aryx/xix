@@ -46,8 +46,7 @@ let add_var env s xs =
   match () with
   | _ when Hashtbl.mem env.vars_commandline s ->
     (* we do not override those vars *)
-    if !Flags.verbose
-    then pr2 (spf "ignoring definition of %s specified on the command-line" s);
+    Logs.warn (fun m -> m "ignoring definition of %s specified on the command-line" s);
     ()
 
   (* stricter: forbid redefinitions.

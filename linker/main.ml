@@ -22,6 +22,7 @@ module T = Types
  *   update: actually I support it now no?
  * 
  * todo?:
+ *  - look at the 5l Go sources in the Golang source, maybe ideas to steal?
  *  - -v is quite useful to debug "redefinition" linking errors
  *    (see pb I had when linking bcm/ kernel)
  *  - when get undefined symbol, print function you are currently in!
@@ -35,6 +36,7 @@ module T = Types
  *  - symbol table
  *  - program counter line table
  *  - nice error reporting for signature conflict, conflicting objects
+
  *)
 
 let thechar = '5'

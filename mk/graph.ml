@@ -296,8 +296,8 @@ let rec vacuous node =
     | Some node2 -> 
         if vacuous node2 && R.is_meta arc.rule
         then begin
-          if !Flags.verbose
-          then pr2 (spf "vacuous arc detected: %s -> %s" node.name node2.name);
+          Logs.warn (fun m -> m "vacuous arc detected: %s -> %s" 
+                        node.name node2.name);
           true
         end else begin 
           vacuous_node := false; 
@@ -307,8 +307,8 @@ let rec vacuous node =
         vacuous_node := false;
         false
   );
-  if !vacuous_node && !Flags.verbose 
-  then pr2 (spf "vacuous node detected: %s" node.name);
+  if !vacuous_node
+  then Logs.warn (fun m -> m "vacuous node detected: %s" node.name);
   !vacuous_node
 
 

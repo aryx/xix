@@ -96,7 +96,8 @@ let report (lvl : level) (msgf : 'a msgf) : unit =
   match lvl with
   | App -> 
       (* no header, no color *)
-      msgf Printf.eprintf
+      msgf Printf.eprintf;
+      Printf.eprintf "\n"
   | Error
   | Warning
   | Info
@@ -108,7 +109,8 @@ let report (lvl : level) (msgf : 'a msgf) : unit =
         (color_pre lvl)
         (header_string_of_level lvl)
         (color_post lvl);
-      msgf Printf.eprintf
+      msgf Printf.eprintf;
+      Printf.eprintf "\n"
 
 let msg (lvl : level) (msgf : 'a msgf) : unit =
   match !current_level with

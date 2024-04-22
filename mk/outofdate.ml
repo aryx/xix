@@ -82,7 +82,7 @@ let dorecipe env node did =
              * an outofdate arc
              *)
             if !Flags.explain_mode && outofdate node arc
-            then pr2 (spf "%s(%.1f) < %s(%.1f)"
+            then Logs.info (fun m -> m "%s(%.1f) < %s(%.1f)"
                         node.G.name (opt0 node.G.time)
                         prereq.G.name (opt0 prereq.G.time));
             if Hashtbl.mem hdone_prereqs prereq
@@ -116,8 +116,8 @@ let dorecipe env node did =
  * more efficient to run a job as soon as we find an opportunity.
  *)
 let rec work env node did =
-  if !Flags.trace
-  then pr2 (spf "work(%s) time=%s" node.G.name (File.str_of_time node.G.time));
+  Logs.debug (fun m -> m "work(%s) time=%s" node.G.name 
+                 (File.str_of_time node.G.time));
 
   if node.G.state = G.BeingMade
   then ()

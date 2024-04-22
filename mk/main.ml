@@ -1,4 +1,4 @@
-(* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2018, 2024 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -66,6 +66,7 @@ module R = Rules
  *  - less use of globals, pass them around
  * 
  * todo:
+ *  - look at source code of omake? and mk-in-go?
  *  - store all output of children process and output only
  *    command that generates error! luisa will be happier :) no more long
  *    command line scrolling
@@ -88,7 +89,6 @@ module R = Rules
  *    but for variable we would still need the dynamic binding of
  *    $target, $prereq, so maybe not good to provide an extra and different
  *    #define mechanism and syntax for using variables/constants.
- * less: look at source code of omake? and mk-in-go?
  *)
 
 let usage =
@@ -103,13 +103,13 @@ let do_action s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
-        pr2 (spf "processing %s" file);
+        Logs.info (fun m -> m "processing %s" file);
         let instrs = Parse.parse file in
         instrs |> List.iter pr2_gen;
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->
-        pr2 (spf "processing %s" file);
+        Logs.info (fun m -> m "processing %s" file);
         let env = Env.initenv() in
         let instrs = Parse.parse file in
         let _rules, env = Eval.eval env (ref []) instrs in
@@ -180,7 +180,7 @@ let (build_targets: Common.filename -> string list ref -> (string*string) list
     let instrs = Parse.parse infile in
 
     if !Flags.dump_ast 
-    then instrs |> List.iter pr2_gen;
+    then Ast.dump_ast instrs;
 
     let rules, env = Eval.eval env targets instrs in
 
@@ -242,25 +242,21 @@ let main () =
     " ";
 
     (* TODO: move in a CLI_common.ml *)
-    "-v", Arg.Set Flags.verbose,
+    "-v", Arg.Unit (fun () -> Logs.set_level (Some Logs.Info)),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> Logs.set_level (Some Logs.Info)),
     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> 
-        Flags.verbose := true;
-        Logs.set_level (Some Logs.Info)
-    ),
-    " verbose mode";
-    "-quiet", Arg.Unit (fun () ->
-      Logs.set_level None;
-    ),
+    "-quiet", Arg.Unit (fun () -> Logs.set_level None),
     " ";
     "-debug", Arg.Unit (fun () ->
-      Flags.trace := true;
       Flags.explain_mode := true;
       Logs.set_level (Some Logs.Debug);
     ),
     " trace the main functions";
     
-    (* useful for debugging when there is an error in recursive mk *)
+    (* useful for debugging when there is an error in recursive mk 
+     * TODO: get rid of ? Logs.debug below enough?
+     *)
     "-print_pwd", Arg.Unit (fun () ->
       pr2 (spf "(in %s)" (Sys.getcwd ()));
     ),
@@ -280,7 +276,7 @@ let main () =
     | _ ->
       targets := t :: !targets
   ) usage;
-  Logs.debug (fun m -> m "mk main");
+  Logs.debug (fun m -> m "inside mk main, ran from %s" (Sys.getcwd ()));
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -297,7 +293,7 @@ let main () =
       (match exn with
       | Failure s -> 
           (* useful to indicate that error comes from mk, not subprocess *)
-          pr2 ("mk: " ^ s);
+          Logs.err (fun m -> m "mk: %s" s);
           (* need to wait for other children before exiting, otherwise
            * could get corrupted incomplete object files.
            *)

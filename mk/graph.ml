@@ -87,9 +87,8 @@ let new_node target =
     probable = time <> None;
   }
   in
-  if !Flags.trace
-  then pr2 (spf "newnode(%s), time = %s" target (File.str_of_time node.time));
-
+  Logs.debug (fun m -> m "newnode(%s), time = %s" target 
+                (File.str_of_time node.time));
   Hashtbl.add hnodes target node;
   node
 
@@ -122,8 +121,7 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
 
 (* todo: infinite rule detection *)
 let rec apply_rules target rules =
-  if !Flags.trace
-  then pr2 (spf "apply_rules('%s')" target);
+  Logs.debug (fun m -> m "apply_rules('%s')" target);
 
   (* the graph of dependency is a DAG, so we must look if node already there *)
   if Hashtbl.mem hnodes target
@@ -296,8 +294,8 @@ let rec vacuous node =
     | Some node2 -> 
         if vacuous node2 && R.is_meta arc.rule
         then begin
-          if !Flags.verbose
-          then pr2 (spf "vacuous arc detected: %s -> %s" node.name node2.name);
+          Logs.warn (fun m -> m "vacuous arc detected: %s -> %s" 
+                        node.name node2.name);
           true
         end else begin 
           vacuous_node := false; 
@@ -307,8 +305,8 @@ let rec vacuous node =
         vacuous_node := false;
         false
   );
-  if !vacuous_node && !Flags.verbose 
-  then pr2 (spf "vacuous node detected: %s" node.name);
+  if !vacuous_node
+  then Logs.warn (fun m -> m "vacuous node detected: %s" node.name);
   !vacuous_node
 
 
@@ -370,9 +368,8 @@ let build_graph target rules =
 (* update graph once a node has been built *)
 let update node =
   node.state <- Made;
-  if !Flags.trace
-  then pr2 (spf "update(): node %s time=%s" node.name 
-              (File.str_of_time node.time));
+  Logs.debug (fun m -> m "update(): node %s time=%s" node.name 
+                 (File.str_of_time node.time));
   
   if node.is_virtual
   then begin

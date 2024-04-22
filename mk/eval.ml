@@ -17,12 +17,12 @@ module Set = Set_
 (* Error management *)
 (*****************************************************************************)
 
+(* TODO: use proper exn *)
 let error loc s =
   failwith (spf "%s:%d: Semantic error, %s" loc.A.file loc.A.line s)
 
 let warning loc s =
-  pr2 (spf "warning: %s (at %s:%d)" s loc.A.file loc.A.line)
-
+  Logs.warn (fun m -> m "warning: %s (at %s:%d)" s loc.A.file loc.A.line)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -84,7 +84,7 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
                    ) |> List.flatten
                (* stricter? what does mk?*)
                | _ -> 
-                 pr2_gen subst;
+                 Logs.debug (fun m -> m "subst = %s" (Common.dump subst));
                  error loc 
                    "pattern or subst does not resolve to a single string"
                )

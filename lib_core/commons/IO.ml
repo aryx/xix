@@ -742,14 +742,15 @@ let rec read_bits b n =
 let drop_bits b =
   b.nbits <- 0
 
-let rec write_bits b ~nbits x =
+(* orig: was ~nbits *)
+let rec write_bits b nbits x =
   let n = nbits in
   if n + b.nbits >= 32 then begin
     if n > 31 then raise Bits_error;
     let n2 = 32 - b.nbits - 1 in
     let n3 = n - n2 in
-    write_bits b ~nbits:n2 (x asr n3);
-    write_bits b ~nbits:n3 (x land ((1 lsl n3) - 1));
+    write_bits b n2 (x asr n3);
+    write_bits b n3 (x land ((1 lsl n3) - 1));
   end else begin
     if n < 0 then raise Bits_error;
     if (x < 0 || x > (1 lsl n - 1)) && n <> 31 then raise Bits_error;

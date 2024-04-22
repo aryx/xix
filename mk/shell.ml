@@ -35,7 +35,7 @@ let rc = {
   name = "rc";
   flags = ["-I"]; (* non-interactive so does not display a prompt *)
   iws = "\001";
-  debug_flags = (fun () -> if !Flags.verbose then ["-v"] else []);
+  debug_flags = (fun () -> (* if !Flags.verbose then ["-v"] else [] *) []);
 }
 
 (* note that this is a toplevel entity, so the code below is executed even
@@ -70,8 +70,7 @@ let exec_shell shellenv flags extra_params =
     |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
   in
   let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
-  if !Flags.verbose
-  then pr2 (spf "exec_shell: %s %s" shell.path (String.concat " " args));
+  Logs.info (fun m -> m "exec_shell: %s %s" shell.path (String.concat " " args));
   (try 
      (* to debug pass instead "/usr/bin/strace" 
         (Array.of_list ("strace"::shell.path::args)) *)

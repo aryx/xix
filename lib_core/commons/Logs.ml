@@ -72,14 +72,15 @@ let header_string_of_level (lvl: level) : string =
 (* ANSI escape sequences for colored output, depending on log level
  * alt: use ANSIterminal.ml, but not worth it
  * LATER: make portable on plan9
+ * see https://en.wikipedia.org/wiki/ANSI_escape_code for the color codes
  *)
 let color level =
   match level with
   | App -> None
   | Warning -> Some "33" (*yellow*)
   | Error -> Some "31" (*red*)
+  | Info -> Some "34" (* blue *)
   | Debug -> Some "32" (* green *)
-  | Info -> Some "30" (* ?? *)
 
 (* pre/post escape sequence around the string we want colored *)
 let color_pre lvl =
@@ -96,7 +97,9 @@ let report (lvl : level) (msgf : 'a msgf) : unit =
   match lvl with
   | App -> 
       (* no header, no color *)
-      msgf Printf.eprintf
+      msgf Printf.eprintf;
+      (* %! is to flush the output *)
+      Printf.eprintf "\n%!"
   | Error
   | Warning
   | Info
@@ -108,7 +111,8 @@ let report (lvl : level) (msgf : 'a msgf) : unit =
         (color_pre lvl)
         (header_string_of_level lvl)
         (color_post lvl);
-      msgf Printf.eprintf
+      msgf Printf.eprintf;
+      Printf.eprintf "\n%!"
 
 let msg (lvl : level) (msgf : 'a msgf) : unit =
   match !current_level with

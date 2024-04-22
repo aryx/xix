@@ -12,6 +12,7 @@ open Common
  *  - no unicode support
  * 
  * todo:
+ *  - look at the 5a Go sources in the Golang source, maybe ideas to steal?
  *  - advanced instructions: floats, MULL, coprocessor, PSR, etc
  *  - make it a multi-archi assembler by following
  *    the new design by Rob Pike of Go assembler to factorize things

@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 
 (* for error reporting *)
 type loc = {
@@ -70,3 +71,9 @@ type instr = {
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
      * so 'string' below, not 'word' *)
     | Definition of string * words
+
+let dump_ast instrs =
+  Logs.debug (fun m -> m "AST = ");
+  instrs |> List.iter (fun instr -> 
+      Logs.debug (fun m -> m "%s" (Common.dump instr))
+  )

@@ -17,35 +17,35 @@ local job = {
     //'fail-fast': false,
     matrix: {
       os: [
-	'ubuntu-latest',
-	//TODO: 'macos-latest'
-	//TODO: 'windows-latest'
-	],
+        'ubuntu-latest',
+        //TODO: 'macos-latest'
+        //TODO: 'windows-latest'
+      ],
       'ocaml-compiler': [
-	// Old OCaml version where I ported ocamlrun to plan9
-	// This needs stdcompat so we can use |> and bytes type without issues.
-	// The |> operator was introduced in 4.02.0, that we could add in
-	// the matrix, but stdcompat does not compile with it.
-	'3.10.0',
-	// First OCaml version with a working ocamlformat OPAM package
-	'4.04.1',
-	// Current version I usually work with
-	'4.14.1',
-	// Why not, living on the edge!
-	'5.1.0',
-	],
-    }
+        // Old OCaml version where I ported ocamlrun to plan9
+        // This needs stdcompat so we can use |> and bytes type without issues.
+        // The |> operator was introduced in 4.02.0, that we could add in
+        // the matrix, but stdcompat does not compile with it.
+        '3.10.0',
+        // First OCaml version with a working ocamlformat OPAM package
+        '4.04.1',
+        // Current version I usually work with
+        '4.14.1',
+        // Why not, living on the edge!
+        '5.1.0',
+      ],
+    },
   },
   'runs-on': '${{ matrix.os }}',
   steps: [
     checkout,
     {
-      uses: "ocaml/setup-ocaml@v2",
+      uses: 'ocaml/setup-ocaml@v2',
       with: {
-	'ocaml-compiler': '${{ matrix.ocaml-compiler }}',
-	// available only for OCaml >= 4.0.0 and we want also 3.10.0
-	'opam-depext': false,
-      }
+        'ocaml-compiler': '${{ matrix.ocaml-compiler }}',
+        // available only for OCaml >= 4.0.0 and we want also 3.10.0
+        'opam-depext': false,
+      },
     },
     {
       name: 'Install dependencies',

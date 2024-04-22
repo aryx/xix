@@ -323,7 +323,8 @@ val output_bits : 'a output -> out_bits
 val read_bits : in_bits -> int -> int
 (** Read up to 31 bits, raise Bits_error if n < 0 or n > 31 *)
 
-val write_bits : out_bits -> nbits:int -> int -> unit
+(* orig: second param was ~nbit *)
+val write_bits : out_bits -> int -> int -> unit
 (** Write up to 31 bits represented as a value, raise Bits_error if nbits < 0
  or nbits > 31 or the value representation excess nbits. *)
 

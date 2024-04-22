@@ -3,8 +3,7 @@
 OPT=.opt
 
 # Limit to just stdcompat! This is Xix!
-#TODO: replace with `ocamlfind query stdcompat`
-EXTERNAL_LIB=/home/pad/.opam/5.1.0/lib/stdcompat
+EXTERNAL_LIB=`ocamlfind query stdcompat`
 
 # -g so we can get good backtrace
 #TODO: -bin-annot -absname

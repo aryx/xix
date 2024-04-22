@@ -22,10 +22,11 @@ local job = {
         //TODO: 'windows-latest'
       ],
       'ocaml-compiler': [
-        // Old OCaml version where I ported ocamlrun to plan9
-        // This needs stdcompat so we can use |> and bytes type without issues.
-        // The |> operator was introduced in 4.02.0, that we could add in
-        // the matrix, but stdcompat does not compile with it.
+        // Old OCaml version in which I ported the ocamlrun to plan9, which is
+	// why we care about it here. It does not support |> nor bytes though so
+        // we need stdcompat to compile without issues.
+        // Note that the |> operator was introduced in 4.02.0, which is a version 
+        // we could add in the matrix, but stdcompat does not compile with it.
         '3.10.0',
         // First OCaml version with a working ocamlformat OPAM package
         '4.04.1',
@@ -49,8 +50,11 @@ local job = {
     },
     {
       name: 'Install dependencies',
+      //TODO: we should get rid of rc at some point and use the one in xix
+      // alt: install 9base (ubuntu package name of plan9port)
       run: |||
         opam install --deps-only .
+        sudo apt-get install -y rc
       |||,
     },
     {
@@ -64,6 +68,16 @@ local job = {
       name: 'Basic test',
       run: |||
         ./test.sh
+      |||,
+    },
+    {
+      name: 'Build all xix',
+      run: |||
+        eval $(opam env)
+        export MKSHELL=`which rc`
+        export PATH=`pwd`/bin:$PATH
+        mk depend
+        mk
       |||,
     },
   ],

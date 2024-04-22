@@ -65,12 +65,6 @@ local job = {
       |||,
     },
     {
-      name: 'Basic test',
-      run: |||
-        ./test.sh
-      |||,
-    },
-    {
       name: 'Build all xix',
       run: |||
         eval $(opam env)
@@ -78,6 +72,12 @@ local job = {
         export PATH=`pwd`/bin:$PATH
         mk depend
         mk
+      |||,
+    },
+    {
+      name: 'Basic test',
+      run: |||
+        ./test.sh
       |||,
     },
   ],

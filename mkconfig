@@ -1,12 +1,24 @@
 # -*- sh -*-
 
 OPT=.opt
-#-g -dtypes -bin-annot -absname
+
+# Limit to just stdcompat! This is Xix!
+#TODO: replace with `ocamlfind query stdcompat`
+EXTERNAL_LIB=/home/pad/.opam/5.1.0/lib/stdcompat
+
+# -g so we can get good backtrace
+#TODO: -bin-annot -absname
 #WARNING_FLAGS?=-w +A-4-29-6-45-41-44-48 -warn-error +a 
-#OCAMLCFLAGS=-g -thread -dtypes $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA) 
-COMPFLAGS=
-#-g -custom
-LINKFLAGS=
+#OCAMLCFLAGS=-thread $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA)
+COMPFLAGS=-I $EXTERNAL_LIB -g
+
+# We need -g for good backtrace.
+# We need -custom because of dllstdcompat__stubs, otherwise
+# we would need to set CAML_LD_LIBRARY_PATH before running the programs.
+# LATER: would be good to remove if one day we want to store
+# a BOOTSTRAP/mk and we want a really portable bytecode across platforms.
+# TODO? for windows under cygwin might need -custom too?
+LINKFLAGS=-I $EXTERNAL_LIB stdcompat.cma -g -custom
 
 OCAMLC=ocamlc$OPT 
 OCAMLLEX=ocamllex #-ml # -ml for debugging lexer, but slightly slower

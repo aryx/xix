@@ -12,7 +12,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 (*s: type [[Change.content]] *)
-type content = bytes
+type content = string
 (*e: type [[Change.content]] *)
 
 (*s: type [[Change.entry]] *)

@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast_asm5
@@ -6,7 +7,7 @@ module T = Types
 module T5 = Types5
 
 let gen symbols2 init_data sizes ds =
-  let arr = Array.create sizes.T.data_size (Char.chr 0) in
+  let arr = Array.make sizes.T.data_size (Char.chr 0) in
 
   ds |> List.iter (fun d ->
     let T5.DATA (global, offset2, size_slice, v) = d in

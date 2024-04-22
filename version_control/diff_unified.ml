@@ -2,6 +2,7 @@
 (*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
+open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)

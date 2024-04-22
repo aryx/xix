@@ -13,6 +13,7 @@
 (*e: copyright ocamllex *)
 (* The lexer generator. Command-line parsing. *)
 
+open Stdcompat (* for |> *)
 open Ast
 open Lexgen
 open Output

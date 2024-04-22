@@ -17,6 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 (*e: copyright ocaml-hex *)
+open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)
@@ -87,11 +88,11 @@ let of_sha s =
   let buf = Bytes.create (n * 2) in
   (*s: [[Hexsha.of_sha()]] fill [[buf]] *)
   for i = 0 to n - 1 do
-    buf.[i * 2]       <- hexa1.[Char.code (s.[i])];
-    buf.[(i * 2) + 1] <- hexa2.[Char.code (s.[i])];
+    Bytes.set buf (i * 2) hexa1.[Char.code (s.[i])];
+    Bytes.set buf ((i * 2) + 1) hexa2.[Char.code (s.[i])];
   done;
   (*e: [[Hexsha.of_sha()]] fill [[buf]] *)
-  buf
+  Bytes.to_string buf
 (*e: function [[Hexsha.of_sha]] *)
 
 (*s: function [[Hexsha.to_sha]] *)
@@ -114,17 +115,17 @@ let to_sha s =
   in
   aux 0;
   (*e: [[Hexsha.to_sha()]] fill [[buf]] *)
-  buf
+  Bytes.to_string buf
 (*e: function [[Hexsha.to_sha]] *)
 
 (*s: function [[Hexsha.read]] *)
 let read ch =
-  let s = IO.really_nread ch 40 in
+  let s = IO.really_nread_string ch 40 in
   assert (is_hexsha s);
   s
 (*e: function [[Hexsha.read]] *)
 (*s: function [[Hexsha.write]] *)
 let write ch x =
-  IO.nwrite ch x
+  IO.nwrite_string ch x
 (*e: function [[Hexsha.write]] *)
 (*e: version_control/hexsha.ml *)

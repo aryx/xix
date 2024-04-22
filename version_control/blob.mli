@@ -1,7 +1,8 @@
 (*s: version_control/blob.mli *)
+open Stdcompat
 
 (*s: type [[Blob.t]] *)
-type t = bytes
+type t = string
 (*e: type [[Blob.t]] *)
 
 (*s: type [[Blob.hash]] *)

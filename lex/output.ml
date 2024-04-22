@@ -13,6 +13,7 @@
 (*e: copyright ocamllex *)
 (* Output the DFA tables and its entry points *)
 
+open Stdcompat (* for |> *)
 open Printf
 open Ast
 open Lexgen
@@ -21,7 +22,7 @@ open Compact
 (*s: constant [[Output.copy_buffer]] *)
 (* To copy the ML code fragments *)
 
-let copy_buffer = String.create 1024
+let copy_buffer = Bytes.create 1024
 (*e: constant [[Output.copy_buffer]] *)
 
 (*s: function [[Output.copy_chunk]] *)
@@ -151,8 +152,8 @@ let enumerate_vect v =
         with Not_found ->
           enum ((v.(pos), ref [pos]) :: env) (succ pos) 
   in
-  Sort.list
-    (fun (e1, pl1) (e2, pl2) -> List.length !pl1 >= List.length !pl2)
+  List.sort
+    (fun (e1, pl1) (e2, pl2) -> compare (List.length !pl1)  (List.length !pl2))
     (enum [] 0)
 
 let output_move oc = function

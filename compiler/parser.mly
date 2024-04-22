@@ -1,9 +1,10 @@
 %{
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast
-module T = Type
+module T = Type_
 module L = Location_cpp
 
 (*****************************************************************************)
@@ -153,9 +154,9 @@ let pop_scope env =
 /*(*************************************************************************)*/
 
 %token <Ast.loc * string> TName TTypeName
-%token <Ast.loc * string * Type.integer_type> TIConst
-%token <Ast.loc * string * Type.float_type> TFConst
-%token <Ast.loc * string * Type.t> TString
+%token <Ast.loc * string * Type_.integer_type> TIConst
+%token <Ast.loc * string * Type_.float_type> TFConst
+%token <Ast.loc * string * Type_.t> TString
 
 /*(*-----------------------------------------*)*/
 /*(*2 Keywords *)*/

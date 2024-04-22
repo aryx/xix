@@ -1,3 +1,4 @@
+open Stdcompat
 open Common
 
 (*
@@ -30,7 +31,7 @@ type key = (char * char * char) option
 type table = (key, int list) Hashtbl.t
 
 type elt =
-  | Buffer of bytes
+  | Buffer of string
   | Insert of int (* past *) * int (* len *)
 
 type elts = elt list
@@ -70,10 +71,10 @@ type t = {
 (*****************************************************************************)
 
 let key buf i =
-  if i < Bytes.length buf - 3 then
-    let x = Bytes.get buf i in
-    let y = Bytes.get buf (i+1) in
-    let z = Bytes.get buf (i+2) in
+  if i < String.length buf - 3 then
+    let x = String.get buf i in
+    let y = String.get buf (i+1) in
+    let z = String.get buf (i+2) in
     Some (x, y, z)
   else
     None
@@ -91,11 +92,11 @@ let add tbl x off =
  * See tests/blah.txt that should lead to 'Bhah b[D=5;L=18]!'
  *)
 
-let longuest_substring buf i j =
+let longest_substring buf i j =
   let rec aux acc len =
     if i + len < j  (* FIXME valid but not allowed by the original algorithm *)
-    && j + len < Bytes.length buf
-    && Bytes.get buf (i+len) = Bytes.get buf (j+len)
+    && j + len < String.length buf
+    && String.get buf (i+len) = String.get buf (j+len)
     then aux (Some (len + 1)) (len+1)
     else acc
   in
@@ -117,7 +118,7 @@ let compress_offset tbl buf off =
       if i >= off || off - i > window_size 
       then acc
       else 
-        (match longuest_substring buf i off with
+        (match longest_substring buf i off with
         | None     -> aux acc t
         | Some len -> aux (max_insert acc (Some (i, len))) t
         )
@@ -133,12 +134,12 @@ let compress_offset tbl buf off =
 let compress buf =
   let res = ref [] in
   let off = ref 0 in
-  let len = Bytes.length buf in
+  let len = String.length buf in
   let tbl = Hashtbl.create 1024 in
   let last = ref 0 in
   let flush_last () =
     if !last <> 0 then (
-      let s = Bytes.sub buf (!off - !last) !last in
+      let s = String.sub buf (!off - !last) !last in
       last := 0;
       res := Buffer s :: !res;
     )

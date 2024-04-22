@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast_asm5
@@ -197,7 +198,7 @@ let gshift (R rf) op2 rcon =
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 
 
-let gbranch_static {T5. loc; branch; real_pc = src_pc } cond is_bl =
+let gbranch_static {T5. loc = loc; branch = branch; real_pc = src_pc } cond is_bl =
   match branch with
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some n -> 
@@ -241,7 +242,7 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   | Right (R r) -> [(1, 25); (r, 0)]
   )
 
-let gload_from_pool { T5. branch; real_pc = src_pc } cond rt =
+let gload_from_pool { T5. branch = branch; real_pc = src_pc } cond rt =
   match branch with
   | None -> raise (Impossible "literal pool should be attached to node")
   | Some n ->
@@ -637,7 +638,7 @@ let gen symbols2 config cg =
 
   cg |> T5.iter (fun n ->
 
-    let {size; binary }  = rules symbols2 !autosize config.T.init_data n in
+    let {size = size; binary = binary }  = rules symbols2 !autosize config.T.init_data n in
     let instrs = binary () in
 
     if n.T5.real_pc <> !pc

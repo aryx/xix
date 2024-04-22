@@ -2,6 +2,7 @@
 (*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
+open Stdcompat (* for |> *)
 open Common
 
 (*****************************************************************************)
@@ -292,7 +293,7 @@ let rec read_objectish r objectish =
 let add_obj r obj =
   let bytes = 
     IO.output_bytes () |> IO_.with_close_out (Objects.write obj) in
-  let sha = Sha1.sha1 bytes in
+  let sha = Sha1.sha1 (Bytes.to_string bytes) in
   let hexsha = Hexsha.of_sha sha in
   let file = hexsha_to_filename r hexsha in
   (*s: [[Repository.add_obj()]] create directory if it does not exist *)
@@ -392,7 +393,7 @@ let commit_index r author committer message =
   (*e: [[Repository.commit_index()]] read merge message if needed *)
   (* todo: execute commit-msg hook *)
   let commit = { Commit. parents = []; tree = root_tree; 
-                 author; committer; message } in
+                 author = author; committer = committer; message = message } in
 
   let ok =
     match follow_ref r aref |> snd with
@@ -438,14 +439,14 @@ let build_file_from_blob fullpath blob perm =
   | Tree.Normal | Tree.Exec ->
     (match oldstat with
     (* opti: if same content, no need to write anything *)
-    | Some { Unix.st_size = x } when x = Bytes.length blob && 
+    | Some { Unix.st_size = x } when x = String.length blob && 
       (fullpath |> Common.with_file_in (fun ch -> 
         (ch |> IO.input_channel |> IO.read_all ) = blob
        )) ->
       ()
     | _ ->
       fullpath |> Common.with_file_out (fun ch ->
-        output_bytes ch blob
+        output_bytes ch (Bytes.of_string blob)
       );
       (* less: honor filemode? *)
       Unix.chmod fullpath 

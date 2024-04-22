@@ -21,6 +21,7 @@
  * THE SOFTWARE.
  *)
 (*e: copyright ocaml-diff-myers *)
+open Stdcompat (* for bytes *)
 
 (* was functorized and parametrized before *)
 let equal = (=)

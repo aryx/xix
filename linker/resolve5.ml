@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast_asm5
@@ -14,7 +15,7 @@ let build_graph symbols xs =
 
   (* graph initialization *)
   let nodes = xs |> Array.map (fun (instr, loc) ->
-    { T5. instr; next = None; branch = None; loc; real_pc = -1 }
+    { T5. instr = instr; next = None; branch = None; loc = loc; real_pc = -1 }
   )
   in
 

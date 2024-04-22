@@ -16,6 +16,7 @@ ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 *)
 (*e: copyright uuidm *)
+open Stdcompat (* for Bytes *)
 open Common
 
 (*****************************************************************************)
@@ -42,12 +43,12 @@ open Common
 
 (*s: type [[Sha1.t]] *)
 (* a 20 bytes number (really a string of length 20) *)
-type t = bytes
+type t = string
 (*e: type [[Sha1.t]] *)
 
 (*s: function [[Sha1.is_sha]] *)
-let is_sha x =
-  Bytes.length x = 20
+let is_sha (x : t) : bool =
+  String.length x = 20
 (*e: function [[Sha1.is_sha]] *)
 
 (*****************************************************************************)
@@ -56,14 +57,14 @@ let is_sha x =
 
 (*s: function [[Sha1.read]] *)
 let read ch =
-  let s = IO.really_nread ch 20 in
+  let s = IO.really_nread_string ch 20 in
   assert (is_sha s);
   s
 (*e: function [[Sha1.read]] *)
 
 (*s: function [[Sha1.write]] *)
 let write ch x =
-  IO.nwrite ch x
+  IO.nwrite_string ch x
 (*e: function [[Sha1.write]] *)
 
 (* start of copy-pasted code from uuidm *)

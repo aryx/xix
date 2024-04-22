@@ -15,6 +15,7 @@
  * license.txt for more details.
  *)
 (*e: copyright ocamlyacc *)
+open Stdcompat (* for |> *)
 open Format
 
 open Ast
@@ -69,7 +70,7 @@ let string_of_symbol s =
    * way so it's easier to compare what we generate with what
    * the dragon book says we should generate
    *)
-  | Nonterm (NT s) -> String.uppercase s
+  | Nonterm (NT s) -> String.uppercase_ascii s
   | Term (T s) ->
     (match s with
     (* special cases for arith.mly and tests.ml grammar toy examples *)
@@ -78,7 +79,7 @@ let string_of_symbol s =
     | "TOPAR" -> "("
     | "TCPAR" -> ")"
 
-    | _ -> String.lowercase s
+    | _ -> String.lowercase_ascii s
     )
 (*e: function [[Dump.string_of_symbol]](yacc) *)
 

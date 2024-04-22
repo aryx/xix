@@ -13,6 +13,7 @@
 (*                                                                     *)
 (***********************************************************************)
 (*e: copyright camlzip *)
+open Stdcompat (* for bytes *)
 open Common
 
 (*s: exception [[Zlib.Error]] *)

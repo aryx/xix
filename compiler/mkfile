@@ -5,7 +5,7 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections \
   -I $TOP/formats/objects
 
 SRC= flags.ml \
-  type.ml meta_type.ml   storage.ml meta_storage.ml \
+  Type_.ml meta_type.ml   storage.ml meta_storage.ml \
   ast.ml meta_ast.ml \
   dumper.ml \
   globals.ml \

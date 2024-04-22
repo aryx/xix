@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast_asm5
@@ -127,7 +128,7 @@ let layout_text symbols2 init_text cg =
       | Codegen5.PoolOperand imm_or_ximm ->
           let instr = T5.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
-          let node = { T5. instr; next = None; branch = None; real_pc = -1; 
+          let node = { T5. instr = instr; next = None; branch = None; real_pc = -1; 
                            loc = n.T5.loc } in
           if node.T5.branch <> None
           then raise (Impossible "attaching literal to branching instruction");

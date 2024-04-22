@@ -1,4 +1,5 @@
 (*s: version_control/tree.mli *)
+open Stdcompat (* for bytes *)
 
 (*s: type [[Tree.perm]] *)
 (* similar to Index.mode, but with also a 'Dir' *)

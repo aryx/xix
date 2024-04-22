@@ -2,6 +2,7 @@
 (*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
+open Stdcompat (* for |> *)
 open Common
 
 (*****************************************************************************)
@@ -71,7 +72,7 @@ let write obj ch =
       ) 
       (Bytes.length body)
   in
-  IO.nwrite ch header;
+  IO.nwrite_string ch header;
   IO.nwrite ch body
 (*e: function [[Objects.write]] *)
 (*e: version_control/objects.ml *)

@@ -4,6 +4,8 @@
 (*e: copyright ocamlgit *)
 open Common
 
+let (|>) = Stdcompat.(|>)
+
 (*s: function [[Cmd_branch.list_branches]] *)
 (* less: remote_flag set with --all to also list remote refs *)
 let list_branches r =

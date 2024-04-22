@@ -72,6 +72,7 @@ local job = {
     {
       name: 'Build all xix',
       run: |||
+        eval $(opam env)
         export MKSHELL=`which rc`
         export PATH=`pwd`/bin:$PATH
         mk depend

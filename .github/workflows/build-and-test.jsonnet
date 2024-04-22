@@ -49,8 +49,11 @@ local job = {
     },
     {
       name: 'Install dependencies',
+      //TODO: we should get rid of rc at some point and use the one in xix
+      // alt: install 9base (ubuntu package name of plan9port)
       run: |||
         opam install --deps-only .
+        apt-get install -y rc
       |||,
     },
     {

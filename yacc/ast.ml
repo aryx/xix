@@ -15,6 +15,7 @@
  * license.txt for more details.
  *)
 (*e: copyright ocamlyacc *)
+open Stdcompat (* for |> *)
 
 (*****************************************************************************)
 (* Types *)

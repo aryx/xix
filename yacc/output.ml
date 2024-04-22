@@ -15,6 +15,7 @@
  * license.txt for more details.
  *)
 (*e: copyright ocamlyacc *)
+open Stdcompat (* for |> *)
 open Ast
 open Lr0
 open Lrtables
@@ -31,7 +32,7 @@ module Map = Map_
 (*****************************************************************************)
 
 (*s: constant [[Output.copy_buffer]](yacc) *)
-let copy_buffer = String.create 1024
+let copy_buffer = Bytes.create 1024
 (*e: constant [[Output.copy_buffer]](yacc) *)
 
 (*s: function [[Output.get_chunk]](yacc) *)
@@ -42,7 +43,7 @@ let get_chunk ic (Location(start,stop)) =
   let n = ref (stop - start) in
   while !n > 0 do
     let m = input ic copy_buffer 0 (min !n 1024) in
-    Buffer.add_string buf (String.sub copy_buffer 0 m);
+    Buffer.add_string buf (Bytes.sub_string copy_buffer 0 m);
     n := !n - m
   done;
   Buffer.contents buf
@@ -60,20 +61,20 @@ let copy_chunk ic oc (Location(start,stop)) =
 (*e: function [[Output.copy_chunk]](yacc) *)
 
 (*s: function [[Output.replace_dollar_underscore]](yacc) *)
-(* actually does the replacment in place 
- * less: we could use Str instead, but this adds a dependency.
+(* less: we could use Str instead, but this adds a dependency.
  *  Str.global_replace (Str.regexp_string "$") "_" s
  *)
 let replace_dollar_underscore s =
+  let buf = Bytes.of_string s in
   let rec aux startpos =
     try
-      let idx = String.index_from s startpos '$' in
-      String.set s idx '_';
+      let idx = Bytes.index_from buf startpos '$' in
+      Bytes.set buf idx '_';
       aux (idx+1)
     with Not_found -> ()
   in
   aux 0;
-  s
+  Bytes.to_string buf
 (*e: function [[Output.replace_dollar_underscore]](yacc) *)
 
 (*s: constant [[Output.spf]](yacc) *)

@@ -2,13 +2,14 @@
 # Script to compile 'mk' (and 'rc') without using 'mk' (nor 'rc') and generate
 # a bin/mk (and bin/rc) so that we don't need a BOOTSTRAP/Linux/386/bin/mk
 # like in kencc. Note that kencc has no BOOTSTRAP/Linux/386/bin/rc because
-# it assumes the presence of a shell and can work both with 'rc' and 'sh'.
+# it assumes the presence of a shell and can work with both 'rc' and 'sh'.
 #
 # Note that right now to boostrap Xix we still need:
 #  - OCaml (which itself requires to bootstrap ocamllex, ocamlyacc and C)
 #  - the ocamlfind tool and stdcompat library
 #  - a C compiler
 #  - /bin/sh
+#  - probably many other things
 #
 # Maybe at some point the assembler/linker/compiler in this repo will
 # be able to bootstrap itself and we will just need an ocamlrun bytecode
@@ -24,16 +25,10 @@ set -x
 # Limit to just stdcompat! This is Xix!
 EXTERNAL_LIB=`ocamlfind query stdcompat`
 
-#TODO? -bin-annot -absname -dtypes
-# -g so we can get good backtrace
+#coupling: mkconfig COMPFLAGS
 OCAMLCFLAGS="-I $EXTERNAL_LIB -g"
 
-# We need -g for good backtrace.
-# We need -custom because of dllstdcompat__stubs, otherwise
-# we would need to set CAML_LD_LIBRARY_PATH before running the programs.
-# LATER: would be good to remove if one day we want to store
-# a BOOTSTRAP/mk and we want a really portable bytecode across platforms.
-# TODO? for windows under cygwin might need -custom too?
+#coupling: mkconfig LINKFLAGS
 EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
 
 TOP=`pwd`

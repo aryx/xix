@@ -50,7 +50,7 @@ type t = {
 
 (*s: function [[User.sign_of_char]] *)
 let sign_of_char = function
-  | '+' -> (fun x -> +x )
+  | '+' -> (fun x -> x)
   | '-' -> (fun x -> - x)
   | c -> failwith (spf "User.sign_of_string: not a sign, got %c" c)
 (*e: function [[User.sign_of_char]] *)
@@ -84,14 +84,14 @@ let read ch =
 
 (*s: function [[User.write_date]] *)
 let write_date ch (date, tz) =
-  IO.nwrite ch (Int64.to_string date);
+  IO.nwrite_string ch (Int64.to_string date);
   IO.write ch ' ';
-  IO.nwrite ch (spf "%c%02d%02d" (char_of_sign tz) (abs tz) 0)
+  IO.nwrite_string ch (spf "%c%02d%02d" (char_of_sign tz) (abs tz) 0)
 (*e: function [[User.write_date]] *)
 
 (*s: function [[User.write]] *)
 let write ch user =
-  IO.nwrite ch (spf "%s <%s> " user.name user.email);
+  IO.nwrite_string ch (spf "%s <%s> " user.name user.email);
   write_date ch user.date
 (*e: function [[User.write]] *)
 

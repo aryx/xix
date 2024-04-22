@@ -16,6 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 (*e: copyright ocaml-git *)
+open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)
@@ -151,23 +152,23 @@ let read ch =
 
 (*s: function [[Commit.write]] *)
 let write commit ch =
-  IO.nwrite ch "tree ";
+  IO.nwrite_string ch "tree ";
   Hexsha.write ch (Hexsha.of_sha commit.tree);
   IO.write ch '\n';
   commit.parents |> List.iter (fun parent ->
-    IO.nwrite ch "parent ";
+    IO.nwrite_string ch "parent ";
     Hexsha.write ch (Hexsha.of_sha parent);
     IO.write ch '\n';
   );
-  IO.nwrite ch "author ";
+  IO.nwrite_string ch "author ";
   User.write ch commit.author;
   IO.write ch '\n';
-  IO.nwrite ch "committer ";
+  IO.nwrite_string ch "committer ";
   User.write ch commit.committer;
   IO.write ch '\n';
 
   IO.write ch '\n';
-  IO.nwrite ch commit.message
+  IO.nwrite_string ch commit.message
 (*e: function [[Commit.write]] *)
 
 (*****************************************************************************)

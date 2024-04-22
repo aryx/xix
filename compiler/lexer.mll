@@ -1,11 +1,12 @@
 {
+open Stdcompat
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Parser
 module A = Ast
 module L = Location_cpp
-module T = Type
+module T = Type_
 
 (*****************************************************************************)
 (* Prelude *)
@@ -34,19 +35,19 @@ let loc () = !L.line
 
 let inttype_of_suffix sign size =
   let sign =
-    match String.lowercase sign with
+    match String.lowercase_ascii sign with
       | "" -> T.Signed
       | "u" -> T.Unsigned
       | s -> error (spf "Impossible: wrong sign suffix: %s" s)
   in
-  match String.lowercase size with
+  match String.lowercase_ascii size with
   | "" -> T.Int, sign
   | "l" -> T.Long, sign
   | "ll" -> T.VLong, sign
   | s -> error (spf "Impossible: wrong int size suffix: %s" s)
 
 let floattype_of_suffix s =
-  match String.lowercase s with
+  match String.lowercase_ascii s with
   | "" -> T.Double
   | "f" -> T.Float
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)

@@ -13,7 +13,7 @@ open Common
 (*****************************************************************************)
 
 (*s: type [[Blob.t]] *)
-type t = bytes
+type t = string
 (*e: type [[Blob.t]] *)
 
 (*s: type [[Blob.hash]] *)
@@ -31,7 +31,7 @@ let read ch =
 
 (*s: function [[Blob.write]] *)
 let write blob ch =
-  IO.nwrite ch blob
+  IO.nwrite_string ch blob
 (*e: function [[Blob.write]] *)
 
 (*****************************************************************************)

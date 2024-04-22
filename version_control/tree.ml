@@ -16,6 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 (*e: copyright ocaml-git *)
+open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)
@@ -175,10 +176,10 @@ let read_entry ch =
 
 (*s: function [[Tree.write_entry]] *)
 let write_entry ch e =
-  IO.nwrite ch (string_of_perm e.perm);
+  IO.nwrite_string ch (string_of_perm e.perm);
   IO.write ch ' ';
   (* todo: handle escape char in filenames? encode/decode *)
-  IO.nwrite ch e.name;
+  IO.nwrite_string ch e.name;
   IO.write ch '\000';
   Sha1.write ch e.id
 (*e: function [[Tree.write_entry]] *)

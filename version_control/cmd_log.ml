@@ -4,6 +4,9 @@
 (*e: copyright ocamlgit *)
 open Common
 
+(* can't use 'open Stdcompat' because conflict with Arg defined in Stdcompat *)
+let (|>) = Stdcompat.(|>)
+
 (* todo: git log --graph --oneline --decorate --all *)
 
 (*s: function [[Cmd_log.print_commit]] *)

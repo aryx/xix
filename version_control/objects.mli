@@ -1,4 +1,5 @@
 (*s: version_control/objects.mli *)
+open Stdcompat (* for bytes *)
 
 (*s: type [[Objects.t]] *)
 type t = 

@@ -1,8 +1,9 @@
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast
-module T = Type
+module T = Type_
 module S = Storage
 module E = Check
 
@@ -50,22 +51,22 @@ type integer = int
 type env = {
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  structs: (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t;
 
   (* internal *)
-  typedefs: (Ast.fullname, Type.t) Hashtbl.t;
+  typedefs: (Ast.fullname, Type_.t) Hashtbl.t;
   (* stricter: no float enum *)
-  enums: (fullname, Type.integer_type) Hashtbl.t;
+  enums: (fullname, Type_.integer_type) Hashtbl.t;
   (* stricter: no support for float enum constants either *)
-  constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
+  constants: (Ast.fullname, integer * Type_.integer_type) Hashtbl.t;
 
   (* return type of function; used to typecheck Return *)
-  return_type: Type.t;
+  return_type: Type_.t;
   (* used to add some implicit GetRef for arrays and functions *)
   expr_context: expr_context;
 }
   and idinfo = {
-    typ: Type.t;
+    typ: Type_.t;
     sto: Storage.t;
     loc: Location_cpp.loc;
     (* typed initialisers (fake expression for function definitions) *)
@@ -981,7 +982,7 @@ let check_and_annotate_program ast =
        * be able to store those definitions in env.ids. That way
        * we can detect function redefinitions, useless redeclarations, etc.
        *)
-      let ini = Some { e = Id fullname; e_loc = loc; e_type = Type.Void } in
+      let ini = Some { e = Id fullname; e_loc = loc; e_type = Type_.Void } in
 
       (try 
          (* check for weird redeclarations *)
@@ -1057,7 +1058,7 @@ let check_and_annotate_program ast =
     enums = Hashtbl.create 101;
     constants = Hashtbl.create 101;
     
-    return_type = Type.Void;
+    return_type = Type_.Void;
     expr_context = CtxWantValue;
   }
   in

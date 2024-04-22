@@ -13,6 +13,7 @@
 (*e: copyright ocamllex *)
 (* Compiling a lexer definition *)
 
+open Stdcompat (* for |> *)
 open Ast
 module Set = Set_
 module Map = Map_
@@ -191,7 +192,7 @@ let rec lastpos = function
 
 (*s: function [[Lexgen.followpos]] *)
 let followpos size_charsets entries =
-  let v = Array.create size_charsets Set.empty in
+  let v = Array.make size_charsets Set.empty in
   let fill_pos first = function
       OnChars pos -> v.(pos) <- Set.union first v.(pos)
     | ToAction _  -> () 
@@ -276,14 +277,14 @@ let goto_state st =
 
 (*s: function [[Lexgen.transition_from]] *)
 let transition_from charsets follow pos_set = 
-  let tr    = Array.create (Ast.charset_size + 1) Set.empty in
+  let tr    = Array.make (Ast.charset_size + 1) Set.empty in
   pos_set |> List.iter (fun pos ->
      charsets.(pos) |> List.iter (fun c ->
            tr.(c) <- Set.union tr.(c) follow.(pos)
       )
   );
 
-  let shift = Array.create (Ast.charset_size + 1) Backtrack in
+  let shift = Array.make (Ast.charset_size + 1) Backtrack in
   for i = 0 to Ast.charset_size do
     shift.(i) <- goto_state tr.(i)
   done;
@@ -319,7 +320,7 @@ let encode_lexentries charsets lexentries =
   let states = 
     map_on_all_states (fun st -> translate_state charsets follow st) 
   in
-  let transitions = Array.create !next_state_num (Perform 0) in
+  let transitions = Array.make !next_state_num (Perform 0) in
   states |> List.iter (fun (act, i) -> transitions.(i) <- act);
   (automata_entries, transitions)
 (*e: function [[Lexgen.encode_lexentries]] *)

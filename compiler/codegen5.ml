@@ -1,11 +1,12 @@
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Ast
 module C = Ast
 module A = Ast_asm5
 
-module T = Type
+module T = Type_
 module S = Storage
 module TC = Typecheck
 module E = Check
@@ -36,7 +37,7 @@ type env = {
   (* computed by previous typechecking phase *)
 
   ids:     (Ast.fullname, TC.idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  structs: (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t;
 
   (* less: compute offset for each field?
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
@@ -87,7 +88,7 @@ let rEXT1 = A.R 10
 let rEXT2 = A.R 9
 
 let regs_initial = 
-  let arr = Array.create A.nb_registers 0 in
+  let arr = Array.make A.nb_registers 0 in
   [A.rLINK; A.rPC;       (* hardware reseved *)
    A.rTMP; A.rSB; A.rSP; (* linker reserved *)
    rEXT1; rEXT2;         (* compiler reserved *)
@@ -103,7 +104,7 @@ type integer = int
 (* some form of instruction selection *)
 type operand_able = 
  { opd: operand_able_kind;
-   typ: Type.t;
+   typ: Type_.t;
    loc: Ast.loc;
  }
 and operand_able_kind =

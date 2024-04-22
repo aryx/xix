@@ -1,8 +1,9 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
 open Common
 
 open Arch
-module T = Type
+module T = Type_
 
 let rec width_of_type env t =
   match t with

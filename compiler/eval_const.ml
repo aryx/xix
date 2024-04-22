@@ -16,7 +16,7 @@ module E = Check
 type integer = int
 
 (* less: could do that in rewrite.ml so no need to pass is to eval *)
-type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t 
+type env = (Ast.fullname, integer * Type_.integer_type) Hashtbl.t 
 
 exception NotAConstant
 

@@ -13,6 +13,7 @@
 (*e: copyright ocamllex *)
 (* Compaction of an automata *)
 
+open Stdcompat (* for |> *)
 open Lexgen
 
 (*s: function [[Compact.most_frequent_elt]] *)
@@ -56,10 +57,10 @@ let non_default_elements def v =
 (* Compact the transition and check arrays *)
 
 (*s: global [[Compact.trans]] *)
-let trans = ref(Array.create 1024 0)
+let trans = ref(Array.make 1024 0)
 (*e: global [[Compact.trans]] *)
 (*s: global [[Compact.check]] *)
-let check = ref(Array.create 1024 (-1))
+let check = ref(Array.make 1024 (-1))
 (*e: global [[Compact.check]] *)
 (*s: global [[Compact.last_used]] *)
 let last_used = ref 0
@@ -71,15 +72,15 @@ let grow_transitions () =
   let old_trans = !trans
   and old_check = !check in
   let n = Array.length old_trans in
-  trans := Array.create (2*n) 0;
+  trans := Array.make (2*n) 0;
   Array.blit old_trans 0 !trans 0 !last_used;
-  check := Array.create (2*n) (-1);
+  check := Array.make (2*n) (-1);
   Array.blit old_check 0 !check 0 !last_used
 (*e: function [[Compact.grow_transitions]] *)
 
 (*s: function [[Compact.pack_moves]] *)
 let pack_moves state_num move_t =
-  let move_v = Array.create 257 0 in
+  let move_v = Array.make 257 0 in
   for i = 0 to 256 do
     move_v.(i) <-
       (match move_t.(i) with
@@ -131,9 +132,9 @@ type lex_tables =
 let compact_tables state_v =
   let n = Array.length state_v in
 
-  let base = Array.create n 0 in
-  let backtrk = Array.create n (-1) in
-  let default = Array.create n 0 in
+  let base = Array.make n 0 in
+  let backtrk = Array.make n (-1) in
+  let default = Array.make n 0 in
 
 
   for i = 0 to n - 1 do

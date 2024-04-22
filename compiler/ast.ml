@@ -47,7 +47,7 @@ type loc = Location_cpp.loc
 type name = string
 
 (* for scope *)
-type blockid = int (* same than Type.blockid, repeated here for clarity *)
+type blockid = int (* same than Type_.blockid, repeated here for clarity *)
 
 (* A fully resolved and scoped name. 
  * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
@@ -57,7 +57,7 @@ type blockid = int (* same than Type.blockid, repeated here for clarity *)
  * 
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
-type fullname = name * blockid (* same than Type.fullname *)
+type fullname = name * blockid (* same than Type_.fullname *)
 
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
  * Could be moved in a separate naming.ml, but not worth it for just two types.
@@ -76,7 +76,7 @@ type tagkind =
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* What are the differences between type_ below and Type.t? 
+(* What are the differences between type_ below and Type_.t? 
  * - typedef expansion is not done here
  * - constant expressions are not resolved yet 
  *  (those expressions can involve enum constants which will be resolved later).
@@ -90,12 +90,12 @@ type type_ = {
   t_loc: loc;
 }
   and type_bis = 
-  | TBase of Type.t (* only the Basic stuff *)
+  | TBase of Type_.t (* only the Basic stuff *)
   | TPointer of type_
   | TArray of const_expr option * type_
   | TFunction of function_type
 
-  | TStructName of Type.struct_kind * fullname
+  | TStructName of Type_.struct_kind * fullname
   (* In C an enum is really like an int. However, we could do
    * extended checks at some point to do more strict type checking! 
    *)
@@ -126,14 +126,14 @@ and expr = {
   e: expr_bis;
   e_loc: loc;
   (* properly set during typechecking in typecheck.ml *)
-  e_type: Type.t;
+  e_type: Type_.t;
 }
   and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
-  | Int of string * Type.integer_type
-  | Float of string * Type.float_type
+  | Int of string * Type_.integer_type
+  | Float of string * Type_.float_type
   (* codegen: converted to Id after typechecking *)
-  | String of string * Type.t (* always array of chars for now, no unicode *)
+  | String of string * Type_.t (* always array of chars for now, no unicode *)
 
   (* Global, local, parameter, enum constant (can be scoped), function.
    * Not that the storage, type, usage of ids is computed later and stored
@@ -288,7 +288,7 @@ type func_def = {
 type struct_def = {
   su_name: fullname;
   su_loc: loc;
-  su_kind: Type.struct_kind;
+  su_kind: Type_.struct_kind;
   (* todo: bitfield annotation *)
   su_flds: field_def list;
 }
@@ -351,7 +351,7 @@ type any =
   | Type of type_
   | Toplevel of toplevel
   | Program of program
-  | FinalType of Type.t
+  | FinalType of Type_.t
 
  (* with tarzan *)
 
@@ -359,8 +359,8 @@ type any =
 (* Helpers *)
 (*****************************************************************************)
 let tagkind_of_su = function
-  | Type.Struct -> TagStruct
-  | Type.Union -> TagUnion
+  | Type_.Struct -> TagStruct
+  | Type_.Union -> TagUnion
 
 let unwrap (name, _) = name    
 

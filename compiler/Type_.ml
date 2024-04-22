@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* renamed to Type_.ml because conflict with OCaml5 module name *)
 
 type blockid = int
 type fullname = string * blockid

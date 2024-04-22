@@ -16,6 +16,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 (*e: copyright ocaml-git *)
+open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)
@@ -281,7 +282,7 @@ let read_time ch =
   (* less: unsigned actually *)
   let lsb32 = IO.BigEndian.read_real_i32 ch in
   let nsec = IO.BigEndian.read_real_i32 ch in
-  { lsb32; nsec }
+  { lsb32 = lsb32; nsec = nsec }
 (*e: function [[Index.read_time]] *)
 
 (*s: function [[Index.write_time]] *)
@@ -334,7 +335,7 @@ let read_stat_info ch =
   let uid = IO.BigEndian.read_real_i32 ch in
   let gid = IO.BigEndian.read_real_i32 ch in
   let size = IO.BigEndian.read_real_i32 ch in
-  { mtime; ctime; dev; inode; mode; uid; gid; size }
+  { mtime = mtime; ctime = ctime; dev = dev; inode = inode; mode = mode; uid = uid; gid = gid; size = size }
 (*e: function [[Index.read_stat_info]] *)
 
 (*s: function [[Index.write_stat_info]] *)
@@ -374,7 +375,7 @@ let read_entry ch =
   in
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
-  { stats; id; path }
+  { stats = stats; id = id; path = path }
 (*e: function [[Index.read_entry]] *)
 
 (*s: function [[Index.write_entry]] *)
@@ -383,7 +384,7 @@ let write_entry ch e =
   Sha1.write ch e.id;
   let flags = (0 lsl 12 + String.length e.path) land 0x3FFF in
   IO.BigEndian.write_ui16 ch flags;
-  IO.nwrite ch e.path;
+  IO.nwrite_string ch e.path;
   let len = 63 + String.length e.path in
   let pad = 
     match len mod 8 with
@@ -429,13 +430,13 @@ let write idx ch =
   let n = List.length idx in
   let body =
     IO.output_bytes () |> IO_.with_close_out (fun ch ->
-      IO.nwrite ch "DIRC";
+      IO.nwrite_string ch "DIRC";
       IO.BigEndian.write_i32 ch 2;
       IO.BigEndian.write_i32 ch n;
       idx |> List.iter (write_entry ch)
     )
   in
-  let sha = Sha1.sha1 body in
+  let sha = Sha1.sha1 (Bytes.to_string body) in
   IO.nwrite ch body;
   Sha1.write ch sha
 (*e: function [[Index.write]] *)

@@ -4,6 +4,8 @@
 (*e: copyright ocamlgit *)
 open Common
 
+let (|>) = Stdcompat.(|>)
+
 (*s: type [[Cmd_status.status]] *)
 type status = {
   (* diff index vs HEAD *)

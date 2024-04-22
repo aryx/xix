@@ -16,9 +16,6 @@ jobs:
         run: |
           eval $(opam env)
           ./bootstrap-mk.sh
-      - name: Basic test
-        run: |
-          ./test.sh
       - name: Build all xix
         run: |
           eval $(opam env)
@@ -26,6 +23,9 @@ jobs:
           export PATH=`pwd`/bin:$PATH
           mk depend
           mk
+      - name: Basic test
+        run: |
+          ./test.sh
     strategy:
       matrix:
         ocaml-compiler:

@@ -60,19 +60,14 @@ let shprint env s =
           else Str.matched_string s
       ) s
   in
-  print_string ("|" ^ s ^ "|\n");
-  (* bug: dont forget to flush, otherwise can have weird output
-   * when mix printing on stdout and stderr like printing
-   * multiple times the same recipe (weird, very weird)
-   *)
-  flush stdout
+  Logs.app (fun m -> m "|%s|" s)
 
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
 
 let dump_job func job pidopt =
-  pr2 (spf "(%d): %s pid = %d; targets = %s" 
+  Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
          (Unix.getpid())
          func 
          (match pidopt with Some pid -> pid | None -> 0)
@@ -190,7 +185,7 @@ let waitup () =
         job.J.rule.R.all_targets |> List.iter (fun f ->
           if Sys.file_exists f
           then begin
-            pr2 (spf "deleting %s" f);
+            Logs.info (fun m -> m "deleting %s" f);
             Sys.remove f
           end
         );

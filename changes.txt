@@ -5,18 +5,18 @@
 ** rc/mk
 TODO Resume work and make it work again! Can build itself.
 
-Can use it on principia and build and syncweb as well Editor.nw
-(efuns), Codemap.nw
+TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
+     (efuns), Codemap.nw
 
 ** internals
 TODO Renamed module to capitalized form (Common.ml), like in Semgrep
-(thx Martin)
+     (thx Martin)
 
-TODO Logging using poor's man Logs.ml
+Logging using poor's man Logs.ml
 
 TODO Testing library using Testo? (only built and run on 4.14.0)
 
-TODO Switch from Common.filelame to (our poor's man) Fpath.t
+TODO Switch from Common.filename to (our poor's man) Fpath.t
 
 ** devops
 
@@ -41,7 +41,7 @@ Github actions (GHA) checks to make sure xix compiles.
 At least it compiles with 3.10.0 (thx to stdcompat), 4.04.0, 4.14.0,
 and even 5.1.0!
 
-First semgrep checks in semgrep.jsonnet :)
+First semgrep checks in semgrep.jsonnet :) and semgrep GHA workflow.
 
 Some basic tests (also enforced in GHA) in test.sh
 

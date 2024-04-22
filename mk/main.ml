@@ -103,13 +103,13 @@ let do_action s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
-        pr2 (spf "processing %s" file);
+        Logs.info (fun m -> m "processing %s" file);
         let instrs = Parse.parse file in
         instrs |> List.iter pr2_gen;
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->
-        pr2 (spf "processing %s" file);
+        Logs.info (fun m -> m "processing %s" file);
         let env = Env.initenv() in
         let instrs = Parse.parse file in
         let _rules, env = Eval.eval env (ref []) instrs in
@@ -180,7 +180,7 @@ let (build_targets: Common.filename -> string list ref -> (string*string) list
     let instrs = Parse.parse infile in
 
     if !Flags.dump_ast 
-    then instrs |> List.iter pr2_gen;
+    then Ast.dump_ast instrs;
 
     let rules, env = Eval.eval env targets instrs in
 
@@ -249,13 +249,14 @@ let main () =
     "-quiet", Arg.Unit (fun () -> Logs.set_level None),
     " ";
     "-debug", Arg.Unit (fun () ->
-      Flags.trace := true;
       Flags.explain_mode := true;
       Logs.set_level (Some Logs.Debug);
     ),
     " trace the main functions";
     
-    (* useful for debugging when there is an error in recursive mk *)
+    (* useful for debugging when there is an error in recursive mk 
+     * TODO: get rid of ? Logs.debug below enough?
+     *)
     "-print_pwd", Arg.Unit (fun () ->
       pr2 (spf "(in %s)" (Sys.getcwd ()));
     ),
@@ -275,7 +276,7 @@ let main () =
     | _ ->
       targets := t :: !targets
   ) usage;
-  Logs.debug (fun m -> m "inside mk main");
+  Logs.debug (fun m -> m "inside mk main, ran from %s" (Sys.getcwd ()));
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 

@@ -46,7 +46,7 @@ let add_var env s xs =
   match () with
   | _ when Hashtbl.mem env.vars_commandline s ->
     (* we do not override those vars *)
-    Logs.warn (fun m -> m "ignoring definition of %s specified on the command-line" s);
+    Logs.info (fun m -> m "ignoring definition of %s specified on the command-line" s);
     ()
 
   (* stricter: forbid redefinitions.
@@ -61,15 +61,14 @@ let add_var env s xs =
   | _ ->
     Hashtbl.replace env.vars s xs
 
-
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
 let dump_env env =
+  Logs.debug (fun m -> m "Dump_env:");
   env.vars |> Hashtbl.iter (fun k v ->
-    pr2 (spf "%s -> %s" k (Common.dump v));
+    Logs.debug (fun m -> m " %s -> %s" k (Common.dump v));
   )
-
 
 (*****************************************************************************)
 (* Functions *)

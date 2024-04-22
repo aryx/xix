@@ -53,7 +53,7 @@ local job = {
       // alt: install 9base (ubuntu package name of plan9port)
       run: |||
         opam install --deps-only .
-        apt-get install -y rc
+        sudo apt-get install -y rc
       |||,
     },
     {

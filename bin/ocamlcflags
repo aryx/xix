@@ -1,0 +1,14 @@
+#!/bin/sh
+
+OCAML_VERSION_MAJOR=`ocamlc -version | cut -f1 -d.`
+#OCAML_VERSION_MINOR = `ocamlopt -version | cut -f2 -d.`
+#OCAML_VERSION_POINT = `ocamlopt -version | cut -f3 -d.`
+
+case "$OCAML_VERSION_MAJOR" in
+    "3") ;;
+    "4")
+       echo "-absname -bin-annot";;
+    "5")
+       echo "-absname -bin-annot";;
+    "*") ;;
+esac

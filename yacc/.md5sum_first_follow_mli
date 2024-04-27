@@ -1,6 +1,0 @@
-yacc/first_follow.mli |07340d09ccfea7bce5835824fabf5965
-type [[First_follow.first]](yacc) |c3ec7efac5779358b0749070e292a06e
-type [[First_follow.epsilon]](yacc) |a1d3bbe85ba131ded81ad13b9e32bc19
-signature [[First_follow.compute_first]](yacc) |99c7012422b102db5be6ddbc62c362a1
-type [[First_follow.follow]](yacc) |d4b6604df045804b6948670d0d0d8386
-signature [[First_follow.compute_follow]](yacc) |8709a920cb17ee7674df42fc47e63a7d

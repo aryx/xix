@@ -1,9 +1,0 @@
-lex/ast.ml |17bbc7757aded2bd431e12011f239beb
-copyright ocamllex |76f927ba746140f058e7a122cb271d1b
-type [[Syntax.charpos]] |b198a3a5ae87b975aa1ad3c54c207395
-type [[Syntax.location]] |3658031834e7bf06e73aac515535e993
-type [[Syntax.char_]] |65550b4d6b5905882f4ebd7043616c3e
-type [[Syntax.regular_expression]] |85fb8f4e060a4dccb0e016b67e8e1d05
-type [[Syntax.action]] |979871c99a89734afaf068bcf4de848f
-type [[Syntax.rule]] |0524dc7f5d0e0d9cbe35fb99d5ac42ac
-type [[Syntax.lexer_definition]] |f6d1f50468ae08c883c8f437fa9b8df0

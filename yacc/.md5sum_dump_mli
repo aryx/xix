@@ -1,5 +1,0 @@
-yacc/dump.mli |61e340725a4f8d3c3166bc86747a1367
-signature [[Dump.dump_item]](yacc) |cc54cce331b6bb17041704b7b3a02daf
-signature [[Dump.dump_items]](yacc) |9246b47e10abfabc18752187604d3de9
-signature [[Dump.dump_lr0_automaton]](yacc) |84033b30e686cd83f0581e479133319d
-signature [[Dump.dump_lrtables]](yacc) |089ef503d906e9194414fb884f3682a6

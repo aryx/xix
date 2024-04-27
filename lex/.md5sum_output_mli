@@ -1,3 +1,0 @@
-lex/output.mli |27ecb3f2d35647019f7bfbcb7244dfa7
-copyright ocamllex |76f927ba746140f058e7a122cb271d1b
-signature [[Output.output_lexdef]] |545f29602db8dd454dfb93cbadf233b8

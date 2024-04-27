@@ -1,5 +1,0 @@
-yacc/lrtables.ml |5986a2f4fd96adf8d310963b06a4c5c1
-type [[Lrtables.action]](yacc) |5581bfc39862b24927b3645f24dc9dbe
-type [[Lrtables.action_table]](yacc) |ca3db0872596ae6ba331d60051df5cf8
-type [[Lrtables.goto_table]](yacc) |71042f9ed2db2a18a1e4fa6f1b1f1497
-type [[Lrtables.lr_tables]](yacc) |00301b8400eaf00603f68a97806cb0cb

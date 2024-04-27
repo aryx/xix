@@ -1,4 +1,0 @@
-yacc/check.mli |9b75cd7c69f060e7587a7260682f4706
-type [[Check.error]](yacc) |0f662de616b3a582efb23b8b4c189870
-exception [[Check.Error]](yacc) |1672ad37a6089451b7982ba37e5f4e2f
-signature [[Check.check]](yacc) |9140b224082930a88ed3ae6718eff320

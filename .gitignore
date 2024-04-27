@@ -14,9 +14,7 @@ bin/*
 *.a
 
 # Syncweb objects
-#TODO: uncomment at some point, but make sure 'make sync'
-# is working in principia for lex/ yacc/ lib_parsing/ and version_control/ 
-#.md5sum_*
+.md5sum_*
 
 # Kencc objects
 *.[58]

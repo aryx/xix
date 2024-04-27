@@ -1,4 +1,0 @@
-version_control/cmd_clone.ml |9fab4e352b90066cbc45e042eaa63bb6
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Cmd_clone.clone]] |72939f94af6855dae33908a1bd33d5cf
-constant [[Cmd_clone.cmd]] |a4fa990e6bb790d638c5600bd94c2a8e

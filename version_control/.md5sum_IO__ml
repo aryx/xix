@@ -1,6 +1,0 @@
-version_control/IO_.ml |387d0c50315ed793126b0910bb7d0321
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[IO_.with_close_out]] |8d5af3a8ef5d49d6a49b192e3b4ed927
-function [[IO_.read_string_and_stop_char]] |2b26b155174b2bbd6ccebf80fd450dda
-function [[IO_.read_int_and_nullbyte]] |b3bd5f9779f737532bc9b7c495ad74d5
-function [[IO_.read_key_space_value_newline]] |b31eb1cbb286445bcf861f561ffa05a5

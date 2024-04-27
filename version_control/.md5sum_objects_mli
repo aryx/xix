@@ -1,5 +1,0 @@
-version_control/objects.mli |dc54b36e093a0b8d03799b89a2b6c66d
-type [[Objects.t]] |0943e5cdcc79bea3917058d20ae8a94c
-[[Objects.t]] cases |415887c76873be72a20cd330a20ead4a
-signature [[Objects.read]] |83f28eb2a4a9555e1edf7d4577d2f539
-signature [[Objects.write]] |0c1c64f7f4b4eef426e2865630f8a117

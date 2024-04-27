@@ -1,5 +1,0 @@
-version_control/cmd_add.ml |01db1c5cbadd828b6f5416073aa517af
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Cmd_add.add]] |5fe2da29db564203ed4ca956234f9581
-constant [[Cmd_add.cmd]] |05ea64bed4c8a238a96aedc206159999
-[[Cmd_add.cmd]] command-line options |66dbc96ffd4c47d9ff71038328e33741

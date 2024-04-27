@@ -1,8 +1,0 @@
-version_control/cmd_log.ml |9634e2edab4acc23b917874c594355d1
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Cmd_log.print_commit]] |a37d060aab0d0ef0fcd71f148507d331
-function [[Cmd_log.print_change]] |c55daf49db25b6cd8e68cd9b906ace14
-constant [[Cmd_log.name_status]] |00a14d541cd68a2373fd1dda41d213a1
-function [[Cmd_log.log]] |7c41c8e583179867b580b4d8a191490a
-[[Cmd_log.log()]] if [[--name-status]] flag |7f6b77d390f7f3125642b37f7d6fa5b5
-constant [[Cmd_log.cmd]] |233403aa9dfa8d16ad02d1e4ef9b1b79

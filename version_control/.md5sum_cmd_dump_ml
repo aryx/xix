@@ -1,8 +1,0 @@
-version_control/cmd_dump.ml |37f51d07c286395be9d0cb9e515939dc
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-constant [[Cmd_dump.raw]] |5278dd6849f0992edd63cfa033509271
-constant [[Cmd_dump.index]] |101430347a3e44fbcbb6c41f1efe5e85
-function [[Cmd_dump.dump_object]] |38a119c1e589868c0ed2e0b18f486a55
-function [[Cmd_dump.dump_index]] |aab558e084bd24a3d22b8730b19101cd
-function [[Cmd_dump.dump]] |9bf563eab9b75c2f868e4e4eef5f4770
-constant [[Cmd_dump.cmd]] |32dcd25d192621ca800df9a821b41c87

@@ -1,4 +1,0 @@
-version_control/diffs.ml |3561e70f8f7c6acf3e8b7194bd4db410
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Diffs.split_lines]] |555558a59b844ffacf14cd78c4762142
-function [[Diffs.diff]] |d0c6ed4c4e905c77cd2cc2af5e3770fb

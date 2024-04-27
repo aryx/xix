@@ -1,9 +1,0 @@
-version_control/refs.mli |b235bea8689d5e1bdabddac90c2ed415
-type [[Refs.refname]] |16313bc5d817281faf9ae0707e89502b
-type [[Refs.t]] |105c4a30e495337bbefb14dcf495e97f
-type [[Refs.ref_content]] |035df194c634afe5afd5f881fbc17f18
-signature [[Refs.default_head_content]] |de41a5b5e22e9fe001d75fab0cda4c01
-signature [[Refs.is_valid_refname]] |4a0db36131ed23e180bbb1c3c4bd5631
-signature [[Refs.read]] |dc510ce0b86a2129d560367054b1a724
-signature [[Refs.write]] |ee0a31442bf7c7a5f930fc5fa050bacd
-signature [[Refs.string_of_ref]] |8f1ca5d9ca4a0e25edec89d6ffd39bdf

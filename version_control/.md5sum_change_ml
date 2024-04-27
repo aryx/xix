@@ -1,5 +1,0 @@
-version_control/change.ml |eeed70fae0de1ad7ccc919bf6867a86f
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-type [[Change.content]] |ac299cf228f0616e4bda5117b7c70c38
-type [[Change.entry]] |ca6dbf30ec21bc40a395a032d3a0780e
-type [[Change.t]] |f0f1cf93c3edf279809fb6a739bb891b

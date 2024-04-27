@@ -1,7 +1,0 @@
-version_control/blob.ml |1a2e5a24643c0d2cf579d865296730eb
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-type [[Blob.t]] |db7a9e5daab3720e60840256786d7838
-type [[Blob.hash]] |027559727a767e1efad9af756e03259f
-function [[Blob.read]] |7c23a858ca8ebb67f37d8f3d1f3619c9
-function [[Blob.write]] |0f7b66ed13a4f14fbaefa7d442302c07
-function [[Blob.show]] |5b6a59febfb6e96f24d058c3ecc7399d

@@ -1,7 +1,0 @@
-version_control/zlib.mli |94089e1abe6b6b67fa37cd3c0ecce00f
-copyright camlzip |0805ac4c8d5509f5bcf54988b18cd3ce
-exception [[Zlib.Error]] |56c4f0b0eba09f494816d60490649339
-signature [[Zlib.compress]] |3c89ca17b9c5069bad29d5ecde2a5804
-signature [[Zlib.compress_direct]] |83e552ec8d37c6ebabe5447c2ac5a3d2
-signature [[Zlib.uncompress]] |da8c461006946b08d82c47b4da7427ed
-type [[Zlib.flush_command]] |84e05c15eae37deae7eed60cd6d305ea

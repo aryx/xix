@@ -1,5 +1,0 @@
-version_control/diff.ml |c5117fead5290f7662a089f74aa41017
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-type [[Diff.item]] |48a7ffa21325cb6b0a0dd3b9c0b78642
-type [[Diff.diff_elem]] |72484870b2e4780c00f8dca3c3428fb3
-type [[Diff.diff]] |eda10a75de8e8817cb2e5059f002ed50

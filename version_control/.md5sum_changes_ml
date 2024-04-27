@@ -1,8 +1,0 @@
-version_control/changes.ml |4c57443cc1f22ef7a1119c53c8859afa
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Changes.skip_tree_and_adjust_path]] |99a5dc3eb6794601757cc7451d53635d
-function [[Changes.content_from_path_and_stat_index]] |121fc9b9c8c57524e6e3809197b7baba
-[[Changes.content_from_path_and_stat_index()]] match mode cases |2b7b685ad40e6da95a36cd701eb9cc9a
-function [[Changes.changes_tree_vs_tree]] |266dd7a68eee943557fc38fd5ac917b4
-function [[Changes.changes_worktree_vs_index]] |bc35c92c66a3e8bf215663d04a4e7ef5
-function [[Changes.changes_index_vs_tree]] |00d95e42d8161afca1b19a8557768bb2

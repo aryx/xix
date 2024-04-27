@@ -1,4 +1,0 @@
-version_control/cmd_diff.ml |fff46f32a36a6ec5898c7ef9c61a1004
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Cmd_diff.diff_worktree_vs_index]] |98d7e1b7ea20441e6932c65d9c1c5482
-constant [[Cmd_diff.cmd]] |6d159c3549ee6d48d07c60a6a21aab64

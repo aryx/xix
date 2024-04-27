@@ -1,4 +1,0 @@
-version_control/cmd_test.ml |4247477401899ef741f78127d004a657
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Cmd_test.test_sha1]] |95f34e34ee812cd01778fb4677a14f49
-constant [[Cmd_test.cmd]] |c3856afb00558f9341ee91c9b4b3e81b

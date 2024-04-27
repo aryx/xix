@@ -1,6 +1,0 @@
-version_control/clients.ml |08247081c8b4ba0d3ee98ff328975a54
-copyright ocamlgit |2e637e0f4a0397dae3b16ce123f2f846
-function [[Clients.client_of_url]] |044fb90ac7ca0d5c74d7ee86370c71a3
-[[Clients.client_of_url()]] match url cases |7012f8ed468ac177969fb05d6ff8e7b2
-[[Clients.client_of_url()]] match url cases |429b41ca068e8377076ba5146f9064f9
-[[Clients.client_of_url()]] match url cases |bfab5a0961b0d5a5ceb012fe8722514d

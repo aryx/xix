@@ -1,6 +1,0 @@
-version_control/sha1.mli |9cc88013d6d57ccc242f528f037f6519
-type [[Sha1.t]] |f0566159e920da62317a6f24ec809cf4
-signature [[Sha1.sha1]] |d2828e3c963fd1089a11404b3c820fcc
-signature [[Sha1.read]] |8e0e659130a934b7c4fa5c422c39841e
-signature [[Sha1.write]] |785d7370daba45a0ac1a7e6a3a0f906a
-signature [[Sha1.is_sha]] |4ba675ccbca4832f62ed482877911331

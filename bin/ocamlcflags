@@ -1,0 +1,2 @@
+#!/bin/sh
+echo "-absname -bin-annot"

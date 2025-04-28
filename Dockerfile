@@ -2,9 +2,14 @@
 
 # history:
 #  - try to build with Alpine 3.21 but clang compilation error
-#    requiring to patch for -Wno-error=implicit-function-declaration and
+#    requiring to patch ocamlc for -Wno-error=implicit-function-declaration and
 #    then missing getwd() old glibc function (alpine use musl libc)
-#    so simpler to switch to Ubuntu
+#    => simpler to switch to Ubuntu
+#  - use 3.10.0 because it was a version we managed to port to plan9?
+#    (the byterun/ from ocaml 1.07 managed to run bytecode from 3.10.0?)
+#    and oldest version that can work for stdcompat
+#  - TODO? use 4.02.2 because oldest version that can work with ppx_deriving
+#    (and also stdcompat and also that I can install on my Arch linux machine)
 
 FROM ubuntu:22.04
 #alt: alpine:3.21
@@ -18,14 +23,12 @@ RUN apt-get install -y opam
 #alt: RUN apk add opam
 # Initialize opam (disable sandboxing due to Docker)
 RUN opam init --disable-sandboxing -y
-# We use 3.10.0 because it's a version we managed to port to plan9 (byterun/) 
 RUN opam switch create 3.10.0 -v
 
 # Install dependencies
 WORKDIR /src
 COPY xix.opam ./
 RUN opam install --deps-only -y .
-
 # 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
 # zlib for ogit
 RUN apt-get install -y 9base zlib1g-dev
@@ -38,6 +41,7 @@ RUN eval $(opam env) && ./bootstrap-mk.sh
 
 # Full build
 ENV PATH="$PATH:/src/bin"
+# TODO: at some point use the boostrapped /src/bin/rc
 ENV MKSHELL="/usr/bin/rc"
 RUN eval $(opam env) && mk clean
 RUN eval $(opam env) && mk

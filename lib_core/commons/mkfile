@@ -3,7 +3,8 @@
 TOP=../..
 INCLUDES=-I .
 
-SRC=common.ml\
+SRC=Cap.ml \
+ common.ml\
  common2.ml\
  ocaml.ml\
  IO.ml\

@@ -1,4 +1,4 @@
-# Build XiX with OCaml 3.10.0 (and opam) on Ubuntu Linux
+# Build XiX with OCaml 4.09.1 (and opam) on Ubuntu Linux
 
 # history:
 #  - try to build with Alpine 3.21 but clang compilation error
@@ -8,7 +8,7 @@
 #  - use 3.10.0 because it was a version we managed to port to plan9?
 #    (the byterun/ from ocaml 1.07 managed to run bytecode from 3.10.0?)
 #    and oldest version that can work for stdcompat
-#  - TODO? use 4.02.2 because oldest version that can work with ppx_deriving
+#  - TODO? use 4.09.1 because oldest version that can work with ppx_deriving
 #    (and also stdcompat and also that I can install on my Arch linux machine)
 
 FROM ubuntu:22.04
@@ -23,7 +23,7 @@ RUN apt-get install -y opam
 #alt: RUN apk add opam
 # Initialize opam (disable sandboxing due to Docker)
 RUN opam init --disable-sandboxing -y
-RUN opam switch create 3.10.0 -v
+RUN opam switch create 4.09.1 -v
 
 # Install dependencies
 WORKDIR /src

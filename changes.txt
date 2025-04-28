@@ -1,10 +1,8 @@
 # -*- org -*-
 
-* 0.14 (Q2 2024) (Works again, Logging, Testing, CI)
+* TODO
 
 ** rc/mk
-TODO Resume work and make it work again! Can build itself.
-
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
      (efuns), Codemap.nw
 
@@ -12,21 +10,34 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
 TODO Renamed module to capitalized form (Common.ml), like in Semgrep
      (thx Martin)
 
-Logging using poor's man Logs.ml
-
 TODO Testing library using Testo? (only built and run on 4.14.0)
 
 TODO Switch from Common.filename to (our poor's man) Fpath.t
 
 ** devops
 
-TODO started to use Nix to define the development environment for Xix.
+TODO started to use Nix to define the development environment for Xix?
 
-TODO? switch to precommit and ocamlformat?
+TODO? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 
 TODO more semgrep rules (forbid functors, labels, etc.)
 
 TODO compile again for ocaml light (my own fork of caml-special-light 1.07)
+
+* 0.15 (Q2 2025) (Dockerfile (devops))
+# resume again after one year of inactivity due to my work for Semgrep.
+
+** devops
+
+Dockerfile (Ubuntu because Alpine is failing for old OCaml versions)
+
+* 0.14 (Q2 2024) (Works again, Logging, Testing, CI)
+
+** mk works again (but need plan9 (a.k.a. 9base) rc)
+
+** internals
+
+Logging using poor's man Logs.ml
 
 * 0.13 (Q1 2024) (CI build and test and semgrep checks (devops))
 # resume after long hiatus (2019-2023) due to our move to Italy,

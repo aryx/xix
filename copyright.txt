@@ -1,6 +1,6 @@
 Xix - Yoann Padioleau
 
-Copyright (C) 2015-2018, 2024 Yoann Padioleau
+Copyright (C) 2015-2018, 2024-2025 Yoann Padioleau
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Lesser General Public License (LGPL)

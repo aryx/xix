@@ -1,7 +1,4 @@
-Most of the code in this repository was written by
-Yoann Padioleau
-
-except:
+Most of the code in this repository was written by Yoann Padioleau except:
  - lex/                                by Xavier Leroy        (from ocaml)
  - lib_core/stdlib/                    by Xavier Leroy et al. (from ocaml)
  - commons/IO.ml                       by Nicolas Canasse     (from exblib)

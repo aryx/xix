@@ -33,7 +33,7 @@ local job = {
         // Current version I usually work with
         '4.14.1',
         // Why not, living on the edge!
-        '5.1.0',
+        '5.2.0',
       ],
     },
   },

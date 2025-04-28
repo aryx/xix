@@ -33,7 +33,7 @@ bootstrap:
 ###############################################################################
 
 check:
-	~/yy/bin/osemgrep --experimental --config semgrep.jsonnet --strict --error
+	~/zz/bin/osemgrep --experimental --config semgrep.jsonnet --strict --error
 
 pr:
 	git push origin `git rev-parse --abbrev-ref HEAD`

@@ -41,7 +41,7 @@ local job = {
   steps: [
     checkout,
     {
-      uses: 'ocaml/setup-ocaml@v2',
+      uses: 'ocaml/setup-ocaml@v3',
       with: {
         'ocaml-compiler': '${{ matrix.ocaml-compiler }}',
         // available only for OCaml >= 4.0.0 and we want also 3.10.0

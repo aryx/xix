@@ -2,6 +2,8 @@
 
 open Opcode
 
+module Ocaml = OCaml
+
 let vof_operation =
   function
   | Mark -> Ocaml.VSum (("Mark", []))

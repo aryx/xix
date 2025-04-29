@@ -202,7 +202,7 @@ let (build_targets: Common.filename -> string list ref -> (string*string) list
 (* Entry point *)
 (*****************************************************************************)
 
-let main () =
+let main (caps: Cap.all_caps) =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -310,4 +310,7 @@ let main () =
       )
 
 let _ = 
-    main ()
+  Cap.main (fun caps ->
+    main caps
+  )
+

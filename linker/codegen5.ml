@@ -38,7 +38,7 @@ type pool =
 let error node s =
   failwith (spf "%s at %s on %s" s 
               (T5.s_of_loc node.T5.loc)
-              (node.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v)
+              (node.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v)
   )
 
 (* new: can detect some typing mistakes *)
@@ -651,7 +651,7 @@ let gen symbols2 config cg =
     
     if !Flags.debug_gen 
     then begin 
-      n.T5.instr |> Meta_types5.vof_instr |> Ocaml.string_of_v |> pr2;
+      n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v |> pr2;
       pr2 "-->";
       xs |> List.iter (fun x ->
         let w = word_of_composed_word x in

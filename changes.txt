@@ -9,9 +9,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
 ** internals
 TODO Renamed module to capitalized form (Common.ml), like in Semgrep
      (thx Martin)
-
 TODO Testing library using Testo? (only built and run on 4.14.0)
-
 TODO Switch from Common.filename to (our poor's man) Fpath.t
 
 ** devops
@@ -22,7 +20,13 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 TODO compile again for ocaml light (my own fork of caml-special-light 1.07)
 
 * 0.15 (Q2 2025) (Dockerfile (devops))
-# resume again after one year of inactivity due to my work for Semgrep.
+# Resume again after one year of inactivity due to my work for Semgrep.
+# Bring again good stuff I learned from semgrep:
+#  - Dockerfile (and GHA) for reproducible tangible build instructions
+#  - ppx_deriving
+#  - TODO Fpath.t (instead of Common.filename)
+#  - TODO capabilities
+#  - TODO ocamlformat
 
 ** internals
 
@@ -44,8 +48,13 @@ TODO compile again for ocaml light (my own fork of caml-special-light 1.07)
 - Logging using poor's man Logs.ml
 
 * 0.13 (Q1 2024) (CI build and test and semgrep checks (devops))
-# resume after long hiatus (2019-2023) due to our move to Italy,
+# Resume after long hiatus (2019-2023) due to our move to Italy,
 # the birth of Nathalie, and especially my work for Semgrep.
+# Bring again good stuff I learned from semgrep:
+#  - GHA and CI regression testing
+#  - Logs
+#  - Semgrep checks (and semgrep.jsonnet)
+#  - tests
 
 ** internals
 

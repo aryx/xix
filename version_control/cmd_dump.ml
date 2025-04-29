@@ -26,7 +26,7 @@ let dump_object file =
     else begin
       let obj = Objects.read unzipped in
       let v = Dump.vof_obj obj in
-      pr (Ocaml.string_of_v v)
+      pr (OCaml.string_of_v v)
     end
   with Unzip.Error _err ->
     failwith "unzip error"
@@ -39,7 +39,7 @@ let dump_index file =
   let input = IO.input_channel chan in
   let index = Index.read input in
   let v = Dump.vof_index index in
-  pr (Ocaml.string_of_v v)
+  pr (OCaml.string_of_v v)
 (*e: function [[Cmd_dump.dump_index]] *)
 
 (*s: function [[Cmd_dump.dump]] *)

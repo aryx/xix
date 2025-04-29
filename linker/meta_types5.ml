@@ -2,6 +2,8 @@
 
 open Types5
 
+module Ocaml = OCaml
+
 module A = Meta_ast_asm5
 
 let vof_filename = Ocaml.vof_string

@@ -2,6 +2,8 @@
 
 open Ast
 
+module Ocaml = OCaml
+
 (* I modified vof_expr and vof_stmt to not always show the 
  * line information and type information.
  * Less noise that way.

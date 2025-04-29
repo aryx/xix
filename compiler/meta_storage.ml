@@ -2,6 +2,8 @@
 
 open Storage
 
+module Ocaml = OCaml
+
 let vof_t =
   function
   | Local -> Ocaml.VSum (("Local", []))

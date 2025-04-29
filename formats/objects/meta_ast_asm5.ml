@@ -2,6 +2,8 @@
 
 open Ast_asm5
 
+module Ocaml = OCaml
+
 let vof_pos = Ocaml.vof_int
 let vof_symbol = Ocaml.vof_string
 let vof_label = Ocaml.vof_string

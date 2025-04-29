@@ -2,6 +2,8 @@
 
 open Type_
 
+module Ocaml = OCaml
+
 let vof_blockid v = Ocaml.vof_int v
   
 (* pad: modif vof_sign to be more compact *)

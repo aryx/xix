@@ -2,6 +2,8 @@
 
 open Ast
 
+module Ocaml = OCaml
+
 let rec vof_value =
   function
   | Word ((v1, v2)) ->

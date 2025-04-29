@@ -1,5 +1,7 @@
 open Common
 
+module Ocaml = OCaml
+
 (* less: could use Any *)
 
 let s_of_line x =

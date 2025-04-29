@@ -41,18 +41,20 @@ ocamlc.opt $OCAMLCFLAGS -c map_.ml
 ocamlc.opt  set_.cmo map_.cmo -a -o lib.cma
 
 cd $TOP/lib_core/commons/
-ocamlc.opt $OCAMLCFLAGS -c common.mli
+ocamlc.opt $OCAMLCFLAGS -c Cap.mli
+ocamlc.opt $OCAMLCFLAGS -c Common.mli
 ocamlc.opt $OCAMLCFLAGS -c common2.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.mli
-ocamlc.opt $OCAMLCFLAGS -c date.mli
-ocamlc.opt $OCAMLCFLAGS -c common.ml
-ocamlc.opt $OCAMLCFLAGS -c ocaml.mli
+ocamlc.opt $OCAMLCFLAGS -c Date.mli
+ocamlc.opt $OCAMLCFLAGS -c Cap.ml
+ocamlc.opt $OCAMLCFLAGS -c Common.ml
+ocamlc.opt $OCAMLCFLAGS -c OCaml.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.ml
-ocamlc.opt $OCAMLCFLAGS -c date.ml
+ocamlc.opt $OCAMLCFLAGS -c Date.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.ml
-ocamlc.opt $OCAMLCFLAGS -c ocaml.ml
-ocamlc.opt -I . common.cmo common2.cmo ocaml.cmo IO.cmo Logs.cmo date.cmo -a -o lib.cma
+ocamlc.opt $OCAMLCFLAGS -c OCaml.ml
+ocamlc.opt -I . Cap.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Date.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc parser.mly

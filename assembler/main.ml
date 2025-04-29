@@ -32,7 +32,7 @@ let assemble5 dump (defs, paths) infile outfile =
   let prog = Parse_asm5.parse (defs, paths) infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
-  then prog |> Meta_ast_asm5.vof_program |> Ocaml.string_of_v |> Common.pr2;
+  then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> Common.pr2;
   Object_code5.save (prog, !Location_cpp.history) outfile
 
 

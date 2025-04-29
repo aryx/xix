@@ -1,4 +1,4 @@
-(* Copyright 2016, 2018, 2024 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -91,6 +91,12 @@ module R = Rules
  *    #define mechanism and syntax for using variables/constants.
  *)
 
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+
+type caps = < Cap.chdir >
+
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
 
@@ -122,8 +128,7 @@ let do_action s xs =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
- fun env rules target ->
+let build_target (caps : < caps; ..>) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
 
    let root = Graph.build_graph target rules in
 
@@ -157,9 +162,7 @@ let (build_target: Env.t -> Rules.rules -> string (* target *) -> unit) =
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 
 
-let (build_targets: Common.filename -> string list ref -> (string*string) list
-     -> unit) = 
- fun infile targets vars ->
+let build_targets (caps : < caps; ..>) (infile : Common.filename) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
     let env = Env.initenv() in
@@ -172,19 +175,19 @@ let (build_targets: Common.filename -> string list ref -> (string*string) list
     );
     
     if !Flags.debugger then begin
-      Sys.chdir (Filename.dirname infile);
+      CapSys.chdir caps (Filename.dirname infile);
       Env.add_var env "objtype" ["386"]
     end;
 
     (* parsing (and evaluating) *)
     let instrs = Parse.parse infile in
 
-    if !Flags.dump_ast 
+    if !Flags.dump_ast
     then Ast.dump_ast instrs;
 
     let rules, env = Eval.eval env targets instrs in
 
-    if !Flags.dump_env 
+    if !Flags.dump_env
     then Env.dump_env env;
     
     (* building *)
@@ -193,7 +196,7 @@ let (build_targets: Common.filename -> string list ref -> (string*string) list
 
     (* less: build shellenv here ?*)
     !targets |> List.rev |> List.iter (fun target ->
-      build_target env rules target
+      build_target caps env rules target
     )
     (* less: profiling*)
 
@@ -202,7 +205,7 @@ let (build_targets: Common.filename -> string list ref -> (string*string) list
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps: Cap.all_caps) =
+let main (caps: Cap.all_caps) : unit =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -254,14 +257,6 @@ let main (caps: Cap.all_caps) =
     ),
     " trace the main functions";
     
-    (* useful for debugging when there is an error in recursive mk 
-     * TODO: get rid of ? Logs.debug below enough?
-     *)
-    "-print_pwd", Arg.Unit (fun () ->
-      pr2 (spf "(in %s)" (Sys.getcwd ()));
-    ),
-    " print the pwd (useful to debug recursive mk)";
-
     "-debugger", Arg.Set Flags.debugger,
     " ";
     "-backtrace", Arg.Set backtrace,
@@ -276,7 +271,7 @@ let main (caps: Cap.all_caps) =
     | _ ->
       targets := t :: !targets
   ) usage;
-  Logs.debug (fun m -> m "inside mk main, ran from %s" (Sys.getcwd ()));
+  Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -285,7 +280,7 @@ let main (caps: Cap.all_caps) =
   end;
 
   try 
-    build_targets !infile targets !vars
+    build_targets caps !infile targets !vars
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn
@@ -310,7 +305,4 @@ let main (caps: Cap.all_caps) =
       )
 
 let _ = 
-  Cap.main (fun caps ->
-    main caps
-  )
-
+  Cap.main main

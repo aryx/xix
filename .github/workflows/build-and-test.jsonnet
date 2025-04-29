@@ -96,7 +96,7 @@ local job = {
     // and another time once the PR is merged on master
     push: {
       branches: [
-        'master',
+        'masterTODO',
       ],
     },
     schedule: [

@@ -22,6 +22,6 @@ on:
   workflow_dispatch: null
   push:
     branches:
-      - master
+      - masterTODO
   #schedule:
   #  - cron: 50 15 * * *

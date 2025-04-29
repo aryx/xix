@@ -40,7 +40,7 @@ on:
   pull_request: null
   push:
     branches:
-      - master
+      - masterTODO
   schedule:
     - cron: 59 12 * * *
   workflow_dispatch: null

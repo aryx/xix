@@ -2,9 +2,9 @@
 val nrunning: int ref
 
 val run: 
-  < Cap.exec; .. > ->
+  < Cap.fork; Cap.exec; .. > ->
   Job.t -> unit
 
 val waitup: 
-  < Cap.exec; .. > ->
+  < Cap.fork; Cap.exec; .. > ->
   unit -> unit

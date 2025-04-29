@@ -10,6 +10,6 @@
  * recursively to process '<file' instructions.
  *)
 val eval: 
-  < Cap.exec; .. > ->
+  < Cap.fork; Cap.exec; .. > ->
   Env.t -> (string list ref) -> Ast.instr list -> 
   Rules.rules * Env.t

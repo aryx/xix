@@ -91,7 +91,7 @@ let dump_job func job pidopt =
 (* Main algorithms *)
 (*****************************************************************************)
 
-let sched (caps : < Cap.exec; .. >) () =
+let sched (caps : < Cap.exec; Cap.fork; .. >) () =
   try 
     let job = Queue.take jobs in
     let rule = job.J.rule in
@@ -138,7 +138,7 @@ let sched (caps : < Cap.exec; .. >) () =
 (* Entry points *)
 (*****************************************************************************)
 
-let run (caps : < Cap.exec; .. >) job =
+let run (caps : < Cap.exec; Cap.fork; .. >) job =
   Queue.add job jobs;
 
   if !Flags.dump_jobs
@@ -149,7 +149,7 @@ let run (caps : < Cap.exec; .. >) job =
 
 
 
-let waitup (caps : < Cap.exec; .. >) () =
+let waitup (caps : < Cap.exec; Cap.fork; .. >) () =
   let (pid, ret) = 
     try 
       Unix.wait () 

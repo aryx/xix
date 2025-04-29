@@ -35,6 +35,8 @@ local cap_rules = [
 	 'Sys.chdir',
 	 #'Unix.chdir'
 	 'Unix.execve',
+	 #'Unix.exec',
+	 'Unix.fork',
 	]
     },
     languages: ['ocaml'],
@@ -45,7 +47,12 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['CapSys.ml', 'CapUnix.ml', 'threadUnix.ml',
-	        'common2.ml', 'version_control/repository.ml'],
+	        'common2.ml',
+		'version_control/repository.ml', 
+		'shell/interpreter.ml',
+		'shell/op_process.ml',
+		'windows/wm.ml',
+		],
     },
   },
 ];

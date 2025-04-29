@@ -10,7 +10,7 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 
-type caps = < Cap.exec >
+type caps = < Cap.exec; Cap.fork >
 
 type t = { 
   path: Common.filename;
@@ -110,8 +110,8 @@ let feed_shell_input inputs pipe_write =
 (* Entry points *)
 (*****************************************************************************)
 
-let exec_recipe (caps : < Cap.exec; .. >) shellenv flags inputs interactive =
-  let pid = Unix.fork () in
+let exec_recipe (caps : < caps; .. >) shellenv flags inputs interactive =
+  let pid = CapUnix.fork caps () in
   
   (* children case *)
   if pid = 0
@@ -140,7 +140,7 @@ let exec_recipe (caps : < Cap.exec; .. >) shellenv flags inputs interactive =
     end else begin
 
     let (pipe_read, pipe_write) = Unix.pipe () in
-    let pid2 = Unix.fork () in
+    let pid2 = CapUnix.fork caps () in
 
     (* child 1, the shell interpeter, the process with pid returned by execsh *)
     if pid2 <> 0
@@ -163,11 +163,11 @@ let exec_recipe (caps : < Cap.exec; .. >) shellenv flags inputs interactive =
   else pid (* pid of child1 *)
 
 
-let exec_backquote (caps : < Cap.exec; ..>) shellenv input =
+let exec_backquote (caps : < caps; ..>) shellenv input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
 
-  let pid = Unix.fork () in
+  let pid = CapUnix.fork caps () in
 
   (* child case *)
   if pid = 0
@@ -207,11 +207,11 @@ let exec_backquote (caps : < Cap.exec; ..>) shellenv input =
   end
 
 
-let exec_pipecmd (caps: < Cap.exec; .. >) shellenv input =
+let exec_pipecmd (caps: < caps; .. >) shellenv input =
   let tmpfile = Filename.temp_file "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
 
-  let pid = Unix.fork () in
+  let pid = CapUnix.fork caps () in
 
   (* child case *)
   if pid = 0

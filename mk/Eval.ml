@@ -35,7 +35,7 @@ let warning (loc : Ast.loc) (s : string) : unit =
  *  - the returned list of strings must not contain any empty string
  *  - less: the returned pattern must contain at least a PPercent
  *)
-let rec eval_word (caps: < Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
+let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
           (Env.values, Percent.pattern) Common.either =
   let (W word) = wd in
   let rec aux acc word_elements =
@@ -127,7 +127,7 @@ let rec eval_word (caps: < Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : A
   aux [] word
 
 
-let eval_words (caps :  < Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
+let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
          (string list, Percent.pattern list) Common.either =
   
   let res = words |> List.map (eval_word caps loc env) in
@@ -158,7 +158,7 @@ let eval_words (caps :  < Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words :
 (* Entry point *)
 (*****************************************************************************)
 
-let eval (caps : < Cap.exec; .. >) env targets_ref xs =
+let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
 
   let simples = Hashtbl.create 101 in
   let metas = ref [] in

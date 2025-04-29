@@ -41,7 +41,7 @@ let opt0 opttime =
     
 
 
-let dorecipe (caps : < Cap.exec; .. >) env node did =
+let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
   then
     if node.G.is_virtual
@@ -115,7 +115,7 @@ let dorecipe (caps : < Cap.exec; .. >) env node did =
 (* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
  *)
-let rec work (caps: < Cap.exec; .. >) env node did =
+let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
   Logs.debug (fun m -> m "work(%s) time=%s" node.G.name 
                  (File.str_of_time node.G.time));
 

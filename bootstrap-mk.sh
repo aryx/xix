@@ -58,7 +58,7 @@ ocamlc.opt $OCAMLCFLAGS -c Fpath.ml
 ocamlc.opt $OCAMLCFLAGS -c Date.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.ml
 ocamlc.opt $OCAMLCFLAGS -c OCaml.ml
-ocamlc.opt -I . Cap.cmo CapSys.cmo CapUnix.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Date.cmo -a -o lib.cma
+ocamlc.opt -I . Cap.cmo CapSys.cmo CapUnix.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Date.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc parser.mly

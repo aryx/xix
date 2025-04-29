@@ -26,5 +26,5 @@ let setvar name v =
   var.R.v <- Some v
 
 
-let vinit () =
+let vinit (_caps : < Cap.env; .. >) =
   pr2 "TODO: load from environment"

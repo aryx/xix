@@ -32,7 +32,7 @@ module O = Opcode
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-type caps = < Cap.fork; Cap.exec >
+type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env >
 
 (* -d and -p are dead according to man page so I removed them *)
 let usage =
@@ -224,7 +224,7 @@ let main (caps : Cap.all_caps) =
   (* todo: 
    * if argc=1 and Isatty then Flags.interactive := true 
    *)
-  Var.vinit ();
+  Var.vinit caps;
   (* todo: trap_init () *)
 
   (* for 'flags' builtin (see builtin.ml) *)

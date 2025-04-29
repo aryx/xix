@@ -55,7 +55,7 @@ let forkexec (caps : < Cap.fork; Cap.exec; .. >) () =
 
 
 
-let op_Simple (caps : < Cap.fork; Cap.exec; ..>) () =
+let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
 
@@ -82,9 +82,9 @@ let op_Simple (caps : < Cap.fork; Cap.exec; ..>) () =
               R.pop_list ()
           | argv0::args ->
               R.pop_word ();
-              Builtin.dispatch argv0
+              Builtin.dispatch caps argv0
           )
-      | s when Builtin.is_builtin s -> Builtin.dispatch argv0
+      | s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
       | _ ->
         (* if exitnext opti *)
         flush stderr;

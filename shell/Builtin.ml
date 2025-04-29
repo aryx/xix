@@ -15,9 +15,9 @@ let is_builtin s =
 
 let ndots = ref 0
 
-let dochdir s =
+let dochdir (caps : < Cap.chdir; .. >) s =
   try 
-    Unix.chdir s;
+    CapUnix.chdir caps s;
     true
   with Unix.Unix_error _ ->
     false
@@ -42,7 +42,7 @@ let dotcmds =
     O.F O.Return;
   |]         
 
-let dispatch s =
+let dispatch (caps : < Cap.chdir; ..>) s =
   match s with
   | "cd" -> 
       let t = R.cur () in
@@ -56,7 +56,7 @@ let dispatch s =
           let v = (Var.vlook "home").R.v in
           (match v with
           | Some (dir::_) ->
-            if dochdir dir
+            if dochdir caps dir
             then Status.setstatus ""
             (* less: %r *)
             else pr2 (spf "Can't cd %s" dir)
@@ -64,7 +64,7 @@ let dispatch s =
           )
       | [_cd;dir] ->
           (* less: cdpath iteration *)
-          if dochdir dir
+          if dochdir caps dir
           then Status.setstatus ""
           else pr2 (spf "Can't cd %s" dir)
       | _ ->

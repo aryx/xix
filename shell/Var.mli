@@ -6,8 +6,7 @@ val gvlook:
   Runtime.varname -> Runtime.var
 
 val vinit: 
-  unit -> unit
+  <Cap.env; ..> -> unit
 
 val setvar:
   Runtime.varname -> Runtime.value -> unit
-

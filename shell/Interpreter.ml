@@ -50,7 +50,7 @@ let vlook_varname_or_index varname =
 (* Entry point *)
 (*****************************************************************************)
 
-let interpret (caps: < Cap.fork; Cap.exec; .. >) operation =
+let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
   match operation with
   (* *)
   | O.REPL -> Op_repl.op_REPL ()

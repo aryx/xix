@@ -33,7 +33,7 @@ local cap_rules = [
     match: { any:
         [
 	 'Sys.chdir',
-	 #'Unix.chdir'
+	 'Unix.chdir',
 	 'Unix.execve',
 	 'Unix.execv',
 	 'Unix.fork',
@@ -50,7 +50,7 @@ local cap_rules = [
     paths: {
       exclude: ['CapSys.ml', 'CapUnix.ml', 'threadUnix.ml',
 		'version_control/repository.ml',
-		'windows/wm.ml',
+		'windows/wm.ml', 'windows/processes_winshell.ml'
 		],
     },
   },

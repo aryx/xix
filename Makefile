@@ -22,11 +22,15 @@
 all:
 	@echo use ./bootstrap-mk.sh and then ./bin/mk instead of make
 
+#alt: git clean -fX
 clean:
-	git clean -fX
+	mk clean
 
 bootstrap:
 	./bootstrap-mk.sh
+
+promote:
+	cp mk/mk shell/rc bin/
 
 build-docker:
 	docker build -t "xix" .
@@ -36,7 +40,7 @@ build-docker:
 ###############################################################################
 
 check:
-	~/zz/bin/osemgrep --experimental --config semgrep.jsonnet --strict --error
+	osemgrep --experimental --config semgrep.jsonnet --strict --error
 
 pr:
 	git push origin `git rev-parse --abbrev-ref HEAD`

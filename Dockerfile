@@ -47,6 +47,7 @@ COPY . .
 RUN eval $(opam env) && ./bootstrap-mk.sh
 
 # Full build
+#coupling: env.sh
 ENV PATH="$PATH:/src/bin"
 # TODO: at some point use the boostrapped /src/bin/rc
 ENV MKSHELL="/usr/bin/rc"

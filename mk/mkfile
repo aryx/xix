@@ -2,13 +2,13 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections
 
-SRC= globals.ml flags.ml \
-  ast.ml   parser.ml lexer.ml parse.ml \
-  shellenv.ml shell.ml \
-  percent.ml env.ml rules.ml   eval.ml \
-  file.ml graph.ml \
-  job.ml   scheduler.ml outofdate.ml \
-  main.ml
+SRC= Globals.ml Flags.ml \
+  Ast.ml   Parser.ml Lexer.ml Parse.ml \
+  Shellenv.ml Shell.ml \
+  Percent.ml Env.ml Rules.ml   Eval.ml \
+  File.ml Graph.ml \
+  Job.ml   Scheduler.ml Outofdate.ml \
+  Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma

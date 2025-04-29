@@ -1,13 +1,13 @@
 # -*- sh -*-
 
-AUTOGEN=lexer.ml parser.ml parser.mli
+AUTOGEN=Lexer.ml Parser.ml Parser.mli
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend
 
-lexer.ml:D: lexer.mll
+Lexer.ml:D: Lexer.mll
 	$OCAMLLEX $prereq
-parser.ml parser.mli: parser.mly
+Parser.ml Parser.mli: Parser.mly
 	$OCAMLYACC $prereq
 
 NUKEFILES=$AUTOGEN

@@ -36,9 +36,9 @@ bin/*
 /assembler/parser_asm5.ml
 /assembler/parser_asm5.mli
 
-/mk/lexer.ml
-/mk/parser.ml
-/mk/parser.mli
+/mk/Lexer.ml
+/mk/Parser.ml
+/mk/Parser.mli
 
 /lex/lexer.ml
 /lex/parser.ml
@@ -48,13 +48,13 @@ bin/*
 /yacc/parser.ml
 /yacc/parser.mli
 
-/shell/lexer.ml
-/shell/parser.ml
-/shell/parser.mli
+/shell/Lexer.ml
+/shell/Parser.ml
+/shell/Parser.mli
 
-/compiler/lexer.ml
-/compiler/parser.ml
-/compiler/parser.mli
+/compiler/Lexer.ml
+/compiler/Parser.ml
+/compiler/Parser.mli
 /compiler/lexer_cpp.ml
 
 /macroprocessor/lexer_cpp.ml

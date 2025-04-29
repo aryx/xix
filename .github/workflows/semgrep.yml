@@ -1,6 +1,6 @@
 jobs:
   job:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     container:
       # living on the edge!
       image: semgrep/semgrep:develop
@@ -10,7 +10,7 @@ jobs:
     # ...
     # run: semgrep ci
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # coupling: with Makefile 'make check' target
       - run: semgrep scan --experimental --config semgrep.jsonnet --strict --error
 
@@ -21,5 +21,5 @@ on:
   push:
     branches:
       - master
-  schedule:
-    - cron: 50 15 * * *
+  #schedule:
+  #  - cron: 50 15 * * *

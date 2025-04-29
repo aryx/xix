@@ -14,11 +14,12 @@ homepage: "https://github.com/aryx/xix"
 bug-reports: "https://github.com/aryx/xix/issues"
 depends: [
   "ocaml" {>= "3.10.0"}
-  # Do not depend on anything except those 2! Xix should limit
+  # Do not depend on anything except those 3! Xix should limit
   # its external dependencies as much as possible, so it
   # can boostrap itself more easily.
   "stdcompat"
   "ocamlfind"
+  "ppx_deriving"
 ]
 build: [
   "echo todo"

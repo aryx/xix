@@ -2,14 +2,15 @@
 
 OPT=.opt
 
-# Limit to just stdcompat! This is Xix!
+# Limit to just stdcompat (and ppx_deriving)! This is Xix!
 EXTERNAL_LIB=`ocamlfind query stdcompat`
 EXTRA_FLAGS=`ocamlcflags`
+PPX=`ocamlfind query ppx_deriving`
 
 # -g so we can get good backtrace
 #WARNING_FLAGS?=-w +A-4-29-6-45-41-44-48 -warn-error +a 
 #OCAMLCFLAGS=-thread $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA)
-COMPFLAGS=-I $EXTERNAL_LIB -g $EXTRA_FLAGS
+COMPFLAGS=-I $EXTERNAL_LIB -g $EXTRA_FLAGS -I $PPX/show -I $PPX/runtime -ppx ppx.sh
 
 # We need -g for good backtrace.
 # We need -custom because of dllstdcompat__stubs, otherwise

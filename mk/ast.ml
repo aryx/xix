@@ -3,9 +3,10 @@ open Stdcompat (* for |> *)
 
 (* for error reporting *)
 type loc = {
-  file: Common.filename; (* an mkfile *)
+  file: string; (* an mkfile *)
   line: int;
 }
+[@@deriving show {with_path = false}]
 
 (* The elements below are not separated by any separator; they are direct
  * concatenations of elements (hence the need for ${name} below).
@@ -30,13 +31,16 @@ type word = W of word_element list
       | SimpleVar of string
       (* ${name:a%b=c%d} *)
       | SubstVar of (string * word * word list)
+[@@deriving show  {with_path = false}]
 
 (* Words are separated by spaces. See also Env.values *)
 type words = word list
+[@@deriving show]
 
 
 (* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = R of string list
+[@@deriving show {with_path = false}]
 
 (* See also Rules.rule_exec *)
 type rule = {
@@ -51,6 +55,7 @@ type rule = {
     | Delete
     | Interactive (* pad: I added this one *)
     | NotHandled of char
+[@@deriving show {with_path = false}]
 
 
 type instr = {
@@ -71,9 +76,13 @@ type instr = {
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
      * so 'string' below, not 'word' *)
     | Definition of string * words
+[@@deriving show {with_path = false}]
+
+(* just for boostrap-mk.sh to work without deriving *)
+let show_instrs _ = "NO DERIVING"
+
+type instrs = instr list
+[@@deriving show]
 
 let dump_ast instrs =
-  Logs.debug (fun m -> m "AST = ");
-  instrs |> List.iter (fun instr -> 
-      Logs.debug (fun m -> m "%s" (Common.dump instr))
-  )
+  Logs.app (fun m -> m "AST = %s" (show_instrs instrs))

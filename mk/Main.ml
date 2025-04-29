@@ -105,7 +105,7 @@ let usage =
 (*****************************************************************************)
 
 (* to test the different mk components *)
-let do_action s xs =
+let do_action caps s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
@@ -118,7 +118,7 @@ let do_action s xs =
         Logs.info (fun m -> m "processing %s" file);
         let env = Env.initenv() in
         let instrs = Parse.parse file in
-        let _rules, env = Eval.eval env (ref []) instrs in
+        let _rules, env = Eval.eval caps env (ref []) instrs in
         Env.dump_env env;
         ()
       )
@@ -185,7 +185,7 @@ let build_targets (caps : < caps; ..>) (infile : Common.filename) (targets : str
     if !Flags.dump_ast
     then Ast.dump_ast instrs;
 
-    let rules, env = Eval.eval env targets instrs in
+    let rules, env = Eval.eval caps env targets instrs in
 
     if !Flags.dump_env
     then Env.dump_env env;
@@ -275,7 +275,7 @@ let main (caps: Cap.all_caps) : unit =
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
-    do_action !action (List.rev !targets); 
+    do_action caps !action (List.rev !targets); 
     exit 0 
   end;
 

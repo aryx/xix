@@ -1,5 +1,4 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 
 (* The elements below are not separated by any separator; they are direct
  * concatenations of elements (hence the need for ${name} below).

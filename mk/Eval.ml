@@ -35,8 +35,9 @@ let warning (loc : Ast.loc) (s : string) : unit =
  *  - the returned list of strings must not contain any empty string
  *  - less: the returned pattern must contain at least a PPercent
  *)
-let rec (eval_word: Ast.loc -> Env.t -> Ast.word -> 
-          (Env.values, Percent.pattern) Common.either)= fun loc env (A.W word)->
+let rec eval_word (caps: < Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
+          (Env.values, Percent.pattern) Common.either =
+  let (W word) = wd in
   let rec aux acc word_elements =
     match word_elements with
     | [] -> 
@@ -69,8 +70,8 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
            | A.SimpleVar _ -> ys
            | A.SubstVar (_, pattern, substs) -> 
                (* recurse! pattern can contain some variable *)
-               let pattern = eval_word loc env pattern in
-               let subst   = substs |> List.map (eval_word loc env) in
+               let pattern = eval_word caps loc env pattern in
+               let subst   = substs |> List.map (eval_word caps loc env) in
                (match pattern, subst with
                | Right pattern, [Right subst] ->
                    ys |> List.map (fun s -> 
@@ -114,7 +115,6 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
 
       | A.Backquoted cmd -> 
         let shellenv = Env.shellenv_of_env env in
-        let caps = Cap.exec_and_tmp_caps_UNSAFE () in
         let s = Shell.exec_backquote caps shellenv cmd in
         let ys = Str.split (Str.regexp "[ \t\n]+") s in
         (match acc, xs with
@@ -127,10 +127,10 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
   aux [] word
 
 
-let rec (eval_words: Ast.loc -> Env.t -> Ast.words -> 
-         (string list, Percent.pattern list) Common.either)= fun loc env words->
+let eval_words (caps :  < Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
+         (string list, Percent.pattern list) Common.either =
   
-  let res = words |> List.map (eval_word loc env) in
+  let res = words |> List.map (eval_word caps loc env) in
 
   if res |> List.exists (fun x ->
     match x with
@@ -158,7 +158,7 @@ let rec (eval_words: Ast.loc -> Env.t -> Ast.words ->
 (* Entry point *)
 (*****************************************************************************)
 
-let eval env targets_ref xs =
+let eval (caps : < Cap.exec; .. >) env targets_ref xs =
 
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
@@ -169,7 +169,7 @@ let eval env targets_ref xs =
 
       match instr.A.instr with
       | A.Include ws ->
-          let res = eval_words loc env ws in
+          let res = eval_words caps loc env ws in
           (match res with
           | Left [file] -> 
               if not (Sys.file_exists file)
@@ -186,7 +186,7 @@ let eval env targets_ref xs =
           )
 
       | A.PipeInclude ws ->
-        let res = eval_words loc env ws in
+        let res = eval_words caps loc env ws in
         let recipe = 
           match res with
           | Left xs -> String.concat " " xs
@@ -195,7 +195,6 @@ let eval env targets_ref xs =
         if recipe = ""
         then failwith "missing include program name";
         let shellenv = Env.shellenv_of_env env in
-        let caps = Cap.exec_and_tmp_caps_UNSAFE () in
         let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
         let xs = Parse.parse tmpfile in
         (* recurse *)
@@ -203,7 +202,7 @@ let eval env targets_ref xs =
 
       | A.Definition (s, ws) ->
         let xs = 
-          match eval_words loc env ws with
+          match eval_words caps loc env ws with
           | Left xs -> xs
           (* stricter: no dynamic patterns *)
           | Right _ -> error loc "use quotes for variable definitions with %"
@@ -216,8 +215,8 @@ let eval env targets_ref xs =
         Hashtbl.add env.E.vars_we_set s true;
 
       | A.Rule r -> 
-          let targets = eval_words loc env r.A.targets in
-          let prereqs = eval_words loc env r.A.prereqs in
+          let targets = eval_words caps loc env r.A.targets in
+          let prereqs = eval_words caps loc env r.A.prereqs in
           (match targets, prereqs with
           (* regular rules *)
           | Left targets, Left prereqs ->

@@ -7,25 +7,23 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
      (efuns), Codemap.nw
 
 ** internals
-TODO Renamed module to capitalized form (Common.ml), like in Semgrep
-     (thx Martin)
-TODO Testing library using Testo? (only built and run on 4.14.0)
-TODO Switch from Common.filename to (our poor's man) Fpath.t
+TODO Testing library using Testo? (only built and run on 4.14.0) or
+ do poor's man version again? or just use ounit?
 
 ** devops
 
 TODO? started to use Nix to define the development environment for Xix?
 TODO? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 TODO more semgrep rules (forbid functors, labels, etc.)
-TODO compile again for ocaml light (my own fork of caml-special-light 1.07)
+LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 
 * 0.15 (Q2 2025) (Dockerfile (devops))
 # Resume again after one year of inactivity due to my work for Semgrep.
 # Bring again good stuff I learned from semgrep:
 #  - Dockerfile (and GHA) for reproducible tangible build instructions
 #  - ppx_deriving
-#  - TODO Fpath.t (instead of Common.filename)
-#  - TODO capabilities
+#  - Fpath.t (instead of Common.filename)
+#  - capabilities!!
 #  - TODO ocamlformat
 
 ** internals
@@ -33,7 +31,11 @@ TODO compile again for ocaml light (my own fork of caml-special-light 1.07)
 - Start use ppx_deriving (which then require OCaml 4.09.1 but
   it should be doable to implement a poor's man deriving in ocaml light)
 - Copy Cap.ml from semgrep and start using capabilities (and
-  augmented semgrep.jsonnet to forbid Sys.xxx)
+  augmented semgrep.jsonnet to forbid Sys.xxx) (which then requires OCaml 4.0x
+  but again it should be doable to just skip any object constructs in ocaml light
+  as capabilities are just a typechecking thing without runtime impact).
+- Start use poor's man Fpath.ml instead of Common.filename
+- Start use capitalized module for lib_core/commons/ and mk/ (thx Martin)
 
 ** devops
 

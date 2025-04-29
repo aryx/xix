@@ -10,7 +10,7 @@ jobs:
     # ...
     # run: semgrep ci
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       # coupling: with Makefile 'make check' target
       - run: semgrep scan --experimental --config semgrep.jsonnet --strict --error
 

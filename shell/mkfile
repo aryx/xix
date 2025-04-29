@@ -2,18 +2,18 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections
 
-SRC=  flags.ml globals.ml \
-  ast.ml meta_ast.ml \
-  opcode.ml meta_opcode.ml \
-  dumper.ml \
-  compile.ml \
-  runtime.ml \
-  pattern.ml \
-  fn.ml var.ml prompt.ml status.ml path.ml process.ml error.ml \
-  Parser.ml Lexer.ml parse.ml \
-  builtin.ml \
-  op_repl.ml op_process.ml \
-  interpreter.ml main.ml
+SRC=  Flags.ml Globals.ml \
+  Ast.ml Meta_ast.ml \
+  Opcode.ml Meta_opcode.ml \
+  Dumper.ml \
+  Compile.ml \
+  Runtime.ml \
+  Pattern.ml \
+  Fn.ml Var.ml Prompt.ml Status.ml Path.ml Process.ml Error.ml \
+  Parser.ml Lexer.ml Parse.ml \
+  Builtin.ml \
+  Op_repl.ml Op_process.ml \
+  Interpreter.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma

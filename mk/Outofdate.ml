@@ -41,7 +41,7 @@ let opt0 opttime =
     
 
 
-let dorecipe env node did =
+let dorecipe (caps : < Cap.exec; .. >) env node did =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
   then
     if node.G.is_virtual
@@ -97,7 +97,7 @@ let dorecipe env node did =
     nodes |> List.iter (fun node ->
       node.G.state <- G.BeingMade
     );
-    Scheduler.run { J. 
+    Scheduler.run caps { J. 
                     rule = master_rule;
                     target_nodes = nodes;
                     env = env;
@@ -115,7 +115,7 @@ let dorecipe env node did =
 (* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
  *)
-let rec work env node did =
+let rec work (caps: < Cap.exec; .. >) env node did =
   Logs.debug (fun m -> m "work(%s) time=%s" node.G.name 
                  (File.str_of_time node.G.time));
 
@@ -142,7 +142,7 @@ let rec work env node did =
           | Some node2 ->
               (* TODO: why recurse if node is Made? *)
               (* recurse! *)
-              work env node2 did;
+              work caps env node2 did;
               
               (match node2.G.state with
               | G.NotMade | G.BeingMade -> ready := false;
@@ -160,4 +160,4 @@ let rec work env node did =
         else 
           if not !out_of_date 
           then node.G.state <- G.Made
-          else dorecipe env node did
+          else dorecipe caps env node did

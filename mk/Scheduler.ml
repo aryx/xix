@@ -91,7 +91,7 @@ let dump_job func job pidopt =
 (* Main algorithms *)
 (*****************************************************************************)
 
-let sched () =
+let sched (caps : < Cap.exec; .. >) () =
   try 
     let job = Queue.take jobs in
     let rule = job.J.rule in
@@ -115,7 +115,6 @@ let sched () =
       node.G.state <- G.Made;
     )
     else begin
-      let caps = Cap.exec_and_tmp_caps_UNSAFE () in
       let pid = 
         Shell.exec_recipe caps
           (Env.shellenv_of_env env)
@@ -139,18 +138,18 @@ let sched () =
 (* Entry points *)
 (*****************************************************************************)
 
-let run job =
+let run (caps : < Cap.exec; .. >) job =
   Queue.add job jobs;
 
   if !Flags.dump_jobs
   then dump_job "run: " job None;
 
   if !nrunning < !nproclimit
-  then sched ()
+  then sched caps ()
 
 
 
-let waitup () =
+let waitup (caps : < Cap.exec; .. >) () =
   let (pid, ret) = 
     try 
       Unix.wait () 
@@ -178,7 +177,7 @@ let waitup () =
        * I added the test on jobs size though.
       *)
       if !nrunning < !nproclimit && Queue.length jobs > 0
-      then sched ()
+      then sched caps ()
   | Unix.WEXITED n ->
       (* less: call shprint *)
       if Set.mem Ast.Delete job.J.rule.R.attrs2 

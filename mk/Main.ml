@@ -142,20 +142,20 @@ let build_target (caps : < caps; ..>) (env : Env.t) (rules : Rules.rules) (targe
      let did = ref false in
 
      (* may call internally Scheduler.run to schedule jobs *)
-     Outofdate.work env root did;
+     Outofdate.work caps env root did;
 
      if !did 
      then ever_did := true
      else 
        (* no work possible, let's wait for a job process to finish *)
        if !Scheduler.nrunning > 0
-       then Scheduler.waitup ()
+       then Scheduler.waitup caps ()
        (* else: impossible? *)
    done;
 
    (* bugfix: root can be BeingMade in which case we need to wait *)
    while !Scheduler.nrunning > 0 do
-     Scheduler.waitup ();
+     Scheduler.waitup caps ();
    done;
    
    if not !ever_did

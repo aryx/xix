@@ -1,7 +1,7 @@
-# Build XiX with OCaml 4.09.1 (and opam) on Ubuntu Linux
+# Build and test XiX with OCaml 4.09.1 via opam on Ubuntu Linux
 
 # history:
-#  - try to build 3.10.0 with Alpine 3.21 but clang compilation error
+#  - try to use OCaml 3.10.0 with Alpine 3.21 but clang compilation error
 #    requiring to patch ocamlc for -Wno-error=implicit-function-declaration and
 #    then missing getwd() old glibc function (alpine use musl libc)
 #    => simpler to switch to Ubuntu
@@ -15,10 +15,11 @@
 
 FROM ubuntu:22.04
 #alt: alpine:3.21
+#alt: opam base image (but simpler to remove unnecessary intermediates)
 
 # Setup a basic C dev environment
+RUN apt-get update # needed otherwise can't find any package
 RUN apt-get install -y build-essential autoconf automake
-#alt: apt-get update
 #alt: apk add build-base make bash git rsync curl
 #alt: LATER: use kencc and compile our own ocaml-light
 
@@ -52,6 +53,7 @@ ENV MKSHELL="/usr/bin/rc"
 RUN eval $(opam env) && mk clean
 RUN eval $(opam env) && mk depend
 RUN eval $(opam env) && mk
+# alt: use dune but xix spirit to limit external tools and dogfood mk
 
 # Test
 RUN ./test.sh

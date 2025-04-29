@@ -50,13 +50,13 @@ let vlook_varname_or_index varname =
 (* Entry point *)
 (*****************************************************************************)
 
-let interpret operation =
+let interpret (caps: < Cap.fork; Cap.exec; .. >) operation =
   match operation with
   (* *)
   | O.REPL -> Op_repl.op_REPL ()
 
   (* (args) *)
-  | O.Simple -> Op_process.op_Simple ()
+  | O.Simple -> Op_process.op_Simple caps ()
 
   | O.Return -> Process.return ()
   | O.Exit -> 
@@ -129,7 +129,7 @@ let interpret operation =
       incr pc;
 
       let (pipe_read, pipe_write) = Unix.pipe () in
-      let forkid = Unix.fork () in
+      let forkid = CapUnix.fork caps () in
 
       (* child *)
       if forkid = 0 then begin

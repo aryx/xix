@@ -4,7 +4,7 @@ open Common
 module R = Runtime
 module E = Error
 
-let execute args path =
+let execute (caps : <Cap.exec; ..>) args path =
 
   let argv = Array.of_list args in
   let errstr = ref "" in
@@ -13,7 +13,7 @@ let execute args path =
   path |> List.iter (fun root ->
     let path = (if root = "" then "" else root ^ "/") ^ argv.(0) in
     try 
-      Unix.execv path argv |> ignore
+      CapUnix.execv caps path argv |> ignore
     with Unix.Unix_error (err, s1, s2) ->
      errstr := Process.s_of_unix_error err s1 s2;
      Globals.errstr := s2
@@ -22,7 +22,7 @@ let execute args path =
   pr2 (spf "%s: %s" argv.(0) !errstr)
 
 
-let exec () =
+let exec (caps : < Cap.exec; .. >) () =
   R.pop_word (); (* "exec" *)
 
   let t = R.cur () in
@@ -32,19 +32,19 @@ let exec () =
   | [] -> E.error "empty argument list" 
   | prog::xs -> 
       R.doredir t.R.redirections;
-      execute argv (Path.search_path_for_cmd prog);
+      execute caps argv (Path.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 
-let forkexec () =
-  let pid = Unix.fork () in
+let forkexec (caps : < Cap.fork; Cap.exec; .. >) () =
+  let pid = CapUnix.fork caps () in
   (* child *)
   if pid = 0
   then begin
     (* less: clearwaitpids *)
     (* less: could simplify and remove this word if exec was not a builtin *)
     R.push_word "exec";
-    exec ();
+    exec caps ();
     (* should not be reached, unless prog could not be executed *)
     Process.exit ("can't exec: " ^ !Globals.errstr);
     0
@@ -55,7 +55,7 @@ let forkexec () =
 
 
 
-let op_Simple () =
+let op_Simple (caps : < Cap.fork; Cap.exec; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
 
@@ -90,7 +90,7 @@ let op_Simple () =
         flush stderr;
         (* less: Updenv *)
         (try 
-          let pid = forkexec () in
+          let pid = forkexec caps () in
           R.pop_list ();
           (* do again even if was interrupted *)
           while Process.waitfor pid = Process.WaitforInterrupted do

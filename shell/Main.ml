@@ -28,6 +28,12 @@ module O = Opcode
  *  - rc -c
  *)
 
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+
+type caps = < Cap.fork; Cap.exec >
+
 (* -d and -p are dead according to man page so I removed them *)
 let usage =
   "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
@@ -97,7 +103,7 @@ let bootstrap () =
   |]
 
 
-let interpret args =
+let interpret (caps : < caps >) args =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
@@ -129,7 +135,7 @@ let interpret args =
     (match t.R.code.(!pc - 1) with
 
     (* opcode dispatch ! *)
-    | O.F operation ->  Interpreter.interpret operation
+    | O.F operation ->  Interpreter.interpret caps operation
     | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
     | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
     );
@@ -141,7 +147,7 @@ let interpret args =
 (* Entry point *)
 (*****************************************************************************)
 
-let main () =
+let main (caps : Cap.all_caps) =
 
   let args = ref [] in
 
@@ -232,7 +238,7 @@ let main () =
   );
 
   try 
-    interpret (List.rev !args)
+    interpret (caps :> < caps >) (List.rev !args)
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn
@@ -246,4 +252,4 @@ let main () =
       )
 
 let _ = 
-    main ()
+    Cap.main main

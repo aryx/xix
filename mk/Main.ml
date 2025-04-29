@@ -128,7 +128,7 @@ let do_action caps s xs =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let build_target (caps : < caps; ..>) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
+let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
 
    let root = Graph.build_graph target rules in
 
@@ -162,7 +162,7 @@ let build_target (caps : < caps; ..>) (env : Env.t) (rules : Rules.rules) (targe
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 
 
-let build_targets (caps : < caps; ..>) (infile : Common.filename) (targets : string list ref) (vars : (string*string) list) : unit =
+let build_targets (caps : caps) (infile : Common.filename) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
     let env = Env.initenv caps in
@@ -283,7 +283,7 @@ let main (caps: Cap.all_caps) : unit =
   end;
 
   try 
-    build_targets caps !infile targets !vars
+    build_targets (caps :> caps ) !infile targets !vars
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn

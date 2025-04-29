@@ -35,7 +35,7 @@ local cap_rules = [
 	 'Sys.chdir',
 	 #'Unix.chdir'
 	 'Unix.execve',
-	 #'Unix.exec',
+	 'Unix.execv',
 	 'Unix.fork',
 	 'Unix.environment',
 	 #'Sys.getenv'
@@ -49,10 +49,7 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['CapSys.ml', 'CapUnix.ml', 'threadUnix.ml',
-	        'common2.ml',
-		'version_control/repository.ml', 
-		'shell/interpreter.ml',
-		'shell/op_process.ml',
+		'version_control/repository.ml',
 		'windows/wm.ml',
 		],
     },

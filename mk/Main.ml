@@ -211,6 +211,7 @@ let main (caps: Cap.all_caps) : unit =
   let vars = ref [] in
 
   (* for debugging *)
+  let level = ref (Some Logs.Warning) in
   let action = ref "" in
   let backtrace = ref false in
 
@@ -245,15 +246,15 @@ let main (caps: Cap.all_caps) : unit =
     " ";
 
     (* TODO: move in a CLI_common.ml *)
-    "-v", Arg.Unit (fun () -> Logs.set_level (Some Logs.Info)),
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose mode";
-    "-verbose", Arg.Unit (fun () -> Logs.set_level (Some Logs.Info)),
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
     " verbose mode";
-    "-quiet", Arg.Unit (fun () -> Logs.set_level None),
+    "-quiet", Arg.Unit (fun () -> level := None),
     " ";
-    "-debug", Arg.Unit (fun () ->
+    "-debug", Arg.Unit (fun () -> 
+      level := Some Logs.Debug;
       Flags.explain_mode := true;
-      Logs.set_level (Some Logs.Debug);
     ),
     " trace the main functions";
     
@@ -271,6 +272,8 @@ let main (caps: Cap.all_caps) : unit =
     | _ ->
       targets := t :: !targets
   ) usage;
+
+  Logs.set_level !level;
   Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 
   (* to test and debug components of mk *)

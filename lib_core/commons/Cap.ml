@@ -98,6 +98,7 @@ end
 module Process = struct
   (* basic stuff *)
   type argv = cap
+  type env = cap
 
   (* advanced stuff *)
   type exit = cap
@@ -172,6 +173,7 @@ type console = < stdin ; stdout ; stderr >
 
 (* process *)
 type argv = < argv : Process.argv >
+type env = < env : Process.env >
 type signal = < signal : Process.signal >
 type time_limit = < time_limit : Process.time_limit >
 type memory_limit = < memory_limit : Process.memory_limit >
@@ -180,7 +182,7 @@ type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
 type process_multi = < fork >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
-type process = < argv ; console ; process_single ; process_multi >
+type process = < argv ; env; console ; process_single ; process_multi >
 
 (* exec *)
 type exec = < exec : Exec.t >
@@ -217,6 +219,7 @@ let powerbox : all_caps =
 
     (* process *)
     method argv = ()
+    method env = ()
     method chdir = ()
     method signal = ()
     method time_limit = ()

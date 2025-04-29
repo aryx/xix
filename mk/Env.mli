@@ -15,7 +15,7 @@ val add_var: t -> string -> values -> unit
 
 (* will read the OS environment variables (e.g., PATH, HOME, objtype) *)
 val initenv: 
-  unit -> t
+  < Cap.env; ..> -> t
 
 val shellenv_of_env: 
   t -> Shellenv.t

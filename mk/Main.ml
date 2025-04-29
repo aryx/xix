@@ -95,7 +95,7 @@ module R = Rules
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-type caps = < Cap.chdir; Cap.exec >
+type caps = < Cap.chdir; Cap.fork; Cap.exec; Cap.env >
 
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
@@ -116,7 +116,7 @@ let do_action caps s xs =
   | "-test_eval" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
-        let env = Env.initenv() in
+        let env = Env.initenv caps in
         let instrs = Parse.parse file in
         let _rules, env = Eval.eval caps env (ref []) instrs in
         Env.dump_env env;
@@ -165,7 +165,7 @@ let build_target (caps : < caps; ..>) (env : Env.t) (rules : Rules.rules) (targe
 let build_targets (caps : < caps; ..>) (infile : Common.filename) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
-    let env = Env.initenv() in
+    let env = Env.initenv caps in
     vars |> List.iter (fun (var, value) ->
      (* stricter: we do not allow list of strings for value for command-line
       * vars, but anyway I'm not sure how they could be parsed by Arg

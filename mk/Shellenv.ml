@@ -4,8 +4,8 @@ open Common
 
 type t = (string * string list) list
 
-let read_environment () =
-  Unix.environment () |> Array.to_list |> List.map (fun s ->
+let read_environment (caps : < Cap.env; ..>) =
+  CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"
     then
       let (var, str) = Regexp_.matched2 s in

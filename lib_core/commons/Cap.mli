@@ -22,6 +22,7 @@ end
 
 module Process : sig
   type argv
+  type env
   type exit
   type chdir
   type signal
@@ -71,6 +72,7 @@ type console = < stdin ; stdout ; stderr >
 
 (* process *)
 type argv = < argv : Process.argv >
+type env = < env : Process.env >
 type signal = < signal : Process.signal >
 type time_limit = < time_limit : Process.time_limit >
 type memory_limit = < memory_limit : Process.memory_limit >
@@ -79,7 +81,7 @@ type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
 type process_multi = < fork >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
-type process = < argv ; console ; process_single ; process_multi >
+type process = < argv ; env; console ; process_single ; process_multi >
 
 (* exec *)
 type exec = < exec : Exec.t >

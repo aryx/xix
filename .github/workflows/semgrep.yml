@@ -1,3 +1,5 @@
+# Run semgrep in CI
+
 jobs:
   job:
     runs-on: ubuntu-22.04

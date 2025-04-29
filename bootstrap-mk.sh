@@ -48,13 +48,15 @@ ocamlc.opt $OCAMLCFLAGS -c IO.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.mli
 ocamlc.opt $OCAMLCFLAGS -c Date.mli
 ocamlc.opt $OCAMLCFLAGS -c Cap.ml
+ocamlc.opt $OCAMLCFLAGS -c CapSys.ml
+ocamlc.opt $OCAMLCFLAGS -c CapUnix.ml
 ocamlc.opt $OCAMLCFLAGS -c Common.ml
 ocamlc.opt $OCAMLCFLAGS -c OCaml.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.ml
 ocamlc.opt $OCAMLCFLAGS -c Date.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.ml
 ocamlc.opt $OCAMLCFLAGS -c OCaml.ml
-ocamlc.opt -I . Cap.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Date.cmo -a -o lib.cma
+ocamlc.opt -I . Cap.cmo CapSys.cmo CapUnix.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Date.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc parser.mly

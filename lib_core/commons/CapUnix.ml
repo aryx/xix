@@ -1,1 +1,1 @@
-let execve (_caps : < Cap.exec; ..>) = Unix.execvp
+let execve (_caps : < Cap.exec; ..>) = Unix.execve

@@ -50,18 +50,18 @@ let vlook_varname_or_index varname =
 (* Entry point *)
 (*****************************************************************************)
 
-let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
+let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =
   match operation with
   (* *)
-  | O.REPL -> Op_repl.op_REPL ()
+  | O.REPL -> Op_repl.op_REPL caps ()
 
   (* (args) *)
   | O.Simple -> Op_process.op_Simple caps ()
 
-  | O.Return -> Process.return ()
+  | O.Return -> Process.return caps ()
   | O.Exit -> 
       (* todo: trapreq *)
-      Process.exit (Status.getstatus())
+      Process.exit caps (Status.getstatus())
 
   | O.Mark -> R.push_list ()
 
@@ -93,7 +93,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
           v.R.v <- Some argv;
           R.pop_list ();
 
-      | _ -> E.error "variable name not singleton!"
+      | _ -> E.error caps "variable name not singleton!"
       )
 
   (* (name) (val) *)
@@ -108,7 +108,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
         let argv = t.R.argv in
         Hashtbl.add t.R.locals varname { R.v = Some argv };
         R.pop_list ();
-      | _ -> E.error "variable name not singleton!"
+      | _ -> E.error caps "variable name not singleton!"
       )
 
   (* [i j]{... Xreturn}{... Xreturn} *)
@@ -182,8 +182,8 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
       let argv = t.R.argv in
       let pc = t.R.pc in
       (match argv with
-      | []       -> E.error "> requires file"
-      | x::y::xs -> E.error "> requires singleton"
+      | []       -> E.error caps "> requires file"
+      | x::y::xs -> E.error caps "> requires singleton"
       | [file] ->
           (try 
             let fd_from = 
@@ -198,7 +198,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
             R.pop_list();
           with Unix.Unix_error (err, s1, s2) ->
             prerr_string (spf "%s: " file);
-            E.error "can't open"
+            E.error caps "can't open"
           )
               
       )
@@ -220,9 +220,9 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
             let newargv = 
               (match value with None -> [] | Some xs -> xs) @ argv in
             t.R.argv <- newargv
-          with Failure s -> E.error s
+          with Failure s -> E.error caps s
          )             
-      | _ -> E.error "variable name not singleton!"
+      | _ -> E.error caps "variable name not singleton!"
       )
   (* (name) *)
   | O.Count ->
@@ -239,7 +239,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
           in
           R.pop_list ();
           R.push_word (spf "%d" num)
-      | _ -> E.error "variable name not singleton!"
+      | _ -> E.error caps "variable name not singleton!"
       )
 
   (* (pat, str) *)
@@ -312,7 +312,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
         | None -> 
             (* stricter: *)
             if !Flags.strict_mode
-            then E.error (spf "deleting undefined function %s" s)
+            then E.error caps (spf "deleting undefined function %s" s)
       );
 
   | O.Not ->
@@ -334,7 +334,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; .. >) operation =
 
   | O.Eflag ->
       if !Globals.eflagok && not (Status.truestatus())
-      then Process.exit (Status.getstatus())
+      then Process.exit caps (Status.getstatus())
 
   | (O.Concatenate|O.Stringify    |O.Index|
      O.Unlocal|

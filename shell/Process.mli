@@ -4,11 +4,10 @@ type waitfor_result =
   | WaitforFound
   | WaitforNotfound
 
-val return: unit -> unit
+val return: < Cap.exit; .. > -> unit -> unit
 
-val exit: string -> unit
+val exit: < Cap.exit; .. > -> string -> unit
 
 val waitfor: int -> waitfor_result
-
 
 val s_of_unix_error: Unix.error -> string -> string -> string

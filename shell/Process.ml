@@ -8,21 +8,21 @@ let s_of_unix_error err _s1 _s2 =
   spf "%s" (Unix.error_message err)
 
 
-let exit s =
+let exit (caps: < Cap.exit; ..>) s =
   (* todo: Updenv *)
   Status.setstatus s;
   (* todo: how communicate error to parent process under Unix? *)
-  exit (if Status.truestatus () then 0 else 1)
+  CapStdlib.exit caps (if Status.truestatus () then 0 else 1)
 
 (* Was called Xreturn but called not only from the opcode interpreter.
  * It is an helper function really.
  *)
-let return () =
+let return (caps : < Cap.exit; .. >) () =
   R.turf_redir ();
   match !R.runq with
   | [] -> failwith "empty runq"
   (* last thread in runq, we exit then *)
-  | [x] -> exit (Status.getstatus ())
+  | [x] -> exit caps (Status.getstatus ())
   | x::xs -> 
       R.runq := xs
 

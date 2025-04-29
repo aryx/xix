@@ -22,21 +22,21 @@ let execute (caps : <Cap.exec; ..>) args path =
   pr2 (spf "%s: %s" argv.(0) !errstr)
 
 
-let exec (caps : < Cap.exec; .. >) () =
+let exec (caps : < Cap.exec; Cap.exit; .. >) () =
   R.pop_word (); (* "exec" *)
 
   let t = R.cur () in
   let argv = t.R.argv in
 
   match argv with
-  | [] -> E.error "empty argument list" 
+  | [] -> E.error caps "empty argument list" 
   | prog::xs -> 
       R.doredir t.R.redirections;
       execute caps argv (Path.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 
-let forkexec (caps : < Cap.fork; Cap.exec; .. >) () =
+let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
   let pid = CapUnix.fork caps () in
   (* child *)
   if pid = 0
@@ -46,7 +46,7 @@ let forkexec (caps : < Cap.fork; Cap.exec; .. >) () =
     R.push_word "exec";
     exec caps ();
     (* should not be reached, unless prog could not be executed *)
-    Process.exit ("can't exec: " ^ !Globals.errstr);
+    Process.exit caps ("can't exec: " ^ !Globals.errstr);
     0
   end
   else 
@@ -55,7 +55,7 @@ let forkexec (caps : < Cap.fork; Cap.exec; .. >) () =
 
 
 
-let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; ..>) () =
+let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
 
@@ -69,7 +69,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; ..>) () =
    * expansion the list becomes empty.
    * stricter: I give extra explanations
    *)
-  | [] -> E.error "empty argument list (after variable expansion)" 
+  | [] -> E.error caps "empty argument list (after variable expansion)" 
 
   | argv0::args ->
       match argv0 with
@@ -98,7 +98,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; ..>) () =
           done
         with
           | Failure s ->
-              E.error ("try again: " ^ s)
+              E.error caps ("try again: " ^ s)
           | Unix.Unix_error (err, s1, s2) -> 
-              E.error (Process.s_of_unix_error err s1 s2)
+              E.error caps (Process.s_of_unix_error err s1 s2)
         )

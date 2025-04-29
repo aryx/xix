@@ -32,7 +32,7 @@ module O = Opcode
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env >
+type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit >
 
 (* -d and -p are dead according to man page so I removed them *)
 let usage =
@@ -218,7 +218,7 @@ let main (caps : Cap.all_caps) =
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action !action (List.rev !args); 
-    exit 0 
+    CapStdlib.exit caps 0 
   end;
 
   (* todo: 
@@ -247,7 +247,7 @@ let main (caps : Cap.all_caps) =
       | Failure s -> 
           (* useful to indicate that error comes from rc, not subprocess *)
           pr2 ("rc: " ^ s);
-          exit (1)
+          CapStdlib.exit caps (1)
       | _ -> raise exn
       )
 

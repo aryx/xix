@@ -42,7 +42,7 @@ let dotcmds =
     O.F O.Return;
   |]         
 
-let dispatch (caps : < Cap.chdir; ..>) s =
+let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
   match s with
   | "cd" -> 
       let t = R.cur () in
@@ -86,7 +86,7 @@ let dispatch (caps : < Cap.chdir; ..>) s =
         | _ -> false
       in
       (match t.R.argv with
-      | [] -> E.error "Usage: . [-i] file [arg ...]"
+      | [] -> E.error caps "Usage: . [-i] file [arg ...]"
       | zero::args ->
           R.pop_word ();
           (* less: searchpath, also for dot? seems wrong *)
@@ -108,7 +108,7 @@ let dispatch (caps : < Cap.chdir; ..>) s =
 
           with Failure _ ->
             prerr_string (spf "%s: " zero);
-            E.error ".: can't open"
+            E.error caps ".: can't open"
           )
       ) 
 
@@ -119,7 +119,7 @@ let dispatch (caps : < Cap.chdir; ..>) s =
       | [_flag;letter] ->
           (* stricter: *)
           if String.length letter <> 1
-          then E.error "flag argument must be a single letter"
+          then E.error caps "flag argument must be a single letter"
           else begin
             let char = String.get letter 0 in
             let is_set =
@@ -132,7 +132,7 @@ let dispatch (caps : < Cap.chdir; ..>) s =
       | [_flag;letter;set] ->
           failwith "TODO: flag letter +- not handled yet"
 
-      | _ -> E.error ("Usage: flag [letter] [+-]")
+      | _ -> E.error caps ("Usage: flag [letter] [+-]")
       );
       R.pop_list()
 

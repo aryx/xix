@@ -10,7 +10,7 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 
-type caps = < Cap.exec; Cap.fork >
+type caps = < Cap.exec; Cap.fork; >
 
 type t = { 
   path: Common.filename;
@@ -90,7 +90,7 @@ let exec_shell (caps : < Cap.exec; ..>) shellenv flags extra_params =
      else failwith (spf "Could not execute a shell command: %s %s %s"
                       (Unix.error_message err) fm argm)
   );
-  (* unreachable *)
+  (* nosemgrep: do-not-use-exit (unreachable) *)
   exit (-2)
 
 let feed_shell_input inputs pipe_write =
@@ -155,6 +155,7 @@ let exec_recipe (caps : < caps; .. >) shellenv flags inputs interactive =
     end else begin
       Unix.close pipe_read;
       feed_shell_input inputs pipe_write;
+      (* nosemgrep: do-not-use-exit (dont want to require caps for this one) *)
       exit 0;
     end
   end

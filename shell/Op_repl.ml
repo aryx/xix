@@ -3,7 +3,7 @@ open Common
 module R = Runtime
 
 (* was called Xrdcmds *)
-let op_REPL () =
+let op_REPL (caps : < Cap.exit; ..>) () =
 
   let t = R.cur () in
 
@@ -29,7 +29,7 @@ let op_REPL () =
     let ast_opt = Parse.parse_line lexbuf in
 
     match ast_opt with
-    | None -> Process.return ()
+    | None -> Process.return caps ()
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in

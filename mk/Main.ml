@@ -279,7 +279,7 @@ let main (caps: Cap.all_caps) : unit =
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action caps !action (List.rev !targets); 
-    exit 0 
+    CapStdlib.exit caps 0 
   end;
 
   try 
@@ -303,7 +303,7 @@ let main (caps: Cap.all_caps) : unit =
               with Unix.Unix_error (error, str1, str2) ->
                 failwith (spf "%s" (Unix.error_message error))
           done;
-          exit (1)
+          CapStdlib.exit caps (1)
       | _ -> raise exn
       )
 

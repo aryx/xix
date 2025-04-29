@@ -54,6 +54,21 @@ local cap_rules = [
 		],
     },
   },
+  {
+    id: 'do-not-use-exit',
+    match: 'exit $N',
+    languages: ['ocaml'],
+    severity: 'ERROR',
+    message: |||
+       Do not use exit. Use CapStdlib.exit and capabilities.
+    |||,
+    paths: {
+      exclude: ['main.ml',
+        'compiler/error.ml', 'ksym.ml', 'thread.ml', 'printexc.ml', 'threadUnix.ml',
+	'lib_system/arg.ml', 'lib_system/unix/unix.ml',
+      ],
+    },
+  },
 ];
 							   
 // ----------------------------------------------------------------------------

@@ -10,6 +10,8 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 
+type caps = < Cap.exec >
+
 type t = { 
   path: Common.filename;
   name: string;
@@ -54,7 +56,7 @@ let shell =
 (* Helpers *)
 (*****************************************************************************)
 
-let exec_shell shellenv flags extra_params =
+let exec_shell (caps : < Cap.exec; ..>) shellenv flags extra_params =
   let env = 
     shellenv 
     (* bug: I exclude empty variables
@@ -74,7 +76,7 @@ let exec_shell shellenv flags extra_params =
   (try 
      (* to debug pass instead "/usr/bin/strace" 
         (Array.of_list ("strace"::shell.path::args)) *)
-     Unix.execve 
+     CapUnix.execve caps
        (* bugfix: need to pass shell.name too! otherwise the first elt
         * in args (usually '-e') will be taken for the prog name and skipped
         * by the shell (and mk will not stop at the first error)
@@ -108,7 +110,7 @@ let feed_shell_input inputs pipe_write =
 (* Entry points *)
 (*****************************************************************************)
 
-let exec_recipe shellenv flags inputs interactive =
+let exec_recipe (caps : < Cap.exec; .. >) shellenv flags inputs interactive =
   let pid = Unix.fork () in
   
   (* children case *)
@@ -132,7 +134,7 @@ let exec_recipe shellenv flags inputs interactive =
        with Sys_error s -> 
          failwith (spf "Could not create temporary file (error = %s)" s)
       ); 
-      exec_shell shellenv flags [tmpfile]
+      exec_shell caps shellenv flags [tmpfile]
       (* less: delete tmpfile *)
     (* unreachable *)
     end else begin
@@ -146,7 +148,7 @@ let exec_recipe shellenv flags inputs interactive =
       Unix.dup2 pipe_read Unix.stdin;
       Unix.close pipe_read;
       Unix.close pipe_write;
-      exec_shell shellenv flags []
+      exec_shell caps shellenv flags []
       (* unreachable *)
 
     (* child 2, feeding the shell with inputs through a pipe *)
@@ -161,7 +163,7 @@ let exec_recipe shellenv flags inputs interactive =
   else pid (* pid of child1 *)
 
 
-let exec_backquote shellenv input =
+let exec_backquote (caps : < Cap.exec; ..>) shellenv input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
 
@@ -177,7 +179,7 @@ let exec_backquote shellenv input =
     Unix.close pipe_read_output;
     Unix.close pipe_write_output;
 
-    exec_shell shellenv [] [] 
+    exec_shell caps shellenv [] [] 
     (* unreachable *)
   end else begin
     (* parent case *)
@@ -205,7 +207,7 @@ let exec_backquote shellenv input =
   end
 
 
-let exec_pipecmd shellenv input =
+let exec_pipecmd (caps: < Cap.exec; .. >) shellenv input =
   let tmpfile = Filename.temp_file "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
 
@@ -221,7 +223,7 @@ let exec_pipecmd shellenv input =
     Unix.dup2 fd Unix.stdout;
     Unix.close fd;
 
-    exec_shell shellenv [] [];
+    exec_shell caps shellenv [] [];
     (* unreachable *)
   end else begin
     (* parent case *)

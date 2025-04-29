@@ -3,7 +3,7 @@
 TOP=../..
 INCLUDES=-I .
 
-SRC=Cap.ml CapSys.ml \
+SRC=Cap.ml CapSys.ml CapUnix.ml \
  Common.ml common2.ml\
  OCaml.ml\
  Logs.ml\

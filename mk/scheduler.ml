@@ -115,8 +115,9 @@ let sched () =
       node.G.state <- G.Made;
     )
     else begin
+      let caps = Cap.exec_and_tmp_caps_UNSAFE () in
       let pid = 
-        Shell.exec_recipe 
+        Shell.exec_recipe caps
           (Env.shellenv_of_env env)
           ["-e"]
           recipe 

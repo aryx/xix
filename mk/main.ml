@@ -95,7 +95,7 @@ module R = Rules
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-type caps = < Cap.chdir >
+type caps = < Cap.chdir; Cap.exec >
 
 let usage =
   "usage: mk [-f file] [options] [targets ...]"

@@ -113,7 +113,8 @@ let rec (eval_word: Ast.loc -> Env.t -> Ast.word ->
 
       | A.Backquoted cmd -> 
         let shellenv = Env.shellenv_of_env env in
-        let s = Shell.exec_backquote shellenv cmd in
+        let caps = Cap.exec_and_tmp_caps_UNSAFE () in
+        let s = Shell.exec_backquote caps shellenv cmd in
         let ys = Str.split (Str.regexp "[ \t\n]+") s in
         (match acc, xs with
         | [], []  -> Left ys
@@ -193,7 +194,8 @@ let eval env targets_ref xs =
         if recipe = ""
         then failwith "missing include program name";
         let shellenv = Env.shellenv_of_env env in
-        let tmpfile = Shell.exec_pipecmd shellenv recipe in
+        let caps = Cap.exec_and_tmp_caps_UNSAFE () in
+        let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
         let xs = Parse.parse tmpfile in
         (* recurse *)
         instrs xs

@@ -1,13 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 
-(* for error reporting *)
-type loc = {
-  file: string; (* an mkfile *)
-  line: int;
-}
-[@@deriving show {with_path = false}]
-
 (* The elements below are not separated by any separator; they are direct
  * concatenations of elements (hence the need for ${name} below).
  * The list must contain at least one element.
@@ -57,6 +50,12 @@ type rule = {
     | NotHandled of char
 [@@deriving show {with_path = false}]
 
+(* for error reporting *)
+type loc = {
+  file: Fpath.t; (* an mkfile *)
+  line: int;
+}
+[@@deriving show {with_path = false}]
 
 type instr = {
   instr: instr_kind;

@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 module A = Ast
 module R = Rules
@@ -227,7 +228,7 @@ let error_ambiguous node groups =
       (* one arc representative is enough *)
       let arc = List.hd arcs in
       spf "\t%s <-(%s:%d)- %s" 
-        node.name loc.A.file loc.A.line
+        node.name !!(loc.A.file) loc.A.line
         (match arc.dest with None -> "" | Some n -> n.name)
     )
   in
@@ -316,7 +317,7 @@ let rec vacuous node =
 
 let loc_of_arc arc =
   let loc = arc.rule.R.loc2 in
-  spf "(%s:%d)" loc.Ast.file loc.Ast.line
+  spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
 
 let dump_graph node =
   let pr s = 

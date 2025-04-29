@@ -2,6 +2,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 open Ast
 
@@ -22,11 +23,11 @@ open Ast
 (* Helpers *)
 (*****************************************************************************)
 
-let error_loc loc s =
-  failwith (spf "%s:%d: Syntax error, %s" loc.file loc.line s)
+let error_loc (loc : Ast.loc) (s : string) =
+  failwith (spf "%s:%d: Syntax error, %s" !!(loc.file) loc.line s)
 
 let error s =
-  error_loc { file = !Globals.file; line = !Globals.line } s
+  error_loc { file = Fpath.v !Globals.file; line = !Globals.line } s
 
 
 let attrs_of_string loc s =

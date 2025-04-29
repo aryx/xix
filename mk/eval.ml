@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 module A = Ast
 module E = Env
@@ -18,11 +19,11 @@ module Set = Set_
 (*****************************************************************************)
 
 (* TODO: use proper exn *)
-let error loc s =
-  failwith (spf "%s:%d: Semantic error, %s" loc.A.file loc.A.line s)
+let error (loc : Ast.loc) (s : string) =
+  failwith (spf "%s:%d: Semantic error, %s" !!(loc.A.file) loc.A.line s)
 
-let warning loc s =
-  Logs.warn (fun m -> m "warning: %s (at %s:%d)" s loc.A.file loc.A.line)
+let warning (loc : Ast.loc) (s : string) : unit =
+  Logs.warn (fun m -> m "warning: %s (at %s:%d)" s !!(loc.A.file) loc.A.line)
 
 (*****************************************************************************)
 (* Helpers *)

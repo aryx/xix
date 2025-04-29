@@ -10,7 +10,7 @@ SRC= flags.ml \
   dumper.ml \
   globals.ml \
   error.ml \
-  parser.ml lexer.ml parse.ml \
+  Parser.ml Lexer.ml parse.ml \
   arch.ml \
   check.ml eval_const.ml typecheck.ml \
   rewrite.ml \

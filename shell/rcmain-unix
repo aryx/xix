@@ -3,9 +3,11 @@ if(~ $#home 0) home=$HOME
 if(~ $#home 0) home=/
 if(~ $#ifs 0) ifs=' 	
 '
+
+#pad: it was '% ' before but 9base rc seems to use ';' for default prompt
 switch($#prompt){
 case 0
-	prompt=('% ' '	')
+	prompt=('; ' '	')
 case 1
 	prompt=($prompt '	')
 }

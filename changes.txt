@@ -8,7 +8,9 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
 
 ** internals
 TODO Testing library using Testo? (only built and run on 4.14.0) or
- do poor's man version again? or just use ounit?
+ do poor's man version again? or just use ounit? non functional anyway
+ so we could just skip the test code when compiling with ocaml-light
+TODO use let* and let/ ?
 
 ** devops
 
@@ -25,6 +27,8 @@ LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 #  - Fpath.t (instead of Common.filename)
 #  - capabilities!!
 #  - TODO ocamlformat
+#  - TODO let*, let/
+#  - TODO Testo
 
 ** internals
 

@@ -33,7 +33,7 @@ module O = Opcode
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit >
+type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 (* -d and -p are dead according to man page so I removed them *)
 let usage =

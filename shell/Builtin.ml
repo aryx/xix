@@ -43,7 +43,7 @@ let dotcmds =
     O.F O.Return;
   |]         
 
-let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
+let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   match s with
   | "cd" -> 
       let t = R.cur () in
@@ -94,7 +94,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
           (try 
             let file = zero in
             Logs.info (fun m -> m "evaluating %s" file);
-            let chan = open_in file in
+            let chan = CapStdlib.open_in caps file in
             let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
             R.runq := [newt];
             R.push_redir (R.Close (Unix.descr_of_in_channel chan));

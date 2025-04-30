@@ -43,7 +43,8 @@ LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
   augmented semgrep.jsonnet to forbid Sys.xxx) (which then requires OCaml 4.0x
   but again it should be doable to just skip any object constructs in ocaml light
   as capabilities are just a typechecking thing without runtime impact).
-- capabilties: Cap.fork, Cap.exec, Cap.exit, Cap.chdir, Cap.stdout, new Cap.env
+- capabilties: Cap.fork, Cap.exec, Cap.exit, Cap.chdir, Cap.stdout,
+  and new Cap.env, Cap.open_in
 - integrate Console.ml, CapConsole.ml, UConsole.ml from semgrep
 - Start use poor's man Fpath.ml instead of Common.filename
 - Start use capitalized module for lib_core/commons/, mk/, shell/ (thx Martin)

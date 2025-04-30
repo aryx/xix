@@ -1,3 +1,7 @@
+# Setup a build environment for XiX using Nix.
+# We are testing mostly the dune way to build XiX (not mk).
+# See also Dockerfile for building xix via mk (and bootstrap-mk.sh).
+
 # Run 'nix-shell --pure' from the root of the project to get a dev environment
 # ready to compile/test/run xix from Linux or macOS, on amd64 or arm64.
 # See https://nixos.org/, https://shopify.engineering/what-is-nix,
@@ -28,10 +32,10 @@ pkgs.mkShell {
 
      # utilities for opam (cacert is needed by curl)
      git curl cacert
+     # for some OCaml libs (stdcompat I think)
+     autoconf
      # optional utilities for development/debugging
      which
-     # for some OCaml libs
-     autoconf
 
      # implicit utilities and libs installed by default in nix
      # (see "echo $PATH | sed -e 's/:/\n/g'" and "ldd ./bin/hello-world"):

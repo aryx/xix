@@ -1,4 +1,5 @@
-# Build and test XiX with OCaml 4.09.1 via opam on Ubuntu Linux
+# Build and test XiX with OCaml 4.09.1 via opam on Ubuntu Linux.
+# We are testing mostly the bootstrap-mk.sh and mk way to build xix (not dune).
 
 # history:
 #  - try to use OCaml 3.10.0 with Alpine 3.21 but clang compilation error
@@ -33,8 +34,8 @@ RUN opam switch create 4.09.1 -v
 WORKDIR /src
 
 # Install dependencies
-COPY xix.opam ./
-RUN opam install --deps-only -y .
+COPY xix.opam configure ./
+RUN ./configure
 # 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
 # zlib for ogit (TODO: delete we should do our own unzip)
 RUN apt-get install -y 9base zlib1g-dev

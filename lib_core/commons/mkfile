@@ -6,6 +6,7 @@ INCLUDES=-I .
 SRC=Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
  Common.ml common2.ml\
  OCaml.ml\
+ Console.ml UConsole.ml CapConsole.ml \
  Logs.ml Fpath.ml\
  IO.ml\
  Date.ml

@@ -69,29 +69,16 @@ let header_string_of_level (lvl: level) : string =
   | Info -> "INFO"
   | Debug -> "DEBUG"
 
-(* ANSI escape sequences for colored output, depending on log level
- * alt: use ANSIterminal.ml, but not worth it
- * LATER: make portable on plan9
- * see https://en.wikipedia.org/wiki/ANSI_escape_code for the color codes
- *)
-let color level =
-  match level with
-  | App -> None
-  | Warning -> Some "33" (*yellow*)
-  | Error -> Some "31" (*red*)
-  | Info -> Some "34" (* blue *)
-  | Debug -> Some "32" (* green *)
-
-(* pre/post escape sequence around the string we want colored *)
-let color_pre lvl =
-  match color lvl with
-  | None -> ""
-  | Some code -> Printf.sprintf "\027[%sm" code
-
-let color_post lvl =
-  match color lvl with
-  | None -> ""
-  | Some _ -> "\027[0m"
+let color lvl str =
+  let color =
+    match lvl with
+    | App -> Console.default
+    | Error -> Console.red
+    | Warning -> Console.yellow
+    | Info -> Console.blue
+    | Debug -> Console.green
+  in
+  Console.sprintf color "%s" str
 
 let report (lvl : level) (msgf : 'a msgf) : unit =
   match lvl with
@@ -106,11 +93,10 @@ let report (lvl : level) (msgf : 'a msgf) : unit =
   | Debug -> 
       let current = now () in
       (* KISS *)
-      Printf.eprintf "[%05.2f][%s%s%s]: " 
+      Printf.eprintf "[%05.2f][%s]: " 
         (current -. time_program_start)
-        (color_pre lvl)
-        (header_string_of_level lvl)
-        (color_post lvl);
+        (color lvl (header_string_of_level lvl))
+        ;
       msgf Printf.eprintf;
       Printf.eprintf "\n%!"
 

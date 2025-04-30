@@ -1,6 +1,14 @@
 (* Copyright 2015, 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Core types *)
+(*****************************************************************************)
+
 type byte = char
 
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
@@ -9,7 +17,24 @@ type byte = char
 type filename = string
 type dirname = string
 
+type compare = Equal | Inf | Sup
+
+let (<=>) a b = 
+  if a = b 
+  then Equal 
+  else 
+    if a < b 
+    then Inf 
+    else Sup
+
 type ('a, 'b) either = Left of 'a | Right of 'b
+
+exception Todo
+exception Impossible of string
+
+(*****************************************************************************)
+(* Misc *)
+(*****************************************************************************)
 
 (* let (|>) o f = f o
    builtin since OCaml 4.01 (builtin and optimized) 
@@ -29,17 +54,10 @@ let pr2 s =
   prerr_string "\n";
   flush stderr
 
-let push a aref =
-  aref := a::!aref
-
-exception Todo
-exception Impossible of string
-
 let rec rnd x v =
   if x mod v = 0
   then x
   else rnd (x+1) v
-
 
 (* old: used to be called do_option, or just opt *)
 let if_some f = function
@@ -54,15 +72,6 @@ let rec filter_some = function
 let optionize f =
   try Some (f ()) with Not_found -> None
 
-
-type compare = Equal | Inf | Sup
-let (<=>) a b = 
-  if a = b 
-  then Equal 
-  else 
-    if a < b 
-    then Inf 
-    else Sup
 
 let memoized ?(use_cache=true) h k f =
   if not use_cache
@@ -89,7 +98,9 @@ let cat file =
   in
   cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)
 
-
+(*****************************************************************************)
+(* Regexp *)
+(*****************************************************************************)
 
 module Regexp_ = struct
 
@@ -119,6 +130,9 @@ end
 let (=~) s re =
   Regexp_.candidate_match_func s re
 
+(*****************************************************************************)
+(* List *)
+(*****************************************************************************)
 
 module List_ = struct
 
@@ -140,6 +154,13 @@ let rec take_safe n xs =
   | (n,x::xs) -> x::take_safe (n-1) xs
 
 end
+
+(*****************************************************************************)
+(* Stack *)
+(*****************************************************************************)
+
+let push a aref =
+  aref := a::!aref
 
 module Stack_ = struct
 
@@ -178,11 +199,15 @@ let nth i st =
   match !res with
   | None -> failwith "Stack_.nth"
   | Some x -> x
-    
 
 end
 
+(*****************************************************************************)
+(* Assoc *)
+(*****************************************************************************)
+
 module Assoc = struct
+
 let sort_by_val_highfirst xs =
   List.sort (fun (_k1,v1) (_k2,v2) -> compare v2 v1) xs
 let sort_by_val_lowfirst xs =
@@ -206,7 +231,12 @@ let group_by f xs =
     Hashtbl.add h k x
   );
   Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
+
 end
+
+(*****************************************************************************)
+(* Hashtbl *)
+(*****************************************************************************)
 
 module Hashtbl_ = struct    
 

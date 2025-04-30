@@ -1,5 +1,6 @@
-# Build XiX via Nix.
-# We are testing mostly the dune way to build XiX (not mk).
+# Build XiX via Nix on Linux and MacOS with OCaml 5.2.1
+# We are testing the dune way to build XiX (not mk).
+# See also shell.nix at the root of the project.
 
 name: nix
 
@@ -14,6 +15,11 @@ jobs:
     defaults:
       run:
         shell: bash
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -21,10 +27,9 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@main
       - name: Cache Nix
         uses: DeterminateSystems/magic-nix-cache-action@main
-      #- name: Check Flake Validity
-      #  uses: DeterminateSystems/flake-checker-action@main
       - name: Build Nix shell
         run: make shell
+      #TODO: run test, but test.sh does not work for dune build right now
       - name: Build XiX using Nix
         run: |
           nix-shell --run '
@@ -32,8 +37,3 @@ jobs:
             make
           '
 
-    strategy:
-      matrix:
-        os:
-          - ubuntu-latest
-          - macos-latest

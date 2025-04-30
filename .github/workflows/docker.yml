@@ -1,5 +1,6 @@
 # Build XiX via docker.
 # We are testing mostly the bootstrap-mk.sh and mk way to build xix (not dune).
+# See also Dockerfile at the root of the project.
 
 name: docker
 

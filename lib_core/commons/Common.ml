@@ -17,6 +17,19 @@ type byte = char
 type filename = string
 type dirname = string
 
+type ('a, 'b) either = Left of 'a | Right of 'b
+
+exception Todo
+exception Impossible of string
+
+(*****************************************************************************)
+(* Eq *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Ord *)
+(*****************************************************************************)
+
 type compare = Equal | Inf | Sup
 
 let (<=>) a b = 
@@ -26,11 +39,6 @@ let (<=>) a b =
     if a < b 
     then Inf 
     else Sup
-
-type ('a, 'b) either = Left of 'a | Right of 'b
-
-exception Todo
-exception Impossible of string
 
 (*****************************************************************************)
 (* Misc *)

@@ -1,13 +1,16 @@
 # Setup a build environment for XiX using Nix.
-# We are testing mostly the dune way to build XiX (not mk).
+# We are here using (and testing) dune to build XiX (not mk).
 # See also Dockerfile for building xix via mk (and bootstrap-mk.sh).
-
+#
 # Run 'nix-shell --pure' from the root of the project to get a dev environment
 # ready to compile/test/run xix from Linux or macOS, on amd64 or arm64.
 # See https://nixos.org/, https://shopify.engineering/what-is-nix,
 # https://nix.dev/tutorials/first-steps/declarative-shell and
 # https://nix.dev/tutorials/nix-language for more info on Nix.
 # alt: flake.nix, which handles more things, but is also more complicated
+#
+# TODO:
+#   - pin ocaml version ? opam switch create ?
 
 let
    # fetch a specific nixos version for better reproducibility
@@ -23,21 +26,17 @@ let
 # and reproducible external deps and Opam for the familiar OCaml deps.
 pkgs.mkShell {
    packages = with pkgs; [
-
-     # OCaml
+     # OCaml!
      opam
-
-     # compile-time external libs
-     pcre
-
-     # utilities for opam (cacert is needed by curl)
+     # Compile-time external libs
+     # ex: pcre
+     # Utilities for opam (cacert is needed by curl)
      git curl cacert
-     # for some OCaml libs (stdcompat I think)
+     # External tools for some OCaml libs (stdcompat I think)
      autoconf
-     # optional utilities for development/debugging
-     which
-
-     # implicit utilities and libs installed by default in nix
+     # Optional utilities for development/debugging
+     # ex: which
+     # Implicit utilities and libs installed by default in nix
      # (see "echo $PATH | sed -e 's/:/\n/g'" and "ldd ./bin/hello-world"):
      # - gnumake bash
      # - binutils gcc/clang glibc linux-headers gnu-config update-autotools

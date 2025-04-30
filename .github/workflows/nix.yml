@@ -1,21 +1,19 @@
-name: CI
+# Build xix via Nix
+
+name: nix
 
 on:
+  workflow_dispatch: null
+  pull_request_target: {}
   push:
-    branches: [main]
-  pull_request:
+    branches: [master]
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-
-    - name: Install Nix
-      uses: cachix/install-nix-action@v22
-
+    - uses: actions/checkout@v3
+    - uses: cachix/install-nix-action@v22
     - name: Enter nix-shell and build
       run: |
         nix-shell --run '

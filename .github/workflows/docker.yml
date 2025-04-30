@@ -1,6 +1,6 @@
-# Build docker image
+# Build xix via docker
 
-name: build-docker
+name: docker
 
 on:
   pull_request_target: {}

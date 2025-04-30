@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -46,7 +46,7 @@ let do_action s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
-        pr2 (spf "processing %s" file);
+        Logs.info (fun m -> m "processing %s" file);
         let chan = open_in file in
         let lexbuf = Lexing.from_channel chan in
 
@@ -59,7 +59,7 @@ let do_action s xs =
           let line = Parse.parse_line lexbuf in
           match line with
           | Some seq -> 
-            pr2 (Dumper.s_of_cmd_sequence seq);
+            Logs.app (fun m -> m "%s" (Dumper.s_of_cmd_sequence seq));
             loop ();
           | None -> ()
         in
@@ -73,7 +73,7 @@ let do_action s xs =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let _bootstrap_simple = 
+let _bootstrap_simple : O.opcode array = 
   [| O.F O.REPL |]
 
 (* The real one is more complex:
@@ -81,7 +81,7 @@ let _bootstrap_simple =
  * Boostrap is now a function because it uses a flag that can be
  * modified after startup.
  *)
-let bootstrap () = 
+let bootstrap () : O.opcode array = 
   [| 
       O.F O.Mark;
         O.F O.Word;
@@ -103,7 +103,7 @@ let bootstrap () =
   |]
 
 
-let interpret (caps : < caps >) args =
+let interpret (caps : < caps >) (args : string list) : unit =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
@@ -123,7 +123,7 @@ let interpret (caps : < caps >) args =
 
     (* less: cycle =~ codevec pointer *)
     if !Flags.rflag
-    then pr2 (spf "pid %d %d %s %s"
+    then Logs.app (fun m -> m "pid %d %d %s %s"
                 (Unix.getpid ())
                 !pc
                 (Dumper.s_of_opcode t.R.code.(!pc))
@@ -147,14 +147,13 @@ let interpret (caps : < caps >) args =
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps : Cap.all_caps) =
+let main (caps : Cap.all_caps) : unit =
 
   let args = ref [] in
 
   (* for debugging *)
   let level = ref (Some Logs.Warning) in
   let action = ref "" in
-  let backtrace = ref false in
 
   let options = [
     "-i", Arg.Set Flags.interactive,
@@ -203,17 +202,12 @@ let main (caps : Cap.all_caps) =
     " trace the main functions";
     "-debugger", Arg.Set Flags.debugger,
     " ";
-    "-backtrace", Arg.Set backtrace,
-    " dump the backtrace after an error";
-
   ]
   in
-  Arg.parse (Arg.align options) (fun t -> 
-    args := t::!args
-  ) usage;
+  Arg.parse (Arg.align options) (fun t -> args := t::!args) usage;
 
   Logs.set_level !level;
-  Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
+  Logs.info (fun m -> m "ran as %s from %s" (Sys.argv.(0)) (Sys.getcwd ()));
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -240,13 +234,13 @@ let main (caps : Cap.all_caps) =
   try 
     interpret (caps :> < caps >) (List.rev !args)
   with exn ->
-    if !backtrace || !Flags.debugger
+    if !Flags.debugger
     then raise exn
     else 
       (match exn with
       | Failure s -> 
           (* useful to indicate that error comes from rc, not subprocess *)
-          pr2 ("rc: " ^ s);
+          Logs.err (fun m -> m  "rc: %s" s);
           CapStdlib.exit caps (1)
       | _ -> raise exn
       )

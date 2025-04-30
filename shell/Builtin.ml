@@ -17,6 +17,7 @@ let ndots = ref 0
 
 let dochdir (caps : < Cap.chdir; .. >) s =
   try 
+    Logs.info (fun m -> m "about to chdir to %s" s);
     CapUnix.chdir caps s;
     true
   with Unix.Unix_error _ ->
@@ -59,16 +60,16 @@ let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
             if dochdir caps dir
             then Status.setstatus ""
             (* less: %r *)
-            else pr2 (spf "Can't cd %s" dir)
-          | _ -> pr2 ("Can't cd -- $home empty")
+            else Logs.err (fun m -> m "Can't cd %s" dir)
+          | _ -> Logs.err (fun m -> m "Can't cd -- $home empty")
           )
       | [_cd;dir] ->
           (* less: cdpath iteration *)
           if dochdir caps dir
           then Status.setstatus ""
-          else pr2 (spf "Can't cd %s" dir)
+          else Logs.err (fun m -> m "Can't cd %s" dir)
       | _ ->
-          pr2 "Usage: cd [directory]";
+          Logs.err (fun m -> m "Usage: cd [directory]");
       );
       R.pop_list()
 
@@ -92,6 +93,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
           (* less: searchpath, also for dot? seems wrong *)
           (try 
             let file = zero in
+            Logs.info (fun m -> m "evaluating %s" file);
             let chan = open_in file in
             let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
             R.runq := [newt];

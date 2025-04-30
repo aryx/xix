@@ -114,6 +114,7 @@ ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Bui
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Meta_ast.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.mli
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.mli
+ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Runtime.mli
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Meta_opcode.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Dumper.mli
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Compile.mli

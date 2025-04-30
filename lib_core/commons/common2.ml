@@ -34,9 +34,8 @@ let index_list_1 xs =
   xs |> index_list |> List.map (fun (x,i) -> x, i+1)
 
 
-let command2 s = 
-  ignore(Sys.command s)
-
+(* TODO: use Buffer_.with_buffer_to_string and Fmt_.with_buffer_to_string *)
+(* Used by OCaml.ml *)
 (* julia: convert something printed using format to print into a string *)
 let format_to_string f =
   let (nm,o) = Filename.open_temp_file "format_to_s" ".out" in

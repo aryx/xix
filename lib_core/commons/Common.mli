@@ -10,6 +10,8 @@ type ('a, 'b) either = Left of 'a | Right of 'b
 
 type compare = Equal | Inf | Sup
 
+val (<=>): 'a -> 'a -> compare
+
 exception Todo
 exception Impossible of string
 
@@ -25,16 +27,16 @@ val if_some : ('a -> unit) -> 'a option -> unit
 val filter_some : 'a option list -> 'a list
 val optionize: (unit -> 'a) -> 'a option
 
-val (<=>): 'a -> 'a -> compare
-
 val memoized :
   ?use_cache:bool -> ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
 
 val cat : string -> string list
 
+val ( =~ ) : string -> string -> bool
 module Regexp_ :
   sig
     val matched : int -> string -> string
+
     val matched1 : string -> string
     val matched2 : string -> string * string
     val matched3 : string -> string * string * string
@@ -44,11 +46,10 @@ module Regexp_ :
       string -> string * string * string * string * string * string
     val matched7 :
       string -> string * string * string * string * string * string * string
-    val _memo_compiled_regexp : (string, Str.regexp) Hashtbl.t
-    val candidate_match_func : string -> string -> bool
+
+    (* val _memo_compiled_regexp : (string, Str.regexp) Hashtbl.t *)
     val split : string -> string -> string list
   end
-val ( =~ ) : string -> string -> bool
 
 module List_ :
   sig
@@ -58,7 +59,6 @@ module List_ :
   end
 
 val push : 'a -> 'a list ref -> unit
-
 module Stack_ :
   sig
     val top_opt: 'a Stack.t -> 'a option

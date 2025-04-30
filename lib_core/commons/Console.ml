@@ -108,6 +108,9 @@ type color =
   | Default  (** Default color of the terminal *)
 [@@deriving show]
 
+(* for boostrap-mk.sh, will be implemented for real by deriving below *)
+let show_style _ = "NOTDERIVED"
+
 type style =
   | Reset
   | Bold

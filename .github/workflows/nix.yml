@@ -25,6 +25,13 @@ jobs:
       #  uses: DeterminateSystems/flake-checker-action@main
       - name: Build Nix shell
         run: make shell
+      - name: Build XiX using Nix
+        run: |
+          nix-shell --run '
+            eval $(opam env)
+            dune build
+          '
+
     strategy:
       matrix:
         os:

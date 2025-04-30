@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v22
+
+    - name: Enter nix-shell and build
+      run: |
+        nix-shell --run '
+          eval $(opam env --root=$PWD/.opam --switch=$PWD/_opam_switch)
+          dune build
+        '

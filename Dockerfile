@@ -1,6 +1,7 @@
 # Build and test XiX with OCaml 4.09.1 via opam on Ubuntu Linux.
 # We are testing mostly the bootstrap-mk.sh and mk way to build xix (not dune).
-
+# See also .github/workflows/docker.yml for its use in Github Actions (GHA).
+#
 # history:
 #  - try to use OCaml 3.10.0 with Alpine 3.21 but clang compilation error
 #    requiring to patch ocamlc for -Wno-error=implicit-function-declaration and

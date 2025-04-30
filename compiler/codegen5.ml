@@ -254,14 +254,14 @@ let operand_able e0 =
       | DeRef  ->
         (match e.e with
         (* less: this should be handled in rewrite.ml *(&x) ==> x *)
-        | (Unary (GetRef, { e = Id fullname })) -> Some (Name (fullname, 0))
+        | (Unary (GetRef, { e = Id fullname; _ })) -> Some (Name (fullname, 0))
         (* less: should normalize constant to left or right in rewrite.ml *)
-        | Binary ({ e = Int (s1, _) }, 
+        | Binary ({ e = Int (s1, _); _ }, 
                   Arith Plus, 
-                  {e = (Unary (GetRef, { e = Id fullname })) })
-        | Binary ({e = (Unary (GetRef, { e = Id fullname })) }, 
+                  {e = (Unary (GetRef, { e = Id fullname; _ })); _ })
+        | Binary ({e = (Unary (GetRef, { e = Id fullname; _ })); _ }, 
                   Arith Plus, 
-                  { e = Int (s1, _) })
+                  { e = Int (s1, _); _ })
           -> Some (Name (fullname, int_of_string s1))
         | _ -> None
         )
@@ -278,7 +278,7 @@ let operand_able e0 =
       | Not -> None
       )
     (* less: could be operand_able if we do constant_evaluation later *)
-    | Binary (e1, op, e2) -> None
+    | Binary (_e1, _op, _e2) -> None
     | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
       -> None
     
@@ -377,7 +377,7 @@ let opd_regalloc env typ loc tgtopt =
   | T.I _ | T.Pointer _ ->
     let i = 
       match tgtopt with
-      | Some { opd = Register (A.R x) } -> 
+      | Some { opd = Register (A.R x); _ } -> 
         reguse env (A.R x);
         x
       | _ -> regalloc env loc
@@ -555,7 +555,7 @@ let rec expr env e0 dst_opd_opt =
           gmove env opd2 opd1
 
         (* ex: return x = 1;, x = y = z, ... *)
-        | Some opd1, Some opd2, Some dst ->
+        | Some _opd1, Some _opd2, Some _dst ->
           raise Todo
 
 
@@ -579,14 +579,14 @@ let rec expr env e0 dst_opd_opt =
         | None, _, _ ->
           raise Todo
         )
-      | OpAssign op ->
+      | OpAssign _op ->
         raise Todo
       )
     | Unary (op, e) ->
       (match op with
       | GetRef -> 
         (match e.e  with
-        | Id fullname -> 
+        | Id _fullname -> 
           raise (Impossible "handled in operand_able()")
         | Unary (DeRef, _) ->
           raise (Impossible "should be simplified in rewrite.ml")
@@ -612,7 +612,7 @@ let rec expr env e0 dst_opd_opt =
       | Not -> raise Todo
       )
     | _ -> 
-      pr2 (Dumper.s_of_any (Expr e0));
+      Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo
     )
 
@@ -641,7 +641,7 @@ let rec stmt env st0 =
   match st0.s with
   | ExprSt e -> expr env e None
   | Block xs -> xs |> List.iter (stmt env)
-  | Var { v_name = fullname; } ->
+  | Var { v_name = fullname; _} ->
       let idinfo = Hashtbl.find env.ids fullname in
       (* todo: generate code for idinfo.ini *)
 
@@ -829,7 +829,7 @@ let codegen (ids, structs, funcs) =
     regs          = Array.make 0 16;
   } in
 
-  funcs |> List.iter (fun { f_name=name; f_loc=loc; f_body=st; f_type=typ } ->
+  funcs |> List.iter (fun { f_name=name; f_loc=loc; f_body=st; f_type=typ; _ } ->
     let fullname = (name, 0) in
     let idinfo = Hashtbl.find env.ids fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)

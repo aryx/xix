@@ -86,7 +86,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
                    ) |> List.flatten
                (* stricter? what does mk?*)
                | _ -> 
-                 Logs.debug (fun m -> m "subst = %s" (Common.dump subst));
+                 Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
                  error loc 
                    "pattern or subst does not resolve to a single string"
                )

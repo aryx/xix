@@ -18,7 +18,10 @@ let parse file =
           Lexer.token lexbuf
       | Lexer.InRecipe -> 
           Lexer.recipe lexbuf
-      ) |> (fun tok -> if !Flags.dump_tokens then pr2_gen tok; tok)
+      ) |> (fun tok -> 
+            if !Flags.dump_tokens 
+            then Logs.app (fun m -> m "%s" (Dumper.dump tok));
+            tok)
     in
       
     try 

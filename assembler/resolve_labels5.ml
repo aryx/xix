@@ -39,7 +39,7 @@ let resolve ps =
     | Pseudo (DATA _ | GLOBL _) -> 
         (* no pc increment here *)
         true
-    | Instr (inst, cond) ->
+    | Instr (inst, _condTODO) ->
         let resolve_branch_operand opd =
           match !opd with
           | SymbolJump _ | IndirectJump _ -> ()

@@ -1,0 +1,10 @@
+(library
+ (name xix_objects)
+ (wrapped false)
+ (libraries
+    stdcompat
+    xix_commons
+    xix_cpp_lib
+  )
+ (preprocess (pps ppx_deriving.show))
+)

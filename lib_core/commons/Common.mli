@@ -13,6 +13,8 @@ exception Todo
 exception Impossible of string
 
 val spf : ('a, unit, string) format -> 'a
+
+(* TODO: delete *)
 val pr : string -> unit
 val pr2 : string -> unit
 
@@ -78,11 +80,3 @@ module Hashtbl_ :
     val of_list : ('a * 'b) list -> ('a, 'b) Hashtbl.t
     val to_list : ('a, 'b) Hashtbl.t -> ('a * 'b) list
   end
-
-module Obj_ : 
-  sig 
-    val dump2 : Obj.t -> string 
-  end
-
-val dump : 'a -> string
-val pr2_gen : 'a -> unit

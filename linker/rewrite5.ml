@@ -29,7 +29,7 @@ let rewrite cg =
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
     | T5.WORD _ -> (curtext, Some n)
-    | T5.I (instr, cond) ->
+    | T5.I (instr, _condXXX) ->
         let env = 
           match instr with
           | BL _ -> 

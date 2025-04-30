@@ -73,7 +73,7 @@ let hmacros = Hashtbl.create 101
  * include a file. cwd becomes the dirname of the included file??? 
  * TODO: dead? used?
  *)
-let cwd = ref (Sys.getcwd ())
+let _cwd = ref (Sys.getcwd ())
 
 (*****************************************************************************)
 (* Helpers *)
@@ -104,7 +104,7 @@ let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
             varargs = varargs; body = sbody }
     in
     if !Flags_cpp.debug_macros
-    then pr2 (spf "#define %s %s" s macro.body);
+    then Logs.app (fun m -> m "#define %s %s" s macro.body);
 
     Hashtbl.add hmacros s macro
   end
@@ -131,7 +131,7 @@ and find_include_bis paths f =
       if Sys.file_exists path
       then begin
         if !Flags.debug_inclusion
-        then pr (spf "%d: %s" !L.line path);
+        then Logs.app (fun m -> m "%d: %s" !L.line path);
         path
       end
       else find_include_bis xs f
@@ -229,7 +229,7 @@ let parse hooks (defs, paths) file =
               | None ->
                   let body = macro.body in
                   if !Flags_cpp.debug_macros
-                  then pr2 (spf "#expand %s %s" s body);
+                  then Logs.app (fun m -> m "#expand %s %s" s body);
                   let lexbuf = Lexing.from_string body in
                   stack := (None, lexbuf)::!stack;
                   lexfunc ()
@@ -243,7 +243,7 @@ let parse hooks (defs, paths) file =
                     let body = 
                       Lexer_cpp.subst_args_in_macro_body s args lexbuf in
                     if !Flags_cpp.debug_macros
-                    then pr2 (spf "#expand %s %s" s body);
+                    then Logs.app (fun m -> m "#expand %s %s" s body);
                     let lexbuf = Lexing.from_string body in
                     stack := (None, lexbuf)::!stack;
                     lexfunc ()

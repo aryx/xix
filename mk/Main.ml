@@ -111,7 +111,7 @@ let do_action caps s xs =
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
         let instrs = Parse.parse file in
-        instrs |> List.iter pr2_gen;
+        CapConsole.print caps (spf "%s" (Ast.show_instrs instrs))
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->

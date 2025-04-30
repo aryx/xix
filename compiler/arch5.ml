@@ -26,11 +26,11 @@ let rec width_of_type env t =
     | None -> raise (Impossible "width of incomplete array")
     | Some i -> i * width_of_type env t
     )
-  | T.StructName (su, fullname) ->
+  | T.StructName (_su, fullname) ->
       let (_su, flds) = Hashtbl.find env.structs fullname in
       (* todo: align so extra size *)
       flds 
-      |> List.map (fun (fld, t) -> width_of_type env t)
+      |> List.map (fun (_fld, t) -> width_of_type env t)
       |> List.fold_left (+) 0
 
 let arch = {

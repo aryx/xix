@@ -5,7 +5,7 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections
 SRC=  Flags.ml Globals.ml \
   Ast.ml Meta_ast.ml \
   Opcode.ml Meta_opcode.ml \
-  Dumper.ml \
+  Dumper_.ml \
   Compile.ml \
   Runtime.ml \
   Pattern.ml \

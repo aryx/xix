@@ -117,7 +117,7 @@ let load xs =
               code |> Common.push (T5.WORD v, (file, line));
               incr pc;
             
-          | GLOBL (global, attrs, size) -> 
+          | GLOBL (global, _attrs, size) -> 
               let v = T5.lookup_global global h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SData size;

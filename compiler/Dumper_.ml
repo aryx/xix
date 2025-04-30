@@ -1,4 +1,3 @@
-open Common
 
 (* less: could have s_of_any_with_pos *)
 let s_of_any x =

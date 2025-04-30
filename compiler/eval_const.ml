@@ -36,11 +36,11 @@ let rec eval env e0 =
   (* todo: enough for big integers? 
    * todo: we should also return an inttype in addition to the integer value.
    *)
-  | Int (s, inttype) -> int_of_string s
+  | Int (s, _inttype) -> int_of_string s
   | Id fullname ->
      if Hashtbl.mem env fullname
      then
-       let (i, inttype) = Hashtbl.find env fullname in
+       let (i, _inttype) = Hashtbl.find env fullname in
        i
      else raise NotAConstant
   | Binary (e1, op, e2) ->

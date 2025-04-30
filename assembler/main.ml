@@ -32,7 +32,8 @@ let assemble5 dump (defs, paths) infile outfile =
   let prog = Parse_asm5.parse (defs, paths) infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
-  then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> Common.pr2;
+  then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
+        Logs.app (fun m -> m "AST = %s" s));
   Object_code5.save (prog, !Location_cpp.history) outfile
 
 
@@ -116,7 +117,7 @@ let main () =
       | Location_cpp.Error (s, loc) ->
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
-          pr2 (spf "%s:%d %s" file line s);
+          Logs.err (fun m -> m "%s:%d %s" file line s);
           exit (-1);
       | _ -> raise exn
       )

@@ -59,7 +59,7 @@ let code_of_escape_char c =
   | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
 
   (* compatibility with plan 9 C code? *)
-  | 'f' -> pr2 "unknown \\f"; 0x00
+  | 'f' -> Logs.err (fun m -> m "unknown \\f"); 0x00
   (* could be removed, special 5c escape char *)
   | 'a' -> 0x07 | 'v' -> 0x0b 
 

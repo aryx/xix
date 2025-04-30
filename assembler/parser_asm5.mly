@@ -305,13 +305,13 @@ pointer:
  | TSP  { (fun name_opt offset ->
            match name_opt with
            | None -> Param (None, offset)
-           | Some ({name = s; priv = _false}) -> Param (Some s, offset)
+           | Some ({name = s; priv = _false; signature = _}) -> Param (Some s, offset)
            )
          }
  | TFP  { (fun name_opt offset ->
            match name_opt with
            | None -> Local (None, offset)
-           | Some ({name = s; priv = _false}) -> Local (Some s, offset)
+           | Some ({name = s; priv = _false; signature = _}) -> Local (Some s, offset)
            )
          }
 

@@ -10,10 +10,10 @@ let warn s loc =
     then raise (L.Error (spf "Warning: %s" s, loc))
     else 
       let (file, line) = Location_cpp.final_loc_of_loc loc in
-      pr2 (spf "%s:%d warning: %s" file line s)
+      Logs.warn (fun m -> m "%s:%d: %s" file line s)
 
 
 (* todo: delete outfile *)
 let errorexit s =
-  pr2 s;
+  Logs.err (fun m -> m "%s" s);
   exit (-1)

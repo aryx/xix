@@ -4,18 +4,17 @@
    str unix
    xix_commons
    xix_collections
+   xix_objects
+   xix_executables
  )
  ; 'byte' is for ocamldebug
  (modes native byte))
-
-(ocamllex Lexer)
-(ocamlyacc Parser)
 
 (install
  (package xix)
  (section bin)
  (files
-  (Main.exe as rc)
+  (Main.exe as 5l)
   ; useful to debug, see ../../debug and ocamldebug
-  (Main.bc as rc.bc))
+  (Main.bc as 5l.bc))
 )

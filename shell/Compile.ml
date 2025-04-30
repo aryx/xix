@@ -119,7 +119,7 @@ let outcode_seq seq eflag (emit,set,idx) =
         | A.RAppend -> 
             emit (O.F O.Append);
             emit (O.I 1);
-        | _ -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
+        | _ -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
         );
         
         (* perform the command *)
@@ -236,7 +236,7 @@ let outcode_seq seq eflag (emit,set,idx) =
        A.ForIn (_, _, _)|
        A.For (_, _)
        )
-       -> failwith ("TODO compile: " ^ Dumper.s_of_cmd cmd)
+       -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
 
  (* Do we need to pass eflag here too?
   * Even though types are mutually recursive because of Backquote, the
@@ -266,7 +266,7 @@ let outcode_seq seq eflag (emit,set,idx) =
        A.Concat (_, _)|
        A.Stringify _
       )
-       -> failwith ("TODO compile: " ^ Dumper.s_of_value w)
+       -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
 
   and xwords ws =
     ws |> List.rev |> List.iter (fun w -> xword w);
@@ -312,4 +312,4 @@ let compile seq =
 
   (* return the trimmed array *)
   Array.sub !codebuf 0 !idx
-  |> (fun x -> if !Flags.dump_opcodes then pr2 (Dumper.s_of_codevec x); x)
+  |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)

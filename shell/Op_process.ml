@@ -1,5 +1,4 @@
 open Stdcompat (* for |> *)
-open Common
 
 module R = Runtime
 module E = Error
@@ -19,7 +18,7 @@ let execute (caps : <Cap.exec; ..>) args path =
      Globals.errstr := s2
   );
   (* reached only when could not find a path *)
-  pr2 (spf "%s: %s" argv.(0) !errstr)
+  Logs.err (fun m -> m "%s: %s" argv.(0) !errstr)
 
 
 let exec (caps : < Cap.exec; Cap.exit; .. >) () =
@@ -61,7 +60,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
 
   (* less: globlist () *)
   if !Flags.xflag 
-  then pr2 (String.concat " " argv);
+  then Logs.app (fun m -> m "%s" (String.concat " " argv));
 
   match argv with
   (* How can you get an empty list as Simple has at least one word?
@@ -77,7 +76,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
       | "builtin" -> 
           (match args with
           | [] ->
-              pr2 "builtin: empty argument list";
+              Logs.err (fun m -> m "builtin: empty argument list");
               Status.setstatus "empty arg list";
               R.pop_list ()
           | argv0::_args ->

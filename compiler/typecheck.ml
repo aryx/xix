@@ -88,8 +88,8 @@ let type_error _t loc =
 
 (* todo: for op xxx *)
 let type_error2 t1 t2 loc =
-  let s1 = Dumper.s_of_any (FinalType t1) in
-  let s2 = Dumper.s_of_any (FinalType t2) in
+  let s1 = Dumper_.s_of_any (FinalType t1) in
+  let s2 = Dumper_.s_of_any (FinalType t2) in
   raise (Error (E.Misc (spf "incompatible types (%s and %s)" s1 s2, loc)))
 
 (*****************************************************************************)
@@ -116,7 +116,7 @@ let same_types t1 t2 =
    
 
 (* if you declare multiple times the same global, we must merge types. *)
-let merge_types t1 t2 =
+let merge_types t1 _t2 =
   t1
 
 (* when processing enumeration constants, we want to keep the biggest type *)
@@ -281,7 +281,7 @@ let rec check_args_vs_params es tparams varargs loc =
   | [], ([] | [T.Void]), _ -> ()
   | [], _, _ -> 
     raise (Error (E.Misc ("not enough function arguments", loc)))
-  | e::es, [], false -> 
+  | _e::_es, [], false -> 
     raise (Error (E.Misc ("too many function arguments", loc)))
   | e::es, [], true -> 
     (match e.e_type with
@@ -369,7 +369,7 @@ let merge_storage_toplevel name loc stoopt ini old =
  * so Id of enum constants for example has been substituted to Int
  * and so are not considered an lvalue.
  *)
-let rec lvalue e0 =
+let lvalue e0 =
   match e0.e with
   | Id _ 
   | Unary (DeRef, _)
@@ -436,7 +436,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
       if Ast.is_gensymed fldname
       then
         (match t with
-        | T.StructName (su, fullname) ->
+        | T.StructName (_su, fullname) ->
           let (_su2, def) = Hashtbl.find env.structs fullname in
           (try 
              let e = 
@@ -454,7 +454,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
   (match !res with
   | [x] -> x
   | [] -> raise Not_found
-  | x::y::xs ->
+  | _x::_y::_xs ->
     raise (Error(E.Misc(spf "ambiguous unnamed structure element %s" name,
                                e.e_loc)))
   )
@@ -510,10 +510,10 @@ let rec expr env e0 =
   let newenv = { env with expr_context = CtxWantValue } in
 
   match e0.e with
-  | Int    (s, inttype)   -> { e0 with e_type = T.I inttype }
-  | Float  (s, floattype) -> { e0 with e_type = T.F floattype }
+  | Int    (_s, inttype)   -> { e0 with e_type = T.I inttype }
+  | Float  (_s, floattype) -> { e0 with e_type = T.F floattype }
   (* less: transform in Id later? *)
-  | String (s, t)         -> { e0 with e_type = t } |> array_to_pointer env
+  | String (_s, t)         -> { e0 with e_type = t } |> array_to_pointer env
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
      then
@@ -613,7 +613,7 @@ let rec expr env e0 =
   | RecordAccess (e, name) ->
     let e = expr newenv e in
     (match e.e_type with
-    | T.StructName (su, fullname) ->
+    | T.StructName (_su, fullname) ->
       let (_su2, def) = Hashtbl.find env.structs fullname in
       (try
          let t = List.assoc name def in
@@ -638,7 +638,7 @@ let rec expr env e0 =
     (* less: should disable implicit OADDR for function here in env *)
     let e = expr newenv e in
     (match e.e_type with
-    | T.Pointer (T.Func (tret, tparams, varargs)) ->
+    | T.Pointer (T.Func (_tret, _tparams, _varargs)) ->
       (* stricter?: we could forbid it, but annoying for my print in libc.h *)
       let e = { e with e = Unary (DeRef, e); } in
       expr newenv { e0 with e = Call (e, es) }
@@ -773,7 +773,7 @@ let rec stmt env st0 =
       let e1either = 
         (match e1either with 
         | Left e1opt -> Left (expropt env e1opt)
-        | Right decls -> raise Todo
+        | Right _decls -> raise Todo
         )
       in
       For (e1either, expropt env e2opt, expropt env e3opt, stmt env st)
@@ -846,7 +846,7 @@ let check_and_annotate_program ast =
 
   let funcs = ref [] in
 
-  let rec toplevel env = function
+  let toplevel env = function
     | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
       Hashtbl.add env.structs fullname 
         (su, flds |> List.map 
@@ -868,10 +868,10 @@ let check_and_annotate_program ast =
             )
         )
 
-    | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
+    | TypeDef { typedef_name = fullname; typedef_loc = _loc; typedef_type =typ}->
       Hashtbl.add env.typedefs fullname (type_ env typ)
 
-    | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }
+    | EnumDef { enum_name = fullname; enum_loc = _loc; enum_constants = csts }
       ->
       (* stricter: no support for float enum constants *)
       let lastvalue = ref 0 in
@@ -943,7 +943,7 @@ let check_and_annotate_program ast =
              match ini, old.ini with
              | Some x, None | None, Some x -> Some x
              | None, None -> None
-             | Some x, Some y ->
+             | Some _x, Some _y ->
                raise (Error (E.Inconsistent (
                spf "redefinition of '%s'" (unwrap fullname), loc,
                "previous definition is here", old.loc)))
@@ -1002,7 +1002,7 @@ let check_and_annotate_program ast =
              match ini, old.ini with
              | Some x, None | None, Some x -> Some x
              | None, None -> None
-             | Some x, Some y ->
+             | Some _x, Some _y ->
                raise (Error (E.Inconsistent (
                spf "redefinition of '%s'" (unwrap fullname), loc,
                "previous definition is here", old.loc)))

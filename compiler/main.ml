@@ -51,7 +51,7 @@ open Common
 
 let thechar = '5'
 let thestring = "arm"
-let arch = Arch5.arch
+let _arch = Arch5.arch
 
 let usage = 
   spf "usage: %cc [-options] files" thechar
@@ -68,7 +68,7 @@ let do_action s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
-        pr2 (spf "processing %s" file);
+        Logs.info (fun m -> m "processing %s" file);
         let system_paths = 
           [spf "/%s/include" thestring; "/sys/include";]
         in
@@ -91,7 +91,7 @@ let compile (defs, include_paths) infile outfile =
 
   (* debug *)
   if !Flags.dump_ast
-  then pr2 (Dumper.s_of_any (Ast.Program ast));
+  then Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.Program ast)));
 
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
@@ -106,12 +106,12 @@ let compile (defs, include_paths) infile outfile =
     ids |> Hashtbl.iter (fun k v ->
       match v.Typecheck.sto with
       | Storage.Global | Storage.Static ->
-        pr2 (Ast.unwrap k);
-        pr2 (Dumper.s_of_any (Ast.FinalType v.Typecheck.typ));
+        Logs.app (fun m -> m "%s" (Ast.unwrap k));
+        Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
       | _ -> ()
     );
     funcs |> List.iter (fun func ->
-      pr2 (Dumper.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func)))
+      Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
   end;
 
@@ -125,7 +125,7 @@ let compile (defs, include_paths) infile outfile =
     asm |> List.iter (fun (instr, _loc) ->
       (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
       let v = Meta_ast_asm5.vof_line instr in
-      pr2 (spf "%2d: %s" !pc (OCaml.string_of_v v));
+      Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
       incr pc;
     );
   end;

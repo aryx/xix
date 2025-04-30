@@ -2,8 +2,9 @@
  (name Main)
  (libraries
    str unix
-   xix_commons
-   xix_collections
+   xix_commons xix_collections
+   xix_cpp_lib
+   xix_objects
  )
  ; 'byte' is for ocamldebug
  (modes native byte))
@@ -15,7 +16,7 @@
  (package xix)
  (section bin)
  (files
-  (Main.exe as rc)
+  (Main.exe as 5c)
   ; useful to debug, see ../../debug and ocamldebug
-  (Main.bc as rc.bc))
+  (Main.bc as 5c.bc))
 )

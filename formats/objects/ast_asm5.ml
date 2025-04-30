@@ -1,5 +1,4 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
-open Common
 
 (*****************************************************************************)
 (* Prelude *)

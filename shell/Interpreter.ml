@@ -27,7 +27,7 @@ let int_at_address t pc =
   | O.I i -> i
   (* stricter: generate error, but should never happen *)
   | op -> failwith (spf "was expecting I, not %s at %d" 
-                      (Dumper.s_of_opcode op) pc)
+                      (Dumper_.s_of_opcode op) pc)
 
 
 let vlook_varname_or_index varname =
@@ -74,7 +74,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
       (match x with
       | O.S s -> R.push_word s
       (* stricter: but should never happen *)
-      | op -> failwith (spf "was expecting a S, not %s" (Dumper.s_of_opcode op))
+      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
       )
 
   (* (name) (val) *)
@@ -173,7 +173,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
 
   (* (value?) *)
   | O.Glob ->
-      pr2 "TODO: interpret Glob";
+      Logs.err (fun m -> m "TODO: interpret Glob");
       ()
 
   (* (file)[fd] *)
@@ -344,4 +344,4 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
      O.Close|O.Dup|O.PipeFd|
      O.Subshell|O.Backquote|O.Async
     ) ->
-    failwith ("TODO: " ^ Dumper.s_of_opcode (O.F operation))
+    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F operation))

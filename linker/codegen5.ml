@@ -43,7 +43,7 @@ let error node s =
 
 (* new: can detect some typing mistakes *)
 let sanity_check_composed_word n xs =
-  let dbg = Common.dump xs in
+  let dbg = Dumper.dump xs in
   let rec aux bit xs =
     match xs with
     | [] -> ()
@@ -198,7 +198,7 @@ let gshift (R rf) op2 rcon =
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 
 
-let gbranch_static {T5. loc = loc; branch = branch; real_pc = src_pc } cond is_bl =
+let gbranch_static {T5. loc = _loc; branch = branch; real_pc = src_pc; _ } cond is_bl =
   match branch with
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some n -> 
@@ -242,7 +242,7 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   | Right (R r) -> [(1, 25); (r, 0)]
   )
 
-let gload_from_pool { T5. branch = branch; real_pc = src_pc } cond rt =
+let gload_from_pool { T5. branch = branch; real_pc = src_pc; _ } cond rt =
   match branch with
   | None -> raise (Impossible "literal pool should be attached to node")
   | Some n ->
@@ -285,7 +285,7 @@ let rules symbols2 autosize init_data node =
       { size = 4; pool = None; binary = (fun () -> 
         match x with
         | Left i -> [ [(i land 0xffffffff, 0)] ]
-        | Right (String s) -> 
+        | Right (String _s) -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed with WORD; use DATA"
         | Right (Address (Global (global, _offsetTODO))) -> 
@@ -590,10 +590,10 @@ let rules symbols2 autosize init_data node =
     | SWAP _ -> error node "TODO: SWAP"
 
     (* Half words and signed bytes *)
-    | MOVE ((HalfWord _ | Byte _), opt, from, dest) -> 
+    | MOVE ((HalfWord _ | Byte _), _opt, _from, _dest) -> 
         error node "TODO: half"
 
-    | MOVE (Word, opt, from, dest) ->
+    | MOVE (Word, _opt, _from, _dest) ->
        (* stricter: better error message *)
        error node "illegal combination: at least one operand must be a register"
 
@@ -638,7 +638,7 @@ let gen symbols2 config cg =
 
   cg |> T5.iter (fun n ->
 
-    let {size = size; binary = binary }  = rules symbols2 !autosize config.T.init_data n in
+    let {size = size; binary = binary; _ }  = rules symbols2 !autosize config.T.init_data n in
     let instrs = binary () in
 
     if n.T5.real_pc <> !pc
@@ -651,13 +651,13 @@ let gen symbols2 config cg =
     
     if !Flags.debug_gen 
     then begin 
-      n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v |> pr2;
-      pr2 "-->";
+      Logs.app (fun m -> m "%s" (n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
+      Logs.app (fun m -> m "-->");
       xs |> List.iter (fun x ->
         let w = word_of_composed_word x in
-        pr2 (spf "%s (0x%x)" (Common.dump x) w);
+        Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
       );
-      pr2 ".";
+      Logs.app (fun m -> m ".");
     end;
 
     let xs = xs |> List.map (fun composed_word ->

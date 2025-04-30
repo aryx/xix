@@ -1,5 +1,4 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-open Common
 
 module R = Runtime
 
@@ -37,4 +36,4 @@ let setvar name v =
 
 
 let vinit (_caps : < Cap.env; .. >) =
-  pr2 "TODO: load from environment"
+  Logs.err (fun m -> m "TODO: load from environment")

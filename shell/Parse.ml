@@ -67,11 +67,14 @@ let parse_line lexbuf =
        - handle free caret insertion
     *)
     !tok 
-    |> (fun tok -> if !Flags.dump_tokens then pr2_gen (tok,s) ; tok)
+    |> (fun tok -> 
+        if !Flags.dump_tokens 
+        then Logs.app (fun m -> m "%s" (Dumper.dump (tok,s)));
+        tok)
   in
   try 
     Parser.rc lexfunc lexbuf
-    |> (fun ast -> if !Flags.dump_ast then pr2 (Dumper.s_of_line ast); ast)
+    |> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Dumper_.s_of_line ast)); ast)
   with 
     | Parsing.Parse_error ->
         error "syntax error" !curtok

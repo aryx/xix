@@ -16,7 +16,7 @@ let gen symbols2 init_data sizes ds =
     | T.SData2 offset ->
         let base = offset + offset2 in
         (match v with
-        | Left i -> raise Todo
+        | Left _i -> raise Todo
         | Right (String s) -> 
             for i = 0 to size_slice -1 do 
               arr.(base + i) <- s.[i] 

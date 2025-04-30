@@ -58,7 +58,7 @@ let failhard = ref false
 let error err =
   if !failhard
   then raise (Error err)
-  else pr2 (string_of_error err)
+  else Logs.err (fun m -> m "%s" (string_of_error err))
  
 (*****************************************************************************)
 (* Helpers *)
@@ -67,7 +67,7 @@ let error err =
 let inconsistent_tag fullname loc usedef =
   let locbefore = 
     match usedef with
-    | { defined = Some loc } | { used = Some loc } -> loc
+    | { defined = Some loc; _ } | { used = Some loc; _ } -> loc
     | _ -> raise (Impossible "must have a def or a use")
   in
   error (Inconsistent (
@@ -95,8 +95,8 @@ let check_inconsistent_or_redefined_tag env fullname tagkind loc =
 let inconsistent_id fullname loc usedef =
   let locbefore = 
     match usedef with
-    | { defined = Some loc } -> loc
-    | { defined = None } -> raise (Impossible "id always defined first")
+    | { defined = Some loc; _ } -> loc
+    | { defined = None; _ } -> raise (Impossible "id always defined first")
   in
   error (Inconsistent (
     spf "redefinition of '%s' " (unwrap fullname), loc,
@@ -133,7 +133,7 @@ let check_unused_locals env =
         (* 5c says whether 'auto' or 'param' *) 
         Error.warn 
           (spf "variable declared and not used: '%s'" (unwrap fullname)) loc
-    | { defined = None; } -> raise (Impossible "locals are always defined")
+    | { defined = None; _} -> raise (Impossible "locals are always defined")
     | { defined = _; used = Some _ } -> ()
   )
 
@@ -185,7 +185,7 @@ let check_usedef program =
       type_ env typ
 
     (* todo: if use struct tags params, they must be complete at this point *)
-    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st } ->
+    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st; _ } ->
       let fullname = name, 0 in
       (if Hashtbl.mem env.ids fullname &&
           snd (Hashtbl.find env.ids fullname) = IdIdent
@@ -200,7 +200,7 @@ let check_usedef program =
       (* new function scope *)
       let env = { env with local_ids = []; labels = Hashtbl.create 11 } in
       let (_tret, (tparams, _dots)) = ftyp in
-      tparams |> List.iter (fun { p_name = fullnameopt; p_loc=loc;} ->
+      tparams |> List.iter (fun { p_name = fullnameopt; p_loc=loc; _} ->
         fullnameopt |> Common.if_some (fun fullname ->
           check_inconsistent_or_redefined_id env fullname IdIdent loc;
           env.local_ids <- fullname :: env.local_ids;
@@ -228,7 +228,7 @@ let check_usedef program =
           raise (Impossible "at least one of used or defined")
       );
         
-    | VarDecl { v_name = fullname; v_loc = loc; v_type = t; v_init = eopt} ->
+    | VarDecl { v_name = fullname; v_loc = loc; v_type = t; v_init = eopt; _} ->
       (if Hashtbl.mem env.ids fullname &&
           snd (Hashtbl.find env.ids fullname) = IdIdent
       (* this can be ok, you can redeclare toplevel identifiers as you
@@ -306,7 +306,7 @@ let check_usedef program =
         )
     | Default st -> stmt env st
 
-    | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt } ->
+    | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; _ } ->
       (* less: before adding in environment? can have recursive use? *)
       eopt |> Common.if_some (expr env);
     (* todo: if local VarDEcl, can actually have stuff nested like
@@ -407,7 +407,7 @@ let check_usedef program =
   program |> List.iter (toplevel env);
 
   (* stricter: check if used but not defined tags (5c does not, clang does) *)
-  env.tags |> Hashtbl.iter (fun fullname (usedef, idkind) ->
+  env.tags |> Hashtbl.iter (fun fullname (usedef, _idkind) ->
     match usedef with
     | { used = Some loc; defined = None } ->
       error (Misc (spf "use of tag '%s' that is never completed"

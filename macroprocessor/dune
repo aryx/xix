@@ -1,0 +1,33 @@
+; used by formats/objects/ for Location_cpp.ml
+
+(library
+ (name xix_cpp_lib)
+ (wrapped false)
+ (libraries
+    stdcompat
+    xix_commons
+  )
+ (preprocess (pps ppx_deriving.show))
+)
+
+(ocamllex lexer_cpp)
+
+
+;(executable
+; (name main)
+; (libraries
+;   str unix
+;   xix_commons
+;   xix_collections
+; )
+; ; 'byte' is for ocamldebug
+; (modes native byte))
+;
+;(install
+; (package xix)
+; (section bin)
+; (files
+;  (main.exe as cpp)
+;  ; useful to debug, see ../../debug and ocamldebug
+;  (main.bc as cpp.bc))
+;)

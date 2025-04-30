@@ -3,12 +3,13 @@
 TOP=../..
 INCLUDES=-I .
 
-SRC=Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
- Common.ml common2.ml\
- OCaml.ml\
+SRC=Cap.ml \
+ CapStdlib.ml CapSys.ml CapUnix.ml \
+ Common.ml common2.ml \
+ Dumper.ml OCaml.ml \
  Console.ml UConsole.ml CapConsole.ml \
- Logs.ml Fpath.ml\
- IO.ml\
+ Logs.ml \
+ Fpath.ml Chan.ml IO.ml \
  Date.ml
 
 <$TOP/mkconfig

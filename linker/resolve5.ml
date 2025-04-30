@@ -29,7 +29,7 @@ let build_graph symbols xs =
   nodes |> Array.iter (fun n ->
     match n.T5.instr with
     | T5.TEXT _ | T5.WORD _ -> ()
-    | T5.I (inst, cond) ->
+    | T5.I (inst, _condXXX) ->
         let resolve_branch_operand opd =
           match !opd with
           | IndirectJump _ -> None

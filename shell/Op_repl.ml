@@ -1,4 +1,3 @@
-open Common
 
 module R = Runtime
 
@@ -9,7 +8,7 @@ let op_REPL (caps : < Cap.exit; ..>) () =
 
   (* todo: flush error and reset error count *)
   if !Flags.sflag && not (Status.truestatus()) 
-  then pr2 (spf "status=%s" (Status.getstatus ()));
+  then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
 
   (* set prompstr *)
   if t.R.iflag then begin
@@ -48,7 +47,7 @@ let op_REPL (caps : < Cap.exit; ..>) () =
     (* less: was doing Xreturn originally *)
     then failwith s
     else begin
-      pr2 s;
+      Logs.err (fun m -> m "%s" s);
       (* go back for next command *)
       decr t.R.pc;
     end

@@ -2,7 +2,6 @@
 open Stdcompat (* for |> *)
 open Common
 
-open Ast_asm5
 module T = Types
 module T5 = Types5
 
@@ -124,7 +123,7 @@ let layout_text symbols2 init_text cg =
       );
     poolopt |> Common.if_some (fun pool ->
       match pool with
-      | Codegen5.LPOOL -> pr2 "TODO: LPOOL"
+      | Codegen5.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
       | Codegen5.PoolOperand imm_or_ximm ->
           let instr = T5.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
@@ -158,10 +157,10 @@ let layout_text symbols2 init_text cg =
   );
   if !Flags.debug_layout then begin
     cg |> T5.iter (fun n ->
-      pr2 (spf "%d: %s" n.T5.real_pc
+      Logs.app (fun m -> m  "%d: %s" n.T5.real_pc
              (n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
       n.T5.branch |> Common.if_some (fun n -> 
-        pr2 (spf " -> branch: %d" n.T5.real_pc)
+        Logs.app (fun m -> m " -> branch: %d" n.T5.real_pc)
       )
     );
   end;

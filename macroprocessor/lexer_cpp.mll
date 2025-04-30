@@ -72,7 +72,7 @@ rule token = parse
             | [] -> [], false
             (* todo: __VA_ARGS__ *)
             | ["..."] -> [], true
-            | "..."::xs -> error "... should be the last parameter of a macro"
+            | "..."::_ -> error "... should be the last parameter of a macro"
             | x::xs ->
                if x =~ "[A-Za-z_][A-Za-z_0-9]*" 
                then let (params, bool) = aux xs in x::params, bool

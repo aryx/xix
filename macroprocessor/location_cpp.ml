@@ -47,11 +47,11 @@ exception Error of string * loc
 let dump_event event =
   match event with
   | Include file -> 
-      pr (spf "%4d: %s" !line file)
+      Logs.app (fun m -> m "%4d: %s" !line file)
   | Line (local_line, file) -> 
-      pr (spf "%4d: %s (#line %d)" !line file local_line)
+      Logs.app (fun m -> m "%4d: %s (#line %d)" !line file local_line)
   | Eof -> 
-      pr (spf "%4d: <pop>" !line)
+      Logs.app (fun m -> m "%4d: <pop>" !line)
 
 (*****************************************************************************)
 (* Entry points *)
@@ -96,5 +96,5 @@ let final_loc_of_loc lineno =
   in
   aux ("<nofile>", 0, 0) [] (List.rev !history)
 
-let final_loc_and_includers_of_loc lineno =
+let _final_loc_and_includers_of_loc _lineno =
   raise Todo

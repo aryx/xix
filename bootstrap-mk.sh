@@ -65,6 +65,7 @@ ocamlc.opt $OCAMLCFLAGS -c CapConsole.ml
 ocamlc.opt $OCAMLCFLAGS -c OCaml.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.ml
 ocamlc.opt $OCAMLCFLAGS -c Fpath.ml
+ocamlc.opt $OCAMLCFLAGS -c Chan.ml
 ocamlc.opt $OCAMLCFLAGS -c Date.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.ml
 ocamlc.opt $OCAMLCFLAGS -c OCaml.ml

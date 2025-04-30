@@ -66,31 +66,6 @@ let (<=>) a b =
     then Inf 
     else Sup
 
-let sort_by_val_highfirst xs =
-  List.sort (fun (_k1,v1) (_k2,v2) -> compare v2 v1) xs
-let sort_by_val_lowfirst xs =
-  List.sort (fun (_k1,v1) (_k2,v2) -> compare v1 v2) xs
-
-let sort_by_key_highfirst xs =
-  List.sort (fun (k1,_v1) (k2,_v2) -> compare k2 k1) xs
-let sort_by_key_lowfirst xs =
-  List.sort (fun (k1,_v1) (k2,_v2) -> compare k1 k2) xs
-
-let group_by f xs =
-  (* use Hashtbl.find_all property *)
-  let h = Hashtbl.create 101 in
-
-  (* could use Set *)
-  let hkeys = Hashtbl.create 101 in
-  
-  xs |> List.iter (fun x ->
-    let k = f x in
-    Hashtbl.replace hkeys k true;
-    Hashtbl.add h k x
-  );
-  Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
-
-
 let memoized ?(use_cache=true) h k f =
   if not use_cache
   then f ()
@@ -207,6 +182,32 @@ let nth i st =
   | Some x -> x
     
 
+end
+
+module Assoc = struct
+let sort_by_val_highfirst xs =
+  List.sort (fun (_k1,v1) (_k2,v2) -> compare v2 v1) xs
+let sort_by_val_lowfirst xs =
+  List.sort (fun (_k1,v1) (_k2,v2) -> compare v1 v2) xs
+
+let sort_by_key_highfirst xs =
+  List.sort (fun (k1,_v1) (k2,_v2) -> compare k2 k1) xs
+let sort_by_key_lowfirst xs =
+  List.sort (fun (k1,_v1) (k2,_v2) -> compare k1 k2) xs
+
+let group_by f xs =
+  (* use Hashtbl.find_all property *)
+  let h = Hashtbl.create 101 in
+
+  (* could use Set *)
+  let hkeys = Hashtbl.create 101 in
+  
+  xs |> List.iter (fun x ->
+    let k = f x in
+    Hashtbl.replace hkeys k true;
+    Hashtbl.add h k x
+  );
+  Hashtbl.fold (fun k _ acc -> (k, Hashtbl.find_all h k)::acc) hkeys []
 end
 
 module Hashtbl_ = struct    

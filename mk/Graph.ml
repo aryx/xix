@@ -249,7 +249,7 @@ let rec check_ambiguous node =
     node.arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
   (* opti? rule_exec is big now, so maybe need have a rule_exec id *)
   let groups_by_rule =
-    arcs_with_recipe |> Common.group_by (fun arc -> arc.rule)
+    arcs_with_recipe |> Assoc.group_by (fun arc -> arc.rule)
   in
   
   match List.length groups_by_rule with

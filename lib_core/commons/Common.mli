@@ -28,13 +28,6 @@ val optionize: (unit -> 'a) -> 'a option
 
 val (<=>): 'a -> 'a -> compare
 
-val sort_by_val_highfirst : ('a * 'b) list -> ('a * 'b) list
-val sort_by_val_lowfirst : ('a * 'b) list -> ('a * 'b) list
-val sort_by_key_highfirst : ('a * 'b) list -> ('a * 'b) list
-val sort_by_key_lowfirst : ('a * 'b) list -> ('a * 'b) list
-
-val group_by : ('a -> 'b) -> 'a list -> ('b * 'a list) list
-
 val memoized :
   ?use_cache:bool -> ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
 
@@ -71,6 +64,16 @@ module Stack_ :
   sig
     val top_opt: 'a Stack.t -> 'a option
     val nth: int -> 'a Stack.t -> 'a
+  end
+
+module Assoc :
+  sig
+    val sort_by_val_highfirst : ('a * 'b) list -> ('a * 'b) list
+    val sort_by_val_lowfirst : ('a * 'b) list -> ('a * 'b) list
+    val sort_by_key_highfirst : ('a * 'b) list -> ('a * 'b) list
+    val sort_by_key_lowfirst : ('a * 'b) list -> ('a * 'b) list
+
+    val group_by : ('a -> 'b) -> 'a list -> ('b * 'a list) list
   end
 
 module Hashtbl_ :

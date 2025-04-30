@@ -647,7 +647,7 @@ let gen symbols2 config cg =
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
                               (T5.s_of_loc n.T5.loc)));
 
-    let xs = instrs |> List.map Common.sort_by_val_highfirst in
+    let xs = instrs |> List.map Assoc.sort_by_val_highfirst in
     
     if !Flags.debug_gen 
     then begin 

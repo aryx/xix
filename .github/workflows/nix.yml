@@ -28,8 +28,8 @@ jobs:
       - name: Build XiX using Nix
         run: |
           nix-shell --run '
-            eval $(opam env)
-            dune build
+            ./configure
+            make
           '
 
     strategy:

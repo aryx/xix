@@ -29,19 +29,6 @@ let pr2 s =
   prerr_string "\n";
   flush stderr
 
-let with_file_out f file = 
-  let chan = open_out file in
-  let res = f chan in
-  close_out chan;
-  res
-
-(* less: unwind_protect? *)
-let with_file_in f file = 
-  let chan = open_in file in
-  let res = f chan in
-  close_in chan;
-  res
-
 let push a aref =
   aref := a::!aref
 

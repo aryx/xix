@@ -32,9 +32,10 @@ let parse (defs, paths) file =
 
 
 let parse_no_cpp file =
-  file |> Common.with_file_in (fun chan ->
+  let file = Fpath.v file in
+  file |> UChan.with_open_in (fun (chan : Chan.i) ->
     L.line := 1;
-    let lexbuf = Lexing.from_channel chan in
+    let lexbuf = Lexing.from_channel chan.ic in
     try 
       Parser_asm5.program Lexer_asm5.token lexbuf
     with Parsing.Parse_error ->

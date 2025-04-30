@@ -10,16 +10,18 @@ let version = 6
 
 (* can normalize before? or check every invariants? *)
 let save obj file =
-  file |> Common.with_file_out (fun chan ->
-    output_value chan (version, obj)
+  let file = Fpath.v file in
+  file |> UChan.with_open_out (fun (chan : Chan.o) ->
+    output_value chan.oc (version, obj)
   )
 
 (* for safer marshalling *)
 exception WrongVersion
 
 let load file =
-  file |> Common.with_file_in (fun chan ->
-    let (ver, obj) = input_value chan in
+  let file = Fpath.v file in
+  file |> UChan.with_open_in (fun (chan : Chan.i) ->
+    let (ver, obj) = input_value chan.ic in
     if ver <> version
     then raise WrongVersion
     else obj

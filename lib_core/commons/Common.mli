@@ -2,6 +2,7 @@
 type byte = char
 (* type bytes = string *)
 
+(* TODO: delete, use Fpath.t *)
 type filename = string
 type dirname = string
 
@@ -17,9 +18,6 @@ val spf : ('a, unit, string) format -> 'a
 (* TODO: delete *)
 val pr : string -> unit
 val pr2 : string -> unit
-
-val with_file_out : (out_channel -> 'a) -> filename -> 'a
-val with_file_in : (in_channel -> 'a) -> filename -> 'a
 
 val rnd : int -> int -> int
 

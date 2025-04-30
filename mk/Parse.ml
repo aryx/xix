@@ -1,14 +1,16 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 let parse file =
-  file |> Common.with_file_in (fun chan ->
+  let file = Fpath.v file in
+  file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
-    Globals.file := file;
+    Globals.file := !!file;
     Lexer.state := Lexer.Start;
 
-    let lexbuf = Lexing.from_channel chan in
+    let lexbuf = Lexing.from_channel chan.ic in
     let lexfunc lexbuf =
       (match !Lexer.state with
       | Lexer.Start 

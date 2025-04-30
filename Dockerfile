@@ -9,9 +9,8 @@
 #    (the byterun/ from ocaml 1.07 managed to run bytecode from 3.10.0?)
 #    and oldest version that can work for stdcompat
 #  - use 4.09.1 because oldest version that can work with ppx_deriving and
-#    stdcompat and Cap.ml and also that I can install on my Arch linux machine.
-#    In theory ppx_deriving works since 4.02.0 but I can't install this
-#    old version on my machine (get compilation errors about inet not available).
+#    stdcompat and Cap.ml
+#    (in theory ppx_deriving works for 4.05.0 but Cap.mli does not parse still)
 
 FROM ubuntu:22.04
 #alt: alpine:3.21

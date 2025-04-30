@@ -28,7 +28,7 @@ type graph_walker = {
 let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
   (* less: start just from HEAD? *)
   let heads = 
-    Repository.all_refs r |> Common.map_filter (fun aref ->
+    Repository.all_refs r |> List.filter_map (fun aref ->
       if aref =~ "refs/heads/"
       then Some (Repository.follow_ref_some r (Refs.Ref aref))
       else None

@@ -51,8 +51,6 @@ let rec filter_some = function
   | None :: l -> filter_some l
   | Some e :: l -> e :: filter_some l
 
-let map_filter f xs = xs |> List.map f |> filter_some
-
 let optionize f =
   try Some (f ()) with Not_found -> None
 

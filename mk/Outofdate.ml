@@ -58,7 +58,7 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
     let all_targets = master_rule.R.all_targets in
     (* less: outofdate_targets (aka target) *)
     let nodes =
-      all_targets |> Common.map_filter (fun target ->
+      all_targets |> List.filter_map (fun target ->
         if Hashtbl.mem G.hnodes target
         then Some (Hashtbl.find G.hnodes target)
         else None

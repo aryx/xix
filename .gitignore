@@ -33,6 +33,8 @@ bin/*
 
 # dune generated files
 /_build
+# opam and nix
+/_opamroot
 
 # Parsers
 /assembler/lexer_asm5.ml

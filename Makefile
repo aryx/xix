@@ -35,6 +35,9 @@ promote:
 
 build-docker:
 	docker build -t "xix" .
+.PHONY: shell
+shell:
+	nix-shell --pure
 
 ###############################################################################
 # Developer targets

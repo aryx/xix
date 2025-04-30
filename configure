@@ -1,0 +1,12 @@
+#!/bin/sh
+
+#TODO:
+# - check opam is in PATH
+# - check opam was initialized
+# - use opam.locked
+
+#in theory we should also
+# - check the ocaml switch is a good version
+# - check external deps are installed (e.g., pcre)
+
+opam install --no-depexts --deps-only ./xix.opam -y

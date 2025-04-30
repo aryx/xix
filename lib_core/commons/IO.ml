@@ -207,7 +207,7 @@ let scanf i fmt =
   Scanf.kscanf ib (fun _ exn -> raise exn) fmt
 
 let printf o fmt =
-  Printf.kprintf (fun s -> nwrite_string o s) fmt
+  Printf.ksprintf (fun s -> nwrite_string o s) fmt
 
 let flush o = o.out_flush()
 

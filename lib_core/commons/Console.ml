@@ -110,6 +110,7 @@ type color =
 
 (* for boostrap-mk.sh, will be implemented for real by deriving below *)
 let show_style _ = "NOTDERIVED"
+[@@warning "-32"]
 
 type style =
   | Reset
@@ -167,7 +168,7 @@ let sprintf styles fmt =
   | On ->
       (match styles with
       | Foreground x ->
-            Printf.kprintf (fun s -> (color_pre x) ^ s ^ (color_post ())) fmt
+            Printf.ksprintf (fun s -> (color_pre x) ^ s ^ (color_post ())) fmt
       | Reset
       | Bold
       | Underlined

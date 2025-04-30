@@ -1,4 +1,3 @@
-
 (* Evaluate the variables and backquotes in the mkfile (hence Cap.exec),
  * process the included files, index the rules, and return the 
  * final environment (actually modify by side effect the environment).
@@ -9,7 +8,9 @@
  * Note that eval() will call parse() internally as well as eval() itself
  * recursively to process '<file' instructions.
  *)
-val eval: 
-  < Cap.fork; Cap.exec; .. > ->
-  Env.t -> (string list ref) -> Ast.instr list -> 
+val eval :
+  < Cap.fork ; Cap.exec ; .. > ->
+  Env.t ->
+  string list ref ->
+  Ast.instr list ->
   Rules.rules * Env.t

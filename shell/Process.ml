@@ -22,8 +22,8 @@ let return (caps : < Cap.exit; .. >) () =
   match !R.runq with
   | [] -> failwith "empty runq"
   (* last thread in runq, we exit then *)
-  | [x] -> exit caps (Status.getstatus ())
-  | x::xs -> 
+  | [_x] -> exit caps (Status.getstatus ())
+  | _x::xs -> 
       R.runq := xs
 
 

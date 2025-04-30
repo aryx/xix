@@ -1,5 +1,3 @@
-open Common
-
 module R = Runtime
 
 (* Set to true so the prompt is displayed before the first character is read.
@@ -24,7 +22,7 @@ let pprompt () =
     let promptv = (Var.vlook "prompt").R.v in
     prompt := 
       (match promptv with
-      | Some [x;y] -> y
+      | Some [_x;y] -> y
        (* stricter? display error message if prompt set no 2 elements?*)
       | Some _ | None -> "\t"
       );

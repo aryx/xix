@@ -171,7 +171,7 @@ let outcode_seq seq eflag (emit,set,idx) =
         
         set nextcase (O.I !idx);
 
-        let rec aux cmds =
+        let aux cmds =
           match cmds with
           | [] -> ()
           | (A.Simple (A.Word ("case", false), ws))::cmds ->
@@ -181,7 +181,7 @@ let outcode_seq seq eflag (emit,set,idx) =
               let nextcase = !idx in
               emit (O.I 0);
 
-              let cmds_for_this_case, other_cases = split_when_case cmds in
+              let cmds_for_this_case, _other_cases = split_when_case cmds in
               cmds_for_this_case |> List.iter (fun cmd ->
                 xcmd cmd eflag
               );

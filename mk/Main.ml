@@ -300,7 +300,7 @@ let main (caps: Cap.all_caps) : unit =
                 (* todo: if dump_jobs, print pid we wait and its recipe *)
                 Unix.wait () |> ignore;
                 decr Scheduler.nrunning
-              with Unix.Unix_error (error, str1, str2) ->
+              with Unix.Unix_error (error, _str1, _str2) ->
                 failwith (spf "%s" (Unix.error_message error))
           done;
           CapStdlib.exit caps (1)

@@ -52,7 +52,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
 
       (* less: cdpath vlook *)
       (match argv with
-      | [cd] -> 
+      | [_cd] -> 
           let v = (Var.vlook "home").R.v in
           (match v with
           | Some (dir::_) ->
@@ -82,7 +82,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
 
       let iflag =
         match t.R.argv with
-        | "-i"::xs -> R.pop_word (); true
+        | "-i"::_xs -> R.pop_word (); true
         | _ -> false
       in
       (match t.R.argv with
@@ -129,7 +129,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; ..>) s =
             Status.setstatus (if is_set then "" else "flag not set");
           end
 
-      | [_flag;letter;set] ->
+      | [_flag;_letter;_set] ->
           failwith "TODO: flag letter +- not handled yet"
 
       | _ -> E.error caps ("Usage: flag [letter] [+-]")

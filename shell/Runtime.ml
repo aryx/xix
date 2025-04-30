@@ -1,5 +1,4 @@
 open Stdcompat (* for |> *)
-open Common
 
 (*****************************************************************************)
 (* Prelude *)
@@ -94,7 +93,7 @@ let runq = ref []
 let cur () =
   match !runq with
   | [] -> failwith "empty runq"
-  | x::xs -> x
+  | x::_xs -> x
 
 let push_list () =
   let t = cur () in
@@ -139,11 +138,11 @@ let pop_redir () =
   let t= cur () in
   match t.redirections with
   | [] -> failwith "pop_redir: no starting redir"
-  | []::xxs -> failwith "popredir null!"
+  | []::_xxs -> failwith "popredir null!"
   | (x::xs)::xxs ->
       t.redirections <- xs::xxs;
       (match x with
-      | FromTo (fd_from, fd_to) ->
+      | FromTo (fd_from, _fd_to) ->
           Unix.close fd_from
       | Close _ ->
           ()
@@ -188,7 +187,7 @@ let mk_thread code pc locals =
     redirections = 
       (match !runq with
       | [] -> []::[]
-      | t::ts -> []::t.redirections
+      | t::_ts -> []::t.redirections
       );
   } in
   t

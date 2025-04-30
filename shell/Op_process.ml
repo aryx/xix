@@ -30,7 +30,7 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () =
 
   match argv with
   | [] -> E.error caps "empty argument list" 
-  | prog::xs -> 
+  | prog::_xs -> 
       R.doredir t.R.redirections;
       execute caps argv (Path.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
@@ -80,7 +80,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
               pr2 "builtin: empty argument list";
               Status.setstatus "empty arg list";
               R.pop_list ()
-          | argv0::args ->
+          | argv0::_args ->
               R.pop_word ();
               Builtin.dispatch caps argv0
           )

@@ -67,7 +67,7 @@ let exec_shell (caps : < Cap.exec; ..>) shellenv flags extra_params =
      * Note however that there is no problem with mk-sh.byte, so
      * this is an rc issue.
      *)
-    |> List_.exclude (fun (s, xs) -> xs = [])
+    |> List_.exclude (fun (_s, xs) -> xs = [])
 
     |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
   in

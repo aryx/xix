@@ -1,5 +1,3 @@
-open Common
-
 module R = Runtime
 
 (* less: error1 similar to error but without %r *)

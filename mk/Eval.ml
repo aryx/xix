@@ -108,7 +108,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
          (* variable contains many elements (array) *)
          | _::_::_, [], [] -> 
              Left ys
-         | _::_::_, acc, xs ->
+         | _::_::_, _acc, _xs ->
              (* stricter: *)
              error loc (spf "use of list variable '%s' in scalar context" v)
          )
@@ -190,7 +190,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
         let recipe = 
           match res with
           | Left xs -> String.concat " " xs
-          | Right xs -> raise Todo
+          | Right _xs -> raise Todo
         in
         if recipe = ""
         then failwith "missing include program name";

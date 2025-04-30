@@ -73,7 +73,7 @@ let do_action s xs =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let bootstrap_simple = 
+let _bootstrap_simple = 
   [| O.F O.REPL |]
 
 (* The real one is more complex:

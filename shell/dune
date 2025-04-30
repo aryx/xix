@@ -1,0 +1,18 @@
+(executable
+ (name Main)
+ (libraries
+   str unix
+   xix_commons
+   xix_collections
+ )
+ ; 'byte' is for ocamldebug
+ (modes native byte))
+
+(install
+ (package xix)
+ (section bin)
+ (files
+  (Main.exe as rc)
+  ; useful to debug, see ../../debug and ocamldebug
+  (Main.bc as rc.bc))
+)

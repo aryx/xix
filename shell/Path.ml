@@ -19,5 +19,5 @@ let search_path_for_cmd s =
     )
 
 
-let find_in_path s paths =
+let find_in_path _s _paths =
   raise Todo

@@ -183,7 +183,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
       let pc = t.R.pc in
       (match argv with
       | []       -> E.error caps "> requires file"
-      | x::y::xs -> E.error caps "> requires singleton"
+      | _x::_y::_xs -> E.error caps "> requires singleton"
       | [file] ->
           (try 
             let fd_from = 
@@ -196,7 +196,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
             R.push_redir (R.FromTo (fd_from, fd_to));
             incr pc;
             R.pop_list();
-          with Unix.Unix_error (err, s1, s2) ->
+          with Unix.Unix_error (_err, _s1, _s2) ->
             prerr_string (spf "%s: " file);
             E.error caps "can't open"
           )

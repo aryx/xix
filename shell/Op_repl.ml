@@ -16,7 +16,7 @@ let op_REPL (caps : < Cap.exit; ..>) () =
     let promptv = (Var.vlook "prompt").R.v in
     Prompt.prompt := 
       (match promptv with
-      | Some (x::xs) -> x
+      | Some (x::_xs) -> x
       (* stricter? display error message if prompt set but no element?*)
       | Some [] | None -> "% "
       );

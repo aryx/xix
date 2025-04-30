@@ -1,5 +1,3 @@
-open Common
-
 module Ocaml = OCaml
 
 (* less: could use Any *)

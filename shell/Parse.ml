@@ -35,7 +35,7 @@ let parse_line lexbuf =
   Globals.skipnl := false;
   let got_skipnl_last_round = ref false in
 
-  let rec lexfunc lexbuf =
+  let lexfunc lexbuf =
     (* less: could do that in caller? would remove need for doprompt *)
     if !Prompt.doprompt
     then Prompt.pprompt ();

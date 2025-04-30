@@ -52,6 +52,7 @@ ocamlc.opt $OCAMLCFLAGS -c common2.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.mli
 ocamlc.opt $OCAMLCFLAGS -c Fpath.mli
+ocamlc.opt $OCAMLCFLAGS -c CapFS.mli
 ocamlc.opt $OCAMLCFLAGS -c Date.mli
 ocamlc.opt $OCAMLCFLAGS -c Cap.ml
 ocamlc.opt $OCAMLCFLAGS -c CapStdlib.ml
@@ -66,6 +67,7 @@ ocamlc.opt $OCAMLCFLAGS -c OCaml.mli
 ocamlc.opt $OCAMLCFLAGS -c Logs.ml
 ocamlc.opt $OCAMLCFLAGS -c Fpath.ml
 ocamlc.opt $OCAMLCFLAGS -c Chan.ml
+ocamlc.opt $OCAMLCFLAGS -c CapFS.ml
 ocamlc.opt $OCAMLCFLAGS -c Date.ml
 ocamlc.opt $OCAMLCFLAGS -c IO.ml
 ocamlc.opt $OCAMLCFLAGS -c OCaml.ml

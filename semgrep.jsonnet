@@ -38,7 +38,9 @@ local cap_rules = [
 	 'Unix.execv',
 	 'Unix.fork',
 	 'Unix.environment',
-	 #'Sys.getenv'
+	 #'Sys.getenv',
+	 #'open_in_bin',
+	 #'open_in',
 	]
     },
     languages: ['ocaml'],

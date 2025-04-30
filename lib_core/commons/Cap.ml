@@ -76,6 +76,8 @@ end
 module FS = struct
   type readdir = cap
   type tmp = cap
+  type open_in = cap
+  type open_out = cap
 end
 
 (**************************************************************************)
@@ -163,7 +165,9 @@ end
 (* fs *)
 type readdir = < readdir : FS.readdir >
 type tmp = < tmp : FS.tmp >
-type fs = < readdir ; tmp >
+type open_in = < open_in : FS.open_in >
+type open_out = < open_out : FS.open_out >
+type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
 type stdin = < stdin : Console.stdin >
@@ -211,6 +215,8 @@ let powerbox : all_caps =
     (* fs *)
     method readdir = ()
     method tmp = ()
+    method open_in = ()
+    method open_out = ()
 
     (* console *)
     method stdin = ()

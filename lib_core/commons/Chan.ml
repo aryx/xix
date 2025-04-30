@@ -1,6 +1,6 @@
 (* Yoann Padioleau
  *
- * Copyright (C) 2023-2024 Semgrep Inc.
+ * Copyright (C) 2023-2025 Semgrep Inc.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public License
@@ -12,6 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
  * LICENSE for more details.
  *)
+open Fpath.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -29,7 +30,9 @@
 (* Types *)
 (*****************************************************************************)
 
-(* alt: call it source (as in spacegrep Src_file.ml) *)
+(* alt: call it source (as in spacegrep Src_file.ml) 
+ * alt: move in separate Origin.ml (as in semgrep)
+ *)
 type origin = 
   | File of Fpath.t
   | Stdin
@@ -44,4 +47,11 @@ type o = { oc : out_channel; p : Fpath.t }
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
-(* mostly a copy of In_channel.ml, Out_channel.ml, and some funcs in File.ml *)
+
+let origin (chani : i) =
+  match chani.origin with
+  | File f -> !!f
+  | Stdin -> "<stdin>"
+  | String -> "<string>"
+  | Channel -> "<channel>"
+  | Network -> "<network>"

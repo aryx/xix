@@ -34,6 +34,9 @@ end
 module FS : sig
   type readdir
   type tmp
+  (* TODO: refine in open_argv, open_pwd, open_root *)
+  type open_in
+  type open_out
 end
 
 module Exec : sig
@@ -62,7 +65,9 @@ end
 (* fs *)
 type readdir = < readdir : FS.readdir >
 type tmp = < tmp : FS.tmp >
-type fs = < readdir ; tmp >
+type open_in = < open_in : FS.open_in >
+type open_out = < open_out : FS.open_out >
+type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
 type stdin = < stdin : Console.stdin >

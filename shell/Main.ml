@@ -1,6 +1,7 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 module R = Runtime
 module O = Opcode
@@ -42,28 +43,30 @@ let usage =
 (* Testing *)
 (*****************************************************************************)
 
-let do_action s xs =
+let do_action caps s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
-        Logs.info (fun m -> m "processing %s" file);
-        let chan = open_in file in
-        let lexbuf = Lexing.from_channel chan in
+        let file = Fpath.v file in
+        Logs.info (fun m -> m "processing %s" !!file);
+        CapFS.with_open_in caps file (fun (chan : Chan.i) ->
+          let lexbuf = Lexing.from_channel chan.ic in
 
-        (* for error reporting I need a runq *)
-        let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
-        R.runq := t::!R.runq;
-        t.R.file <- Some file;
+          (* for error reporting I need a runq *)
+          let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
+          R.runq := t::!R.runq;
+          t.R.file <- Some !!file;
 
-        let rec loop () =
-          let line = Parse.parse_line lexbuf in
-          match line with
-          | Some seq -> 
-            Logs.app (fun m -> m "%s" (Dumper_.s_of_cmd_sequence seq));
-            loop ();
-          | None -> ()
-        in
-        loop ()
+          let rec loop () =
+            let line = Parse.parse_line lexbuf in
+            match line with
+            | Some seq -> 
+              Logs.app (fun m -> m "%s" (Dumper_.s_of_cmd_sequence seq));
+              loop ();
+            | None -> ()
+          in
+          loop ()
+       )
       )
 
   | _ -> failwith ("action not supported: " ^ s)
@@ -211,7 +214,7 @@ let main (caps : Cap.all_caps) : unit =
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
-    do_action !action (List.rev !args); 
+    do_action caps !action (List.rev !args); 
     CapStdlib.exit caps 0 
   end;
 

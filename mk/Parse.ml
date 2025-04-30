@@ -3,8 +3,7 @@ open Stdcompat (* for |> *)
 open Common
 open Fpath.Operators
 
-let parse file =
-  let file = Fpath.v file in
+let parse (file : Fpath.t) =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
     Globals.file := !!file;

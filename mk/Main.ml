@@ -1,6 +1,7 @@
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 module G = Graph
 module R = Rules
@@ -110,14 +111,14 @@ let do_action caps s xs =
   | "-test_parser" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
-        let instrs = Parse.parse file in
+        let instrs = Parse.parse (Fpath.v file) in
         CapConsole.print caps (spf "%s" (Ast.show_instrs instrs))
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
         let env = Env.initenv caps in
-        let instrs = Parse.parse file in
+        let instrs = Parse.parse (Fpath.v file) in
         let _rules, env = Eval.eval caps env (ref []) instrs in
         Env.dump_env env;
         ()
@@ -162,7 +163,7 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 
 
-let build_targets (caps : caps) (infile : Common.filename) (targets : string list ref) (vars : (string*string) list) : unit =
+let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
     let env = Env.initenv caps in
@@ -175,7 +176,7 @@ let build_targets (caps : caps) (infile : Common.filename) (targets : string lis
     );
     
     if !Flags.debugger then begin
-      CapSys.chdir caps (Filename.dirname infile);
+      CapSys.chdir caps (Filename.dirname !!infile);
       Env.add_var env "objtype" ["386"]
     end;
 
@@ -283,7 +284,7 @@ let main (caps: Cap.all_caps) : unit =
   end;
 
   try 
-    build_targets (caps :> caps ) !infile targets !vars
+    build_targets (caps :> caps ) (Fpath.v !infile) targets !vars
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn

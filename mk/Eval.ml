@@ -175,7 +175,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
               if not (Sys.file_exists file)
               then warning loc (spf "skipping missing include file: %s" file)
               else
-                let xs = Parse.parse file in
+                let xs = Parse.parse (Fpath.v file) in
                 (* recurse *)
                 instrs xs
           (* new? what does mk does? *)
@@ -196,7 +196,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
         then failwith "missing include program name";
         let shellenv = Env.shellenv_of_env env in
         let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-        let xs = Parse.parse tmpfile in
+        let xs = Parse.parse (Fpath.v tmpfile) in
         (* recurse *)
         instrs xs
 

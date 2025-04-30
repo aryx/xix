@@ -1,2 +1,2 @@
 (* !internally modifies Globals.line and Globals.file! *)
-val parse : Common.filename -> Ast.instr list
+val parse : Fpath.t -> Ast.instr list

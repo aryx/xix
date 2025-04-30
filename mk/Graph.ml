@@ -60,7 +60,7 @@ type node = {
     | BeingMade
     | Made
 
-type graph = node (* the root *)
+type t = node (* the root *)
 
 
 (* The graph is a DAG; some arcs may point to previously created nodes.

@@ -1,7 +1,5 @@
-
-val doprompt: bool ref
-val prompt: string ref
+val doprompt : bool ref
+val prompt : string ref
 
 (* !will reset doprompt! *)
-val pprompt: 
-  unit -> unit
+val pprompt : unit -> unit

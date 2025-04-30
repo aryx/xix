@@ -1,3 +1,1 @@
-
-val flook: string -> Runtime.fn option
-
+val flook : string -> Runtime.fn option

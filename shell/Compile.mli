@@ -1,2 +1,1 @@
-
-val compile: Ast.cmd_sequence -> Opcode.codevec
+val compile : Ast.cmd_sequence -> Opcode.codevec

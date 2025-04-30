@@ -41,6 +41,8 @@ local cap_rules = [
 	 #'Sys.getenv',
 	 #'open_in_bin',
 	 #'open_in',
+	 #'UChan.with_open_in',
+	 #'UChan.with_open_out',
 	]
     },
     languages: ['ocaml'],

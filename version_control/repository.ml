@@ -79,7 +79,8 @@ let index_to_filename r =
 (* todo: see code of _Gitfile.__init__ O_EXCL ... *)
 let with_file_out_with_lock f file =
   (* todo: create .lock file and then rename *)
-  Common.with_file_out f file
+  let file = Fpath.v file in
+  UChan.with_open_out (fun (chan : Chan.o) -> f chan.oc) file
 (*e: function [[Repository.with_file_out_with_lock]] *)
 
 
@@ -131,8 +132,9 @@ let rec walk_dir f dir =
 let read_ref r aref =
   (* less: packed refs *)
   let file = ref_to_filename r aref in
-  file |> Common.with_file_in (fun ch ->
-    ch |> IO.input_channel |> Refs.read
+  let file = Fpath.v file in
+  file |> UChan.with_open_in (fun (ch : Chan.i) ->
+    ch.ic |> IO.input_channel |> Refs.read
   )
 (*e: function [[Repository.read_ref]] *)
 
@@ -247,10 +249,11 @@ let all_refs r =
 let read_obj r h =
   (* todo: look for packed obj *)
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
-  path |> Common.with_file_in (fun ch ->
+  let path = Fpath.v path in
+  path |> UChan.with_open_in (fun (ch : Chan.i) ->
     (* less: check read everything from channel? *)
     (* todo: check if sha consistent? *)
-    ch |> IO.input_channel |> Compression.decompress |> Objects.read
+    ch.ic |> IO.input_channel |> Compression.decompress |> Objects.read
   )
 (*e: function [[Repository.read_obj]] *)
 
@@ -345,9 +348,10 @@ let content_from_path_and_unix_stat full_path stat =
   | Unix.S_LNK ->
     Unix.readlink full_path
   (*e: [[Repository.content_from_path_and_unix_stat()]] match kind cases *)
-  | Unix.S_REG -> 
-    full_path |> Common.with_file_in (fun ch ->
-      ch |> IO.input_channel |> IO.read_all
+  | Unix.S_REG ->
+    let full_path = Fpath.v full_path in
+    full_path |> UChan.with_open_in (fun (ch : Chan.i) ->
+      ch.ic |> IO.input_channel |> IO.read_all
     )
   | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
                      full_path)
@@ -440,13 +444,13 @@ let build_file_from_blob fullpath blob perm =
     (match oldstat with
     (* opti: if same content, no need to write anything *)
     | Some { Unix.st_size = x } when x = String.length blob && 
-      (fullpath |> Common.with_file_in (fun ch -> 
-        (ch |> IO.input_channel |> IO.read_all ) = blob
+      ((Fpath.v fullpath) |> UChan.with_open_in (fun (ch : Chan.i) -> 
+        (ch.ic |> IO.input_channel |> IO.read_all ) = blob
        )) ->
       ()
     | _ ->
-      fullpath |> Common.with_file_out (fun ch ->
-        output_bytes ch (Bytes.of_string blob)
+      (Fpath.v fullpath) |> UChan.with_open_out (fun (ch : Chan.o) ->
+        output_bytes ch.oc (Bytes.of_string blob)
       );
       (* less: honor filemode? *)
       Unix.chmod fullpath 
@@ -565,8 +569,8 @@ let open_ root =
       index = 
         (if Sys.file_exists (path / "index")
          then 
-          (path / "index") |> Common.with_file_in (fun ch ->
-            ch |> IO.input_channel |> Index.read)
+          (Fpath.v (path / "index")) |> UChan.with_open_in (fun (ch : Chan.i) ->
+            ch.ic |> IO.input_channel |> Index.read)
          else Index.empty
         );
       (*x: [[Repository.open_()]] other fields settings *)

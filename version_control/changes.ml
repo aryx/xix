@@ -45,8 +45,9 @@ let content_from_path_and_stat_index path stat_info =
   | Index.Link ->
     Unix.readlink path
   | Index.Normal | Index.Exec ->
-      path |> Common.with_file_in (fun ch ->
-        ch |> IO.input_channel |> IO.read_all
+      let path = Fpath.v path in
+      path |> UChan.with_open_in (fun (ch : Chan.i) ->
+        ch.ic |> IO.input_channel |> IO.read_all
       )
   (*s: [[Changes.content_from_path_and_stat_index()]] match mode cases *)
   | Index.Gitlink -> failwith "submodule not supported"

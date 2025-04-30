@@ -30,9 +30,10 @@ let test_sha1 content =
 (*e: function [[Cmd_test.test_sha1]] *)
 
 let test_diff file1 file2 =
-  let read_all path = 
-      path |> Common.with_file_in (fun ch ->
-        ch |> IO.input_channel |> IO.read_all
+  let read_all path =
+      let path = Fpath.v path in
+      path |> UChan.with_open_in (fun (ch : Chan.i) ->
+        ch.ic |> IO.input_channel |> IO.read_all
       )
   in
   let content1 = read_all file1 in
@@ -47,9 +48,10 @@ let test_diff file1 file2 =
   end
 
 let test_diff3 fileo filea fileb =
-  let read_all path = 
-      path |> Common.with_file_in (fun ch ->
-        ch |> IO.input_channel |> IO.read_all
+  let read_all path =
+      let path = Fpath.v path in
+      path |> UChan.with_open_in (fun (ch : Chan.i) ->
+        ch.ic |> IO.input_channel |> IO.read_all
       )
   in
   let contento = read_all fileo in

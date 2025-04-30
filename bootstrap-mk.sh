@@ -44,6 +44,7 @@ ocamlc.opt  Set_.cmo Map_.cmo -a -o lib.cma
 
 cd $TOP/lib_core/commons/
 ocamlc.opt $OCAMLCFLAGS -c Cap.mli
+ocamlc.opt $OCAMLCFLAGS -c Dumper.mli
 ocamlc.opt $OCAMLCFLAGS -c Console.mli
 ocamlc.opt $OCAMLCFLAGS -c Common.mli
 ocamlc.opt $OCAMLCFLAGS -c common2.ml

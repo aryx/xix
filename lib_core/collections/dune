@@ -1,0 +1,8 @@
+(library
+ (name xix_collections)
+ (wrapped false)
+ (libraries
+    stdcompat
+  )
+ (preprocess (pps ppx_deriving.show))
+)

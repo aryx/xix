@@ -85,7 +85,7 @@ let rec merge t1 t2 =
   match (t1, t2) with
     (Empty, t) -> t
   | (t, Empty) -> t
-  | (Node(l1, v1, r1, h1), Node(l2, v2, r2, h2)) ->
+  | (Node(l1, v1, r1, _h1), Node(l2, v2, r2, _h2)) ->
       bal l1 v1 (bal (merge r1 l2) v2 r2)
 
 (* Same as merge, but does not assume anything about l and r. *)
@@ -94,7 +94,7 @@ let rec concat t1 t2 =
   match (t1, t2) with
     (Empty, t) -> t
   | (t, Empty) -> t
-  | (Node(l1, v1, r1, h1), Node(l2, v2, r2, h2)) ->
+  | (Node(l1, v1, r1, _h1), Node(l2, v2, r2, _h2)) ->
       join l1 v1 (join (concat r1 l2) v2 r2)
 
 (* Splitting *)
@@ -147,8 +147,8 @@ let rec union s1 s2 =
 
 let rec inter s1 s2 =
   match (s1, s2) with
-    (Empty, t2) -> Empty
-  | (t1, Empty) -> Empty
+    (Empty, _t2) -> Empty
+  | (_t1, Empty) -> Empty
   | (Node(l1, v1, r1, _), t2) ->
       match split v1 t2 with
         (l2, None, r2) ->
@@ -158,7 +158,7 @@ let rec inter s1 s2 =
 
 let rec diff s1 s2 =
   match (s1, s2) with
-    (Empty, t2) -> Empty
+    (Empty, _t2) -> Empty
   | (t1, Empty) -> t1
   | (Node(l1, v1, r1, _), t2) ->
       match split v1 t2 with
@@ -196,7 +196,7 @@ let rec fold f s accu =
 
 let rec cardinal = function
     Empty -> 0
-  | Node(l, v, r, _) -> cardinal l + 1 + cardinal r
+  | Node(l, _v, r, _) -> cardinal l + 1 + cardinal r
 
 let rec elements_aux accu = function
     Empty -> accu
@@ -207,8 +207,8 @@ let elements s =
 
 let rec choose = function
     Empty -> raise Not_found
-  | Node(Empty, v, r, _) -> v
-  | Node(l, v, r, _) -> choose l
+  | Node(Empty, v, _r, _) -> v
+  | Node(l, _v, _r, _) -> choose l
 
 
 let singleton x = Node(Empty, x, Empty, 1)

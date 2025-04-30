@@ -73,7 +73,7 @@ exception Output_closed
 (* -------------------------------------------------------------- *)
 (* API *)
 
-let default_close = (fun () -> ())
+let _default_close = (fun () -> ())
 
 (* pad: could use intermediate struct instead of keyword arguments *)
 let create_in ~read ~input ~close =

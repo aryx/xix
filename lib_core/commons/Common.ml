@@ -79,14 +79,14 @@ let (<=>) a b =
     else Sup
 
 let sort_by_val_highfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare v2 v1) xs
+  List.sort (fun (_k1,v1) (_k2,v2) -> compare v2 v1) xs
 let sort_by_val_lowfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare v1 v2) xs
+  List.sort (fun (_k1,v1) (_k2,v2) -> compare v1 v2) xs
 
 let sort_by_key_highfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare k2 k1) xs
+  List.sort (fun (k1,_v1) (k2,_v2) -> compare k2 k1) xs
 let sort_by_key_lowfirst xs =
-  List.sort (fun (k1,v1) (k2,v2) -> compare k1 k2) xs
+  List.sort (fun (k1,_v1) (k2,_v2) -> compare k1 k2) xs
 
 let group_by f xs =
   (* use Hashtbl.find_all property *)
@@ -241,7 +241,6 @@ module Obj_ = struct
  * By Richard W.M. Jones (rich@annexia.org).
  * dumper.ml 1.2 2005/02/06 12:38:21 rich Exp
  *)
-open Printf
 open Obj
 
 let rec dump2 r =
@@ -292,7 +291,7 @@ let rec dump2 r =
     else if t = closure_tag then opaque "closure"
     else if t = object_tag then (	(* Object. *)
       let fields = get_fields [] s in
-      let clasz, id, slots =
+      let _clasz, id, slots =
         match fields with h::h'::t -> h, h', t | _ -> assert false in
       (* No information on decoding the class (first field).  So just print
        * out the ID and the slots.

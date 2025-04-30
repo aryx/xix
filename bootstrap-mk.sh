@@ -36,11 +36,11 @@ EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
 TOP=`pwd`
 
 cd $TOP/lib_core/collections/
-ocamlc.opt $OCAMLCFLAGS -c set_.mli
-ocamlc.opt $OCAMLCFLAGS -c map_.mli
-ocamlc.opt $OCAMLCFLAGS -c set_.ml
-ocamlc.opt $OCAMLCFLAGS -c map_.ml
-ocamlc.opt  set_.cmo map_.cmo -a -o lib.cma
+ocamlc.opt $OCAMLCFLAGS -c Set_.mli
+ocamlc.opt $OCAMLCFLAGS -c Map_.mli
+ocamlc.opt $OCAMLCFLAGS -c Set_.ml
+ocamlc.opt $OCAMLCFLAGS -c Map_.ml
+ocamlc.opt  Set_.cmo Map_.cmo -a -o lib.cma
 
 cd $TOP/lib_core/commons/
 ocamlc.opt $OCAMLCFLAGS -c Cap.mli

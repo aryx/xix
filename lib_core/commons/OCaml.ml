@@ -297,7 +297,7 @@ let string_of_v v =
       | VSum ((s, xs)) ->
           (match xs with
           | [] -> ppf "%s" s
-          | y::ys ->
+          | _y::_ys ->
               ppf "@[<hov 2>%s(@," s;
               xs |> add_sep |> List.iter (function
               | Left _ -> ppf ",@ ";
@@ -307,7 +307,7 @@ let string_of_v v =
           )
           
       | VVar (s, i64) -> ppf "%s_%d" s (Int64.to_int i64)
-      | VArrow v1 -> failwith "Arrow TODO"
+      | VArrow _v1 -> failwith "Arrow TODO"
       | VNone -> ppf "None";
       | VSome v -> ppf "Some(@["; aux v; ppf "@])";
       | VRef v -> ppf "Ref(@["; aux v; ppf "@])";
@@ -318,7 +318,7 @@ let string_of_v v =
           | Right v -> aux v
           );
           ppf "@]]";
-      | VTODO v1 -> ppf "VTODO"
+      | VTODO _v1 -> ppf "VTODO"
     in
     aux v
   )

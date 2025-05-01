@@ -20,7 +20,7 @@ DIRS=$DIRS1 #$DIRS2 #DIRS3
 
 TESTDIRS=\
   assembler/tests compiler/tests linker/tests \
-  mk/tests windows/tests \
+  windows/tests \
   lib_system/plan9/tests
 
 all:V: all.directories

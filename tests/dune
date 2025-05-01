@@ -1,0 +1,21 @@
+(executable
+ (name Test)
+ (libraries
+   str unix
+   testo
+   xix_commons
+   xix_collections
+   xix_objects
+   xix_executables
+ )
+ ; 'byte' is for ocamldebug
+ (modes native byte))
+
+(install
+ (package xix)
+ (section bin)
+ (files
+  (Test.exe as test)
+  ; useful to debug, see ../../debug and ocamldebug
+  (Test.bc as test.bc))
+)

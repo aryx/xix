@@ -10,7 +10,11 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 
-type caps = < Cap.exec; Cap.fork; >
+(* Need:
+ *  - exec/fork: obviously as we run a shell
+ *  - env: for MKSHELL
+ *)
+type caps = < Cap.exec; Cap.fork; Cap.env >
 
 type t = { 
   path: Common.filename;
@@ -40,13 +44,15 @@ let rc = {
   debug_flags = (fun () -> (* if !Flags.verbose then ["-v"] else [] *) []);
 }
 
-(* note that this is a toplevel entity, so the code below is executed even
+(* old: this is a toplevel entity, so the code below is executed even
  * before main, so you can not rely on the value in Flags as they have
  * not been set yet.
+ * update: we now use capabilities so we could rely on Flags now
+ * less: could use lazy to avoid recompute each time
  *)
-let shell = 
+let shell_from_env_or_sh (caps : < Cap.env; .. >) : t = 
   try 
-    let path = Sys.getenv "MKSHELL" in
+    let path = CapSys.getenv caps "MKSHELL" in
     match path with
     | s when s =~ ".*/rc$" -> { rc with path = path }
     | _ -> { sh with path = path }
@@ -56,7 +62,8 @@ let shell =
 (* Helpers *)
 (*****************************************************************************)
 
-let exec_shell (caps : < Cap.exec; ..>) shellenv flags extra_params =
+let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
+  let shell = shell_from_env_or_sh caps in
   let env = 
     shellenv 
     (* bug: I exclude empty variables

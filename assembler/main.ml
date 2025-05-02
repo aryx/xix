@@ -98,7 +98,7 @@ let main (caps: Cap.all_caps) =
 
   (* dup: same in compiler/main.ml *)
   let system_paths =
-    (try Sys.getenv "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
+    (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
      with Not_found ->
        [spf "/%s/include" thestring; "/sys/include";]
     )

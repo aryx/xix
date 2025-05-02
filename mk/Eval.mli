@@ -9,7 +9,7 @@
  * recursively to process '<file' instructions.
  *)
 val eval :
-  < Cap.fork ; Cap.exec ; .. > ->
+  < Shell.caps ; .. > ->
   Env.t ->
   string list ref ->
   Ast.instr list ->

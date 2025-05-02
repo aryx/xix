@@ -3,7 +3,7 @@
  * Made or BeingMade some nodes.
  *)
 val work :
-  < Cap.fork ; Cap.exec ; .. > ->
+  < Shell.caps ; .. > ->
   Env.t ->
   Graph.node ->
   bool ref (* OUT parameter, did anything *) ->

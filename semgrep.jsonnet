@@ -42,7 +42,7 @@ local cap_rules = [
 	 'Unix.fork',
 	# Cap.env
 	 'Unix.environment',
-	 #'Sys.getenv',
+	 'Sys.getenv',
 	# Cap.open_in
 	 'open_in_bin',
 	 #'open_in',
@@ -58,6 +58,7 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['threadUnix.ml',
+	        'lib_core/strings/filename.ml', # for Sys.getenv TMPDIR
 		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml'
 		],

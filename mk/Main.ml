@@ -98,7 +98,8 @@ module R = Rules
 
 (* Need:
  *  - fork/exec: obviously as we run shell commands
- *  - env: for Env.initenv()
+ *  - env: for Env.initenv() so mk recipe can access env variables.
+ *    Also MKSHELL in Shell.ml, NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - chdir: actually needed just for -debugger, we could remove
  *)

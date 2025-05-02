@@ -1,5 +1,8 @@
+
+type caps = < Cap.fork ; Cap.exec ; Cap.env >
+
 val exec_recipe :
-  < Cap.fork ; Cap.exec ; .. > ->
+  < caps; .. > ->
   Shellenv.t ->
   string list (* sh arguments *) ->
   string list (* sh stdin (recipe) *) ->
@@ -7,13 +10,13 @@ val exec_recipe :
   int (* pid *)
 
 val exec_backquote :
-  < Cap.fork ; Cap.exec ; .. > ->
+  < caps; .. > ->
   Shellenv.t ->
   string (* sh stdin (recipe) *) ->
   string (* sh output *)
 
 val exec_pipecmd :
-  < Cap.fork ; Cap.exec ; .. > ->
+  < caps ; .. > ->
   Shellenv.t ->
   string (* sh stdin (recipe) *) ->
   Common.filename (* sh output*)

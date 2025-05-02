@@ -20,9 +20,9 @@ module Set = Set_
 let running = Hashtbl.create 101
 let nrunning = ref 0
 
-let nproclimit = ref 
+let nproclimit (caps: < Cap.env; ..>) =
   (try 
-    let s = Sys.getenv "NPROC" in
+    let s = CapSys.getenv caps "NPROC" in
     int_of_string s
    with Not_found | _ -> 2
   )
@@ -91,7 +91,7 @@ let dump_job func job pidopt =
 (* Main algorithms *)
 (*****************************************************************************)
 
-let sched (caps : < Cap.exec; Cap.fork; .. >) () =
+let sched (caps : < Shell.caps; .. >) () =
   try 
     let job = Queue.take jobs in
     let rule = job.J.rule in
@@ -138,18 +138,18 @@ let sched (caps : < Cap.exec; Cap.fork; .. >) () =
 (* Entry points *)
 (*****************************************************************************)
 
-let run (caps : < Cap.exec; Cap.fork; .. >) job =
+let run (caps : < Shell.caps; .. >) job =
   Queue.add job jobs;
 
   if !Flags.dump_jobs
   then dump_job "run: " job None;
 
-  if !nrunning < !nproclimit
+  if !nrunning < nproclimit caps
   then sched caps ()
 
 
 
-let waitup (caps : < Cap.exec; Cap.fork; .. >) () =
+let waitup (caps : < Shell.caps; .. >) () =
   let (pid, ret) = 
     try 
       Unix.wait () 
@@ -176,7 +176,7 @@ let waitup (caps : < Cap.exec; Cap.fork; .. >) () =
       (* similar code in run();
        * I added the test on jobs size though.
       *)
-      if !nrunning < !nproclimit && Queue.length jobs > 0
+      if !nrunning < nproclimit caps && Queue.length jobs > 0
       then sched caps ()
   | Unix.WEXITED n ->
       (* less: call shprint *)

@@ -11,22 +11,22 @@ let (|>) = Stdcompat.(|>)
 
 (*s: function [[Cmd_log.print_commit]] *)
 let print_commit sha commit =
-  pr (spf "commit: %s" (Hexsha.of_sha sha));
+  UConsole.print (spf "commit: %s" (Hexsha.of_sha sha));
   (match commit.Commit.parents with
   | [] | [_] -> ()
   | _x::xs ->
-    pr (spf "merge: %s" 
+    UConsole.print (spf "merge: %s" 
           (xs |> List.map Hexsha.of_sha |> String.concat "..."));
   );
   let author = commit.Commit.author in
-  pr (spf "Author: %s <%s>" author.User.name author.User.email);
+  UConsole.print (spf "Author: %s <%s>" author.User.name author.User.email);
   let committer = commit.Commit.committer in
   if author <> committer
   then 
-    pr (spf "Committer: %s <%s>" committer.User.name committer.User.email);
-  pr (spf "Date:   %s" (User.string_of_date author.User.date));
-  pr "";
-  pr ("    " ^ commit.Commit.message);
+    UConsole.print (spf "Committer: %s <%s>" committer.User.name committer.User.email);
+  UConsole.print (spf "Date:   %s" (User.string_of_date author.User.date));
+  UConsole.print "";
+  UConsole.print ("    " ^ commit.Commit.message);
   ()
 (*e: function [[Cmd_log.print_commit]] *)
 
@@ -34,11 +34,11 @@ let print_commit sha commit =
 let print_change change =
   match change with
   | Change.Add entry ->
-    pr (spf "A       %s" entry.Change.path)
+    UConsole.print (spf "A       %s" entry.Change.path)
   | Change.Del entry ->
-    pr (spf "D       %s" entry.Change.path)
+    UConsole.print (spf "D       %s" entry.Change.path)
   | Change.Modify (entry1, _entry2) ->
-    pr (spf "M       %s" entry1.Change.path)
+    UConsole.print (spf "M       %s" entry1.Change.path)
 (*e: function [[Cmd_log.print_change]] *)
 
 
@@ -74,7 +74,7 @@ let log r =
         tree1
       in
       changes |> List.iter print_change;
-      pr "";
+      UConsole.print "";
     (*e: [[Cmd_log.log()]] if [[--name-status]] flag *)
     end
   )

@@ -50,18 +50,6 @@ let (<=>) a b =
 
 let spf = Printf.sprintf
 
-(* TODO: delete! *)
-let pr s =
-  print_string s;
-  print_string "\n";
-  flush stdout
-
-(* TODO: delete! *)
-let pr2 s =
-  prerr_string s;
-  prerr_string "\n";
-  flush stderr
-
 let rec rnd x v =
   if x mod v = 0
   then x

@@ -213,7 +213,7 @@ let write t ch =
 (*s: function [[Tree.show]] *)
 let show xs =
   xs |> List.iter (fun entry ->
-    pr (spf "%s%s" entry.name
+    UConsole.print (spf "%s%s" entry.name
           (match entry.perm with
           | Dir -> "/"
           | _ -> ""

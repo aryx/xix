@@ -26,7 +26,7 @@ let push src_repo url_dst =
   | _ when current_HEAD_sha = remote_HEAD_sha -> ()
   | _ when Hashtbl.mem ancestors_remote_HEAD current_HEAD_sha ->
     (* easy case *)
-    pr (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
+    UConsole.print (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
     Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in

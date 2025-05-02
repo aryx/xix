@@ -110,7 +110,7 @@ let show_change change =
   let diffs = Diffs.diff (Lazy.force old_content) (Lazy.force new_content) in
   if not (diffs |> List.for_all (function Diff.Equal _ -> true | _ -> false))
   then begin
-    pr (spf "diff --git %s %s" old_path new_path);
+    UConsole.print (spf "diff --git %s %s" old_path new_path);
     (* less: display change of modes *)
     show_unified_diff diffs
   end

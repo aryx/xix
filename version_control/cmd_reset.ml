@@ -11,7 +11,7 @@ let reset_hard r =
   let tree = Repository.read_tree r commit.Commit.tree in
 
   Repository.set_worktree_and_index_to_tree r tree;
-  pr (spf "HEAD is now at %s %s" 
+  UConsole.print (spf "HEAD is now at %s %s" 
         (String.sub (Hexsha.of_sha commitid) 0 6)
         (String.sub commit.Commit.message 0 40))
 (*e: function [[Cmd_reset.reset_hard]] *)

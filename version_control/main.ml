@@ -92,7 +92,7 @@ let main () =
   if Array.length Sys.argv < 2
   then begin
     (*s: [[Main.main()]] print usage and exit *)
-    pr (usage ());
+    UConsole.print (usage ());
     exit 1
     (*e: [[Main.main()]] print usage and exit *)
   end
@@ -103,7 +103,7 @@ let main () =
         commands |> List.find (fun cmd -> cmd.Cmd.name = Sys.argv.(1))
       with Not_found ->
         (*s: [[Main.main()]] print usage and exit *)
-        pr (usage ());
+        UConsole.print (usage ());
         exit 1
         (*e: [[Main.main()]] print usage and exit *)
     in

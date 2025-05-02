@@ -21,9 +21,9 @@ let rec cmd = { Cmd.
       then Cmds.main_commands @ Cmds.extra_commands @ [cmd]
       else Cmds.main_commands
     in
-    pr ("Available commands: ");
+    UConsole.print ("Available commands: ");
     xs |> List.iter (fun cmd ->
-      pr (spf "  %s" cmd.Cmd.name);
+      UConsole.print (spf "  %s" cmd.Cmd.name);
     );
   );
 }

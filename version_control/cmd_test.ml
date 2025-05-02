@@ -23,9 +23,9 @@ let test_sha1 content =
   let store = header ^ content in
 
   let sha = Sha1.sha1 store in
-  pr (spf "len = %d, raw = %s" (String.length sha) sha);
+  UConsole.print (spf "len = %d, raw = %s" (String.length sha) sha);
   let hexsha = Hexsha.of_sha sha in
-  pr (spf "len = %d, str = %s" (String.length hexsha) hexsha);
+  UConsole.print (spf "len = %d, str = %s" (String.length hexsha) hexsha);
   ()
 (*e: function [[Cmd_test.test_sha1]] *)
 
@@ -42,7 +42,7 @@ let test_diff file1 file2 =
   let diffs = Diffs.diff content1 content2 in
   if not (diffs |> List.for_all (function Diff.Equal _ -> true | _ -> false))
   then begin
-    pr (spf "diff --git %s %s" file1 file2);
+    UConsole.print (spf "diff --git %s %s" file1 file2);
     (* less: display change of modes *)
     Diff_unified.show_unified_diff diffs
   end
@@ -74,7 +74,7 @@ let test_zip file =
   let input = IO.input_channel chan in
   let zipped = Zip.deflate input in
   let str = IO.read_all zipped in
-  pr str
+  UConsole.print str
 (* TODO
   let dst = file ^ ".deflate" in
   let chan = open_out dst in
@@ -90,7 +90,7 @@ let test_unzip_all_objects () =
   dir |> Repository.walk_dir (fun path _dirs files ->
     files |> List.iter (fun file ->
       let file = path / file in
-      pr file;
+      UConsole.print file;
       let chan = open_in file in
       let input = IO.input_channel chan in
       let unzipped = Unzip.inflate input in

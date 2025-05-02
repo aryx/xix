@@ -32,10 +32,6 @@ val (<=>): 'a -> 'a -> compare
 
 val spf : ('a, unit, string) format -> 'a
 
-(* TODO: delete *)
-val pr : string -> unit
-val pr2 : string -> unit
-
 val rnd : int -> int -> int
 
 val if_some : ('a -> unit) -> 'a option -> unit

@@ -15,11 +15,11 @@ let show r objectish =
   (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Tree x ->
     (* =~ git ls-tree --names-only *)
-    pr (spf "tree %s\n" (Hexsha.of_sha sha));
+    UConsole.print (spf "tree %s\n" (Hexsha.of_sha sha));
     Tree.show x
   (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Commit x -> 
-    pr (spf "commit %s" (Hexsha.of_sha sha));
+    UConsole.print (spf "commit %s" (Hexsha.of_sha sha));
     Commit.show x;
     let tree2 = Repository.read_tree r x.Commit.tree in
     let tree1 = 

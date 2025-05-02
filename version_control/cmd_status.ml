@@ -68,11 +68,11 @@ let status_of_repository r =
 let print_change_long change =
   match change with
   | Change.Add entry ->
-    pr (spf "	new file:	%s" entry.Change.path)
+    UConsole.print (spf "	new file:	%s" entry.Change.path)
   | Change.Del entry ->
-    pr (spf "	deleted:	%s" entry.Change.path)
+    UConsole.print (spf "	deleted:	%s" entry.Change.path)
   | Change.Modify (entry1, _entry2) ->
-    pr (spf "	modified:	%s" entry1.Change.path)
+    UConsole.print (spf "	modified:	%s" entry1.Change.path)
 (*e: function [[Cmd_status.print_change_long]] *)
 
 
@@ -80,33 +80,33 @@ let print_change_long change =
 let print_status_long st =
   if st.staged <> []
   then begin
-    pr "Changes to be committed:";
+    UConsole.print "Changes to be committed:";
 (*  (use "git reset HEAD <file>..." to unstage) *)
-    pr "";
+    UConsole.print "";
     st.staged |> List.iter print_change_long;
-    pr "";
+    UConsole.print "";
   end;
   if st.unstaged <> []
   then begin
-    pr "Changes not staged for commit:";
-    pr "";
+    UConsole.print "Changes not staged for commit:";
+    UConsole.print "";
 (*
   (use "git add/rm <file>..." to update what will be committed)
   (use "git checkout -- <file>..." to discard changes in working directory)
 *)
 
     st.unstaged |> List.iter print_change_long;
-    pr "";
+    UConsole.print "";
   end;
   if st.untracked <> []
   then begin
-    pr "Untracked files:";
+    UConsole.print "Untracked files:";
 (*  (use "git add <file>..." to include in what will be committed) *)
-    pr "";
+    UConsole.print "";
     st.untracked |> List.iter (fun file ->
-      pr (spf "	%s" file)
+      UConsole.print (spf "	%s" file)
     );
-    pr "";
+    UConsole.print "";
   end
 (*e: function [[Cmd_status.print_status_long]] *)
     

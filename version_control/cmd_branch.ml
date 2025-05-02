@@ -20,7 +20,7 @@ let list_branches r =
         then "* "
         else "  "
       in
-      pr (spf "%s%s" prefix short)
+      UConsole.print (spf "%s%s" prefix short)
   )
 (*e: function [[Cmd_branch.list_branches]] *)
 
@@ -50,7 +50,7 @@ let delete_branch r name force =
   then ();
   (*e: [[Cmd_branch.delete_branch()]] sanity check if branch merged unless force *)
   Repository.del_ref r aref;
-  pr (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
+  UConsole.print (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
 (*e: function [[Cmd_branch.delete_branch]] *)
 
 (* less: rename_branch *)

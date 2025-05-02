@@ -2,7 +2,6 @@
 (*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
-open Common
 
 (*s: function [[Cmd_add.add]] *)
 let add r relpaths = 
@@ -24,7 +23,7 @@ let cmd = { Cmd.
   ];
   f = (fun args ->
     match args with
-    | [] -> pr2 "Nothing specified, nothing added."
+    | [] -> Logs.app (fun m -> m "Nothing specified, nothing added.")
     | xs ->
       let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
       (* less: support directories *)

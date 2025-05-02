@@ -554,7 +554,7 @@ let init root =
   (* less: config file, description, hooks, etc *)
   Sys.chdir root;
   let absolute = Sys.getcwd () in
-  pr (spf "Initialized empty Git repository in %s" (absolute / ".git/"))
+  UConsole.print (spf "Initialized empty Git repository in %s" (absolute / ".git/"))
 (*e: function [[Repository.init]] *)
 
 (*s: function [[Repository.open_]] *)

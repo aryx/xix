@@ -16,7 +16,7 @@ local semgrep_rules = [
     severity: 'ERROR',
     message: |||
       It is easy to forget to close `open_in` with `close_in`.
-      Use `Common.with_open_infile()` or `Chan.with_open_in` instead.
+      Use `CapFS.with_open_in()` or `UChan.with_open_in` instead.
     |||,
     paths: {
       exclude: ['common2.ml'],
@@ -44,7 +44,7 @@ local cap_rules = [
 	 'Unix.environment',
 	 #'Sys.getenv',
 	# Cap.open_in
-	 #'open_in_bin',
+	 'open_in_bin',
 	 #'open_in',
 	 #'UChan.with_open_in',
 	 #'UChan.with_open_out',
@@ -57,7 +57,7 @@ local cap_rules = [
        for dangerous functions.
     |||,
     paths: {
-      exclude: ['CapSys.ml', 'CapUnix.ml', 'threadUnix.ml',
+      exclude: ['threadUnix.ml',
 		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml'
 		],

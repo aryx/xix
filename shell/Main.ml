@@ -33,6 +33,14 @@ module O = Opcode
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
+(* Need:
+ *  - fork/exec: obviously as we are a shell
+ *  - chdir: for the builtin 'cd'
+ *  - env: to ??
+ *  - exit: as many commands can abruptely exit 'rc' itself or children
+ *    created by 'rc'
+ *  - open_in: ??
+ *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 (* -d and -p are dead according to man page so I removed them *)
@@ -210,7 +218,7 @@ let main (caps : Cap.all_caps) : unit =
   Arg.parse (Arg.align options) (fun t -> args := t::!args) usage;
 
   Logs.set_level !level;
-  Logs.info (fun m -> m "ran as %s from %s" (Sys.argv.(0)) (Sys.getcwd ()));
+  Logs.info (fun m -> m "ran as %s from %s" ((CapSys.argv caps).(0)) (Sys.getcwd ()));
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -225,7 +233,7 @@ let main (caps : Cap.all_caps) : unit =
   (* todo: trap_init () *)
 
   (* for 'flags' builtin (see builtin.ml) *)
-  Sys.argv |> Array.iter (fun s ->
+  CapSys.argv caps |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"
     then begin
       let letter = Regexp_.matched1 s in

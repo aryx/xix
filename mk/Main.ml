@@ -96,7 +96,13 @@ module R = Rules
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-type caps = < Cap.chdir; Cap.fork; Cap.exec; Cap.env >
+(* Need:
+ *  - fork/exec: obviously as we run shell commands
+ *  - env: for Env.initenv()
+ *  - argv: for setting MKFLAGS also in Env.initenv()
+ *  - chdir: actually needed just for -debugger, we could remove
+ *)
+type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
 
 let usage =
   "usage: mk [-f file] [options] [targets ...]"

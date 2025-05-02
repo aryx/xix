@@ -12,8 +12,10 @@ exception Redefinition of string
 
 val add_var : t -> string -> values -> unit
 
-(* will read the OS environment variables (e.g., PATH, HOME, objtype) *)
-val initenv : < Cap.env ; .. > -> t
+(* Will read the OS environment variables (e.g., PATH, HOME, objtype).
+ * Need also Cap.argv to set MKFLAGS
+ *)
+val initenv : < Cap.env ; Cap.argv; .. > -> t
 val shellenv_of_env : t -> Shellenv.t
 
 (* internals *)

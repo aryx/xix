@@ -75,7 +75,7 @@ let dump_env env =
 (*****************************************************************************)
 
 (* less: could take the readenv function as a parameter? *)
-let initenv (caps : < Cap.env; .. >) =
+let initenv (caps : < Cap.env; Cap.argv; .. >) =
   let internal = 
     mk_vars |> List.map (fun k -> k,[]) |> Hashtbl_.of_list in
   let vars = 
@@ -89,7 +89,7 @@ let initenv (caps : < Cap.env; .. >) =
 
   (* for recursive mk *)
   let mkflags = 
-    Sys.argv |> Array.fold_left (fun acc s ->
+    CapSys.argv caps |> Array.fold_left (fun acc s ->
       if s =~ "^-" || s=~ ".*=.*"
       then s::acc
       else acc

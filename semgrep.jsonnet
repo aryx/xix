@@ -73,6 +73,19 @@ local cap_rules = [
       ],
     },
   },
+  {
+    id: 'do-not-use-argv',
+    match: 'Sys.argv',
+    languages: ['ocaml'],
+    severity: 'ERROR',
+    message: |||
+       Do not use Sys.argv. Use CapSys.argv and capabilities.
+    |||,
+    paths: {
+      exclude: ['main.ml', 'lib_system/arg.ml', 'lib_system/unix/unix.ml'
+      ],
+    },
+  },
 ];
 							   
 // ----------------------------------------------------------------------------

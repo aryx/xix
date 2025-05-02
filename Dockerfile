@@ -20,7 +20,7 @@ FROM ubuntu:22.04
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
-RUN apt-get install -y build-essential autoconf automake
+RUN apt-get install -y build-essential autoconf automake pkgconf
 #alt: apk add build-base make bash git rsync curl
 #alt: LATER: use kencc and compile our own ocaml-light
 
@@ -36,10 +36,10 @@ WORKDIR /src
 
 # Install dependencies
 COPY xix.opam configure ./
-RUN ./configure
 # 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
 # zlib for ogit (TODO: delete we should do our own unzip)
 RUN apt-get install -y 9base zlib1g-dev
+RUN ./configure
 
 # Now let's build from source
 COPY . .

@@ -71,7 +71,7 @@ let link config objfiles outfile =
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 outfile
 
-let main () =
+let main (caps : Cap.all_caps) =
   let infiles = ref [] in
   let outfile = ref "5.out" in
 
@@ -110,7 +110,7 @@ let main () =
   (match List.rev !infiles with
   | [] -> 
       Arg.usage options usage; 
-      exit (-1)
+      CapStdlib.exit caps (-1)
   | xs -> 
       let config = 
         match !header_type with
@@ -139,4 +139,4 @@ let main () =
   )
 
 let _ = 
-  main ()
+  Cap.main main

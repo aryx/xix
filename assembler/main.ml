@@ -37,7 +37,7 @@ let assemble5 dump (defs, paths) infile outfile =
   Object_code5.save (prog, !Location_cpp.history) outfile
 
 
-let main () =
+let main (caps: Cap.all_caps) =
   let infile  = ref "" in
   let outfile = ref "" in
 
@@ -84,7 +84,7 @@ let main () =
    usage;
 
   if !infile = ""
-  then begin Arg.usage options usage; exit (-1); end;
+  then begin Arg.usage options usage; CapStdlib.exit caps (-1); end;
 
   let outfile = 
     if !outfile = ""
@@ -118,9 +118,9 @@ let main () =
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
           Logs.err (fun m -> m "%s:%d %s" file line s);
-          exit (-1);
+          CapStdlib.exit caps (-1);
       | _ -> raise exn
       )
 
 let _ = 
-  main ()
+  Cap.main main

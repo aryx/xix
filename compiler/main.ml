@@ -138,7 +138,7 @@ let compile (defs, include_paths) infile outfile =
 (* Entry point *)
 (*****************************************************************************)
 
-let main () =
+let main (caps : Cap.all_caps) =
 
   (* in *)
   let args = ref [] in
@@ -217,7 +217,7 @@ let main () =
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action !action (List.rev !args); 
-    exit 0 
+    CapStdlib.exit caps 0 
   end;
 
   try 
@@ -273,4 +273,4 @@ let main () =
       )
 
 let _ = 
-    main ()
+    Cap.main main

@@ -24,7 +24,7 @@ local semgrep_rules = [
   },
 ];
 // ----------------------------------------------------------------------------
-// TCB
+// TCB (Trusted Computing Base, see semgrep/TCB/ for more info)
 // ----------------------------------------------------------------------------
 // partial copy of semgrep/TCB/forbid_xxx.jsonnet
 local cap_rules = [
@@ -32,13 +32,18 @@ local cap_rules = [
     id: 'use-caps',
     match: { any:
         [
+	# Cap.chdir
 	 'Sys.chdir',
 	 'Unix.chdir',
+        # Cap.exec
 	 'Unix.execve',
 	 'Unix.execv',
+	# Cap.fork
 	 'Unix.fork',
+	# Cap.env
 	 'Unix.environment',
 	 #'Sys.getenv',
+	# Cap.open_in
 	 #'open_in_bin',
 	 #'open_in',
 	 #'UChan.with_open_in',
@@ -60,6 +65,7 @@ local cap_rules = [
   },
   {
     id: 'do-not-use-exit',
+    # Cap.exit
     match: 'exit $N',
     languages: ['ocaml'],
     severity: 'ERROR',
@@ -67,14 +73,17 @@ local cap_rules = [
        Do not use exit. Use CapStdlib.exit and capabilities.
     |||,
     paths: {
-      exclude: ['main.ml',
+      exclude: [
         'compiler/error.ml', 'ksym.ml', 'thread.ml', 'printexc.ml', 'threadUnix.ml',
 	'lib_system/arg.ml', 'lib_system/unix/unix.ml',
+         'lex/', 'yacc/', 'version_control/',
+	 'windows/'
       ],
     },
   },
   {
     id: 'do-not-use-argv',
+    # Cap.argv
     match: 'Sys.argv',
     languages: ['ocaml'],
     severity: 'ERROR',
@@ -82,7 +91,8 @@ local cap_rules = [
        Do not use Sys.argv. Use CapSys.argv and capabilities.
     |||,
     paths: {
-      exclude: ['main.ml', 'lib_system/arg.ml', 'lib_system/unix/unix.ml'
+      exclude: ['lib_system/arg.ml', 'lib_system/unix/unix.ml',
+         'lex/', 'yacc/', 'version_control/'
       ],
     },
   },

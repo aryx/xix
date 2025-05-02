@@ -3,31 +3,29 @@
 * TODO
 
 ** rc/mk
-TODO Can use rc/mk on principia and build and syncweb as well Editor.nw
-     (efuns), Codemap.nw
+TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
 
 ** internals
-SEMI Testing library using Testo? (only built and run on 4.14.0) or
- do poor's man version again? or just use ounit? non functional anyway
- so we could just skip the test code when compiling with ocaml-light
-TODO use let* and let/ ?
+SEMI Testing library using Testo
+TODO use let* and let/ ? also doable to add in ocaml-light ?
 
 ** devops
-
 SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 TODO more semgrep rules (forbid functors, labels, etc.)
 LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 
-* 0.15 (Q2 2025) (Dockerfile/Nix (devops), dune/merlin/ocamlformat (tools))
-# Resume again after one year of inactivity due to my work for Semgrep.
-# Bring again good stuff I learned from semgrep:
+* 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix (devops), dune/merlin/ocamlformat (tools))
+# Resume again after one year of inactivity due to my work on Semgrep.
+# Bring again like last year good stuff I learned from Semgrep:
+#  - Cap.ml! capabilities!! XiX can innovate not only on being far smaller, and
+#    also have literate documents, but also because it uses capabilities in apps!
+#  - Console.ml, Chan.ml (and UConsole.ml/UChan.ml)
 #  - Dockerfile (and GHA) for reproducible tangible build instructions
 #  - Nix (and GHA) for another reproducible tangible build instructions
-#    and even cross-platform Linux and macOS
-#  - ppx_deriving
+#    and even cross-platform CI checks for Linux and macOS
+#  - ppx_deriving (instead of ocamltarzan and OCaml.ml)
 #  - Fpath.t (instead of Common.filename)
-#  - capabilities!! Console.ml
-#  - dune (and good ocaml warnings)
+#  - dune (and good ocaml warnings and also far faster build time in //)
 #  - merlin for code navigation (requires dune)
 #  - SEMI Testo
 #  - ocamlformat
@@ -36,16 +34,17 @@ LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 ** internals
 
 - Start use ppx_deriving (which then require OCaml 4.09.1 but
-  it should be doable to implement a poor's man deriving in ocaml light)
+  it should be doable to implement a poor's man deriving in ocaml-light)
   We generate some dummy show_xxx so that boostrap-mk.sh can still
   compile correctly the code (ppx_deriving is mostly used in Logs anyway)
-- Copy Cap.ml from semgrep and start using capabilities (and
+- Copy Cap.ml from semgrep and start using capabilities!!! (and
   augmented semgrep.jsonnet to forbid Sys.xxx) (which then requires OCaml 4.0x
   but again it should be doable to just skip any object constructs in ocaml light
   as capabilities are just a typechecking thing without runtime impact).
-- capabilties: Cap.fork, Cap.exec, Cap.exit, Cap.chdir, Cap.stdout,
+- capabilties: Cap.fork, Cap.exec, Cap.exit, Cap.chdir, Cap.stdout, Cap.argv
   and new Cap.env, Cap.open_in
 - integrate Console.ml, CapConsole.ml, UConsole.ml from semgrep
+- Move Chan.ml, UChan.ml, and CapFS.ml from semgrep
 - Start use poor's man Fpath.ml instead of Common.filename
 - Start use capitalized module for lib_core/commons/, mk/, shell/ (thx Martin)
 - use dune as an additional way to build XiX which then allows to

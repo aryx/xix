@@ -186,7 +186,7 @@ let del_ref r aref =
 (*e: function [[Repository.del_ref]] *)
 
 (*s: function [[Repository.set_ref_if_same_old]] *)
-let set_ref_if_same_old r aref oldh newh =
+let set_ref_if_same_old r aref _oldh newh =
   let (refs, _) = follow_ref r aref in
   let lastref = List.hd (List.rev refs) in
   let file = ref_to_filename r lastref in
@@ -443,7 +443,7 @@ let build_file_from_blob fullpath blob perm =
   | Tree.Normal | Tree.Exec ->
     (match oldstat with
     (* opti: if same content, no need to write anything *)
-    | Some { Unix.st_size = x } when x = String.length blob && 
+    | Some { Unix.st_size = x; _ } when x = String.length blob && 
       ((Fpath.v fullpath) |> UChan.with_open_in (fun (ch : Chan.i) -> 
         (ch.ic |> IO.input_channel |> IO.read_all ) = blob
        )) ->
@@ -596,7 +596,7 @@ let find_root_open_and_adjust_paths paths =
   r, relpaths
 (*e: function [[Repository.find_dotgit_root_and_open]] *)
 
-let parse_objectish str = 
+let parse_objectish _str = 
   raise Todo
 
 (*e: version_control/repository.ml *)

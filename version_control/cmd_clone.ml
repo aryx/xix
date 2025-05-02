@@ -2,7 +2,6 @@
 (*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
-open Common
 
 (*s: function [[Cmd_clone.clone]] *)
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)

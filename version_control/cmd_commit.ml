@@ -73,7 +73,7 @@ let cmd = { Cmd.
       in
       (*e: [[Cmd_commit.cmd]] compute [[committer]] user *)
       commit r author committer !message
-    | xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd.ShowUsage
   );
 }
 (*e: constant [[Cmd_commit.cmd]] *)

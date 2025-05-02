@@ -31,14 +31,15 @@ let debug = ref false
 
 (*s: type [[Unzip.huffman]] *)
 type huffman =
-  (** Leaf *)
+  (* Leaf *)
   | Found of int (** 0..288 *)
-  (** Node *)
+  (* Node *)
   | NeedBit of huffman * huffman
   (*s: [[Unzip.huffman]] cases *)
-  (** Opti *)
+  (* Opti *)
   | NeedBits of int * huffman array
   (*e: [[Unzip.huffman]] cases *)
+[@@warning "-37"]
 (*e: type [[Unzip.huffman]] *)
 
 
@@ -76,6 +77,7 @@ type state =
   (*x: [[Unzip.state]] other cases *)
   | DistOne
   (*e: [[Unzip.state]] other cases *)
+[@@warning "-37"]
 (*e: type [[Unzip.state]] *)
 
 (*s: type [[Unzip.t]] *)
@@ -85,10 +87,10 @@ type t = {
   mutable zhuffman  : huffman;
   zwindow  : window;
 
-  (** input *)
+  (* input *)
   zinput   : IO.input;
 
-  (** output *)
+  (* output *)
   mutable zoutput   : bytes;
   mutable zoutpos   : int;
   mutable zneeded   : int;
@@ -133,15 +135,18 @@ let error msg = raise (Error msg)
 (* HUFFMAN TREES *)
 
 (*s: function [[Unzip.tree_depth]] *)
+(*
 let rec tree_depth = function
   | Found _ -> 0
   | NeedBit (a,b) ->
     1 + min (tree_depth a) (tree_depth b)
   | NeedBits _ -> assert false
+*)
 (*e: function [[Unzip.tree_depth]] *)
 
 (*s: function [[Unzip.tree_compress]] *)
-let rec tree_compress t =
+(*
+let rec _tree_compress t =
   match tree_depth t with
   | 0 -> t
   | 1 ->
@@ -154,12 +159,13 @@ let rec tree_compress t =
     tree_walk tbl 0 0 d t;
     NeedBits (d,tbl)
 
-and tree_walk tbl p cd d = function
+and _tree_walk tbl p cd d = function
   | NeedBit (a,b) when d > 0 ->
     tree_walk tbl p (cd + 1) (d-1) a;
     tree_walk tbl (p lor (1 lsl cd)) (cd + 1) (d-1) b;
   | t ->
     Array.set tbl p (tree_compress t)
+*)
 (*e: function [[Unzip.tree_compress]] *)
 
 (*s: function [[Unzip.make_huffman]] *)
@@ -219,7 +225,7 @@ let adler32_create() = {
 (*s: function [[Unzip.adler32_update]] *)
 let adler32_update a s p l =
   let p = ref p in
-  for i = 0 to l - 1 do
+  for _i = 0 to l - 1 do
     let c = int_of_char (Bytes.unsafe_get s !p) in
     a.a1 <- (a.a1 + c) mod 65521;
     a.a2 <- (a.a2 + a.a1) mod 65521;
@@ -428,7 +434,7 @@ let inflate_lengths z a max =
     | 16 ->
       let n = 3 + get_bits z 2 in
       if !i + n > max then error Invalid_data;
-      for k = 0 to n - 1 do
+      for _k = 0 to n - 1 do
         Array.unsafe_set a !i !prev;
         incr i;
       done;
@@ -661,7 +667,7 @@ let inflate ?(header=true) ch =
     ~close:(fun () ->
       IO.close_in ch
     )
-    (** special case of ~input for 1 byte *)
+    (* special case of ~input for 1 byte *)
     ~read:(fun() ->
       let l = inflate_data z tmp 0 1 in
       if l = 1 

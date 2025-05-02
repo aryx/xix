@@ -58,7 +58,7 @@ let show_unified_diff diffs =
     | [] -> ()
     | x::xs ->
       (match x with
-      | Diff.Equal s ->
+      | Diff.Equal _s ->
         (match () with
         | _ when nctx_after > 0 ->
           print x;
@@ -70,13 +70,13 @@ let show_unified_diff diffs =
           aux new_context_lines nContext 0 (nold + 1) (nnew + 1) xs
         | _ -> raise (Impossible "")
         )
-      | Diff.Deleted s  ->
+      | Diff.Deleted _s  ->
         let prevs = List_.take nctx_before context_lines |> List.rev in
         if prevs <> [] then print_header nctx_before nold nnew;
         prevs |> List.iter print;
         print x;
         aux [] 0 nContext (nold + 1) (nnew) xs
-      | Diff.Added s ->
+      | Diff.Added _s ->
         let prevs = List_.take nctx_before context_lines |> List.rev in
         if prevs <> [] then print_header nctx_before nold nnew;
         prevs |> List.iter print;

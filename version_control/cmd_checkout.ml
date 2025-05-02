@@ -38,7 +38,7 @@ let checkout r str =
 
 (*s: function [[Cmd_checkout.update]] *)
 (* Your branch is up-to-date with 'origin/master'. *)
-let update r =
+let update _r =
   raise Todo
 (*e: function [[Cmd_checkout.update]] *)
 

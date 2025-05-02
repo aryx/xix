@@ -86,7 +86,7 @@ let cmd = { Cmd.
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     (*s: [[Cmd_branch.cmd]] match args cases *)
-    | [name;objectish] ->
+    | [_name;_objectish] ->
       raise Todo
     (*x: [[Cmd_branch.cmd]] match args cases *)
     | [] -> list_branches r

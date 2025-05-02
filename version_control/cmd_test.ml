@@ -87,7 +87,7 @@ let test_zip file =
 let test_unzip_all_objects () =
   Unzip.debug := true;
   let dir = ".git/objects" in
-  dir |> Repository.walk_dir (fun path dirs files ->
+  dir |> Repository.walk_dir (fun path _dirs files ->
     files |> List.iter (fun file ->
       let file = path / file in
       pr file;

@@ -42,12 +42,12 @@ type chunk =
       Diff.item list (* Orig *) * Diff.item list (*A*) * Diff.item list (*B*)
 
 (* intermediate types *)
-type matching_lines = 
+type _matching_lines = 
     (int (* line# in original *) * 
      int (* corresponding line# in modified file *))
     list
 
-type identical_lines =
+type _identical_lines =
     (int (* line# in original *) * int (* line# in A *) * int (* line# in B *))
     list
 
@@ -78,8 +78,8 @@ let matching_lines_of_diff diff =
 let rec identical_lines xs ys =
   match xs, ys with
   | [], [] -> []
-  | x::xs, [] -> []
-  | [], y::ys -> []
+  | _x::_xs, [] -> []
+  | [], _y::_ys -> []
   | (o1,a)::xs, (o2,b)::ys ->
     (match o1 <=> o2 with
     | Equal -> (o1, a, b)::identical_lines xs ys

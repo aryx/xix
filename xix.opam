@@ -22,6 +22,8 @@ depends: [
   "stdcompat"
   "ocamlfind"
   "ppx_deriving"
+  # TODO just for version_control/ but should switch to Unzip.ml
+  "camlzip"
   # Extra deps when compiling xix with (optional!) advanced tooling
   "dune"
   "testo"

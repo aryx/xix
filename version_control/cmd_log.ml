@@ -14,7 +14,7 @@ let print_commit sha commit =
   pr (spf "commit: %s" (Hexsha.of_sha sha));
   (match commit.Commit.parents with
   | [] | [_] -> ()
-  | x::xs ->
+  | _x::xs ->
     pr (spf "merge: %s" 
           (xs |> List.map Hexsha.of_sha |> String.concat "..."));
   );
@@ -37,7 +37,7 @@ let print_change change =
     pr (spf "A       %s" entry.Change.path)
   | Change.Del entry ->
     pr (spf "D       %s" entry.Change.path)
-  | Change.Modify (entry1, entry2) ->
+  | Change.Modify (entry1, _entry2) ->
     pr (spf "M       %s" entry1.Change.path)
 (*e: function [[Cmd_log.print_change]] *)
 
@@ -64,7 +64,7 @@ let log r =
         | [sha] -> 
           let commit2 = Repository.read_commit r sha in
           Repository.read_tree r commit2.Commit.tree
-        | x::y::xs ->
+        | _x::_y::_xs ->
           failwith "TODO: log: handle merge"
       in
       let changes = Changes.changes_tree_vs_tree
@@ -96,7 +96,7 @@ let cmd = { Cmd.
     | [] -> log r
     (* todo: git log path *)
     (* less: revision range *)
-    | xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd.ShowUsage
   );
 }
 (*e: constant [[Cmd_log.cmd]] *)

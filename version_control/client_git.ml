@@ -21,7 +21,7 @@ open Common
 (*****************************************************************************)
 
 (*s: function [[Client_git.mk_client]] *)
-let mk_client url =
+let mk_client _url =
   raise Todo
 (*e: function [[Client_git.mk_client]] *)
 (*e: version_control/client_git.ml *)

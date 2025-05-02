@@ -3,7 +3,6 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Stdcompat (* for |> *)
-open Common
 
 (*s: function [[Cmd_rm.rm]] *)
 let rm r relpaths =

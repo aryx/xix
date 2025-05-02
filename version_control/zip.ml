@@ -28,13 +28,13 @@ open Common
 type key = (char * char * char) option
 
 (* TODO: int list? char list? *)
-type table = (key, int list) Hashtbl.t
+type _table = (key, int list) Hashtbl.t
 
 type elt =
   | Buffer of string
   | Insert of int (* past *) * int (* len *)
 
-type elts = elt list
+type _elts = elt list
 
 let window_size = 32 * 1024 (* 1 lsl 15 *)
 let buffer_size = 1 lsl 16
@@ -53,10 +53,10 @@ let window_create () = {
   }
 
 type t = {
-  (** input *)
+  (* input *)
   zinput: IO.input;
 
-  (** output *)
+  (* output *)
   mutable zoutput   : bytes;
   mutable zoutpos   : int;
   mutable zneeded: int;
@@ -174,7 +174,7 @@ let deflate_init ch =
     zwindow = window_create ();
   }
 
-let deflate_data z s pos len =
+let _deflate_data _z _s _pos _len =
   raise Todo
 
 let deflate ch = 

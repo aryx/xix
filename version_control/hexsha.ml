@@ -47,7 +47,7 @@ let is_hexsha x =
 
 (* start of copy-pasted code from ocaml-hex *)
 
-let hexa = "0123456789abcdef"
+let _hexa = "0123456789abcdef"
 (*s: constant [[Hexsha.hexa1]] *)
 and hexa1 =
   "0000000000000000111111111111111122222222222222223333333333333333\

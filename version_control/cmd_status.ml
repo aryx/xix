@@ -35,7 +35,7 @@ let untracked r =
       |> Hashtbl_.of_list 
   in
   let res = ref [] in
-  r.Repository.worktree |> Repository.walk_dir (fun dir dirs files ->
+  r.Repository.worktree |> Repository.walk_dir (fun dir _dirs files ->
     files |> List.iter (fun file ->
       let path = Filename.concat dir file in
       let path = 
@@ -71,7 +71,7 @@ let print_change_long change =
     pr (spf "	new file:	%s" entry.Change.path)
   | Change.Del entry ->
     pr (spf "	deleted:	%s" entry.Change.path)
-  | Change.Modify (entry1, entry2) ->
+  | Change.Modify (entry1, _entry2) ->
     pr (spf "	modified:	%s" entry1.Change.path)
 (*e: function [[Cmd_status.print_change_long]] *)
 
@@ -112,7 +112,7 @@ let print_status_long st =
     
 
 (*s: function [[Cmd_status.print_status_short]] *)
-let print_status_short st =
+let print_status_short _st =
   raise Todo
 (*e: function [[Cmd_status.print_status_short]] *)
 
@@ -141,7 +141,7 @@ let cmd = { Cmd.
     let r, relpaths = Repository.find_root_open_and_adjust_paths args in
     match relpaths with
     | [] -> status r
-    | xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd.ShowUsage
   );
 }
 (*e: constant [[Cmd_status.cmd]] *)

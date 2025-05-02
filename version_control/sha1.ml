@@ -17,7 +17,6 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 *)
 (*e: copyright uuidm *)
 open Stdcompat (* for Bytes *)
-open Common
 
 (*****************************************************************************)
 (* Prelude *)
@@ -112,7 +111,7 @@ let sha1 s =
   let m = sha_1_pad s in
   let w = Array.make 16 0l in
 
-  (** components of the 20 bytes SHA1 (5 * 4 bytes (Int32 with 'l' suffix)) **)
+  (* components of the 20 bytes SHA1 (5 * 4 bytes (Int32 with 'l' suffix)) *)
   let h0 = ref 0x67452301l in
   let h1 = ref 0xEFCDAB89l in
   let h2 = ref 0x98BADCFEl in
@@ -175,7 +174,7 @@ let sha1 s =
     h4 := !h4 ++ !e
   done;
 
-  (** the result hash number of 20 bytes *)
+  (* the result hash number of 20 bytes *)
   let h = Bytes.create 20 in
   (*s: function [[i2s]] *)
   let i2s h k i =

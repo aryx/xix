@@ -24,8 +24,8 @@ open Common
 (*s: function [[Changes.skip_tree_and_adjust_path]] *)
 let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   match entry_opt with
-  | Some { Tree.perm = Tree.Dir } -> None
-  | Some { Tree.perm = Tree.Commit } -> failwith "submodule not supported"
+  | Some { Tree.perm = Tree.Dir; _ } -> None
+  | Some { Tree.perm = Tree.Commit; _ } -> failwith "submodule not supported"
   | Some x -> Some ({ Change.
     path = Filename.concat dirpath x.Tree.name;
     mode = Index.mode_of_perm x.Tree.perm;

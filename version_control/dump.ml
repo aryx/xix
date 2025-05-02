@@ -1,5 +1,4 @@
 (*s: version_control/dump.ml *)
-open OCaml
 
 module Ocaml = OCaml
 

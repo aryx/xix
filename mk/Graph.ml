@@ -76,8 +76,8 @@ let hnodes = Hashtbl.create 101
 (* Helpers *)
 (*****************************************************************************)
 
-let new_node target =
-  let time = File.timeof target in
+let new_node (target : string) =
+  let time = File.timeof (Fpath.v target) in
   let node = {
     name = target;
     time = time;
@@ -379,7 +379,7 @@ let update node =
   end
   else begin
     let oldtime = node.time in
-    node.time <- File.timeof node.name;
+    node.time <- File.timeof (Fpath.v node.name);
 
     (* todo: actually can happen for rule like
      * x.tab.h: y.tab.h

@@ -1,6 +1,7 @@
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Fpath.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -17,7 +18,7 @@ open Common
 type caps = < Cap.exec; Cap.fork; Cap.env >
 
 type t = { 
-  path: Common.filename;
+  path: Fpath.t;
   name: string;
   flags: string list;
   (* environment word separator *)
@@ -29,7 +30,7 @@ type t = {
 }
 
 let sh = {
-  path = "/bin/sh";
+  path = Fpath.v "/bin/sh";
   name = "sh";
   flags = [];
   iws = " ";
@@ -37,7 +38,7 @@ let sh = {
 }
 
 let rc = {
-  path = "/usr/bin/rc";
+  path = Fpath.v "/usr/bin/rc";
   name = "rc";
   flags = ["-I"]; (* non-interactive so does not display a prompt *)
   iws = "\001";
@@ -54,8 +55,8 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
   try 
     let path = CapSys.getenv caps "MKSHELL" in
     match path with
-    | s when s =~ ".*/rc$" -> { rc with path = path }
-    | _ -> { sh with path = path }
+    | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
+    | _ -> { sh with path = Fpath.v path }
   with Not_found -> sh
 
 (*****************************************************************************)
@@ -79,7 +80,8 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
     |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
   in
   let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
-  Logs.info (fun m -> m "exec_shell: %s %s" shell.path (String.concat " " args));
+  let shell_path = !!(shell.path) in
+  Logs.info (fun m -> m "exec_shell: %s %s" shell_path (String.concat " " args));
   (try 
      (* to debug pass instead "/usr/bin/strace" 
         (Array.of_list ("strace"::shell.path::args)) *)
@@ -88,12 +90,12 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
         * in args (usually '-e') will be taken for the prog name and skipped
         * by the shell (and mk will not stop at the first error)
         *)
-       shell.path (Array.of_list (shell.name::args))
+       shell_path (Array.of_list (shell.name::args))
        (Array.of_list env)
       |> ignore;
    with Unix.Unix_error (err, fm, argm) -> 
-     if not (Sys.file_exists shell.path)
-     then failwith (spf "could not find shell %s" shell.path)
+     if not (Sys.file_exists shell_path)
+     then failwith (spf "could not find shell %s" shell_path)
      else failwith (spf "Could not execute a shell command: %s %s %s"
                       (Unix.error_message err) fm argm)
   );
@@ -117,7 +119,8 @@ let feed_shell_input inputs pipe_write =
 (* Entry points *)
 (*****************************************************************************)
 
-let exec_recipe (caps : < caps; .. >) shellenv flags inputs interactive =
+(* returns a pid *)
+let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
   let pid = CapUnix.fork caps () in
   
   (* children case *)
@@ -171,7 +174,7 @@ let exec_recipe (caps : < caps; .. >) shellenv flags inputs interactive =
   else pid (* pid of child1 *)
 
 
-let exec_backquote (caps : < caps; ..>) shellenv input =
+let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
 
@@ -215,7 +218,7 @@ let exec_backquote (caps : < caps; ..>) shellenv input =
   end
 
 
-let exec_pipecmd (caps: < caps; .. >) shellenv input =
+let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
   let tmpfile = Filename.temp_file "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
 

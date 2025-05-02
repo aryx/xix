@@ -5,6 +5,9 @@ TOP=..
 # but not with ocamlopt :(
 
 INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_core/commons
+
+# Note that those files are sync'ed by syncweb from principia/generators
+
 SRC=lexing_.ml parsing_.ml
 
 <$TOP/mkconfig

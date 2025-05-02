@@ -1,5 +1,7 @@
 TOP=..
 
+# Note that those files are sync'ed by syncweb from principia/version_control
+
 SRC= IO_.ml \
      sha1.ml hexsha.ml \
      unzip.ml zip.ml zlib.ml compression.ml \

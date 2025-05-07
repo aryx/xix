@@ -1,20 +1,22 @@
 # -*- org -*-
 
 * TODO
+compile again for ocaml light (my own fork of caml-special-light 1.07)
 
 ** rc/mk
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
 
 ** internals
-SEMI Testing library using Testo
 TODO use let* and let/ ? also doable to add in ocaml-light ?
 
-** devops
+** devinfra
 SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 TODO more semgrep rules (forbid functors, labels, etc.)
-LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 
-* 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix (devops), dune/merlin/ocamlformat (tools))
+** testinfra
+
+
+* 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.
 # Bring again like last year good stuff I learned from Semgrep:
 #  - Cap.ml! capabilities!! XiX can innovate not only on being far smaller, and
@@ -27,8 +29,8 @@ LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 #  - Fpath.t (instead of Common.filename)
 #  - dune (and good ocaml warnings and also far faster build time in //)
 #  - merlin for code navigation (requires dune)
-#  - SEMI Testo
-#  - ocamlformat
+#  - Testo (snapshot-based testing)
+#  - SEMI ocamlformat
 #  - TODO let*, let/
 
 ** internals
@@ -44,29 +46,30 @@ LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 - capabilties: Cap.fork, Cap.exec, Cap.exit, Cap.chdir, Cap.stdout, Cap.argv
   and new Cap.env, Cap.open_in
 - integrate Console.ml, CapConsole.ml, UConsole.ml from semgrep
-- Move Chan.ml, UChan.ml, and CapFS.ml from semgrep
+- copy Chan.ml, UChan.ml, CapProcess, and CapFS.ml from semgrep
 - Start use poor's man Fpath.ml instead of Common.filename
 - Start use capitalized module for lib_core/commons/, mk/, shell/ (thx Martin)
 - use dune as an additional way to build XiX which then allows to
   use merlin and code navigation in efuns!!
 - use ocamlformat (just on some .mli for now)
 
-** devops
+** testinfra
 
 - Dockerfile (Ubuntu because Alpine is failing for old OCaml versions)
   and docker.yml GHA CI
 - shell.nix Nix dev environment setup
   and nix.yml GHA CI
+- start of use of Testo and snapshots for e2e testing of rc
 
 * 0.14 (Q2 2024) (Logging, Testing, CI)
 
-** mk works again (but need plan9 (a.k.a. 9base) rc)
+** mk works again (but need rc from plan9port (a.k.a. 9base in Linux))
 
 ** internals
 
 - Logging using poor's man Logs.ml
 
-* 0.13 (Q1 2024) (CI build and test and semgrep checks (devops))
+* 0.13 (Q1 2024) (CI build and test and semgrep checks (testinfra))
 # Resume after long hiatus (2019-2023) due to our move to Italy,
 # the birth of Nathalie, and especially my work for Semgrep.
 # Bring again good stuff I learned from semgrep:
@@ -80,7 +83,7 @@ LATER compile again for ocaml light (my own fork of caml-special-light 1.07)
 - Started to use stdcompat for backward compatibility with
   old versions of OCaml.
 
-** devops
+** devinfra/testinfra
 
 - Github Actions (GHA) checks to make sure xix compiles.
   At least it compiles with 3.10.0 (thx to stdcompat), 4.04.0, 4.14.0,

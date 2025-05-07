@@ -35,5 +35,6 @@ jobs:
           nix-shell --run '
             ./configure
             make
+            make test
           '
 

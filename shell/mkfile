@@ -14,7 +14,7 @@ SRC=  Flags.ml Globals.ml \
   Parser.ml Lexer.ml Parse.ml \
   Builtin.ml \
   Op_repl.ml Op_process.ml \
-  Interpreter.ml Main.ml
+  Interpreter.ml CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma

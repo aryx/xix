@@ -1,5 +1,5 @@
-# Build and test XiX with OCaml 4.09.1 via opam on Ubuntu Linux.
-# We are testing mostly the bootstrap-mk.sh and mk way to build xix (not dune).
+# Build and test XiX with OCaml 4.09.1 via OPAM on Ubuntu Linux.
+# We are testing mostly the bootstrap-mk.sh and mk way to build XiX (not dune).
 # See also .github/workflows/docker.yml for its use in Github Actions (GHA).
 #
 # history:

@@ -1,6 +1,6 @@
-# Setup a build environment for XiX using Nix.
+# Setup a dev environment for XiX using Nix.
 # We are here using (and testing) dune to build XiX (not mk).
-# See also Dockerfile for building xix via mk (and bootstrap-mk.sh).
+# See also Dockerfile for building XiX via mk (and bootstrap-mk.sh).
 # See also .github/workflows/nix.yml for its use in Github Actions (GHA).
 #
 # Run 'nix-shell --pure' from the root of the project to get a dev environment

@@ -1,0 +1,42 @@
+(executable
+ (name main)
+ (libraries
+   str unix
+   xix_commons
+   xix_collections
+   ;xix_cpp_lib
+   ;xix_objects
+ )
+ ; 'byte' is for ocamldebug
+ (modes native byte))
+
+; lex
+(ocamllex lexer)
+; yacc
+; old: (ocamlyacc parser)
+; but need special processing because of syncweb comments
+(rule
+ (targets parser.ml parser.mli)
+ (deps parser.mly)
+ (action
+   ;alt: (run ocamlyacc %{dep:parser.mly})
+  (progn
+   (run ocamlyacc %{dep:parser.mly})
+   ; must take: /*(*s: copyright ocamlyacc *)*/
+   ; and just remove it
+   (run perl -p -i -e "s#/[*].*[sex]:.*[*]/##" parser.ml)
+   ; failed with those one because of escaping problems hence simpler regexp
+   ; above
+   ;(run perl -p -i -e "s#/\\*\\(\\*[sex]: .* \\*\\)/##" parser.ml)
+   ;(run perl -p -i -e s#/\\*\\(\\*[sex]:\ .*\ \\*\\)/## parser.ml)
+   ;(run perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml)
+   )))
+
+(install
+ (package xix)
+ (section bin)
+ (files
+  (main.exe as oyacc)
+  ; useful to debug, see ../../debug and ocamldebug
+  (main.bc as oyacc.bc))
+)

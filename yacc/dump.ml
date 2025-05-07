@@ -230,7 +230,7 @@ let dump_lrtables env lrtables =
       (match xs with
       | [] -> pf "%3s " " "
       | [S d] -> pf "%3d " d
-      | x::xs -> pf "%3s " "!?!"
+      | _x::_xs -> pf "%3s " "!?!"
       );
     );
 

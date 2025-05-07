@@ -188,7 +188,7 @@ let output_parser def env lrtables ic oc =
       pf " | %s%s -> \"%s\"\n" s
         (match sopt with
         | None -> ""
-        | Some s -> " _"
+        | Some _s -> " _"
         )
         s
     | _ -> ()

@@ -106,7 +106,7 @@ let start_symbol def =
   try 
     (match
       def.directives |> List.find (function
-        | Start x -> true
+        | Start _x -> true
         | _ -> false
       )
      with

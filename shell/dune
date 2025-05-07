@@ -25,6 +25,7 @@
      Builtin
      Op_repl Op_process
      Interpreter
+     CLI
   )
   (libraries
    xix_commons

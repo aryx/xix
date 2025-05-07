@@ -15,8 +15,6 @@
 
 open Stdcompat (* for |> *)
 open Ast
-open Lexgen
-open Output
 
 (*s: function [[Main.main]] *)
 let main () =

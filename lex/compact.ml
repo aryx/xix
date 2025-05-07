@@ -97,7 +97,7 @@ let pack_moves state_num move_t =
     done;
     let rec try_pack = function
       [] -> b
-    | (pos, v) :: rem ->
+    | (pos, _v) :: rem ->
         if !check.(b + pos) = -1 then try_pack rem else pack_from (b+1) in
     try_pack nondef 
   in

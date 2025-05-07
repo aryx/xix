@@ -153,7 +153,7 @@ let enumerate_vect v =
           enum ((v.(pos), ref [pos]) :: env) (succ pos) 
   in
   List.sort
-    (fun (e1, pl1) (e2, pl2) -> compare (List.length !pl1)  (List.length !pl2))
+    (fun (_e1, pl1) (_e2, pl2) -> compare (List.length !pl1)  (List.length !pl2))
     (enum [] 0)
 
 let output_move oc = function
@@ -229,7 +229,7 @@ let output_all_trans oc trans =
       ()
 
 let output_state oc state_num = function
-    Perform i ->
+    Perform _i ->
       ()
   | Shift(what_to_do, moves) ->
       output_string oc

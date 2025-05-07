@@ -163,7 +163,7 @@ let rec nullable = function
   | Action _   -> false
   | Seq(r1,r2) -> nullable r1 && nullable r2
   | Alt(r1,r2) -> nullable r1 || nullable r2
-  | Star r     -> true
+  | Star _r     -> true
 (*e: function [[Lexgen.nullable]] *)
 
 (*s: function [[Lexgen.firstpos]] *)

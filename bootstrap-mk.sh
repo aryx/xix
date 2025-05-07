@@ -151,10 +151,12 @@ ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Sta
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_repl.ml
+ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
+ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
 ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.ml
-ocamlc.opt $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo Path.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
+ocamlc.opt $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo Path.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP
 cp mk/mk shell/rc bin/

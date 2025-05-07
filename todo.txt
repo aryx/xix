@@ -6,9 +6,6 @@ for the kernel in ocaml, use https://github.com/mirage/ocaml-freestanding ?
 
 ** Last
 
-*** generate files for merlin for efuns in xix
-we're not using dune, on purpose, so then we need something for merlin?
-
 *** add profiling ppx?
 use -pp sed ^[@.* so can compile on 3.10.0 still?
 
@@ -16,27 +13,6 @@ use -pp sed ^[@.* so can compile on 3.10.0 still?
 alt: use cppo, but not available for 3.10.0, so simpler just
 use cpp (and also we actually build a cpp! so we could
 also bootstrap this!)
-
-*** ------------------------------------------
-
-*** more cleanup once mk/rc is working and we can compile everything
-
-**** RELAX add Fpath library?
-Copy paste Fpath.ml and try make it compile with 3.10! Simple!
-
-Just need a proper Fpath.t type instead of Common.filename really
-
-of_string
-to_string
-Fpath_.Operators
-!!
-
-but first need to compile all of xix, so when I refactor
-Common.filename in Fpath.t, we're sure it still works
-
-**** RELAX use otarzan to auto generate more dumpers
-
-**** LATER: use my latest shorter common.ml?
 
 *** add Testing library?
 Testo? Alcotest? OUnit? Mine
@@ -877,5 +853,3 @@ Safer than generating strings (similar to 5c in the end).
 
 so can try to run things directly on my mac (but need 5c-ocaml before
  to get interesting program to test on). Also can be used by Tiger-ARM!
-
-

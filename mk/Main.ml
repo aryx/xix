@@ -1,7 +1,7 @@
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
-open Fpath.Operators
+open Fpath_.Operators
 
 module G = Graph
 module R = Rules

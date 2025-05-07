@@ -1,6 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Fpath.Operators
+open Fpath_.Operators
 
 (* could be moved in graph.ml *)
 (* opti? time cache, and flag to skip cache if want refresh *)

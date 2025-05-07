@@ -1,7 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
-open Fpath.Operators
+open Fpath_.Operators
 
 module A = Ast
 module E = Env

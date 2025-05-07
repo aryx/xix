@@ -1,8 +1,26 @@
 (library
  (name xix_commons)
  (wrapped false)
+ ; no Fpath below! we can't use the local Fpath.ml because we also want
+ ; to use Testo in ../tests/, which is relying on the OPAM Fpath, so we
+ ; would get linking errors if we were our own Fpath.ml so we must find a
+ ; way to remain forward compatible
+ ; alt: we could also skip Logs.ml, but Testo is not using it so we're fine
+ ; for now by providing our own Logs.ml
+ ; coupling: mkfile SRC variable
+ (modules
+  Cap CapStdlib CapSys CapUnix
+  Common common2
+  Dumper OCaml
+  Console UConsole CapConsole
+  Chan UChan CapFS IO
+  Date
+  Logs
+  Fpath_
+ )   
  (libraries
     stdcompat
+    fpath
   )
  (preprocess (pps ppx_deriving.show))
 )

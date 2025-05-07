@@ -1,4 +1,4 @@
-open Fpath.Operators
+open Fpath_.Operators
 
 let with_open_in f (file : Fpath.t) =
   let chan : in_channel =

@@ -12,7 +12,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the file
  * LICENSE for more details.
  *)
-open Fpath.Operators
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)

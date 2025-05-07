@@ -1,12 +1,13 @@
 (executable
- (name Test)
+ (name test)
+ (modules Test)
  (libraries
-   str unix
    testo
+   str unix
    xix_commons
-   xix_collections
-   xix_objects
-   xix_executables
+   ;xix_collections
+   ;xix_objects
+   ;xix_executables
  )
  ; 'byte' is for ocamldebug
  (modes native byte))
@@ -15,7 +16,7 @@
  (package xix)
  (section bin)
  (files
-  (Test.exe as test)
+  (test.exe as test)
   ; useful to debug, see ../../debug and ocamldebug
-  (Test.bc as test.bc))
+  (test.bc as test.bc))
 )

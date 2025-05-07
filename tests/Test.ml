@@ -1,3 +1,14 @@
+(*****************************************************************************)
+(* Purpose *)
+(*****************************************************************************)
+(* Xix test suite entry point.
+ *
+ * From the root of the project you can do
+ *
+ *   $ ./test -s hello
+ *
+ * to run all the OCaml tests containing 'hello' in their test name.
+ *)
 
 (*****************************************************************************)
 (* Testsuite *)
@@ -7,8 +18,10 @@ let test_hello =
   Testo.create "hello"
     (fun () -> print_endline "hello!")
 
-let tests _env = [
-  test_hello;
+let tests _caps _env =
+  List.flatten [
+    [ test_hello; ];
+    Test_shell.tests ();
   ]
 
 
@@ -16,7 +29,7 @@ let tests _env = [
 (* Entry point *)
 (*****************************************************************************)
 
-let main (_caps : Cap.all_caps) : unit =
+let main (caps : Cap.all_caps) : unit =
   Testo.interpret_argv ~project_name:"xix"
 (*
     ~handle_subcommand_result:(fun exit_code res ->
@@ -27,7 +40,7 @@ let main (_caps : Cap.all_caps) : unit =
 
     (get_tests (caps :> Cap.all_caps));
  *)
-  tests
+  (tests caps)
   (* never reached *)
 
 let () = Cap.main (fun all_caps -> main all_caps)

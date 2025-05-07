@@ -2,12 +2,16 @@
  (name test)
  (modules Test)
  (libraries
+   ; std deps
    testo
    str unix
+
+   ; xix libs deps
    xix_commons
-   ;xix_collections
-   ;xix_objects
-   ;xix_executables
+
+   ; testsuites
+   xix_shell_tests
+
  )
  ; 'byte' is for ocamldebug
  (modes native byte))

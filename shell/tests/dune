@@ -1,0 +1,9 @@
+(library
+ (name xix_shell_tests)
+ (wrapped false)
+ (libraries
+   testo
+   xix_commons
+)
+ (preprocess (pps ppx_deriving.show))
+)

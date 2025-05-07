@@ -1,12 +1,36 @@
 (executable
  (name Main)
+ (modules Main)
  (libraries
    str unix
-   xix_commons
-   xix_collections
+   xix_shell
  )
  ; 'byte' is for ocamldebug
  (modes native byte))
+
+(library
+  (name xix_shell)
+  ; coupling: mkfile SRC variable
+  (wrapped false)
+  (modules
+     Flags Globals
+     Ast Meta_ast
+     Opcode Meta_opcode
+     Dumper_
+     Compile
+     Runtime
+     Pattern
+     Fn Var Prompt Status Path Process Error
+     Parser Lexer Parse
+     Builtin
+     Op_repl Op_process
+     Interpreter
+  )
+  (libraries
+   xix_commons
+   xix_collections
+  )
+  )
 
 (ocamllex Lexer)
 (ocamlyacc Parser)

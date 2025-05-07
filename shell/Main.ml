@@ -28,4 +28,7 @@
 (*****************************************************************************)
 
 let _ = 
-    Cap.main CLI.main
+    Cap.main (fun (caps : Cap.all_caps) ->
+      let argv = CapSys.argv caps in
+      CLI.main caps argv
+    )

@@ -4,6 +4,8 @@
  (libraries
    testo
    xix_commons
+
+   xix_shell
 )
  (preprocess (pps ppx_deriving.show))
 )

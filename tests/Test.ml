@@ -18,10 +18,10 @@ let test_hello =
   Testo.create "hello"
     (fun () -> print_endline "hello!")
 
-let tests _caps _env =
+let tests caps _env =
   List.flatten [
     [ test_hello; ];
-    Test_shell.tests ();
+    Test_shell.tests caps;
   ]
 
 

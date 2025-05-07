@@ -1,5 +1,4 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 open Fpath_.Operators
 
@@ -9,21 +8,14 @@ module O = Opcode
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Entry point of the CLI (but as a library).
+(* Entry point of the CLI.
  *)
 
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-(* Need:
- *  - fork/exec: obviously as we are a shell
- *  - chdir: for the builtin 'cd'
- *  - env: to ??
- *  - exit: as many commands can abruptely exit 'rc' itself or children
- *    created by 'rc'
- *  - open_in: ??
- *)
+(* see .mli for more explanations on the need for those caps *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 (* -d and -p are dead according to man page so I removed them *)
@@ -140,7 +132,7 @@ let interpret (caps : < caps >) (args : string list) : unit =
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps : Cap.all_caps) : unit =
+let main (caps : <caps; .. >) (argv : string array) : unit =
 
   let args = ref [] in
 
@@ -197,10 +189,17 @@ let main (caps : Cap.all_caps) : unit =
     " ";
   ]
   in
-  Arg.parse (Arg.align options) (fun t -> args := t::!args) usage;
+  (* old: was Arg.parse but we want explicit argv control *)
+  (try 
+    Arg.parse_argv argv (Arg.align options) (fun t -> args := t::!args) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; CapStdlib.exit caps 2
+  | Arg.Help msg -> UConsole.print msg; CapStdlib.exit caps 0
+  );
+
 
   Logs.set_level !level;
-  Logs.info (fun m -> m "ran as %s from %s" ((CapSys.argv caps).(0)) (Sys.getcwd ()));
+  Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
@@ -215,7 +214,7 @@ let main (caps : Cap.all_caps) : unit =
   (* todo: trap_init () *)
 
   (* for 'flags' builtin (see builtin.ml) *)
-  CapSys.argv caps |> Array.iter (fun s ->
+  argv |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"
     then begin
       let letter = Regexp_.matched1 s in

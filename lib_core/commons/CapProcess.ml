@@ -49,5 +49,5 @@ let apply_in_child_process_promise (caps : < Cap.fork; .. >) ?(flags = []) f x =
              *)
             raise e)
 
-let apply_in_child_process (caps : < Cap.fork >) ?flags f x =
+let apply_in_child_process (caps : < Cap.fork; .. >) ?flags f x =
   apply_in_child_process_promise caps ?flags f x ()

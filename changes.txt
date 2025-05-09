@@ -15,6 +15,7 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 
 ** testinfra
 
+* -----------------------------------------------------------
 
 * 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.
@@ -61,11 +62,13 @@ TODO more semgrep rules (forbid functors, labels, etc.)
   and nix.yml GHA CI
 - start of use of Testo and snapshots for e2e testing of rc
 
+* -----------------------------------------------------------
+
 * 0.14 (Q2 2024) (Logging, Testing, CI)
 
 ** mk works again (but need rc from plan9port (a.k.a. 9base in Linux))
 
-** internals
+** dev infra
 
 - Logging using poor's man Logs.ml
 

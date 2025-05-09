@@ -6,39 +6,6 @@ for the kernel in ocaml, use https://github.com/mirage/ocaml-freestanding ?
 
 ** Last
 
-*** add profiling ppx?
-use -pp sed ^[@.* so can compile on 3.10.0 still?
-
-*** use preprocessor for xix to handle old/new version? for Logs.ml? Cmdliner? Fpath?
-alt: use cppo, but not available for 3.10.0, so simpler just
-use cpp (and also we actually build a cpp! so we could
-also bootstrap this!)
-
-*** add Testing library?
-Testo? Alcotest? OUnit? Mine
-
-this could be compiled just for OCaml 4.14.0; it's a non functional
-thing.
-
-*** RELAX get rid of Common.pr and Common.pr2
-
-*** RELAX add a conf CLI object, so can dump it, can pass it around, cleaner
-one of the few things I've learned in the last 4 years at Semgrep
-
-use otarzan --format=show_pad_ocaml
-to generate boilerplate to be used with ,y Ocaml.mli
-
-or for now ocamltarzan -choice vof with the (* tarzan *) annotation
-
-*** WAITING use Capitalized version for each ml file, reduce distance between
-the denotation of the module like Common and its filename like Common.ml
-
-We do that in semgrep, following Martin's lead.
-
-wait for syncweb to work again, and xix to compile everything
-
-*** -------------------------------------------------------------------
-
 *** LATER: fix rc so it can work on the xix source and replace plan9port rc
 
 *** LATER: try compile xix with ocaml light
@@ -55,7 +22,7 @@ ocamlrun ./bootstrap/mk
 *** consolidate different rc versions
 https://github.com/Homebrew/homebrew-core/blob/1ebef261e5b820b6d00f219c90a7e7c2362aa8a1/Formula/r/rc.rb
 
-*** LATER: fix mk warnings on xix whole project compilation
+*** fix mk warnings on xix whole project compilation
 (now that they are more visible)
 
 *** LATER: add tests for 'mk', run in GHA
@@ -69,11 +36,6 @@ https://github.com/Homebrew/homebrew-core/blob/1ebef261e5b820b6d00f219c90a7e7c23
 
 *** LATER: add tests for 'rc', run in GHA
 # note that if we use mk to build xix, that's also good tests 
-
-*** LATER: maybe use dune and (wrapped true), so no problem having multiple dirs
-with an AST.ml.
-just need to change the main.ml to remove the toplevel call it to another
-main_.ml and not add this file in the dune library
 
 *** add semgrep rules to make sure we're not using
 labels, functors, objects, as we want to be able to compile
@@ -94,21 +56,15 @@ but then can messup possible diffs with older version?
 make sure everything works fine before?
 
 *** LATER: setup pre-commit and ocamlformat and trailing space fix?
+but syncweb issue
 
 *** LATER: try to compile with -nopervasives or -nostdlib
 and rely only on stuff in lib_core/
 
 *** LATER: check that it can compile with my "ocaml light"
 
-*** LATER: use Caps in xix?
-
-
 ** augment rc-in-ocaml now that understand better some issues
 get enough again to compile plan9
-
-** mk divergence
-if an HFILES does not exist, then mk-in-ocaml does not say anything
-but original (rightfully) complain about 'dont know how to make xxx.h'
 
 ** lib_gui/lib_graphics
 
@@ -166,6 +122,54 @@ remove useless file I spotted
 see diff.ml for example of problematic input
 
 * Ported (partially working)
+
+** rc in ocaml
+
+*** read environment, Vinit
+
+*** subshell
+
+*** Vinit
+use IFS?
+
+*** read environment variables
+and transform for PATH
+
+*** export environment variables
+only when change?
+
+*** try plug rc.byte to be used by mk-rc.byte :)
+use a ROOT? so make it works also with bootstrap?
+
+so can dogfood more!
+can use it to compile plan9/ itself?
+
+*** implement all rcmain?
+function definition
+
+*** => can run 95% of what I need?
+well, not really, cos miss arrow for history, and TAB for completion.
+
+*** implicit caret insertion (lastword global)
+
+*** ------------------------------- 
+
+*** less: isatty auto detection interactive
+right now have to use -i explicitely
+
+*** signals stuff!
+and signal debugging! pr2 when something happens related to signals
+
+*** less: why wrong status when do  ls | foo
+why not |1 
+?
+still pb?
+
+*** less: look if cover all error messages in lexer and parser
+
+*** less: other lexing tricks
+$foo(...) SUB
+lastdol? for caret insertion?
 
 ** git in ocaml 
 (start from dulwich? ocaml-git?), so self sustaining, can use it
@@ -241,7 +245,6 @@ useful, so need filter when walk_history on diff (so need
 do tree_changes)
 
 *** less: read tags
-
 
 ** rio in ocaml
 Now that I understand better the ocaml thread implementation, I can port 
@@ -377,57 +380,12 @@ actually might be bad. Maybe better to be fully cooperative,
 otherwise may need some mutex at a few places (e.g. for
 atomic access to the queue)
 
-
-** rc in ocaml
-
-*** read environment, Vinit
-
-*** subshell
-
-*** Vinit
-use IFS?
-
-*** read environment variables
-and transform for PATH
-
-*** export environment variables
-only when change?
-
-
-*** try plug rc.byte to be used by mk-rc.byte :)
-use a ROOT? so make it works also with bootstrap?
-
-so can dogfood more!
-can use it to compile plan9/ itself?
-
-*** implement all rcmain?
-function definition
-
-*** => can run 95% of what I need?
-well, not really, cos miss arrow for history, and TAB for completion.
-
-*** implicit caret insertion (lastword global)
-
-*** ------------------------------- 
-
-*** less: isatty auto detection interactive
-right now have to use -i explicitely
-
-*** signals stuff!
-and signal debugging! pr2 when something happens related to signals
-
-*** less: why wrong status when do  ls | foo
-why not |1 
-?
-still pb?
-
-*** less: look if cover all error messages in lexer and parser
-
-*** less: other lexing tricks
-$foo(...) SUB
-lastdol? for caret insertion?
-
 ** mk in ocaml
+
+*** mk divergence
+if an HFILES does not exist, then mk-in-ocaml does not say anything
+but original (rightfully) complain about 'dont know how to make xxx.h'
+
 
 *** mk: don't know how to make 'screen.h' in /Users/pad/github/fork-plan9/sys/src/9/pc
 => improve error! at least say where this screen.h come from
@@ -587,7 +545,6 @@ original had 3?
 
 *** give better error message on quote.s and accept '\''
 
-
 ** ocamlyacc
 opportunity to add EBNF to yacc!
 
@@ -616,54 +573,6 @@ it's an optimisation
 *** later: ocamllex: understand lex running, lex_engine
 it's an optimisation
 
-
-** ocaml in ocaml (ocaml light)
-
-*** library
-would be good to port to latest convention so caml_xxx 
-so at least easy to get library from recent ocaml versions
-working also under ocaml 1.07
-
-**** Arg.align
-
-**** List.iteri
-
-*** support for qualifier just for first field that propagates to
-other fields so can do
-
-{ Xxx.foo = 1; bar = 2; ... } without having to repeat Xxx (which helps
-to avoid some open)
-
-just cherry pick the patch that did that in original ocaml
-
-*** "Some labels are undefined" error
-well nice, which one! Improve error message, give at least one label name.
-or better, give all of them
-
-*** missing errors!
-
-failwith "Unix error: %s while executing %s with %s"
-      (Unix.error_message err) cmd arg
-
-  I forgot 'spf' but ocaml light says nothing
-
-Unix1.openfile "/dev/cons" [Unix1.O_RDONLY];
-
-  I forgot the perm parameter, but ocaml light said nothing
-
-*** -annot!
-
-*** unused variable check 
-and the _xxx prefix to invalidate it
-
-*** check result ignored
-see in lib_graphics/input/keyboard.ml
-I was doing    Event.send ctl.chan buf.[i];
-but this is not unit!
-
-*** support { x; y } when x and y are locals
-
-
 * Partially ported
 
 ** draw in ocaml?
@@ -682,7 +591,6 @@ can port memdraw first and can even test under qemu thx to 9 in ocaml
 DONE can also port draw first and test for rio. 2 independent halves.
 
 **** continue go through Graphics.nw; add %ocaml
-
 
 ** Kernel in ocaml
 So can do draw and then rio in ocaml? How?

@@ -94,25 +94,23 @@ let new_node (target : string) =
   node
 
 let rule_exec (r: string Rules.rule) =
-  { R. 
-    recipe2 = r.R.recipe;
-    loc2 = r.R.loc;
-    attrs2 = r.R.attrs;
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
 
-    stem = None;
-    all_targets = r.R.targets;
-    all_prereqs = r.R.prereqs;
+    R.stem = None;
+    R.all_targets = r.R.targets;
+    R.all_prereqs = r.R.prereqs;
   }
 
 let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
-  { R. 
-    recipe2 = r.R.recipe;
-    loc2 = r.R.loc;
-    attrs2 = r.R.attrs;
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
 
-    stem = Some stem;
-    all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
-    all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
+    R.stem = Some stem;
+    R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
+    R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
   }
 
 

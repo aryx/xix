@@ -3,7 +3,7 @@
 TOP=../..
 INCLUDES=-I .
 
-#coupling: dune modules stanza
+#coupling: dune '(modules ...)' stanza
 SRC=Cap.ml \
  CapStdlib.ml CapSys.ml CapUnix.ml \
  Common.ml common2.ml \
@@ -12,7 +12,8 @@ SRC=Cap.ml \
  Fpath.ml Fpath_.ml \
  Logs.ml \
  Chan.ml UChan.ml CapFS.ml IO.ml \
- Date.ml
+ Date.ml \
+ Exit.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

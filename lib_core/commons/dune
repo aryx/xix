@@ -18,6 +18,7 @@
   Date
   Logs
   Fpath_
+  Exit
  )   
  (libraries
     stdcompat

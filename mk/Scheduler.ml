@@ -190,5 +190,8 @@ let waitup (caps : < Shell.caps; .. >) () =
           end
         );
       failwith (spf "error in child process, exit status = %d" n)
-  | Unix.WSIGNALED n | Unix.WSTOPPED n ->
+  (* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
+  | Unix.WSIGNALED n ->
+      failwith (spf "child process killed/stopped by signal = %d" n)
+  | Unix.WSTOPPED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)

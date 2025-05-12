@@ -5,7 +5,7 @@
 # it assumes the presence of a shell and can work with both 'rc' and 'sh'.
 #
 # Note that right now to boostrap Xix we still need:
-#  - OCaml with ocamlc.opt, ocamllex, ocamlyacc
+#  - OCaml with ocamlc, ocamllex, ocamlyacc
 #    (LATER: we could bootstrap and use the xix ocamllex/ocamlyacc)
 #  - a C compiler
 #  - the ocamlfind tool and stdcompat library
@@ -33,7 +33,10 @@ OCAMLCFLAGS="-I $EXTERNAL_LIB -g"
 #coupling: mkconfig LINKFLAGS
 EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
 
-OPT=.opt
+# can be useful to bench bytecode vs native, see how long it takes to
+# run this script with and without .opt
+# time: 1.135s with .opt, 1.171 without for 4.09.1. hmmm, not that useful
+#OPT=.opt
 
 TOP=`pwd`
 

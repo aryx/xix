@@ -37,7 +37,7 @@ let warning (loc : Ast.loc) (s : string) : unit =
  *)
 let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
           (Env.values, Percent.pattern) Common.either =
-  let (W word) = wd in
+  let (Ast.W word) = wd in
   let rec aux acc word_elements =
     match word_elements with
     | [] -> 

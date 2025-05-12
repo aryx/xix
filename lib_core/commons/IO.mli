@@ -147,25 +147,25 @@ val output_channel : out_channel -> unit output
 (** Create an output that will write into a channel. *)
 
 
-
 val create_in :
-  read:(unit -> char) ->
-  input:(Bytes.t -> int -> int -> int) -> close:(unit -> unit) -> input
+  (*read:*)(unit -> char) ->
+  (*input:*)(Bytes.t -> int -> int -> int) -> (*close:*)(unit -> unit) -> input
 (** Fully create an input by giving all the needed functions. *)
 
+(*
 val create_out :
   write:(char -> unit) ->
   output:(Bytes.t -> int -> int -> int) ->
   flush:(unit -> unit) -> close:(unit -> 'a) -> 'a output
 (** Fully create an output by giving all the needed functions. *)
-
+ *)
 
 (** {6 Utilities} *)
 
-val scanf : input -> ('a, 'b, 'c, 'd) Scanf.scanner
+(* val scanf : input -> ('a, 'b, 'c, 'd) Scanf.scanner *)
 (** The scanf function works for any input. *)
 
-val printf : 'a output -> ('b, unit, string, unit) format4 -> 'b
+(*val printf : 'a output -> ('b, unit, string, unit) format4 -> 'b *)
 (** The printf function works for any output. *)
 
 val read_all : input -> string
@@ -244,11 +244,13 @@ val read_i32 : input -> int
 (** Read a signed 32-bit integer. Raise [Overflow] if the
   read integer cannot be represented as a Caml 31-bit integer. *)
 
+(*
 val read_real_i32 : input -> int32
 (** Read a signed 32-bit integer as an OCaml int32. *)
 
 val read_i64 : input -> int64
 (** Read a signed 64-bit integer as an OCaml int64. *)
+*)
 
 val read_float32 : input -> float
 (** Read an IEEE single precision floating point value (32 bits). *)
@@ -266,11 +268,13 @@ val write_i16 : 'a output -> int -> unit
 val write_i32 : 'a output -> int -> unit
 (** Write a signed 32-bit integer. *)
 
+(*
 val write_real_i32 : 'a output -> int32 -> unit
 (** Write an OCaml int32. *)
 
 val write_i64 : 'a output -> int64 -> unit
 (** Write an OCaml int64. *)
+*)
 
 val write_float32 : 'a output -> float -> unit
 (** Write an IEEE single precision floating point value (32 bits). *)
@@ -288,16 +292,20 @@ sig
   val read_ui16 : input -> int
   val read_i16 : input -> int
   val read_i32 : input -> int
+  (*
   val read_real_i32 : input -> int32
   val read_i64 : input -> int64
+  *)
   val read_float32 : input -> float
   val read_double : input -> float
 
   val write_ui16 : 'a output -> int -> unit
   val write_i16 : 'a output -> int -> unit
   val write_i32 : 'a output -> int -> unit
+  (*
   val write_real_i32 : 'a output -> int32 -> unit
   val write_i64 : 'a output -> int64 -> unit
+  *)
   val write_float32 : 'a output -> float -> unit
   val write_double : 'a output -> float -> unit
 

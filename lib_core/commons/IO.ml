@@ -75,14 +75,17 @@ exception Output_closed
 
 let _default_close = (fun () -> ())
 
-(* pad: could use intermediate struct instead of keyword arguments *)
-let create_in ~read ~input ~close =
+(* pad: could use intermediate struct instead of keyword arguments
+ * old: with labels create_in ~read ~input ~close =
+ *)
+let create_in read input close =
   {
     in_read = read;
     in_input = input;
     in_close = close;
   }
 
+(*
 let create_out ~write ~output ~flush ~close =
   {
     out_write = write;
@@ -90,7 +93,7 @@ let create_out ~write ~output ~flush ~close =
     out_close = close;
     out_flush = flush;
   }
-
+ *)
 
 let read i = i.in_read()
 
@@ -201,13 +204,16 @@ let output o s p l =
   o.out_output s p l
 
 
-
+(*
 let scanf i fmt =
   let ib = Scanf.Scanning.from_function (fun () -> try read i with No_more_input -> raise End_of_file) in
   Scanf.kscanf ib (fun _ exn -> raise exn) fmt
+ *)
 
+(*
 let printf o fmt =
   Printf.ksprintf (fun s -> nwrite_string o s) fmt
+ *)
 
 let flush o = o.out_flush()
 

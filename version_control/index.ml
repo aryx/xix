@@ -277,18 +277,38 @@ let trees_of_index idx add_tree_obj =
 (* IO *)
 (*****************************************************************************)
 
+(* was in IO.BigEndian and IO.ml before but better to moved here
+ * so we can compile most of xix
+ *)
+let read_real_i32 ch =
+  let big = Int32.shift_left (Int32.of_int (IO.read_byte ch)) 24 in
+  let ch3 = IO.read_byte ch in
+  let ch2 = IO.read_byte ch in
+  let ch1 = IO.read_byte ch in
+  let base = Int32.of_int (ch1 lor (ch2 lsl 8) lor (ch3 lsl 16)) in
+  Int32.logor base big
+
+let write_real_i32 ch n =
+  let base = Int32.to_int n in
+  let big = Int32.to_int (Int32.shift_right_logical n 24) in
+  IO.write_byte ch big;
+  IO.write_byte ch (base lsr 16);
+  IO.write_byte ch (base lsr 8);
+  IO.write_byte ch base
+
+
 (*s: function [[Index.read_time]] *)
 let read_time ch =
   (* less: unsigned actually *)
-  let lsb32 = IO.BigEndian.read_real_i32 ch in
-  let nsec = IO.BigEndian.read_real_i32 ch in
+  let lsb32 = (*IO.BigEndian.*)read_real_i32 ch in
+  let nsec = (*IO.BigEndian.*)read_real_i32 ch in
   { lsb32 = lsb32; nsec = nsec }
 (*e: function [[Index.read_time]] *)
 
 (*s: function [[Index.write_time]] *)
 let write_time ch time =
-  IO.BigEndian.write_real_i32 ch time.lsb32;
-  IO.BigEndian.write_real_i32 ch time.nsec
+  (*IO.BigEndian.*)write_real_i32 ch time.lsb32;
+  (*IO.BigEndian.*)write_real_i32 ch time.nsec
 (*e: function [[Index.write_time]] *)
 
 (*s: function [[Index.read_mode]] *)
@@ -329,12 +349,12 @@ let read_stat_info ch =
   let ctime = read_time ch in
   let mtime = read_time ch in
   (* less: unsigned again *)
-  let dev = IO.BigEndian.read_real_i32 ch in
-  let inode = IO.BigEndian.read_real_i32 ch in
+  let dev = (*IO.BigEndian.*)read_real_i32 ch in
+  let inode = (*IO.BigEndian.*)read_real_i32 ch in
   let mode = read_mode ch in
-  let uid = IO.BigEndian.read_real_i32 ch in
-  let gid = IO.BigEndian.read_real_i32 ch in
-  let size = IO.BigEndian.read_real_i32 ch in
+  let uid = (*IO.BigEndian.*)read_real_i32 ch in
+  let gid = (*IO.BigEndian.*)read_real_i32 ch in
+  let size = (*IO.BigEndian.*)read_real_i32 ch in
   { mtime = mtime; ctime = ctime; dev = dev; inode = inode; mode = mode; uid = uid; gid = gid; size = size }
 (*e: function [[Index.read_stat_info]] *)
 
@@ -342,12 +362,12 @@ let read_stat_info ch =
 let write_stat_info ch stats =
   write_time ch stats.ctime;
   write_time ch stats.mtime;
-  IO.BigEndian.write_real_i32 ch stats.dev;
-  IO.BigEndian.write_real_i32 ch stats.inode;
+  (*IO.BigEndian.*)write_real_i32 ch stats.dev;
+  (*IO.BigEndian.*)write_real_i32 ch stats.inode;
   write_mode ch stats.mode;
-  IO.BigEndian.write_real_i32 ch stats.uid;
-  IO.BigEndian.write_real_i32 ch stats.gid;
-  IO.BigEndian.write_real_i32 ch stats.size;
+  (*IO.BigEndian.*)write_real_i32 ch stats.uid;
+  (*IO.BigEndian.*)write_real_i32 ch stats.gid;
+  (*IO.BigEndian.*)write_real_i32 ch stats.size;
   ()
 (*e: function [[Index.write_stat_info]] *)
  

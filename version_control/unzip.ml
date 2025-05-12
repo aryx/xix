@@ -657,22 +657,23 @@ let inflate_init ?(header=true) ch =
 let inflate ?(header=true) ch =
   let z = inflate_init ~header ch in
   let tmp = Bytes.create 1 in
+  (* read input close *)
   IO.create_in
-    ~input:(fun buf_dst pos_in_buf len ->
+    (* special case of ~input for 1 byte *)
+    (*~read:*)(fun() ->
+      let l = inflate_data z tmp 0 1 in
+      if l = 1 
+      then Bytes.unsafe_get tmp 0 
+      else raise IO.No_more_input
+    )
+    (*~input:*)(fun buf_dst pos_in_buf len ->
       let n = inflate_data z buf_dst pos_in_buf len in
       if n = 0 
       then raise IO.No_more_input;
       n
     )
-    ~close:(fun () ->
+    (*~close:*)(fun () ->
       IO.close_in ch
-    )
-    (* special case of ~input for 1 byte *)
-    ~read:(fun() ->
-      let l = inflate_data z tmp 0 1 in
-      if l = 1 
-      then Bytes.unsafe_get tmp 0 
-      else raise IO.No_more_input
     )
 (*e: function [[Unzip.inflate]] *)
 (*e: version_control/unzip.ml *)

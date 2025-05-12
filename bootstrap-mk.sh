@@ -33,130 +33,133 @@ OCAMLCFLAGS="-I $EXTERNAL_LIB -g"
 #coupling: mkconfig LINKFLAGS
 EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
 
+OPT=.opt
+
 TOP=`pwd`
 
+
 cd $TOP/lib_core/collections/
-ocamlc.opt $OCAMLCFLAGS -c Set_.mli
-ocamlc.opt $OCAMLCFLAGS -c Map_.mli
-ocamlc.opt $OCAMLCFLAGS -c Set_.ml
-ocamlc.opt $OCAMLCFLAGS -c Map_.ml
-ocamlc.opt  Set_.cmo Map_.cmo -a -o lib.cma
+ocamlc$OPT $OCAMLCFLAGS -c Set_.mli
+ocamlc$OPT $OCAMLCFLAGS -c Map_.mli
+ocamlc$OPT $OCAMLCFLAGS -c Set_.ml
+ocamlc$OPT $OCAMLCFLAGS -c Map_.ml
+ocamlc$OPT  Set_.cmo Map_.cmo -a -o lib.cma
 
 cd $TOP/lib_core/commons/
-ocamlc.opt $OCAMLCFLAGS -c Cap.mli
-ocamlc.opt $OCAMLCFLAGS -c Dumper.mli
-ocamlc.opt $OCAMLCFLAGS -c Console.mli
-ocamlc.opt $OCAMLCFLAGS -c UConsole.mli
-ocamlc.opt $OCAMLCFLAGS -c Common.mli
-ocamlc.opt $OCAMLCFLAGS -c common2.ml
-ocamlc.opt $OCAMLCFLAGS -c IO.mli
-ocamlc.opt $OCAMLCFLAGS -c Logs.mli
-ocamlc.opt $OCAMLCFLAGS -c Fpath.mli
-ocamlc.opt $OCAMLCFLAGS -c Fpath.ml
-ocamlc.opt $OCAMLCFLAGS -c Fpath_.mli
-ocamlc.opt $OCAMLCFLAGS -c Fpath_.ml
-ocamlc.opt $OCAMLCFLAGS -c Chan.ml
-ocamlc.opt $OCAMLCFLAGS -c UChan.mli
-ocamlc.opt $OCAMLCFLAGS -c CapFS.mli
-ocamlc.opt $OCAMLCFLAGS -c Date.mli
-ocamlc.opt $OCAMLCFLAGS -c Cap.ml
-ocamlc.opt $OCAMLCFLAGS -c CapStdlib.ml
-ocamlc.opt $OCAMLCFLAGS -c CapSys.ml
-ocamlc.opt $OCAMLCFLAGS -c CapUnix.ml
-ocamlc.opt $OCAMLCFLAGS -c Dumper.ml
-ocamlc.opt $OCAMLCFLAGS -c Common.ml
-ocamlc.opt $OCAMLCFLAGS -c Console.ml
-ocamlc.opt $OCAMLCFLAGS -c UConsole.ml
-ocamlc.opt $OCAMLCFLAGS -c CapConsole.ml
-ocamlc.opt $OCAMLCFLAGS -c OCaml.mli
-ocamlc.opt $OCAMLCFLAGS -c Logs.ml
-ocamlc.opt $OCAMLCFLAGS -c UChan.ml
-ocamlc.opt $OCAMLCFLAGS -c CapFS.ml
-ocamlc.opt $OCAMLCFLAGS -c Date.ml
-ocamlc.opt $OCAMLCFLAGS -c IO.ml
-ocamlc.opt $OCAMLCFLAGS -c OCaml.ml
-ocamlc.opt -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo -a -o lib.cma
+ocamlc$OPT $OCAMLCFLAGS -c Cap.mli
+ocamlc$OPT $OCAMLCFLAGS -c Dumper.mli
+ocamlc$OPT $OCAMLCFLAGS -c Console.mli
+ocamlc$OPT $OCAMLCFLAGS -c UConsole.mli
+ocamlc$OPT $OCAMLCFLAGS -c Common.mli
+ocamlc$OPT $OCAMLCFLAGS -c common2.ml
+ocamlc$OPT $OCAMLCFLAGS -c IO.mli
+ocamlc$OPT $OCAMLCFLAGS -c Logs.mli
+ocamlc$OPT $OCAMLCFLAGS -c Fpath.mli
+ocamlc$OPT $OCAMLCFLAGS -c Fpath.ml
+ocamlc$OPT $OCAMLCFLAGS -c Fpath_.mli
+ocamlc$OPT $OCAMLCFLAGS -c Fpath_.ml
+ocamlc$OPT $OCAMLCFLAGS -c Chan.ml
+ocamlc$OPT $OCAMLCFLAGS -c UChan.mli
+ocamlc$OPT $OCAMLCFLAGS -c CapFS.mli
+ocamlc$OPT $OCAMLCFLAGS -c Date.mli
+ocamlc$OPT $OCAMLCFLAGS -c Cap.ml
+ocamlc$OPT $OCAMLCFLAGS -c CapStdlib.ml
+ocamlc$OPT $OCAMLCFLAGS -c CapSys.ml
+ocamlc$OPT $OCAMLCFLAGS -c CapUnix.ml
+ocamlc$OPT $OCAMLCFLAGS -c Dumper.ml
+ocamlc$OPT $OCAMLCFLAGS -c Common.ml
+ocamlc$OPT $OCAMLCFLAGS -c Console.ml
+ocamlc$OPT $OCAMLCFLAGS -c UConsole.ml
+ocamlc$OPT $OCAMLCFLAGS -c CapConsole.ml
+ocamlc$OPT $OCAMLCFLAGS -c OCaml.mli
+ocamlc$OPT $OCAMLCFLAGS -c Logs.ml
+ocamlc$OPT $OCAMLCFLAGS -c UChan.ml
+ocamlc$OPT $OCAMLCFLAGS -c CapFS.ml
+ocamlc$OPT $OCAMLCFLAGS -c Date.ml
+ocamlc$OPT $OCAMLCFLAGS -c IO.ml
+ocamlc$OPT $OCAMLCFLAGS -c OCaml.ml
+ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc Parser.mly
 ocamllex Lexer.mll
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Globals.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Flags.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Ast.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shellenv.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Percent.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c File.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shellenv.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shell.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Env.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Percent.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Rules.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c File.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shell.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Env.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Lexer.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Eval.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Graph.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Eval.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Graph.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Job.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Outofdate.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Scheduler.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Scheduler.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Outofdate.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
-ocamlc.opt $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Globals.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Flags.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Ast.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shellenv.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Percent.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c File.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shellenv.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shell.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Env.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Percent.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Rules.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c File.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Shell.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Env.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Lexer.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Eval.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Graph.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Eval.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Graph.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Job.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Outofdate.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Scheduler.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Scheduler.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Outofdate.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
 
 cd $TOP/shell/
 ocamlyacc Parser.mly
 ocamllex Lexer.mll
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Flags.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Globals.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Ast.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Opcode.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Pattern.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Process.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Error.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Meta_ast.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Runtime.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Meta_opcode.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Dumper_.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Compile.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Runtime.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Pattern.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Dumper_.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Compile.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Fn.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Var.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Process.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Error.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Lexer.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_process.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Fn.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Var.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_repl.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
-ocamlc.opt $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.ml
-ocamlc.opt $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo Path.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Flags.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Globals.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Ast.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Opcode.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Pattern.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Process.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Error.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Meta_ast.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Runtime.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Meta_opcode.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Dumper_.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Compile.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Runtime.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Pattern.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parser.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Dumper_.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Compile.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Fn.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Var.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Process.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Error.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Lexer.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_process.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Fn.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Var.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_repl.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.ml
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo Path.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP
 cp mk/mk shell/rc bin/

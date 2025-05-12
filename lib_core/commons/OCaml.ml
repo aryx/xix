@@ -239,6 +239,33 @@ let vof_either _of_a _of_b =
 (*****************************************************************************)
 (* Format pretty printers *)
 (*****************************************************************************)
+
+(* TODO: use Buffer_.with_buffer_to_string and Fmt_.with_buffer_to_string *)
+(* Used by OCaml.ml *)
+(* julia: convert something printed using format to print into a string *)
+let format_to_string f =
+  let (nm,o) = Filename.open_temp_file "format_to_s" ".out" in
+  (* to avoid interference with other code using Format.printf, e.g.
+   * Ounit.run_tt
+   *)
+  Format.print_flush();
+  Format.set_formatter_out_channel o;
+  let _ = f () in
+  Format.print_newline();
+  Format.print_flush();
+  Format.set_formatter_out_channel stdout;
+  close_out o;
+  let i = open_in nm in
+  let lines = ref [] in
+  let rec loop _ =
+    let cur = input_line i in
+    lines := cur :: !lines;
+    loop() in
+  (try loop() with End_of_file -> ());
+  close_in i;
+  Sys.command ("rm -f " ^ nm) |> ignore;
+  String.concat "\n" (List.rev !lines)
+
 let add_sep xs = 
   xs |> List.map (fun x -> Right x) |> Common2.join_gen (Left ())
 
@@ -264,7 +291,7 @@ let add_sep xs =
  *)
 
 let string_of_v v = 
-  Common2.format_to_string (fun () ->
+  format_to_string (fun () ->
     let ppf = Format.printf in
     let rec aux v = 
       match v with

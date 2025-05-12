@@ -69,10 +69,7 @@ let optionize f =
   try Some (f ()) with Not_found -> None
 
 
-let memoized ?(use_cache=true) h k f =
-  if not use_cache
-  then f ()
-  else
+let memoized h k f =
     try Hashtbl.find h k
     with Not_found ->
       let v = f () in

@@ -39,7 +39,7 @@ val filter_some : 'a option list -> 'a list
 val optionize: (unit -> 'a) -> 'a option
 
 val memoized :
-  ?use_cache:bool -> ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
+  ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
 
 val cat : string -> string list
 

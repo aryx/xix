@@ -53,6 +53,8 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 - use dune as an additional way to build XiX which then allows to
   use merlin and code navigation in efuns!!
 - use ocamlformat (just on some .mli for now)
+- adapt the code to also work with ocaml-light! (remove some labels,
+  remove some Int32/Int64 code, etc.)
 
 ** testinfra
 
@@ -106,7 +108,8 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 
 * 0.11 (Q3 2018) (lib_gui?)
 
-internals: use of merlin (mk .merlin) via Efuns
+** internals
+- use of merlin (mk .merlin) via Efuns
 
 * 0.10 (Q2 2018) ()
 

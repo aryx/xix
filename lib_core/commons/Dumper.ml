@@ -2,6 +2,7 @@
  * By Richard W.M. Jones (rich@annexia.org).
  * dumper.ml 1.2 2005/02/06 12:38:21 rich Exp
  *)
+(* pad: see also stdlib/printexc.ml *)
 
 open Obj
 
@@ -48,7 +49,7 @@ let rec dump r =
       (* Note that [lazy_tag .. forward_tag] are < no_scan_tag.  Not
        * clear if very large constructed values could have the same
        * tag. XXX *)
-    else if t = lazy_tag then opaque "lazy"
+   (* TODO: not in ocaml-light: else if t = lazy_tag then opaque "lazy" *)
     else if t = closure_tag then opaque "closure"
     else if t = object_tag then
       (* Object. *)
@@ -65,7 +66,7 @@ let rec dump r =
       ^ String.concat ", " (List.map dump slots)
       ^ ")"
     else if t = infix_tag then opaque "infix"
-    else if t = forward_tag then opaque "forward"
+    (* TODO: not in ocaml-light: else if t = forward_tag then opaque "forward" *)
     else if t < no_scan_tag then
       (* Constructed value. *)
       let fields = get_fields [] s in
@@ -75,7 +76,7 @@ let rec dump r =
     else if t = string_tag then "\"" ^ String.escaped (magic r : string) ^ "\""
     else if t = double_tag then string_of_float (magic r : float)
     else if t = abstract_tag then opaque "abstract"
-    else if t = custom_tag then opaque "custom"
+    (* TODO: not in ocaml-light: else if t = custom_tag then opaque "custom" *)
     else failwith ("dump: impossible tag (" ^ string_of_int t ^ ")")
 
 let dump v = dump (repr v)

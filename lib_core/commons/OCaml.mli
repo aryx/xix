@@ -14,7 +14,7 @@ type v =
   | VDict of (string * v) list
   | VSum of string * v list
 
-  | VVar of (string * int64)
+  | VVar of (string * int)
   | VArrow of string
 
   (* special cases *) 

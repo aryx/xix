@@ -129,7 +129,7 @@ let really_output o s p l' =
   let p = ref p in
   while !l > 0 do
     let w = o.out_output s !p !l in
-    if w = 0 then raise Sys_blocked_io;
+    if w = 0 then failwith "raise Sys_blocked_io";
     p := !p + w;
     l := !l - w;
   done;
@@ -150,7 +150,7 @@ let really_input i s p l' =
   let p = ref p in
   while !l > 0 do
     let r = i.in_input s !p !l in
-    if r = 0 then raise Sys_blocked_io;
+    if r = 0 then failwith "raise Sys_blocked_io";
     p := !p + r;
     l := !l - r;
   done;
@@ -188,7 +188,7 @@ let nwrite o s =
         let l = ref (Bytes.length s) in
   while !l > 0 do
     let w = o.out_output s !p !l in
-    if w = 0 then raise Sys_blocked_io;
+    if w = 0 then failwith "raise Sys_blocked_io";
     p := !p + w;
     l := !l - w;
   done
@@ -358,19 +358,19 @@ let input_channel ch =
         End_of_file -> raise No_more_input
     );
     in_input = (fun s p l ->
-      let n = Stdlib.input ch s p l in
+      let n = Pervasives.input ch s p l in
       if n = 0 then raise No_more_input;
       n
     );
-    in_close = (fun () -> Stdlib.close_in ch);
+    in_close = (fun () -> Pervasives.close_in ch);
   }
 
 let output_channel ch =
   {
     out_write = (fun c -> output_char ch c);
-    out_output = (fun s p l -> Stdlib.output ch s p l; l);
-    out_close = (fun () -> Stdlib.close_out ch);
-    out_flush = (fun () -> Stdlib.flush ch);
+    out_output = (fun s p l -> Pervasives.output ch s p l; l);
+    out_close = (fun () -> Pervasives.close_out ch);
+    out_flush = (fun () -> Pervasives.flush ch);
   }
 
 
@@ -424,10 +424,10 @@ external cast_output : 'a output -> unit output = "%identity"
 
 exception Overflow of string
 
-let read_byte i = int_of_char (i.in_read())
+let read_byte i = Char.code (i.in_read())
 
 let read_signed_byte i =
-  let c = int_of_char (i.in_read()) in
+  let c = Char.code (i.in_read()) in
   if c land 128 <> 0 then
     c - 256
   else
@@ -533,6 +533,7 @@ let read_i32 ch =
     ch1 lor (ch2 lsl 8) lor (ch3 lsl 16) lor (ch4 lsl 24)
   end
 
+(*
 let read_real_i32 ch =
   let ch1 = read_byte ch in
   let ch2 = read_byte ch in
@@ -556,7 +557,7 @@ let read_float32 ch =
 
 let read_double ch =
   Int64.float_of_bits (read_i64 ch)
-
+ *)
 
 
 let write_ui16 ch n =
@@ -577,6 +578,7 @@ let write_i32 ch n =
   write_byte ch (n lsr 16);
   write_byte ch (n asr 24)
 
+(*
 let write_real_i32 ch n =
   let base = Int32.to_int n in
   let big = Int32.to_int (Int32.shift_right_logical n 24) in
@@ -594,7 +596,7 @@ let write_float32 ch f =
 
 let write_double ch f =
   write_i64 ch (Int64.bits_of_float f)
-
+ *)
 end
 
 (* -------------------------------------------------------------- *)
@@ -629,6 +631,7 @@ let read_i32 ch =
     ch1 lor (ch2 lsl 8) lor (ch3 lsl 16) lor (ch4 lsl 24)
   end
 
+(*
 let read_real_i32 ch =
   let big = Int32.shift_left (Int32.of_int (read_byte ch)) 24 in
   let ch3 = read_byte ch in
@@ -652,7 +655,7 @@ let read_float32 ch =
 
 let read_double ch =
   Int64.float_of_bits (read_i64 ch)
-
+ *)
 
 
 
@@ -674,6 +677,7 @@ let write_i32 ch n =
   write_byte ch (n lsr 8);
   write_byte ch n
 
+(*
 let write_real_i32 ch n =
   let base = Int32.to_int n in
   let big = Int32.to_int (Int32.shift_right_logical n 24) in
@@ -691,7 +695,7 @@ let write_float32 ch f =
 
 let write_double ch f =
   write_i64 ch (Int64.bits_of_float f)
-
+ *)
 end
 
 (* -------------------------------------------------------------- *)

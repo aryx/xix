@@ -24,14 +24,24 @@ set -e
 # for showing the executed commands (verbose)
 set -x
 
-# Limit to just stdcompat! This is Xix!
-EXTERNAL_LIB=`ocamlfind query stdcompat`
+use_ocaml_light="no"
+
+if test "$use_ocaml_light" = "no"; then
+    # Limit to just stdcompat! This is Xix!
+    EXTERNAL_LIB=`ocamlfind query stdcompat`
+else    
+    EXTERNAL_LIB="."
+fi    
 
 #coupling: mkconfig COMPFLAGS
 OCAMLCFLAGS="-I $EXTERNAL_LIB -g"
 
 #coupling: mkconfig LINKFLAGS
-EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
+if test "$use_ocaml_light" = "no"; then
+    EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
+else    
+    EXTRALINKFLAGS="-custom -g"
+fi    
 
 # can be useful to bench bytecode vs native, see how long it takes to
 # run this script with and without .opt
@@ -49,7 +59,9 @@ ocamlc$OPT $OCAMLCFLAGS -c Map_.ml
 ocamlc$OPT  Set_.cmo Map_.cmo -a -o lib.cma
 
 cd $TOP/lib_core/commons/
-ocamlc$OPT $OCAMLCFLAGS -c Cap.mli
+if test "$use_ocaml_light" = "no"; then
+    ocamlc$OPT $OCAMLCFLAGS -c Cap.mli
+fi    
 ocamlc$OPT $OCAMLCFLAGS -c Dumper.mli
 ocamlc$OPT $OCAMLCFLAGS -c Console.mli
 ocamlc$OPT $OCAMLCFLAGS -c UConsole.mli
@@ -65,7 +77,10 @@ ocamlc$OPT $OCAMLCFLAGS -c Chan.ml
 ocamlc$OPT $OCAMLCFLAGS -c UChan.mli
 ocamlc$OPT $OCAMLCFLAGS -c CapFS.mli
 ocamlc$OPT $OCAMLCFLAGS -c Date.mli
-ocamlc$OPT $OCAMLCFLAGS -c Cap.ml
+if test "$use_ocaml_light" = "no"; then
+    ocamlc$OPT $OCAMLCFLAGS -c Cap.ml
+    CAP=Cap.cmo
+fi    
 ocamlc$OPT $OCAMLCFLAGS -c CapStdlib.ml
 ocamlc$OPT $OCAMLCFLAGS -c CapSys.ml
 ocamlc$OPT $OCAMLCFLAGS -c CapUnix.ml
@@ -81,7 +96,7 @@ ocamlc$OPT $OCAMLCFLAGS -c CapFS.ml
 ocamlc$OPT $OCAMLCFLAGS -c Date.ml
 ocamlc$OPT $OCAMLCFLAGS -c IO.ml
 ocamlc$OPT $OCAMLCFLAGS -c OCaml.ml
-ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo -a -o lib.cma
+ocamlc$OPT -I . Dumper.cmo $CAP CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc Parser.mly

@@ -190,7 +190,7 @@ type v =
   | VDict of (string * v) list
   | VSum of string * v list
 
-  | VVar of (string * int64)
+  | VVar of (string * (* was int64 *) int)
   | VArrow of string
 
   (* special cases *) 
@@ -244,7 +244,9 @@ let vof_either _of_a _of_b =
 (* Used by OCaml.ml *)
 (* julia: convert something printed using format to print into a string *)
 let format_to_string f =
-  let (nm,o) = Filename.open_temp_file "format_to_s" ".out" in
+  (* ocaml-light: let (nm,o) = Filename.open_temp_file "format_to_s" ".out" in *)
+  let nm = Filename.temp_file "format_to_s" ".out" in
+  let o = open_out nm in
   (* to avoid interference with other code using Format.printf, e.g.
    * Ounit.run_tt
    *)
@@ -333,7 +335,7 @@ let string_of_v v =
               ppf "@])";
           )
           
-      | VVar (s, i64) -> ppf "%s_%d" s (Int64.to_int i64)
+      | VVar (s, x) -> ppf "%s_%d" s ((*Int64.to_int*) x)
       | VArrow _v1 -> failwith "Arrow TODO"
       | VNone -> ppf "None";
       | VSome v -> ppf "Some(@["; aux v; ppf "@])";

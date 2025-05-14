@@ -96,7 +96,7 @@ let _ =
   Tests.test_slr ();
   Tests.test_lr_engine ();
 *)
-  Printexc.catch main (); 
+  (*Printexc.catch*) main (); 
   exit 0
 (*e: toplevel [[Main._1]](yacc) *)
 (*e: yacc/main.ml *)

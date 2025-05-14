@@ -9,9 +9,6 @@
 # https://nix.dev/tutorials/first-steps/declarative-shell and
 # https://nix.dev/tutorials/nix-language for more info on Nix.
 # alt: flake.nix, which handles more things, but is also more complicated
-#
-# TODO:
-#   - pin ocaml version ? opam switch create ?
 
 let
    # fetch a specific nixos version for better reproducibility
@@ -34,7 +31,11 @@ pkgs.mkShell {
      # Utilities for opam (cacert is needed by curl)
      git curl cacert
      # External tools for some OCaml libs (stdcompat I think)
+     pkg-config
      autoconf
+     # Some Makefile relies on perl to fix some syncweb comments
+     # alt: use sed
+     perl
      # Optional utilities for development/debugging
      # ex: which
      # Implicit utilities and libs installed by default in nix
@@ -57,6 +58,10 @@ pkgs.mkShell {
        ## with --pure
        ## -n to answer no to questions such as 'modify ~/.bash_profile?'
        opam init --disable-sandboxing --no-depexts -n
+
+       # 4.09.1 and 4.14.0 failed fails on my arch linux so
+       # let's keep the default (5.3.0)
+       # opam switch create 4.14.0
 
        # Note that the 'opam install' part is now done outside
        # the shellHook in ./configure

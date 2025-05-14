@@ -13,12 +13,11 @@ license: "LGPL-2.1"
 homepage: "https://github.com/aryx/xix"
 bug-reports: "https://github.com/aryx/xix/issues"
 depends: [
-  # To handle ppx_deriving and Cap.mli advanced object types (but we probably
-  # use 3.10.0 by preprocessing those object types and deriving attributes)
+  # To handle ppx_deriving and Cap.mli advanced object types
   "ocaml" {>= "4.09.1"}
   # Do not depend on anything except those 3! Xix should limit its external
   # dependencies as much as possible, so it can boostrap itself more easily
-  # (and also we can hope to compile xix with ocaml-light and on plan9).
+  # (and also so we can compile xix with ocaml-light and on plan9).
   "stdcompat"
   "ocamlfind"
   "ppx_deriving"

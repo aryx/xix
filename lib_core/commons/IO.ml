@@ -73,6 +73,32 @@ exception Output_closed
 (* -------------------------------------------------------------- *)
 (* API *)
 
+(* put early before input/close_in/output/close_out are redefined below *)
+let input_channel ch =
+  {
+    in_read = (fun () ->
+      try
+        input_char ch
+      with
+        End_of_file -> raise No_more_input
+    );
+    in_input = (fun s p l ->
+      let n = (*Pervasives/Stdlib.*)input ch s p l in
+      if n = 0 then raise No_more_input;
+      n
+    );
+    in_close = (fun () -> (*Pervasives/Stdlib.*)close_in ch);
+  }
+
+let output_channel ch =
+  {
+    out_write = (fun c -> output_char ch c);
+    out_output = (fun s p l -> (*Pervasives/Stdlib.*)output ch s p l; l);
+    out_close = (fun () -> (*Pervasives/Stdlib.*)close_out ch);
+    out_flush = (fun () -> (*Pervasives/Stdlib.*)flush ch);
+  }
+
+
 let _default_close = (fun () -> ())
 
 (* pad: could use intermediate struct instead of keyword arguments
@@ -348,30 +374,6 @@ let output_strings() =
     out_flush = (fun () -> ());
   }
 
-
-let input_channel ch =
-  {
-    in_read = (fun () ->
-      try
-        input_char ch
-      with
-        End_of_file -> raise No_more_input
-    );
-    in_input = (fun s p l ->
-      let n = Pervasives.input ch s p l in
-      if n = 0 then raise No_more_input;
-      n
-    );
-    in_close = (fun () -> Pervasives.close_in ch);
-  }
-
-let output_channel ch =
-  {
-    out_write = (fun c -> output_char ch c);
-    out_output = (fun s p l -> Pervasives.output ch s p l; l);
-    out_close = (fun () -> Pervasives.close_out ch);
-    out_flush = (fun () -> Pervasives.flush ch);
-  }
 
 
 let pipe() =

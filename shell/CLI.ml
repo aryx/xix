@@ -147,7 +147,7 @@ let main (caps : <caps; .. >) (argv : string array) : unit =
     " non-interactive mode (no prompt)";
     "-l", Arg.Set Flags.login,
     " login mode (execute ~/lib/profile)";
-    "-m", Arg.Set_string Flags.rcmain,
+    "-m", Arg.String (fun s ->  Flags.rcmain := s),
     " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
 
     "-e", Arg.Set Flags.eflag,

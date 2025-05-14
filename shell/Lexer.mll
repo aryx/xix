@@ -70,10 +70,17 @@ rule token = parse
   | ">"  { TRedir Ast.RWrite }
   | "<"  { TRedir Ast.RRead }
   | ">>" { TRedir Ast.RAppend }
-  | ">[" (['0'-'9']+ as fd0) "=" (['0'-'9']+ as fd1) "]" 
-         { TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1) }
-  | ">>[" (['0'-'9']+ as fd0) "=" (['0'-'9']+ as fd1) "]" 
-         { TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1) }
+  | ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
+         {  let fd0 = failwith "TODO: fd0" in
+	    let fd1 = failwith "TODO: fd1" in
+	    TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
+	 }
+  | ">>[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
+         {
+             let fd0 = failwith "TODO: fd0" in
+	     let fd1 = failwith "TODO: fd1" in
+	     TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
+	 }
   (* less: advanced pipe and redirection *)
 
   | '('  { TOPar }   | ')' { TCPar }
@@ -123,7 +130,7 @@ rule token = parse
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
-  | _ as c   { error (spf "unrecognized character: '%c'" c) }
+  | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
 
 (*****************************************************************************)
 (* Quote rule *)

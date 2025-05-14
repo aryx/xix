@@ -7,11 +7,11 @@ let parse (file : Fpath.t) =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
     Globals.file := !!file;
-    Lexer.state := Lexer.Start;
+    Lexer.state_ := Lexer.Start;
 
-    let lexbuf = Lexing.from_channel chan.ic in
+    let lexbuf = Lexing.from_channel chan.Chan.ic in
     let lexfunc lexbuf =
-      (match !Lexer.state with
+      (match !Lexer.state_ with
       | Lexer.Start 
       | Lexer.AfterColon 
       | Lexer.AfterEq 

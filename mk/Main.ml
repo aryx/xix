@@ -213,7 +213,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps: Cap.all_caps) : unit =
+let main (caps: <Cap.all_caps>) : unit =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -226,7 +226,7 @@ let main (caps: Cap.all_caps) : unit =
   let options = [
 
     (* less: maybe should do a chdir (Dirname infile) *)
-    "-f", Arg.Set_string infile,
+    "-f", Arg.String (fun s ->  infile := s),
     " <file> use file instead of mkfile";
     
     "-e", Arg.Set Flags.explain_mode,

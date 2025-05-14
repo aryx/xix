@@ -32,8 +32,10 @@ type state =
   (* except inside ${x:...=...} where we still want = to be TEq *)
   | InBrace
 
-(* see also parse.ml and code using that global *)
-let state = ref Start
+(* see also parse.ml and code using that global
+ * ocaml-light: renamed to state_ cos conflict with state var used by ocamllex
+ *)
+let state_ = ref Start
 
 (* A single var is enough since mk does not allow recursivity in braces
  * as in ${x:%${y}x=%.c}. We do not need a stack.
@@ -76,7 +78,7 @@ rule token = parse
 
   (* in mk, newline has a meaning *)
   | '\n' { incr Globals.line;
-           state := if !state = AfterColon then InRecipe else Start;
+           state_ := if !state_ = AfterColon then InRecipe else Start;
            TNewline }
 
   (* escaped newline *)
@@ -97,12 +99,12 @@ rule token = parse
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
 
-  | ':' { state := AfterColon; TColon (loc()) }
-  | '=' { if !state = AfterEq
+  | ':' { state_ := AfterColon; TColon (loc()) }
+  | '=' { if !state_ = AfterEq
           (* todo? means we have to normalize a series of word elements *)
           then TOther "=" 
           else begin
-            state := AfterEq;
+            state_ := AfterEq;
             TEq (loc()) 
           end
        }
@@ -115,18 +117,21 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
 
   (* stricter: force leading letter, so $0 is wrong (found bug in plan9/) *)
-  | '$'    (ident as s)     { TVar s }
-  | '$''{' (ident as s) '}' { TVar s }
+  | '$'    (ident (*as s*))
+      { let s = Lexing.lexeme lexbuf in TVar (String.sub s 1 (String.length s - 1)) }
+  | '$''{' (ident (*as s*)) '}'
+      { let s = Lexing.lexeme lexbuf in TVar (String.sub s 2 (String.length s - 3)) }
   (* important to eat ':' otherwise would trigger a AfterColon we don't want*)
-  | '$''{' (ident as s) ':' 
-      { 
+  | '$''{' (ident (*as s*)) ':'
+      {
+        let s = Lexing.lexeme lexbuf in
         (* this is to handle '=' inside ${} *)
-        save_state_outside_brace := !state;
-        state := InBrace;
-        TVarColon s 
+        save_state_outside_brace := !state_;
+        state_ := InBrace;
+        TVarColon (String.sub s 2 (String.length s - 3)) 
       }
   | '}' 
-      { state := !save_state_outside_brace; 
+      { state_ := !save_state_outside_brace; 
         save_state_outside_brace := Start;
         TCBrace 
       }
@@ -156,7 +161,7 @@ rule token = parse
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
-  | _ as c   { error (spf "unrecognized character: '%c'" c) }
+  | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
 
 (*****************************************************************************)
 (* Rule quote *)
@@ -213,15 +218,19 @@ and backquote2 = parse
 
   (* new: instead of "missing closing `"  *)
   | eof  { error "end of file in backquoted string" }
-  | _    { error "missing closing }" }
+  (* TODO: if use } below get weird ocamllex error *)
+  |_ { error "missing closing brace" }
 
 (*****************************************************************************)
 (* Rule recipe *)
 (*****************************************************************************)
+(* TODO: trim left and right and adjust s below *)
 and recipe = parse
-  | ('#'   [^'\n']*) as s '\n'? { incr Globals.line; TLineRecipe s }
-  | space ([^'\n']* as s) '\n'? { incr Globals.line; TLineRecipe s }
+  | ('#'   [^'\n']*) (*as s*) '\n'?
+      { let s = Lexing.lexeme lexbuf in incr Globals.line; TLineRecipe s }
+  | space ([^'\n']* (*as s*)) '\n'?
+      { let s = Lexing.lexeme lexbuf in incr Globals.line; TLineRecipe s }
 
-  | [^ '#' ' ' '\t']    { state := Start; yyback 1 lexbuf; TEndRecipe }
-  | eof                 { state := Start; yyback 1 lexbuf; TEndRecipe }
-  | _ { error "unrecognized character in recipe" }
+  | [^ '#' ' ' '\t']    { state_ := Start; yyback 1 lexbuf; TEndRecipe }
+  | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
+  | _ {error "unrecognized character in recipe" }

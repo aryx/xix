@@ -3,6 +3,9 @@
 # see https://github.com/aryx/ocaml-light/blob/main/Dockerfile
 FROM padator/ocaml-light
 
+# 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
+RUN apt-get install -y 9base
+
 WORKDIR /xix
 
 # Now let's build from source
@@ -13,4 +16,10 @@ ENV use_ocaml_light="yes"
 RUN ./bootstrap-mk.sh
 
 # Full build
-# TODO
+#coupling: env.sh
+ENV PATH="$PATH:/xix/bin"
+# TODO: at some point use the boostrapped /src/bin/rc
+ENV MKSHELL="/usr/bin/rc"
+RUN cp mkconfig.light mkconfig
+# TODO: mk all at some point
+RUN mk light

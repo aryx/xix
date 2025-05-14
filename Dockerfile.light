@@ -22,4 +22,5 @@ ENV PATH="$PATH:/xix/bin"
 ENV MKSHELL="/usr/bin/rc"
 RUN cp mkconfig.light mkconfig
 # TODO: mk all at some point
+RUN mk depend
 RUN mk light

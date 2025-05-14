@@ -1,0 +1,5 @@
+(env
+ (dev
+  ; -33 for unused open because some are added for ocaml-light and field access
+  (flags (:standard -w -33)))
+)

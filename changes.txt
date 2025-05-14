@@ -1,7 +1,6 @@
 # -*- org -*-
 
 * TODO
-compile again for ocaml light (my own fork of caml-special-light 1.07)
 
 ** rc/mk
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
@@ -63,6 +62,8 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 - shell.nix Nix dev environment setup
   and nix.yml GHA CI
 - start of use of Testo and snapshots for e2e testing of rc
+- Dockerfile.light to compile again but using ocaml light!
+  (my own fork of caml-special-light 1.07)
 
 * -----------------------------------------------------------
 

@@ -39,6 +39,9 @@ build-docker:
 shell:
 	nix-shell --pure
 
+build-dune:
+	dune build
+
 #TODO: run ./test.sh but need to use _build/install/bin/5a not
 # assembler/5a
 .PHONY: test

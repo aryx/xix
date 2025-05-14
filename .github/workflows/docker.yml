@@ -19,3 +19,4 @@ jobs:
       - uses: docker/setup-buildx-action@v3
       # alt: make build-docker
       - run: docker build -t xix .
+      - run: docker build -f Dockerfile.light -t xix-light .

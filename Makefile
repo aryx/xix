@@ -35,6 +35,10 @@ promote:
 
 build-docker:
 	docker build -t "xix" .
+
+build-docker-light:
+	docker build -f Dockerfile.light -t "xix-light" .
+
 .PHONY: shell
 shell:
 	nix-shell --pure

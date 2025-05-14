@@ -10,6 +10,8 @@ module P = Percent
 
 module Set = Set_
 
+open Rules (* for the fields *)
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -50,8 +52,13 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
       | A.String s -> aux ((P.PStr s)::acc) xs
       | A.Percent  -> aux (P.PPercent::acc) xs
 
-      | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind)  ->
-
+      (* ocaml-light: | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind) *)
+      | A.Var ((A.SimpleVar _(*v*) | A.SubstVar (_(*v*), _, _)) as vkind)  ->
+         let v =
+           match vkind with
+           | A.SimpleVar v -> v
+           | A.SubstVar (v, _, _) -> v
+         in
          let ys = 
            try 
              Hashtbl.find env.E.vars v 

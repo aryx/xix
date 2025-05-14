@@ -33,7 +33,7 @@ let do_action caps s xs =
         let file = Fpath.v file in
         Logs.info (fun m -> m "processing %s" !!file);
         file |> CapFS.with_open_in caps (fun (chan : Chan.i) ->
-          let lexbuf = Lexing.from_channel chan.ic in
+          let lexbuf = Lexing.from_channel chan.Chan.ic in
 
           (* for error reporting I need a runq *)
           let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in

@@ -48,10 +48,14 @@ let save_state_outside_brace = ref Start
  *)
 let yyback n lexbuf =
   lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_curr_pos - n;
+  ()
+  (* ocaml-light: lex_curr_p does not exist in ocaml-light, but
+     TODO? anyway do we need this code?
   let currp = lexbuf.Lexing.lex_curr_p in
   lexbuf.Lexing.lex_curr_p <- { currp with
     Lexing.pos_cnum = currp.Lexing.pos_cnum - n;
   }
+  *)
 
 }
 

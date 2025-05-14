@@ -27,7 +27,7 @@
 (* Entry point *)
 (*****************************************************************************)
 
-let _ = 
+let _ =
     Cap.main (fun (caps : Cap.all_caps) ->
       let argv = CapSys.argv caps in
       CLI.main caps argv

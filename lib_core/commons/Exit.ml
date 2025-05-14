@@ -31,7 +31,7 @@ type t =
   (* code 0 in Unix *)
   | OK
   (* code 1 or more in Unix. Note that This is similar to Plan's exits() *)
-  | Error of string
+  | Err of string
   | Code of int
 
 exception Error of string
@@ -44,7 +44,7 @@ exception ExitCode of int
 let to_code (x : t) : code =
   match x with
   | OK -> 0
-  | Error str ->
+  | Err str ->
      Logs.err (fun m -> m "%s" str);
      1
   | Code n -> n

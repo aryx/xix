@@ -2,6 +2,8 @@
 open Stdcompat (* for |> *)
 open Common
 
+open A_out (* for the fields *)
+
 module T = Types
 module T5 = Types5
 

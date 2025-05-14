@@ -6,6 +6,8 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
+open Types5
+
 let build_graph symbols xs =
   let len = Array.length xs in
 

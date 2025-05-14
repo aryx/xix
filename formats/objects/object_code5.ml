@@ -12,7 +12,7 @@ let version = 6
 let save obj file =
   let file = Fpath.v file in
   file |> UChan.with_open_out (fun (chan : Chan.o) ->
-    output_value chan.oc (version, obj)
+    output_value chan.Chan.oc (version, obj)
   )
 
 (* for safer marshalling *)
@@ -21,7 +21,7 @@ exception WrongVersion
 let load file =
   let file = Fpath.v file in
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
-    let (ver, obj) = input_value chan.ic in
+    let (ver, obj) = input_value chan.Chan.ic in
     if ver <> version
     then raise WrongVersion
     else obj

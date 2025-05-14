@@ -13,7 +13,7 @@ SRC=Cap.ml \
  Logs.ml \
  Chan.ml UChan.ml CapFS.ml IO.ml \
  Date.ml \
- Exit.ml
+ Exception.ml Exit.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

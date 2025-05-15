@@ -186,6 +186,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     if !Flags.dump_ast
     then Ast.dump_ast instrs;
 
+    (* can modify targets and use first targets in file if none provided *)
     let rules, env = Eval.eval caps env targets instrs in
 
     if !Flags.dump_env
@@ -206,7 +207,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps: <caps; Cap.stdout; Cap.exit; ..>) (argv : string array) : Exit.t =
+let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -276,8 +277,8 @@ let main (caps: <caps; Cap.stdout; Cap.exit; ..>) (argv : string array) : Exit.t
         targets := t :: !targets
       ) usage;
   with
-  | Arg.Bad msg -> UConsole.eprint msg; CapStdlib.exit caps 2
-  | Arg.Help msg -> UConsole.print msg; CapStdlib.exit caps 0
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
 
   Logs.set_level !level;
@@ -286,7 +287,7 @@ let main (caps: <caps; Cap.stdout; Cap.exit; ..>) (argv : string array) : Exit.t
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action caps !action (List.rev !targets); 
-    CapStdlib.exit caps 0 
+    raise (Exit.ExitCode 0)
   end;
   try 
     build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
@@ -310,6 +311,6 @@ let main (caps: <caps; Cap.stdout; Cap.exit; ..>) (argv : string array) : Exit.t
               with Unix.Unix_error (error, _str1, _str2) ->
                 failwith (spf "%s" (Unix.error_message error))
           done;
-          CapStdlib.exit caps (1)
+          Exit.Code 1
       | _ -> raise exn
       )

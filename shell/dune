@@ -10,8 +10,8 @@
 
 (library
   (name xix_shell)
+  (wrapped true)
   ; coupling: mkfile SRC variable
-  (wrapped false)
   (modules
      Flags Globals
      Ast Meta_ast

@@ -115,6 +115,10 @@ let sched (caps : < Shell.caps; .. >) () =
       node.G.state <- G.Made;
     )
     else begin
+      (* This -e is super important! so that by default the recipe is run
+       * so that any error in a simple command ran from the recipe, even inside
+       * a for loop, will exit the whole recipe with the error.
+       *)
       let pid = 
         Shell.exec_recipe caps
           (Env.shellenv_of_env env)

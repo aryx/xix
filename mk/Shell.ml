@@ -37,6 +37,9 @@ let sh = {
   debug_flags = (fun () -> []);
 }
 
+(* Should we pass -e too here to abort if error inside? This is done in
+ * Scheduler.ml instead when executing recipe (but not for backquote processing)
+ *)
 let rc = {
   path = Fpath.v "/usr/bin/rc";
   name = "rc";

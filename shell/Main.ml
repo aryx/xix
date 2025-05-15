@@ -1,4 +1,5 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Xix_shell
 
 (*****************************************************************************)
 (* Entry point *)

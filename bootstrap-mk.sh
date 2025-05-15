@@ -130,7 +130,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Sch
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Outofdate.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.ml
-ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -pp ../scripts/remove_xix_open.sh -c Main.ml
 ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
 
 cd $TOP/shell/
@@ -175,9 +175,9 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Bui
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_repl.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.ml
-ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -pp ../scripts/remove_xix_open.sh -c Main.ml
 ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo Path.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP

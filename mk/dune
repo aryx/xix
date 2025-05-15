@@ -1,12 +1,33 @@
 (executable
  (name Main)
+ (modules Main)
  (libraries
    str unix
-   xix_commons
-   xix_collections
+   xix_mk
  )
  ; 'byte' is for ocamldebug
  (modes native byte))
+
+(library
+  (name xix_mk)
+  ; need wrapped true so that we can have both mk/CLI.ml and shell/CLI.ml
+  ; and the ability to call them from tests/Test.ml together
+  (wrapped true)
+  ; coupling: mkfile SRC variable
+  (modules
+    Globals Flags
+    Ast   Parser Lexer Parse
+    Shellenv Shell
+    Percent Env Rules   Eval
+    File Graph
+    Job   Scheduler Outofdate
+    CLI
+  )
+  (libraries
+   xix_commons
+   xix_collections
+  )
+  )
 
 (ocamllex Lexer)
 (ocamlyacc Parser)

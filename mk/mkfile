@@ -2,6 +2,7 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections
 
+#coupling: library stanza in dune file
 SRC= Globals.ml Flags.ml \
   Ast.ml   Parser.ml Lexer.ml Parse.ml \
   Shellenv.ml Shell.ml \
@@ -18,3 +19,7 @@ PROG=mk
 <$TOP/mkconfig
 <$TOP/mkprog
 <$TOP/mkparser
+
+#coupling: mkcommon
+Main.cmo: Main.ml
+	  $OCAMLC $COMPFLAGS $INCLUDES -pp ../scripts/remove_xix_open.sh -c Main.ml

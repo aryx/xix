@@ -256,6 +256,10 @@ let rec check_ambiguous node =
     (* failwith (spf "no recipe to make %s" node.name) *)
   | 1 -> ()
   | 2 | _ -> 
+    (* feature: it's ok to have ambiguity between 1 simple rule and 1 meta rule.
+     * The specialized simple rule has priority over the generic meta rule
+     * (see specialize-vs-generic in Build.nw)
+     *)
     let groups_with_simple_rule =
       groups_by_rule |> List_.exclude (fun (r, _) -> R.is_meta r) 
     in

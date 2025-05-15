@@ -8,8 +8,11 @@
  *)
 type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
 
+(* entry point (can also raise Exit.ExitCode) *)
+val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
+
 (* main algorithm *)
 val build_target :
   caps -> Env.t -> Rules.rules -> string (* target *) -> unit                                                       
-(* entry point *)
-val main: <caps; Cap.exit; Cap.stdout; ..> -> string array -> Exit.t
+val build_targets :
+  caps -> Fpath.t -> string list ref -> (string*string) list -> unit

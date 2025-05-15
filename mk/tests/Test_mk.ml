@@ -1,12 +1,12 @@
 open Common
-open Xix_shell
+open Xix_mk
 
 let t = Testo.create
 
 (*****************************************************************************)
 (* Purpose *)
 (*****************************************************************************)
-(* Regression tests for rc *)
+(* Regression tests for mk *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -19,8 +19,10 @@ let run_main (caps : <CLI.caps; ..>) (cmd : string) : unit =
    * tests; simpler to just fork.
    *)
   CapProcess.apply_in_child_process caps (fun () ->
-      print_string (spf "executing: rc %s\n" cmd);
-      CLI.main caps (Array.of_list ("rc" :: args))
+      print_string (spf "executing: mk %s\n" cmd);
+      try 
+        CLI.main caps (Array.of_list ("mk" :: args)) |> ignore
+      with Exit.ExitCode 0 -> ()
    )
    ()
 
@@ -43,7 +45,6 @@ let e2e_tests caps =
 (*****************************************************************************)
 
 let tests caps =
-  Testo.categorize_suites "shell" [
+  Testo.categorize_suites "mk" [
       e2e_tests caps;
   ]
-

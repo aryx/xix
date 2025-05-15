@@ -1,0 +1,22 @@
+executing: mk --help
+usage: mk [-f file] [options] [targets ...]
+  -f            <file> use file instead of mkfile
+  -e            explain mode
+  -n            dry mode
+  -strict       strict mode
+  -test_parser  
+  -test_eval    
+  -dump_tokens  dump the tokens as they are generated
+  -dump_ast     dump the parsed AST
+  -dump_env     dump the environment
+  -dump_graph   dump the generated graph (in graphviz dot format)
+  -dump_jobs    
+  -v            verbose mode
+  -verbose      verbose mode
+  -quiet        
+  -debug        trace the main functions
+  -debugger     
+  -backtrace    dump the backtrace after an error
+  -help         Display this list of options
+  --help        Display this list of options
+

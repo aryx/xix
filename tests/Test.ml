@@ -21,6 +21,7 @@ let test_hello =
 let tests caps _env =
   List.flatten [
     [ test_hello; ];
+    Test_mk.tests caps;
     Test_shell.tests caps;
   ]
 

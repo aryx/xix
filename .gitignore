@@ -3,9 +3,6 @@
 # Patterns
 # ----------------------------------------------------------------------------
 
-# Generated binaries
-bin/*
-
 # OCaml objects
 *.cm*
 
@@ -27,6 +24,7 @@ bin/*
 # Specific files
 # ----------------------------------------------------------------------------
 *.output
+*.save
 
 # Make generated files
 .depend
@@ -65,7 +63,9 @@ bin/*
 /macroprocessor/lexer_cpp.ml
 
 # binaries
-# TODO: move to bin/ so no need all of this
+/bin/mk
+/bin/rc
+# TODO: move to bin/
 /assembler/5a
 /linker/5l
 /compiler/5c

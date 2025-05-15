@@ -231,10 +231,11 @@ and backquote2 = parse
 (* TODO: trim left and right and adjust s below *)
 and recipe = parse
   | ('#'   [^'\n']*) (*as s*) '\n'?
-      { let s = Lexing.lexeme lexbuf in incr Globals.line; TLineRecipe s }
+      { let s = Lexing.lexeme lexbuf |> String.trim in
+        incr Globals.line; TLineRecipe s }
   | space ([^'\n']* (*as s*)) '\n'?
-      { let s = Lexing.lexeme lexbuf in incr Globals.line; TLineRecipe s }
-
+      { let s = Lexing.lexeme lexbuf |> String.trim in
+         incr Globals.line; TLineRecipe s }
   | [^ '#' ' ' '\t']    { state_ := Start; yyback 1 lexbuf; TEndRecipe }
   | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
   | _ {error "unrecognized character in recipe" }

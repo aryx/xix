@@ -128,8 +128,10 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Out
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Scheduler.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Scheduler.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Outofdate.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o mk
 
 cd $TOP/shell/
 ocamlyacc Parser.mly

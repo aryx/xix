@@ -213,7 +213,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps: <Cap.all_caps>) : unit =
+let main (caps: <caps; ..>) (argv : string array) : Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -272,7 +272,7 @@ let main (caps: <Cap.all_caps>) : unit =
     " dump the backtrace after an error";
   ]
   in
-  Arg.parse (Arg.align options) (fun t -> 
+  Arg.parse_argv argv (Arg.align options) (fun t -> 
     match t with
     | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
       let (var, value) = Regexp_.matched2 t in
@@ -289,9 +289,9 @@ let main (caps: <Cap.all_caps>) : unit =
     do_action caps !action (List.rev !targets); 
     CapStdlib.exit caps 0 
   end;
-
   try 
-    build_targets (caps :> caps ) (Fpath.v !infile) targets !vars
+    build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
+    Exit.OK
   with exn ->
     if !backtrace || !Flags.debugger
     then raise exn
@@ -316,4 +316,7 @@ let main (caps: <Cap.all_caps>) : unit =
       )
 
 let _ = 
-  Cap.main main
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     main caps argv
+  )

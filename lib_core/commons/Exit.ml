@@ -19,6 +19,9 @@
 (* Small capability-aware wrapper around Stdlib.exit.
  *
  * See also Exception.ml
+ *
+ * TODO:
+ *  - move in lib_system/unix/ or lib_system/posix/ at some point
  *)
 
 (*****************************************************************************)
@@ -55,5 +58,5 @@ let to_code (x : t) : code =
 
 let exit _caps t =
   let code = to_code t in
-  (* nosemgrep: *)
+  (* nosemgrep: do-not-use-exit *)
   exit code

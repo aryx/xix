@@ -91,7 +91,11 @@ ocamlc$OPT $OCAMLCFLAGS -c CapFS.ml
 ocamlc$OPT $OCAMLCFLAGS -c Date.ml
 ocamlc$OPT $OCAMLCFLAGS -c IO.ml
 ocamlc$OPT $OCAMLCFLAGS -c OCaml.ml
-ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo -a -o lib.cma
+ocamlc$OPT $OCAMLCFLAGS -c Exception.mli
+ocamlc$OPT $OCAMLCFLAGS -c Exception.ml
+ocamlc$OPT $OCAMLCFLAGS -c Exit.mli
+ocamlc$OPT $OCAMLCFLAGS -c Exit.ml
+ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc Parser.mly

@@ -42,6 +42,7 @@
  *    the forbid_xxx.jsonnet rules in this directory.
  *
  * LATER:
+ *  - could move in xix/lib_system/ at some point
  *  - exn (ability to thrown exn)
  *  - comparison? forbid polymorphic equal, forbid compare, force deriving
  *  - refs? (and globals)

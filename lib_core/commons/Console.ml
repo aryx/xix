@@ -56,6 +56,7 @@
  *    and not really needed.
  *
  * TODO:
+ *  - move in lib_system/ ?
  *  - use this module for printing all user-facing messages.
  *  - allow to mock the output, with_mock_output () ?
  *    update: or use Testo recent capture_stdout which uses

@@ -226,7 +226,7 @@ let main (caps: <Cap.all_caps>) : unit =
   let options = [
 
     (* less: maybe should do a chdir (Dirname infile) *)
-    "-f", Arg.String (fun s ->  infile := s),
+    "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
     
     "-e", Arg.Set Flags.explain_mode,

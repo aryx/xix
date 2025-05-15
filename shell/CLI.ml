@@ -12,10 +12,10 @@ module O = Opcode
  *)
 
 (*****************************************************************************)
-(* Types, constants, and globals *)
+(* Types and constants *)
 (*****************************************************************************)
 
-(* see .mli for more explanations on the need for those caps *)
+(* see the .mli for why those caps are needed *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 (* -d and -p are dead according to man page so I removed them *)
@@ -147,7 +147,7 @@ let main (caps : <caps; .. >) (argv : string array) : unit =
     " non-interactive mode (no prompt)";
     "-l", Arg.Set Flags.login,
     " login mode (execute ~/lib/profile)";
-    "-m", Arg.String (fun s ->  Flags.rcmain := s),
+    "-m", Arg.Set_string Flags.rcmain,
     " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
 
     "-e", Arg.Set Flags.eflag,

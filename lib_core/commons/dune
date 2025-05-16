@@ -13,12 +13,12 @@
   Common common2
   Dumper OCaml
   Console UConsole
+  Exit Exception
   Chan UChan FS IO
   Proc
   Date
   Logs
   Fpath_
-  Exit
  )   
  (libraries
     stdcompat

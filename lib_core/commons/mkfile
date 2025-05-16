@@ -11,7 +11,7 @@ SRC=Cap.ml \
  Console.ml UConsole.ml \
  Fpath.ml Fpath_.ml \
  Logs.ml \
- Chan.ml UChan.ml CapFS.ml IO.ml \
+ Chan.ml UChan.ml FS.ml IO.ml \
  Date.ml \
  Exception.ml Exit.ml
 

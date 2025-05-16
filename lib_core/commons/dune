@@ -13,7 +13,7 @@
   Common common2
   Dumper OCaml
   Console UConsole
-  Chan UChan CapFS IO
+  Chan UChan FS IO
   Proc
   Date
   Logs

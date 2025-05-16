@@ -52,7 +52,7 @@ let do_action caps s xs =
       xs |> List.iter (fun file ->
         let file = Fpath.v file in
         Logs.info (fun m -> m "processing %s" !!file);
-        file |> CapFS.with_open_in caps (fun (chan : Chan.i) ->
+        file |> FS.with_open_in caps (fun (chan : Chan.i) ->
           let lexbuf = Lexing.from_channel chan.Chan.ic in
 
           (* for error reporting I need a runq *)

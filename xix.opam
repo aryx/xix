@@ -21,6 +21,7 @@ depends: [
   "stdcompat"
   "ocamlfind"
   "ppx_deriving"
+  "ppxlib" {<= "0.32.0"} # this forces ocaml <= 5.1.1
   # TODO just for version_control/ but should switch to Unzip.ml
   "camlzip"
   # Extra deps when compiling xix with (optional!) advanced tooling

@@ -74,7 +74,7 @@ end
 (* FS *)
 (**************************************************************************)
 
-module FS = struct
+module FS_ = struct
   type readdir = cap
   type tmp = cap
   type open_in = cap
@@ -124,8 +124,16 @@ end
 (* Console *)
 (**************************************************************************)
 
+(* TODO: ugly but I had to rename Console and FS to add an underscore
+ * because ocamldep in ocaml-light does not handle nested module well
+ * and if I use Console below I then get a cycle when compiling.
+ * This seems to be an issue only if the file Console.ml or FS.ml
+ * exist. Otherwise like for Process.ml it does not generate the
+ * dependency, even if it's a nested module like the other.
+ * WEIRD
+ *)
 (* alt: could be part of Process *)
-module Console = struct
+module Console_ = struct
   type stdin = cap
   type stdout = cap
   type stderr = cap
@@ -164,16 +172,16 @@ end
  *)
 
 (* fs *)
-type readdir = < readdir : FS.readdir >
-type tmp = < tmp : FS.tmp >
-type open_in = < open_in : FS.open_in >
-type open_out = < open_out : FS.open_out >
+type readdir = < readdir : FS_.readdir >
+type tmp = < tmp : FS_.tmp >
+type open_in = < open_in : FS_.open_in >
+type open_out = < open_out : FS_.open_out >
 type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
-type stdin = < stdin : Console.stdin >
-type stdout = < stdout : Console.stdout >
-type stderr = < stderr : Console.stderr >
+type stdin = < stdin : Console_.stdin >
+type stdout = < stdout : Console_.stdout >
+type stderr = < stderr : Console_.stderr >
 type console = < stdin ; stdout ; stderr >
 
 (* process *)

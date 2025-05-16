@@ -13,7 +13,7 @@
 (* Standard capabilities *)
 (**************************************************************************)
 
-module Console : sig
+module Console_ : sig
   type stdin
   type stdout
   type stderr
@@ -31,7 +31,7 @@ module Process : sig
   type fork
 end
 
-module FS : sig
+module FS_ : sig
   type readdir
   type tmp
   (* TODO: refine in open_argv, open_pwd, open_root *)
@@ -63,16 +63,16 @@ end
 (**************************************************************************)
 
 (* fs *)
-type readdir = < readdir : FS.readdir >
-type tmp = < tmp : FS.tmp >
-type open_in = < open_in : FS.open_in >
-type open_out = < open_out : FS.open_out >
+type readdir = < readdir : FS_.readdir >
+type tmp = < tmp : FS_.tmp >
+type open_in = < open_in : FS_.open_in >
+type open_out = < open_out : FS_.open_out >
 type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
-type stdin = < stdin : Console.stdin >
-type stdout = < stdout : Console.stdout >
-type stderr = < stderr : Console.stderr >
+type stdin = < stdin : Console_.stdin >
+type stdout = < stdout : Console_.stdout >
+type stderr = < stderr : Console_.stderr >
 type console = < stdin ; stdout ; stderr >
 
 (* process *)

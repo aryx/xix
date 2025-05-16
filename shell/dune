@@ -20,7 +20,7 @@
      Compile
      Runtime
      Pattern
-     Fn Var Prompt Status Path Process Error
+     Fn Var Prompt Status PATH Process Error
      Parser Lexer Parse
      Builtin
      Op_repl Op_process

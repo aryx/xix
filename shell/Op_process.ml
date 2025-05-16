@@ -31,7 +31,7 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () =
   | [] -> E.error caps "empty argument list" 
   | prog::_xs -> 
       R.doredir t.R.redirections;
-      execute caps argv (Path.search_path_for_cmd prog);
+      execute caps argv (PATH.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 

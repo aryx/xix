@@ -18,7 +18,7 @@ let run_main (caps : <CLI.caps; ..>) (cmd : string) : (Exit.t, string) result =
    * and we don't want to write code to reset those globals between two
    * tests; simpler to just fork.
    *)
-  CapProcess.apply_in_child_process caps (fun () ->
+  Proc.apply_in_child_process caps (fun () ->
       print_string (spf "executing: rc %s\n" cmd);
       try 
         Ok (Exit.catch (fun () -> 

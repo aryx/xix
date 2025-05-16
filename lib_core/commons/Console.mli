@@ -4,13 +4,25 @@
 
    Programs such as Semgrep use both stdout and stderr to display
    human-readable messages.
-
-   See UConsole.ml or better CapConsole.ml to actually print messages.
-   This is the shared "safe" part of console management.
 *)
 
-(* The result of applying 'highlight_setting' *)
+(* Print a string, print a newline, and flush the stdout channel. *)
+val print : <Cap.stdout; .. > -> string -> unit
+
+(* Print a string and flush the stdout channel. *)
+val print_no_nl : <Cap.stdout; .. > -> string -> unit
+
+(* Print a string, print a newline, and flush the stderr channel.
+ * You should avoid using this function; Prefer Logs.err or Logs.warn
+ * in general.
+ *)
+val eprint : < Cap.stderr; .. > -> string -> unit
+
+
 type highlight = On | Off [@@deriving show]
+
+(* internals, you should not change that, only UConsole.setup can *)
+val highlight : highlight ref
 
 type color =
   | Black
@@ -62,6 +74,3 @@ val underline : string -> string
 val error : string -> string
 val warning : string -> string
 val success : string -> string
-
-(* internals, you should not change that, only UConsole.setup can *)
-val highlight : highlight ref

@@ -1,3 +1,23 @@
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Process helpers.
+ *
+ * history:
+ *  - harrop article and pfff/commons/parallel.ml
+ *  - pfff/commons/distribution.ml
+ *  - xix/lib_core/commons/CapProcess.ml
+ *
+ * alt: we could name this file Process.ml but this conflict with 
+ * xix/shell/Process.ml and maybe a 4 letters name is not bad and consistent
+ * with Chan.ml, Logs.ml, etc.
+ *)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* src: harrop article on fork-based parallelism
  * returns a promise.

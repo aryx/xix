@@ -112,7 +112,7 @@ let do_action caps s xs =
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
         let instrs = Parse.parse (Fpath.v file) in
-        CapConsole.print caps (spf "%s" (Ast.show_instrs instrs))
+        Console.print caps (spf "%s" (Ast.show_instrs instrs))
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->

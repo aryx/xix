@@ -202,3 +202,13 @@ let style_string style str =
 let error str = style_string Error str
 let warning str = style_string Warning str
 let success str = style_string Success str
+
+(*****************************************************************************)
+(* Actual printing *)
+(*****************************************************************************)
+
+(* %! is to flush *)
+
+let print _caps str = Printf.printf "%s\n%!" str
+let print_no_nl _caps str = Printf.printf "%s%!" str
+let eprint _caps str = Printf.eprintf "%s\n%!" str

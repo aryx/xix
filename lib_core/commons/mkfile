@@ -8,7 +8,7 @@ SRC=Cap.ml \
  CapStdlib.ml CapSys.ml CapUnix.ml \
  Common.ml common2.ml \
  Dumper.ml OCaml.ml \
- Console.ml UConsole.ml CapConsole.ml \
+ Console.ml UConsole.ml \
  Fpath.ml Fpath_.ml \
  Logs.ml \
  Chan.ml UChan.ml CapFS.ml IO.ml \

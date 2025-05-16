@@ -12,9 +12,9 @@
   Cap CapStdlib CapSys CapUnix
   Common common2
   Dumper OCaml
-  Console UConsole CapConsole
+  Console UConsole
   Chan UChan CapFS IO
-  CapProcess
+  Proc
   Date
   Logs
   Fpath_

@@ -83,7 +83,6 @@ ocamlc$OPT $OCAMLCFLAGS -c Dumper.ml
 ocamlc$OPT $OCAMLCFLAGS -c Common.ml
 ocamlc$OPT $OCAMLCFLAGS -c Console.ml
 ocamlc$OPT $OCAMLCFLAGS -c UConsole.ml
-ocamlc$OPT $OCAMLCFLAGS -c CapConsole.ml
 ocamlc$OPT $OCAMLCFLAGS -c OCaml.mli
 ocamlc$OPT $OCAMLCFLAGS -c Logs.ml
 ocamlc$OPT $OCAMLCFLAGS -c UChan.ml
@@ -95,7 +94,7 @@ ocamlc$OPT $OCAMLCFLAGS -c Exception.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exception.ml
 ocamlc$OPT $OCAMLCFLAGS -c Exit.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exit.ml
-ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo CapConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
+ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo Common.cmo common2.cmo OCaml.cmo IO.cmo Logs.cmo Fpath.cmo Fpath_.cmo UChan.cmo CapFS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc Parser.mly
@@ -143,7 +142,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Opc
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Pattern.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.mli
-ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c PATH.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Process.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Error.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.mli
@@ -170,7 +169,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Fn.
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Var.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.ml
-ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Path.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c PATH.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Builtin.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_repl.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI.mli
@@ -178,7 +177,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -pp ../scripts/remove_xix_open.sh -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo Path.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Meta_ast.cmo Opcode.cmo Meta_opcode.cmo Dumper_.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP
 cp mk/mk shell/rc bin/

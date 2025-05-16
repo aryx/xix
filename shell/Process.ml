@@ -11,7 +11,9 @@ let s_of_unix_error err _s1 _s2 =
 let exit (caps: < Cap.exit; ..>) s =
   (* todo: Updenv *)
   Status.setstatus s;
-  (* todo: how communicate error to parent process under Unix? *)
+  (* todo: how communicate error to parent process under Unix? 
+   * alt: raise Exit.ExitCode which removes the need for Cap.exit
+   *)
   CapStdlib.exit caps (if Status.truestatus () then 0 else 1)
 
 (* Was called Xreturn but called not only from the opcode interpreter.

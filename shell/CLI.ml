@@ -33,7 +33,9 @@ module O = Opcode
 (* Types and constants *)
 (*****************************************************************************)
 
-(* see the .mli for why those caps are needed *)
+(* see the .mli for why those caps are needed
+ * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
+ *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 (* -d and -p are dead according to man page so I removed them *)
@@ -150,7 +152,7 @@ let interpret (caps : < caps >) (args : string list) : unit =
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps : <caps; .. >) (argv : string array) : unit =
+let main (caps : <caps; .. >) (argv : string array) : Exit.t =
 
   let args = ref [] in
 
@@ -211,8 +213,8 @@ let main (caps : <caps; .. >) (argv : string array) : unit =
   (try 
     Arg.parse_argv argv (Arg.align options) (fun t -> args := t::!args) usage;
   with
-  | Arg.Bad msg -> UConsole.eprint msg; CapStdlib.exit caps 2
-  | Arg.Help msg -> UConsole.print msg; CapStdlib.exit caps 0
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
 
 
@@ -222,7 +224,7 @@ let main (caps : <caps; .. >) (argv : string array) : unit =
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action caps !action (List.rev !args); 
-    CapStdlib.exit caps 0 
+    raise (Exit.ExitCode 0)
   end;
 
   (* todo: 
@@ -242,7 +244,8 @@ let main (caps : <caps; .. >) (argv : string array) : unit =
   );
 
   try 
-    interpret (caps :> < caps >) (List.rev !args)
+    interpret (caps :> < caps >) (List.rev !args);
+    Exit.OK
   with exn ->
     if !Flags.debugger
     then raise exn
@@ -251,6 +254,7 @@ let main (caps : <caps; .. >) (argv : string array) : unit =
       | Failure s -> 
           (* useful to indicate that error comes from rc, not subprocess *)
           Logs.err (fun m -> m  "rc: %s" s);
-          CapStdlib.exit caps (1)
+          Exit.Code 1
+      (* alt: could catch Exit.ExitCode here but this is done in Main.ml *)
       | _ -> raise exn
       )

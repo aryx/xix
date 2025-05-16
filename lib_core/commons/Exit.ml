@@ -29,6 +29,7 @@
 (*****************************************************************************)
 
 type code = int
+[@@deriving show]
 
 let show _ = "NO DERIVING"
 [@@warning "-32"]
@@ -37,17 +38,25 @@ let show _ = "NO DERIVING"
  *  - Exit_with_status in OCaml codebase 
  *  - { code: int; detail: string} as in Semgrep codebase (Exit_code.ml)
  *    and then specific abstract exit constants (e.g., Exit_code.fatal_error)
+ * history: 
+ *  - Common.UnixExit
  *)
 type t =
   (* code 0 in Unix *)
   | OK
   (* code 1 in Unix. Note that This is similar to Plan0's exits() *)
   | Err of string
-  | Code of int
+  (* This must be > 0 otherwise use OK *)
+  | Code of code
 [@@deriving show]
 
-exception Error of string
-exception ExitCode of int
+exception ExitCode of code
+(* alt: could also add 
+ *   exception Error of string
+ *
+ * but not used for now and we usually instead just use Failure
+ * to encode similar information.
+ *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -78,4 +87,3 @@ let catch (f : unit -> t) : t =
   (* other exceptions (e.g., Failure) will still bubble up *)
   | ExitCode 0 -> OK
   | ExitCode n -> Code n
-  | Error s -> Err s

@@ -9,4 +9,5 @@
  *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
-val main: <caps; ..> -> string array -> unit
+(* entry point (can also raise Exit.ExitCode) *)
+val main: <caps; ..> -> string array -> Exit.t

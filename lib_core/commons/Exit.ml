@@ -66,11 +66,13 @@ let exit _caps t =
   (* nosemgrep: do-not-use-exit *)
   exit code
 
+(* similar to Printexc.catch *)
 let catch caps (f : unit -> t) : unit =
   let x = 
     try
       f ()
     with
+    (* other exceptions (e.g., Failure) will still bubble up *)
     | ExitCode n -> Code n
     | Error s -> Err s
   in

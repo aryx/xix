@@ -1,4 +1,4 @@
-(* Martin Jambon, Yoann Padioleau
+(* Yoann Padioleau, Martin Jambon
  *
  * Copyright (C) 2024-2025 Semgrep Inc.
  *
@@ -21,7 +21,7 @@
  * See also Exception.ml
  *
  * TODO:
- *  - move in lib_system/unix/ or lib_system/posix/ at some point
+ *  - LATER move in lib_system/unix/ or lib_system/posix/ at some point
  *)
 
 (*****************************************************************************)
@@ -30,10 +30,15 @@
 
 type code = int
 
+(* alt: 
+ *  - Exit_with_status in OCaml codebase 
+ *  - { code: int; detail: string} as in Semgrep codebase (Exit_code.ml)
+ *    and then specific abstract exit constants (e.g., Exit_code.fatal_error)
+ *)
 type t =
   (* code 0 in Unix *)
   | OK
-  (* code 1 or more in Unix. Note that This is similar to Plan's exits() *)
+  (* code 1 in Unix. Note that This is similar to Plan0's exits() *)
   | Err of string
   | Code of int
 
@@ -53,10 +58,20 @@ let to_code (x : t) : code =
   | Code n -> n
 
 (*****************************************************************************)
-(* Entry point *)
+(* API *)
 (*****************************************************************************)
 
 let exit _caps t =
   let code = to_code t in
   (* nosemgrep: do-not-use-exit *)
   exit code
+
+let catch caps (f : unit -> t) : unit =
+  let x = 
+    try
+      f ()
+    with
+    | ExitCode n -> Code n
+    | Error s -> Err s
+  in
+  exit caps x

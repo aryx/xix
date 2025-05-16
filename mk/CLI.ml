@@ -142,7 +142,9 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
    while root.G.state = G.NotMade do
      let did = ref false in
 
-     (* may call internally Scheduler.run to schedule jobs *)
+     (* may call internally Scheduler.run to schedule jobs and may
+      * raise some Failure (e.g., "don't know how to make xxx")
+      *)
      Outofdate.work caps env root did;
 
      if !did 
@@ -289,6 +291,8 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     do_action caps !action (List.rev !targets); 
     raise (Exit.ExitCode 0)
   end;
+
+  (* Let's go! *)
   try 
     build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
     Exit.OK
@@ -297,6 +301,9 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     then raise exn
     else 
       (match exn with
+      (* lots of the mk errors are reported using failwith (e.g., "don't know
+       * how to make xxx")
+       *)
       | Failure s -> 
           (* useful to indicate that error comes from mk, not subprocess *)
           Logs.err (fun m -> m "mk: %s" s);

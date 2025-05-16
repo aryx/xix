@@ -7,7 +7,6 @@ module T = Types
 
 (* a single line number is not enough anymore, we need also the filename *)
 type loc = Common.filename * Ast_asm5.loc
- (* with tarzan *)
 
 (* Split Asm5 instructions in code vs data.
  *
@@ -22,7 +21,6 @@ and instr =
   | TEXT of A.global * A.attributes * int
   | WORD of A.imm_or_ximm
   | I of A.instr * A.condition
- (* with tarzan *)
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 

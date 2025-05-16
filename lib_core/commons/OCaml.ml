@@ -203,9 +203,7 @@ type v =
   | VRec of (string * int64) * v
   | VExt of (string * int64) * v
 *)
-
   | VTODO of string
-  (* with tarzan *)
 
 (*****************************************************************************)
 (* Helpers *)

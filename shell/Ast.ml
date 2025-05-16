@@ -88,12 +88,9 @@ and cmd =
       | RAppend (* > > *)
       (* less: RHere *) (* < < *)
       | RDup of int * int (* >[x=y] *)
-     (* with tarzan *)
 
 
 (* None when reads EOF *)
 type line = cmd_sequence option
 
 (* less: type any = Line of line | ... so easier dumper *)
-
- (* with tarzan *)

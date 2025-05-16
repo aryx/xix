@@ -87,12 +87,10 @@ type operation =
   | Async     (* {... Xreturn} *)
 
   | REPL (* *)
-  (* with tarzan *)
 
 type opcode =
   | F of operation
   | I of int
   | S of string
-  (* with tarzan *)
 
 type codevec = opcode array

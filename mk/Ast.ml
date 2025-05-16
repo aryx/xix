@@ -78,6 +78,7 @@ type instr = {
 
 (* for boostrap-mk.sh and ocaml-light to work without deriving *)
 let show_instrs _ = "NO DERIVING"
+[@@warning "-32"]
 
 type instrs = instr list
 [@@deriving show]

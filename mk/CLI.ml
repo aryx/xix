@@ -163,6 +163,7 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
    
    if not !ever_did
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
+[@@profiling]
 
 
 let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
@@ -202,8 +203,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     !targets |> List.rev |> List.iter (fun target ->
       build_target caps env rules target
     )
-    (* less: profiling*)
-
+[@@profiling]
 
 (*****************************************************************************)
 (* Entry point *)

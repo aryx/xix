@@ -1,0 +1,13 @@
+; used to be in pfff in commons/Common.ml
+; and then in semgrep/libs/profiling/
+
+(library
+ ;(public_name profiling)
+ (name xix_profiling)
+ (wrapped false)
+ (libraries
+   unix
+   xix_commons
+   ;process_limits ; for Time_limit.Timeout special handling
+ )
+)

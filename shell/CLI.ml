@@ -146,7 +146,7 @@ let interpret (caps : < caps >) (args : string list) : unit =
     );
     (* todo: handle trap *)
   done
-
+[@@profiling]
 
 (*****************************************************************************)
 (* Entry point *)

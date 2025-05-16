@@ -11,13 +11,15 @@ type t =
   (* specific exit code *)
   | Code of int
 
+val show: t -> string
+
 exception Error of string
 exception ExitCode of int
 
 val exit: < Cap.exit; ..> -> t -> unit
 
-(* [catch caps f] will run [f()] and call exit with its exit value
+(* [catch caps f] will run [f()] and return its exit value
  * but also catch Error and Exitcode exns [f] may throw and
- * exit also with the corresponding exit value.
+ * convert the exn to the corresponding exit value.
  *)
-val catch : < Cap.exit; ..> -> (unit -> t) -> unit
+val catch : (unit -> t) -> t

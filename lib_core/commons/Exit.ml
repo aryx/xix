@@ -30,6 +30,9 @@
 
 type code = int
 
+let show _ = "NO DERIVING"
+[@@warning "-32"]
+
 (* alt: 
  *  - Exit_with_status in OCaml codebase 
  *  - { code: int; detail: string} as in Semgrep codebase (Exit_code.ml)
@@ -41,6 +44,7 @@ type t =
   (* code 1 in Unix. Note that This is similar to Plan0's exits() *)
   | Err of string
   | Code of int
+[@@deriving show]
 
 exception Error of string
 exception ExitCode of int
@@ -66,14 +70,12 @@ let exit _caps t =
   (* nosemgrep: do-not-use-exit *)
   exit code
 
-(* similar to Printexc.catch *)
-let catch caps (f : unit -> t) : unit =
-  let x = 
-    try
-      f ()
-    with
-    (* other exceptions (e.g., Failure) will still bubble up *)
-    | ExitCode n -> Code n
-    | Error s -> Err s
-  in
-  exit caps x
+(* a bit similar to Printexc.catch *)
+let catch (f : unit -> t) : t =
+  try
+    f ()
+  with
+  (* other exceptions (e.g., Failure) will still bubble up *)
+  | ExitCode 0 -> OK
+  | ExitCode n -> Code n
+  | Error s -> Err s

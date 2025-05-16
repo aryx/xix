@@ -76,7 +76,7 @@ type instr = {
     | Definition of string * words
 [@@deriving show {with_path = false}]
 
-(* just for boostrap-mk.sh to work without deriving *)
+(* for boostrap-mk.sh and ocaml-light to work without deriving *)
 let show_instrs _ = "NO DERIVING"
 
 type instrs = instr list

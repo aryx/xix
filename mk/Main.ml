@@ -8,5 +8,7 @@ open Xix_mk
 let _ = 
   Cap.main (fun (caps : Cap.all_caps) ->
      let argv = CapSys.argv caps in
-     Exit.catch caps (fun () -> CLI.main caps argv)
+     Exit.exit caps 
+        (Exit.catch (fun () -> 
+            CLI.main caps argv))
   )

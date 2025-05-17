@@ -71,6 +71,7 @@ ocamlc$OPT $OCAMLCFLAGS -c Fpath.mli
 ocamlc$OPT $OCAMLCFLAGS -c Fpath.ml
 ocamlc$OPT $OCAMLCFLAGS -c Fpath_.mli
 ocamlc$OPT $OCAMLCFLAGS -c Fpath_.ml
+ocamlc$OPT $OCAMLCFLAGS -c Chan.mli
 ocamlc$OPT $OCAMLCFLAGS -c Chan.ml
 ocamlc$OPT $OCAMLCFLAGS -c UChan.mli
 ocamlc$OPT $OCAMLCFLAGS -c FS.mli

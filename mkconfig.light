@@ -1,8 +1,11 @@
 # -*- sh -*-
 COMPFLAGS=-g $EXTRA_FLAGS
 LINKFLAGS=-g -custom -cclib -lunix -cclib -lstr
-#TODO: does not work yet
-OPTLINKFLAGS=-cclib -lunix -cclib -lstr
+#pad: ugly hack with this opt suffix that were made just for
+# linux with -32
+# the -static is optional but nice to show we can statically link
+# with ocaml light!!
+OPTLINKFLAGS=-cclib -lunixopt -cclib -lstropt -ccopt -static
 
 OCAMLC=ocamlc
 OCAMLLEX=ocamllex

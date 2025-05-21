@@ -23,3 +23,5 @@ PROG=mk
 #coupling: mkcommon
 Main.cmo: Main.ml
 	  $OCAMLC $COMPFLAGS $INCLUDES -pp ../scripts/remove_xix_open.sh -c Main.ml
+Main.cmx: Main.ml
+	  $OCAMLOPT $COMPFLAGS $INCLUDES -pp ../scripts/remove_xix_open.sh -c Main.ml

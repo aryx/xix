@@ -19,6 +19,7 @@ COMPFLAGS=-I $EXTERNAL_LIB -g $EXTRA_FLAGS -I $PPX/show -I $PPX/runtime -ppx ppx
 # a BOOTSTRAP/mk and we want a really portable bytecode across platforms.
 # TODO? for windows under cygwin might need -custom too?
 LINKFLAGS=-I $EXTERNAL_LIB stdcompat.cma -g -custom
+OPTLINKFLAGS=-I $EXTERNAL_LIB stdcompat.cmxa
 
 OCAMLC=ocamlc$OPT 
 OCAMLLEX=ocamllex #-ml # -ml for debugging lexer, but slightly slower

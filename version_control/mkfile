@@ -40,6 +40,7 @@ CCLIBS=-cclib -lz
 %.o: %.c
 	$OCAMLC -c $stem.c
 
+#pad: why this is commented?
 #<$TOP/mkprog
 # include  of mkprog:
 #<$TOP/mkconfig
@@ -59,7 +60,7 @@ SYSLIBSOPT=${SYSLIBS:%.cma=%.cmxa}
 LIBSOPT=${LIBS:%.cma=%.cmxa}
 
 $PROG.opt: ${OBJS:%.cmo=%.cmx} $COBJS $LIBSOPT
-	$OCAMLOPT $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq $CCLIBS -o $target
+	$OCAMLOPT $OPTLINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBSOPT $LIBSOPT $prereq $CCLIBS -o $target
 
 clean nuke:V:
 	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*

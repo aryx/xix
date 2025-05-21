@@ -55,6 +55,7 @@ ENV MKSHELL="/usr/bin/rc"
 RUN eval $(opam env) && mk clean
 RUN eval $(opam env) && mk depend
 RUN eval $(opam env) && mk
+RUN eval $(opam env) && mk opt
 # alt: use dune but xix spirit to limit external tools and dogfood mk
 
 # Test

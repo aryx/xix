@@ -6,6 +6,7 @@ FROM padator/ocaml-light
 # 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
 RUN apt-get install -y 9base
 
+#ugly: we don't use /src because it's what padator/ocaml-light used
 WORKDIR /xix
 
 # Now let's build from source
@@ -24,5 +25,9 @@ RUN cp mkconfig.light mkconfig
 # TODO: mk depend and mk all at some point
 RUN mk depend.light
 RUN mk all.light
-#TODO: does not work yet, pb at linking time with libunix.a and libstr.a
-#RUN mk opt.light
+RUN mk opt.light
+
+# Basic test
+# TODO: need propose Arg.Help managemenet in ocaml-light/stdlib/arg.ml
+#RUN ./mk/mk -help
+#RUN ./mk/mk.opt -help

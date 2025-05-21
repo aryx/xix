@@ -53,8 +53,6 @@ DIRS_LIGHT=lib_core/collections lib_core/commons mk shell lib_parsing lex yacc
 		cd $i
 		mk $MKFLAGS $stem
 	}
-light:V: all.light
-depend-light:V: depend.light
 
 # too many dupes for now (e.g., ast.ml in mutliple dirs)
 graph:QV:

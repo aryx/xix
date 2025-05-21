@@ -11,6 +11,7 @@ PPX=`ocamlfind query ppx_deriving`
 #WARNING_FLAGS?=-w +A-4-29-6-45-41-44-48 -warn-error +a 
 #OCAMLCFLAGS=-thread $(WARNING_FLAGS) $(OCAMLCFLAGS_EXTRA)
 COMPFLAGS=-I $EXTERNAL_LIB -g $EXTRA_FLAGS -I $PPX/show -I $PPX/runtime -ppx ppx.sh
+OPTFLAGS=$COMPFLAGS
 
 # We need -g for good backtrace.
 # We need -custom because of dllstdcompat__stubs, otherwise

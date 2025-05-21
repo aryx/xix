@@ -9,7 +9,7 @@
 	$OCAMLC $COMPFLAGS $INCLUDES -c $stem.mli
 
 %.cmx: %.ml
-	$OCAMLOPT $COMPFLAGS $INCLUDES -c $stem.ml
+	$OCAMLOPT $OPTFLAGS $INCLUDES -c $stem.ml
 
 #%.o: %.c
 #	$CC $CFLAGS -v -c $stem.c -o $stem.o

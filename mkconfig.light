@@ -1,6 +1,8 @@
 # -*- sh -*-
 COMPFLAGS=-g $EXTRA_FLAGS
 LINKFLAGS=-g -custom -cclib -lunix -cclib -lstr
+#TODO: does not work yet
+OPTLINKFLAGS=-cclib -lunix -cclib -lstr
 
 OCAMLC=ocamlc
 OCAMLLEX=ocamllex

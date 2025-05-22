@@ -23,7 +23,7 @@ all:
 	dune build
 	@echo you can also use ./bootstrap-mk.sh and ./bin/mk instead of make
 
-#alt: git clean -fX
+#alt: git clean -dfX or -dfx
 clean:
 	dune clean
 	mk clean
@@ -35,7 +35,6 @@ promote:
 
 build-docker:
 	docker build -t "xix" .
-
 build-docker-light:
 	docker build -f Dockerfile.light -t "xix-light" .
 

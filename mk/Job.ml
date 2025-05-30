@@ -1,4 +1,6 @@
+(*s: Job.ml *)
 
+(*s: type [[Job.t]] *)
 type t = {
   rule: Rules.rule_exec;
 
@@ -14,3 +16,5 @@ type t = {
   (* nodes mk needs to update once the job is done *)
   target_nodes: Graph.node list;
 }
+(*e: type [[Job.t]] *)
+(*e: Job.ml *)

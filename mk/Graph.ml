@@ -1,3 +1,4 @@
+(*s: Graph.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -16,6 +17,7 @@ module Set = Set_
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Graph.node]] *)
 type node = {
   (* usually a filename *)
   name: string;
@@ -47,6 +49,8 @@ type node = {
 
 
 }
+(*e: type [[Graph.node]] *)
+(*s: type [[Graph.arc]] *)
   and arc = {
     (* note that because the graph of dependencies is a DAG, multiple
      * arcs may point to the same node. 
@@ -55,12 +59,17 @@ type node = {
     (* what we need from the rule to execute a recipe (and report errors) *)
     rule: Rules.rule_exec;
   }
+(*e: type [[Graph.arc]] *)
+(*s: type [[Graph.build_state]] *)
   and build_state = 
     | NotMade
     | BeingMade
     | Made
+(*e: type [[Graph.build_state]] *)
 
+(*s: type [[Graph.t]] *)
 type t = node (* the root *)
+(*e: type [[Graph.t]] *)
 
 
 (* The graph is a DAG; some arcs may point to previously created nodes.
@@ -70,12 +79,15 @@ type t = node (* the root *)
  * the list of all target nodes concerned by a rule and this requires
  * again given a target name to find the corresponding node in the graph.
  *)
+(*s: constant [[Graph.hnodes]] *)
 let hnodes = Hashtbl.create 101
+(*e: constant [[Graph.hnodes]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Graph.new_node]] *)
 let new_node (target : string) =
   let time = File.timeof (Fpath.v target) in
   let node = {
@@ -92,7 +104,9 @@ let new_node (target : string) =
                 (File.str_of_time node.time));
   Hashtbl.add hnodes target node;
   node
+(*e: function [[Graph.new_node]] *)
 
+(*s: function [[Graph.rule_exec]] *)
 let rule_exec (r: string Rules.rule) =
   { R.recipe2 = r.R.recipe;
     R.loc2 = r.R.loc;
@@ -102,7 +116,9 @@ let rule_exec (r: string Rules.rule) =
     R.all_targets = r.R.targets;
     R.all_prereqs = r.R.prereqs;
   }
+(*e: function [[Graph.rule_exec]] *)
 
+(*s: function [[Graph.rule_exec_meta]] *)
 let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
   { R.recipe2 = r.R.recipe;
     R.loc2 = r.R.loc;
@@ -112,12 +128,14 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
     R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
     R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
   }
+(*e: function [[Graph.rule_exec_meta]] *)
 
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[Graph.apply_rules]] *)
 (* todo: infinite rule detection *)
 let rec apply_rules target rules =
   Logs.debug (fun m -> m "apply_rules('%s')" target);
@@ -182,11 +200,13 @@ let rec apply_rules target rules =
     node.arcs <- List.rev !arcs;
     node
   end
+(*e: function [[Graph.apply_rules]] *)
 
 (*****************************************************************************)
 (* Checks *)
 (*****************************************************************************)
 
+(*s: function [[Graph.error_cycle]] *)
 let error_cycle node trace =
   (* less: I could just display the loop instead of starting from root *)
   let str = 
@@ -199,7 +219,9 @@ let error_cycle node trace =
   in
   failwith (spf "cycle in graph detected at target %s (trace = %s)"
               node.name str)
+(*e: function [[Graph.error_cycle]] *)
 
+(*s: function [[Graph.check_cycle]] *)
 let check_cycle node =
   let rec aux trace node =
     (* stricter: mk also check if nodes has arcs, but looks wrong to me *)
@@ -215,10 +237,12 @@ let check_cycle node =
     node.visited <- false;
   in
   aux [] node
+(*e: function [[Graph.check_cycle]] *)
 
 
 
 
+(*s: function [[Graph.error_ambiguous]] *)
 let error_ambiguous node groups =
   let candidates = 
     groups |> List.map (fun (rule, arcs) -> 
@@ -232,7 +256,9 @@ let error_ambiguous node groups =
   in
   failwith (spf "ambiguous recipes for %s: \n%s" 
               node.name  (candidates |> String.concat "\n"))
+(*e: function [[Graph.error_ambiguous]] *)
 
+(*s: function [[Graph.check_ambiguous]] *)
 let rec check_ambiguous node =
 
   node.arcs |> List.iter (fun arc ->
@@ -270,10 +296,12 @@ let rec check_ambiguous node =
       node.arcs <- List_.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
     | 2 | _ -> error_ambiguous node groups_with_simple_rule
     )
+(*e: function [[Graph.check_ambiguous]] *)
 
 (*****************************************************************************)
 (* Adjustments *)
 (*****************************************************************************)
+(*s: function [[Graph.propagate_attributes]] *)
 let rec propagate_attributes node =
   node.arcs |> List.iter (fun arc ->
     arc.rule.R.attrs2 |> Set.iter (function
@@ -287,8 +315,10 @@ let rec propagate_attributes node =
     );
     arc.dest |> Common.if_some propagate_attributes
   )
+(*e: function [[Graph.propagate_attributes]] *)
 
 
+(*s: function [[Graph.vacuous]] *)
 let rec vacuous node =
   let vacuous_node = ref (not node.probable) in
   
@@ -311,16 +341,20 @@ let rec vacuous node =
   if !vacuous_node
   then Logs.warn (fun m -> m "vacuous node detected: %s" node.name);
   !vacuous_node
+(*e: function [[Graph.vacuous]] *)
 
 
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
 
+(*s: function [[Graph.loc_of_arc]] *)
 let loc_of_arc arc =
   let loc = arc.rule.R.loc2 in
   spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
+(*e: function [[Graph.loc_of_arc]] *)
 
+(*s: function [[Graph.dump_graph]] *)
 let dump_graph node =
   let pr s = 
     print_string (s ^ "\n") 
@@ -348,11 +382,13 @@ let dump_graph node =
   aux node;
   pr "}";
   ()
+(*e: function [[Graph.dump_graph]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Graph.build_graph]] *)
 let build_graph target rules =
   let root = apply_rules target rules in
 
@@ -367,7 +403,9 @@ let build_graph target rules =
   propagate_attributes root;
    
   root
+(*e: function [[Graph.build_graph]] *)
 
+(*s: function [[Graph.update]] *)
 (* update graph once a node has been built *)
 let update node =
   node.state <- Made;
@@ -385,7 +423,7 @@ let update node =
 
     (* todo: actually can happen for rule like
      * x.tab.h: y.tab.h
-	 *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+     *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
      * (see plan9/shell/rc/mkfile).
      * In that case we should not failwith.
      * Because it is a rare case, maybe we should have a special
@@ -396,3 +434,5 @@ let update node =
     then failwith (spf "recipe did not update %s, time =%s" node.name
                      (File.str_of_time node.time));
   end
+(*e: function [[Graph.update]] *)
+(*e: Graph.ml *)

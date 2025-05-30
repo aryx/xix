@@ -1,3 +1,4 @@
+(*s: Env.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -13,8 +14,11 @@ open Common
 (* Content of variables (after full expansion and backquote resolution).
  * It should not contain any empty strings (but it can contain empty lists).
  *)
+(*s: type [[Env.values]] *)
 type values = string list
+(*e: type [[Env.values]] *)
 
+(*s: type [[Env.t]] *)
 type t = {
   (* use Env.add_var to add a var (to check if it's ok) *)
   vars         : (string, values) Hashtbl.t;
@@ -24,7 +28,9 @@ type t = {
   vars_commandline: (string, bool) Hashtbl.t;
   vars_we_set: (string, bool) Hashtbl.t;
 }
+(*e: type [[Env.t]] *)
 
+(*s: constant [[Env.mk_vars]] *)
 let mk_vars = [
   "target";
   "prereq";
@@ -33,15 +39,21 @@ let mk_vars = [
   (* todo: alltargets, newprereq ... 
   *)
 ]
+(*e: constant [[Env.mk_vars]] *)
 
+(*s: function [[Env.check_values]] *)
 (* invariant *)
 let check_values xs = 
   xs |> List.iter (fun s ->
     if s = ""
     then raise (Impossible (spf "empty string in values"))
+(*e: function [[Env.check_values]] *)
   )
 
+(*s: exception [[Env.Redefinition]] *)
 exception Redefinition of string
+(*e: exception [[Env.Redefinition]] *)
+(*s: function [[Env.add_var]] *)
 let add_var env s xs = 
   match () with
   | _ when Hashtbl.mem env.vars_commandline s ->
@@ -60,20 +72,24 @@ let add_var env s xs =
     raise (Redefinition s)
   | _ ->
     Hashtbl.replace env.vars s xs
+(*e: function [[Env.add_var]] *)
 
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
+(*s: function [[Env.dump_env]] *)
 let dump_env env =
   Logs.debug (fun m -> m "Dump_env:");
   env.vars |> Hashtbl.iter (fun k v ->
     Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
+(*e: function [[Env.dump_env]] *)
   )
 
 (*****************************************************************************)
 (* Functions *)
 (*****************************************************************************)
 
+(*s: function [[Env.initenv]] *)
 (* less: could take the readenv function as a parameter? *)
 let initenv (caps : < Cap.env; Cap.argv; .. >) =
   let internal = 
@@ -103,7 +119,11 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
     vars_we_set   = Hashtbl.create 101;
     vars_commandline   = Hashtbl.create 101;
   }
+(*e: function [[Env.initenv]] *)
 
+(*s: function [[Env.shellenv_of_env]] *)
 let shellenv_of_env env =
   Hashtbl_.to_list env.internal_vars @
   Hashtbl_.to_list env.vars
+(*e: function [[Env.shellenv_of_env]] *)
+(*e: Env.ml *)

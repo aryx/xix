@@ -1,8 +1,10 @@
+(*s: Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
 open Fpath_.Operators
 
+(*s: function [[Parse.parse]] *)
 let parse (file : Fpath.t) =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
@@ -31,3 +33,5 @@ let parse (file : Fpath.t) =
     with Parsing.Parse_error ->
       failwith (spf "%s:%d: Syntax error" !Globals.file !Globals.line)
   )
+(*e: function [[Parse.parse]] *)
+(*e: Parse.ml *)

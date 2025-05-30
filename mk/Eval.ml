@@ -1,3 +1,4 @@
+(*s: Eval.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -20,17 +21,22 @@ open Rules (* for the fields *)
 (* Error management *)
 (*****************************************************************************)
 
+(*s: function [[Eval.error]] *)
 (* TODO: use proper exn *)
 let error (loc : Ast.loc) (s : string) =
   failwith (spf "%s:%d: Semantic error, %s" !!(loc.A.file) loc.A.line s)
+(*e: function [[Eval.error]] *)
 
+(*s: function [[Eval.warning]] *)
 let warning (loc : Ast.loc) (s : string) : unit =
   Logs.warn (fun m -> m "warning: %s (at %s:%d)" s !!(loc.A.file) loc.A.line)
+(*e: function [[Eval.warning]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Eval.eval_word]] *)
 (* A word can become multiple strings!
  * opti? could use a Buffer 
  * invariant: 
@@ -132,8 +138,10 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
       )
   in
   aux [] word
+(*e: function [[Eval.eval_word]] *)
 
 
+(*s: function [[Eval.eval_words]] *)
 let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
          (string list, Percent.pattern list) Common.either =
   
@@ -159,12 +167,14 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
         | P.PPercent -> raise (Impossible "exists predicate above is wrong")
     ) |> (fun elems -> [elems |> String.concat ""])
   ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
+(*e: function [[Eval.eval_words]] *)
 
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Eval.eval]] *)
 let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
 
   let simples = Hashtbl.create 101 in
@@ -281,3 +291,5 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
     simples = simples;
     metas = !metas
   }, env
+(*e: function [[Eval.eval]] *)
+(*e: Eval.ml *)

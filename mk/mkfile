@@ -2,7 +2,7 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections
 
-#coupling: library stanza in dune file
+#coupling: library stanza in dune file and docs/mkfile:SRC_VIEW
 SRC= Globals.ml Flags.ml \
   Ast.ml   Parser.ml Lexer.ml Parse.ml \
   Shellenv.ml Shell.ml \

@@ -1,3 +1,4 @@
+(*s: Shell.ml *)
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -15,8 +16,11 @@ open Fpath_.Operators
  *  - exec/fork: obviously as we run a shell
  *  - env: for MKSHELL
  *)
+(*s: type [[Shell.caps]] *)
 type caps = < Cap.exec; Cap.fork; Cap.env >
+(*e: type [[Shell.caps]] *)
 
+(*s: type [[Shell.t]] *)
 type t = { 
   path: Fpath.t;
   name: string;
@@ -28,7 +32,9 @@ type t = {
    * shells, so this should be part of the interface.
    *)
 }
+(*e: type [[Shell.t]] *)
 
+(*s: constant [[Shell.sh]] *)
 let sh = {
   path = Fpath.v "/bin/sh";
   name = "sh";
@@ -36,10 +42,12 @@ let sh = {
   iws = " ";
   debug_flags = (fun () -> []);
 }
+(*e: constant [[Shell.sh]] *)
 
 (* Should we pass -e too here to abort if error inside? This is done in
  * Scheduler.ml instead when executing recipe (but not for backquote processing)
  *)
+(*s: constant [[Shell.rc]] *)
 let rc = {
   path = Fpath.v "/usr/bin/rc";
   name = "rc";
@@ -47,7 +55,9 @@ let rc = {
   iws = "\001";
   debug_flags = (fun () -> (* if !Flags.verbose then ["-v"] else [] *) []);
 }
+(*e: constant [[Shell.rc]] *)
 
+(*s: function [[Shell.shell_from_env_or_sh]] *)
 (* old: this is a toplevel entity, so the code below is executed even
  * before main, so you can not rely on the value in Flags as they have
  * not been set yet.
@@ -61,11 +71,13 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
     | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
     | _ -> { sh with path = Fpath.v path }
   with Not_found -> sh
+(*e: function [[Shell.shell_from_env_or_sh]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Shell.exec_shell]] *)
 let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
   let shell = shell_from_env_or_sh caps in
   let env = 
@@ -104,7 +116,9 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
   );
   (* nosemgrep: do-not-use-exit (unreachable) *)
   exit (-2)
+(*e: function [[Shell.exec_shell]] *)
 
+(*s: function [[Shell.feed_shell_input]] *)
 let feed_shell_input inputs pipe_write =
   inputs |> List.iter (fun str ->
     let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
@@ -116,12 +130,14 @@ let feed_shell_input inputs pipe_write =
   );
   (* will flush *)
   Unix.close pipe_write
+(*e: function [[Shell.feed_shell_input]] *)
 
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Shell.exec_recipe]] *)
 (* returns a pid *)
 let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
   let pid = CapUnix.fork caps () in
@@ -175,8 +191,10 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
 
   (* parent case *)
   else pid (* pid of child1 *)
+(*e: function [[Shell.exec_recipe]] *)
 
 
+(*s: function [[Shell.exec_backquote]] *)
 let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
@@ -219,8 +237,10 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
     Unix.waitpid [] pid |> ignore;
     output
   end
+(*e: function [[Shell.exec_backquote]] *)
 
 
+(*s: function [[Shell.exec_pipecmd]] *)
 let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
   let tmpfile = Filename.temp_file "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
@@ -255,3 +275,5 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     | _ -> failwith "bad include program status"
     )
   end
+(*e: function [[Shell.exec_pipecmd]] *)
+(*e: Shell.ml *)

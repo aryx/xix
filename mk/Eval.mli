@@ -1,3 +1,5 @@
+(*s: Eval.mli *)
+(*s: signature [[Eval.eval]] *)
 (* Evaluate the variables and backquotes in the mkfile (hence Cap.exec),
  * process the included files, index the rules, and return the 
  * final environment (actually modify by side effect the environment).
@@ -14,3 +16,5 @@ val eval :
   string list ref ->
   Ast.instr list ->
   Rules.rules * Env.t
+(*e: signature [[Eval.eval]] *)
+(*e: Eval.mli *)

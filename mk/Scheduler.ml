@@ -1,3 +1,4 @@
+(*s: Scheduler.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -17,22 +18,31 @@ module Set = Set_
 (* Globals *)
 (*****************************************************************************)
 
+(*s: constant [[Scheduler.running]] *)
 let running = Hashtbl.create 101
+(*e: constant [[Scheduler.running]] *)
+(*s: constant [[Scheduler.nrunning]] *)
 let nrunning = ref 0
+(*e: constant [[Scheduler.nrunning]] *)
 
+(*s: function [[Scheduler.nproclimit]] *)
 let nproclimit (caps: < Cap.env; ..>) =
   (try 
     let s = CapSys.getenv caps "NPROC" in
     int_of_string s
    with Not_found | _ -> 2
   )
+(*e: function [[Scheduler.nproclimit]] *)
 
+(*s: constant [[Scheduler.jobs]] *)
 let jobs = Queue.create ()
+(*e: constant [[Scheduler.jobs]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Scheduler.adjust_env]] *)
 (* !modify by side effect job.env! *)
 let adjust_env job =
   let env = job.J.env in
@@ -46,7 +56,9 @@ let adjust_env job =
   );
 
   env
+(*e: function [[Scheduler.adjust_env]] *)
 
+(*s: function [[Scheduler.shprint]] *)
 let shprint env s =
   let s = 
     Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
@@ -61,11 +73,13 @@ let shprint env s =
       ) s
   in
   Logs.app (fun m -> m "|%s|" s)
+(*e: function [[Scheduler.shprint]] *)
 
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
 
+(*s: function [[Scheduler.dump_job]] *)
 let dump_job func job pidopt =
   Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
          (Unix.getpid())
@@ -73,6 +87,7 @@ let dump_job func job pidopt =
          (match pidopt with Some pid -> pid | None -> 0)
          (job.J.target_nodes |> List.map (fun node -> node.G.name) 
              |> String.concat " "))
+(*e: function [[Scheduler.dump_job]] *)
 (*
   let rule = job.J.rule in
       ; recipe = '%s'; stem = %s
@@ -91,6 +106,7 @@ let dump_job func job pidopt =
 (* Main algorithms *)
 (*****************************************************************************)
 
+(*s: function [[Scheduler.sched]] *)
 let sched (caps : < Shell.caps; .. >) () =
   try 
     let job = Queue.take jobs in
@@ -136,12 +152,14 @@ let sched (caps : < Shell.caps; .. >) () =
     
   with Queue.Empty ->
     raise (Impossible "no jobs to schedule")
+(*e: function [[Scheduler.sched]] *)
 
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Scheduler.run]] *)
 let run (caps : < Shell.caps; .. >) job =
   Queue.add job jobs;
 
@@ -150,9 +168,11 @@ let run (caps : < Shell.caps; .. >) job =
 
   if !nrunning < nproclimit caps
   then sched caps ()
+(*e: function [[Scheduler.run]] *)
 
 
 
+(*s: function [[Scheduler.waitup]] *)
 let waitup (caps : < Shell.caps; .. >) () =
   let (pid, ret) = 
     try 
@@ -199,3 +219,5 @@ let waitup (caps : < Shell.caps; .. >) () =
       failwith (spf "child process killed/stopped by signal = %d" n)
   | Unix.WSTOPPED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)
+(*e: function [[Scheduler.waitup]] *)
+(*e: Scheduler.ml *)

@@ -1,3 +1,4 @@
+(*s: Outofdate.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -16,6 +17,7 @@ open Job (* for the fields *)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Outofdate.outofdate]] *)
 let outofdate node arc =
   match arc.G.dest with
   | None -> raise (Impossible "should not call outofdate on nodeless arcs")
@@ -35,14 +37,18 @@ let outofdate node arc =
        | None   , Some _  -> true
        | Some t1, Some t2 -> t1 < t2
        )
+(*e: function [[Outofdate.outofdate]] *)
 
+(*s: function [[Outofdate.opt0]] *)
 let opt0 opttime =
   match opttime with
   | None -> 0.
   | Some x -> x
+(*e: function [[Outofdate.opt0]] *)
     
 
 
+(*s: function [[Outofdate.dorecipe]] *)
 let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
   then
@@ -109,11 +115,13 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
                   };
     did := true
   end
+(*e: function [[Outofdate.dorecipe]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Outofdate.work]] *)
 (* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
  *)
@@ -163,3 +171,5 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
           if not !out_of_date 
           then node.G.state <- G.Made
           else dorecipe caps env node did
+(*e: function [[Outofdate.work]] *)
+(*e: Outofdate.ml *)

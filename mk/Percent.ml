@@ -1,3 +1,4 @@
+(*s: Percent.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -15,13 +16,18 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Percent.pattern_elem]] *)
 type pattern_elem =
   | PStr of string
   | PPercent
+(*e: type [[Percent.pattern_elem]] *)
+(*s: type [[Percent.pattern]] *)
 type pattern = P of pattern_elem list
+(*e: type [[Percent.pattern]] *)
 
 
 
+(*s: function [[Percent.check_pattern]] *)
 let check_pattern (P xs) =
   if xs = []
   then raise (Impossible (spf "empty pattern"));
@@ -29,15 +35,21 @@ let check_pattern (P xs) =
     | PPercent -> ()
     | PStr "" -> raise (Impossible (spf "empty string element in pattern"));
     | PStr _ -> ()
+(*e: function [[Percent.check_pattern]] *)
   )
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: exception [[Percent.TooManyPercents]] *)
 exception TooManyPercents
+(*e: exception [[Percent.TooManyPercents]] *)
+(*s: exception [[Percent.PercentNotFound]] *)
 exception PercentNotFound
+(*e: exception [[Percent.PercentNotFound]] *)
 
+(*s: function [[Percent.string_after_percent]] *)
 let rec string_after_percent xs =
   match xs with
   | [] -> ""
@@ -46,11 +58,13 @@ let rec string_after_percent xs =
     | PStr s -> s ^ string_after_percent xs
     | PPercent -> raise TooManyPercents
     )
+(*e: function [[Percent.string_after_percent]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Percent.match_]] *)
 (* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
  * This is arguably (and sadly) more complicated than the C code.
  *)
@@ -82,15 +96,21 @@ let rec match_ (P pat) str =
           then Some stem
           else None
     )        
+(*e: function [[Percent.match_]] *)
 
+(*s: function [[Percent.subst]] *)
 let subst (P pat) stem =
   pat |> List.map (function
     | PStr s -> s
     | PPercent -> stem
   ) |> String.concat ""
+(*e: function [[Percent.subst]] *)
 
 
+(*s: function [[Percent.match_and_subst]] *)
 let match_and_subst pat sub str =
   match match_ pat str with
   | Some stem -> subst sub stem
   | None -> str
+(*e: function [[Percent.match_and_subst]] *)
+(*e: Percent.ml *)

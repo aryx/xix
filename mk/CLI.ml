@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -96,15 +97,20 @@ module R = Rules
 (*****************************************************************************)
 
 (* see the .mli for why those caps are needed *)
+(*s: type [[CLI.caps]] *)
 type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
+(*e: type [[CLI.caps]] *)
 
+(*s: constant [[CLI.usage]] *)
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
+(*e: constant [[CLI.usage]] *)
 
 (*****************************************************************************)
 (* Testing *)
 (*****************************************************************************)
 
+(*s: function [[CLI.do_action]] *)
 (* to test the different mk components *)
 let do_action caps s xs =
   match s with
@@ -124,11 +130,13 @@ let do_action caps s xs =
         ()
       )
   | _ -> failwith ("action not supported: " ^ s)
+(*e: function [[CLI.do_action]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[CLI.build_target]] *)
 let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
 
    let root = Graph.build_graph target rules in
@@ -164,8 +172,10 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
    if not !ever_did
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 [@@profiling]
+(*e: function [[CLI.build_target]] *)
 
 
+(*s: function [[CLI.build_targets]] *)
 let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
@@ -204,11 +214,13 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
       build_target caps env rules target
     )
 [@@profiling]
+(*e: function [[CLI.build_targets]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[CLI.main]] *)
 let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
@@ -321,3 +333,5 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
+(*e: function [[CLI.main]] *)
+(*e: CLI.ml *)

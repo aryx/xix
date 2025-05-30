@@ -1,5 +1,8 @@
 TOP=../..
 
+SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
+SYNCWEBFLAGS=-debug
+
 DOC=Mk
 VERSION=1
 D=..
@@ -14,8 +17,7 @@ SRC_ML_NO_MLI=$D/Ast.ml $D/Globals.ml $D/Flags.ml $D/Main.ml $D/Rules.ml $D/Job.
 
 SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI
 
-SRC_ORIG=Mk.nw
+SRC_ORIG=Mk.nw Intro.nw
 
-SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 
 <$TOP/docs/latex/mkcommon

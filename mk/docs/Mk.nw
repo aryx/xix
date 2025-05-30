@@ -127,7 +127,139 @@ Documentation License, Version 1.3.
 
 \chapter{Introduction}
 
-Make~\cite{make}
+#include "Intro.nw"
+
+\section{Code organization}
+
+%dup: Assembler.nw
+Table~\ref{tab:code-orga} presents short descriptions
+of the source files of [[mk]], together with
+the main entities (e.g., structures, functions, globals) the file defines,
+and the corresponding chapters in this document in which the code
+contained in the file is primarily discussed.
+\n sorted by chapters, make more sense than sorted by dir
+\t so? what this table is useful for/
+
+
+\begin{table*}[tbh!]
+\begin{center}
+\begin{tabular}{lcllr}
+\toprule
+{\bf Function}                            & {\bf Ch.}                     & {\bf File}     & {\bf Entities}                                        & {\bf LOC} \\
+\otoprule
+
+\otoprule
+Total                                     &                               &                &                                                       & 5445 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\caption{Chapters and associated [[mk]] source files.}
+\label{tab:code-orga}
+\end{table*}
+
+
+\section{Software architecture}
+\label{sec:soft-archi}
+
+%dup: Assembler.nw
+Figure~\ref{fig:controlflow} describes the main control flow of [[mk]], whereas
+Figure~\ref{fig:dataflow} describes the main data flow of [[mk]].
+%
+The main steps of the building pipeline of [[mk]] are as follows:
+
+
+%\begin{enumerate}
+%\item {\em Parse} the [[mkfile]] (via <parse()>) to extract
+%the rules and meta rules in the file
+%\n chapter 5
+%
+%\item {\em Build} the graph of dependencies (via <graph()>)
+%for a specific target given the rules extracted previously 
+%\n chapter 6
+%
+%\item {\em Find} outdated files in the graph (via <work()>)
+%\n chapter 7
+%
+%\item {\em Schedule} jobs (via <sched()>) that will run the shell
+%recipes (via <execsh()>) to update the outdated files
+%\n chapter 8
+%\n chapter 9 = To {\em interact} environment
+%
+%\end{enumerate}
+
+\begin{figure}[!tbp]\centering
+\begin{verbatim}
+              +------+
+              | main |
+              +------+
+                  |
+     +------------+------------+
+     v                         v
+ +-------+                 +-------+
+ | parse |                 |  mk   |
+ +-------+                 +-------+
+     |                         |
+     v             +-----------+
++--------+         v           +----------------+
+|assline |    +---------+      |                |
++--------+    |  graph  |      v                v
+              +---------+ +---------+      +---------+
+                   |      |  work   |      | waitup  |
+             +-----+      +---------+      +---------+
+             v                 |                |
+       +----------+     +------+----+      +----+-+
+       |applyrules|     |           |      |      v
+       +----------+     v           v      | +---------+
+                   +---------+ +---------+ | | update  |
+                   |outofdate| |dorecipe | | +---------+
+                   +---------+ +----+----+ |
+                                    |      |
+                               +----v----+ |
+                               |   run   | |
+                               +------+--+ |
+                                      |    |
+                                   +--v----v-+
+                                   |  sched  |
+                                   +----+----+
+                                        |
+                                   +----v----+
+                                   | execsh  |
+                                   +---------+
+\end{verbatim}
+\caption{Control flow diagram of [[mk]].}\label{fig:controlflow}
+\end{figure}
+\l graphviz of files? or just of the types?
+\l could add <loop> in diagram over work and waitup
+\t maybe could put horizontal instead and could put the big step
+\t  like parsing, building, find, and schedule on the very right
+
+\begin{figure}[!tbp]\centering
+\begin{verbatim}
+                             main target 
+                           /              \
+                          /- simple rules -\
+mkfile -> lines -> words -                  > graph -> jobs
+                          \- meta rules   -/
+
+             (use global symbol table)
+\end{verbatim}
+\caption{Data flow diagram of [[mk]].}\label{fig:dataflow}
+\end{figure}
+
+
+\section{Book structure}
+
+%trans: %dup: Assembler.nw
+You now have enough background to understand the source code of [[mk]].
+%toc:
+The rest of the book is organized as follows.
+%
+I will start by describing the core data structures of [[mk]]
+in Chapter~\ref{chap:core-ds}. 
+%
+
+%###############################################################################
+
 
 \chapter{Conclusion}
 

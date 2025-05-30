@@ -258,8 +258,99 @@ I will start by describing the core data structures of [[mk]]
 in Chapter~\ref{chap:core-ds}. 
 %
 
-%###############################################################################
 
+\chapter{Core Data Structures}
+
+\section{[[Word]]s}
+
+\section{Rules}
+
+\section{Graph}
+
+\section{[[Job]]s}
+
+
+\chapter{[[main]]}
+
+\section{[[main()]] skeleton}
+
+\section{[[mk -]]{\em flag} arguments processing}
+
+\section{[[mk ]]{\em var}[[=]]{\em values} arguments processing}
+
+\section{[[mk ]] remaining arguments processing}
+
+\section{Using the [[mkfile]] or [[mk -f]]{\em file}}
+
+\section{Building the target(s)}
+
+\chapter{Parsing the [[mkfile]]}
+
+\section{}
+
+\section{}
+
+\section{}
+
+\section{}
+
+\chapter{Building the Graph of Dependencies}
+
+\section{}
+
+\section{Finding the simple rule(s) for a target}
+
+\section{Finding matching metarules}
+
+\section{Checking the graph and the rules}
+
+\chapter{Finding Outdated Files}
+
+\section{}
+
+\section{Exploring the graph: [[work()]]}
+
+\section{Scheduling recipes: [[dorecipe()]]}
+
+\chapter{Scheduling Jobs}
+
+\section{Executing Jobs: [[execsh()]]}
+
+\section{Waiting for jobs to finish}
+
+\section{}
+
+\chapter{The Shell Environment}
+
+\section{}
+
+\section{}
+
+\section{}
+
+\chapter{Debugging and Profiling Support}
+
+\section{}
+
+\section{Explain mode: [[mk -e]]}
+
+\section{Dry mode: [[mk -n]]}
+
+\section{What-if mode: [[mk -w]]{\em file}}
+
+\section{Processor utilization: [[mk -u]]}
+
+\chapter{Advanced Features}
+
+\section{}
+
+\section{}
+
+\section{}
+
+\section{}
+
+\section{}
 
 \chapter{Conclusion}
 
@@ -268,6 +359,12 @@ in Chapter~\ref{chap:core-ds}.
 
 \chapter{Debugging}
 
+\chapter{Examples of [[mkfile]]s}
+
+\section{The [[mkfile]] of [[mk]]}
+
+\section{The [[mkfile]]s of \plan}
+  
 \chapter{Extra Code}
 
 \section{[[./]]}

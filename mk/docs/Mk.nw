@@ -1,0 +1,3256 @@
+\documentclass[12pt]{report}
+%12pt, twocolumn, landscape
+
+%******************************************************************************
+% Prelude
+%******************************************************************************
+\newif\iffinal
+\newif\ifverbose
+\finaltrue\verbosefalse % see also other newif in Macros.tex
+
+%------------------------------------------------------------------------------
+%history: 
+%------------------------------------------------------------------------------
+
+%thx to LP, I changed for the better a few things:
+% - found deadcode ?
+% - found duplicated code?
+ 
+
+%thx to codemap/codegraph/scheck:
+% - TODO use cg to to look at backward deps (but the linker already enforces layers)
+%   (harder to understand non layered code)
+% - TODO use scheck to remove deadcode
+%   (harder to understand big files)
+% - TODO use cg to reduce number of globals by moving them closer to the
+%   relevant file (or even function), better cluster the code
+%   (harder to understand non functional code using lots of globals)
+
+%thx to this manual, better understand OCaml:
+
+%history LP-ization:
+% - skeleton, mostly copy paste of Template.nw skeleton
+% - put all content of files in the Extra section, via 'lpizer'
+%   which also now split in chunks!
+%    * function, type, exception, constant
+%    * TODO dumper
+%    * TODO [[xxx]] other fields, [[xxx]] extra fields
+% - read Extra section, identify concepts, first TOC
+% - TODO distribute parts of the Extra section in the main file
+% - TODO understand main(), LP split main, improve TOC
+% - TODO understand main functions, LP split, cluster, improve TOC
+% - TODO LP split the structures, use datalog for flow to field info
+% - TODO aspecify advanced features! remove useless features, error, debug, secu
+% - TODO add figures
+% - TODO add explanations
+
+%------------------------------------------------------------------------------
+% Packages
+%------------------------------------------------------------------------------
+
+\usepackage{xspace}
+\usepackage{verbatim}
+%note: required by 'syncweb -to_tex' for the \t \l \n in this file
+\usepackage{fancyvrb}
+\usepackage{url}
+\usepackage{hyperref}
+ \hypersetup{colorlinks=true}
+\usepackage[pageref]{backref}
+ \def\backref{{\footnotesize cited page(s)}~}
+\usepackage{booktabs} 
+ \newcommand{\otoprule}{\midrule[\heavyrulewidth]}
+\usepackage{graphicx}
+
+\input{../../docs/latex/Config}
+\usepackage{../../docs/latex/noweb}
+ \noweboptions{footnotesizecode,nomargintag}
+ %note: allow chunk on different pages, less white space at bottom of pages
+ \def\nwendcode{\endtrivlist \endgroup}
+ \let\nwdocspar=\par
+\usepackage{../../docs/latex/syncweb}
+
+%------------------------------------------------------------------------------
+% Macros
+%------------------------------------------------------------------------------
+\input{../../docs/latex/Macros}
+
+%------------------------------------------------------------------------------
+% Config
+%------------------------------------------------------------------------------
+\allcodefalse
+% ifallcode is used for:
+% - TODO extra copyright
+
+\begin{document}
+%******************************************************************************
+% Title
+%******************************************************************************
+\title{
+{\Huge 
+Principia Softwarica: The Build System [[mk]]
+}\\
+{version 0.1}
+}
+
+
+\author{
+Yoann Padioleau\\
+\texttt{yoann.padioleau@gmail.com}\\
+\\
+with code from\\
+Andrew Hume and Yoann Padioleau
+}
+
+
+\maketitle 
+
+%\onecolumn
+\hrule
+\begin{quote}
+Copyright \copyright{} 2025 Yoann Padioleau \\
+Permission is granted to copy, distribute and/or modify this document,
+except all the source code it contains, under the terms of the GNU Free
+Documentation License, Version 1.3.
+\end{quote}
+\hrule
+%\twocolumn
+
+\begingroup
+\hypersetup{linkcolor=blue}
+% need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
+\tableofcontents
+\endgroup
+
+%******************************************************************************
+% Body
+%******************************************************************************
+
+\chapter{Introduction}
+
+Make~\cite{make}
+
+\chapter{Conclusion}
+
+\appendix
+
+
+\chapter{Debugging}
+
+\chapter{Extra Code}
+
+\section{[[./]]}
+
+\subsection*{[[Ast.ml]]}
+
+<<type [[Ast.word]]>>=
+type word = W of word_element list
+@
+
+<<type [[Ast.word_element]]>>=
+  and word_element =
+    | String of string (* except the empty string *)
+    | Percent
+  
+    (* evaluated in eval.ml just after parsing *)
+    | Var of var
+     (* stricter: backquotes are allowed only in word context, not at toplevel
+      * so no `echo '<foo.c'` *)
+     (* `...` or `{...} (the string does not include the backquote or braces) *)
+    | Backquoted of string
+@
+
+<<type [[Ast.var]]>>=
+     and var = 
+      (* $name or ${name} (the string does not contain the $ or {}) *)
+      | SimpleVar of string
+      (* ${name:a%b=c%d} *)
+      | SubstVar of (string * word * word list)
+@
+
+<<type [[Ast.words]]>>=
+type words = word list
+[@@deriving show]
+@
+
+<<type [[Ast.recipe]]>>=
+type recipe = R of string list
+[@@deriving show {with_path = false}]
+@
+
+<<type [[Ast.rule]]>>=
+type rule = {
+  targets: words;
+  prereqs: words;
+  attrs: rule_attribute list;
+  recipe: recipe option;
+}
+@
+
+<<type [[Ast.rule_attribute]]>>=
+  and rule_attribute = 
+    | Virtual
+    | Quiet
+    | Delete
+    | Interactive (* pad: I added this one *)
+    | NotHandled of char
+@
+
+<<type [[Ast.loc]]>>=
+type loc = {
+  file: Fpath.t; (* an mkfile *)
+  line: int;
+}
+[@@deriving show {with_path = false}]
+@
+
+<<type [[Ast.instr]]>>=
+type instr = {
+  instr: instr_kind;
+  loc: loc;
+}
+@
+
+<<type [[Ast.instr_kind]]>>=
+  and instr_kind =
+    (* should resolve to a single filename
+     * less: could enforce of word? *)
+    | Include of words
+    (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
+     * less: we could also do PipeInclude of recipe I think *)
+    | PipeInclude of words
+
+    | Rule of rule
+
+    (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
+     * so 'string' below, not 'word' *)
+    | Definition of string * words
+@
+%$
+
+<<function [[Ast.show_instrs]]>>=
+(* for boostrap-mk.sh and ocaml-light to work without deriving *)
+let show_instrs _ = "NO DERIVING"
+[@@warning "-32"]
+@
+
+<<type [[Ast.instrs]]>>=
+type instrs = instr list
+[@@deriving show]
+@
+
+<<function [[Ast.dump_ast]]>>=
+let dump_ast instrs =
+  Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
+@
+
+
+%-------------------------------------------------------------
+
+<<Ast.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+
+(* The elements below are not separated by any separator; they are direct
+ * concatenations of elements (hence the need for ${name} below).
+ * The list must contain at least one element.
+ * ex: '%.c' -> W [Percent; String ".c"]
+ *)
+<<type [[Ast.word]]>>
+
+<<type [[Ast.word_element]]>>
+
+<<type [[Ast.var]]>>
+[@@deriving show  {with_path = false}]
+
+(* Words are separated by spaces. See also Env.values *)
+<<type [[Ast.words]]>>
+
+
+(* (the strings do not contain the leading space nor trailing newline) *)
+<<type [[Ast.recipe]]>>
+
+(* See also Rules.rule_exec *)
+<<type [[Ast.rule]]>>
+<<type [[Ast.rule_attribute]]>>
+[@@deriving show {with_path = false}]
+
+(* for error reporting *)
+<<type [[Ast.loc]]>>
+
+<<type [[Ast.instr]]>>
+
+<<type [[Ast.instr_kind]]>>
+[@@deriving show {with_path = false}]
+
+<<function [[Ast.show_instrs]]>>
+
+<<type [[Ast.instrs]]>>
+
+<<function [[Ast.dump_ast]]>>
+@
+
+
+\subsection*{[[CLI.ml]]}
+
+<<type [[CLI.caps]]>>=
+type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
+@
+
+<<constant [[CLI.usage]]>>=
+let usage =
+  "usage: mk [-f file] [options] [targets ...]"
+@
+
+<<function [[CLI.do_action]]>>=
+(* to test the different mk components *)
+let do_action caps s xs =
+  match s with
+  | "-test_parser" ->
+      xs |> List.iter (fun file ->
+        Logs.info (fun m -> m "processing %s" file);
+        let instrs = Parse.parse (Fpath.v file) in
+        Console.print caps (spf "%s" (Ast.show_instrs instrs))
+      )
+  | "-test_eval" ->
+      xs |> List.iter (fun file ->
+        Logs.info (fun m -> m "processing %s" file);
+        let env = Env.initenv caps in
+        let instrs = Parse.parse (Fpath.v file) in
+        let _rules, env = Eval.eval caps env (ref []) instrs in
+        Env.dump_env env;
+        ()
+      )
+  | _ -> failwith ("action not supported: " ^ s)
+@
+
+<<function [[CLI.build_target]]>>=
+let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
+
+   let root = Graph.build_graph target rules in
+
+   (* could do that after the checks *)
+   if !Flags.dump_graph 
+   then Graph.dump_graph root;
+   
+   let ever_did = ref false in
+
+   while root.G.state = G.NotMade do
+     let did = ref false in
+
+     (* may call internally Scheduler.run to schedule jobs and may
+      * raise some Failure (e.g., "don't know how to make xxx")
+      *)
+     Outofdate.work caps env root did;
+
+     if !did 
+     then ever_did := true
+     else 
+       (* no work possible, let's wait for a job process to finish *)
+       if !Scheduler.nrunning > 0
+       then Scheduler.waitup caps ()
+       (* else: impossible? *)
+   done;
+
+   (* bugfix: root can be BeingMade in which case we need to wait *)
+   while !Scheduler.nrunning > 0 do
+     Scheduler.waitup caps ();
+   done;
+   
+   if not !ever_did
+   then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
+[@@profiling]
+@
+
+<<function [[CLI.build_targets]]>>=
+let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
+
+    (* initialisation *)
+    let env = Env.initenv caps in
+    vars |> List.iter (fun (var, value) ->
+     (* stricter: we do not allow list of strings for value for command-line
+      * vars, but anyway I'm not sure how they could be parsed by Arg
+      *)
+      Env.add_var env var [value];
+      Hashtbl.add env.Env.vars_commandline var true;
+    );
+    
+    if !Flags.debugger then begin
+      CapSys.chdir caps (Filename.dirname !!infile);
+      Env.add_var env "objtype" ["386"]
+    end;
+
+    (* parsing (and evaluating) *)
+    let instrs = Parse.parse infile in
+
+    if !Flags.dump_ast
+    then Ast.dump_ast instrs;
+
+    (* can modify targets and use first targets in file if none provided *)
+    let rules, env = Eval.eval caps env targets instrs in
+
+    if !Flags.dump_env
+    then Env.dump_env env;
+    
+    (* building *)
+    if !targets = []
+    then failwith "nothing to mk";
+
+    (* less: build shellenv here ?*)
+    !targets |> List.rev |> List.iter (fun target ->
+      build_target caps env rules target
+    )
+[@@profiling]
+@
+
+<<function [[CLI.main]]>>=
+let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
+  let infile  = ref "mkfile" in
+  let targets = ref [] in
+  let vars = ref [] in
+
+  (* for debugging *)
+  let level = ref (Some Logs.Warning) in
+  let action = ref "" in
+  let backtrace = ref false in
+
+  let options = [
+
+    (* less: maybe should do a chdir (Dirname infile) *)
+    "-f", Arg.Set_string infile,
+    " <file> use file instead of mkfile";
+    
+    "-e", Arg.Set Flags.explain_mode,
+    " explain mode";
+    "-n", Arg.Set Flags.dry_mode,
+    " dry mode";
+    (* less: -a, etc *)
+    "-strict", Arg.Set Flags.strict_mode,
+    " strict mode";
+
+    (* pad: I added that *)
+    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
+
+    (* pad: I added that *)
+    "-dump_tokens", Arg.Set Flags.dump_tokens,
+    " dump the tokens as they are generated";
+    "-dump_ast", Arg.Set Flags.dump_ast,
+    " dump the parsed AST";
+    "-dump_env", Arg.Set Flags.dump_env,
+    " dump the environment";
+    "-dump_graph", Arg.Set Flags.dump_graph,
+    " dump the generated graph (in graphviz dot format)";
+    "-dump_jobs", Arg.Set Flags.dump_jobs,
+    " ";
+
+    (* TODO: move in a CLI_common.ml *)
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+    "-debug", Arg.Unit (fun () -> 
+      level := Some Logs.Debug;
+      Flags.explain_mode := true;
+    ),
+    " trace the main functions";
+    
+    "-debugger", Arg.Set Flags.debugger,
+    " ";
+    "-backtrace", Arg.Set backtrace,
+    " dump the backtrace after an error";
+  ]
+  in
+  (* old: was Arg.parse but we want explicit argv control *)
+  (try
+    Arg.parse_argv argv (Arg.align options) (fun t -> 
+      match t with
+      | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
+        let (var, value) = Regexp_.matched2 t in
+        vars := (var, value)::!vars;
+      | _ ->
+        targets := t :: !targets
+      ) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+
+  Logs.set_level !level;
+  Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
+
+  (* to test and debug components of mk *)
+  if !action <> "" then begin 
+    do_action caps !action (List.rev !targets); 
+    raise (Exit.ExitCode 0)
+  end;
+
+  (* Let's go! *)
+  try 
+    build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
+    Exit.OK
+  with exn ->
+    if !backtrace || !Flags.debugger
+    then raise exn
+    else 
+      (match exn with
+      (* lots of the mk errors are reported using failwith (e.g., "don't know
+       * how to make xxx")
+       *)
+      | Failure s -> 
+          (* useful to indicate that error comes from mk, not subprocess *)
+          Logs.err (fun m -> m "mk: %s" s);
+          (* need to wait for other children before exiting, otherwise
+           * could get corrupted incomplete object files.
+           *)
+          while !Scheduler.nrunning > 0 do
+              try 
+                (* todo: if dump_jobs, print pid we wait and its recipe *)
+                Unix.wait () |> ignore;
+                decr Scheduler.nrunning
+              with Unix.Unix_error (error, _str1, _str2) ->
+                failwith (spf "%s" (Unix.error_message error))
+          done;
+          Exit.Code 1
+      | _ -> raise exn
+      )
+@
+%$
+
+
+%-------------------------------------------------------------
+
+<<CLI.ml>>=
+(* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+
+module G = Graph
+module R = Rules
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* An OCaml port of mk, the Plan 9 build system.
+ *
+ * Main limitations compared to mk:
+ *  - no regexp rules
+ *    (not worth it, '%' are good enough)
+ *  - no special handling for archives
+ *    (fast enough nowadays to recreate full archives from scratch)
+ *  - no :P:
+ *    (it is barely documented anyway, and you can do without)
+ *  - no private variables
+ *    (I never saw mkfiles using it, and it complicates the parsing of '=')
+ *  - no &
+ *    (rarely found used, '%' is enough again)
+ *  - only one -f is supported, not an array of up to 256 mkfiles
+ *    (who uses that? maybe to have mk -f varfile -f mkfile)
+ *  - no sequential vs parallel mode, and no parallel for multi targets
+ *    (most of the time you give just one target anyway)
+ *  - disallow :=<% in more context
+ *    (confusing for reader anyway, I prefer to force the user to quote)
+ *  - disallow dynamic assignements like X=B ... $X=1
+ *    (harder to read, who uses that?)
+ *  - disallow dynamic patterns like X=%.o  $X: %.c
+ *    (harder to read)
+ *  - disallow backquote outside word context (e.g., at the toplevel)
+ *    so you can not do `echo <foo.txt`
+ *    (harder to read and never used I think)
+ *  - no opti like missing intermediate (mk -i)
+ *    (I barely understand the algorithm anyway)
+ *  - no unicode support
+ * 
+ * Improvements (IMHO):
+ *  - a strict mode where we forbid to redefine variables, use of undefined
+ *    variables
+ *  - forbid to use list variables in a scalar context (error prone I think)
+ *  - a new Interactive attribute :I: so one can call interactive program
+ *    in a recipe (e.g., syncweb)
+ *  - use of MKSHELL to configure which shell to use
+ *    (original mk was doing that but only if MKSHELL was set in an mkfile)
+ *  - simplifications by not supporting the features mentioned above
+ *  - be more relaxing on date (or TODO use nanosec); if equal time then ok
+ *    (modern machines can generate the .o and a.out in the same second)
+ *  - generate error when no mkfile
+ *  - TODO warn at least when we think shprint might be wrong
+ *  - better error when found cycle, show full trace!
+ *  - TODO better error message when error in recipe, right now
+ *    I get the error at the beginning and a trailing of regular shprint
+ *    (but more Plan 9's style, so at least dont print the rest? or print
+ *     also message at the end that something went wrong)
+ *  - TODO a luisa mode, more synthetic, just DONE
+ *  - TODO: like in buck, show all processors and IDLE or active (GUI?)
+ * 
+ * Internal improvements (IMHO):
+ *  - different approach to parsing. Separate more clearly lexing, parsing,
+ *    and evaluating, so avoid duplicate work like handling quoted characters
+ *    or percent at many places.
+ *  - less use of globals, pass them around
+ * 
+ * todo:
+ *  - look at source code of omake? and mk-in-go?
+ *  - store all output of children process and output only
+ *    command that generates error! luisa will be happier :) no more long
+ *    command line scrolling
+ *    (and no interleaving of command output far away from originator,
+ *    as in ninja)
+ *  - output only a short version of the command instead of full shprint
+ *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja),
+ *    or foo.cmo <- foo.ml, foo.byte <- foo.cmo bar.cmo ...
+ *  - some flags (-a, etc)
+ *  - improve speed:
+ *    * -u
+ *    * use nproc for environment
+ *    * profile mk.byte
+ *  - a -profile, a la pad, so see times in parsing, in graph exploration,
+ *    etc.
+ *  - a -dump and -restart, as in emacs -dump and undump(), see the comments in 
+ *    https://news.ycombinator.com/item?id=13073566
+ *  - we could reduce a bit the size of the code by reusing cpp!
+ *    #include is equivalent of <, #define is equivalent of variable definition
+ *    but for variable we would still need the dynamic binding of
+ *    $target, $prereq, so maybe not good to provide an extra and different
+ *    #define mechanism and syntax for using variables/constants.
+ *)
+
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+
+(* see the .mli for why those caps are needed *)
+<<type [[CLI.caps]]>>
+
+<<constant [[CLI.usage]]>>
+
+(*****************************************************************************)
+(* Testing *)
+(*****************************************************************************)
+
+<<function [[CLI.do_action]]>>
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+<<function [[CLI.build_target]]>>
+
+
+<<function [[CLI.build_targets]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[CLI.main]]>>
+@
+
+
+\subsection*{[[Env.ml]]}
+
+<<type [[Env.values]]>>=
+type values = string list
+@
+
+<<type [[Env.t]]>>=
+type t = {
+  (* use Env.add_var to add a var (to check if it's ok) *)
+  vars         : (string, values) Hashtbl.t;
+  internal_vars: (string, values) Hashtbl.t;
+
+  (* those vars can not be overriden by the mkfile *)
+  vars_commandline: (string, bool) Hashtbl.t;
+  vars_we_set: (string, bool) Hashtbl.t;
+}
+@
+
+<<constant [[Env.mk_vars]]>>=
+let mk_vars = [
+  "target";
+  "prereq";
+  "stem";
+
+  (* todo: alltargets, newprereq ... 
+  *)
+]
+@
+
+<<function [[Env.check_values]]>>=
+(* invariant *)
+let check_values xs = 
+  xs |> List.iter (fun s ->
+    if s = ""
+    then raise (Impossible (spf "empty string in values"))
+@
+
+<<exception [[Env.Redefinition]]>>=
+exception Redefinition of string
+@
+
+<<function [[Env.add_var]]>>=
+let add_var env s xs = 
+  match () with
+  | _ when Hashtbl.mem env.vars_commandline s ->
+    (* we do not override those vars *)
+    Logs.info (fun m -> m "ignoring definition of %s specified on the command-line" s);
+    ()
+
+  (* stricter: forbid redefinitions.
+   * (bug: but ok to redefine variable from environment, otherwise
+   *  hard to use mk recursively, hence the use of vars_we_set below)
+   * less: could allow to redefine in strict mode if previous
+   *  def was empty.
+   *)
+  | _ when Hashtbl.mem env.vars s && Hashtbl.mem env.vars_we_set s 
+      && !Flags.strict_mode ->
+    raise (Redefinition s)
+  | _ ->
+    Hashtbl.replace env.vars s xs
+@
+
+<<function [[Env.dump_env]]>>=
+let dump_env env =
+  Logs.debug (fun m -> m "Dump_env:");
+  env.vars |> Hashtbl.iter (fun k v ->
+    Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
+@
+
+<<function [[Env.initenv]]>>=
+(* less: could take the readenv function as a parameter? *)
+let initenv (caps : < Cap.env; Cap.argv; .. >) =
+  let internal = 
+    mk_vars |> List.map (fun k -> k,[]) |> Hashtbl_.of_list in
+  let vars = 
+    Shellenv.read_environment caps |> List_.exclude (fun (s, _) ->
+      (* when you use mk recursively, the environment might contain
+       * a $stem from a parent mk process.
+       *)
+      Hashtbl.mem internal s
+    ) |> Hashtbl_.of_list
+  in
+
+  (* for recursive mk *)
+  let mkflags = 
+    CapSys.argv caps |> Array.fold_left (fun acc s ->
+      if s =~ "^-" || s=~ ".*=.*"
+      then s::acc
+      else acc
+    ) []
+  in
+  Hashtbl.add vars "MKFLAGS" (List.rev mkflags);
+
+  (* less: extra checks and filtering on read_environment? *)
+  { vars          = vars;
+    internal_vars = internal;
+    vars_we_set   = Hashtbl.create 101;
+    vars_commandline   = Hashtbl.create 101;
+  }
+@
+%$
+
+<<function [[Env.shellenv_of_env]]>>=
+let shellenv_of_env env =
+  Hashtbl_.to_list env.internal_vars @
+  Hashtbl_.to_list env.vars
+@
+
+
+%-------------------------------------------------------------
+
+<<Env.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+(* Content of variables (after full expansion and backquote resolution).
+ * It should not contain any empty strings (but it can contain empty lists).
+ *)
+<<type [[Env.values]]>>
+
+<<type [[Env.t]]>>
+
+<<constant [[Env.mk_vars]]>>
+
+<<function [[Env.check_values]]>>
+  )
+
+<<exception [[Env.Redefinition]]>>
+<<function [[Env.add_var]]>>
+
+(*****************************************************************************)
+(* Debug *)
+(*****************************************************************************)
+<<function [[Env.dump_env]]>>
+  )
+
+(*****************************************************************************)
+(* Functions *)
+(*****************************************************************************)
+
+<<function [[Env.initenv]]>>
+
+<<function [[Env.shellenv_of_env]]>>
+@
+
+
+\subsection*{[[Eval.ml]]}
+
+<<function [[Eval.error]]>>=
+(* TODO: use proper exn *)
+let error (loc : Ast.loc) (s : string) =
+  failwith (spf "%s:%d: Semantic error, %s" !!(loc.A.file) loc.A.line s)
+@
+
+<<function [[Eval.warning]]>>=
+let warning (loc : Ast.loc) (s : string) : unit =
+  Logs.warn (fun m -> m "warning: %s (at %s:%d)" s !!(loc.A.file) loc.A.line)
+@
+
+<<function [[Eval.eval_word]]>>=
+(* A word can become multiple strings!
+ * opti? could use a Buffer 
+ * invariant: 
+ *  - the returned list of strings must not contain any empty string
+ *  - less: the returned pattern must contain at least a PPercent
+ *)
+let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
+          (Env.values, Percent.pattern) Common.either =
+  let (Ast.W word) = wd in
+  let rec aux acc word_elements =
+    match word_elements with
+    | [] -> 
+        if acc = []
+        then Left []
+        (* less: could look if any PPercent in acc and if not return a Left *)
+        else Right (P.P (List.rev acc))
+    | x::xs ->
+      (match x with
+      | A.String s -> aux ((P.PStr s)::acc) xs
+      | A.Percent  -> aux (P.PPercent::acc) xs
+
+      (* ocaml-light: | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind) *)
+      | A.Var ((A.SimpleVar _(*v*) | A.SubstVar (_(*v*), _, _)) as vkind)  ->
+         let v =
+           match vkind with
+           | A.SimpleVar v -> v
+           | A.SubstVar (v, _, _) -> v
+         in
+         let ys = 
+           try 
+             Hashtbl.find env.E.vars v 
+           with Not_found ->
+             (* stricter: mk does not complain *)
+             if !Flags.strict_mode
+             then begin 
+               if !Flags.dump_env 
+               then Env.dump_env env;
+               error loc (spf "variable not found '%s'" v);
+             end
+             else []
+         in
+         let ys =
+           match vkind with
+           | A.SimpleVar _ -> ys
+           | A.SubstVar (_, pattern, substs) -> 
+               (* recurse! pattern can contain some variable *)
+               let pattern = eval_word caps loc env pattern in
+               let subst   = substs |> List.map (eval_word caps loc env) in
+               (match pattern, subst with
+               | Right pattern, [Right subst] ->
+                   ys |> List.map (fun s -> 
+                     Percent.match_and_subst pattern subst s
+                   )
+               (* todo: ugly, should be more general, works only for 
+                * subst like ${OPAM_LIBS:%=-I $OPAM/%}
+               *)
+               | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
+                   ys |> List.map (fun s -> 
+                     [x;Percent.match_and_subst pattern subst s]
+                   ) |> List.flatten
+               (* stricter? what does mk?*)
+               | _ -> 
+                 Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
+                 error loc 
+                   "pattern or subst does not resolve to a single string"
+               )
+         in
+         (match ys, acc, xs with
+
+         (* variable does not contain anything *)
+         | [], [], []  -> 
+             Left []
+         | [], acc, xs ->
+             (* stricter: *)
+             warning loc (spf "use of empty variable '%s' in scalar context" v);
+             aux acc xs
+
+         (* variable contains a single element (scalar) *)
+         | [str], acc, xs -> 
+             aux ((P.PStr str)::acc) xs
+
+         (* variable contains many elements (array) *)
+         | _::_::_, [], [] -> 
+             Left ys
+         | _::_::_, _acc, _xs ->
+             (* stricter: *)
+             error loc (spf "use of list variable '%s' in scalar context" v)
+         )
+
+      | A.Backquoted cmd -> 
+        let shellenv = Env.shellenv_of_env env in
+        let s = Shell.exec_backquote caps shellenv cmd in
+        let ys = Str.split (Str.regexp "[ \t\n]+") s in
+        (match acc, xs with
+        | [], []  -> Left ys
+        (* stricter: *)
+        | _ -> error loc (spf "use of `%s` in scalar context" cmd)
+        )
+      )
+  in
+  aux [] word
+@
+
+<<function [[Eval.eval_words]]>>=
+let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
+         (string list, Percent.pattern list) Common.either =
+  
+  let res = words |> List.map (eval_word caps loc env) in
+
+  if res |> List.exists (fun x ->
+    match x with
+    | Left _ -> false
+    | Right (P.P xs) -> List.mem P.PPercent xs
+  )
+
+  (* a list of patterns *)
+  then res |> List.map (function
+    | Left xs -> xs |> List.map (fun s -> P.P [P.PStr s])
+    | Right x -> [x]
+  ) |> List.flatten |> (fun xs -> List.iter Percent.check_pattern xs; Right xs)
+
+  (* a list of strings *)
+  else res |> List.map (function
+    | Left xs -> xs
+    | Right (P.P xs) -> xs |> List.map (function 
+        | P.PStr s -> s
+        | P.PPercent -> raise (Impossible "exists predicate above is wrong")
+    ) |> (fun elems -> [elems |> String.concat ""])
+  ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
+@
+
+<<function [[Eval.eval]]>>=
+let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
+
+  let simples = Hashtbl.create 101 in
+  let metas = ref [] in
+
+  let rec instrs xs = 
+    xs |> List.iter (fun instr ->
+      let loc = instr.A.loc in
+
+      match instr.A.instr with
+      | A.Include ws ->
+          let res = eval_words caps loc env ws in
+          (match res with
+          | Left [file] -> 
+              if not (Sys.file_exists file)
+              then warning loc (spf "skipping missing include file: %s" file)
+              else
+                let xs = Parse.parse (Fpath.v file) in
+                (* recurse *)
+                instrs xs
+          (* new? what does mk does? *)
+          | Left [] -> error loc "missing include file"
+          (* stricter: force use quotes for filename with spaces or percent *)
+          | Right _ | Left (_::_) -> 
+              error loc "use quotes for filenames with spaces or %%"
+          )
+
+      | A.PipeInclude ws ->
+        let res = eval_words caps loc env ws in
+        let recipe = 
+          match res with
+          | Left xs -> String.concat " " xs
+          | Right _xs -> raise Todo
+        in
+        if recipe = ""
+        then failwith "missing include program name";
+        let shellenv = Env.shellenv_of_env env in
+        let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
+        let xs = Parse.parse (Fpath.v tmpfile) in
+        (* recurse *)
+        instrs xs
+
+      | A.Definition (s, ws) ->
+        let xs = 
+          match eval_words caps loc env ws with
+          | Left xs -> xs
+          (* stricter: no dynamic patterns *)
+          | Right _ -> error loc "use quotes for variable definitions with %"
+        in
+        (try 
+          Env.add_var env s xs
+         with Env.Redefinition s ->
+           error loc (spf "redefinition of %s" s)
+        );
+        Hashtbl.add env.E.vars_we_set s true;
+
+      | A.Rule r -> 
+          let targets = eval_words caps loc env r.A.targets in
+          let prereqs = eval_words caps loc env r.A.prereqs in
+          (match targets, prereqs with
+          (* regular rules *)
+          | Left targets, Left prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs;
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+
+              targets |> List.iter (fun target ->
+                (* less: could check if already there, in which case
+                 * need to Hashtbl.replace, not add.
+                 * todo: could have a :O: attribute clearly identifying
+                 * that you overwrite a previous rule!
+                 *)
+                Hashtbl.add simples target rfinal
+              );
+              if !targets_ref = [] 
+              then targets_ref := targets;
+
+          (* meta rules *)
+          | Right targets, Right prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs;
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+              metas |> Common.push rfinal
+          (* it is ok to have a % only for the target to allow
+           * for instance rules such as %.o: $HFILES
+           *)
+          | Right targets, Left prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs 
+                               |> List.map (fun s -> P.P [P.PStr s]);
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+              metas |> Common.push rfinal
+          | Left _, Right _ ->
+              (* stricter: *)
+              error loc "Forgot to use %% for the target"
+          )
+    )
+  in
+  instrs xs;
+
+  { R.
+    simples = simples;
+    metas = !metas
+  }, env
+@
+%$
+
+
+%-------------------------------------------------------------
+
+<<Eval.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+open Fpath_.Operators
+
+module A = Ast
+module E = Env
+module R = Rules
+module P = Percent
+
+module Set = Set_
+
+open Rules (* for the fields *)
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Error management *)
+(*****************************************************************************)
+
+<<function [[Eval.error]]>>
+
+<<function [[Eval.warning]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Eval.eval_word]]>>
+
+
+<<function [[Eval.eval_words]]>>
+
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Eval.eval]]>>
+@
+
+
+\subsection*{[[File.ml]]}
+
+<<function [[File.timeof]]>>=
+(* opti? time cache, and flag to skip cache if want refresh *)
+let timeof file =
+  try 
+    (* bugfix: use stat, not lstat, to get the time of what is pointed
+     * by the symlink, not the symlink
+     *)
+    let stat = Unix.stat !!file in
+    Some (stat.Unix.st_mtime)
+  with Unix.Unix_error (_, _, _) -> None
+@
+
+<<function [[File.str_of_time]]>>=
+let str_of_time timeopt =
+  match timeopt with
+  | None -> "0"
+  | Some t -> spf "%.1f" t
+@
+
+
+%-------------------------------------------------------------
+
+<<File.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+
+(* could be moved in graph.ml *)
+<<function [[File.timeof]]>>
+
+<<function [[File.str_of_time]]>>
+
+@
+
+
+\subsection*{[[Flags.ml]]}
+
+<<constant [[Flags.dry_mode]]>>=
+let dry_mode = ref false
+@
+
+<<constant [[Flags.explain_mode]]>>=
+let explain_mode = ref false
+@
+
+<<constant [[Flags.strict_mode]]>>=
+let strict_mode = ref false
+@
+
+<<constant [[Flags.dump_tokens]]>>=
+let dump_tokens = ref false
+@
+
+<<constant [[Flags.dump_ast]]>>=
+let dump_ast = ref false
+@
+
+<<constant [[Flags.dump_env]]>>=
+let dump_env = ref false
+@
+
+<<constant [[Flags.dump_graph]]>>=
+let dump_graph = ref false
+@
+
+<<constant [[Flags.dump_jobs]]>>=
+let dump_jobs = ref false
+@
+
+<<constant [[Flags.debugger]]>>=
+let debugger = ref false
+@
+
+
+%-------------------------------------------------------------
+
+<<Flags.ml>>=
+<<constant [[Flags.dry_mode]]>>
+
+(* TODO? just use Logs.info for those? *)
+<<constant [[Flags.explain_mode]]>>
+
+(* pad: I added this one *)
+<<constant [[Flags.strict_mode]]>>
+
+<<constant [[Flags.dump_tokens]]>>
+<<constant [[Flags.dump_ast]]>>
+<<constant [[Flags.dump_env]]>>
+<<constant [[Flags.dump_graph]]>>
+<<constant [[Flags.dump_jobs]]>>
+
+<<constant [[Flags.debugger]]>>
+@
+
+
+\subsection*{[[Globals.ml]]}
+
+<<constant [[Globals.line]]>>=
+let line = ref 1
+@
+
+<<constant [[Globals.file]]>>=
+let file = ref "<nofile>"
+@
+
+
+%-------------------------------------------------------------
+
+<<Globals.ml>>=
+
+(* Mostly used by lexer but also by parser, and by error management code.
+ * We can not define it in the lexer because of a mutual dependency issue.
+ * We can not define it in the parser because it's not exported in the .mli.
+ *)
+<<constant [[Globals.line]]>>
+
+<<constant [[Globals.file]]>>
+@
+
+
+\subsection*{[[Graph.ml]]}
+
+<<type [[Graph.node]]>>=
+type node = {
+  (* usually a filename *)
+  name: string;
+
+  (* mutable because this field can be adjusted later in check_ambiguous
+   * and vacuous.
+   * Note that this field was called 'prereqs' before, but virtual rules
+   * without any prereq still have an arc (with an empty dest,
+   * and a recipe), so 'arcs' is a better field name.
+   *)
+  mutable arcs: arc list;
+
+  (* None for inexistent files (and virtual targets).
+   * mutable because it will be updated once the target is generated
+   * (or when we discover a target is a virtual node).
+   *)
+  mutable time: float option;
+
+  mutable state: build_state;
+
+  mutable is_virtual: bool;
+
+  (* used only for check_cycle for now *)
+  mutable visited: bool;
+  (* used for vacuous *)
+  mutable probable: bool;
+
+  (* todo: other flags? *)
+
+
+}
+@
+
+<<type [[Graph.arc]]>>=
+  and arc = {
+    (* note that because the graph of dependencies is a DAG, multiple
+     * arcs may point to the same node. 
+     *)
+    dest: node option;
+    (* what we need from the rule to execute a recipe (and report errors) *)
+    rule: Rules.rule_exec;
+  }
+@
+
+<<type [[Graph.build_state]]>>=
+  and build_state = 
+    | NotMade
+    | BeingMade
+    | Made
+@
+
+<<type [[Graph.t]]>>=
+type t = node (* the root *)
+@
+
+<<constant [[Graph.hnodes]]>>=
+let hnodes = Hashtbl.create 101
+@
+
+<<function [[Graph.new_node]]>>=
+let new_node (target : string) =
+  let time = File.timeof (Fpath.v target) in
+  let node = {
+    name = target;
+    time = time;
+    arcs = [];
+    state = NotMade;
+    visited = false;
+    is_virtual = false;
+    probable = time <> None;
+  }
+  in
+  Logs.debug (fun m -> m "newnode(%s), time = %s" target 
+                (File.str_of_time node.time));
+  Hashtbl.add hnodes target node;
+  node
+@
+
+<<function [[Graph.rule_exec]]>>=
+let rule_exec (r: string Rules.rule) =
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
+
+    R.stem = None;
+    R.all_targets = r.R.targets;
+    R.all_prereqs = r.R.prereqs;
+  }
+@
+
+<<function [[Graph.rule_exec_meta]]>>=
+let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
+
+    R.stem = Some stem;
+    R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
+    R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
+  }
+@
+
+<<function [[Graph.apply_rules]]>>=
+(* todo: infinite rule detection *)
+let rec apply_rules target rules =
+  Logs.debug (fun m -> m "apply_rules('%s')" target);
+
+  (* the graph of dependency is a DAG, so we must look if node already there *)
+  if Hashtbl.mem hnodes target
+  then Hashtbl.find hnodes target
+  else begin
+
+    let node = new_node target in
+    let arcs = ref [] in
+  
+    (* look for simple rules *)
+    let rs = Hashtbl.find_all rules.R.simples target in
+    rs |> List.iter (fun r ->
+      node.probable <- true;
+
+      let pre = r.R.prereqs in
+      if pre = []
+      then
+        (* some tools (e.g., ocamldep) generate useless deps with no
+         * recipe and no prereqs that we can safely skip (we could warn)
+         *)
+        if r.R.recipe = None
+        then ()
+        else arcs |> Common.push { dest = None; rule = rule_exec r }
+
+      else pre |> List.iter (fun prereq ->
+        (* recurse *)
+        let dest = apply_rules prereq rules in
+        arcs |> Common.push { dest = Some dest; rule = rule_exec r }
+      )
+    );
+
+    (* look for meta rules *)
+    let rs = rules.R.metas in
+    rs |> List.iter (fun r ->
+      r.R.targets |> List.iter (fun target_pat ->
+        (match Percent.match_ target_pat target with
+        | None -> ()
+        | Some stem ->
+           (* less: if no recipe and no prereqs, skip, but weird rule no?
+            * especially for a metarule, so maybe we should warn
+            *)
+          let pre = r.R.prereqs in
+          if pre = []
+          then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
+          else pre |> List.iter (fun prereq_pat ->
+            let prereq = Percent.subst prereq_pat stem in
+            (* recurse *)
+            let dest = apply_rules prereq rules in
+            arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
+          )
+        )
+      )
+    );
+
+    (* List.rev is optional. The order should not matter, but it can
+     * be nice to have the same sequential order of exec as the one 
+     * specified in the mkfile.
+     *)
+    node.arcs <- List.rev !arcs;
+    node
+  end
+@
+
+<<function [[Graph.error_cycle]]>>=
+let error_cycle node trace =
+  (* less: I could just display the loop instead of starting from root *)
+  let str = 
+    (node::trace) 
+    |> List.rev 
+    |> List.map (fun x -> 
+      if x.name = node.name then spf "|%s|" x.name else x.name
+     )
+    |> String.concat "->"
+  in
+  failwith (spf "cycle in graph detected at target %s (trace = %s)"
+              node.name str)
+@
+
+<<function [[Graph.check_cycle]]>>=
+let check_cycle node =
+  let rec aux trace node =
+    (* stricter: mk also check if nodes has arcs, but looks wrong to me *)
+    if node.visited
+    then error_cycle node trace;
+
+    node.visited <- true;
+    node.arcs |> List.iter (fun arc ->
+      arc.dest |> Common.if_some (fun node2 -> 
+        aux (node::trace) node2
+      )
+    );
+    node.visited <- false;
+  in
+  aux [] node
+@
+
+<<function [[Graph.error_ambiguous]]>>=
+let error_ambiguous node groups =
+  let candidates = 
+    groups |> List.map (fun (rule, arcs) -> 
+      let loc = rule.R.loc2 in
+      (* one arc representative is enough *)
+      let arc = List.hd arcs in
+      spf "\t%s <-(%s:%d)- %s" 
+        node.name !!(loc.A.file) loc.A.line
+        (match arc.dest with None -> "" | Some n -> n.name)
+    )
+  in
+  failwith (spf "ambiguous recipes for %s: \n%s" 
+              node.name  (candidates |> String.concat "\n"))
+@
+
+<<function [[Graph.check_ambiguous]]>>=
+let rec check_ambiguous node =
+
+  node.arcs |> List.iter (fun arc ->
+    (* less: opti: could use visited to avoid duplicate work in a DAG *)
+    arc.dest |> Common.if_some (fun node2 -> 
+      (* recurse *)
+      check_ambiguous node2
+    );
+  );
+
+  let arcs_with_recipe = 
+    node.arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
+  (* opti? rule_exec is big now, so maybe need have a rule_exec id *)
+  let groups_by_rule =
+    arcs_with_recipe |> Assoc.group_by (fun arc -> arc.rule)
+  in
+  
+  match List.length groups_by_rule with
+  | 0 -> ()
+    (* stricter? or report it later? *)
+    (* failwith (spf "no recipe to make %s" node.name) *)
+  | 1 -> ()
+  | 2 | _ -> 
+    (* feature: it's ok to have ambiguity between 1 simple rule and 1 meta rule.
+     * The specialized simple rule has priority over the generic meta rule
+     * (see specialize-vs-generic in Build.nw)
+     *)
+    let groups_with_simple_rule =
+      groups_by_rule |> List_.exclude (fun (r, _) -> R.is_meta r) 
+    in
+    (match List.length groups_with_simple_rule with
+    | 0 -> error_ambiguous node groups_by_rule
+    | 1 ->
+      (* update graph *)
+      node.arcs <- List_.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
+    | 2 | _ -> error_ambiguous node groups_with_simple_rule
+    )
+@
+
+<<function [[Graph.propagate_attributes]]>>=
+let rec propagate_attributes node =
+  node.arcs |> List.iter (fun arc ->
+    arc.rule.R.attrs2 |> Set.iter (function
+      | A.Virtual -> 
+          node.is_virtual <- true;
+          (* maybe there was a file with the name of the virtual target 
+           * in the directory, but we do not want its time
+           *)
+          node.time <- None;
+      | _ -> ()
+    );
+    arc.dest |> Common.if_some propagate_attributes
+  )
+@
+
+<<function [[Graph.vacuous]]>>=
+let rec vacuous node =
+  let vacuous_node = ref (not node.probable) in
+  
+  node.arcs <- node.arcs |> List_.exclude (fun arc ->
+    match arc.dest with
+    | Some node2 -> 
+        if vacuous node2 && R.is_meta arc.rule
+        then begin
+          Logs.warn (fun m -> m "vacuous arc detected: %s -> %s" 
+                        node.name node2.name);
+          true
+        end else begin 
+          vacuous_node := false; 
+          false 
+        end
+    | None ->
+        vacuous_node := false;
+        false
+  );
+  if !vacuous_node
+  then Logs.warn (fun m -> m "vacuous node detected: %s" node.name);
+  !vacuous_node
+@
+
+<<function [[Graph.loc_of_arc]]>>=
+let loc_of_arc arc =
+  let loc = arc.rule.R.loc2 in
+  spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
+@
+
+<<function [[Graph.dump_graph]]>>=
+let dump_graph node =
+  let pr s = 
+    print_string (s ^ "\n") 
+  in
+  pr "digraph misc {";
+  pr "size = \"10,10\";" ;
+  let hdone = Hashtbl.create 101 in
+  let rec aux node1 =
+    if Hashtbl.mem hdone node1.name
+    then ()
+    else begin
+      Hashtbl.add hdone node1.name true;
+      node1.arcs |> List.iter (fun arc ->
+        match arc.dest with
+        | None -> pr (spf "\"%s\" -> \"<NOTHING>\";    # %s" 
+                        node1.name (loc_of_arc arc))
+        | Some node2 -> 
+          pr (spf "\"%s\" -> \"%s\";       # %s" 
+                node1.name node2.name (loc_of_arc arc));
+          (* recurse *)
+          aux node2
+      )
+    end
+  in
+  aux node;
+  pr "}";
+  ()
+@
+
+<<function [[Graph.build_graph]]>>=
+let build_graph target rules =
+  let root = apply_rules target rules in
+
+  check_cycle root;
+
+  (* must be before check_ambiguous! *)
+  root.probable <- true;
+  vacuous root |> ignore;
+
+  check_ambiguous root;
+
+  propagate_attributes root;
+   
+  root
+@
+
+<<function [[Graph.update]]>>=
+(* update graph once a node has been built *)
+let update node =
+  node.state <- Made;
+  Logs.debug (fun m -> m "update(): node %s time=%s" node.name 
+                 (File.str_of_time node.time));
+  
+  if node.is_virtual
+  then begin
+    node.time <- Some 1.0;
+    (* less: take max time of prereqs, need that? *)
+  end
+  else begin
+    let oldtime = node.time in
+    node.time <- File.timeof (Fpath.v node.name);
+
+    (* todo: actually can happen for rule like
+     * x.tab.h: y.tab.h
+     *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+     * (see plan9/shell/rc/mkfile).
+     * In that case we should not failwith.
+     * Because it is a rare case, maybe we should have a special
+     * attribute for those rules, so not fail only when have this
+     * attribute
+     *)
+    if oldtime = node.time || node.time = None
+    then failwith (spf "recipe did not update %s, time =%s" node.name
+                     (File.str_of_time node.time));
+  end
+@
+
+
+%-------------------------------------------------------------
+
+<<Graph.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+open Fpath_.Operators
+
+module A = Ast
+module R = Rules
+
+module Set = Set_
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+<<type [[Graph.node]]>>
+<<type [[Graph.arc]]>>
+<<type [[Graph.build_state]]>>
+
+<<type [[Graph.t]]>>
+
+
+(* The graph is a DAG; some arcs may point to previously created nodes.
+ * This is why we store in this hash all the created nodes.
+ * 
+ * Moreover, later in dorecipe() when we run a job, we want to build
+ * the list of all target nodes concerned by a rule and this requires
+ * again given a target name to find the corresponding node in the graph.
+ *)
+<<constant [[Graph.hnodes]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Graph.new_node]]>>
+
+<<function [[Graph.rule_exec]]>>
+
+<<function [[Graph.rule_exec_meta]]>>
+
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+<<function [[Graph.apply_rules]]>>
+
+(*****************************************************************************)
+(* Checks *)
+(*****************************************************************************)
+
+<<function [[Graph.error_cycle]]>>
+
+<<function [[Graph.check_cycle]]>>
+
+
+
+
+<<function [[Graph.error_ambiguous]]>>
+
+<<function [[Graph.check_ambiguous]]>>
+
+(*****************************************************************************)
+(* Adjustments *)
+(*****************************************************************************)
+<<function [[Graph.propagate_attributes]]>>
+
+
+<<function [[Graph.vacuous]]>>
+
+
+(*****************************************************************************)
+(* Debug *)
+(*****************************************************************************)
+
+<<function [[Graph.loc_of_arc]]>>
+
+<<function [[Graph.dump_graph]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Graph.build_graph]]>>
+
+<<function [[Graph.update]]>>
+@
+
+
+\subsection*{[[Job.ml]]}
+
+<<type [[Job.t]]>>=
+type t = {
+  rule: Rules.rule_exec;
+
+  env: Env.t;
+  (* values for special mk variables such as $target, $prereq, etc.
+   * (note that $stem is in rule_exec)
+   *)
+  all_targets: Env.values;
+  all_prereqs: Env.values;
+  (* less: newprereqs, targets *)
+  main_target: string;
+
+  (* nodes mk needs to update once the job is done *)
+  target_nodes: Graph.node list;
+}
+@
+%$
+
+
+%-------------------------------------------------------------
+
+<<Job.ml>>=
+
+<<type [[Job.t]]>>
+@
+
+
+
+\subsection*{[[Main.ml]]}
+
+<<toplevel [[Main._1]]>>=
+let _ = 
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     Exit.exit caps 
+        (Exit.catch (fun () -> 
+            CLI.main caps argv))
+@
+
+
+%-------------------------------------------------------------
+
+<<Main.ml>>=
+(* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
+open Xix_mk
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<toplevel [[Main._1]]>>
+  )
+@
+
+
+\subsection*{[[Outofdate.ml]]}
+
+<<function [[Outofdate.outofdate]]>>=
+let outofdate node arc =
+  match arc.G.dest with
+  | None -> raise (Impossible "should not call outofdate on nodeless arcs")
+  | Some node2 -> 
+      (* I use the strictly < in the C version because on modern machines 
+       * many files can be created in the same second. In OCaml,
+       * the time is a float with higher precision so I can use back
+       * the <=.
+       *)
+       (match node.G.time, node2.G.time with
+       (* in foo.exe: foo.o: foo.c, foo.exe and foo.o might not
+        * exist and so have a time set to None. In that case,
+        * I consider foo.exe also out of date as anyway foo.o
+        * will be generated
+        *)
+       | _      , None    -> true
+       | None   , Some _  -> true
+       | Some t1, Some t2 -> t1 < t2
+       )
+@
+
+<<function [[Outofdate.opt0]]>>=
+let opt0 opttime =
+  match opttime with
+  | None -> 0.
+  | Some x -> x
+@
+
+<<function [[Outofdate.dorecipe]]>>=
+let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
+  if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
+  then
+    if node.G.is_virtual
+    then G.update node
+    else failwith (spf "no recipe to make '%s'" node.G.name)
+  else begin
+    let master_arc = 
+      try node.G.arcs |> List.find (fun arc -> R.has_recipe arc.G.rule)
+      with Not_found -> raise (Impossible "List.exists above")
+    in
+    let master_rule = master_arc.G.rule in
+    
+    let main_target = node.G.name in
+    let all_targets = master_rule.R.all_targets in
+    (* less: outofdate_targets (aka target) *)
+    let nodes =
+      all_targets |> List.filter_map (fun target ->
+        if Hashtbl.mem G.hnodes target
+        then Some (Hashtbl.find G.hnodes target)
+        else None
+      )
+    in
+    (* less: newprereqs *)
+    let all_prereqs = ref [] in
+    (* bug: can not use Set for the accumulator below! Indeed, we want
+     * the order for prereqs to be the original order in the mkfile.
+     * If not, some command may not work if the order of the file
+     * matters (e.g., with the ocaml linker the .cmo must be given
+     * in a certain order)
+     *)
+    let hdone_prereqs = Hashtbl.create 101 in
+    nodes |> List.iter (fun target ->
+      target.G.arcs |> List.iter (fun arc ->
+        match arc.G.dest with
+        | None -> ()
+        | Some prereq -> 
+            (* less: could do that instead in work when find out about
+             * an outofdate arc
+             *)
+            if !Flags.explain_mode && outofdate node arc
+            then Logs.info (fun m -> m "%s(%.1f) < %s(%.1f)"
+                        node.G.name (opt0 node.G.time)
+                        prereq.G.name (opt0 prereq.G.time));
+            if Hashtbl.mem hdone_prereqs prereq
+            then ()
+            else begin
+              Hashtbl.add hdone_prereqs prereq true;
+              Common.push prereq.G.name all_prereqs
+            end
+      )
+    );
+    
+    nodes |> List.iter (fun node ->
+      node.G.state <- G.BeingMade
+    );
+    Scheduler.run caps { J. 
+                    rule = master_rule;
+                    target_nodes = nodes;
+                    env = env;
+                    main_target = main_target;
+                    all_targets = all_targets;
+                    all_prereqs = List.rev !all_prereqs;
+                  };
+    did := true
+  end
+@
+
+<<function [[Outofdate.work]]>>=
+(* alt: we could return a job list, which would be cleaner, but it is
+ * more efficient to run a job as soon as we find an opportunity.
+ *)
+let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
+  Logs.debug (fun m -> m "work(%s) time=%s" node.G.name 
+                 (File.str_of_time node.G.time));
+
+  if node.G.state = G.BeingMade
+  then ()
+  else 
+    match node.G.arcs with
+    (* a leaf *)
+    | [] ->
+        (* could be a virtual node, but weird to have a virtual node leaf*)
+        if node.G.time = None
+        then failwith (spf "don't know how to make '%s'" node.G.name);
+
+        (* less: why not call update here?*)
+        node.G.state <- G.Made
+
+    (* a node *)
+    | xs ->
+        let out_of_date = ref false in
+        let ready = ref true in
+
+        xs |> List.iter (fun arc ->
+          match arc.G.dest with
+          | Some node2 ->
+              (* TODO: why recurse if node is Made? *)
+              (* recurse! *)
+              work caps env node2 did;
+              
+              (match node2.G.state with
+              | G.NotMade | G.BeingMade -> ready := false;
+              | G.Made -> ()
+              );
+              if outofdate node arc
+              then out_of_date := true
+
+          | None ->
+              if node.G.time = None
+              then out_of_date := true
+        );
+        if not !ready
+        then ()
+        else 
+          if not !out_of_date 
+          then node.G.state <- G.Made
+          else dorecipe caps env node did
+@
+
+
+%-------------------------------------------------------------
+
+<<Outofdate.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+
+module G = Graph
+module R = Rules
+module J = Job
+
+open Job (* for the fields *)
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Outofdate.outofdate]]>>
+
+<<function [[Outofdate.opt0]]>>
+    
+
+
+<<function [[Outofdate.dorecipe]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Outofdate.work]]>>
+@
+
+
+\subsection*{[[Parse.ml]]}
+
+<<function [[Parse.parse]]>>=
+let parse (file : Fpath.t) =
+  file |> UChan.with_open_in (fun (chan : Chan.i) ->
+    Globals.line := 1;
+    Globals.file := !!file;
+    Lexer.state_ := Lexer.Start;
+
+    let lexbuf = Lexing.from_channel chan.Chan.ic in
+    let lexfunc lexbuf =
+      (match !Lexer.state_ with
+      | Lexer.Start 
+      | Lexer.AfterColon 
+      | Lexer.AfterEq 
+      | Lexer.InBrace -> 
+          Lexer.token lexbuf
+      | Lexer.InRecipe -> 
+          Lexer.recipe lexbuf
+      ) |> (fun tok -> 
+            if !Flags.dump_tokens 
+            then Logs.app (fun m -> m "%s" (Dumper.dump tok));
+            tok)
+    in
+      
+    try 
+      Parser.program lexfunc lexbuf
+    (* less: could track line of : and = *)
+    with Parsing.Parse_error ->
+      failwith (spf "%s:%d: Syntax error" !Globals.file !Globals.line)
+  )
+@
+
+
+%-------------------------------------------------------------
+
+<<Parse.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+open Fpath_.Operators
+
+<<function [[Parse.parse]]>>
+@
+
+
+
+\subsection*{[[Percent.ml]]}
+
+<<type [[Percent.pattern_elem]]>>=
+type pattern_elem =
+  | PStr of string
+  | PPercent
+@
+
+<<type [[Percent.pattern]]>>=
+type pattern = P of pattern_elem list
+@
+
+<<function [[Percent.check_pattern]]>>=
+let check_pattern (P xs) =
+  if xs = []
+  then raise (Impossible (spf "empty pattern"));
+  xs |> List.iter (function
+    | PPercent -> ()
+    | PStr "" -> raise (Impossible (spf "empty string element in pattern"));
+    | PStr _ -> ()
+@
+
+<<exception [[Percent.TooManyPercents]]>>=
+exception TooManyPercents
+@
+
+<<exception [[Percent.PercentNotFound]]>>=
+exception PercentNotFound
+@
+
+<<function [[Percent.string_after_percent]]>>=
+let rec string_after_percent xs =
+  match xs with
+  | [] -> ""
+  | x::xs ->
+    (match x with 
+    | PStr s -> s ^ string_after_percent xs
+    | PPercent -> raise TooManyPercents
+    )
+@
+
+<<function [[Percent.match_]]>>=
+(* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
+ * This is arguably (and sadly) more complicated than the C code.
+ *)
+
+let rec match_ (P pat) str =
+  let len = String.length str in
+  match pat with
+  | [] -> raise PercentNotFound
+  | x::xs ->
+    (match x with
+    | PStr s ->
+        let len2 = String.length s in
+        if len2 > len
+        then None
+        else
+          if s <> (String.sub str 0 len2)
+          then None
+          else match_ (P xs) (String.sub str len2 (len - len2))
+    | PPercent ->
+        let str_pat_after = string_after_percent xs in
+        let len_after = String.length str_pat_after in
+        let len_matching_percent = len - len_after in
+        if len_matching_percent < 0
+        then None
+        else
+          let stem = String.sub str 0 len_matching_percent in
+          if str_pat_after = String.sub str len_matching_percent 
+            (len - len_matching_percent) && stem <> ""
+          then Some stem
+          else None
+    )        
+@
+
+<<function [[Percent.subst]]>>=
+let subst (P pat) stem =
+  pat |> List.map (function
+    | PStr s -> s
+    | PPercent -> stem
+  ) |> String.concat ""
+@
+
+<<function [[Percent.match_and_subst]]>>=
+let match_and_subst pat sub str =
+  match match_ pat str with
+  | Some stem -> subst sub stem
+  | None -> str
+@
+
+
+%-------------------------------------------------------------
+
+<<Percent.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* A poor's man regexp system. 
+ *
+ * alt: could reuse Str and just have a regexp_of_word that
+ * transform a word pattern containing % in a regular regexp.
+ *) 
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+<<type [[Percent.pattern_elem]]>>
+<<type [[Percent.pattern]]>>
+
+
+
+<<function [[Percent.check_pattern]]>>
+  )
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<exception [[Percent.TooManyPercents]]>>
+<<exception [[Percent.PercentNotFound]]>>
+
+<<function [[Percent.string_after_percent]]>>
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+<<function [[Percent.match_]]>>
+
+<<function [[Percent.subst]]>>
+
+
+<<function [[Percent.match_and_subst]]>>
+@
+
+
+\subsection*{[[Rules.ml]]}
+
+<<type [[Rules.rule]]>>=
+type 'a rule = {
+  targets: 'a list;
+  prereqs: 'a list;
+
+  attrs: Ast.rule_attribute Set_.t;
+  recipe: Ast.recipe option;
+
+  loc: Ast.loc;
+}
+@
+
+<<type [[Rules.rules]]>>=
+type rules = {
+  (* use Hashtbl.find_all because a target can be associated to many rules *)
+  simples: (string, string rule) Hashtbl.t;
+
+  metas: (Percent.pattern rule) list;
+}
+@
+
+<<type [[Rules.rule_exec]]>>=
+type rule_exec = {
+  recipe2: Ast.recipe option;
+  attrs2: Ast.rule_attribute Set_.t;
+  loc2: Ast.loc;
+
+  stem: string option;
+
+  all_targets: string list;
+  all_prereqs: string list;
+}
+@
+
+<<function [[Rules.has_recipe]]>>=
+(* helpers *)
+let has_recipe re =
+  re.recipe2 <> None
+@
+
+<<function [[Rules.is_meta]]>>=
+let is_meta re =
+  re.stem <> None
+@
+
+
+%-------------------------------------------------------------
+
+<<Rules.ml>>=
+
+<<type [[Rules.rule]]>>
+
+
+<<type [[Rules.rules]]>>
+
+<<type [[Rules.rule_exec]]>>
+
+<<function [[Rules.has_recipe]]>>
+
+<<function [[Rules.is_meta]]>>
+@
+
+
+\subsection*{[[Scheduler.ml]]}
+
+<<constant [[Scheduler.running]]>>=
+let running = Hashtbl.create 101
+@
+
+<<constant [[Scheduler.nrunning]]>>=
+let nrunning = ref 0
+@
+
+<<function [[Scheduler.nproclimit]]>>=
+let nproclimit (caps: < Cap.env; ..>) =
+  (try 
+    let s = CapSys.getenv caps "NPROC" in
+    int_of_string s
+   with Not_found | _ -> 2
+  )
+@
+
+<<constant [[Scheduler.jobs]]>>=
+let jobs = Queue.create ()
+@
+
+<<function [[Scheduler.adjust_env]]>>=
+(* !modify by side effect job.env! *)
+let adjust_env job =
+  let env = job.J.env in
+
+  (* less: should be all_target *)
+  Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
+  (* less: newprereqs *)
+  Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
+  job.J.rule.R.stem |> Common.if_some (fun s ->
+    Hashtbl.replace env.E.internal_vars "stem" [s];
+  );
+
+  env
+@
+
+<<function [[Scheduler.shprint]]>>=
+let shprint env s =
+  let s = 
+    Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
+      (fun _wholestr ->
+        let var = Str.matched_group 1 s in
+        if Hashtbl.mem env.E.internal_vars var
+        then Hashtbl.find env.E.internal_vars var |> String.concat " "
+        else 
+          if Hashtbl.mem env.E.vars_we_set var
+          then Hashtbl.find env.E.vars var |> String.concat " "
+          else Str.matched_string s
+      ) s
+  in
+  Logs.app (fun m -> m "|%s|" s)
+@
+%$
+
+<<function [[Scheduler.dump_job]]>>=
+let dump_job func job pidopt =
+  Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
+         (Unix.getpid())
+         func 
+         (match pidopt with Some pid -> pid | None -> 0)
+         (job.J.target_nodes |> List.map (fun node -> node.G.name) 
+             |> String.concat " "))
+@
+
+<<function [[Scheduler.sched]]>>=
+let sched (caps : < Shell.caps; .. >) () =
+  try 
+    let job = Queue.take jobs in
+    let rule = job.J.rule in
+
+    if !Flags.dump_jobs
+    then dump_job "sched1: firing up " job None;
+
+    let recipe = 
+      match rule.R.recipe2 with 
+      | Some (Ast.R x) -> x
+      | None -> raise (Impossible "job without a recipe")
+    in
+    let env = adjust_env job in
+    
+    if not (Set.mem Ast.Quiet rule.R.attrs2)
+    then recipe |> List.iter (fun s -> shprint env s);
+
+    if !Flags.dry_mode 
+    then job.J.target_nodes |> List.iter (fun node ->
+      node.G.time <- Some (Unix.time ());
+      node.G.state <- G.Made;
+    )
+    else begin
+      (* This -e is super important! so that by default the recipe is run
+       * so that any error in a simple command ran from the recipe, even inside
+       * a for loop, will exit the whole recipe with the error.
+       *)
+      let pid = 
+        Shell.exec_recipe caps
+          (Env.shellenv_of_env env)
+          ["-e"]
+          recipe 
+          (Set.mem Ast.Interactive rule.R.attrs2) 
+      in
+
+      if !Flags.dump_jobs
+      then dump_job "sched2: " job (Some pid);
+
+      Hashtbl.add running pid job;
+      incr nrunning
+    end
+    
+  with Queue.Empty ->
+    raise (Impossible "no jobs to schedule")
+@
+
+<<function [[Scheduler.run]]>>=
+let run (caps : < Shell.caps; .. >) job =
+  Queue.add job jobs;
+
+  if !Flags.dump_jobs
+  then dump_job "run: " job None;
+
+  if !nrunning < nproclimit caps
+  then sched caps ()
+@
+
+<<function [[Scheduler.waitup]]>>=
+let waitup (caps : < Shell.caps; .. >) () =
+  let (pid, ret) = 
+    try 
+      Unix.wait () 
+    with Unix.Unix_error (error, str1, str2) ->
+      failwith (spf "%s: %s (%s)" str1 (Unix.error_message error) str2)
+  in
+  let job = 
+    try Hashtbl.find running pid
+    with Not_found ->
+      raise 
+        (Impossible (spf "wait returned unexpected process with pid %d" pid))
+  in
+  if !Flags.dump_jobs
+  then dump_job "waitup: " job (Some pid);
+
+  Hashtbl.remove running pid;
+  decr nrunning;
+
+  match ret with
+  | Unix.WEXITED 0 ->
+      job.J.target_nodes |> List.iter (fun node ->
+        G.update node
+      );
+      (* similar code in run();
+       * I added the test on jobs size though.
+      *)
+      if !nrunning < nproclimit caps && Queue.length jobs > 0
+      then sched caps ()
+  | Unix.WEXITED n ->
+      (* less: call shprint *)
+      if Set.mem Ast.Delete job.J.rule.R.attrs2 
+      then 
+        job.J.rule.R.all_targets |> List.iter (fun f ->
+          if Sys.file_exists f
+          then begin
+            Logs.info (fun m -> m "deleting %s" f);
+            Sys.remove f
+          end
+        );
+      failwith (spf "error in child process, exit status = %d" n)
+  (* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
+  | Unix.WSIGNALED n ->
+      failwith (spf "child process killed/stopped by signal = %d" n)
+  | Unix.WSTOPPED n ->
+      failwith (spf "child process killed/stopped by signal = %d" n)
+@
+
+
+%-------------------------------------------------------------
+
+<<Scheduler.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+
+module J = Job
+module G = Graph
+module R = Rules
+module E = Env
+
+module Set = Set_
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Globals *)
+(*****************************************************************************)
+
+<<constant [[Scheduler.running]]>>
+<<constant [[Scheduler.nrunning]]>>
+
+<<function [[Scheduler.nproclimit]]>>
+
+<<constant [[Scheduler.jobs]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Scheduler.adjust_env]]>>
+
+<<function [[Scheduler.shprint]]>>
+
+(*****************************************************************************)
+(* Debug *)
+(*****************************************************************************)
+
+<<function [[Scheduler.dump_job]]>>
+(*
+  let rule = job.J.rule in
+      ; recipe = '%s'; stem = %s
+         (match rule.R.recipe2 with 
+         | None -> "" 
+         | Some (Ast.R xs) ->String.concat "\\n" xs
+         )
+         (match rule.R.stem with
+         | None -> ""
+         | Some s -> s
+         )
+*)
+
+
+(*****************************************************************************)
+(* Main algorithms *)
+(*****************************************************************************)
+
+<<function [[Scheduler.sched]]>>
+
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+<<function [[Scheduler.run]]>>
+
+
+
+<<function [[Scheduler.waitup]]>>
+@
+
+
+\subsection*{[[Shellenv.ml]]}
+
+<<type [[Shellenv.t]]>>=
+type t = (string * string list) list
+@
+
+<<function [[Shellenv.read_environment]]>>=
+let read_environment (caps : < Cap.env; ..>) =
+  CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
+    if s =~ "\\([^=]+\\)=\\(.*\\)"
+    then
+      let (var, str) = Regexp_.matched2 s in
+      var, Regexp_.split "[ \t]+" str
+    else failwith (spf "wrong format for environment variable: %s" s)
+@
+
+
+%-------------------------------------------------------------
+
+<<Shellenv.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+
+<<type [[Shellenv.t]]>>
+
+<<function [[Shellenv.read_environment]]>>
+  )
+@
+
+
+\subsection*{[[Shell.ml]]}
+
+<<type [[Shell.caps]]>>=
+type caps = < Cap.exec; Cap.fork; Cap.env >
+@
+
+<<type [[Shell.t]]>>=
+type t = { 
+  path: Fpath.t;
+  name: string;
+  flags: string list;
+  (* environment word separator *)
+  iws: string;
+  debug_flags: unit -> string list;
+  (* less: in theory the escaping and quoting rules are different between
+   * shells, so this should be part of the interface.
+   *)
+}
+@
+
+<<constant [[Shell.sh]]>>=
+let sh = {
+  path = Fpath.v "/bin/sh";
+  name = "sh";
+  flags = [];
+  iws = " ";
+  debug_flags = (fun () -> []);
+}
+@
+
+<<constant [[Shell.rc]]>>=
+let rc = {
+  path = Fpath.v "/usr/bin/rc";
+  name = "rc";
+  flags = ["-I"]; (* non-interactive so does not display a prompt *)
+  iws = "\001";
+  debug_flags = (fun () -> (* if !Flags.verbose then ["-v"] else [] *) []);
+}
+@
+
+<<function [[Shell.shell_from_env_or_sh]]>>=
+(* old: this is a toplevel entity, so the code below is executed even
+ * before main, so you can not rely on the value in Flags as they have
+ * not been set yet.
+ * update: we now use capabilities so we could rely on Flags now
+ * less: could use lazy to avoid recompute each time
+ *)
+let shell_from_env_or_sh (caps : < Cap.env; .. >) : t = 
+  try 
+    let path = CapSys.getenv caps "MKSHELL" in
+    match path with
+    | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
+    | _ -> { sh with path = Fpath.v path }
+  with Not_found -> sh
+@
+%$
+
+<<function [[Shell.exec_shell]]>>=
+let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
+  let shell = shell_from_env_or_sh caps in
+  let env = 
+    shellenv 
+    (* bug: I exclude empty variables
+     * otherwise rc does strange things. Indeed, programs
+     * such as ocamlc get confused by empty variables
+     * used in shell commands such as ocamlc $FLAG where FLAG is empty.
+     * I get the problem also with mk-plan9port.
+     * Note however that there is no problem with mk-sh.byte, so
+     * this is an rc issue.
+     *)
+    |> List_.exclude (fun (_s, xs) -> xs = [])
+
+    |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
+  in
+  let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
+  let shell_path = !!(shell.path) in
+  Logs.info (fun m -> m "exec_shell: %s %s" shell_path (String.concat " " args));
+  (try 
+     (* to debug pass instead "/usr/bin/strace" 
+        (Array.of_list ("strace"::shell.path::args)) *)
+     CapUnix.execve caps
+       (* bugfix: need to pass shell.name too! otherwise the first elt
+        * in args (usually '-e') will be taken for the prog name and skipped
+        * by the shell (and mk will not stop at the first error)
+        *)
+       shell_path (Array.of_list (shell.name::args))
+       (Array.of_list env)
+      |> ignore;
+   with Unix.Unix_error (err, fm, argm) -> 
+     if not (Sys.file_exists shell_path)
+     then failwith (spf "could not find shell %s" shell_path)
+     else failwith (spf "Could not execute a shell command: %s %s %s"
+                      (Unix.error_message err) fm argm)
+  );
+  (* nosemgrep: do-not-use-exit (unreachable) *)
+  exit (-2)
+@
+%$
+
+<<function [[Shell.feed_shell_input]]>>=
+let feed_shell_input inputs pipe_write =
+  inputs |> List.iter (fun str ->
+    let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
+    if n < 0
+    then failwith "Could not write in pipe to shell";
+    let n = Unix.write pipe_write (Bytes.of_string "\n") 0 1 in
+    if n < 0
+    then failwith "Could not write in pipe to shell";
+  );
+  (* will flush *)
+  Unix.close pipe_write
+@
+
+<<function [[Shell.exec_recipe]]>>=
+(* returns a pid *)
+let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
+  let pid = CapUnix.fork caps () in
+  
+  (* children case *)
+  if pid = 0
+  then
+
+    (* pad: I added this feature so mk can call interactive program
+     * such as syncweb. Otherwise stdin is used to feed the shell
+     * and so any program called from the shell will not have any stdin
+     *)
+    if interactive 
+    then begin
+      let tmpfile = Filename.temp_file "mk" "sh" in
+      (try
+         let chan = open_out tmpfile in
+         inputs |> List.iter (fun s -> 
+           output_string chan s; 
+           output_string chan "\n"
+         );
+         close_out chan
+       with Sys_error s -> 
+         failwith (spf "Could not create temporary file (error = %s)" s)
+      ); 
+      exec_shell caps shellenv flags [tmpfile]
+      (* less: delete tmpfile *)
+    (* unreachable *)
+    end else begin
+
+    let (pipe_read, pipe_write) = Unix.pipe () in
+    let pid2 = CapUnix.fork caps () in
+
+    (* child 1, the shell interpeter, the process with pid returned by execsh *)
+    if pid2 <> 0
+    then begin
+      Unix.dup2 pipe_read Unix.stdin;
+      Unix.close pipe_read;
+      Unix.close pipe_write;
+      exec_shell caps shellenv flags []
+      (* unreachable *)
+
+    (* child 2, feeding the shell with inputs through a pipe *)
+    end else begin
+      Unix.close pipe_read;
+      feed_shell_input inputs pipe_write;
+      (* nosemgrep: do-not-use-exit (dont want to require caps for this one) *)
+      exit 0;
+    end
+  end
+
+  (* parent case *)
+  else pid (* pid of child1 *)
+@
+
+<<function [[Shell.exec_backquote]]>>=
+let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
+  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
+  let (pipe_read_output, pipe_write_output) = Unix.pipe () in
+
+  let pid = CapUnix.fork caps () in
+
+  (* child case *)
+  if pid = 0
+  then begin
+    Unix.dup2 pipe_read_input Unix.stdin;
+    Unix.dup2 pipe_write_output Unix.stdout;
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_input;
+    Unix.close pipe_read_output;
+    Unix.close pipe_write_output;
+
+    exec_shell caps shellenv [] [] 
+    (* unreachable *)
+  end else begin
+    (* parent case *)
+
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_output;
+
+    feed_shell_input [input] pipe_write_input;
+
+    (* read the shell output through the other pipe *)
+    let buffer = Bytes.create 1024 in
+    let rec loop_read () =
+      let n = Unix.read pipe_read_output buffer 0 1024 in
+      match n with
+      | 0 -> ""
+      | _ when n < 0 ->
+        failwith "Could not read from pipe to shell";
+      | _ -> 
+        let s = Bytes.sub_string buffer 0 n in
+        s ^ loop_read ()
+    in
+    let output = loop_read () in
+    Unix.waitpid [] pid |> ignore;
+    output
+  end
+@
+
+<<function [[Shell.exec_pipecmd]]>>=
+let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
+  let tmpfile = Filename.temp_file "mk" "sh" in
+  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
+
+  let pid = CapUnix.fork caps () in
+
+  (* child case *)
+  if pid = 0
+  then begin
+    Unix.dup2 pipe_read_input Unix.stdin;
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_input;
+    let fd = Unix.openfile tmpfile [Unix.O_WRONLY] 0o640 in
+    Unix.dup2 fd Unix.stdout;
+    Unix.close fd;
+
+    exec_shell caps shellenv [] [];
+    (* unreachable *)
+  end else begin
+    (* parent case *)
+
+    Unix.close pipe_read_input;
+    
+    feed_shell_input [input] pipe_write_input;
+
+    let (pid2, status) = Unix.waitpid [] pid in
+    if pid <> pid2
+    then raise (Impossible "waitpid takes the specific pid");
+    (match status with
+    | Unix.WEXITED 0 -> tmpfile
+    (* stricter: fail fast, no "warning: skipping missing program file: " *)
+    | _ -> failwith "bad include program status"
+    )
+  end
+@
+
+
+%-------------------------------------------------------------
+
+<<Shell.ml>>=
+(* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+open Fpath_.Operators
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+(* Need:
+ *  - exec/fork: obviously as we run a shell
+ *  - env: for MKSHELL
+ *)
+<<type [[Shell.caps]]>>
+
+<<type [[Shell.t]]>>
+
+<<constant [[Shell.sh]]>>
+
+(* Should we pass -e too here to abort if error inside? This is done in
+ * Scheduler.ml instead when executing recipe (but not for backquote processing)
+ *)
+<<constant [[Shell.rc]]>>
+
+<<function [[Shell.shell_from_env_or_sh]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Shell.exec_shell]]>>
+
+<<function [[Shell.feed_shell_input]]>>
+
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+<<function [[Shell.exec_recipe]]>>
+
+
+<<function [[Shell.exec_backquote]]>>
+
+
+<<function [[Shell.exec_pipecmd]]>>
+@
+
+
+\subsection*{[[CLI.mli]]}
+
+<<type [[CLI.caps (CLI.mli)]]>>=
+type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
+@
+
+<<signature [[CLI.main]]>>=
+(* entry point (can also raise Exit.ExitCode) *)
+val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
+@
+
+<<signature [[CLI.build_target]]>>=
+(* main algorithm *)
+val build_target :
+  caps -> Env.t -> Rules.rules -> string (* target *) -> unit                                                       
+@
+
+<<signature [[CLI.build_targets]]>>=
+val build_targets :
+  caps -> Fpath.t -> string list ref -> (string*string) list -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<CLI.mli>>=
+
+(* Need:
+ *  - fork/exec: obviously as we run shell commands
+ *  - env: for Env.initenv() so mk recipe can access env variables.
+ *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
+ *  - argv: for setting MKFLAGS also in Env.initenv()
+ *  - chdir: actually needed just for -debugger, we could remove
+ *)
+<<type [[CLI.caps (CLI.mli)]]>>
+
+<<signature [[CLI.main]]>>
+
+<<signature [[CLI.build_target]]>>
+<<signature [[CLI.build_targets]]>>
+@
+
+
+\subsection*{[[Env.mli]]}
+
+<<type [[Env.values (Env.mli)]]>>=
+type values = string list
+@
+
+<<type [[Env.t (Env.mli)]]>>=
+type t = {
+  (* use Env.add_var to populate vars (to check if it's ok) *)
+  vars : (string, values) Hashtbl.t;
+  internal_vars : (string, values) Hashtbl.t;
+  vars_commandline : (string, bool) Hashtbl.t;
+  vars_we_set : (string, bool) Hashtbl.t;
+}
+@
+
+<<exception [[Env.Redefinition (Env.mli)]]>>=
+exception Redefinition of string
+@
+
+<<signature [[Env.add_var]]>>=
+val add_var : t -> string -> values -> unit
+@
+
+<<signature [[Env.initenv]]>>=
+(* Will read the OS environment variables (e.g., PATH, HOME, objtype).
+ * Need also Cap.argv to set MKFLAGS
+ *)
+val initenv : < Cap.env ; Cap.argv; .. > -> t
+@
+
+<<signature [[Env.shellenv_of_env]]>>=
+val shellenv_of_env : t -> Shellenv.t
+@
+
+<<signature [[Env.check_values]]>>=
+(* internals *)
+
+val check_values : values -> unit
+@
+
+<<signature [[Env.dump_env]]>>=
+val dump_env : t -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Env.mli>>=
+<<type [[Env.values (Env.mli)]]>>
+
+<<type [[Env.t (Env.mli)]]>>
+
+<<exception [[Env.Redefinition (Env.mli)]]>>
+
+<<signature [[Env.add_var]]>>
+
+<<signature [[Env.initenv]]>>
+<<signature [[Env.shellenv_of_env]]>>
+
+<<signature [[Env.check_values]]>>
+<<signature [[Env.dump_env]]>>
+@
+
+
+\subsection*{[[Eval.mli]]}
+
+<<signature [[Eval.eval]]>>=
+(* Evaluate the variables and backquotes in the mkfile (hence Cap.exec),
+ * process the included files, index the rules, and return the 
+ * final environment (actually modify by side effect the environment).
+ * 
+ * Also sets the parameter to contain the first (simple) target found
+ * in the file if it was not set already.
+ * 
+ * Note that eval() will call parse() internally as well as eval() itself
+ * recursively to process '<file' instructions.
+ *)
+val eval :
+  < Shell.caps ; .. > ->
+  Env.t ->
+  string list ref ->
+  Ast.instr list ->
+  Rules.rules * Env.t
+@
+
+
+%-------------------------------------------------------------
+
+<<Eval.mli>>=
+<<signature [[Eval.eval]]>>
+@
+
+
+\subsection*{[[File.mli]]}
+
+<<signature [[File.timeof]]>>=
+(* returns None if file does not exist or can't be stat'ed for some reasons *)
+val timeof : Fpath.t -> float option
+@
+
+<<signature [[File.str_of_time]]>>=
+val str_of_time : float option -> string
+@
+
+
+%-------------------------------------------------------------
+
+<<File.mli>>=
+<<signature [[File.timeof]]>>
+
+<<signature [[File.str_of_time]]>>
+@
+
+
+\subsection*{[[Graph.mli]]}
+
+<<type [[Graph.node (Graph.mli)]]>>=
+type node = {
+  name : string;
+  mutable arcs : arc list;
+  mutable time : float option;
+  mutable state : build_state;
+  mutable is_virtual : bool;
+  mutable visited : bool;
+  mutable probable : bool;
+}
+@
+
+<<type [[Graph.arc (Graph.mli)]]>>=
+and arc = { dest : node option; rule : Rules.rule_exec }
+@
+
+<<type [[Graph.build_state (Graph.mli)]]>>=
+and build_state = NotMade | BeingMade | Made
+@
+
+<<type [[Graph.t (Graph.mli)]]>>=
+type t = node (* the root *)
+@
+
+<<signature [[Graph.hnodes]]>>=
+val hnodes : (string, node) Hashtbl.t
+@
+
+<<signature [[Graph.build_graph]]>>=
+(* !will also modify hnode! *)
+val build_graph : string (* target *) -> Rules.rules -> t
+@
+
+<<signature [[Graph.update]]>>=
+(* update time of node once the target node has been generated by a job *)
+val update : node -> unit
+@
+
+<<signature [[Graph.check_cycle]]>>=
+(* internals *)
+val check_cycle : t -> unit
+@
+
+<<signature [[Graph.check_ambiguous]]>>=
+(* will also adjust the graph *)
+val check_ambiguous : t -> unit
+@
+
+<<signature [[Graph.dump_graph]]>>=
+(* output graphviz dot file *)
+val dump_graph : t -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Graph.mli>>=
+<<type [[Graph.node (Graph.mli)]]>>
+
+<<type [[Graph.arc (Graph.mli)]]>>
+<<type [[Graph.build_state (Graph.mli)]]>>
+
+<<type [[Graph.t (Graph.mli)]]>>
+
+<<signature [[Graph.hnodes]]>>
+
+<<signature [[Graph.build_graph]]>>
+
+<<signature [[Graph.update]]>>
+
+<<signature [[Graph.check_cycle]]>>
+
+<<signature [[Graph.check_ambiguous]]>>
+
+<<signature [[Graph.dump_graph]]>>
+@
+
+
+\subsection*{[[Outofdate.mli]]}
+
+<<signature [[Outofdate.work]]>>=
+(* work() may call internally Scheduler.run() to schedule jobs.
+ * It will also modify by side effect the graph to set to 
+ * Made or BeingMade some nodes.
+ * May raise Failure ("don't know how to make xxx" | "no recipe to make xxx")
+ *)
+val work :
+  < Shell.caps ; .. > ->
+  Env.t ->
+  Graph.node ->
+  bool ref (* OUT parameter, did anything *) ->
+  unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Outofdate.mli>>=
+<<signature [[Outofdate.work]]>>
+@
+
+
+\subsection*{[[Parse.mli]]}
+
+<<signature [[Parse.parse]]>>=
+(* !internally modifies Globals.line and Globals.file! *)
+val parse : Fpath.t -> Ast.instr list
+@
+
+
+%-------------------------------------------------------------
+
+<<Parse.mli>>=
+<<signature [[Parse.parse]]>>
+@
+
+
+
+\subsection*{[[Percent.mli]]}
+
+<<type [[Percent.pattern (Percent.mli)]]>>=
+type pattern = P of pattern_elem list
+@
+
+<<type [[Percent.pattern_elem (Percent.mli)]]>>=
+and pattern_elem = PStr of string | PPercent
+@
+
+<<exception [[Percent.TooManyPercents (Percent.mli)]]>>=
+exception TooManyPercents
+@
+
+<<exception [[Percent.PercentNotFound (Percent.mli)]]>>=
+exception PercentNotFound
+@
+
+<<signature [[Percent.match_]]>>=
+(* return the possible stem *)
+val match_ : pattern -> string -> string option
+@
+
+<<signature [[Percent.subst]]>>=
+val subst : pattern -> string (* stem *) -> string
+@
+
+<<signature [[Percent.match_and_subst]]>>=
+(* print a warning if not match *)
+val match_and_subst :
+  pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
+@
+
+<<signature [[Percent.check_pattern]]>>=
+(* internals *)
+
+val check_pattern : pattern -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Percent.mli>>=
+(* The list must contain at least one element *)
+<<type [[Percent.pattern (Percent.mli)]]>>
+<<type [[Percent.pattern_elem (Percent.mli)]]>>
+
+<<exception [[Percent.TooManyPercents (Percent.mli)]]>>
+<<exception [[Percent.PercentNotFound (Percent.mli)]]>>
+
+<<signature [[Percent.match_]]>>
+<<signature [[Percent.subst]]>>
+
+<<signature [[Percent.match_and_subst]]>>
+
+<<signature [[Percent.check_pattern]]>>
+@
+
+
+\subsection*{[[Scheduler.mli]]}
+
+<<signature [[Scheduler.nrunning]]>>=
+val nrunning : int ref
+@
+
+<<signature [[Scheduler.run]]>>=
+(* need Cap.env for NPROC *)
+val run : < Shell.caps ; Cap.env; .. > -> Job.t -> unit
+@
+
+<<signature [[Scheduler.waitup]]>>=
+val waitup : < Shell.caps ; Cap.env; .. > -> unit -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Scheduler.mli>>=
+<<signature [[Scheduler.nrunning]]>>
+
+<<signature [[Scheduler.run]]>>
+<<signature [[Scheduler.waitup]]>>
+@
+
+
+\subsection*{[[Shellenv.mli]]}
+
+<<type [[Shellenv.t (Shellenv.mli)]]>>=
+type t = (string * string list) list
+@
+
+<<signature [[Shellenv.read_environment]]>>=
+val read_environment : < Cap.env ; .. > -> t
+@
+
+
+%-------------------------------------------------------------
+
+<<Shellenv.mli>>=
+<<type [[Shellenv.t (Shellenv.mli)]]>>
+
+<<signature [[Shellenv.read_environment]]>>
+@
+
+
+\subsection*{[[Shell.mli]]}
+
+<<type [[Shell.caps (Shell.mli)]]>>=
+type caps = < Cap.fork ; Cap.exec ; Cap.env >
+@
+
+<<signature [[Shell.exec_recipe]]>>=
+val exec_recipe :
+  < caps; .. > ->
+  Shellenv.t ->
+  string list (* sh arguments *) ->
+  string list (* sh stdin (recipe) *) ->
+  bool (* interactive *) ->
+  int (* pid *)
+@
+
+<<signature [[Shell.exec_backquote]]>>=
+val exec_backquote :
+  < caps; .. > ->
+  Shellenv.t ->
+  string (* sh stdin (recipe) *) ->
+  string (* sh output *)
+@
+
+<<signature [[Shell.exec_pipecmd]]>>=
+val exec_pipecmd :
+  < caps ; .. > ->
+  Shellenv.t ->
+  string (* sh stdin (recipe) *) ->
+  Common.filename (* sh output*)
+@
+
+
+%-------------------------------------------------------------
+
+<<Shell.mli>>=
+
+<<type [[Shell.caps (Shell.mli)]]>>
+
+<<signature [[Shell.exec_recipe]]>>
+
+<<signature [[Shell.exec_backquote]]>>
+
+<<signature [[Shell.exec_pipecmd]]>>
+@
+
+\chapter*{Indexes}
+\addcontentsline{toc}{chapter}{Index}
+
+%\chapter{References} 
+\addcontentsline{toc}{chapter}{References}
+
+\bibliography{../../docs/latex/Principia}
+\bibliographystyle{alpha}
+
+%******************************************************************************
+% Postlude
+%******************************************************************************
+
+\end{document}
+

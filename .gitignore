@@ -14,12 +14,26 @@
 *.o
 *.a
 
-# Syncweb objects
-.md5sum_*
-
 # Kencc objects
 *.[58]
 
+# Syncweb objects
+.md5sum_*
+
+# latex object files
+*.aux
+*.brf
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+
+# noweb files
+**/docs/*/*-[0-9].pdf
+**/docs/*/*.tex
+
+# misc
 *.output
 *.save
 

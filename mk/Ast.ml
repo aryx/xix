@@ -1,12 +1,12 @@
 (*s: Ast.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
+(*s: type [[Ast.word]] *)
 (* The elements below are not separated by any separator; they are direct
  * concatenations of elements (hence the need for ${name} below).
  * The list must contain at least one element.
  * ex: '%.c' -> W [Percent; String ".c"]
  *)
-(*s: type [[Ast.word]] *)
 type word = W of word_element list
 (*e: type [[Ast.word]] *)
 
@@ -32,18 +32,18 @@ type word = W of word_element list
 (*e: type [[Ast.var]] *)
 [@@deriving show  {with_path = false}]
 
-(* Words are separated by spaces. See also Env.values *)
 (*s: type [[Ast.words]] *)
+(* Words are separated by spaces. See also Env.values *)
 type words = word list
-[@@deriving show]
 (*e: type [[Ast.words]] *)
+[@@deriving show]
 
 
-(* (the strings do not contain the leading space nor trailing newline) *)
 (*s: type [[Ast.recipe]] *)
+(* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = R of string list
-[@@deriving show {with_path = false}]
 (*e: type [[Ast.recipe]] *)
+[@@deriving show {with_path = false}]
 
 (* See also Rules.rule_exec *)
 (*s: type [[Ast.rule]] *)
@@ -64,14 +64,14 @@ type rule = {
 (*e: type [[Ast.rule_attribute]] *)
 [@@deriving show {with_path = false}]
 
-(* for error reporting *)
 (*s: type [[Ast.loc]] *)
+(* for error reporting *)
 type loc = {
   file: Fpath.t; (* an mkfile *)
   line: int;
 }
-[@@deriving show {with_path = false}]
 (*e: type [[Ast.loc]] *)
+[@@deriving show {with_path = false}]
 
 (*s: type [[Ast.instr]] *)
 type instr = {
@@ -105,8 +105,8 @@ let show_instrs _ = "NO DERIVING"
 
 (*s: type [[Ast.instrs]] *)
 type instrs = instr list
-[@@deriving show]
 (*e: type [[Ast.instrs]] *)
+[@@deriving show]
 
 (*s: function [[Ast.dump_ast]] *)
 let dump_ast instrs =

@@ -31,9 +31,9 @@ val initenv : < Cap.env ; Cap.argv; .. > -> t
 val shellenv_of_env : t -> Shellenv.t
 (*e: signature [[Env.shellenv_of_env]] *)
 
-(*s: signature [[Env.check_values]] *)
 (* internals *)
 
+(*s: signature [[Env.check_values]] *)
 val check_values : values -> unit
 (*e: signature [[Env.check_values]] *)
 (*s: signature [[Env.dump_env]] *)

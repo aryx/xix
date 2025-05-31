@@ -4,6 +4,7 @@
  * We can not define it in the lexer because of a mutual dependency issue.
  * We can not define it in the parser because it's not exported in the .mli.
  *)
+
 (*s: constant [[Globals.line]] *)
 let line = ref 1
 (*e: constant [[Globals.line]] *)

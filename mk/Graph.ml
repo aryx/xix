@@ -72,6 +72,7 @@ type t = node (* the root *)
 (*e: type [[Graph.t]] *)
 
 
+(*s: constant [[Graph.hnodes]] *)
 (* The graph is a DAG; some arcs may point to previously created nodes.
  * This is why we store in this hash all the created nodes.
  * 
@@ -79,7 +80,6 @@ type t = node (* the root *)
  * the list of all target nodes concerned by a rule and this requires
  * again given a target name to find the corresponding node in the graph.
  *)
-(*s: constant [[Graph.hnodes]] *)
 let hnodes = Hashtbl.create 101
 (*e: constant [[Graph.hnodes]] *)
 

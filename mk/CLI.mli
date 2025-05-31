@@ -1,5 +1,6 @@
 (*s: CLI.mli *)
 
+(*s: type [[CLI.caps (CLI.mli)]] *)
 (* Need:
  *  - fork/exec: obviously as we run shell commands
  *  - env: for Env.initenv() so mk recipe can access env variables.
@@ -7,7 +8,6 @@
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - chdir: actually needed just for -debugger, we could remove
  *)
-(*s: type [[CLI.caps (CLI.mli)]] *)
 type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
 (*e: type [[CLI.caps (CLI.mli)]] *)
 

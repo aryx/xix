@@ -12,11 +12,11 @@ open Fpath_.Operators
 (* Types and constants *)
 (*****************************************************************************)
 
+(*s: type [[Shell.caps]] *)
 (* Need:
  *  - exec/fork: obviously as we run a shell
  *  - env: for MKSHELL
  *)
-(*s: type [[Shell.caps]] *)
 type caps = < Cap.exec; Cap.fork; Cap.env >
 (*e: type [[Shell.caps]] *)
 

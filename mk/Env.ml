@@ -11,10 +11,10 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Env.values]] *)
 (* Content of variables (after full expansion and backquote resolution).
  * It should not contain any empty strings (but it can contain empty lists).
  *)
-(*s: type [[Env.values]] *)
 type values = string list
 (*e: type [[Env.values]] *)
 
@@ -47,8 +47,8 @@ let check_values xs =
   xs |> List.iter (fun s ->
     if s = ""
     then raise (Impossible (spf "empty string in values"))
-(*e: function [[Env.check_values]] *)
   )
+(*e: function [[Env.check_values]] *)
 
 (*s: exception [[Env.Redefinition]] *)
 exception Redefinition of string

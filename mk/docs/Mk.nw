@@ -3397,7 +3397,6 @@ val dump_graph : t -> unit
 \subsection*{[[Parse.mli]]}
 
 
-
 %-------------------------------------------------------------
 
 <<Parse.mli>>=
@@ -3445,7 +3444,6 @@ val match_and_subst :
 val check_pattern : pattern -> unit
 @
 
-
 %-------------------------------------------------------------
 
 <<Percent.mli>>=
@@ -3471,9 +3469,6 @@ val check_pattern : pattern -> unit
 val nrunning : int ref
 @
 
-
-
-
 %-------------------------------------------------------------
 
 <<Scheduler.mli>>=
@@ -3490,8 +3485,6 @@ val nrunning : int ref
 type t = (string * string list) list
 @
 
-
-
 %-------------------------------------------------------------
 
 <<Shellenv.mli>>=
@@ -3506,9 +3499,6 @@ type t = (string * string list) list
 <<type [[Shell.caps (Shell.mli)]]>>=
 type caps = < Cap.fork ; Cap.exec ; Cap.env >
 @
-
-
-
 
 %-------------------------------------------------------------
 

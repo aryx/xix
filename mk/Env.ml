@@ -82,8 +82,8 @@ let dump_env env =
   Logs.debug (fun m -> m "Dump_env:");
   env.vars |> Hashtbl.iter (fun k v ->
     Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
-(*e: function [[Env.dump_env]] *)
   )
+(*e: function [[Env.dump_env]] *)
 
 (*****************************************************************************)
 (* Functions *)

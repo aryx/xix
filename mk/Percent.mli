@@ -1,18 +1,20 @@
 (*s: Percent.mli *)
+(*s: type [[Percent.pattern]] *)
 (* The list must contain at least one element *)
-(*s: type [[Percent.pattern (Percent.mli)]] *)
 type pattern = P of pattern_elem list
-(*e: type [[Percent.pattern (Percent.mli)]] *)
-(*s: type [[Percent.pattern_elem (Percent.mli)]] *)
-and pattern_elem = PStr of string | PPercent
-(*e: type [[Percent.pattern_elem (Percent.mli)]] *)
+(*e: type [[Percent.pattern]] *)
+(*s: type [[Percent.pattern_elem]] *)
+and pattern_elem =
+  | PStr of string
+  | PPercent
+(*e: type [[Percent.pattern_elem]] *)
 
-(*s: exception [[Percent.TooManyPercents (Percent.mli)]] *)
+(*s: exception [[Percent.TooManyPercents]] *)
 exception TooManyPercents
-(*e: exception [[Percent.TooManyPercents (Percent.mli)]] *)
-(*s: exception [[Percent.PercentNotFound (Percent.mli)]] *)
+(*e: exception [[Percent.TooManyPercents]] *)
+(*s: exception [[Percent.PercentNotFound]] *)
 exception PercentNotFound
-(*e: exception [[Percent.PercentNotFound (Percent.mli)]] *)
+(*e: exception [[Percent.PercentNotFound]] *)
 
 (*s: signature [[Percent.match_]] *)
 (* return the possible stem *)

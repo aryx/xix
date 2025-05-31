@@ -1,26 +1,58 @@
 (*s: Graph.mli *)
-(*s: type [[Graph.node (Graph.mli)]] *)
+(*s: type [[Graph.node]] *)
 type node = {
-  name : string;
-  mutable arcs : arc list;
-  mutable time : float option;
-  mutable state : build_state;
-  mutable is_virtual : bool;
-  mutable visited : bool;
-  mutable probable : bool;
+  (* usually a filename *)
+  name: string;
+
+  (* mutable because this field can be adjusted later in check_ambiguous
+   * and vacuous.
+   * Note that this field was called 'prereqs' before, but virtual rules
+   * without any prereq still have an arc (with an empty dest,
+   * and a recipe), so 'arcs' is a better field name.
+   *)
+  mutable arcs: arc list;
+
+  (* None for inexistent files (and virtual targets).
+   * mutable because it will be updated once the target is generated
+   * (or when we discover a target is a virtual node).
+   *)
+  mutable time: float option;
+
+  mutable state: build_state;
+
+  mutable is_virtual: bool;
+
+  (* used only for check_cycle for now *)
+  mutable visited: bool;
+  (* used for vacuous *)
+  mutable probable: bool;
+
+  (* todo: other flags? *)
+
+
 }
-(*e: type [[Graph.node (Graph.mli)]] *)
+(*e: type [[Graph.node]] *)
 
-(*s: type [[Graph.arc (Graph.mli)]] *)
-and arc = { dest : node option; rule : Rules.rule_exec }
-(*e: type [[Graph.arc (Graph.mli)]] *)
-(*s: type [[Graph.build_state (Graph.mli)]] *)
-and build_state = NotMade | BeingMade | Made
-(*e: type [[Graph.build_state (Graph.mli)]] *)
+(*s: type [[Graph.arc]] *)
+  and arc = {
+    (* note that because the graph of dependencies is a DAG, multiple
+     * arcs may point to the same node. 
+     *)
+    dest: node option;
+    (* what we need from the rule to execute a recipe (and report errors) *)
+    rule: Rules.rule_exec;
+  }
+(*e: type [[Graph.arc]] *)
+(*s: type [[Graph.build_state]] *)
+  and build_state = 
+    | NotMade
+    | BeingMade
+    | Made
+(*e: type [[Graph.build_state]] *)
 
-(*s: type [[Graph.t (Graph.mli)]] *)
+(*s: type [[Graph.t]] *)
 type t = node (* the root *)
-(*e: type [[Graph.t (Graph.mli)]] *)
+(*e: type [[Graph.t]] *)
 
 (*s: signature [[Graph.hnodes]] *)
 val hnodes : (string, node) Hashtbl.t

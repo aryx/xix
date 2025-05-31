@@ -171,7 +171,6 @@ let run (caps : < Shell.caps; .. >) job =
 (*e: function [[Scheduler.run]] *)
 
 
-
 (*s: function [[Scheduler.waitup]] *)
 let waitup (caps : < Shell.caps; .. >) () =
   let (pid, ret) = 

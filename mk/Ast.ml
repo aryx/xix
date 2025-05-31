@@ -38,15 +38,14 @@ type words = word list
 (*e: type [[Ast.words]] *)
 [@@deriving show]
 
-
 (*s: type [[Ast.recipe]] *)
 (* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = R of string list
 (*e: type [[Ast.recipe]] *)
 [@@deriving show {with_path = false}]
 
-(* See also Rules.rule_exec *)
 (*s: type [[Ast.rule]] *)
+(* See also Rules.rule_exec *)
 type rule = {
   targets: words;
   prereqs: words;

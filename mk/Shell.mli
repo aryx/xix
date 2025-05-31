@@ -1,8 +1,12 @@
 (*s: Shell.mli *)
 
-(*s: type [[Shell.caps (Shell.mli)]] *)
-type caps = < Cap.fork ; Cap.exec ; Cap.env >
-(*e: type [[Shell.caps (Shell.mli)]] *)
+(*s: type [[Shell.caps]] *)
+(* Need:
+ *  - exec/fork: obviously as we run a shell
+ *  - env: for MKSHELL
+ *)
+type caps = < Cap.exec; Cap.fork; Cap.env >
+(*e: type [[Shell.caps]] *)
 
 (*s: signature [[Shell.exec_recipe]] *)
 val exec_recipe :

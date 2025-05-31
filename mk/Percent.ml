@@ -16,16 +16,15 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Percent.pattern]] *)
+(* The list must contain at least one element *)
+type pattern = P of pattern_elem list
+(*e: type [[Percent.pattern]] *)
 (*s: type [[Percent.pattern_elem]] *)
-type pattern_elem =
+and pattern_elem =
   | PStr of string
   | PPercent
 (*e: type [[Percent.pattern_elem]] *)
-(*s: type [[Percent.pattern]] *)
-type pattern = P of pattern_elem list
-(*e: type [[Percent.pattern]] *)
-
-
 
 (*s: function [[Percent.check_pattern]] *)
 let check_pattern (P xs) =
@@ -35,8 +34,8 @@ let check_pattern (P xs) =
     | PPercent -> ()
     | PStr "" -> raise (Impossible (spf "empty string element in pattern"));
     | PStr _ -> ()
-(*e: function [[Percent.check_pattern]] *)
   )
+(*e: function [[Percent.check_pattern]] *)
 
 (*****************************************************************************)
 (* Helpers *)

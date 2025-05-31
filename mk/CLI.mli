@@ -1,6 +1,6 @@
 (*s: CLI.mli *)
 
-(*s: type [[CLI.caps (CLI.mli)]] *)
+(*s: type [[CLI.caps]] *)
 (* Need:
  *  - fork/exec: obviously as we run shell commands
  *  - env: for Env.initenv() so mk recipe can access env variables.
@@ -9,7 +9,7 @@
  *  - chdir: actually needed just for -debugger, we could remove
  *)
 type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
-(*e: type [[CLI.caps (CLI.mli)]] *)
+(*e: type [[CLI.caps]] *)
 
 (*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)

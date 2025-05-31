@@ -1,21 +1,26 @@
 (*s: Env.mli *)
-(*s: type [[Env.values (Env.mli)]] *)
+(*s: type [[Env.values]] *)
+(* Content of variables (after full expansion and backquote resolution).
+ * It should not contain any empty strings (but it can contain empty lists).
+ *)
 type values = string list
-(*e: type [[Env.values (Env.mli)]] *)
+(*e: type [[Env.values]] *)
 
-(*s: type [[Env.t (Env.mli)]] *)
+(*s: type [[Env.t]] *)
 type t = {
-  (* use Env.add_var to populate vars (to check if it's ok) *)
-  vars : (string, values) Hashtbl.t;
-  internal_vars : (string, values) Hashtbl.t;
-  vars_commandline : (string, bool) Hashtbl.t;
-  vars_we_set : (string, bool) Hashtbl.t;
-}
-(*e: type [[Env.t (Env.mli)]] *)
+  (* use Env.add_var to add a var (to check if it's ok) *)
+  vars         : (string, values) Hashtbl.t;
+  internal_vars: (string, values) Hashtbl.t;
 
-(*s: exception [[Env.Redefinition (Env.mli)]] *)
+  (* those vars can not be overriden by the mkfile *)
+  vars_commandline: (string, bool) Hashtbl.t;
+  vars_we_set: (string, bool) Hashtbl.t;
+}
+(*e: type [[Env.t]] *)
+
+(*s: exception [[Env.Redefinition]] *)
 exception Redefinition of string
-(*e: exception [[Env.Redefinition (Env.mli)]] *)
+(*e: exception [[Env.Redefinition]] *)
 
 (*s: signature [[Env.add_var]] *)
 val add_var : t -> string -> values -> unit

@@ -302,7 +302,7 @@ type word = W of word_element list
     | Backquoted of string
 @
 %LP: move Backquoted out
-% move Var later? in Variables section?
+% move Var later? in Variables section? same for Percent
 
 <<type [[Ast.var]]>>=
      and var = 
@@ -320,6 +320,34 @@ type words = word list
 
 
 \section{Parsed rules}
+
+<<type [[Ast.rule]]>>=
+(* See also Rules.rule_exec *)
+type rule = {
+  targets: words;
+  prereqs: words;
+  attrs: rule_attribute list;
+  recipe: recipe option;
+}
+@
+%LP: aspecify attrs
+
+<<type [[Ast.recipe]]>>=
+(* (the strings do not contain the leading space nor trailing newline) *)
+type recipe = R of string list
+@
+
+<<type [[Ast.rule_attribute]]>>=
+  and rule_attribute = 
+    | Virtual
+    | Quiet
+    | Delete
+    | Interactive (* pad: I added this one *)
+    | NotHandled of char
+@
+%LP: move later (and aspectize cases)
+
+\section{Parsed [[mkfile]]}
 
 <<type [[Ast.instr]]>>=
 type instr = {
@@ -359,30 +387,6 @@ type loc = {
 type instrs = instr list
 @
 
-<<type [[Ast.rule]]>>=
-type rule = {
-  targets: words;
-  prereqs: words;
-  attrs: rule_attribute list;
-  recipe: recipe option;
-}
-@
-%LP: aspecify attrs
-
-<<type [[Ast.recipe]]>>=
-(* (the strings do not contain the leading space nor trailing newline) *)
-type recipe = R of string list
-@
-
-<<type [[Ast.rule_attribute]]>>=
-  and rule_attribute = 
-    | Virtual
-    | Quiet
-    | Delete
-    | Interactive (* pad: I added this one *)
-    | NotHandled of char
-@
-%LP: move later (and aspectize cases)
 
 \section{Variables}
 %alt: Environment
@@ -465,6 +469,30 @@ let check_values xs =
 
 % patterns, feature 2 of DSL
 
+<<type [[Percent.pattern_elem]]>>=
+and pattern_elem =
+  | PStr of string
+  | PPercent
+@
+
+<<type [[Percent.pattern]]>>=
+(* The list must contain at least one element *)
+type pattern = P of pattern_elem list
+@
+
+<<function [[Percent.check_pattern]]>>=
+let check_pattern (P xs) =
+  if xs = []
+  then raise (Impossible (spf "empty pattern"));
+  xs |> List.iter (function
+    | PPercent -> ()
+    | PStr "" -> raise (Impossible (spf "empty string element in pattern"));
+    | PStr _ -> ()
+  )
+@
+
+
+
 \section{Evaluated rules}
 
 % already seen parsed rule, but now after 'eval'uation of vars and "parsing"
@@ -491,6 +519,7 @@ type rules = {
   metas: (Percent.pattern rule) list;
 }
 @
+
 
 \section{Graph}
 
@@ -548,31 +577,6 @@ type node = {
 @
 
 
-<<type [[Rules.rule_exec]]>>=
-type rule_exec = {
-  recipe2: Ast.recipe option;
-  attrs2: Ast.rule_attribute Set_.t;
-  loc2: Ast.loc;
-
-  stem: string option;
-
-  all_targets: string list;
-  all_prereqs: string list;
-}
-@
-%alt: move later?
-<<function [[Rules.has_recipe]]>>=
-(* helpers *)
-let has_recipe re =
-  re.recipe2 <> None
-@
-<<function [[Rules.is_meta]]>>=
-let is_meta re =
-  re.stem <> None
-@
-
-
-
 
 <<type [[Graph.t]]>>=
 type t = node (* the root *)
@@ -608,6 +612,75 @@ let new_node (target : string) =
   node
 @
 
+<<function [[File.timeof]]>>=
+(* opti? time cache, and flag to skip cache if want refresh *)
+let timeof file =
+  try 
+    (* bugfix: use stat, not lstat, to get the time of what is pointed
+     * by the symlink, not the symlink
+     *)
+    let stat = Unix.stat !!file in
+    Some (stat.Unix.st_mtime)
+  with Unix.Unix_error (_, _, _) -> None
+@
+
+<<function [[File.str_of_time]]>>=
+let str_of_time timeopt =
+  match timeopt with
+  | None -> "0"
+  | Some t -> spf "%.1f" t
+@
+
+
+\section{Executed rules}
+
+<<type [[Rules.rule_exec]]>>=
+type rule_exec = {
+  recipe2: Ast.recipe option;
+  attrs2: Ast.rule_attribute Set_.t;
+  loc2: Ast.loc;
+
+  stem: string option;
+
+  all_targets: string list;
+  all_prereqs: string list;
+}
+@
+%alt: move later?
+<<function [[Rules.has_recipe]]>>=
+(* helpers *)
+let has_recipe re =
+  re.recipe2 <> None
+@
+<<function [[Rules.is_meta]]>>=
+let is_meta re =
+  re.stem <> None
+@
+
+<<function [[Graph.rule_exec]]>>=
+let rule_exec (r: string Rules.rule) =
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
+
+    R.stem = None;
+    R.all_targets = r.R.targets;
+    R.all_prereqs = r.R.prereqs;
+  }
+@
+
+<<function [[Graph.rule_exec_meta]]>>=
+let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
+
+    R.stem = Some stem;
+    R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
+    R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
+  }
+@
+
 \section{Jobs}
 
 <<type [[Job.t]]>>=
@@ -633,61 +706,6 @@ type t = {
 let jobs = Queue.create ()
 @
 
-\section{Shell}
-
-
-<<type [[Shell.t]]>>=
-type t = { 
-  path: Fpath.t;
-  name: string;
-  flags: string list;
-  (* environment word separator *)
-  iws: string;
-  debug_flags: unit -> string list;
-  (* less: in theory the escaping and quoting rules are different between
-   * shells, so this should be part of the interface.
-   *)
-}
-@
-
-
-<<constant [[Shell.sh]]>>=
-let sh = {
-  path = Fpath.v "/bin/sh";
-  name = "sh";
-  flags = [];
-  iws = " ";
-  debug_flags = (fun () -> []);
-}
-@
-
-<<constant [[Shell.rc]]>>=
-let rc = {
-  path = Fpath.v "/usr/bin/rc";
-  name = "rc";
-  flags = ["-I"]; (* non-interactive so does not display a prompt *)
-  iws = "\001";
-  debug_flags = (fun () -> (* if !Flags.verbose then ["-v"] else [] *) []);
-}
-@
-
-
-<<function [[Shell.shell_from_env_or_sh]]>>=
-(* old: this is a toplevel entity, so the code below is executed even
- * before main, so you can not rely on the value in Flags as they have
- * not been set yet.
- * update: we now use capabilities so we could rely on Flags now
- * less: could use lazy to avoid recompute each time
- *)
-let shell_from_env_or_sh (caps : < Cap.env; .. >) : t = 
-  try 
-    let path = CapSys.getenv caps "MKSHELL" in
-    match path with
-    | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
-    | _ -> { sh with path = Fpath.v path }
-  with Not_found -> sh
-@
-%$
 
 \chapter{[[main]]}
 
@@ -1020,9 +1038,275 @@ let parse (file : Fpath.t) =
 
 %LP: lpize Parser.mly
 
-\chapter{Evaluating}
+\chapter{Evaluating the [[mkfile]]}
+%alt: Evaluating the rules?
 
 % not a full interpreter, so "evaluating", just vars basically
+
+
+<<function [[Eval.eval_word]]>>=
+(* A word can become multiple strings!
+ * opti? could use a Buffer 
+ * invariant: 
+ *  - the returned list of strings must not contain any empty string
+ *  - less: the returned pattern must contain at least a PPercent
+ *)
+let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
+          (Env.values, Percent.pattern) Common.either =
+  let (Ast.W word) = wd in
+  let rec aux acc word_elements =
+    match word_elements with
+    | [] -> 
+        if acc = []
+        then Left []
+        (* less: could look if any PPercent in acc and if not return a Left *)
+        else Right (P.P (List.rev acc))
+    | x::xs ->
+      (match x with
+      | A.String s -> aux ((P.PStr s)::acc) xs
+      | A.Percent  -> aux (P.PPercent::acc) xs
+
+      (* ocaml-light: | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind) *)
+      | A.Var ((A.SimpleVar _(*v*) | A.SubstVar (_(*v*), _, _)) as vkind)  ->
+         let v =
+           match vkind with
+           | A.SimpleVar v -> v
+           | A.SubstVar (v, _, _) -> v
+         in
+         let ys = 
+           try 
+             Hashtbl.find env.E.vars v 
+           with Not_found ->
+             (* stricter: mk does not complain *)
+             if !Flags.strict_mode
+             then begin 
+               if !Flags.dump_env 
+               then Env.dump_env env;
+               error loc (spf "variable not found '%s'" v);
+             end
+             else []
+         in
+         let ys =
+           match vkind with
+           | A.SimpleVar _ -> ys
+           | A.SubstVar (_, pattern, substs) -> 
+               (* recurse! pattern can contain some variable *)
+               let pattern = eval_word caps loc env pattern in
+               let subst   = substs |> List.map (eval_word caps loc env) in
+               (match pattern, subst with
+               | Right pattern, [Right subst] ->
+                   ys |> List.map (fun s -> 
+                     Percent.match_and_subst pattern subst s
+                   )
+               (* todo: ugly, should be more general, works only for 
+                * subst like ${OPAM_LIBS:%=-I $OPAM/%}
+               *)
+               | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
+                   ys |> List.map (fun s -> 
+                     [x;Percent.match_and_subst pattern subst s]
+                   ) |> List.flatten
+               (* stricter? what does mk?*)
+               | _ -> 
+                 Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
+                 error loc 
+                   "pattern or subst does not resolve to a single string"
+               )
+         in
+         (match ys, acc, xs with
+
+         (* variable does not contain anything *)
+         | [], [], []  -> 
+             Left []
+         | [], acc, xs ->
+             (* stricter: *)
+             warning loc (spf "use of empty variable '%s' in scalar context" v);
+             aux acc xs
+
+         (* variable contains a single element (scalar) *)
+         | [str], acc, xs -> 
+             aux ((P.PStr str)::acc) xs
+
+         (* variable contains many elements (array) *)
+         | _::_::_, [], [] -> 
+             Left ys
+         | _::_::_, _acc, _xs ->
+             (* stricter: *)
+             error loc (spf "use of list variable '%s' in scalar context" v)
+         )
+
+      | A.Backquoted cmd -> 
+        let shellenv = Env.shellenv_of_env env in
+        let s = Shell.exec_backquote caps shellenv cmd in
+        let ys = Str.split (Str.regexp "[ \t\n]+") s in
+        (match acc, xs with
+        | [], []  -> Left ys
+        (* stricter: *)
+        | _ -> error loc (spf "use of `%s` in scalar context" cmd)
+        )
+      )
+  in
+  aux [] word
+@
+
+<<function [[Eval.eval_words]]>>=
+let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
+         (string list, Percent.pattern list) Common.either =
+  
+  let res = words |> List.map (eval_word caps loc env) in
+
+  if res |> List.exists (fun x ->
+    match x with
+    | Left _ -> false
+    | Right (P.P xs) -> List.mem P.PPercent xs
+  )
+
+  (* a list of patterns *)
+  then res |> List.map (function
+    | Left xs -> xs |> List.map (fun s -> P.P [P.PStr s])
+    | Right x -> [x]
+  ) |> List.flatten |> (fun xs -> List.iter Percent.check_pattern xs; Right xs)
+
+  (* a list of strings *)
+  else res |> List.map (function
+    | Left xs -> xs
+    | Right (P.P xs) -> xs |> List.map (function 
+        | P.PStr s -> s
+        | P.PPercent -> raise (Impossible "exists predicate above is wrong")
+    ) |> (fun elems -> [elems |> String.concat ""])
+  ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
+@
+
+<<function [[Eval.eval]]>>=
+let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
+
+  let simples = Hashtbl.create 101 in
+  let metas = ref [] in
+
+  let rec instrs xs = 
+    xs |> List.iter (fun instr ->
+      let loc = instr.A.loc in
+
+      match instr.A.instr with
+      | A.Include ws ->
+          let res = eval_words caps loc env ws in
+          (match res with
+          | Left [file] -> 
+              if not (Sys.file_exists file)
+              then warning loc (spf "skipping missing include file: %s" file)
+              else
+                let xs = Parse.parse (Fpath.v file) in
+                (* recurse *)
+                instrs xs
+          (* new? what does mk does? *)
+          | Left [] -> error loc "missing include file"
+          (* stricter: force use quotes for filename with spaces or percent *)
+          | Right _ | Left (_::_) -> 
+              error loc "use quotes for filenames with spaces or %%"
+          )
+
+      | A.PipeInclude ws ->
+        let res = eval_words caps loc env ws in
+        let recipe = 
+          match res with
+          | Left xs -> String.concat " " xs
+          | Right _xs -> raise Todo
+        in
+        if recipe = ""
+        then failwith "missing include program name";
+        let shellenv = Env.shellenv_of_env env in
+        let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
+        let xs = Parse.parse (Fpath.v tmpfile) in
+        (* recurse *)
+        instrs xs
+
+      | A.Definition (s, ws) ->
+        let xs = 
+          match eval_words caps loc env ws with
+          | Left xs -> xs
+          (* stricter: no dynamic patterns *)
+          | Right _ -> error loc "use quotes for variable definitions with %"
+        in
+        (try 
+          Env.add_var env s xs
+         with Env.Redefinition s ->
+           error loc (spf "redefinition of %s" s)
+        );
+        Hashtbl.add env.E.vars_we_set s true;
+
+      | A.Rule r -> 
+          let targets = eval_words caps loc env r.A.targets in
+          let prereqs = eval_words caps loc env r.A.prereqs in
+          (match targets, prereqs with
+          (* regular rules *)
+          | Left targets, Left prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs;
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+
+              targets |> List.iter (fun target ->
+                (* less: could check if already there, in which case
+                 * need to Hashtbl.replace, not add.
+                 * todo: could have a :O: attribute clearly identifying
+                 * that you overwrite a previous rule!
+                 *)
+                Hashtbl.add simples target rfinal
+              );
+              if !targets_ref = [] 
+              then targets_ref := targets;
+
+          (* meta rules *)
+          | Right targets, Right prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs;
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+              metas |> Common.push rfinal
+          (* it is ok to have a % only for the target to allow
+           * for instance rules such as %.o: $HFILES
+           *)
+          | Right targets, Left prereqs ->
+              let rfinal = { R.
+                             targets = targets; 
+                             prereqs = prereqs 
+                               |> List.map (fun s -> P.P [P.PStr s]);
+                             attrs = Set.of_list r.A.attrs;
+                             recipe = r.A.recipe;
+                             loc = loc;
+                           } in
+              metas |> Common.push rfinal
+          | Left _, Right _ ->
+              (* stricter: *)
+              error loc "Forgot to use %% for the target"
+          )
+    )
+  in
+  instrs xs;
+
+  { R.
+    simples = simples;
+    metas = !metas
+  }, env
+@
+%$
+
+
+<<function [[Eval.error]]>>=
+(* TODO: use proper exn *)
+let error (loc : Ast.loc) (s : string) =
+  failwith (spf "%s:%d: Semantic error, %s" !!(loc.A.file) loc.A.line s)
+@
+
+<<function [[Eval.warning]]>>=
+let warning (loc : Ast.loc) (s : string) : unit =
+  Logs.warn (fun m -> m "warning: %s (at %s:%d)" s !!(loc.A.file) loc.A.line)
+@
 
 
 
@@ -1119,6 +1403,75 @@ let rec apply_rules target rules =
 \section{Finding the simple rule(s) for a target}
 
 \section{Finding matching metarules}
+
+<<exception [[Percent.TooManyPercents]]>>=
+exception TooManyPercents
+@
+
+<<exception [[Percent.PercentNotFound]]>>=
+exception PercentNotFound
+@
+
+<<function [[Percent.string_after_percent]]>>=
+let rec string_after_percent xs =
+  match xs with
+  | [] -> ""
+  | x::xs ->
+    (match x with 
+    | PStr s -> s ^ string_after_percent xs
+    | PPercent -> raise TooManyPercents
+    )
+@
+
+<<function [[Percent.match_]]>>=
+(* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
+ * This is arguably (and sadly) more complicated than the C code.
+ *)
+
+let rec match_ (P pat) str =
+  let len = String.length str in
+  match pat with
+  | [] -> raise PercentNotFound
+  | x::xs ->
+    (match x with
+    | PStr s ->
+        let len2 = String.length s in
+        if len2 > len
+        then None
+        else
+          if s <> (String.sub str 0 len2)
+          then None
+          else match_ (P xs) (String.sub str len2 (len - len2))
+    | PPercent ->
+        let str_pat_after = string_after_percent xs in
+        let len_after = String.length str_pat_after in
+        let len_matching_percent = len - len_after in
+        if len_matching_percent < 0
+        then None
+        else
+          let stem = String.sub str 0 len_matching_percent in
+          if str_pat_after = String.sub str len_matching_percent 
+            (len - len_matching_percent) && stem <> ""
+          then Some stem
+          else None
+    )        
+@
+
+<<function [[Percent.subst]]>>=
+let subst (P pat) stem =
+  pat |> List.map (function
+    | PStr s -> s
+    | PPercent -> stem
+  ) |> String.concat ""
+@
+
+<<function [[Percent.match_and_subst]]>>=
+let match_and_subst pat sub str =
+  match match_ pat str with
+  | Some stem -> subst sub stem
+  | None -> str
+@
+
 
 \section{Checking the graph and the rules}
 
@@ -1471,9 +1824,43 @@ let run (caps : < Shell.caps; .. >) job =
   then sched caps ()
 @
 
+
+<<function [[Scheduler.shprint]]>>=
+let shprint env s =
+  let s = 
+    Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
+      (fun _wholestr ->
+        let var = Str.matched_group 1 s in
+        if Hashtbl.mem env.E.internal_vars var
+        then Hashtbl.find env.E.internal_vars var |> String.concat " "
+        else 
+          if Hashtbl.mem env.E.vars_we_set var
+          then Hashtbl.find env.E.vars var |> String.concat " "
+          else Str.matched_string s
+      ) s
+  in
+  Logs.app (fun m -> m "|%s|" s)
+@
+%$
+
+
+<<function [[Scheduler.adjust_env]]>>=
+(* !modify by side effect job.env! *)
+let adjust_env job =
+  let env = job.J.env in
+
+  (* less: should be all_target *)
+  Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
+  (* less: newprereqs *)
+  Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
+  job.J.rule.R.stem |> Common.if_some (fun s ->
+    Hashtbl.replace env.E.internal_vars "stem" [s];
+  );
+
+  env
+@
+
 \section{Executing Jobs: [[exec_shell()]]}
-
-
 
 <<function [[Shell.exec_shell]]>>=
 let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
@@ -1746,6 +2133,39 @@ let waitup (caps : < Shell.caps; .. >) () =
       failwith (spf "child process killed/stopped by signal = %d" n)
 @
 
+
+<<function [[Graph.update]]>>=
+(* update graph once a node has been built *)
+let update node =
+  node.state <- Made;
+  Logs.debug (fun m -> m "update(): node %s time=%s" node.name 
+                 (File.str_of_time node.time));
+  
+  if node.is_virtual
+  then begin
+    node.time <- Some 1.0;
+    (* less: take max time of prereqs, need that? *)
+  end
+  else begin
+    let oldtime = node.time in
+    node.time <- File.timeof (Fpath.v node.name);
+
+    (* todo: actually can happen for rule like
+     * x.tab.h: y.tab.h
+     *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+     * (see plan9/shell/rc/mkfile).
+     * In that case we should not failwith.
+     * Because it is a rare case, maybe we should have a special
+     * attribute for those rules, so not fail only when have this
+     * attribute
+     *)
+    if oldtime = node.time || node.time = None
+    then failwith (spf "recipe did not update %s, time =%s" node.name
+                     (File.str_of_time node.time));
+  end
+@
+
+
 \chapter{The Shell Environment}
 
 <<type [[Shellenv.t]]>>=
@@ -1764,7 +2184,8 @@ let read_environment (caps : < Cap.env; ..>) =
     then
       let (var, str) = Regexp_.matched2 s in
       var, Regexp_.split "[ \t]+" str
-    else failwith (spf "wrong format for environment variable: %s" s)
+      else failwith (spf "wrong format for environment variable: %s" s)
+  )
 @
 
 
@@ -1815,6 +2236,64 @@ let shellenv_of_env env =
 @
 
 
+
+\subsection{Shell}
+%alt: move in core DS?
+
+<<type [[Shell.t]]>>=
+type t = { 
+  path: Fpath.t;
+  name: string;
+  flags: string list;
+  (* environment word separator *)
+  iws: string;
+  debug_flags: unit -> string list;
+  (* less: in theory the escaping and quoting rules are different between
+   * shells, so this should be part of the interface.
+   *)
+}
+@
+
+
+<<constant [[Shell.sh]]>>=
+let sh = {
+  path = Fpath.v "/bin/sh";
+  name = "sh";
+  flags = [];
+  iws = " ";
+  debug_flags = (fun () -> []);
+}
+@
+
+<<constant [[Shell.rc]]>>=
+let rc = {
+  path = Fpath.v "/usr/bin/rc";
+  name = "rc";
+  flags = ["-I"]; (* non-interactive so does not display a prompt *)
+  iws = "\001";
+  debug_flags = (fun () -> (* if !Flags.verbose then ["-v"] else [] *) []);
+}
+@
+
+
+<<function [[Shell.shell_from_env_or_sh]]>>=
+(* old: this is a toplevel entity, so the code below is executed even
+ * before main, so you can not rely on the value in Flags as they have
+ * not been set yet.
+ * update: we now use capabilities so we could rely on Flags now
+ * less: could use lazy to avoid recompute each time
+ *)
+let shell_from_env_or_sh (caps : < Cap.env; .. >) : t = 
+  try 
+    let path = CapSys.getenv caps "MKSHELL" in
+    match path with
+    | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
+    | _ -> { sh with path = Fpath.v path }
+  with Not_found -> sh
+@
+%$
+
+
 \chapter{Debugging and Profiling Support}
 
 \section{Explain mode: [[mk -e]]}
@@ -1836,11 +2315,43 @@ let dry_mode = ref false
 
 \chapter{Advanced Features}
 
+\section{Strict mode}
+
+%new: not in original mk
+<<constant [[Flags.strict_mode]]>>=
+let strict_mode = ref false
+@
+
 \chapter{Conclusion}
 
 \appendix
 
 \chapter{Debugging}
+
+<<constant [[Flags.dump_tokens]]>>=
+let dump_tokens = ref false
+@
+
+<<constant [[Flags.dump_ast]]>>=
+let dump_ast = ref false
+@
+
+<<constant [[Flags.dump_env]]>>=
+let dump_env = ref false
+@
+
+<<constant [[Flags.dump_graph]]>>=
+let dump_graph = ref false
+@
+
+<<constant [[Flags.dump_jobs]]>>=
+let dump_jobs = ref false
+@
+
+
+
+
+
 
 <<function [[Ast.dump_ast]]>>=
 let dump_ast instrs =
@@ -1852,6 +2363,7 @@ let dump_env env =
   Logs.debug (fun m -> m "Dump_env:");
   env.vars |> Hashtbl.iter (fun k v ->
     Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
+  )
 @
 
 <<function [[CLI.do_action]]>>=
@@ -1874,7 +2386,50 @@ let do_action caps s xs =
         ()
       )
   | _ -> failwith ("action not supported: " ^ s)
-  )
+@
+
+
+<<function [[Scheduler.dump_job]]>>=
+let dump_job func job pidopt =
+  Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
+         (Unix.getpid())
+         func 
+         (match pidopt with Some pid -> pid | None -> 0)
+         (job.J.target_nodes |> List.map (fun node -> node.G.name) 
+             |> String.concat " "))
+@
+
+
+
+
+<<function [[Graph.dump_graph]]>>=
+let dump_graph node =
+  let pr s = 
+    print_string (s ^ "\n") 
+  in
+  pr "digraph misc {";
+  pr "size = \"10,10\";" ;
+  let hdone = Hashtbl.create 101 in
+  let rec aux node1 =
+    if Hashtbl.mem hdone node1.name
+    then ()
+    else begin
+      Hashtbl.add hdone node1.name true;
+      node1.arcs |> List.iter (fun arc ->
+        match arc.dest with
+        | None -> pr (spf "\"%s\" -> \"<NOTHING>\";    # %s" 
+                        node1.name (loc_of_arc arc))
+        | Some node2 -> 
+          pr (spf "\"%s\" -> \"%s\";       # %s" 
+                node1.name node2.name (loc_of_arc arc));
+          (* recurse *)
+          aux node2
+      )
+    end
+  in
+  aux node;
+  pr "}";
+  ()
 @
 
 
@@ -1887,7 +2442,7 @@ let do_action caps s xs =
 \chapter{Extra Code}
 
 %\chapter{Changelog}
-% code via make loc = ? LOC, after full lpized ? LOC
+% code via mk loc = XXX LOC, after full lpized ? LOC
 % orig Mk.nw = ? LOC, after full lpized and comments in sections ??
 % now: ? LOC so added ?? LOE (Lines of explanations)
 % mk in C: ? LOC (but not all features: no archive, no :P, etc)
@@ -1920,7 +2475,6 @@ let show_instrs _ = "NO DERIVING"
 <<type [[Ast.recipe]]>>
 [@@deriving show {with_path = false}]
 
-(* See also Rules.rule_exec *)
 <<type [[Ast.rule]]>>
 <<type [[Ast.rule_attribute]]>>
 [@@deriving show {with_path = false}]
@@ -1943,7 +2497,6 @@ let show_instrs _ = "NO DERIVING"
 
 
 \subsection*{[[CLI.ml]]}
-
 
 
 %-------------------------------------------------------------
@@ -2118,269 +2671,6 @@ open Common
 
 \subsection*{[[Eval.ml]]}
 
-<<function [[Eval.error]]>>=
-(* TODO: use proper exn *)
-let error (loc : Ast.loc) (s : string) =
-  failwith (spf "%s:%d: Semantic error, %s" !!(loc.A.file) loc.A.line s)
-@
-
-<<function [[Eval.warning]]>>=
-let warning (loc : Ast.loc) (s : string) : unit =
-  Logs.warn (fun m -> m "warning: %s (at %s:%d)" s !!(loc.A.file) loc.A.line)
-@
-
-<<function [[Eval.eval_word]]>>=
-(* A word can become multiple strings!
- * opti? could use a Buffer 
- * invariant: 
- *  - the returned list of strings must not contain any empty string
- *  - less: the returned pattern must contain at least a PPercent
- *)
-let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
-          (Env.values, Percent.pattern) Common.either =
-  let (Ast.W word) = wd in
-  let rec aux acc word_elements =
-    match word_elements with
-    | [] -> 
-        if acc = []
-        then Left []
-        (* less: could look if any PPercent in acc and if not return a Left *)
-        else Right (P.P (List.rev acc))
-    | x::xs ->
-      (match x with
-      | A.String s -> aux ((P.PStr s)::acc) xs
-      | A.Percent  -> aux (P.PPercent::acc) xs
-
-      (* ocaml-light: | A.Var ((A.SimpleVar v | A.SubstVar (v, _, _)) as vkind) *)
-      | A.Var ((A.SimpleVar _(*v*) | A.SubstVar (_(*v*), _, _)) as vkind)  ->
-         let v =
-           match vkind with
-           | A.SimpleVar v -> v
-           | A.SubstVar (v, _, _) -> v
-         in
-         let ys = 
-           try 
-             Hashtbl.find env.E.vars v 
-           with Not_found ->
-             (* stricter: mk does not complain *)
-             if !Flags.strict_mode
-             then begin 
-               if !Flags.dump_env 
-               then Env.dump_env env;
-               error loc (spf "variable not found '%s'" v);
-             end
-             else []
-         in
-         let ys =
-           match vkind with
-           | A.SimpleVar _ -> ys
-           | A.SubstVar (_, pattern, substs) -> 
-               (* recurse! pattern can contain some variable *)
-               let pattern = eval_word caps loc env pattern in
-               let subst   = substs |> List.map (eval_word caps loc env) in
-               (match pattern, subst with
-               | Right pattern, [Right subst] ->
-                   ys |> List.map (fun s -> 
-                     Percent.match_and_subst pattern subst s
-                   )
-               (* todo: ugly, should be more general, works only for 
-                * subst like ${OPAM_LIBS:%=-I $OPAM/%}
-               *)
-               | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
-                   ys |> List.map (fun s -> 
-                     [x;Percent.match_and_subst pattern subst s]
-                   ) |> List.flatten
-               (* stricter? what does mk?*)
-               | _ -> 
-                 Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
-                 error loc 
-                   "pattern or subst does not resolve to a single string"
-               )
-         in
-         (match ys, acc, xs with
-
-         (* variable does not contain anything *)
-         | [], [], []  -> 
-             Left []
-         | [], acc, xs ->
-             (* stricter: *)
-             warning loc (spf "use of empty variable '%s' in scalar context" v);
-             aux acc xs
-
-         (* variable contains a single element (scalar) *)
-         | [str], acc, xs -> 
-             aux ((P.PStr str)::acc) xs
-
-         (* variable contains many elements (array) *)
-         | _::_::_, [], [] -> 
-             Left ys
-         | _::_::_, _acc, _xs ->
-             (* stricter: *)
-             error loc (spf "use of list variable '%s' in scalar context" v)
-         )
-
-      | A.Backquoted cmd -> 
-        let shellenv = Env.shellenv_of_env env in
-        let s = Shell.exec_backquote caps shellenv cmd in
-        let ys = Str.split (Str.regexp "[ \t\n]+") s in
-        (match acc, xs with
-        | [], []  -> Left ys
-        (* stricter: *)
-        | _ -> error loc (spf "use of `%s` in scalar context" cmd)
-        )
-      )
-  in
-  aux [] word
-@
-
-<<function [[Eval.eval_words]]>>=
-let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
-         (string list, Percent.pattern list) Common.either =
-  
-  let res = words |> List.map (eval_word caps loc env) in
-
-  if res |> List.exists (fun x ->
-    match x with
-    | Left _ -> false
-    | Right (P.P xs) -> List.mem P.PPercent xs
-  )
-
-  (* a list of patterns *)
-  then res |> List.map (function
-    | Left xs -> xs |> List.map (fun s -> P.P [P.PStr s])
-    | Right x -> [x]
-  ) |> List.flatten |> (fun xs -> List.iter Percent.check_pattern xs; Right xs)
-
-  (* a list of strings *)
-  else res |> List.map (function
-    | Left xs -> xs
-    | Right (P.P xs) -> xs |> List.map (function 
-        | P.PStr s -> s
-        | P.PPercent -> raise (Impossible "exists predicate above is wrong")
-    ) |> (fun elems -> [elems |> String.concat ""])
-  ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
-@
-
-<<function [[Eval.eval]]>>=
-let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
-
-  let simples = Hashtbl.create 101 in
-  let metas = ref [] in
-
-  let rec instrs xs = 
-    xs |> List.iter (fun instr ->
-      let loc = instr.A.loc in
-
-      match instr.A.instr with
-      | A.Include ws ->
-          let res = eval_words caps loc env ws in
-          (match res with
-          | Left [file] -> 
-              if not (Sys.file_exists file)
-              then warning loc (spf "skipping missing include file: %s" file)
-              else
-                let xs = Parse.parse (Fpath.v file) in
-                (* recurse *)
-                instrs xs
-          (* new? what does mk does? *)
-          | Left [] -> error loc "missing include file"
-          (* stricter: force use quotes for filename with spaces or percent *)
-          | Right _ | Left (_::_) -> 
-              error loc "use quotes for filenames with spaces or %%"
-          )
-
-      | A.PipeInclude ws ->
-        let res = eval_words caps loc env ws in
-        let recipe = 
-          match res with
-          | Left xs -> String.concat " " xs
-          | Right _xs -> raise Todo
-        in
-        if recipe = ""
-        then failwith "missing include program name";
-        let shellenv = Env.shellenv_of_env env in
-        let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-        let xs = Parse.parse (Fpath.v tmpfile) in
-        (* recurse *)
-        instrs xs
-
-      | A.Definition (s, ws) ->
-        let xs = 
-          match eval_words caps loc env ws with
-          | Left xs -> xs
-          (* stricter: no dynamic patterns *)
-          | Right _ -> error loc "use quotes for variable definitions with %"
-        in
-        (try 
-          Env.add_var env s xs
-         with Env.Redefinition s ->
-           error loc (spf "redefinition of %s" s)
-        );
-        Hashtbl.add env.E.vars_we_set s true;
-
-      | A.Rule r -> 
-          let targets = eval_words caps loc env r.A.targets in
-          let prereqs = eval_words caps loc env r.A.prereqs in
-          (match targets, prereqs with
-          (* regular rules *)
-          | Left targets, Left prereqs ->
-              let rfinal = { R.
-                             targets = targets; 
-                             prereqs = prereqs;
-                             attrs = Set.of_list r.A.attrs;
-                             recipe = r.A.recipe;
-                             loc = loc;
-                           } in
-
-              targets |> List.iter (fun target ->
-                (* less: could check if already there, in which case
-                 * need to Hashtbl.replace, not add.
-                 * todo: could have a :O: attribute clearly identifying
-                 * that you overwrite a previous rule!
-                 *)
-                Hashtbl.add simples target rfinal
-              );
-              if !targets_ref = [] 
-              then targets_ref := targets;
-
-          (* meta rules *)
-          | Right targets, Right prereqs ->
-              let rfinal = { R.
-                             targets = targets; 
-                             prereqs = prereqs;
-                             attrs = Set.of_list r.A.attrs;
-                             recipe = r.A.recipe;
-                             loc = loc;
-                           } in
-              metas |> Common.push rfinal
-          (* it is ok to have a % only for the target to allow
-           * for instance rules such as %.o: $HFILES
-           *)
-          | Right targets, Left prereqs ->
-              let rfinal = { R.
-                             targets = targets; 
-                             prereqs = prereqs 
-                               |> List.map (fun s -> P.P [P.PStr s]);
-                             attrs = Set.of_list r.A.attrs;
-                             recipe = r.A.recipe;
-                             loc = loc;
-                           } in
-              metas |> Common.push rfinal
-          | Left _, Right _ ->
-              (* stricter: *)
-              error loc "Forgot to use %% for the target"
-          )
-    )
-  in
-  instrs xs;
-
-  { R.
-    simples = simples;
-    metas = !metas
-  }, env
-@
-%$
-
 
 %-------------------------------------------------------------
 
@@ -2420,7 +2710,6 @@ open Rules (* for the fields *)
 
 <<function [[Eval.eval_words]]>>
 
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
@@ -2430,25 +2719,6 @@ open Rules (* for the fields *)
 
 
 \subsection*{[[File.ml]]}
-
-<<function [[File.timeof]]>>=
-(* opti? time cache, and flag to skip cache if want refresh *)
-let timeof file =
-  try 
-    (* bugfix: use stat, not lstat, to get the time of what is pointed
-     * by the symlink, not the symlink
-     *)
-    let stat = Unix.stat !!file in
-    Some (stat.Unix.st_mtime)
-  with Unix.Unix_error (_, _, _) -> None
-@
-
-<<function [[File.str_of_time]]>>=
-let str_of_time timeopt =
-  match timeopt with
-  | None -> "0"
-  | Some t -> spf "%.1f" t
-@
 
 
 %-------------------------------------------------------------
@@ -2468,30 +2738,6 @@ open Fpath_.Operators
 
 \subsection*{[[Flags.ml]]}
 
-
-<<constant [[Flags.strict_mode]]>>=
-let strict_mode = ref false
-@
-
-<<constant [[Flags.dump_tokens]]>>=
-let dump_tokens = ref false
-@
-
-<<constant [[Flags.dump_ast]]>>=
-let dump_ast = ref false
-@
-
-<<constant [[Flags.dump_env]]>>=
-let dump_env = ref false
-@
-
-<<constant [[Flags.dump_graph]]>>=
-let dump_graph = ref false
-@
-
-<<constant [[Flags.dump_jobs]]>>=
-let dump_jobs = ref false
-@
 
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
@@ -2522,7 +2768,6 @@ let debugger = ref false
 \subsection*{[[Globals.ml]]}
 
 
-
 %-------------------------------------------------------------
 
 <<Globals.ml>>=
@@ -2539,31 +2784,6 @@ let debugger = ref false
 
 
 \subsection*{[[Graph.ml]]}
-
-
-<<function [[Graph.rule_exec]]>>=
-let rule_exec (r: string Rules.rule) =
-  { R.recipe2 = r.R.recipe;
-    R.loc2 = r.R.loc;
-    R.attrs2 = r.R.attrs;
-
-    R.stem = None;
-    R.all_targets = r.R.targets;
-    R.all_prereqs = r.R.prereqs;
-  }
-@
-
-<<function [[Graph.rule_exec_meta]]>>=
-let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
-  { R.recipe2 = r.R.recipe;
-    R.loc2 = r.R.loc;
-    R.attrs2 = r.R.attrs;
-
-    R.stem = Some stem;
-    R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
-    R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
-  }
-@
 
 
 
@@ -2588,68 +2808,6 @@ let rec propagate_attributes node =
 let loc_of_arc arc =
   let loc = arc.rule.R.loc2 in
   spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
-@
-
-<<function [[Graph.dump_graph]]>>=
-let dump_graph node =
-  let pr s = 
-    print_string (s ^ "\n") 
-  in
-  pr "digraph misc {";
-  pr "size = \"10,10\";" ;
-  let hdone = Hashtbl.create 101 in
-  let rec aux node1 =
-    if Hashtbl.mem hdone node1.name
-    then ()
-    else begin
-      Hashtbl.add hdone node1.name true;
-      node1.arcs |> List.iter (fun arc ->
-        match arc.dest with
-        | None -> pr (spf "\"%s\" -> \"<NOTHING>\";    # %s" 
-                        node1.name (loc_of_arc arc))
-        | Some node2 -> 
-          pr (spf "\"%s\" -> \"%s\";       # %s" 
-                node1.name node2.name (loc_of_arc arc));
-          (* recurse *)
-          aux node2
-      )
-    end
-  in
-  aux node;
-  pr "}";
-  ()
-@
-
-
-<<function [[Graph.update]]>>=
-(* update graph once a node has been built *)
-let update node =
-  node.state <- Made;
-  Logs.debug (fun m -> m "update(): node %s time=%s" node.name 
-                 (File.str_of_time node.time));
-  
-  if node.is_virtual
-  then begin
-    node.time <- Some 1.0;
-    (* less: take max time of prereqs, need that? *)
-  end
-  else begin
-    let oldtime = node.time in
-    node.time <- File.timeof (Fpath.v node.name);
-
-    (* todo: actually can happen for rule like
-     * x.tab.h: y.tab.h
-     *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
-     * (see plan9/shell/rc/mkfile).
-     * In that case we should not failwith.
-     * Because it is a rare case, maybe we should have a special
-     * attribute for those rules, so not fail only when have this
-     * attribute
-     *)
-    if oldtime = node.time || node.time = None
-    then failwith (spf "recipe did not update %s, time =%s" node.name
-                     (File.str_of_time node.time));
-  end
 @
 
 
@@ -2740,7 +2898,7 @@ module Set = Set_
 
 <<function [[Graph.update]]>>
 @
-
+%$
 
 \subsection*{[[Job.ml]]}
 
@@ -2848,94 +3006,6 @@ open Fpath_.Operators
 
 \subsection*{[[Percent.ml]]}
 
-<<type [[Percent.pattern_elem]]>>=
-type pattern_elem =
-  | PStr of string
-  | PPercent
-@
-
-<<type [[Percent.pattern]]>>=
-type pattern = P of pattern_elem list
-@
-
-<<function [[Percent.check_pattern]]>>=
-let check_pattern (P xs) =
-  if xs = []
-  then raise (Impossible (spf "empty pattern"));
-  xs |> List.iter (function
-    | PPercent -> ()
-    | PStr "" -> raise (Impossible (spf "empty string element in pattern"));
-    | PStr _ -> ()
-@
-
-<<exception [[Percent.TooManyPercents]]>>=
-exception TooManyPercents
-@
-
-<<exception [[Percent.PercentNotFound]]>>=
-exception PercentNotFound
-@
-
-<<function [[Percent.string_after_percent]]>>=
-let rec string_after_percent xs =
-  match xs with
-  | [] -> ""
-  | x::xs ->
-    (match x with 
-    | PStr s -> s ^ string_after_percent xs
-    | PPercent -> raise TooManyPercents
-    )
-@
-
-<<function [[Percent.match_]]>>=
-(* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
- * This is arguably (and sadly) more complicated than the C code.
- *)
-
-let rec match_ (P pat) str =
-  let len = String.length str in
-  match pat with
-  | [] -> raise PercentNotFound
-  | x::xs ->
-    (match x with
-    | PStr s ->
-        let len2 = String.length s in
-        if len2 > len
-        then None
-        else
-          if s <> (String.sub str 0 len2)
-          then None
-          else match_ (P xs) (String.sub str len2 (len - len2))
-    | PPercent ->
-        let str_pat_after = string_after_percent xs in
-        let len_after = String.length str_pat_after in
-        let len_matching_percent = len - len_after in
-        if len_matching_percent < 0
-        then None
-        else
-          let stem = String.sub str 0 len_matching_percent in
-          if str_pat_after = String.sub str len_matching_percent 
-            (len - len_matching_percent) && stem <> ""
-          then Some stem
-          else None
-    )        
-@
-
-<<function [[Percent.subst]]>>=
-let subst (P pat) stem =
-  pat |> List.map (function
-    | PStr s -> s
-    | PPercent -> stem
-  ) |> String.concat ""
-@
-
-<<function [[Percent.match_and_subst]]>>=
-let match_and_subst pat sub str =
-  match match_ pat str with
-  | Some stem -> subst sub stem
-  | None -> str
-@
-
 
 %-------------------------------------------------------------
 
@@ -2957,13 +3027,10 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-<<type [[Percent.pattern_elem]]>>
 <<type [[Percent.pattern]]>>
-
-
+<<type [[Percent.pattern_elem]]>>
 
 <<function [[Percent.check_pattern]]>>
-  )
 
 (*****************************************************************************)
 (* Helpers *)
@@ -3009,52 +3076,6 @@ open Common
 
 
 \subsection*{[[Scheduler.ml]]}
-
-
-<<function [[Scheduler.adjust_env]]>>=
-(* !modify by side effect job.env! *)
-let adjust_env job =
-  let env = job.J.env in
-
-  (* less: should be all_target *)
-  Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
-  (* less: newprereqs *)
-  Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
-  job.J.rule.R.stem |> Common.if_some (fun s ->
-    Hashtbl.replace env.E.internal_vars "stem" [s];
-  );
-
-  env
-@
-
-<<function [[Scheduler.shprint]]>>=
-let shprint env s =
-  let s = 
-    Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
-      (fun _wholestr ->
-        let var = Str.matched_group 1 s in
-        if Hashtbl.mem env.E.internal_vars var
-        then Hashtbl.find env.E.internal_vars var |> String.concat " "
-        else 
-          if Hashtbl.mem env.E.vars_we_set var
-          then Hashtbl.find env.E.vars var |> String.concat " "
-          else Str.matched_string s
-      ) s
-  in
-  Logs.app (fun m -> m "|%s|" s)
-@
-%$
-
-<<function [[Scheduler.dump_job]]>>=
-let dump_job func job pidopt =
-  Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
-         (Unix.getpid())
-         func 
-         (match pidopt with Some pid -> pid | None -> 0)
-         (job.J.target_nodes |> List.map (fun node -> node.G.name) 
-             |> String.concat " "))
-@
-
 
 
 %-------------------------------------------------------------
@@ -3127,13 +3148,11 @@ module Set = Set_
 <<function [[Scheduler.run]]>>
 
 
-
 <<function [[Scheduler.waitup]]>>
 @
 
 
 \subsection*{[[Shellenv.ml]]}
-
 
 
 %-------------------------------------------------------------
@@ -3146,7 +3165,6 @@ open Common
 <<type [[Shellenv.t]]>>
 
 <<function [[Shellenv.read_environment]]>>
-  )
 @
 
 
@@ -3232,25 +3250,6 @@ open Fpath_.Operators
 
 \subsection*{[[Env.mli]]}
 
-<<type [[Env.values (Env.mli)]]>>=
-type values = string list
-@
-
-<<type [[Env.t (Env.mli)]]>>=
-type t = {
-  (* use Env.add_var to populate vars (to check if it's ok) *)
-  vars : (string, values) Hashtbl.t;
-  internal_vars : (string, values) Hashtbl.t;
-  vars_commandline : (string, bool) Hashtbl.t;
-  vars_we_set : (string, bool) Hashtbl.t;
-}
-@
-
-<<exception [[Env.Redefinition (Env.mli)]]>>=
-exception Redefinition of string
-@
-
-
 
 <<signature [[Env.shellenv_of_env]]>>=
 val shellenv_of_env : t -> Shellenv.t
@@ -3268,11 +3267,11 @@ val dump_env : t -> unit
 %-------------------------------------------------------------
 
 <<Env.mli>>=
-<<type [[Env.values (Env.mli)]]>>
+<<type [[Env.values]]>>
 
-<<type [[Env.t (Env.mli)]]>>
+<<type [[Env.t]]>>
 
-<<exception [[Env.Redefinition (Env.mli)]]>>
+<<exception [[Env.Redefinition]]>>
 
 <<signature [[Env.add_var]]>>
 
@@ -3338,30 +3337,6 @@ val str_of_time : float option -> string
 
 \subsection*{[[Graph.mli]]}
 
-<<type [[Graph.node (Graph.mli)]]>>=
-type node = {
-  name : string;
-  mutable arcs : arc list;
-  mutable time : float option;
-  mutable state : build_state;
-  mutable is_virtual : bool;
-  mutable visited : bool;
-  mutable probable : bool;
-}
-@
-
-<<type [[Graph.arc (Graph.mli)]]>>=
-and arc = { dest : node option; rule : Rules.rule_exec }
-@
-
-<<type [[Graph.build_state (Graph.mli)]]>>=
-and build_state = NotMade | BeingMade | Made
-@
-
-<<type [[Graph.t (Graph.mli)]]>>=
-type t = node (* the root *)
-@
-
 <<signature [[Graph.hnodes]]>>=
 val hnodes : (string, node) Hashtbl.t
 @
@@ -3391,12 +3366,12 @@ val dump_graph : t -> unit
 %-------------------------------------------------------------
 
 <<Graph.mli>>=
-<<type [[Graph.node (Graph.mli)]]>>
+<<type [[Graph.node]]>>
 
-<<type [[Graph.arc (Graph.mli)]]>>
-<<type [[Graph.build_state (Graph.mli)]]>>
+<<type [[Graph.arc]]>>
+<<type [[Graph.build_state]]>>
 
-<<type [[Graph.t (Graph.mli)]]>>
+<<type [[Graph.t]]>>
 
 <<signature [[Graph.hnodes]]>>
 
@@ -3435,22 +3410,6 @@ val dump_graph : t -> unit
 
 \subsection*{[[Percent.mli]]}
 
-<<type [[Percent.pattern (Percent.mli)]]>>=
-type pattern = P of pattern_elem list
-@
-
-<<type [[Percent.pattern_elem (Percent.mli)]]>>=
-and pattern_elem = PStr of string | PPercent
-@
-
-<<exception [[Percent.TooManyPercents (Percent.mli)]]>>=
-exception TooManyPercents
-@
-
-<<exception [[Percent.PercentNotFound (Percent.mli)]]>>=
-exception PercentNotFound
-@
-
 <<signature [[Percent.match_]]>>=
 (* return the possible stem *)
 val match_ : pattern -> string -> string option
@@ -3475,12 +3434,11 @@ val check_pattern : pattern -> unit
 %-------------------------------------------------------------
 
 <<Percent.mli>>=
-(* The list must contain at least one element *)
-<<type [[Percent.pattern (Percent.mli)]]>>
-<<type [[Percent.pattern_elem (Percent.mli)]]>>
+<<type [[Percent.pattern]]>>
+<<type [[Percent.pattern_elem]]>>
 
-<<exception [[Percent.TooManyPercents (Percent.mli)]]>>
-<<exception [[Percent.PercentNotFound (Percent.mli)]]>>
+<<exception [[Percent.TooManyPercents]]>>
+<<exception [[Percent.PercentNotFound]]>>
 
 <<signature [[Percent.match_]]>>
 <<signature [[Percent.subst]]>>
@@ -3509,14 +3467,10 @@ val nrunning : int ref
 
 \subsection*{[[Shellenv.mli]]}
 
-<<type [[Shellenv.t (Shellenv.mli)]]>>=
-type t = (string * string list) list
-@
-
 %-------------------------------------------------------------
 
 <<Shellenv.mli>>=
-<<type [[Shellenv.t (Shellenv.mli)]]>>
+<<type [[Shellenv.t]]>>
 
 <<signature [[Shellenv.read_environment]]>>
 @
@@ -3524,15 +3478,11 @@ type t = (string * string list) list
 
 \subsection*{[[Shell.mli]]}
 
-<<type [[Shell.caps (Shell.mli)]]>>=
-type caps = < Cap.fork ; Cap.exec ; Cap.env >
-@
-
 %-------------------------------------------------------------
 
 <<Shell.mli>>=
 
-<<type [[Shell.caps (Shell.mli)]]>>
+<<type [[Shell.caps]]>>
 
 <<signature [[Shell.exec_recipe]]>>
 

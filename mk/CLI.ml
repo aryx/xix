@@ -96,8 +96,14 @@ module R = Rules
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-(* see the .mli for why those caps are needed *)
 (*s: type [[CLI.caps]] *)
+(* Need:
+ *  - fork/exec: obviously as we run shell commands
+ *  - env: for Env.initenv() so mk recipe can access env variables.
+ *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
+ *  - argv: for setting MKFLAGS also in Env.initenv()
+ *  - chdir: actually needed just for -debugger, we could remove
+ *)
 type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
 (*e: type [[CLI.caps]] *)
 
@@ -173,7 +179,6 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 [@@profiling]
 (*e: function [[CLI.build_target]] *)
-
 
 (*s: function [[CLI.build_targets]] *)
 let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =

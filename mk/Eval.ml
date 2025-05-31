@@ -169,7 +169,6 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
   ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
 (*e: function [[Eval.eval_words]] *)
 
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)

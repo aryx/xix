@@ -1,7 +1,7 @@
 (*s: Shellenv.mli *)
-(*s: type [[Shellenv.t (Shellenv.mli)]] *)
+(*s: type [[Shellenv.t]] *)
 type t = (string * string list) list
-(*e: type [[Shellenv.t (Shellenv.mli)]] *)
+(*e: type [[Shellenv.t]] *)
 
 (*s: signature [[Shellenv.read_environment]] *)
 val read_environment : < Cap.env ; .. > -> t

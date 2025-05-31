@@ -17,7 +17,7 @@
 % - found duplicated code?
  
 
-%thx to codemap/codegraph/scheck:
+%thx to codemap/codegraph/scheck (but ocaml does a better job than C here:
 % - TODO use cg to to look at backward deps (but the linker already enforces layers)
 %   (harder to understand non layered code)
 % - TODO use scheck to remove deadcode
@@ -26,7 +26,7 @@
 %   relevant file (or even function), better cluster the code
 %   (harder to understand non functional code using lots of globals)
 
-%thx to this manual, better understand OCaml:
+%thx to this manual, better understand mk/make:
 
 %history LP-ization:
 % - skeleton, mostly copy paste of Template.nw skeleton
@@ -61,18 +61,18 @@
  \newcommand{\otoprule}{\midrule[\heavyrulewidth]}
 \usepackage{graphicx}
 
-\input{../../docs/latex/Config}
-\usepackage{../../docs/latex/noweb}
+\input{latex/Config}
+\usepackage{latex/noweb}
  \noweboptions{footnotesizecode,nomargintag}
  %note: allow chunk on different pages, less white space at bottom of pages
  \def\nwendcode{\endtrivlist \endgroup}
  \let\nwdocspar=\par
-\usepackage{../../docs/latex/syncweb}
+\usepackage{latex/syncweb}
 
 %------------------------------------------------------------------------------
 % Macros
 %------------------------------------------------------------------------------
-\input{../../docs/latex/Macros}
+\input{latex/Macros}
 
 %------------------------------------------------------------------------------
 % Config
@@ -260,10 +260,115 @@ in Chapter~\ref{chap:core-ds}.
 
 
 \chapter{Core Data Structures}
+\label{chap:core-ds}
 
-\section{[[Word]]s}
+\begin{verse}
+\begin{flushright}
+  {\it Show me your code and conceal your data structures, and I shall
+    continue to be mystified. Show me your data structures, and I
+    won't usually need your code; it'll be obvious.\\
+    ~\\
+    Fred Brooks}
+\end{flushright}
+\end{verse}
+
+%toc:
+
+
+\section{[[words]]}
+
+<<type [[Ast.word]]>>=
+type word = W of word_element list
+@
+
+<<type [[Ast.word_element]]>>=
+  and word_element =
+    | String of string (* except the empty string *)
+    | Percent
+  
+    (* evaluated in eval.ml just after parsing *)
+    | Var of var
+     (* stricter: backquotes are allowed only in word context, not at toplevel
+      * so no `echo '<foo.c'` *)
+     (* `...` or `{...} (the string does not include the backquote or braces) *)
+    | Backquoted of string
+@
+
+<<type [[Ast.var]]>>=
+     and var = 
+      (* $name or ${name} (the string does not contain the $ or {}) *)
+      | SimpleVar of string
+      (* ${name:a%b=c%d} *)
+      | SubstVar of (string * word * word list)
+@
+
+<<type [[Ast.words]]>>=
+type words = word list
+[@@deriving show]
+@
+
 
 \section{Rules}
+
+<<type [[Ast.recipe]]>>=
+type recipe = R of string list
+[@@deriving show {with_path = false}]
+@
+
+<<type [[Ast.rule]]>>=
+type rule = {
+  targets: words;
+  prereqs: words;
+  attrs: rule_attribute list;
+  recipe: recipe option;
+}
+@
+
+<<type [[Ast.rule_attribute]]>>=
+  and rule_attribute = 
+    | Virtual
+    | Quiet
+    | Delete
+    | Interactive (* pad: I added this one *)
+    | NotHandled of char
+@
+
+<<type [[Ast.loc]]>>=
+type loc = {
+  file: Fpath.t; (* an mkfile *)
+  line: int;
+}
+[@@deriving show {with_path = false}]
+@
+
+<<type [[Ast.instr]]>>=
+type instr = {
+  instr: instr_kind;
+  loc: loc;
+}
+@
+
+<<type [[Ast.instr_kind]]>>=
+  and instr_kind =
+    (* should resolve to a single filename
+     * less: could enforce of word? *)
+    | Include of words
+    (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
+     * less: we could also do PipeInclude of recipe I think *)
+    | PipeInclude of words
+
+    | Rule of rule
+
+    (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
+     * so 'string' below, not 'word' *)
+    | Definition of string * words
+@
+%$
+
+<<type [[Ast.instrs]]>>=
+type instrs = instr list
+[@@deriving show]
+@
 
 \section{Graph}
 
@@ -364,107 +469,23 @@ in Chapter~\ref{chap:core-ds}.
 \section{The [[mkfile]] of [[mk]]}
 
 \section{The [[mkfile]]s of \plan}
-  
+
 \chapter{Extra Code}
+
+%\chapter{Changelog}
+% code via make loc = ? LOC, after full lpized ? LOC
+% orig Mk.nw = ? LOC, after full lpized and comments in sections ??
+% now: ? LOC so added ?? LOE (Lines of explanations)
+% mk in C: ? LOC (but not all features: no archive, no :P, etc)
 
 \section{[[./]]}
 
 \subsection*{[[Ast.ml]]}
 
-<<type [[Ast.word]]>>=
-type word = W of word_element list
-@
-
-<<type [[Ast.word_element]]>>=
-  and word_element =
-    | String of string (* except the empty string *)
-    | Percent
-  
-    (* evaluated in eval.ml just after parsing *)
-    | Var of var
-     (* stricter: backquotes are allowed only in word context, not at toplevel
-      * so no `echo '<foo.c'` *)
-     (* `...` or `{...} (the string does not include the backquote or braces) *)
-    | Backquoted of string
-@
-
-<<type [[Ast.var]]>>=
-     and var = 
-      (* $name or ${name} (the string does not contain the $ or {}) *)
-      | SimpleVar of string
-      (* ${name:a%b=c%d} *)
-      | SubstVar of (string * word * word list)
-@
-
-<<type [[Ast.words]]>>=
-type words = word list
-[@@deriving show]
-@
-
-<<type [[Ast.recipe]]>>=
-type recipe = R of string list
-[@@deriving show {with_path = false}]
-@
-
-<<type [[Ast.rule]]>>=
-type rule = {
-  targets: words;
-  prereqs: words;
-  attrs: rule_attribute list;
-  recipe: recipe option;
-}
-@
-
-<<type [[Ast.rule_attribute]]>>=
-  and rule_attribute = 
-    | Virtual
-    | Quiet
-    | Delete
-    | Interactive (* pad: I added this one *)
-    | NotHandled of char
-@
-
-<<type [[Ast.loc]]>>=
-type loc = {
-  file: Fpath.t; (* an mkfile *)
-  line: int;
-}
-[@@deriving show {with_path = false}]
-@
-
-<<type [[Ast.instr]]>>=
-type instr = {
-  instr: instr_kind;
-  loc: loc;
-}
-@
-
-<<type [[Ast.instr_kind]]>>=
-  and instr_kind =
-    (* should resolve to a single filename
-     * less: could enforce of word? *)
-    | Include of words
-    (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
-     * less: we could also do PipeInclude of recipe I think *)
-    | PipeInclude of words
-
-    | Rule of rule
-
-    (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
-     * so 'string' below, not 'word' *)
-    | Definition of string * words
-@
-%$
-
 <<function [[Ast.show_instrs]]>>=
 (* for boostrap-mk.sh and ocaml-light to work without deriving *)
 let show_instrs _ = "NO DERIVING"
 [@@warning "-32"]
-@
-
-<<type [[Ast.instrs]]>>=
-type instrs = instr list
-[@@deriving show]
 @
 
 <<function [[Ast.dump_ast]]>>=

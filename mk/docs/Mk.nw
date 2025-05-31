@@ -1,5 +1,5 @@
 \documentclass[12pt]{report}
-%12pt, twocolumn, landscape
+%alt: [12pt, twocolumn, landscape]
 
 %******************************************************************************
 % Prelude
@@ -15,7 +15,6 @@
 %thx to LP, I changed for the better a few things:
 % - found deadcode ?
 % - found duplicated code?
-% - TODO: split Ast.ml in Rule.ml
  
 
 %thx to codemap/codegraph/scheck (but ocaml does a better job than C here:
@@ -129,6 +128,9 @@ Documentation License, Version 1.3.
 \chapter{Introduction}
 
 #include "Intro.nw"
+
+%\chapter{Overview}
+% now in Intro.nw too
 
 \section{Code organization}
 
@@ -299,6 +301,8 @@ type word = W of word_element list
      (* `...` or `{...} (the string does not include the backquote or braces) *)
     | Backquoted of string
 @
+%LP: move Backquoted out
+% move Var later? in Variables section?
 
 <<type [[Ast.var]]>>=
      and var = 
@@ -307,6 +311,7 @@ type word = W of word_element list
       (* ${name:a%b=c%d} *)
       | SubstVar of (string * word * word list)
 @
+%LP: move SubstVar out
 
 <<type [[Ast.words]]>>=
 (* Words are separated by spaces. See also Env.values *)
@@ -314,79 +319,7 @@ type words = word list
 @
 
 
-\section{Rules}
-
-<<type [[Ast.rule]]>>=
-type rule = {
-  targets: words;
-  prereqs: words;
-  attrs: rule_attribute list;
-  recipe: recipe option;
-}
-@
-
-<<type [[Ast.recipe]]>>=
-(* (the strings do not contain the leading space nor trailing newline) *)
-type recipe = R of string list
-@
-
-<<type [[Ast.rule_attribute]]>>=
-  and rule_attribute = 
-    | Virtual
-    | Quiet
-    | Delete
-    | Interactive (* pad: I added this one *)
-    | NotHandled of char
-@
-
-
-
-<<type [[Rules.rule]]>>=
-type 'a rule = {
-  targets: 'a list;
-  prereqs: 'a list;
-
-  attrs: Ast.rule_attribute Set_.t;
-  recipe: Ast.recipe option;
-
-  loc: Ast.loc;
-}
-@
-
-<<type [[Rules.rules]]>>=
-type rules = {
-  (* use Hashtbl.find_all because a target can be associated to many rules *)
-  simples: (string, string rule) Hashtbl.t;
-
-  metas: (Percent.pattern rule) list;
-}
-@
-
-<<type [[Rules.rule_exec]]>>=
-type rule_exec = {
-  recipe2: Ast.recipe option;
-  attrs2: Ast.rule_attribute Set_.t;
-  loc2: Ast.loc;
-
-  stem: string option;
-
-  all_targets: string list;
-  all_prereqs: string list;
-}
-@
-
-<<function [[Rules.has_recipe]]>>=
-(* helpers *)
-let has_recipe re =
-  re.recipe2 <> None
-@
-
-<<function [[Rules.is_meta]]>>=
-let is_meta re =
-  re.stem <> None
-@
-
-\section{AST}
+\section{Parsed rules}
 
 <<type [[Ast.instr]]>>=
 type instr = {
@@ -419,12 +352,42 @@ type loc = {
     | Definition of string * words
 @
 %$
+%alt: move later include, PipInclude
+%LP: PipeInclude later, and maybe Definition later with Variables section!
 
 <<type [[Ast.instrs]]>>=
 type instrs = instr list
 @
 
-\section{Environment}
+<<type [[Ast.rule]]>>=
+type rule = {
+  targets: words;
+  prereqs: words;
+  attrs: rule_attribute list;
+  recipe: recipe option;
+}
+@
+%LP: aspecify attrs
+
+<<type [[Ast.recipe]]>>=
+(* (the strings do not contain the leading space nor trailing newline) *)
+type recipe = R of string list
+@
+
+<<type [[Ast.rule_attribute]]>>=
+  and rule_attribute = 
+    | Virtual
+    | Quiet
+    | Delete
+    | Interactive (* pad: I added this one *)
+    | NotHandled of char
+@
+%LP: move later (and aspectize cases)
+
+\section{Variables}
+%alt: Environment
+
+% vars, feature 1 of DSL!
 
 <<type [[Env.t]]>>=
 type t = {
@@ -437,6 +400,7 @@ type t = {
   vars_we_set: (string, bool) Hashtbl.t;
 }
 @
+%LP: aspectize all except vars
 
 <<type [[Env.values]]>>=
 (* Content of variables (after full expansion and backquote resolution).
@@ -455,19 +419,8 @@ let mk_vars = [
   *)
 ]
 @
-
-<<function [[Env.check_values]]>>=
-(* invariant *)
-let check_values xs = 
-  xs |> List.iter (fun s ->
-    if s = ""
-    then raise (Impossible (spf "empty string in values"))
-  )
-@
-
-<<exception [[Env.Redefinition]]>>=
-exception Redefinition of string
-@
+%LP: used fpr vars_we_set?
+%    split move stem later
 
 <<signature [[Env.add_var]]>>=
 val add_var : t -> string -> values -> unit
@@ -494,6 +447,50 @@ let add_var env s xs =
     Hashtbl.replace env.vars s xs
 @
 
+
+<<exception [[Env.Redefinition]]>>=
+exception Redefinition of string
+@
+
+<<function [[Env.check_values]]>>=
+(* invariant *)
+let check_values xs = 
+  xs |> List.iter (fun s ->
+    if s = ""
+    then raise (Impossible (spf "empty string in values"))
+  )
+@
+
+\section{Patterns}
+
+% patterns, feature 2 of DSL
+
+\section{Evaluated rules}
+
+% already seen parsed rule, but now after 'eval'uation of vars and "parsing"
+% of patterns
+
+<<type [[Rules.rule]]>>=
+type 'a rule = {
+  targets: 'a list;
+  prereqs: 'a list;
+
+  attrs: Ast.rule_attribute Set_.t;
+  recipe: Ast.recipe option;
+
+  loc: Ast.loc;
+}
+@
+% Diff with AST.rule?? Evaluated!
+
+<<type [[Rules.rules]]>>=
+type rules = {
+  (* use Hashtbl.find_all because a target can be associated to many rules *)
+  simples: (string, string rule) Hashtbl.t;
+
+  metas: (Percent.pattern rule) list;
+}
+@
 
 \section{Graph}
 
@@ -530,6 +527,7 @@ type node = {
 
 }
 @
+%LP: aspectize and split
 
 <<type [[Graph.arc]]>>=
   and arc = {
@@ -548,6 +546,33 @@ type node = {
     | BeingMade
     | Made
 @
+
+
+<<type [[Rules.rule_exec]]>>=
+type rule_exec = {
+  recipe2: Ast.recipe option;
+  attrs2: Ast.rule_attribute Set_.t;
+  loc2: Ast.loc;
+
+  stem: string option;
+
+  all_targets: string list;
+  all_prereqs: string list;
+}
+@
+%alt: move later?
+<<function [[Rules.has_recipe]]>>=
+(* helpers *)
+let has_recipe re =
+  re.recipe2 <> None
+@
+<<function [[Rules.is_meta]]>>=
+let is_meta re =
+  re.stem <> None
+@
+
+
+
 
 <<type [[Graph.t]]>>=
 type t = node (* the root *)
@@ -668,7 +693,7 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 
 \section{[[main()]] skeleton}
 
-<<type [[CLI.caps (CLI.mli)]]>>=
+<<type [[CLI.caps]]>>=
 (* Need:
  *  - fork/exec: obviously as we run shell commands
  *  - env: for Env.initenv() so mk recipe can access env variables.
@@ -678,21 +703,11 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
  *)
 type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
 @
+%TODO: delete chdir and -debugger?
 
 <<signature [[CLI.main]]>>=
 (* entry point (can also raise Exit.ExitCode) *)
 val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
-@
-
-<<signature [[CLI.build_target]]>>=
-(* main algorithm *)
-val build_target :
-  caps -> Env.t -> Rules.rules -> string (* target *) -> unit                                                       
-@
-
-<<signature [[CLI.build_targets]]>>=
-val build_targets :
-  caps -> Fpath.t -> string list ref -> (string*string) list -> unit
 @
 
 
@@ -812,6 +827,24 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
       )
 @
 %$
+%LP: split
+
+<<constant [[CLI.usage]]>>=
+let usage =
+  "usage: mk [-f file] [options] [targets ...]"
+@
+
+<<signature [[CLI.build_target]]>>=
+(* main algorithm *)
+val build_target :
+  caps -> Env.t -> Rules.rules -> string (* target *) -> unit                                                       
+@
+
+<<signature [[CLI.build_targets]]>>=
+val build_targets :
+  caps -> Fpath.t -> string list ref -> (string*string) list -> unit
+@
+
 
 \section{[[mk -]]{\em flag} arguments processing}
 
@@ -822,60 +855,6 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
 \section{Using the [[mkfile]] or [[mk -f]]{\em file}}
 
 \section{Building the target(s)}
-
-<<function [[CLI.build_target]]>>=
-let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
-
-   let root = Graph.build_graph target rules in
-
-   (* could do that after the checks *)
-   if !Flags.dump_graph 
-   then Graph.dump_graph root;
-   
-   let ever_did = ref false in
-
-   while root.G.state = G.NotMade do
-     let did = ref false in
-
-     (* may call internally Scheduler.run to schedule jobs and may
-      * raise some Failure (e.g., "don't know how to make xxx")
-      *)
-     Outofdate.work caps env root did;
-
-     if !did 
-     then ever_did := true
-     else 
-       (* no work possible, let's wait for a job process to finish *)
-       if !Scheduler.nrunning > 0
-       then Scheduler.waitup caps ()
-       (* else: impossible? *)
-   done;
-
-   (* bugfix: root can be BeingMade in which case we need to wait *)
-   while !Scheduler.nrunning > 0 do
-     Scheduler.waitup caps ();
-   done;
-   
-   if not !ever_did
-   then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
-[@@profiling]
-@
-
-<<signature [[Outofdate.work]]>>=
-(* work() may call internally Scheduler.run() to schedule jobs.
- * It will also modify by side effect the graph to set to 
- * Made or BeingMade some nodes.
- * May raise Failure ("don't know how to make xxx" | "no recipe to make xxx")
- *)
-val work :
-  < Shell.caps ; .. > ->
-  Env.t ->
-  Graph.node ->
-  bool ref (* OUT parameter, did anything *) ->
-  unit
-@
-
-
 
 <<function [[CLI.build_targets]]>>=
 let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
@@ -917,6 +896,73 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     )
 [@@profiling]
 @
+%LP: aspect debug flags
+
+
+<<function [[CLI.build_target]]>>=
+let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
+
+   let root = Graph.build_graph target rules in
+
+   (* could do that after the checks *)
+   if !Flags.dump_graph 
+   then Graph.dump_graph root;
+   
+   let ever_did = ref false in
+
+   while root.G.state = G.NotMade do
+     let did = ref false in
+
+     (* may call internally Scheduler.run to schedule jobs and may
+      * raise some Failure (e.g., "don't know how to make xxx")
+      *)
+     Outofdate.work caps env root did;
+
+     if !did 
+     then ever_did := true
+     else 
+       (* no work possible, let's wait for a job process to finish *)
+       if !Scheduler.nrunning > 0
+       then Scheduler.waitup caps ()
+       (* else: impossible? *)
+   done;
+
+   (* bugfix: root can be BeingMade in which case we need to wait *)
+   while !Scheduler.nrunning > 0 do
+     Scheduler.waitup caps ();
+   done;
+   
+   if not !ever_did
+   then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
+[@@profiling]
+@
+%LP: aspect debug flags
+
+<<signature [[Graph.build_graph]]>>=
+(* !will also modify hnode! *)
+val build_graph : string (* target *) -> Rules.rules -> t
+@
+
+
+<<signature [[Outofdate.work]]>>=
+(* work() may call internally Scheduler.run() to schedule jobs.
+ * It will also modify by side effect the graph to set to 
+ * Made or BeingMade some nodes.
+ * May raise Failure ("don't know how to make xxx" | "no recipe to make xxx")
+ *)
+val work :
+  < Shell.caps ; .. > ->
+  Env.t ->
+  Graph.node ->
+  bool ref (* OUT parameter, did anything *) ->
+  unit
+@
+
+<<signature [[Scheduler.waitup]]>>=
+val waitup : < Shell.caps ; Cap.env; .. > -> unit -> unit
+@
+
+
 
 \chapter{Parsing the [[mkfile]]}
 
@@ -927,6 +973,8 @@ let line = ref 1
 <<constant [[Globals.file]]>>=
 let file = ref "<nofile>"
 @
+
+\section{[[parse()]]}
 
 <<signature [[Parse.parse]]>>=
 (* !internally modifies Globals.line and Globals.file! *)
@@ -964,13 +1012,22 @@ let parse (file : Fpath.t) =
   )
 @
 
+\section{Lexer}
+
+%LP: lpize Lexer.mll
+
+\section{Grammar}
+
+%LP: lpize Parser.mly
+
+\chapter{Evaluating}
+
+% not a full interpreter, so "evaluating", just vars basically
+
+
 
 \chapter{Building the Graph of Dependencies}
 
-<<signature [[Graph.build_graph]]>>=
-(* !will also modify hnode! *)
-val build_graph : string (* target *) -> Rules.rules -> t
-@
 
 <<function [[Graph.build_graph]]>>=
 let build_graph target rules =
@@ -988,6 +1045,7 @@ let build_graph target rules =
    
   root
 @
+%LP: aspectize
 
 
 <<function [[Graph.apply_rules]]>>=
@@ -1056,15 +1114,15 @@ let rec apply_rules target rules =
     node
   end
 @
-
-
-\section{}
+%LP: split and distribute to below
 
 \section{Finding the simple rule(s) for a target}
 
 \section{Finding matching metarules}
 
 \section{Checking the graph and the rules}
+
+%LP: section like in Make.nw for each check
 
 <<function [[Graph.error_cycle]]>>=
 let error_cycle node trace =
@@ -1203,8 +1261,6 @@ let outofdate node arc =
        | Some t1, Some t2 -> t1 < t2
        )
 @
-
-\section{}
 
 \section{Exploring the graph: [[work()]]}
 
@@ -1397,6 +1453,7 @@ let sched (caps : < Shell.caps; .. >) () =
   with Queue.Empty ->
     raise (Impossible "no jobs to schedule")
 @
+%LP: split and aspectize
 
 <<signature [[Scheduler.run]]>>=
 (* need Cap.env for NPROC *)
@@ -1414,7 +1471,7 @@ let run (caps : < Shell.caps; .. >) job =
   then sched caps ()
 @
 
-\section{Executing Jobs: [[execsh()]]}
+\section{Executing Jobs: [[exec_shell()]]}
 
 
 
@@ -1547,7 +1604,7 @@ val exec_backquote :
   string (* sh stdin (recipe) *) ->
   string (* sh output *)
 @
-
+%LP: later
 <<function [[Shell.exec_backquote]]>>=
 let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
@@ -1600,8 +1657,7 @@ val exec_pipecmd :
   string (* sh stdin (recipe) *) ->
   Common.filename (* sh output*)
 @
-
-
+%LP: later
 <<function [[Shell.exec_pipecmd]]>>=
 let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
   let tmpfile = Filename.temp_file "mk" "sh" in
@@ -1640,10 +1696,6 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
 @
 
 \section{Waiting for jobs to finish}
-
-<<signature [[Scheduler.waitup]]>>=
-val waitup : < Shell.caps ; Cap.env; .. > -> unit -> unit
-@
 
 <<function [[Scheduler.waitup]]>>=
 let waitup (caps : < Shell.caps; .. >) () =
@@ -1699,7 +1751,7 @@ let waitup (caps : < Shell.caps; .. >) () =
 <<type [[Shellenv.t]]>>=
 type t = (string * string list) list
 @
-
+%alt: move in Core DS chapter
 
 <<signature [[Shellenv.read_environment]]>>=
 val read_environment : < Cap.env ; .. > -> t
@@ -1780,26 +1832,51 @@ let dry_mode = ref false
 
 \section{What-if mode: [[mk -w]]{\em file}}
 
-\section{Processor utilization: [[mk -u]]}
+%\section{Processor utilization: [[mk -u]]}
 
 \chapter{Advanced Features}
-
-\section{}
-
-\section{}
-
-\section{}
-
-\section{}
-
-\section{}
 
 \chapter{Conclusion}
 
 \appendix
 
-
 \chapter{Debugging}
+
+<<function [[Ast.dump_ast]]>>=
+let dump_ast instrs =
+  Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
+@
+
+<<function [[Env.dump_env]]>>=
+let dump_env env =
+  Logs.debug (fun m -> m "Dump_env:");
+  env.vars |> Hashtbl.iter (fun k v ->
+    Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
+@
+
+<<function [[CLI.do_action]]>>=
+(* to test the different mk components *)
+let do_action caps s xs =
+  match s with
+  | "-test_parser" ->
+      xs |> List.iter (fun file ->
+        Logs.info (fun m -> m "processing %s" file);
+        let instrs = Parse.parse (Fpath.v file) in
+        Console.print caps (spf "%s" (Ast.show_instrs instrs))
+      )
+  | "-test_eval" ->
+      xs |> List.iter (fun file ->
+        Logs.info (fun m -> m "processing %s" file);
+        let env = Env.initenv caps in
+        let instrs = Parse.parse (Fpath.v file) in
+        let _rules, env = Eval.eval caps env (ref []) instrs in
+        Env.dump_env env;
+        ()
+      )
+  | _ -> failwith ("action not supported: " ^ s)
+  )
+@
+
 
 \chapter{Examples of [[mkfile]]s}
 
@@ -1825,12 +1902,6 @@ let show_instrs _ = "NO DERIVING"
 [@@warning "-32"]
 @
 
-<<function [[Ast.dump_ast]]>>=
-let dump_ast instrs =
-  Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
-@
-
-
 %-------------------------------------------------------------
 
 <<Ast.ml>>=
@@ -1845,7 +1916,6 @@ let dump_ast instrs =
 
 <<type [[Ast.words]]>>
 [@@deriving show]
-
 
 <<type [[Ast.recipe]]>>
 [@@deriving show {with_path = false}]
@@ -1873,37 +1943,6 @@ let dump_ast instrs =
 
 
 \subsection*{[[CLI.ml]]}
-
-<<type [[CLI.caps]]>>=
-type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
-@
-
-<<constant [[CLI.usage]]>>=
-let usage =
-  "usage: mk [-f file] [options] [targets ...]"
-@
-
-<<function [[CLI.do_action]]>>=
-(* to test the different mk components *)
-let do_action caps s xs =
-  match s with
-  | "-test_parser" ->
-      xs |> List.iter (fun file ->
-        Logs.info (fun m -> m "processing %s" file);
-        let instrs = Parse.parse (Fpath.v file) in
-        Console.print caps (spf "%s" (Ast.show_instrs instrs))
-      )
-  | "-test_eval" ->
-      xs |> List.iter (fun file ->
-        Logs.info (fun m -> m "processing %s" file);
-        let env = Env.initenv caps in
-        let instrs = Parse.parse (Fpath.v file) in
-        let _rules, env = Eval.eval caps env (ref []) instrs in
-        Env.dump_env env;
-        ()
-      )
-  | _ -> failwith ("action not supported: " ^ s)
-@
 
 
 
@@ -2007,7 +2046,6 @@ module R = Rules
 (* Types, constants, and globals *)
 (*****************************************************************************)
 
-(* see the .mli for why those caps are needed *)
 <<type [[CLI.caps]]>>
 
 <<constant [[CLI.usage]]>>
@@ -2024,7 +2062,6 @@ module R = Rules
 
 <<function [[CLI.build_target]]>>
 
-
 <<function [[CLI.build_targets]]>>
 
 (*****************************************************************************)
@@ -2036,14 +2073,6 @@ module R = Rules
 
 
 \subsection*{[[Env.ml]]}
-
-
-<<function [[Env.dump_env]]>>=
-let dump_env env =
-  Logs.debug (fun m -> m "Dump_env:");
-  env.vars |> Hashtbl.iter (fun k v ->
-    Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
-@
 
 
 %-------------------------------------------------------------
@@ -2076,7 +2105,6 @@ open Common
 (* Debug *)
 (*****************************************************************************)
 <<function [[Env.dump_env]]>>
-  )
 
 (*****************************************************************************)
 (* Functions *)
@@ -3193,7 +3221,7 @@ open Fpath_.Operators
 
 <<CLI.mli>>=
 
-<<type [[CLI.caps (CLI.mli)]]>>
+<<type [[CLI.caps]]>>
 
 <<signature [[CLI.main]]>>
 

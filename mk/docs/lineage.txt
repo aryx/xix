@@ -1,1 +1,1 @@
-/home/pad/principia/builders/lineage.txt
+../../principia/builders/lineage.txt

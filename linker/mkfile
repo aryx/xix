@@ -1,7 +1,7 @@
 # -*- sh -*-
 
 TOP=..
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/formats/objects -I $TOP/formats/executables
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_toolchain/objects -I $TOP/lib_toolchain/executables
 
 SRC= flags.ml\
  types.ml types5.ml meta_types5.ml \
@@ -10,7 +10,7 @@ SRC= flags.ml\
  executable.ml main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/formats/objects/lib.cma $TOP/formats/executables/lib.cma
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_toolchain/objects/lib.cma $TOP/lib_toolchain/executables/lib.cma
 
 # or use Principia spirit! THE linker! so call it simply 'linker' ? :)
 PROG=5l

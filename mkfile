@@ -5,8 +5,8 @@ DIRS1=\
   mk shell\
   lib_parsing lex yacc\
   macroprocessor\
-  formats/objects assembler\
-  formats/executables linker\
+  lib_toolchain/objects assembler\
+  lib_toolchain/executables linker\
   compiler \
   version_control
 

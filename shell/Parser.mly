@@ -1,3 +1,4 @@
+/*(*s: Parser.mly *)*/
 %{
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
@@ -243,3 +244,5 @@ tnot_skipnl: TNot   { Globals.skipnl := true; }
 word_skipnl: word   { Globals.skipnl := true; $1 }
 
 tcpar_skipnl: TCPar { Globals.skipnl := true; }
+
+/*(*e: Parser.mly *)*/

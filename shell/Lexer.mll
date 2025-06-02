@@ -1,3 +1,4 @@
+(*s: Lexer.mll *)
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -72,15 +73,15 @@ rule token = parse
   | ">>" { TRedir Ast.RAppend }
   | ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
          {  let fd0 = failwith "TODO: fd0" in
-	    let fd1 = failwith "TODO: fd1" in
-	    TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
-	 }
+     let fd1 = failwith "TODO: fd1" in
+     TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
+  }
   | ">>[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
          {
              let fd0 = failwith "TODO: fd0" in
-	     let fd1 = failwith "TODO: fd1" in
-	     TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
-	 }
+      let fd1 = failwith "TODO: fd1" in
+      TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
+  }
   (* less: advanced pipe and redirection *)
 
   | '('  { TOPar }   | ')' { TCPar }
@@ -146,3 +147,5 @@ and quote = parse
   | [^'\'' '\n']+ { let s = Lexing.lexeme lexbuf in s ^ quote lexbuf }
   (* stricter: generate error *)
   | eof { error "unterminated quote" }
+
+(*e: Lexer.mll *)

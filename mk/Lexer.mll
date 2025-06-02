@@ -1,3 +1,4 @@
+(*s: Lexer.mll *)
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -239,3 +240,5 @@ and recipe = parse
   | [^ '#' ' ' '\t']    { state_ := Start; yyback 1 lexbuf; TEndRecipe }
   | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
   | _ {error "unrecognized character in recipe" }
+
+(*e: Lexer.mll *)

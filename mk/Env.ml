@@ -22,11 +22,14 @@ type values = string list
 type t = {
   (* use Env.add_var to add a var (to check if it's ok) *)
   vars         : (string, values) Hashtbl.t;
+  (*s: [[Env.t]] fields *)
   internal_vars: (string, values) Hashtbl.t;
-
+  (*x: [[Env.t]] fields *)
   (* those vars can not be overriden by the mkfile *)
   vars_commandline: (string, bool) Hashtbl.t;
+  (*x: [[Env.t]] fields *)
   vars_we_set: (string, bool) Hashtbl.t;
+  (*e: [[Env.t]] fields *)
 }
 (*e: type [[Env.t]] *)
 
@@ -36,8 +39,7 @@ let mk_vars = [
   "prereq";
   "stem";
 
-  (* todo: alltargets, newprereq ... 
-  *)
+  (* todo: alltargets, newprereq ... *)
 ]
 (*e: constant [[Env.mk_vars]] *)
 
@@ -56,11 +58,13 @@ exception Redefinition of string
 (*s: function [[Env.add_var]] *)
 let add_var env s xs = 
   match () with
+  (*s: [[Env.add_var()]] ignore def if overriden on the command-line *)
   | _ when Hashtbl.mem env.vars_commandline s ->
     (* we do not override those vars *)
     Logs.info (fun m -> m "ignoring definition of %s specified on the command-line" s);
     ()
-
+  (*e: [[Env.add_var()]] ignore def if overriden on the command-line *)
+  (*s: [[Env.add_var()]] forbid redefinition in strict mode *)
   (* stricter: forbid redefinitions.
    * (bug: but ok to redefine variable from environment, otherwise
    *  hard to use mk recursively, hence the use of vars_we_set below)
@@ -70,6 +74,7 @@ let add_var env s xs =
   | _ when Hashtbl.mem env.vars s && Hashtbl.mem env.vars_we_set s 
       && !Flags.strict_mode ->
     raise (Redefinition s)
+  (*e: [[Env.add_var()]] forbid redefinition in strict mode *)
   | _ ->
     Hashtbl.replace env.vars s xs
 (*e: function [[Env.add_var]] *)

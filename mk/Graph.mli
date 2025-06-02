@@ -11,25 +11,23 @@ type node = {
    * and a recipe), so 'arcs' is a better field name.
    *)
   mutable arcs: arc list;
-
+  (*s: [[Graph.node]] other fields *)
   (* None for inexistent files (and virtual targets).
    * mutable because it will be updated once the target is generated
    * (or when we discover a target is a virtual node).
    *)
   mutable time: float option;
-
+  (*x: [[Graph.node]] other fields *)
   mutable state: build_state;
-
-  mutable is_virtual: bool;
-
+  (*x: [[Graph.node]] other fields *)
   (* used only for check_cycle for now *)
   mutable visited: bool;
+  (*x: [[Graph.node]] other fields *)
   (* used for vacuous *)
   mutable probable: bool;
-
-  (* todo: other flags? *)
-
-
+  (*x: [[Graph.node]] other fields *)
+  mutable is_virtual: bool;
+  (*e: [[Graph.node]] other fields *)
 }
 (*e: type [[Graph.node]] *)
 
@@ -39,8 +37,10 @@ type node = {
      * arcs may point to the same node. 
      *)
     dest: node option;
+    (*s: [[Graph.arc]] other fields *)
     (* what we need from the rule to execute a recipe (and report errors) *)
     rule: Rules.rule_exec;
+    (*e: [[Graph.arc]] other fields *)
   }
 (*e: type [[Graph.arc]] *)
 (*s: type [[Graph.build_state]] *)

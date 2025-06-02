@@ -14,21 +14,25 @@ type word = W of word_element list
   and word_element =
     | String of string (* except the empty string *)
     | Percent
-  
+    (*s: [[Ast.word_element]] cases *)
     (* evaluated in eval.ml just after parsing *)
     | Var of var
+    (*x: [[Ast.word_element]] cases *)
      (* stricter: backquotes are allowed only in word context, not at toplevel
       * so no `echo '<foo.c'` *)
      (* `...` or `{...} (the string does not include the backquote or braces) *)
     | Backquoted of string
+    (*e: [[Ast.word_element]] cases *)
 (*e: type [[Ast.word_element]] *)
 
 (*s: type [[Ast.var]] *)
-     and var = 
-      (* $name or ${name} (the string does not contain the $ or {}) *)
-      | SimpleVar of string
-      (* ${name:a%b=c%d} *)
-      | SubstVar of (string * word * word list)
+and var = 
+ (* $name or ${name} (the string does not contain the $ or {}) *)
+| SimpleVar of string
+(*s: [[Ast.var]] cases *)
+ (* ${name:a%b=c%d} *)
+| SubstVar of (string * word * word list)
+(*e: [[Ast.var]] cases *)
 (*e: type [[Ast.var]] *)
 [@@deriving show  {with_path = false}]
 
@@ -49,17 +53,21 @@ type recipe = R of string list
 type rule = {
   targets: words;
   prereqs: words;
-  attrs: rule_attribute list;
   recipe: recipe option;
+  (*s: [[Ast.rule]] other fields *)
+  attrs: rule_attribute list;
+  (*e: [[Ast.rule]] other fields *)
 }
 (*e: type [[Ast.rule]] *)
 (*s: type [[Ast.rule_attribute]] *)
-  and rule_attribute = 
-    | Virtual
-    | Quiet
-    | Delete
-    | Interactive (* pad: I added this one *)
-    | NotHandled of char
+and rule_attribute =
+(*s: [[Ast.rule_attribute]] cases *)
+| Virtual
+(*e: [[Ast.rule_attribute]] cases *)
+| Quiet
+| Delete
+| Interactive (* pad: I added this one *)
+| NotHandled of char
 (*e: type [[Ast.rule_attribute]] *)
 [@@deriving show {with_path = false}]
 
@@ -81,18 +89,20 @@ type instr = {
 
 (*s: type [[Ast.instr_kind]] *)
   and instr_kind =
+    | Rule of rule
+
     (* should resolve to a single filename
      * less: could enforce of word? *)
     | Include of words
-    (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
-     * less: we could also do PipeInclude of recipe I think *)
-    | PipeInclude of words
-
-    | Rule of rule
-
+    (*s: [[Ast.instr_kind]] cases *)
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
      * so 'string' below, not 'word' *)
     | Definition of string * words
+    (*x: [[Ast.instr_kind]] cases *)
+    (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
+     * less: we could also do PipeInclude of recipe I think *)
+    | PipeInclude of words
+    (*e: [[Ast.instr_kind]] cases *)
 (*e: type [[Ast.instr_kind]] *)
 [@@deriving show {with_path = false}]
 

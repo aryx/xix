@@ -10,11 +10,14 @@ type values = string list
 type t = {
   (* use Env.add_var to add a var (to check if it's ok) *)
   vars         : (string, values) Hashtbl.t;
+  (*s: [[Env.t]] fields *)
   internal_vars: (string, values) Hashtbl.t;
-
+  (*x: [[Env.t]] fields *)
   (* those vars can not be overriden by the mkfile *)
   vars_commandline: (string, bool) Hashtbl.t;
+  (*x: [[Env.t]] fields *)
   vars_we_set: (string, bool) Hashtbl.t;
+  (*e: [[Env.t]] fields *)
 }
 (*e: type [[Env.t]] *)
 

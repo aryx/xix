@@ -81,6 +81,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
          let ys =
            match vkind with
            | A.SimpleVar _ -> ys
+           (*s: [[Eval.eval_word()]] match [[vkind]] cases *)
            | A.SubstVar (_, pattern, substs) -> 
                (* recurse! pattern can contain some variable *)
                let pattern = eval_word caps loc env pattern in
@@ -103,6 +104,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
                  error loc 
                    "pattern or subst does not resolve to a single string"
                )
+           (*e: [[Eval.eval_word()]] match [[vkind]] cases *)
          in
          (match ys, acc, xs with
 
@@ -126,6 +128,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
              error loc (spf "use of list variable '%s' in scalar context" v)
          )
 
+      (*s: [[Eval.eval_word()]] match [[x]] cases *)
       | A.Backquoted cmd -> 
         let shellenv = Env.shellenv_of_env env in
         let s = Shell.exec_backquote caps shellenv cmd in
@@ -136,6 +139,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
         | _ -> error loc (spf "use of `%s` in scalar context" cmd)
         )
       )
+      (*e: [[Eval.eval_word()]] match [[x]] cases *)
   in
   aux [] word
 (*e: function [[Eval.eval_word]] *)
@@ -174,7 +178,7 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
 (*****************************************************************************)
 
 (*s: function [[Eval.eval]] *)
-let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
+let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * Env.t =
 
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
@@ -182,40 +186,8 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
   let rec instrs xs = 
     xs |> List.iter (fun instr ->
       let loc = instr.A.loc in
-
       match instr.A.instr with
-      | A.Include ws ->
-          let res = eval_words caps loc env ws in
-          (match res with
-          | Left [file] -> 
-              if not (Sys.file_exists file)
-              then warning loc (spf "skipping missing include file: %s" file)
-              else
-                let xs = Parse.parse (Fpath.v file) in
-                (* recurse *)
-                instrs xs
-          (* new? what does mk does? *)
-          | Left [] -> error loc "missing include file"
-          (* stricter: force use quotes for filename with spaces or percent *)
-          | Right _ | Left (_::_) -> 
-              error loc "use quotes for filenames with spaces or %%"
-          )
-
-      | A.PipeInclude ws ->
-        let res = eval_words caps loc env ws in
-        let recipe = 
-          match res with
-          | Left xs -> String.concat " " xs
-          | Right _xs -> raise Todo
-        in
-        if recipe = ""
-        then failwith "missing include program name";
-        let shellenv = Env.shellenv_of_env env in
-        let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-        let xs = Parse.parse (Fpath.v tmpfile) in
-        (* recurse *)
-        instrs xs
-
+      (*s: [[Eval.eval()]] match instruction kind cases *)
       | A.Definition (s, ws) ->
         let xs = 
           match eval_words caps loc env ws with
@@ -229,7 +201,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
            error loc (spf "redefinition of %s" s)
         );
         Hashtbl.add env.E.vars_we_set s true;
-
+      (*x: [[Eval.eval()]] match instruction kind cases *)
       | A.Rule r -> 
           let targets = eval_words caps loc env r.A.targets in
           let prereqs = eval_words caps loc env r.A.prereqs in
@@ -282,6 +254,39 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs =
               (* stricter: *)
               error loc "Forgot to use %% for the target"
           )
+      (*x: [[Eval.eval()]] match instruction kind cases *)
+      | A.Include ws ->
+          let res = eval_words caps loc env ws in
+          (match res with
+          | Left [file] -> 
+              if not (Sys.file_exists file)
+              then warning loc (spf "skipping missing include file: %s" file)
+              else
+                let xs = Parse.parse (Fpath.v file) in
+                (* recurse *)
+                instrs xs
+          (* new? what does mk does? *)
+          | Left [] -> error loc "missing include file"
+          (* stricter: force use quotes for filename with spaces or percent *)
+          | Right _ | Left (_::_) -> 
+              error loc "use quotes for filenames with spaces or %%"
+          )
+      (*x: [[Eval.eval()]] match instruction kind cases *)
+      | A.PipeInclude ws ->
+        let res = eval_words caps loc env ws in
+        let recipe = 
+          match res with
+          | Left xs -> String.concat " " xs
+          | Right _xs -> raise Todo
+        in
+        if recipe = ""
+        then failwith "missing include program name";
+        let shellenv = Env.shellenv_of_env env in
+        let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
+        let xs = Parse.parse (Fpath.v tmpfile) in
+        (* recurse *)
+        instrs xs
+      (*e: [[Eval.eval()]] match instruction kind cases *)
     )
   in
   instrs xs;

@@ -146,10 +146,11 @@ let do_action caps s xs =
 let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
 
    let root = Graph.build_graph target rules in
-
+   (*s: [[CLI.build_target()]] possibly dump the graph *)
    (* could do that after the checks *)
    if !Flags.dump_graph 
    then Graph.dump_graph root;
+   (*e: [[CLI.build_target()]] possibly dump the graph *)
    
    let ever_did = ref false in
 
@@ -185,6 +186,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 
     (* initialisation *)
     let env = Env.initenv caps in
+    (*s: [[CLI.build_targets()]] initialize [[env]] using [[vars]] *)
     vars |> List.iter (fun (var, value) ->
      (* stricter: we do not allow list of strings for value for command-line
       * vars, but anyway I'm not sure how they could be parsed by Arg
@@ -192,23 +194,30 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
       Env.add_var env var [value];
       Hashtbl.add env.Env.vars_commandline var true;
     );
+    (*e: [[CLI.build_targets()]] initialize [[env]] using [[vars]] *)
     
+    (*s: [[CLI.build_targets()]] if debugger set *)
     if !Flags.debugger then begin
       CapSys.chdir caps (Filename.dirname !!infile);
       Env.add_var env "objtype" ["386"]
     end;
+    (*e: [[CLI.build_targets()]] if debugger set *)
 
     (* parsing (and evaluating) *)
     let instrs = Parse.parse infile in
 
+    (*s: [[CLI.build_targets()]] possibly dump the AST *)
     if !Flags.dump_ast
     then Ast.dump_ast instrs;
+    (*e: [[CLI.build_targets()]] possibly dump the AST *)
 
     (* can modify targets and use first targets in file if none provided *)
     let rules, env = Eval.eval caps env targets instrs in
 
+    (*s: [[CLI.build_targets()]] possibly dump the environment *)
     if !Flags.dump_env
     then Env.dump_env env;
+    (*e: [[CLI.build_targets()]] possibly dump the environment *)
     
     (* building *)
     if !targets = []

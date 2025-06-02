@@ -4,10 +4,11 @@
 type 'a rule = {
   targets: 'a list;
   prereqs: 'a list;
-
-  attrs: Ast.rule_attribute Set_.t;
   recipe: Ast.recipe option;
 
+  (*s: [[Rules.rule]] other fields *)
+  attrs: Ast.rule_attribute Set_.t;
+  (*e: [[Rules.rule]] other fields *)
   loc: Ast.loc;
 }
 (*e: type [[Rules.rule]] *)
@@ -25,13 +26,14 @@ type rules = {
 (*s: type [[Rules.rule_exec]] *)
 type rule_exec = {
   recipe2: Ast.recipe option;
-  attrs2: Ast.rule_attribute Set_.t;
-  loc2: Ast.loc;
-
   stem: string option;
 
   all_targets: string list;
   all_prereqs: string list;
+  (*s: [[Rules.rule_exec]] other fields *)
+  attrs2: Ast.rule_attribute Set_.t;
+  (*e: [[Rules.rule_exec]] other fields *)
+  loc2: Ast.loc;
 }
 (*e: type [[Rules.rule_exec]] *)
 

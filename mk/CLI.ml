@@ -240,89 +240,108 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
   let targets = ref [] in
   let vars = ref [] in
 
-  (* for debugging *)
+  (*s: [[CLI.main()]] debugging initializations *)
   let level = ref (Some Logs.Warning) in
-  let action = ref "" in
+  (*x: [[CLI.main()]] debugging initializations *)
   let backtrace = ref false in
+  (*x: [[CLI.main()]] debugging initializations *)
+  let action = ref "" in
+  (*e: [[CLI.main()]] debugging initializations *)
 
   let options = [
-
+    (*s: [[CLI.main()]] [[options]] elements *)
     (* less: maybe should do a chdir (Dirname infile) *)
     "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
-    
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-e", Arg.Set Flags.explain_mode,
     " explain mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-n", Arg.Set Flags.dry_mode,
     " dry mode";
-    (* less: -a, etc *)
-    "-strict", Arg.Set Flags.strict_mode,
-    " strict mode";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_env", Arg.Set Flags.dump_env,
-    " dump the environment";
-    "-dump_graph", Arg.Set Flags.dump_graph,
-    " dump the generated graph (in graphviz dot format)";
-    "-dump_jobs", Arg.Set Flags.dump_jobs,
-    " ";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* TODO: move in a CLI_common.ml *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
     " verbose mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-quiet", Arg.Unit (fun () -> level := None),
     " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-debug", Arg.Unit (fun () -> 
       level := Some Logs.Debug;
       Flags.explain_mode := true;
     ),
     " trace the main functions";
-    
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* less: -a, etc *)
+    "-strict", Arg.Set Flags.strict_mode,
+    " strict mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-debugger", Arg.Set Flags.debugger,
     " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_tokens", Arg.Set Flags.dump_tokens,
+    " dump the tokens as they are generated";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_ast", Arg.Set Flags.dump_ast,
+    " dump the parsed AST";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_env", Arg.Set Flags.dump_env,
+    " dump the environment";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_graph", Arg.Set Flags.dump_graph,
+    " dump the generated graph (in graphviz dot format)";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_jobs", Arg.Set Flags.dump_jobs,
+    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* pad: I added that *)
+    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
+    (*e: [[CLI.main()]] [[options]] elements *)
   ]
   in
   (* old: was Arg.parse but we want explicit argv control *)
   (try
     Arg.parse_argv argv (Arg.align options) (fun t -> 
-      match t with
+    match t with
+    (*s: [[CLI.main()]] modify [[vars]] when definition-like argument *)
       | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
         let (var, value) = Regexp_.matched2 t in
         vars := (var, value)::!vars;
-      | _ ->
+    (*e: [[CLI.main()]] modify [[vars]] when definition-like argument *)
+    | _ ->
         targets := t :: !targets
-      ) usage;
+    ) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
-
+  (*s: [[CLI.main()]] logging initializations *)
   Logs.set_level !level;
   Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
-
+  (*e: [[CLI.main()]] logging initializations *)
+  (*s: [[CLI.main()]] CLI action processing *)
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action caps !action (List.rev !targets); 
     raise (Exit.ExitCode 0)
   end;
+  (*e: [[CLI.main()]] CLI action processing *)
 
   (* Let's go! *)
   try 
     build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
     Exit.OK
   with exn ->
+    (*s: [[CLI.main()]] when [[exn]] thrown in [[build_targets()]] *)
     if !backtrace || !Flags.debugger
     then raise exn
     else 
@@ -347,5 +366,6 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
+    (*e: [[CLI.main()]] when [[exn]] thrown in [[build_targets()]] *)
 (*e: function [[CLI.main]] *)
 (*e: CLI.ml *)

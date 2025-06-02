@@ -38,10 +38,10 @@
 %    * TODO [[xxx]] other fields, [[xxx]] extra fields
 % - read Extra section, identify concepts, first TOC
 % - distribute parts of the Extra section in the main file
-% - TODO understand main(), LP split main, improve TOC
-% - TODO understand main functions, LP split, cluster, improve TOC
-% - TODO LP split the structures, use datalog for flow to field info
-% - TODO aspecify advanced features! remove useless features, error, debug, secu
+% - SEMI understand main(), LP split main, improve TOC
+% - SEMI understand main functions, LP split, cluster, improve TOC
+% - SEMI LP split the structures, use datalog for flow to field info
+% - SEMI aspecify advanced features! remove useless features, error, debug, secu
 % - TODO add figures
 % - TODO add explanations
 
@@ -260,6 +260,7 @@ type word = W of word_element list
     <<[[Ast.word_element]] cases>>
 @
 %alt: move Percent later but referenced in comment above so maybe better keep
+%alt: bring back Var here?
 
 <<type [[Ast.words]]>>=
 (* Words are separated by spaces. See also Env.values *)
@@ -284,6 +285,8 @@ type rule = {
 (* (the strings do not contain the leading space nor trailing newline) *)
 type recipe = R of string list
 @
+% note that not words here! We don't care whether use $Var
+% we just leverage existing env var mechanism! better than make!
 
 \section{Parsed [[mkfile]]}
 
@@ -304,7 +307,7 @@ type instr = {
     <<[[Ast.instr_kind]] cases>> 
 @
 %$
-%alt: move later include
+%alt: move later Include?
 
 
 <<type [[Ast.instrs]]>>=
@@ -332,6 +335,7 @@ type loc = {
  * so 'string' below, not 'word' *)
 | Definition of string * words
 @
+% words! core datatype of mk (and rc), list of things (files, objects, flags)
 
 <<[[Ast.word_element]] cases>>=
 (* evaluated in eval.ml just after parsing *)
@@ -362,7 +366,7 @@ type t = {
  *)
 type values = string list
 @
-
+% like in rc, core datatype is a list of words, but here after full expansion!
 
 
 <<signature [[Env.add_var]]>>=
@@ -420,7 +424,7 @@ and pattern_elem =
   | PStr of string
   | PPercent
 @
-
+% parsed pattern, so string here, not word!
 
 <<function [[Percent.check_pattern]]>>=
 let check_pattern (P xs) =
@@ -480,6 +484,17 @@ type node = {
 }
 @
 
+<<type [[Graph.arc]]>>=
+  and arc = {
+    (* note that because the graph of dependencies is a DAG, multiple
+     * arcs may point to the same node. 
+     *)
+    dest: node option;
+    <<[[Graph.arc]] other fields>>
+  }
+@
+
+
 
 
 <<[[Graph.node]] other fields>>=
@@ -500,18 +515,6 @@ mutable state: build_state;
     | BeingMade
     | Made
 @
-
-
-<<type [[Graph.arc]]>>=
-  and arc = {
-    (* note that because the graph of dependencies is a DAG, multiple
-     * arcs may point to the same node. 
-     *)
-    dest: node option;
-    <<[[Graph.arc]] other fields>>
-  }
-@
-
 
 
 <<type [[Graph.t]]>>=
@@ -661,10 +664,11 @@ let jobs = Queue.create ()
 @
 
 
+
+
+
 \chapter{[[Main.main()]]}
 
-
-\section{[[main()]] skeleton}
 
 <<type [[CLI.caps]]>>=
 (* Need:
@@ -684,6 +688,8 @@ val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
 @
 
 
+\section{[[main()]] skeleton}
+
 
 <<function [[CLI.main]]>>=
 let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
@@ -691,117 +697,65 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
   let targets = ref [] in
   let vars = ref [] in
 
-  (* for debugging *)
-  let level = ref (Some Logs.Warning) in
-  let action = ref "" in
-  let backtrace = ref false in
+  <<[[CLI.main()]] debugging initializations>>
 
   let options = [
-
-    (* less: maybe should do a chdir (Dirname infile) *)
-    "-f", Arg.Set_string infile,
-    " <file> use file instead of mkfile";
-    
-    "-e", Arg.Set Flags.explain_mode,
-    " explain mode";
-    "-n", Arg.Set Flags.dry_mode,
-    " dry mode";
-    (* less: -a, etc *)
-    "-strict", Arg.Set Flags.strict_mode,
-    " strict mode";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-    "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_env", Arg.Set Flags.dump_env,
-    " dump the environment";
-    "-dump_graph", Arg.Set Flags.dump_graph,
-    " dump the generated graph (in graphviz dot format)";
-    "-dump_jobs", Arg.Set Flags.dump_jobs,
-    " ";
-
-    (* TODO: move in a CLI_common.ml *)
-    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-    " verbose mode";
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-    "-debug", Arg.Unit (fun () -> 
-      level := Some Logs.Debug;
-      Flags.explain_mode := true;
-    ),
-    " trace the main functions";
-    
-    "-debugger", Arg.Set Flags.debugger,
-    " ";
-    "-backtrace", Arg.Set backtrace,
-    " dump the backtrace after an error";
+    <<[[CLI.main()]] [[options]] elements>>
   ]
   in
   (* old: was Arg.parse but we want explicit argv control *)
   (try
     Arg.parse_argv argv (Arg.align options) (fun t -> 
-      match t with
-      | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
-        let (var, value) = Regexp_.matched2 t in
-        vars := (var, value)::!vars;
-      | _ ->
+    match t with
+    <<[[CLI.main()]] modify [[vars]] when definition-like argument>>
+    | _ ->
         targets := t :: !targets
-      ) usage;
+    ) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
-
-  Logs.set_level !level;
-  Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
-
-  (* to test and debug components of mk *)
-  if !action <> "" then begin 
-    do_action caps !action (List.rev !targets); 
-    raise (Exit.ExitCode 0)
-  end;
+  <<[[CLI.main()]] logging initializations>>
+  <<[[CLI.main()]] CLI action processing>>
 
   (* Let's go! *)
   try 
     build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
     Exit.OK
   with exn ->
-    if !backtrace || !Flags.debugger
-    then raise exn
-    else 
-      (match exn with
-      (* lots of the mk errors are reported using failwith (e.g., "don't know
-       * how to make xxx")
-       *)
-      | Failure s -> 
-          (* useful to indicate that error comes from mk, not subprocess *)
-          Logs.err (fun m -> m "mk: %s" s);
-          (* need to wait for other children before exiting, otherwise
-           * could get corrupted incomplete object files.
-           *)
-          while !Scheduler.nrunning > 0 do
-              try 
-                (* todo: if dump_jobs, print pid we wait and its recipe *)
-                Unix.wait () |> ignore;
-                decr Scheduler.nrunning
-              with Unix.Unix_error (error, _str1, _str2) ->
-                failwith (spf "%s" (Unix.error_message error))
-          done;
-          Exit.Code 1
-      | _ -> raise exn
-      )
+    <<[[CLI.main()]] when [[exn]] thrown in [[build_targets()]]>>
 @
 %$
-%LP: split
 
+
+
+<<[[CLI.main()]] when [[exn]] thrown in [[build_targets()]]>>=
+if !backtrace || !Flags.debugger
+then raise exn
+else 
+  (match exn with
+  (* lots of the mk errors are reported using failwith (e.g., "don't know
+   * how to make xxx")
+   *)
+  | Failure s -> 
+      (* useful to indicate that error comes from mk, not subprocess *)
+      Logs.err (fun m -> m "mk: %s" s);
+      (* need to wait for other children before exiting, otherwise
+       * could get corrupted incomplete object files.
+       *)
+      while !Scheduler.nrunning > 0 do
+          try 
+            (* todo: if dump_jobs, print pid we wait and its recipe *)
+            Unix.wait () |> ignore;
+            decr Scheduler.nrunning
+          with Unix.Unix_error (error, _str1, _str2) ->
+            failwith (spf "%s" (Unix.error_message error))
+      done;
+      Exit.Code 1
+  | _ -> raise exn
+  )
+@
+  
 <<constant [[CLI.usage]]>>=
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
@@ -823,6 +777,14 @@ val build_targets :
 
 \section{[[mk ]]{\em var}[[=]]{\em values} arguments processing}
 
+
+<<[[CLI.main()]] modify [[vars]] when definition-like argument>>=
+  | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
+    let (var, value) = Regexp_.matched2 t in
+    vars := (var, value)::!vars;
+@
+
+    
 <<[[Env.t]] fields>>=
 (* those vars can not be overriden by the mkfile *)
 vars_commandline: (string, bool) Hashtbl.t;
@@ -839,6 +801,12 @@ vars_commandline: (string, bool) Hashtbl.t;
 \section{[[mk ]] remaining arguments processing}
 
 \section{Using the [[mkfile]] or [[mk -f]]{\em file}}
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* less: maybe should do a chdir (Dirname infile) *)
+"-f", Arg.Set_string infile,
+" <file> use file instead of mkfile";
+@
 
 
 \section{Building the target(s)}
@@ -2329,17 +2297,59 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 let explain_mode = ref false
 @
 
+<<[[CLI.main()]] [[options]] elements>>=
+"-e", Arg.Set Flags.explain_mode,
+" explain mode";
+@
+
 \section{Dry mode: [[mk -n]]}
 
 <<constant [[Flags.dry_mode]]>>=
 let dry_mode = ref false
 @
 
+<<[[CLI.main()]] [[options]] elements>>=
+"-n", Arg.Set Flags.dry_mode,
+" dry mode";
+@
 
 \section{What-if mode: [[mk -w]]{\em file}}
 
 %\section{Processor utilization: [[mk -u]]}
 
+\section{Logging: [[mk -v]]}
+% see also Debugging chapter later
+
+<<[[CLI.main()]] debugging initializations>>=
+let level = ref (Some Logs.Warning) in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* TODO: move in a CLI_common.ml *)
+"-v", Arg.Unit (fun () -> level := Some Logs.Info),
+ " verbose mode";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+" verbose mode";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-quiet", Arg.Unit (fun () -> level := None),
+" ";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-debug", Arg.Unit (fun () -> 
+  level := Some Logs.Debug;
+  Flags.explain_mode := true;
+),
+" trace the main functions";
+@
+
+<<[[CLI.main()]] logging initializations>>=
+Logs.set_level !level;
+Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
+@
+  
 \chapter{Advanced Features}
 
 \section{Backquote expansion}
@@ -2463,6 +2473,11 @@ mutable is_virtual: bool;
 <<constant [[Flags.strict_mode]]>>=
 let strict_mode = ref false
 @
+<<[[CLI.main()]] [[options]] elements>>=
+(* less: -a, etc *)
+"-strict", Arg.Set Flags.strict_mode,
+" strict mode";
+@
 
 
 <<exception [[Env.Redefinition]]>>=
@@ -2488,10 +2503,23 @@ exception Redefinition of string
 
 \chapter{Debugging}
 
-
+ 
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
 @
+<<[[CLI.main()]] [[options]] elements>>=
+"-debugger", Arg.Set Flags.debugger,
+" ";
+@
+
+<<[[CLI.main()]] debugging initializations>>=
+let backtrace = ref false in
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-backtrace", Arg.Set backtrace,
+" dump the backtrace after an error";
+@
+
 
 <<[[CLI.build_targets()]] if debugger set>>=
 if !Flags.debugger then begin
@@ -2500,12 +2528,22 @@ if !Flags.debugger then begin
 end;
 @
     
+\section{Dumpers}
+
 <<constant [[Flags.dump_tokens]]>>=
 let dump_tokens = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_tokens", Arg.Set Flags.dump_tokens,
+" dump the tokens as they are generated";
 @
 
 <<constant [[Flags.dump_ast]]>>=
 let dump_ast = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_ast", Arg.Set Flags.dump_ast,
+" dump the parsed AST";
 @
 
 <<[[CLI.build_targets()]] possibly dump the AST>>=
@@ -2513,22 +2551,31 @@ if !Flags.dump_ast
 then Ast.dump_ast instrs;
 @
 
+
+<<constant [[Flags.dump_env]]>>=
+let dump_env = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_env", Arg.Set Flags.dump_env,
+" dump the environment";
+@
+
 <<signature [[Env.dump_env]]>>=
 val dump_env : t -> unit
 @
-
 <<[[CLI.build_targets()]] possibly dump the environment>>=
 if !Flags.dump_env
 then Env.dump_env env;
 @
 
 
-<<constant [[Flags.dump_env]]>>=
-let dump_env = ref false
-@
 
 <<constant [[Flags.dump_graph]]>>=
 let dump_graph = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_graph", Arg.Set Flags.dump_graph,
+" dump the generated graph (in graphviz dot format)";
 @
 
 <<[[CLI.build_target()]] possibly dump the graph>>=
@@ -2540,7 +2587,10 @@ then Graph.dump_graph root;
 <<constant [[Flags.dump_jobs]]>>=
 let dump_jobs = ref false
 @
-
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_jobs", Arg.Set Flags.dump_jobs,
+" ";
+@
 
 
 
@@ -2557,28 +2607,6 @@ let dump_env env =
   env.vars |> Hashtbl.iter (fun k v ->
     Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
   )
-@
-
-<<function [[CLI.do_action]]>>=
-(* to test the different mk components *)
-let do_action caps s xs =
-  match s with
-  | "-test_parser" ->
-      xs |> List.iter (fun file ->
-        Logs.info (fun m -> m "processing %s" file);
-        let instrs = Parse.parse (Fpath.v file) in
-        Console.print caps (spf "%s" (Ast.show_instrs instrs))
-      )
-  | "-test_eval" ->
-      xs |> List.iter (fun file ->
-        Logs.info (fun m -> m "processing %s" file);
-        let env = Env.initenv caps in
-        let instrs = Parse.parse (Fpath.v file) in
-        let _rules, env = Eval.eval caps env (ref []) instrs in
-        Env.dump_env env;
-        ()
-      )
-  | _ -> failwith ("action not supported: " ^ s)
 @
 
 
@@ -2628,6 +2656,50 @@ let dump_graph node =
   aux node;
   pr "}";
   ()
+@
+
+\section{CLI Actions}
+
+<<[[CLI.main()]] debugging initializations>>=
+let action = ref "" in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
+@
+
+<<[[CLI.main()]] CLI action processing>>=
+(* to test and debug components of mk *)
+if !action <> "" then begin 
+  do_action caps !action (List.rev !targets); 
+  raise (Exit.ExitCode 0)
+end;
+@
+  
+<<function [[CLI.do_action]]>>=
+(* to test the different mk components *)
+let do_action caps s xs =
+  match s with
+  | "-test_parser" ->
+      xs |> List.iter (fun file ->
+        Logs.info (fun m -> m "processing %s" file);
+        let instrs = Parse.parse (Fpath.v file) in
+        Console.print caps (spf "%s" (Ast.show_instrs instrs))
+      )
+  | "-test_eval" ->
+      xs |> List.iter (fun file ->
+        Logs.info (fun m -> m "processing %s" file);
+        let env = Env.initenv caps in
+        let instrs = Parse.parse (Fpath.v file) in
+        let _rules, env = Eval.eval caps env (ref []) instrs in
+        Env.dump_env env;
+        ()
+      )
+  | _ -> failwith ("action not supported: " ^ s)
 @
 
 

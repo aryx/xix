@@ -36,7 +36,7 @@
 %    * TODO dumper
 %    * TODO [[xxx]] other fields, [[xxx]] extra fields
 % - read Extra section, identify concepts, first TOC
-% - TODO distribute parts of the Extra section in the main file
+% - distribute parts of the Extra section in the main file
 % - TODO understand main(), LP split main, improve TOC
 % - TODO understand main functions, LP split, cluster, improve TOC
 % - TODO LP split the structures, use datalog for flow to field info
@@ -720,7 +720,7 @@ let jobs = Queue.create ()
 @
 
 
-\chapter{[[main]]}
+\chapter{[[Main.main()]]}
 
 \section{[[main()]] skeleton}
 
@@ -2534,8 +2534,8 @@ let dump_graph node =
 \chapter{Extra Code}
 
 %\chapter{Changelog}
-% code via mk loc = XXX LOC, after full lpized ? LOC
-% orig Mk.nw = ? LOC, after full lpized and comments in sections ??
+% code via cd ..;mk loc = 3047 LOC (after lpizer), after full lpized ?? LOC
+% orig Mk.nw = 3944 LOC, after full lpized and comments in sections ??
 % now: ? LOC so added ?? LOE (Lines of explanations)
 % mk in C: ? LOC (but not all features: no archive, no :P, etc)
 

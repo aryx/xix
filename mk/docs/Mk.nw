@@ -1,12 +1,13 @@
 \documentclass[12pt]{report}
 %alt: [12pt, twocolumn, landscape]
 
+\input{latex/Packages}
+\input{latex/Config}
+\input{latex/Macros}
+
 %******************************************************************************
 % Prelude
 %******************************************************************************
-\newif\iffinal
-\newif\ifverbose
-\finaltrue\verbosefalse % see also other newif in Macros.tex
 
 %------------------------------------------------------------------------------
 %history: 
@@ -43,43 +44,6 @@
 % - TODO aspecify advanced features! remove useless features, error, debug, secu
 % - TODO add figures
 % - TODO add explanations
-
-%------------------------------------------------------------------------------
-% Packages
-%------------------------------------------------------------------------------
-
-\usepackage{xspace}
-\usepackage{verbatim}
-%note: required by 'syncweb -to_tex' for the \t \l \n in this file
-\usepackage{fancyvrb}
-\usepackage{url}
-\usepackage{hyperref}
- \hypersetup{colorlinks=true}
-\usepackage[pageref]{backref}
- \def\backref{{\footnotesize cited page(s)}~}
-\usepackage{booktabs} 
- \newcommand{\otoprule}{\midrule[\heavyrulewidth]}
-\usepackage{graphicx}
-
-\input{latex/Config}
-\usepackage{latex/noweb}
- \noweboptions{footnotesizecode,nomargintag}
- %note: allow chunk on different pages, less white space at bottom of pages
- \def\nwendcode{\endtrivlist \endgroup}
- \let\nwdocspar=\par
-\usepackage{latex/syncweb}
-
-%------------------------------------------------------------------------------
-% Macros
-%------------------------------------------------------------------------------
-\input{latex/Macros}
-
-%------------------------------------------------------------------------------
-% Config
-%------------------------------------------------------------------------------
-\allcodefalse
-% ifallcode is used for:
-% - TODO extra copyright
 
 \begin{document}
 %******************************************************************************
@@ -2534,8 +2498,8 @@ let dump_graph node =
 \chapter{Extra Code}
 
 %\chapter{Changelog}
-% code via cd ..;mk loc = 3047 LOC (after lpizer), after full lpized ?? LOC
-% orig Mk.nw = 3944 LOC, after full lpized and comments in sections ??
+% code via 'cd ..;mk loc' = 3070 LOC (after lpizer), after full lpized ?? LOC
+% orig Mk.nw = 3972 LOC, after full lpized and comments in sections ??
 % now: ? LOC so added ?? LOE (Lines of explanations)
 % mk in C: ? LOC (but not all features: no archive, no :P, etc)
 

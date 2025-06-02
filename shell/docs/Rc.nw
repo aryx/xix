@@ -1,4 +1,98 @@
+\documentclass[12pt]{report}
+%alt: [12pt, twocolumn, landscape]
+%coupling: see Config.tex
 
+\input{latex/Packages}
+\input{latex/Config}
+\input{latex/Macros}
+
+%******************************************************************************
+% Prelude
+%******************************************************************************
+
+%------------------------------------------------------------------------------
+%history: 
+%------------------------------------------------------------------------------
+
+%thx to LP, I changed for the better a few things:
+
+
+%thx to codemap/codegraph/scheck:
+
+%thx to this manual, I better understand sh:
+
+%history LP-ization:
+% - skeleton, mostly copy paste of Template.nw skeleton
+% - put all content of files in the Extra section, via 'lpizer'
+%   which also now split in chunks!
+%    * function, global, struct, enum, constant, macro(actually function)
+% - TODO read Extra section, identify concepts, first TOC
+% - TODO distribute parts of the file before
+% - TODO nullify, boolify, typeify,    scheckify
+% - TODO aspecify advanced features!
+% - TODO add figures
+% - TODO add explanations
+
+\begin{document}
+%******************************************************************************
+% Title
+%******************************************************************************
+\title{
+{\Huge 
+Principia Softwarica: The Plan~9 Shell [[rc]]
+}\\
+{version 0.1}
+}
+
+\author{
+Yoann Padioleau\\
+\texttt{yoann.padioleau@gmail.com}\\
+\\
+with code from\\
+Tom Duff and Yoann Padioleau
+}
+
+\maketitle 
+%\onecolumn
+\hrule
+%\input{latex/Copyright}
+%\input{latex/CopyrightPlan9}
+\begin{quote}
+Copyright \copyright{} 2025 Yoann Padioleau \\
+Permission is granted to copy, distribute and/or modify this document,
+except all the source code it contains, under the terms of the GNU Free
+Documentation License, Version 1.3.
+\end{quote}
+\hrule
+%\twocolumn
+
+\begingroup
+\hypersetup{linkcolor=blue}
+% need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
+\tableofcontents
+\endgroup
+
+%******************************************************************************
+% Body
+%******************************************************************************
+
+\chapter{Introduction}
+
+
+\cite{make}
+
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+\appendix
+
+\chapter{Extra Code}
+
+%\chapter{Changelog}
+% code via make loc = 6300 LOC, after full lpized  ? LOC
+% orig Shell.nw = 7500 LOC, after full lpized and comments in sections ??
+% now: =~ ?? LOC so added ?? LOE (Lines of explanations)
+% rc in ocaml: 2300 LOC (but not all features)
 
 
 \section{[[shell/]]}
@@ -3789,3 +3883,36 @@ val vinit : < Cap.env ; .. > -> unit
 @
 
 
+
+\chapter*{Glossary}
+\addcontentsline{toc}{chapter}{Glossary}
+\label{sec:glossary}
+
+\begin{verbatim}
+LOC = Lines Of Code
+CLI = Command-Line Interface
+\end{verbatim}
+
+
+\chapter*{Indexes}
+\addcontentsline{toc}{chapter}{Index}
+
+%src: wc.nw in noweb source
+Here is a list of the identifiers used, and where they appear.
+Underlined entries indicate the place of definition.
+This index is generated automatically.
+
+%\twocolumn does not work
+\nowebindex
+
+%\chapter{References} 
+\addcontentsline{toc}{chapter}{References}
+
+\bibliography{latex/Principia}
+\bibliographystyle{alpha}
+
+%******************************************************************************
+% Postlude
+%******************************************************************************
+
+\end{document}

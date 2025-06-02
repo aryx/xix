@@ -1,7 +1,7 @@
 TOP=../..
 
 SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
-SYNCWEBFLAGS=-debug
+#SYNCWEBFLAGS=-debug
 
 DOC=Mk
 VERSION=1

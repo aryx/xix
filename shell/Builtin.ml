@@ -1,9 +1,11 @@
+(*s: Builtin.ml *)
 open Common
 
 module R = Runtime
 module E = Error
 module O = Opcode
 
+(*s: function [[Builtin.is_builtin]] *)
 let is_builtin s =
   List.mem s [
     "cd"; 
@@ -12,9 +14,13 @@ let is_builtin s =
     "flag";
     "finit"
   ]
+(*e: function [[Builtin.is_builtin]] *)
 
+(*s: constant [[Builtin.ndots]] *)
 let ndots = ref 0
+(*e: constant [[Builtin.ndots]] *)
 
+(*s: function [[Builtin.dochdir]] *)
 let dochdir (caps : < Cap.chdir; .. >) s =
   try 
     Logs.info (fun m -> m "about to chdir to %s" s);
@@ -22,8 +28,10 @@ let dochdir (caps : < Cap.chdir; .. >) s =
     true
   with Unix.Unix_error _ ->
     false
+(*e: function [[Builtin.dochdir]] *)
 
 (* for the builtin '.' (called 'source' in bash) *)
+(*s: constant [[Builtin.dotcmds]] *)
 let dotcmds = 
   [|
     O.F O.Mark;
@@ -41,8 +49,10 @@ let dotcmds =
     O.F O.Unlocal;
     O.F O.Unlocal;
     O.F O.Return;
+(*e: constant [[Builtin.dotcmds]] *)
   |]         
 
+(*s: function [[Builtin.dispatch]] *)
 let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   match s with
   | "cd" -> 
@@ -143,4 +153,6 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
      R.pop_list ()
 
   | _ -> failwith (spf "unsupported builtin %s" s)
+(*e: function [[Builtin.dispatch]] *)
 
+(*e: Builtin.ml *)

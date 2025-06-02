@@ -1,0 +1,27 @@
+TOP=../..
+
+SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
+SYNCWEBFLAGS=-debug
+
+DOC=Rc
+VERSION=1
+D=..
+SRC_ML=\
+  $D/Builtin.ml $D/CLI.ml $D/Compile.ml $D/Dumper_.ml $D/Env.ml $D/Error.ml \
+  $D/Fn.ml $D/Glob.ml $D/Heredoc.ml $D/Interpreter.ml $D/PATH.ml $D/Parse.ml \
+  $D/Pattern.ml $D/Process.ml $D/Prompt.ml $D/Runtime.ml $D/Status.ml $D/Var.ml
+
+SRC_ML_NO_MLI=$D/Ast.ml $D/Flags.ml $D/Globals.ml $D/Main.ml $D/Op_process.ml \
+  $D/Op_repl.ml $D/Opcode.ml
+
+SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI
+
+SRC_ORIG=Rc.nw
+# Intro.nw
+
+
+<$TOP/docs/latex/mkcommon
+
+sync_yacc:VI:
+        $SYNCWEB -md5sum_in_auxfile -less_marks -lang ocamlyacc  $SRC_ORIG \
+            ../Parser.mly

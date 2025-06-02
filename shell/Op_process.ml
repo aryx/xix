@@ -1,8 +1,10 @@
+(*s: Op_process.ml *)
 open Stdcompat (* for |> *)
 
 module R = Runtime
 module E = Error
 
+(*s: function [[Op_process.execute]] *)
 let execute (caps : <Cap.exec; ..>) args path =
 
   let argv = Array.of_list args in
@@ -19,8 +21,10 @@ let execute (caps : <Cap.exec; ..>) args path =
   );
   (* reached only when could not find a path *)
   Logs.err (fun m -> m "%s: %s" argv.(0) !errstr)
+(*e: function [[Op_process.execute]] *)
 
 
+(*s: function [[Op_process.exec]] *)
 let exec (caps : < Cap.exec; Cap.exit; .. >) () =
   R.pop_word (); (* "exec" *)
 
@@ -34,7 +38,9 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () =
       execute caps argv (PATH.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
+(*e: function [[Op_process.exec]] *)
 
+(*s: function [[Op_process.forkexec]] *)
 let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
   let pid = CapUnix.fork caps () in
   (* child *)
@@ -51,9 +57,11 @@ let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
   else 
     (* less: addwaitpid *)
     pid
+(*e: function [[Op_process.forkexec]] *)
 
 
 
+(*s: function [[Op_process.op_Simple]] *)
 let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
@@ -100,4 +108,6 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
               E.error caps ("try again: " ^ s)
           | Unix.Unix_error (err, s1, s2) -> 
               E.error caps (Process.s_of_unix_error err s1 s2)
+(*e: function [[Op_process.op_Simple]] *)
         )
+(*e: Op_process.ml *)

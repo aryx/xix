@@ -1,3 +1,4 @@
+(*s: Var.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 module R = Runtime
@@ -11,6 +12,7 @@ module R = Runtime
 (* API *)
 (*****************************************************************************)
 
+(*s: function [[Var.gvlook]] *)
 let gvlook name =
   try 
     Hashtbl.find R.globals name
@@ -18,7 +20,9 @@ let gvlook name =
     let var = { R.v = None } in
     Hashtbl.add R.globals name var;
     var
+(*e: function [[Var.gvlook]] *)
     
+(*s: function [[Var.vlook]] *)
 let vlook name =
   if !Runtime.runq <> []
   then 
@@ -28,12 +32,18 @@ let vlook name =
     with Not_found ->
       gvlook name
   else gvlook name
+(*e: function [[Var.vlook]] *)
 
 
+(*s: function [[Var.setvar]] *)
 let setvar name v =
   let var = vlook name in
   var.R.v <- Some v
+(*e: function [[Var.setvar]] *)
 
 
+(*s: function [[Var.vinit]] *)
 let vinit (_caps : < Cap.env; .. >) =
   Logs.err (fun m -> m "TODO: load from environment")
+(*e: function [[Var.vinit]] *)
+(*e: Var.ml *)

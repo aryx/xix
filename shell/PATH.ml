@@ -1,7 +1,9 @@
+(*s: PATH.ml *)
 open Common
 
 module R = Runtime
 
+(*s: function [[PATH.search_path_for_cmd]] *)
 let search_path_for_cmd s =
   let nullpath = [""] in
 
@@ -17,7 +19,11 @@ let search_path_for_cmd s =
     | None -> nullpath
     | Some xs -> xs
     )
+(*e: function [[PATH.search_path_for_cmd]] *)
 
 
+(*s: function [[PATH.find_in_path]] *)
 let find_in_path _s _paths =
   raise Todo
+(*e: function [[PATH.find_in_path]] *)
+(*e: PATH.ml *)

@@ -1,13 +1,17 @@
+(*s: Process.ml *)
 open Stdcompat (* for |> *)
 open Common
 
 module R = Runtime
 
 
+(*s: function [[Process.s_of_unix_error]] *)
 let s_of_unix_error err _s1 _s2 = 
   spf "%s" (Unix.error_message err)
+(*e: function [[Process.s_of_unix_error]] *)
 
 
+(*s: function [[Process.exit]] *)
 let exit (caps: < Cap.exit; ..>) s =
   (* todo: Updenv *)
   Status.setstatus s;
@@ -15,7 +19,9 @@ let exit (caps: < Cap.exit; ..>) s =
    * alt: raise Exit.ExitCode which removes the need for Cap.exit
    *)
   CapStdlib.exit caps (if Status.truestatus () then 0 else 1)
+(*e: function [[Process.exit]] *)
 
+(*s: function [[Process.return]] *)
 (* Was called Xreturn but called not only from the opcode interpreter.
  * It is an helper function really.
  *)
@@ -27,15 +33,19 @@ let return (caps : < Cap.exit; .. >) () =
   | [_x] -> exit caps (Status.getstatus ())
   | _x::xs -> 
       R.runq := xs
+(*e: function [[Process.return]] *)
 
 
 
 
+(*s: type [[Process.waitfor_result]] *)
 type waitfor_result =
   | WaitforInterrupted
   | WaitforFound
   | WaitforNotfound
+(*e: type [[Process.waitfor_result]] *)
 
+(*s: function [[Process.waitfor]] *)
 let waitfor pid =
   (* less: check for havewaitpid *)
 
@@ -69,3 +79,5 @@ let waitfor pid =
     if err = Unix.EINTR
     then WaitforInterrupted
     else WaitforNotfound
+(*e: function [[Process.waitfor]] *)
+(*e: Process.ml *)

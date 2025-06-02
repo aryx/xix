@@ -1,3 +1,4 @@
+(*s: Interpreter.ml *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -13,6 +14,7 @@ module E = Error
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Interpreter.file_descr_of_int]] *)
 (* could be in runtime.ml *)
 let file_descr_of_int i =
   match i with
@@ -21,15 +23,19 @@ let file_descr_of_int i =
   | 2 -> Unix.stderr
   (* todo: how do that? if do >[1=4] ?? *)
   | n -> failwith (spf "file_descr_of_int: unsupported int %d" n)
+(*e: function [[Interpreter.file_descr_of_int]] *)
 
+(*s: function [[Interpreter.int_at_address]] *)
 let int_at_address t pc =
   match t.R.code.(pc) with
   | O.I i -> i
   (* stricter: generate error, but should never happen *)
   | op -> failwith (spf "was expecting I, not %s at %d" 
                       (Dumper_.s_of_opcode op) pc)
+(*e: function [[Interpreter.int_at_address]] *)
 
 
+(*s: function [[Interpreter.vlook_varname_or_index]] *)
 let vlook_varname_or_index varname =
   if varname =~ "^[0-9]+$"
   then
@@ -45,11 +51,13 @@ let vlook_varname_or_index varname =
         else failwith (spf "out of bound, $%d too big for $*" i)
     )
   else (Var.vlook varname).R.v
+(*e: function [[Interpreter.vlook_varname_or_index]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Interpreter.interpret]] *)
 let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =
   match operation with
   (* *)
@@ -345,3 +353,5 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
      O.Subshell|O.Backquote|O.Async
     ) ->
     failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F operation))
+(*e: function [[Interpreter.interpret]] *)
+(*e: Interpreter.ml *)

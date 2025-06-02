@@ -1,5 +1,7 @@
+(*s: Error.ml *)
 module R = Runtime
 
+(*s: function [[Error.error]] *)
 (* less: error1 similar to error but without %r *)
 let error (caps: < Cap.exit; ..>) (s : string) =
   (* less: use argv0 *)
@@ -12,3 +14,5 @@ let error (caps: < Cap.exit; ..>) (s : string) =
     (* goes up the call stack, like when we have an exception *)
     Process.return caps ();
   done
+(*e: function [[Error.error]] *)
+(*e: Error.ml *)

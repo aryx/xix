@@ -1,9 +1,11 @@
+(*s: Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
 
 module R = Runtime
 
+(*s: function [[Parse.error]] *)
 let error s (curtok, curtokstr) =
   let t = R.cur () in
   let locstr =
@@ -26,9 +28,11 @@ let error s (curtok, curtokstr) =
 
   (* less: nerror++; *)
   failwith str
+(*e: function [[Parse.error]] *)
    
 
 
+(*s: function [[Parse.parse_line]] *)
 let parse_line lexbuf =
   let curtok = ref (Parser.EOF, "EOF") in
 
@@ -80,3 +84,5 @@ let parse_line lexbuf =
         error "syntax error" !curtok
     | Lexer.Lexical_error s ->
         error (spf "lexical error, %s" s) !curtok
+(*e: function [[Parse.parse_line]] *)
+(*e: Parse.ml *)

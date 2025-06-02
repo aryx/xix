@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -36,16 +37,21 @@ module O = Opcode
 (* see the .mli for why those caps are needed
  * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
  *)
+(*s: type [[CLI.caps]] *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
+(*e: type [[CLI.caps]] *)
 
 (* -d and -p are dead according to man page so I removed them *)
+(*s: constant [[CLI.usage]] *)
 let usage =
   "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
+(*e: constant [[CLI.usage]] *)
 
 (*****************************************************************************)
 (* Testing *)
 (*****************************************************************************)
 
+(*s: function [[CLI.do_action]] *)
 let do_action caps s xs =
   match s with
   | "-test_parser" ->
@@ -73,14 +79,18 @@ let do_action caps s xs =
       )
 
   | _ -> failwith ("action not supported: " ^ s)
+(*e: function [[CLI.do_action]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: constant [[CLI._bootstrap_simple]] *)
 let _bootstrap_simple : O.opcode array = 
   [| O.F O.REPL |]
+(*e: constant [[CLI._bootstrap_simple]] *)
 
+(*s: function [[CLI.bootstrap]] *)
 (* The real one is more complex:
  *  *=(argv);. /usr/lib/rcmain $*
  * Boostrap is now a function because it uses a flag that can be
@@ -105,9 +115,11 @@ let bootstrap () : O.opcode array =
       O.F O.Simple; (* will pop_list once *)
 
       O.F O.Exit;
+(*e: function [[CLI.bootstrap]] *)
   |]
 
 
+(*s: function [[CLI.interpret]] *)
 let interpret (caps : < caps >) (args : string list) : unit =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
@@ -147,11 +159,13 @@ let interpret (caps : < caps >) (args : string list) : unit =
     (* todo: handle trap *)
   done
 [@@profiling]
+(*e: function [[CLI.interpret]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[CLI.main]] *)
 let main (caps : <caps; .. >) (argv : string array) : Exit.t =
 
   let args = ref [] in
@@ -258,3 +272,5 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
       (* alt: could catch Exit.ExitCode here but this is done in Main.ml *)
       | _ -> raise exn
       )
+(*e: function [[CLI.main]] *)
+(*e: CLI.ml *)

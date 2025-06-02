@@ -1,6 +1,8 @@
+(*s: Op_repl.ml *)
 
 module R = Runtime
 
+(*s: function [[Op_repl.op_REPL]] *)
 (* was called Xrdcmds *)
 let op_REPL (caps : < Cap.exit; ..>) () =
 
@@ -51,3 +53,5 @@ let op_REPL (caps : < Cap.exit; ..>) () =
       (* go back for next command *)
       decr t.R.pc;
     end
+(*e: function [[Op_repl.op_REPL]] *)
+(*e: Op_repl.ml *)

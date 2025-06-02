@@ -1,3 +1,4 @@
+(*s: Compile.ml *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -14,23 +15,28 @@ module O = Opcode
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Compile.split_at_non_assign]] *)
 let rec split_at_non_assign = function
   | A.Assign (val1, val2, cmd) ->
       let (a,b) = split_at_non_assign cmd in
       (val1, val2)::a, b
   | b -> [], b
+(*e: function [[Compile.split_at_non_assign]] *)
 
+(*s: function [[Compile.split_when_case]] *)
 let split_when_case cmds =
   cmds |> Common2.span (function
     | (A.Simple (A.Word ("case", false), _)) -> false
     | _ -> true
   )
+(*e: function [[Compile.split_when_case]] *)
 
 
 (*****************************************************************************)
 (* Compilation algorithm *)
 (*****************************************************************************)
 
+(*s: function [[Compile.outcode_seq]] *)
 let outcode_seq seq eflag (emit,set,idx) =
 
   let rec xseq seq eflag =
@@ -273,11 +279,13 @@ let outcode_seq seq eflag (emit,set,idx) =
     
   in
   xseq seq eflag
+(*e: function [[Compile.outcode_seq]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Compile.compile]] *)
 let compile seq =
 
   (* a growing array *)
@@ -313,3 +321,5 @@ let compile seq =
   (* return the trimmed array *)
   Array.sub !codebuf 0 !idx
   |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+(*e: function [[Compile.compile]] *)
+(*e: Compile.ml *)

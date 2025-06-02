@@ -1,3 +1,4 @@
+(*s: Prompt.ml *)
 module R = Runtime
 
 (* Set to true so the prompt is displayed before the first character is read.
@@ -8,10 +9,15 @@ module R = Runtime
  * prompt should be done before the next round of input.
  * less: actually we could do it in the caller of parse_line, in the REPL.
  *)
+(*s: constant [[Prompt.doprompt]] *)
 let doprompt = ref true
+(*e: constant [[Prompt.doprompt]] *)
 
+(*s: constant [[Prompt.prompt]] *)
 let prompt = ref "% "
+(*e: constant [[Prompt.prompt]] *)
 
+(*s: function [[Prompt.pprompt]] *)
 let pprompt () =
   let t = R.cur () in
   if t.R.iflag then begin
@@ -29,3 +35,5 @@ let pprompt () =
   end;
   (* alt: incr t.R.line; this is done in the lexer instead *)
   doprompt := false
+(*e: function [[Prompt.pprompt]] *)
+(*e: Prompt.ml *)

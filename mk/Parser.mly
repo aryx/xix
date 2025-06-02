@@ -1,3 +1,4 @@
+/*(*s: Parser.mly *)*/
 %{
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
@@ -165,3 +166,4 @@ recipe: recipe_lines_opt TEndRecipe
 recipe_lines_opt:
  | /*(* empty *)*/              { [] }
  | TLineRecipe recipe_lines_opt { $1 :: $2 }
+/*(*e: Parser.mly *)*/

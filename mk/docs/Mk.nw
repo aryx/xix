@@ -680,6 +680,16 @@ type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
 val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
 @
 
+<<toplevel [[Main._1]]>>=
+let _ = 
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     Exit.exit caps 
+        (Exit.catch (fun () -> 
+            CLI.main caps argv))
+  )
+@
+
 
 \section{[[main()]] skeleton}
 
@@ -1882,6 +1892,13 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
   end
 @
 
+<<function [[Outofdate.opt0]]>>=
+let opt0 opttime =
+  match opttime with
+  | None -> 0.
+  | Some x -> x
+@
+
 
 \chapter{Scheduling Jobs}
 
@@ -1936,6 +1953,10 @@ let sched (caps : < Shell.caps; .. >) () =
     raise (Impossible "no jobs to schedule")
 @
 %LP: split and aspectize
+
+<<signature [[Env.shellenv_of_env]]>>=
+val shellenv_of_env : t -> Shellenv.t
+@
 
 <<constant [[Scheduler.running]]>>=
 let running = Hashtbl.create 101
@@ -2135,103 +2156,6 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
   else pid (* pid of child1 *)
 @
 
-<<signature [[Shell.exec_backquote]]>>=
-val exec_backquote :
-  < caps; .. > ->
-  Shellenv.t ->
-  string (* sh stdin (recipe) *) ->
-  string (* sh output *)
-@
-%LP: later
-<<function [[Shell.exec_backquote]]>>=
-let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
-  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
-  let (pipe_read_output, pipe_write_output) = Unix.pipe () in
-
-  let pid = CapUnix.fork caps () in
-
-  (* child case *)
-  if pid = 0
-  then begin
-    Unix.dup2 pipe_read_input Unix.stdin;
-    Unix.dup2 pipe_write_output Unix.stdout;
-    Unix.close pipe_read_input;
-    Unix.close pipe_write_input;
-    Unix.close pipe_read_output;
-    Unix.close pipe_write_output;
-
-    exec_shell caps shellenv [] [] 
-    (* unreachable *)
-  end else begin
-    (* parent case *)
-
-    Unix.close pipe_read_input;
-    Unix.close pipe_write_output;
-
-    feed_shell_input [input] pipe_write_input;
-
-    (* read the shell output through the other pipe *)
-    let buffer = Bytes.create 1024 in
-    let rec loop_read () =
-      let n = Unix.read pipe_read_output buffer 0 1024 in
-      match n with
-      | 0 -> ""
-      | _ when n < 0 ->
-        failwith "Could not read from pipe to shell";
-      | _ -> 
-        let s = Bytes.sub_string buffer 0 n in
-        s ^ loop_read ()
-    in
-    let output = loop_read () in
-    Unix.waitpid [] pid |> ignore;
-    output
-  end
-@
-
-<<signature [[Shell.exec_pipecmd]]>>=
-val exec_pipecmd :
-  < caps ; .. > ->
-  Shellenv.t ->
-  string (* sh stdin (recipe) *) ->
-  Common.filename (* sh output*)
-@
-%LP: later
-<<function [[Shell.exec_pipecmd]]>>=
-let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
-  let tmpfile = Filename.temp_file "mk" "sh" in
-  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
-
-  let pid = CapUnix.fork caps () in
-
-  (* child case *)
-  if pid = 0
-  then begin
-    Unix.dup2 pipe_read_input Unix.stdin;
-    Unix.close pipe_read_input;
-    Unix.close pipe_write_input;
-    let fd = Unix.openfile tmpfile [Unix.O_WRONLY] 0o640 in
-    Unix.dup2 fd Unix.stdout;
-    Unix.close fd;
-
-    exec_shell caps shellenv [] [];
-    (* unreachable *)
-  end else begin
-    (* parent case *)
-
-    Unix.close pipe_read_input;
-    
-    feed_shell_input [input] pipe_write_input;
-
-    let (pid2, status) = Unix.waitpid [] pid in
-    if pid <> pid2
-    then raise (Impossible "waitpid takes the specific pid");
-    (match status with
-    | Unix.WEXITED 0 -> tmpfile
-    (* stricter: fail fast, no "warning: skipping missing program file: " *)
-    | _ -> failwith "bad include program status"
-    )
-  end
-@
 
 \section{Waiting for jobs to finish}
 
@@ -2330,21 +2254,7 @@ type t = (string * string list) list
 @
 %alt: move in Core DS chapter
 
-<<signature [[Shellenv.read_environment]]>>=
-val read_environment : < Cap.env ; .. > -> t
-@
-
-<<function [[Shellenv.read_environment]]>>=
-let read_environment (caps : < Cap.env; ..>) =
-  CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
-    if s =~ "\\([^=]+\\)=\\(.*\\)"
-    then
-      let (var, str) = Regexp_.matched2 s in
-      var, Regexp_.split "[ \t]+" str
-      else failwith (spf "wrong format for environment variable: %s" s)
-  )
-@
-
+\section{[[initenv()]]}
 
 <<signature [[Env.initenv]]>>=
 (* Will read the OS environment variables (e.g., PATH, HOME, objtype).
@@ -2392,9 +2302,23 @@ let shellenv_of_env env =
   Hashtbl_.to_list env.vars
 @
 
+<<signature [[Shellenv.read_environment]]>>=
+val read_environment : < Cap.env ; .. > -> t
+@
+
+<<function [[Shellenv.read_environment]]>>=
+let read_environment (caps : < Cap.env; ..>) =
+  CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
+    if s =~ "\\([^=]+\\)=\\(.*\\)"
+    then
+      let (var, str) = Regexp_.matched2 s in
+      var, Regexp_.split "[ \t]+" str
+      else failwith (spf "wrong format for environment variable: %s" s)
+  )
+@
 
 
-\subsection{Shell}
+\section{Choice of shell and [[MKSHELL]]}
 %alt: move in core DS?
 
 <<type [[Shell.t]]>>=
@@ -2452,7 +2376,7 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 
 
 \chapter{Debugging and Profiling Support}
-% not debugging for the user. See Debugging appendix
+% debugging for the user here! See Debugging appendix
 % for debugging developer of mk itself (e.g., internal dumpers)
 
 \section{Logging: [[mk -v]]}
@@ -2466,6 +2390,8 @@ let level = ref (Some Logs.Warning) in
 "-quiet", Arg.Unit (fun () -> level := None),
 " ";
 @
+% remove even warnings
+
 <<[[CLI.main()]] [[options]] elements>>=
 (* TODO: move in a CLI_common.ml *)
 "-v", Arg.Unit (fun () -> level := Some Logs.Info),
@@ -2475,6 +2401,8 @@ let level = ref (Some Logs.Warning) in
 "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
 " verbose mode";
 @
+
+
 <<[[CLI.main()]] [[options]] elements>>=
 "-debug", Arg.Unit (fun () -> 
   level := Some Logs.Debug;
@@ -2482,11 +2410,14 @@ let level = ref (Some Logs.Warning) in
 ),
 " trace the main functions";
 @
+% explain_mode later
 
 <<[[CLI.main()]] logging initializations>>=
 Logs.set_level !level;
 Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 @
+% will see with -v (or -debug), will not see by default (or when -quiet)
+
 
 \section{Explain mode: [[mk -e]]}
 
@@ -2511,8 +2442,10 @@ let dry_mode = ref false
 @
 
 \section{What-if mode: [[mk -w]]{\em file}}
+% ported to OCaml?
 
 %\section{Processor utilization: [[mk -u]]}
+
 
 \section{Strict mode}
 
@@ -2527,10 +2460,6 @@ let strict_mode = ref false
 @
 
 
-<<exception [[Env.Redefinition]]>>=
-exception Redefinition of string
-@
-
 <<[[Env.add_var()]] forbid redefinition in strict mode>>=
 (* stricter: forbid redefinitions.
  * (bug: but ok to redefine variable from environment, otherwise
@@ -2542,6 +2471,11 @@ exception Redefinition of string
     && !Flags.strict_mode ->
   raise (Redefinition s)
 @
+
+<<exception [[Env.Redefinition]]>>=
+exception Redefinition of string
+@
+
 
 
 <<[[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]]>>=
@@ -2555,6 +2489,8 @@ end;
 @
 % see dump_env later
   
+
+
 \chapter{Advanced Features}
 
 \section{Backquote expansion}
@@ -2577,6 +2513,59 @@ end;
   | _ -> error loc (spf "use of `%s` in scalar context" cmd)
   )
 )
+@
+
+<<signature [[Shell.exec_backquote]]>>=
+val exec_backquote :
+  < caps; .. > ->
+  Shellenv.t ->
+  string (* sh stdin (recipe) *) ->
+  string (* sh output *)
+@
+%LP: later
+<<function [[Shell.exec_backquote]]>>=
+let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
+  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
+  let (pipe_read_output, pipe_write_output) = Unix.pipe () in
+
+  let pid = CapUnix.fork caps () in
+
+  (* child case *)
+  if pid = 0
+  then begin
+    Unix.dup2 pipe_read_input Unix.stdin;
+    Unix.dup2 pipe_write_output Unix.stdout;
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_input;
+    Unix.close pipe_read_output;
+    Unix.close pipe_write_output;
+
+    exec_shell caps shellenv [] [] 
+    (* unreachable *)
+  end else begin
+    (* parent case *)
+
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_output;
+
+    feed_shell_input [input] pipe_write_input;
+
+    (* read the shell output through the other pipe *)
+    let buffer = Bytes.create 1024 in
+    let rec loop_read () =
+      let n = Unix.read pipe_read_output buffer 0 1024 in
+      match n with
+      | 0 -> ""
+      | _ when n < 0 ->
+        failwith "Could not read from pipe to shell";
+      | _ -> 
+        let s = Bytes.sub_string buffer 0 n in
+        s ^ loop_read ()
+    in
+    let output = loop_read () in
+    Unix.waitpid [] pid |> ignore;
+    output
+  end
 @
         
 \section{Subst variable}
@@ -2674,7 +2663,7 @@ attrs: Ast.rule_attribute Set_.t;
 attrs2: Ast.rule_attribute Set_.t;
 @
   
-\subsection{Virtual targets}
+\subsection{[V]irtual targets}
 
 <<[[Ast.rule_attribute]] cases>>=
 | Virtual
@@ -2683,6 +2672,10 @@ attrs2: Ast.rule_attribute Set_.t;
 <<[[Graph.node]] other fields>>=
 mutable is_virtual: bool;
 @
+
+\subsection{[Q]uiet targets}
+
+\subsection{[D]elete targets}
 
 \section{Dynamic includes}
 
@@ -2708,6 +2701,51 @@ mutable is_virtual: bool;
   let xs = Parse.parse (Fpath.v tmpfile) in
   (* recurse *)
   instrs xs
+@
+
+<<signature [[Shell.exec_pipecmd]]>>=
+val exec_pipecmd :
+  < caps ; .. > ->
+  Shellenv.t ->
+  string (* sh stdin (recipe) *) ->
+  Common.filename (* sh output*)
+@
+%LP: later
+<<function [[Shell.exec_pipecmd]]>>=
+let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
+  let tmpfile = Filename.temp_file "mk" "sh" in
+  let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
+
+  let pid = CapUnix.fork caps () in
+
+  (* child case *)
+  if pid = 0
+  then begin
+    Unix.dup2 pipe_read_input Unix.stdin;
+    Unix.close pipe_read_input;
+    Unix.close pipe_write_input;
+    let fd = Unix.openfile tmpfile [Unix.O_WRONLY] 0o640 in
+    Unix.dup2 fd Unix.stdout;
+    Unix.close fd;
+
+    exec_shell caps shellenv [] [];
+    (* unreachable *)
+  end else begin
+    (* parent case *)
+
+    Unix.close pipe_read_input;
+    
+    feed_shell_input [input] pipe_write_input;
+
+    let (pid2, status) = Unix.waitpid [] pid in
+    if pid <> pid2
+    then raise (Impossible "waitpid takes the specific pid");
+    (match status with
+    | Unix.WEXITED 0 -> tmpfile
+    (* stricter: fail fast, no "warning: skipping missing program file: " *)
+    | _ -> failwith "bad include program status"
+    )
+  end
 @
   
 
@@ -2884,6 +2922,12 @@ let dump_graph node =
   aux node;
   pr "}";
   ()
+@
+
+<<function [[Graph.loc_of_arc]]>>=
+let loc_of_arc arc =
+  let loc = arc.rule.R.loc2 in
+  spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
 @
 
 \section{CLI Actions}
@@ -3703,14 +3747,6 @@ open Fpath_.Operators
 \subsection*{[[Graph.ml]]}
 
 
-
-<<function [[Graph.loc_of_arc]]>>=
-let loc_of_arc arc =
-  let loc = arc.rule.R.loc2 in
-  spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
-@
-
-
 %-------------------------------------------------------------
 
 <<Graph.ml>>=
@@ -3814,16 +3850,6 @@ module Set = Set_
 
 \subsection*{[[Main.ml]]}
 
-<<toplevel [[Main._1]]>>=
-let _ = 
-  Cap.main (fun (caps : Cap.all_caps) ->
-     let argv = CapSys.argv caps in
-     Exit.exit caps 
-        (Exit.catch (fun () -> 
-            CLI.main caps argv))
-  )
-@
-
 
 %-------------------------------------------------------------
 
@@ -3840,14 +3866,6 @@ open Xix_mk
 
 
 \subsection*{[[Outofdate.ml]]}
-
-
-<<function [[Outofdate.opt0]]>>=
-let opt0 opttime =
-  match opttime with
-  | None -> 0.
-  | Some x -> x
-@
 
 
 %-------------------------------------------------------------
@@ -4143,10 +4161,6 @@ open Fpath_.Operators
 \subsection*{[[Env.mli]]}
 
 
-<<signature [[Env.shellenv_of_env]]>>=
-val shellenv_of_env : t -> Shellenv.t
-@
-
 %-------------------------------------------------------------
 
 <<Env.mli>>=
@@ -4324,4 +4338,3 @@ val hnodes : (string, node) Hashtbl.t
 %******************************************************************************
 
 \end{document}
-

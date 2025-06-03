@@ -110,42 +110,43 @@ let dump_job func job pidopt =
 let sched (caps : < Shell.caps; .. >) () =
   try 
     let job = Queue.take jobs in
-    let rule = job.J.rule in
-
+    (*s: [[Scheduler.sched()]] possibly dump job *)
     if !Flags.dump_jobs
     then dump_job "sched1: firing up " job None;
-
-    let recipe = 
+    (*e: [[Scheduler.sched()]] possibly dump job *)
+    let rule = job.J.rule in
+    let recipe : string list = 
       match rule.R.recipe2 with 
       | Some (Ast.R x) -> x
       | None -> raise (Impossible "job without a recipe")
     in
     let env = adjust_env job in
-    
+    (*s: [[Scheduler.sched()]] guard to display the recipe *)
     if not (Set.mem Ast.Quiet rule.R.attrs2)
+    (*e: [[Scheduler.sched()]] guard to display the recipe *)
     then recipe |> List.iter (fun s -> shprint env s);
-
+    (*s: [[Scheduler.sched()]] if dry mode *)
     if !Flags.dry_mode 
     then job.J.target_nodes |> List.iter (fun node ->
       node.G.time <- Some (Unix.time ());
       node.G.state <- G.Made;
     )
+    (*e: [[Scheduler.sched()]] if dry mode *)
     else begin
+      (*s: [[Scheduler.sched()]] let [[interactive]] *)
+      let interactive = Set.mem Ast.Interactive rule.R.attrs2 in
+      (*e: [[Scheduler.sched()]] let [[interactive]] *)
       (* This -e is super important! so that by default the recipe is run
        * so that any error in a simple command ran from the recipe, even inside
        * a for loop, will exit the whole recipe with the error.
        *)
       let pid = 
-        Shell.exec_recipe caps
-          (Env.shellenv_of_env env)
-          ["-e"]
-          recipe 
-          (Set.mem Ast.Interactive rule.R.attrs2) 
+        Shell.exec_recipe caps (Env.shellenv_of_env env) ["-e"] recipe interactive
       in
-
+      (*s: [[Scheduler.sched()]] possibly dump job after [[exec_recipe]] *)
       if !Flags.dump_jobs
       then dump_job "sched2: " job (Some pid);
-
+      (*e: [[Scheduler.sched()]] possibly dump job after [[exec_recipe]] *)
       Hashtbl.add running pid job;
       incr nrunning
     end
@@ -160,12 +161,12 @@ let sched (caps : < Shell.caps; .. >) () =
 (*****************************************************************************)
 
 (*s: function [[Scheduler.run]] *)
-let run (caps : < Shell.caps; .. >) job =
+let run (caps : < Shell.caps; .. >) (job : Job.t) : unit =
   Queue.add job jobs;
-
+  (*s: [[Scheduler.run]] possibly dump the job *)
   if !Flags.dump_jobs
   then dump_job "run: " job None;
-
+  (*e: [[Scheduler.run]] possibly dump the job *)
   if !nrunning < nproclimit caps
   then sched caps ()
 (*e: function [[Scheduler.run]] *)
@@ -185,13 +186,15 @@ let waitup (caps : < Shell.caps; .. >) () =
       raise 
         (Impossible (spf "wait returned unexpected process with pid %d" pid))
   in
+  (*s: [[Scheduler.waitup()]] possibly dump job *)
   if !Flags.dump_jobs
   then dump_job "waitup: " job (Some pid);
-
+  (*e: [[Scheduler.waitup()]] possibly dump job *)
   Hashtbl.remove running pid;
   decr nrunning;
 
   match ret with
+  (*s: [[Scheduler.waitup()]] matching [[ret]] cases *)
   | Unix.WEXITED 0 ->
       job.J.target_nodes |> List.iter (fun node ->
         G.update node
@@ -201,7 +204,9 @@ let waitup (caps : < Shell.caps; .. >) () =
       *)
       if !nrunning < nproclimit caps && Queue.length jobs > 0
       then sched caps ()
+  (*x: [[Scheduler.waitup()]] matching [[ret]] cases *)
   | Unix.WEXITED n ->
+      (*s: [[Scheduler.waitup()]] job exited with error code [[n]], if [[Delete]] rule *)
       (* less: call shprint *)
       if Set.mem Ast.Delete job.J.rule.R.attrs2 
       then 
@@ -212,11 +217,15 @@ let waitup (caps : < Shell.caps; .. >) () =
             Sys.remove f
           end
         );
+      (*e: [[Scheduler.waitup()]] job exited with error code [[n]], if [[Delete]] rule *)
       failwith (spf "error in child process, exit status = %d" n)
+  (*x: [[Scheduler.waitup()]] matching [[ret]] cases *)
   (* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
   | Unix.WSIGNALED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)
+  (*x: [[Scheduler.waitup()]] matching [[ret]] cases *)
   | Unix.WSTOPPED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)
+  (*e: [[Scheduler.waitup()]] matching [[ret]] cases *)
 (*e: function [[Scheduler.waitup]] *)
 (*e: Scheduler.ml *)

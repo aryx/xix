@@ -121,6 +121,7 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
   (* less: extra checks and filtering on read_environment? *)
   { vars          = vars;
     internal_vars = internal;
+
     vars_we_set   = Hashtbl.create 101;
     vars_commandline   = Hashtbl.create 101;
   }

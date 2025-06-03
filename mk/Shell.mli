@@ -33,4 +33,10 @@ val exec_pipecmd :
   string (* sh stdin (recipe) *) ->
   Common.filename (* sh output*)
 (*e: signature [[Shell.exec_pipecmd]] *)
+
+(* internals *)
+(*s: signature [[Shell.exec_shell]] *)
+val exec_shell: <Cap.exec; Cap.env; ..> -> Shellenv.t -> string list -> string list ->
+  unit
+(*e: signature [[Shell.exec_shell]] *)
 (*e: Shell.mli *)

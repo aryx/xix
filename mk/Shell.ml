@@ -91,7 +91,6 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
      * this is an rc issue.
      *)
     |> List_.exclude (fun (_s, xs) -> xs = [])
-
     |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
   in
   let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
@@ -145,7 +144,7 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
   (* children case *)
   if pid = 0
   then
-
+    (*s: [[Shell.exec_recipe]] when children case, if [[interactive]] *)
     (* pad: I added this feature so mk can call interactive program
      * such as syncweb. Otherwise stdin is used to feed the shell
      * and so any program called from the shell will not have any stdin
@@ -166,7 +165,9 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
       exec_shell caps shellenv flags [tmpfile]
       (* less: delete tmpfile *)
     (* unreachable *)
-    end else begin
+    end 
+    (*e: [[Shell.exec_recipe]] when children case, if [[interactive]] *)
+    else begin
 
     let (pipe_read, pipe_write) = Unix.pipe () in
     let pid2 = CapUnix.fork caps () in

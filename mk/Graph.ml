@@ -429,15 +429,17 @@ let update node =
   Logs.debug (fun m -> m "update(): node %s time=%s" node.name 
                  (File.str_of_time node.time));
   
+  (*s: [[Graph.update()]] if virtual node *)
   if node.is_virtual
   then begin
     node.time <- Some 1.0;
     (* less: take max time of prereqs, need that? *)
   end
+  (*e: [[Graph.update()]] if virtual node *)
   else begin
     let oldtime = node.time in
     node.time <- File.timeof (Fpath.v node.name);
-
+    (*s: [[Graph.update()]] sanity check new [[node.time]] *)
     (* todo: actually can happen for rule like
      * x.tab.h: y.tab.h
      *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
@@ -450,6 +452,7 @@ let update node =
     if oldtime = node.time || node.time = None
     then failwith (spf "recipe did not update %s, time =%s" node.name
                      (File.str_of_time node.time));
+    (*e: [[Graph.update()]] sanity check new [[node.time]] *)
   end
 (*e: function [[Graph.update]] *)
 (*e: Graph.ml *)

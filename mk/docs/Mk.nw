@@ -323,7 +323,7 @@ type instr = {
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
      * so 'string' below, not 'word' *)
     | Definition of string * words
-    <<[[Ast.instr_kind]] cases>> 
+    <<[[Ast.instr_kind]] cases>>
 @
 %$
 %alt: move later Include? move Definition in separate section?
@@ -1907,7 +1907,7 @@ nodes |> List.iter (fun target ->
           Common.push prereq.G.name all_prereqs
         end
   )
-);
+));
 @
 
 <<function [[Outofdate.opt0]]>>=
@@ -2186,7 +2186,7 @@ then failwith (spf "recipe did not update %s, time =%s" node.name
 
 <<[[Scheduler.waitup()]] matching [[ret]] cases>>=
 | Unix.WEXITED n ->
-    <<[[Scheduler.waitup()]] job exited with error code [[n]], if [[ Delete]] rule>>
+    <<[[Scheduler.waitup()]] job exited with error code [[n]], if [[Delete]] rule>>
     failwith (spf "error in child process, exit status = %d" n)
 @
 
@@ -3387,7 +3387,7 @@ let error s =
 let loc () = 
   { Ast.file = Fpath.v !Globals.file; Ast.line = !Globals.line; }
 
-<<type [[Lexer.state]]>> 
+<<type [[Lexer.state]]>>
 
 <<global [[Lexer.state_]]>>
 

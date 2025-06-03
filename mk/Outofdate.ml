@@ -28,6 +28,7 @@ let outofdate node arc =
        * the <=.
        *)
        (match node.G.time, node2.G.time with
+       | Some t1, Some t2 -> t1 < t2
        (* in foo.exe: foo.o: foo.c, foo.exe and foo.o might not
         * exist and so have a time set to None. In that case,
         * I consider foo.exe also out of date as anyway foo.o
@@ -35,7 +36,6 @@ let outofdate node arc =
         *)
        | _      , None    -> true
        | None   , Some _  -> true
-       | Some t1, Some t2 -> t1 < t2
        )
 (*e: function [[Outofdate.outofdate]] *)
 
@@ -49,11 +49,13 @@ let opt0 opttime =
 
 
 (*s: function [[Outofdate.dorecipe]] *)
-let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
+let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
   then
+    (*s: [[Outofdate.dorecipe()]] when no arcs with a recipe, if virtual node *)
     if node.G.is_virtual
     then G.update node
+    (*e: [[Outofdate.dorecipe()]] when no arcs with a recipe, if virtual node *)
     else failwith (spf "no recipe to make '%s'" node.G.name)
   else begin
     let master_arc = 
@@ -61,10 +63,9 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
       with Not_found -> raise (Impossible "List.exists above")
     in
     let master_rule = master_arc.G.rule in
-    
-    let main_target = node.G.name in
     let all_targets = master_rule.R.all_targets in
     (* less: outofdate_targets (aka target) *)
+    (*s: [[Outofdate.dorecipe()]] compute target [[nodes]] *)
     let nodes =
       all_targets |> List.filter_map (fun target ->
         if Hashtbl.mem G.hnodes target
@@ -73,6 +74,8 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
         else None
       )
     in
+    (*e: [[Outofdate.dorecipe()]] compute target [[nodes]] *)
+    (*s: [[Outofdate.dorecipe()]] compute [[all_prereqs]] *)
     (* less: newprereqs *)
     let all_prereqs = ref [] in
     (* bug: can not use Set for the accumulator below! Indeed, we want
@@ -84,9 +87,8 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
     let hdone_prereqs = Hashtbl.create 101 in
     nodes |> List.iter (fun target ->
       target.G.arcs |> List.iter (fun arc ->
-        match arc.G.dest with
-        | None -> ()
-        | Some prereq -> 
+        arc.G.dest |> Option.iter (fun prereq ->
+            (*s: [[Outofdate.dorecipe()]] when compute [[all_prereqs]] if explain mode *)
             (* less: could do that instead in work when find out about
              * an outofdate arc
              *)
@@ -94,6 +96,7 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
             then Logs.info (fun m -> m "%s(%.1f) < %s(%.1f)"
                         node.G.name (opt0 node.G.time)
                         prereq.G.name (opt0 prereq.G.time));
+            (*e: [[Outofdate.dorecipe()]] when compute [[all_prereqs]] if explain mode *)
             if Hashtbl.mem hdone_prereqs prereq
             then ()
             else begin
@@ -101,19 +104,18 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
               Common.push prereq.G.name all_prereqs
             end
       )
-    );
-    
-    nodes |> List.iter (fun node ->
-      node.G.state <- G.BeingMade
-    );
-    Scheduler.run caps { J. 
-                    rule = master_rule;
-                    target_nodes = nodes;
-                    env = env;
-                    main_target = main_target;
-                    all_targets = all_targets;
-                    all_prereqs = List.rev !all_prereqs;
-                  };
+    ));
+    (*e: [[Outofdate.dorecipe()]] compute [[all_prereqs]] *)
+    nodes |> List.iter (fun node -> node.G.state <- G.BeingMade);
+    let job = { J. 
+        rule = master_rule;
+        env = env;
+        main_target = node.G.name;
+        target_nodes = nodes;
+        all_targets = all_targets;
+        all_prereqs = List.rev !all_prereqs;
+    } in
+    Scheduler.run caps job;
     did := true
   end
 (*e: function [[Outofdate.dorecipe]] *)
@@ -126,9 +128,8 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
 (* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
  *)
-let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
-  Logs.debug (fun m -> m "work(%s) time=%s" node.G.name 
-                 (File.str_of_time node.G.time));
+let rec work (caps: < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit =
+  Logs.debug (fun m -> m "work(%s) time=%s" node.G.name (File.str_of_time node.G.time));
 
   if node.G.state = G.BeingMade
   then ()
@@ -136,11 +137,12 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
     match node.G.arcs with
     (* a leaf *)
     | [] ->
+        (*s: [[Outofdate.work()]] sanity check node time when leaf node *)
         (* could be a virtual node, but weird to have a virtual node leaf *)
         if node.G.time = None
         then failwith (spf "don't know how to make '%s'" node.G.name);
-
-        (* less: why not call update here?*)
+        (*e: [[Outofdate.work()]] sanity check node time when leaf node *)
+        (* less: why not call update here? *)
         node.G.state <- G.Made
 
     (* a node *)
@@ -150,27 +152,29 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
 
         xs |> List.iter (fun arc ->
           match arc.G.dest with
+          (*s: [[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases *)
           | Some node2 ->
               (* TODO: why recurse if node is Made? *)
               (* recurse! *)
               work caps env node2 did;
-              
+    
               (match node2.G.state with
               | G.NotMade | G.BeingMade -> ready := false;
               | G.Made -> ()
               );
               if outofdate node arc
               then out_of_date := true
-
+          (*x: [[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases *)
           | None ->
               if node.G.time = None
               then out_of_date := true
+          (*e: [[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases *)
         );
         if not !ready
         then ()
         else 
-          if not !out_of_date 
-          then node.G.state <- G.Made
-          else dorecipe caps env node did
+          if !out_of_date 
+          then dorecipe caps env node did
+          else node.G.state <- G.Made
 (*e: function [[Outofdate.work]] *)
 (*e: Outofdate.ml *)

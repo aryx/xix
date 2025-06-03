@@ -1576,6 +1576,8 @@ let check_cycle node =
   in
   aux [] node
 @
+% classic DFS
+
 
 <<function [[Graph.error_cycle]]>>=
 let error_cycle node trace =
@@ -1743,16 +1745,18 @@ let rec vacuous node =
 
 \chapter{Finding Outdated Files}
 
+% outdated mean either inexistent target or time older than
+% its recently updated dependencies (e.g., .o vs .c)
 
 \section{Exploring the graph: [[work()]]}
 
+% main -> build_target -> <> -> outofdate; dorecipe
 <<function [[Outofdate.work]]>>=
 (* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
  *)
-let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
-  Logs.debug (fun m -> m "work(%s) time=%s" node.G.name 
-                 (File.str_of_time node.G.time));
+let rec work (caps: < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit =
+  Logs.debug (fun m -> m "work(%s) time=%s" node.G.name (File.str_of_time node.G.time));
 
   if node.G.state = G.BeingMade
   then ()
@@ -1760,11 +1764,8 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
     match node.G.arcs with
     (* a leaf *)
     | [] ->
-        (* could be a virtual node, but weird to have a virtual node leaf *)
-        if node.G.time = None
-        then failwith (spf "don't know how to make '%s'" node.G.name);
-
-        (* less: why not call update here?*)
+        <<[[Outofdate.work()]] sanity check node time when leaf node>>
+        (* less: why not call update here? *)
         node.G.state <- G.Made
 
     (* a node *)
@@ -1774,29 +1775,43 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
 
         xs |> List.iter (fun arc ->
           match arc.G.dest with
-          | Some node2 ->
-              (* TODO: why recurse if node is Made? *)
-              (* recurse! *)
-              work caps env node2 did;
-              
-              (match node2.G.state with
-              | G.NotMade | G.BeingMade -> ready := false;
-              | G.Made -> ()
-              );
-              if outofdate node arc
-              then out_of_date := true
-
-          | None ->
-              if node.G.time = None
-              then out_of_date := true
+          <<[[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases>>
         );
         if not !ready
         then ()
         else 
-          if not !out_of_date 
-          then node.G.state <- G.Made
-          else dorecipe caps env node did
+          if !out_of_date 
+          then dorecipe caps env node did
+          else node.G.state <- G.Made
 @
+
+<<[[Outofdate.work()]] sanity check node time when leaf node>>=
+(* could be a virtual node, but weird to have a virtual node leaf *)
+if node.G.time = None
+then failwith (spf "don't know how to make '%s'" node.G.name);
+@
+% sometimes typo on filename in prereqs of a rule so file actually does not exist
+
+<<[[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases>>=
+| Some node2 ->
+    (* TODO: why recurse if node is Made? *)
+    (* recurse! *)
+    work caps env node2 did;
+    
+    (match node2.G.state with
+    | G.NotMade | G.BeingMade -> ready := false;
+    | G.Made -> ()
+    );
+    if outofdate node arc
+    then out_of_date := true
+@
+
+<<[[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases>>=
+| None ->
+    if node.G.time = None
+    then out_of_date := true
+@
+% ???
 
 <<function [[Outofdate.outofdate]]>>=
 let outofdate node arc =
@@ -1809,6 +1824,7 @@ let outofdate node arc =
        * the <=.
        *)
        (match node.G.time, node2.G.time with
+       | Some t1, Some t2 -> t1 < t2
        (* in foo.exe: foo.o: foo.c, foo.exe and foo.o might not
         * exist and so have a time set to None. In that case,
         * I consider foo.exe also out of date as anyway foo.o
@@ -1816,18 +1832,18 @@ let outofdate node arc =
         *)
        | _      , None    -> true
        | None   , Some _  -> true
-       | Some t1, Some t2 -> t1 < t2
        )
 @
 
 \section{Scheduling recipes: [[dorecipe()]]}
+%alt: enqueuing recipes? or jobs?
 
+% main -> build_target -> work -> <> ->
 <<function [[Outofdate.dorecipe]]>>=
-let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
+let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
   then
-    if node.G.is_virtual
-    then G.update node
+    <<[[Outofdate.dorecipe()]] when no arcs with a recipe, if virtual node>>
     else failwith (spf "no recipe to make '%s'" node.G.name)
   else begin
     let master_arc = 
@@ -1835,61 +1851,63 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
       with Not_found -> raise (Impossible "List.exists above")
     in
     let master_rule = master_arc.G.rule in
-    
-    let main_target = node.G.name in
     let all_targets = master_rule.R.all_targets in
     (* less: outofdate_targets (aka target) *)
-    let nodes =
-      all_targets |> List.filter_map (fun target ->
-        if Hashtbl.mem G.hnodes target
-        then Some (Hashtbl.find G.hnodes target)
-        (* TODO? failwith? when can this happen? *)
-        else None
-      )
-    in
-    (* less: newprereqs *)
-    let all_prereqs = ref [] in
-    (* bug: can not use Set for the accumulator below! Indeed, we want
-     * the order for prereqs to be the original order in the mkfile.
-     * If not, some command may not work if the order of the file
-     * matters (e.g., with the ocaml linker the .cmo must be given
-     * in a certain order)
-     *)
-    let hdone_prereqs = Hashtbl.create 101 in
-    nodes |> List.iter (fun target ->
-      target.G.arcs |> List.iter (fun arc ->
-        match arc.G.dest with
-        | None -> ()
-        | Some prereq -> 
-            (* less: could do that instead in work when find out about
-             * an outofdate arc
-             *)
-            if !Flags.explain_mode && outofdate node arc
-            then Logs.info (fun m -> m "%s(%.1f) < %s(%.1f)"
-                        node.G.name (opt0 node.G.time)
-                        prereq.G.name (opt0 prereq.G.time));
-            if Hashtbl.mem hdone_prereqs prereq
-            then ()
-            else begin
-              Hashtbl.add hdone_prereqs prereq true;
-              Common.push prereq.G.name all_prereqs
-            end
-      )
-    );
-    
-    nodes |> List.iter (fun node ->
-      node.G.state <- G.BeingMade
-    );
-    Scheduler.run caps { J. 
-                    rule = master_rule;
-                    target_nodes = nodes;
-                    env = env;
-                    main_target = main_target;
-                    all_targets = all_targets;
-                    all_prereqs = List.rev !all_prereqs;
-                  };
+    <<[[Outofdate.dorecipe()]] compute target [[nodes]]>>
+    <<[[Outofdate.dorecipe()]] compute [[all_prereqs]]>>
+    nodes |> List.iter (fun node -> node.G.state <- G.BeingMade);
+    let job = { J. 
+        rule = master_rule;
+        env = env;
+        main_target = node.G.name;
+        target_nodes = nodes;
+        all_targets = all_targets;
+        all_prereqs = List.rev !all_prereqs;
+    } in
+    Scheduler.run caps job;
     did := true
   end
+@
+% why care about prereqs? for $prereqs!
+
+<<signature [[Scheduler.run]]>>=
+(* need Cap.env for NPROC *)
+val run : < Shell.caps ; Cap.env; .. > -> Job.t -> unit
+@
+
+<<[[Outofdate.dorecipe()]] compute target [[nodes]]>>=
+let nodes =
+  all_targets |> List.filter_map (fun target ->
+    if Hashtbl.mem G.hnodes target
+    then Some (Hashtbl.find G.hnodes target)
+    (* TODO? failwith? when can this happen? *)
+    else None
+  )
+in
+@
+
+<<[[Outofdate.dorecipe()]] compute [[all_prereqs]]>>=
+(* less: newprereqs *)
+let all_prereqs = ref [] in
+(* bug: can not use Set for the accumulator below! Indeed, we want
+ * the order for prereqs to be the original order in the mkfile.
+ * If not, some command may not work if the order of the file
+ * matters (e.g., with the ocaml linker the .cmo must be given
+ * in a certain order)
+ *)
+let hdone_prereqs = Hashtbl.create 101 in
+nodes |> List.iter (fun target ->
+  target.G.arcs |> List.iter (fun arc ->
+    arc.G.dest |> Option.iter (fun prereq ->
+        <<[[Outofdate.dorecipe()]] when compute [[all_prereqs]] if explain mode>>
+        if Hashtbl.mem hdone_prereqs prereq
+        then ()
+        else begin
+          Hashtbl.add hdone_prereqs prereq true;
+          Common.push prereq.G.name all_prereqs
+        end
+  )
+);
 @
 
 <<function [[Outofdate.opt0]]>>=
@@ -1900,83 +1918,25 @@ let opt0 opttime =
 @
 
 
+
+
+
 \chapter{Scheduling Jobs}
 
 
-\section{[[sched()]] skeleton}
+\section{Enqueuing jobs: [[run()]]}
 
-<<function [[Scheduler.sched]]>>=
-let sched (caps : < Shell.caps; .. >) () =
-  try 
-    let job = Queue.take jobs in
-    let rule = job.J.rule in
-
-    if !Flags.dump_jobs
-    then dump_job "sched1: firing up " job None;
-
-    let recipe = 
-      match rule.R.recipe2 with 
-      | Some (Ast.R x) -> x
-      | None -> raise (Impossible "job without a recipe")
-    in
-    let env = adjust_env job in
-    
-    if not (Set.mem Ast.Quiet rule.R.attrs2)
-    then recipe |> List.iter (fun s -> shprint env s);
-
-    if !Flags.dry_mode 
-    then job.J.target_nodes |> List.iter (fun node ->
-      node.G.time <- Some (Unix.time ());
-      node.G.state <- G.Made;
-    )
-    else begin
-      (* This -e is super important! so that by default the recipe is run
-       * so that any error in a simple command ran from the recipe, even inside
-       * a for loop, will exit the whole recipe with the error.
-       *)
-      let pid = 
-        Shell.exec_recipe caps
-          (Env.shellenv_of_env env)
-          ["-e"]
-          recipe 
-          (Set.mem Ast.Interactive rule.R.attrs2) 
-      in
-
-      if !Flags.dump_jobs
-      then dump_job "sched2: " job (Some pid);
-
-      Hashtbl.add running pid job;
-      incr nrunning
-    end
-    
-  with Queue.Empty ->
-    raise (Impossible "no jobs to schedule")
-@
-%LP: split and aspectize
-
-<<signature [[Env.shellenv_of_env]]>>=
-val shellenv_of_env : t -> Shellenv.t
-@
-
-<<constant [[Scheduler.running]]>>=
-let running = Hashtbl.create 101
-@
-
-<<signature [[Scheduler.run]]>>=
-(* need Cap.env for NPROC *)
-val run : < Shell.caps ; Cap.env; .. > -> Job.t -> unit
-@
-
+% ... -> dorecipe -> <> -> sched
 <<function [[Scheduler.run]]>>=
-let run (caps : < Shell.caps; .. >) job =
+let run (caps : < Shell.caps; .. >) (job : Job.t) : unit =
   Queue.add job jobs;
-
-  if !Flags.dump_jobs
-  then dump_job "run: " job None;
-
+  <<[[Scheduler.run]] possibly dump the job>>
   if !nrunning < nproclimit caps
   then sched caps ()
 @
+% note that this will return! it will not wait for the job
+% to finish, so that work can find more work (which will 
+% enqueue and also possibly schedule more work)
 
 <<function [[Scheduler.nproclimit]]>>=
 let nproclimit (caps: < Cap.env; ..>) =
@@ -1985,6 +1945,78 @@ let nproclimit (caps: < Cap.env; ..>) =
     int_of_string s
    with Not_found | _ -> 2
   )
+@
+
+\section{[[sched()]] skeleton}
+
+% ... -> run | ??? -> <> -> ???
+<<function [[Scheduler.sched]]>>=
+let sched (caps : < Shell.caps; .. >) () =
+  try 
+    let job = Queue.take jobs in
+    <<[[Scheduler.sched()]] possibly dump job>>
+    let rule = job.J.rule in
+    let recipe : string list = 
+      match rule.R.recipe2 with 
+      | Some (Ast.R x) -> x
+      | None -> raise (Impossible "job without a recipe")
+    in
+    let env = adjust_env job in
+    <<[[Scheduler.sched()]] guard to display the recipe>>
+    then recipe |> List.iter (fun s -> shprint env s);
+    <<[[Scheduler.sched()]] if dry mode>>
+    else begin
+      <<[[Scheduler.sched()]] let [[interactive]]>>
+      (* This -e is super important! so that by default the recipe is run
+       * so that any error in a simple command ran from the recipe, even inside
+       * a for loop, will exit the whole recipe with the error.
+       *)
+      let pid = 
+        Shell.exec_recipe caps (Env.shellenv_of_env env) ["-e"] recipe interactive
+      in
+      <<[[Scheduler.sched()]] possibly dump job after [[exec_recipe]]>>
+      Hashtbl.add running pid job;
+      incr nrunning
+    end
+    
+  with Queue.Empty ->
+    raise (Impossible "no jobs to schedule")
+@
+
+<<signature [[Shell.exec_recipe]]>>=
+val exec_recipe :
+  < caps; .. > ->
+  Shellenv.t ->
+  string list (* sh arguments *) ->
+  string list (* sh stdin (recipe) *) ->
+  bool (* interactive *) ->
+  int (* pid *)
+@
+
+<<constant [[Scheduler.running]]>>=
+let running = Hashtbl.create 101
+@
+
+<<function [[Scheduler.adjust_env]]>>=
+(* !modify by side effect job.env! *)
+let adjust_env job =
+  let env = job.J.env in
+
+  (* less: should be all_target *)
+  Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
+  (* less: newprereqs *)
+  Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
+  job.J.rule.R.stem |> Common.if_some (fun s ->
+    Hashtbl.replace env.E.internal_vars "stem" [s];
+  );
+
+  env
+@
+% where is created env? Always from initial Env.initenv?
+% no copy?
+
+<<signature [[Env.shellenv_of_env]]>>=
+val shellenv_of_env : t -> Shellenv.t
 @
 
 
@@ -2007,23 +2039,8 @@ let shprint env s =
 %$
 
 
-<<function [[Scheduler.adjust_env]]>>=
-(* !modify by side effect job.env! *)
-let adjust_env job =
-  let env = job.J.env in
 
-  (* less: should be all_target *)
-  Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
-  (* less: newprereqs *)
-  Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
-  job.J.rule.R.stem |> Common.if_some (fun s ->
-    Hashtbl.replace env.E.internal_vars "stem" [s];
-  );
-
-  env
-@
-
-\section{Executing Jobs: [[exec_shell()]]}
+\section{Executing Jobs: [[exec_recipe()]]}
 
 <<type [[Shell.caps]]>>=
 (* Need:
@@ -2033,73 +2050,8 @@ let adjust_env job =
 type caps = < Cap.exec; Cap.fork; Cap.env >
 @
 
-
-<<function [[Shell.exec_shell]]>>=
-let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
-  let shell = shell_from_env_or_sh caps in
-  let env = 
-    shellenv 
-    (* bug: I exclude empty variables
-     * otherwise rc does strange things. Indeed, programs
-     * such as ocamlc get confused by empty variables
-     * used in shell commands such as ocamlc $FLAG where FLAG is empty.
-     * I get the problem also with mk-plan9port.
-     * Note however that there is no problem with mk-sh.byte, so
-     * this is an rc issue.
-     *)
-    |> List_.exclude (fun (_s, xs) -> xs = [])
-
-    |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
-  in
-  let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
-  let shell_path = !!(shell.path) in
-  Logs.info (fun m -> m "exec_shell: %s %s" shell_path (String.concat " " args));
-  (try 
-     (* to debug pass instead "/usr/bin/strace" 
-        (Array.of_list ("strace"::shell.path::args)) *)
-     CapUnix.execve caps
-       (* bugfix: need to pass shell.name too! otherwise the first elt
-        * in args (usually '-e') will be taken for the prog name and skipped
-        * by the shell (and mk will not stop at the first error)
-        *)
-       shell_path (Array.of_list (shell.name::args))
-       (Array.of_list env)
-      |> ignore;
-   with Unix.Unix_error (err, fm, argm) -> 
-     if not (Sys.file_exists shell_path)
-     then failwith (spf "could not find shell %s" shell_path)
-     else failwith (spf "Could not execute a shell command: %s %s %s"
-                      (Unix.error_message err) fm argm)
-  );
-  (* nosemgrep: do-not-use-exit (unreachable) *)
-  exit (-2)
-@
-%$
-
-<<function [[Shell.feed_shell_input]]>>=
-let feed_shell_input inputs pipe_write =
-  inputs |> List.iter (fun str ->
-    let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
-    if n < 0
-    then failwith "Could not write in pipe to shell";
-    let n = Unix.write pipe_write (Bytes.of_string "\n") 0 1 in
-    if n < 0
-    then failwith "Could not write in pipe to shell";
-  );
-  (* will flush *)
-  Unix.close pipe_write
-@
-
-<<signature [[Shell.exec_recipe]]>>=
-val exec_recipe :
-  < caps; .. > ->
-  Shellenv.t ->
-  string list (* sh arguments *) ->
-  string list (* sh stdin (recipe) *) ->
-  bool (* interactive *) ->
-  int (* pid *)
-@
-
+% ??? -> <>
+% (double) fork pipe exec classic
 <<function [[Shell.exec_recipe]]>>=
 (* returns a pid *)
 let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
@@ -2108,28 +2060,8 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
   (* children case *)
   if pid = 0
   then
-
-    (* pad: I added this feature so mk can call interactive program
-     * such as syncweb. Otherwise stdin is used to feed the shell
-     * and so any program called from the shell will not have any stdin
-     *)
-    if interactive 
-    then begin
-      let tmpfile = Filename.temp_file "mk" "sh" in
-      (try
-         let chan = open_out tmpfile in
-         inputs |> List.iter (fun s -> 
-           output_string chan s; 
-           output_string chan "\n"
-         );
-         close_out chan
-       with Sys_error s -> 
-         failwith (spf "Could not create temporary file (error = %s)" s)
-      ); 
-      exec_shell caps shellenv flags [tmpfile]
-      (* less: delete tmpfile *)
-    (* unreachable *)
-    end else begin
+    <<[[Shell.exec_recipe]] when children case, if [[interactive]]>>
+    else begin
 
     let (pipe_read, pipe_write) = Unix.pipe () in
     let pid2 = CapUnix.fork caps () in
@@ -2156,9 +2088,30 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
   else pid (* pid of child1 *)
 @
 
+<<signature [[Shell.exec_shell]]>>=
+val exec_shell: <Cap.exec; Cap.env; ..> -> Shellenv.t -> string list -> string list ->
+  unit
+@
 
-\section{Waiting for jobs to finish}
 
+<<function [[Shell.feed_shell_input]]>>=
+let feed_shell_input inputs pipe_write =
+  inputs |> List.iter (fun str ->
+    let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
+    if n < 0
+    then failwith "Could not write in pipe to shell";
+    let n = Unix.write pipe_write (Bytes.of_string "\n") 0 1 in
+    if n < 0
+    then failwith "Could not write in pipe to shell";
+  );
+  (* will flush *)
+  Unix.close pipe_write
+@
+
+
+\section{Waiting for jobs to finish: [[waitup()]]}
+
+% main -> build_target -> work(); <> -> ???
 <<function [[Scheduler.waitup]]>>=
 let waitup (caps : < Shell.caps; .. >) () =
   let (pid, ret) = 
@@ -2173,39 +2126,24 @@ let waitup (caps : < Shell.caps; .. >) () =
       raise 
         (Impossible (spf "wait returned unexpected process with pid %d" pid))
   in
-  if !Flags.dump_jobs
-  then dump_job "waitup: " job (Some pid);
-
+  <<[[Scheduler.waitup()]] possibly dump job>>
   Hashtbl.remove running pid;
   decr nrunning;
 
   match ret with
-  | Unix.WEXITED 0 ->
-      job.J.target_nodes |> List.iter (fun node ->
-        G.update node
-      );
-      (* similar code in run();
-       * I added the test on jobs size though.
-      *)
-      if !nrunning < nproclimit caps && Queue.length jobs > 0
-      then sched caps ()
-  | Unix.WEXITED n ->
-      (* less: call shprint *)
-      if Set.mem Ast.Delete job.J.rule.R.attrs2 
-      then 
-        job.J.rule.R.all_targets |> List.iter (fun f ->
-          if Sys.file_exists f
-          then begin
-            Logs.info (fun m -> m "deleting %s" f);
-            Sys.remove f
-          end
-        );
-      failwith (spf "error in child process, exit status = %d" n)
-  (* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
-  | Unix.WSIGNALED n ->
-      failwith (spf "child process killed/stopped by signal = %d" n)
-  | Unix.WSTOPPED n ->
-      failwith (spf "child process killed/stopped by signal = %d" n)
+  <<[[Scheduler.waitup()]] matching [[ret]] cases>>
+@
+
+<<[[Scheduler.waitup()]] matching [[ret]] cases>>=
+| Unix.WEXITED 0 ->
+    job.J.target_nodes |> List.iter (fun node ->
+      G.update node
+    );
+    (* similar code in run();
+     * I added the test on jobs size though.
+    *)
+    if !nrunning < nproclimit caps && Queue.length jobs > 0
+    then sched caps ()
 @
 
 
@@ -2222,32 +2160,56 @@ let update node =
   Logs.debug (fun m -> m "update(): node %s time=%s" node.name 
                  (File.str_of_time node.time));
   
-  if node.is_virtual
-  then begin
-    node.time <- Some 1.0;
-    (* less: take max time of prereqs, need that? *)
-  end
+  <<[[Graph.update()]] if virtual node>>
   else begin
     let oldtime = node.time in
     node.time <- File.timeof (Fpath.v node.name);
-
-    (* todo: actually can happen for rule like
-     * x.tab.h: y.tab.h
-     *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
-     * (see plan9/shell/rc/mkfile).
-     * In that case we should not failwith.
-     * Because it is a rare case, maybe we should have a special
-     * attribute for those rules, so not fail only when have this
-     * attribute
-     *)
-    if oldtime = node.time || node.time = None
-    then failwith (spf "recipe did not update %s, time =%s" node.name
-                     (File.str_of_time node.time));
+    <<[[Graph.update()]] sanity check new [[node.time]]>>
   end
 @
 
+<<[[Graph.update()]] sanity check new [[node.time]]>>=
+(* todo: actually can happen for rule like
+ * x.tab.h: y.tab.h
+ *   cmp -s x.tab.h y.tab.h || cp y.tab.h x.tab.h
+ * (see plan9/shell/rc/mkfile).
+ * In that case we should not failwith.
+ * Because it is a rare case, maybe we should have a special
+ * attribute for those rules, so not fail only when have this
+ * attribute
+ *)
+if oldtime = node.time || node.time = None
+then failwith (spf "recipe did not update %s, time =%s" node.name
+                 (File.str_of_time node.time));
+@
 
-\chapter{The Shell Environment}
+
+<<[[Scheduler.waitup()]] matching [[ret]] cases>>=
+| Unix.WEXITED n ->
+    <<[[Scheduler.waitup()]] job exited with error code [[n]], if [[ Delete]] rule>>
+    failwith (spf "error in child process, exit status = %d" n)
+@
+
+
+
+<<[[Scheduler.waitup()]] matching [[ret]] cases>>=
+(* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
+| Unix.WSIGNALED n ->
+    failwith (spf "child process killed/stopped by signal = %d" n)
+@
+<<[[Scheduler.waitup()]] matching [[ret]] cases>>=
+| Unix.WSTOPPED n ->
+    failwith (spf "child process killed/stopped by signal = %d" n)
+@
+
+
+
+\chapter{The shell and its environment}
+%alt: Interacting with the Shell
+
+%trans: %toc:
+% get env and use vars from enclosing env, and will prepare
+% new env for child shell process executing recipe
 
 <<type [[Shellenv.t]]>>=
 type t = (string * string list) list
@@ -2256,6 +2218,7 @@ type t = (string * string list) list
 
 \section{[[initenv()]]}
 
+% main -> build_targets -> <>
 <<signature [[Env.initenv]]>>=
 (* Will read the OS environment variables (e.g., PATH, HOME, objtype).
  * Need also Cap.argv to set MKFLAGS
@@ -2290,6 +2253,7 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
   (* less: extra checks and filtering on read_environment? *)
   { vars          = vars;
     internal_vars = internal;
+
     vars_we_set   = Hashtbl.create 101;
     vars_commandline   = Hashtbl.create 101;
   }
@@ -2375,6 +2339,53 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 %$
 
 
+\section{[[exec_shell()]]}
+% finally
+
+% ??? -> sched -> exec_recipe -> <>
+<<function [[Shell.exec_shell]]>>=
+let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
+  let shell = shell_from_env_or_sh caps in
+  let env = 
+    shellenv 
+    (* bug: I exclude empty variables
+     * otherwise rc does strange things. Indeed, programs
+     * such as ocamlc get confused by empty variables
+     * used in shell commands such as ocamlc $FLAG where FLAG is empty.
+     * I get the problem also with mk-plan9port.
+     * Note however that there is no problem with mk-sh.byte, so
+     * this is an rc issue.
+     *)
+    |> List_.exclude (fun (_s, xs) -> xs = [])
+    |> List.map (fun (s, xs) -> spf "%s=%s" s (String.concat shell.iws xs))
+  in
+  let args = flags @ shell.flags @ shell.debug_flags() @extra_params in
+  let shell_path = !!(shell.path) in
+  Logs.info (fun m -> m "exec_shell: %s %s" shell_path (String.concat " " args));
+  (try 
+     (* to debug pass instead "/usr/bin/strace" 
+        (Array.of_list ("strace"::shell.path::args)) *)
+     CapUnix.execve caps
+       (* bugfix: need to pass shell.name too! otherwise the first elt
+        * in args (usually '-e') will be taken for the prog name and skipped
+        * by the shell (and mk will not stop at the first error)
+        *)
+       shell_path (Array.of_list (shell.name::args))
+       (Array.of_list env)
+      |> ignore;
+   with Unix.Unix_error (err, fm, argm) -> 
+     if not (Sys.file_exists shell_path)
+     then failwith (spf "could not find shell %s" shell_path)
+     else failwith (spf "Could not execute a shell command: %s %s %s"
+                      (Unix.error_message err) fm argm)
+  );
+  (* nosemgrep: do-not-use-exit (unreachable) *)
+  exit (-2)
+@
+%$
+
+%trans: and done! seen everything! from parsing to executing!
+
 \chapter{Debugging and Profiling Support}
 % debugging for the user here! See Debugging appendix
 % for debugging developer of mk itself (e.g., internal dumpers)
@@ -2430,6 +2441,16 @@ let explain_mode = ref false
 " explain mode";
 @
 
+<<[[Outofdate.dorecipe()]] when compute [[all_prereqs]] if explain mode>>=
+(* less: could do that instead in work when find out about
+ * an outofdate arc
+ *)
+if !Flags.explain_mode && outofdate node arc
+then Logs.info (fun m -> m "%s(%.1f) < %s(%.1f)"
+            node.G.name (opt0 node.G.time)
+            prereq.G.name (opt0 prereq.G.time));
+@
+
 \section{Dry mode: [[mk -n]]}
 
 <<constant [[Flags.dry_mode]]>>=
@@ -2439,6 +2460,15 @@ let dry_mode = ref false
 <<[[CLI.main()]] [[options]] elements>>=
 "-n", Arg.Set Flags.dry_mode,
 " dry mode";
+@
+
+
+<<[[Scheduler.sched()]] if dry mode>>=
+if !Flags.dry_mode 
+then job.J.target_nodes |> List.iter (fun node ->
+  node.G.time <- Some (Unix.time ());
+  node.G.state <- G.Made;
+)
 @
 
 \section{What-if mode: [[mk -w]]{\em file}}
@@ -2494,6 +2524,7 @@ end;
 \chapter{Advanced Features}
 
 \section{Backquote expansion}
+%TODO: copy titles from Make.nw
 
 <<[[Ast.word_element]] cases>>=
  (* stricter: backquotes are allowed only in word context, not at toplevel
@@ -2522,6 +2553,7 @@ val exec_backquote :
   string (* sh stdin (recipe) *) ->
   string (* sh output *)
 @
+
 %LP: later
 <<function [[Shell.exec_backquote]]>>=
 let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
@@ -2567,6 +2599,7 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
     output
   end
 @
+% diff with exec_recipe?
         
 \section{Subst variable}
 
@@ -2647,9 +2680,6 @@ attrs: rule_attribute list;
 <<type [[Ast.rule_attribute]]>>=
 and rule_attribute =
 <<[[Ast.rule_attribute]] cases>>
-| Quiet
-| Delete
-| Interactive (* pad: I added this one *)
 | NotHandled of char
 @
 
@@ -2673,9 +2703,83 @@ attrs2: Ast.rule_attribute Set_.t;
 mutable is_virtual: bool;
 @
 
+<<[[Graph.update()]] if virtual node>>=
+if node.is_virtual
+then begin
+  node.time <- Some 1.0;
+  (* less: take max time of prereqs, need that? *)
+end
+@
+
+
+<<[[Outofdate.dorecipe()]] when no arcs with a recipe, if virtual node>>=
+if node.G.is_virtual
+then G.update node
+@
+
+
 \subsection{[Q]uiet targets}
 
+<<[[Ast.rule_attribute]] cases>>=
+| Quiet
+@
+
+<<[[Scheduler.sched()]] guard to display the recipe>>=
+if not (Set.mem Ast.Quiet rule.R.attrs2)
+@
+
 \subsection{[D]elete targets}
+
+<<[[Ast.rule_attribute]] cases>>=
+| Delete
+@
+
+<<[[Scheduler.waitup()]] job exited with error code [[n]], if [[Delete]] rule>>=
+(* less: call shprint *)
+if Set.mem Ast.Delete job.J.rule.R.attrs2 
+then 
+  job.J.rule.R.all_targets |> List.iter (fun f ->
+    if Sys.file_exists f
+    then begin
+      Logs.info (fun m -> m "deleting %s" f);
+      Sys.remove f
+    end
+  );
+@
+
+\subsection{[I]nteractive recipe}
+
+<<[[Ast.rule_attribute]] cases>>=
+| Interactive (* pad: I added this one *)
+@
+
+<<[[Scheduler.sched()]] let [[interactive]]>>=
+let interactive = Set.mem Ast.Interactive rule.R.attrs2 in
+@
+
+<<[[Shell.exec_recipe]] when children case, if [[interactive]]>>=
+(* pad: I added this feature so mk can call interactive program
+ * such as syncweb. Otherwise stdin is used to feed the shell
+ * and so any program called from the shell will not have any stdin
+ *)
+if interactive 
+then begin
+  let tmpfile = Filename.temp_file "mk" "sh" in
+  (try
+     let chan = open_out tmpfile in
+     inputs |> List.iter (fun s -> 
+       output_string chan s; 
+       output_string chan "\n"
+     );
+     close_out chan
+   with Sys_error s -> 
+     failwith (spf "Could not create temporary file (error = %s)" s)
+  ); 
+  exec_shell caps shellenv flags [tmpfile]
+  (* less: delete tmpfile *)
+(* unreachable *)
+end 
+@
 
 \section{Dynamic includes}
 
@@ -2747,11 +2851,18 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     )
   end
 @
-  
+% diff with other exec_xxx? can't factorize a bit?  
 
 \chapter{Conclusion}
 
+
+
+
+
 \appendix
+
+
+
 
 \chapter{Debugging}
 
@@ -2792,6 +2903,9 @@ end;
     
 \section{Dumpers}
 
+
+\subsection{Dumping tokens}
+
 <<constant [[Flags.dump_tokens]]>>=
 let dump_tokens = ref false
 @
@@ -2804,6 +2918,9 @@ let dump_tokens = ref false
 if !Flags.dump_tokens 
 then Logs.app (fun m -> m "%s" (Dumper.dump tok));
 @
+
+\subsection{Dumping the AST}
+
 <<constant [[Flags.dump_ast]]>>=
 let dump_ast = ref false
 @
@@ -2817,6 +2934,12 @@ if !Flags.dump_ast
 then Ast.dump_ast instrs;
 @
 
+<<function [[Ast.dump_ast]]>>=
+let dump_ast instrs =
+  Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
+@
+
+\subsection{Dumping the environment}
 
 <<constant [[Flags.dump_env]]>>=
 let dump_env = ref false
@@ -2834,7 +2957,15 @@ if !Flags.dump_env
 then Env.dump_env env;
 @
 
+<<function [[Env.dump_env]]>>=
+let dump_env env =
+  Logs.debug (fun m -> m "Dump_env:");
+  env.vars |> Hashtbl.iter (fun k v ->
+    Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
+  )
+@
 
+\subsection{Dumping the graph}
 
 <<constant [[Flags.dump_graph]]>>=
 let dump_graph = ref false
@@ -2849,44 +2980,6 @@ let dump_graph = ref false
 if !Flags.dump_graph 
 then Graph.dump_graph root;
 @
-
-<<constant [[Flags.dump_jobs]]>>=
-let dump_jobs = ref false
-@
-<<[[CLI.main()]] [[options]] elements>>=
-"-dump_jobs", Arg.Set Flags.dump_jobs,
-" ";
-@
-
-
-
-
-
-<<function [[Ast.dump_ast]]>>=
-let dump_ast instrs =
-  Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
-@
-
-<<function [[Env.dump_env]]>>=
-let dump_env env =
-  Logs.debug (fun m -> m "Dump_env:");
-  env.vars |> Hashtbl.iter (fun k v ->
-    Logs.debug (fun m -> m " %s -> %s" k (Dumper.dump v));
-  )
-@
-
-
-<<function [[Scheduler.dump_job]]>>=
-let dump_job func job pidopt =
-  Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
-         (Unix.getpid())
-         func 
-         (match pidopt with Some pid -> pid | None -> 0)
-         (job.J.target_nodes |> List.map (fun node -> node.G.name) 
-             |> String.concat " "))
-@
-
-
 
 <<signature [[Graph.dump_graph]]>>=
 (* output graphviz dot file *)
@@ -2929,6 +3022,48 @@ let loc_of_arc arc =
   let loc = arc.rule.R.loc2 in
   spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
 @
+
+\subsection{Dumping jobs}
+
+<<constant [[Flags.dump_jobs]]>>=
+let dump_jobs = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_jobs", Arg.Set Flags.dump_jobs,
+" ";
+@
+
+<<[[Scheduler.run]] possibly dump the job>>=
+if !Flags.dump_jobs
+then dump_job "run: " job None;
+@
+
+<<[[Scheduler.sched()]] possibly dump job>>=
+if !Flags.dump_jobs
+then dump_job "sched1: firing up " job None;
+@
+
+<<[[Scheduler.sched()]] possibly dump job after [[exec_recipe]]>>=
+if !Flags.dump_jobs
+then dump_job "sched2: " job (Some pid);
+@
+
+<<[[Scheduler.waitup()]] possibly dump job>>=
+if !Flags.dump_jobs
+then dump_job "waitup: " job (Some pid);
+@
+
+
+<<function [[Scheduler.dump_job]]>>=
+let dump_job func job pidopt =
+  Logs.debug (fun m -> m "(%d): %s pid = %d; targets = %s" 
+         (Unix.getpid())
+         func 
+         (match pidopt with Some pid -> pid | None -> 0)
+         (job.J.target_nodes |> List.map (fun node -> node.G.name) 
+             |> String.concat " "))
+@
+
 
 \section{CLI Actions}
 
@@ -2978,6 +3113,7 @@ let do_action caps s xs =
 \chapter{Examples of [[mkfile]]s}
 
 \section{The [[mkfile]] of [[mk]]}
+% actually need also mkprog, mkcommon, mkconfig, etc.
 
 \section{The [[mkfile]]s of \plan}
 
@@ -4322,6 +4458,9 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Shell.exec_backquote]]>>
 
 <<signature [[Shell.exec_pipecmd]]>>
+
+(* internals *)
+<<signature [[Shell.exec_shell]]>>
 @
 
 \chapter*{Indexes}

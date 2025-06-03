@@ -375,6 +375,9 @@ let add_var env s xs =
 @
 
 
+<<signature [[Env.check_values]]>>=
+val check_values : values -> unit
+@
 <<function [[Env.check_values]]>>=
 (* invariant *)
 let check_values xs = 
@@ -419,6 +422,9 @@ and pattern_elem =
 @
 % parsed pattern, so string here, not word!
 
+<<signature [[Percent.check_pattern]]>>=
+val check_pattern : pattern -> unit
+@
 <<function [[Percent.check_pattern]]>>=
 let check_pattern (P xs) =
   if xs = []
@@ -429,7 +435,6 @@ let check_pattern (P xs) =
     | PStr _ -> ()
   )
 @
-
 
 
 \subsection{Evaluated rules}
@@ -1311,25 +1316,18 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
 
 \chapter{Building the Graph of Dependencies}
 
+%trans:
+%toc:
 
 <<function [[Graph.build_graph]]>>=
 let build_graph target rules =
   let root = apply_rules target rules in
-
-  check_cycle root;
-
-  (* must be before check_ambiguous! *)
-  root.probable <- true;
-  vacuous root |> ignore;
-
-  check_ambiguous root;
-
-  propagate_attributes root;
-   
+  <<[[Graph.build_graph()]] checks on the graph [[root]]>>
+  <<[[Graph.build_graph()]] propagate attributes on the graph [[root]]>>
   root
 @
-%LP: aspectize
 
+\section{[[apply_rules()]] skeleton}
 
 <<function [[Graph.apply_rules]]>>=
 (* todo: infinite rule detection *)
@@ -1345,49 +1343,10 @@ let rec apply_rules target rules =
     let arcs = ref [] in
   
     (* look for simple rules *)
-    let rs = Hashtbl.find_all rules.R.simples target in
-    rs |> List.iter (fun r ->
-      node.probable <- true;
-
-      let pre = r.R.prereqs in
-      if pre = []
-      then
-        (* some tools (e.g., ocamldep) generate useless deps with no
-         * recipe and no prereqs that we can safely skip (we could warn)
-         *)
-        if r.R.recipe = None
-        then ()
-        else arcs |> Common.push { dest = None; rule = rule_exec r }
-
-      else pre |> List.iter (fun prereq ->
-        (* recurse *)
-        let dest = apply_rules prereq rules in
-        arcs |> Common.push { dest = Some dest; rule = rule_exec r }
-      )
-    );
+    <<[[Graph.apply_rules()]] look for simple matching rules and update [[arcs]]>>
 
     (* look for meta rules *)
-    let rs = rules.R.metas in
-    rs |> List.iter (fun r ->
-      r.R.targets |> List.iter (fun target_pat ->
-        (match Percent.match_ target_pat target with
-        | None -> ()
-        | Some stem ->
-           (* less: if no recipe and no prereqs, skip, but weird rule no?
-            * especially for a metarule, so maybe we should warn
-            *)
-          let pre = r.R.prereqs in
-          if pre = []
-          then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
-          else pre |> List.iter (fun prereq_pat ->
-            let prereq = Percent.subst prereq_pat stem in
-            (* recurse *)
-            let dest = apply_rules prereq rules in
-            arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
-          )
-        )
-      )
-    );
+    <<[[Graph.apply_rules()]] look for meta matching rules and update [[arcs]]>>
 
     (* List.rev is optional. The order should not matter, but it can
      * be nice to have the same sequential order of exec as the one 
@@ -1397,8 +1356,34 @@ let rec apply_rules target rules =
     node
   end
 @
-%LP: split and distribute to below
+% rec, will recurse!
 
+
+
+\section{Finding the simple rule(s) for a target}
+
+<<[[Graph.apply_rules()]] look for simple matching rules and update [[arcs]]>>=
+let rs = Hashtbl.find_all rules.R.simples target in
+rs |> List.iter (fun r ->
+  <<[[Graph.apply_rules()]] when found a simple rule for [[node]]>>
+
+  let pre = r.R.prereqs in
+  if pre = []
+  then
+    (* some tools (e.g., ocamldep) generate useless deps with no
+     * recipe and no prereqs that we can safely skip (we could warn)
+     *)
+    if r.R.recipe = None
+    then ()
+    else arcs |> Common.push { dest = None; rule = rule_exec r }
+
+  else pre |> List.iter (fun prereq ->
+    (* recurse *)
+    let dest = apply_rules prereq rules in
+    arcs |> Common.push { dest = Some dest; rule = rule_exec r }
+  )
+);
+@
 
 
 <<function [[Graph.rule_exec]]>>=
@@ -1412,16 +1397,42 @@ let rule_exec (r: string Rules.rule) =
     R.all_prereqs = r.R.prereqs;
   }
 @
+% stem = None here
 
 <<[[Rules.rule_exec]] other fields>>=
 all_targets: string list;
 all_prereqs: string list;
 @
+% useful for?
 
-\section{Finding the simple rule(s) for a target}
 
 \section{Finding matching metarules}
 
+<<[[Graph.apply_rules()]] look for meta matching rules and update [[arcs]]>>=
+let rs = rules.R.metas in
+rs |> List.iter (fun r ->
+  r.R.targets |> List.iter (fun target_pat ->
+    (match Percent.match_ target_pat target with
+    | None -> ()
+    | Some stem ->
+       (* less: if no recipe and no prereqs, skip, but weird rule no?
+        * especially for a metarule, so maybe we should warn
+        *)
+       let pre = r.R.prereqs in
+       if pre = []
+       then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
+       else pre |> List.iter (fun prereq_pat ->
+         let prereq = Percent.subst prereq_pat stem in
+         (* recurse *)
+         let dest = apply_rules prereq rules in
+         arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
+      )
+    )
+  )
+);
+@
+
+% Percent match, Percent subst
 
 <<function [[Graph.rule_exec_meta]]>>=
 let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
@@ -1434,55 +1445,19 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
     R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
   }
 @
-% Percent.subst later!
+% step this time!
 
+\subsection{[[Percent.match_()]]}
 
 <<signature [[Percent.match_]]>>=
 (* return the possible stem *)
 val match_ : pattern -> string -> string option
 @
 
-<<signature [[Percent.subst]]>>=
-val subst : pattern -> string (* stem *) -> string
-@
-
-<<signature [[Percent.match_and_subst]]>>=
-(* print a warning if not match *)
-val match_and_subst :
-  pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
-@
-
-<<signature [[Percent.check_pattern]]>>=
-(* internals *)
-
-val check_pattern : pattern -> unit
-@
-
-
-<<exception [[Percent.TooManyPercents]]>>=
-exception TooManyPercents
-@
-
-<<exception [[Percent.PercentNotFound]]>>=
-exception PercentNotFound
-@
-
-<<function [[Percent.string_after_percent]]>>=
-let rec string_after_percent xs =
-  match xs with
-  | [] -> ""
-  | x::xs ->
-    (match x with 
-    | PStr s -> s ^ string_after_percent xs
-    | PPercent -> raise TooManyPercents
-    )
-@
-
 <<function [[Percent.match_]]>>=
 (* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
  * This is arguably (and sadly) more complicated than the C code.
  *)
-
 let rec match_ (P pat) str =
   let len = String.length str in
   match pat with
@@ -1512,6 +1487,32 @@ let rec match_ (P pat) str =
     )        
 @
 
+<<exception [[Percent.PercentNotFound]]>>=
+exception PercentNotFound
+@
+
+<<function [[Percent.string_after_percent]]>>=
+let rec string_after_percent xs =
+  match xs with
+  | [] -> ""
+  | x::xs ->
+    (match x with 
+    | PStr s -> s ^ string_after_percent xs
+    | PPercent -> raise TooManyPercents
+    )
+@
+
+<<exception [[Percent.TooManyPercents]]>>=
+exception TooManyPercents
+@
+
+
+\subsection{[[Percent.subst()]]}
+
+<<signature [[Percent.subst]]>>=
+val subst : pattern -> string (* stem *) -> string
+@
+
 <<function [[Percent.subst]]>>=
 let subst (P pat) stem =
   pat |> List.map (function
@@ -1519,16 +1520,22 @@ let subst (P pat) stem =
     | PPercent -> stem
   ) |> String.concat ""
 @
+% simple
 
-<<function [[Percent.match_and_subst]]>>=
-let match_and_subst pat sub str =
-  match match_ pat str with
-  | Some stem -> subst sub stem
-  | None -> str
-@
+
 
 
 \section{Checking the graph and the rules}
+
+<<[[Graph.build_graph()]] checks on the graph [[root]]>>=
+check_cycle root;
+
+(* must be before check_ambiguous! *)
+root.probable <- true;
+vacuous root |> ignore;
+check_ambiguous root;
+@
+
 
 %LP: section like in Make.nw for each check
 
@@ -1654,6 +1661,10 @@ let is_meta re =
 <<[[Graph.node]] other fields>>=
 (* used for vacuous *)
 mutable probable: bool;
+@
+
+<<[[Graph.apply_rules()]] when found a simple rule for [[node]]>>=
+node.probable <- true;
 @
 
 <<function [[Graph.vacuous]]>>=
@@ -2397,6 +2408,41 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 
 
 \chapter{Debugging and Profiling Support}
+% not debugging for the user. See Debugging appendix
+% for debugging developer of mk itself (e.g., internal dumpers)
+
+\section{Logging: [[mk -v]]}
+% see also Debugging chapter later
+
+<<[[CLI.main()]] debugging initializations>>=
+let level = ref (Some Logs.Warning) in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-quiet", Arg.Unit (fun () -> level := None),
+" ";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+(* TODO: move in a CLI_common.ml *)
+"-v", Arg.Unit (fun () -> level := Some Logs.Info),
+ " verbose mode";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+" verbose mode";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-debug", Arg.Unit (fun () -> 
+  level := Some Logs.Debug;
+  Flags.explain_mode := true;
+),
+" trace the main functions";
+@
+
+<<[[CLI.main()]] logging initializations>>=
+Logs.set_level !level;
+Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
+@
 
 \section{Explain mode: [[mk -e]]}
 
@@ -2424,38 +2470,46 @@ let dry_mode = ref false
 
 %\section{Processor utilization: [[mk -u]]}
 
-\section{Logging: [[mk -v]]}
-% see also Debugging chapter later
+\section{Strict mode}
 
-<<[[CLI.main()]] debugging initializations>>=
-let level = ref (Some Logs.Warning) in
-@
-
-<<[[CLI.main()]] [[options]] elements>>=
-(* TODO: move in a CLI_common.ml *)
-"-v", Arg.Unit (fun () -> level := Some Logs.Info),
- " verbose mode";
+%new: not in original mk
+<<constant [[Flags.strict_mode]]>>=
+let strict_mode = ref false
 @
 <<[[CLI.main()]] [[options]] elements>>=
-"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-" verbose mode";
-@
-<<[[CLI.main()]] [[options]] elements>>=
-"-quiet", Arg.Unit (fun () -> level := None),
-" ";
-@
-<<[[CLI.main()]] [[options]] elements>>=
-"-debug", Arg.Unit (fun () -> 
-  level := Some Logs.Debug;
-  Flags.explain_mode := true;
-),
-" trace the main functions";
+(* less: -a, etc *)
+"-strict", Arg.Set Flags.strict_mode,
+" strict mode";
 @
 
-<<[[CLI.main()]] logging initializations>>=
-Logs.set_level !level;
-Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
+
+<<exception [[Env.Redefinition]]>>=
+exception Redefinition of string
 @
+
+<<[[Env.add_var()]] forbid redefinition in strict mode>>=
+(* stricter: forbid redefinitions.
+ * (bug: but ok to redefine variable from environment, otherwise
+ *  hard to use mk recursively, hence the use of vars_we_set below)
+ * less: could allow to redefine in strict mode if previous
+ *  def was empty.
+ *)
+| _ when Hashtbl.mem env.vars s && Hashtbl.mem env.vars_we_set s 
+    && !Flags.strict_mode ->
+  raise (Redefinition s)
+@
+
+
+<<[[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]]>>=
+(* stricter: mk does not complain *)
+if !Flags.strict_mode
+then begin 
+  if !Flags.dump_env 
+  then Env.dump_env env;
+  error loc (spf "variable not found '%s'" v);
+end;
+@
+% see dump_env later
   
 \chapter{Advanced Features}
 
@@ -2517,7 +2571,41 @@ let ys =
 in
 @
 
+<<signature [[Percent.match_and_subst]]>>=
+(* print a warning if not match *)
+val match_and_subst :
+  pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
+@
+
+<<function [[Percent.match_and_subst]]>>=
+let match_and_subst pat sub str =
+  match match_ pat str with
+  | Some stem -> subst sub stem
+  | None -> str
+@
+
 \section{Rule attributes}
+
+<<[[Graph.build_graph()]] propagate attributes on the graph [[root]]>>=
+propagate_attributes root;
+@
+
+<<function [[Graph.propagate_attributes]]>>=
+let rec propagate_attributes node =
+  node.arcs |> List.iter (fun arc ->
+    arc.rule.R.attrs2 |> Set.iter (function
+      | A.Virtual -> 
+          node.is_virtual <- true;
+          (* maybe there was a file with the name of the virtual target 
+           * in the directory, but we do not want its time
+           *)
+          node.time <- None;
+      | _ -> ()
+    );
+    arc.dest |> Common.if_some propagate_attributes
+  )
+@
+
 
 <<[[Ast.rule]] other fields>>=
 attrs: rule_attribute list;
@@ -2577,48 +2665,7 @@ mutable is_virtual: bool;
   (* recurse *)
   instrs xs
 @
-
   
-\section{Strict mode}
-
-%new: not in original mk
-<<constant [[Flags.strict_mode]]>>=
-let strict_mode = ref false
-@
-<<[[CLI.main()]] [[options]] elements>>=
-(* less: -a, etc *)
-"-strict", Arg.Set Flags.strict_mode,
-" strict mode";
-@
-
-
-<<exception [[Env.Redefinition]]>>=
-exception Redefinition of string
-@
-
-<<[[Env.add_var()]] forbid redefinition in strict mode>>=
-(* stricter: forbid redefinitions.
- * (bug: but ok to redefine variable from environment, otherwise
- *  hard to use mk recursively, hence the use of vars_we_set below)
- * less: could allow to redefine in strict mode if previous
- *  def was empty.
- *)
-| _ when Hashtbl.mem env.vars s && Hashtbl.mem env.vars_we_set s 
-    && !Flags.strict_mode ->
-  raise (Redefinition s)
-@
-
-
-<<[[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]]>>=
-(* stricter: mk does not complain *)
-if !Flags.strict_mode
-then begin 
-  if !Flags.dump_env 
-  then Env.dump_env env;
-  error loc (spf "variable not found '%s'" v);
-end;
-@
-% see dump_env later
 
 \chapter{Conclusion}
 
@@ -3613,23 +3660,6 @@ open Fpath_.Operators
 
 
 
-<<function [[Graph.propagate_attributes]]>>=
-let rec propagate_attributes node =
-  node.arcs |> List.iter (fun arc ->
-    arc.rule.R.attrs2 |> Set.iter (function
-      | A.Virtual -> 
-          node.is_virtual <- true;
-          (* maybe there was a file with the name of the virtual target 
-           * in the directory, but we do not want its time
-           *)
-          node.time <- None;
-      | _ -> ()
-    );
-    arc.dest |> Common.if_some propagate_attributes
-  )
-@
-
-
 <<function [[Graph.loc_of_arc]]>>=
 let loc_of_arc arc =
   let loc = arc.rule.R.loc2 in
@@ -4073,12 +4103,6 @@ open Fpath_.Operators
 val shellenv_of_env : t -> Shellenv.t
 @
 
-<<signature [[Env.check_values]]>>=
-val check_values : values -> unit
-@
-
-
-
 %-------------------------------------------------------------
 
 <<Env.mli>>=
@@ -4153,7 +4177,9 @@ val hnodes : (string, node) Hashtbl.t
 
 <<signature [[Graph.check_ambiguous]]>>
 
+(* internals *)
 <<signature [[Graph.dump_graph]]>>
+
 @
 
 
@@ -4193,6 +4219,8 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Percent.subst]]>>
 
 <<signature [[Percent.match_and_subst]]>>
+
+(* internals *)
 
 <<signature [[Percent.check_pattern]]>>
 @

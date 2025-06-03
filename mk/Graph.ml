@@ -150,9 +150,12 @@ let rec apply_rules target rules =
     let arcs = ref [] in
   
     (* look for simple rules *)
+    (*s: [[Graph.apply_rules()]] look for simple matching rules and update [[arcs]] *)
     let rs = Hashtbl.find_all rules.R.simples target in
     rs |> List.iter (fun r ->
+      (*s: [[Graph.apply_rules()]] when found a simple rule for [[node]] *)
       node.probable <- true;
+      (*e: [[Graph.apply_rules()]] when found a simple rule for [[node]] *)
 
       let pre = r.R.prereqs in
       if pre = []
@@ -170,8 +173,10 @@ let rec apply_rules target rules =
         arcs |> Common.push { dest = Some dest; rule = rule_exec r }
       )
     );
+    (*e: [[Graph.apply_rules()]] look for simple matching rules and update [[arcs]] *)
 
     (* look for meta rules *)
+    (*s: [[Graph.apply_rules()]] look for meta matching rules and update [[arcs]] *)
     let rs = rules.R.metas in
     rs |> List.iter (fun r ->
       r.R.targets |> List.iter (fun target_pat ->
@@ -181,18 +186,19 @@ let rec apply_rules target rules =
            (* less: if no recipe and no prereqs, skip, but weird rule no?
             * especially for a metarule, so maybe we should warn
             *)
-          let pre = r.R.prereqs in
-          if pre = []
-          then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
-          else pre |> List.iter (fun prereq_pat ->
-            let prereq = Percent.subst prereq_pat stem in
-            (* recurse *)
-            let dest = apply_rules prereq rules in
-            arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
+           let pre = r.R.prereqs in
+           if pre = []
+           then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
+           else pre |> List.iter (fun prereq_pat ->
+             let prereq = Percent.subst prereq_pat stem in
+             (* recurse *)
+             let dest = apply_rules prereq rules in
+             arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
           )
         )
       )
     );
+    (*e: [[Graph.apply_rules()]] look for meta matching rules and update [[arcs]] *)
 
     (* List.rev is optional. The order should not matter, but it can
      * be nice to have the same sequential order of exec as the one 
@@ -392,17 +398,17 @@ let dump_graph node =
 (*s: function [[Graph.build_graph]] *)
 let build_graph target rules =
   let root = apply_rules target rules in
-
+  (*s: [[Graph.build_graph()]] checks on the graph [[root]] *)
   check_cycle root;
 
   (* must be before check_ambiguous! *)
   root.probable <- true;
   vacuous root |> ignore;
-
   check_ambiguous root;
-
+  (*e: [[Graph.build_graph()]] checks on the graph [[root]] *)
+  (*s: [[Graph.build_graph()]] propagate attributes on the graph [[root]] *)
   propagate_attributes root;
-   
+  (*e: [[Graph.build_graph()]] propagate attributes on the graph [[root]] *)
   root
 (*e: function [[Graph.build_graph]] *)
 

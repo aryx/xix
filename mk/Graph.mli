@@ -78,8 +78,10 @@ val check_cycle : t -> unit
 val check_ambiguous : t -> unit
 (*e: signature [[Graph.check_ambiguous]] *)
 
+(* internals *)
 (*s: signature [[Graph.dump_graph]] *)
 (* output graphviz dot file *)
 val dump_graph : t -> unit
 (*e: signature [[Graph.dump_graph]] *)
+
 (*e: Graph.mli *)

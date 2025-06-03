@@ -67,7 +67,6 @@ let rec string_after_percent xs =
 (* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
  * This is arguably (and sadly) more complicated than the C code.
  *)
-
 let rec match_ (P pat) str =
   let len = String.length str in
   match pat with

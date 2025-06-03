@@ -252,11 +252,8 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-e", Arg.Set Flags.explain_mode,
-    " explain mode";
-    (*x: [[CLI.main()]] [[options]] elements *)
-    "-n", Arg.Set Flags.dry_mode,
-    " dry mode";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
     (*x: [[CLI.main()]] [[options]] elements *)
     (* TODO: move in a CLI_common.ml *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
@@ -265,14 +262,17 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
     " verbose mode";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-    (*x: [[CLI.main()]] [[options]] elements *)
     "-debug", Arg.Unit (fun () -> 
       level := Some Logs.Debug;
       Flags.explain_mode := true;
     ),
     " trace the main functions";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-e", Arg.Set Flags.explain_mode,
+    " explain mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-n", Arg.Set Flags.dry_mode,
+    " dry mode";
     (*x: [[CLI.main()]] [[options]] elements *)
     (* less: -a, etc *)
     "-strict", Arg.Set Flags.strict_mode,

@@ -30,9 +30,9 @@ val match_and_subst :
   pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
 (*e: signature [[Percent.match_and_subst]] *)
 
-(*s: signature [[Percent.check_pattern]] *)
 (* internals *)
 
+(*s: signature [[Percent.check_pattern]] *)
 val check_pattern : pattern -> unit
 (*e: signature [[Percent.check_pattern]] *)
 (*e: Percent.mli *)

@@ -195,7 +195,6 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
       Hashtbl.add env.Env.vars_commandline var true;
     );
     (*e: [[CLI.build_targets()]] initialize [[env]] using [[vars]] *)
-    
     (*s: [[CLI.build_targets()]] if debugger set *)
     if !Flags.debugger then begin
       CapSys.chdir caps (Filename.dirname !!infile);
@@ -205,7 +204,6 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 
     (* parsing (and evaluating) *)
     let instrs = Parse.parse infile in
-
     (*s: [[CLI.build_targets()]] possibly dump the AST *)
     if !Flags.dump_ast
     then Ast.dump_ast instrs;
@@ -213,7 +211,6 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 
     (* can modify targets and use first targets in file if none provided *)
     let rules, env = Eval.eval caps env targets instrs in
-
     (*s: [[CLI.build_targets()]] possibly dump the environment *)
     if !Flags.dump_env
     then Env.dump_env env;
@@ -222,7 +219,6 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     (* building *)
     if !targets = []
     then failwith "nothing to mk";
-
     (* less: build shellenv here ?*)
     !targets |> List.rev |> List.iter (fun target ->
       build_target caps env rules target
@@ -239,7 +235,6 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
-
   (*s: [[CLI.main()]] debugging initializations *)
   let level = ref (Some Logs.Warning) in
   (*x: [[CLI.main()]] debugging initializations *)
@@ -317,8 +312,7 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
         let (var, value) = Regexp_.matched2 t in
         vars := (var, value)::!vars;
     (*e: [[CLI.main()]] modify [[vars]] when definition-like argument *)
-    | _ ->
-        targets := t :: !targets
+    | _ -> targets := t :: !targets
     ) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
@@ -346,24 +340,26 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     then raise exn
     else 
       (match exn with
+      (*s: [[CLI.main()]] when [[Failure]] [[exn]] thrown in [[build_targets()]] *)
       (* lots of the mk errors are reported using failwith (e.g., "don't know
        * how to make xxx")
        *)
       | Failure s -> 
-          (* useful to indicate that error comes from mk, not subprocess *)
-          Logs.err (fun m -> m "mk: %s" s);
-          (* need to wait for other children before exiting, otherwise
-           * could get corrupted incomplete object files.
-           *)
-          while !Scheduler.nrunning > 0 do
-              try 
-                (* todo: if dump_jobs, print pid we wait and its recipe *)
-                Unix.wait () |> ignore;
-                decr Scheduler.nrunning
-              with Unix.Unix_error (error, _str1, _str2) ->
-                failwith (spf "%s" (Unix.error_message error))
-          done;
-          Exit.Code 1
+         (* useful to indicate that error comes from mk, not subprocess *)
+         Logs.err (fun m -> m "mk: %s" s);
+         (* need to wait for other children before exiting, otherwise
+          * could get corrupted incomplete object files.
+          *)
+         while !Scheduler.nrunning > 0 do
+             try 
+               (* todo: if dump_jobs, print pid we wait and its recipe *)
+               Unix.wait () |> ignore;
+               decr Scheduler.nrunning
+             with Unix.Unix_error (error, _str1, _str2) ->
+               failwith (spf "%s" (Unix.error_message error))
+         done;
+         Exit.Code 1
+      (*e: [[CLI.main()]] when [[Failure]] [[exn]] thrown in [[build_targets()]] *)
       | _ -> raise exn
       )
     (*e: [[CLI.main()]] when [[exn]] thrown in [[build_targets()]] *)

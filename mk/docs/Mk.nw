@@ -257,10 +257,12 @@ type word = W of word_element list
   and word_element =
     | String of string (* except the empty string *)
     | Percent
+    (* evaluated in eval.ml just after parsing *)
+    | Var of var
     <<[[Ast.word_element]] cases>>
 @
 %alt: move Percent later but referenced in comment above so maybe better keep
-%alt: bring back Var here?
+
 
 <<type [[Ast.words]]>>=
 (* Words are separated by spaces. See also Env.values *)
@@ -300,9 +302,7 @@ type instr = {
 <<type [[Ast.instr_kind]]>>=
   and instr_kind =
     | Rule of rule
-
-    (* should resolve to a single filename
-     * less: could enforce of word? *)
+    (* should resolve to a single filename less: could enforce of word? *)
     | Include of words
     <<[[Ast.instr_kind]] cases>> 
 @
@@ -326,7 +326,6 @@ type loc = {
 
 
 \section{Variables}
-%alt: Environment
 
 % vars, feature 1 of DSL!
 
@@ -337,11 +336,6 @@ type loc = {
 @
 % words! core datatype of mk (and rc), list of things (files, objects, flags)
 
-<<[[Ast.word_element]] cases>>=
-(* evaluated in eval.ml just after parsing *)
-| Var of var
-@
-
 <<type [[Ast.var]]>>=
 and var = 
  (* $name or ${name} (the string does not contain the $ or {}) *)
@@ -350,6 +344,8 @@ and var =
 @
 
 
+\section{Environment}
+% evaluated variables
 
 <<type [[Env.t]]>>=
 type t = {
@@ -358,7 +354,6 @@ type t = {
   <<[[Env.t]] fields>>
 }
 @
-
 
 <<type [[Env.values]]>>=
 (* Content of variables (after full expansion and backquote resolution).
@@ -410,6 +405,7 @@ let mk_vars = [
 
 
 \section{Patterns}
+% evaluated patterns
 
 % patterns, feature 2 of DSL
 % seen % and Percent before
@@ -449,7 +445,6 @@ type 'a rule = {
   targets: 'a list;
   prereqs: 'a list;
   recipe: Ast.recipe option;
-
   <<[[Rules.rule]] other fields>>
   loc: Ast.loc;
 }
@@ -460,8 +455,7 @@ type 'a rule = {
 type rules = {
   (* use Hashtbl.find_all because a target can be associated to many rules *)
   simples: (string, string rule) Hashtbl.t;
-
-  metas: (Percent.pattern rule) list;
+  metas:  (Percent.pattern rule) list;
 }
 @
 
@@ -582,7 +576,7 @@ let str_of_time timeopt =
 
 
 \section{Executed rules}
-
+% move later?
 
 <<[[Graph.arc]] other fields>>=
 (* what we need from the rule to execute a recipe (and report errors) *)
@@ -636,6 +630,7 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
   }
 @
 % Percent.subst later!
+% alt: move later!!
 
 \section{Jobs}
 
@@ -663,6 +658,14 @@ type t = {
 let jobs = Queue.create ()
 @
 
+<<signature [[Scheduler.nrunning]]>>=
+val nrunning : int ref
+@
+
+%TODO: actually it is a global! 
+<<constant [[Scheduler.nrunning]]>>=
+let nrunning = ref 0
+@
 
 
 
@@ -696,7 +699,6 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
-
   <<[[CLI.main()]] debugging initializations>>
 
   let options = [
@@ -708,8 +710,7 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     Arg.parse_argv argv (Arg.align options) (fun t -> 
     match t with
     <<[[CLI.main()]] modify [[vars]] when definition-like argument>>
-    | _ ->
-        targets := t :: !targets
+    | _ -> targets := t :: !targets
     ) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
@@ -729,36 +730,15 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
 
 
 
-<<[[CLI.main()]] when [[exn]] thrown in [[build_targets()]]>>=
-if !backtrace || !Flags.debugger
-then raise exn
-else 
-  (match exn with
-  (* lots of the mk errors are reported using failwith (e.g., "don't know
-   * how to make xxx")
-   *)
-  | Failure s -> 
-      (* useful to indicate that error comes from mk, not subprocess *)
-      Logs.err (fun m -> m "mk: %s" s);
-      (* need to wait for other children before exiting, otherwise
-       * could get corrupted incomplete object files.
-       *)
-      while !Scheduler.nrunning > 0 do
-          try 
-            (* todo: if dump_jobs, print pid we wait and its recipe *)
-            Unix.wait () |> ignore;
-            decr Scheduler.nrunning
-          with Unix.Unix_error (error, _str1, _str2) ->
-            failwith (spf "%s" (Unix.error_message error))
-      done;
-      Exit.Code 1
-  | _ -> raise exn
-  )
-@
   
 <<constant [[CLI.usage]]>>=
 let usage =
   "usage: mk [-f file] [options] [targets ...]"
+@
+
+<<signature [[CLI.build_targets]]>>=
+val build_targets :
+  caps -> Fpath.t -> string list ref -> (string*string) list -> unit
 @
 
 <<signature [[CLI.build_target]]>>=
@@ -767,13 +747,31 @@ val build_target :
   caps -> Env.t -> Rules.rules -> string (* target *) -> unit                                                       
 @
 
-<<signature [[CLI.build_targets]]>>=
-val build_targets :
-  caps -> Fpath.t -> string list ref -> (string*string) list -> unit
+
+
+<<[[CLI.main()]] when [[Failure]] [[exn]] thrown in [[build_targets()]]>>=
+(* lots of the mk errors are reported using failwith (e.g., "don't know
+ * how to make xxx")
+ *)
+| Failure s -> 
+   (* useful to indicate that error comes from mk, not subprocess *)
+   Logs.err (fun m -> m "mk: %s" s);
+   (* need to wait for other children before exiting, otherwise
+    * could get corrupted incomplete object files.
+    *)
+   while !Scheduler.nrunning > 0 do
+       try 
+         (* todo: if dump_jobs, print pid we wait and its recipe *)
+         Unix.wait () |> ignore;
+         decr Scheduler.nrunning
+       with Unix.Unix_error (error, _str1, _str2) ->
+         failwith (spf "%s" (Unix.error_message error))
+   done;
+   Exit.Code 1
 @
 
-
-\section{[[mk -]]{\em flag} arguments processing}
+%\section{[[mk -]]{\em flag} arguments processing}
+%ocaml: no needed section
 
 \section{[[mk ]]{\em var}[[=]]{\em values} arguments processing}
 
@@ -784,11 +782,21 @@ val build_targets :
     vars := (var, value)::!vars;
 @
 
+<<[[CLI.build_targets()]] initialize [[env]] using [[vars]]>>=
+vars |> List.iter (fun (var, value) ->
+ (* stricter: we do not allow list of strings for value for command-line
+  * vars, but anyway I'm not sure how they could be parsed by Arg
+  *)
+  Env.add_var env var [value];
+  Hashtbl.add env.Env.vars_commandline var true;
+);
+@
     
 <<[[Env.t]] fields>>=
 (* those vars can not be overriden by the mkfile *)
 vars_commandline: (string, bool) Hashtbl.t;
 @
+
 
 <<[[Env.add_var()]] ignore def if overriden on the command-line>>=
 | _ when Hashtbl.mem env.vars_commandline s ->
@@ -796,9 +804,11 @@ vars_commandline: (string, bool) Hashtbl.t;
   Logs.info (fun m -> m "ignoring definition of %s specified on the command-line" s);
   ()
 @
+% so added above, but when parsing the file and call to Env.add_var
+% with same var it will be overriden!
 
-
-\section{[[mk ]] remaining arguments processing}
+%\section{[[mk ]] remaining arguments processing}
+%ocaml: no needed section
 
 \section{Using the [[mkfile]] or [[mk -f]]{\em file}}
 
@@ -817,23 +827,19 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     (* initialisation *)
     let env = Env.initenv caps in
     <<[[CLI.build_targets()]] initialize [[env]] using [[vars]]>>
-    
     <<[[CLI.build_targets()]] if debugger set>>
 
     (* parsing (and evaluating) *)
     let instrs = Parse.parse infile in
-
     <<[[CLI.build_targets()]] possibly dump the AST>>
 
     (* can modify targets and use first targets in file if none provided *)
     let rules, env = Eval.eval caps env targets instrs in
-
     <<[[CLI.build_targets()]] possibly dump the environment>>
     
     (* building *)
     if !targets = []
     then failwith "nothing to mk";
-
     (* less: build shellenv here ?*)
     !targets |> List.rev |> List.iter (fun target ->
       build_target caps env rules target
@@ -842,15 +848,6 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 @
 
 
-<<[[CLI.build_targets()]] initialize [[env]] using [[vars]]>>=
-vars |> List.iter (fun (var, value) ->
- (* stricter: we do not allow list of strings for value for command-line
-  * vars, but anyway I'm not sure how they could be parsed by Arg
-  *)
-  Env.add_var env var [value];
-  Hashtbl.add env.Env.vars_commandline var true;
-);
-@
 
 % include has been expanded, vars too?
 <<function [[CLI.build_target]]>>=
@@ -1722,13 +1719,6 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
 
 \chapter{Scheduling Jobs}
 
-<<constant [[Scheduler.running]]>>=
-let running = Hashtbl.create 101
-@
-
-<<constant [[Scheduler.nrunning]]>>=
-let nrunning = ref 0
-@
 
 <<function [[Scheduler.nproclimit]]>>=
 let nproclimit (caps: < Cap.env; ..>) =
@@ -1787,6 +1777,10 @@ let sched (caps : < Shell.caps; .. >) () =
     raise (Impossible "no jobs to schedule")
 @
 %LP: split and aspectize
+
+<<constant [[Scheduler.running]]>>=
+let running = Hashtbl.create 101
+@
 
 <<signature [[Scheduler.run]]>>=
 (* need Cap.env for NPROC *)
@@ -2518,6 +2512,16 @@ let backtrace = ref false in
 <<[[CLI.main()]] [[options]] elements>>=
 "-backtrace", Arg.Set backtrace,
 " dump the backtrace after an error";
+@
+
+<<[[CLI.main()]] when [[exn]] thrown in [[build_targets()]]>>=
+if !backtrace || !Flags.debugger
+then raise exn
+else 
+  (match exn with
+  <<[[CLI.main()]] when [[Failure]] [[exn]] thrown in [[build_targets()]]>>
+  | _ -> raise exn
+  )
 @
 
 
@@ -4088,9 +4092,6 @@ val hnodes : (string, node) Hashtbl.t
 
 \subsection*{[[Scheduler.mli]]}
 
-<<signature [[Scheduler.nrunning]]>>=
-val nrunning : int ref
-@
 
 %-------------------------------------------------------------
 

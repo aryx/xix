@@ -14,10 +14,9 @@ type word = W of word_element list
   and word_element =
     | String of string (* except the empty string *)
     | Percent
-    (*s: [[Ast.word_element]] cases *)
     (* evaluated in eval.ml just after parsing *)
     | Var of var
-    (*x: [[Ast.word_element]] cases *)
+    (*s: [[Ast.word_element]] cases *)
      (* stricter: backquotes are allowed only in word context, not at toplevel
       * so no `echo '<foo.c'` *)
      (* `...` or `{...} (the string does not include the backquote or braces) *)
@@ -90,9 +89,7 @@ type instr = {
 (*s: type [[Ast.instr_kind]] *)
   and instr_kind =
     | Rule of rule
-
-    (* should resolve to a single filename
-     * less: could enforce of word? *)
+    (* should resolve to a single filename less: could enforce of word? *)
     | Include of words
     (*s: [[Ast.instr_kind]] cases *)
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 

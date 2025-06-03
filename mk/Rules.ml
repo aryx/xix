@@ -5,7 +5,6 @@ type 'a rule = {
   targets: 'a list;
   prereqs: 'a list;
   recipe: Ast.recipe option;
-
   (*s: [[Rules.rule]] other fields *)
   attrs: Ast.rule_attribute Set_.t;
   (*e: [[Rules.rule]] other fields *)
@@ -18,8 +17,7 @@ type 'a rule = {
 type rules = {
   (* use Hashtbl.find_all because a target can be associated to many rules *)
   simples: (string, string rule) Hashtbl.t;
-
-  metas: (Percent.pattern rule) list;
+  metas:  (Percent.pattern rule) list;
 }
 (*e: type [[Rules.rules]] *)
 

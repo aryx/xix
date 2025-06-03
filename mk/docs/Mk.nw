@@ -14,14 +14,14 @@
 %------------------------------------------------------------------------------
 
 %thx to LP, I changed for the better a few things:
-% - found deadcode ?
+% - found deadcode?
 % - found duplicated code?
  
 
-%thx to codemap/codegraph/scheck (but ocaml does a better job than C here:
+%thx to codemap/codegraph/scheck (but ocaml does a better job than C here):
 % - TODO use cg to to look at backward deps (but the linker already enforces layers)
 %   (harder to understand non layered code)
-% - TODO use scheck to remove deadcode
+% - TODO use scheck to remove deadcode (but ocamlc now is better at this)
 %   (harder to understand big files)
 % - TODO use cg to reduce number of globals by moving them closer to the
 %   relevant file (or even function), better cluster the code
@@ -30,18 +30,18 @@
 %thx to this manual, better understand mk/make:
 
 %history LP-ization:
-% - skeleton, mostly copy paste of Template.nw skeleton
+% - skeleton, mostly copy paste of Make.nw structure
 % - put all content of files in the Extra section, via 'lpizer'
 %   which also now split in chunks!
 %    * function, type, exception, constant
 %    * TODO dumper
-%    * TODO [[xxx]] other fields, [[xxx]] extra fields
+%    * SEMI [[xxx]] other fields
 % - read Extra section, identify concepts, first TOC
 % - distribute parts of the Extra section in the main file
-% - SEMI understand main(), LP split main, improve TOC
+% - understand main(), LP split main, improve TOC
 % - SEMI understand main functions, LP split, cluster, improve TOC
-% - SEMI LP split the structures, use datalog for flow to field info
-% - SEMI aspecify advanced features! remove useless features, error, debug, secu
+% - SEMI LP split the structures
+% - SEMI aspectify advanced features! remove useless features, error, debug, secu
 % - TODO add figures
 % - TODO add explanations
 
@@ -239,10 +239,18 @@ in Chapter~\ref{chap:core-ds}.
 \end{flushright}
 \end{verse}
 
-%toc:
+%toc: parsed -> "evaluated" -> executed
 
+\section{Parsed structures}
+%alt: AST
 
-\section{Words}
+\subsection{Words}
+
+<<type [[Ast.words]]>>=
+(* Words are separated by spaces. See also Env.values *)
+type words = word list
+@
+% words! core datatype of mk (and rc), list of things (files, objects, flags)
 
 <<type [[Ast.word]]>>=
 (* The elements below are not separated by any separator; they are direct
@@ -261,16 +269,17 @@ type word = W of word_element list
     | Var of var
     <<[[Ast.word_element]] cases>>
 @
-%alt: move Percent later but referenced in comment above so maybe better keep
 
+% vars, feature 1 of DSL!
 
-<<type [[Ast.words]]>>=
-(* Words are separated by spaces. See also Env.values *)
-type words = word list
+<<type [[Ast.var]]>>=
+and var = 
+ (* $name or ${name} (the string does not contain the $ or {}) *)
+| SimpleVar of string
+<<[[Ast.var]] cases>>
 @
 
-
-\section{Parsed rule}
+\subsection{Rules}
 
 <<type [[Ast.rule]]>>=
 (* See also Rules.rule_exec *)
@@ -281,7 +290,8 @@ type rule = {
   <<[[Ast.rule]] other fields>>
 }
 @
-
+% can have multiple targets, see previous chapter, but most often just one target
+% one prereq
 
 <<type [[Ast.recipe]]>>=
 (* (the strings do not contain the leading space nor trailing newline) *)
@@ -290,7 +300,13 @@ type recipe = R of string list
 % note that not words here! We don't care whether use $Var
 % we just leverage existing env var mechanism! better than make!
 
-\section{Parsed [[mkfile]]}
+
+\subsection{Instructions}
+%alt: Parsed [[mkfile]]Instructions
+
+<<type [[Ast.instrs]]>>=
+type instrs = instr list
+@
 
 <<type [[Ast.instr]]>>=
 type instr = {
@@ -304,15 +320,14 @@ type instr = {
     | Rule of rule
     (* should resolve to a single filename less: could enforce of word? *)
     | Include of words
+    (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
+     * so 'string' below, not 'word' *)
+    | Definition of string * words
     <<[[Ast.instr_kind]] cases>> 
 @
 %$
-%alt: move later Include?
+%alt: move later Include? move Definition in separate section?
 
-
-<<type [[Ast.instrs]]>>=
-type instrs = instr list
-@
 
 
 <<type [[Ast.loc]]>>=
@@ -324,28 +339,10 @@ type loc = {
 @
 % see chapter X for error management?
 
+\section{Evaluated structures}
 
-\section{Variables}
-
-% vars, feature 1 of DSL!
-
-<<[[Ast.instr_kind]] cases>>=
-(* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
- * so 'string' below, not 'word' *)
-| Definition of string * words
-@
-% words! core datatype of mk (and rc), list of things (files, objects, flags)
-
-<<type [[Ast.var]]>>=
-and var = 
- (* $name or ${name} (the string does not contain the $ or {}) *)
-| SimpleVar of string
-<<[[Ast.var]] cases>>
-@
-
-
-\section{Environment}
-% evaluated variables
+\subsection{Environment}
+%alt: evaluated variables
 
 <<type [[Env.t]]>>=
 type t = {
@@ -401,11 +398,11 @@ let mk_vars = [
   (* todo: alltargets, newprereq ... *)
 ]
 @
-% split and move stem later ?
+%alt: split and move stem later ?
 
 
-\section{Patterns}
-% evaluated patterns
+\subsection{Patterns}
+%alt: evaluated patterns
 
 % patterns, feature 2 of DSL
 % seen % and Percent before
@@ -435,7 +432,7 @@ let check_pattern (P xs) =
 
 
 
-\section{Evaluated rules}
+\subsection{Evaluated rules}
 
 % already seen parsed rule, but now after 'eval'uation of vars and "parsing"
 % of patterns
@@ -460,7 +457,10 @@ type rules = {
 @
 
 
-\section{Graph}
+\section{Graph of dependencies}
+
+%trans: parsed, evaluated, now applied to concrete filesystem
+% kinda "instance" of rules
 
 <<type [[Graph.node]]>>=
 type node = {
@@ -487,6 +487,29 @@ type node = {
     <<[[Graph.arc]] other fields>>
   }
 @
+
+
+<<[[Graph.arc]] other fields>>=
+(* what we need from the rule to execute a recipe (and report errors) *)
+rule: Rules.rule_exec;
+@
+% a kinda link to the rule that is responsible for the arc
+% ex: TODO
+
+<<type [[Rules.rule_exec]]>>=
+type rule_exec = {
+  recipe2: Ast.recipe option;
+  <<[[Rules.rule_exec]] other fields>>
+  loc2: Ast.loc;
+}
+@
+% just enough info for executing the rule, so really what we need is the recipe!
+% can be None here? what if None? what do we execute??
+
+<<[[Rules.rule_exec]] other fields>>=
+stem: string option;
+@
+% for meta rules! so recipe can use $stem
 
 
 
@@ -526,6 +549,11 @@ type t = node (* the root *)
 let hnodes = Hashtbl.create 101
 @
 
+
+
+
+
+
 <<function [[Graph.new_node]]>>=
 let new_node (target : string) =
   let time = File.timeof (Fpath.v target) in
@@ -534,6 +562,7 @@ let new_node (target : string) =
     arcs = [];
     state = NotMade;
     time = time;
+
     visited = false;
     is_virtual = false;
     probable = time <> None;
@@ -544,6 +573,8 @@ let new_node (target : string) =
   Hashtbl.add hnodes target node;
   node
 @
+% default to NotMade!
+
 
 <<signature [[File.timeof]]>>=
 (* returns None if file does not exist or can't be stat'ed for some reasons *)
@@ -561,7 +592,7 @@ let timeof file =
     Some (stat.Unix.st_mtime)
   with Unix.Unix_error (_, _, _) -> None
 @
-
+% note use of !! because Fpath.t vs string for filename, See lib_core/Fpath_.ml
 
 
 <<signature [[File.str_of_time]]>>=
@@ -575,84 +606,38 @@ let str_of_time timeopt =
 @
 
 
-\section{Executed rules}
-% move later?
-
-<<[[Graph.arc]] other fields>>=
-(* what we need from the rule to execute a recipe (and report errors) *)
-rule: Rules.rule_exec;
-@
-
-<<type [[Rules.rule_exec]]>>=
-type rule_exec = {
-  recipe2: Ast.recipe option;
-  stem: string option;
-
-  all_targets: string list;
-  all_prereqs: string list;
-  <<[[Rules.rule_exec]] other fields>>
-  loc2: Ast.loc;
-}
-@
-
-%alt: move later?
-<<function [[Rules.has_recipe]]>>=
-(* helpers *)
-let has_recipe re =
-  re.recipe2 <> None
-@
-<<function [[Rules.is_meta]]>>=
-let is_meta re =
-  re.stem <> None
-@
-
-<<function [[Graph.rule_exec]]>>=
-let rule_exec (r: string Rules.rule) =
-  { R.recipe2 = r.R.recipe;
-    R.loc2 = r.R.loc;
-    R.attrs2 = r.R.attrs;
-
-    R.stem = None;
-    R.all_targets = r.R.targets;
-    R.all_prereqs = r.R.prereqs;
-  }
-@
-
-<<function [[Graph.rule_exec_meta]]>>=
-let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
-  { R.recipe2 = r.R.recipe;
-    R.loc2 = r.R.loc;
-    R.attrs2 = r.R.attrs;
-
-    R.stem = Some stem;
-    R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
-    R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
-  }
-@
-% Percent.subst later!
-% alt: move later!!
 
 \section{Jobs}
 
 <<type [[Job.t]]>>=
 type t = {
   rule: Rules.rule_exec;
-
   env: Env.t;
-
-  (* values for special mk variables such as $target, $prereq, etc.
-   * (note that $stem is in rule_exec)
-   *)
-  all_targets: Env.values;
-  all_prereqs: Env.values;
-  (* less: newprereqs, targets *)
-  main_target: string;
 
   (* nodes mk needs to update once the job is done *)
   target_nodes: Graph.node list;
+
+  <<[[Job.t]] other fields>>
 }
 @
 %$
+
+<<[[Job.t]] other fields>>=
+(* less: newprereqs, targets *)
+main_target: string;
+@
+% this is the Graph.name
+% this is $target?
+
+<<[[Job.t]] other fields>>=
+(* values for special mk variables such as $target, $prereq, etc.
+ * (note that $stem is in rule_exec)
+ *)
+all_targets: Env.values;
+all_prereqs: Env.values;
+@
+%TODO: all_targets vs main_target?
+
 
 <<constant [[Scheduler.jobs]]>>=
 let jobs = Queue.create ()
@@ -736,10 +721,18 @@ let usage =
   "usage: mk [-f file] [options] [targets ...]"
 @
 
+<<[[CLI.main()]] [[options]] elements>>=
+(* less: maybe should do a chdir (Dirname infile) *)
+"-f", Arg.Set_string infile,
+" <file> use file instead of mkfile";
+@
+
+
 <<signature [[CLI.build_targets]]>>=
 val build_targets :
   caps -> Fpath.t -> string list ref -> (string*string) list -> unit
 @
+% string list ref for targets, why?
 
 <<signature [[CLI.build_target]]>>=
 (* main algorithm *)
@@ -808,15 +801,11 @@ vars_commandline: (string, bool) Hashtbl.t;
 % with same var it will be overriden!
 
 %\section{[[mk ]] remaining arguments processing}
-%ocaml: no needed section
+%ocaml: section not needed anymore
 
-\section{Using the [[mkfile]] or [[mk -f]]{\em file}}
+%\section{Using the [[mkfile]] or [[mk -f]]{\em file}}
+%ocaml: section not needed anymore
 
-<<[[CLI.main()]] [[options]] elements>>=
-(* less: maybe should do a chdir (Dirname infile) *)
-"-f", Arg.Set_string infile,
-" <file> use file instead of mkfile";
-@
 
 
 \section{Building the target(s)}
@@ -837,19 +826,20 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     let rules, env = Eval.eval caps env targets instrs in
     <<[[CLI.build_targets()]] possibly dump the environment>>
     
-    (* building *)
-    if !targets = []
-    then failwith "nothing to mk";
+    <<[[CLI.build_targets()]] sanity check [[targets]]>>
     (* less: build shellenv here ?*)
     !targets |> List.rev |> List.iter (fun target ->
       build_target caps env rules target
     )
 [@@profiling]
 @
+% could build in parallel targets? why not build_graph here?
+% at least internally it will build in parallel
+
+%trans: Parse.parse, Eval.eval!
 
 
-
-% include has been expanded, vars too?
+% include has been expanded, vars too, only get simple/meta rules
 <<function [[CLI.build_target]]>>=
 let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
 
@@ -874,17 +864,14 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
        then Scheduler.waitup caps ()
        (* else: impossible? *)
    done;
-
-   (* bugfix: root can be BeingMade in which case we need to wait *)
-   while !Scheduler.nrunning > 0 do
-     Scheduler.waitup caps ();
-   done;
-   
+   <<[[CLI.build_target()]] wait after loop for possible remaining jobs>>
+ 
    if not !ever_did
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
 [@@profiling]
 @
 
+%trans: Graph.build_graph!
 
 <<signature [[Graph.build_graph]]>>=
 (* !will also modify hnode! *)
@@ -905,29 +892,49 @@ val work :
   bool ref (* OUT parameter, did anything *) ->
   unit
 @
+%TODO: ugly Out param, better return a bool instead?
 
 <<signature [[Scheduler.waitup]]>>=
 val waitup : < Shell.caps ; Cap.env; .. > -> unit -> unit
 @
 
 
+<<[[CLI.build_target()]] wait after loop for possible remaining jobs>>=
+(* bugfix: root can be BeingMade in which case we need to wait *)
+while !Scheduler.nrunning > 0 do
+  Scheduler.waitup caps ();
+done;
+@
+
+
+<<[[CLI.build_targets()]] sanity check [[targets]]>>=
+(* building *)
+if !targets = []
+then failwith "nothing to mk";
+@
+
+
+%trans: seen most important func, next chapters detail each component
 
 \chapter{Parsing the [[mkfile]]}
 
-<<constant [[Globals.line]]>>=
-let line = ref 1
-@
+%toc: skeleton, lex, parse, eval next chapter
+% Lex & Yacc requirement, see also \book{generators}
 
-<<constant [[Globals.file]]>>=
-let file = ref "<nofile>"
-@
-
-\section{[[parse()]]}
+\section{[[parse()]] skeleton}
 
 <<signature [[Parse.parse]]>>=
 (* !internally modifies Globals.line and Globals.file! *)
 val parse : Fpath.t -> Ast.instr list
 @
+
+<<constant [[Globals.line]]>>=
+let line = ref 1
+@
+<<constant [[Globals.file]]>>=
+let file = ref "<nofile>"
+@
+%$
 
 % parse and evaluate
 <<function [[Parse.parse]]>>=
@@ -935,24 +942,9 @@ let parse (file : Fpath.t) =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
     Globals.file := !!file;
-    Lexer.state_ := Lexer.Start;
 
     let lexbuf = Lexing.from_channel chan.Chan.ic in
-    let lexfunc lexbuf =
-      (match !Lexer.state_ with
-      | Lexer.Start 
-      | Lexer.AfterColon 
-      | Lexer.AfterEq 
-      | Lexer.InBrace -> 
-          Lexer.token lexbuf
-      | Lexer.InRecipe -> 
-          Lexer.recipe lexbuf
-      ) |> (fun tok -> 
-            if !Flags.dump_tokens 
-            then Logs.app (fun m -> m "%s" (Dumper.dump tok));
-            tok)
-    in
-      
+    <<[[Parse.parse()]] nested [[lexfunc]] function>>
     try 
       Parser.program lexfunc lexbuf
     (* less: could track line of : and = *)
@@ -965,15 +957,72 @@ let parse (file : Fpath.t) =
 
 %LP: lpize Lexer.mll
 
+<<type [[Lexer.state]]>>=
+(* lexer state *)
+type state = 
+  | Start
+
+  (* once we started to parse a rule, the next newline will start a recipe *)
+  | AfterColon
+  (* the lexing rules are different in a recipe; we do not parse rc's input *)
+  | InRecipe
+
+  (* once we started to parse an assign, the second = is like a string *)
+  | AfterEq
+  (* except inside ${x:...=...} where we still want = to be TEq *)
+  | InBrace
+@
+
+<<signature [[Lexer.state_]]>>=
+val state_ : state ref
+@
+
+<<global [[Lexer.state_]]>>=
+(* see also parse.ml and code using that global
+ * ocaml-light: renamed to state_ cos conflict with state var used by ocamllex
+ *)
+let state_ = ref Start
+@
+
+<<[[Parse.parse()]] nested [[lexfunc]] function>>=
+Lexer.state_ := Lexer.Start;
+let lexfunc lexbuf =
+  let tok =
+    match !Lexer.state_ with
+    | Lexer.Start 
+    | Lexer.AfterColon 
+    | Lexer.AfterEq 
+    | Lexer.InBrace -> 
+        Lexer.token lexbuf
+    | Lexer.InRecipe -> 
+        Lexer.recipe lexbuf
+  in
+  <<[[Parse.parse()]] [[lexfunc()]] possibly dump the token>>
+  tok
+in
+@
+
+<<signature [[Lexer.token]]>>=
+val token: Lexing.lexbuf -> Parser.token
+@
+
+<<signature [[Lexer.recipe]]>>=
+val recipe: Lexing.lexbuf -> Parser.token
+@
+
 \section{Grammar}
 
 %LP: lpize Parser.mly
 
+
 \chapter{Evaluating the [[mkfile]]}
 %alt: Evaluating the rules?
 
-% not a full interpreter, so "evaluating", just vars basically
+% not really an interpreter, so "evaluating" a big exaggerated;
+% just vars and include basically (and backquote extension in section X,
+% which is why need complex caps)
 
+\section{[[eval()]] skeleton}
 
 <<signature [[Eval.eval]]>>=
 (* Evaluate the variables and backquotes in the mkfile (hence Cap.exec),
@@ -997,7 +1046,6 @@ val eval :
 
 <<function [[Eval.eval]]>>=
 let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * Env.t =
-
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
 
@@ -1009,14 +1057,10 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
     )
   in
   instrs xs;
-
-  { R.
-    simples = simples;
-    metas = !metas
-  }, env
+  { R. simples = simples; metas = !metas}, env
 @
 %$
-% need rec instrs? because include?
+% need rec instrs? because include!
 
 
 <<function [[Eval.error]]>>=
@@ -1048,68 +1092,17 @@ let warning (loc : Ast.loc) (s : string) : unit =
   );
   Hashtbl.add env.E.vars_we_set s true;
 @
+% eval_words later
+
+<<signature [[Eval.eval_words]]>>=
+val eval_words : < Shell.caps; .. > -> Ast.loc -> Env.t ->
+  Ast.words -> (string list, Percent.pattern list) Common.either
+@
 
 <<[[Env.t]] fields>>=
 vars_we_set: (string, bool) Hashtbl.t;
 @
-
-
-\section{Evaluating rules}
-
-<<[[Eval.eval()]] match instruction kind cases>>=
-| A.Rule r -> 
-    let targets = eval_words caps loc env r.A.targets in
-    let prereqs = eval_words caps loc env r.A.prereqs in
-    (match targets, prereqs with
-    (* regular rules *)
-    | Left targets, Left prereqs ->
-        let rfinal = { R.
-                       targets = targets; 
-                       prereqs = prereqs;
-                       attrs = Set.of_list r.A.attrs;
-                       recipe = r.A.recipe;
-                       loc = loc;
-                     } in
-
-        targets |> List.iter (fun target ->
-          (* less: could check if already there, in which case
-           * need to Hashtbl.replace, not add.
-           * todo: could have a :O: attribute clearly identifying
-           * that you overwrite a previous rule!
-           *)
-          Hashtbl.add simples target rfinal
-        );
-        if !targets_ref = [] 
-        then targets_ref := targets;
-
-    (* meta rules *)
-    | Right targets, Right prereqs ->
-        let rfinal = { R.
-                       targets = targets; 
-                       prereqs = prereqs;
-                       attrs = Set.of_list r.A.attrs;
-                       recipe = r.A.recipe;
-                       loc = loc;
-                     } in
-        metas |> Common.push rfinal
-    (* it is ok to have a % only for the target to allow
-     * for instance rules such as %.o: $HFILES
-     *)
-    | Right targets, Left prereqs ->
-        let rfinal = { R.
-                       targets = targets; 
-                       prereqs = prereqs 
-                         |> List.map (fun s -> P.P [P.PStr s]);
-                       attrs = Set.of_list r.A.attrs;
-                       recipe = r.A.recipe;
-                       loc = loc;
-                     } in
-        metas |> Common.push rfinal
-    | Left _, Right _ ->
-        (* stricter: *)
-        error loc "Forgot to use %% for the target"
-    )
-@
+% used in strict mode and in shprint
 
 \section{Evaluating includes}
 
@@ -1134,8 +1127,77 @@ vars_we_set: (string, bool) Hashtbl.t;
 % call instrs here, hence need for rec earlier
 
 
+\section{Evaluating rules}
+
+<<[[Eval.eval()]] match instruction kind cases>>=
+| A.Rule r -> 
+    let targets = eval_words caps loc env r.A.targets in
+    let prereqs = eval_words caps loc env r.A.prereqs in
+    (match targets, prereqs with
+    <<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>
+@
+
+<<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>=
+(* regular rules *)
+| Left targets, Left prereqs ->
+    let rfinal = { R.
+                   targets = targets; 
+                   prereqs = prereqs;
+                   attrs = Set.of_list r.A.attrs;
+                   recipe = r.A.recipe;
+                   loc = loc;
+                 } in
+
+    targets |> List.iter (fun target ->
+      (* less: could check if already there, in which case
+       * need to Hashtbl.replace, not add.
+       * todo: could have a :O: attribute clearly identifying
+       * that you overwrite a previous rule!
+       *)
+      Hashtbl.add simples target rfinal
+    );
+    if !targets_ref = [] 
+    then targets_ref := targets;
+@
+% adjust first targets!
 
 
+<<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>=
+(* meta rules *)
+| Right targets, Right prereqs ->
+    let rfinal = { R.
+                   targets = targets; 
+                   prereqs = prereqs;
+                   attrs = Set.of_list r.A.attrs;
+                   recipe = r.A.recipe;
+                   loc = loc;
+                 } in
+    metas |> Common.push rfinal
+@
+
+<<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>=
+(* it is ok to have a % only for the target to allow
+ * for instance rules such as %.o: $HFILES
+ *)
+| Right targets, Left prereqs ->
+    let rfinal = { R.
+                   targets = targets; 
+                   prereqs = prereqs 
+                     |> List.map (fun s -> P.P [P.PStr s]);
+                   attrs = Set.of_list r.A.attrs;
+                   recipe = r.A.recipe;
+                   loc = loc;
+                 } in
+    metas |> Common.push rfinal
+@
+    
+<<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>=
+| Left _, Right _ ->
+    (* stricter: *)
+    error loc "Forgot to use %% for the target"
+)
+@
+        
 \section{Evaluating words}
 
 <<function [[Eval.eval_words]]>>=
@@ -1165,6 +1227,7 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
     ) |> (fun elems -> [elems |> String.concat ""])
   ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
 @
+% either simple rule, or meta rule if contains % or not
 
 
 <<function [[Eval.eval_word]]>>=
@@ -1182,7 +1245,9 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
     | [] -> 
         if acc = []
         then Left []
-        (* less: could look if any PPercent in acc and if not return a Left *)
+        (* less: could look if any PPercent in acc and if not return a Left
+         * TODO: should do that! bug otherwise? write test case?
+         *)
         else Right (P.P (List.rev acc))
     | x::xs ->
       (match x with
@@ -1200,46 +1265,49 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
            try 
              Hashtbl.find env.E.vars v 
            with Not_found ->
-             (* stricter: mk does not complain *)
-             if !Flags.strict_mode
-             then begin 
-               if !Flags.dump_env 
-               then Env.dump_env env;
-               error loc (spf "variable not found '%s'" v);
-             end
-             else []
+             <<[[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]]>>
+             []
          in
-         let ys =
-           match vkind with
-           | A.SimpleVar _ -> ys
-           <<[[Eval.eval_word()]] match [[vkind]] cases>>
-         in
+         <<[[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case>>
          (match ys, acc, xs with
-
-         (* variable does not contain anything *)
-         | [], [], []  -> 
-             Left []
-         | [], acc, xs ->
-             (* stricter: *)
-             warning loc (spf "use of empty variable '%s' in scalar context" v);
-             aux acc xs
-
-         (* variable contains a single element (scalar) *)
-         | [str], acc, xs -> 
-             aux ((P.PStr str)::acc) xs
-
-         (* variable contains many elements (array) *)
-         | _::_::_, [], [] -> 
-             Left ys
-         | _::_::_, _acc, _xs ->
-             (* stricter: *)
-             error loc (spf "use of list variable '%s' in scalar context" v)
+         <<[[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]]>>
          )
-
       <<[[Eval.eval_word()]] match [[x]] cases>>
   in
   aux [] word
 @
+
+<<[[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]]>>=
+(* variable contains a single element (scalar) *)
+| [str], acc, xs -> 
+    aux ((P.PStr str)::acc) xs
+@
+<<[[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]]>>=
+(* variable contains many elements (array) *)
+| _::_::_, [], [] -> 
+    Left ys
+@
+
+
+<<[[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]]>>=
+(* variable does not contain anything *)
+| [], [], []  -> 
+    Left []
+@
+
+<<[[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]]>>=
+| [], acc, xs ->
+    (* stricter: *)
+    warning loc (spf "use of empty variable '%s' in scalar context" v);
+    aux acc xs
+@
+
+<<[[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]]>>=
+| _::_::_, _acc, _xs ->
+    (* stricter: *)
+    error loc (spf "use of list variable '%s' in scalar context" v)
+@
+
 
 \chapter{Building the Graph of Dependencies}
 
@@ -1331,9 +1399,42 @@ let rec apply_rules target rules =
 @
 %LP: split and distribute to below
 
+
+
+<<function [[Graph.rule_exec]]>>=
+let rule_exec (r: string Rules.rule) =
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
+
+    R.stem = None;
+    R.all_targets = r.R.targets;
+    R.all_prereqs = r.R.prereqs;
+  }
+@
+
+<<[[Rules.rule_exec]] other fields>>=
+all_targets: string list;
+all_prereqs: string list;
+@
+
 \section{Finding the simple rule(s) for a target}
 
 \section{Finding matching metarules}
+
+
+<<function [[Graph.rule_exec_meta]]>>=
+let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
+  { R.recipe2 = r.R.recipe;
+    R.loc2 = r.R.loc;
+    R.attrs2 = r.R.attrs;
+
+    R.stem = Some stem;
+    R.all_targets = r.R.targets |> List.map (fun pat -> Percent.subst pat stem);
+    R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
+  }
+@
+% Percent.subst later!
 
 
 <<signature [[Percent.match_]]>>=
@@ -1537,6 +1638,18 @@ let rec check_ambiguous node =
     | 2 | _ -> error_ambiguous node groups_with_simple_rule
     )
 @
+
+<<function [[Rules.has_recipe]]>>=
+(* helpers *)
+let has_recipe re =
+  re.recipe2 <> None
+@
+
+<<function [[Rules.is_meta]]>>=
+let is_meta re =
+  re.stem <> None
+@
+
 
 <<[[Graph.node]] other fields>>=
 (* used for vacuous *)
@@ -2375,8 +2488,11 @@ Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 | SubstVar of (string * word * word list)
 @
 
-<<[[Eval.eval_word()]] match [[vkind]] cases>>=
-| A.SubstVar (_, pattern, substs) -> 
+<<[[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case>>=
+let ys =
+  match vkind with
+  | A.SimpleVar _ -> ys
+  | A.SubstVar (_, pattern, substs) -> 
     (* recurse! pattern can contain some variable *)
     let pattern = eval_word caps loc env pattern in
     let subst   = substs |> List.map (eval_word caps loc env) in
@@ -2398,7 +2514,9 @@ Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
       error loc 
         "pattern or subst does not resolve to a single string"
     )
+in
 @
+
 \section{Rule attributes}
 
 <<[[Ast.rule]] other fields>>=
@@ -2491,6 +2609,17 @@ exception Redefinition of string
 @
 
 
+<<[[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]]>>=
+(* stricter: mk does not complain *)
+if !Flags.strict_mode
+then begin 
+  if !Flags.dump_env 
+  then Env.dump_env env;
+  error loc (spf "variable not found '%s'" v);
+end;
+@
+% see dump_env later
+
 \chapter{Conclusion}
 
 \appendix
@@ -2542,6 +2671,10 @@ let dump_tokens = ref false
 " dump the tokens as they are generated";
 @
 
+<<[[Parse.parse()]] [[lexfunc()]] possibly dump the token>>=
+if !Flags.dump_tokens 
+then Logs.app (fun m -> m "%s" (Dumper.dump tok));
+@
 <<constant [[Flags.dump_ast]]>>=
 let dump_ast = ref false
 @
@@ -2949,25 +3082,13 @@ recipe_lines_opt:
 
 <<Lexer.mli>>=
 
-(* lexer state *)
-type state = 
-  | Start
+<<type [[Lexer.state]]>>
 
-  (* once we started to parse a rule, the next newline will start a recipe *)
-  | AfterColon
-  (* the lexing rules are different in a recipe; we do not parse rc's input *)
-  | InRecipe
+<<signature [[Lexer.state_]]>>
 
-  (* once we started to parse an assign, the second = is like a string *)
-  | AfterEq
-  (* except inside ${x:...=...} where we still want = to be TEq *)
-  | InBrace
+<<signature [[Lexer.token]]>>
 
-val state_ : state ref
-
-val token: Lexing.lexbuf -> Parser.token
-
-val recipe: Lexing.lexbuf -> Parser.token
+<<signature [[Lexer.recipe]]>>
 
 @
 
@@ -2995,25 +3116,9 @@ let error s =
 let loc () = 
   { Ast.file = Fpath.v !Globals.file; Ast.line = !Globals.line; }
 
- 
-(* lexer state *)
-type state = 
-  | Start
+<<type [[Lexer.state]]>> 
 
-  (* once we started to parse a rule, the next newline will start a recipe *)
-  | AfterColon
-  (* the lexing rules are different in a recipe; we do not parse rc's input *)
-  | InRecipe
-
-  (* once we started to parse an assign, the second = is like a string *)
-  | AfterEq
-  (* except inside ${x:...=...} where we still want = to be TEq *)
-  | InBrace
-
-(* see also parse.ml and code using that global
- * ocaml-light: renamed to state_ cos conflict with state var used by ocamllex
- *)
-let state_ = ref Start
+<<global [[Lexer.state_]]>>
 
 (* A single var is enough since mk does not allow recursivity in braces
  * as in ${x:%${y}x=%.c}. We do not need a stack.
@@ -4002,6 +4107,9 @@ val check_values : values -> unit
 
 <<Eval.mli>>=
 <<signature [[Eval.eval]]>>
+
+(* internals *)
+<<signature [[Eval.eval_words]]>>
 @
 
 

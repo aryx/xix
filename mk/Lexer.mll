@@ -18,7 +18,7 @@ let error s =
 let loc () = 
   { Ast.file = Fpath.v !Globals.file; Ast.line = !Globals.line; }
 
- 
+(*s: type [[Lexer.state]] *)
 (* lexer state *)
 type state = 
   | Start
@@ -32,11 +32,14 @@ type state =
   | AfterEq
   (* except inside ${x:...=...} where we still want = to be TEq *)
   | InBrace
+(*e: type [[Lexer.state]] *)
 
+(*s: global [[Lexer.state_]] *)
 (* see also parse.ml and code using that global
  * ocaml-light: renamed to state_ cos conflict with state var used by ocamllex
  *)
 let state_ = ref Start
+(*e: global [[Lexer.state_]] *)
 
 (* A single var is enough since mk does not allow recursivity in braces
  * as in ${x:%${y}x=%.c}. We do not need a stack.

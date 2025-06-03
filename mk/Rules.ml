@@ -24,11 +24,12 @@ type rules = {
 (*s: type [[Rules.rule_exec]] *)
 type rule_exec = {
   recipe2: Ast.recipe option;
+  (*s: [[Rules.rule_exec]] other fields *)
   stem: string option;
-
+  (*x: [[Rules.rule_exec]] other fields *)
   all_targets: string list;
   all_prereqs: string list;
-  (*s: [[Rules.rule_exec]] other fields *)
+  (*x: [[Rules.rule_exec]] other fields *)
   attrs2: Ast.rule_attribute Set_.t;
   (*e: [[Rules.rule_exec]] other fields *)
   loc2: Ast.loc;

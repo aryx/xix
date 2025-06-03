@@ -17,4 +17,10 @@ val eval :
   Ast.instr list ->
   Rules.rules * Env.t
 (*e: signature [[Eval.eval]] *)
+
+(* internals *)
+(*s: signature [[Eval.eval_words]] *)
+val eval_words : < Shell.caps; .. > -> Ast.loc -> Env.t ->
+  Ast.words -> (string list, Percent.pattern list) Common.either
+(*e: signature [[Eval.eval_words]] *)
 (*e: Eval.mli *)

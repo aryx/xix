@@ -1,5 +1,6 @@
 (*s: Lexer.mli *)
 
+(*s: type [[Lexer.state]] *)
 (* lexer state *)
 type state = 
   | Start
@@ -13,11 +14,18 @@ type state =
   | AfterEq
   (* except inside ${x:...=...} where we still want = to be TEq *)
   | InBrace
+(*e: type [[Lexer.state]] *)
 
+(*s: signature [[Lexer.state_]] *)
 val state_ : state ref
+(*e: signature [[Lexer.state_]] *)
 
+(*s: signature [[Lexer.token]] *)
 val token: Lexing.lexbuf -> Parser.token
+(*e: signature [[Lexer.token]] *)
 
+(*s: signature [[Lexer.recipe]] *)
 val recipe: Lexing.lexbuf -> Parser.token
+(*e: signature [[Lexer.recipe]] *)
 
 (*e: Lexer.mli *)

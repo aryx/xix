@@ -9,24 +9,28 @@ let parse (file : Fpath.t) =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
     Globals.file := !!file;
-    Lexer.state_ := Lexer.Start;
 
     let lexbuf = Lexing.from_channel chan.Chan.ic in
+    (*s: [[Parse.parse()]] nested [[lexfunc]] function *)
+    Lexer.state_ := Lexer.Start;
     let lexfunc lexbuf =
-      (match !Lexer.state_ with
-      | Lexer.Start 
-      | Lexer.AfterColon 
-      | Lexer.AfterEq 
-      | Lexer.InBrace -> 
-          Lexer.token lexbuf
-      | Lexer.InRecipe -> 
-          Lexer.recipe lexbuf
-      ) |> (fun tok -> 
-            if !Flags.dump_tokens 
-            then Logs.app (fun m -> m "%s" (Dumper.dump tok));
-            tok)
+      let tok =
+        match !Lexer.state_ with
+        | Lexer.Start 
+        | Lexer.AfterColon 
+        | Lexer.AfterEq 
+        | Lexer.InBrace -> 
+            Lexer.token lexbuf
+        | Lexer.InRecipe -> 
+            Lexer.recipe lexbuf
+      in
+      (*s: [[Parse.parse()]] [[lexfunc()]] possibly dump the token *)
+      if !Flags.dump_tokens 
+      then Logs.app (fun m -> m "%s" (Dumper.dump tok));
+      (*e: [[Parse.parse()]] [[lexfunc()]] possibly dump the token *)
+      tok
     in
-      
+    (*e: [[Parse.parse()]] nested [[lexfunc]] function *)
     try 
       Parser.program lexfunc lexbuf
     (* less: could track line of : and = *)

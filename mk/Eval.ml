@@ -51,7 +51,9 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
     | [] -> 
         if acc = []
         then Left []
-        (* less: could look if any PPercent in acc and if not return a Left *)
+        (* less: could look if any PPercent in acc and if not return a Left
+         * TODO: should do that! bug otherwise? write test case?
+         *)
         else Right (P.P (List.rev acc))
     | x::xs ->
       (match x with
@@ -69,65 +71,69 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
            try 
              Hashtbl.find env.E.vars v 
            with Not_found ->
+             (*s: [[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]] *)
              (* stricter: mk does not complain *)
              if !Flags.strict_mode
              then begin 
                if !Flags.dump_env 
                then Env.dump_env env;
                error loc (spf "variable not found '%s'" v);
-             end
-             else []
+             end;
+             (*e: [[Eval.eval_word()]] when [[Not_found]] exn thrown for var [[v]] *)
+             []
          in
+         (*s: [[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case *)
          let ys =
            match vkind with
            | A.SimpleVar _ -> ys
-           (*s: [[Eval.eval_word()]] match [[vkind]] cases *)
            | A.SubstVar (_, pattern, substs) -> 
-               (* recurse! pattern can contain some variable *)
-               let pattern = eval_word caps loc env pattern in
-               let subst   = substs |> List.map (eval_word caps loc env) in
-               (match pattern, subst with
-               | Right pattern, [Right subst] ->
-                   ys |> List.map (fun s -> 
-                     Percent.match_and_subst pattern subst s
-                   )
-               (* todo: ugly, should be more general, works only for 
-                * subst like ${OPAM_LIBS:%=-I $OPAM/%}
-               *)
-               | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
-                   ys |> List.map (fun s -> 
-                     [x;Percent.match_and_subst pattern subst s]
-                   ) |> List.flatten
-               (* stricter? what does mk?*)
-               | _ -> 
-                 Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
-                 error loc 
-                   "pattern or subst does not resolve to a single string"
-               )
-           (*e: [[Eval.eval_word()]] match [[vkind]] cases *)
+             (* recurse! pattern can contain some variable *)
+             let pattern = eval_word caps loc env pattern in
+             let subst   = substs |> List.map (eval_word caps loc env) in
+             (match pattern, subst with
+             | Right pattern, [Right subst] ->
+                 ys |> List.map (fun s -> 
+                   Percent.match_and_subst pattern subst s
+                 )
+             (* todo: ugly, should be more general, works only for 
+              * subst like ${OPAM_LIBS:%=-I $OPAM/%}
+             *)
+             | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
+                 ys |> List.map (fun s -> 
+                   [x;Percent.match_and_subst pattern subst s]
+                 ) |> List.flatten
+             (* stricter? what does mk?*)
+             | _ -> 
+               Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
+               error loc 
+                 "pattern or subst does not resolve to a single string"
+             )
          in
+         (*e: [[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case *)
          (match ys, acc, xs with
-
+         (*s: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
+         (* variable contains a single element (scalar) *)
+         | [str], acc, xs -> 
+             aux ((P.PStr str)::acc) xs
+         (*x: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
+         (* variable contains many elements (array) *)
+         | _::_::_, [], [] -> 
+             Left ys
+         (*x: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
          (* variable does not contain anything *)
          | [], [], []  -> 
              Left []
+         (*x: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
          | [], acc, xs ->
              (* stricter: *)
              warning loc (spf "use of empty variable '%s' in scalar context" v);
              aux acc xs
-
-         (* variable contains a single element (scalar) *)
-         | [str], acc, xs -> 
-             aux ((P.PStr str)::acc) xs
-
-         (* variable contains many elements (array) *)
-         | _::_::_, [], [] -> 
-             Left ys
+         (*x: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
          | _::_::_, _acc, _xs ->
              (* stricter: *)
              error loc (spf "use of list variable '%s' in scalar context" v)
+         (*e: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
          )
-
       (*s: [[Eval.eval_word()]] match [[x]] cases *)
       | A.Backquoted cmd -> 
         let shellenv = Env.shellenv_of_env env in
@@ -179,7 +185,6 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
 
 (*s: function [[Eval.eval]] *)
 let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * Env.t =
-
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
 
@@ -202,10 +207,28 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
         );
         Hashtbl.add env.E.vars_we_set s true;
       (*x: [[Eval.eval()]] match instruction kind cases *)
+      | A.Include ws ->
+          let res = eval_words caps loc env ws in
+          (match res with
+          | Left [file] -> 
+              if not (Sys.file_exists file)
+              then warning loc (spf "skipping missing include file: %s" file)
+              else
+                let xs = Parse.parse (Fpath.v file) in
+                (* recurse *)
+                instrs xs
+          (* new? what does mk does? *)
+          | Left [] -> error loc "missing include file"
+          (* stricter: force use quotes for filename with spaces or percent *)
+          | Right _ | Left (_::_) -> 
+              error loc "use quotes for filenames with spaces or %%"
+          )
+      (*x: [[Eval.eval()]] match instruction kind cases *)
       | A.Rule r -> 
           let targets = eval_words caps loc env r.A.targets in
           let prereqs = eval_words caps loc env r.A.prereqs in
           (match targets, prereqs with
+          (*s: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           (* regular rules *)
           | Left targets, Left prereqs ->
               let rfinal = { R.
@@ -226,7 +249,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
               );
               if !targets_ref = [] 
               then targets_ref := targets;
-
+          (*x: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           (* meta rules *)
           | Right targets, Right prereqs ->
               let rfinal = { R.
@@ -237,6 +260,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
                              loc = loc;
                            } in
               metas |> Common.push rfinal
+          (*x: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           (* it is ok to have a % only for the target to allow
            * for instance rules such as %.o: $HFILES
            *)
@@ -250,27 +274,12 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
                              loc = loc;
                            } in
               metas |> Common.push rfinal
+          (*x: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           | Left _, Right _ ->
               (* stricter: *)
               error loc "Forgot to use %% for the target"
           )
-      (*x: [[Eval.eval()]] match instruction kind cases *)
-      | A.Include ws ->
-          let res = eval_words caps loc env ws in
-          (match res with
-          | Left [file] -> 
-              if not (Sys.file_exists file)
-              then warning loc (spf "skipping missing include file: %s" file)
-              else
-                let xs = Parse.parse (Fpath.v file) in
-                (* recurse *)
-                instrs xs
-          (* new? what does mk does? *)
-          | Left [] -> error loc "missing include file"
-          (* stricter: force use quotes for filename with spaces or percent *)
-          | Right _ | Left (_::_) -> 
-              error loc "use quotes for filenames with spaces or %%"
-          )
+          (*e: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
       (*x: [[Eval.eval()]] match instruction kind cases *)
       | A.PipeInclude ws ->
         let res = eval_words caps loc env ws in
@@ -290,10 +299,6 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
     )
   in
   instrs xs;
-
-  { R.
-    simples = simples;
-    metas = !metas
-  }, env
+  { R. simples = simples; metas = !metas}, env
 (*e: function [[Eval.eval]] *)
 (*e: Eval.ml *)

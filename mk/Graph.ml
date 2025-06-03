@@ -95,6 +95,7 @@ let new_node (target : string) =
     arcs = [];
     state = NotMade;
     time = time;
+
     visited = false;
     is_virtual = false;
     probable = time <> None;

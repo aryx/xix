@@ -91,11 +91,10 @@ type instr = {
     | Rule of rule
     (* should resolve to a single filename less: could enforce of word? *)
     | Include of words
-    (*s: [[Ast.instr_kind]] cases *)
     (* stricter: no dynamic def like X=AVAR  $X=42 ... $AVAR, 
      * so 'string' below, not 'word' *)
     | Definition of string * words
-    (*x: [[Ast.instr_kind]] cases *)
+    (*s: [[Ast.instr_kind]] cases *)
     (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
      * less: we could also do PipeInclude of recipe I think *)
     | PipeInclude of words

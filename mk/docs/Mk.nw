@@ -1531,16 +1531,16 @@ let subst (P pat) stem =
 check_cycle root;
 
 (* must be before check_ambiguous! *)
-root.probable <- true;
-vacuous root |> ignore;
+<<[[Graph.build_graph()]] check vacuous nodes>>
+
 check_ambiguous root;
 @
+% why must be before check_ambiguous?
 
-
-%LP: section like in Make.nw for each check
+\subsection{Cycle detection}
+\label{sec:cycle-check}
 
 <<signature [[Graph.check_cycle]]>>=
-(* internals *)
 val check_cycle : t -> unit
 @
 
@@ -1548,29 +1548,6 @@ val check_cycle : t -> unit
 (* used only for check_cycle for now *)
 mutable visited: bool;
 @
-
-
-<<signature [[Graph.check_ambiguous]]>>=
-(* will also adjust the graph *)
-val check_ambiguous : t -> unit
-@
-
-
-<<function [[Graph.error_cycle]]>>=
-let error_cycle node trace =
-  (* less: I could just display the loop instead of starting from root *)
-  let str = 
-    (node::trace) 
-    |> List.rev 
-    |> List.map (fun x -> 
-      if x.name = node.name then spf "|%s|" x.name else x.name
-     )
-    |> String.concat "->"
-  in
-  failwith (spf "cycle in graph detected at target %s (trace = %s)"
-              node.name str)
-@
-
 
 <<function [[Graph.check_cycle]]>>=
 let check_cycle node =
@@ -1590,6 +1567,57 @@ let check_cycle node =
   aux [] node
 @
 
+<<function [[Graph.error_cycle]]>>=
+let error_cycle node trace =
+  (* less: I could just display the loop instead of starting from root *)
+  let str = 
+    (node::trace) 
+    |> List.rev 
+    |> List.map (fun x -> 
+      if x.name = node.name then spf "|%s|" x.name else x.name
+     )
+    |> String.concat "->"
+  in
+  failwith (spf "cycle in graph detected at target %s (trace = %s)"
+              node.name str)
+@
+% restore visited? needed?
+
+\subsection{Infinite rule detection}
+
+\subsection{Ambiguous rules detection}
+\label{sec:ambiguous-checks}
+
+<<signature [[Graph.check_ambiguous]]>>=
+(* will also adjust the graph *)
+val check_ambiguous : t -> unit
+@
+
+<<function [[Graph.check_ambiguous]]>>=
+let rec check_ambiguous node =
+  <<[[Graph.check_ambiguous()]] recurse on the arcs of the node>>
+
+  let arcs_with_recipe = 
+    node.arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
+  (* opti? rule_exec is big now, so maybe need have a rule_exec id *)
+  let groups_by_rule =
+    arcs_with_recipe |> Assoc.group_by (fun arc -> arc.rule)
+  in
+  
+  match List.length groups_by_rule with
+  <<[[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases>>
+@
+
+<<[[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases>>=
+| 1 -> ()
+@
+
+<<function [[Rules.has_recipe]]>>=
+(* helpers *)
+let has_recipe re =
+  re.recipe2 <> None
+@
+
 <<function [[Graph.error_ambiguous]]>>=
 let error_ambiguous node groups =
   let candidates = 
@@ -1606,50 +1634,42 @@ let error_ambiguous node groups =
               node.name  (candidates |> String.concat "\n"))
 @
 
-<<function [[Graph.check_ambiguous]]>>=
-let rec check_ambiguous node =
-
-  node.arcs |> List.iter (fun arc ->
-    (* less: opti: could use visited to avoid duplicate work in a DAG *)
-    arc.dest |> Common.if_some (fun node2 -> 
-      (* recurse *)
-      check_ambiguous node2
-    );
-  );
-
-  let arcs_with_recipe = 
-    node.arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
-  (* opti? rule_exec is big now, so maybe need have a rule_exec id *)
-  let groups_by_rule =
-    arcs_with_recipe |> Assoc.group_by (fun arc -> arc.rule)
-  in
-  
-  match List.length groups_by_rule with
-  | 0 -> ()
-    (* stricter? or report it later? *)
-    (* failwith (spf "no recipe to make %s" node.name) *)
-  | 1 -> ()
-  | 2 | _ -> 
-    (* feature: it's ok to have ambiguity between 1 simple rule and 1 meta rule.
-     * The specialized simple rule has priority over the generic meta rule
-     * (see specialize-vs-generic in Build.nw)
-     *)
-    let groups_with_simple_rule =
-      groups_by_rule |> List_.exclude (fun (r, _) -> R.is_meta r) 
-    in
-    (match List.length groups_with_simple_rule with
-    | 0 -> error_ambiguous node groups_by_rule
-    | 1 ->
-      (* update graph *)
-      node.arcs <- List_.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
-    | 2 | _ -> error_ambiguous node groups_with_simple_rule
-    )
+<<[[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases>>=
+| 0 -> ()
+  (* stricter? or report it later? *)
+  (* failwith (spf "no recipe to make %s" node.name) *)
 @
 
-<<function [[Rules.has_recipe]]>>=
-(* helpers *)
-let has_recipe re =
-  re.recipe2 <> None
+
+
+<<[[Graph.check_ambiguous()]] recurse on the arcs of the node>>=
+node.arcs |> List.iter (fun arc ->
+  (* less: opti: could use visited to avoid duplicate work in a DAG *)
+  arc.dest |> Common.if_some (fun node2 -> 
+    (* recurse *)
+    check_ambiguous node2
+  );
+);
+@
+
+\subsubsection{Specialized versus generic rules}
+\label{sec:specialize-vs-generic}
+
+
+<<[[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases>>=
+| 2 | _ -> 
+  (* feature: it's ok to have ambiguity between 1 simple rule and 1 meta rule.
+   * The specialized simple rule has priority over the generic meta rule
+   * (see specialize-vs-generic in Build.nw)
+   *)
+  let groups_with_simple_rule =
+    groups_by_rule |> List_.exclude (fun (r, _) -> R.is_meta r) 
+  in
+  (match List.length groups_with_simple_rule with
+  | 0 -> error_ambiguous node groups_by_rule
+  <<[[Graph.check_ambiguous()]] when length [[groups_with_simple_rule]] is 1>>
+  | 2 | _ -> error_ambiguous node groups_with_simple_rule
+  )
 @
 
 <<function [[Rules.is_meta]]>>=
@@ -1657,6 +1677,21 @@ let is_meta re =
   re.stem <> None
 @
 
+<<[[Graph.check_ambiguous()]] when length [[groups_with_simple_rule]] is 1>>=
+| 1 ->
+  (* update graph *)
+  node.arcs <- List_.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
+@
+
+
+\subsection{Vacuous nodes removal}
+\n def of vacuous =~ stupid
+
+
+<<[[Graph.build_graph()]] check vacuous nodes>>=
+root.probable <- true;
+vacuous root |> ignore;
+@
 
 <<[[Graph.node]] other fields>>=
 (* used for vacuous *)
@@ -1692,29 +1727,12 @@ let rec vacuous node =
   !vacuous_node
 @
 
+
+
+
+
 \chapter{Finding Outdated Files}
 
-<<function [[Outofdate.outofdate]]>>=
-let outofdate node arc =
-  match arc.G.dest with
-  | None -> raise (Impossible "should not call outofdate on nodeless arcs")
-  | Some node2 -> 
-      (* I use the strictly < in the C version because on modern machines 
-       * many files can be created in the same second. In OCaml,
-       * the time is a float with higher precision so I can use back
-       * the <=.
-       *)
-       (match node.G.time, node2.G.time with
-       (* in foo.exe: foo.o: foo.c, foo.exe and foo.o might not
-        * exist and so have a time set to None. In that case,
-        * I consider foo.exe also out of date as anyway foo.o
-        * will be generated
-        *)
-       | _      , None    -> true
-       | None   , Some _  -> true
-       | Some t1, Some t2 -> t1 < t2
-       )
-@
 
 \section{Exploring the graph: [[work()]]}
 
@@ -1732,7 +1750,7 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
     match node.G.arcs with
     (* a leaf *)
     | [] ->
-        (* could be a virtual node, but weird to have a virtual node leaf*)
+        (* could be a virtual node, but weird to have a virtual node leaf *)
         if node.G.time = None
         then failwith (spf "don't know how to make '%s'" node.G.name);
 
@@ -1770,6 +1788,28 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
           else dorecipe caps env node did
 @
 
+<<function [[Outofdate.outofdate]]>>=
+let outofdate node arc =
+  match arc.G.dest with
+  | None -> raise (Impossible "should not call outofdate on nodeless arcs")
+  | Some node2 -> 
+      (* I use the strictly < in the C version because on modern machines 
+       * many files can be created in the same second. In OCaml,
+       * the time is a float with higher precision so I can use back
+       * the <=.
+       *)
+       (match node.G.time, node2.G.time with
+       (* in foo.exe: foo.o: foo.c, foo.exe and foo.o might not
+        * exist and so have a time set to None. In that case,
+        * I consider foo.exe also out of date as anyway foo.o
+        * will be generated
+        *)
+       | _      , None    -> true
+       | None   , Some _  -> true
+       | Some t1, Some t2 -> t1 < t2
+       )
+@
+
 \section{Scheduling recipes: [[dorecipe()]]}
 
 <<function [[Outofdate.dorecipe]]>>=
@@ -1793,6 +1833,7 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
       all_targets |> List.filter_map (fun target ->
         if Hashtbl.mem G.hnodes target
         then Some (Hashtbl.find G.hnodes target)
+        (* TODO? failwith? when can this happen? *)
         else None
       )
     in
@@ -1841,17 +1882,11 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
   end
 @
 
+
 \chapter{Scheduling Jobs}
 
 
-<<function [[Scheduler.nproclimit]]>>=
-let nproclimit (caps: < Cap.env; ..>) =
-  (try 
-    let s = CapSys.getenv caps "NPROC" in
-    int_of_string s
-   with Not_found | _ -> 2
-  )
-@
+\section{[[sched()]] skeleton}
 
 <<function [[Scheduler.sched]]>>=
 let sched (caps : < Shell.caps; .. >) () =
@@ -1920,6 +1955,15 @@ let run (caps : < Shell.caps; .. >) job =
 
   if !nrunning < nproclimit caps
   then sched caps ()
+@
+
+<<function [[Scheduler.nproclimit]]>>=
+let nproclimit (caps: < Cap.env; ..>) =
+  (try 
+    let s = CapSys.getenv caps "NPROC" in
+    int_of_string s
+   with Not_found | _ -> 2
+  )
 @
 
 
@@ -4173,11 +4217,12 @@ val hnodes : (string, node) Hashtbl.t
 
 <<signature [[Graph.update]]>>
 
+(* internals *)
+
 <<signature [[Graph.check_cycle]]>>
 
 <<signature [[Graph.check_ambiguous]]>>
 
-(* internals *)
 <<signature [[Graph.dump_graph]]>>
 
 @

@@ -267,7 +267,7 @@ let error_ambiguous node groups =
 
 (*s: function [[Graph.check_ambiguous]] *)
 let rec check_ambiguous node =
-
+  (*s: [[Graph.check_ambiguous()]] recurse on the arcs of the node *)
   node.arcs |> List.iter (fun arc ->
     (* less: opti: could use visited to avoid duplicate work in a DAG *)
     arc.dest |> Common.if_some (fun node2 -> 
@@ -275,6 +275,7 @@ let rec check_ambiguous node =
       check_ambiguous node2
     );
   );
+  (*e: [[Graph.check_ambiguous()]] recurse on the arcs of the node *)
 
   let arcs_with_recipe = 
     node.arcs |> List.filter (fun arc -> R.has_recipe arc.rule) in
@@ -284,10 +285,13 @@ let rec check_ambiguous node =
   in
   
   match List.length groups_by_rule with
+  (*s: [[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases *)
+  | 1 -> ()
+  (*x: [[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases *)
   | 0 -> ()
     (* stricter? or report it later? *)
     (* failwith (spf "no recipe to make %s" node.name) *)
-  | 1 -> ()
+  (*x: [[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases *)
   | 2 | _ -> 
     (* feature: it's ok to have ambiguity between 1 simple rule and 1 meta rule.
      * The specialized simple rule has priority over the generic meta rule
@@ -298,11 +302,14 @@ let rec check_ambiguous node =
     in
     (match List.length groups_with_simple_rule with
     | 0 -> error_ambiguous node groups_by_rule
+    (*s: [[Graph.check_ambiguous()]] when length [[groups_with_simple_rule]] is 1 *)
     | 1 ->
       (* update graph *)
       node.arcs <- List_.exclude (fun arc -> R.is_meta arc.rule) node.arcs;
+    (*e: [[Graph.check_ambiguous()]] when length [[groups_with_simple_rule]] is 1 *)
     | 2 | _ -> error_ambiguous node groups_with_simple_rule
     )
+  (*e: [[Graph.check_ambiguous()]] match length of [[groups_by_rule]] cases *)
 (*e: function [[Graph.check_ambiguous]] *)
 
 (*****************************************************************************)
@@ -402,8 +409,11 @@ let build_graph target rules =
   check_cycle root;
 
   (* must be before check_ambiguous! *)
+  (*s: [[Graph.build_graph()]] check vacuous nodes *)
   root.probable <- true;
   vacuous root |> ignore;
+  (*e: [[Graph.build_graph()]] check vacuous nodes *)
+
   check_ambiguous root;
   (*e: [[Graph.build_graph()]] checks on the graph [[root]] *)
   (*s: [[Graph.build_graph()]] propagate attributes on the graph [[root]] *)

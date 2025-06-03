@@ -68,8 +68,9 @@ val build_graph : string (* target *) -> Rules.rules -> t
 val update : node -> unit
 (*e: signature [[Graph.update]] *)
 
-(*s: signature [[Graph.check_cycle]] *)
 (* internals *)
+
+(*s: signature [[Graph.check_cycle]] *)
 val check_cycle : t -> unit
 (*e: signature [[Graph.check_cycle]] *)
 
@@ -78,7 +79,6 @@ val check_cycle : t -> unit
 val check_ambiguous : t -> unit
 (*e: signature [[Graph.check_ambiguous]] *)
 
-(* internals *)
 (*s: signature [[Graph.dump_graph]] *)
 (* output graphviz dot file *)
 val dump_graph : t -> unit

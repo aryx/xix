@@ -69,6 +69,7 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node did =
       all_targets |> List.filter_map (fun target ->
         if Hashtbl.mem G.hnodes target
         then Some (Hashtbl.find G.hnodes target)
+        (* TODO? failwith? when can this happen? *)
         else None
       )
     in
@@ -135,7 +136,7 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node did =
     match node.G.arcs with
     (* a leaf *)
     | [] ->
-        (* could be a virtual node, but weird to have a virtual node leaf*)
+        (* could be a virtual node, but weird to have a virtual node leaf *)
         if node.G.time = None
         then failwith (spf "don't know how to make '%s'" node.G.name);
 

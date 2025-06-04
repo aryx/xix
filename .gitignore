@@ -19,6 +19,7 @@
 
 # Syncweb objects
 .md5sum_*
+*.nwcache
 
 # latex object files
 *.aux

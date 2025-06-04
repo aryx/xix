@@ -177,8 +177,8 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
  
    if not !ever_did
    then print_string (spf "mk: '%s' is already up to date\n" root.G.name)
-[@@profiling]
 (*e: function [[CLI.build_target]] *)
+[@@profiling]
 
 (*s: function [[CLI.build_targets]] *)
 let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
@@ -201,14 +201,14 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     end;
     (*e: [[CLI.build_targets()]] if debugger set *)
 
-    (* parsing (and evaluating) *)
+    (* parsing *)
     let instrs = Parse.parse infile in
     (*s: [[CLI.build_targets()]] possibly dump the AST *)
     if !Flags.dump_ast
     then Ast.dump_ast instrs;
     (*e: [[CLI.build_targets()]] possibly dump the AST *)
 
-    (* can modify targets and use first targets in file if none provided *)
+    (* evaluating (can modify targets with first targets in file if none provided) *)
     let rules, env = Eval.eval caps env targets instrs in
     (*s: [[CLI.build_targets()]] possibly dump the environment *)
     if !Flags.dump_env
@@ -224,8 +224,8 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     !targets |> List.rev |> List.iter (fun target ->
       build_target caps env rules target
     )
-[@@profiling]
 (*e: function [[CLI.build_targets]] *)
+[@@profiling]
 
 (*****************************************************************************)
 (* Entry point *)

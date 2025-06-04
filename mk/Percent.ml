@@ -64,7 +64,7 @@ let rec string_after_percent xs =
 (*****************************************************************************)
 
 (*s: function [[Percent.match_]] *)
-(* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c"
+(* ex: match_ [PStr "foo"; PPercent; PStr ".c"] "foobar.c" => Some "bar"
  * This is arguably (and sadly) more complicated than the C code.
  *)
 let rec match_ (P pat) str =

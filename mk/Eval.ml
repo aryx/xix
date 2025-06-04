@@ -22,7 +22,6 @@ open Rules (* for the fields *)
 (*****************************************************************************)
 
 (*s: function [[Eval.error]] *)
-(* TODO: use proper exn *)
 let error (loc : Ast.loc) (s : string) =
   failwith (spf "%s:%d: Semantic error, %s" !!(loc.A.file) loc.A.line s)
 (*e: function [[Eval.error]] *)
@@ -44,7 +43,7 @@ let warning (loc : Ast.loc) (s : string) : unit =
  *  - less: the returned pattern must contain at least a PPercent
  *)
 let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
-          (Env.values, Percent.pattern) Common.either =
+          (string list, Percent.pattern) Common.either =
   let (Ast.W word) = wd in
   let rec aux acc word_elements =
     match word_elements with
@@ -134,7 +133,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
              error loc (spf "use of list variable '%s' in scalar context" v)
          (*e: [[Eval.eval_word]] when [[Var v]] case, matching [[ys, acc, xs]] *)
          )
-      (*s: [[Eval.eval_word()]] match [[x]] cases *)
+      (*s: [[Eval.eval_word()]] match [[x]] other cases *)
       | A.Backquoted cmd -> 
         let shellenv = Env.shellenv_of_env env in
         let s = Shell.exec_backquote caps shellenv cmd in
@@ -144,8 +143,8 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
         (* stricter: *)
         | _ -> error loc (spf "use of `%s` in scalar context" cmd)
         )
+      (*e: [[Eval.eval_word()]] match [[x]] other cases *)
       )
-      (*e: [[Eval.eval_word()]] match [[x]] cases *)
   in
   aux [] word
 (*e: function [[Eval.eval_word]] *)
@@ -156,25 +155,26 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
          (string list, Percent.pattern list) Common.either =
   
   let res = words |> List.map (eval_word caps loc env) in
-
-  if res |> List.exists (fun x ->
-    match x with
+  (*s: [[Eval.eval_words()]] nested function [[contain_percent]] *)
+  let contain_percent xs = 
+    xs |> List.exists (function
     | Left _ -> false
     | Right (P.P xs) -> List.mem P.PPercent xs
-  )
-
+    )
+  in
+  (*e: [[Eval.eval_words()]] nested function [[contain_percent]] *)
+  if contain_percent res 
   (* a list of patterns *)
   then res |> List.map (function
     | Left xs -> xs |> List.map (fun s -> P.P [P.PStr s])
     | Right x -> [x]
   ) |> List.flatten |> (fun xs -> List.iter Percent.check_pattern xs; Right xs)
-
   (* a list of strings *)
   else res |> List.map (function
     | Left xs -> xs
     | Right (P.P xs) -> xs |> List.map (function 
         | P.PStr s -> s
-        | P.PPercent -> raise (Impossible "exists predicate above is wrong")
+        | P.PPercent -> raise (Impossible "contain_percent above is buggy then")
     ) |> (fun elems -> [elems |> String.concat ""])
   ) |> List.flatten |> (fun xs -> Env.check_values xs; Left xs)
 (*e: function [[Eval.eval_words]] *)
@@ -184,7 +184,7 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
 (*****************************************************************************)
 
 (*s: function [[Eval.eval]] *)
-let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * Env.t =
+let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr list) : Rules.rules * Env.t =
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
 
@@ -247,8 +247,10 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
                  *)
                 Hashtbl.add simples target rfinal
               );
+              (*s: [[Eval.eval()]] adjusts [[targets_ref]] when first simple targets in mkfile *)
               if !targets_ref = [] 
               then targets_ref := targets;
+              (*e: [[Eval.eval()]] adjusts [[targets_ref]] when first simple targets in mkfile *)
           (*x: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           (* meta rules *)
           | Right targets, Right prereqs ->
@@ -278,8 +280,8 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref xs : Rules.rules * 
           | Left _, Right _ ->
               (* stricter: *)
               error loc "Forgot to use %% for the target"
-          )
           (*e: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
+          )
       (*x: [[Eval.eval()]] match instruction kind cases *)
       | A.PipeInclude ws ->
         let res = eval_words caps loc env ws in

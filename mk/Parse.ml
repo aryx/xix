@@ -5,7 +5,7 @@ open Common
 open Fpath_.Operators
 
 (*s: function [[Parse.parse]] *)
-let parse (file : Fpath.t) =
+let parse (file : Fpath.t) : Ast.instr list =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     Globals.line := 1;
     Globals.file := !!file;

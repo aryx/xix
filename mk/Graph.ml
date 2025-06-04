@@ -108,7 +108,7 @@ let new_node (target : string) =
 (*e: function [[Graph.new_node]] *)
 
 (*s: function [[Graph.rule_exec]] *)
-let rule_exec (r: string Rules.rule) =
+let rule_exec (r: string Rules.rule) : Rules.rule_exec =
   { R.recipe2 = r.R.recipe;
     R.loc2 = r.R.loc;
     R.attrs2 = r.R.attrs;
@@ -120,7 +120,7 @@ let rule_exec (r: string Rules.rule) =
 (*e: function [[Graph.rule_exec]] *)
 
 (*s: function [[Graph.rule_exec_meta]] *)
-let rule_exec_meta (r: Percent.pattern Rules.rule) stem =
+let rule_exec_meta (r: Percent.pattern Rules.rule) (stem : string) : Rules.rule_exec =
   { R.recipe2 = r.R.recipe;
     R.loc2 = r.R.loc;
     R.attrs2 = r.R.attrs;
@@ -237,7 +237,7 @@ let check_cycle node =
 
     node.visited <- true;
     node.arcs |> List.iter (fun arc ->
-      arc.dest |> Common.if_some (fun node2 -> 
+      arc.dest |> Option.iter (fun node2 -> 
         aux (node::trace) node2
       )
     );
@@ -245,8 +245,6 @@ let check_cycle node =
   in
   aux [] node
 (*e: function [[Graph.check_cycle]] *)
-
-
 
 
 (*s: function [[Graph.error_ambiguous]] *)
@@ -270,7 +268,7 @@ let rec check_ambiguous node =
   (*s: [[Graph.check_ambiguous()]] recurse on the arcs of the node *)
   node.arcs |> List.iter (fun arc ->
     (* less: opti: could use visited to avoid duplicate work in a DAG *)
-    arc.dest |> Common.if_some (fun node2 -> 
+    arc.dest |> Option.iter (fun node2 -> 
       (* recurse *)
       check_ambiguous node2
     );
@@ -327,10 +325,9 @@ let rec propagate_attributes node =
           node.time <- None;
       | _ -> ()
     );
-    arc.dest |> Common.if_some propagate_attributes
+    arc.dest |> Option.iter propagate_attributes
   )
 (*e: function [[Graph.propagate_attributes]] *)
-
 
 (*s: function [[Graph.vacuous]] *)
 let rec vacuous node =
@@ -356,7 +353,6 @@ let rec vacuous node =
   then Logs.warn (fun m -> m "vacuous node detected: %s" node.name);
   !vacuous_node
 (*e: function [[Graph.vacuous]] *)
-
 
 (*****************************************************************************)
 (* Debug *)

@@ -51,7 +51,7 @@ let adjust_env job =
   Hashtbl.replace env.E.internal_vars "target" [job.J.main_target];
   (* less: newprereqs *)
   Hashtbl.replace env.E.internal_vars "prereq" job.J.all_prereqs;
-  job.J.rule.R.stem |> Common.if_some (fun s ->
+  job.J.rule.R.stem |> Option.iter (fun s ->
     Hashtbl.replace env.E.internal_vars "stem" [s];
   );
 

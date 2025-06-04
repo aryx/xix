@@ -74,9 +74,8 @@ let yyback n lexbuf =
 let space = [' ''\t']
 (*x: lexer regexp aliases *)
 let letter = ['a'-'z''A'-'Z''_']
-(*x: lexer regexp aliases *)
 let number = ['0'-'9']
-(*x: lexer regexp aliases *)
+
 (* stricter: WORDCHR = !utfrune("!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", (r) *)
 let ident = letter (letter | number)*
 (*e: lexer regexp aliases *)
@@ -123,13 +122,13 @@ rule token = parse
   (*x: [[Lexer.token()]] symbol cases *)
   | '%'  { TPercent }
   (*x: [[Lexer.token()]] symbol cases *)
-  | '=' { if !state_ = AfterEq
+  | '=' { if !state_ <> AfterEq
           (* todo? means we have to normalize a series of word elements *)
-          then TOther "=" 
-          else begin
+          then begin
             state_ := AfterEq;
             TEq (loc()) 
           end
+          else TOther "=" 
        }
   (*x: [[Lexer.token()]] symbol cases *)
   | "<|" { TInfPipe (loc()) }
@@ -220,7 +219,6 @@ and quote = parse
 (* Rule recipe *)
 (*****************************************************************************)
 (*s: rule [[Lexer.recipe]] *)
-(* TODO: trim left and right and adjust s below *)
 and recipe = parse
   | ('#'   [^'\n']*) (*as s*) '\n'?
       { let s = Lexing.lexeme lexbuf |> String.trim in

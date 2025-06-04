@@ -99,6 +99,7 @@ ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.
 
 cd $TOP/mk
 ocamlyacc Parser.mly
+perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
 ocamllex Lexer.mll
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Globals.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Flags.ml
@@ -136,6 +137,7 @@ ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str
 
 cd $TOP/shell/
 ocamlyacc Parser.mly
+perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
 ocamllex Lexer.mll
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Flags.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Globals.ml

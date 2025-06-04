@@ -9,7 +9,7 @@ Lexer.ml:D: Lexer.mll
 	$OCAMLLEX $prereq
 Parser.ml Parser.mli: Parser.mly
 	$OCAMLYACC $prereq
-#	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
+	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
 #	perl -p -i -e 's#\(\*[sex]: .* \*\)##' Parser.ml
 #pad: this  perl thing is just because ocamlyacc does not handle well
 # syncweb special comment at the very end

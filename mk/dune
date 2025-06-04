@@ -32,7 +32,16 @@
   )
 
 (ocamllex Lexer)
-(ocamlyacc Parser)
+;old: (ocamlyacc Parser)
+(rule
+ (targets Parser.ml Parser.mli)
+ (deps Parser.mly)
+ (action
+  (progn
+   (run ocamlyacc %{dep:Parser.mly})
+   (run perl -p -i -e "s#/[*].*[sex]:.*[*]/##" Parser.ml)
+   )))
+
 
 (install
  (package xix)

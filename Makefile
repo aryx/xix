@@ -35,6 +35,9 @@ promote:
 
 build-docker:
 	docker build -t "xix" .
+# Note that you probably want 'mk nuke' before running this target
+# as you might get "Parsing.xxx error" because the code generated
+# by regular ocamlyacc is different from the one used in ocaml-light
 build-docker-light:
 	docker build -f Dockerfile.light -t "xix-light" .
 

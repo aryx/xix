@@ -28,6 +28,5 @@ RUN mk all.light
 RUN mk opt.light
 
 # Basic test
-# TODO: need propose Arg.Help managemenet in ocaml-light/stdlib/arg.ml
-#RUN ./mk/mk -help
-#RUN ./mk/mk.opt -help
+RUN ./mk/mk -help
+RUN ./mk/mk.opt -help

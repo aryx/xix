@@ -144,7 +144,6 @@ let do_action caps s xs =
 
 (*s: function [[CLI.build_target]] *)
 let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
-
    let root = Graph.build_graph target rules in
    (*s: [[CLI.build_target()]] possibly dump the graph *)
    (* could do that after the checks *)
@@ -153,7 +152,6 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
    (*e: [[CLI.build_target()]] possibly dump the graph *)
    
    let ever_did = ref false in
-
    while root.G.state = G.NotMade do
      let did = ref false in
 

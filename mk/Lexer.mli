@@ -4,16 +4,17 @@
 (* lexer state *)
 type state = 
   | Start
-
   (* once we started to parse a rule, the next newline will start a recipe *)
   | AfterColon
   (* the lexing rules are different in a recipe; we do not parse rc's input *)
   | InRecipe
-
+  (*s: [[Lexer.state]] other cases *)
   (* once we started to parse an assign, the second = is like a string *)
   | AfterEq
+  (*x: [[Lexer.state]] other cases *)
   (* except inside ${x:...=...} where we still want = to be TEq *)
   | InBrace
+  (*e: [[Lexer.state]] other cases *)
 (*e: type [[Lexer.state]] *)
 
 (*s: signature [[Lexer.state_]] *)

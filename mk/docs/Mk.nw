@@ -931,6 +931,11 @@ then failwith "nothing to mk";
 
 %trans: seen most important func, next chapters detail each component
 
+
+
+
+
+
 \chapter{Parsing the [[mkfile]]}
 
 %toc: skeleton, lex, parse, eval next chapter
@@ -972,6 +977,7 @@ let parse (file : Fpath.t) =
 
 %LP: lpize Lexer.mll
 
+\subsection{Lexer state}
 <<type [[Lexer.state]]>>=
 (* lexer state *)
 type state = 
@@ -987,6 +993,7 @@ type state =
   (* except inside ${x:...=...} where we still want = to be TEq *)
   | InBrace
 @
+%$
 
 <<signature [[Lexer.state_]]>>=
 val state_ : state ref
@@ -1025,9 +1032,407 @@ val token: Lexing.lexbuf -> Parser.token
 val recipe: Lexing.lexbuf -> Parser.token
 @
 
+\subsection{Lexer overview}
+
+<<lexer regexp aliases>>=
+let space = [' ''\t']
+let letter = ['a'-'z''A'-'Z''_']
+let number = ['0'-'9']
+
+(* stricter: WORDCHR = !utfrune("!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", (r) *)
+let ident = letter (letter | number)*
+@
+
+<<function [[Lexer.error]]>>=
+let error s =
+  failwith (spf "%s:%d: Lexical error, %s" !Globals.file !Globals.line s)
+@
+
+<<function [[Lexer.loc]]>>=
+let loc () = 
+  { Ast.file = Fpath.v !Globals.file; Ast.line = !Globals.line; }
+@
+
+<<global [[Lexer.save_state__outside_brace]]>>=
+(* A single var is enough since mk does not allow recursivity in braces
+ * as in ${x:%${y}x=%.c}. We do not need a stack.
+ * *)
+let save_state_outside_brace = ref Start
+@
+
+<<function [[Lexer.yyback]]>>=
+(* pad: hack around ocamllex to emulate the yyless() of flex. The semantic
+ * is not exactly the same than yyless(), so I use yyback() instead.
+ * http://my.safaribooksonline.com/book/programming/flex/9780596805418/a-reference-for-flex-specifications/yyless
+ *)
+let yyback n lexbuf =
+  lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_curr_pos - n;
+  ()
+  (* ocaml-light: lex_curr_p does not exist in ocaml-light, but
+     TODO? anyway do we need this code?
+  let currp = lexbuf.Lexing.lex_curr_p in
+  lexbuf.Lexing.lex_curr_p <- { currp with
+    Lexing.pos_cnum = currp.Lexing.pos_cnum - n;
+  }
+  *)
+@
+
+<<rule [[Lexer.token]]>>=
+rule token = parse
+
+  (* ----------------------------------------------------------------------- *)
+  (* Spacing/comments *)
+  (* ----------------------------------------------------------------------- *)
+  (* in mk, spaces have a meaning *)
+  | space+        { TSpace (Lexing.lexeme lexbuf) }
+
+  (* in mk, newline has a meaning *)
+  | '\n' { incr Globals.line;
+           state_ := if !state_ = AfterColon then InRecipe else Start;
+           TNewline }
+
+  (* escaped newline *)
+  | '\\' '\n'     { incr Globals.line; TSpace (Lexing.lexeme lexbuf) }
+
+  (* comments *)
+  | '#' [^ '\n']* { token lexbuf }
+
+  (* escaped newline in comment (useful to handle) *)
+  | '#' [^ '\n']* '\\' '\n' 
+      { incr Globals.line; 
+        token lexbuf 
+      }
+      
+
+
+  (* ----------------------------------------------------------------------- *)
+  (* Symbols *)
+  (* ----------------------------------------------------------------------- *)
+
+  | ':' { state_ := AfterColon; TColon (loc()) }
+  | '=' { if !state_ = AfterEq
+          (* todo? means we have to normalize a series of word elements *)
+          then TOther "=" 
+          else begin
+            state_ := AfterEq;
+            TEq (loc()) 
+          end
+       }
+  | '<'  { TInf (loc()) }
+  | "<|" { TInfPipe (loc()) }
+  | '%'  { TPercent }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Variables *)
+  (* ----------------------------------------------------------------------- *)
+
+  (* stricter: force leading letter, so $0 is wrong (found bug in plan9/) *)
+  | '$'    (ident (*as s*))
+      { let s = Lexing.lexeme lexbuf in TVar (String.sub s 1 (String.length s - 1)) }
+  | '$''{' (ident (*as s*)) '}'
+      { let s = Lexing.lexeme lexbuf in TVar (String.sub s 2 (String.length s - 3)) }
+  (* important to eat ':' otherwise would trigger a AfterColon we don't want*)
+  | '$''{' (ident (*as s*)) ':'
+      {
+        let s = Lexing.lexeme lexbuf in
+        (* this is to handle '=' inside ${} *)
+        save_state_outside_brace := !state_;
+        state_ := InBrace;
+        TVarColon (String.sub s 2 (String.length s - 3)) 
+      }
+  | '}' 
+      { state_ := !save_state_outside_brace; 
+        save_state_outside_brace := Start;
+        TCBrace 
+      }
+
+  | '$' { error "missing variable name" }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Quoted strings *)
+  (* ----------------------------------------------------------------------- *)
+  | "'" { TQuoted (quote lexbuf) }
+
+  (* stricter: does not allow leading space *)
+  (* sh syntax *)
+  | "`" { TBackquoted (backquote lexbuf) }
+  (* rc syntax *)
+  | "`{" { TBackquoted (backquote2 lexbuf) }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Regular stuff *)
+  (* ----------------------------------------------------------------------- *)
+  (* should be the union of the special characters mentioned before *)
+  | [^'\'' '`'  '$' '{' '}'  ':' '=' '<'  '%'   '\n' '\\' '#' ' ' '\t']+ 
+      { TOther (Lexing.lexeme lexbuf) }
+
+  (* todo? means we have to normalize a series of word elements *)
+  | '\\' { TOther "\\" }
+
+  (* ----------------------------------------------------------------------- *)
+  | eof { EOF }
+  | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
+@
+
+
+<<rule [[Lexer.quote]]>>=
+(* opti? could use Buffer *)
+and quote = parse
+  | "'"                  { "" }
+  (* escaped quote by writing a double quote *)
+  | "''"                 { "'" ^ quote lexbuf }
+
+  | '\\' '\n'            { incr Globals.line; " " ^ quote lexbuf }
+  (* new: better error message instead of "missing closing '"  *)
+  | '\n' { error "newline in quoted string" }
+
+  | [^ '\\' '\'' '\n']+  { let x = Lexing.lexeme lexbuf in x ^ quote lexbuf }
+  | '\\' { "\\" ^ quote lexbuf }
+
+  (* new: instead of "missing closing '"  *)
+  | eof  { error "end of file in quoted string" }
+  | _    { error "missing closing '" }
+@
+
+<<rule [[Lexer.recipe]]>>=
+(* TODO: trim left and right and adjust s below *)
+and recipe = parse
+  | ('#'   [^'\n']*) (*as s*) '\n'?
+      { let s = Lexing.lexeme lexbuf |> String.trim in
+        incr Globals.line; TLineRecipe s }
+  | space ([^'\n']* (*as s*)) '\n'?
+      { let s = Lexing.lexeme lexbuf |> String.trim in
+         incr Globals.line; TLineRecipe s }
+  | [^ '#' ' ' '\t']    { state_ := Start; yyback 1 lexbuf; TEndRecipe }
+  | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
+  | _ {error "unrecognized character in recipe" }
+@
+
+<<Lexer.mll>>=
+{
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+open Parser
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Limitations compared to mk:
+ *  - does not handle unicode (use ulex?)
+ *)
+
+<<function [[Lexer.error]]>>
+<<function [[Lexer.loc]]>>
+
+<<type [[Lexer.state]]>>
+<<global [[Lexer.state_]]>>
+<<global [[Lexer.save_state__outside_brace]]>>
+<<function [[Lexer.yyback]]>>
+}
+
+(*****************************************************************************)
+(* Regexps aliases *)
+(*****************************************************************************)
+<<lexer regexp aliases>>
+
+(*****************************************************************************)
+(* Main rule *)
+(*****************************************************************************)
+<<rule [[Lexer.token]]>>
+
+(*****************************************************************************)
+(* Rule quote *)
+(*****************************************************************************)
+<<rule [[Lexer.quote]]>>
+
+(*****************************************************************************)
+(* Rule backquote *)
+(*****************************************************************************)
+<<rule [[Lexer.backquote]]>>
+<<rule [[Lexer.backquote2]]>>
+
+(*****************************************************************************)
+(* Rule recipe *)
+(*****************************************************************************)
+<<rule [[Lexer.recipe]]>>
+@
+
 \section{Grammar}
 
 %LP: lpize Parser.mly
+
+
+\subsection{Overview}
+
+<<Parser.mly>>=
+%{
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+open Fpath_.Operators
+open Ast
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Limitations compared to mk:
+ *  - backquote only in words context, not at toplevel
+ *    (you can not do  `echo '<foo.c'` and expect it to include foo.c)
+ * todo:
+ *  - good parsing error messages, right now hard.
+      "missing include file name\n"    < no words.
+      "multiple vars on left side of assignment\n"  words =
+      "missing trailing :" (for rule attribute)
+ *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let error_loc (loc : Ast.loc) (s : string) =
+  failwith (spf "%s:%d: Syntax error, %s" !!(loc.file) loc.line s)
+
+let error s =
+  error_loc { file = Fpath.v !Globals.file; line = !Globals.line } s
+
+
+let attrs_of_string loc s =
+  s |> Common2.list_of_string |> List.map (function
+    | 'Q' -> Quiet
+    | 'V' -> Virtual
+    | 'D' -> Delete
+    | 'I' -> Interactive
+    | ('N' | 'R' | 'n') as c  -> NotHandled c
+    | c -> error_loc loc (spf "unknown attribute: %c" c)
+  )
+
+%}
+
+/*(*************************************************************************)*/
+/*(*1 Tokens *)*/
+/*(*************************************************************************)*/
+
+%token <string> TSpace
+%token TNewline
+
+%token <Ast.loc> TColon TEq TInf TInfPipe
+%token TPercent
+
+%token <string> TVar TVarColon
+%token <string> TQuoted TBackquoted TLineRecipe
+%token <string> TOther
+
+%token TCBrace
+%token TEndRecipe
+
+%token EOF
+
+
+/*(*************************************************************************)*/
+/*(*1 Rules type declaration *)*/
+/*(*************************************************************************)*/
+
+%type <Ast.instr list> program
+%start program
+
+%%
+
+/*(*************************************************************************)*/
+/*(*1 Program *)*/
+/*(*************************************************************************)*/
+
+program: instrs EOF { $1 }
+
+/*(*************************************************************************)*/
+/*(*1 Instr *)*/
+/*(*************************************************************************)*/
+
+instrs: 
+| instr instrs  { $1 @ $2 }
+| /*(*empty*)*/ { [] }
+
+instr:
+ | TNewline             { [] }
+ | TInf words TNewline  { [{instr = Include $2; loc = $1}] }
+ | TInfPipe words TNewline  { [{instr = PipeInclude $2; loc = $1}] }
+
+ /*(* stricter: no space after variable name, no private var syntax *)*/
+ | TOther TEq words_opt TNewline        
+     { [{instr = Definition ($1, $3); loc = $2}] }
+
+ | words TColon words_opt TNewline recipe
+     { [{instr = Rule { targets = $1; prereqs = $3; attrs = []; recipe = $5;};
+         loc = $2;
+        }]
+     }
+ | words TColon TOther TColon words_opt TNewline recipe 
+     { [{instr = Rule { targets = $1; prereqs = $5; 
+                        attrs = attrs_of_string $2 $3; 
+                        recipe = $7;
+                       };
+         loc = $2;
+        }]
+     }
+
+ | error TNewline { error "expected one of :<=\n" }
+ 
+
+/*(* less: 
+instr: error { }
+  *)*/
+
+/*(*************************************************************************)*/
+/*(*1 Words *)*/
+/*(*************************************************************************)*/
+
+/*(* remove leading spaces *)*/
+words: 
+ | spaces words_ { $2 }
+ | words_        { $1 }
+
+words_:
+| word spaces words_ { (W $1) :: $3 }
+| word        { [W $1] }
+/*(* remove trailing spaces *)*/
+| word spaces { [W $1] }
+
+/*(* stricter: forbid just spaces; if have space, then must have a word *)*/
+words_opt:
+| words          { $1 }
+| /*(*empty*)*/  { [] }
+
+/*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
+word:
+| word_elem word { ($1::$2) }
+| word_elem      { [$1] }
+
+word_elem:
+| TOther      { String $1 }
+| TPercent    { Percent }
+| TQuoted     { String $1 }
+| TBackquoted { Backquoted $1 }
+| TVar        { Var (SimpleVar $1) }
+| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
+
+/*(* the lexer agglomerates spaces in one TSpace token, but then the escaped
+   * newline are not agglomerated so we may have multiple TSpace so
+   * we should also normalize that.
+   *)*/
+spaces: 
+ | TSpace { }
+ | TSpace spaces { }
+
+/*(*************************************************************************)*/
+/*(*1 recipe *)*/
+/*(*************************************************************************)*/
+recipe: recipe_lines_opt TEndRecipe 
+ { if $1 = [] then None else Some (R $1) }
+
+recipe_lines_opt:
+ | /*(* empty *)*/              { [] }
+ | TLineRecipe recipe_lines_opt { $1 :: $2 }
+@
+
 
 
 \chapter{Evaluating the [[mkfile]]}
@@ -2533,6 +2938,46 @@ end;
 | Backquoted of string
 @
 
+
+<<rule [[Lexer.backquote]]>>=
+(* sh syntax *)
+and backquote = parse
+  | "`"                  { "" }
+
+  | '\\' '\n'            { incr Globals.line; " " ^ backquote lexbuf }
+  (* new: instead of "missing closing '"  *)
+  | '\n' { error "newline in backquoted string" }
+
+  | [^ '\\' '\'' '`' '\n']+ 
+      { let x = Lexing.lexeme lexbuf in x ^ backquote lexbuf }
+  (* bugfix: we want to preserve the quote here! *)
+  | "'" { let s = quote lexbuf in "'" ^ s ^ "'" ^ backquote lexbuf }
+
+  (* new: instead of "missing closing `"  *)
+  | eof  { error "end of file in backquoted string" }
+  | _    { error "missing closing `" }
+@
+
+<<rule [[Lexer.backquote2]]>>=
+(* rc syntax *)
+and backquote2 = parse
+  | "}"                  { "" }
+
+  | '\\' '\n'            { incr Globals.line; " " ^ backquote2 lexbuf }
+  (* new: instead of "missing closing '"  *)
+  | '\n' { error "newline in backquoted string" }
+
+  | [^ '\\' '\'' '}' '\n']+ 
+      { let x = Lexing.lexeme lexbuf in x ^ backquote2 lexbuf }
+  (* bugfix: we want to preserve the quote here! *)
+  | "'" { let s = quote lexbuf in "'" ^ s ^ "'" ^ backquote2 lexbuf }
+
+  (* new: instead of "missing closing `"  *)
+  | eof  { error "end of file in backquoted string" }
+  (* TODO: if use } below get weird ocamllex error *)
+  |_ { error "missing closing brace" }
+@
+
 <<[[Eval.eval_word()]] match [[x]] cases>>=
 | A.Backquoted cmd -> 
   let shellenv = Env.shellenv_of_env env in
@@ -3177,175 +3622,6 @@ let show_instrs _ = "NO DERIVING"
 
 %-------------------------------------------------------------
 
-<<Parser.mly>>=
-%{
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-open Fpath_.Operators
-
-open Ast
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* Limitations compared to mk:
- *  - backquote only in words context, not at toplevel
- *    (you can not do  `echo '<foo.c'` and expect it to include foo.c)
- * todo:
- *  - good parsing error messages, right now hard.
-      "missing include file name\n"    < no words.
-      "multiple vars on left side of assignment\n"  words =
-      "missing trailing :" (for rule attribute)
- *)
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-let error_loc (loc : Ast.loc) (s : string) =
-  failwith (spf "%s:%d: Syntax error, %s" !!(loc.file) loc.line s)
-
-let error s =
-  error_loc { file = Fpath.v !Globals.file; line = !Globals.line } s
-
-
-let attrs_of_string loc s =
-  s |> Common2.list_of_string |> List.map (function
-    | 'Q' -> Quiet
-    | 'V' -> Virtual
-    | 'D' -> Delete
-    | 'I' -> Interactive
-    | ('N' | 'R' | 'n') as c  -> NotHandled c
-    | c -> error_loc loc (spf "unknown attribute: %c" c)
-  )
-
-%}
-
-/*(*************************************************************************)*/
-/*(*1 Tokens *)*/
-/*(*************************************************************************)*/
-
-%token <string> TSpace
-%token TNewline
-
-%token <Ast.loc> TColon TEq TInf TInfPipe
-%token TPercent
-
-%token <string> TVar TVarColon
-%token <string> TQuoted TBackquoted TLineRecipe
-%token <string> TOther
-
-%token TCBrace
-%token TEndRecipe
-
-%token EOF
-
-
-/*(*************************************************************************)*/
-/*(*1 Rules type declaration *)*/
-/*(*************************************************************************)*/
-
-%type <Ast.instr list> program
-%start program
-
-%%
-
-/*(*************************************************************************)*/
-/*(*1 Program *)*/
-/*(*************************************************************************)*/
-
-program: instrs EOF { $1 }
-
-/*(*************************************************************************)*/
-/*(*1 Instr *)*/
-/*(*************************************************************************)*/
-
-instrs: 
-| instr instrs  { $1 @ $2 }
-| /*(*empty*)*/ { [] }
-
-instr:
- | TNewline             { [] }
- | TInf words TNewline  { [{instr = Include $2; loc = $1}] }
- | TInfPipe words TNewline  { [{instr = PipeInclude $2; loc = $1}] }
-
- /*(* stricter: no space after variable name, no private var syntax *)*/
- | TOther TEq words_opt TNewline        
-     { [{instr = Definition ($1, $3); loc = $2}] }
-
- | words TColon words_opt TNewline recipe
-     { [{instr = Rule { targets = $1; prereqs = $3; attrs = []; recipe = $5;};
-         loc = $2;
-        }]
-     }
- | words TColon TOther TColon words_opt TNewline recipe 
-     { [{instr = Rule { targets = $1; prereqs = $5; 
-                        attrs = attrs_of_string $2 $3; 
-                        recipe = $7;
-                       };
-         loc = $2;
-        }]
-     }
-
- | error TNewline { error "expected one of :<=\n" }
- 
-
-/*(* less: 
-instr: error { }
-  *)*/
-
-/*(*************************************************************************)*/
-/*(*1 Words *)*/
-/*(*************************************************************************)*/
-
-/*(* remove leading spaces *)*/
-words: 
- | spaces words_ { $2 }
- | words_        { $1 }
-
-words_:
-| word spaces words_ { (W $1) :: $3 }
-| word        { [W $1] }
-/*(* remove trailing spaces *)*/
-| word spaces { [W $1] }
-
-/*(* stricter: forbid just spaces; if have space, then must have a word *)*/
-words_opt:
-| words          { $1 }
-| /*(*empty*)*/  { [] }
-
-/*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
-word:
-| word_elem word { ($1::$2) }
-| word_elem      { [$1] }
-
-word_elem:
-| TOther      { String $1 }
-| TPercent    { Percent }
-| TQuoted     { String $1 }
-| TBackquoted { Backquoted $1 }
-| TVar        { Var (SimpleVar $1) }
-| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
-
-/*(* the lexer agglomerates spaces in one TSpace token, but then the escaped
-   * newline are not agglomerated so we may have multiple TSpace so
-   * we should also normalize that.
-   *)*/
-spaces: 
- | TSpace { }
- | TSpace spaces { }
-
-/*(*************************************************************************)*/
-/*(*1 recipe *)*/
-/*(*************************************************************************)*/
-recipe: recipe_lines_opt TEndRecipe 
- { if $1 = [] then None else Some (R $1) }
-
-recipe_lines_opt:
- | /*(* empty *)*/              { [] }
- | TLineRecipe recipe_lines_opt { $1 :: $2 }
-@
 
 \subsection*{[[Lexer.mli]]}
 
@@ -3367,234 +3643,6 @@ recipe_lines_opt:
 
 %-------------------------------------------------------------
 
-<<Lexer.mll>>=
-{
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Common
-
-open Parser
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* Limitations compared to mk:
- *  - does not handle unicode (use ulex?)
- *)
-
-let error s =
-  failwith (spf "%s:%d: Lexical error, %s" !Globals.file !Globals.line s)
-
-let loc () = 
-  { Ast.file = Fpath.v !Globals.file; Ast.line = !Globals.line; }
-
-<<type [[Lexer.state]]>>
-
-<<global [[Lexer.state_]]>>
-
-(* A single var is enough since mk does not allow recursivity in braces
- * as in ${x:%${y}x=%.c}. We do not need a stack.
- * *)
-let save_state_outside_brace = ref Start
-
-(* pad: hack around ocamllex to emulate the yyless() of flex. The semantic
- * is not exactly the same than yyless(), so I use yyback() instead.
- * http://my.safaribooksonline.com/book/programming/flex/9780596805418/a-reference-for-flex-specifications/yyless
- *)
-let yyback n lexbuf =
-  lexbuf.Lexing.lex_curr_pos <- lexbuf.Lexing.lex_curr_pos - n;
-  ()
-  (* ocaml-light: lex_curr_p does not exist in ocaml-light, but
-     TODO? anyway do we need this code?
-  let currp = lexbuf.Lexing.lex_curr_p in
-  lexbuf.Lexing.lex_curr_p <- { currp with
-    Lexing.pos_cnum = currp.Lexing.pos_cnum - n;
-  }
-  *)
-
-}
-
-(*****************************************************************************)
-(* Regexps aliases *)
-(*****************************************************************************)
-let space = [' ''\t']
-let letter = ['a'-'z''A'-'Z''_']
-let number = ['0'-'9']
-
-(* stricter: WORDCHR = !utfrune("!\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~", (r) *)
-let ident = letter (letter | number)*
-
-(*****************************************************************************)
-(* Main rule *)
-(*****************************************************************************)
-rule token = parse
-
-  (* ----------------------------------------------------------------------- *)
-  (* Spacing/comments *)
-  (* ----------------------------------------------------------------------- *)
-  (* in mk, spaces have a meaning *)
-  | space+        { TSpace (Lexing.lexeme lexbuf) }
-
-  (* in mk, newline has a meaning *)
-  | '\n' { incr Globals.line;
-           state_ := if !state_ = AfterColon then InRecipe else Start;
-           TNewline }
-
-  (* escaped newline *)
-  | '\\' '\n'     { incr Globals.line; TSpace (Lexing.lexeme lexbuf) }
-
-  (* comments *)
-  | '#' [^ '\n']* { token lexbuf }
-
-  (* escaped newline in comment (useful to handle) *)
-  | '#' [^ '\n']* '\\' '\n' 
-      { incr Globals.line; 
-        token lexbuf 
-      }
-      
-
-
-  (* ----------------------------------------------------------------------- *)
-  (* Symbols *)
-  (* ----------------------------------------------------------------------- *)
-
-  | ':' { state_ := AfterColon; TColon (loc()) }
-  | '=' { if !state_ = AfterEq
-          (* todo? means we have to normalize a series of word elements *)
-          then TOther "=" 
-          else begin
-            state_ := AfterEq;
-            TEq (loc()) 
-          end
-       }
-  | '<'  { TInf (loc()) }
-  | "<|" { TInfPipe (loc()) }
-  | '%'  { TPercent }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Variables *)
-  (* ----------------------------------------------------------------------- *)
-
-  (* stricter: force leading letter, so $0 is wrong (found bug in plan9/) *)
-  | '$'    (ident (*as s*))
-      { let s = Lexing.lexeme lexbuf in TVar (String.sub s 1 (String.length s - 1)) }
-  | '$''{' (ident (*as s*)) '}'
-      { let s = Lexing.lexeme lexbuf in TVar (String.sub s 2 (String.length s - 3)) }
-  (* important to eat ':' otherwise would trigger a AfterColon we don't want*)
-  | '$''{' (ident (*as s*)) ':'
-      {
-        let s = Lexing.lexeme lexbuf in
-        (* this is to handle '=' inside ${} *)
-        save_state_outside_brace := !state_;
-        state_ := InBrace;
-        TVarColon (String.sub s 2 (String.length s - 3)) 
-      }
-  | '}' 
-      { state_ := !save_state_outside_brace; 
-        save_state_outside_brace := Start;
-        TCBrace 
-      }
-
-  | '$' { error "missing variable name" }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Quoted strings *)
-  (* ----------------------------------------------------------------------- *)
-  | "'" { TQuoted (quote lexbuf) }
-
-  (* stricter: does not allow leading space *)
-  (* sh syntax *)
-  | "`" { TBackquoted (backquote lexbuf) }
-  (* rc syntax *)
-  | "`{" { TBackquoted (backquote2 lexbuf) }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Regular stuff *)
-  (* ----------------------------------------------------------------------- *)
-  (* should be the union of the special characters mentioned before *)
-  | [^'\'' '`'  '$' '{' '}'  ':' '=' '<'  '%'   '\n' '\\' '#' ' ' '\t']+ 
-      { TOther (Lexing.lexeme lexbuf) }
-
-  (* todo? means we have to normalize a series of word elements *)
-  | '\\' { TOther "\\" }
-
-  (* ----------------------------------------------------------------------- *)
-  | eof { EOF }
-  | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
-
-(*****************************************************************************)
-(* Rule quote *)
-(*****************************************************************************)
-(* opti? could use Buffer *)
-and quote = parse
-  | "'"                  { "" }
-  (* escaped quote by writing a double quote *)
-  | "''"                 { "'" ^ quote lexbuf }
-
-  | '\\' '\n'            { incr Globals.line; " " ^ quote lexbuf }
-  (* new: better error message instead of "missing closing '"  *)
-  | '\n' { error "newline in quoted string" }
-
-  | [^ '\\' '\'' '\n']+  { let x = Lexing.lexeme lexbuf in x ^ quote lexbuf }
-  | '\\' { "\\" ^ quote lexbuf }
-
-  (* new: instead of "missing closing '"  *)
-  | eof  { error "end of file in quoted string" }
-  | _    { error "missing closing '" }
-
-(*****************************************************************************)
-(* Rule backquote *)
-(*****************************************************************************)
-(* sh syntax *)
-and backquote = parse
-  | "`"                  { "" }
-
-  | '\\' '\n'            { incr Globals.line; " " ^ backquote lexbuf }
-  (* new: instead of "missing closing '"  *)
-  | '\n' { error "newline in backquoted string" }
-
-  | [^ '\\' '\'' '`' '\n']+ 
-      { let x = Lexing.lexeme lexbuf in x ^ backquote lexbuf }
-  (* bugfix: we want to preserve the quote here! *)
-  | "'" { let s = quote lexbuf in "'" ^ s ^ "'" ^ backquote lexbuf }
-
-  (* new: instead of "missing closing `"  *)
-  | eof  { error "end of file in backquoted string" }
-  | _    { error "missing closing `" }
-
-(* rc syntax *)
-and backquote2 = parse
-  | "}"                  { "" }
-
-  | '\\' '\n'            { incr Globals.line; " " ^ backquote2 lexbuf }
-  (* new: instead of "missing closing '"  *)
-  | '\n' { error "newline in backquoted string" }
-
-  | [^ '\\' '\'' '}' '\n']+ 
-      { let x = Lexing.lexeme lexbuf in x ^ backquote2 lexbuf }
-  (* bugfix: we want to preserve the quote here! *)
-  | "'" { let s = quote lexbuf in "'" ^ s ^ "'" ^ backquote2 lexbuf }
-
-  (* new: instead of "missing closing `"  *)
-  | eof  { error "end of file in backquoted string" }
-  (* TODO: if use } below get weird ocamllex error *)
-  |_ { error "missing closing brace" }
-
-(*****************************************************************************)
-(* Rule recipe *)
-(*****************************************************************************)
-(* TODO: trim left and right and adjust s below *)
-and recipe = parse
-  | ('#'   [^'\n']*) (*as s*) '\n'?
-      { let s = Lexing.lexeme lexbuf |> String.trim in
-        incr Globals.line; TLineRecipe s }
-  | space ([^'\n']* (*as s*)) '\n'?
-      { let s = Lexing.lexeme lexbuf |> String.trim in
-         incr Globals.line; TLineRecipe s }
-  | [^ '#' ' ' '\t']    { state_ := Start; yyback 1 lexbuf; TEndRecipe }
-  | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
-  | _ {error "unrecognized character in recipe" }
-
-@
 
 
 \subsection*{[[CLI.ml]]}

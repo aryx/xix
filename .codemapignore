@@ -13,3 +13,7 @@ orig/
 #assembler/
 #formats/
 #mk/
+
+#TODO: bug in Gitignore.ml, .gitignore skip *.nwcache so should
+# ignore this file too but I had to explicitely add it here
+.Mk.nwcache

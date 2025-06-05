@@ -16,7 +16,6 @@
 
 %thx to LP, I changed for the better a few things:
 
-
 %thx to codemap/codegraph/scheck:
 
 %thx to this manual, I better understand sh:
@@ -78,52 +77,24 @@ Documentation License, Version 1.3.
 
 \chapter{Introduction}
 
-
 \cite{make}
 
-\chapter{Conclusion}
-\label{chap:conclusion}
-
-\appendix
-
-\chapter{Extra Code}
-
-%\chapter{Changelog}
-% code via make loc = 6300 LOC, after full lpized  ? LOC
-% orig Shell.nw = 7500 LOC, after full lpized and comments in sections ??
-% now: =~ ?? LOC so added ?? LOE (Lines of explanations)
-% rc in ocaml: 2300 LOC (but not all features)
 
 
-\section{[[shell/]]}
 
-\subsection*{[[Ast.ml]]}
+\chapter{Core Data Structures}
 
-<<type [[Ast.value]]>>=
-type value = 
-  (* The string can contain the * ? [ special characters.
-   * So, even a single word can expand to a list of strings.
-   * less: they should be preceded by \001
-   * less: W of word_elt list and word_elt = Star | Question | ...Str of string
-   *)
-  | Word of string * bool (* quoted *)
-  | List of values
-  (* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
-  | CommandOutput of cmd_sequence
+\section{[[Token]]}
 
-  | Dollar of value
+\section{Abstract syntax [[Tree]]}
 
-  | Count of value (* $#foo *)
-  | Index of value * values (* $foo(...) *)
-
-  (* ^ distributes over lists *)
-  | Concat of value * value
-
-  | Stringify of value (* $"foo " *)
+<<type [[Ast.line]]>>=
+(* None when reads EOF *)
+type line = cmd_sequence option
 @
 
-<<type [[Ast.values]]>>=
-and values = value list
+<<type [[Ast.cmd_sequence]]>>=
+  and cmd_sequence = cmd list
 @
 
 <<type [[Ast.cmd]]>>=
@@ -177,9 +148,40 @@ and cmd =
   | Assign of value * value * cmd (* can be EmptyCommand *)
 @
 
-<<type [[Ast.cmd_sequence]]>>=
-  and cmd_sequence = cmd list
+<<type [[Ast.value]]>>=
+(* rc does not use types; there is no integer, no boolean, no float.
+ * The only value in rc is the list of strings. Even a single
+ * string is really a list with one element.
+ *)
+type value = 
+  (* The string can contain the * ? [ special characters.
+   * So, even a single word can expand to a list of strings.
+   * less: they should be preceded by \001
+   * less: W of word_elt list and word_elt = Star | Question | ...Str of string
+   *)
+  | Word of string * bool (* quoted *)
+  | List of values
+  (* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
+  | CommandOutput of cmd_sequence
+
+  | Dollar of value
+
+  | Count of value (* $#foo *)
+  | Index of value * values (* $foo(...) *)
+
+  (* ^ distributes over lists *)
+  | Concat of value * value
+
+  | Stringify of value (* $"foo " *)
 @
+
+
+<<type [[Ast.values]]>>=
+(* separated by spaces *)
+and values = value list
+@
+
+
 
 <<type [[Ast.redirection]]>>=
   and redirection = redirection_kind * value (* the filename *)
@@ -194,332 +196,32 @@ and cmd =
       | RDup of int * int (* >[x=y] *)
 @
 
-<<type [[Ast.line]]>>=
-type line = cmd_sequence option
-@
 
 
-%-------------------------------------------------------------
+\section{Byte[[Code]] and [[codebuf]]}
 
-<<Ast.ml>>=
+\section{[[Thread]] and [[runq]]eue}
 
-(* rc does not use types; there is no integer, no boolean, no float.
- * The only value in rc is the list of strings. Even a single
- * string is really a list with one element.
- *)
-<<type [[Ast.value]]>>
+\section{Words and lists of words}
 
-(* separated by spaces *)
-<<type [[Ast.values]]>>
+\subsection{[[Word]]s}
 
+\subsection{[[List]] of sequence of words}
 
-<<type [[Ast.cmd]]>>
-
-<<type [[Ast.cmd_sequence]]>>
-
-  (* todo: RDup does not have a filename? so push value inside RWrite of value*)
-<<type [[Ast.redirection]]>>
-
-<<type [[Ast.redirection_kind]]>>
+\section{[[Var]]iables}
 
 
-(* None when reads EOF *)
-<<type [[Ast.line]]>>
-
-(* less: type any = Line of line | ... so easier dumper *)
-@
 
 
-\subsection*{[[Builtin.ml]]}
-
-<<function [[Builtin.is_builtin]]>>=
-let is_builtin s =
-  List.mem s [
-    "cd"; 
-    "."; "eval"; 
-    "exit";
-    "flag";
-    "finit"
-  ]
-@
-
-<<constant [[Builtin.ndots]]>>=
-let ndots = ref 0
-@
-
-<<function [[Builtin.dochdir]]>>=
-let dochdir (caps : < Cap.chdir; .. >) s =
-  try 
-    Logs.info (fun m -> m "about to chdir to %s" s);
-    CapUnix.chdir caps s;
-    true
-  with Unix.Unix_error _ ->
-    false
-@
-
-<<constant [[Builtin.dotcmds]]>>=
-let dotcmds = 
-  [|
-    O.F O.Mark;
-      O.F O.Word;
-      O.S "0";
-    O.F O.Local;
-
-    O.F O.Mark;
-      O.F O.Word;
-      O.S "*";
-    O.F O.Local;
-
-    O.F O.REPL;
-
-    O.F O.Unlocal;
-    O.F O.Unlocal;
-    O.F O.Return;
-@
-
-<<function [[Builtin.dispatch]]>>=
-let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
-  match s with
-  | "cd" -> 
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (* default value in case something goes wrong below *)
-      Status.setstatus "can't cd";
-
-      (* less: cdpath vlook *)
-      (match argv with
-      | [_cd] -> 
-          let v = (Var.vlook "home").R.v in
-          (match v with
-          | Some (dir::_) ->
-            if dochdir caps dir
-            then Status.setstatus ""
-            (* less: %r *)
-            else Logs.err (fun m -> m "Can't cd %s" dir)
-          | _ -> Logs.err (fun m -> m "Can't cd -- $home empty")
-          )
-      | [_cd;dir] ->
-          (* less: cdpath iteration *)
-          if dochdir caps dir
-          then Status.setstatus ""
-          else Logs.err (fun m -> m "Can't cd %s" dir)
-      | _ ->
-          Logs.err (fun m -> m "Usage: cd [directory]");
-      );
-      R.pop_list()
-
-  | "." ->
-      let t = R.cur () in
-      R.pop_word (); (* "." *)
-
-      if !ndots > 0
-      then Globals.eflagok := true;
-      incr ndots;
-
-      let iflag =
-        match t.R.argv with
-        | "-i"::_xs -> R.pop_word (); true
-        | _ -> false
-      in
-      (match t.R.argv with
-      | [] -> E.error caps "Usage: . [-i] file [arg ...]"
-      | zero::args ->
-          R.pop_word ();
-          (* less: searchpath, also for dot? seems wrong *)
-          (try 
-            let file = zero in
-            Logs.info (fun m -> m "evaluating %s" file);
-            let chan = CapStdlib.open_in caps file in
-            let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
-            R.runq := [newt];
-            R.push_redir (R.Close (Unix.descr_of_in_channel chan));
-            newt.R.file <- Some file;
-            newt.R.lexbuf <- Lexing.from_channel chan;
-            newt.R.iflag <- iflag;
-            (* push for $* *)
-            R.push_list ();
-            newt.R.argv <- args;
-            (* push for $0 *)
-            R.push_list ();
-            newt.R.argv <- [zero];
-
-          with Failure _ ->
-            prerr_string (spf "%s: " zero);
-            E.error caps ".: can't open"
-          )
-      ) 
-
-  | "flag" -> 
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [_flag;letter] ->
-          (* stricter: *)
-          if String.length letter <> 1
-          then E.error caps "flag argument must be a single letter"
-          else begin
-            let char = String.get letter 0 in
-            let is_set =
-              try Hashtbl.find Flags.hflags char
-              with Not_found -> false
-            in
-            Status.setstatus (if is_set then "" else "flag not set");
-          end
-
-      | [_flag;_letter;_set] ->
-          failwith "TODO: flag letter +- not handled yet"
-
-      | _ -> E.error caps ("Usage: flag [letter] [+-]")
-      );
-      R.pop_list()
-
-  | "finit" -> 
-     (* less: Xrdfn *)
-     R.pop_list ()
-
-  | _ -> failwith (spf "unsupported builtin %s" s)
-@
-%$
 
 
-%-------------------------------------------------------------
+\chapter{[[main()]]}
 
-<<Builtin.ml>>=
-open Common
-
-module R = Runtime
-module E = Error
-module O = Opcode
-
-<<function [[Builtin.is_builtin]]>>
-
-<<constant [[Builtin.ndots]]>>
-
-<<function [[Builtin.dochdir]]>>
-
-(* for the builtin '.' (called 'source' in bash) *)
-<<constant [[Builtin.dotcmds]]>>
-  |]         
-
-<<function [[Builtin.dispatch]]>>
-
-@
-
-
-\subsection*{[[CLI.ml]]}
+\section{Overview}
 
 <<type [[CLI.caps]]>>=
+ * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
-@
-
-<<constant [[CLI.usage]]>>=
-let usage =
-  "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
-@
-
-<<function [[CLI.do_action]]>>=
-let do_action caps s xs =
-  match s with
-  | "-test_parser" ->
-      xs |> List.iter (fun file ->
-        let file = Fpath.v file in
-        Logs.info (fun m -> m "processing %s" !!file);
-        file |> FS.with_open_in caps (fun (chan : Chan.i) ->
-          let lexbuf = Lexing.from_channel chan.Chan.ic in
-
-          (* for error reporting I need a runq *)
-          let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
-          R.runq := t::!R.runq;
-          t.R.file <- Some !!file;
-
-          let rec loop () =
-            let line = Parse.parse_line lexbuf in
-            match line with
-            | Some seq -> 
-              Logs.app (fun m -> m "%s" (Dumper_.s_of_cmd_sequence seq));
-              loop ();
-            | None -> ()
-          in
-          loop ()
-       )
-      )
-
-  | _ -> failwith ("action not supported: " ^ s)
-@
-
-<<constant [[CLI._bootstrap_simple]]>>=
-let _bootstrap_simple : O.opcode array = 
-  [| O.F O.REPL |]
-@
-
-<<function [[CLI.bootstrap]]>>=
-(* The real one is more complex:
- *  *=(argv);. /usr/lib/rcmain $*
- * Boostrap is now a function because it uses a flag that can be
- * modified after startup.
- *)
-let bootstrap () : O.opcode array = 
-  [| 
-      O.F O.Mark;
-        O.F O.Word;
-        O.S "*";
-      O.F O.Assign; (* will pop_list twice *)
-
-      O.F O.Mark;
-        O.F O.Mark;
-          O.F O.Word;
-          O.S "*";
-        O.F O.Dollar; (* will pop_list once *)
-        O.F O.Word;
-        O.S !Flags.rcmain; (* can be changed -m *)
-        O.F O.Word;
-        O.S ".";
-      O.F O.Simple; (* will pop_list once *)
-
-      O.F O.Exit;
-@
-%$
-
-<<function [[CLI.interpret]]>>=
-let interpret (caps : < caps >) (args : string list) : unit =
-  let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
-  R.runq := t::!R.runq;
-
-  t.R.lexbuf <- Lexing.from_channel stdin;
-  t.R.iflag <- !Flags.interactive;
-
-  (* less: set argv0 *)
-  args |> List.rev |> List.iter Runtime.push_word;
-
-  while true do
-
-    (* bugfix: need to fetch the current thread each time,
-     * as the interpreted code may have modified runq.
-     *)
-    let t = Runtime.cur () in
-    let pc = t.R.pc in
-
-    (* less: cycle =~ codevec pointer *)
-    if !Flags.rflag
-    then Logs.app (fun m -> m "pid %d %d %s %s"
-                (Unix.getpid ())
-                !pc
-                (Dumper_.s_of_opcode t.R.code.(!pc))
-                ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
-                    spf "(%s)" (String.concat " " xs)
-                   ) |> String.concat " "));
-    
-    incr pc;
-    (match t.R.code.(!pc - 1) with
-
-    (* opcode dispatch ! *)
-    | O.F operation ->  Interpreter.interpret caps operation
-    | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
-    | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
-    );
-    (* todo: handle trap *)
-  done
-[@@profiling]
 @
 
 <<function [[CLI.main]]>>=
@@ -632,80 +334,169 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
 @
 %$
 
+\section{Command-line arguments processing}
 
-%-------------------------------------------------------------
-
-<<CLI.ml>>=
-(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-open Common
-open Fpath_.Operators
-
-module R = Runtime
-module O = Opcode
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* An OCaml port of rc, the Plan 9 shell.
- *
- * Main limitations compared to rc:
- *  - no unicode support
- *  - not all of the fancy redirections and fancy pipes
- *  - no storing of functions in the environment
- *    (used by rcmain. But can do the same by using '. rcmain')
- * 
- * Improvements (IMHO):
- *  - a strict mode where we report when deleting undefined function
- *  - Logs with errors and warnings and debug
- *  - more?
- * 
- * todo:
- *  - read environment variables and export variables
- *  - globbing
- *  - Isatty rc -i detection
- *  - add ~ shortcut for HOME (from csh?)
- *  - rc -c
- *)
-
-(*****************************************************************************)
-(* Types and constants *)
-(*****************************************************************************)
-
-(* see the .mli for why those caps are needed
- * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
- *)
-<<type [[CLI.caps]]>>
-
-(* -d and -p are dead according to man page so I removed them *)
-<<constant [[CLI.usage]]>>
-
-(*****************************************************************************)
-(* Testing *)
-(*****************************************************************************)
-
-<<function [[CLI.do_action]]>>
-
-(*****************************************************************************)
-(* Main algorithm *)
-(*****************************************************************************)
-
-<<constant [[CLI._bootstrap_simple]]>>
-
-<<function [[CLI.bootstrap]]>>
-  |]
-
-
-<<function [[CLI.interpret]]>>
-
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
-
-<<function [[CLI.main]]>>
+<<constant [[CLI.usage]]>>=
+let usage =
+  "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
 @
 
+<<constant [[Flags.interactive]]>>=
+(* -i (on by default when detects that stdin is /dev/cons *)
+let interactive = ref false
+@
 
-\subsection*{[[Compile.ml]]}
+<<constant [[Flags.login]]>>=
+(* -l (on by default if argv0 starts with a -) *)
+let login = ref false
+@
+
+\subsection{Login mode: [[rc -l]]}
+
+\subsection{Interactive mode: [[rc -i]]}
+
+\section{Initialization}
+
+\section{Bootstrapping bytecodes (simplified)}
+
+<<constant [[CLI._bootstrap_simple]]>>=
+let _bootstrap_simple : O.opcode array = 
+  [| O.F O.REPL |]
+@
+
+\section{Setting [[runq]]}
+
+\section{Setting [[runq->argv]]}
+
+\section{Bytecode interpreter loop}
+
+<<function [[CLI.interpret]]>>=
+let interpret (caps : < caps >) (args : string list) : unit =
+  let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
+  R.runq := t::!R.runq;
+
+  t.R.lexbuf <- Lexing.from_channel stdin;
+  t.R.iflag <- !Flags.interactive;
+
+  (* less: set argv0 *)
+  args |> List.rev |> List.iter Runtime.push_word;
+
+  while true do
+
+    (* bugfix: need to fetch the current thread each time,
+     * as the interpreted code may have modified runq.
+     *)
+    let t = Runtime.cur () in
+    let pc = t.R.pc in
+
+    (* less: cycle =~ codevec pointer *)
+    if !Flags.rflag
+    then Logs.app (fun m -> m "pid %d %d %s %s"
+                (Unix.getpid ())
+                !pc
+                (Dumper_.s_of_opcode t.R.code.(!pc))
+                ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
+                    spf "(%s)" (String.concat " " xs)
+                   ) |> String.concat " "));
+    
+    incr pc;
+    (match t.R.code.(!pc - 1) with
+
+    (* opcode dispatch ! *)
+    | O.F operation ->  Interpreter.interpret caps operation
+    | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
+    | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
+    );
+    (* todo: handle trap *)
+  done
+[@@profiling]
+@
+
+\section{Reading commands: [[Xrdcmds()]]}
+
+
+
+
+
+\chapter{Input}
+
+\section{Overview}
+
+\section{Reading a character: [[getnext()]]}
+
+\subsection{End-of-file management}
+
+\subsection{Multiple lines commands and escaped newlines}
+
+\subsection{Displaying the prompt}
+
+
+\section{Looking ahead: [[nextc()]] and [[advance()]]}
+
+
+\chapter{Lexing}
+
+\section{[[yylex()]]}
+
+\section{Spaces and comments ([['#']])}
+
+\section{Newlines}
+
+<<constant [[Globals.skipnl]]>>=
+(* This global is used by the lexer and parser to consider certain
+ * newlines as regular spaces. Because rc is an interactive
+ * interpreter, newline has a special meaning: it terminates a command.
+ * However, sometimes we just want to add a newline because the command
+ * is too long. Escaping the newline is one way to do it. 
+ * But when we start to parse 'cmd1 &&' we know that we are expecting
+ * more stuff. So after the && and other binary operators  we consider 
+ * the newline not as a command terminator, but as a space.
+ * Also we indent the prompt to let the user know he can still enter
+ * more characters.
+ *)
+let skipnl = ref false
+@
+
+\section{Operators ([['&']], [['&&']], [['|']], [['||']], [['<']], [['>']], [['$']], \ldots)}
+
+\section{Quoted strings ([['...']])}
+
+\section{Keywords and identifiers ([[if]], [[for]], [[while]], [[switch]], [[fn]], \ldots )}
+
+\section{Array subscript ([[<arr>(<n>)]])}
+
+
+
+\chapter{Parsing}
+
+\section{Overview}
+
+\section{Simple commands ([[<cmd> <arg1>...<argn>]]) }
+
+\section{Operators}
+
+\subsection{Sequences ([[';']], [['&']])}
+
+\subsection{Logical operators  ([['&&']], [['||']], [['!']])}
+
+\subsection{String matching  (\texttt{'\textasciitilde'})}
+
+\subsection{Pipe  ([['|']])}
+
+\subsection{Redirections  ([['>']], [['<']])}
+
+\section{Control flow statements ([[if]], [[if not]], [[while]], [[switch]], [[for]])} 
+\section{Functions ([[fn]])}
+
+\section{Variables ([[<x> = ...]])}
+
+\section{Lists ([[(...)]])}
+
+
+%\chapter{Checking}
+
+
+\chapter{Bytecode Generation and Interpretation}
 
 <<function [[Compile.split_at_non_assign]]>>=
 let rec split_at_non_assign = function
@@ -722,6 +513,92 @@ let split_when_case cmds =
     | _ -> true
   )
 @
+
+
+
+<<function [[Interpreter.vlook_varname_or_index]]>>=
+let vlook_varname_or_index varname =
+  if varname =~ "^[0-9]+$"
+  then
+    let i = int_of_string varname in
+    let v = (Var.vlook "*").R.v in
+    (match v with
+    (* stricter: array out of bound checking *)
+    | None -> failwith "undefined $*"
+    | Some xs -> 
+        (* list indexes in rc starts at 1, not 0 *)
+        if i >= 1 && i <= List.length xs
+        then Some ([List.nth xs (i-1)])
+        else failwith (spf "out of bound, $%d too big for $*" i)
+    )
+  else (Var.vlook varname).R.v
+@
+
+<<function [[Interpreter.file_descr_of_int]]>>=
+(* could be in runtime.ml *)
+let file_descr_of_int i =
+  match i with
+  | 0 -> Unix.stdin
+  | 1 -> Unix.stdout
+  | 2 -> Unix.stderr
+  (* todo: how do that? if do >[1=4] ?? *)
+  | n -> failwith (spf "file_descr_of_int: unsupported int %d" n)
+@
+
+<<function [[Interpreter.int_at_address]]>>=
+let int_at_address t pc =
+  match t.R.code.(pc) with
+  | O.I i -> i
+  (* stricter: generate error, but should never happen *)
+  | op -> failwith (spf "was expecting I, not %s at %d" 
+                      (Dumper_.s_of_opcode op) pc)
+@
+
+\section{Overview}
+
+\subsection{[[emitxxx()]]}
+
+\subsection{[[compile()]]}
+
+<<function [[Compile.compile]]>>=
+let compile seq =
+
+  (* a growing array *)
+  let codebuf = ref [| |] in
+  let len_codebuf = ref 0 in
+  (* pointer in codebuf *)
+  let idx = ref 0 in
+
+  let codebuf_template = Array.make 100 (O.I 0) in
+
+  let emit x =
+    (* grow the array if needed *)
+    if !idx = !len_codebuf then begin
+      len_codebuf := !len_codebuf + 100;
+      codebuf := Array.append !codebuf codebuf_template;
+    end;
+
+    !codebuf.(!idx) <- x;
+    incr idx
+  in
+  let set idx2 x =
+    if idx2 < 0 || idx2 >= !len_codebuf
+    then failwith (spf "Bad address %d in set()" idx2);
+
+    !codebuf.(idx2) <- x;
+  in
+  
+  outcode_seq seq !Flags.eflag (emit,set,idx);
+  emit (O.F O.Return);
+  (* less: O.F O.End *)
+  (* less: heredoc, readhere() *)
+
+  (* return the trimmed array *)
+  Array.sub !codebuf 0 !idx
+  |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+@
+
+\subsection{[[outcode()]]}
 
 <<function [[Compile.outcode_seq]]>>=
 let outcode_seq seq eflag (emit,set,idx) =
@@ -968,88 +845,397 @@ let outcode_seq seq eflag (emit,set,idx) =
   xseq seq eflag
 @
 
-<<function [[Compile.compile]]>>=
-let compile seq =
+\subsection{[[argv]] management}
 
-  (* a growing array *)
-  let codebuf = ref [| |] in
-  let len_codebuf = ref 0 in
-  (* pointer in codebuf *)
-  let idx = ref 0 in
+\subsection{Process status management}
 
-  let codebuf_template = Array.make 100 (O.I 0) in
+\subsection{Subprocesses management}
 
-  let emit x =
-    (* grow the array if needed *)
-    if !idx = !len_codebuf then begin
-      len_codebuf := !len_codebuf + 100;
-      codebuf := Array.append !codebuf codebuf_template;
-    end;
+\section{Simple commands}
 
-    !codebuf.(!idx) <- x;
-    incr idx
-  in
-  let set idx2 x =
-    if idx2 < 0 || idx2 >= !len_codebuf
-    then failwith (spf "Bad address %d in set()" idx2);
+\subsection{Bytecode generation}
 
-    !codebuf.(idx2) <- x;
-  in
-  
-  outcode_seq seq !Flags.eflag (emit,set,idx);
-  emit (O.F O.Return);
-  (* less: O.F O.End *)
-  (* less: heredoc, readhere() *)
+\subsection{[[Xsimple()]]}
 
-  (* return the trimmed array *)
-  Array.sub !codebuf 0 !idx
-  |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+\subsection{Fork}
+
+\subsection{Exec}
+
+\subsection{[[$path]] management}
+
+\subsection{Wait}
+
+\subsection{Fork optimization}
+
+\section{Operators}
+
+\subsection{Basic sequence}
+
+\subsection{Logical operators}
+
+\subsection{String matching}
+
+\subsection{Redirection}
+
+%\subsection{Trace of a redirection}
+
+\subsubsection{[[Redir]]}
+
+\subsubsection{[[doredir()]]}
+
+\subsubsection{Bytecode generation}
+
+\subsubsection{[[Xwrite()]]}
+
+\subsubsection{[[Xread()]]}
+
+\subsubsection{[[Xappend()]]}
+
+\subsubsection{Closing redirection opened files}
+
+\subsection{Pipe}
+
+%\subsubsection{Trace of a pipe}
+
+\subsection{Asynchronous execution}
+
+\section{Control flow statements}
+
+\subsection{[[if]]}
+
+\subsection{[[while]]}
+
+\subsection{[[for]]}
+
+\subsection{[[switch]]}
+
+\subsection{Blocks: \texttt{'\{...\}'}}
+
+\section{Functions}
+
+\subsection{Function definitions ([[fn <foo> { ... }]])}
+
+\subsection{Function uses ([[<foo>(...)]])}
+
+\section{Variables}
+
+\subsection{Variable definitions ([[<x>=...]])}
+
+\subsection{Variable uses ([[$<x>]])} %$
+
+%\subsection{Interpolation}
+
+\subsection{Special variables}
+
+
+
+\chapter{Builtins}
+
+\section{Overview}
+
+<<function [[Builtin.is_builtin]]>>=
+let is_builtin s =
+  List.mem s [
+    "cd"; 
+    "."; "eval"; 
+    "exit";
+    "flag";
+    "finit"
+  ]
+@
+
+<<function [[Builtin.dispatch]]>>=
+let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
+  match s with
+  | "cd" -> 
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (* default value in case something goes wrong below *)
+      Status.setstatus "can't cd";
+
+      (* less: cdpath vlook *)
+      (match argv with
+      | [_cd] -> 
+          let v = (Var.vlook "home").R.v in
+          (match v with
+          | Some (dir::_) ->
+            if dochdir caps dir
+            then Status.setstatus ""
+            (* less: %r *)
+            else Logs.err (fun m -> m "Can't cd %s" dir)
+          | _ -> Logs.err (fun m -> m "Can't cd -- $home empty")
+          )
+      | [_cd;dir] ->
+          (* less: cdpath iteration *)
+          if dochdir caps dir
+          then Status.setstatus ""
+          else Logs.err (fun m -> m "Can't cd %s" dir)
+      | _ ->
+          Logs.err (fun m -> m "Usage: cd [directory]");
+      );
+      R.pop_list()
+
+  | "." ->
+      let t = R.cur () in
+      R.pop_word (); (* "." *)
+
+      if !ndots > 0
+      then Globals.eflagok := true;
+      incr ndots;
+
+      let iflag =
+        match t.R.argv with
+        | "-i"::_xs -> R.pop_word (); true
+        | _ -> false
+      in
+      (match t.R.argv with
+      | [] -> E.error caps "Usage: . [-i] file [arg ...]"
+      | zero::args ->
+          R.pop_word ();
+          (* less: searchpath, also for dot? seems wrong *)
+          (try 
+            let file = zero in
+            Logs.info (fun m -> m "evaluating %s" file);
+            let chan = CapStdlib.open_in caps file in
+            let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
+            R.runq := [newt];
+            R.push_redir (R.Close (Unix.descr_of_in_channel chan));
+            newt.R.file <- Some file;
+            newt.R.lexbuf <- Lexing.from_channel chan;
+            newt.R.iflag <- iflag;
+            (* push for $* *)
+            R.push_list ();
+            newt.R.argv <- args;
+            (* push for $0 *)
+            R.push_list ();
+            newt.R.argv <- [zero];
+
+          with Failure _ ->
+            prerr_string (spf "%s: " zero);
+            E.error caps ".: can't open"
+          )
+      ) 
+
+  | "flag" -> 
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [_flag;letter] ->
+          (* stricter: *)
+          if String.length letter <> 1
+          then E.error caps "flag argument must be a single letter"
+          else begin
+            let char = String.get letter 0 in
+            let is_set =
+              try Hashtbl.find Flags.hflags char
+              with Not_found -> false
+            in
+            Status.setstatus (if is_set then "" else "flag not set");
+          end
+
+      | [_flag;_letter;_set] ->
+          failwith "TODO: flag letter +- not handled yet"
+
+      | _ -> E.error caps ("Usage: flag [letter] [+-]")
+      );
+      R.pop_list()
+
+  | "finit" -> 
+     (* less: Xrdfn *)
+     R.pop_list ()
+
+  | _ -> failwith (spf "unsupported builtin %s" s)
+@
+%$
+
+
+\section{[[$ cd]]}
+
+<<function [[Builtin.dochdir]]>>=
+let dochdir (caps : < Cap.chdir; .. >) s =
+  try 
+    Logs.info (fun m -> m "about to chdir to %s" s);
+    CapUnix.chdir caps s;
+    true
+  with Unix.Unix_error _ ->
+    false
+@
+
+\section{[[$ exit]]}
+
+\section{[[$ .]]}
+
+<<constant [[Builtin.dotcmds]]>>=
+(* for the builtin '.' (called 'source' in bash) *)
+let dotcmds = 
+  [|
+    O.F O.Mark;
+      O.F O.Word;
+      O.S "0";
+    O.F O.Local;
+
+    O.F O.Mark;
+      O.F O.Word;
+      O.S "*";
+    O.F O.Local;
+
+    O.F O.REPL;
+
+    O.F O.Unlocal;
+    O.F O.Unlocal;
+    O.F O.Return;
+  |]         
 @
 
 
-%-------------------------------------------------------------
+\section{[[$ eval]]}
 
-<<Compile.ml>>=
-open Stdcompat (* for |> *)
-open Common
-
-module A = Ast
-module O = Opcode
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* AST to opcodes.
-*)
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<function [[Compile.split_at_non_assign]]>>
-
-<<function [[Compile.split_when_case]]>>
+\section{[[$ wait]]}
 
 
-(*****************************************************************************)
-(* Compilation algorithm *)
-(*****************************************************************************)
 
-<<function [[Compile.outcode_seq]]>>
+\chapter{Environment}
 
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
+\section{[[Updenv()]]}
 
-<<function [[Compile.compile]]>>
+\section{[[Vinit()]]}
+
+%\section{Functions in the environment}
+
+
+
+\chapter{Signals}
+
+
+
+
+
+
+
+
+
+\chapter{Initialization}
+
+\section{Actual bootstrapping code}
+
+<<function [[CLI.bootstrap]]>>=
+(* The real one is more complex:
+ *  *=(argv);. /usr/lib/rcmain $*
+ * Boostrap is now a function because it uses a flag that can be
+ * modified after startup.
+ *)
+let bootstrap () : O.opcode array = 
+  [| 
+      O.F O.Mark;
+        O.F O.Word;
+        O.S "*";
+      O.F O.Assign; (* will pop_list twice *)
+
+      O.F O.Mark;
+        O.F O.Mark;
+          O.F O.Word;
+          O.S "*";
+        O.F O.Dollar; (* will pop_list once *)
+        O.F O.Word;
+        O.S !Flags.rcmain; (* can be changed -m *)
+        O.F O.Word;
+        O.S ".";
+      O.F O.Simple; (* will pop_list once *)
+
+      O.F O.Exit;
+  |]
+@
+%$
+
+\section{Intitialization script and [[rc -m /path/to/rcmain]]}
+
+\section{Actual environment}
+
+
+
+\chapter{Globbing}
+
+\section{Lexing globbing characters}
+
+\section{Expanding globbing characters}
+
+\section{[[glob()]]}
+
+\section{[[match()]]}
+
+
+
+\chapter{Advanced Topics TODO}
+%\section{Shell-like features implemented outside [[rc]]}
+
+\section{Reading commands from a string: [[rc -c]]}
+
+\section{Failing fast: [[rc -e]]}
+
+\section{Unicode}
+
+\section{Advanced constructs}
+
+\subsection{Subshell: [[@ <cmd>]]}
+
+\subsection{Here documents: [[<< <HERE>]]}
+
+\subsection{Read-write redirections: [[<> <file>]]}
+
+\subsection{General redirections: [[>[2] <file>]]}
+
+\subsection{Advanced dup: [[>[<fd0>=<fd1>]] ], [[<>[<fd0>=<fd1>] ]], [[<[<fd0>=<fd1>] ]]}
+
+\subsection{Advanced pipes: [[|[<fd>] ]], [[|[<fd0>=<fd1>] ]]}
+
+\subsection{Command output as a file: \texttt{'<\{<cmd>\}'}}
+
+\subsection{Command substitution: \texttt{`\{<cmd>\}}}
+
+\subsection{Stringification of variables: [[$"<foo>]]} %$
+
+
+\section{Advanced builtins}
+
+\subsection{[[$ exec]]}
+
+\subsection{[[$ whatis]]}
+
+\subsection{[[$ rfork]]}
+
+\subsection{[[$ flag]]}
+
+\subsection{[[$ shift]]}
+
+\subsection{[[$ finit]]}
+
+
+\chapter{Conclusion}
+\label{chap:conclusion}
+
+\appendix
+
+\chapter{Debugging}
+
+<<constant [[Flags.debugger]]>>=
+let debugger = ref false
 @
 
+\section{AST dumper}
 
-\subsection*{[[Dumper_.ml]]}
+<<constant [[Flags.dump_tokens]]>>=
+let dump_tokens = ref false
+@
+
+<<constant [[Flags.dump_ast]]>>=
+let dump_ast = ref false
+@
+
+<<constant [[Flags.dump_opcodes]]>>=
+let dump_opcodes = ref false
+@
 
 <<function [[Dumper_.s_of_line]]>>=
-(* less: could use Any *)
-
 let s_of_line x =
   let v = Meta_ast.vof_line x in
   Ocaml.string_of_v v
@@ -1093,24 +1279,249 @@ let s_of_codevec x =
 @
 
 
+\section{Bytecode generator trace: [[rc -r]]}
+
+\section{Printing subprocesses status: [[rc -s]]}
+
+\section{Printing commands: [[rc -x]]}
+
+\section{Printing characters: [[rc -v]]}
+
+\section{Printing all characters: [[rc -V]]}
+
+\section{CLI actions}
+
+<<function [[CLI.do_action]]>>=
+let do_action caps s xs =
+  match s with
+  | "-test_parser" ->
+      xs |> List.iter (fun file ->
+        let file = Fpath.v file in
+        Logs.info (fun m -> m "processing %s" !!file);
+        file |> FS.with_open_in caps (fun (chan : Chan.i) ->
+          let lexbuf = Lexing.from_channel chan.Chan.ic in
+
+          (* for error reporting I need a runq *)
+          let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
+          R.runq := t::!R.runq;
+          t.R.file <- Some !!file;
+
+          let rec loop () =
+            let line = Parse.parse_line lexbuf in
+            match line with
+            | Some seq -> 
+              Logs.app (fun m -> m "%s" (Dumper_.s_of_cmd_sequence seq));
+              loop ();
+            | None -> ()
+          in
+          loop ()
+       )
+      )
+
+  | _ -> failwith ("action not supported: " ^ s)
+@
+
+
+\chapter{Error Management}
+
+\chapter{Utilities}
+
+\section{Memory management}
+
+\section{Command-line arguments}
+
+\section{Buffered IO}
+
+\section{Format}
+
+\section{String conversions}
+
+\section{Misc}
+
+\chapter{Examples of [[rc]] scripts TODO}
+
+\section{[[/rc/lib/rcmain]]}
+
+\section{[[/home/pad/lib/profile]]}
+
+%\chapter{Changelog}
+% code via make loc = ?? LOC, after full lpized  ? LOC
+% orig Rc.nw = ?? LOC, after full lpized and comments in sections ??
+% now: =~ ?? LOC so added ?? LOE (Lines of explanations)
+% rc in C: ? LOC (but more features)
+
+\chapter{Extra Code}
+
+\section{[[shell/]]}
+
+\subsection*{[[Ast.ml]]}
+
+%-------------------------------------------------------------
+
+<<Ast.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+
+<<type [[Ast.value]]>>
+<<type [[Ast.values]]>>
+
+<<type [[Ast.cmd]]>>
+<<type [[Ast.cmd_sequence]]>>
+
+(* todo: RDup does not have a filename? so push value inside RWrite of value*)
+<<type [[Ast.redirection]]>>
+<<type [[Ast.redirection_kind]]>>
+
+<<type [[Ast.line]]>>
+
+(* less: type any = Line of line | ... so easier dumper *)
+@
+
+
+\subsection*{[[Builtin.ml]]}
+
+<<constant [[Builtin.ndots]]>>=
+let ndots = ref 0
+@
+
+%-------------------------------------------------------------
+
+<<Builtin.ml>>=
+open Common
+
+module R = Runtime
+module E = Error
+module O = Opcode
+
+<<function [[Builtin.is_builtin]]>>
+<<constant [[Builtin.ndots]]>>
+<<function [[Builtin.dochdir]]>>
+<<constant [[Builtin.dotcmds]]>>
+<<function [[Builtin.dispatch]]>>
+
+@
+
+
+\subsection*{[[CLI.ml]]}
+
+%-------------------------------------------------------------
+
+<<CLI.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+
+module R = Runtime
+module O = Opcode
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* An OCaml port of rc, the Plan 9 shell.
+ *
+ * Main limitations compared to rc:
+ *  - no unicode support
+ *  - not all of the fancy redirections and fancy pipes
+ *  - no storing of functions in the environment
+ *    (used by rcmain. But can do the same by using '. rcmain')
+ * 
+ * Improvements (IMHO):
+ *  - a strict mode where we report when deleting undefined function
+ *  - Logs with errors and warnings and debug
+ *  - more?
+ * 
+ * todo:
+ *  - read environment variables and export variables
+ *  - globbing
+ *  - Isatty rc -i detection
+ *  - add ~ shortcut for HOME (from csh?)
+ *  - rc -c
+ *)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+<<type [[CLI.caps]]>>
+
+(* -d and -p are dead according to man page so I removed them *)
+<<constant [[CLI.usage]]>>
+
+(*****************************************************************************)
+(* Testing *)
+(*****************************************************************************)
+
+<<function [[CLI.do_action]]>>
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+<<constant [[CLI._bootstrap_simple]]>>
+<<function [[CLI.bootstrap]]>>
+<<function [[CLI.interpret]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[CLI.main]]>>
+@
+
+
+\subsection*{[[Compile.ml]]}
+
+%-------------------------------------------------------------
+
+<<Compile.ml>>=
+open Stdcompat (* for |> *)
+open Common
+
+module A = Ast
+module O = Opcode
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* AST to opcodes.
+*)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Compile.split_at_non_assign]]>>
+<<function [[Compile.split_when_case]]>>
+
+(*****************************************************************************)
+(* Compilation algorithm *)
+(*****************************************************************************)
+
+<<function [[Compile.outcode_seq]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Compile.compile]]>>
+@
+
+
+\subsection*{[[Dumper_.ml]]}
+
+
 %-------------------------------------------------------------
 
 <<Dumper_.ml>>=
 module Ocaml = OCaml
+(* less: could use Any *)
 
 <<function [[Dumper_.s_of_line]]>>
-
 <<function [[Dumper_.s_of_cmd_sequence]]>>
-
 <<function [[Dumper_.s_of_cmd]]>>
-
 <<function [[Dumper_.s_of_value]]>>
 
-
 <<function [[Dumper_.s_of_opcode]]>>
-
 <<function [[Dumper_.s_of_operation]]>>
-
 <<function [[Dumper_.s_of_codevec]]>>
   
 @
@@ -1154,31 +1565,29 @@ module R = Runtime
 
 \subsection*{[[Flags.ml]]}
 
-<<constant [[Flags.interactive]]>>=
-let interactive = ref false
-@
-
-<<constant [[Flags.login]]>>=
-let login = ref false
-@
 
 <<constant [[Flags.eflag]]>>=
+(* -e, for strict error checking. Abort the script when an error happens.*)
 let eflag = ref false
 @
 
 <<constant [[Flags.rflag]]>>=
+(* -r, similar to dump_opcodes, but at each step *)
 let rflag = ref false
 @
 
 <<constant [[Flags.sflag]]>>=
+(* -s, to print status when error in command just ran *)
 let sflag = ref false
 @
 
 <<constant [[Flags.xflag]]>>=
+(* -x, to print simple commands before executing them *)
 let xflag = ref false
 @
 
 <<constant [[Flags.rcmain]]>>=
+(* can be changed with -m *)
 let rcmain = ref "/rc/lib/rcmain"
 @
 
@@ -1186,46 +1595,23 @@ let rcmain = ref "/rc/lib/rcmain"
 let strict_mode = ref false
 @
 
-<<constant [[Flags.dump_tokens]]>>=
-let dump_tokens = ref false
-@
-
-<<constant [[Flags.dump_ast]]>>=
-let dump_ast = ref false
-@
-
-<<constant [[Flags.dump_opcodes]]>>=
-let dump_opcodes = ref false
-@
-
-<<constant [[Flags.debugger]]>>=
-let debugger = ref false
-@
-
 
 %-------------------------------------------------------------
 
 <<Flags.ml>>=
 
-(* -i (on by default when detects that stdin is /dev/cons *)
 <<constant [[Flags.interactive]]>>
-(* -l (on by default if argv0 starts with a -) *)
 <<constant [[Flags.login]]>>
 
-(* -e, for strict error checking. Abort the script when an error happens.*)
 <<constant [[Flags.eflag]]>>
-(* -r, similar to dump_opcodes, but at each step *)
 <<constant [[Flags.rflag]]>>
-(* -s, to print status when error in command just ran *)
 <<constant [[Flags.sflag]]>>
-(* -x, to print simple commands before executing them *)
 <<constant [[Flags.xflag]]>>
 
 (* less: let cflag = ref "" *)
 
 let (hflags: (char, bool) Hashtbl.t) = Hashtbl.create 10
 
-(* can be changed with -m *)
 <<constant [[Flags.rcmain]]>>
 
 (* pad: I added this one *)
@@ -1270,19 +1656,22 @@ module R = Runtime
 
 \subsection*{[[Globals.ml]]}
 
-<<constant [[Globals.skipnl]]>>=
-let skipnl = ref false
-@
 
 <<constant [[Globals.errstr]]>>=
+(* to mimic Plan 9 errstr() *)
 let errstr = ref ""
 @
 
 <<constant [[Globals.ifnot]]>>=
+(* Set to true at the beginning of an if and back to false
+ * if rc executes the then branch. Kept to true otherwise
+ * so next IfNot will run.
+ *)
 let ifnot = ref false
 @
 
 <<constant [[Globals.eflagok]]>>=
+(* this is set after the first . of rcmain *)
 let eflagok = ref false
 @
 
@@ -1291,30 +1680,13 @@ let eflagok = ref false
 
 <<Globals.ml>>=
 
-(* This global is used by the lexer and parser to consider certain
- * newlines as regular spaces. Because rc is an interactive
- * interpreter, newline has a special meaning: it terminates a command.
- * However, sometimes we just want to add a newline because the command
- * is too long. Escaping the newline is one way to do it. 
- * But when we start to parse 'cmd1 &&' we know that we are expecting
- * more stuff. So after the && and other binary operators  we consider 
- * the newline not as a command terminator, but as a space.
- * Also we indent the prompt to let the user know he can still enter
- * more characters.
- *)
 <<constant [[Globals.skipnl]]>>
 
-(* to mimic Plan 9 errstr() *)
 <<constant [[Globals.errstr]]>>
 
 
-(* Set to true at the beginning of an if and back to false
- * if rc executes the then branch. Kept to true otherwise
- * so next IfNot will run.
- *)
 <<constant [[Globals.ifnot]]>>
 
-(* this is set after the first . of rcmain *)
 <<constant [[Globals.eflagok]]>>
 @
 
@@ -1330,43 +1702,7 @@ let eflagok = ref false
 
 \subsection*{[[Interpreter.ml]]}
 
-<<function [[Interpreter.file_descr_of_int]]>>=
-(* could be in runtime.ml *)
-let file_descr_of_int i =
-  match i with
-  | 0 -> Unix.stdin
-  | 1 -> Unix.stdout
-  | 2 -> Unix.stderr
-  (* todo: how do that? if do >[1=4] ?? *)
-  | n -> failwith (spf "file_descr_of_int: unsupported int %d" n)
-@
 
-<<function [[Interpreter.int_at_address]]>>=
-let int_at_address t pc =
-  match t.R.code.(pc) with
-  | O.I i -> i
-  (* stricter: generate error, but should never happen *)
-  | op -> failwith (spf "was expecting I, not %s at %d" 
-                      (Dumper_.s_of_opcode op) pc)
-@
-
-<<function [[Interpreter.vlook_varname_or_index]]>>=
-let vlook_varname_or_index varname =
-  if varname =~ "^[0-9]+$"
-  then
-    let i = int_of_string varname in
-    let v = (Var.vlook "*").R.v in
-    (match v with
-    (* stricter: array out of bound checking *)
-    | None -> failwith "undefined $*"
-    | Some xs -> 
-        (* list indexes in rc starts at 1, not 0 *)
-        if i >= 1 && i <= List.length xs
-        then Some ([List.nth xs (i-1)])
-        else failwith (spf "out of bound, $%d too big for $*" i)
-    )
-  else (Var.vlook varname).R.v
-@
 
 <<function [[Interpreter.interpret]]>>=
 let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =

@@ -1,4 +1,5 @@
 (*s: Runtime.ml *)
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 
 (*****************************************************************************)
@@ -9,18 +10,16 @@ open Stdcompat (* for |> *)
 (* Types and globals *)
 (*****************************************************************************)
 
-(* can be anything: "foo", but also "*", "1", "2", etc *)
 (*s: type [[Runtime.varname]] *)
+(* can be anything: "foo", but also "*", "1", "2", etc *)
 type varname = string
 (*e: type [[Runtime.varname]] *)
-
+(*s: type [[Runtime.value]] *)
 (* In rc the basic (and only) value is the list of strings.
  * A single word is considered as a list with one element.
  *)
-(*s: type [[Runtime.value]] *)
 type value = string list
 (*e: type [[Runtime.value]] *)
-
 (*s: type [[Runtime.var]] *)
 type var = { 
   (* can be None when lookup for a value that was never set before,
@@ -31,7 +30,6 @@ type var = {
   (* less: opti: changed: bool *)
 }
 (*e: type [[Runtime.var]] *)
-
 (*s: type [[Runtime.fn]] *)
 type fn = {
   code: Opcode.codevec;
@@ -39,7 +37,6 @@ type fn = {
   (* less: fnchanged *)
 }
 (*e: type [[Runtime.fn]] *)
-
 
 (*s: type [[Runtime.thread]] *)
 type thread = {
@@ -88,18 +85,22 @@ type thread = {
     | ChildStatus of string
 (*e: type [[Runtime.waitstatus]] *)
 
-let (globals: (varname, var) Hashtbl.t) = 
+(*s: global [[Runtime.globals]] *)
+let globals: (varname, var) Hashtbl.t = 
   Hashtbl.create 101
+(*e: global [[Runtime.globals]] *)
 
-let (fns: (string, fn) Hashtbl.t) = 
+(*s: global [[Runtime.fns]] *)
+let fns: (string, fn) Hashtbl.t = 
   Hashtbl.create 101
+(*e: global [[Runtime.fns]] *)
 
 (* less: argv0 *)
 
+(*s: constant [[Runtime.runq]] *)
 (* less: could have also  'let cur = { code = boostrap; pc = 1; chan = stdin }'
  * in addition to runq. Then there will be no need for cur ().
  *)
-(*s: constant [[Runtime.runq]] *)
 let runq = ref []
 (*e: constant [[Runtime.runq]] *)
 
@@ -120,7 +121,6 @@ let push_list () =
   t.argv_stack <- t.argv :: t.argv_stack;
   t.argv <- []
 (*e: function [[Runtime.push_list]] *)
-
 (*s: function [[Runtime.pop_list]] *)
 let pop_list () =
   let t = cur () in
@@ -137,13 +137,11 @@ let pop_list () =
       t.argv <- x
 (*e: function [[Runtime.pop_list]] *)
 
-
 (*s: function [[Runtime.push_word]] *)
 let push_word s =
   let t = cur () in
   t.argv <- s::t.argv
 (*e: function [[Runtime.push_word]] *)
-
 (*s: function [[Runtime.pop_word]] *)
 let pop_word () =
   let t = cur () in
@@ -153,7 +151,6 @@ let pop_word () =
       t.argv <- xs
 (*e: function [[Runtime.pop_word]] *)
 
-
 (*s: function [[Runtime.push_redir]] *)
 let push_redir x =
   let t = cur () in
@@ -161,8 +158,6 @@ let push_redir x =
   | [] -> failwith "push_redir: no starting redir"
   | xs::xxs -> t.redirections <- (x::xs)::xxs
 (*e: function [[Runtime.push_redir]] *)
-
-
 (*s: function [[Runtime.pop_redir]] *)
 let pop_redir () =
   let t= cur () in
@@ -176,17 +171,16 @@ let pop_redir () =
           Unix.close fd_from
       | Close _ ->
           ()
-(*e: function [[Runtime.pop_redir]] *)
       )
+(*e: function [[Runtime.pop_redir]] *)
 
 (*s: function [[Runtime.turf_redir]] *)
 let turf_redir () =
   let t = cur () in
   while List.hd t.redirections <> [] do
     pop_redir ()
-(*e: function [[Runtime.turf_redir]] *)
   done
-  
+(*e: function [[Runtime.turf_redir]] *)
 
 (*s: function [[Runtime.doredir]] *)
 let doredir xxs =
@@ -199,7 +193,6 @@ let doredir xxs =
         Unix.close from
   )
 (*e: function [[Runtime.doredir]] *)
-
 
 (*s: function [[Runtime.mk_thread]] *)
 (* This function was called start(), but it does not really start right
@@ -228,7 +221,4 @@ let mk_thread code pc locals =
   } in
   t
 (*e: function [[Runtime.mk_thread]] *)
-  (* old: do that in caller now, so more explicit 
-  runq := t::!runq
-  *)
 (*e: Runtime.ml *)

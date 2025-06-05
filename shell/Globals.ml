@@ -1,5 +1,6 @@
 (*s: Globals.ml *)
 
+(*s: constant [[Globals.skipnl]] *)
 (* This global is used by the lexer and parser to consider certain
  * newlines as regular spaces. Because rc is an interactive
  * interpreter, newline has a special meaning: it terminates a command.
@@ -11,26 +12,22 @@
  * Also we indent the prompt to let the user know he can still enter
  * more characters.
  *)
-(*s: constant [[Globals.skipnl]] *)
 let skipnl = ref false
 (*e: constant [[Globals.skipnl]] *)
-
-(* to mimic Plan 9 errstr() *)
 (*s: constant [[Globals.errstr]] *)
+(* to mimic Plan 9 errstr() *)
 let errstr = ref ""
 (*e: constant [[Globals.errstr]] *)
 
-
+(*s: constant [[Globals.ifnot]] *)
 (* Set to true at the beginning of an if and back to false
  * if rc executes the then branch. Kept to true otherwise
  * so next IfNot will run.
  *)
-(*s: constant [[Globals.ifnot]] *)
 let ifnot = ref false
 (*e: constant [[Globals.ifnot]] *)
-
-(* this is set after the first . of rcmain *)
 (*s: constant [[Globals.eflagok]] *)
+(* this is set after the first . of rcmain *)
 let eflagok = ref false
 (*e: constant [[Globals.eflagok]] *)
 (*e: Globals.ml *)

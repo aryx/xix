@@ -1,45 +1,82 @@
 (*s: Runtime.mli *)
 
-(*s: type [[Runtime.varname (Runtime.mli)]] *)
+(*s: type [[Runtime.varname]] *)
+(* can be anything: "foo", but also "*", "1", "2", etc *)
 type varname = string
-(*e: type [[Runtime.varname (Runtime.mli)]] *)
-(*s: type [[Runtime.value (Runtime.mli)]] *)
+(*e: type [[Runtime.varname]] *)
+(*s: type [[Runtime.value]] *)
+(* In rc the basic (and only) value is the list of strings.
+ * A single word is considered as a list with one element.
+ *)
 type value = string list
-(*e: type [[Runtime.value (Runtime.mli)]] *)
-(*s: type [[Runtime.var (Runtime.mli)]] *)
-type var = { mutable v : value option; }
-(*e: type [[Runtime.var (Runtime.mli)]] *)
-(*s: type [[Runtime.fn (Runtime.mli)]] *)
-type fn = { code : Opcode.codevec; pc : int; }
-(*e: type [[Runtime.fn (Runtime.mli)]] *)
-
-(*s: type [[Runtime.thread (Runtime.mli)]] *)
-type thread = {
-  code : Opcode.codevec;
-  pc : int ref;
-  mutable argv : string list;
-  locals : (varname, var) Hashtbl.t;
-  mutable argv_stack : string list list;
-  mutable lexbuf : Lexing.lexbuf;
-  mutable iflag : bool;
-  mutable file : Common.filename option;
-  line : int ref;
-  mutable redirections : redir list list;
-  mutable waitstatus : waitstatus;
+(*e: type [[Runtime.value]] *)
+(*s: type [[Runtime.var]] *)
+type var = { 
+  (* can be None when lookup for a value that was never set before,
+   * which is different from Some [] (when do A=()), which is also
+   * different from Some [""] (when do A='').
+   *)
+  mutable v: value option;
+  (* less: opti: changed: bool *)
 }
-(*e: type [[Runtime.thread (Runtime.mli)]] *)
-(*s: type [[Runtime.redir (Runtime.mli)]] *)
-and redir =
-    FromTo of Unix.file_descr * Unix.file_descr
-  | Close of Unix.file_descr
-(*e: type [[Runtime.redir (Runtime.mli)]] *)
+(*e: type [[Runtime.var]] *)
+(*s: type [[Runtime.fn]] *)
+type fn = {
+  code: Opcode.codevec;
+  pc: int;
+  (* less: fnchanged *)
+}
+(*e: type [[Runtime.fn]] *)
 
-(*s: type [[Runtime.waitstatus (Runtime.mli)]] *)
-and waitstatus = NothingToWaitfor | WaitFor of int | ChildStatus of string
-(*e: type [[Runtime.waitstatus (Runtime.mli)]] *)
+(*s: type [[Runtime.thread]] *)
+type thread = {
+  code: Opcode.codevec;
+  pc: int ref;
+
+  mutable argv: string list;
+  locals: (varname, var) Hashtbl.t;
+
+  (* Used for switch but also assignments. *)
+  mutable argv_stack: (string list) list;
+
+  (* connected on stdin by default (changed when do '. file') *)
+  mutable lexbuf: Lexing.lexbuf;
+  (* to display a prompt or not *)
+  mutable iflag: bool;
+
+  (* for error reporting (None when reading from stdin) *)
+  (* less: file has to be mutable? could be a param of start? like chan? *)
+  mutable file: Common.filename option;
+  line: int ref;
+
+  (* things to do before exec'ing the simple command *)
+  mutable redirections: (redir list) list;
+
+  (* things to wait for after a thread forked a process *)
+  mutable waitstatus: waitstatus;
+}
+(*e: type [[Runtime.thread]] *)
+(*s: type [[Runtime.redir]] *)
+  and redir =
+    (* the file descriptor From becomes To, e.g., /tmp/foo becomes stdout,
+     * which means your process output will now go in /tmp/foo.
+     *)
+    | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
+    | Close of Unix.file_descr
+(*e: type [[Runtime.redir]] *)
+
+(*s: type [[Runtime.waitstatus]] *)
+  and waitstatus =
+    | NothingToWaitfor
+    (* process pid to wait for in Xpipewait (set from Xpipe) *)
+    | WaitFor of int 
+    (* exit status from child process returned from a wait() *)
+    | ChildStatus of string
+(*e: type [[Runtime.waitstatus]] *)
+
+(* globals *)
 
 (*s: signature [[Runtime.globals]] *)
-(* globals *)
 val globals : (varname, var) Hashtbl.t
 (*e: signature [[Runtime.globals]] *)
 (*s: signature [[Runtime.fns]] *)
@@ -49,9 +86,9 @@ val fns : (string, fn) Hashtbl.t
 val runq : thread list ref
 (*e: signature [[Runtime.runq]] *)
 
-(*s: signature [[Runtime.cur]] *)
 (* API *)
 
+(*s: signature [[Runtime.cur]] *)
 val cur : unit -> thread
 (*e: signature [[Runtime.cur]] *)
 (*s: signature [[Runtime.push_list]] *)

@@ -17,7 +17,6 @@ module R = Runtime
 let setstatus s =
   Var.setvar "status" [s]
 (*e: function [[Status.setstatus]] *)
-
 (*s: function [[Status.getstatus]] *)
 let getstatus () =
   let v = (Var.vlook "status").R.v in
@@ -27,12 +26,10 @@ let getstatus () =
   (* stricter: should never happen *)
   | Some _ -> failwith "getstatus: $status is a list with more than one element"
 (*e: function [[Status.getstatus]] *)
-
 (*s: function [[Status.concstatus]] *)
 let concstatus s1 s2 =
   s1 ^ "|" ^ s2
 (*e: function [[Status.concstatus]] *)
-
 (*s: function [[Status.truestatus]] *)
 let truestatus () =
   let s = getstatus () in

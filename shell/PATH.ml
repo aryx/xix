@@ -20,8 +20,6 @@ let search_path_for_cmd s =
     | Some xs -> xs
     )
 (*e: function [[PATH.search_path_for_cmd]] *)
-
-
 (*s: function [[PATH.find_in_path]] *)
 let find_in_path _s _paths =
   raise Todo

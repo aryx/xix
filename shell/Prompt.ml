@@ -1,6 +1,7 @@
 (*s: Prompt.ml *)
 module R = Runtime
 
+(*s: constant [[Prompt.doprompt]] *)
 (* Set to true so the prompt is displayed before the first character is read.
  *
  * Do we need that global? Can we not just call pprompt() explicitely?
@@ -9,10 +10,8 @@ module R = Runtime
  * prompt should be done before the next round of input.
  * less: actually we could do it in the caller of parse_line, in the REPL.
  *)
-(*s: constant [[Prompt.doprompt]] *)
 let doprompt = ref true
 (*e: constant [[Prompt.doprompt]] *)
-
 (*s: constant [[Prompt.prompt]] *)
 let prompt = ref "% "
 (*e: constant [[Prompt.prompt]] *)

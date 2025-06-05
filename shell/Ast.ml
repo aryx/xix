@@ -1,10 +1,11 @@
 (*s: Ast.ml *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
+(*s: type [[Ast.value]] *)
 (* rc does not use types; there is no integer, no boolean, no float.
  * The only value in rc is the list of strings. Even a single
  * string is really a list with one element.
  *)
-(*s: type [[Ast.value]] *)
 type value = 
   (* The string can contain the * ? [ special characters.
    * So, even a single word can expand to a list of strings.
@@ -26,12 +27,10 @@ type value =
 
   | Stringify of value (* $"foo " *)
 (*e: type [[Ast.value]] *)
-
-(* separated by spaces *)
 (*s: type [[Ast.values]] *)
+(* separated by spaces *)
 and values = value list
 (*e: type [[Ast.values]] *)
-
 
 (*s: type [[Ast.cmd]] *)
 and cmd =
@@ -83,16 +82,14 @@ and cmd =
    *)
   | Assign of value * value * cmd (* can be EmptyCommand *)
 (*e: type [[Ast.cmd]] *)
-
 (*s: type [[Ast.cmd_sequence]] *)
   and cmd_sequence = cmd list
 (*e: type [[Ast.cmd_sequence]] *)
 
-  (* todo: RDup does not have a filename? so push value inside RWrite of value*)
+(* todo: RDup does not have a filename? so push value inside RWrite of value*)
 (*s: type [[Ast.redirection]] *)
   and redirection = redirection_kind * value (* the filename *)
 (*e: type [[Ast.redirection]] *)
-
 (*s: type [[Ast.redirection_kind]] *)
     and redirection_kind = 
       | RWrite (* > *)
@@ -102,9 +99,8 @@ and cmd =
       | RDup of int * int (* >[x=y] *)
 (*e: type [[Ast.redirection_kind]] *)
 
-
-(* None when reads EOF *)
 (*s: type [[Ast.line]] *)
+(* None when reads EOF *)
 type line = cmd_sequence option
 (*e: type [[Ast.line]] *)
 

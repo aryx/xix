@@ -1,37 +1,39 @@
 (*s: Flags.ml *)
 
-(* -i (on by default when detects that stdin is /dev/cons *)
 (*s: constant [[Flags.interactive]] *)
+(* -i (on by default when detects that stdin is /dev/cons *)
 let interactive = ref false
 (*e: constant [[Flags.interactive]] *)
-(* -l (on by default if argv0 starts with a -) *)
 (*s: constant [[Flags.login]] *)
+(* -l (on by default if argv0 starts with a -) *)
 let login = ref false
 (*e: constant [[Flags.login]] *)
 
-(* -e, for strict error checking. Abort the script when an error happens.*)
 (*s: constant [[Flags.eflag]] *)
+(* -e, for strict error checking. Abort the script when an error happens.*)
 let eflag = ref false
 (*e: constant [[Flags.eflag]] *)
-(* -r, similar to dump_opcodes, but at each step *)
 (*s: constant [[Flags.rflag]] *)
+(* -r, similar to dump_opcodes, but at each step *)
 let rflag = ref false
 (*e: constant [[Flags.rflag]] *)
-(* -s, to print status when error in command just ran *)
 (*s: constant [[Flags.sflag]] *)
+(* -s, to print status when error in command just ran *)
 let sflag = ref false
 (*e: constant [[Flags.sflag]] *)
-(* -x, to print simple commands before executing them *)
 (*s: constant [[Flags.xflag]] *)
+(* -x, to print simple commands before executing them *)
 let xflag = ref false
 (*e: constant [[Flags.xflag]] *)
 
 (* less: let cflag = ref "" *)
 
-let (hflags: (char, bool) Hashtbl.t) = Hashtbl.create 10
+(*s: global [[Flags.hflags]] *)
+let hflags: (char, bool) Hashtbl.t = Hashtbl.create 10
+(*e: global [[Flags.hflags]] *)
 
-(* can be changed with -m *)
 (*s: constant [[Flags.rcmain]] *)
+(* can be changed with -m *)
 let rcmain = ref "/rc/lib/rcmain"
 (*e: constant [[Flags.rcmain]] *)
 

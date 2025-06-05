@@ -24,7 +24,6 @@ let file_descr_of_int i =
   (* todo: how do that? if do >[1=4] ?? *)
   | n -> failwith (spf "file_descr_of_int: unsupported int %d" n)
 (*e: function [[Interpreter.file_descr_of_int]] *)
-
 (*s: function [[Interpreter.int_at_address]] *)
 let int_at_address t pc =
   match t.R.code.(pc) with
@@ -33,7 +32,6 @@ let int_at_address t pc =
   | op -> failwith (spf "was expecting I, not %s at %d" 
                       (Dumper_.s_of_opcode op) pc)
 (*e: function [[Interpreter.int_at_address]] *)
-
 
 (*s: function [[Interpreter.vlook_varname_or_index]] *)
 let vlook_varname_or_index varname =

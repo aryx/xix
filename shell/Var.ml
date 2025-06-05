@@ -21,7 +21,6 @@ let gvlook name =
     Hashtbl.add R.globals name var;
     var
 (*e: function [[Var.gvlook]] *)
-    
 (*s: function [[Var.vlook]] *)
 let vlook name =
   if !Runtime.runq <> []
@@ -34,13 +33,11 @@ let vlook name =
   else gvlook name
 (*e: function [[Var.vlook]] *)
 
-
 (*s: function [[Var.setvar]] *)
 let setvar name v =
   let var = vlook name in
   var.R.v <- Some v
 (*e: function [[Var.setvar]] *)
-
 
 (*s: function [[Var.vinit]] *)
 let vinit (_caps : < Cap.env; .. >) =

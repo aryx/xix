@@ -4,12 +4,10 @@ open Common
 
 module R = Runtime
 
-
 (*s: function [[Process.s_of_unix_error]] *)
 let s_of_unix_error err _s1 _s2 = 
   spf "%s" (Unix.error_message err)
 (*e: function [[Process.s_of_unix_error]] *)
-
 
 (*s: function [[Process.exit]] *)
 let exit (caps: < Cap.exit; ..>) s =
@@ -34,8 +32,6 @@ let return (caps : < Cap.exit; .. >) () =
   | _x::xs -> 
       R.runq := xs
 (*e: function [[Process.return]] *)
-
-
 
 
 (*s: type [[Process.waitfor_result]] *)

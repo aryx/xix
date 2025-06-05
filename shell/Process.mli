@@ -1,7 +1,10 @@
 (*s: Process.mli *)
-(*s: type [[Process.waitfor_result (Process.mli)]] *)
-type waitfor_result = WaitforInterrupted | WaitforFound | WaitforNotfound
-(*e: type [[Process.waitfor_result (Process.mli)]] *)
+(*s: type [[Process.waitfor_result]] *)
+type waitfor_result =
+  | WaitforInterrupted
+  | WaitforFound
+  | WaitforNotfound
+(*e: type [[Process.waitfor_result]] *)
 
 (*s: signature [[Process.return]] *)
 val return : < Cap.exit ; .. > -> unit -> unit
@@ -10,6 +13,8 @@ val return : < Cap.exit ; .. > -> unit -> unit
 val exit : < Cap.exit ; .. > -> string -> unit
 (*e: signature [[Process.exit]] *)
 (*s: signature [[Process.waitfor]] *)
+val waitfor : int -> waitfor_result
+(*x: signature [[Process.waitfor]] *)
 val waitfor : int -> waitfor_result
 (*e: signature [[Process.waitfor]] *)
 (*s: signature [[Process.s_of_unix_error]] *)

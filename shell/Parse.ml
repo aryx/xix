@@ -29,8 +29,6 @@ let error s (curtok, curtokstr) =
   (* less: nerror++; *)
   failwith str
 (*e: function [[Parse.error]] *)
-   
-
 
 (*s: function [[Parse.parse_line]] *)
 let parse_line lexbuf =

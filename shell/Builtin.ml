@@ -1,4 +1,6 @@
 (*s: Builtin.ml *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+
 open Common
 
 module R = Runtime
@@ -15,11 +17,9 @@ let is_builtin s =
     "finit"
   ]
 (*e: function [[Builtin.is_builtin]] *)
-
 (*s: constant [[Builtin.ndots]] *)
 let ndots = ref 0
 (*e: constant [[Builtin.ndots]] *)
-
 (*s: function [[Builtin.dochdir]] *)
 let dochdir (caps : < Cap.chdir; .. >) s =
   try 
@@ -29,9 +29,8 @@ let dochdir (caps : < Cap.chdir; .. >) s =
   with Unix.Unix_error _ ->
     false
 (*e: function [[Builtin.dochdir]] *)
-
-(* for the builtin '.' (called 'source' in bash) *)
 (*s: constant [[Builtin.dotcmds]] *)
+(* for the builtin '.' (called 'source' in bash) *)
 let dotcmds = 
   [|
     O.F O.Mark;
@@ -49,9 +48,8 @@ let dotcmds =
     O.F O.Unlocal;
     O.F O.Unlocal;
     O.F O.Return;
-(*e: constant [[Builtin.dotcmds]] *)
   |]         
-
+(*e: constant [[Builtin.dotcmds]] *)
 (*s: function [[Builtin.dispatch]] *)
 let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   match s with

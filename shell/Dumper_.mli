@@ -6,9 +6,9 @@ val s_of_cmd : Ast.cmd -> string
 val s_of_opcode : Opcode.opcode -> string
 (*e: signature [[Dumper_.s_of_opcode]] *)
 
-(*s: signature [[Dumper_.s_of_line]] *)
 (* extra *)
 
+(*s: signature [[Dumper_.s_of_line]] *)
 val s_of_line : Ast.line -> string
 (*e: signature [[Dumper_.s_of_line]] *)
 (*s: signature [[Dumper_.s_of_cmd_sequence]] *)

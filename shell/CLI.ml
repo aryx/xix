@@ -1,5 +1,6 @@
 (*s: CLI.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+
 open Common
 open Fpath_.Operators
 
@@ -34,10 +35,17 @@ module O = Opcode
 (* Types and constants *)
 (*****************************************************************************)
 
-(* see the .mli for why those caps are needed
- * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
- *)
 (*s: type [[CLI.caps]] *)
+(* Need:
+ *  - fork/exec: obviously as we are a shell
+ *  - chdir: for the builtin 'cd'
+ *  - env: to ??
+ *  - exit: as many commands can abruptely exit 'rc' itself or children
+ *    created by 'rc'
+ *  - open_in: ??
+ *
+ * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
+*)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 (*e: type [[CLI.caps]] *)
 
@@ -79,6 +87,9 @@ let do_action caps s xs =
       )
 
   | _ -> failwith ("action not supported: " ^ s)
+  (* old: do that in caller now, so more explicit 
+  runq := t::!runq
+  *)
 (*e: function [[CLI.do_action]] *)
 
 (*****************************************************************************)
@@ -89,7 +100,6 @@ let do_action caps s xs =
 let _bootstrap_simple : O.opcode array = 
   [| O.F O.REPL |]
 (*e: constant [[CLI._bootstrap_simple]] *)
-
 (*s: function [[CLI.bootstrap]] *)
 (* The real one is more complex:
  *  *=(argv);. /usr/lib/rcmain $*
@@ -115,9 +125,8 @@ let bootstrap () : O.opcode array =
       O.F O.Simple; (* will pop_list once *)
 
       O.F O.Exit;
-(*e: function [[CLI.bootstrap]] *)
   |]
-
+(*e: function [[CLI.bootstrap]] *)
 
 (*s: function [[CLI.interpret]] *)
 let interpret (caps : < caps >) (args : string list) : unit =

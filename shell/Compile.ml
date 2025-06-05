@@ -22,7 +22,6 @@ let rec split_at_non_assign = function
       (val1, val2)::a, b
   | b -> [], b
 (*e: function [[Compile.split_at_non_assign]] *)
-
 (*s: function [[Compile.split_when_case]] *)
 let split_when_case cmds =
   cmds |> Common2.span (function
@@ -30,7 +29,6 @@ let split_when_case cmds =
     | _ -> true
   )
 (*e: function [[Compile.split_when_case]] *)
-
 
 (*****************************************************************************)
 (* Compilation algorithm *)

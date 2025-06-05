@@ -23,7 +23,6 @@ let execute (caps : <Cap.exec; ..>) args path =
   Logs.err (fun m -> m "%s: %s" argv.(0) !errstr)
 (*e: function [[Op_process.execute]] *)
 
-
 (*s: function [[Op_process.exec]] *)
 let exec (caps : < Cap.exec; Cap.exit; .. >) () =
   R.pop_word (); (* "exec" *)
@@ -58,8 +57,6 @@ let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
     (* less: addwaitpid *)
     pid
 (*e: function [[Op_process.forkexec]] *)
-
-
 
 (*s: function [[Op_process.op_Simple]] *)
 let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
@@ -108,6 +105,6 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
               E.error caps ("try again: " ^ s)
           | Unix.Unix_error (err, s1, s2) -> 
               E.error caps (Process.s_of_unix_error err s1 s2)
+)
 (*e: function [[Op_process.op_Simple]] *)
-        )
 (*e: Op_process.ml *)

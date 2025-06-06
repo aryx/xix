@@ -14,80 +14,83 @@
 type operation =
 
   (* Stack (argv) *)
-
   | Mark
   | Word (* [string] *)
   | Popm (* (value) *)
+  (*s: [[Opcode.operation]] other stack cases *)
   | Count (* (name) *)
   | Concatenate (* (left)(right) *)
   | Stringify (* (name) *)
-
-  (* Globbing *)
-  | Glob (* (value?) *)
+  (*e: [[Opcode.operation]] other stack cases *)
 
   (* Variable *)
-
   | Assign (* (name)(val) *)
   | Dollar (* (name) *)
+  (*s: [[Opcode.operation]] other variable cases *)
   | Index  (* ??? *)
   | Local (* (name)(val) *)
   | Unlocal (* *)
-
-  (* Functions *)
-  | Fn (* (name){... Xreturn } *)
-  | DelFn (* (name) *)
-  (* less: RdFn *)
+  (*e: [[Opcode.operation]] other variable cases *)
 
   (* Process! *)
-
   | Simple (* (args) *)
 
-  (* Control part 1 *)
-
-  | Exit 
-  | Return
-
-  (* Control part 2 *)
-
+  (* Control flow *)
   | If 
   | IfNot
   | Jump  (* [addr] *)
+  | Exit 
+  (*s: [[Opcode.operation]] other control cases *)
   (* While are compiled in jumps *)  
   | Match (* (pat, str) *)
   | Case  (* (pat, value){...} *)
   | For   (* (var, list){... Xreturn} *)
+  (*x: [[Opcode.operation]] other control cases *)
+  | Return
+  (*e: [[Opcode.operation]] other control cases *)
 
   (* Boolean return status  *)
-
   | Wastrue
   | Not
   | False (* {...} *)
   | True  (* {...} *)
 
   (* Redirections *)
-
   | Read (* (file)[fd] *)
   | Write (* (file)[fd] *)
-  | ReadWrite (* (file)[fd] *)
   | Append (* (file)[fd] *)
+  (*s: [[Opcode.operation]] other redirection cases *)
+  | ReadWrite (* (file)[fd] *)
   | Close  (* [fd] *)
   | Dup    (* [fd0 fd1] *)
   | Popredir (* *)
+  (*e: [[Opcode.operation]] other redirection cases *)
 
   (* Pipes *)
-
   | Pipe (* [i j]{... Xreturn}{... Xreturn} *)
+  (*s: [[Opcode.operation]] other pipe cases *)
   | PipeWait (* argument passed through Thread.pid *)
   | PipeFd (* [type]{... Xreturn} *)
+  (*e: [[Opcode.operation]] other pipe cases *)
 
-  (* Error management *)
-  | Eflag
+  (* Functions *)
+  | Fn (* (name){... Xreturn } *)
 
+  (*s: [[Opcode.operation]] other cases *)
+  | DelFn (* (name) *)
+  (* less: RdFn *)
+  (*x: [[Opcode.operation]] other cases *)
   (* ?? *)
-
   | Subshell (* {... Xexit} *)
   | Backquote (* {... Xreturn} *)
   | Async     (* {... Xreturn} *)
+  (*x: [[Opcode.operation]] other cases *)
+  (* Globbing *)
+  | Glob (* (value?) *)
+  (*x: [[Opcode.operation]] other cases *)
+  (* Error management *)
+  | Eflag
+  (*e: [[Opcode.operation]] other cases *)
 
   | REPL (* *)
 (*e: type [[Opcode.operation]] *)

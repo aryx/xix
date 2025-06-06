@@ -44,7 +44,7 @@ module O = Opcode
  *    created by 'rc'
  *  - open_in: ??
  *
- * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
+ * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 (*e: type [[CLI.caps]] *)
@@ -128,8 +128,8 @@ let bootstrap () : O.opcode array =
   |]
 (*e: function [[CLI.bootstrap]] *)
 
-(*s: function [[CLI.interpret]] *)
-let interpret (caps : < caps >) (args : string list) : unit =
+(*s: function [[CLI.interpret_bootstrap]] *)
+let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
@@ -140,13 +140,12 @@ let interpret (caps : < caps >) (args : string list) : unit =
   args |> List.rev |> List.iter Runtime.push_word;
 
   while true do
-
     (* bugfix: need to fetch the current thread each time,
      * as the interpreted code may have modified runq.
      *)
     let t = Runtime.cur () in
     let pc = t.R.pc in
-
+    (*s: [[CLI.interpret()]] if [[rflag]] *)
     (* less: cycle =~ codevec pointer *)
     if !Flags.rflag
     then Logs.app (fun m -> m "pid %d %d %s %s"
@@ -156,19 +155,18 @@ let interpret (caps : < caps >) (args : string list) : unit =
                 ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
                     spf "(%s)" (String.concat " " xs)
                    ) |> String.concat " "));
-    
+    (*e: [[CLI.interpret()]] if [[rflag]] *)
     incr pc;
     (match t.R.code.(!pc - 1) with
-
     (* opcode dispatch ! *)
-    | O.F operation ->  Interpreter.interpret caps operation
+    | O.F operation ->  Interpreter.interpret_operation caps operation
     | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
     | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
     );
     (* todo: handle trap *)
   done
 [@@profiling]
-(*e: function [[CLI.interpret]] *)
+(*e: function [[CLI.interpret_bootstrap]] *)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -176,48 +174,36 @@ let interpret (caps : < caps >) (args : string list) : unit =
 
 (*s: function [[CLI.main]] *)
 let main (caps : <caps; .. >) (argv : string array) : Exit.t =
-
   let args = ref [] in
-
-  (* for debugging *)
+  (*s: [[CLI.main()]] debugging initializations *)
   let level = ref (Some Logs.Warning) in
+  (*x: [[CLI.main()]] debugging initializations *)
   let action = ref "" in
+  (*e: [[CLI.main()]] debugging initializations *)
 
   let options = [
+    (*s: [[CLI.main()]] [[options]] elements *)
+    "-l", Arg.Set Flags.login,
+    " login mode (execute ~/lib/profile)";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-i", Arg.Set Flags.interactive,
     " interactive mode (display prompt)";
     "-I", Arg.Clear Flags.interactive,
     " non-interactive mode (no prompt)";
-    "-l", Arg.Set Flags.login,
-    " login mode (execute ~/lib/profile)";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-m", Arg.Set_string Flags.rcmain,
     " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-e", Arg.Set Flags.eflag,
     " exit if $status is non-null after a simple command";
-
-    "-r", Arg.Set Flags.rflag,
-    " print internal form of commands (opcodes)";
-    "-s", Arg.Set Flags.sflag,
-    " print exit status after any command where the status is non-null";
-    "-x", Arg.Set Flags.xflag,
-    " print each simple command before executing it";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
     "-strict", Arg.Set Flags.strict_mode,
     " strict mode";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_opcodes", Arg.Set Flags.dump_opcodes,
-    " dump the generated opcodes ";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-debugger", Arg.Set Flags.debugger,
+    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
     (* TODO: move in a CLI_common.ml *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
@@ -228,8 +214,27 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     " ";
     "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
     " trace the main functions";
-    "-debugger", Arg.Set Flags.debugger,
-    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* pad: I added that *)
+    "-dump_tokens", Arg.Set Flags.dump_tokens,
+    " dump the tokens as they are generated";
+    "-dump_ast", Arg.Set Flags.dump_ast,
+    " dump the parsed AST";
+    "-dump_opcodes", Arg.Set Flags.dump_opcodes,
+    " dump the generated opcodes ";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-r", Arg.Set Flags.rflag,
+    " print internal form of commands (opcodes)";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-s", Arg.Set Flags.sflag,
+    " print exit status after any command where the status is non-null";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-x", Arg.Set Flags.xflag,
+    " print each simple command before executing it";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* pad: I added that *)
+    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+    (*e: [[CLI.main()]] [[options]] elements *)
   ]
   in
   (* old: was Arg.parse but we want explicit argv control *)
@@ -239,23 +244,23 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
-
-
+  (*s: [[CLI.main()]] logging initializations *)
   Logs.set_level !level;
   Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
-
+  (*e: [[CLI.main()]] logging initializations *)
+  (*s: [[CLI.main()]] CLI action processing *)
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action caps !action (List.rev !args); 
     raise (Exit.ExitCode 0)
   end;
-
+  (*e: [[CLI.main()]] CLI action processing *)
   (* todo: 
    * if argc=1 and Isatty then Flags.interactive := true 
    *)
   Var.vinit caps;
   (* todo: trap_init () *)
-
+  (*s: [[CLI.main()]] other initializations *)
   (* for 'flags' builtin (see builtin.ml) *)
   argv |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"
@@ -265,21 +270,25 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
       Hashtbl.add Flags.hflags char true
     end
   );
-
+  (*e: [[CLI.main()]] other initializations *)
   try 
-    interpret (caps :> < caps >) (List.rev !args);
+    interpret_bootstrap (caps :> < caps >) (List.rev !args);
     Exit.OK
   with exn ->
+    (*s: [[CLI.main()]] when [[exn]] thrown in [[interpret()]] *)
     if !Flags.debugger
     then raise exn
     else 
       (match exn with
+      (*s: [[CLI.main()]] when [[Failure]] [[exn]] thrown in [[interpret()]] *)
       | Failure s -> 
           (* useful to indicate that error comes from rc, not subprocess *)
           Logs.err (fun m -> m  "rc: %s" s);
           Exit.Code 1
+      (*e: [[CLI.main()]] when [[Failure]] [[exn]] thrown in [[interpret()]] *)
       (* alt: could catch Exit.ExitCode here but this is done in Main.ml *)
       | _ -> raise exn
       )
+    (*e: [[CLI.main()]] when [[exn]] thrown in [[interpret()]] *)
 (*e: function [[CLI.main]] *)
 (*e: CLI.ml *)

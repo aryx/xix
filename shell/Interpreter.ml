@@ -55,22 +55,21 @@ let vlook_varname_or_index varname =
 (* Entry point *)
 (*****************************************************************************)
 
-(*s: function [[Interpreter.interpret]] *)
-let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =
-  match operation with
+(*s: function [[Interpreter.interpret_operation]] *)
+let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) op : unit =
+  match op with
+  (*s: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* *)
   | O.REPL -> Op_repl.op_REPL caps ()
-
-  (* (args) *)
-  | O.Simple -> Op_process.op_Simple caps ()
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Return -> Process.return caps ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Exit -> 
       (* todo: trapreq *)
       Process.exit caps (Status.getstatus())
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Mark -> R.push_list ()
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* [string] *)
   | O.Word ->
       let t = R.cur () in
@@ -82,7 +81,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
       (* stricter: but should never happen *)
       | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
       )
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (name) (val) *)
   | O.Assign ->
       let t = R.cur () in
@@ -101,7 +100,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
 
       | _ -> E.error caps "variable name not singleton!"
       )
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (name) (val) *)
   | O.Local ->
       let t = R.cur () in
@@ -116,7 +115,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
         R.pop_list ();
       | _ -> E.error caps "variable name not singleton!"
       )
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* [i j]{... Xreturn}{... Xreturn} *)
   | O.Pipe -> 
       let t = R.cur () in
@@ -153,12 +152,12 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
         R.runq := newt::!R.runq;
         Unix.close pipe_write;
         R.push_redir (R.FromTo (pipe_read, rfd));
-      
+    
        (* once newt finished, jump to Xpipewait *)
         pc := int_at_address t (!pc+1);
         t.R.waitstatus <- R.WaitFor forkid;
       end
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* argument passed through Thread.pid *)
   | O.PipeWait -> 
       let t = R.cur () in
@@ -176,12 +175,12 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
           t.R.waitstatus <- R.NothingToWaitfor;
           Status.setstatus (Status.concstatus (Status.getstatus()) status);
       )
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (value?) *)
   | O.Glob ->
       Logs.err (fun m -> m "TODO: interpret Glob");
       ()
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (file)[fd] *)
   | O.Write ->
       let t = R.cur () in
@@ -206,12 +205,12 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
             prerr_string (spf "%s: " file);
             E.error caps "can't open"
           )
-              
+            
       )
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Popredir ->
       R.pop_redir ()
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (name) *)
   | O.Dollar ->
       let t = R.cur () in
@@ -230,6 +229,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
          )             
       | _ -> E.error caps "variable name not singleton!"
       )
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (name) *)
   | O.Count ->
       let t = R.cur () in
@@ -247,7 +247,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
           R.push_word (spf "%d" num)
       | _ -> E.error caps "variable name not singleton!"
       )
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (pat, str) *)
   | O.Match ->
       let t = R.cur () in
@@ -264,7 +264,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
         end else false
       ) |> ignore;
       R.pop_list ();
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.If ->
       let t = R.cur () in
       let pc = t.R.pc in
@@ -273,23 +273,23 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
       if Status.truestatus()
       then incr pc
       else pc := int_at_address t (!pc);
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Wastrue ->
       Globals.ifnot := false
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.IfNot ->
       let t = R.cur () in
       let pc = t.R.pc in
       if !Globals.ifnot
       then incr pc
       else pc := int_at_address t (!pc);
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* [addr] *)
   | O.Jump ->
       let t = R.cur () in
       let pc = t.R.pc in
       pc := int_at_address t (!pc);
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (pat, value){...} *)
   | O.Case ->
       let t = R.cur () in
@@ -302,11 +302,11 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
       else pc := int_at_address t (!pc)
       );
       R.pop_list ();
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (value) *)
   | O.Popm ->
       R.pop_list ()
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (name) *)
   | O.DelFn ->
       let t = R.cur () in
@@ -320,28 +320,31 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
             if !Flags.strict_mode
             then E.error caps (spf "deleting undefined function %s" s)
       );
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Not ->
       Status.setstatus (if Status.truestatus() then "false" else "");
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.True ->
       let t = R.cur () in
       let pc = t.R.pc in
       if Status.truestatus ()
       then incr pc
       else pc := int_at_address t (!pc)
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.False ->
       let t = R.cur () in
       let pc = t.R.pc in
       if Status.truestatus ()
       then pc := int_at_address t (!pc)
       else incr pc
-
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (args) *)
+  | O.Simple -> Op_process.op_Simple caps ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Eflag ->
       if !Globals.eflagok && not (Status.truestatus())
       then Process.exit caps (Status.getstatus())
-
+  (*e: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | (O.Concatenate|O.Stringify    |O.Index|
      O.Unlocal|
      O.Fn|
@@ -350,6 +353,6 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
      O.Close|O.Dup|O.PipeFd|
      O.Subshell|O.Backquote|O.Async
     ) ->
-    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F operation))
-(*e: function [[Interpreter.interpret]] *)
+    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F op))
+(*e: function [[Interpreter.interpret_operation]] *)
 (*e: Interpreter.ml *)

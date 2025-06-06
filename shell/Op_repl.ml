@@ -5,13 +5,14 @@ module R = Runtime
 (*s: function [[Op_repl.op_REPL]] *)
 (* was called Xrdcmds *)
 let op_REPL (caps : < Cap.exit; ..>) () =
-
   let t = R.cur () in
 
+  (*s: [[Op_repl.op_REPL()]] if [[sflag]] *)
   (* todo: flush error and reset error count *)
   if !Flags.sflag && not (Status.truestatus()) 
   then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
-
+  (*e: [[Op_repl.op_REPL()]] if [[sflag]] *)
+  (*s: [[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]] *)
   (* set prompstr *)
   if t.R.iflag then begin
     let promptv = (Var.vlook "prompt").R.v in
@@ -22,15 +23,14 @@ let op_REPL (caps : < Cap.exit; ..>) () =
       | Some [] | None -> "% "
       );
   end;
+  (*e: [[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]] *)
+
   (* less: call Noerror before yyparse *)
 
   let lexbuf = t.R.lexbuf in
-
   try 
-    let ast_opt = Parse.parse_line lexbuf in
-
-    match ast_opt with
-    | None -> Process.return caps ()
+    let cmdseq_opt = Parse.parse_line lexbuf in
+    match cmdseq_opt with
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in
@@ -41,8 +41,10 @@ let op_REPL (caps : < Cap.exit; ..>) () =
         (* when codevec does a op_return(), then interpreter loop
          * in main should call us back since the pc was decremented above
          *)
+    | None -> Process.return caps ()
 
   with Failure s -> 
+    (*s: [[Op_repl.op_REPL()]] when [[Failure s]] thrown *)
     (* todo: check signals  *)
 
     if not t.R.iflag
@@ -53,5 +55,6 @@ let op_REPL (caps : < Cap.exit; ..>) () =
       (* go back for next command *)
       decr t.R.pc;
     end
+    (*e: [[Op_repl.op_REPL()]] when [[Failure s]] thrown *)
 (*e: function [[Op_repl.op_REPL]] *)
 (*e: Op_repl.ml *)

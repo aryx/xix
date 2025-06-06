@@ -35,25 +35,19 @@ let split_when_case cmds =
 (*****************************************************************************)
 
 (*s: function [[Compile.outcode_seq]] *)
-let outcode_seq seq eflag (emit,set,idx) =
+let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
 
-  let rec xseq seq eflag =
+  let rec xseq (seq : Ast.cmd_sequence) eflag : unit =
    (* less set iflast, for if not syntax error checking *)
     seq |> List.iter (fun x -> xcmd x eflag)
   
-  and xcmd cmd eflag =
+  and xcmd (cmd : Ast.cmd) eflag : unit =
     match cmd with
+    (*s: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.EmptyCommand -> ()
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Compound seq -> xseq seq eflag
-
-    | A.Simple (w, ws) -> 
-        emit (O.F O.Mark);
-        xwords ws;
-        xword w;
-        emit (O.F O.Simple);
-        if eflag 
-        then emit (O.F O.Eflag);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Assign (val1, val2, cmd) ->
         let all_assigns, cmd = 
           split_at_non_assign (A.Assign (val1, val2, cmd)) in
@@ -82,7 +76,7 @@ let outcode_seq seq eflag (emit,set,idx) =
               emit (O.F O.Unlocal);
             )
         )
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Pipe (cmd1, cmd2) ->
         emit (O.F O.Pipe);
         emit (O.I 1); (* left fd *)
@@ -105,7 +99,7 @@ let outcode_seq seq eflag (emit,set,idx) =
         (* will be executed by parent once the children thread finished *)
         set q (O.I !idx);
         emit (O.F O.PipeWait);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Redir (cmd, (redir_kind, word)) ->
         (* resolve the filename *)
         emit (O.F O.Mark);
@@ -125,11 +119,11 @@ let outcode_seq seq eflag (emit,set,idx) =
             emit (O.I 1);
         | _ -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
         );
-        
+    
         (* perform the command *)
         xcmd cmd eflag;
         emit (O.F O.Popredir);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.If (cmds, cmd) ->
         xseq cmds false;
         emit (O.F O.If);
@@ -138,14 +132,14 @@ let outcode_seq seq eflag (emit,set,idx) =
         xcmd cmd eflag;
         emit (O.F O.Wastrue);
         set p (O.I !idx);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.IfNot cmd ->
         emit (O.F O.IfNot);
         let p = !idx in
         emit (O.I 0);
         xcmd cmd eflag;
         set p (O.I !idx);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Match (w, ws) ->
         emit (O.F O.Mark);
         xwords ws;
@@ -154,7 +148,7 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Match);
         if eflag 
         then emit (O.F O.Eflag);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Switch (w, cmds) ->
 
         (match cmds with
@@ -172,7 +166,7 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Jump);
         let leave = !idx in
         emit (O.I 0);
-        
+    
         set nextcase (O.I !idx);
 
         let aux cmds =
@@ -198,7 +192,7 @@ let outcode_seq seq eflag (emit,set,idx) =
         set leave (O.I !idx);
         (* can not call pop_list(), here, otherwise circular deps *)
         emit (O.F O.Popm);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Fn (w, cmds) ->
         emit (O.F O.Mark);
         xword w;
@@ -210,30 +204,40 @@ let outcode_seq seq eflag (emit,set,idx) =
         emit (O.F O.Unlocal);
         emit (O.F O.Return);
         set p (O.I !idx);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.DelFn w ->
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.DelFn);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Not cmd ->
         xcmd cmd eflag;
         emit (O.F O.Not);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.And (cmd1, cmd2) ->
         xcmd cmd1 false;
         emit (O.F O.True);
         let p = !idx in
         xcmd cmd2 eflag;
         set p (O.I !idx)
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Or (cmd1, cmd2) ->
         xcmd cmd1 false;
         emit (O.F O.False);
         let p = !idx in
         xcmd cmd2 eflag;
         set p (O.I !idx)
-
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Simple (w, ws) -> 
+        emit (O.F O.Mark);
+        xwords ws;
+        xword w;
+        emit (O.F O.Simple);
+        (*s: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
+        if eflag 
+        then emit (O.F O.Eflag);
+        (*e: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
+    (*e: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | (A.Async _|
        A.Dup (_, _, _, _)|
        A.While (_, _)|
@@ -246,25 +250,26 @@ let outcode_seq seq eflag (emit,set,idx) =
   * Even though types are mutually recursive because of Backquote, the
   * compilation of backquote does not use eflag!
   *)
-  and xword w =
+  and xword (w : Ast.value) : unit =
     match w with
+    (*s: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.Word (s, _quoted) ->
         emit (O.F O.Word);
         emit (O.S s);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.List ws ->
         xwords ws
-
+    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.Dollar w ->
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.Dollar);
-
+    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.Count w ->
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.Count);
-
+    (*e: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | (A.CommandOutput _|
        A.Index (_, _)|
        A.Concat (_, _)|
@@ -272,7 +277,7 @@ let outcode_seq seq eflag (emit,set,idx) =
       )
        -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
 
-  and xwords ws =
+  and xwords (ws : Ast.value list) : unit =
     ws |> List.rev |> List.iter (fun w -> xword w);
     
   in
@@ -284,7 +289,7 @@ let outcode_seq seq eflag (emit,set,idx) =
 (*****************************************************************************)
 
 (*s: function [[Compile.compile]] *)
-let compile seq =
+let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
 
   (* a growing array *)
   let codebuf = ref [| |] in
@@ -292,32 +297,38 @@ let compile seq =
   (* pointer in codebuf *)
   let idx = ref 0 in
 
-  let codebuf_template = Array.make 100 (O.I 0) in
-
+  (*s: [[Compile.compile()]] nested function [[emit]] *)
   let emit x =
+    (*s: [[Compile.compile()]] nested function [[emit]] possibly grow [[codebuf]] *)
     (* grow the array if needed *)
     if !idx = !len_codebuf then begin
       len_codebuf := !len_codebuf + 100;
-      codebuf := Array.append !codebuf codebuf_template;
+      codebuf := Array.append !codebuf (Array.make 100 (O.I 0));
     end;
-
+    (*e: [[Compile.compile()]] nested function [[emit]] possibly grow [[codebuf]] *)
     !codebuf.(!idx) <- x;
     incr idx
   in
+  (*e: [[Compile.compile()]] nested function [[emit]] *)
+  (*s: [[Compile.compile()]] nested function [[set]] *)
   let set idx2 x =
+    (*s: [[Compile.compile()]] nested function [[set]] array bound checking *)
     if idx2 < 0 || idx2 >= !len_codebuf
     then failwith (spf "Bad address %d in set()" idx2);
-
+    (*e: [[Compile.compile()]] nested function [[set]] array bound checking *)
     !codebuf.(idx2) <- x;
   in
-  
-  outcode_seq seq !Flags.eflag (emit,set,idx);
+  (*e: [[Compile.compile()]] nested function [[set]] *)
+
+  outcode_seq seq !Flags.eflag (emit, set, idx);
   emit (O.F O.Return);
   (* less: O.F O.End *)
   (* less: heredoc, readhere() *)
 
   (* return the trimmed array *)
   Array.sub !codebuf 0 !idx
+  (*s: [[Compile.compile()]] possibly dump returned opcodes *)
   |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+  (*e: [[Compile.compile()]] possibly dump returned opcodes *)
 (*e: function [[Compile.compile]] *)
 (*e: Compile.ml *)

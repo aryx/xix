@@ -46,24 +46,27 @@ type thread = {
   mutable argv: string list;
   locals: (varname, var) Hashtbl.t;
 
+  (*s: [[Runtime.thread]] other fields *)
+  (* things to do before exec'ing the simple command *)
+  mutable redirections: (redir list) list;
+  (*x: [[Runtime.thread]] other fields *)
+  (* things to wait for after a thread forked a process *)
+  mutable waitstatus: waitstatus;
+  (*x: [[Runtime.thread]] other fields *)
   (* Used for switch but also assignments. *)
   mutable argv_stack: (string list) list;
-
-  (* connected on stdin by default (changed when do '. file') *)
-  mutable lexbuf: Lexing.lexbuf;
-  (* to display a prompt or not *)
-  mutable iflag: bool;
-
+  (*x: [[Runtime.thread]] other fields *)
   (* for error reporting (None when reading from stdin) *)
   (* less: file has to be mutable? could be a param of start? like chan? *)
   mutable file: Common.filename option;
   line: int ref;
-
-  (* things to do before exec'ing the simple command *)
-  mutable redirections: (redir list) list;
-
-  (* things to wait for after a thread forked a process *)
-  mutable waitstatus: waitstatus;
+  (*x: [[Runtime.thread]] other fields *)
+  (* connected on stdin by default (changed when do '. file') *)
+  mutable lexbuf: Lexing.lexbuf;
+  (*x: [[Runtime.thread]] other fields *)
+  (* to display a prompt or not *)
+  mutable iflag: bool;
+  (*e: [[Runtime.thread]] other fields *)
 }
 (*e: type [[Runtime.thread]] *)
 
@@ -204,20 +207,24 @@ let mk_thread code pc locals =
     code = code;
     pc = ref pc;
     argv = [];
-    argv_stack = [];
     locals = locals;
 
-    lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
-    iflag = false;
-    file = None;
-    line = ref 1;
-
-    waitstatus = NothingToWaitfor;
+    (*s: [[Runtime.mk_thread()]] set other fields *)
     redirections = 
       (match !runq with
       | [] -> []::[]
       | t::_ts -> []::t.redirections
       );
+    (*x: [[Runtime.mk_thread()]] set other fields *)
+    waitstatus = NothingToWaitfor;
+    (*x: [[Runtime.mk_thread()]] set other fields *)
+    argv_stack = [];
+    (*x: [[Runtime.mk_thread()]] set other fields *)
+    lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
+    iflag = false;
+    file = None;
+    line = ref 1;
+    (*e: [[Runtime.mk_thread()]] set other fields *)
   } in
   t
 (*e: function [[Runtime.mk_thread]] *)

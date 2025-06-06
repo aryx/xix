@@ -962,8 +962,8 @@ val interpret_operation :
 
 
 <<function [[Interpreter.interpret_operation]]>>=
-let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =
-  match operation with
+let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) op : unit =
+  match op with
   <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>
   | (O.Concatenate|O.Stringify    |O.Index|
      O.Unlocal|
@@ -973,7 +973,7 @@ let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation 
      O.Close|O.Dup|O.PipeFd|
      O.Subshell|O.Backquote|O.Async
     ) ->
-    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F operation))
+    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F op))
 @
 %$
 
@@ -1907,7 +1907,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
   * Even though types are mutually recursive because of Backquote, the
   * compilation of backquote does not use eflag!
   *)
-  and xword (w : Ast.word) : unit =
+  and xword (w : Ast.value) : unit =
     match w with
     <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>
     | (A.CommandOutput _|
@@ -1917,7 +1917,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
       )
        -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
 
-  and xwords (ws : Ast.word list) : unit =
+  and xwords (ws : Ast.value list) : unit =
     ws |> List.rev |> List.iter (fun w -> xword w);
     
   in
@@ -3779,7 +3779,7 @@ module O = Opcode
 <<constant [[CLI._bootstrap_simple]]>>
 <<function [[CLI.bootstrap]]>>
 
-<<function [[CLI.interpret_boostrap]]>>
+<<function [[CLI.interpret_bootstrap]]>>
 
 (*****************************************************************************)
 (* Entry point *)

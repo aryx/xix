@@ -14,7 +14,7 @@
 %------------------------------------------------------------------------------
 
 %thx to LP, I changed for the better a few things:
-% - found deadcode? Lexer.save_state__outside_brace ?
+% - found deadcode?
 % - found duplicated code?
  
 
@@ -34,13 +34,12 @@
 % - put all content of files in the Extra section, via 'lpizer'
 %   which also now split in chunks!
 %    * function, type, exception, constant
-%    * TODO dumper
-%    * SEMI [[xxx]] other fields
+%    * [[xxx]] other fields
 % - read Extra section, identify concepts, first TOC
 % - distribute parts of the Extra section in the main file
 % - understand main(), LP split main, improve TOC
-% - SEMI understand main functions, LP split, cluster, improve TOC
-% - SEMI LP split the structures
+% - understand main functions, LP split, cluster, improve TOC
+% - LP split the structures
 % - SEMI aspectify advanced features! remove useless features, error, debug, secu
 % - TODO add figures
 % - TODO add explanations
@@ -282,7 +281,7 @@ and var =
 \subsection{Rules}
 
 <<type [[Ast.rule]]>>=
-(* See also Rules.rule_exec *)
+(* See also Rules.rule and Rules.rule_exec *)
 type rule = {
   targets: words;
   prereqs: words;
@@ -3533,6 +3532,15 @@ let debugger = ref false
 " ";
 @
 
+<<[[CLI.build_targets()]] if debugger set>>=
+if !Flags.debugger then begin
+  CapSys.chdir caps (Filename.dirname !!infile);
+  Env.add_var env "objtype" ["386"]
+end;
+@
+
+\section{Exception backtraces}
+
 <<[[CLI.main()]] debugging initializations>>=
 let backtrace = ref false in
 @
@@ -3551,14 +3559,7 @@ else
   )
 @
 
-
-<<[[CLI.build_targets()]] if debugger set>>=
-if !Flags.debugger then begin
-  CapSys.chdir caps (Filename.dirname !!infile);
-  Env.add_var env "objtype" ["386"]
-end;
-@
-    
+   
 \section{Dumpers}
 
 

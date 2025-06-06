@@ -43,10 +43,11 @@ type operation =
   | Jump  (* [addr] *)
   | Exit 
   (*s: [[Opcode.operation]] other control cases *)
-  | Case  (* (pat, value){...} *)
+  | Return
+  (*x: [[Opcode.operation]] other control cases *)
   | For   (* (var, list){... Xreturn} *)
   (*x: [[Opcode.operation]] other control cases *)
-  | Return
+  | Case  (* (pat, value){...} *)
   (*e: [[Opcode.operation]] other control cases *)
 
   (* Boolean return status  *)

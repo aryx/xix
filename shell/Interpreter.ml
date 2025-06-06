@@ -64,6 +64,23 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Return -> Process.return caps ()
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* [string] *)
+  | O.Word ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      let x = t.R.code.(!pc) in
+      incr pc;
+      (match x with
+      | O.S s -> R.push_word s
+      (* stricter: but should never happen *)
+      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+      )
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  | O.Mark -> R.push_list ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (args) *)
+  | O.Simple -> Op_process.op_Simple caps ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Exit -> 
       (* todo: trapreq *)
       Process.exit caps (Status.getstatus())
@@ -286,23 +303,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       if Status.truestatus ()
       then pc := int_at_address t (!pc)
       else incr pc
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* [string] *)
-  | O.Word ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      let x = t.R.code.(!pc) in
-      incr pc;
-      (match x with
-      | O.S s -> R.push_word s
-      (* stricter: but should never happen *)
-      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
-      )
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.Mark -> R.push_list ()
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (args) *)
-  | O.Simple -> Op_process.op_Simple caps ()
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (value?) *)
   | O.Glob ->

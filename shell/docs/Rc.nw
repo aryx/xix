@@ -15,10 +15,12 @@
 %------------------------------------------------------------------------------
 
 %thx to LP, I changed for the better a few things:
+% - TODO removed cur_tok in lexerfunc, move it outside
 
 %thx to codemap/codegraph/scheck:
 
 %thx to this manual, I better understand sh:
+% - how rc -e works for error strictness
 
 %history LP-ization:
 % - skeleton, mostly copy paste of Shell.nw skeleton
@@ -96,6 +98,10 @@ Documentation License, Version 1.3.
 \end{flushright}
 \end{verse}
 
+
+% follow mostly data flow order diagram of section X
+% token -> AST -> opcodes -> runq
+
 \section{Tokens}
 
 <<Parser tokens>>=
@@ -147,11 +153,12 @@ Documentation License, Version 1.3.
 (* None when reads EOF *)
 type line = cmd_sequence option
 @
+% parse_line() later
 
 <<type [[Ast.cmd_sequence]]>>=
   and cmd_sequence = cmd list
 @
-% separated by ';' ?
+% separated by ';'
 
 
 <<type [[Ast.cmd]]>>=
@@ -251,6 +258,7 @@ type opcode =
   | I of int
   | S of string
 @
+% 'I' useful for Jump pc
 
 % a bit like assembly, opcodes, operands, but very simple.
 % why opcode? why not interpret AST instead?
@@ -320,31 +328,6 @@ type operation =
 
 
 %TODO: show example of opcode for ls /etc > /tmp/list.txt, via -dump ?? with ref to appendix?
-
-
-
-
-
-
-
-
-
-<<[[Opcode.operation]] other control cases>>=
-| Case  (* (pat, value){...} *)
-| For   (* (var, list){... Xreturn} *)
-@
-
-<<[[Opcode.operation]] other redirection cases>>=
-| ReadWrite (* (file)[fd] *)
-| Close  (* [fd] *)
-| Dup    (* [fd0 fd1] *)
-| Popredir (* *)
-@
-
-<<[[Opcode.operation]] other pipe cases>>=
-| PipeWait (* argument passed through Thread.pid *)
-| PipeFd (* [type]{... Xreturn} *)
-@
 
 
 
@@ -518,6 +501,8 @@ let mk_thread code pc locals =
 
 
 \subsection{The stack}
+
+% argv
 
 <<signature [[Runtime.push_word]]>>=
 val push_word : string -> unit
@@ -837,6 +822,17 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
 @
 %$
 
+%LP: later, when implemented
+<<[[Opcode.operation]] other redirection cases>>=
+| ReadWrite (* (file)[fd] *)
+| Close  (* [fd] *)
+| Dup    (* [fd0 fd1] *)
+| Popredir (* *)
+@
+<<[[Opcode.operation]] other pipe cases>>=
+| PipeWait (* argument passed through Thread.pid *)
+| PipeFd (* [type]{... Xreturn} *)
+@
 
 
 
@@ -1391,6 +1387,7 @@ curtok := (!tok, s);
 %TODO: get rid of?, can still call Lexing.lexeme in exn handler?
 % maybe can do 'Parser.rc (fun lexbuf -> let tok = lexfunc lexbuf; curtok := ....) ?
 
+
 <<function [[Parse.error]]>>=
 let error s (curtok, curtokstr) =
   let t = R.cur () in
@@ -1415,7 +1412,7 @@ let error s (curtok, curtokstr) =
   (* less: nerror++; *)
   failwith str
 @
-
+%LP: setstatus later?
 
 \section{Grammar overview}
 
@@ -1471,6 +1468,12 @@ open Ast
 %left TSub
 @
 
+<<Parser entry points types>>=
+%type <Ast.line> rc
+<<Parser other rule types>>
+%start rc
+@
+
 
 
 <<grammar>>=
@@ -1515,13 +1518,6 @@ rc:
 @
 
 
-<<Parser entry points types>>=
-%type <Ast.line> rc
-<<Parser other rule types>>
-%start rc
-@
-
-
 
 \section{Simple commands ([[<cmd> <arg1>...<argn>]]) }
 
@@ -1559,7 +1555,7 @@ cmd:
 
 
 <<Parser other rule types>>=
-%type <Ast.cmd> simple
+%type <Ast.XXX> simple
 @
 
 <<rule [[Parser.simple]]>>=
@@ -1767,11 +1763,8 @@ tcpar_skipnl: TCPar { Globals.skipnl := true; }
 
 <<[[Parser.cmd]] other cases>>=
 | brace epilog   { 
-    $2 |> List.fold_left (fun acc e -> 
-      match e with
-      | Left (kind, word) -> Redir (acc, (kind, word))
-      | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
-    ) (Compound $1) 
+    let cmd = (Compound $1) in
+    <<[[Parser.cmd]] in [[brace]] case, adjust [[cmd]] with [[epilog]]>>
 }
 @
 
@@ -1785,14 +1778,6 @@ brace: TOBrace body TCBrace { $2 }
 @
 % so no diff with paren? brace can have epilog after
 
-
-<<other redirection related rules>>=
-epilog:
-  | /*empty*/    { [] }
-  | redir epilog { $1::$2 }
-@
-
-
 <<other command related rules>>=
 body: 
   | cmd         { [$1] }
@@ -1804,6 +1789,25 @@ cmdsan:
   | cmd TNewline { (fun x -> mk_Seq ($1, x)) }
 @
 % so can have newline now! newline act as semicolon now when in body context!
+
+
+
+
+
+<<other redirection related rules>>=
+epilog:
+  | /*empty*/    { [] }
+  | redir epilog { $1::$2 }
+@
+
+<<[[Parser.cmd]] in [[brace]] case, adjust [[cmd]] with [[epilog]]>>=
+$2 |> List.fold_left (fun acc e -> 
+  match e with
+  | Left (kind, word) -> Redir (acc, (kind, word))
+  | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
+)  cmd
+@
+
 
 \section{Functions ([[fn <f> { ... }]])}
 
@@ -1820,6 +1824,8 @@ cmdsan:
 | assign cmd %prec TBang { $1 $2 }
 @
 % again $1 $2 idiom
+
+% need %prec because?
 
 <<other command related rules>>=
 assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
@@ -1849,6 +1855,7 @@ assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 
 \chapter{Bytecode Generation and Interpretation}
 
+%LP: move later!
 <<function [[Compile.split_at_non_assign]]>>=
 let rec split_at_non_assign = function
   | A.Assign (val1, val2, cmd) ->
@@ -1904,6 +1911,7 @@ let int_at_address t pc =
   | op -> failwith (spf "was expecting I, not %s at %d" 
                       (Dumper_.s_of_opcode op) pc)
 @
+
 
 
 \section{Overview}
@@ -2013,7 +2021,432 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
   xseq seq eflag
 @
 
-\subsection{XXX1}
+
+
+
+\section{Simple commands}
+
+% reminder: ls /etc => Simple (Word "ls", [Word "/etc"])
+
+\subsection{Bytecode generation}
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Simple (w, ws) -> 
+    emit (O.F O.Mark);
+    xwords ws;
+    xword w;
+    emit (O.F O.Simple);
+    <<[[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]]>>
+@
+% need Mark so know when finish args
+
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.Word (s, _quoted) ->
+    emit (O.F O.Word);
+    emit (O.S s);
+@
+
+\subsection{Stack management}
+
+<<[[Compile.outcode_seq]] in nested [[xwords()]]>>=
+ws |> List.rev |> List.iter (fun w -> xword w);
+@
+% List.rev! stack!
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* [string] *)
+| O.Word ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    let x = t.R.code.(!pc) in
+    incr pc;
+    (match x with
+    | O.S s -> R.push_word s
+    (* stricter: but should never happen *)
+    | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+    )
+@
+% remember pc already incremented in caller, so incr pc here to increment
+% it even more to pass the inline string
+
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Mark -> R.push_list ()
+@
+
+<<signature [[Runtime.push_list]]>>=
+val push_list : unit -> unit
+@
+<<function [[Runtime.push_list]]>>=
+let push_list () =
+  let t = cur () in
+  t.argv_stack <- t.argv :: t.argv_stack;
+  t.argv <- []
+@
+
+<<[[Runtime.thread]] other fields>>=
+(* Used for switch but also assignments. *)
+mutable argv_stack: (string list) list;
+@
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+argv_stack = [];
+@
+
+
+\subsection{[[O.Simple]]}
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (args) *)
+| O.Simple -> Op_process.op_Simple caps ()
+@
+
+
+<<function [[Op_process.op_Simple]]>>=
+let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
+  let t = R.cur () in
+  let argv = t.R.argv in
+  <<[[Op_process.op_Simple()]] possibly dump command>>
+  match argv with
+  <<[[Op_process.op_Simple()]] match [[argv]] empty case>>
+  | argv0::args ->
+      match argv0 with
+      <<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>
+      | _ ->
+        <<[[Op_process.op_Simple()]] when default case, before the fork>>
+        (try 
+          let pid = forkexec caps () in
+          R.pop_list ();
+          <<[[Op_process.op_Simple()]] when default case, after the fork>>
+        with
+          | Failure s ->
+              E.error caps ("try again: " ^ s)
+          | Unix.Unix_error (err, s1, s2) -> 
+              E.error caps (Process.s_of_unix_error err s1 s2)
+)
+@
+%$
+
+
+<<signature [[Runtime.pop_list]]>>=
+val pop_list : unit -> unit
+@
+<<function [[Runtime.pop_list]]>>=
+let pop_list () =
+  let t = cur () in
+  match t.argv_stack with
+  (* At the very beginning we do *=(argv) in bootstrap.
+   * In that case, Assign will generate two pop_list, but for
+   * the second one argv_stack becomes empty. The only thing
+   * we must do is to empty argv then.
+   *)
+  | [] ->
+     t.argv <- []
+  | x::xs -> 
+      t.argv_stack <- xs;
+      t.argv <- x
+@
+
+
+<<[[Op_process.op_Simple()]] when default case, before the fork>>=
+(* if exitnext opti *)
+flush stderr;
+(* less: Updenv *)
+@
+
+
+\subsection{Builtin dispatch}
+
+<<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>=
+| s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
+@
+
+<<signature [[Builtin.is_builtin]]>>=
+val is_builtin : string -> bool
+@
+<<signature [[Builtin.dispatch]]>>=
+(* execute the builtin *)
+val dispatch : < Cap.chdir ; Cap.exit ; Cap.open_in; .. > -> string -> unit
+@
+
+
+<<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>=
+(* todo: if argv0 is a function *)
+| "builtin" -> 
+    (match args with
+    | [] ->
+        Logs.err (fun m -> m "builtin: empty argument list");
+        Status.setstatus "empty arg list";
+        R.pop_list ()
+    | argv0::_args ->
+        R.pop_word ();
+        Builtin.dispatch caps argv0
+    )
+@
+
+
+
+\subsection{Fork}
+
+% Essence of a shell! Fork/exec! a 50LOC mini shell will be that
+
+<<function [[Op_process.forkexec]]>>=
+let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () : int =
+  let pid = CapUnix.fork caps () in
+  (* child *)
+  if pid = 0
+  then begin
+    (* less: clearwaitpids *)
+    (* less: could simplify and remove this word if exec was not a builtin *)
+    R.push_word "exec";
+    exec caps ();
+    (* should not be reached, unless prog could not be executed *)
+    Process.exit caps ("can't exec: " ^ !Globals.errstr);
+    0
+  end
+  else 
+    (* less: addwaitpid *)
+    pid
+@
+
+\subsection{Exec}
+
+<<function [[Op_process.exec]]>>=
+let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
+  R.pop_word (); (* "exec" *)
+
+  let t = R.cur () in
+  let argv = t.R.argv in
+  match argv with
+  | [] -> E.error caps "empty argument list" 
+  | prog::_xs -> 
+      <<[[Op_process.exec()]] before [[execute]]>>
+      execute caps argv (PATH.search_path_for_cmd prog);
+      (* should not be reached, unless prog could not be executed *)
+      R.pop_list ()
+@
+
+
+<<function [[Op_process.execute]]>>=
+let execute (caps : <Cap.exec; ..>) args path =
+
+  let argv = Array.of_list args in
+  let errstr = ref "" in
+
+  (* less: Updenv () *)
+  path |> List.iter (fun root ->
+    let path = (if root = "" then "" else root ^ "/") ^ argv.(0) in
+    try 
+      CapUnix.execv caps path argv |> ignore
+    with Unix.Unix_error (err, s1, s2) ->
+     errstr := Process.s_of_unix_error err s1 s2;
+     Globals.errstr := s2
+  );
+  (* reached only when could not find a path *)
+  Logs.err (fun m -> m "%s: %s" argv.(0) !errstr)
+@
+
+
+<<[[Op_process.exec()]] before [[execute]]>>=
+R.doredir t.R.redirections;
+@
+
+\subsection{Wait}
+
+<<[[Op_process.op_Simple()]] when default case, after the fork>>=
+(* do again even if was interrupted *)
+while Process.waitfor pid = Process.WaitforInterrupted do
+  ()
+done
+@
+
+
+<<type [[Process.waitfor_result]]>>=
+type waitfor_result =
+  | WaitforInterrupted
+  | WaitforFound
+  | WaitforNotfound
+@
+
+<<function [[Process.waitfor]]>>=
+let waitfor pid =
+  (* less: check for havewaitpid *)
+
+  try 
+    let rec loop () =
+      let (pid2, status) = Unix.wait () in
+      let status_str = 
+        match status with
+        | Unix.WEXITED i -> spf "%d" i
+        | Unix.WSIGNALED i -> spf "signaled %d" i
+        | Unix.WSTOPPED i -> spf "stopped %d" i
+      in
+      if pid = pid2
+      then begin
+        Status.setstatus status_str;
+        WaitforFound
+      end else begin
+        !R.runq |> List.iter (fun t ->
+          match t.R.waitstatus with
+          | R.WaitFor pid ->
+              if pid = pid2
+              then t.R.waitstatus <- R.ChildStatus status_str;
+          | R.ChildStatus _ | R.NothingToWaitfor -> ()
+        );
+        loop ()
+      end
+    in
+    loop ()
+  with Unix.Unix_error (err, s1, s2) ->
+    Globals.errstr := s_of_unix_error err s1 s2;
+    if err = Unix.EINTR
+    then WaitforInterrupted
+    else WaitforNotfound
+@
+
+
+\subsection{Error management}
+
+<<[[Op_process.op_Simple()]] match [[argv]] empty case>>=
+(* How can you get an empty list as Simple has at least one word?
+ * If you do A=()\n and then $A\n then Simple has a word, but after
+ * expansion the list becomes empty.
+ * stricter: I give extra explanations
+ *)
+| [] -> E.error caps "empty argument list (after variable expansion)" 
+@
+
+
+<<signature [[Error.error]]>>=
+(* Will behave like a 'raise'. Will Return until you reach
+ * the interactive thread and set the status to the error argument.
+ * Mostly used by the builtins.
+ *)
+val error : < Cap.exit ; .. > -> string -> unit
+@
+
+
+
+<<function [[Error.error]]>>=
+(* less: error1 similar to error but without %r *)
+let error (caps: < Cap.exit; ..>) (s : string) =
+  (* less: use argv0 *)
+  (* less: use %r *)
+  Logs.err (fun m -> m "rc: %s" s);
+
+  Status.setstatus "error";
+
+  while (R.cur ()).R.iflag do
+    (* goes up the call stack, like when we have an exception *)
+    Process.return caps ();
+  done
+@
+
+<<constant [[Globals.errstr]]>>=
+(* to mimic Plan 9 errstr() *)
+let errstr = ref ""
+@
+
+
+
+
+
+
+
+<<signature [[Process.s_of_unix_error]]>>=
+val s_of_unix_error : Unix.error -> string -> string -> string
+@
+<<function [[Process.s_of_unix_error]]>>=
+let s_of_unix_error err _s1 _s2 = 
+  spf "%s" (Unix.error_message err)
+@
+
+\subsection{[[$status]] management}
+
+% in bash $$?
+
+<<signature [[Status.setstatus]]>>=
+val setstatus : string -> unit
+@
+<<function [[Status.setstatus]]>>=
+let setstatus s =
+  Var.setvar "status" [s]
+@
+
+
+<<signature [[Status.getstatus]]>>=
+val getstatus : unit -> string
+@
+<<function [[Status.getstatus]]>>=
+let getstatus () =
+  let v = (Var.vlook "status").R.v in
+  match v with
+  | None -> ""
+  | Some [x] -> x
+  (* stricter: should never happen *)
+  | Some _ -> failwith "getstatus: $status is a list with more than one element"
+@
+%$
+
+
+<<signature [[Status.truestatus]]>>=
+val truestatus : unit -> bool
+@
+<<function [[Status.truestatus]]>>=
+let truestatus () =
+  let s = getstatus () in
+  s = "" || s =~ "0+\\(|0+\\)*"
+@
+
+
+
+\subsection{[[$path]] management}
+
+<<signature [[PATH.find_in_path]]>>=
+val find_in_path :
+  string (* cmd *) -> string list (* $path *) -> Common.filename
+@
+%$
+
+<<signature [[PATH.search_path_for_cmd]]>>=
+val search_path_for_cmd : string (* cmd *) -> string list (* $path *)
+@
+%$
+
+<<function [[PATH.search_path_for_cmd]]>>=
+let search_path_for_cmd s =
+  let nullpath = [""] in
+
+  if s =~ "^/" ||
+     (* Plan 9 device paths *)
+     s =~ "^#" || 
+     s =~ "\\./" ||
+     s =~ "\\.\\./"
+  then nullpath
+  else
+    let v = (Var.vlook "path").R.v in
+    (match v with
+    | None -> nullpath
+    | Some xs -> xs
+    )
+@
+
+<<function [[PATH.find_in_path]]>>=
+let find_in_path _s _paths =
+  raise Todo
+@
+
+
+
+%\subsection{Fork optimization}
+
+
+
+\section{XXX1}
+
+<<[[Opcode.operation]] other control cases>>=
+| For   (* (var, list){... Xreturn} *)
+@
 
 <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
 | A.List ws ->
@@ -2194,6 +2627,11 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
     emit (O.F O.Popm);
 @
 
+<<[[Opcode.operation]] other control cases>>=
+| Case  (* (pat, value){...} *)
+@
+
+
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Fn (w, cmds) ->
     emit (O.F O.Mark);
@@ -2233,7 +2671,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
     set p (O.I !idx)
 @
 
-\subsection{XXX2}
+\section{XXX2}
 
 
 
@@ -2360,6 +2798,17 @@ val exit : < Cap.exit ; .. > -> string -> unit
         Status.setstatus (Status.concstatus (Status.getstatus()) status);
     )
 @
+
+<<signature [[Status.concstatus]]>>=
+val concstatus : string -> string -> string
+@
+<<function [[Status.concstatus]]>>=
+let concstatus s1 s2 =
+  s1 ^ "|" ^ s2
+@
+
+
+
 
 
 <<signature [[Process.waitfor]]>>=
@@ -2508,444 +2957,6 @@ val waitfor : int -> waitfor_result
     then pc := int_at_address t (!pc)
     else incr pc
 @
-
-
-\subsection{[[argv]] management}
-
-\subsection{Process status management}
-
-<<signature [[Status.setstatus]]>>=
-val setstatus : string -> unit
-@
-
-<<signature [[Status.getstatus]]>>=
-val getstatus : unit -> string
-@
-
-<<signature [[Status.concstatus]]>>=
-val concstatus : string -> string -> string
-@
-
-<<signature [[Status.truestatus]]>>=
-val truestatus : unit -> bool
-@
-
-
-
-
-<<function [[Status.setstatus]]>>=
-let setstatus s =
-  Var.setvar "status" [s]
-@
-
-<<function [[Status.getstatus]]>>=
-let getstatus () =
-  let v = (Var.vlook "status").R.v in
-  match v with
-  | None -> ""
-  | Some [x] -> x
-  (* stricter: should never happen *)
-  | Some _ -> failwith "getstatus: $status is a list with more than one element"
-@
-%$
-
-<<function [[Status.concstatus]]>>=
-let concstatus s1 s2 =
-  s1 ^ "|" ^ s2
-@
-
-<<function [[Status.truestatus]]>>=
-let truestatus () =
-  let s = getstatus () in
-  s = "" || s =~ "0+\\(|0+\\)*"
-@
-
-
-
-
-\subsection{Subprocesses management}
-
-
-
-
-\section{Simple commands}
-
-% reminder: ls /etc => Simple (Word "ls", [Word "/etc"])
-
-\subsection{Bytecode generation}
-
-<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
-| A.Simple (w, ws) -> 
-    emit (O.F O.Mark);
-    xwords ws;
-    xword w;
-    emit (O.F O.Simple);
-    <<[[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]]>>
-@
-% need Mark so know when finish args
-
-<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
-| A.Word (s, _quoted) ->
-    emit (O.F O.Word);
-    emit (O.S s);
-@
-
-\subsection{Stack management}
-
-<<[[Compile.outcode_seq]] in nested [[xwords()]]>>=
-ws |> List.rev |> List.iter (fun w -> xword w);
-@
-% List.rev! stack!
-
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-(* [string] *)
-| O.Word ->
-    let t = R.cur () in
-    let pc = t.R.pc in
-    let x = t.R.code.(!pc) in
-    incr pc;
-    (match x with
-    | O.S s -> R.push_word s
-    (* stricter: but should never happen *)
-    | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
-    )
-@
-% remember pc already incremented in caller, so incr pc here to increment
-% it even more to pass the inline string
-
-
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-| O.Mark -> R.push_list ()
-@
-
-<<signature [[Runtime.push_list]]>>=
-val push_list : unit -> unit
-@
-<<function [[Runtime.push_list]]>>=
-let push_list () =
-  let t = cur () in
-  t.argv_stack <- t.argv :: t.argv_stack;
-  t.argv <- []
-@
-
-<<[[Runtime.thread]] other fields>>=
-(* Used for switch but also assignments. *)
-mutable argv_stack: (string list) list;
-@
-
-<<[[Runtime.mk_thread()]] set other fields>>=
-argv_stack = [];
-@
-
-
-\subsection{[[O.Simple]]}
-
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-(* (args) *)
-| O.Simple -> Op_process.op_Simple caps ()
-@
-
-
-<<function [[Op_process.op_Simple]]>>=
-let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
-  let t = R.cur () in
-  let argv = t.R.argv in
-  <<[[Op_process.op_Simple()]] possibly dump command>>
-  match argv with
-  <<[[Op_process.op_Simple()]] match [[argv]] empty case>>
-  | argv0::args ->
-      match argv0 with
-      <<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>
-      | _ ->
-        <<[[Op_process.op_Simple()]] when default case, before the fork>>
-        (try 
-          let pid = forkexec caps () in
-          R.pop_list ();
-          <<[[Op_process.op_Simple()]] when default case, after the fork>>
-        with
-          | Failure s ->
-              E.error caps ("try again: " ^ s)
-          | Unix.Unix_error (err, s1, s2) -> 
-              E.error caps (Process.s_of_unix_error err s1 s2)
-)
-@
-%$
-
-
-<<signature [[Runtime.pop_list]]>>=
-val pop_list : unit -> unit
-@
-<<function [[Runtime.pop_list]]>>=
-let pop_list () =
-  let t = cur () in
-  match t.argv_stack with
-  (* At the very beginning we do *=(argv) in bootstrap.
-   * In that case, Assign will generate two pop_list, but for
-   * the second one argv_stack becomes empty. The only thing
-   * we must do is to empty argv then.
-   *)
-  | [] ->
-     t.argv <- []
-  | x::xs -> 
-      t.argv_stack <- xs;
-      t.argv <- x
-@
-
-
-<<[[Op_process.op_Simple()]] when default case, before the fork>>=
-(* if exitnext opti *)
-flush stderr;
-(* less: Updenv *)
-@
-
-
-<<[[Op_process.op_Simple()]] when default case, after the fork>>=
-(* do again even if was interrupted *)
-while Process.waitfor pid = Process.WaitforInterrupted do
-  ()
-done
-@
-
-<<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>=
-| s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
-@
-
-<<signature [[Builtin.is_builtin]]>>=
-val is_builtin : string -> bool
-@
-<<signature [[Builtin.dispatch]]>>=
-(* execute the builtin *)
-val dispatch : < Cap.chdir ; Cap.exit ; Cap.open_in; .. > -> string -> unit
-@
-
-
-<<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>=
-(* todo: if argv0 is a function *)
-| "builtin" -> 
-    (match args with
-    | [] ->
-        Logs.err (fun m -> m "builtin: empty argument list");
-        Status.setstatus "empty arg list";
-        R.pop_list ()
-    | argv0::_args ->
-        R.pop_word ();
-        Builtin.dispatch caps argv0
-    )
-@
-
-
-
-\subsection{Fork}
-
-% Essence of a shell! Fork/exec! a 50LOC mini shell will be that
-
-<<function [[Op_process.forkexec]]>>=
-let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () : int =
-  let pid = CapUnix.fork caps () in
-  (* child *)
-  if pid = 0
-  then begin
-    (* less: clearwaitpids *)
-    (* less: could simplify and remove this word if exec was not a builtin *)
-    R.push_word "exec";
-    exec caps ();
-    (* should not be reached, unless prog could not be executed *)
-    Process.exit caps ("can't exec: " ^ !Globals.errstr);
-    0
-  end
-  else 
-    (* less: addwaitpid *)
-    pid
-@
-
-\subsection{Exec}
-
-<<function [[Op_process.exec]]>>=
-let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
-  R.pop_word (); (* "exec" *)
-
-  let t = R.cur () in
-  let argv = t.R.argv in
-  match argv with
-  | [] -> E.error caps "empty argument list" 
-  | prog::_xs -> 
-      <<[[Op_process.exec()]] before [[execute]]>>
-      execute caps argv (PATH.search_path_for_cmd prog);
-      (* should not be reached, unless prog could not be executed *)
-      R.pop_list ()
-@
-
-
-<<function [[Op_process.execute]]>>=
-let execute (caps : <Cap.exec; ..>) args path =
-
-  let argv = Array.of_list args in
-  let errstr = ref "" in
-
-  (* less: Updenv () *)
-  path |> List.iter (fun root ->
-    let path = (if root = "" then "" else root ^ "/") ^ argv.(0) in
-    try 
-      CapUnix.execv caps path argv |> ignore
-    with Unix.Unix_error (err, s1, s2) ->
-     errstr := Process.s_of_unix_error err s1 s2;
-     Globals.errstr := s2
-  );
-  (* reached only when could not find a path *)
-  Logs.err (fun m -> m "%s: %s" argv.(0) !errstr)
-@
-
-
-<<[[Op_process.exec()]] before [[execute]]>>=
-R.doredir t.R.redirections;
-@
-
-
-
-\subsection{Error management}
-
-<<[[Op_process.op_Simple()]] match [[argv]] empty case>>=
-(* How can you get an empty list as Simple has at least one word?
- * If you do A=()\n and then $A\n then Simple has a word, but after
- * expansion the list becomes empty.
- * stricter: I give extra explanations
- *)
-| [] -> E.error caps "empty argument list (after variable expansion)" 
-@
-
-
-<<signature [[Error.error]]>>=
-(* Will behave like a 'raise'. Will Return until you reach
- * the interactive thread and set the status to the error argument.
- * Mostly used by the builtins.
- *)
-val error : < Cap.exit ; .. > -> string -> unit
-@
-
-
-
-<<function [[Error.error]]>>=
-(* less: error1 similar to error but without %r *)
-let error (caps: < Cap.exit; ..>) (s : string) =
-  (* less: use argv0 *)
-  (* less: use %r *)
-  Logs.err (fun m -> m "rc: %s" s);
-
-  Status.setstatus "error";
-
-  while (R.cur ()).R.iflag do
-    (* goes up the call stack, like when we have an exception *)
-    Process.return caps ();
-  done
-@
-
-<<constant [[Globals.errstr]]>>=
-(* to mimic Plan 9 errstr() *)
-let errstr = ref ""
-@
-
-
-
-
-
-
-
-<<signature [[Process.s_of_unix_error]]>>=
-val s_of_unix_error : Unix.error -> string -> string -> string
-@
-<<function [[Process.s_of_unix_error]]>>=
-let s_of_unix_error err _s1 _s2 = 
-  spf "%s" (Unix.error_message err)
-@
-
-
-\subsection{[[$path]] management}
-
-<<signature [[PATH.find_in_path]]>>=
-val find_in_path :
-  string (* cmd *) -> string list (* $path *) -> Common.filename
-@
-%$
-
-<<signature [[PATH.search_path_for_cmd]]>>=
-val search_path_for_cmd : string (* cmd *) -> string list (* $path *)
-@
-%$
-
-<<function [[PATH.search_path_for_cmd]]>>=
-let search_path_for_cmd s =
-  let nullpath = [""] in
-
-  if s =~ "^/" ||
-     (* Plan 9 device paths *)
-     s =~ "^#" || 
-     s =~ "\\./" ||
-     s =~ "\\.\\./"
-  then nullpath
-  else
-    let v = (Var.vlook "path").R.v in
-    (match v with
-    | None -> nullpath
-    | Some xs -> xs
-    )
-@
-
-<<function [[PATH.find_in_path]]>>=
-let find_in_path _s _paths =
-  raise Todo
-@
-
-
-
-\subsection{Wait}
-
-
-<<type [[Process.waitfor_result]]>>=
-type waitfor_result =
-  | WaitforInterrupted
-  | WaitforFound
-  | WaitforNotfound
-@
-
-<<function [[Process.waitfor]]>>=
-let waitfor pid =
-  (* less: check for havewaitpid *)
-
-  try 
-    let rec loop () =
-      let (pid2, status) = Unix.wait () in
-      let status_str = 
-        match status with
-        | Unix.WEXITED i -> spf "%d" i
-        | Unix.WSIGNALED i -> spf "signaled %d" i
-        | Unix.WSTOPPED i -> spf "stopped %d" i
-      in
-      if pid = pid2
-      then begin
-        Status.setstatus status_str;
-        WaitforFound
-      end else begin
-        !R.runq |> List.iter (fun t ->
-          match t.R.waitstatus with
-          | R.WaitFor pid ->
-              if pid = pid2
-              then t.R.waitstatus <- R.ChildStatus status_str;
-          | R.ChildStatus _ | R.NothingToWaitfor -> ()
-        );
-        loop ()
-      end
-    in
-    loop ()
-  with Unix.Unix_error (err, s1, s2) ->
-    Globals.errstr := s_of_unix_error err s1 s2;
-    if err = Unix.EINTR
-    then WaitforInterrupted
-    else WaitforNotfound
-@
-
-
-
-\subsection{Fork optimization}
 
 
 

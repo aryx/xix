@@ -46,6 +46,16 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
   and xcmd (cmd : Ast.cmd) eflag : unit =
     match cmd with
     (*s: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Simple (w, ws) -> 
+        emit (O.F O.Mark);
+        xwords ws;
+        xword w;
+        emit (O.F O.Simple);
+        (*s: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
+        if eflag 
+        then emit (O.F O.Eflag);
+        (*e: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Compound seq -> xseq seq eflag
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Assign (val1, val2, cmd) ->
@@ -223,16 +233,6 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         xcmd cmd2 eflag;
         set p (O.I !idx)
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Simple (w, ws) -> 
-        emit (O.F O.Mark);
-        xwords ws;
-        xword w;
-        emit (O.F O.Simple);
-        (*s: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
-        if eflag 
-        then emit (O.F O.Eflag);
-        (*e: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.EmptyCommand -> ()
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.DelFn w ->
@@ -255,6 +255,10 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
   and xword (w : Ast.value) : unit =
     match w with
     (*s: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
+    | A.Word (s, _quoted) ->
+        emit (O.F O.Word);
+        emit (O.S s);
+    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.List ws ->
         xwords ws
     (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
@@ -262,10 +266,6 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.Dollar);
-    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
-    | A.Word (s, _quoted) ->
-        emit (O.F O.Word);
-        emit (O.S s);
     (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.Count w ->
         emit (O.F O.Mark);

@@ -134,6 +134,9 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
   R.runq := t::!R.runq;
 
   (*s: [[CLI.interpret_bootstrap()]] other initializations for [[t]] *)
+  (* less: set argv0 *)
+  args |> List.rev |> List.iter Runtime.push_word;
+  (*x: [[CLI.interpret_bootstrap()]] other initializations for [[t]] *)
   t.R.lexbuf <- Lexing.from_channel stdin;
   (*x: [[CLI.interpret_bootstrap()]] other initializations for [[t]] *)
   t.R.iflag <- !Flags.interactive;

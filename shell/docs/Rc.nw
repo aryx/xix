@@ -999,10 +999,10 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
 
 
 
-<<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>
+<<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>=
 (* less: set argv0 *)
 args |> List.rev |> List.iter Runtime.push_word;
-
+@
 
 <<signature [[Runtime.push_word]]>>=
 val push_word : string -> unit

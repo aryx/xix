@@ -38,14 +38,14 @@ let split_when_case cmds =
 let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
 
   let rec xseq (seq : Ast.cmd_sequence) eflag : unit =
+   (*s: [[Compile.outcode_seq]] in nested [[xseq()]] *)
    (* less set iflast, for if not syntax error checking *)
-    seq |> List.iter (fun x -> xcmd x eflag)
+   seq |> List.iter (fun x -> xcmd x eflag)
+   (*e: [[Compile.outcode_seq]] in nested [[xseq()]] *)
   
   and xcmd (cmd : Ast.cmd) eflag : unit =
     match cmd with
     (*s: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.EmptyCommand -> ()
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Compound seq -> xseq seq eflag
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Assign (val1, val2, cmd) ->
@@ -205,11 +205,6 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         emit (O.F O.Return);
         set p (O.I !idx);
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.DelFn w ->
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.DelFn);
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Not cmd ->
         xcmd cmd eflag;
         emit (O.F O.Not);
@@ -237,6 +232,13 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         if eflag 
         then emit (O.F O.Eflag);
         (*e: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.EmptyCommand -> ()
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.DelFn w ->
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.DelFn);
     (*e: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | (A.Async _|
        A.Dup (_, _, _, _)|
@@ -253,10 +255,6 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
   and xword (w : Ast.value) : unit =
     match w with
     (*s: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
-    | A.Word (s, _quoted) ->
-        emit (O.F O.Word);
-        emit (O.S s);
-    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.List ws ->
         xwords ws
     (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
@@ -264,6 +262,10 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         emit (O.F O.Mark);
         xword w;
         emit (O.F O.Dollar);
+    (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
+    | A.Word (s, _quoted) ->
+        emit (O.F O.Word);
+        emit (O.S s);
     (*x: [[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases *)
     | A.Count w ->
         emit (O.F O.Mark);
@@ -278,8 +280,9 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
        -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
 
   and xwords (ws : Ast.value list) : unit =
+    (*s: [[Compile.outcode_seq]] in nested [[xwords()]] *)
     ws |> List.rev |> List.iter (fun w -> xword w);
-    
+    (*e: [[Compile.outcode_seq]] in nested [[xwords()]] *)
   in
   xseq seq eflag
 (*e: function [[Compile.outcode_seq]] *)

@@ -197,15 +197,11 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     "-m", Arg.Set_string Flags.rcmain,
     " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-e", Arg.Set Flags.eflag,
-    " exit if $status is non-null after a simple command";
+    "-x", Arg.Set Flags.xflag,
+    " print each simple command before executing it";
     (*x: [[CLI.main()]] [[options]] elements *)
-    (* pad: I added that *)
-    "-strict", Arg.Set Flags.strict_mode,
-    " strict mode";
-    (*x: [[CLI.main()]] [[options]] elements *)
-    "-debugger", Arg.Set Flags.debugger,
-    " ";
+    "-s", Arg.Set Flags.sflag,
+    " print exit status after any command where the status is non-null";
     (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
     (* TODO: move in a CLI_common.ml *)
@@ -218,6 +214,16 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
     " trace the main functions";
     (*x: [[CLI.main()]] [[options]] elements *)
+    "-e", Arg.Set Flags.eflag,
+    " exit if $status is non-null after a simple command";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* pad: I added that *)
+    "-strict", Arg.Set Flags.strict_mode,
+    " strict mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-debugger", Arg.Set Flags.debugger,
+    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
     "-dump_tokens", Arg.Set Flags.dump_tokens,
     " dump the tokens as they are generated";
@@ -228,12 +234,6 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     (*x: [[CLI.main()]] [[options]] elements *)
     "-r", Arg.Set Flags.rflag,
     " print internal form of commands (opcodes)";
-    (*x: [[CLI.main()]] [[options]] elements *)
-    "-s", Arg.Set Flags.sflag,
-    " print exit status after any command where the status is non-null";
-    (*x: [[CLI.main()]] [[options]] elements *)
-    "-x", Arg.Set Flags.xflag,
-    " print each simple command before executing it";
     (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";

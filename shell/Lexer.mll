@@ -69,17 +69,29 @@ rule token = parse
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
   (*s: [[Lexer.token()]] symbol cases *)
-  | "&&" { Globals.skipnl := true; TAndAnd }
-  | "||" { Globals.skipnl := true; TOrOr }
-  (*x: [[Lexer.token()]] symbol cases *)
   | ';'  { TSemicolon }
-  | "&"  { TAnd }
   (*x: [[Lexer.token()]] symbol cases *)
-  | "|"  { Globals.skipnl := true; TPipe }
+  | "&"  { TAnd }
   (*x: [[Lexer.token()]] symbol cases *)
   | ">"  { TRedir Ast.RWrite }
   | "<"  { TRedir Ast.RRead }
   | ">>" { TRedir Ast.RAppend }
+  (*x: [[Lexer.token()]] symbol cases *)
+  | '('  { TOPar }   | ')' { TCPar }
+  | '{'  { TOBrace } | '}' { TCBrace }
+  (*x: [[Lexer.token()]] symbol cases *)
+  | '='  { TEq }
+  (*x: [[Lexer.token()]] symbol cases *)
+  | "|"  { Globals.skipnl := true; TPipe }
+  (*x: [[Lexer.token()]] symbol cases *)
+  | "&&" { Globals.skipnl := true; TAndAnd }
+  | "||" { Globals.skipnl := true; TOrOr }
+  (*x: [[Lexer.token()]] symbol cases *)
+  | "!" { TBang }
+  (*x: [[Lexer.token()]] symbol cases *)
+  | "~" { TTwiddle } 
+  (*x: [[Lexer.token()]] symbol cases *)
+  | "@" { TSubshell }
   (*x: [[Lexer.token()]] symbol cases *)
   | ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
          {  let fd0 = failwith "TODO: fd0" in
@@ -94,17 +106,7 @@ rule token = parse
   }
   (* less: advanced pipe and redirection *)
   (*x: [[Lexer.token()]] symbol cases *)
-  | '('  { TOPar }   | ')' { TCPar }
-  | '{'  { TOBrace } | '}' { TCBrace }
-  (*x: [[Lexer.token()]] symbol cases *)
-  | '='  { TEq }
-  (*x: [[Lexer.token()]] symbol cases *)
   | "`" { TBackquote } 
-  (*x: [[Lexer.token()]] symbol cases *)
-  | "~" { TTwiddle } 
-  | "!" { TBang }
-  (*x: [[Lexer.token()]] symbol cases *)
-  | "@" { TSubshell }
   (*x: [[Lexer.token()]] symbol cases *)
   | "^" { TCaret }
   (*e: [[Lexer.token()]] symbol cases *)
@@ -115,9 +117,9 @@ rule token = parse
   (*s: [[Lexer.token()]] variable cases *)
   | "$"   { TDollar }
   (*x: [[Lexer.token()]] variable cases *)
-  | "$#"  { TCount }
-  (*x: [[Lexer.token()]] variable cases *)
   | "$\"" { TStringify }
+  (*x: [[Lexer.token()]] variable cases *)
+  | "$#"  { TCount }
   (*e: [[Lexer.token()]] variable cases *)
 
   (* ----------------------------------------------------------------------- *)
@@ -158,8 +160,8 @@ rule token = parse
 (*****************************************************************************)
 (*s: rule [[Lexer.quote]] *)
 and quote = parse
-  | "''" { "'" ^ quote lexbuf } 
   | "'" { "" } 
+  | "''" { "'" ^ quote lexbuf } 
   | "\n" { 
       incr_lineno ();
       Prompt.pprompt ();

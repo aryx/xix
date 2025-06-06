@@ -68,20 +68,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       (* todo: trapreq *)
       Process.exit caps (Status.getstatus())
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.Mark -> R.push_list ()
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* [string] *)
-  | O.Word ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      let x = t.R.code.(!pc) in
-      incr pc;
-      (match x with
-      | O.S s -> R.push_word s
-      (* stricter: but should never happen *)
-      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
-      )
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (name) (val) *)
   | O.Assign ->
       let t = R.cur () in
@@ -176,11 +162,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
           Status.setstatus (Status.concstatus (Status.getstatus()) status);
       )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (value?) *)
-  | O.Glob ->
-      Logs.err (fun m -> m "TODO: interpret Glob");
-      ()
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (file)[fd] *)
   | O.Write ->
       let t = R.cur () in
@@ -227,24 +208,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
             t.R.argv <- newargv
           with Failure s -> E.error caps s
          )             
-      | _ -> E.error caps "variable name not singleton!"
-      )
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (name) *)
-  | O.Count ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] -> 
-          (* less: deglob *)
-          let value = vlook_varname_or_index varname in
-          let num = 
-            match value with
-            | None -> 0
-            | Some xs -> List.length xs
-          in
-          R.pop_list ();
-          R.push_word (spf "%d" num)
       | _ -> E.error caps "variable name not singleton!"
       )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
@@ -307,20 +270,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
   | O.Popm ->
       R.pop_list ()
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (name) *)
-  | O.DelFn ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      argv |> List.iter (fun s ->
-        let x = Fn.flook s in
-        match x with
-        | Some _ -> Hashtbl.remove R.fns s
-        | None -> 
-            (* stricter: *)
-            if !Flags.strict_mode
-            then E.error caps (spf "deleting undefined function %s" s)
-      );
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Not ->
       Status.setstatus (if Status.truestatus() then "false" else "");
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
@@ -338,12 +287,63 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       then pc := int_at_address t (!pc)
       else incr pc
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* [string] *)
+  | O.Word ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      let x = t.R.code.(!pc) in
+      incr pc;
+      (match x with
+      | O.S s -> R.push_word s
+      (* stricter: but should never happen *)
+      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+      )
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  | O.Mark -> R.push_list ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (args) *)
   | O.Simple -> Op_process.op_Simple caps ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (value?) *)
+  | O.Glob ->
+      Logs.err (fun m -> m "TODO: interpret Glob");
+      ()
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Eflag ->
       if !Globals.eflagok && not (Status.truestatus())
       then Process.exit caps (Status.getstatus())
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (name) *)
+  | O.DelFn ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      argv |> List.iter (fun s ->
+        let x = Fn.flook s in
+        match x with
+        | Some _ -> Hashtbl.remove R.fns s
+        | None -> 
+            (* stricter: *)
+            if !Flags.strict_mode
+            then E.error caps (spf "deleting undefined function %s" s)
+      );
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (name) *)
+  | O.Count ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] -> 
+          (* less: deglob *)
+          let value = vlook_varname_or_index varname in
+          let num = 
+            match value with
+            | None -> 0
+            | Some xs -> List.length xs
+          in
+          R.pop_list ();
+          R.push_word (spf "%d" num)
+      | _ -> E.error caps "variable name not singleton!"
+      )
   (*e: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | (O.Concatenate|O.Stringify    |O.Index|
      O.Unlocal|

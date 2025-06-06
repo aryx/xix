@@ -19,13 +19,13 @@ type value =
   (* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
   | CommandOutput of cmd_sequence
   (*x: [[Ast.value]] other cases *)
+  | Stringify of value (* $"foo " *)
+  (*x: [[Ast.value]] other cases *)
   | Count of value (* $#foo *)
   | Index of value * values (* $foo(...) *)
   (*x: [[Ast.value]] other cases *)
   (* ^ distributes over lists *)
   | Concat of value * value
-  (*x: [[Ast.value]] other cases *)
-  | Stringify of value (* $"foo " *)
   (*e: [[Ast.value]] other cases *)
 (*e: type [[Ast.value]] *)
 (*s: type [[Ast.values]] *)
@@ -40,9 +40,7 @@ and cmd =
   (* Base *)
   | Simple of value * values
   | Pipe of cmd * cmd (* less: lfd, rfd option *)
-  (*s: [[Ast.cmd]] other base cases *)
   | Async of cmd
-  (*e: [[Ast.cmd]] other base cases *)
 
   (* Redirections *)
   | Redir of cmd * redirection
@@ -51,14 +49,11 @@ and cmd =
   (*e: [[Ast.cmd]] other redirection cases *)
 
   (* expressions *)
-  (*s: [[Ast.cmd]] expression cases *)
   | And of cmd * cmd
   | Or of cmd * cmd
   | Not of cmd
-  (*x: [[Ast.cmd]] expression cases *)
+  (* can also run the program 'test' for other comparisons ('[' in bash) *)
   | Match of value * values
-  (* can also run the program 'test' for other comparisons *)
-  (*e: [[Ast.cmd]] expression cases *)
 
   (* stmts *)
   | If of cmd_sequence * cmd

@@ -34,15 +34,15 @@ type operation =
 
   (* Process! *)
   | Simple (* (args) *)
+  | Async  (* {... Xreturn} *)
 
   (* Control flow *)
   | If 
   | IfNot
+  (* While are compiled in jumps *)
   | Jump  (* [addr] *)
   | Exit 
   (*s: [[Opcode.operation]] other control cases *)
-  (* While are compiled in jumps *)  
-  | Match (* (pat, str) *)
   | Case  (* (pat, value){...} *)
   | For   (* (var, list){... Xreturn} *)
   (*x: [[Opcode.operation]] other control cases *)
@@ -54,6 +54,7 @@ type operation =
   | Not
   | False (* {...} *)
   | True  (* {...} *)
+  | Match (* (pat, str) *)
 
   (* Redirections *)
   | Read (* (file)[fd] *)
@@ -77,19 +78,19 @@ type operation =
   | Fn (* (name){... Xreturn } *)
 
   (*s: [[Opcode.operation]] other cases *)
-  | DelFn (* (name) *)
-  (* less: RdFn *)
-  (*x: [[Opcode.operation]] other cases *)
-  (* ?? *)
-  | Subshell (* {... Xexit} *)
-  | Backquote (* {... Xreturn} *)
-  | Async     (* {... Xreturn} *)
-  (*x: [[Opcode.operation]] other cases *)
   (* Globbing *)
   | Glob (* (value?) *)
   (*x: [[Opcode.operation]] other cases *)
   (* Error management *)
   | Eflag
+  (*x: [[Opcode.operation]] other cases *)
+  | DelFn (* (name) *)
+  (* less: RdFn *)
+  (*x: [[Opcode.operation]] other cases *)
+  (* ?? *)
+  | Subshell (* {... Xexit} *)
+  (*x: [[Opcode.operation]] other cases *)
+  | Backquote (* {... Xreturn} *)
   (*e: [[Opcode.operation]] other cases *)
 
   | REPL (* *)

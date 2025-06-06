@@ -24,23 +24,24 @@ let execute (caps : <Cap.exec; ..>) args path =
 (*e: function [[Op_process.execute]] *)
 
 (*s: function [[Op_process.exec]] *)
-let exec (caps : < Cap.exec; Cap.exit; .. >) () =
+let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
   R.pop_word (); (* "exec" *)
 
   let t = R.cur () in
   let argv = t.R.argv in
-
   match argv with
   | [] -> E.error caps "empty argument list" 
   | prog::_xs -> 
+      (*s: [[Op_process.exec()]] before [[execute]] *)
       R.doredir t.R.redirections;
+      (*e: [[Op_process.exec()]] before [[execute]] *)
       execute caps argv (PATH.search_path_for_cmd prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 (*e: function [[Op_process.exec]] *)
 
 (*s: function [[Op_process.forkexec]] *)
-let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
+let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () : int =
   let pid = CapUnix.fork caps () in
   (* child *)
   if pid = 0
@@ -62,21 +63,25 @@ let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
 let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
-
+  (*s: [[Op_process.op_Simple()]] possibly dump command *)
   (* less: globlist () *)
   if !Flags.xflag 
   then Logs.app (fun m -> m "%s" (String.concat " " argv));
-
+  (*e: [[Op_process.op_Simple()]] possibly dump command *)
   match argv with
+  (*s: [[Op_process.op_Simple()]] match [[argv]] empty case *)
   (* How can you get an empty list as Simple has at least one word?
    * If you do A=()\n and then $A\n then Simple has a word, but after
    * expansion the list becomes empty.
    * stricter: I give extra explanations
    *)
   | [] -> E.error caps "empty argument list (after variable expansion)" 
-
+  (*e: [[Op_process.op_Simple()]] match [[argv]] empty case *)
   | argv0::args ->
       match argv0 with
+      (*s: [[Op_process.op_Simple()]] match [[argv0]] builtin cases *)
+      | s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
+      (*x: [[Op_process.op_Simple()]] match [[argv0]] builtin cases *)
       (* todo: if argv0 is a function *)
       | "builtin" -> 
           (match args with
@@ -88,18 +93,22 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
               R.pop_word ();
               Builtin.dispatch caps argv0
           )
-      | s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
+      (*e: [[Op_process.op_Simple()]] match [[argv0]] builtin cases *)
       | _ ->
+        (*s: [[Op_process.op_Simple()]] when default case, before the fork *)
         (* if exitnext opti *)
         flush stderr;
         (* less: Updenv *)
+        (*e: [[Op_process.op_Simple()]] when default case, before the fork *)
         (try 
           let pid = forkexec caps () in
           R.pop_list ();
+          (*s: [[Op_process.op_Simple()]] when default case, after the fork *)
           (* do again even if was interrupted *)
           while Process.waitfor pid = Process.WaitforInterrupted do
             ()
           done
+          (*e: [[Op_process.op_Simple()]] when default case, after the fork *)
         with
           | Failure s ->
               E.error caps ("try again: " ^ s)

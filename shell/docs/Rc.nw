@@ -114,6 +114,12 @@ Documentation License, Version 1.3.
 /*(*-----------------------------------------*)*/
 %token TPipe
 %token<Ast.redirection_kind> TRedir
+%token TAndAnd TOrOr
+%token TBang
+%token TTwiddle  
+%token TEq
+%token TDollar
+%token TAnd
 <<Parser tokens, operators other cases>>
 
 /*(*-----------------------------------------*)*/
@@ -122,8 +128,7 @@ Documentation License, Version 1.3.
 
 %token TOPar TCPar
 %token TOBrace TCBrace
-%token TSemicolon TEq
-%token TDollar
+%token TSemicolon 
 <<Parser tokens, punctuation other cases>>
 
 /*(*-----------------------------------------*)*/
@@ -135,46 +140,6 @@ Documentation License, Version 1.3.
 @
 
 
-
-
-
-%LP: distribute to advanced or later
-<<Parser tokens, operators other cases>>=
-%token TAndAnd TOrOr
-@
-
-<<Parser tokens, operators other cases>>=
-%token TBang
-@
-<<Parser tokens, operators other cases>>=
-%token TTwiddle  
-@
-
-<<Parser tokens, operators other cases>>=
-%token<Ast.redirection_kind * int * int> TDup
-@
-<<Parser tokens, operators other cases>>=
-%token TAnd
-@
-<<Parser tokens, operators other cases>>=
-%token TSubshell
-@
-
-<<Parser tokens, punctuation other cases>>=
-%token TCount
-@
-<<Parser tokens, punctuation other cases>>=
-%token TStringify
-@
-<<Parser tokens, punctuation other cases>>=
-%token TSub
-@
-<<Parser tokens, punctuation other cases>>=
-%token TCaret
-@
-<<Parser tokens, punctuation other cases>>=
-%token TBackquote
-@
 
 \section{Abstract syntax tree (AST)}
 
@@ -196,14 +161,18 @@ and cmd =
   (* Base *)
   | Simple of value * values
   | Pipe of cmd * cmd (* less: lfd, rfd option *)
-  <<[[Ast.cmd]] other base cases>>
+  | Async of cmd
 
   (* Redirections *)
   | Redir of cmd * redirection
   <<[[Ast.cmd]] other redirection cases>>
 
   (* expressions *)
-  <<[[Ast.cmd]] expression cases>>
+  | And of cmd * cmd
+  | Or of cmd * cmd
+  | Not of cmd
+  (* can also run the program 'test' for other comparisons ('[' in bash) *)
+  | Match of value * values
 
   (* stmts *)
   | If of cmd_sequence * cmd
@@ -266,72 +235,6 @@ type value =
 
 
 
-
-
-%LP: distribute to advanced or later
-<<[[Ast.redirection_kind]] other cases>>=
-(* less: RHere *) (* < < *)
-| RDup of int * int (* >[x=y] *)
-@
-
-<<[[Ast.value]] other cases>>=
-(* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
-| CommandOutput of cmd_sequence
-@
-%$
-<<[[Ast.value]] other cases>>=
-| Count of value (* $#foo *)
-| Index of value * values (* $foo(...) *)
-@
-%$
-<<[[Ast.value]] other cases>>=
-(* ^ distributes over lists *)
-| Concat of value * value
-@
-<<[[Ast.value]] other cases>>=
-| Stringify of value (* $"foo " *)
-@
-%$
-
-
-<<[[Ast.cmd]] other base cases>>=
-| Async of cmd
-@
-
-<<[[Ast.cmd]] other redirection cases>>=
-| Dup of cmd * redirection_kind * int * int (* >[1=2] *)
-@
-
-<<[[Ast.cmd]] expression cases>>=
-| And of cmd * cmd
-| Or of cmd * cmd
-| Not of cmd
-@
-<<[[Ast.cmd]] expression cases>>=
-| Match of value * values
-(* can also run the program 'test' for other comparisons *)
-@
-
-
-<<[[Ast.cmd]] other statement cases>>=
-| Switch of value * cmd_sequence
-@
-<<[[Ast.cmd]] other statement cases>>=
-| ForIn of value * values * cmd
-(* less: could desugar as ForIn value $* *)
-| For of value * cmd
-@
-<<[[Ast.cmd]] other statement cases>>=
-| Compound of cmd_sequence
-@
-%$
-
-<<[[Ast.cmd]] other definition cases>>=
-| DelFn of value
-@
-
-
-
 \section{Opcodes}
 
 <<signature [[Compile.compile]]>>=
@@ -378,10 +281,12 @@ type operation =
 
   (* Process! *)
   | Simple (* (args) *)
+  | Async  (* {... Xreturn} *)
 
   (* Control flow *)
   | If 
   | IfNot
+  (* While are compiled in jumps *)
   | Jump  (* [addr] *)
   | Exit 
   <<[[Opcode.operation]] other control cases>>
@@ -391,6 +296,7 @@ type operation =
   | Not
   | False (* {...} *)
   | True  (* {...} *)
+  | Match (* (pat, str) *)
 
   (* Redirections *)
   | Read (* (file)[fd] *)
@@ -420,22 +326,10 @@ type operation =
 
 
 
-%LP: distribute to advanced
-<<[[Opcode.operation]] other stack cases>>=
-| Count (* (name) *)
-| Concatenate (* (left)(right) *)
-| Stringify (* (name) *)
-@
 
-<<[[Opcode.operation]] other variable cases>>=
-| Index  (* ??? *)
-| Local (* (name)(val) *)
-| Unlocal (* *)
-@
+
 
 <<[[Opcode.operation]] other control cases>>=
-(* While are compiled in jumps *)  
-| Match (* (pat, str) *)
 | Case  (* (pat, value){...} *)
 | For   (* (var, list){... Xreturn} *)
 @
@@ -452,23 +346,6 @@ type operation =
 | PipeFd (* [type]{... Xreturn} *)
 @
 
-
-<<[[Opcode.operation]] other cases>>=
-| DelFn (* (name) *)
-(* less: RdFn *)
-@
-
-<<[[Opcode.operation]] other cases>>=
-(* ?? *)
-| Subshell (* {... Xexit} *)
-| Backquote (* {... Xreturn} *)
-| Async     (* {... Xreturn} *)
-@
-
-<<[[Opcode.operation]] other cases>>=
-(* Globbing *)
-| Glob (* (value?) *)
-@
 
 
 \section{Words}
@@ -583,8 +460,11 @@ type thread = {
 }
 @
 % pc = program counter (a classic in assembly)
+% argv =~ sp = stack (also classic in assembly)
+% called argv cos ultimately what will be passed to simple commands
+%  executed
 
-%Where is the stack ?? what is argv? that's the stack? use Stack.t ?
+%less: use Stack.t for argv?
 
 
 
@@ -639,16 +519,29 @@ let mk_thread code pc locals =
 
 \subsection{The stack}
 
-
-<<[[Runtime.thread]] other fields>>=
-(* Used for switch but also assignments. *)
-mutable argv_stack: (string list) list;
+<<signature [[Runtime.push_word]]>>=
+val push_word : string -> unit
 @
-%TODO? use value list here?? diff with argv?
-
-<<[[Runtime.mk_thread()]] set other fields>>=
-argv_stack = [];
+<<function [[Runtime.push_word]]>>=
+let push_word s =
+  let t = cur () in
+  t.argv <- s::t.argv
 @
+
+
+<<signature [[Runtime.pop_word]]>>=
+val pop_word : unit -> unit
+@
+<<function [[Runtime.pop_word]]>>=
+let pop_word () =
+  let t = cur () in
+  match t.argv with
+  | [] -> failwith "pop_word but no word!"
+  | _x::xs ->
+      t.argv <- xs
+@
+
+
 
 \subsection{Local variables}
 
@@ -734,60 +627,7 @@ waitstatus = NothingToWaitfor;
 
 
 
-%\subsection{Stack helpers}
-
-<<signature [[Runtime.push_list]]>>=
-val push_list : unit -> unit
-@
-
-<<signature [[Runtime.pop_list]]>>=
-val pop_list : unit -> unit
-@
-
-
-<<signature [[Runtime.pop_word]]>>=
-val pop_word : unit -> unit
-@
-
-
-<<function [[Runtime.push_list]]>>=
-let push_list () =
-  let t = cur () in
-  t.argv_stack <- t.argv :: t.argv_stack;
-  t.argv <- []
-@
-
-<<function [[Runtime.pop_list]]>>=
-let pop_list () =
-  let t = cur () in
-  match t.argv_stack with
-  (* At the very beginning we do *=(argv) in bootstrap.
-   * In that case, Assign will generate two pop_list, but for
-   * the second one argv_stack becomes empty. The only thing
-   * we must do is to empty argv then.
-   *)
-  | [] ->
-     t.argv <- []
-  | x::xs -> 
-      t.argv_stack <- xs;
-      t.argv <- x
-@
-
-
-<<function [[Runtime.pop_word]]>>=
-let pop_word () =
-  let t = cur () in
-  match t.argv with
-  | [] -> failwith "pop_word but no word!"
-  | _x::xs ->
-      t.argv <- xs
-@
-
-
-
 \chapter{[[main()]]}
-
-
 
 
 
@@ -897,6 +737,7 @@ let login = ref false
 %TODO? implemented?
 
 \subsection{Interactive mode: [[rc -i]]}
+% and prompt part1
 
 <<constant [[Flags.interactive]]>>=
 (* -i (on by default when detects that stdin is /dev/cons *)
@@ -1004,15 +845,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
 args |> List.rev |> List.iter Runtime.push_word;
 @
 
-<<signature [[Runtime.push_word]]>>=
-val push_word : string -> unit
-@
-<<function [[Runtime.push_word]]>>=
-let push_word s =
-  let t = cur () in
-  t.argv <- s::t.argv
-@
-
 
 
 
@@ -1088,6 +920,7 @@ let op_REPL (caps : < Cap.exit; ..>) () =
     <<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>
 @
 % parse_line, compile, runq
+% and this is a hidden loop because of the decr t.R.pc!
 
 <<signature [[Parse.parse_line]]>>=
 val parse_line : Lexing.lexbuf -> Ast.line
@@ -1097,6 +930,9 @@ val parse_line : Lexing.lexbuf -> Ast.line
 % when return op_REPL, and interpret_operation, will go gack to
 % while loop of interpret_bootstrap and newt at the top of cur!
 % so will execute that!
+
+
+
 
 <<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>=
 (* todo: check signals  *)
@@ -1111,19 +947,6 @@ end
 @
 
 
-
-<<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>=
-(* set prompstr *)
-if t.R.iflag then begin
-  let promptv = (Var.vlook "prompt").R.v in
-  Prompt.prompt := 
-    (match promptv with
-    | Some (x::_xs) -> x
-    (* stricter? display error message if prompt set but no element?*)
-    | Some [] | None -> "% "
-    );
-end;
-@
 
 
 <<signature [[Process.return]]>>=
@@ -1154,68 +977,36 @@ let return (caps : < Cap.exit; .. >) () =
 %\subsection{End-of-file management}
 %\subsection{Multiple lines commands and escaped newlines}
 %\section{Looking ahead: [[nextc()]] and [[advance()]]}
-\subsection{Displaying the prompt}
-
-<<signature [[Prompt.doprompt]]>>=
-val doprompt : bool ref
-@
-
-<<signature [[Prompt.prompt]]>>=
-val prompt : string ref
-@
-
-<<signature [[Prompt.pprompt]]>>=
-(* !will reset doprompt! *)
-val pprompt : unit -> unit
-@
-
-
-<<constant [[Prompt.doprompt]]>>=
-(* Set to true so the prompt is displayed before the first character is read.
- *
- * Do we need that global? Can we not just call pprompt() explicitely?
- * No because when we get a newline, we know we should display the prompt,
- * but not before finishing executing the command. So the display
- * prompt should be done before the next round of input.
- * less: actually we could do it in the caller of parse_line, in the REPL.
- *)
-let doprompt = ref true
-@
-
-<<constant [[Prompt.prompt]]>>=
-let prompt = ref "% "
-@
-
-<<function [[Prompt.pprompt]]>>=
-let pprompt () =
-  let t = R.cur () in
-  if t.R.iflag then begin
-    prerr_string !prompt;
-    flush stderr;
-
-    (* set promptstr for the next pprompt() *)
-    let promptv = (Var.vlook "prompt").R.v in
-    prompt := 
-      (match promptv with
-      | Some [_x;y] -> y
-       (* stricter? display error message if prompt set no 2 elements?*)
-      | Some _ | None -> "\t"
-      );
-  end;
-  (* alt: incr t.R.line; this is done in the lexer instead *)
-  doprompt := false
-@
-
-
-
-
-
-
+%\subsection{Displaying the prompt}
 
 
 \chapter{Lexing}
 
-% parse_line() will call Lexer.token()
+% Seen tokens before in core DS.
+
+% seen mentioned parse_line in REPL
+
+% parse_line() will call Lexer.token() via lexfunc below
+
+\section{[[lexfunc()]] skeleton}
+
+<<[[Parse.parse_line()]] nested function [[lexfunc]]>>=
+let lexfunc lexbuf =
+  <<[[Parse.lexfunc()]] possibly print the prompt>>
+  let tok = ref (Lexer.token lexbuf) in
+  <<[[Parse.lexfunc()]] adjustment for skipnl depending on [[tok]] read>>
+  <<[[Parse.lexfunc()]] adjust [[curtok]] with [[tok]]>>
+  (* todo: 
+     - handle lastdol 
+     - handle SUB
+     - handle free caret insertion
+  *)
+  !tok 
+  <<[[Parse.lexfunc()]] possibly dump tokens>>
+in
+@
+
+
 
 <<signature [[Lexer.token]]>>=
 val token: Lexing.lexbuf -> Parser.token
@@ -1346,24 +1137,89 @@ let incr_lineno () =
   let t = Runtime.cur () in
   incr t.Runtime.line
 @  
+% what is using t.line ??
 
 
-
-
-\section{Operators ([['&']], [['&&']], [['|']], [['||']], [['<']], [['>']], [['$']], \ldots)}
-
-<<[[Lexer.token()]] symbol cases>>=
-| "&&" { Globals.skipnl := true; TAndAnd }
-| "||" { Globals.skipnl := true; TOrOr }
+<<signature [[Prompt.doprompt]]>>=
+val doprompt : bool ref
 @
+<<constant [[Prompt.doprompt]]>>=
+(* Set to true so the prompt is displayed before the first character is read.
+ *
+ * Do we need that global? Can we not just call pprompt() explicitely?
+ * No because when we get a newline, we know we should display the prompt,
+ * but not before finishing executing the command. So the display
+ * prompt should be done before the next round of input.
+ * less: actually we could do it in the caller of parse_line, in the REPL.
+ *)
+let doprompt = ref true
+@
+
+
+<<[[Parse.lexfunc()]] possibly print the prompt>>=
+(* less: could do that in caller? would remove need for doprompt *)
+if !Prompt.doprompt
+then Prompt.pprompt ();
+@
+
+<<signature [[Prompt.prompt]]>>=
+val prompt : string ref
+@
+<<constant [[Prompt.prompt]]>>=
+let prompt = ref "% "
+@
+
+
+<<signature [[Prompt.pprompt]]>>=
+(* !will reset doprompt! *)
+val pprompt : unit -> unit
+@
+<<function [[Prompt.pprompt]]>>=
+let pprompt () =
+  let t = R.cur () in
+  if t.R.iflag then begin
+    prerr_string !prompt;
+    flush stderr;
+
+    (* set promptstr for the next pprompt() *)
+    let promptv = (Var.vlook "prompt").R.v in
+    prompt := 
+      (match promptv with
+      | Some [_x;y] -> y
+       (* stricter? display error message if prompt set no 2 elements?*)
+      | Some _ | None -> "\t"
+      );
+  end;
+  (* alt: incr t.R.line; this is done in the lexer instead *)
+  doprompt := false
+@
+
+
+
+<<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>=
+(* set prompstr *)
+if t.R.iflag then begin
+  let promptv = (Var.vlook "prompt").R.v in
+  Prompt.prompt := 
+    (match promptv with
+    | Some (x::_xs) -> x
+    (* stricter? display error message if prompt set but no element?*)
+    | Some [] | None -> "% "
+    );
+end;
+@
+% duplicate?
+
+
+
+\section{Operators ([[';']], [['&']], [['|']], [['<']], [['>']], [['$']], [['&&']], [['||']], \ldots)}
+%alt: Symbols?
 
 <<[[Lexer.token()]] symbol cases>>=
 | ';'  { TSemicolon }
-| "&"  { TAnd }
 @
-
 <<[[Lexer.token()]] symbol cases>>=
-| "|"  { Globals.skipnl := true; TPipe }
+| "&"  { TAnd }
 @
 
 <<[[Lexer.token()]] symbol cases>>=
@@ -1371,19 +1227,10 @@ let incr_lineno () =
 | "<"  { TRedir Ast.RRead }
 | ">>" { TRedir Ast.RAppend }
 @
-<<[[Lexer.token()]] symbol cases>>=
-| ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
-       {  let fd0 = failwith "TODO: fd0" in
-   let fd1 = failwith "TODO: fd1" in
-   TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
-}
-| ">>[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
-       {
-           let fd0 = failwith "TODO: fd0" in
-    let fd1 = failwith "TODO: fd1" in
-    TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
-}
-(* less: advanced pipe and redirection *)
+
+
+<<[[Lexer.token()]] variable cases>>=
+| "$"   { TDollar }
 @
 
 <<[[Lexer.token()]] symbol cases>>=
@@ -1394,19 +1241,9 @@ let incr_lineno () =
 | '='  { TEq }
 @
 
-<<[[Lexer.token()]] symbol cases>>=
-| "`" { TBackquote } 
-@
-<<[[Lexer.token()]] symbol cases>>=
-| "~" { TTwiddle } 
-| "!" { TBang }
-@
 
 <<[[Lexer.token()]] symbol cases>>=
-| "@" { TSubshell }
-@
-<<[[Lexer.token()]] symbol cases>>=
-| "^" { TCaret }
+| "|"  { Globals.skipnl := true; TPipe }
 @
 
 
@@ -1426,16 +1263,49 @@ let skipnl = ref false
 @
 
 
-<<[[Lexer.token()]] variable cases>>=
-| "$"   { TDollar }
+<<[[Parse.parse_line()]] locals and inits>>=
+Globals.skipnl := false;
 @
-<<[[Lexer.token()]] variable cases>>=
-| "$#"  { TCount }
+<<[[Parse.parse_line()]] locals and inits>>=
+let got_skipnl_last_round = ref false in
 @
-<<[[Lexer.token()]] variable cases>>=
-| "$\"" { TStringify }
+
+<<[[Parse.lexfunc()]] adjustment for skipnl depending on [[tok]] read>>=
+if !got_skipnl_last_round then begin
+  if !tok = Parser.TNewline 
+  then begin
+    let rec loop () =
+      Prompt.pprompt ();
+      tok := Lexer.token lexbuf;
+      if !tok = Parser.TNewline
+      then loop ()
+    in
+    loop ()
+  end;
+  got_skipnl_last_round := false;
+end;
+if !Globals.skipnl 
+then got_skipnl_last_round := true;
+Globals.skipnl := false;
 @
-%$
+% subtle
+
+
+<<[[Lexer.token()]] symbol cases>>=
+| "&&" { Globals.skipnl := true; TAndAnd }
+| "||" { Globals.skipnl := true; TOrOr }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "!" { TBang }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "~" { TTwiddle } 
+@
+
+
+
 
 \section{Quoted strings ([['...']])}
 
@@ -1445,8 +1315,8 @@ let skipnl = ref false
 
 <<rule [[Lexer.quote]]>>=
 and quote = parse
-  | "''" { "'" ^ quote lexbuf } 
   | "'" { "" } 
+  | "''" { "'" ^ quote lexbuf } 
   | "\n" { 
       incr_lineno ();
       Prompt.pprompt ();
@@ -1457,7 +1327,7 @@ and quote = parse
   | eof { error "unterminated quote" }
 @
 
-\section{Keywords and identifiers ([[if]], [[for]], [[while]], [[switch]], [[fn]], \ldots )}
+\section{Keywords and words ([[if]], [[for]], [[while]], [[switch]], [[fn]], \ldots )}
 
 <<lexer regexp aliases>>=
 (* original: !strchr("\n \t#;&|^$=`'{}()<>", c) && c!=EOF;
@@ -1488,7 +1358,6 @@ let wordchr = [^'\n' ' ' '\t' '#'
 }
 @
 
-%\section{Array subscript ([[<arr>(<n>)]])}
 
 
 
@@ -1500,58 +1369,27 @@ let wordchr = [^'\n' ' ' '\t' '#'
 <<function [[Parse.parse_line]]>>=
 let parse_line lexbuf =
   let curtok = ref (Parser.EOF, "EOF") in
-
-  Globals.skipnl := false;
-  let got_skipnl_last_round = ref false in
-
-  let lexfunc lexbuf =
-    (* less: could do that in caller? would remove need for doprompt *)
-    if !Prompt.doprompt
-    then Prompt.pprompt ();
-
-    let tok = ref (Lexer.token lexbuf) in
-
-    if !got_skipnl_last_round then begin
-      if !tok = Parser.TNewline 
-      then begin
-        let rec loop () =
-          Prompt.pprompt ();
-          tok := Lexer.token lexbuf;
-          if !tok = Parser.TNewline
-          then loop ()
-        in
-        loop ()
-      end;
-      got_skipnl_last_round := false;
-    end;
-    if !Globals.skipnl 
-    then got_skipnl_last_round := true;
-    Globals.skipnl := false;
-
-    let s = Lexing.lexeme lexbuf in
-    curtok := (!tok, s);
-    (* todo: 
-       - handle lastdol 
-       - handle SUB
-       - handle free caret insertion
-    *)
-    !tok 
-    |> (fun tok -> 
-        if !Flags.dump_tokens 
-        then Logs.app (fun m -> m "%s" (Dumper.dump (tok,s)));
-        tok)
-  in
+  <<[[Parse.parse_line()]] locals and inits>>
+  <<[[Parse.parse_line()]] nested function [[lexfunc]]>>
   try 
     Parser.rc lexfunc lexbuf
-    |> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Dumper_.s_of_line ast)); ast)
+    <<[[Parse.parse_line()]] possibly dump AST>>
   with 
     | Parsing.Parse_error ->
         error "syntax error" !curtok
     | Lexer.Lexical_error s ->
         error (spf "lexical error, %s" s) !curtok
 @
+% 'rc' rule!
 
+<<[[Parse.lexfunc()]] adjust [[curtok]] with [[tok]]>>=
+let s = Lexing.lexeme lexbuf in
+curtok := (!tok, s);
+@
 
+% curtok for error management in parse_line only? ugly
+%TODO: get rid of?, can still call Lexing.lexeme in exn handler?
+% maybe can do 'Parser.rc (fun lexbuf -> let tok = lexfunc lexbuf; curtok := ....) ?
 
 <<function [[Parse.error]]>>=
 let error s (curtok, curtokstr) =
@@ -1579,34 +1417,7 @@ let error s (curtok, curtokstr) =
 @
 
 
-
-<<function [[Parser.mk_seq]]>>=
-(* This is a useful optimisation as you can get lots of EmptyCommand,
- * for instance, in {\nls\n} you will get 2 EmptyCommand (for each \n)
-*)
-let mk_Seq (a, b) =
-  match a, b with
-  | EmptyCommand, _ -> b
-  | _, [EmptyCommand] -> [a]
-  | _ -> a::b
-@
-
-<<Parser token priorities>>=
-/*(* from low to high *)*/
-%left TIf TWhile TFor TSwitch TCPar TNot
-%left TAndAnd TOrOr
-%left TBang TSubshell
-%left TPipe
-%left TCaret
-/*(* $$A -> ($ ($ A)) not (($ $) A) *)*/
-%right TDollar TCount TStringify
-%left TSub
-@
-
-<<Parser entry points types>>=
-%type <Ast.line> rc
-%start rc
-@
+\section{Grammar overview}
 
 <<Parser.mly>>=
 %{
@@ -1645,6 +1456,23 @@ open Ast
 <<grammar>>
 @
 
+
+
+
+<<Parser token priorities>>=
+/*(* from low to high *)*/
+%left TIf TWhile TFor TSwitch TCPar TNot
+%left TAndAnd TOrOr
+%left TBang TSubshell
+%left TPipe
+%left TCaret
+/*(* $$A -> ($ ($ A)) not (($ $) A) *)*/
+%right TDollar TCount TStringify
+%left TSub
+@
+
+
+
 <<grammar>>=
 /*(*************************************************************************)*/
 /*(*1 line *)*/
@@ -1653,176 +1481,363 @@ rc:
   | EOF           { None }
   | line TNewline { Some $1 }
 
-/*(* =~ stmt *)*/
-line:
-  | cmd { [$1] }
-  | cmdsa line { $1 $2  }
-
-cmdsa:
-  | cmd TSemicolon { (fun x -> mk_Seq ($1, x)) }
-  | cmd TAnd       { (fun x -> mk_Seq (Async $1, x)) }
+<<rule [[Parser.line]]>>
+<<other line related rules>>
 
 /*(*************************************************************************)*/
 /*(*1 Command *)*/
 /*(*************************************************************************)*/
 
+<<rule [[Parser.cmd]]>>
+<<rule [[Parser.simple]]>>
+<<other command related rules>>
+
+/*(*************************************************************************)*/
+/*(*1 Word *)*/
+/*(*************************************************************************)*/
+
+<<rule [[Parser.comword]]>>
+<<rule [[Parser.word]]>>
+<<other word related rules>>
+
+/*(*************************************************************************)*/
+/*(*1 Redirection *)*/
+/*(*************************************************************************)*/
+
+<<rule [[Parser.redir]]>>
+<<other redirection related rules>>
+
+/*(*************************************************************************)*/
+/*(*1 Skipnl hacks *)*/
+/*(*************************************************************************)*/
+
+<<skipnl rules>>
+@
+
+
+<<Parser entry points types>>=
+%type <Ast.line> rc
+<<Parser other rule types>>
+%start rc
+@
+
+
+
+\section{Simple commands ([[<cmd> <arg1>...<argn>]]) }
+
+% a line can have a single command (stmt)
+<<rule [[Parser.line]]>>=
+/*(* =~ stmt *)*/
+line:
+  | cmd { [$1] }
+  <<[[Parser.line]] other cases>>
+@
+
+
+<<Parser other rule types>>=
+%type <Ast.cmd> cmd
+@
+
+% a (single) command can be a simple "expression"
+<<rule [[Parser.cmd]]>>=
 /*(* =~ expr *)*/
 cmd:
   | /*empty*/ { EmptyCommand }
   | simple    { 
       let (cmd, args, redirs) = $1 in
       let args = List.rev args in
-      let redirs = List.rev redirs in
       let base = Simple (cmd, args) in
+      let redirs = List.rev redirs in
       redirs |> List.fold_left (fun acc e ->
         match e with
         | Left (kind, word)    -> Redir (acc, (kind, word))
         | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
       ) base
     }
-  | brace epilog   { 
-      $2 |> List.fold_left (fun acc e -> 
-        match e with
-        | Left (kind, word) -> Redir (acc, (kind, word))
-        | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
-      ) (Compound $1) 
-  }
-
-  | cmd TAndAnd cmd { And ($1, $3) }
-  | cmd TOrOr cmd   { Or  ($1, $3) }
-  | TBang cmd       { Not $2 }
-
-  | TTwiddle word words { Match ($2, $3) }
-
-  | cmd TPipe cmd  { Pipe ($1, $3) }
-
-  | TIf paren_skipnl cmd { If ($2, $3) }
-  | TIf tnot_skipnl  cmd { IfNot $3 }
-
-  | TWhile paren_skipnl cmd   { While ($2, $3) }
-  | TSwitch word_skipnl brace { Switch ($2, $3) }
-
-  /*(* I added the %prec TFor. *)*/
-  | TFor TOPar word TIn words tcpar_skipnl cmd %prec TFor { ForIn ($3, $5, $7) }
-  | TFor TOPar word tcpar_skipnl cmd           %prec TFor { For ($3, $5) }
-
-  /*(* stricter: allow only word, not words *)*/
-  | TFn word brace { Fn ($2, $3) }
-  | TFn word       { DelFn $2 }
-
-  | assign cmd %prec TBang { $1 $2 }
+  <<[[Parser.cmd]] other cases>>
+@
 
 
+<<Parser other rule types>>=
+%type <Ast.cmd> simple
+@
+
+<<rule [[Parser.simple]]>>=
 /*(* =~ primary expr *)*/
 simple:
   | first        { $1, [], [] }
   | simple word  { let (a,b,c) = $1 in (a, $2::b, c) }
-  | simple redir { let (a,b,c) = $1 in (a, b, $2::c) }
+  <<[[Parser.simple]] other cases>>
+@
 
 
-paren: TOPar body TCPar { $2 }
+<<Parser other rule types>>=
+%type <Ast.value> first
+@
 
-brace: TOBrace body TCBrace { $2 }
-
-body: 
-  | cmd         { [$1] }
-  | cmdsan body { $1 $2 }
-
-cmdsan:
-  | cmdsa        { $1 }
-  | cmd TNewline { (fun x -> mk_Seq ($1, x)) }
-
-assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
-
-
-/*(*************************************************************************)*/
-/*(*1 Word *)*/
-/*(*************************************************************************)*/
-
+<<other word related rules>>=
 first:
   | comword           { $1 }
-  | first TCaret word { Concat ($1, $3) }
+  <<[[Parser.first]] other cases>>
+@
 
-
+% command word (the first word)
+<<rule [[Parser.comword]]>>=
 comword:
   | TWord                         { Word (fst $1, snd $1) }
-  | TDollar word                  { Dollar $2 }
-  | TCount word                   { Count $2 }
-  | TDollar word TSub words TCPar { Index ($2, $4) }
-  | TOPar words TCPar             { List $2 }
-  | TBackquote brace              { CommandOutput $2 }
-  | TStringify word               { Stringify $2 }
+  <<[[Parser.comword]] other cases>>
+@
 
+
+<<rule [[Parser.word]]>>=
 word:
   | comword          { $1 }
   | keyword          { Word ($1, false) }
-  | word TCaret word { Concat ($1, $3) }
+  <<[[Parser.word]] other cases>>
+@
+% flexible language, not like regular lang where if forbidden,
+% here if could be a filename argument of a command! it's just that
+% it can't be the command name
 
+<<other word related rules>>=
 keyword:
   | TFor { "for" }  | TIn { "in" }
   | TIf { "if" }  | TNot { "not" }
   | TWhile { "while" }
   | TSwitch { "switch" }
   | TFn { "fn" }
-
-  | TTwiddle { "~" }
-  | TBang { "!" }
-  | TSubshell { "@" }
-
-
-words: words_rev { List.rev $1 }
-
-words_rev:
-  | /*empty*/  { [] }
-  | words_rev word { $2::$1 }
-
-/*(*************************************************************************)*/
-/*(*1 Redirection *)*/
-/*(*************************************************************************)*/
-
-redir:
-  | TRedir word { Left ($1, $2) }
-  | TDup        { Right $1 }
-
-epilog:
-  | /*empty*/    { [] }
-  | redir epilog { $1::$2 }
-
-/*(*************************************************************************)*/
-/*(*1 Skipnl hacks *)*/
-/*(*************************************************************************)*/
-
-paren_skipnl: paren { Globals.skipnl := true; $1 }
-
-tnot_skipnl: TNot   { Globals.skipnl := true; }
-
-word_skipnl: word   { Globals.skipnl := true; $1 }
-
-tcpar_skipnl: TCPar { Globals.skipnl := true; }
-
+  <<[[Parser.keyword]] other cases>>
 @
 
 
-\section{Simple commands ([[<cmd> <arg1>...<argn>]]) }
 
 \section{Operators}
 
-\subsection{Sequences ([[';']], [['&']])}
+\subsection{Sequence ([[';']], [['&']])}
+
+<<[[Parser.line]] other cases>>=
+| cmdsa line { $1 $2  }
+@
+
+% cmdsa = command sequence or and
+
+<<other line related rules>>=
+cmdsa:
+  | cmd TSemicolon { (fun x -> mk_Seq ($1, x)) }
+  | cmd TAnd       { (fun x -> mk_Seq (Async $1, x)) }
+@
+% $1 $2 and fun x -> ... grammar idiom
+
+<<function [[Parser.mk_seq]]>>=
+(* This is a useful optimisation as you can get lots of EmptyCommand,
+ * for instance, in {\nls\n} you will get 2 EmptyCommand (for each \n)
+*)
+let mk_Seq (a, b) =
+  match a, b with
+  | EmptyCommand, _ -> b
+  | _, [EmptyCommand] -> [a]
+  | _ -> a::b
+@
+
 
 \subsection{Logical operators  ([['&&']], [['||']], [['!']])}
 
+<<[[Parser.cmd]] other cases>>=
+| cmd TAndAnd cmd { And ($1, $3) }
+| cmd TOrOr cmd   { Or  ($1, $3) }
+| TBang cmd       { Not $2 }
+@
+
+
+<<[[Parser.keyword]] other cases>>=
+| TBang { "!" }
+@
+% if not first word, then can be a parameter of a command
+
+
 \subsection{String matching  (\texttt{'\textasciitilde'})}
+%alt: move in advanced section, but nice to have a construct that
+% can go inside 'if' otherwise have to talk about 'test' or '[' or bash
+
+<<[[Parser.cmd]] other cases>>=
+| TTwiddle word words { Match ($2, $3) }
+@
+% note that first, not binary operator
+% kinda builtin command
+
+<<[[Parser.keyword]] other cases>>=
+| TTwiddle { "~" }
+@
+
+
+<<other word related rules>>=
+words: words_rev { List.rev $1 }
+@
+<<other word related rules>>=
+words_rev:
+  | /*empty*/  { [] }
+  | words_rev word { $2::$1 }
+@
 
 \subsection{Pipe  ([['|']])}
 
+<<[[Parser.cmd]] other cases>>=
+| cmd TPipe cmd  { Pipe ($1, $3) }
+@
+
+
 \subsection{Redirections  ([['>']], [['<']])}
 
-\section{Control flow statements ([[if]], [[if not]], [[while]], [[switch]], [[for]])} 
-\section{Functions ([[fn]])}
+<<[[Parser.simple]] other cases>>=
+| simple redir { let (a,b,c) = $1 in (a, b, $2::c) }
+@
+% add to redir, can have multiple redir! ex: cat < foo.txt > out.txt =~ cp :)
 
-\section{Variables ([[<x> = ...]])}
+<<rule [[Parser.redir]]>>=
+redir:
+  | TRedir word { Left ($1, $2) }
+  <<[[Parser.redir]] other cases>>
+@
+
+
+
+
+%LP: later
+<<[[Parser.redir]] other cases>>=
+| TDup        { Right $1 }
+@
+
+\section{Control flow statements ([[if]], [[if not]], [[while]], [[switch]], [[for]])}
+
+<<[[Parser.cmd]] other cases>>=
+| TIf paren_skipnl cmd { If ($2, $3) }
+| TIf tnot_skipnl  cmd { IfNot $3 }
+@
+
+<<[[Parser.cmd]] other cases>>=
+| TWhile paren_skipnl cmd   { While ($2, $3) }
+@
+
+<<skipnl rules>>=
+paren_skipnl: paren { Globals.skipnl := true; $1 }
+tnot_skipnl: TNot   { Globals.skipnl := true; }
+@
+
+<<other command related rules>>=
+paren: TOPar body TCPar { $2 }
+@
+% body later but =~ cmd
+% need paren to separate condition from cmd
+% not that condition is a command too! exit code will determine
+% (or can also be '~' )
+
+
+<<[[Parser.cmd]] other cases>>=
+| TSwitch word_skipnl brace { Switch ($2, $3) }
+@
+<<[[Ast.cmd]] other statement cases>>=
+| Switch of value * cmd_sequence
+@
+
+
+<<[[Parser.cmd]] other cases>>=
+/*(* I added the %prec TFor. *)*/
+| TFor TOPar word TIn words tcpar_skipnl cmd %prec TFor { ForIn ($3, $5, $7) }
+| TFor TOPar word tcpar_skipnl cmd           %prec TFor { For ($3, $5) }
+@
+<<[[Ast.cmd]] other statement cases>>=
+| ForIn of value * values * cmd
+(* less: could desugar as ForIn value $* *)
+| For of value * cmd
+@
+
+
+
+<<skipnl rules>>=
+word_skipnl: word   { Globals.skipnl := true; $1 }
+tcpar_skipnl: TCPar { Globals.skipnl := true; }
+@
+
+
+\section{Grouping (\texttt{'\{...\}'})} 
+
+% used in Switch above
+
+% but can also be part of cmd
+
+<<[[Parser.cmd]] other cases>>=
+| brace epilog   { 
+    $2 |> List.fold_left (fun acc e -> 
+      match e with
+      | Left (kind, word) -> Redir (acc, (kind, word))
+      | Right (kind, fd0, fd1) -> Dup (acc, kind, fd0, fd1)
+    ) (Compound $1) 
+}
+@
+
+<<[[Ast.cmd]] other statement cases>>=
+| Compound of cmd_sequence
+@
+%$
+
+<<other command related rules>>=
+brace: TOBrace body TCBrace { $2 }
+@
+% so no diff with paren? brace can have epilog after
+
+
+<<other redirection related rules>>=
+epilog:
+  | /*empty*/    { [] }
+  | redir epilog { $1::$2 }
+@
+
+
+<<other command related rules>>=
+body: 
+  | cmd         { [$1] }
+  | cmdsan body { $1 $2 }
+@
+<<other command related rules>>=
+cmdsan:
+  | cmdsa        { $1 }
+  | cmd TNewline { (fun x -> mk_Seq ($1, x)) }
+@
+% so can have newline now! newline act as semicolon now when in body context!
+
+\section{Functions ([[fn <f> { ... }]])}
+
+<<[[Parser.cmd]] other cases>>=
+/*(* stricter: allow only word, not words *)*/
+| TFn word brace { Fn ($2, $3) }
+@
+
+% function use =   [[f ( )]] so parsed as a simple command
+
+\section{Variables ([[<x> = ...]], [[$x]])}
+
+<<[[Parser.cmd]] other cases>>=
+| assign cmd %prec TBang { $1 $2 }
+@
+% again $1 $2 idiom
+
+<<other command related rules>>=
+assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
+@
+
+
+<<[[Parser.comword]] other cases>>=
+| TDollar word                  { Dollar $2 }
+@
 
 \section{Lists ([[(...)]])}
+
+% note that have seen parens in if/while context but
+% here different
+
+<<[[Parser.comword]] other cases>>=
+| TOPar words TCPar             { List $2 }
+@
 
 
 %\chapter{Checking}
@@ -1965,8 +1980,7 @@ then failwith (spf "Bad address %d in set()" idx2);
 let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
 
   let rec xseq (seq : Ast.cmd_sequence) eflag : unit =
-   (* less set iflast, for if not syntax error checking *)
-    seq |> List.iter (fun x -> xcmd x eflag)
+   <<[[Compile.outcode_seq]] in nested [[xseq()]]>>
   
   and xcmd (cmd : Ast.cmd) eflag : unit =
     match cmd with
@@ -1994,20 +2008,12 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
        -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
 
   and xwords (ws : Ast.value list) : unit =
-    ws |> List.rev |> List.iter (fun w -> xword w);
-    
+    <<[[Compile.outcode_seq]] in nested [[xwords()]]>>
   in
   xseq seq eflag
 @
 
 \subsection{XXX1}
-
-
-<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
-| A.Word (s, _quoted) ->
-    emit (O.F O.Word);
-    emit (O.S s);
-@
 
 <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
 | A.List ws ->
@@ -2021,17 +2027,8 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
     emit (O.F O.Dollar);
 @
 
-<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
-| A.Count w ->
-    emit (O.F O.Mark);
-    xword w;
-    emit (O.F O.Count);
-@
 
 
-<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
-| A.EmptyCommand -> ()
-@
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Compound seq -> xseq seq eflag
@@ -2211,12 +2208,6 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
     set p (O.I !idx);
 @
 
-<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
-| A.DelFn w ->
-    emit (O.F O.Mark);
-    xword w;
-    emit (O.F O.DelFn);
-@
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Not cmd ->
@@ -2268,22 +2259,6 @@ val exit : < Cap.exit ; .. > -> string -> unit
 
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-| O.Mark -> R.push_list ()
-@
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-(* [string] *)
-| O.Word ->
-    let t = R.cur () in
-    let pc = t.R.pc in
-    let x = t.R.code.(!pc) in
-    incr pc;
-    (match x with
-    | O.S s -> R.push_word s
-    (* stricter: but should never happen *)
-    | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
-    )
-@
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (name) (val) *)
 | O.Assign ->
     let t = R.cur () in
@@ -2303,6 +2278,10 @@ val exit : < Cap.exit ; .. > -> string -> unit
     | _ -> E.error caps "variable name not singleton!"
     )
 @
+
+
+
+
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (name) (val) *)
 | O.Local ->
@@ -2391,12 +2370,6 @@ val waitfor : int -> waitfor_result
 
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-(* (value?) *)
-| O.Glob ->
-    Logs.err (fun m -> m "TODO: interpret Glob");
-    ()
-@
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (file)[fd] *)
 | O.Write ->
     let t = R.cur () in
@@ -2445,25 +2418,6 @@ val waitfor : int -> waitfor_result
           t.R.argv <- newargv
         with Failure s -> E.error caps s
        )             
-    | _ -> E.error caps "variable name not singleton!"
-    )
-@
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-(* (name) *)
-| O.Count ->
-    let t = R.cur () in
-    let argv = t.R.argv in
-    (match argv with
-    | [varname] -> 
-        (* less: deglob *)
-        let value = vlook_varname_or_index varname in
-        let num = 
-          match value with
-          | None -> 0
-          | Some xs -> List.length xs
-        in
-        R.pop_list ();
-        R.push_word (spf "%d" num)
     | _ -> E.error caps "variable name not singleton!"
     )
 @
@@ -2533,21 +2487,7 @@ val waitfor : int -> waitfor_result
 | O.Popm ->
     R.pop_list ()
 @
-<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
-(* (name) *)
-| O.DelFn ->
-    let t = R.cur () in
-    let argv = t.R.argv in
-    argv |> List.iter (fun s ->
-      let x = Fn.flook s in
-      match x with
-      | Some _ -> Hashtbl.remove R.fns s
-      | None -> 
-          (* stricter: *)
-          if !Flags.strict_mode
-          then E.error caps (spf "deleting undefined function %s" s)
-    );
-@
+
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 | O.Not ->
     Status.setstatus (if Status.truestatus() then "false" else "");
@@ -2630,6 +2570,7 @@ let truestatus () =
 
 \section{Simple commands}
 
+% reminder: ls /etc => Simple (Word "ls", [Word "/etc"])
 
 \subsection{Bytecode generation}
 
@@ -2643,6 +2584,60 @@ let truestatus () =
 @
 % need Mark so know when finish args
 
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.Word (s, _quoted) ->
+    emit (O.F O.Word);
+    emit (O.S s);
+@
+
+\subsection{Stack management}
+
+<<[[Compile.outcode_seq]] in nested [[xwords()]]>>=
+ws |> List.rev |> List.iter (fun w -> xword w);
+@
+% List.rev! stack!
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* [string] *)
+| O.Word ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    let x = t.R.code.(!pc) in
+    incr pc;
+    (match x with
+    | O.S s -> R.push_word s
+    (* stricter: but should never happen *)
+    | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+    )
+@
+% remember pc already incremented in caller, so incr pc here to increment
+% it even more to pass the inline string
+
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Mark -> R.push_list ()
+@
+
+<<signature [[Runtime.push_list]]>>=
+val push_list : unit -> unit
+@
+<<function [[Runtime.push_list]]>>=
+let push_list () =
+  let t = cur () in
+  t.argv_stack <- t.argv :: t.argv_stack;
+  t.argv <- []
+@
+
+<<[[Runtime.thread]] other fields>>=
+(* Used for switch but also assignments. *)
+mutable argv_stack: (string list) list;
+@
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+argv_stack = [];
+@
+
+
 \subsection{[[O.Simple]]}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
@@ -2655,44 +2650,18 @@ let truestatus () =
 let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
-
-  (* less: globlist () *)
-  if !Flags.xflag 
-  then Logs.app (fun m -> m "%s" (String.concat " " argv));
-
+  <<[[Op_process.op_Simple()]] possibly dump command>>
   match argv with
-  (* How can you get an empty list as Simple has at least one word?
-   * If you do A=()\n and then $A\n then Simple has a word, but after
-   * expansion the list becomes empty.
-   * stricter: I give extra explanations
-   *)
-  | [] -> E.error caps "empty argument list (after variable expansion)" 
-
+  <<[[Op_process.op_Simple()]] match [[argv]] empty case>>
   | argv0::args ->
       match argv0 with
-      (* todo: if argv0 is a function *)
-      | "builtin" -> 
-          (match args with
-          | [] ->
-              Logs.err (fun m -> m "builtin: empty argument list");
-              Status.setstatus "empty arg list";
-              R.pop_list ()
-          | argv0::_args ->
-              R.pop_word ();
-              Builtin.dispatch caps argv0
-          )
-      | s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
+      <<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>
       | _ ->
-        (* if exitnext opti *)
-        flush stderr;
-        (* less: Updenv *)
+        <<[[Op_process.op_Simple()]] when default case, before the fork>>
         (try 
           let pid = forkexec caps () in
           R.pop_list ();
-          (* do again even if was interrupted *)
-          while Process.waitfor pid = Process.WaitforInterrupted do
-            ()
-          done
+          <<[[Op_process.op_Simple()]] when default case, after the fork>>
         with
           | Failure s ->
               E.error caps ("try again: " ^ s)
@@ -2702,29 +2671,76 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
 @
 %$
 
-<<signature [[Process.s_of_unix_error]]>>=
-val s_of_unix_error : Unix.error -> string -> string -> string
+
+<<signature [[Runtime.pop_list]]>>=
+val pop_list : unit -> unit
 @
-<<function [[Process.s_of_unix_error]]>>=
-let s_of_unix_error err _s1 _s2 = 
-  spf "%s" (Unix.error_message err)
+<<function [[Runtime.pop_list]]>>=
+let pop_list () =
+  let t = cur () in
+  match t.argv_stack with
+  (* At the very beginning we do *=(argv) in bootstrap.
+   * In that case, Assign will generate two pop_list, but for
+   * the second one argv_stack becomes empty. The only thing
+   * we must do is to empty argv then.
+   *)
+  | [] ->
+     t.argv <- []
+  | x::xs -> 
+      t.argv_stack <- xs;
+      t.argv <- x
 @
 
 
+<<[[Op_process.op_Simple()]] when default case, before the fork>>=
+(* if exitnext opti *)
+flush stderr;
+(* less: Updenv *)
+@
+
+
+<<[[Op_process.op_Simple()]] when default case, after the fork>>=
+(* do again even if was interrupted *)
+while Process.waitfor pid = Process.WaitforInterrupted do
+  ()
+done
+@
+
+<<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>=
+| s when Builtin.is_builtin s -> Builtin.dispatch caps argv0
+@
 
 <<signature [[Builtin.is_builtin]]>>=
 val is_builtin : string -> bool
 @
-
 <<signature [[Builtin.dispatch]]>>=
 (* execute the builtin *)
 val dispatch : < Cap.chdir ; Cap.exit ; Cap.open_in; .. > -> string -> unit
 @
 
+
+<<[[Op_process.op_Simple()]] match [[argv0]] builtin cases>>=
+(* todo: if argv0 is a function *)
+| "builtin" -> 
+    (match args with
+    | [] ->
+        Logs.err (fun m -> m "builtin: empty argument list");
+        Status.setstatus "empty arg list";
+        R.pop_list ()
+    | argv0::_args ->
+        R.pop_word ();
+        Builtin.dispatch caps argv0
+    )
+@
+
+
+
 \subsection{Fork}
 
+% Essence of a shell! Fork/exec! a 50LOC mini shell will be that
+
 <<function [[Op_process.forkexec]]>>=
-let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
+let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () : int =
   let pid = CapUnix.fork caps () in
   (* child *)
   if pid = 0
@@ -2743,6 +2759,22 @@ let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
 @
 
 \subsection{Exec}
+
+<<function [[Op_process.exec]]>>=
+let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
+  R.pop_word (); (* "exec" *)
+
+  let t = R.cur () in
+  let argv = t.R.argv in
+  match argv with
+  | [] -> E.error caps "empty argument list" 
+  | prog::_xs -> 
+      <<[[Op_process.exec()]] before [[execute]]>>
+      execute caps argv (PATH.search_path_for_cmd prog);
+      (* should not be reached, unless prog could not be executed *)
+      R.pop_list ()
+@
+
 
 <<function [[Op_process.execute]]>>=
 let execute (caps : <Cap.exec; ..>) args path =
@@ -2763,20 +2795,67 @@ let execute (caps : <Cap.exec; ..>) args path =
   Logs.err (fun m -> m "%s: %s" argv.(0) !errstr)
 @
 
-<<function [[Op_process.exec]]>>=
-let exec (caps : < Cap.exec; Cap.exit; .. >) () =
-  R.pop_word (); (* "exec" *)
 
-  let t = R.cur () in
-  let argv = t.R.argv in
+<<[[Op_process.exec()]] before [[execute]]>>=
+R.doredir t.R.redirections;
+@
 
-  match argv with
-  | [] -> E.error caps "empty argument list" 
-  | prog::_xs -> 
-      R.doredir t.R.redirections;
-      execute caps argv (PATH.search_path_for_cmd prog);
-      (* should not be reached, unless prog could not be executed *)
-      R.pop_list ()
+
+
+\subsection{Error management}
+
+<<[[Op_process.op_Simple()]] match [[argv]] empty case>>=
+(* How can you get an empty list as Simple has at least one word?
+ * If you do A=()\n and then $A\n then Simple has a word, but after
+ * expansion the list becomes empty.
+ * stricter: I give extra explanations
+ *)
+| [] -> E.error caps "empty argument list (after variable expansion)" 
+@
+
+
+<<signature [[Error.error]]>>=
+(* Will behave like a 'raise'. Will Return until you reach
+ * the interactive thread and set the status to the error argument.
+ * Mostly used by the builtins.
+ *)
+val error : < Cap.exit ; .. > -> string -> unit
+@
+
+
+
+<<function [[Error.error]]>>=
+(* less: error1 similar to error but without %r *)
+let error (caps: < Cap.exit; ..>) (s : string) =
+  (* less: use argv0 *)
+  (* less: use %r *)
+  Logs.err (fun m -> m "rc: %s" s);
+
+  Status.setstatus "error";
+
+  while (R.cur ()).R.iflag do
+    (* goes up the call stack, like when we have an exception *)
+    Process.return caps ();
+  done
+@
+
+<<constant [[Globals.errstr]]>>=
+(* to mimic Plan 9 errstr() *)
+let errstr = ref ""
+@
+
+
+
+
+
+
+
+<<signature [[Process.s_of_unix_error]]>>=
+val s_of_unix_error : Unix.error -> string -> string -> string
+@
+<<function [[Process.s_of_unix_error]]>>=
+let s_of_unix_error err _s1 _s2 = 
+  spf "%s" (Unix.error_message err)
 @
 
 
@@ -2874,6 +2953,17 @@ let waitfor pid =
 
 
 \subsection{Basic sequence}
+
+<<[[Compile.outcode_seq]] in nested [[xseq()]]>>=
+(* less set iflast, for if not syntax error checking *)
+seq |> List.iter (fun x -> xcmd x eflag)
+@
+
+% sequence is simply generating bytecode for each cmd!
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.EmptyCommand -> ()
+@
 
 
 \subsection{Logical operators}
@@ -3264,6 +3354,19 @@ let rcmain = ref "/rc/lib/rcmain"
 
 \chapter{Globbing}
 
+<<[[Opcode.operation]] other cases>>=
+(* Globbing *)
+| Glob (* (value?) *)
+@
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (value?) *)
+| O.Glob ->
+    Logs.err (fun m -> m "TODO: interpret Glob");
+    ()
+@
+
+
 \section{Lexing globbing characters}
 
 \section{Expanding globbing characters}
@@ -3277,14 +3380,66 @@ let rcmain = ref "/rc/lib/rcmain"
 
 
 
+\chapter{Debugging for the [[rc]] User}
 
-\chapter{Advanced Topics TODO}
-%\section{Shell-like features implemented outside [[rc]]}
+\section{Printing commands: [[rc -x]]}
 
+<<constant [[Flags.xflag]]>>=
+(* -x, to print simple commands before executing them *)
+let xflag = ref false
+@
 
-\section{Reading commands from a string: [[rc -c]]}
+<<[[CLI.main()]] [[options]] elements>>=
+"-x", Arg.Set Flags.xflag,
+" print each simple command before executing it";
+@
 
+<<[[Op_process.op_Simple()]] possibly dump command>>=
+(* less: globlist () *)
+if !Flags.xflag 
+then Logs.app (fun m -> m "%s" (String.concat " " argv));
+@
 
+\section{Printing subprocesses status: [[rc -s]]}
+
+<<constant [[Flags.sflag]]>>=
+(* -s, to print status when error in command just ran *)
+let sflag = ref false
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-s", Arg.Set Flags.sflag,
+" print exit status after any command where the status is non-null";
+@
+<<[[Op_repl.op_REPL()]] if [[sflag]]>>=
+(* todo: flush error and reset error count *)
+if !Flags.sflag && not (Status.truestatus()) 
+then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
+@
+
+\section{Logging}
+
+<<[[CLI.main()]] debugging initializations>>=
+let level = ref (Some Logs.Warning) in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+(* TODO: move in a CLI_common.ml *)
+"-v", Arg.Unit (fun () -> level := Some Logs.Info),
+ " verbose mode";
+"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+" verbose mode";
+"-quiet", Arg.Unit (fun () -> level := None),
+" ";
+"-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+" trace the main functions";
+@
+
+<<[[CLI.main()]] logging initializations>>=
+Logs.set_level !level;
+Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
+@
 
 \section{Failing fast: [[rc -e]]}
 % very important, especially when using rc with mk!
@@ -3320,7 +3475,6 @@ then emit (O.F O.Eflag);
 @
 
 
-
 \section{Strict mode: [[rc -strict]]}
 
 <<constant [[Flags.strict_mode]]>>=
@@ -3332,6 +3486,15 @@ let strict_mode = ref false
 " strict mode";
 @
 
+\chapter{Advanced Features}
+%alt: Advanced Topics
+
+%\section{Shell-like features implemented outside [[rc]]}
+% completion, history (readline?), ...
+% done in rio!
+
+
+\section{Reading commands from a string: [[rc -c]]}
 
 \section{Unicode}
 
@@ -3340,24 +3503,228 @@ let strict_mode = ref false
 
 \section{Advanced constructs}
 
+<<Parser tokens, punctuation other cases>>=
+%token TSub
+@
+<<[[Ast.cmd]] other definition cases>>=
+| DelFn of value
+@
+<<[[Opcode.operation]] other cases>>=
+| DelFn (* (name) *)
+(* less: RdFn *)
+@
+<<[[Parser.cmd]] other cases>>=
+| TFn word       { DelFn $2 }
+@
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.DelFn w ->
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.DelFn);
+@
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) *)
+| O.DelFn ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    argv |> List.iter (fun s ->
+      let x = Fn.flook s in
+      match x with
+      | Some _ -> Hashtbl.remove R.fns s
+      | None -> 
+          (* stricter: *)
+          if !Flags.strict_mode
+          then E.error caps (spf "deleting undefined function %s" s)
+    );
+@
+
 \subsection{Subshell: [[@ <cmd>]]}
+
+<<Parser tokens, operators other cases>>=
+%token TSubshell
+@
+
+<<[[Opcode.operation]] other cases>>=
+(* ?? *)
+| Subshell (* {... Xexit} *)
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "@" { TSubshell }
+@
+
+<<[[Parser.keyword]] other cases>>=
+| TSubshell { "@" }
+@
 
 \subsection{Here documents: [[<< <HERE>]]}
 
 \subsection{Read-write redirections: [[<> <file>]]}
 
+
 \subsection{General redirections: [[>[2] <file>]]}
 
+<<[[Lexer.token()]] symbol cases>>=
+| ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
+       {  let fd0 = failwith "TODO: fd0" in
+   let fd1 = failwith "TODO: fd1" in
+   TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
+}
+| ">>[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
+       {
+           let fd0 = failwith "TODO: fd0" in
+    let fd1 = failwith "TODO: fd1" in
+    TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
+}
+(* less: advanced pipe and redirection *)
+@
+
 \subsection{Advanced dup: [[>[<fd0>=<fd1>]] ], [[<>[<fd0>=<fd1>] ]], [[<[<fd0>=<fd1>] ]]}
+
+%LP: distribute to advanced or later
+<<Parser tokens, operators other cases>>=
+%token<Ast.redirection_kind * int * int> TDup
+@
+
+<<[[Ast.redirection_kind]] other cases>>=
+(* less: RHere *) (* < < *)
+| RDup of int * int (* >[x=y] *)
+@
+
+<<[[Ast.cmd]] other redirection cases>>=
+| Dup of cmd * redirection_kind * int * int (* >[1=2] *)
+@
 
 \subsection{Advanced pipes: [[|[<fd>] ]], [[|[<fd0>=<fd1>] ]]}
 
 \subsection{Command output as a file: \texttt{'<\{<cmd>\}'}}
 
+<<Parser tokens, punctuation other cases>>=
+%token TBackquote
+@
+
+<<[[Ast.value]] other cases>>=
+(* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
+| CommandOutput of cmd_sequence
+@
+%$
+
+<<[[Opcode.operation]] other cases>>=
+| Backquote (* {... Xreturn} *)
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "`" { TBackquote } 
+@
+
+<<[[Parser.comword]] other cases>>=
+| TBackquote brace              { CommandOutput $2 }
+@
+
 \subsection{Command substitution: \texttt{`\{<cmd>\}}}
 
 \subsection{Stringification of variables: [[$"<foo>]]} %$
 
+<<Parser tokens, punctuation other cases>>=
+%token TStringify
+@
+<<[[Lexer.token()]] variable cases>>=
+| "$\"" { TStringify }
+@
+%$
+
+
+<<[[Ast.value]] other cases>>=
+| Stringify of value (* $"foo " *)
+@
+%$
+
+<<[[Parser.comword]] other cases>>=
+| TCount word                   { Count $2 }
+| TDollar word TSub words TCPar { Index ($2, $4) }
+| TStringify word               { Stringify $2 }
+@
+
+
+\subsection{Count and indexing of variables: [[$#<foo>]], [[$<foo>(...)]]} %$
+
+<<Parser tokens, punctuation other cases>>=
+%token TCount
+@
+
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.Count w ->
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.Count);
+@
+
+
+<<[[Ast.value]] other cases>>=
+| Count of value (* $#foo *)
+| Index of value * values (* $foo(...) *)
+@
+%$
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) *)
+| O.Count ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    (match argv with
+    | [varname] -> 
+        (* less: deglob *)
+        let value = vlook_varname_or_index varname in
+        let num = 
+          match value with
+          | None -> 0
+          | Some xs -> List.length xs
+        in
+        R.pop_list ();
+        R.push_word (spf "%d" num)
+    | _ -> E.error caps "variable name not singleton!"
+    )
+@
+
+
+<<[[Lexer.token()]] variable cases>>=
+| "$#"  { TCount }
+@
+
+<<[[Opcode.operation]] other stack cases>>=
+| Count (* (name) *)
+| Concatenate (* (left)(right) *)
+| Stringify (* (name) *)
+@
+
+<<[[Opcode.operation]] other variable cases>>=
+| Index  (* ??? *)
+| Local (* (name)(val) *)
+| Unlocal (* *)
+@
+
+\subsection{String concatenation}
+
+<<Parser tokens, punctuation other cases>>=
+%token TCaret
+@
+
+<<[[Parser.word]] other cases>>=
+| word TCaret word { Concat ($1, $3) }
+@
+<<[[Parser.first]] other cases>>=
+| first TCaret word { Concat ($1, $3) }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "^" { TCaret }
+@
+
+<<[[Ast.value]] other cases>>=
+(* ^ distributes over lists *)
+| Concat of value * value
+@
 
 \section{Advanced builtins}
 
@@ -3408,7 +3775,11 @@ argv |> Array.iter (fun s ->
 
 
 
-\chapter{Debugging}
+\chapter{Debugging for the [[mk]] Developer}
+
+\section{Exception backtraces}
+%TODO: disable by default!
+%alt: move in Error management appendix later?
 
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
@@ -3429,31 +3800,7 @@ else
   )
 @
 
-\section{Logging}
-
-<<[[CLI.main()]] debugging initializations>>=
-let level = ref (Some Logs.Warning) in
-@
-
-<<[[CLI.main()]] [[options]] elements>>=
-(* pad: I added that *)
-(* TODO: move in a CLI_common.ml *)
-"-v", Arg.Unit (fun () -> level := Some Logs.Info),
- " verbose mode";
-"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-" verbose mode";
-"-quiet", Arg.Unit (fun () -> level := None),
-" ";
-"-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
-" trace the main functions";
-@
-
-<<[[CLI.main()]] logging initializations>>=
-Logs.set_level !level;
-Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
-@
-
-\section{AST dumper}
+\section{Dumpers}
 
 <<[[CLI.main()]] [[options]] elements>>=
 (* pad: I added that *)
@@ -3464,6 +3811,25 @@ Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
 "-dump_opcodes", Arg.Set Flags.dump_opcodes,
 " dump the generated opcodes ";
 @
+
+\subsection{Dumping tokens}
+
+<<[[Parse.lexfunc()]] possibly dump tokens>>=
+|> (fun tok -> 
+    if !Flags.dump_tokens 
+    then Logs.app (fun m -> m "%s" (Dumper.dump (tok,s)));
+    tok)
+@
+
+\subsection{Dumping the AST}
+
+<<[[Parse.parse_line()]] possibly dump AST>>=
+|> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Dumper_.s_of_line ast)); ast)
+@
+
+\subsection{Dumping the opcodes}
+
+\subsection{XXX}
 
 <<signature [[Dumper_.s_of_cmd]]>>=
 val s_of_cmd : Ast.cmd -> string
@@ -3579,38 +3945,8 @@ then Logs.app (fun m -> m "pid %d %d %s %s"
                ) |> String.concat " "));
 @
 
-\section{Printing subprocesses status: [[rc -s]]}
-
-<<constant [[Flags.sflag]]>>=
-(* -s, to print status when error in command just ran *)
-let sflag = ref false
-@
-
-<<[[CLI.main()]] [[options]] elements>>=
-"-s", Arg.Set Flags.sflag,
-" print exit status after any command where the status is non-null";
-@
-<<[[Op_repl.op_REPL()]] if [[sflag]]>>=
-(* todo: flush error and reset error count *)
-if !Flags.sflag && not (Status.truestatus()) 
-then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
-@
-
-\section{Printing commands: [[rc -x]]}
-
-<<constant [[Flags.xflag]]>>=
-(* -x, to print simple commands before executing them *)
-let xflag = ref false
-@
-
-<<[[CLI.main()]] [[options]] elements>>=
-"-x", Arg.Set Flags.xflag,
-" print each simple command before executing it";
-@
-
 
 \section{Printing characters: [[rc -v]]}
-
 
 \section{Printing all characters: [[rc -V]]}
 
@@ -3672,44 +4008,10 @@ let do_action caps s xs =
 @
 
 
-\chapter{Error Management}
-
-<<signature [[Error.error]]>>=
-(* Will behave like a 'raise'. Will Return until you reach
- * the interactive thread and set the status to the error argument.
- * Mostly used by the builtins.
- *)
-val error : < Cap.exit ; .. > -> string -> unit
-@
+%\chapter{Error Management}
 
 
-
-<<function [[Error.error]]>>=
-(* less: error1 similar to error but without %r *)
-let error (caps: < Cap.exit; ..>) (s : string) =
-  (* less: use argv0 *)
-  (* less: use %r *)
-  Logs.err (fun m -> m "rc: %s" s);
-
-  Status.setstatus "error";
-
-  while (R.cur ()).R.iflag do
-    (* goes up the call stack, like when we have an exception *)
-    Process.return caps ();
-  done
-@
-
-<<constant [[Globals.errstr]]>>=
-(* to mimic Plan 9 errstr() *)
-let errstr = ref ""
-@
-
-
-
-
-
-
-\chapter{Examples of [[rc]] scripts TODO}
+\chapter{Examples of [[rc]] scripts}
 
 \section{[[/rc/lib/rcmain]]}
 

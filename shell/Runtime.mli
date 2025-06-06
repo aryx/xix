@@ -37,9 +37,6 @@ type thread = {
   locals: (varname, var) Hashtbl.t;
 
   (*s: [[Runtime.thread]] other fields *)
-  (* Used for switch but also assignments. *)
-  mutable argv_stack: (string list) list;
-  (*x: [[Runtime.thread]] other fields *)
   (* things to do before exec'ing the simple command *)
   mutable redirections: (redir list) list;
   (*x: [[Runtime.thread]] other fields *)
@@ -56,6 +53,9 @@ type thread = {
   (* less: file has to be mutable? could be a param of start? like chan? *)
   mutable file: Common.filename option;
   line: int ref;
+  (*x: [[Runtime.thread]] other fields *)
+  (* Used for switch but also assignments. *)
+  mutable argv_stack: (string list) list;
   (*e: [[Runtime.thread]] other fields *)
 }
 (*e: type [[Runtime.thread]] *)

@@ -21,14 +21,13 @@
 %thx to this manual, I better understand sh:
 
 %history LP-ization:
-% - skeleton, mostly copy paste of Template.nw skeleton
+% - skeleton, mostly copy paste of Shell.nw skeleton
 % - put all content of files in the Extra section, via 'lpizer'
 %   which also now split in chunks!
 %    * function, global, struct, enum, constant, macro(actually function)
-% - TODO read Extra section, identify concepts, first TOC
-% - TODO distribute parts of the file before
-% - TODO nullify, boolify, typeify,    scheckify
-% - TODO aspecify advanced features!
+% - read Extra section, identify concepts, first TOC
+% - distribute parts of the file before
+% - SEMI aspecify advanced features!
 % - TODO add figures
 % - TODO add explanations
 
@@ -86,8 +85,60 @@ Documentation License, Version 1.3.
 
 
 \chapter{Core Data Structures}
+\label{chap:core-ds}
+
+\begin{verse}
+\begin{flushright}
+  {\it Show me your code and conceal your data structures, and I shall
+    continue to be mystified. Show me your data structures, and I
+    won't usually need your code; it'll be obvious.\\
+    ~\\
+    Fred Brooks}
+\end{flushright}
+\end{verse}
 
 \section{Tokens}
+
+<<Parser tokens>>=
+/*(*-----------------------------------------*)*/
+/*(*2 Keywords *)*/
+/*(*-----------------------------------------*)*/
+%token TFor TIn  TIf TNot TWhile  TSwitch  
+%token TFn
+
+/*(*-----------------------------------------*)*/
+/*(*2 Word *)*/
+/*(*-----------------------------------------*)*/
+%token<string * bool(* quoted *)> TWord
+
+/*(*-----------------------------------------*)*/
+/*(*2 Operators *)*/
+/*(*-----------------------------------------*)*/
+%token TPipe
+%token TAndAnd TOrOr TBang
+%token<Ast.redirection_kind> TRedir
+%token<Ast.redirection_kind * int * int> TDup
+%token TAnd TSubshell
+%token TTwiddle  
+
+/*(*-----------------------------------------*)*/
+/*(*2 Punctuation *)*/
+/*(*-----------------------------------------*)*/
+
+%token TOPar TCPar TOBrace TCBrace
+%token TSemicolon TEq
+%token TDollar TCount TStringify 
+%token TSub
+%token TCaret
+%token TBackquote
+
+/*(*-----------------------------------------*)*/
+/*(*2 Misc *)*/
+/*(*-----------------------------------------*)*/
+%token TNewline
+
+%token EOF
+@
 
 \section{Abstract syntax tree (AST)}
 
@@ -99,57 +150,50 @@ type line = cmd_sequence option
 <<type [[Ast.cmd_sequence]]>>=
   and cmd_sequence = cmd list
 @
+% separated by ';' ?
+
 
 <<type [[Ast.cmd]]>>=
 and cmd =
   | EmptyCommand
 
   (* Base *)
-
   | Simple of value * values
   | Pipe of cmd * cmd (* less: lfd, rfd option *)
-  | Async of cmd
+  <<[[Ast.cmd]] other base cases>>
 
   (* Redirections *)
-
   | Redir of cmd * redirection
-  | Dup of cmd * redirection_kind * int * int (* >[1=2] *)
+  <<[[Ast.cmd]] other redirection cases>>
 
   (* expressions *)
-
-  | And of cmd * cmd
-  | Or of cmd * cmd
-  | Not of cmd
-
-  | Match of value * values
-  (* can also run the program 'test' for other comparisons *)
+  <<[[Ast.cmd]] expression cases>>
 
   (* stmts *)
-
   | If of cmd_sequence * cmd
   (* Note that you can not put a 'cmd option' in If instead of IfNot below. 
    * rc has to process 'if(...) cmd\n' now! It can not wait for an else.
    *)
   | IfNot of cmd
-
   | While of cmd_sequence * cmd
-  | Switch of value * cmd_sequence
-
-  | ForIn of value * values * cmd
-  (* less: could desugar as ForIn value $* *)
-  | For of value * cmd
-
-  | Compound of cmd_sequence
+  <<[[Ast.cmd]] other statement cases>>
 
   (* definitions *)
-
-  | Fn of value * cmd_sequence
-  | DelFn of value
   (* can do x=a; but also $x=b ! 
    * less: could have AssignGlobal and AssignLocal of ... cmd
    *)
   | Assign of value * value * cmd (* can be EmptyCommand *)
+  | Fn of value * cmd_sequence
+  <<[[Ast.cmd]] other definition cases>>
 @
+
+
+
+<<type [[Ast.values]]>>=
+(* separated by spaces *)
+and values = value list
+@
+
 
 <<type [[Ast.value]]>>=
 (* rc does not use types; there is no integer, no boolean, no float.
@@ -163,28 +207,10 @@ type value =
    * less: W of word_elt list and word_elt = Star | Question | ...Str of string
    *)
   | Word of string * bool (* quoted *)
-  | List of values
-  (* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
-  | CommandOutput of cmd_sequence
-
   | Dollar of value
-
-  | Count of value (* $#foo *)
-  | Index of value * values (* $foo(...) *)
-
-  (* ^ distributes over lists *)
-  | Concat of value * value
-
-  | Stringify of value (* $"foo " *)
+  | List of values
+  <<[[Ast.value]] other cases>>
 @
-
-
-<<type [[Ast.values]]>>=
-(* separated by spaces *)
-and values = value list
-@
-
-
 
 <<type [[Ast.redirection]]>>=
   and redirection = redirection_kind * value (* the filename *)
@@ -195,14 +221,105 @@ and values = value list
       | RWrite (* > *)
       | RRead  (* < *)
       | RAppend (* > > *)
-      (* less: RHere *) (* < < *)
-      | RDup of int * int (* >[x=y] *)
+      <<[[Ast.redirection_kind]] other cases>>
+@
+
+
+
+%TODO: dump AST for ls /etc > /tmp/list.txt, and ref to -dump_ast in appendix
+
+
+
+
+
+
+
+
+%LP: distribute to advanced or later
+<<[[Ast.redirection_kind]] other cases>>=
+(* less: RHere *) (* < < *)
+| RDup of int * int (* >[x=y] *)
+@
+
+<<[[Ast.value]] other cases>>=
+(* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
+| CommandOutput of cmd_sequence
+@
+%$
+<<[[Ast.value]] other cases>>=
+| Count of value (* $#foo *)
+| Index of value * values (* $foo(...) *)
+@
+%$
+<<[[Ast.value]] other cases>>=
+(* ^ distributes over lists *)
+| Concat of value * value
+@
+<<[[Ast.value]] other cases>>=
+| Stringify of value (* $"foo " *)
+@
+%$
+
+
+<<[[Ast.cmd]] other base cases>>=
+| Async of cmd
+@
+
+<<[[Ast.cmd]] other redirection cases>>=
+| Dup of cmd * redirection_kind * int * int (* >[1=2] *)
+@
+
+<<[[Ast.cmd]] expression cases>>=
+| And of cmd * cmd
+| Or of cmd * cmd
+| Not of cmd
+@
+<<[[Ast.cmd]] expression cases>>=
+| Match of value * values
+(* can also run the program 'test' for other comparisons *)
+@
+
+
+<<[[Ast.cmd]] other statement cases>>=
+| Switch of value * cmd_sequence
+@
+<<[[Ast.cmd]] other statement cases>>=
+| ForIn of value * values * cmd
+(* less: could desugar as ForIn value $* *)
+| For of value * cmd
+@
+<<[[Ast.cmd]] other statement cases>>=
+| Compound of cmd_sequence
+@
+%$
+
+<<[[Ast.cmd]] other definition cases>>=
+| DelFn of value
 @
 
 
 
 \section{Opcodes}
 
+<<signature [[Compile.compile]]>>=
+val compile : Ast.cmd_sequence -> Opcode.codevec
+@
+
+<<type [[Opcode.codevec]]>>=
+type codevec = opcode array
+@
+
+<<type [[Opcode.opcode]]>>=
+type opcode =
+  | F of operation
+  | I of int
+  | S of string
+@
+
+% a bit like assembly, opcodes, operands, but very simple.
+% why opcode? why not interpret AST instead?
+
+% Stack machine, Word, Pop, use either inline or on Stack
 <<type [[Opcode.operation]]>>=
 (* Operations generated by the compiler. 
  * 
@@ -216,241 +333,116 @@ and values = value list
 type operation =
 
   (* Stack (argv) *)
-
   | Mark
   | Word (* [string] *)
   | Popm (* (value) *)
-  | Count (* (name) *)
-  | Concatenate (* (left)(right) *)
-  | Stringify (* (name) *)
-
-  (* Globbing *)
-  | Glob (* (value?) *)
+  <<[[Opcode.operation]] other stack cases>>
 
   (* Variable *)
-
   | Assign (* (name)(val) *)
   | Dollar (* (name) *)
-  | Index  (* ??? *)
-  | Local (* (name)(val) *)
-  | Unlocal (* *)
-
-  (* Functions *)
-  | Fn (* (name){... Xreturn } *)
-  | DelFn (* (name) *)
-  (* less: RdFn *)
+  <<[[Opcode.operation]] other variable cases>>
 
   (* Process! *)
-
   | Simple (* (args) *)
 
-  (* Control part 1 *)
-
-  | Exit 
-  | Return
-
-  (* Control part 2 *)
-
+  (* Control flow *)
   | If 
   | IfNot
   | Jump  (* [addr] *)
-  (* While are compiled in jumps *)  
-  | Match (* (pat, str) *)
-  | Case  (* (pat, value){...} *)
-  | For   (* (var, list){... Xreturn} *)
+  | Exit 
+  <<[[Opcode.operation]] other control cases>>
 
   (* Boolean return status  *)
-
   | Wastrue
   | Not
   | False (* {...} *)
   | True  (* {...} *)
 
   (* Redirections *)
-
   | Read (* (file)[fd] *)
   | Write (* (file)[fd] *)
-  | ReadWrite (* (file)[fd] *)
   | Append (* (file)[fd] *)
-  | Close  (* [fd] *)
-  | Dup    (* [fd0 fd1] *)
-  | Popredir (* *)
+  <<[[Opcode.operation]] other redirection cases>>
 
   (* Pipes *)
-
   | Pipe (* [i j]{... Xreturn}{... Xreturn} *)
-  | PipeWait (* argument passed through Thread.pid *)
-  | PipeFd (* [type]{... Xreturn} *)
+  <<[[Opcode.operation]] other pipe cases>>
 
-  (* Error management *)
-  | Eflag
+  (* Functions *)
+  | Fn (* (name){... Xreturn } *)
 
-  (* ?? *)
-
-  | Subshell (* {... Xexit} *)
-  | Backquote (* {... Xreturn} *)
-  | Async     (* {... Xreturn} *)
+  <<[[Opcode.operation]] other cases>>
 
   | REPL (* *)
 @
 
-<<type [[Opcode.opcode]]>>=
-type opcode =
-  | F of operation
-  | I of int
-  | S of string
+% REPL! (was Xrdcmds?)
+
+
+%TODO: show example of opcode for ls /etc > /tmp/list.txt, via -dump ?? with ref to appendix?
+
+
+
+
+
+
+%LP: distribute to advanced
+<<[[Opcode.operation]] other stack cases>>=
+| Count (* (name) *)
+| Concatenate (* (left)(right) *)
+| Stringify (* (name) *)
 @
 
-<<type [[Opcode.codevec]]>>=
-type codevec = opcode array
+<<[[Opcode.operation]] other variable cases>>=
+| Index  (* ??? *)
+| Local (* (name)(val) *)
+| Unlocal (* *)
 @
 
-
-\section{Threads and run queue}
-
-<<type [[Runtime.thread]]>>=
-type thread = {
-  code: Opcode.codevec;
-  pc: int ref;
-
-  mutable argv: string list;
-  locals: (varname, var) Hashtbl.t;
-
-  (* Used for switch but also assignments. *)
-  mutable argv_stack: (string list) list;
-
-  (* connected on stdin by default (changed when do '. file') *)
-  mutable lexbuf: Lexing.lexbuf;
-  (* to display a prompt or not *)
-  mutable iflag: bool;
-
-  (* for error reporting (None when reading from stdin) *)
-  (* less: file has to be mutable? could be a param of start? like chan? *)
-  mutable file: Common.filename option;
-  line: int ref;
-
-  (* things to do before exec'ing the simple command *)
-  mutable redirections: (redir list) list;
-
-  (* things to wait for after a thread forked a process *)
-  mutable waitstatus: waitstatus;
-}
+<<[[Opcode.operation]] other control cases>>=
+(* While are compiled in jumps *)  
+| Match (* (pat, str) *)
+| Case  (* (pat, value){...} *)
+| For   (* (var, list){... Xreturn} *)
 @
 
-
-<<signature [[Runtime.mk_thread]]>>=
-val mk_thread :
-  Opcode.codevec -> int -> (varname, var) Hashtbl.t -> thread
+<<[[Opcode.operation]] other redirection cases>>=
+| ReadWrite (* (file)[fd] *)
+| Close  (* [fd] *)
+| Dup    (* [fd0 fd1] *)
+| Popredir (* *)
 @
 
-<<function [[Runtime.mk_thread]]>>=
-(* This function was called start(), but it does not really start right
- * away the new thread. So better to call it mk_thread.
- * It starts with pc <> 0 when handle async, traps, pipes, etc.
- *)
-let mk_thread code pc locals =
-  let t = {
-    code = code;
-    pc = ref pc;
-    argv = [];
-    argv_stack = [];
-    locals = locals;
-
-    lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
-    iflag = false;
-    file = None;
-    line = ref 1;
-
-    waitstatus = NothingToWaitfor;
-    redirections = 
-      (match !runq with
-      | [] -> []::[]
-      | t::_ts -> []::t.redirections
-      );
-  } in
-  t
+<<[[Opcode.operation]] other pipe cases>>=
+| PipeWait (* argument passed through Thread.pid *)
+| PipeFd (* [type]{... Xreturn} *)
 @
 
 
-<<signature [[Runtime.runq]]>>=
-val runq : thread list ref
+<<[[Opcode.operation]] other cases>>=
+| DelFn (* (name) *)
+(* less: RdFn *)
 @
 
-<<constant [[Runtime.runq]]>>=
-(* less: could have also  'let cur = { code = boostrap; pc = 1; chan = stdin }'
- * in addition to runq. Then there will be no need for cur ().
- *)
-let runq = ref []
+<<[[Opcode.operation]] other cases>>=
+(* ?? *)
+| Subshell (* {... Xexit} *)
+| Backquote (* {... Xreturn} *)
+| Async     (* {... Xreturn} *)
 @
 
-<<signature [[Runtime.cur]]>>=
-val cur : unit -> thread
-@
-
-<<signature [[Runtime.push_list]]>>=
-val push_list : unit -> unit
-@
-
-<<signature [[Runtime.pop_list]]>>=
-val pop_list : unit -> unit
-@
-
-<<signature [[Runtime.push_word]]>>=
-val push_word : string -> unit
-@
-
-<<signature [[Runtime.pop_word]]>>=
-val pop_word : unit -> unit
-@
-
-<<function [[Runtime.cur]]>>=
-let cur () =
-  match !runq with
-  | [] -> failwith "empty runq"
-  | x::_xs -> x
-@
-
-<<function [[Runtime.push_list]]>>=
-let push_list () =
-  let t = cur () in
-  t.argv_stack <- t.argv :: t.argv_stack;
-  t.argv <- []
-@
-
-<<function [[Runtime.pop_list]]>>=
-let pop_list () =
-  let t = cur () in
-  match t.argv_stack with
-  (* At the very beginning we do *=(argv) in bootstrap.
-   * In that case, Assign will generate two pop_list, but for
-   * the second one argv_stack becomes empty. The only thing
-   * we must do is to empty argv then.
-   *)
-  | [] ->
-     t.argv <- []
-  | x::xs -> 
-      t.argv_stack <- xs;
-      t.argv <- x
-@
-
-<<function [[Runtime.push_word]]>>=
-let push_word s =
-  let t = cur () in
-  t.argv <- s::t.argv
-@
-
-<<function [[Runtime.pop_word]]>>=
-let pop_word () =
-  let t = cur () in
-  match t.argv with
-  | [] -> failwith "pop_word but no word!"
-  | _x::xs ->
-      t.argv <- xs
+<<[[Opcode.operation]] other cases>>=
+(* Globbing *)
+| Glob (* (value?) *)
 @
 
 
 \section{Words}
 %alt: and lists of words
+
+% runtime value, what will be in the stack
+% Not like Ast.value!
 
 <<type [[Runtime.value]]>>=
 (* In rc the basic (and only) value is the list of strings.
@@ -458,6 +450,8 @@ let pop_word () =
  *)
 type value = string list
 @
+
+
 
 \section{Variables}
 
@@ -502,35 +496,9 @@ let gvlook name =
     var
 @
 
-<<signature [[Var.vlook]]>>=
-(* This will look first in the locals (in Runtime.cur().locals) and then
- * in globals (in Runtime.globals)
- *)
-val vlook : Runtime.varname -> Runtime.var
-@
 
-<<function [[Var.vlook]]>>=
-let vlook name =
-  if !Runtime.runq <> []
-  then 
-    let t = Runtime.cur () in
-    try 
-      Hashtbl.find t.R.locals name
-    with Not_found ->
-      gvlook name
-  else gvlook name
-@
 
-<<signature [[Var.setvar]]>>=
-(* Override the content of a (local or global) variable *)
-val setvar : Runtime.varname -> Runtime.value -> unit
-@
 
-<<function [[Var.setvar]]>>=
-let setvar name v =
-  let var = vlook name in
-  var.R.v <- Some v
-@
 
 <<signature [[Var.vinit]]>>=
 (* Populate Runtime.globals from the current environment *)
@@ -564,7 +532,250 @@ type fn = {
 @
 
 
+
+
+\section{Threads and run queue}
+
+<<type [[Runtime.thread]]>>=
+type thread = {
+  code: Opcode.codevec;
+  pc: int ref;
+
+  mutable argv: string list;
+  locals: (varname, var) Hashtbl.t;
+
+  <<[[Runtime.thread]] other fields>>
+}
+@
+
+%Where is the stack ?? what is argv?
+
+
+
+<<signature [[Runtime.runq]]>>=
+val runq : thread list ref
+@
+
+<<constant [[Runtime.runq]]>>=
+(* less: could have also  'let cur = { code = boostrap; pc = 1; chan = stdin }'
+ * in addition to runq. Then there will be no need for cur ().
+ *)
+let runq = ref []
+@
+
+<<signature [[Runtime.cur]]>>=
+val cur : unit -> thread
+@
+<<function [[Runtime.cur]]>>=
+let cur () =
+  match !runq with
+  | [] -> failwith "empty runq"
+  | x::_xs -> x
+@
+
+
+
+<<signature [[Runtime.mk_thread]]>>=
+val mk_thread :
+  Opcode.codevec -> int -> (varname, var) Hashtbl.t -> thread
+@
+
+<<function [[Runtime.mk_thread]]>>=
+(* This function was called start(), but it does not really start right
+ * away the new thread. So better to call it mk_thread.
+ * It starts with pc <> 0 when handle async, traps, pipes, etc.
+ *)
+let mk_thread code pc locals =
+  let t = {
+    code = code;
+    pc = ref pc;
+    argv = [];
+    locals = locals;
+
+    <<[[Runtime.mk_thread()]] set other fields>>
+  } in
+  t
+@
+
+
+
+
+
+\subsection{Local variables}
+
+
+<<signature [[Var.vlook]]>>=
+(* This will look first in the locals (in Runtime.cur().locals) and then
+ * in globals (in Runtime.globals)
+ *)
+val vlook : Runtime.varname -> Runtime.var
+@
+
+<<function [[Var.vlook]]>>=
+let vlook name =
+  if !Runtime.runq <> []
+  then 
+    let t = Runtime.cur () in
+    try 
+      Hashtbl.find t.R.locals name
+    with Not_found ->
+      gvlook name
+  else gvlook name
+@
+
+<<signature [[Var.setvar]]>>=
+(* Override the content of a (local or global) variable *)
+val setvar : Runtime.varname -> Runtime.value -> unit
+@
+
+<<function [[Var.setvar]]>>=
+let setvar name v =
+  let var = vlook name in
+  var.R.v <- Some v
+@
+
+
+
+\subsection{Redirections}
+
+<<[[Runtime.thread]] other fields>>=
+(* things to do before exec'ing the simple command *)
+mutable redirections: (redir list) list;
+@
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+redirections = 
+  (match !runq with
+  | [] -> []::[]
+  | t::_ts -> []::t.redirections
+  );
+@
+
+
+\subsection{Wait status}
+
+<<[[Runtime.thread]] other fields>>=
+(* things to wait for after a thread forked a process *)
+mutable waitstatus: waitstatus;
+@
+<<[[Runtime.mk_thread()]] set other fields>>=
+waitstatus = NothingToWaitfor;
+@
+
+
+
+
+
+
+
+
+
+<<[[Runtime.thread]] other fields>>=
+(* Used for switch but also assignments. *)
+mutable argv_stack: (string list) list;
+@
+%TODO? use value list here?? diff with argv?
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+argv_stack = [];
+@
+
+
+<<[[Runtime.thread]] other fields>>=
+(* for error reporting (None when reading from stdin) *)
+(* less: file has to be mutable? could be a param of start? like chan? *)
+mutable file: Common.filename option;
+line: int ref;
+@
+
+<<[[Runtime.thread]] other fields>>=
+(* connected on stdin by default (changed when do '. file') *)
+mutable lexbuf: Lexing.lexbuf;
+@
+
+
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
+iflag = false;
+file = None;
+line = ref 1;
+@
+
+
+
+
+
+<<[[Runtime.thread]] other fields>>=
+(* to display a prompt or not *)
+mutable iflag: bool;
+@
+
+
+
+
+
+
+
+
+
+
+%\subsection{Stack helpers}
+
+<<signature [[Runtime.push_list]]>>=
+val push_list : unit -> unit
+@
+
+<<signature [[Runtime.pop_list]]>>=
+val pop_list : unit -> unit
+@
+
+
+<<signature [[Runtime.pop_word]]>>=
+val pop_word : unit -> unit
+@
+
+
+<<function [[Runtime.push_list]]>>=
+let push_list () =
+  let t = cur () in
+  t.argv_stack <- t.argv :: t.argv_stack;
+  t.argv <- []
+@
+
+<<function [[Runtime.pop_list]]>>=
+let pop_list () =
+  let t = cur () in
+  match t.argv_stack with
+  (* At the very beginning we do *=(argv) in bootstrap.
+   * In that case, Assign will generate two pop_list, but for
+   * the second one argv_stack becomes empty. The only thing
+   * we must do is to empty argv then.
+   *)
+  | [] ->
+     t.argv <- []
+  | x::xs -> 
+      t.argv_stack <- xs;
+      t.argv <- x
+@
+
+
+<<function [[Runtime.pop_word]]>>=
+let pop_word () =
+  let t = cur () in
+  match t.argv with
+  | [] -> failwith "pop_word but no word!"
+  | _x::xs ->
+      t.argv <- xs
+@
+
+
+
 \chapter{[[main()]]}
+
+
+
+
 
 \section{Overview}
 
@@ -577,7 +788,7 @@ type fn = {
  *    created by 'rc'
  *  - open_in: ??
  *
- * TODO? could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
+ * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
 type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 @
@@ -599,62 +810,15 @@ let _ =
 
 
 
+
+
 <<function [[CLI.main]]>>=
 let main (caps : <caps; .. >) (argv : string array) : Exit.t =
-
   let args = ref [] in
-
-  (* for debugging *)
-  let level = ref (Some Logs.Warning) in
-  let action = ref "" in
+  <<[[CLI.main()]] debugging initializations>>
 
   let options = [
-    "-i", Arg.Set Flags.interactive,
-    " interactive mode (display prompt)";
-    "-I", Arg.Clear Flags.interactive,
-    " non-interactive mode (no prompt)";
-    "-l", Arg.Set Flags.login,
-    " login mode (execute ~/lib/profile)";
-    "-m", Arg.Set_string Flags.rcmain,
-    " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
-
-    "-e", Arg.Set Flags.eflag,
-    " exit if $status is non-null after a simple command";
-
-    "-r", Arg.Set Flags.rflag,
-    " print internal form of commands (opcodes)";
-    "-s", Arg.Set Flags.sflag,
-    " print exit status after any command where the status is non-null";
-    "-x", Arg.Set Flags.xflag,
-    " print each simple command before executing it";
-
-    (* pad: I added that *)
-    "-strict", Arg.Set Flags.strict_mode,
-    " strict mode";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_opcodes", Arg.Set Flags.dump_opcodes,
-    " dump the generated opcodes ";
-
-    (* pad: I added that *)
-    (* TODO: move in a CLI_common.ml *)
-    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-    " verbose mode";
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
-    " trace the main functions";
-    "-debugger", Arg.Set Flags.debugger,
-    " ";
+    <<[[CLI.main()]] [[options]] elements>>
   ]
   in
   (* old: was Arg.parse but we want explicit argv control *)
@@ -664,73 +828,56 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
-
-
-  Logs.set_level !level;
-  Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
-
-  (* to test and debug components of mk *)
-  if !action <> "" then begin 
-    do_action caps !action (List.rev !args); 
-    raise (Exit.ExitCode 0)
-  end;
-
+  <<[[CLI.main()]] logging initializations>>
+  <<[[CLI.main()]] CLI action processing>>
   (* todo: 
    * if argc=1 and Isatty then Flags.interactive := true 
    *)
   Var.vinit caps;
   (* todo: trap_init () *)
-
-  (* for 'flags' builtin (see builtin.ml) *)
-  argv |> Array.iter (fun s ->
-    if s =~ "^-\\([a-zA-Z]\\)"
-    then begin
-      let letter = Regexp_.matched1 s in
-      let char = String.get letter 0 in
-      Hashtbl.add Flags.hflags char true
-    end
-  );
-
+  <<[[CLI.main()]] other initializations>>
   try 
-    interpret (caps :> < caps >) (List.rev !args);
+    interpret_bootstrap (caps :> < caps >) (List.rev !args);
     Exit.OK
   with exn ->
-    if !Flags.debugger
-    then raise exn
-    else 
-      (match exn with
-      | Failure s -> 
-          (* useful to indicate that error comes from rc, not subprocess *)
-          Logs.err (fun m -> m  "rc: %s" s);
-          Exit.Code 1
-      (* alt: could catch Exit.ExitCode here but this is done in Main.ml *)
-      | _ -> raise exn
-      )
+    <<[[CLI.main()]] when [[exn]] thrown in [[interpret()]]>>
 @
 %$
 
 
-<<signature [[Interpreter.interpret]]>>=
-(* Interpret one operation. Called from a loop in main(). *)
-val interpret :
-  < Cap.fork ; Cap.exec ; Cap.chdir ; Cap.exit ; Cap.open_in; .. > ->
-  Opcode.operation ->
-  unit
+<<[[CLI.main()]] when [[Failure]] [[exn]] thrown in [[interpret()]]>>=
+| Failure s -> 
+    (* useful to indicate that error comes from rc, not subprocess *)
+    Logs.err (fun m -> m  "rc: %s" s);
+    Exit.Code 1
+@
+
+
+<<signature [[CLI.interpret_bootstrap]]>>=
+val interpret_bootstrap : < caps > -> string list -> unit
 @
 
 
 \section{Command-line arguments processing}
+%ocaml: section not needed
 
 <<constant [[CLI.usage]]>>=
 let usage =
   "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
 @
 
+% will show gradually
+
 \subsection{Login mode: [[rc -l]]}
 
 <<constant [[Flags.login]]>>=
 (* -l (on by default if argv0 starts with a -) *)
 let login = ref false
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-l", Arg.Set Flags.login,
+" login mode (execute ~/lib/profile)";
 @
 
 \subsection{Interactive mode: [[rc -i]]}
@@ -740,7 +887,16 @@ let login = ref false
 let interactive = ref false
 @
 
+<<[[CLI.main()]] [[options]] elements>>=
+"-i", Arg.Set Flags.interactive,
+" interactive mode (display prompt)";
+"-I", Arg.Clear Flags.interactive,
+" non-interactive mode (no prompt)";
+@
+
 \section{Initialization}
+
+%Var.vinit
 
 \section{Bootstrapping bytecodes (simplified)}
 
@@ -749,14 +905,15 @@ let _bootstrap_simple : O.opcode array =
   [| O.F O.REPL |]
 @
 
-\section{Setting [[runq]]}
+%\section{Setting [[runq]]}
 
-\section{Setting [[runq->argv]]}
+%\section{Setting [[runq->argv]]}
 
 \section{Bytecode interpreter loop}
 
-<<function [[CLI.interpret]]>>=
-let interpret (caps : < caps >) (args : string list) : unit =
+
+<<function [[CLI.interpret_bootstrap]]>>=
+let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
@@ -767,28 +924,16 @@ let interpret (caps : < caps >) (args : string list) : unit =
   args |> List.rev |> List.iter Runtime.push_word;
 
   while true do
-
     (* bugfix: need to fetch the current thread each time,
      * as the interpreted code may have modified runq.
      *)
     let t = Runtime.cur () in
     let pc = t.R.pc in
-
-    (* less: cycle =~ codevec pointer *)
-    if !Flags.rflag
-    then Logs.app (fun m -> m "pid %d %d %s %s"
-                (Unix.getpid ())
-                !pc
-                (Dumper_.s_of_opcode t.R.code.(!pc))
-                ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
-                    spf "(%s)" (String.concat " " xs)
-                   ) |> String.concat " "));
-    
+    <<[[CLI.interpret()]] if [[rflag]]>>
     incr pc;
     (match t.R.code.(!pc - 1) with
-
     (* opcode dispatch ! *)
-    | O.F operation ->  Interpreter.interpret caps operation
+    | O.F operation ->  Interpreter.interpret_operation caps operation
     | O.S s -> failwith (spf "was expecting a F, not a S: %s" s)
     | O.I i -> failwith (spf "was expecting a F, not a I: %d" i)
     );
@@ -797,37 +942,76 @@ let interpret (caps : < caps >) (args : string list) : unit =
 [@@profiling]
 @
 
-\section{Reading commands: [[Xrdcmds()]]}
+
+<<signature [[Runtime.push_word]]>>=
+val push_word : string -> unit
+@
+<<function [[Runtime.push_word]]>>=
+let push_word s =
+  let t = cur () in
+  t.argv <- s::t.argv
+@
+
+<<signature [[Interpreter.interpret_operation]]>>=
+(* Interpret one operation. Called from a loop in main(). *)
+val interpret_operation :
+  < Cap.fork ; Cap.exec ; Cap.chdir ; Cap.exit ; Cap.open_in; .. > ->
+  Opcode.operation ->
+  unit
+@
+
+
+<<function [[Interpreter.interpret_operation]]>>=
+let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =
+  match operation with
+  <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>
+  | (O.Concatenate|O.Stringify    |O.Index|
+     O.Unlocal|
+     O.Fn|
+     O.For|
+     O.Read|O.Append |O.ReadWrite|
+     O.Close|O.Dup|O.PipeFd|
+     O.Subshell|O.Backquote|O.Async
+    ) ->
+    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F operation))
+@
+%$
+
+\section{Reading commands: [[O.REPL]]}
+%c: was Xrdcmds()
+
+<<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>=
+(* set prompstr *)
+if t.R.iflag then begin
+  let promptv = (Var.vlook "prompt").R.v in
+  Prompt.prompt := 
+    (match promptv with
+    | Some (x::_xs) -> x
+    (* stricter? display error message if prompt set but no element?*)
+    | Some [] | None -> "% "
+    );
+end;
+@
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* *)
+| O.REPL -> Op_repl.op_REPL caps ()
+@
 
 <<function [[Op_repl.op_REPL]]>>=
 (* was called Xrdcmds *)
 let op_REPL (caps : < Cap.exit; ..>) () =
-
   let t = R.cur () in
 
-  (* todo: flush error and reset error count *)
-  if !Flags.sflag && not (Status.truestatus()) 
-  then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
+  <<[[Op_repl.op_REPL()]] if [[sflag]]>>
+  <<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>
 
-  (* set prompstr *)
-  if t.R.iflag then begin
-    let promptv = (Var.vlook "prompt").R.v in
-    Prompt.prompt := 
-      (match promptv with
-      | Some (x::_xs) -> x
-      (* stricter? display error message if prompt set but no element?*)
-      | Some [] | None -> "% "
-      );
-  end;
   (* less: call Noerror before yyparse *)
 
   let lexbuf = t.R.lexbuf in
-
   try 
-    let ast_opt = Parse.parse_line lexbuf in
-
-    match ast_opt with
-    | None -> Process.return caps ()
+    let cmdseq_opt = Parse.parse_line lexbuf in
+    match cmdseq_opt with
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in
@@ -838,50 +1022,64 @@ let op_REPL (caps : < Cap.exit; ..>) () =
         (* when codevec does a op_return(), then interpreter loop
          * in main should call us back since the pc was decremented above
          *)
+    | None -> Process.return caps ()
 
   with Failure s -> 
-    (* todo: check signals  *)
-
-    if not t.R.iflag
-    (* less: was doing Xreturn originally *)
-    then failwith s
-    else begin
-      Logs.err (fun m -> m "%s" s);
-      (* go back for next command *)
-      decr t.R.pc;
-    end
+    <<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>
 @
+% parse_line, compile, runq
+
+<<signature [[Parse.parse_line]]>>=
+val parse_line : Lexing.lexbuf -> Ast.line
+@
+% compile seen before
+
+% when return op_REPL, and interpret_operation, will go gack to
+% while loop of interpret_bootstrap and newt at the top of cur!
+% so will execute that!
+
+<<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>=
+(* todo: check signals  *)
+
+if not t.R.iflag
+(* less: was doing Xreturn originally *)
+then failwith s
+else begin
+  Logs.err (fun m -> m "%s" s);
+  (* go back for next command *)
+  decr t.R.pc;
+end
+@
+
 
 <<signature [[Process.return]]>>=
 val return : < Cap.exit ; .. > -> unit -> unit
 @
 
-<<signature [[Process.exit]]>>=
-val exit : < Cap.exit ; .. > -> string -> unit
+<<function [[Process.return]]>>=
+(* Was called Xreturn but called not only from the opcode interpreter.
+ * It is an helper function really.
+ *)
+let return (caps : < Cap.exit; .. >) () =
+  R.turf_redir ();
+  match !R.runq with
+  | [] -> failwith "empty runq"
+  (* last thread in runq, we exit then *)
+  | [_x] -> exit caps (Status.getstatus ())
+  | _x::xs -> 
+      R.runq := xs
 @
 
-<<signature [[Process.waitfor]]>>=
-val waitfor : int -> waitfor_result
-@
-
-
-<<signature [[Compile.compile]]>>=
-val compile : Ast.cmd_sequence -> Opcode.codevec
-@
 
 
 
 
-\chapter{Input}
-
-\section{Overview}
-
-\section{Reading a character: [[getnext()]]}
-
-\subsection{End-of-file management}
-
-\subsection{Multiple lines commands and escaped newlines}
-
+%\chapter{Input}
+%\section{Overview}
+%\section{Reading a character: [[getnext()]]}
+%\subsection{End-of-file management}
+%\subsection{Multiple lines commands and escaped newlines}
+%\section{Looking ahead: [[nextc()]] and [[advance()]]}
 \subsection{Displaying the prompt}
 
 <<signature [[Prompt.doprompt]]>>=
@@ -938,10 +1136,12 @@ let pprompt () =
 
 
 
-\section{Looking ahead: [[nextc()]] and [[advance()]]}
+
 
 
 \chapter{Lexing}
+
+% parse_line() will call Lexer.token()
 
 <<signature [[Lexer.token]]>>=
 val token: Lexing.lexbuf -> Parser.token
@@ -950,12 +1150,19 @@ val token: Lexing.lexbuf -> Parser.token
 <<exception [[Lexer.Lexical_error]]>>=
 exception Lexical_error of string
 @
+<<function [[Lexer.error]]>>=
+let error s =
+  raise (Lexical_error s)
+@
+
+
+\section{[[token()]] skeleton}
+
 
 <<Lexer.mll>>=
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-
 open Parser
 
 (*****************************************************************************)
@@ -964,151 +1171,168 @@ open Parser
 (* Limitations compared to rc:
  *  - no unicode support
 *)
-
-exception Lexical_error of string
-
-let error s =
-  raise (Lexical_error s)
-
-(* we could do that in pprompt() too *)
-let incr_lineno () =
-  let t = Runtime.cur () in
-  incr t.Runtime.line
-  
+<<exception [[Lexer.Lexical_error]]>>
+<<function [[Lexer.error]]>>
+<<function [[Lexer.incr_lineno]]>>
 }
-
-
 (*****************************************************************************)
 (* Regexps aliases *)
 (*****************************************************************************)
-(* original: !strchr("\n \t#;&|^$=`'{}()<>", c) && c!=EOF;
- * note that wordchr allows '~', '!', '@', '"', ','
- *)
-let wordchr = [^'\n' ' ' '\t' '#'
-                ';' '&''|''^' '$' '=' 
-                '`' '\'' 
-               '{''}' '('')' '<''>'
-                ]
-
-(* less: not used yet, special regexp used with lastdol *)
-let idchr = ['a'-'z''A'-'Z''0'-'9''_''*']
+<<lexer regexp aliases>>
 
 (*****************************************************************************)
 (* Main rule *)
 (*****************************************************************************)
+<<rule [[Lexer.token]]>>
 
+(*****************************************************************************)
+(* Quote rule *)
+(*****************************************************************************)
+<<rule [[Lexer.quote]]>>
+@
+
+
+
+<<rule [[Lexer.token]]>>=
 rule token = parse
 
   (* ----------------------------------------------------------------------- *)
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
-  | [' ''\t']+ { token lexbuf }
-  | '\n'       { incr_lineno(); Prompt.doprompt := true; TNewline }
-  | '\\''\n'  {
-      incr_lineno ();
-      Prompt.pprompt ();
-      token lexbuf
-  }    
-  | '#' [^'\n']* { token lexbuf }
+  <<[[Lexer.token()]] space cases>>
+  <<[[Lexer.token()]] comment cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
-  | "&&" { Globals.skipnl := true; TAndAnd }
-  | "||" { Globals.skipnl := true; TOrOr }
-
-  | ';'  { TSemicolon }
-  | "&"  { TAnd }
-  | "|"  { Globals.skipnl := true; TPipe }
-
-  | ">"  { TRedir Ast.RWrite }
-  | "<"  { TRedir Ast.RRead }
-  | ">>" { TRedir Ast.RAppend }
-  | ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
-         {  let fd0 = failwith "TODO: fd0" in
-     let fd1 = failwith "TODO: fd1" in
-     TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
-  }
-  | ">>[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
-         {
-             let fd0 = failwith "TODO: fd0" in
-      let fd1 = failwith "TODO: fd1" in
-      TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
-  }
-  (* less: advanced pipe and redirection *)
-
-  | '('  { TOPar }   | ')' { TCPar }
-  | '{'  { TOBrace } | '}' { TCBrace }
-
-  | '='  { TEq }
-  | "`" { TBackquote } 
-
-  | "~" { TTwiddle } 
-  | "!" { TBang }
-  | "@" { TSubshell }
-
-  | "^" { TCaret }
+  <<[[Lexer.token()]] symbol cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* Variables *)
   (* ----------------------------------------------------------------------- *)
-
-  | "$"   { TDollar }
-  | "$#"  { TCount }
-  | "$\"" { TStringify }
+  <<[[Lexer.token()]] variable cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* Quoted word *)
   (* ----------------------------------------------------------------------- *)
-  | "'" { let s = quote lexbuf in TWord (s, true) }
+  <<[[Lexer.token()]] quoted word cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* Keywords and unquoted words *)
   (* ----------------------------------------------------------------------- *)
-
-  | wordchr+ { 
-
-    let s = Lexing.lexeme lexbuf in
-    (match s with
-    | "for"   -> TFor
-    | "in"    -> TIn
-    | "while" -> TWhile
-    | "if"    -> TIf
-    | "not"   -> TNot
-    | "switch" -> TSwitch
-    | "fn"     -> TFn
-
-    | _ -> TWord (s, false)
-    )
-  }
+  <<[[Lexer.token()]] keywords and unquoted words cases>>
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
   | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
-
-(*****************************************************************************)
-(* Quote rule *)
-(*****************************************************************************)
-and quote = parse
-  | "''" { "'" ^ quote lexbuf } 
-  | "'" { "" } 
-  | "\n" { 
-      incr_lineno ();
-      Prompt.pprompt ();
-      "\n" ^ quote lexbuf
-    }
-  | [^'\'' '\n']+ { let s = Lexing.lexeme lexbuf in s ^ quote lexbuf }
-  (* stricter: generate error *)
-  | eof { error "unterminated quote" }
-
 @
 
 
-\section{[[yylex()]]}
+
+
+<<lexer regexp aliases>>=
+(* less: not used yet, special regexp used with lastdol *)
+let idchr = ['a'-'z''A'-'Z''0'-'9''_''*']
+@
+
+
+
+
+%\section{[[yylex()]]}
 
 \section{Spaces and comments ([['#']])}
 
-\section{Newlines}
+<<[[Lexer.token()]] space cases>>=
+| [' ''\t']+ { token lexbuf }
+@
+
+<<[[Lexer.token()]] comment cases>>=
+| '#' [^'\n']* { token lexbuf }
+@
+
+
+\section{Newlines and prompts}
+
+<<[[Lexer.token()]] space cases>>=
+| '\n'       { incr_lineno(); Prompt.doprompt := true; TNewline }
+@
+
+<<[[Lexer.token()]] space cases>>=
+| '\\''\n'  {
+    incr_lineno ();
+    Prompt.pprompt ();
+    token lexbuf
+}    
+@
+
+
+<<function [[Lexer.incr_lineno]]>>=
+(* we could do that in pprompt() too *)
+let incr_lineno () =
+  let t = Runtime.cur () in
+  incr t.Runtime.line
+@  
+
+
+\section{Operators ([['&']], [['&&']], [['|']], [['||']], [['<']], [['>']], [['$']], \ldots)}
+
+<<[[Lexer.token()]] symbol cases>>=
+| "&&" { Globals.skipnl := true; TAndAnd }
+| "||" { Globals.skipnl := true; TOrOr }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| ';'  { TSemicolon }
+| "&"  { TAnd }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "|"  { Globals.skipnl := true; TPipe }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| ">"  { TRedir Ast.RWrite }
+| "<"  { TRedir Ast.RRead }
+| ">>" { TRedir Ast.RAppend }
+@
+<<[[Lexer.token()]] symbol cases>>=
+| ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
+       {  let fd0 = failwith "TODO: fd0" in
+   let fd1 = failwith "TODO: fd1" in
+   TDup (Ast.RWrite, int_of_string fd0, int_of_string fd1)
+}
+| ">>[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
+       {
+           let fd0 = failwith "TODO: fd0" in
+    let fd1 = failwith "TODO: fd1" in
+    TDup (Ast.RAppend, int_of_string fd0, int_of_string fd1)
+}
+(* less: advanced pipe and redirection *)
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| '('  { TOPar }   | ')' { TCPar }
+| '{'  { TOBrace } | '}' { TCBrace }
+@
+<<[[Lexer.token()]] symbol cases>>=
+| '='  { TEq }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "`" { TBackquote } 
+@
+<<[[Lexer.token()]] symbol cases>>=
+| "~" { TTwiddle } 
+| "!" { TBang }
+@
+
+<<[[Lexer.token()]] symbol cases>>=
+| "@" { TSubshell }
+@
+<<[[Lexer.token()]] symbol cases>>=
+| "^" { TCaret }
+@
+
 
 <<constant [[Globals.skipnl]]>>=
 (* This global is used by the lexer and parser to consider certain
@@ -1125,48 +1349,76 @@ and quote = parse
 let skipnl = ref false
 @
 
-\section{Operators ([['&']], [['&&']], [['|']], [['||']], [['<']], [['>']], [['$']], \ldots)}
+
+<<[[Lexer.token()]] variable cases>>=
+| "$"   { TDollar }
+@
+<<[[Lexer.token()]] variable cases>>=
+| "$#"  { TCount }
+@
+<<[[Lexer.token()]] variable cases>>=
+| "$\"" { TStringify }
+@
+%$
 
 \section{Quoted strings ([['...']])}
 
+<<[[Lexer.token()]] quoted word cases>>=
+| "'" { let s = quote lexbuf in TWord (s, true) }
+@
+
+<<rule [[Lexer.quote]]>>=
+and quote = parse
+  | "''" { "'" ^ quote lexbuf } 
+  | "'" { "" } 
+  | "\n" { 
+      incr_lineno ();
+      Prompt.pprompt ();
+      "\n" ^ quote lexbuf
+    }
+  | [^'\'' '\n']+ { let s = Lexing.lexeme lexbuf in s ^ quote lexbuf }
+  (* stricter: generate error *)
+  | eof { error "unterminated quote" }
+@
+
 \section{Keywords and identifiers ([[if]], [[for]], [[while]], [[switch]], [[fn]], \ldots )}
 
-\section{Array subscript ([[<arr>(<n>)]])}
+<<lexer regexp aliases>>=
+(* original: !strchr("\n \t#;&|^$=`'{}()<>", c) && c!=EOF;
+ * note that wordchr allows '~', '!', '@', '"', ','
+ *)
+let wordchr = [^'\n' ' ' '\t' '#'
+                ';' '&''|''^' '$' '=' 
+                '`' '\'' 
+               '{''}' '('')' '<''>'
+                ]
+@
+
+<<[[Lexer.token()]] keywords and unquoted words cases>>=
+| wordchr+ { 
+
+  let s = Lexing.lexeme lexbuf in
+  (match s with
+  | "if"    -> TIf
+  | "while" -> TWhile
+  | "for"   -> TFor
+  | "in"    -> TIn
+  | "not"   -> TNot
+  | "switch" -> TSwitch
+  | "fn"     -> TFn
+
+  | _ -> TWord (s, false)
+  )
+}
+@
+
+%\section{Array subscript ([[<arr>(<n>)]])}
 
 
 
 \chapter{Parsing}
 
-\section{Overview}
-
-<<signature [[Parse.parse_line]]>>=
-val parse_line : Lexing.lexbuf -> Ast.line
-@
-
-<<function [[Parse.error]]>>=
-let error s (curtok, curtokstr) =
-  let t = R.cur () in
-  let locstr =
-    match t.R.file, t.R.iflag with
-    | Some f, false -> spf "%s:%d: " f !(t.R.line)
-    | Some f, true -> spf "%s: " f
-    | None, false -> spf "%d: " !(t.R.line)
-    | None, true -> ""
-  in
-  let tokstr = 
-    match curtok with
-    | Parser.TNewline -> ""
-    | _ -> spf "token %s: " (curtokstr)
-  in
-  let str = spf "rc: %s%s%s" locstr tokstr s in
-
-  (* todo: reset globals like lastdol, lastword *)
-  (* less: error recovery, skip until next newline *)
-  Status.setstatus s;
-
-  (* less: nerror++; *)
-  failwith str
-@
+\section{[[parse_line()]] skeleton}
 
 
 <<function [[Parse.parse_line]]>>=
@@ -1225,22 +1477,34 @@ let parse_line lexbuf =
 
 
 
-<<Parser.mly>>=
-%{
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
+<<function [[Parse.error]]>>=
+let error s (curtok, curtokstr) =
+  let t = R.cur () in
+  let locstr =
+    match t.R.file, t.R.iflag with
+    | Some f, false -> spf "%s:%d: " f !(t.R.line)
+    | Some f, true -> spf "%s: " f
+    | None, false -> spf "%d: " !(t.R.line)
+    | None, true -> ""
+  in
+  let tokstr = 
+    match curtok with
+    | Parser.TNewline -> ""
+    | _ -> spf "token %s: " (curtokstr)
+  in
+  let str = spf "rc: %s%s%s" locstr tokstr s in
 
-open Ast
+  (* todo: reset globals like lastdol, lastword *)
+  (* less: error recovery, skip until next newline *)
+  Status.setstatus s;
 
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
+  (* less: nerror++; *)
+  failwith str
+@
 
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
 
+
+<<function [[Parser.mk_seq]]>>=
 (* This is a useful optimisation as you can get lots of EmptyCommand,
  * for instance, in {\nls\n} you will get 2 EmptyCommand (for each \n)
 *)
@@ -1249,56 +1513,9 @@ let mk_Seq (a, b) =
   | EmptyCommand, _ -> b
   | _, [EmptyCommand] -> [a]
   | _ -> a::b
-  
-%}
+@
 
-/*(*************************************************************************)*/
-/*(*1 Tokens *)*/
-/*(*************************************************************************)*/
-
-/*(*-----------------------------------------*)*/
-/*(*2 Keywords *)*/
-/*(*-----------------------------------------*)*/
-%token TFor TIn  TIf TNot TWhile  TSwitch  
-%token TFn
-
-/*(*-----------------------------------------*)*/
-/*(*2 Word *)*/
-/*(*-----------------------------------------*)*/
-%token<string * bool(* quoted *)> TWord
-
-/*(*-----------------------------------------*)*/
-/*(*2 Operators *)*/
-/*(*-----------------------------------------*)*/
-%token TAndAnd TOrOr TBang
-%token TPipe
-%token<Ast.redirection_kind> TRedir
-%token<Ast.redirection_kind * int * int> TDup
-%token TAnd TSubshell
-%token TTwiddle  
-
-/*(*-----------------------------------------*)*/
-/*(*2 Punctuation *)*/
-/*(*-----------------------------------------*)*/
-
-%token TOPar TCPar TOBrace TCBrace
-%token TSemicolon TEq
-%token TDollar TCount TStringify 
-%token TSub
-%token TCaret
-%token TBackquote
-
-/*(*-----------------------------------------*)*/
-/*(*2 Misc *)*/
-/*(*-----------------------------------------*)*/
-%token TNewline
-
-%token EOF
-
-/*(*************************************************************************)*/
-/*(*1 Priorities *)*/
-/*(*************************************************************************)*/
-
+<<Parser token priorities>>=
 /*(* from low to high *)*/
 %left TIf TWhile TFor TSwitch TCPar TNot
 %left TAndAnd TOrOr
@@ -1308,16 +1525,51 @@ let mk_Seq (a, b) =
 /*(* $$A -> ($ ($ A)) not (($ $) A) *)*/
 %right TDollar TCount TStringify
 %left TSub
+@
+
+<<Parser entry points types>>=
+%type <Ast.line> rc
+%start rc
+@
+
+<<Parser.mly>>=
+%{
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Stdcompat (* for |> *)
+open Common
+open Ast
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+<<function [[Parser.mk_seq]]>>
+%}
+
+/*(*************************************************************************)*/
+/*(*1 Tokens *)*/
+/*(*************************************************************************)*/
+<<Parser tokens>>
+
+/*(*************************************************************************)*/
+/*(*1 Priorities *)*/
+/*(*************************************************************************)*/
+<<Parser token priorities>>
 
 /*(*************************************************************************)*/
 /*(*1 Rules type declaration *)*/
 /*(*************************************************************************)*/
-
-%type <Ast.line> rc
-%start rc
+<<Parser entry points types>>
 
 %%
 
+<<grammar>>
+@
+
+<<grammar>>=
 /*(*************************************************************************)*/
 /*(*1 line *)*/
 /*(*************************************************************************)*/
@@ -1500,6 +1752,10 @@ tcpar_skipnl: TCPar { Globals.skipnl := true; }
 %\chapter{Checking}
 
 
+
+
+
+
 \chapter{Bytecode Generation and Interpretation}
 
 <<function [[Compile.split_at_non_assign]]>>=
@@ -1558,315 +1814,14 @@ let int_at_address t pc =
                       (Dumper_.s_of_opcode op) pc)
 @
 
+
 \section{Overview}
 
-<<function [[Interpreter.interpret]]>>=
-let interpret (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) operation =
-  match operation with
-  (* *)
-  | O.REPL -> Op_repl.op_REPL caps ()
-
-  (* (args) *)
-  | O.Simple -> Op_process.op_Simple caps ()
-
-  | O.Return -> Process.return caps ()
-  | O.Exit -> 
-      (* todo: trapreq *)
-      Process.exit caps (Status.getstatus())
-
-  | O.Mark -> R.push_list ()
-
-  (* [string] *)
-  | O.Word ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      let x = t.R.code.(!pc) in
-      incr pc;
-      (match x with
-      | O.S s -> R.push_word s
-      (* stricter: but should never happen *)
-      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
-      )
-
-  (* (name) (val) *)
-  | O.Assign ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] ->
-          (* no call to globlist for varname as it can be "*" for $* *)
-          (* less: deglob varname *)
-          let v = Var.vlook varname in
-          R.pop_list ();
-
-          (* less: globlist for the arguments *)
-          let argv = t.R.argv in
-          v.R.v <- Some argv;
-          R.pop_list ();
-
-      | _ -> E.error caps "variable name not singleton!"
-      )
-
-  (* (name) (val) *)
-  | O.Local ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] ->
-        (* less: deglob varname *)
-        R.pop_list ();
-        (* less: globlist *)
-        let argv = t.R.argv in
-        Hashtbl.add t.R.locals varname { R.v = Some argv };
-        R.pop_list ();
-      | _ -> E.error caps "variable name not singleton!"
-      )
-
-  (* [i j]{... Xreturn}{... Xreturn} *)
-  | O.Pipe -> 
-      let t = R.cur () in
-      let pc = t.R.pc in
-      (* left file descriptor, should be stdout *)
-      let lfd =
-        let i = int_at_address t !pc in
-        file_descr_of_int i
-      in
-      incr pc;
-      (* right file descriptor, should be stdin *)
-      let rfd =
-        let i = int_at_address t !pc in
-        file_descr_of_int i
-      in
-      incr pc;
-
-      let (pipe_read, pipe_write) = Unix.pipe () in
-      let forkid = CapUnix.fork caps () in
-
-      (* child *)
-      if forkid = 0 then begin
-        (* less: clearwaitpids () *)
-        (* pc + 2 to jump over the jump addresses *)
-        let newt = R.mk_thread t.R.code (!pc + 2) t.R.locals in
-        R.runq := [newt];
-        Unix.close pipe_read;
-        R.push_redir (R.FromTo (pipe_write, lfd));
-      (* parent *)
-      end else begin
-        (* less: addwaitpid () *)
-        let newt = 
-          R.mk_thread t.R.code (int_at_address t (!pc+0)) t.R.locals in
-        R.runq := newt::!R.runq;
-        Unix.close pipe_write;
-        R.push_redir (R.FromTo (pipe_read, rfd));
-      
-       (* once newt finished, jump to Xpipewait *)
-        pc := int_at_address t (!pc+1);
-        t.R.waitstatus <- R.WaitFor forkid;
-      end
-
-  (* argument passed through Thread.pid *)
-  | O.PipeWait -> 
-      let t = R.cur () in
-      (match t.R.waitstatus with
-      (* stricter: *)
-      | R.NothingToWaitfor -> 
-          failwith "Impossible: NothingToWaitfor for PipeWait"
-      (* a previous waitfor() already got it *)
-      | R.ChildStatus status -> 
-          Status.setstatus (Status.concstatus status (Status.getstatus()));
-      | R.WaitFor pid ->
-          let status = Status.getstatus () in
-          (* will internally call setstatus() when it found the right child *)
-          Process.waitfor pid |> ignore;
-          t.R.waitstatus <- R.NothingToWaitfor;
-          Status.setstatus (Status.concstatus (Status.getstatus()) status);
-      )
-
-  (* (value?) *)
-  | O.Glob ->
-      Logs.err (fun m -> m "TODO: interpret Glob");
-      ()
-
-  (* (file)[fd] *)
-  | O.Write ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      let pc = t.R.pc in
-      (match argv with
-      | []       -> E.error caps "> requires file"
-      | _x::_y::_xs -> E.error caps "> requires singleton"
-      | [file] ->
-          (try 
-            let fd_from = 
-              Unix.openfile file [Unix.O_CREAT;Unix.O_WRONLY] 0o666 in
-            (* should be stdout *)
-            let fd_to =
-              let i = int_at_address t !pc in
-              file_descr_of_int i
-            in
-            R.push_redir (R.FromTo (fd_from, fd_to));
-            incr pc;
-            R.pop_list();
-          with Unix.Unix_error (_err, _s1, _s2) ->
-            prerr_string (spf "%s: " file);
-            E.error caps "can't open"
-          )
-              
-      )
-
-  | O.Popredir ->
-      R.pop_redir ()
-
-  (* (name) *)
-  | O.Dollar ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] -> 
-         (* less: deglob varname *)
-         (try 
-            let value = vlook_varname_or_index varname in
-            R.pop_list ();
-            let argv = t.R.argv in
-            let newargv = 
-              (match value with None -> [] | Some xs -> xs) @ argv in
-            t.R.argv <- newargv
-          with Failure s -> E.error caps s
-         )             
-      | _ -> E.error caps "variable name not singleton!"
-      )
-  (* (name) *)
-  | O.Count ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] -> 
-          (* less: deglob *)
-          let value = vlook_varname_or_index varname in
-          let num = 
-            match value with
-            | None -> 0
-            | Some xs -> List.length xs
-          in
-          R.pop_list ();
-          R.push_word (spf "%d" num)
-      | _ -> E.error caps "variable name not singleton!"
-      )
-
-  (* (pat, str) *)
-  | O.Match ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      let subject = String.concat " " argv in
-      Status.setstatus "no match";
-      R.pop_list ();
-      let argv = t.R.argv in
-      argv |> List.exists (fun w -> 
-        if Pattern.match_str subject w
-        then begin
-          Status.setstatus "";
-          true
-        end else false
-      ) |> ignore;
-      R.pop_list ();
-
-  | O.If ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-
-      Globals.ifnot := true;
-      if Status.truestatus()
-      then incr pc
-      else pc := int_at_address t (!pc);
-
-  | O.Wastrue ->
-      Globals.ifnot := false
-
-  | O.IfNot ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      if !Globals.ifnot
-      then incr pc
-      else pc := int_at_address t (!pc);
-
-  (* [addr] *)
-  | O.Jump ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      pc := int_at_address t (!pc);
-
-  (* (pat, value){...} *)
-  | O.Case ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      let s = List.hd t.R.argv_stack |> String.concat " " in
-      let argv = t.R.argv in
-      let match_found = argv |> List.exists (fun w -> Pattern.match_str s w) in
-      (if match_found
-      then incr pc
-      else pc := int_at_address t (!pc)
-      );
-      R.pop_list ();
-
-  (* (value) *)
-  | O.Popm ->
-      R.pop_list ()
-
-  (* (name) *)
-  | O.DelFn ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      argv |> List.iter (fun s ->
-        let x = Fn.flook s in
-        match x with
-        | Some _ -> Hashtbl.remove R.fns s
-        | None -> 
-            (* stricter: *)
-            if !Flags.strict_mode
-            then E.error caps (spf "deleting undefined function %s" s)
-      );
-
-  | O.Not ->
-      Status.setstatus (if Status.truestatus() then "false" else "");
-
-  | O.True ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      if Status.truestatus ()
-      then incr pc
-      else pc := int_at_address t (!pc)
-
-  | O.False ->
-      let t = R.cur () in
-      let pc = t.R.pc in
-      if Status.truestatus ()
-      then pc := int_at_address t (!pc)
-      else incr pc
-
-  | O.Eflag ->
-      if !Globals.eflagok && not (Status.truestatus())
-      then Process.exit caps (Status.getstatus())
-
-  | (O.Concatenate|O.Stringify    |O.Index|
-     O.Unlocal|
-     O.Fn|
-     O.For|
-     O.Read|O.Append |O.ReadWrite|
-     O.Close|O.Dup|O.PipeFd|
-     O.Subshell|O.Backquote|O.Async
-    ) ->
-    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F operation))
-@
-%$
-
-
-
-\subsection{[[emitxxx()]]}
-
+%\subsection{[[emitxxx()]]}
 \subsection{[[compile()]]}
 
 <<function [[Compile.compile]]>>=
-let compile seq =
+let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
 
   (* a growing array *)
   let codebuf = ref [| |] in
@@ -1874,237 +1829,72 @@ let compile seq =
   (* pointer in codebuf *)
   let idx = ref 0 in
 
-  let codebuf_template = Array.make 100 (O.I 0) in
+  <<[[Compile.compile()]] nested function [[emit]]>>
+  <<[[Compile.compile()]] nested function [[set]]>>
 
-  let emit x =
-    (* grow the array if needed *)
-    if !idx = !len_codebuf then begin
-      len_codebuf := !len_codebuf + 100;
-      codebuf := Array.append !codebuf codebuf_template;
-    end;
-
-    !codebuf.(!idx) <- x;
-    incr idx
-  in
-  let set idx2 x =
-    if idx2 < 0 || idx2 >= !len_codebuf
-    then failwith (spf "Bad address %d in set()" idx2);
-
-    !codebuf.(idx2) <- x;
-  in
-  
-  outcode_seq seq !Flags.eflag (emit,set,idx);
+  outcode_seq seq !Flags.eflag (emit, set, idx);
   emit (O.F O.Return);
   (* less: O.F O.End *)
   (* less: heredoc, readhere() *)
 
   (* return the trimmed array *)
   Array.sub !codebuf 0 !idx
-  |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+  <<[[Compile.compile()]] possibly dump returned opcodes>>
 @
 
-\subsection{[[outcode()]]}
+<<[[Opcode.operation]] other control cases>>=
+| Return
+@
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Return -> Process.return caps ()
+@
+
+
+<<[[Compile.compile()]] nested function [[emit]]>>=
+let emit x =
+  <<[[Compile.compile()]] nested function [[emit]] possibly grow [[codebuf]]>>
+  !codebuf.(!idx) <- x;
+  incr idx
+in
+@
+
+<<[[Compile.compile()]] nested function [[emit]] possibly grow [[codebuf]]>>=
+(* grow the array if needed *)
+if !idx = !len_codebuf then begin
+  len_codebuf := !len_codebuf + 100;
+  codebuf := Array.append !codebuf (Array.make 100 (O.I 0));
+end;
+@
+
+
+<<[[Compile.compile()]] nested function [[set]]>>=
+let set idx2 x =
+  <<[[Compile.compile()]] nested function [[set]] array bound checking>>
+  !codebuf.(idx2) <- x;
+in
+@
+
+<<[[Compile.compile()]] nested function [[set]] array bound checking>>=
+if idx2 < 0 || idx2 >= !len_codebuf
+then failwith (spf "Bad address %d in set()" idx2);
+@
+
+\subsection{[[outcode_seq()]] skeleton}
+
+% return unit cos side effect on enclosing codebuf in compile()
+% via emit or set or idx
 
 <<function [[Compile.outcode_seq]]>>=
-let outcode_seq seq eflag (emit,set,idx) =
+let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
 
-  let rec xseq seq eflag =
+  let rec xseq (seq : Ast.cmd_sequence) eflag : unit =
    (* less set iflast, for if not syntax error checking *)
     seq |> List.iter (fun x -> xcmd x eflag)
   
-  and xcmd cmd eflag =
+  and xcmd (cmd : Ast.cmd) eflag : unit =
     match cmd with
-    | A.EmptyCommand -> ()
-    | A.Compound seq -> xseq seq eflag
-
-    | A.Simple (w, ws) -> 
-        emit (O.F O.Mark);
-        xwords ws;
-        xword w;
-        emit (O.F O.Simple);
-        if eflag 
-        then emit (O.F O.Eflag);
-
-    | A.Assign (val1, val2, cmd) ->
-        let all_assigns, cmd = 
-          split_at_non_assign (A.Assign (val1, val2, cmd)) in
-        (match cmd with
-        (* A=b; *)
-        | A.EmptyCommand -> 
-            all_assigns |> List.iter (fun (val1, val2) ->
-              emit (O.F O.Mark);
-              xword val2;
-              emit (O.F O.Mark);
-              xword val1;
-              emit (O.F O.Assign);
-            )
-
-        (* A=b cmd; *)
-        | _ -> 
-            all_assigns |> List.iter (fun (val1, val2) ->
-              emit (O.F O.Mark);
-              xword val2;
-              emit (O.F O.Mark);
-              xword val1;
-              emit (O.F O.Local);
-            );
-            xcmd cmd eflag;
-            all_assigns |> List.iter (fun (_, _) ->
-              emit (O.F O.Unlocal);
-            )
-        )
-
-    | A.Pipe (cmd1, cmd2) ->
-        emit (O.F O.Pipe);
-        emit (O.I 1); (* left fd *)
-        emit (O.I 0); (* right fd *)
-
-        let p = !idx in
-        emit (O.I 0);
-        let q = !idx in
-        emit (O.I 0);
-
-        (* will be executed in a forked child, hence Exit *)
-        xcmd cmd1 eflag;
-        emit (O.F O.Exit);
-
-        (* will be executed in a children thread, hence Return *)
-        set p (O.I !idx);
-        xcmd cmd2 eflag;
-        emit (O.F O.Return);
-
-        (* will be executed by parent once the children thread finished *)
-        set q (O.I !idx);
-        emit (O.F O.PipeWait);
-
-    | A.Redir (cmd, (redir_kind, word)) ->
-        (* resolve the filename *)
-        emit (O.F O.Mark);
-        xword word;
-        emit (O.F O.Glob);
-
-        (match redir_kind with
-        | A.RWrite ->
-            emit (O.F O.Write);
-            emit (O.I 1);
-        (* less: and A.RHere *)
-        | A.RRead -> 
-            emit (O.F O.Read);
-            emit (O.I 0);
-        | A.RAppend -> 
-            emit (O.F O.Append);
-            emit (O.I 1);
-        | _ -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
-        );
-        
-        (* perform the command *)
-        xcmd cmd eflag;
-        emit (O.F O.Popredir);
-
-    | A.If (cmds, cmd) ->
-        xseq cmds false;
-        emit (O.F O.If);
-        let p = !idx in
-        emit (O.I 0);
-        xcmd cmd eflag;
-        emit (O.F O.Wastrue);
-        set p (O.I !idx);
-
-    | A.IfNot cmd ->
-        emit (O.F O.IfNot);
-        let p = !idx in
-        emit (O.I 0);
-        xcmd cmd eflag;
-        set p (O.I !idx);
-
-    | A.Match (w, ws) ->
-        emit (O.F O.Mark);
-        xwords ws;
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.Match);
-        if eflag 
-        then emit (O.F O.Eflag);
-
-    | A.Switch (w, cmds) ->
-
-        (match cmds with
-        | (A.Simple (A.Word ("case", false), _))::_ -> ()
-        | _ -> failwith "case missing in switch"
-        );
-
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.Jump);
-
-        let nextcase = !idx in
-        emit (O.I 0);
-        let out = !idx in
-        emit (O.F O.Jump);
-        let leave = !idx in
-        emit (O.I 0);
-        
-        set nextcase (O.I !idx);
-
-        let aux cmds =
-          match cmds with
-          | [] -> ()
-          | (A.Simple (A.Word ("case", false), ws))::cmds ->
-              emit (O.F O.Mark);
-              xwords ws;
-              emit (O.F O.Case);
-              let nextcase = !idx in
-              emit (O.I 0);
-
-              let cmds_for_this_case, _other_cases = split_when_case cmds in
-              cmds_for_this_case |> List.iter (fun cmd ->
-                xcmd cmd eflag
-              );
-              emit (O.F O.Jump);
-              emit (O.I out);
-              set nextcase (O.I !idx);
-          | _ -> failwith "case missing in switch"
-        in
-        aux cmds;
-        set leave (O.I !idx);
-        (* can not call pop_list(), here, otherwise circular deps *)
-        emit (O.F O.Popm);
-
-    | A.Fn (w, cmds) ->
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.Fn);
-        let p = !idx in
-        (* less: emit str of fn *)
-        emit (O.S "Fn String Todo?");
-        xseq cmds eflag;
-        emit (O.F O.Unlocal);
-        emit (O.F O.Return);
-        set p (O.I !idx);
-
-    | A.DelFn w ->
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.DelFn);
-
-    | A.Not cmd ->
-        xcmd cmd eflag;
-        emit (O.F O.Not);
-
-    | A.And (cmd1, cmd2) ->
-        xcmd cmd1 false;
-        emit (O.F O.True);
-        let p = !idx in
-        xcmd cmd2 eflag;
-        set p (O.I !idx)
-
-    | A.Or (cmd1, cmd2) ->
-        xcmd cmd1 false;
-        emit (O.F O.False);
-        let p = !idx in
-        xcmd cmd2 eflag;
-        set p (O.I !idx)
-
+    <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>
     | (A.Async _|
        A.Dup (_, _, _, _)|
        A.While (_, _)|
@@ -2117,25 +1907,9 @@ let outcode_seq seq eflag (emit,set,idx) =
   * Even though types are mutually recursive because of Backquote, the
   * compilation of backquote does not use eflag!
   *)
-  and xword w =
+  and xword (w : Ast.word) : unit =
     match w with
-    | A.Word (s, _quoted) ->
-        emit (O.F O.Word);
-        emit (O.S s);
-
-    | A.List ws ->
-        xwords ws
-
-    | A.Dollar w ->
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.Dollar);
-
-    | A.Count w ->
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.Count);
-
+    <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>
     | (A.CommandOutput _|
        A.Index (_, _)|
        A.Concat (_, _)|
@@ -2143,11 +1917,580 @@ let outcode_seq seq eflag (emit,set,idx) =
       )
        -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
 
-  and xwords ws =
+  and xwords (ws : Ast.word list) : unit =
     ws |> List.rev |> List.iter (fun w -> xword w);
     
   in
   xseq seq eflag
+@
+
+\subsection{XXX1}
+
+
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.Word (s, _quoted) ->
+    emit (O.F O.Word);
+    emit (O.S s);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.List ws ->
+    xwords ws
+@
+
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.Dollar w ->
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.Dollar);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
+| A.Count w ->
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.Count);
+@
+
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.EmptyCommand -> ()
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Compound seq -> xseq seq eflag
+@
+
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Assign (val1, val2, cmd) ->
+    let all_assigns, cmd = 
+      split_at_non_assign (A.Assign (val1, val2, cmd)) in
+    (match cmd with
+    (* A=b; *)
+    | A.EmptyCommand -> 
+        all_assigns |> List.iter (fun (val1, val2) ->
+          emit (O.F O.Mark);
+          xword val2;
+          emit (O.F O.Mark);
+          xword val1;
+          emit (O.F O.Assign);
+        )
+
+    (* A=b cmd; *)
+    | _ -> 
+        all_assigns |> List.iter (fun (val1, val2) ->
+          emit (O.F O.Mark);
+          xword val2;
+          emit (O.F O.Mark);
+          xword val1;
+          emit (O.F O.Local);
+        );
+        xcmd cmd eflag;
+        all_assigns |> List.iter (fun (_, _) ->
+          emit (O.F O.Unlocal);
+        )
+    )
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Pipe (cmd1, cmd2) ->
+    emit (O.F O.Pipe);
+    emit (O.I 1); (* left fd *)
+    emit (O.I 0); (* right fd *)
+
+    let p = !idx in
+    emit (O.I 0);
+    let q = !idx in
+    emit (O.I 0);
+
+    (* will be executed in a forked child, hence Exit *)
+    xcmd cmd1 eflag;
+    emit (O.F O.Exit);
+
+    (* will be executed in a children thread, hence Return *)
+    set p (O.I !idx);
+    xcmd cmd2 eflag;
+    emit (O.F O.Return);
+
+    (* will be executed by parent once the children thread finished *)
+    set q (O.I !idx);
+    emit (O.F O.PipeWait);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Redir (cmd, (redir_kind, word)) ->
+    (* resolve the filename *)
+    emit (O.F O.Mark);
+    xword word;
+    emit (O.F O.Glob);
+
+    (match redir_kind with
+    | A.RWrite ->
+        emit (O.F O.Write);
+        emit (O.I 1);
+    (* less: and A.RHere *)
+    | A.RRead -> 
+        emit (O.F O.Read);
+        emit (O.I 0);
+    | A.RAppend -> 
+        emit (O.F O.Append);
+        emit (O.I 1);
+    | _ -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
+    );
+    
+    (* perform the command *)
+    xcmd cmd eflag;
+    emit (O.F O.Popredir);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.If (cmds, cmd) ->
+    xseq cmds false;
+    emit (O.F O.If);
+    let p = !idx in
+    emit (O.I 0);
+    xcmd cmd eflag;
+    emit (O.F O.Wastrue);
+    set p (O.I !idx);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.IfNot cmd ->
+    emit (O.F O.IfNot);
+    let p = !idx in
+    emit (O.I 0);
+    xcmd cmd eflag;
+    set p (O.I !idx);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Match (w, ws) ->
+    emit (O.F O.Mark);
+    xwords ws;
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.Match);
+    if eflag 
+    then emit (O.F O.Eflag);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Switch (w, cmds) ->
+
+    (match cmds with
+    | (A.Simple (A.Word ("case", false), _))::_ -> ()
+    | _ -> failwith "case missing in switch"
+    );
+
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.Jump);
+
+    let nextcase = !idx in
+    emit (O.I 0);
+    let out = !idx in
+    emit (O.F O.Jump);
+    let leave = !idx in
+    emit (O.I 0);
+    
+    set nextcase (O.I !idx);
+
+    let aux cmds =
+      match cmds with
+      | [] -> ()
+      | (A.Simple (A.Word ("case", false), ws))::cmds ->
+          emit (O.F O.Mark);
+          xwords ws;
+          emit (O.F O.Case);
+          let nextcase = !idx in
+          emit (O.I 0);
+
+          let cmds_for_this_case, _other_cases = split_when_case cmds in
+          cmds_for_this_case |> List.iter (fun cmd ->
+            xcmd cmd eflag
+          );
+          emit (O.F O.Jump);
+          emit (O.I out);
+          set nextcase (O.I !idx);
+      | _ -> failwith "case missing in switch"
+    in
+    aux cmds;
+    set leave (O.I !idx);
+    (* can not call pop_list(), here, otherwise circular deps *)
+    emit (O.F O.Popm);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Fn (w, cmds) ->
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.Fn);
+    let p = !idx in
+    (* less: emit str of fn *)
+    emit (O.S "Fn String Todo?");
+    xseq cmds eflag;
+    emit (O.F O.Unlocal);
+    emit (O.F O.Return);
+    set p (O.I !idx);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.DelFn w ->
+    emit (O.F O.Mark);
+    xword w;
+    emit (O.F O.DelFn);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Not cmd ->
+    xcmd cmd eflag;
+    emit (O.F O.Not);
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.And (cmd1, cmd2) ->
+    xcmd cmd1 false;
+    emit (O.F O.True);
+    let p = !idx in
+    xcmd cmd2 eflag;
+    set p (O.I !idx)
+@
+
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Or (cmd1, cmd2) ->
+    xcmd cmd1 false;
+    emit (O.F O.False);
+    let p = !idx in
+    xcmd cmd2 eflag;
+    set p (O.I !idx)
+@
+
+\subsection{XXX2}
+
+
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Exit -> 
+    (* todo: trapreq *)
+    Process.exit caps (Status.getstatus())
+@
+<<function [[Process.exit]]>>=
+let exit (caps: < Cap.exit; ..>) s =
+  (* todo: Updenv *)
+  Status.setstatus s;
+  (* todo: how communicate error to parent process under Unix? 
+   * alt: raise Exit.ExitCode which removes the need for Cap.exit
+   *)
+  CapStdlib.exit caps (if Status.truestatus () then 0 else 1)
+@
+
+
+<<signature [[Process.exit]]>>=
+val exit : < Cap.exit ; .. > -> string -> unit
+@
+
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Mark -> R.push_list ()
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* [string] *)
+| O.Word ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    let x = t.R.code.(!pc) in
+    incr pc;
+    (match x with
+    | O.S s -> R.push_word s
+    (* stricter: but should never happen *)
+    | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+    )
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) (val) *)
+| O.Assign ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    (match argv with
+    | [varname] ->
+        (* no call to globlist for varname as it can be "*" for $* *)
+        (* less: deglob varname *)
+        let v = Var.vlook varname in
+        R.pop_list ();
+
+        (* less: globlist for the arguments *)
+        let argv = t.R.argv in
+        v.R.v <- Some argv;
+        R.pop_list ();
+
+    | _ -> E.error caps "variable name not singleton!"
+    )
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) (val) *)
+| O.Local ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    (match argv with
+    | [varname] ->
+      (* less: deglob varname *)
+      R.pop_list ();
+      (* less: globlist *)
+      let argv = t.R.argv in
+      Hashtbl.add t.R.locals varname { R.v = Some argv };
+      R.pop_list ();
+    | _ -> E.error caps "variable name not singleton!"
+    )
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* [i j]{... Xreturn}{... Xreturn} *)
+| O.Pipe -> 
+    let t = R.cur () in
+    let pc = t.R.pc in
+    (* left file descriptor, should be stdout *)
+    let lfd =
+      let i = int_at_address t !pc in
+      file_descr_of_int i
+    in
+    incr pc;
+    (* right file descriptor, should be stdin *)
+    let rfd =
+      let i = int_at_address t !pc in
+      file_descr_of_int i
+    in
+    incr pc;
+
+    let (pipe_read, pipe_write) = Unix.pipe () in
+    let forkid = CapUnix.fork caps () in
+
+    (* child *)
+    if forkid = 0 then begin
+      (* less: clearwaitpids () *)
+      (* pc + 2 to jump over the jump addresses *)
+      let newt = R.mk_thread t.R.code (!pc + 2) t.R.locals in
+      R.runq := [newt];
+      Unix.close pipe_read;
+      R.push_redir (R.FromTo (pipe_write, lfd));
+    (* parent *)
+    end else begin
+      (* less: addwaitpid () *)
+      let newt = 
+        R.mk_thread t.R.code (int_at_address t (!pc+0)) t.R.locals in
+      R.runq := newt::!R.runq;
+      Unix.close pipe_write;
+      R.push_redir (R.FromTo (pipe_read, rfd));
+    
+     (* once newt finished, jump to Xpipewait *)
+      pc := int_at_address t (!pc+1);
+      t.R.waitstatus <- R.WaitFor forkid;
+    end
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* argument passed through Thread.pid *)
+| O.PipeWait -> 
+    let t = R.cur () in
+    (match t.R.waitstatus with
+    (* stricter: *)
+    | R.NothingToWaitfor -> 
+        failwith "Impossible: NothingToWaitfor for PipeWait"
+    (* a previous waitfor() already got it *)
+    | R.ChildStatus status -> 
+        Status.setstatus (Status.concstatus status (Status.getstatus()));
+    | R.WaitFor pid ->
+        let status = Status.getstatus () in
+        (* will internally call setstatus() when it found the right child *)
+        Process.waitfor pid |> ignore;
+        t.R.waitstatus <- R.NothingToWaitfor;
+        Status.setstatus (Status.concstatus (Status.getstatus()) status);
+    )
+@
+
+
+<<signature [[Process.waitfor]]>>=
+val waitfor : int -> waitfor_result
+@
+
+
+
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (value?) *)
+| O.Glob ->
+    Logs.err (fun m -> m "TODO: interpret Glob");
+    ()
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (file)[fd] *)
+| O.Write ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    let pc = t.R.pc in
+    (match argv with
+    | []       -> E.error caps "> requires file"
+    | _x::_y::_xs -> E.error caps "> requires singleton"
+    | [file] ->
+        (try 
+          let fd_from = 
+            Unix.openfile file [Unix.O_CREAT;Unix.O_WRONLY] 0o666 in
+          (* should be stdout *)
+          let fd_to =
+            let i = int_at_address t !pc in
+            file_descr_of_int i
+          in
+          R.push_redir (R.FromTo (fd_from, fd_to));
+          incr pc;
+          R.pop_list();
+        with Unix.Unix_error (_err, _s1, _s2) ->
+          prerr_string (spf "%s: " file);
+          E.error caps "can't open"
+        )
+            
+    )
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Popredir ->
+    R.pop_redir ()
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) *)
+| O.Dollar ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    (match argv with
+    | [varname] -> 
+       (* less: deglob varname *)
+       (try 
+          let value = vlook_varname_or_index varname in
+          R.pop_list ();
+          let argv = t.R.argv in
+          let newargv = 
+            (match value with None -> [] | Some xs -> xs) @ argv in
+          t.R.argv <- newargv
+        with Failure s -> E.error caps s
+       )             
+    | _ -> E.error caps "variable name not singleton!"
+    )
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) *)
+| O.Count ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    (match argv with
+    | [varname] -> 
+        (* less: deglob *)
+        let value = vlook_varname_or_index varname in
+        let num = 
+          match value with
+          | None -> 0
+          | Some xs -> List.length xs
+        in
+        R.pop_list ();
+        R.push_word (spf "%d" num)
+    | _ -> E.error caps "variable name not singleton!"
+    )
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (pat, str) *)
+| O.Match ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    let subject = String.concat " " argv in
+    Status.setstatus "no match";
+    R.pop_list ();
+    let argv = t.R.argv in
+    argv |> List.exists (fun w -> 
+      if Pattern.match_str subject w
+      then begin
+        Status.setstatus "";
+        true
+      end else false
+    ) |> ignore;
+    R.pop_list ();
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.If ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+
+    Globals.ifnot := true;
+    if Status.truestatus()
+    then incr pc
+    else pc := int_at_address t (!pc);
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Wastrue ->
+    Globals.ifnot := false
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.IfNot ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    if !Globals.ifnot
+    then incr pc
+    else pc := int_at_address t (!pc);
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* [addr] *)
+| O.Jump ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    pc := int_at_address t (!pc);
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (pat, value){...} *)
+| O.Case ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    let s = List.hd t.R.argv_stack |> String.concat " " in
+    let argv = t.R.argv in
+    let match_found = argv |> List.exists (fun w -> Pattern.match_str s w) in
+    (if match_found
+    then incr pc
+    else pc := int_at_address t (!pc)
+    );
+    R.pop_list ();
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (value) *)
+| O.Popm ->
+    R.pop_list ()
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (name) *)
+| O.DelFn ->
+    let t = R.cur () in
+    let argv = t.R.argv in
+    argv |> List.iter (fun s ->
+      let x = Fn.flook s in
+      match x with
+      | Some _ -> Hashtbl.remove R.fns s
+      | None -> 
+          (* stricter: *)
+          if !Flags.strict_mode
+          then E.error caps (spf "deleting undefined function %s" s)
+    );
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Not ->
+    Status.setstatus (if Status.truestatus() then "false" else "");
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.True ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    if Status.truestatus ()
+    then incr pc
+    else pc := int_at_address t (!pc)
+@
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.False ->
+    let t = R.cur () in
+    let pc = t.R.pc in
+    if Status.truestatus ()
+    then pc := int_at_address t (!pc)
+    else incr pc
 @
 
 
@@ -2211,9 +2554,26 @@ let truestatus () =
 
 \section{Simple commands}
 
+
 \subsection{Bytecode generation}
 
-\subsection{[[Xsimple()]]}
+<<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
+| A.Simple (w, ws) -> 
+    emit (O.F O.Mark);
+    xwords ws;
+    xword w;
+    emit (O.F O.Simple);
+    <<[[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]]>>
+@
+% need Mark so know when finish args
+
+\subsection{[[O.Simple]]}
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+(* (args) *)
+| O.Simple -> Op_process.op_Simple caps ()
+@
+
 
 <<function [[Op_process.op_Simple]]>>=
 let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
@@ -2266,6 +2626,16 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
 @
 %$
 
+<<signature [[Process.s_of_unix_error]]>>=
+val s_of_unix_error : Unix.error -> string -> string -> string
+@
+<<function [[Process.s_of_unix_error]]>>=
+let s_of_unix_error err _s1 _s2 = 
+  spf "%s" (Unix.error_message err)
+@
+
+
+
 <<signature [[Builtin.is_builtin]]>>=
 val is_builtin : string -> bool
 @
@@ -2276,6 +2646,25 @@ val dispatch : < Cap.chdir ; Cap.exit ; Cap.open_in; .. > -> string -> unit
 @
 
 \subsection{Fork}
+
+<<function [[Op_process.forkexec]]>>=
+let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
+  let pid = CapUnix.fork caps () in
+  (* child *)
+  if pid = 0
+  then begin
+    (* less: clearwaitpids *)
+    (* less: could simplify and remove this word if exec was not a builtin *)
+    R.push_word "exec";
+    exec caps ();
+    (* should not be reached, unless prog could not be executed *)
+    Process.exit caps ("can't exec: " ^ !Globals.errstr);
+    0
+  end
+  else 
+    (* less: addwaitpid *)
+    pid
+@
 
 \subsection{Exec}
 
@@ -2314,24 +2703,6 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () =
       R.pop_list ()
 @
 
-<<function [[Op_process.forkexec]]>>=
-let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () =
-  let pid = CapUnix.fork caps () in
-  (* child *)
-  if pid = 0
-  then begin
-    (* less: clearwaitpids *)
-    (* less: could simplify and remove this word if exec was not a builtin *)
-    R.push_word "exec";
-    exec caps ();
-    (* should not be reached, unless prog could not be executed *)
-    Process.exit caps ("can't exec: " ^ !Globals.errstr);
-    0
-  end
-  else 
-    (* less: addwaitpid *)
-    pid
-@
 
 \subsection{[[$path]] management}
 
@@ -2438,11 +2809,15 @@ let waitfor pid =
 
 \section{Operators}
 
+
 \subsection{Basic sequence}
+
 
 \subsection{Logical operators}
 
+
 \subsection{String matching}
+
 
 \subsection{Redirection}
 
@@ -2584,6 +2959,9 @@ let doredir xxs =
 
 
 
+
+
+
 \chapter{Builtins}
 
 \section{Overview}
@@ -2599,6 +2977,7 @@ let is_builtin s =
   ]
 @
 
+% ??? -> <>
 <<function [[Builtin.dispatch]]>>=
 let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   match s with
@@ -2817,7 +3196,14 @@ let bootstrap () : O.opcode array =
 let rcmain = ref "/rc/lib/rcmain"
 @
 
+<<[[CLI.main()]] [[options]] elements>>=
+"-m", Arg.Set_string Flags.rcmain,
+" <file> read commands to initialize rc from file, not /rc/lib/rcmain";
+@
+
+
 \section{Actual environment}
+
 
 
 
@@ -2833,10 +3219,17 @@ let rcmain = ref "/rc/lib/rcmain"
 
 
 
+
+
+
+
 \chapter{Advanced Topics TODO}
 %\section{Shell-like features implemented outside [[rc]]}
 
+
 \section{Reading commands from a string: [[rc -c]]}
+
+
 
 \section{Failing fast: [[rc -e]]}
 % very important, especially when using rc with mk!
@@ -2845,16 +3238,50 @@ let rcmain = ref "/rc/lib/rcmain"
 (* -e, for strict error checking. Abort the script when an error happens.*)
 let eflag = ref false
 @
+% passed down a lot in outcode (why not use Flags.eflag instead
+% of passing it down?)
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-e", Arg.Set Flags.eflag,
+" exit if $status is non-null after a simple command";
+@
+
+
+
+<<[[Opcode.operation]] other cases>>=
+(* Error management *)
+| Eflag
+@
+
+<<[[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]]>>=
+if eflag 
+then emit (O.F O.Eflag);
+@
+
+<<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
+| O.Eflag ->
+    if !Globals.eflagok && not (Status.truestatus())
+    then Process.exit caps (Status.getstatus())
+@
+
+
 
 \section{Strict mode: [[rc -strict]]}
 
 <<constant [[Flags.strict_mode]]>>=
 let strict_mode = ref false
 @
-
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-strict", Arg.Set Flags.strict_mode,
+" strict mode";
+@
 
 
 \section{Unicode}
+
+
+
 
 \section{Advanced constructs}
 
@@ -2886,9 +3313,22 @@ let strict_mode = ref false
 \subsection{[[$ rfork]]}
 
 \subsection{[[$ flag]]}
+% put earlier? used heavily in rcmain
 
 <<global [[Flags.hflags]]>>=
 let hflags: (char, bool) Hashtbl.t = Hashtbl.create 10
+@
+
+<<[[CLI.main()]] other initializations>>=
+(* for 'flags' builtin (see builtin.ml) *)
+argv |> Array.iter (fun s ->
+  if s =~ "^-\\([a-zA-Z]\\)"
+  then begin
+    let letter = Regexp_.matched1 s in
+    let char = String.get letter 0 in
+    Hashtbl.add Flags.hflags char true
+  end
+);
 @
 
 \subsection{[[$ shift]]}
@@ -2896,18 +3336,79 @@ let hflags: (char, bool) Hashtbl.t = Hashtbl.create 10
 \subsection{[[$ finit]]}
 
 
+
+
 \chapter{Conclusion}
 \label{chap:conclusion}
 
+
+
+
+
+
+
 \appendix
+
+
+
+
 
 \chapter{Debugging}
 
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
 @
+<<[[CLI.main()]] [[options]] elements>>=
+"-debugger", Arg.Set Flags.debugger,
+" ";
+@
+
+<<[[CLI.main()]] when [[exn]] thrown in [[interpret()]]>>=
+if !Flags.debugger
+then raise exn
+else 
+  (match exn with
+  <<[[CLI.main()]] when [[Failure]] [[exn]] thrown in [[interpret()]]>>
+  (* alt: could catch Exit.ExitCode here but this is done in Main.ml *)
+  | _ -> raise exn
+  )
+@
+
+\section{Logging}
+
+<<[[CLI.main()]] debugging initializations>>=
+let level = ref (Some Logs.Warning) in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+(* TODO: move in a CLI_common.ml *)
+"-v", Arg.Unit (fun () -> level := Some Logs.Info),
+ " verbose mode";
+"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+" verbose mode";
+"-quiet", Arg.Unit (fun () -> level := None),
+" ";
+"-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+" trace the main functions";
+@
+
+<<[[CLI.main()]] logging initializations>>=
+Logs.set_level !level;
+Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
+@
 
 \section{AST dumper}
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-dump_tokens", Arg.Set Flags.dump_tokens,
+" dump the tokens as they are generated";
+"-dump_ast", Arg.Set Flags.dump_ast,
+" dump the parsed AST";
+"-dump_opcodes", Arg.Set Flags.dump_opcodes,
+" dump the generated opcodes ";
+@
 
 <<signature [[Dumper_.s_of_cmd]]>>=
 val s_of_cmd : Ast.cmd -> string
@@ -2951,6 +3452,9 @@ let dump_ast = ref false
 let dump_opcodes = ref false
 @
 
+<<[[Compile.compile()]] possibly dump returned opcodes>>=
+|> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+@
 <<function [[Dumper_.s_of_line]]>>=
 let s_of_line x =
   let v = Meta_ast.vof_line x in
@@ -3002,11 +3506,39 @@ let s_of_codevec x =
 let rflag = ref false
 @
 
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-r", Arg.Set Flags.rflag,
+" print internal form of commands (opcodes)";
+@
+
+<<[[CLI.interpret()]] if [[rflag]]>>=
+(* less: cycle =~ codevec pointer *)
+if !Flags.rflag
+then Logs.app (fun m -> m "pid %d %d %s %s"
+            (Unix.getpid ())
+            !pc
+            (Dumper_.s_of_opcode t.R.code.(!pc))
+            ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
+                spf "(%s)" (String.concat " " xs)
+               ) |> String.concat " "));
+@
+
 \section{Printing subprocesses status: [[rc -s]]}
 
 <<constant [[Flags.sflag]]>>=
 (* -s, to print status when error in command just ran *)
 let sflag = ref false
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-s", Arg.Set Flags.sflag,
+" print exit status after any command where the status is non-null";
+@
+<<[[Op_repl.op_REPL()]] if [[sflag]]>>=
+(* todo: flush error and reset error count *)
+if !Flags.sflag && not (Status.truestatus()) 
+then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
 @
 
 \section{Printing commands: [[rc -x]]}
@@ -3016,11 +3548,40 @@ let sflag = ref false
 let xflag = ref false
 @
 
+<<[[CLI.main()]] [[options]] elements>>=
+"-x", Arg.Set Flags.xflag,
+" print each simple command before executing it";
+@
+
+
 \section{Printing characters: [[rc -v]]}
+
 
 \section{Printing all characters: [[rc -V]]}
 
+
+
+
+
 \section{CLI actions}
+
+<<[[CLI.main()]] debugging initializations>>=
+let action = ref "" in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+@
+
+<<[[CLI.main()]] CLI action processing>>=
+(* to test and debug components of mk *)
+if !action <> "" then begin 
+  do_action caps !action (List.rev !args); 
+  raise (Exit.ExitCode 0)
+end;
+@
+
 
 <<function [[CLI.do_action]]>>=
 let do_action caps s xs =
@@ -3091,11 +3652,18 @@ let errstr = ref ""
 
 
 
+
+
 \chapter{Examples of [[rc]] scripts TODO}
 
 \section{[[/rc/lib/rcmain]]}
 
+
 \section{[[/home/pad/lib/profile]]}
+
+
+
+
 
 %\chapter{Changelog}
 % code via make loc = ?? LOC, after full lpized  ? LOC
@@ -3211,7 +3779,7 @@ module O = Opcode
 <<constant [[CLI._bootstrap_simple]]>>
 <<function [[CLI.bootstrap]]>>
 
-<<function [[CLI.interpret]]>>
+<<function [[CLI.interpret_boostrap]]>>
 
 (*****************************************************************************)
 (* Entry point *)
@@ -3422,7 +3990,7 @@ module E = Error
 (* Entry point *)
 (*****************************************************************************)
 
-<<function [[Interpreter.interpret]]>>
+<<function [[Interpreter.interpret_operation]]>>
 @
 
 
@@ -3762,35 +4330,6 @@ let match_str s1 s2 =
 
 \subsection*{[[Process.ml]]}
 
-<<function [[Process.s_of_unix_error]]>>=
-let s_of_unix_error err _s1 _s2 = 
-  spf "%s" (Unix.error_message err)
-@
-
-<<function [[Process.exit]]>>=
-let exit (caps: < Cap.exit; ..>) s =
-  (* todo: Updenv *)
-  Status.setstatus s;
-  (* todo: how communicate error to parent process under Unix? 
-   * alt: raise Exit.ExitCode which removes the need for Cap.exit
-   *)
-  CapStdlib.exit caps (if Status.truestatus () then 0 else 1)
-@
-
-<<function [[Process.return]]>>=
-(* Was called Xreturn but called not only from the opcode interpreter.
- * It is an helper function really.
- *)
-let return (caps : < Cap.exit; .. >) () =
-  R.turf_redir ();
-  match !R.runq with
-  | [] -> failwith "empty runq"
-  (* last thread in runq, we exit then *)
-  | [_x] -> exit caps (Status.getstatus ())
-  | _x::xs -> 
-      R.runq := xs
-@
-
 %-------------------------------------------------------------
 
 <<Process.ml>>=
@@ -3958,6 +4497,9 @@ module R = Runtime
 <<type [[CLI.caps]]>>
 
 <<signature [[CLI.main]]>>
+
+(* internals *)
+<<signature [[CLI.interpret_bootstrap]]>>
 @
 
 
@@ -4034,7 +4576,7 @@ module R = Runtime
 %-------------------------------------------------------------
 
 <<Interpreter.mli>>=
-<<signature [[Interpreter.interpret]]>>
+<<signature [[Interpreter.interpret_operation]]>>
 @
 
 \subsection*{[[PATH.mli]]}
@@ -4072,9 +4614,6 @@ val match_str : string -> pattern -> bool
 
 \subsection*{[[Process.mli]]}
 
-<<signature [[Process.s_of_unix_error]]>>=
-val s_of_unix_error : Unix.error -> string -> string -> string
-@
 
 %-------------------------------------------------------------
 

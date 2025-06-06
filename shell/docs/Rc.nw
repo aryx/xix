@@ -24,13 +24,12 @@
 % - skeleton, mostly copy paste of Shell.nw skeleton
 % - put all content of files in the Extra section, via 'lpizer'
 %   which also now split in chunks!
-%    * function, global, struct, enum, constant, macro(actually function)
-% - read Extra section, identify concepts, first TOC
+%    * function, type, exception, constant, signature
+% - read Extra section, identify concepts, first TOC (copy also Shell.nw)
 % - distribute parts of the file before
 % - SEMI aspecify advanced features!
 % - TODO add figures
 % - TODO add explanations
-
 
 \begin{document}
 %******************************************************************************
@@ -103,8 +102,7 @@ Documentation License, Version 1.3.
 /*(*-----------------------------------------*)*/
 /*(*2 Keywords *)*/
 /*(*-----------------------------------------*)*/
-%token TFor TIn  TIf TNot TWhile  TSwitch  
-%token TFn
+%token TIf TNot TWhile TSwitch TFor TIn TFn
 
 /*(*-----------------------------------------*)*/
 /*(*2 Word *)*/
@@ -115,22 +113,18 @@ Documentation License, Version 1.3.
 /*(*2 Operators *)*/
 /*(*-----------------------------------------*)*/
 %token TPipe
-%token TAndAnd TOrOr TBang
 %token<Ast.redirection_kind> TRedir
-%token<Ast.redirection_kind * int * int> TDup
-%token TAnd TSubshell
-%token TTwiddle  
+<<Parser tokens, operators other cases>>
 
 /*(*-----------------------------------------*)*/
 /*(*2 Punctuation *)*/
 /*(*-----------------------------------------*)*/
 
-%token TOPar TCPar TOBrace TCBrace
+%token TOPar TCPar
+%token TOBrace TCBrace
 %token TSemicolon TEq
-%token TDollar TCount TStringify 
-%token TSub
-%token TCaret
-%token TBackquote
+%token TDollar
+<<Parser tokens, punctuation other cases>>
 
 /*(*-----------------------------------------*)*/
 /*(*2 Misc *)*/
@@ -138,6 +132,48 @@ Documentation License, Version 1.3.
 %token TNewline
 
 %token EOF
+@
+
+
+
+
+
+%LP: distribute to advanced or later
+<<Parser tokens, operators other cases>>=
+%token TAndAnd TOrOr
+@
+
+<<Parser tokens, operators other cases>>=
+%token TBang
+@
+<<Parser tokens, operators other cases>>=
+%token TTwiddle  
+@
+
+<<Parser tokens, operators other cases>>=
+%token<Ast.redirection_kind * int * int> TDup
+@
+<<Parser tokens, operators other cases>>=
+%token TAnd
+@
+<<Parser tokens, operators other cases>>=
+%token TSubshell
+@
+
+<<Parser tokens, punctuation other cases>>=
+%token TCount
+@
+<<Parser tokens, punctuation other cases>>=
+%token TStringify
+@
+<<Parser tokens, punctuation other cases>>=
+%token TSub
+@
+<<Parser tokens, punctuation other cases>>=
+%token TCaret
+@
+<<Parser tokens, punctuation other cases>>=
+%token TBackquote
 @
 
 \section{Abstract syntax tree (AST)}
@@ -186,7 +222,7 @@ and cmd =
   | Fn of value * cmd_sequence
   <<[[Ast.cmd]] other definition cases>>
 @
-
+% Assign because actually often do CFLAGS=xxx make
 
 
 <<type [[Ast.values]]>>=
@@ -227,9 +263,6 @@ type value =
 
 
 %TODO: dump AST for ls /etc > /tmp/list.txt, and ref to -dump_ast in appendix
-
-
-
 
 
 
@@ -459,7 +492,7 @@ type value = string list
 (* can be anything: "foo", but also "*", "1", "2", etc *)
 type varname = string
 @
-
+% $* $1 will be used
 
 <<type [[Runtime.var]]>>=
 type var = { 
@@ -471,6 +504,7 @@ type var = {
   (* less: opti: changed: bool *)
 }
 @
+% remember value is string list!
 
 <<signature [[Runtime.globals]]>>=
 val globals : (varname, var) Hashtbl.t
@@ -505,6 +539,7 @@ let gvlook name =
 val vinit : < Cap.env ; .. > -> unit
 @
 
+%LP: move later
 <<function [[Var.vinit]]>>=
 let vinit (_caps : < Cap.env; .. >) =
   Logs.err (fun m -> m "TODO: load from environment")
@@ -530,7 +565,7 @@ type fn = {
   (* less: fnchanged *)
 }
 @
-
+% why pc? can't simply start at 0 by convention?
 
 
 
@@ -547,8 +582,9 @@ type thread = {
   <<[[Runtime.thread]] other fields>>
 }
 @
+% pc = program counter (a classic in assembly)
 
-%Where is the stack ?? what is argv?
+%Where is the stack ?? what is argv? that's the stack? use Stack.t ?
 
 
 
@@ -598,8 +634,21 @@ let mk_thread code pc locals =
 @
 
 
+%TODO? dump a thread for simple command?
 
 
+\subsection{The stack}
+
+
+<<[[Runtime.thread]] other fields>>=
+(* Used for switch but also assignments. *)
+mutable argv_stack: (string list) list;
+@
+%TODO? use value list here?? diff with argv?
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+argv_stack = [];
+@
 
 \subsection{Local variables}
 
@@ -629,7 +678,7 @@ val setvar : Runtime.varname -> Runtime.value -> unit
 @
 
 <<function [[Var.setvar]]>>=
-let setvar name v =
+let setvar (name : Runtime.varname) (v : Runtime.value) : unit =
   let var = vlook name in
   var.R.v <- Some v
 @
@@ -643,6 +692,15 @@ let setvar name v =
 mutable redirections: (redir list) list;
 @
 
+<<type [[Runtime.redir]]>>=
+  and redir =
+    (* the file descriptor From becomes To, e.g., /tmp/foo becomes stdout,
+     * which means your process output will now go in /tmp/foo.
+     *)
+    | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
+    | Close of Unix.file_descr
+@
+
 <<[[Runtime.mk_thread()]] set other fields>>=
 redirections = 
   (match !runq with
@@ -650,7 +708,7 @@ redirections =
   | t::_ts -> []::t.redirections
   );
 @
-
+% ???
 
 \subsection{Wait status}
 
@@ -658,64 +716,20 @@ redirections =
 (* things to wait for after a thread forked a process *)
 mutable waitstatus: waitstatus;
 @
+
+<<type [[Runtime.waitstatus]]>>=
+  and waitstatus =
+    | NothingToWaitfor
+    (* process pid to wait for in Xpipewait (set from Xpipe) *)
+    | WaitFor of int 
+    (* exit status from child process returned from a wait() *)
+    | ChildStatus of string
+@
+
+
 <<[[Runtime.mk_thread()]] set other fields>>=
 waitstatus = NothingToWaitfor;
 @
-
-
-
-
-
-
-
-
-
-<<[[Runtime.thread]] other fields>>=
-(* Used for switch but also assignments. *)
-mutable argv_stack: (string list) list;
-@
-%TODO? use value list here?? diff with argv?
-
-<<[[Runtime.mk_thread()]] set other fields>>=
-argv_stack = [];
-@
-
-
-<<[[Runtime.thread]] other fields>>=
-(* for error reporting (None when reading from stdin) *)
-(* less: file has to be mutable? could be a param of start? like chan? *)
-mutable file: Common.filename option;
-line: int ref;
-@
-
-<<[[Runtime.thread]] other fields>>=
-(* connected on stdin by default (changed when do '. file') *)
-mutable lexbuf: Lexing.lexbuf;
-@
-
-
-
-<<[[Runtime.mk_thread()]] set other fields>>=
-lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
-iflag = false;
-file = None;
-line = ref 1;
-@
-
-
-
-
-
-<<[[Runtime.thread]] other fields>>=
-(* to display a prompt or not *)
-mutable iflag: bool;
-@
-
-
-
-
-
-
 
 
 
@@ -810,7 +824,7 @@ let _ =
 
 
 
-
+% ex of use of rc, rc, rc -I, rc ls /foo?
 
 <<function [[CLI.main]]>>=
 let main (caps : <caps; .. >) (argv : string array) : Exit.t =
@@ -880,6 +894,8 @@ let login = ref false
 " login mode (execute ~/lib/profile)";
 @
 
+%TODO? implemented?
+
 \subsection{Interactive mode: [[rc -i]]}
 
 <<constant [[Flags.interactive]]>>=
@@ -894,9 +910,24 @@ let interactive = ref false
 " non-interactive mode (no prompt)";
 @
 
+% prompt display when interactive!
+
+% and error management different when interactive
+
+<<[[Runtime.thread]] other fields>>=
+(* to display a prompt or not *)
+mutable iflag: bool;
+@
+
+<<[[Runtime.mk_thread()]] set other fields>>=
+iflag = false;
+@
+
+
+
 \section{Initialization}
 
-%Var.vinit
+%Var.vinit before
 
 \section{Bootstrapping bytecodes (simplified)}
 
@@ -917,11 +948,7 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
   let t = R.mk_thread (bootstrap ()) 0 (Hashtbl.create 11) in
   R.runq := t::!R.runq;
 
-  t.R.lexbuf <- Lexing.from_channel stdin;
-  t.R.iflag <- !Flags.interactive;
-
-  (* less: set argv0 *)
-  args |> List.rev |> List.iter Runtime.push_word;
+  <<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>
 
   while true do
     (* bugfix: need to fetch the current thread each time,
@@ -943,14 +970,6 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
 @
 
 
-<<signature [[Runtime.push_word]]>>=
-val push_word : string -> unit
-@
-<<function [[Runtime.push_word]]>>=
-let push_word s =
-  let t = cur () in
-  t.argv <- s::t.argv
-@
 
 <<signature [[Interpreter.interpret_operation]]>>=
 (* Interpret one operation. Called from a loop in main(). *)
@@ -977,21 +996,63 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
 @
 %$
 
+
+
+
+<<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>
+(* less: set argv0 *)
+args |> List.rev |> List.iter Runtime.push_word;
+
+
+<<signature [[Runtime.push_word]]>>=
+val push_word : string -> unit
+@
+<<function [[Runtime.push_word]]>>=
+let push_word s =
+  let t = cur () in
+  t.argv <- s::t.argv
+@
+
+
+
+
+<<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>=
+t.R.lexbuf <- Lexing.from_channel stdin;
+@
+
+<<[[Runtime.thread]] other fields>>=
+(* connected on stdin by default (changed when do '. file') *)
+mutable lexbuf: Lexing.lexbuf;
+@
+% but why need lexbuf? not already compiled and code stored in thread.code?
+% yes but this code can be '.' which requires to read more commands
+% and evaluate them from a source '. env.sh'
+<<[[Runtime.mk_thread()]] set other fields>>=
+lexbuf = Lexing.from_function (fun _ _ -> failwith "unconnected lexbuf");
+@
+
+
+%LP: move later
+<<[[Runtime.thread]] other fields>>=
+(* for error reporting (None when reading from stdin) *)
+(* less: file has to be mutable? could be a param of start? like chan? *)
+mutable file: Common.filename option;
+line: int ref;
+@
+<<[[Runtime.mk_thread()]] set other fields>>=
+file = None;
+line = ref 1;
+@
+
+
+
+<<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>=
+t.R.iflag <- !Flags.interactive;
+@
+
+
 \section{Reading commands: [[O.REPL]]}
 %c: was Xrdcmds()
-
-<<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>=
-(* set prompstr *)
-if t.R.iflag then begin
-  let promptv = (Var.vlook "prompt").R.v in
-  Prompt.prompt := 
-    (match promptv with
-    | Some (x::_xs) -> x
-    (* stricter? display error message if prompt set but no element?*)
-    | Some [] | None -> "% "
-    );
-end;
-@
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* *)
@@ -1005,7 +1066,6 @@ let op_REPL (caps : < Cap.exit; ..>) () =
 
   <<[[Op_repl.op_REPL()]] if [[sflag]]>>
   <<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>
-
   (* less: call Noerror before yyparse *)
 
   let lexbuf = t.R.lexbuf in
@@ -1040,7 +1100,6 @@ val parse_line : Lexing.lexbuf -> Ast.line
 
 <<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>=
 (* todo: check signals  *)
-
 if not t.R.iflag
 (* less: was doing Xreturn originally *)
 then failwith s
@@ -1049,6 +1108,21 @@ else begin
   (* go back for next command *)
   decr t.R.pc;
 end
+@
+
+
+
+<<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>=
+(* set prompstr *)
+if t.R.iflag then begin
+  let promptv = (Var.vlook "prompt").R.v in
+  Prompt.prompt := 
+    (match promptv with
+    | Some (x::_xs) -> x
+    (* stricter? display error message if prompt set but no element?*)
+    | Some [] | None -> "% "
+    );
+end;
 @
 
 
@@ -1272,6 +1346,8 @@ let incr_lineno () =
   let t = Runtime.cur () in
   incr t.Runtime.line
 @  
+
+
 
 
 \section{Operators ([['&']], [['&&']], [['|']], [['||']], [['<']], [['>']], [['$']], \ldots)}
@@ -2744,14 +2820,6 @@ let find_in_path _s _paths =
 
 \subsection{Wait}
 
-<<type [[Runtime.waitstatus]]>>=
-  and waitstatus =
-    | NothingToWaitfor
-    (* process pid to wait for in Xpipewait (set from Xpipe) *)
-    | WaitFor of int 
-    (* exit status from child process returned from a wait() *)
-    | ChildStatus of string
-@
 
 <<type [[Process.waitfor_result]]>>=
 type waitfor_result =
@@ -2835,14 +2903,6 @@ val doredir : redir list list -> unit
 
 
 
-<<type [[Runtime.redir]]>>=
-  and redir =
-    (* the file descriptor From becomes To, e.g., /tmp/foo becomes stdout,
-     * which means your process output will now go in /tmp/foo.
-     *)
-    | FromTo of Unix.file_descr (* from *) * Unix.file_descr (* to *)
-    | Close of Unix.file_descr
-@
 
 
 

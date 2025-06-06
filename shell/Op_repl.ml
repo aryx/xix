@@ -24,7 +24,6 @@ let op_REPL (caps : < Cap.exit; ..>) () =
       );
   end;
   (*e: [[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]] *)
-
   (* less: call Noerror before yyparse *)
 
   let lexbuf = t.R.lexbuf in
@@ -46,7 +45,6 @@ let op_REPL (caps : < Cap.exit; ..>) () =
   with Failure s -> 
     (*s: [[Op_repl.op_REPL()]] when [[Failure s]] thrown *)
     (* todo: check signals  *)
-
     if not t.R.iflag
     (* less: was doing Xreturn originally *)
     then failwith s

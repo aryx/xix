@@ -34,7 +34,7 @@ let vlook name =
 (*e: function [[Var.vlook]] *)
 
 (*s: function [[Var.setvar]] *)
-let setvar name v =
+let setvar (name : Runtime.varname) (v : Runtime.value) : unit =
   let var = vlook name in
   var.R.v <- Some v
 (*e: function [[Var.setvar]] *)

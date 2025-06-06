@@ -155,7 +155,7 @@ let pop_word () =
 (*e: function [[Runtime.pop_word]] *)
 
 (*s: function [[Runtime.push_redir]] *)
-let push_redir x =
+let push_redir (x : redir) : unit =
   let t = cur () in
   match t.redirections with
   | [] -> failwith "push_redir: no starting redir"

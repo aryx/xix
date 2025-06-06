@@ -56,59 +56,38 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         then emit (O.F O.Eflag);
         (*e: [[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]] *)
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Compound seq -> xseq seq eflag
+    | A.EmptyCommand -> ()
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Assign (val1, val2, cmd) ->
-        let all_assigns, cmd = 
-          split_at_non_assign (A.Assign (val1, val2, cmd)) in
-        (match cmd with
-        (* A=b; *)
-        | A.EmptyCommand -> 
-            all_assigns |> List.iter (fun (val1, val2) ->
-              emit (O.F O.Mark);
-              xword val2;
-              emit (O.F O.Mark);
-              xword val1;
-              emit (O.F O.Assign);
-            )
-
-        (* A=b cmd; *)
-        | _ -> 
-            all_assigns |> List.iter (fun (val1, val2) ->
-              emit (O.F O.Mark);
-              xword val2;
-              emit (O.F O.Mark);
-              xword val1;
-              emit (O.F O.Local);
-            );
-            xcmd cmd eflag;
-            all_assigns |> List.iter (fun (_, _) ->
-              emit (O.F O.Unlocal);
-            )
-        )
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Pipe (cmd1, cmd2) ->
-        emit (O.F O.Pipe);
-        emit (O.I 1); (* left fd *)
-        emit (O.I 0); (* right fd *)
-
+    | A.And (cmd1, cmd2) ->
+        xcmd cmd1 false;
+        emit (O.F O.True);
         let p = !idx in
-        emit (O.I 0);
-        let q = !idx in
-        emit (O.I 0);
-
-        (* will be executed in a forked child, hence Exit *)
-        xcmd cmd1 eflag;
-        emit (O.F O.Exit);
-
-        (* will be executed in a children thread, hence Return *)
-        set p (O.I !idx);
         xcmd cmd2 eflag;
-        emit (O.F O.Return);
 
-        (* will be executed by parent once the children thread finished *)
-        set q (O.I !idx);
-        emit (O.F O.PipeWait);
+        set p (O.I !idx)
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Or (cmd1, cmd2) ->
+        xcmd cmd1 false;
+        emit (O.F O.False);
+        let p = !idx in
+        xcmd cmd2 eflag;
+
+        set p (O.I !idx)
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Not cmd ->
+        xcmd cmd eflag;
+        emit (O.F O.Not);
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Match (w, ws) ->
+        emit (O.F O.Mark);
+        xwords ws;
+        emit (O.F O.Mark);
+        xword w;
+        emit (O.F O.Match);
+        (*s: [[Compile.outcode_seq]] in [[A.Match]] case after emit [[O.Match]] *)
+        if eflag 
+        then emit (O.F O.Eflag);
+        (*e: [[Compile.outcode_seq]] in [[A.Match]] case after emit [[O.Match]] *)
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Redir (cmd, (redir_kind, word)) ->
         (* resolve the filename *)
@@ -134,6 +113,29 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         xcmd cmd eflag;
         emit (O.F O.Popredir);
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Pipe (cmd1, cmd2) ->
+        emit (O.F O.Pipe);
+        emit (O.I 1); (* left fd *)
+        emit (O.I 0); (* right fd *)
+
+        let p = !idx in
+        emit (O.I 0);
+        let q = !idx in
+        emit (O.I 0);
+
+        (* will be executed in a forked child, hence Exit *)
+        xcmd cmd1 eflag;
+        emit (O.F O.Exit);
+
+        (* will be executed in a children thread, hence Return *)
+        set p (O.I !idx);
+        xcmd cmd2 eflag;
+        emit (O.F O.Return);
+
+        (* will be executed by parent once the children thread finished *)
+        set q (O.I !idx);
+        emit (O.F O.PipeWait);
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.If (cmds, cmd) ->
         xseq cmds false;
         emit (O.F O.If);
@@ -149,15 +151,6 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         emit (O.I 0);
         xcmd cmd eflag;
         set p (O.I !idx);
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Match (w, ws) ->
-        emit (O.F O.Mark);
-        xwords ws;
-        emit (O.F O.Mark);
-        xword w;
-        emit (O.F O.Match);
-        if eflag 
-        then emit (O.F O.Eflag);
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Switch (w, cmds) ->
 
@@ -203,6 +196,8 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         (* can not call pop_list(), here, otherwise circular deps *)
         emit (O.F O.Popm);
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
+    | A.Compound seq -> xseq seq eflag
+    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Fn (w, cmds) ->
         emit (O.F O.Mark);
         xword w;
@@ -215,25 +210,34 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         emit (O.F O.Return);
         set p (O.I !idx);
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Not cmd ->
-        xcmd cmd eflag;
-        emit (O.F O.Not);
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.And (cmd1, cmd2) ->
-        xcmd cmd1 false;
-        emit (O.F O.True);
-        let p = !idx in
-        xcmd cmd2 eflag;
-        set p (O.I !idx)
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.Or (cmd1, cmd2) ->
-        xcmd cmd1 false;
-        emit (O.F O.False);
-        let p = !idx in
-        xcmd cmd2 eflag;
-        set p (O.I !idx)
-    (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
-    | A.EmptyCommand -> ()
+    | A.Assign (val1, val2, cmd) ->
+        let all_assigns, cmd = 
+          split_at_non_assign (A.Assign (val1, val2, cmd)) in
+        (match cmd with
+        (* A=b; *)
+        | A.EmptyCommand -> 
+            all_assigns |> List.iter (fun (val1, val2) ->
+              emit (O.F O.Mark);
+              xword val2;
+              emit (O.F O.Mark);
+              xword val1;
+              emit (O.F O.Assign);
+            )
+
+        (* A=b cmd; *)
+        | _ -> 
+            all_assigns |> List.iter (fun (val1, val2) ->
+              emit (O.F O.Mark);
+              xword val2;
+              emit (O.F O.Mark);
+              xword val1;
+              emit (O.F O.Local);
+            );
+            xcmd cmd eflag;
+            all_assigns |> List.iter (fun (_, _) ->
+              emit (O.F O.Unlocal);
+            )
+        )
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.DelFn w ->
         emit (O.F O.Mark);

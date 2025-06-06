@@ -81,42 +81,67 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
   (* (args) *)
   | O.Simple -> Op_process.op_Simple caps ()
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.Exit -> 
-      (* todo: trapreq *)
-      Process.exit caps (Status.getstatus())
+  | O.True ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      if Status.truestatus ()
+      then incr pc
+      else pc := int_at_address t (!pc)
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (name) (val) *)
-  | O.Assign ->
+  | O.False ->
+      let t = R.cur () in
+      let pc = t.R.pc in
+      if Status.truestatus ()
+      then pc := int_at_address t (!pc)
+      else incr pc
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  | O.Not ->
+      Status.setstatus (if Status.truestatus() then "false" else "");
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (pat, str) *)
+  | O.Match ->
       let t = R.cur () in
       let argv = t.R.argv in
-      (match argv with
-      | [varname] ->
-          (* no call to globlist for varname as it can be "*" for $* *)
-          (* less: deglob varname *)
-          let v = Var.vlook varname in
-          R.pop_list ();
-
-          (* less: globlist for the arguments *)
-          let argv = t.R.argv in
-          v.R.v <- Some argv;
-          R.pop_list ();
-
-      | _ -> E.error caps "variable name not singleton!"
-      )
+      let subject = String.concat " " argv in
+      Status.setstatus "no match";
+      R.pop_list ();
+      let argv = t.R.argv in
+      argv |> List.exists (fun w -> 
+        if Pattern.match_str subject w
+        then begin
+          Status.setstatus "";
+          true
+        end else false
+      ) |> ignore;
+      R.pop_list ();
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (name) (val) *)
-  | O.Local ->
+  | O.Popredir ->
+      R.pop_redir ()
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (file)[fd] *)
+  | O.Write ->
       let t = R.cur () in
       let argv = t.R.argv in
+      let pc = t.R.pc in
       (match argv with
-      | [varname] ->
-        (* less: deglob varname *)
-        R.pop_list ();
-        (* less: globlist *)
-        let argv = t.R.argv in
-        Hashtbl.add t.R.locals varname { R.v = Some argv };
-        R.pop_list ();
-      | _ -> E.error caps "variable name not singleton!"
+      | [file] ->
+          (try 
+            let fd_from = 
+              Unix.openfile file [Unix.O_CREAT;Unix.O_WRONLY] 0o666 in
+            (* should be stdout *)
+            let fd_to =
+              let i = int_at_address t !pc in
+              file_descr_of_int i
+            in
+            R.push_redir (R.FromTo (fd_from, fd_to));
+            incr pc;
+            R.pop_list();
+          with Unix.Unix_error (_err, _s1, _s2) ->
+            prerr_string (spf "%s: " file);
+            E.error caps "can't open"
+          )
+      | []       -> E.error caps "> requires file"
+      | _x::_y::_xs -> E.error caps "> requires singleton"
       )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* [i j]{... Xreturn}{... Xreturn} *)
@@ -161,6 +186,10 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
         t.R.waitstatus <- R.WaitFor forkid;
       end
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  | O.Exit -> 
+      (* todo: trapreq *)
+      Process.exit caps (Status.getstatus())
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* argument passed through Thread.pid *)
   | O.PipeWait -> 
       let t = R.cur () in
@@ -179,72 +208,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
           Status.setstatus (Status.concstatus (Status.getstatus()) status);
       )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (file)[fd] *)
-  | O.Write ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      let pc = t.R.pc in
-      (match argv with
-      | []       -> E.error caps "> requires file"
-      | _x::_y::_xs -> E.error caps "> requires singleton"
-      | [file] ->
-          (try 
-            let fd_from = 
-              Unix.openfile file [Unix.O_CREAT;Unix.O_WRONLY] 0o666 in
-            (* should be stdout *)
-            let fd_to =
-              let i = int_at_address t !pc in
-              file_descr_of_int i
-            in
-            R.push_redir (R.FromTo (fd_from, fd_to));
-            incr pc;
-            R.pop_list();
-          with Unix.Unix_error (_err, _s1, _s2) ->
-            prerr_string (spf "%s: " file);
-            E.error caps "can't open"
-          )
-            
-      )
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.Popredir ->
-      R.pop_redir ()
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (name) *)
-  | O.Dollar ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      (match argv with
-      | [varname] -> 
-         (* less: deglob varname *)
-         (try 
-            let value = vlook_varname_or_index varname in
-            R.pop_list ();
-            let argv = t.R.argv in
-            let newargv = 
-              (match value with None -> [] | Some xs -> xs) @ argv in
-            t.R.argv <- newargv
-          with Failure s -> E.error caps s
-         )             
-      | _ -> E.error caps "variable name not singleton!"
-      )
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  (* (pat, str) *)
-  | O.Match ->
-      let t = R.cur () in
-      let argv = t.R.argv in
-      let subject = String.concat " " argv in
-      Status.setstatus "no match";
-      R.pop_list ();
-      let argv = t.R.argv in
-      argv |> List.exists (fun w -> 
-        if Pattern.match_str subject w
-        then begin
-          Status.setstatus "";
-          true
-        end else false
-      ) |> ignore;
-      R.pop_list ();
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.If ->
       let t = R.cur () in
       let pc = t.R.pc in
@@ -254,15 +217,15 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       then incr pc
       else pc := int_at_address t (!pc);
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.Wastrue ->
-      Globals.ifnot := false
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.IfNot ->
       let t = R.cur () in
       let pc = t.R.pc in
       if !Globals.ifnot
       then incr pc
       else pc := int_at_address t (!pc);
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  | O.Wastrue ->
+      Globals.ifnot := false
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* [addr] *)
   | O.Jump ->
@@ -287,22 +250,58 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
   | O.Popm ->
       R.pop_list ()
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.Not ->
-      Status.setstatus (if Status.truestatus() then "false" else "");
-  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.True ->
+  (* (name) (val) *)
+  | O.Assign ->
       let t = R.cur () in
-      let pc = t.R.pc in
-      if Status.truestatus ()
-      then incr pc
-      else pc := int_at_address t (!pc)
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] ->
+          (* no call to globlist for varname as it can be "*" for $* *)
+          (* less: deglob varname *)
+          let v = Var.vlook varname in
+          R.pop_list ();
+
+          (* less: globlist for the arguments *)
+          let argv = t.R.argv in
+          v.R.v <- Some argv;
+          R.pop_list ();
+
+      | _ -> E.error caps "variable name not singleton!"
+      )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
-  | O.False ->
+  (* (name) (val) *)
+  | O.Local ->
       let t = R.cur () in
-      let pc = t.R.pc in
-      if Status.truestatus ()
-      then pc := int_at_address t (!pc)
-      else incr pc
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] ->
+        (* less: deglob varname *)
+        R.pop_list ();
+        (* less: globlist *)
+        let argv = t.R.argv in
+        Hashtbl.add t.R.locals varname { R.v = Some argv };
+        R.pop_list ();
+      | _ -> E.error caps "variable name not singleton!"
+      )
+  (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
+  (* (name) *)
+  | O.Dollar ->
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [varname] -> 
+         (* less: deglob varname *)
+         (try 
+            let value = vlook_varname_or_index varname in
+            R.pop_list ();
+            let argv = t.R.argv in
+            let newargv = 
+              (match value with None -> [] | Some xs -> xs) @ argv in
+            t.R.argv <- newargv
+          with Failure s -> E.error caps s
+         )             
+      | _ -> E.error caps "variable name not singleton!"
+      )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* (value?) *)
   | O.Glob ->

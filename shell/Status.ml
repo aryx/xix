@@ -31,8 +31,9 @@ let concstatus s1 s2 =
   s1 ^ "|" ^ s2
 (*e: function [[Status.concstatus]] *)
 (*s: function [[Status.truestatus]] *)
-let truestatus () =
+let truestatus () : bool =
   let s = getstatus () in
-  s = "" || s =~ "0+\\(|0+\\)*"
+  s = ""
+  || s =~ "0+\\(|0+\\)*"
 (*e: function [[Status.truestatus]] *)
 (*e: Status.ml *)

@@ -71,8 +71,9 @@ type operation =
   (* Pipes *)
   | Pipe (* [i j]{... Xreturn}{... Xreturn} *)
   (*s: [[Opcode.operation]] other pipe cases *)
-  | PipeWait (* argument passed through Thread.pid *)
   | PipeFd (* [type]{... Xreturn} *)
+  (*x: [[Opcode.operation]] other pipe cases *)
+  | PipeWait (* argument passed through Thread.pid *)
   (*e: [[Opcode.operation]] other pipe cases *)
 
   (* Functions *)

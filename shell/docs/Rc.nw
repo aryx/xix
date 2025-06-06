@@ -2744,11 +2744,6 @@ let find_in_path _s _paths =
 
 \subsection{Wait}
 
-<<signature [[Process.waitfor]]>>=
-val waitfor : int -> waitfor_result
-@
-
-
 <<type [[Runtime.waitstatus]]>>=
   and waitstatus =
     | NothingToWaitfor

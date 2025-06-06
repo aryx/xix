@@ -14,8 +14,6 @@ val exit : < Cap.exit ; .. > -> string -> unit
 (*e: signature [[Process.exit]] *)
 (*s: signature [[Process.waitfor]] *)
 val waitfor : int -> waitfor_result
-(*x: signature [[Process.waitfor]] *)
-val waitfor : int -> waitfor_result
 (*e: signature [[Process.waitfor]] *)
 (*s: signature [[Process.s_of_unix_error]] *)
 val s_of_unix_error : Unix.error -> string -> string -> string

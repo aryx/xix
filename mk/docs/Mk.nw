@@ -19,7 +19,7 @@
  
 
 %thx to codemap/codegraph/scheck (but ocaml does a better job than C here):
-% - TODO use cg to to look at backward deps (but the linker already enforces layers)
+% - TODO use cg to to look at backward deps (but ocamlc already enforces layers)
 %   (harder to understand non layered code)
 % - TODO use scheck to remove deadcode (but ocamlc now is better at this)
 %   (harder to understand big files)
@@ -40,7 +40,7 @@
 % - understand main(), LP split main, improve TOC
 % - understand main functions, LP split, cluster, improve TOC
 % - LP split the structures
-% - SEMI aspectify advanced features! remove useless features, error, debug, secu
+% - aspectify advanced features! remove useless features, error, debug, secu
 % - TODO add figures
 % - TODO add explanations
 
@@ -356,6 +356,7 @@ type t = {
   <<[[Env.t]] fields>>
 }
 @
+%alt: varname type? like in rc?
 
 <<type [[Env.values]]>>=
 (* Content of variables (after full expansion and backquote resolution).
@@ -364,7 +365,8 @@ type t = {
 type values = string list
 @
 % like in rc, core datatype is a list of words, but here after full expansion!
-
+%less: rename just value? more consistent with rc and
+% reads better to see varname, value
 
 <<signature [[Env.add_var]]>>=
 val add_var : t -> string -> values -> unit
@@ -517,6 +519,10 @@ type rule_exec = {
 % just enough info for executing the rule, so really what we need is the recipe!
 % can be None here? what if None? what do we execute??
 
+% use 2 because ocaml fields must be unique for inference to work
+% (or need modern ocaml and more type annotations)
+
+
 <<[[Rules.rule_exec]] other fields>>=
 stem: string option;
 @
@@ -543,7 +549,7 @@ mutable state: build_state;
     | BeingMade
     | Made
 @
-% see explanation in principles section before
+% see explanation in principles section before \ref{}
 
 <<type [[Graph.t]]>>=
 type t = node (* the root *)
@@ -1212,6 +1218,21 @@ let space = [' ''\t']
 (* in mk, spaces have a meaning *)
 | space+        { TSpace (Lexing.lexeme lexbuf) }
 @
+% not skipped like in other language (including 'rc')
+
+
+<<[[Lexer.token()]] comment cases>>=
+(* comments *)
+| '#' [^ '\n']* { token lexbuf }
+
+(* escaped newline in comment (useful to handle) *)
+| '#' [^ '\n']* '\\' '\n' 
+    { incr Globals.line; 
+      token lexbuf 
+    }
+@
+
+\subsection{Newlines}
 
 <<[[Lexer.token()]] space cases>>=
 (* in mk, newline has a meaning *)
@@ -1226,16 +1247,6 @@ let space = [' ''\t']
 @
 
 
-<<[[Lexer.token()]] comment cases>>=
-(* comments *)
-| '#' [^ '\n']* { token lexbuf }
-
-(* escaped newline in comment (useful to handle) *)
-| '#' [^ '\n']* '\\' '\n' 
-    { incr Globals.line; 
-      token lexbuf 
-    }
-@
 
 \subsection{Symbols}
 
@@ -1300,6 +1311,9 @@ let ident = letter (letter | number)*
 <<[[Lexer.token()]] quoted string cases>>=
 | "'" { TQuoted (quote lexbuf) }
 @
+% will return TQuoted whose string does not contain enclosing quotes
+
+% just single quote in mk (like in rc)
 
 <<rule [[Lexer.quote]]>>=
 (* opti? could use Buffer *)
@@ -1334,6 +1348,8 @@ and recipe = parse
   | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
   | _ {error "unrecognized character in recipe" }
 @
+
+% When anything not indented, then stop of recipe
 
 <<function [[Lexer.yyback]]>>=
 (* pad: hack around ocamllex to emulate the yyless() of flex. The semantic
@@ -1452,8 +1468,8 @@ program: instrs EOF { $1 }
 
 <<rule [[Parser.instrs]]>>=
 instrs: 
-| instr instrs  { $1 @ $2 }
-| /*(*empty*)*/ { [] }
+ | instr instrs  { $1 @ $2 }
+ | /*(*empty*)*/ { [] }
 @
 %alt: ebnf
 
@@ -1474,8 +1490,8 @@ instr:
 <<ebnf rules>>=
 /*(* stricter: forbid just spaces; if have space, then must have a word *)*/
 words_opt:
-| words          { $1 }
-| /*(*empty*)*/  { [] }
+ | words          { $1 }
+ | /*(*empty*)*/  { [] }
 @
 
 
@@ -1487,7 +1503,8 @@ recipe_lines_opt:
  | /*(* empty *)*/              { [] }
  | TLineRecipe recipe_lines_opt { $1 :: $2 }
 @
-
+% move TENDRecipe up and remove intermediate recipe rule?
+% hmm no cos called from Parse.ml, Lexer.recipe
 
 <<rule [[Parser.instr]] other cases>>=
 | TNewline             { [] }
@@ -1498,8 +1515,8 @@ recipe_lines_opt:
 \subsection{Words}
 
 <<word rules>>=
-/*(* remove leading spaces *)*/
 words: 
+ /*(* remove leading spaces *)*/
  | spaces words_ { $2 }
  | words_        { $1 }
 @
@@ -1517,10 +1534,10 @@ spaces:
 
 <<word rules>>=
 words_:
-| word spaces words_ { (W $1) :: $3 }
-| word        { [W $1] }
-/*(* remove trailing spaces *)*/
-| word spaces { [W $1] }
+ | word spaces words_ { (W $1) :: $3 }
+ | word        { [W $1] }
+ /*(* remove trailing spaces *)*/
+ | word spaces { [W $1] }
 @
 
 \subsection{Word elements}
@@ -1528,18 +1545,18 @@ words_:
 <<word rules>>=
 /*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
 word:
-| word_elem word { ($1::$2) }
-| word_elem      { [$1] }
+ | word_elem word { ($1::$2) }
+ | word_elem      { [$1] }
 @
 %alt: ebnf rule
 
 <<word rules>>=
 word_elem:
-| TOther      { String $1 }
-| TQuoted     { String $1 }
-| TPercent    { Percent }
-| TVar        { Var (SimpleVar $1) }
-<<rule [[Parser.word_elem]] other cases>>
+ | TOther      { String $1 }
+ | TQuoted     { String $1 }
+ | TPercent    { Percent }
+ | TVar        { Var (SimpleVar $1) }
+ <<rule [[Parser.word_elem]] other cases>>
 @
 
 
@@ -2110,6 +2127,9 @@ let error_cycle node trace =
 
 \subsection{Infinite rule detection}
 
+%TODO: not implemented, quite tricky actually to understand too
+% maybe could move in advanced topics chapter?
+
 \subsection{Ambiguous rules detection}
 \label{sec:ambiguous-checks}
 
@@ -2315,6 +2335,7 @@ then failwith (spf "don't know how to make '%s'" node.G.name);
     | G.NotMade | G.BeingMade -> ready := false;
     | G.Made -> ()
     );
+
     if outofdate node arc
     then out_of_date := true
 @
@@ -2476,8 +2497,10 @@ let sched (caps : < Shell.caps; .. >) () =
       | None -> raise (Impossible "job without a recipe")
     in
     let env = adjust_env job in
+
     <<[[Scheduler.sched()]] guard to display the recipe>>
     then recipe |> List.iter (fun s -> shprint env s);
+
     <<[[Scheduler.sched()]] if dry mode>>
     else begin
       <<[[Scheduler.sched()]] let [[interactive]]>>
@@ -2502,8 +2525,8 @@ let sched (caps : < Shell.caps; .. >) () =
 val exec_recipe :
   < caps; .. > ->
   Shellenv.t ->
-  string list (* sh arguments *) ->
-  string list (* sh stdin (recipe) *) ->
+  string list (* shell arguments (e.g., ["-e"]) *) ->
+  string list (* shell stdin lines (the recipe) *) ->
   bool (* interactive *) ->
   int (* pid *)
 @
@@ -2538,22 +2561,22 @@ val shellenv_of_env : t -> Shellenv.t
 <<function [[Scheduler.shprint]]>>=
 let shprint env s =
   let s = 
-    Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
+    s |> Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
       (fun _wholestr ->
         let var = Str.matched_group 1 s in
-        if Hashtbl.mem env.E.internal_vars var
-        then Hashtbl.find env.E.internal_vars var |> String.concat " "
-        else 
-          if Hashtbl.mem env.E.vars_we_set var
-          then Hashtbl.find env.E.vars var |> String.concat " "
-          else Str.matched_string s
-      ) s
+        match () with
+        | _ when Hashtbl.mem env.E.internal_vars var ->
+            Hashtbl.find env.E.internal_vars var |> String.concat " "
+        | _ when Hashtbl.mem env.E.vars_we_set var ->
+            Hashtbl.find env.E.vars var |> String.concat " "
+        | _ -> Str.matched_string s
+      )
   in
   Logs.app (fun m -> m "|%s|" s)
 @
 %$
 
-
+% when part of enclosing env then not printed, why?
 
 \section{Executing Jobs: [[exec_recipe()]]}
 
@@ -2709,11 +2732,9 @@ then failwith (spf "recipe did not update %s, time =%s" node.name
 
 
 <<[[Scheduler.waitup()]] matching [[ret]] cases>>=
-(* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
+(* ocaml-light: Unix.WSIGNALED n | Unix.WSTOPPED n *)
 | Unix.WSIGNALED n ->
     failwith (spf "child process killed/stopped by signal = %d" n)
-@
-<<[[Scheduler.waitup()]] matching [[ret]] cases>>=
 | Unix.WSTOPPED n ->
     failwith (spf "child process killed/stopped by signal = %d" n)
 @
@@ -2745,14 +2766,14 @@ val initenv : < Cap.env ; Cap.argv; .. > -> t
 <<function [[Env.initenv]]>>=
 (* less: could take the readenv function as a parameter? *)
 let initenv (caps : < Cap.env; Cap.argv; .. >) =
-  let internal = 
+  let internals = 
     mk_vars |> List.map (fun k -> k,[]) |> Hashtbl_.of_list in
   let vars = 
     Shellenv.read_environment caps |> List_.exclude (fun (s, _) ->
       (* when you use mk recursively, the environment might contain
        * a $stem from a parent mk process.
        *)
-      Hashtbl.mem internal s
+      Hashtbl.mem internals s
     ) |> Hashtbl_.of_list
   in
 
@@ -2768,7 +2789,7 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
 
   (* less: extra checks and filtering on read_environment? *)
   { vars          = vars;
-    internal_vars = internal;
+    internal_vars = internals;
 
     vars_we_set   = Hashtbl.create 101;
     vars_commandline   = Hashtbl.create 101;
@@ -2777,7 +2798,7 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
 %$
 
 <<function [[Env.shellenv_of_env]]>>=
-let shellenv_of_env env =
+let shellenv_of_env (env : t) : Shellenv.t =
   Hashtbl_.to_list env.internal_vars @
   Hashtbl_.to_list env.vars
 @
@@ -2793,7 +2814,7 @@ let read_environment (caps : < Cap.env; ..>) =
     then
       let (var, str) = Regexp_.matched2 s in
       var, Regexp_.split "[ \t]+" str
-      else failwith (spf "wrong format for environment variable: %s" s)
+    else failwith (spf "wrong format for environment variable: %s" s)
   )
 @
 
@@ -2837,23 +2858,22 @@ let rc = {
 @
 
 
-<<function [[Shell.shell_from_env_or_sh]]>>=
+<<function [[Shell.shell_from_env_opt]]>>=
 (* old: this is a toplevel entity, so the code below is executed even
  * before main, so you can not rely on the value in Flags as they have
  * not been set yet.
  * update: we now use capabilities so we could rely on Flags now
  * less: could use lazy to avoid recompute each time
  *)
-let shell_from_env_or_sh (caps : < Cap.env; .. >) : t = 
+let shell_from_env_opt (caps : < Cap.env; .. >) : t option = 
   try 
     let path = CapSys.getenv caps "MKSHELL" in
     match path with
-    | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
-    | _ -> { sh with path = Fpath.v path }
-  with Not_found -> sh
+    | s when s =~ ".*/rc$" -> Some { rc with path = Fpath.v path }
+    | _ -> Some { sh with path = Fpath.v path }
+  with Not_found -> None
 @
 %$
-
 
 \section{[[exec_shell()]]}
 % finally
@@ -2861,7 +2881,7 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 % ??? -> sched -> exec_recipe -> <>
 <<function [[Shell.exec_shell]]>>=
 let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
-  let shell = shell_from_env_or_sh caps in
+  let shell = shell_from_env_opt caps ||| sh in
   let env = 
     shellenv 
     (* bug: I exclude empty variables
@@ -2902,7 +2922,7 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
 
 %trans: and done! seen everything! from parsing to executing!
 
-\chapter{Debugging for the [[mk]] User}
+\chapter{Debugging help for the [[mk]] User}
 %TODO?  and Profiling Support
 % debugging for the user here! See Debugging appendix
 % for debugging developer of mk itself (e.g., internal dumpers)
@@ -2913,12 +2933,6 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
 <<[[CLI.main()]] debugging initializations>>=
 let level = ref (Some Logs.Warning) in
 @
-
-<<[[CLI.main()]] [[options]] elements>>=
-"-quiet", Arg.Unit (fun () -> level := None),
-" ";
-@
-% remove even warnings
 
 <<[[CLI.main()]] [[options]] elements>>=
 (* TODO: move in a CLI_common.ml *)
@@ -2946,6 +2960,11 @@ Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 @
 % will see with -v (or -debug), will not see by default (or when -quiet)
 
+<<[[CLI.main()]] [[options]] elements>>=
+"-quiet", Arg.Unit (fun () -> level := None),
+" ";
+@
+% remove even warnings
 
 \section{Explain mode: [[mk -e]]}
 
@@ -2987,6 +3006,7 @@ then job.J.target_nodes |> List.iter (fun node ->
   node.G.state <- G.Made;
 )
 @
+% no exec_recipe branch
 
 \section{What-if mode: [[mk -w]]{\em file}}
 % ported to OCaml?
@@ -3051,11 +3071,6 @@ end;
 | Backquoted of string
 @
 
-<<Lexer other rules>>=
-<<rule [[Lexer.backquote]]>>
-<<rule [[Lexer.backquote2]]>>
-@
-
 <<Parser extra tokens>>=
 %token <string> TBackquoted
 @
@@ -3068,10 +3083,10 @@ end;
 | "`{" { TBackquoted (backquote2 lexbuf) }
 @
 
-<<rule [[Parser.word_elem]] other cases>>=
-| TBackquoted { Backquoted $1 }
+<<Lexer other rules>>=
+<<rule [[Lexer.backquote]]>>
+<<rule [[Lexer.backquote2]]>>
 @
-
 
 <<rule [[Lexer.backquote]]>>=
 (* sh syntax *)
@@ -3112,6 +3127,10 @@ and backquote2 = parse
   |_ { error "missing closing brace" }
 @
 
+<<rule [[Parser.word_elem]] other cases>>=
+| TBackquoted { Backquoted $1 }
+@
+
 <<[[Eval.eval_word()]] match [[x]] other cases>>=
 | A.Backquoted cmd -> 
   let shellenv = Env.shellenv_of_env env in
@@ -3132,7 +3151,7 @@ val exec_backquote :
   string (* sh output *)
 @
 
-%LP: later
+
 <<function [[Shell.exec_backquote]]>>=
 let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
@@ -3177,7 +3196,7 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
     output
   end
 @
-% diff with exec_recipe?
+% diff with exec_recipe? can factorize?
         
 \section{Subst variable}
 
@@ -3191,13 +3210,9 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
 %token TCBrace
 @
 
-<<rule [[Parser.word_elem]] other cases>>=
-| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
-@
-
 <<[[Lexer.token()]] variable cases>>=
-(* important to eat ':' otherwise would trigger a AfterColon we don't want*)
-| '$''{' (ident (*as s*)) ':'
+(* important to eat ':' otherwise would trigger a AfterColon we don't want *)
+| '$' '{' (ident (*as s*)) ':'
     {
       let s = Lexing.lexeme lexbuf in
       (* this is to handle '=' inside ${} *)
@@ -3213,12 +3228,12 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
 
 | '$' { error "missing variable name" }
 @
+%$
 
 <<[[Lexer.state]] other cases>>=
 (* except inside ${x:...=...} where we still want = to be TEq *)
 | InBrace
 @
-
 
 <<global [[Lexer.save_state__outside_brace]]>>=
 (* A single var is enough since mk does not allow recursivity in braces
@@ -3226,6 +3241,12 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
  * *)
 let save_state_outside_brace = ref Start
 @
+
+
+<<rule [[Parser.word_elem]] other cases>>=
+| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
+@
+
 
 
 <<[[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case>>=
@@ -3275,14 +3296,15 @@ let match_and_subst pat sub str =
 % compensate for lack of ifdef of GNU make?
 % ifdef are kinda useful, see Makefiles of Goken9cc
 
-<<Parser extra tokens>>=
-%token <Ast.loc> TInfPipe
-@
-
 <<[[Ast.instr_kind]] cases>>=
 (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
  * less: we could also do PipeInclude of recipe I think *)
 | PipeInclude of words
+@
+
+
+<<Parser extra tokens>>=
+%token <Ast.loc> TInfPipe
 @
 
 <<[[Lexer.token()]] symbol cases>>=
@@ -3317,7 +3339,7 @@ val exec_pipecmd :
   string (* sh stdin (recipe) *) ->
   Common.filename (* sh output*)
 @
-%LP: later
+
 <<function [[Shell.exec_pipecmd]]>>=
 let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
   let tmpfile = Filename.temp_file "mk" "sh" in
@@ -3527,6 +3549,8 @@ end
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
 @
+%TODO: DELETE
+
 <<[[CLI.main()]] [[options]] elements>>=
 "-debugger", Arg.Set Flags.debugger,
 " ";
@@ -3777,24 +3801,19 @@ let do_action caps s xs =
 
 \section{The [[mkfile]]s of \plan}
 
-\ifallcode
-\chapter{Extra Code}
-
 %\chapter{Changelog}
 % code via 'cd ..;mk loc' = 3070 LOC (after lpizer), after full lpized ?? LOC
 % orig Mk.nw = 3972 LOC, after full lpized and comments in sections ??
 % now: ? LOC so added ?? LOE (Lines of explanations)
 % mk in C: ? LOC (but not all features: no archive, no :P, etc)
 
+\ifallcode
+\chapter{Extra Code}
+
+
 \section{[[mk/]]}
 
 \subsection*{[[Ast.ml]]}
-
-<<function [[Ast.show_instrs]]>>=
-(* for boostrap-mk.sh and ocaml-light to work without deriving *)
-let show_instrs _ = "NO DERIVING"
-[@@warning "-32"]
-@
 
 %-------------------------------------------------------------
 
@@ -3802,7 +3821,6 @@ let show_instrs _ = "NO DERIVING"
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 <<type [[Ast.word]]>>
-
 <<type [[Ast.word_element]]>>
 
 <<type [[Ast.var]]>>
@@ -3822,11 +3840,12 @@ let show_instrs _ = "NO DERIVING"
 [@@deriving show {with_path = false}]
 
 <<type [[Ast.instr]]>>
-
 <<type [[Ast.instr_kind]]>>
 [@@deriving show {with_path = false}]
 
-<<function [[Ast.show_instrs]]>>
+(* for boostrap-mk.sh and ocaml-light to work without deriving *)
+let show_instrs _ = "NO DERIVING"
+[@@warning "-32"]
 
 <<type [[Ast.instrs]]>>
 [@@deriving show]
@@ -3838,7 +3857,6 @@ let show_instrs _ = "NO DERIVING"
 
 %-------------------------------------------------------------
 
-
 \subsection*{[[Lexer.mli]]}
 
 %-------------------------------------------------------------
@@ -3846,23 +3864,17 @@ let show_instrs _ = "NO DERIVING"
 <<Lexer.mli>>=
 
 <<type [[Lexer.state]]>>
-
 <<signature [[Lexer.state_]]>>
 
 <<signature [[Lexer.token]]>>
-
 <<signature [[Lexer.recipe]]>>
-
 @
 
 \subsection*{[[Lexer.mll]]}
 
 %-------------------------------------------------------------
 
-
-
 \subsection*{[[CLI.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -3994,7 +4006,6 @@ module R = Rules
 
 \subsection*{[[Env.ml]]}
 
-
 %-------------------------------------------------------------
 
 <<Env.ml>>=
@@ -4038,7 +4049,6 @@ open Common
 
 \subsection*{[[Eval.ml]]}
 
-
 %-------------------------------------------------------------
 
 <<Eval.ml>>=
@@ -4074,7 +4084,6 @@ open Rules (* for the fields *)
 
 <<function [[Eval.eval_word]]>>
 
-
 <<function [[Eval.eval_words]]>>
 
 (*****************************************************************************)
@@ -4087,7 +4096,6 @@ open Rules (* for the fields *)
 
 \subsection*{[[File.ml]]}
 
-
 %-------------------------------------------------------------
 
 <<File.ml>>=
@@ -4099,13 +4107,9 @@ open Fpath_.Operators
 <<function [[File.timeof]]>>
 
 <<function [[File.str_of_time]]>>
-
 @
 
-
 \subsection*{[[Flags.ml]]}
-
-
 
 %-------------------------------------------------------------
 
@@ -4130,7 +4134,6 @@ open Fpath_.Operators
 
 \subsection*{[[Globals.ml]]}
 
-
 %-------------------------------------------------------------
 
 <<Globals.ml>>=
@@ -4141,13 +4144,10 @@ open Fpath_.Operators
  *)
 
 <<constant [[Globals.line]]>>
-
 <<constant [[Globals.file]]>>
 @
 
-
 \subsection*{[[Graph.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4176,7 +4176,6 @@ module Set = Set_
 
 <<type [[Graph.t]]>>
 
-
 <<constant [[Graph.hnodes]]>>
 
 (*****************************************************************************)
@@ -4186,9 +4185,7 @@ module Set = Set_
 <<function [[Graph.new_node]]>>
 
 <<function [[Graph.rule_exec]]>>
-
 <<function [[Graph.rule_exec_meta]]>>
-
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -4201,12 +4198,9 @@ module Set = Set_
 (*****************************************************************************)
 
 <<function [[Graph.error_cycle]]>>
-
 <<function [[Graph.check_cycle]]>>
 
-
 <<function [[Graph.error_ambiguous]]>>
-
 <<function [[Graph.check_ambiguous]]>>
 
 (*****************************************************************************)
@@ -4236,7 +4230,6 @@ module Set = Set_
 
 \subsection*{[[Job.ml]]}
 
-
 %-------------------------------------------------------------
 
 <<Job.ml>>=
@@ -4244,10 +4237,7 @@ module Set = Set_
 <<type [[Job.t]]>>
 @
 
-
-
 \subsection*{[[Main.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4264,7 +4254,6 @@ open Xix_mk
 
 
 \subsection*{[[Outofdate.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4290,8 +4279,6 @@ open Job (* for the fields *)
 <<function [[Outofdate.outofdate]]>>
 
 <<function [[Outofdate.opt0]]>>
-    
-
 
 <<function [[Outofdate.dorecipe]]>>
 
@@ -4305,8 +4292,6 @@ open Job (* for the fields *)
 
 \subsection*{[[Parse.ml]]}
 
-
-
 %-------------------------------------------------------------
 
 <<Parse.ml>>=
@@ -4318,10 +4303,7 @@ open Fpath_.Operators
 <<function [[Parse.parse]]>>
 @
 
-
-
 \subsection*{[[Percent.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4365,14 +4347,10 @@ open Common
 
 <<function [[Percent.subst]]>>
 
-
 <<function [[Percent.match_and_subst]]>>
 @
 
-
 \subsection*{[[Rules.ml]]}
-
-
 
 %-------------------------------------------------------------
 
@@ -4380,19 +4358,15 @@ open Common
 
 <<type [[Rules.rule]]>>
 
-
 <<type [[Rules.rules]]>>
 
 <<type [[Rules.rule_exec]]>>
 
 <<function [[Rules.has_recipe]]>>
-
 <<function [[Rules.is_meta]]>>
 @
 
-
 \subsection*{[[Scheduler.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4449,13 +4423,11 @@ module Set = Set_
          )
 *)
 
-
 (*****************************************************************************)
 (* Main algorithms *)
 (*****************************************************************************)
 
 <<function [[Scheduler.sched]]>>
-
 
 (*****************************************************************************)
 (* Entry points *)
@@ -4463,13 +4435,10 @@ module Set = Set_
 
 <<function [[Scheduler.run]]>>
 
-
 <<function [[Scheduler.waitup]]>>
 @
 
-
 \subsection*{[[Shellenv.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4483,9 +4452,7 @@ open Common
 <<function [[Shellenv.read_environment]]>>
 @
 
-
 \subsection*{[[Shell.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -4514,7 +4481,7 @@ open Fpath_.Operators
  *)
 <<constant [[Shell.rc]]>>
 
-<<function [[Shell.shell_from_env_or_sh]]>>
+<<function [[Shell.shell_from_env_opt]]>>
 
 (*****************************************************************************)
 (* Helpers *)
@@ -4524,24 +4491,18 @@ open Fpath_.Operators
 
 <<function [[Shell.feed_shell_input]]>>
 
-
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
 <<function [[Shell.exec_recipe]]>>
 
-
 <<function [[Shell.exec_backquote]]>>
-
 
 <<function [[Shell.exec_pipecmd]]>>
 @
 
-
 \subsection*{[[CLI.mli]]}
-
-
 
 %-------------------------------------------------------------
 
@@ -4555,9 +4516,7 @@ open Fpath_.Operators
 <<signature [[CLI.build_targets]]>>
 @
 
-
 \subsection*{[[Env.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -4579,9 +4538,7 @@ open Fpath_.Operators
 <<signature [[Env.dump_env]]>>
 @
 
-
 \subsection*{[[Eval.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -4592,9 +4549,7 @@ open Fpath_.Operators
 <<signature [[Eval.eval_words]]>>
 @
 
-
 \subsection*{[[File.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -4604,14 +4559,11 @@ open Fpath_.Operators
 <<signature [[File.str_of_time]]>>
 @
 
-
 \subsection*{[[Graph.mli]]}
 
 <<signature [[Graph.hnodes]]>>=
 val hnodes : (string, node) Hashtbl.t
 @
-
-
 
 %-------------------------------------------------------------
 
@@ -4636,12 +4588,9 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Graph.check_ambiguous]]>>
 
 <<signature [[Graph.dump_graph]]>>
-
 @
 
-
 \subsection*{[[Outofdate.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -4649,17 +4598,13 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Outofdate.work]]>>
 @
 
-
 \subsection*{[[Parse.mli]]}
-
 
 %-------------------------------------------------------------
 
 <<Parse.mli>>=
 <<signature [[Parse.parse]]>>
 @
-
-
 
 \subsection*{[[Percent.mli]]}
 
@@ -4682,9 +4627,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Percent.check_pattern]]>>
 @
 
-
 \subsection*{[[Scheduler.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -4694,7 +4637,6 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Scheduler.run]]>>
 <<signature [[Scheduler.waitup]]>>
 @
-
 
 \subsection*{[[Shellenv.mli]]}
 
@@ -4706,7 +4648,6 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Shellenv.read_environment]]>>
 @
 
-
 \subsection*{[[Shell.mli]]}
 
 %-------------------------------------------------------------
@@ -4716,9 +4657,7 @@ val hnodes : (string, node) Hashtbl.t
 <<type [[Shell.caps]]>>
 
 <<signature [[Shell.exec_recipe]]>>
-
 <<signature [[Shell.exec_backquote]]>>
-
 <<signature [[Shell.exec_pipecmd]]>>
 
 (* internals *)

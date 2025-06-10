@@ -55,6 +55,7 @@ let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () : int =
     0
   end
   else 
+    (* parent *)
     (* less: addwaitpid *)
     pid
 (*e: function [[Op_process.forkexec]] *)

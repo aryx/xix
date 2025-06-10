@@ -53,6 +53,7 @@ let dotcmds =
 (*s: function [[Builtin.dispatch]] *)
 let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   match s with
+  (*s: [[Builtin.dispatch()]] match [[s]] cases *)
   | "cd" -> 
       let t = R.cur () in
       let argv = t.R.argv in
@@ -80,7 +81,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
           Logs.err (fun m -> m "Usage: cd [directory]");
       );
       R.pop_list()
-
+  (*x: [[Builtin.dispatch()]] match [[s]] cases *)
   | "." ->
       let t = R.cur () in
       R.pop_word (); (* "." *)
@@ -121,7 +122,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
             E.error caps ".: can't open"
           )
       ) 
-
+  (*x: [[Builtin.dispatch()]] match [[s]] cases *)
   | "flag" -> 
       let t = R.cur () in
       let argv = t.R.argv in
@@ -146,11 +147,11 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
       );
       R.pop_list()
 
+  (*x: [[Builtin.dispatch()]] match [[s]] cases *)
   | "finit" -> 
      (* less: Xrdfn *)
      R.pop_list ()
-
+  (*e: [[Builtin.dispatch()]] match [[s]] cases *)
   | _ -> failwith (spf "unsupported builtin %s" s)
 (*e: function [[Builtin.dispatch]] *)
-
 (*e: Builtin.ml *)

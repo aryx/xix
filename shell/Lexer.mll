@@ -35,7 +35,7 @@ let idchr = ['a'-'z''A'-'Z''0'-'9''_''*']
  * note that wordchr allows '~', '!', '@', '"', ','
  *)
 let wordchr = [^'\n' ' ' '\t' '#'
-                ';' '&''|''^' '$' '=' 
+                ';' '&' '|' '^' '$' '=' 
                 '`' '\'' 
                '{''}' '('')' '<''>'
                 ]
@@ -93,6 +93,8 @@ rule token = parse
   (*x: [[Lexer.token()]] symbol cases *)
   | "@" { TSubshell }
   (*x: [[Lexer.token()]] symbol cases *)
+  | "`" { TBackquote } 
+  (*x: [[Lexer.token()]] symbol cases *)
   | ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
          {  let fd0 = failwith "TODO: fd0" in
      let fd1 = failwith "TODO: fd1" in
@@ -106,8 +108,6 @@ rule token = parse
   }
   (* less: advanced pipe and redirection *)
   (*x: [[Lexer.token()]] symbol cases *)
-  | "`" { TBackquote } 
-  (*x: [[Lexer.token()]] symbol cases *)
   | "^" { TCaret }
   (*e: [[Lexer.token()]] symbol cases *)
 
@@ -117,9 +117,9 @@ rule token = parse
   (*s: [[Lexer.token()]] variable cases *)
   | "$"   { TDollar }
   (*x: [[Lexer.token()]] variable cases *)
-  | "$\"" { TStringify }
-  (*x: [[Lexer.token()]] variable cases *)
   | "$#"  { TCount }
+  (*x: [[Lexer.token()]] variable cases *)
+  | "$\"" { TStringify }
   (*e: [[Lexer.token()]] variable cases *)
 
   (* ----------------------------------------------------------------------- *)
@@ -134,9 +134,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (*s: [[Lexer.token()]] keywords and unquoted words cases *)
   | wordchr+ { 
-
-    let s = Lexing.lexeme lexbuf in
-    (match s with
+    match Lexing.lexeme lexbuf with
     | "if"    -> TIf
     | "while" -> TWhile
     | "for"   -> TFor
@@ -144,9 +142,7 @@ rule token = parse
     | "not"   -> TNot
     | "switch" -> TSwitch
     | "fn"     -> TFn
-
-    | _ -> TWord (s, false)
-    )
+    | s -> TWord (s, false)
   }
   (*e: [[Lexer.token()]] keywords and unquoted words cases *)
 

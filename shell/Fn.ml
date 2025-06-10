@@ -7,5 +7,4 @@ let flook s =
     Some (Hashtbl.find R.fns s)
   with Not_found -> None
 (*e: function [[Fn.flook]] *)
-
 (*e: Fn.ml *)

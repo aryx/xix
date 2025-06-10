@@ -16,13 +16,13 @@ type value =
   | Dollar of value
   | List of values
   (*s: [[Ast.value]] other cases *)
+  | Count of value (* $#foo *)
+  | Index of value * values (* $foo(...) *)
+  (*x: [[Ast.value]] other cases *)
   (* this causes the value and cmd types to be mutually recursive. Uses $IFS *)
   | CommandOutput of cmd_sequence
   (*x: [[Ast.value]] other cases *)
   | Stringify of value (* $"foo " *)
-  (*x: [[Ast.value]] other cases *)
-  | Count of value (* $#foo *)
-  | Index of value * values (* $foo(...) *)
   (*x: [[Ast.value]] other cases *)
   (* ^ distributes over lists *)
   | Concat of value * value

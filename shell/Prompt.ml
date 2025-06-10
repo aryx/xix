@@ -22,7 +22,7 @@ let pprompt () =
   if t.R.iflag then begin
     prerr_string !prompt;
     flush stderr;
-
+    (*s: [[Prompt.pprompt()]] adjust [[prompt]] for next time *)
     (* set promptstr for the next pprompt() *)
     let promptv = (Var.vlook "prompt").R.v in
     prompt := 
@@ -31,6 +31,7 @@ let pprompt () =
        (* stricter? display error message if prompt set no 2 elements?*)
       | Some _ | None -> "\t"
       );
+    (*e: [[Prompt.pprompt()]] adjust [[prompt]] for next time *)
   end;
   (* alt: incr t.R.line; this is done in the lexer instead *)
   doprompt := false

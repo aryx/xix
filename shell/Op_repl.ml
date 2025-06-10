@@ -33,6 +33,7 @@ let op_REPL (caps : < Cap.exit; ..>) () =
     | Some seq ->
         (* should contain an op_return *)
         let codevec = Compile.compile seq in
+
         let newt = R.mk_thread codevec 0 t.R.locals in
         R.runq := newt::!(R.runq);
 
@@ -40,19 +41,21 @@ let op_REPL (caps : < Cap.exit; ..>) () =
         (* when codevec does a op_return(), then interpreter loop
          * in main should call us back since the pc was decremented above
          *)
+    (*s: [[Op_repl.op_REPL()]] match [[cmdset_opt]] other cases *)
     | None -> Process.return caps ()
+    (*e: [[Op_repl.op_REPL()]] match [[cmdset_opt]] other cases *)
 
   with Failure s -> 
     (*s: [[Op_repl.op_REPL()]] when [[Failure s]] thrown *)
     (* todo: check signals  *)
-    if not t.R.iflag
     (* less: was doing Xreturn originally *)
-    then failwith s
-    else begin
+    if t.R.iflag
+    then begin
       Logs.err (fun m -> m "%s" s);
       (* go back for next command *)
       decr t.R.pc;
     end
+    else failwith s
     (*e: [[Op_repl.op_REPL()]] when [[Failure s]] thrown *)
 (*e: function [[Op_repl.op_REPL]] *)
 (*e: Op_repl.ml *)

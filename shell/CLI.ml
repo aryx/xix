@@ -186,13 +186,13 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
 
   let options = [
     (*s: [[CLI.main()]] [[options]] elements *)
-    "-l", Arg.Set Flags.login,
-    " login mode (execute ~/lib/profile)";
-    (*x: [[CLI.main()]] [[options]] elements *)
     "-i", Arg.Set Flags.interactive,
     " interactive mode (display prompt)";
     "-I", Arg.Clear Flags.interactive,
     " non-interactive mode (no prompt)";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-l", Arg.Set Flags.login,
+    " login mode (execute ~/lib/profile)";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-m", Arg.Set_string Flags.rcmain,
     " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
@@ -258,12 +258,13 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     raise (Exit.ExitCode 0)
   end;
   (*e: [[CLI.main()]] CLI action processing *)
-  (* todo: 
-   * if argc=1 and Isatty then Flags.interactive := true 
-   *)
   Var.vinit caps;
   (* todo: trap_init () *)
   (*s: [[CLI.main()]] other initializations *)
+  (* todo: 
+   * if argc=1 and Isatty then Flags.interactive := true 
+   *)
+  (*x: [[CLI.main()]] other initializations *)
   (* for 'flags' builtin (see builtin.ml) *)
   argv |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"

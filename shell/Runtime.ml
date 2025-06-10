@@ -212,8 +212,8 @@ let mk_thread code pc locals =
     (*s: [[Runtime.mk_thread()]] set other fields *)
     redirections = 
       (match !runq with
-      | [] -> []::[]
       | t::_ts -> []::t.redirections
+      | [] -> []::[]
       );
     (*x: [[Runtime.mk_thread()]] set other fields *)
     waitstatus = NothingToWaitfor;

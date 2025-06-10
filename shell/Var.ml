@@ -13,7 +13,7 @@ module R = Runtime
 (*****************************************************************************)
 
 (*s: function [[Var.gvlook]] *)
-let gvlook name =
+let gvlook (name : R.varname) : R.var =
   try 
     Hashtbl.find R.globals name
   with Not_found ->

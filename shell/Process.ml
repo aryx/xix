@@ -24,7 +24,9 @@ let exit (caps: < Cap.exit; ..>) s =
  * It is an helper function really.
  *)
 let return (caps : < Cap.exit; .. >) () =
+  (*s: [[Process.return()]] initializations *)
   R.turf_redir ();
+  (*e: [[Process.return()]] initializations *)
   match !R.runq with
   | [] -> failwith "empty runq"
   (* last thread in runq, we exit then *)

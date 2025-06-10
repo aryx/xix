@@ -7,7 +7,6 @@
 *** fix mk warnings on xix whole project compilation
 (now that they are more visible)
 
-
 ** Dev infra
 
 *** add semgrep rules to make sure we're not using
@@ -35,25 +34,25 @@ but syncweb issue
 
 ** rc in ocaml
 
-*** consolidate different rc versions
-https://github.com/Homebrew/homebrew-core/blob/1ebef261e5b820b6d00f219c90a7e7c2362aa8a1/Formula/r/rc.rb
-
 *** fix rc so it can work on the xix source and replace plan9port rc
 
-*** ----------------------------
-
 *** read environment, Vinit
-
-*** subshell
-
-*** Vinit
-use IFS?
 
 *** read environment variables
 and transform for PATH
 
 *** export environment variables
 only when change?
+
+*** consolidate different rc versions
+https://github.com/Homebrew/homebrew-core/blob/1ebef261e5b820b6d00f219c90a7e7c2362aa8a1/Formula/r/rc.rb
+
+*** Vinit
+use IFS?
+
+*** ----------------------------
+
+*** subshell
 
 *** try plug rc.byte to be used by mk-rc.byte :)
 use a ROOT? so make it works also with bootstrap?
@@ -137,7 +136,9 @@ opportunity to have a debug mode where better see the lexer
  and parser actions and what's going on!
 
 *** 'as' feature
- 
+hmm maybe not if complexify too much the code
+maybe not worth it as we need to make a literate program for CompilerGenerators.nw 
+
 *** ----------------------------
 
 *** ocamllex: read dragon book, confusing 'pos'
@@ -512,11 +513,9 @@ original had 3?
 
 *** merge commons/ and commons2/? 
 
-
 *** can have more recent obj.ml?
 replace all stdlib.cma by my own?
 => can use ocamltarzan for dumping kernel stuff?
-
 
 *** LATER: try to compile with -nopervasives or -nostdlib
 and rely only on stuff in lib_core/
@@ -524,6 +523,7 @@ and rely only on stuff in lib_core/
 *** use camomile for unicode?
 or extlib/utf8.ml good enough?
 
+or uchar.ml enough?
 
 * Partially ported
 

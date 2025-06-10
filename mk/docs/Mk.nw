@@ -3817,7 +3817,7 @@ let do_action caps s xs =
 
 %-------------------------------------------------------------
 
-<<Ast.ml>>=
+<<mk/Ast.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 <<type [[Ast.word]]>>
@@ -3878,7 +3878,7 @@ let show_instrs _ = "NO DERIVING"
 
 %-------------------------------------------------------------
 
-<<CLI.ml>>=
+<<mk/CLI.ml>>=
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -4008,7 +4008,7 @@ module R = Rules
 
 %-------------------------------------------------------------
 
-<<Env.ml>>=
+<<mk/Env.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4051,7 +4051,7 @@ open Common
 
 %-------------------------------------------------------------
 
-<<Eval.ml>>=
+<<mk/Eval.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4098,7 +4098,7 @@ open Rules (* for the fields *)
 
 %-------------------------------------------------------------
 
-<<File.ml>>=
+<<mk/File.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -4113,7 +4113,7 @@ open Fpath_.Operators
 
 %-------------------------------------------------------------
 
-<<Flags.ml>>=
+<<mk/Flags.ml>>=
 <<constant [[Flags.dry_mode]]>>
 
 (* TODO? just use Logs.info for those? *)
@@ -4136,7 +4136,7 @@ open Fpath_.Operators
 
 %-------------------------------------------------------------
 
-<<Globals.ml>>=
+<<mk/Globals.ml>>=
 
 (* Mostly used by lexer but also by parser, and by error management code.
  * We can not define it in the lexer because of a mutual dependency issue.
@@ -4151,7 +4151,7 @@ open Fpath_.Operators
 
 %-------------------------------------------------------------
 
-<<Graph.ml>>=
+<<mk/Graph.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4232,7 +4232,7 @@ module Set = Set_
 
 %-------------------------------------------------------------
 
-<<Job.ml>>=
+<<mk/Job.ml>>=
 
 <<type [[Job.t]]>>
 @
@@ -4241,7 +4241,7 @@ module Set = Set_
 
 %-------------------------------------------------------------
 
-<<Main.ml>>=
+<<mk/Main.ml>>=
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Xix_mk
 
@@ -4257,7 +4257,7 @@ open Xix_mk
 
 %-------------------------------------------------------------
 
-<<Outofdate.ml>>=
+<<mk/Outofdate.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4294,7 +4294,7 @@ open Job (* for the fields *)
 
 %-------------------------------------------------------------
 
-<<Parse.ml>>=
+<<mk/Parse.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4307,7 +4307,7 @@ open Fpath_.Operators
 
 %-------------------------------------------------------------
 
-<<Percent.ml>>=
+<<mk/Percent.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4354,7 +4354,7 @@ open Common
 
 %-------------------------------------------------------------
 
-<<Rules.ml>>=
+<<mk/Rules.ml>>=
 
 <<type [[Rules.rule]]>>
 
@@ -4370,7 +4370,7 @@ open Common
 
 %-------------------------------------------------------------
 
-<<Scheduler.ml>>=
+<<mk/Scheduler.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4442,7 +4442,7 @@ module Set = Set_
 
 %-------------------------------------------------------------
 
-<<Shellenv.ml>>=
+<<mk/Shellenv.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4456,7 +4456,7 @@ open Common
 
 %-------------------------------------------------------------
 
-<<Shell.ml>>=
+<<mk/Shell.ml>>=
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -4666,8 +4666,24 @@ val hnodes : (string, node) Hashtbl.t
 
 \fi %ifallcode
 
+
+\chapter*{Glossary}
+\addcontentsline{toc}{chapter}{Glossary}
+\label{sec:glossary}
+
+\begin{verbatim}
+LOC = Lines Of Code
+\end{verbatim}
+
 \chapter*{Indexes}
 \addcontentsline{toc}{chapter}{Index}
+
+Here is a list of the identifiers used, and where they appear.
+Underlined entries indicate the place of definition.
+This index is generated automatically.
+
+%\twocolumn does not work
+\nowebindex
 
 %\chapter{References} 
 \addcontentsline{toc}{chapter}{References}

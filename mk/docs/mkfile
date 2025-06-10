@@ -25,3 +25,29 @@ SRC_ORIG=Mk.nw Intro.nw
 sync_yacc:VI:
         $SYNCWEB -md5sum_in_auxfile -less_marks -lang ocamlyacc  $SRC_ORIG \
             ../Parser.mly
+
+# steps to build index:
+# - remove wrapped true in dune file
+# - cd ~/xix; mk nuke; make clean
+# # make all to produce .cmt for all of xix otherwise not enough
+# - make build-dune
+# - rm -rf _build/.../mk/tests
+# - codegraph_build -lang cmt .
+# # look if codegraph looks ok
+# - cg .
+# - cd mk/docs
+# - mk index
+# - mk pdf
+# => DONE! Mk.pdf should now have indexes!
+index:V:
+    $INDEXER -lang cmt $TOP \
+    | grep -v 'TODO_NO_SOURCE_FOUND' \
+    | grep  'mk/' \
+    > defs_and_uses.list.new
+    mv defs_and_uses.list.new defs_and_uses.list
+
+
+#    | sed -e 's#main.cmt#Main#' \
+#    | grep -v 'Pervasives.:=' \
+#    | grep -v 'Pervasives.~' \
+#    | grep -v 'stdlib/' \

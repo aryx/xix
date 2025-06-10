@@ -44,6 +44,12 @@ let (<=>) a b =
 (* Misc *)
 (*****************************************************************************)
 
+(* not sure why but can't use let (?:) a b = ... then at use time ocaml yells*)
+let ( ||| ) a b =
+  match a with
+  | Some x -> x
+  | None -> b
+
 (* let (|>) o f = f o
    builtin since OCaml 4.01 (builtin and optimized) 
 *)

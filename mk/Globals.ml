@@ -8,7 +8,6 @@
 (*s: constant [[Globals.line]] *)
 let line = ref 1
 (*e: constant [[Globals.line]] *)
-
 (*s: constant [[Globals.file]] *)
 let file = ref "<nofile>"
 (*e: constant [[Globals.file]] *)

@@ -61,16 +61,16 @@ let adjust_env job =
 (*s: function [[Scheduler.shprint]] *)
 let shprint env s =
   let s = 
-    Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
+    s |> Str.global_substitute (Str.regexp "\\$\\([a-zA-Z][a-zA-Z0-9_]*\\)")
       (fun _wholestr ->
         let var = Str.matched_group 1 s in
-        if Hashtbl.mem env.E.internal_vars var
-        then Hashtbl.find env.E.internal_vars var |> String.concat " "
-        else 
-          if Hashtbl.mem env.E.vars_we_set var
-          then Hashtbl.find env.E.vars var |> String.concat " "
-          else Str.matched_string s
-      ) s
+        match () with
+        | _ when Hashtbl.mem env.E.internal_vars var ->
+            Hashtbl.find env.E.internal_vars var |> String.concat " "
+        | _ when Hashtbl.mem env.E.vars_we_set var ->
+            Hashtbl.find env.E.vars var |> String.concat " "
+        | _ -> Str.matched_string s
+      )
   in
   Logs.app (fun m -> m "|%s|" s)
 (*e: function [[Scheduler.shprint]] *)
@@ -101,7 +101,6 @@ let dump_job func job pidopt =
          )
 *)
 
-
 (*****************************************************************************)
 (* Main algorithms *)
 (*****************************************************************************)
@@ -121,10 +120,12 @@ let sched (caps : < Shell.caps; .. >) () =
       | None -> raise (Impossible "job without a recipe")
     in
     let env = adjust_env job in
+
     (*s: [[Scheduler.sched()]] guard to display the recipe *)
     if not (Set.mem Ast.Quiet rule.R.attrs2)
     (*e: [[Scheduler.sched()]] guard to display the recipe *)
     then recipe |> List.iter (fun s -> shprint env s);
+
     (*s: [[Scheduler.sched()]] if dry mode *)
     if !Flags.dry_mode 
     then job.J.target_nodes |> List.iter (fun node ->
@@ -155,7 +156,6 @@ let sched (caps : < Shell.caps; .. >) () =
     raise (Impossible "no jobs to schedule")
 (*e: function [[Scheduler.sched]] *)
 
-
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
@@ -170,7 +170,6 @@ let run (caps : < Shell.caps; .. >) (job : Job.t) : unit =
   if !nrunning < nproclimit caps
   then sched caps ()
 (*e: function [[Scheduler.run]] *)
-
 
 (*s: function [[Scheduler.waitup]] *)
 let waitup (caps : < Shell.caps; .. >) () =
@@ -220,10 +219,9 @@ let waitup (caps : < Shell.caps; .. >) () =
       (*e: [[Scheduler.waitup()]] job exited with error code [[n]], if [[Delete]] rule *)
       failwith (spf "error in child process, exit status = %d" n)
   (*x: [[Scheduler.waitup()]] matching [[ret]] cases *)
-  (* old: Unix.WSIGNALED n | Unix.WSTOPPED n *)
+  (* ocaml-light: Unix.WSIGNALED n | Unix.WSTOPPED n *)
   | Unix.WSIGNALED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)
-  (*x: [[Scheduler.waitup()]] matching [[ret]] cases *)
   | Unix.WSTOPPED n ->
       failwith (spf "child process killed/stopped by signal = %d" n)
   (*e: [[Scheduler.waitup()]] matching [[ret]] cases *)

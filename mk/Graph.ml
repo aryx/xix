@@ -71,7 +71,6 @@ type node = {
 type t = node (* the root *)
 (*e: type [[Graph.t]] *)
 
-
 (*s: constant [[Graph.hnodes]] *)
 (* The graph is a DAG; some arcs may point to previously created nodes.
  * This is why we store in this hash all the created nodes.
@@ -118,7 +117,6 @@ let rule_exec (r: string Rules.rule) : Rules.rule_exec =
     R.all_prereqs = r.R.prereqs;
   }
 (*e: function [[Graph.rule_exec]] *)
-
 (*s: function [[Graph.rule_exec_meta]] *)
 let rule_exec_meta (r: Percent.pattern Rules.rule) (stem : string) : Rules.rule_exec =
   { R.recipe2 = r.R.recipe;
@@ -130,7 +128,6 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) (stem : string) : Rules.rule_
     R.all_prereqs = r.R.prereqs |> List.map (fun pat -> Percent.subst pat stem);
   }
 (*e: function [[Graph.rule_exec_meta]] *)
-
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -227,7 +224,6 @@ let error_cycle node trace =
   failwith (spf "cycle in graph detected at target %s (trace = %s)"
               node.name str)
 (*e: function [[Graph.error_cycle]] *)
-
 (*s: function [[Graph.check_cycle]] *)
 let check_cycle node =
   let rec aux trace node =
@@ -246,7 +242,6 @@ let check_cycle node =
   aux [] node
 (*e: function [[Graph.check_cycle]] *)
 
-
 (*s: function [[Graph.error_ambiguous]] *)
 let error_ambiguous node groups =
   let candidates = 
@@ -262,7 +257,6 @@ let error_ambiguous node groups =
   failwith (spf "ambiguous recipes for %s: \n%s" 
               node.name  (candidates |> String.concat "\n"))
 (*e: function [[Graph.error_ambiguous]] *)
-
 (*s: function [[Graph.check_ambiguous]] *)
 let rec check_ambiguous node =
   (*s: [[Graph.check_ambiguous()]] recurse on the arcs of the node *)

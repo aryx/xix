@@ -250,9 +250,6 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     "-f", Arg.Set_string infile,
     " <file> use file instead of mkfile";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-    (*x: [[CLI.main()]] [[options]] elements *)
     (* TODO: move in a CLI_common.ml *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose mode";
@@ -265,6 +262,9 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
       Flags.explain_mode := true;
     ),
     " trace the main functions";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-e", Arg.Set Flags.explain_mode,
     " explain mode";

@@ -57,21 +57,21 @@ let rc = {
 }
 (*e: constant [[Shell.rc]] *)
 
-(*s: function [[Shell.shell_from_env_or_sh]] *)
+(*s: function [[Shell.shell_from_env_opt]] *)
 (* old: this is a toplevel entity, so the code below is executed even
  * before main, so you can not rely on the value in Flags as they have
  * not been set yet.
  * update: we now use capabilities so we could rely on Flags now
  * less: could use lazy to avoid recompute each time
  *)
-let shell_from_env_or_sh (caps : < Cap.env; .. >) : t = 
+let shell_from_env_opt (caps : < Cap.env; .. >) : t option = 
   try 
     let path = CapSys.getenv caps "MKSHELL" in
     match path with
-    | s when s =~ ".*/rc$" -> { rc with path = Fpath.v path }
-    | _ -> { sh with path = Fpath.v path }
-  with Not_found -> sh
-(*e: function [[Shell.shell_from_env_or_sh]] *)
+    | s when s =~ ".*/rc$" -> Some { rc with path = Fpath.v path }
+    | _ -> Some { sh with path = Fpath.v path }
+  with Not_found -> None
+(*e: function [[Shell.shell_from_env_opt]] *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -79,7 +79,7 @@ let shell_from_env_or_sh (caps : < Cap.env; .. >) : t =
 
 (*s: function [[Shell.exec_shell]] *)
 let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
-  let shell = shell_from_env_or_sh caps in
+  let shell = shell_from_env_opt caps ||| sh in
   let env = 
     shellenv 
     (* bug: I exclude empty variables
@@ -130,7 +130,6 @@ let feed_shell_input inputs pipe_write =
   (* will flush *)
   Unix.close pipe_write
 (*e: function [[Shell.feed_shell_input]] *)
-
 
 (*****************************************************************************)
 (* Entry points *)
@@ -194,7 +193,6 @@ let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (inte
   else pid (* pid of child1 *)
 (*e: function [[Shell.exec_recipe]] *)
 
-
 (*s: function [[Shell.exec_backquote]] *)
 let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
@@ -239,7 +237,6 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
     output
   end
 (*e: function [[Shell.exec_backquote]] *)
-
 
 (*s: function [[Shell.exec_pipecmd]] *)
 let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =

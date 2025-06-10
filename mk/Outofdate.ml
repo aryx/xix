@@ -45,8 +45,6 @@ let opt0 opttime =
   | None -> 0.
   | Some x -> x
 (*e: function [[Outofdate.opt0]] *)
-    
-
 
 (*s: function [[Outofdate.dorecipe]] *)
 let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit =
@@ -162,6 +160,7 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit
               | G.NotMade | G.BeingMade -> ready := false;
               | G.Made -> ()
               );
+
               if outofdate node arc
               then out_of_date := true
           (*x: [[Outofdate.work()]] when iterating arc and matching [[arc.dest]] cases *)

@@ -149,7 +149,6 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
   aux [] word
 (*e: function [[Eval.eval_word]] *)
 
-
 (*s: function [[Eval.eval_words]] *)
 let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
          (string list, Percent.pattern list) Common.either =

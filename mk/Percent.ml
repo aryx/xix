@@ -104,7 +104,6 @@ let subst (P pat) stem =
   ) |> String.concat ""
 (*e: function [[Percent.subst]] *)
 
-
 (*s: function [[Percent.match_and_subst]] *)
 let match_and_subst pat sub str =
   match match_ pat str with

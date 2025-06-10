@@ -83,5 +83,4 @@ val check_ambiguous : t -> unit
 (* output graphviz dot file *)
 val dump_graph : t -> unit
 (*e: signature [[Graph.dump_graph]] *)
-
 (*e: Graph.mli *)

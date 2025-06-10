@@ -9,7 +9,6 @@
  *)
 type word = W of word_element list
 (*e: type [[Ast.word]] *)
-
 (*s: type [[Ast.word_element]] *)
   and word_element =
     | String of string (* except the empty string *)
@@ -48,7 +47,7 @@ type recipe = R of string list
 [@@deriving show {with_path = false}]
 
 (*s: type [[Ast.rule]] *)
-(* See also Rules.rule_exec *)
+(* See also Rules.rule and Rules.rule_exec *)
 type rule = {
   targets: words;
   prereqs: words;
@@ -88,7 +87,6 @@ type instr = {
   loc: loc;
 }
 (*e: type [[Ast.instr]] *)
-
 (*s: type [[Ast.instr_kind]] *)
   and instr_kind =
     | Rule of rule
@@ -105,11 +103,9 @@ type instr = {
 (*e: type [[Ast.instr_kind]] *)
 [@@deriving show {with_path = false}]
 
-(*s: function [[Ast.show_instrs]] *)
 (* for boostrap-mk.sh and ocaml-light to work without deriving *)
 let show_instrs _ = "NO DERIVING"
 [@@warning "-32"]
-(*e: function [[Ast.show_instrs]] *)
 
 (*s: type [[Ast.instrs]] *)
 type instrs = instr list

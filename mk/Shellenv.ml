@@ -14,7 +14,7 @@ let read_environment (caps : < Cap.env; ..>) =
     then
       let (var, str) = Regexp_.matched2 s in
       var, Regexp_.split "[ \t]+" str
-      else failwith (spf "wrong format for environment variable: %s" s)
+    else failwith (spf "wrong format for environment variable: %s" s)
   )
 (*e: function [[Shellenv.read_environment]] *)
 (*e: Shellenv.ml *)

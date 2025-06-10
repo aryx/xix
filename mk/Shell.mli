@@ -12,12 +12,11 @@ type caps = < Cap.exec; Cap.fork; Cap.env >
 val exec_recipe :
   < caps; .. > ->
   Shellenv.t ->
-  string list (* sh arguments *) ->
-  string list (* sh stdin (recipe) *) ->
+  string list (* shell arguments (e.g., ["-e"]) *) ->
+  string list (* shell stdin lines (the recipe) *) ->
   bool (* interactive *) ->
   int (* pid *)
 (*e: signature [[Shell.exec_recipe]] *)
-
 (*s: signature [[Shell.exec_backquote]] *)
 val exec_backquote :
   < caps; .. > ->
@@ -25,7 +24,6 @@ val exec_backquote :
   string (* sh stdin (recipe) *) ->
   string (* sh output *)
 (*e: signature [[Shell.exec_backquote]] *)
-
 (*s: signature [[Shell.exec_pipecmd]] *)
 val exec_pipecmd :
   < caps ; .. > ->

@@ -12,7 +12,6 @@ type 'a rule = {
 }
 (*e: type [[Rules.rule]] *)
 
-
 (*s: type [[Rules.rules]] *)
 type rules = {
   (* use Hashtbl.find_all because a target can be associated to many rules *)
@@ -41,7 +40,6 @@ type rule_exec = {
 let has_recipe re =
   re.recipe2 <> None
 (*e: function [[Rules.has_recipe]] *)
-
 (*s: function [[Rules.is_meta]] *)
 let is_meta re =
   re.stem <> None

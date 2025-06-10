@@ -16,7 +16,6 @@ type state =
   | InBrace
   (*e: [[Lexer.state]] other cases *)
 (*e: type [[Lexer.state]] *)
-
 (*s: signature [[Lexer.state_]] *)
 val state_ : state ref
 (*e: signature [[Lexer.state_]] *)
@@ -24,9 +23,7 @@ val state_ : state ref
 (*s: signature [[Lexer.token]] *)
 val token: Lexing.lexbuf -> Parser.token
 (*e: signature [[Lexer.token]] *)
-
 (*s: signature [[Lexer.recipe]] *)
 val recipe: Lexing.lexbuf -> Parser.token
 (*e: signature [[Lexer.recipe]] *)
-
 (*e: Lexer.mli *)

@@ -97,14 +97,14 @@ let dump_env env =
 (*s: function [[Env.initenv]] *)
 (* less: could take the readenv function as a parameter? *)
 let initenv (caps : < Cap.env; Cap.argv; .. >) =
-  let internal = 
+  let internals = 
     mk_vars |> List.map (fun k -> k,[]) |> Hashtbl_.of_list in
   let vars = 
     Shellenv.read_environment caps |> List_.exclude (fun (s, _) ->
       (* when you use mk recursively, the environment might contain
        * a $stem from a parent mk process.
        *)
-      Hashtbl.mem internal s
+      Hashtbl.mem internals s
     ) |> Hashtbl_.of_list
   in
 
@@ -120,7 +120,7 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
 
   (* less: extra checks and filtering on read_environment? *)
   { vars          = vars;
-    internal_vars = internal;
+    internal_vars = internals;
 
     vars_we_set   = Hashtbl.create 101;
     vars_commandline   = Hashtbl.create 101;
@@ -128,7 +128,7 @@ let initenv (caps : < Cap.env; Cap.argv; .. >) =
 (*e: function [[Env.initenv]] *)
 
 (*s: function [[Env.shellenv_of_env]] *)
-let shellenv_of_env env =
+let shellenv_of_env (env : t) : Shellenv.t =
   Hashtbl_.to_list env.internal_vars @
   Hashtbl_.to_list env.vars
 (*e: function [[Env.shellenv_of_env]] *)

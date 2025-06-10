@@ -22,5 +22,4 @@ let str_of_time timeopt =
   | None -> "0"
   | Some t -> spf "%.1f" t
 (*e: function [[File.str_of_time]] *)
-
 (*e: File.ml *)

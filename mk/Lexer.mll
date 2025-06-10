@@ -145,8 +145,8 @@ rule token = parse
   | '$''{' (ident (*as s*)) '}'
       { let s = Lexing.lexeme lexbuf in TVar (String.sub s 2 (String.length s - 3)) }
   (*x: [[Lexer.token()]] variable cases *)
-  (* important to eat ':' otherwise would trigger a AfterColon we don't want*)
-  | '$''{' (ident (*as s*)) ':'
+  (* important to eat ':' otherwise would trigger a AfterColon we don't want *)
+  | '$' '{' (ident (*as s*)) ':'
       {
         let s = Lexing.lexeme lexbuf in
         (* this is to handle '=' inside ${} *)

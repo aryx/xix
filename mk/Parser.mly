@@ -93,8 +93,8 @@ program: instrs EOF { $1 }
 /*(*************************************************************************)*/
 /*(*s: rule [[Parser.instrs]] *)*/
 instrs: 
-| instr instrs  { $1 @ $2 }
-| /*(*empty*)*/ { [] }
+ | instr instrs  { $1 @ $2 }
+ | /*(*empty*)*/ { [] }
 /*(*e: rule [[Parser.instrs]] *)*/
 /*(*s: rule [[Parser.instr]] *)*/
 instr:
@@ -131,8 +131,8 @@ instr: error { }
 /*(*1 Words *)*/
 /*(*************************************************************************)*/
 /*(*s: word rules *)*/
-/*(* remove leading spaces *)*/
 words: 
+ /*(* remove leading spaces *)*/
  | spaces words_ { $2 }
  | words_        { $1 }
 /*(*x: word rules *)*/
@@ -145,26 +145,26 @@ spaces:
  | TSpace spaces { }
 /*(*x: word rules *)*/
 words_:
-| word spaces words_ { (W $1) :: $3 }
-| word        { [W $1] }
-/*(* remove trailing spaces *)*/
-| word spaces { [W $1] }
+ | word spaces words_ { (W $1) :: $3 }
+ | word        { [W $1] }
+ /*(* remove trailing spaces *)*/
+ | word spaces { [W $1] }
 /*(*x: word rules *)*/
 /*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
 word:
-| word_elem word { ($1::$2) }
-| word_elem      { [$1] }
+ | word_elem word { ($1::$2) }
+ | word_elem      { [$1] }
 /*(*x: word rules *)*/
 word_elem:
-| TOther      { String $1 }
-| TQuoted     { String $1 }
-| TPercent    { Percent }
-| TVar        { Var (SimpleVar $1) }
-/*(*s: rule [[Parser.word_elem]] other cases *)*/
-| TBackquoted { Backquoted $1 }
-/*(*x: rule [[Parser.word_elem]] other cases *)*/
-| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
-/*(*e: rule [[Parser.word_elem]] other cases *)*/
+ | TOther      { String $1 }
+ | TQuoted     { String $1 }
+ | TPercent    { Percent }
+ | TVar        { Var (SimpleVar $1) }
+ /*(*s: rule [[Parser.word_elem]] other cases *)*/
+ | TBackquoted { Backquoted $1 }
+ /*(*x: rule [[Parser.word_elem]] other cases *)*/
+ | TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
+ /*(*e: rule [[Parser.word_elem]] other cases *)*/
 /*(*e: word rules *)*/
 
 /*(*************************************************************************)*/
@@ -185,8 +185,8 @@ recipe_lines_opt:
 /*(*s: ebnf rules *)*/
 /*(* stricter: forbid just spaces; if have space, then must have a word *)*/
 words_opt:
-| words          { $1 }
-| /*(*empty*)*/  { [] }
+ | words          { $1 }
+ | /*(*empty*)*/  { [] }
 /*(*e: ebnf rules *)*/
 /*(*e: grammar *)*/
 /*(*e: Parser.mly *)*/

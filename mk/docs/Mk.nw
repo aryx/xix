@@ -98,11 +98,9 @@ Documentation License, Version 1.3.
 %dup: Assembler.nw
 Table~\ref{tab:code-orga} presents short descriptions
 of the source files of [[mk]], together with
-the main entities (e.g., structures, functions, globals) the file defines,
+the main entities (e.g., types, functions, globals) the file defines,
 and the corresponding chapters in this document in which the code
 contained in the file is primarily discussed.
-\n sorted by chapters, make more sense than sorted by dir
-\t so? what this table is useful for/
 
 
 \begin{table*}[tbh!]
@@ -111,9 +109,45 @@ contained in the file is primarily discussed.
 \toprule
 {\bf Function}                            & {\bf Ch.}                     & {\bf File}     & {\bf Entities}                                        & {\bf LOC} \\
 \otoprule
+parsing data structures             & \ref{chap:core-ds}            & [[Ast.ml]]       & [<word>] [<Ast.rule>] [<instr>] & 119 \\
+environment variables               & \ref{chap:core-ds}            & [[Env.ml]]      & [<Env.t>] [<add_var()>] [<mk_vars>]  & 135 \\
+rules data structures               & \ref{chap:core-ds}            & [[Rules.ml]]      & [<Rules.rule>] [<rules>] [<Rules.rule_exec>] & 47 \\
+graph of dependencies               & \ref{chap:core-ds}            & [[Graph.ml]]      & [<node>] [<arc>] [<build_state>] & 448 \\
+file time                           & \ref{chap:core-ds}            & [[File.ml]]      & [<timeof()>] & 25 \\
+job data structure                  & \ref{chap:core-ds}            & [[Job.ml]]      & [<Job.t>] & 23 \\
+
+\midrule
+entry point                               & \ref{chap:main}               & [[Main.ml]]     &     & 18 \\
+main functions                            & \ref{chap:main}               & [[CLI.ml]]     & [<main()>] [<build_targets()>] [<build_target>]  & 368 \\
+
+\midrule
+parser entry point                        & \ref{chap:parsing}            & [[Parse.ml]]      & [<parse()>]      & 41 \\
+lexer/grammar globals                     & \ref{chap:parsing}            & [[Globals.ml]]      & [<Globals.file>] [<Globals.line>]  & 14 \\
+lexer                                     & \ref{chap:parsing}            & [[Lexer.mll]]      & [<Lexer.token()>] [<Lexer.recipe()>] & 276 \\ % [<Lexer.state>] 
+grammar                                    & \ref{chap:parsing}            & [[Parser.mly]]    & [<Parser.token>] [<Parser.instrs>]    & 192 \\ % [<Parser.program()>]  [<Parser.error()>]  
+
+\midrule
+expanding variables                       & \ref{chap:eval}            & [[Eval.ml]]      & [<eval()>] [<eval_words()>]      & 305 \\
+
+\midrule
+building the graph           & \ref{chap:graph}              & [[Graph.ml]]    & [<build_graph()>] [<apply_rules()>]          & 448 \\ %  [<check_cycle()>] check_ambiguous vacuous
+pattern matching         & \ref{chap:graph}              & [[Percent.ml]]    & [<match_()>] [<subst()>]                               & 113 \\
+
+\midrule
+finding outdated files     & \ref{chap:finding-outdated}   & [[Outofdate.ml]]       & [<work()>] [<outofdate()>] [<dorecipe()>]      & 179 \\
+
+\midrule
+scheduling jobs                           & \ref{chap:scheduling}         & [[Scheduler.ml]]      & [<run()>] [<sched()>] [<waitup()>]       & 229 \\
+executing jobs                           & \ref{chap:scheduling}         & [[Shell.ml]]      & [<exec_recipe()>] [<exec_shell()>]  & 277 \\ % [<Shell.t>] [<rc>] [<sh>]
+
+\midrule
+shell environment                         & \ref{chap:shellenv}           & [[Shellenv.ml]]      & [<Shellenv.t>] [<initenv()>] & 20 \\
+
+\midrule
+Debugging flags                   & \ref{chap:debugging-support}           & [[Flags.ml]]      & [<explain_mode>] [<dry_mode>] & 35 \\
 
 \otoprule
-Total                                     &                               &                &                                                       & 5445 \\
+Total                                     &                               &                &                                                       & 3300 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -1127,6 +1161,7 @@ rule token = parse
   | eof { EOF }
   | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
 @
+\swdefs{Lexer.token}
 
 <<Parser tokens>>=
 %token <string> TSpace
@@ -1146,7 +1181,7 @@ rule token = parse
 
 %token EOF
 @
-
+\swdefs{Parser.token}
 
 
 
@@ -1357,6 +1392,7 @@ and recipe = parse
   | eof                 { state_ := Start; yyback 1 lexbuf; TEndRecipe }
   | _ {error "unrecognized character in recipe" }
 @
+\swdefs{Lexer.recipe}
 
 % When anything not indented, then stop of recipe
 
@@ -1471,7 +1507,7 @@ instr: error { }
 <<rule [[Parser.program]]>>=
 program: instrs EOF { $1 }
 @
-
+\swdefs{Parser.program}
 
 \subsection{Instructions (definitions, includes, and rules)}
 
@@ -1480,6 +1516,7 @@ instrs:
  | instr instrs  { $1 @ $2 }
  | /*(*empty*)*/ { [] }
 @
+\swdefs{Parser.instrs}
 %alt: ebnf
 
 <<rule [[Parser.instr]]>>=

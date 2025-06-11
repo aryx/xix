@@ -17,7 +17,7 @@ SRC_ML_NO_MLI=$D/Ast.ml $D/Globals.ml $D/Flags.ml $D/Main.ml $D/Rules.ml $D/Job.
 
 SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI ../Lexer.mll ../Lexer.mli
 
-SRC_ORIG=Mk.nw Intro.nw
+SRC_ORIG=Mk.nw Intro.nw Mk_extra.nw
 
 
 <$TOP/docs/latex/mkcommon

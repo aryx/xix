@@ -85,10 +85,8 @@ Documentation License, Version 1.3.
 \endgroup
 
 %******************************************************************************
-% Body
-%******************************************************************************
-
 \chapter{Introduction}
+%******************************************************************************
 
 #include "Intro.nw"
 
@@ -225,9 +223,9 @@ in Chapter~\ref{chap:core-ds}.
 %
 
 
-%###############################################################################
-
+%******************************************************************************
 \chapter{Core Data Structures}
+%******************************************************************************
 \label{chap:core-ds}
 
 \begin{verse}
@@ -676,7 +674,9 @@ let nrunning = ref 0
 %TODO: ex of dump_jobs, still on same example
 
 
+%******************************************************************************
 \chapter{[[Main.main()]]}
+%******************************************************************************
 \label{chap:main}
 
 
@@ -978,7 +978,9 @@ then failwith "nothing to mk";
 
 
 
+%******************************************************************************
 \chapter{Parsing the [[mkfile]]}
+%******************************************************************************
 \label{chap:parsing}
 
 %toc: skeleton, lex, parse, eval next chapter
@@ -1571,7 +1573,9 @@ word_elem:
 
 
 
+%******************************************************************************
 \chapter{Evaluating the [[mkfile]]}
+%******************************************************************************
 \label{chap:eval}
 %alt: Evaluating the rules?
 
@@ -1860,7 +1864,9 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
 @
 
 
+%******************************************************************************
 \chapter{Building the Graph of Dependencies}
+%******************************************************************************
 \label{chap:graph}
 
 %trans:
@@ -2287,7 +2293,9 @@ let rec vacuous node =
 
 
 
+%******************************************************************************
 \chapter{Finding Outdated Files}
+%******************************************************************************
 \label{chap:finding-outdated}
 
 % outdated mean either inexistent target or time older than
@@ -2468,7 +2476,9 @@ let opt0 opttime =
 
 
 
+%******************************************************************************
 \chapter{Scheduling Jobs}
+%******************************************************************************
 \label{chap:scheduling}
 
 
@@ -2760,7 +2770,9 @@ then failwith (spf "recipe did not update %s, time =%s" node.name
 
 %TODO: not implemented
 
+%******************************************************************************
 \chapter{The Shell and its Environment}
+%******************************************************************************
 \label{chap:shellenv}
 %alt: Interacting with the Shell
 
@@ -2951,7 +2963,9 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
 
 %trans: and done! seen everything! from parsing to executing!
 
+%******************************************************************************
 \chapter{Debugging help for the [[mk]] User}
+%******************************************************************************
 \label{chap:debugging-support}
 
 %TODO?  and Profiling Support
@@ -3086,7 +3100,9 @@ end;
   
 
 
+%******************************************************************************
 \chapter{Advanced Features}
+%******************************************************************************
 \label{chap:advanced}
 
 %\section{Regular-expression rules: [[:R:]]}
@@ -3632,19 +3648,25 @@ end
 \section{[[mk -k]]}
 % ??
 
+%******************************************************************************
 \chapter{Conclusion}
+%******************************************************************************
 \label{chap:conclusion}
 
 
 
 
 
+%******************************************************************************
 \appendix
+%******************************************************************************
 
 
 
 
+%******************************************************************************
 \chapter{Debugging for the [[mk]] Developer}
+%******************************************************************************
 \label{chap:debugging-appendix}
 
  
@@ -3907,7 +3929,9 @@ let do_action caps s xs =
   | _ -> failwith ("action not supported: " ^ s)
 @
 
+%******************************************************************************
 \chapter{Profiling}
+%******************************************************************************
 \label{chap:profiling-appendix}
 
 %\chapter{Error Management}
@@ -3920,7 +3944,9 @@ let do_action caps s xs =
 %\chapter{Utilities}
 %\label{chap:utilities}
 
+%******************************************************************************
 \chapter{Examples of [[mkfile]]s}
+%******************************************************************************
 \label{chap:examples}
 
 \section{The [[mkfile]] of [[mk]]}
@@ -3937,859 +3963,11 @@ let do_action caps s xs =
 
 
 \ifallcode
-\chapter{Extra Code}
-
-
-\section{[[mk/]]}
-
-\subsection*{[[Ast.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Ast.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-
-<<type [[Ast.word]]>>
-<<type [[Ast.word_element]]>>
-
-<<type [[Ast.var]]>>
-[@@deriving show  {with_path = false}]
-
-<<type [[Ast.words]]>>
-[@@deriving show]
-
-<<type [[Ast.recipe]]>>
-[@@deriving show {with_path = false}]
-
-<<type [[Ast.rule]]>>
-<<type [[Ast.rule_attribute]]>>
-[@@deriving show {with_path = false}]
-
-<<type [[Ast.loc]]>>
-[@@deriving show {with_path = false}]
-
-<<type [[Ast.instr]]>>
-<<type [[Ast.instr_kind]]>>
-[@@deriving show {with_path = false}]
-
-(* for boostrap-mk.sh and ocaml-light to work without deriving *)
-let show_instrs _ = "NO DERIVING"
-[@@warning "-32"]
-
-<<type [[Ast.instrs]]>>
-[@@deriving show]
-
-<<function [[Ast.dump_ast]]>>
-@
-
-\subsection*{[[Parser.mly]]}
-
-%-------------------------------------------------------------
-
-\subsection*{[[Lexer.mli]]}
-
-%-------------------------------------------------------------
-
-<<Lexer.mli>>=
-
-<<type [[Lexer.state]]>>
-<<signature [[Lexer.state_]]>>
-
-<<signature [[Lexer.token]]>>
-<<signature [[Lexer.recipe]]>>
-@
-
-\subsection*{[[Lexer.mll]]}
-
-%-------------------------------------------------------------
-
-\subsection*{[[CLI.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/CLI.ml>>=
-(* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
-open Common
-open Fpath_.Operators
-
-module G = Graph
-module R = Rules
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* An OCaml port of mk, the Plan 9 build system.
- *
- * Main limitations compared to mk:
- *  - no regexp rules
- *    (not worth it, '%' are good enough)
- *  - no special handling for archives
- *    (fast enough nowadays to recreate full archives from scratch)
- *  - no :P:
- *    (it is barely documented anyway, and you can do without)
- *  - no private variables
- *    (I never saw mkfiles using it, and it complicates the parsing of '=')
- *  - no &
- *    (rarely found used, '%' is enough again)
- *  - only one -f is supported, not an array of up to 256 mkfiles
- *    (who uses that? maybe to have mk -f varfile -f mkfile)
- *  - no sequential vs parallel mode, and no parallel for multi targets
- *    (most of the time you give just one target anyway)
- *  - disallow :=<% in more context
- *    (confusing for reader anyway, I prefer to force the user to quote)
- *  - disallow dynamic assignements like X=B ... $X=1
- *    (harder to read, who uses that?)
- *  - disallow dynamic patterns like X=%.o  $X: %.c
- *    (harder to read)
- *  - disallow backquote outside word context (e.g., at the toplevel)
- *    so you can not do `echo <foo.txt`
- *    (harder to read and never used I think)
- *  - no opti like missing intermediate (mk -i)
- *    (I barely understand the algorithm anyway)
- *  - no unicode support
- * 
- * Improvements (IMHO):
- *  - a strict mode where we forbid to redefine variables, use of undefined
- *    variables
- *  - forbid to use list variables in a scalar context (error prone I think)
- *  - a new Interactive attribute :I: so one can call interactive program
- *    in a recipe (e.g., syncweb)
- *  - use of MKSHELL to configure which shell to use
- *    (original mk was doing that but only if MKSHELL was set in an mkfile)
- *  - simplifications by not supporting the features mentioned above
- *  - be more relaxing on date (or TODO use nanosec); if equal time then ok
- *    (modern machines can generate the .o and a.out in the same second)
- *  - generate error when no mkfile
- *  - TODO warn at least when we think shprint might be wrong
- *  - better error when found cycle, show full trace!
- *  - TODO better error message when error in recipe, right now
- *    I get the error at the beginning and a trailing of regular shprint
- *    (but more Plan 9's style, so at least dont print the rest? or print
- *     also message at the end that something went wrong)
- *  - TODO a luisa mode, more synthetic, just DONE
- *  - TODO: like in buck, show all processors and IDLE or active (GUI?)
- * 
- * Internal improvements (IMHO):
- *  - different approach to parsing. Separate more clearly lexing, parsing,
- *    and evaluating, so avoid duplicate work like handling quoted characters
- *    or percent at many places.
- *  - less use of globals, pass them around
- * 
- * todo:
- *  - look at source code of omake? and mk-in-go?
- *  - store all output of children process and output only
- *    command that generates error! luisa will be happier :) no more long
- *    command line scrolling
- *    (and no interleaving of command output far away from originator,
- *    as in ninja)
- *  - output only a short version of the command instead of full shprint
- *    like ocamlc ... foo.ml (as in Linux Makefiles and ninja),
- *    or foo.cmo <- foo.ml, foo.byte <- foo.cmo bar.cmo ...
- *  - some flags (-a, etc)
- *  - improve speed:
- *    * -u
- *    * use nproc for environment
- *    * profile mk.byte
- *  - a -profile, a la pad, so see times in parsing, in graph exploration,
- *    etc.
- *  - a -dump and -restart, as in emacs -dump and undump(), see the comments in 
- *    https://news.ycombinator.com/item?id=13073566
- *  - we could reduce a bit the size of the code by reusing cpp!
- *    #include is equivalent of <, #define is equivalent of variable definition
- *    but for variable we would still need the dynamic binding of
- *    $target, $prereq, so maybe not good to provide an extra and different
- *    #define mechanism and syntax for using variables/constants.
- *)
-
-(*****************************************************************************)
-(* Types, constants, and globals *)
-(*****************************************************************************)
-
-<<type [[CLI.caps]]>>
-
-<<constant [[CLI.usage]]>>
-
-(*****************************************************************************)
-(* Testing *)
-(*****************************************************************************)
-
-<<function [[CLI.do_action]]>>
-
-(*****************************************************************************)
-(* Main algorithm *)
-(*****************************************************************************)
-
-<<function [[CLI.build_target]]>>
-[@@profiling]
-
-<<function [[CLI.build_targets]]>>
-[@@profiling]
-
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
-
-<<function [[CLI.main]]>>
-@
-
-\subsection*{[[Env.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Env.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Types *)
-(*****************************************************************************)
-
-<<type [[Env.values]]>>
-
-<<type [[Env.t]]>>
-
-<<constant [[Env.mk_vars]]>>
-
-<<function [[Env.check_values]]>>
-
-<<exception [[Env.Redefinition]]>>
-<<function [[Env.add_var]]>>
-
-(*****************************************************************************)
-(* Debug *)
-(*****************************************************************************)
-<<function [[Env.dump_env]]>>
-
-(*****************************************************************************)
-(* Functions *)
-(*****************************************************************************)
-
-<<function [[Env.initenv]]>>
-
-<<function [[Env.shellenv_of_env]]>>
-@
-
-\subsection*{[[Eval.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Eval.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-open Fpath_.Operators
-
-module A = Ast
-module E = Env
-module R = Rules
-module P = Percent
-
-module Set = Set_
-
-open Rules (* for the fields *)
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Error management *)
-(*****************************************************************************)
-
-<<function [[Eval.error]]>>
-
-<<function [[Eval.warning]]>>
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<function [[Eval.eval_word]]>>
-
-<<function [[Eval.eval_words]]>>
-
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
-
-<<function [[Eval.eval]]>>
-@
-
-\subsection*{[[File.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/File.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Common
-open Fpath_.Operators
-
-(* could be moved in graph.ml *)
-<<function [[File.timeof]]>>
-
-<<function [[File.str_of_time]]>>
-@
-
-\subsection*{[[Flags.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Flags.ml>>=
-<<constant [[Flags.dry_mode]]>>
-
-(* TODO? just use Logs.info for those? *)
-<<constant [[Flags.explain_mode]]>>
-
-(* pad: I added this one *)
-<<constant [[Flags.strict_mode]]>>
-
-<<constant [[Flags.dump_tokens]]>>
-<<constant [[Flags.dump_ast]]>>
-<<constant [[Flags.dump_env]]>>
-<<constant [[Flags.dump_graph]]>>
-<<constant [[Flags.dump_jobs]]>>
-
-<<constant [[Flags.debugger]]>>
-@
-
-\subsection*{[[Globals.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Globals.ml>>=
-
-(* Mostly used by lexer but also by parser, and by error management code.
- * We can not define it in the lexer because of a mutual dependency issue.
- * We can not define it in the parser because it's not exported in the .mli.
- *)
-
-<<constant [[Globals.line]]>>
-<<constant [[Globals.file]]>>
-@
-
-\subsection*{[[Graph.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Graph.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-open Fpath_.Operators
-
-module A = Ast
-module R = Rules
-
-module Set = Set_
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Types *)
-(*****************************************************************************)
-
-<<type [[Graph.node]]>>
-<<type [[Graph.arc]]>>
-<<type [[Graph.build_state]]>>
-
-<<type [[Graph.t]]>>
-
-<<constant [[Graph.hnodes]]>>
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<function [[Graph.new_node]]>>
-
-<<function [[Graph.rule_exec]]>>
-<<function [[Graph.rule_exec_meta]]>>
-
-(*****************************************************************************)
-(* Main algorithm *)
-(*****************************************************************************)
-
-<<function [[Graph.apply_rules]]>>
-
-(*****************************************************************************)
-(* Checks *)
-(*****************************************************************************)
-
-<<function [[Graph.error_cycle]]>>
-<<function [[Graph.check_cycle]]>>
-
-<<function [[Graph.error_ambiguous]]>>
-<<function [[Graph.check_ambiguous]]>>
-
-(*****************************************************************************)
-(* Adjustments *)
-(*****************************************************************************)
-<<function [[Graph.propagate_attributes]]>>
-
-<<function [[Graph.vacuous]]>>
-
-(*****************************************************************************)
-(* Debug *)
-(*****************************************************************************)
-
-<<function [[Graph.loc_of_arc]]>>
-
-<<function [[Graph.dump_graph]]>>
-
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
-
-<<function [[Graph.build_graph]]>>
-
-<<function [[Graph.update]]>>
-@
-%$
-
-\subsection*{[[Job.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Job.ml>>=
-
-<<type [[Job.t]]>>
-@
-
-\subsection*{[[Main.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Main.ml>>=
-(* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
-open Xix_mk
-
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
-
-<<toplevel [[Main._1]]>>
-@
-
-\subsection*{[[Outofdate.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Outofdate.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-
-module G = Graph
-module R = Rules
-module J = Job
-
-open Job (* for the fields *)
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<function [[Outofdate.outofdate]]>>
-
-<<function [[Outofdate.opt0]]>>
-
-<<function [[Outofdate.dorecipe]]>>
-
-(*****************************************************************************)
-(* Entry point *)
-(*****************************************************************************)
-
-<<function [[Outofdate.work]]>>
-@
-
-\subsection*{[[Parse.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Parse.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-open Fpath_.Operators
-
-<<function [[Parse.parse]]>>
-@
-
-\subsection*{[[Percent.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Percent.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* A poor's man regexp system. 
- *
- * alt: could reuse Str and just have a regexp_of_word that
- * transform a word pattern containing % in a regular regexp.
- *) 
-
-(*****************************************************************************)
-(* Types *)
-(*****************************************************************************)
-
-<<type [[Percent.pattern]]>>
-<<type [[Percent.pattern_elem]]>>
-
-<<function [[Percent.check_pattern]]>>
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<exception [[Percent.TooManyPercents]]>>
-<<exception [[Percent.PercentNotFound]]>>
-
-<<function [[Percent.string_after_percent]]>>
-
-(*****************************************************************************)
-(* Entry points *)
-(*****************************************************************************)
-
-<<function [[Percent.match_]]>>
-
-<<function [[Percent.subst]]>>
-
-<<function [[Percent.match_and_subst]]>>
-@
-
-\subsection*{[[Rules.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Rules.ml>>=
-
-<<type [[Rules.rule]]>>
-
-<<type [[Rules.rules]]>>
-
-<<type [[Rules.rule_exec]]>>
-
-<<function [[Rules.has_recipe]]>>
-<<function [[Rules.is_meta]]>>
-@
-
-\subsection*{[[Scheduler.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Scheduler.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-
-module J = Job
-module G = Graph
-module R = Rules
-module E = Env
-
-module Set = Set_
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Globals *)
-(*****************************************************************************)
-
-<<constant [[Scheduler.running]]>>
-<<constant [[Scheduler.nrunning]]>>
-
-<<function [[Scheduler.nproclimit]]>>
-
-<<constant [[Scheduler.jobs]]>>
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<function [[Scheduler.adjust_env]]>>
-
-<<function [[Scheduler.shprint]]>>
-
-(*****************************************************************************)
-(* Debug *)
-(*****************************************************************************)
-
-<<function [[Scheduler.dump_job]]>>
-(*
-  let rule = job.J.rule in
-      ; recipe = '%s'; stem = %s
-         (match rule.R.recipe2 with 
-         | None -> "" 
-         | Some (Ast.R xs) ->String.concat "\\n" xs
-         )
-         (match rule.R.stem with
-         | None -> ""
-         | Some s -> s
-         )
-*)
-
-(*****************************************************************************)
-(* Main algorithms *)
-(*****************************************************************************)
-
-<<function [[Scheduler.sched]]>>
-
-(*****************************************************************************)
-(* Entry points *)
-(*****************************************************************************)
-
-<<function [[Scheduler.run]]>>
-
-<<function [[Scheduler.waitup]]>>
-@
-
-\subsection*{[[Shellenv.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Shellenv.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-
-<<type [[Shellenv.t]]>>
-
-<<function [[Shellenv.read_environment]]>>
-@
-
-\subsection*{[[Shell.ml]]}
-
-%-------------------------------------------------------------
-
-<<mk/Shell.ml>>=
-(* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
-open Common
-open Fpath_.Operators
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Types and constants *)
-(*****************************************************************************)
-
-<<type [[Shell.caps]]>>
-
-<<type [[Shell.t]]>>
-
-<<constant [[Shell.sh]]>>
-
-(* Should we pass -e too here to abort if error inside? This is done in
- * Scheduler.ml instead when executing recipe (but not for backquote processing)
- *)
-<<constant [[Shell.rc]]>>
-
-<<function [[Shell.shell_from_env_opt]]>>
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-<<function [[Shell.exec_shell]]>>
-
-<<function [[Shell.feed_shell_input]]>>
-
-(*****************************************************************************)
-(* Entry points *)
-(*****************************************************************************)
-
-<<function [[Shell.exec_recipe]]>>
-
-<<function [[Shell.exec_backquote]]>>
-
-<<function [[Shell.exec_pipecmd]]>>
-@
-
-\subsection*{[[CLI.mli]]}
-
-%-------------------------------------------------------------
-
-<<CLI.mli>>=
-
-<<type [[CLI.caps]]>>
-
-<<signature [[CLI.main]]>>
-
-<<signature [[CLI.build_target]]>>
-<<signature [[CLI.build_targets]]>>
-@
-
-\subsection*{[[Env.mli]]}
-
-%-------------------------------------------------------------
-
-<<Env.mli>>=
-<<type [[Env.values]]>>
-
-<<type [[Env.t]]>>
-
-<<exception [[Env.Redefinition]]>>
-
-<<signature [[Env.add_var]]>>
-
-<<signature [[Env.initenv]]>>
-<<signature [[Env.shellenv_of_env]]>>
-
-(* internals *)
-
-<<signature [[Env.check_values]]>>
-<<signature [[Env.dump_env]]>>
-@
-
-\subsection*{[[Eval.mli]]}
-
-%-------------------------------------------------------------
-
-<<Eval.mli>>=
-<<signature [[Eval.eval]]>>
-
-(* internals *)
-<<signature [[Eval.eval_words]]>>
-@
-
-\subsection*{[[File.mli]]}
-
-%-------------------------------------------------------------
-
-<<File.mli>>=
-<<signature [[File.timeof]]>>
-
-<<signature [[File.str_of_time]]>>
-@
-
-\subsection*{[[Graph.mli]]}
-
-<<signature [[Graph.hnodes]]>>=
-val hnodes : (string, node) Hashtbl.t
-@
-
-%-------------------------------------------------------------
-
-<<Graph.mli>>=
-<<type [[Graph.node]]>>
-
-<<type [[Graph.arc]]>>
-<<type [[Graph.build_state]]>>
-
-<<type [[Graph.t]]>>
-
-<<signature [[Graph.hnodes]]>>
-
-<<signature [[Graph.build_graph]]>>
-
-<<signature [[Graph.update]]>>
-
-(* internals *)
-
-<<signature [[Graph.check_cycle]]>>
-
-<<signature [[Graph.check_ambiguous]]>>
-
-<<signature [[Graph.dump_graph]]>>
-@
-
-\subsection*{[[Outofdate.mli]]}
-
-%-------------------------------------------------------------
-
-<<Outofdate.mli>>=
-<<signature [[Outofdate.work]]>>
-@
-
-\subsection*{[[Parse.mli]]}
-
-%-------------------------------------------------------------
-
-<<Parse.mli>>=
-<<signature [[Parse.parse]]>>
-@
-
-\subsection*{[[Percent.mli]]}
-
-%-------------------------------------------------------------
-
-<<Percent.mli>>=
-<<type [[Percent.pattern]]>>
-<<type [[Percent.pattern_elem]]>>
-
-<<exception [[Percent.TooManyPercents]]>>
-<<exception [[Percent.PercentNotFound]]>>
-
-<<signature [[Percent.match_]]>>
-<<signature [[Percent.subst]]>>
-
-<<signature [[Percent.match_and_subst]]>>
-
-(* internals *)
-
-<<signature [[Percent.check_pattern]]>>
-@
-
-\subsection*{[[Scheduler.mli]]}
-
-%-------------------------------------------------------------
-
-<<Scheduler.mli>>=
-<<signature [[Scheduler.nrunning]]>>
-
-<<signature [[Scheduler.run]]>>
-<<signature [[Scheduler.waitup]]>>
-@
-
-\subsection*{[[Shellenv.mli]]}
-
-%-------------------------------------------------------------
-
-<<Shellenv.mli>>=
-<<type [[Shellenv.t]]>>
-
-<<signature [[Shellenv.read_environment]]>>
-@
-
-\subsection*{[[Shell.mli]]}
-
-%-------------------------------------------------------------
-
-<<Shell.mli>>=
-
-<<type [[Shell.caps]]>>
-
-<<signature [[Shell.exec_recipe]]>>
-<<signature [[Shell.exec_backquote]]>>
-<<signature [[Shell.exec_pipecmd]]>>
-
-(* internals *)
-<<signature [[Shell.exec_shell]]>>
-@
-
+#include "Mk_extra.nw"
 \fi %ifallcode
 
 
+%******************************************************************************
 \chapter*{Glossary}
 \addcontentsline{toc}{chapter}{Glossary}
 \label{sec:glossary}

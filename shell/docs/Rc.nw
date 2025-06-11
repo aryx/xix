@@ -1611,7 +1611,7 @@ cmd:
 % EmptyCommand also here, useful for Assign
 
 <<Parser other rule types>>=
-%type <Ast.XXX> simple
+%type <value * value list * (redirection_kind * value, redirection_kind * int * int) either list> simple
 @
 
 <<rule [[Parser.simple]]>>=

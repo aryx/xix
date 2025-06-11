@@ -1,4 +1,4 @@
-(*s: Scheduler.ml *)
+(*s: mk/Scheduler.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -226,4 +226,4 @@ let waitup (caps : < Shell.caps; .. >) () =
       failwith (spf "child process killed/stopped by signal = %d" n)
   (*e: [[Scheduler.waitup()]] matching [[ret]] cases *)
 (*e: function [[Scheduler.waitup]] *)
-(*e: Scheduler.ml *)
+(*e: mk/Scheduler.ml *)

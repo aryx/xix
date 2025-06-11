@@ -1,4 +1,4 @@
-(*s: Main.ml *)
+(*s: shell/Main.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Xix_shell
 
@@ -15,4 +15,4 @@ let _ =
             CLI.main caps argv))
    )
 (*e: toplevel [[Main._1]] *)
-(*e: Main.ml *)
+(*e: shell/Main.ml *)

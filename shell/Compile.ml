@@ -1,4 +1,4 @@
-(*s: Compile.ml *)
+(*s: shell/Compile.ml *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -338,4 +338,4 @@ let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
   |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
   (*e: [[Compile.compile()]] possibly dump returned opcodes *)
 (*e: function [[Compile.compile]] *)
-(*e: Compile.ml *)
+(*e: shell/Compile.ml *)

@@ -1,4 +1,4 @@
-(*s: Parse.ml *)
+(*s: shell/Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -93,4 +93,4 @@ let parse_line lexbuf =
     | Lexer.Lexical_error s ->
         error (spf "lexical error, %s" s) !curtok
 (*e: function [[Parse.parse_line]] *)
-(*e: Parse.ml *)
+(*e: shell/Parse.ml *)

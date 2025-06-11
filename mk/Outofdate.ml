@@ -1,4 +1,4 @@
-(*s: Outofdate.ml *)
+(*s: mk/Outofdate.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -176,4 +176,4 @@ let rec work (caps: < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit
           then dorecipe caps env node did
           else node.G.state <- G.Made
 (*e: function [[Outofdate.work]] *)
-(*e: Outofdate.ml *)
+(*e: mk/Outofdate.ml *)

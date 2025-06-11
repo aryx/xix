@@ -1,4 +1,4 @@
-(*s: Parse.ml *)
+(*s: mk/Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -38,4 +38,4 @@ let parse (file : Fpath.t) : Ast.instr list =
       failwith (spf "%s:%d: Syntax error" !Globals.file !Globals.line)
   )
 (*e: function [[Parse.parse]] *)
-(*e: Parse.ml *)
+(*e: mk/Parse.ml *)

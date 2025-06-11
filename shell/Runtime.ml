@@ -1,4 +1,4 @@
-(*s: Runtime.ml *)
+(*s: shell/Runtime.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 
@@ -230,4 +230,4 @@ let mk_thread code pc locals =
   } in
   t
 (*e: function [[Runtime.mk_thread]] *)
-(*e: Runtime.ml *)
+(*e: shell/Runtime.ml *)

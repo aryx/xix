@@ -1,4 +1,4 @@
-(*s: Status.ml *)
+(*s: shell/Status.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -36,4 +36,4 @@ let truestatus () : bool =
   s = ""
   || s =~ "0+\\(|0+\\)*"
 (*e: function [[Status.truestatus]] *)
-(*e: Status.ml *)
+(*e: shell/Status.ml *)

@@ -1,4 +1,4 @@
-(*s: Pattern.ml *)
+(*s: shell/Pattern.ml *)
 
 (*s: type [[Pattern.pattern]] *)
 type pattern = string
@@ -9,4 +9,4 @@ type pattern = string
 let match_str s1 s2 =
   s1 = s2
 (*e: function [[Pattern.match_str]] *)
-(*e: Pattern.ml *)
+(*e: shell/Pattern.ml *)

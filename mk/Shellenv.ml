@@ -1,4 +1,4 @@
-(*s: Shellenv.ml *)
+(*s: mk/Shellenv.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -17,4 +17,4 @@ let read_environment (caps : < Cap.env; ..>) =
     else failwith (spf "wrong format for environment variable: %s" s)
   )
 (*e: function [[Shellenv.read_environment]] *)
-(*e: Shellenv.ml *)
+(*e: mk/Shellenv.ml *)

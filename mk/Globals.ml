@@ -1,4 +1,4 @@
-(*s: Globals.ml *)
+(*s: mk/Globals.ml *)
 
 (* Mostly used by lexer but also by parser, and by error management code.
  * We can not define it in the lexer because of a mutual dependency issue.
@@ -11,4 +11,4 @@ let line = ref 1
 (*s: constant [[Globals.file]] *)
 let file = ref "<nofile>"
 (*e: constant [[Globals.file]] *)
-(*e: Globals.ml *)
+(*e: mk/Globals.ml *)

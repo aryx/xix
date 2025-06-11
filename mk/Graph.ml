@@ -1,4 +1,4 @@
-(*s: Graph.ml *)
+(*s: mk/Graph.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -445,4 +445,4 @@ let update node =
     (*e: [[Graph.update()]] sanity check new [[node.time]] *)
   end
 (*e: function [[Graph.update]] *)
-(*e: Graph.ml *)
+(*e: mk/Graph.ml *)

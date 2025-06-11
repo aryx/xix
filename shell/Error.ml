@@ -1,4 +1,4 @@
-(*s: Error.ml *)
+(*s: shell/Error.ml *)
 module R = Runtime
 
 (*s: function [[Error.error]] *)
@@ -15,4 +15,4 @@ let error (caps: < Cap.exit; ..>) (s : string) =
     Process.return caps ();
   done
 (*e: function [[Error.error]] *)
-(*e: Error.ml *)
+(*e: shell/Error.ml *)

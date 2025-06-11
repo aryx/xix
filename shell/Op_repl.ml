@@ -1,4 +1,4 @@
-(*s: Op_repl.ml *)
+(*s: shell/Op_repl.ml *)
 
 module R = Runtime
 
@@ -58,4 +58,4 @@ let op_REPL (caps : < Cap.exit; ..>) () =
     else failwith s
     (*e: [[Op_repl.op_REPL()]] when [[Failure s]] thrown *)
 (*e: function [[Op_repl.op_REPL]] *)
-(*e: Op_repl.ml *)
+(*e: shell/Op_repl.ml *)

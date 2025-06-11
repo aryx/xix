@@ -1,4 +1,4 @@
-(*s: Rules.ml *)
+(*s: mk/Rules.ml *)
 
 (*s: type [[Rules.rule]] *)
 type 'a rule = {
@@ -44,4 +44,4 @@ let has_recipe re =
 let is_meta re =
   re.stem <> None
 (*e: function [[Rules.is_meta]] *)
-(*e: Rules.ml *)
+(*e: mk/Rules.ml *)

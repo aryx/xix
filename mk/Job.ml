@@ -1,4 +1,4 @@
-(*s: Job.ml *)
+(*s: mk/Job.ml *)
 
 (*s: type [[Job.t]] *)
 type t = {
@@ -20,4 +20,4 @@ type t = {
   (*e: [[Job.t]] other fields *)
 }
 (*e: type [[Job.t]] *)
-(*e: Job.ml *)
+(*e: mk/Job.ml *)

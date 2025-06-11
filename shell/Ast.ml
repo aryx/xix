@@ -1,4 +1,4 @@
-(*s: Ast.ml *)
+(*s: shell/Ast.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*s: type [[Ast.value]] *)
@@ -107,4 +107,4 @@ type line = cmd_sequence option
 (*e: type [[Ast.line]] *)
 
 (* less: type any = Line of line | ... so easier dumper *)
-(*e: Ast.ml *)
+(*e: shell/Ast.ml *)

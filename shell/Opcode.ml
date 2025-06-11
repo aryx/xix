@@ -1,4 +1,4 @@
-(*s: Opcode.ml *)
+(*s: shell/Opcode.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*s: type [[Opcode.operation]] *)
@@ -106,4 +106,4 @@ type opcode =
 (*s: type [[Opcode.codevec]] *)
 type codevec = opcode array
 (*e: type [[Opcode.codevec]] *)
-(*e: Opcode.ml *)
+(*e: shell/Opcode.ml *)

@@ -1,4 +1,4 @@
-(*s: Process.ml *)
+(*s: shell/Process.ml *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -78,4 +78,4 @@ let waitfor pid =
     then WaitforInterrupted
     else WaitforNotfound
 (*e: function [[Process.waitfor]] *)
-(*e: Process.ml *)
+(*e: shell/Process.ml *)

@@ -1,4 +1,4 @@
-(*s: Globals.ml *)
+(*s: shell/Globals.ml *)
 
 (*s: constant [[Globals.skipnl]] *)
 (* This global is used by the lexer and parser to consider certain
@@ -30,4 +30,4 @@ let ifnot = ref false
 (* this is set after the first . of rcmain *)
 let eflagok = ref false
 (*e: constant [[Globals.eflagok]] *)
-(*e: Globals.ml *)
+(*e: shell/Globals.ml *)

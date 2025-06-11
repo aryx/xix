@@ -1,4 +1,4 @@
-(*s: Interpreter.ml *)
+(*s: shell/Interpreter.ml *)
 open Stdcompat (* for |> *)
 open Common
 
@@ -354,4 +354,4 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
     ) ->
     failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F op))
 (*e: function [[Interpreter.interpret_operation]] *)
-(*e: Interpreter.ml *)
+(*e: shell/Interpreter.ml *)

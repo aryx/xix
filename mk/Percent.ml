@@ -1,4 +1,4 @@
-(*s: Percent.ml *)
+(*s: mk/Percent.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -110,4 +110,4 @@ let match_and_subst pat sub str =
   | Some stem -> subst sub stem
   | None -> str
 (*e: function [[Percent.match_and_subst]] *)
-(*e: Percent.ml *)
+(*e: mk/Percent.ml *)

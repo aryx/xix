@@ -1,4 +1,4 @@
-(*s: Main.ml *)
+(*s: mk/Main.ml *)
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Xix_mk
 
@@ -15,4 +15,4 @@ let _ =
             CLI.main caps argv))
   )
 (*e: toplevel [[Main._1]] *)
-(*e: Main.ml *)
+(*e: mk/Main.ml *)

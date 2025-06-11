@@ -1,4 +1,4 @@
-(*s: Prompt.ml *)
+(*s: shell/Prompt.ml *)
 module R = Runtime
 
 (*s: constant [[Prompt.doprompt]] *)
@@ -36,4 +36,4 @@ let pprompt () =
   (* alt: incr t.R.line; this is done in the lexer instead *)
   doprompt := false
 (*e: function [[Prompt.pprompt]] *)
-(*e: Prompt.ml *)
+(*e: shell/Prompt.ml *)

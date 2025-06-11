@@ -1,4 +1,4 @@
-(*s: Dumper_.ml *)
+(*s: shell/Dumper_.ml *)
 module Ocaml = OCaml
 (* less: could use Any *)
 
@@ -39,4 +39,4 @@ let s_of_codevec x =
   let v = Ocaml.vof_list Meta_opcode.vof_opcode xs in
   Ocaml.string_of_v v
 (*e: function [[Dumper_.s_of_codevec]] *)
-(*e: Dumper_.ml *)
+(*e: shell/Dumper_.ml *)

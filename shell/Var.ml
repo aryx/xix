@@ -1,4 +1,4 @@
-(*s: Var.ml *)
+(*s: shell/Var.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 module R = Runtime
@@ -43,4 +43,4 @@ let setvar (name : Runtime.varname) (v : Runtime.value) : unit =
 let vinit (_caps : < Cap.env; .. >) =
   Logs.err (fun m -> m "TODO: load from environment")
 (*e: function [[Var.vinit]] *)
-(*e: Var.ml *)
+(*e: shell/Var.ml *)

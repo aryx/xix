@@ -1,4 +1,4 @@
-(*s: Shell.ml *)
+(*s: mk/Shell.ml *)
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -274,4 +274,4 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     )
   end
 (*e: function [[Shell.exec_pipecmd]] *)
-(*e: Shell.ml *)
+(*e: mk/Shell.ml *)

@@ -1,4 +1,4 @@
-(*s: Flags.ml *)
+(*s: mk/Flags.ml *)
 (*s: constant [[Flags.dry_mode]] *)
 let dry_mode = ref false
 (*e: constant [[Flags.dry_mode]] *)
@@ -32,4 +32,4 @@ let dump_jobs = ref false
 (*s: constant [[Flags.debugger]] *)
 let debugger = ref false
 (*e: constant [[Flags.debugger]] *)
-(*e: Flags.ml *)
+(*e: mk/Flags.ml *)

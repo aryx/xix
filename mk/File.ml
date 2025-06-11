@@ -1,4 +1,4 @@
-(*s: File.ml *)
+(*s: mk/File.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -22,4 +22,4 @@ let str_of_time timeopt =
   | None -> "0"
   | Some t -> spf "%.1f" t
 (*e: function [[File.str_of_time]] *)
-(*e: File.ml *)
+(*e: mk/File.ml *)

@@ -1,4 +1,4 @@
-(*s: Op_process.ml *)
+(*s: shell/Op_process.ml *)
 open Stdcompat (* for |> *)
 
 module R = Runtime
@@ -117,4 +117,4 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
               E.error caps (Process.s_of_unix_error err s1 s2)
 )
 (*e: function [[Op_process.op_Simple]] *)
-(*e: Op_process.ml *)
+(*e: shell/Op_process.ml *)

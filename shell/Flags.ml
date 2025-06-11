@@ -1,4 +1,4 @@
-(*s: Flags.ml *)
+(*s: shell/Flags.ml *)
 
 (*s: constant [[Flags.interactive]] *)
 (* -i (on by default when detects that stdin is /dev/cons *)
@@ -55,4 +55,4 @@ let dump_opcodes = ref false
 (*s: constant [[Flags.debugger]] *)
 let debugger = ref false
 (*e: constant [[Flags.debugger]] *)
-(*e: Flags.ml *)
+(*e: shell/Flags.ml *)

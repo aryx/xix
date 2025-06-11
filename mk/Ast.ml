@@ -1,4 +1,4 @@
-(*s: Ast.ml *)
+(*s: mk/Ast.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 (*s: type [[Ast.word]] *)
@@ -116,4 +116,4 @@ type instrs = instr list
 let dump_ast instrs =
   Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
 (*e: function [[Ast.dump_ast]] *)
-(*e: Ast.ml *)
+(*e: mk/Ast.ml *)

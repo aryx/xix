@@ -1,4 +1,4 @@
-(*s: Builtin.ml *)
+(*s: shell/Builtin.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 open Common
@@ -154,4 +154,4 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   (*e: [[Builtin.dispatch()]] match [[s]] cases *)
   | _ -> failwith (spf "unsupported builtin %s" s)
 (*e: function [[Builtin.dispatch]] *)
-(*e: Builtin.ml *)
+(*e: shell/Builtin.ml *)

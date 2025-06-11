@@ -1,4 +1,4 @@
-(*s: CLI.ml *)
+(*s: shell/CLI.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 open Common
@@ -295,4 +295,4 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
       )
     (*e: [[CLI.main()]] when [[exn]] thrown in [[interpret()]] *)
 (*e: function [[CLI.main]] *)
-(*e: CLI.ml *)
+(*e: shell/CLI.ml *)

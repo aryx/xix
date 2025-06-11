@@ -1,4 +1,4 @@
-(*s: Env.ml *)
+(*s: mk/Env.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
@@ -132,4 +132,4 @@ let shellenv_of_env (env : t) : Shellenv.t =
   Hashtbl_.to_list env.internal_vars @
   Hashtbl_.to_list env.vars
 (*e: function [[Env.shellenv_of_env]] *)
-(*e: Env.ml *)
+(*e: mk/Env.ml *)

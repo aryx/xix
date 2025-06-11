@@ -1,4 +1,4 @@
-(*s: CLI.ml *)
+(*s: mk/CLI.ml *)
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -365,4 +365,4 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
       )
     (*e: [[CLI.main()]] when [[exn]] thrown in [[build_targets()]] *)
 (*e: function [[CLI.main]] *)
-(*e: CLI.ml *)
+(*e: mk/CLI.ml *)

@@ -1,22 +1,22 @@
 executing: rc --help
 usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]
-  -l             login mode (execute ~/lib/profile)
   -i             interactive mode (display prompt)
   -I             non-interactive mode (no prompt)
+  -l             login mode (execute ~/lib/profile)
   -m             <file> read commands to initialize rc from file, not /rc/lib/rcmain
-  -e             exit if $status is non-null after a simple command
-  -strict        strict mode
-  -debugger      
+  -x             print each simple command before executing it
+  -s             print exit status after any command where the status is non-null
   -v             verbose mode
   -verbose       verbose mode
   -quiet         
   -debug         trace the main functions
+  -e             exit if $status is non-null after a simple command
+  -strict        strict mode
+  -debugger      
   -dump_tokens   dump the tokens as they are generated
   -dump_ast      dump the parsed AST
   -dump_opcodes  dump the generated opcodes 
   -r             print internal form of commands (opcodes)
-  -s             print exit status after any command where the status is non-null
-  -x             print each simple command before executing it
   -test_parser   
   -help          Display this list of options
   --help         Display this list of options

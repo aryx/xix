@@ -36,7 +36,7 @@ defs_and_uses.list
 **/docs/*.tex
 
 # misc
-**/docs/*.dot
+#**/docs/*.dot
 *.output
 *.save
 

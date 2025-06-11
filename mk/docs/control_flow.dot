@@ -1,0 +1,18 @@
+//TODO? could add CapUnix.fork, CapUnix.wait, ...
+// and show where the capabilities are really used
+
+digraph G {
+    main -> { build_targets };
+    build_targets -> { parse eval build_target}
+    parse -> token;
+    eval -> { parse eval }
+    build_target -> { build_graph work waitup };
+    build_graph -> { apply_rules };
+    apply_rules -> { apply_rules };
+    work -> { work dorecipe outofdate }
+    dorecipe -> run;
+    waitup -> { update sched };
+    run -> sched;
+    sched -> exec_recipe;
+    exec_recipe -> exec_shell;
+}

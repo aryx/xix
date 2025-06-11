@@ -4,6 +4,7 @@ SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 #SYNCWEBFLAGS=-debug
 
 DOC=Mk
+DOC_EXTRA=control_flow.tex
 VERSION=1
 D=..
 SRC_ML=\
@@ -15,8 +16,8 @@ SRC_ML=\
   $D/CLI.ml
 SRC_ML_NO_MLI=$D/Ast.ml $D/Globals.ml $D/Flags.ml $D/Main.ml $D/Rules.ml $D/Job.ml
 
-# also ../Parser.mly but use different -lang
-SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI ../Lexer.mll ../Lexer.mli
+# also $D/Parser.mly but use different -lang
+SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI $D/Lexer.mll $D/Lexer.mli
 
 SRC_ORIG=Mk.nw Intro.nw Mk_extra.nw
 
@@ -25,16 +26,20 @@ SRC_ORIG=Mk.nw Intro.nw Mk_extra.nw
 
 sync_yacc:VI:
         $SYNCWEB -md5sum_in_auxfile -less_marks -lang ocamlyacc  $SRC_ORIG \
-            ../Parser.mly
+            $D/Parser.mly
+
+control_flow.tex: control_flow.dot
+   dot2tex $prereq --figonly > $target
+
 
 # steps to build index:
 # - remove wrapped true in dune file
 # - cd ~/xix; mk nuke; make clean
-# # make all to produce .cmt for all of xix otherwise not enough
+# # produce .cmt for all of xix (dune build _build/.../mk is not enough)
 # - make build-dune
 # - rm -rf _build/.../mk/tests
 # - codegraph_build -lang cmt .
-# # look if codegraph looks ok
+# # look if codegraph looks ok with:
 # - cg .
 # - cd mk/docs
 # - mk index
@@ -46,9 +51,3 @@ index:V:
     | grep  'mk/' \
     > defs_and_uses.list.new
     mv defs_and_uses.list.new defs_and_uses.list
-
-
-#    | sed -e 's#main.cmt#Main#' \
-#    | grep -v 'Pervasives.:=' \
-#    | grep -v 'Pervasives.~' \
-#    | grep -v 'stdlib/' \

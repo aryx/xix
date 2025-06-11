@@ -101,6 +101,7 @@ of the source files of [[mk]], together with
 the main entities (e.g., types, functions, globals) the file defines,
 and the corresponding chapters in this document in which the code
 contained in the file is primarily discussed.
+\t so? what this table is useful for/
 
 
 \begin{table*}[tbh!]
@@ -110,7 +111,7 @@ contained in the file is primarily discussed.
 {\bf Function}                            & {\bf Ch.}                     & {\bf File}     & {\bf Entities}                                        & {\bf LOC} \\
 \otoprule
 parsing data structures             & \ref{chap:core-ds}            & [[Ast.ml]]       & [<word>] [<Ast.rule>] [<instr>] & 119 \\
-environment variables               & \ref{chap:core-ds}            & [[Env.ml]]      & [<Env.t>] [<add_var()>] [<mk_vars>]  & 135 \\
+variables management               & \ref{chap:core-ds}            & [[Env.ml]]      & [<Env.t>] [<add_var()>] [<mk_vars>]  & 135 \\
 rules data structures               & \ref{chap:core-ds}            & [[Rules.ml]]      & [<Rules.rule>] [<rules>] [<Rules.rule_exec>] & 47 \\
 graph of dependencies               & \ref{chap:core-ds}            & [[Graph.ml]]      & [<node>] [<arc>] [<build_state>] & 448 \\
 file time                           & \ref{chap:core-ds}            & [[File.ml]]      & [<timeof()>] & 25 \\
@@ -118,13 +119,13 @@ job data structure                  & \ref{chap:core-ds}            & [[Job.ml]]
 
 \midrule
 entry point                               & \ref{chap:main}               & [[Main.ml]]     &     & 18 \\
-main functions                            & \ref{chap:main}               & [[CLI.ml]]     & [<main()>] [<build_targets()>] [<build_target>]  & 368 \\
+main functions                            & \ref{chap:main}               & [[CLI.ml]]     & [<main()>] [<build_targets()>] [<build_target()>]  & 368 \\
 
 \midrule
 parser entry point                        & \ref{chap:parsing}            & [[Parse.ml]]      & [<parse()>]      & 41 \\
 lexer/grammar globals                     & \ref{chap:parsing}            & [[Globals.ml]]      & [<Globals.file>] [<Globals.line>]  & 14 \\
 lexer                                     & \ref{chap:parsing}            & [[Lexer.mll]]      & [<Lexer.token()>] [<Lexer.recipe()>] & 276 \\ % [<Lexer.state>] 
-grammar                                    & \ref{chap:parsing}            & [[Parser.mly]]    & [<Parser.token>] [<Parser.instrs>]    & 192 \\ % [<Parser.program()>]  [<Parser.error()>]  
+grammar                                    & \ref{chap:parsing}            & [[Parser.mly]]    & [<Parser.token>] [<Parser.instrs()>]    & 192 \\ % [<Parser.program()>]  [<Parser.error()>]  
 
 \midrule
 expanding variables                       & \ref{chap:eval}            & [[Eval.ml]]      & [<eval()>] [<eval_words()>]      & 305 \\
@@ -167,39 +168,40 @@ The main steps of the building pipeline of [[mk]] are as follows:
 
 
 \begin{enumerate}
-\item {\em Parse} the [[mkfile]] (via [<parse()>])
+\item {\em Parse} the [[mkfile]] (via [<parse()>]) to generate
+a convenient data structure representing the content of an [[mkfile]]:
+an Abstract Syntax Tree (AST).
 \n chapter 5
 
-\item {\em Evaluate} the [[mkfile]] (via [<eval()>]) to process
+\item {\em Evaluate} the AST (via [<eval()>]) to process
 the include instructions, variables, and backquotes and to extract
-the rules and meta rules in the [[mkfile]] and its included files
+the rules and meta rules in the [[mkfile]] and its included files.
 \n chapter 6
+%ocaml: new and better separation of concerns with parsing
 
 \item {\em Build} the graph of dependencies (via [<build_graph()>])
-for a specific target given the rules extracted previously 
+for a specific target given the rules extracted previously.
 \n chapter 7
 
-\item {\em Find} outdated files in the graph (via [<work()>])
+\item {\em Find} outdated files in the graph (via [<work()>]).
 \n chapter 8
 
 \item {\em Schedule} jobs (via [<sched()>]) that will run the shell
-recipes (via [<exec_recipe()>]) to update the outdated files
+recipes (via [<exec_recipe()>]) to update the outdated files.
 \n chapter 9
 \n chapter 10 = To {\em interact} environment
 
 \end{enumerate}
 
 
-\begin{figure}[!tbp]
-\centering
+\begin{figure}[!tbp]\centering
 \resizebox{0.7\textwidth}{!}{%
-  \input{control_flow}
+\input{control_flow}
 }
 \caption{Control flow diagram of [[mk]].}\label{fig:controlflow}
 \end{figure}
 
-\begin{figure}[!tbp]
-\centering
+\begin{figure}[!tbp]\centering
 \begin{verbatim}
                              main target 
                            /              \
@@ -214,6 +216,124 @@ mkfile -> tokens -> AST  -                  > graph -> jobs
 \end{figure}
 
 
+%trans:
+Starting from the top of Figure~\ref{fig:controlflow},
+the function [<main()>],
+after some basic command-line processing and initializations,
+calls [<build_targets()>] which calls [<parse()>] with the file to {parse}
+as an argument (by default [[mkfile]], unless you specified
+another filename with the [[-f]] command-line flag).
+%
+[<parse()>] first calls the lexer (via [<Lexer.token()>]) to get
+{tokens} which are then assembled into list of {instructions} by the {grammar}
+(via [<Parser.instrs()>]) forming the {AST} of the [[mkfile]].
+%
+[<build_targets()>] then evaluates this AST (via [<eval()>]) to process
+the include instructions (which trigger further calls to [<parse()>]),
+variable definitions and uses, and backquotes.
+Once all the files have been included and variable uses expanded, 
+[<eval()>] then returns important data structures
+such as [<Rules.rules.simples>] and [<Rules.rules.metas>],
+which contain the lists of extracted {rules}.
+%
+[<eval()>] also modifies some target reference with the name of the 
+first {target} found in the [[mkfile]], unless you gave
+a specific target on the command line (e.g., with [[mk hello.5]]).
+%
+Finally, [<eval()>] returns an [<Env.t>] containing
+the values for the {variables} defined in the [[mkfile]]
+and in the enclosing {environment}.
+\n also process inclusion, so recursive function
+
+
+After the rules have been extracted, [<build_targets()>] calls [<build_target()>] 
+(at the top right in Figure~\ref{fig:controlflow})
+with the name of a target as an argument.
+%(the name stored in target1 by default).
+\n actually target1 is a list (said later)
+%
+[<build_target()>] then calls [<build_graph()>] to build the {graph of dependencies}
+for this target given the rules and metarules extracted during parsing and
+evaluation.
+%dup: overview/principles/graph
+This graph contains nodes and arcs, as explained 
+in Section~\ref{sec:graph-principles}.
+%dup:
+The {nodes} correspond to concrete files
+(e.g., [[hello.5]], [[hello.c]]),
+\n unless virtual targets (said later)
+and the arcs connect two nodes when a node depends on another node 
+(e.g., [[hello.5]] is connected to [[hello.c]]).
+%
+Those arcs are also labeled with the rule containing the recipe
+to generate the target node.
+\l also modification time, and build status.
+
+[<build_graph()>] works by first creating a node for the target parameter,
+called the {root} of the graph, and by then
+calling [<apply_rules()>] on this node.
+\n actually apply_rules build the node
+%
+[<apply_rules()>] then finds a rule or meta rule with the node as a target,
+\n can have ambiguity (said later)
+and creates new nodes for all the prerequisites found in the rule. 
+It then calls recursively [<apply_rules()>] on those new nodes.
+\l at some point leaf cos existing file with no matching rule for target
+%make:
+Note that as opposed to Make,
+in [[mk]] the graph of dependencies is computed statically once and for all
+at the very beginning.
+\t so? better?
+
+
+[<build_target()>] then calls [<work()>] to find outdated files in the graph.
+%
+Starting from the root, [<work()>] performs a depth-first search
+\l as explained in Section X
+and goes down recursively in
+the graph to find nodes corresponding to inexistent files, or
+to files that are older than the files in the nodes they are connected to.
+%
+Once it found such a node,
+[<work()>] calls [<dorecipe()>]
+with the outdated node as a parameter. 
+\t note that DFS, go deep first! even if node more recent than all
+\t  connected nodes, those nodes may not be up to date, so call
+\t  work on them first! and then compare the date. (or said before)
+[<dorecipe()>] then finds the arc containing the master rule 
+\l see Section X for master rule
+with the recipe to regenerate the file in the node.
+\l can have ambiguity, but always a master arc, a master rule (said later)
+%
+[<dorecipe()>] then calls [<run()>] 
+(at the bottom of Figure~\ref{fig:controlflow})
+to add in a queue the job to 
+run the recipe. 
+[<run()>] possibly calls [<sched()>] to schedule the job if there was
+a free processor to run the job in parallel.
+%
+[<sched()>] then calls [<exec_recipe()>] to fork and execute in a shell the recipe.
+
+
+[<build_target()>] calls [<work()>] in a loop, to schedule jobs in
+parallel until the root node is up-to-date ([<Made>]). 
+However, during those loops,
+[<work()>] may not be able to schedule any job. Indeed, all the processors
+may already be in use, or certain jobs may not be able to start until
+other jobs are finished.
+This is why [<build_target()>] also calls sometimes [<waitup()>] 
+(at the right in Figure~\ref{fig:controlflow})
+to wait for those jobs to finish.
+Once a job is finished, [<waitup()>] calls [<update()>] to update 
+the node in the graph associated with the job, and [<sched()>] 
+to schedule another job.
+\t as I said, ends when root node is up-to-date and no more process 
+\t  to wait for.
+
+
+
+
+
 \section{Book structure}
 
 %trans: %dup: Assembler.nw
@@ -224,6 +344,35 @@ The rest of the book is organized as follows.
 I will start by describing the core data structures of [[mk]]
 in Chapter~\ref{chap:core-ds}. 
 %
+Then, I will use a top-down approach, starting with Chapter~\ref{chap:main}
+with the description of [<main()>] and the initialization of [[mk]].
+%
+The following chapters will describe
+the main components of the building pipeline:
+Chapter~\ref{chap:parsing} will present the code to parse an [[mkfile]],
+Chapter~\ref{chap:eval} the code to evaluate the parsed AST,
+Chapter~\ref{chap:graph} the code to build the graph of dependencies,
+Chapter~\ref{chap:finding-outdated} the code to find outdated files in the graph,
+Chapter~\ref{chap:scheduling} the code to schedule jobs, and finally
+Chapter~\ref{chap:shellenv} the code to communicate with the shell through
+the environment.
+%
+In Chapter~\ref{chap:debugging-support}, I will present code to help you
+debug and profile your [[mkfile]].
+%
+Chapter~\ref{chap:advanced} presents advanced
+features of [[mk]] that I did not present before to simplify the explanations
+(e.g., {rule attributes}).
+%
+Finally, Chapter~\ref{chap:conclusion} concludes
+and gives pointers to other books in the \principia series.
+
+%toc:
+Some appendices present the code of non-functional properties:
+code to help debug [[mk]] itself in Appendix~\ref{chap:debugging-appendix} and
+code to profile [[mk]] itself in Appendix~\ref{chap:profiling-appendix}.
+%
+Finally, Appendix~\ref{chap:examples} presents examples of [[mkfile]]s.
 
 
 %******************************************************************************
@@ -3177,6 +3326,8 @@ and backquote2 = parse
 | TBackquoted { Backquoted $1 }
 @
 
+\subsection{Executing backquotes}
+
 <<[[Eval.eval_word()]] match [[x]] other cases>>=
 | A.Backquoted cmd -> 
   let shellenv = Env.shellenv_of_env env in
@@ -3337,7 +3488,7 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
 \section{Substitution variables: [[${]]{\em name}[[:]]{\em pattern}[[=]]{\em subst}[[}]]}
 \label{sec:subst-var}
 
-\subsection{Parsing adjustments}
+\subsection{Parsing substitutions}
 
 <<[[Ast.var]] cases>>=
  (* ${name:a%b=c%d} *)
@@ -3387,6 +3538,7 @@ let save_state_outside_brace = ref Start
 @
 
 
+\subsection{Executing substitutions}
 
 <<[[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case>>=
 let ys =
@@ -3417,7 +3569,6 @@ let ys =
 in
 @
 
-\subsection{Substitutions}
 %: [[subsub()]]
 
 <<signature [[Percent.match_and_subst]]>>=
@@ -3436,6 +3587,7 @@ let match_and_subst pat sub str =
 \section{Rule attributes}
 \label{sec:rule-attributes-advanced}
 
+\subsection{Parsing and propagating rule attributes}
 <<rule [[Parser.instr]] other cases>>=
 | words TColon TOther TColon words_opt TNewline recipe 
     { [{instr = Rule { targets = $1; prereqs = $5; 

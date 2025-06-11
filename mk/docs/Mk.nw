@@ -225,6 +225,8 @@ in Chapter~\ref{chap:core-ds}.
 %
 
 
+%###############################################################################
+
 \chapter{Core Data Structures}
 \label{chap:core-ds}
 
@@ -675,6 +677,7 @@ let nrunning = ref 0
 
 
 \chapter{[[Main.main()]]}
+\label{chap:main}
 
 
 <<type [[CLI.caps]]>>=
@@ -792,11 +795,13 @@ val build_target :
    Exit.Code 1
 @
 % why not Scheduler.waitup ()?
+%alt: Move in Process management, Exit section later?
 
 %\section{[[mk -]]{\em flag} arguments processing}
 %ocaml: no needed section
 
 \section{[[mk ]]{\em var}[[=]]{\em values} arguments processing}
+\label{sec:vardef-command-line}
 
 
 <<[[CLI.main()]] modify [[vars]] when definition-like argument>>=
@@ -974,11 +979,13 @@ then failwith "nothing to mk";
 
 
 \chapter{Parsing the [[mkfile]]}
+\label{chap:parsing}
 
 %toc: skeleton, lex, parse, eval next chapter
 % Lex & Yacc requirement, see also \book{generators}
 
 \section{[[parse()]] skeleton}
+\label{sec:parse}
 
 % parse and evaluate
 <<function [[Parse.parse]]>>=
@@ -1565,6 +1572,7 @@ word_elem:
 
 
 \chapter{Evaluating the [[mkfile]]}
+\label{chap:eval}
 %alt: Evaluating the rules?
 
 % not really an interpreter, so "evaluating" a big exaggerated;
@@ -1853,6 +1861,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
 
 
 \chapter{Building the Graph of Dependencies}
+\label{chap:graph}
 
 %trans:
 %toc:
@@ -1899,6 +1908,7 @@ let rec apply_rules target rules =
 
 
 \section{Finding the simple rule(s) for a target}
+\label{sec:finding-simple-rules}
 
 <<[[Graph.apply_rules()]] look for simple matching rules and update [[arcs]]>>=
 let rs = Hashtbl.find_all rules.R.simples target in
@@ -1985,7 +1995,7 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) (stem : string) : Rules.rule_
 @
 % step this time!
 
-\subsection{[[Percent.match_()]]}
+\subsection{Matching a pattern: [[Percent.match_()]]}
 
 <<signature [[Percent.match_]]>>=
 (* return the possible stem *)
@@ -2045,7 +2055,7 @@ exception TooManyPercents
 @
 
 
-\subsection{[[Percent.subst()]]}
+\subsection{Substituting the stem: [[Percent.subst()]]}
 
 <<signature [[Percent.subst]]>>=
 val subst : pattern -> string (* stem *) -> string
@@ -2064,6 +2074,7 @@ let subst (P pat) stem =
 
 
 \section{Checking the graph and the rules}
+\label{sec:check-graph}
 
 <<[[Graph.build_graph()]] checks on the graph [[root]]>>=
 check_cycle root;
@@ -2277,6 +2288,7 @@ let rec vacuous node =
 
 
 \chapter{Finding Outdated Files}
+\label{chap:finding-outdated}
 
 % outdated mean either inexistent target or time older than
 % its recently updated dependencies (e.g., .o vs .c)
@@ -2457,6 +2469,7 @@ let opt0 opttime =
 
 
 \chapter{Scheduling Jobs}
+\label{chap:scheduling}
 
 
 \section{Enqueuing jobs: [[run()]]}
@@ -2557,7 +2570,7 @@ let adjust_env job =
 val shellenv_of_env : t -> Shellenv.t
 @
 
-
+%alt: move later in Debugging section?
 <<function [[Scheduler.shprint]]>>=
 let shprint env s =
   let s = 
@@ -2649,6 +2662,7 @@ let feed_shell_input inputs pipe_write =
 
 
 \section{Waiting for jobs to finish: [[waitup()]]}
+\label{sec:waiting-processes}
 
 % main -> build_target -> work(); <> -> ???
 <<function [[Scheduler.waitup]]>>=
@@ -2739,21 +2753,31 @@ then failwith (spf "recipe did not update %s, time =%s" node.name
     failwith (spf "child process killed/stopped by signal = %d" n)
 @
 
+%\section{Process management, [[Exit()]]}
+% now done in Main.ml
 
+\section{Notes (signals) management}
+
+%TODO: not implemented
 
 \chapter{The Shell and its Environment}
+\label{chap:shellenv}
 %alt: Interacting with the Shell
 
 %trans: %toc:
 % get env and use vars from enclosing env, and will prepare
 % new env for child shell process executing recipe
 
+
+%\section{[[Shellenv]] and [[shellenv]]}
+%\label{sec:shellenv}
+
 <<type [[Shellenv.t]]>>=
 type t = (string * string list) list
 @
 %alt: move in Core DS chapter
 
-\section{[[initenv()]]}
+\section{Initializing the shell environment: [[initenv()]]}
 
 % main -> build_targets -> <>
 <<signature [[Env.initenv]]>>=
@@ -2806,6 +2830,8 @@ let shellenv_of_env (env : t) : Shellenv.t =
 <<signature [[Shellenv.read_environment]]>>=
 val read_environment : < Cap.env ; .. > -> t
 @
+
+%\section{Importing the environment: [[readenv()]]}
 
 <<function [[Shellenv.read_environment]]>>=
 let read_environment (caps : < Cap.env; ..>) =
@@ -2875,6 +2901,9 @@ let shell_from_env_opt (caps : < Cap.env; .. >) : t option =
 @
 %$
 
+%\section{Adjusting the shell environment: [[buildenv()]]}
+%\section{Exporting the shell environment: [[exportenv()]]}
+
 \section{[[exec_shell()]]}
 % finally
 
@@ -2923,9 +2952,17 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
 %trans: and done! seen everything! from parsing to executing!
 
 \chapter{Debugging help for the [[mk]] User}
+\label{chap:debugging-support}
+
 %TODO?  and Profiling Support
 % debugging for the user here! See Debugging appendix
 % for debugging developer of mk itself (e.g., internal dumpers)
+
+% seen file/line fields in Rule, so can report error accurately.
+
+%\section{Printing jobs: [[shprint()]]}
+%\subsection{Expanding and printing variables}
+%\subsection{Printing quoted strings}
 
 \section{Logging: [[mk -v]]}
 % see also Debugging chapter later
@@ -2944,15 +2981,6 @@ let level = ref (Some Logs.Warning) in
 " verbose mode";
 @
 
-
-<<[[CLI.main()]] [[options]] elements>>=
-"-debug", Arg.Unit (fun () -> 
-  level := Some Logs.Debug;
-  Flags.explain_mode := true;
-),
-" trace the main functions";
-@
-% explain_mode later
 
 <<[[CLI.main()]] logging initializations>>=
 Logs.set_level !level;
@@ -3012,7 +3040,7 @@ then job.J.target_nodes |> List.iter (fun node ->
 % ported to OCaml?
 
 %\section{Processor utilization: [[mk -u]]}
-
+%TODO
 
 \section{Strict mode}
 
@@ -3061,8 +3089,14 @@ end;
 \chapter{Advanced Features}
 \label{chap:advanced}
 
-\section{Backquote expansion}
+%\section{Regular-expression rules: [[:R:]]}
+%\label{sec:regexp}
+
+\section{Shell-command expansion: [[`]]{\em cmd}[[`]]}
+\label{sec:backquotes}
 %TODO: copy titles from Make.nw
+
+\subsection{Parsing backquotes}
 
 <<[[Ast.word_element]] cases>>=
  (* stricter: backquotes are allowed only in word context, not at toplevel
@@ -3143,6 +3177,8 @@ and backquote2 = parse
   )
 @
 
+%\subsection{Adjusting [[exec_recipe()]]}
+
 <<signature [[Shell.exec_backquote]]>>=
 val exec_backquote :
   < caps; .. > ->
@@ -3198,100 +3234,8 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
 @
 % diff with exec_recipe? can factorize?
         
-\section{Subst variable}
-
-<<[[Ast.var]] cases>>=
- (* ${name:a%b=c%d} *)
-| SubstVar of (string * word * word list)
-@
-
-<<Parser extra tokens>>=
-%token <string> TVarColon
-%token TCBrace
-@
-
-<<[[Lexer.token()]] variable cases>>=
-(* important to eat ':' otherwise would trigger a AfterColon we don't want *)
-| '$' '{' (ident (*as s*)) ':'
-    {
-      let s = Lexing.lexeme lexbuf in
-      (* this is to handle '=' inside ${} *)
-      save_state_outside_brace := !state_;
-      state_ := InBrace;
-      TVarColon (String.sub s 2 (String.length s - 3)) 
-    }
-| '}' 
-    { state_ := !save_state_outside_brace; 
-      save_state_outside_brace := Start;
-      TCBrace 
-    }
-
-| '$' { error "missing variable name" }
-@
-%$
-
-<<[[Lexer.state]] other cases>>=
-(* except inside ${x:...=...} where we still want = to be TEq *)
-| InBrace
-@
-
-<<global [[Lexer.save_state__outside_brace]]>>=
-(* A single var is enough since mk does not allow recursivity in braces
- * as in ${x:%${y}x=%.c}. We do not need a stack.
- * *)
-let save_state_outside_brace = ref Start
-@
-
-
-<<rule [[Parser.word_elem]] other cases>>=
-| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
-@
-
-
-
-<<[[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case>>=
-let ys =
-  match vkind with
-  | A.SimpleVar _ -> ys
-  | A.SubstVar (_, pattern, substs) -> 
-    (* recurse! pattern can contain some variable *)
-    let pattern = eval_word caps loc env pattern in
-    let subst   = substs |> List.map (eval_word caps loc env) in
-    (match pattern, subst with
-    | Right pattern, [Right subst] ->
-        ys |> List.map (fun s -> 
-          Percent.match_and_subst pattern subst s
-        )
-    (* todo: ugly, should be more general, works only for 
-     * subst like ${OPAM_LIBS:%=-I $OPAM/%}
-    *)
-    | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
-        ys |> List.map (fun s -> 
-          [x;Percent.match_and_subst pattern subst s]
-        ) |> List.flatten
-    (* stricter? what does mk?*)
-    | _ -> 
-      Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
-      error loc 
-        "pattern or subst does not resolve to a single string"
-    )
-in
-@
-
-<<signature [[Percent.match_and_subst]]>>=
-(* print a warning if not match *)
-val match_and_subst :
-  pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
-@
-
-<<function [[Percent.match_and_subst]]>>=
-let match_and_subst pat sub str =
-  match match_ pat str with
-  | Some stem -> subst sub stem
-  | None -> str
-@
-
-\section{Dynamic includes}
+\section{Dynamic [[mkfile]]: [[<|]]{\em prog}}
+\label{sec:dynamic-mkfile}
 
 % compensate for lack of ifdef of GNU make?
 % ifdef are kinda useful, see Makefiles of Goken9cc
@@ -3378,7 +3322,107 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
 @
 % diff with other exec_xxx? can't factorize a bit?  
 
+\section{Substitution variables: [[${]]{\em name}[[:]]{\em pattern}[[=]]{\em subst}[[}]]}
+\label{sec:subst-var}
+
+\subsection{Parsing adjustments}
+
+<<[[Ast.var]] cases>>=
+ (* ${name:a%b=c%d} *)
+| SubstVar of (string * word * word list)
+@
+
+<<Parser extra tokens>>=
+%token <string> TVarColon
+%token TCBrace
+@
+
+<<[[Lexer.token()]] variable cases>>=
+(* important to eat ':' otherwise would trigger a AfterColon we don't want *)
+| '$' '{' (ident (*as s*)) ':'
+    {
+      let s = Lexing.lexeme lexbuf in
+      (* this is to handle '=' inside ${} *)
+      save_state_outside_brace := !state_;
+      state_ := InBrace;
+      TVarColon (String.sub s 2 (String.length s - 3)) 
+    }
+| '}' 
+    { state_ := !save_state_outside_brace; 
+      save_state_outside_brace := Start;
+      TCBrace 
+    }
+
+| '$' { error "missing variable name" }
+@
+%$
+
+<<[[Lexer.state]] other cases>>=
+(* except inside ${x:...=...} where we still want = to be TEq *)
+| InBrace
+@
+
+<<global [[Lexer.save_state__outside_brace]]>>=
+(* A single var is enough since mk does not allow recursivity in braces
+ * as in ${x:%${y}x=%.c}. We do not need a stack.
+ * *)
+let save_state_outside_brace = ref Start
+@
+
+
+<<rule [[Parser.word_elem]] other cases>>=
+| TVarColon word TEq words TCBrace { Var (SubstVar ($1, W $2, $4)) }
+@
+
+
+
+<<[[Eval.eval_word()]] adjust [[ys]] for [[SubstVar]] case>>=
+let ys =
+  match vkind with
+  | A.SimpleVar _ -> ys
+  | A.SubstVar (_, pattern, substs) -> 
+    (* recurse! pattern can contain some variable *)
+    let pattern = eval_word caps loc env pattern in
+    let subst   = substs |> List.map (eval_word caps loc env) in
+    (match pattern, subst with
+    | Right pattern, [Right subst] ->
+        ys |> List.map (fun s -> 
+          Percent.match_and_subst pattern subst s
+        )
+    (* todo: ugly, should be more general, works only for 
+     * subst like ${OPAM_LIBS:%=-I $OPAM/%}
+    *)
+    | Right pattern, [Right (P.P [P.PStr x]); Right subst] ->
+        ys |> List.map (fun s -> 
+          [x;Percent.match_and_subst pattern subst s]
+        ) |> List.flatten
+    (* stricter? what does mk?*)
+    | _ -> 
+      Logs.debug (fun m -> m "subst = %s" (Dumper.dump subst));
+      error loc 
+        "pattern or subst does not resolve to a single string"
+    )
+in
+@
+
+\subsection{Substitutions}
+%: [[subsub()]]
+
+<<signature [[Percent.match_and_subst]]>>=
+(* print a warning if not match *)
+val match_and_subst :
+  pattern (* pattern *) -> pattern (* subst *) -> string (* src *) -> string
+@
+
+<<function [[Percent.match_and_subst]]>>=
+let match_and_subst pat sub str =
+  match match_ pat str with
+  | Some stem -> subst sub stem
+  | None -> str
+@
+
 \section{Rule attributes}
+\label{sec:rule-attributes-advanced}
 
 <<rule [[Parser.instr]] other cases>>=
 | words TColon TOther TColon words_opt TNewline recipe 
@@ -3444,7 +3488,9 @@ attrs: Ast.rule_attribute Set_.t;
 attrs2: Ast.rule_attribute Set_.t;
 @
   
-\subsection{[[V]]irtual targets}
+\subsection{Virtual target: [[:V:]]}
+\label{sec:virtual}
+
 
 <<[[Ast.rule_attribute]] cases>>=
 | Virtual
@@ -3469,17 +3515,7 @@ then G.update node
 @
 
 
-\subsection{[[Q]]uiet targets}
-
-<<[[Ast.rule_attribute]] cases>>=
-| Quiet
-@
-
-<<[[Scheduler.sched()]] guard to display the recipe>>=
-if not (Set.mem Ast.Quiet rule.R.attrs2)
-@
-
-\subsection{[[D]]elete targets}
+\subsection{Deleting a target when the recipe returns an error: [[:D:]]}
 
 <<[[Ast.rule_attribute]] cases>>=
 | Delete
@@ -3498,7 +3534,29 @@ then
   );
 @
 
-\subsection{[[I]]nteractive recipe}
+\subsection{Not printing the recipe (quiet mode): [[:Q:]]}
+
+<<[[Ast.rule_attribute]] cases>>=
+| Quiet
+@
+
+<<[[Scheduler.sched()]] guard to display the recipe>>=
+if not (Set.mem Ast.Quiet rule.R.attrs2)
+@
+
+\subsection{Running a shell script without [[-e]]: [[:E:]]}
+%TODO
+
+\subsection{Disabling the no-recipe warning: [[:N:]]}
+%TODO
+
+\subsection{Forbidding metarules to match virtual targets:  [[:n:]]}
+%TODO
+
+%\subsection{Custom-dependency comparison program: [[:P:]]}
+%\label{sec:custom-comparison}
+
+\subsection{Interactive recipe: [[:I:]]}
 
 <<[[Ast.rule_attribute]] cases>>=
 | Interactive (* pad: I added this one *)
@@ -3532,7 +3590,50 @@ then begin
 end 
 @
 
+\section{Variable attributes}
+\label{sec:variable-attributes}
+
+\subsection{Private variables: [[=U=]]}
+
+\section{Advanced [[mk]] variables}
+
+\subsection{[[$target]] versus [[$alltargets]]}
+
+\subsection{[[$prereq]] versus [[$newprereq]]}
+
+\subsection{[[$NREP]]}
+
+\subsection{[[$pid]]}
+
+\subsection{[[$nproc]]}
+
+
+%\section{Dealing with archives (libraries)}
+
+\section{Optimizations}
+
+%\subsection{Node cache}
+
+%\subsection{Missing-intermediates optimization: [[mk -I]]}
+%\label{sec:pretending}
+
+%\subsection{Touching-mode optimization: [[mk -t]]}
+
+\subsection{Time cache}
+\label{sec:time-cache}
+
+\subsection{Bulk time optimisation}
+
+\section{Recompiling everything: [[mk -a]]}
+
+\section{Recursive [[mk]]}
+% MKFLAGS
+
+\section{[[mk -k]]}
+% ??
+
 \chapter{Conclusion}
+\label{chap:conclusion}
 
 
 
@@ -3544,6 +3645,7 @@ end
 
 
 \chapter{Debugging for the [[mk]] Developer}
+\label{chap:debugging-appendix}
 
  
 <<constant [[Flags.debugger]]>>=
@@ -3583,11 +3685,23 @@ else
   )
 @
 
+\section{Tracing function calls: [[mk -debug]]}
+% Logging part2
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-debug", Arg.Unit (fun () -> 
+  level := Some Logs.Debug;
+  Flags.explain_mode := true;
+),
+" trace the main functions";
+@
+% explain_mode later
+
    
 \section{Dumpers}
 
 
-\subsection{Dumping tokens}
+\subsection{Dumping tokens: [[mk -dump_tokens]]}
 
 <<constant [[Flags.dump_tokens]]>>=
 let dump_tokens = ref false
@@ -3602,7 +3716,7 @@ if !Flags.dump_tokens
 then Logs.app (fun m -> m "%s" (Dumper.dump tok));
 @
 
-\subsection{Dumping the AST}
+\subsection{Dumping the AST: [[mk -dump_ast]]}
 
 <<constant [[Flags.dump_ast]]>>=
 let dump_ast = ref false
@@ -3622,7 +3736,7 @@ let dump_ast instrs =
   Logs.app (fun m -> m "AST = %s" (show_instrs instrs))
 @
 
-\subsection{Dumping the environment}
+\subsection{Dumping the environment: [[mk -dump_env]]}
 
 <<constant [[Flags.dump_env]]>>=
 let dump_env = ref false
@@ -3648,7 +3762,7 @@ let dump_env env =
   )
 @
 
-\subsection{Dumping the graph}
+\subsection{Dumping the graph: [[mk -dump_graph]]}
 %alt: could be put in User Debugging chapter? Useful feature for the user no?
 
 <<constant [[Flags.dump_graph]]>>=
@@ -3707,7 +3821,7 @@ let loc_of_arc arc =
   spf "(%s:%d)" !!(loc.Ast.file) loc.Ast.line
 @
 
-\subsection{Dumping jobs}
+\subsection{Tracing jobs: [[mk -dump_jobs]]}
 
 <<constant [[Flags.dump_jobs]]>>=
 let dump_jobs = ref false
@@ -3793,8 +3907,21 @@ let do_action caps s xs =
   | _ -> failwith ("action not supported: " ^ s)
 @
 
+\chapter{Profiling}
+\label{chap:profiling-appendix}
+
+%\chapter{Error Management}
+%\label{chap:error}
+
+% related is mk -k, but not really error management in the end.
+% automatic error handling
+% Also call Exit, not exit! so carefully wait for children.
+
+%\chapter{Utilities}
+%\label{chap:utilities}
 
 \chapter{Examples of [[mkfile]]s}
+\label{chap:examples}
 
 \section{The [[mkfile]] of [[mk]]}
 % actually need also mkprog, mkcommon, mkconfig, etc.
@@ -3806,6 +3933,8 @@ let do_action caps s xs =
 % orig Mk.nw = 3972 LOC, after full lpized and comments in sections ??
 % now: ? LOC so added ?? LOE (Lines of explanations)
 % mk in C: ? LOC (but not all features: no archive, no :P, etc)
+
+
 
 \ifallcode
 \chapter{Extra Code}
@@ -4003,7 +4132,6 @@ module R = Rules
 <<function [[CLI.main]]>>
 @
 
-
 \subsection*{[[Env.ml]]}
 
 %-------------------------------------------------------------
@@ -4045,7 +4173,6 @@ open Common
 
 <<function [[Env.shellenv_of_env]]>>
 @
-
 
 \subsection*{[[Eval.ml]]}
 
@@ -4093,7 +4220,6 @@ open Rules (* for the fields *)
 <<function [[Eval.eval]]>>
 @
 
-
 \subsection*{[[File.ml]]}
 
 %-------------------------------------------------------------
@@ -4130,7 +4256,6 @@ open Fpath_.Operators
 
 <<constant [[Flags.debugger]]>>
 @
-
 
 \subsection*{[[Globals.ml]]}
 
@@ -4252,7 +4377,6 @@ open Xix_mk
 <<toplevel [[Main._1]]>>
 @
 
-
 \subsection*{[[Outofdate.ml]]}
 
 %-------------------------------------------------------------
@@ -4288,7 +4412,6 @@ open Job (* for the fields *)
 
 <<function [[Outofdate.work]]>>
 @
-
 
 \subsection*{[[Parse.ml]]}
 
@@ -4673,11 +4796,15 @@ val hnodes : (string, node) Hashtbl.t
 
 \begin{verbatim}
 LOC = Lines Of Code
+DSL = Domain Specific Language
+DAG = Directed Acyclic Graph
+DFS = Depth-First Search
 \end{verbatim}
 
 \chapter*{Indexes}
 \addcontentsline{toc}{chapter}{Index}
 
+%src: wc.nw in noweb source
 Here is a list of the identifiers used, and where they appear.
 Underlined entries indicate the place of definition.
 This index is generated automatically.

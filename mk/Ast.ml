@@ -62,9 +62,9 @@ and rule_attribute =
 (*s: [[Ast.rule_attribute]] cases *)
 | Virtual
 (*x: [[Ast.rule_attribute]] cases *)
-| Quiet
-(*x: [[Ast.rule_attribute]] cases *)
 | Delete
+(*x: [[Ast.rule_attribute]] cases *)
+| Quiet
 (*x: [[Ast.rule_attribute]] cases *)
 | Interactive (* pad: I added this one *)
 (*e: [[Ast.rule_attribute]] cases *)

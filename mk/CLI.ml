@@ -257,12 +257,6 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
     " verbose mode";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-debug", Arg.Unit (fun () -> 
-      level := Some Logs.Debug;
-      Flags.explain_mode := true;
-    ),
-    " trace the main functions";
-    (*x: [[CLI.main()]] [[options]] elements *)
     "-quiet", Arg.Unit (fun () -> level := None),
     " ";
     (*x: [[CLI.main()]] [[options]] elements *)
@@ -281,6 +275,12 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     (*x: [[CLI.main()]] [[options]] elements *)
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-debug", Arg.Unit (fun () -> 
+      level := Some Logs.Debug;
+      Flags.explain_mode := true;
+    ),
+    " trace the main functions";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-dump_tokens", Arg.Set Flags.dump_tokens,
     " dump the tokens as they are generated";

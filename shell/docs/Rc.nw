@@ -100,53 +100,48 @@ contained in the file is primarily discussed.
 \toprule
 {\bf Function}                 & {\bf Ch.}                     & {\bf File}     & {\bf Entities}                                  & {\bf LOC} \\
 \otoprule
-main data structures           & \ref{chap:core-ds}            & [[rc.h]]       & [<Tree>] [<Code>] [<Word>] [<Var>]     & \\ % Here PipeRdWr RedirEnum1 
-execution data structures      & \ref{chap:core-ds}            & [[exec.h]]     & [<Thread>] [<List>]                                      & \\ % Redir Builtin and RedirEnum2
-AST helpers                    & \ref{chap:core-ds}            & [[tree.c]]     & [<newtree()>] [<tree1()>] [<tree2()>]           & \\ % treenodes mung[123] epimung simplemung  [tree3()>] [freenodes()>]
-globals                        & \ref{chap:core-ds}            & [[globals.c]]  & [<codebuf>] [<runq>]                            & \\ %
-list of strings (words)        & \ref{chap:core-ds}            & [[words.c]]    & [<newword()>] [<count()>] [<freewords()>]       & \\ % copywords freelist? [copynwords()>]
-shell variables                & \ref{chap:core-ds}            & [[var.c]]      & [<setvar()>] [<vlook()>] [<gvar>] [<gvlook()>]  & \\ % kenter kinit [newvar()>] 
-function prototypes            & \ref{chap:core-ds}            & [[fns.h]]      & \\ %
-\midrule
-
-entry point                    & \ref{chap:main}               & [[main.c]]     & [<main()>]                                      & \\ % isatty Rcmain
-execution utilities            & \ref{chap:main}               & [[executils.c]]& [<start()>] [<pushlist()>] [<pushword()>]   & \\ %  [Xerror()>] [Xreturn()>] Xpopredir poplist popword argv0
+abstract syntax tree           & \ref{chap:core-ds}            & [[Ast.ml]]       & [<line>] [<cmd>] [<Ast.value>]   & 110 \\
+opcodes                        & \ref{chap:core-ds}            & [[Opcode.ml]]     & [<codevec>] [<Opcode.opcode>] [<operation>]        & 109 \\
+runtime structures             & \ref{chap:core-ds}            & [[Runtime.ml]]  & [<var>] [<globals>] [<thread>] [<runq>] [<cur()>] & 233 \\ % push_word() vlook() setvar [<Runtime.value>]
+variable management            & \ref{chap:core-ds}            & [[Var.ml]]     & [<gvlook()>] [<vlook()>] [<setvar()>] &  46 \\ %  [<vinit()>]
+function management            & \ref{chap:core-ds}            & [[Fn.ml]]     & [<flook()>] &  10 \\ 
 
 \midrule
-character input and prompt     & \ref{chap:input}              & [[input.c]]    & [<getnext()>] [<pprompt()>] [<nextc()>] \\ % [token()>] [klook()>]
-lexer                          & \ref{chap:lexing}             & [[lex.c]]      & [<yylex()>]                                     & \\ % wordchr idchr skipwhite skipnl  [<yyerror()>]
-parser                         & \ref{chap:parsing}            & [[syn.y]]      & [<yyparse()>]                                   & \\ 
+entry point                    & \ref{chap:main}               & [[Main.ml]]     &                                       & 18 \\
+main functions                 & \ref{chap:main}               & [[CLI.ml]] & [<main()>] [<interpret_bootstrap()>]   & 298 \\ % bootstrap
+read eval print loop           & \ref{chap:main}               & [[Op_REPL.ml]] & [<op_REPL()>]   & 61 \\ % bootstrap
 
 \midrule
-bytecode generation            & \ref{chap:compile-interpret}  & [[code.c]]     & [<emitf()>] [<compile()>] [<outcode()>]         & \\ % 
-process status                 & \ref{chap:compile-interpret}  & [[status.c]]   & [<setstatus()>] [<getstatus()>]                 & \\ % truestatus convstatuts
-simple command bytecode        & \ref{chap:compile-interpret}  & [[simple.c]]   & [<Xsimple()>] [<execexec()>] [<doredir()>]      & \\ % execcmds execfunc (fn)
-[[$path]] management           & \ref{chap:compile-interpret}  & [[path.c]]     & [<searchpath()>]                                & \\ %$
-process-related bytecodes      & \ref{chap:compile-interpret}  & [[processes.c]] & [<execforkexec()>] [<Xpipe()>] [<Xasync()>]     & \\ % Xbackq Xpipefd Xsubshell 
-other bytecodes                & \ref{chap:compile-interpret}  & [[exec.c]]     & [<Xtrue()>] [<Xjump()>] [<Xfn()>] & \\ % [Xwrite()>] [Xassign()>]
+lexer                          & \ref{chap:lexing}             & [[Lexer.mll]]      & [<Lexer.token()>] [<incr_lineno()>]               & 170 \\
+prompt management              & \ref{chap:lexing}             & [[Prompt.ml]]      & [<doprompt>] [<prompt>] [<pprompt()>]    & 39 \\
+globals                        & \ref{chap:lexing}             & [[Globals.ml]]      & [<skipnl>] [<ifnot>] [<errstr>]        & 33 \\ % eflagok
+parser                         & \ref{chap:parsing}            & [[Parse.ml]]      & [<parse_line()>] [<Parse.error()>]     & 96 \\ 
+grammar                        & \ref{chap:parsing}            & [[Parser.mly]]      & [<Parser.tokens>] [<Parser.line()>]    & 311 \\ 
 
 \midrule
-shell builtins                 & \ref{chap:builtins}           & [[builtins.c]] & [<execcd()>] [<execexit()>] [<execdot()>]       & \\ % execshift execeval execflag [execwait()>]  [execwhatis()>]
-shell environment              & \ref{chap:environment}        & [[env.c]]      & [<addenv()>] [<Vinit()>]                        & \\ % Updenv
-wildcard matching              & \ref{chap:globbing}           & [[glob.c]]     & [<glob()>] [<match()>]                          & \\ % globlist Xglob
-signal management              & \ref{chap:signals}            & [[trap.c]]     & [<dotrap()>]                                    & \\ %
-
-\midrule
+bytecode generation            & \ref{chap:compile-interpret}  & [[Compile.ml]]     & [<compile()>] [<outcode_seq()>]         & 341 \\
+bytecode interpretation        & \ref{chap:compile-interpret}  & [[Interpret.ml]]     & [<interpret_operation()>] & 357 \\
+simple command interpretation  & \ref{chap:compile-interpret}  & [[Op_process.ml]]   & [<op_Simple()>] [<forkexec()>]     & 120 \\
+process status                 & \ref{chap:compile-interpret}  & [[Status.ml]]   & [<setstatus()>] [<getstatus()>]                 & 39 \\
+process management             & \ref{chap:compile-interpret}  & [[Process.ml]]   & [<waitfor()>] [<return()>] [<exit()>]                 & 81 \\
+[[$path]] management           & \ref{chap:compile-interpret}  & [[PATH.ml]]     & [<find_in_path()>]                          & 27 \\
+error management               & \ref{chap:compile-interpret}  & [[Error.ml]]     & [<Error.error()>]                          & 18 \\
+pattern matching [[~]]         & \ref{chap:compile-interpret}  & [[Pattern.ml]]     & [<match_str()>]                          & 12 \\
+shell builtins                 & \ref{chap:builtins}           & [[Builtin.ml]] & [<dispatch()>] [<dochdir()>]        & 157 \\
+shell environment              & \ref{chap:environment}        & [[Env.ml]]      &                         & 2 \\
+signal management              & \ref{chap:signals}            & [[Trap.ml]]     &                           & \\
 % initialization chapter?
-here documents & \ref{chap:advanced-topics}    & [[here.c]]     & [<readhere()>] [<heredoc()>]                    & \\ %
 
 \midrule
-AST dumper                     & \ref{chap:debugging-appendix} & [[pcmd.c]]     & [<pcmd()>]                                      & \\ %
-bytecode dumper                & \ref{chap:debugging-appendix} & [[pfnc.c]]     & [<pfnc()>]                                      & \\ %
-error management               & \ref{chap:error}              & [[error.c]]    & [<panic()>]                                     & \\ %
-memory management              & \ref{chap:utilities}          & [[utils.c]]    & [<emalloc()>] [<efree()>]                       & \\ % Dup Creat Unlink Malloc [inttoascii()>] ...
-command-line flags             & \ref{chap:utilities}          & [[getflags.c]] & [<getflags()>] [<usage()>]                      & \\ % getflags.h flagset [flag>] 
-buffered IO                    & \ref{chap:utilities}          & [[io.c]]       & [<openfd()>] [<rchr()>]                         & \\ % io.h openstr opencore
-pretty printer                 & \ref{chap:utilities}          & [[fmt.c]]      & [<pfmt()>]                                      & \\ %
-%misc utilities                 & \ref{chap:utilities}          & [[subr.c]]     &                                 & \\ % iacvt
+wildcard matching              & \ref{chap:globbing}           & [[Glob.ml]]     &                           & 2 \\
+Debugging flags                   & \ref{chap:debugging}           & [[Flags.ml]]      & [<xflag>] [<sflag>] [<eflag>] & 58 \\
+here documents & \ref{chap:advanced-topics}    & [[Heredoc.ml]]     &                    & 2 \\
+
+\midrule
+AST dumper                     & \ref{chap:debugging-appendix} & [[Dumper_.ml]]     & [<s_of_line()>]        & 42 \\
 
 \otoprule
-Total                          &                               &                &                                                 & 6800 \\
+Total                          &                               &                &                                                 & 3200 \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -165,7 +160,7 @@ Total                          &                               &                
 
 The shell is only one {component} of the command-line user interface (CLI).
 Figure~\ref{fig:cui-plan9} shows the components supporting
-the CLI under \plan (the components for the CLI under \unix are very similar).
+the CLI under \plan (the components under \unix are very similar).
 
 To run commands, the shell needs first a kernel to create processes. 
 %dup: intro/requirements
@@ -268,6 +263,8 @@ write characters in [[/dev/cons]].
 
 \end{verbatim}
 
+
+
 \subsection{[[rc]]'s components}
 
 %dup: (reverted order if figures) Assembler.nw
@@ -279,12 +276,12 @@ At its core, [[rc]] is both a {compiler} and a {bytecode interpreter}.
 As shown by Figure~\ref{fig:dataflow}, given a series of characters
 (coming either from what you typed in the terminal or 
 from the content of a script),
-[[rc]] first groups those characters in {tokens} (with [<yylex()>]). Then,
-[[rc]] parses those tokens (with [<yyparse()>]) and 
-builds an {abstract syntax tree} (AST) of the program (see [<Tree>]). Finally,
+[[rc]] first groups those characters in {tokens} (with [<Lexer.token()>]). Then,
+[[rc]] parses those tokens (with [<Parse.parse_line()>]) and 
+builds an {abstract syntax tree} (AST) of the program (see [<Ast.line>]). Finally,
 \n actually not lexing -> parsing; for efficiency, parser calls lexer
 \n on demand, so it can keep only one token in memory (opti, less important)
-[[rc]] transforms this tree in a series of {bytecodes} (see [<Code>]).
+[[rc]] transforms this tree in a series of {bytecodes} (see [<Opcode.opcode>]).
 %
 This is similar to what a compiler such as [[5c]] does (see \book{Compiler}),
 except a bytecode here is not an instruction 
@@ -300,11 +297,11 @@ Input characters --> tokens --> AST --> bytecodes --> threads --> processes
 
 After this compilation, [[rc]] goes through the series of bytecodes and 
 {interprets} them. [[rc]] keeps track of what is currently executing
-in a [<Thread>] data structure and in a queue [<runq>]. This data structure
+in a [Thread] data structure and in a queue [<runq>]. This data structure
 is called a ``thread'' because [[rc]] must sometimes manage 
 multiple threads of execution. Indeed,
 some of the bytecodes can create new processes running concurrently
-(e.g., [<Xpipe()>], the bytecode handling pipes).
+(e.g., [Xpipe()], the bytecode handling pipes).
 \l confusing then process vs thread? not fully clear in my head too
 
 
@@ -350,7 +347,7 @@ some of the bytecodes can create new processes running concurrently
 %trans:
 In fact, [[rc]] does not start by compiling, but by interpreting. 
 Indeed, [[rc]] starts first by interpreting some special bytecodes,
-called the {\em bootstrap}, that contains a bytecode ([<Xrdcmds()>])
+called the {\em bootstrap}, that contains a bytecode ([Xrdcmds()])
 that then triggers the compiler.
 \n lie a bit, there is call to finit instead (said later)
 %trans: %dup: Assembler.nw
@@ -361,72 +358,72 @@ the top of Figure~\ref{fig:controlflow}.
 
 After some basic initializations,
 \n no talk about command-line processing, confusing with command-line user
-[<main()>] sets its local [<bootstrap>] to contain the initial set
-of bytecodes to execute. It then calls [<start()>] with [<bootstrap>]
+[<main()>] sets its local [bootstrap] to contain the initial set
+of bytecodes to execute. It then calls [start()] with [bootstrap]
 as an argument, to start interpreting this series of bytecodes.
 %
-Internally, [<start()>] just modifies the global [<runq>] to point to
-a newly created [<Thread>], and sets the field [<Thread.code>] to 
-the content of [<bootstrap>].
+Internally, [start()] just modifies the global [<runq>] to point to
+a newly created [Thread], and sets the field [Thread.code] to 
+the content of [bootstrap].
 %
-After [<start()>] returns, [<main()>] goes in a loop that interprets
+After [start()] returns, [<main()>] goes in a loop that interprets
 the bytecodes in [[runq->code]].
 \n [[runq->code[pc-1].f()]], 
 \l also main set [[runq->argv]]
 
 
-The most important bytecode in [<bootstrap>] is [<Xrdcmds()>],
+The most important bytecode in [bootstrap] is [Xrdcmds()],
 \l actually it has a Xsimple "." rcmain and so will run execdot which
 \l  will run Xrdcmds (said later?)
-which reads a command (hence its name) and starts a new [<Thread>].
+which reads a command (hence its name) and starts a new [Thread].
 %
-[<Xrdcmds()>] first calls the parser [<yyparse()>], which calls
-the lexer [<yylex()>], which calls the input routine [<nextc()>] to
+[Xrdcmds()] first calls the parser [yyparse()], which calls
+the lexer [yylex()], which calls the input routine [nextc()] to
 get the next character.
 \l also yylex print prompt
 %
-By default, [<nextc()>] reads characters from the standard input, and
+By default, [nextc()] reads characters from the standard input, and
 so it waits for the characters you type in a terminal.
 \n old: "on the command-line" but better terminal, more precise
 \n or script
 Once you finished to enter a command with a {newline},
 \l can be something else when command on multiple lines because skipnl
-[<yyparse()>] will call [<compile()>] with the tree it built during
+[yyparse()] will call [<compile()>] with the tree it built during
 parsing as an argument.
 %
-Internally, [<compile()>] modifies the global [<codebuf>] to store
+Internally, [<compile()>] modifies the global [codebuf] to store
 the bytecodes deriving from the tree.
 \n via outcode
-Then, after [<yyparse()>] returned, [<Xrdcmds()>] calls
-[<start()>] to start a new thread with [<codebuf>] as a parameter.
+Then, after [yyparse()] returned, [Xrdcmds()] calls
+[start()] to start a new thread with [codebuf] as a parameter.
 %
-[<start()>] then modifies again the global [<runq>], and when [<Xrdcmds()>]
+[start()] then modifies again the global [<runq>], and when [Xrdcmds()]
 returns, the main bytecode interpreter loop will process 
 a new series of bytecodes stored in [[runq.code]].
 
 
-Note that before modifying [<runq>], [<start()>] first links
+Note that before modifying [<runq>], [start()] first links
 the newly created thread with the old thread (through the
-[<Thread.ret>] field). 
+[Thread.ret] field). 
 %
-Moreover,[<compile()>] adds the bytecode [<Xreturn()>] at the end of
+Moreover,[<compile()>] adds the bytecode [Xreturn()] at the end of
 \l also called if error after yyparse, 
 \l also exn mechanism?
 the series of bytecodes deriving from your command.
 %
 Thus, after [<main()>] finished interpreting the bytecodes of your command,
-it will process [<Xreturn()>], which will modify [<runq>] to point
+it will process [Xreturn()], which will modify [<runq>] to point
 to the old thread, the one containing the bootstrap bytecodes.
 %
-Then, after [<Xreturn()>] returns, the main bytecode interpreter loop
+Then, after [Xreturn()] returns, the main bytecode interpreter loop
 will process again the bytecodes from the bootstrap, which
-will read another command through [<Xrdcmds()>].
+will read another command through [Xrdcmds()].
 \n actually Xrdcommands does a [[runq->pc--]] before start, but too specific
 
 
 In [[rc]], the bytecodes are represented by regular C functions
 starting by convention with an [[X]] 
-(e.g., [<Xrdcmds()>], [<Xpipe()>], [<Xif()>]).
+(e.g., [Xrdcmds()], [Xpipe()], [Xif()]).
 %
 Thus, the bytecode interpreter is mainly a function dispatcher.
 %
@@ -436,18 +433,18 @@ to fork a new process ([[fork()]]),
 to wait for a child process ([[wait()]]),
 or to change directory ([[chdir()]]).
 %
-An important bytecode is [<Xsimple()>], which [[rc]] uses
+An important bytecode is [Xsimple()], which [[rc]] uses
 to run a ``simple'' command.
 \n basic, or atomic, one not containing a pipe, or redir
-[<Xsimple()>] represents the essence of a shell: with
+[Xsimple()] represents the essence of a shell: with
 the series of system calls [[fork()]], [[exec()]], and [[wait()]],
 [[rc]] can run a command in a new process and wait for
 its termination (or interruption).
 \l link to signal chapter.
 %
-[<Xsimple()>] is also responsible for managing the multiple shell builtins.
+[Xsimple()] is also responsible for managing the multiple shell builtins.
 Indeed, if the name of the ``simple'' command is a builtin (e.g., [[cd]]),
-then [<Xsimple()>] dispatches the appropriate function (e.g., [[execcd]])
+then [Xsimple()] dispatches the appropriate function (e.g., [[execcd]])
 \n another dispatch
 instead of forking a new process.
 %By convention, the functions representing builtins start with exec
@@ -481,11 +478,11 @@ It is not important to fully understand the format of this trace
 (see Section~\ref{sec:rc-r} for the full explanation and
 for the code handling [[rc -r]]), but you can recognize a few of
 the bytecodes I mentioned before: 
-[<Xrdcmds()>], 
-[<Xsimple()>], and 
-[<Xreturn()>].
+[Xrdcmds()], 
+[Xsimple()], and 
+[Xreturn()].
 %
-I will explain [<Xmark()>] and [<Xword()>] later in this document.
+I will explain [Xmark()] and [Xword()] later in this document.
 
 \begin{verbatim}
 
@@ -529,7 +526,7 @@ Then, I will use a top-down approach, starting with Chapter~\ref{chap:main}
 with the description of [<main()>], 
 the initialization of [[rc]],
 the bytecode interpreter loop, and 
-the function [<Xrdcmds()>].
+the function [Xrdcmds()].
 %
 The following chapters will describe the main components of the compiler pipeline:
 Chapter~\ref{chap:input} will present the input routines,
@@ -539,7 +536,7 @@ Chapter~\ref{chap:compile-interpret} the bytecode generator and bytecode
 interpreter for the main features of [[rc]].
 %
 In Chapter~\ref{chap:builtins}, I will present the code of the different
-shell builtins (e.g., [<execcd()>] for [[cd]]).
+shell builtins (e.g., [execcd()] for [[cd]]).
 %
 Chapter~\ref{chap:environment} contains the code to manage the environment
 of the processes launched from the shell, and
@@ -640,6 +637,7 @@ Finally, Appendix~\ref{chap:examples} presents examples of [[rc]] scripts.
 
 %token EOF
 @
+\swdefs{Parser.tokens}
 
 % classic, except TNewline, usually skipped in trad lang but
 % here newline has special semantic and trigger special behavior
@@ -1594,7 +1592,7 @@ rule token = parse
   | eof { EOF }
   | _ (*as c*)   { error (spf "unrecognized character: '%s'" (Lexing.lexeme lexbuf)) }
 @
-
+\swdefs{Lexer.token}
 
 
 
@@ -1680,7 +1678,7 @@ let pprompt () =
 
 
 <<[[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]]>>=
-(* set prompstr *)
+(* set promptstr *)
 if t.R.iflag then begin
   let promptv = (Var.vlook "prompt").R.v in
   Prompt.prompt := 
@@ -1931,7 +1929,8 @@ line = ref 1;
 let incr_lineno () =
   let t = Runtime.cur () in
   incr t.Runtime.line
-@  
+@
+\swdefs{incr_lineno}
 %TODO: what is using t.line ??
 
 
@@ -2084,7 +2083,7 @@ line:
   | cmd { [$1] }
   <<[[Parser.line]] other cases>>
 @
-
+\swdefs{Parser.line}
 
 <<Parser other rule types>>=
 %type <Ast.cmd> cmd

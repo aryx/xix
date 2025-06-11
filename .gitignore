@@ -37,6 +37,7 @@ defs_and_uses.list
 
 # misc
 #**/docs/*.dot
+lineage.dot
 *.output
 *.save
 

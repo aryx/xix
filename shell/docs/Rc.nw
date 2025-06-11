@@ -87,9 +87,492 @@ Documentation License, Version 1.3.
 
 \section{Code organization}
 
+%dup: Assembler.nw
+Table~\ref{tab:code-orga} presents short descriptions
+of the source files of [[rc]], together with
+the main entities (e.g., types, functions, globals) the file defines,
+and the corresponding chapter in this document in which the code
+contained in the file is primarily discussed.
+
+\begin{table*}[tbh!]
+\begin{center}
+\begin{tabular}{lcllr}
+\toprule
+{\bf Function}                 & {\bf Ch.}                     & {\bf File}     & {\bf Entities}                                  & {\bf LOC} \\
+\otoprule
+main data structures           & \ref{chap:core-ds}            & [[rc.h]]       & [<Tree>] [<Code>] [<Word>] [<Var>]     & \\ % Here PipeRdWr RedirEnum1 
+execution data structures      & \ref{chap:core-ds}            & [[exec.h]]     & [<Thread>] [<List>]                                      & \\ % Redir Builtin and RedirEnum2
+AST helpers                    & \ref{chap:core-ds}            & [[tree.c]]     & [<newtree()>] [<tree1()>] [<tree2()>]           & \\ % treenodes mung[123] epimung simplemung  [tree3()>] [freenodes()>]
+globals                        & \ref{chap:core-ds}            & [[globals.c]]  & [<codebuf>] [<runq>]                            & \\ %
+list of strings (words)        & \ref{chap:core-ds}            & [[words.c]]    & [<newword()>] [<count()>] [<freewords()>]       & \\ % copywords freelist? [copynwords()>]
+shell variables                & \ref{chap:core-ds}            & [[var.c]]      & [<setvar()>] [<vlook()>] [<gvar>] [<gvlook()>]  & \\ % kenter kinit [newvar()>] 
+function prototypes            & \ref{chap:core-ds}            & [[fns.h]]      & \\ %
+\midrule
+
+entry point                    & \ref{chap:main}               & [[main.c]]     & [<main()>]                                      & \\ % isatty Rcmain
+execution utilities            & \ref{chap:main}               & [[executils.c]]& [<start()>] [<pushlist()>] [<pushword()>]   & \\ %  [Xerror()>] [Xreturn()>] Xpopredir poplist popword argv0
+
+\midrule
+character input and prompt     & \ref{chap:input}              & [[input.c]]    & [<getnext()>] [<pprompt()>] [<nextc()>] \\ % [token()>] [klook()>]
+lexer                          & \ref{chap:lexing}             & [[lex.c]]      & [<yylex()>]                                     & \\ % wordchr idchr skipwhite skipnl  [<yyerror()>]
+parser                         & \ref{chap:parsing}            & [[syn.y]]      & [<yyparse()>]                                   & \\ 
+
+\midrule
+bytecode generation            & \ref{chap:compile-interpret}  & [[code.c]]     & [<emitf()>] [<compile()>] [<outcode()>]         & \\ % 
+process status                 & \ref{chap:compile-interpret}  & [[status.c]]   & [<setstatus()>] [<getstatus()>]                 & \\ % truestatus convstatuts
+simple command bytecode        & \ref{chap:compile-interpret}  & [[simple.c]]   & [<Xsimple()>] [<execexec()>] [<doredir()>]      & \\ % execcmds execfunc (fn)
+[[$path]] management           & \ref{chap:compile-interpret}  & [[path.c]]     & [<searchpath()>]                                & \\ %$
+process-related bytecodes      & \ref{chap:compile-interpret}  & [[processes.c]] & [<execforkexec()>] [<Xpipe()>] [<Xasync()>]     & \\ % Xbackq Xpipefd Xsubshell 
+other bytecodes                & \ref{chap:compile-interpret}  & [[exec.c]]     & [<Xtrue()>] [<Xjump()>] [<Xfn()>] & \\ % [Xwrite()>] [Xassign()>]
+
+\midrule
+shell builtins                 & \ref{chap:builtins}           & [[builtins.c]] & [<execcd()>] [<execexit()>] [<execdot()>]       & \\ % execshift execeval execflag [execwait()>]  [execwhatis()>]
+shell environment              & \ref{chap:environment}        & [[env.c]]      & [<addenv()>] [<Vinit()>]                        & \\ % Updenv
+wildcard matching              & \ref{chap:globbing}           & [[glob.c]]     & [<glob()>] [<match()>]                          & \\ % globlist Xglob
+signal management              & \ref{chap:signals}            & [[trap.c]]     & [<dotrap()>]                                    & \\ %
+
+\midrule
+% initialization chapter?
+here documents & \ref{chap:advanced-topics}    & [[here.c]]     & [<readhere()>] [<heredoc()>]                    & \\ %
+
+\midrule
+AST dumper                     & \ref{chap:debugging-appendix} & [[pcmd.c]]     & [<pcmd()>]                                      & \\ %
+bytecode dumper                & \ref{chap:debugging-appendix} & [[pfnc.c]]     & [<pfnc()>]                                      & \\ %
+error management               & \ref{chap:error}              & [[error.c]]    & [<panic()>]                                     & \\ %
+memory management              & \ref{chap:utilities}          & [[utils.c]]    & [<emalloc()>] [<efree()>]                       & \\ % Dup Creat Unlink Malloc [inttoascii()>] ...
+command-line flags             & \ref{chap:utilities}          & [[getflags.c]] & [<getflags()>] [<usage()>]                      & \\ % getflags.h flagset [flag>] 
+buffered IO                    & \ref{chap:utilities}          & [[io.c]]       & [<openfd()>] [<rchr()>]                         & \\ % io.h openstr opencore
+pretty printer                 & \ref{chap:utilities}          & [[fmt.c]]      & [<pfmt()>]                                      & \\ %
+%misc utilities                 & \ref{chap:utilities}          & [[subr.c]]     &                                 & \\ % iacvt
+
+\otoprule
+Total                          &                               &                &                                                 & 6800 \\
+\bottomrule
+\end{tabular}
+\end{center}
+\caption{Chapters and associated [[rc]] source files.}
+\label{tab:code-orga}
+\end{table*}
+
+
 \section{Software architecture}
 
+%toc: before presenting soft archi of rc itself, useful to see context
+% and how rc fits in the big picture.
+
+\subsection{The command-line user interface}
+\n terminal, shell, login
+
+The shell is only one {component} of the command-line user interface (CLI).
+Figure~\ref{fig:cui-plan9} shows the components supporting
+the CLI under \plan (the components for the CLI under \unix are very similar).
+
+To run commands, the shell needs first a kernel to create processes. 
+%dup: intro/requirements
+The kernel provides services to applications (including the shell) through its
+{\em system call interface} (also known as {\em syscalls}).
+For example, under \plan, [[rfork()]] creates a new process in which
+the shell can then [[exec()]] a program (see \book{Kernel}).
+
+\begin{figure}[!tbp]\centering
+\begin{verbatim}
+   filesystem           +---------------+ +-------------------+
+    interface           |               | |                   |  A
+   |-- bin              |     Shell     | |command (e.g., ls) |  P
+   |   |-- cp  +--------+-> stdin       | |      stdin        |  P
+   |   |-- ls  |      +-+---stdout      | |      stdout       |  S
+   |   |-- rc  |      | +---------------+ +-------------------+
+   |   `-- ... |      |------------syscall interface------------
+   |-- boot    |      | +-------------------------------------+
+   |-- dev     |      | |               Kernel                |
+   |   |--  cons <----+ |                                     |  K
+   |   |         < - - +|  device drivers-+                   |  E
+   |   |--  draw        |  |              |                   |  R
+   |   |--  mouse      +|- + >console     |                   |  N
+   |   `--  ...         |  |              |                   |  E
+   |-- env           + -|- + -display     |                   |  L
+   |-- sys              |  |  keyboard- - |                   |
+   `-- ...           |  |  |  mouse - - -|+ - - - - - - +     |
+                        |  |              |                   |
+                     |  |  +-------------++             |     |
+                        +-------------------------------------+
+                     v                   |              |        D
+                + - - - - - - -                                  E
+                               |         v              v        V
+                |   Monitor      + - - - - -      + - - - - -    I
+                               |   keyboard |        mouse   |   C
+                + - - - - - - -  + - - - - -      + - - - - -    E
+                            Terminal                             S
+                           (console)
+\end{verbatim}
+\caption{Components of the command-line user interface under \plan.}
+\label{fig:cui-plan9}
+\end{figure}
+
+A shell needs also device drivers in the kernel handling
+the terminal with its keyboard and monitor.
+%
+To access those devices, the kernel provides a {\em filesystem interface}
+(called a {\em namespace} under \plan).
+%
+An application can [[open()]], [[read()]], [[write()]], or [[close()]]
+\n also seek, actually pread(), pwrite()
+files in this filesystem. Under \unix and \plan, devices are represented
+as files. For example, [[/dev/cons]] (for console) is a file representing
+the terminal. 
+%dup: intro/requirements
+To read characters from the keyboard, an application can simply
+read characters from [[/dev/cons]].
+%
+To write characters on the monitor, an application can simply
+write characters in [[/dev/cons]].
+\l also /dev/draw, see \book{Graphics}
+%
+\t when kernel start, connect first process to /dev/cons and
+\t following process inherits this configuration when fork, including rc.
+
+\t separate program! huge innovation.
+
+\begin{verbatim}
+
+\t stdin stdout regular program
+%plan9:
+\t under \plan kernel run rc (see \book{Kernel} and Section{boot.rc}).
+%unix:
+\t Under \unix run init, then login, then shell in terminal. Even virtual
+\t  terminal in Linux, 
+\t under windowing system like rio also virtual terminals connected
+\t stdin and stdout of process (see \book{Windows}).
+% Figure X presents archi for plan9.
+
+% shell = stuff around a kernel in a coquillage.
+% history: multics.
+% A shell is a bastard. See es paper quote in abstract
+%  that reference unix programmnig environment book
+
+% separate prog from kernel, can change shell!
+%history: originated in Multics (one of the 2 things Thompson liked about
+% Multics, the other being the hierarchical filesystem)
+
+% for a long time actually there was no (external) shell? Shell was
+% part of kernel? With Unix it changed and shell can be a regular user program.
+
+% for interactive use, and for programming. Both uses, 
+% and different features for those 2 things.
+
+% regular program
+% backspace handled by kerne
+% line editing not shell
+% \footnote not libreadline raw mode, completion
+
+
+\end{verbatim}
+
+\subsection{[[rc]]'s components}
+
+%dup: (reverted order if figures) Assembler.nw
+Figure~\ref{fig:dataflow}    describes the main data    flow of [[rc]], whereas
+Figure~\ref{fig:controlflow} describes the main control flow of [[rc]].
+%dup: intro/requirements
+At its core, [[rc]] is both a {compiler} and a {bytecode interpreter}.
+\l like OCaml, Perl, Ruby, etc.
+As shown by Figure~\ref{fig:dataflow}, given a series of characters
+(coming either from what you typed in the terminal or 
+from the content of a script),
+[[rc]] first groups those characters in {tokens} (with [<yylex()>]). Then,
+[[rc]] parses those tokens (with [<yyparse()>]) and 
+builds an {abstract syntax tree} (AST) of the program (see [<Tree>]). Finally,
+\n actually not lexing -> parsing; for efficiency, parser calls lexer
+\n on demand, so it can keep only one token in memory (opti, less important)
+[[rc]] transforms this tree in a series of {bytecodes} (see [<Code>]).
+%
+This is similar to what a compiler such as [[5c]] does (see \book{Compiler}),
+except a bytecode here is not an instruction 
+from a concrete machine but
+from a {\em virtual machine}.
+
+\begin{figure}[!tbp]\centering
+\begin{verbatim}
+Input characters --> tokens --> AST --> bytecodes --> threads --> processes
+\end{verbatim}
+\caption{Data flow diagram of [[rc]].}\label{fig:dataflow}
+\end{figure}
+
+After this compilation, [[rc]] goes through the series of bytecodes and 
+{interprets} them. [[rc]] keeps track of what is currently executing
+in a [<Thread>] data structure and in a queue [<runq>]. This data structure
+is called a ``thread'' because [[rc]] must sometimes manage 
+multiple threads of execution. Indeed,
+some of the bytecodes can create new processes running concurrently
+(e.g., [<Xpipe()>], the bytecode handling pipes).
+\l confusing then process vs thread? not fully clear in my head too
+
+
+\begin{figure}[!tbp]\centering
+\begin{verbatim}
+                             +------------+
+                             |    main    |
+                             +-+----+-----+
+                               |    |
+                  .------------+----v-----------------.
+                 (      bytecod| interpreter loop      ) (interpreting)
+                  `------------+----+-----------------'
+                               |    |
+            +------------------++---+-------------+--------------------+
+            |        +---------+|                 |                    |
+     +------v-----+  |   +------v-----+   +-------v----+        +------v-----+
+     |  Xrdcmds   |  |   |   Xpipe    |   |  Xsimple   |   ...  |    Xif     | bytecodes
+     +-----+------+  |   +--+---------+   +--+-----+---+|       +------------+
+           ||        |      |   |            |     |    |
+           |+--------+---+  |   | +----------v-+   |   +v-----------+
+     +-----+         |   |  |   | |execforkexec|  .|.  |   execcd   | shell builtins
+     |            +--v---v--v--+| +------------+   |   +----------+-+
+     |            |   start    ||        |         |              |
+     v            +------------+|        |         |              |
++---------+                     |        |         |              |
+| yyparse | (parsing)   +-------+-+      |         +----+         |
++----+-+--+             |         |      |              |         |
+     | +-------+        |         |  +---+----+         |         |
++----v--+  +---v-----+  |         |  |        |         |         |
+| yylex |  | compile |  |         |  |        |         |         |
++----+--+  +---------+  |         |  |        |         |         |
+     |     (compiling)  |         |  |        |         |         |
++----v--+               |         |  |        |         |         |
+| nextc |               v         v  v        v         v         v
++-------+        +--------+  +--------+  +--------+  +--------+  +--------+
+                 |  pipe  |  |  fork  |  |  exec  |  |  wait  |  | chdir  |  syscalls
+                 +--------+  +--------+  +--------+  +--------+  +--------+
+
+\end{verbatim}
+\caption{Control flow diagram of [[rc]].}\label{fig:controlflow}
+\end{figure}
+
+%trans:
+In fact, [[rc]] does not start by compiling, but by interpreting. 
+Indeed, [[rc]] starts first by interpreting some special bytecodes,
+called the {\em bootstrap}, that contains a bytecode ([<Xrdcmds()>])
+that then triggers the compiler.
+\n lie a bit, there is call to finit instead (said later)
+%trans: %dup: Assembler.nw
+I will now explain briefly the control flow of [[rc]], starting from 
+the top of Figure~\ref{fig:controlflow}.
+\l and left to right
+
+
+After some basic initializations,
+\n no talk about command-line processing, confusing with command-line user
+[<main()>] sets its local [<bootstrap>] to contain the initial set
+of bytecodes to execute. It then calls [<start()>] with [<bootstrap>]
+as an argument, to start interpreting this series of bytecodes.
+%
+Internally, [<start()>] just modifies the global [<runq>] to point to
+a newly created [<Thread>], and sets the field [<Thread.code>] to 
+the content of [<bootstrap>].
+%
+After [<start()>] returns, [<main()>] goes in a loop that interprets
+the bytecodes in [[runq->code]].
+\n [[runq->code[pc-1].f()]], 
+\l also main set [[runq->argv]]
+
+
+The most important bytecode in [<bootstrap>] is [<Xrdcmds()>],
+\l actually it has a Xsimple "." rcmain and so will run execdot which
+\l  will run Xrdcmds (said later?)
+which reads a command (hence its name) and starts a new [<Thread>].
+%
+[<Xrdcmds()>] first calls the parser [<yyparse()>], which calls
+the lexer [<yylex()>], which calls the input routine [<nextc()>] to
+get the next character.
+\l also yylex print prompt
+%
+By default, [<nextc()>] reads characters from the standard input, and
+so it waits for the characters you type in a terminal.
+\n old: "on the command-line" but better terminal, more precise
+\n or script
+Once you finished to enter a command with a {newline},
+\l can be something else when command on multiple lines because skipnl
+[<yyparse()>] will call [<compile()>] with the tree it built during
+parsing as an argument.
+%
+Internally, [<compile()>] modifies the global [<codebuf>] to store
+the bytecodes deriving from the tree.
+\n via outcode
+Then, after [<yyparse()>] returned, [<Xrdcmds()>] calls
+[<start()>] to start a new thread with [<codebuf>] as a parameter.
+%
+[<start()>] then modifies again the global [<runq>], and when [<Xrdcmds()>]
+returns, the main bytecode interpreter loop will process 
+a new series of bytecodes stored in [[runq.code]].
+
+
+Note that before modifying [<runq>], [<start()>] first links
+the newly created thread with the old thread (through the
+[<Thread.ret>] field). 
+%
+Moreover,[<compile()>] adds the bytecode [<Xreturn()>] at the end of
+\l also called if error after yyparse, 
+\l also exn mechanism?
+the series of bytecodes deriving from your command.
+%
+Thus, after [<main()>] finished interpreting the bytecodes of your command,
+it will process [<Xreturn()>], which will modify [<runq>] to point
+to the old thread, the one containing the bootstrap bytecodes.
+%
+Then, after [<Xreturn()>] returns, the main bytecode interpreter loop
+will process again the bytecodes from the bootstrap, which
+will read another command through [<Xrdcmds()>].
+\n actually Xrdcommands does a [[runq->pc--]] before start, but too specific
+
+
+In [[rc]], the bytecodes are represented by regular C functions
+starting by convention with an [[X]] 
+(e.g., [<Xrdcmds()>], [<Xpipe()>], [<Xif()>]).
+%
+Thus, the bytecode interpreter is mainly a function dispatcher.
+%
+Internally those functions perform {system calls} to the kernel
+to create a pipe ([[pipe()]]), 
+to fork a new process ([[fork()]]),
+to wait for a child process ([[wait()]]),
+or to change directory ([[chdir()]]).
+%
+An important bytecode is [<Xsimple()>], which [[rc]] uses
+to run a ``simple'' command.
+\n basic, or atomic, one not containing a pipe, or redir
+[<Xsimple()>] represents the essence of a shell: with
+the series of system calls [[fork()]], [[exec()]], and [[wait()]],
+[[rc]] can run a command in a new process and wait for
+its termination (or interruption).
+\l link to signal chapter.
+%
+[<Xsimple()>] is also responsible for managing the multiple shell builtins.
+Indeed, if the name of the ``simple'' command is a builtin (e.g., [[cd]]),
+then [<Xsimple()>] dispatches the appropriate function (e.g., [[execcd]])
+\n another dispatch
+instead of forking a new process.
+%By convention, the functions representing builtins start with exec
+\t except execforkexec which is confusing!
+
+\subsection{Trace of a simple command: [[ls /]]}
+
+You can see the bytecodes and the threads created internally by [[rc]] 
+by running [[rc]] with the [[-r]] flag.
+Here is an example of a {trace} of the simple command [[ls /]]:
+
+\begin{verbatim}
+% rc -r
+pid 39 cycle 0002D930 1 Xmark ()
+...
+pid 38 cycle 0001984C 9 Xrdcmds
+% ls /
+pid 38 cycle 0002CBD0 1 Xmark
+pid 38 cycle 0002CBD0 2 Xword ()
+pid 38 cycle 0002CBD0 4 Xword (/)
+pid 38 cycle 0002CBD0 6 Xsimple (ls /)
+bin
+boot
+...
+srv
+pid 38 cycle 0002CBD0 7 Xreturn
+pid 38 cycle 0001984C 9 Xrdcmds
+\end{verbatim}
+
+It is not important to fully understand the format of this trace
+(see Section~\ref{sec:rc-r} for the full explanation and
+for the code handling [[rc -r]]), but you can recognize a few of
+the bytecodes I mentioned before: 
+[<Xrdcmds()>], 
+[<Xsimple()>], and 
+[<Xreturn()>].
+%
+I will explain [<Xmark()>] and [<Xword()>] later in this document.
+
+\begin{verbatim}
+
+% It is interesting to understand the full trace of a simple command
+% through the multiple layers of the software stack.
+% Here is again the trace of the command [[ls /<newline>]] 
+% entered in a terminal:
+
+\t full trace ls\n 
+\begin{enumerate}
+\item After [[rc]] displayed its prompt,
+\t 1 shell read(), sysread, connected to /dev/cons, consread
+\t blocked (see \book{kernel})
+
+\t item l
+
+\t item s space /
+
+\t item newline
+\end{enumerate}
+
+\end{verbatim}
+
+%\subsection{Trace of a pipe}
+% later
+%\subsection{Trace of a redirection}
+% later
+
+
 \section{Book structure}
+
+%trans: %dup: Assembler.nw
+You now have enough background to understand the source code of [[rc]].
+%toc:
+The rest of the book is organized as follows.
+%
+I will start by describing the core data structures of [[rc]]
+in Chapter~\ref{chap:core-ds}. 
+%
+Then, I will use a top-down approach, starting with Chapter~\ref{chap:main}
+with the description of [<main()>], 
+the initialization of [[rc]],
+the bytecode interpreter loop, and 
+the function [<Xrdcmds()>].
+%
+The following chapters will describe the main components of the compiler pipeline:
+Chapter~\ref{chap:input} will present the input routines,
+Chapter~\ref{chap:lexing} the lexer,
+Chapter~\ref{chap:parsing} the parser, and finally
+Chapter~\ref{chap:compile-interpret} the bytecode generator and bytecode
+interpreter for the main features of [[rc]].
+%
+In Chapter~\ref{chap:builtins}, I will present the code of the different
+shell builtins (e.g., [<execcd()>] for [[cd]]).
+%
+Chapter~\ref{chap:environment} contains the code to manage the environment
+of the processes launched from the shell, and
+Chapter~\ref{chap:signals} the code to manage the signals sent to
+the processes (also known as {\em notes} under \plan).
+%
+Chapter~\ref{chap:initialization-real} presents the actual code
+initializing [[rc]]. Indeed, Chapter~\ref{chap:main} presents
+only a simplified initialization to not introduce too much
+complexity early-on.
+%dup: Assembler.nw
+Then, I will present advanced features of [[rc]] that I did not present 
+before to simplify the explanations, for instance,
+wildcard matching (e.g., [[ls *.c]]) in Chapter~\ref{chap:globbing},
+or command substitutions (e.g., \verb+`{ls}+) in Chapter~\ref{chap:advanced-topics}.
+%dup: Assembler.nw
+Those advanced features tend to crosscut
+many components of [[rc]] with extensions to the lexer, the parser,
+the bytecode generator, and the bytecode interpreter.
+%
+Finally, Chapter~\ref{chap:conclusion} concludes
+and gives pointers to other books in the \principia series.
+
+%toc:
+Some appendices present the code of non-functional properties:
+code to help debug [[rc]] itself in Appendix~\ref{chap:debugging-appendix} and
+code to manage errors in Appendix~\ref{chap:error}.
+%
+Appendix~\ref{chap:utilities} contains the code of
+utility functions used by [[rc]] but that are not specific to [[rc]]
+(e.g., a library to manage string buffers).
+%
+Finally, Appendix~\ref{chap:examples} presents examples of [[rc]] scripts.
 
 
 
@@ -653,6 +1136,7 @@ waitstatus = NothingToWaitfor;
 %******************************************************************************
 \chapter{[[main()]]}
 %******************************************************************************
+\label{chap:main}
 
 
 \section{Overview}
@@ -1000,6 +1484,7 @@ else failwith s
 %******************************************************************************
 \chapter{Lexing}
 %******************************************************************************
+\label{chap:lexing}
 
 % Seen tokens before in core DS.
 
@@ -1136,6 +1621,7 @@ let idchr = ['a'-'z''A'-'Z''0'-'9''_''*']
 
 \section{Newlines and prompts}
 \label{sec:newlines-and-prompts}
+\label{sec:display-prompt}
 
 <<[[Lexer.token()]] space cases>>=
 | '\n'       { incr_lineno(); Prompt.doprompt := true; TNewline }
@@ -1216,6 +1702,7 @@ end;
     token lexbuf
 }    
 @
+\label{sec:escaping-newline}
 
 <<[[Prompt.pprompt()]] adjust [[prompt]] for next time>>=
 (* set promptstr for the next pprompt() *)
@@ -1333,6 +1820,7 @@ Globals.skipnl := false;
 
 
 \section{Quoted strings ([['...']])}
+\label{sec:quoting}
 
 <<[[Lexer.token()]] quoted word cases>>=
 | "'" { let s = quote lexbuf in TWord (s, true) }
@@ -1391,6 +1879,7 @@ let wordchr = [^'\n' ' ' '\t' '#'
 %******************************************************************************
 \chapter{Parsing}
 %******************************************************************************
+\label{chap:parsing}
 
 \section{[[parse_line()]] skeleton}
 
@@ -1925,6 +2414,7 @@ assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 %******************************************************************************
 \chapter{Bytecode Generation and Interpretation}
 %******************************************************************************
+\label{chap:compile-interpret}
 
 
 \section{Overview}
@@ -2464,6 +2954,7 @@ let waitfor pid =
 
 
 \subsection{[[$path]] management}
+\label{sec:path-management}
 
 <<signature [[PATH.find_in_path]]>>=
 val find_in_path :
@@ -3234,6 +3725,7 @@ let rec split_at_non_assign = function
 @
 
 \subsection{Special variables} %$
+\label{sec:special-variables}
 
 <<function [[Interpreter.vlook_varname_or_index]]>>=
 let vlook_varname_or_index varname =
@@ -3259,6 +3751,7 @@ let vlook_varname_or_index varname =
 %******************************************************************************
 \chapter{Builtins}
 %******************************************************************************
+\label{chap:builtins}
 
 \section{Overview}
 
@@ -3464,6 +3957,8 @@ argv |> Array.iter (fun s ->
 %******************************************************************************
 \chapter{Environment}
 %******************************************************************************
+\label{chap:environment}
+
 % worth a chapter?
 
 \section{[[Updenv()]]}
@@ -3476,6 +3971,7 @@ argv |> Array.iter (fun s ->
 %******************************************************************************
 \chapter{Signals}
 %******************************************************************************
+\label{chap:signals}
 
 
 
@@ -3483,6 +3979,7 @@ argv |> Array.iter (fun s ->
 %******************************************************************************
 \chapter{Initialization}
 %******************************************************************************
+\label{chap:initialization-real}
 
 
 
@@ -3538,6 +4035,7 @@ let rcmain = ref "/rc/lib/rcmain"
 %******************************************************************************
 \chapter{Globbing}
 %******************************************************************************
+\label{chap:globbing}
 
 <<[[Opcode.operation]] other cases>>=
 (* Globbing *)
@@ -3569,6 +4067,7 @@ let rcmain = ref "/rc/lib/rcmain"
 %******************************************************************************
 \chapter{Debugging for the [[rc]] User}
 %******************************************************************************
+\label{chap:debugging}
 
 \section{Printing commands: [[rc -x]]}
 
@@ -3684,6 +4183,8 @@ let strict_mode = ref false
 %******************************************************************************
 \chapter{Advanced Features}
 %******************************************************************************
+\label{chap:advanced-topics}
+
 %alt: Advanced Topics
 
 %\section{Shell-like features implemented outside [[rc]]}
@@ -3692,6 +4193,7 @@ let strict_mode = ref false
 
 
 \section{Reading commands from a string: [[rc -c]]}
+\label{sec:rc-c}
 
 \section{Unicode}
 
@@ -3839,6 +4341,7 @@ let strict_mode = ref false
 \subsection{Read-write redirections: [[<> <file>]]}
 
 \subsection{General redirections: [[>[2] <file>]]}
+\label{sec:advanced-redirection}
 
 <<[[Lexer.token()]] symbol cases>>=
 | ">[" (['0'-'9']+ (*as fd0*)) "=" (['0'-'9']+ (*as fd1*)) "]" 
@@ -3955,6 +4458,7 @@ let strict_mode = ref false
 %******************************************************************************
 \chapter{Debugging for the [[mk]] Developer}
 %******************************************************************************
+\label{chap:debugging-appendix}
 
 \section{Exception backtraces}
 %TODO: disable by default!
@@ -4100,6 +4604,7 @@ let s_of_codevec x =
 
 
 \section{Bytecode generator trace: [[rc -r]]}
+\label{sec:rc-r}
 
 <<constant [[Flags.rflag]]>>=
 (* -r, similar to dump_opcodes, but at each step *)
@@ -4189,13 +4694,16 @@ let do_action caps s xs =
 
 
 %\chapter{Error Management}
+%\label{chap:error}
 
 
 %******************************************************************************
 \chapter{Examples of [[rc]] scripts}
 %******************************************************************************
+\label{chap:examples}
 
 \section{[[/rc/lib/rcmain]]}
+\label{sec:rcmain}
 
 
 \section{[[/home/pad/lib/profile]]}

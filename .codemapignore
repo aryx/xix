@@ -14,6 +14,9 @@ orig/
 #formats/
 #mk/
 
+VCS_dulwich.nw
+
 #TODO: bug in Gitignore.ml, .gitignore skip *.nwcache so should
 # ignore this file too but I had to explicitely add it here
 .Mk.nwcache
+.Rc.nwcache

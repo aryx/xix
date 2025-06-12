@@ -98,12 +98,12 @@ type operation =
   | REPL (* *)
 (*e: type [[Opcode.operation]] *)
 (*s: type [[Opcode.opcode]] *)
-type opcode =
+type t =
   | F of operation
   | I of int
   | S of string
 (*e: type [[Opcode.opcode]] *)
 (*s: type [[Opcode.codevec]] *)
-type codevec = opcode array
+type codevec = t array
 (*e: type [[Opcode.codevec]] *)
 (*e: shell/Opcode.ml *)

@@ -719,11 +719,11 @@ val compile : Ast.cmd_sequence -> Opcode.codevec
 @
 
 <<type [[Opcode.codevec]]>>=
-type codevec = opcode array
+type codevec = t array
 @
 
 <<type [[Opcode.opcode]]>>=
-type opcode =
+type t =
   | F of operation
   | I of int
   | S of string
@@ -1286,7 +1286,7 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
 % essentially this one below
 
 <<constant [[CLI._bootstrap_simple]]>>=
-let _bootstrap_simple : O.opcode array = 
+let _bootstrap_simple : O.codevec = 
   [| O.F O.REPL |]
 @
 
@@ -3977,7 +3977,7 @@ argv |> Array.iter (fun s ->
  * Boostrap is now a function because it uses a flag that can be
  * modified after startup.
  *)
-let bootstrap () : O.opcode array = 
+let bootstrap () : O.codevec = 
   [| 
       O.F O.Mark;
         O.F O.Word;
@@ -4557,7 +4557,7 @@ let s_of_cmd x =
 
 
 <<signature [[Dumper_.s_of_opcode]]>>=
-val s_of_opcode : Opcode.opcode -> string
+val s_of_opcode : Opcode.t -> string
 @
 <<function [[Dumper_.s_of_opcode]]>>=
 let s_of_opcode x =

@@ -97,7 +97,7 @@ let do_action caps s xs =
 (*****************************************************************************)
 
 (*s: constant [[CLI._bootstrap_simple]] *)
-let _bootstrap_simple : O.opcode array = 
+let _bootstrap_simple : O.codevec = 
   [| O.F O.REPL |]
 (*e: constant [[CLI._bootstrap_simple]] *)
 (*s: function [[CLI.bootstrap]] *)
@@ -106,7 +106,7 @@ let _bootstrap_simple : O.opcode array =
  * Boostrap is now a function because it uses a flag that can be
  * modified after startup.
  *)
-let bootstrap () : O.opcode array = 
+let bootstrap () : O.codevec = 
   [| 
       O.F O.Mark;
         O.F O.Word;

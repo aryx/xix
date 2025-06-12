@@ -3,7 +3,7 @@
 val s_of_cmd : Ast.cmd -> string
 (*e: signature [[Dumper_.s_of_cmd]] *)
 (*s: signature [[Dumper_.s_of_opcode]] *)
-val s_of_opcode : Opcode.opcode -> string
+val s_of_opcode : Opcode.t -> string
 (*e: signature [[Dumper_.s_of_opcode]] *)
 
 (* extra *)

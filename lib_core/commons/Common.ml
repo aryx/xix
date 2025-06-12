@@ -1,5 +1,4 @@
-(* Copyright 2015, 2016, 2017 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
+(* Copyright 2015, 2016, 2017, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -9,13 +8,13 @@ open Stdcompat (* for |> *)
 (* Core types *)
 (*****************************************************************************)
 
-type byte = char
-
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
 (* type bytes = string *)
 
+type byte = char
+
+
 type filename = string
-type dirname = string
 
 exception Todo
 exception Impossible of string
@@ -39,7 +38,7 @@ let (<=>) a b =
     else Sup
 
 (*****************************************************************************)
-(* Misc *)
+(* Option *)
 (*****************************************************************************)
 
 (* not sure why but can't use let (?:) a b = ... then at use time ocaml yells*)
@@ -47,6 +46,17 @@ let ( ||| ) a b =
   match a with
   | Some x -> x
   | None -> b
+
+(* TODO: let* once ocaml-light supports it *)
+
+(*****************************************************************************)
+(* Result *)
+(*****************************************************************************)
+(* TODO: let/ once ocaml-light supports it *)
+
+(*****************************************************************************)
+(* Misc *)
+(*****************************************************************************)
 
 (* let (|>) o f = f o
    builtin since OCaml 4.01 (builtin and optimized) 
@@ -59,15 +69,6 @@ let rec rnd x v =
   then x
   else rnd (x+1) v
 
-let rec filter_some = function
-  | [] -> []
-  | None :: l -> filter_some l
-  | Some e :: l -> e :: filter_some l
-
-let optionize f =
-  try Some (f ()) with Not_found -> None
-
-
 let memoized h k f =
     try Hashtbl.find h k
     with Not_found ->
@@ -76,7 +77,6 @@ let memoized h k f =
         Hashtbl.add h k v;
         v
       end
-
 
 (* tail recursive efficient version *)
 let cat file =
@@ -155,18 +155,6 @@ let push a aref =
   aref := a::!aref
 
 module Stack_ = struct
-
-(* not in ocaml 1.07 but came later 
-let top s =  
-  match s.c with
-  | [] -> raise Empty
-  | x::xs -> x
-*)
-
-let top_opt s =
-  try 
-    Some (Stack.top s)
-  with Stack.Empty -> None
 
 (* If have access to internal implementation of a stack:
 let nth i s =

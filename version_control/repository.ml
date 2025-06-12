@@ -19,8 +19,8 @@ open Common
 
 (*s: type [[Repository.t]] *)
 type t = {
-  worktree: Common.dirname;
-  dotgit: Common.dirname; (* usually <worktree>/.git *)
+  worktree: Common.filename;
+  dotgit: Common.filename; (* usually <worktree>/.git *)
 
   (*s: [[Repository.t]] index field *)
   mutable index: Index.t;

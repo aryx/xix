@@ -2,8 +2,8 @@
 
 (*s: type [[Repository.t]] *)
 type t = {
-  worktree: Common.dirname;
-  dotgit: Common.dirname; (* usually <worktree>/.git *)
+  worktree: Common.filename;
+  dotgit: Common.filename; (* usually <worktree>/.git *)
 
   (*s: [[Repository.t]] index field *)
   mutable index: Index.t;
@@ -27,10 +27,10 @@ type objectish =
 
 (* repo *)
 (*s: signature [[Repository.init]] *)
-val init: Common.dirname -> unit
+val init: Common.filename -> unit
 (*e: signature [[Repository.init]] *)
 (*s: signature [[Repository.open_]] *)
-val open_: Common.dirname -> t
+val open_: Common.filename -> t
 (*e: signature [[Repository.open_]] *)
 (*s: signature [[Repository.find_dotgit_root_and_open]] *)
 val find_root_open_and_adjust_paths: 
@@ -116,7 +116,7 @@ val set_worktree_and_index_to_tree:
 (* misc *)
 (*s: signature [[Repository.walk_dir]] *)
 val walk_dir: 
-  (Common.dirname -> Common.dirname list -> Common.filename list -> unit) ->
+  (Common.filename -> Common.filename list -> Common.filename list -> unit) ->
   Common.filename ->
   unit
 (*e: signature [[Repository.walk_dir]] *)

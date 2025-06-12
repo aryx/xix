@@ -1,4 +1,3 @@
-
 (*****************************************************************************)
 (* Core types and exceptions *)
 (*****************************************************************************)
@@ -8,7 +7,6 @@ type byte = char
 
 (* TODO: delete, use Fpath.t *)
 type filename = string
-type dirname = string
 
 exception Todo
 exception Impossible of string
@@ -36,9 +34,6 @@ val ( ||| ) : 'a option -> 'a -> 'a
 val spf : ('a, unit, string) format -> 'a
 
 val rnd : int -> int -> int
-
-val filter_some : 'a option list -> 'a list
-val optionize: (unit -> 'a) -> 'a option
 
 val memoized :
   ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
@@ -82,9 +77,9 @@ module List_ :
   end
 
 val push : 'a -> 'a list ref -> unit
+
 module Stack_ :
   sig
-    val top_opt: 'a Stack.t -> 'a option
     val nth: int -> 'a Stack.t -> 'a
   end
 

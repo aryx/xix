@@ -13,7 +13,7 @@ let op_REPL (caps : < Cap.exit; ..>) () =
   then Logs.app (fun m -> m "status=%s" (Status.getstatus ()));
   (*e: [[Op_repl.op_REPL()]] if [[sflag]] *)
   (*s: [[Op_repl.op_REPL()]] set [[prompt]] if [[iflag]] *)
-  (* set prompstr *)
+  (* set promptstr *)
   if t.R.iflag then begin
     let promptv = (Var.vlook "prompt").R.v in
     Prompt.prompt := 

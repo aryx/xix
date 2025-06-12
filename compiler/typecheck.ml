@@ -1035,7 +1035,7 @@ let check_and_annotate_program ast =
       (* add params in environment before process st *)
       let (tret, (tparams, _dots)) = ftyp in
       tparams |> List.iter (fun p ->
-        p.p_name |> Common.if_some (fun fullname ->
+        p.p_name |> Option.iter (fun fullname ->
           let t = type_ env p.p_type in
           (match t with
           (* stricter: 5c and clang says nothing, could convert in pointer *) 

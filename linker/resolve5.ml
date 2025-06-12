@@ -53,7 +53,7 @@ let build_graph symbols xs =
         in
         (match inst with
         | B opd | BL opd | Bxx (_, opd) -> 
-            resolve_branch_operand opd |> Common.if_some (fun virt_pc ->
+            resolve_branch_operand opd |> Option.iter (fun virt_pc ->
               if virt_pc < len
               then n.T5.branch <- Some nodes.(virt_pc)
               else failwith (spf "branch out of range %d at %s" virt_pc

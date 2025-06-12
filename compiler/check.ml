@@ -82,7 +82,7 @@ let check_inconsistent_or_redefined_tag env fullname tagkind loc =
     if tagkind <> oldtagkind
     then inconsistent_tag fullname loc usedef;
     (* the tag may not have be defined, as in a previous 'struct Foo x;' *)
-    usedef.defined |> Common.if_some (fun locdef ->
+    usedef.defined |> Option.iter (fun locdef ->
       error (Inconsistent (spf "redefinition of '%s'" (unwrap fullname), loc,
                      "previous definition is here", locdef))
     );
@@ -177,7 +177,7 @@ let check_usedef program =
       csts |> List.iter 
           (fun { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
             check_inconsistent_or_redefined_id env fullname IdEnumConstant loc;
-            eopt |> Common.if_some (expr env)
+            eopt |> Option.iter (expr env)
           );
 
     | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
@@ -201,7 +201,7 @@ let check_usedef program =
       let env = { env with local_ids = []; labels = Hashtbl.create 11 } in
       let (_tret, (tparams, _dots)) = ftyp in
       tparams |> List.iter (fun { p_name = fullnameopt; p_loc=loc; _} ->
-        fullnameopt |> Common.if_some (fun fullname ->
+        fullnameopt |> Option.iter (fun fullname ->
           check_inconsistent_or_redefined_id env fullname IdIdent loc;
           env.local_ids <- fullname :: env.local_ids;
         );
@@ -239,7 +239,7 @@ let check_usedef program =
        else check_inconsistent_or_redefined_id env fullname IdIdent loc
       );
       type_ env t;
-      eopt |> Common.if_some (expr env)
+      eopt |> Option.iter (expr env)
 
   and stmt env st0 =
     match st0.s with
@@ -266,19 +266,19 @@ let check_usedef program =
         (* new block scope again *)
         let env = { env with local_ids = [] } in
         (match e1either with
-        | Left e1opt -> e1opt |> Common.if_some (expr env)
+        | Left e1opt -> e1opt |> Option.iter (expr env)
         | Right decls ->
             decls |> List.iter (fun decl -> 
               stmt env ({s = Var decl; s_loc = decl.v_loc }) 
             )
         );
-        e2opt |> Common.if_some (expr env);
-        e3opt |> Common.if_some (expr env);
+        e2opt |> Option.iter (expr env);
+        e3opt |> Option.iter (expr env);
         stmt env st;
         (* check block scope *)
         check_unused_locals env
 
-    | Return eopt -> eopt |> Common.if_some (expr env)
+    | Return eopt -> eopt |> Option.iter (expr env)
     (* todo: check that inside something that be continue/break *)
     | Continue | Break -> ()
 
@@ -286,7 +286,7 @@ let check_usedef program =
     | Label (name, st) ->
         (try
            let usedef = Hashtbl.find env.labels name in
-           usedef.defined |> Common.if_some (fun locprev ->
+           usedef.defined |> Option.iter (fun locprev ->
              error (Inconsistent (spf "redefinition of label '%s'" name, 
                                   st0.s_loc,
                                   "previous definition is here", locprev))
@@ -308,7 +308,7 @@ let check_usedef program =
 
     | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; _ } ->
       (* less: before adding in environment? can have recursive use? *)
-      eopt |> Common.if_some (expr env);
+      eopt |> Option.iter (expr env);
     (* todo: if local VarDEcl, can actually have stuff nested like
      *  extern int i;  in which case we must go back to global
      *  scope for i! so rewrite AST? or just in typecheck.ml
@@ -349,7 +349,7 @@ let check_usedef program =
         )
     | ArrayInit xs -> 
       xs |> List.iter (fun (eopt, e) -> 
-        eopt |> Common.if_some (expr env);
+        eopt |> Option.iter (expr env);
         expr env e
       )
     | RecordInit xs -> xs |> List.iter (fun (_, e) -> expr env e)
@@ -361,7 +361,7 @@ let check_usedef program =
     | TBase _ -> ()
     | TPointer t -> type_ env t
     | TArray (eopt, t) -> 
-      eopt |> Common.if_some (expr env);
+      eopt |> Option.iter (expr env);
       type_ env t;
     | TFunction (tret, (params, _dots)) ->
       type_ env tret;

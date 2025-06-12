@@ -33,17 +33,17 @@ let rewrite cg =
         let env = 
           match instr with
           | BL _ -> 
-              curtext |> Common.if_some (fun p -> Hashtbl.remove is_leaf p);
+              curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
           (* remove the NOP *)
           | NOP ->
-              prev_no_nop |> Common.if_some (fun prev ->
+              prev_no_nop |> Option.iter (fun prev ->
                 prev.T5.next <- n.T5.next;
               );
               (curtext, prev_no_nop)
           | _ -> (curtext, Some n)
         in
-        n.T5.branch |> Common.if_some (fun n2 ->
+        n.T5.branch |> Option.iter (fun n2 ->
           match n2.T5.instr with
           | T5.I (NOP, _) -> n.T5.branch <- find_first_no_nop_node n2.T5.next 
           | _ -> ()
@@ -66,7 +66,7 @@ let rewrite cg =
           then None
           else Some (size + 4)
         in
-        autosize_opt |> Common.if_some (fun autosize ->
+        autosize_opt |> Option.iter (fun autosize ->
           (* for layout text we need to set the final autosize *)
           n.T5.instr <- T5.TEXT (global, attrs, autosize);
           (* MOVW.W R14, -autosize(SP) *)

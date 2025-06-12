@@ -59,11 +59,6 @@ let rec rnd x v =
   then x
   else rnd (x+1) v
 
-(* old: used to be called do_option, or just opt *)
-let if_some f = function
-  | None -> ()
-  | Some x -> f x
-
 let rec filter_some = function
   | [] -> []
   | None :: l -> filter_some l

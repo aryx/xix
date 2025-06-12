@@ -97,7 +97,7 @@ let find_top_common_commits src dst =
   let walker = mk_graph_walker dst in
 
   let rec loop_while_sha commit_sha_opt =
-    commit_sha_opt |> Common.if_some (fun commit_sha ->
+    commit_sha_opt |> Option.iter (fun commit_sha ->
       if Repository.has_obj src commit_sha
       then begin
         Hashtbl.add top_commons commit_sha true;

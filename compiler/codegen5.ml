@@ -851,7 +851,7 @@ let codegen (ids, structs, funcs) =
     let offset = ref 0 in
     xs |> List.iter (fun (p, t) ->
       let sizet = env.arch.Arch.width_of_type {Arch.structs = env.structs} t in
-      p.p_name |> Common.if_some (fun fullname ->
+      p.p_name |> Option.iter (fun fullname ->
         Hashtbl.add offsets fullname !offset
       );
       (* todo: align *)

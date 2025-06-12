@@ -64,8 +64,8 @@ let s_of_global x =
 
 let rec iter f n =
   f n;
-  n.next |> Common.if_some (fun n -> iter f n)
+  n.next |> Option.iter (fun n -> iter f n)
 
 let rec iter_with_env f env n =
   let env = f env n in
-  n.next |> Common.if_some (fun n -> iter_with_env f env n)
+  n.next |> Option.iter (fun n -> iter_with_env f env n)

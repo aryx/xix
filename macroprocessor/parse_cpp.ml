@@ -165,7 +165,7 @@ let parse hooks (defs, paths) file =
         (match categ with
         | Eof -> 
             stack := xs;
-            chanopt |> Common.if_some (fun chan ->
+            chanopt |> Option.iter (fun chan ->
               close_in chan;
               L.add_event L.Eof;
             );

@@ -37,7 +37,6 @@ val spf : ('a, unit, string) format -> 'a
 
 val rnd : int -> int -> int
 
-val if_some : ('a -> unit) -> 'a option -> unit
 val filter_some : 'a option list -> 'a list
 val optionize: (unit -> 'a) -> 'a option
 

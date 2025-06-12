@@ -121,7 +121,7 @@ let layout_text symbols2 init_text cg =
       | _ -> failwith (spf "zero-width instruction at %s" 
                          (T5.s_of_loc n.T5.loc))
       );
-    poolopt |> Common.if_some (fun pool ->
+    poolopt |> Option.iter (fun pool ->
       match pool with
       | Codegen5.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
       | Codegen5.PoolOperand imm_or_ximm ->
@@ -159,7 +159,7 @@ let layout_text symbols2 init_text cg =
     cg |> T5.iter (fun n ->
       Logs.app (fun m -> m  "%d: %s" n.T5.real_pc
              (n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
-      n.T5.branch |> Common.if_some (fun n -> 
+      n.T5.branch |> Option.iter (fun n -> 
         Logs.app (fun m -> m " -> branch: %d" n.T5.real_pc)
       )
     );

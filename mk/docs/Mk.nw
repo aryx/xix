@@ -1786,7 +1786,7 @@ let warning (loc : Ast.loc) (s : string) : unit =
 
 <<signature [[Eval.eval_words]]>>=
 val eval_words : < Shell.caps; .. > -> Ast.loc -> Env.t ->
-  Ast.words -> (string list, Percent.pattern list) Common.either
+  Ast.words -> (string list, Percent.pattern list) Either.t
 @
 
 <<[[Env.t]] fields>>=
@@ -1901,7 +1901,7 @@ then targets_ref := targets;
 
 <<function [[Eval.eval_words]]>>=
 let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
-         (string list, Percent.pattern list) Common.either =
+         (string list, Percent.pattern list) Either.t =
   
   let res = words |> List.map (eval_word caps loc env) in
   <<[[Eval.eval_words()]] nested function [[contain_percent]]>>
@@ -1939,7 +1939,7 @@ in
  *  - less: the returned pattern must contain at least a PPercent
  *)
 let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
-          (string list, Percent.pattern) Common.either =
+          (string list, Percent.pattern) Either.t =
   let (Ast.W word) = wd in
   let rec aux acc word_elements =
     match word_elements with

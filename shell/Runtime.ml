@@ -1,6 +1,5 @@
 (*s: shell/Runtime.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 
 (*****************************************************************************)
 (* Prelude *)

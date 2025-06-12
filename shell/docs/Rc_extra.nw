@@ -117,7 +117,6 @@ module O = Opcode
 %-------------------------------------------------------------
 
 <<shell/Compile.ml>>=
-open Stdcompat (* for |> *)
 open Common
 
 module A = Ast
@@ -275,7 +274,6 @@ let eflagok = ref false
 %-------------------------------------------------------------
 
 <<shell/Interpreter.ml>>=
-open Stdcompat (* for |> *)
 open Common
 
 module O = Opcode
@@ -517,7 +515,6 @@ module Ocaml = OCaml
 %-------------------------------------------------------------
 
 <<shell/Op_process.ml>>=
-open Stdcompat (* for |> *)
 
 module R = Runtime
 module E = Error
@@ -591,7 +588,6 @@ module R = Runtime
 
 <<shell/Parse.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 
 module R = Runtime
@@ -628,7 +624,6 @@ let match_str s1 s2 =
 %-------------------------------------------------------------
 
 <<shell/Process.ml>>=
-open Stdcompat (* for |> *)
 open Common
 
 module R = Runtime
@@ -664,7 +659,6 @@ module R = Runtime
 
 <<shell/Runtime.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 
 (*****************************************************************************)
 (* Prelude *)

@@ -1,6 +1,5 @@
 (*s: mk/Scheduler.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 
 module J = Job

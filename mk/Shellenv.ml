@@ -1,6 +1,5 @@
 (*s: mk/Shellenv.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 
 (*s: type [[Shellenv.t]] *)

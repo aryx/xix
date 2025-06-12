@@ -1,6 +1,5 @@
 (*s: mk/Shell.ml *)
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 open Fpath_.Operators
 

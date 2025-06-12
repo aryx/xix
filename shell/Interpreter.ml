@@ -1,5 +1,4 @@
 (*s: shell/Interpreter.ml *)
-open Stdcompat (* for |> *)
 open Common
 
 module O = Opcode

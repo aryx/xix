@@ -1,5 +1,4 @@
 (*s: shell/Op_process.ml *)
-open Stdcompat (* for |> *)
 
 module R = Runtime
 module E = Error

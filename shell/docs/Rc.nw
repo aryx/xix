@@ -348,31 +348,31 @@ The most important opcode in [<bootstrap()>] is [<Opcode.operation.REPL>],
 \l  will run Xrdcmds (said later?)
 which reads and evaluates a command (hence its name) and starts a new [<thread>].
 %
-[<op_REPL()>] first calls the parser [<parse_line()>], which calls
+[<O.REPL()>] first calls the parser [<parse_line()>], which calls
 the lexer [<Lexer.token()>] to get the next token.
 \l also print prompt
 %
 By default, [<parse_line()>] will read characters from a [[lexbuf]] data structure
 attached to the current thread (in [<Runtime.thread.lexbuf>]). This [[lexbuf]] is
 set initially to be the standard input in [<interpret_bootstrap()>] but this can
-be changed if [<op_REPL()>] is asked at some point to parse a script instead.
+be changed if [<O.REPL()>] is asked at some point to parse a script instead.
 %
 Once you finished to enter a command with a {newline}, [<parse_line()>] will return
 \l can be something else when command on multiple lines because skipnl
-and [<op_REPL()>] will call [<compile()>] with the AST it built during
+and [<O.REPL()>] will call [<compile()>] with the AST it built during
 parsing as an argument.
 %
 [<compile()>] then returns the opcodes deriving from the tree.
 \n via outcode
-Then, [<op_REPL()>] calls
+Then, [<O.REPL()>] calls
 [<Runtime.mk_thread()>] to start a new thread with the returned opcodes as a parameter.
 %
-[<op_REPL()>] then modifies again the global [<runq>], and when [<op_REPL()>]
+[<O.REPL()>] then modifies again the global [<runq>], and when [<O.REPL()>]
 returns, the main bytecode interpreter loop will process 
 a new series of opcodes stored in [[runq.code]].
 
 
-Note that [<op_REPL>] modifies [<runq>] by adding new threads
+Note that [<O.REPL()>] modifies [<runq>] by adding new threads
 but keep the old threads in the queue still.
 %
 Moreover, [<compile()>] adds the opcode [<Opcode.operation.Return>] at the end of
@@ -386,7 +386,7 @@ to the old thread, the one containing the bootstrap opcodes.
 %
 Then, after [<O.Return()>] returns, the main bytecode interpreter loop
 will process again the opcodes from the bootstrap, which
-will read another command through [<op_REPL()>].
+will read another command through [<O.REPL()>].
 \n actually Xrdcommands does a [[runq->pc--]] before start, but too specific
 
 
@@ -402,18 +402,18 @@ to wait for a child process ([[wait()]]),
 or to change directory ([[chdir()]]).
 %
 An important opcode is [<Opcode.operation.Simple>], which is interpreted
-by the function [<op_Simple()>], which [[rc]] uses
+by the function [<O.Simple()>], which [[rc]] uses
 to run a ``simple'' command.
 \n basic, or atomic, one not containing a pipe, or redir
-[<op_Simple()>] represents the essence of a shell: with
+[<O.Simple()>] represents the essence of a shell: with
 the series of system calls [[fork()]], [[exec()]], and [[wait()]],
 [[rc]] can run a command in a new process and wait for
 its termination (or interruption).
 \l link to signal chapter.
 %
-[<op_Simple()>] is also responsible for managing the multiple shell builtins.
+[<O.Simple()>] is also responsible for managing the multiple shell builtins.
 Indeed, if the name of the ``simple'' command is a builtin (e.g., [[cd]]),
-then [<op_Simple()>] calls [<Builtin.dispatch()>] which dispatches the appropriate function (e.g., [<dochdir()>])
+then [<O.Simple()>] calls [<Builtin.dispatch()>] which dispatches the appropriate function (e.g., [<dochdir()>])
 \n another dispatch
 instead of forking a new process.
 %By convention, the functions representing builtins start with exec
@@ -495,7 +495,7 @@ Then, I will use a top-down approach, starting with Chapter~\ref{chap:main}
 with the description of [<main()>], 
 the initialization of [[rc]],
 the bytecode interpreter loop, and 
-the function [<op_REPL()>].
+the function [<O.REPL()>].
 %
 The following chapters will describe the main components of the compiler pipeline:
 Chapter~\ref{chap:lexing} will present the lexer,

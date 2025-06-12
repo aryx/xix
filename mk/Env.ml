@@ -25,9 +25,9 @@ type t = {
   internal_vars: (string, values) Hashtbl.t;
   (*x: [[Env.t]] fields *)
   (* those vars can not be overriden by the mkfile *)
-  vars_commandline: (string, bool) Hashtbl.t;
+  vars_commandline: string Hashtbl_.set;
   (*x: [[Env.t]] fields *)
-  vars_we_set: (string, bool) Hashtbl.t;
+  vars_we_set: string Hashtbl_.set;
   (*e: [[Env.t]] fields *)
 }
 (*e: type [[Env.t]] *)

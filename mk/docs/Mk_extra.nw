@@ -697,6 +697,7 @@ open Fpath_.Operators
 %-------------------------------------------------------------
 
 <<Env.mli>>=
+open Common
 <<type [[Env.values]]>>
 
 <<type [[Env.t]]>>

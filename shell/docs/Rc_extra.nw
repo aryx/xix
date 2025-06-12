@@ -189,6 +189,7 @@ module R = Runtime
 %-------------------------------------------------------------
 
 <<shell/Flags.ml>>=
+open Common
 
 <<constant [[Flags.interactive]]>>
 <<constant [[Flags.login]]>>

@@ -1,4 +1,5 @@
 (*s: shell/Flags.ml *)
+open Common
 
 (*s: constant [[Flags.interactive]] *)
 (* -i (on by default when detects that stdin is /dev/cons *)
@@ -29,7 +30,7 @@ let xflag = ref false
 (* less: let cflag = ref "" *)
 
 (*s: global [[Flags.hflags]] *)
-let hflags: (char, bool) Hashtbl.t = Hashtbl.create 10
+let hflags: char Hashtbl_.set = Hashtbl.create 10
 (*e: global [[Flags.hflags]] *)
 
 (*s: constant [[Flags.rcmain]] *)

@@ -1,4 +1,5 @@
 (*s: version_control/commit.mli *)
+open Common
 
 (*s: type [[Commit.t]] *)
 type t = {
@@ -35,8 +36,8 @@ val show: t -> unit
 
 (*s: signature [[Commit.collect_ancestors]] *)
 val collect_ancestors: 
-  (hash -> t) ->  hash list -> (hash, bool) Hashtbl.t -> 
-  (hash, bool) Hashtbl.t
+  (hash -> t) ->  hash list -> hash Hashtbl_.set -> 
+  hash Hashtbl_.set
 (*e: signature [[Commit.collect_ancestors]] *)
 
 (*s: signature [[Commit.walk_history]] *)

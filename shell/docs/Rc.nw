@@ -3885,7 +3885,7 @@ let dotcmds =
 % put earlier? used heavily in rcmain
 
 <<global [[Flags.hflags]]>>=
-let hflags: (char, bool) Hashtbl.t = Hashtbl.create 10
+let hflags: char Hashtbl_.set = Hashtbl.create 10
 @
 
 <<[[CLI.main()]] other initializations>>=

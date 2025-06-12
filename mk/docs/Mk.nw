@@ -974,7 +974,7 @@ vars |> List.iter (fun (var, value) ->
     
 <<[[Env.t]] fields>>=
 (* those vars can not be overriden by the mkfile *)
-vars_commandline: (string, bool) Hashtbl.t;
+vars_commandline: string Hashtbl_.set;
 @
 % it's a hashset really, different from other
 
@@ -1790,7 +1790,7 @@ val eval_words : < Shell.caps; .. > -> Ast.loc -> Env.t ->
 @
 
 <<[[Env.t]] fields>>=
-vars_we_set: (string, bool) Hashtbl.t;
+vars_we_set: string Hashtbl_.set;
 @
 % used in strict mode and in shprint
 % hashset again

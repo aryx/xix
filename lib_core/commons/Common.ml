@@ -228,4 +228,6 @@ let of_list xs =
 let to_list h =
   Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
 
+type 'a set = ('a, bool) Hashtbl.t
+
 end

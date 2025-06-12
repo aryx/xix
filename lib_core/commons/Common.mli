@@ -97,4 +97,6 @@ module Hashtbl_ :
   sig
     val of_list : ('a * 'b) list -> ('a, 'b) Hashtbl.t
     val to_list : ('a, 'b) Hashtbl.t -> ('a * 'b) list
+
+    type 'a set = ('a, bool) Hashtbl.t
   end

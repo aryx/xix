@@ -3,6 +3,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Either
 open Ast
 
 (*****************************************************************************)
@@ -108,7 +109,7 @@ let mk_Seq (a, b) =
 /*(*s: Parser other rule types *)*/
 %type <Ast.cmd> cmd
 /*(*x: Parser other rule types *)*/
-%type <value * value list * (redirection_kind * value, redirection_kind * int * int) either list> simple
+%type <value * value list * (redirection_kind * value, redirection_kind * int * int) Either.t list> simple
 /*(*x: Parser other rule types *)*/
 %type <Ast.value> first
 /*(*e: Parser other rule types *)*/

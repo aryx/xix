@@ -30,8 +30,8 @@ let visit_globals f xs =
   in
   let imm_or_ximm x =
     match x with
-    | Left _ -> ()
-    | Right x -> ximm x
+    | Either.Left _ -> ()
+    | Either.Right x -> ximm x
   in
   let mov_operand x =
     match x with

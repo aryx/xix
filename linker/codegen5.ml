@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Either
 
 open Ast_asm5
 module T = Types
@@ -186,8 +187,8 @@ let gop_bitshift_register op =
 
 let gop_rcon x =
   match x with
-  | Left (R r) -> [(r,8); (1, 4)]
-  | Right i    -> [(i, 7); (0, 4)]
+  | Either.Left (R r) -> [(r,8); (1, 4)]
+  | Either.Right i    -> [(i, 7); (0, 4)]
 
 
 (*****************************************************************************)

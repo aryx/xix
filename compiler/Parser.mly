@@ -2,6 +2,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Either
 
 open Ast
 module T = Type_

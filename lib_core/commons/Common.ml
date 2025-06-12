@@ -17,8 +17,6 @@ type byte = char
 type filename = string
 type dirname = string
 
-type ('a, 'b) either = Left of 'a | Right of 'b
-
 exception Todo
 exception Impossible of string
 

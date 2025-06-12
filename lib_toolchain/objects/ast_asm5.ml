@@ -70,7 +70,7 @@ type arith_operand =
   | Reg of register
   (* can not be used with shift opcodes (SLL/SRL/SRA) *)
   | Shift of register * shift_reg_op * 
-             (register, int (* between 0 and 31 *)) Common.either
+             (register, int (* between 0 and 31 *)) Either.t
 
   and shift_reg_op =
     | Sh_logic_left | Sh_logic_right
@@ -209,7 +209,7 @@ type pseudo_instr =
   | WORD of imm_or_ximm
 
   and attributes = { dupok: bool; prof: bool }
-  and imm_or_ximm = (integer, ximm) Common.either
+  and imm_or_ximm = (integer, ximm) Either.t
 (* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)

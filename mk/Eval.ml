@@ -2,6 +2,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Stdcompat (* for |> *)
 open Common
+open Either
 open Fpath_.Operators
 
 module A = Ast
@@ -43,7 +44,7 @@ let warning (loc : Ast.loc) (s : string) : unit =
  *  - less: the returned pattern must contain at least a PPercent
  *)
 let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t)  (wd : Ast.word) :
-          (string list, Percent.pattern) Common.either =
+          (string list, Percent.pattern) Either.t =
   let (Ast.W word) = wd in
   let rec aux acc word_elements =
     match word_elements with
@@ -151,7 +152,7 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
 
 (*s: function [[Eval.eval_words]] *)
 let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
-         (string list, Percent.pattern list) Common.either =
+         (string list, Percent.pattern list) Either.t =
   
   let res = words |> List.map (eval_word caps loc env) in
   (*s: [[Eval.eval_words()]] nested function [[contain_percent]] *)

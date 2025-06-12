@@ -33,7 +33,7 @@ val vof_string : string -> v
 val vof_list   : ('a -> v) -> 'a list -> v
 val vof_option : ('a -> v) -> 'a option -> v
 val vof_ref    : ('a -> v) -> 'a ref -> v
-val vof_either    : ('a -> v) -> ('b -> v) -> ('a, 'b) Common.either -> v
+val vof_either    : ('a -> v) -> ('b -> v) -> ('a, 'b) Either.t -> v
 
 (* regular pretty printer (not via sexp, but using Format) *)
 val string_of_v: v -> string

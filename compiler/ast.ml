@@ -170,7 +170,7 @@ and expr = {
   | Sequence of expr * expr
 
   (* codegen: converted to Int *)
-  | SizeOf of (expr, type_) Common.either
+  | SizeOf of (expr, type_) Either.t
 
   (* should appear only in a variable initializer, or after GccConstructor *)
   | ArrayInit of (const_expr option * expr) list
@@ -229,7 +229,7 @@ type stmt = {
 
   | While of expr * stmt
   | DoWhile of stmt * expr
-  | For of (expr option, var_decl list) Common.either * 
+  | For of (expr option, var_decl list) Either.t * 
            expr option * 
            expr option * 
            stmt

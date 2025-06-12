@@ -231,8 +231,8 @@ let vof_ref ofa x =
   | {contents = x } -> VRef (ofa x)
 let vof_either _of_a _of_b =
   function
-  | Left v1 -> let v1 = _of_a v1 in VSum (("Left", [ v1 ]))
-  | Right v1 -> let v1 = _of_b v1 in VSum (("Right", [ v1 ]))
+  | Either.Left v1 -> let v1 = _of_a v1 in VSum (("Left", [ v1 ]))
+  | Either.Right v1 -> let v1 = _of_b v1 in VSum (("Right", [ v1 ]))
 
 (*****************************************************************************)
 (* Format pretty printers *)
@@ -267,7 +267,7 @@ let format_to_string f =
   String.concat "\n" (List.rev !lines)
 
 let add_sep xs = 
-  xs |> List.map (fun x -> Right x) |> Common2.join_gen (Left ())
+  xs |> List.map (fun x -> Either.Right x) |> Common2.join_gen (Either.Left ())
 
 (* 
  * OCaml value pretty printer. A similar functionnality is provided by
@@ -307,8 +307,8 @@ let string_of_v v =
       | VTuple xs ->
           ppf "(@[";
               xs |> add_sep |> List.iter (function
-              | Left _ -> ppf ",@ ";
-              | Right v -> aux v
+              | Either.Left _ -> ppf ",@ ";
+              | Either.Right v -> aux v
               );
           ppf "@])";
       | VDict xs ->
@@ -327,8 +327,8 @@ let string_of_v v =
           | _y::_ys ->
               ppf "@[<hov 2>%s(@," s;
               xs |> add_sep |> List.iter (function
-              | Left _ -> ppf ",@ ";
-              | Right v -> aux v
+              | Either.Left _ -> ppf ",@ ";
+              | Either.Right v -> aux v
               );
               ppf "@])";
           )
@@ -341,8 +341,8 @@ let string_of_v v =
       | VList xs ->
           ppf "[@[<hov>";
           xs |> add_sep |> List.iter (function
-          | Left _ -> ppf ";@ ";
-          | Right v -> aux v
+          | Either.Left _ -> ppf ";@ ";
+          | Either.Right v -> aux v
           );
           ppf "@]]";
       | VTODO _v1 -> ppf "VTODO"

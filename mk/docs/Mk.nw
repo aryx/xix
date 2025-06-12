@@ -834,13 +834,13 @@ let nrunning = ref 0
 
 <<type [[CLI.caps]]>>=
 (* Need:
- *  - fork/exec: obviously as we run shell commands
+ *  - fork/exec/wait: obviously as we run shell commands
  *  - env: for Env.initenv() so mk recipe can access env variables.
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - chdir: actually needed just for -debugger, we could remove
  *)
-type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
+type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.env; Cap.argv; Cap.chdir >
 @
 %TODO: delete chdir and -debugger?
 
@@ -939,7 +939,7 @@ val build_target :
    while !Scheduler.nrunning > 0 do
        try 
          (* todo: if dump_jobs, print pid we wait and its recipe *)
-         Unix.wait () |> ignore;
+         CapUnix.wait caps () |> ignore;
          decr Scheduler.nrunning
        with Unix.Unix_error (error, _str1, _str2) ->
          failwith (spf "%s" (Unix.error_message error))
@@ -2748,17 +2748,17 @@ let shprint env s =
 
 <<type [[Shell.caps]]>>=
 (* Need:
- *  - exec/fork: obviously as we run a shell
+ *  - exec/fork/wait: obviously as we run a shell
  *  - env: for MKSHELL
  *)
-type caps = < Cap.exec; Cap.fork; Cap.env >
+type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env >
 @
 
 % ??? -> <>
 % (double) fork pipe exec classic
 <<function [[Shell.exec_recipe]]>>=
 (* returns a pid *)
-let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
+let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
   let pid = CapUnix.fork caps () in
   
   (* children case *)
@@ -2819,10 +2819,11 @@ let feed_shell_input inputs pipe_write =
 
 % main -> build_target -> work(); <> -> ???
 <<function [[Scheduler.waitup]]>>=
+(* can call sched () hence the need for Shell.caps, not just Cap.wait *)
 let waitup (caps : < Shell.caps; .. >) () =
   let (pid, ret) = 
     try 
-      Unix.wait () 
+      CapUnix.wait caps () 
     with Unix.Unix_error (error, str1, str2) ->
       failwith (spf "%s: %s (%s)" str1 (Unix.error_message error) str2)
   in

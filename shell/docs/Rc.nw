@@ -1105,7 +1105,7 @@ waitstatus = NothingToWaitfor;
 
 <<type [[CLI.caps]]>>=
 (* Need:
- *  - fork/exec: obviously as we are a shell
+ *  - fork/exec/wait: obviously as we are a shell
  *  - chdir: for the builtin 'cd'
  *  - env: to ??
  *  - exit: as many commands can abruptely exit 'rc' itself or children
@@ -1114,7 +1114,7 @@ waitstatus = NothingToWaitfor;
  *
  * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
-type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
+type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 @
 
 <<signature [[CLI.main]]>>=
@@ -1299,7 +1299,7 @@ let _bootstrap_simple : O.codevec =
 <<signature [[Interpreter.interpret_operation]]>>=
 (* Interpret one operation. Called from a loop in main(). *)
 val interpret_operation :
-  < Cap.fork ; Cap.exec ; Cap.chdir ; Cap.exit ; Cap.open_in; .. > ->
+  < Cap.fork ; Cap.exec ; Cap.wait; Cap.chdir ; Cap.exit ; Cap.open_in; .. > ->
   Opcode.operation ->
   unit
 @
@@ -2611,7 +2611,7 @@ argv_stack = [];
 \swdefs{O.Simple}
 
 <<function [[Op_process.op_Simple]]>>=
-let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
+let op_Simple (caps : < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.exit; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
   <<[[Op_process.op_Simple()]] possibly dump command>>
@@ -2865,13 +2865,13 @@ let truestatus () : bool =
 
 <<[[Op_process.op_Simple()]] when default case, after the fork>>=
 (* do again even if was interrupted *)
-while Process.waitfor pid = Process.WaitforInterrupted do
+while Process.waitfor caps pid = Process.WaitforInterrupted do
   ()
 done
 @
 
 <<signature [[Process.waitfor]]>>=
-val waitfor : int -> waitfor_result
+val waitfor : < Cap.wait; .. > -> int (* pid *) -> waitfor_result
 @
 
 
@@ -2884,12 +2884,12 @@ type waitfor_result =
 
 % Capa waitfor!
 <<function [[Process.waitfor]]>>=
-let waitfor pid =
+let waitfor (caps : < Cap.wait; .. >) (pid : int) : waitfor_result =
   (* less: check for havewaitpid *)
 
   try 
     let rec loop () =
-      let (pid2, status) = Unix.wait () in
+      let (pid2, status) = CapUnix.wait caps () in
       let status_str = 
         match status with
         | Unix.WEXITED i -> spf "%d" i
@@ -3372,7 +3372,7 @@ let exit (caps: < Cap.exit; ..>) s =
     | R.WaitFor pid ->
         let status = Status.getstatus () in
         (* will internally call setstatus() when it found the right child *)
-        Process.waitfor pid |> ignore;
+        Process.waitfor caps pid |> ignore;
         t.R.waitstatus <- R.NothingToWaitfor;
         Status.setstatus (Status.concstatus (Status.getstatus()) status);
     )

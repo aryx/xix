@@ -42,7 +42,7 @@ module O = Opcode
  *  - env: to ??
  *  - exit: as many commands can abruptely exit 'rc' itself or children
  *    created by 'rc'
- *  - open_in: ??
+ *  - open_in: for '.' that can source and eval scripts
  *
  * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)

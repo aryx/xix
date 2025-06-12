@@ -1110,7 +1110,7 @@ waitstatus = NothingToWaitfor;
  *  - env: to ??
  *  - exit: as many commands can abruptely exit 'rc' itself or children
  *    created by 'rc'
- *  - open_in: ??
+ *  - open_in: for '.' that can source and eval scripts
  *
  * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
@@ -2420,7 +2420,7 @@ let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
 <<[[Op_repl.op_REPL()]] match [[cmdset_opt]] other cases>>=
 | None -> Process.return caps ()
 @
-% when return op_REPL, and interpret_operation, will go gack to
+% when return O.REPL(), and interpret_operation, will go gack to
 % while loop of interpret_bootstrap and newt at the top of cur!
 % so will execute that!
 
@@ -3001,6 +3001,7 @@ seq |> List.iter (fun x -> xcmd x eflag)
     then incr pc
     else pc := int_at_address t (!pc)
 @
+\swdefs{O.True}
 
 <<function [[Interpreter.int_at_address]]>>=
 let int_at_address t pc =
@@ -3032,7 +3033,7 @@ let int_at_address t pc =
     then pc := int_at_address t (!pc)
     else incr pc
 @
-
+\swdefs{O.False}
 
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
@@ -3046,6 +3047,7 @@ let int_at_address t pc =
 | O.Not ->
     Status.setstatus (if Status.truestatus() then "false" else "");
 @
+\swdefs{O.Not}
 % "" means true (exit code 0), anything else is error (falsy)
 
 \subsection{String matching}
@@ -3079,6 +3081,7 @@ let int_at_address t pc =
     ) |> ignore;
     R.pop_list ();
 @
+\swdefs{O.Match}
 
 \section{Redirection}
 % could be part of Operators, but better higher level in TOC
@@ -3122,6 +3125,7 @@ let int_at_address t pc =
 | O.Popredir ->
     R.pop_redir ()
 @
+\swdefs{O.Popredir}
 
 \subsection{[[O.Write()]]}
 
@@ -3152,7 +3156,7 @@ let int_at_address t pc =
     | _x::_y::_xs -> E.error caps "> requires singleton"
     )
 @
-
+\swdefs{O.Write}
 
 <<function [[Interpreter.file_descr_of_int]]>>=
 (* could be in runtime.ml *)
@@ -3333,6 +3337,8 @@ let doredir xxs =
     (* todo: trapreq *)
     Process.exit caps (Status.getstatus())
 @
+\swdefs{O.Exit}
+
 <<signature [[Process.exit]]>>=
 val exit : < Cap.exit ; .. > -> string -> unit
 @
@@ -3371,6 +3377,7 @@ let exit (caps: < Cap.exit; ..>) s =
         Status.setstatus (Status.concstatus (Status.getstatus()) status);
     )
 @
+\swdefs{O.PipeWait}
 
 <<signature [[Status.concstatus]]>>=
 val concstatus : string -> string -> string
@@ -3411,6 +3418,7 @@ let concstatus s1 s2 =
     then incr pc
     else pc := int_at_address t (!pc);
 @
+\swdefs{O.If}
 
 \subsection{[[if not]]}
 
@@ -3422,7 +3430,7 @@ let concstatus s1 s2 =
     then incr pc
     else pc := int_at_address t (!pc);
 @
-
+\swdefs{O.IfNot}
 
 <<constant [[Globals.ifnot]]>>=
 (* Set to true at the beginning of an if and back to false
@@ -3436,7 +3444,7 @@ let ifnot = ref false
 | O.Wastrue ->
     Globals.ifnot := false
 @
-
+\swdefs{O.Wastrue}
 
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
@@ -3516,6 +3524,7 @@ let ifnot = ref false
     let pc = t.R.pc in
     pc := int_at_address t (!pc);
 @
+\swdefs{O.Jump}
 
 
 <<[[Opcode.operation]] other control cases>>=
@@ -3536,13 +3545,14 @@ let ifnot = ref false
     );
     R.pop_list ();
 @
+\swdefs{O.Case}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (value) *)
 | O.Popm ->
     R.pop_list ()
 @
-
+\swdefs{O.Popm}
 
 
 <<function [[Compile.split_when_case]]>>=
@@ -3640,7 +3650,7 @@ let split_when_case cmds =
     | _ -> E.error caps "variable name not singleton!"
     )
 @
-
+\swdefs{O.Assign}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (name) (val) *)
@@ -3658,7 +3668,7 @@ let split_when_case cmds =
     | _ -> E.error caps "variable name not singleton!"
     )
 @
-
+\swdefs{O.Local}
 
 <<function [[Compile.split_at_non_assign]]>>=
 let rec split_at_non_assign = function
@@ -3698,6 +3708,7 @@ let rec split_at_non_assign = function
     | _ -> E.error caps "variable name not singleton!"
     )
 @
+\swdefs{O.Dollar}
 
 \subsection{Special variables} %$
 \label{sec:special-variables}
@@ -4011,6 +4022,8 @@ let rcmain = ref "/rc/lib/rcmain"
 \chapter{Globbing}
 %******************************************************************************
 \label{chap:globbing}
+%TODO: move in previous chapter like other features? it is an
+% opcode in the end
 
 <<[[Opcode.operation]] other cases>>=
 (* Globbing *)
@@ -4023,6 +4036,8 @@ let rcmain = ref "/rc/lib/rcmain"
     Logs.err (fun m -> m "TODO: interpret Glob");
     ()
 @
+\swdefs{O.Glob}
+
 %TODO: but should be emitted far more no? Even in Simple
 % we should emit no?
 
@@ -4136,6 +4151,7 @@ then emit (O.F O.Eflag);
     if !Globals.eflagok && not (Status.truestatus())
     then Process.exit caps (Status.getstatus())
 @
+\swdefs{O.Eflag}
 
 <<[[Compile.outcode_seq]] in [[A.Match]] case after emit [[O.Match]]>>=
 if eflag 
@@ -4210,6 +4226,7 @@ let strict_mode = ref false
           then E.error caps (spf "deleting undefined function %s" s)
     );
 @
+\swdefs{O.DelFn}
 
 \subsection{Subshell: [[@ <cmd>]]}
 
@@ -4269,7 +4286,7 @@ let strict_mode = ref false
     | _ -> E.error caps "variable name not singleton!"
     )
 @
-
+\swdefs{O.Count}
 
 <<[[Lexer.token()]] variable cases>>=
 | "$#"  { TCount }

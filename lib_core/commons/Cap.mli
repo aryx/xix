@@ -29,6 +29,7 @@ module Process : sig
   type time_limit
   type memory_limit
   type fork
+  type wait
 end
 
 module FS_ : sig
@@ -84,7 +85,8 @@ type memory_limit = < memory_limit : Process.memory_limit >
 type exit = < exit : Process.exit >
 type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
-type process_multi = < fork >
+type wait = < wait : Process.wait >
+type process_multi = < fork; wait >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
 type process = < argv ; env; console ; process_single ; process_multi >
 
@@ -128,8 +130,6 @@ val no_caps : no_caps
 val network_caps_UNSAFE : unit -> < network >
 val tmp_caps_UNSAFE : unit -> < tmp >
 val stdout_caps_UNSAFE : unit -> < stdout >
-val caps_for_js_UNSAFE : unit -> < fork ; time_limit ; memory_limit ; readdir >
-val exec_and_tmp_caps_UNSAFE : unit -> < exec ; tmp >
 val readdir_UNSAFE : unit -> < readdir >
 
 (**************************************************************************)

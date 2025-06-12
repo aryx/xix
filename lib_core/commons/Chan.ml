@@ -42,6 +42,7 @@ type origin =
 
 (* alt: "in", but reserved keyword, and "in_" is ugly *)
 type i = { ic : in_channel; origin : origin }
+(* TODO? use dest: dest? with type dest = origin ? *)
 type o = { oc : out_channel; p : Fpath.t }
 
 (*****************************************************************************)

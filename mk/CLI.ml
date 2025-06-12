@@ -98,13 +98,13 @@ module R = Rules
 
 (*s: type [[CLI.caps]] *)
 (* Need:
- *  - fork/exec: obviously as we run shell commands
+ *  - fork/exec/wait: obviously as we run shell commands
  *  - env: for Env.initenv() so mk recipe can access env variables.
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - chdir: actually needed just for -debugger, we could remove
  *)
-type caps = < Cap.fork; Cap.exec; Cap.env; Cap.argv; Cap.chdir >
+type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.env; Cap.argv; Cap.chdir >
 (*e: type [[CLI.caps]] *)
 
 (*s: constant [[CLI.usage]] *)
@@ -354,7 +354,7 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
          while !Scheduler.nrunning > 0 do
              try 
                (* todo: if dump_jobs, print pid we wait and its recipe *)
-               Unix.wait () |> ignore;
+               CapUnix.wait caps () |> ignore;
                decr Scheduler.nrunning
              with Unix.Unix_error (error, _str1, _str2) ->
                failwith (spf "%s" (Unix.error_message error))

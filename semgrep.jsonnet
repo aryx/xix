@@ -40,6 +40,8 @@ local cap_rules = [
 	 'Unix.execv',
 	# Cap.fork
 	 'Unix.fork',
+	# Cap.wait
+	 'Unix.wait',
 	# Cap.env
 	 'Unix.environment',
 	 'Sys.getenv',

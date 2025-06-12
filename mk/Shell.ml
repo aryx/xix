@@ -14,10 +14,10 @@ open Fpath_.Operators
 
 (*s: type [[Shell.caps]] *)
 (* Need:
- *  - exec/fork: obviously as we run a shell
+ *  - exec/fork/wait: obviously as we run a shell
  *  - env: for MKSHELL
  *)
-type caps = < Cap.exec; Cap.fork; Cap.env >
+type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env >
 (*e: type [[Shell.caps]] *)
 
 (*s: type [[Shell.t]] *)
@@ -137,7 +137,7 @@ let feed_shell_input inputs pipe_write =
 
 (*s: function [[Shell.exec_recipe]] *)
 (* returns a pid *)
-let exec_recipe (caps : < caps; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
+let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
   let pid = CapUnix.fork caps () in
   
   (* children case *)

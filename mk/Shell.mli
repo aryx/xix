@@ -2,10 +2,10 @@
 
 (*s: type [[Shell.caps]] *)
 (* Need:
- *  - exec/fork: obviously as we run a shell
+ *  - exec/fork/wait: obviously as we run a shell
  *  - env: for MKSHELL
  *)
-type caps = < Cap.exec; Cap.fork; Cap.env >
+type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env >
 (*e: type [[Shell.caps]] *)
 
 (*s: signature [[Shell.exec_recipe]] *)

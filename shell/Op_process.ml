@@ -61,7 +61,7 @@ let forkexec (caps : < Cap.fork; Cap.exec; Cap.exit; .. >) () : int =
 (*e: function [[Op_process.forkexec]] *)
 
 (*s: function [[Op_process.op_Simple]] *)
-let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
+let op_Simple (caps : < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.exit; ..>) () =
   let t = R.cur () in
   let argv = t.R.argv in
   (*s: [[Op_process.op_Simple()]] possibly dump command *)
@@ -106,7 +106,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
           R.pop_list ();
           (*s: [[Op_process.op_Simple()]] when default case, after the fork *)
           (* do again even if was interrupted *)
-          while Process.waitfor pid = Process.WaitforInterrupted do
+          while Process.waitfor caps pid = Process.WaitforInterrupted do
             ()
           done
           (*e: [[Op_process.op_Simple()]] when default case, after the fork *)

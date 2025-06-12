@@ -37,7 +37,7 @@ module O = Opcode
 
 (*s: type [[CLI.caps]] *)
 (* Need:
- *  - fork/exec: obviously as we are a shell
+ *  - fork/exec/wait: obviously as we are a shell
  *  - chdir: for the builtin 'cd'
  *  - env: to ??
  *  - exit: as many commands can abruptely exit 'rc' itself or children
@@ -46,7 +46,7 @@ module O = Opcode
  *
  * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
-type caps = < Cap.fork; Cap.exec; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
+type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 (*e: type [[CLI.caps]] *)
 
 (* -d and -p are dead according to man page so I removed them *)

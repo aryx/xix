@@ -44,12 +44,12 @@ type waitfor_result =
 (*e: type [[Process.waitfor_result]] *)
 
 (*s: function [[Process.waitfor]] *)
-let waitfor pid =
+let waitfor (caps : < Cap.wait; .. >) (pid : int) : waitfor_result =
   (* less: check for havewaitpid *)
 
   try 
     let rec loop () =
-      let (pid2, status) = Unix.wait () in
+      let (pid2, status) = CapUnix.wait caps () in
       let status_str = 
         match status with
         | Unix.WEXITED i -> spf "%d" i

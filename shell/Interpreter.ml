@@ -203,7 +203,7 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       | R.WaitFor pid ->
           let status = Status.getstatus () in
           (* will internally call setstatus() when it found the right child *)
-          Process.waitfor pid |> ignore;
+          Process.waitfor caps pid |> ignore;
           t.R.waitstatus <- R.NothingToWaitfor;
           Status.setstatus (Status.concstatus (Status.getstatus()) status);
       )

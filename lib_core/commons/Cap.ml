@@ -112,6 +112,8 @@ module Process = struct
 
   (* multi processes *)
   type fork = cap
+  type wait = cap
+  (* pipe? not sure it requires a cap; it's a local thing *)
 
   (* old: was alarm, but better rename to be consistent with memory_limit
    * See libs/process_limits/
@@ -193,7 +195,8 @@ type memory_limit = < memory_limit : Process.memory_limit >
 type exit = < exit : Process.exit >
 type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
-type process_multi = < fork >
+type wait = < wait : Process.wait >
+type process_multi = < fork; wait >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
 type process = < argv ; env; console ; process_single ; process_multi >
 
@@ -240,6 +243,7 @@ let powerbox : all_caps =
     method time_limit = ()
     method memory_limit = ()
     method fork = ()
+    method wait = ()
     method exit = ()
 
     (* misc *)
@@ -273,21 +277,6 @@ let stdout_caps_UNSAFE () =
   end
 
 (* !!DO NOT USE!! *)
-let caps_for_js_UNSAFE () =
-  object
-    method fork = ()
-    method time_limit = ()
-    method memory_limit = ()
-    method readdir = ()
-  end
-
-(* !!DO NOT USE!! *)
-let exec_and_tmp_caps_UNSAFE () =
-  object
-    method exec = ()
-    method tmp = ()
-  end
-
 let readdir_UNSAFE () =
   object
     method readdir = ()

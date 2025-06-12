@@ -172,10 +172,11 @@ let run (caps : < Shell.caps; .. >) (job : Job.t) : unit =
 (*e: function [[Scheduler.run]] *)
 
 (*s: function [[Scheduler.waitup]] *)
+(* can call sched () hence the need for Shell.caps, not just Cap.wait *)
 let waitup (caps : < Shell.caps; .. >) () =
   let (pid, ret) = 
     try 
-      Unix.wait () 
+      CapUnix.wait caps () 
     with Unix.Unix_error (error, str1, str2) ->
       failwith (spf "%s: %s (%s)" str1 (Unix.error_message error) str2)
   in

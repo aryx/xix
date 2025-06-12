@@ -10,9 +10,7 @@
 
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
 (* type bytes = string *)
-
 type byte = char
-
 
 type filename = string
 
@@ -64,11 +62,9 @@ let ( ||| ) a b =
 
 let spf = Printf.sprintf
 
-let rec rnd x v =
-  if x mod v = 0
-  then x
-  else rnd (x+1) v
-
+(* should be in Hashtbl_ below but it's also used by Regexp_ module
+ * so has to be defined before
+ *)
 let memoized h k f =
     try Hashtbl.find h k
     with Not_found ->
@@ -78,17 +74,18 @@ let memoized h k f =
         v
       end
 
-(* tail recursive efficient version *)
-let cat file =
-  let chan = open_in file in
-  let rec cat_aux acc ()  =
-      (* cant do input_line chan::aux() cos ocaml eval from right to left ! *)
-    let (b, l) = try (true, input_line chan) with End_of_file -> (false, "") in
-    if b
-    then cat_aux (l::acc) ()
-    else acc
-  in
-  cat_aux [] () |> List.rev |> (fun x -> close_in chan; x)
+(*****************************************************************************)
+(* Basic types *)
+(*****************************************************************************)
+
+module Int_ = struct
+
+let rec rnd x v =
+  if x mod v = 0
+  then x
+  else rnd (x+1) v
+
+end
 
 (*****************************************************************************)
 (* Regexp *)
@@ -229,5 +226,7 @@ let to_list h =
   Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
 
 type 'a set = ('a, bool) Hashtbl.t
+
+let memoized = memoized
 
 end

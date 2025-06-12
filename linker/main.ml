@@ -1,5 +1,4 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 
 module T = Types
@@ -62,7 +61,7 @@ let link config objfiles outfile =
   let sizes = { T.text_size = text_size; data_size = data_size; bss_size = bss_size } in
   let init_data =  
     match config.T.init_data with
-    | None -> rnd (text_size + config.T.init_text) config.T.init_round
+    | None -> Int_.rnd (text_size + config.T.init_text) config.T.init_round
     | Some x -> x
   in
   let config = { config with T.init_data = Some init_data } in

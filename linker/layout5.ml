@@ -1,5 +1,4 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 
 module T = Types
@@ -46,7 +45,7 @@ let layout_data symbols ds =
         then failwith (spf "%s: no size" s);
 
         if size mod 4 <> 0
-        then v.T.section <- T.SData (Common.rnd size 4)
+        then v.T.section <- T.SData (Int_.rnd size 4)
     | _ -> ()
   );
 
@@ -60,7 +59,7 @@ let layout_data symbols ds =
         orig := !orig + size;
     | _ -> ()
   );
-  orig := Common.rnd !orig 8;
+  orig := Int_.rnd !orig 8;
   let data_size = !orig in
 
   (* step3: layout Bss section *)
@@ -71,7 +70,7 @@ let layout_data symbols ds =
         orig := !orig + size;
     | _ -> ()
   );
-  orig := Common.rnd !orig 8;
+  orig := Int_.rnd !orig 8;
   let bss_size = !orig - data_size in
 
   (* define special symbols *)
@@ -165,7 +164,7 @@ let layout_text symbols2 init_text cg =
     );
   end;
 
-  let final_text = Common.rnd !pc 8 in
+  let final_text = Int_.rnd !pc 8 in
   let textsize = final_text - init_text in
   Hashtbl.replace symbols2 ("etext", T.Public) (T.SText2 final_text);
   

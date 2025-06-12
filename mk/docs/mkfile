@@ -35,6 +35,7 @@ control_flow.tex: control_flow.dot
 # steps to build index:
 # - switch to dune 2.7 in xix/dune-project
 # - remove wrapped true in xix/mk/dune file
+# - comment open Xix_mk in xix/mk/Main.ml
 # - cd ~/xix; mk nuke; make clean
 # # produce .cmt for all of xix (dune build _build/.../mk is not enough)
 # - make build-dune

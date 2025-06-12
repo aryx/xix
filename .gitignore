@@ -32,7 +32,7 @@ defs_and_uses.list
 *.blg
 
 # noweb files
-**/docs/*-[0-9].pdf
+**/docs/*-[0-9]*.pdf
 **/docs/*.tex
 
 # misc

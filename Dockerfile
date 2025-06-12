@@ -1,4 +1,4 @@
-# Build and test XiX with OCaml 4.09.1 via OPAM on Ubuntu Linux.
+# Build and test XiX with OCaml 4.12.0 via OPAM on Ubuntu Linux.
 # We are testing mostly the bootstrap-mk.sh and mk way to build XiX (not dune).
 # See also .github/workflows/docker.yml for its use in Github Actions (GHA).
 #
@@ -13,6 +13,7 @@
 #  - use 4.09.1 because oldest version that can work with ppx_deriving and
 #    stdcompat and Cap.ml
 #    (in theory ppx_deriving works for 4.05.0 but Cap.mli does not parse still)
+#  - use 4.12.0 because oldest version with stdlib/either.ml
 
 FROM ubuntu:22.04
 #alt: alpine:3.21
@@ -30,7 +31,7 @@ RUN apt-get install -y opam
 #alt: RUN apk add opam
 # Initialize opam (disable sandboxing due to Docker)
 RUN opam init --disable-sandboxing -y
-RUN opam switch create 4.09.1 -v
+RUN opam switch create 4.12.0 -v
 
 WORKDIR /src
 

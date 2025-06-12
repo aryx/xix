@@ -119,13 +119,13 @@ parser                         & \ref{chap:parsing}            & [[Parse.ml]]   
 grammar                        & \ref{chap:parsing}            & [[Parser.mly]]      & [<Parser.tokens>] [<Parser.line()>]    & 311 \\ 
 
 \midrule
-bytecode generation            & \ref{chap:compile-interpret}  & [[Compile.ml]]     & [<compile()>] [<outcode_seq()>]         & 341 \\
-bytecode interpretation        & \ref{chap:compile-interpret}  & [[Interpret.ml]]     & [<interpret_operation()>] & 357 \\
+opcode generation            & \ref{chap:compile-interpret}  & [[Compile.ml]]     & [<compile()>] [<outcode_seq()>]         & 341 \\
+opcode interpretation        & \ref{chap:compile-interpret}  & [[Interpret.ml]]     & [<interpret_operation()>] & 357 \\
 simple command interpretation  & \ref{chap:compile-interpret}  & [[Op_process.ml]]   & [<op_Simple()>] [<forkexec()>]     & 120 \\
 process status                 & \ref{chap:compile-interpret}  & [[Status.ml]]   & [<setstatus()>] [<getstatus()>]                 & 39 \\
-process management             & \ref{chap:compile-interpret}  & [[Process.ml]]   & [<waitfor()>] [<return()>] [<exit()>]                 & 81 \\
-[[$path]] management           & \ref{chap:compile-interpret}  & [[PATH.ml]]     & [<find_in_path()>]                          & 27 \\
+process management             & \ref{chap:compile-interpret}  & [[Process.ml]]   & [<return()>] [<waitfor()>] [<exit()>]                 & 81 \\
 error management               & \ref{chap:compile-interpret}  & [[Error.ml]]     & [<Error.error()>]                          & 18 \\
+[[$path]] management           & \ref{chap:compile-interpret}  & [[PATH.ml]]     & [<find_in_path()>]                          & 27 \\
 pattern matching [[~]]         & \ref{chap:compile-interpret}  & [[Pattern.ml]]     & [<match_str()>]                          & 12 \\
 shell builtins                 & \ref{chap:builtins}           & [[Builtin.ml]] & [<dispatch()>] [<dochdir()>]        & 157 \\
 shell environment              & \ref{chap:environment}        & [[Env.ml]]      &                         & 2 \\
@@ -273,178 +273,147 @@ Figure~\ref{fig:controlflow} describes the main control flow of [[rc]].
 %dup: intro/requirements
 At its core, [[rc]] is both a {compiler} and a {bytecode interpreter}.
 \l like OCaml, Perl, Ruby, etc.
+%TODO: do like in Mk.nw and enumerate the big dataflow steps?
 As shown by Figure~\ref{fig:dataflow}, given a series of characters
 (coming either from what you typed in the terminal or 
 from the content of a script),
 [[rc]] first groups those characters in {tokens} (with [<Lexer.token()>]). Then,
 [[rc]] parses those tokens (with [<Parse.parse_line()>]) and 
-builds an {abstract syntax tree} (AST) of the program (see [<Ast.line>]). Finally,
+builds an {abstract syntax tree} (AST) of the program (see [<Ast.line>] and [<Ast.cmd>]). Finally,
 \n actually not lexing -> parsing; for efficiency, parser calls lexer
 \n on demand, so it can keep only one token in memory (opti, less important)
-[[rc]] transforms this tree in a series of {bytecodes} (see [<Opcode.opcode>]).
+[[rc]] transforms this tree in a series of bytecodes or {opcodes} (see [<Opcode.opcode>] and [<Opcode.operation>]).
 %
 This is similar to what a compiler such as [[5c]] does (see \book{Compiler}),
-except a bytecode here is not an instruction 
+except an opcode here is not an instruction
 from a concrete machine but
 from a {\em virtual machine}.
 
 \begin{figure}[!tbp]\centering
 \begin{verbatim}
-Input characters --> tokens --> AST --> bytecodes --> threads --> processes
+Input characters --> tokens --> AST --> opcodes --> threads --> processes
 \end{verbatim}
 \caption{Data flow diagram of [[rc]].}\label{fig:dataflow}
 \end{figure}
 
-After this compilation, [[rc]] goes through the series of bytecodes and 
+After this compilation, [[rc]] goes through the series of opcodes and 
 {interprets} them. [[rc]] keeps track of what is currently executing
-in a [Thread] data structure and in a queue [<runq>]. This data structure
+in a [<thread>] data structure and in a queue [<runq>]. This data structure
 is called a ``thread'' because [[rc]] must sometimes manage 
 multiple threads of execution. Indeed,
-some of the bytecodes can create new processes running concurrently
-(e.g., [Xpipe()], the bytecode handling pipes).
+\t actually from rc point of view they are thread, but many of those
+\t threads are attached to and represent external processes
+some of the opcodes can create new processes running concurrently
+(e.g., [<O.Pipe()>], the opcode handling pipes).
 \l confusing then process vs thread? not fully clear in my head too
 
 
 \begin{figure}[!tbp]\centering
-\begin{verbatim}
-                             +------------+
-                             |    main    |
-                             +-+----+-----+
-                               |    |
-                  .------------+----v-----------------.
-                 (      bytecod| interpreter loop      ) (interpreting)
-                  `------------+----+-----------------'
-                               |    |
-            +------------------++---+-------------+--------------------+
-            |        +---------+|                 |                    |
-     +------v-----+  |   +------v-----+   +-------v----+        +------v-----+
-     |  Xrdcmds   |  |   |   Xpipe    |   |  Xsimple   |   ...  |    Xif     | bytecodes
-     +-----+------+  |   +--+---------+   +--+-----+---+|       +------------+
-           ||        |      |   |            |     |    |
-           |+--------+---+  |   | +----------v-+   |   +v-----------+
-     +-----+         |   |  |   | |execforkexec|  .|.  |   execcd   | shell builtins
-     |            +--v---v--v--+| +------------+   |   +----------+-+
-     |            |   start    ||        |         |              |
-     v            +------------+|        |         |              |
-+---------+                     |        |         |              |
-| yyparse | (parsing)   +-------+-+      |         +----+         |
-+----+-+--+             |         |      |              |         |
-     | +-------+        |         |  +---+----+         |         |
-+----v--+  +---v-----+  |         |  |        |         |         |
-| yylex |  | compile |  |         |  |        |         |         |
-+----+--+  +---------+  |         |  |        |         |         |
-     |     (compiling)  |         |  |        |         |         |
-+----v--+               |         |  |        |         |         |
-| nextc |               v         v  v        v         v         v
-+-------+        +--------+  +--------+  +--------+  +--------+  +--------+
-                 |  pipe  |  |  fork  |  |  exec  |  |  wait  |  | chdir  |  syscalls
-                 +--------+  +--------+  +--------+  +--------+  +--------+
-
-\end{verbatim}
+\resizebox{0.9\textwidth}{!}{%
+\input{control_flow}
+}
 \caption{Control flow diagram of [[rc]].}\label{fig:controlflow}
 \end{figure}
 
 %trans:
 In fact, [[rc]] does not start by compiling, but by interpreting. 
-Indeed, [[rc]] starts first by interpreting some special bytecodes,
-called the {\em bootstrap}, that contains a bytecode ([Xrdcmds()])
-that then triggers the compiler.
+Indeed, [[rc]] starts first by interpreting some special opcodes,
+called the {\em bootstrap}, that contains an opcode ([<Opcode.operation.REPL>])
+that when interpreted triggers the compiler.
 \n lie a bit, there is call to finit instead (said later)
 %trans: %dup: Assembler.nw
+
 I will now explain briefly the control flow of [[rc]], starting from 
 the top of Figure~\ref{fig:controlflow}.
 \l and left to right
-
-
+%
 After some basic initializations,
 \n no talk about command-line processing, confusing with command-line user
-[<main()>] sets its local [bootstrap] to contain the initial set
-of bytecodes to execute. It then calls [start()] with [bootstrap]
-as an argument, to start interpreting this series of bytecodes.
+[<main()>] calls [<interpret_bootstrap()>] which calls itself first a function
+[<bootstrap()>] returning the initial set
+of opcodes to execute.
 %
-Internally, [start()] just modifies the global [<runq>] to point to
-a newly created [Thread], and sets the field [Thread.code] to 
-the content of [bootstrap].
+Internally, [<interpret_bootstrap()>] just modifies the global [<runq>] to point to
+a newly created [<thread>], and sets the field [<Runtime.thread.code>] to 
+the content of [[bootstrap]].
 %
-After [start()] returns, [<main()>] goes in a loop that interprets
-the bytecodes in [[runq->code]].
+[<interpret_bootstrap()>] then goes in a loop that interprets
+the opcodes in [[runq.code]].
 \n [[runq->code[pc-1].f()]], 
 \l also main set [[runq->argv]]
 
 
-The most important bytecode in [bootstrap] is [Xrdcmds()],
+The most important opcode in [<bootstrap()>] is [<Opcode.operation.REPL>],
 \l actually it has a Xsimple "." rcmain and so will run execdot which
 \l  will run Xrdcmds (said later?)
-which reads a command (hence its name) and starts a new [Thread].
+which reads and evaluates a command (hence its name) and starts a new [<thread>].
 %
-[Xrdcmds()] first calls the parser [yyparse()], which calls
-the lexer [yylex()], which calls the input routine [nextc()] to
-get the next character.
-\l also yylex print prompt
+[<op_REPL()>] first calls the parser [<parse_line()>], which calls
+the lexer [<Lexer.token()>] to get the next token.
+\l also print prompt
 %
-By default, [nextc()] reads characters from the standard input, and
-so it waits for the characters you type in a terminal.
-\n old: "on the command-line" but better terminal, more precise
-\n or script
-Once you finished to enter a command with a {newline},
+By default, [<parse_line()>] will read characters from a [[lexbuf]] data structure
+attached to the current thread (in [<Runtime.thread.lexbuf>]). This [[lexbuf]] is
+set initially to be the standard input in [<interpret_bootstrap()>] but this can
+be changed if [<op_REPL()>] is asked at some point to parse a script instead.
+%
+Once you finished to enter a command with a {newline}, [<parse_line()>] will return
 \l can be something else when command on multiple lines because skipnl
-[yyparse()] will call [<compile()>] with the tree it built during
+and [<op_REPL()>] will call [<compile()>] with the AST it built during
 parsing as an argument.
 %
-Internally, [<compile()>] modifies the global [codebuf] to store
-the bytecodes deriving from the tree.
+[<compile()>] then returns the opcodes deriving from the tree.
 \n via outcode
-Then, after [yyparse()] returned, [Xrdcmds()] calls
-[start()] to start a new thread with [codebuf] as a parameter.
+Then, [<op_REPL()>] calls
+[<Runtime.mk_thread()>] to start a new thread with the returned opcodes as a parameter.
 %
-[start()] then modifies again the global [<runq>], and when [Xrdcmds()]
+[<op_REPL()>] then modifies again the global [<runq>], and when [<op_REPL()>]
 returns, the main bytecode interpreter loop will process 
-a new series of bytecodes stored in [[runq.code]].
+a new series of opcodes stored in [[runq.code]].
 
 
-Note that before modifying [<runq>], [start()] first links
-the newly created thread with the old thread (through the
-[Thread.ret] field). 
+Note that [<op_REPL>] modifies [<runq>] by adding new threads
+but keep the old threads in the queue still.
 %
-Moreover,[<compile()>] adds the bytecode [Xreturn()] at the end of
+Moreover, [<compile()>] adds the opcode [<Opcode.operation.Return>] at the end of
 \l also called if error after yyparse, 
 \l also exn mechanism?
-the series of bytecodes deriving from your command.
+the series of opcodes deriving from your command.
 %
-Thus, after [<main()>] finished interpreting the bytecodes of your command,
-it will process [Xreturn()], which will modify [<runq>] to point
-to the old thread, the one containing the bootstrap bytecodes.
+Thus, after the interpreter loop finished interpreting the opcodes of your command,
+it will process the [[Return]] opcode in [<O.Return()>], which will modify [<runq>] to point
+to the old thread, the one containing the bootstrap opcodes.
 %
-Then, after [Xreturn()] returns, the main bytecode interpreter loop
-will process again the bytecodes from the bootstrap, which
-will read another command through [Xrdcmds()].
+Then, after [<O.Return()>] returns, the main bytecode interpreter loop
+will process again the opcodes from the bootstrap, which
+will read another command through [<op_REPL()>].
 \n actually Xrdcommands does a [[runq->pc--]] before start, but too specific
 
 
-In [[rc]], the bytecodes are represented by regular C functions
-starting by convention with an [[X]] 
-(e.g., [Xrdcmds()], [Xpipe()], [Xif()]).
+In [[rc]], the opcodes are represented by regular constructors
+(e.g., [[REPL]], [[Pipe]], [[If]]).
 %
-Thus, the bytecode interpreter is mainly a function dispatcher.
+Thus, the bytecode interpreter is mainly an opcode dispatcher.
 %
-Internally those functions perform {system calls} to the kernel
+Internally, those functions perform {system calls} to the kernel
 to create a pipe ([[pipe()]]), 
 to fork a new process ([[fork()]]),
 to wait for a child process ([[wait()]]),
 or to change directory ([[chdir()]]).
 %
-An important bytecode is [Xsimple()], which [[rc]] uses
+An important opcode is [<Opcode.operation.Simple>], which is interpreted
+by the function [<op_Simple()>], which [[rc]] uses
 to run a ``simple'' command.
 \n basic, or atomic, one not containing a pipe, or redir
-[Xsimple()] represents the essence of a shell: with
+[<op_Simple()>] represents the essence of a shell: with
 the series of system calls [[fork()]], [[exec()]], and [[wait()]],
 [[rc]] can run a command in a new process and wait for
 its termination (or interruption).
 \l link to signal chapter.
 %
-[Xsimple()] is also responsible for managing the multiple shell builtins.
+[<op_Simple()>] is also responsible for managing the multiple shell builtins.
 Indeed, if the name of the ``simple'' command is a builtin (e.g., [[cd]]),
-then [Xsimple()] dispatches the appropriate function (e.g., [[execcd]])
+then [<op_Simple()>] calls [<Builtin.dispatch()>] which dispatches the appropriate function (e.g., [<dochdir()>])
 \n another dispatch
 instead of forking a new process.
 %By convention, the functions representing builtins start with exec
@@ -452,7 +421,7 @@ instead of forking a new process.
 
 \subsection{Trace of a simple command: [[ls /]]}
 
-You can see the bytecodes and the threads created internally by [[rc]] 
+You can see the opcodes and the threads created internally by [[rc]] 
 by running [[rc]] with the [[-r]] flag.
 Here is an example of a {trace} of the simple command [[ls /]]:
 
@@ -477,12 +446,12 @@ pid 38 cycle 0001984C 9 Xrdcmds
 It is not important to fully understand the format of this trace
 (see Section~\ref{sec:rc-r} for the full explanation and
 for the code handling [[rc -r]]), but you can recognize a few of
-the bytecodes I mentioned before: 
-[Xrdcmds()], 
-[Xsimple()], and 
-[Xreturn()].
+the opcodes I mentioned before: 
+[<O.REPL()>], 
+[<O.Simple()>], and 
+[<O.Return()>].
 %
-I will explain [Xmark()] and [Xword()] later in this document.
+I will explain [<O.Mark()>] and [<O.Word()>] later in this document.
 
 \begin{verbatim}
 
@@ -526,17 +495,16 @@ Then, I will use a top-down approach, starting with Chapter~\ref{chap:main}
 with the description of [<main()>], 
 the initialization of [[rc]],
 the bytecode interpreter loop, and 
-the function [Xrdcmds()].
+the function [<op_REPL()>].
 %
 The following chapters will describe the main components of the compiler pipeline:
-Chapter~\ref{chap:input} will present the input routines,
-Chapter~\ref{chap:lexing} the lexer,
+Chapter~\ref{chap:lexing} will present the lexer,
 Chapter~\ref{chap:parsing} the parser, and finally
-Chapter~\ref{chap:compile-interpret} the bytecode generator and bytecode
+Chapter~\ref{chap:compile-interpret} the opcode generator and opcode
 interpreter for the main features of [[rc]].
 %
 In Chapter~\ref{chap:builtins}, I will present the code of the different
-shell builtins (e.g., [execcd()] for [[cd]]).
+shell builtins (e.g., [<dochdir()>] for [[cd]]).
 %
 Chapter~\ref{chap:environment} contains the code to manage the environment
 of the processes launched from the shell, and
@@ -551,26 +519,22 @@ complexity early-on.
 Then, I will present advanced features of [[rc]] that I did not present 
 before to simplify the explanations, for instance,
 wildcard matching (e.g., [[ls *.c]]) in Chapter~\ref{chap:globbing},
+logging and other debugging helps in Chapter~\ref{chap:debugging},
 or command substitutions (e.g., \verb+`{ls}+) in Chapter~\ref{chap:advanced-topics}.
 %dup: Assembler.nw
 Those advanced features tend to crosscut
 many components of [[rc]] with extensions to the lexer, the parser,
-the bytecode generator, and the bytecode interpreter.
+the opcode generator, and the opcode interpreter.
 %
 Finally, Chapter~\ref{chap:conclusion} concludes
 and gives pointers to other books in the \principia series.
 
 %toc:
 Some appendices present the code of non-functional properties:
-code to help debug [[rc]] itself in Appendix~\ref{chap:debugging-appendix} and
-code to manage errors in Appendix~\ref{chap:error}.
-%
-Appendix~\ref{chap:utilities} contains the code of
-utility functions used by [[rc]] but that are not specific to [[rc]]
-(e.g., a library to manage string buffers).
+code to help debug [[rc]] itself in Appendix~\ref{chap:debugging-appendix}
+% and code to manage errors in Appendix~\ref{chap:error}.
 %
 Finally, Appendix~\ref{chap:examples} presents examples of [[rc]] scripts.
-
 
 
 %******************************************************************************
@@ -1413,6 +1377,7 @@ t.R.iflag <- !Flags.interactive;
 (* *)
 | O.REPL -> Op_repl.op_REPL caps ()
 @
+\swdefs{O.REPL}
 
 <<function [[Op_repl.op_REPL]]>>=
 (* was called Xrdcmds *)
@@ -2411,7 +2376,7 @@ assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 
 
 %******************************************************************************
-\chapter{Bytecode Generation and Interpretation}
+\chapter{Opcode Generation and Interpretation}
 %******************************************************************************
 \label{chap:compile-interpret}
 
@@ -2450,6 +2415,7 @@ let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 | O.Return -> Process.return caps ()
 @
+\swdefs{O.Return}
 
 <<[[Op_repl.op_REPL()]] match [[cmdset_opt]] other cases>>=
 | None -> Process.return caps ()
@@ -2561,7 +2527,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
 
 % reminder: ls /etc => Simple (Word "ls", [Word "/etc"])
 
-\subsection{Bytecode generation}
+\subsection{Opcode generation}
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Simple (w, ws) -> 
@@ -2606,6 +2572,7 @@ ws |> List.rev |> List.iter (fun w -> xword w);
     | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
     )
 @
+\swdefs{O.Word}
 % remember pc already incremented in caller, so incr pc here to increment
 % it even more to pass the inline string
 
@@ -2613,6 +2580,7 @@ ws |> List.rev |> List.iter (fun w -> xword w);
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 | O.Mark -> R.push_list ()
 @
+\swdefs{O.Mark}
 
 <<signature [[Runtime.push_list]]>>=
 val push_list : unit -> unit
@@ -2640,7 +2608,7 @@ argv_stack = [];
 (* (args) *)
 | O.Simple -> Op_process.op_Simple caps ()
 @
-
+\swdefs{O.Simple}
 
 <<function [[Op_process.op_Simple]]>>=
 let op_Simple (caps : < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; ..>) () =
@@ -3004,7 +2972,7 @@ let find_in_path _s _paths =
 seq |> List.iter (fun x -> xcmd x eflag)
 @
 
-% sequence is simply generating bytecode for each cmd!
+% sequence is simply generating opcode for each cmd!
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.EmptyCommand -> ()
@@ -3112,13 +3080,14 @@ let int_at_address t pc =
     R.pop_list ();
 @
 
-\subsection{Redirection}
+\section{Redirection}
+% could be part of Operators, but better higher level in TOC
 
 %\subsection{Trace of a redirection}
 %\subsubsection{[[Redir]]}
 %\subsubsection{[[doredir()]]}
 
-\subsubsection{Bytecode generation}
+\subsection{Opcode generation}
 
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
@@ -3154,7 +3123,7 @@ let int_at_address t pc =
     R.pop_redir ()
 @
 
-\subsubsection{[[O.Write]]}
+\subsection{[[O.Write()]]}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (file)[fd] *)
@@ -3210,13 +3179,13 @@ let push_redir (x : redir) : unit =
 @
 
 
-\subsubsection{[[O.Read]]}
+\subsection{[[O.Read()]]}
 %TODO: O.Read not implemented yet 
 
-\subsubsection{[[O.Append]]}
+\subsection{[[O.Append()]]}
 %TODO: O.Append
 
-\subsubsection{Closing redirection opened files}
+\subsection{Closing redirection opened files}
 
 
 
@@ -3279,7 +3248,9 @@ let doredir xxs =
 
 
 
-\subsection{Pipe}
+\section{Pipe}
+
+\subsection{Opcode generation}
 
 %\subsubsection{Trace of a pipe}
 
@@ -3307,6 +3278,8 @@ let doredir xxs =
     set q (O.I !idx);
     emit (O.F O.PipeWait);
 @
+
+\subsection{[[O.Pipe()]]}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* [i j]{... Xreturn}{... Xreturn} *)
@@ -3351,7 +3324,9 @@ let doredir xxs =
       t.R.waitstatus <- R.WaitFor forkid;
     end
 @
+\swdefs{O.Pipe}
 
+\subsection{[[O.Exit()]]}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 | O.Exit -> 
@@ -3371,6 +3346,8 @@ let exit (caps: < Cap.exit; ..>) s =
   CapStdlib.exit caps (if Status.truestatus () then 0 else 1)
 @
 
+
+\subsection{[[O.PipeWait()]]}
 
 <<[[Opcode.operation]] other pipe cases>>=
 | PipeWait (* argument passed through Thread.pid *)
@@ -3404,10 +3381,9 @@ let concstatus s1 s2 =
 @
 
 
-\subsection{Asynchronous execution}
+\section{Asynchronous execution}
 
 %TODO: not implemented yet
-
 
 
 \section{Control flow statements}
@@ -4461,6 +4437,7 @@ let strict_mode = ref false
 
 \section{Exception backtraces}
 %TODO: disable by default!
+%TODO: use -backtrace instead of -debugger, like in Mk.nw
 %alt: move in Error management appendix later?
 
 <<constant [[Flags.debugger]]>>=
@@ -4496,6 +4473,10 @@ else
 
 \subsection{Dumping tokens}
 
+<<constant [[Flags.dump_tokens]]>>=
+let dump_tokens = ref false
+@
+
 <<[[Parse.lexfunc()]] possibly dump tokens>>=
 |> (fun tok -> 
     if !Flags.dump_tokens 
@@ -4503,95 +4484,39 @@ else
     tok)
 @
 
+
 \subsection{Dumping the AST}
+
+<<constant [[Flags.dump_ast]]>>=
+let dump_ast = ref false
+@
 
 <<[[Parse.parse_line()]] possibly dump AST>>=
 |> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Dumper_.s_of_line ast)); ast)
-@
-
-\subsection{Dumping the opcodes}
-
-\subsection{XXX}
-
-<<signature [[Dumper_.s_of_cmd]]>>=
-val s_of_cmd : Ast.cmd -> string
-@
-
-<<signature [[Dumper_.s_of_opcode]]>>=
-val s_of_opcode : Opcode.opcode -> string
 @
 
 <<signature [[Dumper_.s_of_line]]>>=
 val s_of_line : Ast.line -> string
 @
 
-<<signature [[Dumper_.s_of_cmd_sequence]]>>=
-val s_of_cmd_sequence : Ast.cmd_sequence -> string
-@
-
-<<signature [[Dumper_.s_of_value]]>>=
-val s_of_value : Ast.value -> string
-@
-
-<<signature [[Dumper_.s_of_codevec]]>>=
-val s_of_codevec : Opcode.codevec -> string
-@
-
-<<signature [[Dumper_.s_of_operation]]>>=
-val s_of_operation : Opcode.operation -> string
-@
-
-
-
-<<constant [[Flags.dump_tokens]]>>=
-let dump_tokens = ref false
-@
-
-<<constant [[Flags.dump_ast]]>>=
-let dump_ast = ref false
-@
-
-<<constant [[Flags.dump_opcodes]]>>=
-let dump_opcodes = ref false
-@
-
-<<[[Compile.compile()]] possibly dump returned opcodes>>=
-|> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
-@
 <<function [[Dumper_.s_of_line]]>>=
 let s_of_line x =
   let v = Meta_ast.vof_line x in
   Ocaml.string_of_v v
 @
 
-<<function [[Dumper_.s_of_cmd_sequence]]>>=
-let s_of_cmd_sequence x =
-  let v = Meta_ast.vof_cmd_sequence x in
-  Ocaml.string_of_v v
+\subsection{Dumping the opcodes}
+% see also rc -r
+
+<<constant [[Flags.dump_opcodes]]>>=
+let dump_opcodes = ref false
+@
+<<[[Compile.compile()]] possibly dump returned opcodes>>=
+|> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
 @
 
-<<function [[Dumper_.s_of_cmd]]>>=
-let s_of_cmd x =
-  let v = Meta_ast.vof_cmd x in
-  Ocaml.string_of_v v
-@
-
-<<function [[Dumper_.s_of_value]]>>=
-let s_of_value x =
-  let v = Meta_ast.vof_value x in
-  Ocaml.string_of_v v
-@
-
-<<function [[Dumper_.s_of_opcode]]>>=
-let s_of_opcode x =
-  let v = Meta_opcode.vof_opcode x in
-  Ocaml.string_of_v v
-@
-
-<<function [[Dumper_.s_of_operation]]>>=
-let s_of_operation x =
-  let v = Meta_opcode.vof_operation x in
-  Ocaml.string_of_v v
+<<signature [[Dumper_.s_of_codevec]]>>=
+val s_of_codevec : Opcode.codevec -> string
 @
 
 <<function [[Dumper_.s_of_codevec]]>>=
@@ -4601,8 +4526,63 @@ let s_of_codevec x =
   Ocaml.string_of_v v
 @
 
+\subsection{Dumping unhandled constructs}
+%TODO: should disappear once I implement all opcodes
 
-\section{Bytecode generator trace: [[rc -r]]}
+<<signature [[Dumper_.s_of_cmd]]>>=
+val s_of_cmd : Ast.cmd -> string
+@
+<<function [[Dumper_.s_of_cmd]]>>=
+let s_of_cmd x =
+  let v = Meta_ast.vof_cmd x in
+  Ocaml.string_of_v v
+@
+
+
+<<signature [[Dumper_.s_of_opcode]]>>=
+val s_of_opcode : Opcode.opcode -> string
+@
+<<function [[Dumper_.s_of_opcode]]>>=
+let s_of_opcode x =
+  let v = Meta_opcode.vof_opcode x in
+  Ocaml.string_of_v v
+@
+
+
+<<signature [[Dumper_.s_of_cmd_sequence]]>>=
+val s_of_cmd_sequence : Ast.cmd_sequence -> string
+@
+
+<<function [[Dumper_.s_of_cmd_sequence]]>>=
+let s_of_cmd_sequence x =
+  let v = Meta_ast.vof_cmd_sequence x in
+  Ocaml.string_of_v v
+@
+
+
+
+<<signature [[Dumper_.s_of_value]]>>=
+val s_of_value : Ast.value -> string
+@
+<<function [[Dumper_.s_of_value]]>>=
+let s_of_value x =
+  let v = Meta_ast.vof_value x in
+  Ocaml.string_of_v v
+@
+
+
+%DEAD?
+<<signature [[Dumper_.s_of_operation]]>>=
+val s_of_operation : Opcode.operation -> string
+@
+<<function [[Dumper_.s_of_operation]]>>=
+let s_of_operation x =
+  let v = Meta_opcode.vof_operation x in
+  Ocaml.string_of_v v
+@
+
+
+\section{Opcode generator trace: [[rc -r]]}
 \label{sec:rc-r}
 
 <<constant [[Flags.rflag]]>>=
@@ -4627,7 +4607,7 @@ then Logs.app (fun m -> m "pid %d %d %s %s"
                 spf "(%s)" (String.concat " " xs)
                ) |> String.concat " "));
 @
-
+%TODO: do a better one, that knows that O.Simple accept value and values after in sequence
 
 \section{Printing characters: [[rc -v]]}
 % hmm I've used it for verbose now

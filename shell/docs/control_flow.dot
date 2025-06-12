@@ -1,0 +1,43 @@
+digraph {
+    rankdir=TB;
+    node [shape=box, style=rounded];
+
+    // Interpreter loop
+    main -> interpret_bootstrap;
+    interpret_bootstrap -> { mk_thread interpreter_loop };
+    interpreter_loop -> {"O.REPL" "O.Pipe" "O.Simple" "O.If" "..."};
+
+    // Opcodes
+    "O.REPL" -> { parse_line compile mk_thread };
+    "O.Pipe" -> {pipe fork mk_thread };
+    "O.Simple" -> {fork exec wait "Builtin.dispatch"};
+
+    parse_line -> { token pprompt };
+    token -> pprompt;
+    compile -> outcode_seq;
+
+    // Shell builtins
+    dochdir; "Builtin.dispatch";
+    "Builtin.dispatch" -> dochdir;
+    dochdir -> chdir;
+
+    // Syscalls
+    pipe; fork; exec; wait; chdir;
+
+    // Layer labels
+    opcodes_label   [label="(opcodes)", shape=none];
+    builtins_label  [label="(shell builtins)", shape=none];
+    syscalls_label  [label="(syscalls)", shape=none];
+    interpreting_label [label="(interpreting)", shape=none];
+
+    // Align labels with nodes using invisible edges
+    { rank=same; "O.REPL"; "O.Pipe"; "O.Simple"; "O.If"; "..."; opcodes_label }
+    { rank=same; dochdir; "Builtin.dispatch"; builtins_label }
+    { rank=same; pipe; fork; exec; wait; chdir; syscalls_label }
+    { rank=same; interpreter_loop; interpreting_label }
+
+    "..." -> opcodes_label [style=invis];
+    dochdir -> builtins_label [style=invis];
+    chdir -> syscalls_label [style=invis];
+    interpreter_loop -> interpreting_label [style=invis];
+}

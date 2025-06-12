@@ -4,6 +4,7 @@ SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 #SYNCWEBFLAGS=-debug
 
 DOC=Rc
+DOC_EXTRA=control_flow.tex
 VERSION=1
 D=..
 SRC_ML=\
@@ -24,6 +25,9 @@ SRC_ORIG=Rc.nw Intro.nw Rc_extra.nw
 sync_yacc:VI:
         $SYNCWEB -md5sum_in_auxfile -less_marks -lang ocamlyacc  $SRC_ORIG \
             ../Parser.mly
+
+control_flow.tex: control_flow.dot
+   dot2tex $prereq --figonly > $target
 
 # see mk/docs/mkfile for how to produce the right files for the INDEXER to work
 index:V:

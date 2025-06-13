@@ -10,3 +10,7 @@ type t
 val v : string -> t
 
 val to_string: t -> string
+
+val add_seg : t -> string -> t
+
+val append: t -> t -> t

@@ -28,3 +28,8 @@ let v (s : string) : t =
 
 let to_string (p : t) : string = p
 
+let add_seg (p : t) (seg : string) : t =
+  Filename.concat p seg
+
+let append (p1 : t) (p2 : t) : t =
+  Filename.concat p1 p2

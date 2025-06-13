@@ -31,7 +31,7 @@ let to_strings paths = List.map Fpath.to_string paths
 (*****************************************************************************)
 
 module Operators = struct
-  let ( / ) = Fpath.( / )
-  let ( // ) = Fpath.( // )
+  let ( / ) = Fpath.add_seg
+  let ( // ) = Fpath.append
   let ( !! ) = Fpath.to_string
 end

@@ -3988,6 +3988,9 @@ argv |> Array.iter (fun s ->
    R.pop_list ()
 @
 
+%TODO: not implemented, partly because rely on /env/ and is
+% a bit Plan9 specific in Shell.nw
+
 \section{[[wait]]}
 
 

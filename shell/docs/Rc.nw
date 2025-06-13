@@ -1289,7 +1289,7 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
 [@@profiling]
 @
 
-% will see real one bootstrap() later, but for now
+% will see real one [<bootstrap()>] later, but for now
 % essentially this one below
 
 <<constant [[CLI._bootstrap_simple]]>>=
@@ -1578,7 +1578,7 @@ let idchr = ['a'-'z''A'-'Z''0'-'9''_''*']
 
 %\section{[[yylex()]]}
 
-\section{Spaces and comments ([['#']])}
+\section{Spaces and comments ([[#]])}
 
 <<[[Lexer.token()]] space cases>>=
 | [' ''\t']+ { token lexbuf }
@@ -1688,7 +1688,7 @@ prompt :=
 
 
 
-\section{Operators ([[';']], [['&']], [['|']], [['<']], [['>']], [['$']], [['&&']], [['||']], \ldots)}
+\section{Operators ([[;]], [[&]], [[|]], [[<]], [[>]], [[$]], [[&&]], [[||]], \ldots)}
 %alt: Symbols?
 
 <<[[Lexer.token()]] symbol cases>>=
@@ -2132,7 +2132,7 @@ keyword:
 
 \section{Operators}
 
-\subsection{Sequence ([[';']], [['&']])}
+\subsection{Sequence ([[;]], [[&]])}
 
 <<[[Parser.line]] other cases>>=
 | cmdsa line { $1 $2  }
@@ -2161,7 +2161,7 @@ let mk_Seq (a, b) =
 @
 
 
-\subsection{Logical operators  ([['&&']], [['||']], [['!']])}
+\subsection{Logical operators  ([[&&]], [[||]], [[!]])}
 
 <<[[Parser.cmd]] other cases>>=
 | cmd TAndAnd cmd { And ($1, $3) }
@@ -2176,7 +2176,7 @@ let mk_Seq (a, b) =
 % if not first word, then can be a parameter of a command
 
 
-\subsection{String matching  (\texttt{'\textasciitilde'})}
+\subsection{String matching  (\texttt{\textasciitilde})}
 %alt: move in advanced section, but nice to have a construct that
 % can go inside 'if' otherwise have to talk about 'test' or '[' or bash
 
@@ -2202,14 +2202,14 @@ words_rev:
   | words_rev word { $2::$1 }
 @
 
-\subsection{Pipe  ([['|']])}
+\subsection{Pipe  ([[|]])}
 
 <<[[Parser.cmd]] other cases>>=
 | cmd TPipe cmd  { Pipe ($1, $3) }
 @
 
 
-\subsection{Redirections  ([['>']], [['<']])}
+\subsection{Redirections  ([[>]], [[<]])}
 
 <<[[Parser.simple]] other cases>>=
 | simple redir { let (cmd, args, redirs) = $1 in (cmd, args, $2::redirs) }
@@ -2287,7 +2287,7 @@ tcpar_skipnl: TCPar { Globals.skipnl := true; }
 @
 
 
-\section{Grouping (\texttt{'\{...\}'})} 
+\section{Grouping (\texttt{\{...\}})} 
 
 % used in Switch above
 
@@ -3768,7 +3768,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
 @
 %$
 
-\section{[[$ cd]]}
+\section{[[cd]]}
 
 <<[[Builtin.dispatch()]] match [[s]] cases>>=
 | "cd" -> 
@@ -3810,9 +3810,12 @@ let dochdir (caps : < Cap.chdir; .. >) s =
     false
 @
 
-\section{[[$ exit]]}
+\section{[[show]]}
+% new! not in original rc; similar to git show, semgrep show, dune show
 
-\section{[[$ .]]}
+\section{[[exit]]}
+
+\section{[[eval]] and [['.']]}%$
 
 <<[[Builtin.dispatch()]] match [[s]] cases>>=
 | "." ->
@@ -3886,9 +3889,7 @@ let dotcmds =
 @
 
 
-\section{[[$ eval]]}
-
-\subsection{[[$ flag]]}
+\section{[[flag]]}
 % put earlier? used heavily in rcmain
 
 <<global [[Flags.hflags]]>>=
@@ -3934,7 +3935,7 @@ argv |> Array.iter (fun s ->
 
 @
 
-\subsection{[[$ finit]]}
+\section{[[finit]]}
 
 <<[[Builtin.dispatch()]] match [[s]] cases>>=
 | "finit" -> 
@@ -3942,7 +3943,7 @@ argv |> Array.iter (fun s ->
    R.pop_list ()
 @
 
-\section{[[$ wait]]}
+\section{[[wait]]}
 
 
 
@@ -3973,14 +3974,18 @@ argv |> Array.iter (fun s ->
 %******************************************************************************
 \label{chap:initialization-real}
 
-
-
 \section{Actual bootstrapping code}
 
 <<function [[CLI.bootstrap]]>>=
-(* The real one is more complex:
- *  *=(argv);. /usr/lib/rcmain $*
- * Boostrap is now a function because it uses a flag that can be
+(* This is more complex than just [| O.REPL |] in _bootstrap_simple.
+ * The opcodes below correspond to this shell code:
+ *
+ *       *=(argv); . /usr/lib/rcmain $*
+ *
+ * /usr/lib/rcmain itself contains code roughly equivalent to '. /dev/stdin'
+ * that will trigger reading commands from the standard input.
+ *
+ * Note that boostrap is now a function because it uses a flag that can be
  * modified after startup.
  *)
 let bootstrap () : O.codevec = 
@@ -4018,10 +4023,11 @@ let rcmain = ref "/rc/lib/rcmain"
 " <file> read commands to initialize rc from file, not /rc/lib/rcmain";
 @
 
+% show content? also in appendix?
 
 \section{Actual environment}
 
-
+% C code setvar "pid" and "rcname". Useful?
 
 
 %******************************************************************************
@@ -4431,13 +4437,13 @@ let strict_mode = ref false
 
 \section{Advanced builtins}
 
-\subsection{[[$ exec]]}
+\subsection{[[exec]]}
 
-\subsection{[[$ whatis]]}
+\subsection{[[whatis]]}
 
-\subsection{[[$ rfork]]}
+\subsection{[[rfork]]}
 
-\subsection{[[$ shift]]}
+\subsection{[[shift]]}
 
 
 %******************************************************************************

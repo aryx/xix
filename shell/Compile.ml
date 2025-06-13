@@ -105,7 +105,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         | A.RAppend -> 
             emit (O.F O.Append);
             emit (O.I 1);
-        | _ -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
+        | _ -> failwith ("TODO compile: " ^ Ast.show_cmd cmd)
         );
     
         (* perform the command *)
@@ -249,7 +249,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
        A.ForIn (_, _, _)|
        A.For (_, _)
        )
-       -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
+       -> failwith ("TODO compile: " ^ Ast.show_cmd cmd)
 
  (* Do we need to pass eflag here too?
   * Even though types are mutually recursive because of Backquote, the
@@ -280,7 +280,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
        A.Concat (_, _)|
        A.Stringify _
       )
-       -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
+       -> failwith ("TODO compile: " ^ Ast.show_value w)
 
   and xwords (ws : Ast.value list) : unit =
     (*s: [[Compile.outcode_seq]] in nested [[xwords()]] *)
@@ -334,7 +334,7 @@ let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
   (* return the trimmed array *)
   Array.sub !codebuf 0 !idx
   (*s: [[Compile.compile()]] possibly dump returned opcodes *)
-  |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+  |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Opcode.show_codevec x)); x)
   (*e: [[Compile.compile()]] possibly dump returned opcodes *)
 (*e: function [[Compile.compile]] *)
 (*e: shell/Compile.ml *)

@@ -84,7 +84,7 @@ let parse_line lexbuf =
   try 
     Parser.rc lexfunc lexbuf
     (*s: [[Parse.parse_line()]] possibly dump AST *)
-    |> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Dumper_.s_of_line ast)); ast)
+    |> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Ast.show_line ast)); ast)
     (*e: [[Parse.parse_line()]] possibly dump AST *)
   with 
     | Parsing.Parse_error ->

@@ -14,9 +14,8 @@
   ; coupling: mkfile SRC variable
   (modules
      Flags Globals
-     Ast Meta_ast
-     Opcode Meta_opcode
-     Dumper_
+     Ast
+     Opcode
      Compile
      Runtime
      Pattern

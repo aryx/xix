@@ -1,6 +1,16 @@
 (*s: shell/Ast.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
+(* for boostrap-mk.sh and ocaml-light to work without deriving *)
+let show_cmd _ = "NO DERIVING"
+[@@warning "-32"]
+let show_value _ = "NO DERIVING"
+[@@warning "-32"]
+let show_cmd_sequence _ = "NO DERIVING"
+[@@warning "-32"]
+let show_line _ = "NO DERIVING"
+[@@warning "-32"]
+
 (*s: type [[Ast.value]] *)
 (* rc does not use types; there is no integer, no boolean, no float.
  * The only value in rc is the list of strings. Even a single
@@ -100,11 +110,11 @@ and cmd =
       | RDup of int * int (* >[x=y] *)
       (*e: [[Ast.redirection_kind]] other cases *)
 (*e: type [[Ast.redirection_kind]] *)
+[@@deriving show]
 
 (*s: type [[Ast.line]] *)
 (* None when reads EOF *)
 type line = cmd_sequence option
 (*e: type [[Ast.line]] *)
-
-(* less: type any = Line of line | ... so easier dumper *)
+[@@deriving show]
 (*e: shell/Ast.ml *)

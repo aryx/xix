@@ -29,7 +29,7 @@ let int_at_address t pc =
   | O.I i -> i
   (* stricter: generate error, but should never happen *)
   | op -> failwith (spf "was expecting I, not %s at %d" 
-                      (Dumper_.s_of_opcode op) pc)
+                      (Opcode.show op) pc)
 (*e: function [[Interpreter.int_at_address]] *)
 
 (*s: function [[Interpreter.vlook_varname_or_index]] *)
@@ -72,7 +72,7 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       (match x with
       | O.S s -> R.push_word s
       (* stricter: but should never happen *)
-      | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+      | op -> failwith (spf "was expecting a S, not %s" (Opcode.show op))
       )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   | O.Mark -> R.push_list ()
@@ -351,6 +351,6 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
      O.Close|O.Dup|O.PipeFd|
      O.Subshell|O.Backquote|O.Async
     ) ->
-    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F op))
+    failwith ("TODO: " ^ Opcode.show (O.F op))
 (*e: function [[Interpreter.interpret_operation]] *)
 (*e: shell/Interpreter.ml *)

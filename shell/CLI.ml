@@ -78,7 +78,7 @@ let do_action caps s xs =
             let line = Parse.parse_line lexbuf in
             match line with
             | Some seq -> 
-              Logs.app (fun m -> m "%s" (Dumper_.s_of_cmd_sequence seq));
+              Logs.app (fun m -> m "%s" (Ast.show_cmd_sequence seq));
               loop ();
             | None -> ()
           in
@@ -154,7 +154,7 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
     then Logs.app (fun m -> m "pid %d %d %s %s"
                 (Unix.getpid ())
                 !pc
-                (Dumper_.s_of_opcode t.R.code.(!pc))
+                (Opcode.show t.R.code.(!pc))
                 ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
                     spf "(%s)" (String.concat " " xs)
                    ) |> String.concat " "));

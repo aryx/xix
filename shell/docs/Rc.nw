@@ -137,9 +137,6 @@ wildcard matching              & \ref{chap:globbing}           & [[Glob.ml]]    
 Debugging flags                   & \ref{chap:debugging}           & [[Flags.ml]]      & [<xflag>] [<sflag>] [<eflag>] & 58 \\
 here documents & \ref{chap:advanced-topics}    & [[Heredoc.ml]]     &                    & 2 \\
 
-\midrule
-AST dumper                     & \ref{chap:debugging-appendix} & [[Dumper_.ml]]     & [<s_of_line()>]        & 42 \\
-
 \otoprule
 Total                          &                               &                &                                                 & 3200 \\
 \bottomrule
@@ -901,6 +898,16 @@ type fn = {
 @
 % why pc? can't simply start at 0 by convention?
 
+<<signature [[Fn.flook]]>>=
+val flook : string -> Runtime.fn option
+@
+
+<<function [[Fn.flook]]>>=
+let flook s =
+  try 
+    Some (Hashtbl.find R.fns s)
+  with Not_found -> None
+@
 
 
 \section{Threads and run queue}
@@ -1317,7 +1324,7 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
      O.Close|O.Dup|O.PipeFd|
      O.Subshell|O.Backquote|O.Async
     ) ->
-    failwith ("TODO: " ^ Dumper_.s_of_opcode (O.F op))
+    failwith ("TODO: " ^ Opcode.show (O.F op))
 @
 %$
 
@@ -2497,7 +2504,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
        A.ForIn (_, _, _)|
        A.For (_, _)
        )
-       -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
+       -> failwith ("TODO compile: " ^ Ast.show_cmd cmd)
 
  (* Do we need to pass eflag here too?
   * Even though types are mutually recursive because of Backquote, the
@@ -2511,7 +2518,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
        A.Concat (_, _)|
        A.Stringify _
       )
-       -> failwith ("TODO compile: " ^ Dumper_.s_of_value w)
+       -> failwith ("TODO compile: " ^ Ast.show_value w)
 
   and xwords (ws : Ast.value list) : unit =
     <<[[Compile.outcode_seq]] in nested [[xwords()]]>>
@@ -2568,7 +2575,7 @@ ws |> List.rev |> List.iter (fun w -> xword w);
     (match x with
     | O.S s -> R.push_word s
     (* stricter: but should never happen *)
-    | op -> failwith (spf "was expecting a S, not %s" (Dumper_.s_of_opcode op))
+    | op -> failwith (spf "was expecting a S, not %s" (Opcode.show op))
     )
 @
 \swdefs{O.Word}
@@ -3008,7 +3015,7 @@ let int_at_address t pc =
   | O.I i -> i
   (* stricter: generate error, but should never happen *)
   | op -> failwith (spf "was expecting I, not %s at %d" 
-                      (Dumper_.s_of_opcode op) pc)
+                      (Opcode.show op) pc)
 @
 
 
@@ -3110,7 +3117,7 @@ let int_at_address t pc =
     | A.RAppend -> 
         emit (O.F O.Append);
         emit (O.I 1);
-    | _ -> failwith ("TODO compile: " ^ Dumper_.s_of_cmd cmd)
+    | _ -> failwith ("TODO compile: " ^ Ast.show_cmd cmd)
     );
     
     (* perform the command *)
@@ -4508,17 +4515,7 @@ let dump_ast = ref false
 @
 
 <<[[Parse.parse_line()]] possibly dump AST>>=
-|> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Dumper_.s_of_line ast)); ast)
-@
-
-<<signature [[Dumper_.s_of_line]]>>=
-val s_of_line : Ast.line -> string
-@
-
-<<function [[Dumper_.s_of_line]]>>=
-let s_of_line x =
-  let v = Meta_ast.vof_line x in
-  Ocaml.string_of_v v
+|> (fun ast -> if !Flags.dump_ast then Logs.app (fun m -> m "%s" (Ast.show_line ast)); ast)
 @
 
 \subsection{Dumping the opcodes}
@@ -4528,75 +4525,8 @@ let s_of_line x =
 let dump_opcodes = ref false
 @
 <<[[Compile.compile()]] possibly dump returned opcodes>>=
-|> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Dumper_.s_of_codevec x)); x)
+|> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Opcode.show_codevec x)); x)
 @
-
-<<signature [[Dumper_.s_of_codevec]]>>=
-val s_of_codevec : Opcode.codevec -> string
-@
-
-<<function [[Dumper_.s_of_codevec]]>>=
-let s_of_codevec x =
-  let xs = Array.to_list x in
-  let v = Ocaml.vof_list Meta_opcode.vof_opcode xs in
-  Ocaml.string_of_v v
-@
-
-\subsection{Dumping unhandled constructs}
-%TODO: should disappear once I implement all opcodes
-
-<<signature [[Dumper_.s_of_cmd]]>>=
-val s_of_cmd : Ast.cmd -> string
-@
-<<function [[Dumper_.s_of_cmd]]>>=
-let s_of_cmd x =
-  let v = Meta_ast.vof_cmd x in
-  Ocaml.string_of_v v
-@
-
-
-<<signature [[Dumper_.s_of_opcode]]>>=
-val s_of_opcode : Opcode.t -> string
-@
-<<function [[Dumper_.s_of_opcode]]>>=
-let s_of_opcode x =
-  let v = Meta_opcode.vof_opcode x in
-  Ocaml.string_of_v v
-@
-
-
-<<signature [[Dumper_.s_of_cmd_sequence]]>>=
-val s_of_cmd_sequence : Ast.cmd_sequence -> string
-@
-
-<<function [[Dumper_.s_of_cmd_sequence]]>>=
-let s_of_cmd_sequence x =
-  let v = Meta_ast.vof_cmd_sequence x in
-  Ocaml.string_of_v v
-@
-
-
-
-<<signature [[Dumper_.s_of_value]]>>=
-val s_of_value : Ast.value -> string
-@
-<<function [[Dumper_.s_of_value]]>>=
-let s_of_value x =
-  let v = Meta_ast.vof_value x in
-  Ocaml.string_of_v v
-@
-
-
-%DEAD?
-<<signature [[Dumper_.s_of_operation]]>>=
-val s_of_operation : Opcode.operation -> string
-@
-<<function [[Dumper_.s_of_operation]]>>=
-let s_of_operation x =
-  let v = Meta_opcode.vof_operation x in
-  Ocaml.string_of_v v
-@
-
 
 \section{Opcode generator trace: [[rc -r]]}
 \label{sec:rc-r}
@@ -4618,7 +4548,7 @@ if !Flags.rflag
 then Logs.app (fun m -> m "pid %d %d %s %s"
             (Unix.getpid ())
             !pc
-            (Dumper_.s_of_opcode t.R.code.(!pc))
+            (Opcode.show t.R.code.(!pc))
             ( (t.R.argv::t.R.argv_stack) |> List.map (fun xs ->
                 spf "(%s)" (String.concat " " xs)
                ) |> String.concat " "));
@@ -4673,7 +4603,7 @@ let do_action caps s xs =
             let line = Parse.parse_line lexbuf in
             match line with
             | Some seq -> 
-              Logs.app (fun m -> m "%s" (Dumper_.s_of_cmd_sequence seq));
+              Logs.app (fun m -> m "%s" (Ast.show_cmd_sequence seq));
               loop ();
             | None -> ()
           in

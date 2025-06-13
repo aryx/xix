@@ -8,7 +8,7 @@ DOC_EXTRA=control_flow.tex
 VERSION=1
 D=..
 SRC_ML=\
-  $D/Builtin.ml $D/CLI.ml $D/Compile.ml $D/Dumper_.ml $D/Env.ml $D/Error.ml \
+  $D/Builtin.ml $D/CLI.ml $D/Compile.ml $D/Env.ml $D/Error.ml \
   $D/Fn.ml $D/Glob.ml $D/Heredoc.ml $D/Interpreter.ml $D/PATH.ml $D/Parse.ml \
   $D/Pattern.ml $D/Process.ml $D/Prompt.ml $D/Runtime.ml $D/Status.ml $D/Var.ml
 

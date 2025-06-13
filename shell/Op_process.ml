@@ -77,7 +77,7 @@ let op_Simple (caps : < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.exit; ..>) 
   (*s: [[Op_process.op_Simple()]] possibly dump command *)
   (* less: globlist () *)
   if !Flags.xflag 
-  then Logs.app (fun m -> m "%s" (String.concat " " argv));
+  then Logs.app (fun m -> m "|%s|" (String.concat " " argv));
   (*e: [[Op_process.op_Simple()]] possibly dump command *)
   match argv with
   (*s: [[Op_process.op_Simple()]] match [[argv]] empty case *)

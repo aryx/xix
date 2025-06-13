@@ -1,3 +1,4 @@
+# -*- rc -*-
 # rcmain: Plan 9 version
 if(~ $#home 0) home=/
 if(~ $#ifs 0) ifs=' 	

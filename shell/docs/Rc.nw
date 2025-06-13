@@ -1373,7 +1373,7 @@ t.R.iflag <- !Flags.interactive;
 % first thread (the REPL) is interactive if shell was set to be interactive
 % some will not?
 
-\section{Reading commands: [[O.REPL]]}
+\section{Reading commands: [[O.REPL()]]}
 %c: was Xrdcmds()
 
 % see bootstrap_simple, and interpreter loop, so here we go
@@ -2608,7 +2608,7 @@ argv_stack = [];
 @
 % how can have enclosing argv_stack we need to save?
 
-\subsection{[[O.Simple]]}
+\subsection{[[O.Simple()]]}
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (args) *)
@@ -4192,9 +4192,7 @@ let strict_mode = ref false
 \section{Reading commands from a string: [[rc -c]]}
 \label{sec:rc-c}
 
-\section{Unicode}
-
-
+%\section{Unicode}
 
 \section{Advanced constructs}
 
@@ -4555,13 +4553,9 @@ then Logs.app (fun m -> m "pid %d %d %s %s"
 @
 %TODO: do a better one, that knows that O.Simple accept value and values after in sequence
 
-\section{Printing characters: [[rc -v]]}
+%\section{Printing characters: [[rc -v]]}
 % hmm I've used it for verbose now
-
-\section{Printing all characters: [[rc -V]]}
-
-
-
+%\section{Printing all characters: [[rc -V]]}
 
 
 \section{CLI actions}

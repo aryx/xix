@@ -1,19 +1,30 @@
 (*s: shell/Op_process.ml *)
+open Fpath_.Operators
 
 module R = Runtime
 module E = Error
 
 (*s: function [[Op_process.execute]] *)
-let execute (caps : <Cap.exec; ..>) args path =
+let execute (caps : <Cap.exec; ..>) (args : string list) (var_PATH : Fpath.t list option) =
 
   let argv = Array.of_list args in
+  let arg0 = argv.(0) in
   let errstr = ref "" in
 
   (* less: Updenv () *)
-  path |> List.iter (fun root ->
-    let path = (if root = "" then "" else root ^ "/") ^ argv.(0) in
-    try 
-      CapUnix.execv caps path argv |> ignore
+  let final_path : Fpath.t =
+    match var_PATH with
+    | None -> Fpath.v arg0
+    | Some xs ->
+        try 
+          let dir = PATH.find_dir_with_cmd_in_PATH arg0 xs in
+          dir / arg0
+        with Not_found -> 
+            Logs.err (fun m -> m "could not find %s in $path" arg0);
+            Fpath.v arg0
+  in
+  (try 
+      CapUnix.execv caps !!final_path argv |> ignore
     with Unix.Unix_error (err, s1, s2) ->
      errstr := Process.s_of_unix_error err s1 s2;
      Globals.errstr := s2
@@ -34,7 +45,7 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
       (*s: [[Op_process.exec()]] before [[execute]] *)
       R.doredir t.R.redirections;
       (*e: [[Op_process.exec()]] before [[execute]] *)
-      execute caps argv (PATH.search_path_for_cmd prog);
+      execute caps argv (PATH.var_PATH_for_cmd_opt prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 (*e: function [[Op_process.exec]] *)

@@ -1,11 +1,14 @@
 
+val of_strings : string list -> Fpath.t list
+val to_strings : Fpath.t list -> string list
+
 module Operators : sig
-  (* = add_seg *)
-  (*val ( / ) : Fpath.t -> string -> Fpath.t *)
+  (* Fpath.add_seg = Fpath.(/) *)
+  val ( / ) : Fpath.t -> string -> Fpath.t
 
-  (* = append *)
-  (* val ( // ) : Fpath.t -> Fpath.t -> Fpath.t *)
+  (* Fpath.append = Fpath.(//) *)
+  val ( // ) : Fpath.t -> Fpath.t -> Fpath.t
 
-  (* = to_string *)
+  (* Fpath.to_string *)
   val ( !! ) : Fpath.t -> string
 end

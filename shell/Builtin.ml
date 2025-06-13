@@ -1,6 +1,5 @@
 (*s: shell/Builtin.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-
 open Common
 
 module R = Runtime
@@ -11,10 +10,13 @@ module O = Opcode
 let is_builtin s =
   List.mem s [
     "cd"; 
-    "."; "eval"; 
+    "."; 
+    "eval";
     "exit";
     "flag";
-    "finit"
+    "finit";
+    (* new in ocaml *)
+    "show";
   ]
 (*e: function [[Builtin.is_builtin]] *)
 (*s: constant [[Builtin.ndots]] *)
@@ -152,6 +154,28 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
      (* less: Xrdfn *)
      R.pop_list ()
   (*e: [[Builtin.dispatch()]] match [[s]] cases *)
+  | "show" -> 
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [_show;"vars"] ->
+          Logs.app (fun m -> m "--- GLOBALS ---");
+          R.globals |> Hashtbl.iter (fun k v ->
+              Logs.app (fun m -> m "%s=%s" k (Runtime.string_of_var v))
+          );
+          Logs.app (fun m -> m "--- LOCALS ---");
+          t.R.locals |> Hashtbl.iter (fun k v ->
+              Logs.app (fun m -> m "%s=%s" k (Runtime.string_of_var v))
+          );
+          Logs.app (fun m -> m "--- FUNCTIONS ---");
+          R.fns |> Hashtbl.iter (fun k fn ->
+              Logs.app (fun m -> m "%s=%s" k (Runtime.show_fn fn))
+          );
+          ()
+      | _ -> E.error caps ("Usage: show (vars|thread)")
+      );
+
+
   | _ -> failwith (spf "unsupported builtin %s" s)
 (*e: function [[Builtin.dispatch]] *)
 (*e: shell/Builtin.ml *)

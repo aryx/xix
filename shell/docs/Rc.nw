@@ -3815,7 +3815,7 @@ let dochdir (caps : < Cap.chdir; .. >) s =
 
 \section{[[exit]]}
 
-\section{[[eval]] and [['.']]}%$
+\section{[['.']]}
 
 <<[[Builtin.dispatch()]] match [[s]] cases>>=
 | "." ->
@@ -3888,6 +3888,7 @@ let dotcmds =
   |]         
 @
 
+\section{[[eval]]}%$
 
 \section{[[flag]]}
 % put earlier? used heavily in rcmain

@@ -20,6 +20,9 @@ type var = {
   (* less: opti: changed: bool *)
 }
 (*e: type [[Runtime.var]] *)
+
+val string_of_var : var -> string
+
 (*s: type [[Runtime.fn]] *)
 type fn = {
   code: Opcode.codevec;
@@ -27,6 +30,7 @@ type fn = {
   (* less: fnchanged *)
 }
 (*e: type [[Runtime.fn]] *)
+val show_fn: fn -> string
 
 (*s: type [[Runtime.thread]] *)
 type thread = {

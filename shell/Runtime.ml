@@ -1,9 +1,11 @@
 (*s: shell/Runtime.ml *)
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Globals used by rc during interpretation.
+ *)
 
 (*****************************************************************************)
 (* Types and globals *)
@@ -29,6 +31,11 @@ type var = {
   (* less: opti: changed: bool *)
 }
 (*e: type [[Runtime.var]] *)
+
+(* for boostrap-mk.sh and ocaml-light to work without deriving *)
+let show_fn _ = "NO DERIVING"
+[@@warning "-32"]
+
 (*s: type [[Runtime.fn]] *)
 type fn = {
   code: Opcode.codevec;
@@ -36,6 +43,7 @@ type fn = {
   (* less: fnchanged *)
 }
 (*e: type [[Runtime.fn]] *)
+[@@deriving show]
 
 (*s: type [[Runtime.thread]] *)
 type thread = {
@@ -107,7 +115,7 @@ let runq = ref []
 (*e: constant [[Runtime.runq]] *)
 
 (*****************************************************************************)
-(* Helpers *)
+(* cur *)
 (*****************************************************************************)
 
 (*s: function [[Runtime.cur]] *)
@@ -116,6 +124,10 @@ let cur () =
   | [] -> failwith "empty runq"
   | x::_xs -> x
 (*e: function [[Runtime.cur]] *)
+
+(*****************************************************************************)
+(* Stack (argv) API *)
+(*****************************************************************************)
 
 (*s: function [[Runtime.push_list]] *)
 let push_list () =
@@ -152,6 +164,10 @@ let pop_word () =
   | _x::xs ->
       t.argv <- xs
 (*e: function [[Runtime.pop_word]] *)
+
+(*****************************************************************************)
+(* Redirection *)
+(*****************************************************************************)
 
 (*s: function [[Runtime.push_redir]] *)
 let push_redir (x : redir) : unit =
@@ -196,6 +212,10 @@ let doredir xxs =
   )
 (*e: function [[Runtime.doredir]] *)
 
+(*****************************************************************************)
+(* Constructor *)
+(*****************************************************************************)
+
 (*s: function [[Runtime.mk_thread]] *)
 (* This function was called start(), but it does not really start right
  * away the new thread. So better to call it mk_thread.
@@ -229,4 +249,15 @@ let mk_thread code pc locals =
   } in
   t
 (*e: function [[Runtime.mk_thread]] *)
+
+(*****************************************************************************)
+(* Misc *)
+(*****************************************************************************)
+let string_of_var (var : var) : string =
+  match var.v with
+  | None -> ""
+  | Some [] -> ""
+  | Some [x] -> x
+  | Some xs -> "(" ^ String.concat " " xs ^ ")"
+
 (*e: shell/Runtime.ml *)

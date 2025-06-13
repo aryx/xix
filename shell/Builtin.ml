@@ -135,10 +135,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
           then E.error caps "flag argument must be a single letter"
           else begin
             let char = String.get letter 0 in
-            let is_set =
-              try Hashtbl.find Flags.hflags char
-              with Not_found -> false
-            in
+            let is_set = Hashtbl.mem Flags.hflags char in
             Status.setstatus (if is_set then "" else "flag not set");
           end
 

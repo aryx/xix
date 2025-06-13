@@ -40,7 +40,6 @@ let show_line _ = "NO DERIVING"
 
 <<shell/Builtin.ml>>=
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-
 open Common
 
 module R = Runtime
@@ -301,6 +300,7 @@ open Xix_shell
 %-------------------------------------------------------------
 
 <<shell/Op_process.ml>>=
+open Fpath_.Operators
 
 module R = Runtime
 module E = Error
@@ -353,6 +353,7 @@ let show_codevec _ = "NO DERIVING"
 
 <<shell/PATH.ml>>=
 open Common
+open Fpath_.Operators
 
 module R = Runtime
 
@@ -453,11 +454,13 @@ module R = Runtime
 %-------------------------------------------------------------
 
 <<shell/Runtime.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Globals used by rc during interpretation.
+ *)
 
 (*****************************************************************************)
 (* Types and globals *)
@@ -466,7 +469,13 @@ module R = Runtime
 <<type [[Runtime.varname]]>>
 <<type [[Runtime.value]]>>
 <<type [[Runtime.var]]>>
+
+(* for boostrap-mk.sh and ocaml-light to work without deriving *)
+let show_fn _ = "NO DERIVING"
+[@@warning "-32"]
+
 <<type [[Runtime.fn]]>>
+[@@deriving show]
 
 <<type [[Runtime.thread]]>>
 
@@ -483,16 +492,24 @@ module R = Runtime
 <<constant [[Runtime.runq]]>>
 
 (*****************************************************************************)
-(* Helpers *)
+(* cur *)
 (*****************************************************************************)
 
 <<function [[Runtime.cur]]>>
+
+(*****************************************************************************)
+(* Stack (argv) API *)
+(*****************************************************************************)
 
 <<function [[Runtime.push_list]]>>
 <<function [[Runtime.pop_list]]>>
 
 <<function [[Runtime.push_word]]>>
 <<function [[Runtime.pop_word]]>>
+
+(*****************************************************************************)
+(* Redirection *)
+(*****************************************************************************)
 
 <<function [[Runtime.push_redir]]>>
 <<function [[Runtime.pop_redir]]>>
@@ -501,7 +518,22 @@ module R = Runtime
 
 <<function [[Runtime.doredir]]>>
 
+(*****************************************************************************)
+(* Constructor *)
+(*****************************************************************************)
+
 <<function [[Runtime.mk_thread]]>>
+
+(*****************************************************************************)
+(* Misc *)
+(*****************************************************************************)
+let string_of_var (var : var) : string =
+  match var.v with
+  | None -> ""
+  | Some [] -> ""
+  | Some [x] -> x
+  | Some xs -> "(" ^ String.concat " " xs ^ ")"
+
 @
 
 
@@ -700,7 +732,11 @@ val match_str : string -> pattern -> bool
 <<type [[Runtime.varname]]>>
 <<type [[Runtime.value]]>>
 <<type [[Runtime.var]]>>
+
+val string_of_var : var -> string
+
 <<type [[Runtime.fn]]>>
+val show_fn: fn -> string
 
 <<type [[Runtime.thread]]>>
 <<type [[Runtime.redir]]>>

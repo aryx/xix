@@ -1193,7 +1193,7 @@ val interpret_bootstrap : < caps > -> string list -> unit
 
 <<constant [[CLI.usage]]>>=
 let usage =
-  "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
+  "usage: rc [-SsriIlxepv] [-c arg] [-m command] [file [arg ...]]"
 @
 
 % will show gradually
@@ -1247,7 +1247,9 @@ let login = ref false
 " login mode (execute ~/lib/profile)";
 @
 
-%TODO? implemented?
+% no code really here but hflags will pick it up and
+% rcmain \ref{sec:rcmain} will use whether flag is set
+% (same for -p)
 
 %trans: many more flags, shown gradually, especially Chapter X
 % advanced features and Y for debugging
@@ -1256,7 +1258,6 @@ let login = ref false
 %\section{Initialization}
 %Var.vinit before
 % trapinit?
-
 %\section{Setting [[runq]]}
 %\section{Setting [[runq->argv]]}
 
@@ -2740,7 +2741,7 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
   | [] -> E.error caps "empty argument list" 
   | prog::_xs -> 
       <<[[Op_process.exec()]] before [[execute]]>>
-      execute caps argv (PATH.search_path_for_cmd prog);
+      execute caps argv (PATH.var_PATH_for_cmd_opt prog);
       (* should not be reached, unless prog could not be executed *)
       R.pop_list ()
 @
@@ -2749,16 +2750,26 @@ let exec (caps : < Cap.exec; Cap.exit; .. >) () : unit =
 % actually why need prog as a param?
 
 <<function [[Op_process.execute]]>>=
-let execute (caps : <Cap.exec; ..>) args path =
+let execute (caps : <Cap.exec; ..>) (args : string list) (var_PATH : Fpath.t list option) =
 
   let argv = Array.of_list args in
+  let arg0 = argv.(0) in
   let errstr = ref "" in
 
   (* less: Updenv () *)
-  path |> List.iter (fun root ->
-    let path = (if root = "" then "" else root ^ "/") ^ argv.(0) in
-    try 
-      CapUnix.execv caps path argv |> ignore
+  let final_path : Fpath.t =
+    match var_PATH with
+    | None -> Fpath.v arg0
+    | Some xs ->
+        try 
+          let dir = PATH.find_dir_with_cmd_in_PATH arg0 xs in
+          dir / arg0
+        with Not_found -> 
+            Logs.err (fun m -> m "could not find %s in $path" arg0);
+            Fpath.v arg0
+  in
+  (try 
+      CapUnix.execv caps !!final_path argv |> ignore
     with Unix.Unix_error (err, s1, s2) ->
      errstr := Process.s_of_unix_error err s1 s2;
      Globals.errstr := s2
@@ -2930,37 +2941,48 @@ let waitfor (caps : < Cap.wait; .. >) (pid : int) : waitfor_result =
 \label{sec:path-management}
 
 <<signature [[PATH.find_in_path]]>>=
-val find_in_path :
-  string (* cmd *) -> string list (* $path *) -> Common.filename
+val find_dir_with_cmd_in_PATH :
+  string (* cmd *) -> Fpath.t list (* $path *) -> Fpath.t
 @
 %$
 
 <<signature [[PATH.search_path_for_cmd]]>>=
-val search_path_for_cmd : string (* cmd *) -> string list (* $path *)
+(* Returns None when there is no need to use $path because the cmd is
+ * already using an absolute, relative, or special path.
+ *)
+val var_PATH_for_cmd_opt : string (* cmd *) -> 
+  Fpath.t list (* content of $path *) option
 @
 %$
 
 <<function [[PATH.search_path_for_cmd]]>>=
-let search_path_for_cmd s =
-  let nullpath = [""] in
-
+let var_PATH_for_cmd_opt (s : string) : Fpath.t list option =
+  (* no need for PATH resolution when commands use absolute, relative, or
+   * special paths.
+   *)
   if s =~ "^/" ||
      (* Plan 9 device paths *)
      s =~ "^#" || 
      s =~ "\\./" ||
      s =~ "\\.\\./"
-  then nullpath
+  then None
   else
     let v = (Var.vlook "path").R.v in
     (match v with
-    | None -> nullpath
-    | Some xs -> xs
+    | None -> Some []
+    | Some xs -> Some (Fpath_.of_strings xs)
     )
 @
 
 <<function [[PATH.find_in_path]]>>=
-let find_in_path _s _paths =
-  raise Todo
+let find_dir_with_cmd_in_PATH (cmd : string) (paths : Fpath.t list) : Fpath.t =
+  paths |> List.find (fun dir ->
+    let res = Sys.file_exists !!(dir / cmd) in
+    if res
+    then Logs.info (fun m -> m "found %s in %s" cmd !!dir);
+    res
+  )
+
 @
 %TODO
 
@@ -3751,10 +3773,13 @@ let vlook_varname_or_index varname =
 let is_builtin s =
   List.mem s [
     "cd"; 
-    "."; "eval"; 
+    "."; 
+    "eval";
     "exit";
     "flag";
-    "finit"
+    "finit";
+    (* new in ocaml *)
+    "show";
   ]
 @
 %TODO: "exec" ?
@@ -3764,6 +3789,28 @@ let is_builtin s =
 let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
   match s with
   <<[[Builtin.dispatch()]] match [[s]] cases>>
+  | "show" -> 
+      let t = R.cur () in
+      let argv = t.R.argv in
+      (match argv with
+      | [_show;"vars"] ->
+          Logs.app (fun m -> m "--- GLOBALS ---");
+          R.globals |> Hashtbl.iter (fun k v ->
+              Logs.app (fun m -> m "%s=%s" k (Runtime.string_of_var v))
+          );
+          Logs.app (fun m -> m "--- LOCALS ---");
+          t.R.locals |> Hashtbl.iter (fun k v ->
+              Logs.app (fun m -> m "%s=%s" k (Runtime.string_of_var v))
+          );
+          Logs.app (fun m -> m "--- FUNCTIONS ---");
+          R.fns |> Hashtbl.iter (fun k fn ->
+              Logs.app (fun m -> m "%s=%s" k (Runtime.show_fn fn))
+          );
+          ()
+      | _ -> E.error caps ("Usage: show (vars|thread)")
+      );
+
+
   | _ -> failwith (spf "unsupported builtin %s" s)
 @
 %$
@@ -3920,10 +3967,7 @@ argv |> Array.iter (fun s ->
         then E.error caps "flag argument must be a single letter"
         else begin
           let char = String.get letter 0 in
-          let is_set =
-            try Hashtbl.find Flags.hflags char
-            with Not_found -> false
-          in
+          let is_set = Hashtbl.mem Flags.hflags char in
           Status.setstatus (if is_set then "" else "flag not set");
         end
 
@@ -4087,7 +4131,7 @@ let xflag = ref false
 <<[[Op_process.op_Simple()]] possibly dump command>>=
 (* less: globlist () *)
 if !Flags.xflag 
-then Logs.app (fun m -> m "%s" (String.concat " " argv));
+then Logs.app (fun m -> m "|%s|" (String.concat " " argv));
 @
 
 \section{Printing subprocesses status: [[rc -s]]}
@@ -4196,8 +4240,25 @@ let strict_mode = ref false
 % done in rio!
 
 
-\section{Reading commands from a string: [[rc -c]]}
+\section{Advanced flags}
+
+\subsection{Reading commands from a string: [[rc -c]]}
 \label{sec:rc-c}
+
+\subsection{Restrict [[$path]] candidates: [[rc -p]]}
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-p", Arg.Unit (fun () -> ()),
+" restrict $path to just (/bin /usr/bin)";
+@
+% -p looks like it was dead code in Shell.nw because never used
+% and not used here either in the OCaml code,
+% but it's because it is used in rcmain via 'flag p'!!
+% see \ref{sec:rcmain}
+% to set path to just bin and /usr/bin instead of calling finit
+% the man page of rc in 9base says "a no op" but rcmain use it actually
+
+%TODO: what about -d
 
 %\section{Unicode}
 
@@ -4675,6 +4736,8 @@ status=''
 . $*
 exit $status
 \end{verbatim}
+
+% see flags p! used by rc -p!
 
 \section{[[/home/pad/lib/profile]]}
 

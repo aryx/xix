@@ -52,7 +52,7 @@ type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.env; Cap.exit; Cap.op
 (* -d and -p are dead according to man page so I removed them *)
 (*s: constant [[CLI.usage]] *)
 let usage =
-  "usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]"
+  "usage: rc [-SsriIlxepv] [-c arg] [-m command] [file [arg ...]]"
 (*e: constant [[CLI.usage]] *)
 
 (*****************************************************************************)
@@ -101,9 +101,15 @@ let _bootstrap_simple : O.codevec =
   [| O.F O.REPL |]
 (*e: constant [[CLI._bootstrap_simple]] *)
 (*s: function [[CLI.bootstrap]] *)
-(* The real one is more complex:
- *  *=(argv);. /usr/lib/rcmain $*
- * Boostrap is now a function because it uses a flag that can be
+(* This is more complex than just [| O.REPL |] in _bootstrap_simple.
+ * The opcodes below correspond to this shell code:
+ *
+ *       *=(argv); . /usr/lib/rcmain $*
+ *
+ * /usr/lib/rcmain itself contains code roughly equivalent to '. /dev/stdin'
+ * that will trigger reading commands from the standard input.
+ *
+ * Note that boostrap is now a function because it uses a flag that can be
  * modified after startup.
  *)
 let bootstrap () : O.codevec = 
@@ -220,6 +226,9 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     (* pad: I added that *)
     "-strict", Arg.Set Flags.strict_mode,
     " strict mode";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-p", Arg.Unit (fun () -> ()),
+    " restrict $path to just (/bin /usr/bin)";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-debugger", Arg.Set Flags.debugger,
     " ";

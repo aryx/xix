@@ -1,5 +1,6 @@
 (*s: shell/Var.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
 
 module R = Runtime
 
@@ -40,7 +41,17 @@ let setvar (name : Runtime.varname) (v : Runtime.value) : unit =
 (*e: function [[Var.setvar]] *)
 
 (*s: function [[Var.vinit]] *)
-let vinit (_caps : < Cap.env; .. >) =
-  Logs.err (fun m -> m "TODO: load from environment")
+let init (caps : < Cap.env; .. >) =
+  Logs.info (fun m -> m "load globals from the environment");
+  let xs = Env.read_environment caps in
+  xs |> List.iter (fun (k, vs) ->
+    match k, vs with
+    | "PATH", [x] ->
+       Logs.info (fun m -> m "adjust $PATH to $path");
+       let vs = Regexp_.split "[:]" x in
+       let k = "path" in
+       setvar k vs
+    | _ -> setvar k vs
+  );
 (*e: function [[Var.vinit]] *)
 (*e: shell/Var.ml *)

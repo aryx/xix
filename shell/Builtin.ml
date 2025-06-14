@@ -157,7 +157,8 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
       (match argv with
       | [_show;"vars"] ->
           Logs.app (fun m -> m "--- GLOBALS ---");
-          R.globals |> Hashtbl.iter (fun k v ->
+          R.globals |> Hashtbl_.to_list |> Assoc.sort_by_key_lowfirst |>
+          List.iter (fun (k, v) ->
               Logs.app (fun m -> m "%s=%s" k (Runtime.string_of_var v))
           );
           Logs.app (fun m -> m "--- LOCALS ---");

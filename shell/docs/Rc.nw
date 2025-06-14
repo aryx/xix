@@ -101,9 +101,9 @@ contained in the file is primarily discussed.
 {\bf Function}                 & {\bf Ch.}                     & {\bf File}     & {\bf Entities}                                  & {\bf LOC} \\
 \otoprule
 abstract syntax tree           & \ref{chap:core-ds}            & [[Ast.ml]]       & [<line>] [<cmd>] [<Ast.value>]   & 110 \\
-opcodes                        & \ref{chap:core-ds}            & [[Opcode.ml]]     & [<codevec>] [<Opcode.opcode>] [<operation>]        & 109 \\
+opcodes                        & \ref{chap:core-ds}            & [[Opcode.ml]]     & [<codevec>] [<Opcode.t>] [<operation>]        & 109 \\
 runtime structures             & \ref{chap:core-ds}            & [[Runtime.ml]]  & [<var>] [<globals>] [<thread>] [<runq>] [<cur()>] & 233 \\ % push_word() vlook() setvar [<Runtime.value>]
-variable management            & \ref{chap:core-ds}            & [[Var.ml]]     & [<gvlook()>] [<vlook()>] [<setvar()>] &  46 \\ %  [<vinit()>]
+variable management            & \ref{chap:core-ds}            & [[Var.ml]]     & [<gvlook()>] [<vlook()>] [<setvar()>] [<init()>] &  46 \\ % 
 function management            & \ref{chap:core-ds}            & [[Fn.ml]]     & [<flook()>] &  10 \\ 
 
 \midrule
@@ -128,7 +128,7 @@ error management               & \ref{chap:compile-interpret}  & [[Error.ml]]   
 [[$path]] management           & \ref{chap:compile-interpret}  & [[PATH.ml]]     & [<find_in_path()>]                          & 27 \\
 pattern matching [[~]]         & \ref{chap:compile-interpret}  & [[Pattern.ml]]     & [<match_str()>]                          & 12 \\
 shell builtins                 & \ref{chap:builtins}           & [[Builtin.ml]] & [<dispatch()>] [<dochdir()>]        & 157 \\
-shell environment              & \ref{chap:environment}        & [[Env.ml]]      &                         & 2 \\
+shell environment              & \ref{chap:environment}        & [[Env.ml]]      & [<read_environment()>]                        & 2 \\
 signal management              & \ref{chap:signals}            & [[Trap.ml]]     &                           & \\
 % initialization chapter?
 
@@ -870,13 +870,6 @@ let gvlook (name : R.varname) : R.var =
 (* Populate Runtime.globals from the current environment *)
 val vinit : < Cap.env ; .. > -> unit
 @
-
-%alt: move later? maybe ok here
-<<function [[Var.vinit]]>>=
-let vinit (_caps : < Cap.env; .. >) =
-  Logs.err (fun m -> m "TODO: load from environment")
-@
-
 
 
 \section{Functions}
@@ -3999,15 +3992,21 @@ argv |> Array.iter (fun s ->
 \chapter{Environment}
 %******************************************************************************
 \label{chap:environment}
+%alt: worth a chapter? merge with initialization?
 
-% worth a chapter?
+\section{[[Var.init()]]}
 
-\section{[[Updenv()]]}
+<<function [[Var.vinit]]>>=
+let vinit (_caps : < Cap.env; .. >) =
+  Logs.err (fun m -> m "TODO: load from environment")
+@
 
-\section{[[Vinit()]]}
+\section{[[Var.update_env()]]}
+
+
 
 %\section{Functions in the environment}
-
+% see also finit builtin
 
 %******************************************************************************
 \chapter{Signals}

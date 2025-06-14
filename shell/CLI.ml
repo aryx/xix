@@ -267,7 +267,7 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     raise (Exit.ExitCode 0)
   end;
   (*e: [[CLI.main()]] CLI action processing *)
-  Var.vinit caps;
+  Var.init caps;
   (* todo: trap_init () *)
   (*s: [[CLI.main()]] other initializations *)
   (* todo: 

@@ -1,5 +1,5 @@
 executing: rc --help
-usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]
+usage: rc [-SsriIlxepv] [-c arg] [-m command] [file [arg ...]]
   -i             interactive mode (display prompt)
   -I             non-interactive mode (no prompt)
   -l             login mode (execute ~/lib/profile)
@@ -12,6 +12,7 @@ usage: rc [-SsriIlxevV] [-c arg] [-m command] [file [arg ...]]
   -debug         trace the main functions
   -e             exit if $status is non-null after a simple command
   -strict        strict mode
+  -p             restrict $path to just (/bin /usr/bin)
   -debugger      
   -dump_tokens   dump the tokens as they are generated
   -dump_ast      dump the parsed AST

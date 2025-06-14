@@ -17,6 +17,6 @@ val setvar : Runtime.varname -> Runtime.value -> unit
 (*e: signature [[Var.setvar]] *)
 (*s: signature [[Var.vinit]] *)
 (* Populate Runtime.globals from the current environment *)
-val vinit : < Cap.env ; .. > -> unit
+val init : < Cap.env ; .. > -> unit
 (*e: signature [[Var.vinit]] *)
 (*e: Var.mli *)

@@ -174,6 +174,8 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Lex
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Lexer.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Op_process.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Fn.ml
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Env.mli
+ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Env.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Var.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Prompt.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Status.ml
@@ -185,7 +187,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c CLI
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Parse.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -c Interpreter.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/collections -pp ../scripts/remove_xix_open.sh -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Opcode.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str.cma unix.cma ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Opcode.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Env.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/collections/lib.cma ../lib_core/commons/lib.cma -o rc
 
 cd $TOP
 cp mk/mk shell/rc bin/

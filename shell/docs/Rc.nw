@@ -868,7 +868,7 @@ let gvlook (name : R.varname) : R.var =
 
 <<signature [[Var.vinit]]>>=
 (* Populate Runtime.globals from the current environment *)
-val vinit : < Cap.env ; .. > -> unit
+val init : < Cap.env ; .. > -> unit
 @
 
 
@@ -1155,7 +1155,7 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
   );
   <<[[CLI.main()]] logging initializations>>
   <<[[CLI.main()]] CLI action processing>>
-  Var.vinit caps;
+  Var.init caps;
   (* todo: trap_init () *)
   <<[[CLI.main()]] other initializations>>
   try 
@@ -3788,7 +3788,8 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
       (match argv with
       | [_show;"vars"] ->
           Logs.app (fun m -> m "--- GLOBALS ---");
-          R.globals |> Hashtbl.iter (fun k v ->
+          R.globals |> Hashtbl_.to_list |> Assoc.sort_by_key_lowfirst |>
+          List.iter (fun (k, v) ->
               Logs.app (fun m -> m "%s=%s" k (Runtime.string_of_var v))
           );
           Logs.app (fun m -> m "--- LOCALS ---");
@@ -3997,8 +3998,18 @@ argv |> Array.iter (fun s ->
 \section{[[Var.init()]]}
 
 <<function [[Var.vinit]]>>=
-let vinit (_caps : < Cap.env; .. >) =
-  Logs.err (fun m -> m "TODO: load from environment")
+let init (caps : < Cap.env; .. >) =
+  Logs.info (fun m -> m "load globals from the environment");
+  let xs = Env.read_environment caps in
+  xs |> List.iter (fun (k, vs) ->
+    match k, vs with
+    | "PATH", [x] ->
+       Logs.info (fun m -> m "adjust $PATH to $path");
+       let vs = Regexp_.split "[:]" x in
+       let k = "path" in
+       setvar k vs
+    | _ -> setvar k vs
+  );
 @
 
 \section{[[Var.update_env()]]}

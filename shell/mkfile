@@ -9,7 +9,7 @@ SRC=  Flags.ml Globals.ml \
   Compile.ml \
   Runtime.ml \
   Pattern.ml \
-  Fn.ml Var.ml Prompt.ml Status.ml PATH.ml Process.ml Error.ml \
+  Env.ml Fn.ml Var.ml Prompt.ml Status.ml PATH.ml Process.ml Error.ml \
   Parser.ml Lexer.ml Parse.ml \
   Builtin.ml \
   Op_repl.ml Op_process.ml \

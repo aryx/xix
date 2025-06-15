@@ -1,6 +1,7 @@
 (*s: shell/Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module R = Runtime
 
@@ -9,8 +10,8 @@ let error s (curtok, curtokstr) =
   let t = R.cur () in
   let locstr =
     match t.R.file, t.R.iflag with
-    | Some f, false -> spf "%s:%d: " f !(t.R.line)
-    | Some f, true -> spf "%s: " f
+    | Some f, false -> spf "%s:%d: " !!f !(t.R.line)
+    | Some f, true -> spf "%s: " !!f
     | None, false -> spf "%d: " !(t.R.line)
     | None, true -> ""
   in

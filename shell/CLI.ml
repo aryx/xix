@@ -72,7 +72,7 @@ let do_action caps s xs =
           (* for error reporting I need a runq *)
           let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
           R.runq := t::!R.runq;
-          t.R.file <- Some !!file;
+          t.R.file <- Some file;
 
           let rec loop () =
             let line = Parse.parse_line lexbuf in

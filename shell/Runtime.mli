@@ -55,7 +55,7 @@ type thread = {
   (*x: [[Runtime.thread]] other fields *)
   (* for error reporting (None when reading from stdin) *)
   (* less: file has to be mutable? could be a param of start? like chan? *)
-  mutable file: Common.filename option;
+  mutable file: Fpath.t option;
   line: int ref;
   (*x: [[Runtime.thread]] other fields *)
   (* Used for switch but also assignments. *)

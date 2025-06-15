@@ -109,7 +109,7 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
             let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
             R.runq := [newt];
             R.push_redir (R.Close (Unix.descr_of_in_channel chan));
-            newt.R.file <- Some file;
+            newt.R.file <- Some (Fpath.v file);
             newt.R.lexbuf <- Lexing.from_channel chan;
             newt.R.iflag <- iflag;
             (* push for $* *)

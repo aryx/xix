@@ -16,7 +16,7 @@ let diff_worktree_vs_index r =
 (*e: function [[Cmd_diff.diff_worktree_vs_index]] *)
 
 (*s: constant [[Cmd_diff.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "diff";
   usage = " ";
   options = [];
@@ -24,7 +24,7 @@ let cmd = { Cmd.
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> diff_worktree_vs_index r
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_diff.cmd]] *)

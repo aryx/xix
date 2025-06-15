@@ -6,7 +6,7 @@
 (* less: let bare = ref false *)
 
 (*s: constant [[Cmd_init.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "init";
   usage = " [directory]";
   options = [
@@ -18,7 +18,7 @@ let cmd = { Cmd.
     match args with
     | []    -> Repository.init "."
     | [dir] -> Repository.init dir
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_init.cmd]] *)

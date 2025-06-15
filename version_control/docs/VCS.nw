@@ -2246,7 +2246,7 @@ writing to a repository   & \ref{chap:writing}              & [[compression.ml]]
 
 \midrule
 
-list of commands                   & \ref{chap:main}              & [[cmd.ml]] [[cmds.ml]] &    \\
+list of commands                   & \ref{chap:main}              & [[cmd_.ml]] [[cmds.ml]] &    \\
 entry point and command dispatcher & \ref{chap:main}              & [[main.ml]] &    \\
 getting help                       & \ref{chap:main}              & [[cmd_help.ml]] &    \\
 
@@ -4305,9 +4305,9 @@ a name,
 some usage documentation,
 and a set of command-line options, hence the following type:
 
-%\subsection{[[Cmd.t]]}
+%\subsection{[[Cmd_.t]]}
 
-<<type [[Cmd.t]]>>=
+<<type [[Cmd_.t]]>>=
 type t = {
   name: string;
   usage: string;
@@ -4325,7 +4325,7 @@ type t = {
 %cvs: the one who introduced cvs xxx style instead of many programs? 
 % (ci/co/...)
 
-The last field of [<Cmd.t>] is the {callback} function to call
+The last field of [<Cmd_.t>] is the {callback} function to call
 to execute the Git command. It takes as a parameter the list
 of command-line arguments that were not flags.
 
@@ -4386,7 +4386,7 @@ let main () =
   else begin
     let cmd = 
       try 
-        commands |> List.find (fun cmd -> cmd.Cmd.name = Sys.argv.(1))
+        commands |> List.find (fun cmd -> cmd.Cmd_.name = Sys.argv.(1))
       with Not_found ->
         <<[[Main.main()]] print usage and exit>>
     in
@@ -4398,7 +4398,7 @@ let main () =
 %old:
 %<<constant Main.hcommands>>=
 %let hcommands = 
-%  commands |> List.map (fun cmd -> cmd.Cmd.name, cmd) |> Hashtbl_.of_list
+%  commands |> List.map (fun cmd -> cmd.Cmd_.name, cmd) |> Hashtbl_.of_list
 %@
 % useless opti
 
@@ -4449,7 +4449,7 @@ exit 1
 <<function [[Main.usage]]>>=
 let usage () =
   spf "usage: ocamlgit <%s> [options]"
-    (String.concat "|" (commands |> List.map (fun cmd -> cmd.Cmd.name)))
+    (String.concat "|" (commands |> List.map (fun cmd -> cmd.Cmd_.name)))
 @
 % See Section~{sec:git-command-line}
 
@@ -4469,25 +4469,25 @@ arguments of the command:
 let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
 let usage_msg_cmd = spf "usage: %s %s%s"
   (Filename.basename Sys.argv.(0))
-  cmd.Cmd.name
-  cmd.Cmd.usage
+  cmd.Cmd_.name
+  cmd.Cmd_.usage
 in
 let remaining_args = ref [] in
 <<[[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]]>>
 (* finally! *)
 try 
-  cmd.Cmd.f (List.rev !remaining_args)
+  cmd.Cmd_.f (List.rev !remaining_args)
 with 
-  | Cmd.ShowUsage ->
-    Arg.usage (Arg.align cmd.Cmd.options) usage_msg_cmd;
+  | Cmd_.ShowUsage ->
+    Arg.usage (Arg.align cmd.Cmd_.options) usage_msg_cmd;
     exit 1
 @
 
 The exception below will be used from command callbacks to indicate
 that something was wrong with the command-line arguments:
 
-<<exception [[Cmd.ShowUsage]]>>=
-(* Cmd.f can raise ShowUsage. It will be catched by Main.main *)
+<<exception [[Cmd_.ShowUsage]]>>=
+(* Cmd_.f can raise ShowUsage. It will be catched by Main.main *)
 exception ShowUsage
 @
 
@@ -4498,7 +4498,7 @@ and it involves the [[Arg]] module:
 <<[[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]]>>=
 (try 
  (* todo: look if --help and factorize treatment of usage for subcmds *)
-   Arg.parse_argv argv (Arg.align cmd.Cmd.options) 
+   Arg.parse_argv argv (Arg.align cmd.Cmd_.options) 
      (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
  with Arg.Bad str | Arg.Help str->  
    prerr_string str;
@@ -4521,7 +4521,7 @@ let list_extra = ref false
 @
 
 <<constant [[Cmd_help.cmd]]>>=
-let rec cmd = { Cmd.
+let rec cmd = { Cmd_.
   name = "help";
   usage = "";
   options = ["-a", Arg.Set list_extra, " see all commands"];
@@ -4533,7 +4533,7 @@ let rec cmd = { Cmd.
     in
     UConsole.print ("Available commands: ");
     xs |> List.iter (fun cmd ->
-      UConsole.print (spf "  %s" cmd.Cmd.name);
+      UConsole.print (spf "  %s" cmd.Cmd_.name);
     );
   );
 }
@@ -4591,7 +4591,7 @@ Section~\ref{sec:getting-started}.
 Here is the code describing this command:
 
 <<constant [[Cmd_init.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "init";
   usage = " [directory]";
   options = [
@@ -4601,12 +4601,12 @@ let cmd = { Cmd.
     match args with
     | []    -> Repository.init "."
     | [dir] -> Repository.init dir
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
 
-%crossref: Cmd.ShowUsage
+%crossref: Cmd_.ShowUsage
 
 \ifallcode
 <<[[Cmd_init.cmd]] command-line options>>=
@@ -4876,7 +4876,7 @@ Here is the code of the command to add a file or set of files
 to the staging area:
 
 <<constant [[Cmd_add.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "add";
   usage = " <file>..."; (* less: pathspec? *)
   options = [
@@ -5041,7 +5041,7 @@ let content_from_path_and_unix_stat full_path stat =
 \section{Removing files: [[git rm]]}
 
 <<constant [[Cmd_rm.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "rm";
   usage = " [options] <file>...";
   options = [
@@ -5049,7 +5049,7 @@ let cmd = { Cmd.
   ];
   f = (fun args ->
     match args with
-    | [] -> raise Cmd.ShowUsage
+    | [] -> raise Cmd_.ShowUsage
     | xs ->
       let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
       rm r relpaths
@@ -5147,7 +5147,7 @@ the commit itself, which will use what was staged in the previous chapter.
 Here is the code describing the [[git commit]] command:
 
 <<constant [[Cmd_commit.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "commit";
   usage = " [options]"; (* less: <pathspec>... *)
   options = [
@@ -5161,7 +5161,7 @@ let cmd = { Cmd.
       <<[[Cmd_commit.cmd]] compute [[author]] user>>
       <<[[Cmd_commit.cmd]] compute [[committer]] user>>
       commit r author committer !message
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -5623,7 +5623,7 @@ current branch.
 % everybody is a branch! everybody maintains its own fork!
 
 <<constant [[Cmd_branch.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "branch";
   usage = " [options]
    or: ocamlgit branch [options] <branchname>
@@ -5636,7 +5636,7 @@ let cmd = { Cmd.
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     <<[[Cmd_branch.cmd]] match args cases>>
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -5853,7 +5853,7 @@ To switch to another branch, Git uses another command: [[git checkout]].
 \n git checkout can also be used to create a branch with -b, but redundant
 
 <<constant [[Cmd_checkout.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "checkout";
   usage = " [options] <branch>
    or: ocamlgit checkout [options] <commitid>
@@ -5866,7 +5866,7 @@ let cmd = { Cmd.
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     <<[[Cmd_checkout.cmd]] match args cases>>
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -5911,7 +5911,7 @@ let checkout r str =
     (* less: if master, then check if up-to-date with origin/master *)
 
   <<[[Cmd_checkout.checkout()]] cases>>
-  | _ -> raise Cmd.ShowUsage
+  | _ -> raise Cmd_.ShowUsage
 @
 
 To checkout a branch, the code above first finds the commit
@@ -6075,7 +6075,7 @@ Indeed, there are multiple ways to reset a branch, as shown
 by the code and flags below:
 
 <<constant [[Cmd_reset.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "reset";
   usage = " [options] ";
   options = [
@@ -6087,9 +6087,9 @@ let cmd = { Cmd.
     | [] -> 
       (match () with
       <<[[Cmd_reset.cmd.f()]] when no args, cases>>
-      | _ -> raise Cmd.ShowUsage
+      | _ -> raise Cmd_.ShowUsage
       )
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -6145,7 +6145,7 @@ let reset_hard r =
 if !soft || !mixed || not !hard
 then begin
   pr2 "only --hard supported";
-  raise Cmd.ShowUsage
+  raise Cmd_.ShowUsage
 end
 @
 
@@ -6256,7 +6256,7 @@ let merge_heads = [] in
 % can be useful to understand formats
 
 <<constant [[Cmd_show.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "show";
   usage = " <objectish>";
   (* less: --oneline *)
@@ -6455,7 +6455,7 @@ type item = string
 \section{Showing file differences: [[git diff]]}
 
 <<constant [[Cmd_diff.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "diff";
   usage = " ";
   options = [];
@@ -6463,7 +6463,7 @@ let cmd = { Cmd.
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> diff_worktree_vs_index r
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -6722,7 +6722,7 @@ let walk_graph r f =
 \section{Showing the commit history: [[git log]]}
 
 <<constant [[Cmd_log.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "log";
   usage = " [options]";
   options = [
@@ -6737,7 +6737,7 @@ let cmd = { Cmd.
     | [] -> log r
     (* todo: git log path *)
     (* less: revision range *)
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -6949,7 +6949,7 @@ let mode_of_perm perm =
 \section{Showing the status of a file: [[git status]]}
 
 <<constant [[Cmd_status.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "status";
   usage = " [options]"; (* less: <pathspec> *)
   options = [
@@ -6961,7 +6961,7 @@ let cmd = { Cmd.
     let r, relpaths = Repository.find_root_open_and_adjust_paths args in
     match relpaths with
     | [] -> status r
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -7373,7 +7373,7 @@ let client_of_url url =
 
 
 <<constant [[Cmd_pull.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "pull";
   usage = " [options] [<url repository>]";
   options = [
@@ -7385,7 +7385,7 @@ let cmd = { Cmd.
       failwith "TODO: use remote information in config file"
     | [url] -> 
       pull dst url
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -7768,7 +7768,7 @@ let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
 % to a bare repository (unless --force?)
 
 <<constant [[Cmd_push.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "push";
   usage = " [options] [<url repository>]";
   options = [
@@ -7781,7 +7781,7 @@ let cmd = { Cmd.
       failwith "TODO: use remote information in config file"
     | [url] -> 
       push src url
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -7830,7 +7830,7 @@ let push src_repo url_dst =
 % In the end, quite similar to git pull; we just pull everything.
 
 <<constant [[Cmd_clone.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "clone";
   usage = " [options] <repo> [<dir>]";
   options = [
@@ -7840,7 +7840,7 @@ let cmd = { Cmd.
     match args with
     | [url]     -> clone url "."
     | [url;dst] -> clone url dst
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 @
@@ -10003,7 +10003,7 @@ let extra_commands = [
 % but there is a git dump-index though.
 
 <<constant [[Cmd_dump.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "dump";
   usage = " <file>";
   options = [
@@ -10089,7 +10089,7 @@ let vof_obj = Objects.vof_t
 \section{[[ocamlgit test]]}
 
 <<constant [[Cmd_test.cmd]]>>=
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "test";
   usage = " ";
   options = [];

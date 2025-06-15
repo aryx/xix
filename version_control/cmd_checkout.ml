@@ -33,7 +33,7 @@ let checkout r str =
     UConsole.print (spf "Note: checking out '%s'." str);
     UConsole.print ("You are in 'detached HEAD' state");
   (*e: [[Cmd_checkout.checkout()]] cases *)
-  | _ -> raise Cmd.ShowUsage
+  | _ -> raise Cmd_.ShowUsage
 (*e: function [[Cmd_checkout.checkout]] *)
 
 (*s: function [[Cmd_checkout.update]] *)
@@ -43,7 +43,7 @@ let update _r =
 (*e: function [[Cmd_checkout.update]] *)
 
 (*s: constant [[Cmd_checkout.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "checkout";
   usage = " [options] <branch>
    or: ocamlgit checkout [options] <commitid>
@@ -64,7 +64,7 @@ let cmd = { Cmd.
     (*x: [[Cmd_checkout.cmd]] match args cases *)
     | [] -> update r
     (*e: [[Cmd_checkout.cmd]] match args cases *)
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_checkout.cmd]] *)

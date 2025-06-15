@@ -27,7 +27,7 @@ let mixed = ref false
 (*e: constant [[Cmd_reset.mixed]] *)
 
 (*s: constant [[Cmd_reset.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "reset";
   usage = " [options] ";
   options = [
@@ -48,9 +48,9 @@ let cmd = { Cmd.
       (*s: [[Cmd_reset.cmd.f()]] when no args, cases *)
       | _ when !hard -> reset_hard r
       (*e: [[Cmd_reset.cmd.f()]] when no args, cases *)
-      | _ -> raise Cmd.ShowUsage
+      | _ -> raise Cmd_.ShowUsage
       )
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_reset.cmd]] *)

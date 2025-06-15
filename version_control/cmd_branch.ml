@@ -63,7 +63,7 @@ let del_force = ref false
 (*e: constant [[Cmd_branch.del_force]] *)
 
 (*s: constant [[Cmd_branch.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "branch";
   usage = " [options]
    or: ocamlgit branch [options] <branchname>
@@ -102,7 +102,7 @@ let cmd = { Cmd.
       | _ -> create_branch r name
       )
     (*e: [[Cmd_branch.cmd]] match args cases *)
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_branch.cmd]] *)

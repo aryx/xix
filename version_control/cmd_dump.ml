@@ -50,7 +50,7 @@ let dump file =
 (*e: function [[Cmd_dump.dump]] *)
 
 (*s: constant [[Cmd_dump.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "dump";
   usage = " <file>";
   options = [

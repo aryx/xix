@@ -104,7 +104,7 @@ let test_unzip_all_objects () =
 (*****************************************************************************)
 
 (*s: constant [[Cmd_test.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "test";
   usage = " ";
   options = [];

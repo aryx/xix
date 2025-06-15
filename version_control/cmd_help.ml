@@ -11,7 +11,7 @@ let list_extra = ref false
 (*e: constant [[Cmd_help.list_extra]] *)
 
 (*s: constant [[Cmd_help.cmd]] *)
-let rec cmd = { Cmd.
+let rec cmd = { Cmd_.
   name = "help";
   usage = "";
   options = ["-a", Arg.Set list_extra, " see all commands"];
@@ -23,7 +23,7 @@ let rec cmd = { Cmd.
     in
     UConsole.print ("Available commands: ");
     xs |> List.iter (fun cmd ->
-      UConsole.print (spf "  %s" cmd.Cmd.name);
+      UConsole.print (spf "  %s" cmd.Cmd_.name);
     );
   );
 }

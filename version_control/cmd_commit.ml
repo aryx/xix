@@ -26,7 +26,7 @@ let message = ref ""
 (*e: constant [[Cmd_commit.message]] *)
 
 (*s: constant [[Cmd_commit.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "commit";
   usage = " [options]"; (* less: <pathspec>... *)
   options = [
@@ -73,7 +73,7 @@ let cmd = { Cmd.
       in
       (*e: [[Cmd_commit.cmd]] compute [[committer]] user *)
       commit r author committer !message
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_commit.cmd]] *)

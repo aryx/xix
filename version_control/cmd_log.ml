@@ -81,7 +81,7 @@ let log r =
 (*e: function [[Cmd_log.log]] *)
 
 (*s: constant [[Cmd_log.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "log";
   usage = " [options]";
   options = [
@@ -96,7 +96,7 @@ let cmd = { Cmd.
     | [] -> log r
     (* todo: git log path *)
     (* less: revision range *)
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_log.cmd]] *)

@@ -24,7 +24,7 @@ let clone url path_dst =
 (* todo: when clone then repo should have a "refs/remotes/origin/master" *)
 
 (*s: constant [[Cmd_clone.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "clone";
   usage = " [options] <repo> [<dir>]";
   options = [
@@ -34,7 +34,7 @@ let cmd = { Cmd.
     match args with
     | [url]     -> clone url "."
     | [url;dst] -> clone url dst
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_clone.cmd]] *)

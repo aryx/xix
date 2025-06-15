@@ -16,7 +16,7 @@ let rm r relpaths =
 (*e: function [[Cmd_rm.rm]] *)
 
 (*s: constant [[Cmd_rm.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "rm";
   usage = " [options] <file>...";
   options = [
@@ -26,7 +26,7 @@ let cmd = { Cmd.
   ];
   f = (fun args ->
     match args with
-    | [] -> raise Cmd.ShowUsage
+    | [] -> raise Cmd_.ShowUsage
     | xs ->
       let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
       rm r relpaths

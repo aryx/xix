@@ -17,7 +17,7 @@ SRC1= IO_.ml \
      diff_unified.ml changes.ml diffs.ml \
      repository.ml \
      client.ml client_local.ml client_git.ml clients.ml \
-     cmd.ml \
+     cmd_.ml \
      cmd_init.ml \
      cmd_add.ml cmd_rm.ml cmd_commit.ml \
      cmd_branch.ml cmd_checkout.ml cmd_reset.ml \

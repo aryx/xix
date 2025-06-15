@@ -36,7 +36,7 @@ let push src_repo url_dst =
 (*e: function [[Cmd_push.push]] *)
 
 (*s: constant [[Cmd_push.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "push";
   usage = " [options] [<url repository>]";
   options = [
@@ -49,7 +49,7 @@ let cmd = { Cmd.
       failwith "TODO: use remote information in config file"
     | [url] -> 
       push src url
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_push.cmd]] *)

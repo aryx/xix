@@ -319,15 +319,15 @@ open Common
 <<function [[Clients.client_of_url]]>>
 @
 
-\subsection{[[version_control/cmd.ml]]}
+\subsection{[[version_control/cmd_.ml]]}
 
 %-------------------------------------------------------------
 
-<<version_control/cmd.ml>>=
+<<version_control/cmd_.ml>>=
 
-<<type [[Cmd.t]]>>
+<<type [[Cmd_.t]]>>
 
-<<exception [[Cmd.ShowUsage]]>>
+<<exception [[Cmd_.ShowUsage]]>>
 @
 
 \subsection{[[version_control/cmd_add.ml]]}

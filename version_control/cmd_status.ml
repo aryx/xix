@@ -129,7 +129,7 @@ let status r =
 (*e: function [[Cmd_status.status]] *)
 
 (*s: constant [[Cmd_status.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "status";
   usage = " [options]"; (* less: <pathspec> *)
   options = [
@@ -141,7 +141,7 @@ let cmd = { Cmd.
     let r, relpaths = Repository.find_root_open_and_adjust_paths args in
     match relpaths with
     | [] -> status r
-    | _xs -> raise Cmd.ShowUsage
+    | _xs -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_status.cmd]] *)

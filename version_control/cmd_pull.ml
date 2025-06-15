@@ -33,7 +33,7 @@ let pull dst url =
 (*e: function [[Cmd_pull.pull]] *)
 
 (*s: constant [[Cmd_pull.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "pull";
   usage = " [options] [<url repository>]";
   options = [
@@ -45,7 +45,7 @@ let cmd = { Cmd.
       failwith "TODO: use remote information in config file"
     | [url] -> 
       pull dst url
-    | _ -> raise Cmd.ShowUsage
+    | _ -> raise Cmd_.ShowUsage
   );
 }
 (*e: constant [[Cmd_pull.cmd]] *)

@@ -10,7 +10,7 @@ let add r relpaths =
 (*e: function [[Cmd_add.add]] *)
 
 (*s: constant [[Cmd_add.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "add";
   usage = " <file>..."; (* less: pathspec? *)
   options = [

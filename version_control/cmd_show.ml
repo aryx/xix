@@ -42,7 +42,7 @@ let show r objectish =
 (*e: function [[Cmd_show.show]] *)
 
 (*s: constant [[Cmd_show.cmd]] *)
-let cmd = { Cmd.
+let cmd = { Cmd_.
   name = "show";
   usage = " <objectish>";
   (* less: --oneline *)

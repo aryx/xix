@@ -15,6 +15,7 @@
   Console UConsole
   Exit Exception
   Chan UChan FS IO
+  Cmd
   Proc
   Date
   Logs

@@ -12,6 +12,7 @@ SRC=\
  Fpath.ml Fpath_.ml \
  Logs.ml \
  Chan.ml UChan.ml FS.ml IO.ml \
+ Cmd.ml \
  Date.ml \
  Exception.ml Exit.ml
 

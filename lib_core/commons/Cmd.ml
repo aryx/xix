@@ -19,7 +19,7 @@ type env = { vars : (string * string) list; inherit_parent_env : bool }
 
 let env_of_list (inherit_parent_env : bool) (vars : (string * string) list) :
     env =
-  { vars; inherit_parent_env }
+  { vars = vars; inherit_parent_env = inherit_parent_env }
 
 (*****************************************************************************)
 (* API *)

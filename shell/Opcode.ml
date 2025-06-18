@@ -107,7 +107,9 @@ type operation =
 (*s: type [[Opcode.opcode]] *)
 type t =
   | F of operation
+  (* The int can be a program counter, a file descriptor depending on ctx *)
   | I of int
+  (* command name and arguments from the user *)
   | S of string
 (*e: type [[Opcode.opcode]] *)
 [@@deriving show]

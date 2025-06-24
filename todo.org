@@ -1,5 +1,36 @@
 # -*- org -*-
 
+* Last
+
+** Last0
+
+*** RELAX try profiling ppx, report diagnostics with -profile! for mk and rc
+need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
+
+*** less: fix shift/reduce conflicts? from which parser? mk? rc? 5c?
+
+*** RELAX use Cap.exit in compiler/Error.errorexit
+but will need to thread it from many files?
+
+
+*** less fix semgrep and build-test workflows and restore from masterTODO -> master
+
+*** less: get rid of IO.ml from canasse and do my own capability based file IO!
+but used heavily in version_control/
+
+*** less: integrate back TCB.ml? and UXxx.ml ? works with ocaml-light?
+try to add TCB.ml and -open TCB?
+can it compile with ocaml-light though? 
+if use -open TCB in dune, the mkfile and ocaml-light should be fine
+
+**** less: add (-open TCB) in a few dune files?
+
+**** need backport ocamlc -open, for TCB
+
+*** LATER: add semgrep-libs/libs/process_limits/
+other stuff to copy from semgrep-libs/?
+maybe Unix.realpath!
+
 * Infra
 
 ** Build infra
@@ -34,12 +65,37 @@ but syncweb issue
 
 ** rc in ocaml
 
+*** Last
+
+**** RELAX use CapConsole for Bad|Help in rc and also for pprompt!! tedious
+to pass down?
+can be nice though
+
+mk should also use CapConsole!
+
+**** RELAX try use curtok in closure around lexfunc
+
+
+**** implement Env.Updenv
+putenv! what fails if you don't implement this when using mk/rc?
+
+**** use RCMAIN env var to set path to rcmain in addition to -m
+so can get rid of /rc/lib/rcmain on my linux machine
+
+**** implement isatty detection
+so can get prompt even without using rc -i
+
+copy paste ANSITerminal.isatty and move to CapConsole.ml (and UConsole.ml before?)
+
+**** add e2e regression tests for tests/rc/*.rc
+just evaluate and check output? can handle echo? special builtin
+for echo?
+
+**** use Chan.i for lexbuf+file so have both together ?
+but lexbuf != in_channel :(
+
+
 *** fix rc so it can work on the xix source and replace plan9port rc
-
-*** read environment, Vinit
-
-*** read environment variables
-and transform for PATH
 
 *** export environment variables
 only when change?
@@ -47,18 +103,9 @@ only when change?
 *** consolidate different rc versions
 https://github.com/Homebrew/homebrew-core/blob/1ebef261e5b820b6d00f219c90a7e7c2362aa8a1/Formula/r/rc.rb
 
-*** Vinit
-use IFS?
-
 *** ----------------------------
 
 *** subshell
-
-*** try plug rc.byte to be used by mk-rc.byte :)
-use a ROOT? so make it works also with bootstrap?
-
-so can dogfood more!
-can use it to compile plan9/ itself?
 
 *** implement all rcmain?
 function definition
@@ -88,6 +135,38 @@ $foo(...) SUB
 lastdol? for caret insertion?
 
 ** mk in ocaml
+
+*** Last
+
+**** RELAX no need for Cap.stdout when running mk? use CapConsole more!
+
+**** RELAX look at mk/*.mli and try to improve things, use Fpath.t, use more caps
+
+
+**** infinite loop detection and limits
+
+all: hello_linux_amd64
+%: %.s
+   6a -c $prereq
+   6l $stem.6 -o $target
+
+*** quiet mode, and maybe buffer output and a very synthetic
+DONE xxx.pdf :)
+luisa will be happy :)
+
+mk -quiet
+mk -verbose
+
+update: was a very old feature luisa wanted me to do because she was scared
+ about me looking at all those scrolling mk lines when compiling plan9
+ but in 2025 I've actually added -quiet and -verbose for Logs but this time
+ I can probably use -quiet! just need use Logs.app for a few calls
+ to display the command run and if I use -quiet I will not see them!
+ easy!
+
+*** test: add test for mk/rc that check -e works correctly and error
+in nested mk abort the whole thing when inside a rc for loop in enclosing
+mkfile
 
 *** ----------------------------
 
@@ -510,6 +589,19 @@ original had 3?
 *** give better error message on quote.s and accept '\''
 
 ** libcore
+
+*** Last
+
+**** RELAX Proc.pid, but need to make it compatible with ocaml-light then!
+remove use of labels and default arg in Proc.ml
+
+**** RELAX port part of Cmd.ml and add also the exec part in it, but
+with capabilities only! and then add in
+CapUnix and CapSys should use Cmd
+
+Cmd.exec? Cmd.run?
+imitate some of Bos API? or too complex IMHO.
+
 
 *** merge commons/ and commons2/? 
 

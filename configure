@@ -1,4 +1,65 @@
 #!/bin/sh
+#alt: #! /usr/bin/env bash
+set -eu # to debug this script add '-x'
+
+###############################################################################
+# Prelude
+###############################################################################
+# The goal of this script is to automate the configuration and installation
+# of packages that are needed to then compile and install xix itself.
+#
+# The goal is also to use a single command that can work on all platforms:
+#  - Linux (Alpine for Docker, TODO Ubuntu for Github Actions, TODO Nix/Arch/...)
+#  - macOS (TODO HomeBrew, TODO Nix)
+#  - Windows (TODO Cygwin, TODO WSL, TODO Nix?)
+# and that setup everything (e.g., OCaml).
+#
+# This is reminescent of the classic "configure; make; make install"
+# trifecta of building and installing GNU packages, but adapted to the
+# new world of software development with powerful package managers and
+# software written using multiple programming languages.
+#
+# This script assumes that OCaml (and opam) as well as
+# a few other utilities (e.g., make, gcc, bash) have already been installed.
+#
+# history: we used to have many different Makefile targets in semgrep for each
+# platform (e.g., install-deps-UBUNTU, install-deps-ALPINE) as well as other
+# targets to setup our development environment (e.g., setup). We also used
+# to have two different worlds: the OCaml world and Python world each
+# with different Makefiles and setup requirements. At the time
+# this was normal because each world was developed by different teams and
+# we needed different Docker images (e.g., returntocorp/ocaml and python3.11)
+# to develop each part and to make CI fast. We are now using a single
+# base docker image (alpine 3.21) for both the OCaml and Python sides and
+# CI is still fast thanks to our use of depot.dev so we can revisit many
+# of our old decisions to split things apart.
+# This split and those many Makefiles and Makefile targets led to too much
+# complexity. It is better to abstract away this complexity by using a single
+# script (which currently relies on those various make targets for gradual
+# migration and backward compatibility) that can setup everything, on all
+# platforms, for both the OCaml and Python sides of semgrep.
+
+###############################################################################
+# Platform specific setup
+###############################################################################
+
+#if [[ -e /etc/alpine-release ]]; then
+#    # TODO: at some point we should move the content of this target here
+#    make install-deps-ALPINE
+#else
+#    OS=`uname`
+#    echo "Only Alpine is supported. OS $OS is not yet supported:"
+#    exit 2
+#fi
+
+# TODO: on macOS double check pkg-conf is installed
+
+###############################################################################
+# Platform independent
+###############################################################################
+
+# This should work on all platforms
+#make install-deps
 
 #TODO:
 # - check opam is in PATH
@@ -10,3 +71,6 @@
 # - check external deps are installed (e.g., pcre)
 
 opam install --no-depexts --deps-only ./xix.opam -y
+
+# List the dependencies we've installed and their versions
+opam list

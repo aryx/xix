@@ -35,7 +35,6 @@ let run_main (caps : <CLI.caps; ..>) (cmd : string) : (Exit.t, string) result =
 (*****************************************************************************)
 let e2e_tests caps = 
   Testo.categorize "e2e" [
-    (* TODO: use Exit_code.ml to remove the need for End_of_file catch *)
     t ~checked_output:(Testo.stdxxx ()) "--help" (fun () ->
         match run_main caps "--help" with
         | Ok Exit.OK -> ()

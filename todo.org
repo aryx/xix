@@ -1,66 +1,5 @@
 # -*- org -*-
 
-* Last
-
-** Last0
-
-*** RELAX try profiling ppx, report diagnostics with -profile! for mk and rc
-need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
-
-*** less: fix shift/reduce conflicts? from which parser? mk? rc? 5c?
-
-*** RELAX use Cap.exit in compiler/Error.errorexit
-but will need to thread it from many files?
-
-
-*** less fix semgrep and build-test workflows and restore from masterTODO -> master
-
-*** less: get rid of IO.ml from canasse and do my own capability based file IO!
-but used heavily in version_control/
-
-*** less: integrate back TCB.ml? and UXxx.ml ? works with ocaml-light?
-try to add TCB.ml and -open TCB?
-can it compile with ocaml-light though? 
-if use -open TCB in dune, the mkfile and ocaml-light should be fine
-
-**** less: add (-open TCB) in a few dune files?
-
-**** need backport ocamlc -open, for TCB
-
-*** LATER: add semgrep-libs/libs/process_limits/
-other stuff to copy from semgrep-libs/?
-maybe Unix.realpath!
-
-* Infra
-
-** Build infra
-
-*** fix mk warnings on xix whole project compilation
-(now that they are more visible)
-
-** Dev infra
-
-*** add semgrep rules to make sure we're not using
-labels, functors, objects, as we want to be able to compile
-xix with our own fork of OCaml that removed those features
-(a fork I called "ocaml light" :) special ref to caml light)
-
-maybe add a do_not_use_certain_features.ml
-and add nosemgrep: comment in it, so nice to see what
-is currently forbidden
-
-*** try to use ocamlformat?
-but exclude lex/ yacc/ lib_parsing/ version_control/ for now
-because of our use of syncweb there?
-
-but need OCaml 4.04.1 at least
-
-but then can messup possible diffs with older version?
-make sure everything works fine before?
-
-*** setup pre-commit and ocamlformat and trailing space fix?
-but syncweb issue
-
 * Ported (partially working)
 
 ** rc in ocaml
@@ -74,7 +13,6 @@ can be nice though
 mk should also use CapConsole!
 
 **** RELAX try use curtok in closure around lexfunc
-
 
 **** implement Env.Updenv
 putenv! what fails if you don't implement this when using mk/rc?
@@ -94,11 +32,11 @@ for echo?
 **** use Chan.i for lexbuf+file so have both together ?
 but lexbuf != in_channel :(
 
-
 *** fix rc so it can work on the xix source and replace plan9port rc
 
 *** export environment variables
-only when change?
+only when change? needed in practice?
+write test infra and test case before fixing
 
 *** consolidate different rc versions
 https://github.com/Homebrew/homebrew-core/blob/1ebef261e5b820b6d00f219c90a7e7c2362aa8a1/Formula/r/rc.rb
@@ -141,7 +79,6 @@ lastdol? for caret insertion?
 **** RELAX no need for Cap.stdout when running mk? use CapConsole more!
 
 **** RELAX look at mk/*.mli and try to improve things, use Fpath.t, use more caps
-
 
 **** infinite loop detection and limits
 
@@ -582,6 +519,8 @@ look at (correct) original code to report error in 5c
 *** fix shift/reduce conflict? still 6
 original had 3?
 
+** 5l in ocaml
+
 ** 5a in ocaml
 
 *** ----------------------------
@@ -589,6 +528,11 @@ original had 3?
 *** give better error message on quote.s and accept '\''
 
 ** libcore
+
+*** LATER: add semgrep-libs/libs/process_limits/
+other stuff to copy from semgrep-libs/?
+maybe Unix.realpath!
+
 
 *** Last
 
@@ -617,13 +561,68 @@ or extlib/utf8.ml good enough?
 
 or uchar.ml enough?
 
+* Infra
+
+** Capabilities
+
+*** RELAX use Cap.exit in compiler/Error.errorexit
+but will need to thread it from many files?
+
+*** less: get rid of IO.ml from canasse and do my own capability based file IO!
+but used heavily in version_control/
+
+*** less: integrate back TCB.ml? and UXxx.ml ? works with ocaml-light?
+try to add TCB.ml and -open TCB?
+can it compile with ocaml-light though? 
+if use -open TCB in dune, the mkfile and ocaml-light should be fine
+
+**** less: add (-open TCB) in a few dune files?
+
+**** need backport ocamlc -open, for TCB
+
+** Bench infra
+
+*** RELAX try profiling ppx, report diagnostics with -profile! for mk and rc
+need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
+
+** Build infra
+
+*** fix mk warnings on xix whole project compilation
+(now that they are more visible)
+
+*** less: fix shift/reduce conflicts? from which parser? mk? rc? 5c?
+
+** Dev infra
+
+*** less fix semgrep and build-test workflows and restore from masterTODO -> master
+
+*** add semgrep rules to make sure we're not using
+labels, functors, objects, as we want to be able to compile
+xix with our own fork of OCaml that removed those features
+(a fork I called "ocaml light" :) special ref to caml light)
+
+maybe add a do_not_use_certain_features.ml
+and add nosemgrep: comment in it, so nice to see what
+is currently forbidden
+
+*** try to use ocamlformat?
+but exclude lex/ yacc/ lib_parsing/ version_control/ for now
+because of our use of syncweb there?
+
+but need OCaml 4.04.1 at least
+
+but then can messup possible diffs with older version?
+make sure everything works fine before?
+
+*** setup pre-commit and ocamlformat and trailing space fix?
+but syncweb issue
+
 * Partially ported
 
 ** lib_system
 
 *** port mkfile to mkfile-ocaml for lib_system/plan9
 pb when try build .a because need mk-C extension for libs.
-
 
 ** draw in ocaml?
 
@@ -783,7 +782,6 @@ stuff embedding scheme interpreter I saw recently, femtolisp?
 minoca OS?
 redox?
 
-
 ** xv6 in ocaml for ARM?
 Can learn another way to write an OS. 
 Can contrast some of the design decisions in plan9 and also compare 
@@ -854,7 +852,6 @@ in a module? then reference cstruct and mstruct.
 Why need bigarray? simple API on top of string (now called
 bytes in recent ocaml) not enough?
 
-
 ** Send patches?
 
 *** send patch to github for esthetic changes in ocaml :)
@@ -864,4 +861,3 @@ remove useless file I spotted
 
 *** less: report bug on simple-diff
 see diff.ml for example of problematic input
-

@@ -23,7 +23,7 @@ let rec split_at_non_assign = function
 (*e: function [[Compile.split_at_non_assign]] *)
 (*s: function [[Compile.split_when_case]] *)
 let split_when_case cmds =
-  cmds |> Common2.span (function
+  cmds |> List_.span (function
     | (A.Simple (A.Word ("case", false), _)) -> false
     | _ -> true
   )

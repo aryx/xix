@@ -31,7 +31,7 @@ let error s =
 /*(*e: function [[Parser.error]] *)*/
 /*(*s: function [[Parser.attrs_of_string]] *)*/
 let attrs_of_string loc s =
-  s |> Common2.list_of_string |> List.map (function
+  s |> List_.list_of_string |> List.map (function
     | 'Q' -> Quiet
     | 'V' -> Virtual
     | 'D' -> Delete

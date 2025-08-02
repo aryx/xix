@@ -80,6 +80,10 @@ module List_ :
     val exclude : ('a -> bool) -> 'a list -> 'a list
     val take : int -> 'a list -> 'a list
     val take_safe : int -> 'a list -> 'a list
+    (* was in common2.ml *)
+    val join_gen: 'a -> 'a list -> 'a list
+    val list_of_string: string -> char list
+    val span: ('a -> bool) -> 'a list -> 'a list * 'a list
   end
 
 val push : 'a -> 'a list ref -> unit

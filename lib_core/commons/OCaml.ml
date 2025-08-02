@@ -267,7 +267,7 @@ let format_to_string f =
   String.concat "\n" (List.rev !lines)
 
 let add_sep xs = 
-  xs |> List.map (fun x -> Either.Right x) |> Common2.join_gen (Either.Left ())
+  xs |> List.map (fun x -> Either.Right x) |> List_.join_gen (Either.Left ())
 
 (* 
  * OCaml value pretty printer. A similar functionnality is provided by

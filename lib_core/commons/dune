@@ -10,7 +10,7 @@
  ; coupling: mkfile SRC variable
  (modules
   Cap CapStdlib CapSys CapUnix
-  Common common2
+  Common
   Dumper OCaml
   Console UConsole
   Exit Exception

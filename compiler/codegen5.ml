@@ -847,7 +847,7 @@ let codegen (ids, structs, funcs) =
       | _ -> raise (Impossible "not a FUNC")
     in
     assert (List.length tparams = List.length typparams);
-    let xs = Common2.zip typparams tparams in
+    let xs = List_.zip typparams tparams in
     let offset = ref 0 in
     xs |> List.iter (fun (p, t) ->
       let sizet = env.arch.Arch.width_of_type {Arch.structs = env.structs} t in

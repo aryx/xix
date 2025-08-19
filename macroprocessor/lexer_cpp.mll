@@ -80,7 +80,7 @@ rule token = parse
           in
           aux xs
         in
-        let body = define_body s1 (Common2.index_list_1 params) lexbuf in
+        let body = define_body s1 (List_.index_list_1 params) lexbuf in
         Define { name = s1; params = Some (params); varargs = varargs;
                  body = Some body }
       }

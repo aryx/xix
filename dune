@@ -3,3 +3,5 @@
   ; -33 for unused open because some are added for ocaml-light and field access
   (flags (:standard -w -33)))
 )
+; principia/ contain/ SRC/cmd/ROOT recursive symlink that dune does not like
+(dirs :standard \ principia \ bin_dune \ test)

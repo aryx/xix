@@ -318,16 +318,14 @@ In fact, [[rc]] does not start by compiling, but by interpreting.
 Indeed, [[rc]] starts first by interpreting some special opcodes,
 called the {\em bootstrap}, that contains an opcode ([<Opcode.operation.REPL>])
 that when interpreted triggers the compiler.
-\n lie a bit, there is call to finit instead (said later)
 %trans: %dup: Assembler.nw
-
 I will now explain briefly the control flow of [[rc]], starting from 
 the top of Figure~\ref{fig:controlflow}.
 \l and left to right
 %
 After some basic initializations,
 \n no talk about command-line processing, confusing with command-line user
-[<main()>] calls [<interpret_bootstrap()>] which calls itself first a function
+[<main()>] calls [<interpret_bootstrap()>] which first calls a function
 [<bootstrap()>] returning the initial set
 of opcodes to execute.
 %
@@ -345,6 +343,7 @@ The most important opcode in [<bootstrap()>] is [<Opcode.operation.REPL>],
 \l actually it has a Xsimple "." rcmain and so will run execdot which
 \l  will run Xrdcmds (said later?)
 which reads and evaluates a command (hence its name) and starts a new [<thread>].
+\l actually was RdCmds before. Also it is more read, compile+interpret, no print, and loop indeed with decr pc
 %
 [<O.REPL()>] first calls the parser [<parse_line()>], which calls
 the lexer [<Lexer.token()>] to get the next token.
@@ -368,6 +367,7 @@ Then, [<O.REPL()>] calls
 [<O.REPL()>] then modifies again the global [<runq>], and when [<O.REPL()>]
 returns, the main bytecode interpreter loop will process 
 a new series of opcodes stored in [[runq.code]].
+\l will double loop in fact because REPL decr pc so interpreter loop will interpret back REPL
 
 
 Note that [<O.REPL()>] modifies [<runq>] by adding new threads
@@ -379,8 +379,7 @@ Moreover, [<compile()>] adds the opcode [<Opcode.operation.Return>] at the end o
 the series of opcodes deriving from your command.
 %
 Thus, after the interpreter loop finished interpreting the opcodes of your command,
-it will process the [[Return]] opcode in [<O.Return()>], which will modify [<runq>] to point
-to the old thread, the one containing the bootstrap opcodes.
+it will process the [[Return]] opcode in [<O.Return()>], which will modify [<runq>] topoint to the old thread, the one containing the bootstrap opcodes.
 %
 Then, after [<O.Return()>] returns, the main bytecode interpreter loop
 will process again the opcodes from the bootstrap, which
@@ -400,8 +399,8 @@ to wait for a child process ([[wait()]]),
 or to change directory ([[chdir()]]).
 %
 An important opcode is [<Opcode.operation.Simple>], which is interpreted
-by the function [<O.Simple()>], which [[rc]] uses
-to run a ``simple'' command.
+by the function [<O.Simple()>], which [[rc]] uses to run a ``simple'' command.
+\l actually not really a func, or the func is Pp_Process.op_Simple
 \n basic, or atomic, one not containing a pipe, or redir
 [<O.Simple()>] represents the essence of a shell: with
 the series of system calls [[fork()]], [[exec()]], and [[wait()]],
@@ -412,9 +411,9 @@ its termination (or interruption).
 [<O.Simple()>] is also responsible for managing the multiple shell builtins.
 Indeed, if the name of the ``simple'' command is a builtin (e.g., [[cd]]),
 then [<O.Simple()>] calls [<Builtin.dispatch()>] which dispatches the appropriate function (e.g., [<dochdir()>])
-\n another dispatch
+\n yet another dispatch mechanism
 instead of forking a new process.
-%By convention, the functions representing builtins start with exec
+%c: By convention, the functions representing builtins start with exec
 \t except execforkexec which is confusing!
 
 \subsection{Trace of a simple command: [[ls /]]}
@@ -422,6 +421,7 @@ instead of forking a new process.
 You can see the opcodes and the threads created internally by [[rc]] 
 by running [[rc]] with the [[-r]] flag.
 Here is an example of a {trace} of the simple command [[ls /]]:
+%TODO: implement in OCaml with similar display!
 
 \begin{verbatim}
 % rc -r
@@ -929,6 +929,10 @@ type thread = {
 % parent will juggle with those threads structures (Tied possibly
 % to external process)
 
+% REPL is kinda "yielding" to created thread
+% waitfor also yielding?
+% Similar to mk where also threads linked to external processes
+
 
 <<signature [[Runtime.runq]]>>=
 val runq : thread list ref
@@ -976,7 +980,7 @@ let mk_thread code pc locals =
   } in
   t
 @
-
+%c: was called start()
 
 %TODO? dump a thread for simple command?
 
@@ -1073,6 +1077,8 @@ redirections =
 %TODO: ???
 
 \subsection{Wait status}
+
+%trans: finally, wait status, last major field in thread data structure.
 
 <<[[Runtime.thread]] other fields>>=
 (* things to wait for after a thread forked a process *)
@@ -1369,7 +1375,8 @@ t.R.iflag <- !Flags.interactive;
 % some will not?
 
 \section{Reading commands: [[O.REPL()]]}
-%c: was Xrdcmds()
+%c: was Xrdcmds() but kinda REPL; read line, compile + interpret,
+% ok no print, but loop because of decr pc.
 
 % see bootstrap_simple, and interpreter loop, so here we go
 % interpret_operation first case. Will gradually show in chapter X

@@ -15,6 +15,6 @@
 #	$CC $CFLAGS -v -c $stem.c -o $stem.o
 
 depend:V:
-	$OCAMLDEP $DEPEND_INCLUDES *.ml *.mli  > .depend
+	$OCAMLDEP $INCLUDES *.ml *.mli  > .depend
 #ocamldep generates some empty entries that mk does not like
 #| grep -v -e '.* :$'

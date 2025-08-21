@@ -41,6 +41,12 @@ build-docker:
 build-docker-light:
 	docker build -f Dockerfile.light -t "xix-light" .
 
+# need 'docker login -u padator' first with credentials of
+# https://hub.docker.com/r/padator/ stored in ~/.docker/config.json
+push-docker:
+	docker tag "xix" padator/xix:latest
+	docker push padator/xix:latest
+
 .PHONY: shell
 shell:
 	nix-shell --pure

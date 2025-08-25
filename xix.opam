@@ -9,7 +9,7 @@ For more information see https://github.com/aryx/xix
 """
 maintainer: ["Yoann Padioleau <yoann.padioleau@gmail.com>"]
 authors: ["Yoann Padioleau <yoann.padioleau@gmail.com>"]
-license: "LGPL-2.1"
+license: "LGPL-2.1-only WITH OCaml-LGPL-linking-exception"
 homepage: "https://github.com/aryx/xix"
 bug-reports: "https://github.com/aryx/xix/issues"
 depends: [

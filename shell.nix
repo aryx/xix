@@ -26,8 +26,8 @@ pkgs.mkShell {
    packages = with pkgs; [
      # OCaml!
      opam
-     # Compile-time external libs
-     # ex: pcre
+     # Compile-time external libs (ex: pcre)
+     # 
      # Utilities for opam (cacert is needed by curl)
      git curl cacert
      # External tools for some OCaml libs (stdcompat I think)
@@ -59,9 +59,10 @@ pkgs.mkShell {
        ## -n to answer no to questions such as 'modify ~/.bash_profile?'
        opam init --disable-sandboxing --no-depexts -n
 
-       # 4.09.1 and 4.14.0 failed fails on my arch linux so
+       # 4.09.1 and 4.14.0 failed on my arch linux so
        # let's keep the default (5.3.0)
        # opam switch create 4.14.0
+       # update: 4.14.2 might work as it fixed regressions with modern gcc
 
        # Note that the 'opam install' part is now done outside
        # the shellHook in ./configure

@@ -8,7 +8,8 @@
 #  - OCaml with ocamlc, ocamllex, ocamlyacc
 #    (LATER: we could bootstrap and use the xix ocamllex/ocamlyacc)
 #  - a C compiler
-#  - the ocamlfind tool and stdcompat library
+#    (LATER: we could bootstrap and use the xix 5a/5c/5l)
+#  - the ocamlfind tool and stdcompat library (unless using ocaml-light)
 #  - /bin/sh
 #    (LATER: we could use the xix rc at some point and add it in BOOTSTRAP/)
 #  - probably many other things
@@ -31,9 +32,11 @@ set -e
 # for showing the executed commands (verbose)
 set -x
 
-#use_ocaml_light="yes"
+#to test uncomment the following (but you should set those outside):
+## use_ocaml_light="yes"
 
 if test "$use_ocaml_light" = "yes"; then
+    # ocaml-light provides its own (lightweight) stdlib/stdcompat.ml
     EXTERNAL_LIB="."
 else    
     # Limit to just stdcompat! This is Xix!

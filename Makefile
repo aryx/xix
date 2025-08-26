@@ -13,7 +13,7 @@
 # tasks, since 'mk' is not a standard tool, hence this file.
 # Moreover, you can build xix also with dune so we can leverage merlin
 # indexing in editors. However this is optional! It is important to be able to
-# build xix without dune and with just mk!
+# build xix without dune and with just mk (and with ocaml-light too)!
 
 ###############################################################################
 # Main targets

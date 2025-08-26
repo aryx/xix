@@ -5,7 +5,7 @@
 # history:
 #  - try to use OCaml 3.10.0 with Alpine 3.21 but clang compilation error
 #    requiring to patch ocamlc for -Wno-error=implicit-function-declaration and
-#    then missing getwd() old glibc function (alpine use musl libc)
+#    then missing getwd() old glibc function (Alpine use Musl libc)
 #    => simpler to switch to Ubuntu
 #  - use 3.10.0 (on Ubuntu) because it was a version we managed to port to plan9?
 #    (the byterun/ from ocaml 1.07 managed to run bytecode from 3.10.0?)
@@ -14,6 +14,12 @@
 #    stdcompat and Cap.ml
 #    (in theory ppx_deriving works for 4.05.0 but Cap.mli does not parse still)
 #  - use 4.12.0 because oldest version with stdlib/either.ml
+#
+# Note that even if we requires 4.12.0 here, which is relatively recent, we now
+# also check we build with ocaml-light (=~ 1.07 + recent patches) in
+# Dockerfile.light!
+# Note that xix uses Stdcompat so xix should compile with many different versions
+# of OCaml (including ocaml-light since it defines also a toy stdcompat.ml).
 
 FROM ubuntu:22.04
 #alt: alpine:3.21
@@ -23,7 +29,7 @@ FROM ubuntu:22.04
 RUN apt-get update # needed otherwise can't find any package
 RUN apt-get install -y build-essential autoconf automake pkgconf
 #alt: apk add build-base make bash git rsync curl
-#alt: LATER: use kencc and compile our own ocaml-light
+#alt: LATER: use kencc or better goken and compile our own ocaml-light!
 
 # Setup OPAM and OCaml
 RUN apt-get install -y opam

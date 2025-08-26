@@ -6,7 +6,6 @@ Requirements:
 
 Then:
 	$ ./bootstrap-mk.sh
-	$ export PATH=`pwd`/bin
-	$ export MKSHELL=/path/to/rc
+	$ source env.sh
 	$ mk depend
 	$ mk

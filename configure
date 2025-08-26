@@ -12,7 +12,7 @@ set -eu # to debug this script add '-x'
 #  - Linux (Alpine for Docker, TODO Ubuntu for Github Actions, TODO Nix/Arch/...)
 #  - macOS (TODO HomeBrew, TODO Nix)
 #  - Windows (TODO Cygwin, TODO WSL, TODO Nix?)
-# and that setup everything (e.g., OCaml).
+# and that setup everything (e.g., OCaml), for amd64 and arm64.
 #
 # This is reminescent of the classic "configure; make; make install"
 # trifecta of building and installing GNU packages, but adapted to the

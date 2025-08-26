@@ -6,7 +6,7 @@
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
 
 ** internals
-TODO use let* and let/ ? also doable to add in ocaml-light ?
+TODO? use let* and let/ ? also doable to add in ocaml-light ?
 
 ** devinfra
 SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
@@ -15,6 +15,12 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 ** testinfra
 
 * -----------------------------------------------------------
+
+* 0.16 (Q3 2025) ()
+
+** rc
+
+** mk/rc
 
 * 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.
@@ -41,7 +47,7 @@ TODO more semgrep rules (forbid functors, labels, etc.)
   compile correctly the code (ppx_deriving is mostly used in Logs anyway)
 - Copy Cap.ml from semgrep and start using capabilities!!! (and
   augmented semgrep.jsonnet to forbid Sys.xxx) (which then requires OCaml 4.0x
-  but again it should be doable to just skip any object constructs in ocaml light
+  but again it is doable to just skip any object constructs in ocaml light
   as capabilities are just a typechecking thing without runtime impact).
 - capabilties: Cap.fork, Cap.exec, Cap.exit, Cap.chdir, Cap.stdout, Cap.argv
   and new Cap.env, Cap.open_in
@@ -58,12 +64,13 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 ** testinfra
 
 - Dockerfile (Ubuntu because Alpine is failing for old OCaml versions)
-  and docker.yml GHA CI
+  and docker.yml GHA (GitHub Actions) CI
 - shell.nix Nix dev environment setup
   and nix.yml GHA CI
 - start of use of Testo and snapshots for e2e testing of rc
 - Dockerfile.light to compile again but using ocaml light!
-  (my own fork of caml-special-light 1.07)
+  (my own fork of ocaml 1.07 (which is roughly caml-special-light since
+  I've removed the objects part))
 
 * -----------------------------------------------------------
 

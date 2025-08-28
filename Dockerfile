@@ -1,5 +1,5 @@
-# Build and test XiX with OCaml 4.12.0 via OPAM on Ubuntu Linux.
-# We are testing mostly the bootstrap-mk.sh and mk way to build XiX (not dune).
+# Build and test XiX with OCaml 4.12.0 via OPAM on Ubuntu.
+# We are testing the bootstrap-mk.sh and mk way to build XiX, not dune!
 # See also .github/workflows/docker.yml for its use in Github Actions (GHA).
 #
 # history:
@@ -17,27 +17,27 @@
 #
 # Note that even if we requires 4.12.0 here, which is relatively recent, we now
 # also check we build with ocaml-light (=~ 1.07 + recent patches) in
-# Dockerfile.light!
+# Dockerfile.light! and we also check it builds with OCaml 5.3.0 in shell.nix
 # Note that xix uses Stdcompat so xix should compile with many different versions
 # of OCaml (including ocaml-light since it defines also a toy stdcompat.ml).
 
 FROM ubuntu:22.04
-#alt: alpine:3.21
-#alt: opam base image (but simpler to remove unnecessary intermediates)
+#alt: alpine:3.21, ubuntu:24.04, opam/ocaml (but simpler to remove intermediates)
 
 # Setup a basic C dev environment
 RUN apt-get update # needed otherwise can't find any package
 RUN apt-get install -y build-essential autoconf automake pkgconf
 #alt: apk add build-base make bash git rsync curl
-#alt: LATER: use kencc or better goken and compile our own ocaml-light!
+#alt: LATER: use kencc or better goken or better BOOTSTRAP/{7a,7c,7l}
+# and compile our own ocaml-light and then xix
 
 # Setup OPAM and OCaml
 RUN apt-get install -y opam
 #alt: install old OCaml from tar (without opam) and install stdcompat
 #alt: RUN apk add opam
-# Initialize opam (disable sandboxing due to Docker)
-RUN opam init --disable-sandboxing -y
-RUN opam switch create 4.12.0 -v
+RUN opam init --disable-sandboxing -y  # (disable sandboxing due to Docker)
+ARG OCAML_VERSION=4.12.0
+RUN opam switch create ${OCAML_VERSION} -v
 
 WORKDIR /src
 

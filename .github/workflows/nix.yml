@@ -29,6 +29,8 @@ jobs:
         uses: DeterminateSystems/magic-nix-cache-action@main
       - name: Build Nix shell
         run: make shell
+      # UGLY: even with (dirs \ principia) directive dune complains under nix
+      - run: rm -f principia
       #TODO: run test, but test.sh does not work for dune build right now
       - name: Build XiX using Nix
         run: |

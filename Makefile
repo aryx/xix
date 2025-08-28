@@ -20,7 +20,7 @@
 ###############################################################################
 
 default:
-	bash -c "dune build _build/install/default/bin/{mk,rc,olex,oyacc,test.bc}"
+	bash -c "dune build _build/install/default/bin/{mk,rc,olex,oyacc,test.bc,5a,5c,5l,ogit}"
 	@echo you can also use ./bootstrap-mk.sh and ./bin/mk instead of make
 
 all:

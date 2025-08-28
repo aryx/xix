@@ -1,1 +1,1 @@
-_build/default/tests/test.exe
+bin_dune/test

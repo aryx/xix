@@ -19,9 +19,12 @@
 # Main targets
 ###############################################################################
 
+default:
+	bash -c "dune build _build/install/default/bin/{mk,rc,olex,oyacc,test.bc}"
+	@echo you can also use ./bootstrap-mk.sh and ./bin/mk instead of make
+
 all:
 	dune build
-	@echo you can also use ./bootstrap-mk.sh and ./bin/mk instead of make
 
 #alt: git clean -dfX or -dfx
 clean:
@@ -43,7 +46,6 @@ build-docker-ocaml5:
 # by regular ocamlyacc is different from the one used in ocaml-light
 build-docker-light:
 	docker build -f Dockerfile.light -t "xix-light" .
-
 # need 'docker login -u padator' first with credentials of
 # https://hub.docker.com/r/padator/ stored in ~/.docker/config.json
 push-docker:

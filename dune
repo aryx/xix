@@ -3,5 +3,8 @@
   ; -33 for unused open because some are added for ocaml-light and field access
   (flags (:standard -w -33)))
 )
+
+; The dirs directive below is needed when using dune 2.7 (see dune-project)
 ; principia/ contain/ SRC/cmd/ROOT recursive symlink that dune does not like
-(dirs :standard \ principia \ bin_dune \ test)
+; there are other (dirs :standard \ docs) in shell/dune, mk/dune, vcs/dune
+(dirs :standard \ principia generators docs)

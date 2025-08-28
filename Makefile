@@ -35,8 +35,9 @@ promote:
 
 build-docker:
 	docker build -t "xix" .
+# currently forced to 5.1.1 because of ppxlib constraint in xix.opam
 build-docker-ocaml5:
-	docker build -t "xix" --build-arg OCAML_VERSION=5.2.1 .
+	docker build -t "xix" --build-arg OCAML_VERSION=5.1.1 .
 # Note that you probably want 'mk nuke' before running this target
 # as you might get "Parsing.xxx error" because the code generated
 # by regular ocamlyacc is different from the one used in ocaml-light

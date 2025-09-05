@@ -254,8 +254,16 @@ let of_list xs =
 let to_list h =
   Hashtbl.fold (fun k v acc -> (k,v)::acc) h []
 
+(* alt: could be a further nested module Hashtbl_.Set.t *)
 type 'a set = ('a, bool) Hashtbl.t
 
 let memoized = memoized
+
+let hashset_of_list (xs : 'a list) : 'a set =
+  let h = Hashtbl.create (List.length xs) in
+  xs |> List.iter (fun k -> Hashtbl.replace h k true);
+  h
+
+let hashset_to_list h = to_list h |> List.map fst
 
 end

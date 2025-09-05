@@ -105,6 +105,9 @@ module Hashtbl_ :
 
     type 'a set = ('a, bool) Hashtbl.t
 
+    val hashset_of_list : 'a list -> 'a set
+    val hashset_to_list : 'a set -> 'a list
+
     val memoized :
       ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
   end

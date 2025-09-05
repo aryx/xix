@@ -1,5 +1,5 @@
 
-(* 0 means ok, otherwise mean error (e.g., 2 for "fatal error") *)
+(* 0 means ok, otherwise means error (e.g., 2 for "fatal error") *)
 type code = int
 
 type t =
@@ -13,7 +13,7 @@ type t =
 
 val show: t -> string
 
-(* The code can also be 0 here; it will be converted back to Ok by catch() *)
+(* The code can also be 0 here; it will be converted back to OK by catch() *)
 exception ExitCode of code
 
 val exit: < Cap.exit; ..> -> t -> unit

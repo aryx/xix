@@ -109,8 +109,8 @@ let rec walk_dir f dir =
           let path = Filename.concat dir s in
           let st = Unix.lstat path in
           (match st.Unix.st_kind with
-          | Unix.S_DIR -> Common.push s dirs
-          | _ -> Common.push s files
+          | Unix.S_DIR -> Stack_.push s dirs
+          | _ -> Stack_.push s files
           )
         end
       done
@@ -235,7 +235,7 @@ let all_refs r =
       (* less: replace os.path.sep *)
       let dir = String.sub path rootlen (String.length path - rootlen) in
       let refname = dir / file in
-      Common.push refname res
+      Stack_.push refname res
     );
    );
   List.rev !res
@@ -495,7 +495,7 @@ let set_worktree_and_index_to_tree r tree =
       let blob = read_blob r sha in
       let stat = build_file_from_blob fullpath blob perm in
       Hashtbl.replace hcurrent relpath true;
-      Common.push (Index.mk_entry relpath sha stat) new_index;
+      Stack_.push (Index.mk_entry relpath sha stat) new_index;
     (*s: [[Repository.set_worktree_and_index_to_tree()]] walk tree cases *)
     | Tree.Commit -> failwith "submodule not yet supported"
     (*e: [[Repository.set_worktree_and_index_to_tree()]] walk tree cases *)

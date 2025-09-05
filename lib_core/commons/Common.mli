@@ -77,10 +77,11 @@ module List_ :
     val zip: 'a list -> 'b list -> ('a * 'b) list
   end
 
-val push : 'a -> 'a list ref -> unit
 
 module Stack_ :
   sig
+    val push : 'a -> 'a list ref -> unit
+
     val nth: int -> 'a Stack.t -> 'a
   end
 

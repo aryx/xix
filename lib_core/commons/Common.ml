@@ -173,10 +173,11 @@ end
 (* Stack *)
 (*****************************************************************************)
 
-let push a aref =
-  aref := a::!aref
 
 module Stack_ = struct
+
+let push a aref =
+  aref := a::!aref
 
 (* If have access to internal implementation of a stack:
 let nth i s =

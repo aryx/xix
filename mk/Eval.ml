@@ -260,7 +260,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr lis
                              recipe = r.A.recipe;
                              loc = loc;
                            } in
-              metas |> Common.push rfinal
+              metas |> Stack_.push rfinal
           (*x: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           (* it is ok to have a % only for the target to allow
            * for instance rules such as %.o: $HFILES
@@ -274,7 +274,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr lis
                              recipe = r.A.recipe;
                              loc = loc;
                            } in
-              metas |> Common.push rfinal
+              metas |> Stack_.push rfinal
           (*x: [[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases *)
           | Left _, Right _ ->
               (* stricter: *)

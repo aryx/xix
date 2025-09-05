@@ -98,7 +98,7 @@ let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : uni
             then ()
             else begin
               Hashtbl.add hdone_prereqs prereq true;
-              Common.push prereq.G.name all_prereqs
+              Stack_.push prereq.G.name all_prereqs
             end
       )
     ));

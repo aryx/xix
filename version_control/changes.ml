@@ -64,7 +64,7 @@ let content_from_path_and_stat_index path stat_info =
  *)
 let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
   let changes = ref [] in
-  let add x = Common.push x changes in
+  let add x = Stack_.push x changes in
   Tree.walk_trees read_tree "" (fun dirpath entry1_opt entry2_opt ->
     (* if entries are directories, then we would be called again
      * with their individual files, so safe to skip the dir entries.
@@ -163,7 +163,7 @@ let changes_index_vs_tree read_tree index treeid =
         Hashtbl.add h_in_index_and_head relpath true;
         (* less: if change mode, then report as del/add *)
         if entry_head.Tree.id <> entry_index.Index.id
-        then changes |> Common.push (Change.Modify (
+        then changes |> Stack_.push (Change.Modify (
           { Change.path = relpath; 
             mode = Index.mode_of_perm perm; 
             content = lazy (raise (Impossible "not called")); },
@@ -172,7 +172,7 @@ let changes_index_vs_tree read_tree index treeid =
             content = lazy (raise (Impossible "not called")); }
         ))
       with Not_found ->
-        changes |> Common.push (Change.Del { Change.
+        changes |> Stack_.push (Change.Del { Change.
              path = relpath;
              mode = Index.mode_of_perm perm;
              content = lazy (raise (Impossible "not called"));
@@ -180,7 +180,7 @@ let changes_index_vs_tree read_tree index treeid =
   );
   index |> List.iter (fun entry ->
     if not (Hashtbl.mem h_in_index_and_head entry.Index.path)
-    then changes |> Common.push (Change.Add { Change.
+    then changes |> Stack_.push (Change.Add { Change.
              path = entry.Index.path;
              mode = entry.Index.stats.Index.mode;                                            content = lazy (raise (Impossible "not called")); }
     )

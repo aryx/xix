@@ -111,10 +111,10 @@ let load xs =
               | _ -> failwith (spf "redefinition of %s" global.name)
               );
               (* less: adjust autosize? *)
-              code |> Common.push (T5.TEXT (global, attrs, size), (file, line));
+              code |> Stack_.push (T5.TEXT (global, attrs, size), (file, line));
               incr pc;
           | WORD v ->
-              code |> Common.push (T5.WORD v, (file, line));
+              code |> Stack_.push (T5.WORD v, (file, line));
               incr pc;
             
           | GLOBL (global, _attrs, size) -> 
@@ -124,7 +124,7 @@ let load xs =
               | _ -> failwith (spf "redefinition of %s" global.name)
               );
           | DATA (global, offset, size, v) -> 
-              data |> Common.push (T5.DATA (global, offset, size, v))
+              data |> Stack_.push (T5.DATA (global, offset, size, v))
           )
 
       | Instr (inst, cond) ->
@@ -139,7 +139,7 @@ let load xs =
           | B opd | BL opd | Bxx (_, opd) -> relocate_branch opd
           | _ -> ()
           );
-          code |> Common.push (T5.I (inst, cond), (file, line));
+          code |> Stack_.push (T5.I (inst, cond), (file, line));
           incr pc;
 
       | LabelDef _ -> failwith (spf "label definition in object")

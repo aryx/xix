@@ -666,7 +666,7 @@ let gen symbols2 config cg =
       word_of_composed_word composed_word;
     )
     in
-    res |> Common.push xs;
+    res |> Stack_.push xs;
 
     pc := !pc + size;
     (match n.T5.instr with

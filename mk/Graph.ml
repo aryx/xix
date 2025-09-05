@@ -161,12 +161,12 @@ let rec apply_rules target rules =
          *)
         if r.R.recipe = None
         then ()
-        else arcs |> Common.push { dest = None; rule = rule_exec r }
+        else arcs |> Stack_.push { dest = None; rule = rule_exec r }
 
       else pre |> List.iter (fun prereq ->
         (* recurse *)
         let dest = apply_rules prereq rules in
-        arcs |> Common.push { dest = Some dest; rule = rule_exec r }
+        arcs |> Stack_.push { dest = Some dest; rule = rule_exec r }
       )
     );
     (*e: [[Graph.apply_rules()]] look for simple matching rules and update [[arcs]] *)
@@ -184,12 +184,12 @@ let rec apply_rules target rules =
             *)
            let pre = r.R.prereqs in
            if pre = []
-           then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
+           then arcs |> Stack_.push { dest = None; rule = rule_exec_meta r stem }
            else pre |> List.iter (fun prereq_pat ->
              let prereq = Percent.subst prereq_pat stem in
              (* recurse *)
              let dest = apply_rules prereq rules in
-             arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
+             arcs |> Stack_.push { dest = Some dest; rule=rule_exec_meta r stem }
           )
         )
       )

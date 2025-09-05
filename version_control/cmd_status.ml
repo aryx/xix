@@ -44,7 +44,7 @@ let untracked r =
         else path
       in
       if not (Hashtbl.mem h path)
-      then Common.push path res
+      then Stack_.push path res
     );
   );
   List.rev !res

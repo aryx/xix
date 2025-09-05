@@ -432,7 +432,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
 
   def |> List.iter (fun (fldname, t) ->
     if fldname = name
-    then res |> Common.push { e0 with e = RecordAccess (e, name); e_type = t }
+    then res |> Stack_.push { e0 with e = RecordAccess (e, name); e_type = t }
     else
       if Ast.is_gensymed fldname
       then
@@ -445,7 +445,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
                  ({ e with e = RecordAccess (e, fldname); e_type = t })
                  name def
              in
-             res |> Common.push e
+             res |> Stack_.push e
            with Not_found -> ()
           )
         | _ -> raise (Impossible "checked anon elements are struct/union")

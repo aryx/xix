@@ -132,7 +132,7 @@ let layout_text symbols2 init_text cg =
           then raise (Impossible "attaching literal to branching instruction");
 
           n.T5.branch <- Some node;
-          literal_pools |> Common.push node;
+          literal_pools |> Stack_.push node;
           
     );
     pc := !pc + size;

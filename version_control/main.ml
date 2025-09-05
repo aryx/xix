@@ -119,7 +119,7 @@ let main () =
     (try 
      (* todo: look if --help and factorize treatment of usage for subcmds *)
        Arg.parse_argv argv (Arg.align cmd.Cmd_.options) 
-         (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
+         (fun arg -> Stack_.push arg remaining_args) usage_msg_cmd;
      with Arg.Bad str | Arg.Help str->  
        prerr_string str;
        exit 1

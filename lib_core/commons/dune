@@ -10,6 +10,7 @@
  ; coupling: mkfile SRC variable
  (modules
   Cap CapStdlib CapSys CapUnix
+  Eq Ord
   Common
   Dumper OCaml
   Console UConsole

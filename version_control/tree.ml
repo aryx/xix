@@ -18,6 +18,7 @@
 (*e: copyright ocaml-git *)
 open Stdcompat (* for bytes *)
 open Common
+open Ord.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -125,10 +126,10 @@ let rec walk_trees read_tree dirpath f xs ys =
     | Equal -> 
       g dirpath (Some x) (Some y);
       walk_trees read_tree dirpath f xs ys
-    | Inf -> 
+    | Less -> 
       g dirpath (Some x) None;
       walk_trees read_tree dirpath f xs (y::ys)
-    | Sup ->
+    | Greater ->
       g dirpath None (Some y);
       walk_trees read_tree dirpath f (x::xs) ys
     )

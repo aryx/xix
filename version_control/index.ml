@@ -18,6 +18,7 @@
 (*e: copyright ocaml-git *)
 open Stdcompat (* for bytes *)
 open Common
+open Ord.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -167,10 +168,10 @@ let rec remove_entry idx name =
   | [] -> failwith (spf "The file %s is not in the index" name)
   | x::xs ->
     (match name <=> x.path with
-    | Sup -> x::(remove_entry xs name)
+    | Greater -> x::(remove_entry xs name)
     | Equal -> xs
     (* the entries are sorted *)
-    | Inf -> failwith (spf "The file %s is not in the index" name)
+    | Less -> failwith (spf "The file %s is not in the index" name)
     )
 (*e: function [[Index.remove_entry]] *)
 
@@ -180,11 +181,11 @@ let rec add_entry idx entry =
   | [] -> [entry]
   | x::xs ->
     (match entry.path <=> x.path with
-    | Sup -> x::(add_entry xs entry)
+    | Greater -> x::(add_entry xs entry)
     (* replacing old entry, new version of tracked file  *)
     | Equal -> entry::xs
     (* new file (the entries are sorted, no need to go through xs) *)
-    | Inf -> entry::x::xs
+    | Less -> entry::x::xs
     )
 (*e: function [[Index.add_entry]] *)
 

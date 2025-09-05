@@ -1,5 +1,6 @@
 open Stdcompat (* for |> *)
 open Common
+open Ord.Operators
 
 module D = Diff
 
@@ -83,8 +84,8 @@ let rec identical_lines xs ys =
   | (o1,a)::xs, (o2,b)::ys ->
     (match o1 <=> o2 with
     | Equal -> (o1, a, b)::identical_lines xs ys
-    | Inf -> identical_lines xs ((o2,b)::ys)
-    | Sup -> identical_lines ((o1,a)::xs) ys
+    | Less -> identical_lines xs ((o2,b)::ys)
+    | Greater -> identical_lines ((o1,a)::xs) ys
     )
 
 (* aligning *)

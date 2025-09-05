@@ -1,8 +1,8 @@
 (*s: shell/CLI.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 module R = Runtime
 module O = Opcode

@@ -39,7 +39,6 @@ module Int_ :
 (* Regexps *)
 (*****************************************************************************)
 
-val ( =~ ) : string -> string -> bool
 module Regexp_ :
   sig
     val matched : int -> string -> string
@@ -56,6 +55,10 @@ module Regexp_ :
 
     (* val _memo_compiled_regexp : (string, Str.regexp) Hashtbl.t *)
     val split : string -> string -> string list
+
+    module Operators : sig
+      val ( =~ ) : string -> string -> bool
+    end
   end
 
 (*****************************************************************************)

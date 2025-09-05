@@ -2,6 +2,7 @@
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)

@@ -96,10 +96,13 @@ let candidate_match_func s re =
 
 let split sep s = Str.split (Str.regexp sep) s
 
+  module Operators = struct
+    let (=~) s re =
+      candidate_match_func s re
+  end
+
 end
 
-let (=~) s re =
-  Regexp_.candidate_match_func s re
 
 (*****************************************************************************)
 (* List *)

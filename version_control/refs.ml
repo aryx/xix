@@ -1,6 +1,7 @@
 (*s: version_control/refs.ml *)
 open Stdcompat (* for |> *)
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Types *)

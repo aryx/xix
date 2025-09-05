@@ -4,6 +4,7 @@
 (*e: copyright ocamlgit *)
 open Stdcompat (* for |> *)
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)

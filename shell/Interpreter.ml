@@ -1,5 +1,6 @@
 (*s: shell/Interpreter.ml *)
 open Common
+open Regexp_.Operators
 
 module O = Opcode
 module R = Runtime

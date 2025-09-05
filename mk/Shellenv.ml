@@ -1,6 +1,7 @@
 (*s: mk/Shellenv.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 (*s: type [[Shellenv.t]] *)
 type t = (string * string list) list

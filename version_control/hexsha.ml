@@ -19,6 +19,7 @@
 (*e: copyright ocaml-hex *)
 open Stdcompat (* for bytes *)
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)

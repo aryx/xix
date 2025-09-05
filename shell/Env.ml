@@ -1,5 +1,6 @@
 (*s: shell/Env.ml *)
 open Common
+open Regexp_.Operators
 
 type t = (string * string list) list
 

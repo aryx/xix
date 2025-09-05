@@ -365,6 +365,7 @@ let tagkind_of_su = function
 let unwrap (name, _) = name    
 
 open Common
+open Regexp_.Operators
 (* see also Parser.gensym *)
 let is_gensymed str = 
   str =~ "|sym[0-9]+|.*"

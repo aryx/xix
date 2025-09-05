@@ -2,6 +2,7 @@
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 module G = Graph
 module R = Rules

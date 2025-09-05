@@ -3,6 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Regexp_.Operators
 
 let (|>) = Stdcompat.(|>)
 

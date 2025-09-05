@@ -14,7 +14,7 @@ module Operators = struct
   (* To forbid people to use the polymorphic '='.
    * See https://blog.janestreet.com/the-perils-of-polymorphic-compare/
    *)
-  let ( = ) = String.equal
+  let ( = ) : string -> string -> bool = ( = ) (* alt: String.equal *)
   let ( == ) : hidden_by_your_nanny = ()
   let ( != ) : hidden_by_your_nanny = ()
 end

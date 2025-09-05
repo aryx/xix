@@ -28,6 +28,7 @@ module Process : sig
   type signal
   type time_limit
   type memory_limit
+  (* exec has its separate module below *)
   type fork
   type wait
 end
@@ -57,18 +58,12 @@ end
  *)
 module Misc : sig
   type random
+  (* TODO: time *)
 end
 
 (**************************************************************************)
-(* Powerbox *)
+(* Shortcut aliases *)
 (**************************************************************************)
-
-(* fs *)
-type readdir = < readdir : FS_.readdir >
-type tmp = < tmp : FS_.tmp >
-type open_in = < open_in : FS_.open_in >
-type open_out = < open_out : FS_.open_out >
-type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
 type stdin = < stdin : Console_.stdin >
@@ -90,6 +85,13 @@ type process_multi = < fork; wait >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
 type process = < argv ; env; console ; process_single ; process_multi >
 
+(* fs *)
+type readdir = < readdir : FS_.readdir >
+type tmp = < tmp : FS_.tmp >
+type open_in = < open_in : FS_.open_in >
+type open_out = < open_out : FS_.open_out >
+type fs = < readdir ; tmp; open_in; open_out >
+
 (* exec *)
 type exec = < exec : Exec.t >
 
@@ -99,6 +101,10 @@ type network = < network : Network.t >
 (* misc *)
 type random = < random : Misc.random >
 type misc = < random >
+
+(**************************************************************************)
+(* Powerbox *)
+(**************************************************************************)
 
 (* alt: called "Stdenv.Base.env" in EIO *)
 type all_caps =

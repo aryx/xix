@@ -15,6 +15,8 @@
  *    exns in variants of this regular type).
  *  - the closure may not use [exit] (UnixExit is fine) as this will
  *    raise an End_of_file error.
+ * history:
+ *  - was called CapProcess.ml in semgrep
  *)
 val apply_in_child_process :
   < Cap.fork; .. > -> ?flags:Marshal.extern_flags list -> ('a -> 'b) -> 'a -> 'b
@@ -31,3 +33,5 @@ val apply_in_child_process_promise :
   'a ->
   unit ->
   'b
+
+type pid = int

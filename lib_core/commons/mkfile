@@ -6,6 +6,7 @@ INCLUDES=-I .
 #coupling: dune '(modules ...)' stanza
 SRC=\
  Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
+ Eq.ml Ord.ml \
  Common.ml \
  Dumper.ml OCaml.ml \
  Console.ml UConsole.ml \

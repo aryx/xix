@@ -10,10 +10,10 @@ SRC=\
  Common.ml \
  Dumper.ml OCaml.ml \
  Console.ml UConsole.ml \
- Fpath.ml Fpath_.ml \
+ Fpath.ml Fpath_.ml FType.ml \
  Logs.ml \
  Chan.ml UChan.ml FS.ml IO.ml \
- Cmd.ml \
+ Cmd.ml Proc.ml \
  Date.ml \
  Exception.ml Exit.ml
 

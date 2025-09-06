@@ -77,6 +77,7 @@ module List_ :
     val list_of_string: string -> char list
     val span: ('a -> bool) -> 'a list -> 'a list * 'a list
     val index_list_1: 'a list -> ('a * int) list
+    val enum : int -> int -> int list
     val zip: 'a list -> 'b list -> ('a * 'b) list
   end
 

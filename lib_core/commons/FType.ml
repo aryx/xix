@@ -16,6 +16,7 @@
 open Common
 open Regexp_.Operators
 open Fpath_.Operators
+open Stdcompat (* for String.starts_with, String.ends_with *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -462,7 +463,8 @@ let of_file file =
   | _ when b = ".gitkeep" -> Text b
   | _ when String.starts_with "." b && String.ends_with "ignore" b ->
       Config (Ignore b)
-  | _ when String.starts_with "." b && String.ends_with "rc" b -> Config (RC b)
+  | _ when String.starts_with "." b && String.ends_with "rc" b ->
+      Config (RC b)
 (* TODO   | _ when UFile.filesize file > 300_000 -> Obj e *)
   | _ -> Other e
 

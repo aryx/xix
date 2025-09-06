@@ -3,6 +3,7 @@
 TOP=../..
 INCLUDES=-I .
 
+#TODO: Proc.ml but then syntax error on label in Proc.mli with ocaml-light
 #coupling: dune '(modules ...)' stanza
 SRC=\
  Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
@@ -13,7 +14,7 @@ SRC=\
  Fpath.ml Fpath_.ml FType.ml \
  Logs.ml \
  Chan.ml UChan.ml FS.ml IO.ml \
- Cmd.ml Proc.ml \
+ Cmd.ml \
  Date.ml \
  Exception.ml Exit.ml
 

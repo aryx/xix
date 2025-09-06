@@ -82,8 +82,10 @@ and idl_type = Thrift | ATD | Protobuf
 and media_type = Sound of string | Picture of string | Video of string
 
 
-(* main entry point *)
-val ftype_of_file : Fpath.t -> t
+(* main entry point (note that this function might read the file
+ * or Unix.stat it to get its size so the file must exist!)
+ *)
+val of_file : Fpath.t -> t
 
 (* is_xxx helpers *)
 val is_textual_file : Fpath.t -> bool

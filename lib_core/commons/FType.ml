@@ -175,7 +175,7 @@ let dbe_of_filename_noext_ok file =
 (* this function is used by codemap and archi_parse and called for each
  * filenames, so it has to be fast!
  *)
-let ftype_of_file file =
+let of_file file =
   let _d, b, e = dbe_of_filename_noext_ok !!file in
   (* extensions are not case sensitive, at least on windows! *)
   let e = String.lowercase_ascii e in
@@ -472,7 +472,7 @@ let ftype_of_file file =
 
 (* this is used in codemap, to know whether to display a file *)
 let is_textual_file file =
-  match ftype_of_file file with
+  match of_file file with
   (* still? if this contains weird code then pfff_visual crash *)
   | PL (Web Sql) -> false
   | PL _
@@ -488,7 +488,7 @@ let is_textual_file file =
       false
 
 let webpl_type_of_file file =
-  match ftype_of_file file with
+  match of_file file with
   | PL (Web x) -> Some x
   | _ -> None
 
@@ -499,6 +499,6 @@ let is_json_file file = !!file =~ ".*\\.json$"
 let files_of_dirs_or_files caps p xs =
   xs
   |> UFile.files_of_dirs_or_files_no_vcs_nofilter caps
-  |> List.filter (fun filename -> p (ftype_of_file filename))
+  |> List.filter (fun filename -> p (of_file filename))
   |> List_.sort
 *)

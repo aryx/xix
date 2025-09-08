@@ -14,7 +14,6 @@
 (* The lexical analyzer for lexer definitions. Bootstrapped! *)
 
 {
-open Stdcompat (* for Bytes *)
 open Ast
 open Parser
 

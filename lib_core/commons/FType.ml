@@ -16,7 +16,6 @@
 open Common
 open Regexp_.Operators
 open Fpath_.Operators
-open Stdcompat (* for String.starts_with, String.ends_with *)
 
 (*****************************************************************************)
 (* Prelude *)

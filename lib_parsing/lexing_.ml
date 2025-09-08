@@ -11,7 +11,6 @@
 (*                                                                     *)
 (***********************************************************************)
 (*e: copyright ocamllex *)
-open Stdcompat
 
 (* coupling: lexbuf and lexing.c lexer_buffer must match! *)
 (*s: type [[Lexing.lexbuf]] *)

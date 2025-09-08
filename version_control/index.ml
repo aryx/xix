@@ -16,7 +16,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  *)
 (*e: copyright ocaml-git *)
-open Stdcompat (* for bytes *)
 open Common
 open Ord.Operators
 

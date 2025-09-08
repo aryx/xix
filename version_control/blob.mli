@@ -1,5 +1,4 @@
 (*s: version_control/blob.mli *)
-open Stdcompat
 
 (*s: type [[Blob.t]] *)
 type t = string

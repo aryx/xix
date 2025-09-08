@@ -13,7 +13,6 @@
 (*e: copyright ocamllex *)
 (* Compaction of an automata *)
 
-open Stdcompat (* for |> *)
 open Lexgen
 
 (*s: function [[Compact.most_frequent_elt]] *)

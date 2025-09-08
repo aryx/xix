@@ -1,4 +1,3 @@
-open Stdcompat (* for |> *)
 open Common
 open Ord.Operators
 

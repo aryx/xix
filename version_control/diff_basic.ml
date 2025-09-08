@@ -1,5 +1,4 @@
 (*s: version_control/diff_basic.ml *)
-open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)

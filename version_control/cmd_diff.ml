@@ -2,7 +2,6 @@
 (*s: copyright ocamlgit *)
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
-open Stdcompat (* for |> *)
 
 (*s: function [[Cmd_diff.diff_worktree_vs_index]] *)
 let diff_worktree_vs_index r =

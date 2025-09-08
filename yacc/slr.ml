@@ -15,7 +15,6 @@
  * license.txt for more details.
  *)
 (*e: copyright ocamlyacc *)
-open Stdcompat (* for |> *)
 open Ast
 open Lr0
 open Lrtables

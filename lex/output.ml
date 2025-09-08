@@ -13,7 +13,6 @@
 (*e: copyright ocamllex *)
 (* Output the DFA tables and its entry points *)
 
-open Stdcompat (* for |> *)
 open Printf
 open Ast
 open Lexgen

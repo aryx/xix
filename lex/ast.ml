@@ -11,7 +11,6 @@
 (*                                                                     *)
 (***********************************************************************)
 (*e: copyright ocamllex *)
-open Stdcompat (* for |> *)
 (* The shallow abstract syntax *)
 
 (*s: type [[Syntax.charpos]] *)

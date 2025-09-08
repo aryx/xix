@@ -1,5 +1,4 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-open Stdcompat (* for |> *)
 open Common
 
 module A = Ast_asm5

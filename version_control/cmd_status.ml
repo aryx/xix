@@ -5,8 +5,6 @@
 open Common
 open Regexp_.Operators
 
-let (|>) = Stdcompat.(|>)
-
 (*s: type [[Cmd_status.status]] *)
 type status = {
   (* diff index vs HEAD *)

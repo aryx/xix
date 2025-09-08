@@ -12,7 +12,6 @@
 
 (* The parsing engine *)
 
-open Stdcompat (* for |> *)
 open Lexing
 
 (*s: type [[Parsing.parser_env]](yacc) *)

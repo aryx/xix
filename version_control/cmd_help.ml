@@ -4,8 +4,6 @@
 (*e: copyright ocamlgit *)
 open Common
 
-let (|>) = Stdcompat.(|>)
-
 (*s: constant [[Cmd_help.list_extra]] *)
 let list_extra = ref false
 (*e: constant [[Cmd_help.list_extra]] *)

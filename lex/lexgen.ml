@@ -13,7 +13,6 @@
 (*e: copyright ocamllex *)
 (* Compiling a lexer definition *)
 
-open Stdcompat (* for |> *)
 open Ast
 module Set = Set_
 module Map = Map_

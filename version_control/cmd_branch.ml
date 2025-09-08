@@ -5,7 +5,6 @@
 open Common
 open Regexp_.Operators
 
-let (|>) = Stdcompat.(|>)
 
 (*s: function [[Cmd_branch.list_branches]] *)
 (* less: remote_flag set with --all to also list remote refs *)

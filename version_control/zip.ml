@@ -1,4 +1,3 @@
-open Stdcompat
 open Common
 
 (*

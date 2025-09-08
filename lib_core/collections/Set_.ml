@@ -8,7 +8,6 @@
 (*  Automatique.  Distributed only by permission.                      *)
 (*                                                                     *)
 (***********************************************************************)
-open Stdcompat (* for Stdlib *)
 
 (* $Id: set.ml,v 1.9 1997/10/31 12:59:27 doligez Exp $ *)
 
@@ -103,7 +102,7 @@ let rec split x = function
     Empty ->
       (Empty, None, Empty)
   | Node(l, v, r, _) ->
-      let c = (*Ord.*)Stdlib.compare x v in
+      let c = (*Ord.*)compare x v in
       if c = 0 then (l, Some v, r)
       else if c < 0 then
         let (ll, vl, rl) = split x l in (ll, vl, join rl v r)
@@ -119,21 +118,21 @@ let is_empty = function Empty -> true | _ -> false
 let rec mem x = function
     Empty -> false
   | Node(l, v, r, _) ->
-      let c = (*Ord.*)Stdlib.compare x v in
+      let c = (*Ord.*)compare x v in
       if c = 0 then true else
       if c < 0 then mem x l else mem x r
 
 let rec add x = function
     Empty -> Node(Empty, x, Empty, 1)
   | Node(l, v, r, _) as t ->
-      let c = (*Ord.*)Stdlib.compare x v in
+      let c = (*Ord.*)compare x v in
       if c = 0 then t else
       if c < 0 then bal (add x l) v r else bal l v (add x r)
 
 let rec remove x = function
     Empty -> Empty
   | Node(l, v, r, _) ->
-      let c = (*Ord.*)Stdlib.compare x v in
+      let c = (*Ord.*)compare x v in
       if c = 0 then merge l r else
       if c < 0 then bal (remove x l) v r else bal l v (remove x r)
 
@@ -176,7 +175,7 @@ let rec subset s1 s2 =
   | _, Empty ->
       false
   | Node (l1, v1, r1, _), (Node (l2, v2, r2, _) as t2) ->
-      let c = Stdlib.compare v1 v2 in
+      let c = compare v1 v2 in
       if c = 0 then
         subset l1 l2 && subset r1 r2
       else if c < 0 then
@@ -223,7 +222,7 @@ let rec compare_aux l1 l2 =
   | (Empty :: t1, Empty :: t2) ->
       compare_aux t1 t2
   | (Node(Empty, v1, r1, _) :: t1, Node(Empty, v2, r2, _) :: t2) ->
-      let c = (*Ord.*)Stdlib.compare v1 v2 in
+      let c = (*Ord.*)compare v1 v2 in
       if c <> 0 then c else compare_aux (r1::t1) (r2::t2)
   | (Node(l1, v1, r1, _) :: t1, t2) ->
       compare_aux (l1 :: Node(Empty, v1, r1, 0) :: t1) t2

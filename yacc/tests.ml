@@ -1,5 +1,4 @@
 (*s: yacc/tests.ml *)
-open Stdcompat (* for |> *)
 open Ast
 open Lr0
 

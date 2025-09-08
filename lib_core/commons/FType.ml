@@ -460,9 +460,9 @@ let of_file file =
   | _ when b = ".emacs" -> PL (Lisp Elisp)
   | _ when b = ".gitattributes" -> Text b
   | _ when b = ".gitkeep" -> Text b
-  | _ when String.starts_with "." b && String.ends_with "ignore" b ->
+  | _ when Stdcompat.String.starts_with "." b && Stdcompat.String.ends_with "ignore" b ->
       Config (Ignore b)
-  | _ when String.starts_with "." b && String.ends_with "rc" b ->
+  | _ when Stdcompat.String.starts_with "." b && Stdcompat.String.ends_with "rc" b ->
       Config (RC b)
 (* TODO   | _ when UFile.filesize file > 300_000 -> Obj e *)
   | _ -> Other e

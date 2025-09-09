@@ -4138,7 +4138,7 @@ This index is generated automatically.
 %\chapter{References} 
 \addcontentsline{toc}{chapter}{References}
 
-\bibliography{../../docs/latex/Principia}
+\bibliography{latex/Principia}
 \bibliographystyle{alpha}
 
 %******************************************************************************

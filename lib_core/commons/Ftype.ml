@@ -26,7 +26,7 @@ open Fpath_.Operators
  *
  * history:
  *  - was called File_type.ml in pfff and then semgrep but renamed
- *    to FType.ml to better match FPath.ml
+ *    to Ftype.ml to better match Fpath.ml
  *
  * TODO? in semgrep we had lots of deriving yojson
  *)

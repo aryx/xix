@@ -81,6 +81,8 @@ ocamlc$OPT $OCAMLCFLAGS -c Fpath.mli
 ocamlc$OPT $OCAMLCFLAGS -c Fpath.ml
 ocamlc$OPT $OCAMLCFLAGS -c Fpath_.mli
 ocamlc$OPT $OCAMLCFLAGS -c Fpath_.ml
+ocamlc$OPT $OCAMLCFLAGS -c Ftype.mli
+ocamlc$OPT $OCAMLCFLAGS -c Ftype.ml
 ocamlc$OPT $OCAMLCFLAGS -c Chan.mli
 ocamlc$OPT $OCAMLCFLAGS -c Chan.ml
 ocamlc$OPT $OCAMLCFLAGS -c UChan.mli
@@ -106,7 +108,7 @@ ocamlc$OPT $OCAMLCFLAGS -c Exception.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exception.ml
 ocamlc$OPT $OCAMLCFLAGS -c Exit.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exit.ml
-ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo Common.cmo OCaml.cmo IO.cmo Logs.cmo Logs_.cmo Fpath.cmo Fpath_.cmo UChan.cmo FS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
+ocamlc$OPT -I . Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo Common.cmo OCaml.cmo IO.cmo Logs.cmo Logs_.cmo Fpath.cmo Fpath_.cmo Ftype.cmo UChan.cmo FS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
 
 cd $TOP/mk
 ocamlyacc Parser.mly

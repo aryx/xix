@@ -11,7 +11,7 @@ SRC=\
  Common.ml \
  Dumper.ml OCaml.ml \
  Console.ml UConsole.ml \
- Fpath.ml Fpath_.ml FType.ml \
+ Fpath.ml Fpath_.ml Ftype.ml \
  Logs.ml Logs_.ml \
  Chan.ml UChan.ml FS.ml IO.ml \
  Cmd.ml \

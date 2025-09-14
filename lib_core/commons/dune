@@ -19,7 +19,7 @@
   Chan UChan FS IO
   Cmd Proc
   Date
-  Fpath_ FType
+  Fpath_ Ftype
  )   
  (libraries
     stdcompat

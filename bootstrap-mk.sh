@@ -198,3 +198,7 @@ ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/collections str
 cd $TOP
 cp mk/mk shell/rc bin/
 echo 'Copy bin/mk bin/rc somewhere in your PATH and sets MKSHELL to point to rc.'
+
+# Safer to delete the generated libs as we may have forgotten objects
+# that are not needed for mk/rc but might be needed by other programs
+rm -f ../lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma

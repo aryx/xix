@@ -257,7 +257,7 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
   (*s: [[CLI.main()]] logging initializations *)
-  Logs.set_level !level;
+  Logs_.setup !level ();
   Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
   (*e: [[CLI.main()]] logging initializations *)
   (*s: [[CLI.main()]] CLI action processing *)

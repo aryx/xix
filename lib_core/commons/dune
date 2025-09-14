@@ -14,7 +14,7 @@
   Common
   Dumper OCaml
   Console UConsole
-  Logs
+  Logs Logs_
   Exit Exception
   Chan UChan FS IO
   Cmd Proc

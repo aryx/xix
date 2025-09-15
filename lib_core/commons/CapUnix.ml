@@ -11,6 +11,8 @@ let wait (_caps : < Cap.wait; ..>) = Unix.wait
 (* nosemgrep: use-caps *)
 let waitpid (_caps : < Cap.wait; ..>) = Unix.waitpid
 (* nosemgrep: use-caps *)
+let kill (_caps : < Cap.kill; ..>) = Unix.kill
+(* nosemgrep: use-caps *)
 let environment (_caps : < Cap.env; ..>) = Unix.environment
 (* nosemgrep: use-caps *)
 let chdir (_caps : < Cap.chdir; ..>) = Unix.chdir

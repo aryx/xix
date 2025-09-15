@@ -31,6 +31,7 @@ module Process : sig
   (* exec has its separate module below *)
   type fork
   type wait
+  type kill
 end
 
 module FS_ : sig
@@ -81,7 +82,8 @@ type exit = < exit : Process.exit >
 type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
 type wait = < wait : Process.wait >
-type process_multi = < fork; wait >
+type kill = < kill : Process.kill >
+type process_multi = < fork; wait; kill >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
 type process = < argv ; env; console ; process_single ; process_multi >
 

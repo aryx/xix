@@ -113,6 +113,7 @@ module Process = struct
   (* multi processes *)
   type fork = cap
   type wait = cap
+  type kill = cap
   (* pipe? not sure it requires a cap; it's a local thing *)
 
   (* old: was alarm, but better rename to be consistent with memory_limit
@@ -196,7 +197,8 @@ type exit = < exit : Process.exit >
 type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
 type wait = < wait : Process.wait >
-type process_multi = < fork; wait >
+type kill = < kill : Process.kill >
+type process_multi = < fork; wait; kill >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
 type process = < argv ; env; console ; process_single ; process_multi >
 
@@ -247,6 +249,7 @@ let powerbox : all_caps =
     method memory_limit = ()
     method fork = ()
     method wait = ()
+    method kill = ()
     method exit = ()
 
     (* misc *)

@@ -49,6 +49,7 @@ local cap_rules = [
 	# Cap.env
 	 'Unix.environment',
 	 'Sys.getenv',
+	 'Sys.getenv_opt',
 	# Cap.open_in
 	 'open_in_bin',
 	 #'open_in',

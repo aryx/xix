@@ -222,6 +222,9 @@ type no_caps = < >
 
 let no_caps : no_caps = object end
 
+(* shortcuts *)
+type forkew = < fork; exec; wait >
+
 let powerbox : all_caps =
   object
     (* fs *)

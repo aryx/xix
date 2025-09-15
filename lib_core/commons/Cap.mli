@@ -129,6 +129,9 @@ type no_caps = < >
  *)
 val no_caps : no_caps
 
+(* shortcuts *)
+type forkew = < fork; exec; wait >
+
 (**************************************************************************)
 (* Temporary unsafe caps to help migration *)
 (**************************************************************************)

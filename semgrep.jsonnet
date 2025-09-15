@@ -35,6 +35,9 @@ local cap_rules = [
 	# Cap.chdir
 	 'Sys.chdir',
 	 'Unix.chdir',
+        # Cap.forkew
+         'Sys.command',
+         'Unix.system',
         # Cap.exec
 	 'Unix.execve',
 	 'Unix.execv',
@@ -42,6 +45,7 @@ local cap_rules = [
 	 'Unix.fork',
 	# Cap.wait
 	 'Unix.wait',
+	 'Unix.waitpid',
 	# Cap.env
 	 'Unix.environment',
 	 'Sys.getenv',

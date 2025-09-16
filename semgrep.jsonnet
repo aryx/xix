@@ -46,6 +46,8 @@ local cap_rules = [
 	# Cap.wait
 	 'Unix.wait',
 	 'Unix.waitpid',
+	# Cap.kill
+         'Unix.kill',
 	# Cap.env
 	 'Unix.environment',
 	 'Sys.getenv',

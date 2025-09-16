@@ -6,6 +6,8 @@ let argv (_caps : < Cap.argv; .. >) = Sys.argv
 (* nosemgrep: use-caps *)
 let getenv (_caps : < Cap.env; ..>) = Sys.getenv
 (* nosemgrep: use-caps *)
+(* TODO: add to ocaml-light
 let getenv_opt (_caps : < Cap.env; ..>) = Sys.getenv_opt
+*)
 (* nosemgrep: use-caps *)
 let command (_caps : < Cap.fork; Cap.exec; Cap.wait; .. >) = Sys.command

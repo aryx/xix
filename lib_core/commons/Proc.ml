@@ -22,6 +22,11 @@
 (* clearer than abusing int everywhere *)
 type pid = int
 
+(* was using `Res and `Exn before but can't with ocaml-light *)
+type ('a, 'exn) res_or_exn =
+  | Res of 'a
+  | Exn of 'exn
+
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
@@ -44,8 +49,8 @@ let apply_in_child_process_promise (caps : < Cap.fork; .. >) (*?(flags = [])*) f
       Unix.close input;
       let output = Unix.out_channel_of_descr output in
       Marshal.to_channel output
-        (try `Res (f x) with
-        | e -> `Exn e)
+        (try Res (f x) with
+        | e -> Exn e)
         flags;
       close_out output;
       (* nosemgrep: do-not-use-exit *)
@@ -58,11 +63,11 @@ let apply_in_child_process_promise (caps : < Cap.fork; .. >) (*?(flags = [])*) f
         let v = Marshal.from_channel input in
         (* Without 'WNOHANG', in macOS the 'waitpid' call may fail with 'EINTR',
          * not 100% sure why. *)
-        ignore Unix.(waitpid [ WNOHANG ] pid);
+        ignore (Unix.waitpid [ Unix.WNOHANG ] pid);
         close_in input;
         match v with
-        | `Res x -> x
-        | `Exn e ->
+        | Res x -> x
+        | Exn e ->
             (* From marshal.mli in the OCaml stdlib:
              *  "Values of extensible variant types, for example exceptions (of
              *  extensible type [exn]), returned by the unmarshaller should not be

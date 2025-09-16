@@ -11,7 +11,7 @@
  *
  * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
-type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
+type caps = < Cap.forkew; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 (*e: type [[CLI.caps]] *)
 
 (*s: signature [[CLI.main]] *)

@@ -105,7 +105,7 @@ module R = Rules
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - chdir: actually needed just for -debugger, we could remove
  *)
-type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.env; Cap.argv; Cap.chdir >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.chdir >
 (*e: type [[CLI.caps]] *)
 
 (*s: constant [[CLI.usage]] *)

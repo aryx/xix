@@ -25,8 +25,11 @@ RUN cp mkconfig.light mkconfig
 # TODO: mk depend and mk all at some point
 RUN mk depend.light
 RUN mk all.light
-RUN mk opt.light
+
+#TODO: disabled for now, does not build on arm64
+#RUN mk opt.light
 
 # Basic test
 RUN ./mk/mk -help
-RUN ./mk/mk.opt -help
+#TODO: disabled for now, does not build on arm64
+#RUN ./mk/mk.opt -help

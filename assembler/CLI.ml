@@ -54,6 +54,7 @@ let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpat
 (*****************************************************************************)
 
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
+  (* alt: Fpath.t option ref *)
   let infile  = ref "" in
   let outfile = ref "" in
 

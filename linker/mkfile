@@ -7,7 +7,7 @@ SRC= Flags.ml\
  Types.ml Types5.ml Meta_types5.ml \
  Load5.ml Check.ml Resolve5.ml Rewrite5.ml\
  Codegen5.ml Datagen.ml Layout5.ml\
- Executable.ml Main.ml
+ Executable.ml CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_toolchain/objects/lib.cma $TOP/lib_toolchain/executables/lib.cma

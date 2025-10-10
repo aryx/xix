@@ -36,12 +36,21 @@ module T = Types
  *  - symbol table
  *  - program counter line table
  *  - nice error reporting for signature conflict, conflicting objects
-
  *)
+
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+(* Need: see .mli *)
+type caps = < >
 
 let thechar = '5'
 let usage = 
   spf "usage: %cl [-options] objects" thechar
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
 
 let link config (objfiles : Fpath.t list) outfile =
   let (code, data, symbols) = Load5.load objfiles in
@@ -70,7 +79,11 @@ let link config (objfiles : Fpath.t list) outfile =
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 outfile
 
-let main (caps : Cap.all_caps) =
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
   let outfile = ref (Fpath.v "5.out") in
 
@@ -79,6 +92,10 @@ let main (caps : Cap.all_caps) =
   let init_round = ref None in
   let init_data  = ref None in
   let init_entry = ref "_main" in
+
+  let level = ref (Some Logs.Warning) in
+  (* for debugging *)
+  let backtrace = ref false in
 
   let options = [
     "-o", Arg.String (fun s -> outfile := Fpath.v s),
@@ -98,18 +115,39 @@ let main (caps : Cap.all_caps) =
     "-E", Arg.Set_string init_entry,
     " <str> entry point";
 
+    (* pad: I added that *)
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " guess what";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+
+    (* pad: I added that *)
+    "-backtrace", Arg.Set backtrace,
+    " dump the backtrace after an error";
+
     "-debug_layout", Arg.Set Flags.debug_layout,
     " debug layout code";
     "-debug_gen", Arg.Set Flags.debug_gen,
     " debug code generation";
   ]
   in
-  Arg.parse options (fun f -> infiles := f::!infiles) usage;
+  (try
+    Arg.parse_argv argv options (fun f -> infiles := Fpath.v f::!infiles) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "5a ran from %s" (Sys.getcwd()));
 
   (match List.rev !infiles with
   | [] -> 
       Arg.usage options usage; 
-      CapStdlib.exit caps (-1)
+      raise (Exit.ExitCode 1)
   | xs -> 
       let config = 
         match !header_type with
@@ -132,10 +170,22 @@ let main (caps : Cap.all_caps) =
         | "elf" -> raise Todo
         | s -> failwith (spf "unknown -H option, format not handled: %s" s)
       in
-
-      (* the main call *)
-      link config (Fpath_.of_strings xs) !outfile
+     try 
+        (* the main call *)
+        link config xs !outfile;
+        Exit.OK
+  with exn ->
+    if !backtrace
+    then raise exn
+    else 
+      (match exn with
+(*
+      | Location_cpp.Error (s, loc) ->
+          (* less: could use final_loc_and_includers_of_loc loc *)
+          let (file, line) = Location_cpp.final_loc_of_loc loc in
+          Logs.err (fun m -> m "%s:%d %s" !!file line s);
+          Exit.Code 1
+*)
+      | _ -> raise exn
+      )
   )
-
-let _ = 
-  Cap.main main

@@ -12,7 +12,7 @@ module T = Parser_asm5  (* T for Tokens *)
 (* Entry points *)
 (*****************************************************************************)
 
-let parse (defs, paths) file = 
+let parse (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program = 
   let hooks = { Parse_cpp.
      lexer = Lexer_asm5.token;
      category = (fun t ->
@@ -27,10 +27,10 @@ let parse (defs, paths) file =
    eof = T.EOF;
   }
   in
-  Parse_cpp.parse hooks (defs, paths) file
+  Parse_cpp.parse hooks conf file
 
 
-let parse_no_cpp (file : Fpath.t) =
+let parse_no_cpp (file : Fpath.t) : Ast_asm5.program =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     L.line := 1;
     let lexbuf = Lexing.from_channel chan.ic in

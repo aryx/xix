@@ -30,8 +30,8 @@ let thestring = "arm"
 let usage = 
   spf "usage: %ca [-options] file.s" thechar
 
-let assemble5 dump (defs, paths) (infile : Fpath.t) outfile =
-  let prog = Parse_asm5.parse (defs, paths) infile in
+let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) outfile =
+  let prog = Parse_asm5.parse conf infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
@@ -99,18 +99,23 @@ let main (caps: Cap.all_caps) =
   in
 
   (* dup: same in compiler/main.ml *)
-  let system_paths : Preprocessor.system_paths =
+  let system_paths : Fpath.t list =
     (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
      with Not_found ->
        [spf "/%s/include" thestring; "/sys/include";]
     ) |> Fpath_.of_strings
   in
-  let include_paths = system_paths @ (List.rev !include_paths) in
-  let dir = Fpath.v (Filename.dirname !infile) in
+  let conf : Preprocessor.conf = {
+    defs = !macro_defs;
+    (* this order? *)
+    paths = system_paths @ List.rev !include_paths;
+    dir_source_file = Fpath.v (Filename.dirname !infile);
+  }
+  in
 
   try 
     (* main call *)
-    assemble5 !dump (!macro_defs, (dir, include_paths)) (Fpath.v !infile) outfile
+    assemble5 !dump conf (Fpath.v !infile) outfile
   with  exn ->
     if !backtrace
     then raise exn

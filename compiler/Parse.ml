@@ -12,7 +12,7 @@ module T = Parser  (* T for Tokens *)
 (* Entry points *)
 (*****************************************************************************)
 
-let parse (defs, paths) file = 
+let parse (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
   let hooks = { Parse_cpp.
      lexer = Lexer.token;
      category = (fun t ->
@@ -38,7 +38,7 @@ let parse (defs, paths) file =
    eof = T.EOF;
   }
   in
-  Parse_cpp.parse hooks (defs, paths) file
+  Parse_cpp.parse hooks conf file
 
 
 

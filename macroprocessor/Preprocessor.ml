@@ -8,17 +8,11 @@
 (* Types *)
 (*****************************************************************************)
 
-(* -D *)
-type cmdline_defs = (string * string) list
-
-(* -I *)
-type system_paths = Fpath.t list
-
-(* The first element in the list is supposed to contain the directory
- * of the C file so it is looked for "" but not for <>
- *)
-type include_paths = Fpath.t * system_paths
-
-(* TODO: type conf = cmdline_defs * system_paths ? or include_paths?
- * or better record!
- *)
+type conf = {
+  (* -D *)
+  defs: (string * string) list;
+  (* -I + system paths (e.g., /usr/include) *)
+  paths: Fpath.t list;
+  (* the directory of the C file so it is looked for "" but not for <> *)
+  dir_source_file: Fpath.t;
+}

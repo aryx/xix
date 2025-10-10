@@ -113,10 +113,10 @@ let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
 (* less: Could use Set instead of list for the set of include paths 
  * todo: if absolute path, need to find it.
 *)
-let rec find_include ((dir, system_paths) : Preprocessor.include_paths) (f, system) =
+let rec find_include (conf : Preprocessor.conf) (f : Fpath.t) (system : bool) =
   if system
-  then find_include_bis system_paths f
-  else find_include_bis (dir::system_paths) f
+  then find_include_bis conf.paths f
+  else find_include_bis (conf.dir_source_file::conf.paths) f
 and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Common.filename =
   match paths with 
   (* stricter: better error message *)
@@ -140,12 +140,11 @@ and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Common.filename =
 (* Entry point *)
 (*****************************************************************************)
 
-let parse hooks ((defs : Preprocessor.cmdline_defs), (paths : Preprocessor.include_paths)) (file : Fpath.t) = 
-
+let parse hooks (conf : Preprocessor.conf) (file : Fpath.t) = 
   L.history := [];
   L.line := 1;
   Hashtbl.clear hmacros;
-  defs |> List.iter define_cmdline_def;
+  conf.defs |> List.iter define_cmdline_def;
 
   let chan = open_in !!file in
   L.add_event (L.Include file);
@@ -175,7 +174,7 @@ let parse hooks ((defs : Preprocessor.cmdline_defs), (paths : Preprocessor.inclu
             let t = Lexer_cpp.token lexbuf in
             (match t with
             | D.Include (f, system_hdr) ->
-                let path = find_include paths (f, system_hdr) in
+                let path = find_include conf f system_hdr in
                 (try 
                   let chan = open_in path in
                   L.add_event (L.Include (Fpath.v path));

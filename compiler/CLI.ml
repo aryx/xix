@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 open Regexp_.Operators
@@ -18,6 +18,16 @@ open Regexp_.Operators
  *    (but who uses that?)
  *  - no error recovery, we stop at the first error (except in check.ml)
  *    (but compiler now fast enough and errors have a domino effect anyway)
+ *  - no support for certain kencc extensions: 
+ *     * STILL? unnamed structure element
+ *       (confusing anyway, and annoying when porting code to gcc/clang)
+ *     * typestr
+ *       (seems dead)
+ *  - no support for certain C features:
+ *     * enum float
+ *       (who uses that?)
+ *
+ * stricter:
  *  - stricter for grammar (see parser.mly), for instance force a specific
  *    order between the sign, qualifier, and type.
  *  - disallow implicit declarations of functions
@@ -26,14 +36,6 @@ open Regexp_.Operators
  *    equality for typechecking structs, not field equality.
  *    we also do not automatically transform 0 in nil; I force to write
  *    nil
- *  - no support for certain kencc extensions: 
- *     * STILL? unnamed structure element
- *       (confusing anyway)
- *     * typestr
- *       (seems dead)
- *  - no support for certain C features:
- *     * enum float
- *       (who uses that?)
  * 
  * improvements:
  *  - we forbid more constructs: 
@@ -95,7 +97,7 @@ let do_action s xs =
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-let compile (conf : Preprocessor.conf) (infile : Fpath.t) outfile : unit =
+let compile (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
 
   let ast = Parse.parse conf infile in
 

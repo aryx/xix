@@ -1,7 +1,7 @@
 ; used by formats/objects/ for Location_cpp.ml
 
 (library
- (name xix_cpp_lib)
+ (name xix_cpp)
  (wrapped false)
  (libraries
     stdcompat

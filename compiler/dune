@@ -3,7 +3,7 @@
  (libraries
    str unix
    xix_commons xix_collections
-   xix_cpp_lib
+   xix_cpp
    xix_objects
  )
  ; 'byte' is for ocamldebug

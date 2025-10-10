@@ -2,9 +2,9 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_toolchain/objects -I $TOP/macroprocessor
 
-SRC= parser_asm5.ml lexer_asm5.ml parse_asm5.ml \
- check_asm5.ml resolve_labels5.ml \
- main.ml
+SRC= Parser_asm5.ml Lexer_asm5.ml Parse_asm5.ml \
+ Check_asm5.ml Resolve_labels5.ml \
+ Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_toolchain/objects/lib.cma \
@@ -17,19 +17,19 @@ PROG=5a
 <$TOP/mkprog
 #<$TOP/mkparser
 
-AUTOGEN=lexer_asm5.ml parser_asm5.ml parser_asm5.mli
+AUTOGEN=Lexer_asm5.ml Parser_asm5.ml Parser_asm5.mli
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend
 
-lexer_asm5.ml:D: lexer_asm5.mll
+Lexer_asm5.ml:D: Lexer_asm5.mll
 	$OCAMLLEX $prereq
-parser_asm5.ml parser_asm5.mli: parser_asm5.mly
+Parser_asm5.ml Parser_asm5.mli: Parser_asm5.mly
 	$OCAMLYACC $prereq
 
 NUKEFILES=$AUTOGEN
 
 loc:V:
-   wc -l lexer_asm5.mll parser_asm5.mly parse_asm5.ml* main.ml \
-    check_asm5.ml resolve_labels5.ml \
-     $TOP/lib_toolchain/objects/ast_asm5.ml $TOP/lib_toolchain/objects/object_code5.ml*
+   wc -l Lexer_asm5.mll Parser_asm5.mly Parse_asm5.ml* Main.ml \
+    Check_asm5.ml Resolve_labels5.ml \
+     $TOP/lib_toolchain/objects/Ast_asm5.ml $TOP/lib_toolchain/objects/Object_code5.ml*

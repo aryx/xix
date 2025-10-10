@@ -10,7 +10,7 @@
  (preprocess (pps ppx_deriving.show))
 )
 
-(ocamllex lexer_cpp)
+(ocamllex Lexer_cpp)
 
 
 ;(executable

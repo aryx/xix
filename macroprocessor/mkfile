@@ -2,18 +2,18 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons
 
-SRC= flags_cpp.ml location_cpp.ml ast_cpp.ml lexer_cpp.ml preprocessor.ml \
- parse_cpp.ml
+SRC= Flags_cpp.ml Location_cpp.ml Ast_cpp.ml Lexer_cpp.ml Preprocessor.ml \
+ Parse_cpp.ml
 
 <$TOP/mklib
 
 #<$TOP/mkparser
 
-AUTOGEN=lexer_cpp.ml
+AUTOGEN=Lexer_cpp.ml
 NUKEFILES=$AUTOGEN
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend
 
-lexer_cpp.ml:D: lexer_cpp.mll
+Lexer_cpp.ml:D: Lexer_cpp.mll
 	$OCAMLLEX $prereq

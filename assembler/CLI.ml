@@ -112,7 +112,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
-  Logs.info (fun m -> m "5a ran from %s" (Sys.getcwd()));
+  Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
 
   if !infile = ""
   then begin Arg.usage options usage; raise (Exit.ExitCode 1); end;

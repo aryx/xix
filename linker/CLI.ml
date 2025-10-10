@@ -22,7 +22,6 @@ module T = Types
  *   update: actually I support it now no?
  * 
  * todo?:
- *  - look at the 5l Go sources in the Golang source, maybe ideas to steal?
  *  - -v is quite useful to debug "redefinition" linking errors
  *    (see pb I had when linking bcm/ kernel)
  *  - when get undefined symbol, print function you are currently in!
@@ -36,6 +35,8 @@ module T = Types
  *  - symbol table
  *  - program counter line table
  *  - nice error reporting for signature conflict, conflicting objects
+ * later:
+ *  - look at the 5l Go sources in the Golang source, maybe ideas to steal?
  *)
 
 (*****************************************************************************)
@@ -45,6 +46,7 @@ module T = Types
 type caps = < >
 
 let thechar = '5'
+
 let usage = 
   spf "usage: %cl [-options] objects" thechar
 
@@ -52,7 +54,8 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let link config (objfiles : Fpath.t list) outfile =
+(* will generate outfile as a side effect *)
+let link (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : unit =
   let (code, data, symbols) = Load5.load objfiles in
 
   (* mark at least as SXref the entry point *)
@@ -142,14 +145,14 @@ let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
-  Logs.info (fun m -> m "5a ran from %s" (Sys.getcwd()));
+  Logs.info (fun m -> m "linker ran from %s" (Sys.getcwd()));
 
   (match List.rev !infiles with
   | [] -> 
       Arg.usage options usage; 
       raise (Exit.ExitCode 1)
   | xs -> 
-      let config = 
+      let config : Types.config = 
         match !header_type with
         | "a.out" ->
             (match !init_data, !init_round with

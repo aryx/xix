@@ -1,5 +1,16 @@
 # -*- org -*-
 
+* Big plan
+
+** big plan
+# get mk/rc working, release mk and rc on OPAM? SEMI LPized version of it
+# and then efuns -> ogit -> lex/yacc and far later finish 5a/5c/5l, and capabilities
+# testbed! and make it work in plan9
+
+** LATER
+
+* Last
+
 * Ported (partially working)
 
 ** rc in ocaml

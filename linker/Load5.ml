@@ -72,7 +72,7 @@ let visit_globals f xs =
  *   (handling private symbols),
  * - visit all entities (defs and uses) and add them in symbol table
  *)
-let load xs =
+let load (xs : Fpath.t list) : T5.code array * T5.data list * Types.symbol_table=
 
   (* values to return *)
   let code = ref [] in

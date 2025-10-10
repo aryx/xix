@@ -43,7 +43,7 @@ let thechar = '5'
 let usage = 
   spf "usage: %cl [-options] objects" thechar
 
-let link config objfiles outfile =
+let link config (objfiles : Fpath.t list) outfile =
   let (code, data, symbols) = Load5.load objfiles in
 
   (* mark at least as SXref the entry point *)
@@ -134,7 +134,7 @@ let main (caps : Cap.all_caps) =
       in
 
       (* the main call *)
-      link config xs !outfile
+      link config (Fpath_.of_strings xs) !outfile
   )
 
 let _ = 

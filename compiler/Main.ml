@@ -241,13 +241,14 @@ let main (caps : Cap.all_caps) =
           ) |> Fpath_.of_strings
         in
         
-        let outfile = 
-          if outfile = ""
+        let outfile : Fpath.t = 
+          (if outfile = ""
           then
             if base =~ "\\(.*\\)\\.c"
             then Regexp_.matched1 base ^ (spf ".%c" thechar)
             else base ^ (spf ".%c" thechar)
           else outfile
+          ) |> Fpath.v
         in
         let conf : Preprocessor.conf = {
           defs = !macro_defs;

@@ -1,11 +1,12 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module A = Ast_asm5
 module T = Types
 
 (* a single line number is not enough anymore, we need also the filename *)
-type loc = Common.filename * Ast_asm5.loc
+type loc = Fpath.t * A.loc
 
 (* Split Asm5 instructions in code vs data.
  *
@@ -55,7 +56,7 @@ let lookup_global x h =
 
 (* less: would need Hist mapping for this file to convert to original source *)
 let s_of_loc (file, line) =
-  spf "%s:%d" file line
+  spf "%s:%d" !!file line
 
 let s_of_global x = 
   x.A.name ^ (match x.A.priv with None -> "" | Some _ -> "<>")

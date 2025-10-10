@@ -40,7 +40,8 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) outfile =
+(* Will generate outfile as a side effect *)
+let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
   let prog = Parse_asm5.parse conf infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
@@ -115,14 +116,15 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   if !infile = ""
   then begin Arg.usage options usage; raise (Exit.ExitCode 1); end;
 
-  let outfile = 
-    if !outfile = ""
+  let outfile : Fpath.t = 
+    (if !outfile = ""
     then
       let b = Filename.basename !infile in
       if b =~ "\\(.*\\)\\.s"
       then Regexp_.matched1 b ^ (spf ".%c" thechar)
-      else b ^ (spf ".%c" thechar)
+      else (b ^ (spf ".%c" thechar))
     else !outfile
+    ) |> Fpath.v
   in
 
   (* dup: same in compiler/main.ml *)
@@ -142,6 +144,9 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
 
   try 
     (* main call *)
+    (* TODO: create chan from infile outfile instead so no need
+     * pass heavy capabilities (Cap.open_in, Cap.open_out)
+     *)
     assemble5 !dump conf (Fpath.v !infile) outfile;
     Exit.OK
   with exn ->

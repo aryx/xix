@@ -1,5 +1,7 @@
 (* Need:
  * - env: for INCLUDE (for cpp)
+ * - TODO open_in but should be only for argv derived file
+ * - TODO open_out for -o object file or argv .5
  *)
 type caps = < Cap.env >
 

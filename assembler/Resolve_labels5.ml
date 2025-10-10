@@ -39,6 +39,7 @@ let resolve ps =
         (* no pc increment here *)
         true
     | Instr (inst, _condTODO) ->
+        (* TODO: move nested function out *)
         let resolve_branch_operand opd =
           match !opd with
           | SymbolJump _ | IndirectJump _ -> ()

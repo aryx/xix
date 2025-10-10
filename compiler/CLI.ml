@@ -50,6 +50,12 @@ open Regexp_.Operators
  *  - profiler support
  *)
 
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+(* Need: see .mli *)
+type caps = < Cap.env >
+
 let thechar = '5'
 let thestring = "arm"
 let _arch = Arch5.arch
@@ -136,13 +142,11 @@ let compile (conf : Preprocessor.conf) (infile : Fpath.t) outfile : unit =
 
   Object_code5.save (asm, !Location_cpp.history) outfile
 
-
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-let main (caps : Cap.all_caps) =
+let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   (* in *)
   let args = ref [] in
@@ -156,6 +160,7 @@ let main (caps : Cap.all_caps) =
   (* Ansi Posix Environment for plan9 *)
   let ape = ref false in 
 
+  let level = ref (Some Logs.Warning) in
   (* for debugging *)
   let action = ref "" in
   let backtrace = ref false in
@@ -189,6 +194,16 @@ let main (caps : Cap.all_caps) =
     "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-f", Arg.Set Flags_cpp.debug_line, " ";
     "-m", Arg.Set Flags_cpp.debug_macros, " ";
+
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " guess what";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+
     (* pad: I added long names for those options *)
     "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
     "-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
@@ -208,21 +223,27 @@ let main (caps : Cap.all_caps) =
     " dump the generated assembly";
 
     (* pad: I added that *)
-    "-debugger", Arg.Set Flags.debugger,
-    " ";
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
   ]
   in
-  Arg.parse (Arg.align options) (fun t -> 
-    args := t::!args
-  ) usage;
+  (try
+    Arg.parse_argv argv (Arg.align options) (fun t -> 
+      args := t::!args
+    ) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
+
   (* less: process the old style -Dname=val and -Idir attached *)
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action !action (List.rev !args); 
-    CapStdlib.exit caps 0 
+    raise (Exit.ExitCode 0 )
   end;
 
   try 
@@ -257,14 +278,15 @@ let main (caps : Cap.all_caps) =
           dir_source_file = Fpath.v (Filename.dirname cfile);
         }
         in
-        compile conf (Fpath.v cfile) outfile
+        compile conf (Fpath.v cfile) outfile;
+        Exit.OK
     | _ -> 
       (* stricter: *)
         failwith 
           "compiling multiple files at the same time is not supported; use mk"
     )
   with exn ->
-    if !backtrace || !Flags.debugger
+    if !backtrace
     then raise exn
     else 
       (match exn with
@@ -282,6 +304,3 @@ let main (caps : Cap.all_caps) =
 
       | _ -> raise exn
       )
-
-let _ = 
-    Cap.main main

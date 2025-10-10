@@ -1,5 +1,5 @@
 
 val warn: string -> Location_cpp.loc -> unit
 
-val errorexit: string -> unit
-
+(* TODO: switch to exn or use of Exit.t *)
+val errorexit: string -> 'a

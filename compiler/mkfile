@@ -4,18 +4,18 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/collections \
   -I $TOP/macroprocessor \
   -I $TOP/lib_toolchain/objects
 
-SRC= flags.ml \
-  Type_.ml meta_type.ml   storage.ml meta_storage.ml \
-  ast.ml meta_ast.ml \
+SRC= Flags.ml \
+  Type_.ml Meta_type.ml   Storage.ml Meta_storage.ml \
+  Ast.ml Meta_ast.ml \
   Dumper_.ml \
-  globals.ml \
-  error.ml \
-  Parser.ml Lexer.ml parse.ml \
-  arch.ml \
-  check.ml eval_const.ml typecheck.ml \
-  rewrite.ml \
-  arch5.ml codegen5.ml \
-  main.ml
+  Globals.ml \
+  Error.ml \
+  Parser.ml Lexer.ml Parse.ml \
+  Arch.ml \
+  Check.ml Eval_const.ml Typecheck.ml \
+  Rewrite.ml \
+  Arch5.ml Codegen5.ml \
+  Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma \

@@ -72,7 +72,7 @@ let link config (objfiles : Fpath.t list) outfile =
 
 let main (caps : Cap.all_caps) =
   let infiles = ref [] in
-  let outfile = ref "5.out" in
+  let outfile = ref (Fpath.v "5.out") in
 
   let header_type = ref "a.out" in
   let init_text  = ref None in
@@ -81,7 +81,7 @@ let main (caps : Cap.all_caps) =
   let init_entry = ref "_main" in
 
   let options = [
-    "-o", Arg.Set_string outfile,
+    "-o", Arg.String (fun s -> outfile := Fpath.v s),
     " <file> output file";
     
     "-H", Arg.Set_string header_type,

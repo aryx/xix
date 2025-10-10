@@ -26,8 +26,7 @@ let cput chan byte =
   output_char chan byte
   
 
-let gen config sizes cs ds symbols2 outfile =
- let outfile = Fpath.v outfile in
+let gen config sizes cs ds symbols2 (outfile : Fpath.t) : unit =
  outfile |> UChan.with_open_out (fun (chan : Chan.o) ->
 
   let entry = config.T.entry_point in

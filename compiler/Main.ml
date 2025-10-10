@@ -71,10 +71,10 @@ let do_action s xs =
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
         let system_paths = 
-          [spf "/%s/include" thestring; "/sys/include";]
+          [spf "/%s/include" thestring; "/sys/include";] |> Fpath_.of_strings
         in
         try 
-          let _ = Parse.parse ([], (".", system_paths)) (Fpath.v file) in
+          let _ = Parse.parse ([], (Fpath.v ".", system_paths)) (Fpath.v file) in
           ()
         with Location_cpp.Error (s, loc) ->
           let (file, line) = Location_cpp.final_loc_of_loc loc in
@@ -147,7 +147,7 @@ let main (caps : Cap.all_caps) =
   let outfile = ref "" in
 
   (* for cpp *)
-  let system_paths = ref [] in
+  let system_paths : Fpath.t list ref = ref [] in
   let defs = ref [] in
   (* Ansi Posix Environment for plan9 *)
   let ape = ref false in 
@@ -169,7 +169,7 @@ let main (caps : Cap.all_caps) =
       defs := (var, val_)::!defs
     ), " <name=def> (or just <name>) define name for preprocessor";
     "-I", Arg.String (fun s ->
-      system_paths := s::!system_paths
+      system_paths := Fpath.v s::!system_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
     "-ape", Arg.Set ape,
     " ";
@@ -228,14 +228,14 @@ let main (caps : Cap.all_caps) =
         Error.errorexit ""
     | [cfile], outfile ->
         let base = Filename.basename cfile in
-        let dir = Filename.dirname cfile in
+        let dir = Fpath.v (Filename.dirname cfile) in
         let system_paths =
-          (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
+          ((try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
           with Not_found ->
             [spf "/%s/include" thestring; 
              "/sys/include";
             ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
-          ) @
+          ) |> Fpath_.of_strings) @
           !system_paths
         in
         

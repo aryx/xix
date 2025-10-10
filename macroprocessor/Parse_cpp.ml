@@ -113,20 +113,20 @@ let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
 (* less: Could use Set instead of list for the set of include paths 
  * todo: if absolute path, need to find it.
 *)
-let rec find_include (dir, system_paths) (f, system) =
+let rec find_include ((dir, system_paths) : Preprocessor.include_paths) (f, system) =
   if system
   then find_include_bis system_paths f
   else find_include_bis (dir::system_paths) f
-and find_include_bis paths (f : Fpath.t) : Common.filename =
+and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Common.filename =
   match paths with 
   (* stricter: better error message *)
   | [] -> failwith (spf "could not find %s in include paths" !!f)
   | x::xs ->
       let path = 
-        if x = "."
+        if !!x = "."
         (* this will handle also absolute path *)
         then !!f
-        else Filename.concat x !!f 
+        else Filename.concat !!x !!f 
       in
       if Sys.file_exists path
       then begin
@@ -140,7 +140,7 @@ and find_include_bis paths (f : Fpath.t) : Common.filename =
 (* Entry point *)
 (*****************************************************************************)
 
-let parse hooks (defs, paths) (file : Fpath.t) = 
+let parse hooks ((defs : Preprocessor.cmdline_defs), (paths : Preprocessor.include_paths)) (file : Fpath.t) = 
 
   L.history := [];
   L.line := 1;

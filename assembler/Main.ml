@@ -11,16 +11,17 @@ open Regexp_.Operators
  * Main limitations compared to 5a:
  *  - no multiple files processing in parallel 
  *    (not the place, use xargs)
- *  - no unicode support
+ *  - no unicode support? or can ocamllex in ocaml-light do unicode?
  * 
  * todo:
- *  - look at the 5a Go sources in the Golang source, maybe ideas to steal?
  *  - advanced instructions: floats, MULL, coprocessor, PSR, etc
+ *  - handle the instructions used in the kernel
+ * later:
+ *  - look at the 5a Go sources in the Golang source, maybe ideas to steal?
  *  - make it a multi-archi assembler by following
  *    the new design by Rob Pike of Go assembler to factorize things
  *    (see https://www.youtube.com/watch?v=KINIAgRpkDA&feature=youtu.be )
  *    (=~ 2 tables, register string -> code, and opcode string -> code
- *  - instructions used in kernel
  *)
 
 let thechar = '5'
@@ -45,7 +46,7 @@ let main (caps: Cap.all_caps) =
   let dump    = ref false in
 
   (* for cpp *)
-  let include_paths = ref [] in
+  let include_paths : Fpath.t list ref = ref [] in
   let macro_defs = ref [] in
 
   (* for debugging *)
@@ -65,7 +66,7 @@ let main (caps: Cap.all_caps) =
       macro_defs := (var, val_)::!macro_defs
     ), " <name=def> (or just <name>) define the name to the preprocessor";
     "-I", Arg.String (fun s ->
-      include_paths := s::!include_paths
+      include_paths := Fpath.v s::!include_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
 
     (* pad: I added that *)
@@ -98,14 +99,14 @@ let main (caps: Cap.all_caps) =
   in
 
   (* dup: same in compiler/main.ml *)
-  let system_paths =
+  let system_paths : Preprocessor.system_paths =
     (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
      with Not_found ->
        [spf "/%s/include" thestring; "/sys/include";]
-    )
+    ) |> Fpath_.of_strings
   in
   let include_paths = system_paths @ (List.rev !include_paths) in
-  let dir = Filename.dirname !infile in
+  let dir = Fpath.v (Filename.dirname !infile) in
 
   try 
     (* main call *)

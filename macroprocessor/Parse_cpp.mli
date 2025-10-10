@@ -12,6 +12,7 @@ type ('token, 'ast) hook = {
   eof: 'token;
 }
 
+(* TODO? Preprocess.conf instead of 2 params? *)
 val parse: 
   ('token, 'ast) hook -> 
   Preprocessor.cmdline_defs * Preprocessor.include_paths ->

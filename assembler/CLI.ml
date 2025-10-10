@@ -1,4 +1,4 @@
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 open Regexp_.Operators
@@ -24,11 +24,21 @@ open Regexp_.Operators
  *    (=~ 2 tables, register string -> code, and opcode string -> code
  *)
 
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+(* Need: see .mli *)
+type caps = < Cap.env >
+
 let thechar = '5'
 let thestring = "arm"
 
 let usage = 
   spf "usage: %ca [-options] file.s" thechar
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
 
 let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) outfile =
   let prog = Parse_asm5.parse conf infile in
@@ -38,25 +48,28 @@ let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) outfile =
         Logs.app (fun m -> m "AST = %s" s));
   Object_code5.save (prog, !Location_cpp.history) outfile
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
-let main (caps: Cap.all_caps) =
+let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   let infile  = ref "" in
   let outfile = ref "" in
 
+  let level = ref (Some Logs.Warning) in
   let dump    = ref false in
+  (* for debugging *)
+  let backtrace = ref false in
 
   (* for cpp *)
   let include_paths : Fpath.t list ref = ref [] in
   let macro_defs = ref [] in
 
-  (* for debugging *)
-  let backtrace = ref false in
-
   let options = [
     "-o", Arg.Set_string outfile,
     " <file> output file";
 
-    (* dup: same in compiler/main.ml *)
+    (* dup: same in compiler/CLI.ml *)
     "-D", Arg.String (fun s ->
       let (var, val_) = 
         if s =~ "\\(.*\\)=\\(.*\\)"
@@ -69,6 +82,15 @@ let main (caps: Cap.all_caps) =
       include_paths := Fpath.v s::!include_paths
     ), " <dir> add dir as a path to look for '#include <file>' files";
 
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " guess what";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+
     (* pad: I added that *)
     "-dump", Arg.Set dump,
     " dump the parsed AST";
@@ -77,16 +99,21 @@ let main (caps: Cap.all_caps) =
     " dump the backtrace after an error";
   ]
   in
-  Arg.parse options
-   (fun f -> 
+  (try
+    Arg.parse_argv argv (Arg.align options) (fun f -> 
      if !infile <> ""
      then failwith "already specified an input file";
      infile := f;
-   )
-   usage;
+   ) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "5a ran from %s" (Sys.getcwd()));
 
   if !infile = ""
-  then begin Arg.usage options usage; CapStdlib.exit caps (-1); end;
+  then begin Arg.usage options usage; raise (Exit.ExitCode 1); end;
 
   let outfile = 
     if !outfile = ""
@@ -115,8 +142,9 @@ let main (caps: Cap.all_caps) =
 
   try 
     (* main call *)
-    assemble5 !dump conf (Fpath.v !infile) outfile
-  with  exn ->
+    assemble5 !dump conf (Fpath.v !infile) outfile;
+    Exit.OK
+  with exn ->
     if !backtrace
     then raise exn
     else 
@@ -125,9 +153,7 @@ let main (caps: Cap.all_caps) =
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
           Logs.err (fun m -> m "%s:%d %s" !!file line s);
-          CapStdlib.exit caps (-1);
+          Exit.Code 1
       | _ -> raise exn
       )
 
-let _ = 
-  Cap.main main

@@ -34,6 +34,17 @@ module L = Location_cpp
 let error s =
   raise  (L.Error (spf "Lexical error in cpp: %s" s, !L.line))
 
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let symbol_after_space lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  s =~ ".*[ \t]\\([^ \t]+\\)" |> ignore; 
+  Regexp_.matched1 s
+let char lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
+
 }
 
 (*****************************************************************************)
@@ -53,19 +64,28 @@ let symbol = (letter | '_') (letter | digit | '_')*
 rule token = parse
 
   (* note that filenames containing double quotes are not supported *)
-  | "include" space* '"' ([^ '"' '\n']+ as file) '"'
-      { space_or_comment_and_newline lexbuf; 
+  | "include" space* '"' ([^ '"' '\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
         Include (Fpath.v file, false)  
       }
-  | "include" space* '<' ([^ '>' '\n']+ as file) '>'
-      { space_or_comment_and_newline lexbuf; 
+  | "include" space* '<' ([^ '>' '\n']+ (*as file*)) '>'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*<\\(.*\\)>" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
         Include(Fpath.v file, true) 
       }
   | "include" { error "syntax in #include" }
 
   (* Macro definition part 1 *)
-  | "define" space+ (symbol as s1) '(' ([^')']* as s2) ')'
-      { let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
+  | "define" space+ (symbol (*as s1*)) '(' ([^')']* (*as s2*)) ')'
+      { let (s1, s2) =
+           let s = Lexing.lexeme lexbuf in s =~ "define[ \t]+\\(.*\\)(\\(.*\\))" |> ignore;
+           Regexp_.matched2 s in
+        let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one *)
         let params, varargs = 
           let rec aux xs =
@@ -88,34 +108,39 @@ rule token = parse
   (* a space after the symbol means the macro has no argument, even if
    * this space is followed by a '('.
    *)
-  | "define" space+ (symbol as s1) space+
-      { let body = define_body s1 [] lexbuf in 
+  | "define" space+ (symbol (*as s1*)) space+
+      { let s1 = symbol_after_space lexbuf in
+        let body = define_body s1 [] lexbuf in 
         Define { name = s1; params = None; varargs = false; body = Some body}
       }
   (* if do '#define FOO+' then? we should return a syntax error because
    * of the space_or_comment_and_newline below.
    *)
-  | "define" space+ (symbol as s1)
-      { space_or_comment_and_newline lexbuf; 
+  | "define" space+ (symbol (*as s1*))
+      { let s1 = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf; 
         Define { name = s1; params = None; varargs = false; body =  None }
       }
   | "define" { error "syntax in #define" }
 
   (* stricter: require space_or_comment-only after sym *)
-  | "undef" space+ (symbol as s)
-      { space_or_comment_and_newline lexbuf; 
-        Undef s 
+  | "undef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf; 
+        Undef name
       }
   | "undef" { error "syntax in #undef" } 
 
 
-  | "ifdef" space+ (symbol as s)
-      { space_or_comment_and_newline lexbuf;
-        Ifdef s 
+  | "ifdef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf;
+        Ifdef name 
       }
-  | "ifndef" space+ (symbol as s)
-      { space_or_comment_and_newline lexbuf;
-        Ifndef s 
+  | "ifndef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf;
+        Ifndef name
       }
   | "ifdef" { error "syntax in #ifdef" } 
   | "ifndef" { error "syntax in #ifndef" } 
@@ -130,18 +155,28 @@ rule token = parse
       }
 
   (* stricter: I impose a filename (with no quote in name, like original?) *)
-  | "line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
-      { space_or_comment_and_newline lexbuf;
+  | "line" space+ (digit+ (*as s1*)) space* ('"' ([^'"']* (*as s2*)) '"')
+      { 
+        let (s1, s2) =
+           let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([0-9]+\\).*\"(\\(.*\\)\"" |> ignore;
+           Regexp_.matched2 s in
+        space_or_comment_and_newline lexbuf;
         Line (int_of_string s1, Fpath.v s2) }
   | "line" { error "syntax in #line" }
 
 
-  | "pragma" space+ "lib" space* '"' ([^'"''\n']+ as file) '"'
-      { space_or_comment_and_newline lexbuf; 
+  | "pragma" space+ "lib" space* '"' ([^'"''\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
         Pragma("lib", [file]) 
       }
-  | "pragma" space+ "src" space* '"' ([^'"''\n']+ as file) '"'
-      { space_or_comment_and_newline lexbuf; 
+  | "pragma" space+ "src" space* '"' ([^'"''\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
         Pragma("src", [file]) 
       }
 
@@ -158,9 +193,12 @@ rule token = parse
         Pragma("varargck", ["TODO"]) 
       }
 
-  | "pragma" space+ "incomplete" space* (symbol as s)
-      { space_or_comment_and_newline lexbuf; 
-        Pragma("incomplete", [s]) 
+  | "pragma" space+ "incomplete" space+ (symbol (*as name*))
+      { let name = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([^ \t]+\\)" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("incomplete", [name]) 
       }
   (* stricter: we do not silently skip unknown pragmas *)
   | "pragma"  { error "syntax in #pragma" }
@@ -171,8 +209,9 @@ rule token = parse
 (* Macro definition part 2, the body *)
 (*****************************************************************************)
 and define_body name params = parse
-  | symbol as s  
-     { try 
+  | symbol (*as s *)
+     { let s = Lexing.lexeme lexbuf in
+       try 
         let i = List.assoc s params in
         (* safe to use # for a special mark since C code can not
          * use this symbol since it is reserved by cpp
@@ -182,15 +221,17 @@ and define_body name params = parse
         s ^ define_body name params lexbuf
      }
 
-  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/' '#']+ as s 
-      { s ^ define_body name params lexbuf }
+  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/' '#']+ (*as s *)
+      { let s = Lexing.lexeme lexbuf in
+        s ^ define_body name params lexbuf }
 
   (* end of macro *)
   | '\n' { incr Location_cpp.line; "" }
 
   (* special cases *)
-  | ['\'' '"'] as c
-      { let s = define_body_strchar c name params lexbuf in 
+  | ['\'' '"'] (*as c *)
+      { let c = char lexbuf in
+        let s = define_body_strchar c name params lexbuf in 
         String.make 1 c ^ s ^ define_body name params lexbuf 
       }
 
@@ -223,23 +264,28 @@ and define_body name params = parse
 
 and define_body_strchar endchar name params = parse
   (* no need for stringify! substitute also in strings *)
-  | symbol as s  
-     { try let i = List.assoc s params in
+  | symbol (*as s*)
+     { let s = Lexing.lexeme lexbuf in
+       try let i = List.assoc s params in
         spf "#%d" i ^ define_body_strchar endchar name params lexbuf
        with Not_found -> s ^ define_body_strchar endchar name params lexbuf
      }
-  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\' '#']+ as s 
-      { s ^ define_body_strchar endchar name params lexbuf }
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\' '#']+ (*as s *)
+      { let s = Lexing.lexeme lexbuf in
+        s ^ define_body_strchar endchar name params lexbuf }
 
   | '\\' '\n' 
       { incr Location_cpp.line; define_body_strchar endchar name params lexbuf }
-  | '\\' _ as s { s^define_body_strchar endchar name params lexbuf }
+  | '\\' _ (*as s*) 
+       { let s = Lexing.lexeme lexbuf in
+         s^define_body_strchar endchar name params lexbuf }
 
   (* escape # to disambiguate with use of # to reference a parameter *)
   | '#' { "##" ^ define_body_strchar endchar name params lexbuf }
 
-  | ['\'' '"'] as c
-      { if c = endchar 
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        if c = endchar 
         then String.make 1 c
         else String.make 1 c ^ define_body_strchar endchar name params lexbuf
       }
@@ -263,7 +309,8 @@ and macro_arguments = parse
        if xs = [""] then [] else xs
      }
  (* stricter: better error message *)
- | _ as c { error (spf "was expecting a '(' not %c for macro arguments" c) }
+ | _ (*as c*) { let c = char lexbuf in 
+                error (spf "was expecting a '(' not %c for macro arguments" c) }
  | eof    { error "was expecting a '(', not an eof for macro arguments" }
 
 and macro_args depth str args = parse
@@ -285,8 +332,9 @@ and macro_args depth str args = parse
 
  | "("  { macro_args (depth+1) (str^"(") args lexbuf }
 
-  | ['\'' '"'] as c
-      { let s = macro_args_strchar c lexbuf in 
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        let s = macro_args_strchar c lexbuf in 
         macro_args depth (str ^ String.make 1 c ^ s) args lexbuf
       }
 
@@ -299,7 +347,7 @@ and macro_args depth str args = parse
 
  | '\n' { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
 
- | _ as c { error (spf "unrecognized character: '%c'" c) }
+ | _ (*as c*) { let c = char lexbuf in error (spf "unrecognized character: '%c'" c) }
  (* stricter: better error message *)
  | eof { error "eof in macro arguments" }
 
@@ -308,10 +356,13 @@ and macro_args depth str args = parse
  * to the string of the body of a macro.
  *)
 and subst_args_in_macro_body name args = parse
- | [^ '\n' '#']+ as s { s ^ subst_args_in_macro_body name args lexbuf }
+ | [^ '\n' '#']+ (*as s*) { 
+       let s = Lexing.lexeme lexbuf in
+       s ^ subst_args_in_macro_body name args lexbuf }
  | "##" { "#" ^ subst_args_in_macro_body name args lexbuf }
- | "#" (digit+ as s) 
-     { let i = int_of_string s in
+ | "#" (digit+ (*as s*)) 
+     { let s = Str.string_after (Lexing.lexeme lexbuf) 1 in
+       let i = int_of_string s in
        try 
          let arg = List.nth args (i - 1) in
          arg ^ subst_args_in_macro_body name args lexbuf
@@ -328,13 +379,18 @@ and subst_args_in_macro_body name args = parse
 (* Strings and characters (part1) *)
 (*****************************************************************************)
 and macro_args_strchar endchar = parse
-  | [^ '\n' '\'' '"' '\\' ]+ as s  { s ^ macro_args_strchar endchar lexbuf }
+  | [^ '\n' '\'' '"' '\\' ]+ (*as s*)  
+      { let s = Lexing.lexeme lexbuf in
+        s ^ macro_args_strchar endchar lexbuf }
 
   | '\\' '\n' { incr Location_cpp.line; macro_args_strchar endchar lexbuf }
-  | '\\' _ as s { s^macro_args_strchar endchar lexbuf }
+  | '\\' _ (*as s*) 
+        { let s = Lexing.lexeme lexbuf in
+          s^macro_args_strchar endchar lexbuf }
 
-  | ['\'' '"'] as c
-      { if c = endchar 
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        if c = endchar 
         then String.make 1 c
         else String.make 1 c ^ macro_args_strchar endchar lexbuf
       }
@@ -355,7 +411,8 @@ and space_or_comment_and_newline = parse
                     space_or_comment_and_newline lexbuf }
 
   (* stricter: new error message *)
-  | _ as c        { error (spf "unexpected character %c after directive" c) }
+  | _ (*as c*)    { let c = char lexbuf in
+                    error (spf "unexpected character %c after directive" c) }
   | eof           { error "expected newline, not EOF" }
 
 and comment_star_no_newline = parse

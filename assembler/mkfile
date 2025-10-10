@@ -4,7 +4,7 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_toolchain/objects -I $TOP/macropro
 
 SRC= Parser_asm5.ml Lexer_asm5.ml Parse_asm5.ml \
  Check_asm5.ml Resolve_labels5.ml \
- Main.ml
+ CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_toolchain/objects/lib.cma \

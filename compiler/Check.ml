@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 open Ast
 
@@ -45,10 +46,10 @@ let string_of_error err =
   | Inconsistent (s1, loc1, s2, loc2) ->
     let (file1, line1) = Location_cpp.final_loc_of_loc loc1 in
     let (file2, line2) = Location_cpp.final_loc_of_loc loc2 in
-    spf "%s:%d error: %s\n%s:%d note: %s" file1 line1 s1 file2 line2 s2
+    spf "%s:%d error: %s\n%s:%d note: %s" !!file1 line1 s1 !!file2 line2 s2
   | Misc (s, loc) ->
     let (file, line) = Location_cpp.final_loc_of_loc loc in
-    spf "%s:%d error: %s" file line s
+    spf "%s:%d error: %s" !!file line s
 
 exception Error of error
 

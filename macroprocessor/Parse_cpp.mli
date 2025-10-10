@@ -15,7 +15,7 @@ type ('token, 'ast) hook = {
 val parse: 
   ('token, 'ast) hook -> 
   Preprocessor.cmdline_defs * Preprocessor.include_paths ->
-  Common.filename -> 'ast
+  Fpath.t -> 'ast
 
 (* internals:
 type macro = {

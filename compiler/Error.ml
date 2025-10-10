@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module L = Location_cpp
 
@@ -10,7 +11,7 @@ let warn s loc =
     then raise (L.Error (spf "Warning: %s" s, loc))
     else 
       let (file, line) = Location_cpp.final_loc_of_loc loc in
-      Logs.warn (fun m -> m "%s:%d: %s" file line s)
+      Logs.warn (fun m -> m "%s:%d: %s" !!file line s)
 
 
 (* todo: delete outfile *)

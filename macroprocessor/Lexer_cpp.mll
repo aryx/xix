@@ -55,11 +55,11 @@ rule token = parse
   (* note that filenames containing double quotes are not supported *)
   | "include" space* '"' ([^ '"' '\n']+ as file) '"'
       { space_or_comment_and_newline lexbuf; 
-        Include (file, false)  
+        Include (Fpath.v file, false)  
       }
   | "include" space* '<' ([^ '>' '\n']+ as file) '>'
       { space_or_comment_and_newline lexbuf; 
-        Include(file, true) 
+        Include(Fpath.v file, true) 
       }
   | "include" { error "syntax in #include" }
 
@@ -132,7 +132,7 @@ rule token = parse
   (* stricter: I impose a filename (with no quote in name, like original?) *)
   | "line" space+ (digit+ as s1) space* ('"' ([^'"']* as s2) '"')
       { space_or_comment_and_newline lexbuf;
-        Line (int_of_string s1, s2) }
+        Line (int_of_string s1, Fpath.v s2) }
   | "line" { error "syntax in #line" }
 
 

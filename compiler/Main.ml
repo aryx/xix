@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 open Regexp_.Operators
 
 (*****************************************************************************)
@@ -73,11 +74,11 @@ let do_action s xs =
           [spf "/%s/include" thestring; "/sys/include";]
         in
         try 
-          let _ = Parse.parse ([], (".", system_paths)) file in
+          let _ = Parse.parse ([], (".", system_paths)) (Fpath.v file) in
           ()
         with Location_cpp.Error (s, loc) ->
           let (file, line) = Location_cpp.final_loc_of_loc loc in
-          failwith (spf "%s:%d %s" file line s)
+          failwith (spf "%s:%d %s" !!file line s)
       )
 
   | _ -> failwith ("action not supported: " ^ s)
@@ -246,7 +247,7 @@ let main (caps : Cap.all_caps) =
             else base ^ (spf ".%c" thechar)
           else outfile
         in
-        compile (!defs, (dir, system_paths)) cfile outfile
+        compile (!defs, (dir, system_paths)) (Fpath.v cfile) outfile
     | _ -> 
       (* stricter: *)
         failwith 
@@ -263,7 +264,7 @@ let main (caps : Cap.all_caps) =
       | Location_cpp.Error (s, loc) ->
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
-          Error.errorexit (spf "%s:%d %s" file line s)
+          Error.errorexit (spf "%s:%d %s" !!file line s)
       | Check.Error err | Typecheck.Error err | Eval_const.Error err
       | Codegen5.Error err 
         ->

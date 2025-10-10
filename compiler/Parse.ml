@@ -42,8 +42,7 @@ let parse (defs, paths) file =
 
 
 
-let parse_no_cpp file =
-  let file = Fpath.v file in
+let parse_no_cpp (file : Fpath.t) =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     L.line := 1;
     let lexbuf = Lexing.from_channel chan.ic in

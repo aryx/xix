@@ -1,5 +1,6 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 open Regexp_.Operators
 
 (*****************************************************************************)
@@ -28,7 +29,7 @@ let thestring = "arm"
 let usage = 
   spf "usage: %ca [-options] file.s" thechar
 
-let assemble5 dump (defs, paths) infile outfile =
+let assemble5 dump (defs, paths) (infile : Fpath.t) outfile =
   let prog = Parse_asm5.parse (defs, paths) infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
@@ -108,7 +109,7 @@ let main (caps: Cap.all_caps) =
 
   try 
     (* main call *)
-    assemble5 !dump (!macro_defs, (dir, include_paths)) !infile outfile
+    assemble5 !dump (!macro_defs, (dir, include_paths)) (Fpath.v !infile) outfile
   with  exn ->
     if !backtrace
     then raise exn
@@ -117,7 +118,7 @@ let main (caps: Cap.all_caps) =
       | Location_cpp.Error (s, loc) ->
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
-          Logs.err (fun m -> m "%s:%d %s" file line s);
+          Logs.err (fun m -> m "%s:%d %s" !!file line s);
           CapStdlib.exit caps (-1);
       | _ -> raise exn
       )

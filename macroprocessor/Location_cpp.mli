@@ -1,14 +1,14 @@
 
 type loc = int
-type final_loc = Common.filename * int
+type final_loc = Fpath.t * int
 
 type location_history = {
   location_event: location_event;
   global_line: loc;
 }
   and location_event =
-    | Include of Common.filename
-    | Line of int * Common.filename
+    | Include of Fpath.t
+    | Line of int * Fpath.t
     | Eof
 
 (* both should be reseted each time you parse a new file *)

@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -15,7 +16,7 @@ open Common
 (* global line number, after pre-processing *)
 type loc = int
 (* final readable location *)
-type final_loc = Common.filename * int
+type final_loc = Fpath.t * int
 
 type location_history = {
   location_event: location_event;
@@ -23,9 +24,9 @@ type location_history = {
 }
   and location_event =
     (* #include "foo.h" *)
-    | Include of Common.filename
+    | Include of Fpath.t
     (* #line 1 "foo.c" *)
-    | Line of int * Common.filename
+    | Line of int * Fpath.t
     (* end of #include, back to includer *)
     | Eof
 
@@ -47,9 +48,9 @@ exception Error of string * loc
 let dump_event event =
   match event with
   | Include file -> 
-      Logs.app (fun m -> m "%4d: %s" !line file)
+      Logs.app (fun m -> m "%4d: %s" !line !!file)
   | Line (local_line, file) -> 
-      Logs.app (fun m -> m "%4d: %s (#line %d)" !line file local_line)
+      Logs.app (fun m -> m "%4d: %s (#line %d)" !line !!file local_line)
   | Eof -> 
       Logs.app (fun m -> m "%4d: <pop>" !line)
 
@@ -94,7 +95,7 @@ let final_loc_of_loc lineno =
             aux (file, x.global_line, line) [] xs
         )
   in
-  aux ("<nofile>", 0, 0) [] (List.rev !history)
+  aux (Fpath.v "<nofile>", 0, 0) [] (List.rev !history)
 
 let _final_loc_and_includers_of_loc _lineno =
   raise Todo

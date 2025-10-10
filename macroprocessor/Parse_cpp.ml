@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module D = Ast_cpp (* D for Directives *)
 module L = Location_cpp
@@ -116,16 +117,16 @@ let rec find_include (dir, system_paths) (f, system) =
   if system
   then find_include_bis system_paths f
   else find_include_bis (dir::system_paths) f
-and find_include_bis paths f =
+and find_include_bis paths (f : Fpath.t) : Common.filename =
   match paths with 
   (* stricter: better error message *)
-  | [] -> failwith (spf "could not find %s in include paths" f)
+  | [] -> failwith (spf "could not find %s in include paths" !!f)
   | x::xs ->
       let path = 
         if x = "."
         (* this will handle also absolute path *)
-        then f
-        else Filename.concat x f 
+        then !!f
+        else Filename.concat x !!f 
       in
       if Sys.file_exists path
       then begin
@@ -139,14 +140,14 @@ and find_include_bis paths f =
 (* Entry point *)
 (*****************************************************************************)
 
-let parse hooks (defs, paths) file = 
+let parse hooks (defs, paths) (file : Fpath.t) = 
 
   L.history := [];
   L.line := 1;
   Hashtbl.clear hmacros;
   defs |> List.iter define_cmdline_def;
 
-  let chan = open_in file in
+  let chan = open_in !!file in
   L.add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(Some chan, lexbuf)] in
@@ -177,7 +178,7 @@ let parse hooks (defs, paths) file =
                 let path = find_include paths (f, system_hdr) in
                 (try 
                   let chan = open_in path in
-                  L.add_event (L.Include path);
+                  L.add_event (L.Include (Fpath.v path));
                   let lexbuf = Lexing.from_channel chan in
                   (* less: 
                      if List.length stack > 1000

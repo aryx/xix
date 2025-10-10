@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -11,7 +11,7 @@
 (*****************************************************************************)
 
 type directive =
-  | Include of Common.filename * bool (* true if <>, false if "" *)
+  | Include of Fpath.t * bool (* true if <>, false if "" *)
 
   | Define of macro
   | Undef of string
@@ -21,7 +21,7 @@ type directive =
   | Else
   | Endif
 
-  | Line of int * Common.filename
+  | Line of int * Fpath.t
   (* ex: #pragma lib "libc.a" -> Pragma("lib", ["libc.a"]) *)
   | Pragma of string * string list
 

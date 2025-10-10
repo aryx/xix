@@ -24,9 +24,9 @@ jobs:
           #- 5.3.0
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t "syncweb" --build-arg OCAML_VERSION=${{matrix.ocaml}} .
+      - run: docker build --tag "syncweb" --build-arg OCAML_VERSION=${{matrix.ocaml}} .
   build-light:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -f Dockerfile.light -t xix-light .
+      - run: docker build -f Dockerfile.light --tag xix-light .

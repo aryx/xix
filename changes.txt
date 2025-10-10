@@ -4,6 +4,7 @@
 
 ** rc/mk
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
+  need implement globbing, subshell, etc.
 
 ** internals
 TODO? use let* and let/ ? also doable to add in ocaml-light ?
@@ -16,11 +17,22 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 
 * -----------------------------------------------------------
 
-* 0.16 (Q3 2025) ()
+* 0.17 (Q4 2025) ()
 
-** rc
+** testinfra
+- TODO Dockerfile.light can now compile also 5a/5c/5l/cpp
+  thx to the removal of the use of 'as' in the .mll files
+  that is not supported by ocaml-light ocamlllex
 
-** mk/rc
+** internals
+- use uppercase module filenames, split Main.ml/CLI.ml, and start
+  to use capabilities for 5a/5c/5l/cpp
+
+* 0.16 (Q3 2025) (Dockerfile.light)
+
+** testinfra
+- Finish Dockerfile.light that can compile mk/rc/lib_core/ with ocaml-light! 
+  see ocaml-light/changes.txt for all the stuff needed
 
 * 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.
@@ -85,7 +97,7 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 * 0.13 (Q1 2024) (CI build and test and semgrep checks (testinfra))
 # Resume after long hiatus (2019-2023) due to our move to Italy,
 # the birth of Nathalie, and especially my work for Semgrep.
-# Bring again good stuff I learned from semgrep:
+# Bring good stuff I learned from semgrep:
 #  - GHA and CI regression testing
 #  - Logs
 #  - Semgrep checks (and semgrep.jsonnet)

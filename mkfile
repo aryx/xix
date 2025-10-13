@@ -23,7 +23,7 @@ DIRS_LIGHT=\
   lib_core/collections lib_core/commons\
   mk shell\
   lib_parsing lex yacc\
-#  macroprocessor
+  macroprocessor
 
 
 TESTDIRS=\

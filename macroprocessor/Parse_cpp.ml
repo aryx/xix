@@ -5,6 +5,9 @@ open Fpath_.Operators
 module D = Ast_cpp (* D for Directives *)
 module L = Location_cpp
 module Flags = Flags_cpp
+(* for ocaml-light for fields *)
+open Ast_cpp 
+open Preprocessor
 
 (*****************************************************************************)
 (* Prelude *)
@@ -47,11 +50,11 @@ type ('token, 'ast) hook = {
   eof: 'token;
 }
 
-
+(* similar to Ast_cpp.macro *)
 type macro = {
-  name: string;
-  nbargs: int option;
-  varargs: bool; (* use "..." *)
+  m_name: string;
+  m_nbargs: int option;
+  m_varargs: bool; (* use "..." *)
 
   (* body contains #xxx substrings corresponding to the parameter of the macro.
    * For instance, #define foo(a,b) a+b --> {name="foo";nbargs=2;body="#1+#2"}.
@@ -60,7 +63,7 @@ type macro = {
    * No, because if you have 'a1+b' then 'a1' is a separate identifier 
    * so you can not generate #11+#2 .
    *)
-  body: string;
+  m_body: string;
 }
 
 (*****************************************************************************)
@@ -84,9 +87,10 @@ let error s =
 
 
 let define_cmdline_def (k, v) =
-  Hashtbl.add hmacros k { name = k; nbargs = None; varargs = false; body = v; }
+  Hashtbl.add hmacros k 
+    { m_name = k; m_nbargs = None; m_varargs = false; m_body = v; }
 
-let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
+let define {name = s; params = params; varargs = varargs; body = body}=
   (* We could forbid here 's' to conflict with C keyboard, but this
    * should be done in the caller, as cpp can be used with different
    * languages, which may use different keywords.
@@ -98,13 +102,13 @@ let define {Ast_cpp.name = s; params = params; varargs = varargs; body = body}=
     let macro =
       match params with
       | None -> 
-          { name = s; nbargs = None; varargs = false; body = sbody }
+          { m_name = s; m_nbargs = None; m_varargs = false; m_body = sbody }
       | Some params ->
-          { name = s; nbargs = Some (List.length params); 
-            varargs = varargs; body = sbody }
+          { m_name = s; m_nbargs = Some (List.length params); 
+            m_varargs = varargs; m_body = sbody }
     in
     if !Flags_cpp.debug_macros
-    then Logs.app (fun m -> m "#define %s %s" s macro.body);
+    then Logs.app (fun m -> m "#define %s %s" s macro.m_body);
 
     Hashtbl.add hmacros s macro
   end
@@ -224,9 +228,9 @@ let parse hooks (conf : Preprocessor.conf) (file : Fpath.t) =
             if Hashtbl.mem hmacros s
             then 
               let macro = Hashtbl.find hmacros s in
-              match macro.nbargs with
+              match macro.m_nbargs with
               | None ->
-                  let body = macro.body in
+                  let body = macro.m_body in
                   if !Flags_cpp.debug_macros
                   then Logs.app (fun m -> m "#expand %s %s" s body);
                   let lexbuf = Lexing.from_string body in
@@ -237,7 +241,7 @@ let parse hooks (conf : Preprocessor.conf) (file : Fpath.t) =
                   if List.length args <> n
                   then error (spf "argument mismatch expanding: %s" s)
                   else begin
-                    let body = macro.body in
+                    let body = macro.m_body in
                     let lexbuf = Lexing.from_string body in
                     let body = 
                       Lexer_cpp.subst_args_in_macro_body s args lexbuf in

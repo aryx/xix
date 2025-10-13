@@ -1,4 +1,4 @@
-(*s: yacc/slr.ml *)
+(*s: yacc/Slr.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -92,4 +92,4 @@ let lr_tables env auto follow =
 
   action_tables, goto_tables
 (*e: function [[Slr.lr_tables]](yacc) *)
-(*e: yacc/slr.ml *)
+(*e: yacc/Slr.ml *)

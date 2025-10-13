@@ -1,4 +1,4 @@
-(*s: yacc/first_follow.mli *)
+(*s: yacc/First_follow.mli *)
 
 (*s: type [[First_follow.first]](yacc) *)
 type first = (Ast.symbol, Ast.term Set_.t) Map_.t
@@ -20,4 +20,4 @@ type follow = (Ast.nonterm, Ast.term Set_.t) Map_.t
 (* take Lr0.env for its augmented grammar *)
 val compute_follow: Lr0.env -> first * epsilon -> follow
 (*e: signature [[First_follow.compute_follow]](yacc) *)
-(*e: yacc/first_follow.mli *)
+(*e: yacc/First_follow.mli *)

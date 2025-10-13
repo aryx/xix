@@ -1,4 +1,4 @@
-(*s: yacc/lrtables.ml *)
+(*s: yacc/Lrtables.ml *)
 
 (*s: type [[Lrtables.action]](yacc) *)
 type action =
@@ -26,4 +26,4 @@ type goto_table =
 type lr_tables = action_table * goto_table
 (*e: type [[Lrtables.lr_tables]](yacc) *)
 
-(*e: yacc/lrtables.ml *)
+(*e: yacc/Lrtables.ml *)

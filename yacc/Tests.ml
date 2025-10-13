@@ -1,4 +1,4 @@
-(*s: yacc/tests.ml *)
+(*s: yacc/Tests.ml *)
 open Ast
 open Lr0
 
@@ -168,4 +168,4 @@ let test_lr_engine () =
 (*e: function [[Tests.test_lr_engine]](yacc) *)
 
 
-(*e: yacc/tests.ml *)
+(*e: yacc/Tests.ml *)

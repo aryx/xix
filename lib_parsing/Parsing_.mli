@@ -1,4 +1,4 @@
-(*s: stdlib/parsing_.mli *)
+(*s: stdlib/Parsing_.mli *)
 (***********************************************************************)
 (*                                                                     *)
 (*                           Objective Caml                            *)
@@ -139,4 +139,4 @@ val yyparse_simple:
   (Lexing.lexbuf -> 'tok) -> ('tok -> string) -> Lexing.lexbuf -> 'a
 (*e: signature [[Parsing.yyparse_simple]](yacc) *)
 
-(*e: stdlib/parsing_.mli *)
+(*e: stdlib/Parsing_.mli *)

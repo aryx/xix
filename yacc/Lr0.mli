@@ -1,4 +1,4 @@
-(*s: yacc/lr0.mli *)
+(*s: yacc/Lr0.mli *)
 
 (*s: type [[Lr0.ruleidx]](yacc) *)
 (* the index of the rule in env.g *)
@@ -67,4 +67,4 @@ val after_dot: Ast.rule -> dotidx -> Ast.symbol option
 (*s: signature [[Lr0.all_symbols]](yacc) *)
 val all_symbols: env -> Ast.symbol Set_.t
 (*e: signature [[Lr0.all_symbols]](yacc) *)
-(*e: yacc/lr0.mli *)
+(*e: yacc/Lr0.mli *)

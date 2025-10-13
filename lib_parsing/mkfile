@@ -8,7 +8,7 @@ INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_core/commons
 
 # Note that those files are sync'ed by syncweb from principia/generators
 
-SRC=Lexing_.ml parsing_.ml
+SRC=Lexing_.ml Parsing_.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

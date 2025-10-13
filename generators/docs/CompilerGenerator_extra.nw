@@ -763,12 +763,12 @@ let backtrack lexbuf =
 
 \section{[[ocamlyacc/]]}
 
-\subsection{[[yacc/ast.ml]]}
+\subsection{[[yacc/Ast.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/ast.ml>>=
+<<yacc/Ast.ml>>=
 <<copyright ocamlyacc>>
 
 (*****************************************************************************)
@@ -808,12 +808,12 @@ let backtrack lexbuf =
 @
 
 
-\subsection{[[yacc/check.mli]]}
+\subsection{[[yacc/Check.mli]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/check.mli>>=
+<<yacc/Check.mli>>=
 
 <<type [[Check.error]](yacc)>>
 
@@ -823,12 +823,12 @@ let backtrack lexbuf =
 @
 
 
-\subsection{[[yacc/check.ml]]}
+\subsection{[[yacc/Check.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/check.ml>>=
+<<yacc/Check.ml>>=
 <<copyright ocamlyacc>>
 open Ast
 
@@ -867,12 +867,12 @@ open Ast
 %$
 
 
-\subsection{[[yacc/lr0.mli]]}
+\subsection{[[yacc/Lr0.mli]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/lr0.mli>>=
+<<yacc/Lr0.mli>>=
 
 <<type [[Lr0.ruleidx]](yacc)>>
 <<type [[Lr0.dotidx]](yacc)>>
@@ -903,12 +903,12 @@ open Ast
 @
 
 
-\subsection{[[yacc/lr0.ml]]}
+\subsection{[[yacc/Lr0.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/lr0.ml>>=
+<<yacc/Lr0.ml>>=
 <<copyright ocamlyacc>>
 open Ast
 
@@ -970,12 +970,12 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/first_follow.mli]]}
+\subsection{[[yacc/First_follow.mli]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/first_follow.mli>>=
+<<yacc/First_follow.mli>>=
 
 <<type [[First_follow.first]](yacc)>>
 
@@ -989,13 +989,13 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/first_follow.ml]]}
+\subsection{[[yacc/First_follow.ml]]}
 
 
 
 %-------------------------------------------------------------
 
-<<yacc/first_follow.ml>>=
+<<yacc/First_follow.ml>>=
 <<copyright ocamlyacc>>
 open Ast
 open Lr0 (* for the augmented grammar *)
@@ -1042,12 +1042,12 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/lrtables.ml]]}
+\subsection{[[yacc/Lrtables.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/lrtables.ml>>=
+<<yacc/Lrtables.ml>>=
 
 <<type [[Lrtables.action]](yacc)>>
 
@@ -1060,25 +1060,25 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/slr.mli]]}
+\subsection{[[yacc/Slr.mli]]}
 
 
 
 %-------------------------------------------------------------
 
-<<yacc/slr.mli>>=
+<<yacc/Slr.mli>>=
 
 <<signature [[Slr.lr_tables]](yacc)>>
 @
 
 
-\subsection{[[yacc/slr.ml]]}
+\subsection{[[yacc/Slr.ml]]}
 
 
 
 %-------------------------------------------------------------
 
-<<yacc/slr.ml>>=
+<<yacc/Slr.ml>>=
 <<copyright ocamlyacc>>
 open Ast
 open Lr0
@@ -1111,41 +1111,41 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/lalr.mli]]}
+\subsection{[[yacc/Lalr.mli]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/lalr.mli>>=
+<<yacc/Lalr.mli>>=
 @
 
 
-\subsection{[[yacc/lalr.ml]]}
+\subsection{[[yacc/Lalr.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/lalr.ml>>=
+<<yacc/Lalr.ml>>=
 @
 
 
-\subsection{[[yacc/output.mli]]}
+\subsection{[[yacc/Output.mli]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/output.mli>>=
+<<yacc/Output.mli>>=
 
 <<signature [[Output.output_parser]](yacc)>>
 @
 
 
-\subsection{[[yacc/output.ml]]}
+\subsection{[[yacc/Output.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/output.ml>>=
+<<yacc/Output.ml>>=
 <<copyright ocamlyacc>>
 open Ast
 open Lr0
@@ -1186,13 +1186,13 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/dump.mli]]}
+\subsection{[[yacc/Dump.mli]]}
 
 
 
 %-------------------------------------------------------------
 
-<<yacc/dump.mli>>=
+<<yacc/Dump.mli>>=
 
 <<signature [[Dump.dump_item]](yacc)>>
 
@@ -1204,12 +1204,12 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/dump.ml]]}
+\subsection{[[yacc/Dump.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/dump.ml>>=
+<<yacc/Dump.ml>>=
 <<copyright ocamlyacc>>
 open Format
 
@@ -1266,12 +1266,12 @@ module Map = Map_
 @
 
 
-\subsection{[[yacc/tests.ml]]}
+\subsection{[[yacc/Tests.ml]]}
 
 
 %-------------------------------------------------------------
 
-<<yacc/tests.ml>>=
+<<yacc/Tests.ml>>=
 open Ast
 open Lr0
 
@@ -1297,7 +1297,7 @@ open Parsing_
 
 @
 
-\subsection{[[yacc/lexer.mll]]}
+\subsection{[[yacc/Lexer.mll]]}
 
 <<backward compatible lexing rules(yacc)>>=
 (* to be backward compatible with ocamlyacc *)
@@ -1344,15 +1344,27 @@ and comment2 = parse
 @
 
 
-\subsection{[[yacc/parser.mly]]}
+\subsection{[[yacc/Parser.mly]]}
 
+\subsection{[[yacc/CLI.mli]]}
 
-\subsection{[[yacc/main.ml]]}
-
+<<signature [[CLI.main]](yacc)>>=
+val main: unit -> unit
+@
 
 %-------------------------------------------------------------
 
-<<yacc/main.ml>>=
+<<yacc/CLI.mli>>=
+<<signature [[CLI.main]](yacc)>>
+
+@
+
+\subsection{[[yacc/CLI.ml]]}
+
+%-------------------------------------------------------------
+
+
+<<yacc/CLI.ml>>=
 <<copyright ocamlyacc>>
 open Ast
 
@@ -1373,13 +1385,22 @@ open Ast
 (* Main entry point *)
 (*****************************************************************************)
 
-<<function [[Main.main]](yacc)>>
+<<function [[CLI.main]](yacc)>>
+@
+
+\subsection{[[yacc/Main.ml]]}
+
+
+%-------------------------------------------------------------
+
+<<yacc/Main.ml>>=
 
 <<toplevel [[Main._1]](yacc)>>
 @
 
 
-\subsection{[[stdlib/parsing_.mli]]}
+
+\subsection{[[stdlib/Parsing_.mli]]}
 
 <<signature [[Parsing.symbol_start]](yacc)>>=
 (* Module [Parsing]: the run-time library for parsers generated by [ocamlyacc]*)
@@ -1462,7 +1483,7 @@ val parse_error : string -> unit
 
 %-------------------------------------------------------------
 
-<<stdlib/parsing_.mli>>=
+<<stdlib/Parsing_.mli>>=
 (***********************************************************************)
 (*                                                                     *)
 (*                           Objective Caml                            *)
@@ -1521,7 +1542,7 @@ type parser_env_simple
 @
 
 
-\subsection{[[stdlib/parsing_.ml]]}
+\subsection{[[stdlib/Parsing_.ml]]}
 
 <<type [[Parsing.parser_env]](yacc)>>=
 (* Internal interface to the parsing engine *)
@@ -1745,7 +1766,7 @@ let parse_error (msg: string) = ()
 
 %-------------------------------------------------------------
 
-<<stdlib/parsing_.ml>>=
+<<stdlib/Parsing_.ml>>=
 (***********************************************************************)
 (*                                                                     *)
 (*                           Objective Caml                            *)

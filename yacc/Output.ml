@@ -1,4 +1,4 @@
-(*s: yacc/output.ml *)
+(*s: yacc/Output.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -263,4 +263,4 @@ let output_parser def env lrtables ic oc =
   ()
 (*e: function [[Output.output_parser]](yacc) *)
 
-(*e: yacc/output.ml *)
+(*e: yacc/Output.ml *)

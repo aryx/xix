@@ -9,25 +9,25 @@
  (modes native byte))
 
 ; lex
-(ocamllex lexer)
+(ocamllex Lexer)
 ; yacc
 ; old: (ocamlyacc parser)
 ; but need special processing because of syncweb comments
 (rule
- (targets parser.ml parser.mli)
- (deps parser.mly)
+ (targets Parser.ml Parser.mli)
+ (deps Parser.mly)
  (action
-   ;alt: (run ocamlyacc %{dep:parser.mly})
+   ;alt: (run ocamlyacc %{dep:Parser.mly})
   (progn
-   (run ocamlyacc %{dep:parser.mly})
+   (run ocamlyacc %{dep:Parser.mly})
    ; must take: /*(*s: copyright ocamlyacc *)*/
    ; and just remove it
-   (run perl -p -i -e "s#/[*].*[sex]:.*[*]/##" parser.ml)
+   (run perl -p -i -e "s#/[*].*[sex]:.*[*]/##" Parser.ml)
    ; failed with those one because of escaping problems hence simpler regexp
    ; above
-   ;(run perl -p -i -e "s#/\\*\\(\\*[sex]: .* \\*\\)/##" parser.ml)
-   ;(run perl -p -i -e s#/\\*\\(\\*[sex]:\ .*\ \\*\\)/## parser.ml)
-   ;(run perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml)
+   ;(run perl -p -i -e "s#/\\*\\(\\*[sex]: .* \\*\\)/##" Parser.ml)
+   ;(run perl -p -i -e s#/\\*\\(\\*[sex]:\ .*\ \\*\\)/## Parser.ml)
+   ;(run perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml)
    )))
 
 (install

@@ -1,4 +1,4 @@
-(*s: yacc/dump.ml *)
+(*s: yacc/Dump.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -241,4 +241,4 @@ let dump_lrtables env lrtables =
   ()
 (*e: function [[Dump.dump_lrtables]](yacc) *)
 
-(*e: yacc/dump.ml *)
+(*e: yacc/Dump.ml *)

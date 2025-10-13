@@ -1,4 +1,4 @@
-(*s: yacc/first_follow.ml *)
+(*s: yacc/First_follow.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -203,4 +203,4 @@ let compute_follow env (first, epsilon) =
   done;
   !follow
 (*e: function [[First_follow.compute_follow]](yacc) *)
-(*e: yacc/first_follow.ml *)
+(*e: yacc/First_follow.ml *)

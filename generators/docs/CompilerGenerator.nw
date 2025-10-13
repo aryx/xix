@@ -2092,7 +2092,7 @@ let test_lr_engine () =
 
 \chapter{[[main()]]}
 
-<<function [[Main.main]](yacc)>>=
+<<function [[CLI.main]](yacc)>>=
 let main () =
 
   if Array.length Sys.argv != 2 then begin
@@ -2154,7 +2154,7 @@ let _ =
   Tests.test_slr ();
   Tests.test_lr_engine ();
 *)
-  (*Printexc.catch*) main (); 
+  (*Printexc.catch*) CLI.main (); 
   exit 0
 @
 
@@ -2178,7 +2178,7 @@ let start_symbol def =
 
 \chapter{Lexing}
 
-<<yacc/lexer.mll>>=
+<<yacc/Lexer.mll>>=
 {
 <<copyright ocamlyacc>>
 
@@ -2357,7 +2357,7 @@ and angle = parse
 
 \section{Overview}
 
-<<yacc/parser.mly>>=
+<<yacc/Parser.mly>>=
 %{
 <<copyright ocamlyacc>>
 open Ast

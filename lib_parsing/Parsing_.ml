@@ -1,4 +1,4 @@
-(*s: stdlib/parsing_.ml *)
+(*s: stdlib/Parsing_.ml *)
 (***********************************************************************)
 (*                                                                     *)
 (*                           Objective Caml                            *)
@@ -365,4 +365,4 @@ let yyparse_simple lrtables rules_actions lexfun string_of_tok lexbuf =
   Obj.magic !res
 (*e: function [[Parsing.yyparse_simple]](yacc) *)
   
-(*e: stdlib/parsing_.ml *)
+(*e: stdlib/Parsing_.ml *)

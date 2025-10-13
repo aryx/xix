@@ -1,4 +1,4 @@
-(*s: yacc/check.ml *)
+(*s: yacc/Check.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -58,4 +58,4 @@ let check def =
   failwith "TODO"
 (*e: function [[Check.check]](yacc) *)
 
-(*e: yacc/check.ml *)
+(*e: yacc/Check.ml *)

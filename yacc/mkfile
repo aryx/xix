@@ -6,12 +6,12 @@ INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_parsing
 
 # Note that those files are sync'ed by syncweb from principia/generators
 
-SRC= ast.ml\
- parser.ml lexer.ml\
- check.ml\
- lr0.ml first_follow.ml lrtables.ml slr.ml lalr.ml \
- output.ml dump.ml \
- tests.ml main.ml
+SRC= Ast.ml\
+ Parser.ml Lexer.ml\
+ Check.ml\
+ Lr0.ml First_follow.ml Lrtables.ml Slr.ml Lalr.ml \
+ Output.ml Dump.ml \
+ Tests.ml CLI.ml Main.ml
 
 # need str.cma and commons/lib.cma because of Common.Stack_.nth
 # but we could inline this function in parsing_.ml to avoid those deps.
@@ -26,20 +26,16 @@ PROG=ocamlyacc
 
 #<$TOP/mkparser
 
-AUTOGEN=lexer.ml parser.ml parser.mli
+AUTOGEN=Lexer.ml Parser.ml Parser.mli
 NUKEFILES=$AUTOGEN
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend
 
-lexer.ml:D: lexer.mll
+Lexer.ml:D: Lexer.mll
 	$OCAMLLEX $prereq
-parser.ml parser.mli: parser.mly
+Parser.ml Parser.mli: Parser.mly
 	$OCAMLYACC $prereq
-	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml
+	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
 #pad: this  perl thing is just because ocamlyacc does not handle well
 # syncweb special comment at the very end
-
-
-loc:V:
-   wc -l globals.ml lexer_asm5.mll parser_asm5.mly parse_asm5.ml* main.ml $TOP/formats/objects/ast_asm5.ml $TOP/formats/objects/object_code5.ml*

@@ -1,4 +1,4 @@
-(*s: yacc/lr0.ml *)
+(*s: yacc/Lr0.ml *)
 (*s: copyright ocamlyacc *)
 (* Yoann Padioleau
  *
@@ -213,4 +213,4 @@ let canonical_lr0_automaton env =
     trans = trans
   }
 (*e: function [[Lr0.canonical_lr0_automaton]](yacc) *)
-(*e: yacc/lr0.ml *)
+(*e: yacc/Lr0.ml *)

@@ -1,4 +1,4 @@
-/*(*s: yacc/parser.mly *)*/
+/*(*s: yacc/Parser.mly *)*/
 %{
 /*(*s: copyright ocamlyacc *)*/
 (* Yoann Padioleau
@@ -20,7 +20,7 @@ open Ast
 
 %}
 
-/*(*s: type Parser.token (yacc) *)*/
+/*(*s: type [[Parser.token]](yacc) *)*/
 %token <Ast.term> TTerm
 %token <Ast.nonterm> TNonterm
 %token Ttoken Tprec Tstart Ttype
@@ -28,16 +28,16 @@ open Ast
 %token <string> TAngle
 %token <Ast.location> TAction
 %token TEOF
-/*(*e: type Parser.token (yacc) *)*/
+/*(*e: type [[Parser.token]](yacc) *)*/
 
-/*(*s: Parser entry point definition (yacc) *)*/
+/*(*s: Parser entry point definition(yacc) *)*/
 %start parser_definition
 %type <Ast.parser_definition> parser_definition
-/*(*e: Parser entry point definition (yacc) *)*/
+/*(*e: Parser entry point definition(yacc) *)*/
 
 %%
 
-/*(*s: grammar (yacc) *)*/
+/*(*s: grammar(yacc) *)*/
 /*(*s: yacc top rule *)*/
 parser_definition: header directives_opt grammar header_opt TEOF 
   { { header = $1; directives = $2; grm = $3; trailer = $4 } }
@@ -112,6 +112,6 @@ terms_opt:
  | TTerm terms_opt { $1::$2 }
 ;
 /*(*e: yacc extra rules *)*/
-/*(*e: grammar (yacc) *)*/
+/*(*e: grammar(yacc) *)*/
 
-/*(*e: yacc/parser.mly *)*/
+/*(*e: yacc/Parser.mly *)*/

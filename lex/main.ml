@@ -14,6 +14,9 @@
 (* The lexer generator. Command-line parsing. *)
 
 open Ast
+(* for ocaml-light fields access *)
+open Lexgen
+open Output
 
 (*s: function [[Main.main]] *)
 let main () =
@@ -74,7 +77,7 @@ let main () =
 
 (*s: toplevel [[Main._1]] *)
 let _ = 
-  (* Printexc.catch*) main (); 
+  Printexc.catch main (); 
   exit 0
 (*e: toplevel [[Main._1]] *)
 

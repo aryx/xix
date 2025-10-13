@@ -50,6 +50,7 @@ let char_for_backslash = function
   | 'r' -> '\r'
   | c   -> c
 (*x: Lexer helper functions and globals *)
+(* note that 48 is the ascii code for '0' hence the substraction below *)
 let char_for_decimal_code lexbuf i =
   Char.chr(100 * (Char.code(Lexing.lexeme_char lexbuf i) - 48) +
             10 * (Char.code(Lexing.lexeme_char lexbuf (i+1)) - 48) +
@@ -136,6 +137,17 @@ and action = parse
   | '}' 
     { decr brace_depth;
       if !brace_depth == 0 then Lexing.lexeme_start lexbuf else action lexbuf }
+  | '"' 
+    { reset_string_buffer();
+      string lexbuf;
+      reset_string_buffer();
+      action lexbuf }
+  | "'" [^ '\\'] "'" 
+    { action lexbuf }
+  | "'" '\\' ['\\' '\'' 'n' 't' 'b' 'r'] "'" 
+    { action lexbuf }
+  | "'" '\\' ['0'-'9'] ['0'-'9'] ['0'-'9'] "'" 
+    { action lexbuf }
   | "(*" 
     { comment_depth := 1;
       comment lexbuf;
@@ -172,6 +184,19 @@ and comment = parse
   | "*)" 
     { decr comment_depth;
       if !comment_depth == 0 then () else comment lexbuf }
+  | '"' 
+    { reset_string_buffer();
+      string lexbuf;
+      reset_string_buffer();
+      comment lexbuf }
+  | "''"
+      { comment lexbuf }
+  | "'" [^ '\\' '\''] "'"
+      { comment lexbuf }
+  | "'\\" ['\\' '\'' 'n' 't' 'b' 'r'] "'"
+      { comment lexbuf }
+  | "'\\" ['0'-'9'] ['0'-'9'] ['0'-'9'] "'"
+      { comment lexbuf }
 
   | eof 
     { raise(Lexical_error "unterminated comment") }

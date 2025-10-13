@@ -1,4 +1,4 @@
-(*s: lex/ast.ml *)
+(*s: lex/Ast.ml *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -65,4 +65,4 @@ type lexer_definition =
       trailer: location 
     }
 (*e: type [[Syntax.lexer_definition]] *)
-(*e: lex/ast.ml *)
+(*e: lex/Ast.ml *)

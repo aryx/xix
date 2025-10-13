@@ -1,4 +1,4 @@
-(*s: lex/output.mli *)
+(*s: lex/Output.mli *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -31,4 +31,4 @@ val output_lexdef_simple:
       unit
 
 
-(*e: lex/output.mli *)
+(*e: lex/Output.mli *)

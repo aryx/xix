@@ -1,4 +1,4 @@
-(*s: stdlib/lexing_.mli *)
+(*s: stdlib/Lexing_.mli *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -125,4 +125,4 @@ val backtrack : lexbuf -> 'a
 
 val start_lexing : lexbuf -> unit
 
-(*e: stdlib/lexing_.mli *)
+(*e: stdlib/Lexing_.mli *)

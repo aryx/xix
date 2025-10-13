@@ -1,4 +1,4 @@
-(*s: lex/compact.mli *)
+(*s: lex/Compact.mli *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -30,4 +30,4 @@ type lex_tables =
 (*s: signature [[Compact.compact_tables]] *)
 val compact_tables: Lexgen.automata_matrix -> lex_tables
 (*e: signature [[Compact.compact_tables]] *)
-(*e: lex/compact.mli *)
+(*e: lex/Compact.mli *)

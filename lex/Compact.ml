@@ -1,4 +1,4 @@
-(*s: lex/compact.ml *)
+(*s: lex/Compact.ml *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -157,4 +157,4 @@ let compact_tables state_v =
   }
 (*e: function [[Compact.compact_tables]] *)
 
-(*e: lex/compact.ml *)
+(*e: lex/Compact.ml *)

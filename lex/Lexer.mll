@@ -1,4 +1,4 @@
-(*s: lex/lexer.mll *)
+(*s: lex/Lexer.mll *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -203,4 +203,4 @@ and comment = parse
   | _ 
     { comment lexbuf }
 (*e: rule Lexer.comment *)
-(*e: lex/lexer.mll *)
+(*e: lex/Lexer.mll *)

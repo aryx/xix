@@ -1,4 +1,4 @@
-(*s: lex/lexgen.mli *)
+(*s: lex/Lexgen.mli *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -54,4 +54,4 @@ type automata_matrix = automata_row array
 
 val make_dfa: Ast.lexer_definition -> automata_entry list * automata_matrix
 (*e: signature [[Lexgen.make_dfa]] *)
-(*e: lex/lexgen.mli *)
+(*e: lex/Lexgen.mli *)

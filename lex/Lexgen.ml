@@ -1,4 +1,4 @@
-(*s: lex/lexgen.ml *)
+(*s: lex/Lexgen.ml *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -332,4 +332,4 @@ let make_dfa lexdef =
     encode_lexentries charsets lex_entries in
   automata_entries, automata_transitions
 (*e: function [[Lexgen.make_dfa]] *)
-(*e: lex/lexgen.ml *)
+(*e: lex/Lexgen.ml *)

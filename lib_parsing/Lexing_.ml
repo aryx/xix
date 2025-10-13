@@ -1,4 +1,4 @@
-(*s: stdlib/lexing_.ml *)
+(*s: stdlib/Lexing_.ml *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -182,4 +182,4 @@ let backtrack lexbuf =
   Obj.magic(lexbuf.lex_last_action_simple lexbuf)
 
 
-(*e: stdlib/lexing_.ml *)
+(*e: stdlib/Lexing_.ml *)

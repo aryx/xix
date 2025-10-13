@@ -6,10 +6,10 @@ INCLUDES=-I $TOP/lib_core/collections
 
 # Note that those files are sync'ed by syncweb from principia/generators
 
-SRC= ast.ml \
- parser.ml lexer.ml \
- lexgen.ml compact.ml output.ml \
- main.ml
+SRC= Ast.ml \
+ Parser.ml Lexer.ml \
+ Lexgen.ml Compact.ml Output.ml \
+ CLI.ml Main.ml
 
 SYSLIBS=
 LIBS=$TOP/lib_core/collections/lib.cma
@@ -21,17 +21,17 @@ PROG=ocamllex
 
 #<$TOP/mkparser
 
-AUTOGEN=lexer.ml parser.ml parser.mli
+AUTOGEN=Lexer.ml Parser.ml Parser.mli
 NUKEFILES=$AUTOGEN
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend
 
-lexer.ml:D: lexer.mll
+Lexer.ml:D: Lexer.mll
 	$OCAMLLEX $prereq
-parser.ml parser.mli: parser.mly
+Parser.ml Parser.mli: Parser.mly
 	$OCAMLYACC $prereq
-	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' parser.ml
+	perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
 #pad: this  perl thing is just because ocamlyacc does not handle well
 # syncweb special comment at the very end
 

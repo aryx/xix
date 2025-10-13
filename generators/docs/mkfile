@@ -6,18 +6,21 @@ DOC=CompilerGenerator
 DOC_EXTRA=
 VERSION=3
 
+# the Parser.mly are synced separately
 SRC=\
-  lex/ast.ml \
-  lex/output.mli \
-  lex/output.ml \
-  lex/lexgen.mli \
-  lex/lexgen.ml \
-  lex/compact.mli \
-  lex/compact.ml \
-  lex/main.ml \
-  lex/lexer.mll \
-  lib_parsing/lexing_.mli \
-  lib_parsing/lexing_.ml \
+  lex/Ast.ml \
+  lex/Output.mli \
+  lex/Output.ml \
+  lex/Lexgen.mli \
+  lex/Lexgen.ml \
+  lex/Compact.mli \
+  lex/Compact.ml \
+  lex/CLI.mli \
+  lex/CLI.ml \
+  lex/Main.ml \
+  lex/Lexer.mll \
+  lib_parsing/Lexing_.mli \
+  lib_parsing/Lexing_.ml \
   yacc/ast.ml \
   yacc/check.mli \
   yacc/check.ml \
@@ -50,9 +53,9 @@ SRC_ORIG=CompilerGenerator.nw CompilerGenerator_extra.nw
 
 #TODO!!!!
 SYNCFLAGS2=-md5sum_in_auxfile -less_marks -lang ocamlyacc
-#sync_yacc:
-#	$(SYNCWEB_YACC) $(SRC_ORIG) $(CAML)/lex/parser.mly
-#	$(SYNCWEB_YACC) $(SRC_ORIG) $(CAML)/yacc/parser.mly
+sync_yacc:V:
+	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/lex/Parser.mly
+#	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/yacc/parser.mly
 
 
 #TODO: add also $PLAN9ML/yacc! but right now conflicting module names

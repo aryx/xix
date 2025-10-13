@@ -1,4 +1,4 @@
-(*s: lex/main.ml *)
+(*s: lex/CLI.ml *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -18,14 +18,14 @@ open Ast
 open Lexgen
 open Output
 
-(*s: function [[Main.main]] *)
+(*s: function [[CLI.main]] *)
 let main () =
-  (*s: [[Main.main()]] print lex usage if wrong number of arguments *)
+  (*s: [[CLI.main()]] print lex usage if wrong number of arguments *)
   if Array.length Sys.argv != 2 then begin
     prerr_endline "Usage: ocamllex <input file>";
     exit 2
   end;
-  (*e: [[Main.main()]] print lex usage if wrong number of arguments *)
+  (*e: [[CLI.main()]] print lex usage if wrong number of arguments *)
   let source_name = Sys.argv.(1) in
   let dest_name =
     if Filename.check_suffix source_name ".mll" 
@@ -73,13 +73,6 @@ let main () =
   Output.output_lexdef ic oc def.header tables entries def.trailer;
   close_in ic;
   close_out oc
-(*e: function [[Main.main]] *)
+(*e: function [[CLI.main]] *)
 
-(*s: toplevel [[Main._1]] *)
-let _ = 
-  (* Deprecated in OCaml 5 cos done by default: Printexc.catch *)
-  main (); 
-  exit 0
-(*e: toplevel [[Main._1]] *)
-
-(*e: lex/main.ml *)
+(*e: lex/CLI.ml *)

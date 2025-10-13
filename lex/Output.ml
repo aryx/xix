@@ -1,4 +1,4 @@
-(*s: lex/output.ml *)
+(*s: lex/Output.ml *)
 (*s: copyright ocamllex *)
 (***********************************************************************)
 (*                                                                     *)
@@ -289,4 +289,4 @@ let output_lexdef_simple ic oc header (initial_st, st) trailer =
   output_string oc "\n";
   copy_chunk ic oc trailer
 
-(*e: lex/output.ml *)
+(*e: lex/Output.ml *)

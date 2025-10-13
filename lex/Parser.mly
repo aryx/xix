@@ -1,4 +1,4 @@
-/*(*s: lex/parser.mly *)*/
+/*(*s: lex/Parser.mly *)*/
 /*(*s: copyright ocamllex bis *)*/
 /***********************************************************************/
 /*                                                                     */
@@ -41,7 +41,7 @@ let regexp_for_string s =
 
 /* Tokens */
 
-/*(*s: type Parser.token *)*/
+/*(*s: type [[Parser.token]] *)*/
 %token Trule Tparse Tand
 %token <int> Tchar
 %token <string> Tstring
@@ -52,7 +52,7 @@ let regexp_for_string s =
 %token Tlet Tequal 
 %token <string> Tident
 %token Tend  
-/*(*e: type Parser.token *)*/
+/*(*e: type [[Parser.token]] *)*/
 
 /* Precedences and associativities. Lower precedences come first. */
 
@@ -73,7 +73,7 @@ let regexp_for_string s =
 
 %%
 
-/*(*s: grammar (lex) *)*/
+/*(*s: grammar(lex) *)*/
 /*(*s: lex top rule *)*/
 lexer_definition:
     header named_regexps Trule definition other_definitions header Tend
@@ -191,7 +191,7 @@ char_class1:
 
 /*(*e: lex regexp rule *)*/
 
-/*(*e: grammar (lex) *)*/
+/*(*e: grammar(lex) *)*/
 
 %%
-/*(*e: lex/parser.mly *)*/
+/*(*e: lex/Parser.mly *)*/

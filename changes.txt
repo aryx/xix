@@ -26,7 +26,7 @@ TODO more semgrep rules (forbid functors, labels, etc.)
 
 ** internals
 - use uppercase module filenames, split Main.ml/CLI.ml, and start
-  to use capabilities for 5a/5c/5l/cpp
+  to use capabilities for 5a/5c/5l/cpp as well as lex/yacc
 
 * 0.16 (Q3 2025) (Dockerfile.light)
 

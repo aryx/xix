@@ -73,9 +73,10 @@ let output_tables oc tbl =
 (* Output the entries *)
 
 let output_entry ic oc e =
-  fprintf oc "%s lexbuf = %s_rec lexbuf %d\n"
-          e.auto_name e.auto_name e.auto_initial_state;
-  fprintf oc "and %s_rec lexbuf state =\n" e.auto_name;
+  let args = String.concat " " e.auto_args in
+  fprintf oc "%s %s lexbuf = %s_rec %s lexbuf %d\n"
+          e.auto_name args e.auto_name args e.auto_initial_state;
+  fprintf oc "and %s_rec %s lexbuf state =\n" e.auto_name args;
   fprintf oc "  match Lexing.engine lex_tables state lexbuf with\n    ";
   let first = ref true in
   e.auto_actions |> List.iter (fun (num, loc_action) ->

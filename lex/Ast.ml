@@ -58,6 +58,8 @@ type action = location
 type rule = {
   name: string;
   clauses: (regular_expression * action) list;
+  (* rules can have parameters *)
+  args: string list;
  }
 (*e: type [[Syntax.rule]] *)
 

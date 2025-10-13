@@ -103,9 +103,13 @@ named_regexps:
 
 /*(*s: lex rule rule *)*/
 definition:
-    Tident Tequal entry
-        { { name = $1; clauses = $3 } }
+    Tident arguments Tequal entry
+        { { name = $1; args = $2; clauses = $4 } }
 ;
+arguments:
+    Tident arguments { $1::$2 }
+  | /*epsilon*/ { [] }
+
 entry:
     Tparse case rest_of_entry
         { $2::List.rev $3 }

@@ -40,6 +40,7 @@ and automata_move =
 type automata_entry =
   { auto_name: string;
     auto_initial_state: int;
+    auto_args: string list;
     auto_actions: (action_id * Ast.action) list;
   }
 (*e: type [[Lexgen.automata_entry]] *)

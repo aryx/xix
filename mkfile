@@ -18,12 +18,16 @@ DIRS3=kernel
 
 DIRS=$DIRS1 #$DIRS2 #DIRS3
 
-#TODO: add the other dirs from DIRS1
+#TODO: add the other dirs from DIRS1 and remove once DIRS_LIGHT==DIRS1
 DIRS_LIGHT=\
   lib_core/collections lib_core/commons\
   mk shell\
   lib_parsing lex yacc\
-  macroprocessor
+  macroprocessor \
+  lib_toolchain/objects \
+  lib_toolchain/executables
+
+#TODO: assembler linker compiler version_control
 
 
 TESTDIRS=\

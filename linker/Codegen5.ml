@@ -186,8 +186,8 @@ let gop_bitshift_register op =
 
 let gop_rcon x =
   match x with
-  | Either.Left (R r) -> [(r,8); (1, 4)]
-  | Either.Right i    -> [(i, 7); (0, 4)]
+  | Left (R r) -> [(r,8); (1, 4)]
+  | Right i    -> [(i, 7); (0, 4)]
 
 
 (*****************************************************************************)
@@ -235,11 +235,11 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
    (rbase, 16); (rt, 12);
   ] @
   (match offset_or_rm with
-  | Left offset -> 
+  | Either.Left offset -> 
       if offset >= 0 
       then [(1, 23); (offset, 0)]
       else [(0, 23); (-offset, 0)]
-  | Right (R r) -> [(1, 25); (r, 0)]
+  | Either.Right (R r) -> [(1, 25); (r, 0)]
   )
 
 let gload_from_pool { T5. branch = branch; real_pc = src_pc; _ } cond rt =

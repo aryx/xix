@@ -5,6 +5,8 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
+(* for field access for ocaml-light *)
+open Types5
 
 let rec find_first_no_nop_node nopt =
   match nopt with

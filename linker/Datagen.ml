@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Either
 
 open Ast_asm5
 module T = Types
@@ -26,8 +27,9 @@ let gen symbols2 init_data sizes ds =
               match info2 with
               | T.SText2 real_pc -> 
                   real_pc
-              | T.SData2 offset | T.SBss2 offset -> 
-                  init_data + offset
+              (* ocaml-light: | T.SData2 offset | T.SBss2 offset ->  *)
+              | T.SData2 offset -> init_data + offset
+              | T.SBss2 offset -> init_data + offset
             in
             raise Todo
         | Right (Address (Local _ | Param _)) -> raise Todo

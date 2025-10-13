@@ -50,14 +50,17 @@ let build_graph symbols xs =
               )
           | Absolute virt_pc -> Some virt_pc
         in
+        let adjust_virt_pc virt_pc =
+          if virt_pc < len
+          then n.T5.branch <- Some nodes.(virt_pc)
+          else failwith (spf "branch out of range %d at %s" virt_pc
+                           (T5.s_of_loc n.T5.loc))
+        in
         (match inst with
-        | B opd | BL opd | Bxx (_, opd) -> 
-            resolve_branch_operand opd |> Option.iter (fun virt_pc ->
-              if virt_pc < len
-              then n.T5.branch <- Some nodes.(virt_pc)
-              else failwith (spf "branch out of range %d at %s" virt_pc
-                               (T5.s_of_loc n.T5.loc))
-            )
+        (* ocaml-light: | B opd | BL opd | Bxx (_, opd) ->  *)
+        | B opd -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
+        | BL opd -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
+        | Bxx (_, opd) -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
         | _ -> ()
         )
   );

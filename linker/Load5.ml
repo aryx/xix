@@ -56,7 +56,10 @@ let visit_globals f xs =
     | Instr (i, _cond) ->
       (match i with
       | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
-      | B b | BL b | Bxx (_, b) -> branch_operand b
+      (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
+      | B b -> branch_operand b
+      | BL b -> branch_operand b
+      | Bxx (_, b) -> branch_operand b
       | Arith _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> () 
       )
     | LabelDef _ -> ()
@@ -135,7 +138,10 @@ let load (xs : Fpath.t list) : T5.code array * T5.data list * Types.symbol_table
             | Absolute i -> opd := Absolute (i + ipc)
           in
           (match inst with
-          | B opd | BL opd | Bxx (_, opd) -> relocate_branch opd
+          (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> relocate_branch opd *)
+          | B opd -> relocate_branch opd
+          | BL opd -> relocate_branch opd
+          | Bxx (_, opd) -> relocate_branch opd
           | _ -> ()
           );
           code |> Stack_.push (T5.I (inst, cond), (file, line));

@@ -1,7 +1,9 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-open A_out (* for the fields *)
+(* for the fields for ocaml-light *)
+open A_out 
+open Chan
 
 module T = Types
 module T5 = Types5

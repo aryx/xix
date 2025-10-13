@@ -126,7 +126,7 @@ let encode_lexdef def =
   chars_count := 0;
 (* CONFIG   actions_count := 0; *)
   let entries =
-    def.entrypoints |> List.map (fun (entry_name, casedef) ->
+    def.entrypoints |> List.map (fun { name = entry_name; clauses = casedef } ->
         actions := [];
         (* CONFIG !! for simpler output can't do that *)
         actions_count := 0;

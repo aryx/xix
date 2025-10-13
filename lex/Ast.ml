@@ -55,7 +55,10 @@ type action = location
 (*e: type [[Syntax.action]] *)
 
 (*s: type [[Syntax.rule]] *)
-type rule = string * (regular_expression * action) list
+type rule = {
+  name: string;
+  clauses: (regular_expression * action) list;
+ }
 (*e: type [[Syntax.rule]] *)
 
 (*s: type [[Syntax.lexer_definition]] *)

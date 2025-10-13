@@ -104,7 +104,7 @@ named_regexps:
 /*(*s: lex rule rule *)*/
 definition:
     Tident Tequal entry
-        { ($1,$3) }
+        { { name = $1; clauses = $3 } }
 ;
 entry:
     Tparse case rest_of_entry

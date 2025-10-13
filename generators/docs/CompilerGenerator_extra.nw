@@ -427,6 +427,9 @@ open Lexgen
 (* The lexer generator. Command-line parsing. *)
 
 open Ast
+(* for ocaml-light fields access *)
+open Lexgen
+open Output
 
 <<function [[Main.main]]>>
 

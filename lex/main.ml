@@ -77,7 +77,8 @@ let main () =
 
 (*s: toplevel [[Main._1]] *)
 let _ = 
-  Printexc.catch main (); 
+  (* Deprecated in OCaml 5 cos done by default: Printexc.catch *)
+  main (); 
   exit 0
 (*e: toplevel [[Main._1]] *)
 

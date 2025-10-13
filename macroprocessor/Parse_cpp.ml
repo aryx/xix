@@ -90,7 +90,7 @@ let define_cmdline_def (k, v) =
   Hashtbl.add hmacros k 
     { m_name = k; m_nbargs = None; m_varargs = false; m_body = v; }
 
-let define {name = s; params = params; varargs = varargs; body = body}=
+let define {name = s; params; varargs; body}=
   (* We could forbid here 's' to conflict with C keyboard, but this
    * should be done in the caller, as cpp can be used with different
    * languages, which may use different keywords.

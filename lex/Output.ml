@@ -87,8 +87,8 @@ let output_entry ic oc e =
       copy_chunk ic oc loc_action;
       fprintf oc ")\n"
   );
-  fprintf oc "  | n -> lexbuf.Lexing.refill_buff lexbuf; %s_rec lexbuf n\n\n"
-          e.auto_name
+  fprintf oc "  | n -> lexbuf.Lexing.refill_buff lexbuf; %s_rec %s lexbuf n\n\n"
+          e.auto_name args
 (*e: function [[Output.output_entry]] *)
 
 (*s: function [[Output.output_lexdef]] *)

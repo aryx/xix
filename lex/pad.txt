@@ -1,7 +1,4 @@
-Imported from ocaml-light/lex.
+Originally imported from ocaml-light/lex and must be kept in sync.
 The literate document is in plan9/generators/CompilerGenerator.nw.
 This literate document is using syncweb https://github.com/aryx/syncweb
 hence the presence of those .md5sum_xxx files.
-
-TODO: lex/ and ocaml-light/lex drifted a bit so we need to merge
-them back together.

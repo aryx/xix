@@ -18,6 +18,14 @@ DIRS3=kernel
 
 DIRS=$DIRS1 #$DIRS2 #DIRS3
 
+#TODO: add the other dirs from DIRS1
+DIRS_LIGHT=\
+  lib_core/collections lib_core/commons\
+  mk shell\
+  lib_parsing lex yacc\
+#  macroprocessor
+
+
 TESTDIRS=\
   assembler/tests compiler/tests linker/tests \
   windows/tests \
@@ -43,9 +51,6 @@ clean nuke:V:
 
 # ???
 SUBDIRS=$DIRS $TESTDIRS
-
-#TODO: add the other dirs from DIRS1
-DIRS_LIGHT=lib_core/collections lib_core/commons mk shell lib_parsing lex yacc
 
 %.light:V:
 	for(i in $DIRS_LIGHT) @{

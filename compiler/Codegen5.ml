@@ -1,5 +1,6 @@
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
+open Either
 
 open Ast
 module C = Ast
@@ -167,9 +168,13 @@ let add_fake_goto env loc =
  
 let patch_fake_goto env pcgoto pcdest =
   match !(env.code).(pcgoto) with
-  | A.Instr (A.B aref, A.AL), _loc 
-  | A.Instr (A.Bxx (_, aref), A.AL), _loc
-    ->
+  (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
+  (* ocaml-light: | A.Instr (A.B aref, A.AL), _loc | A.Instr (A.Bxx (_, aref), A.AL), _loc *)
+  | A.Instr (A.B aref, A.AL), _loc ->
+    if !aref = (A.Absolute fake_pc)
+    then aref := A.Absolute pcdest
+    else raise (Impossible "patching already resolved branch")
+  | A.Instr (A.Bxx (_, aref), A.AL), _loc ->
     if !aref = (A.Absolute fake_pc)
     then aref := A.Absolute pcdest
     else raise (Impossible "patching already resolved branch")
@@ -253,14 +258,15 @@ let operand_able e0 =
       | DeRef  ->
         (match e.e with
         (* less: this should be handled in rewrite.ml *(&x) ==> x *)
-        | (Unary (GetRef, { e = Id fullname; _ })) -> Some (Name (fullname, 0))
+        | (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })) -> Some (Name (fullname, 0))
         (* less: should normalize constant to left or right in rewrite.ml *)
-        | Binary ({ e = Int (s1, _); _ }, 
+        | Binary ({ e = Int (s1, _); e_loc=_;e_type=_ }, 
                   Arith Plus, 
-                  {e = (Unary (GetRef, { e = Id fullname; _ })); _ })
-        | Binary ({e = (Unary (GetRef, { e = Id fullname; _ })); _ }, 
+                  {e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ })
+          -> Some (Name (fullname, int_of_string s1))
+        | Binary ({e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ }, 
                   Arith Plus, 
-                  { e = Int (s1, _); _ })
+                  { e = Int (s1, _); e_loc=_;e_type=_a })
           -> Some (Name (fullname, int_of_string s1))
         | _ -> None
         )
@@ -305,8 +311,15 @@ let rec complexity e =
     match e.e with
     | Int _ | Float _ | String _ | Id _ -> 0
     | Call _ -> fn_complexity
-    | Assign (_, e1, e2) | ArrayAccess (e1, e2) | Binary (e1, _, e2) 
-    | Sequence (e1, e2)  ->
+    | Assign _ | ArrayAccess _ | Binary _ | Sequence _ ->
+      let (e1, e2) =
+        match e.e with
+        | Assign (_, e1, e2) -> e1, e2
+        | ArrayAccess (e1, e2) -> e1, e2
+        | Binary (e1, _, e2) -> e1, e2
+        | Sequence (e1, e2) -> e1, e2
+        | _ -> raise (Impossible "see pattern match above")
+      in
       let n1 = complexity e1 in
       let n2 = complexity e2 in
       if n1 = n2
@@ -316,11 +329,18 @@ let rec complexity e =
     | CondExpr (e1, e2, e3) -> 
       complexity {e with e = Sequence (e1, { e with e = Sequence (e2, e3) } ) }
 
-    | RecordAccess (e, _) | RecordPtAccess (e, _)
-    | Cast (_, e)
-    | Postfix (e, _) | Prefix (_, e)
-    | Unary (_, e)
+    | RecordAccess _ | RecordPtAccess _ | Cast _ | Postfix _ | Prefix _ | Unary _
       -> 
+       let e =
+         match e.e with
+         | RecordAccess (e, _) -> e
+         | RecordPtAccess (e, _) -> e
+         | Cast (_, e) -> e
+         | Postfix (e, _) -> e
+         | Prefix (_, e) -> e
+         | Unary (_, e) -> e
+         | _ -> raise (Impossible "see pattern match above")
+      in
       let n = complexity e in
       if n = 0 then 1 else n
     (* should be converted in Int anyway *)
@@ -376,12 +396,12 @@ let opd_regalloc env typ loc tgtopt =
   | T.I _ | T.Pointer _ ->
     let i = 
       match tgtopt with
-      | Some { opd = Register (A.R x); _ } -> 
+      | Some { opd = Register (A.R x); typ=_; loc=_ } -> 
         reguse env (A.R x);
         x
       | _ -> regalloc env loc
     in
-    { opd = Register (A.R i); typ = typ; loc = loc }
+    { opd = Register (A.R i); typ; loc }
   | _ -> raise Todo
 
 (*
@@ -640,7 +660,7 @@ let rec stmt env st0 =
   match st0.s with
   | ExprSt e -> expr env e None
   | Block xs -> xs |> List.iter (stmt env)
-  | Var { v_name = fullname; _} ->
+  | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
       let idinfo = Hashtbl.find env.ids fullname in
       (* todo: generate code for idinfo.ini *)
 
@@ -828,7 +848,7 @@ let codegen (ids, structs, funcs) =
     regs          = Array.make 0 16;
   } in
 
-  funcs |> List.iter (fun { f_name=name; f_loc=loc; f_body=st; f_type=typ; _ } ->
+  funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
     let fullname = (name, 0) in
     let idinfo = Hashtbl.find env.ids fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)
@@ -872,13 +892,13 @@ let codegen (ids, structs, funcs) =
 
     set_instr env spc 
       (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
-                         !(env.size_locals)))) loc;
-    add_instr env (A.Instr (A.RET, A.AL)) loc;
+                         !(env.size_locals)))) f_loc;
+    add_instr env (A.Instr (A.RET, A.AL)) f_loc;
 
     (* sanity check register allocation *)
     env.regs |> Array.iteri (fun i v ->
       if regs_initial.(i) <> v
-      then raise (Error (E.Misc (spf "reg %d left allocated" i, loc)));
+      then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
     );
   );
 

@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+open Either
 
 open Ast
 
@@ -67,7 +68,9 @@ let error err =
 let inconsistent_tag fullname loc usedef =
   let locbefore = 
     match usedef with
-    | { defined = Some loc; _ } | { used = Some loc; _ } -> loc
+    (* ocaml-light: | { defined = Some loc; _ } | { used = Some loc; _ } *)
+    | { defined = Some loc; used = _ } -> loc
+    | { used = Some loc; defined = _ } -> loc
     | _ -> raise (Impossible "must have a def or a use")
   in
   error (Inconsistent (
@@ -95,8 +98,8 @@ let check_inconsistent_or_redefined_tag env fullname tagkind loc =
 let inconsistent_id fullname loc usedef =
   let locbefore = 
     match usedef with
-    | { defined = Some loc; _ } -> loc
-    | { defined = None; _ } -> raise (Impossible "id always defined first")
+    | { defined = Some loc; used = _ } -> loc
+    | { defined = None; used = _ } -> raise (Impossible "id always defined first")
   in
   error (Inconsistent (
     spf "redefinition of '%s' " (unwrap fullname), loc,
@@ -133,7 +136,8 @@ let check_unused_locals env =
         (* 5c says whether 'auto' or 'param' *) 
         Error.warn 
           (spf "variable declared and not used: '%s'" (unwrap fullname)) loc
-    | { defined = None; _} -> raise (Impossible "locals are always defined")
+    | { defined = None; used = _} -> 
+          raise (Impossible "locals are always defined")
     | { defined = _; used = Some _ } -> ()
   )
 
@@ -185,7 +189,7 @@ let check_usedef program =
       type_ env typ
 
     (* todo: if use struct tags params, they must be complete at this point *)
-    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st; _ } ->
+    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st; f_storage = _ } ->
       let fullname = name, 0 in
       (if Hashtbl.mem env.ids fullname &&
           snd (Hashtbl.find env.ids fullname) = IdIdent
@@ -200,9 +204,9 @@ let check_usedef program =
       (* new function scope *)
       let env = { env with local_ids = []; labels = Hashtbl.create 11 } in
       let (_tret, (tparams, _dots)) = ftyp in
-      tparams |> List.iter (fun { p_name = fullnameopt; p_loc=loc; _} ->
+      tparams |> List.iter (fun { p_name = fullnameopt; p_loc; p_type = _} ->
         fullnameopt |> Option.iter (fun fullname ->
-          check_inconsistent_or_redefined_id env fullname IdIdent loc;
+          check_inconsistent_or_redefined_id env fullname IdIdent p_loc;
           env.local_ids <- fullname :: env.local_ids;
         );
       );
@@ -228,7 +232,7 @@ let check_usedef program =
           raise (Impossible "at least one of used or defined")
       );
         
-    | VarDecl { v_name = fullname; v_loc = loc; v_type = t; v_init = eopt; _} ->
+    | VarDecl { v_name = fullname; v_loc; v_type = t; v_init = eopt; v_storage = _} ->
       (if Hashtbl.mem env.ids fullname &&
           snd (Hashtbl.find env.ids fullname) = IdIdent
       (* this can be ok, you can redeclare toplevel identifiers as you
@@ -236,7 +240,7 @@ let check_usedef program =
        * see typecheck.ml
        *)
        then ()
-       else check_inconsistent_or_redefined_id env fullname IdIdent loc
+       else check_inconsistent_or_redefined_id env fullname IdIdent v_loc
       );
       type_ env t;
       eopt |> Option.iter (expr env)
@@ -254,11 +258,16 @@ let check_usedef program =
         expr env e;
         stmt env st1;
         stmt env st2;
-    | While (e, st) 
-    | Switch (e, st) | Case (e, st) ->
+    (* ocaml-light: | While (e, st)  | Switch (e, st) | Case (e, st) *)
+    | While (e, st) ->
         expr env e;
         stmt env st;
-
+    | Switch (e, st) ->
+        expr env e;
+        stmt env st;
+    | Case (e, st) ->
+        expr env e;
+        stmt env st;
     | DoWhile (st, e) ->
         stmt env st;
         expr env e
@@ -306,7 +315,7 @@ let check_usedef program =
         )
     | Default st -> stmt env st
 
-    | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; _ } ->
+    | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; v_storage = _ } ->
       (* less: before adding in environment? can have recursive use? *)
       eopt |> Option.iter (expr env);
     (* todo: if local VarDEcl, can actually have stuff nested like
@@ -332,13 +341,23 @@ let check_usedef program =
                                 (unwrap fullname)))
         )
     | Call (e, es) -> exprs env (e::es)
-    | Assign (_, e1, e2) | Binary (e1, _, e2) | Sequence (e1, e2) 
-    | ArrayAccess (e1, e2) -> 
-      exprs env [e1; e2]
-    | RecordAccess (e, _) | RecordPtAccess (e, _) 
-    | Postfix (e, _) | Prefix (_, e) | Unary (_, e) ->
+    (* ocaml-light: | Assign (_, e1, e2) | Binary (e1, _, e2) | Sequence (e1, e2) | ArrayAccess (e1, e2) *)
+    | Assign (_, e1, e2) -> exprs env [e1; e2]
+    | Binary (e1, _, e2) -> exprs env [e1; e2]
+    | Sequence (e1, e2) -> exprs env [e1; e2]
+    | ArrayAccess (e1, e2) -> exprs env [e1; e2]
+    (* ocaml-light: | RecordAccess (e, _) | RecordPtAccess (e, _) 
+    | Postfix (e, _) | Prefix (_, e) | Unary (_, e) *)
+    | RecordAccess (e, _) -> expr env e
+    | RecordPtAccess (e, _) -> expr env e
+    | Postfix (e, _) -> expr env e
+    | Prefix (_, e) -> expr env e
+    | Unary (_, e) -> expr env e
+    (* ocaml-light: | Cast (typ, e) | GccConstructor (typ, e) *)
+    | Cast (typ, e) ->
+      type_ env typ;
       expr env e
-    | Cast (typ, e) | GccConstructor (typ, e) ->
+    | GccConstructor (typ, e) ->
       type_ env typ;
       expr env e
     | CondExpr (e1, e2, e3) -> exprs env [e1; e2; e3]
@@ -369,11 +388,11 @@ let check_usedef program =
         (* nothing to do with p.p_name here *)
         type_ env p.p_type
       )
-    | TStructName (_, fullname) | TEnumName fullname ->
-      let tagkind = 
+    | TStructName (_, _) | TEnumName _ ->
+      let tagkind, fullname = 
         match typ.t with
-        | TStructName (su, _) -> Ast.tagkind_of_su su
-        | TEnumName _ -> TagEnum
+        | TStructName (su, fullname) -> Ast.tagkind_of_su su, fullname
+        | TEnumName fullname -> TagEnum, fullname
         | _ -> raise (Impossible "see pattern above")
       in
       (try 

@@ -3,6 +3,9 @@ open Common
 
 module L = Location_cpp
 module T = Parser  (* T for Tokens *)
+(* for fields for ocaml-light *)
+open Parse_cpp
+open Chan
 
 (*****************************************************************************)
 (* Prelude *)
@@ -20,7 +23,9 @@ let parse (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program =
        | T.EOF    -> Parse_cpp.Eof
        | T.TSharp -> Parse_cpp.Sharp
 
-       | T.TName (_, s) | T.TTypeName (_, s) -> Parse_cpp.Ident s
+       (* ocaml-light: | T.TName (_, s) | T.TTypeName (_, s) *)
+       | T.TName (_, s)  -> Parse_cpp.Ident s
+       | T.TTypeName (_, s) -> Parse_cpp.Ident s
         (* stricter: I forbid to have macros overwrite keywords *)
         (*
         | T.Tvoid | T.Tchar | T.Tshort | T.Tint | T.Tlong

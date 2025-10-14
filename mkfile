@@ -25,7 +25,8 @@ DIRS_LIGHT=\
   lib_parsing lex yacc\
   macroprocessor \
   lib_toolchain/objects assembler \
-  lib_toolchain/executables linker
+  lib_toolchain/executables linker \
+  compiler
 
 #TODO: assembler linker compiler version_control
 

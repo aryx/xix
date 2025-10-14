@@ -2,6 +2,8 @@
 open Common
 open Fpath_.Operators
 open Regexp_.Operators
+(* for fields for ocaml-light *)
+open Preprocessor
 
 (*****************************************************************************)
 (* Prelude *)
@@ -299,10 +301,10 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
           Error.errorexit (spf "%s:%d %s" !!file line s)
-      | Check.Error err | Typecheck.Error err | Eval_const.Error err
-      | Codegen5.Error err 
-        ->
-          Error.errorexit (Check.string_of_error err)
-
+      (* ocaml-light: | Check.Error err | Typecheck.Error err | Eval_const.Error err | Codegen5.Error err  *)
+      | Check.Error err -> Error.errorexit (Check.string_of_error err)
+      | Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
+      | Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
+      | Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
       | _ -> raise exn
       )

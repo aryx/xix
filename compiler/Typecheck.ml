@@ -679,7 +679,14 @@ let rec expr env e0 =
     (* todo: add cast *)
     { e0 with e = CondExpr (e1, e2, e3); e_type = finalt }
 
-  | Postfix(e, op) | Prefix (op, e) ->
+  (* ocaml-light: | Postfix (e, op) | Prefix (op, e) *)
+  | Postfix (_, _) | Prefix (_, _) ->
+    let (e, op) =
+        match e0.e with
+        | Postfix (e, op) -> e, op
+        | Prefix (op, e) -> e, op
+        | _ -> raise (Impossible "pattern match only those cases")
+    in
     let e = expr newenv e in
     if not (lvalue (e))
     then raise (Error (E.Misc ("not an l-value", e.e_loc)));
@@ -941,7 +948,8 @@ let check_and_annotate_program ast =
              merge_types t old.typ in
            let finalini = 
              match ini, old.ini with
-             | Some x, None | None, Some x -> Some x
+             | Some x, None  -> Some x
+             | None, Some x -> Some x
              | None, None -> None
              | Some _x, Some _y ->
                raise (Error (E.Inconsistent (
@@ -1000,7 +1008,8 @@ let check_and_annotate_program ast =
              merge_types t old.typ in
            let finalini = 
              match ini, old.ini with
-             | Some x, None | None, Some x -> Some x
+             | Some x, None -> Some x
+             | None, Some x -> Some x
              | None, None -> None
              | Some _x, Some _y ->
                raise (Error (E.Inconsistent (

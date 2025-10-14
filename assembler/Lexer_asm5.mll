@@ -33,6 +33,12 @@ let code_of_escape_char c =
 let string_of_ascii i =
   String.make 1 (Char.chr i)
 
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let char_ lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
 }
 
 (*****************************************************************************)
@@ -80,8 +86,9 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Mnemonics and identifiers *)
   (* ----------------------------------------------------------------------- *)
-  | "R" (digit+ as s) 
-      { let i = int_of_string s in 
+  | "R" (digit+ (*as s*)) 
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        let i = int_of_string s in 
         if i <= 15 && i >=0
         then TRx (R i)
         else error ("register number not valid")
@@ -154,7 +161,9 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* Numbers *)
   (* ----------------------------------------------------------------------- *)
-  | "0"  (oct+ as s) { TINT (int_of_string ("0o" ^ s))  }
+  | "0"  (oct+ (*as s*)) 
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        TINT (int_of_string ("0o" ^ s))  }
   | "0x" hex+        { TINT (int_of_string (Lexing.lexeme lexbuf)) }
   | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
 
@@ -183,16 +192,24 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* less: maybe return a fake semicolon the first time? *)
   | eof { EOF }
-  | _ as c   { error (spf "unrecognized character: '%c'" c) }
+  | _ (*as c*)   { let c = char_ lexbuf in
+                   error (spf "unrecognized character: '%c'" c) }
 
 (*****************************************************************************)
 (* Rule char *)
 (*****************************************************************************)
 and char = parse
   | "''"                            { Char.code '\'' }
-  | "\\" ((oct oct? oct?) as s) "'" { int_of_string ("0o" ^ s) }
-  | "\\" (['a'-'z'] as c) "'"       { code_of_escape_char c }
-  | [^ '\\' '\'' '\n'] as c  "'"    { Char.code c }
+  | "\\" ((oct oct? oct?) (*as s*)) "'" 
+      { let s = Lexing.lexeme lexbuf |>
+           String_.drop_prefix 1 |> String_.drop_suffix 1 in
+         int_of_string ("0o" ^ s) }
+  | "\\" (['a'-'z'] (*as c*)) "'"       
+     { let c = String.get (Lexing.lexeme lexbuf) 1 in
+       code_of_escape_char c }
+  | [^ '\\' '\'' '\n'] (*as c*)  "'"    
+      { let c = String.get (Lexing.lexeme lexbuf) 0 in
+        Char.code c }
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }
   | _    { error "missing '" }
@@ -202,10 +219,12 @@ and char = parse
 (*****************************************************************************)
 and string = parse
   | '"' { "" }
-  | "\\" ((oct oct oct) as s)
-      { let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
-  | "\\" (['a'-'z'] as c) 
-      { let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
+  | "\\" ((oct oct oct) (*as s*))
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
+  | "\\" (['a'-'z'] (*as c*)) 
+      { let c = String.get (Lexing.lexeme lexbuf) 1 in
+        let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
   | [^ '\\' '"' '\n']+   
       { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
   | '\n' { error "newline in string" }

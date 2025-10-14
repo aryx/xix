@@ -361,7 +361,7 @@ and subst_args_in_macro_body name args = parse
        s ^ subst_args_in_macro_body name args lexbuf }
  | "##" { "#" ^ subst_args_in_macro_body name args lexbuf }
  | "#" (digit+ (*as s*)) 
-     { let s = Str.string_after (Lexing.lexeme lexbuf) 1 in
+     { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
        let i = int_of_string s in
        try 
          let arg = List.nth args (i - 1) in

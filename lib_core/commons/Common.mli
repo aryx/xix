@@ -3,7 +3,6 @@
 (*****************************************************************************)
 
 type byte = char
-(* type bytes = string *)
 
 (* TODO: delete, use Fpath.t *)
 type filename = string
@@ -33,6 +32,15 @@ val ( ||| ) : 'a option -> 'a -> 'a
 module Int_ :
   sig
     val rnd: int -> int -> int
+  end
+
+module String_ :
+  sig
+    (* those functions doe not raise exn; if the integer is higher than the
+     * length of the string, the empty string is returned.
+     *)
+    val drop_prefix: int -> string -> string
+    val drop_suffix: int -> string -> string
   end
 
 (*****************************************************************************)

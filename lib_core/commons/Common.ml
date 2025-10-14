@@ -10,6 +10,7 @@
 
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
 (* type bytes = string *)
+
 type byte = char
 
 type filename = string
@@ -66,6 +67,23 @@ let rec rnd x v =
   if x mod v = 0
   then x
   else rnd (x+1) v
+
+end
+
+module String_ = struct
+
+(* also in Base/Core
+ * alt: drop_left/drop_right, and could raise exn
+ *)
+let drop_prefix n s =
+  let len = String.length s in
+  if n >= len then ""
+  else String.sub s n (len - n)
+
+let drop_suffix n s =
+  let len = String.length s in
+  if n >= len then ""
+  else String.sub s 0 (len - n)
 
 end
 

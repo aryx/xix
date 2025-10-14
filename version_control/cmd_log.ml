@@ -3,6 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Fpath_.Operators
 
 (* todo: git log --graph --oneline --decorate --all *)
 
@@ -31,11 +32,11 @@ let print_commit sha commit =
 let print_change change =
   match change with
   | Change.Add entry ->
-    UConsole.print (spf "A       %s" entry.Change.path)
+    UConsole.print (spf "A       %s" !!(entry.Change.path))
   | Change.Del entry ->
-    UConsole.print (spf "D       %s" entry.Change.path)
+    UConsole.print (spf "D       %s" !!(entry.Change.path))
   | Change.Modify (entry1, _entry2) ->
-    UConsole.print (spf "M       %s" entry1.Change.path)
+    UConsole.print (spf "M       %s" !!(entry1.Change.path))
 (*e: function [[Cmd_log.print_change]] *)
 
 
@@ -88,7 +89,7 @@ let cmd = { Cmd_.
     (* less: --reverse *)
   ];
   f = (fun args ->
-    let r, relpaths = Repository.find_root_open_and_adjust_paths args in
+    let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
     | [] -> log r
     (* todo: git log path *)

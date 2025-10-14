@@ -1,4 +1,5 @@
 (*s: version_control/dump.ml *)
+open Fpath_.Operators
 
 module Ocaml = OCaml
 
@@ -163,7 +164,7 @@ and vof_time { lsb32 = v_lsb32; nsec = v_nsec } =
 let vof_entry { stats = v_stats; id = v_id; path = v_name }
               =
   let bnds = [] in
-  let arg = Ocaml.vof_string v_name in
+  let arg = Ocaml.vof_string !!v_name in
   let bnd = ("path", arg) in
   let bnds = bnd :: bnds in
   let arg = Sha1.vof_t v_id in

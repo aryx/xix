@@ -3,12 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-let (/) = Filename.concat
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Algorithm tests *)
@@ -84,12 +79,12 @@ let test_zip file =
 
 let test_unzip_all_objects () =
   Unzip.debug := true;
-  let dir = ".git/objects" in
+  let dir = Fpath.v ".git/objects" in
   dir |> Repository.walk_dir (fun path _dirs files ->
     files |> List.iter (fun file ->
       let file = path / file in
-      UConsole.print file;
-      let chan = open_in file in
+      UConsole.print !!file;
+      let chan = open_in !!file in
       let input = IO.input_channel chan in
       let unzipped = Unzip.inflate input in
       let _str = IO.read_all unzipped in 

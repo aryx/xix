@@ -3,6 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Fpath_.Operators
 open Regexp_.Operators
 
 (*****************************************************************************)
@@ -199,9 +200,9 @@ let fetch_objects src dst =
 (*****************************************************************************)
 
 (*s: function [[Client_local.mk_client]] *)
-let mk_client path =
+let mk_client (path : Fpath.t) =
   { Client.
-    url = path;
+    url = !!path;
     fetch = (fun dst ->
       let src = Repository.open_ path in
       fetch_objects src dst;

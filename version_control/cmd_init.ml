@@ -16,8 +16,8 @@ let cmd = { Cmd_.
   ];
   f = (fun args ->
     match args with
-    | []    -> Repository.init "."
-    | [dir] -> Repository.init dir
+    | []    -> Repository.init (Fpath.v ".")
+    | [dir] -> Repository.init (Fpath.v dir)
     | _ -> raise Cmd_.ShowUsage
   );
 }

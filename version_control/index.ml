@@ -18,6 +18,7 @@
 (*e: copyright ocaml-git *)
 open Common
 open Ord.Operators
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -71,7 +72,7 @@ and time = {
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
-  path  : Common.filename;
+  path  : Fpath.t;
   id    : Blob.hash;
 
   stats : stat_info;
@@ -162,15 +163,15 @@ let mode_of_perm perm =
 (*****************************************************************************)
 
 (*s: function [[Index.remove_entry]] *)
-let rec remove_entry idx name =
+let rec remove_entry idx (name : Fpath.t) =
   match idx with
-  | [] -> failwith (spf "The file %s is not in the index" name)
+  | [] -> failwith (spf "The file %s is not in the index" !!name)
   | x::xs ->
     (match name <=> x.path with
     | Greater -> x::(remove_entry xs name)
     | Equal -> xs
     (* the entries are sorted *)
-    | Less -> failwith (spf "The file %s is not in the index" name)
+    | Less -> failwith (spf "The file %s is not in the index" !!name)
     )
 (*e: function [[Index.remove_entry]] *)
 
@@ -201,13 +202,13 @@ type dir = dir_entry list ref
     | File of string (* basename *) * entry
 (*e: type [[Index.dir_entry]] *)
 (*s: type [[Index.dirs]] *)
-type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
+type dirs = (Fpath.t (* full relpath of dir *), dir) Hashtbl.t
 (*e: type [[Index.dirs]] *)
 
 (* the code in this section derives from dulwich *)
 
 (*s: function [[Index.add_dir]] *)
-let rec find_dir dirs dirpath =
+let rec find_dir (dirs : dirs) (dirpath : Fpath.t) : dir =
   try 
     Hashtbl.find dirs dirpath
   with Not_found ->
@@ -215,16 +216,16 @@ let rec find_dir dirs dirpath =
     Hashtbl.add dirs dirpath newdir;
     (*s: [[Index.add_dir()]] recurse on parent of [[dirpath]] *)
     let (parent, base) = 
-      Filename.dirname dirpath, Filename.basename dirpath in
+      Filename.dirname !!dirpath, Filename.basename !!dirpath in
     (* !recursive call! should stop at some point because "." is in dirs *)
-    let dir = find_dir dirs parent in
+    let dir = find_dir dirs (Fpath.v parent) in
     dir := Subdir (base)::!dir;
     (*e: [[Index.add_dir()]] recurse on parent of [[dirpath]] *)
     newdir
 (*e: function [[Index.add_dir]] *)
 
 (*s: function [[Index.build_trees]] *)
-let rec build_trees dirs dirpath add_tree_obj =
+let rec build_trees (dirs : dirs) (dirpath : Fpath.t) add_tree_obj =
   let dir = Hashtbl.find dirs dirpath in
   (* entries of a Tree.t must be sorted, but entries of an index too,
    * so we can assume add_dir was called in sorted order
@@ -241,7 +242,7 @@ let rec build_trees dirs dirpath add_tree_obj =
       | Subdir base ->
         (* recurse *)
         let sha = 
-          build_trees dirs (Filename.concat dirpath base) add_tree_obj in
+          build_trees dirs (dirpath / base) add_tree_obj in
         {Tree. perm = Tree.Dir; name = base; id = sha }
     )
   in
@@ -254,17 +255,17 @@ let trees_of_index idx add_tree_obj =
   let (dirs: dirs) = Hashtbl.create 11 in
   (* populate dirs *)
   (*s: [[Index.trees_of_index()]] populate [[dirs]] *)
-  Hashtbl.add dirs "." (ref []);
+  Hashtbl.add dirs (Fpath.v ".") (ref []);
   idx |> List.iter (fun entry ->
-    let relpath = entry.path in
-    let (dirpath, base) = Filename.dirname relpath, Filename.basename relpath in
-    let dir = find_dir dirs dirpath in
+    let relpath : Fpath.t = entry.path in
+    let (dirpath, base) = Filename.dirname !!relpath, Filename.basename !!relpath in
+    let dir = find_dir dirs (Fpath.v dirpath) in
     dir := (File (base, entry))::!dir
   );
   (*e: [[Index.trees_of_index()]] populate [[dirs]] *)
   (* build trees *)
   (*s: [[Index.trees_of_index()]] build trees from [[dirs]] *)
-  build_trees dirs "." add_tree_obj
+  build_trees dirs (Fpath.v ".") add_tree_obj
   (*e: [[Index.trees_of_index()]] build trees from [[dirs]] *)
 (*e: function [[Index.trees_of_index]] *)
 
@@ -373,7 +374,7 @@ let write_stat_info ch stats =
  
 
 (*s: function [[Index.read_entry]] *)
-let read_entry ch =
+let read_entry (ch : IO.input) : entry =
   let stats = read_stat_info ch in
   let id = Sha1.read ch in
   let stage, len =
@@ -395,17 +396,17 @@ let read_entry ch =
   in
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
-  { stats = stats; id = id; path = path }
+  { stats = stats; id = id; path = Fpath.v path }
 (*e: function [[Index.read_entry]] *)
 
 (*s: function [[Index.write_entry]] *)
-let write_entry ch e =
+let write_entry ch (e : entry) =
   write_stat_info ch e.stats;
   Sha1.write ch e.id;
-  let flags = (0 lsl 12 + String.length e.path) land 0x3FFF in
+  let flags = (0 lsl 12 + String.length !!(e.path)) land 0x3FFF in
   IO.BigEndian.write_ui16 ch flags;
-  IO.nwrite_string ch e.path;
-  let len = 63 + String.length e.path in
+  IO.nwrite_string ch !!(e.path);
+  let len = 63 + String.length !!(e.path) in
   let pad = 
     match len mod 8 with
     | 0 -> 0

@@ -7,7 +7,7 @@ type content = string
 (*s: type [[Change.entry]] *)
 type entry = {
   (* relative path *)
-  path: Common.filename;
+  path: Fpath.t;
   mode: Index.mode;
   content: content Lazy.t;
 }

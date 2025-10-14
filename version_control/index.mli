@@ -40,7 +40,7 @@ and time = {
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
-  path  : Common.filename;
+  path  : Fpath.t;
   id    : Blob.hash;
 
   stats : stat_info;
@@ -56,7 +56,7 @@ type t = entry list
 val empty: t
 (*e: signature [[Index.empty]] *)
 (*s: signature [[Index.mk_entry]] *)
-val mk_entry: Common.filename -> Sha1.t -> Unix.stats -> entry
+val mk_entry: Fpath.t -> Sha1.t -> Unix.stats -> entry
 (*e: signature [[Index.mk_entry]] *)
 
 (*s: signature [[Index.stat_info_of_lstats]] *)
@@ -78,7 +78,7 @@ val write: t -> unit IO.output -> unit
 (*e: signature [[Index.write]] *)
 
 (*s: signature [[Index.remove_entry]] *)
-val remove_entry: t -> Common.filename -> t
+val remove_entry: t -> Fpath.t -> t
 (*e: signature [[Index.remove_entry]] *)
 (*s: signature [[Index.add_entry]] *)
 val add_entry: t -> entry -> t

@@ -3,6 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -26,7 +27,7 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   | Some { Tree.perm = Tree.Dir; _ } -> None
   | Some { Tree.perm = Tree.Commit; _ } -> failwith "submodule not supported"
   | Some x -> Some ({ Change.
-    path = Filename.concat dirpath x.Tree.name;
+    path = dirpath / x.Tree.name;
     mode = Index.mode_of_perm x.Tree.perm;
     
     (* todo: do that later? once know we will return a change with this entry?
@@ -39,12 +40,11 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
 
 (*s: function [[Changes.content_from_path_and_stat_index]] *)
 (* similar to Repository.content_from_path_and_unix_stat *)
-let content_from_path_and_stat_index path stat_info =
+let content_from_path_and_stat_index (path : Fpath.t) stat_info =
   match stat_info.Index.mode with
   | Index.Link ->
-    Unix.readlink path
+    Unix.readlink !!path
   | Index.Normal | Index.Exec ->
-      let path = Fpath.v path in
       path |> UChan.with_open_in (fun (ch : Chan.i) ->
         ch.ic |> IO.input_channel |> IO.read_all
       )
@@ -64,7 +64,7 @@ let content_from_path_and_stat_index path stat_info =
 let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
   let changes = ref [] in
   let add x = Stack_.push x changes in
-  Tree.walk_trees read_tree "" (fun dirpath entry1_opt entry2_opt ->
+  Tree.walk_trees read_tree (Fpath.v "XXX") (fun dirpath entry1_opt entry2_opt ->
     (* if entries are directories, then we would be called again
      * with their individual files, so safe to skip the dir entries.
      *)
@@ -99,9 +99,9 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
 let changes_worktree_vs_index read_blob worktree index =
   index |> List.map (fun entry ->
     let old_stat = entry.Index.stats in
-    let path = Filename.concat worktree entry.Index.path in
+    let path = worktree // entry.Index.path in
     let new_stat_opt = 
-      try Some (Unix.lstat path |> Index.stat_info_of_lstats)
+      try Some (Unix.lstat !!path |> Index.stat_info_of_lstats)
       with Unix.Unix_error _ -> None
     in
     match new_stat_opt with
@@ -151,7 +151,7 @@ let changes_index_vs_tree read_tree index treeid =
   in
   let changes = ref [] in
 
-  tree |> Tree.walk_tree read_tree "" (fun relpath entry_head ->
+  tree |> Tree.walk_tree read_tree (Fpath.v "XXX") (fun relpath entry_head ->
     let perm = entry_head.Tree.perm in
     match perm with
     | Tree.Dir -> ()

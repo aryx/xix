@@ -3,14 +3,15 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Fpath_.Operators
 
 (*s: function [[Cmd_push.push]] *)
 (* =~ git fetch + git merge but inverting dst and src  *)
-let push src_repo url_dst =
+let push src_repo (url_dst : string) =
   let url = src_repo.Repository.worktree in
-  let dst = Repository.open_ url_dst in
+  let dst = Repository.open_ (Fpath.v url_dst) in
   (* todo: detect if clean repo? status is empty? *)
-  let client = Clients.client_of_url url in
+  let client = Clients.client_of_url !!url in
 
 
   (* less: allow to grab from multiple heads, not just HEAD *)

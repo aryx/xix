@@ -49,14 +49,14 @@ val show: t -> unit
 
 (*s: signature [[Tree.walk_tree]] *)
 val walk_tree: 
-  (hash -> t) -> Common.filename (* dir *) -> 
-  (Common.filename -> entry -> unit) -> t -> unit
+  (hash -> t) -> Fpath.t (* dir *) -> 
+  (Fpath.t -> entry -> unit) -> t -> unit
 (*e: signature [[Tree.walk_tree]] *)
 
 (*s: signature [[Tree.walk_trees]] *)
 val walk_trees:
-  (hash -> t) -> Common.filename (* dir *) ->
-  (Common.filename -> entry option -> entry option -> unit) -> t -> t -> unit
+  (hash -> t) -> Fpath.t (* dir *) ->
+  (Fpath.t -> entry option -> entry option -> unit) -> t -> t -> unit
 (*e: signature [[Tree.walk_trees]] *)
 
 (*e: version_control/tree.mli *)

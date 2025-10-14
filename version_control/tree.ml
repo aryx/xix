@@ -18,6 +18,7 @@
 (*e: copyright ocaml-git *)
 open Common
 open Ord.Operators
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -72,9 +73,9 @@ type hash = Sha1.t
  * being called in order (so it can easily create for example sorted 
  * index entries while visiting a tree)
  *)
-let rec walk_tree read_tree dirpath f xs =
+let rec walk_tree read_tree (dirpath : Fpath.t) f xs =
   xs |> List.iter (fun entry ->
-    let relpath = Filename.concat dirpath entry.name in
+    let relpath = dirpath / entry.name in
     f relpath entry;
     match entry.perm with
     | Dir ->
@@ -88,21 +89,21 @@ let rec walk_tree read_tree dirpath f xs =
 (*e: function [[Tree.walk_tree]] *)
 
 (*s: function [[Tree.walk_trees]] *)
-let rec walk_trees read_tree dirpath f xs ys =
+let rec walk_trees read_tree (dirpath : Fpath.t) f xs ys =
   let g dirpath entry1_opt entry2_opt =
     f dirpath entry1_opt entry2_opt;
     (match entry1_opt, entry2_opt with
     | Some { perm = Dir; name = str; id = sha }, None ->
-      walk_trees read_tree (Filename.concat dirpath str) f
+      walk_trees read_tree (dirpath / str) f
         (read_tree sha) []
     | None, Some { perm = Dir; name = str; id = sha } ->
-      walk_trees read_tree (Filename.concat dirpath str) f
+      walk_trees read_tree (dirpath / str) f
         [] (read_tree sha)
     | Some { perm = Dir; name = str1; id = sha1 },
       Some { perm = Dir; name = str2; id = sha2 } ->
       assert (str1 = str2);
         (* todo: could skip if sha1 = sha2 here, useful opti *)
-        walk_trees read_tree (Filename.concat dirpath str1) f
+        walk_trees read_tree (dirpath / str1) f
           (read_tree sha1) (read_tree sha2)
     | None, None -> raise (Impossible "two None in walk_trees.g")
     (* no directories, no need to recurse *)

@@ -5,7 +5,7 @@
 
 (*s: function [[Cmd_clone.clone]] *)
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)
-let clone url path_dst =
+let clone url (path_dst : Fpath.t) =
   let client = Clients.client_of_url url in
   
   Repository.init path_dst;
@@ -32,8 +32,8 @@ let cmd = { Cmd_.
   ];
   f = (fun args ->
     match args with
-    | [url]     -> clone url "."
-    | [url;dst] -> clone url dst
+    | [url]     -> clone url (Fpath.v ".")
+    | [url;dst] -> clone url (Fpath.v dst)
     | _ -> raise Cmd_.ShowUsage
   );
 }

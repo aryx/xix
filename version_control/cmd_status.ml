@@ -3,6 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Fpath_.Operators
 open Regexp_.Operators
 
 (*s: type [[Cmd_status.status]] *)
@@ -12,7 +13,7 @@ type status = {
   (* diff worktree vs index *)
   unstaged: Change.t list;
   (* other *)
-  untracked: Common.filename list;
+  untracked: Fpath.t list;
 }
 (*e: type [[Cmd_status.status]] *)
 
@@ -36,10 +37,10 @@ let untracked r =
   let res = ref [] in
   r.Repository.worktree |> Repository.walk_dir (fun dir _dirs files ->
     files |> List.iter (fun file ->
-      let path = Filename.concat dir file in
+      let path = dir / file in
       let path = 
-        if path =~ "^\\./\\(.*\\)"
-        then Regexp_.matched1 path
+        if !!path =~ "^\\./\\(.*\\)"
+        then Fpath.v (Regexp_.matched1 !!path)
         else path
       in
       if not (Hashtbl.mem h path)
@@ -67,11 +68,11 @@ let status_of_repository r =
 let print_change_long change =
   match change with
   | Change.Add entry ->
-    UConsole.print (spf "	new file:	%s" entry.Change.path)
+    UConsole.print (spf "	new file:	%s" !!(entry.Change.path))
   | Change.Del entry ->
-    UConsole.print (spf "	deleted:	%s" entry.Change.path)
+    UConsole.print (spf "	deleted:	%s" !!(entry.Change.path))
   | Change.Modify (entry1, _entry2) ->
-    UConsole.print (spf "	modified:	%s" entry1.Change.path)
+    UConsole.print (spf "	modified:	%s" !!(entry1.Change.path))
 (*e: function [[Cmd_status.print_change_long]] *)
 
 
@@ -103,7 +104,7 @@ let print_status_long st =
 (*  (use "git add <file>..." to include in what will be committed) *)
     UConsole.print "";
     st.untracked |> List.iter (fun file ->
-      UConsole.print (spf "	%s" file)
+      UConsole.print (spf "	%s" !!file)
     );
     UConsole.print "";
   end
@@ -137,7 +138,7 @@ let cmd = { Cmd_.
     (* less: --branch, --ignored *)
   ];
   f = (fun args ->
-    let r, relpaths = Repository.find_root_open_and_adjust_paths args in
+    let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
     | [] -> status r
     | _xs -> raise Cmd_.ShowUsage

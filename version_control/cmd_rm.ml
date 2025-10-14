@@ -27,7 +27,7 @@ let cmd = { Cmd_.
     match args with
     | [] -> raise Cmd_.ShowUsage
     | xs ->
-      let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
+      let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings xs) in
       rm r relpaths
   );
 }

@@ -12,7 +12,7 @@ val changes_tree_vs_tree:
 (* for git diff and git status *)
 val changes_worktree_vs_index:
   (Blob.hash -> Change.content) ->
-  Common.filename -> Index.t -> Change.t list
+  Fpath.t -> Index.t -> Change.t list
 (*e: signature [[Changes.changes_worktree_vs_index]] *)
 
 (*s: signature [[Changes.changes_index_vs_tree]] *)

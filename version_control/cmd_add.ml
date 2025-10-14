@@ -25,7 +25,7 @@ let cmd = { Cmd_.
     match args with
     | [] -> Logs.app (fun m -> m "Nothing specified, nothing added.")
     | xs ->
-      let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
+      let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings xs) in
       (* less: support directories *)
       add r relpaths
   );

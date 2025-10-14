@@ -121,21 +121,21 @@ let rec find_include (conf : Preprocessor.conf) (f : Fpath.t) (system : bool) =
   if system
   then find_include_bis conf.paths f
   else find_include_bis (conf.dir_source_file::conf.paths) f
-and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Common.filename =
+and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
   match paths with 
   (* stricter: better error message *)
   | [] -> failwith (spf "could not find %s in include paths" !!f)
   | x::xs ->
-      let path = 
+      let path : Fpath.t = 
         if !!x = "."
         (* this will handle also absolute path *)
-        then !!f
-        else Filename.concat !!x !!f 
+        then f
+        else x // f 
       in
-      if Sys.file_exists path
+      if Sys.file_exists !!path
       then begin
         if !Flags.debug_inclusion
-        then Logs.app (fun m -> m "%d: %s" !L.line path);
+        then Logs.app (fun m -> m "%d: %s" !L.line !!path);
         path
       end
       else find_include_bis xs f
@@ -180,8 +180,9 @@ let parse hooks (conf : Preprocessor.conf) (file : Fpath.t) =
             | D.Include (f, system_hdr) ->
                 let path = find_include conf f system_hdr in
                 (try 
-                  let chan = open_in path in
-                  L.add_event (L.Include (Fpath.v path));
+                  (* TODO: caps!! *)
+                  let chan = open_in !!path in
+                  L.add_event (L.Include path);
                   let lexbuf = Lexing.from_channel chan in
                   (* less: 
                      if List.length stack > 1000

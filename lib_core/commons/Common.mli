@@ -4,9 +4,6 @@
 
 type byte = char
 
-(* TODO: delete, use Fpath.t *)
-type filename = string
-
 exception Todo
 exception Impossible of string
 

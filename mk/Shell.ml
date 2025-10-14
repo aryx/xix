@@ -118,7 +118,7 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
 (*e: function [[Shell.exec_shell]] *)
 
 (*s: function [[Shell.feed_shell_input]] *)
-let feed_shell_input inputs pipe_write =
+let feed_shell_input (inputs : string list) (pipe_write : Unix.file_descr) : unit =
   inputs |> List.iter (fun str ->
     let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
     if n < 0
@@ -194,7 +194,7 @@ let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flag
 (*e: function [[Shell.exec_recipe]] *)
 
 (*s: function [[Shell.exec_backquote]] *)
-let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
+let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) (input : string) =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
 

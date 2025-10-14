@@ -29,7 +29,7 @@ val exec_pipecmd :
   < caps ; .. > ->
   Shellenv.t ->
   string (* sh stdin (recipe) *) ->
-  Common.filename (* sh output*)
+  string (* sh output *)
 (*e: signature [[Shell.exec_pipecmd]] *)
 
 (* internals *)

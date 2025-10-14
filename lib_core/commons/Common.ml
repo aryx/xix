@@ -13,8 +13,6 @@
 
 type byte = char
 
-type filename = string
-
 exception Todo
 exception Impossible of string
 

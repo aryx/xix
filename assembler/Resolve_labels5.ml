@@ -61,7 +61,10 @@ let resolve ps =
         (* less: could issue warning if cond <> AL when B or Bxx,
          * or normalize?
          *)
-        | B opd | BL opd | Bxx (_, opd) -> resolve_branch_operand opd
+        (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> *)
+        | B opd -> resolve_branch_operand opd
+        | BL opd -> resolve_branch_operand opd
+        | Bxx (_, opd) -> resolve_branch_operand opd
         | _ -> ()
         );
         incr pc;

@@ -3,6 +3,9 @@ open Common
 
 module L = Location_cpp
 module T = Parser_asm5  (* T for Tokens *)
+(* for fields access for ocaml-light *)
+open Parse_cpp
+open Chan
 
 (*****************************************************************************)
 (* Prelude *)

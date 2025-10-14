@@ -1,14 +1,16 @@
 <mkconfig
 
-DIRS1=\
+DIRS0=\
   lib_core/collections lib_core/commons\
   mk shell\
   lib_parsing lex yacc\
   macroprocessor\
   lib_toolchain/objects assembler\
   lib_toolchain/executables linker\
-  compiler \
-  version_control
+  compiler
+
+# does not work yet with ocaml-light
+DIRS1=version_control
 
 # works only under plan9 for now: 
 DIRS2=lib_core/commons2 lib_system/plan9 lib_graphics windows
@@ -16,20 +18,7 @@ DIRS2=lib_core/commons2 lib_system/plan9 lib_graphics windows
 # works only from scratch:
 DIRS3=kernel
 
-DIRS=$DIRS1 #$DIRS2 #DIRS3
-
-#TODO: add the other dirs from DIRS1 and remove once DIRS_LIGHT==DIRS1
-DIRS_LIGHT=\
-  lib_core/collections lib_core/commons\
-  mk shell\
-  lib_parsing lex yacc\
-  macroprocessor \
-  lib_toolchain/objects assembler \
-  lib_toolchain/executables linker \
-  compiler
-
-#TODO: assembler linker compiler version_control
-
+DIRS=$DIRS0 #$DIRS2 #DIRS3
 
 TESTDIRS=\
   assembler/tests compiler/tests linker/tests \
@@ -52,16 +41,6 @@ clean nuke:V:
 	for(i in $DIRS $TESTDIRS) @{
 		cd $i
 		mk $MKFLAGS $target
-	}
-
-# ???
-SUBDIRS=$DIRS $TESTDIRS
-
-%.light:V:
-	for(i in $DIRS_LIGHT) @{
-		echo $i/
-		cd $i
-		mk $MKFLAGS $stem
 	}
 
 # too many dupes for now (e.g., ast.ml in mutliple dirs)

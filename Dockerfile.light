@@ -22,9 +22,8 @@ ENV PATH="$PATH:/xix/bin"
 # TODO: at some point use the boostrapped /src/bin/rc
 ENV MKSHELL="/usr/bin/rc"
 RUN cp mkconfig.light mkconfig
-# TODO: mk depend and mk all at some point
-RUN mk depend.light
-RUN mk all.light
+RUN mk depend
+RUN mk all
 
 #TODO: disabled for now, does not build on arm64
 #RUN mk opt.light

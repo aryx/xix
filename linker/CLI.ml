@@ -2,6 +2,8 @@
 open Common
 
 module T = Types
+(* for ocaml-light field access *)
+open Types
 
 (*****************************************************************************)
 (* Prelude *)
@@ -59,7 +61,7 @@ let link (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : uni
   let (code, data, symbols) = Load5.load objfiles in
 
   (* mark at least as SXref the entry point *)
-  T.lookup (config.T.entry_point, T.Public) None symbols |> ignore;
+  T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   Check.check symbols;
   
   let graph = Resolve5.build_graph symbols code in
@@ -68,15 +70,15 @@ let link (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : uni
   let symbols2, (data_size, bss_size) = 
     Layout5.layout_data symbols data in
   let symbols2, graph(* why modify that??*), text_size = 
-    Layout5.layout_text symbols2 config.T.init_text graph in
+    Layout5.layout_text symbols2 config.init_text graph in
 
-  let sizes = { T.text_size = text_size; data_size = data_size; bss_size = bss_size } in
+  let sizes = { text_size; data_size; bss_size } in
   let init_data =  
-    match config.T.init_data with
-    | None -> Int_.rnd (text_size + config.T.init_text) config.T.init_round
+    match config.init_data with
+    | None -> Int_.rnd (text_size + config.init_text) config.init_round
     | Some x -> x
   in
-  let config = { config with T.init_data = Some init_data } in
+  let config = { config with init_data = Some init_data } in
  
   let instrs = Codegen5.gen symbols2 config graph in
   let datas  = Datagen.gen symbols2 init_data sizes data in
@@ -160,7 +162,7 @@ let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
                 failwith (spf "-D%d is ignored because of -R%d" x y)
             | _ -> ()
             );
-            { T.
+            { 
               header_type = "a.out";
               header_size = 32;
               (* 4128 = 4096 (1 page) + 32 (the header) *)

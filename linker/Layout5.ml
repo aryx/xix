@@ -3,6 +3,8 @@ open Common
 
 module T = Types
 module T5 = Types5
+(* for ocaml-lights field access *)
+open Types5
 
 let xdefine h2 h symb v =
   (* stricter: we do not accept previous def of special symbols *)
@@ -55,7 +57,7 @@ let layout_data symbols ds =
   symbols |> Hashtbl.iter (fun symb v ->
     match v.T.section with
     | T.SData size when Hashtbl.mem is_data symb ->
-        Hashtbl.add h2 symb (T.SData2 !orig);
+        Hashtbl.add h2 symb (T.SData2 (!orig, T.Data));
         orig := !orig + size;
     | _ -> ()
   );
@@ -66,7 +68,7 @@ let layout_data symbols ds =
   symbols |> Hashtbl.iter (fun symb v ->
     match v.T.section with
     | T.SData size when not (Hashtbl.mem is_data symb) ->
-        Hashtbl.add h2 symb (T.SBss2 !orig);
+        Hashtbl.add h2 symb (T.SData2(!orig, T.Bss));
         orig := !orig + size;
     | _ -> ()
   );
@@ -74,10 +76,10 @@ let layout_data symbols ds =
   let bss_size = !orig - data_size in
 
   (* define special symbols *)
-  xdefine h2 symbols ("bdata"  , T.Public) (T.SData2 0);
-  xdefine h2 symbols ("edata"  , T.Public) (T.SData2 data_size);
-  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size));
-  xdefine h2 symbols ("setR12" , T.Public) (T.SData2 0);
+  xdefine h2 symbols ("bdata"  , T.Public) (T.SData2 (0, T.Data));
+  xdefine h2 symbols ("edata"  , T.Public) (T.SData2 (data_size, T.Data));
+  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size, T.Data));
+  xdefine h2 symbols ("setR12" , T.Public) (T.SData2 (0, T.Data));
   (* This is incorrect but it will be corrected later. This has
    * no consequence on the size of the code computed in layout_text
    * because address resolution for procedures always use a literal
@@ -102,14 +104,14 @@ let layout_text symbols2 init_text cg =
   let literal_pools = ref [] in
 
   cg |> T5.iter (fun n ->
-    n.T5.real_pc <- !pc;
+    n.real_pc <- !pc;
 
     let size, poolopt = 
       Codegen5.size_of_instruction symbols2 !autosize n 
     in
     if size = 0
     then
-      (match n.T5.instr with
+      (match n.instr with
       | T5.TEXT (global, _, size) ->
           (* remember that rewrite5 has adjusted autosize correctly *)
           autosize := size;
@@ -118,7 +120,7 @@ let layout_text symbols2 init_text cg =
            *)
           Hashtbl.add symbols2 (T5.symbol_of_global global) (T.SText2 !pc);
       | _ -> failwith (spf "zero-width instruction at %s" 
-                         (T5.s_of_loc n.T5.loc))
+                         (T5.s_of_loc n.loc))
       );
     poolopt |> Option.iter (fun pool ->
       match pool with
@@ -126,12 +128,12 @@ let layout_text symbols2 init_text cg =
       | Codegen5.PoolOperand imm_or_ximm ->
           let instr = T5.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
-          let node = { T5. instr = instr; next = None; branch = None; real_pc = -1; 
-                           loc = n.T5.loc } in
-          if node.T5.branch <> None
+          let node = { instr = instr; next = None; branch = None; real_pc = -1; 
+                           loc = n.loc } in
+          if node.branch <> None
           then raise (Impossible "attaching literal to branching instruction");
 
-          n.T5.branch <- Some node;
+          n.branch <- Some node;
           literal_pools |> Stack_.push node;
           
     );
@@ -139,14 +141,14 @@ let layout_text symbols2 init_text cg =
 
     (* flush pool *)
     (* todo: complex condition when possible out of offset range *)
-    if n.T5.next = None && !literal_pools <> [] then begin
+    if n.next = None && !literal_pools <> [] then begin
       (* extend cg, and so the cg |> T5.iter, on the fly! *)
       let rec aux prev xs =
         match xs with
         | [] -> ()
         | x::xs ->
             (* cg grows *)
-            prev.T5.next <- Some x;
+            prev.next <- Some x;
             aux x xs
       in
       aux n !literal_pools;
@@ -156,10 +158,10 @@ let layout_text symbols2 init_text cg =
   );
   if !Flags.debug_layout then begin
     cg |> T5.iter (fun n ->
-      Logs.app (fun m -> m  "%d: %s" n.T5.real_pc
-             (n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
-      n.T5.branch |> Option.iter (fun n -> 
-        Logs.app (fun m -> m " -> branch: %d" n.T5.real_pc)
+      Logs.app (fun m -> m  "%d: %s" n.real_pc
+             (n.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
+      n.branch |> Option.iter (fun n -> 
+        Logs.app (fun m -> m " -> branch: %d" n.real_pc)
       )
     );
   end;

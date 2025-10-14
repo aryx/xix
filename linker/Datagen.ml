@@ -13,7 +13,7 @@ let gen symbols2 init_data sizes ds =
     let T5.DATA (global, offset2, size_slice, v) = d in
     let info = Hashtbl.find symbols2 (T5.symbol_of_global global) in
     match info with
-    | T.SData2 offset ->
+    | T.SData2 (offset, T.Data) ->
         let base = offset + offset2 in
         (match v with
         | Left _i -> raise Todo
@@ -25,19 +25,13 @@ let gen symbols2 init_data sizes ds =
             let info2 = Hashtbl.find symbols2 (T5.symbol_of_global global2) in
             let _i = 
               match info2 with
-              | T.SText2 real_pc -> 
-                  real_pc
-              (* ocaml-light: | T.SData2 offset | T.SBss2 offset ->  *)
-              | T.SData2 offset -> init_data + offset
-              | T.SBss2 offset -> init_data + offset
+              | T.SText2 real_pc -> real_pc
+              | T.SData2 (offset, _kind) -> init_data + offset
             in
             raise Todo
         | Right (Address (Local _ | Param _)) -> raise Todo
         )
-    | T.SBss2 _ -> raise (Impossible "layout_data missed a DATA")
+    | T.SData2 (_, T.Bss) -> raise (Impossible "layout_data missed a DATA")
     | T.SText2 _ -> raise (Impossible "layout_data did this check")
   );
   arr
-
-
-

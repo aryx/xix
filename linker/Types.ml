@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 type symbol = string * scope
@@ -38,8 +38,8 @@ type symbol_table = (symbol, value) Hashtbl.t
 type section2 =
   | SText2 of real_pc
   (* offset to start of data section for ARM *)
-  | SData2 of offset
-  | SBss2 of offset
+  | SData2 of offset * data_kind
+  and data_kind = Data | Bss
 
 type value2 = section2
 

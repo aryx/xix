@@ -3,6 +3,7 @@ open Common
 open Either
 
 open Ast_asm5
+open Types5
 module T = Types
 module T5 = Types5
 
@@ -37,8 +38,8 @@ type pool =
 
 let error node s =
   failwith (spf "%s at %s on %s" s 
-              (T5.s_of_loc node.T5.loc)
-              (node.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v)
+              (T5.s_of_loc node.loc)
+              (node.instr |> Meta_types5.vof_instr |> OCaml.string_of_v)
   )
 
 (* new: can detect some typing mistakes *)
@@ -89,7 +90,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
   | Entity (Global (global, off)) ->
       let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
       (match v with
-      | T.SData2 offset | T.SBss2 offset -> 
+        | T.SData2 (offset, _kind) ->
           rSB, offset_to_R12 (offset + off)
       (* stricter: allowed in 5l but I think with wrong codegen *)
       | T.SText2 _ -> 
@@ -198,12 +199,12 @@ let gshift (R rf) op2 rcon =
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 
 
-let gbranch_static {T5. loc = _loc; branch = branch; real_pc = src_pc; _ } cond is_bl =
-  match branch with
+let gbranch_static (nsrc : T5.node) cond is_bl =
+  match nsrc.branch with
   | None -> raise (Impossible "resolving should have set the branch field")
-  | Some n -> 
-      let dst_pc = n.T5.real_pc in
-      let v = (dst_pc - src_pc) - 8 in
+  | Some ndst -> 
+      let dst_pc = ndst.real_pc in
+      let v = (dst_pc - nsrc.real_pc) - 8 in
       if v mod 4 <> 0
       then raise (Impossible "layout text wrong, not word aligned node");
       let v = (v asr 2) land 0xffffff in
@@ -242,13 +243,13 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   | Either.Right (R r) -> [(1, 25); (r, 0)]
   )
 
-let gload_from_pool { T5. branch = branch; real_pc = src_pc; _ } cond rt =
-  match branch with
+let gload_from_pool (nsrc : T5.node) cond rt =
+  match nsrc.branch with
   | None -> raise (Impossible "literal pool should be attached to node")
-  | Some n ->
+  | Some ndst ->
       (* less: could assert the dst node is a WORD *)
-      let dst_pc = n.T5.real_pc in
-      let v = (dst_pc - src_pc) - 8 in
+      let dst_pc = ndst.real_pc in
+      let v = (dst_pc - nsrc.real_pc) - 8 in
       if v mod 4 <> 0
       then raise (Impossible "layout text wrong, not word aligned node");
       (* LDR v(R15), RT (usually R11) *)
@@ -272,7 +273,7 @@ type action = {
  * - r  = register middle (called Rn in refcard)
  *)
 let rules symbols2 autosize init_data node =
-  match node.T5.instr with
+  match node.instr with
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
@@ -292,7 +293,7 @@ let rules symbols2 autosize init_data node =
             let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
             (match v with
              | T.SText2 real_pc -> [ [(real_pc, 0)] ]
-             | T.SData2 offset | T.SBss2 offset -> 
+             | T.SData2 (offset, _kind) -> 
                  (match init_data with
                  | None -> raise (Impossible "init_data should be set by now")
                  | Some init_data -> [ [(init_data + offset, 0)] ]
@@ -508,7 +509,7 @@ let rules symbols2 autosize init_data node =
               try 
                 let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
                 match v with
-                | T.SData2 offset | T.SBss2 offset ->
+                | T.SData2 (offset, _kind) ->
                     let final_offset = offset_to_R12 offset in
                     (* super important condition! for bootstrapping
                      * setR12 in MOVW $setR12(SB), R12 and not
@@ -638,20 +639,20 @@ let gen symbols2 config cg =
 
   cg |> T5.iter (fun n ->
 
-    let {size = size; binary = binary; _ }  = rules symbols2 !autosize config.T.init_data n in
+    let {size; binary; pool = _ }  = rules symbols2 !autosize config.T.init_data n in
     let instrs = binary () in
 
-    if n.T5.real_pc <> !pc
+    if n.real_pc <> !pc
     then raise (Impossible "Phase error, layout inconsistent with codegen");
     if List.length instrs * 4 <> size
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
-                              (T5.s_of_loc n.T5.loc)));
+                              (T5.s_of_loc n.loc)));
 
     let xs = instrs |> List.map Assoc.sort_by_val_highfirst in
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s" (n.T5.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
+      Logs.app (fun m -> m "%s" (n.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
       Logs.app (fun m -> m "-->");
       xs |> List.iter (fun x ->
         let w = word_of_composed_word x in
@@ -668,7 +669,7 @@ let gen symbols2 config cg =
     res |> Stack_.push xs;
 
     pc := !pc + size;
-    (match n.T5.instr with
+    (match n.instr with
     (* after the resolve phase the size of a TEXT is the final autosize *)
     | T5.TEXT (_, _, size) -> autosize := size;
     | _ -> ()

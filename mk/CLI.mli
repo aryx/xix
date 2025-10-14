@@ -6,9 +6,8 @@
  *  - env: for Env.initenv() so mk recipe can access env variables.
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
- *  - chdir: actually needed just for -debugger, we could remove
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.chdir >
+type caps = < Cap.forkew; Cap.env; Cap.argv >
 (*e: type [[CLI.caps]] *)
 
 (*s: signature [[CLI.main]] *)

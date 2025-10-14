@@ -103,9 +103,8 @@ module R = Rules
  *  - env: for Env.initenv() so mk recipe can access env variables.
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
- *  - chdir: actually needed just for -debugger, we could remove
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.chdir >
+type caps = < Cap.forkew; Cap.env; Cap.argv >
 (*e: type [[CLI.caps]] *)
 
 (*s: constant [[CLI.usage]] *)
@@ -196,10 +195,12 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     );
     (*e: [[CLI.build_targets()]] initialize [[env]] using [[vars]] *)
     (*s: [[CLI.build_targets()]] if debugger set *)
+    (* ???
     if !Flags.debugger then begin
       CapSys.chdir caps (Filename.dirname !!infile);
       Env.add_var env "objtype" ["386"]
     end;
+    *)
     (*e: [[CLI.build_targets()]] if debugger set *)
 
     (* parsing *)

@@ -33,6 +33,7 @@ let parse (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program =
   Parse_cpp.parse hooks conf file
 
 
+(* ?? what for ? *)
 let parse_no_cpp (file : Fpath.t) : Ast_asm5.program =
   file |> UChan.with_open_in (fun (chan : Chan.i) ->
     L.line := 1;

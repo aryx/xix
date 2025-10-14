@@ -1,6 +1,7 @@
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 open Parser
 module A = Ast
@@ -70,6 +71,13 @@ let code_of_escape_char c =
 let string_of_ascii i =
   String.make 1 (Char.chr i)
 
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let char_ lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
+
 }
 
 (*****************************************************************************)
@@ -138,18 +146,38 @@ rule token = parse
   (* Numbers *)
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
-  | "0"  (oct+ as s) (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst(loc(), "0o"^s, inttype_of_suffix unsigned long)}
-  | "0x" (hex+ as s)  (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst(loc(), "0x"^s, inttype_of_suffix unsigned long)}
+  | "0"  (oct+ (*as s*)) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+      { let (s, unsigned, long) = 
+           let s = Lexing.lexeme lexbuf in
+           s =~ "0\\([0-7]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+           Regexp_.matched3 s
+        in
+        TIConst(loc(), "0o" ^ s, inttype_of_suffix unsigned long)}
+  | "0x" (hex+ (*as s*))  (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+      { let (s, unsigned, long) = 
+           let s = Lexing.lexeme lexbuf in
+           s =~ "0x\\([0-9A-Fa-f]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+           Regexp_.matched3 s
+        in
+        TIConst(loc(), "0x" ^ s, inttype_of_suffix unsigned long)}
   | "0x" { error "malformed hex constant" }
-  | ['0'-'9'] digit* (['U''u']? as unsigned) (['L''l']* as long)
-      { TIConst (loc(), Lexing.lexeme lexbuf, inttype_of_suffix unsigned long)}
+  | (['0'-'9'] digit*) (*as s*) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+      { let (s, unsigned, long) = 
+           let s = Lexing.lexeme lexbuf in
+           s =~ "\\([0-9]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+           Regexp_.matched3 s
+        in
+        TIConst (loc(), s, inttype_of_suffix unsigned long)}
 
   (* stricter: I impose some digit+ after '.' and after 'e' *)
-  | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) as s 
-      (['F''f']* as float)
-     { TFConst (loc(), s, floattype_of_suffix float) }
+  | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) (*as s*)
+      (['F''f']* (*as float*))
+     { let (s, float) =
+          let s = Lexing.lexeme lexbuf in
+          s =~ "\\([^Ff]+\\)\\([Ff]*\\)$" |> ignore;
+          Regexp_.matched2 s
+        in
+        TFConst (loc(), s, floattype_of_suffix float) }
 
   (* special regexp for better error message *)
   | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
@@ -217,17 +245,20 @@ rule token = parse
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
-  | _ as c   { error (spf "unrecognized character: '%c'" c) }
+  | _ (*as c*)   { let c = char_ lexbuf in
+                   error (spf "unrecognized character: '%c'" c) }
 
 (*****************************************************************************)
 (* String rule *)
 (*****************************************************************************)
 and string = parse
   | '"' { "" }
-  | "\\" ((oct oct oct) as s)
-      { let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
-  | "\\" (['a'-'z' '\\' '"'] as c) 
-      { let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
+  | "\\" ((oct oct oct) (*as s*))
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
+  | "\\" (['a'-'z' '\\' '"'] (*as c*)) 
+      { let c = String.get (Lexing.lexeme lexbuf) 1 in
+        let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
   (* strings can contain newline! but they must be escaped before *)
   | '\\' '\n' { "\n" ^ string lexbuf }
   | [^ '\\' '"' '\n']+   
@@ -242,10 +273,18 @@ and string = parse
 and char = parse
   | "''"                            { Char.code '\'' }
   (* less: 5c allows up to 8 octal number when in L'' mode *)
-  | "\\" ((oct oct? oct?) as s) "'" { int_of_string ("0o" ^ s) }
-  | "\\" (['a'-'z' '\\' '\''] as c) "'"       { code_of_escape_char c }
+  | "\\" ((oct oct? oct?) (*as s*)) "'" 
+      { let s = Lexing.lexeme lexbuf |>
+           String_.drop_prefix 1 |> String_.drop_suffix 1
+        in
+        int_of_string ("0o" ^ s) }
+  | "\\" (['a'-'z' '\\' '\''] (*as c*)) "'"       
+      { let c = String.get (Lexing.lexeme lexbuf) 1 in
+        code_of_escape_char c }
   | '\\' '\n' { char lexbuf }
-  | [^ '\\' '\'' '\n'] as c  "'"    { Char.code c }
+  | [^ '\\' '\'' '\n'] (*as c*)  "'"    
+      { let c = String.get (Lexing.lexeme lexbuf) 0 in
+        Char.code c }
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }
   | _    { error "missing '" }

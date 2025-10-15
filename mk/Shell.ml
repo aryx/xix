@@ -233,7 +233,7 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) (input : string)
         s ^ loop_read ()
     in
     let output = loop_read () in
-    Unix.waitpid [] pid |> ignore;
+    CapUnix.waitpid caps [] pid |> ignore;
     output
   end
 (*e: function [[Shell.exec_backquote]] *)
@@ -264,7 +264,7 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     
     feed_shell_input [input] pipe_write_input;
 
-    let (pid2, status) = Unix.waitpid [] pid in
+    let (pid2, status) = CapUnix.waitpid caps [] pid in
     if pid <> pid2
     then raise (Impossible "waitpid takes the specific pid");
     (match status with

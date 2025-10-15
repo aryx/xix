@@ -138,10 +138,7 @@ type forkew = < fork; exec; wait >
 (* Temporary unsafe caps to help migration *)
 (**************************************************************************)
 (* !!DO NOT USE!! *)
-val network_caps_UNSAFE : unit -> < network >
 val tmp_caps_UNSAFE : unit -> < tmp >
-val stdout_caps_UNSAFE : unit -> < stdout >
-val readdir_UNSAFE : unit -> < readdir >
 
 (**************************************************************************)
 (* Entry point *)

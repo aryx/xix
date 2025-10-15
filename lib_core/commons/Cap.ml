@@ -265,27 +265,9 @@ let powerbox : all_caps =
 (**************************************************************************)
 
 (* !!DO NOT USE!! *)
-let network_caps_UNSAFE () =
-  object
-    method network = ()
-  end
-
-(* !!DO NOT USE!! *)
 let tmp_caps_UNSAFE () =
   object
     method tmp = ()
-  end
-
-(* !!DO NOT USE!! *)
-let stdout_caps_UNSAFE () =
-  object
-    method stdout = ()
-  end
-
-(* !!DO NOT USE!! *)
-let readdir_UNSAFE () =
-  object
-    method readdir = ()
   end
 
 (**************************************************************************)

@@ -18,12 +18,12 @@ open Preprocessor
  * 
  * Main limitations compared to the cpp embedded in 5c of Plan 9:
  *  - no support for unicode
- *  - see lexer_cpp.mll
+ *  - see Lexer_cpp.mll
  * Main limitations compared to ANSI cpp:
  *  - no complex boolean expressions for #ifdefs
- * 
+ *
  * stricter:
- *  - 
+ *  - see Lexer_cpp.mll
  * more general:
  *  - allow any number of arguments for macros 
  *    (not limited to 25 because of the use of #a to #z)
@@ -175,6 +175,8 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
             lexfunc ()
 
         | Sharp ->
+
+            (* treating cpp directives *)
             let t = Lexer_cpp.token lexbuf in
             (match t with
             | D.Include (f, system_hdr) ->
@@ -191,28 +193,22 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
                 with Failure s ->
                   error s
                 )
-
             | D.Define macro_ast ->
                (* todo: stricter: forbid s to conflict with C keyboard *)
                 define macro_ast
-
             | D.Undef s ->
                 (* stricter: check that was defined *)
                 if not (Hashtbl.mem hmacros s)
                 then error (spf "macro %s was not defined" s);
                 Hashtbl.remove hmacros s
-
             | D.Line (line, file) ->
                 L.add_event (L.Line (line, file));
-
             (* less: for "lib" should add a L.PragmaLib event? *)
             | D.Pragma _ -> ()
-
             | D.Ifdef s ->
                 if Hashtbl.mem hmacros s
                 then ()
                 else Lexer_cpp.skip_for_ifdef 0 true lexbuf
-
             | D.Ifndef s ->
                 if not (Hashtbl.mem hmacros s)
                 then ()

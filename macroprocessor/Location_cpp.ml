@@ -45,7 +45,8 @@ exception Error of string * loc
 (*****************************************************************************)
 
 (* for 5c -f *)
-let dump_event event =
+let dump_event (event : location_event) : unit =
+  (* alt: use deriving show above but kept this for compatibility with kencc *)
   match event with
   | Include file -> 
       Logs.app (fun m -> m "%4d: %s" !line !!file)
@@ -58,7 +59,7 @@ let dump_event event =
 (* Entry points *)
 (*****************************************************************************)
 
-let add_event event =
+let add_event (event : location_event) : unit =
   if !Flags_cpp.debug_line
   then dump_event event;
   history := {location_event = event; global_line = !line }::!history
@@ -71,7 +72,7 @@ let add_event event =
  * we want to stop when we encounter 150,
  * so when lineno < x.global_line below succeed for the first time.
  *)
-let final_loc_of_loc lineno =
+let final_loc_of_loc (lineno : loc) : final_loc =
   let rec aux (lastfile, lastlineno, lastdelta) stack xs =
     match xs with
     | [] -> lastfile, lineno - lastlineno + lastdelta

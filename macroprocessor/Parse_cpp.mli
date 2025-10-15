@@ -5,6 +5,7 @@ type token_category =
   | Ident of string
   | Other
 
+(* wrapper around a parser/lexer (e.g., 5c) to preprocess first the file *)
 type ('token, 'ast) hook = {
   lexer: Lexing.lexbuf -> 'token;
   parser: (Lexing.lexbuf -> 'token) -> Lexing.lexbuf -> 'ast;
@@ -12,29 +13,12 @@ type ('token, 'ast) hook = {
   eof: 'token;
 }
 
-(* [parse] will [open_in] the passed file parameter but may also [open_in]
- * other files as [parse] will recursively process [#include] directives.
+(* Wrapper function around a parser/lexer.
+ *
+ * Regarding Cap.open_in, [parse] will [open_in] the passed file parameter but
+ * may also [open_in] other files as [parse] will recursively process
+ * [#include] directives.
  *)
 val parse: 
   < Cap.open_in; .. > ->
   ('token, 'ast) hook -> Preprocessor.conf -> Fpath.t -> 'ast
-
-(* internals:
-type macro = {
-  name: string;
-  nbargs: int option;
-  varargs: bool; (* use "..." *)
-  body: string;
-}
-
-val hmacros: (string, macro) Hashtbl.t
-
-val define_cmdline_def: (string * string) -> unit
-
-(* may raise an exception if macro was already defined *)
-val define: Ast_cpp.macro -> unit
-
-(* may raise an exception if the file could not be found *)
-val find_include:
-  include_paths -> (string * bool (* system header (<>) *)) -> Common.filename
-*)

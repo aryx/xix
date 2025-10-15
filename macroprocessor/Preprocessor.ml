@@ -3,6 +3,10 @@
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Data structure containing the command-line data that one can pass to cpp
+ * (e.g, -D and -I CLI flags).
+ * This is passed then to Parse_cpp.parse() in addition to hooks.
+ *)
 
 (*****************************************************************************)
 (* Types *)

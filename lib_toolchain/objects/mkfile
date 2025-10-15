@@ -1,5 +1,4 @@
 # -*- sh -*-
-
 TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor
@@ -7,5 +6,5 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor
 SRC=Ast_asm5.ml Object_code5.ml \
   Meta_ast_asm5.ml
 
-<$TOP/mklib
 <$TOP/mkconfig
+<$TOP/mklib

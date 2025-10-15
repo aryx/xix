@@ -15,6 +15,7 @@ LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_toolchain/objects/lib.cma $TOP/lib_t
 # or use Principia spirit! THE linker! so call it simply 'linker' ? :)
 PROG=5l
 
+<$TOP/mkconfig
 <$TOP/mkprog
 
 loc:V:

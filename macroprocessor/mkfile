@@ -5,6 +5,7 @@ INCLUDES=-I $TOP/lib_core/commons
 SRC= Flags_cpp.ml Location_cpp.ml Ast_cpp.ml Lexer_cpp.ml Preprocessor.ml \
  Parse_cpp.ml
 
+<$TOP/mkconfig
 <$TOP/mklib
 
 #<$TOP/mkparser

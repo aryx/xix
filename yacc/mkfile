@@ -2,7 +2,10 @@
 # The parser generator
 
 TOP=..
-INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_parsing
+
+# Just for Set_ and Map_. yacc/ might be synced with ocaml-light/yacc
+# at some point so keep the dependencies to xix to the minimum.
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_parsing
 
 # Note that those files are sync'ed by syncweb from principia/generators
 
@@ -16,7 +19,7 @@ SRC= Ast.ml\
 # need str.cma and commons/lib.cma because of Common.Stack_.nth
 # but we could inline this function in parsing_.ml to avoid those deps.
 SYSLIBS=str.cma
-LIBS=$TOP/lib_core/collections/lib.cma $TOP/lib_core/commons/lib.cma \
+LIBS=$TOP/lib_core/commons/lib.cma \
   $TOP/lib_parsing/lib.cma
 
 PROG=ocamlyacc

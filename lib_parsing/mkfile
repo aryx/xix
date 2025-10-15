@@ -4,7 +4,7 @@ TOP=..
 # We could have lexing.ml and parsing.ml. It would work with ocamlc,
 # but not with ocamlopt :(
 
-INCLUDES=-I $TOP/lib_core/collections -I $TOP/lib_core/commons
+INCLUDES=-I $TOP/lib_core/commons
 
 # Note that those files are sync'ed by syncweb from principia/generators
 

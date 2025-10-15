@@ -1,9 +1,10 @@
 TOP=.
 <mkconfig
 
+# STDLIB is defined (or not) in mkconfig
+
 DIRS0=\
-  $STDLIB \
-  lib_core/collections lib_core/commons\
+  $STDLIB lib_core/commons\
   mk shell\
   lib_parsing lex yacc\
   macroprocessor\

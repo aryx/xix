@@ -2,7 +2,9 @@
 
 TOP=..
 
-INCLUDES=-I $TOP/lib_core/collections
+# Just for Set_ and Map_. lex/ is synced almost as-is with ocaml-light/lex
+# so keep the dependencies to xix to the minimum.
+INCLUDES=-I $TOP/lib_core/commons
 
 # Note that those files are sync'ed by syncweb from principia/generators
 
@@ -12,7 +14,7 @@ SRC= Ast.ml \
  CLI.ml Main.ml
 
 SYSLIBS=
-LIBS=$TOP/lib_core/collections/lib.cma
+LIBS=$TOP/lib_core/commons/lib.cma
 
 PROG=ocamllex
 

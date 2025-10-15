@@ -76,7 +76,7 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['threadUnix.ml',
-	        'lib_core/strings/filename.ml', # for Sys.getenv TMPDIR
+	        'lib_core/strings/todo/filename.ml', # for Sys.getenv TMPDIR
 		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml',
 		

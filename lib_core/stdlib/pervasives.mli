@@ -9,7 +9,37 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: pervasives.mli,v 1.35 1997/07/02 18:16:12 xleroy Exp $ *)
+(* adapted from ocaml 4.02 *)
+type bytes = string
+
+(* ported from ocaml 4.02.2 *)
+
+type ('a,'b) result = Ok of 'a | Error of 'b
+
+(* ported from ocaml 4.0 *)
+
+val ( |> ) : 'a -> ('a -> 'b) -> 'b
+(** Reverse-application operator: [x |> f |> g] is exactly equivalent
+ to [g (f (x))].
+   @since 4.01
+*)
+
+(* ported from ocaml 3.12 *)
+
+val ignore : 'a -> unit (*= "%ignore"*)
+(** Discard the value of its argument and return [()].
+   For instance, [ignore(f x)] discards the result of
+   the side-effecting function [f].  It is equivalent to
+   [f x; ()], except that the latter may generate a
+   compiler warning; writing [ignore(f x)] instead
+   avoids the warning. *)
+
+(* pad: for upward compatibility *)
+(*
+type ('a, 'b, 'c, 'd) format4 = ('a, 'b, 'c, 'c, 'c, 'd) format6
+type ('a, 'b, 'c) format = ('a, 'b, 'c, 'c) format4
+*)
+
 
 (* Module [Pervasives]: the initially opened module *)
 
@@ -288,7 +318,13 @@ val (^) : string -> string -> string
 (*** String conversion functions *)
 
 val string_of_bool : bool -> string
-        (* Return the string representation of a boolean. *)
+(* Return the string representation of a boolean. *)
+
+val bool_of_string : string -> bool
+(** Convert the given string to a boolean.
+   Raise [Invalid_argument "bool_of_string"] if the string is not
+   ["true"] or ["false"]. *)
+
 val string_of_int : int -> string
         (* Return the string representation of an integer, in decimal. *)
 external int_of_string : string -> int = "int_of_string"
@@ -423,6 +459,12 @@ val output : out_channel -> string -> int -> int -> unit
            [buff], starting at offset [ofs], to the output channel [chan].
            Raise [Invalid_argument "output"] if [ofs] and [len] do not
            designate a valid substring of [buff]. *)
+
+val output_substring : out_channel -> string -> int -> int -> unit
+(** Same as [output] but take a string as argument instead of
+   a byte sequence.
+   @since 4.02.0 *)
+
 val output_byte : out_channel -> int -> unit
         (* Write one 8-bit integer (as the single character with that code)
            on the given output channel. The given integer is taken modulo
@@ -543,12 +585,6 @@ external decr : int ref -> unit = "%decr"
            Could be defined as [fun r -> r := pred !r]. *)
 
 
-(* pad: for upward compatibility *)
-(*
-type ('a, 'b, 'c, 'd) format4 = ('a, 'b, 'c, 'c, 'c, 'd) format6
-type ('a, 'b, 'c) format = ('a, 'b, 'c, 'c) format4
-*)
-
 (*** Program termination *)
 
 val exit : int -> 'a
@@ -573,24 +609,6 @@ val at_exit: (unit -> unit) -> unit
 val unsafe_really_input : in_channel -> string -> int -> int -> unit
 
 val do_at_exit: unit -> unit
-
-(* ported from ocaml 4.0 *)
-
-val ( |> ) : 'a -> ('a -> 'b) -> 'b
-(** Reverse-application operator: [x |> f |> g] is exactly equivalent
- to [g (f (x))].
-   @since 4.01
-*)
-
-(* ported from ocaml 3.12 *)
-
-val ignore : 'a -> unit (*= "%ignore"*)
-(** Discard the value of its argument and return [()].
-   For instance, [ignore(f x)] discards the result of
-   the side-effecting function [f].  It is equivalent to
-   [f x; ()], except that the latter may generate a
-   compiler warning; writing [ignore(f x)] instead
-   avoids the warning. *)
 
 external float_of_int : int -> float = "%floatofint"
 (** Convert an integer to floating-point. *)

@@ -9,7 +9,27 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: pervasives.ml,v 1.24 1997/08/29 15:37:21 xleroy Exp $ *)
+(* coupling: if you add functions here, you will probably need to
+ * modify also otherlibs/threads/
+ *)
+
+(* ported from ocaml 4.00 *)
+
+let (|>) o f =
+  f o
+
+(* ported from ocaml 3.12 *)
+
+(*external ignore : 'a -> unit = "%ignore"*)
+let ignore _ = ()
+
+(* adapted from ocaml 4.02 *)
+type bytes = string
+
+(* ported from ocaml 4.02.2 *)
+
+type ('a,'b) result = Ok of 'a | Error of 'b
+
 
 type 'a option = None | Some of 'a
 
@@ -132,6 +152,11 @@ external format_float: string -> float -> string = "format_float"
 let string_of_bool b =
   if b then "true" else "false"
 
+let bool_of_string = function
+  | "true" -> true
+  | "false" -> false
+  | _ -> invalid_arg "bool_of_string"
+
 let string_of_int n =
   format_int "%d" n
 
@@ -191,6 +216,8 @@ let output oc s ofs len =
   then invalid_arg "output"
   else unsafe_output oc s ofs len
 
+let output_substring = output
+
 external output_byte : out_channel -> int -> unit = "caml_output_char"
 external output_binary_int : out_channel -> int -> unit = "caml_output_int"
 
@@ -243,12 +270,12 @@ let rec input_line chan =
     raise End_of_file
   else if n > 0 then begin              (* n > 0: newline found in buffer *)
     let res = string_create (n-1) in
-    unsafe_input chan res 0 (n-1);
-    input_char chan;                    (* skip the newline *)
+    ignore (unsafe_input chan res 0 (n-1));
+    ignore (input_char chan);                    (* skip the newline *)
     res
   end else begin                        (* n < 0: newline not found *)
     let beg = string_create (-n) in
-    unsafe_input chan beg 0 (-n);
+    ignore (unsafe_input chan beg 0 (-n));
     try
       beg ^ input_line chan
     with End_of_file ->
@@ -318,16 +345,6 @@ let do_at_exit () = (!exit_function) ()
 let exit retcode =
   do_at_exit ();
   sys_exit retcode
-
-(* ported from ocaml 4.00 *)
-
-let (|>) o f =
-  f o
-
-(* ported from ocaml 3.12 *)
-
-(*external ignore : 'a -> unit = "%ignore"*)
-let ignore _ = ()
 
 external float_of_int : int -> float = "%floatofint"
 external int_of_float : float -> int = "%intoffloat"

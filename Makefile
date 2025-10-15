@@ -26,6 +26,9 @@ default:
 all:
 	dune build
 
+install:
+	dune install
+
 #alt: git clean -dfX or -dfx
 clean:
 	dune clean

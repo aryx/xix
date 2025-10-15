@@ -46,6 +46,9 @@ lineage.pdf
 # Specific files
 # ----------------------------------------------------------------------------
 
+# configure generated
+/mkconfig
+
 # Make generated files
 .depend
 

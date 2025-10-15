@@ -73,6 +73,14 @@ set -eu # to debug this script add '-x'
 opam install --no-depexts --deps-only ./xix.opam -y
 
 # List the dependencies we've installed and their versions
-opam list
+#opam list
 
 cp mkconfig.unix mkconfig
+
+echo 'Everything looks fine. You can now run: '
+echo
+echo '   $ make'
+echo '   $ make install'
+echo
+echo 'Here is the content of the ./mkconfig that configure generated:'
+cat mkconfig

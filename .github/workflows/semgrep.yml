@@ -24,6 +24,7 @@ jobs:
           git --version
           pwd
           ls
+          git -C /__w/xix/xix ls-files -z --cached
       - run: semgrep scan --experimental --config semgrep.jsonnet --strict --error
 
 name: semgrep

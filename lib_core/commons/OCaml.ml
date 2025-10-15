@@ -2,8 +2,9 @@
  * Yoann Padioleau 
  *
  * Copyright (C) 2009-2012 Facebook
+ * Copyright (C) 2025 Yoann Padioleau
  * 
- * Most of the code in this file was inspired by code by Gazagnaire.
+ * Most of the code in this file was inspired by code by Thomas Gazagnaire.
  * Here is the original copyright:
  * 
  * Copyright (c) 2009 Thomas Gazagnaire <thomas@gazagnaire.com>
@@ -25,8 +26,9 @@ open Common
 (*****************************************************************************)
 (* Purpose *)
 (*****************************************************************************)
-(* 
- * OCaml hacks to support reflection.
+(* OCaml hacks to support reflection.
+ *
+ * UPDATE: You should probably use 'deriving show' instead of this module.
  * 
  * OCaml does not support reflection, and it's a good thing: we love
  * strong type-checking that forbids too clever hacks like 'eval', or
@@ -237,34 +239,6 @@ let vof_either _of_a _of_b =
 (* Format pretty printers *)
 (*****************************************************************************)
 
-(* TODO: use Buffer_.with_buffer_to_string and Fmt_.with_buffer_to_string *)
-(* Used by OCaml.ml *)
-(* julia: convert something printed using format to print into a string *)
-let format_to_string f =
-  (* ocaml-light: let (nm,o) = Filename.open_temp_file "format_to_s" ".out" in *)
-  let nm = Filename.temp_file "format_to_s" ".out" in
-  let o = open_out nm in
-  (* to avoid interference with other code using Format.printf, e.g.
-   * Ounit.run_tt
-   *)
-  Format.print_flush();
-  Format.set_formatter_out_channel o;
-  let _ = f () in
-  Format.print_newline();
-  Format.print_flush();
-  Format.set_formatter_out_channel stdout;
-  close_out o;
-  let i = open_in nm in
-  let lines = ref [] in
-  let rec loop _ =
-    let cur = input_line i in
-    lines := cur :: !lines;
-    loop() in
-  (try loop() with End_of_file -> ());
-  close_in i;
-  Sys.command ("rm -f " ^ nm) |> ignore;
-  String.concat "\n" (List.rev !lines)
-
 let add_sep xs = 
   xs |> List.map (fun x -> Either.Right x) |> List_.join_gen (Either.Left ())
 
@@ -290,61 +264,60 @@ let add_sep xs =
  *)
 
 let string_of_v v = 
-  format_to_string (fun () ->
-    let ppf = Format.printf in
+  Fmt_.with_buffer_to_string (fun ppf ->
     let rec aux v = 
       match v with
-      | VUnit -> ppf "()"
+      | VUnit -> Format.fprintf ppf "()"
       | VBool v1 ->
           if v1
-          then ppf "true"
-          else ppf "false"
-      | VFloat v1 -> ppf "%f" v1
-      | VChar v1 -> ppf "'%c'" v1
-      | VString v1 -> ppf "\"%s\"" v1
-      | VInt i -> ppf "%d" i
+          then Format.fprintf ppf "true"
+          else Format.fprintf ppf "false"
+      | VFloat v1 -> Format.fprintf ppf "%f" v1
+      | VChar v1 -> Format.fprintf ppf "'%c'" v1
+      | VString v1 -> Format.fprintf ppf "\"%s\"" v1
+      | VInt i -> Format.fprintf ppf "%d" i
       | VTuple xs ->
-          ppf "(@[";
+          Format.fprintf ppf "(@[";
               xs |> add_sep |> List.iter (function
-              | Either.Left _ -> ppf ",@ ";
+              | Either.Left _ -> Format.fprintf ppf ",@ ";
               | Either.Right v -> aux v
               );
-          ppf "@])";
+          Format.fprintf ppf "@])";
       | VDict xs ->
-          ppf "{@[";
+          Format.fprintf ppf "{@[";
           xs |> List.iter (fun (s, v) ->
             (* less: could open a box there too? *)
-            ppf "@,%s=" s;
+            Format.fprintf ppf "@,%s=" s;
             aux v;
-            ppf ";@ ";
+            Format.fprintf ppf ";@ ";
           );
-          ppf "@]}";
+          Format.fprintf ppf "@]}";
           
       | VSum ((s, xs)) ->
           (match xs with
-          | [] -> ppf "%s" s
+          | [] -> Format.fprintf ppf "%s" s
           | _y::_ys ->
-              ppf "@[<hov 2>%s(@," s;
+              Format.fprintf ppf "@[<hov 2>%s(@," s;
               xs |> add_sep |> List.iter (function
-              | Either.Left _ -> ppf ",@ ";
+              | Either.Left _ -> Format.fprintf ppf ",@ ";
               | Either.Right v -> aux v
               );
-              ppf "@])";
+              Format.fprintf ppf "@])";
           )
           
-      | VVar (s, x) -> ppf "%s_%d" s ((*Int64.to_int*) x)
+      | VVar (s, x) -> Format.fprintf ppf "%s_%d" s ((*Int64.to_int*) x)
       | VArrow _v1 -> failwith "Arrow TODO"
-      | VNone -> ppf "None";
-      | VSome v -> ppf "Some(@["; aux v; ppf "@])";
-      | VRef v -> ppf "Ref(@["; aux v; ppf "@])";
+      | VNone -> Format.fprintf ppf "None";
+      | VSome v -> Format.fprintf ppf "Some(@["; aux v; Format.fprintf ppf "@])";
+      | VRef v -> Format.fprintf ppf "Ref(@["; aux v; Format.fprintf ppf "@])";
       | VList xs ->
-          ppf "[@[<hov>";
+          Format.fprintf ppf "[@[<hov>";
           xs |> add_sep |> List.iter (function
-          | Either.Left _ -> ppf ";@ ";
+          | Either.Left _ -> Format.fprintf ppf ";@ ";
           | Either.Right v -> aux v
           );
-          ppf "@]]";
-      | VTODO _v1 -> ppf "VTODO"
+          Format.fprintf ppf "@]]";
+      | VTODO _v1 -> Format.fprintf ppf "VTODO"
     in
     aux v
   )

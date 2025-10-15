@@ -13,6 +13,11 @@ exception Impossible of string
 
 val spf : ('a, unit, string) format -> 'a
 
+module Fmt_ : 
+  sig
+    val with_buffer_to_string: (Format.formatter -> unit) -> string
+  end
+
 (*****************************************************************************)
 (* Option *)
 (*****************************************************************************)

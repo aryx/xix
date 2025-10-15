@@ -55,6 +55,15 @@ let memoized h k f =
         v
       end
 
+module Fmt_ = struct
+let with_buffer_to_string f =
+  let buf = Buffer.create 100 in
+  let (ppf : Format.formatter) = Format.formatter_of_buffer buf in
+  f ppf;
+  Format.pp_print_flush ppf ();
+  Buffer.contents buf
+end
+
 (*****************************************************************************)
 (* Basic types *)
 (*****************************************************************************)

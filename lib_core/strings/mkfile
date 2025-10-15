@@ -4,11 +4,10 @@ TOP=../..
 INCLUDES=-I .
 
 SRC=\
-  char.ml \
-  string.ml bytes.ml \
-  format.ml
+  Char.ml \
+  String.ml Bytes.ml \
+  Format.ml
 
 <$TOP/mkconfig
 <$TOP/mklib
 
-either.cmi: stdlib.cmi

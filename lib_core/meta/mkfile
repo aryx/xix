@@ -4,7 +4,7 @@ TOP=../..
 INCLUDES=-I .
 
 SRC=\
-  obj.ml
+  Obj.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

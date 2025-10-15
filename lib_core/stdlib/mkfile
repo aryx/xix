@@ -5,25 +5,23 @@ INCLUDES=-I .
 
 # coupling: if you add a file, you also need to add an entry
 #  for the %.cmi: stdlib.cmi below
-SRC=camlinternalFormatBasics.ml stdlib.ml \
-   bool.ml \
-   option.ml either.ml result.ml
+SRC=camlinternalFormatBasics.ml Stdlib.ml \
+   Bool.ml \
+   Option.ml Either.ml Result.ml
 
 <$TOP/mkconfig
 <$TOP/mklib
 
-bool.cmi: stdlib.cmi
-option.cmi: stdlib.cmi
-either.cmi: stdlib.cmi
-result.cmi: stdlib.cmi
+Bool.cmi: Stdlib.cmi
+Option.cmi: Stdlib.cmi
+Either.cmi: Stdlib.cmi
+Result.cmi: Stdlib.cmi
 
 camlinternalFormatBasics.cmo: camlinternalFormatBasics.ml
 	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c camlinternalFormatBasics.ml
 
-stdlib.cmo: stdlib.ml
-	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c stdlib.ml
+Stdlib.cmo: Stdlib.ml
+	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c Stdlib.ml
 
-stdlib.cmi: stdlib.mli
-	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c stdlib.mli
-
-
+Stdlib.cmi: Stdlib.mli
+	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c Stdlib.mli

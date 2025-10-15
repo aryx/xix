@@ -3,7 +3,7 @@
 TOP=../..
 INCLUDES=-I .
 
-SRC=list.ml stack.ml array.ml hashtbl.ml queue.ml set.ml map.ml
+SRC=List.ml Stack.ml Array.ml Hashtbl.ml Queue.ml Set.ml Map.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

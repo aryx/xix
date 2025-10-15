@@ -16,7 +16,8 @@ jobs:
     strategy:
       matrix:
         ocaml:
-          - 4.12.0
+          #not since I've removed the use of Stdcompat in a few files
+          #- 4.12.0
           - 4.14.2
           - 5.1.1
           # the one after don't work because of ppxlib constraint in xix.opam

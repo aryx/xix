@@ -74,3 +74,5 @@ opam install --no-depexts --deps-only ./xix.opam -y
 
 # List the dependencies we've installed and their versions
 opam list
+
+cp mkconfig.unix mkconfig

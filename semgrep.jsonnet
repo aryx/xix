@@ -89,10 +89,10 @@ local cap_rules = [
     |||,
     paths: {
       exclude: [
-        'compiler/error.ml', 'ksym.ml', 'thread.ml', 'printexc.ml', 'threadUnix.ml',
+        'ksym.ml', 'thread.ml', 'printexc.ml', 'threadUnix.ml',
 	'lib_system/arg.ml', 'lib_system/unix/unix.ml',
-         'lex/', 'yacc/', 'version_control/',
-	 'windows/'
+        'lex/', 'yacc/', 'version_control/',
+	'windows/'
       ],
     },
   },
@@ -107,7 +107,8 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['lib_system/arg.ml', 'lib_system/unix/unix.ml',
-         'lex/', 'yacc/', 'version_control/'
+         'lex/', 'yacc/', 
+          'version_control/'
       ],
     },
   },

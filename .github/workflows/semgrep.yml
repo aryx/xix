@@ -20,6 +20,10 @@ jobs:
         with:
           fetch-depth: 0
       # coupling: with Makefile 'make check' target
+      - run: |
+          git --version
+          pwd
+          ls
       - run: semgrep scan --experimental --config semgrep.jsonnet --strict --error
 
 name: semgrep

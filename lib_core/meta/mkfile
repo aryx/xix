@@ -1,9 +1,10 @@
 # -*- sh -*-
 
-TOP=../../..
+TOP=../..
 INCLUDES=-I .
 
-SRC=list.ml
+SRC=\
+  obj.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

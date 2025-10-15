@@ -13,8 +13,8 @@
 (*                                                                        *)
 (**************************************************************************)
 
-(* pad: a few functions have been commited because using advanced features
- * like labels not supported by ocaml-light. A few other like map because
+(* pad: a few functions have been ommited because they were using advanced features
+ * like labels not supported by ocaml-light. A few other like map were removed because
  * of some weird typing errors. Maybe some bugs/limitations in OCaml 1.07
  *)
 

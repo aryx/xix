@@ -40,11 +40,11 @@ external ( || ) : bool -> bool -> bool = "%sequor"
 
 (** {1:preds Predicates and comparisons} *)
 
-val equal : bool -> bool -> bool
+val equal : t -> t -> bool
 (** [equal b0 b1] is [true] iff [b0] and [b1] are both either [true]
     or [false]. *)
 
-val compare : bool -> bool -> int
+val compare : t -> t -> int
 (** [compare b0 b1] is a total order on boolean values. [false] is smaller
     than [true]. *)
 

@@ -327,9 +327,12 @@ external decr: int ref -> unit = "%decr"
 
 (* pad: for upward compatibility *)
 (*
+*)
+type ('a, 'b, 'c, 'd, 'e, 'f) format6 =
+  ('a, 'b, 'c, 'd, 'e, 'f) CamlinternalFormatBasics.format6
 type ('a, 'b, 'c, 'd) format4 = ('a, 'b, 'c, 'c, 'c, 'd) format6
 type ('a, 'b, 'c) format = ('a, 'b, 'c, 'c) format4
-*)
+
 (* Miscellaneous *)
 
 external sys_exit : int -> 'a = "sys_exit"

@@ -3,10 +3,17 @@
 TOP=../..
 INCLUDES=-I .
 
-SRC=stdlib.ml
+#  bool.ml \
+#  option.ml either.ml result.ml
+
+SRC=camlinternalFormatBasics.ml stdlib.ml \
+   either.ml
 
 <$TOP/mkconfig
 <$TOP/mklib
+
+camlinternalFormatBasics.cmo: camlinternalFormatBasics.ml
+	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c camlinternalFormatBasics.ml
 
 stdlib.cmo: stdlib.ml
 	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c stdlib.ml

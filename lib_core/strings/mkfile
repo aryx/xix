@@ -1,0 +1,14 @@
+# -*- sh -*-
+
+TOP=../..
+INCLUDES=-I .
+
+SRC=\
+  char.ml \
+  string.ml bytes.ml \
+  format.ml
+
+<$TOP/mkconfig
+<$TOP/mklib
+
+either.cmi: stdlib.cmi

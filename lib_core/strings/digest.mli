@@ -29,8 +29,12 @@ val substring: string -> int -> int -> t
 external channel: in_channel -> int -> t = "md5_chan"
         (* [Digest.channel ic len] reads [len] characters from channel [ic]
            and returns their digest. *)
+
+(* REQUIRE CAPS
 val file: string -> t
         (* Return the digest of the file whose name is given. *)
+*)
+
 val output: out_channel -> t -> unit
         (* Write a digest on the given output channel. *)
 val input: in_channel -> t

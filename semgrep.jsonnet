@@ -32,6 +32,10 @@ local cap_rules = [
     id: 'use-caps',
     match: { any:
         [
+        # Cap.exit: see separate rule
+        # 'exit',
+        # Cap.argv: see separate rule
+        # 'Sys.argv',
 	# Cap.chdir
 	 'Sys.chdir',
 	 'Unix.chdir',
@@ -52,7 +56,7 @@ local cap_rules = [
 	 'Unix.environment',
 	 'Sys.getenv',
 	 'Sys.getenv_opt',
-	# Cap.open_in
+	# Cap.open_in: see separate rule
 	 'open_in_bin',
 	 #'open_in',
          #'Unix.openfile',
@@ -74,7 +78,8 @@ local cap_rules = [
       exclude: ['threadUnix.ml',
 	        'lib_core/strings/filename.ml', # for Sys.getenv TMPDIR
 		'version_control/repository.ml',
-		'windows/wm.ml', 'windows/processes_winshell.ml'
+		'windows/wm.ml', 'windows/processes_winshell.ml',
+		
 		],
     },
   },
@@ -107,8 +112,23 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['lib_system/arg.ml', 'lib_system/unix/unix.ml',
-         'lex/', 'yacc/', 
-          'version_control/'
+         'lex/', 'yacc/', 'version_control/'
+      ],
+    },
+  },
+  {
+    id: 'do-not-use-open-in',
+    # Cap.open_in
+    match: 'open_in',
+    languages: ['ocaml'],
+    severity: 'ERROR',
+    message: |||
+       Do not use open_in. Use FS.with_open_in and capabilities.
+    |||,
+    paths: {
+      exclude: [
+         'lib_core/commons_plan9/', 'lib_graphics/draw/draw_rio.ml',
+         'lex/', 'yacc/', 'version_control/'
       ],
     },
   },

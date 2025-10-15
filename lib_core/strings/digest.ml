@@ -26,11 +26,13 @@ let substring str ofs len =
   then invalid_arg "Digest.substring"
   else unsafe_string str ofs len
 
+(*
 let file filename =
   let ic = open_in filename in
   let d = channel ic (in_channel_length ic) in
   close_in ic;
   d
+*)
 
 let output chan digest =
   output chan digest 0 16

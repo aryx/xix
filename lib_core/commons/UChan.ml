@@ -3,6 +3,7 @@ open Chan (* for fields *)
 
 let with_open_in (f : Chan.i -> 'a) (file : Fpath.t) : 'a =
   let chan : in_channel =
+    (* nosemgrep: do-not-use-open-in *)
     open_in !!file 
   in
   let ichan : Chan.i = { ic = chan; origin = Chan.File file } in

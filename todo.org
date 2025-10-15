@@ -200,6 +200,9 @@ hmm but then can't use regular ocamlyacc so maybe not
 (start from dulwich? ocaml-git?), so self sustaining, can use it
  to communicate with github! can use it to do stuff under plan9 itself!
 
+*** less: compile with ocaml-light ogit? missing features? missing libraries?
+
+
 *** ----------------------------
 
 *** port zip so can skip camlzip from Leroy 

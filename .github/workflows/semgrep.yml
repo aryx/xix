@@ -19,13 +19,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # coupling: with Makefile 'make check' target
+      # Workaround for rootless containers as git operations may fail due to
+      # dubious ownership of /__w/xix/xix
+      # ugly: needed because osemgrep does not do the git hack done by
+      # pysemgrep
       - run: |
           git --version
           pwd
           ls
           git config --global --add safe.directory /__w/xix/xix
           git -C /__w/xix/xix ls-files -z --cached
+      # coupling: with Makefile 'make check' target
       - run: semgrep scan --experimental --config semgrep.jsonnet --strict --error
 
 name: semgrep

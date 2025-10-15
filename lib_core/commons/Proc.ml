@@ -36,7 +36,7 @@ type ('a, 'exn) res_or_exn =
  * old: was called invoke() and was in pfff/commons/parallel.ml
  * related work: my pfff/commons/distribution.ml
  *)
-let apply_in_child_process_promise (caps : < Cap.fork; .. >) (*?(flags = [])*) f x =
+let apply_in_child_process_promise (caps : < Cap.fork; Cap.wait; .. >) (*?(flags = [])*) f x =
   let flags = [] in
   let input, output = Unix.pipe () in
   match CapUnix.fork caps () with
@@ -63,7 +63,7 @@ let apply_in_child_process_promise (caps : < Cap.fork; .. >) (*?(flags = [])*) f
         let v = Marshal.from_channel input in
         (* Without 'WNOHANG', in macOS the 'waitpid' call may fail with 'EINTR',
          * not 100% sure why. *)
-        ignore (Unix.waitpid [ Unix.WNOHANG ] pid);
+        ignore (CapUnix.waitpid caps [ Unix.WNOHANG ] pid);
         close_in input;
         match v with
         | Res x -> x
@@ -82,5 +82,5 @@ let apply_in_child_process_promise (caps : < Cap.fork; .. >) (*?(flags = [])*) f
              *)
             raise e)
 
-let apply_in_child_process (caps : < Cap.fork; .. >) (*?flags*) f x =
+let apply_in_child_process (caps : < Cap.fork; Cap.wait; .. >) (*?flags*) f x =
   apply_in_child_process_promise caps (*?flags*) f x ()

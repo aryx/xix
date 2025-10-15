@@ -19,7 +19,7 @@
  *  - was called CapProcess.ml in semgrep
  *)
 val apply_in_child_process :
-  < Cap.fork; .. > -> (*?flags:Marshal.extern_flags list ->*)
+  < Cap.fork; Cap.wait; .. > -> (*?flags:Marshal.extern_flags list ->*)
   ('a -> 'b) -> 'a -> 'b
 
 (*
@@ -28,7 +28,7 @@ val apply_in_child_process :
  * result.
  *)
 val apply_in_child_process_promise :
-  < Cap.fork; .. > ->
+  < Cap.fork; Cap.wait; .. > ->
   (*?flags:Marshal.extern_flags list -> *)
   ('a -> 'b) ->
   'a ->

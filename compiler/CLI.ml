@@ -58,7 +58,7 @@ open Preprocessor
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
-type caps = < Cap.env >
+type caps = < Cap.open_in; Cap.env >
 
 let thechar = '5'
 let thestring = "arm"
@@ -75,7 +75,7 @@ let usage =
 (* Testing *)
 (*****************************************************************************)
 
-let do_action s xs =
+let do_action (caps: < caps; .. >) s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
@@ -87,7 +87,7 @@ let do_action s xs =
         }
         in
         try 
-          let _ = Parse.parse conf (Fpath.v file) in
+          let _ = Parse.parse caps conf (Fpath.v file) in
           ()
         with Location_cpp.Error (s, loc) ->
           let (file, line) = Location_cpp.final_loc_of_loc loc in
@@ -99,9 +99,9 @@ let do_action s xs =
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-let compile (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
+let compile (caps : < caps; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
 
-  let ast = Parse.parse conf infile in
+  let ast = Parse.parse caps conf infile in
 
   (* debug *)
   if !Flags.dump_ast
@@ -246,7 +246,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
-    do_action !action (List.rev !args); 
+    do_action caps !action (List.rev !args); 
     raise (Exit.ExitCode 0 )
   end;
 
@@ -282,7 +282,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           dir_source_file = Fpath.v (Filename.dirname cfile);
         }
         in
-        compile conf (Fpath.v cfile) outfile;
+        compile caps conf (Fpath.v cfile) outfile;
         Exit.OK
     | _ -> 
       (* stricter: *)

@@ -12,7 +12,11 @@ type ('token, 'ast) hook = {
   eof: 'token;
 }
 
+(* [parse] will [open_in] the passed file parameter but may also [open_in]
+ * other files as [parse] will recursively process [#include] directives.
+ *)
 val parse: 
+  < Cap.open_in; .. > ->
   ('token, 'ast) hook -> Preprocessor.conf -> Fpath.t -> 'ast
 
 (* internals:

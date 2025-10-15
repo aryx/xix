@@ -144,13 +144,13 @@ and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
 (* Entry point *)
 (*****************************************************************************)
 
-let parse hooks (conf : Preprocessor.conf) (file : Fpath.t) = 
+let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : Fpath.t) = 
   L.history := [];
   L.line := 1;
   Hashtbl.clear hmacros;
   conf.defs |> List.iter define_cmdline_def;
 
-  let chan = open_in !!file in
+  let chan = CapStdlib.open_in caps !!file in
   L.add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(Some chan, lexbuf)] in
@@ -180,8 +180,7 @@ let parse hooks (conf : Preprocessor.conf) (file : Fpath.t) =
             | D.Include (f, system_hdr) ->
                 let path = find_include conf f system_hdr in
                 (try 
-                  (* TODO: caps!! *)
-                  let chan = open_in !!path in
+                  let chan = CapStdlib.open_in caps !!path in
                   L.add_event (L.Include path);
                   let lexbuf = Lexing.from_channel chan in
                   (* less: 

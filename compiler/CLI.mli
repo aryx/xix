@@ -1,9 +1,10 @@
 (* Need:
+ * - open_in: for argv derived file but also for #include'd files
+ *   because 5c does its own preprocessing
  * - env: for INCLUDE (for cpp)
- * - TODO open_in but should be only for argv derived file
  * - TODO open_out for -o object file or 5. argv 
  *)
-type caps = < Cap.env >
+type caps = < Cap.open_in; Cap.env >
 
 (* entry point (can also raise Exit.ExitCode) *)
 val main: <caps; ..> -> string array -> Exit.t

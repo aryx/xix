@@ -1,7 +1,7 @@
 
 (* will call cpp internally first *)
 val parse: 
-  Preprocessor.conf -> Fpath.t -> Ast.program
+  < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast.program
 
 (* internals *)
 val parse_no_cpp:

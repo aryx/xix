@@ -31,7 +31,7 @@ open Preprocessor
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
-type caps = < Cap.env >
+type caps = < Cap.open_in; Cap.env >
 
 let thechar = '5'
 let thestring = "arm"
@@ -44,8 +44,8 @@ let usage =
 (*****************************************************************************)
 
 (* Will generate outfile as a side effect *)
-let assemble5 dump (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
-  let prog = Parse_asm5.parse conf infile in
+let assemble5 (caps: < caps; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
+  let prog = Parse_asm5.parse caps conf infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
@@ -151,7 +151,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     (* TODO: create chan from infile outfile instead so no need
      * pass heavy capabilities (Cap.open_in, Cap.open_out)
      *)
-    assemble5 !dump conf (Fpath.v !infile) outfile;
+    assemble5 caps !dump conf (Fpath.v !infile) outfile;
     Exit.OK
   with exn ->
     if !backtrace

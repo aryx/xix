@@ -15,7 +15,7 @@ open Chan
 (* Entry points *)
 (*****************************************************************************)
 
-let parse (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
+let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
   let hooks = { Parse_cpp.
      lexer = Lexer.token;
      category = (fun t ->
@@ -43,7 +43,7 @@ let parse (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program =
    eof = T.EOF;
   }
   in
-  Parse_cpp.parse hooks conf file
+  Parse_cpp.parse caps hooks conf file
 
 
 

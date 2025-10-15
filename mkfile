@@ -21,9 +21,10 @@ DIRS3=kernel
 DIRS=$DIRS0 #$DIRS2 #DIRS3
 
 TESTDIRS=\
-  assembler/tests compiler/tests linker/tests \
-  windows/tests \
-  lib_system/plan9/tests
+  assembler/tests compiler/tests linker/tests
+
+# works only under plan9 for now
+TESTDIRS2=windows/tests lib_system/plan9/tests
 
 all:V: all.directories
 opt:V: opt.directories

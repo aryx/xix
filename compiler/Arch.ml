@@ -4,7 +4,7 @@ type env = {
   structs: (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t;
 }
 
-type arch = {
+type t = {
   width_of_type: env -> Type_.t -> int;
 }
 

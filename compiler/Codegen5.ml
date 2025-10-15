@@ -43,7 +43,7 @@ type env = {
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
    *)
 
-  arch: Arch.arch;
+  arch: Arch.t;
 
   (* the output *)
 

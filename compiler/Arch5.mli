@@ -1,2 +1,2 @@
 
-val arch: Arch.arch
+val arch: Arch.t

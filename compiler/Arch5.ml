@@ -4,7 +4,7 @@ open Common
 open Arch
 module T = Type_
 
-let rec width_of_type env t =
+let rec width_of_type (env : Arch.env) (t : Type_.t) : int =
   match t with
   | T.Void -> 0
   | T.I (inttype, _sign) ->
@@ -32,6 +32,4 @@ let rec width_of_type env t =
       |> List.map (fun (_fld, t) -> width_of_type env t)
       |> List.fold_left (+) 0
 
-let arch = {
-  width_of_type = width_of_type;
-}
+let arch = { width_of_type }

@@ -254,7 +254,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     (match !args, !outfile with
     | [], "" -> 
         Arg.usage (Arg.align options) usage;
-        Error.errorexit ""
+        Exit.Code 1
     | [cfile], outfile ->
         let base = Filename.basename cfile in
         let system_paths : Fpath.t list =

@@ -4,7 +4,6 @@
    str unix
    camlzip
    xix_commons
-   xix_collections
  )
  ; 'byte' is for ocamldebug
  (modes native byte))

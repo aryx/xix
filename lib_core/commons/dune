@@ -9,6 +9,7 @@
  ; for now by providing our own Logs.ml
  ; coupling: mkfile SRC variable
  (modules
+  Set_ Map_
   Cap CapStdlib CapSys CapUnix
   Eq Ord
   Common

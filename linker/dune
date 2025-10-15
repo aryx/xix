@@ -3,7 +3,6 @@
  (libraries
    str unix
    xix_commons
-   xix_collections
    xix_objects
    xix_executables
  )

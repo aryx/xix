@@ -2,7 +2,7 @@
  (name Main)
  (libraries
    str unix
-   xix_commons xix_collections
+   xix_commons
    xix_cpp
    xix_objects
  )

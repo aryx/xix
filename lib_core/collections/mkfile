@@ -1,12 +1,9 @@
 # -*- sh -*-
+
 TOP=../..
+INCLUDES=-I .
 
-# We could have Set.ml and Map.ml. It would work with ocamlc, but 
-# not with ocamlopt :( so not worth the trouble.
-# Also it makes it easier to see what is non-standard.
-
-INCLUDES=
-SRC= Set_.ml Map_.ml
+SRC=list.ml stack.ml array.ml hashtbl.ml queue.ml set.ml map.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

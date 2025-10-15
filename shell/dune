@@ -28,7 +28,6 @@
   )
   (libraries
    xix_commons
-   xix_collections
    xix_profiling
   )
  (preprocess (pps ppx_deriving.show ppx_profiling))

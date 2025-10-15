@@ -3,8 +3,16 @@
 TOP=../..
 INCLUDES=-I .
 
+# We could have Set.ml and Map.ml below. It would work with ocamlc, but
+# not with ocamlopt :( so not worth the trouble.
+# Also it makes it easier to see what is non-standard.
+# history: Set_.ml and Map_.ml were in a separate lib_core/collections
+# before but simpler to merge with commons for just those two files
+# and to free lib_core/collections/ for the ocaml stdlib collection files
+
 #coupling: dune '(modules ...)' stanza
 SRC=\
+ Set_.ml Map_.ml \
  Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
  Eq.ml Ord.ml \
  Common.ml \
@@ -15,7 +23,7 @@ SRC=\
  Chan.ml UChan.ml FS.ml IO.ml \
  Cmd.ml Proc.ml \
  Date.ml \
- Exception.ml Exit.ml
+ Exception.ml Exit.ml \
 
 <$TOP/mkconfig
 <$TOP/mklib

@@ -605,17 +605,6 @@ need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
 
 ** Dev infra
 
-*** less fix semgrep and build-test workflows and restore from masterTODO -> master
-
-*** add semgrep rules to make sure we're not using
-labels, functors, objects, as we want to be able to compile
-xix with our own fork of OCaml that removed those features
-(a fork I called "ocaml light" :) special ref to caml light)
-
-maybe add a do_not_use_certain_features.ml
-and add nosemgrep: comment in it, so nice to see what
-is currently forbidden
-
 *** try to use ocamlformat?
 but exclude lex/ yacc/ lib_parsing/ version_control/ for now
 because of our use of syncweb there?

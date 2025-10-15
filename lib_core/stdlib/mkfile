@@ -1,0 +1,15 @@
+# -*- sh -*-
+
+TOP=../..
+INCLUDES=-I .
+
+SRC=stdlib.ml
+
+<$TOP/mkconfig
+<$TOP/mklib
+
+stdlib.cmo: stdlib.ml
+	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c stdlib.ml
+
+stdlib.cmi: stdlib.mli
+	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c stdlib.mli

@@ -1,0 +1,9 @@
+# -*- sh -*-
+
+TOP=../../..
+INCLUDES=-I .
+
+SRC=list.ml
+
+<$TOP/mkconfig
+<$TOP/mklib

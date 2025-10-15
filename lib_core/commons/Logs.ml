@@ -30,8 +30,9 @@ type level = App | Error | Warning | Info | Debug
 
 (* The builtin compare will work on level because of the order in which
  * we defined the constructors. App < Error < Warning < ...
+ * alt (Stdcompat.Stdlib.compare)
  *)
-let compare_level = (Stdcompat.Stdlib.compare)
+let compare_level = compare
 
 (* orig: type ('a, 'b) msgf = ?header:... -> ?tags:... 
  * (('a, Format.formatter, unit, unit) format4 -> 'a) -> unit

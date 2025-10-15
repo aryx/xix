@@ -1,0 +1,9 @@
+COMPFLAGS=
+OPTFLAGS=$COMPFLAGS
+LINKFLAGS=-g -custom
+OPTLINKFLAGS=
+OCAMLC=ocamlc
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc -v
+OCAMLDEP=ocamldep
+OCAMLOPT=ocamlopt

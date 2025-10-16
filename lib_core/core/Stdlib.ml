@@ -242,7 +242,7 @@ let open_in name =
 external input_char : in_channel -> char = "caml_input_char"
 
 external unsafe_input : in_channel -> string -> int -> int -> int 
-                      = "caml_input"
+                      = "caml_ml_input"
 
 let input ic s ofs len =
   if ofs < 0 or ofs + len > string_length s

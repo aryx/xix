@@ -1,0 +1,12 @@
+# -*- sh -*-
+
+TOP=../..
+INCLUDES=-I .
+
+# We need camlinternalOO.ml to compile commons/Cap.ml otherwise
+# ocamlc throws some weird "fatal error missing primitive create_object_opt".
+# Apparently ocamlc has some magic to find and load a camlinternalOO.cmo
+SRC=camlinternalOO.ml
+
+<$TOP/mkconfig
+<$TOP/mklib

@@ -5,10 +5,11 @@ INCLUDES=-I .
 
 # coupling: if you add a file, you also need to add an entry
 #  for the %.cmi: stdlib.cmi below
+#std_exit.cmo is looked by the ocaml linker at link time
 #alt: Callback.ml could go to a separate lib_core/ffi/
 #alt: Marshal.ml could go to a separate lib_core/serialize/
 #alt: Obj.ml, Callback.ml, Marshal.ml could go to lib_core/meta/
-SRC=camlinternalFormatBasics.ml Stdlib.ml \
+SRC=camlinternalFormatBasics.ml Stdlib.ml std_exit.ml \
   Obj.ml Callback.ml Marshal.ml \
   Gc.ml
 
@@ -19,6 +20,8 @@ Obj.cmi: Stdlib.cmi
 Callback.cmi: Stdlib.cmi
 Marshal.cmi: Stdlib.cmi
 Gc.cmi: Stdlib.cmi
+std_exit.cmi: Stdlib.cmi
+std_exit.cmo: Stdlib.cmi
 
 Stdlib.cmo: Stdlib.ml
 	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c Stdlib.ml

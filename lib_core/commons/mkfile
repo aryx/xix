@@ -12,9 +12,9 @@ INCLUDES=-I .
 
 #coupling: dune '(modules ...)' stanza
 SRC=\
- Set_.ml Map_.ml \
  Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
  Eq.ml Ord.ml \
+ Set_.ml Map_.ml \
  Common.ml \
  Dumper.ml OCaml.ml \
  Console.ml UConsole.ml \

@@ -4,7 +4,7 @@ TOP=../..
 INCLUDES=-I .
 
 SRC=\
-  Obj.ml
+  Obj.ml Printf.ml Printexc.ml Format.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

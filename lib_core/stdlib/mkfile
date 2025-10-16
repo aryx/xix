@@ -7,7 +7,7 @@ INCLUDES=-I .
 #  for the %.cmi: stdlib.cmi below
 SRC=camlinternalFormatBasics.ml Stdlib.ml \
    Bool.ml \
-   Option.ml Either.ml Result.ml
+   Option.ml Either.ml Result.ml \
 
 <$TOP/mkconfig
 <$TOP/mklib

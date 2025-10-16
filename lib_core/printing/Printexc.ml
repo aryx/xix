@@ -12,8 +12,10 @@
 open Printf;;
 
 let locfmt =
-  match Sys.os_type with
-  | _ -> ("File \"%s\", line %d, characters %d-%d: %s" : ('a, 'b, 'c) format)
+  (*match Sys.os_type with
+  | _ -> 
+  *)
+  ("File \"%s\", line %d, characters %d-%d: %s" : ('a, 'b, 'c) format)
 ;;
 
 let field x i =

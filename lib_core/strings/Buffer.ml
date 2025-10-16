@@ -13,6 +13,14 @@
 
 (* $Id: buffer.ml 10216 2010-03-28 08:16:45Z xleroy $ *)
 
+(* partial copy of sys.ml to avoid depending on lib_system/ from stdlib/ *)
+external get_config: unit -> string * int = "sys_get_config"
+let (os_type, word_size) = get_config()
+let max_array_length = (1 lsl (word_size - 10)) - 1;;
+let sys_max_string_length = word_size / 8 * max_array_length - 1;;
+
+
+
 (* Extensible buffers *)
 
 type t =
@@ -23,7 +31,7 @@ type t =
 
 let create n =
  let n = if n < 1 then 1 else n in
- let n = if n > Sys.max_string_length then Sys.max_string_length else n in
+ let n = if n > sys_max_string_length then sys_max_string_length else n in
  let s = String.create n in
  {buffer = s; position = 0; length = n; initial_buffer = s}
 
@@ -65,9 +73,9 @@ let resize b more =
   let len = b.length in
   let new_len = ref len in
   while b.position + more > !new_len do new_len := 2 * !new_len done;
-  if !new_len > Sys.max_string_length then begin
-    if b.position + more <= Sys.max_string_length
-    then new_len := Sys.max_string_length
+  if !new_len > sys_max_string_length then begin
+    if b.position + more <= sys_max_string_length
+    then new_len := sys_max_string_length
     else failwith "Buffer.add: cannot grow buffer"
   end;
   let new_buffer = String.create !new_len in
@@ -100,7 +108,7 @@ let add_buffer b bs =
   add_substring b bs.buffer 0 bs.position
 
 let add_channel b ic len =
-  if len < 0 || len > Sys.max_string_length then   (* PR#5004 *)
+  if len < 0 || len > sys_max_string_length then   (* PR#5004 *)
     invalid_arg "Buffer.add_channel";
   if b.position + len > b.length then resize b len;
   really_input ic b.buffer b.position len;

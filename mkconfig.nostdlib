@@ -1,0 +1,15 @@
+STDLIB=lib_core/core lib_core/stdlib lib_core/collections lib_core/strings lib_core/regexps lib_core/printing lib_system lib_core/parsing lib_system/unix 
+
+COMPFLAGS=-nostdlib -I $TOP/lib_core/core -I $TOP/lib_core/stdlib -I $TOP/lib_core/collections -I $TOP/lib_core/strings -I $TOP/lib_core/regexps -I $TOP/lib_core/parsing -I $TOP/lib_core/printing -I $TOP/lib_system -I $TOP/lib_system/unix 
+
+#STDLIB=lib_core/latest
+#COMPFLAGS=-nostdlib -I $TOP/lib_core/latest
+
+OPTFLAGS=$COMPFLAGS
+LINKFLAGS=-g -custom $TOP/lib_core/core/lib.cma $TOP/lib_core/stdlib/lib.cma $TOP/lib_core/collections/lib.cma $TOP/lib_core/strings/lib.cma $TOP/lib_core/regexps/lib.cma $TOP/lib_core/printing/lib.cma $TOP/lib_system/lib.cma $TOP/lib_core/parsing/lib.cma $TOP/lib_system/unix/lib.cma 
+OPTLINKFLAGS=
+OCAMLC=ocamlc
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc -v
+OCAMLDEP=ocamldep -I $TOP/lib_core/stdlib
+OCAMLOPT=ocamlopt

@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-TOP=../..
+TOP=../../..
 INCLUDES=-I .
 
 #alt: merge with lib_core/system/ but unix.ml relies on C lib -lunix

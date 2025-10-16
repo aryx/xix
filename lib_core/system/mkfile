@@ -1,10 +1,10 @@
 # -*- sh -*-
 
-TOP=..
+TOP=../..
 INCLUDES=-I .
 
 SRC=\
-  Sys.ml Filename.ml Arg.ml
+  Sys.ml Filename.ml Arg.ml Random.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

@@ -3,10 +3,16 @@
 TOP=../..
 INCLUDES=-I .
 
+#history: Buffer.ml/Digest.ml were in a separate lib_core/strings/
+# that also contained String.ml, Char.ml, Str.ml, etc. but
+# String is needed for many things and so must be in base which
+# then make lib_core/strings/ less elegant (without a String.ml)
+
 SRC=Bool.ml \
    Char.ml Uchar.ml String.ml Bytes.ml \
    Option.ml Either.ml Result.ml \
-   Fun.ml
+   Fun.ml \
+   Buffer.ml Digest.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

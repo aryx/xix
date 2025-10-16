@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: stack.mli,v 1.8 1997/10/31 12:59:29 doligez Exp $ *)
 
 (* Module [Stack]: last-in first-out stacks *)
 
@@ -37,8 +36,10 @@ val iter: ('a -> unit) -> 'a t -> unit
            from the element at the top of the stack to the element at the
            bottom of the stack. The stack itself is unchanged. *)
 
-(* addons pad *)
 val top: 'a t -> 'a
+
+(* since 4.08 *)
 val top_opt: 'a t -> 'a option
 
+(* TODO: remove, not part of modern OCaml *)
 val nth: int -> 'a t -> 'a

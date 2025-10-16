@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: random.ml,v 1.8 1997/09/11 15:10:21 doligez Exp $ *)
 
 (* "Linear feedback shift register" random number generator. *)
 (* References: Robert Sedgewick, "Algorithms", Addison-Wesley *)

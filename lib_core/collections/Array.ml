@@ -9,8 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: array.ml,v 1.13 1997/11/12 08:56:34 weis Exp $ *)
-
 (* Array operations *)
 
 external length : 'a array -> int = "%array_length"

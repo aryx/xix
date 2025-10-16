@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: marshal.mli,v 1.3 1997/11/19 10:02:22 xleroy Exp $ *)
 
 (* Module [Marshal]: marshaling of data structures *)
 

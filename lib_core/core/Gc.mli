@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: gc.mli,v 1.12 1997/10/14 15:50:22 doligez Exp $ *)
 
 (* Module [Gc]: memory management control and statistics *)
 

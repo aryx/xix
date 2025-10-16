@@ -9,8 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: array.mli,v 1.16 1997/12/09 09:11:21 xleroy Exp $ *)
-
 (* Module [Array]: array operations *)
 
 external length : 'a array -> int = "%array_length"

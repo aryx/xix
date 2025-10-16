@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: hashtbl.mli,v 1.13 1997/10/31 12:59:23 doligez Exp $ *)
 
 (* Module [Hashtbl]: hash tables and hash functions *)
 

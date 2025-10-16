@@ -9,7 +9,9 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: map.mli,v 1.11 1997/12/09 09:11:47 xleroy Exp $ *)
+(* pad: this module relies on stdlib.compare and does not use functors
+ * to parametrize the Map (because ocaml-light does not support functors)
+ *)
 
 (* Module [Map]: association tables over ordered types *)
 

@@ -11,7 +11,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: buffer.ml 10216 2010-03-28 08:16:45Z xleroy $ *)
 
 (* partial copy of sys.ml to avoid depending on lib_system/ from stdlib/ *)
 external get_config: unit -> string * int = "sys_get_config"

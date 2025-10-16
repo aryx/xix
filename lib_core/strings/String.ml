@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: string.ml,v 1.13 1997/12/09 09:12:05 xleroy Exp $ *)
 
 (* String operations *)
 
@@ -77,6 +76,28 @@ external is_printable: char -> bool = "is_printable"
 external char_code: char -> int = "%identity"
 external char_chr: int -> char = "%identity"
 
+let is_space = function
+  | ' ' | '\012' | '\n' | '\r' | '\t' -> true
+  | _ -> false
+
+let trim s =
+  let len = length s in
+  let i = ref 0 in
+  while !i < len && is_space (unsafe_get s !i) do
+    incr i
+  done;
+  let j = ref (len - 1) in
+  while !j >= !i && is_space (unsafe_get s !j) do
+    decr j
+  done;
+  if !i = 0 && !j = len - 1 then
+    s
+  else if !j >= !i then
+    sub s !i (!j - !i + 1)
+  else
+    ""
+
+
 let escaped s =
   let n = ref 0 in
     for i = 0 to length s - 1 do
@@ -127,6 +148,9 @@ let map f s =
 let uppercase s = map Char.uppercase s
 let lowercase s = map Char.lowercase s
 
+let uppercase_ascii s = uppercase s
+let lowercase_ascii s = lowercase s
+
 let apply1 f s =
   if length s = 0 then s else begin
     let r = copy s in
@@ -136,6 +160,10 @@ let apply1 f s =
 
 let capitalize s = apply1 Char.uppercase s
 let uncapitalize s = apply1 Char.lowercase s
+
+let capitalize_ascii = capitalize
+let uncapitalize_ascii = uncapitalize
+
 
 let rec index_rec s i c =
   if i >= length s then raise Not_found
@@ -160,4 +188,36 @@ let rindex_from s i c =
   if i < 0 || i >= length s
   then invalid_arg "String.rindex_from"
   else rindex_rec s i c
+
+
+type t = string
+
+let compare (x: t) (y: t) = compare x y
+
+(* external equal : string -> string -> bool = "caml_string_equal" [@@noalloc] *)
+let equal x y = compare x y = 0
+
+
+(** backported from 4.13.0 *)
+
+(* duplicated in bytes.ml *)
+let starts_with (*~*)prefix s =
+  let len_s = length s
+  and len_pre = length prefix in
+  let rec aux i =
+    if i = len_pre then true
+    else if unsafe_get s i <> unsafe_get prefix i then false
+    else aux (i + 1)
+  in len_s >= len_pre && aux 0
+
+(* duplicated in bytes.ml *)
+let ends_with (*~*)suffix s =
+  let len_s = length s
+  and len_suf = length suffix in
+  let diff = len_s - len_suf in
+  let rec aux i =
+    if i = len_suf then true
+    else if unsafe_get s (diff + i) <> unsafe_get suffix i then false
+    else aux (i + 1)
+  in diff >= 0 && aux 0
 

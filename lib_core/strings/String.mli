@@ -63,6 +63,12 @@ val concat : string -> string list -> string
         (* [String.concat sep sl] catenates the list of strings [sl],
            inserting the separator string [sep] between each. *)
 
+val trim : string -> string
+(** Return a copy of the argument, without leading and trailing whitespace.
+   The characters regarded as whitespace are: [' '], ['\012'], ['\n'],
+   ['\r'], and ['\t'].  If there is no whitespace character in the argument,
+   return the original string itself, not a copy. *)
+
 val escaped: string -> string
         (* Return a copy of the argument, with special characters represented
            by escape sequences, following the lexical conventions of
@@ -106,3 +112,59 @@ external unsafe_blit : string -> int -> string -> int -> int -> unit
                      = "blit_string" "noalloc"
 external unsafe_fill : string -> int -> int -> char -> unit
                      = "fill_string" "noalloc"
+
+val uppercase_ascii : string -> string
+(** [uppercase_ascii s] is [s] with all lowercase letters
+    translated to uppercase, using the US-ASCII character set.
+
+    @since 4.03 (4.05 in StringLabels) *)
+
+val lowercase_ascii : string -> string
+(** [lowercase_ascii s] is [s] with all uppercase letters translated
+    to lowercase, using the US-ASCII character set.
+
+    @since 4.03 (4.05 in StringLabels) *)
+
+
+val capitalize_ascii : string -> string
+(** [capitalize_ascii s] is [s] with the first character set to
+    uppercase, using the US-ASCII character set.
+
+    @since 4.03.0 (4.05.0 in StringLabels) *)
+
+val uncapitalize_ascii : string -> string
+(** [uncapitalize_ascii s] is [s] with the first character set to lowercase,
+    using the US-ASCII character set.
+
+    @since 4.03.0 (4.05.0 in StringLabels) *)
+
+val map : (char -> char) -> string -> string
+(** [map f s] is the string resulting from applying [f] to all the
+    characters of [s] in increasing order.
+
+    @since 4.00.0 *)
+
+
+type t = string
+
+val equal : t -> t -> bool
+(** [equal s0 s1] is [true] if and only if [s0] and [s1] are character-wise
+    equal.
+    @since 4.03.0 (4.05.0 in StringLabels) *)
+
+val compare : t -> t -> int
+(** [compare s0 s1] sorts [s0] and [s1] in lexicographical order. [compare]
+    behaves like {!Stdlib.compare} on strings but may be more efficient. *)
+
+val starts_with :
+  (*prefix:*)string -> string -> bool
+(** [starts_with ][~prefix s] is [true] if and only if [s] starts with
+    [prefix].
+
+    @since 4.13.0 *)
+
+val ends_with :
+  (*suffix:*)string -> string -> bool
+(** [ends_with ][~suffix s] is [true] if and only if [s] ends with [suffix].
+
+    @since 4.13.0 *)

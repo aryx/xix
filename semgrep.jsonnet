@@ -1,3 +1,6 @@
+// Semgrep rules for XiX mostly to enforce the use of capabilities
+// (see lib_core/commons/Cap.ml)
+
 // ----------------------------------------------------------------------------
 // Simple rules
 // ----------------------------------------------------------------------------

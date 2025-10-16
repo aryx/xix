@@ -4,8 +4,9 @@
 
 ** big plan
 # get mk/rc working, release mk and rc on OPAM? SEMI LPized version of it
-# and then efuns -> ogit -> lex/yacc and far later finish 5a/5c/5l, and capabilities
-# testbed! and make it work in plan9
+# then efuns -> ogit -> lex/yacc 
+# then later finish 5a/5c/5l, and capabilities testbed! 
+# make it work in plan9
 
 ** LATER
 
@@ -201,7 +202,6 @@ hmm but then can't use regular ocamlyacc so maybe not
  to communicate with github! can use it to do stuff under plan9 itself!
 
 *** less: compile with ocaml-light ogit? missing features? missing libraries?
-
 
 *** ----------------------------
 
@@ -547,11 +547,7 @@ original had 3?
 other stuff to copy from semgrep-libs/?
 maybe Unix.realpath!
 
-
 *** Last
-
-**** RELAX Proc.pid, but need to make it compatible with ocaml-light then!
-remove use of labels and default arg in Proc.ml
 
 **** RELAX port part of Cmd.ml and add also the exec part in it, but
 with capabilities only! and then add in
@@ -559,16 +555,6 @@ CapUnix and CapSys should use Cmd
 
 Cmd.exec? Cmd.run?
 imitate some of Bos API? or too complex IMHO.
-
-
-*** merge commons/ and commons2/? 
-
-*** can have more recent obj.ml?
-replace all stdlib.cma by my own?
-=> can use ocamltarzan for dumping kernel stuff?
-
-*** LATER: try to compile with -nopervasives or -nostdlib
-and rely only on stuff in lib_core/
 
 *** use camomile for unicode?
 or extlib/utf8.ml good enough?
@@ -579,13 +565,13 @@ or uchar.ml enough?
 
 ** Capabilities
 
-*** RELAX use Cap.exit in compiler/Error.errorexit
-but will need to thread it from many files?
-
 *** less: get rid of IO.ml from canasse and do my own capability based file IO!
 but used heavily in version_control/
 
 *** less: integrate back TCB.ml? and UXxx.ml ? works with ocaml-light?
+# alt: use -nostdlib with reduced lib_core/stdlib/! with commented functions?
+#  or 'external:' functions moved in cap files and not exported!
+
 try to add TCB.ml and -open TCB?
 can it compile with ocaml-light though? 
 if use -open TCB in dune, the mkfile and ocaml-light should be fine
@@ -617,8 +603,8 @@ but need OCaml 4.04.1 at least
 but then can messup possible diffs with older version?
 make sure everything works fine before?
 
-*** setup pre-commit and ocamlformat and trailing space fix?
-but syncweb issue
+*** still? setup pre-commit and ocamlformat and trailing space fix?
+but syncweb issue, so maybe not worth it
 
 * Partially ported
 
@@ -632,7 +618,6 @@ pb when try build .a because need mk-C extension for libs.
 *** EASY add .mli in lib_graphics/geometry
 
 *** EASY add .mli in lib_graphics/draw
-
 
 *** use camlidl? or implement low-level stuff that writes
 into /dev/draw/x/ directly?

@@ -1,6 +1,7 @@
 Most of the code in this repository was written by Yoann Padioleau except:
  - lex/                                by Xavier Leroy        (from ocaml)
- - lib_core/stdlib/                    by Xavier Leroy et al. (from ocaml)
+ - lib_core/{stdlib,collections,strings,meta,concurrency}
+   by Xavier Leroy et al. (from ocaml)
  - commons/IO.ml                       by Nicolas Canasse     (from exblib)
  - version_control/sha.ml              by Daniel Bunzli       (from uuidm)
  - version_control/hexsha.ml           by Thomas Gazagnaire   (from ocaml-hex)

@@ -11,24 +11,31 @@ TODO? use let* and let/ ? also doable to add in ocaml-light ?
 
 ** devinfra
 SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
-TODO more semgrep rules (forbid functors, labels, etc.)
 
 ** testinfra
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) ()
+* 0.17 (Q4 2025) (Dockerfile.light v1, CLI.ml and caps, semgrep GHA)
+
+** libcore
+- compile our own stdlib (mostly a copy from ocaml-light stdlib)
+  thanks to -nostdlib (and -nopervasives)
 
 ** testinfra
-- TODO Dockerfile.light can now compile also 5a/5c/5l/cpp
+- Dockerfile.light can now compile also 5a/5c/5l/cpp
   thx to the removal of the use of 'as' in the .mll files
   that is not supported by ocaml-light ocamlllex
+
+** devinfra
+- resume semgrep.jsonnet and semgrep.yml in CI
 
 ** internals
 - use uppercase module filenames, split Main.ml/CLI.ml, and start
   to use capabilities for 5a/5c/5l/cpp as well as lex/yacc
 
-* 0.16 (Q3 2025) (Dockerfile.light)
+
+* 0.16 (Q3 2025) (Dockerfile.light v0)
 
 ** testinfra
 - Finish Dockerfile.light that can compile mk/rc/lib_core/ with ocaml-light! 

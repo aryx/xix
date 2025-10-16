@@ -5,27 +5,36 @@ INCLUDES=-I .
 
 # coupling: if you add a file, you also need to add an entry
 #  for the %.cmi: stdlib.cmi below
+#alt: Callback.ml could go to a separate lib_core/ffi/
+#alt: Marshal.ml could go to a separate lib_core/serialize/
+#alt: Obj.ml, Callback.ml, Marshal.ml could go to lib_core/meta/
 SRC=camlinternalFormatBasics.ml Stdlib.ml \
    Bool.ml \
    Option.ml Either.ml Result.ml \
-   Obj.ml \
-   Callback.ml
+   Fun.ml \
+   Obj.ml Callback.ml Marshal.ml
 
 <$TOP/mkconfig
 <$TOP/mklib
 
 Bool.cmi: Stdlib.cmi
+
 Option.cmi: Stdlib.cmi
 Either.cmi: Stdlib.cmi
 Result.cmi: Stdlib.cmi
+
+Fun.cmi: Stdlib.cmi
+
 Obj.cmi: Stdlib.cmi
 Callback.cmi: Stdlib.cmi
+Marshal.cmi: Stdlib.cmi
 
-camlinternalFormatBasics.cmo: camlinternalFormatBasics.ml
-	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c camlinternalFormatBasics.ml
 
 Stdlib.cmo: Stdlib.ml
 	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c Stdlib.ml
 
 Stdlib.cmi: Stdlib.mli
 	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c Stdlib.mli
+
+camlinternalFormatBasics.cmo: camlinternalFormatBasics.ml
+	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c camlinternalFormatBasics.ml

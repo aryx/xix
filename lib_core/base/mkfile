@@ -4,7 +4,7 @@ TOP=../..
 INCLUDES=-I .
 
 SRC=Bool.ml \
-   Char.ml String.ml Bytes.ml \
+   Char.ml Uchar.ml String.ml Bytes.ml \
    Option.ml Either.ml Result.ml \
    Fun.ml
 

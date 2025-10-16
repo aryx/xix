@@ -5,161 +5,240 @@
 (*            Xavier Leroy, projet Cristal, INRIA Rocquencourt         *)
 (*                                                                     *)
 (*  Copyright 1996 Institut National de Recherche en Informatique et   *)
-(*  Automatique.  Distributed only by permission.                      *)
+(*  en Automatique.  All rights reserved.  This file is distributed    *)
+(*  under the terms of the GNU Library General Public License, with    *)
+(*  the special exception on linking described in the file LICENSE.    *)
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: printf.ml,v 1.5 1996/04/30 14:50:28 xleroy Exp $ *)
-
 external format_int: string -> int -> string = "format_int"
+(*
+external format_int32: string -> int32 -> string = "int32_format"
+external format_nativeint: string -> nativeint -> string = "nativeint_format"
+external format_int64: string -> int64 -> string = "int64_format"
+ *)
 external format_float: string -> float -> string = "format_float"
 
-let fprintf outchan format =
-  let format = (Obj.magic format : string) in
+let bad_format fmt pos =
+  invalid_arg
+    ("printf: bad format " ^ String.sub fmt pos (String.length fmt - pos))
+
+(* Format a string given a %s format, e.g. %40s or %-20s.
+   To do: ignore other flags (#, +, etc)? *)
+
+let format_string format s =
+  let rec parse_format neg i =
+    if i >= String.length format then (0, neg) else
+    match String.unsafe_get format i with
+    | '1'..'9' ->
+        (int_of_string (String.sub format i (String.length format - i - 1)),
+         neg)
+    | '-' ->
+        parse_format true (succ i)
+    | _ ->
+        parse_format neg (succ i) in
+  let (p, neg) =
+    try parse_format false 1 with Failure _ -> bad_format format 0 in
+  if String.length s < p then begin
+    let res = String.make p ' ' in
+    if neg 
+    then String.blit s 0 res 0 (String.length s)
+    else String.blit s 0 res (p - String.length s) (String.length s);
+    res
+  end else
+    s
+
+(* Extract a %format from [fmt] between [start] and [stop] inclusive.
+   '*' in the format are replaced by integers taken from the [widths] list.
+   The function is somewhat optimized for the "no *" case. *)
+
+let extract_format fmt start stop widths =
+  match widths with
+  | [] -> String.sub fmt start (stop - start + 1)
+  | _  ->
+      let b = Buffer.create (stop - start + 10) in
+      let rec fill_format i w =
+        if i > stop then Buffer.contents b else
+          match (String.unsafe_get fmt i, w) with
+            ('*', h::t) ->
+              Buffer.add_string b (string_of_int h); fill_format (succ i) t
+          | ('*', []) ->
+              bad_format fmt start (* should not happen *)
+          | (c, _) ->
+              Buffer.add_char b c; fill_format (succ i) w
+      in fill_format start (List.rev widths)
+
+(* Decode a %format and act on it.
+   [fmt] is the printf format style, and [pos] points to a [%] character.  
+   After consuming the appropriate number of arguments and formatting
+   them, one of the three continuations is called:
+   [cont_s] for outputting a string (args: string, next pos)
+   [cont_a] for performing a %a action (args: fn, arg, next pos)
+   [cont_t] for performing a %t action (args: fn, next pos)
+   "next pos" is the position in [fmt] of the first character following
+   the %format in [fmt]. *)
+
+(* Note: here, rather than test explicitly against [String.length fmt]
+   to detect the end of the format, we use [String.unsafe_get] and
+   rely on the fact that we'll get a "nul" character if we access
+   one past the end of the string.  These "nul" characters are then
+   caught by the [_ -> bad_format] clauses below.
+   Don't do this at home, kids. *) 
+
+let scan_format fmt pos cont_s cont_a cont_t cont_f =
+  let rec scan_flags widths i =
+    match String.unsafe_get fmt i with
+    | '*' ->
+        Obj.magic(fun w -> scan_flags (w :: widths) (succ i))
+    | '0'..'9' | '.' | '#' | '-' | ' ' | '+' -> scan_flags widths (succ i)
+    | _ -> scan_conv widths i
+  and scan_conv widths i =
+    match String.unsafe_get fmt i with
+    | '%' ->
+        cont_s "%" (succ i)
+    | 's' ->
+        Obj.magic (fun (s: string) ->
+          if i = succ pos (* optimize for common case %s *)
+          then cont_s s (succ i)
+          else cont_s (format_string (extract_format fmt pos i widths) s)
+                      (succ i))
+    | 'c' ->
+        Obj.magic (fun (c: char) ->
+          cont_s (String.make 1 c) (succ i))
+    | 'd' | 'i' | 'o' | 'x' | 'X' | 'u' ->
+        Obj.magic(fun (n: int) ->
+          cont_s (format_int (extract_format fmt pos i widths) n) (succ i))
+    | 'f' | 'e' | 'E' | 'g' | 'G' ->
+        Obj.magic(fun (f: float) ->
+          cont_s (format_float (extract_format fmt pos i widths) f) (succ i))
+    | 'b' ->
+        Obj.magic(fun (b: bool) ->
+          cont_s (string_of_bool b) (succ i))
+    | 'a' ->
+        Obj.magic (fun printer arg ->
+          cont_a printer arg (succ i))
+    | 't' ->
+        Obj.magic (fun printer ->
+          cont_t printer (succ i))
+(*	  
+    | 'l' ->
+        begin match String.unsafe_get fmt (succ i) with
+        | 'd' | 'i' | 'o' | 'x' | 'X' | 'u' ->
+            Obj.magic(fun (n: int32) ->
+              cont_s (format_int32 (extract_format fmt pos (succ i) widths) n)
+                     (i + 2))
+        | _ ->
+            bad_format fmt pos
+        end
+    | 'n' ->
+        begin match String.unsafe_get fmt (succ i) with
+        | 'd' | 'i' | 'o' | 'x' | 'X' | 'u' ->
+            Obj.magic(fun (n: nativeint) ->
+              cont_s (format_nativeint
+                         (extract_format fmt pos (succ i) widths)
+                         n)
+                     (i + 2))
+        | _ ->
+            bad_format fmt pos
+        end
+    | 'L' ->
+        begin match String.unsafe_get fmt (succ i) with
+        | 'd' | 'i' | 'o' | 'x' | 'X' | 'u' ->
+            Obj.magic(fun (n: int64) ->
+              cont_s (format_int64 (extract_format fmt pos (succ i) widths) n)
+                     (i + 2))
+        | _ ->
+            bad_format fmt pos
+        end
+*)	
+    | '!' ->
+        Obj.magic (cont_f (succ i))
+    | _ ->
+        bad_format fmt pos
+  in scan_flags [] (pos + 1)
+
+(* Application to [fprintf], etc.  See also [Format.*printf]. *)
+
+let fprintf chan fmt =
+  let fmt = (Obj.magic fmt : string) in
+  let len = String.length fmt in
   let rec doprn i =
-    if i >= String.length format then
-      Obj.magic ()
-    else begin
-      let c = String.unsafe_get format i in
-      if c <> '%' then begin
-        output_char outchan c;
-        doprn (succ i)
-      end else begin
-        let j = skip_args (succ i) in
-        match String.unsafe_get format j with
-          '%' ->
-            output_char outchan '%';
-            doprn (succ j)
-        | 's' ->
-            Obj.magic(fun s ->
-              if j <= i+1 then
-                output_string outchan s
-              else begin
-                let p =
-                  try
-                    int_of_string (String.sub format (i+1) (j-i-1))
-                  with _ ->
-                    invalid_arg "fprintf: bad %s format" in
-                if p > 0 & String.length s < p then begin
-                  output_string outchan
-                                (String.make (p - String.length s) ' ');
-                  output_string outchan s
-                end else if p < 0 & String.length s < -p then begin
-                  output_string outchan s;
-                  output_string outchan
-                                (String.make (-p - String.length s) ' ')
-                end else
-                  output_string outchan s
-              end;
-              doprn (succ j))
-        | 'c' ->
-            Obj.magic(fun c ->
-              output_char outchan c;
-              doprn (succ j))
-        | 'd' | 'o' | 'x' | 'X' | 'u' ->
-            Obj.magic(fun n ->
-              output_string outchan
-                            (format_int (String.sub format i (j-i+1)) n);
-              doprn (succ j))
-        | 'f' | 'e' | 'E' | 'g' | 'G' ->
-            Obj.magic(fun f ->
-              output_string outchan
-                            (format_float (String.sub format i (j-i+1)) f);
-              doprn (succ j))
-        | 'b' ->
-            Obj.magic(fun b ->
-              output_string outchan (string_of_bool b);
-              doprn (succ j))
-        | 'a' ->
-            Obj.magic(fun printer arg ->
-              printer outchan arg;
-              doprn(succ j))
-        | 't' ->
-            Obj.magic(fun printer ->
-              printer outchan;
-              doprn(succ j))
-        | c ->
-            invalid_arg ("fprintf: unknown format")
-      end
-    end
-
-  and skip_args j =
-    match String.unsafe_get format j with
-      '0' .. '9' | ' ' | '.' | '-' -> skip_args (succ j)
-    | c -> j
-
+    if i >= len then Obj.magic () else
+    match String.unsafe_get fmt i with
+    | '%' -> scan_format fmt i cont_s cont_a cont_t cont_f
+    |  c  -> output_char chan c; doprn (succ i)
+  and cont_s s i =
+    output_string chan s; doprn i
+  and cont_a printer arg i =
+    printer chan arg; doprn i
+  and cont_t printer i =
+    printer chan; doprn i
+  and cont_f i =
+    flush chan; doprn i
   in doprn 0
 
 let printf fmt = fprintf stdout fmt
-and eprintf fmt = fprintf stderr fmt
+let eprintf fmt = fprintf stderr fmt
 
-let sprintf format =
-  let format = (Obj.magic format : string) in
-  let rec doprn start i accu =
-    if i >= String.length format then begin
-      let res = 
-        if i > start    
-        then String.sub format start (i-start) :: accu
-        else accu in
-      Obj.magic(String.concat "" (List.rev res))
+let ksprintf kont fmt =
+  let fmt = (Obj.magic fmt : string) in
+  let len = String.length fmt in
+  let dest = Buffer.create (len + 16) in
+  let rec doprn i =
+    if i >= len then begin
+      let res = Buffer.contents dest in
+      Buffer.clear dest;  (* just in case ksprintf is partially applied *)
+      Obj.magic (kont res)
     end else
-      if String.unsafe_get format i <> '%' then
-        doprn start (i+1) accu
-      else begin
-        let accu1 =
-          if i > start then
-          String.sub format start (i-start) :: accu
-          else accu in
-        let j = skip_args (succ i) in
-        match String.unsafe_get format j with
-          '%' ->
-            doprn j (succ j) accu1
-        | 's' ->
-            Obj.magic(fun s ->
-              let accu2 =
-                if j <= i+1 then
-                  s :: accu1
-                else begin
-                  let p =
-                    try
-                      int_of_string (String.sub format (i+1) (j-i-1))
-                    with _ ->
-                      invalid_arg "fprintf: bad %s format" in
-                  if p > 0 & String.length s < p then
-                    s :: String.make (p - String.length s) ' ' :: accu1
-                  else if p < 0 & String.length s < -p then
-                    String.make (-p - String.length s) ' ' :: s :: accu1
-                  else
-                    s :: accu1
-                end in
-              doprn (succ j) (succ j) accu2)
-        | 'c' ->
-            Obj.magic(fun c ->
-              doprn (succ j) (succ j) (String.make 1 c :: accu1))
-        | 'd' | 'o' | 'x' | 'X' | 'u' ->
-            Obj.magic(fun n ->
-              doprn (succ j) (succ j)
-                    (format_int (String.sub format i (j-i+1)) n :: accu1))
-        | 'f' | 'e' | 'E' | 'g' | 'G' ->
-            Obj.magic(fun f ->
-              doprn (succ j) (succ j)
-                    (format_float (String.sub format i (j-i+1)) f :: accu1))
-        | 'b' ->
-            Obj.magic(fun b ->
-              doprn (succ j) (succ j) (string_of_bool b :: accu1))
-        | 'a' ->
-            Obj.magic(fun printer arg ->
-              doprn (succ j) (succ j) (printer () arg :: accu1))
-        | 't' ->
-            Obj.magic(fun printer ->
-              doprn (succ j) (succ j) (printer () :: accu1))
-        | c ->
-            invalid_arg ("sprintf: unknown format")
-      end
+    match String.unsafe_get fmt i with
+    | '%' -> scan_format fmt i cont_s cont_a cont_t cont_f
+    |  c  -> Buffer.add_char dest c; doprn (succ i)
+  and cont_s s i =
+    Buffer.add_string dest s; doprn i
+  and cont_a printer arg i =
+    Buffer.add_string dest (printer () arg); doprn i
+  and cont_t printer i =
+    Buffer.add_string dest (printer ()); doprn i
+  and cont_f i = doprn i
+  in doprn 0
 
-  and skip_args j =
-    match String.unsafe_get format j with
-      '0' .. '9' | ' ' | '.' | '-' -> skip_args (succ j)
-    | c -> j
+let sprintf fmt =
+  let fmt = (Obj.magic fmt : string) in
+  let len = String.length fmt in
+  let dest = Buffer.create (len + 16) in
+  let rec doprn i =
+    if i >= len then begin
+      let res = Buffer.contents dest in
+      Buffer.clear dest;  (* just in case sprintf is partially applied *)
+      Obj.magic res
+    end else
+    match String.unsafe_get fmt i with
+    | '%' -> scan_format fmt i cont_s cont_a cont_t cont_f
+    |  c  -> Buffer.add_char dest c; doprn (succ i)
+  and cont_s s i =
+    Buffer.add_string dest s; doprn i
+  and cont_a printer arg i =
+    Buffer.add_string dest (printer () arg); doprn i
+  and cont_t printer i =
+    Buffer.add_string dest (printer ()); doprn i
+  and cont_f i = doprn i
+  in doprn 0
 
-  in doprn 0 0 []
+let bprintf dest fmt =
+  let fmt = (Obj.magic fmt : string) in
+  let len = String.length fmt in
+  let rec doprn i =
+    if i >= len then Obj.magic () else
+    match String.unsafe_get fmt i with
+    | '%' -> scan_format fmt i cont_s cont_a cont_t cont_f
+    |  c  -> Buffer.add_char dest c; doprn (succ i)
+  and cont_s s i =
+    Buffer.add_string dest s; doprn i
+  and cont_a printer arg i =
+    printer dest arg; doprn i
+  and cont_t printer i =
+    printer dest; doprn i
+  and cont_f i = doprn i
+  in doprn 0
+
+

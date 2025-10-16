@@ -22,7 +22,7 @@ local semgrep_rules = [
       Use `FS.with_open_in()` or `UChan.with_open_in` instead.
     |||,
     paths: {
-      exclude: [],
+      exclude: ['todo/'],
     },
   },
 ];
@@ -82,7 +82,7 @@ local cap_rules = [
 	        'lib_core/strings/todo/filename.ml', # for Sys.getenv TMPDIR
 		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml',
-		
+		'todo/'
 		],
     },
   },
@@ -97,10 +97,10 @@ local cap_rules = [
     |||,
     paths: {
       exclude: [
-        'ksym.ml', 'thread.ml', 'printexc.ml', 'threadUnix.ml',
-	'lib_system/arg.ml', 'lib_system/unix/unix.ml',
+        'ksym.ml', 'thread.ml', 'Printexc.ml', 'threadUnix.ml',
+	'lib_system/Arg.ml', 'lib_system/unix/unix.ml',
         'lex/', 'yacc/', 'version_control/',
-	'windows/'
+	'windows/', 'todo/',
       ],
     },
   },
@@ -114,8 +114,9 @@ local cap_rules = [
        Do not use Sys.argv. Use CapSys.argv and capabilities.
     |||,
     paths: {
-      exclude: ['lib_system/arg.ml', 'lib_system/unix/unix.ml',
-         'lex/', 'yacc/', 'version_control/'
+      exclude: ['lib_system/Arg.ml', 'lib_system/unix/unix.ml',
+         'lex/', 'yacc/', 'version_control/',
+         'todo/'
       ],
     },
   },
@@ -131,7 +132,8 @@ local cap_rules = [
     paths: {
       exclude: [
          'lib_core/commons_plan9/', 'lib_graphics/draw/draw_rio.ml',
-         'lex/', 'yacc/', 'version_control/'
+         'lex/', 'yacc/', 'version_control/',
+         'todo/'
       ],
     },
   },

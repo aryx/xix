@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: list.ml,v 1.17 1997/11/06 17:28:16 xleroy Exp $ *)
 
 (* List operations *)
 
@@ -140,6 +139,33 @@ let rec combine l1 l2 =
   | (a1::l1, a2::l2) -> (a1, a2) :: combine l1 l2
   | (_, _) -> invalid_arg "List.combine"
 
+(* old sort from sort.ml *)
+let rec merge order l1 l2 =
+  match l1 with
+    [] -> l2
+  | h1 :: t1 ->
+      match l2 with
+        [] -> l1
+      | h2 :: t2 ->
+          if order h1 h2
+          then h1 :: merge order t1 l2
+          else h2 :: merge order l1 t2
+
+let sort_bool order l =
+  let rec initlist = function
+      [] -> []
+    | [e] -> [[e]]
+    | e1::e2::rest ->
+        (if order e1 e2 then [e1;e2] else [e2;e1]) :: initlist rest in
+  let rec merge2 = function
+      l1::l2::rest -> merge order l1 l2 :: merge2 rest
+    | x -> x in
+  let rec mergeall = function
+      [] -> []
+    | [l] -> l
+    | llist -> mergeall (merge2 llist) in
+  mergeall(initlist l)
+
 (* ported from 3.12 *)
 
 let rec chop k l =
@@ -235,3 +261,10 @@ let partition p l =
   | [] -> (rev yes, rev no)
   | x :: l -> if p x then part (x :: yes) no l else part yes (x :: no) l in
   part [] [] l
+
+let rec filter_map f = function
+  | [] -> []
+  | x :: l ->
+      match f x with
+      | None -> filter_map f l
+      | Some v -> v :: filter_map f l

@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: list.mli,v 1.11 1997/10/31 12:59:25 doligez Exp $ *)
 
 (* Module [List]: list operations *)
 
@@ -123,6 +122,20 @@ val combine : 'a list -> 'b list -> ('a * 'b) list
            have different lengths. *)
 
 
+(* DEPRECATED: was Sort.list before *)
+val sort_bool : ('a -> 'a -> bool) -> 'a list -> 'a list
+        (* Sort a list in increasing order according to an ordering predicate.
+           The predicate should return [true] if its first argument is
+           less than or equal to its second argument. *)
+
+(* DEPRECATED: was Sort.merge before *)
+val merge : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
+        (* Merge two lists according to the given predicate.
+           Assuming the two argument lists are sorted according to the
+           predicate, [merge] returns a sorted list containing the elements
+           from the two lists. The behavior is undefined if the two
+           argument lists were not sorted. *)
+
 (* ported from 3.12 *)
 val sort : ('a -> 'a -> int) -> 'a list -> 'a list
 (** Sort a list in increasing order according to a comparison
@@ -160,3 +173,10 @@ val find : ('a -> bool) -> 'a list -> 'a
    that satisfies the predicate [p].
    Raise [Not_found] if there is no value that satisfies [p] in the
    list [l]. *)
+
+val filter_map : ('a -> 'b option) -> 'a list -> 'b list
+(** [filter_map f l] applies [f] to every element of [l], filters
+    out the [None] elements and returns the list of the arguments of
+    the [Some] elements.
+    @since 4.08
+ *)

@@ -1,13 +1,13 @@
 TOP=..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_toolchain/objects -I $TOP/macroprocessor
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/assembler/objects -I $TOP/macroprocessor
 
 SRC= Parser_asm5.ml Lexer_asm5.ml Parse_asm5.ml \
  Check_asm5.ml Resolve_labels5.ml \
  CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_toolchain/objects/lib.cma \
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/assembler/objects/lib.cma \
   $TOP/macroprocessor/lib.cma
 
 # or use Principia spirit! THE assembler! so call it simply 'assembler' ? :)
@@ -32,4 +32,4 @@ NUKEFILES=$AUTOGEN
 loc:V:
    wc -l Lexer_asm5.mll Parser_asm5.mly Parse_asm5.ml* Main.ml \
     Check_asm5.ml Resolve_labels5.ml \
-     $TOP/lib_toolchain/objects/Ast_asm5.ml $TOP/lib_toolchain/objects/Object_code5.ml*
+     $TOP/assembler/objects/Ast_asm5.ml $TOP/assembler/objects/Object_code5.ml*

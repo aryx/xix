@@ -8,8 +8,8 @@ DIRS0=\
   mk shell\
   lib_parsing lex yacc\
   macroprocessor\
-  lib_toolchain/objects assembler\
-  lib_toolchain/executables linker\
+  assembler/objects assembler\
+  linker/executables linker\
   compiler
 
 # does not work yet with ocaml-light

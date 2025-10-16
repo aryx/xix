@@ -2,7 +2,7 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons \
   -I $TOP/macroprocessor \
-  -I $TOP/lib_toolchain/objects
+  -I $TOP/assembler/objects
 
 SRC= Flags.ml \
   Type_.ml Meta_type.ml   Storage.ml Meta_storage.ml \
@@ -20,7 +20,7 @@ SRC= Flags.ml \
 SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma \
  $TOP/macroprocessor/lib.cma \
- $TOP/lib_toolchain/objects/lib.cma
+ $TOP/assembler/objects/lib.cma
 
 PROG=5c
 

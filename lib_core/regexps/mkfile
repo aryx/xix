@@ -1,0 +1,11 @@
+# -*- sh -*-
+
+TOP=../..
+INCLUDES=-I .
+
+#alt: merge with lib_core/strings/ but str.ml relies on C lib -lstr
+# so simpler to separate it like it's separated in the original stdlib
+SRC=Str.ml
+
+<$TOP/mkconfig
+<$TOP/mklib

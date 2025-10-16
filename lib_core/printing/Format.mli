@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: format.mli,v 1.16 1997/10/23 07:53:12 weis Exp $ *)
 
 (* Module [Format]: pretty printing *)
 
@@ -237,6 +236,14 @@ type formatter;;
            each pretty-printer and may be fixed independently.
            A new formatter is obtained by calling the [make_formatter]
            function. *)
+
+
+val formatter_of_buffer : Buffer.t -> formatter
+(** [formatter_of_buffer b] returns a new formatter writing to
+  buffer [b]. At the end of pretty-printing, the formatter must be flushed
+  using {!pp_print_flush} or {!pp_print_newline}, to print all the
+  pending material into the buffer.
+*)
 
 val std_formatter : formatter;;
         (* The standard formatter used by the formatting functions

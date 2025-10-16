@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: filename.ml,v 1.12 1997/10/24 15:54:06 xleroy Exp $ *)
 
 let current_dir_name =
   match Sys.os_type with
@@ -67,7 +66,7 @@ let wnt_is_implicit n =
 
 let contains_colon n =
   try
-    String.index n ':'; true
+    ignore (String.index n ':'); true
   with Not_found ->
     false
 ;;

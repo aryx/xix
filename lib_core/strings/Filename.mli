@@ -9,7 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: filename.mli,v 1.12 1997/10/24 15:54:06 xleroy Exp $ *)
 
 (* Module [Filename]: operations on file names *)
 

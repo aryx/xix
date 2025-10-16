@@ -8,6 +8,7 @@ INCLUDES=-I .
 SRC=camlinternalFormatBasics.ml Stdlib.ml \
    Bool.ml \
    Option.ml Either.ml Result.ml \
+   Obj.ml
 
 <$TOP/mkconfig
 <$TOP/mklib
@@ -16,6 +17,7 @@ Bool.cmi: Stdlib.cmi
 Option.cmi: Stdlib.cmi
 Either.cmi: Stdlib.cmi
 Result.cmi: Stdlib.cmi
+Obj.cmi: Stdlib.cmi
 
 camlinternalFormatBasics.cmo: camlinternalFormatBasics.ml
 	$OCAMLC $COMPFLAGS $INCLUDES -nopervasives -c camlinternalFormatBasics.ml

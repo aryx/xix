@@ -1,10 +1,10 @@
 # -*- sh -*-
 
-TOP=../..
+TOP=..
 INCLUDES=-I .
 
 SRC=\
-  Printf.ml Printexc.ml Format.ml
+  Sys.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

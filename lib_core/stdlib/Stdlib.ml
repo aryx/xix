@@ -179,8 +179,8 @@ let rec (@) l1 l2 =
 type in_channel
 type out_channel
 
-external open_descriptor_out: int -> out_channel = "caml_open_descriptor"
-external open_descriptor_in: int -> in_channel = "caml_open_descriptor"
+external open_descriptor_out: int -> out_channel = "caml_ml_open_descriptor_out"
+external open_descriptor_in: int -> in_channel = "caml_ml_open_descriptor_in"
 
 let stdin  = open_descriptor_in 0
 let stdout = open_descriptor_out 1
@@ -193,7 +193,7 @@ type open_flag =
   | Open_creat | Open_trunc | Open_excl
   | Open_nonblock
 
-external open_desc: string -> open_flag list -> int -> int = "sys_open"
+external open_desc: string -> open_flag list -> int -> int = "caml_sys_open"
 
 let open_out_gen mode perm name =
   open_descriptor_out(open_desc name mode perm)
@@ -335,7 +335,7 @@ type ('a, 'b, 'c) format = ('a, 'b, 'c, 'c) format4
 
 (* Miscellaneous *)
 
-external sys_exit : int -> 'a = "sys_exit"
+external sys_exit : int -> 'a = "caml_sys_exit"
 
 let exit_function = ref (fun () -> flush stdout; flush stderr)
 

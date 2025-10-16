@@ -6,7 +6,8 @@ INCLUDES=-I .
 SRC=\
   Char.ml \
   String.ml Bytes.ml \
-  Buffer.ml
+  Buffer.ml \
+  Filename.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

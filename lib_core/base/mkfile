@@ -9,9 +9,10 @@ INCLUDES=-I .
 # then make lib_core/strings/ less elegant (without a String.ml)
 
 SRC=Bool.ml \
+   Int.ml Float.ml \
    Char.ml Uchar.ml String.ml Bytes.ml \
    Option.ml Either.ml Result.ml \
-   Fun.ml \
+   Fun.ml Lazy.ml \
    Buffer.ml Digest.ml
 
 <$TOP/mkconfig

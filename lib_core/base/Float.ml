@@ -34,7 +34,7 @@ external of_int : int -> float = "%floatofint"
 external to_int : float -> int = "%intoffloat"
 external of_string : string -> float = "float_of_string"
 (*let of_string_opt = Pervasives.float_of_string_opt *)
-let to_string = Pervasives.string_of_float
+let to_string = (*Pervasives.*)string_of_float
 
 (*
 type fpclass = Pervasives.fpclass =
@@ -96,4 +96,5 @@ type t = float
 (*
 external compare : float -> float -> int = "%compare"
  *)
+let compare : t -> t -> int = compare
 let equal x y = compare x y = 0

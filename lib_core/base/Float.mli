@@ -253,14 +253,12 @@ external modf : float -> float * float = "caml_modf_float"
 type t = float
 (** An alias for the type of floating-point numbers. *)
 
-(*
 val compare: t -> t -> int
 (** [compare x y] returns [0] if [x] is equal to [y], a negative integer if [x]
     is less than [y], and a positive integer if [x] is greater than
     [y]. [compare] treats [nan] as equal to itself and less than any other float
     value.  This treatment of [nan] ensures that [compare] defines a total
     ordering relation.  *)
- *)
 
 val equal: t -> t -> bool
 (** The equal function for floating-point numbers, compared using {!compare}. *)

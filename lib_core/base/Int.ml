@@ -36,8 +36,10 @@ let lognot x = logxor x (-1)
 external shift_left : int -> int -> int = "%lslint"
 external shift_right : int -> int -> int = "%asrint"
 external shift_right_logical : int -> int -> int = "%lsrint"
-let equal : int -> int -> bool = ( = )
-let compare : int -> int -> int = compare
+
+let equal : t -> t -> bool = ( = )
+let compare : t -> t -> int = compare
+
 external to_float : int -> float = "%floatofint"
 external of_float : float -> int = "%intoffloat"
 

@@ -102,10 +102,10 @@ external shift_right_logical : int -> int -> int = "%lsrint"
 
 (** {1:preds Predicates and comparisons} *)
 
-val equal : int -> int -> bool
+val equal : t -> t -> bool
 (** [equal x y] is [true] iff [x = y]. *)
 
-val compare : int -> int -> int
+val compare : t -> t -> int
 (** [compare x y] is {!Stdlib.compare}[ x y] but more efficient. *)
 
 (** {1:convert Converting} *)

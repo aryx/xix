@@ -7,7 +7,6 @@ SRC=\
   Char.ml \
   String.ml Bytes.ml \
   Buffer.ml \
-  Filename.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

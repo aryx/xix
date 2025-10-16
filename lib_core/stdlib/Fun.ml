@@ -32,7 +32,7 @@ let negate p v = not (p v)
  *         result
  *       with x -> f2 (); raise x
  *)
-let protect (*~*)finally work =
+let protect ~finally work =
   let result = (try work () with e -> finally (); raise e) in
   finally ();
   result

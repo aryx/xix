@@ -54,16 +54,21 @@ let blit s1 ofs1 s2 ofs2 len =
   then invalid_arg "String.blit"
   else unsafe_blit s1 ofs1 s2 ofs2 len
 
+(* duplicated List.iter to avoid mutual deps stdlib <-> collections *)
+let rec list_iter f = function
+    [] -> ()
+  | a::l -> f a; list_iter f l
+
 let concat sep l =
   match l with
     [] -> ""
   | hd :: tl ->
       let num = ref 0 and len = ref 0 in
-      List.iter (fun s -> incr num; len := !len + length s) l;
+      list_iter (fun s -> incr num; len := !len + length s) l;
       let r = create (!len + length sep * (!num - 1)) in
       unsafe_blit hd 0 r 0 (length hd);
       let pos = ref(length hd) in
-      List.iter
+      list_iter
         (fun s ->
           unsafe_blit sep 0 r !pos (length sep);
           pos := !pos + length sep;

@@ -10,6 +10,7 @@ INCLUDES=-I .
 #alt: Obj.ml, Callback.ml, Marshal.ml could go to lib_core/meta/
 SRC=camlinternalFormatBasics.ml Stdlib.ml \
    Bool.ml \
+   Char.ml Bytes.ml String.ml \
    Option.ml Either.ml Result.ml \
    Fun.ml \
    Obj.ml Callback.ml Marshal.ml
@@ -18,6 +19,9 @@ SRC=camlinternalFormatBasics.ml Stdlib.ml \
 <$TOP/mklib
 
 Bool.cmi: Stdlib.cmi
+Char.cmi: Stdlib.cmi
+Bytes.cmi: Stdlib.cmi
+String.cmi: Stdlib.cmi
 
 Option.cmi: Stdlib.cmi
 Either.cmi: Stdlib.cmi

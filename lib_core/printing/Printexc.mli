@@ -27,10 +27,32 @@ val catch: ('a -> 'b) -> 'a -> 'b
            [unit->unit], is the entry point of a standalone program.
            This catches and reports any exception that escapes the program. *)
 
-(* forward port of 3.10.2 *)
+(* backport of 3.10.2 *)
 val get_backtrace: unit -> string
 (** [Printexc.get_backtrace ()] returns a string containing the
     same exception backtrace that [Printexc.print_backtrace] would
     print. *)
 
 
+(* partial port of 4.01 *)
+(** {6 Raw backtraces} *)
+
+type raw_backtrace
+
+(** The abstract type [backtrace] stores exception backtraces in
+    a low-level format, instead of directly exposing them as string as
+    the [get_backtrace()] function does.
+
+    This allows to pay the performance overhead of representation
+    conversion and formatting only at printing time, which is useful
+    if you want to record more backtrace than you actually print.
+*)
+
+val get_raw_backtrace: unit -> raw_backtrace
+(* val print_raw_backtrace: out_channel -> raw_backtrace -> unit *)
+val raw_backtrace_to_string: raw_backtrace -> string
+
+val get_callstack: int -> raw_backtrace
+
+(* partial port of 4.05 *)
+val raise_with_backtrace: exn -> raw_backtrace -> 'a

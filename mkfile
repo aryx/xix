@@ -1,7 +1,7 @@
 TOP=.
 <mkconfig
 
-# STDLIB is defined (or not) in mkconfig
+# STDLIB is defined or not (usually not) in mkconfig
 
 DIRS0=\
   $STDLIB lib_core/commons\
@@ -16,13 +16,14 @@ DIRS0=\
 DIRS1=version_control
 
 # works only under plan9 for now: 
-DIRS2=lib_core/commons2 lib_system/plan9 lib_graphics windows
+DIRS2=lib_core/commons_plan9 lib_system/plan9 lib_graphics windows
 
 # works only from scratch:
 DIRS3=kernel
 
-DIRS=$DIRS0 #$DIRS2 #DIRS3
+DIRS=$DIRS0 #$DIRS1 #$DIRS2 #DIRS3
 
+#TODO: add tests/
 TESTDIRS=\
   assembler/tests compiler/tests linker/tests
 
@@ -47,6 +48,6 @@ clean nuke:V:
 		mk $MKFLAGS $target
 	}
 
-# too many dupes for now (e.g., ast.ml in mutliple dirs)
+# too many dupes for now (e.g., Ast.ml in mutliple dirs)
 graph:QV:
 	codegraph_build -symlinks -lang cmt -verbose .

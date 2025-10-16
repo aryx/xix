@@ -45,6 +45,7 @@ external major : unit -> unit = "gc_major";;
 external full_major : unit -> unit = "gc_full_major";;
 external compact : unit -> unit = "gc_compaction";;
 
+(*
 open Printf;;
 
 let print_stat c =
@@ -64,3 +65,4 @@ let print_stat c =
   fprintf c "fragments: %d\n" st.fragments;
   fprintf c "compactions: %d\n" st.compactions;
 ;;
+*)

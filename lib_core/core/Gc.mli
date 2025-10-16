@@ -99,9 +99,12 @@ type control = {
 external stat : unit -> stat = "gc_stat"
   (* Return the current values of the memory management counters in a
      [stat] record. *)
+(*
 val print_stat : out_channel -> unit
   (* Print the current values of the memory management counters (in
      human-readable form) into the channel argument. *)
+*)
+
 external get : unit -> control = "gc_get"
   (* Return the current values of the GC parameters in a [control] record. *)
 external set : control -> unit = "gc_set"

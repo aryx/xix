@@ -68,6 +68,26 @@ val hash : 'a -> int
            Moreover, [hash] always terminates, even on cyclic
            structures. *)
 
+val hash_param : int -> int -> 'a -> int
+(** [Hashtbl.hash_param meaningful total x] computes a hash value for [x],
+   with the same properties as for [hash]. The two extra integer
+   parameters [meaningful] and [total] give more precise control over
+   hashing. Hashing performs a breadth-first, left-to-right traversal
+   of the structure [x], stopping after [meaningful] meaningful nodes
+   were encountered, or [total] nodes (meaningful or not) were
+   encountered.  If [total] as specified by the user exceeds a certain
+   value, currently 256, then it is capped to that value.
+   Meaningful nodes are: integers; floating-point
+   numbers; strings; characters; booleans; and constant
+   constructors. Larger values of [meaningful] and [total] means that
+   more nodes are taken into account to compute the final hash value,
+   and therefore collisions are less likely to happen.  However,
+   hashing takes longer. The parameters [meaningful] and [total]
+   govern the tradeoff between accuracy and speed.  As default
+   choices, {!hash} and {!seeded_hash} take
+   [meaningful = 10] and [total = 100]. *)
+
+(*
 external hash_param : int -> int -> 'a -> int = "hash_univ_param" "noalloc"
         (* [Hashtbl.hash_param n m x] computes a hash value for [x], with the
            same properties as for [hash]. The two extra parameters [n] and
@@ -81,6 +101,7 @@ external hash_param : int -> int -> 'a -> int = "hash_univ_param" "noalloc"
            value, and therefore collisions are less likely to happen.
            However, hashing takes longer. The parameters [m] and [n]
            govern the tradeoff between accuracy and speed. *)
+*)
 
 (* ported from 3.12 *)
 val mem : ('a, 'b) t -> 'a -> bool

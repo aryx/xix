@@ -77,7 +77,7 @@ let concat sep l =
         tl;
       r
 
-external is_printable: char -> bool = "is_printable"
+(* old: external is_printable: char -> bool = "is_printable" *)
 external char_code: char -> int = "%identity"
 external char_chr: int -> char = "%identity"
 
@@ -109,7 +109,10 @@ let escaped s =
       n := !n +
         (match unsafe_get s i with
            '"' | '\\' | '\n' | '\t' -> 2
-          | c -> if is_printable c then 1 else 4)
+       (* old: | c -> if is_printable c then 1 else 4 *)
+       | ' ' .. '~' -> 1
+       | _ -> 4
+        )
     done;
     if !n = length s then s else begin
       let s' = create !n in
@@ -123,10 +126,15 @@ let escaped s =
                 unsafe_set s' !n '\\'; incr n; unsafe_set s' !n 'n'
             | '\t' ->
                 unsafe_set s' !n '\\'; incr n; unsafe_set s' !n 't'
+            (* old: 
             | c ->
                 if is_printable c then
                   unsafe_set s' !n c
-                else begin
+                else begin ... end
+             *)
+            | (' ' .. '~') as c -> unsafe_set s' !n c
+            | c ->
+                begin
                   let a = char_code c in
                   unsafe_set s' !n '\\';
                   incr n;

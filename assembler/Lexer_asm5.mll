@@ -97,7 +97,9 @@ rule token = parse
   (* looser: actually for '.' 5a imposes to have an isalpha() after *)    
   | (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
       let s = Lexing.lexeme lexbuf in
-      (* fast enough? I hope OCaml generate good code for strings matching *)
+      (* fast enough? I hope OCaml generate good code for strings matching
+       * alt: use Hashtbl.t
+       *)
       match s with
       (* instructions *)
       | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
@@ -186,7 +188,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* See ../macroprocessor/lexer_cpp.mll (called from parse_asm5.ml) *)
+  (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asm5.ml) *)
   | "#" { TSharp }
 
   (* ----------------------------------------------------------------------- *)

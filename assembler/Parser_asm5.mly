@@ -39,10 +39,7 @@ let attributes_of_int i =
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
 
 let mk_e name static = 
-  { name = name;
-    priv = if static then Some (-1) else None;
-    signature = None;
-  }
+  { name; priv = if static then Some (-1) else None; signature = None; }
 
 %}
 

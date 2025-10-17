@@ -49,9 +49,9 @@
  (package xix)
  (section bin)
  (files
-  (Main.exe as rc)
+  (Main.exe as orc)
   ; useful to debug, see ../../debug and ocamldebug
-  (Main.bc as rc.bc))
+  (Main.bc as orc.bc))
 )
 
 (dirs :standard \ docs)

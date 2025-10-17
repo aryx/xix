@@ -16,7 +16,7 @@
  (package xix)
  (section bin)
  (files
-  (Main.exe as 5a)
+  (Main.exe as o5a)
   ; useful to debug, see ../../debug and ocamldebug
-  (Main.bc as 5a.bc))
+  (Main.bc as o5a.bc))
 )

@@ -20,7 +20,7 @@
 ###############################################################################
 
 default:
-	bash -c "dune build _build/install/default/bin/{mk,rc,olex,oyacc,test.bc,5a,5c,5l,ogit}"
+	bash -c "dune build _build/install/default/bin/{omk,orc,olex,oyacc,test.bc,o5a,o5c,o5l,ogit}"
 	@echo you can also use ./bootstrap-mk.sh and ./bin/mk instead of make
 
 all:
@@ -28,6 +28,8 @@ all:
 
 install:
 	dune install
+uninstall:
+	dune uninstall
 
 #alt: git clean -dfX or -dfx
 clean:

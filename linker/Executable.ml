@@ -28,9 +28,7 @@ let cput chan byte =
   output_char chan byte
   
 
-let gen config sizes cs ds symbols2 (outfile : Fpath.t) : unit =
- outfile |> UChan.with_open_out (fun (chan : Chan.o) ->
-
+let gen config sizes cs ds symbols2 (chan : Chan.o) : unit =
   let entry = config.T.entry_point in
   let format = config.T.header_type in
 
@@ -71,6 +69,5 @@ let gen config sizes cs ds symbols2 (outfile : Fpath.t) : unit =
   (* Data section *)
   (* no seek to a page boundary; a disk image is not a memory image! *)
   ds |> Array.iter (cput chan.oc);
-  
   (* todo: symbol table, program counter line table *)
- )
+  ()

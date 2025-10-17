@@ -56,8 +56,8 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-(* will generate outfile as a side effect *)
-let link (caps : < caps; ..> ) (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : unit =
+(* will modify chan as a side effect *)
+let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
   let (code, data, symbols) = Load5.load caps objfiles in
 
   (* mark at least as SXref the entry point *)
@@ -82,7 +82,7 @@ let link (caps : < caps; ..> ) (config : T.config) (objfiles : Fpath.t list) (ou
  
   let instrs = Codegen5.gen symbols2 config graph in
   let datas  = Datagen.gen symbols2 init_data sizes data in
-  Executable.gen config sizes instrs datas symbols2 outfile
+  Executable.gen config sizes instrs datas symbols2 chan
 
 (*****************************************************************************)
 (* Entry point *)
@@ -177,7 +177,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       in
      try 
         (* the main call *)
-        link caps config xs !outfile;
+        !outfile |> FS.with_open_out caps (fun chan ->
+          link5 caps config xs chan
+        );
         Exit.OK
   with exn ->
     if !backtrace

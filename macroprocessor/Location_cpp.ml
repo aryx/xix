@@ -15,8 +15,11 @@ open Fpath_.Operators
 
 (* global line number, after pre-processing *)
 type loc = int
+[@@deriving show]
+
 (* final readable location *)
 type final_loc = Fpath.t * int
+[@@deriving show]
 
 type location_history = {
   location_event: location_event;
@@ -29,6 +32,7 @@ type location_history = {
     | Line of int * Fpath.t
     (* end of #include, back to includer *)
     | Eof
+[@@deriving show]
 
 let history = ref []
 
@@ -44,9 +48,10 @@ exception Error of string * loc
 (* Debugging *)
 (*****************************************************************************)
 
-(* for 5c -f *)
+(* for 5c -f 
+ * alt: just rely on deriving show but kept this for compatibility with kencc
+ *)
 let dump_event (event : location_event) : unit =
-  (* alt: use deriving show above but kept this for compatibility with kencc *)
   match event with
   | Include file -> 
       Logs.app (fun m -> m "%4d: %s" !line !!file)

@@ -16,7 +16,7 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (Dockerfile.light v1, CLI.ml and caps, semgrep GHA)
+* 0.17 (Q4 2025) (Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0)
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
@@ -29,6 +29,7 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 
 ** devinfra
 - resume semgrep.jsonnet and semgrep.yml in CI
+- use more Logs.info in 5a/5l/...
 
 ** internals
 - use uppercase module filenames, split Main.ml/CLI.ml, and start

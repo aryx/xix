@@ -4,6 +4,7 @@ type token_category =
   | Sharp
   | Ident of string
   | Other
+[@@deriving show]
 
 (* wrapper around a parser/lexer (e.g., 5c) to preprocess first the file *)
 type ('token, 'ast) hook = {

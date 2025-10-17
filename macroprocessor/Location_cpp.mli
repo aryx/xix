@@ -1,6 +1,8 @@
 
 type loc = int
+[@@deriving show]
 type final_loc = Fpath.t * int
+[@@deriving show]
 
 type location_history = {
   location_event: location_event;
@@ -10,6 +12,7 @@ type location_history = {
     | Include of Fpath.t
     | Line of int * Fpath.t
     | Eof
+[@@deriving show]
 
 (* both should be reseted each time you parse a new file *)
 val history: location_history list ref

@@ -41,6 +41,7 @@ type token_category =
   | Sharp
   | Ident of string
   | Other
+[@@deriving show]
 
 type ('token, 'ast) hook = {
   lexer: Lexing.lexbuf -> 'token;

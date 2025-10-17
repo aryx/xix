@@ -39,3 +39,4 @@ type directive =
      *)
     body: string option
   }
+[@@deriving show]

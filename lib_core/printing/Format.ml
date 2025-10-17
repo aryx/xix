@@ -645,8 +645,8 @@ and set_formatter_output_functions =
 and get_formatter_output_functions =
     pp_get_formatter_output_functions std_formatter;;
 
-external format_int: string -> int -> string = "format_int"
-external format_float: string -> float -> string = "format_float"
+external format_int: string -> int -> string = "caml_format_int"
+external format_float: string -> float -> string = "caml_format_float"
 
 let fprintf ppf format =
   let format = (Obj.magic format : string) in

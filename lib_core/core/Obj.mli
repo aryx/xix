@@ -19,12 +19,12 @@ external repr : 'a -> t = "%identity"
 external obj : t -> 'a = "%identity"
 external magic : 'a -> 'b = "%identity"
 
-external is_block : t -> bool = "obj_is_block"
-external tag : t -> int = "obj_tag"
+val is_block : t -> bool
+external tag : t -> int = "caml_obj_tag"
 external size : t -> int = "%obj_size"
 external field : t -> int -> t = "%obj_field"
 external set_field : t -> int -> t -> unit = "%obj_set_field"
-external new_block : int -> int -> t = "obj_block"
+external new_block : int -> int -> t = "caml_obj_block"
 
 (* from 3.0 *)
 external is_int : t -> bool = "%obj_is_int"

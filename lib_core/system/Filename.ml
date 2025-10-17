@@ -185,8 +185,8 @@ let temporary_directory =
   | "MacOS" -> (try Sys.getenv "TempFolder" with Not_found -> ":")
   | _ -> assert false
 
-external open_desc: string -> open_flag list -> int -> int = "sys_open"
-external close_desc: int -> unit = "sys_close"
+external open_desc: string -> open_flag list -> int -> int = "caml_sys_open"
+external close_desc: int -> unit = "caml_sys_close"
 
 let temp_file prefix suffix =
   let rec try_name counter =

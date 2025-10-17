@@ -26,8 +26,8 @@ external set: 'a array -> int -> 'a -> unit = "%array_safe_set"
            Raise [Invalid_argument "Array.set"] if [n] is outside the range
            0 to [Array.length a - 1].
            You can also write [a.(n) <- x] instead of [Array.set a n x]. *)
-external make: int -> 'a -> 'a array = "make_vect"
-external create: int -> 'a -> 'a array = "make_vect"
+external make: int -> 'a -> 'a array = "caml_make_vect"
+external create: int -> 'a -> 'a array = "caml_make_vect"
         (* [Array.make n x] returns a fresh array of length [n],
            initialized with [x].
            All the elements of this new array are initially

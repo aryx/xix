@@ -28,7 +28,7 @@ external set : string -> int -> char -> unit = "%string_safe_set"
            0 to [(String.length s - 1)].
            You can also write [s.[n] <- c] instead of [String.set s n c]. *)
 
-external create : int -> string = "create_string"
+external create : int -> string = "caml_create_string"
         (* [String.create n] returns a fresh string of length [n].
            The string initially contains arbitrary characters. *)
 val make : int -> char -> string
@@ -109,9 +109,9 @@ val uncapitalize: string -> string
 external unsafe_get : string -> int -> char = "%string_unsafe_get"
 external unsafe_set : string -> int -> char -> unit = "%string_unsafe_set"
 external unsafe_blit : string -> int -> string -> int -> int -> unit
-                     = "blit_string" "noalloc"
+                     = "caml_blit_string" "noalloc"
 external unsafe_fill : string -> int -> int -> char -> unit
-                     = "fill_string" "noalloc"
+                     = "caml_fill_string" "noalloc"
 
 val uppercase_ascii : string -> string
 (** [uppercase_ascii s] is [s] with all lowercase letters

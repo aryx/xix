@@ -16,21 +16,21 @@ val argv: string array
         (* The command line arguments given to the process.
            The first element is the command name used to invoke the program.
            The following elements are the arguments given to the program. *)
-external file_exists: string -> bool = "sys_file_exists"
+external file_exists: string -> bool = "caml_sys_file_exists"
         (* Test if a file with the given name exists. *)
-external remove: string -> unit = "sys_remove"
+external remove: string -> unit = "caml_sys_remove"
         (* Remove the given file name from the file system. *)
-external rename : string -> string -> unit = "sys_rename"
+external rename : string -> string -> unit = "caml_sys_rename"
         (* Rename a file. The first argument is the old name and the
            second is the new name. *)
-external getenv: string -> string = "sys_getenv"
+external getenv: string -> string = "caml_sys_getenv"
         (* Return the value associated to a variable in the process
            environment. Raise [Not_found] if the variable is unbound. *)
-external command: string -> int = "sys_system_command"
+external command: string -> int = "caml_sys_system_command"
         (* Execute the given shell command and return its exit code. *)
-external chdir: string -> unit = "sys_chdir"
+external chdir: string -> unit = "caml_sys_chdir"
         (* Change the current working directory of the process. *)
-external getcwd: unit -> string = "sys_getcwd"
+external getcwd: unit -> string = "caml_sys_getcwd"
         (* Return the current working directory of the process. *)
 val interactive: bool ref
         (* This reference is initially set to [false] in standalone
@@ -59,7 +59,7 @@ type signal_behavior =
 -          [Signal_handle f]: call function [f], giving it the signal
              number as argument. *)
 
-external signal: int -> signal_behavior -> unit = "install_signal_handler"
+external signal: int -> signal_behavior -> unit = "caml_install_signal_handler"
         (* Set the behavior of the system on receipt of a given signal.
            The first argument is the signal number. *)
 

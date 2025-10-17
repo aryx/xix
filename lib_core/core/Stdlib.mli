@@ -156,7 +156,7 @@ external (>=) : 'a -> 'a -> bool = "%greaterequal"
            of [(=)], mutable structures are compared by contents.
            Comparison between functional values raises [Invalid_argument].
            Comparison between cyclic structures may not terminate. *)
-external compare: 'a -> 'a -> int = "compare" "noalloc"
+external compare: 'a -> 'a -> int = "%compare" "noalloc"
         (* [compare x y] returns [0] if [x=y], a negative integer if
            [x<y], and a positive integer if [x>y]. The same restrictions
            as for [=] apply. [compare] can be used as the comparison function
@@ -329,7 +329,7 @@ val bool_of_string : string -> bool
 
 val string_of_int : int -> string
         (* Return the string representation of an integer, in decimal. *)
-external int_of_string : string -> int = "int_of_string"
+external int_of_string : string -> int = "caml_int_of_string"
         (* Convert the given string to an integer.
            The string is read in decimal (by default) or in hexadecimal,
            octal or binary if the string begins with [0x], [0o] or [0b]
@@ -338,7 +338,7 @@ external int_of_string : string -> int = "int_of_string"
            a valid representation of an integer. *)
 val string_of_float : float -> string
         (* Return the string representation of a floating-point number. *)
-external float_of_string : string -> float = "float_of_string"
+external float_of_string : string -> float = "caml_float_of_string"
         (* Convert the given string to a float.
            The result is unspecified if the given string is not
            a valid representation of a float. *)

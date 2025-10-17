@@ -51,7 +51,7 @@ external (<) : 'a -> 'a -> bool = "%lessthan"
 external (>) : 'a -> 'a -> bool = "%greaterthan"
 external (<=) : 'a -> 'a -> bool = "%lessequal"
 external (>=) : 'a -> 'a -> bool = "%greaterequal"
-external compare: 'a -> 'a -> int = "compare" "noalloc"
+external compare: 'a -> 'a -> int = "%compare" "noalloc"
 
 let min x y = if x <= y then x else y
 let max x y = if x >= y then x else y
@@ -127,10 +127,10 @@ external truncate : float -> int = "%intoffloat"
 
 (* String operations -- more in module String *)
 
-external string_length : string -> int = "ml_string_length"
-external string_create: int -> string = "create_string"
+external string_length : string -> int = "%string_length"
+external string_create: int -> string = "caml_create_string"
 external string_blit : string -> int -> string -> int -> int -> unit
-                     = "blit_string"
+                     = "caml_blit_string"
 
 let (^) s1 s2 =
   let l1 = string_length s1 and l2 = string_length s2 in
@@ -146,8 +146,8 @@ external snd : 'a * 'b -> 'b = "%field1"
 
 (* String conversion functions *)
 
-external format_int: string -> int -> string = "format_int"
-external format_float: string -> float -> string = "format_float"
+external format_int: string -> int -> string = "caml_format_int"
+external format_float: string -> float -> string = "caml_format_float"
 
 let string_of_bool b =
   if b then "true" else "false"
@@ -160,12 +160,12 @@ let bool_of_string = function
 let string_of_int n =
   format_int "%d" n
 
-external int_of_string : string -> int = "int_of_string"
+external int_of_string : string -> int = "caml_int_of_string"
 
 let string_of_float f =
   format_float "%.12g" f
 
-external float_of_string : string -> float = "float_of_string"
+external float_of_string : string -> float = "caml_float_of_string"
 
 (* List operations -- more in module List *)
 
@@ -204,9 +204,9 @@ let open_out name =
 external flush : out_channel -> unit = "caml_flush"
 
 external unsafe_output : out_channel -> string -> int -> int -> unit
-                       = "caml_output"
+                       = "caml_ml_output_bytes"
 
-external output_char : out_channel -> char -> unit = "caml_output_char"
+external output_char : out_channel -> char -> unit = "caml_ml_output_char"
 
 let output_string oc s =
   unsafe_output oc s 0 (string_length s)
@@ -218,11 +218,11 @@ let output oc s ofs len =
 
 let output_substring = output
 
-external output_byte : out_channel -> int -> unit = "caml_output_char"
-external output_binary_int : out_channel -> int -> unit = "caml_output_int"
+external output_byte : out_channel -> int -> unit = "caml_ml_output_char"
+external output_binary_int : out_channel -> int -> unit = "caml_ml_output_int"
 
 external marshal_to_channel : out_channel -> 'a -> unit list -> unit
-     = "output_value"
+     = "caml_output_value"
 let output_value chan v = marshal_to_channel chan v []
 
 external seek_out : out_channel -> int -> unit = "caml_seek_out"
@@ -239,7 +239,7 @@ let open_in_gen mode perm name =
 let open_in name =
   open_in_gen [Open_rdonly] 0 name
 
-external input_char : in_channel -> char = "caml_input_char"
+external input_char : in_channel -> char = "caml_ml_input_char"
 
 external unsafe_input : in_channel -> string -> int -> int -> int 
                       = "caml_ml_input"
@@ -282,9 +282,9 @@ let rec input_line chan =
       beg
   end
 
-external input_byte : in_channel -> int = "caml_input_char"
-external input_binary_int : in_channel -> int = "caml_input_int"
-external input_value : in_channel -> 'a = "input_value"
+external input_byte : in_channel -> int = "caml_ml_input_char"
+external input_binary_int : in_channel -> int = "caml_ml_input_int"
+external input_value : in_channel -> 'a = "caml_input_value"
 external seek_in : in_channel -> int -> unit = "caml_seek_in"
 external pos_in : in_channel -> int = "caml_pos_in"
 external in_channel_length : in_channel -> int = "caml_channel_size"

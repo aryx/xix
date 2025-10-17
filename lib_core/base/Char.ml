@@ -20,7 +20,7 @@ let chr n =
 
 external is_printable: char -> bool = "is_printable"
 
-external string_create: int -> string = "create_string"
+external string_create: int -> string = "caml_create_string"
 external string_unsafe_get : string -> int -> char = "%string_unsafe_get"
 external string_unsafe_set : string -> int -> char -> unit
                            = "%string_unsafe_set"

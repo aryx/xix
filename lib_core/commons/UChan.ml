@@ -14,5 +14,5 @@ let with_open_out (f : Chan.o -> 'a) (file : Fpath.t) : 'a =
     (* nosemgrep: use-caps *)
     open_out !!file 
   in
-  let ochan : Chan.o = { oc = chan; p = file } in
+  let ochan : Chan.o = { oc = chan; dest = Chan.OutFile file } in
   Fun.protect ~finally:(fun () -> close_out chan) (fun () -> f ochan)

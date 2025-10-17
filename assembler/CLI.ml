@@ -37,7 +37,7 @@ let thechar = '5'
 let thestring = "arm"
 
 let usage = 
-  spf "usage: %ca [-options] file.s" thechar
+  spf "usage: o%ca [-options] file.s" thechar
 
 (*****************************************************************************)
 (* Main algorithm *)

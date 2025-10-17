@@ -9,5 +9,8 @@ type caps = < Cap.open_in; Cap.open_out; Cap.env >
 (* entry point (can also raise Exit.ExitCode) *)
 val main: <caps; ..> -> string array -> Exit.t
 
-(* main algorithm *)
-(* val assemble5: ... *)
+(* main algorithm; works by side effect on outfile *)
+val assemble5: 
+  <caps; .. > -> bool (* dump *) -> Preprocessor.conf ->
+  Fpath.t (* infile *) -> Fpath.t (* outfile *) -> unit
+

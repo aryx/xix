@@ -40,10 +40,14 @@ type origin =
   | Channel
   | Network
 
+type destination = 
+  | OutFile of Fpath.t
+  | Stdout
+
 (* alt: "in", but reserved keyword, and "in_" is ugly *)
 type i = { ic : in_channel; origin : origin }
-(* TODO? use dest: dest? with type dest = origin ? *)
-type o = { oc : out_channel; p : Fpath.t }
+
+type o = { oc : out_channel; dest : destination }
 
 (*****************************************************************************)
 (* API *)
@@ -56,3 +60,8 @@ let origin (chani : i) =
   | String -> "<string>"
   | Channel -> "<channel>"
   | Network -> "<network>"
+
+let destination (chano : o) =
+  match chano.dest with
+  | OutFile f -> !!f
+  | Stdout -> "<stdout>"

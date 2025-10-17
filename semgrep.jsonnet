@@ -82,6 +82,7 @@ local cap_rules = [
 	        'Filename.ml', # for Sys.getenv TMPDIR
 		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml',
+		'lex/', 'yacc/',
 		'todo/'
 		],
     },

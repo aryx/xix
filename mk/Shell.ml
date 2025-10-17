@@ -152,6 +152,7 @@ let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flag
     then begin
       let tmpfile = Filename.temp_file "mk" "sh" in
       (try
+         (* nosemgrep: use-caps *)
          let chan = open_out tmpfile in
          inputs |> List.iter (fun s -> 
            output_string chan s; 

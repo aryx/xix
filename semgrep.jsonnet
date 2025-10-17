@@ -79,7 +79,7 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['threadUnix.ml',
-	        'lib_core/strings/todo/filename.ml', # for Sys.getenv TMPDIR
+	        'Filename.ml', # for Sys.getenv TMPDIR
 		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml',
 		'todo/'
@@ -98,7 +98,7 @@ local cap_rules = [
     paths: {
       exclude: [
         'ksym.ml', 'thread.ml', 'Printexc.ml', 'threadUnix.ml',
-	'lib_system/Arg.ml', 'lib_system/unix/unix.ml',
+	'Arg.ml', 'Unix.ml',
         'lex/', 'yacc/', 'version_control/',
 	'windows/', 'todo/',
       ],
@@ -114,7 +114,7 @@ local cap_rules = [
        Do not use Sys.argv. Use CapSys.argv and capabilities.
     |||,
     paths: {
-      exclude: ['lib_system/Arg.ml', 'lib_system/unix/unix.ml',
+      exclude: ['Arg.ml', 'Unix.ml',
          'lex/', 'yacc/', 'version_control/',
          'todo/'
       ],

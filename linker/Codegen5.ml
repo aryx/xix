@@ -12,7 +12,7 @@ module T5 = Types5
 (*****************************************************************************)
 (* ARM code generation.
  *
- * No need for optab/oplook/ocmp/cmp as in 5l. Just use pattern matching!
+ * ocaml: No need for optab/oplook/ocmp/cmp as in 5l. Just use pattern matching!
  *)
 
 (*****************************************************************************)
@@ -603,7 +603,7 @@ let rules symbols2 autosize init_data node =
     (* --------------------------------------------------------------------- *)
     | SWI i ->
         if i <> 0
-        then error node (spf "SWI does not use its parameter under Plan 9");
+        then error node (spf "SWI does not use its parameter under Plan 9/Linux");
 
         { size = 4; pool = None; binary = (fun () ->
           [ [gcond cond; (0xf, 24)] ]

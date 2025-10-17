@@ -10,6 +10,13 @@
 
 ** LATER
 
+*** LATER: port also 8a/8c/8l to ocaml? and other archs?
+automate the translation from C to OCaml like Russ Cox did?
+Or better! Translate Go to OCaml, might be easier as closer
+and just start from the go-translated code of Russ Cox!
+Use my Go parser to automate the translation?
+ or use chatGPT to semi-automate the translation?
+
 * Last
 
 * Ported (partially working)
@@ -543,6 +550,11 @@ original had 3?
 
 ** libcore
 
+*** less: lib_core: revert fix for 4.14.2 and try to compile lib_core with ocaml-light!
+or possibly fix ocaml-light itself to use the latest naming conventions
+for some of those primitives
+
+
 *** LATER: add semgrep-libs/libs/process_limits/
 other stuff to copy from semgrep-libs/?
 maybe Unix.realpath!
@@ -594,7 +606,10 @@ need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
 
 ** Dev infra
 
-*** try to use ocamlformat?
+*** still? try to use ocamlformat?
+# maybe not so needed when working alone on a codebase and there are
+#  no fight on indentation
+
 but exclude lex/ yacc/ lib_parsing/ version_control/ for now
 because of our use of syncweb there?
 
@@ -781,7 +796,16 @@ seems it does not handle it ... it uses UART?
 
 * To port
 
-** EASY tree in ocaml
+** utilities/ in ocaml
+# go through and improve Utilities.nw at the same time; clearer C code
+#  is easier to port code
+
+*** utilities/files/ cat, wc, ls, etc.
+
+*** utilities/ed.c
+use chatGPT to automate the translation?
+
+*** EASY tree in ocaml
 http://blog.shaynefletcher.org/2017/10/how-to-render-trees-like-unix-tree.html
 plan9-ml/utilities/misc/tree.ml
 

@@ -60,6 +60,7 @@ let dump_event (event : location_event) : unit =
 (*****************************************************************************)
 
 let add_event (event : location_event) : unit =
+  (* alt: use Logs.debug instead of a flag *)
   if !Flags_cpp.debug_line
   then dump_event event;
   history := {location_event = event; global_line = !line }::!history

@@ -5,6 +5,7 @@ open Fpath_.Operators
 module D = Ast_cpp (* D for Directives *)
 module L = Location_cpp
 module Flags = Flags_cpp
+
 (* for ocaml-light for fields *)
 open Ast_cpp 
 open Preprocessor
@@ -12,9 +13,7 @@ open Preprocessor
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 
- * Cpp as a library.
- * This is used by 5c but also 5a.
+(* Cpp as a library. This is used by 5c but also 5a.
  * 
  * Main limitations compared to the cpp embedded in 5c of Plan 9:
  *  - no support for unicode
@@ -152,6 +151,8 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
   conf.defs |> List.iter define_cmdline_def;
 
   let chan = CapStdlib.open_in caps !!file in
+  Logs.info (fun m -> m "opening %s" !!file);
+
   L.add_event (L.Include file);
   let lexbuf = Lexing.from_channel chan in
   let stack = ref [(Some chan, lexbuf)] in
@@ -184,6 +185,7 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
                 let path = find_include conf f system_hdr in
                 (try 
                   let chan = CapStdlib.open_in caps !!path in
+                  Logs.info (fun m -> m "opening included file %s" !!path);
                   L.add_event (L.Include path);
                   let lexbuf = Lexing.from_channel chan in
                   (* less: 

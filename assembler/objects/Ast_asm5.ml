@@ -23,12 +23,12 @@
 (* The AST related types *)
 (*****************************************************************************)
 
+(* (global) line# *)
+type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
+
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
 (* ------------------------------------------------------------------------- *)
-
-(* (global) line# *)
-type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
 
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
 type integer = int 
@@ -49,7 +49,6 @@ type global = {
   (* for safe linking (generated only by 5c, not 5a) *)
   signature: int option;
 }
-(* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
@@ -75,7 +74,6 @@ type arith_operand =
   and shift_reg_op =
     | Sh_logic_left | Sh_logic_right
     | Sh_arith_right | Sh_rotate_right
-(* with tarzan *)
 
 type mov_operand = 
   (* Immediate shift register *)
@@ -103,7 +101,6 @@ type mov_operand =
      * old: Address of global.
      *)
     | Address of entity
- (* with tarzan *)
 
 
 (* I use a ref below so the code that resolves branches is shorter.
@@ -126,7 +123,6 @@ and branch_operand2 =
 
   (* resolved dynamically by the machine (e.g., B (R14)) *)
   | IndirectJump of register
-(* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -152,7 +148,7 @@ type instr =
   | Bxx of condition * branch_operand (* virtual, sugar for B.XX *) 
 
   (* System *)
-  | SWI of int (* value actually unused in Plan 9 *)
+  | SWI of int (* value actually unused in Plan 9 and Linux *)
   | RFE (* virtual, sugar for MOVM *)
 
   (* Misc *)
@@ -197,7 +193,6 @@ type instr =
    and move_option = move_cond option
      (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
-(* with tarzan *)
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
@@ -210,7 +205,6 @@ type pseudo_instr =
 
   and attributes = { dupok: bool; prof: bool }
   and imm_or_ximm = (integer, ximm) Either.t
-(* with tarzan *)
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
@@ -223,7 +217,5 @@ type line =
   (* disappear after resolve *)
   | LabelDef of label
   (* less: PragmaLibDirective of string *)
-(* with tarzan *)
 
 type program = (line * loc) list
- (* with tarzan *)

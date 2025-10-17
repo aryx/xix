@@ -43,14 +43,14 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-(* Will generate outfile as a side effect *)
-let assemble5 (caps: < Cap.open_in; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (outchan : Chan.o) : unit =
+(* Will modify chan as a side effect *)
+let assemble5 (caps: < Cap.open_in; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
   let prog = Parse_asm5.parse caps conf infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
-  Object_code5.save (prog, !Location_cpp.history) outchan
+  Object_code5.save (prog, !Location_cpp.history) chan
 
 (*****************************************************************************)
 (* Entry point *)

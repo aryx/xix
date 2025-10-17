@@ -47,6 +47,7 @@ type ('token, 'ast) hook = {
   lexer: Lexing.lexbuf -> 'token;
   parser: (Lexing.lexbuf -> 'token) -> Lexing.lexbuf -> 'ast;
   category: 'token -> token_category;
+  (* TODO: delete, redundant with Eof token_category above *)
   eof: 'token;
 }
 

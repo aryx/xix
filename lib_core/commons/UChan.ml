@@ -11,6 +11,7 @@ let with_open_in (f : Chan.i -> 'a) (file : Fpath.t) : 'a =
 
 let with_open_out (f : Chan.o -> 'a) (file : Fpath.t) : 'a =
   let chan : out_channel =
+    (* nosemgrep: use-caps *)
     open_out !!file 
   in
   let ochan : Chan.o = { oc = chan; p = file } in

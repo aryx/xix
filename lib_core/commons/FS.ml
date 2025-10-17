@@ -3,6 +3,7 @@ open Chan
 
 (* capabilities-aware version of UChan.ml *)
 let with_open_in (_caps : < Cap.open_in; .. >) = UChan.with_open_in
+let with_open_out (_caps : < Cap.open_out; .. >) = UChan.with_open_out
 
 (* tail recursive efficient version *)
 let cat (caps : < Cap.open_in; .. >) (file : Fpath.t) : string list =

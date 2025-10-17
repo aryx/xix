@@ -31,7 +31,7 @@ open Preprocessor
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
-type caps = < Cap.open_in; Cap.env >
+type caps = < Cap.open_in; Cap.open_out; Cap.env >
 
 let thechar = '5'
 let thestring = "arm"
@@ -50,7 +50,9 @@ let assemble5 (caps: < caps; .. >) dump (conf : Preprocessor.conf) (infile : Fpa
   if dump 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
-  Object_code5.save (prog, !Location_cpp.history) outfile
+  outfile |> FS.with_open_out caps (fun chan ->
+      Object_code5.save (prog, !Location_cpp.history) chan
+  )
 
 (*****************************************************************************)
 (* Entry point *)

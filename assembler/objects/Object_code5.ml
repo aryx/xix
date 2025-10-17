@@ -8,18 +8,14 @@ type t =
 let version = 6
 
 (* can normalize before? or check every invariants? *)
-let save (obj : t) (file : Fpath.t) : unit =
-  file |> UChan.with_open_out (fun (chan : Chan.o) ->
+let save (obj : t) (chan : Chan.o) : unit =
     output_value chan.Chan.oc (version, obj)
-  )
 
 (* for safer marshalling *)
 exception WrongVersion
 
-let load (file : Fpath.t) : t =
-  file |> UChan.with_open_in (fun (chan : Chan.i) ->
-    let (ver, obj) = input_value chan.Chan.ic in
-    if ver <> version
-    then raise WrongVersion
-    else obj
-  )
+let load (chan : Chan.i) : t =
+  let (ver, obj) = input_value chan.Chan.ic in
+  if ver <> version
+  then raise WrongVersion
+  else obj

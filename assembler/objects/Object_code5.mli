@@ -4,10 +4,10 @@ type t =
   Location_cpp.location_history list (* includes src file origin *)
 
 val save: 
-  t -> Fpath.t (* obj file *) -> unit
+  t -> Chan.o (* obj file *) -> unit
 
 exception WrongVersion
 
 (* may raise WrongVersion *)
 val load: 
-  Fpath.t (* obj file *) -> t
+  Chan.i (* obj file *) -> t

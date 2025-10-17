@@ -1,8 +1,8 @@
 (* Need:
- * - TODO open_in but should be only for argv derived file
- * - TODO open_out for -o object file or 5. argv 
+ * - open_in but should be only for argv derived file
+ * - open_out for -o object file or 5.argv[0]
  *)
-type caps = < >
+type caps = < Cap.open_in; Cap.open_out >
 
 (* entry point (can also raise Exit.ExitCode) *)
 val main: <caps; ..> -> string array -> Exit.t

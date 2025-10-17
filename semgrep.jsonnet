@@ -64,9 +64,9 @@ local cap_rules = [
 	 #'open_in',
          #'Unix.openfile',
 	 #'UChan.with_open_in',
-	 #'UChan.with_open_out',
 	# Cap.open_out
-         #'open_out',
+        'open_out',
+	 #'UChan.with_open_out',
         # Cap.tmp
          # Filename.temp_file
 	]

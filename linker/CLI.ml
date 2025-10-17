@@ -45,7 +45,7 @@ open Types
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
-type caps = < >
+type caps = < Cap.open_in; Cap.open_out >
 
 let thechar = '5'
 
@@ -57,8 +57,8 @@ let usage =
 (*****************************************************************************)
 
 (* will generate outfile as a side effect *)
-let link (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : unit =
-  let (code, data, symbols) = Load5.load objfiles in
+let link (caps : < caps; ..> ) (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : unit =
+  let (code, data, symbols) = Load5.load caps objfiles in
 
   (* mark at least as SXref the entry point *)
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
@@ -88,7 +88,7 @@ let link (config : T.config) (objfiles : Fpath.t list) (outfile : Fpath.t) : uni
 (* Entry point *)
 (*****************************************************************************)
 
-let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
+let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
   let outfile = ref (Fpath.v "5.out") in
 
@@ -177,7 +177,7 @@ let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
       in
      try 
         (* the main call *)
-        link config xs !outfile;
+        link caps config xs !outfile;
         Exit.OK
   with exn ->
     if !backtrace

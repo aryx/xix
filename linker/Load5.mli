@@ -4,5 +4,6 @@
  * less: return also LineDirective info per file.
  *)
 val load: 
+  <Cap.open_in; .. > ->
   Fpath.t list -> 
   Types5.code array * Types5.data list * Types.symbol_table

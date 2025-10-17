@@ -74,8 +74,9 @@ let visit_globals f xs =
  * - "name" entities by assigning a unique name to every entities
  *   (handling private symbols),
  * - visit all entities (defs and uses) and add them in symbol table
+ * alt: take as a parameter (xs : Chan.i list);
  *)
-let load (xs : Fpath.t list) : T5.code array * T5.data list * Types.symbol_table=
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.data list * Types.symbol_table=
 
   (* values to return *)
   let code = ref [] in
@@ -92,7 +93,7 @@ let load (xs : Fpath.t list) : T5.code array * T5.data list * Types.symbol_table
     (* todo: if lib file! *)
 
     (* object loading is so much easier in ocaml :) *)
-    let (prog, _srcfile) = Object_code5.load file in
+    let (prog, _srcfile) = file |> FS.with_open_in caps Object_code5.load in
     (* less: could check valid AST, range of registers, shift values, etc *)
 
     (* naming and populating symbol table h *)

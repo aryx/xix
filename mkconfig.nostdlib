@@ -1,15 +1,21 @@
-STDLIB=lib_core/core lib_core/stdlib lib_core/collections lib_core/strings lib_core/regexps lib_core/printing lib_system lib_core/parsing lib_system/unix 
+STDLIB=lib_core/core lib_core/base lib_core/collections lib_core/regexps lib_core/printing lib_core/system lib_core/parsing lib_core/system/unix lib_core/misc
 
-COMPFLAGS=-nostdlib -I $TOP/lib_core/core -I $TOP/lib_core/stdlib -I $TOP/lib_core/collections -I $TOP/lib_core/strings -I $TOP/lib_core/regexps -I $TOP/lib_core/parsing -I $TOP/lib_core/printing -I $TOP/lib_system -I $TOP/lib_system/unix 
+COMPFLAGS=-nostdlib -I $TOP/lib_core/core -I $TOP/lib_core/base -I $TOP/lib_core/collections -I $TOP/lib_core/regexps -I $TOP/lib_core/parsing -I $TOP/lib_core/printing -I $TOP/lib_core/system -I $TOP/lib_core/system/unix  -I $TOP/lib_core/misc
 
 #STDLIB=lib_core/latest
 #COMPFLAGS=-nostdlib -I $TOP/lib_core/latest
 
+# for the linker to find -lcamlrun even with -nostdlib
+LIBOCAML=`ocamlc -where`
+
 OPTFLAGS=$COMPFLAGS
-LINKFLAGS=-g -custom $TOP/lib_core/core/lib.cma $TOP/lib_core/stdlib/lib.cma $TOP/lib_core/collections/lib.cma $TOP/lib_core/strings/lib.cma $TOP/lib_core/regexps/lib.cma $TOP/lib_core/printing/lib.cma $TOP/lib_system/lib.cma $TOP/lib_core/parsing/lib.cma $TOP/lib_system/unix/lib.cma 
+# the -I $TOP/lib_core/core is to find std_exit.cmo
+LINKFLAGS=-nostdlib -g -custom $TOP/lib_core/core/lib.cma $TOP/lib_core/base/lib.cma $TOP/lib_core/collections/lib.cma $TOP/lib_core/regexps/lib.cma $TOP/lib_core/printing/lib.cma $TOP/lib_core/system/lib.cma $TOP/lib_core/parsing/lib.cma $TOP/lib_core/system/unix/lib.cma $TOP/lib_core/misc/lib.cma -I $TOP/lib_core -cclib -L$LIBOCAML -cclib -lunix -cclib -lcamlstr
+
+
 OPTLINKFLAGS=
 OCAMLC=ocamlc
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc -v
-OCAMLDEP=ocamldep -I $TOP/lib_core/stdlib
+OCAMLDEP=ocamldep -I $TOP/lib_core/core -I $TOP/lib_core/base
 OCAMLOPT=ocamlopt

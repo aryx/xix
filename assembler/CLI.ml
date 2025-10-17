@@ -44,15 +44,13 @@ let usage =
 (*****************************************************************************)
 
 (* Will generate outfile as a side effect *)
-let assemble5 (caps: < caps; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
+let assemble5 (caps: < Cap.open_in; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (outchan : Chan.o) : unit =
   let prog = Parse_asm5.parse caps conf infile in
   let prog = Resolve_labels5.resolve prog in
   if dump 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
-  outfile |> FS.with_open_out caps (fun chan ->
-      Object_code5.save (prog, !Location_cpp.history) chan
-  )
+  Object_code5.save (prog, !Location_cpp.history) outchan
 
 (*****************************************************************************)
 (* Entry point *)
@@ -150,10 +148,12 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
 
   try 
     (* main call *)
-    (* TODO: create chan from infile outfile instead so no need
-     * pass heavy capabilities (Cap.open_in, Cap.open_out)
+    (* can't create chan from infile to avoid passing Cap.open_in because
+     * with cpp we open other files.
      *)
-    assemble5 caps !dump conf (Fpath.v !infile) outfile;
+    outfile |> FS.with_open_out caps (fun chan ->
+        assemble5 caps !dump conf (Fpath.v !infile) chan
+    );
     Exit.OK
   with exn ->
     if !backtrace

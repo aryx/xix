@@ -11,6 +11,6 @@ val main: <caps; ..> -> string array -> Exit.t
 
 (* main algorithm; works by side effect on outfile *)
 val assemble5: 
-  <caps; .. > -> bool (* dump *) -> Preprocessor.conf ->
-  Fpath.t (* infile *) -> Fpath.t (* outfile *) -> unit
+  <Cap.open_in; .. > -> bool (* dump *) -> Preprocessor.conf ->
+  Fpath.t (* infile *) -> Chan.o (* outfile *) -> unit
 

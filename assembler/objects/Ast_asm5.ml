@@ -1,4 +1,5 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+open Common
 
 (*****************************************************************************)
 (* Prelude *)
@@ -25,6 +26,7 @@
 
 (* (global) line# *)
 type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
@@ -32,13 +34,18 @@ type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
 
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
 type integer = int 
+[@@deriving show]
 (* increments by unit of 1 *)
 type virt_pc = int
+[@@deriving show]
 (* can be 0, negative, or positive *)
 type offset = int
+[@@deriving show]
 
 type label = string
+[@@deriving show]
 type symbol = string
+[@@deriving show]
 
 type global = {
   name: symbol;
@@ -49,12 +56,15 @@ type global = {
   (* for safe linking (generated only by 5c, not 5a) *)
   signature: int option;
 }
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
 type register = R of int (* between 0 and 15 *)
+[@@deriving show]
+
 (* reserved by linker *)
 let rTMP = R 11
 let rSB  = R 12
@@ -69,11 +79,12 @@ type arith_operand =
   | Reg of register
   (* can not be used with shift opcodes (SLL/SRL/SRA) *)
   | Shift of register * shift_reg_op * 
-             (register, int (* between 0 and 31 *)) Either.t
+             (register, int (* between 0 and 31 *)) Either_.t
 
   and shift_reg_op =
     | Sh_logic_left | Sh_logic_right
     | Sh_arith_right | Sh_rotate_right
+[@@deriving show]
 
 type mov_operand = 
   (* Immediate shift register *)
@@ -101,6 +112,7 @@ type mov_operand =
      * old: Address of global.
      *)
     | Address of entity
+[@@deriving show]
 
 
 (* I use a ref below so the code that resolves branches is shorter.
@@ -123,6 +135,7 @@ and branch_operand2 =
 
   (* resolved dynamically by the machine (e.g., B (R14)) *)
   | IndirectJump of register
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -193,6 +206,7 @@ type instr =
    and move_option = move_cond option
      (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+[@@deriving show]
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
@@ -204,7 +218,8 @@ type pseudo_instr =
   | WORD of imm_or_ximm
 
   and attributes = { dupok: bool; prof: bool }
-  and imm_or_ximm = (integer, ximm) Either.t
+  and imm_or_ximm = (integer, ximm) Either_.t
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
@@ -217,5 +232,7 @@ type line =
   (* disappear after resolve *)
   | LabelDef of label
   (* less: PragmaLibDirective of string *)
+[@@deriving show]
 
 type program = (line * loc) list
+[@@deriving show]

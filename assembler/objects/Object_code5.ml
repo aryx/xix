@@ -11,7 +11,7 @@ let version = 6
 
 (* can normalize before? or check every invariants? *)
 let save (obj : t) (chan : Chan.o) : unit =
-    output_value chan.oc (version, obj)
+  output_value chan.oc (version, obj)
 
 (* for safer marshalling *)
 exception WrongVersion

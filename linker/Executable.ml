@@ -8,10 +8,15 @@ open Chan
 module T = Types
 module T5 = Types5
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 (* little-endian put long (see also lput in a_out.ml for big-endian version) *)
-let lputl chan word =
+let lputl (chan : out_channel) (word : int) : unit =
   if word < 0 
   then raise (Impossible (spf "should call lputl with a uint not %d" word));
+  (* TODO? sanity check not > 32 bits uint? *)
 
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in
@@ -24,16 +29,21 @@ let lputl chan word =
   ()
   
 
-let cput chan byte =
+let cput (chan : out_channel) (byte : byte) : unit =
   output_char chan byte
   
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
-let gen config sizes cs ds symbols2 (chan : Chan.o) : unit =
+let gen (config : T.config) (sizes : T.sections_size) cs ds symbols2 (chan : Chan.o) : unit =
   let entry = config.T.entry_point in
   let format = config.T.header_type in
 
-  if format  <> "a.out"
-  then failwith (spf "executable format not supported: %s" format);
+  (match format with
+  | A_out -> ()
+  | Elf -> failwith "ELF executable format not yet supported"
+  );
 
   let header = { A_out.
      (* Plan 9 ARM *)
@@ -61,6 +71,7 @@ let gen config sizes cs ds symbols2 (chan : Chan.o) : unit =
       ;
   }
   in
+  Logs.info (fun m -> m "saving executable in %s" (Chan.destination chan));
   (* Header *)
   A_out.write_header header chan.oc;
 

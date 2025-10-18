@@ -50,7 +50,6 @@ let assemble5 (caps: < Cap.open_in; .. >) dump (conf : Preprocessor.conf) (infil
   if dump 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
-  Logs.info (fun m -> m "saving object in %s" (Chan.destination chan));
   Object_code5.save (prog, !Location_cpp.history) chan
 
 (*****************************************************************************)

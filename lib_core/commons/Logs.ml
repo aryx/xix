@@ -90,7 +90,11 @@ let report (lvl : level) (msgf : 'a msgf) : unit =
       Printf.eprintf "\n%!"
   | Error
   | Warning
-  | Info
+  | Info ->
+      Printf.eprintf "[%s]: " 
+        (color lvl (header_string_of_level lvl));
+      msgf Printf.eprintf;
+      Printf.eprintf "\n%!"
   | Debug -> 
       let current = now () in
       (* KISS *)

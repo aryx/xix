@@ -5,8 +5,12 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 (* "Names", modifies global, modifies h *)
-let process_global global h idfile =
+let process_global (global : Ast_asm5.global) h (idfile : int) : unit =
   (match global.priv with
   | Some _ -> global.priv <- Some idfile
   | None -> ()
@@ -66,6 +70,9 @@ let visit_globals f xs =
   )
 
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
 (* load() performs a few things:
  * - load objects (of course),
@@ -83,14 +90,14 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.da
   let data = ref [] in
   let h = Hashtbl.create 101 in
 
-  let pc = ref 0 in
+  let pc : Types.virt_pc ref = ref 0 in
   let idfile = ref 0 in
 
   xs |> List.iter (fun file ->
-    let ipc = !pc in
+    let ipc : Types.virt_pc = !pc in
     incr idfile;
     (* less: assert it is a .5 file *)
-    (* todo: if lib file! *)
+    (* TODO: if lib file! *)
 
     (* object loading is so much easier in ocaml :) *)
     let (prog, _srcfile) = file |> FS.with_open_in caps Object_code5.load in
@@ -131,6 +138,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.da
           )
 
       | Instr (inst, cond) ->
+
           let relocate_branch opd =
             match !opd with
             | SymbolJump _ | IndirectJump _ -> ()
@@ -138,6 +146,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.da
                 raise (Impossible "Relative or LabelUse resolved by assembler")
             | Absolute i -> opd := Absolute (i + ipc)
           in
+
           (match inst with
           (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> relocate_branch opd *)
           | B opd -> relocate_branch opd

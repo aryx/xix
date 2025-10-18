@@ -50,7 +50,7 @@ type caps = < Cap.open_in; Cap.open_out >
 let thechar = '5'
 
 let usage = 
-  spf "usage: %cl [-options] objects" thechar
+  spf "usage: o%cl [-options] objects" thechar
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -152,18 +152,18 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (match List.rev !infiles with
   | [] -> 
       Arg.usage options usage; 
-      raise (Exit.ExitCode 1)
+      Exit.Code 1
   | xs -> 
       let config : Types.config = 
         match !header_type with
-        | "a.out" ->
+        | "a.out" | "a.out_plan9" ->
             (match !init_data, !init_round with
             | Some x, Some y -> 
                 failwith (spf "-D%d is ignored because of -R%d" x y)
             | _ -> ()
             );
             { 
-              header_type = "a.out";
+              header_type = A_out;
               header_size = 32;
               (* 4128 = 4096 (1 page) + 32 (the header) *)
               init_text  = (match !init_text  with Some x -> x | None -> 4128);
@@ -172,7 +172,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
               entry_point = !init_entry;
             }
               
-        | "elf" -> raise Todo
+        | "elf" | "elf_linux" -> raise Todo
         | s -> failwith (spf "unknown -H option, format not handled: %s" s)
       in
      try 
@@ -186,6 +186,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     then raise exn
     else 
       (match exn with
+      | Failure s ->
+          Logs.err (fun m -> m "%s" s);
+          Exit.Code 1
 (*
       | Location_cpp.Error (s, loc) ->
           (* less: could use final_loc_and_includers_of_loc loc *)

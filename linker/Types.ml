@@ -1,12 +1,16 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 type symbol = string * scope
    and scope =
      | Public
      | Private of int (* represents a unique filename, less: use filename? *)
 
-(* increments by 1 *)
+(* increments by 1. Used as index in some 'code array' or 'node array' *)
 type virt_pc = int
 (* increments by 4 for ARM *)
 type real_pc = int
@@ -45,8 +49,12 @@ type value2 = section2
 
 type symbol_table2 = (symbol, value2) Hashtbl.t
 
+type header_type =
+  | A_out (* Plan9 *)
+  | Elf (* Linux *)
+
 type config = {
-  header_type: string;
+  header_type: header_type;
   header_size: int;
   init_text: addr;
   init_round: int;
@@ -60,6 +68,10 @@ type sections_size = {
   data_size: int;
   bss_size: int;
 }
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (* create new entry with SXRef if not found *)
 let lookup k sigopt h =

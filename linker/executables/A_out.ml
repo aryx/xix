@@ -1,6 +1,10 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 type header = {
   magic: int;
 
@@ -14,8 +18,13 @@ type header = {
   entry: int;
 }
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 (* a.out uses big-endian integers even on low-endian architectures *)
-let lput chan word =
+(* TODO: rename blput ? big-end long put *)
+let lput (chan : out_channel) (word : int) : unit =
   if word < 0 
   then raise (Impossible (spf "should call lput with a uint not %d" word));
 
@@ -31,8 +40,13 @@ let lput chan word =
   output_char chan x1;
   ()
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (* entry point *)
-let write_header header chan =
+let write_header (header : header) (chan : out_channel) : unit =
+
   lput chan header.magic;
 
   lput chan header.text_size;

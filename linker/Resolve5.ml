@@ -7,7 +7,11 @@ module T5 = Types5
 
 open Types5
 
-let build_graph symbols xs =
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+let build_graph (symbols : T.symbol_table) (xs : T5.code array) : T5.code_graph =
   let len = Array.length xs in
 
   (* stricter: does not make sense to allow empty programs *)
@@ -15,7 +19,7 @@ let build_graph symbols xs =
   then failwith "empty program";
 
   (* graph initialization *)
-  let nodes = xs |> Array.map (fun (instr, loc) ->
+  let nodes : T5.node array = xs |> Array.map (fun (instr, loc) ->
     { T5. instr = instr; next = None; branch = None; loc = loc; real_pc = -1 }
   )
   in
@@ -50,7 +54,7 @@ let build_graph symbols xs =
               )
           | Absolute virt_pc -> Some virt_pc
         in
-        let adjust_virt_pc virt_pc =
+        let adjust_virt_pc (virt_pc : T.virt_pc) =
           if virt_pc < len
           then n.T5.branch <- Some nodes.(virt_pc)
           else failwith (spf "branch out of range %d at %s" virt_pc

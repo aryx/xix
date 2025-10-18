@@ -5,6 +5,10 @@ open Fpath_.Operators
 module A = Ast_asm5
 module T = Types
 
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 (* a single line number is not enough anymore, we need also the filename *)
 type loc = Fpath.t * A.loc
 
@@ -35,7 +39,7 @@ type node = {
   (* for branching instructions and also for instructions using the pool *)
   mutable branch: node option;
   
-  (* set after layout_text *)
+  (* set after layout_text (set to -1 initially) *)
   mutable real_pc: T.real_pc;
 
   loc: loc;
@@ -43,7 +47,9 @@ type node = {
 
 type code_graph = node (* the first node *)
 
-
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (* assert not Some -1 ! should have been set during loading! *)
 let symbol_of_global e =

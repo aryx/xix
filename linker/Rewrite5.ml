@@ -8,6 +8,10 @@ module T5 = Types5
 (* for field access for ocaml-light *)
 open Types5
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let rec find_first_no_nop_node nopt =
   match nopt with
   | None -> failwith "could not find non NOP node for branch"
@@ -17,8 +21,12 @@ let rec find_first_no_nop_node nopt =
       | _ -> Some n
       )
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (* less: rewrite when profiling flag -p *)
-let rewrite cg =
+let rewrite (cg : T5.code_graph) : T5.code_graph =
   
   (* a set *)
   let is_leaf = Hashtbl.create 101 in
@@ -97,7 +105,10 @@ let rewrite cg =
                                    Imsr (Reg rPC))
            ), cond);
         autosize_opt
-    | _ -> autosize_opt        
+     | T5.I (NOP, _) -> raise (Impossible "NOP was removed in step1")
+     | T5.I ((RFE|Arith (_, _, _, _, _)|MOVE (_, _, _, _)|SWAP (_, _, _, _)|
+   B _|BL _|Cmp (_, _, _)|Bxx (_, _)|SWI _), _) ->
+        autosize_opt
   ) None;
 
   (* works by side effect, still return first node *)

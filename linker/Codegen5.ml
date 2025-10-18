@@ -621,15 +621,15 @@ let rules symbols2 autosize init_data node =
     )
 
 (*****************************************************************************)
-(* entry points *)
+(* Entry points *)
 (*****************************************************************************)
 
-let size_of_instruction symbols2 autosize node =
+let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5.node) : int (* a multiple of 4 *) * pool option =
   let action  = rules symbols2 autosize None node in
   action.size, action.pool
 
 
-let gen symbols2 config cg =
+let gen (symbols2 : T.symbol_table2) (config : T.config) (cg : T5.code_graph) : T.word list =
 
   let res = ref [] in
   let autosize = ref 0 in

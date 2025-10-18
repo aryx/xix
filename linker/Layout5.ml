@@ -6,6 +6,10 @@ module T5 = Types5
 (* for ocaml-lights field access *)
 open Types5
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let xdefine h2 h symb v =
   (* stricter: we do not accept previous def of special symbols *)
   if Hashtbl.mem h symb || Hashtbl.mem h2 symb
@@ -13,9 +17,11 @@ let xdefine h2 h symb v =
 
   Hashtbl.add h2 symb v
 
-
-
-let layout_data symbols ds =
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+let layout_data (symbols : T.symbol_table) (ds : T5.data list) : T.symbol_table2 * (int * int)
+  =
   let h2 = Hashtbl.create 101 in
 
   (* a set *)
@@ -91,10 +97,9 @@ let layout_data symbols ds =
 
 
 
+let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.code_graph) : T.symbol_table2 * T5.code_graph * int =
 
-let layout_text symbols2 init_text cg =
-
-  let pc = ref init_text in
+  let pc : T.real_pc ref = ref init_text in
   (* less: could be a None, to be more precise, to detect use of local/param
    * outside a procedure. But anyway at frontier of objects we
    * are considered in TEXT of preceding obj which does not make

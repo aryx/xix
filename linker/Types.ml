@@ -5,24 +5,27 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(* 8 bits *)
+type byte = char
+(* 32 bits *)
+type word = int
+
+(* 32 bits *)
+type addr = int
+(* 32 bits *)
+type offset = int
+
 type symbol = string * scope
    and scope =
      | Public
      | Private of int (* represents a unique filename, less: use filename? *)
 
+(* --------------------------------------- *)
+(* The virtual pc world *)
+(* --------------------------------------- *)
+
 (* increments by 1. Used as index in some 'code array' or 'node array' *)
 type virt_pc = int
-(* increments by 4 for ARM *)
-type real_pc = int
-
-(* 32 bits *)
-type addr = int
-(* 32 bits *)
-type word = int
-(* 32 bits *)
-type offset = int
-(* 8 bits *)
-type byte = char
 
 type section =
   | SText of virt_pc
@@ -38,6 +41,13 @@ type value = {
 
 type symbol_table = (symbol, value) Hashtbl.t
 
+(* --------------------------------------- *)
+(* The real pc world *)
+(* --------------------------------------- *)
+
+(* increments by 4 for ARM *)
+type real_pc = int
+
 (* after layout *)
 type section2 =
   | SText2 of real_pc
@@ -48,6 +58,10 @@ type section2 =
 type value2 = section2
 
 type symbol_table2 = (symbol, value2) Hashtbl.t
+
+(* --------------------------------------- *)
+(* The executable world *)
+(* --------------------------------------- *)
 
 type header_type =
   | A_out (* Plan9 *)

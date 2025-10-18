@@ -36,7 +36,7 @@ let cput (chan : out_channel) (byte : byte) : unit =
 (* Entry point *)
 (*****************************************************************************)
 
-let gen (config : T.config) (sizes : T.sections_size) cs ds symbols2 (chan : Chan.o) : unit =
+let gen (config : T.config) (sizes : T.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
   let entry = config.T.entry_point in
   let format = config.T.header_type in
 

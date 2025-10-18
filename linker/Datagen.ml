@@ -6,7 +6,11 @@ open Ast_asm5
 module T = Types
 module T5 = Types5
 
-let gen symbols2 init_data sizes ds =
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_size) (ds : T5.data list) : T.byte array =
   let arr = Array.make sizes.T.data_size (Char.chr 0) in
 
   ds |> List.iter (fun d ->

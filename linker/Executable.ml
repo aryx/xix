@@ -41,8 +41,8 @@ let gen (config : T.config) (sizes : T.sections_size) cs ds symbols2 (chan : Cha
   let format = config.T.header_type in
 
   (match format with
-  | A_out -> ()
-  | Elf -> failwith "ELF executable format not yet supported"
+  | Types.A_out -> ()
+  | Types.Elf -> failwith "ELF executable format not yet supported"
   );
 
   let header = { A_out.

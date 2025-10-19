@@ -31,7 +31,9 @@ open Ast_asm
 (* Numbers and Strings *)
 (* ------------------------------------------------------------------------- *)
 
-(* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
+(* enough for ARM 32 bits? on 64 bits machine it is enough :) 
+ * alt: move in Ast_asm.ml and use Int64.t so sure it's enough for every arch
+*)
 type integer = int 
 [@@deriving show]
 (* can be 0, negative, or positive *)
@@ -42,6 +44,7 @@ type offset = int
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
+(* alt: in Ast_asm.ml *)
 type register = R of int (* between 0 and 15 *)
 [@@deriving show]
 
@@ -99,6 +102,7 @@ type mov_operand =
 
 (* I use a ref below so the code that resolves branches is shorter.
  * The ref is modified by the assembler and then by the linker.
+ * alt: in Ast_asm.ml
  *)  
 type branch_operand = branch_operand2 ref
 and branch_operand2 =
@@ -208,6 +212,7 @@ type pseudo_instr =
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
+(* alt: in Ast_asm.ml parametrized by 'instr *)
 type line = 
   | Pseudo of pseudo_instr
   | Instr of instr * condition (* cond should be AL for B/Bxx instructions *)

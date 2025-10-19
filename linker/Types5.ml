@@ -3,7 +3,7 @@ open Common
 open Fpath_.Operators
 
 open Ast_asm
-module A = Ast_asm5
+module A5 = Ast_asm5
 module T = Types
 
 (*****************************************************************************)
@@ -21,13 +21,13 @@ module T = Types
 type code = (instr * Types.loc)
 (* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
 and instr =
-  | TEXT of Ast_asm.global * A.attributes * int
-  | WORD of A.imm_or_ximm
-  | I of A.instr * A.condition
+  | TEXT of Ast_asm.global * A5.attributes * int
+  | WORD of A5.imm_or_ximm
+  | I of A5.instr * A5.condition
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
-  | DATA of Ast_asm.global * A.offset * int * A.imm_or_ximm
+  | DATA of Ast_asm.global * A5.offset * int * A5.imm_or_ximm
 
 
 (* graph via pointers, like in original 5l *)

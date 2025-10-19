@@ -5,6 +5,13 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(* --------------------------------------- *)
+(* basic types *)
+(* --------------------------------------- *)
+
+(* a single line number is not enough anymore, we need also the filename *)
+type loc = Fpath.t * Ast_asm.loc
+
 (* 8 bits *)
 type byte = char
 (* 32 bits *)
@@ -27,12 +34,12 @@ type symbol = string * scope
 (* increments by 1. Used as index in some 'code array' or 'node array' *)
 type virt_pc = int
 
+(* before layout *)
 type section =
   | SText of virt_pc
   | SData of int
   | SXref
 
-(* before layout *)
 type value = {
   mutable section: section;
   (* the filename is for safe linking error report *)

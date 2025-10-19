@@ -3,6 +3,7 @@
 open Common
 open Either
 
+open Ast_asm
 open Ast_asm5
 module L = Location_cpp
 

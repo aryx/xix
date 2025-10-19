@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+open Ast_asm
 open Ast_asm5
 module T = Types
 module T5 = Types5
@@ -10,7 +11,7 @@ module T5 = Types5
 (*****************************************************************************)
 
 (* "Names", modifies global, modifies h *)
-let process_global (global : Ast_asm5.global) h (idfile : int) : unit =
+let process_global (global : Ast_asm.global) h (idfile : int) : unit =
   (match global.priv with
   | Some _ -> global.priv <- Some idfile
   | None -> ()

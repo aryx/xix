@@ -48,6 +48,7 @@ open Types
 type caps = < Cap.open_in; Cap.open_out >
 
 let thechar = '5'
+let thebin = "5.out"
 
 let usage = 
   spf "usage: o%cl [-options] objects" thechar
@@ -84,13 +85,16 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t l
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 chan
 
+let link (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
+  link5 caps config objfiles chan
+
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
-  let outfile = ref (Fpath.v "5.out") in
+  let outfile = ref (Fpath.v thebin) in
 
   let header_type = ref "a.out" in
   let init_text  = ref None in
@@ -178,7 +182,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      try 
         (* the main call *)
         !outfile |> FS.with_open_out caps (fun chan ->
-          link5 caps config xs chan
+          link caps config xs chan
         );
         Exit.OK
   with exn ->

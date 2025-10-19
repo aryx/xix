@@ -3,6 +3,7 @@ open Common
 open Either
 
 open Ast
+open Ast_asm
 module C = Ast
 module A = Ast_asm5
 
@@ -47,12 +48,12 @@ type env = {
 
   (* the output *)
 
-  pc: A.virt_pc ref;
+  pc: Ast_asm.virt_pc ref;
 
   (* growing array *)
-  code: (A.line * A.loc) array ref;
+  code: (A.line * Ast_asm.loc) array ref;
   (* should contain only DATA or GLOBL *)
-  data: (A.line * A.loc) list ref;
+  data: (A.line * Ast_asm.loc) list ref;
 
   (* reinitialized for each function *)
 
@@ -67,16 +68,16 @@ type env = {
   offsets: (Ast.fullname, int) Hashtbl.t;
 
   (* for goto/labels *)
-  labels: (string, A.virt_pc) Hashtbl.t;
+  labels: (string, Ast_asm.virt_pc) Hashtbl.t;
   (* if the label is defined after the goto, when we process the label,
    * we need to update previous goto instructions.
    *)
-  forward_gotos: (string, A.virt_pc list) Hashtbl.t;
+  forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
 
   (* for loops (and switch) *)
   (* reinitialized for each block scope *)
-  break_pc: A.virt_pc option;
-  continue_pc: A.virt_pc option;
+  break_pc: Ast_asm.virt_pc option;
+  continue_pc: Ast_asm.virt_pc option;
 
 }
 
@@ -186,15 +187,15 @@ let patch_fake_goto env pcgoto pcdest =
 (*****************************************************************************)
 
 let global_of_id fullname idinfo = 
-  { A.name = Ast.unwrap fullname;
-    A.priv = 
+  { name = Ast.unwrap fullname;
+    priv = 
       (match idinfo.TC.sto with
       | S.Static -> Some (-1)
       | S.Global | S.Extern -> None
       | _ -> raise (Impossible "global can be only Static/Global/Extern")
       );
     (* less: analyse idinfo.typ *)
-    A.signature = None;
+    signature = None;
   }
 
 let symbol fullname = Ast.unwrap fullname

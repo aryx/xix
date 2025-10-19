@@ -8,6 +8,6 @@ type caps = < Cap.open_in; Cap.open_out >
 val main: <caps; ..> -> string array -> Exit.t
 
 (* main algorithm; works by side effect on outfile *)
-val link5: 
+val link: 
   < Cap.open_in; ..> ->
   Types.config -> Fpath.t list (* objfiles *) -> Chan.o (* outfile *) -> unit

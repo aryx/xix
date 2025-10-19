@@ -1,5 +1,6 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Ast_asm
 
 (*****************************************************************************)
 (* Prelude *)
@@ -10,7 +11,7 @@ open Common
  * Note that in Plan 9 object files are mostly the serialized form of 
  * the assembly AST, which is why this file is in this directory.
  * 
- * !!! If you modify this file please increment Object_code5.version !!!
+ * !!! If you modify this file please increment Object5.version !!!
  * 
  * TODO: 
  *  - floats,
@@ -24,9 +25,7 @@ open Common
 (* The AST related types *)
 (*****************************************************************************)
 
-(* (global) line# *)
-type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
-[@@deriving show]
+(* see also Ast_asm.ml *)
 
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
@@ -35,27 +34,8 @@ type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
 (* enough for ARM 32 bits? on 64 bits machine it is enough :) *)
 type integer = int 
 [@@deriving show]
-(* increments by unit of 1 *)
-type virt_pc = int
-[@@deriving show]
 (* can be 0, negative, or positive *)
 type offset = int
-[@@deriving show]
-
-type label = string
-[@@deriving show]
-type symbol = string
-[@@deriving show]
-
-type global = {
-  name: symbol;
-  (* 'Some _' when entity is a private symbol (aka static symbol).
-   * mutable (ugly?) modifed by linker in naming phase.
-   *)
-  mutable priv: int option; 
-  (* for safe linking (generated only by 5c, not 5a) *)
-  signature: int option;
-}
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
@@ -96,12 +76,14 @@ type mov_operand =
   (* another form of Indirect *)
   | Entity of entity
 
+  (* TODO: in Ast_asm.ml *)
   and entity = 
   | Param of symbol option * offset (* FP *)
   | Local of symbol option * offset (* SP *)
   (* stricter: we disallow anonymous offsets to SB *)
   | Global of global * offset (* SB *) 
 
+  (* alt: in Ast_asm.ml *)
   and ximm =
     | String of string (* limited to 8 characters *)
 
@@ -208,6 +190,7 @@ type instr =
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
 [@@deriving show]
 
+(* alt: in Ast_asm.ml *)
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
   | TEXT of global * attributes * int (* size locals, should be multiple of 4 *)
@@ -234,5 +217,5 @@ type line =
   (* less: PragmaLibDirective of string *)
 [@@deriving show]
 
-type program = (line * loc) list
+type program = (line * Ast_asm.loc) list
 [@@deriving show]

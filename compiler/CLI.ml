@@ -144,7 +144,7 @@ let compile (caps : < caps; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) 
     );
   end;
   outfile |> FS.with_open_out caps 
-    (fun chan -> Object_code5.save (asm, !Location_cpp.history) chan)
+    (fun chan -> Object5.save (asm, !Location_cpp.history) chan)
 
 (*****************************************************************************)
 (* Entry point *)

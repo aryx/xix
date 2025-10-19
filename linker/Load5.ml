@@ -100,7 +100,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.da
     (* TODO: if lib file! *)
 
     (* object loading is so much easier in ocaml :) *)
-    let (prog, _srcfile) = file |> FS.with_open_in caps Object_code5.load in
+    let (prog, _srcfile) = file |> FS.with_open_in caps Object5.load in
     (* less: could check valid AST, range of registers, shift values, etc *)
 
     (* naming and populating symbol table h *)

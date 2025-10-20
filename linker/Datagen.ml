@@ -2,6 +2,7 @@
 open Common
 open Either
 
+module A = Ast_asm
 module T = Types
 
 (*****************************************************************************)
@@ -19,11 +20,11 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_si
         let base = offset + offset2 in
         (match v with
         | Left _i -> raise Todo
-        | Right (String s) -> 
+        | Right (A.String s) -> 
             for i = 0 to size_slice -1 do 
               arr.(base + i) <- s.[i] 
             done
-        | Right (Address (Global (global2,_offsetTODO))) ->
+        | Right (A.Address (A.Global (global2,_offsetTODO))) ->
             let info2 = Hashtbl.find symbols2 (T.symbol_of_global global2) in
             let _i = 
               match info2 with
@@ -31,7 +32,7 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_si
               | T.SData2 (offset, _kind) -> init_data + offset
             in
             raise Todo
-        | Right (Address (Local _ | Param _)) -> raise Todo
+        | Right (A.Address (A.Local _ | A.Param _)) -> raise Todo
         )
     | T.SData2 (_, T.Bss) -> raise (Impossible "layout_data missed a DATA")
     | T.SText2 _ -> raise (Impossible "layout_data did this check")

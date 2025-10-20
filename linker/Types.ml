@@ -49,7 +49,7 @@ type signature = int (* todo: * Common.filename *)
 
 type value = {
   mutable section: section;
-  signature: signature option;
+  sig_: signature option;
 }
 
 type symbol_table = (symbol, value) Hashtbl.t
@@ -145,11 +145,11 @@ let lookup (k : symbol) (sigopt : signature option) (h : symbol_table) : value =
     try
       Hashtbl.find h k
     with Not_found ->
-      let v = { section = SXref; signature = sigopt } in
+      let v = { section = SXref; sig_ = sigopt } in
       Hashtbl.add h k v;
       v
   in
-  (match sigopt, v.signature with
+  (match sigopt, v.sig_ with
   | None, None -> ()
   | Some i1, Some i2 ->
       (* todo: report also offending object files *)

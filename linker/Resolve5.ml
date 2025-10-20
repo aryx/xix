@@ -2,11 +2,10 @@
 open Common
 
 open Ast_asm
-open Ast_asm5
+open Types
+module A5 = Ast_asm5
 module T = Types
 module T5 = Types5
-
-open Types5
 
 (*****************************************************************************)
 (* Entry point *)
@@ -63,9 +62,9 @@ let build_graph (symbols : T.symbol_table) (xs : T5.code array) : T5.code_graph 
         in
         (match inst with
         (* ocaml-light: | B opd | BL opd | Bxx (_, opd) ->  *)
-        | B opd -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
-        | BL opd -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
-        | Bxx (_, opd) -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
+        | A5.B opd -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
+        | A5.BL opd -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
+        | A5.Bxx (_, opd) -> resolve_branch_operand opd |> Option.iter adjust_virt_pc
         | _ -> ()
         )
   );

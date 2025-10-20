@@ -97,9 +97,9 @@ let do_action (caps: < caps; .. >) s xs =
   | _ -> failwith ("action not supported: " ^ s)
 
 (*****************************************************************************)
-(* Main algorithm *)
+(* Main algorithms *)
 (*****************************************************************************)
-let compile (caps : < caps; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (outfile : Fpath.t) : unit =
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : (Ast.fullname, Typecheck.idinfo) Hashtbl.t * (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t * Ast.func_def list =
 
   let ast = Parse.parse caps conf infile in
 
@@ -129,8 +129,10 @@ let compile (caps : < caps; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) 
     );
   end;
 
-  (* todo: Rewrite.rewrite *)
+  ids, structs, funcs
 
+let backend5 (caps : < Cap.open_out; .. >) (ids, structs, funcs)  (outfile : Fpath.t) : unit =
+  (* todo: Rewrite.rewrite *)
   let asm = Codegen5.codegen (ids, structs, funcs) in
 
   if !Flags.dump_asm
@@ -145,6 +147,16 @@ let compile (caps : < caps; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) 
   end;
   outfile |> FS.with_open_out caps 
     (fun chan -> Object5.save (asm, !Location_cpp.history) chan)
+
+let compile5 (caps : < caps; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
+  (outfile : Fpath.t) =
+  let (ids, structs, funcs) = 
+    frontend caps conf infile in
+  backend5 caps (ids, structs, funcs) outfile
+
+let compile (caps : < caps; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
+  (outfile : Fpath.t) =
+  compile5 caps conf infile outfile
 
 (*****************************************************************************)
 (* Entry point *)

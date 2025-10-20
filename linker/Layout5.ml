@@ -36,9 +36,9 @@ let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 
         | T.SData size ->
             if offset + size_slice > size
             then failwith (spf "initialize bounds (%d): %s" size
-                             (T.s_of_global global))
+                             (A.s_of_global global))
         | T.SText _ -> failwith (spf "initialize TEXT, not a GLOBL for %s"
-                                   (T.s_of_global global))
+                                   (A.s_of_global global))
         | T.SXref -> raise (Impossible "SXRef detected by Check.check")
         );
         (* use replace cos can have multiple DATA for the same GLOBL *)

@@ -97,7 +97,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
       (* stricter: allowed in 5l but I think with wrong codegen *)
       | T.SText2 _ -> 
           error node (spf "use of procedure %s in indirect with offset"
-                       (T.s_of_global global))
+                       (A.s_of_global global))
       )
   | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
 

@@ -135,3 +135,10 @@ type 'instr line =
 
 type 'instr program = ('instr line * loc) list
 [@@deriving show]
+
+(*****************************************************************************)
+(*  Extractors/visitors *)
+(*****************************************************************************)
+
+let s_of_global (x : global) : string = 
+  x.name ^ (match x.priv with None -> "" | Some _ -> "<>")

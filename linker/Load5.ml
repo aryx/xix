@@ -1,17 +1,20 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-open Ast_asm
-open Ast_asm5
+module A = Ast_asm
+module A5= Ast_asm5
 module T = Types
 module T5 = Types5
+
+(* for field access for ocaml-light *)
+open Ast_asm
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
 (* "Names", modifies global, modifies h *)
-let process_global (global : Ast_asm.global) h (idfile : int) : unit =
+let process_global (global : A.global) h (idfile : int) : unit =
   (match global.priv with
   | Some _ -> global.priv <- Some idfile
   | None -> ()
@@ -39,35 +42,35 @@ let visit_globals f xs =
   in
   let mov_operand x =
     match x with
-    | Entity (Global (x, _)) -> f x
-    | Entity (Param _ | Local _) -> ()
-    | Ximm x -> ximm x
-    | Imsr _ | Indirect _ -> ()
+    | A5.Entity (A.Global (x, _)) -> f x
+    | A5.Entity (A.Param _ | A.Local _) -> ()
+    | A5.Ximm x -> ximm x
+    | A5.Imsr _ | A5.Indirect _ -> ()
   in
   let branch_operand x =
     match !x with
-    | SymbolJump ent -> f ent
-    | IndirectJump _ | Relative _ | LabelUse _ | Absolute _ -> ()
+    | A.SymbolJump ent -> f ent
+    | A.IndirectJump _ | A.Relative _ | A.LabelUse _ | A.Absolute _ -> ()
   in
   xs |> List.iter (fun (x, _line) ->
     match x with
-    | Pseudo y ->
+    | A.Pseudo y ->
       (match y with
-      | TEXT (ent, _, _) -> f ent
-      | GLOBL (ent, _, _) -> f ent
-      | DATA (ent, _, _, ix) -> f ent; imm_or_ximm ix
-      | WORD (ix) -> imm_or_ximm ix
+      | A.TEXT (ent, _, _) -> f ent
+      | A.GLOBL (ent, _, _) -> f ent
+      | A.DATA (ent, _, _, ix) -> f ent; imm_or_ximm ix
+      | A.WORD (ix) -> imm_or_ximm ix
       )
-    | Instr (i, _cond) ->
+    | A.Instr (i, _cond) ->
       (match i with
-      | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
+      | A5.MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
       (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
-      | B b -> branch_operand b
-      | BL b -> branch_operand b
-      | Bxx (_, b) -> branch_operand b
-      | Arith _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> () 
+      | A5.B b -> branch_operand b
+      | A5.BL b -> branch_operand b
+      | A5.Bxx (_, b) -> branch_operand b
+      | A5.Arith _ | A5.SWAP _ | A5.RET | A5.Cmp _ | A5.SWI _ | A5.RFE | A5.NOP -> () 
       )
-    | LabelDef _ -> ()
+    | A.LabelDef _ -> ()
   )
 
 
@@ -84,7 +87,7 @@ let visit_globals f xs =
  * - visit all entities (defs and uses) and add them in symbol table
  * alt: take as a parameter (xs : Chan.i list);
  *)
-let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T.data list * Types.symbol_table=
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : Ast_asm5.instr_with_cond T.code array * T.data list * Types.symbol_table=
 
   (* values to return *)
   let code = ref [] in
@@ -112,9 +115,9 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T.dat
      *)
     prog |> List.iter (fun (p, line) ->
       match p with
-      | Pseudo pseudo ->
+      | A.Pseudo pseudo ->
           (match pseudo with
-          | TEXT (global, attrs, size) ->
+          | A.TEXT (global, attrs, size) ->
               (* less: set curtext for better error managment *)
               let v = T.lookup_global global h in
               (match v.T.section with
@@ -124,21 +127,21 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T.dat
               (* less: adjust autosize? *)
               code |> Stack_.push (T.TEXT (global, attrs, size), (file, line));
               incr pc;
-          | WORD v ->
+          | A.WORD v ->
               code |> Stack_.push (T.WORD v, (file, line));
               incr pc;
             
-          | GLOBL (global, _attrs, size) -> 
+          | A.GLOBL (global, _attrs, size) -> 
               let v = T.lookup_global global h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SData size;
               | _ -> failwith (spf "redefinition of %s" global.name)
               );
-          | DATA (global, offset, size, v) -> 
+          | A.DATA (global, offset, size, v) -> 
               data |> Stack_.push (T.DATA (global, offset, size, v))
           )
 
-      | Instr (inst, cond) ->
+      | A.Instr (instr) ->
 
           let relocate_branch opd =
             match !opd with
@@ -148,17 +151,16 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T.dat
             | Absolute i -> opd := Absolute (i + ipc)
           in
 
-          (match inst with
-          (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> relocate_branch opd *)
-          | B opd -> relocate_branch opd
-          | BL opd -> relocate_branch opd
-          | Bxx (_, opd) -> relocate_branch opd
+          (match fst instr with
+          | A5.B opd -> relocate_branch opd
+          | A5.BL opd -> relocate_branch opd
+          | A5.Bxx (_, opd) -> relocate_branch opd
           | _ -> ()
           );
-          code |> Stack_.push (T.I (inst, cond), (file, line));
+          code |> Stack_.push (T.I instr, (file, line));
           incr pc;
 
-      | LabelDef _ -> failwith (spf "label definition in object")
+      | A.LabelDef _ -> failwith (spf "label definition in object")
     );
   );
   Array.of_list (List.rev !code), List.rev !data, h

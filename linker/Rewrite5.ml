@@ -67,7 +67,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
     | T.TEXT (global, attrs, size) ->
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
-                         (T.s_of_global global));
+                         (A.s_of_global global));
         if size < 0 
         then failwith "TODO: handle size local -4";
         

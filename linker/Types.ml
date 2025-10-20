@@ -171,7 +171,7 @@ let s_of_symbol (s, scope) =
 let symbol_of_global (e : A.global) : symbol =
   e.name, (match e.priv with None -> Public | Some i -> Private i)
 
-let lookup_global x h =
+let lookup_global (x : A.global) (h : symbol_table) : value =
   let symbol = symbol_of_global x in
   lookup symbol x.signature h
 
@@ -179,10 +179,6 @@ let lookup_global x h =
 (* less: would need Hist mapping for this file to convert to original source *)
 let s_of_loc (file, line) =
   spf "%s:%d" !!file line
-
-let s_of_global (x : A.global) : string = 
-  x.name ^ (match x.priv with None -> "" | Some _ -> "<>")
-
 
 let rec iter f n =
   f n;

@@ -6,4 +6,4 @@
 val load: 
   <Cap.open_in; .. > ->
   Fpath.t list -> 
-  Types5.code array * Types.data list * Types.symbol_table
+  Ast_asm5.instr_with_cond Types.code array * Types.data list * Types.symbol_table

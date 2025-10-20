@@ -1,14 +1,13 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-open Ast_asm
-open Ast_asm5
+module A = Ast_asm
+module A5 = Ast_asm5
+open Types
 module T = Types
 module T5 = Types5
 
 (* for field access for ocaml-light *)
-open Types
-open Types5
 
 (*****************************************************************************)
 (* Helpers *)
@@ -18,8 +17,8 @@ let rec find_first_no_nop_node nopt =
   match nopt with
   | None -> failwith "could not find non NOP node for branch"
   | Some n ->
-      (match n.T.instr with
-      | T.I (NOP, _) -> find_first_no_nop_node n.T.next
+      (match n.instr with
+      | T.I (A5.NOP, _) -> find_first_no_nop_node n.next
       | _ -> Some n
       )
 
@@ -43,11 +42,11 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
     | T.I (instr, _condXXX) ->
         let env = 
           match instr with
-          | BL _ -> 
+          | A5.BL _ -> 
               curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
           (* remove the NOP *)
-          | NOP ->
+          | A5.NOP ->
               prev_no_nop |> Option.iter (fun prev ->
                 prev.T.next <- n.T.next;
               );
@@ -56,7 +55,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         in
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
-          | T.I (NOP, _) -> n.branch <- find_first_no_nop_node n2.next 
+          | T.I (A5.NOP, _) -> n.branch <- find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env
@@ -82,9 +81,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           n.instr <- T.TEXT (global, attrs, autosize);
           (* MOVW.W R14, -autosize(SP) *)
           let n1 = {
-            instr = T.I (MOVE (Word, Some WriteAddressBase, 
-                              Imsr (Reg rLINK), 
-                              Indirect (rSP, -autosize)), AL);
+            instr = T.I (A5.MOVE (A5.Word, Some A5.WriteAddressBase, 
+                              A5.Imsr (A5.Reg A5.rLINK), 
+                              Indirect (A5.rSP, -autosize)), A5.AL);
             next = n.next;
             branch = None;
             loc = n.loc;
@@ -96,15 +95,15 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         autosize_opt
 
     | T.WORD _ -> autosize_opt
-    | T.I (RET, cond) ->
+    | T.I (A5.RET, cond) ->
         n.instr <- T.I
           ((match autosize_opt with
            (* B (R14) *)
-           | None -> B (ref (IndirectJump (rLINK)))
+           | None -> B (ref (A.IndirectJump (A5.rLINK)))
            (* MOVW.P autosize(SP), PC *)
-           | Some autosize -> MOVE (Word, Some PostOffsetWrite,
-                                   Indirect (rSP, autosize), 
-                                   Imsr (Reg rPC))
+           | Some autosize -> MOVE (Word, Some A5.PostOffsetWrite,
+                                   A5.Indirect (A5.rSP, autosize), 
+                                   A5.Imsr (A5.Reg A5.rPC))
            ), cond);
         autosize_opt
      | T.I (NOP, _) -> raise (Impossible "NOP was removed in step1")

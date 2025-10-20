@@ -5,7 +5,7 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
-type code = Ast_asm5.instr_with_cond Types.code
+type code_ = Ast_asm5.instr_with_cond Types.code
 type node = Ast_asm5.instr_with_cond Types.node
 type code_graph = Ast_asm5.instr_with_cond Types.code_graph
 

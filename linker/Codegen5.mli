@@ -1,6 +1,6 @@
 
 type pool =
-  | PoolOperand of Ast_asm5.imm_or_ximm
+  | PoolOperand of Ast_asm.imm_or_ximm
   | LPOOL
 
 (* This is used for the code layout. *)

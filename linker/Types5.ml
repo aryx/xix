@@ -21,13 +21,13 @@ module T = Types
 type code = (instr * Types.loc)
 (* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
 and instr =
-  | TEXT of Ast_asm.global * A5.attributes * int
-  | WORD of A5.imm_or_ximm
+  | TEXT of global * attributes * int
+  | WORD of imm_or_ximm
   | I of A5.instr * A5.condition
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
-  | DATA of Ast_asm.global * A5.offset * int * A5.imm_or_ximm
+  | DATA of global * offset * int * imm_or_ximm
 
 
 (* graph via pointers, like in original 5l *)

@@ -1,6 +1,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+open Ast_asm
 open Ast_asm5
 module T = Types
 module T5 = Types5

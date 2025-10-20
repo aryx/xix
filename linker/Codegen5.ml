@@ -2,6 +2,7 @@
 open Common
 open Either
 
+open Ast_asm
 open Ast_asm5
 open Types5
 module T = Types
@@ -28,7 +29,7 @@ type pool =
   (* note that it is not always an int! Sometimes it can be an
    * Address which will be resolved only at the very end.
    *)
-  | PoolOperand of imm_or_ximm
+  | PoolOperand of Ast_asm.imm_or_ximm
   (* todo: still don't know why we need that *)
   | LPOOL 
 

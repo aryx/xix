@@ -1,5 +1,6 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+
 open Ast_asm
 
 (*****************************************************************************)
@@ -8,44 +9,38 @@ open Ast_asm
 (* Abstract Syntax Tree (AST) for the assembly language supported by 5a.
  * I call this language Asm5.
  *
+ * Note that many types are now defined in Ast_asm.ml instead because they are
+ * mostly arch independent and can be reused in other plan9 assemblers
+ * (e.g,, 8a, 6a, va).
+ *
  * Note that in Plan 9 object files are mostly the serialized form of 
  * the assembly AST, which is why this file is in this directory.
  * 
  * !!! If you modify this file please increment Object5.version !!!
  * 
  * TODO: 
- *  - floats,
+ *  - floats (or better in Ast_asm.ml?)
  *  - MULA, MULL,
  *  - MOVM (and his special bits .IA/...), 
  *  - PSR, MCR/MRC,
- *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU
+ *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU (or better in Ast_asm.ml too?)
  *)
 
 (*****************************************************************************)
 (* The AST related types *)
 (*****************************************************************************)
 
-(* see also Ast_asm.ml *)
-
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
 (* ------------------------------------------------------------------------- *)
 
-(* enough for ARM 32 bits? on 64 bits machine it is enough :) 
- * alt: move in Ast_asm.ml and use Int64.t so sure it's enough for every arch
-*)
-type integer = int 
-[@@deriving show]
-(* can be 0, negative, or positive *)
-type offset = int
-[@@deriving show]
+(* see Ast_asm.ml *)
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
-(* alt: in Ast_asm.ml *)
-type register = R of int (* between 0 and 15 *)
+type register = Ast_asm.register (* between 0 and 15 on ARM *)
 [@@deriving show]
 
 (* reserved by linker *)
@@ -55,6 +50,7 @@ let rSP  = R 13
 (* reserved by hardware *)
 let rLINK = R 14
 let rPC   = R 15
+
 let nb_registers = 16
 
 type arith_operand =
@@ -69,6 +65,9 @@ type arith_operand =
     | Sh_arith_right | Sh_rotate_right
 [@@deriving show]
 
+(* alt: could almost be moved to Ast_asm.ml but Shift above of arith_operand
+ * seems arm-specific
+ *)
 type mov_operand = 
   (* Immediate shift register *)
   | Imsr of arith_operand
@@ -79,54 +78,13 @@ type mov_operand =
   (* another form of Indirect *)
   | Entity of entity
 
-  (* TODO: in Ast_asm.ml *)
-  and entity = 
-  | Param of symbol option * offset (* FP *)
-  | Local of symbol option * offset (* SP *)
-  (* stricter: we disallow anonymous offsets to SB *)
-  | Global of global * offset (* SB *) 
-
-  (* alt: in Ast_asm.ml *)
-  and ximm =
-    | String of string (* limited to 8 characters *)
-
-    (* Float? *)
-
-    (* I used to disallow address of FP or SP, and offset to SB, but
-     * 5c needs this feature, so you can take the address of a local.
-     * old: Address of global.
-     *)
-    | Address of entity
-[@@deriving show]
-
-
-(* I use a ref below so the code that resolves branches is shorter.
- * The ref is modified by the assembler and then by the linker.
- * alt: in Ast_asm.ml
- *)  
-type branch_operand = branch_operand2 ref
-and branch_operand2 =
-
-  (* resolved by assembler *)
-  (* relative to PC, in units of virtual_code_address *)
-  | Relative of int 
-  (* we could transform labels in symbols early-on, but nice to resolve ASAP *)
-  | LabelUse of label * offset (* useful to have offset? *)
-
-  (* resolved by linker *)
-  | SymbolJump of global (* no offset (it would not be used by 5l anyway) *)
-
-  (* after resolution *)
-  | Absolute of virt_pc
-
-  (* resolved dynamically by the machine (e.g., B (R14)) *)
-  | IndirectJump of register
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
 (* ------------------------------------------------------------------------- *)
 
+(* less: could probably factorize things and move stuff in Ast_asm.ml *)
 type instr = 
   (* Arithmetic *)
   | Arith of arith_opcode * arith_option *
@@ -194,33 +152,18 @@ type instr =
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
 [@@deriving show]
 
-(* alt: in Ast_asm.ml *)
-type pseudo_instr =
-  (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of global * attributes * int (* size locals, should be multiple of 4 *)
-  | GLOBL of global (* can have offset? *) * attributes * int (* size *)
-
-  | DATA of global * offset * int (* size, should be in [1..8] *) * imm_or_ximm
-  (* any ximm? even String? And Float? for float should have DWORD? *)
-  | WORD of imm_or_ximm
-
-  and attributes = { dupok: bool; prof: bool }
-  and imm_or_ximm = (integer, ximm) Either_.t
-[@@deriving show]
-
 (* ------------------------------------------------------------------------- *)
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
-(* alt: in Ast_asm.ml parametrized by 'instr *)
-type line = 
-  | Pseudo of pseudo_instr
-  | Instr of instr * condition (* cond should be AL for B/Bxx instructions *)
-
-  (* disappear after resolve *)
-  | LabelDef of label
-  (* less: PragmaLibDirective of string *)
+(* On the ARM every instructions can be prefixed with a condition.
+ * Note that cond should be AL (Always) for B/Bxx instructions.
+*)
+type instr_with_cond = instr * condition
 [@@deriving show]
 
-type program = (line * Ast_asm.loc) list
+type line = instr_with_cond Ast_asm.line
+[@@deriving show]
+
+type program = instr_with_cond Ast_asm.program
 [@@deriving show]

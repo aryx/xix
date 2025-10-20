@@ -2,6 +2,7 @@
 open Common
 open Either
 
+open Ast_asm
 open Ast_asm5
 module T = Types
 module T5 = Types5

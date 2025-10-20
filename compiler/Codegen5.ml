@@ -2,10 +2,11 @@
 open Common
 open Either
 
-open Ast
 open Ast_asm
+open Ast
 module C = Ast
-module A = Ast_asm5
+module A = Ast_asm
+module A5 = Ast_asm5
 
 module T = Type_
 module S = Storage
@@ -51,9 +52,9 @@ type env = {
   pc: Ast_asm.virt_pc ref;
 
   (* growing array *)
-  code: (A.line * Ast_asm.loc) array ref;
+  code: (A5.line * Ast_asm.loc) array ref;
   (* should contain only DATA or GLOBL *)
-  data: (A.line * Ast_asm.loc) list ref;
+  data: (A5.line * Ast_asm.loc) list ref;
 
   (* reinitialized for each function *)
 
@@ -81,19 +82,19 @@ type env = {
 
 }
 
-let rRET = A.R 0
+let rRET = R 0
 (* opti: let rARG = A.R 0 *)
 
 (* for 'extern register xx;', used in ARM kernel *)
-let rEXT1 = A.R 10
-let rEXT2 = A.R 9
+let rEXT1 = R 10
+let rEXT2 = R 9
 
 let regs_initial = 
-  let arr = Array.make A.nb_registers 0 in
-  [A.rLINK; A.rPC;       (* hardware reseved *)
-   A.rTMP; A.rSB; A.rSP; (* linker reserved *)
+  let arr = Array.make A5.nb_registers 0 in
+  [A5.rLINK; A5.rPC;       (* hardware reseved *)
+   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
    rEXT1; rEXT2;         (* compiler reserved *)
-  ] |> List.iter (fun (A.R x) ->
+  ] |> List.iter (fun (R x) ->
     arr.(x) <- 1
   );
   arr
@@ -110,11 +111,11 @@ type operand_able =
  }
 and operand_able_kind =
  | ConstI of integer
- | Register of A.register
+ | Register of register
 
  (* indirect *)
- | Name of Ast.fullname * A.offset
- | Indirect of A.register * A.offset
+ | Name of Ast.fullname * offset
+ | Indirect of register * offset
  (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
 
@@ -130,10 +131,10 @@ exception Error of error
 (* Instructions  *)
 (*****************************************************************************)
 
-let fake_instr = A.Instr (A.NOP, A.AL)
+let fake_instr = A.Instr (A5.NOP, A5.AL)
 let fake_loc = -1
 let fake_pc = -1
-let noattr = { A.prof = false; A.dupok = false}
+let noattr = { prof = false; dupok = false}
 
 let add_instr env instr loc = 
   (* grow array if necessary *)
@@ -164,20 +165,20 @@ let add_fake_instr env str =
 
 let add_fake_goto env loc =
   let spc = !(env.pc) in
-  add_instr env (A.Instr (A.B (ref (A.Absolute fake_pc)), A.AL)) loc;
+  add_instr env (A.Instr (A5.B (ref (Absolute fake_pc)), A5.AL)) loc;
   spc
  
 let patch_fake_goto env pcgoto pcdest =
   match !(env.code).(pcgoto) with
   (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
-  (* ocaml-light: | A.Instr (A.B aref, A.AL), _loc | A.Instr (A.Bxx (_, aref), A.AL), _loc *)
-  | A.Instr (A.B aref, A.AL), _loc ->
-    if !aref = (A.Absolute fake_pc)
-    then aref := A.Absolute pcdest
+  (* ocaml-light: | A5.Instr (A5.B aref, A5.AL), _loc | A5.Instr (A5.Bxx (_, aref), A5.AL), _loc *)
+  | A.Instr (A5.B aref, A5.AL), _loc ->
+    if !aref = (Absolute fake_pc)
+    then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
-  | A.Instr (A.Bxx (_, aref), A.AL), _loc ->
-    if !aref = (A.Absolute fake_pc)
-    then aref := A.Absolute pcdest
+  | A.Instr (A5.Bxx (_, aref), A5.AL), _loc ->
+    if !aref = (Absolute fake_pc)
+    then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
   | _ -> raise (Impossible "patching non jump instruction")
 
@@ -205,7 +206,7 @@ let entity_of_id env fullname offset_extra =
   match idinfo.TC.sto with
   | S.Param -> 
     let offset = Hashtbl.find env.offsets fullname + offset_extra in
-    A.Param (Some (symbol fullname), offset)
+    Param (Some (symbol fullname), offset)
   | S.Local ->
     let offset = Hashtbl.find env.offsets fullname + offset_extra in
     (* - offset for locals *)
@@ -218,28 +219,28 @@ let entity_of_id env fullname offset_extra =
 (* less: opportunity for bitshifted registers? *)
 let mov_operand_of_opd env opd =
   match opd.opd with
-  | ConstI i   -> A.Imsr (A.Imm i)
-  | Register r -> A.Imsr (A.Reg r)
-  | Name (fullname, offset) -> A.Entity (entity_of_id env fullname offset)
-  | Indirect (r, offset) -> A.Indirect (r, offset)
-  | Addr fullname -> A.Ximm (A.Address (entity_of_id env fullname 0))
+  | ConstI i   -> A5.Imsr (A5.Imm i)
+  | Register r -> A5.Imsr (A5.Reg r)
+  | Name (fullname, offset) -> A5.Entity (entity_of_id env fullname offset)
+  | Indirect (r, offset) -> A5.Indirect (r, offset)
+  | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
 
 let arith_instr_of_op op r1 r2 r3 =
-  A.Arith (
+  A5.Arith (
     (match op with
     | Arith op ->
       (match op with 
-      | Plus -> A.ADD | Minus -> A.SUB
-      | And -> A.AND | Or -> A.ORR | Xor -> A.EOR
+      | Plus -> A5.ADD | Minus -> A5.SUB
+      | And -> A5.AND | Or -> A5.ORR | Xor -> A5.EOR
       (* todo: need type info for A.SLR *)
-      | ShiftLeft -> A.SLL | ShiftRight -> A.SRA
+      | ShiftLeft -> A5.SLL | ShiftRight -> A5.SRA
       (* todo: need type info for A.MULU, etc *)
-      | Mul -> A.MUL | Div -> A.DIV | Mod -> A.MOD
+      | Mul -> A5.MUL | Div -> A5.DIV | Mod -> A5.MOD
       )
     | Logical _ -> raise Todo
     ),
     None, 
-    A.Reg r1, Some r2, r3
+    A5.Reg r1, Some r2, r3
   )
 
 (*****************************************************************************)
@@ -435,7 +436,7 @@ let rec gmove env opd1 opd2 =
   | Name _ | Indirect _ ->
     let move_size = 
       match opd1.typ with
-      | T.I (T.Int, _) | T.Pointer _ -> A.Word
+      | T.I (T.Int, _) | T.Pointer _ -> A5.Word
       | _ -> raise Todo
     in
     (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
@@ -449,7 +450,7 @@ let rec gmove env opd1 opd2 =
     | Name _ | Indirect _ ->
       let move_size =
         match opd2.typ with
-        | T.I (T.Int, _) | T.Pointer _ -> A.Word
+        | T.I (T.Int, _) | T.Pointer _ -> A5.Word
         | _ -> raise Todo
       in
       (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
@@ -462,8 +463,8 @@ let rec gmove env opd1 opd2 =
       (* the simple cases *)
       let move_size = 
         match opd1.typ, opd2.typ with
-        | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
-        | T.Pointer _, T.Pointer _ -> A.Word
+        | T.I (T.Int, _), T.I (T.Int, _) -> A5.Word
+        | T.Pointer _, T.Pointer _ -> A5.Word
         (* todo: lots of opti related to float *)
         | _ -> raise Todo
       in
@@ -479,9 +480,9 @@ and gmove_aux env move_size opd1 opd2 =
   then ()
   else 
   add_instr env 
-    (A.Instr (A.MOVE (move_size, None, 
+    (A.Instr (A5.MOVE (move_size, None, 
                       mov_operand_of_opd env opd1,
-                      mov_operand_of_opd env opd2), A.AL)) opd1.loc
+                      mov_operand_of_opd env opd2), A5.AL)) opd1.loc
 
 let gmove_opt env opd1 opd2opt = 
   match opd2opt with
@@ -529,7 +530,7 @@ let rec expr env e0 dst_opd_opt =
             (match opd1reg.opd, opd2reg.opd with
             | Register r1, Register r2 ->
               (* again reverse order SUB r2 r1 ... means r1 - r2 *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A.AL)) 
+              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A5.AL)) 
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
             );
@@ -545,7 +546,7 @@ let rec expr env e0 dst_opd_opt =
               (* This time we store result in r2! important and subtle.
                * This avoids some extra MOVW; see plus_chain.c
                *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A.AL)) 
+              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A5.AL)) 
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
             );
@@ -643,9 +644,9 @@ let expr_cond env e0 =
     expr env e0 (Some dst);
     (* less: actually should be last loc of e0 *)
     let loc = e0.e_loc in
-    add_instr env (A.Instr (A.Cmp (A.CMP, A.Imm 0, rRET), A.AL)) loc;
+    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, rRET), A5.AL)) loc;
     let pc = !(env.pc) in
-    add_instr env (A.Instr (A.Bxx (A.EQ,(ref (A.Absolute fake_pc))),A.AL)) loc;
+    add_instr env (A.Instr (A5.Bxx (A5.EQ,(ref (A.Absolute fake_pc))),A5.AL)) loc;
     pc
   )
 
@@ -675,13 +676,13 @@ let rec stmt env st0 =
   | Return eopt ->
     (match eopt with
     | None ->
-      add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
+      add_instr env (A.Instr (A5.RET, A5.AL)) st0.s_loc
     | Some e ->
       (* todo: if type compatible with R0 *)
       with_reg env rRET (fun () ->
         let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
         expr env e (Some dst);
-        add_instr env (A.Instr (A.RET, A.AL)) st0.s_loc
+        add_instr env (A.Instr (A5.RET, A5.AL)) st0.s_loc
       )
     )
 
@@ -710,7 +711,7 @@ let rec stmt env st0 =
         fake_pc
       end
     in
-    add_instr env (A.Instr (A.B (ref (A.Absolute dstpc)), A.AL)) st0.s_loc;
+    add_instr env (A.Instr (A5.B (ref (A.Absolute dstpc)), A5.AL)) st0.s_loc;
     
   | If (e, st1, st2) ->
     let goto_else_or_end = ref (expr_cond env e) in
@@ -744,7 +745,7 @@ let rec stmt env st0 =
 
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
-    add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
+    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
 
   | DoWhile (st, e) ->
@@ -769,19 +770,19 @@ let rec stmt env st0 =
 
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
-    add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
+    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
 
   | Break -> 
     (match env.break_pc with
     | Some dst ->
-      add_instr env (A.Instr (A.B (ref(A.Absolute dst)), A.AL)) st0.s_loc;
+      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
     | None -> raise (Impossible "should be detected in check.ml")
     )
   | Continue ->
     (match env.continue_pc with
     | Some dst ->
-      add_instr env (A.Instr (A.B (ref(A.Absolute dst)), A.AL)) st0.s_loc;
+      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
     | None -> raise (Impossible "should be detected in check.ml")
     )
 
@@ -814,7 +815,7 @@ let rec stmt env st0 =
     stmt env st;
 
     let loc = st0.s_loc in
-    add_instr env (A.Instr (A.B (ref(A.Absolute goto_for_continue)), A.AL)) loc;
+    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
 
   | Switch _ 
@@ -894,7 +895,7 @@ let codegen (ids, structs, funcs) =
     set_instr env spc 
       (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
                          !(env.size_locals)))) f_loc;
-    add_instr env (A.Instr (A.RET, A.AL)) f_loc;
+    add_instr env (A.Instr (A5.RET, A5.AL)) f_loc;
 
     (* sanity check register allocation *)
     env.regs |> Array.iteri (fun i v ->

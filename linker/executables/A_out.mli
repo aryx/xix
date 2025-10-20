@@ -11,5 +11,6 @@ type header = {
 
   entry: int;
 }
+[@@deriving show]
 
 val write_header: header -> out_channel -> unit

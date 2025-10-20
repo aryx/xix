@@ -16,21 +16,27 @@ open Ast_asm
 
 (* a single line number is not enough anymore, we need also the filename *)
 type loc = Fpath.t * A.loc
+[@@deriving show]
 
 (* 8 bits *)
 type byte = char
+[@@deriving show]
 (* 32 bits *)
 type word = int
+[@@deriving show]
 
 (* 32 bits *)
 type addr = int
+[@@deriving show]
 (* 32 bits *)
 type offset = int
+[@@deriving show]
 
 type symbol = string * scope
    and scope =
      | Public
      | Private of int (* represents a unique filename, less: use filename? *)
+[@@deriving show]
 
 (* --------------------------------------- *)
 (* The virtual pc world *)
@@ -38,22 +44,27 @@ type symbol = string * scope
 
 (* increments by 1. Used as index in some 'code array' or 'node array' *)
 type virt_pc = A.virt_pc
+[@@deriving show]
 
 (* before layout *)
 type section =
   | SText of virt_pc
   | SData of int
   | SXref
+[@@deriving show]
 
 (* the filename is for safe linking error report *)
 type signature = int (* todo: * Common.filename *)
+[@@deriving show]
 
 type value = {
   mutable section: section;
   sig_: signature option;
 }
+[@@deriving show]
 
 type symbol_table = (symbol, value) Hashtbl.t
+[@@deriving show]
 
 (* --------------------------------------- *)
 (* The real pc world *)
@@ -61,6 +72,7 @@ type symbol_table = (symbol, value) Hashtbl.t
 
 (* increments by 4 for ARM *)
 type real_pc = int
+[@@deriving show]
 
 (* after layout *)
 type section2 =
@@ -68,10 +80,13 @@ type section2 =
   (* offset to start of data section for ARM *)
   | SData2 of offset * data_kind
   and data_kind = Data | Bss
+[@@deriving show]
 
 type value2 = section2
+[@@deriving show]
 
 type symbol_table2 = (symbol, value2) Hashtbl.t
+[@@deriving show]
 
 (* --------------------------------------- *)
 (* Code vs Data *)
@@ -91,10 +106,12 @@ and 'instr code_instr =
   | TEXT of A.global * A.attributes * int
   | WORD of A.imm_or_ximm
   | I of 'instr
+[@@deriving show]
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
   | DATA of A.global * A.offset * int * A.imm_or_ximm
+[@@deriving show]
 
 
 (* graph via pointers, like in original 5l *)
@@ -110,8 +127,10 @@ type 'instr node = {
 
   loc: loc;
 }
+[@@deriving show]
 
 type 'instr code_graph = 'instr node (* the first node *)
+[@@deriving show]
 
 
 (* --------------------------------------- *)
@@ -121,6 +140,7 @@ type 'instr code_graph = 'instr node (* the first node *)
 type header_type =
   | A_out (* Plan9 *)
   | Elf (* Linux *)
+[@@deriving show]
 
 type config = {
   header_type: header_type;
@@ -131,12 +151,14 @@ type config = {
   (* less: could be (string, addr) Common.either too *)
   entry_point: string;
 }
+[@@deriving show]
 
 type sections_size = {
   text_size: int;
   data_size: int;
   bss_size: int;
 }
+[@@deriving show]
 
 (*****************************************************************************)
 (* Helpers *)

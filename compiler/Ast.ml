@@ -39,15 +39,18 @@
 
 (* global linenumber after preprocessing *)
 type loc = Location_cpp.loc
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
 type name = string
+[@@deriving show]
 
 (* for scope *)
 type blockid = int (* same than Type_.blockid, repeated here for clarity *)
+[@@deriving show]
 
 (* A fully resolved and scoped name. 
  * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
@@ -58,6 +61,7 @@ type blockid = int (* same than Type_.blockid, repeated here for clarity *)
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
 type fullname = name * blockid (* same than Type_.fullname *)
+[@@deriving show]
 
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
  * Could be moved in a separate naming.ml, but not worth it for just two types.
@@ -207,8 +211,7 @@ and const_expr = expr
          | Inf | Sup | InfEq | SupEq 
          | Eq | NotEq 
          | AndLog | OrLog
-
- (* with tarzan *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
@@ -266,7 +269,7 @@ and var_decl = {
 }
  (* can have ArrayInit and RecordInit here in addition to other expr *)
  and initialiser = expr
- (* with tarzan *)
+[@@deriving show]
 
 
 (* ------------------------------------------------------------------------- *)
@@ -282,7 +285,7 @@ type func_def = {
   (* always a Block *)
   f_body: stmt;
 }
- (* with tarzan *)
+[@@deriving show]
 
 (* struct and union *)
 type struct_def = {
@@ -301,7 +304,7 @@ type struct_def = {
     fld_loc: loc;
     fld_type: typ;
   }
- (* with tarzan *)
+[@@deriving show]
 
 type enum_def = { 
   (* this name is rarely used; C programmers rarely write 'enum Foo x;' *)
@@ -315,15 +318,14 @@ type enum_def = {
     ecst_loc: loc;
     ecst_value: const_expr option;
   }
- (* with tarzan *)
+[@@deriving show]
 
 type type_def = { 
   typedef_name: fullname;
   typedef_loc: loc;
   typedef_type: typ;
 }
- (* with tarzan *)
-
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
@@ -335,15 +337,14 @@ type toplevel =
   (* globals, but also extern decls and prototypes *)
   | VarDecl of var_decl
   | FuncDef of func_def
- (* with tarzan *)
+[@@deriving show]
 
 type program = toplevel list
- (* with tarzan *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Any *)
 (* ------------------------------------------------------------------------- *)
-
 (* for visitor and dumper *)
 type any =
   | Expr of expr
@@ -352,8 +353,7 @@ type any =
   | Toplevel of toplevel
   | Program of program
   | FinalType of Type.t
-
- (* with tarzan *)
+[@@deriving show]
 
 (*****************************************************************************)
 (* Helpers *)

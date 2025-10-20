@@ -6,6 +6,7 @@ INCLUDES=-I .
 # We need camlinternalOO.ml to compile commons/Cap.ml otherwise
 # ocamlc throws some weird "fatal error missing primitive create_object_opt".
 # Apparently ocamlc has some magic to find and load a camlinternalOO.cmo
+# We can't put this in lib_core/core/ because it relies on String and Map
 SRC=camlinternalOO.ml
 
 <$TOP/mkconfig

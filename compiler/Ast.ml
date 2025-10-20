@@ -76,7 +76,7 @@ type tagkind =
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* What are the differences between type_ below and Type_.t? 
+(* What are the differences between typ below and Type.t? 
  * - typedef expansion is not done here
  * - constant expressions are not resolved yet 
  *  (those expressions can involve enum constants which will be resolved later).
@@ -85,14 +85,14 @@ type tagkind =
  * Note that 'type_' and 'expr' are mutually recursive (because of const_expr).
  * todo: qualifier type
  *)
-type type_ = {
+type typ = {
   t: type_bis;
   t_loc: loc;
 }
   and type_bis = 
   | TBase of Type.t (* only the Basic stuff *)
-  | TPointer of type_
-  | TArray of const_expr option * type_
+  | TPointer of typ
+  | TArray of const_expr option * typ
   | TFunction of function_type
 
   | TStructName of Type.struct_kind * fullname
@@ -102,7 +102,7 @@ type type_ = {
   | TEnumName of fullname
   | TTypeName of fullname
 
- and function_type = (type_ * (parameter list * bool (* var args '...' *)))
+ and function_type = (typ * (parameter list * bool (* var args '...' *)))
 
   and parameter = {
     (* When part of a prototype, the name is not always mentionned, hence
@@ -115,7 +115,7 @@ type type_ = {
     p_name: fullname option;
     p_loc: loc;
 
-    p_type: type_;
+    p_type: typ;
   }
 
 
@@ -155,7 +155,7 @@ and expr = {
   | RecordPtAccess of expr * name (* x->y,  and not x.y!! *)
 
   (* less: bool (* explicit cast (xcast) *) *)
-  | Cast of type_ * expr
+  | Cast of typ * expr
 
   | Postfix of expr * fixOp
   | Prefix of fixOp * expr
@@ -170,13 +170,13 @@ and expr = {
   | Sequence of expr * expr
 
   (* codegen: converted to Int *)
-  | SizeOf of (expr, type_) Either.t
+  | SizeOf of (expr, typ) Either.t
 
   (* should appear only in a variable initializer, or after GccConstructor *)
   | ArrayInit of (const_expr option * expr) list
   | RecordInit of (name * expr) list
   (* gccext: kenccext: *)
-  | GccConstructor  of type_ * expr (* always an ArrayInit (or RecordInit?) *)
+  | GccConstructor  of typ * expr (* always an ArrayInit (or RecordInit?) *)
 
 and argument = expr
 
@@ -261,7 +261,7 @@ and var_decl = {
   v_name: fullname;
   v_loc: loc;
   v_storage: Storage.t option;
-  v_type: type_;
+  v_type: typ;
   v_init: initialiser option;
 }
  (* can have ArrayInit and RecordInit here in addition to other expr *)
@@ -299,7 +299,7 @@ type struct_def = {
     *)
     fld_name: name;
     fld_loc: loc;
-    fld_type: type_;
+    fld_type: typ;
   }
  (* with tarzan *)
 
@@ -320,7 +320,7 @@ type enum_def = {
 type type_def = { 
   typedef_name: fullname;
   typedef_loc: loc;
-  typedef_type: type_;
+  typedef_type: typ;
 }
  (* with tarzan *)
 
@@ -348,7 +348,7 @@ type program = toplevel list
 type any =
   | Expr of expr
   | Stmt of stmt
-  | Type of type_
+  | Type of typ
   | Toplevel of toplevel
   | Program of program
   | FinalType of Type.t

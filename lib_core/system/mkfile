@@ -4,7 +4,7 @@ TOP=../..
 INCLUDES=-I .
 
 SRC=\
-  Sys.ml Filename.ml Arg.ml Random.ml
+  Sys.ml Filename.ml Arg.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

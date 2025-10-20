@@ -1,1 +1,1 @@
-../system/Random.mli
+../base/Random.mli

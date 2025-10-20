@@ -13,7 +13,7 @@ SRC=Bool.ml \
    Char.ml Uchar.ml String.ml Bytes.ml \
    Option.ml Either.ml Result.ml \
    Fun.ml Lazy.ml \
-   Buffer.ml Digest.ml
+   Buffer.ml Digest.ml Random.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

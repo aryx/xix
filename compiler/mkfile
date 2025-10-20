@@ -5,7 +5,7 @@ INCLUDES=-I $TOP/lib_core/commons \
   -I $TOP/assembler/objects
 
 SRC= Flags.ml \
-  Type_.ml Meta_type.ml   Storage.ml Meta_storage.ml \
+  Type.ml Meta_type.ml   Storage.ml Meta_storage.ml \
   Ast.ml Meta_ast.ml \
   Dumper_.ml \
   Globals.ml \

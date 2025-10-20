@@ -99,7 +99,7 @@ let do_action (caps: < caps; .. >) s xs =
 (*****************************************************************************)
 (* Main algorithms *)
 (*****************************************************************************)
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : (Ast.fullname, Typecheck.idinfo) Hashtbl.t * (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t * Ast.func_def list =
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : (Ast.fullname, Typecheck.idinfo) Hashtbl.t * (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t * Ast.func_def list =
 
   let ast = Parse.parse caps conf infile in
 

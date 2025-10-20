@@ -6,7 +6,7 @@ open Regexp_.Operators
 open Parser
 module A = Ast
 module L = Location_cpp
-module T = Type_
+module T = Type
 
 (*****************************************************************************)
 (* Prelude *)

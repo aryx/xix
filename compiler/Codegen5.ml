@@ -8,7 +8,7 @@ module C = Ast
 module A = Ast_asm
 module A5 = Ast_asm5
 
-module T = Type_
+module T = Type
 module S = Storage
 module TC = Typecheck
 module E = Check
@@ -39,7 +39,7 @@ type env = {
   (* computed by previous typechecking phase *)
 
   ids:     (Ast.fullname, TC.idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   (* less: compute offset for each field?
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
@@ -106,7 +106,7 @@ type integer = int
 (* some form of instruction selection *)
 type operand_able = 
  { opd: operand_able_kind;
-   typ: Type_.t;
+   typ: Type.t;
    loc: Ast.loc;
  }
 and operand_able_kind =

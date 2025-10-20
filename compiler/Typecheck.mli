@@ -1,6 +1,6 @@
 
 type idinfo = {
-    typ: Type_.t;
+    typ: Type.t;
     sto: Storage.t;
     loc: Location_cpp.loc;
     (* typed initialisers *)
@@ -24,5 +24,5 @@ exception Error of error
 val check_and_annotate_program: 
   Ast.program -> 
   (Ast.fullname, idinfo) Hashtbl.t *
-  (Ast.fullname, Type_.struct_kind * Type_.structdef) Hashtbl.t *
+  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
   Ast.func_def list

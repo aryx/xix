@@ -90,12 +90,12 @@ type type_ = {
   t_loc: loc;
 }
   and type_bis = 
-  | TBase of Type_.t (* only the Basic stuff *)
+  | TBase of Type.t (* only the Basic stuff *)
   | TPointer of type_
   | TArray of const_expr option * type_
   | TFunction of function_type
 
-  | TStructName of Type_.struct_kind * fullname
+  | TStructName of Type.struct_kind * fullname
   (* In C an enum is really like an int. However, we could do
    * extended checks at some point to do more strict type checking! 
    *)
@@ -126,14 +126,14 @@ and expr = {
   e: expr_bis;
   e_loc: loc;
   (* properly set during typechecking in typecheck.ml *)
-  e_type: Type_.t;
+  e_type: Type.t;
 }
   and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
-  | Int of string * Type_.integer_type
-  | Float of string * Type_.float_type
+  | Int of string * Type.integer_type
+  | Float of string * Type.float_type
   (* codegen: converted to Id after typechecking *)
-  | String of string * Type_.t (* always array of chars for now, no unicode *)
+  | String of string * Type.t (* always array of chars for now, no unicode *)
 
   (* Global, local, parameter, enum constant (can be scoped), function.
    * Not that the storage, type, usage of ids is computed later and stored
@@ -288,7 +288,7 @@ type func_def = {
 type struct_def = {
   su_name: fullname;
   su_loc: loc;
-  su_kind: Type_.struct_kind;
+  su_kind: Type.struct_kind;
   (* todo: bitfield annotation *)
   su_flds: field_def list;
 }
@@ -351,7 +351,7 @@ type any =
   | Type of type_
   | Toplevel of toplevel
   | Program of program
-  | FinalType of Type_.t
+  | FinalType of Type.t
 
  (* with tarzan *)
 
@@ -359,8 +359,8 @@ type any =
 (* Helpers *)
 (*****************************************************************************)
 let tagkind_of_su = function
-  | Type_.Struct -> TagStruct
-  | Type_.Union -> TagUnion
+  | Type.Struct -> TagStruct
+  | Type.Union -> TagUnion
 
 let unwrap (name, _) = name    
 

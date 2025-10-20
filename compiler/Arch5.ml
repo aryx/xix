@@ -2,9 +2,9 @@
 open Common
 
 open Arch
-module T = Type_
+module T = Type
 
-let rec width_of_type (env : Arch.env) (t : Type_.t) : int =
+let rec width_of_type (env : Arch.env) (t : Type.t) : int =
   match t with
   | T.Void -> 0
   | T.I (inttype, _sign) ->

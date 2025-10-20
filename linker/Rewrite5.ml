@@ -83,7 +83,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           let n1 = {
             instr = T.I (A5.MOVE (A5.Word, Some A5.WriteAddressBase, 
                               A5.Imsr (A5.Reg A5.rLINK), 
-                              Indirect (A5.rSP, -autosize)), A5.AL);
+                              A5.Indirect (A5.rSP, -autosize)), A5.AL);
             next = n.next;
             branch = None;
             loc = n.loc;
@@ -99,16 +99,16 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         n.instr <- T.I
           ((match autosize_opt with
            (* B (R14) *)
-           | None -> B (ref (A.IndirectJump (A5.rLINK)))
+           | None -> A5.B (ref (A.IndirectJump (A5.rLINK)))
            (* MOVW.P autosize(SP), PC *)
-           | Some autosize -> MOVE (Word, Some A5.PostOffsetWrite,
+           | Some autosize -> A5.MOVE (A5.Word, Some A5.PostOffsetWrite,
                                    A5.Indirect (A5.rSP, autosize), 
                                    A5.Imsr (A5.Reg A5.rPC))
            ), cond);
         autosize_opt
-     | T.I (NOP, _) -> raise (Impossible "NOP was removed in step1")
-     | T.I ((RFE|Arith (_, _, _, _, _)|MOVE (_, _, _, _)|SWAP (_, _, _, _)|
-   B _|BL _|Cmp (_, _, _)|Bxx (_, _)|SWI _), _) ->
+     | T.I (A5.NOP, _) -> raise (Impossible "NOP was removed in step1")
+     | T.I ((A5.RFE|A5.Arith (_, _, _, _, _)|A5.MOVE (_, _, _, _)|A5.SWAP (_, _, _, _)|
+   A5.B _|A5.BL _|A5.Cmp (_, _, _)|A5.Bxx (_, _)|A5.SWI _), _) ->
         autosize_opt
   ) None;
 

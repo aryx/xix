@@ -65,7 +65,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t l
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   Check.check symbols;
   
-  let graph = Resolve5.build_graph symbols code in
+  let graph = Resolve.build_graph Ast_asm5.branch_opd_of_instr symbols code in
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 

@@ -111,6 +111,8 @@ type 'instr node = {
   loc: loc;
 }
 
+type 'instr code_graph = 'instr node (* the first node *)
+
 
 (* --------------------------------------- *)
 (* The executable world *)

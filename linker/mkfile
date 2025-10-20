@@ -5,7 +5,7 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/assembler/objects -I $TOP/linker/execu
 
 SRC= Flags.ml\
  Types.ml Types5.ml Meta_types5.ml \
- Load5.ml Check.ml Resolve5.ml Rewrite5.ml\
+ Load5.ml Check.ml Resolve.ml Rewrite5.ml\
  Codegen5.ml Datagen.ml Layout5.ml\
  Executable.ml CLI.ml Main.ml
 

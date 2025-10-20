@@ -7,7 +7,7 @@ open Common
 
 type code = Ast_asm5.instr_with_cond Types.code
 type node = Ast_asm5.instr_with_cond Types.node
-type code_graph = node (* the first node *)
+type code_graph = Ast_asm5.instr_with_cond Types.code_graph
 
 (*****************************************************************************)
 (* Helpers *)

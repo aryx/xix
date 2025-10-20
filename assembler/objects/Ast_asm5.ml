@@ -167,3 +167,16 @@ type line = instr_with_cond Ast_asm.line
 
 type program = instr_with_cond Ast_asm.program
 [@@deriving show]
+
+(*****************************************************************************)
+(* Extractors/Visitors *)
+(*****************************************************************************)
+
+let branch_opd_of_instr (instr : instr_with_cond) : branch_operand option =
+  (* less: could issue warning if cond <> AL when B or Bxx, or normalize? *)
+  match (fst instr) with
+  (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> *)
+  | B opd -> Some opd
+  | BL opd -> Some opd
+  | Bxx (_cond, opd) -> Some opd
+  | Arith _ | MOVE _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> None

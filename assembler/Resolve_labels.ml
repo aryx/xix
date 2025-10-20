@@ -2,14 +2,25 @@
 open Common
 
 open Ast_asm
-open Ast_asm5
 
-let error s line =
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Error management *)
+(*****************************************************************************)
+
+let error (s : string) (line : int) =
   (* TODO: use Location_cpp.Error instead! *)
   failwith (spf "%s at line %d" s line)
 
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
 (* ocaml: see how little processing 5a actually does :) *)
-let resolve (ps : program) : program =
+let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
   let pc : virt_pc ref = ref 0 in
   let h = Hashtbl.create 101 in
 
@@ -43,7 +54,7 @@ let resolve (ps : program) : program =
     | Pseudo (DATA _ | GLOBL _) -> 
         (* no pc increment here *)
         true
-    | Instr (inst, _condTODO) ->
+    | Instr instr ->
 
         (* TODO? move nested function out? *)
         let resolve_branch_operand (opd : branch_operand2 ref) : unit =
@@ -63,17 +74,7 @@ let resolve (ps : program) : program =
           | Absolute _ -> 
               raise (Impossible "Absolute can't be made via assembly syntax")
         in
-
-        (match inst with
-        (* less: could issue warning if cond <> AL when B or Bxx,
-         * or normalize?
-         *)
-        (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> *)
-        | B opd -> resolve_branch_operand opd
-        | BL opd -> resolve_branch_operand opd
-        | Bxx (_, opd) -> resolve_branch_operand opd
-        | _ -> ()
-        );
+        branch_opd_of_instr instr |> Option.iter resolve_branch_operand;
         incr pc;
         true
     )

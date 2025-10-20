@@ -7,6 +7,7 @@ module T = Types
 module T5 = Types5
 
 (* for field access for ocaml-light *)
+open Types
 open Types5
 
 (*****************************************************************************)
@@ -17,8 +18,8 @@ let rec find_first_no_nop_node nopt =
   match nopt with
   | None -> failwith "could not find non NOP node for branch"
   | Some n ->
-      (match n.T5.instr with
-      | T5.I (NOP, _) -> find_first_no_nop_node n.T5.next
+      (match n.T.instr with
+      | T.I (NOP, _) -> find_first_no_nop_node n.T.next
       | _ -> Some n
       )
 
@@ -33,13 +34,13 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
   let is_leaf = Hashtbl.create 101 in
 
   (* step1: mark is leaf and delete NOPs *)
-  cg |> T5.iter_with_env (fun (curtext, prev_no_nop) n ->
-    match n.T5.instr with
-    | T5.TEXT (ent, _attrs, _size) ->
+  cg |> T.iter_with_env (fun (curtext, prev_no_nop) n ->
+    match n.T.instr with
+    | T.TEXT (ent, _attrs, _size) ->
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
-    | T5.WORD _ -> (curtext, Some n)
-    | T5.I (instr, _condXXX) ->
+    | T.WORD _ -> (curtext, Some n)
+    | T.I (instr, _condXXX) ->
         let env = 
           match instr with
           | BL _ -> 
@@ -48,26 +49,26 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           (* remove the NOP *)
           | NOP ->
               prev_no_nop |> Option.iter (fun prev ->
-                prev.T5.next <- n.T5.next;
+                prev.T.next <- n.T.next;
               );
               (curtext, prev_no_nop)
           | _ -> (curtext, Some n)
         in
-        n.T5.branch |> Option.iter (fun n2 ->
-          match n2.T5.instr with
-          | T5.I (NOP, _) -> n.T5.branch <- find_first_no_nop_node n2.T5.next 
+        n.branch |> Option.iter (fun n2 ->
+          match n2.instr with
+          | T.I (NOP, _) -> n.branch <- find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env
   ) (None, None);
   
   (* step2: transform *)
-  cg |> T5.iter_with_env (fun autosize_opt n ->
-    match n.T5.instr with
-    | T5.TEXT (global, attrs, size) ->
+  cg |> T.iter_with_env (fun autosize_opt n ->
+    match n.instr with
+    | T.TEXT (global, attrs, size) ->
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
-                         (T5.s_of_global global));
+                         (T.s_of_global global));
         if size < 0 
         then failwith "TODO: handle size local -4";
         
@@ -78,25 +79,25 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         in
         autosize_opt |> Option.iter (fun autosize ->
           (* for layout text we need to set the final autosize *)
-          n.T5.instr <- T5.TEXT (global, attrs, autosize);
+          n.instr <- T.TEXT (global, attrs, autosize);
           (* MOVW.W R14, -autosize(SP) *)
-          let n1 = { T5.
-            instr = T5.I (MOVE (Word, Some WriteAddressBase, 
+          let n1 = {
+            instr = T.I (MOVE (Word, Some WriteAddressBase, 
                               Imsr (Reg rLINK), 
                               Indirect (rSP, -autosize)), AL);
-            next = n.T5.next;
+            next = n.next;
             branch = None;
-            loc = n.T5.loc;
+            loc = n.loc;
             real_pc = -1;
           }
           in
-          n.T5.next <- Some n1;
+          n.next <- Some n1;
         );
         autosize_opt
 
-    | T5.WORD _ -> autosize_opt
-    | T5.I (RET, cond) ->
-        n.T5.instr <- T5.I
+    | T.WORD _ -> autosize_opt
+    | T.I (RET, cond) ->
+        n.instr <- T.I
           ((match autosize_opt with
            (* B (R14) *)
            | None -> B (ref (IndirectJump (rLINK)))
@@ -106,8 +107,8 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
                                    Imsr (Reg rPC))
            ), cond);
         autosize_opt
-     | T5.I (NOP, _) -> raise (Impossible "NOP was removed in step1")
-     | T5.I ((RFE|Arith (_, _, _, _, _)|MOVE (_, _, _, _)|SWAP (_, _, _, _)|
+     | T.I (NOP, _) -> raise (Impossible "NOP was removed in step1")
+     | T.I ((RFE|Arith (_, _, _, _, _)|MOVE (_, _, _, _)|SWAP (_, _, _, _)|
    B _|BL _|Cmp (_, _, _)|Bxx (_, _)|SWI _), _) ->
         autosize_opt
   ) None;

@@ -4,6 +4,7 @@ open Common
 module T = Types
 module T5 = Types5
 (* for ocaml-lights field access *)
+open Types
 open Types5
 
 (*****************************************************************************)
@@ -20,7 +21,7 @@ let xdefine h2 h symb v =
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-let layout_data (symbols : T.symbol_table) (ds : T5.data list) : T.symbol_table2 * (int * int)
+let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 * (int * int)
   =
   let h2 = Hashtbl.create 101 in
 
@@ -29,19 +30,19 @@ let layout_data (symbols : T.symbol_table) (ds : T5.data list) : T.symbol_table2
 
   (* step0: identify Data vs Bss (and sanity check DATA instructions) *)
   ds |> List.iter (function
-    | T5.DATA (global, offset, size_slice, _v) ->
+    | T.DATA (global, offset, size_slice, _v) ->
         (* sanity checks *)
-        (match (T5.lookup_global global symbols).T.section with
+        (match (T.lookup_global global symbols).T.section with
         | T.SData size ->
             if offset + size_slice > size
             then failwith (spf "initialize bounds (%d): %s" size
-                             (T5.s_of_global global))
+                             (T.s_of_global global))
         | T.SText _ -> failwith (spf "initialize TEXT, not a GLOBL for %s"
-                                   (T5.s_of_global global))
+                                   (T.s_of_global global))
         | T.SXref -> raise (Impossible "SXRef detected by Check.check")
         );
         (* use replace cos can have multiple DATA for the same GLOBL *)
-        Hashtbl.replace is_data (T5.symbol_of_global global) true
+        Hashtbl.replace is_data (T.symbol_of_global global) true
   );
 
   (* step1: sanity check sizes and align *)
@@ -108,7 +109,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
   let autosize = ref 0 in
   let literal_pools = ref [] in
 
-  cg |> T5.iter (fun n ->
+  cg |> T.iter (fun n ->
     n.real_pc <- !pc;
 
     let size, poolopt = 
@@ -117,21 +118,21 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
     if size = 0
     then
       (match n.instr with
-      | T5.TEXT (global, _, size) ->
+      | T.TEXT (global, _, size) ->
           (* remember that rewrite5 has adjusted autosize correctly *)
           autosize := size;
           (* Useful to find pc of entry point and to get the address of a
            * procedure, e.g. in WORD $foo(SB)
            *)
-          Hashtbl.add symbols2 (T5.symbol_of_global global) (T.SText2 !pc);
+          Hashtbl.add symbols2 (T.symbol_of_global global) (T.SText2 !pc);
       | _ -> failwith (spf "zero-width instruction at %s" 
-                         (T5.s_of_loc n.loc))
+                         (T.s_of_loc n.loc))
       );
     poolopt |> Option.iter (fun pool ->
       match pool with
       | Codegen5.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
       | Codegen5.PoolOperand imm_or_ximm ->
-          let instr = T5.WORD imm_or_ximm in
+          let instr = T.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
           let node = { instr = instr; next = None; branch = None; real_pc = -1; 
                            loc = n.loc } in
@@ -162,7 +163,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
 
   );
   if !Flags.debug_layout then begin
-    cg |> T5.iter (fun n ->
+    cg |> T.iter (fun n ->
       Logs.app (fun m -> m  "%d: %s" n.real_pc
              (n.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
       n.branch |> Option.iter (fun n -> 

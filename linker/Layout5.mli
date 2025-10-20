@@ -3,7 +3,7 @@
  * Returns also data_size x bss_size.
  *)
 val layout_data: 
-  Types.symbol_table -> Types5.data list -> 
+  Types.symbol_table -> Types.data list -> 
   Types.symbol_table2 * (int * int)
 
 (* Returns symbol_table2 with SText2 entries populated. 

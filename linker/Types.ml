@@ -1,5 +1,9 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
+
+open Ast_asm
+module A = Ast_asm
 
 (*****************************************************************************)
 (* Types *)
@@ -40,10 +44,12 @@ type section =
   | SData of int
   | SXref
 
+(* the filename is for safe linking error report *)
+type signature = int (* todo: * Common.filename *)
+
 type value = {
   mutable section: section;
-  (* the filename is for safe linking error report *)
-  signature: (int (* todo: * Common.filename *)) option;
+  signature: signature option;
 }
 
 type symbol_table = (symbol, value) Hashtbl.t
@@ -65,6 +71,45 @@ type section2 =
 type value2 = section2
 
 type symbol_table2 = (symbol, value2) Hashtbl.t
+
+(* --------------------------------------- *)
+(* Code vs Data *)
+(* --------------------------------------- *)
+
+
+(* Split Asm instructions in code vs data.
+ *
+ * For 'code' below we want to do some naming. We could copy many of 
+ * ast_asm.ml and replace 'global' with the fully resolved 'symbol'.
+ * But it would be a big copy paste. Instead, we opted for a mutable field 
+ * in ast_asm.ml set by the linker (see Ast_asm.entity.priv).
+ *)
+type 'instr code = ('instr code_instr * loc)
+(* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
+and 'instr code_instr =
+  | TEXT of A.global * A.attributes * int
+  | WORD of A.imm_or_ximm
+  | I of 'instr
+
+(* remember that GLOBL information is stored in symbol table  *)
+type data = 
+  | DATA of A.global * A.offset * int * A.imm_or_ximm
+
+
+(* graph via pointers, like in original 5l *)
+type 'instr node = {
+  (* can be altered during rewriting *)
+  mutable instr: 'instr code_instr;
+  mutable next: 'instr node option;
+  (* for branching instructions and also for instructions using the pool *)
+  mutable branch: 'instr node option;
+  
+  (* set after layout_text (set to -1 initially) *)
+  mutable real_pc: real_pc;
+
+  loc: loc;
+}
+
 
 (* --------------------------------------- *)
 (* The executable world *)
@@ -95,7 +140,7 @@ type sections_size = {
 (*****************************************************************************)
 
 (* create new entry with SXRef if not found *)
-let lookup k sigopt h =
+let lookup (k : symbol) (sigopt : signature option) (h : symbol_table) : value =
   let v =
     try
       Hashtbl.find h k
@@ -118,3 +163,28 @@ let lookup k sigopt h =
 let s_of_symbol (s, scope) =
   (* less: could print the object filename instead *)
   s ^ (match scope with Public -> "" | Private _ -> "<>")
+
+(* assert not Some -1 ! should have been set during loading! *)
+let symbol_of_global e =
+  e.name, (match e.priv with None -> Public | Some i -> Private i)
+
+let lookup_global x h =
+  let symbol = symbol_of_global x in
+  lookup symbol x.signature h
+
+
+(* less: would need Hist mapping for this file to convert to original source *)
+let s_of_loc (file, line) =
+  spf "%s:%d" !!file line
+
+let s_of_global x = 
+  x.name ^ (match x.priv with None -> "" | Some _ -> "<>")
+
+
+let rec iter f n =
+  f n;
+  n.next |> Option.iter (fun n -> iter f n)
+
+let rec iter_with_env f env n =
+  let env = f env n in
+  n.next |> Option.iter (fun n -> iter_with_env f env n)

@@ -4,6 +4,7 @@ open Either
 
 open Ast_asm
 open Ast_asm5
+open Types
 open Types5
 module T = Types
 module T5 = Types5
@@ -39,7 +40,7 @@ type pool =
 
 let error node s =
   failwith (spf "%s at %s on %s" s 
-              (T5.s_of_loc node.loc)
+              (T.s_of_loc node.loc)
               (node.instr |> Meta_types5.vof_instr |> OCaml.string_of_v)
   )
 
@@ -89,14 +90,14 @@ let base_and_offset_of_indirect node symbols2 autosize x =
   | Entity (Local (_s, off)) -> 
       rSP, autosize + off
   | Entity (Global (global, off)) ->
-      let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
+      let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
       (match v with
         | T.SData2 (offset, _kind) ->
           rSB, offset_to_R12 (offset + off)
       (* stricter: allowed in 5l but I think with wrong codegen *)
       | T.SText2 _ -> 
           error node (spf "use of procedure %s in indirect with offset"
-                       (T5.s_of_global global))
+                       (T.s_of_global global))
       )
   | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
 
@@ -280,10 +281,10 @@ let rules symbols2 autosize init_data node =
   (* --------------------------------------------------------------------- *)
 
   (* TEXT instructions were kept just for better error reporting localisation *)
-  | T5.TEXT (_, _, _) -> 
+  | T.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
 
-  | T5.WORD x ->
+  | T.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
         match x with
         | Left i -> [ [(i land 0xffffffff, 0)] ]
@@ -291,7 +292,7 @@ let rules symbols2 autosize init_data node =
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed with WORD; use DATA"
         | Right (Address (Global (global, _offsetTODO))) -> 
-            let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
+            let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
             (match v with
              | T.SText2 real_pc -> [ [(real_pc, 0)] ]
              | T.SData2 (offset, _kind) -> 
@@ -303,7 +304,7 @@ let rules symbols2 autosize init_data node =
         | Right (Address (Param _ | Local _)) -> raise Todo
       )}
 
-  | T5.I (instr, cond) ->
+  | T.I (instr, cond) ->
     (match instr with
 
     (* --------------------------------------------------------------------- *)
@@ -508,7 +509,7 @@ let rules symbols2 autosize init_data node =
         | Address (Global (global, _offsetTODO)) ->
             let from_part_when_small_offset_to_R12 =
               try 
-                let v = Hashtbl.find symbols2 (T5.symbol_of_global global) in
+                let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
                 match v with
                 | T.SData2 (offset, _kind) ->
                     let final_offset = offset_to_R12 offset in
@@ -638,7 +639,7 @@ let gen (symbols2 : T.symbol_table2) (config : T.config) (cg : T5.code_graph) : 
   (* just for sanity checking *)
   let pc = ref config.T.init_text in
 
-  cg |> T5.iter (fun n ->
+  cg |> T.iter (fun n ->
 
     let {size; binary; pool = _ }  = rules symbols2 !autosize config.T.init_data n in
     let instrs = binary () in
@@ -647,7 +648,7 @@ let gen (symbols2 : T.symbol_table2) (config : T.config) (cg : T5.code_graph) : 
     then raise (Impossible "Phase error, layout inconsistent with codegen");
     if List.length instrs * 4 <> size
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
-                              (T5.s_of_loc n.loc)));
+                              (T.s_of_loc n.loc)));
 
     let xs = instrs |> List.map Assoc.sort_by_val_highfirst in
     
@@ -672,7 +673,7 @@ let gen (symbols2 : T.symbol_table2) (config : T.config) (cg : T5.code_graph) : 
     pc := !pc + size;
     (match n.instr with
     (* after the resolve phase the size of a TEXT is the final autosize *)
-    | T5.TEXT (_, _, size) -> autosize := size;
+    | T.TEXT (_, _, size) -> autosize := size;
     | _ -> ()
     );
   );

@@ -2,21 +2,18 @@
 open Common
 open Either
 
-open Ast_asm
-open Ast_asm5
 module T = Types
-module T5 = Types5
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_size) (ds : T5.data list) : T.byte array =
+let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_size) (ds : T.data list) : T.byte array =
   let arr = Array.make sizes.T.data_size (Char.chr 0) in
 
   ds |> List.iter (fun d ->
-    let T5.DATA (global, offset2, size_slice, v) = d in
-    let info = Hashtbl.find symbols2 (T5.symbol_of_global global) in
+    let T.DATA (global, offset2, size_slice, v) = d in
+    let info = Hashtbl.find symbols2 (T.symbol_of_global global) in
     match info with
     | T.SData2 (offset, T.Data) ->
         let base = offset + offset2 in
@@ -27,7 +24,7 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_si
               arr.(base + i) <- s.[i] 
             done
         | Right (Address (Global (global2,_offsetTODO))) ->
-            let info2 = Hashtbl.find symbols2 (T5.symbol_of_global global2) in
+            let info2 = Hashtbl.find symbols2 (T.symbol_of_global global2) in
             let _i = 
               match info2 with
               | T.SText2 real_pc -> real_pc

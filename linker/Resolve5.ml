@@ -21,21 +21,21 @@ let build_graph (symbols : T.symbol_table) (xs : T5.code array) : T5.code_graph 
 
   (* graph initialization *)
   let nodes : T5.node array = xs |> Array.map (fun (instr, loc) ->
-    { T5. instr = instr; next = None; branch = None; loc = loc; real_pc = -1 }
+    { T. instr = instr; next = None; branch = None; loc = loc; real_pc = -1 }
   )
   in
 
   (* set the next fields *)
   nodes |> Array.iteri (fun i n ->
     if i+1 < len
-    then n.T5.next <- Some nodes.(i+1)
+    then n.T.next <- Some nodes.(i+1)
   );
 
   (* set the branch fields *)
   nodes |> Array.iter (fun n ->
-    match n.T5.instr with
-    | T5.TEXT _ | T5.WORD _ -> ()
-    | T5.I (inst, _condXXX) ->
+    match n.T.instr with
+    | T.TEXT _ | T.WORD _ -> ()
+    | T.I (inst, _condXXX) ->
         let resolve_branch_operand opd =
           match !opd with
           | IndirectJump _ -> None
@@ -43,7 +43,7 @@ let build_graph (symbols : T.symbol_table) (xs : T5.code array) : T5.code_graph 
               raise (Impossible "Relative and LabelUse resolved by assembler")
           | SymbolJump x ->
               (* resolve branching to symbols *)
-              (match (T5.lookup_global x symbols).T.section with
+              (match (T.lookup_global x symbols).T.section with
               | T.SText virt_pc -> 
                   opd := Absolute virt_pc; 
                   Some virt_pc
@@ -57,9 +57,9 @@ let build_graph (symbols : T.symbol_table) (xs : T5.code array) : T5.code_graph 
         in
         let adjust_virt_pc (virt_pc : T.virt_pc) =
           if virt_pc < len
-          then n.T5.branch <- Some nodes.(virt_pc)
+          then n.T.branch <- Some nodes.(virt_pc)
           else failwith (spf "branch out of range %d at %s" virt_pc
-                           (T5.s_of_loc n.T5.loc))
+                           (T.s_of_loc n.loc))
         in
         (match inst with
         (* ocaml-light: | B opd | BL opd | Bxx (_, opd) ->  *)

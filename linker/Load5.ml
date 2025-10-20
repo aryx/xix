@@ -17,7 +17,7 @@ let process_global (global : Ast_asm.global) h (idfile : int) : unit =
   | None -> ()
   );
   (* populate symbol table with SXref if new entity *)
-  T5.lookup_global global h |> ignore
+  T.lookup_global global h |> ignore
 
 (* Visit globals to populate symbol table with wanted symbols.
  * This is more complicated than in 5l because we can not rely
@@ -84,7 +84,7 @@ let visit_globals f xs =
  * - visit all entities (defs and uses) and add them in symbol table
  * alt: take as a parameter (xs : Chan.i list);
  *)
-let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.data list * Types.symbol_table=
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T.data list * Types.symbol_table=
 
   (* values to return *)
   let code = ref [] in
@@ -116,26 +116,26 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.da
           (match pseudo with
           | TEXT (global, attrs, size) ->
               (* less: set curtext for better error managment *)
-              let v = T5.lookup_global global h in
+              let v = T.lookup_global global h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SText !pc;
               | _ -> failwith (spf "redefinition of %s" global.name)
               );
               (* less: adjust autosize? *)
-              code |> Stack_.push (T5.TEXT (global, attrs, size), (file, line));
+              code |> Stack_.push (T.TEXT (global, attrs, size), (file, line));
               incr pc;
           | WORD v ->
-              code |> Stack_.push (T5.WORD v, (file, line));
+              code |> Stack_.push (T.WORD v, (file, line));
               incr pc;
             
           | GLOBL (global, _attrs, size) -> 
-              let v = T5.lookup_global global h in
+              let v = T.lookup_global global h in
               (match v.T.section with
               | T.SXref -> v.T.section <- T.SData size;
               | _ -> failwith (spf "redefinition of %s" global.name)
               );
           | DATA (global, offset, size, v) -> 
-              data |> Stack_.push (T5.DATA (global, offset, size, v))
+              data |> Stack_.push (T.DATA (global, offset, size, v))
           )
 
       | Instr (inst, cond) ->
@@ -155,7 +155,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) : T5.code array * T5.da
           | Bxx (_, opd) -> relocate_branch opd
           | _ -> ()
           );
-          code |> Stack_.push (T5.I (inst, cond), (file, line));
+          code |> Stack_.push (T.I (inst, cond), (file, line));
           incr pc;
 
       | LabelDef _ -> failwith (spf "label definition in object")

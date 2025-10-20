@@ -135,7 +135,7 @@ and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
       in
       if Sys.file_exists !!path
       then begin
-        if !Flags.debug_inclusion
+        if !Flags.debug_include
         then Logs.app (fun m -> m "%d: %s" !L.line !!path);
         path
       end

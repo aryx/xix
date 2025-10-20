@@ -195,7 +195,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     "-S", Arg.Set Flags.dump_asm,
     " dump the generated assembly";
 
-    "-e", Arg.Set Flags_cpp.debug_inclusion, " ";
+    "-e", Arg.Set Flags_cpp.debug_include, " ";
     "-f", Arg.Set Flags_cpp.debug_line, " ";
     "-m", Arg.Set Flags_cpp.debug_macros, " ";
 
@@ -209,7 +209,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     " ";
 
     (* pad: I added long names for those options *)
-    "-debug_inclusion", Arg.Set Flags_cpp.debug_inclusion, " ";
+    "-debug_include", Arg.Set Flags_cpp.debug_include, " ";
     "-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
     "-debug_macros",    Arg.Set Flags_cpp.debug_macros, " ";
 

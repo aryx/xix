@@ -16,7 +16,7 @@ extern void xexit(void);
 //    assembly machine code)
 //  - [5678vi]l -v -W -a (different debugging output)
 void main() {
-  xwrite("Hello C World\n", 7*2);
+  xwrite("Hello C World\n", 14); // TODO: 7 * 2
   // good to have another call with another string as
   // it usually exposes bugs such as forgetting to use setR12
   // or setSB with some linkers in a _start init function.

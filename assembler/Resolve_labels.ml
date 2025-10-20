@@ -6,6 +6,12 @@ open Ast_asm
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Resolve and remove the LabelDef/LabelUse constructs as well as
+ * the branch_operand Relative (turned into Absolute like for LabelUse).
+ *
+ * As you can see, the Plan 9 assembler does not do much. Most of the work
+ * is done in the linker really. 
+ *)
 
 (*****************************************************************************)
 (* Error management *)

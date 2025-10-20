@@ -131,7 +131,7 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
 
   ids, structs, funcs
 
-let backend5 (caps : < Cap.open_out; .. >) (ids, structs, funcs)  (outfile : Fpath.t) : unit =
+let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
   let asm = Codegen5.codegen (ids, structs, funcs) in
 
@@ -145,17 +145,16 @@ let backend5 (caps : < Cap.open_out; .. >) (ids, structs, funcs)  (outfile : Fpa
       incr pc;
     );
   end;
-  outfile |> FS.with_open_out caps 
-    (fun chan -> Object5.save (asm, !Location_cpp.history) chan)
+  Object5.save (asm, !Location_cpp.history) chan
 
-let compile5 (caps : < caps; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
-  (outfile : Fpath.t) =
+let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
+  (outfile : Chan.o) =
   let (ids, structs, funcs) = 
     frontend caps conf infile in
-  backend5 caps (ids, structs, funcs) outfile
+  backend5 (ids, structs, funcs) outfile
 
-let compile (caps : < caps; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
-  (outfile : Fpath.t) =
+let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
+  (outfile : Chan.o) =
   compile5 caps conf infile outfile
 
 (*****************************************************************************)
@@ -294,7 +293,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           dir_source_file = Fpath.v (Filename.dirname cfile);
         }
         in
-        compile caps conf (Fpath.v cfile) outfile;
+        outfile |> FS.with_open_out caps (fun chan ->
+          compile caps conf (Fpath.v cfile) chan
+        );
         Exit.OK
     | _ -> 
       (* stricter: *)

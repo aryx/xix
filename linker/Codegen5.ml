@@ -24,8 +24,6 @@ module T5 = Types5
 (* new: more declaratif and give opportunity to sanity check if overlap *)
 type composed_word = (int * int) list
 
-type mem_opcode = LDR | STR
-
 type pool =
   (* note that it is not always an int! Sometimes it can be an
    * Address which will be resolved only at the very end.
@@ -33,6 +31,15 @@ type pool =
   | PoolOperand of Ast_asm.imm_or_ximm
   (* todo: still don't know why we need that *)
   | LPOOL 
+
+type action = {
+  (* a multiple of 4 *)
+  size: int;
+  pool: pool option;
+  binary: unit -> composed_word list;
+}
+
+type mem_opcode = LDR | STR
 
 (*****************************************************************************)
 (* Helpers *)
@@ -261,13 +268,6 @@ let gload_from_pool (nsrc : T5.node) cond rt =
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
-
-type action = {
-  (* a multiple of 4 *)
-  size: int; 
-  pool: pool option;
-  binary: unit -> composed_word list;
-}
 
 (* conventions (matches the one used (inconsistently) in 5l):
  * - rf = register from (called Rm in refcard)

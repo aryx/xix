@@ -1,6 +1,7 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
+module A = Ast_asm
 open Ast_asm
 
 (*****************************************************************************)
@@ -40,7 +41,7 @@ open Ast_asm
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
-type register = Ast_asm.register (* between 0 and 15 on ARM *)
+type register = A.register (* between 0 and 15 on ARM *)
 [@@deriving show]
 
 (* reserved by linker *)
@@ -54,7 +55,7 @@ let rPC   = R 15
 let nb_registers = 16
 
 type arith_operand =
-  | Imm of integer (* characters are converted to integers *)
+  | Imm of A.integer (* characters are converted to integers *)
   | Reg of register
   (* can not be used with shift opcodes (SLL/SRL/SRA) *)
   | Shift of register * shift_reg_op * 
@@ -74,9 +75,9 @@ type mov_operand =
   (* eXtended immediate *)
   | Ximm of ximm
 
-  | Indirect of register * offset
+  | Indirect of register * A.offset
   (* another form of Indirect *)
-  | Entity of entity
+  | Entity of A.entity
 
 [@@deriving show]
 
@@ -97,13 +98,13 @@ type instr =
        register (* indirect *) * register * register option
 
   (* Control flow *)
-  | B  of branch_operand
-  | BL of branch_operand
+  | B  of A.branch_operand
+  | BL of A.branch_operand
   (* alt: move to Ast_asm.ml? *)
   | RET (* virtual *)
   | Cmp of cmp_opcode * arith_operand * register
   (* just Relative or LabelUse here for branch_operand *)
-  | Bxx of condition * branch_operand (* virtual, sugar for B.XX *) 
+  | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
 
   (* System *)
   | SWI of int (* value actually unused in Plan 9 and Linux *)
@@ -164,21 +165,37 @@ type instr =
 type instr_with_cond = instr * condition
 [@@deriving show]
 
-type line = instr_with_cond Ast_asm.line
+type line = instr_with_cond A.line
 [@@deriving show]
 
-type program = instr_with_cond Ast_asm.program
+type program = instr_with_cond A.program
 [@@deriving show]
 
 (*****************************************************************************)
 (* Extractors/Visitors *)
 (*****************************************************************************)
 
-let branch_opd_of_instr (instr : instr_with_cond) : branch_operand option =
+let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   (* less: could issue warning if cond <> AL when B or Bxx, or normalize? *)
-  match (fst instr) with
+  match fst instr with
   (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> *)
   | B opd -> Some opd
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
   | Arith _ | MOVE _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> None
+
+let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
+  let mov_operand x =
+    match x with
+    | Entity (A.Global (x, _)) -> f x
+    | Entity (A.Param _ | A.Local _) -> ()
+    | Ximm x -> A.visit_globals_ximm f x
+    | Imsr _ | Indirect _ -> ()
+  in
+  match fst i with
+  | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
+  (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
+  | B b -> A.visit_globals_branch_operand f b
+  | BL b -> A.visit_globals_branch_operand f b
+  | Bxx (_, b) -> A.visit_globals_branch_operand f b
+  | Arith _ | SWAP _ | RET | Cmp _ | SWI _ | RFE | NOP -> () 

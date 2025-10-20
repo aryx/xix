@@ -5,5 +5,7 @@
  *)
 val load: 
   <Cap.open_in; .. > ->
-  Fpath.t list -> 
-  Ast_asm5.instr_with_cond Types.code array * Types.data list * Types.symbol_table
+  Fpath.t list ->
+  (Chan.i -> 'instr Ast_asm.program * 'loc_history) ->
+  'instr Arch.t ->
+  'instr Types.code array * Types.data list * Types.symbol_table

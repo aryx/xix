@@ -59,7 +59,13 @@ let usage =
 
 (* will modify chan as a side effect *)
 let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
-  let (code, data, symbols) = Load5.load caps objfiles in
+  let arch : Ast_asm5.instr_with_cond Arch.t = {
+    Arch.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
+    Arch.visit_globals_instr = Ast_asm5.visit_globals_instr;
+    (* alt: could make Object5.load a field of arch *)
+  }
+  in
+  let (code, data, symbols) = Load.load caps objfiles Object5.load arch in
 
   (* mark at least as SXref the entry point *)
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;

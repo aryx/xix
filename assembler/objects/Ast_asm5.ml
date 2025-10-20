@@ -99,6 +99,7 @@ type instr =
   (* Control flow *)
   | B  of branch_operand
   | BL of branch_operand
+  (* alt: move to Ast_asm.ml? *)
   | RET (* virtual *)
   | Cmp of cmp_opcode * arith_operand * register
   (* just Relative or LabelUse here for branch_operand *)
@@ -109,6 +110,7 @@ type instr =
   | RFE (* virtual, sugar for MOVM *)
 
   (* Misc *)
+  (* alt: move to Ast_asm.ml? *)
   | NOP (* virtual, removed by linker, no reading syntax *)
 
 

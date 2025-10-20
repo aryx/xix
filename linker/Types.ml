@@ -2,8 +2,9 @@
 open Common
 open Fpath_.Operators
 
-open Ast_asm
 module A = Ast_asm
+(* for field access for ocaml-light *)
+open Ast_asm
 
 (*****************************************************************************)
 (* Types *)
@@ -14,7 +15,7 @@ module A = Ast_asm
 (* --------------------------------------- *)
 
 (* a single line number is not enough anymore, we need also the filename *)
-type loc = Fpath.t * Ast_asm.loc
+type loc = Fpath.t * A.loc
 
 (* 8 bits *)
 type byte = char
@@ -36,7 +37,7 @@ type symbol = string * scope
 (* --------------------------------------- *)
 
 (* increments by 1. Used as index in some 'code array' or 'node array' *)
-type virt_pc = int
+type virt_pc = A.virt_pc
 
 (* before layout *)
 type section =
@@ -165,7 +166,7 @@ let s_of_symbol (s, scope) =
   s ^ (match scope with Public -> "" | Private _ -> "<>")
 
 (* assert not Some -1 ! should have been set during loading! *)
-let symbol_of_global e =
+let symbol_of_global (e : A.global) : symbol =
   e.name, (match e.priv with None -> Public | Some i -> Private i)
 
 let lookup_global x h =
@@ -177,7 +178,7 @@ let lookup_global x h =
 let s_of_loc (file, line) =
   spf "%s:%d" !!file line
 
-let s_of_global x = 
+let s_of_global (x : A.global) : string = 
   x.name ^ (match x.priv with None -> "" | Some _ -> "<>")
 
 

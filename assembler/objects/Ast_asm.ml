@@ -28,8 +28,9 @@ type virt_pc = int
 (* 'int' enough for ARM 32 bits? on 64 bits machine it is enough :) 
  * TODO: use Int64.t so sure it's enough for every arch.
  * alt: have separate type in each Ast_asmxxx.ml, with more precise size
- * but not worth it because it prevents more generalization in this file and
- * anyway Plan 9 asms are not a direct match of the machine assembly.
+ * but not worth it because it prevents more generalization in this file 
+ * like imm_or_ximm, which in turn allow to generalize pseudo_instr,
+ * and anyway Plan 9 asms are not a direct match of the machine assembly.
 *)
 type integer = int 
 [@@deriving show]

@@ -1,5 +1,6 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module T = Types
 (* for ocaml-light field access *)
@@ -114,10 +115,10 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let options = [
     "-o", Arg.String (fun s -> outfile := Fpath.v s),
-    " <file> output file";
+    spf " <file> output file (default is %s)" !!(!outfile);
     
     "-H", Arg.Set_string header_type,
-    " <str> executable format";
+    spf " <str> executable (header) format (default is %s)" !header_type;
     (* less: Arg support 0x1000 integer syntax? *)
     "-T", Arg.Int (fun i -> init_text := Some i),
     " <addr> start of text section";
@@ -128,7 +129,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
     (* less: support integer value instead of string too? *)
     "-E", Arg.Set_string init_entry,
-    " <str> entry point";
+    spf " <str> entry point (default is %s)" !init_entry;
 
     (* pad: I added that *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
@@ -151,7 +152,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   ]
   in
   (try
-    Arg.parse_argv argv options (fun f -> infiles := Fpath.v f::!infiles) usage;
+    Arg.parse_argv argv (Arg.align options)
+      (fun f -> infiles := Fpath.v f::!infiles) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)

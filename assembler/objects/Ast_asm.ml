@@ -180,5 +180,3 @@ and visit_globals_branch_operand f x =
   match !x with
   | SymbolJump ent -> f ent
   | IndirectJump _ | Relative _ | LabelUse _ | Absolute _ -> ()
-
-

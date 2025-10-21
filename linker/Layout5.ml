@@ -126,7 +126,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
            *)
           Hashtbl.add symbols2 (T.symbol_of_global global) (T.SText2 !pc);
       | _ -> failwith (spf "zero-width instruction at %s" 
-                         (T.s_of_loc n.loc))
+                         (T.s_of_loc n.n_loc))
       );
     poolopt |> Option.iter (fun pool ->
       match pool with
@@ -135,7 +135,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
           let instr = T.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
           let node = { instr = instr; next = None; branch = None; real_pc = -1; 
-                           loc = n.loc } in
+                           n_loc = n.n_loc } in
           if node.branch <> None
           then raise (Impossible "attaching literal to branching instruction");
 
@@ -164,8 +164,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
   );
   if !Flags.debug_layout then begin
     cg |> T.iter (fun n ->
-      Logs.app (fun m -> m  "%d: %s" n.real_pc
-             (n.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
+      Logs.app (fun m -> m  "%d: %s" n.real_pc (T5.show_instr n.instr));
       n.branch |> Option.iter (fun n -> 
         Logs.app (fun m -> m " -> branch: %d" n.real_pc)
       )

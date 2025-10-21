@@ -2,7 +2,9 @@
 (* renamed to Type_.ml because conflict with OCaml5 module name *)
 
 type blockid = int
+[@@deriving show]
 type fullname = string * blockid
+[@@deriving show]
 
 (* The C type system.
  *
@@ -42,18 +44,20 @@ type t =
   | Double
 
  and struct_kind = Struct | Union
- (* with tarzan *)
+[@@deriving show]
 
 type qualifier = 
   | Volatile
   | Const
   (* less: unsupported: | Restrict | Inline *)
- (* with tarzan *)
+[@@deriving show]
+
+
 
 (* note that the field can be gensym'ed for anonymous struct/union elements *)
 (* todo: bitfield *)
 type structdef = (string * t) list
- (* with tarzan *)
+[@@deriving show]
 
 let int = I (Int, Signed)
 let long = I (Long, Signed)

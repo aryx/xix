@@ -1,4 +1,5 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
 
 (*****************************************************************************)
 (* Prelude *)
@@ -174,7 +175,7 @@ and expr = {
   | Sequence of expr * expr
 
   (* codegen: converted to Int *)
-  | SizeOf of (expr, typ) Either.t
+  | SizeOf of (expr, typ) Either_.t
 
   (* should appear only in a variable initializer, or after GccConstructor *)
   | ArrayInit of (const_expr option * expr) list
@@ -232,7 +233,7 @@ type stmt = {
 
   | While of expr * stmt
   | DoWhile of stmt * expr
-  | For of (expr option, var_decl list) Either.t * 
+  | For of (expr option, var_decl list) Either_.t * 
            expr option * 
            expr option * 
            stmt

@@ -64,7 +64,7 @@ type value = {
 [@@deriving show]
 
 type symbol_table = (symbol, value) Hashtbl.t
-[@@deriving show]
+(*[@@deriving show]*)
 
 (* --------------------------------------- *)
 (* The real pc world *)
@@ -86,7 +86,7 @@ type value2 = section2
 [@@deriving show]
 
 type symbol_table2 = (symbol, value2) Hashtbl.t
-[@@deriving show]
+(*[@@deriving show]*)
 
 (* --------------------------------------- *)
 (* Code vs Data *)
@@ -126,7 +126,7 @@ type 'instr node = {
   (* set after layout_text (set to -1 initially) *)
   mutable real_pc: real_pc;
 
-  loc: loc;
+  n_loc: loc;
 }
 [@@deriving show]
 

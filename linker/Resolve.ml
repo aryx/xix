@@ -18,7 +18,7 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
 
   (* graph initialization *)
   let nodes : 'intr T.node array = xs |> Array.map (fun (instr, loc) ->
-    { instr = instr; next = None; branch = None; loc = loc; real_pc = -1 }
+    { T.instr = instr; next = None; branch = None; n_loc = loc; real_pc = -1 }
   )
   in
 
@@ -57,7 +57,7 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
           if virt_pc < len
           then n.branch <- Some nodes.(virt_pc)
           else failwith (spf "branch out of range %d at %s" virt_pc
-                           (T.s_of_loc n.loc))
+                           (T.s_of_loc n.n_loc))
         in
         branch_opd_of_instr instr |> Option.iter (fun opd -> 
             resolve_branch_operand opd |> Option.iter adjust_virt_pc)

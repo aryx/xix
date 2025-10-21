@@ -6,6 +6,7 @@
    xix_cpp
    xix_objects
  )
+ (preprocess (pps ppx_deriving.show))
  ; 'byte' is for ocamldebug
  (modes native byte))
 

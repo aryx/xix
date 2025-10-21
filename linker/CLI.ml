@@ -192,6 +192,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         !outfile |> FS.with_open_out caps (fun chan ->
           link caps config xs chan
         );
+        (* TODO: set exec bit on outfile *)
         Exit.OK
   with exn ->
     if !backtrace

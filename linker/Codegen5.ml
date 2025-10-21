@@ -47,8 +47,8 @@ type mem_opcode = LDR | STR
 
 let error node s =
   failwith (spf "%s at %s on %s" s 
-              (T.s_of_loc node.loc)
-              (node.instr |> Meta_types5.vof_instr |> OCaml.string_of_v)
+              (T.s_of_loc node.n_loc)
+              (T5.show_instr node.instr)
   )
 
 (* new: can detect some typing mistakes *)
@@ -652,13 +652,13 @@ let gen (symbols2 : T.symbol_table2) (config : T.config) (cg : T5.code_graph) : 
     then raise (Impossible "Phase error, layout inconsistent with codegen");
     if List.length instrs * 4 <> size
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
-                              (T.s_of_loc n.loc)));
+                              (T.s_of_loc n.n_loc)));
 
     let xs = instrs |> List.map Assoc.sort_by_val_highfirst in
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s" (n.instr |> Meta_types5.vof_instr |> OCaml.string_of_v));
+      Logs.app (fun m -> m "%s" (T5.show_instr n.instr));
       Logs.app (fun m -> m "-->");
       xs |> List.iter (fun x ->
         let w = word_of_composed_word x in

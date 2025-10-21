@@ -99,7 +99,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
                               A5.Indirect (A5.rSP, -autosize)), A5.AL);
             next = n.next;
             branch = None;
-            loc = n.loc;
+            n_loc = n.n_loc;
             real_pc = -1;
           }
           in

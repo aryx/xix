@@ -277,6 +277,12 @@ let gload_from_pool (nsrc : T5.node) cond rt =
 let rules symbols2 autosize init_data node =
   match node.instr with
   (* --------------------------------------------------------------------- *)
+  (* Virtual *)
+  (* --------------------------------------------------------------------- *)
+   | T.V (A.RET | A.NOP) -> 
+      raise (Impossible "rewrite should have transformed RET/NOP")
+
+  (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
 
@@ -493,8 +499,6 @@ let rules symbols2 autosize init_data node =
         | IndirectJump _ -> error node "Bxx supports only static jumps"
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )
-
-    | RET | NOP -> raise (Impossible "rewrite should have transformed RET/NOP")
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)

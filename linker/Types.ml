@@ -100,11 +100,12 @@ type symbol_table2 = (symbol, value2) Hashtbl.t
  * But it would be a big copy paste. Instead, we opted for a mutable field 
  * in ast_asm.ml set by the linker (see Ast_asm.entity.priv).
  *)
-type 'instr code = ('instr code_instr * loc)
+type 'instr code = ('instr code_bis * loc)
 (* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
-and 'instr code_instr =
+and 'instr code_bis =
   | TEXT of A.global * A.attributes * int
   | WORD of A.imm_or_ximm
+  | V of A.virtual_instr
   | I of 'instr
 [@@deriving show]
 
@@ -117,7 +118,7 @@ type data =
 (* graph via pointers, like in original 5l *)
 type 'instr node = {
   (* can be altered during rewriting *)
-  mutable instr: 'instr code_instr;
+  mutable instr: 'instr code_bis;
   mutable next: 'instr node option;
   (* for branching instructions and also for instructions using the pool *)
   mutable branch: 'instr node option;

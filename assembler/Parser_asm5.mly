@@ -141,6 +141,7 @@ line:
  |               TSEMICOLON { [] }
  | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
+ | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
 
  | label_def line           { $1::$2 }
 
@@ -165,6 +166,7 @@ pseudo_instr:
  | TDATA global_and_offset TSLASH con TCOMMA ximm  
      { DATA (fst $2, snd $2, $4, $6) }
 
+
 /*(* stricter: I introduced those intermediate rules *)*/
 global: name
   { match $1 with
@@ -177,6 +179,14 @@ global_and_offset: name
     | Global (e, n) -> (e, n)
     | _ -> error "global with offset expected"
   } 
+
+/*(*************************************************************************)*/
+/*(*1 Virtual instructions *)*/
+/*(*************************************************************************)*/
+
+virtual_instr:
+ /*(* was in instr before *)*/
+ | TRET                  { RET }
 
 /*(*************************************************************************)*/
 /*(*1 Instructions *)*/
@@ -200,7 +210,6 @@ instr:
  | TBx       rel              { (Bxx ($1, $2), AL) }
  | TBL  cond branch           { (BL $3, $2)}
  | TCMP cond imsr TCOMMA reg  { (Cmp ($1, $3, $5), $2) } 
- | TRET cond                  { (RET, $2) }
 
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }

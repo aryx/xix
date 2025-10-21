@@ -24,6 +24,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TGLOBL -> TGLOBL
   | T.TDATA -> TDATA
   | T.TWORD -> TWORD
+  | T.TRET -> TRET
   | T.TR -> TR
   | T.TPC -> TPC
   | T.TSB -> TSB
@@ -62,6 +63,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       | "MVN" -> TMVN
 
+      (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
       | "MOVW" -> TMOV Word
       | "MOVB" -> TMOV (Byte     Signed) | "MOVBU" -> TMOV (Byte     Unsigned)
       | "MOVH" -> TMOV (HalfWord Signed) | "MOVHU" -> TMOV (HalfWord Unsigned)
@@ -70,9 +72,6 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | "CMP" -> TCMP CMP 
       | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
 
-      (* no "NOP" reading syntax but can be generated programmatically by 5c *)
-      | "RET" -> TRET
-      
       | "BEQ" -> TBx EQ | "BNE" -> TBx NE
       | "BGT" -> TBx (GT Signed) | "BLT" -> TBx (LT Signed)
       | "BGE" -> TBx (GE Signed) | "BLE" -> TBx (LE Signed)

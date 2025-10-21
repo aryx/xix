@@ -2,6 +2,8 @@ type t =
   (* pseudo *)
   | TTEXT | TGLOBL
   | TDATA | TWORD
+  (* virtual *)
+  | TRET
   (* registers *)
   | TR
   | TPC | TSB | TFP | TSP
@@ -19,6 +21,6 @@ type t =
   (* operators *)
   | TPLUS | TMINUS
   | TMUL | TSLASH | TMOD
-  (* for cpp *)
+  (* for cpp; see also Parse_cpp.token_category *)
   | TSharp
   | EOF

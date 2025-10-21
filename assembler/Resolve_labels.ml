@@ -42,7 +42,8 @@ let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
         (* no incr pc; share pc if multiple labels at same place *)
     | Instr _ | Pseudo (TEXT _ | WORD _) -> 
         incr pc
-    | Pseudo (DATA _ | GLOBL _) -> ()
+    | Pseudo (DATA _ | GLOBL _ ) -> ()
+    | Virtual (RET | NOP) -> ()
     )
   );
 
@@ -59,6 +60,9 @@ let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
         true
     | Pseudo (DATA _ | GLOBL _) -> 
         (* no pc increment here *)
+        true
+    | Virtual (RET | NOP) -> 
+        incr pc; 
         true
     | Instr instr ->
 
@@ -81,6 +85,7 @@ let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
               raise (Impossible "Absolute can't be made via assembly syntax")
         in
         branch_opd_of_instr instr |> Option.iter resolve_branch_operand;
+
         incr pc;
         true
     )

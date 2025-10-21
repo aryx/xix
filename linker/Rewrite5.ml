@@ -18,7 +18,7 @@ let rec find_first_no_nop_node nopt =
   | None -> failwith "could not find non NOP node for branch"
   | Some n ->
       (match n.instr with
-      | T.I (A5.NOP, _) -> find_first_no_nop_node n.next
+      | T.V A.NOP -> find_first_no_nop_node n.next
       | _ -> Some n
       )
 
@@ -39,23 +39,36 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
     | T.WORD _ -> (curtext, Some n)
+    | T.V instr ->
+        let env = 
+          match instr with
+          (* remove the NOP *)
+          | A.NOP ->
+              prev_no_nop |> Option.iter (fun prev ->
+                prev.T.next <- n.T.next;
+              );
+              (curtext, prev_no_nop)
+          | A.RET -> (curtext, Some n)
+        in
+        n.branch |> Option.iter (fun n2 ->
+          match n2.instr with
+          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
+          | _ -> ()
+        );
+        env
+        
     | T.I (instr, _condXXX) ->
         let env = 
           match instr with
           | A5.BL _ -> 
               curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
-          (* remove the NOP *)
-          | A5.NOP ->
-              prev_no_nop |> Option.iter (fun prev ->
-                prev.T.next <- n.T.next;
-              );
-              (curtext, prev_no_nop)
           | _ -> (curtext, Some n)
         in
+        (* need that also here now that I moved NOP handling in T.V case? *)
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
-          | T.I (A5.NOP, _) -> n.branch <- find_first_no_nop_node n2.next 
+          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env
@@ -95,7 +108,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         autosize_opt
 
     | T.WORD _ -> autosize_opt
-    | T.I (A5.RET, cond) ->
+    | T.V A.RET ->
         n.instr <- T.I
           ((match autosize_opt with
            (* B (R14) *)
@@ -104,11 +117,15 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
            | Some autosize -> A5.MOVE (A5.Word, Some A5.PostOffsetWrite,
                                    A5.Indirect (A5.rSP, autosize), 
                                    A5.Imsr (A5.Reg A5.rPC))
-           ), cond);
+           ), A5.AL);
         autosize_opt
-     | T.I (A5.NOP, _) -> raise (Impossible "NOP was removed in step1")
-     | T.I ((A5.RFE|A5.Arith (_, _, _, _, _)|A5.MOVE (_, _, _, _)|A5.SWAP (_, _, _, _)|
-   A5.B _|A5.BL _|A5.Cmp (_, _, _)|A5.Bxx (_, _)|A5.SWI _), _) ->
+     | T.V A.NOP -> raise (Impossible "NOP was removed in step1")
+
+     | T.I (
+            (A5.RFE|A5.Arith (_, _, _, _, _)|A5.MOVE (_, _, _, _)
+            |A5.SWAP (_, _, _, _)|A5.B _|A5.BL _|A5.Cmp (_, _, _)|A5.Bxx (_, _)
+            |A5.SWI _)
+            , _) ->
         autosize_opt
   ) None;
 

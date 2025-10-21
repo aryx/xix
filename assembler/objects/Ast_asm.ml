@@ -4,7 +4,11 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Types common to the different Plan 9 assembler ASTs *)
+(* Types common to the different Plan 9 assembler ASTs
+ *
+ * Note that in Plan 9 object files are mostly the serialized form of 
+ * the assembly AST, which is why this file is in this directory.
+ *) 
 
 (*****************************************************************************)
 (*  AST related types *)
@@ -15,7 +19,7 @@ open Common
 (* ------------------------------------------------------------------------- *)
 
 (* (global) line# *)
-type loc = int (* same than Location_cpp.loc (repeated here for clarity) *)
+type loc = int (* Location_cpp.loc *)
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
@@ -120,12 +124,22 @@ type pseudo_instr =
   and imm_or_ximm = (integer, ximm) Either_.t
 [@@deriving show]
 
+(* alt: move in arch-specific Ast_asmx.instr
+ * alt: merge with pseudo_instr
+*)
+type virtual_instr =
+  | RET
+  | NOP (* removed by linker, no reading syntax *)
+  (* TODO? out MOV here with sizes and sign/unsigned *)
+[@@deriving show]
+
 (* ------------------------------------------------------------------------- *)
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
 type 'instr line = 
   | Pseudo of pseudo_instr
+  | Virtual of virtual_instr
   | Instr of 'instr
 
   (* disappear after resolve *)
@@ -161,6 +175,10 @@ let rec visit_globals_program visit_instr (f : global -> unit) (xs : 'instr prog
       | GLOBL (ent, _, _) -> f ent
       | DATA (ent, _, _, ix) -> f ent; visit_globals_imm_or_ximm f ix
       | WORD (ix) -> visit_globals_imm_or_ximm f ix
+      )
+    | Virtual y ->
+      (match y with
+      | RET | NOP -> ()
       )
     | Instr instr ->
       visit_instr f instr

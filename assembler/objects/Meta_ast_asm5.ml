@@ -119,7 +119,6 @@ let rec vof_instr =
       in Ocaml.VSum (("SWAP", [ v1; v2; v3; v4 ]))
   | B v1 -> let v1 = vof_branch_operand v1 in Ocaml.VSum (("B", [ v1 ]))
   | BL v1 -> let v1 = vof_branch_operand v1 in Ocaml.VSum (("BL", [ v1 ]))
-  | RET -> Ocaml.VSum (("RET", []))
   | Cmp ((v1, v2, v3)) ->
       let v1 = vof_cmp_opcode v1
       and v2 = vof_arith_operand v2
@@ -131,7 +130,6 @@ let rec vof_instr =
       in Ocaml.VSum (("Bxx", [ v1; v2 ]))
   | SWI v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("SWI", [ v1 ]))
   | RFE -> Ocaml.VSum (("RFE", []))
-  | NOP -> Ocaml.VSum (("NOP", []))
 and vof_arith_opcode =
   function
   | AND -> Ocaml.VSum (("AND", []))
@@ -189,7 +187,8 @@ and vof_move_cond =
   function
   | WriteAddressBase -> Ocaml.VSum (("WriteAddressBase", []))
   | PostOffsetWrite -> Ocaml.VSum (("PostOffsetWrite", []))
-  
+
+
 let rec vof_pseudo_instr =
   function
   | TEXT ((v1, v2, v3)) ->
@@ -209,6 +208,10 @@ let rec vof_pseudo_instr =
       and v4 = vof_imm_or_ximm v4
       in Ocaml.VSum (("DATA", [ v1; v2; v3; v4 ]))
   | WORD v1 -> let v1 = vof_imm_or_ximm v1 in Ocaml.VSum (("WORD", [ v1 ]))
+and vof_virtual_instr =
+  function
+  | RET -> Ocaml.VSum (("RET", []))
+  | NOP -> Ocaml.VSum (("NOP", []))
 
 and vof_attributes { dupok = v_dupok; prof = v_prof } =
   let bnds = [] in
@@ -225,6 +228,8 @@ let vof_line =
   function
   | Pseudo v1 ->
       let v1 = vof_pseudo_instr v1 in Ocaml.VSum (("Pseudo", [ v1 ]))
+  | Virtual v1 ->
+      let v1 = vof_virtual_instr v1 in Ocaml.VSum (("Virtual", [ v1 ]))
   | Instr ((v1, v2)) ->
       let v1 = vof_instr v1
       and v2 = vof_condition v2

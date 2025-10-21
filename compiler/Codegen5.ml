@@ -131,7 +131,7 @@ exception Error of error
 (* Instructions  *)
 (*****************************************************************************)
 
-let fake_instr = A.Instr (A5.NOP, A5.AL)
+let fake_instr = A.Virtual A.NOP
 let fake_loc = -1
 let fake_pc = -1
 let noattr = { prof = false; dupok = false}
@@ -676,13 +676,13 @@ let rec stmt env st0 =
   | Return eopt ->
     (match eopt with
     | None ->
-      add_instr env (A.Instr (A5.RET, A5.AL)) st0.s_loc
+      add_instr env (A.Virtual A.RET) st0.s_loc
     | Some e ->
       (* todo: if type compatible with R0 *)
       with_reg env rRET (fun () ->
         let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
         expr env e (Some dst);
-        add_instr env (A.Instr (A5.RET, A5.AL)) st0.s_loc
+        add_instr env (A.Virtual A.RET) st0.s_loc
       )
     )
 
@@ -895,7 +895,7 @@ let codegen (ids, structs, funcs) =
     set_instr env spc 
       (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
                          !(env.size_locals)))) f_loc;
-    add_instr env (A.Instr (A5.RET, A5.AL)) f_loc;
+    add_instr env (A.Virtual A.RET) f_loc;
 
     (* sanity check register allocation *)
     env.regs |> Array.iteri (fun i v ->

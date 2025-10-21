@@ -88,6 +88,9 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> '
               data |> Stack_.push (T.DATA (global, offset, size, v))
           )
 
+      | A.Virtual instr ->
+          code |> Stack_.push (T.V instr, (file, line));
+          incr pc;
       | A.Instr instr ->
 
           let relocate_branch opd =

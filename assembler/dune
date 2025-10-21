@@ -9,7 +9,7 @@
  ; 'byte' is for ocamldebug
  (modes native byte))
 
-(ocamllex Lexer_asm5)
+(ocamllex Lexer_asm)
 (ocamlyacc Parser_asm5)
 
 (install

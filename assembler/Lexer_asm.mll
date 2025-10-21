@@ -2,15 +2,15 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-open Ast_asm
-open Ast_asm5
-open Parser_asm5
+open Token_asm
 module L = Location_cpp
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Limitations compared to 5a:
+(* Common parts of the different Plan 9 assembly lexers.
+ * 
+ * Limitations compared to 5a/va/...:
  *  - no unicode support
  *  - no uU lL suffix
  *    (but was skipped by 5a anyway)
@@ -91,7 +91,7 @@ rule token = parse
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         let i = int_of_string s in 
         if i <= 15 && i >=0
-        then TRx (R i)
+        then TRx (Ast_asm.R i)
         else error ("register number not valid")
       }
 
@@ -102,39 +102,6 @@ rule token = parse
        * alt: use Hashtbl.t
        *)
       match s with
-      (* instructions *)
-      | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
-
-      | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
-      | "MUL" -> TARITH MUL | "DIV" -> TARITH DIV | "MOD" -> TARITH MOD
-      | "SLL" -> TARITH SLL | "SRL" -> TARITH SRL | "SRA" -> TARITH SRA
-
-      | "BIC" -> TARITH BIC
-      | "ADC" -> TARITH ADC | "SBC" -> TARITH SBC
-      | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC
-
-      | "MVN" -> TMVN
-
-      | "MOVW" -> TMOV Word
-      | "MOVB" -> TMOV (Byte     Signed) | "MOVBU" -> TMOV (Byte     Unsigned)
-      | "MOVH" -> TMOV (HalfWord Signed) | "MOVHU" -> TMOV (HalfWord Unsigned)
-
-      | "B" -> TB | "BL" -> TBL
-      | "CMP" -> TCMP CMP 
-      | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
-      | "RET" -> TRET
-      
-      | "BEQ" -> TBx EQ | "BNE" -> TBx NE
-      | "BGT" -> TBx (GT Signed) | "BLT" -> TBx (LT Signed)
-      | "BGE" -> TBx (GE Signed) | "BLE" -> TBx (LE Signed)
-      | "BHI" -> TBx (GT Unsigned) | "BLO" -> TBx (LT Unsigned) 
-      | "BHS" -> TBx (GE Unsigned) | "BLS" -> TBx (LE Unsigned)
-      | "BMI" -> TBx MI | "BPL" -> TBx PL 
-      | "BVS" -> TBx VS | "BVC" -> TBx VC
-
-      | "SWI" -> TSWI
-      | "RFE" -> TRFE
-
       (* pseudo instructions *)
       | "TEXT" -> TTEXT | "GLOBL" -> TGLOBL
       | "WORD" -> TWORD | "DATA" -> TDATA
@@ -144,18 +111,6 @@ rule token = parse
 
       (* pseudo registers *)
       | "PC" -> TPC | "SB" -> TSB | "SP" -> TSP | "FP" -> TFP
-
-      (* conditions *)
-      | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND (GT Signed)   | ".LT" -> TCOND (LT Signed) 
-      | ".GE" -> TCOND (GE Signed)   | ".LE" -> TCOND (LE Signed)
-      | ".HI" -> TCOND (GT Unsigned) | ".LO" -> TCOND (LT Unsigned)
-      | ".HS" -> TCOND (GE Unsigned) | ".LS" -> TCOND (LE Unsigned)
-      | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
-      | ".VS" -> TCOND VS | ".VC" -> TCOND VC
-
-      (* less: special bits *)
-      (* less: float, MUL, ... *)
 
       (* less: could impose is_lowercase? *)
       | _ -> TIDENT s

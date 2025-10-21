@@ -63,9 +63,9 @@ lineage.pdf
 /shell/docs/Rc*.pdf
 
 # Parsers
-/assembler/Lexer_asm5.ml
-/assembler/Parser_asm5.ml
-/assembler/Parser_asm5.mli
+/assembler/Lexer_asm.ml
+/assembler/Parser_asm.ml
+/assembler/Parser_asm.mli
 
 /mk/Lexer.ml
 /mk/Parser.ml

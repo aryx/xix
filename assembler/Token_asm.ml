@@ -5,9 +5,10 @@ type t =
   (* virtual *)
   | TRET
   (* registers *)
-  | TR
+  | TR | TF
   | TPC | TSB | TFP | TSP
   | TRx of Ast_asm.register
+  | TFx of Ast_asm.fregister
   (* immediate *)
   | TINT of int
   | TFLOAT of float

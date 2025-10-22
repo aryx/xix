@@ -90,9 +90,12 @@ rule token = parse
   | "R" (digit+ (*as s*)) 
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         let i = int_of_string s in 
-        if i <= 15 && i >=0
-        then TRx (Ast_asm.R i)
-        else error ("register number not valid")
+        TRx (Ast_asm.R i)
+      }
+  | "F" (digit+ (*as s*)) 
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        let i = int_of_string s in 
+        TFx (Ast_asm.F i)
       }
 
   (* looser: actually for '.' 5a imposes to have an isalpha() after *)    
@@ -112,6 +115,7 @@ rule token = parse
  
       (* registers (see also the special rule above for R digit+) *)
       | "R" -> TR
+      | "F" -> TF
 
       (* pseudo registers *)
       | "PC" -> TPC | "SB" -> TSB | "SP" -> TSP | "FP" -> TFP

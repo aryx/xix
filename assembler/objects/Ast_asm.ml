@@ -65,6 +65,9 @@ type global = {
 type register = R of int (* between 0 and 15 on ARM *)
 [@@deriving show]
 
+type fregister = F of int (* between 0 and 15 on ARM *)
+[@@deriving show]
+
 type entity = 
   | Param of symbol option * offset (* FP *)
   | Local of symbol option * offset (* SP *)

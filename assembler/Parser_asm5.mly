@@ -68,7 +68,8 @@ let mk_e name static =
 /*(*-----------------------------------------*)*/
 
 %token <Ast_asm5.register> TRx
-%token TR
+%token <Ast_asm5.fregister> TFx
+%token TR TF
 %token TPC TSB TFP TSP
 
 /*(*-----------------------------------------*)*/

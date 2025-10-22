@@ -12,7 +12,7 @@ open Ast_asm
  *
  * Note that many types are now defined in Ast_asm.ml instead because they are
  * mostly arch independent and can be reused in other plan9 assemblers
- * (e.g,, 8a, 6a, va).
+ * (e.g. va, ia, 7a).
  *
  * !!! If you modify this file please increment Object5.version !!!
  * 
@@ -31,15 +31,21 @@ open Ast_asm
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
 (* ------------------------------------------------------------------------- *)
-
 (* see Ast_asm.ml *)
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
-type register = A.register (* between 0 and 15 on ARM *)
+type register = A.register (* between 0 and 15 *)
 [@@deriving show]
+
+(* TOPORT *)
+type fregister = A.fregister (* between 0 and 15 *)
+[@@deriving show]
+
+(* TOPORT *)
+type cregister = C of int (* between 0 and 15 *)
 
 (* reserved by linker *)
 let rTMP = R 11

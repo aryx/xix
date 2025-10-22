@@ -190,13 +190,6 @@ itab[] =
 };
 
 void
-cinit(void)
-{
-	if(FPCHIP)
-		nullgen.dval = 0;
-}
-
-void
 outcode(int a, int scond, Gen *g1, int reg, Gen *g2)
 {
 	int sf, st, t;
@@ -207,5 +200,4 @@ outcode(int a, int scond, Gen *g1, int reg, Gen *g2)
 		a = bcode[scond&0xf];
 		scond = (scond & ~0xf) | Always;
 	}
-
 }

@@ -1,14 +1,3 @@
-%{
-#include "a.h"
-%}
-%union
-{
-	Sym	*sym;
-	vlong	lval;
-	double	dval;
-	char	sval[8];
-	Gen	gen;
-}
 %left	'|'
 %left	'^'
 %left	'&'

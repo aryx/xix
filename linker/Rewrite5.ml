@@ -94,7 +94,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           n.instr <- T.TEXT (global, attrs, autosize);
           (* MOVW.W R14, -autosize(SP) *)
           let n1 = {
-            instr = T.I (A5.MOVE (A5.Word, Some A5.WriteAddressBase, 
+            instr = T.I (A5.MOVE (A.Word, Some A5.WriteAddressBase, 
                               A5.Imsr (A5.Reg A5.rLINK), 
                               A5.Indirect (A5.rSP, -autosize)), A5.AL);
             next = n.next;
@@ -114,7 +114,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
            (* B (R14) *)
            | None -> A5.B (ref (A.IndirectJump (A5.rLINK)))
            (* MOVW.P autosize(SP), PC *)
-           | Some autosize -> A5.MOVE (A5.Word, Some A5.PostOffsetWrite,
+           | Some autosize -> A5.MOVE (A.Word, Some A5.PostOffsetWrite,
                                    A5.Indirect (A5.rSP, autosize), 
                                    A5.Imsr (A5.Reg A5.rPC))
            ), A5.AL);

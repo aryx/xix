@@ -436,7 +436,7 @@ let rec gmove env opd1 opd2 =
   | Name _ | Indirect _ ->
     let move_size = 
       match opd1.typ with
-      | T.I (T.Int, _) | T.Pointer _ -> A5.Word
+      | T.I (T.Int, _) | T.Pointer _ -> A.Word
       | _ -> raise Todo
     in
     (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
@@ -450,7 +450,7 @@ let rec gmove env opd1 opd2 =
     | Name _ | Indirect _ ->
       let move_size =
         match opd2.typ with
-        | T.I (T.Int, _) | T.Pointer _ -> A5.Word
+        | T.I (T.Int, _) | T.Pointer _ -> A.Word
         | _ -> raise Todo
       in
       (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
@@ -463,8 +463,8 @@ let rec gmove env opd1 opd2 =
       (* the simple cases *)
       let move_size = 
         match opd1.typ, opd2.typ with
-        | T.I (T.Int, _), T.I (T.Int, _) -> A5.Word
-        | T.Pointer _, T.Pointer _ -> A5.Word
+        | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
+        | T.Pointer _, T.Pointer _ -> A.Word
         (* todo: lots of opti related to float *)
         | _ -> raise Todo
       in

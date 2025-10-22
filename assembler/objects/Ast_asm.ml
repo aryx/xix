@@ -110,6 +110,13 @@ and branch_operand2 =
   | IndirectJump of register
 [@@deriving show]
 
+   (* In a MOVE, sign is relevant only for a load operation *)
+type sign = Signed | Unsigned
+[@@deriving show]
+(* TODO: add Dword  *)
+type move_size = Word | HalfWord of sign | Byte of sign
+[@@deriving show]
+
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
 (* ------------------------------------------------------------------------- *)

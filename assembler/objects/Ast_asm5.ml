@@ -95,9 +95,9 @@ type instr =
       arith_operand (* src *) * register option * register (* dst *)
 
   (* Memory *)
-  | MOVE of move_size * move_option *
+  | MOVE of A.move_size * move_option *
       mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
-  | SWAP of move_size (* actually only (Byte x) *) * 
+  | SWAP of A.move_size (* actually only (Byte x) *) * 
        register (* indirect *) * register * register option
 
   (* Control flow *)
@@ -143,10 +143,6 @@ type instr =
     (* always/never *)
     | AL | NV
 
-   (* In a MOVE, sign is relevant only for a load operation *)
-   and sign = Signed | Unsigned
-
-   and move_size = Word | HalfWord of sign | Byte of sign
    and move_option = move_cond option
      (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)

@@ -1,72 +1,36 @@
-// Inferno utils/6c/6.out.h
-// http://code.google.com/p/inferno-os/source/browse/utils/6c/6.out.h
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-#define	NSYM	50
-#define	NSNAME	8
-
-#define NOPROF	(1<<0)
-#define DUPOK	(1<<1)
-#ifdef GOLANG
-#define NOSPLIT	(1<<2)
-#endif
 #define RODATA	(1<<3)
-
-/*
- *	amd64
- */
 
 enum	as
 {
-	AXXX,
-
 	AAAA,
 	AAAD,
 	AAAM,
 	AAAS,
+
 	AADCB,
 	AADCL,
 	AADCW,
+
 	AADDB,
 	AADDL,
 	AADDW,
+
 	AADJSP,
+
 	AANDB,
 	AANDL,
 	AANDW,
+
 	AARPL,
+
 	ABOUNDL,
 	ABOUNDW,
+
 	ABSFL,
 	ABSFW,
 	ABSRL,
 	ABSRW,
+
 	ABTL,
 	ABTW,
 	ABTCL,
@@ -75,40 +39,51 @@ enum	as
 	ABTRW,
 	ABTSL,
 	ABTSW,
+
 	ABYTE,
+
 	ACALL,
+
 	ACLC,
 	ACLD,
 	ACLI,
 	ACLTS,
+
 	ACMC,
+
 	ACMPB,
 	ACMPL,
 	ACMPW,
 	ACMPSB,
 	ACMPSL,
 	ACMPSW,
+
 	ADAA,
 	ADAS,
-	ADATA,
+
+
+
 	ADECB,
 	ADECL,
 	ADECQ,
 	ADECW,
+
 	ADIVB,
 	ADIVL,
 	ADIVW,
+
 	AENTER,
-	AGLOBL,
-	AGOK,
-	AHISTORY,
+
 	AHLT,
+
 	AIDIVB,
 	AIDIVL,
 	AIDIVW,
 	AIMULB,
 	AIMULL,
+
 	AIMULW,
+
 	AINB,
 	AINL,
 	AINW,
@@ -121,8 +96,10 @@ enum	as
 	AINSW,
 	AINT,
 	AINTO,
+
 	AIRETL,
 	AIRETW,
+
 	AJCC,
 	AJCS,
 	AJCXZ,
@@ -141,86 +118,106 @@ enum	as
 	AJPC,
 	AJPL,
 	AJPS,
+
 	ALAHF,
 	ALARL,
 	ALARW,
+
 	ALEAL,
 	ALEAW,
 	ALEAVEL,
 	ALEAVEW,
+
 	ALOCK,
+
 	ALODSB,
 	ALODSL,
 	ALODSW,
+
 	ALONG,
+
 	ALOOP,
 	ALOOPEQ,
 	ALOOPNE,
+
 	ALSLL,
 	ALSLW,
+
 	AMOVB,
 	AMOVL,
 	AMOVW,
+
 	AMOVBLSX,
 	AMOVBLZX,
 	AMOVBQSX,
 	AMOVBQZX,
 	AMOVBWSX,
 	AMOVBWZX,
+
 	AMOVWLSX,
 	AMOVWLZX,
 	AMOVWQSX,
 	AMOVWQZX,
+
 	AMOVSB,
 	AMOVSL,
 	AMOVSW,
+
 	AMULB,
 	AMULL,
 	AMULW,
-	ANAME,
+
 	ANEGB,
 	ANEGL,
 	ANEGW,
-	ANOP,
+
 	ANOTB,
 	ANOTL,
 	ANOTW,
+
 	AORB,
 	AORL,
 	AORW,
+
 	AOUTB,
 	AOUTL,
 	AOUTW,
 	AOUTSB,
 	AOUTSL,
 	AOUTSW,
+
 	APOPAL,
 	APOPAW,
 	APOPFL,
 	APOPFW,
 	APOPL,
 	APOPW,
+
 	APUSHAL,
 	APUSHAW,
 	APUSHFL,
 	APUSHFW,
 	APUSHL,
 	APUSHW,
+
 	ARCLB,
 	ARCLL,
 	ARCLW,
 	ARCRB,
 	ARCRL,
 	ARCRW,
+
 	AREP,
 	AREPN,
-	ARET,
+
+
 	AROLB,
 	AROLL,
 	AROLW,
 	ARORB,
 	ARORL,
 	ARORW,
+
 	ASAHF,
 	ASALB,
 	ASALL,
@@ -228,12 +225,15 @@ enum	as
 	ASARB,
 	ASARL,
 	ASARW,
+
 	ASBBB,
 	ASBBL,
 	ASBBW,
+
 	ASCASB,
 	ASCASL,
 	ASCASW,
+
 	ASETCC,
 	ASETCS,
 	ASETEQ,
@@ -250,32 +250,39 @@ enum	as
 	ASETPC,
 	ASETPL,
 	ASETPS,
+
 	ACDQ,
 	ACWD,
+
 	ASHLB,
 	ASHLL,
 	ASHLW,
 	ASHRB,
 	ASHRL,
 	ASHRW,
+
 	ASTC,
 	ASTD,
 	ASTI,
 	ASTOSB,
 	ASTOSL,
 	ASTOSW,
+
 	ASUBB,
 	ASUBL,
 	ASUBW,
+
 	ASYSCALL,
+
 	ATESTB,
 	ATESTL,
 	ATESTW,
-	ATEXT,
+
 	AVERR,
 	AVERW,
+
 	AWAIT,
-	AWORD,
+
 	AXCHGB,
 	AXCHGL,
 	AXCHGW,
@@ -310,6 +317,7 @@ enum	as
 	AFCOMLP,
 	AFCOMW,
 	AFCOMWP,
+
 	AFUCOM,
 	AFUCOMP,
 	AFUCOMPP,
@@ -356,19 +364,25 @@ enum	as
 	AFLDCW,
 	AFLDENV,
 	AFRSTOR,
+
 	AFSAVE,
 	AFSTCW,
 	AFSTENV,
 	AFSTSW,
 
 	AF2XM1,
+
 	AFABS,
 	AFCHS,
 	AFCLEX,
+
 	AFCOS,
+
 	AFDECSTP,
 	AFINCSTP,
+
 	AFINIT,
+
 	AFLD1,
 	AFLDL2E,
 	AFLDL2T,
@@ -376,17 +390,25 @@ enum	as
 	AFLDLN2,
 	AFLDPI,
 	AFLDZ,
+
 	AFNOP,
+
 	AFPATAN,
+
 	AFPREM,
 	AFPREM1,
 	AFPTAN,
 	AFRNDINT,
+
 	AFSCALE,
+
 	AFSIN,
 	AFSINCOS,
+
 	AFSQRT,
+
 	AFTST,
+
 	AFXAM,
 	AFXTRACT,
 	AFYL2X,
@@ -404,20 +426,29 @@ enum	as
 	ACMPXCHGL,
 	ACMPXCHGW,
 	ACMPXCHG8B,
+
 	ACPUID,
+
 	AINVD,
 	AINVLPG,
+
 	ALFENCE,
 	AMFENCE,
+
 	AMOVNTIL,
+
 	ARDMSR,
 	ARDPMC,
 	ARDTSC,
 	ARSM,
+
 	ASFENCE,
+
 	ASYSRET,
+
 	AWBINVD,
 	AWRMSR,
+
 	AXADDB,
 	AXADDL,
 	AXADDW,
@@ -475,37 +506,53 @@ enum	as
 	/* 64-bit */
 	AADCQ,
 	AADDQ,
+
 	AANDQ,
+
 	ABSFQ,
 	ABSRQ,
+
 	ABTCQ,
 	ABTQ,
 	ABTRQ,
 	ABTSQ,
+
 	ACMPQ,
 	ACMPSQ,
 	ACMPXCHGQ,
+
 	ACQO,
+
 	ADIVQ,
 	AIDIVQ,
 	AIMULQ,
+
 	AIRETQ,
+
 	ALEAQ,
+
 	ALEAVEQ,
+
 	ALODSQ,
+
 	AMOVQ,
 	AMOVLQSX,
 	AMOVLQZX,
 	AMOVNTIQ,
 	AMOVSQ,
+
 	AMULQ,
+
 	ANEGQ,
+
 	ANOTQ,
 	AORQ,
+
 	APOPFQ,
 	APOPQ,
 	APUSHFQ,
 	APUSHQ,
+
 	ARCLQ,
 	ARCRQ,
 	AROLQ,
@@ -561,18 +608,24 @@ enum	as
 	ACVTTSD2SQ,
 	ACVTTSS2SL,
 	ACVTTSS2SQ,
+
 	ADIVPD,
 	ADIVPS,
 	ADIVSD,
 	ADIVSS,
+
 	AEMMS,
+
 	AFXRSTOR,
 	AFXRSTOR64,
 	AFXSAVE,
 	AFXSAVE64,
+
 	ALDMXCSR,
+
 	AMASKMOVOU,
 	AMASKMOVQ,
+
 	AMAXPD,
 	AMAXPS,
 	AMAXSD,
@@ -581,6 +634,7 @@ enum	as
 	AMINPS,
 	AMINSD,
 	AMINSS,
+
 	AMOVAPD,
 	AMOVAPS,
 	AMOVOU,
@@ -606,11 +660,14 @@ enum	as
 	AMULPS,
 	AMULSD,
 	AMULSS,
+
 	AORPD,
 	AORPS,
+
 	APACKSSLW,
 	APACKSSWB,
 	APACKUSWB,
+
 	APADDB,
 	APADDL,
 	APADDQ,
@@ -630,13 +687,16 @@ enum	as
 	APANDN,
 	APAVGB,
 	APAVGW,
+
 	APCMPEQB,
 	APCMPEQL,
 	APCMPEQW,
 	APCMPGTB,
 	APCMPGTL,
 	APCMPGTW,
+
 	APEXTRW,
+
 	APFACC,
 	APFADD,
 	APFCMPEQ,
@@ -656,26 +716,33 @@ enum	as
 	APFSUBR,
 	APINSRW,
 	APMADDWL,
+
 	APMAXSW,
 	APMAXUB,
 	APMINSW,
 	APMINUB,
+
 	APMOVMSKB,
+
 	APMULHRW,
 	APMULHUW,
 	APMULHW,
 	APMULLW,
 	APMULULQ,
+
 	APOR,
+
 	APSADBW,
 	APSHUFHW,
 	APSHUFL,
 	APSHUFLW,
 	APSHUFW,
+
 	APSLLO,
 	APSLLL,
 	APSLLQ,
 	APSLLW,
+
 	APSRAL,
 	APSRAW,
 	APSRLO,
@@ -734,8 +801,6 @@ enum	as
 	ASWAPGS,
 
 	AMODE,
-
-	ALAST
 };
 
 enum
@@ -810,20 +875,6 @@ enum
 	D_DR		= 95,
 	D_TR		= 103,
 
-	D_NONE		= 111,
-
-	D_BRANCH	= 112,
-	D_EXTERN	= 113,
-	D_STATIC	= 114,
-	D_AUTO		= 115,
-	D_PARAM		= 116,
-	D_CONST		= 117,
-	D_FCONST	= 118,
-	D_SCONST	= 119,
-	D_ADDR		= 120,
-
-	D_FILE,
-	D_FILE1,
 
 	D_INDIR,	/* additive */
 
@@ -847,21 +898,4 @@ enum
 	REGEXT		= D_R15,	/* compiler allocates external registers R15 down */
 	FREGMIN		= D_X0+5,	/* first register variable */
 	FREGEXT		= D_X0+15	/* first external register */
-};
-
-/*
- * this is the ranlib header
- */
-#define	SYMDEF	"__.SYMDEF"
-
-/*
- * this is the simulated IEEE floating point
- */
-typedef	struct	ieee	Ieee;
-struct	ieee
-{
-	int32	l;	/* contains ls-man	0xffffffff */
-	int32	h;	/* contains sign	0x80000000
-				    exp		0x7ff00000
-				    ms-man	0x000fffff */
 };

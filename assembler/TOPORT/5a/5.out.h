@@ -11,6 +11,7 @@
 #define	REGEXT		10
 /* compiler allocates external registers R10 down */
 #define	REGTMP		11
+
 #define	REGSB		12
 #define	REGSP		13
 #define	REGLINK		14

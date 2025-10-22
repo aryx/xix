@@ -1,228 +1,12 @@
-// Inferno utils/6a/lex.c
-// http://code.google.com/p/inferno-os/source/browse/utils/6a/lex.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.	All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-#define	EXTERN
-#include "a.h"
-#include "y.tab.h"
-#include <ctype.h>
-
-enum
-{
-	Plan9	= 1<<0,
-	Unix	= 1<<1,
-	Windows	= 1<<2,
-};
-
-int
-systemtype(int sys)
-{
-	return sys&Plan9;
-}
-
-int
-pathchar(void)
-{
-	return '/';
-}
-
 void
 main(int argc, char *argv[])
 {
-	char *p;
-	int nout, nproc, i, c;
-
 	thechar = '6';
 	thestring = "amd64";
-
-	ensuresymb(NSYMB);
-	memset(debug, 0, sizeof(debug));
-	cinit();
-	outfile = 0;
-	setinclude(".");
-	ARGBEGIN {
-	default:
-		c = ARGC();
-		if(c >= 0 || c < sizeof(debug))
-			debug[c] = 1;
-		break;
-
-	case 'o':
-		outfile = ARGF();
-		break;
-
-	case 'D':
-		p = ARGF();
-		if(p) {
-			if (nDlist%8 == 0)
-				Dlist = allocn(Dlist, nDlist*sizeof(char *), 
-					8*sizeof(char *));
-			Dlist[nDlist++] = p;
-		}
-		break;
-
-	case 'I':
-		p = ARGF();
-		setinclude(p);
-		break;
-	} ARGEND
-	if(*argv == 0) {
-		print("usage: %ca [-options] file.s\n", thechar);
-		errorexit();
-	}
-	if(argc > 1 && systemtype(Windows)){
-		print("can't assemble multiple files on windows\n");
-		errorexit();
-	}
-	if(argc > 1 && !systemtype(Windows)) {
-		nproc = 1;
-		if(p = getenv("NPROC"))
-			nproc = atol(p);	/* */
-		c = 0;
-		nout = 0;
-		for(;;) {
-			Waitmsg *w;
-
-			while(nout < nproc && argc > 0) {
-				i = fork();
-				if(i < 0) {
-					fprint(2, "fork: %r\n");
-					errorexit();
-				}
-				if(i == 0) {
-					print("%s:\n", *argv);
-					if(assemble(*argv))
-						errorexit();
-					exits(0);
-				}
-				nout++;
-				argc--;
-				argv++;
-			}
-			w = wait();
-			if(w == nil) {
-				if(c)
-					errorexit();
-				exits(0);
-			}
-			if(w->msg[0])
-				c++;
-			nout--;
-		}
-	}
-	if(assemble(argv[0]))
-		errorexit();
-	exits(0);
 }
 
-int
-assemble(char *file)
+itab[] =
 {
-	char *ofile, incfile[20], *p;
-	int i, of;
-
-	ofile = alloc(strlen(file)+3); // +3 for .x\0 (x=thechar)
-	strcpy(ofile, file);
-	p = utfrrune(ofile, pathchar());
-	if(p) {
-		include[0] = ofile;
-		*p++ = 0;
-	} else
-		p = ofile;
-	if(outfile == 0) {
-		outfile = p;
-		if(outfile){
-			p = utfrrune(outfile, '.');
-			if(p)
-				if(p[1] == 's' && p[2] == 0)
-					p[0] = 0;
-			p = utfrune(outfile, 0);
-			p[0] = '.';
-			p[1] = thechar;
-			p[2] = 0;
-		} else
-			outfile = "/dev/null";
-	}
-	p = getenv("INCLUDE");
-	if(p) {
-		setinclude(p);
-	} else {
-		if(systemtype(Plan9)) {
-			sprint(incfile,"/%s/include", thestring);
-			setinclude(strdup(incfile));
-		}
-	}
-
-	of = create(outfile, OWRITE, 0664);
-	if(of < 0) {
-		yyerror("%ca: cannot create %s", thechar, outfile);
-		errorexit();
-	}
-	Binit(&obuf, of, OWRITE);
-
-	pass = 1;
-	pinit(file);
-
-	Bprint(&obuf, "%s\n", thestring);
-
-	for(i=0; i<nDlist; i++)
-		dodefine(Dlist[i]);
-	yyparse();
-	if(nerrors) {
-		cclean();
-		return nerrors;
-	}
-
-	Bprint(&obuf, "\n!\n");
-
-	pass = 2;
-	outhist();
-	pinit(file);
-	for(i=0; i<nDlist; i++)
-		dodefine(Dlist[i]);
-	yyparse();
-	cclean();
-	return nerrors;
-}
-
-struct
-{
-	char	*name;
-	ushort	type;
-	ushort	value;
-} itab[] =
-{
-	"SP",		LSP,	D_AUTO,
-	"SB",		LSB,	D_EXTERN,
-	"FP",		LFP,	D_PARAM,
-	"PC",		LPC,	D_BRANCH,
-
 	"AL",		LBREG,	D_AL,
 	"CL",		LBREG,	D_CL,
 	"DL",		LBREG,	D_DL,
@@ -233,6 +17,7 @@ struct
 	"BPB",		LBREG,	D_BPB,
 	"R8B",		LBREG,	D_R8B,
 	"R9B",		LBREG,	D_R9B,
+
 	"R10B",		LBREG,	D_R10B,
 	"R11B",		LBREG,	D_R11B,
 	"R12B",		LBREG,	D_R12B,
@@ -253,25 +38,9 @@ struct
 	"BP",		LLREG,	D_BP,
 	"SI",		LLREG,	D_SI,
 	"DI",		LLREG,	D_DI,
-	"R8",		LLREG,	D_R8,
-	"R9",		LLREG,	D_R9,
-	"R10",		LLREG,	D_R10,
-	"R11",		LLREG,	D_R11,
-	"R12",		LLREG,	D_R12,
-	"R13",		LLREG,	D_R13,
-	"R14",		LLREG,	D_R14,
-	"R15",		LLREG,	D_R15,
 
 	"RARG",		LLREG,	REGARG,
 
-	"F0",		LFREG,	D_F0+0,
-	"F1",		LFREG,	D_F0+1,
-	"F2",		LFREG,	D_F0+2,
-	"F3",		LFREG,	D_F0+3,
-	"F4",		LFREG,	D_F0+4,
-	"F5",		LFREG,	D_F0+5,
-	"F6",		LFREG,	D_F0+6,
-	"F7",		LFREG,	D_F0+7,
 
 	"M0",		LMREG,	D_M0+0,
 	"M1",		LMREG,	D_M0+1,
@@ -351,31 +120,40 @@ struct
 	"AAD",		LTYPE0,	AAAD,
 	"AAM",		LTYPE0,	AAAM,
 	"AAS",		LTYPE0,	AAAS,
+
 	"ADCB",		LTYPE3,	AADCB,
 	"ADCL",		LTYPE3,	AADCL,
 	"ADCQ",		LTYPE3,	AADCQ,
 	"ADCW",		LTYPE3,	AADCW,
+
 	"ADDB",		LTYPE3,	AADDB,
 	"ADDL",		LTYPE3,	AADDL,
 	"ADDQ",		LTYPE3,	AADDQ,
 	"ADDW",		LTYPE3,	AADDW,
+
 	"ADJSP",	LTYPE2,	AADJSP,
+
 	"ANDB",		LTYPE3,	AANDB,
 	"ANDL",		LTYPE3,	AANDL,
 	"ANDQ",		LTYPE3,	AANDQ,
 	"ANDW",		LTYPE3,	AANDW,
+
 	"ARPL",		LTYPE3,	AARPL,
+
 	"BOUNDL",	LTYPE3,	ABOUNDL,
 	"BOUNDW",	LTYPE3,	ABOUNDW,
+
 	"BSFL",		LTYPE3,	ABSFL,
 	"BSFQ",		LTYPE3,	ABSFQ,
 	"BSFW",		LTYPE3,	ABSFW,
 	"BSRL",		LTYPE3,	ABSRL,
 	"BSRQ",		LTYPE3,	ABSRQ,
 	"BSRW",		LTYPE3,	ABSRW,
+
 	"BTCL",		LTYPE3,	ABTCL,
 	"BTCQ",		LTYPE3,	ABTCQ,
 	"BTCW",		LTYPE3,	ABTCW,
+
 	"BTL",		LTYPE3,	ABTL,
 	"BTQ",		LTYPE3,	ABTQ,
 	"BTRL",		LTYPE3,	ABTRL,
@@ -385,13 +163,20 @@ struct
 	"BTSQ",		LTYPE3,	ABTSQ,
 	"BTSW",		LTYPE3,	ABTSW,
 	"BTW",		LTYPE3,	ABTW,
+
 	"BYTE",		LTYPE2,	ABYTE,
+
 	"CALL",		LTYPEC,	ACALL,
+
 	"CLC",		LTYPE0,	ACLC,
 	"CLD",		LTYPE0,	ACLD,
+
 	"CLI",		LTYPE0,	ACLI,
+
 	"CLTS",		LTYPE0,	ACLTS,
+
 	"CMC",		LTYPE0,	ACMC,
+
 	"CMPB",		LTYPE4,	ACMPB,
 	"CMPL",		LTYPE4,	ACMPL,
 	"CMPQ",		LTYPE4,	ACMPQ,
@@ -400,36 +185,48 @@ struct
 	"CMPSL",	LTYPE0,	ACMPSL,
 	"CMPSQ",	LTYPE0,	ACMPSQ,
 	"CMPSW",	LTYPE0,	ACMPSW,
+
 	"CMPXCHG8B",	LTYPE1,	ACMPXCHG8B,
 	"CMPXCHGB",	LTYPE3,	ACMPXCHGB,	/* LTYPE3? */
 	"CMPXCHGL",	LTYPE3,	ACMPXCHGL,
 	"CMPXCHGQ",	LTYPE3,	ACMPXCHGQ,
 	"CMPXCHGW",	LTYPE3,	ACMPXCHGW,
+
 	"CPUID",	LTYPE0,	ACPUID,
+
 	"DAA",		LTYPE0,	ADAA,
 	"DAS",		LTYPE0,	ADAS,
-	"DATA",		LTYPED,	ADATA,
+
+
 	"DECB",		LTYPE1,	ADECB,
 	"DECL",		LTYPE1,	ADECL,
 	"DECQ",		LTYPE1,	ADECQ,
 	"DECW",		LTYPE1,	ADECW,
+
 	"DIVB",		LTYPE2,	ADIVB,
 	"DIVL",		LTYPE2,	ADIVL,
 	"DIVQ",		LTYPE2,	ADIVQ,
 	"DIVW",		LTYPE2,	ADIVW,
+
 	"EMMS",		LTYPE0,	AEMMS,
+
 	"END",		LTYPE0,	AEND,
+
 	"ENTER",	LTYPE2,	AENTER,
-	"GLOBL",	LTYPEG,	AGLOBL,
+
+
 	"HLT",		LTYPE0,	AHLT,
+
 	"IDIVB",	LTYPE2,	AIDIVB,
 	"IDIVL",	LTYPE2,	AIDIVL,
 	"IDIVQ",	LTYPE2,	AIDIVQ,
 	"IDIVW",	LTYPE2,	AIDIVW,
+
 	"IMULB",	LTYPEI,	AIMULB,
 	"IMULL",	LTYPEI,	AIMULL,
 	"IMULQ",	LTYPEI,	AIMULQ,
 	"IMULW",	LTYPEI,	AIMULW,
+
 	"INB",		LTYPE0,	AINB,
 	"INL",		LTYPE0,	AINL,
 	"INW",		LTYPE0,	AINW,
@@ -495,34 +292,49 @@ struct
 	"JNLE",		LTYPER,	AJGT,	/* alternate */
 
 	"JCXZ",		LTYPER,	AJCXZ,
+
 	"JMP",		LTYPEC,	AJMP,
+
 	"LAHF",		LTYPE0,	ALAHF,
+
 	"LARL",		LTYPE3,	ALARL,
 	"LARW",		LTYPE3,	ALARW,
+
 	"LEAL",		LTYPE3,	ALEAL,
 	"LEAQ",		LTYPE3,	ALEAQ,
 	"LEAW",		LTYPE3,	ALEAW,
+
 	"LEAVEL",	LTYPE0,	ALEAVEL,
 	"LEAVEQ",	LTYPE0,	ALEAVEQ,
 	"LEAVEW",	LTYPE0,	ALEAVEW,
+
 	"LFENCE",	LTYPE0,	ALFENCE,
+
 	"LOCK",		LTYPE0,	ALOCK,
+
 	"LODSB",	LTYPE0,	ALODSB,
 	"LODSL",	LTYPE0,	ALODSL,
 	"LODSQ",	LTYPE0,	ALODSQ,
 	"LODSW",	LTYPE0,	ALODSW,
+
 	"LONG",		LTYPE2,	ALONG,
+
 	"LOOP",		LTYPER,	ALOOP,
 	"LOOPEQ",	LTYPER,	ALOOPEQ,
 	"LOOPNE",	LTYPER,	ALOOPNE,
+
 	"LSLL",		LTYPE3,	ALSLL,
 	"LSLW",		LTYPE3,	ALSLW,
+
 	"MFENCE",	LTYPE0,	AMFENCE,
+
 	"MODE",		LTYPE2,	AMODE,
+
 	"MOVB",		LTYPE3,	AMOVB,
 	"MOVL",		LTYPEM,	AMOVL,
 	"MOVQ",		LTYPEM,	AMOVQ,
 	"MOVW",		LTYPEM,	AMOVW,
+
 	"MOVBLSX",	LTYPE3, AMOVBLSX,
 	"MOVBLZX",	LTYPE3, AMOVBLZX,
 	"MOVBQSX",	LTYPE3,	AMOVBQSX,
@@ -541,29 +353,35 @@ struct
 	"MOVSL",	LTYPE0,	AMOVSL,
 	"MOVSQ",	LTYPE0,	AMOVSQ,
 	"MOVSW",	LTYPE0,	AMOVSW,
+
 	"MULB",		LTYPE2,	AMULB,
 	"MULL",		LTYPE2,	AMULL,
 	"MULQ",		LTYPE2,	AMULQ,
 	"MULW",		LTYPE2,	AMULW,
+
 	"NEGB",		LTYPE1,	ANEGB,
 	"NEGL",		LTYPE1,	ANEGL,
 	"NEGQ",		LTYPE1,	ANEGQ,
 	"NEGW",		LTYPE1,	ANEGW,
-	"NOP",		LTYPEN,	ANOP,
+
+
 	"NOTB",		LTYPE1,	ANOTB,
 	"NOTL",		LTYPE1,	ANOTL,
 	"NOTQ",		LTYPE1,	ANOTQ,
 	"NOTW",		LTYPE1,	ANOTW,
+
 	"ORB",		LTYPE3,	AORB,
 	"ORL",		LTYPE3,	AORL,
 	"ORQ",		LTYPE3,	AORQ,
 	"ORW",		LTYPE3,	AORW,
+
 	"OUTB",		LTYPE0,	AOUTB,
 	"OUTL",		LTYPE0,	AOUTL,
 	"OUTW",		LTYPE0,	AOUTW,
 	"OUTSB",	LTYPE0,	AOUTSB,
 	"OUTSL",	LTYPE0,	AOUTSL,
 	"OUTSW",	LTYPE0,	AOUTSW,
+
 	"POPAL",	LTYPE0,	APOPAL,
 	"POPAW",	LTYPE0,	APOPAW,
 	"POPFL",	LTYPE0,	APOPFL,
@@ -572,6 +390,7 @@ struct
 	"POPL",		LTYPE1,	APOPL,
 	"POPQ",		LTYPE1,	APOPQ,
 	"POPW",		LTYPE1,	APOPW,
+
 	"PUSHAL",	LTYPE0,	APUSHAL,
 	"PUSHAW",	LTYPE0,	APUSHAW,
 	"PUSHFL",	LTYPE0,	APUSHFL,
@@ -580,6 +399,7 @@ struct
 	"PUSHL",	LTYPE2,	APUSHL,
 	"PUSHQ",	LTYPE2,	APUSHQ,
 	"PUSHW",	LTYPE2,	APUSHW,
+
 	"RCLB",		LTYPE3,	ARCLB,
 	"RCLL",		LTYPE3,	ARCLL,
 	"RCLQ",		LTYPE3,	ARCLQ,
@@ -588,15 +408,17 @@ struct
 	"RCRL",		LTYPE3,	ARCRL,
 	"RCRQ",		LTYPE3,	ARCRQ,
 	"RCRW",		LTYPE3,	ARCRW,
+
 	"RDMSR",	LTYPE0,	ARDMSR,
 	"RDPMC",	LTYPE0,	ARDPMC,
 	"RDTSC",	LTYPE0,	ARDTSC,
 	"REP",		LTYPE0,	AREP,
 	"REPN",		LTYPE0,	AREPN,
-	"RET",		LTYPE0,	ARET,
+
 	"RETFL",	LTYPERT,ARETFL,
 	"RETFW",	LTYPERT,ARETFW,
 	"RETFQ",	LTYPERT,ARETFQ,
+
 	"ROLB",		LTYPE3,	AROLB,
 	"ROLL",		LTYPE3,	AROLL,
 	"ROLQ",		LTYPE3,	AROLQ,
@@ -605,7 +427,9 @@ struct
 	"RORL",		LTYPE3,	ARORL,
 	"RORQ",		LTYPE3,	ARORQ,
 	"RORW",		LTYPE3,	ARORW,
+
 	"RSM",		LTYPE0,	ARSM,
+
 	"SAHF",		LTYPE0,	ASAHF,
 	"SALB",		LTYPE3,	ASALB,
 	"SALL",		LTYPE3,	ASALL,
@@ -615,14 +439,17 @@ struct
 	"SARL",		LTYPE3,	ASARL,
 	"SARQ",		LTYPE3,	ASARQ,
 	"SARW",		LTYPE3,	ASARW,
+
 	"SBBB",		LTYPE3,	ASBBB,
 	"SBBL",		LTYPE3,	ASBBL,
 	"SBBQ",		LTYPE3,	ASBBQ,
 	"SBBW",		LTYPE3,	ASBBW,
+
 	"SCASB",	LTYPE0,	ASCASB,
 	"SCASL",	LTYPE0,	ASCASL,
 	"SCASQ",	LTYPE0,	ASCASQ,
 	"SCASW",	LTYPE0,	ASCASW,
+
 	"SETCC",	LTYPE1,	ASETCC,
 	"SETCS",	LTYPE1,	ASETCS,
 	"SETEQ",	LTYPE1,	ASETEQ,
@@ -639,10 +466,13 @@ struct
 	"SETPC",	LTYPE1,	ASETPC,
 	"SETPL",	LTYPE1,	ASETPL,
 	"SETPS",	LTYPE1,	ASETPS,
+
 	"SFENCE",	LTYPE0,	ASFENCE,
+
 	"CDQ",		LTYPE0,	ACDQ,
 	"CWD",		LTYPE0,	ACWD,
 	"CQO",		LTYPE0,	ACQO,
+
 	"SHLB",		LTYPE3,	ASHLB,
 	"SHLL",		LTYPES,	ASHLL,
 	"SHLQ",		LTYPES,	ASHLQ,
@@ -651,32 +481,43 @@ struct
 	"SHRL",		LTYPES,	ASHRL,
 	"SHRQ",		LTYPES,	ASHRQ,
 	"SHRW",		LTYPES,	ASHRW,
+
 	"STC",		LTYPE0,	ASTC,
 	"STD",		LTYPE0,	ASTD,
 	"STI",		LTYPE0,	ASTI,
+
 	"STOSB",	LTYPE0,	ASTOSB,
 	"STOSL",	LTYPE0,	ASTOSL,
 	"STOSQ",	LTYPE0,	ASTOSQ,
 	"STOSW",	LTYPE0,	ASTOSW,
+
 	"SUBB",		LTYPE3,	ASUBB,
 	"SUBL",		LTYPE3,	ASUBL,
 	"SUBQ",		LTYPE3,	ASUBQ,
 	"SUBW",		LTYPE3,	ASUBW,
+
 	"SYSCALL",	LTYPE0,	ASYSCALL,
+
 	"SYSRET",	LTYPE0,	ASYSRET,
+
 	"SWAPGS",	LTYPE0,	ASWAPGS,
+
 	"TESTB",	LTYPE3,	ATESTB,
 	"TESTL",	LTYPE3,	ATESTL,
 	"TESTQ",	LTYPE3,	ATESTQ,
 	"TESTW",	LTYPE3,	ATESTW,
-	"TEXT",		LTYPET,	ATEXT,
+
 	"VERR",		LTYPE2,	AVERR,
 	"VERW",		LTYPE2,	AVERW,
+
 	"QUAD",		LTYPE2,	AQUAD,
+
 	"WAIT",		LTYPE0,	AWAIT,
+
 	"WBINVD",	LTYPE0,	AWBINVD,
+
 	"WRMSR",	LTYPE0,	AWRMSR,
-	"WORD",		LTYPE2,	AWORD,
+
 	"XADDB",	LTYPE3,	AXADDB,
 	"XADDL",	LTYPE3,	AXADDL,
 	"XADDQ",	LTYPE3,	AXADDQ,
@@ -686,6 +527,7 @@ struct
 	"XCHGQ",	LTYPE3,	AXCHGQ,
 	"XCHGW",	LTYPE3,	AXCHGW,
 	"XLAT",		LTYPE2,	AXLAT,
+
 	"XORB",		LTYPE3,	AXORB,
 	"XORL",		LTYPE3,	AXORL,
 	"XORQ",		LTYPE3,	AXORQ,
@@ -754,6 +596,7 @@ struct
 	"FMOVWP",	LTYPE3, AFMOVWP,
 	"FMOVX",	LTYPE3, AFMOVX,
 	"FMOVXP",	LTYPE3, AFMOVXP,
+
 	"FCOMB",	LTYPE3, AFCOMB,
 	"FCOMBP",	LTYPE3, AFCOMBP,
 	"FCOMD",	LTYPE3, AFCOMD,
@@ -765,9 +608,11 @@ struct
 	"FCOMLP",	LTYPE3, AFCOMLP,
 	"FCOMW",	LTYPE3, AFCOMW,
 	"FCOMWP",	LTYPE3, AFCOMWP,
+
 	"FUCOM",	LTYPE3, AFUCOM,
 	"FUCOMP",	LTYPE3, AFUCOMP,
 	"FUCOMPP",	LTYPE3, AFUCOMPP,
+
 	"FADDW",	LTYPE3, AFADDW,
 	"FADDL",	LTYPE3, AFADDL,
 	"FADDF",	LTYPE3, AFADDF,
@@ -803,6 +648,7 @@ struct
 	"FLDCW",	LTYPE2, AFLDCW,
 	"FLDENV",	LTYPE1, AFLDENV,
 	"FRSTOR",	LTYPE2, AFRSTOR,
+
 	"FSAVE",	LTYPE1, AFSAVE,
 	"FSTCW",	LTYPE1, AFSTCW,
 	"FSTENV",	LTYPE1, AFSTENV,
@@ -815,6 +661,7 @@ struct
 	"FDECSTP",	LTYPE0, AFDECSTP,
 	"FINCSTP",	LTYPE0, AFINCSTP,
 	"FINIT",	LTYPE0, AFINIT,
+
 	"FLD1",		LTYPE0, AFLD1,
 	"FLDL2E",	LTYPE0, AFLDL2E,
 	"FLDL2T",	LTYPE0, AFLDL2T,
@@ -822,7 +669,9 @@ struct
 	"FLDLN2",	LTYPE0, AFLDLN2,
 	"FLDPI",	LTYPE0, AFLDPI,
 	"FLDZ",		LTYPE0, AFLDZ,
+
 	"FNOP",		LTYPE0, AFNOP,
+
 	"FPATAN",	LTYPE0, AFPATAN,
 	"FPREM",	LTYPE0, AFPREM,
 	"FPREM1",	LTYPE0, AFPREM1,
@@ -846,23 +695,28 @@ struct
 	"ANDNPS",	LTYPE3,	AANDNPS,
 	"ANDPD",	LTYPE3,	AANDPD,
 	"ANDPS",	LTYPE3,	AANDPS,
+
 	"CMPPD",	LTYPEXC,ACMPPD,
 	"CMPPS",	LTYPEXC,ACMPPS,
 	"CMPSD",	LTYPEXC,ACMPSD,
 	"CMPSS",	LTYPEXC,ACMPSS,
+
 	"COMISD",	LTYPE3,	ACOMISD,
 	"COMISS",	LTYPE3,	ACOMISS,
+
 	"CVTPL2PD",	LTYPE3,	ACVTPL2PD,
 	"CVTPL2PS",	LTYPE3,	ACVTPL2PS,
 	"CVTPD2PL",	LTYPE3,	ACVTPD2PL,
 	"CVTPD2PS",	LTYPE3,	ACVTPD2PS,
 	"CVTPS2PL",	LTYPE3,	ACVTPS2PL,
+
 	"PF2IW",	LTYPE3,	APF2IW,
 	"PF2IL",	LTYPE3,	APF2IL,
 	"PF2ID",	LTYPE3,	APF2IL,	/* syn */
 	"PI2FL",	LTYPE3,	API2FL,
 	"PI2FD",	LTYPE3,	API2FL,	/* syn */
 	"PI2FW",	LTYPE3,	API2FW,
+
 	"CVTPS2PD",	LTYPE3,	ACVTPS2PD,
 	"CVTSD2SL",	LTYPE3,	ACVTSD2SL,
 	"CVTSD2SQ",	LTYPE3,	ACVTSD2SQ,
@@ -874,12 +728,14 @@ struct
 	"CVTSS2SD",	LTYPE3,	ACVTSS2SD,
 	"CVTSS2SL",	LTYPE3,	ACVTSS2SL,
 	"CVTSS2SQ",	LTYPE3,	ACVTSS2SQ,
+
 	"CVTTPD2PL",	LTYPE3,	ACVTTPD2PL,
 	"CVTTPS2PL",	LTYPE3,	ACVTTPS2PL,
 	"CVTTSD2SL",	LTYPE3,	ACVTTSD2SL,
 	"CVTTSD2SQ",	LTYPE3,	ACVTTSD2SQ,
 	"CVTTSS2SL",	LTYPE3,	ACVTTSS2SL,
 	"CVTTSS2SQ",	LTYPE3,	ACVTTSS2SQ,
+
 	"DIVPD",	LTYPE3,	ADIVPD,
 	"DIVPS",	LTYPE3,	ADIVPS,
 	"DIVSD",	LTYPE3,	ADIVSD,
@@ -889,9 +745,11 @@ struct
 	"FXSAVE",	LTYPE1,	AFXSAVE,
 	"FXSAVE64",	LTYPE1,	AFXSAVE64,
 	"LDMXCSR",	LTYPE2,	ALDMXCSR,
+
 	"MASKMOVOU",	LTYPE3,	AMASKMOVOU,
 	"MASKMOVDQU",	LTYPE3,	AMASKMOVOU,	/* syn */
 	"MASKMOVQ",	LTYPE3,	AMASKMOVQ,
+
 	"MAXPD",	LTYPE3,	AMAXPD,
 	"MAXPS",	LTYPE3,	AMAXPS,
 	"MAXSD",	LTYPE3,	AMAXSD,
@@ -900,6 +758,7 @@ struct
 	"MINPS",	LTYPE3,	AMINPS,
 	"MINSD",	LTYPE3,	AMINSD,
 	"MINSS",	LTYPE3,	AMINSS,
+
 	"MOVAPD",	LTYPE3,	AMOVAPD,
 	"MOVAPS",	LTYPE3,	AMOVAPS,
 	"MOVD",		LTYPE3,	AMOVQ,	/* syn */
@@ -925,15 +784,19 @@ struct
 	"MOVSS",	LTYPE3,	AMOVSS,
 	"MOVUPD",	LTYPE3,	AMOVUPD,
 	"MOVUPS",	LTYPE3,	AMOVUPS,
+
 	"MULPD",	LTYPE3,	AMULPD,
 	"MULPS",	LTYPE3,	AMULPS,
 	"MULSD",	LTYPE3,	AMULSD,
 	"MULSS",	LTYPE3,	AMULSS,
+
 	"ORPD",		LTYPE3,	AORPD,
 	"ORPS",		LTYPE3,	AORPS,
+
 	"PACKSSLW",	LTYPE3,	APACKSSLW,
 	"PACKSSWB",	LTYPE3,	APACKSSWB,
 	"PACKUSWB",	LTYPE3,	APACKUSWB,
+
 	"PADDB",	LTYPE3,	APADDB,
 	"PADDL",	LTYPE3,	APADDL,
 	"PADDQ",	LTYPE3,	APADDQ,
@@ -942,6 +805,7 @@ struct
 	"PADDUSB",	LTYPE3,	APADDUSB,
 	"PADDUSW",	LTYPE3,	APADDUSW,
 	"PADDW",	LTYPE3,	APADDW,
+
 	"PAND",		LTYPE3, APAND,
 	"PANDB",	LTYPE3,	APANDB,
 	"PANDL",	LTYPE3,	APANDL,
@@ -998,6 +862,7 @@ struct
 	"PSUBUSB",	LTYPE3,	APSUBUSB,
 	"PSUBUSW",	LTYPE3,	APSUBUSW,
 	"PSUBW",	LTYPE3,	APSUBW,
+
 	"PUNPCKHBW",	LTYPE3,	APUNPCKHBW,
 	"PUNPCKHLQ",	LTYPE3,	APUNPCKHLQ,
 	"PUNPCKHQDQ",	LTYPE3,	APUNPCKHQDQ,
@@ -1006,11 +871,15 @@ struct
 	"PUNPCKLLQ",	LTYPE3,	APUNPCKLLQ,
 	"PUNPCKLQDQ",	LTYPE3,	APUNPCKLQDQ,
 	"PUNPCKLWL",	LTYPE3,	APUNPCKLWL,
+
 	"PXOR",		LTYPE3,	APXOR,
+
 	"RCPPS",	LTYPE3,	ARCPPS,
 	"RCPSS",	LTYPE3,	ARCPSS,
+
 	"RSQRTPS",	LTYPE3,	ARSQRTPS,
 	"RSQRTSS",	LTYPE3,	ARSQRTSS,
+
 	"SHUFPD",	LTYPEX,	ASHUFPD,
 	"SHUFPS",	LTYPEX,	ASHUFPS,
 	"SQRTPD",	LTYPE3,	ASQRTPD,
@@ -1018,59 +887,29 @@ struct
 	"SQRTSD",	LTYPE3,	ASQRTSD,
 	"SQRTSS",	LTYPE3,	ASQRTSS,
 	"STMXCSR",	LTYPE1,	ASTMXCSR,
+
 	"SUBPD",	LTYPE3,	ASUBPD,
 	"SUBPS",	LTYPE3,	ASUBPS,
 	"SUBSD",	LTYPE3,	ASUBSD,
 	"SUBSS",	LTYPE3,	ASUBSS,
+
 	"UCOMISD",	LTYPE3,	AUCOMISD,
 	"UCOMISS",	LTYPE3,	AUCOMISS,
+
 	"UNPCKHPD",	LTYPE3,	AUNPCKHPD,
 	"UNPCKHPS",	LTYPE3,	AUNPCKHPS,
 	"UNPCKLPD",	LTYPE3,	AUNPCKLPD,
 	"UNPCKLPS",	LTYPE3,	AUNPCKLPS,
+
 	"XORPD",	LTYPE3,	AXORPD,
 	"XORPS",	LTYPE3,	AXORPS,
-
-	0
 };
 
 void
 cinit(void)
 {
-	Sym *s;
-	int i;
-
-	nullgen.sym = S;
-	nullgen.offset = 0;
-	if(FPCHIP)
-		nullgen.dval = 0;
-	for(i=0; i<sizeof(nullgen.sval); i++)
-		nullgen.sval[i] = 0;
-	nullgen.type = D_NONE;
 	nullgen.index = D_NONE;
 	nullgen.scale = 0;
-
-	nerrors = 0;
-	iostack = I;
-	iofree = I;
-	peekc = IGN;
-	nhunk = 0;
-	for(i=0; i<NHASH; i++)
-		hash[i] = S;
-	for(i=0; itab[i].name; i++) {
-		s = slookup(itab[i].name);
-		if(s->type != LNAME)
-			yyerror("double initialization %s", itab[i].name);
-		s->type = itab[i].type;
-		s->value = itab[i].value;
-	}
-
-	pathname = allocn(pathname, 0, 100);
-	if(getwd(pathname, 99) == 0) {
-		pathname = allocn(pathname, 100, 900);
-		if(getwd(pathname, 999) == 0)
-			strcpy(pathname, "/???");
-	}
 }
 
 void
@@ -1087,13 +926,6 @@ checkscale(int scale)
 	yyerror("scale must be 1248: %d", scale);
 }
 
-void
-syminit(Sym *s)
-{
-
-	s->type = LNAME;
-	s->value = 0;
-}
 
 void
 cclean(void)
@@ -1106,20 +938,6 @@ cclean(void)
 	Bflush(&obuf);
 }
 
-void
-zname(char *n, int t, int s)
-{
-
-	Bputc(&obuf, ANAME);		/* as(2) */
-	Bputc(&obuf, ANAME>>8);
-	Bputc(&obuf, t);		/* type */
-	Bputc(&obuf, s);		/* sym */
-	while(*n) {
-		Bputc(&obuf, *n);
-		n++;
-	}
-	Bputc(&obuf, 0);
-}
 
 void
 zaddr(Gen *a, int s)
@@ -1202,145 +1020,6 @@ zaddr(Gen *a, int s)
 		Bputc(&obuf, a->type);
 }
 
-void
-outcode(int a, Gen2 *g2)
-{
-	int sf, st, t;
-	Sym *s;
-
-	if(pass == 1)
-		goto out;
-
-jackpot:
-	sf = 0;
-	s = g2->from.sym;
-	while(s != S) {
-		sf = s->sym;
-		if(sf < 0 || sf >= NSYM)
-			sf = 0;
-		t = g2->from.type;
-		if(t == D_ADDR)
-			t = g2->from.index;
-		if(h[sf].type == t)
-		if(h[sf].sym == s)
-			break;
-		zname(s->name, t, sym);
-		s->sym = sym;
-		h[sym].sym = s;
-		h[sym].type = t;
-		sf = sym;
-		sym++;
-		if(sym >= NSYM)
-			sym = 1;
-		break;
-	}
-	st = 0;
-	s = g2->to.sym;
-	while(s != S) {
-		st = s->sym;
-		if(st < 0 || st >= NSYM)
-			st = 0;
-		t = g2->to.type;
-		if(t == D_ADDR)
-			t = g2->to.index;
-		if(h[st].type == t)
-		if(h[st].sym == s)
-			break;
-		zname(s->name, t, sym);
-		s->sym = sym;
-		h[sym].sym = s;
-		h[sym].type = t;
-		st = sym;
-		sym++;
-		if(sym >= NSYM)
-			sym = 1;
-		if(st == sf)
-			goto jackpot;
-		break;
-	}
-	Bputc(&obuf, a);
-	Bputc(&obuf, a>>8);
-	Bputc(&obuf, stmtline);
-	Bputc(&obuf, stmtline>>8);
-	Bputc(&obuf, stmtline>>16);
-	Bputc(&obuf, stmtline>>24);
-	zaddr(&g2->from, sf);
-	zaddr(&g2->to, st);
-
-out:
-	if(a != AGLOBL && a != ADATA)
-		pc++;
-}
-
-void
-outhist(void)
-{
-	Gen g;
-	Hist *h;
-	char *p, *q, *op, c;
-	int n;
-
-	g = nullgen;
-	c = pathchar();
-	for(h = hist; h != H; h = h->link) {
-		p = h->name;
-		op = 0;
-		/* on windows skip drive specifier in pathname */
-		if(systemtype(Windows) && p && p[1] == ':'){
-			p += 2;
-			c = *p;
-		}
-		if(p && p[0] != c && h->offset == 0 && pathname){
-			/* on windows skip drive specifier in pathname */
-			if(systemtype(Windows) && pathname[1] == ':') {
-				op = p;
-				p = pathname+2;
-				c = *p;
-			} else if(pathname[0] == c){
-				op = p;
-				p = pathname;
-			}
-		}
-		while(p) {
-			q = strchr(p, c);
-			if(q) {
-				n = q-p;
-				if(n == 0){
-					n = 1;	/* leading "/" */
-					*p = '/';	/* don't emit "\" on windows */
-				}
-				q++;
-			} else {
-				n = strlen(p);
-				q = 0;
-			}
-			if(n) {
-				Bputc(&obuf, ANAME);
-				Bputc(&obuf, ANAME>>8);
-				Bputc(&obuf, D_FILE);	/* type */
-				Bputc(&obuf, 1);	/* sym */
-				Bputc(&obuf, '<');
-				Bwrite(&obuf, p, n);
-				Bputc(&obuf, 0);
-			}
-			p = q;
-			if(p == 0 && op) {
-				p = op;
-				op = 0;
-			}
-		}
-		g.offset = h->offset;
-
-		Bputc(&obuf, AHISTORY);
-		Bputc(&obuf, AHISTORY>>8);
-		Bputc(&obuf, h->line);
-		Bputc(&obuf, h->line>>8);
-		Bputc(&obuf, h->line>>16);
-		Bputc(&obuf, h->line>>24);
-		zaddr(&nullgen, 0);
-		zaddr(&g, 0);
-	}
-}
 
 void
 pragbldicks(void)
@@ -1355,6 +1034,3 @@ praghjdicks(void)
 	while(getnsc() != '\n')
 		;
 }
-
-#include "../cc/lexbody"
-#include "../cc/macbody"

@@ -7,9 +7,9 @@
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> -> string array -> Exit.t
+val main: <caps; ..> ->
+  string array -> Exit.t
 
 (* main algorithm; works by side effect on outfile *)
-val assemble: 
-  <Cap.open_in; .. > -> bool (* dump *) -> Preprocessor.conf ->
-  Fpath.t (* infile *) -> Chan.o (* outfile *) -> unit
+val assemble: <Cap.open_in; .. > ->
+  Preprocessor.conf -> Fpath.t (* infile *) -> Chan.o (* outfile *) -> unit

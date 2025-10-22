@@ -12,7 +12,8 @@ type caps = < Cap.forkew; Cap.env; Cap.argv >
 
 (*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
+val main: <caps; Cap.stdout; ..> ->
+  string array -> Exit.t
 (*e: signature [[CLI.main]] *)
 
 (*s: signature [[CLI.build_target]] *)

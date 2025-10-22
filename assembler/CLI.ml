@@ -36,6 +36,8 @@ type caps = < Cap.open_in; Cap.open_out; Cap.env >
 let thechar = '5'
 let thestring = "arm"
 
+let dump_ast = ref false
+
 let usage = 
   spf "usage: o%ca [-options] file.s" thechar
 
@@ -43,17 +45,17 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let assemble5 (caps: < Cap.open_in; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
+let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
   let prog = Parse_asm5.parse caps conf infile in
   let prog = Resolve_labels.resolve Ast_asm5.branch_opd_of_instr prog in
-  if dump 
+  if !dump_ast 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
   Object5.save (prog, !Location_cpp.history) chan
 
 (* Will modify chan as a side effect *)
-let assemble (caps: < Cap.open_in; .. >) dump (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
-  assemble5 caps dump conf infile chan
+let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
+  assemble5 caps conf infile chan
 
 (*****************************************************************************)
 (* Entry point *)
@@ -65,7 +67,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   let outfile = ref "" in
 
   let level = ref (Some Logs.Warning) in
-  let dump    = ref false in
+  let dump_ast    = ref false in
   (* for debugging *)
   let backtrace = ref false in
 
@@ -100,7 +102,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     " ";
 
     (* pad: I added that *)
-    "-dump", Arg.Set dump,
+    "-dump_ast", Arg.Set dump_ast,
     " dump the parsed AST";
     (* pad: I added that *)
     "-backtrace", Arg.Set backtrace,
@@ -155,7 +157,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
      * with cpp we open other files.
      *)
     outfile |> FS.with_open_out caps (fun chan ->
-        assemble caps !dump conf (Fpath.v !infile) chan
+        assemble caps conf (Fpath.v !infile) chan
     );
     Exit.OK
   with exn ->

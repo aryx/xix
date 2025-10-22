@@ -16,11 +16,13 @@ type caps = < Cap.forkew; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 (*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> -> string array -> Exit.t
+val main: <caps; ..> ->
+  string array -> Exit.t
 (*e: signature [[CLI.main]] *)
 
 (* internals *)
 (*s: signature [[CLI.interpret_bootstrap]] *)
-val interpret_bootstrap : < caps > -> string list -> unit
+val interpret_bootstrap : < caps > ->
+  string list -> unit
 (*e: signature [[CLI.interpret_bootstrap]] *)
 (*e: CLI.mli *)

@@ -195,5 +195,4 @@ itab[] =
 
 	"SCHED",	LSCHED, 0,
 	"NOSCHED",	LSCHED, 0x80,
-	0
 };

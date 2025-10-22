@@ -1,0 +1,27 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=ia		# also makes ja (for riscv64)
+LDLIBS=-lbio -l9 -lm
+
+OFILES=\
+	y.tab.$O\
+	lex.$O\
+
+HFILES=\
+	../il/i.out.h\
+	y.tab.h\
+	a.h\
+
+YFILES=a.y
+
+YFLAGS=-D1 -d
+#CFLAGS=	$CFLAGS -I../include
+
+<$TOP/mkfiles/mkone
+
+lex.$O:	../cc/macbody ../cc/lexbody
+
+#TODO:
+#install:V:	$BIN/ja

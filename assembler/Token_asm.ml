@@ -3,7 +3,7 @@ type t =
   | TTEXT | TGLOBL
   | TDATA | TWORD
   (* virtual *)
-  | TRET
+  | TRET | TNOP
   (* registers *)
   | TR | TF
   | TPC | TSB | TFP | TSP

@@ -132,7 +132,7 @@ type pseudo_instr =
 *)
 type virtual_instr =
   | RET
-  | NOP (* removed by linker, no reading syntax *)
+  | NOP (* removed by linker *)
   (* TODO? out MOV here with sizes and sign/unsigned *)
 [@@deriving show]
 

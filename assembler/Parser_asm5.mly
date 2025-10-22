@@ -55,7 +55,8 @@ let mk_e name static =
 %token <Ast_asm5.arith_opcode> TARITH
 %token TMVN
 %token <Ast_asm5.move_size> TMOV TSWAP
-%token TB  TBL TRET
+%token TB  TBL
+%token TRET TNOP
 %token <Ast_asm5.cmp_opcode> TCMP   
 %token <Ast_asm5.condition> TBx TCOND
 %token TSWI TRFE

@@ -111,7 +111,7 @@ rule token = parse
 
       (* virtual instructions *)
       | "RET" -> TRET
-      (* no "NOP" reading syntax but can be generated programmatically by 5c *)
+      | "NOP" -> TNOP
  
       (* registers (see also the special rule above for R digit+) *)
       | "R" -> TR

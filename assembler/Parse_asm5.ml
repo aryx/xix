@@ -25,6 +25,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TDATA -> TDATA
   | T.TWORD -> TWORD
   | T.TRET -> TRET
+  | T.TNOP -> TNOP
   | T.TR -> TR
   | T.TF -> TF
   | T.TPC -> TPC

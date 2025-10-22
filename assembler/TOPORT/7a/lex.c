@@ -1,284 +1,19 @@
-#define	EXTERN
-#include "a.h"
-#include "y.tab.h"
-#include <ctype.h>
-
-
-//goken: was partially in a.h before
-enum				/* keep in synch with ../cc/cc.h */
-{
-	Plan9	= 1<<0,
-	Unix	= 1<<1,
-	Windows	= 1<<2,
-};
-int
-systemtype(int sys)
-{
-	return sys&Plan9;
-}
-//goken: was in 6a but not 5a, so let's be consistent
-int
-pathchar(void)
-{
-	return '/';
-}
-
 void
 main(int argc, char *argv[])
 {
-	char *p;
-	int nout, nproc, status, i, c;
-
 	thechar = '7';
 	thestring = "arm64";
-
-	ensuresymb(NSYMB);
-
-	memset(debug, 0, sizeof(debug));
-	cinit();
-	outfile = 0;
-	//goken: include[ninclude++] = ".";
-    setinclude(".");
-
-	ARGBEGIN {
-	default:
-		c = ARGC();
-		if(c >= 0 || c < sizeof(debug))
-			debug[c] = 1;
-		break;
-
-	case 'o':
-		outfile = ARGF();
-		break;
-
-	case 'D':
-		p = ARGF();
-		if(p)
-			Dlist[nDlist++] = p;
-		break;
-
-	case 'I':
-		p = ARGF();
-		setinclude(p);
-		break;
-	} ARGEND
-	if(*argv == 0) {
-		print("usage: %ca [-options] file.s\n", thechar);
-		errorexit();
-	}
-	if(argc > 1 && systemtype(Windows)){
-		print("can't assemble multiple files on windows\n");
-		errorexit();
-	}
-	if(argc > 1 && !systemtype(Windows)) {
-		nproc = 1;
-		if(p = getenv("NPROC"))
-			nproc = atol(p);	/* */
-		c = 0;
-		nout = 0;
-		for(;;) {
-
-            //goken: I removed myxxx() calls and switched to regular xxx()
-            Waitmsg *w;
-          
-			while(nout < nproc && argc > 0) {
-				i = fork();
-				if(i < 0) {
-					//i = mywait(&status);
-					//if(i < 0)
-                        fprint(2, "fork: %r\n");
-						errorexit();
-					//if(status)
-					//	c++;
-					//nout--;
-					//continue;
-				}
-				if(i == 0) {
-					print("%s:\n", *argv);
-					if(assemble(*argv))
-						errorexit();
-					exits(0);
-				}
-				nout++;
-				argc--;
-				argv++;
-			}
-			//i = mywait(&status);
-			//if(i < 0) {
-            w = wait();
-            if(w == nil) {
-				if(c)
-					errorexit();
-				exits(0);
-			}
-			//if(status)
-            if(w->msg[0])
-				c++;
-			nout--;
-		}
-	}
-	if(assemble(argv[0]))
-		errorexit();
-	exits(0);
 }
 
-int
-assemble(char *file)
+itab[] =
 {
-	char ofile[100], incfile[20], *p;
-	int i, of;
 
-	strcpy(ofile, file);
-	p = utfrrune(ofile, pathchar());
-	if(p) {
-		include[0] = ofile;
-		*p++ = 0;
-	} else
-		p = ofile;
-	if(outfile == 0) {
-		outfile = p;
-		if(outfile){
-			p = utfrrune(outfile, '.');
-			if(p)
-				if(p[1] == 's' && p[2] == 0)
-					p[0] = 0;
-			p = utfrune(outfile, 0);
-			p[0] = '.';
-			p[1] = thechar;
-			p[2] = 0;
-		} else
-			outfile = "/dev/null";
-	}
-	p = getenv("INCLUDE");
-	if(p) {
-		setinclude(p);
-	} else {
-		if(systemtype(Plan9)) {
-			sprint(incfile,"/%s/include", thestring);
-			setinclude(strdup(incfile));
-		}
-	}
-
-	//goken: of = mycreat(outfile, 0664);
-    of = create(outfile, OWRITE, 0664);
-	if(of < 0) {
-		yyerror("%ca: cannot create %s", thechar, outfile);
-		errorexit();
-	}
-	Binit(&obuf, of, OWRITE);
-
-	pass = 1;
-	pinit(file);
-
-    //goken: for goken iar/gopack that use slightly different
-    // object format
-	Bprint(&obuf, "%s\n", thestring);
-
-	for(i=0; i<nDlist; i++)
-		dodefine(Dlist[i]);
-	yyparse();
-	if(nerrors) {
-		cclean();
-		return nerrors;
-	}
-
-	Bprint(&obuf, "\n!\n");
-
-	pass = 2;
-	outhist();
-	pinit(file);
-	for(i=0; i<nDlist; i++)
-		dodefine(Dlist[i]);
-	yyparse();
-	cclean();
-	return nerrors;
-}
-
-struct
-{
-	char	*name;
-	ushort	type;
-	ulong	value;
-} itab[] =
-{
-	"SP",		LSP,	D_AUTO,
-	"SB",		LSB,	D_EXTERN,
-	"FP",		LFP,	D_PARAM,
-	"PC",		LPC,	D_BRANCH,
-
-	"R",		LR,	0,
-	"R0",		LREG,	0,
-	"R1",		LREG,	1,
-	"R2",		LREG,	2,
-	"R3",		LREG,	3,
-	"R4",		LREG,	4,
-	"R5",		LREG,	5,
-	"R6",		LREG,	6,
-	"R7",		LREG,	7,
-	"R8",		LREG,	8,
-	"R9",		LREG,	9,
-	"R10",		LREG,	10,
-	"R11",		LREG,	11,
-	"R12",		LREG,	12,
-	"R13",		LREG,	13,
-	"R14",		LREG,	14,
-	"R15",		LREG,	15,
-	"R16",		LREG,	16,
-	"R17",		LREG,	17,
-	"R18",		LREG,	18,
-	"R19",		LREG,	19,
-	"R20",		LREG,	20,
-	"R21",		LREG,	21,
-	"R22",		LREG,	22,
-	"R23",		LREG,	23,
-	"R24",		LREG,	24,
-	"R25",		LREG,	25,
-	"R26",		LREG,	26,
-	"R27",		LREG,	27,
-	"R28",		LREG,	28,
-	"R29",		LREG,	29,
-	"R30",		LREG,	30,
 	"LR",			LREG,	30,
 	"ZR",			LREG,	31,
 
 	"RARG",		LREG,	REGARG,
 	"RARG0",	LREG,	REGARG,
 	"RSP",	LREG,	31,
-
-	"F",		LF,	0,
-
-	"F0",		LFREG,	0,
-	"F1",		LFREG,	1,
-	"F2",		LFREG,	2,
-	"F3",		LFREG,	3,
-	"F4",		LFREG,	4,
-	"F5",		LFREG,	5,
-	"F6",		LFREG,	6,
-	"F7",		LFREG,	7,
-	"F8",		LFREG,	8,
-	"F9",		LFREG,	9,
-	"F10",	LFREG,	10,
-	"F11",	LFREG,	11,
-	"F12",	LFREG,	12,
-	"F13",	LFREG,	13,
-	"F14",	LFREG,	14,
-	"F15",	LFREG,	15,
-	"F16",	LFREG,	16,
-	"F17",	LFREG,	17,
-	"F18",	LFREG,	18,
-	"F19",	LFREG,	19,
-	"F20",	LFREG,	20,
-	"F21",	LFREG,	21,
-	"F22",	LFREG,	22,
-	"F23",	LFREG,	23,
-	"F24",	LFREG,	24,
-	"F25",	LFREG,	25,
-	"F26",	LFREG,	26,
-	"F27",	LFREG,	27,
-	"F28",	LFREG,	28,
-	"F29",	LFREG,	29,
-	"F30",	LFREG,	30,
-	"F31",	LFREG,	31,
 
 	"V",		LV,	0,
 
@@ -382,6 +117,7 @@ struct
 	"ADCS",	LTYPE1,	AADCS,
 	"ADCSW",	LTYPE1,	AADCSW,
 	"ADCW",	LTYPE1,	AADCW,
+
 	"ADD",	LTYPE1,	AADD,
 	"ADDS",	LTYPE1,	AADDS,
 	"ADDSW",	LTYPE1,	AADDSW,
@@ -502,12 +238,13 @@ struct
 	"RBITW",	LTYPE2,	ARBITW,
 	"REM",	LTYPE1, AREM,
 	"REMW",	LTYPE1,	AREMW,
-	"RET",	LTYPEA,	ARET,
+
 	"REV",	LTYPE2,	AREV,
 	"REV16",	LTYPE2,	AREV16,
 	"REV16W",	LTYPE2,	AREV16W,
 	"REV32",	LTYPE2,	AREV32,
 	"REVW",	LTYPE2,	AREVW,
+
 	"ROR",	LTYPE1,	AROR,
 	"RORW",	LTYPE1,	ARORW,
 	"SBC",	LTYPE1,	ASBC,
@@ -751,16 +488,10 @@ struct
 	"BLT",		LTYPE5,	ABLT,
 	"BGT",		LTYPE5,	ABGT,
 	"BLE",		LTYPE5,	ABLE,
+
 	"BCASE",	LTYPE5,	ABCASE,
 
-	"TEXT",		LTYPEB, ATEXT,
-	"GLOBL",	LTYPEB, AGLOBL,
-	"DATA",		LTYPEC, ADATA,
-	"CASE",		LTYPED, ACASE,
-	"END",		LTYPEE, AEND,
-	"WORD",		LTYPEH, AWORD,
 	"DWORD",		LTYPEH, ADWORD,
-	"NOP",		LTYPEQ, ANOP,
 	"RETURN",	LTYPEA,	ARETURN,
 	0
 };
@@ -771,69 +502,8 @@ cinit(void)
 	Sym *s;
 	int i;
 
-	nullgen.sym = S;
-	nullgen.offset = 0;
-	nullgen.type = D_NONE;
-	nullgen.name = D_NONE;
 	nullgen.reg = NREG;
 	nullgen.xreg = NREG;
-	if(FPCHIP)
-		nullgen.dval = 0;
-	for(i=0; i<sizeof(nullgen.sval); i++)
-		nullgen.sval[i] = 0;
-
-	nerrors = 0;
-	iostack = I;
-	iofree = I;
-	peekc = IGN;
-	nhunk = 0;
-	for(i=0; i<NHASH; i++)
-		hash[i] = S;
-	for(i=0; itab[i].name; i++) {
-		s = slookup(itab[i].name);
-		if(s->value != 0)
-			yyerror("internal: duplicate %s", s->name);
-		s->type = itab[i].type;
-		s->value = itab[i].value;
-	}
-
-	pathname = allocn(pathname, 0, 100);
-	if(getwd(pathname, 99) == 0) {
-		pathname = allocn(pathname, 100, 900);
-		if(getwd(pathname, 999) == 0)
-			strcpy(pathname, "/???");
-	}
-}
-
-void
-syminit(Sym *s)
-{
-
-	s->type = LNAME;
-	s->value = 0;
-}
-
-void
-cclean(void)
-{
-
-	outcode(AEND, &nullgen, NREG, &nullgen);
-	Bflush(&obuf);
-}
-
-void
-zname(char *n, int t, int s)
-{
-
-	Bputc(&obuf, ANAME);
-	Bputc(&obuf, ANAME>>8);
-	Bputc(&obuf, t);	/* type */
-	Bputc(&obuf, s);	/* sym */
-	while(*n) {
-		Bputc(&obuf, *n);
-		n++;
-	}
-	Bputc(&obuf, 0);
 }
 
 void
@@ -849,23 +519,7 @@ zaddr(Gen *a, int s)
 		if((vlong)l != a->offset)
 			a->type = D_DCONST;
 	}
-	Bputc(&obuf, a->type);
-	Bputc(&obuf, a->reg);
-	Bputc(&obuf, s);
-	Bputc(&obuf, a->name);
 	switch(a->type) {
-	default:
-		print("unknown type %d\n", a->type);
-		exits("arg");
-
-	case D_NONE:
-	case D_REG:
-	case D_SP:
-	case D_FREG:
-	case D_VREG:
-	case D_COND:
-		break;
-
 	case D_DCONST:
 		l = a->offset;
 		Bputc(&obuf, l);
@@ -878,43 +532,6 @@ zaddr(Gen *a, int s)
 		Bputc(&obuf, l>>16);
 		Bputc(&obuf, l>>24);
 		break;
-
-	case D_OREG:
-	case D_XPRE:
-	case D_XPOST:
-	case D_CONST:
-	case D_BRANCH:
-	case D_SHIFT:
-	case D_EXTREG:
-	case D_ROFF:
-	case D_SPR:
-		l = a->offset;
-		Bputc(&obuf, l);
-		Bputc(&obuf, l>>8);
-		Bputc(&obuf, l>>16);
-		Bputc(&obuf, l>>24);
-		break;
-
-	case D_SCONST:
-		n = a->sval;
-		for(i=0; i<NSNAME; i++) {
-			Bputc(&obuf, *n);
-			n++;
-		}
-		break;
-
-	case D_FCONST:
-		ieeedtod(&e, a->dval);
-		Bputc(&obuf, e.l);
-		Bputc(&obuf, e.l>>8);
-		Bputc(&obuf, e.l>>16);
-		Bputc(&obuf, e.l>>24);
-		Bputc(&obuf, e.h);
-		Bputc(&obuf, e.h>>8);
-		Bputc(&obuf, e.h>>16);
-		Bputc(&obuf, e.h>>24);
-		break;
-	}
 }
 
 static int
@@ -1005,77 +622,3 @@ outcode4(int a, Gen *g1, int reg, Gen *g2, Gen *g3)
 		zaddr(g2, s2);
 	zaddr(g3, s3);
 }
-
-void
-outhist(void)
-{
-	Gen g;
-	Hist *h;
-	char *p, *q, *op, c;
-	int n;
-
-	g = nullgen;
-	c = pathchar();
-	for(h = hist; h != H; h = h->link) {
-		p = h->name;
-		op = 0;
-		/* on windows skip drive specifier in pathname */
-		if(systemtype(Windows) && p && p[1] == ':'){
-			p += 2;
-			c = *p;
-		}
-		if(p && p[0] != c && h->offset == 0 && pathname){
-			/* on windows skip drive specifier in pathname */
-			if(systemtype(Windows) && pathname[1] == ':') {
-				op = p;
-				p = pathname+2;
-				c = *p;
-			} else if(pathname[0] == c){
-				op = p;
-				p = pathname;
-			}
-		}
-		while(p) {
-			q = strchr(p, c);
-			if(q) {
-				n = q-p;
-				if(n == 0){
-					n = 1;	/* leading "/" */
-					*p = '/';	/* don't emit "\" on windows */
-				}
-				q++;
-			} else {
-				n = strlen(p);
-				q = 0;
-			}
-			if(n) {
-				Bputc(&obuf, ANAME);
-				Bputc(&obuf, ANAME>>8);
-				Bputc(&obuf, D_FILE);	/* type */
-				Bputc(&obuf, 1);	/* sym */
-				Bputc(&obuf, '<');
-				Bwrite(&obuf, p, n);
-				Bputc(&obuf, 0);
-			}
-			p = q;
-			if(p == 0 && op) {
-				p = op;
-				op = 0;
-			}
-		}
-		g.offset = h->offset;
-
-		Bputc(&obuf, AHISTORY);
-		Bputc(&obuf, AHISTORY>>8);
-		Bputc(&obuf, 0);
-		Bputc(&obuf, h->line);
-		Bputc(&obuf, h->line>>8);
-		Bputc(&obuf, h->line>>16);
-		Bputc(&obuf, h->line>>24);
-		zaddr(&nullgen, 0);
-		zaddr(&g, 0);
-	}
-}
-
-#include "../cc/lexbody"
-#include "../cc/macbody"

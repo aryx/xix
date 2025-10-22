@@ -1,13 +1,6 @@
-%{
-#include "a.h"
-%}
 %union
 {
-	Sym	*sym;
 	vlong	lval;
-	double	dval;
-	char	sval[NSNAME];
-	Gen	gen;
 }
 %left	'|'
 %left	'^'

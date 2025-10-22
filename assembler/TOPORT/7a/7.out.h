@@ -1,13 +1,4 @@
-/*
- * arm64
- */
-
-#define	NSNAME		8
-#define	NSYM		50
 #define	NREG		32
-
-#define NOPROF		(1<<0)
-#define DUPOK		(1<<1)
 
 #define	REGRET		0
 #define	REGARG		0
@@ -38,25 +29,29 @@
 
 enum	as
 {
-	AXXX,
-
 	AADC,
 	AADCS,
 	AADCSW,
 	AADCW,
+
 	AADD,
 	AADDS,
 	AADDSW,
 	AADDW,
+
 	AADR,
 	AADRP,
+
 	AAND,
 	AANDS,
 	AANDSW,
 	AANDW,
+
 	AASR,
 	AASRW,
+
 	AAT,
+
 	AB,
 	ABFI,
 	ABFIW,
@@ -64,35 +59,50 @@ enum	as
 	ABFMW,
 	ABFXIL,
 	ABFXILW,
+
 	ABIC,
 	ABICS,
 	ABICSW,
 	ABICW,
+
 	ABL,
+
 	ABRK,
+
 	ACBNZ,
 	ACBNZW,
+
 	ACBZ,
 	ACBZW,
+
 	ACCMN,
 	ACCMNW,
+
 	ACCMP,
 	ACCMPW,
+
 	ACINC,
 	ACINCW,
+
 	ACINV,
 	ACINVW,
+
 	ACLREX,
+
 	ACLS,
 	ACLSW,
 	ACLZ,
 	ACLZW,
+
 	ACMN,
 	ACMNW,
+
 	ACMP,
 	ACMPW,
+
 	ACNEG,
 	ACNEGW,
+
 	ACRC32B,
 	ACRC32CB,
 	ACRC32CH,
@@ -101,6 +111,7 @@ enum	as
 	ACRC32H,
 	ACRC32W,
 	ACRC32X,
+
 	ACSEL,
 	ACSELW,
 	ACSET,
@@ -113,25 +124,33 @@ enum	as
 	ACSINVW,
 	ACSNEG,
 	ACSNEGW,
+
 	ADC,
 	ADCPS1,
 	ADCPS2,
 	ADCPS3,
+
 	ADMB,
 	ADRPS,
 	ADSB,
+
 	AEON,
 	AEONW,
 	AEOR,
 	AEORW,
+
 	AERET,
+
 	AEXTR,
 	AEXTRW,
+
 	AHINT,
 	AHLT,
 	AHVC,
+
 	AIC,
 	AISB,
+
 	ALDAR,
 	ALDARB,
 	ALDARH,
@@ -142,61 +161,80 @@ enum	as
 	ALDAXRB,
 	ALDAXRH,
 	ALDAXRW,
+
 	ALDXR,
 	ALDXRB,
 	ALDXRH,
 	ALDXRW,
 	ALDXP,
 	ALDXPW,
+
 	ALSL,
 	ALSLW,
+
 	ALSR,
 	ALSRW,
+
 	AMADD,
 	AMADDW,
+
 	AMNEG,
 	AMNEGW,
+
 	AMOVK,
 	AMOVKW,
 	AMOVN,
 	AMOVNW,
 	AMOVZ,
 	AMOVZW,
+
 	AMRS,
 	AMSR,
+
 	AMSUB,
 	AMSUBW,
+
 	AMUL,
 	AMULW,
+
 	AMVN,
 	AMVNW,
+
 	ANEG,
 	ANEGS,
 	ANEGSW,
 	ANEGW,
+
 	ANGC,
 	ANGCS,
 	ANGCSW,
 	ANGCW,
-	ANOP,
+
+
 	AORN,
 	AORNW,
 	AORR,
 	AORRW,
+
 	APRFM,
 	APRFUM,
+
 	ARBIT,
 	ARBITW,
+
 	AREM,
 	AREMW,
-	ARET,
+
+
 	AREV,
 	AREV16,
 	AREV16W,
 	AREV32,
 	AREVW,
+
 	AROR,
 	ARORW,
+
 	ASBC,
 	ASBCS,
 	ASBCSW,
@@ -207,22 +245,27 @@ enum	as
 	ASBFMW,
 	ASBFX,
 	ASBFXW,
+
 	ASDIV,
 	ASDIVW,
+
 	ASEV,
 	ASEVL,
+
 	ASMADDL,
 	ASMC,
 	ASMNEGL,
 	ASMSUBL,
 	ASMULH,
 	ASMULL,
+
 	ASTXR,
 	ASTXRB,
 	ASTXRH,
 	ASTXP,
 	ASTXPW,
 	ASTXRW,
+
 	ASTLP,
 	ASTLPW,
 	ASTLR,
@@ -235,16 +278,19 @@ enum	as
 	ASTLXRB,
 	ASTLXRH,
 	ASTLXRW,
+
 	ASUB,
 	ASUBS,
 	ASUBSW,
 	ASUBW,
+
 	ASVC,
 	ASXTB,
 	ASXTBW,
 	ASXTH,
 	ASXTHW,
 	ASXTW,
+
 	ASYS,
 	ASYSL,
 	ATBNZ,
@@ -252,12 +298,14 @@ enum	as
 	ATLBI,
 	ATST,
 	ATSTW,
+
 	AUBFIZ,
 	AUBFIZW,
 	AUBFM,
 	AUBFMW,
 	AUBFX,
 	AUBFXW,
+
 	AUDIV,
 	AUDIVW,
 	AUMADDL,
@@ -272,8 +320,10 @@ enum	as
 	AUXTW,
 	AUXTBW,
 	AUXTHW,
+
 	AWFE,
 	AWFI,
+
 	AYIELD,
 
 	AMOVB,
@@ -325,6 +375,7 @@ enum	as
 	AFCMPED,
 	AFCMPES,
 	AFCMPS,
+
 	AFCVTSD,
 	AFCVTDS,
 	AFCVTZSD,
@@ -335,6 +386,7 @@ enum	as
 	AFCVTZUDW,
 	AFCVTZUS,
 	AFCVTZUSW,
+
 	AFDIVD,
 	AFDIVS,
 	AFMOVD,
@@ -347,6 +399,7 @@ enum	as
 	AFSQRTS,
 	AFSUBD,
 	AFSUBS,
+
 	ASCVTFD,
 	ASCVTFS,
 	ASCVTFWD,
@@ -356,19 +409,7 @@ enum	as
 	AUCVTFWD,
 	AUCVTFWS,
 
-	ATEXT,
-	ADATA,
-	AGLOBL,
-	AHISTORY,
-	ANAME,
-	AWORD,
-	ADYNT,
-	AINIT,
-	ABCASE,
-	ACASE,
 	ADWORD,
-	ASIGNAME,
-	AGOK,
 	ARETURN,
 	AEND,
 
@@ -425,8 +466,6 @@ enum	as
 	ASHA256H2,
 	ASHA256SU0,
 	ASHA256SU1,
-	
-	ALAST,
 };
 
 /* form offset parameter to SYS; special register number */
@@ -436,17 +475,6 @@ enum	as
 /* type/name */
 enum
 {
-	D_GOK	= 0,
-	D_NONE,
-
-/* name */
-	D_EXTERN,
-	D_STATIC,
-	D_AUTO,
-	D_PARAM,
-
-/* type */
-	D_BRANCH,
 	D_OREG,		/* offset(reg) */
 	D_XPRE,		/* offset(reg)! - pre-indexed */
 	D_XPOST,		/* (reg)offset! - post-indexed */
@@ -498,21 +526,4 @@ enum
 	D_DAIFSet = (1<<30)|0,
 	D_DAIFClr = (1<<30)|1
 
-};
-
-/*
- * this is the ranlib header
- */
-#define	SYMDEF	"__.SYMDEF"
-
-/*
- * this is the simulated IEEE floating point
- */
-typedef	struct	Ieee	Ieee;
-struct	Ieee
-{
-	long	l;	/* contains ls-man	0xffffffff */
-	long	h;	/* contains sign	0x80000000
-				    exp		0x7ff00000
-				    ms-man	0x000fffff */
 };

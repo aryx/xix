@@ -186,15 +186,11 @@ itab[] =
 
 	"MCR",		LTYPEJ, 0,
 	"MRC",		LTYPEJ, 1,
-	0
 };
 
 void
 outcode(int a, int scond, Gen *g1, int reg, Gen *g2)
 {
-	int sf, st, t;
-	Sym *s;
-
 	/* hack to make B.NE etc. work: turn it into the corresponding conditional */
 	if(a == AB){
 		a = bcode[scond&0xf];

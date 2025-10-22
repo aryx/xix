@@ -10,16 +10,23 @@
 enum
 {
 	REGZERO		= 0,	/* always zero */
+
 	REGLINK		= 1,	/* call return address */
+
 	REGSP		= 2,	/* stack pointer */
 	REGSB		= 3,	/* static base */
+
 	REGTMP		= 4,	/* assembler temporary */
+
 	REGEXT		= 7,	/* extern reg from here down */
+
 	REGRET		= 8,	/* fn return value */
 	REGARG		= 8,	/* fn arg value */
+
 	REGALLOC	= 15,	/* highest reg to allocate (allow for RV32E) */
 
 	FREGRET		= 0,	/* fn return value */
+
 	FREGEXT		= 27,	/* extern reg from here down */
 	FREGZERO	= 28,
 	FREGHALF	= 29,
@@ -75,6 +82,7 @@ enum	as
 	AMOV,
 	AMOVW,
 	AMOVWU,
+
 	AMUL,
 	AMULH,
 	AMULHSU,
@@ -95,6 +103,7 @@ enum	as
 	ASLLW,
 	ASLT,
 	ASLTU,
+
 	ASRA,
 	ASRAW,
 	ASRL,
@@ -120,6 +129,7 @@ enum	as
 	AMOVWD,     /* FCVT.D.W */
 	AMOVUD,     /* FCVT.D.WU */
 	AMOVDW,     /* FCVT.W.D */
+
 	AADDF,      /* FADD.S */
 	AADDD,      /* FADD.D */
 	ASUBF,      /* FSUB.S */
@@ -172,6 +182,7 @@ enum	as
 
 	/* RV64 extension */
 	ADWORD,
+
 	AMOVFV,
 	AMOVDV,
 	AMOVVF,

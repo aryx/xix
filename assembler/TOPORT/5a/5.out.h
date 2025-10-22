@@ -128,6 +128,7 @@ enum	as
 
 	ABX,
 	ABXRET,
+
 	ADWORD,
 
 	/* moved here to preserve values of older identifiers */

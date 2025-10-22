@@ -1,12 +1,16 @@
 #define	NREG	32
 
 #define	REGZERO		0
+
 #define	REGRET		1
 #define	REGARG		1
+
 /* compiler allocates R1 up as temps */
+
 /* compiler allocates register variables R3-R23 */
 #define	REGEXT		25
 /* compiler allocates external registers R25 down */
+
 /* dont use R26 R27 */
 #define	REGTMP		28
 #define	REGSP		29
@@ -17,6 +21,7 @@
 /* compiler allocates register variables F4-F22 */
 /* compiler allocates external registers F22 down */
 #define	FREGEXT		22
+
 #define	FREGZERO	24	/* both float and double */
 #define	FREGHALF	26	/* double */
 #define	FREGONE		28	/* double */
@@ -125,9 +130,11 @@ enum	as
 	AMOVV,
 	AMOVVL,
 	AMOVVR,
+
 	ASLLV,
 	ASRAV,
 	ASRLV,
+
 	ADIVV,
 	ADIVVU,
 	AREMV,
@@ -139,16 +146,11 @@ enum	as
 	ASUBV,
 	ASUBVU,
 
-	ADYNT,
-	AINIT,
-
-	ABCASE,
-	ACASE,
-
 	ATRUNCFV,
 	ATRUNCDV,
 	ATRUNCFW,
 	ATRUNCDW,
+
 	AMOVWU,
 	AMOVFV,
 	AMOVDV,

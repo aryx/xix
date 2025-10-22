@@ -24,3 +24,11 @@ type register = A.register (* between 0 and 31 *)
 
 type fregister = A.fregister (* between 0 and 31 *)
 [@@deriving show]
+
+(* TOPORT *)
+type mregister = M of int (* between 0 and 31 *)
+[@@deriving show]
+
+(* TOPORT *)
+type fcrregister = FCR of int (* between 0 and 31 *)
+[@@deriving show]

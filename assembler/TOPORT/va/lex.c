@@ -51,6 +51,7 @@ itab[] =
 	"M31",		LMREG,	31,
 
 	"FCR",		LFCR,	0,
+
 	"FCR0",		LFCREG,	0,
 	"FCR1",		LFCREG,	1,
 	"FCR2",		LFCREG,	2,
@@ -88,11 +89,14 @@ itab[] =
 	"ADDU",		LTYPE1, AADDU,
 	"SUB",		LTYPE1, ASUB,	/* converted to ADD(-) in loader */
 	"SUBU",		LTYPE1, ASUBU,
+
 	"SGT",		LTYPE1, ASGT,
 	"SGTU",		LTYPE1, ASGTU,
+
 	"AND",		LTYPE1, AAND,
 	"OR",		LTYPE1, AOR,
 	"XOR",		LTYPE1, AXOR,
+
 	"SLL",		LTYPE1, ASLL,
 	"SRL",		LTYPE1, ASRL,
 	"SRA",		LTYPE1, ASRA,
@@ -101,6 +105,7 @@ itab[] =
 	"ADDVU",		LTYPE1, AADDVU,
 	"SUBV",		LTYPE1, ASUBV,	/* converted to ADD(-) in loader */
 	"SUBVU",		LTYPE1, ASUBVU,
+
 	"SLLV",		LTYPE1, ASLLV,
 	"SRLV",		LTYPE1, ASRLV,
 	"SRAV",		LTYPE1, ASRAV,
@@ -118,10 +123,12 @@ itab[] =
 
 	"BREAK",	LTYPEJ, ABREAK,		/* overloaded CACHE opcode */
 	"END",		LTYPE4, AEND,
+
 	"REM",		LTYPE6, AREM,
 	"REMU",		LTYPE6, AREMU,
 
 	"SYSCALL",	LTYPE4, ASYSCALL,
+
 	"TLBP",		LTYPE4, ATLBP,
 	"TLBR",		LTYPE4, ATLBR,
 	"TLBWI",	LTYPE4, ATLBWI,
@@ -148,7 +155,6 @@ itab[] =
 
 	"BEQ",		LTYPE9, ABEQ,
 	"BNE",		LTYPE9, ABNE,
-
 	"BGEZ",		LTYPEA, ABGEZ,
 	"BGEZAL",	LTYPEA, ABGEZAL,
 	"BGTZ",		LTYPEA, ABGTZ,

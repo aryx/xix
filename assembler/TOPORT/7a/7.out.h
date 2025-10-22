@@ -8,15 +8,20 @@
 /* compiler allocates register variables R10 up */
 #define	REGMIN		9
 #define	REGMAX		15
+
 #define	REGIP0		16
 #define	REGIP1		17
+
 #define	REGTMP		REGIP1
+
 /* compiler allocates external registers R27 down */
 #define	REGEXT		27
+
 #define	REGSB		28
 #define	REGFP		29
 #define	REGLINK		30
 #define	REGSP		31
+
 #define	REGZERO		31
 
 #define	NFREG		32

@@ -9,7 +9,7 @@ open Preprocessor
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5a/va/..., the Plan 9 assemblers.
+(* An OCaml port of 5a/va, the Plan 9 ARM/MIPS assemblers.
  *
  * Main limitations compared to 5a/va/...:
  *  - no multiple files processing in parallel 
@@ -32,10 +32,9 @@ open Preprocessor
  *  - handle the instructions used in the kernel
  * later:
  *  - look at the 5a Go sources in the Golang source, maybe ideas to steal?
- *  - make it a multi-archi assembler by following
- *    the new design by Rob Pike of Go assembler to factorize things
+ *  - follow the new design by Rob Pike of Go assembler to factorize things
  *    (see https://www.youtube.com/watch?v=KINIAgRpkDA&feature=youtu.be )
- *    (=~ 2 tables, register string -> code, and opcode string -> code
+ *    (=~ 2 tables, register string -> code, and opcode string -> code)
  *)
 
 (*****************************************************************************)
@@ -59,8 +58,10 @@ let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   Object5.save (prog, !Location_cpp.history) chan
 
 (* Will modify chan as a side effect *)
-let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
-  assemble5 caps conf infile chan
+let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
+  match arch with
+  | Arch.Arm -> assemble5 caps conf infile chan
+  | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 
 (*****************************************************************************)
 (* Entry point *)
@@ -171,7 +172,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
      * with cpp we open other files.
      *)
     outfile |> FS.with_open_out caps (fun chan ->
-        assemble caps conf (Fpath.v !infile) chan
+        assemble caps conf arch (Fpath.v !infile) chan
     );
     Exit.OK
   with exn ->

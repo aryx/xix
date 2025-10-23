@@ -14,6 +14,8 @@ module L = Location_cpp
  *  - no unicode support
  *  - no uU lL suffix
  *    (but was skipped by 5a anyway)
+ *  - no '=' used for constant definition
+ *    (but can use cpp #define for that)
  *)
 
 let error s =
@@ -26,7 +28,9 @@ let code_of_escape_char c =
 
   | 'f' -> error "unknown \\f"
   (* could be removed, special 5a escape char *)
-  | 'a' -> 0x07 | 'v' -> 0x0b | 'z' -> 0
+  | 'a' -> 0x07 | 'v' -> 0x0b 
+  (* useful to generate C-compatible strings with special end marker *)
+  | 'z' -> 0
 
   (* stricter: we disallow \ with unknown character *)
   | _ -> error "unknown escape sequence"
@@ -90,11 +94,13 @@ rule token = parse
   | "R" (digit+ (*as s*)) 
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         let i = int_of_string s in 
+        (* the range check is arch-specific and must be done in Parse_asmX.ml *)
         TRx (Ast_asm.R i)
       }
   | "F" (digit+ (*as s*)) 
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         let i = int_of_string s in 
+        (* the range check is arch-specific and must be done in Parse_asmX.ml *)
         TFx (Ast_asm.F i)
       }
 

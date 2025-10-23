@@ -12,4 +12,5 @@ val main: <caps; ..> ->
 
 (* main algorithm; works by side effect on outfile *)
 val assemble: <Cap.open_in; .. > ->
-  Preprocessor.conf -> Fpath.t (* infile *) -> Chan.o (* outfile *) -> unit
+  Preprocessor.conf -> Arch.t -> Fpath.t (* infile *) -> Chan.o (* outfile *) ->
+  unit

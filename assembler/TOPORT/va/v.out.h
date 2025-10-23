@@ -24,18 +24,12 @@
 enum	as
 {
 	AABSW,
-
 	AABSD,
 	AABSF,
 
-
-	AADD,
-	AADDU,
 	AADDW,
-
 	AADDD,
 	AADDF,
-
 
 	ABEQ,
 	ABFPF,
@@ -55,10 +49,7 @@ enum	as
 	ACMPGTD,
 	ACMPGTF,
 
-	ADIV,
-	ADIVU,
 	ADIVW,
-
 	ADIVD,
 	ADIVF,
 
@@ -79,32 +70,15 @@ enum	as
 	AMOVWL,
 	AMOVWR,
 
-	AMUL,
-	AMULU,
 	AMULW,
-
 	AMULD,
 	AMULF,
 
 	ANEGW,
-
 	ANEGD,
 	ANEGF,
 
-	AREM,
-	AREMU,
-
-	ASGT,
-	ASGTU,
-
-	ASLL,
-	ASRA,
-	ASRL,
-
-	ASUB,
-	ASUBU,
 	ASUBW,
-
 	ASUBD,
 	ASUBF,
 
@@ -117,20 +91,8 @@ enum	as
 	AMOVVL,
 	AMOVVR,
 
-	ASLLV,
-	ASRAV,
-	ASRLV,
-
-	ADIVV,
-	ADIVVU,
 	AREMV,
 	AREMVU,
-	AMULV,
-	AMULVU,
-	AADDV,
-	AADDVU,
-	ASUBV,
-	ASUBVU,
 
 	ATRUNCFV,
 	ATRUNCDV,

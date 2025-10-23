@@ -56,9 +56,9 @@ type gen =
 (* ------------------------------------------------------------------------- *)
 type instr =
   (* Arithmetic *)
-  | Logic of logic_opcode * imr * register option * imr
-  | Arith of arith_opcode * imr * register option * imr
-  | ArithMul of mul_opcode
+  | Arith of arith_opcode * imr * register option * register
+  | NOR of imr * register option * imr
+  | ArithMul of mul_opcode * register * register option * register
 
   (* Memory *)
   | Move
@@ -74,9 +74,9 @@ type instr =
   | RFE
   | TBLP
 
-  and logic_opcode = 
-    | AND | OR | XOR | NOR
   and arith_opcode =
+    (* logic *)
+    | AND | OR | XOR
     (* arithmetic *)
     | ADD of size * A.sign  | SUB of size * A.sign (* converted to ADD(-) in vl *)
     (* bitshifting *)
@@ -86,6 +86,7 @@ type instr =
 
   and size = W (* word, 32 bits *) | V (* vlong, 64 bits *)
   and mul_opcode =
+    (* TODO? in va/a.h there is REMVU/REMV but not in va/lex.c, weird *)
     | MUL of size * A.sign | DIV of size * A.sign | REM of A.sign
 
 [@@deriving show]

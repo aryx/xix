@@ -61,14 +61,45 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TIDENT s ->
       (match s with
       (* instructions *)
-      | "AND" -> TLOGIC AND | "OR" -> TLOGIC OR | "XOR" -> TLOGIC XOR
-      | "NOR" -> TLOGIC NOR
+      | "AND" -> TARITH AND | "OR" -> TARITH OR | "XOR" -> TARITH XOR 
+      | "NOR" -> TNOR
 
+      | "ADD" -> TARITH (ADD (W, S)) 
+      | "ADDU" -> TARITH (ADD (W, U))
+      | "ADDV" -> TARITH (ADD (V, S))
+      | "ADDVU"  -> TARITH (ADD (V, U))
+      | "SUB" -> TARITH (SUB (W, S)) 
+      | "SUBU" -> TARITH (SUB (W, U))
+      | "SUBV" -> TARITH (SUB (V, S))
+      | "SUBVU"  -> TARITH (SUB (V, U))
+
+      | "SLL" -> TARITH (SLL W)
+      | "SLLV" -> TARITH (SLL V)
+      | "SRL" -> TARITH (SRL W)
+      | "SRLV" -> TARITH (SRL V)
+      | "SRA" -> TARITH (SRA W)
+      | "SRAV" -> TARITH (SRA V)
+
+      | "SGT" -> TARITH (SGT S)
+      | "SGTU" -> TARITH (SGT U)
+
+      | "MUL" -> TMULOP (MUL (W, S)) 
+      | "MULU" -> TMULOP (MUL (W, U))
+      | "MULV" -> TMULOP (MUL (V, S))
+      | "MULVU"  -> TMULOP (MUL (V, U))
+      | "DIV" -> TMULOP (DIV (W, S)) 
+      | "DIVU" -> TMULOP (DIV (W, U))
+      | "DIVV" -> TMULOP (DIV (V, S))
+      | "DIVVU"  -> TMULOP (DIV (V, U))
+
+      | "REM" -> TMULOP (REM S)
+      | "REMU" -> TMULOP (REM U)
+    
       | "JMP" -> TJMP
       | "JAL" -> TJAL
 
-      | "BREAK" -> TBREAK
       | "SYSCALL" -> TSYSCALL
+      | "BREAK" -> TBREAK
       | "RFE" -> TRFE
 
       (* advanced *)
@@ -117,4 +148,3 @@ let parse_no_cpp (chan : Chan.i) : Ast_asmv.program =
     Parser_asmv.program token lexbuf
   with Parsing.Parse_error ->
       failwith (spf "Syntax error: line %d" !L.line)
-

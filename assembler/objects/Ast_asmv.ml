@@ -72,7 +72,7 @@ type instr =
   | SYSCALL
   | BREAK
   | RFE
-  | TBLP
+  | TLB of tlb_kind
 
   and arith_opcode =
     (* logic *)
@@ -88,6 +88,9 @@ type instr =
   and mul_opcode =
     (* TODO? in va/a.h there is REMVU/REMV but not in va/lex.c, weird *)
     | MUL of size * A.sign | DIV of size * A.sign | REM of A.sign
+  and tlb_kind =
+    (* ?? *)
+    | P | R | WI | WR
 
 [@@deriving show]
 

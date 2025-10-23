@@ -82,11 +82,6 @@ enum	as
 	ASUBD,
 	ASUBF,
 
-	ATLBP,
-	ATLBR,
-	ATLBWI,
-	ATLBWR,
-
 	AMOVV,
 	AMOVVL,
 	AMOVVR,

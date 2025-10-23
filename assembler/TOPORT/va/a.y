@@ -23,14 +23,6 @@ inst:
 	}
 
 /*
- * SPECIAL
- */
-|	LTYPE4 comma
-	{
-		outcode($1, &nullgen, NREG, &nullgen);
-	}
-
-/*
  * MOVW
  */
 |	LTYPE5 vlgen ',' vgen

@@ -36,6 +36,7 @@ module L = Location_cpp
 %token <Ast_asmv.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
+%token <Ast_asmv.tlb_kind> TTLB
 
 %token TRET TNOP
 
@@ -181,6 +182,9 @@ instr:
  | TNOR   imr        TC imr { NOR ($2, None, $4) }
  | TMULOP reg TC reg TC reg { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg { ArithMul ($1, $2, None, $4) }
+
+ | TSYSCALL { SYSCALL }
+ | TTLB { TLB $1 }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/

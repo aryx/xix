@@ -102,6 +102,11 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "BREAK" -> TBREAK
       | "RFE" -> TRFE
 
+      | "TLBP" -> TTLB P
+      | "TLBR" -> TTLB R
+      | "TLBWI" -> TTLB WI
+      | "TLBWR" -> TTLB WR
+
       (* advanced *)
       | "M" -> TM
       | _ when s =~ "^M\\([0-9]+\\)$" ->

@@ -1,9 +1,8 @@
 %token	<lval>	LHI LLO LMREG 
 %token	<lval>	LTYPEX LFCREG LM
 %token	<lval>	LFCR LSCHED
-%type	<lval>	pointer offset sreg
-%type	<gen>	gen vgen lgen vlgen rel reg freg mreg fcreg
-%type	<gen>	imm ximm ireg name oreg imr nireg fgen
+%type	<gen>	vgen lgen vlgen freg mreg fcreg
+%type	<gen>	oreg imr nireg fgen
 %%
 
 line:
@@ -51,6 +50,7 @@ inst:
 	{
 		outcode($1, &nullgen, NREG, &nullgen);
 	}
+
 /*
  * MOVW
  */
@@ -60,6 +60,7 @@ inst:
 			print("one side must be register\n");
 		outcode($1, &$2, NREG, &$4);
 	}
+
 /*
  * MUL/DIV
  */
@@ -71,6 +72,7 @@ inst:
 	{
 		outcode($1, &$2, $4, &$6);
 	}
+
 /*
  * JMP/JAL
  */
@@ -82,6 +84,7 @@ inst:
 	{
 		outcode($1, &nullgen, NREG, &$3);
 	}
+
 |	LTYPE8 comma rel
 	{
 		outcode($1, &nullgen, NREG, &$3);
@@ -90,10 +93,12 @@ inst:
 	{
 		outcode($1, &nullgen, NREG, &$3);
 	}
+
 |	LTYPE8 sreg ',' nireg
 	{
 		outcode($1, &nullgen, $2, &$4);
 	}
+
 /*
  * BEQ/BNE
  */
@@ -342,104 +347,4 @@ name:
 		$$.name = $3;
 		$$.sym = S;
 		$$.offset = $1;
-	}
-|	LNAME offset '(' pointer ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.name = $4;
-		$$.sym = $1;
-		$$.offset = $2;
-	}
-|	LNAME '<' '>' offset '(' LSB ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.name = D_STATIC;
-		$$.sym = $1;
-		$$.offset = $4;
-	}
-
-offset:
-	{
-		$$ = 0;
-	}
-|	'+' con
-	{
-		$$ = $2;
-	}
-|	'-' con
-	{
-		$$ = -$2;
-	}
-
-pointer:
-	LSB
-|	LSP
-|	LFP
-
-con:
-	LCONST
-|	LVAR
-	{
-		$$ = $1->value;
-	}
-|	'-' con
-	{
-		$$ = -$2;
-	}
-|	'+' con
-	{
-		$$ = $2;
-	}
-|	'~' con
-	{
-		$$ = ~$2;
-	}
-|	'(' expr ')'
-	{
-		$$ = $2;
-	}
-
-expr:
-	con
-|	expr '+' expr
-	{
-		$$ = $1 + $3;
-	}
-|	expr '-' expr
-	{
-		$$ = $1 - $3;
-	}
-|	expr '*' expr
-	{
-		$$ = $1 * $3;
-	}
-|	expr '/' expr
-	{
-		$$ = $1 / $3;
-	}
-|	expr '%' expr
-	{
-		$$ = $1 % $3;
-	}
-|	expr '<' '<' expr
-	{
-		$$ = $1 << $4;
-	}
-|	expr '>' '>' expr
-	{
-		$$ = $1 >> $4;
-	}
-|	expr '&' expr
-	{
-		$$ = $1 & $3;
-	}
-|	expr '^' expr
-	{
-		$$ = $1 ^ $3;
-	}
-|	expr '|' expr
-	{
-		$$ = $1 | $3;
 	}

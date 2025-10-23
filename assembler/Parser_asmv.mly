@@ -165,6 +165,7 @@ virtual_instr:
 /*(*************************************************************************)*/
 /*(*1 Instructions *)*/
 /*(*************************************************************************)*/
+instr:
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
@@ -204,6 +205,36 @@ rel:
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/
 /*(*-----------------------------------------*)*/
+
+name: 
+ | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
+
+pointer: 
+ | TSB  { (fun name_opt offset ->
+           match name_opt with
+           | None -> error "identifier expected"
+           | Some e -> Global (e, offset)
+          )
+         }
+ | TSP  { (fun name_opt offset ->
+           match name_opt with
+           | None -> Param (None, offset)
+           | Some ({name = s; priv = _false; signature = _}) -> Param (Some s, offset)
+           )
+         }
+ | TFP  { (fun name_opt offset ->
+           match name_opt with
+           | None -> Local (None, offset)
+           | Some ({name = s; priv = _false; signature = _}) -> Local (Some s, offset)
+           )
+         }
+
+
+offset:
+ | /* empty */ { 0 }
+ | TPLUS  con  { $2 }
+ | TMINUS con  { - $2 }
 
 /*(*-----------------------------------------*)*/
 /*(*2 Integer constant and expression (arch independent)  *)*/

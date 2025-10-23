@@ -2,10 +2,11 @@
 open Common
 
 module L = Location_cpp
+module T = Token_asm
+module A = Ast_asm
 (* for fields access for ocaml-light *)
 open Parse_cpp
 open Chan
-module T = Token_asm
 open Parser_asm5
 open Ast_asm5
 
@@ -73,19 +74,19 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | "MVN" -> TMVN
 
       (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
-      | "MOVW" -> TMOV Word
-      | "MOVB" -> TMOV (Byte     Signed) | "MOVBU" -> TMOV (Byte     Unsigned)
-      | "MOVH" -> TMOV (HalfWord Signed) | "MOVHU" -> TMOV (HalfWord Unsigned)
+      | "MOVW" -> TMOV A.Word
+      | "MOVB" -> TMOV (A.Byte     A.Signed) | "MOVBU" -> TMOV (A.Byte     A.Unsigned)
+      | "MOVH" -> TMOV (A.HalfWord A.Signed) | "MOVHU" -> TMOV (A.HalfWord A.Unsigned)
 
       | "B" -> TB | "BL" -> TBL
       | "CMP" -> TCMP CMP 
       | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
 
       | "BEQ" -> TBx EQ | "BNE" -> TBx NE
-      | "BGT" -> TBx (GT Signed) | "BLT" -> TBx (LT Signed)
-      | "BGE" -> TBx (GE Signed) | "BLE" -> TBx (LE Signed)
-      | "BHI" -> TBx (GT Unsigned) | "BLO" -> TBx (LT Unsigned) 
-      | "BHS" -> TBx (GE Unsigned) | "BLS" -> TBx (LE Unsigned)
+      | "BGT" -> TBx (GT A.Signed) | "BLT" -> TBx (LT A.Signed)
+      | "BGE" -> TBx (GE A.Signed) | "BLE" -> TBx (LE A.Signed)
+      | "BHI" -> TBx (GT A.Unsigned) | "BLO" -> TBx (LT A.Unsigned) 
+      | "BHS" -> TBx (GE A.Unsigned) | "BLS" -> TBx (LE A.Unsigned)
       | "BMI" -> TBx MI | "BPL" -> TBx PL 
       | "BVS" -> TBx VS | "BVC" -> TBx VC
 
@@ -94,10 +95,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       (* conditions *)
       | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND (GT Signed)   | ".LT" -> TCOND (LT Signed) 
-      | ".GE" -> TCOND (GE Signed)   | ".LE" -> TCOND (LE Signed)
-      | ".HI" -> TCOND (GT Unsigned) | ".LO" -> TCOND (LT Unsigned)
-      | ".HS" -> TCOND (GE Unsigned) | ".LS" -> TCOND (LE Unsigned)
+      | ".GT" -> TCOND (GT A.Signed)   | ".LT" -> TCOND (LT A.Signed) 
+      | ".GE" -> TCOND (GE A.Signed)   | ".LE" -> TCOND (LE A.Signed)
+      | ".HI" -> TCOND (GT A.Unsigned) | ".LO" -> TCOND (LT A.Unsigned)
+      | ".HS" -> TCOND (GE A.Unsigned) | ".LS" -> TCOND (LE A.Unsigned)
       | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
 

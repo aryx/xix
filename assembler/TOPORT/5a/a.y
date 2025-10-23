@@ -1,42 +1,10 @@
-%left	'|'
-%left	'^'
-%left	'&'
-%left	'<' '>'
-%left	'+' '-'
-%left	'*' '/' '%'
-%token	<lval>	LTYPE1 LTYPE2 LTYPE3 LTYPE4 LTYPE5
-%token	<lval>	LTYPE6 LTYPE7 LTYPE8 LTYPE9 LTYPEA
-%token	<lval>	LTYPEB LTYPEC LTYPED LTYPEE LTYPEF
-%token	<lval>	LTYPEG LTYPEH LTYPEI LTYPEJ LTYPEK
-%token	<lval>	LTYPEL LTYPEM LTYPEN LTYPEBX
-%token	<lval>	LCONST LSP LSB LFP LPC
-%token	<lval>	LTYPEX LR LREG LF LFREG LC LCREG LPSR LFCR
-%token	<lval>	LCOND LS LAT
-%token	<dval>	LFCONST
-%token	<sval>	LSCONST
-%token	<sym>	LNAME LLAB LVAR
 %type	<lval>	con expr oexpr pointer offset sreg spreg creg
 %type	<lval>	rcon cond reglist
 %type	<gen>	gen rel reg regreg freg shift fcon frcon
 %type	<gen>	imm ximm name oreg ireg nireg ioreg imsr
 %%
-prog:
-|	prog line
 
 line:
-	LLAB ':'
-	{
-		if($1->value != pc)
-			yyerror("redeclaration of %s", $1->name);
-		$1->value = pc;
-	}
-	line
-|	LNAME ':'
-	{
-		$1->type = LLAB;
-		$1->value = pc;
-	}
-	line
 |	LNAME '=' expr ';'
 	{
 		$1->type = LVAR;
@@ -48,8 +16,6 @@ line:
 			yyerror("redeclaration of %s", $1->name);
 		$1->value = $3;
 	}
-|	';'
-|	inst ';'
 |	error ';'
 
 inst:
@@ -63,24 +29,6 @@ inst:
 |	LTYPE1 cond imsr ',' spreg ','
 	{
 		outcode($1, $2, &$3, $5, &nullgen);
-	}
-|	LTYPE1 cond imsr ',' reg
-	{
-		outcode($1, $2, &$3, NREG, &$5);
-	}
-/*
- * MVN
- */
-|	LTYPE2 cond imsr ',' reg
-	{
-		outcode($1, $2, &$3, NREG, &$5);
-	}
-/*
- * MOVW
- */
-|	LTYPE3 cond gen ',' gen
-	{
-		outcode($1, $2, &$3, NREG, &$5);
 	}
 /*
  * B/BL
@@ -97,13 +45,6 @@ inst:
  * BX
  */
 |	LTYPEBX comma ireg
-	{
-		outcode($1, Always, &nullgen, NREG, &$3);
-	}
-/*
- * BEQ
- */
-|	LTYPE5 comma rel
 	{
 		outcode($1, Always, &nullgen, NREG, &$3);
 	}
@@ -143,46 +84,6 @@ inst:
 		outcode($1, $2, &g, NREG, &$7);
 	}
 /*
- * SWAP
- */
-|	LTYPE9 cond reg ',' ireg ',' reg
-	{
-		outcode($1, $2, &$5, $3.reg, &$7);
-	}
-|	LTYPE9 cond reg ',' ireg comma
-	{
-		outcode($1, $2, &$5, $3.reg, &$3);
-	}
-|	LTYPE9 cond comma ireg ',' reg
-	{
-		outcode($1, $2, &$4, $6.reg, &$6);
-	}
-/*
- * RET
- */
-|	LTYPEA cond comma
-	{
-		outcode($1, $2, &nullgen, NREG, &nullgen);
-	}
-/*
- * TEXT/GLOBL
- */
-|	LTYPEB name ',' imm
-	{
-		outcode($1, Always, &$2, NREG, &$4);
-	}
-|	LTYPEB name ',' con ',' imm
-	{
-		outcode($1, Always, &$2, $4, &$6);
-	}
-/*
- * DATA
- */
-|	LTYPEC name '/' con ',' ximm
-	{
-		outcode($1, Always, &$2, $4, &$6);
-	}
-/*
  * CASE
  */
 |	LTYPED cond reg comma
@@ -196,6 +97,7 @@ inst:
 	{
 		outcode($1, Always, &nullgen, NREG, &$3);
 	}
+
 /*
  * floating-point coprocessor
  */
@@ -215,6 +117,7 @@ inst:
 	{
 		outcode($1, $2, &$3, $5.reg, &nullgen);
 	}
+
 /*
  * MCR MRC
  */
@@ -261,10 +164,11 @@ inst:
 		outcode($1, Always, &nullgen, NREG, &nullgen);
 	}
 
+
+
+
+
 cond:
-	{
-		$$ = Always;
-	}
 |	cond LCOND
 	{
 		$$ = ($1 & ~C_SCOND) | $2;
@@ -274,39 +178,8 @@ cond:
 		$$ = $1 | $2;
 	}
 
-comma:
-|	',' comma
 
-rel:
-	con '(' LPC ')'
-	{
-		$$ = nullgen;
-		$$.type = D_BRANCH;
-		$$.offset = $1 + pc;
-	}
-|	LNAME offset
-	{
-		$$ = nullgen;
-		if(pass == 2)
-			yyerror("undefined label: %s", $1->name);
-		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $2;
-	}
-|	LLAB offset
-	{
-		$$ = nullgen;
-		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $1->value + $2;
-	}
-
-ximm:	'$' con
-	{
-		$$ = nullgen;
-		$$.type = D_CONST;
-		$$.offset = $2;
-	}
+ximm:	
 |	'$' oreg
 	{
 		$$ = $2;
@@ -317,13 +190,8 @@ ximm:	'$' con
 		$$ = $4;
 		$$.type = D_OCONST;
 	}
-|	'$' LSCONST
-	{
-		$$ = nullgen;
-		$$.type = D_SCONST;
-		memcpy($$.sval, $2, sizeof($$.sval));
-	}
 |	fcon
+
 
 fcon:
 	'$' LFCONST
@@ -359,9 +227,6 @@ reglist:
 	}
 
 gen:
-	reg
-|	ximm
-|	shift
 |	shift '(' spreg ')'
 	{
 		$$ = $1;
@@ -426,18 +291,6 @@ oreg:
 	}
 |	ioreg
 
-imsr:
-	reg
-|	imm
-|	shift
-
-imm:	'$' con
-	{
-		$$ = nullgen;
-		$$.type = D_CONST;
-		$$.offset = $2;
-	}
-
 reg:
 	spreg
 	{
@@ -487,12 +340,6 @@ rcon:
 		if($$ < 0 || $$ >= 16)
 			print("register value out of range\n");
 		$$ = (($1&15) << 8) | (1 << 4);
-	}
-|	con
-	{
-		if($$ < 0 || $$ >= 32)
-			print("shift value out of range\n");
-		$$ = ($1&31) << 7;
 	}
 
 sreg:
@@ -551,62 +398,11 @@ name:
 		$$.sym = S;
 		$$.offset = $1;
 	}
-|	LNAME offset '(' pointer ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.name = $4;
-		$$.sym = $1;
-		$$.offset = $2;
-	}
-|	LNAME '<' '>' offset '(' LSB ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.name = D_STATIC;
-		$$.sym = $1;
-		$$.offset = $4;
-	}
-
-offset:
-	{
-		$$ = 0;
-	}
-|	'+' con
-	{
-		$$ = $2;
-	}
-|	'-' con
-	{
-		$$ = -$2;
-	}
-
-pointer:
-	LSB
-|	LSP
-|	LFP
 
 con:
-	LCONST
 |	LVAR
 	{
 		$$ = $1->value;
-	}
-|	'-' con
-	{
-		$$ = -$2;
-	}
-|	'+' con
-	{
-		$$ = $2;
-	}
-|	'~' con
-	{
-		$$ = ~$2;
-	}
-|	'(' expr ')'
-	{
-		$$ = $2;
 	}
 
 oexpr:
@@ -616,47 +412,4 @@ oexpr:
 |	',' expr
 	{
 		$$ = $2;
-	}
-
-expr:
-	con
-|	expr '+' expr
-	{
-		$$ = $1 + $3;
-	}
-|	expr '-' expr
-	{
-		$$ = $1 - $3;
-	}
-|	expr '*' expr
-	{
-		$$ = $1 * $3;
-	}
-|	expr '/' expr
-	{
-		$$ = $1 / $3;
-	}
-|	expr '%' expr
-	{
-		$$ = $1 % $3;
-	}
-|	expr '<' '<' expr
-	{
-		$$ = $1 << $4;
-	}
-|	expr '>' '>' expr
-	{
-		$$ = $1 >> $4;
-	}
-|	expr '&' expr
-	{
-		$$ = $1 & $3;
-	}
-|	expr '^' expr
-	{
-		$$ = $1 ^ $3;
-	}
-|	expr '|' expr
-	{
-		$$ = $1 | $3;
 	}

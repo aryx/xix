@@ -17,11 +17,15 @@ open Preprocessor
  *  - no unicode support? or can ocamllex in ocaml-light do unicode?
  *
  * better than 5a/va/...:
- *  - far greater code reuse across all assemblers thanks to Lexer_asm.mll
- *    factorization, Ast_asm.ml and 'instr polymorphic type, use of
- *    simple marshalling instead of adhoc object format (different in each
- *    arch), generalize more code in macroprocessor/ and use simple marshal
- *    again for cpp line history.
+ *  - far greater code reuse across all assemblers thanks to:
+ *    * Lexer_asm.mll factorization
+ *    * Ast_asm.ml and 'instr polymorphic type
+ *    * use of simple marshalling instead of adhoc object format
+ *      (which were slightly different in each arch)
+ *    * seperate AST generation from resolving which allows to factorize
+ *      checks of redefinition and the resolution of labels
+ *    * generalize more code in macroprocessor/
+ *    * use simple marshal again for cpp line history
  * 
  * todo:
  *  - advanced instructions: floats, MULL, coprocessor, PSR, etc

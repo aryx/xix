@@ -1,5 +1,6 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 module L = Location_cpp
 module T = Token_asm
@@ -47,7 +48,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TSEMICOLON i -> TSEMICOLON i
   | T.TCOLON -> TCOLON 
   | T.TDOT -> TDOT 
-  | T.TCOMMA-> TCOMMA
+  | T.TCOMMA-> TC
   | T.TDOLLAR-> TDOLLAR
   | T.TOPAR-> TOPAR
   | T.TCPAR-> TCPAR
@@ -105,6 +106,13 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       (* less: special bits *)
       (* less: float, MUL, ... *)
 
+      (* advanced *)
+      | "C" -> TC
+      | _ when s =~ "^C\\([0-9]+\\)$" ->
+            let i = int_of_string (Regexp_.matched1 s) in
+            if i >= 0 && i <= 15
+            then TCx (C i)
+            else Lexer_asm.error ("register number not valid")
 
       | _ -> TIDENT s
       )

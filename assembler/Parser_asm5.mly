@@ -11,9 +11,19 @@ module L = Location_cpp
 (* Prelude *)
 (*****************************************************************************)
 (* 
+ * Limitations compared to 5a:
+ *  - does not support 'NAME=expr;' constant definition, which allows
+ *    to evaluate constant at parsing time (and avoid the need to build
+ *    expr AST as we want to separate AST generation from checks/resolution/eval)
+ *    (but can use cpp for constant definition so not a big loss)
+ *  - does not allow SP and PC in a few places with 'spreg' and 'sreg' original
+ *    grammar rule
+ *    (but can use directly R13 and R15)
+ *  - just imm for SWI
+ *  - no END instruction
  * todo:
  *  - special bits
- *  - advanced instructions
+ *  - lots of advanced instructions (float, mulm, ...)
  *)
 
 (*****************************************************************************)
@@ -70,7 +80,8 @@ let mk_e name static =
 
 %token <Ast_asm5.register> TRx
 %token <Ast_asm5.fregister> TFx
-%token TR TF
+%token <Ast_asm5.cregister> TCx
+%token TR TF TC
 %token TPC TSB TFP TSP
 
 /*(*-----------------------------------------*)*/
@@ -93,7 +104,8 @@ let mk_e name static =
 /*(* line number *)*/
 %token <int> TSEMICOLON 
 
-%token TCOLON TDOT TCOMMA TDOLLAR
+%token TCOLON TDOT TDOLLAR
+%token TC
 %token TOPAR TCPAR
 
 /*(*-----------------------------------------*)*/
@@ -152,20 +164,20 @@ label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions *)*/
 /*(*************************************************************************)*/
-/*(* I can't factorize in attr_opt; shift/reduce conflict with TCOMMA *)*/
+/*(* I can't factorize in attr_opt; shift/reduce conflict with TC *)*/
 pseudo_instr:
- | TTEXT  global TCOMMA imm    
+ | TTEXT  global TC imm    
      { TEXT  ($2, noattr, $4) }
- | TGLOBL global TCOMMA imm    
+ | TGLOBL global TC imm    
      { GLOBL ($2, noattr, $4) }
 
  /*(* less: would be better to have mnemonics for attributes too *)*/
- | TTEXT global TCOMMA con TCOMMA imm
+ | TTEXT global TC con TC imm
      { TEXT ($2, attributes_of_int $4, $6) }
- | TGLOBL global TCOMMA con TCOMMA imm
+ | TGLOBL global TC con TC imm
      { GLOBL ($2, attributes_of_int $4, $6) }
 
- | TDATA global_and_offset TSLASH con TCOMMA ximm  
+ | TDATA global_and_offset TSLASH con TC ximm  
      { DATA (fst $2, snd $2, $4, $6) }
 
 
@@ -187,7 +199,7 @@ global_and_offset: name
 /*(*************************************************************************)*/
 
 virtual_instr:
- /*(* was in instr before *)*/
+ /*(* was in instr before. stricter: no cond (nor comma) *)*/
  | TRET                  { RET }
 
 /*(*************************************************************************)*/
@@ -195,23 +207,23 @@ virtual_instr:
 /*(*************************************************************************)*/
 
 instr:
- | TARITH cond  imsr TCOMMA reg TCOMMA reg 
+ | TARITH cond  imsr TC reg TC reg 
      { (Arith ($1, None, $3, Some $5, $7), $2) }
- | TARITH cond  imsr TCOMMA reg  { (Arith ($1,  None, $3, None, $5), $2) }
- | TMVN   cond  imsr TCOMMA reg  { (Arith (MVN, None, $3, None, $5), $2) }
+ | TARITH cond  imsr TC reg  { (Arith ($1,  None, $3, None, $5), $2) }
+ | TMVN   cond  imsr TC reg  { (Arith (MVN, None, $3, None, $5), $2) }
 
- | TMOV   cond  gen  TCOMMA gen     { (MOVE ($1, None, $3, $5), $2) }
+ | TMOV   cond  gen  TC gen     { (MOVE ($1, None, $3, $5), $2) }
 
- | TSWAP  cond  reg  TCOMMA ireg    { (SWAP ($1, $5, $3, None), $2) }
- | TSWAP  cond  ireg TCOMMA reg     { (SWAP ($1, $3, $5, None), $2) }
- | TSWAP  cond  reg  TCOMMA ireg TCOMMA reg 
+ | TSWAP  cond  reg  TC ireg    { (SWAP ($1, $5, $3, None), $2) }
+ | TSWAP  cond  ireg TC reg     { (SWAP ($1, $3, $5, None), $2) }
+ | TSWAP  cond  reg  TC ireg TC reg 
      { (SWAP ($1, $5, $3, Some $7), $2) }
 
  /*(*stricter: no cond here, use Bxx form, so normalized AST *)*/
  | TB        branch           { (B $2, AL) }
  | TBx       rel              { (Bxx ($1, $2), AL) }
  | TBL  cond branch           { (BL $3, $2)}
- | TCMP cond imsr TCOMMA reg  { (Cmp ($1, $3, $5), $2) } 
+ | TCMP cond imsr TC reg  { (Cmp ($1, $3, $5), $2) } 
 
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }

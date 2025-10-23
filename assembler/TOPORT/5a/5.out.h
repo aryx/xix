@@ -1,5 +1,3 @@
-#define	NREG		16
-
 #define	ALLTHUMBS	(1<<2)
 
 #define	REGRET		0
@@ -12,10 +10,6 @@
 /* compiler allocates external registers R10 down */
 #define	REGTMP		11
 
-#define	REGSB		12
-#define	REGSP		13
-#define	REGLINK		14
-#define	REGPC		15
 
 #define	REGTMPT		7	/* used by the loader for thumb code */
 
@@ -28,46 +22,13 @@
 
 enum	as
 {
-	AAND,
-	AEOR,
-	ASUB,
-	ARSB,
-	AADD,
-	AADC,
-	ASBC,
-	ARSC,
-	ATST,
-	ATEQ,
-	ACMP,
-	ACMN,
-	AORR,
-	ABIC,
 
-	AMVN,
-
-	AB,
-	ABL,
-
-/* 
- * Do not reorder or fragment the conditional branch 
- * opcodes, or the predication code will break 
- */ 
-	ABEQ,
-	ABNE,
 	ABCS,
 	ABHS,
 	ABCC,
 	ABLO,
-	ABMI,
-	ABPL,
-	ABVS,
-	ABVC,
 	ABHI,
 	ABLS,
-	ABGE,
-	ABLT,
-	ABGT,
-	ABLE,
 
 	AMOVWD,
 	AMOVWF,
@@ -91,27 +52,16 @@ enum	as
 //	ASQRTF,
 //	ASQRTD,
 
-	ASRL,
-	ASRA,
-	ASLL,
 	AMULU,
 	ADIVU,
-	AMUL,
-	ADIV,
-	AMOD,
 	AMODU,
 
-	AMOVB,
-	AMOVBU,
-	AMOVH,
-	AMOVHU,
-	AMOVW,
+
 	AMOVM,
+
 	ASWPBU,
 	ASWPW,
 
-	ARFE,
-	ASWI,
 	AMULA,
 
 	AGOK,

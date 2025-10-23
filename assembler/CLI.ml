@@ -80,6 +80,7 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   (* TODO: derive it from argv.(0) *)
   let arch = 
+    (* alt: use Arch.arch_of_char argv.(0).(1) *)
     match Filename.basename argv.(0) with
     | "o5a" -> Arch.Arm
     | "ova" -> Arch.Mips

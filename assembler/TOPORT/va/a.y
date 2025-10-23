@@ -21,6 +21,7 @@ inst:
 			print("one side must be register\n");
 		outcode($1, &$2, NREG, &$4);
 	}
+
 /*
  * SPECIAL
  */
@@ -37,18 +38,6 @@ inst:
 		if(!isreg(&$2) && !isreg(&$4))
 			print("one side must be register\n");
 		outcode($1, &$2, NREG, &$4);
-	}
-
-/*
- * MUL/DIV
- */
-|	LTYPE6 reg ',' sreg comma
-	{
-		outcode($1, &$2, $4, &nullgen);
-	}
-|	LTYPE6 reg ',' sreg ',' reg
-	{
-		outcode($1, &$2, $4, &$6);
 	}
 
 /*

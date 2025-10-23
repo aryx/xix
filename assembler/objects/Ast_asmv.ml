@@ -58,6 +58,7 @@ type instr =
   (* Arithmetic *)
   | Logic of logic_opcode * imr * register option * imr
   | Arith of arith_opcode * imr * register option * imr
+  | ArithMul of mul_opcode
 
   (* Memory *)
   | Move
@@ -78,12 +79,14 @@ type instr =
   and arith_opcode =
     (* arithmetic *)
     | ADD of size * A.sign  | SUB of size * A.sign (* converted to ADD(-) in vl *)
-    | MUL of A.sign | DIV of A.sign | REM of A.sign
     (* bitshifting *)
-    | SLL | SRA | SRL
+    | SLL of size | SRA of size | SRL of size
     (* less useful *)
     | SGT of A.sign
+
   and size = W (* word, 32 bits *) | V (* vlong, 64 bits *)
+  and mul_opcode =
+    | MUL of size * A.sign | DIV of size * A.sign | REM of A.sign
 
 [@@deriving show]
 

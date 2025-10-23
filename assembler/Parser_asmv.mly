@@ -33,6 +33,7 @@ module L = Location_cpp
 
 %token <Ast_asmv.logic_opcode> TLOGIC
 %token <Ast_asmv.arith_opcode> TARITH
+%token <Ast_asmv.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
 
@@ -174,7 +175,12 @@ virtual_instr:
 /*(*1 Instructions *)*/
 /*(*************************************************************************)*/
 instr:
- | TLOGIC { failwith "XXX" }
+ | TARITH imr TC reg TC reg { failwith "XXX" }
+ | TARITH imr        TC reg { failwith "XXX" }
+ | TLOGIC imr TC reg TC imr { failwith "XXX" }
+ | TLOGIC imr        TC imr { failwith "XXX" }      
+ | TMULOP reg TC reg TC reg { failwith "XXX" }
+ | TMULOP reg        TC reg { failwith "XXX" }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/

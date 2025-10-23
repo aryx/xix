@@ -1,9 +1,6 @@
 void
 main(int argc, char *argv[])
 {
-	thechar = 'v';
-	thestring = "mips";
-
 	case  'L':			/* for little-endian mips */
 		thechar = '0';
 		thestring = "spim";
@@ -14,16 +11,6 @@ itab[] =
 {
 	"HI",		LHI,	D_HI,
 	"LO",		LLO,	D_LO,
-
-
-	"ADDV",		LTYPE1, AADDV,
-	"ADDVU",		LTYPE1, AADDVU,
-	"SUBV",		LTYPE1, ASUBV,	/* converted to ADD(-) in loader */
-	"SUBVU",		LTYPE1, ASUBVU,
-
-	"SLLV",		LTYPE1, ASLLV,
-	"SRLV",		LTYPE1, ASRLV,
-	"SRAV",		LTYPE1, ASRAV,
 
 	"MOVB",		LTYPE3, AMOVB,
 	"MOVBU",	LTYPE3, AMOVBU,
@@ -43,11 +30,6 @@ itab[] =
 	"MOVV",		LTYPE5, AMOVV,
 	"MOVD",		LTYPE5, AMOVD,
 	"MOVF",		LTYPE5, AMOVF,
-
-	"DIVV",		LTYPE6, ADIVV,
-	"DIVVU",		LTYPE6, ADIVVU,
-	"MULV",		LTYPE6, AMULV,
-	"MULVU",		LTYPE6, AMULVU,
 
 	"BEQ",		LTYPE9, ABEQ,
 	"BNE",		LTYPE9, ABNE,

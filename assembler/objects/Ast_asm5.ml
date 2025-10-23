@@ -43,6 +43,7 @@ type register = A.register (* between 0 and 15 *)
 type fregister = A.fregister (* between 0 and 15 *)
 [@@deriving show]
 
+(* ?? *)
 type cregister = C of int (* between 0 and 15 *)
 
 (* reserved by linker *)

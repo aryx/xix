@@ -23,6 +23,7 @@ itab[] =
 
 	"MOVW",		LTYPE5, AMOVW,
 	"MOVV",		LTYPE5, AMOVV,
+
 	"MOVD",		LTYPE5, AMOVD,
 	"MOVF",		LTYPE5, AMOVF,
 

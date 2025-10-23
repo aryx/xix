@@ -25,9 +25,11 @@ type register = A.register (* between 0 and 31 *)
 type fregister = A.fregister (* between 0 and 31 *)
 [@@deriving show]
 
+(* ?? *)
 type mregister = M of int (* between 0 and 31 *)
 [@@deriving show]
 
+(* ?? *)
 type fcrregister = FCR of int (* between 0 and 31 *)
 [@@deriving show]
 
@@ -64,14 +66,14 @@ type instr =
   | Move
 
   (* Control flow *)
-  | JAL
   | JMP
+  | RFE
+  | JAL
   | Bxx
 
   (* System *)
   | SYSCALL
   | BREAK
-  | RFE
   | TLB of tlb_kind
 
   and arith_opcode =

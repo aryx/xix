@@ -37,8 +37,6 @@ enum	as
 	AADDF,
 
 
-	AAND,
-
 	ABEQ,
 	ABFPF,
 	ABFPT,

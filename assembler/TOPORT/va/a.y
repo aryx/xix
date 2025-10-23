@@ -1,58 +1,16 @@
-%left	'|'
-%left	'^'
-%left	'&'
-%left	'<' '>'
-%left	'+' '-'
-%left	'*' '/' '%'
-%token	<lval>	LTYPE1 LTYPE2 LTYPE3 LTYPE4 LTYPE5
-%token	<lval>	LTYPE6 LTYPE7 LTYPE8 LTYPE9 LTYPEA
-%token	<lval>	LTYPEB LTYPEC LTYPED LTYPEE LTYPEF
-%token	<lval>	LTYPEG LTYPEH LTYPEI LTYPEJ LTYPEK
-%token	<lval>	LCONST LSP LSB LFP LPC LHI LLO LMREG 
-%token	<lval>	LTYPEX LREG LFREG LFCREG LR LM LF
+%token	<lval>	LHI LLO LMREG 
+%token	<lval>	LTYPEX LFCREG LM
 %token	<lval>	LFCR LSCHED
-%token	<dval>	LFCONST
-%token	<sval>	LSCONST
-%token	<sym>	LNAME LLAB LVAR
-%type	<lval>	con expr pointer offset sreg
+%type	<lval>	pointer offset sreg
 %type	<gen>	gen vgen lgen vlgen rel reg freg mreg fcreg
 %type	<gen>	imm ximm ireg name oreg imr nireg fgen
 %%
-prog:
-|	prog line
 
 line:
-	LLAB ':'
-	{
-		if($1->value != pc)
-			yyerror("redeclaration of %s", $1->name);
-		$1->value = pc;
-	}
-	line
-|	LNAME ':'
-	{
-		$1->type = LLAB;
-		$1->value = pc;
-	}
-	line
-|	LNAME '=' expr ';'
-	{
-		$1->type = LVAR;
-		$1->value = $3;
-	}
-|	LVAR '=' expr ';'
-	{
-		if($1->value != $3)
-			yyerror("redeclaration of %s", $1->name);
-		$1->value = $3;
-	}
 |	LSCHED ';'
 	{
 		nosched = $1;
 	}
-|	';'
-|	inst ';'
-|	error ';'
 
 inst:
 /*
@@ -160,24 +118,7 @@ inst:
 			print("left side must be register\n");
 		outcode($1, &$2, NREG, &$4);
 	}
-/*
- * TEXT/GLOBL
- */
-|	LTYPEB name ',' imm
-	{
-		outcode($1, &$2, NREG, &$4);
-	}
-|	LTYPEB name ',' con ',' imm
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-/*
- * DATA
- */
-|	LTYPEC name '/' con ',' ximm
-	{
-		outcode($1, &$2, $4, &$6);
-	}
+
 /*
  * floating-type
  */
@@ -238,32 +179,6 @@ inst:
 		outcode($1, &$2, NREG, &$4);
 	}
 
-comma:
-|	','
-
-rel:
-	con '(' LPC ')'
-	{
-		$$ = nullgen;
-		$$.type = D_BRANCH;
-		$$.offset = $1 + pc;
-	}
-|	LNAME offset
-	{
-		$$ = nullgen;
-		if(pass == 2)
-			yyerror("undefined label: %s", $1->name);
-		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $2;
-	}
-|	LLAB offset
-	{
-		$$ = nullgen;
-		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $1->value + $2;
-	}
 
 vlgen:
 	lgen
@@ -346,12 +261,7 @@ freg:
 		$$.reg = $3;
 	}
 
-ximm:	'$' con
-	{
-		$$ = nullgen;
-		$$.type = D_CONST;
-		$$.offset = $2;
-	}
+ximm:	
 |	'$' oreg
 	{
 		$$ = $2;
@@ -362,12 +272,7 @@ ximm:	'$' con
 		$$ = $4;
 		$$.type = D_OCONST;
 	}
-|	'$' LSCONST
-	{
-		$$ = nullgen;
-		$$.type = D_SCONST;
-		memcpy($$.sval, $2, sizeof($$.sval));
-	}
+
 |	'$' LFCONST
 	{
 		$$ = nullgen;
@@ -394,15 +299,6 @@ nireg:
 		$$ = $1;
 		if($1.name != D_EXTERN && $1.name != D_STATIC) {
 		}
-	}
-
-ireg:
-	'(' sreg ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.reg = $2;
-		$$.offset = 0;
 	}
 
 gen:
@@ -436,34 +332,6 @@ oreg:
 		$$.type = D_OREG;
 		$$.reg = $3;
 		$$.offset = $1;
-	}
-
-imr:
-	reg
-|	imm
-
-imm:	'$' con
-	{
-		$$ = nullgen;
-		$$.type = D_CONST;
-		$$.offset = $2;
-	}
-
-reg:
-	sreg
-	{
-		$$ = nullgen;
-		$$.type = D_REG;
-		$$.reg = $1;
-	}
-
-sreg:
-	LREG
-|	LR '(' con ')'
-	{
-		if($$ < 0 || $$ >= NREG)
-			print("register value out of range\n");
-		$$ = $3;
 	}
 
 name:

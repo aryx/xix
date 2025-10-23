@@ -8,7 +8,6 @@ main(int argc, char *argv[])
 		thechar = '0';
 		thestring = "spim";
 		break;
-	} ARGEND
 }
 
 itab[] =
@@ -71,6 +70,7 @@ itab[] =
 
 	"BEQ",		LTYPE9, ABEQ,
 	"BNE",		LTYPE9, ABNE,
+
 	"BGEZ",		LTYPEA, ABGEZ,
 	"BGEZAL",	LTYPEA, ABGEZAL,
 	"BGTZ",		LTYPEA, ABGTZ,

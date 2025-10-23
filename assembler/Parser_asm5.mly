@@ -1,9 +1,10 @@
 %{
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Either
 
 open Ast_asm
+open Parser_asm
 open Ast_asm5
 module L = Location_cpp
 
@@ -11,17 +12,20 @@ module L = Location_cpp
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * Limitations compared to 5a:
- *  - does not support 'NAME=expr;' constant definition, nor use of it
+ * General limitations compared to 5a/va/...:
+ *  - no support for 'NAME=expr;' constant definition, nor use of it
  *    in expressions, which allows to evaluate constant at parsing time 
- *    and avoid the need to build expr AST (as we want to separate AST
+ *    and avoid the need to build an expr AST (as we want to separate AST
  *    generation from checks/resolution/eval)
  *    (but can use cpp for constant definition so not a big loss)
  *  - does not allow SP and PC in a few places with 'spreg' and 'sreg' original
  *    grammar rule
  *    (but can use directly R13 and R15)
- *  - just imm for SWI
  *  - no END instruction
+ *
+ * Limitations compared to 5a:
+ *  - just imm for SWI
+ *
  * todo:
  *  - special bits
  *  - lots of advanced instructions (float, mulm, ...)
@@ -30,28 +34,7 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
-let error s =
-  raise (L.Error (spf "Syntax error: %s" s, !L.line))
-
-
-let noattr = { dupok = false; prof = true }
-
-(* less: should use keywords in Asm5 instead of abusing integers *)
-let attributes_of_int i =
-   match i with 
-   | 0 -> noattr
-   (* NOPROF *)
-   | 1 -> { dupok = false; prof = false }
-   (* DUPOK *)
-   | 2 -> { dupok = true; prof = true }
-   (* both DUPOK and NOPROF *)
-   | 3 -> { dupok = true; prof = false }
-
-   | _ -> error (spf "unknown attribute or attribute combination: %d" i)
-
-let mk_e name static = 
-  { name; priv = if static then Some (-1) else None; signature = None; }
+(* See Parser_asm.ml *)
 
 %}
 
@@ -67,10 +50,11 @@ let mk_e name static =
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
-%token TRET TNOP
 %token <Ast_asm5.cmp_opcode> TCMP   
 %token <Ast_asm5.condition> TBx TCOND
 %token TSWI TRFE
+
+%token TRET TNOP
 
 %token TTEXT TGLOBL 
 %token TDATA TWORD 
@@ -81,9 +65,11 @@ let mk_e name static =
 
 %token <Ast_asm5.register> TRx
 %token <Ast_asm5.fregister> TFx
-%token <Ast_asm5.cregister> TCx
-%token TR TF TC
+%token TR TF
 %token TPC TSB TFP TSP
+
+%token TC
+%token <Ast_asm5.cregister> TCx
 
 /*(*-----------------------------------------*)*/
 /*(*2 Constants *)*/
@@ -143,7 +129,7 @@ let mk_e name static =
 %%
 
 /*(*************************************************************************)*/
-/*(*1 Program *)*/
+/*(*1 Program (arch independent) *)*/
 /*(*************************************************************************)*/
 
 program: lines EOF { $1 }
@@ -163,7 +149,7 @@ line:
 label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 
 /*(*************************************************************************)*/
-/*(*1 Pseudo instructions *)*/
+/*(*1 Pseudo instructions (arch independent) *)*/
 /*(*************************************************************************)*/
 /*(* I can't factorize in attr_opt; shift/reduce conflict with TC *)*/
 pseudo_instr:
@@ -196,7 +182,7 @@ global_and_offset: name
   } 
 
 /*(*************************************************************************)*/
-/*(*1 Virtual instructions *)*/
+/*(*1 Virtual instructions (arch independent) *)*/
 /*(*************************************************************************)*/
 
 virtual_instr:
@@ -204,7 +190,7 @@ virtual_instr:
  | TRET                  { RET }
 
 /*(*************************************************************************)*/
-/*(*1 Instructions *)*/
+/*(*1 Instructions, arch specific!! *)*/
 /*(*************************************************************************)*/
 
 instr:
@@ -241,32 +227,6 @@ imsr:
 
 imm: TDOLLAR con      { $2 }
 
-con:
- | TINT { $1 }
-
- | TMINUS con { - $2 }
- | TPLUS  con { $2 }
- | TTILDE con { lnot $2 }
-
- | TOPAR expr TCPAR { $2 }
-
-expr:
- | con { $1 }
-
- | expr TPLUS expr  { $1 + $3 }
- | expr TMINUS expr { $1 - $3 }
- | expr TMUL expr   { $1 * $3 }
- | expr TSLASH expr { $1 / $3 }
- | expr TMOD expr   { $1 mod $3 }
-
- | expr TLT TLT expr { $1 lsl $4 }
- | expr TGT TGT expr { $1 asr $4 }
-
- | expr TAND expr    { $1 land $3 }
- | expr TOR expr     { $1 lor $3 }
- | expr TXOR expr    { $1 lxor $3 }
-
-
 reg:
  | TRx                { $1 }
  /*(* stricter? could remove, redundant with cpp *)*/
@@ -276,7 +236,7 @@ reg:
        else error "register value out of range"
      }
 
-
+/*(* ARM specific *)*/
 shift:
  | reg TSHL rcon     { Shift ($1, Sh_logic_left, $3)  }
  | reg TSHR rcon     { Shift ($1, Sh_logic_right, $3)  }
@@ -314,6 +274,20 @@ ioreg:
 ireg: TOPAR reg TCPAR { $2 }
 
 
+
+branch: 
+ | rel               { $1 }
+ | global            { ref (SymbolJump $1) }
+ | ireg              { ref (IndirectJump $1) }
+
+rel:
+ | TIDENT offset        { ref (LabelUse ($1, $2)) }
+ | con TOPAR TPC TCPAR  { ref (Relative $1) }
+
+/*(*-----------------------------------------*)*/
+/*(*2 name and offset (arch independent)  *)*/
+/*(*-----------------------------------------*)*/
+
 name: 
  | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
  | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
@@ -344,17 +318,34 @@ offset:
  | TPLUS  con  { $2 }
  | TMINUS con  { - $2 }
 
+/*(*-----------------------------------------*)*/
+/*(*2 Integer constant and expression (arch independent)  *)*/
+/*(*-----------------------------------------*)*/
 
+con:
+ | TINT { $1 }
 
-branch: 
- | rel               { $1 }
- | global            { ref (SymbolJump $1) }
- | ireg              { ref (IndirectJump $1) }
+ | TMINUS con { - $2 }
+ | TPLUS  con { $2 }
+ | TTILDE con { lnot $2 }
 
-rel:
- | TIDENT offset        { ref (LabelUse ($1, $2)) }
- | con TOPAR TPC TCPAR  { ref (Relative $1) }
+ | TOPAR expr TCPAR { $2 }
 
+expr:
+ | con { $1 }
+
+ | expr TPLUS expr  { $1 + $3 }
+ | expr TMINUS expr { $1 - $3 }
+ | expr TMUL expr   { $1 * $3 }
+ | expr TSLASH expr { $1 / $3 }
+ | expr TMOD expr   { $1 mod $3 }
+
+ | expr TLT TLT expr { $1 lsl $4 }
+ | expr TGT TGT expr { $1 asr $4 }
+
+ | expr TAND expr    { $1 land $3 }
+ | expr TOR expr     { $1 lor $3 }
+ | expr TXOR expr    { $1 lxor $3 }
 
 /*(*************************************************************************)*/
 /*(*1 Misc *)*/

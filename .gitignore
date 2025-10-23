@@ -64,8 +64,8 @@ lineage.pdf
 
 # Parsers
 /assembler/Lexer_asm.ml
-/assembler/Parser_asm.ml
-/assembler/Parser_asm.mli
+/assembler/Parser_asm[5v].ml
+/assembler/Parser_asm[5v].mli
 
 /mk/Lexer.ml
 /mk/Parser.ml

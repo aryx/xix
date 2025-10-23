@@ -57,10 +57,20 @@ let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
         Logs.app (fun m -> m "AST = %s" s));
   Object5.save (prog, !Location_cpp.history) chan
 
+let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (_chan : Chan.o) : unit =
+  let prog = Parse_asmv.parse caps conf infile in
+  let _prog = Resolve_labels.resolve Ast_asmv.branch_opd_of_instr prog in
+  if !dump_ast 
+  then Logs.app (fun m -> m "AST = %s" "TODO");
+  (* Object.savev (prog, !Location_cpp.history) chan *)
+  failwith "TODO: Object.savev"
+
+
 (* Will modify chan as a side effect *)
 let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
   match arch with
   | Arch.Arm -> assemble5 caps conf infile chan
+  | Arch.Mips -> assemblev caps conf infile chan
   | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 
 (*****************************************************************************)
@@ -69,7 +79,13 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
 
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   (* TODO: derive it from argv.(0) *)
-  let arch = Arch.Arm in
+  let arch = 
+    match Filename.basename argv.(0) with
+    | "o5a" -> Arch.Arm
+    | "ova" -> Arch.Mips
+    | s -> failwith (spf "arch could not detected from argv0 %s" s)
+  in
+
   let thechar = Arch.thechar arch in
   let thestring = Arch.thestring arch in
 

@@ -111,7 +111,7 @@ and branch_operand2 =
 [@@deriving show]
 
    (* In a MOVE, sign is relevant only for a load operation *)
-type sign = Signed | Unsigned
+type sign = S (* Signed *) | U (* Unsigned *)
 [@@deriving show]
 (* TODO: add Dword  *)
 type move_size = Word | HalfWord of sign | Byte of sign

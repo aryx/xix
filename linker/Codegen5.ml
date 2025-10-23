@@ -130,18 +130,18 @@ let gcond cond =
   match cond with
   | EQ            -> (0x0, 28)
   | NE            -> (0x1, 28)
-  | GE (Unsigned) -> (0x2, 28)
-  | LT (Unsigned) -> (0x3, 28)
+  | GE (U) -> (0x2, 28)
+  | LT (U) -> (0x3, 28)
   | MI            -> (0x4, 28)
   | PL            -> (0x5, 28)
   | VS            -> (0x6, 28)
   | VC            -> (0x7, 28)
-  | GT (Unsigned) -> (0x8, 28)
-  | LE (Unsigned) -> (0x9, 28) 
-  | GE (Signed)   -> (0xa, 28) 
-  | LT (Signed)   -> (0xb, 28)
-  | GT (Signed)   -> (0xc, 28)
-  | LE (Signed)   -> (0xd, 28)
+  | GT (U) -> (0x8, 28)
+  | LE (U) -> (0x9, 28) 
+  | GE (S)   -> (0xa, 28) 
+  | LT (S)   -> (0xb, 28)
+  | GT (S)   -> (0xc, 28)
+  | LE (S)   -> (0xd, 28)
   | AL            -> (0xe, 28)
   | NV            -> (0xf, 28)
 
@@ -419,7 +419,7 @@ let rules symbols2 autosize init_data node =
         )}
 
     (* MOVBU R, RT -> ADD 0xff, R, RT *)
-    | MOVE (Byte Unsigned, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
+    | MOVE (Byte U, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
         { size = 4; pool = None; binary = (fun () ->
           [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff, 0)]]
         )}
@@ -431,8 +431,8 @@ let rules symbols2 autosize init_data node =
     | MOVE ((Byte _|HalfWord _)as size, None, Imsr(Reg(R rf)),Imsr(Reg(R rt)))->
         let rop =
           match size with
-          | Byte Unsigned | HalfWord Unsigned -> SRL
-          | Byte Signed   | HalfWord Signed -> SRA
+          | Byte U | HalfWord U -> SRL
+          | Byte S   | HalfWord S -> SRA
           | Word -> raise (Impossible "size matched in pattern")
         in
         let sh =
@@ -549,7 +549,7 @@ let rules symbols2 autosize init_data node =
 
     (* Load *)
 
-    | MOVE ((Word | Byte Unsigned) as size, opt, from, Imsr (Reg rt)) ->
+    | MOVE ((Word | Byte U) as size, opt, from, Imsr (Reg rt)) ->
         (match from with
         | Imsr (Imm _ | Reg _) -> 
             if size = Word 

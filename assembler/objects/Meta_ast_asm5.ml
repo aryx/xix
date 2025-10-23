@@ -180,8 +180,8 @@ and vof_move_size =
   | Byte v1 -> let v1 = vof_sign v1 in Ocaml.VSum (("Byte", [ v1 ]))
 and vof_sign =
   function
-  | Signed -> Ocaml.VSum (("Signed", []))
-  | Unsigned -> Ocaml.VSum (("Unsigned", []))
+  | S -> Ocaml.VSum (("Signed", []))
+  | U -> Ocaml.VSum (("Unsigned", []))
 and vof_move_option v = Ocaml.vof_option vof_move_cond v
 and vof_move_cond =
   function

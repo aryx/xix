@@ -2,7 +2,7 @@
 %token	<lval>	LTYPEX LFCREG LM
 %token	<lval>	LFCR LSCHED
 %type	<gen>	vgen lgen vlgen freg mreg fcreg
-%type	<gen>	oreg imr nireg fgen
+%type	<gen>	oreg nireg fgen
 %%
 
 line:
@@ -12,28 +12,6 @@ line:
 	}
 
 inst:
-/*
- * Immed-type
- */
-	LTYPE1 imr ',' sreg ',' reg
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-|	LTYPE1 imr ',' reg
-	{
-		outcode($1, &$2, NREG, &$4);
-	}
-/*
- * NOR
- */
-|	LTYPE2 imr ',' sreg ',' imr
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-|	LTYPE2 imr ',' imr
-	{
-		outcode($1, &$2, NREG, &$4);
-	}
 /*
  * LOAD/STORE, but not MOVW
  */
@@ -187,6 +165,7 @@ inst:
 
 vlgen:
 	lgen
+
 |	fgen
 |	mreg
 |	fcreg
@@ -203,6 +182,7 @@ vlgen:
 
 vgen:
 	gen
+
 |	fgen
 |	mreg
 |	fcreg

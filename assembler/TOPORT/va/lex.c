@@ -16,18 +16,6 @@ itab[] =
 	"LO",		LLO,	D_LO,
 
 
-	"ADD",		LTYPE1, AADD,
-	"ADDU",		LTYPE1, AADDU,
-	"SUB",		LTYPE1, ASUB,	/* converted to ADD(-) in loader */
-	"SUBU",		LTYPE1, ASUBU,
-
-	"SGT",		LTYPE1, ASGT,
-	"SGTU",		LTYPE1, ASGTU,
-
-	"SLL",		LTYPE1, ASLL,
-	"SRL",		LTYPE1, ASRL,
-	"SRA",		LTYPE1, ASRA,
-
 	"ADDV",		LTYPE1, AADDV,
 	"ADDVU",		LTYPE1, AADDVU,
 	"SUBV",		LTYPE1, ASUBV,	/* converted to ADD(-) in loader */
@@ -46,9 +34,6 @@ itab[] =
 	"MOVVL",	LTYPE3, AMOVVL,
 	"MOVVR",	LTYPE3, AMOVVR,
 
-	"REM",		LTYPE6, AREM,
-	"REMU",		LTYPE6, AREMU,
-
 	"TLBP",		LTYPE4, ATLBP,
 	"TLBR",		LTYPE4, ATLBR,
 	"TLBWI",	LTYPE4, ATLBWI,
@@ -59,10 +44,6 @@ itab[] =
 	"MOVD",		LTYPE5, AMOVD,
 	"MOVF",		LTYPE5, AMOVF,
 
-	"DIV",		LTYPE6, ADIV,
-	"DIVU",		LTYPE6, ADIVU,
-	"MUL",		LTYPE6, AMUL,
-	"MULU",		LTYPE6, AMULU,
 	"DIVV",		LTYPE6, ADIVV,
 	"DIVVU",		LTYPE6, ADIVVU,
 	"MULV",		LTYPE6, AMULV,

@@ -1,5 +1,6 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 module L = Location_cpp
 (* for fields access for ocaml-light *)
@@ -46,7 +47,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TSEMICOLON i -> TSEMICOLON i
   | T.TCOLON -> TCOLON 
   | T.TDOT -> TDOT 
-  | T.TCOMMA-> TCOMMA
+  | T.TCOMMA-> TC
   | T.TDOLLAR-> TDOLLAR
   | T.TOPAR-> TOPAR
   | T.TCPAR-> TCPAR
@@ -60,7 +61,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TIDENT s ->
       (match s with
       (* instructions *)
-      | "AND" | "OR" | "XOR" | "NOR" -> 
+      | "AND" -> TLOGIC AND | "OR" -> TLOGIC OR | "XOR" -> TLOGIC XOR
+      | "NOR" -> TLOGIC NOR
 
       | "JMP" -> TJMP
       | "JAL" -> TJAL
@@ -108,7 +110,7 @@ let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.
 
 
 (* Simpler code path; possibly useful in tests *)
-let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
+let parse_no_cpp (chan : Chan.i) : Ast_asmv.program =
   L.line := 1;
   let lexbuf = Lexing.from_channel chan.ic in
   try 

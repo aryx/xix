@@ -12,12 +12,14 @@
 
 (ocamllex Lexer_asm)
 (ocamlyacc Parser_asm5)
+(ocamlyacc Parser_asmv)
 
 (install
  (package xix)
  (section bin)
  (files
   (Main.exe as o5a)
+  (Main.exe as ova)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5a.bc))
 )

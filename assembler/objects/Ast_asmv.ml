@@ -40,14 +40,27 @@ let rLINK = R 31
 
 let nb_registers = 32
 
+
+(* alt: arith_operand *)
+type imr =
+  | Imm of A.integer
+  | Reg of register
+[@@deriving show]
+
+(* alt: move_operand *)
+type gen =
+  | Imr of imr
+
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
 (* ------------------------------------------------------------------------- *)
 type instr =
   (* Arithmetic *)
+  | Logic of logic_opcode * imr * register option * imr
+  | Arith of arith_opcode * imr * register option * imr
 
   (* Memory *)
-  | MOV
+  | Move
 
   (* Control flow *)
   | JAL
@@ -60,20 +73,29 @@ type instr =
   | RFE
   | TBLP
 
-  and arith_opcode = 
-    (* logic *)
+  and logic_opcode = 
     | AND | OR | XOR | NOR
+  and arith_opcode =
     (* arithmetic *)
-    | ADD | SUB | MUL | DIV | REM
+    | ADD of size * A.sign  | SUB of size * A.sign (* converted to ADD(-) in vl *)
+    | MUL of A.sign | DIV of A.sign | REM of A.sign
     (* bitshifting *)
     | SLL | SRA | SRL
     (* less useful *)
-    | ABS | NEG
+    | SGT of A.sign
+  and size = W (* word, 32 bits *) | V (* vlong, 64 bits *)
+
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
+type program = instr A.program
+[@@deriving show]
+
 (*****************************************************************************)
 (* Extractors/Visitors *)
 (*****************************************************************************)
+let branch_opd_of_instr (_instr: instr) : A.branch_operand option =
+  failwith "TODO:branch_opd_of_instr"

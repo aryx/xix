@@ -5,6 +5,7 @@ open Either
 
 open Ast_asm
 open Ast_asmv
+open Parser_asm
 module L = Location_cpp
 
 (*****************************************************************************)
@@ -30,7 +31,10 @@ module L = Location_cpp
 /*(*2 opcodes *)*/
 /*(*-----------------------------------------*)*/
 
+%token <Ast_asmv.logic_opcode> TLOGIC
+%token <Ast_asmv.arith_opcode> TARITH
 %token TSYSCALL TRFE TBREAK
+%token TJMP TJAL
 
 %token TRET TNOP
 
@@ -45,6 +49,10 @@ module L = Location_cpp
 %token <Ast_asm5.fregister> TFx
 %token TR TF
 %token TPC TSB TFP TSP
+
+%token TM TFCR
+%token <Ast_asmv.mregister> TMx
+%token <Ast_asmv.fcrregister> TFCRx
 
 /*(*-----------------------------------------*)*/
 /*(*2 Constants *)*/
@@ -115,7 +123,7 @@ lines:
 
 line: 
  |               TSEMICOLON { [] }
- | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
+ | instr         TSEMICOLON { [(Instr $1, $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
  | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
 
@@ -166,6 +174,7 @@ virtual_instr:
 /*(*1 Instructions *)*/
 /*(*************************************************************************)*/
 instr:
+ | TLOGIC { failwith "XXX" }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
@@ -187,7 +196,7 @@ reg:
      }
 
 gen:
- | reg   { Imsr (Reg $1) }
+ | reg   { Imr (Reg $1) }
 
 ximm:
  | imm             { Left $1 }

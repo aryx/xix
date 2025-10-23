@@ -76,18 +76,18 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
       | "MOVW" -> TMOV A.Word
-      | "MOVB" -> TMOV (A.Byte     A.Signed) | "MOVBU" -> TMOV (A.Byte     A.Unsigned)
-      | "MOVH" -> TMOV (A.HalfWord A.Signed) | "MOVHU" -> TMOV (A.HalfWord A.Unsigned)
+      | "MOVB" -> TMOV (A.Byte     A.S) | "MOVBU" -> TMOV (A.Byte     A.U)
+      | "MOVH" -> TMOV (A.HalfWord A.S) | "MOVHU" -> TMOV (A.HalfWord A.U)
 
       | "B" -> TB | "BL" -> TBL
       | "CMP" -> TCMP CMP 
       | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
 
       | "BEQ" -> TBx EQ | "BNE" -> TBx NE
-      | "BGT" -> TBx (GT A.Signed) | "BLT" -> TBx (LT A.Signed)
-      | "BGE" -> TBx (GE A.Signed) | "BLE" -> TBx (LE A.Signed)
-      | "BHI" -> TBx (GT A.Unsigned) | "BLO" -> TBx (LT A.Unsigned) 
-      | "BHS" -> TBx (GE A.Unsigned) | "BLS" -> TBx (LE A.Unsigned)
+      | "BGT" -> TBx (GT A.S) | "BLT" -> TBx (LT A.S)
+      | "BGE" -> TBx (GE A.S) | "BLE" -> TBx (LE A.S)
+      | "BHI" -> TBx (GT A.U) | "BLO" -> TBx (LT A.U) 
+      | "BHS" -> TBx (GE A.U) | "BLS" -> TBx (LE A.U)
       | "BMI" -> TBx MI | "BPL" -> TBx PL 
       | "BVS" -> TBx VS | "BVC" -> TBx VC
 
@@ -96,10 +96,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       (* conditions *)
       | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND (GT A.Signed)   | ".LT" -> TCOND (LT A.Signed) 
-      | ".GE" -> TCOND (GE A.Signed)   | ".LE" -> TCOND (LE A.Signed)
-      | ".HI" -> TCOND (GT A.Unsigned) | ".LO" -> TCOND (LT A.Unsigned)
-      | ".HS" -> TCOND (GE A.Unsigned) | ".LS" -> TCOND (LE A.Unsigned)
+      | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 
+      | ".GE" -> TCOND (GE A.S)   | ".LE" -> TCOND (LE A.S)
+      | ".HI" -> TCOND (GT A.U) | ".LO" -> TCOND (LT A.U)
+      | ".HS" -> TCOND (GE A.U) | ".LS" -> TCOND (LE A.U)
       | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
 

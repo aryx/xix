@@ -90,7 +90,7 @@ type mov_operand =
 (* less: could probably factorize things and move stuff in Ast_asm.ml *)
 type instr = 
   (* Arithmetic *)
-  | Arith of arith_opcode * arith_option *
+  | Arith of arith_opcode * arith_cond option *
       arith_operand (* src *) * register option * register (* dst *)
 
   (* Memory *)
@@ -100,8 +100,8 @@ type instr =
        register (* indirect *) * register * register option
 
   (* Control flow *)
-  | B  of A.branch_operand
-  | BL of A.branch_operand
+  | B  of A.branch_operand (* branch *)
+  | BL of A.branch_operand (* branch and link *)
   | Cmp of cmp_opcode * arith_operand * register
   (* just Relative or LabelUse here for branch_operand *)
   | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
@@ -122,8 +122,7 @@ type instr =
     | BIC  | ADC | SBC  | RSB | RSC
     (* middle operand always empty (could lift up and put special type) *)
     | MOV | MVN (* MOV has no reading syntax in 5a, MOVE is used *)
-  and arith_option = arith_cond option
-   and arith_cond = Set_condition (* .S *)
+  and arith_cond = Set_condition (* .S *)
 
   and cmp_opcode = 
     | CMP

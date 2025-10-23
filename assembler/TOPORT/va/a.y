@@ -1,8 +1,8 @@
 %token	<lval>	LHI LLO LMREG 
 %token	<lval>	LTYPEX LFCREG LM
 %token	<lval>	LFCR LSCHED
-%type	<gen>	vgen lgen vlgen freg mreg fcreg
-%type	<gen>	oreg nireg fgen
+%type	<gen>	vgen vlgen freg mreg fcreg
+%type	<gen>	fgen
 %%
 
 line:

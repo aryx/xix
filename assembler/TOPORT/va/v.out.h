@@ -31,16 +31,8 @@ enum	as
 	AADDD,
 	AADDF,
 
-	ABEQ,
 	ABFPF,
 	ABFPT,
-	ABGEZ,
-	ABGEZAL,
-	ABGTZ,
-	ABLEZ,
-	ABLTZ,
-	ABLTZAL,
-	ABNE,
 
 	ACMPEQD,
 	ACMPEQF,
@@ -65,6 +57,7 @@ enum	as
 	AMOVF,
 	AMOVFD,
 	AMOVFW,
+
 	AMOVWD,
 	AMOVWF,
 	AMOVWL,

@@ -36,6 +36,8 @@ module L = Location_cpp
 %token <Ast_asmv.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
+%token TBEQ TBNE
+%token <Ast_asmv.b_condition> TB
 %token <Ast_asmv.tlb_kind> TTLB
 
 %token TRET TNOP
@@ -183,6 +185,7 @@ instr:
  | TMULOP reg TC reg TC reg { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg { ArithMul ($1, $2, None, $4) }
 
+
  | TSYSCALL { SYSCALL }
  | TTLB { TLB $1 }
 
@@ -206,7 +209,7 @@ reg:
      }
 
 gen:
- | reg   { Imr (Reg $1) }
+ | reg   { GReg $1 }
 
 ximm:
  | imm             { Left $1 }
@@ -216,6 +219,11 @@ ximm:
 
 
 ireg: TOPAR reg TCPAR { $2 }
+
+branch: 
+ | rel               { $1 }
+ | global            { ref (SymbolJump $1) }
+ | ireg              { ref (IndirectJump $1) }
 
 rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }

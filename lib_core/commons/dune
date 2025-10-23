@@ -21,6 +21,7 @@
   Cmd Proc
   Date
   Fpath_ Ftype
+  Arch OS
  )   
  (libraries
     stdcompat

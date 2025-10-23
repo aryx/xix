@@ -9,12 +9,19 @@ open Preprocessor
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5a, the Plan 9 ARM assembler.
+(* An OCaml port of 5a/va/..., the Plan 9 assemblers.
  *
- * Main limitations compared to 5a:
+ * Main limitations compared to 5a/va/...:
  *  - no multiple files processing in parallel 
  *    (not the place, use xargs)
  *  - no unicode support? or can ocamllex in ocaml-light do unicode?
+ *
+ * better than 5a/va/...:
+ *  - far greater code reuse across all assemblers thanks to Lexer_asm.mll
+ *    factorization, Ast_asm.ml and 'instr polymorphic type, use of
+ *    simple marshalling instead of adhoc object format (different in each
+ *    arch), generalize more code in macroprocessor/ and use simple marshal
+ *    again for cpp line history.
  * 
  * todo:
  *  - advanced instructions: floats, MULL, coprocessor, PSR, etc
@@ -33,13 +40,7 @@ open Preprocessor
 (* Need: see .mli *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 
-let thechar = '5'
-let thestring = "arm"
-
 let dump_ast = ref false
-
-let usage = 
-  spf "usage: o%ca [-options] file.s" thechar
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -62,6 +63,15 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fp
 (*****************************************************************************)
 
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
+  (* TODO: derive it from argv.(0) *)
+  let arch = Arch.Arm in
+  let thechar = Arch.thechar arch in
+  let thestring = Arch.thestring arch in
+
+  let usage = 
+    spf "usage: o%ca [-options] file.s" thechar
+  in
+
   (* alt: Fpath.t option ref *)
   let infile  = ref "" in
   let outfile = ref "" in

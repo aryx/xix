@@ -247,11 +247,11 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     (* pad: I added that *)
     "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
     (*e: [[CLI.main()]] [[options]] elements *)
-  ]
+  ] |> Arg.align
   in
   (* old: was Arg.parse but we want explicit argv control *)
   (try 
-    Arg.parse_argv argv (Arg.align options) (fun t -> args := t::!args) usage;
+    Arg.parse_argv argv options (fun t -> args := t::!args) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)

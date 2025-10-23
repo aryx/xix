@@ -304,11 +304,11 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     (*x: [[CLI.main()]] [[options]] elements *)
     "-test_eval", Arg.Unit (fun () -> action := "-test_eval"), " ";
     (*e: [[CLI.main()]] [[options]] elements *)
-  ]
+  ] |> Arg.align
   in
   (* old: was Arg.parse but we want explicit argv control *)
   (try
-    Arg.parse_argv argv (Arg.align options) (fun t -> 
+    Arg.parse_argv argv options (fun t -> 
     match t with
     (*s: [[CLI.main()]] modify [[vars]] when definition-like argument *)
       | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->

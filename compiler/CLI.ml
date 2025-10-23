@@ -240,10 +240,10 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     (* pad: I added that *)
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
-  ]
+  ] |> Arg.align
   in
   (try
-    Arg.parse_argv argv (Arg.align options) (fun t -> 
+    Arg.parse_argv argv options (fun t -> 
       args := t::!args
     ) usage;
   with
@@ -264,7 +264,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   try 
     (match !args, !outfile with
     | [], "" -> 
-        Arg.usage (Arg.align options) usage;
+        Arg.usage options usage;
         Exit.Code 1
     | [cfile], outfile ->
         let base = Filename.basename cfile in

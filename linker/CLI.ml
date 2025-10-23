@@ -149,10 +149,10 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     " debug layout code";
     "-debug_gen", Arg.Set Flags.debug_gen,
     " debug code generation";
-  ]
+  ] |> Arg.align
   in
   (try
-    Arg.parse_argv argv (Arg.align options)
+    Arg.parse_argv argv options
       (fun f -> infiles := Fpath.v f::!infiles) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)

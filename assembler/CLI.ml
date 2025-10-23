@@ -74,7 +74,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   let thestring = Arch.thestring arch in
 
   let usage = 
-    spf "usage: o%ca [-options] file.s" thechar
+    spf "usage: %s [-options] file.s" argv.(0)
   in
 
   (* alt: Fpath.t option ref *)
@@ -122,10 +122,10 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     (* pad: I added that *)
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
-  ]
+  ] |> Arg.align
   in
   (try
-    Arg.parse_argv argv (Arg.align options) (fun f -> 
+    Arg.parse_argv argv options (fun f -> 
      if !infile <> ""
      then failwith "already specified an input file";
      infile := f;

@@ -1,66 +1,16 @@
-%type	<lval>	con expr oexpr pointer offset sreg spreg creg
-%type	<lval>	rcon cond reglist
-%type	<gen>	gen rel reg regreg freg shift fcon frcon
-%type	<gen>	imm ximm name oreg ireg nireg ioreg imsr
+%type	<lval>	oexpr creg
+%type	<lval>	reglist
+%type	<gen>	regreg freg fcon frcon
+%type	<gen>	oreg ioreg
 %%
 
-line:
-|	LNAME '=' expr ';'
-	{
-		$1->type = LVAR;
-		$1->value = $3;
-	}
-|	LVAR '=' expr ';'
-	{
-		if($1->value != $3)
-			yyerror("redeclaration of %s", $1->name);
-		$1->value = $3;
-	}
-|	error ';'
-
 inst:
-/*
- * ADD
- */
-	LTYPE1 cond imsr ',' spreg ',' reg
-	{
-		outcode($1, $2, &$3, $5, &$7);
-	}
-|	LTYPE1 cond imsr ',' spreg ','
-	{
-		outcode($1, $2, &$3, $5, &nullgen);
-	}
-/*
- * B/BL
- */
-|	LTYPE4 cond comma rel
-	{
-		outcode($1, $2, &nullgen, NREG, &$4);
-	}
-|	LTYPE4 cond comma nireg
-	{
-		outcode($1, $2, &nullgen, NREG, &$4);
-	}
 /*
  * BX
  */
 |	LTYPEBX comma ireg
 	{
 		outcode($1, Always, &nullgen, NREG, &$3);
-	}
-/*
- * SWI
- */
-|	LTYPE6 cond comma gen
-	{
-		outcode($1, $2, &nullgen, NREG, &$4);
-	}
-/*
- * CMP
- */
-|	LTYPE7 cond imsr ',' spreg comma
-	{
-		outcode($1, $2, &$3, $5, &nullgen);
 	}
 /*
  * MOVM
@@ -156,16 +106,6 @@ inst:
 		$7.offset = $9;
 		outcode($1, $2, &$3, $5.reg, &$7);
 	}
-/*
- * END
- */
-|	LTYPEE comma
-	{
-		outcode($1, Always, &nullgen, NREG, &nullgen);
-	}
-
-
-
 
 
 cond:
@@ -253,23 +193,6 @@ gen:
 |	oreg
 |	freg
 
-nireg:
-	ireg
-|	name
-	{
-		$$ = $1;
-		if($1.name != D_EXTERN && $1.name != D_STATIC) {
-		}
-	}
-
-ireg:
-	'(' spreg ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.reg = $2;
-		$$.offset = 0;
-	}
 
 ioreg:
 	ireg
@@ -291,14 +214,6 @@ oreg:
 	}
 |	ioreg
 
-reg:
-	spreg
-	{
-		$$ = nullgen;
-		$$.type = D_REG;
-		$$.reg = $1;
-	}
-
 regreg:
 	'(' spreg ',' spreg ')'
 	{
@@ -306,60 +221,6 @@ regreg:
 		$$.type = D_REGREG;
 		$$.reg = $2;
 		$$.offset = $4;
-	}
-
-shift:
-	spreg '<' '<' rcon
-	{
-		$$ = nullgen;
-		$$.type = D_SHIFT;
-		$$.offset = $1 | $4 | (0 << 5);
-	}
-|	spreg '>' '>' rcon
-	{
-		$$ = nullgen;
-		$$.type = D_SHIFT;
-		$$.offset = $1 | $4 | (1 << 5);
-	}
-|	spreg '-' '>' rcon
-	{
-		$$ = nullgen;
-		$$.type = D_SHIFT;
-		$$.offset = $1 | $4 | (2 << 5);
-	}
-|	spreg LAT '>' rcon
-	{
-		$$ = nullgen;
-		$$.type = D_SHIFT;
-		$$.offset = $1 | $4 | (3 << 5);
-	}
-
-rcon:
-	spreg
-	{
-		if($$ < 0 || $$ >= 16)
-			print("register value out of range\n");
-		$$ = (($1&15) << 8) | (1 << 4);
-	}
-
-sreg:
-	LREG
-|	LPC
-	{
-		$$ = REGPC;
-	}
-|	LR '(' expr ')'
-	{
-		if($3 < 0 || $3 >= NREG)
-			print("register value out of range\n");
-		$$ = $3;
-	}
-
-spreg:
-	sreg
-|	LSP
-	{
-		$$ = REGSP;
 	}
 
 creg:
@@ -397,12 +258,6 @@ name:
 		$$.name = $3;
 		$$.sym = S;
 		$$.offset = $1;
-	}
-
-con:
-|	LVAR
-	{
-		$$ = $1->value;
 	}
 
 oexpr:

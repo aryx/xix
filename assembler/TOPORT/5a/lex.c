@@ -89,7 +89,6 @@ itab[] =
 	"BCS",		LTYPE5,	ABCS,
 	"BCC",		LTYPE5,	ABCC,
 
-
 	"BCASE",	LTYPE5,	ABCASE,
 
 	"MOVM",		LTYPE8, AMOVM,
@@ -98,7 +97,6 @@ itab[] =
 	"SWPW",		LTYPE9, ASWPW,
 
 	"CASE",		LTYPED, ACASE,
-	"END",		LTYPEE, AEND,
 
 	"MCR",		LTYPEJ, 0,
 	"MRC",		LTYPEJ, 1,

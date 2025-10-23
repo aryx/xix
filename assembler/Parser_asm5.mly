@@ -12,9 +12,10 @@ module L = Location_cpp
 (*****************************************************************************)
 (* 
  * Limitations compared to 5a:
- *  - does not support 'NAME=expr;' constant definition, which allows
- *    to evaluate constant at parsing time (and avoid the need to build
- *    expr AST as we want to separate AST generation from checks/resolution/eval)
+ *  - does not support 'NAME=expr;' constant definition, nor use of it
+ *    in expressions, which allows to evaluate constant at parsing time 
+ *    and avoid the need to build expr AST (as we want to separate AST
+ *    generation from checks/resolution/eval)
  *    (but can use cpp for constant definition so not a big loss)
  *  - does not allow SP and PC in a few places with 'spreg' and 'sreg' original
  *    grammar rule

@@ -70,7 +70,6 @@ enum	as
 	ABCASE,
 	ACASE,
 
-	AEND,
 
 	AMULL,
 	AMULAL,
@@ -78,9 +77,9 @@ enum	as
 	AMULALU,
 
 	ABX,
-	ABXRET,
+	ABXRET, // ??
 
-	ADWORD,
+	ADWORD,  //??
 
 	/* moved here to preserve values of older identifiers */
 	ASQRTF,
@@ -103,11 +102,7 @@ enum	as
 #define	C_UBIT	(1<<7)	/* up bit */
 
 /* type */
-#define	D_SCONST	(D_NONE+9)
 #define	D_PSR		(D_NONE+10)
 #define	D_OCONST	(D_NONE+17)
-
-#define	D_SHIFT		(D_NONE+19)
 #define	D_FPCR		(D_NONE+20)
 #define	D_REGREG	(D_NONE+21)
-#define	D_ADDR		(D_NONE+22)

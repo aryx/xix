@@ -1,5 +1,3 @@
-#define	NREG	32
-
 #define	REGZERO		0
 
 #define	REGRET		1
@@ -12,10 +10,6 @@
 /* compiler allocates external registers R25 down */
 
 /* dont use R26 R27 */
-#define	REGTMP		28
-#define	REGSP		29
-#define	REGSB		30
-#define	REGLINK		31
 
 #define	FREGRET		0
 /* compiler allocates register variables F4-F22 */
@@ -29,15 +23,19 @@
 
 enum	as
 {
-	AABSD,
-	AABSF,
 	AABSW,
 
+	AABSD,
+	AABSF,
+
+
 	AADD,
-	AADDD,
-	AADDF,
 	AADDU,
 	AADDW,
+
+	AADDD,
+	AADDF,
+
 
 	AAND,
 
@@ -51,7 +49,6 @@ enum	as
 	ABLTZ,
 	ABLTZAL,
 	ABNE,
-	ABREAK,
 
 	ACMPEQD,
 	ACMPEQF,
@@ -61,71 +58,62 @@ enum	as
 	ACMPGTF,
 
 	ADIV,
-	ADIVD,
-	ADIVF,
 	ADIVU,
 	ADIVW,
 
-	AJAL,
-	AJMP,
+	ADIVD,
+	ADIVF,
 
 	AMOVB,
 	AMOVBU,
+	AMOVH,
+	AMOVHU,
+	AMOVW,
+
 	AMOVD,
 	AMOVDF,
 	AMOVDW,
 	AMOVF,
 	AMOVFD,
 	AMOVFW,
-	AMOVH,
-	AMOVHU,
-	AMOVW,
 	AMOVWD,
 	AMOVWF,
 	AMOVWL,
 	AMOVWR,
 
 	AMUL,
-	AMULD,
-	AMULF,
 	AMULU,
 	AMULW,
 
+	AMULD,
+	AMULF,
+
+	ANEGW,
 
 	ANEGD,
 	ANEGF,
-	ANEGW,
 
-	ANOR,
-	AOR,
 	AREM,
 	AREMU,
 
-	ARFE,
-
 	ASGT,
 	ASGTU,
+
 	ASLL,
 	ASRA,
 	ASRL,
 
 	ASUB,
-	ASUBD,
-	ASUBF,
 	ASUBU,
 	ASUBW,
 
-	ASYSCALL,
-
+	ASUBD,
+	ASUBF,
 
 	ATLBP,
 	ATLBR,
 	ATLBWI,
 	ATLBWR,
-
-	AXOR,
-
-	AEND,
 
 	AMOVV,
 	AMOVVL,

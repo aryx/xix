@@ -17,7 +17,7 @@ open Ast_asm
  * !!! If you modify this file please increment Object5.version !!!
  * 
  * TODO: 
- *  - floats (or better in Ast_asm.ml?)
+ *  - floats instructions (or better in Ast_asm.ml?)
  *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU (or better in Ast_asm.ml too?)
  *  - MULA, MULL,
  *  - MOVM (and his special bits .IA/...), 
@@ -40,11 +40,9 @@ open Ast_asm
 type register = A.register (* between 0 and 15 *)
 [@@deriving show]
 
-(* TOPORT *)
 type fregister = A.fregister (* between 0 and 15 *)
 [@@deriving show]
 
-(* TOPORT *)
 type cregister = C of int (* between 0 and 15 *)
 
 (* reserved by linker *)

@@ -135,6 +135,10 @@ type instr =
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
+(* for ocaml-light to work without deriving *)
+let show_program _ = "NO DERIVING"
+[@@warning "-32"]
+
 type program = instr A.program
 [@@deriving show]
 

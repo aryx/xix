@@ -9,6 +9,8 @@ open Ast_asm
 (*****************************************************************************)
 (* Abstract Syntax Tree (AST) for the assembly language supported by va.
  * I call this language Asmv.
+ *
+ * !!! If you modify this file please increment Object_file.version !!!
  *)
 
 (*****************************************************************************)

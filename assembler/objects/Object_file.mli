@@ -1,9 +1,12 @@
 
-val save: 
-  'instr Ast_asm.program -> Chan.o (* obj file *) -> unit
+(* An object (.o) in Plan 9 is really just a serialized assembly AST *)
+type 'instr t = 'instr Ast_asm.program
+
+val save: 'instr t -> Chan.o (* obj file *) -> unit
 
 exception WrongVersion
+(* used also in Library_file.ml *)
+val version : int 
 
 (* may raise WrongVersion *)
-val load: 
-  Chan.i (* obj file *) -> 'instr Ast_asm.program
+val load: Chan.i (* obj file *) -> 'instr t

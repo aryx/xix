@@ -3,7 +3,7 @@
  (libraries
    str unix
    xix_commons
-   xix_objects
+   xix_objects xix_libraries
    xix_executables
  )
  (preprocess (pps ppx_deriving.show))

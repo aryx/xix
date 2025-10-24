@@ -8,6 +8,8 @@ open Common
  *
  * Note that in Plan 9 object files are mostly the serialized form of 
  * the assembly AST, which is why this file is in this directory.
+ *
+ * !!! If you modify this file please increment Object_file.version !!!
  *) 
 
 (*****************************************************************************)

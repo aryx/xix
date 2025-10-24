@@ -14,7 +14,7 @@ open Ast_asm
  * mostly arch independent and can be reused in other plan9 assemblers
  * (e.g. va, ia, 7a).
  *
- * !!! If you modify this file please increment Object5.version !!!
+ * !!! If you modify this file please increment Object_file.version !!!
  * 
  * TODO: 
  *  - floats instructions (or better in Ast_asm.ml?)

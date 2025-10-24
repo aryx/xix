@@ -1,0 +1,20 @@
+(executable
+ (name Ar)
+ (modules Ar)
+ (libraries
+   str unix
+   xix_commons
+   xix_objects xix_libraries
+ )
+ (preprocess (pps ppx_deriving.show))
+ ; 'byte' is for ocamldebug
+ (modes native byte))
+
+(install
+ (package xix)
+ (section bin)
+ (files
+  (Ar.exe as oar)
+  (Ar.bc as oar.bc)
+ )
+)

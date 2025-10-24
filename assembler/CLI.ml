@@ -48,29 +48,33 @@ let dump_ast = ref false
 (* Main algorithm *)
 (*****************************************************************************)
 
-let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (chan : Chan.o) : unit =
+let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asm5.program =
   let prog = Parse_asm5.parse caps conf infile in
   let prog = Resolve_labels.resolve Ast_asm5.branch_opd_of_instr prog in
   if !dump_ast 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
-  Object_file.save5 prog chan
+  prog
 
-let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (_chan : Chan.o) : unit =
+let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asmv.program =
   let prog = Parse_asmv.parse caps conf infile in
-  let _prog = Resolve_labels.resolve Ast_asmv.branch_opd_of_instr prog in
+  let prog = Resolve_labels.resolve Ast_asmv.branch_opd_of_instr prog in
   if !dump_ast 
   then Logs.app (fun m -> m "AST = %s" "TODO");
-  (* Object.savev (prog, !Location_cpp.history) chan *)
-  failwith "TODO: Object.savev"
+  prog
 
 
 (* Will modify chan as a side effect *)
 let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
   match arch with
-  | Arch.Arm -> assemble5 caps conf infile chan
-  | Arch.Mips -> assemblev caps conf infile chan
-  | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+  | Arch.Arm -> 
+      let prog = assemble5 caps conf infile in
+      Object_file.save prog chan
+  | Arch.Mips -> 
+      let prog = assemblev caps conf infile in
+      Object_file.save prog chan
+  | _ -> 
+   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 
 (*****************************************************************************)
 (* Entry point *)

@@ -145,7 +145,7 @@ let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
       incr pc;
     );
   end;
-  Object_file.save5 (asm, !Location_cpp.history) chan
+  Object_file.save (asm, !Location_cpp.history) chan
 
 let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
   (outfile : Chan.o) =

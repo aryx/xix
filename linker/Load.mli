@@ -6,6 +6,6 @@
 val load: 
   <Cap.open_in; .. > ->
   Fpath.t list ->
-  (Chan.i -> 'instr Ast_asm.program * 'loc_history) ->
+  (Chan.i -> 'instr Ast_asm.program) ->
   'instr Arch.t ->
   'instr Types.code array * Types.data list * Types.symbol_table

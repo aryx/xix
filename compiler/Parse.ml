@@ -53,7 +53,7 @@ let parse_no_cpp (file : Fpath.t) =
     L.line := 1;
     let lexbuf = Lexing.from_channel chan.ic in
     (try 
-      Parser.prog Lexer.token lexbuf
+      Parser.prog Lexer.token lexbuf, []
     with Parsing.Parse_error ->
       failwith (spf "Syntax error: line %d" !L.line)
     )

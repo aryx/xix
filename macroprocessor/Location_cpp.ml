@@ -34,6 +34,7 @@ type location_history = {
     | Eof
 [@@deriving show]
 
+(* TODO? move to local in Parse_cpp.ml? *)
 let history = ref []
 
 (* Global line number (after pre-processing).

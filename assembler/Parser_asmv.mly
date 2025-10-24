@@ -112,7 +112,7 @@ module L = Location_cpp
 /*(*1 Rules type declaration *)*/
 /*(*************************************************************************)*/
 
-%type <Ast_asmv.program> program
+%type <Ast_asmv.instr Ast_asm.lines> program
 %start program
 
 %%

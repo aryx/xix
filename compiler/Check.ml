@@ -450,5 +450,5 @@ let check_usedef program =
 (* Entry point *)
 (*****************************************************************************)
 
-let check_program ast =
+let check_program (ast, _locs) =
   check_usedef ast

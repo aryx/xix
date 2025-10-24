@@ -52,9 +52,9 @@ type env = {
   pc: Ast_asm.virt_pc ref;
 
   (* growing array *)
-  code: (A5.line * Ast_asm.loc) array ref;
+  code: (A5.instr_with_cond A.line * A.loc) array ref;
   (* should contain only DATA or GLOBL *)
-  data: (A5.line * Ast_asm.loc) list ref;
+  data: (A5.instr_with_cond A.line * A.loc) list ref;
 
   (* reinitialized for each function *)
 
@@ -827,8 +827,7 @@ let rec stmt env st0 =
 (* Main entry point *)
 (*****************************************************************************)
 
-let codegen (ids, structs, funcs) =
-
+let codegen (ids, structs, funcs) : Ast_asm5.program =
   let env = {
     ids = ids;
     structs = structs;
@@ -905,6 +904,10 @@ let codegen (ids, structs, funcs) =
   );
 
   (* todo: generate code for ids after, for CGLOBAL *)
+  let instrs = 
+    (Array.sub !(env.code) 0 !(env.pc) |> Array.to_list) @
+      List.rev !(env.data)
+  in
+  let locs = [] in
+  instrs, locs
 
-  (Array.sub !(env.code) 0 !(env.pc) |> Array.to_list) @
-  List.rev !(env.data)

@@ -238,7 +238,7 @@ let vof_line =
       Ocaml.VTuple (([ v1; v2 ]))
   | LabelDef v1 -> let v1 = vof_label v1 in Ocaml.VSum (("LabelDef", [ v1 ]))
   
-let vof_program v =
+let vof_program (v, _locs) =
   Ocaml.vof_list
     (fun (v1, v2) ->
        let v1 = vof_line v1 and v2 = vof_pos v2 in Ocaml.VTuple [ v1; v2 ])

@@ -111,6 +111,8 @@ type instr =
   | SWI of int (* value actually unused in Plan 9 and Linux *)
   | RFE (* virtual, sugar for MOVM *)
 
+  (* Floats *)
+  (* | MOVF ... | ArithFloat | ... *)
 
   and arith_opcode = 
     (* logic *)
@@ -155,9 +157,6 @@ type instr =
  * Note that cond should be AL (Always) for B/Bxx instructions.
 *)
 type instr_with_cond = instr * condition
-[@@deriving show]
-
-type line = instr_with_cond A.line
 [@@deriving show]
 
 type program = instr_with_cond A.program

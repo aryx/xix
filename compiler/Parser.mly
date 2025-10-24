@@ -229,7 +229,7 @@ let pop_scope env =
 /*(*1 Rules type declaration *)*/
 /*(*************************************************************************)*/
 
-%type <Ast.program> prog
+%type <Ast.toplevels> prog
 %start prog
 
 %%

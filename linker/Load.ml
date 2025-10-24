@@ -33,7 +33,7 @@ let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : uni
  * - visit all entities (defs and uses) and add them in symbol table
  * alt: take as a parameter (xs : Chan.i list);
  *)
-let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> 'instr A.program * 'loc_history) (arch: 'instr Arch.t) : 'instr T.code array * T.data list * Types.symbol_table =
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> 'instr A.program) (arch: 'instr Arch.t) : 'instr T.code array * T.data list * Types.symbol_table =
 
   (* values to return *)
   let code = ref [] in
@@ -50,17 +50,18 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> '
     (* TODO: if lib file! *)
 
     (* object loading is so much easier in ocaml :) *)
-    let (prog, _srcfile) = file |> FS.with_open_in caps load_obj in
+    let prog = file |> FS.with_open_in caps load_obj in
     (* less: could check valid AST, range of registers, shift values, etc *)
 
     (* naming and populating symbol table h *)
     prog |> A.visit_globals_program arch.visit_globals_instr 
         (fun x -> process_global x h !idfile);
 
+    let (ps, _locs) = prog in
     (* split and concatenate in code vs data, relocate branches, 
      * and add definitions in symbol table h.
      *)
-    prog |> List.iter (fun (p, line) ->
+    ps |> List.iter (fun (p, line) ->
       match p with
       | A.Pseudo pseudo ->
           (match pseudo with

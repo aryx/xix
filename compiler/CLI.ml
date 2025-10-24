@@ -133,7 +133,7 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
 
 let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
-  let asm = Codegen5.codegen (ids, structs, funcs) in
+  let (asm, _locs) = Codegen5.codegen (ids, structs, funcs) in
 
   if !Flags.dump_asm
   then begin

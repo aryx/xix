@@ -2,9 +2,7 @@
 (* for field access for ocaml-light *)
 open Chan
 
-(* todo: use absolute path? realpath? *)
-type t = 
-  Ast_asm5.program * Location_cpp.location_history list
+type t = Ast_asm5.program
 
 (* less: could be sha1 of ast_asm5.ml for even safer marshalling *)
 let version = 6

@@ -1,7 +1,5 @@
 
-type t = 
-  Ast_asm5.program * 
-  Location_cpp.location_history list (* includes src file origin *)
+type t = Ast_asm5.program
 
 val save5: 
   t -> Chan.o (* obj file *) -> unit

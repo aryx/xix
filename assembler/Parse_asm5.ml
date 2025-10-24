@@ -146,7 +146,7 @@ let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
   L.line := 1;
   let lexbuf = Lexing.from_channel chan.ic in
   try 
-    Parser_asm5.program token lexbuf
+    Parser_asm5.program token lexbuf, []
   with Parsing.Parse_error ->
       failwith (spf "Syntax error: line %d" !L.line)
 

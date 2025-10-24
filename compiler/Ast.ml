@@ -340,7 +340,10 @@ type toplevel =
   | FuncDef of func_def
 [@@deriving show]
 
-type program = toplevel list
+type toplevels = toplevel list
+[@@deriving show]
+
+type program = toplevels * Location_cpp.location_history list
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)

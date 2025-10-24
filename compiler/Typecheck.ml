@@ -849,7 +849,8 @@ let rec stmt env st0 =
 (* Entry point *)
 (*****************************************************************************)
 
-let check_and_annotate_program ast =
+let check_and_annotate_program (prog: Ast.program) =
+  let (ast, _locs) = prog in
 
   let funcs = ref [] in
 

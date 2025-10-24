@@ -259,7 +259,8 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
   in
 
   (try 
-    hooks.parser (fun _lexbuf -> lexfunc ()) lexbuf
+    let ast = hooks.parser (fun _lexbuf -> lexfunc ()) lexbuf in
+    ast, !L.history
   with Parsing.Parse_error ->
     error ("Syntax error" ^ 
               (if !last_ident = "" 

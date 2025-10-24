@@ -431,7 +431,7 @@ let vof_toplevel =
   | VarDecl v1 ->
       let v1 = vof_var_decl v1 in Ocaml.VSum (("VarDecl", [ v1 ]))
   
-let vof_program v = Ocaml.vof_list vof_toplevel v
+let vof_program (v, _) = Ocaml.vof_list vof_toplevel v
   
 let vof_any =
   function

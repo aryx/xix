@@ -92,6 +92,9 @@ type instr =
   | BREAK
   | TLB of tlb_kind
 
+  (* Floats *)
+  (* | MOVF ... | ArithFloat | ... *)
+
   and arith_opcode =
     (* logic *)
     | AND | OR | XOR

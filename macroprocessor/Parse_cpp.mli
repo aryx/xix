@@ -22,4 +22,6 @@ type ('token, 'ast) hook = {
  *)
 val parse: 
   < Cap.open_in; .. > ->
-  ('token, 'ast) hook -> Preprocessor.conf -> Fpath.t -> 'ast
+  ('token, 'ast) hook -> Preprocessor.conf -> Fpath.t -> 
+  'ast * Location_cpp.location_history list
+

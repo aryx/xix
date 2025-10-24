@@ -26,9 +26,11 @@ let error (s : string) (line : int) =
 (*****************************************************************************)
 
 (* ocaml: see how little processing 5a actually does :) *)
-let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
+let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
   let pc : virt_pc ref = ref 0 in
   let h = Hashtbl.create 101 in
+
+  let (ps, locs) = prog in
 
   (* first pass, process the label definitions, populate h *)
   ps |> List.iter (fun (p, line) ->
@@ -50,7 +52,7 @@ let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
   (* second pass, process the label uses, resolve some branch operands *)
   pc := 0;
   (* filter but modify also by side effect p *)
-  ps |> List.filter (fun (p, line) ->
+  let ps' = ps |> List.filter (fun (p, line) ->
     (match p with
     (* no need to keep the labels in the object file *)
     | LabelDef _ -> false
@@ -90,3 +92,5 @@ let resolve branch_opd_of_instr (ps : 'instr program) : 'instr program =
         true
     )
   )
+  in
+  ps', locs

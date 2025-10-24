@@ -25,8 +25,10 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let archive (_caps : < Cap.open_in; ..> ) (_objfiles : Fpath.t list) (_chan : Chan.o) : unit =
-  failwith "TODO"
+let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
+  (* TODO? sanity check all of same arch? *)
+  let xs = objfiles |> List.map (FS.with_open_in caps Object_file.load) in
+  Library_file.save xs chan
 
 (*****************************************************************************)
 (* Entry point *)

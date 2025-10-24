@@ -14,8 +14,10 @@
 *.o
 *.a
 
-# Xixcc objects
+# Xixcc objects and libs
 *.o[5v]
+*.oa[5v]
+*.oa
 
 # Kencc objects
 *.[5678vij]

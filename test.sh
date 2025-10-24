@@ -14,7 +14,7 @@ set -x
 # or dynamic linking errors
 ./bin/mk --help
 ./bin/rc --help
-./assembler/5a --help
+./assembler/o5a --help
 ./linker/5l --help
 ./compiler/5c --help
 # TODO: add a --help, and exit 0 on --help, not 2

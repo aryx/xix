@@ -34,7 +34,7 @@ let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : uni
  * - visit all entities (defs and uses) and add them in symbol table
  * alt: take as a parameter (xs : Chan.i list);
  *)
-let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch.t) : 'instr T.code array * T.data list * Types.symbol_table =
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_linker.t) : 'instr T.code array * T.data list * Types.symbol_table =
 
   (* values to return *)
   let code = ref [] in
@@ -113,7 +113,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch.t) :
   xs |> List.iter (fun file ->
     match () with
     | _ when Library_file.is_libfile file ->
-         let objs = 
+         let (objs : 'instr Library_file.t)  = 
             file |> FS.with_open_in caps Library_file.load in
          (* TODO: filter only the one needed because contain entities
           * used in the object files
@@ -121,7 +121,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch.t) :
          objs |> List.iter (fun obj -> process_obj obj)
     | _ when Object_file.is_objfile file ->
       (* object loading is so much easier in ocaml :) *)
-      let obj =
+      let (obj : 'instr Object_file.t) =
             file |> FS.with_open_in caps Object_file.load in
       process_obj obj
      (* less: could check valid AST, range of registers, shift values, etc *)

@@ -9,9 +9,9 @@ open Types
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5l, the Plan 9 ARM linker.
+(* An OCaml port of 5l/5v, the Plan 9 ARM/MIPS linkers.
  *
- * Main limitations compared to 5l:
+ * Main limitations compared to 5l/vl/...:
  * - no -E digit 
  *   (What was it anyway?)
  * - no optimisation about small data, strings in text section
@@ -23,6 +23,11 @@ open Types
  * - address of parameter or local is not supported
  *   (Why would you want that? Does 5c generate that?)
  *   update: actually I support it now no?
+ *
+ * Better than 5l/vl/...:
+ * - greater code reuse across all linkers thanks to:
+ *    * use of marshalling for objects and libraries
+ *    * factorized analysis such as ???
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors
@@ -33,7 +38,7 @@ open Types
  *  - half word and byte load/store basic version
  *  - endianess and datagen
  *  - advanced instructions: floats, MULL, coprocessor, psr, etc
- *  - library, but need 5c in ocaml first I think, libpath
+ *  - library ranlib/symdef indexing
  *  - profiling -p
  *  - symbol table
  *  - program counter line table
@@ -48,21 +53,15 @@ open Types
 (* Need: see .mli *)
 type caps = < Cap.open_in; Cap.open_out >
 
-let thechar = '5'
-let thebin = "5.out"
-
-let usage = 
-  spf "usage: o%cl [-options] objects" thechar
-
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
 (* will modify chan as a side effect *)
 let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
-  let arch : Ast_asm5.instr_with_cond Arch.t = {
-    Arch.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
-    Arch.visit_globals_instr = Ast_asm5.visit_globals_instr;
+  let arch : Ast_asm5.instr_with_cond Arch_linker.t = {
+    Arch_linker.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
+    Arch_linker.visit_globals_instr = Ast_asm5.visit_globals_instr;
   }
   in
   let (code, data, symbols) = Load.load caps files arch in
@@ -91,14 +90,32 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 chan
 
-let link (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
-  link5 caps config files chan
+let link (caps : < Cap.open_in; ..> ) (config : T.config) (arch: Arch.t) (files : Fpath.t list) (chan : Chan.o) : unit =
+  match arch with
+  | Arch.Arm ->
+     link5 caps config files chan
+  | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+
+  let arch = 
+    (* alt: use Arch.arch_of_char argv.(0).(1) *)
+    match Filename.basename argv.(0) with
+    | "o5l" -> Arch.Arm
+    | "ovl" -> Arch.Mips
+    | s -> failwith (spf "arch could not detected from argv0 %s" s)
+  in
+
+  let thechar = Arch.thechar arch in
+  let thebin = spf "%c.out" thechar in
+  let usage = 
+    spf "usage: %s [-options] objects" argv.(0) 
+  in
+
   let infiles = ref [] in
   let outfile = ref (Fpath.v thebin) in
 
@@ -189,7 +206,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      try 
         (* the main call *)
         !outfile |> FS.with_open_out caps (fun chan ->
-          link caps config xs chan
+          link caps config arch xs chan
         );
         (* TODO: set exec bit on outfile *)
         Exit.OK

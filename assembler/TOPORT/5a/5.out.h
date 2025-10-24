@@ -79,7 +79,7 @@ enum	as
 	ABX,
 	ABXRET, // ??
 
-	ADWORD,  //??
+	ADWORD,  //64 bits ?
 
 	/* moved here to preserve values of older identifiers */
 	ASQRTF,

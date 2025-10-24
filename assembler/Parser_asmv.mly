@@ -154,6 +154,8 @@ pseudo_instr:
 
  | TDATA global_and_offset TSLASH con TC ximm  
      { DATA (fst $2, snd $2, $4, $6) }
+ | TWORD ximm
+     { WORD $2 }
 
 
 /*(* stricter: I introduced those intermediate rules *)*/

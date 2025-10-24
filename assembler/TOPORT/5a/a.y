@@ -1,8 +1,5 @@
-%type	<lval>	oexpr creg
-%type	<lval>	reglist
+%type	<lval>	oexpr creg reglist
 %type	<gen>	regreg freg fcon frcon
-%type	<gen>	oreg ioreg
-%%
 
 inst:
 /*
@@ -39,13 +36,6 @@ inst:
 |	LTYPED cond reg comma
 	{
 		outcode($1, $2, &$3, NREG, &nullgen);
-	}
-/*
- * word
- */
-|	LTYPEH comma ximm
-	{
-		outcode($1, Always, &nullgen, NREG, &$3);
 	}
 
 /*
@@ -90,6 +80,7 @@ inst:
 			(1<<4);			/* must be set */
 		outcode(AWORD, Always, &nullgen, NREG, &g);
 	}
+
 /*
  * MULL hi,lo,r1,r2
  */
@@ -97,6 +88,7 @@ inst:
 	{
 		outcode($1, $2, &$3, $5.reg, &$7);
 	}
+
 /*
  * MULA hi,lo,r1,r2
  */

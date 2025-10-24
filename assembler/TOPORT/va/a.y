@@ -1,8 +1,5 @@
-%token	<lval>	LHI LLO LMREG 
-%token	<lval>	LTYPEX LFCREG LM
-%token	<lval>	LFCR LSCHED
-%type	<gen>	vgen vlgen freg mreg fcreg
-%type	<gen>	fgen
+%token	<lval>	LHI LLO LMREG LTYPEX LFCREG LM	LFCR LSCHED
+%type	<gen>	vgen vlgen freg mreg fcreg	fgen
 
 line:
 |	LSCHED ';'
@@ -34,14 +31,6 @@ inst:
  * coprocessor branch
  */
 |	LTYPEG comma rel
-	{
-		outcode($1, &nullgen, NREG, &$3);
-	}
-
-/*
- * word
- */
-|	LTYPEH comma ximm
 	{
 		outcode($1, &nullgen, NREG, &$3);
 	}

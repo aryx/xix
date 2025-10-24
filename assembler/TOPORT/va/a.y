@@ -37,6 +37,7 @@ inst:
 	{
 		outcode($1, &nullgen, NREG, &$3);
 	}
+
 /*
  * word
  */
@@ -44,6 +45,7 @@ inst:
 	{
 		outcode($1, &nullgen, NREG, &$3);
 	}
+
 /*
  * NOP
  */
@@ -178,22 +180,14 @@ ximm:
 	}
 
 nireg:
-	ireg
 |	con ireg
 	{
 		if($1 != 0)
 			yyerror("offset must be zero");
 		$$ = $2;
 	}
-|	name
-	{
-		$$ = $1;
-		if($1.name != D_EXTERN && $1.name != D_STATIC) {
-		}
-	}
 
 gen:
-	reg
 |	con
 	{
 		$$ = nullgen;

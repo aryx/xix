@@ -46,14 +46,15 @@ enum	as
 	ADIVF,
 
 	AMOVD,
+	AMOVF,
+
 	AMOVDF,
 	AMOVDW,
-	AMOVF,
 	AMOVFD,
 	AMOVFW,
-
 	AMOVWD,
 	AMOVWF,
+
 	AMOVWL,
 	AMOVWR,
 

@@ -25,7 +25,7 @@ let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : uni
 (*****************************************************************************)
 
 (* load() performs a few things:
- * - load objects (of course),
+ * - load objects (of course), and libraries (which are essentially objects)
  * - split and concatenate in code vs data all objects,
  * - relocate absolute jumps,
  * - "name" entities by assigning a unique name to every entities
@@ -33,7 +33,7 @@ let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : uni
  * - visit all entities (defs and uses) and add them in symbol table
  * alt: take as a parameter (xs : Chan.i list);
  *)
-let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> 'instr A.program) (arch: 'instr Arch.t) : 'instr T.code array * T.data list * Types.symbol_table =
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch.t) : 'instr T.code array * T.data list * Types.symbol_table =
 
   (* values to return *)
   let code = ref [] in
@@ -43,6 +43,11 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> '
   let pc : Types.virt_pc ref = ref 0 in
   let idfile = ref 0 in
 
+  (* TODO: split in obj file vs libfile and process libfile at the end
+   * and define nested func maybe for process_obj as it will be called too
+   * from the code loading libraries
+   *)
+
   xs |> List.iter (fun file ->
     let ipc : Types.virt_pc = !pc in
     incr idfile;
@@ -50,7 +55,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (load_obj : Chan.i -> '
     (* TODO: if lib file! *)
 
     (* object loading is so much easier in ocaml :) *)
-    let prog = file |> FS.with_open_in caps load_obj in
+    let prog = file |> FS.with_open_in caps Object_file.load in
     (* less: could check valid AST, range of registers, shift values, etc *)
 
     (* naming and populating symbol table h *)

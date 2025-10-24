@@ -59,14 +59,13 @@ let usage =
 (*****************************************************************************)
 
 (* will modify chan as a side effect *)
-let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
+let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
   let arch : Ast_asm5.instr_with_cond Arch.t = {
     Arch.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
     Arch.visit_globals_instr = Ast_asm5.visit_globals_instr;
-    (* alt: could make Object5.load a field of arch *)
   }
   in
-  let (code, data, symbols) = Load.load caps objfiles Object_file.load arch in
+  let (code, data, symbols) = Load.load caps files arch in
 
   (* mark at least as SXref the entry point *)
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
@@ -92,8 +91,8 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t l
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 chan
 
-let link (caps : < Cap.open_in; ..> ) (config : T.config) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
-  link5 caps config objfiles chan
+let link (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  link5 caps config files chan
 
 (*****************************************************************************)
 (* Entry point *)

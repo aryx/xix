@@ -1,2 +1,2 @@
 
-val arch: Arch.t
+val arch: Arch_compiler.t

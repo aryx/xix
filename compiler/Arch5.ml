@@ -1,10 +1,10 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-open Arch
+open Arch_compiler
 module T = Type
 
-let rec width_of_type (env : Arch.env) (t : Type.t) : int =
+let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
   match t with
   | T.Void -> 0
   | T.I (inttype, _sign) ->

@@ -16,7 +16,7 @@ LIBS=$TOP/lib_core/commons/lib.cma \
   
 
 # or use Principia spirit! THE assembler! so call it simply 'assembler' ? :)
-PROG=5a
+PROG=o5a
 
 <$TOP/mkconfig
 <$TOP/mkprog

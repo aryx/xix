@@ -10,14 +10,14 @@ type t =
 let version = 6
 
 (* can normalize before? or check every invariants? *)
-let save (obj : t) (chan : Chan.o) : unit =
+let save5 (obj : t) (chan : Chan.o) : unit =
   Logs.info (fun m -> m "Saving object in %s" (Chan.destination chan));
   output_value chan.oc (version, obj)
 
 (* for safer marshalling *)
 exception WrongVersion
 
-let load (chan : Chan.i) : t =
+let load5 (chan : Chan.i) : t =
   Logs.info (fun m -> m "Loading object %s" (Chan.origin chan));
   let (ver, obj) = input_value chan.ic in
   if ver <> version

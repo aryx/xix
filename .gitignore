@@ -15,7 +15,7 @@
 *.a
 
 # Kencc objects
-*.[58]
+*.[5678vij]
 
 # Syncweb objects
 .md5sum_*

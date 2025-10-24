@@ -4,8 +4,9 @@ TOP=../..
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor
 
 SRC=Ast_asm.ml \
-  Ast_asm5.ml Object5.ml Meta_ast_asm5.ml \
+  Ast_asm5.ml Meta_ast_asm5.ml \
   Ast_asmv.ml \
+  Object_file.ml 
 
 <$TOP/mkconfig
 <$TOP/mklib

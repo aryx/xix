@@ -54,7 +54,7 @@ let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   if !dump_ast 
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
-  Object5.save (prog, !Location_cpp.history) chan
+  Object_file.save5 (prog, !Location_cpp.history) chan
 
 let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) (_chan : Chan.o) : unit =
   let prog = Parse_asmv.parse caps conf infile in

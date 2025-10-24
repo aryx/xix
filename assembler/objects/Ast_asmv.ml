@@ -71,7 +71,7 @@ type instr =
   | NOR of imr * register option * imr
   | ArithMul of mul_opcode * register * register option * register
 
-  (* Memory *)
+  (* Memory (Load/Store) *)
   (* "one side must be a register" *)
   | Move1 of move1_size * (gen, imm_or_ximm) Either_.t * gen
   (* "one side must be a register" *)
@@ -138,5 +138,14 @@ type program = instr A.program
 (*****************************************************************************)
 (* Extractors/Visitors *)
 (*****************************************************************************)
-let branch_opd_of_instr (_instr: instr) : A.branch_operand option =
-  failwith "TODO:branch_opd_of_instr"
+let branch_opd_of_instr (instr: instr) : A.branch_operand option =
+  match instr with
+  | JMP opd -> Some opd
+  | RFE opd -> Some opd
+  | JAL opd -> Some opd
+  | JALReg (_, opd) -> Some opd
+  | BEQ (_, _, opd) -> Some opd
+  | BNE (_, _, opd) -> Some opd
+  | Bxx (_, _, opd) -> Some opd
+  | Arith _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
+  | TLB _ -> None

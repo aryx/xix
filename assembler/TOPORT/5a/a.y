@@ -190,29 +190,17 @@ gen:
 		$$.type = D_OREG;
 		$$.offset = $1;
 	}
-|	oreg
 |	freg
 
 
-ioreg:
-	ireg
-|	con '(' sreg ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.reg = $3;
-		$$.offset = $1;
-	}
-
 oreg:
-	name
 |	name '(' sreg ')'
 	{
 		$$ = $1;
 		$$.type = D_OREG;
 		$$.reg = $3;
 	}
-|	ioreg
+
 
 regreg:
 	'(' spreg ',' spreg ')'

@@ -36,6 +36,7 @@ enum	as
 	AMOVFW,
 	AMOVFD,
 	AMOVDF,
+
 	AMOVF,
 	AMOVD,
 
@@ -64,7 +65,6 @@ enum	as
 
 	AMULA,
 
-	AGOK,
 	ADYNT,
 	AINIT,
 	ABCASE,

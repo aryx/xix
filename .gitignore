@@ -14,6 +14,9 @@
 *.o
 *.a
 
+# Xixcc objects
+*.o[5v]
+
 # Kencc objects
 *.[5678vij]
 

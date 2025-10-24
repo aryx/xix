@@ -1,3 +1,8 @@
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Regexp_.Operators
+open Fpath_.Operators
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -28,3 +33,6 @@ let load (chan : Chan.i) : 'instr t =
   if ver <> Object_file.version
   then raise Object_file.WrongVersion
   else x
+
+let is_libfile (file : Fpath.t) : bool =
+  !!file =~ ".*\\.oa[5vi]?$"

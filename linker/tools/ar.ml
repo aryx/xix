@@ -8,8 +8,13 @@ open Fpath_.Operators
 (* An OCaml port of ar, the Plan 9 archiver.
  *
  * Main limitations compared to ar:
- * 
- * todo?:
+ *  - no complex CLI flags; just oar objfiles -o
+ *    no ar vu, ar rcs, ... just archive!
+ *
+ * todo:
+ *  - index the archive a la SYMDEF/ranlib to reduce size of
+ *    binaries in the linker for unneeded object files
+ *
  * later:
  *)
 
@@ -26,7 +31,18 @@ let usage =
 (*****************************************************************************)
 
 let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
+  (* sanity checks *)
   (* TODO? sanity check all of same arch? *)
+  objfiles |> List.iter (fun file ->
+    if not (Object_file.is_objfile file)
+    then failwith (spf "The file extension of %s does not match an object file"
+          !!file)
+  );
+  let libfile = Fpath.v (Chan.destination chan) in
+  if not (Library_file.is_libfile libfile)
+  then failwith (spf "The file extension of %s does not match a library file"
+          !!libfile);
+
   let xs = objfiles |> List.map (FS.with_open_in caps Object_file.load) in
   Library_file.save xs chan
 

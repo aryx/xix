@@ -10,3 +10,6 @@ val version : int
 
 (* may raise WrongVersion *)
 val load: Chan.i (* obj file *) -> 'instr t
+
+(* look whether finishes in .o[5vi] *)
+val is_objfile : Fpath.t -> bool

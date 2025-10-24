@@ -1,4 +1,7 @@
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+open Regexp_.Operators
+open Fpath_.Operators
 
 (* for field access for ocaml-light *)
 open Chan
@@ -40,3 +43,6 @@ let load (chan : Chan.i) : 'instr t =
   if ver <> version
   then raise WrongVersion
   else obj
+
+let is_objfile (file : Fpath.t) : bool =
+  !!file =~ ".*\\.o[5v]$"

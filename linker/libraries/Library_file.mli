@@ -7,3 +7,6 @@ val save : 'instr t -> Chan.o -> unit
 
 (* may raise Object_file.WrongVersion *)
 val load:  Chan.i -> 'instr t
+
+(* look whether finishes in .oa[5vi] or .oa *)
+val is_libfile: Fpath.t -> bool

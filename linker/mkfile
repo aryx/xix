@@ -1,7 +1,8 @@
 # -*- sh -*-
 
 TOP=..
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/assembler/objects -I $TOP/linker/executables
+# need -I macroprocessor/ because object files contains Location_cpp data
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables
 
 SRC= Flags.ml\
  Types.ml Types5.ml Arch.ml \

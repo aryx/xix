@@ -119,7 +119,7 @@ type instr =
 
   and tlb_kind =
     (* ?? *)
-    | P | R | WI | WR
+    | P_ | R_ | WI | WR
 
 [@@deriving show]
 

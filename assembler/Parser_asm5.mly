@@ -11,17 +11,7 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* 
- * General limitations compared to 5a/va/...:
- *  - no support for 'NAME=expr;' constant definition, nor use of it
- *    in expressions, which allows to evaluate constant at parsing time 
- *    and avoid the need to build an expr AST (as we want to separate AST
- *    generation from checks/resolution/eval)
- *    (but can use cpp for constant definition so not a big loss)
- *  - does not allow SP and PC in a few places with 'spreg' and 'sreg' original
- *    grammar rule
- *    (but can use directly R13 and R15)
- *  - no END instruction
+(* The 5a ARM assembly grammar.
  *
  * Limitations compared to 5a:
  *  - just imm for SWI

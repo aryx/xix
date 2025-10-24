@@ -12,7 +12,7 @@ module L = Location_cpp
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * Limitations compared to va (see also Parser_asm5.mly comment):
+ * Limitations compared to va (see also Parser_asm.ml top comment):
  *  - 
  * todo:
  *)

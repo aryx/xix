@@ -19,6 +19,7 @@ open Ast_asmi
 
 let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
   let tok = Lexer_asm.token lexbuf in
+
   match tok with
   | T.TTEXT -> TTEXT
   | T.TGLOBL -> TGLOBL
@@ -32,14 +33,6 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
   | T.TSB -> TSB
   | T.TFP -> TFP
   | T.TSP -> TSP
-  | T.TRx ((A.R i) as x) -> 
-      if i <= 31 && i >=0
-      then TRx x
-      else Lexer_asm.error ("register number not valid")
-  | T.TFx ((A.F i) as x) -> 
-      if i <= 31 && i >=0
-      then TFx x
-      else Lexer_asm.error ("register number not valid")
   | T.TINT i -> TINT i
   | T.TFLOAT f -> TFLOAT f
   | T.TSTRING s -> TSTRING s
@@ -57,6 +50,16 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
   | T.TMOD-> TMOD
   | T.TSharp-> TSharp
   | T.EOF-> EOF
+
+  | T.TRx ((A.R i) as x) -> 
+      if i <= 31 && i >=0
+      then TRx x
+      else Lexer_asm.error ("register number not valid")
+  | T.TFx ((A.F i) as x) -> 
+      if i <= 31 && i >=0
+      then TFx x
+      else Lexer_asm.error ("register number not valid")
+
   | T.TIDENT s ->
       (match s with
       (* instructions *)
@@ -65,7 +68,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
       )
 
 (*****************************************************************************)
-(* Entry points *)
+(* Entry point *)
 (*****************************************************************************)
 
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm8.program = 
@@ -84,14 +87,3 @@ let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.
   }
   in
   Parse_cpp.parse caps hooks conf file
-
-
-(* Simpler code path; possibly useful in tests *)
-let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
-  L.line := 1;
-  let lexbuf = Lexing.from_channel chan.ic in
-  try 
-    Parser_asm8.program token lexbuf
-  with Parsing.Parse_error ->
-      failwith (spf "Syntax error: line %d" !L.line)
-

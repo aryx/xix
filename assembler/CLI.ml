@@ -28,8 +28,7 @@ open Preprocessor
  *    * use simple marshal again for cpp line history
  * 
  * todo:
- *  - advanced instructions: floats, MULL, coprocessor, PSR, etc
- *  - handle the instructions used in the kernel
+ *  - port remaining assembler: ia, 7a, 8a, 6a (increasing difficulty)
  * later:
  *  - look at the 5a Go sources in the Golang source, maybe ideas to steal?
  *  - follow the new design by Rob Pike of Go assembler to factorize things
@@ -78,7 +77,6 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
 (*****************************************************************************)
 
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
-  (* TODO: derive it from argv.(0) *)
   let arch = 
     (* alt: use Arch.arch_of_char argv.(0).(1) *)
     match Filename.basename argv.(0) with

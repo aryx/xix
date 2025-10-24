@@ -1,6 +1,6 @@
 (* Need:
  * - open_in: for argv derived input file but also for #include'd files
- *   because 5a is a macroassembler
+ *   because 5a/va/... are macroassemblers
  * - open_out for -o object file or argv[0].5
  * - env: for INCLUDE (for cpp)
  *)

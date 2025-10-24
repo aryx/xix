@@ -3,10 +3,11 @@ open Common
 open Regexp_.Operators
 
 module L = Location_cpp
+module T = Token_asm
+module A = Ast_asm
 (* for fields access for ocaml-light *)
 open Parse_cpp
 open Chan
-module T = Token_asm
 open Parser_asmv
 open Ast_asmv
 
@@ -21,6 +22,7 @@ open Ast_asmv
 let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   let tok = Lexer_asm.token lexbuf in
   match tok with
+
   | T.TTEXT -> TTEXT
   | T.TGLOBL -> TGLOBL
   | T.TDATA -> TDATA
@@ -33,14 +35,6 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TSB -> TSB
   | T.TFP -> TFP
   | T.TSP -> TSP
-  | T.TRx ((A.R i) as x) -> 
-      if i <= 31 && i >=0
-      then TRx x
-      else Lexer_asm.error ("register number not valid")
-  | T.TFx ((A.F i) as x) -> 
-      if i <= 31 && i >=0
-      then TFx x
-      else Lexer_asm.error ("register number not valid")
   | T.TINT i -> TINT i
   | T.TFLOAT f -> TFLOAT f
   | T.TSTRING s -> TSTRING s
@@ -58,20 +52,30 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TMOD-> TMOD
   | T.TSharp-> TSharp
   | T.EOF-> EOF
+
+  | T.TRx ((A.R i) as x) -> 
+      if i <= 31 && i >=0
+      then TRx x
+      else Lexer_asm.error ("register number not valid")
+  | T.TFx ((A.F i) as x) -> 
+      if i <= 31 && i >=0
+      then TFx x
+      else Lexer_asm.error ("register number not valid")
+
   | T.TIDENT s ->
       (match s with
       (* instructions *)
-      | "AND" -> TARITH AND | "OR" -> TARITH OR | "XOR" -> TARITH XOR 
+      | "AND" -> TARITH AND | "OR" -> TARITH OR | "XOR" -> TARITH XOR
       | "NOR" -> TNOR
 
-      | "ADD" -> TARITH (ADD (W, S)) 
-      | "ADDU" -> TARITH (ADD (W, U))
-      | "ADDV" -> TARITH (ADD (V, S))
-      | "ADDVU"  -> TARITH (ADD (V, U))
-      | "SUB" -> TARITH (SUB (W, S)) 
-      | "SUBU" -> TARITH (SUB (W, U))
-      | "SUBV" -> TARITH (SUB (V, S))
-      | "SUBVU"  -> TARITH (SUB (V, U))
+      | "ADD" -> TARITH (ADD (W, A.S)) 
+      | "ADDU" -> TARITH (ADD (W, A.U))
+      | "ADDV" -> TARITH (ADD (V, A.S))
+      | "ADDVU"  -> TARITH (ADD (V, A.U))
+      | "SUB" -> TARITH (SUB (W, A.S)) 
+      | "SUBU" -> TARITH (SUB (W, A.U))
+      | "SUBV" -> TARITH (SUB (V, A.S))
+      | "SUBVU"  -> TARITH (SUB (V, A.U))
 
       | "SLL" -> TARITH (SLL W)
       | "SLLV" -> TARITH (SLL V)
@@ -80,20 +84,20 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "SRA" -> TARITH (SRA W)
       | "SRAV" -> TARITH (SRA V)
 
-      | "SGT" -> TARITH (SGT S)
-      | "SGTU" -> TARITH (SGT U)
+      | "SGT" -> TARITH (SGT A.S)
+      | "SGTU" -> TARITH (SGT A.U)
 
-      | "MUL" -> TMULOP (MUL (W, S)) 
-      | "MULU" -> TMULOP (MUL (W, U))
-      | "MULV" -> TMULOP (MUL (V, S))
-      | "MULVU"  -> TMULOP (MUL (V, U))
-      | "DIV" -> TMULOP (DIV (W, S)) 
-      | "DIVU" -> TMULOP (DIV (W, U))
-      | "DIVV" -> TMULOP (DIV (V, S))
-      | "DIVVU"  -> TMULOP (DIV (V, U))
+      | "MUL" -> TMULOP (MUL (W, A.S)) 
+      | "MULU" -> TMULOP (MUL (W, A.U))
+      | "MULV" -> TMULOP (MUL (V, A.S))
+      | "MULVU"  -> TMULOP (MUL (V, A.U))
+      | "DIV" -> TMULOP (DIV (W, A.S)) 
+      | "DIVU" -> TMULOP (DIV (W, A.U))
+      | "DIVV" -> TMULOP (DIV (V, A.S))
+      | "DIVVU"  -> TMULOP (DIV (V, A.U))
 
-      | "REM" -> TMULOP (REM S)
-      | "REMU" -> TMULOP (REM U)
+      | "REM" -> TMULOP (REM A.S)
+      | "REMU" -> TMULOP (REM A.U)
     
       | "JMP" -> TJMP
       | "JAL" -> TJAL
@@ -112,8 +116,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "BREAK" -> TBREAK
       | "RFE" -> TRFE
 
-      | "TLBP" -> TTLB P
-      | "TLBR" -> TTLB R
+      | "TLBP" -> TTLB P_
+      | "TLBR" -> TTLB R_
       | "TLBWI" -> TTLB WI
       | "TLBWR" -> TTLB WR
 
@@ -134,7 +138,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       )
 
 (*****************************************************************************)
-(* Entry points *)
+(* Entry point *)
 (*****************************************************************************)
 
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asmv.program = 
@@ -153,13 +157,3 @@ let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.
   }
   in
   Parse_cpp.parse caps hooks conf file
-
-
-(* Simpler code path; possibly useful in tests *)
-let parse_no_cpp (chan : Chan.i) : Ast_asmv.program =
-  L.line := 1;
-  let lexbuf = Lexing.from_channel chan.ic in
-  try 
-    Parser_asmv.program token lexbuf
-  with Parsing.Parse_error ->
-      failwith (spf "Syntax error: line %d" !L.line)

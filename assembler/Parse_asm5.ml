@@ -22,6 +22,7 @@ open Ast_asm5
 let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   let tok = Lexer_asm.token lexbuf in
   match tok with
+
   | T.TTEXT -> TTEXT
   | T.TGLOBL -> TGLOBL
   | T.TDATA -> TDATA
@@ -34,14 +35,6 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TSB -> TSB
   | T.TFP -> TFP
   | T.TSP -> TSP
-  | T.TRx ((A.R i) as x) -> 
-      if i <= 15 && i >=0
-      then TRx x
-      else Lexer_asm.error ("register number not valid")
-  | T.TFx ((A.F i) as x) -> 
-      if i <= 15 && i >=0
-      then TFx x
-      else Lexer_asm.error ("register number not valid")
   | T.TINT i -> TINT i
   | T.TFLOAT f -> TFLOAT f
   | T.TSTRING s -> TSTRING s
@@ -59,6 +52,15 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TMOD-> TMOD
   | T.TSharp-> TSharp
   | T.EOF-> EOF
+
+  | T.TRx ((A.R i) as x) -> 
+      if i <= 15 && i >=0
+      then TRx x
+      else Lexer_asm.error ("register number not valid")
+  | T.TFx ((A.F i) as x) -> 
+      if i <= 15 && i >=0
+      then TFx x
+      else Lexer_asm.error ("register number not valid")
   | T.TIDENT s ->
       (match s with
       (* instructions *)

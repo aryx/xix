@@ -22,6 +22,7 @@ open Ast_asm
  *  - MULA, MULL,
  *  - MOVM (and his special bits .IA/...), 
  *  - PSR, MCR/MRC,
+ *  - handle the instructions used in the kernel
  *)
 
 (*****************************************************************************)

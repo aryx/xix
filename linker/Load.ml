@@ -1,5 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 module A = Ast_asm
 module T = Types
 
@@ -43,20 +44,12 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch.t) :
   let pc : Types.virt_pc ref = ref 0 in
   let idfile = ref 0 in
 
-  (* TODO: split in obj file vs libfile and process libfile at the end
-   * and define nested func maybe for process_obj as it will be called too
-   * from the code loading libraries
-   *)
-
-  xs |> List.iter (fun file ->
+  let process_obj (obj : 'instr Object_file.t) =
+    let file = Fpath.v "TODO" in
+    let prog = obj in
     let ipc : Types.virt_pc = !pc in
     incr idfile;
-    (* less: assert it is a .5 file *)
-    (* TODO: if lib file! *)
-
-    (* object loading is so much easier in ocaml :) *)
-    let prog = file |> FS.with_open_in caps Object_file.load in
-    (* less: could check valid AST, range of registers, shift values, etc *)
+    
 
     (* naming and populating symbol table h *)
     prog |> A.visit_globals_program arch.visit_globals_instr 
@@ -112,5 +105,29 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch.t) :
 
       | A.LabelDef _ -> failwith (spf "label definition in object")
     );
+  in
+
+  (* TODO: split in obj file vs libfile and process libfile at the end
+   * and leverage SYMDEF/ranlib index to optimize
+  *)
+  xs |> List.iter (fun file ->
+    match () with
+    | _ when Library_file.is_libfile file ->
+         let objs = 
+            file |> FS.with_open_in caps Library_file.load in
+         (* TODO: filter only the one needed because contain entities
+          * used in the object files
+          *)
+         objs |> List.iter (fun obj -> process_obj obj)
+    | _ when Object_file.is_objfile file ->
+      (* object loading is so much easier in ocaml :) *)
+      let obj =
+            file |> FS.with_open_in caps Object_file.load in
+      process_obj obj
+     (* less: could check valid AST, range of registers, shift values, etc *)
+
+    | _ -> failwith (spf "file %s does not appear to be an obj or lib file"
+            !!file)
   );
+
   Array.of_list (List.rev !code), List.rev !data, h

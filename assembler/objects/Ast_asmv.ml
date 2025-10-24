@@ -47,20 +47,20 @@ let nb_registers = 32
 type imr =
   | Imm of A.integer
   | Reg of register
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (* alt: move_operand1 *)
 type gen =
   | GReg of register
   | Indirect of register * A.offset
   | Entity of A.entity
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (* alt: move_operand2 *)
 type vgen =
   | Gen of gen
   (* | ... far more stuff *)
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -129,7 +129,7 @@ type instr =
     (* ?? *)
     | P_ | R_ | WI | WR
 
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)

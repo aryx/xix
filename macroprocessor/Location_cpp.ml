@@ -32,7 +32,7 @@ type location_history = {
     | Line of int * Fpath.t
     (* end of #include, back to includer *)
     | Eof
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (* TODO? move to local in Parse_cpp.ml? *)
 let history = ref []

@@ -60,7 +60,7 @@ let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   let prog = Parse_asmv.parse caps conf infile in
   let prog = Resolve_labels.resolve Ast_asmv.branch_opd_of_instr prog in
   if !dump_ast 
-  then Logs.app (fun m -> m "AST = %s" "TODO");
+  then Logs.app (fun m -> m "AST = %s" (Ast_asmv.show_program prog));
   prog
 
 
@@ -101,7 +101,6 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   let outfile = ref "" in
 
   let level = ref (Some Logs.Warning) in
-  let dump_ast    = ref false in
   (* for debugging *)
   let backtrace = ref false in
 
@@ -154,7 +153,8 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
-  Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
+  Logs.info (fun m -> m "assembler ran from %s with arch %s" 
+        (Sys.getcwd()) thestring);
 
   if !infile = ""
   then begin Arg.usage options usage; raise (Exit.ExitCode 1); end;

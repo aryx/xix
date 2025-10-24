@@ -34,7 +34,7 @@ let ( ||| ) a b =
 module Either_ = struct
     (* just for deriving show *)
     type ('a, 'b) t = ('a, 'b) Either.t =  Left of 'a | Right of 'b
-    [@@deriving show]
+    [@@deriving show {with_path = false }]
 end
 
 (*****************************************************************************)

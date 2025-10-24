@@ -132,7 +132,7 @@ type pseudo_instr =
 
   and attributes = { dupok: bool; prof: bool }
   and imm_or_ximm = (integer, ximm) Either_.t
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (* alt: move in arch-specific Ast_asmx.instr
  * alt: merge with pseudo_instr
@@ -155,7 +155,7 @@ type 'instr line =
   (* disappear after resolve *)
   | LabelDef of label
   (* less: PragmaLibDirective of string *)
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 type 'instr lines = ('instr line * loc) list
 [@@deriving show]

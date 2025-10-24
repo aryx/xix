@@ -39,6 +39,8 @@ module L = Location_cpp
 %token TBEQ TBNE
 %token <Ast_asmv.b_condition> TB
 %token <Ast_asmv.tlb_kind> TTLB
+%token <Ast_asmv.move1_size> TMOVE1
+%token <Ast_asmv.move2_size> TMOVE2
 
 %token TRET TNOP
 
@@ -185,6 +187,21 @@ instr:
  | TMULOP reg TC reg TC reg { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg { ArithMul ($1, $2, None, $4) }
 
+ /*(* TODO? check "one side must be register" but va code buggy I think *)*/
+ | TMOVE1 lgen TC gen { Move1 ($1, $2, $4) }
+ | TMOVE2 vlgen TC vgen { Move2 ($1, $2, $4) }
+
+ | TJMP branch { JMP $2 }
+ | TJAL branch { JAL $2 }
+ /*(* was just nireg here for branch *)*/
+ | TJAL reg TC branch { JALReg ($2, $4) }
+
+ | TBEQ gen TC rel    { BEQ ($2, None, $4) }
+ | TBNE gen TC rel    { BNE ($2, None, $4) }
+ | TBEQ gen TC reg TC rel    { BEQ ($2, Some $4, $6) }
+ | TBNE gen TC reg TC rel    { BNE ($2, Some $4, $6) }
+
+ | TB gen TC rel { Bxx ($1, $2, $4) }
 
  | TSYSCALL { SYSCALL }
  | TTLB { TLB $1 }
@@ -217,6 +234,9 @@ ximm:
  | TDOLLAR TSTRING { Right (String $2) }
  | TDOLLAR name    { Right (Address $2) }
 
+lgen:
+ | gen { Left $1 }
+ | ximm { Right $1 }
 
 ireg: TOPAR reg TCPAR { $2 }
 
@@ -228,6 +248,12 @@ branch:
 rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }
  | con TOPAR TPC TCPAR  { ref (Relative $1) }
+
+vgen:
+ | gen { Gen $1 }
+
+vlgen:
+ | lgen { match $1 with Left x -> Left (Gen x) | Right x -> Right x }
 
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/

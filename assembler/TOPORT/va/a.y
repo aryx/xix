@@ -3,7 +3,6 @@
 %token	<lval>	LFCR LSCHED
 %type	<gen>	vgen vlgen freg mreg fcreg
 %type	<gen>	fgen
-%%
 
 line:
 |	LSCHED ';'
@@ -12,77 +11,6 @@ line:
 	}
 
 inst:
-/*
- * LOAD/STORE, but not MOVW
- */
-|	LTYPE3 lgen ',' gen
-	{
-		if(!isreg(&$2) && !isreg(&$4))
-			print("one side must be register\n");
-		outcode($1, &$2, NREG, &$4);
-	}
-
-/*
- * MOVW
- */
-|	LTYPE5 vlgen ',' vgen
-	{
-		if(!isreg(&$2) && !isreg(&$4))
-			print("one side must be register\n");
-		outcode($1, &$2, NREG, &$4);
-	}
-
-/*
- * JMP/JAL
- */
-|	LTYPE7 comma rel
-	{
-		outcode($1, &nullgen, NREG, &$3);
-	}
-|	LTYPE7 comma nireg
-	{
-		outcode($1, &nullgen, NREG, &$3);
-	}
-
-|	LTYPE8 comma rel
-	{
-		outcode($1, &nullgen, NREG, &$3);
-	}
-|	LTYPE8 comma nireg
-	{
-		outcode($1, &nullgen, NREG, &$3);
-	}
-
-|	LTYPE8 sreg ',' nireg
-	{
-		outcode($1, &nullgen, $2, &$4);
-	}
-
-/*
- * BEQ/BNE
- */
-|	LTYPE9 gen ',' rel
-	{
-		if(!isreg(&$2))
-			print("left side must be register\n");
-		outcode($1, &$2, NREG, &$4);
-	}
-|	LTYPE9 gen ',' sreg ',' rel
-	{
-		if(!isreg(&$2))
-			print("left side must be register\n");
-		outcode($1, &$2, $4, &$6);
-	}
-/*
- * B-other
- */
-|	LTYPEA gen ',' rel
-	{
-		if(!isreg(&$2))
-			print("left side must be register\n");
-		outcode($1, &$2, NREG, &$4);
-	}
-
 /*
  * floating-type
  */
@@ -178,9 +106,6 @@ vgen:
 		$$.type = D_LO;
 	}
 
-lgen:
-	gen
-|	ximm
 
 fgen:
 	freg

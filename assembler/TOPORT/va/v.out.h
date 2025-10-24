@@ -45,12 +45,6 @@ enum	as
 	ADIVD,
 	ADIVF,
 
-	AMOVB,
-	AMOVBU,
-	AMOVH,
-	AMOVHU,
-	AMOVW,
-
 	AMOVD,
 	AMOVDF,
 	AMOVDW,
@@ -74,10 +68,6 @@ enum	as
 	ASUBW,
 	ASUBD,
 	ASUBF,
-
-	AMOVV,
-	AMOVVL,
-	AMOVVR,
 
 	AREMV,
 	AREMVU,

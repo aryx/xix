@@ -73,9 +73,9 @@ type instr =
 
   (* Memory *)
   (* "one side must be a register" *)
-  | MoveG of moveg_size * (gen, ximm) Either_.t * gen
+  | Move1 of move1_size * (gen, imm_or_ximm) Either_.t * gen
   (* "one side must be a register" *)
-  | MoveV of (vgen, ximm) Either_.t * vgen
+  | Move2 of move2_size * (vgen, imm_or_ximm) Either_.t * vgen
 
   (* Control flow *)
   | JMP of A.branch_operand
@@ -107,14 +107,19 @@ type instr =
     (* TODO? in va/a.h there is REMVU/REMV but not in va/lex.c, weird *)
     | MUL of size * A.sign | DIV of size * A.sign | REM of A.sign
 
-  and moveg_size = 
+  and move1_size = 
      | B_ (* Byte *) of A.sign
      | H_ (* Half world *) of A.sign
-     | W_ (* word *) of move_dir
-     | V_ (* very long *) of move_dir
+     | W_ (* Word *) of move_dir
+     | V_ (* Very long *) of move_dir
   and move_dir = Le (* Left *) | Ri (* Right *)
 
+  and move2_size =
+    | W__ (* Word *)  | V__ (* Very long *)
+    | F__ (* Float *) | D__ (* Double *)
+
   and b_condition =
+    (* Great/Less Equal Zero (AL = ?) *)
     | GEZ | GEZAL | GTZ | LEZ | LTZ | LTZAL
 
   and tlb_kind =

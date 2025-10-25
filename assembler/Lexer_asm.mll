@@ -1,5 +1,5 @@
 {
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Token_asm
@@ -76,8 +76,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   | ';' { TSEMICOLON !L.line }
 
-  | ':' { TCOLON }
-  | ',' { TCOMMA }
+  | ':' { TCOLON } | ',' { TCOMMA }
   | '(' { TOPAR } | ')' { TCPAR }
   | '$' { TDOLLAR }
 
@@ -107,9 +106,7 @@ rule token = parse
   (* looser: actually for '.' 5a imposes to have an isalpha() after *)    
   | (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
       let s = Lexing.lexeme lexbuf in
-      (* fast enough? I hope OCaml generate good code for strings matching
-       * alt: use Hashtbl.t
-       *)
+      (* alt: use Hashtbl.t *)
       match s with
       (* pseudo instructions *)
       | "TEXT" -> TTEXT | "GLOBL" -> TGLOBL
@@ -126,7 +123,7 @@ rule token = parse
       (* pseudo registers *)
       | "PC" -> TPC | "SB" -> TSB | "SP" -> TSP | "FP" -> TFP
 
-      (* less: could impose is_lowercase? *)
+      (* each Parse_asmX.ml will refine and convert some TIDENT *)
       | _ -> TIDENT s
     }
 
@@ -158,7 +155,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asm5.ml) *)
+  (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asmX.ml) *)
   | "#" { TSharp }
 
   (* ----------------------------------------------------------------------- *)

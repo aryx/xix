@@ -4,7 +4,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Types common to the different Plan 9 assembler ASTs
+(* Types common to the different Plan 9 assembler ASTs.
  *
  * Note that in Plan 9 object files are mostly the serialized form of 
  * the assembly AST, which is why this file is in this directory.

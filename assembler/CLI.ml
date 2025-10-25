@@ -22,7 +22,7 @@ open Preprocessor
  *    * Ast_asm.ml and 'instr polymorphic type
  *    * use of simple marshalling instead of adhoc object format
  *      (which were slightly different in each arch)
- *    * seperate AST generation from resolving which allows to factorize
+ *    * separate AST generation from resolving which allows to factorize
  *      checks of redefinition and the resolution of labels
  *    * generalize more code in macroprocessor/
  *    * use simple marshal again for cpp line history
@@ -86,7 +86,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     match Filename.basename argv.(0) with
     | "o5a" -> Arch.Arm
     | "ova" -> Arch.Mips
-    | s -> failwith (spf "arch could not detected from argv0 %s" s)
+    | s -> failwith (spf "arch could not be detected from argv0 %s" s)
   in
 
   let thechar = Arch.thechar arch in
@@ -170,7 +170,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     ) |> Fpath.v
   in
 
-  (* dup: same in compiler/main.ml *)
+  (* dup: same in compiler/CLI.ml *)
   let system_paths : Fpath.t list =
     (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
      with Not_found ->
@@ -188,7 +188,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   try 
     (* main call *)
     (* can't create chan from infile to avoid passing Cap.open_in because
-     * with cpp we open other files.
+     * with cpp we need to open other files.
      *)
     outfile |> FS.with_open_out caps (fun chan ->
         assemble caps conf arch (Fpath.v !infile) chan

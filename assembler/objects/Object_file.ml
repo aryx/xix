@@ -14,7 +14,9 @@ open Chan
 (* Types and constants *)
 (*****************************************************************************)
 
-(* An object (.o) in Plan 9 is really just a serialized assembly AST *)
+(* An object (.o) in Plan 9 is really just a serialized assembly AST
+ * TODO? could also add file origin?
+ *)
 type 'instr t = 'instr Ast_asm.program
 
 (* less: could be sha1 of ast_asmxxx.ml for even safer marshalling *)
@@ -44,5 +46,5 @@ let load (chan : Chan.i) : 'instr t =
   then raise WrongVersion
   else obj
 
-let is_objfile (file : Fpath.t) : bool =
+let is_obj_filename (file : Fpath.t) : bool =
   !!file =~ ".*\\.o[5v]$"

@@ -1,5 +1,5 @@
 
-(* will call cpp internally first *)
+(* will preprocess the code internally first *)
 val parse: 
   < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast_asm5.program
 

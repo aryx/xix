@@ -119,7 +119,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_link
           * used in the object files
           *)
          objs |> List.iter (fun obj -> process_obj obj)
-    | _ when Object_file.is_objfile file ->
+    | _ when Object_file.is_obj_filename file ->
       (* object loading is so much easier in ocaml :) *)
       let (obj : 'instr Object_file.t) =
             file |> FS.with_open_in caps Object_file.load in

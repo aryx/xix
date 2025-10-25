@@ -29,7 +29,9 @@ let error s =
 
 let noattr = { dupok = false; prof = true }
 
-(* less: should use keywords in Asm5 instead of abusing integers *)
+(* less: should use keywords in Asm5 instead of abusing integers
+ * alt: anyway one can also use cpp to define NOPROF/DUPOK macros
+ *)
 let attributes_of_int i =
    match i with 
    | 0 -> noattr

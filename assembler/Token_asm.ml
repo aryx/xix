@@ -1,7 +1,7 @@
 type t =
   (* pseudo *)
   | TTEXT | TGLOBL
-  | TDATA | TWORD
+  | TWORD | TDATA 
   (* virtual *)
   | TRET | TNOP
   (* registers *)

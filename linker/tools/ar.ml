@@ -34,7 +34,7 @@ let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.
   (* sanity checks *)
   (* TODO? sanity check all of same arch? *)
   objfiles |> List.iter (fun file ->
-    if not (Object_file.is_objfile file)
+    if not (Object_file.is_obj_filename file)
     then failwith (spf "The file extension of %s does not match an object file"
           !!file)
   );

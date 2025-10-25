@@ -1,5 +1,5 @@
 %{
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Either
 
@@ -182,28 +182,28 @@ virtual_instr:
 /*(*1 Instructions *)*/
 /*(*************************************************************************)*/
 instr:
- | TARITH imr TC reg TC reg { Arith ($1, $2, Some $4, $6) }
- | TARITH imr        TC reg { Arith ($1, $2, None, $4) }
- | TNOR   imr TC reg TC imr { NOR ($2, Some $4, $6) }
- | TNOR   imr        TC imr { NOR ($2, None, $4) }
- | TMULOP reg TC reg TC reg { ArithMul ($1, $2, Some $4, $6) }
- | TMULOP reg        TC reg { ArithMul ($1, $2, None, $4) }
+ | TARITH imr TC reg TC reg     { Arith ($1, $2, Some $4, $6) }
+ | TARITH imr        TC reg     { Arith ($1, $2, None, $4) }
+ | TNOR   imr TC reg TC imr     { NOR ($2, Some $4, $6) }
+ | TNOR   imr        TC imr     { NOR ($2, None, $4) }
+ | TMULOP reg TC reg TC reg     { ArithMul ($1, $2, Some $4, $6) }
+ | TMULOP reg        TC reg     { ArithMul ($1, $2, None, $4) }
 
  /*(* TODO? check "one side must be register" but va code buggy I think *)*/
- | TMOVE1 lgen TC gen { Move1 ($1, $2, $4) }
- | TMOVE2 vlgen TC vgen { Move2 ($1, $2, $4) }
+ | TMOVE1 lgen TC gen           { Move1 ($1, $2, $4) }
+ | TMOVE2 vlgen TC vgen         { Move2 ($1, $2, $4) }
 
  | TJMP branch { JMP $2 }
  | TJAL branch { JAL $2 }
  /*(* was just nireg here for branch *)*/
  | TJAL reg TC branch { JALReg ($2, $4) }
 
- | TBEQ gen TC rel    { BEQ ($2, None, $4) }
- | TBNE gen TC rel    { BNE ($2, None, $4) }
+ | TBEQ gen TC rel           { BEQ ($2, None, $4) }
+ | TBNE gen TC rel           { BNE ($2, None, $4) }
  | TBEQ gen TC reg TC rel    { BEQ ($2, Some $4, $6) }
  | TBNE gen TC reg TC rel    { BNE ($2, Some $4, $6) }
 
- | TB gen TC rel { Bxx ($1, $2, $4) }
+ | TB gen TC rel             { Bxx ($1, $2, $4) }
 
  | TSYSCALL { SYSCALL }
  | TTLB { TLB $1 }
@@ -214,7 +214,7 @@ instr:
 
 imr:
  | imm   { Imm $1 }
- | reg   { Reg $1 }
+ | reg   { IReg $1 }
 
 imm: TDOLLAR con      { $2 }
 
@@ -227,14 +227,15 @@ reg:
        else error "register value out of range"
      }
 
+/*(*TODO: far more cases *)*/
 gen:
  | reg   { GReg $1 }
 
 ximm:
- | imm             { Left $1 }
+ | imm             { Int $1 }
  /*(* todo: float *)*/
- | TDOLLAR TSTRING { Right (String $2) }
- | TDOLLAR name    { Right (Address $2) }
+ | TDOLLAR TSTRING { String $2 }
+ | TDOLLAR name    { Address $2 }
 
 lgen:
  | gen { Left $1 }
@@ -251,9 +252,11 @@ rel:
  | TIDENT offset        { ref (LabelUse ($1, $2)) }
  | con TOPAR TPC TCPAR  { ref (Relative $1) }
 
+/*(*TODO: far more cases *)*/
 vgen:
  | gen { Gen $1 }
 
+/*(*TODO: far more cases *)*/
 vlgen:
  | lgen { match $1 with Left x -> Left (Gen x) | Right x -> Right x }
 

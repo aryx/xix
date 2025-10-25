@@ -10,7 +10,7 @@ open Preprocessor
 (*****************************************************************************)
 (* An OCaml port of 5c, the Plan 9 C compiler for ARM.
  *
- * Main limitations compared to 5c:
+ * Main limitations compared to 5c/vc/...:
  *  - no unicode support
  *  - can not compile multiple files at the same time
  *    (but you should use mk anyway)
@@ -49,6 +49,8 @@ open Preprocessor
  *    better error messages (a la clang)
  * 
  * todo:
+ *  - finish enough to at least handle helloc.c (basic function calls, basic
+ *    types)
  *  - safe-linking support
  *  - debugger support
  *  - profiler support
@@ -60,13 +62,6 @@ open Preprocessor
 (* Need: see .mli *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 
-let thechar = '5'
-let thestring = "arm"
-let _arch = Arch5.arch
-
-let usage = 
-  spf "usage: %cc [-options] files" thechar
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -75,7 +70,7 @@ let usage =
 (* Testing *)
 (*****************************************************************************)
 
-let do_action (caps: < caps; .. >) s xs =
+let do_action (caps: < caps; .. >) thestring s xs =
   match s with
   | "-test_parser" ->
       xs |> List.iter (fun file ->
@@ -99,7 +94,16 @@ let do_action (caps: < caps; .. >) s xs =
 (*****************************************************************************)
 (* Main algorithms *)
 (*****************************************************************************)
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : (Ast.fullname, Typecheck.idinfo) Hashtbl.t * (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t * Ast.func_def list =
+
+(* TODO: move somewhere else, rename ids_structs_funcs? or use
+ * record with fields!
+ *)
+type frontend_result = 
+  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
+  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
+  Ast.func_def list
+
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : frontend_result =
 
   let ast = Parse.parse caps conf infile in
 
@@ -153,15 +157,31 @@ let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fp
     frontend caps conf infile in
   backend5 (ids, structs, funcs) outfile
 
-let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
-  (outfile : Chan.o) =
-  compile5 caps conf infile outfile
+let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t) (infile : Fpath.t) (outfile : Chan.o) : unit =
+  match arch with
+  | Arch.Arm -> compile5 caps conf infile outfile
+  | _ -> 
+   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+
+  let arch = 
+    match Filename.basename argv.(0) with
+    | "o5c" -> Arch.Arm
+    | "ovc" -> Arch.Mips
+    | s -> failwith (spf "arch could not detected from argv0 %s" s)
+  in
+
+  let thechar = Arch.thechar arch in
+  let thestring = Arch.thestring arch in
+
+  let usage = 
+    spf "usage: %s [-options] file.c" argv.(0)
+  in
 
   (* in *)
   let args = ref [] in
@@ -257,7 +277,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   (* to test and debug components of mk *)
   if !action <> "" then begin 
-    do_action caps !action (List.rev !args); 
+    do_action caps thestring !action (List.rev !args); 
     raise (Exit.ExitCode 0 )
   end;
 
@@ -294,7 +314,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         }
         in
         outfile |> FS.with_open_out caps (fun chan ->
-          compile caps conf (Fpath.v cfile) chan
+          compile caps conf arch (Fpath.v cfile) chan
         );
         Exit.OK
     | _ -> 

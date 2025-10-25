@@ -245,7 +245,7 @@ rcon:
 
 
 gen:
- | ximm  { match $1 with Left x -> Imsr (Imm x) | Right x -> Ximm x }
+ | ximm  { match $1 with Int x -> Imsr (Imm x) | x -> Ximm x }
  | shift { Imsr ($1) }
  | reg   { Imsr (Reg $1) }
 
@@ -254,14 +254,14 @@ gen:
  | con TOPAR pointer TCPAR { Entity ($3 None $1) }
 
 ximm:
- | imm             { Left $1 }
+ | imm             { Int $1 }
  /*(* todo: float *)*/
- | TDOLLAR TSTRING { Right (String $2) }
- | TDOLLAR name    { Right (Address $2) }
+ | TDOLLAR TSTRING { String $2 }
+ | TDOLLAR name    { Address $2 }
 
 ioreg:
- | ireg                { Indirect ($1, 0) }
- | con TOPAR reg TCPAR { Indirect ($3, $1) }
+ | ireg     { Indirect ($1, 0) }
+ | con ireg { Indirect ($2, $1) }
 
 ireg: TOPAR reg TCPAR { $2 }
 

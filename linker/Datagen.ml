@@ -19,12 +19,12 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_si
     | T.SData2 (offset, T.Data) ->
         let base = offset + offset2 in
         (match v with
-        | Left _i -> raise Todo
-        | Right (A.String s) -> 
+        | A.Int _i -> raise Todo
+        | A.String s -> 
             for i = 0 to size_slice -1 do 
               arr.(base + i) <- s.[i] 
             done
-        | Right (A.Address (A.Global (global2,_offsetTODO))) ->
+        | A.Address (A.Global (global2,_offsetTODO)) ->
             let info2 = Hashtbl.find symbols2 (T.symbol_of_global global2) in
             let _i = 
               match info2 with
@@ -32,7 +32,7 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_si
               | T.SData2 (offset, _kind) -> init_data + offset
             in
             raise Todo
-        | Right (A.Address (A.Local _ | A.Param _)) -> raise Todo
+        | (A.Address (A.Local _ | A.Param _)) -> raise Todo
         )
     | T.SData2 (_, T.Bss) -> raise (Impossible "layout_data missed a DATA")
     | T.SText2 _ -> raise (Impossible "layout_data did this check")

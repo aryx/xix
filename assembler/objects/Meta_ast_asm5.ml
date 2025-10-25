@@ -76,6 +76,8 @@ and vof_entity =
       in Ocaml.VSum (("Global", [ v1; v2 ]))
 and vof_ximm =
   function
+  | Int v1 ->
+      let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("Int", [ v1 ]))
   | String v1 ->
       let v1 = Ocaml.vof_string v1 in Ocaml.VSum (("String", [ v1 ]))
   | Address v1 -> let v1 = vof_entity v1 in Ocaml.VSum (("Address", [ v1 ]))
@@ -205,9 +207,9 @@ let rec vof_pseudo_instr =
       let v1 = vof_global v1
       and v2 = vof_offset v2
       and v3 = Ocaml.vof_int v3
-      and v4 = vof_imm_or_ximm v4
+      and v4 = vof_ximm v4
       in Ocaml.VSum (("DATA", [ v1; v2; v3; v4 ]))
-  | WORD v1 -> let v1 = vof_imm_or_ximm v1 in Ocaml.VSum (("WORD", [ v1 ]))
+  | WORD v1 -> let v1 = vof_ximm v1 in Ocaml.VSum (("WORD", [ v1 ]))
 and vof_virtual_instr =
   function
   | RET -> Ocaml.VSum (("RET", []))
@@ -221,9 +223,6 @@ and vof_attributes { dupok = v_dupok; prof = v_prof } =
   let arg = Ocaml.vof_bool v_dupok in
   let bnd = ("dupok", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds
 
-
-and vof_imm_or_ximm v = Ocaml.vof_either vof_integer vof_ximm v
-  
 let vof_line =
   function
   | Pseudo v1 ->

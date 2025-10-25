@@ -79,6 +79,7 @@ type entity =
 
 (* extended immediate *)
 type ximm =
+  | Int of integer
   | String of string (* limited to 8 characters *)
 
   (* Float? *)
@@ -125,15 +126,14 @@ type move_size = Word | HalfWord of sign | Byte of sign
 
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of global * attributes * int (* size locals, should be multiple of 4 *)
+  | TEXT of global * attributes * int (* size locals, (multiple of 4 on ARM) *)
   | GLOBL of global (* can have offset? *) * attributes * int (* size *)
 
-  | DATA of global * offset * int (* size, should be in [1..8] *) * imm_or_ximm
+  | DATA of global * offset * int (* size, should be in [1..8] *) * ximm
   (* any ximm? even String? And Float? for float should have DWORD? *)
-  | WORD of imm_or_ximm
+  | WORD of ximm
 
   and attributes = { dupok: bool; prof: bool }
-  and imm_or_ximm = (integer, ximm) Either_.t
 [@@deriving show {with_path = false}]
 
 (* alt: move in arch-specific Ast_asmx.instr
@@ -187,27 +187,18 @@ let rec visit_globals_program visit_instr (f : global -> unit) (prog : 'instr pr
       (match y with
       | TEXT (ent, _, _) -> f ent
       | GLOBL (ent, _, _) -> f ent
-      | DATA (ent, _, _, ix) -> f ent; visit_globals_imm_or_ximm f ix
-      | WORD (ix) -> visit_globals_imm_or_ximm f ix
+      | DATA (ent, _, _, ix) -> f ent; visit_globals_ximm f ix
+      | WORD (ix) -> visit_globals_ximm f ix
       )
-    | Virtual y ->
-      (match y with
-      | RET | NOP -> ()
-      )
+    | Virtual (RET | NOP) | LabelDef _ -> ()
     | Instr instr ->
       visit_instr f instr
-    | LabelDef _ -> ()
   )
 
 and visit_globals_ximm f x =
   match x with
   | Address (Global (x, _)) -> f x
-  | Address (Param _ | Local _) -> ()
-  | String _ -> ()
-and visit_globals_imm_or_ximm f x =
-  match x with
-  | Either.Left _ -> ()
-  | Either.Right x -> visit_globals_ximm f x
+  | Address (Param _ | Local _) | String _ | Int _ -> ()
 and visit_globals_branch_operand f x =
   match !x with
   | SymbolJump ent -> f ent

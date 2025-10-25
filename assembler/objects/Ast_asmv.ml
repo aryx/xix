@@ -45,13 +45,13 @@ let rLINK = R 31
 let nb_registers = 32
 
 
-(* alt: arith_operand *)
+(* alt: could call it arith_operand but use imr like in the original grammar *)
 type imr =
   | Imm of A.integer
-  | Reg of register
+  | IReg of register
 [@@deriving show {with_path = false}]
 
-(* alt: move_operand1 *)
+(* alt: could call move_operand1 but follow naming of original grammar *)
 type gen =
   | GReg of register
   | Indirect of register * A.offset
@@ -75,9 +75,9 @@ type instr =
 
   (* Memory (Load/Store) *)
   (* "one side must be a register" *)
-  | Move1 of move1_size * (gen, imm_or_ximm) Either_.t * gen
+  | Move1 of move1_size * (gen, ximm) Either_.t * gen
   (* "one side must be a register" *)
-  | Move2 of move2_size * (vgen, imm_or_ximm) Either_.t * vgen
+  | Move2 of move2_size * (vgen, ximm) Either_.t * vgen
 
   (* Control flow *)
   | JMP of A.branch_operand

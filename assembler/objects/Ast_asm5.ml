@@ -75,7 +75,9 @@ type arith_operand =
 type mov_operand = 
   (* Immediate shift register *)
   | Imsr of arith_operand
-  (* eXtended immediate *)
+  (* eXtended immediate.
+   * (Ximm (Int x) is converted in Imsr (Imm x) in the parser
+   *)
   | Ximm of ximm
 
   | Indirect of register * A.offset

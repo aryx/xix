@@ -104,14 +104,14 @@ type 'instr code = ('instr code_bis * loc)
 (* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
 and 'instr code_bis =
   | TEXT of A.global * A.attributes * int
-  | WORD of A.imm_or_ximm
+  | WORD of A.ximm
   | V of A.virtual_instr
   | I of 'instr
 [@@deriving show]
 
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
-  | DATA of A.global * A.offset * int * A.imm_or_ximm
+  | DATA of A.global * A.offset * int * A.ximm
 [@@deriving show]
 
 

@@ -28,7 +28,7 @@ type pool =
   (* note that it is not always an int! Sometimes it can be an
    * Address which will be resolved only at the very end.
    *)
-  | PoolOperand of Ast_asm.imm_or_ximm
+  | PoolOperand of Ast_asm.ximm
   (* todo: still don't know why we need that *)
   | LPOOL 
 
@@ -293,11 +293,11 @@ let rules symbols2 autosize init_data node =
   | T.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
         match x with
-        | Left i -> [ [(i land 0xffffffff, 0)] ]
-        | Right (String _s) -> 
+        | Int i -> [ [(i land 0xffffffff, 0)] ]
+        | String _s -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed with WORD; use DATA"
-        | Right (Address (Global (global, _offsetTODO))) -> 
+        | Address (Global (global, _offsetTODO)) -> 
             let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
             (match v with
              | T.SText2 real_pc -> [ [(real_pc, 0)] ]
@@ -307,7 +307,7 @@ let rules symbols2 autosize init_data node =
                  | Some init_data -> [ [(init_data + offset, 0)] ]
                  )
             )
-        | Right (Address (Param _ | Local _)) -> raise Todo
+        | Address (Param _ | Local _) -> raise Todo
       )}
 
   | T.I (instr, cond) ->
@@ -507,6 +507,7 @@ let rules symbols2 autosize init_data node =
     (* Address *)
     | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
         (match ximm with
+        | Int _ -> failwith "TODO: ?? because of refactor of imm_or_ximm"
         | String _ -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed in MOVW; use DATA"
@@ -540,7 +541,7 @@ let rules symbols2 autosize init_data node =
             )}
             | None -> 
               (* MOVW $L(SB), RT -> LDR x(R15), RT *)
-              { size = 4; pool=Some(PoolOperand(Right ximm)); binary=(fun () ->
+              { size = 4; pool=Some(PoolOperand(ximm)); binary=(fun () ->
                 [ gload_from_pool node cond (R rt) ]
               )}
             )

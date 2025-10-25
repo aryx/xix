@@ -1,0 +1,51 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=7c
+LDLIBS=-lbio -l9 -lm
+
+
+OFILES=\
+	cgen.$O\
+	list.$O\
+	machcap.$O\
+	mul.$O\
+	peep.$O\
+	reg.$O\
+	sgen.$O\
+	swt.$O\
+	txt.$O\
+        \
+	pgen.$O\
+	pswt.$O\
+	../7l/enam.$O\
+
+HFILES=\
+	gc.h\
+	../7l/7.out.h\
+	../cc/cc.h\
+
+LIB=../cc/cc.a
+
+<$TOP/mkfiles/mkone
+
+# have to use p% to restrict to pgen/pswt and not enam
+# otherwise with just %.$O we get rule ambiguity
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c
+
+#$ROOT/$OBJDIR/lib/libcc.a:
+#	cd ../cc
+#	mk install
+#	mk clean
+#
+
+#
+#t:V:	$O.out
+#	$O.out -S t
+#	$LD -o t.out t.$O
+#	t.out
+
+#enam.c: 7.out.h
+#	rc mkenam

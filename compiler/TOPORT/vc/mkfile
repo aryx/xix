@@ -1,0 +1,34 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=vc
+LDLIBS=-lbio -l9 -lm
+
+OFILES=\
+	cgen.$O\
+	list.$O\
+	peep.$O\
+	reg.$O\
+	sgen.$O\
+	swt.$O\
+	txt.$O\
+	mul.$O\
+        \
+	pgen.$O\
+	pswt.$O\
+	../vl/enam.$O\
+
+HFILES=\
+	gc.h\
+	../vl/v.out.h\
+	../cc/cc.h\
+
+LIB=\
+	../cc/cc.a\
+
+<$TOP/mkfiles/mkone
+
+# see 7c/mkfile for more info
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c

@@ -1,0 +1,51 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=ic		# also makes jc (for riscv64)
+LDLIBS=-lbio -l9 -lm
+
+OFILES=\
+	cgen.$O\
+	list.$O\
+	mul.$O\
+	peep.$O\
+	reg.$O\
+	sgen.$O\
+	swt.$O\
+	txt.$O\
+	machcap.$O\
+        \
+	pgen.$O\
+	pswt.$O\
+	../il/enam.$O\
+
+#	lex.$O\
+
+HFILES=\
+	gc.h\
+	../il/i.out.h\
+	../cc/cc.h\
+
+LIB=../cc/cc.a
+
+<$TOP/mkfiles/mkone
+
+# see 7c/mkfile for more info
+p%.$O: ../cc2/p%.c
+	$CC $CFLAGS ../cc2/p$stem.c
+
+#TODO: trick for ic and jc
+#lex.$O: ../cc/lex.c ../cc/y.tab.h
+#	$CC -Dmain'='ccmain $CFLAGS ../cc/lex.c
+
+#$ROOT/$OBJDIR/lib/libcc.a:
+#	cd ../cc
+#	mk $MKFLAGS install
+#	mk $MKFLAGS clean
+#../cc/y.tab.h: ../cc/cc.y
+#	cd ../cc
+#	mk $MKFLAGS y.tab.h
+#
+#
+#install:V:	$BIN/jc

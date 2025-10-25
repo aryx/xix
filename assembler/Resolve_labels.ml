@@ -1,4 +1,4 @@
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Ast_asm
@@ -17,8 +17,8 @@ open Ast_asm
 (* Error management *)
 (*****************************************************************************)
 
-let error (s : string) (line : int) =
-  (* TODO: use Location_cpp.Error instead! *)
+let error (s : string) (line, _locs) =
+  (* TODO: use Location_cpp.Error instead or use locs at least! *)
   failwith (spf "%s at line %d" s line)
 
 (*****************************************************************************)
@@ -38,14 +38,16 @@ let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
     | LabelDef lbl -> 
         (* better to check duplicate here than via lexing tricks *)
         if Hashtbl.mem h lbl
-        then error (spf "redeclaration of %s" lbl) line;
+        then error (spf "redeclaration of %s" lbl) (line, locs);
 
         Hashtbl.add h lbl !pc;
         (* no incr pc; share pc if multiple labels at same place *)
-    | Instr _ | Pseudo (TEXT _ | WORD _) -> 
+    (* coupling: must be consistent with second pass below and incr pc
+     * for the same cases!
+     *)
+    | Instr _ | Pseudo (TEXT _ | WORD _) | Virtual (RET | NOP) -> 
         incr pc
     | Pseudo (DATA _ | GLOBL _ ) -> ()
-    | Virtual (RET | NOP) -> ()
     )
   );
 
@@ -81,7 +83,7 @@ let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
                  (* less: could keep label info also for debugging purpose? *)
                  opd := Absolute (pc + i)
                with Not_found ->
-                 error (spf "undefined label: %s" lbl) line
+                 error (spf "undefined label: %s" lbl) (line, locs)
                )
           | Absolute _ -> 
               raise (Impossible "Absolute can't be made via assembly syntax")

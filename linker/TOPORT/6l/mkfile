@@ -1,0 +1,43 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=6l
+LDLIBS=-lbio -l9 -lm
+CFLAGS_EXTRA=-I../ld
+
+# no pe.$O this time compared to 8l
+#old: we used to use ../ld/elf.$O and so on but the problem is that
+# other linkers like 5l are also using elf.c but with a different l.h
+# that should result in a different .o, so simpler to use symlinks
+# to generate in each linker a different independent .o
+OFILES=\
+	asm.$O\
+	data.$O\
+	dwarf.$O\
+	elf.$O\
+	enam.$O\
+	go.$O\
+	lib.$O\
+	list.$O\
+	macho.$O\
+	obj.$O\
+	optab.$O\
+	pass.$O\
+	prof.$O\
+	span.$O\
+	symtab.$O\
+
+HFILES=\
+	l.h\
+	../6l/6.out.h\
+	../ld/lib.h\
+	../ld/elf_.h\
+	../ld/macho.h\
+	../ld/dwarf.h\
+
+<$TOP/mkfiles/mkone
+
+CLEANFILES=enam.c
+enam.c: 6.out.h
+	sh mkenam

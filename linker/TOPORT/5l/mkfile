@@ -1,0 +1,38 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=5l
+LDLIBS=-lbio -l9 -lm
+CFLAGS_EXTRA=-I../ld
+
+# no macho.$O, no pe.$O compared to 8l
+# and addition of thumb.$O and softfloat.$O and noop.$O
+OFILES=\
+	asm.$O\
+	data.$O\
+	elf.$O\
+	enam.$O\
+	lib.$O\
+	list.$O\
+	noop.$O\
+	obj.$O\
+	optab.$O\
+	pass.$O\
+	prof.$O\
+	thumb.$O\
+	softfloat.$O\
+	span.$O\
+	symtab.$O\
+	go.$O\
+
+HFILES=\
+	l.h\
+	../5l/5.out.h\
+	../ld/elf_.h\
+
+<$TOP/mkfiles/mkone
+
+CLEANFILES=enam.c
+enam.c: 5.out.h
+	sh mkenam

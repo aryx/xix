@@ -1,0 +1,39 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=8l
+LDLIBS=-lbio -l9 -lm
+CFLAGS_EXTRA=-I../ld
+
+OFILES=\
+	asm.$O\
+	data.$O\
+	dwarf.$O\
+	elf.$O\
+	enam.$O\
+	go.$O\
+	lib.$O\
+	list.$O\
+	macho.$O\
+	obj.$O\
+	optab.$O\
+	pass.$O\
+	pe.$O\
+	prof.$O\
+	span.$O\
+	symtab.$O\
+
+HFILES=\
+	l.h\
+	../8l/8.out.h\
+	../ld/dwarf.h\
+	../ld/elf_.h\
+	../ld/macho.h\
+	../ld/pe.h\
+
+<$TOP/mkfiles/mkone
+
+CLEANFILES=enam.c
+enam.c: 8.out.h
+	sh mkenam

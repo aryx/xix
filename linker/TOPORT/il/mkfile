@@ -1,0 +1,42 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+TARG=il		# also makes jl (for riscv64)
+LDLIBS=-lbio -l9 -lm
+
+OFILES=\
+	asm.$O\
+	compress.$O\
+	list.$O\
+	noop.$O\
+	obj.$O\
+	optab.$O\
+	pass.$O\
+	span.$O\
+	enam.$O\
+	elf.$O\
+
+#	$TARGMODEL.$O\
+
+HFILES=\
+	l.h\
+	i.out.h\
+	../ld/elf.h\
+
+CLEANFILES=enam.c
+
+<$TOP/mkfiles/mkone
+
+enam.c: i.out.h
+	sh mkenam
+
+#enam.$O:	../ic/enam.c
+#	$CC $CFLAGS ../ic/enam.c
+elf.$O:	../ld/elf.c
+	$CC $CFLAGS ../ld/elf.c
+
+#$TARGMODEL.$O:	../ld/$TARGMODEL.c
+#	$CC $CFLAGS ../ld/$TARGMODEL.c
+
+#install:V:	$BIN/jl

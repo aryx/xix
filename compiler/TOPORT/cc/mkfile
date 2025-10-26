@@ -1,0 +1,29 @@
+TOP=../../..
+<$TOP/mkconfig
+<$TOP/mkfiles/$objtype/mkfile
+
+LIB=cc.a
+
+HFILES=\
+	cc.h\
+	y.tab.h\
+
+YFILES=cc.y
+
+OFILES=\
+	y.tab.$O\
+	lex.$O\
+	mac.$O\
+	dcl.$O\
+	acid.$O\
+	pickle.$O\
+	bits.$O\
+	com.$O\
+	scon.$O\
+	funct.$O\
+	sub.$O\
+	com64.$O\
+	dpchk.$O\
+	omachcap.$O\
+
+<$TOP/mkfiles/mklib

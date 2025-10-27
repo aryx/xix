@@ -37,15 +37,18 @@ itab[] =
 	"CSR",		LCTL,	0,
 
 	"ADD",		LADD,	AADD,
+	"ADDW",		LADD,	AADDW,
+
 	"SLL",		LADD,	ASLL,
+	"SRL",		LADD,	ASRL,
+	"SRA",		LADD,	ASRA,
+
 	"SLT",		LADD,	ASLT,
 	"SLTU",		LADD,	ASLTU,
+
 	"XOR",		LADD,	AXOR,
-	"SRL",		LADD,	ASRL,
 	"OR",		LADD,	AOR,
 	"AND",		LADD,	AAND,
-	"SRA",		LADD,	ASRA,
-	"ADDW",		LADD,	AADDW,
 
 	"SLLW",		LADD,	ASLLW,
 	"SRLW",		LADD,	ASRLW,
@@ -63,6 +66,7 @@ itab[] =
 	"DIVU",		LMUL,	ADIVU,
 	"REM",		LMUL,	AREM,
 	"REMU",		LMUL,	AREMU,
+
 	"MULW",		LMUL,	AMULW,
 	"DIVW",		LMUL,	ADIVW,
 	"DIVUW",	LMUL,	ADIVUW,

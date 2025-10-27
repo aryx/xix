@@ -70,6 +70,7 @@ enum	as
 	ASUBD,
 	ASUBF,
 
+    //??? not in lex.c, normal?
 	AREMV,
 	AREMVU,
 

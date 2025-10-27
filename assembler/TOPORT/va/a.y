@@ -15,6 +15,7 @@ inst:
 	{
 		outcode($1, &$2, NREG, &$4);
 	}
+
 |	LTYPEE freg ',' freg
 	{
 		outcode($1, &$2, NREG, &$4);
@@ -23,6 +24,7 @@ inst:
 	{
 		outcode($1, &$2, $4, &$6);
 	}
+
 |	LTYPEF freg ',' LFREG comma
 	{
 		outcode($1, &$2, $4, &nullgen);
@@ -184,6 +186,7 @@ gen:
 		$$.offset = $1;
 	}
 |	oreg
+
 
 oreg:
 	name

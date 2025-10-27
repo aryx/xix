@@ -46,7 +46,7 @@
  *)
 
 (*****************************************************************************)
-(* Types *)
+(* Types and exns *)
 (*****************************************************************************)
 
 (* start of copy-pasted code from extLib/IO.ml *)
@@ -69,11 +69,16 @@ exception No_more_input
 exception Input_closed
 exception Output_closed
 
-(* -------------------------------------------------------------- *)
+(*****************************************************************************)
 (* API *)
+(*****************************************************************************)
+
+(* ------------------------------------------------------------------------- *)
+(* Channel <-> IO *)
+(* ------------------------------------------------------------------------- *)
 
 (* put early before input/close_in/output/close_out are redefined below *)
-let input_channel ch =
+let input_channel (ch : in_channel) : input =
   {
     in_read = (fun () ->
       try
@@ -89,7 +94,7 @@ let input_channel ch =
     in_close = (fun () -> (*Pervasives/Stdlib.*)close_in ch);
   }
 
-let output_channel ch =
+let output_channel (ch : out_channel) : 'a output =
   {
     out_write = (fun c -> output_char ch c);
     out_output = (fun s p l -> (*Pervasives/Stdlib.*)output ch s p l; l);
@@ -119,6 +124,10 @@ let create_out ~write ~output ~flush ~close =
     out_flush = flush;
   }
  *)
+
+(* ------------------------------------------------------------------------- *)
+(* read/write *)
+(* ------------------------------------------------------------------------- *)
 
 let read i = i.in_read()
 
@@ -229,6 +238,10 @@ let output o s p l =
   o.out_output s p l
 
 
+(* ------------------------------------------------------------------------- *)
+(* Misc *)
+(* ------------------------------------------------------------------------- *)
+
 (*
 let scanf i fmt =
   let ib = Scanf.Scanning.from_function (fun () -> try read i with No_more_input -> raise End_of_file) in
@@ -307,7 +320,11 @@ let pos_out o =
 (* -------------------------------------------------------------- *)
 (* Standard IO *)
 
-let input_bytes s =
+(* ------------------------------------------------------------------------- *)
+(* Bytes/Strings <-> IO *)
+(* ------------------------------------------------------------------------- *)
+
+let input_bytes (s : bytes) : input =
   let pos = ref 0 in
   let len = Bytes.length s in
   {
@@ -327,12 +344,10 @@ let input_bytes s =
     in_close = (fun () -> ());
   }
 
-let input_string s =
+let input_string (s : string) : input =
   (* Bytes.unsafe_of_string is safe here as input_bytes does not
      mutate the byte sequence *)
   input_bytes (Bytes.unsafe_of_string s)
-
-
 
 
 let output_buffer close =
@@ -344,8 +359,8 @@ let output_buffer close =
     out_flush = (fun () -> ());
   }
 
-let output_string () = output_buffer Buffer.contents
-let output_bytes () = output_buffer Buffer.to_bytes
+let output_string () : string output = output_buffer Buffer.contents
+let output_bytes () : bytes output = output_buffer Buffer.to_bytes
 
 let output_strings() =
   let sl = ref [] in
@@ -373,7 +388,9 @@ let output_strings() =
     out_flush = (fun () -> ());
   }
 
-
+(* ------------------------------------------------------------------------- *)
+(* Misc2 *)
+(* ------------------------------------------------------------------------- *)
 
 let pipe() =
   let input = ref "" in

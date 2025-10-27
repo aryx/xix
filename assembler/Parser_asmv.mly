@@ -57,8 +57,8 @@ module L = Location_cpp
 %token TPC TSB TFP TSP
 
 %token TM TFCR
-%token <Ast_asmv.mregister> TMx
-%token <Ast_asmv.fcrregister> TFCRx
+%token <Ast_asmv.mreg> TMx
+%token <Ast_asmv.fcrreg> TFCRx
 
 /*(*-----------------------------------------*)*/
 /*(*2 Constants *)*/

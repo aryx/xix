@@ -21,18 +21,18 @@ open Ast_asm
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
-type register = A.register (* between 0 and 31 *)
+type reg = A.register (* between 0 and 31 *)
 [@@deriving show]
 
-type fregister = A.fregister (* between 0 and 31 *)
-[@@deriving show]
-
-(* ?? *)
-type mregister = M of int (* between 0 and 31 *)
+type freg = A.fregister (* between 0 and 31 *)
 [@@deriving show]
 
 (* ?? *)
-type fcrregister = FCR of int (* between 0 and 31 *)
+type mreg = M of int (* between 0 and 31 *)
+[@@deriving show]
+
+(* ?? *)
+type fcrreg = FCR of int (* between 0 and 31 *)
 [@@deriving show]
 
 (* reserved by the linker *)
@@ -48,13 +48,13 @@ let nb_registers = 32
 (* alt: could call it arith_operand but use imr like in the original grammar *)
 type imr =
   | Imm of A.integer
-  | IReg of register
+  | IReg of reg
 [@@deriving show {with_path = false}]
 
 (* alt: could call move_operand1 but follow naming of original grammar *)
 type gen =
-  | GReg of register
-  | Indirect of register * A.offset
+  | GReg of reg
+  | Indirect of reg * A.offset
   | Entity of A.entity
 [@@deriving show {with_path = false}]
 
@@ -69,9 +69,9 @@ type vgen =
 (* ------------------------------------------------------------------------- *)
 type instr =
   (* Arithmetic *)
-  | Arith of arith_opcode * imr * register option * register
-  | NOR of imr * register option * imr
-  | ArithMul of mul_opcode * register * register option * register
+  | Arith of arith_opcode * imr * reg option * reg
+  | NOR of imr * reg option * imr
+  | ArithMul of mul_opcode * reg * reg option * reg
 
   (* Memory (Load/Store) *)
   (* "one side must be a register" *)
@@ -83,10 +83,10 @@ type instr =
   | JMP of A.branch_operand
   | RFE of A.branch_operand
   | JAL of A.branch_operand (* jump and link *)
-  | JALReg of register * A.branch_operand (* no Relative|LabelUse here *) 
+  | JALReg of reg * A.branch_operand (* no Relative|LabelUse here *) 
   (* "left side must be register" *)
-  | BEQ of gen * register option * A.branch_operand (* just Relative|LabelUse *)
-  | BNE of gen * register option * A.branch_operand (* just Relative|LabelUse *)
+  | BEQ of gen * reg option * A.branch_operand (* just Relative|LabelUse *)
+  | BNE of gen * reg option * A.branch_operand (* just Relative|LabelUse *)
   | Bxx of b_condition * gen * A.branch_operand (* just Relative|LabelUse *)
 
   (* System *)

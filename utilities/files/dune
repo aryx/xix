@@ -1,0 +1,19 @@
+(executable
+ (name Cat)
+ (modules Cat)
+ (libraries
+   str unix
+   xix_commons
+ )
+ (preprocess (pps ppx_deriving.show))
+ (modes native byte)
+)
+
+
+(install
+ (package xix)
+ (section bin)
+ (files
+  (Cat.exe as ocat)
+ )
+)

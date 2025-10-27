@@ -21,7 +21,7 @@
   Cmd Proc
   Date
   Fpath_ Ftype
-  Arch OS
+  Arch OS Endian
  )   
  (libraries
     stdcompat

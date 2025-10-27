@@ -3,17 +3,17 @@
 TOP=..
 # need -I macroprocessor/ because object files contains Location_cpp data
 # but in theory the linker does not need it
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables -I $TOP/linker/libraries
 
 SRC= Flags.ml\
- Types.ml Types5.ml Arch_.ml \
+ Types.ml Types5.ml Arch_linker.ml \
  Load.ml Check.ml Resolve.ml\
  Rewrite5.ml Codegen5.ml Datagen.ml Layout5.ml\
  Executable.ml \
  CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/macroprocessor/lib.cma $TOP/assembler/objects/lib.cma $TOP/linker/executables/lib.cma
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/macroprocessor/lib.cma $TOP/assembler/objects/lib.cma $TOP/linker/executables/lib.cma $TOP/linker/libraries/lib.cma
 
 # or use Principia spirit! THE linker! so call it simply 'linker' ? :)
 PROG=5l

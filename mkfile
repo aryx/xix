@@ -9,7 +9,7 @@ DIRS0=\
   lib_parsing lex yacc\
   macroprocessor\
   assembler/objects assembler\
-  linker/executables linker\
+  linker/executables linker/libraries linker\
   compiler
 
 # does not work yet with ocaml-light

@@ -1,4 +1,4 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 module A = Ast_asm
@@ -6,7 +6,7 @@ module T = Types
 
 (* for field access for ocaml-light *)
 open Ast_asm
-open Arch
+open Arch_linker
 
 (*****************************************************************************)
 (* Helpers *)
@@ -32,6 +32,7 @@ let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : uni
  * - "name" entities by assigning a unique name to every entities
  *   (handling private symbols),
  * - visit all entities (defs and uses) and add them in symbol table
+ *
  * alt: take as a parameter (xs : Chan.i list);
  *)
 let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_linker.t) : 'instr T.code array * T.data list * Types.symbol_table =
@@ -112,7 +113,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_link
   *)
   xs |> List.iter (fun file ->
     match () with
-    | _ when Library_file.is_libfile file ->
+    | _ when Library_file.is_lib_filename file ->
          let (objs : 'instr Library_file.t)  = 
             file |> FS.with_open_in caps Library_file.load in
          (* TODO: filter only the one needed because contain entities

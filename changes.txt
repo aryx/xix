@@ -16,7 +16,12 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0)
+* 0.17 (Q4 2025) (va, ar v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0)
+
+** toolchain
+- port va to OCaml
+- port ar to OCaml (v0)
+- start of multi-arch assembler/linker/compiler detecting arch with argv0
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)

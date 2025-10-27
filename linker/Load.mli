@@ -1,5 +1,5 @@
 
-(* Load all the object (or library) files and split in code vs data.
+(* Load all the object (and library) files and split in code vs data.
  * Will also relocate branching instructions.
  * less: return also LineDirective info per file.
  *)

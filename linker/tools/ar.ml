@@ -5,10 +5,10 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of ar, the Plan 9 archiver.
+(* An OCaml port of ar, the Plan 9 (object) archiver.
  *
  * Main limitations compared to ar:
- *  - no complex CLI flags; just oar objfiles -o
+ *  - no complex CLI flags; just 'oar objfiles [-o libfile]'
  *    no ar vu, ar rcs, ... just archive!
  *
  * todo:
@@ -39,7 +39,7 @@ let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.
           !!file)
   );
   let libfile = Fpath.v (Chan.destination chan) in
-  if not (Library_file.is_libfile libfile)
+  if not (Library_file.is_lib_filename libfile)
   then failwith (spf "The file extension of %s does not match a library file"
           !!libfile);
 

@@ -3,9 +3,13 @@ open Common
 open Regexp_.Operators
 open Fpath_.Operators
 
+(* for field-access in ocaml-light *)
+open Chan
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Simple API to load/save archive library files (e.g., libc.a) *)
 
 (*****************************************************************************)
 (* Types and constants *)
@@ -34,5 +38,5 @@ let load (chan : Chan.i) : 'instr t =
   then raise Object_file.WrongVersion
   else x
 
-let is_libfile (file : Fpath.t) : bool =
+let is_lib_filename (file : Fpath.t) : bool =
   !!file =~ ".*\\.oa[5vi]?$"

@@ -4,7 +4,6 @@ open Either
 
 open Ast_asm
 open Ast
-open Arch_compiler
 module C = Ast
 module A = Ast_asm
 module A5 = Ast_asm5
@@ -13,6 +12,9 @@ module T = Type
 module S = Storage
 module TC = Typecheck
 module E = Check
+
+(* for ocaml-light field access *)
+open Arch_compiler
 
 (*****************************************************************************)
 (* Prelude *)
@@ -669,7 +671,8 @@ let rec stmt env st0 =
 
       (* update env.offsets *)
       let t = idinfo.TC.typ in
-      let sizet = env.arch.width_of_type {structs = env.structs} t in
+      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
+      in
       (* todo: align *)
       env.offset_locals := !(env.offset_locals) + sizet;
       env.size_locals := !(env.size_locals) + sizet;
@@ -871,7 +874,8 @@ let codegen (ids, structs, funcs) : Ast_asm5.program =
     let xs = List_.zip typparams tparams in
     let offset = ref 0 in
     xs |> List.iter (fun (p, t) ->
-      let sizet = env.arch.width_of_type {structs = env.structs} t in
+      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
+      in
       p.p_name |> Option.iter (fun fullname ->
         Hashtbl.add offsets fullname !offset
       );

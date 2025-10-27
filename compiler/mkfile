@@ -11,7 +11,7 @@ SRC= Flags.ml \
   Globals.ml \
   Error.ml \
   Parser.ml Lexer.ml Parse.ml \
-  Arch.ml \
+  Arch_compiler.ml \
   Check.ml Eval_const.ml Typecheck.ml \
   Rewrite.ml \
   Arch5.ml Codegen5.ml \

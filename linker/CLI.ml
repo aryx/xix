@@ -5,11 +5,12 @@ open Fpath_.Operators
 module T = Types
 (* for ocaml-light field access *)
 open Types
+open Arch_linker
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5l/5v, the Plan 9 ARM/MIPS linkers.
+(* An OCaml port of 5l/vl, the Plan 9 ARM/MIPS linkers.
  *
  * Main limitations compared to 5l/vl/...:
  * - no -E digit 
@@ -27,7 +28,8 @@ open Types
  * Better than 5l/vl/...:
  * - greater code reuse across all linkers thanks to:
  *    * use of marshalling for objects and libraries
- *    * factorized analysis such as ???
+ *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
+ *      Load.load
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors
@@ -43,6 +45,7 @@ open Types
  *  - symbol table
  *  - program counter line table
  *  - nice error reporting for signature conflict, conflicting objects
+ *
  * later:
  *  - look at the 5l Go sources in the Golang source, maybe ideas to steal?
  *)
@@ -70,7 +73,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   Check.check symbols;
   
-  let graph = Resolve.build_graph Ast_asm5.branch_opd_of_instr symbols code in
+  let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
@@ -85,12 +88,13 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
     | Some x -> x
   in
   let config = { config with init_data = Some init_data } in
+  Logs.info (fun m -> m "final config is %s" (Types.show_config config));
  
   let instrs = Codegen5.gen symbols2 config graph in
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Executable.gen config sizes instrs datas symbols2 chan
 
-let link (caps : < Cap.open_in; ..> ) (config : T.config) (arch: Arch.t) (files : Fpath.t list) (chan : Chan.o) : unit =
+let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
   match arch with
   | Arch.Arm ->
      link5 caps config files chan
@@ -103,7 +107,6 @@ let link (caps : < Cap.open_in; ..> ) (config : T.config) (arch: Arch.t) (files 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let arch = 
-    (* alt: use Arch.arch_of_char argv.(0).(1) *)
     match Filename.basename argv.(0) with
     | "o5l" -> Arch.Arm
     | "ovl" -> Arch.Mips
@@ -111,6 +114,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   in
 
   let thechar = Arch.thechar arch in
+  let thestring = Arch.thestring arch in
   let thebin = spf "%c.out" thechar in
   let usage = 
     spf "usage: %s [-options] objects" argv.(0) 
@@ -123,6 +127,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let init_text  = ref None in
   let init_round = ref None in
   let init_data  = ref None in
+  (* note that this is not "main"; we give the opportunity to libc _main
+   * to do a few things before calling user's main()
+   *)
   let init_entry = ref "_main" in
 
   let level = ref (Some Logs.Warning) in
@@ -175,7 +182,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
-  Logs.info (fun m -> m "linker ran from %s" (Sys.getcwd()));
+  Logs.info (fun m -> m "linker ran from %s with arch %s" 
+        (Sys.getcwd()) thestring);
 
   (match List.rev !infiles with
   | [] -> 
@@ -206,7 +214,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      try 
         (* the main call *)
         !outfile |> FS.with_open_out caps (fun chan ->
-          link caps config arch xs chan
+          link caps arch config xs chan
         );
         (* TODO: set exec bit on outfile *)
         Exit.OK
@@ -218,13 +226,12 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       | Failure s ->
           Logs.err (fun m -> m "%s" s);
           Exit.Code 1
-(*
+      (* not sure this exn is currently thrown but just in case *)
       | Location_cpp.Error (s, loc) ->
-          (* less: could use final_loc_and_includers_of_loc loc *)
+          (* TODO: actually we should pass locs! *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
           Logs.err (fun m -> m "%s:%d %s" !!file line s);
           Exit.Code 1
-*)
       | _ -> raise exn
       )
   )

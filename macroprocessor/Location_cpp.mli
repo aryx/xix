@@ -25,7 +25,8 @@ exception Error of string * loc
 val add_event: 
   location_event -> unit
 
-(* uses history *)
+(* !uses history! you should avoid this function in a multifile processing
+ * context (e.g., in the linker) *)
 val final_loc_of_loc: 
     loc -> final_loc
 

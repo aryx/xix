@@ -1,6 +1,6 @@
 (* Need:
- * - open_in but should be only for argv derived file
- * - open_out for -o object file or 5.argv[0]
+ * - open_in but should be only for argv derived files
+ * - open_out for -o exec file or 5.out
  *)
 type caps = < Cap.open_in; Cap.open_out >
 
@@ -10,5 +10,5 @@ val main: <caps; ..> ->
 
 (* main algorithm; works by side effect on outfile *)
 val link: < Cap.open_in; ..> ->
-  Types.config -> Arch.t -> Fpath.t list (* files *) -> Chan.o (* outfile *) ->
+  Arch.t -> Types.config -> Fpath.t list (* files *) -> Chan.o (* outfile *) ->
   unit

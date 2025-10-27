@@ -1,13 +1,14 @@
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Either
 
 open Ast_asm
 open Ast_asm5
-open Types
-open Types5
+
 module T = Types
 module T5 = Types5
+open Types
+open Types5
 
 (*****************************************************************************)
 (* Prelude *)
@@ -52,7 +53,7 @@ let error node s =
   )
 
 (* new: can detect some typing mistakes *)
-let sanity_check_composed_word n xs =
+let sanity_check_composed_word node (xs : composed_word) =
   let dbg = Dumper.dump xs in
   let rec aux bit xs =
     match xs with
@@ -60,12 +61,12 @@ let sanity_check_composed_word n xs =
     | (x,bit2)::xs ->
         let size = bit - bit2 in
         (match () with
-        | _ when bit2 >= bit -> error n ("composed word not sorted: " ^ dbg)
-        | _ when x < 0       -> error n (spf "negative value %d: %s" x dbg)
-        | _ when size <= 0   -> error n (spf "no space for value %d: %s" x dbg)
+        | _ when bit2 >= bit -> error node ("composed word not sorted: " ^ dbg)
+        | _ when x < 0       -> error node (spf "negative value %d: %s" x dbg)
+        | _ when size <= 0   -> error node (spf "no space for value %d: %s" x dbg)
         (* if size = 2 then maxval = 3 so x >= 2^2 (= 1 lsl 2) then error *)
         | _ when x >= 1 lsl size ->
-            error n (spf "value %d overflow outside its space (%d - %d): %s "
+            error node (spf "value %d overflow outside its space (%d - %d): %s "
                        x bit bit2 dbg)
         | _ -> ()
         );
@@ -73,7 +74,7 @@ let sanity_check_composed_word n xs =
   in
   aux 32 xs
 
-let word_of_composed_word x =
+let word_of_composed_word (x : composed_word) : Types.word =
   x |> List.fold_left (fun acc (v, i) ->
     (v lsl i) lor acc
   ) 0

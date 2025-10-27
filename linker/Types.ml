@@ -143,6 +143,10 @@ type header_type =
   | Elf (* Linux *)
 [@@deriving show]
 
+(* for ocaml-light to work without deriving *)
+let show_config _ = "NO DERIVING"
+[@@warning "-32"]
+
 type config = {
   header_type: header_type;
   header_size: int;

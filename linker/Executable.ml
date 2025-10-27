@@ -11,26 +11,6 @@ module T5 = Types5
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
-(* little-endian put long (see also lput in a_out.ml for big-endian version) *)
-let lputl (chan : out_channel) (word : int) : unit =
-  if word < 0 
-  then raise (Impossible (spf "should call lputl with a uint not %d" word));
-  (* TODO? sanity check not > 32 bits uint? *)
-
-  let x1 = Char.chr (word mod 256) in
-  let x2 = Char.chr ((word lsr 8) mod 256) in
-  let x3 = Char.chr ((word lsr 16) mod 256) in
-  let x4 = Char.chr ((word lsr 24) mod 256) in
-  output_char chan x1;
-  output_char chan x2;
-  output_char chan x3;
-  output_char chan x4;
-  ()
-  
-
-let cput (chan : out_channel) (byte : byte) : unit =
-  output_char chan byte
   
 (*****************************************************************************)
 (* Entry point *)
@@ -76,9 +56,9 @@ let gen (config : T.config) (sizes : T.sections_size) (cs : T.word list) (ds : T
   A_out.write_header header chan.oc;
 
   (* Text section *)
-  cs |> List.iter (lputl chan.oc);
+  cs |> List.iter (Endian.Little.output_32 chan.oc);
   (* Data section *)
   (* no seek to a page boundary; a disk image is not a memory image! *)
-  ds |> Array.iter (cput chan.oc);
+  ds |> Array.iter (output_char chan.oc);
   (* todo: symbol table, program counter line table *)
   ()

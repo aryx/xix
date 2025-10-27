@@ -294,6 +294,7 @@ let rules symbols2 autosize init_data node =
   | T.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
         match x with
+        | Float _ -> raise Todo
         | Int i -> [ [(i land 0xffffffff, 0)] ]
         | String _s -> 
             (* stricter? what does 5l do with that? confusing I think *)
@@ -508,7 +509,8 @@ let rules symbols2 autosize init_data node =
     (* Address *)
     | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
         (match ximm with
-        | Int _ -> failwith "TODO: ?? because of refactor of imm_or_ximm"
+        | Int _ | Float _ -> 
+           failwith "TODO: ?? because of refactor of imm_or_ximm"
         | String _ -> 
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed in MOVW; use DATA"

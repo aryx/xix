@@ -78,6 +78,8 @@ and vof_ximm =
   function
   | Int v1 ->
       let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("Int", [ v1 ]))
+  | Float v1 ->
+      let v1 = Ocaml.vof_float v1 in Ocaml.VSum (("Float", [ v1 ]))
   | String v1 ->
       let v1 = Ocaml.vof_string v1 in Ocaml.VSum (("String", [ v1 ]))
   | Address v1 -> let v1 = vof_entity v1 in Ocaml.VSum (("Address", [ v1 ]))

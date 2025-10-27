@@ -18,7 +18,7 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_si
     | T.SData2 (offset, T.Data) ->
         let base = offset + offset2 in
         (match v with
-        | A.Int _i -> raise Todo
+        | A.Int _ | A.Float _ -> raise Todo
         | A.String s -> 
             for i = 0 to size_slice -1 do 
               arr.(base + i) <- s.[i] 

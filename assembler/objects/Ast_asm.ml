@@ -40,6 +40,11 @@ type virt_pc = int
 *)
 type integer = int 
 [@@deriving show]
+
+(* floating point. float enough too? can contain 'double' C? *)
+type floatp = float 
+[@@deriving show]
+
 (* can be 0, negative, or positive *)
 type offset = int
 [@@deriving show]
@@ -80,10 +85,8 @@ type entity =
 (* extended immediate *)
 type ximm =
   | Int of integer
+  | Float of floatp
   | String of string (* limited to 8 characters *)
-
-  (* Float? *)
-
   (* I used to disallow address of FP or SP, and offset to SB, but
    * 5c needs this feature, so you can take the address of a local.
    * old: Address of global.
@@ -198,7 +201,7 @@ let rec visit_globals_program visit_instr (f : global -> unit) (prog : 'instr pr
 and visit_globals_ximm f x =
   match x with
   | Address (Global (x, _)) -> f x
-  | Address (Param _ | Local _) | String _ | Int _ -> ()
+  | Address (Param _ | Local _) | String _ | Int _ | Float _ -> ()
 and visit_globals_branch_operand f x =
   match !x with
   | SymbolJump ent -> f ent

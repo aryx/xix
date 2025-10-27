@@ -108,17 +108,17 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       (* less: special bits *)
 
       (* float, MUL, ... *)
-      | "ADDF" -> TARITHF (ADD_, F)
-      | "SUBF" -> TARITHF (SUB_, F)
-      | "MULF" -> TARITHF (MUL_, F)
-      | "DIVF" -> TARITHF (DIV_, F)
-      | "ADDD" -> TARITHF (ADD_, D) 
-      | "SUBD" -> TARITHF (SUB_, D)
-      | "MULD" -> TARITHF (MUL_, D)
-      | "DIVD" -> TARITHF (DIV_, D)
+      | "ADDF" -> TARITHF (ADD_, A.F)
+      | "SUBF" -> TARITHF (SUB_, A.F)
+      | "MULF" -> TARITHF (MUL_, A.F)
+      | "DIVF" -> TARITHF (DIV_, A.F)
+      | "ADDD" -> TARITHF (ADD_, A.D) 
+      | "SUBD" -> TARITHF (SUB_, A.D)
+      | "MULD" -> TARITHF (MUL_, A.D)
+      | "DIVD" -> TARITHF (DIV_, A.D)
 
-      | "CMPF" -> TCMPF F
-      | "CMPD" -> TCMPF D
+      | "CMPF" -> TCMPF A.F
+      | "CMPD" -> TCMPF A.D
 
       (* advanced *)
       | "C" -> TC

@@ -95,6 +95,7 @@ type instr =
   (* Arithmetic *)
   | Arith of arith_opcode * arith_cond option *
       arith_operand (* src *) * register option * register (* dst *)
+  | ArithF of arithf_opcode
 
   (* Memory *)
   | MOVE of A.move_size * move_option *
@@ -113,9 +114,6 @@ type instr =
   | SWI of int (* value actually unused in Plan 9 and Linux *)
   | RFE (* virtual, sugar for MOVM *)
 
-  (* Floats *)
-  (* | MOVF ... | ArithFloat | ... *)
-
   and arith_opcode = 
     (* logic *)
     | AND | ORR | EOR
@@ -129,6 +127,9 @@ type instr =
     | MOV | MVN (* MOV has no reading syntax in 5a, MOVE is used *)
   and arith_cond = Set_condition (* .S *)
 
+  and arithf_opcode =
+    | ADDF | SUBF | MULF | DIVF
+    
   and cmp_opcode = 
     | CMP
     (* less useful *)
@@ -149,6 +150,7 @@ type instr =
    and move_option = move_cond option
      (* this is used only with a MOV with an indirect with offset operand *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
@@ -175,7 +177,7 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | B opd -> Some opd
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
-  | Arith _ | MOVE _ | SWAP _ | Cmp _ | SWI _ | RFE -> None
+  | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | SWI _ | RFE -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   let mov_operand x =
@@ -191,4 +193,4 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | B b -> A.visit_globals_branch_operand f b
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
-  | Arith _ | SWAP _ | Cmp _ | SWI _ | RFE -> () 
+  | Arith _ | ArithF _ | SWAP _ | Cmp _ | SWI _ | RFE -> () 

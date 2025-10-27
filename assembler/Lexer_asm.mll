@@ -100,7 +100,7 @@ rule token = parse
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         let i = int_of_string s in 
         (* the range check is arch-specific and must be done in Parse_asmX.ml *)
-        TFx (Ast_asm.F i)
+        TFx (Ast_asm.FR i)
       }
 
   (* looser: actually for '.' 5a imposes to have an isalpha() after *)    

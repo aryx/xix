@@ -72,7 +72,7 @@ type global = {
 type register = R of int (* between 0 and 15 on ARM *)
 [@@deriving show]
 
-type fregister = F of int (* between 0 and 15 on ARM *)
+type fregister = FR of int (* between 0 and 15 on ARM *)
 [@@deriving show]
 
 type entity = 
@@ -116,11 +116,15 @@ and branch_operand2 =
   | IndirectJump of register
 [@@deriving show]
 
-   (* In a MOVE, sign is relevant only for a load operation *)
+(* In a MOVE, sign is relevant only for a load operation *)
 type sign = S (* Signed *) | U (* Unsigned *)
 [@@deriving show]
+
 (* TODO: add Dword  *)
 type move_size = Word | HalfWord of sign | Byte of sign
+[@@deriving show]
+
+type float_precision = F (* Float *) | D (* Double *)
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)

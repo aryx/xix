@@ -120,9 +120,10 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
      | T.V A.NOP -> raise (Impossible "NOP was removed in step1")
 
      | T.I (
-            (A5.RFE|A5.Arith (_, _, _, _, _)|A5.MOVE (_, _, _, _)
-            |A5.SWAP (_, _, _, _)|A5.B _|A5.BL _|A5.Cmp (_, _, _)|A5.Bxx (_, _)
-            |A5.SWI _)
+            ( A5.RFE | A5.Arith _ | A5.ArithF _ | A5.MOVE _
+            | A5.SWAP _ | A5.B _ | A5.BL _ | A5.Cmp _ | A5.Bxx _
+            | A5.SWI _
+            )
             , _) ->
         autosize_opt
   ) None;

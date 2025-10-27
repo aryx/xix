@@ -32,6 +32,7 @@ module L = Location_cpp
 /*(*-----------------------------------------*)*/
 
 %token <Ast_asmv.arith_opcode> TARITH
+%token <Ast_asmv.arithf_opcode * Ast_asm.floatp_precision> TARITHF
 %token TNOR
 %token <Ast_asmv.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
@@ -189,6 +190,9 @@ instr:
  | TMULOP reg TC reg TC reg     { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg     { ArithMul ($1, $2, None, $4) }
 
+ | TARITHF freg         TC freg { ArithF ($1, $2, None, $4) }
+ | TARITHF freg TC freg TC freg { ArithF ($1, $2, Some $4, $6) }
+
  /*(* TODO? check "one side must be register" but va code buggy I think *)*/
  | TMOVE1 lgen TC gen           { Move1 ($1, $2, $4) }
  | TMOVE2 vlgen TC vgen         { Move2 ($1, $2, $4) }
@@ -233,7 +237,7 @@ gen:
 
 ximm:
  | imm             { Int $1 }
- /*(* todo: float *)*/
+ | TDOLLAR fcon    { Float $2 }
  | TDOLLAR TSTRING { String $2 }
  | TDOLLAR name    { Address $2 }
 
@@ -295,7 +299,19 @@ offset:
  | TMINUS con  { - $2 }
 
 /*(*-----------------------------------------*)*/
-/*(*2 Integer constant and expression (arch independent)  *)*/
+/*(*2 float (arch independent; check is arch dependent) *)*/
+/*(*-----------------------------------------*)*/
+
+freg:
+ | TFx                { $1 }
+ | TF TOPAR con TCPAR 
+     { if $3 <= 32 && $3 >= 0
+       then FR $3
+       else error "register value out of range"
+     }
+
+/*(*-----------------------------------------*)*/
+/*(*2 number constant and expression (arch independent)  *)*/
 /*(*-----------------------------------------*)*/
 
 con:
@@ -306,6 +322,10 @@ con:
  | TTILDE con { lnot $2 }
 
  | TOPAR expr TCPAR { $2 }
+
+fcon: 
+ | TDOLLAR TFLOAT { $2 }
+ | TDOLLAR TMINUS TFLOAT { -. $3 }
 
 expr:
  | con { $1 }

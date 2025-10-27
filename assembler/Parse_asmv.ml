@@ -112,6 +112,16 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "MOVW" -> TMOVE2 W__
       | "MOVV" -> TMOVE2 V__
 
+      | "ABSF" -> TARITHF (ABS_, F) | "ABSD" -> TARITHF (ABS_, D)
+      | "NEGF" -> TARITHF (NEG_, F) | "NEGD" -> TARITHF (NEG_, D)
+      | "CMPEQF" -> TARITHF (CMPEQ_, F) | "CMPEQD" -> TARITHF (CMPEQ_, D)
+      | "CMPGEF" -> TARITHF (CMPGE_, F) | "CMPGED" -> TARITHF (CMPGE_, D)
+      | "CMPGTF" -> TARITHF (CMPGT_, F) | "CMPGTD" -> TARITHF (CMPGT_, D)
+      | "ADDF" -> TARITHF (ADD_, F) | "ADDD" -> TARITHF (ADD_, D)
+      | "SUBF" -> TARITHF (SUB_, F) | "SUBD" -> TARITHF (SUB_, D)
+      | "DIVF" -> TARITHF (DIV_, F) | "DIVD" -> TARITHF (DIV_, D)
+      | "MULF" -> TARITHF (MUL_, F) | "MULD" -> TARITHF (MUL_, D)
+
       (* advanced *)
       | "M" -> TM
       | _ when s =~ "^M\\([0-9]+\\)$" ->

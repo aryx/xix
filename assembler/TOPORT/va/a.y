@@ -9,27 +9,6 @@ line:
 
 inst:
 /*
- * floating-type
- */
-|	LTYPED freg ',' freg
-	{
-		outcode($1, &$2, NREG, &$4);
-	}
-
-|	LTYPEE freg ',' freg
-	{
-		outcode($1, &$2, NREG, &$4);
-	}
-|	LTYPEE freg ',' LFREG ',' freg
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-
-|	LTYPEF freg ',' LFREG comma
-	{
-		outcode($1, &$2, $4, &nullgen);
-	}
-/*
  * coprocessor branch
  */
 |	LTYPEG comma rel
@@ -131,20 +110,6 @@ fcreg:
 		$$.reg = $3;
 	}
 
-freg:
-	LFREG
-	{
-		$$ = nullgen;
-		$$.type = D_FREG;
-		$$.reg = $1;
-	}
-|	LF '(' con ')'
-	{
-		$$ = nullgen;
-		$$.type = D_FREG;
-		$$.reg = $3;
-	}
-
 ximm:	
 |	'$' oreg
 	{
@@ -157,18 +122,6 @@ ximm:
 		$$.type = D_OCONST;
 	}
 
-|	'$' LFCONST
-	{
-		$$ = nullgen;
-		$$.type = D_FCONST;
-		$$.dval = $2;
-	}
-|	'$' '-' LFCONST
-	{
-		$$ = nullgen;
-		$$.type = D_FCONST;
-		$$.dval = -$3;
-	}
 
 nireg:
 |	con ireg

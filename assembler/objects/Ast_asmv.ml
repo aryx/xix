@@ -72,6 +72,9 @@ type instr =
   | Arith of arith_opcode * imr * reg option * reg
   | NOR of imr * reg option * imr
   | ArithMul of mul_opcode * reg * reg option * reg
+  (* TODO: in theory takes F | D | W, not just A.floatp_precision *)
+  | ArithF of (arithf_opcode * A.floatp_precision) *
+       freg * freg option * freg
 
   (* Memory (Load/Store) *)
   (* "one side must be a register" *)
@@ -111,6 +114,14 @@ type instr =
   and mul_opcode =
     (* TODO? in va/a.h there is REMVU/REMV but not in va/lex.c, weird *)
     | MUL of size * A.sign | DIV of size * A.sign | REM of A.sign
+
+  (* ABS/NEG are unary and can't take middle register. Same for CMPFxx 
+   * alt: define separate ArithFUnary CmpF constructs
+   *)
+  and arithf_opcode =
+    | ADD_ | SUB_ | DIV_ | MUL_
+    | ABS_ | NEG_
+    | CMPEQ_ | CMPGE_ | CMPGT_
 
   and move1_size = 
      | B_ (* Byte *) of A.sign
@@ -156,5 +167,5 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | BEQ (_, _, opd) -> Some opd
   | BNE (_, _, opd) -> Some opd
   | Bxx (_, _, opd) -> Some opd
-  | Arith _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
+  | Arith _ | ArithF _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
   | TLB _ -> None

@@ -24,26 +24,14 @@
 enum	as
 {
 	AABSW,
-	AABSD,
-	AABSF,
-
 	AADDW,
-	AADDD,
-	AADDF,
+	ADIVW,
+	AMULW,
+	ANEGW,
+	ASUBW,
 
 	ABFPF,
 	ABFPT,
-
-	ACMPEQD,
-	ACMPEQF,
-	ACMPGED,
-	ACMPGEF,
-	ACMPGTD,
-	ACMPGTF,
-
-	ADIVW,
-	ADIVD,
-	ADIVF,
 
 	AMOVD,
 	AMOVF,
@@ -57,18 +45,6 @@ enum	as
 
 	AMOVWL,
 	AMOVWR,
-
-	AMULW,
-	AMULD,
-	AMULF,
-
-	ANEGW,
-	ANEGD,
-	ANEGF,
-
-	ASUBW,
-	ASUBD,
-	ASUBF,
 
     //??? not in lex.c, normal?
 	AREMV,

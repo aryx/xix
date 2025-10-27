@@ -314,7 +314,7 @@ let rules symbols2 autosize init_data node =
 
   | T.I (instr, cond) ->
     (match instr with
-    | ArithF _ -> raise Todo
+    | ArithF _ | CmpF _ -> raise Todo
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)

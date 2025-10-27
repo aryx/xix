@@ -106,7 +106,19 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
 
       (* less: special bits *)
-      (* less: float, MUL, ... *)
+
+      (* float, MUL, ... *)
+      | "ADDF" -> TARITHF (ADD_, F)
+      | "SUBF" -> TARITHF (SUB_, F)
+      | "MULF" -> TARITHF (MUL_, F)
+      | "DIVF" -> TARITHF (DIV_, F)
+      | "ADDD" -> TARITHF (ADD_, D) 
+      | "SUBD" -> TARITHF (SUB_, D)
+      | "MULD" -> TARITHF (MUL_, D)
+      | "DIVD" -> TARITHF (DIV_, D)
+
+      | "CMPF" -> TCMPF F
+      | "CMPD" -> TCMPF D
 
       (* advanced *)
       | "C" -> TC

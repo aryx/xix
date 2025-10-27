@@ -37,6 +37,8 @@ module L = Location_cpp
 /*(*-----------------------------------------*)*/
 
 %token <Ast_asm5.arith_opcode> TARITH
+%token <Ast_asm5.arithf_opcode * Ast_asm.floatp_precision> TARITHF
+%token <Ast_asm.floatp_precision> TCMPF
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
@@ -191,6 +193,10 @@ instr:
  | TARITH cond  imsr TC reg  { (Arith ($1,  None, $3, None, $5), $2) }
  | TMVN   cond  imsr TC reg  { (Arith (MVN, None, $3, None, $5), $2) }
 
+ | TARITHF cond frcon         TC freg  { (ArithF ($1, $3, None, $5), $2) }
+ | TARITHF cond frcon TC freg TC freg  { (ArithF ($1, $3, Some $5, $7), $2) }
+ | TCMPF cond freg TC freg             { (CmpF ($1, $3, $5), $2) }
+
  | TMOV   cond  gen  TC gen     { (MOVE ($1, None, $3, $5), $2) }
 
  | TSWAP  cond  reg  TC ireg    { (SWAP ($1, $5, $3, None), $2) }
@@ -255,7 +261,7 @@ gen:
 
 ximm:
  | imm             { Int $1 }
- /*(* todo: float *)*/
+ | fcon            { Float $1 }
  | TDOLLAR TSTRING { String $2 }
  | TDOLLAR name    { Address $2 }
 
@@ -311,7 +317,23 @@ offset:
  | TMINUS con  { - $2 }
 
 /*(*-----------------------------------------*)*/
-/*(*2 Integer constant and expression (arch independent)  *)*/
+/*(*2 float *)*/
+/*(*-----------------------------------------*)*/
+
+freg:
+ | TFx                { $1 }
+ | TF TOPAR con TCPAR 
+     { if $3 <= 15 && $3 >= 0
+       then FR $3
+       else error "register value out of range"
+     }
+
+frcon:
+  | freg { Right $1 }
+  | fcon { Left $1 }
+
+/*(*-----------------------------------------*)*/
+/*(*2 number constants and expressions (arch independent)  *)*/
 /*(*-----------------------------------------*)*/
 
 con:
@@ -322,6 +344,10 @@ con:
  | TTILDE con { lnot $2 }
 
  | TOPAR expr TCPAR { $2 }
+
+fcon: 
+ | TDOLLAR TFLOAT { $2 }
+ | TDOLLAR TMINUS TFLOAT { -. $3 }
 
 expr:
  | con { $1 }

@@ -111,7 +111,7 @@ let rec vof_instr =
       and v4 = Ocaml.vof_option vof_register v4
       and v5 = vof_register v5
       in Ocaml.VSum (("Arith", [ v1; v2; v3; v4; v5 ]))
-  | ArithF ((v1, v2, v3, v4, v5)) ->
+  | ArithF ((v1, v2), v3, v4, v5) ->
       let v1 = vof_arithf_opcode v1 in
       let v2 = vof_floatp_precision v2 in
       let v3 = OCaml.vof_either OCaml.vof_float vof_fregister v3 in
@@ -137,6 +137,11 @@ let rec vof_instr =
       and v2 = vof_arith_operand v2
       and v3 = vof_register v3
       in Ocaml.VSum (("Cmp", [ v1; v2; v3 ]))
+  | CmpF ((v1, v2, v3)) ->
+      let v1 = vof_floatp_precision v1
+      and v2 = vof_fregister v2
+      and v3 = vof_fregister v3
+      in Ocaml.VSum (("CmpF", [ v1; v2; v3 ]))
   | Bxx ((v1, v2)) ->
       let v1 = vof_condition v1
       and v2 = vof_branch_operand v2

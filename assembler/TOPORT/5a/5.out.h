@@ -14,6 +14,7 @@
 #define	REGTMPT		7	/* used by the loader for thumb code */
 
 #define	NFREG		8
+
 #define	FREGRET		0
 #define	FREGEXT		7
 #define	FREGTMP		15
@@ -40,16 +41,6 @@ enum	as
 	AMOVF,
 	AMOVD,
 
-	ACMPF,
-	ACMPD,
-	AADDF,
-	AADDD,
-	ASUBF,
-	ASUBD,
-	AMULF,
-	AMULD,
-	ADIVF,
-	ADIVD,
 //	ASQRTF,
 //	ASQRTD,
 

@@ -121,7 +121,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
 
      | T.I (
             ( A5.RFE | A5.Arith _ | A5.ArithF _ | A5.MOVE _
-            | A5.SWAP _ | A5.B _ | A5.BL _ | A5.Cmp _ | A5.Bxx _
+            | A5.SWAP _ | A5.B _ | A5.BL _ | A5.Cmp _ | A5.CmpF _ | A5.Bxx _
             | A5.SWI _
             )
             , _) ->

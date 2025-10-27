@@ -1,5 +1,5 @@
 %type	<lval>	oexpr creg reglist
-%type	<gen>	regreg freg fcon frcon
+%type	<gen>	regreg
 
 inst:
 /*
@@ -44,18 +44,6 @@ inst:
 |	LTYPEI cond freg ',' freg
 	{
 		outcode($1, $2, &$3, NREG, &$5);
-	}
-|	LTYPEK cond frcon ',' freg
-	{
-		outcode($1, $2, &$3, NREG, &$5);
-	}
-|	LTYPEK cond frcon ',' LFREG ',' freg
-	{
-		outcode($1, $2, &$3, $5, &$7);
-	}
-|	LTYPEL cond freg ',' freg comma
-	{
-		outcode($1, $2, &$3, $5.reg, &nullgen);
 	}
 
 /*
@@ -124,20 +112,6 @@ ximm:
 	}
 |	fcon
 
-
-fcon:
-	'$' LFCONST
-	{
-		$$ = nullgen;
-		$$.type = D_FCONST;
-		$$.dval = $2;
-	}
-|	'$' '-' LFCONST
-	{
-		$$ = nullgen;
-		$$.type = D_FCONST;
-		$$.dval = -$3;
-	}
 
 reglist:
 	spreg
@@ -210,24 +184,6 @@ creg:
 		if($3 < 0 || $3 >= NREG)
 			print("register value out of range\n");
 		$$ = $3;
-	}
-
-frcon:
-	freg
-|	fcon
-
-freg:
-	LFREG
-	{
-		$$ = nullgen;
-		$$.type = D_FREG;
-		$$.reg = $1;
-	}
-|	LF '(' con ')'
-	{
-		$$ = nullgen;
-		$$.type = D_FREG;
-		$$.reg = $3;
 	}
 
 name:

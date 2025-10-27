@@ -17,7 +17,6 @@ open Ast_asm
  * !!! If you modify this file please increment Object_file.version !!!
  * 
  * TODO: 
- *  - floats instructions (or better in Ast_asm.ml?)
  *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU (or better in Ast_asm.ml too?)
  *  - MULA, MULL,
  *  - MOVM (and his special bits .IA/...), 
@@ -95,7 +94,7 @@ type instr =
   (* Arithmetic *)
   | Arith of arith_opcode * arith_cond option *
       arith_operand (* src *) * reg option * reg (* dst *)
-  | ArithF of arithf_opcode * A.floatp_precision *
+  | ArithF of (arithf_opcode * A.floatp_precision) *
       (A.floatp, freg) Either_.t * freg option * freg
 
   (* Memory *)
@@ -108,6 +107,7 @@ type instr =
   | B  of A.branch_operand (* branch *)
   | BL of A.branch_operand (* branch and link *)
   | Cmp of cmp_opcode * arith_operand * reg
+  | CmpF of A.floatp_precision * freg * freg
   (* just Relative or LabelUse here for branch_operand *)
   | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
 
@@ -178,7 +178,7 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | B opd -> Some opd
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
-  | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | SWI _ | RFE -> None
+  | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   let mov_operand x =
@@ -194,4 +194,4 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | B b -> A.visit_globals_branch_operand f b
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
-  | Arith _ | ArithF _ | SWAP _ | Cmp _ | SWI _ | RFE -> () 
+  | Arith _ | ArithF _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> () 

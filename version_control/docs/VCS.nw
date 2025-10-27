@@ -2777,8 +2777,8 @@ files on the disk:
 
 <<type [[Repository.t]]>>=
 type t = {
-  worktree: Common.filename;
-  dotgit: Common.filename; (* usually <worktree>/.git *)
+  worktree: Fpath.t;
+  dotgit: Fpath.t; (* usually <worktree>/.git *)
 
   <<[[Repository.t]] index field>>
 }
@@ -2828,7 +2828,7 @@ following function:
 % internal functions not exposed in repository.mli
 <<function [[Repository.hexsha_to_filename]]>>=
 (* for loose objects *)
-let hexsha_to_filename r hexsha =
+let hexsha_to_filename (r : t) (hexsha : string) : Fpath.t =
   let dir = String.sub hexsha 0 2 in
   let file = String.sub hexsha 2 (String.length hexsha - 2) in
   r.dotgit / "objects" / dir / file
@@ -2855,7 +2855,6 @@ The function above relies on a special operator to concatenate
 filenames:
 
 <<constant [[Repository.SlashOperator]]>>=
-let (/) = Filename.concat
 @
 
 
@@ -3274,7 +3273,7 @@ type t = entry list
 (** The type for a Git index entry. *)
 type entry = {
   (* relative path *)
-  path  : Common.filename;
+  path  : Fpath.t;
   id    : Blob.hash;
 
   stats : stat_info;
@@ -3366,7 +3365,7 @@ let empty = []
 The function below helps to build an index entry from its subelements:
 
 <<signature [[Index.mk_entry]]>>=
-val mk_entry: Common.filename -> Sha1.t -> Unix.stats -> entry
+val mk_entry: Fpath.t -> Sha1.t -> Unix.stats -> entry
 @
 <<function [[Index.mk_entry]]>>=
 let mk_entry relpath sha stats =
@@ -3464,7 +3463,6 @@ val read_obj: t -> Sha1.t -> Objects.t
 let read_obj r h =
   (* todo: look for packed obj *)
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
-  let path = Fpath.v path in
   path |> UChan.with_open_in (fun (ch : Chan.i) ->
     (* less: check read everything from channel? *)
     (* todo: check if sha consistent? *)
@@ -3730,7 +3728,6 @@ val read_ref: t -> Refs.t -> Refs.ref_content
 let read_ref r aref =
   (* less: packed refs *)
   let file = ref_to_filename r aref in
-  let file = Fpath.v file in
   file |> UChan.with_open_in (fun (ch : Chan.i) ->
     ch.ic |> IO.input_channel |> Refs.read
   )
@@ -3858,7 +3855,7 @@ let read_entries ch =
 @
 
 <<function [[Index.read_entry]]>>=
-let read_entry ch =
+let read_entry (ch : IO.input) : entry =
   let stats = read_stat_info ch in
   let id = Sha1.read ch in
   let stage, len =
@@ -3880,7 +3877,7 @@ let read_entry ch =
   in
   let _zeros = IO.really_nread ch pad in
   (* less: assert zeros *)
-  { stats = stats; id = id; path = path }
+  { stats = stats; id = id; path = Fpath.v path }
 @
 %old: was using stage
 
@@ -3951,7 +3948,7 @@ let add_obj r obj =
   let hexsha = Hexsha.of_sha sha in
   let file = hexsha_to_filename r hexsha in
   <<[[Repository.add_obj()]] create directory if it does not exist>>
-  if (Sys.file_exists file)
+  if (Sys.file_exists !!file)
   then sha (* deduplication! nothing to write, can share objects *)
   else begin
     file |> with_file_out_with_lock (fun ch ->
@@ -3968,7 +3965,7 @@ let add_obj r obj =
 %crossref: Hexsha.of_sha again hexsha_to_filename
 
 <<[[Repository.add_obj()]] create directory if it does not exist>>=
-let dir = Filename.dirname file in
+let dir = Filename.dirname !!file in
 if not (Sys.file_exists dir)
 then Unix.mkdir dir dirperm;
 @
@@ -4045,9 +4042,8 @@ let compress ic oc =
 
 <<function [[Repository.with_file_out_with_lock]]>>=
 (* todo: see code of _Gitfile.__init__ O_EXCL ... *)
-let with_file_out_with_lock f file =
+let with_file_out_with_lock f (file : Fpath.t) =
   (* todo: create .lock file and then rename *)
-  let file = Fpath.v file in
   UChan.with_open_out (fun (chan : Chan.o) -> f chan.oc) file
 @
 % but really need that for objects?
@@ -4226,13 +4222,13 @@ let write idx ch =
 @
 
 <<function [[Index.write_entry]]>>=
-let write_entry ch e =
+let write_entry ch (e : entry) =
   write_stat_info ch e.stats;
   Sha1.write ch e.id;
-  let flags = (0 lsl 12 + String.length e.path) land 0x3FFF in
+  let flags = (0 lsl 12 + String.length !!(e.path)) land 0x3FFF in
   IO.BigEndian.write_ui16 ch flags;
-  IO.nwrite_string ch e.path;
-  let len = 63 + String.length e.path in
+  IO.nwrite_string ch !!(e.path);
+  let len = 63 + String.length !!(e.path) in
   let pad = 
     match len mod 8 with
     | 0 -> 0
@@ -4499,7 +4495,7 @@ and it involves the [[Arg]] module:
 (try 
  (* todo: look if --help and factorize treatment of usage for subcmds *)
    Arg.parse_argv argv (Arg.align cmd.Cmd_.options) 
-     (fun arg -> Common.push arg remaining_args) usage_msg_cmd;
+     (fun arg -> Stack_.push arg remaining_args) usage_msg_cmd;
  with Arg.Bad str | Arg.Help str->  
    prerr_string str;
    exit 1
@@ -4599,8 +4595,8 @@ let cmd = { Cmd_.
   ];
   f = (fun args ->
     match args with
-    | []    -> Repository.init "."
-    | [dir] -> Repository.init dir
+    | []    -> Repository.init (Fpath.v ".")
+    | [dir] -> Repository.init (Fpath.v dir)
     | _ -> raise Cmd_.ShowUsage
   );
 }
@@ -4619,12 +4615,12 @@ a fresh repository consists mainly in creating a directory
 structure under [[.git/]], without any objects in it.
 
 <<signature [[Repository.init]]>>=
-val init: Common.filename -> unit
+val init: Fpath.t -> unit
 @
 <<function [[Repository.init]]>>=
-let init root =
-  if not (Sys.file_exists root)
-  then Unix.mkdir root dirperm;
+let init (root : Fpath.t) =
+  if not (Sys.file_exists !!root)
+  then Unix.mkdir !!root dirperm;
 
   (* less: bare argument? so no .git/ prefix? *)
   let dirs = [
@@ -4640,14 +4636,14 @@ let init root =
   ] in
   dirs |> List.iter (fun dir ->
     (* less: exn if already there? *)
-    Unix.mkdir (root / dir) dirperm;
+    Unix.mkdir !!(root / dir) dirperm;
   );
   <<[[Repository.init()]] create [[.git/HEAD]]>>
 
   (* less: config file, description, hooks, etc *)
-  Sys.chdir root;
-  let absolute = Sys.getcwd () in
-  UConsole.print (spf "Initialized empty Git repository in %s" (absolute / ".git/"))
+  Sys.chdir !!root;
+  let absolute = Sys.getcwd () |> Fpath.v in
+  UConsole.print (spf "Initialized empty Git repository in %s" !!(absolute / ".git/"))
 @
 
 
@@ -4754,20 +4750,20 @@ Here is the function to open a repository and get a
 [<Repository.t>] record:
 
 <<signature [[Repository.open_]]>>=
-val open_: Common.filename -> t
+val open_: Fpath.t -> t
 @
 % not open cos conflict with ocaml keyword
 <<function [[Repository.open_]]>>=
-let open_ root = 
+let open_ (root : Fpath.t) = 
   let path = root / ".git" in
-  if Sys.file_exists path &&
-     (Unix.stat path).Unix.st_kind = Unix.S_DIR
+  if Sys.file_exists !!path &&
+     (Unix.stat !!path).Unix.st_kind = Unix.S_DIR
   then 
     { worktree = root;
       dotgit = path;
       <<[[Repository.open_()]] other fields settings>>
     }
-  else failwith (spf "Not a git repository at %s" root)
+  else failwith (spf "Not a git repository at %s" !!root)
 @
 %todo: bar repo, 
 \l cant used index_to_filename cos no repo yet, sad.
@@ -4778,9 +4774,9 @@ so opening a repository also reads its index:
 
 <<[[Repository.open_()]] other fields settings>>=
 index = 
-  (if Sys.file_exists (path / "index")
+  (if Sys.file_exists !!(path / "index")
    then 
-    (Fpath.v (path / "index")) |> UChan.with_open_in (fun (ch : Chan.i) ->
+    (path / "index") |> UChan.with_open_in (fun (ch : Chan.i) ->
       ch.ic |> IO.input_channel |> Index.read)
    else Index.empty
   );
@@ -4824,19 +4820,19 @@ repository:
 
 <<signature [[Repository.find_dotgit_root_and_open]]>>=
 val find_root_open_and_adjust_paths: 
- Common.filename list -> t * Common.filename list
+ Fpath.t list -> t * Fpath.t list
 @
 <<function [[Repository.find_dotgit_root_and_open]]>>=
-let find_root_open_and_adjust_paths paths = 
+let find_root_open_and_adjust_paths (paths : Fpath.t list) : t * Fpath.t list = 
   (* todo: allow git from different location *)
-  let r = open_ "." in
+  let r = open_ (Fpath.v ".") in
   (* todo: support also absolute paths and transform in relpaths *)
   let relpaths = paths |> List.map (fun path ->
-    if Filename.is_relative path
+    if Filename.is_relative !!path
     then 
       (* todo: may have to adjust if root was not pwd *)
       path
-    else failwith (spf "TODO: Not a relative path: %s" path)
+    else failwith (spf "TODO: Not a relative path: %s" !!path)
     )
   in
   r, relpaths
@@ -4886,7 +4882,7 @@ let cmd = { Cmd_.
     match args with
     | [] -> Logs.app (fun m -> m "Nothing specified, nothing added.")
     | xs ->
-      let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
+      let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings xs) in
       (* less: support directories *)
       add r relpaths
   );
@@ -4937,14 +4933,14 @@ iterating over those files, modifying the index, and
 finally writing back the modified index on the disk:
 
 <<signature [[Repository.add_in_index]]>>=
-val add_in_index: t -> Common.filename list -> unit
+val add_in_index: t -> Fpath.t list -> unit
 @
 
 % create blob and add object! so 'git add' add object to repo.
 % if git add again same file then old object is useless (git gc).
 
 <<function [[Repository.add_in_index]]>>=
-let add_in_index r relpaths =
+let add_in_index (r : t) (relpaths : Fpath.t list) : unit =
   <<[[Repository.add_in_index()]] sanity check [[relpaths]]>>
   relpaths |> List.iter (fun relpath ->
     <<[[Repository.add_in_index()]] adding [[relpath]]>>
@@ -4958,7 +4954,7 @@ let add_in_index r relpaths =
 I described before the code of [<Repository.write_index()>] called above.
 
 <<[[Repository.add_in_index()]] sanity check [[relpaths]]>>=
-assert (relpaths |> List.for_all Filename.is_relative);
+assert (relpaths |> List.for_all (fun p -> Filename.is_relative !!p));
 @
 
 Adding a file in the index 
@@ -4967,12 +4963,12 @@ Then, [[add_in_index()]] adds the blob to the object store, and finally
 adds (or replaces) an entry in the index:
 
 <<[[Repository.add_in_index()]] adding [[relpath]]>>=
-let full_path = r.worktree / relpath in
+let full_path = r.worktree // relpath in
 let stat = 
-  try Unix.lstat full_path 
+  try Unix.lstat !!full_path 
   with Unix.Unix_error _ ->
     failwith (spf "Repository.add_in_index: %s does not exist anymore"
-                relpath)
+                !!relpath)
 in
 let blob = Objects.Blob (content_from_path_and_unix_stat full_path stat) in
 let sha = add_obj r blob in
@@ -5002,11 +4998,11 @@ let rec add_entry idx entry =
   | [] -> [entry]
   | x::xs ->
     (match entry.path <=> x.path with
-    | Sup -> x::(add_entry xs entry)
+    | Greater -> x::(add_entry xs entry)
     (* replacing old entry, new version of tracked file  *)
     | Equal -> entry::xs
     (* new file (the entries are sorted, no need to go through xs) *)
-    | Inf -> entry::x::xs
+    | Less -> entry::x::xs
     )
 @
 %crossref:
@@ -5019,16 +5015,15 @@ values. It returns
 I show the code of [[<=>]] in Appendix~\ref{chap:utilities}.
 
 <<function [[Repository.content_from_path_and_unix_stat]]>>=
-let content_from_path_and_unix_stat full_path stat =
+let content_from_path_and_unix_stat (full_path : Fpath.t) (stat : Unix.stats) : string =
   match stat.Unix.st_kind with
   <<[[Repository.content_from_path_and_unix_stat()]] match kind cases>>
   | Unix.S_REG ->
-    let full_path = Fpath.v full_path in
     full_path |> UChan.with_open_in (fun (ch : Chan.i) ->
       ch.ic |> IO.input_channel |> IO.read_all
     )
   | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
-                     full_path)
+                     !!full_path)
 @
 \n not Blob.read here! even though same function called in the end.
 
@@ -5051,7 +5046,7 @@ let cmd = { Cmd_.
     match args with
     | [] -> raise Cmd_.ShowUsage
     | xs ->
-      let r, relpaths = Repository.find_root_open_and_adjust_paths xs in
+      let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings xs) in
       rm r relpaths
   );
 }
@@ -5094,18 +5089,18 @@ let rm r relpaths =
 of [<Index.add_entry()>] in the previous section
 
 <<signature [[Index.remove_entry]]>>=
-val remove_entry: t -> Common.filename -> t
+val remove_entry: t -> Fpath.t -> t
 @
 <<function [[Index.remove_entry]]>>=
-let rec remove_entry idx name =
+let rec remove_entry idx (name : Fpath.t) =
   match idx with
-  | [] -> failwith (spf "The file %s is not in the index" name)
+  | [] -> failwith (spf "The file %s is not in the index" !!name)
   | x::xs ->
     (match name <=> x.path with
-    | Sup -> x::(remove_entry xs name)
+    | Greater -> x::(remove_entry xs name)
     | Equal -> xs
     (* the entries are sorted *)
-    | Inf -> failwith (spf "The file %s is not in the index" name)
+    | Less -> failwith (spf "The file %s is not in the index" !!name)
     )
 @
 
@@ -5281,7 +5276,7 @@ Here is the type of the hashtbl [[dirs]] grouping files
 by directory:
 
 <<type [[Index.dirs]]>>=
-type dirs = (string (* full relpath of dir *), dir) Hashtbl.t
+type dirs = (Fpath.t (* full relpath of dir *), dir) Hashtbl.t
 @
 
 <<type [[Index.dir]]>>=
@@ -5297,11 +5292,11 @@ type dir = dir_entry list ref
 Here is the code to populate the [[dirs]] hashtable:
 
 <<[[Index.trees_of_index()]] populate [[dirs]]>>=
-Hashtbl.add dirs "." (ref []);
+Hashtbl.add dirs (Fpath.v ".") (ref []);
 idx |> List.iter (fun entry ->
-  let relpath = entry.path in
-  let (dirpath, base) = Filename.dirname relpath, Filename.basename relpath in
-  let dir = find_dir dirs dirpath in
+  let relpath : Fpath.t = entry.path in
+  let (dirpath, base) = Filename.dirname !!relpath, Filename.basename !!relpath in
+  let dir = find_dir dirs (Fpath.v dirpath) in
   dir := (File (base, entry))::!dir
 );
 @
@@ -5310,7 +5305,7 @@ idx |> List.iter (fun entry ->
 Finding the directory of a file uses the function below:
 
 <<function [[Index.add_dir]]>>=
-let rec find_dir dirs dirpath =
+let rec find_dir (dirs : dirs) (dirpath : Fpath.t) : dir =
   try 
     Hashtbl.find dirs dirpath
   with Not_found ->
@@ -5329,9 +5324,9 @@ recursively add its parent:
 
 <<[[Index.add_dir()]] recurse on parent of [[dirpath]]>>=
 let (parent, base) = 
-  Filename.dirname dirpath, Filename.basename dirpath in
+  Filename.dirname !!dirpath, Filename.basename !!dirpath in
 (* !recursive call! should stop at some point because "." is in dirs *)
-let dir = find_dir dirs parent in
+let dir = find_dir dirs (Fpath.v parent) in
 dir := Subdir (base)::!dir;
 @
 
@@ -5347,11 +5342,11 @@ which builds a set of trees from [[dirs]] recursively starting
 from the root directory [['.']].
 
 <<[[Index.trees_of_index()]] build trees from [[dirs]]>>=
-build_trees dirs "." add_tree_obj
+build_trees dirs (Fpath.v ".") add_tree_obj
 @
 
 <<function [[Index.build_trees]]>>=
-let rec build_trees dirs dirpath add_tree_obj =
+let rec build_trees (dirs : dirs) (dirpath : Fpath.t) add_tree_obj =
   let dir = Hashtbl.find dirs dirpath in
   (* entries of a Tree.t must be sorted, but entries of an index too,
    * so we can assume add_dir was called in sorted order
@@ -5368,7 +5363,7 @@ let rec build_trees dirs dirpath add_tree_obj =
       | Subdir base ->
         (* recurse *)
         let sha = 
-          build_trees dirs (Filename.concat dirpath base) add_tree_obj in
+          build_trees dirs (dirpath / base) add_tree_obj in
         {Tree. perm = Tree.Dir; name = base; id = sha }
     )
   in
@@ -5712,16 +5707,16 @@ the [[.git/refs/]] directory:
 val all_refs: t -> Refs.refname list
 @
 <<function [[Repository.all_refs]]>>=
-let all_refs r =
-  let root = r.dotgit ^ "/" in
-  let rootlen = String.length root in
+let all_refs (r : t) : Refs.refname list =
+  let root = r.dotgit in
+  let rootlen = String.length !!root in
   let res = ref [] in
   (root / "refs") |> walk_dir (fun path _dirs files ->
     files |> List.iter (fun file ->
       (* less: replace os.path.sep *)
-      let dir = String.sub path rootlen (String.length path - rootlen) in
-      let refname = dir / file in
-      Common.push refname res
+      let dir = String.sub !!path rootlen (String.length !!path - rootlen) in
+      let refname = Fpath.v dir / file in
+      Stack_.push !!refname res
     );
    );
   List.rev !res
@@ -5831,7 +5826,7 @@ val del_ref: t -> Refs.t -> unit
 <<function [[Repository.del_ref]]>>=
 let del_ref r aref =
   let file = ref_to_filename r aref in
-  Unix.unlink file
+  Unix.unlink !!file
 @
 
 % git gc
@@ -5956,26 +5951,26 @@ let set_worktree_and_index_to_tree r tree =
     r.index |> List.map (fun e -> e.Index.path, false) |> Hashtbl_.of_list in
   let new_index = ref [] in
   (* less: honor file mode from config file? *)
-  tree |> Tree.walk_tree (read_tree r) "" (fun relpath entry ->
+  tree |> Tree.walk_tree (read_tree r) (Fpath.v "XXX") (fun relpath entry ->
     let perm = entry.Tree.perm in
     match perm with
     | Tree.Dir -> 
       (* bugfix: need also here to mkdir; doing it below is not enough
        * when a dir has no file but only subdirs
        *)
-      let fullpath = r.worktree / relpath in
-      if not (Sys.file_exists fullpath)
-      then Unix.mkdir fullpath dirperm;
+      let fullpath = r.worktree // relpath in
+      if not (Sys.file_exists !!fullpath)
+      then Unix.mkdir !!fullpath dirperm;
     | Tree.Normal | Tree.Exec | Tree.Link ->
       (* less: validate_path? *)
-      let fullpath = r.worktree / relpath in
-      if not (Sys.file_exists (Filename.dirname fullpath))
-      then Unix.mkdir (Filename.dirname fullpath) dirperm;
+      let fullpath = r.worktree // relpath in
+      if not (Sys.file_exists (Filename.dirname !!fullpath))
+      then Unix.mkdir (Filename.dirname !!fullpath) dirperm;
       let sha = entry.Tree.id in
       let blob = read_blob r sha in
       let stat = build_file_from_blob fullpath blob perm in
       Hashtbl.replace hcurrent relpath true;
-      Common.push (Index.mk_entry relpath sha stat) new_index;
+      Stack_.push (Index.mk_entry relpath sha stat) new_index;
     <<[[Repository.set_worktree_and_index_to_tree()]] walk tree cases>>
   );
   let index = List.rev !new_index in
@@ -5985,8 +5980,8 @@ let set_worktree_and_index_to_tree r tree =
     if not used
     then 
       (* todo: should check if modified? otherwise lose modif! *)
-      let fullpath = r.worktree / file in
-      Unix.unlink fullpath
+      let fullpath = r.worktree // file in
+      Unix.unlink !!fullpath
   )
   (* less: delete if a dir became empty, just walk_dir? *)
 @
@@ -5996,17 +5991,17 @@ let set_worktree_and_index_to_tree r tree =
 
 <<signature [[Tree.walk_tree]]>>=
 val walk_tree: 
-  (hash -> t) -> Common.filename (* dir *) -> 
-  (Common.filename -> entry -> unit) -> t -> unit
+  (hash -> t) -> Fpath.t (* dir *) -> 
+  (Fpath.t -> entry -> unit) -> t -> unit
 @
 <<function [[Tree.walk_tree]]>>=
 (* we must visit in sorted order, so the caller of walk_tree can rely on 'f'
  * being called in order (so it can easily create for example sorted 
  * index entries while visiting a tree)
  *)
-let rec walk_tree read_tree dirpath f xs =
+let rec walk_tree read_tree (dirpath : Fpath.t) f xs =
   xs |> List.iter (fun entry ->
-    let relpath = Filename.concat dirpath entry.name in
+    let relpath = dirpath / entry.name in
     f relpath entry;
     match entry.perm with
     | Dir ->
@@ -6021,31 +6016,31 @@ let rec walk_tree read_tree dirpath f xs =
 \subsection{Creating a file from a blob}
 
 <<function [[Repository.build_file_from_blob]]>>=
-let build_file_from_blob fullpath blob perm =
+let build_file_from_blob (fullpath : Fpath.t) blob perm =
   let oldstat =
     try 
-      Some (Unix.lstat fullpath)
+      Some (Unix.lstat !!fullpath)
     with Unix.Unix_error _ -> None
   in
   (match perm with 
   | Tree.Link -> 
     if oldstat <> None
-    then Unix.unlink fullpath;
-    Unix.symlink blob fullpath;
+    then Unix.unlink !!fullpath;
+    Unix.symlink blob !!fullpath;
   | Tree.Normal | Tree.Exec ->
     (match oldstat with
     (* opti: if same content, no need to write anything *)
     | Some { Unix.st_size = x; _ } when x = String.length blob && 
-      ((Fpath.v fullpath) |> UChan.with_open_in (fun (ch : Chan.i) -> 
+      (fullpath |> UChan.with_open_in (fun (ch : Chan.i) -> 
         (ch.ic |> IO.input_channel |> IO.read_all ) = blob
        )) ->
       ()
     | _ ->
-      (Fpath.v fullpath) |> UChan.with_open_out (fun (ch : Chan.o) ->
+      fullpath |> UChan.with_open_out (fun (ch : Chan.o) ->
         output_bytes ch.oc (Bytes.of_string blob)
       );
       (* less: honor filemode? *)
-      Unix.chmod fullpath 
+      Unix.chmod !!fullpath 
         (match perm with 
         | Tree.Normal -> 0o644
         | Tree.Exec -> 0o755
@@ -6055,7 +6050,7 @@ let build_file_from_blob fullpath blob perm =
   | Tree.Dir -> raise (Impossible "dirs filtered in walk_tree iteration")
   <<[[Repository.build_file_from_blob()]] match perm cases>>
   );
-  Unix.lstat fullpath
+  Unix.lstat !!fullpath
 @
 
 
@@ -6413,7 +6408,7 @@ type t =
 <<type [[Change.entry]]>>=
 type entry = {
   (* relative path *)
-  path: Common.filename;
+  path: Fpath.t;
   mode: Index.mode;
   content: content Lazy.t;
 }
@@ -6487,7 +6482,7 @@ let diff_worktree_vs_index r =
 (* for git diff and git status *)
 val changes_worktree_vs_index:
   (Blob.hash -> Change.content) ->
-  Common.filename -> Index.t -> Change.t list
+  Fpath.t -> Index.t -> Change.t list
 @
 <<function [[Changes.changes_worktree_vs_index]]>>=
 (* less: could factorize with Diff_tree.changes_tree_vs_tree? would need
@@ -6499,9 +6494,9 @@ val changes_worktree_vs_index:
 let changes_worktree_vs_index read_blob worktree index =
   index |> List.map (fun entry ->
     let old_stat = entry.Index.stats in
-    let path = Filename.concat worktree entry.Index.path in
+    let path = worktree // entry.Index.path in
     let new_stat_opt = 
-      try Some (Unix.lstat path |> Index.stat_info_of_lstats)
+      try Some (Unix.lstat !!path |> Index.stat_info_of_lstats)
       with Unix.Unix_error _ -> None
     in
     match new_stat_opt with
@@ -6540,12 +6535,11 @@ let changes_worktree_vs_index read_blob worktree index =
 
 <<function [[Changes.content_from_path_and_stat_index]]>>=
 (* similar to Repository.content_from_path_and_unix_stat *)
-let content_from_path_and_stat_index path stat_info =
+let content_from_path_and_stat_index (path : Fpath.t) stat_info =
   match stat_info.Index.mode with
   | Index.Link ->
-    Unix.readlink path
+    Unix.readlink !!path
   | Index.Normal | Index.Exec ->
-      let path = Fpath.v path in
       path |> UChan.with_open_in (fun (ch : Chan.i) ->
         ch.ic |> IO.input_channel |> IO.read_all
       )
@@ -6574,19 +6568,19 @@ let show_change change =
   let (old_path, old_content), (new_path, new_content) = 
     match change with
     | Change.Add entry ->
-      ("dev/null", lazy ""), 
-      ("b/" ^ entry.Change.path, entry.Change.content)
+      (Fpath.v "dev/null", lazy ""), 
+      (Fpath.v "b" // entry.Change.path, entry.Change.content)
     | Change.Del entry ->
-      ("a/" ^ entry.Change.path, entry.Change.content), 
-      ("dev/null", lazy "")
+      (Fpath.v "a" // entry.Change.path, entry.Change.content), 
+      (Fpath.v "dev/null", lazy "")
     | Change.Modify (entry1, entry2) ->
-      ("a/" ^ entry1.Change.path, entry1.Change.content), 
-      ("b/" ^ entry2.Change.path, entry2.Change.content)
+      (Fpath.v "a" // entry1.Change.path, entry1.Change.content), 
+      (Fpath.v "b" // entry2.Change.path, entry2.Change.content)
   in
   let diffs = Diffs.diff (Lazy.force old_content) (Lazy.force new_content) in
   if not (diffs |> List.for_all (function Diff.Equal _ -> true | _ -> false))
   then begin
-    UConsole.print (spf "diff --git %s %s" old_path new_path);
+    UConsole.print (spf "diff --git %s %s" !!old_path !!new_path);
     (* less: display change of modes *)
     show_unified_diff diffs
   end
@@ -6732,7 +6726,7 @@ let cmd = { Cmd_.
     (* less: --reverse *)
   ];
   f = (fun args ->
-    let r, relpaths = Repository.find_root_open_and_adjust_paths args in
+    let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
     | [] -> log r
     (* todo: git log path *)
@@ -6812,11 +6806,11 @@ then begin
 let print_change change =
   match change with
   | Change.Add entry ->
-    UConsole.print (spf "A       %s" entry.Change.path)
+    UConsole.print (spf "A       %s" !!(entry.Change.path))
   | Change.Del entry ->
-    UConsole.print (spf "D       %s" entry.Change.path)
+    UConsole.print (spf "D       %s" !!(entry.Change.path))
   | Change.Modify (entry1, _entry2) ->
-    UConsole.print (spf "M       %s" entry1.Change.path)
+    UConsole.print (spf "M       %s" !!(entry1.Change.path))
 @
 
 \subsection{Comparing trees}
@@ -6835,8 +6829,8 @@ val changes_tree_vs_tree:
  *)
 let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
   let changes = ref [] in
-  let add x = Common.push x changes in
-  Tree.walk_trees read_tree "" (fun dirpath entry1_opt entry2_opt ->
+  let add x = Stack_.push x changes in
+  Tree.walk_trees read_tree (Fpath.v "XXX") (fun dirpath entry1_opt entry2_opt ->
     (* if entries are directories, then we would be called again
      * with their individual files, so safe to skip the dir entries.
      *)
@@ -6863,25 +6857,25 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
 
 <<signature [[Tree.walk_trees]]>>=
 val walk_trees:
-  (hash -> t) -> Common.filename (* dir *) ->
-  (Common.filename -> entry option -> entry option -> unit) -> t -> t -> unit
+  (hash -> t) -> Fpath.t (* dir *) ->
+  (Fpath.t -> entry option -> entry option -> unit) -> t -> t -> unit
 @
 <<function [[Tree.walk_trees]]>>=
-let rec walk_trees read_tree dirpath f xs ys =
+let rec walk_trees read_tree (dirpath : Fpath.t) f xs ys =
   let g dirpath entry1_opt entry2_opt =
     f dirpath entry1_opt entry2_opt;
     (match entry1_opt, entry2_opt with
     | Some { perm = Dir; name = str; id = sha }, None ->
-      walk_trees read_tree (Filename.concat dirpath str) f
+      walk_trees read_tree (dirpath / str) f
         (read_tree sha) []
     | None, Some { perm = Dir; name = str; id = sha } ->
-      walk_trees read_tree (Filename.concat dirpath str) f
+      walk_trees read_tree (dirpath / str) f
         [] (read_tree sha)
     | Some { perm = Dir; name = str1; id = sha1 },
       Some { perm = Dir; name = str2; id = sha2 } ->
       assert (str1 = str2);
         (* todo: could skip if sha1 = sha2 here, useful opti *)
-        walk_trees read_tree (Filename.concat dirpath str1) f
+        walk_trees read_tree (dirpath / str1) f
           (read_tree sha1) (read_tree sha2)
     | None, None -> raise (Impossible "two None in walk_trees.g")
     (* no directories, no need to recurse *)
@@ -6904,10 +6898,10 @@ let rec walk_trees read_tree dirpath f xs ys =
     | Equal -> 
       g dirpath (Some x) (Some y);
       walk_trees read_tree dirpath f xs ys
-    | Inf -> 
+    | Less -> 
       g dirpath (Some x) None;
       walk_trees read_tree dirpath f xs (y::ys)
-    | Sup ->
+    | Greater ->
       g dirpath None (Some y);
       walk_trees read_tree dirpath f (x::xs) ys
     )
@@ -6921,7 +6915,7 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
   | Some { Tree.perm = Tree.Dir; _ } -> None
   | Some { Tree.perm = Tree.Commit; _ } -> failwith "submodule not supported"
   | Some x -> Some ({ Change.
-    path = Filename.concat dirpath x.Tree.name;
+    path = dirpath / x.Tree.name;
     mode = Index.mode_of_perm x.Tree.perm;
     
     (* todo: do that later? once know we will return a change with this entry?
@@ -6958,7 +6952,7 @@ let cmd = { Cmd_.
     (* less: --branch, --ignored *)
   ];
   f = (fun args ->
-    let r, relpaths = Repository.find_root_open_and_adjust_paths args in
+    let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
     | [] -> status r
     | _xs -> raise Cmd_.ShowUsage
@@ -7012,7 +7006,7 @@ let print_status_long st =
 (*  (use "git add <file>..." to include in what will be committed) *)
     UConsole.print "";
     st.untracked |> List.iter (fun file ->
-      UConsole.print (spf "	%s" file)
+      UConsole.print (spf "	%s" !!file)
     );
     UConsole.print "";
   end
@@ -7025,7 +7019,7 @@ type status = {
   (* diff worktree vs index *)
   unstaged: Change.t list;
   (* other *)
-  untracked: Common.filename list;
+  untracked: Fpath.t list;
 }
 @
 
@@ -7035,11 +7029,11 @@ type status = {
 let print_change_long change =
   match change with
   | Change.Add entry ->
-    UConsole.print (spf "	new file:	%s" entry.Change.path)
+    UConsole.print (spf "	new file:	%s" !!(entry.Change.path))
   | Change.Del entry ->
-    UConsole.print (spf "	deleted:	%s" entry.Change.path)
+    UConsole.print (spf "	deleted:	%s" !!(entry.Change.path))
   | Change.Modify (entry1, _entry2) ->
-    UConsole.print (spf "	modified:	%s" entry1.Change.path)
+    UConsole.print (spf "	modified:	%s" !!(entry1.Change.path))
 @
 
 
@@ -7089,7 +7083,7 @@ let changes_index_vs_tree read_tree index treeid =
   in
   let changes = ref [] in
 
-  tree |> Tree.walk_tree read_tree "" (fun relpath entry_head ->
+  tree |> Tree.walk_tree read_tree (Fpath.v "XXX") (fun relpath entry_head ->
     let perm = entry_head.Tree.perm in
     match perm with
     | Tree.Dir -> ()
@@ -7100,7 +7094,7 @@ let changes_index_vs_tree read_tree index treeid =
         Hashtbl.add h_in_index_and_head relpath true;
         (* less: if change mode, then report as del/add *)
         if entry_head.Tree.id <> entry_index.Index.id
-        then changes |> Common.push (Change.Modify (
+        then changes |> Stack_.push (Change.Modify (
           { Change.path = relpath; 
             mode = Index.mode_of_perm perm; 
             content = lazy (raise (Impossible "not called")); },
@@ -7109,7 +7103,7 @@ let changes_index_vs_tree read_tree index treeid =
             content = lazy (raise (Impossible "not called")); }
         ))
       with Not_found ->
-        changes |> Common.push (Change.Del { Change.
+        changes |> Stack_.push (Change.Del { Change.
              path = relpath;
              mode = Index.mode_of_perm perm;
              content = lazy (raise (Impossible "not called"));
@@ -7117,7 +7111,7 @@ let changes_index_vs_tree read_tree index treeid =
   );
   index |> List.iter (fun entry ->
     if not (Hashtbl.mem h_in_index_and_head entry.Index.path)
-    then changes |> Common.push (Change.Add { Change.
+    then changes |> Stack_.push (Change.Add { Change.
              path = entry.Index.path;
              mode = entry.Index.stats.Index.mode;                                            content = lazy (raise (Impossible "not called")); }
     )
@@ -7146,14 +7140,14 @@ let untracked r =
   let res = ref [] in
   r.Repository.worktree |> Repository.walk_dir (fun dir _dirs files ->
     files |> List.iter (fun file ->
-      let path = Filename.concat dir file in
+      let path = dir / file in
       let path = 
-        if path =~ "^\\./\\(.*\\)"
-        then Regexp_.matched1 path
+        if !!path =~ "^\\./\\(.*\\)"
+        then Fpath.v (Regexp_.matched1 !!path)
         else path
       in
       if not (Hashtbl.mem h path)
-      then Common.push path res
+      then Stack_.push path res
     );
   );
   List.rev !res
@@ -7323,7 +7317,9 @@ let untracked r =
 
 <<type [[Client.t]]>>=
 type t = {
-  (* path to remote (e.g., /path/other/repo, or git://github.com/foo/bar) *)
+  (* path to remote (e.g., /path/other/repo, or git://github.com/foo/bar) 
+   * Fpath.t or Uri.t (TODO: use variant and enforce?)
+  *)
   url: string;
   (* less: more parameters:
    *  - determine_refs_wanted. for now grabs everything from remote HEAD 
@@ -7348,7 +7344,7 @@ let client_of_url url =
   <<[[Clients.client_of_url()]] match url cases>>
   | s -> 
     if Sys.file_exists s
-    then Client_local.mk_client url
+    then Client_local.mk_client (Fpath.v s)
     else failwith (spf "remote repository URL not supported: %s" url)
 @
 
@@ -7434,12 +7430,12 @@ let set_ref r aref newh =
 @
 
 <<signature [[Client_local.mk_client]]>>=
-val mk_client: Common.filename -> Client.t
+val mk_client: Fpath.t -> Client.t
 @
 <<function [[Client_local.mk_client]]>>=
-let mk_client path =
+let mk_client (path : Fpath.t) =
   { Client.
-    url = path;
+    url = !!path;
     fetch = (fun dst ->
       let src = Repository.open_ path in
       fetch_objects src dst;
@@ -7531,7 +7527,7 @@ val has_obj: t -> Sha1.t -> bool
 <<function [[Repository.has_obj]]>>=
 let has_obj r h =
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
-  Sys.file_exists path
+  Sys.file_exists !!path
 @
 
 
@@ -7788,11 +7784,11 @@ let cmd = { Cmd_.
 
 <<function [[Cmd_push.push]]>>=
 (* =~ git fetch + git merge but inverting dst and src  *)
-let push src_repo url_dst =
+let push src_repo (url_dst : string) =
   let url = src_repo.Repository.worktree in
-  let dst = Repository.open_ url_dst in
+  let dst = Repository.open_ (Fpath.v url_dst) in
   (* todo: detect if clean repo? status is empty? *)
-  let client = Clients.client_of_url url in
+  let client = Clients.client_of_url !!url in
 
 
   (* less: allow to grab from multiple heads, not just HEAD *)
@@ -7838,8 +7834,8 @@ let cmd = { Cmd_.
   ];
   f = (fun args ->
     match args with
-    | [url]     -> clone url "."
-    | [url;dst] -> clone url dst
+    | [url]     -> clone url (Fpath.v ".")
+    | [url;dst] -> clone url (Fpath.v dst)
     | _ -> raise Cmd_.ShowUsage
   );
 }
@@ -7847,7 +7843,7 @@ let cmd = { Cmd_.
 
 <<function [[Cmd_clone.clone]]>>=
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)
-let clone url path_dst =
+let clone url (path_dst : Fpath.t) =
   let client = Clients.client_of_url url in
   
   Repository.init path_dst;
@@ -7929,7 +7925,7 @@ let clone url path_dst =
 %\subsection{[[git://]]}
 
 <<signature [[Client_git.mk_client]]>>=
-val mk_client: Common.filename -> Client.t
+val mk_client: string (* Fpath.t or Uri.t like git:// *) -> Client.t
 @
 <<function [[Client_git.mk_client]]>>=
 let mk_client _url =
@@ -9566,7 +9562,7 @@ TODO
 
 <<[[Repository.content_from_path_and_unix_stat()]] match kind cases>>=
 | Unix.S_LNK ->
-  Unix.readlink full_path
+  Unix.readlink !!full_path
 @
 
 % see also use of lstat() before, not stat()
@@ -10163,13 +10159,13 @@ Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
 % all_refs | ?? -> <>
 <<signature [[Repository.walk_dir]]>>=
 val walk_dir: 
-  (Common.filename -> Common.filename list -> Common.filename list -> unit) ->
-  Common.filename ->
+  (Fpath.t (* dir *) -> string (* subdir *) list -> string (* file *) list -> unit) ->
+  Fpath.t ->
   unit
 @
 <<function [[Repository.walk_dir]]>>=
 (* inspired from os.path.walk in Python *)
-let rec walk_dir f dir =
+let rec walk_dir f (dir : Fpath.t) : unit =
   dir |> with_opendir (fun handle ->
     let dirs = ref [] in
     let files = ref [] in
@@ -10178,11 +10174,11 @@ let rec walk_dir f dir =
         let s = Unix.readdir handle in
         (* git specific here *)
         if s <> "." && s <> ".." && s <> ".git" then begin
-          let path = Filename.concat dir s in
-          let st = Unix.lstat path in
+          let path : Fpath.t = dir / s in
+          let st = Unix.lstat !!path in
           (match st.Unix.st_kind with
-          | Unix.S_DIR -> Common.push s dirs
-          | _ -> Common.push s files
+          | Unix.S_DIR -> Stack_.push s dirs
+          | _ -> Stack_.push s files
           )
         end
       done
@@ -10191,15 +10187,15 @@ let rec walk_dir f dir =
       let files = List.rev !files in
       f dir dirs files;
       dirs |> List.iter (fun s ->
-        walk_dir f (Filename.concat dir s)
+        walk_dir f (dir / s)
       )
   )
 @
 
 <<function [[Repository.with_opendir]]>>=
 (* less: use finalize *)
-let with_opendir f dir =
-  let handle = Unix.opendir dir in
+let with_opendir f (dir : Fpath.t) =
+  let handle = Unix.opendir !!dir in
   let res = f handle in
   Unix.closedir handle;
   res

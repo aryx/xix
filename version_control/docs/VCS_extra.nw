@@ -45,7 +45,6 @@ open Common
 %-------------------------------------------------------------
 
 <<version_control/blob.mli>>=
-open Stdcompat
 
 <<type [[Blob.t]]>>
 
@@ -144,8 +143,8 @@ open Stdcompat
 
 <<version_control/changes.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 open Common
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -256,8 +255,9 @@ open Common
 
 <<version_control/client_local.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 open Common
+open Fpath_.Operators
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -307,6 +307,7 @@ open Common
 <<version_control/clients.ml>>=
 <<copyright ocamlgit>>
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -349,8 +350,8 @@ open Common
 <<version_control/cmd_branch.ml>>=
 <<copyright ocamlgit>>
 open Common
+open Regexp_.Operators
 
-let (|>) = Stdcompat.(|>)
 
 <<function [[Cmd_branch.list_branches]]>>
 
@@ -418,7 +419,6 @@ open Common
 
 <<version_control/cmd_diff.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 
 <<function [[Cmd_diff.diff_worktree_vs_index]]>>
 
@@ -453,8 +453,6 @@ open Common
 <<copyright ocamlgit>>
 open Common
 
-let (|>) = Stdcompat.(|>)
-
 <<constant [[Cmd_help.list_extra]]>>
 
 <<constant [[Cmd_help.cmd]]>>
@@ -479,9 +477,7 @@ let (|>) = Stdcompat.(|>)
 <<version_control/cmd_log.ml>>=
 <<copyright ocamlgit>>
 open Common
-
-(* can't use 'open Stdcompat' because conflict with Arg defined in Stdcompat *)
-let (|>) = Stdcompat.(|>)
+open Fpath_.Operators
 
 (* todo: git log --graph --oneline --decorate --all *)
 
@@ -524,6 +520,7 @@ open Common
 <<version_control/cmd_push.ml>>=
 <<copyright ocamlgit>>
 open Common
+open Fpath_.Operators
 
 <<function [[Cmd_push.push]]>>
 
@@ -553,7 +550,6 @@ open Common
 
 <<version_control/cmd_rm.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 
 <<function [[Cmd_rm.rm]]>>
 
@@ -566,7 +562,6 @@ open Stdcompat (* for |> *)
 
 <<version_control/cmd_show.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 open Common
 
 <<function [[Cmd_show.show]]>>
@@ -581,8 +576,8 @@ open Common
 <<version_control/cmd_status.ml>>=
 <<copyright ocamlgit>>
 open Common
-
-let (|>) = Stdcompat.(|>)
+open Fpath_.Operators
+open Regexp_.Operators
 
 <<type [[Cmd_status.status]]>>
 
@@ -615,14 +610,7 @@ let (|>) = Stdcompat.(|>)
 <<version_control/cmd_test.ml>>=
 <<copyright ocamlgit>>
 open Common
-
-let (|>) = Stdcompat.(|>)
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
-let (/) = Filename.concat
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Algorithm tests *)
@@ -687,12 +675,12 @@ let test_zip file =
 
 let test_unzip_all_objects () =
   Unzip.debug := true;
-  let dir = ".git/objects" in
+  let dir = Fpath.v ".git/objects" in
   dir |> Repository.walk_dir (fun path _dirs files ->
     files |> List.iter (fun file ->
       let file = path / file in
-      UConsole.print file;
-      let chan = open_in file in
+      UConsole.print !!file;
+      let chan = open_in !!file in
       let input = IO.input_channel chan in
       let unzipped = Unzip.inflate input in
       let _str = IO.read_all unzipped in 
@@ -746,7 +734,6 @@ open Common
 
 <<version_control/commit.ml>>=
 <<copyright ocaml-git>>
-open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)
@@ -807,7 +794,6 @@ open Common
 
 <<version_control/compression.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for bytes *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -890,7 +876,6 @@ open Stdcompat (* for bytes *)
 \subsection{[[version_control/diff_basic.ml]]}
 
 <<version_control/diff_basic.ml>>=
-open Stdcompat (* for bytes *)
 open Common
 
 (*****************************************************************************)
@@ -1222,7 +1207,6 @@ let _ = assert (edit_distance "vintner" "writers" = 5)
 
 <<version_control/diff_myers.ml>>=
 <<copyright ocaml-diff-myers>>
-open Stdcompat (* for bytes *)
 
 (* was functorized and parametrized before *)
 let equal = (=)
@@ -1533,8 +1517,8 @@ val show_unified_diff: Diff.diff -> unit
 
 <<version_control/diff_unified.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for bytes *)
 open Common
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -1621,6 +1605,7 @@ open Common
 %-------------------------------------------------------------
 
 <<version_control/dump.ml>>=
+open Fpath_.Operators
 
 module Ocaml = OCaml
 
@@ -1783,7 +1768,7 @@ and vof_time { lsb32 = v_lsb32; nsec = v_nsec } =
 let vof_entry { stats = v_stats; id = v_id; path = v_name }
               =
   let bnds = [] in
-  let arg = Ocaml.vof_string v_name in
+  let arg = Ocaml.vof_string !!v_name in
   let bnd = ("path", arg) in
   let bnds = bnd :: bnds in
   let arg = Sha1.vof_t v_id in
@@ -1821,8 +1806,8 @@ end
 
 <<version_control/hexsha.ml>>=
 <<copyright ocaml-hex>>
-open Stdcompat (* for bytes *)
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -1900,8 +1885,9 @@ let _hexa = "0123456789abcdef"
 
 <<version_control/index.ml>>=
 <<copyright ocaml-git>>
-open Stdcompat (* for bytes *)
 open Common
+open Ord.Operators
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -2039,8 +2025,6 @@ let write_real_i32 ch n =
 <<copyright ocamlgit>>
 open Common
 
-let (|>) = Stdcompat.(|>)
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -2128,7 +2112,6 @@ https://github.com/schuhschuh/cmake-basis/blob/master/src/utilities/python/diff3
 %-------------------------------------------------------------
 
 <<version_control/objects.mli>>=
-open Stdcompat (* for bytes *)
 
 <<type [[Objects.t]]>>
 
@@ -2143,7 +2126,6 @@ open Stdcompat (* for bytes *)
 
 <<version_control/objects.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 open Common
 
 (*****************************************************************************)
@@ -2193,8 +2175,8 @@ open Common
 %-------------------------------------------------------------
 
 <<version_control/refs.ml>>=
-open Stdcompat (* for |> *)
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Types *)
@@ -2285,8 +2267,8 @@ val parse_objectish: string -> objectish
 
 <<version_control/repository.ml>>=
 <<copyright ocamlgit>>
-open Stdcompat (* for |> *)
 open Common
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -2436,7 +2418,6 @@ let parse_objectish _str =
 
 <<version_control/sha1.ml>>=
 <<copyright uuidm>>
-open Stdcompat (* for Bytes *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -2482,7 +2463,6 @@ open Stdcompat (* for Bytes *)
 %-------------------------------------------------------------
 
 <<version_control/tree.mli>>=
-open Stdcompat (* for bytes *)
 
 <<type [[Tree.perm]]>>
 
@@ -2510,8 +2490,9 @@ open Stdcompat (* for bytes *)
 
 <<version_control/tree.ml>>=
 <<copyright ocaml-git>>
-open Stdcompat (* for bytes *)
 open Common
+open Ord.Operators
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -2590,7 +2571,6 @@ open Common
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *)
-open Stdcompat (* for bytes *)
 (** Decompression algorithm.
 
   Unzip decompression algorithm is compliant with RFC 1950 and 1951 which
@@ -2622,7 +2602,6 @@ val debug: bool ref
 
 <<version_control/unzip.ml>>=
 <<copyright ocaml-unzip>>
-open Stdcompat (* for bytes *)
 
 (*****************************************************************************)
 (* Types *)
@@ -2813,7 +2792,6 @@ open Common
 
 <<version_control/zlib.mli>>=
 <<copyright camlzip>>
-open Stdcompat (* for bytes *)
 
 <<exception [[Zlib.Error]]>>
 
@@ -2855,7 +2833,6 @@ external update_crc_string: int32 -> string -> int -> int -> int32
 
 <<version_control/zlib.ml>>=
 <<copyright camlzip>>
-open Stdcompat (* for bytes *)
 
 <<exception [[Zlib.Error]]>>
 

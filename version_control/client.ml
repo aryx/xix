@@ -13,7 +13,9 @@
 
 (*s: type [[Client.t]] *)
 type t = {
-  (* path to remote (e.g., /path/other/repo, or git://github.com/foo/bar) *)
+  (* path to remote (e.g., /path/other/repo, or git://github.com/foo/bar) 
+   * Fpath.t or Uri.t (TODO: use variant and enforce?)
+  *)
   url: string;
   (* less: more parameters:
    *  - determine_refs_wanted. for now grabs everything from remote HEAD 

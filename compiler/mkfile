@@ -22,7 +22,7 @@ LIBS=$TOP/lib_core/commons/lib.cma \
  $TOP/macroprocessor/lib.cma \
  $TOP/assembler/objects/lib.cma
 
-PROG=5c
+PROG=o5c
 
 <$TOP/mkconfig
 <$TOP/mkprog

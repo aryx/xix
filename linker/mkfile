@@ -16,7 +16,7 @@ SYSLIBS=str.cma unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/macroprocessor/lib.cma $TOP/assembler/objects/lib.cma $TOP/linker/executables/lib.cma $TOP/linker/libraries/lib.cma
 
 # or use Principia spirit! THE linker! so call it simply 'linker' ? :)
-PROG=5l
+PROG=o5l
 
 <$TOP/mkconfig
 <$TOP/mkprog

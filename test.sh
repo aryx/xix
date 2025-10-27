@@ -15,8 +15,8 @@ set -x
 ./bin/mk --help
 ./bin/rc --help
 ./assembler/o5a --help
-./linker/5l --help
-./compiler/5c --help
+./linker/o5l --help
+./compiler/o5c --help
 # TODO: add a --help, and exit 0 on --help, not 2
 #./lex/ocamllex --help
 #./yacc/ocamlyacc --help

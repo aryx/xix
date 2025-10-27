@@ -18,6 +18,8 @@ let vof_filename = Ocaml.vof_string
 
 let vof_register =
   function | R v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("R", [ v1 ]))
+let vof_fregister =
+  function | FR v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("FR", [ v1 ]))
 
 
 let vof_global { name = v_name; priv = v_priv; signature = v_signature } =
@@ -109,16 +111,13 @@ let rec vof_instr =
       and v4 = Ocaml.vof_option vof_register v4
       and v5 = vof_register v5
       in Ocaml.VSum (("Arith", [ v1; v2; v3; v4; v5 ]))
-  | ArithF ((v1(*, v2, v3, v4, v5*))) ->
+  | ArithF ((v1, v2, v3, v4, v5)) ->
       let v1 = vof_arithf_opcode v1 in
-(*
-      and v2 = vof_arith_option v2
-      and v3 = vof_arith_operand v3
-      and v4 = Ocaml.vof_option vof_register v4
-      and v5 = vof_register v5
-      in 
-*)
-      Ocaml.VSum (("ArithF", [ v1(*; v2; v3; v4; v5*) ]))
+      let v2 = vof_floatp_precision v2 in
+      let v3 = OCaml.vof_either OCaml.vof_float vof_fregister v3 in
+      let v4 = Ocaml.vof_option vof_fregister v4 in
+      let v5 = vof_fregister v5 in 
+      Ocaml.VSum (("ArithF", [ v1; v2; v3; v4; v5 ]))
   | MOVE ((v1, v2, v3, v4)) ->
       let v1 = vof_move_size v1
       and v2 = vof_move_option v2
@@ -145,10 +144,10 @@ let rec vof_instr =
   | SWI v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("SWI", [ v1 ]))
   | RFE -> Ocaml.VSum (("RFE", []))
 and vof_arithf_opcode = function
-  | ADDF -> Ocaml.VSum (("ADD", []))
-  | SUBF -> Ocaml.VSum (("SUB", []))
-  | MULF -> Ocaml.VSum (("MUL", []))
-  | DIVF -> Ocaml.VSum (("DIV", []))
+  | ADD_ -> Ocaml.VSum (("ADD", []))
+  | SUB_ -> Ocaml.VSum (("SUB", []))
+  | MUL_ -> Ocaml.VSum (("MUL", []))
+  | DIV_ -> Ocaml.VSum (("DIV", []))
 and vof_arith_opcode =
   function
   | AND -> Ocaml.VSum (("AND", []))
@@ -172,6 +171,10 @@ and vof_arith_opcode =
 and vof_arith_option v = Ocaml.vof_option vof_arith_cond v
 and vof_arith_cond =
   function | Set_condition -> Ocaml.VSum (("Set_condition", []))
+and vof_floatp_precision =
+  function
+  | F -> Ocaml.VSum (("F", []))
+  | D -> Ocaml.VSum (("D", []))
 and vof_cmp_opcode =
   function
   | CMP -> Ocaml.VSum (("CMP", []))

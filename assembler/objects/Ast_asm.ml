@@ -41,7 +41,10 @@ type virt_pc = int
 type integer = int 
 [@@deriving show]
 
-(* floating point. float enough too? can contain 'double' C? *)
+(* floating point number.
+ * TODO: float enough too? can contain 'double' C? 
+ * alt? use explicit float record { Int32.t; Int32.t mantisse/exp } ?
+*)
 type floatp = float 
 [@@deriving show]
 
@@ -49,8 +52,10 @@ type floatp = float
 type offset = int
 [@@deriving show]
 
+(* jmp labels *)
 type label = string
 [@@deriving show]
+
 type symbol = string
 [@@deriving show]
 
@@ -120,11 +125,11 @@ and branch_operand2 =
 type sign = S (* Signed *) | U (* Unsigned *)
 [@@deriving show]
 
-(* TODO: add Dword  *)
+(* TODO: add Dword? use shorter W_ | H_ | B_ | D_ ?  *)
 type move_size = Word | HalfWord of sign | Byte of sign
 [@@deriving show]
 
-type float_precision = F (* Float *) | D (* Double *)
+type floatp_precision = F (* Float *) | D (* Double *)
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)

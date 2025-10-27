@@ -51,8 +51,8 @@ module L = Location_cpp
 /*(*2 registers *)*/
 /*(*-----------------------------------------*)*/
 
-%token <Ast_asm5.register> TRx
-%token <Ast_asm5.fregister> TFx
+%token <Ast_asm.register> TRx
+%token <Ast_asm.fregister> TFx
 %token TR TF
 %token TPC TSB TFP TSP
 

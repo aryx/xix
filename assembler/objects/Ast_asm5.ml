@@ -38,14 +38,14 @@ open Ast_asm
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
-type register = A.register (* between 0 and 15 *)
+type reg = A.register (* between 0 and 15 *)
 [@@deriving show]
 
-type fregister = A.fregister (* between 0 and 15 *)
+type freg = A.fregister (* between 0 and 15 *)
 [@@deriving show]
 
 (* ?? *)
-type cregister = C of int (* between 0 and 15 *)
+type creg = C of int (* between 0 and 15 *)
 
 (* reserved by linker *)
 let rTMP = R 11
@@ -59,10 +59,10 @@ let nb_registers = 16
 
 type arith_operand =
   | Imm of A.integer (* characters are converted to integers *)
-  | Reg of register
+  | Reg of reg
   (* can not be used with shift opcodes (SLL/SRL/SRA) *)
-  | Shift of register * shift_reg_op * 
-             (register, int (* between 0 and 31 *)) Either_.t
+  | Shift of reg * shift_reg_op * 
+             (reg, int (* between 0 and 31 *)) Either_.t
 
   and shift_reg_op =
     | Sh_logic_left | Sh_logic_right
@@ -80,7 +80,7 @@ type mov_operand =
    *)
   | Ximm of ximm
 
-  | Indirect of register * A.offset
+  | Indirect of reg * A.offset
   (* another form of Indirect *)
   | Entity of A.entity
 
@@ -94,19 +94,20 @@ type mov_operand =
 type instr = 
   (* Arithmetic *)
   | Arith of arith_opcode * arith_cond option *
-      arith_operand (* src *) * register option * register (* dst *)
-  | ArithF of arithf_opcode
+      arith_operand (* src *) * reg option * reg (* dst *)
+  | ArithF of arithf_opcode * A.floatp_precision *
+      (A.floatp, freg) Either_.t * freg option * freg
 
   (* Memory *)
   | MOVE of A.move_size * move_option *
       mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
   | SWAP of A.move_size (* actually only (Byte x) *) * 
-       register (* indirect *) * register * register option
+       reg (* indirect *) * reg * reg option
 
   (* Control flow *)
   | B  of A.branch_operand (* branch *)
   | BL of A.branch_operand (* branch and link *)
-  | Cmp of cmp_opcode * arith_operand * register
+  | Cmp of cmp_opcode * arith_operand * reg
   (* just Relative or LabelUse here for branch_operand *)
   | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
 
@@ -128,7 +129,7 @@ type instr =
   and arith_cond = Set_condition (* .S *)
 
   and arithf_opcode =
-    | ADDF | SUBF | MULF | DIVF
+    | ADD_ | SUB_ | MUL_ | DIV_
     
   and cmp_opcode = 
     | CMP

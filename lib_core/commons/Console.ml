@@ -204,7 +204,7 @@ let warning str = style_string Warning str
 let success str = style_string Success str
 
 (*****************************************************************************)
-(* Actual printing *)
+(* Actual printing and caps *)
 (*****************************************************************************)
 
 (* %! is to flush *)
@@ -212,3 +212,7 @@ let success str = style_string Success str
 let print _caps str = Printf.printf "%s\n%!" str
 let print_no_nl _caps str = Printf.printf "%s%!" str
 let eprint _caps str = Printf.eprintf "%s\n%!" str
+
+let stdin _caps = stdin
+let stdout _caps = stdout
+let stderr _caps = stderr

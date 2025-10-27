@@ -18,6 +18,9 @@ val print_no_nl : <Cap.stdout; .. > -> string -> unit
  *)
 val eprint : < Cap.stderr; .. > -> string -> unit
 
+val stdin: <Cap.stdin; .. > -> in_channel
+val stdout: <Cap.stdout; .. > -> out_channel
+val stderr: <Cap.stderr; .. > -> out_channel
 
 type highlight = On | Off [@@deriving show]
 

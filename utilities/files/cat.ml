@@ -14,9 +14,20 @@ type caps = < Cap.open_in; Cap.stdout >
 (* Main algorithm *)
 (*****************************************************************************)
 
-let cat (_caps : < Cap.stdout; .. >) (chan : Chan.i) : unit =
+let cat (caps : < Cap.stdout; .. >) (chan : Chan.i) : unit =
   Logs.info (fun m -> m "processing %s" (Chan.origin chan));
-  failwith "TODO"
+
+  let buf = Bytes.create 8192 in
+  let rec aux () =
+    let n = input chan.ic buf 0 8192 in
+    if n = 0
+    then ()
+    else begin
+        output (Console.stdout caps) buf 0 n;
+        aux ()
+      end
+  in
+  aux ()
 
 (*****************************************************************************)
 (* Entry point *)

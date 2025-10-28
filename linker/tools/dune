@@ -10,11 +10,23 @@
  ; 'byte' is for ocamldebug
  (modes native byte))
 
+(executable
+ (name Nm)
+ (modules Nm)
+ (libraries
+   str unix
+   xix_commons
+   xix_objects xix_libraries
+ )
+ (preprocess (pps ppx_deriving.show))
+ (modes native byte))
+
 (install
  (package xix)
  (section bin)
  (files
   (Ar.exe as oar)
   (Ar.bc as oar.bc)
+  (Nm.exe as onm)
  )
 )

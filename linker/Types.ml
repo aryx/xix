@@ -3,8 +3,6 @@ open Common
 open Fpath_.Operators
 
 module A = Ast_asm
-(* for field access for ocaml-light *)
-open Ast_asm
 
 (*****************************************************************************)
 (* Types *)

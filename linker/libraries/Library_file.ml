@@ -3,9 +3,6 @@ open Common
 open Regexp_.Operators
 open Fpath_.Operators
 
-(* for field-access in ocaml-light *)
-open Chan
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)

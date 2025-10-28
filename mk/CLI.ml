@@ -104,7 +104,7 @@ module R = Rules
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in >
 (*e: type [[CLI.caps]] *)
 
 (*s: constant [[CLI.usage]] *)
@@ -123,14 +123,14 @@ let do_action caps s xs =
   | "-test_parser" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
-        let instrs = Parse.parse (Fpath.v file) in
+        let instrs = FS.with_open_in caps Parse.parse (Fpath.v file) in
         Console.print caps (spf "%s" (Ast.show_instrs instrs))
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
         let env = Env.initenv caps in
-        let instrs = Parse.parse (Fpath.v file) in
+        let instrs = FS.with_open_in caps Parse.parse (Fpath.v file) in
         let _rules, env = Eval.eval caps env (ref []) instrs in
         Env.dump_env env;
         ()
@@ -143,7 +143,7 @@ let do_action caps s xs =
 (*****************************************************************************)
 
 (*s: function [[CLI.build_target]] *)
-let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
+let build_target (caps : <caps; ..>) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
    let root = Graph.build_graph target rules in
    (*s: [[CLI.build_target()]] possibly dump the graph *)
    (* could do that after the checks *)
@@ -181,7 +181,7 @@ let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : str
 [@@profiling]
 
 (*s: function [[CLI.build_targets]] *)
-let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
+let build_targets (caps : <caps; .. >) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
     let env = Env.initenv caps in
@@ -204,7 +204,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     (*e: [[CLI.build_targets()]] if debugger set *)
 
     (* parsing *)
-    let instrs = Parse.parse infile in
+    let instrs = FS.with_open_in caps Parse.parse infile in
     (*s: [[CLI.build_targets()]] possibly dump the AST *)
     if !Flags.dump_ast
     then Ast.dump_ast instrs;

@@ -183,7 +183,7 @@ let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t
 (*****************************************************************************)
 
 (*s: function [[Eval.eval]] *)
-let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr list) : Rules.rules * Env.t =
+let eval (caps : < Cap.fork; Cap.exec; Cap.open_in; .. >) env targets_ref (xs : Ast.instr list) : Rules.rules * Env.t =
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
 
@@ -213,7 +213,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr lis
               if not (Sys.file_exists file)
               then warning loc (spf "skipping missing include file: %s" file)
               else
-                let xs = Parse.parse (Fpath.v file) in
+                let xs = FS.with_open_in caps Parse.parse (Fpath.v file) in
                 (* recurse *)
                 instrs xs
           (* new? what does mk does? *)
@@ -293,7 +293,7 @@ let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr lis
         then failwith "missing include program name";
         let shellenv = Env.shellenv_of_env env in
         let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-        let xs = Parse.parse (Fpath.v tmpfile) in
+        let xs = FS.with_open_in caps Parse.parse (Fpath.v tmpfile) in
         (* recurse *)
         instrs xs
       (*e: [[Eval.eval()]] match instruction kind cases *)

@@ -5,4 +5,4 @@ val parse:
 
 (* internals *)
 val parse_no_cpp:
-  Fpath.t -> Ast.program
+  Chan.i -> Ast.program

@@ -9,6 +9,7 @@
 let line = ref 1
 (*e: constant [[Globals.line]] *)
 (*s: constant [[Globals.file]] *)
+(* TODO: use Chan.origin? *)
 let file = ref "<nofile>"
 (*e: constant [[Globals.file]] *)
 (*e: mk/Globals.ml *)

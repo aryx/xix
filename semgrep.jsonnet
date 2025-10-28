@@ -1,5 +1,5 @@
-// Semgrep rules for XiX mostly to enforce the use of capabilities
-// (see lib_core/commons/Cap.ml)
+// Semgrep rules for XiX, mostly to enforce the use of capabilities
+// (see lib_core/commons/Cap.ml).
 
 // ----------------------------------------------------------------------------
 // Simple rules
@@ -19,7 +19,7 @@ local semgrep_rules = [
     severity: 'ERROR',
     message: |||
       It is easy to forget to close `open_in` with `close_in`.
-      Use `FS.with_open_in()` or `UChan.with_open_in` instead.
+      Use `FS.with_open_in()` (or `UChan.with_open_in`) instead.
     |||,
     paths: {
       exclude: ['todo/'],
@@ -29,6 +29,10 @@ local semgrep_rules = [
 // ----------------------------------------------------------------------------
 // TCB (Trusted Computing Base, see semgrep/TCB/ for more info)
 // ----------------------------------------------------------------------------
+
+// lex and yacc are also part of ocaml-light so better not impose caps there
+local exclude_dirs = ['lex/', 'yacc/', 'version_control', 'todo/'];
+
 // partial copy of semgrep/TCB/forbid_xxx.jsonnet
 local cap_rules = [
   {
@@ -63,10 +67,10 @@ local cap_rules = [
 	 'open_in_bin',
 	 #'open_in',
          #'Unix.openfile',
-	 #'UChan.with_open_in',
+         'UChan.with_open_in',
 	# Cap.open_out
         'open_out',
-	 #'UChan.with_open_out',
+        'UChan.with_open_out',
         # Cap.tmp
          # Filename.temp_file
 	]
@@ -74,17 +78,14 @@ local cap_rules = [
     languages: ['ocaml'],
     severity: 'ERROR',
     message: |||
-       Do not use Sys.xxx or Unix.xxx. Use CapSys or CapUnix and capabilities
-       for dangerous functions.
+       Do not use Sys.xxx or Unix.xxx (or UChan.xxx). Use CapSys or CapUnix and
+       capabilities for dangerous functions.
     |||,
     paths: {
       exclude: ['threadUnix.ml',
 	        'Filename.ml', # for Sys.getenv TMPDIR
-		'version_control/repository.ml',
 		'windows/wm.ml', 'windows/processes_winshell.ml',
-		'lex/', 'yacc/',
-		'todo/'
-		],
+		] + exclude_dirs,
     },
   },
   {
@@ -100,9 +101,8 @@ local cap_rules = [
       exclude: [
         'ksym.ml', 'thread.ml', 'Printexc.ml', 'threadUnix.ml',
 	'Arg.ml', 'Unix.ml',
-        'lex/', 'yacc/', 'version_control/',
-	'windows/', 'todo/',
-      ],
+	'windows/'
+      ] + exclude_dirs,
     },
   },
   {
@@ -115,10 +115,7 @@ local cap_rules = [
        Do not use Sys.argv. Use CapSys.argv and capabilities.
     |||,
     paths: {
-      exclude: ['Arg.ml', 'Unix.ml',
-         'lex/', 'yacc/', 'version_control/',
-         'todo/'
-      ],
+      exclude: ['Arg.ml', 'Unix.ml'] + exclude_dirs,
     },
   },
   {
@@ -133,9 +130,7 @@ local cap_rules = [
     paths: {
       exclude: [
          'lib_core/commons_plan9/', 'lib_graphics/draw/draw_rio.ml',
-         'lex/', 'yacc/', 'version_control/',
-         'todo/'
-      ],
+      ] + exclude_dirs,
     },
   },
 ];

@@ -48,13 +48,11 @@ let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.
 
 
 (* ?? what for ? *)
-let parse_no_cpp (file : Fpath.t) =
-  file |> UChan.with_open_in (fun (chan : Chan.i) ->
-    L.line := 1;
-    let lexbuf = Lexing.from_channel chan.ic in
-    (try 
+let parse_no_cpp (chan : Chan.i) =
+  L.line := 1;
+  let lexbuf = Lexing.from_channel chan.ic in
+  (try 
       Parser.prog Lexer.token lexbuf, []
     with Parsing.Parse_error ->
-      failwith (spf "Syntax error: line %d" !L.line)
-    )
+        failwith (spf "Syntax error: line %d" !L.line)
   )

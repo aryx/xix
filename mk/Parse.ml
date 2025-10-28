@@ -2,12 +2,13 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+(* for ocaml-light field access *)
+open Chan
 
 (*s: function [[Parse.parse]] *)
-let parse (file : Fpath.t) : Ast.instr list =
-  file |> UChan.with_open_in (fun (chan : Chan.i) ->
+let parse (chan : Chan.i) : Ast.instr list =
     Globals.line := 1;
-    Globals.file := !!file;
+    Globals.file := Chan.origin chan;
 
     let lexbuf = Lexing.from_channel chan.Chan.ic in
     (*s: [[Parse.parse()]] nested [[lexfunc]] function *)
@@ -35,6 +36,5 @@ let parse (file : Fpath.t) : Ast.instr list =
     (* less: could track line of : and = *)
     with Parsing.Parse_error ->
       failwith (spf "%s:%d: Syntax error" !Globals.file !Globals.line)
-  )
 (*e: function [[Parse.parse]] *)
 (*e: mk/Parse.ml *)

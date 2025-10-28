@@ -3,6 +3,9 @@ open Common
 open Ast_asm
 module A = Ast_asm
 
+(* for ocaml-light field access *)
+open Object_file
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -32,7 +35,7 @@ let usage =
 
 (* TODO: visit also the uses, not just the defs *)
 let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
-  let (xs, _locs) = obj in
+  let (xs, _locs) = obj.prog in
   (* visit the defs *)
   xs |> List.iter (fun (line, _loc) ->
       match line with

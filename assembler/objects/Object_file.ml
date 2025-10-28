@@ -16,10 +16,12 @@ open Chan
 
 (* An object (.o) in Plan 9 is really just a serialized assembly AST
  * TODO? could also add file origin?
- * TODO: add also Arch.t, so make it a record:
- *   { prog: ...; origin: ...; arch: ... }
  *)
-type 'instr t = 'instr Ast_asm.program
+type 'instr t = {
+  prog:  'instr Ast_asm.program;
+  arch: Arch.t
+}
+
 
 (* less: could be sha1 of ast_asmxxx.ml for even safer marshalling *)
 let version = 6
@@ -32,9 +34,10 @@ let version = 6
  * TODO? pass and save arch name string? like in goken? and
  * check for it at loading time?
  *)
-let save (obj : 'instr t) (chan : Chan.o) : unit =
-  Logs.info (fun m -> m "Saving object in %s" (Chan.destination chan));
-  output_value chan.oc (version, obj)
+let save (arch : Arch.t) (obj : 'instr Ast_asm.program) (chan : Chan.o) : unit =
+  Logs.info (fun m -> m "Saving %s object in %s" (Arch.thestring arch)
+      (Chan.destination chan));
+  output_value chan.oc (version, { prog = obj; arch })
 
 (* for slightly safer marshalling
  * TODO: exception WrongArch ?

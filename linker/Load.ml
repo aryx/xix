@@ -7,6 +7,7 @@ module T = Types
 (* for field access for ocaml-light *)
 open Ast_asm
 open Arch_linker
+(*open Object_file*)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -47,7 +48,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_link
 
   let process_obj (obj : 'instr Object_file.t) =
     let file = Fpath.v "TODO" in
-    let prog = obj in
+    let prog = obj.prog in
     let ipc : Types.virt_pc = !pc in
     incr idfile;
     

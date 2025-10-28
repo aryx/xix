@@ -69,10 +69,10 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
   match arch with
   | Arch.Arm -> 
       let prog = assemble5 caps conf infile in
-      Object_file.save prog chan
+      Object_file.save arch prog chan
   | Arch.Mips -> 
       let prog = assemblev caps conf infile in
-      Object_file.save prog chan
+      Object_file.save arch prog chan
   | _ -> 
    failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 

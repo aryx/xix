@@ -1,6 +1,7 @@
 # -*- org -*-
 
 * TODO
+ELF! ELF Linux!
 
 ** rc/mk
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
@@ -16,12 +17,12 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (va, ar v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0)
+* 0.17 (Q4 2025) (va, ar v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/ utilities)
 
 ** toolchain
-- port va to OCaml
-- port ar to OCaml (v0)
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
+- port va (plan9 mips assembler) to OCaml
+- port ar to OCaml (v0)
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
@@ -39,13 +40,14 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 ** internals
 - use uppercase module filenames, split Main.ml/CLI.ml, and start
   to use capabilities for 5a/5c/5l/cpp as well as lex/yacc
+- use Cap.open_out
 
 
 * 0.16 (Q3 2025) (Dockerfile.light v0)
 
 ** testinfra
 - Finish Dockerfile.light that can compile mk/rc/lib_core/ with ocaml-light! 
-  see ocaml-light/changes.txt for all the stuff needed
+  see ocaml-light/changes.txt for all the stuff that was needed
 
 * 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.
@@ -61,8 +63,7 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 #  - dune (and good ocaml warnings and also far faster build time in //)
 #  - merlin for code navigation (requires dune)
 #  - Testo (snapshot-based testing)
-#  - SEMI ocamlformat
-#  - TODO let*, let/
+#  (remain ocamlformat and let* that I learned at Semgrep but maybe less important)
 
 ** internals
 
@@ -139,7 +140,7 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 * 0.12 (Q4 2018) ()
 # Move to Italy
 
-* 0.11 (Q3 2018) (lib_gui?)
+* 0.11 (Q3 2018) ()
 
 ** internals
 - use of merlin (mk .merlin) via Efuns

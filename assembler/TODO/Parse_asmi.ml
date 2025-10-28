@@ -2,9 +2,10 @@
 open Common
 
 module L = Location_cpp
-(* for fields access for ocaml-light *)
+
+(* for record-building for ocaml-light *)
 open Parse_cpp
-open Chan
+
 module T = Token_asm
 open Parser_asmi
 open Ast_asmi

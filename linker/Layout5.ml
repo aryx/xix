@@ -3,9 +3,10 @@ open Common
 
 module T = Types
 module T5 = Types5
-(* for ocaml-lights field access *)
+module A = Ast_asm
+
+(* for record-building for ocaml-light *)
 open Types
-open Types5
 
 (*****************************************************************************)
 (* Helpers *)

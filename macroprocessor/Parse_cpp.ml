@@ -6,9 +6,8 @@ module D = Ast_cpp (* D for Directives *)
 module L = Location_cpp
 module Flags = Flags_cpp
 
-(* for ocaml-light for fields *)
-open Ast_cpp 
-open Preprocessor
+(* for record matching for ocaml-light *)
+open Ast_cpp
 
 (*****************************************************************************)
 (* Prelude *)
@@ -91,7 +90,8 @@ let define_cmdline_def (k, v) =
   Hashtbl.add hmacros k 
     { m_name = k; m_nbargs = None; m_varargs = false; m_body = v; }
 
-let define {name = s; params; varargs; body}=
+let define (macro : D.macro) =
+  let {D.name = s; params; varargs; body} = macro in
   (* We could forbid here 's' to conflict with C keyboard, but this
    * should be done in the caller, as cpp can be used with different
    * languages, which may use different keywords.

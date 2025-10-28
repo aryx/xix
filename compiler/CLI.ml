@@ -2,7 +2,7 @@
 open Common
 open Fpath_.Operators
 open Regexp_.Operators
-(* for fields for ocaml-light *)
+(* for record-building for ocaml-light *)
 open Preprocessor
 
 (*****************************************************************************)

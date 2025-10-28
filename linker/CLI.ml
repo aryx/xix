@@ -3,9 +3,9 @@ open Common
 open Fpath_.Operators
 
 module T = Types
-(* for ocaml-light field access *)
+
+(* for record-building for ocaml-light *)
 open Types
-open Arch_linker
 
 (*****************************************************************************)
 (* Prelude *)
@@ -81,7 +81,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
   let symbols2, graph(* why modify that??*), text_size = 
     Layout5.layout_text symbols2 config.init_text graph in
 
-  let sizes = { text_size; data_size; bss_size } in
+  let sizes : Types.sections_size = { text_size; data_size; bss_size } in
   let init_data =  
     match config.init_data with
     | None -> Int_.rnd (text_size + config.init_text) config.init_round

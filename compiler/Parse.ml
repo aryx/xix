@@ -3,9 +3,9 @@ open Common
 
 module L = Location_cpp
 module T = Parser  (* T for Tokens *)
-(* for fields for ocaml-light *)
+
+(* for record-building for ocaml-light *)
 open Parse_cpp
-open Chan
 
 (*****************************************************************************)
 (* Prelude *)

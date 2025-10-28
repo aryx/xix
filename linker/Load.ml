@@ -4,11 +4,6 @@ open Fpath_.Operators
 module A = Ast_asm
 module T = Types
 
-(* for field access for ocaml-light *)
-open Ast_asm
-open Arch_linker
-(*open Object_file*)
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -16,7 +11,7 @@ open Arch_linker
 (* "Names", modifies global, modifies h *)
 let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : unit =
   (match global.priv with
-  | Some _ -> global.priv <- Some idfile
+  | Some _ -> global.A.priv <- Some idfile
   | None -> ()
   );
   (* populate symbol table with SXref if new entity *)
@@ -96,10 +91,10 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_link
 
           let relocate_branch opd =
             match !opd with
-            | SymbolJump _ | IndirectJump _ -> ()
-            | Relative _ | LabelUse _ ->
+            | A.SymbolJump _ | A.IndirectJump _ -> ()
+            | A.Relative _ | A.LabelUse _ ->
                 raise (Impossible "Relative or LabelUse resolved by assembler")
-            | Absolute i -> opd := Absolute (i + ipc)
+            | A.Absolute i -> opd := A.Absolute (i + ipc)
           in
           arch.branch_opd_of_instr instr |> Option.iter relocate_branch;
           code |> Stack_.push (T.I instr, (file, line));

@@ -13,9 +13,6 @@ module S = Storage
 module TC = Typecheck
 module E = Check
 
-(* for ocaml-light field access *)
-open Arch_compiler
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)

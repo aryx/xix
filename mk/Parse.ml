@@ -1,9 +1,6 @@
 (*s: mk/Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Fpath_.Operators
-(* for ocaml-light field access *)
-open Chan
 
 (*s: function [[Parse.parse]] *)
 let parse (chan : Chan.i) : Ast.instr list =

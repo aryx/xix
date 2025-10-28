@@ -5,11 +5,12 @@ open Regexp_.Operators
 module L = Location_cpp
 module T = Token_asm
 module A = Ast_asm
-(* for fields access for ocaml-light *)
-open Parse_cpp
-open Chan
+
 open Parser_asmv
 open Ast_asmv
+
+(* for record building for ocaml-light *)
+open Parse_cpp
 
 (*****************************************************************************)
 (* Prelude *)

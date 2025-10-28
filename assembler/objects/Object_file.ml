@@ -16,6 +16,8 @@ open Chan
 
 (* An object (.o) in Plan 9 is really just a serialized assembly AST
  * TODO? could also add file origin?
+ * TODO: add also Arch.t, so make it a record:
+ *   { prog: ...; origin: ...; arch: ... }
  *)
 type 'instr t = 'instr Ast_asm.program
 

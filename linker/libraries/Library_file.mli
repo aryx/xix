@@ -1,7 +1,7 @@
 (* An archive (.a) is really essentially just a list of objects, which in Plan 9
  * are just a list of serialized assembly ASTs
  *)
-type 'instr t = 'instr Ast_asm.program list
+type 'instr t = 'instr Object_file.t list
 
 (* may raise Object_file.WrongVersion *)
 val load:  Chan.i -> 'instr t

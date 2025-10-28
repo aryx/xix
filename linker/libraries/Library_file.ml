@@ -21,7 +21,7 @@ open Chan
  * TODO: do SYMDEF/ranlib indexing so can avoid objects that are not
  * needed by the linked program like in 5l/vl/...
  *)
-type 'instr t = 'instr Ast_asm.program list
+type 'instr t = 'instr Object_file.t list
 
 (*****************************************************************************)
 (* API *)

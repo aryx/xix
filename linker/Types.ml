@@ -136,30 +136,20 @@ type 'instr code_graph = 'instr node (* the first node *)
 (* The executable world *)
 (* --------------------------------------- *)
 
-type header_type =
-  | A_out (* Plan9 *)
-  | Elf (* Linux *)
-[@@deriving show]
-
 (* for ocaml-light to work without deriving *)
 let show_config _ = "NO DERIVING"
 [@@warning "-32"]
 
 type config = {
-  header_type: header_type;
+  header_type: Exec_file.header_type;
   header_size: int;
+
   init_text: addr;
   init_round: int;
   init_data: addr option;
+
   (* less: could be (string, addr) Common.either too *)
   entry_point: string;
-}
-[@@deriving show]
-
-type sections_size = {
-  text_size: int;
-  data_size: int;
-  bss_size: int;
 }
 [@@deriving show]
 

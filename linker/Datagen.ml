@@ -8,8 +8,8 @@ module T = Types
 (* Entry point *)
 (*****************************************************************************)
 
-let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : T.sections_size) (ds : T.data list) : T.byte array =
-  let arr = Array.make sizes.T.data_size (Char.chr 0) in
+let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : Exec_file.sections_size) (ds : T.data list) : T.byte array =
+  let arr = Array.make sizes.data_size (Char.chr 0) in
 
   ds |> List.iter (fun d ->
     let T.DATA (global, offset2, size_slice, v) = d in

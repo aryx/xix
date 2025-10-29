@@ -3,7 +3,7 @@
 TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons
-SRC=A_out.ml Elf.ml
+SRC=Exec_file.ml A_out.ml Elf.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

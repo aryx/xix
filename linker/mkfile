@@ -9,7 +9,7 @@ SRC= Flags.ml\
  Types.ml Types5.ml Arch_linker.ml \
  Load.ml Check.ml Resolve.ml\
  Rewrite5.ml Codegen5.ml Datagen.ml Layout5.ml\
- Executable.ml \
+ Execgen.ml \
  CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma

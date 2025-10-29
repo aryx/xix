@@ -30,7 +30,23 @@ type header = {
 (*****************************************************************************)
 
 (* entry point *)
-let write_header (header : header) (chan : out_channel) : unit =
+let write_header (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+
+  let header = {
+      (* Plan 9 ARM *)
+      magic = 0x647;
+
+      text_size = sizes.Exec_file.text_size;
+      data_size = sizes.Exec_file.data_size;
+      bss_size = sizes.Exec_file.bss_size;
+
+      (* todo: for now stripped *)
+      symbol_size = 0;
+      pc_size = 0;
+     
+      entry = entry_addr;
+    }
+  in
 
   (* a.out uses big-endian integers even on low-endian architectures *)
   let lput = Endian.Big.output_32 in

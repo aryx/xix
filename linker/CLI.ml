@@ -6,6 +6,7 @@ module T = Types
 
 (* for record-building for ocaml-light *)
 open Types
+open Exec_file
 
 (*****************************************************************************)
 (* Prelude *)
@@ -131,7 +132,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
   let symbols2, graph(* why modify that??*), text_size = 
     Layout5.layout_text symbols2 config.init_text graph in
 
-  let sizes : Types.sections_size = { text_size; data_size; bss_size } in
+  let sizes : Exec_file.sections_size = { text_size; data_size; bss_size } in
   let init_data =  
     match config.init_data with
     | None -> Int_.rnd (text_size + config.init_text) config.init_round
@@ -142,7 +143,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
  
   let instrs = Codegen5.gen symbols2 config graph in
   let datas  = Datagen.gen symbols2 init_data sizes data in
-  Executable.gen config sizes instrs datas symbols2 chan
+  Execgen.gen config sizes instrs datas symbols2 chan
 
 let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
   match arch with

@@ -131,29 +131,6 @@ type 'instr node = {
 type 'instr code_graph = 'instr node (* the first node *)
 [@@deriving show]
 
-
-(* --------------------------------------- *)
-(* The executable world *)
-(* --------------------------------------- *)
-
-(* for ocaml-light to work without deriving *)
-let show_config _ = "NO DERIVING"
-[@@warning "-32"]
-
-type config = {
-  header_type: Exec_file.header_type;
-  arch: Arch.t;
-  header_size: int;
-
-  init_text: addr;
-  init_round: int;
-  init_data: addr option;
-
-  (* less: could be (string, addr) Common.either too *)
-  entry_point: string;
-}
-[@@deriving show]
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)

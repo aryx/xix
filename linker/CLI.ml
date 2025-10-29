@@ -70,7 +70,7 @@ let init_entry = ref "_main"
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-let config_of_header_type (arch : Arch.t) (header_type : string) : Types.config =
+let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.linker_config =
   match header_type with
   | "a.out" | "a.out_plan9" ->
       let header_size = A_out.header_size in
@@ -114,7 +114,7 @@ let config_of_header_type (arch : Arch.t) (header_type : string) : Types.config 
 (*****************************************************************************)
 
 (* will modify chan as a side effect *)
-let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
+let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
   let arch : Ast_asm5.instr_with_cond Arch_linker.t = {
     Arch_linker.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
     Arch_linker.visit_globals_instr = Ast_asm5.visit_globals_instr;
@@ -141,13 +141,14 @@ let link5 (caps : < Cap.open_in; ..> ) (config : T.config) (files : Fpath.t list
     | Some x -> x
   in
   let config = { config with init_data = Some init_data } in
-  Logs.info (fun m -> m "final config is %s" (Types.show_config config));
+  Logs.info (fun m -> m "final config is %s" 
+        (Exec_file.show_linker_config config));
  
   let instrs = Codegen5.gen symbols2 config graph in
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Execgen.gen config sizes instrs datas symbols2 chan
 
-let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : T.config) (files : Fpath.t list) (chan : Chan.o) : unit =
+let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
   match arch with
   | Arch.Arm ->
      link5 caps config files chan
@@ -243,7 +244,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
                 failwith (spf "-D%d is ignored because of -R%d" x y)
       | _ -> ()
       );
-      let config : Types.config = config_of_header_type arch !header_type in   
+      let config : Exec_file.linker_config = 
+          config_of_header_type arch !header_type
+      in   
       try 
         (* the main call *)
         !outfile |> FS.with_open_out caps (fun chan ->

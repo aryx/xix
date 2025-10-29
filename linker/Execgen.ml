@@ -15,7 +15,7 @@ module T5 = Types5
 (* Entry point *)
 (*****************************************************************************)
 
-let gen (config : T.config) (sizes : Exec_file.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
+let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
   let entry_name : string = config.entry_point in
   let entry_addr : T.real_pc =
     try 
@@ -47,8 +47,8 @@ let gen (config : T.config) (sizes : Exec_file.sections_size) (cs : T.word list)
       ()
 
   | Exec_file.Elf ->
-      (* Header *)
-      Elf.write_header config.arch sizes entry_addr chan.oc;
+      (* Headers (ELF header + program headers) *)
+      Elf.write_headers config sizes entry_addr chan.oc;
 
       (* Text section *)
       cs |> List.iter (Endian.Little.output_32 chan.oc);

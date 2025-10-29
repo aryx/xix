@@ -11,6 +11,6 @@ val size_of_instruction:
 
 (* uses only config.init_text and for sanity checking only *)
 val gen: 
-  Types.symbol_table2 -> Types.config -> Types5.code_graph -> 
+  Types.symbol_table2 -> Exec_file.linker_config -> Types5.code_graph -> 
   Types.word list
 

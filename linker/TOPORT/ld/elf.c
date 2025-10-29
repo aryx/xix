@@ -59,12 +59,6 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
     ...
 
 	/*
-	 * could include ELF headers in text -- 8l doesn't,
-	 * but in theory it aids demand loading.
-	 */
-	elf32phdr(putl, PT_LOAD, HEADR, INITTEXT, INITTEXTP,
-		textsize, textsize, R|X, INITRND);	/* text */
-	/*
 	 * we need INITDATP, but it has to be computed.
 	 * assume distance between INITTEXT & INITTEXTP is also
 	 * correct for INITDAT and INITDATP.

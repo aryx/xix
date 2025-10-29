@@ -197,8 +197,9 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
 (*****************************************************************************)
 
 (* entry point *)
-let write_header (arch : Arch.t)
- (_sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+let write_headers (config : Exec_file.linker_config)
+ (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+  let arch = config.arch in
 
   (* ELF ident part (first 16 bytes) *)
 
@@ -251,6 +252,15 @@ let write_header (arch : Arch.t)
 
   (* Program headers *)
 
-  (* program_header_32 endian PH_PT_Load *)
+  (* Text *)
+  program_header_32 endian PH_PT_Load 
+    config.header_size (config.init_text, config.init_text)
+    (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
+  program_header_32 endian PH_PT_Load 
+    config.header_size (config.init_text, config.init_text)
+    (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
+  program_header_32 endian PH_PT_Load 
+    config.header_size (config.init_text, config.init_text)
+    (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
   
   ()

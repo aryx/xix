@@ -639,17 +639,17 @@ let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5
   action.size, action.pool
 
 
-let gen (symbols2 : T.symbol_table2) (config : T.config) (cg : T5.code_graph) : T.word list =
+let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5.code_graph) : T.word list =
 
   let res = ref [] in
   let autosize = ref 0 in
 
   (* just for sanity checking *)
-  let pc = ref config.T.init_text in
+  let pc = ref config.init_text in
 
   cg |> T.iter (fun n ->
 
-    let {size; binary; pool = _ }  = rules symbols2 !autosize config.T.init_data n in
+    let {size; binary; pool = _ }  = rules symbols2 !autosize config.init_data n in
     let instrs = binary () in
 
     if n.real_pc <> !pc

@@ -10,5 +10,6 @@ val main: <caps; ..> ->
 
 (* main algorithm; works by side effect on outfile *)
 val link: < Cap.open_in; ..> ->
-  Arch.t -> Types.config -> Fpath.t list (* files *) -> Chan.o (* outfile *) ->
+  Arch.t -> Exec_file.linker_config -> Fpath.t list (* files *) ->
+  Chan.o (* outfile *) ->
   unit

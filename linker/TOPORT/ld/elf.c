@@ -1,35 +1,9 @@
-/*
- * emit 32- or 64-bit elf headers for any architecture.
- * this is a component of ?l.
- */
-#include "l.h"
-
-extern char thechar;
-
 enum {
 	/* offsets into string table */
 	Stitext		= 1,
 	Stidata		= 7,
 	Stistrtab	= 13,
 };
-
-void
-elfident(int bo, int class)
-{
-	strnput("\177ELF", 4);		/* e_ident */
-	cput(class);
-	cput(bo);			/* byte order */
-	cput(1);			/* version = CURRENT */
-	if(debug['k']){			/* boot/embedded/standalone */
-		cput(255);
-		cput(0);
-	}
-	else{
-		cput(0);		/* osabi = SYSV */
-		cput(0);		/* abiversion = 3 */
-	}
-	strnput("", 7);
-}
 
 void
 elfstrtab(void)
@@ -95,19 +69,6 @@ void
 elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 {
 	ulong phydata;
-	void (*putw)(long), (*putl)(long);
-
-	if(bo == ELFDATA2MSB){
-		putw = wput;
-		putl = lput;
-	}else if(bo == ELFDATA2LSB){
-		putw = wputl;
-		putl = lputl;
-	}else{
-		print("elf32 byte order is mixed-endian\n");
-		errorexit();
-		return;
-	}
 
 	elfident(bo, ELFCLASS32);
 	putw(EXEC);
@@ -166,6 +127,9 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 	if(debug['S'])
 		elf32sectab(putl);
 }
+
+
+
 
 /*
  * elf64

@@ -5,24 +5,6 @@ enum {
 };
 
 enum {
-	/* Ehdr codes */
-	MAG0 = 0,		/* ident[] indexes */
-	MAG1 = 1,
-	MAG2 = 2,
-	MAG3 = 3,
-	CLASS = 4,
-	DATA = 5,
-	VERSION = 6,
-
-	ELFCLASSNONE = 0,	/* ident[CLASS] */
-	ELFCLASS32 = 1,
-	ELFCLASS64 = 2,
-	ELFCLASSNUM = 3,
-
-	ELFDATANONE = 0,	/* ident[DATA] */
-	ELFDATA2LSB = 1,
-	ELFDATA2MSB = 2,
-	ELFDATANUM = 3,
 
 	NOETYPE = 0,		/* type */
 	REL = 1,

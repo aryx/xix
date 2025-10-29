@@ -19,19 +19,6 @@ elfstrtab(void)
 	cput(0);
 }
 
-void
-elf32phdr(void (*putl)(long), ulong type, ulong off, ulong vaddr, ulong paddr,
-	ulong filesz, ulong memsz, ulong prots, ulong align)
-{
-	putl(type);
-	putl(off);
-	putl(vaddr);
-	putl(paddr);
-	putl(filesz);
-	putl(memsz);
-	putl(prots);
-	putl(align);
-}
 
 void
 elf32shdr(void (*putl)(long), ulong name, ulong type, ulong flags, ulong vaddr,

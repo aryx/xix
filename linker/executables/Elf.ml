@@ -17,6 +17,8 @@ let exec_header_32_size = 52
 let program_header_32_size = 32
 let section_header_32_size = 40
 
+let nb_program_headers = 3
+
 (* ------------------------------------------------------------------------- *)
 (* Exec header *)
 (* ------------------------------------------------------------------------- *)
@@ -79,6 +81,11 @@ type program_header_type =
   | PH_Shlib
   | PH_Phdr
 
+type program_header_protection =
+  | R
+  | W
+  | X
+
 (* ------------------------------------------------------------------------- *)
 (* Section header *)
 (* ------------------------------------------------------------------------- *)
@@ -132,6 +139,25 @@ let int_of_machine (m : machine) : int =
 
   | MRiscv -> failwith "TODO: MRiscv"
 
+let int_of_program_header_type (ph : program_header_type) : int =
+  match ph with
+  | PH_None -> 0
+  | PH_PT_Load -> 1
+  | PH_Dynamic -> 2
+  | PH_Interp -> 3
+  | PH_Note -> 4
+  | PH_Shlib -> 5
+  | PH_Phdr -> 6
+
+let int_of_prot (prot : program_header_protection) : int =
+  match prot with
+  | R -> 0x4
+  | W -> 0x2
+  | X -> 0x1
+
+let int_of_prots xs =
+  List.fold_left (fun acc e -> acc + int_of_prot e) 0 xs
+
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
@@ -151,6 +177,20 @@ let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : u
   output_byte chan 0; (* abiversion = 3 *)
   output_string chan "\000\000\000\000\000\000\000";
   ()
+
+let program_header_32 (endian: Endian.t) (ph: program_header_type)
+  offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
+  let (_, output_32) = Endian.output_functions_of_endian endian in
+  output_32 chan (int_of_program_header_type ph);
+  output_32 chan offset;
+  output_32 chan vaddr;
+  output_32 chan paddr;
+  output_32 chan filesz;
+  output_32 chan memsz;
+  output_32 chan (int_of_prots prots);
+  output_32 chan align
+  
+  
   
 (*****************************************************************************)
 (* Entry point *)
@@ -161,6 +201,7 @@ let write_header (arch : Arch.t)
  (_sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
 
   (* ELF ident part (first 16 bytes) *)
+
   let endian = Arch.endian_of_arch arch in
   let bo : byte_order =
     match endian  with
@@ -201,11 +242,15 @@ let write_header (arch : Arch.t)
   );
   output_16 chan exec_header_32_size;
   output_16 chan program_header_32_size;
-  output_16 chan 3; (* # of Phdrs *)
+  output_16 chan nb_program_headers; (* # of Phdrs *)
   output_16 chan section_header_32_size;
   output_16 chan 0; (* # of Shdrs, TODO 3 *)
   output_16 chan 0; (* Shdr table index, TODO 2 *)
 
   Logs.debug (fun m -> m "at pos %d" (pos_out chan));
+
+  (* Program headers *)
+
+  (* program_header_32 endian PH_PT_Load *)
   
   ()

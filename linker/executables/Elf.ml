@@ -17,7 +17,8 @@ let exec_header_32_size = 52
 let program_header_32_size = 32
 let section_header_32_size = 40
 
-let nb_program_headers = 1 (* TODO 3 *)
+(* Text, Data, and Symbol table *)
+let nb_program_headers = 2 (* TODO 3 *)
 
 let header_size =
   Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
@@ -99,7 +100,6 @@ type program_header_protection =
   | R
   | W
   | X
-[@@warning "-37"]
 
 (* ------------------------------------------------------------------------- *)
 (* Section header *)
@@ -218,7 +218,7 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
 
 (* entry point *)
 let write_headers (config : Exec_file.linker_config)
- (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+ (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : int * int =
   let arch = config.arch in
 
   (* ELF ident part (first 16 bytes) *)
@@ -273,18 +273,28 @@ let write_headers (config : Exec_file.linker_config)
   (* Program headers *)
 
   (* Text *)
+  let offset_disk_text = config.header_size in
   program_header_32 endian PH_PT_Load 
-    config.header_size (config.init_text, config.init_text)
+   offset_disk_text (config.init_text, config.init_text)
     (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
-(*
-  program_header_32 endian PH_PT_Load 
-    config.header_size (config.init_text, config.init_text)
-    (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
-  program_header_32 endian PH_PT_Load 
-    config.header_size (config.init_text, config.init_text)
-    (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
-*)
+
+  (* ELF Linux constrains that virtual
+   * address modulo a page must match file offset modulo
+   * a page, so simpler to start data at a page boundary
+   *)
+  let offset_disk_data = 
+    Int_.rnd (config.header_size + sizes.text_size) config.init_round
+  in
+  let init_data =
+    match config.init_data with
+    | None -> 
+        raise (Impossible "init_data should be set by now after layout_text")
+    | Some x -> x
+  in
+  program_header_32 endian PH_PT_Load
+    offset_disk_data (init_data, init_data)
+     (sizes.data_size, sizes.data_size + sizes.bss_size) [R; W; X]
+     config.init_round chan;
 
   Logs.debug (fun m -> m "after Program headers at pos %d" (pos_out chan));
-  
-  ()
+  offset_disk_text, offset_disk_data

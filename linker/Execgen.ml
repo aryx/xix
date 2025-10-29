@@ -48,18 +48,20 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
 
   | Exec_file.Elf ->
       (* Headers (ELF header + program headers) *)
-      Elf.write_headers config sizes entry_addr chan.oc;
+      let (offset_disk_text, offset_disk_data) = 
+        Elf.write_headers config sizes entry_addr chan.oc
+      in
 
       (* bugfix: important seek! we are using Int_.rnd in CLI.ml for
        * header_size and so after the program header we might need
        * some padding, hence this seek.
        *)
-      seek_out chan.oc config.header_size;
+      seek_out chan.oc offset_disk_text; (* = config.header_size *)
       (* Text section *)
       cs |> List.iter (Endian.Little.output_32 chan.oc);
 
       (* Data section *)
-      (* TODO: seek to a page boundary *)
+      seek_out chan.oc offset_disk_data;
       ds |> Array.iter (output_char chan.oc);
 
       ()

@@ -17,7 +17,7 @@ let exec_header_32_size = 52
 let program_header_32_size = 32
 let section_header_32_size = 40
 
-let nb_program_headers = 3
+let nb_program_headers = 1 (* TODO 3 *)
 
 (* ------------------------------------------------------------------------- *)
 (* Exec header *)
@@ -248,7 +248,7 @@ let write_headers (config : Exec_file.linker_config)
   output_16 chan 0; (* # of Shdrs, TODO 3 *)
   output_16 chan 0; (* Shdr table index, TODO 2 *)
 
-  Logs.debug (fun m -> m "at pos %d" (pos_out chan));
+  Logs.debug (fun m -> m "after ELF header at pos %d" (pos_out chan));
 
   (* Program headers *)
 
@@ -256,11 +256,15 @@ let write_headers (config : Exec_file.linker_config)
   program_header_32 endian PH_PT_Load 
     config.header_size (config.init_text, config.init_text)
     (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
+(*
   program_header_32 endian PH_PT_Load 
     config.header_size (config.init_text, config.init_text)
     (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
   program_header_32 endian PH_PT_Load 
     config.header_size (config.init_text, config.init_text)
     (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
+*)
+
+  Logs.debug (fun m -> m "after Program headers at pos %d" (pos_out chan));
   
   ()

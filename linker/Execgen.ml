@@ -50,6 +50,11 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
       (* Headers (ELF header + program headers) *)
       Elf.write_headers config sizes entry_addr chan.oc;
 
+      (* bugfix: important seek! we are using Int_.rnd in CLI.ml for
+       * header_size and so after the program header we might need
+       * some padding, hence this seek.
+       *)
+      seek_out chan.oc config.header_size;
       (* Text section *)
       cs |> List.iter (Endian.Little.output_32 chan.oc);
 

@@ -32,22 +32,25 @@ type ident_class =
   | C32
   | C64
   | CNum (* ?? *)
+[@@warning "-37"]
 
 (* alt: ident_data *)
-and byte_order = 
+type byte_order = 
   | BNone
   | BLSB (* Least Significant Bit *)
   | BMSB (* Most Significant bit *)
   | BNum (* ?? *)
+[@@warning "-37"]
 
-and elf_type =
+type elf_type =
   | TNone
   | TRel
   | TExec
   | TDyn
   | TCore
+[@@warning "-37"]
 
-and machine =
+type machine =
   | MNone
 
   (* main one; the one we want to support in xix *)
@@ -71,6 +74,7 @@ and machine =
   | MSparc64
   | MPower
   | MPower64
+[@@warning "-37"]
 
 (* ------------------------------------------------------------------------- *)
 (* Program header *)
@@ -84,11 +88,13 @@ type program_header_type =
   | PH_Note
   | PH_Shlib
   | PH_Phdr
+[@@warning "-37"]
 
 type program_header_protection =
   | R
   | W
   | X
+[@@warning "-37"]
 
 (* ------------------------------------------------------------------------- *)
 (* Section header *)

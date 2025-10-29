@@ -1,6 +1,14 @@
 open Common
 
-(* supported archs by xix toolchain *)
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+(* supported archs by the xix toolchain *)
 type t =
   | Arm
   | Arm64
@@ -10,6 +18,36 @@ type t =
   | X86
   | Amd64
 [@@deriving show]
+
+type bits =
+  | Arch32
+  | Arch64
+
+(*****************************************************************************)
+(* Conversions *)
+(*****************************************************************************)
+
+let endian_of_arch = function
+  | Arm -> Endian.Little
+  | Arm64 -> Endian.Little
+  | Mips -> Endian.Little
+  | Riscv -> Endian.Little
+  | Riscv64 -> Endian.Little
+  | X86 -> Endian.Big
+  | Amd64 -> Endian.Big
+
+let bits_of_arch = function
+  | Arm -> Arch32
+  | Arm64 -> Arch64
+  | Mips -> Arch32
+  | Riscv -> Arch32
+  | Riscv64 -> Arch64
+  | X86 -> Arch32
+  | Amd64 -> Arch64
+
+(*****************************************************************************)
+(* Plan9 arch char/string conventions *)
+(*****************************************************************************)
 
 (* Plan 9 conventions *)
 let thechar (x : t) : char =

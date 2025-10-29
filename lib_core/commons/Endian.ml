@@ -11,6 +11,10 @@ open Common
 (* Big *)
 (*****************************************************************************)
 
+type t =
+  | Big (* BE *)
+  | Little (* LE *)
+
 module Big = struct
 
 (* old: was called lput in A_out.ml *)

@@ -87,13 +87,29 @@ type program_header_type =
 
 (* entry point *)
 let write_header
-  (_arch : Arch.t)
+  (arch : Arch.t)
  (_sizes : Exec_file.sections_size) (_entry_addr : int) (_chan : out_channel) : unit =
 
   let _mach : machine =
-    failwith "XXX" 
+    match arch with
+    | Arch.Arm -> MArm
+    | Arch.Arm64 -> MArm64
+    | Arch.Mips -> MMips
+    | Arch.Riscv -> MRiscv
+    | Arch.Riscv64 -> failwith "TODO: Riscv64"
+    | Arch.X86 -> MI386 (* what about MI486? *)
+    | Arch.Amd64 -> MAmd64
   in
+  let endian = Arch.endian_of_arch arch in
   let _bo : byte_order =
-    failwith "XXX"
+    match endian  with
+    | Endian.Little -> DLSB
+    | Endian.Big -> DMSB
   in
+  let _class_ : ident_class =
+    match Arch.bits_of_arch arch with
+    | Arch.Arch32 -> C32
+    | Arch.Arch64 -> C64
+  in
+  
   failwith "XXX"

@@ -24,7 +24,7 @@ SRC=\
  Cmd.ml Proc.ml \
  Date.ml \
  Exception.ml Exit.ml \
- Arch.ml OS.ml Endian.ml
+ Endian.ml Arch.ml OS.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

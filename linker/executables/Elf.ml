@@ -42,6 +42,11 @@ type byte_order =
   | BNum (* ?? *)
 [@@warning "-37"]
 
+type ident_version =
+  | VNone
+  | VCurrent
+[@@warning "-37"]
+
 type elf_type =
   | TNone
   | TRel
@@ -117,6 +122,11 @@ let byte_of_byte_order (bo : byte_order) : int =
   | BMSB -> 2
   | BNum -> 3
 
+let int_of_version (v : ident_version) : int =
+  match v with
+  | VNone -> 0
+  | VCurrent -> 1
+
 let int_of_elf_type (t : elf_type) : int =
   match t with
   | TNone -> 0
@@ -182,7 +192,7 @@ let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : u
   output_string chan "ELF";
   output_byte chan (byte_of_class class_);
   output_byte chan (byte_of_byte_order bo);
-  output_byte chan 1; (* version = CURRENT *)
+  output_byte chan (int_of_version VCurrent);
   output_byte chan 0; (* osabi = SYSV; 255 = boot/embedded/standalone? *)
   output_byte chan 0; (* abiversion = 3 *)
   output_string chan "\000\000\000\000\000\000\000";
@@ -241,7 +251,7 @@ let write_headers (config : Exec_file.linker_config)
   let output_16, output_32 = Endian.output_functions_of_endian endian in
   output_16 chan (int_of_elf_type TExec);
   output_16 chan (int_of_machine mach);
-  output_32 chan 1; (* version = CURRENT *)
+  output_32 chan (int_of_version VCurrent); (* again? *)
   output_32 chan entry_addr;
   output_32 chan exec_header_32_size; (* offset to first phdr *)
   output_32 chan 0; (* TODO: offset to first shdr HEADR+textsize+datsize+symsize *)

@@ -69,9 +69,7 @@ elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 		datsize, datsize+bsssize, R|W|X, INITRND); /* data */
 	elf32phdr(putl, NOPTYPE, HEADR+textsize+datsize, 0, 0,
 		symsize, lcsize, R, 4);			/* symbol table */
-	if (addpsects > 0)
-		putpsects(putl);
-	cflush();
+
 
 	if(debug['S'])
 		elf32sectab(putl);

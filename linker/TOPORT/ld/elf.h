@@ -5,10 +5,6 @@ enum {
 };
 
 enum {
-
-	NO_VERSION = 0,		/* version, ident[VERSION] */
-	CURRENT = 1,
-
 	/* Shdr Codes */
 	Progbits = 1,	/* section types */
 	Strtab = 3,

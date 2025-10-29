@@ -34,6 +34,13 @@ and byte_order =
   | BMSB (* Most Significant bit *)
   | BNum (* ?? *)
 
+and elf_type =
+  | TNone
+  | TRel
+  | TExec
+  | TDyn
+  | TCore
+
 and machine =
   | MNone
 
@@ -93,13 +100,50 @@ let byte_of_byte_order (bo : byte_order) : int =
   | BMSB -> 2
   | BNum -> 3
 
+let int_of_elf_type (t : elf_type) : int =
+  match t with
+  | TNone -> 0
+  | TRel -> 1
+  | TExec -> 2
+  | TDyn -> 3
+  | TCore -> 4
+
+let int_of_machine (m : machine) : int =
+  match m with
+  | MNone -> 0
+  | MM32 -> 1
+  | MSparc -> 2
+  | MI386 -> 3
+  | MM68K -> 4
+  | MM88K -> 5
+  | MI486 -> 6
+  | MI860 -> 7
+  | MMips -> 8
+  | MS370 -> 9
+  | MMipsr4K -> 10
+
+  | MSparc64 -> 18
+  | MPower -> 20
+  | MPower64 -> 21
+
+  | MArm -> 40
+  | MAmd64 -> 62
+  | MArm64 -> 183
+
+  | MRiscv -> failwith "TODO: MRiscv"
+
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
 
 (* first 16 bytes *)
 let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : unit =
-  output_string chan "\177ELF";
+  (* take care, using "\177ELF" like in C to OCaml does not work because
+   * in C \177 is interpreted as an octal number but in OCaml it's an int
+   * and 0o177 is different from 177. Simpler to use 0x7f.
+   *)
+  output_byte chan 0x7f;
+  output_string chan "ELF";
   output_byte chan (byte_of_class class_);
   output_byte chan (byte_of_byte_order bo);
   output_byte chan 1; (* version = CURRENT *)
@@ -114,7 +158,9 @@ let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : u
 
 (* entry point *)
 let write_header (arch : Arch.t)
- (_sizes : Exec_file.sections_size) (_entry_addr : int) (chan : out_channel) : unit =
+ (_sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+
+  (* ELF ident part (first 16 bytes) *)
   let endian = Arch.endian_of_arch arch in
   let bo : byte_order =
     match endian  with
@@ -128,7 +174,9 @@ let write_header (arch : Arch.t)
   in
   write_ident bo class_ chan;
 
-  let _mach : machine =
+  (* Rest of ELF header (36 bytes => total 52 bytes) *)
+
+  let mach : machine =
     match arch with
     | Arch.Arm -> MArm
     | Arch.Arm64 -> MArm64
@@ -138,6 +186,26 @@ let write_header (arch : Arch.t)
     | Arch.X86 -> MI386 (* what about MI486? *)
     | Arch.Amd64 -> MAmd64
   in
-  let _output_16, _output_32 = Endian.output_functions_of_endian endian in
+  let output_16, output_32 = Endian.output_functions_of_endian endian in
+  output_16 chan (int_of_elf_type TExec);
+  output_16 chan (int_of_machine mach);
+  output_32 chan 1; (* version = CURRENT *)
+  output_32 chan entry_addr;
+  output_32 chan exec_header_32_size; (* offset to first phdr *)
+  output_32 chan 0; (* TODO: offset to first shdr HEADR+textsize+datsize+symsize *)
+  (match arch with
+  | Arch.Arm ->
+        (* version5 EABI for Linux *)
+        output_32 chan 0x5000200;
+  | _ -> output_32 chan 0
+  );
+  output_16 chan exec_header_32_size;
+  output_16 chan program_header_32_size;
+  output_16 chan 3; (* # of Phdrs *)
+  output_16 chan section_header_32_size;
+  output_16 chan 0; (* # of Shdrs, TODO 3 *)
+  output_16 chan 0; (* Shdr table index, TODO 2 *)
 
-  failwith "XXX1"
+  Logs.debug (fun m -> m "at pos %d" (pos_out chan));
+  
+  ()

@@ -69,39 +69,7 @@ void
 elf32(int mach, int bo, int addpsects, void (*putpsects)(Putl))
 {
 	ulong phydata;
-
-	elfident(bo, ELFCLASS32);
-	putw(EXEC);
-	putw(mach);
-	putl(1L);			/* version = CURRENT */
-	putl(entryvalue());		/* entry vaddr */
-	putl(Ehdr32sz);			/* offset to first phdr */
-	if(debug['S'])
-		putl(HEADR+textsize+datsize+symsize); /* offset to first shdr */
-	else
-		putl(0);
-
-	switch(thechar) {
-    case '5':
-        //goken: version5 EABI for Linux
-        putl(0x5000200);			/* flags */
-        break;
-    default:
-        putl(0L);			/* flags */
-        break;
-    }
-    
-	putw(Ehdr32sz);
-	putw(Phdr32sz);
-	putw(3 + addpsects);		/* # of Phdrs */
-	putw(Shdr32sz);
-	if(debug['S']){
-		putw(3);		/* # of Shdrs */
-		putw(2);		/* Shdr table index */
-	}else{
-		putw(0);
-		putw(0);
-	}
+    ...
 
 	/*
 	 * could include ELF headers in text -- 8l doesn't,

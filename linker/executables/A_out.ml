@@ -5,6 +5,8 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+let header_size = 32
+
 type header = {
   magic: int;
 

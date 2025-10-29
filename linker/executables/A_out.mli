@@ -13,4 +13,6 @@ type header = {
 }
 [@@deriving show]
 
+val header_size: int
+
 val write_header: header -> out_channel -> unit

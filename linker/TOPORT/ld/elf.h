@@ -1,14 +1,9 @@
 enum {
-	Ehdr32sz	= 52,
-	Phdr32sz	= 32,
-	Shdr32sz	= 40,
-
 	Ehdr64sz	= 64,
 	Phdr64sz	= 56,
 	Shdr64sz	= 64,
 };
 
-/* from /sys/src/libmach/elf.h */
 enum {
 	/* Ehdr codes */
 	MAG0 = 0,		/* ident[] indexes */

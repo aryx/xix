@@ -19,11 +19,13 @@ open Types
  *   (really gain?)
  * - no extensions not yet understood (import/export, dynamic linking)
  *   (not sure it was used by any Plan 9 programs)
- * - no half-word specialized instructions and immhalf()
- *   (rare instructions anyway?)
  * - address of parameter or local is not supported
  *   (Why would you want that? Does 5c generate that?)
  *   update: actually I support it now no?
+ *
+ * Main limitations compared to 5l:
+ * - no half-word specialized instructions and immhalf()
+ *   (rare instructions anyway?)
  *
  * Better than 5l/vl/...:
  * - greater code reuse across all linkers thanks to:
@@ -55,6 +57,54 @@ open Types
 (*****************************************************************************)
 (* Need: see .mli *)
 type caps = < Cap.open_in; Cap.open_out >
+
+let init_text  = ref None
+let init_round = ref None
+let init_data  = ref None
+(* note that this is not "main"; we give the opportunity to libc _main
+ * to do a few things before calling user's main()
+ *)
+let init_entry = ref "_main"
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+let config_of_header_type (header_type : string) : Types.config =
+  match header_type with
+  | "a.out" | "a.out_plan9" ->
+      let header_size = A_out.header_size in
+      { 
+        header_type = A_out;
+        header_size;
+        init_text  = 
+        (match !init_text  with
+          | Some x -> x
+          | None -> 4096 + header_size
+        );
+        init_data = !init_data;
+        init_round = (match !init_round with Some x -> x | None -> 4096);
+        entry_point = !init_entry;
+      }
+      
+  | "elf" | "elf_linux" ->
+      let header_size = 
+        Int_.rnd (Elf.exec_header_32_size +
+            3 * Elf.program_header_32_size)
+        16
+      in
+      { 
+        header_type = Elf;
+        header_size;
+        init_text  = 
+        (match !init_text  with
+          | Some x -> x 
+          | None -> 0x8000 + header_size
+        );
+        init_data = !init_data;
+        init_round = (match !init_round with Some x -> x | None -> 4096);
+        entry_point = !init_entry;
+      }
+  | s -> failwith (spf "unknown -H option, format not handled: %s" s)
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -123,14 +173,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
   let outfile = ref (Fpath.v thebin) in
 
-  let header_type = ref "a.out" in
-  let init_text  = ref None in
-  let init_round = ref None in
-  let init_data  = ref None in
-  (* note that this is not "main"; we give the opportunity to libc _main
-   * to do a few things before calling user's main()
-   *)
-  let init_entry = ref "_main" in
+  (* LATER: detect type depending on current host *)
+  let header_type = ref "elf" in
 
   let level = ref (Some Logs.Warning) in
   (* for debugging *)
@@ -190,48 +234,34 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       Arg.usage options usage; 
       Exit.Code 1
   | xs -> 
-      let config : Types.config = 
-        match !header_type with
-        | "a.out" | "a.out_plan9" ->
-            (match !init_data, !init_round with
-            | Some x, Some y -> 
+        (* sanity checks *)
+      (match !init_data, !init_round with
+      | Some x, Some y -> 
                 failwith (spf "-D%d is ignored because of -R%d" x y)
-            | _ -> ()
-            );
-            { 
-              header_type = A_out;
-              header_size = 32;
-              (* 4128 = 4096 (1 page) + 32 (the header) *)
-              init_text  = (match !init_text  with Some x -> x | None -> 4128);
-              init_round = (match !init_round with Some x -> x | None -> 4096);
-              init_data = !init_data;
-              entry_point = !init_entry;
-            }
-              
-        | "elf" | "elf_linux" -> raise Todo
-        | s -> failwith (spf "unknown -H option, format not handled: %s" s)
-      in
-     try 
+      | _ -> ()
+      );
+      let config : Types.config = config_of_header_type !header_type in      
+      try 
         (* the main call *)
         !outfile |> FS.with_open_out caps (fun chan ->
           link caps arch config xs chan
         );
         (* TODO: set exec bit on outfile *)
         Exit.OK
-  with exn ->
-    if !backtrace
-    then raise exn
-    else 
-      (match exn with
-      | Failure s ->
-          Logs.err (fun m -> m "%s" s);
-          Exit.Code 1
-      (* not sure this exn is currently thrown but just in case *)
-      | Location_cpp.Error (s, loc) ->
-          (* TODO: actually we should pass locs! *)
-          let (file, line) = Location_cpp.final_loc_of_loc loc in
-          Logs.err (fun m -> m "%s:%d %s" !!file line s);
-          Exit.Code 1
-      | _ -> raise exn
-      )
+      with exn ->
+       if !backtrace
+       then raise exn
+       else 
+         (match exn with
+         | Failure s ->
+             Logs.err (fun m -> m "%s" s);
+             Exit.Code 1
+         (* not sure this exn is currently thrown but just in case *)
+         | Location_cpp.Error (s, loc) ->
+             (* TODO: actually we should pass locs! *)
+             let (file, line) = Location_cpp.final_loc_of_loc loc in
+             Logs.err (fun m -> m "%s:%d %s" !!file line s);
+             Exit.Code 1
+         | _ -> raise exn
+         )
   )

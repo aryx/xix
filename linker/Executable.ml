@@ -16,8 +16,8 @@ module T5 = Types5
 (*****************************************************************************)
 
 let gen (config : T.config) (sizes : T.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
-  let entry = config.T.entry_point in
-  let format = config.T.header_type in
+  let entry = config.entry_point in
+  let format = config.header_type in
 
   (match format with
   | Types.A_out -> ()

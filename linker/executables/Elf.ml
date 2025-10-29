@@ -19,6 +19,10 @@ let section_header_32_size = 40
 
 let nb_program_headers = 1 (* TODO 3 *)
 
+let header_size =
+  Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
+  16
+
 (* ------------------------------------------------------------------------- *)
 (* Exec header *)
 (* ------------------------------------------------------------------------- *)

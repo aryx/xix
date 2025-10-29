@@ -89,11 +89,7 @@ let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.lin
       }
       
   | "elf" | "elf_linux" ->
-      let header_size = 
-        Int_.rnd (Elf.exec_header_32_size +
-                  Elf.nb_program_headers * Elf.program_header_32_size)
-                 16
-      in
+      let header_size = Elf.header_size in
       { 
         header_type = Elf;
         arch;

@@ -9,6 +9,7 @@ type t =
   | Riscv64
   | X86
   | Amd64
+[@@deriving show]
 
 (* Plan 9 conventions *)
 let thechar (x : t) : char =

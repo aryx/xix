@@ -26,33 +26,39 @@ and ident_class =
   | CNone
   | C32
   | C64
-  | CNum
+  | CNum (* ?? *)
 
-and ident_data = 
+(* alt: ident_data *)
+and byte_order = 
   | DNone
-  | DLSB
-  | DMSB
-  | DNum
+  | DLSB (* Least Significant Bit *)
+  | DMSB (* Most Significant bit *)
+  | DNum (* ?? *)
 
 and machine =
   | MNone
+
+  (* main one; the one we want to support in xix *)
+  | MI386
+  | MAmd64
+  | MArm
+  | MArm64
+  | MMips
+  | MRiscv
+  (* | MRiscv64? *)
+
+  (* other: *)
   | MM32
   | MSparc
-  | MI386
   | MM68K
   | MM88K
   | MI486
   | MI860
-  | MMips
   | MS370
   | MMipsr4K
   | MSparc64
   | MPower
   | MPower64
-  | MArm
-  | MAmd64
-  | MArm64
-  | MRiscv
 
 (* ------------------------------------------------------------------------- *)
 (* Program header *)
@@ -74,3 +80,20 @@ type program_header_type =
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+(* entry point *)
+let write_header
+  (_arch : Arch.t)
+ (_sizes : Exec_file.sections_size) (_entry_addr : int) (_chan : out_channel) : unit =
+
+  let _mach : machine =
+    failwith "XXX" 
+  in
+  let _bo : byte_order =
+    failwith "XXX"
+  in
+  failwith "XXX"

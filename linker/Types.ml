@@ -142,6 +142,7 @@ let show_config _ = "NO DERIVING"
 
 type config = {
   header_type: Exec_file.header_type;
+  arch: Arch.t;
   header_size: int;
 
   init_text: addr;

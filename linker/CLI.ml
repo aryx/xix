@@ -70,12 +70,13 @@ let init_entry = ref "_main"
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-let config_of_header_type (header_type : string) : Types.config =
+let config_of_header_type (arch : Arch.t) (header_type : string) : Types.config =
   match header_type with
   | "a.out" | "a.out_plan9" ->
       let header_size = A_out.header_size in
       { 
         header_type = A_out;
+        arch;
         header_size;
         init_text  = 
         (match !init_text  with
@@ -95,6 +96,7 @@ let config_of_header_type (header_type : string) : Types.config =
       in
       { 
         header_type = Elf;
+        arch;
         header_size;
         init_text  = 
         (match !init_text  with
@@ -241,7 +243,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
                 failwith (spf "-D%d is ignored because of -R%d" x y)
       | _ -> ()
       );
-      let config : Types.config = config_of_header_type !header_type in      
+      let config : Types.config = config_of_header_type arch !header_type in   
       try 
         (* the main call *)
         !outfile |> FS.with_open_out caps (fun chan ->

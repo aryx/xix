@@ -34,16 +34,27 @@ let gen (config : T.config) (sizes : Exec_file.sections_size) (cs : T.word list)
 
   match format with
   | Exec_file.A_out ->
-
       (* Header *)
       A_out.write_header sizes entry_addr chan.oc;
 
       (* Text section *)
       cs |> List.iter (Endian.Little.output_32 chan.oc);
-      (* Data section *)
-      (* no seek to a page boundary; a disk image is not a memory image! *)
+
+      (* Data section (no seek to a page boundary; disk image != memory image) *)
       ds |> Array.iter (output_char chan.oc);
+
       (* todo: symbol table, program counter line table *)
       ()
+
   | Exec_file.Elf ->
-      failwith "HERE"
+      (* Header *)
+      Elf.write_header config.arch sizes entry_addr chan.oc;
+
+      (* Text section *)
+      cs |> List.iter (Endian.Little.output_32 chan.oc);
+
+      (* Data section *)
+      (* TODO: seek to a page boundary *)
+      ds |> Array.iter (output_char chan.oc);
+
+      ()

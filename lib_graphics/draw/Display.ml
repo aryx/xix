@@ -1,14 +1,22 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
 
 open Point
 open Rectangle
 
-(* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 
 module M = Draw_marshal
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 type image = {
   id: int;
@@ -72,6 +80,10 @@ type t = display
 
 (* less: iounit(data)? *)
 let bufsize = 8000 (* actually 8000+1 for 'v' when flush_display  *)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 let flush_buffer display =
   let n = display.bufp in
@@ -212,7 +224,7 @@ let debug_set display b =
 let debug display =
   debug_set display true
 
-let with_debug display f =
+let _with_debug display f =
   debug_set display true;
   f ();
   debug_set display false;

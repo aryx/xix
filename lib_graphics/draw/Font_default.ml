@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Point
 open Rectangle
@@ -5,6 +6,15 @@ open Fontchar
 
 module I = Display
 module M = Draw_marshal
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 
 (* comes from tests/testfont.ml and lucm_latin_1_9_uncompressed_raw *)
 let lucm_latin_1_9_uncompressed_parsed = 

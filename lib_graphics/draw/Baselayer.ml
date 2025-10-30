@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module I = Display
@@ -8,7 +9,7 @@ module M = Draw_marshal
 (*****************************************************************************)
 (* Base layer on top of which other layers (see layer.ml) can be drawn.
  *
- * We could rename this file desktop.ml, but the code below provides 
+ * alt: we could rename this file desktop.ml, but the code below provides 
  * a general mechanism that can be used not only for windowing system 
  * (e.g., in GIMP for layers)
  *)
@@ -27,7 +28,7 @@ type t = {
   display: Display.t;
 }
 
-let fake_baselayer = { id = -1; display = Display.fake_display }
+let _fake_baselayer = { id = -1; display = Display.fake_display }
 
 let counter_id = 
   ref 0
@@ -36,7 +37,7 @@ let counter_id =
 (* Entry points *)
 (*****************************************************************************)
 
-let alloc img background =
+let alloc (img : Display.image) (background: Display.image) : t =
   (* less: public bool parameter? *)
   let public = true in
 
@@ -71,7 +72,7 @@ let alloc img background =
 
 
 
-let free _baselayer =
+let free (_baselayer : t) : unit =
   failwith "Baselayer.free: TODO"
 
 (* less: let get_public  *)

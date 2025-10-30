@@ -1,11 +1,24 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
 
 module D = Display
 module I = Display
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 (* rio and draw (Draw.getview) cooperate and must agree on a common constant *)
 let window_border_size = 4
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (* Note that rio also relies on baselayer.ml and layer.ml, but those files
  * are not rio-specific. They can be used by regular graphical 
@@ -45,6 +58,10 @@ let get_view_and_baselayer display =
   (* todo? originwindow *)
 
   view, base
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 let get_view display =
   fst (get_view_and_baselayer display)

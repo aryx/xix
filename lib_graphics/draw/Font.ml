@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Point
 open Rectangle
@@ -5,6 +6,14 @@ open Rectangle
 module I = Display
 module FC = Fontchar
 module M = Draw_marshal
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 type t = {
   (* e.g., /lib/font/bit/lucm/latin1.9.font *)
@@ -37,13 +46,16 @@ and subfont_spec = {
   subfont_filename: string (*TODO: Fpath.t *);
 }
 
-let fake_font = 
+let _fake_font = 
   { height = -1; name = ""; ascent = 0; subfont_spec = [];
     subfont = None; cache_img = Display.fake_image 
   }
 
 (* for default_font see font_default.ml *)
 
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* TODO: simplified to work with simplified cachec_chars and font_default.ml*)
 let initialize cache_img ncache ascent =

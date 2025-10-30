@@ -1,12 +1,25 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module I = Display (* image type is in display.ml *)
 module M = Draw_marshal
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 type end_line =
   | EndSquare
   | EndDisc
   | EndArrow
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let bp_end_line = function
   | EndSquare -> M.bp_long 0
@@ -22,6 +35,10 @@ let line_gen dst p0 p1 end0 end1 radius src sp op =
   in
   Display.add_buf dst.I.display (Draw.adjust_str_for_op str op)
 
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 let line dst p0 p1 end0 end1 radius src sp =
   line_gen dst p0 p1 end0 end1 radius src sp Draw.SoverD

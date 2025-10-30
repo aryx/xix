@@ -1,7 +1,29 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Point
 open Rectangle
 open Color
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(* alt:
+ * marshall full AST if kernel was written in OCaml:
+ * 
+type msg =
+  | AllocImage of int
+
+  | Draw of int
+
+  | Line of int
+  | Ellipse of int
+  | Arc of int
+ *)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* todo: sanity check range *)
 let bp_byte x =
@@ -48,17 +70,3 @@ let bp_color c =
 let bp_chans chans =
   let i = Channel.mk_channels_serial chans in
   bp_long i
-
-
-(* alt:
- * marshall full AST if kernel was written in OCaml:
- * 
-type msg =
-  | AllocImage of int
-
-  | Draw of int
-
-  | Line of int
-  | Ellipse of int
-  | Arc of int
- *)

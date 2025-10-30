@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Point
 open Rectangle
@@ -8,6 +9,13 @@ module F = Font
 module SF = Subfont
 module FC = Fontchar
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (* less: return subfontname? *)
 let cache_chars font str max_n =
@@ -71,6 +79,9 @@ let string_gen dst pt color sp font s clipr op =
   !pt
     
   
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 let string dst pt color sp font str =
   string_gen dst pt color sp font str dst.I.clipr Draw.SoverD
@@ -111,5 +122,5 @@ let string_width font str =
   *)
   string_width_gen font str
 
-let string_size font str =
+let _string_size font str =
   Point.p (string_width font str) font.Font.height

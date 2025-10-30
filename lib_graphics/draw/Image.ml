@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Point
 open Rectangle
@@ -9,12 +10,24 @@ module Unix2 = (*Thread*)Unix
 open Display
 module M = Draw_marshal
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 type t = Display.image
 
 type refresh =
   | RefreshNone
   | RefreshBackup
   (* less: RefreshMesg *)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* less: _allocimage and initial image  and
  *  optional color (can pass -1 mean no color to set)
@@ -53,7 +66,7 @@ let alloc_gen display r chans repl color baseopt refopt =
     M.bp_rect r ^ M.bp_rect clipr ^ 
     M.bp_color color
   in
-  add_buf display str;
+  Display.add_buf display str;
 
   { id = id;
     r = r;

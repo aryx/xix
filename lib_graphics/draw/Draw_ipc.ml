@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
 
@@ -9,6 +10,18 @@ module I = Display (* Image.t is in display.ml *)
 module M = Draw_marshal
 
 open Display
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* less: public parameter *)
 let name_image img name =
@@ -48,7 +61,7 @@ let get_named_image display name =
   let ninfo = 12 * 12 in
   let str = Bytes.make ninfo ' ' in
 
-  let n = Unix1.read display.D.ctl str 0 ninfo in
+  let n = Unix.read display.D.ctl str 0 ninfo in
   if n <> ninfo && 
      (* less: not sure why but it reads only 143 characters *)
      n <> (ninfo - 1)

@@ -1,4 +1,13 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 type chan_kind =
   | CRed
@@ -19,11 +28,11 @@ let grey1 =
   [ CGrey, 1]
 let grey8 =
   [ CGrey, 8]
-let rgb16 =
+let _rgb16 =
   [ CRed, 5; CGreen, 6; CBlue, 6]
 let rgb24 =
   [ CRed, 8; CGreen, 8; CBlue, 8]
-let rgba32 =
+let _rgba32 =
   [ CRed, 8; CGreen, 8; CBlue, 8; CAlpha, 8]
 let cmap8 =
   [ CMap, 8]
@@ -42,10 +51,14 @@ type channels_serial = int
 (* when reading from /dev/draw/new *)
 type channels_str = string
 
+(*****************************************************************************)
+(* IO *)
+(*****************************************************************************)
+
 (* deserializing *)
-let kind_of_chan_serial x =
+let _kind_of_chan_serial x =
   (x lsr 4) land 15
-let nbits_of_chan_serial x =
+let _nbits_of_chan_serial x =
   x land 15
 
 (* serializing *)
@@ -86,8 +99,8 @@ let channels_of_str str =
 
 
 (* do not pass an img here otherwise mutually dependent modules *)
-let imgval_to_rgba _chan _val =
+let _imgval_to_rgba _chan _val =
   failwith "imgval_to_rgba: TODO"
 
-let rgba_to_imgval _chan _rgba =
+let _rgba_to_imgval _chan _rgba =
   failwith "rgba_to_imgval: TODO"

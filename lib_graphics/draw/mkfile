@@ -3,14 +3,14 @@ TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons2 -I ../geometry
 
-SRC= channel.ml color.ml \
-     draw_marshal.ml display.ml image.ml \
-     draw_ipc.ml \
-     draw.ml \
-     line.ml polygon.ml ellipse.ml arc.ml \
-     fontchar.ml subfont.ml font.ml font_default.ml text.ml \
-     baselayer.ml layer.ml \
-     draw_rio.ml
+SRC= Channel.ml Color.ml \
+     Draw_marshal.ml Display.ml Image.ml \
+     Draw_ipc.ml \
+     Draw.ml \
+     Line.ml Polygon.ml Ellipse.ml Arc.ml \
+     Fontchar.ml Subfont.ml Font.ml Font_default.ml Text.ml \
+     Baselayer.ml Layer.ml \
+     Draw_rio.ml
 
 <$TOP/mkconfig2
 <$TOP/mklib

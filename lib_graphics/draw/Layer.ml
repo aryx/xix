@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module D = Display
@@ -5,12 +6,24 @@ module I = Display
 module B = Baselayer
 module M = Draw_marshal
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 (* Most drawing functions takes either a layer or image as a parameter.
  * less: we could force the programmer to each time do layer.img to get
  * the image in the layer. This would be more explicit. Would
  * it prevent some genericity?
  *)
 type t = Image.t
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* less: refBackup? _allocwindow and initial image *)
 let alloc base r color =

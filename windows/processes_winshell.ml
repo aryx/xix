@@ -1,7 +1,7 @@
 open Common
 
 module Unix1 = Unix
-module Unix2 = ThreadUnix
+module Unix2 = (*Thread*)Unix
 
 module FS = Fileserver
 module W = Window
@@ -31,6 +31,6 @@ let run_cmd_in_window_in_child_of_fork cmd argv w fs =
   Unix1.dup2 Unix1.stdout Unix1.stderr; 
 
   (* less: notify nil *)
-  Unix2.execv cmd argv;
+  Unix2.execv cmd argv |> ignore;
   (* should never reach this point *)
   failwith "exec failed"

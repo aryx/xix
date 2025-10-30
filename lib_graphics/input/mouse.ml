@@ -5,7 +5,7 @@ open Point
 
 (* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
-module Unix2 = ThreadUnix
+module Unix2 = (*Thread*)Unix
 
 module C = Cursor
 module M = Draw_marshal

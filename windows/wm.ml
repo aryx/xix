@@ -1,7 +1,7 @@
 open Common
 
 module Unix1 = Unix
-module Unix2 = ThreadUnix
+module Unix2 = (*Thread*)Unix
 
 module I = Display
 module W = Window

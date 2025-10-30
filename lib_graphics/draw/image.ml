@@ -4,7 +4,7 @@ open Rectangle
 
 (* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
-module Unix2 = ThreadUnix
+module Unix2 = (*Thread*)Unix
 
 open Display
 module M = Draw_marshal

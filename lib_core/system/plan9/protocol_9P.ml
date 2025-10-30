@@ -3,7 +3,7 @@ open Common
 module N = Plan9
 
 module Unix1 = Unix
-module Unix2  = ThreadUnix
+module Unix2  = (*Thread*)Unix
 
 (*****************************************************************************)
 (* Prelude *)

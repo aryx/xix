@@ -86,8 +86,8 @@ let channels_of_str str =
 
 
 (* do not pass an img here otherwise mutually dependent modules *)
-let imgval_to_rgba chan val_ =
+let imgval_to_rgba _chan _val =
   failwith "imgval_to_rgba: TODO"
 
-let rgba_to_imgval chan rgba =
+let rgba_to_imgval _chan _rgba =
   failwith "rgba_to_imgval: TODO"

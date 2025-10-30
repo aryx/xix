@@ -1,4 +1,5 @@
 open Common
+open Regexp_.Operators
 
 module D = Display
 module I = Display
@@ -20,17 +21,17 @@ let get_view_and_baselayer display =
     | xs -> failwith (spf "wrong format in /dev/winname: %s"
                         (String.concat "," xs))
     *)
-    let buf = String.make 256 ' ' in
+    let buf = Bytes.make 256 ' ' in
     let chan = open_in "/dev/winname" in
     let n = input chan buf 0 256 in
     if n < 256
-    then String.sub buf 0 n
+    then Bytes.sub_string buf 0 n
     else failwith "buffer too short for /dev/winname"
   in
   let img = 
     try Draw_ipc.get_named_image display winname
     with Failure _ -> 
-      pr (spf "failed to get named image for %s, using display.image" winname);
+      Logs.warn (fun m -> m "failed to get named image for %s, using display.image" winname);
       display.D.image
   in
   (* todo: finalize free baselayer if pb allocate view *)

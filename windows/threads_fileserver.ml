@@ -49,7 +49,7 @@ let toplevel_entries =
 
 let answer fs res =
   if !Globals.debug_9P
-  then pr (P.str_of_msg res);
+  then Logs.debug (fun m -> m "%s" (P.str_of_msg res));
 
   P.write_9P_msg res fs.FS.server_fd
 
@@ -88,7 +88,7 @@ let dispatch fs req request_typ =
     )
 
   (* Attach *)
-  | T.Attach (rootfid, auth_fid_opt, uname, aname) ->
+  | T.Attach (rootfid, _auth_fid_opt, uname, aname) ->
     (* stricter: *)
     if Hashtbl.mem fs.FS.fids rootfid
     then failwith (spf "Attach: fid already used: %d" rootfid);
@@ -116,7 +116,7 @@ let dispatch fs req request_typ =
        } in
        Hashtbl.add fs.FS.fids rootfid file;
        answer fs {req with P.typ = P.R (R.Attach qid) }
-     with exn ->
+     with _exn ->
         error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
     ))
@@ -127,7 +127,7 @@ let dispatch fs req request_typ =
     let file = Hashtbl.find fs.FS.fids fid in
     let wid = file.F.w.W.id in
     (match file, newfid_opt with
-    | { F.opened = Some _ }, _ ->
+    | { F.opened = Some _; _ }, _ ->
       error fs req "walk of open file"
     (* stricter? failwith or error? *)
     | _, Some newfid when Hashtbl.mem fs.FS.fids newfid ->
@@ -179,7 +179,7 @@ let dispatch fs req request_typ =
         file.F.entry <- final_entry;
         answer fs { req with P.typ = P.R (R.Walk qids) }
       with exn ->
-        newfid_opt |> Common.if_some (fun newfid ->
+        newfid_opt |> Option.iter (fun newfid ->
           Hashtbl.remove fs.FS.fids newfid
         );
         (match exn with
@@ -188,7 +188,7 @@ let dispatch fs req request_typ =
          *)
         | Not_found -> 
           error fs req "file does not exist"
-        | Failure "not a directory" ->
+        | Failure s when s = "not a directory" ->
           error fs req "not a directory"
         (* internal error then *)
         | _ -> raise exn
@@ -203,9 +203,9 @@ let dispatch fs req request_typ =
     let w = file.F.w in
     (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
     (match flags, file.F.entry.F.perm with
-    | { N.x = true}, _ 
-    | { N.r = true}, { N.r = false}
-    | { N.w = true}, { N.w = false}
+    | { N.x = true; _}, _ 
+    | { N.r = true; _}, { N.r = false; _}
+    | { N.w = true; _}, { N.w = false; _}
       -> error fs req "permission denied"
     | _, _ when w.W.deleted ->
       error fs req "window deleted"
@@ -216,7 +216,7 @@ let dispatch fs req request_typ =
          | F.File devid ->
            let dev = device_of_devid devid in
            dev.D.open_ w
-         | F.Dir dir ->
+         | F.Dir _dir ->
            (* todo: nothing to do for dir? ok to open a dir? *)
            ()
          );
@@ -266,7 +266,7 @@ let dispatch fs req request_typ =
        (try 
          let dev = device_of_devid devid in
          let data = dev.D.read_threaded offset count w in
-         answer fs { req with P.typ = P.R (R.Read data) }
+         answer fs { req with P.typ = P.R (R.Read (Bytes.of_string data)) }
        with Device.Error str ->
          error fs req str
       )) () |> ignore
@@ -289,8 +289,8 @@ let dispatch fs req request_typ =
        (try 
          let dev = device_of_devid devid in
          (* less: case where want to let device return different count? *)
-         let count = String.length data in
-         dev.D.write_threaded offset data w;
+         let count = Bytes.length data in
+         dev.D.write_threaded offset (Bytes.to_string data) w;
          answer fs { req with P.typ = P.R (R.Write count) }
        with Device.Error str ->
          error fs req str
@@ -354,11 +354,11 @@ let thread fs =
 
     (* todo: should exit the whole proc if error *)
     if !Globals.debug_9P
-    then pr (P.str_of_msg req);
+    then Logs.debug (fun m -> m "%s" (P.str_of_msg req));
 
     (match req.P.typ with
     | P.T x -> dispatch fs req x
-    | P.R x ->
+    | P.R _x ->
       (* less: Ebadfcall *)
       raise (Impossible (spf "got a response request: %s" (P.str_of_msg req)))
     );

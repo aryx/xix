@@ -15,7 +15,7 @@ let thread kbd =
      *  - use double array of keys so can send and then receive without
      *    losing anything?
     *)
-    Globals.win () |> Common.if_some (fun win ->
+    Globals.win () |> Option.iter (fun win ->
       Event.send win.W.chan_keyboard key |> Event.sync
     )
   done

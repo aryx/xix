@@ -12,7 +12,6 @@ threadUnix.mli
 lib_core/commons/Map_.ml*
 lib_core/commons/Set_.ml*
 lib_core/concurrency/todo/pervasives.ml*
-lib_core/commons_plan9/
 
 /gitlog.txt
 

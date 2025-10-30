@@ -1,5 +1,7 @@
 open Common
 
+(* This is incomplete and used only for plan9 stuff for now (e.g., windows/) *)
+
 (*
  * alternatives:
  *  - extlib/utf8.ml ?
@@ -18,9 +20,14 @@ let bytes_to_runes str =
   done;
   List.rev !res
 
+
+(* todo: remove once get List.iteri in 1.07 *)
+let iteri f xs =
+  xs |> Array.of_list |> Array.iteri f
+
 let string_of_runes xs =
-  let str = String.create (List.length xs) in
-  xs |> List_.iteri (fun i c ->
-    str.[i] <- c
+  let str = Bytes.create (List.length xs) in
+  xs |> (*List.*)iteri (fun i c ->
+    Bytes.set str i c
   );
-  str
+  Bytes.to_string str

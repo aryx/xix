@@ -110,8 +110,6 @@ let io_header_size = 24
 (* different from Response.Error *)
 exception Error of string
 
-let debug = ref false
-
 (*****************************************************************************)
 (* Dumper *)
 (*****************************************************************************)
@@ -157,7 +155,7 @@ let str_of_msg msg =
       spf "Read: fid = %d offset = %d, count = %d" fid offset count
     | T.Write (fid, offset, data) ->
       spf "Write: fid = %d offset = %d, data = %s" fid offset
-        (if String.length data > 10 then String.sub data 0 10 else data)
+        (if Bytes.length data > 10 then Bytes.sub_string data 0 10 else Bytes.to_string data)
     | T.Clunk fid ->
       spf "Clunk: %d" fid
     | T.Remove fid ->
@@ -185,7 +183,7 @@ let str_of_msg msg =
       spf "Create: qid = %s, iounit = %d" (str_of_qid qid) iounit
     | R.Read str ->
       spf "Read: %s" 
-        (if String.length str > 10 then String.sub str 0 10 else str)
+        (if Bytes.length str > 10 then Bytes.sub_string str 0 10 else Bytes.to_string str)
     | R.Write count -> 
       spf  "Write: %d" count
     | R.Clunk -> 
@@ -240,7 +238,7 @@ let gstring buf off =
   let off = off + bit16sz in
   String.sub buf off n
 
-let gdir_entry buf =
+let gdir_entry _buf =
   raise Todo
 
 
@@ -257,22 +255,22 @@ let pbit16 x =
   (* less: sanity check range? *)
   let x1 = Char.chr (x land 0xFF) in
   let x2 = Char.chr ((x asr 8) land 0xFF) in
-  let str = String.make 2 ' ' in
-  str.[0] <- x1;
-  str.[1] <- x2;
-  str
+  let str = Bytes.make 2 ' ' in
+  Bytes.set str 0 x1;
+  Bytes.set str 1 x2;
+  Bytes.to_string str
 
 let pbit32 x =
   let x1 = Char.chr (x land 0xFF) in
   let x2 = Char.chr ((x asr 8) land 0xFF) in
   let x3 = Char.chr ((x asr 16) land 0xFF) in
   let x4 = Char.chr ((x asr 24) land 0xFF) in
-  let str = String.make 4 ' ' in
-  str.[0] <- x1;
-  str.[1] <- x2;
-  str.[2] <- x3;
-  str.[3] <- x4;
-  str
+  let str = Bytes.make 4 ' ' in
+  Bytes.set str 0 x1;
+  Bytes.set str 1 x2;
+  Bytes.set str 2 x3;
+  Bytes.set str 3 x4;
+  Bytes.to_string str
 
 let pbit32_special (x, dm) =
   let x1 = Char.chr (x land 0xFF) in
@@ -283,12 +281,12 @@ let pbit32_special (x, dm) =
     | N.DMDir -> Char.chr  (((x asr 24) land 0xFF) lor 128)
     | N.DMFile -> Char.chr ((x asr 24) land 0xFF)
   in
-  let str = String.make 4 ' ' in
-  str.[0] <- x1;
-  str.[1] <- x2;
-  str.[2] <- x3;
-  str.[3] <- x4;
-  str
+  let str = Bytes.make 4 ' ' in
+  Bytes.set str 0 x1;
+  Bytes.set str 1 x2;
+  Bytes.set str 2 x3;
+  Bytes.set str 3 x4;
+  Bytes.to_string str
   
 
 (* todo: sanity check range *)
@@ -297,16 +295,16 @@ let pbit64 x =
   let x2 = Char.chr ((x asr 8) land 0xFF) in
   let x3 = Char.chr ((x asr 16) land 0xFF) in
   let x4 = Char.chr ((x asr 24) land 0xFF) in
-  let str = String.make 8 ' ' in
-  str.[0] <- x1;
-  str.[1] <- x2;
-  str.[2] <- x3;
-  str.[3] <- x4;
-  str.[4] <- Char.chr 0;
-  str.[5] <- Char.chr 0;
-  str.[6] <- Char.chr 0;
-  str.[7] <- Char.chr 0;
-  str
+  let str = Bytes.make 8 ' ' in
+  Bytes.set str 0 x1;
+  Bytes.set str 1 x2;
+  Bytes.set str 2 x3;
+  Bytes.set str 3 x4;
+  Bytes.set str 4 (Char.chr 0);
+  Bytes.set str 5 (Char.chr 0);
+  Bytes.set str 6 (Char.chr 0);
+  Bytes.set str 7 (Char.chr 0);
+  Bytes.to_string str
 
 let pstring s =
   let len = String.length s in
@@ -352,32 +350,34 @@ let pdir_entry entry =
  *)
 let read_9P_msg fd =
   (* read count *)
-  let buf1 = String.make bit32sz ' ' in
+  let buf1 = Bytes.make bit32sz ' ' in
   let n = Unix2.read fd buf1 0 bit32sz in
   if n <> bit32sz
   then raise (Error "could not read the message size");
   
-  let len = gbit32 buf1 0 in
+  let len = gbit32 (Bytes.to_string buf1) 0 in
   if len <= bit32sz
   then raise (Error "bad length in 9P2000 message header");
   let len = len - bit32sz in
 
-  let buf2 = String.make len ' ' in
+  let buf2 = Bytes.make len ' ' in
   let n = Unix2.read fd buf2 0 len in
   if n <> len
   then raise  (Error (spf "could not read enough bytes %d < %d" n len));
-  if !debug then pr (spf "read in total %d" (n+bit32sz));
+  Logs.debug (fun m -> m "read in total %d" (n+bit32sz));
 
   if len < bit8sz + bit16sz
   then raise (Error "no space for message type and tag");
   let buf = buf2 in
   
   let offset = 0 in
-  let type_ = gbit8 buf offset in
+  let type_ = gbit8 (Bytes.to_string buf) offset in
   let offset = offset + bit8sz in
-  let tag   = gbit16 buf offset in
+  let tag   = gbit16 (Bytes.to_string buf) offset in
   let offset = offset + bit16sz in
   let res = { tag = tag; typ = R (R.Error "TODO") } in
+
+  let buf = Bytes.to_string buf in
   try (
     let msg, final_offset = 
     match type_ with
@@ -421,7 +421,7 @@ let read_9P_msg fd =
       then failwith "too many names";
       let xs = ref [] in
       let offset = ref (offset + 10) in
-      for i = 0 to nwname - 1 do
+      for _i = 0 to nwname - 1 do
         let str = gstring buf !offset in
         let len = String.length str + bit16sz in
         offset := !offset + len;
@@ -463,7 +463,7 @@ let read_9P_msg fd =
       let write_offset = gbit64 buf (offset + 4) in
       let count = gbit32 buf (offset + 12) in
       let data = String.sub buf (offset + 16) count in
-      { res with typ = T (T.Write (fid, write_offset, data)) },
+      { res with typ = T (T.Write (fid, write_offset, Bytes.of_string data)) },
       offset + 16 + count
     (* Clunk *)
     | 120 -> 
@@ -554,8 +554,8 @@ let write_9P_msg msg fd =
       | R.Open (qid, iounit) -> pqid qid ^ pbit32 iounit
       | R.Create (qid, iounit) -> pqid qid ^ pbit32 iounit
       | R.Read data -> 
-        let len = String.length data in
-        pbit32 len ^ data
+        let len = Bytes.length data in
+        pbit32 len ^ (Bytes.to_string data)
       | R.Write count -> pbit32 count
       | R.Clunk -> ""
       | R.Walk xs -> 
@@ -577,8 +577,8 @@ let write_9P_msg msg fd =
   in
   let len = String.length str + bit32sz in
   let str = pbit32 len ^ str in
-  if !debug then pr (spf "write in total %d" len);
-  let n = Unix2.write fd str 0 len in
+  Logs.debug (fun m -> m "write in total %d" len);
+  let n = Unix2.write fd (Bytes.of_string str) 0 len in
   if n <> len
   then failwith "write error in 9P response";
   ()

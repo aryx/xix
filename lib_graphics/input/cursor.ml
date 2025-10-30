@@ -13,7 +13,7 @@ type t = {
   set: byte array;
 }
 
-let array_size = 2 * 16
+let _array_size = 2 * 16
 
 (* helper functions useful when building a cursor (e.g., see windows/data.ml) *)
 let ints_to_bytes arr =

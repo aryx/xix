@@ -1,4 +1,6 @@
 open Common
+open Regexp_.Operators
+
 open Point
 open Rectangle
 
@@ -54,7 +56,7 @@ and display = {
   mutable imageid: int;
   
   (* size = Image.bufsize + 1 (* for 'v' *)  *)
-  buf: string;
+  buf: bytes;
   (* between 0 and String.length buf *)
   mutable bufp: int;
 
@@ -86,7 +88,7 @@ let flush_buffer display =
       with Unix1.Unix_error (err, _write, s2) ->
         failwith (spf "error '%s(%s)' writing %d bytes |%s|" 
                     (Unix1.error_message err) s2
-                    n (String.escaped (String.sub display.buf 0 n)))
+                    n (String.escaped (Bytes.sub_string display.buf 0 n)))
     in
     (* stricter: not only if drawdebug but always *)
     if n2 <> n
@@ -114,7 +116,7 @@ and fake_display = {
   image = fake_image; dirno = -1; ctl = Unix1.stderr; data = Unix1.stderr;
   white = fake_image; black = fake_image; 
   opaque = fake_image; transparent = fake_image;
-  imageid = -1; buf = ""; bufp = -1;
+  imageid = -1; buf = Bytes.create 0; bufp = -1;
 }
 
 
@@ -126,18 +128,18 @@ let init () =
     Unix1.openfile "/dev/draw/new" [Unix1.O_RDWR] 0o666 in
 
   let ninfo = 12 * 12 in
-  let str = String.make ninfo ' ' in
+  let str = Bytes.make ninfo ' ' in
 
   let n = Unix1.read ctlfd str 0 ninfo in
   if n <> ninfo && 
      (* less: not sure why but it reads only 143 characters *)
      n <> (ninfo - 1)
-  then failwith (spf "wrong format in /dev/draw/new; read %d chars (%s)" n str);
+  then failwith (spf "wrong format in /dev/draw/new; read %d chars (%s)" n (Bytes.to_string str));
 
   let str_at n = 
-    let s = String.sub str (n * 12) 12 in
+    let s = Bytes.sub_string str (n * 12) 12 in
     if s =~ "^[ ]*\\([^ ]+\\)[ ]*$"
-    then Regexp.matched1 s
+    then Regexp_.matched1 s
     else failwith (spf "not a /dev/draw/new entry, got %s" s)
   in
   let int_at n = 
@@ -182,7 +184,7 @@ let init () =
     image = image;
     imageid = 0;
     (* +1 for space for 'v' when flush_display() *)
-    buf = String.make (bufsize + 1) ' ';  
+    buf = Bytes.make (bufsize + 1) ' ';  
     bufp = 0;
 
     (* set in Draw.init *)

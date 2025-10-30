@@ -1,0 +1,12 @@
+(library
+ (name xix_graphics_input)
+ (wrapped false)
+ (libraries
+    stdcompat
+    threads
+    xix_commons
+    xix_geometry
+    xix_draw
+  )
+ (preprocess (pps ppx_deriving.show))
+)

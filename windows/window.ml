@@ -102,7 +102,7 @@ type t = {
    * channel will be used to send the bytes to thread_fileserver.
    * Note that we send bytes, even though we read keys.
   *)
-  chan_devcons_read: (int Event.channel * bytes Event.channel) Event.channel;
+  chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
 
   (* Threads_window.thread --> Thread_fileserver.dispatch(Write).
    * Note that we send full runes, not bytes.
@@ -132,7 +132,7 @@ type t = {
   (* not really mutable, but set after Window.alloc() *)
   mutable pid: int;
   (* can be changed through /mnt/wsys/wdir *)
-  mutable pwd: Common.filename;
+  mutable pwd: string (* TODO: Fpath.t*);
   (* todo? notefd *)
 
   (* ---------------------------------------------------------------- *)

@@ -32,7 +32,7 @@ let window_cursor w pt mouse =
   | None -> Mouse.reset_cursor mouse
 
 
-let corner_cursor w pt mouse =
+let _corner_cursor w pt mouse =
   if Window.pt_on_border pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
 
@@ -91,7 +91,7 @@ let set_current_and_repaint wopt (*mouse*) =
     repaint w2
   | _ -> ()
   );
-  wopt |> Common.if_some (fun w ->
+  wopt |> Option.iter (fun w ->
     repaint w;
     (* TODO: do that in caller? so no need pass mouse? *)
     (* window_cursor w ptTODO mouse;*)
@@ -110,7 +110,7 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
 
 (* less: hideit, pid (but 0, or if != 0 -> use another func), scrolling *)
 let new_win img cmd argv pwd_opt 
-    (mouse, fs, font) =
+    (_mouse, fs, font) =
 
   (* A new Window.t *)
 
@@ -135,9 +135,10 @@ let new_win img cmd argv pwd_opt
 
   (* A new window process *)
 
-  pwd_opt |> Common.if_some (fun str -> w.W.pwd <- str);
+  pwd_opt |> Option.iter (fun str -> w.W.pwd <- str);
 
-  Thread.critical_section := true;
+  (* TODO: Thread.critical_section := true; *)
+  Logs.warn (fun m -> m "TODO: Thread.critical_section");
   let res = Unix.fork () in
   (match res with
   | -1 -> failwith "fork returned -1"
@@ -146,7 +147,7 @@ let new_win img cmd argv pwd_opt
     Processes_winshell.run_cmd_in_window_in_child_of_fork cmd argv w fs
   | pid -> 
     (* parent *)
-    Thread.critical_section := false;
+    (* TODO: Thread.critical_section := false; *)
     w.W.pid <- pid;
 
     (* todo: how know if pb in child that require us then from
@@ -168,7 +169,7 @@ let new_win img cmd argv pwd_opt
 
 let close_win w =
   w.W.deleted <- true;
-  Globals.win () |> Common.if_some (fun w2 ->
+  Globals.win () |> Option.iter (fun w2 ->
     if w2 == w
     then Globals.current := None;
     (* less: window_cursor  ?*)

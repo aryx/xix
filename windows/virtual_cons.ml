@@ -57,7 +57,7 @@ let dev_consctl = { Device.default with
     w.W.consctl_opened <- false;
   );
     
-  write_threaded = (fun offset str w ->
+  write_threaded = (fun _offset str w ->
     match str with
     | "rawon" -> 
       (* less: holding *)

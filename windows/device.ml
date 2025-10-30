@@ -22,8 +22,8 @@ type t = {
    * can honor or not the offset requirements. For instance,
    * /dev/winname does honor offset but /dev/mouse does not.
    *)
-  read_threaded: int64 -> int -> Window.t -> bytes;
-  write_threaded: int64 -> bytes -> Window.t -> unit;
+  read_threaded: int64 -> int -> Window.t -> string (* bytes *);
+  write_threaded: int64 -> string (* bytes *) -> Window.t -> unit;
 }
 
 let default = {

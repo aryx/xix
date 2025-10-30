@@ -1,4 +1,6 @@
 open Common
+open Regexp_.Operators
+
 open Point
 open Rectangle
 
@@ -44,18 +46,18 @@ let get_named_image display name =
   (* similar to Display.init *)
 
   let ninfo = 12 * 12 in
-  let str = String.make ninfo ' ' in
+  let str = Bytes.make ninfo ' ' in
 
   let n = Unix1.read display.D.ctl str 0 ninfo in
   if n <> ninfo && 
      (* less: not sure why but it reads only 143 characters *)
      n <> (ninfo - 1)
-  then failwith (spf "wrong format in /dev/draw/new; read %d chars (%s)" n str);
+  then failwith (spf "wrong format in /dev/draw/new; read %d chars (%s)" n (Bytes.to_string str));
 
   let str_at n = 
-    let s = String.sub str (n * 12) 12 in
+    let s = Bytes.sub_string str (n * 12) 12 in
     if s =~ "^[ ]*\\([^ ]+\\)[ ]*$"
-    then Regexp.matched1 s
+    then Regexp_.matched1 s
     else failwith (spf "not a /dev/draw/new entry, got %s" s)
   in
   let int_at n = 

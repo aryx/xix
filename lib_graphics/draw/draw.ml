@@ -7,7 +7,7 @@ module M = Draw_marshal
 type op =
   | SoverD
 
-let bp_op op =
+let bp_op _op =
   failwith "bp_op: TODO"
 
 (* less: errorfn? fontname? *)
@@ -62,7 +62,7 @@ let draw_color dst r color =
 (* in draw_utils? *)
 let qmask = ref None
 let alloc_mix_colors display color1 color2 =
-  let mask = Common.once qmask (fun () -> 
+  let mask = Fun_.once qmask (fun () -> 
     Image.alloc display Rectangle.r_1x1 Channel.grey8 true
       (Color.mk2 0x3F 0x3F 0x3F)
   )

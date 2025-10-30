@@ -1,8 +1,0 @@
-# -*- sh -*-
-TOP=../..
-INCLUDES=
-
-SRC=common.ml rune.ml
-
-<$TOP/mkconfig2
-<$TOP/mklib

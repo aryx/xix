@@ -92,11 +92,11 @@ let paint_item (img:Image.t) (font:Font.t) (i:int) (entries: string array) textr
     (*pt??*) Point.zero;
   Text.string img pt 
     (if highlight then !text_highlighted else !text_color) 
-    (*pt??*) Point.zero font str;
+    (*pt??*) Point.zero font str |> ignore;
   ()
 
 let paint_item_opt img font iopt entries textr highlight action =
-  iopt |> Common.if_some (fun i ->
+  iopt |> Option.iter (fun i ->
     paint_item img font i entries textr highlight action
   )
 
@@ -230,7 +230,7 @@ let menu items pos button mouse (display, desktop, view, font) =
   Layer.free img;
   Display.flush display;
   (* bugfix: must run callback after menu has been erased! *)
-  iopt |> Common.if_some (fun i ->
+  iopt |> Option.iter (fun i ->
     let (_, f) = List.nth items i in
     f ()
   );

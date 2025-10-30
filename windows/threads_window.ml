@@ -90,13 +90,13 @@ let mouse_out w chan =
 
 let bytes_out w (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
-  let buf = String.create cnt in
+  let buf = Bytes.create cnt in
   let i = ref 0 in
 
   (match w.raw_mode with
   | true ->
     while !i < cnt && Queue.length w.raw_keys > 0 do
-      buf.[!i] <- Queue.take w.raw_keys;
+      Bytes.set buf !i (Queue.take w.raw_keys);
       incr i;
     done
   | false ->
@@ -104,7 +104,7 @@ let bytes_out w (chan_count, chan_bytes) =
     (* "When newline, chars between output point and newline are sent."*)
     while !i < cnt && term.T.output_point.T.i < term.T.nrunes do
       let pos = term.T.output_point.T.i in
-      buf.[!i] <- term.T.text.(pos);
+      Bytes.set buf !i term.T.text.(pos);
       term.T.output_point <- { T.i = pos + 1};
       incr i;
     done
@@ -112,8 +112,8 @@ let bytes_out w (chan_count, chan_bytes) =
 
   let str =
     if !i < cnt
-    then String.sub buf 0 !i
-    else buf
+    then Bytes.sub_string buf 0 !i
+    else Bytes.to_string buf
   in
   Event.send chan_bytes str |> Event.sync
 
@@ -139,12 +139,12 @@ let cmd_in w cmd =
     (match Rectangle.dx r, Globals.win () with
     | 0, Some w2 when w2 == w ->
       Wm.set_current_and_repaint None
-    | n, Some w2 when (w2 == w) -> 
+    | _n, Some w2 when (w2 == w) -> 
       (* less: could Wm.set_current_and_repaint_borders (Some w) mouse,
        * useless opti I think to special case here w2 == w
        *)
       ()
-    | n, (Some _ | None) ->
+    | _n, (Some _ | None) ->
       Wm.set_current_and_repaint (Some w)
     );
     (* less: Image.flush new_img, but useless cos done in thread () *)

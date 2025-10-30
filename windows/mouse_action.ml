@@ -55,7 +55,7 @@ let sweep mouse (display, desktop, font) =
             let grey = Color.mk2 0xEE 0xEE 0xEE in
             (* todo? RefreshNothing? *)
             let img = Layer.alloc desktop r grey in
-            old_img_opt |> Common.if_some Layer.free;
+            old_img_opt |> Option.iter Layer.free;
             Polygon.border img r Window.window_border_size 
               !Globals.red Point.zero;
             Display.flush display;
@@ -94,7 +94,7 @@ let sweep mouse (display, desktop, font) =
       img_opt
 
     | SweepRescue (clicked_state, old_img_opt) ->
-      old_img_opt |> Common.if_some Layer.free;
+      old_img_opt |> Option.iter Layer.free;
       if clicked_state
       then transit SweepDrain
       else transit (SweepReturn None)
@@ -125,7 +125,7 @@ let point_to mouse =
     m := Mouse.read mouse;
   done;
   (* restore cursor state *)
-  Globals.win () |> Common.if_some (fun w ->
+  Globals.win () |> Option.iter (fun w ->
     Wm.corner_cursor_or_window_cursor w !m.Mouse.pos mouse
   );
   wopt

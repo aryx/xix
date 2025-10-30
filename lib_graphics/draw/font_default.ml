@@ -552,7 +552,7 @@ let load_default_subfont display =
   in
   (* todo: finalize to free the image in case of pb *)
   let img = Image.alloc display r chans false Color.transparent in
-  Image.load img r bytes;
+  Image.load img r bytes |> ignore;
   
   Subfont.alloc "*default*" nfontchars height ascent fontchars img
 

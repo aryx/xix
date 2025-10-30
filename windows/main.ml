@@ -86,12 +86,12 @@ let main () =
   let options = (*todo: Arg.align*) [
     "-s", Arg.Unit (fun () -> raise Todo),
     " ";
-    "-font", Arg.String (fun s -> raise Todo),
+    "-font", Arg.String (fun _s -> raise Todo),
     " <fontname>";
 
-    "-i", Arg.String (fun s -> raise Todo),
+    "-i", Arg.String (fun _s -> raise Todo),
     " <initcmd>";
-    "-k", Arg.String (fun s -> raise Todo),
+    "-k", Arg.String (fun _s -> raise Todo),
     " <kbdcmd>";
 
     (* pad: not in original *)

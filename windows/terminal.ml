@@ -204,7 +204,7 @@ let repaint_scrollbar term =
   let r2 = Rectangle.sub_pt r1.min r2 in
   let r1 = Rectangle.sub_pt r1.min r1 in
 
-  let img = Common.once scrollbar_img (fun () ->
+  let img = Fun_.once scrollbar_img (fun () ->
     let display = term.img.I.display in
     let view = display.D.image in
     (* /*factor by which window dimension can exceed screen*/ *)
@@ -309,7 +309,7 @@ let point_of_position term pos =
 
 
 let repaint_tick term colors =
-  let img = Common.once tick_img (fun () ->
+  let img = Fun_.once tick_img (fun () ->
     let display = term.img.I.display in
     let view = display.D.image in
     let font = term.font in
@@ -392,7 +392,7 @@ let insert_runes term pos runes =
     let oldlen = Array.length old in
     (* todo: high_water, low_water, etc *)
     let increment = 20000 in
-    term.text <- Array.create (oldlen + increment) '*';
+    term.text <- Array.make (oldlen + increment) '*';
     Array.blit old 0 term.text 0 oldlen;
   end;
 
@@ -400,7 +400,7 @@ let insert_runes term pos runes =
   (* move to the right the runes after the cursor pos to make some space *)
   Array.blit term.text pos.i term.text (pos.i + n) (term.nrunes - pos.i);
   (* fill the space *)
-  runes |> List_.iteri (fun i rune ->
+  runes |> List.iteri (fun i rune ->
     term.text.(pos.i + i) <- rune;
   );
   term.nrunes <- term.nrunes + n;
@@ -408,7 +408,7 @@ let insert_runes term pos runes =
   (* adjust cursors *)
   if pos.i <= term.cursor.i 
   then term.cursor <- { i = term.cursor.i + n };
-  term.end_selection |> Common.if_some (fun ends ->
+  term.end_selection |> Option.iter (fun ends ->
     if pos.i <= ends.i
     then term.end_selection <- Some ({ i = ends.i + n});
   );
@@ -431,7 +431,7 @@ let delete_runes term pos n =
   (* adjust cursors *)
   if pos.i < term.cursor.i
   then term.cursor <- { i = term.cursor.i - min n (term.cursor.i - pos.i) };
-  term.end_selection |> Common.if_some (fun ends ->
+  term.end_selection |> Option.iter (fun ends ->
     if pos.i < ends.i
     then term.end_selection <- Some ({ i = ends.i - min n (ends.i - pos.i)});
   );

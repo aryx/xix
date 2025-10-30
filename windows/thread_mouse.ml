@@ -36,7 +36,7 @@ let wm_menu pos button exitchan
     (* less: the first item get selected the very first time; QEMU bug?  *)
     "New", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
-      img_opt |> Common.if_some (fun img ->
+      img_opt |> Option.iter (fun img ->
         (* 
            Wm.new_win img "/tests/xxx/test_rio_graph_app1" 
              [|"/tests/xxx/test_rio_graph_app1"|] None (mouse, fs, font)
@@ -55,13 +55,13 @@ let wm_menu pos button exitchan
     "Move", (fun () -> raise Todo);
     "Delete", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
-      wopt |> Common.if_some (fun w ->
+      wopt |> Option.iter (fun w ->
         let cmd = W.Delete in
         Event.send w.W.chan_cmd cmd |> Event.sync;
       ));
     "Hide", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
-      wopt |> Common.if_some (fun w ->
+      wopt |> Option.iter (fun w ->
         Wm.hide_win w
       ));
     "Exit", (fun () ->
@@ -77,8 +77,8 @@ let wm_menu pos button exitchan
   Menu_ui.menu items pos button
     mouse (display, desktop, view, font)
 
-let middle_click_system m mouse =
-  pr "Todo: middle click"
+let middle_click_system _m _mouse =
+  Logs.err (fun m -> m "Todo: middle click")
 
 (*****************************************************************************)
 (* Entry point *)
@@ -116,7 +116,7 @@ let thread (exitchan,
       (match sending_to_win with
       | true ->
         (* could assert that Globals.win() <> None *)
-        Globals.win () |> Common.if_some (fun w ->
+        Globals.win () |> Option.iter (fun w ->
           (if not (Mouse.has_click m)
           then Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
           (* todo: why if click then not corner cursor? *)
@@ -145,28 +145,28 @@ let thread (exitchan,
           in
           (match under_mouse, m.buttons with
           (* TODO: remove; just because hard to right click on QEMU and laptop*)
-          | Nothing , { left = true } ->
+          | Nothing , { left = true; _ } ->
             wm_menu m.Mouse.pos Mouse.Left exitchan 
               mouse (display, desktop, view, font) fs
 
 
-          | (Nothing | CurrentWin _), { left = true } ->
+          | ((*Nothing |*) CurrentWin _), { left = true; _ } ->
             ()
 
-          | Nothing,  { middle = true } ->
+          | Nothing,  { middle = true; _ } ->
              middle_click_system m mouse
-          | CurrentWin w, { middle = true } ->
+          | CurrentWin w, { middle = true; _ } ->
             if not w.W.mouse_opened
             then middle_click_system m mouse
 
-          | (Nothing | CurrentWin _), { right = true } ->
+          | (Nothing | CurrentWin _), { right = true; _ } ->
             wm_menu m.Mouse.pos Mouse.Right exitchan 
               mouse (display, desktop, view, font) fs
 
-          | OtherWin w, { left = true } ->
+          | OtherWin w, { left = true; _ } ->
             Wm.top_win w
             (* less: should drain and wait that release up, unless winborder *)
-          | OtherWin w, ({ middle = true } | { right = true}) ->
+          | OtherWin w, ({ middle = true; _ } | { right = true; _}) ->
             Wm.top_win w
             (* todo: should goto again, may need to send event *)
             

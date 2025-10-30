@@ -37,7 +37,7 @@ module Response : sig
     | Error of string
 
     | Open of Plan9.qid * int (* iounit *)
-    | Read of bytes (* data *)
+    | Read of bytes (* data *) (* TODO: string? need modify in place? *)
     | Write of int (* count *)
     | Clunk
 

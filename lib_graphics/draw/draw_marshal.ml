@@ -11,10 +11,10 @@ let bp_short x =
   (* less: sanity check range? *)
   let x1 = Char.chr (x land 0xFF) in
   let x2 = Char.chr ((x asr 8) land 0xFF) in
-  let str = String.make 2 ' ' in
-  str.[0] <- x1;
-  str.[1] <- x2;
-  str
+  let str = Bytes.make 2 ' ' in
+  Bytes.set str 0 x1;
+  Bytes.set str 1 x2;
+  Bytes.to_string str
 
 (* less: use commons/byte_order.ml? *)
 let bp_long x =
@@ -22,12 +22,12 @@ let bp_long x =
   let x2 = Char.chr ((x asr 8) land 0xFF) in
   let x3 = Char.chr ((x asr 16) land 0xFF) in
   let x4 = Char.chr ((x asr 24) land 0xFF) in
-  let str = String.make 4 ' ' in
-  str.[0] <- x1;
-  str.[1] <- x2;
-  str.[2] <- x3;
-  str.[3] <- x4;
-  str
+  let str = Bytes.make 4 ' ' in
+  Bytes.set str 0 x1;
+  Bytes.set str 1 x2;
+  Bytes.set str 2 x3;
+  Bytes.set str 3 x4;
+  Bytes.to_string str
 
 let bp_bool b =
   if b

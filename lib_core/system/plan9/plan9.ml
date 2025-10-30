@@ -34,7 +34,7 @@ type qid = {
 type perm_property = { r: bool; w: bool; x: bool }
 
 (* user/group/other (0oUGO) *)
-type perm = { u: perm_property; g: perm_property; o: perm_property }
+type _perm = { u: perm_property; g: perm_property; o: perm_property }
 
 (* old: was called only 'Dir' in libcore-C but misleading *)
 type dir_entry = {
@@ -81,7 +81,7 @@ type open_flags = perm_property (* ORead | OWrite | ORdwr | OExec *)
  (* less: OTrunc | OCExec | ORClose | OExcl *)
 
 (* for errstr() *)
-let errmax = 128
+let _errmax = 128
 
 exception Plan9_error of string (* cmd *) * string (* errstr *)
 
@@ -92,7 +92,7 @@ let _ = Callback.register_exception "Plan9.Plan9_error"
 (* Conversions and builders *)
 (*****************************************************************************)
 
-let mk_dir_entry name qid perm = 
+let _mk_dir_entry name qid perm = 
   { name = name; qid = qid; mode = perm;
     length = 0;
     atime = 0; mtime = 0;
@@ -140,16 +140,26 @@ let int_of_perm_property perm =
 (* FFI *)
 (*****************************************************************************)
 
+(* TODO
 external plan9_bind: string -> string -> int -> int = 
   "plan9_bind"
 external plan9_mount: Unix.file_descr -> int -> string -> int -> string -> int =
   "plan9_mount"
+*)
 (* string must not be more than errmax, and you should set the first
  * char to '\000' if you want to reset the error string in the kernel
  * for this process.
  *)
+(*
 external errstr: string -> int -> unit =
   "plan9_errstr"
+*)
+
+(* TODO: use instead the external above *)
+let plan9_bind _ _ _ =
+  failwith "TODO: plan9_bind external"
+let plan9_mount _ _ _ _ _ =
+  failwith "TODO: plan9_mount external"
 
 (* less: flags? and a namespace_flags_to_int that fold lor? *)
 let bind src dst flag =

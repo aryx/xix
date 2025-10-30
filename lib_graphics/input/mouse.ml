@@ -1,4 +1,6 @@
 open Common
+open Regexp_.Operators
+
 open Point
 
 (* todo: delete once threadUnix is not needed anymore *)
@@ -101,17 +103,17 @@ let thread_mouse ctl =
   (* less: threadsetname? *)
   (* 'm':1 [xpos:4] [ypos:4] [button:4] [mseg:4] *)
   let bufsize = 1 + 4*12 in
-  let buf = String.make bufsize ' ' in
+  let buf = Bytes.make bufsize ' ' in
   while true do
     let n = Unix2.read ctl.fd buf 0 bufsize in
     if n <> bufsize
     then failwith (spf "wrong format in /dev/mouse; read %d chars (%s)" 
-                     n (String.escaped buf));
+                     n (String.escaped (Bytes.to_string buf)));
 
     let str_at n = 
-      let s = String.sub buf (1 + (n * 12)) 12 in
+      let s = Bytes.sub_string buf (1 + (n * 12)) 12 in
       if s =~ "^[ ]*\\([^ ]+\\)[ ]*$"
-      then Regexp.matched1 s
+      then Regexp_.matched1 s
       else failwith (spf "not a /dev/mouse entry, got %s" s)
     in
     let int_at n = 
@@ -119,7 +121,7 @@ let thread_mouse ctl =
       with Failure _ -> failwith (spf "not an int at %d (%s)" n (str_at n))
     in
     
-    (match buf.[0] with
+    (match Bytes.get buf 0 with
     | 'm' ->
       let m = {
         pos = { x = int_at 0; y = int_at 1; };
@@ -130,7 +132,7 @@ let thread_mouse ctl =
       Event.send ctl.chan m |> Event.sync
     | 'r' -> failwith "Mouse.thread: resize event: TODO"
     | x -> failwith (spf "wrong format in /dev/mouse: %c (%s)" x 
-                       (String.escaped buf))
+                       (String.escaped (Bytes.to_string buf)))
     )
   done
 
@@ -146,7 +148,7 @@ let init () =
    let ctl = 
     { fd = fd; chan = chan; cursor_fd = cursor_fd; (*state = fake_state*) } in
 
-   let thread = Thread.create thread_mouse ctl in
+   let _thread = Thread.create thread_mouse ctl in
    ctl
   with Unix.Unix_error (err, cmd, arg) ->
     failwith (spf "Mouse.init: unix error '%s' while executing '%s' with '%s'"
@@ -168,7 +170,7 @@ let flush_and_read display ctl =
   
 
 (* hence O_RDWR for /dev/mouse *)
-let move_to ctl pt =
+let _move_to _ctl _pt =
   failwith "Mouse.move_to: TODO"
 
 (*****************************************************************************)
@@ -184,7 +186,7 @@ let set_cursor ctl cursor =
         |> String.concat "")
   in
   (* less: sanity check ?*)
-  Unix2.write ctl.cursor_fd str 0 (String.length str) |> ignore
+  Unix2.write ctl.cursor_fd (Bytes.of_string str) 0 (String.length str) |> ignore
 
 let reset_cursor ctl =
   (* todo: this does not work because ocaml/unix/write.c call write

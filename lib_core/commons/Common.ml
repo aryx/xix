@@ -17,7 +17,6 @@ type byte = char
 exception Todo
 exception Impossible of string
 
-
 (*****************************************************************************)
 (* Printing *)
 (*****************************************************************************)
@@ -53,9 +52,33 @@ let memoized h k f =
         v
       end
 
+module Fun_ = struct
+
+let once aref f =
+  match !aref with
+  | Some x -> x
+  | None ->
+    let x = f () in
+    aref := Some x;
+    x
+end
+
 (*****************************************************************************)
 (* Basic types *)
 (*****************************************************************************)
+
+(* For lib_core/system/plan9.ml *)
+(* todo: constructor to sanity check *)
+type int8 = int
+(* todo: constructor to sanity check *)
+type int16 = int
+(* todo: use Int32.t, builtin since OCaml ?? *)
+type int32 = int
+(* todo: use Int64.t, builtin since OCaml ?? *)
+type int64 = int
+(* if you really need to represent high values use: 
+ * type int64_special = int * int 
+ *)
 
 module Int_ = struct
 

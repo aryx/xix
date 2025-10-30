@@ -17,16 +17,16 @@ type ctl = {
 let thread_keyboard ctl =
   (* less: threadsetname *)
   let bufsize = 20 in
-  let buf = String.make bufsize ' ' in
+  let buf = Bytes.make bufsize ' ' in
   while true do
     let n = Unix2.read ctl.fd buf 0 bufsize in
     if n <= 0
     then failwith (spf "wrong format in /dev/cons; read %d chars (%s)" 
-                     n (String.escaped buf));
+                     n (String.escaped (Bytes.to_string buf)));
     (* todo: rune parsing, so return runes instead of series of bytes (utf8) *)
     for i = 0 to n - 1 do
       (*pr (spf "sending %c" buf.[i]);*)
-      Event.send ctl.chan buf.[i] |> Event.sync
+      Event.send ctl.chan (Bytes.get buf i) |> Event.sync
     done
   done
   
@@ -37,12 +37,12 @@ let init () =
 
   let ctl = { fd = fd; chan = chan; consctl = consctl } in
 
-  let str = "rawon" in
-  let n = Unix1.write consctl str 0 (String.length str) in
-  if n <> String.length str
+  let str = Bytes.of_string "rawon" in
+  let n = Unix1.write consctl str 0 (Bytes.length str) in
+  if n <> Bytes.length str
   then failwith ("Keyboard.init: can't turn on raw mode" );
   
-  let thread = Thread.create thread_keyboard ctl in
+  let _thread = Thread.create thread_keyboard ctl in
   ctl
 
 let receive ctl =

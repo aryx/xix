@@ -8,7 +8,7 @@ module M = Draw_marshal
 
 type t = {
   (* e.g., /lib/font/bit/lucm/latin1.9.font *)
-  name: Common.filename;
+  name: string (* TODO: Fpath.t*);
 
   (*/* max height of image, interline spacing */*)
   height : int;
@@ -34,7 +34,7 @@ and subfont_spec = {
   (*/* stored in font*/ relative filename *)
   subfont_name: string;
   (* absolute filename computed by subfontname *)
-  subfont_filename: Common.filename;
+  subfont_filename: string (*TODO: Fpath.t *);
 }
 
 let fake_font = 

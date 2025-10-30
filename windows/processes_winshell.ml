@@ -25,9 +25,9 @@ let run_cmd_in_window_in_child_of_fork cmd argv w fs =
    * below even crashes the plan9 kernel)
    *)
   Unix1.close Unix1.stdin;
-  let fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
+  let _fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
   Unix1.close Unix1.stdout;
-  let fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
+  let _fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
   Unix1.dup2 Unix1.stdout Unix1.stderr; 
 
   (* less: notify nil *)

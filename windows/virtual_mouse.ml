@@ -7,7 +7,7 @@ module M = Mouse
 module F = File
 module W = Window
 
-let dev_mouse = { Device.default with
+let dev_mouse = { (*Device.default with*)
   name = "mouse";
   perm = Plan9.rw;
 
@@ -41,25 +41,25 @@ let dev_mouse = { Device.default with
     (* bugfix: note that we do not honor_offset. /dev/mouse is a dynamic file *)
     Device.honor_count count str
   );
-  write_threaded = (fun _offset str w ->
+  write_threaded = (fun _offset _str _w ->
     failwith "TODO: virtual_mouse.write_threaded"
   );
 }
 
-let dev_cursor = { Device.default with
+let _dev_cursor = { (*Device.default with*)
   name = "cursor";
   perm = Plan9.rw;
 
-  open_ = (fun w ->
+  open_ = (fun _w ->
     raise Todo
   );
-  close = (fun w ->
+  close = (fun _w ->
     raise Todo
   );
-  read_threaded = (fun offset count w  ->
+  read_threaded = (fun _offset _count _w  ->
     raise Todo
   );
-  write_threaded = (fun offset str w ->
+  write_threaded = (fun _offset _str _w ->
     raise Todo
   );
 }

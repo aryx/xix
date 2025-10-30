@@ -64,7 +64,7 @@ let sightcursor = {
 
 
 (* for holding mode *)
-let whitearrow = {
+let _whitearrow = {
   offset =  {x = 0; y = 0; };
   clr = Cursor.ints_to_bytes
     [| 0xFF; 0xFF; 0xFF; 0xFF; 0xFF; 0xFE; 0xFF; 0xFC; 
@@ -81,7 +81,7 @@ let whitearrow = {
 }
 
 (* ?? *)
-let query = {
+let _query = {
   offset =  {x = -7;y = -7; };
   clr = Cursor.ints_to_bytes
     [| 0x0f; 0xf0; 0x1f; 0xf8; 0x3f; 0xfc; 0x7f; 0xfe; 
@@ -112,7 +112,8 @@ let portion x low high =
   (* normalize to low *)
   let x = x - low in
   let high = high - low in
-  let low = 0 in
+  (* TODO: unused low? *)
+  let _low = 0 in
 
   match () with
   | _ when x < 20 -> Inf

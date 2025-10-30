@@ -1,0 +1,9 @@
+(library
+ (name xix_geometry)
+ (wrapped false)
+ (libraries
+    stdcompat
+    xix_commons
+  )
+ (preprocess (pps ppx_deriving.show))
+)

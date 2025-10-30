@@ -6,46 +6,45 @@ DOC=CompilerGenerator
 DOC_EXTRA=
 VERSION=3
 
+D=..
 # the Parser.mly are synced separately
-SRC=\
-  lex/Ast.ml \
-  lex/Output.mli \
-  lex/Output.ml \
-  lex/Lexgen.mli \
-  lex/Lexgen.ml \
-  lex/Compact.mli \
-  lex/Compact.ml \
-  lex/CLI.mli \
-  lex/CLI.ml \
-  lex/Main.ml \
-  lex/Lexer.mll \
-  lib_parsing/Lexing_.mli \
-  lib_parsing/Lexing_.ml \
-  yacc/Ast.ml \
-  yacc/Check.mli \
-  yacc/Check.ml \
-  yacc/Lr0.mli \
-  yacc/Lr0.ml \
-  yacc/First_follow.mli \
-  yacc/First_follow.ml \
-  yacc/Lrtables.ml \
-  yacc/Slr.mli \
-  yacc/Slr.ml \
-  yacc/Lalr.mli \
-  yacc/Lalr.ml \
-  yacc/Output.mli \
-  yacc/Output.ml \
-  yacc/Dump.mli \
-  yacc/Dump.ml \
-  yacc/Tests.ml \
-  yacc/Lexer.mll \
-  yacc/CLI.mli \
-  yacc/CLI.ml \
-  yacc/Main.ml \
-  lib_parsing/Parsing_.mli \
-  lib_parsing/Parsing_.ml \
-
-SRC_VIEWS=${SRC:%=$TOP/%}
+SRC_VIEWS=\
+  $D/lex/Ast.ml \
+  $D/lex/Output.mli \
+  $D/lex/Output.ml \
+  $D/lex/Lexgen.mli \
+  $D/lex/Lexgen.ml \
+  $D/lex/Compact.mli \
+  $D/lex/Compact.ml \
+  $D/lex/CLI.mli \
+  $D/lex/CLI.ml \
+  $D/lex/Main.ml \
+  $D/lex/Lexer.mll \
+  $TOP/lib_parsing/Lexing_.mli \
+  $TOP/lib_parsing/Lexing_.ml \
+  $D/yacc/Ast.ml \
+  $D/yacc/Check.mli \
+  $D/yacc/Check.ml \
+  $D/yacc/Lr0.mli \
+  $D/yacc/Lr0.ml \
+  $D/yacc/First_follow.mli \
+  $D/yacc/First_follow.ml \
+  $D/yacc/Lrtables.ml \
+  $D/yacc/Slr.mli \
+  $D/yacc/Slr.ml \
+  $D/yacc/Lalr.mli \
+  $D/yacc/Lalr.ml \
+  $D/yacc/Output.mli \
+  $D/yacc/Output.ml \
+  $D/yacc/Dump.mli \
+  $D/yacc/Dump.ml \
+  $D/yacc/Tests.ml \
+  $D/yacc/Lexer.mll \
+  $D/yacc/CLI.mli \
+  $D/yacc/CLI.ml \
+  $D/yacc/Main.ml \
+  $TOP/lib_parsing/Parsing_.mli \
+  $TOP/lib_parsing/Parsing_.ml \
 
 # must be in the same order than the #include in $DOC.nw for syncweb to work
 SRC_ORIG=CompilerGenerator.nw CompilerGenerator_extra.nw
@@ -55,8 +54,8 @@ SRC_ORIG=CompilerGenerator.nw CompilerGenerator_extra.nw
 
 SYNCFLAGS2=-md5sum_in_auxfile -less_marks -lang ocamlyacc
 sync_yacc:V:
-	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/lex/Parser.mly
-	syncweb $SYNCFLAGS2 $SRC_ORIG $TOP/yacc/Parser.mly
+	syncweb $SYNCFLAGS2 $SRC_ORIG $D/lex/Parser.mly
+	syncweb $SYNCFLAGS2 $SRC_ORIG $D/yacc/Parser.mly
 
 
 #TODO: add also $PLAN9ML/yacc! but right now conflicting module names

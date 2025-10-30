@@ -64,7 +64,7 @@ lineage.pdf
 
 # Literate docs
 /generators/docs/CompilerGenerator*.pdf
-/mk/docs/Mk*.pdf
+/builder/docs/Mk*.pdf
 /shell/docs/Rc*.pdf
 
 # Parsers
@@ -72,9 +72,9 @@ lineage.pdf
 /assembler/Parser_asm[5v].ml
 /assembler/Parser_asm[5v].mli
 
-/mk/Lexer.ml
-/mk/Parser.ml
-/mk/Parser.mli
+/builder/Lexer.ml
+/builder/Parser.ml
+/builder/Parser.mli
 
 /lex/Lexer.ml
 /lex/Parser.ml
@@ -96,16 +96,16 @@ lineage.pdf
 /macroprocessor/Lexer_cpp.ml
 
 # binaries
-/bin/mk
-/bin/rc
+/bin/omk
+/bin/orc
 # TODO: move to bin/
 /assembler/5a
 /linker/5l
 /compiler/5c
 /lex/ocamllex
 /yacc/ocamlyacc
-/mk/mk
-/shell/rc
+/builder/omk
+/shell/orc
 /kernel/9minimal
 /windows/rio
 /debugger/ksym

@@ -107,7 +107,7 @@ ocamlc$OPT $OCAMLCFLAGS -c Exit.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exit.ml
 ocamlc$OPT -I . Set_.cmo Map_.cmo Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo Common.cmo OCaml.cmo IO.cmo Logs.cmo Logs_.cmo Fpath.cmo Fpath_.cmo Ftype.cmo Chan.cmo UChan.cmo FS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
 
-cd $TOP/mk
+cd $TOP/builder
 ocamlyacc Parser.mly
 perl -p -i -e 's#/\*\(\*[sex]: .* \*\)\*/##' Parser.ml
 ocamllex Lexer.mll
@@ -143,7 +143,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -c Outofdate.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -c CLI.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -c CLI.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -pp ../scripts/remove_xix_open.sh -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons str.cma unix.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo CLI.cmo Main.cmo ../lib_core/commons/lib.cma -o mk
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons str.cma unix.cma ../lib_core/commons/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo CLI.cmo Main.cmo ../lib_core/commons/lib.cma -o omk
 
 cd $TOP/shell/
 ocamlyacc Parser.mly
@@ -190,11 +190,11 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -c CLI.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -c Parse.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -c Interpreter.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -pp ../scripts/remove_xix_open.sh -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons str.cma unix.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Opcode.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Env.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/commons/lib.cma -o rc
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons str.cma unix.cma ../lib_core/commons/lib.cma Flags.cmo Globals.cmo Ast.cmo Opcode.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Env.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo ../lib_core/commons/lib.cma -o orc
 
 cd $TOP
-cp mk/mk shell/rc bin/
-echo 'Copy bin/mk bin/rc somewhere in your PATH and sets MKSHELL to point to rc.'
+cp builder/omk shell/orc bin/
+echo 'Copy bin/omk bin/orc somewhere in your PATH and sets MKSHELL to point to rc.'
 
 # Safer to delete the generated libs as we may have forgotten objects
 # that are not needed for mk/rc but might be needed by other programs

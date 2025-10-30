@@ -1,6 +1,6 @@
 # The lexer generator
 
-TOP=..
+TOP=../..
 
 # Just for Set_ and Map_. lex/ is synced almost as-is with ocaml-light/lex
 # so keep the dependencies to xix to the minimum.

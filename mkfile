@@ -1,12 +1,14 @@
 TOP=.
 <mkconfig
 
+MK=omk
+
 # STDLIB is defined or not (usually not) in mkconfig
 
 DIRS0=\
   $STDLIB lib_core/commons\
-  mk shell\
-  lib_parsing lex yacc\
+  builder shell\
+  lib_parsing generators/lex generators/yacc\
   macroprocessor\
   assembler/objects assembler\
   linker/executables linker/libraries linker\
@@ -38,14 +40,14 @@ depend:V: depend.directories
 	for(i in $DIRS) @{
 		echo $i/
 		cd $i
-		mk $MKFLAGS $stem
+		$MK $MKFLAGS $stem
 	}
 
 # alternate style to the %.directories trick; even simpler
 clean nuke:V:
 	for(i in $DIRS $TESTDIRS) @{
 		cd $i
-		mk $MKFLAGS $target
+		$MK $MKFLAGS $target
 	}
 
 # too many dupes for now (e.g., Ast.ml in mutliple dirs)

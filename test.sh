@@ -12,8 +12,8 @@ set -x
 
 # Just make sure at least the programs are not segfaulting
 # or dynamic linking errors
-./bin/mk --help
-./bin/rc --help
+./bin/omk --help
+./bin/orc --help
 ./assembler/o5a --help
 ./linker/o5l --help
 ./compiler/o5c --help

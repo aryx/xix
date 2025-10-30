@@ -64,10 +64,10 @@ RUN eval $(opam env) && ./bootstrap-mk.sh
 ENV PATH="$PATH:/src/bin"
 # TODO: at some point use the boostrapped /src/bin/rc
 ENV MKSHELL="/usr/bin/rc"
-RUN eval $(opam env) && mk clean
-RUN eval $(opam env) && mk depend
-RUN eval $(opam env) && mk
-RUN eval $(opam env) && mk opt
+RUN eval $(opam env) && omk clean
+RUN eval $(opam env) && omk depend
+RUN eval $(opam env) && omk
+RUN eval $(opam env) && omk opt
 # alt: use dune but xix spirit to limit external tools and dogfood mk
 
 # Test

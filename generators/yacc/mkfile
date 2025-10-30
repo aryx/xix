@@ -1,7 +1,7 @@
 # -*- sh -*-
 # The parser generator
 
-TOP=..
+TOP=../..
 
 # Just for Set_ and Map_. yacc/ might be synced with ocaml-light/yacc
 # at some point so keep the dependencies to xix to the minimum.

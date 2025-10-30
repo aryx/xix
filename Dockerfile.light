@@ -22,13 +22,13 @@ ENV PATH="$PATH:/xix/bin"
 # TODO: at some point use the boostrapped /src/bin/rc
 ENV MKSHELL="/usr/bin/rc"
 RUN cp mkconfig.light mkconfig
-RUN mk depend
-RUN mk all
+RUN omk depend
+RUN omk all
 
 #TODO: disabled for now, does not build on arm64
 #RUN mk opt.light
 
 # Basic test
-RUN ./mk/mk -help
+RUN ./builder/omk -help
 #TODO: disabled for now, does not build on arm64
 #RUN ./mk/mk.opt -help

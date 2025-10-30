@@ -118,7 +118,7 @@ let rw = { r = true; w = true; x = false }
 let rx = { r = true; w = false; x = true }
 let rwx = { r = true; w = true; x = true }
 
-let open_flags_of_int mode =
+let open_flags_of_int (mode : perm_int) : open_flags =
   match mode with
   (* OREAD *)
   | 0 -> r
@@ -130,7 +130,7 @@ let open_flags_of_int mode =
   | 3 -> { r = false; w = false; x = true }
   | _ -> failwith (spf "mode not yet supported: %d" mode)
 
-let int_of_perm_property perm =
+let int_of_perm_property (perm : perm_property) : int =
   (if perm.r then 0x4 else 0) lor
   (if perm.w then 0x2 else 0) lor
   (if perm.x then 0x1 else 0) lor
@@ -163,9 +163,9 @@ let plan9_mount _ _ _ _ _ =
   failwith "TODO: plan9_mount external"
 
 (* less: flags? and a namespace_flags_to_int that fold lor? *)
-let bind src dst flag =
+let bind (src : Fpath.t) (dst : Fpath.t) (flag : namespace_flag) : unit =
   plan9_bind src dst (int_of_namespace_flag flag) |> ignore
 
-let mount fd int1 dst flag args =
+let mount fd int1 (dst : Fpath.t) (flag : namespace_flag) (args : string) =
   plan9_mount fd int1 dst (int_of_namespace_flag flag) args |> ignore
 

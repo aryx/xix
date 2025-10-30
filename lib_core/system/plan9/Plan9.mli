@@ -56,9 +56,10 @@ type namespace_flag =
   | MBefore
   | MAfter
 
-val mount: 
-  Unix.file_descr -> int -> string(*TODO:Fpath.t*) -> namespace_flag -> string ->
-  unit
 
 val bind: 
-  string (*TODO: Fpath.t*) -> string (*TODO: Fpath.t*) -> namespace_flag -> unit
+  Fpath.t (* src *) -> Fpath.t (* dst *) -> namespace_flag -> unit
+
+val mount: 
+  Unix.file_descr -> int (* ?? *) -> Fpath.t (* dst *) -> namespace_flag ->
+  string (* args *) -> unit

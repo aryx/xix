@@ -348,7 +348,7 @@ let pdir_entry entry =
 (* less: opti: go though a string buffer and size? and convS2M? 
  *  so can reuse the same buffer again and again instead of malloc each time?
  *)
-let read_9P_msg fd =
+let read_9P_msg (fd : Unix.file_descr) : message =
   (* read count *)
   let buf1 = Bytes.make bit32sz ' ' in
   let n = Unix2.read fd buf1 0 bit32sz in
@@ -505,7 +505,7 @@ let read_9P_msg fd =
     raise (Error (spf "access out of range: %s" s))
 
 
-let code_of_msg msg = 
+let code_of_msg (msg : message_type) : int = 
   match msg with
   | T  (T.Version _) -> 100
   | R (R.Version _) -> 101
@@ -537,7 +537,7 @@ let code_of_msg msg =
   | R (R.Wstat) -> 126
 
 (* less: opti: use a string buffer instead of all those concatenations *)
-let write_9P_msg msg fd =
+let write_9P_msg (msg : message) (fd : Unix.file_descr) : unit =
   let code = code_of_msg msg.typ in
   let str = 
     pbit8 code ^ 

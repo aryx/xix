@@ -15,8 +15,8 @@ let run_cmd_in_window_in_child_of_fork cmd argv w fs =
   Unix1.close fs.FS.server_fd;
   (* todo: close on exec? *)
 
-  Plan9.mount fs.FS.clients_fd (-1) "/mnt/wsys" Plan9.MRepl (spf "%d" w.W.id);
-  Plan9.bind "/mnt/wsys" "/dev" Plan9.MBefore;
+  Plan9.mount fs.FS.clients_fd (-1) (Fpath.v "/mnt/wsys") Plan9.MRepl (spf "%d" w.W.id);
+  Plan9.bind (Fpath.v "/mnt/wsys") (Fpath.v "/dev") Plan9.MBefore;
 
   (* less: wclose for ref counting *)
   (* todo: handle errors? Unix_error? then communicate failure to parent? *)

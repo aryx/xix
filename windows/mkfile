@@ -2,18 +2,18 @@
 TOP=..
 
 SRC= \
-  cursors.ml terminal.ml \
-  window.ml \
-  file.ml device.ml fileserver.ml \
-  globals.ml \
-  processes_winshell.ml wm.ml threads_window.ml  \
-  mouse_action.ml             thread_mouse.ml \
-                              thread_keyboard.ml \
-  virtual_draw.ml virtual_mouse.ml virtual_cons.ml \
-  dev_wm.ml \
-  dev_textual_window.ml dev_graphical_window.ml \
-                              threads_fileserver.ml \
-  test.ml main.ml
+  Cursors.ml Terminal.ml \
+  Window.ml \
+  File.ml Device.ml Fileserver.ml \
+  Globals.ml \
+  Processes_winshell.ml Wm.ml Threads_window.ml  \
+  Mouse_action.ml             Thread_mouse.ml \
+                              Thread_keyboard.ml \
+  Virtual_draw.ml Virtual_mouse.ml Virtual_cons.ml \
+  Dev_wm.ml \
+  Dev_textual_window.ml Dev_graphical_window.ml \
+                              Threads_fileserver.ml \
+  test.ml Main.ml
 
 INCLUDES=-I $TOP/lib_core/commons2 -I $TOP/lib_system/plan9 \
  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \

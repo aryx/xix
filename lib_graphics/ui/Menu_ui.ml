@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Point
 open Rectangle
@@ -8,13 +9,14 @@ module D = Display
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* old: called menuhit.c in draw-C
+(* Poor's man menu UI for rio.
+ *
+ * old: called menuhit.c in draw-C
 *)
 
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-
 
 (* inspiration is GToolbox in lablgtk *)
 type item = (string * (unit -> unit))
@@ -41,7 +43,7 @@ let text_highlighted       = ref Display.fake_image
 (* Helpers *)
 (*****************************************************************************)
 
-let init_colors display =
+let init_colors (display : Display.t) : unit =
   if !background == Display.fake_image
   then begin
     (* less: could use try and default to black/white if can not alloc image*)
@@ -139,7 +141,8 @@ let scan_items img font  mouse button  iopt entries textr  save =
 (* Entry point *)
 (*****************************************************************************)
 
-let menu items pos button mouse (display, desktop, view, font) =
+let menu (items : items) (pos : Point.t) (button : Mouse.button)
+  (mouse : Mouse.ctl) (display, desktop, view, font) : unit =
   init_colors display;
   (* less: reset clipr and repl on view? *)
 

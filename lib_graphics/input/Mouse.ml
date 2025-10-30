@@ -1,3 +1,4 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
 
@@ -9,6 +10,11 @@ module Unix2 = (*Thread*)Unix
 
 module C = Cursor
 module M = Draw_marshal
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Console mouse API *)
 
 (*****************************************************************************)
 (* Mouse state *)

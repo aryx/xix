@@ -1,8 +1,18 @@
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Console keyboard (thread) API *)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 type key = Rune.t
 
@@ -14,7 +24,11 @@ type ctl = {
   consctl: Unix1.file_descr;
 }
 
-let thread_keyboard ctl =
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let thread_keyboard (ctl : ctl) =
   (* less: threadsetname *)
   let bufsize = 20 in
   let buf = Bytes.make bufsize ' ' in
@@ -29,6 +43,10 @@ let thread_keyboard ctl =
       Event.send ctl.chan (Bytes.get buf i) |> Event.sync
     done
   done
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
   
 let init () =
   let (chan: key Event.channel) = Event.new_channel () in
@@ -45,5 +63,5 @@ let init () =
   let _thread = Thread.create thread_keyboard ctl in
   ctl
 
-let receive ctl =
+let receive (ctl : ctl) : key Event.event =
   Event.receive ctl.chan

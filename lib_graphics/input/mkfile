@@ -2,7 +2,7 @@
 TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons2 -I ../draw -I ../geometry 
-SRC= cursor.ml mouse.ml keyboard.ml
+SRC= Cursor.ml Mouse.ml Keyboard.ml
 
 <$TOP/mkconfig2
 <$TOP/mklib

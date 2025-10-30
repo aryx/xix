@@ -1,56 +1,45 @@
-(* Copyright 2015, 2016, 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* A lighter pad's Common.ml (see also semgrep/libs/commons/Common.ml) *)
 
 (*****************************************************************************)
-(* Core types *)
+(* Core types and exns *)
 (*****************************************************************************)
-
-(* builtin since OCaml 4.02 (bytes are mutable strings) *)
-(* type bytes = string *)
 
 type byte = char
+
+(* type bytes = string *)
+(* builtin since OCaml 4.02 (bytes are mutable strings) *)
 
 exception Todo
 exception Impossible of string
 
-(*****************************************************************************)
-(* Option *)
-(*****************************************************************************)
-
-(* not sure why but can't use let (?:) a b = ... then at use time ocaml yells*)
-let ( ||| ) a b =
-  match a with
-  | Some x -> x
-  | None -> b
-
-(* TODO: let* once ocaml-light supports it *)
 
 (*****************************************************************************)
-(* Either *)
+(* Printing *)
 (*****************************************************************************)
-module Either_ = struct
-    (* just for deriving show *)
-    type ('a, 'b) t = ('a, 'b) Either.t =  Left of 'a | Right of 'b
-    [@@deriving show {with_path = false }]
+
+let spf = Printf.sprintf
+
+module Fmt_ = struct
+let with_buffer_to_string f =
+  let buf = Buffer.create 100 in
+  let (ppf : Format.formatter) = Format.formatter_of_buffer buf in
+  f ppf;
+  Format.pp_print_flush ppf ();
+  Buffer.contents buf
 end
 
 (*****************************************************************************)
-(* Result *)
-(*****************************************************************************)
-(* TODO: let/ once ocaml-light supports it *)
-
-(*****************************************************************************)
-(* Misc *)
+(* Fun *)
 (*****************************************************************************)
 
 (* let (|>) o f = f o
    builtin since OCaml 4.01 (builtin and optimized) 
 *)
-
-let spf = Printf.sprintf
 
 (* should be in Hashtbl_ below but it's also used by Regexp_ module
  * so has to be defined before
@@ -63,15 +52,6 @@ let memoized h k f =
         Hashtbl.add h k v;
         v
       end
-
-module Fmt_ = struct
-let with_buffer_to_string f =
-  let buf = Buffer.create 100 in
-  let (ppf : Format.formatter) = Format.formatter_of_buffer buf in
-  f ppf;
-  Format.pp_print_flush ppf ();
-  Buffer.contents buf
-end
 
 (*****************************************************************************)
 (* Basic types *)
@@ -137,10 +117,44 @@ let split sep s = Str.split (Str.regexp sep) s
 
 end
 
+(*****************************************************************************)
+(* Containers *)
+(*****************************************************************************)
+
+(* ------------------------------------------------------------------------- *)
+(* Option *)
+(* ------------------------------------------------------------------------- *)
+
+(* not sure why but can't use let (?:) a b = ... then at use time ocaml yells*)
+let ( ||| ) a b =
+  match a with
+  | Some x -> x
+  | None -> b
+
+(* TODO: let* once ocaml-light supports it *)
+
+(* ------------------------------------------------------------------------- *)
+(* Either *)
+(* ------------------------------------------------------------------------- *)
+
+module Either_ = struct
+    (* just for deriving show *)
+    type ('a, 'b) t = ('a, 'b) Either.t =  Left of 'a | Right of 'b
+    [@@deriving show {with_path = false }]
+end
+
+(* ------------------------------------------------------------------------- *)
+(* Result *)
+(* ------------------------------------------------------------------------- *)
+(* TODO: let/ once ocaml-light supports it *)
 
 (*****************************************************************************)
-(* List *)
+(* Collections *)
 (*****************************************************************************)
+
+(* ------------------------------------------------------------------------- *)
+(* List *)
+(* ------------------------------------------------------------------------- *)
 
 module List_ = struct
 
@@ -206,10 +220,9 @@ let rec (span: ('a -> bool) -> 'a list -> 'a list * 'a list) =
 
 end
 
-(*****************************************************************************)
+(* ------------------------------------------------------------------------- *)
 (* Stack *)
-(*****************************************************************************)
-
+(* ------------------------------------------------------------------------- *)
 
 module Stack_ = struct
 
@@ -242,9 +255,9 @@ let nth i st =
 
 end
 
-(*****************************************************************************)
+(* ------------------------------------------------------------------------- *)
 (* Assoc *)
-(*****************************************************************************)
+(* ------------------------------------------------------------------------- *)
 
 module Assoc = struct
 
@@ -274,9 +287,9 @@ let group_by f xs =
 
 end
 
-(*****************************************************************************)
+(* ------------------------------------------------------------------------- *)
 (* Hashtbl *)
-(*****************************************************************************)
+(* ------------------------------------------------------------------------- *)
 
 module Hashtbl_ = struct    
 

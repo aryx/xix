@@ -127,7 +127,7 @@ let str_of_perm_int x =
   spf "%d" x
 
 
-(* todo: use ocamltarzan at some point and ocaml.ml *)
+(* alt: use deriving *)
 let str_of_msg msg = 
   (match msg.typ with
   | T r -> "Q:" ^ 

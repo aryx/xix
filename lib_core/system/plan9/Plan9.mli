@@ -1,5 +1,7 @@
+(* Partial port of the Plan9 API to OCaml (Similar to unix.ml, but for Plan9) *)
 open Common
 
+(* uniQue file identifier (fileserver entity) *)
 type qid = {
   path: int64;
   vers: int;
@@ -9,8 +11,7 @@ type qid = {
     | QTFile
     | QTDir
 
-val int_of_qid_type: qid_type -> int
-
+(* read/write/execute *)
 type perm_property = { r: bool; w: bool; x: bool }
 
 val r: perm_property
@@ -18,8 +19,6 @@ val w: perm_property
 val rw: perm_property
 val rx: perm_property
 val rwx: perm_property
-
-val int_of_perm_property: perm_property -> int
 
 type dir_entry = {
   name: string;
@@ -42,18 +41,24 @@ type dir_entry = {
     | DMDir
     | DMFile
 
-
 type open_flags = perm_property
 
+(* conversions needed when calling the C code *)
+val int_of_qid_type: qid_type -> int
+val int_of_perm_property: perm_property -> int
 val open_flags_of_int: int -> open_flags
 
+(* similar to Unix.Unix_error but for Plan9 *)
+exception Plan9_error of string (* cmd *) * string (* errstr *)
 
 type namespace_flag =
   | MRepl
   | MBefore
   | MAfter
 
-val mount: Unix.file_descr -> int -> string(*TODO:Fpath.t*) -> namespace_flag -> string ->
+val mount: 
+  Unix.file_descr -> int -> string(*TODO:Fpath.t*) -> namespace_flag -> string ->
   unit
 
-val bind: string (*TODO: Fpath.t*) -> string (*TODO: Fpath.t*) -> namespace_flag -> unit
+val bind: 
+  string (*TODO: Fpath.t*) -> string (*TODO: Fpath.t*) -> namespace_flag -> unit

@@ -7,7 +7,7 @@ open Common
  * This is similar to unix.ml, but for Plan9.
  *  
  * I just binded the necessary API for rio to work:
- * bind, mount, errstr, and a few types for protocol_9P.ml.
+ * bind, mount, errstr, and a few types for Protocol_9P.ml.
  * 
  * less: provide full API in syscall.h and libc.h that is not
  *  already provided by unix.ml
@@ -85,6 +85,7 @@ let _errmax = 128
 
 exception Plan9_error of string (* cmd *) * string (* errstr *)
 
+(* needed so it can be thrown from C code *)
 let _ = Callback.register_exception "Plan9.Plan9_error"
                                     (Plan9_error("", ""))
 

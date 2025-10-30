@@ -266,7 +266,7 @@ let dispatch fs req request_typ =
        (try 
          let dev = device_of_devid devid in
          let data = dev.D.read_threaded offset count w in
-         answer fs { req with P.typ = P.R (R.Read (Bytes.of_string data)) }
+         answer fs { req with P.typ = P.R (R.Read data) }
        with Device.Error str ->
          error fs req str
       )) () |> ignore
@@ -289,8 +289,8 @@ let dispatch fs req request_typ =
        (try 
          let dev = device_of_devid devid in
          (* less: case where want to let device return different count? *)
-         let count = Bytes.length data in
-         dev.D.write_threaded offset (Bytes.to_string data) w;
+         let count = String.length data in
+         dev.D.write_threaded offset data w;
          answer fs { req with P.typ = P.R (R.Write count) }
        with Device.Error str ->
          error fs req str

@@ -47,7 +47,7 @@ module Request = struct
      *)
     | Open of fid * Plan9.open_flags
     | Read of fid * int64 (* offset *) * int32 (* count *)
-    | Write of fid * int64 (* offset *) * bytes (* data *)
+    | Write of fid * int64 (* offset *) * string (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid option (* newfid when clone *) * 
@@ -70,7 +70,7 @@ module Response = struct
     | Error of string
 
     | Open of qid * int (* iounit *)
-    | Read of bytes (* data *)
+    | Read of string (* data *)
     | Write of int (* count *)
     | Clunk
 
@@ -155,7 +155,7 @@ let str_of_msg msg =
       spf "Read: fid = %d offset = %d, count = %d" fid offset count
     | T.Write (fid, offset, data) ->
       spf "Write: fid = %d offset = %d, data = %s" fid offset
-        (if Bytes.length data > 10 then Bytes.sub_string data 0 10 else Bytes.to_string data)
+        (if String.length data > 10 then String.sub data 0 10 else data)
     | T.Clunk fid ->
       spf "Clunk: %d" fid
     | T.Remove fid ->
@@ -183,7 +183,7 @@ let str_of_msg msg =
       spf "Create: qid = %s, iounit = %d" (str_of_qid qid) iounit
     | R.Read str ->
       spf "Read: %s" 
-        (if Bytes.length str > 10 then Bytes.sub_string str 0 10 else Bytes.to_string str)
+        (if String.length str > 10 then String.sub str 0 10 else str)
     | R.Write count -> 
       spf  "Write: %d" count
     | R.Clunk -> 
@@ -463,7 +463,7 @@ let read_9P_msg fd =
       let write_offset = gbit64 buf (offset + 4) in
       let count = gbit32 buf (offset + 12) in
       let data = String.sub buf (offset + 16) count in
-      { res with typ = T (T.Write (fid, write_offset, Bytes.of_string data)) },
+      { res with typ = T (T.Write (fid, write_offset, data)) },
       offset + 16 + count
     (* Clunk *)
     | 120 -> 
@@ -554,8 +554,8 @@ let write_9P_msg msg fd =
       | R.Open (qid, iounit) -> pqid qid ^ pbit32 iounit
       | R.Create (qid, iounit) -> pqid qid ^ pbit32 iounit
       | R.Read data -> 
-        let len = Bytes.length data in
-        pbit32 len ^ (Bytes.to_string data)
+        let len = String.length data in
+        pbit32 len ^ data
       | R.Write count -> pbit32 count
       | R.Clunk -> ""
       | R.Walk xs -> 

@@ -15,7 +15,7 @@ module Request : sig
      *)
     | Open of fid * Plan9.open_flags
     | Read of fid * int64 (* offset *) * int32 (* count *)
-    | Write of fid * int64 (* offset *) * bytes (* data *)
+    | Write of fid * int64 (* offset *) * string (* data *)
     | Clunk of fid
 
     | Walk  of fid * fid option (* newfid when clone *) * 
@@ -38,7 +38,7 @@ module Response : sig
     | Error of string
 
     | Open of Plan9.qid * int (* iounit *)
-    | Read of bytes (* data *) (* TODO: string? need modify in place? *)
+    | Read of string (* data *)
     | Write of int (* count *)
     | Clunk
 

@@ -7,7 +7,7 @@
 
     xix_commons
 
-    xix_kernel_core
+    xix_kernel_base
     xix_kernel_memory
     xix_kernel_processes
     xix_kernel_time

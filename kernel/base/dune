@@ -1,5 +1,5 @@
 (library
- (name xix_kernel_core)
+ (name xix_kernel_base)
  (wrapped false)
  (libraries
     stdcompat

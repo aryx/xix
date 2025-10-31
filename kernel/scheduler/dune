@@ -5,7 +5,7 @@
     stdcompat
     threads
     xix_commons
-    xix_kernel_core
+    xix_kernel_base
     xix_kernel_processes
   )
  (preprocess (pps ppx_deriving.show))

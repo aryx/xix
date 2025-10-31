@@ -2,15 +2,6 @@
 (* could be in common.ml *)
 (*****************************************************************************)
 
-type byte = char
-
-type int8 = int
-type int16 = int
-(* todo: use Int32 *)
-type int32 = int
-(* todo: use Int64 *)
-type int64 = int
-
 (* todo: unicode *)
 type rune = char
 
@@ -49,6 +40,7 @@ type cpuid = int
 type fd = int
 
 (* special symbols: '/', '..', '#' *)
+(* TODO: Fpath.t *)
 type filename = string
 
 (* todo? more precise type? ugo? rwx? *)

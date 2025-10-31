@@ -30,7 +30,7 @@ module Fun_ :
 (* Basic types *)
 (*****************************************************************************)
 
-(* For lib_core/system/plan9.ml *)
+(* For lib_core/system/plan9.ml and kernel/ *)
 type int8 = int
 type int16 = int
 type int32 = int

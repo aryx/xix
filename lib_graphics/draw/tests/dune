@@ -1,0 +1,20 @@
+(executable
+ (name Hellodraw)
+ (libraries
+   str unix
+   xix_commons
+   xix_graphics_input
+   xix_plan9
+   xix_graphics_ui
+ )
+ (preprocess (pps ppx_deriving.show))
+ (modes native byte))
+
+;(install
+; (package xix)
+; (section bin)
+; (files
+;  (Hellorio.exe as orio)
+;  (Main.bc as orio.bc)
+;)
+;)

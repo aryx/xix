@@ -14,6 +14,7 @@ type chan = chan_kind * int (* nb bits *)
 type t = chan list (* usually 4, like R8G8B8A8 *)
 
 val rgb24: t
+val rgba32: t
 val grey1: t
 val grey8: t
 

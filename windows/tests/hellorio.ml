@@ -16,12 +16,12 @@ let redraw display view pos bgcolor =
   
 
 (* the Keyboard.init() and Mouse.init() below create other threads *)
-let thread_main () =
-  let display = Draw.init "Hello Rio" in
+let thread_main caps =
+  let display = Draw.init caps "Hello Rio" in
   let view = Draw_rio.get_view display in
 
-  let kbd = Keyboard.init () in
-  let mouse = Mouse.init () in
+  let kbd = Keyboard.init caps in
+  let mouse = Mouse.init caps in
 
   let bgcolor = 
     Image.alloc display (Rectangle.r 0 0 1 1) Channel.rgba32 true Color.magenta
@@ -44,7 +44,7 @@ let thread_main () =
     | Key c ->
       if c = 'q'
       then exit 0
-      else pr (spf "%c" c)
+      else Logs.app (fun m -> m "%c" c)
     (* less: 
      * | Resize -> view := getwindow display
      *)
@@ -53,4 +53,6 @@ let thread_main () =
   done
 
 let _ =
-  thread_main ()
+  Cap.main (fun caps ->
+      thread_main caps
+  )

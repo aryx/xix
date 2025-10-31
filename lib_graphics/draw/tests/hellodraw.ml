@@ -3,8 +3,8 @@ open Common
 module D = Display
 module I = Display (* image type is in display.ml *)
 
-let main () =
-  let display = Draw.init "Hello Draw" in
+let main caps =
+  let display = Draw.init caps "Hello Draw" in
   Display.debug display;
   let view = display.D.image in
   let color = 
@@ -25,6 +25,8 @@ let main () =
 
 let _ =
   try 
-    main ()
+    Cap.main (fun caps ->
+        main caps
+    )
   with Unix.Unix_error (err, s1, s2) when s2 = "xxx" ->
     failwith (spf "unix_error: %s, %s, %s" (Unix.error_message err) s1 s2)

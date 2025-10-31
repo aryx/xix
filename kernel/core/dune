@@ -1,11 +1,10 @@
 (library
- (name xix_kernel_base)
+ (name xix_kernel_core)
  (wrapped false)
  (libraries
     stdcompat
     threads
     xix_commons
-    xix_kernel_core
   )
  (preprocess (pps ppx_deriving.show))
 )

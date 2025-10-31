@@ -379,11 +379,11 @@ let lucm_latin_1_9_uncompressed_raw = [|
 
 let array_to_string arr =
   let len = Array.length arr in
-  let str = String.create len in
+  let str = Bytes.create len in
   for i = 0 to len - 1 do
-    str.[i] <- arr.(i)
+    Bytes.set str i arr.(i)
   done;
-  str
+  Bytes.to_string str
   
 
 (* TODO: after processed lucm_latin_1_9_uncompressed *)

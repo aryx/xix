@@ -17,6 +17,7 @@ set -x
 ./assembler/o5a --help
 ./linker/o5l --help
 ./compiler/o5c --help
+#TODO: ./windows/orio --help
 # TODO: add a --help, and exit 0 on --help, not 2
 #./lex/ocamllex --help
 #./yacc/ocamlyacc --help

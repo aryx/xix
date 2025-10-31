@@ -26,6 +26,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build --tag "syncweb" --build-arg OCAML_VERSION=${{matrix.ocaml}} .
+
+  # Building XiX with ocaml-light!
   build-light:
     runs-on: ubuntu-latest
     steps:

@@ -1,11 +1,11 @@
-open Types
+open Common
 
 type devid = Types.devid
 
 type seek = Seek of int64
 
 type t = {
-  devcode: rune;
+  devcode: Types.rune;
   name: string;
 
   (* methods *)
@@ -26,7 +26,7 @@ type t = {
   (* todo:
   walk: 
   *)
-  create: Chan_.t -> string -> perm -> unit; (* less: open_mode? *)
+  create: Chan_.t -> string -> Types.perm -> unit; (* less: open_mode? *)
   remove: Chan_.t -> unit;
 
   (* less:

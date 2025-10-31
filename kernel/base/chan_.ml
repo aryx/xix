@@ -1,4 +1,4 @@
-open Types
+open Common
 
 type qid = {
   (* less: really need more than 32 billions files? *)
@@ -21,7 +21,7 @@ type open_mode = {
 
 type t = {
   qid: qid;
-  chantype: devid;
+  chantype: Types.devid;
   (* less: dev: int *)
 
   mode: open_mode;

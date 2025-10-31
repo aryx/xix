@@ -1,4 +1,4 @@
-open Types
+open Common
 
 (* No need for Spinock.t here: this record is accessed by only 1 processor. *)
 
@@ -11,9 +11,9 @@ type t = {
   (* the scheduled proc on this processor! = Globals.up *)
   mutable proc: Proc_.t option;
 
-  mutable ticks: t_ticks;
+  mutable ticks: Types.t_ticks;
   (* at which next ticks the current process should be scheduled out *)
-  mutable sched_ticks: t_ticks;
+  mutable sched_ticks: Types.t_ticks;
 
   (* the main kernel thread (Thread.self() from main()) *)
   thread: Thread.t;

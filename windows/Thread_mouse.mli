@@ -6,7 +6,7 @@
  * a new window and process (hence the need for Cap.fork below).
  *)
 val thread: 
-  < Cap.fork; Cap.exec; Cap.chdir; .. > ->
+  < Cap.fork; Cap.exec; Cap.chdir; Cap.mount; Cap.bind; .. > ->
   Exit.t Event.channel * Mouse.ctl * 
   (Display.t * Baselayer.t * Image.t * Font.t) * Fileserver.t -> 
   unit

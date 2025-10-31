@@ -6,7 +6,7 @@ module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 
 let run_cmd_in_window_in_child_of_fork
-  (caps : < Cap.chdir; Cap.exec; .. >)
+  (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
   (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
   (*Unix1*)CapUnix.chdir caps !!(w.pwd);
   (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
@@ -15,8 +15,8 @@ let run_cmd_in_window_in_child_of_fork
   Unix1.close fs.server_fd;
   (* todo: close on exec? *)
 
-  Plan9.mount fs.clients_fd (-1) (Fpath.v "/mnt/wsys") Plan9.MRepl (spf "%d" w.id);
-  Plan9.bind (Fpath.v "/mnt/wsys") (Fpath.v "/dev") Plan9.MBefore;
+  Plan9.mount caps fs.clients_fd (-1) (Fpath.v "/mnt/wsys") Plan9.MRepl (spf "%d" w.id);
+  Plan9.bind caps (Fpath.v "/mnt/wsys") (Fpath.v "/dev") Plan9.MBefore;
 
   (* less: wclose for ref counting *)
   (* todo: handle errors? Unix_error? then communicate failure to parent? *)

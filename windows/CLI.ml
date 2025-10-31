@@ -25,7 +25,8 @@ open Common
 type caps = < 
     Cap.draw; Cap.mouse; Cap.keyboard; 
     Cap.fork; Cap.exec; Cap.chdir;
-    Cap.open_in
+    Cap.open_in;
+    Cap.mount; Cap.bind
  >
 
 let usage = 

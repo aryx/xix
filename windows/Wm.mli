@@ -11,7 +11,7 @@
  *   and finally run the cmd in it
  *)
 val new_win:
-  < Cap.fork; Cap.exec; Cap.chdir; .. > ->
+  < Cap.fork; Cap.exec; Cap.chdir; Cap.mount; Cap.bind; .. > ->
   Image.t -> string (* cmd *) -> string array (* argv (including argv0) *) ->
   Fpath.t option (* pwd option *) ->
   (Mouse.ctl * Fileserver.t * Font.t) ->

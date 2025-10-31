@@ -58,8 +58,10 @@ type namespace_flag =
 
 
 val bind: 
+  < Cap.bind; .. > ->
   Fpath.t (* src *) -> Fpath.t (* dst *) -> namespace_flag -> unit
 
 val mount: 
+  < Cap.mount; .. > ->
   Unix.file_descr -> int (* ?? *) -> Fpath.t (* dst *) -> namespace_flag ->
   string (* args *) -> unit

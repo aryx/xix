@@ -121,6 +121,10 @@ module Process = struct
    *)
   type time_limit = cap
   type memory_limit = cap
+
+  (* plan9 caps *)
+  type mount = cap
+  type bind = cap
 end
 
 (**************************************************************************)
@@ -207,8 +211,10 @@ type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
 type wait = < wait : Process.wait >
 type kill = < kill : Process.kill >
+type mount = < mount : Process.mount >
+type bind = < bind: Process.bind >
 type process_multi = < fork; wait; kill >
-type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
+type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir; mount; bind >
 type process = < argv ; env; process_single ; process_multi >
 
 (* exec *)
@@ -264,6 +270,8 @@ let powerbox : all_caps =
     method wait = ()
     method kill = ()
     method exit = ()
+    method mount = ()
+    method bind = ()
 
     (* misc *)
     method random = ()

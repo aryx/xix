@@ -28,15 +28,22 @@ end
 module Process : sig
   type argv
   type env
+
   type exit
   type chdir
   type signal
+
   type time_limit
   type memory_limit
+
   (* exec has its separate module below *)
   type fork
   type wait
   type kill
+
+  (* plan9 fileservers and namespaces *)
+  type mount
+  type bind
 end
 
 module FS_ : sig
@@ -91,8 +98,10 @@ type chdir = < chdir : Process.chdir >
 type fork = < fork : Process.fork >
 type wait = < wait : Process.wait >
 type kill = < kill : Process.kill >
+type mount = < mount : Process.mount >
+type bind = < bind: Process.bind >
 type process_multi = < fork; wait; kill >
-type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
+type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir; mount; bind >
 type process = < argv ; env; process_single ; process_multi >
 
 (* fs *)

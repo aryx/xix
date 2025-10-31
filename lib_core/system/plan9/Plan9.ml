@@ -164,9 +164,11 @@ let plan9_mount _ _ _ _ _ =
   failwith "TODO: plan9_mount external"
 
 (* less: flags? and a namespace_flags_to_int that fold lor? *)
-let bind (src : Fpath.t) (dst : Fpath.t) (flag : namespace_flag) : unit =
+let bind (_caps : < Cap.bind; .. >)
+ (src : Fpath.t) (dst : Fpath.t) (flag : namespace_flag) : unit =
   plan9_bind src dst (int_of_namespace_flag flag) |> ignore
 
-let mount fd int1 (dst : Fpath.t) (flag : namespace_flag) (args : string) =
+let mount (_caps : < Cap.mount; .. >)
+  fd int1 (dst : Fpath.t) (flag : namespace_flag) (args : string) =
   plan9_mount fd int1 dst (int_of_namespace_flag flag) args |> ignore
 

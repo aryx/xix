@@ -132,7 +132,7 @@ type t = {
   (* not really mutable, but set after Window.alloc() *)
   mutable pid: int;
   (* can be changed through /mnt/wsys/wdir *)
-  mutable pwd: string (* TODO: Fpath.t*);
+  mutable pwd: Fpath.t;
   (* todo? notefd *)
 
   (* ---------------------------------------------------------------- *)
@@ -243,7 +243,7 @@ let alloc img font =
 
     auto_scroll = false;
 
-    pwd = Sys.getcwd ();
+    pwd = Fpath.v (Sys.getcwd ());
     pid = -1;
   }
   in

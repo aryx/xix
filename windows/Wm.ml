@@ -1,15 +1,11 @@
+(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-
-module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
-
-module I = Display
-module W = Window
-module FS = Fileserver
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* The Window Manager.
+ *)
 
 (*****************************************************************************)
 (* Cursors *)
@@ -18,11 +14,11 @@ module FS = Fileserver
 (* less? move those cursor functions in cursors.ml? *)
 
 (* less: a rio_cursor? with lastcursor opti? and force parameter? *)
-let window_cursor w pt mouse =
+let window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) : unit =
   let cursoropt = 
     (* less: if img is nil? if screenr is 0? *)
     match Globals.window_at_point pt with
-    | Some w2 when w2  == w -> w.W.mouse_cursor
+    | Some w2 when w2  == w -> w.mouse_cursor
     | _ -> None
   in
   (* less: if menuing? or use corner_cursor() so no need this global? *)
@@ -32,13 +28,13 @@ let window_cursor w pt mouse =
   | None -> Mouse.reset_cursor mouse
 
 
-let _corner_cursor w pt mouse =
+let _corner_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
   if Window.pt_on_border pt w
-  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
+  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
 
-let corner_cursor_or_window_cursor w pt mouse =
+let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
   if Window.pt_on_border pt w
-  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.W.screenr pt)
+  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
   else window_cursor w pt mouse
 
 
@@ -46,29 +42,29 @@ let corner_cursor_or_window_cursor w pt mouse =
 (* Borders and content *)
 (*****************************************************************************)
 
-let draw_border w status =
-  let img = w.W.img in
+let draw_border (w : Window.t) (status : Window.border_status) =
+  let img = w.img in
   (* less: if holding? *)
   let color = 
     match status with
-    | W.Selected   -> !Globals.title_color
-    | W.Unselected -> !Globals.title_color_light
+    | Window.Selected   -> !Globals.title_color
+    | Window.Unselected -> !Globals.title_color_light
   in
-  Polygon.border img img.I.r Window.window_border_size color Point.zero
+  Polygon.border img img.r Window.window_border_size color Point.zero
 
 (* repaint border, content for textual window, (and todo cursor?) *)
 (* old: was called wrepaint in rio-C *)
-let repaint w =
+let repaint (w : Window.t) =
   let status = 
     match Globals.win () with
-    | Some w2 when w2 == w -> W.Selected
-    | _ -> W.Unselected
+    | Some w2 when w2 == w -> Window.Selected
+    | _ -> Window.Unselected
   in
   draw_border w status;
   (* less: wsetcursor again? *)
-  w.W.terminal.Terminal.is_selected <- (status = W.Selected);
-  if not w.W.mouse_opened 
-  then Terminal.repaint w.W.terminal 
+  w.terminal.Terminal.is_selected <- (status = Window.Selected);
+  if not w.mouse_opened 
+  then Terminal.repaint w.terminal 
 
 
 (* old: was called wcurrent() in rio-C.
@@ -104,19 +100,20 @@ let set_current_and_repaint wopt (*mouse*) =
 (* Wm *)
 (*****************************************************************************)
 
+(* will be set to Threads_window.thread in CLI.ml *)
 let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
 )
 
 (* less: hideit, pid (but 0, or if != 0 -> use another func), scrolling *)
-let new_win img cmd argv pwd_opt 
-    (_mouse, fs, font) =
+let new_win (img : Image.t) (cmd : string) (argv : string array) (pwd_opt : Fpath.t option)
+    (_mouse, fs, font) : unit =
 
   (* A new Window.t *)
 
   (* less: cpid channel?  *)
   (* less: scrollit *)
-  let w = Window.alloc img font in
+  let w : Window.t = Window.alloc img font in
   (* less: wscrdraw here? (instead of in alloc, ugly) and draw(cols[BACK])? *)
   (* less: incref? *)
 
@@ -126,7 +123,7 @@ let new_win img cmd argv pwd_opt
 
   (* A new window thread *)
 
-  Hashtbl.add Globals.windows w.W.id w;
+  Hashtbl.add Globals.windows w.id w;
   let _win_thread = Thread.create !threads_window_thread_func w in
 
   (* less: if not hideit *)
@@ -135,7 +132,7 @@ let new_win img cmd argv pwd_opt
 
   (* A new window process *)
 
-  pwd_opt |> Option.iter (fun str -> w.W.pwd <- str);
+  pwd_opt |> Option.iter (fun str -> w.pwd <- str);
 
   (* TODO: Thread.critical_section := true; *)
   Logs.warn (fun m -> m "TODO: Thread.critical_section");
@@ -148,77 +145,77 @@ let new_win img cmd argv pwd_opt
   | pid -> 
     (* parent *)
     (* TODO: Thread.critical_section := false; *)
-    w.W.pid <- pid;
+    w.pid <- pid;
 
     (* todo: how know if pb in child that require us then from
      * delete the window? need a cpid!
      *)
 
     (* old: was in wsetpid() *)
-    w.W.label <- spf "rc %d" pid;
+    w.label <- spf "rc %d" pid;
     (* less: notefd *)
 
     (* less: not too late? race with child to access /dev/winname? *)
-    let winname = spf "window.%d" w.W.id in
-    w.W.winname <- winname;
-    Draw_ipc.name_image w.W.img winname;
+    let winname = spf "window.%d" w.id in
+    w.winname <- winname;
+    Draw_ipc.name_image w.img winname;
     (* less: namecount and retry again if already used *)
   )
 
 
 
-let close_win w =
-  w.W.deleted <- true;
+let close_win (w : Window.t) =
+  w.deleted <- true;
   Globals.win () |> Option.iter (fun w2 ->
     if w2 == w
     then Globals.current := None;
     (* less: window_cursor  ?*)
   );
   (* less: if wkeyboard *)
-  Hashtbl.remove Globals.hidden w.W.id;
-  Hashtbl.remove Globals.windows w.W.id;
-  Layer.free w.W.img;
-  w.W.img <- Image.fake_image;
+  Hashtbl.remove Globals.hidden w.id;
+  Hashtbl.remove Globals.windows w.id;
+  Layer.free w.img;
+  w.img <- Image.fake_image;
   ()
 
 
-let top_win w =
-  if w.W.topped = !Window.topped_counter
+let top_win (w : Window.t) =
+  if w.topped = !Window.topped_counter
   then ()
   else begin
-    Layer.put_to_top w.W.img;
+    Layer.put_to_top w.img;
     set_current_and_repaint (Some w);
-    Image.flush w.W.img;
+    Image.flush w.img;
 
     incr Window.topped_counter;
-    w.W.topped <- !Window.topped_counter;
+    w.topped <- !Window.topped_counter;
   end
 
 
-let hide_win w =
-  if Hashtbl.mem Globals.hidden w.W.id
+let hide_win (w : Window.t) =
+  if Hashtbl.mem Globals.hidden w.id
   (* less: return -1? can happen if window thread take too much time
    * to respond to the Reshape command?
    *)
   then raise (Impossible "window already hidden");
-  let old_layer = w.W.img in
-  let display = old_layer.I.display in
+  let old_layer = w.img in
+  let display = old_layer.display in
   (* this is an image! not a layer, so it will not be visible on screen *)
   let img = 
-    Image.alloc display w.W.screenr old_layer.I.chans false Color.white in
+    Image.alloc display w.screenr old_layer.chans false Color.white in
   (* less: return 0 or 1 if can or can not allocate? *)
-  Hashtbl.add Globals.hidden w.W.id w;
-  let cmd = W.Reshape (img) in
-  Event.send w.W.chan_cmd cmd |> Event.sync;
+  Hashtbl.add Globals.hidden w.id w;
+  let cmd = Window.Reshape img in
+  Event.send w.chan_cmd cmd |> Event.sync;
   ()
 
-let show_win w desktop =
-  let old_img = w.W.img in
+let show_win (w : Window.t) (desktop : Baselayer.t) =
+  let old_img = w.img in
   (* back to a layer *)
-  let layer = Layer.alloc desktop old_img.I.r Color.white in
-  Hashtbl.remove Globals.hidden w.W.id;
-  let cmd = W.Reshape (layer) in
-  Event.send w.W.chan_cmd cmd |> Event.sync;
+  let layer = Layer.alloc desktop old_img.r Color.white in
+  Hashtbl.remove Globals.hidden w.id;
+  let cmd = Window.Reshape layer in
+  Event.send w.chan_cmd cmd |> Event.sync;
   ()
 
 
@@ -227,23 +224,23 @@ let show_win w desktop =
 (*****************************************************************************)
 
 (* less: move boolean parameter, useless opti test dx/dy below catch it *)
-let resize_win w new_img =
-  let old_img = w.W.img in
-  let old_r = old_img.I.r in
-  let new_r = new_img.I.r in
+let resize_win (w : Window.t) (new_img : Image.t) =
+  let old_img = w.img in
+  let old_r = old_img.r in
+  let new_r = new_img.r in
   if Rectangle.dx old_r = Rectangle.dx new_r && 
      Rectangle.dy old_r = Rectangle.dy new_r
   then Draw.draw new_img new_r old_img None old_r.Rectangle.min;
   (* a layer or image, so when hiding this should make disappear the window *)
   Image.free old_img;
   (* less: screenr set in caller, but could do it here *)
-  w.W.img <- new_img;
+  w.img <- new_img;
   (* todo: wsetname *)
 
   (* todo: textual window update *)
-  draw_border w W.Selected;
+  draw_border w Window.Selected;
   incr Window.topped_counter;
-  w.W.topped <- !Window.topped_counter;
+  w.topped <- !Window.topped_counter;
 
   (* todo: w.W.resized <- true *)
   (* todo: mouse counter ++ so transmit resize event *)

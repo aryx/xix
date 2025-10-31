@@ -1,21 +1,19 @@
+(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 
-module FS = Fileserver
-module W = Window
-
-
-let run_cmd_in_window_in_child_of_fork cmd argv w fs =
-  Unix1.chdir w.W.pwd;
+let run_cmd_in_window_in_child_of_fork (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
+  Unix1.chdir !!(w.pwd);
   (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
     
   (*/* close server end so mount won't hang if exiting */*)
-  Unix1.close fs.FS.server_fd;
+  Unix1.close fs.server_fd;
   (* todo: close on exec? *)
 
-  Plan9.mount fs.FS.clients_fd (-1) (Fpath.v "/mnt/wsys") Plan9.MRepl (spf "%d" w.W.id);
+  Plan9.mount fs.clients_fd (-1) (Fpath.v "/mnt/wsys") Plan9.MRepl (spf "%d" w.id);
   Plan9.bind (Fpath.v "/mnt/wsys") (Fpath.v "/dev") Plan9.MBefore;
 
   (* less: wclose for ref counting *)

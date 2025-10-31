@@ -1,9 +1,20 @@
+(* The Window Manager *)
 
 (* main wm actions *)
 
+(* This is called from Thread_mouse.ml when right-click and select New.
+ * Internally it will:
+ * - create a new Window.t and adds it to Globals.windows
+ * - create a new window thread
+ * - fork a new process, mount /mnt/wsys from fileserver and then binds
+ *   /mnt/wsys to /dev so the process will have virtual /dev/{cons,winname,...}
+ *   and finally run the cmd in it
+ *
+ * CLI.thread_main -> Thread_mouse.thread -> Thread_mouse.wm_menu -> <>
+ *)
 val new_win:
-  Image.t -> string (* cmd *) -> string array (* argv *) ->
-  string(*TODO: Fath.t*) option ->
+  Image.t -> string (* cmd *) -> string array (* argv (including argv0) *) ->
+  Fpath.t option (* pwd option *) ->
   (Mouse.ctl * Fileserver.t * Font.t) ->
   unit
 val close_win:

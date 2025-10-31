@@ -70,13 +70,15 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 
   (* Rio, a concurrent application *)
 
-  (* to break some mutual dependencies *)
-  Wm.threads_window_thread_func := Threads_window.thread;
-
-  let (exit_chan: Exit.t Event.channel) = Event.new_channel () in
-
   let _kbd_thread   = 
     Thread.create Thread_keyboard.thread kbd in
+
+  let (exit_chan: Exit.t Event.channel) = Event.new_channel () in
+  (* To break some mutual dependencies.
+   * The mouse right-click and menu will trigger the creation
+   * of new windows and new window threads and call this function.
+   *)
+  Wm.threads_window_thread_func := Threads_window.thread;
   let _mouse_thread = 
     Thread.create Thread_mouse.thread (exit_chan, 
                                        mouse, (display, desktop, view, font),

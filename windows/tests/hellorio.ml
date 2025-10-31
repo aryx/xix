@@ -1,22 +1,20 @@
 open Common
 
-module I = Display
-
 type event =
   | Mouse of Mouse.state
   | Key of Keyboard.key
   (* less: Resize *)
 
-let redraw display view pos bgcolor =
-  Draw.draw view view.I.r bgcolor None Point.zero;
+let redraw (display : Display.t) (view : Image.t) (pos : Point.t) (bgcolor : Image.t) =
+  Draw.draw view view.r bgcolor None Point.zero;
   (* todo: Text.string *)
   Line.line view pos (Point.add pos (Point.p 100 100))
-    Line.EndSquare Line.EndSquare 2 display.I.black Point.zero;
+    Line.EndSquare Line.EndSquare 2 display.black Point.zero;
   Display.flush display
   
 
 (* the Keyboard.init() and Mouse.init() below create other threads *)
-let thread_main caps =
+let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) =
   let display = Draw.init caps "Hello Rio" in
   let view = Draw_rio.get_view caps display in
 
@@ -24,10 +22,10 @@ let thread_main caps =
   let mouse = Mouse.init caps in
 
   let bgcolor = 
-    Image.alloc display (Rectangle.r 0 0 1 1) Channel.rgba32 true Color.magenta
+    Image.alloc display Rectangle.r_1x1 Channel.rgba32 true Color.magenta
   in
   (* if does not use originwindow, then need to add view.r.min *)
-  let mousepos = ref (Point.add view.I.r.Rectangle.min (Point.p 10 10)) in
+  let mousepos = ref (Point.add view.r.Rectangle.min (Point.p 10 10)) in
 
   redraw display view !mousepos bgcolor;
 

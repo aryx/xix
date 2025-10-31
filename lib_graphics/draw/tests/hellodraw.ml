@@ -1,19 +1,16 @@
 open Common
 
-module D = Display
-module I = Display (* image type is in display.ml *)
-
-let main caps =
-  let display = Draw.init caps "Hello Draw" in
+let main (caps : < Cap.draw; .. >) =
+  let display : Display.t = Draw.init caps "Hello Draw" in
   Display.debug display;
-  let view = display.D.image in
-  let color = 
-    Image.alloc display (Rectangle.r 0 0 1 1) Channel.rgb24 true (* repl *)
+  let view : Image.t = display.image in
+  let color : Image.t = 
+    Image.alloc display Rectangle.r_1x1 Channel.rgb24 true (* repl *)
       Color.magenta
   in
-  Draw.draw view view.I.r color None Point.zero;
+  Draw.draw view view.r color None Point.zero;
   Line.line view (Point.p 10 10) (Point.p 100 100)
-    Line.EndSquare Line.EndSquare 10 display.D.black Point.zero;
+    Line.EndSquare Line.EndSquare 10 display.black Point.zero;
 (* TODO
   Draw.string view (Point.p 200 200) display.Display.black Point.zero 
     Font.default_font "Hello Graphical World";

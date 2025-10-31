@@ -22,10 +22,9 @@ SRC=\
  Logs.ml Logs_.ml \
  Chan.ml UChan.ml FS.ml IO.ml \
  Cmd.ml Proc.ml \
- Date.ml \
+ Date.ml Bits.ml Rune.ml \
  Exception.ml Exit.ml \
  Endian.ml Arch.ml OS.ml \
- Rune.ml
 
 <$TOP/mkconfig
 <$TOP/mklib

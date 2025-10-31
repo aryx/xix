@@ -22,9 +22,6 @@ open Types5
 (* Types and constants *)
 (*****************************************************************************)
 
-(* new: more declaratif and give opportunity to sanity check if overlap *)
-type composed_word = (int * int) list
-
 type pool =
   (* note that it is not always an int! Sometimes it can be an
    * Address which will be resolved only at the very end.
@@ -37,7 +34,7 @@ type action = {
   (* a multiple of 4 *)
   size: int;
   pool: pool option;
-  binary: unit -> composed_word list;
+  binary: unit -> Bits.int32 list;
 }
 
 type mem_opcode = LDR | STR
@@ -52,33 +49,10 @@ let error node s =
               (T5.show_instr node.instr)
   )
 
-(* new: can detect some typing mistakes *)
-let sanity_check_composed_word node (xs : composed_word) =
-  let dbg = Dumper.dump xs in
-  let rec aux bit xs =
-    match xs with
-    | [] -> ()
-    | (x,bit2)::xs ->
-        let size = bit - bit2 in
-        (match () with
-        | _ when bit2 >= bit -> error node ("composed word not sorted: " ^ dbg)
-        | _ when x < 0       -> error node (spf "negative value %d: %s" x dbg)
-        | _ when size <= 0   -> error node (spf "no space for value %d: %s" x dbg)
-        (* if size = 2 then maxval = 3 so x >= 2^2 (= 1 lsl 2) then error *)
-        | _ when x >= 1 lsl size ->
-            error node (spf "value %d overflow outside its space (%d - %d): %s "
-                       x bit bit2 dbg)
-        | _ -> ()
-        );
-        aux bit2 xs
-  in
-  aux 32 xs
-
-let word_of_composed_word (x : composed_word) : Types.word =
-  x |> List.fold_left (fun acc (v, i) ->
-    (v lsl i) lor acc
-  ) 0
-
+let int_of_bits (n : node) (x : Bits.int32) : int =
+  try
+    Bits.int_of_bits32 x
+  with Failure s -> error n s
 
 let offset_to_R12 x =
   (* less: x - BIG at some point if want some optimisation *)
@@ -658,24 +632,20 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
     then raise (Impossible (spf "size of rule does not match #instrs at %s"
                               (T.s_of_loc n.n_loc)));
 
-    let xs = instrs |> List.map Assoc.sort_by_val_highfirst in
+    let xs : Bits.int32 list = instrs |> List.map Assoc.sort_by_val_highfirst in
     
     if !Flags.debug_gen 
     then begin 
       Logs.app (fun m -> m "%s" (T5.show_instr n.instr));
       Logs.app (fun m -> m "-->");
       xs |> List.iter (fun x ->
-        let w = word_of_composed_word x in
+        let w = int_of_bits n x in
         Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
       );
       Logs.app (fun m -> m ".");
     end;
 
-    let xs = xs |> List.map (fun composed_word ->
-      sanity_check_composed_word n composed_word;
-      word_of_composed_word composed_word;
-    )
-    in
+    let xs = xs |> List.map (fun x -> int_of_bits n x) in
     res |> Stack_.push xs;
 
     pc := !pc + size;

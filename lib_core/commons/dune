@@ -19,10 +19,9 @@
   Exit Exception
   Chan UChan FS IO
   Cmd Proc
-  Date
+  Date Bits Rune
   Fpath_ Ftype
   Arch OS Endian
-  Rune
  )   
  (libraries
     stdcompat

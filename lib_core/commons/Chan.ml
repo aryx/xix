@@ -17,7 +17,6 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-
 (* Channels on (local) files.
  *
  * In many cases, having just the channel is not enough for good error

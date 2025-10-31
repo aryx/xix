@@ -1,6 +1,6 @@
 open Common
 open Types
-open Proc_
+open Process_
 open User_memory (* for the @< operators *)
 
 
@@ -95,20 +95,20 @@ let syscall_exec cmd _args =
       (* todo: from tc, demand loading on channel tc *)
       raise Todo 
     in
-    Hashtbl.add up.seg Proc_.SText text_segment;
+    Hashtbl.add up.seg Process_.SText text_segment;
 
     let data_segment = 
       Segment.alloc Segment_.SData end_text 
         (((end_data @- end_text) lsr Memory.pgshift))
     in
     (* todo: demand loading on tc too *)
-    Hashtbl.add up.seg Proc_.SData data_segment;
+    Hashtbl.add up.seg Process_.SData data_segment;
 
     let bss_segment =
       Segment.alloc Segment_.SBss end_data
         (((end_bss @- end_data) lsr Memory.pgshift))
     in
-    Hashtbl.add up.seg Proc_.SBss bss_segment;
+    Hashtbl.add up.seg Process_.SBss bss_segment;
 
     (* todo: stack segment, stack segment relocation *)
 

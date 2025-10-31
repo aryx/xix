@@ -18,7 +18,7 @@ let lock x =
      * - increment up.nlocks (but using low level atomic_inc) 
      * - update up.last_spinlock
     *)
-    x.p <- up.Proc_.pid;
+    x.p <- up.Process_.pid;
     (* less: add more debugging info in lock once you grab it *)
     ()
   in
@@ -48,7 +48,7 @@ let unlock x =
   if not !(x.hold)
   then failwith "Spinlock.unlock: not locked";
   let up = Globals.up () in
-  if up.Proc_.pid <> x.p
+  if up.Process_.pid <> x.p
   then failwith "Spinlock.unlock: up changed";
 
   (* less: coherence issue? *)
@@ -59,7 +59,7 @@ let canlock x =
   then begin
     (* coupling: copy paste of lock when_hold *) 
     let up = Globals.up () in
-    x.p <- up.Proc_.pid;
+    x.p <- up.Process_.pid;
     true
   end
   else false

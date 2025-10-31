@@ -3,19 +3,19 @@ open Types
 open User_memory (* for operators @<, @-, etc *)
 
 let change_segment_top addr section =
-  let up = Globals.up () in
-  let seg =
-    try Hashtbl.find up.Proc_.seg section
+  let up : Process_.t = Globals.up () in
+  let seg : Segment_.t =
+    try Hashtbl.find up.seg section
     with Not_found -> Error.error Error.Ebadarg
   in
   (* less: why need lock? who else will modify up.seg? the pager? *)
-  seg.Segment_.ql |> Qlock.with_lock  (fun () ->
+  seg.ql |> Qlock.with_lock  (fun () ->
     let new_top = User_memory.roundup_page addr in
-    if new_top @< seg.Segment_.top
+    if new_top @< seg.top
     then raise Todo
     else begin
       (* make sure new_top does not overlap with another segment *)
-      up.Proc_.seg |> Hashtbl.iter (fun section2 seg2 ->
+      up.seg |> Hashtbl.iter (fun section2 seg2 ->
         if section2 <> section
         then
           if new_top >= seg2.Segment_.base && new_top < seg2.Segment_.top
@@ -46,4 +46,4 @@ let change_segment_top addr section =
 (* brk means?  *)
 let syscall_brk addr =
   (* less: allow addr_opt and None where return base? useful? *)
-  change_segment_top addr Proc_.SBss
+  change_segment_top addr Process_.SBss

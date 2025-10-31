@@ -9,7 +9,7 @@ type t = {
   id: cpuid; 
 
   (* the scheduled proc on this processor! = Globals.up *)
-  mutable proc: Proc_.t option;
+  mutable proc: Process_.t option;
 
   mutable ticks: Types.t_ticks;
   (* at which next ticks the current process should be scheduled out *)

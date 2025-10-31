@@ -1,6 +1,6 @@
 open Common
 open Types
-open Proc_
+open Process_
 
 (* todo: can call files/chan.ml from here? *)
 module Chan = struct

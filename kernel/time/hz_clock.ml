@@ -12,6 +12,6 @@ let hz_clock () =
   (* todo: check alarms *)
 
   let up = Globals.up () in
-  if up.Proc_.state = Proc_.Running
+  if up.state = Process_.Running
   then Hz_sched.hz_sched ()
 

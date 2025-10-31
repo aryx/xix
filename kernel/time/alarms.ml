@@ -8,7 +8,7 @@ open Types
  *)
 type t = {
   (* sorted list by Proc_.alarm time *)
-  mutable elts: Proc_.t list;
+  mutable elts: Process_.t list;
 
   ql: Qlock.t;
 }

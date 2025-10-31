@@ -36,9 +36,9 @@ let rlock q =
   end else begin
     (* a writer was there or a list of waiting process *)
     (* todo: when have no writer but waiting processes?? *)
-    let up = Globals.up () in
-    Queue.add up.Proc_.pid q.q;
-    up.Proc_.state  <- Proc_.Queueing (Some Proc_.Read);
+    let up : Process_.t = Globals.up () in
+    Queue.add up.pid q.q;
+    up.state  <- Process_.Queueing (Some Process_.Read);
     Spinlock.unlock q.l;
     !Hooks.Scheduler.sched ();
     (* will resume here once woke up by another process *)
@@ -61,14 +61,14 @@ let wlock q =
   if q.readers = 0 && not q.writer
   then begin
     (* no one is waiting *)
-    let up = Globals.up () in
+    let up : Process_.t = Globals.up () in
     q.writer <- true;
-    q.wproc <- Some up.Proc_.pid;
+    q.wproc <- Some up.pid;
     Spinlock.unlock q.l;
   end else begin
-    let up = Globals.up () in
-    Queue.add up.Proc_.pid q.q;
-    up.Proc_.state <- Proc_.Queueing (Some Proc_.Write);
+    let up : Process_.t = Globals.up () in
+    Queue.add up.pid q.q;
+    up.state <- Process_.Queueing (Some Process_.Write);
     Spinlock.unlock q.l;
     !Hooks.Scheduler.sched ();
     (* will resume here once woke up by another process *)

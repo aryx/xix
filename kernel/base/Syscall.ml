@@ -33,7 +33,7 @@ type rfork_flags =
 (* Await *)
 
 (* await result *)
-type wait_msg = Proc_.wait_msg
+type wait_msg = Process_.wait_msg
 
 (* Open *)
 

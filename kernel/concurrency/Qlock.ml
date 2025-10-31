@@ -25,9 +25,9 @@ let lock q =
     q.locked <- true;
     Spinlock.unlock q.l;
   end else begin
-    let up = Globals.up () in
-    Queue.add up.Proc_.pid q.q;
-    up.Proc_.state  <- Proc_.Queueing None;
+    let up : Process_.t = Globals.up () in
+    Queue.add up.pid q.q;
+    up.state  <- Process_.Queueing None;
     Spinlock.unlock q.l;
     !Hooks.Scheduler.sched ();
     (* will resume here once woke up by another process *)

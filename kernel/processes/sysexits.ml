@@ -1,8 +1,8 @@
 open Common
 open Types
-open Proc_
+open Process_
 
-let (hooks: (Proc_.t -> unit) list ref) = ref []
+let (hooks: (Process_.t -> unit) list ref) = ref []
 
 (* in C the str can be null pointer but better use empty string for that *)
 let syscall_exits str =
@@ -28,7 +28,7 @@ let syscall_exits str =
     Spinlock.lock parent.childlock;
 
     (* less: what about Moribund? *)
-    if parent.state <> Proc_.Broken 
+    if parent.state <> Process_.Broken 
     then begin
       parent.nchild <- parent.nchild - 1;
       (* less: update time info in parent *)
@@ -73,7 +73,7 @@ let syscall_exits str =
   Spinlock.lock Process.allocator.Process.l;
   Spinlock.lock Page.allocator.Page.l;
 
-  up.state <- Proc_.Moribund;
+  up.state <- Process_.Moribund;
   (* todo: go directly to schedinit instead? *)
   !Hooks.Scheduler.sched ();
   Error.panic "syscall_exits: should never each this point"

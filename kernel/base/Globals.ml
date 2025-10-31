@@ -1,7 +1,7 @@
 (* todo: delete once added the { Xxx. } feature in my ocaml light *)
 open Cpu 
 open Conf
-open Proc_
+open Process_
 open Chan_
 open Spinlock_
 open Ref_
@@ -41,7 +41,7 @@ let fakechan = { Chan_.
   refcnt = fakeref;
 }
 
-let fakeproc = { Proc_.
+let fakeproc = { Process_.
   pid = 0;
   state = Dead;
   slash = fakechan;

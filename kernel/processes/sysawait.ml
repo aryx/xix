@@ -1,6 +1,6 @@
 open Common
 open Types
-open Proc_
+open Process_
 
 let syscall_await () =
   let up = Globals.up () in

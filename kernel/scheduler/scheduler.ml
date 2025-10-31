@@ -12,7 +12,7 @@ let thread_sleep _ =
 
 type runq = {
   (* use pid? *)
-  queues: (Proc_.t Queue.t) array; (* length = Scheduler_.nb_priorities *)
+  queues: (Process_.t Queue.t) array; (* length = Scheduler_.nb_priorities *)
   l: Spinlock_.t;
   (* bitset *)
   mutable runvec: int;
@@ -30,10 +30,10 @@ let any_ready () =
   runq.runvec <> 0
 
 (* the priority of a process must be regularly adjusted (to avoid starving) *)
-let add p prio = 
+let add (p : Process_.t) prio = 
   Spinlock.lock runq.l;
 
-  p.Proc_.priority <- prio;
+  p.priority <- prio;
   let (Prio iprio) = prio in
   
   Queue.add p runq.queues.(iprio);
@@ -49,10 +49,10 @@ let dequeue prio =
   then failwith "Caller should hold runq.l";
   (*less: Spinlock.lock runq.l;*)
   let (Prio iprio) = prio in
-  let p = Queue.take runq.queues.(iprio) in
-  if p.Proc_.state <> Proc_.Ready
+  let p : Process_.t = Queue.take runq.queues.(iprio) in
+  if p.state <> Process_.Ready
   then failwith (spf "process %s %d in runq was not in Ready state" 
-                   p.Proc_.name p.Proc_.pid);
+                   p.name p.pid);
   
   if Queue.length runq.queues.(iprio) = 0
   then runq.runvec <- runq.runvec land (lnot (1 lsl iprio));
@@ -86,9 +86,9 @@ let find_proc () =
     raise (Impossible "while infinite loop can exit only through raise")
   with Found prio ->
     (* less: splhi? *)
-    let p = dequeue prio in
+    let p : Process_.t = dequeue prio in
     (* less: loop and dance if runq has changed in between *)
-    p.Proc_.state <- Proc_.Scheding;
+    p.state <- Process_.Scheding;
     (* less: lastcpu *)
     (* less: proctrace strace *)
     Spinlock.unlock runq.l;
@@ -125,11 +125,11 @@ let sched () =
 
 
 (* from Running to Ready in right priority queue *)
-let ready p =
+let ready (p : Process_.t) =
   (* less: splhi/splx? why? *)
   (* less: cpu->readied *)
-  p.Proc_.state <- Proc_.Ready;
-  let prio = p.Proc_.priority in
+  p.state <- Process_.Ready;
+  let prio = p.priority in
   (* less: adjust priority *)
   add p prio
 
@@ -142,10 +142,10 @@ let scheduler () =
   Logs.err (fun m -> m "TODO: Thread.critical_section");
   (* less: assert splhi? *)
   (* less: check ilockdepth  *)
-  let up = Globals.up () in
-  (match up.Proc_.state with
-  | Proc_.Running -> ready up
-  | Proc_.Moribund -> raise Todo
+  let up : Process_.t = Globals.up () in
+  (match up.state with
+  | Process_.Running -> ready up
+  | Process_.Moribund -> raise Todo
   | _ -> raise (Impossible "can hve either Running or Moribund in scheduler()")
   );
   cpu.Cpu.proc <- None;
@@ -161,12 +161,12 @@ let scheduler () =
   
   cpu.Cpu.proc <- Some p;
   (* new up! *)
-  let up = Globals.up () in
-  up.Proc_.state <- Proc_.Running;
+  let up : Process_.t = Globals.up () in
+  up.state <- Process_.Running;
   (* less: up.Proc_.cpu <- cpu.id *)
 
   (* todo: mmuswitch *)
-  thread_wakeup up.Proc_.thread;
+  thread_wakeup up.thread;
   thread_sleep () (* reset Thread.critical_section *)
  done
 

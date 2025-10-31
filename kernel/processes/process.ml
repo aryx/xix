@@ -1,6 +1,6 @@
 open Common
 open Types
-open Proc_
+open Process_
 
 type allocator = {
   (* less: opti: an arena allocator? 
@@ -10,7 +10,7 @@ type allocator = {
    *)
 
   (* used even more now that I use pid in Qlock.q instead of direct reference*)
-  hpids: (pid, Proc_.t) Hashtbl.t;
+  hpids: (pid, Process_.t) Hashtbl.t;
 
   l: Spinlock_.t;
 }
@@ -30,7 +30,7 @@ let allocator = {
 
 let hash p =
   Spinlock.lock allocator.l;
-  Hashtbl.add allocator.hpids p.Proc_.pid p;
+  Hashtbl.add allocator.hpids p.pid p;
   Spinlock.unlock allocator.l
 
 let unhash p =
@@ -38,7 +38,7 @@ let unhash p =
   (* this should garbage collect the Proc, unless it is still referenced
    * in some globals (e.g., timers? alarms?)
    *)
-  Hashtbl.remove allocator.hpids p.Proc_.pid;
+  Hashtbl.remove allocator.hpids p.pid;
   Spinlock.unlock allocator.l
 
 (* can raise Not_found *)

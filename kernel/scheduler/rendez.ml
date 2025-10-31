@@ -18,28 +18,28 @@ let alloc () = {
 let sleep rdz fcond =
   (* todo: splhi/splx *)
   (* less: sanity check nlocks *)
-  let up = Globals.up () in
+  let up : Process_.t = Globals.up () in
   Spinlock.lock rdz.l;
-  Spinlock.lock up.Proc_.rdzlock;
+  Spinlock.lock up.rdzlock;
 
   if rdz.p <> None
-  then failwith (spf "double sleep for %s %d" up.Proc_.name up.Proc_.pid);
+  then failwith (spf "double sleep for %s %d" up.name up.pid);
   (* stricter: *)
-  if up.Proc_.rdz <> None
+  if up.rdz <> None
   then raise (Impossible "cant have rendez vous and Running");
 
-  rdz.p <- Some up.Proc_.pid;
+  rdz.p <- Some up.pid;
 
   let cond = fcond () in
   if cond (* less: up->notepending *)
   then begin
     rdz.p <- None;
-    Spinlock.unlock up.Proc_.rdzlock;
+    Spinlock.unlock up.rdzlock;
     Spinlock.unlock rdz.l;
   end else begin
     (* less: hook proctrace strace *)
-    up.Proc_.state <- Proc_.Wakeme;
-    up.Proc_.rdz <- Some rdz;
+    up.state <- Process_.Wakeme;
+    up.rdz <- Some rdz;
 
     (* similar to Scheduler.sched () but with extra unlocks *)
        (* less: arch_procsave hooks *)
@@ -47,7 +47,7 @@ let sleep rdz fcond =
        (* XXX: Thread.critical_section := true; *)
        Logs.err (fun m -> m "TODO: critical_section");
        thread_wakeup cpu.Cpu.thread;
-    Spinlock.unlock up.Proc_.rdzlock;
+    Spinlock.unlock up.rdzlock;
     Spinlock.unlock rdz.l;
        thread_sleep (); (* reset Thread.critical_section *)
        (* less: arch_procrestore *)
@@ -63,16 +63,16 @@ let wakeup rdz =
   let optp = rdz.p in
   optp |> Option.iter (fun pid ->
     let p = Process.proc_of_pid pid in
-    Spinlock.lock p.Proc_.rdzlock;
-    (match p.Proc_.state, p.Proc_.rdz with
-    | Proc_.Wakeme, Some r when r == rdz -> ()
+    Spinlock.lock p.rdzlock;
+    (match p.state, p.rdz with
+    | Process_.Wakeme, Some r when r == rdz -> ()
     | _ -> 
       failwith "wakeup: inconsistency";
     );
     rdz.p <- None;
-    p.Proc_.rdz <- None;
+    p.rdz <- None;
     Scheduler.ready p;
-    Spinlock.unlock p.Proc_.rdzlock;
+    Spinlock.unlock p.rdzlock;
   );
   Spinlock.unlock rdz.l;
   optp

@@ -1,9 +1,15 @@
 open Common
-open Keyboard
 
-module W = Window
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Reads from the keyboard and sends the key to the "current" window *)
 
-let thread kbd =
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+let thread (kbd : Keyboard.ctl) =
   (* less: threadsetname *)
 
   while true do
@@ -15,7 +21,7 @@ let thread kbd =
      *  - use double array of keys so can send and then receive without
      *    losing anything?
     *)
-    Globals.win () |> Option.iter (fun win ->
-      Event.send win.W.chan_keyboard key |> Event.sync
+    Globals.win () |> Option.iter (fun (win : Window.t) ->
+      Event.send win.chan_keyboard key |> Event.sync
     )
   done

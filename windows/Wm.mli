@@ -2,7 +2,8 @@
 (* main wm actions *)
 
 val new_win:
-  Image.t -> string -> string array -> string(*TODO: Fath.t*) option ->
+  Image.t -> string (* cmd *) -> string array (* argv *) ->
+  string(*TODO: Fath.t*) option ->
   (Mouse.ctl * Fileserver.t * Font.t) ->
   unit
 val close_win:

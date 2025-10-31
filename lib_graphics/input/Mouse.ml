@@ -160,15 +160,15 @@ let init (_caps : < Cap.mouse; ..>) =
       (Unix.error_message err) cmd arg)
 
 
-let receive ctl =
+let receive (ctl : ctl) : state Event.event =
   Event.receive ctl.chan
 
-let read ctl =
+let read (ctl : ctl) : state =
   let m = receive ctl |> Event.sync in
   (* ctl.state <- m; *)
   m
 
-let flush_and_read display ctl =
+let flush_and_read (display : Display.t) (ctl : ctl) : state =
   Display.flush display;
   read ctl
 

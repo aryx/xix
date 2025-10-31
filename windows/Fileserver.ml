@@ -1,6 +1,5 @@
 open Common
 
-(* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 

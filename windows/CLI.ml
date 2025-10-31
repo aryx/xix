@@ -35,13 +35,13 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 
   (* Rio, a graphical application *)
 
-  let display = Draw.init caps "Rio" in
-  let view = Draw_rio.get_view display in
-  (* simpler (but does not allow rio under rio in): 
-   *  let view = display.I.image 
+  let display : Display.t = Draw.init caps "orio" in
+  (* alt: simpler (but does not allow rio under rio in): 
+   * let view = display.image in
+   * less: let viewr save?
    *)
-  (* less: let viewr save? *)
-  let font = Font_default.load_default_font display in
+  let view : Image.t = Draw_rio.get_view display in
+  let font : Font.t = Font_default.load_default_font display in
 
   if !Globals.debug_draw
   then Display.debug display;
@@ -51,12 +51,12 @@ let thread_main (caps: < caps; .. >) : Exit.t =
   Globals.title_color       := Image.alloc_color display Color.greygreen;
   Globals.title_color_light := Image.alloc_color display Color.palegreygreen;
 
-  let desktop = Baselayer.alloc view background in
+  let desktop : Baselayer.t = Baselayer.alloc view background in
 
   let mouse : Mouse.ctl = Mouse.init caps in
   let kbd : Keyboard.ctl = Keyboard.init caps in
 
-  Draw.draw_color view view.Display.r background;
+  Draw.draw_color view view.r background;
   (* to test: alternative to -test that leverages work done above
   Test.test_display_default_font display view;
   Test.test_display_text display view font;

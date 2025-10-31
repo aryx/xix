@@ -1,9 +1,5 @@
 open Common
 
-open Mouse
-module I = Image
-module W = Window
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -29,7 +25,7 @@ type under_mouse =
 
 (* bind to right-click *)
 let wm_menu (pos : Point.t) button (exitchan : Exit.t Event.channel) 
-    mouse (display, desktop, view, font) fs =
+    (mouse : Mouse.ctl) (display, desktop, view, font) (fs : Fileserver.t) =
   (* todo: set (and later restore) sweeping to true *)
 
   let items = [
@@ -55,9 +51,9 @@ let wm_menu (pos : Point.t) button (exitchan : Exit.t Event.channel)
     "Move", (fun () -> raise Todo);
     "Delete", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
-      wopt |> Option.iter (fun w ->
-        let cmd = W.Delete in
-        Event.send w.W.chan_cmd cmd |> Event.sync;
+      wopt |> Option.iter (fun (w : Window.t) ->
+        let cmd = Window.Delete in
+        Event.send w.chan_cmd cmd |> Event.sync;
       ));
     "Hide", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
@@ -68,9 +64,9 @@ let wm_menu (pos : Point.t) button (exitchan : Exit.t Event.channel)
       Event.send exitchan Exit.OK |> Event.sync;
     );
   ] @
-  (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, w) ->
+  (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, (w : Window.t)) ->
     (* less: could sort by name, or time it was put in hidden hash *)
-    w.W.label, (fun () -> 
+    w.label, (fun () -> 
       Wm.show_win w desktop
     )))
   in
@@ -102,7 +98,7 @@ let thread (exitchan,
       (* todo? race on Globals.win? can change between? need store in local?*)
       let sending_to_win =
         match Globals.win () with
-        | Some w ->
+        | Some (w : Window.t) ->
           (* less: logical coordinates with winput.img.r and winput.screenr *)
           let xy = m.pos in
           (* less: goto scrolling if scroll buttons *)
@@ -110,25 +106,25 @@ let thread (exitchan,
           (* todo: set scrolling *)
           (* todo: set moving *)
           (* less: || scrolling *)
-          inside && (w.W.mouse_opened || m.buttons.left)
+          inside && (w.mouse_opened || m.buttons.left)
         | None -> false
       in
       (match sending_to_win with
       | true ->
         (* could assert that Globals.win() <> None *)
-        Globals.win () |> Option.iter (fun w ->
+        Globals.win () |> Option.iter (fun (w : Window.t) ->
           (if not (Mouse.has_click m)
-          then Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
+          then Wm.corner_cursor_or_window_cursor w m.pos mouse
           (* todo: why if click then not corner cursor? *)
-          else Wm.window_cursor w m.Mouse.pos  mouse
+          else Wm.window_cursor w m.pos  mouse
           );
           (* less: send logical coordinates *)
-          Event.send w.W.chan_mouse m |> Event.sync
+          Event.send w.chan_mouse m |> Event.sync
         )
       | false ->
         let wopt = Globals.window_at_point m.pos in
         (match wopt with
-        | Some w -> Wm.corner_cursor_or_window_cursor w m.Mouse.pos mouse
+        | Some w -> Wm.corner_cursor_or_window_cursor w m.pos mouse
         | None -> Mouse.reset_cursor mouse
         );
         (* todo: if moving and buttons *)
@@ -146,7 +142,7 @@ let thread (exitchan,
           (match under_mouse, m.buttons with
           (* TODO: remove; just because hard to right click on QEMU and laptop*)
           | Nothing , { left = true; _ } ->
-            wm_menu m.Mouse.pos Mouse.Left exitchan 
+            wm_menu m.pos Mouse.Left exitchan 
               mouse (display, desktop, view, font) fs
 
 
@@ -155,12 +151,12 @@ let thread (exitchan,
 
           | Nothing,  { middle = true; _ } ->
              middle_click_system m mouse
-          | CurrentWin w, { middle = true; _ } ->
-            if not w.W.mouse_opened
+          | CurrentWin (w : Window.t), { middle = true; _ } ->
+            if not w.mouse_opened
             then middle_click_system m mouse
 
           | (Nothing | CurrentWin _), { right = true; _ } ->
-            wm_menu m.Mouse.pos Mouse.Right exitchan 
+            wm_menu m.pos Mouse.Right exitchan 
               mouse (display, desktop, view, font) fs
 
           | OtherWin w, { left = true; _ } ->

@@ -31,7 +31,7 @@ let parse_header str =
 
 end
 
-let syscall_exec cmd _args =
+let syscall_exec (cmd : string) _args =
   let up = Globals.up () in
 
   (* big call *)

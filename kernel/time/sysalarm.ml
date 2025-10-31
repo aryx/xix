@@ -2,7 +2,7 @@ open Common
 open Types
 open Alarms
 
-let syscall_alarm ms_opt =
+let syscall_alarm (ms_opt : Types.t_ms option) =
   let up = Globals.up () in
   (* less: use cpu0? why *)
   let cpu = Globals.cpu () in

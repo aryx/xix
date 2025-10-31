@@ -2,7 +2,7 @@ open Common
 open Types
 open User_memory (* for operators @<, @-, etc *)
 
-let change_segment_top addr section =
+let change_segment_top (addr : user_addr) (section : Process_.section) =
   let up : Process_.t = Globals.up () in
   let seg : Segment_.t =
     try Hashtbl.find up.seg section
@@ -44,6 +44,6 @@ let change_segment_top addr section =
   )
 
 (* brk means?  *)
-let syscall_brk addr =
+let syscall_brk (addr : user_addr) : unit =
   (* less: allow addr_opt and None where return base? useful? *)
   change_segment_top addr Process_.SBss

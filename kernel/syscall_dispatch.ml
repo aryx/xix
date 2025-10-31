@@ -44,5 +44,5 @@ let dispatch syscall =
     * and do like in ocaml
     *)
    | exn -> 
-     Common2.print ("unexpected exception");
+     Print.print "unexpected exception";
      raise exn

@@ -11,7 +11,7 @@ let alloc kind base nb_pages =
   let top = match base with VU x -> VU (x + nb_pages * Memory.pg2by) in
   let pgdir_size = 
     (* each pgdir entry will have pagetab_size pgtab entries *)
-    Common2.roundup nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
+    Int_.roundup nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
   in
   { 
     kind = kind;

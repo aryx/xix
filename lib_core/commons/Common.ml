@@ -87,6 +87,41 @@ let rec rnd x v =
   then x
   else rnd (x+1) v
 
+(* found on stack overflow *)
+let is_power_of_2 x =
+  x <> 0 && 
+  x land (x - 1) = 0 
+
+(* a bit brute force ... *)
+let log2h = Hashtbl.create 32
+let _ = 
+  Hashtbl.add log2h 0 0;
+  Hashtbl.add log2h 2 1;
+  Hashtbl.add log2h 4 2;
+  Hashtbl.add log2h 8 3;
+  Hashtbl.add log2h 16 4;
+  Hashtbl.add log2h 32 5;
+  Hashtbl.add log2h 64 6;
+  Hashtbl.add log2h 128 7;
+  Hashtbl.add log2h 256 8;
+  Hashtbl.add log2h 512 9;
+  Hashtbl.add log2h 1024 10;
+  Hashtbl.add log2h 2048 11;
+  Hashtbl.add log2h 4096 12;
+  Hashtbl.add log2h 8192 13;
+  (* todo: more *)
+  ()
+
+let log2 x =
+  try 
+    Hashtbl.find log2h x
+  with Not_found -> failwith (spf "log2: %d is not a power of 2" x)
+
+let roundup x pow2 =
+  assert (is_power_of_2 pow2);
+  (x + (pow2 - 1)) land (lnot (pow2 - 1))
+(*TODO! let _ = assert(round_up 2045 1024 = 3072) *)
+
 end
 
 module String_ = struct

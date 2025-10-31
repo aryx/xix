@@ -39,6 +39,9 @@ type int64 = int
 module Int_ :
   sig
     val rnd: int -> int -> int
+
+    val log2: int -> int
+    val roundup: int -> int (* power of 2 *) -> int
   end
 
 module String_ :

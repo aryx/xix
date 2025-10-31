@@ -12,7 +12,7 @@ let mb = 1024 * 1024 (* 1048576 *)
 let gb = 1024 * 1024 * 1024 (* 1073741824 *)
 
 let pg2by = Arch.pg2by
-let pgshift = Common2.log2 pg2by
+let pgshift = Int_.log2 pg2by
 
 (* general constants *)
 let kzero = VK Arch.kzero

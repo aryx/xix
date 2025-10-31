@@ -16,7 +16,7 @@ let (@+) (VU a) b =
 
 
 let roundup_page (VU addr) = 
-  VU (Common2.roundup addr Memory.pg2by)
+  VU (Int_.roundup addr Memory.pg2by)
 
 
 let ok_addr_range _addr _len _write =

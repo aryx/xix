@@ -9,7 +9,7 @@ open Types
  *)
 type t = {
   hold: bool ref;
-  mutable saved_spl: Spl.prio;
+  mutable saved_spl: Spl_.prio;
 
   (* less: debugging fields
    * pc: kern_addr;

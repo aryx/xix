@@ -1,4 +1,4 @@
 open Common
 
 let syscall_nop () =
-  print "Hello World!\n"
+  Common2.print "Hello World!\n"

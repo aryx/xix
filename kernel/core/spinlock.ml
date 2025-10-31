@@ -68,9 +68,9 @@ let canlock x =
 (* so nice compared to C *)
 let with_lock f x =
   lock x;
-  Common.finalize f (fun () ->
+  Fun.protect ~finally:(fun () ->
     unlock x
-  )
+  ) f
 
 
 let alloc () = 

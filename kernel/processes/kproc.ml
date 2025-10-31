@@ -5,7 +5,7 @@ open Proc_
 (* todo: can call files/chan.ml from here? *)
 module Chan = struct
 let share chan =
-  Ref.inc chan.Chan_.refcnt; 
+  Ref.inc chan.Chan_.refcnt |> ignore; 
   chan
 end
 
@@ -17,7 +17,7 @@ let kproc name f =
   let up = Globals.up () in
 
   (* I prefer to inline Proc.alloc () here *)
-  let pid = Counter.gen Proc.pidcounter in
+  let pid = Counter.gen Process.pidcounter in
   let p = {
     pid = pid;
     state = Scheding;
@@ -52,7 +52,7 @@ let kproc name f =
   }
   in
   (* as in Proc.alloc() *)
-  Proc.hash p;
+  Process.hash p;
 
   (* todo: arch_kprocchild *)
   !Hooks.Scheduler.ready pid

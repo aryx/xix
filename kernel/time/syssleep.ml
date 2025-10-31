@@ -15,7 +15,7 @@ let syscall_sleep ms =
       then Time.tick_to_ms 1
       else ms
     in
-    let up = Globals.up () in
+    let _up = Globals.up () in
     (* less: opti: reuse up.sleep_rdz instead of alloc each time? more complex*)
     let rdz = Rendez.alloc () in
     Time_rendez.sleep rdz (fun _ -> false) ms

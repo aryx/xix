@@ -12,7 +12,7 @@ let mb = 1024 * 1024 (* 1048576 *)
 let gb = 1024 * 1024 * 1024 (* 1073741824 *)
 
 let pg2by = Arch.pg2by
-let pgshift = log2 pg2by
+let pgshift = Common2.log2 pg2by
 
 (* general constants *)
 let kzero = VK Arch.kzero
@@ -25,8 +25,8 @@ let ustktop = VU 0x2000000
 let ustksize = 8 * mb
 
 (* mv in arch.ml? *)
-let virt_to_phys x =
+let virt_to_phys _x =
   raise Todo
 
-let phys_to_virt x =
+let phys_to_virt _x =
   raise Todo

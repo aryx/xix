@@ -22,7 +22,7 @@ let tick_to_ms tk =
 let ms_to_tick ms =
   (ms * Arch.hz + 500) / 1000
 
-let ns_to_fastticks ns =
+let ns_to_fastticks _ns =
   raise Todo
 
 let ms_to_ns ms =

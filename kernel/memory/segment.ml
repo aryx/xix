@@ -11,7 +11,7 @@ let alloc kind base nb_pages =
   let top = match base with VU x -> VU (x + nb_pages * Memory.pg2by) in
   let pgdir_size = 
     (* each pgdir entry will have pagetab_size pgtab entries *)
-    Common.roundup nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
+    Common2.roundup nb_pages Pagetable_.pagetab_size / Pagetable_.pagetab_size
   in
   { 
     kind = kind;
@@ -28,7 +28,7 @@ let free seg =
   then begin
     Qlock.lock seg.ql;
     seg.pagedir |> Array.iter (fun pagedir ->
-      pagedir |> Common.if_some (fun pagetable ->
+      pagedir |> Option.iter (fun pagetable ->
         Pagetable.free pagetable;
       );
     );
@@ -74,13 +74,13 @@ let add_page_to_segment page seg =
 
 
 let really_share seg =
-  Ref.inc seg.refcnt;
+  Ref.inc seg.refcnt |> ignore;
   seg
 
 let really_copy oldseg =
   let seg = alloc oldseg.kind oldseg.base oldseg.nb_pages in
   oldseg.pagedir |> Array.iteri (fun i x ->
-    x |> Common.if_some (fun pt -> 
+    x |> Option.iter (fun pt -> 
       seg.pagedir.(i) <- Some (Pagetable.copy pt)
   )
   );

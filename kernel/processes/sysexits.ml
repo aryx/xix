@@ -16,9 +16,9 @@ let syscall_exits str =
   then Error.panic ("boot process died: " ^ str);
 
   (* exit/await and my parent *)
-  up.parent |> Common.if_some (fun parent_pid ->
+  up.parent |> Option.iter (fun parent_pid ->
    try 
-    let parent = Proc.proc_of_pid parent_pid in
+    let parent = Process.proc_of_pid parent_pid in
     (* note that in between maybe the parent exited and so we may have
      * a reference to a dead parent. Still, the GC should not have
      * collected it yet so we can still use lock on it.
@@ -54,7 +54,7 @@ let syscall_exits str =
   (* exit/await and my (orphan) children *)
   Spinlock.lock up.childlock;
   (* so my children will not find me anymore *)
-  Proc.unhash up;
+  Process.unhash up;
   (* todo: why need that? who waits for me ? for /proc/x/wait/ *)
   (* Hook.Scheduler.wakeup () (* todo: up.waitr *);
   *)
@@ -70,7 +70,7 @@ let syscall_exits str =
   !hooks |> List.iter (fun f -> f up);
 
   (* todo: why need that?? coupling with sched *)
-  Spinlock.lock Proc.allocator.Proc.l;
+  Spinlock.lock Process.allocator.Process.l;
   Spinlock.lock Page.allocator.Page.l;
 
   up.state <- Proc_.Moribund;

@@ -63,6 +63,6 @@ let canlock q =
 (* so much better than those waserror/nexterror/poperror in C *)
 let with_lock f x =
   lock x;
-  Common.finalize f (fun () ->
+  Fun.protect f ~finally:(fun () ->
     unlock x
   )

@@ -2,6 +2,14 @@ open Common
 open Types
 open Rendez_
 
+let thread_wakeup _ = 
+  let _ = failwith "TODO" in
+  ()
+
+let thread_sleep _ = 
+  let _ = failwith "TODO" in
+  ()
+
 let alloc () = {
   p = None;
   l = Spinlock.alloc ();
@@ -36,11 +44,12 @@ let sleep rdz fcond =
     (* similar to Scheduler.sched () but with extra unlocks *)
        (* less: arch_procsave hooks *)
        let cpu = Globals.cpu () in
-       Thread.critical_section := true;
-       Thread.wakeup cpu.Cpu.thread;
+       (* XXX: Thread.critical_section := true; *)
+       Logs.err (fun m -> m "TODO: critical_section");
+       thread_wakeup cpu.Cpu.thread;
     Spinlock.unlock up.Proc_.rdzlock;
     Spinlock.unlock rdz.l;
-       Thread.sleep (); (* reset Thread.critical_section *)
+       thread_sleep (); (* reset Thread.critical_section *)
        (* less: arch_procrestore *)
        (* todo: spllo *)
      (* stricter: *)
@@ -52,8 +61,8 @@ let wakeup rdz =
   (* todo: splhi/splx *)
   Spinlock.lock rdz.l;
   let optp = rdz.p in
-  optp |> Common.if_some (fun pid ->
-    let p = Proc.proc_of_pid pid in
+  optp |> Option.iter (fun pid ->
+    let p = Process.proc_of_pid pid in
     Spinlock.lock p.Proc_.rdzlock;
     (match p.Proc_.state, p.Proc_.rdz with
     | Proc_.Wakeme, Some r when r == rdz -> ()

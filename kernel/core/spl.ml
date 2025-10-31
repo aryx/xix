@@ -12,8 +12,9 @@ let high () =
 let low () =
   raise Todo
 
-let set prio =
-  raise Todo
+let set _prio =
+  Logs.err (fun m -> m "TODO: spl.set")
+  (* raise Todo *)
 
 let is_low () =
   raise Todo

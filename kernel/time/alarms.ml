@@ -22,12 +22,14 @@ let alarms = {
 let rendez = 
   Rendez.alloc ()
 
-let del_proc p =
+let del_proc _p =
   assert(not (Qlock.canlock alarms.ql));
   (* todo: remove sorted list *)
-  raise Todo
+  let _ = raise Todo in
+  ()
 
-let add_proc p when_ =
+let add_proc _p _when_ =
   assert(not (Qlock.canlock alarms.ql));
   (* todo: insert sorted list *)
-  raise Todo
+  let _ = raise Todo in
+  ()

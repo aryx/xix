@@ -28,7 +28,7 @@ let change_segment_top addr section =
       then Error.error Error.Enovmem;
 
       let new_pgdir_size = 
-        Common.roundup new_nb_pages Pagetable_.pagetab_size 
+        Common2.roundup new_nb_pages Pagetable_.pagetab_size 
         / Pagetable_.pagetab_size
       in
       let old_pgdir_size = Array.length seg.Segment_.pagedir in

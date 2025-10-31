@@ -2,7 +2,7 @@ open Common
 open Types
 
 let sleep rdz fcond ms =
-  let up = Globals.up () in
+  let _up = Globals.up () in
 
   (* less: used to have a Proc_.timer option, but simpler allocate each time.
    * anyway, how can do double sleep? or exits while sleeping?

@@ -13,7 +13,7 @@ let alloc mode ns f =
     l = Ilock.alloc ();
   }
 
-let add timer xs =
+let add timer _xs =
   (* less: assert timer is locked? *)
   assert (timer.cpu = None);
 
@@ -32,6 +32,6 @@ let add timer xs =
   (* insert in sorted list *)
   raise Todo
 
-let del timer xs =
+let del _timer _xs =
   (* less: assert timer is locked? *)
   raise Todo

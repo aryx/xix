@@ -5,18 +5,18 @@ open Proc_
 (* todo: can call files/chan.ml from here? *)
 module Chan = struct
 let share chan =
-  Ref.inc chan.Chan_.refcnt; 
+  Ref.inc chan.Chan_.refcnt |> ignore; 
   chan
 end
 
 
 let syscall_rfork flags =
   match flags with
-  | Syscall.Fork (fork_flags, flags) ->
+  | Syscall.Fork (fork_flags, _flags) ->
     let up = Globals.up () in
 
     (* I prefer to inline Proc.alloc () here *)
-    let pid = Counter.gen Proc.pidcounter in
+    let pid = Counter.gen Process.pidcounter in
 
     let seg = Hashtbl.create 10 in
     let p = {
@@ -78,7 +78,7 @@ let syscall_rfork flags =
     }
     in
     (* as in Proc.alloc() *)
-    Proc.hash p;
+    Process.hash p;
 
     if fork_flags.Syscall.wait_child
     then up.childlock |> Spinlock.with_lock (fun () ->
@@ -90,6 +90,6 @@ let syscall_rfork flags =
     !Hooks.Scheduler.sched ();
     Some pid
 
-  | Syscall.NoFork (flags) -> 
-    let up = Globals.up () in
+  | Syscall.NoFork _flags -> 
+    let _up = Globals.up () in
     raise Todo

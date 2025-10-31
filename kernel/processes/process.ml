@@ -94,5 +94,5 @@ let alloc () =
  * schedinit really frees!
  * todo: pidunhash and let the Gc do its job?
  *)
-let free p =
+let free _p =
   raise Todo

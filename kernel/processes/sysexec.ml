@@ -31,12 +31,12 @@ let parse_header str =
 
 end
 
-let syscall_exec cmd args =
+let syscall_exec cmd _args =
   let up = Globals.up () in
 
   (* big call *)
   let chan = !Hooks.Chan.chan_of_filename cmd in
-  (fun () -> !Hooks.Chan.close chan) |> Common.finalize (fun () ->
+  Fun.protect ~finally:(fun () -> !Hooks.Chan.close chan) (fun () ->
 
     let dev = !Globals.devtab.(chan.Chan_.chantype) in
     let buf = String.make A_out.sizeof_header ' ' in
@@ -82,7 +82,7 @@ let syscall_exec cmd args =
     (* todo: build args *)
 
     (* free old segments *)
-    up.seg |> Hashtbl.iter (fun section s ->
+    up.seg |> Hashtbl.iter (fun _section s ->
         (* less: do not free special segments?
          * less: what about seglock?
          *)
@@ -113,7 +113,8 @@ let syscall_exec cmd args =
     (* todo: stack segment, stack segment relocation *)
 
     (* todo: arch_flushmmu, arch_procsetup, arch_execregs *)
-    raise Todo
+    let _ = raise Todo in
+    ()
 
    )
 

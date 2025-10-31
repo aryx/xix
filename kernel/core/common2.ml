@@ -1,7 +1,4 @@
-(* TODO: reuse plan9-ml/commons/common.ml at some point *)
-
-(* available since ocaml 4.01 but we use 1.07 (ocaml light) for the kernel *)
-let (|>) o f = f o
+open Common
 
 (* We could use print_string below, but it requires some hacks to make
  * it work in a kernel context. Indeed, there is not really a
@@ -9,17 +6,8 @@ let (|>) o f = f o
  * to a specific external C function (e.g., screenputs C).
  *)
 let (_print: (string -> unit) ref) = 
-  ref (fun s -> failwith "Common._print not defined")
+  ref (fun _s -> failwith "Common._print not defined")
 let print s = !_print s
-
-let spf = Printf.sprintf
-
-let if_some f = function
-  | None -> ()
-  | Some x -> f x
-
-exception Todo
-exception Impossible of string
 
 (* found on stack overflow *)
 let is_power_of_2 x =
@@ -56,13 +44,3 @@ let roundup x pow2 =
   (x + (pow2 - 1)) land (lnot (pow2 - 1))
 
 (*TODO! let _ = assert(round_up 2045 1024 = 3072) *)
-
-(* useful for the with_lock functions! no need waserror/nexterror/poperror *)
-let finalize f cleanup =
-  try
-    let res = f () in
-    cleanup ();
-    res
-  with e ->
-    cleanup ();
-    raise e

@@ -1,10 +1,10 @@
 open Common
 open Types
 
-let kmap page =
+let kmap _page =
   raise Todo
 
-let kunmap page =
+let kunmap _page =
   raise Todo
 
 (* less: let va k = ... ? 
@@ -12,6 +12,7 @@ let kunmap page =
  * clearer interface and no need VA(k) as in C?
  *)
 
-let memclear ka size =
-  raise Todo
+let memclear _ka _size =
+  Logs.err (fun m -> m "TODO: Kernel_memory.memclean")
+  (*raise Todo*)
 

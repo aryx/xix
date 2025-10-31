@@ -2,6 +2,14 @@ open Common
 open Types
 open Scheduler_
 
+let thread_wakeup _ = 
+  let _ = failwith "TODO" in
+  ()
+
+let thread_sleep _ = 
+  let _ = failwith "TODO" in
+  ()
+
 type runq = {
   (* use pid? *)
   queues: (Proc_.t Queue.t) array; (* length = Scheduler_.nb_priorities *)
@@ -72,7 +80,8 @@ let find_proc () =
       done;
       (* nothing found?? *)
       Spinlock.unlock runq.l;
-      failwith "todo: idlehands"
+      let _ = failwith "todo: idlehands" in
+      ()
     done;
     raise (Impossible "while infinite loop can exit only through raise")
   with Found prio ->
@@ -105,10 +114,11 @@ let sched () =
   (* todo: delaysched and nlocks (and adjust unlocks to call sched sometimes *)
 
   (* less: arch_procsave hooks *)
-  Thread.critical_section := true;
+  (* XXX Thread.critical_section := true; *)
+  Logs.err (fun m -> m "TODO: Thread.critical_section");
   let cpu = Globals.cpu () in
-  Thread.wakeup cpu.Cpu.thread;
-  Thread.sleep (); (* reset Thread.critical_section *)
+  thread_wakeup cpu.Cpu.thread;
+  thread_sleep (); (* reset Thread.critical_section *)
   (* less: arch_procrestore *)
   (* todo: spllo *)
   ()
@@ -128,7 +138,8 @@ let scheduler () =
  let cpu = Globals.cpu () in
  assert (Thread.id (Thread.self ()) = Thread.id (cpu.Cpu.thread));
  while true do 
-  Thread.critical_section := true;
+  (*Thread.critical_section := true;*)
+  Logs.err (fun m -> m "TODO: Thread.critical_section");
   (* less: assert splhi? *)
   (* less: check ilockdepth  *)
   let up = Globals.up () in
@@ -155,8 +166,8 @@ let scheduler () =
   (* less: up.Proc_.cpu <- cpu.id *)
 
   (* todo: mmuswitch *)
-  Thread.wakeup up.Proc_.thread;
-  Thread.sleep () (* reset Thread.critical_section *)
+  thread_wakeup up.Proc_.thread;
+  thread_sleep () (* reset Thread.critical_section *)
  done
 
 (* not super useful *)

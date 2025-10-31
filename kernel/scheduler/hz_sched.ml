@@ -13,7 +13,7 @@ let hz_sched () =
   then begin
     (* less: cpu.readied <- None; *)
     (* todo? why not call sched() instead? *)
-    let up = Globals.up () in
+    let _up = Globals.up () in
     (* TODO: up.Proc_.delay_sched <- up.Proc_.delay_sched + 1; *)
     raise Todo
   end

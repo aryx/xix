@@ -72,10 +72,11 @@ let fastticks () =
 
 let timerset next =
   let now = fastticks () in
-  let period = next - now in
+  let _period = next - now in
   (* less: sanitize period *)
   (* set timer counter *)
-  raise Todo
+  let _ = raise Todo in
+  ()
 
 let us () =
   raise Todo

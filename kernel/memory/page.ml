@@ -51,7 +51,7 @@ let chain_free_head p =
   ()
 
 (* todo: when need that? *)
-let chain_free_tail p =
+let chain_free_tail _p =
   raise Todo
 
 (* todo: should be swapalloc.highwater *)
@@ -112,7 +112,7 @@ let free p =
 
 
 (* init the allocator *)
-let init_allocator xs =
+let init_allocator _xs =
   raise Todo
 
 

@@ -23,9 +23,12 @@ let dispatch syscall =
 
   | R.Exits str ->
     (* no return from here ... *)
-    Sysexits.syscall_exits str; A.Void
+    let _ = Sysexits.syscall_exits str in
+    (* should never reach here *)
+    A.Void
 
-  | R.Sleep ms -> Syssleep.syscall_sleep ms; A.Void
+  | R.Sleep ms -> 
+       Syssleep.syscall_sleep ms; A.Void
   | R.Alarm ms -> 
     let old_remaining = Sysalarm.syscall_alarm ms in 
     A.Alarm old_remaining
@@ -41,5 +44,5 @@ let dispatch syscall =
     * and do like in ocaml
     *)
    | exn -> 
-     print ("unexpected exception");
+     Common2.print ("unexpected exception");
      raise exn

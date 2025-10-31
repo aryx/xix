@@ -23,7 +23,7 @@ let add timer =
   Ilock.lock timer.Timer_.l;
 
   (* stricter? allow to have timer already active *)
-  timer.Timer_.cpu |> Common.if_some (fun cpuid ->
+  timer.Timer_.cpu |> Option.iter (fun _cpuid ->
     (* timerdel? but then should call arch_timerset somewhere?
      * or assert cpuid = cpu.id?
      * or ok if timer occurs anyway; it will do not trigger any callback.
@@ -36,7 +36,7 @@ let add timer =
   let timers = cpus_timers.(cpu.Cpu.id) in
   Ilock.lock timers.l;
   let (xs, new_head) = Timer.add timer timers.elts in
-  new_head |> Common.if_some (fun fasttk ->
+  new_head |> Option.iter (fun fasttk ->
     Arch.timerset fasttk
   );
   timer.Timer_.cpu <- Some cpu.Cpu.id;
@@ -57,7 +57,7 @@ let del timer =
      * because timer_interrupt removed it?
      *)
     let (xs, new_head) = Timer.del timer timers.elts in
-    new_head |> Common.if_some (fun fasttk ->
+    new_head |> Option.iter (fun fasttk ->
       let cpu = Globals.cpu () in
       if cpuid = cpu.Cpu.id
       then Arch.timerset fasttk
@@ -93,7 +93,7 @@ let add_clock0_periodic_timer f ms =
   let timers = cpus_timers.(0) in
   Ilock.lock timers.l;
   let (xs, new_head) = Timer.add timer timers.elts in
-  new_head |> Common.if_some (fun fasttk ->
+  new_head |> Option.iter (fun fasttk ->
     Arch.timerset fasttk
   );
   timer.Timer_.cpu <- Some 0;

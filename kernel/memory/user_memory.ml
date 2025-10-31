@@ -16,18 +16,18 @@ let (@+) (VU a) b =
 
 
 let roundup_page (VU addr) = 
-  VU (Common.roundup addr Memory.pg2by)
+  VU (Common2.roundup addr Memory.pg2by)
 
 
-let ok_addr_range addr len write =
+let ok_addr_range _addr _len _write =
   (* less: every sections are writable for now. Just need
    * extra check and a Segment_.readonly for Kimage?
    *)
   (* todo: use Proc_segment.segment_of_addr *)
   raise Todo
 
-let valid_addr_range addr len write =
+let valid_addr_range _addr _len _write =
   raise Todo
 
-let memchr x =
+let memchr _x =
   raise Todo

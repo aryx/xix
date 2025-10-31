@@ -15,7 +15,7 @@ let free pt =
   if pt.first < pagetab_size
   then 
     for i = pt.first to pt.last do
-      pt.pagetab.(i) |> Common.if_some (fun p -> Page.free p);
+      pt.pagetab.(i) |> Option.iter Page.free;
     done
 
 (* actually share the pages, but create a fresh pagetable so when fault,
@@ -29,7 +29,7 @@ let copy pt_old =
   if pt_new.first < pagetab_size
   then begin
     for i = pt_new.first to pt_new.last do
-      pt_old.pagetab.(i) |> Common.if_some (fun p -> 
+      pt_old.pagetab.(i) |> Option.iter (fun p -> 
         pt_new.pagetab.(i) <- Some (Page.share p);
       );
     done

@@ -1,0 +1,16 @@
+(library
+ (name xix_kernel)
+ (wrapped false)
+ (libraries
+    stdcompat
+    threads
+
+    xix_commons
+
+    xix_kernel_core
+    xix_kernel_memory
+    xix_kernel_processes
+    xix_kernel_time
+  )
+ (preprocess (pps ppx_deriving.show))
+)

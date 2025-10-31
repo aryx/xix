@@ -84,7 +84,7 @@ local cap_rules = [
     paths: {
       exclude: ['threadUnix.ml',
 	        'Filename.ml', # for Sys.getenv TMPDIR
-		'windows/wm.ml', 'windows/processes_winshell.ml',
+		'windows/Wm.ml', 'windows/Processes_winshell.ml',
 		] + exclude_dirs,
     },
   },
@@ -129,7 +129,7 @@ local cap_rules = [
     |||,
     paths: {
       exclude: [
-         'lib_core/commons_plan9/', 'lib_graphics/draw/draw_rio.ml',
+         'lib_core/commons_plan9/', 'lib_graphics/draw/Draw_rio.ml',
       ] + exclude_dirs,
     },
   },

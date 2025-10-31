@@ -1,4 +1,4 @@
-(* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -17,10 +17,21 @@ open Common
  *  - need to disable preempt?
  *)
 
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+(* Need: see .mli *)
+type caps = < Cap.open_in >
+
 let usage = 
   "usage: rio [options]"
 
-let thread_main () =
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+let thread_main (_caps: < caps; .. >) : Exit.t =
 
   (* Rio, a graphical application *)
 
@@ -81,8 +92,15 @@ let thread_main () =
   (* todo: kill all threads? done when do exit no? *)
   exit exit_code
     
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
 
-let main () =
+let main (caps : < caps; ..>) (argv : string array) : Exit.t =
+
+  let backtrace = ref false in
+  let level = ref (Some Logs.Warning) in
+
   let options = (*todo: Arg.align*) [
     "-s", Arg.Unit (fun () -> raise Todo),
     " ";
@@ -103,5 +121,26 @@ let main () =
     " ";
   ] |> Arg.align
   in
-  Arg.parse options (fun _ -> Arg.usage options usage) usage;
-  thread_main ()
+  (try
+    Arg.parse_argv argv options
+      (fun _f -> Arg.usage options usage) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
+
+  try 
+    (* the main call *)
+    thread_main caps
+  with exn ->
+      if !backtrace
+      then raise exn
+      else 
+        (match exn with
+        | Failure s ->
+              Logs.err (fun m -> m "%s" s);
+              Exit.Code 1
+        | _ -> raise exn
+        )

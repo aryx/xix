@@ -1,8 +1,10 @@
+(* Raw keyboard device interaction *)
 
 type key = Rune.t
 
 type ctl = {
   chan: key (* less: buffer 20? *) Event.channel;
+
   (* /dev/cons *)
   fd: Unix.file_descr;
   (* /dev/consctl *)
@@ -12,6 +14,6 @@ type ctl = {
 (* will create a keyboard thread reading ctl.fd and sending keys on
  * ctl.chan
  *)
-val init: unit -> ctl
+val init: <Cap.keyboard; ..> -> ctl
 
 val receive: ctl -> key Event.event

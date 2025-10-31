@@ -28,9 +28,9 @@ let bp_op _op =
 (*****************************************************************************)
 
 (* less: errorfn? fontname? *)
-let init _label =
+let init (caps : < Cap.draw; ..>) _label =
   (* less: sanity check /dev/draw/new exists and bind("#i", "/dev") *)
-  let display = Display.init () in
+  let display = Display.init caps in
   (* I prefer to do the allocimage here *)
   display.D.white <- 
     Image.alloc display (Rectangle.r 0 0 1 1) Channel.grey1 true Color.white;

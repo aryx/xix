@@ -4,7 +4,6 @@ open Regexp_.Operators
 
 open Point
 
-(* todo: delete once threadUnix is not needed anymore *)
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 
@@ -88,11 +87,11 @@ let int_of_buttons buttons =
 (*****************************************************************************)
 
 type ctl = {
-  (* /dev/mouse *)
-  fd: Unix1.file_descr;
   (* streams of mouse events that can be received from thread_mouse below *)
   chan: state Event.channel;
 
+  (* /dev/mouse *)
+  fd: Unix1.file_descr;
   (* /dev/cursor *)
   cursor_fd: Unix1.file_descr;
   (* todo: resize_chan: unit Event.channel; *) 
@@ -145,7 +144,7 @@ let thread_mouse ctl =
 
 
 (* less: take image parameter? *)
-let init () =
+let init (_caps : < Cap.mouse; ..>) =
   try 
    let (chan: state Event.channel) = Event.new_channel () in
    let fd        = Unix1.openfile "/dev/mouse"  [Unix1.O_RDWR] 0o666 in

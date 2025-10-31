@@ -18,6 +18,11 @@ module Console_ : sig
   type stdout
   type stderr
   (* logs are an "ambient" authority though *)
+
+  (* plan9 caps *)
+  type draw
+  type keyboard
+  type mouse
 end
 
 module Process : sig
@@ -70,7 +75,10 @@ end
 type stdin = < stdin : Console_.stdin >
 type stdout = < stdout : Console_.stdout >
 type stderr = < stderr : Console_.stderr >
-type console = < stdin ; stdout ; stderr >
+type draw = < draw : Console_.draw >
+type keyboard = < keyboard : Console_.keyboard >
+type mouse = < mouse : Console_.mouse >
+type console = < stdin ; stdout ; stderr; draw; keyboard; mouse >
 
 (* process *)
 type argv = < argv : Process.argv >
@@ -85,7 +93,7 @@ type wait = < wait : Process.wait >
 type kill = < kill : Process.kill >
 type process_multi = < fork; wait; kill >
 type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir >
-type process = < argv ; env; console ; process_single ; process_multi >
+type process = < argv ; env; process_single ; process_multi >
 
 (* fs *)
 type readdir = < readdir : FS_.readdir >
@@ -110,7 +118,8 @@ type misc = < random >
 
 (* alt: called "Stdenv.Base.env" in EIO *)
 type all_caps =
-  < process
+  < console
+  ; process
   ; fs
   ; exec (* exec is a mix of fs and process_multi as it requires both *)
   ; network

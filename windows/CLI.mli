@@ -1,9 +1,10 @@
 (* Need:
- * - open_in for ?
+ * - draw/mouse/keyboard because rio multiplexes access to those devices
  *)
-type caps = < Cap.open_in >
+type caps = < Cap.draw; Cap.mouse; Cap.keyboard >
 
 (* entry point (can also raise Exit.ExitCode) *)
 val main: <caps; ..> -> string array -> Exit.t
 
-(* main algorithm ? *)
+(* main thread which will itself create mouse/keyboard/fs/... threads *)
+val thread_main: < caps; ..> -> Exit.t

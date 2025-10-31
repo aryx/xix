@@ -22,7 +22,7 @@ open Common
 (*****************************************************************************)
 
 (* Need: see .mli *)
-type caps = < Cap.open_in >
+type caps = < Cap.draw; Cap.mouse; Cap.keyboard >
 
 let usage = 
   "usage: rio [options]"
@@ -31,11 +31,11 @@ let usage =
 (* Main algorithm *)
 (*****************************************************************************)
 
-let thread_main (_caps: < caps; .. >) : Exit.t =
+let thread_main (caps: < caps; .. >) : Exit.t =
 
   (* Rio, a graphical application *)
 
-  let display = Draw.init "Rio" in
+  let display = Draw.init caps "Rio" in
   let view = Draw_rio.get_view display in
   (* simpler (but does not allow rio under rio in): 
    *  let view = display.I.image 
@@ -53,8 +53,8 @@ let thread_main (_caps: < caps; .. >) : Exit.t =
 
   let desktop = Baselayer.alloc view background in
 
-  let mouse : Mouse.ctl = Mouse.init () in
-  let kbd : Keyboard.ctl = Keyboard.init () in
+  let mouse : Mouse.ctl = Mouse.init caps in
+  let kbd : Keyboard.ctl = Keyboard.init caps in
 
   Draw.draw_color view view.Display.r background;
   (* to test: alternative to -test that leverages work done above

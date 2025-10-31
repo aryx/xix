@@ -345,10 +345,10 @@ let repaint_tick term colors =
   
 
 (*****************************************************************************)
-(* entry points *)
+(* Entry points *)
 (*****************************************************************************)
 
-let alloc img font =
+let alloc (img : Image.t) (font : Font.t) : t =
   init_colors img.I.display;
   let r = 
     Rectangle.insetrect (Draw_rio.window_border_size + 1) img.I.r in

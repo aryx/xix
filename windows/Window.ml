@@ -1,7 +1,5 @@
 open Common
 
-module I = Display
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -202,7 +200,8 @@ let pt_on_border pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
 
 
-let alloc img font = 
+(* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)
+let alloc (img : Image.t) (font : Font.t) : t = 
   incr wid_counter;
   incr topped_counter;
 
@@ -213,7 +212,7 @@ let alloc img font =
     label = "<unnamed>";
 
     img = img;
-    screenr = img.I.r;
+    screenr = img.r;
     mouse_cursor = None;
 
     chan_mouse    = Event.new_channel ();
@@ -244,6 +243,7 @@ let alloc img font =
     auto_scroll = false;
 
     pwd = Fpath.v (Sys.getcwd ());
+    (* set later in Wm.ml in the caller *)
     pid = -1;
   }
   in

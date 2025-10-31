@@ -4,10 +4,6 @@ open Point
 open Rectangle
 open Window
 
-module W = Window
-module I = Display
-module T = Terminal
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -36,7 +32,7 @@ type event =
 (*****************************************************************************)
 
 (* input from user *)
-let key_in w key =
+let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
     match w.raw_mode, w.mouse_opened with
@@ -50,28 +46,28 @@ let key_in w key =
     (* todo: if holding *)
     | false, false -> 
       (* less: snarf *)
-      Terminal.key_in w.W.terminal key
+      Terminal.key_in w.terminal key
   end
 
 (* output from application *)
-let runes_in (w: Window.t) chan =
+let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
   let runes = Event.receive chan |> Event.sync in
-  Terminal.runes_in w.W.terminal runes
+  Terminal.runes_in w.terminal runes
 
-let mouse_in w m =
+let mouse_in (w : Window.t) (m : Mouse.state) =
   w.last_mouse <- m;
   match w.mouse_opened with
   | true -> 
     w.mouse_counter <- w.mouse_counter + 1;
     (* less: limit queue length? *)
-    if m.Mouse.buttons <> w.last_buttons 
+    if m.buttons <> w.last_buttons 
     then begin 
       Queue.add (m, w.mouse_counter) w.mouseclicks_queue;
-      w.last_buttons <- m.Mouse.buttons
+      w.last_buttons <- m.buttons
     end;
   | false -> failwith "mouse_in: mouse not opened todo"
 
-let mouse_out w chan =
+let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
   (*/* send a queued event or, if the queue is empty, the current state */
     /* if the queue has filled, we discard all the events it contained. */
     /* the intent is to discard frantic clicking by the user during long latencies. */
@@ -88,7 +84,7 @@ let mouse_out w chan =
   Event.send chan m |> Event.sync
 
 
-let bytes_out w (chan_count, chan_bytes) =
+let bytes_out (w : Window.t) (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
   let buf = Bytes.create cnt in
   let i = ref 0 in
@@ -100,12 +96,12 @@ let bytes_out w (chan_count, chan_bytes) =
       incr i;
     done
   | false ->
-    let term = w.W.terminal in
+    let term : Terminal.t = w.terminal in
     (* "When newline, chars between output point and newline are sent."*)
-    while !i < cnt && term.T.output_point.T.i < term.T.nrunes do
-      let pos = term.T.output_point.T.i in
-      Bytes.set buf !i term.T.text.(pos);
-      term.T.output_point <- { T.i = pos + 1};
+    while !i < cnt && term.output_point.i < term.nrunes do
+      let pos = term.output_point.i in
+      Bytes.set buf !i term.text.(pos);
+      term.output_point <- { i = pos + 1};
       incr i;
     done
   );
@@ -119,7 +115,7 @@ let bytes_out w (chan_count, chan_bytes) =
 
 
 
-let cmd_in w cmd =
+let cmd_in (w : Window.t) (cmd : cmd) =
   match cmd with
   | Delete -> 
     (* less: break if window already deleted *)
@@ -128,11 +124,11 @@ let cmd_in w cmd =
 
   | Reshape (new_img) ->
     (* less: put all of that in Wm.resize_win ? *)
-    if w.W.deleted
+    if w.deleted
     (* less: free new_img if deleted, but when can happen? *)
     then failwith "window already deleted";
-    let r = new_img.I.r in
-    w.W.screenr <- r;
+    let r = new_img.r in
+    w.screenr <- r;
     Wm.resize_win w new_img;
     (* less: set wctlready to true *)
     (* todo: delete timeout proc for old name of window *)
@@ -158,7 +154,7 @@ let cmd_in w cmd =
 let wrap f = 
   fun ev -> Event.wrap ev f
 
-let thread w =
+let thread (w : Window.t) =
   
   (* less: threadsetname *)
 
@@ -183,7 +179,7 @@ let thread w =
       ) @
       (* less: npart *)
       (if (w.raw_mode && Queue.length w.raw_keys > 0) ||
-          (not w.raw_mode && Terminal.newline_after_output_point w.W.terminal)
+          (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
        then [Event.send w.chan_devcons_read 
                 (chan_devcons_read_count, chan_devcons_read_bytes)
               |> wrap (fun () -> SentChannelsForConsRead)]

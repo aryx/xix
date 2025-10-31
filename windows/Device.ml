@@ -4,20 +4,25 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* ?? *)
+(* Helpers to build "virtual devices" (e.g., a virtual /dev/cons).
+ *)
 
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
 
 type t = {
+  (* ex: "winname", "cons" *)
   name: string;
   perm: Plan9.perm_property;
 
+  (* called when a process is opening/closing the device *)
   open_: Window.t -> unit;
   close: Window.t -> unit;
   
-  (* we need to thread 'read' (and 'write') because this operation may spend
+  (* called when a process is reading/writing on the device.
+   *
+   * we need to thread 'read' (and 'write') because this operation may spend
    * some time waiting while receiving and sending information on channels.
    * 
    * Note that 'read' takes an offset (and count) because each device 

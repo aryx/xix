@@ -1,7 +1,5 @@
 open Common
 
-module I = Display
-
 (* less: maybe the 'ref m' approach of point_to() is simpler for sweep() too *)
 type sweep_state = 
   (* start, no buttons *)
@@ -20,7 +18,7 @@ type sweep_state =
   (* wait until no buttons *)
   | SweepDrain
 
-let sweep mouse (display, desktop, font) =
+let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
   (* todo: menuing? but not sweeping? *)
   Mouse.set_cursor mouse Cursors.crosscursor;
 
@@ -71,8 +69,8 @@ let sweep mouse (display, desktop, font) =
     | SweepUnclicked (old_img_opt) ->
       (match old_img_opt with
       | None -> transit (SweepReturn None)
-      | Some old_img ->
-        let r = old_img.I.r in
+      | Some (old_img : Image.t) ->
+        let r = old_img.r in
         if Rectangle.dx r < 100 || Rectangle.dy r < 3 * font.Font.height
         then transit (SweepRescue (false, old_img_opt))
         else begin
@@ -107,7 +105,7 @@ let sweep mouse (display, desktop, font) =
   transit SweepInit
 
 
-let point_to mouse =
+let point_to (mouse : Mouse.ctl) : Window.t option =
   (* todo: menuing? but not sweeping? *)
   Mouse.set_cursor mouse Cursors.sightcursor;
 

@@ -28,7 +28,7 @@ type under_mouse =
 (*****************************************************************************)
 
 (* bind to right-click *)
-let wm_menu pos button exitchan 
+let wm_menu (pos : Point.t) button (exitchan : Exit.t Event.channel) 
     mouse (display, desktop, view, font) fs =
   (* todo: set (and later restore) sweeping to true *)
 
@@ -65,7 +65,7 @@ let wm_menu pos button exitchan
         Wm.hide_win w
       ));
     "Exit", (fun () ->
-      Event.send exitchan 0 |> Event.sync;
+      Event.send exitchan Exit.OK |> Event.sync;
     );
   ] @
   (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, w) ->

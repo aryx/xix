@@ -53,8 +53,8 @@ let thread_main (_caps: < caps; .. >) : Exit.t =
 
   let desktop = Baselayer.alloc view background in
 
-  let mouse = Mouse.init () in
-  let kbd = Keyboard.init () in
+  let mouse : Mouse.ctl = Mouse.init () in
+  let kbd : Keyboard.ctl = Keyboard.init () in
 
   Draw.draw_color view view.Display.r background;
   (* to test: alternative to -test that leverages work done above
@@ -73,7 +73,7 @@ let thread_main (_caps: < caps; .. >) : Exit.t =
   (* to break some mutual dependencies *)
   Wm.threads_window_thread_func := Threads_window.thread;
 
-  let (exit_chan: int (* exit code *) Event.channel) = Event.new_channel () in
+  let (exit_chan: Exit.t Event.channel) = Event.new_channel () in
 
   let _kbd_thread   = 
     Thread.create Thread_keyboard.thread kbd in
@@ -90,7 +90,7 @@ let thread_main (_caps: < caps; .. >) : Exit.t =
   let exit_code = Event.receive exit_chan |> Event.sync in
   (* todo: kill all procs? all the winshell processes? *)
   (* todo: kill all threads? done when do exit no? *)
-  exit exit_code
+  exit_code
     
 (*****************************************************************************)
 (* Entry point *)

@@ -101,7 +101,6 @@ local cap_rules = [
       exclude: [
         'ksym.ml', 'thread.ml', 'Printexc.ml', 'threadUnix.ml',
 	'Arg.ml', 'Unix.ml',
-	'windows/'
       ] + exclude_dirs,
     },
   },

@@ -9,8 +9,6 @@
  * - fork a new process, mount /mnt/wsys from fileserver and then binds
  *   /mnt/wsys to /dev so the process will have virtual /dev/{cons,winname,...}
  *   and finally run the cmd in it
- *
- * CLI.thread_main -> Thread_mouse.thread -> Thread_mouse.wm_menu -> <>
  *)
 val new_win:
   < Cap.fork; Cap.exec; Cap.chdir; .. > ->

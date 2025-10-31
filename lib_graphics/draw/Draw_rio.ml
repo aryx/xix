@@ -26,7 +26,8 @@ let window_border_size = 4
  *)
 
 (* less: refresh method parameter *)
-let get_view_and_baselayer (display : Display.t) : Image.t * Baselayer.t =
+let get_view_and_baselayer (caps : < Cap.open_in; .. >)
+  (display : Display.t) : Image.t * Baselayer.t =
   let winname : string = 
     (* TODO: does not work?
        match Common.cat "/dev/winname" with
@@ -35,8 +36,7 @@ let get_view_and_baselayer (display : Display.t) : Image.t * Baselayer.t =
                         (String.concat "," xs))
     *)
     let buf = Bytes.make 256 ' ' in
-    (* nosemgrep: do-not-use-open-in *)
-    let chan = open_in "/dev/winname" in
+    let chan = CapStdlib.open_in caps "/dev/winname" in
     let n = input chan buf 0 256 in
     if n < 256
     then Bytes.sub_string buf 0 n
@@ -64,5 +64,5 @@ let get_view_and_baselayer (display : Display.t) : Image.t * Baselayer.t =
 (* API *)
 (*****************************************************************************)
 
-let get_view (display : Display.t) : Image.t =
-  fst (get_view_and_baselayer display)
+let get_view (caps : < Cap.open_in; .. >) (display : Display.t) : Image.t =
+  fst (get_view_and_baselayer caps display)

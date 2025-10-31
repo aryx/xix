@@ -22,7 +22,11 @@ open Common
 (*****************************************************************************)
 
 (* Need: see .mli *)
-type caps = < Cap.draw; Cap.mouse; Cap.keyboard; Cap.fork; Cap.exec; Cap.chdir >
+type caps = < 
+    Cap.draw; Cap.mouse; Cap.keyboard; 
+    Cap.fork; Cap.exec; Cap.chdir;
+    Cap.open_in
+ >
 
 let usage = 
   "usage: rio [options]"
@@ -40,7 +44,7 @@ let thread_main (caps: < caps; .. >) : Exit.t =
    * let view = display.image in
    * less: let viewr save?
    *)
-  let view : Image.t = Draw_rio.get_view display in
+  let view : Image.t = Draw_rio.get_view caps display in
   let font : Font.t = Font_default.load_default_font display in
 
   if !Globals.debug_draw

@@ -13,6 +13,7 @@
  * CLI.thread_main -> Thread_mouse.thread -> Thread_mouse.wm_menu -> <>
  *)
 val new_win:
+  < Cap.fork; Cap.exec; Cap.chdir; .. > ->
   Image.t -> string (* cmd *) -> string array (* argv (including argv0) *) ->
   Fpath.t option (* pwd option *) ->
   (Mouse.ctl * Fileserver.t * Font.t) ->

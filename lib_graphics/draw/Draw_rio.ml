@@ -26,8 +26,8 @@ let window_border_size = 4
  *)
 
 (* less: refresh method parameter *)
-let get_view_and_baselayer display =
-  let winname = 
+let get_view_and_baselayer (display : Display.t) : Image.t * Baselayer.t =
+  let winname : string = 
     (* TODO: does not work?
        match Common.cat "/dev/winname" with
     | [x] -> x
@@ -35,13 +35,14 @@ let get_view_and_baselayer display =
                         (String.concat "," xs))
     *)
     let buf = Bytes.make 256 ' ' in
+    (* nosemgrep: do-not-use-open-in *)
     let chan = open_in "/dev/winname" in
     let n = input chan buf 0 256 in
     if n < 256
     then Bytes.sub_string buf 0 n
     else failwith "buffer too short for /dev/winname"
   in
-  let img = 
+  let img : Image.t = 
     try Draw_ipc.get_named_image display winname
     with Failure _ -> 
       Logs.warn (fun m -> m "failed to get named image for %s, using display.image" winname);
@@ -63,5 +64,5 @@ let get_view_and_baselayer display =
 (* API *)
 (*****************************************************************************)
 
-let get_view display =
+let get_view (display : Display.t) : Image.t =
   fst (get_view_and_baselayer display)

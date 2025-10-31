@@ -25,7 +25,7 @@ type under_mouse =
 (*****************************************************************************)
 
 (* bind to right-click *)
-let wm_menu (pos : Point.t) button (exitchan : Exit.t Event.channel) 
+let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button (exitchan : Exit.t Event.channel) 
     (mouse : Mouse.ctl) (display, desktop, view, font) (fs : Fileserver.t) =
   (* todo: set (and later restore) sweeping to true *)
 
@@ -44,7 +44,7 @@ let wm_menu (pos : Point.t) button (exitchan : Exit.t Event.channel)
            Wm.new_win img "/tests/xxx/test_rio_console_app1" 
              [|"/tests/xxx/test_rio_console_app1"|] None (mouse, fs, font)
         *)
-           Wm.new_win img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
+           Wm.new_win caps img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
       )
     );
     (* old: was Reshape but here it's really resizing *)
@@ -81,7 +81,7 @@ let middle_click_system _m _mouse =
 (* Entry point *)
 (*****************************************************************************)
 
-let thread (exitchan, 
+let thread (caps : < Cap.fork; .. >) (exitchan, 
             mouse, (display, desktop, view, font), fs) =
   (* less: threadsetname *)
 
@@ -143,7 +143,7 @@ let thread (exitchan,
           (match under_mouse, m.buttons with
           (* TODO: remove; just because hard to right click on QEMU and laptop*)
           | Nothing , { left = true; _ } ->
-            wm_menu m.pos Mouse.Left exitchan 
+            wm_menu caps m.pos Mouse.Left exitchan 
               mouse (display, desktop, view, font) fs
 
 
@@ -157,7 +157,7 @@ let thread (exitchan,
             then middle_click_system m mouse
 
           | (Nothing | CurrentWin _), { right = true; _ } ->
-            wm_menu m.pos Mouse.Right exitchan 
+            wm_menu caps m.pos Mouse.Right exitchan 
               mouse (display, desktop, view, font) fs
 
           | OtherWin w, { left = true; _ } ->

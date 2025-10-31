@@ -84,7 +84,6 @@ local cap_rules = [
     paths: {
       exclude: ['threadUnix.ml',
 	        'Filename.ml', # for Sys.getenv TMPDIR
-		'windows/Wm.ml', 'windows/Processes_winshell.ml',
 		] + exclude_dirs,
     },
   },
@@ -127,9 +126,7 @@ local cap_rules = [
        Do not use open_in. Use FS.with_open_in and capabilities.
     |||,
     paths: {
-      exclude: [
-         'lib_core/commons_plan9/', 'lib_graphics/draw/Draw_rio.ml',
-      ] + exclude_dirs,
+      exclude: [] + exclude_dirs,
     },
   },
 ];

@@ -5,8 +5,10 @@ open Fpath_.Operators
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 
-let run_cmd_in_window_in_child_of_fork (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
-  Unix1.chdir !!(w.pwd);
+let run_cmd_in_window_in_child_of_fork
+  (caps : < Cap.chdir; Cap.exec; .. >)
+  (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
+  (*Unix1*)CapUnix.chdir caps !!(w.pwd);
   (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
     
   (*/* close server end so mount won't hang if exiting */*)
@@ -29,6 +31,6 @@ let run_cmd_in_window_in_child_of_fork (cmd : string) (argv : string array) (w :
   Unix1.dup2 Unix1.stdout Unix1.stderr; 
 
   (* less: notify nil *)
-  Unix2.execv cmd argv |> ignore;
+  (*Unix2*)CapUnix.execv caps cmd argv |> ignore;
   (* should never reach this point *)
   failwith "exec failed"

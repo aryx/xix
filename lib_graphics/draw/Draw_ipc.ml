@@ -4,11 +4,9 @@ open Regexp_.Operators
 
 open Point
 open Rectangle
-
-module D = Display
-module I = Display (* Image.t is in display.ml *)
 module M = Draw_marshal
 
+(* for record building *)
 open Display
 
 (*****************************************************************************)
@@ -24,31 +22,31 @@ open Display
 (*****************************************************************************)
 
 (* less: public parameter *)
-let name_image img name =
+let name_image (img : Image.t) (name : string) =
   let public = true in
   let len = String.length name in
   (* stricter: *)
   if len >= 256
   then failwith "long for image too long";
 
-  let str = "N" ^ M.bp_long img.I.id ^ M.bp_bool public ^
+  let str = "N" ^ M.bp_long img.id ^ M.bp_bool public ^
     M.bp_byte len ^ name in
-  Display.add_buf img.I.display str;
+  Display.add_buf img.display str;
   (* will generate an exception if the name is already used *)
   Image.flush img
 
-let get_named_image display name =
+let get_named_image (display : Display.t) (name : string) : Image.t =
   let len = String.length name in
   if len >= 256
-  then failwith "long for image too long";
+  then failwith "name for image too long";
 
   (* similar to Image.alloc_gen *)
 
   (* meh *)
   Display.flush_buffer display;
 
-  display.D.imageid <- display.D.imageid + 1;
-  let id = display.D.imageid in
+  display.imageid <- display.imageid + 1;
+  let id = display.imageid in
 
   let str = "n" ^ M.bp_long id ^ M.bp_byte len ^ name in
 
@@ -61,7 +59,7 @@ let get_named_image display name =
   let ninfo = 12 * 12 in
   let str = Bytes.make ninfo ' ' in
 
-  let n = Unix.read display.D.ctl str 0 ninfo in
+  let n = Unix.read display.ctl str 0 ninfo in
   if n <> ninfo && 
      (* less: not sure why but it reads only 143 characters *)
      n <> (ninfo - 1)

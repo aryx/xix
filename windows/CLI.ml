@@ -22,7 +22,7 @@ open Common
 (*****************************************************************************)
 
 (* Need: see .mli *)
-type caps = < Cap.draw; Cap.mouse; Cap.keyboard >
+type caps = < Cap.draw; Cap.mouse; Cap.keyboard; Cap.fork; Cap.exec; Cap.chdir >
 
 let usage = 
   "usage: rio [options]"
@@ -80,7 +80,7 @@ let thread_main (caps: < caps; .. >) : Exit.t =
    *)
   Wm.threads_window_thread_func := Threads_window.thread;
   let _mouse_thread = 
-    Thread.create Thread_mouse.thread (exit_chan, 
+    Thread.create (Thread_mouse.thread caps) (exit_chan, 
                                        mouse, (display, desktop, view, font),
                                        fs) in
 

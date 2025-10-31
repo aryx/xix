@@ -1,12 +1,9 @@
 (library
- (name xix_kernel_base)
+ (name xix_kernel_concurrency_)
  (wrapped false)
  (libraries
-    stdcompat
-    threads
     xix_commons
     xix_kernel_core
-    xix_kernel_concurrency_
   )
  (preprocess (pps ppx_deriving.show))
 )

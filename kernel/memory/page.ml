@@ -18,7 +18,7 @@ type allocator = {
   mutable freecnt: int;
 
   (* !lock ordering! allocator.l before page.l *)
-  l: Spinlock.t;
+  l: Spinlock_.t;
 }
 
 let allocator = {

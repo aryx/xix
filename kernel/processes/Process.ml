@@ -2,6 +2,8 @@ open Common
 open Types
 open Process_
 
+type t = Process_.t
+
 type allocator = {
   (* less: opti: an arena allocator? 
    * but then Proc.pid can not be a constant field.
@@ -54,7 +56,7 @@ let proc_of_pid pid =
  * less: use { (alloc()) with ... } if you need to modify the non-mutable
  *  fields? but then need a rehash function.
  *)
-let alloc () =
+let _alloc () =
   let pid = Counter.gen pidcounter in
   let p = 
   (* less: if can not alloc, do noprocpanic and resrcwait? 
@@ -94,5 +96,5 @@ let alloc () =
  * schedinit really frees!
  * todo: pidunhash and let the Gc do its job?
  *)
-let free _p =
+let _free _p =
   raise Todo

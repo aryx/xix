@@ -13,7 +13,7 @@ end
  * let kernel_shared_namespace = ...
  *)
 
-let kproc name f =
+let _kproc name f =
   let up = Globals.up () in
 
   (* I prefer to inline Proc.alloc () here *)

@@ -42,7 +42,7 @@ let ptx offset =
   
 
 (* less: no seglock? *)
-let add_page_to_segment page seg =
+let _add_page_to_segment page seg =
   let (VU va) = page.Page_.va in
   let (VU base) = seg.base in
   let (VU top) = seg.top in

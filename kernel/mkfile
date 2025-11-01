@@ -81,7 +81,7 @@ CMO= \
 O=5
 
 OBJ=\
-	bcm/start.$O\
+    bcm/start.$O\
     bcm/startv7.$O\
     \
     libc/arm/getcallerpc.$O\
@@ -160,25 +160,25 @@ OBJ=\
     libgeometry/fmt.$O\
     libgeometry/replclipr_geom.$O\
     \
-	libmemdraw/alloc.$O\
-	 libmemdraw/resolution.$O\
-	 libmemdraw/chan.$O\
-	libmemdraw/arc.$O\
-	libmemdraw/cmap.$O\
-	libmemdraw/defont.$O\
+        libmemdraw/alloc.$O\
+         libmemdraw/resolution.$O\
+         libmemdraw/chan.$O\
+        libmemdraw/arc.$O\
+        libmemdraw/cmap.$O\
+        libmemdraw/defont.$O\
         libmemdraw/replmul.$O\
-	libmemdraw/draw.$O\
+        libmemdraw/draw.$O\
       libmemdraw/init.$O\
       libmemdraw/color.$O\
       libmemdraw/alphadraw.$O\
-	libmemdraw/ellipse.$O\
-	libmemdraw/fillpoly.$O\
-	libmemdraw/hooks.$O\
-	libmemdraw/line.$O\
-	libmemdraw/transfer.$O\
-	libmemdraw/poly.$O\
-	libmemdraw/string.$O\
-	libmemdraw/subfont.$O\
+        libmemdraw/ellipse.$O\
+        libmemdraw/fillpoly.$O\
+        libmemdraw/hooks.$O\
+        libmemdraw/line.$O\
+        libmemdraw/transfer.$O\
+        libmemdraw/poly.$O\
+        libmemdraw/string.$O\
+        libmemdraw/subfont.$O\
     \
     libmemlayer/draw.$O\
     libmemlayer/lalloc.$O\
@@ -239,24 +239,24 @@ OBJ=\
     \
     bcm/globals.$O\
     \
-	port/taslock.$O\
-	port/xalloc.$O\
-	port/alloc.$O\
- 	port/pool.$O\
+        port/taslock.$O\
+        port/xalloc.$O\
+        port/alloc.$O\
+        port/pool.$O\
     port/portscreen.$O\
     port/swconsole.$O\
-	port/print.$O\
-	port/devcons.$O\
-	port/portclock.$O\
-	port/error.$O\
-	port/mul64fract.$O\
-	port/tod.$O\
+        port/print.$O\
+        port/devcons.$O\
+        port/portclock.$O\
+        port/error.$O\
+        port/mul64fract.$O\
+        port/tod.$O\
     \
     bcm/concurrency_raspi2.$O\
     bcm/tas_raspi2.$O\
-	bcm/mmu.$O\
+        bcm/mmu.$O\
     bcm/mmuinvalidate.$O\
-	bcm/spl.$O\
+        bcm/spl.$O\
     bcm/raspi2.$O\
     bcm/fault_helpers.$O\
     bcm/exceptions.$O\
@@ -271,9 +271,9 @@ OBJ=\
     bcm/vcore.$O\
     bcm/screen.$O\
     \
-	fakes.$O\
-	test.$O\
-	main.$O\
+        fakes.$O\
+        test.$O\
+        main.$O\
     \
     ocaml.$O
 
@@ -315,41 +315,41 @@ OCAMLCFLAGS=$OCAMLINCLUDES
 
 # use of -l so no automagic lib and no _main
 9minimal: $OBJ mkfile
-	$LD $LDFLAGS -o $target $OBJ
+        $LD $LDFLAGS -o $target $OBJ
     mk debug
 
 debug:QV:
-	$LD -n $LDFLAGS -o /tmp/xxx $OBJ > syms.list
+        $LD -n $LDFLAGS -o /tmp/xxx $OBJ > syms.list
 
 
 ocaml.c: $CMO mkfile
-	$OCAMLC -output-c $CMO -o ocaml.c
+        $OCAMLC -output-c $CMO -o ocaml.c
 
 
 clean:V:
-	rm -f $OBJ $CMO ocaml.c 9minimal */*.cmi *.cmi
+        rm -f $OBJ $CMO ocaml.c 9minimal */*.cmi *.cmi
 
 run:V:
-	qemu-system-arm -M raspi2 -bios 9minimal
+        qemu-system-arm -M raspi2 -bios 9minimal
 
 depend:V:
-	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
+        $OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
 
 #############################################################################
 # Meta rules
 #############################################################################
 
-%.$O:	%.s
-	$AS $AFLAGS -o $stem.$O $stem.s
+%.$O:   %.s
+        $AS $AFLAGS -o $stem.$O $stem.s
 
-%.$O:	%.c
-	$CC $CFLAGS -o $stem.$O $stem.c 
+%.$O:   %.c
+        $CC $CFLAGS -o $stem.$O $stem.c 
 
 %.cmo: %.ml
-	$OCAMLC $OCAMLCFLAGS -c $stem.ml
+        $OCAMLC $OCAMLCFLAGS -c $stem.ml
 
 %.cmi: %.mli
-	$OCAMLC $OCAMLCFLAGS -c $stem.mli
+        $OCAMLC $OCAMLCFLAGS -c $stem.mli
 
 
 #############################################################################

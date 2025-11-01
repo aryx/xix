@@ -19,7 +19,7 @@ let alarms = {
 }
 
 (* for alarm_kproc and hz_checkalarms to sleep/wakeup *)
-let rendez = 
+let _rendez = 
   Rendez.alloc ()
 
 let del_proc _p =

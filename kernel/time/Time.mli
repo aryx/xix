@@ -1,5 +1,3 @@
-open Common
-open Types
 
 type t_s = Types.t_s
 type t_ms = Types.t_ms
@@ -11,19 +9,8 @@ type t_ticks = Types.t_ticks
 (* incremented at system timer frequency (system clock) *)
 type t_fastticks = Types.t_fastticks (* itself an alias for Arch.t_fastticks *)
 
-let _mhz = 1000 * 1000
+val tick_to_ms : t_ticks -> t_ms
 
-
-(* a tick is 10ms when Arch.hz is 100 *)
-let tick_to_ms tk =
-  tk * 1000 / Arch.hz
-
-(* + 500 to average up. 5ms is counted as 1 tick when Arch.hz is 100 *)
-let ms_to_tick ms =
-  (ms * Arch.hz + 500) / 1000
-
-let ns_to_fastticks _ns =
-  raise Todo
-
-let ms_to_ns ms =
-  ms * 100000
+val ms_to_tick : t_ms -> t_ticks
+val ns_to_fastticks : t_ns -> t_fastticks
+val ms_to_ns : t_ms -> t_ns

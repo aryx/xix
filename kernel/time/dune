@@ -6,7 +6,6 @@
     threads
     xix_commons
     xix_kernel_base
-;    xix_kernel_memory
     xix_kernel_scheduler
   )
  (preprocess (pps ppx_deriving.show))

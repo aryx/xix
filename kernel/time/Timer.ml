@@ -3,6 +3,7 @@ open Types
 open Timer_
 
 type t = Timer_.t
+type mode = Timer_.mode
 
 let alloc mode ns f =
   { mode = mode;

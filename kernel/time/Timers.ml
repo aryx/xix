@@ -45,7 +45,7 @@ let add timer =
   Ilock.unlock timer.Timer_.l;
   ()
 
-let del timer =
+let _del timer =
   Ilock.lock timer.Timer_.l;
 
   match timer.Timer_.cpu with
@@ -81,7 +81,7 @@ let _init =
   )::!Sysexits.hooks
 *)
 
-let add_clock0_periodic_timer f ms =
+let _add_clock0_periodic_timer f ms =
   (* less: sanity check timersinit *)
   let ms = 
     if ms = 0

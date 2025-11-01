@@ -2,7 +2,7 @@ open Common
 open Types
 
 (* less: pass Ureg? *)
-let timer_interrupt () =
+let _timer_interrupt () =
   let cpu = Globals.cpu () in
   let timers = Timers.cpus_timers.(cpu.Cpu.id) in
   let now = Arch.fastticks () in

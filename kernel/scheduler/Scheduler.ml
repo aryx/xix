@@ -134,7 +134,7 @@ let ready (p : Process_.t) =
   add p prio
 
 (* The function finally executed by the main kernel thread (in cpu.thread) *)
-let scheduler () =
+let _scheduler () =
  let cpu = Globals.cpu () in
  assert (Thread.id (Thread.self ()) = Thread.id (cpu.Cpu.thread));
  while true do 

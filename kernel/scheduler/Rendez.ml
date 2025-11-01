@@ -2,6 +2,8 @@ open Common
 open Types
 open Rendez_
 
+type t = Rendez_.t
+
 let thread_wakeup _ = 
   let _ = failwith "TODO" in
   ()

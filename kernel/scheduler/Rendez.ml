@@ -12,12 +12,12 @@ let thread_sleep _ =
   let _ = failwith "TODO" in
   ()
 
-let alloc () = {
+let alloc () : t = {
   p = None;
   l = Spinlock.alloc ();
 }
 
-let sleep rdz fcond =
+let sleep (rdz : t) (fcond : unit -> bool) : unit =
   (* todo: splhi/splx *)
   (* less: sanity check nlocks *)
   let up : Process_.t = Globals.up () in
@@ -59,7 +59,7 @@ let sleep rdz fcond =
   end
   
 
-let wakeup rdz =
+let wakeup (rdz : t) : pid option =
   (* todo: splhi/splx *)
   Spinlock.lock rdz.l;
   let optp = rdz.p in
@@ -78,4 +78,3 @@ let wakeup rdz =
   );
   Spinlock.unlock rdz.l;
   optp
-  

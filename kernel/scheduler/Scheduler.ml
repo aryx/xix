@@ -2,6 +2,11 @@ open Common
 open Types
 open Scheduler_
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+
 let thread_wakeup _ = 
   let _ = failwith "TODO" in
   ()
@@ -9,6 +14,10 @@ let thread_wakeup _ =
 let thread_sleep _ = 
   let _ = failwith "TODO" in
   ()
+
+(*****************************************************************************)
+(* Types and globals *)
+(*****************************************************************************)
 
 type runq = {
   (* use pid? *)
@@ -25,6 +34,10 @@ let runq = {
   runvec = 0;
   nready = 0;
 }
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let any_ready () =
   runq.runvec <> 0
@@ -123,9 +136,12 @@ let sched () =
   (* todo: spllo *)
   ()
 
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 (* from Running to Ready in right priority queue *)
-let ready (p : Process_.t) =
+let ready (p : Process.t) : unit =
   (* less: splhi/splx? why? *)
   (* less: cpu->readied *)
   p.state <- Process_.Ready;
@@ -135,8 +151,8 @@ let ready (p : Process_.t) =
 
 (* The function finally executed by the main kernel thread (in cpu.thread) *)
 let _scheduler () =
- let cpu = Globals.cpu () in
- assert (Thread.id (Thread.self ()) = Thread.id (cpu.Cpu.thread));
+ let cpu : Cpu.t = Globals.cpu () in
+ assert (Thread.id (Thread.self ()) = Thread.id (cpu.thread));
  while true do 
   (*Thread.critical_section := true;*)
   Logs.err (fun m -> m "TODO: Thread.critical_section");
@@ -148,7 +164,7 @@ let _scheduler () =
   | Process_.Moribund -> raise Todo
   | _ -> raise (Impossible "can hve either Running or Moribund in scheduler()")
   );
-  cpu.Cpu.proc <- None;
+  cpu.proc <- None;
 
   (* from now on, up is nil *)
   (* less: call sched()?? better put the logic in scheduler too no? *)
@@ -157,9 +173,9 @@ let _scheduler () =
   (* less: update priority *)
   (* less: adjust unless readied process in which case use quantum of
    * process that readied it *)
-  cpu.Cpu.sched_ticks <- cpu.Cpu.ticks + (Arch.hz / 10);
+  cpu.sched_ticks <- cpu.ticks + (Arch.hz / 10);
   
-  cpu.Cpu.proc <- Some p;
+  cpu.proc <- Some p;
   (* new up! *)
   let up : Process_.t = Globals.up () in
   up.state <- Process_.Running;
@@ -171,7 +187,7 @@ let _scheduler () =
  done
 
 (* not super useful *)
-let yield () =
+let yield () : unit =
   if any_ready () 
   (* less: adjust lastupdate *)
   then sched ()

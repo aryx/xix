@@ -2,13 +2,13 @@ open Common
 open Types
 open Alarms
 
-let syscall_alarm (ms_opt : Types.t_ms option) =
+let syscall_alarm (ms_opt : Types.t_ms option) : int =
   let up = Globals.up () in
   (* less: use cpu0? why *)
-  let cpu = Globals.cpu () in
+  let cpu : Cpu.t = Globals.cpu () in
   let remaining = 
     match up.alarm with
-    | Some x -> Time.tick_to_ms (x - cpu.Cpu.ticks)
+    | Some x -> Time.tick_to_ms (x - cpu.ticks)
     | None -> 0
   in
   match ms_opt with

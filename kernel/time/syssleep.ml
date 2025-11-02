@@ -2,7 +2,7 @@ open Common
 open Types
 
 (* todo: can be interrupted !!! *)
-let syscall_sleep ms =
+let syscall_sleep (ms : Types.t_ms) : unit =
   (* stricter: *)
   match ms with
   | x when x < 0 -> failwith "sleep: negative time";

@@ -1,3 +1,2 @@
 
-val syscall_sleep: Types.t_s -> unit
-
+val syscall_sleep: Types.t_ms -> unit

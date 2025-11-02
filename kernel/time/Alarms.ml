@@ -1,6 +1,14 @@
 open Common
 open Types
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types and globals *)
+(*****************************************************************************)
+
 (* less: possible memory leak if a process sets an alarm far away
  * and gets killed in the mean time; its Proc_.t will not be gc'ed.
  * todo: store pid instead in list? and take care to check for Not_found
@@ -18,17 +26,21 @@ let alarms = {
   ql = Qlock.alloc ();
 }
 
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
+
 (* for alarm_kproc and hz_checkalarms to sleep/wakeup *)
 let _rendez = 
   Rendez.alloc ()
 
-let del_proc _p =
+let del_proc (_p : Process.t) : unit =
   assert(not (Qlock.canlock alarms.ql));
   (* todo: remove sorted list *)
   let _ = raise Todo in
   ()
 
-let add_proc _p _when_ =
+let add_proc (_p : Process.t) (_when_ : 'a) : unit =
   assert(not (Qlock.canlock alarms.ql));
   (* todo: insert sorted list *)
   let _ = raise Todo in

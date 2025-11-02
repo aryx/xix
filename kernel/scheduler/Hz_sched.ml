@@ -6,10 +6,10 @@ let any_higher () =
   raise Todo
 
 (* (interrupt) -> ... -> hz_clock -> <> *)
-let hz_sched () =
-  let cpu = Globals.cpu () in
+let hz_sched () : unit =
+  let cpu : Cpu.t = Globals.cpu () in
   if any_higher ()
-     || (cpu.Cpu.ticks > cpu.Cpu.sched_ticks && Scheduler.any_ready())
+     || (cpu.ticks > cpu.sched_ticks && Scheduler.any_ready())
   then begin
     (* less: cpu.readied <- None; *)
     (* todo? why not call sched() instead? *)

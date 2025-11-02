@@ -12,7 +12,11 @@ DIRS0=\
   macroprocessor\
   assembler/objects assembler\
   linker/executables linker/libraries linker\
-  compiler
+  compiler\
+  lib_core/system/plan9\
+  lib_graphics/geometry lib_graphics/draw
+
+#TODO: lib_graphics/input\ windows
 
 # does not work yet with ocaml-light
 DIRS1=version_control

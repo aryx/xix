@@ -1,0 +1,76 @@
+# -*- sh -*-
+
+</$objtype/mkfile
+
+all:V: libplan9.a plan9.cma
+
+LIB=libplan9.a
+
+OFILES=\
+ plan9support.$O\
+ bind.$O mount.$O errstr.$O
+
+OCAML=/home/pad/github/fork-ocaml
+INCLUDES=-I$OCAML/byterun
+
+</sys/src/cmd/mklib
+
+CC=pcc
+LD=pcc
+CFLAGS=-FV -c -D_POSIX_SOURCE -D_PLAN9_SOURCE -DOS_PLAN9_APE $INCLUDES
+LDFLAGS=
+
+ROOT=/home/pad/plan9/ROOT
+
+install:V: $LIB
+	cp $LIB $ROOT/$objtype/lib/ocaml
+
+clean:V:
+	rm -f *.[58] y.tab.? y.output y.error $CLEANFILES
+	rm -f *.a
+    rm -f *.cm*
+
+TOP=../..
+#############################################################################
+# Src
+#############################################################################
+CMO= Plan9.cmo Protocol_9P.cmo
+
+#############################################################################
+# Compilers
+#############################################################################
+OCAML=/home/pad/github/fork-ocaml
+OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
+OCAMLDEP=ocamldep
+
+#############################################################################
+# Config
+#############################################################################
+
+OCAMLINCLUDES=-I $TOP/lib_core/commons2
+
+OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
+OCAMLLDFLAGS=
+
+#############################################################################
+# Toplevel targets
+#############################################################################
+
+plan9.cma: $CMO mkfile
+	$OCAMLC -g -a -o $target $CMO
+
+depend:V:
+	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
+
+#############################################################################
+# Meta rules
+#############################################################################
+
+%.cmo: %.ml
+	$OCAMLC $OCAMLCFLAGS -c $stem.ml
+
+%.cmi: %.mli
+	$OCAMLC $OCAMLCFLAGS -c $stem.mli
+
+#############################################################################
+<.depend

@@ -37,4 +37,4 @@ gen_font_default: gen_font_default.ml ../font_default.ml
 clean:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS
 
-<$TOP/mkcommon
+<$TOP/mkfiles/mkcommon

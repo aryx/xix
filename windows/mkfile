@@ -34,7 +34,7 @@ CCLIBS= \
 PROG=rio
 
 <$TOP/mkconfig2
-<$TOP/mkprog
+<$TOP/mkfiles/mkprog
 
 ROOT=/home/pad/plan9/ROOT/
 test:V:

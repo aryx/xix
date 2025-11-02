@@ -21,8 +21,8 @@ LIBS=$TOP/lib_core/commons/lib.cma
 PROG=rc
 
 <$TOP/mkconfig
-<$TOP/mkprog
-<$TOP/mkparser
+<$TOP/mkfiles/mkprog
+<$TOP/mkfiles/mkparser
 
 #coupling: mkcommon
 Main.cmo: Main.ml

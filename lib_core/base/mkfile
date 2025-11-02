@@ -16,4 +16,4 @@ SRC=Bool.ml \
    Buffer.ml Digest.ml Random.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

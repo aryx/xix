@@ -21,7 +21,7 @@ RUN ./bootstrap-mk.sh
 ENV PATH="$PATH:/xix/bin"
 # TODO: at some point use the boostrapped /src/bin/rc
 ENV MKSHELL="/usr/bin/rc"
-RUN cp mkconfig.light mkconfig
+RUN cp mkfiles/mkconfig.light mkconfig
 RUN omk depend
 RUN omk all
 

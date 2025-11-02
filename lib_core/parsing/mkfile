@@ -6,4 +6,4 @@ INCLUDES=-I .
 SRC=Lexing.ml Parsing.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

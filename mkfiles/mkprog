@@ -30,5 +30,5 @@ loc:V:
 	wc -l *.ml*
 
 
-<$TOP/mkcommon
+<$TOP/mkfiles/mkcommon
 <.depend

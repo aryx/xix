@@ -5,4 +5,4 @@ INCLUDES=-I $TOP/lib_core/commons2 -I ../draw -I ../geometry -I ../input
 SRC= Menu_ui.ml Text_ui.ml Frame_ui.ml Selection_ui.ml
 
 <$TOP/mkconfig2
-<$TOP/mklib
+<$TOP/mkfiles/mklib

@@ -9,4 +9,4 @@ SRC=Ast_asm.ml \
   Object_file.ml 
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

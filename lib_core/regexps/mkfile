@@ -8,4 +8,4 @@ INCLUDES=-I .
 SRC=Str.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

@@ -11,4 +11,4 @@ INCLUDES=-I $TOP/lib_core/commons
 SRC=Lexing_.ml Parsing_.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

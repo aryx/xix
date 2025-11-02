@@ -5,4 +5,4 @@ INCLUDES=-I $TOP/lib_core/commons2 -I ../draw -I ../geometry
 SRC= Cursor.ml Mouse.ml Keyboard.ml
 
 <$TOP/mkconfig2
-<$TOP/mklib
+<$TOP/mkfiles/mklib

@@ -19,7 +19,7 @@ LIBS=$TOP/lib_core/commons/lib.cma
 PROG=ocamllex
 
 <$TOP/mkconfig
-<$TOP/mkprog
+<$TOP/mkfiles/mkprog
 
 #<$TOP/mkparser
 

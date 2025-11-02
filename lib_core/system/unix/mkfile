@@ -9,4 +9,4 @@ SRC=\
   Unix.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

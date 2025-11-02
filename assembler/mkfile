@@ -19,7 +19,7 @@ LIBS=$TOP/lib_core/commons/lib.cma \
 PROG=o5a
 
 <$TOP/mkconfig
-<$TOP/mkprog
+<$TOP/mkfiles/mkprog
 #<$TOP/mkparser
 
 AUTOGEN=Lexer_asm.ml \

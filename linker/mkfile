@@ -19,7 +19,7 @@ LIBS=$TOP/lib_core/commons/lib.cma $TOP/macroprocessor/lib.cma $TOP/assembler/ob
 PROG=o5l
 
 <$TOP/mkconfig
-<$TOP/mkprog
+<$TOP/mkfiles/mkprog
 
 loc:V:
    wc -l $SRC *.mli

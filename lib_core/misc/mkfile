@@ -10,4 +10,4 @@ INCLUDES=-I .
 SRC=camlinternalOO.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

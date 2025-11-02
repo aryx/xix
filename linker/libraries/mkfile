@@ -6,4 +6,4 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/assembler/objects
 SRC=Library_file.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

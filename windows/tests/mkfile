@@ -42,5 +42,5 @@ test:V:
     cd /home/pad/plan9; make disk; make run
 
 
-<$TOP/mkcommon
+<$TOP/mkfiles/mkcommon
 <.depend

@@ -14,7 +14,7 @@ SRC=camlinternalFormatBasics.ml Stdlib.ml std_exit.ml \
   Gc.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib
 
 Obj.cmi: Stdlib.cmi
 Callback.cmi: Stdlib.cmi

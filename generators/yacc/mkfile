@@ -25,7 +25,7 @@ LIBS=$TOP/lib_core/commons/lib.cma \
 PROG=ocamlyacc
 
 <$TOP/mkconfig
-<$TOP/mkprog
+<$TOP/mkfiles/mkprog
 
 #<$TOP/mkparser
 

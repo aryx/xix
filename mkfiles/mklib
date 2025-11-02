@@ -20,5 +20,5 @@ clean:V:
 nuke:V: clean
 	rm -f $NUKEFILES
 
-<$TOP/mkcommon
+<$TOP/mkfiles/mkcommon
 <.depend

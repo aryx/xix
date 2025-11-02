@@ -13,5 +13,5 @@ SRC= Channel.ml Color.ml \
      Draw_rio.ml
 
 <$TOP/mkconfig2
-<$TOP/mklib
+<$TOP/mkfiles/mklib
 

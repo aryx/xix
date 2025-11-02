@@ -6,4 +6,4 @@ INCLUDES=-I .
 SRC=List.ml Stack.ml Array.ml Hashtbl.ml Queue.ml Set.ml Map.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

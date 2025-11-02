@@ -7,4 +7,4 @@ SRC=\
   Printf.ml Printexc.ml Format.ml
 
 <$TOP/mkconfig
-<$TOP/mklib
+<$TOP/mkfiles/mklib

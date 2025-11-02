@@ -66,7 +66,7 @@ clean nuke:V:
 	rm -f $PROG $PROG.opt *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*
 	rm -f *~ .*~ *.exe gmon.out *.output ocamldoc.out
 
-<$TOP/mkcommon
+<$TOP/mkfiles/mkcommon
 <.depend
 
 loc:V:

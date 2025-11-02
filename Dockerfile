@@ -47,7 +47,7 @@ WORKDIR /src
 
 # Install dependencies
 # copy enough files for configure below to work
-COPY configure xix.opam mkconfig.unix ./
+COPY configure xix.opam mkfiles/mkconfig.unix ./
 # 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
 # zlib for ogit (TODO: delete we should do our own unzip)
 RUN apt-get install -y 9base zlib1g-dev

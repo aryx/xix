@@ -1,5 +1,7 @@
 
 type t = Process_.t
+type pid = Process_.pid
+type wait_msg = Process_.wait_msg
 
 val pidcounter: Counter.t
 

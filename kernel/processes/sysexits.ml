@@ -1,11 +1,13 @@
 open Common
+
 open Types
+(* for record building for ocaml-light *)
 open Process_
 
-let (hooks: (Process_.t -> unit) list ref) = ref []
+let (hooks: (Process.t -> unit) list ref) = ref []
 
 (* in C the str can be null pointer but better use empty string for that *)
-let syscall_exits str =
+let syscall_exits (str : string) : unit =
 
   let up = Globals.up () in
   (* in C the code looks if parent is nil, but I use only parentpid
@@ -70,8 +72,8 @@ let syscall_exits str =
   !hooks |> List.iter (fun f -> f up);
 
   (* todo: why need that?? coupling with sched *)
-  Spinlock.lock Process.allocator.Process.l;
-  Spinlock.lock Page.allocator.Page.l;
+  Spinlock.lock Process.allocator.l;
+  Spinlock.lock Page.allocator.l;
 
   up.state <- Process_.Moribund;
   (* todo: go directly to schedinit instead? *)

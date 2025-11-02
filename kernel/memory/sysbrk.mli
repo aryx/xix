@@ -1,3 +1,2 @@
-open Types
 
-val syscall_brk: user_addr -> unit
+val syscall_brk: Types.user_addr -> unit

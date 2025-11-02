@@ -1,2 +1,2 @@
 
-val syscall_await : unit -> Process_.wait_msg
+val syscall_await : unit -> Process.wait_msg

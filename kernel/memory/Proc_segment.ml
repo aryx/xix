@@ -9,7 +9,7 @@ exception Found of Segment_.t
  * todo: return section! so less need store segment kind?
  *  or pb when have STEXT in SG_DATA?
  *)
-let segment_of_addr (p : Process_.t) addr =
+let segment_of_addr (p : Process_.t) (addr : Types.user_addr) : Segment.t =
   try 
     p.seg |> Hashtbl.iter (fun _section (seg : Segment_.t) ->
         let (VU va) = addr in

@@ -1,4 +1,5 @@
 open Common
+
 open Types
 open Process_
 
@@ -13,7 +14,7 @@ end
  * let kernel_shared_namespace = ...
  *)
 
-let _kproc name f =
+let kproc (name : string) (f : unit -> unit) : unit =
   let up = Globals.up () in
 
   (* I prefer to inline Proc.alloc () here *)

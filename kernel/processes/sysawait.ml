@@ -2,7 +2,7 @@ open Common
 open Types
 open Process_
 
-let syscall_await () =
+let syscall_await () : wait_msg =
   let up = Globals.up () in
 
   (* sanity check *)  

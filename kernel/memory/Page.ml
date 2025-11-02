@@ -1,6 +1,11 @@
 open Common
+
 open Types
 open Page_
+
+(*****************************************************************************)
+(* Types and globals *)
+(*****************************************************************************)
 
 type t = Page_.t
 
@@ -30,7 +35,11 @@ let allocator = {
   l = Spinlock.alloc ();
 }
 
-let unchain p =
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let unchain (p : t) =
   if Spinlock.canlock allocator.l
   then failwith "unchain: palloc lock should be held";
 
@@ -57,8 +66,11 @@ let _chain_free_tail _p =
 (* todo: should be swapalloc.highwater *)
 let highwater = 100
 
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
-let alloc va clear (* less: segopt *) =
+let alloc (va : Types.user_addr) (clear : bool) (* less: segopt *) : t =
   Spinlock.lock allocator.l;
 
   if allocator.freecnt > highwater
@@ -89,7 +101,7 @@ let alloc va clear (* less: segopt *) =
     failwith "TODO: very few free pages"
 
 (* less: if page is a swapaddress? *)
-let free p =
+let free (p : t) : unit =
   Spinlock.lock allocator.l;
   (* we should use Ref.dec_and_is_zero but for opti reason we
    * use a spinlock and a separate int for a refcnt (and not a Ref)
@@ -116,7 +128,7 @@ let _init_allocator _xs =
   raise Todo
 
 
-let share p = 
+let share (p : t) : t = 
   Spinlock.lock p.Page_.l;
   p.refcnt <- p.refcnt + 1;
   Spinlock.unlock p.Page_.l;

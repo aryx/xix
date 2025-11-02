@@ -4,14 +4,14 @@ open Pagetable_
 
 type t = Pagetable_.t
 
-let alloc () =
+let alloc () : t =
   { pagetab = Array.make pagetab_size None;
     first = pagetab_size; (* take care of access outside bound *)
     last = 0;
   }
 
 (* less: pass seg type if want to handle SG_PHYSICAL (or handle it in caller)*)
-let free pt =
+let free (pt : t) : unit =
   if pt.first < pagetab_size
   then 
     for i = pt.first to pt.last do
@@ -22,7 +22,7 @@ let free pt =
  * we will be able to allocate a new page (copy on write) and reference
  * this new page in the pagetab array.
  *)
-let copy pt_old =
+let copy (pt_old : t) : t =
   let pt_new = alloc () in
   pt_new.first <- pt_old.first;
   pt_new.last <- pt_old.last;

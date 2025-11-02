@@ -2,9 +2,18 @@ open Common
 open Types
 open Segment_
 
-type t = Segment_.t
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
 
-let alloc kind base nb_pages =
+type t = Segment_.t
+type kind = Segment_.kind
+
+(*****************************************************************************)
+(* alloc/free *)
+(*****************************************************************************)
+
+let alloc (kind : kind) (base : Types.user_addr) (nb_pages : int) : t =
   if nb_pages > Segment_.pagedir_size * Pagetable_.pagetab_size
   then Error.error Error.Enovmem;
 
@@ -23,7 +32,7 @@ let alloc kind base nb_pages =
     ql = Qlock.alloc ();
   }
   
-let free seg =
+let free (seg : t) : unit =
   if Ref.dec_and_is_zero seg.refcnt
   then begin
     Qlock.lock seg.ql;
@@ -35,6 +44,10 @@ let free seg =
     Qlock.unlock seg.ql;
   end
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 let pdx offset = 
   offset / Pagetable_.pagetab_memory_mapped
 let ptx offset = 
@@ -42,8 +55,8 @@ let ptx offset =
   
 
 (* less: no seglock? *)
-let _add_page_to_segment page seg =
-  let (VU va) = page.Page_.va in
+let _add_page_to_segment (page : Page.t) (seg : t) : unit =
+  let (VU va) = page.va in
   let (VU base) = seg.base in
   let (VU top) = seg.top in
   
@@ -51,7 +64,7 @@ let _add_page_to_segment page seg =
   then failwith "add_page_to_segment: page out of segment range";
   
   let offset = va - base in
-  let pt =
+  let pt : Pagetable.t =
     match seg.pagedir.(pdx offset) with
     | None -> 
       let pt = Pagetable.alloc () in
@@ -59,16 +72,16 @@ let _add_page_to_segment page seg =
       pt
     | Some x -> x
   in
-  if pt.Pagetable_.pagetab.(ptx offset) <> None
+  if pt.pagetab.(ptx offset) <> None
   then failwith "add_page_to_segment: address already mapped to a page";
 
-  pt.Pagetable_.pagetab.(ptx offset) <- Some page;
+  pt.pagetab.(ptx offset) <- Some page;
 
   let i = ptx offset in
-  if i < pt.Pagetable_.first
-  then pt.Pagetable_.first <- i;
-  if i > pt.Pagetable_.last
-  then pt.Pagetable_.last <- i;
+  if i < pt.first
+  then pt.first <- i;
+  if i > pt.last
+  then pt.last <- i;
   ()
 
 
@@ -103,7 +116,12 @@ let copy_or_share seg share =
   )
   
 
-let share seg =
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
+
+let share (seg : t) : t =
   copy_or_share seg true
-let copy seg =
+
+let copy (seg : t) : t =
   copy_or_share seg false

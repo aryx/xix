@@ -1,8 +1,15 @@
 open Common
+
 open Types
 open Process_
 
+(*****************************************************************************)
+(* Types and globals *)
+(*****************************************************************************)
+
 type t = Process_.t
+type pid = Process_.pid
+type wait_msg = Process_.wait_msg
 
 type allocator = {
   (* less: opti: an arena allocator? 
@@ -30,12 +37,16 @@ let allocator = {
   l = Spinlock.alloc ();
 }
 
-let hash p =
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
+
+let hash (p : t) : unit =
   Spinlock.lock allocator.l;
   Hashtbl.add allocator.hpids p.pid p;
   Spinlock.unlock allocator.l
 
-let unhash p =
+let unhash (p : t) : unit =
   Spinlock.lock allocator.l;
   (* this should garbage collect the Proc, unless it is still referenced
    * in some globals (e.g., timers? alarms?)
@@ -44,7 +55,7 @@ let unhash p =
   Spinlock.unlock allocator.l
 
 (* can raise Not_found *)
-let proc_of_pid pid =
+let proc_of_pid (pid : pid) : t =
   allocator.l |> Spinlock.with_lock (fun () ->
     Hashtbl.find allocator.hpids pid
   )
@@ -56,7 +67,7 @@ let proc_of_pid pid =
  * less: use { (alloc()) with ... } if you need to modify the non-mutable
  *  fields? but then need a rehash function.
  *)
-let _alloc () =
+let _alloc () : t =
   let pid = Counter.gen pidcounter in
   let p = 
   (* less: if can not alloc, do noprocpanic and resrcwait? 
@@ -90,11 +101,12 @@ let _alloc () =
     alarm = None;
   }
   in
-  hash p
+  hash p;
+  p
 
 (* todo: sysexits just set to Moribund. 
  * schedinit really frees!
  * todo: pidunhash and let the Gc do its job?
  *)
-let _free _p =
+let _free (_p : t) : unit =
   raise Todo

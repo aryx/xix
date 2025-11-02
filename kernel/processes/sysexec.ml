@@ -4,6 +4,9 @@ open Types
 open Process_
 open User_memory.Operators
 
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 (* todo: factorize with plan9-ml/formats/executable/a_out.ml? *)
 module A_out = struct
@@ -24,6 +27,10 @@ type header = {
 }
 let sizeof_header = 0x20 (* 32 *)
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
 (* may raise Error.Ebadexec *)
 let parse_header str = 
   assert (String.length str = sizeof_header);
@@ -32,7 +39,11 @@ let parse_header str =
 
 end
 
-let syscall_exec (cmd : string) _args =
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+let syscall_exec (cmd : string) (_args : string list) : unit =
   let up = Globals.up () in
 
   (* big call *)
@@ -118,4 +129,3 @@ let syscall_exec (cmd : string) _args =
     ()
 
    )
-

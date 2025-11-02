@@ -10,7 +10,7 @@ let share chan =
 end
 
 
-let syscall_rfork flags =
+let syscall_rfork (flags : Syscall.rfork_flags) : pid option =
   match flags with
   | Syscall.Fork (fork_flags, _flags) ->
     let up = Globals.up () in

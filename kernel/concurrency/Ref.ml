@@ -1,16 +1,17 @@
 open Common
+
 open Types
 open Ref_
 
 type t = Ref_.t
 
-let alloc n = 
+let alloc (n : int) : t = 
   { cnt = n;
     l = Spinlock.alloc ();
   }
 
 
-let inc x =
+let inc (x : t) : int =
   Spinlock.lock x.l;
   (* less: can detect overflow? exn in ocaml? *)
   x.cnt <- x.cnt + 1;
@@ -19,7 +20,7 @@ let inc x =
   Spinlock.unlock x.l;
   v
 
-let dec x =
+let dec (x : t) : int =
   Spinlock.lock x.l;
   x.cnt <- x.cnt - 1;
   let v = x.cnt in
@@ -28,7 +29,7 @@ let dec x =
   then failwith "Ref.dec has a negative count";
   v
 
-let dec_and_is_zero x =
+let dec_and_is_zero (x : t) : bool =
   Spinlock.lock x.l;
   x.cnt <- x.cnt - 1;
   let v = x.cnt in
@@ -40,7 +41,7 @@ let dec_and_is_zero x =
   
 
 (* a Ref is often used as a lock for other fields (e.g., in Page_.t) *)
-let lock x =
+let lock (x : t) : unit =
   Spinlock.lock x.l
-let unlock x =
+let unlock (x : t) : unit =
   Spinlock.unlock x.l

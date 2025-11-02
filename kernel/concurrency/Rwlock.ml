@@ -25,7 +25,7 @@ type t = {
 }
 
 (* similar to Qlock.lock *)
-let rlock q =
+let rlock (q : t) : unit =
   Spinlock.lock q.l;
   (* todo: when can have not q.writer && queue.length q.q > 0 ???? *)
   if not q.writer && Queue.length q.q = 0
@@ -44,7 +44,7 @@ let rlock q =
     (* will resume here once woke up by another process *)
   end
 
-let runlock q =
+let runlock (q : t) : unit =
   Spinlock.lock q.l;
   q.readers <- q.readers - 1;
   (* this implies that there is no writer? *)
@@ -56,7 +56,7 @@ let runlock q =
   end
 
 
-let wlock q =
+let wlock (q : t) : unit =
   Spinlock.lock q.l;
   if q.readers = 0 && not q.writer
   then begin
@@ -74,7 +74,7 @@ let wlock q =
     (* will resume here once woke up by another process *)
   end
 
-let wunlock q =
+let wunlock (q : t) : unit =
   Spinlock.lock q.l;
   raise Todo
 

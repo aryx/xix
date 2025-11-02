@@ -6,16 +6,15 @@ open Spl_
 
 type prio = Spl_.prio
 
-let high () =
+let high () : prio =
   raise Todo
 
-let low () =
+let low () : prio =
   raise Todo
 
-let set _prio =
-  Logs.err (fun m -> m "TODO: spl.set")
-  (* raise Todo *)
+let set (_prio : prio) : unit =
+  raise Todo
 
-let is_low () =
+let is_low () : bool =
   raise Todo
 

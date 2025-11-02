@@ -1,4 +1,5 @@
 open Common
+
 open Types
 open Spinlock_
 
@@ -11,7 +12,7 @@ open Spinlock_
 
 type t = Spinlock_.t
 
-let lock x =
+let lock (x : t) : unit =
   let when_hold () =
     let up = Globals.up () in
     (* less: 
@@ -44,7 +45,7 @@ let lock x =
     done
   end
 
-let unlock x =
+let unlock (x : t) : unit =
   if not !(x.hold)
   then failwith "Spinlock.unlock: not locked";
   let up = Globals.up () in
@@ -54,7 +55,7 @@ let unlock x =
   (* less: coherence issue? *)
   x.hold := false
 
-let canlock x =
+let canlock (x : t) : bool =
   if Tas.tas x.hold = false
   then begin
     (* coupling: copy paste of lock when_hold *) 
@@ -66,14 +67,14 @@ let canlock x =
 
 
 (* so nice compared to C *)
-let with_lock f x =
+let with_lock (f : unit -> 'a) (x : t) : 'a =
   lock x;
   Fun.protect ~finally:(fun () ->
     unlock x
   ) f
 
 
-let alloc () = 
+let alloc () : t = 
   { hold = ref false;
     p = 0;
   }

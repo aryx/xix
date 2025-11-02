@@ -1,7 +1,8 @@
 open Common
+
 open Types
 open Process_
-open User_memory (* for the @< operators *)
+open User_memory.Operators
 
 
 (* todo: factorize with plan9-ml/formats/executable/a_out.ml? *)

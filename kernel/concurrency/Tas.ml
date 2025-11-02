@@ -10,6 +10,6 @@ open Common
  * 
  * todo: for now no concurrency in ocaml so pretty simple ...
  *)
-let tas boolref =
+let tas (boolref : bool ref) : bool =
   boolref := true;
   false

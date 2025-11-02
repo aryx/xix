@@ -10,14 +10,14 @@ open Qlock_
 
 type t = Qlock_.t
 
-let alloc () =
+let alloc () : t =
   { locked = false;
     q = Queue.create ();
     l = Spinlock.alloc ();
   }
   
 
-let lock q =
+let lock (q : t) : unit =
   (* todo: sanity check ilockdepth, nlocks *)
   Spinlock.lock q.l;
   if not q.locked
@@ -34,7 +34,7 @@ let lock q =
   end
 
 
-let unlock q =
+let unlock (q : t) : unit =
   Spinlock.lock q.l;
   if not q.locked 
   then failwith "Qlock.unlock called with qlock not held";
@@ -46,7 +46,7 @@ let unlock q =
     q.locked <- false;
     Spinlock.unlock q.l
 
-let canlock q =
+let canlock (q : t) : bool =
   if not (Spinlock.canlock q.l)
   then false
   else 
@@ -61,7 +61,7 @@ let canlock q =
     end
 
 (* so much better than those waserror/nexterror/poperror in C *)
-let with_lock f x =
+let with_lock (f : unit -> 'a) (x : t) : 'a =
   lock x;
   Fun.protect f ~finally:(fun () ->
     unlock x

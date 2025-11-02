@@ -1,6 +1,7 @@
 open Common
 open Types
 
+module Operators = struct
 (* less: Pervasives would work? *)
 let (@<) (VU a) (VU b) = a < b
 let (@>) (VU a) (VU b) = a > b
@@ -13,7 +14,7 @@ let (@-) (VU a) (VU b) =
 let (@+) (VU a) b =
   assert (b > 0);
   VU (a+b)
-
+end
 
 let roundup_page (VU addr) = 
   VU (Int_.roundup addr Memory.pg2by)

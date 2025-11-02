@@ -1,10 +1,19 @@
 open Common
+
 open Types
-open User_memory (* for operators @<, @-, etc *)
+open User_memory.Operators
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let change_segment_top (addr : user_addr) (section : Process_.section) =
   let up : Process_.t = Globals.up () in
-  let seg : Segment_.t =
+  let seg : Segment.t =
     try Hashtbl.find up.seg section
     with Not_found -> Error.error Error.Ebadarg
   in
@@ -15,14 +24,14 @@ let change_segment_top (addr : user_addr) (section : Process_.section) =
     then raise Todo
     else begin
       (* make sure new_top does not overlap with another segment *)
-      up.seg |> Hashtbl.iter (fun section2 seg2 ->
+      up.seg |> Hashtbl.iter (fun section2 (seg2 : Segment.t) ->
         if section2 <> section
         then
-          if new_top >= seg2.Segment_.base && new_top < seg2.Segment_.top
+          if new_top >= seg2.base && new_top < seg2.top
           then Error.error Error.Esoverlap
       );
 
-      let new_nb_pages = (new_top @- seg.Segment_.base) / Memory.pg2by in
+      let new_nb_pages = (new_top @- seg.base) / Memory.pg2by in
       (* code similar in Segment.alloc *)
       if new_nb_pages > Segment_.pagedir_size * Pagetable_.pagetab_size
       then Error.error Error.Enovmem;
@@ -31,17 +40,21 @@ let change_segment_top (addr : user_addr) (section : Process_.section) =
         Int_.roundup new_nb_pages Pagetable_.pagetab_size 
         / Pagetable_.pagetab_size
       in
-      let old_pgdir_size = Array.length seg.Segment_.pagedir in
+      let old_pgdir_size = Array.length seg.pagedir in
       if new_pgdir_size > old_pgdir_size
       then begin
         let newarr = Array.make new_pgdir_size None in
-        Array.blit seg.Segment_.pagedir 0 newarr 0 old_pgdir_size;
-        seg.Segment_.pagedir <- newarr;
+        Array.blit seg.pagedir 0 newarr 0 old_pgdir_size;
+        seg.pagedir <- newarr;
       end;
-      seg.Segment_.top <- new_top;
-      seg.Segment_.nb_pages <- new_nb_pages;
+      seg.top <- new_top;
+      seg.nb_pages <- new_nb_pages;
     end
   )
+
+(*****************************************************************************)
+(* The syscall *)
+(*****************************************************************************)
 
 (* brk means?  *)
 let syscall_brk (addr : user_addr) : unit =

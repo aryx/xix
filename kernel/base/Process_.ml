@@ -42,7 +42,7 @@ type wait_msg = {
 }
 
 
-
+(* The big process data structure! *)
 type t = {
   (* ---------------------------------------------------------------- *)
   (* State *)

@@ -1,10 +1,10 @@
 open Common
 open Types
 
-let kmap _page =
+let kmap (_page : Page_.t) : unit =
   raise Todo
 
-let kunmap _page =
+let kunmap (_page : unit (* ??? not Page._t *)) : unit =
   raise Todo
 
 (* less: let va k = ... ? 

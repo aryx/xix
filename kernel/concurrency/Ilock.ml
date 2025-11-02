@@ -1,10 +1,11 @@
 open Common
+
 open Types
 open Ilock_
 
 type t = Ilock_.t
 
-let lock x =
+let lock (x : t) : unit =
   let when_hold oldprio =
     let _up = Globals.up () in
     (* less: 
@@ -42,7 +43,7 @@ let lock x =
     done
   end
 
-let unlock x =
+let unlock (x : t) : unit =
   if not !(x.hold)
   then failwith "Spinlock.unlock: not locked";
   (* less: if Spl.is_low failwith? *)
@@ -53,7 +54,7 @@ let unlock x =
   Spl.set oldprio
     
 
-let alloc () =
+let alloc () : t =
   { hold = ref false;
     saved_spl = Spl_.Low;
   }

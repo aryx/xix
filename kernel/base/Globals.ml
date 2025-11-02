@@ -89,21 +89,6 @@ let cpus =
   Array.init Arch.max_cpus (fun i -> if i = 0 then Some cpu0 else None)
 (* less: active *)
 
-(* less: opti: a special register (faster and local to a processor) *)
-let cpu () = 
-  (* todo: handle multiple processors *)
-  match cpus.(0) with
-  | None -> Error.panic "cpu: no processor??"
-  | Some x -> x
-
-
-(* less: opti: a special register (faster and local to a processor) *)
-let up () = 
-  match (cpu()).proc with
-  (* sentinel proc; convenient because need less if (up == nil) code *)
-  | None -> fakeproc (* todo? or failwith? *)
-  | Some x -> x
-
 let devtab = ref ([| |]: Device_.t array)
 
 let conf = ref fakeconf
@@ -117,3 +102,24 @@ let eve = ref ""
  *  - Timers.timers array 
  *  - Alarms.alarms list
  *)
+
+(*****************************************************************************)
+(* cpu() and up() *)
+(*****************************************************************************)
+
+(* less: opti: a special register (faster and local to a processor) *)
+let cpu () = 
+  (* todo: handle multiple processors *)
+  match cpus.(0) with
+  | None -> Error.panic "cpu: no processor??"
+  | Some x -> x
+
+
+(* UP for user process?
+ * less: opti: a special register (faster and local to a processor) 
+ *)
+let up () = 
+  match (cpu()).proc with
+  (* sentinel proc; convenient because need less if (up == nil) code *)
+  | None -> fakeproc (* todo? or failwith? *)
+  | Some x -> x

@@ -66,6 +66,7 @@ let rc = {
  *)
 let shell_from_env_opt (caps : < Cap.env; .. >) : t option = 
   try 
+    Logs.info (fun m -> m "looking for $MKSHELL");
     let path = CapSys.getenv caps "MKSHELL" in
     match path with
     | s when s =~ ".*/rc$" -> Some { rc with path = Fpath.v path }

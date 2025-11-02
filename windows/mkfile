@@ -15,31 +15,32 @@ SRC= \
                               Threads_fileserver.ml \
   test.ml Main.ml
 
-INCLUDES=-I $TOP/lib_core/commons2 -I $TOP/lib_system/plan9 \
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/lib_system/plan9 \
  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
  -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
 
-LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_system/plan9/plan9.cma \
- $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
- $TOP/lib_graphics/input/lib.cma $TOP/lib_graphics/ui/lib.cma
+#LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_system/plan9/plan9.cma \
+# $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
+# $TOP/lib_graphics/input/lib.cma $TOP/lib_graphics/ui/lib.cma
 
-SYSLIBS=unix.cma threads.cma str.cma
-CCLIBS= \
-        -cclib $TOP/lib_system/plan9/libplan9.a\
-        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
-        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a\
-        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
-        -cclib /home/pad/github/fork-ocaml/byterun/main.8
+#SYSLIBS=unix.cma threads.cma str.cma
+#CCLIBS= \
+#        -cclib $TOP/lib_system/plan9/libplan9.a\
+#        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
+#        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libstr.a\
+#        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
+#        -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
-PROG=rio
+#PROG=rio
 
-<$TOP/mkconfig2
-<$TOP/mkfiles/mkprog
+<$TOP/mkconfig
+#<$TOP/mkfiles/mkprog
+<$TOP/mkfiles/mklib
 
-ROOT=/home/pad/plan9/ROOT/
-test:V:
-	cp $PROG $ROOT/tests/xxx/
-    cd /home/pad/plan9; make disk; make run
-
-loc:V:
-	wc -l *.ml*
+#ROOT=/home/pad/plan9/ROOT/
+#test:V:
+#	cp $PROG $ROOT/tests/xxx/
+#    cd /home/pad/plan9; make disk; make run
+#
+#loc:V:
+#	wc -l *.ml*

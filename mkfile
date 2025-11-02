@@ -14,9 +14,9 @@ DIRS0=\
   linker/executables linker/libraries linker\
   compiler\
   lib_core/system/plan9\
-  lib_graphics/geometry lib_graphics/draw
+  lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui \
 
-#TODO: lib_graphics/input\ windows
+#TODO:  windows
 
 # does not work yet with ocaml-light
 DIRS1=version_control

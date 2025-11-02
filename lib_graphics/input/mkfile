@@ -1,7 +1,8 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_graphics/draw -I $TOP/lib_graphics/geometry 
+#TODO: should use -I +threads instead of full path below
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_graphics/draw -I $TOP/lib_graphics/geometry -I /usr/local/lib/ocaml/
 SRC= Cursor.ml Mouse.ml Keyboard.ml
 
 <$TOP/mkconfig

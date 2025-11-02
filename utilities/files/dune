@@ -9,11 +9,18 @@
  (modes native byte)
 )
 
+(executable (name Pwd) (modules Pwd)
+ (libraries str unix xix_commons)
+ (preprocess (pps ppx_deriving.show))
+ (modes native byte)
+)
+
 
 (install
  (package xix)
  (section bin)
  (files
   (Cat.exe as ocat)
+  (Pwd.exe as opwd)
  )
 )

@@ -1,7 +1,7 @@
 # -*- org -*-
 
 * TODO
-ELF! ELF Linux!
+fix o5c for helloc.exe
 
 ** rc/mk
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
@@ -14,15 +14,19 @@ TODO? use let* and let/ ? also doable to add in ocaml-light ?
 SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 
 ** testinfra
+- Dockerfile.light can now compile lib_graphivcs/, windows/, and kernel/
+  so all OCaml code in xix now compiles with ocaml-light!
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (va, ar v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/ utilities)
+* 0.17 (Q4 2025) (ELF Linux, va, ar v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/ utilities, resume windows, resume kernel)
 
 ** toolchain
+- support for ELF and Linux code generation in o5l and hello_linux_arm.exe
+  working! (and also the simpler exit_linux_arm.exe)
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
-- port va (plan9 mips assembler) to OCaml
-- port ar to OCaml (v0)
+- port va (plan9 mips assembler) to OCaml (now called ova)
+- port ar to OCaml (v0) (now called oar)
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
@@ -41,6 +45,8 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 - use uppercase module filenames, split Main.ml/CLI.ml, and start
   to use capabilities for 5a/5c/5l/cpp as well as lex/yacc
 - use Cap.open_out
+- resume the compilation of windows/ and kernel/ with dune and mkfile
+  without requiring a plan9 ocamlc
 
 
 * 0.16 (Q3 2025) (Dockerfile.light v0)

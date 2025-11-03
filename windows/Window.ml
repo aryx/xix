@@ -201,7 +201,7 @@ let pt_on_border pt w =
 
 
 (* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)
-let alloc (img : Image.t) (font : Font.t) : t = 
+let alloc (img : Display.image) (font : Font.t) : t = 
   incr wid_counter;
   incr topped_counter;
 

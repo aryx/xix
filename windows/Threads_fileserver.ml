@@ -3,7 +3,6 @@ open Common
 
 module F = File
 module D = Device
-module FS = Fileserver
 module W = Window
 module N = Plan9
 module P = Protocol_9P
@@ -33,7 +32,7 @@ let all_devices = [
 (* Helpers *)
 (*****************************************************************************)
 
-let device_of_devid devid =
+let device_of_devid (devid : File.devid) : Device.t =
   try 
     List.assoc devid all_devices
   with Not_found ->
@@ -49,20 +48,20 @@ let toplevel_entries =
     }
   )
 
-let answer fs res =
+let answer (fs : Fileserver.t) (res : P.message) =
   if !Globals.debug_9P
   then Logs.debug (fun m -> m "%s" (P.str_of_msg res));
 
-  P.write_9P_msg res fs.FS.server_fd
+  P.write_9P_msg res fs.server_fd
 
 let error fs req str =
   let res = { req with P.typ = P.R (R.Error str) } in
   answer fs res
 
 (* less: could be check_and_find_fid to factorize more code in dispatch() *)
-let check_fid op fid fs =
+let check_fid op fid (fs : Fileserver.t) =
   (* stricter: *)
-  if not (Hashtbl.mem fs.FS.fids fid)
+  if not (Hashtbl.mem fs.fids fid)
   then failwith (spf "%s: unknown fid %d" op fid)
   
 
@@ -73,7 +72,7 @@ let check_fid op fid fs =
 (* for Version *)
 let first_message = ref true
 
-let dispatch fs req request_typ =
+let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   match request_typ with
   (* Version *)
   | T.Version (msize, str) -> 
@@ -85,19 +84,19 @@ let dispatch fs req request_typ =
     | _ when str <> "9P2000" ->
       error fs req "version: unrecognized 9P version";
     | _ ->
-      fs.FS.message_size <- msize;
+      fs.message_size <- msize;
       answer fs {req with P.typ = P.R (R.Version (msize, str)) }
     )
 
   (* Attach *)
   | T.Attach (rootfid, _auth_fid_opt, uname, aname) ->
     (* stricter: *)
-    if Hashtbl.mem fs.FS.fids rootfid
+    if Hashtbl.mem fs.fids rootfid
     then failwith (spf "Attach: fid already used: %d" rootfid);
 
     (match () with
-    | _ when uname <> fs.FS.user ->
-      error fs req (spf "permission denied, %s <> %s" uname fs.FS.user)
+    | _ when uname <> fs.user ->
+      error fs req (spf "permission denied, %s <> %s" uname fs.user)
     | _ ->
     (* less: could do that in a worker thread (if use qlock) *)
     (* less: newlymade, qlock all *)
@@ -116,7 +115,7 @@ let dispatch fs req request_typ =
          F.opened = None;
          F.w = w;
        } in
-       Hashtbl.add fs.FS.fids rootfid file;
+       Hashtbl.add fs.fids rootfid file;
        answer fs {req with P.typ = P.R (R.Attach qid) }
      with _exn ->
         error fs req (spf "unknown id in attach: %s" aname)
@@ -126,13 +125,13 @@ let dispatch fs req request_typ =
   (* Walk *)
   | T.Walk (fid, newfid_opt, xs) ->
     check_fid "walk" fid fs;
-    let file = Hashtbl.find fs.FS.fids fid in
-    let wid = file.F.w.W.id in
-    (match file, newfid_opt with
-    | { F.opened = Some _; _ }, _ ->
+    let file : File.t = Hashtbl.find fs.fids fid in
+    let wid = file.w.W.id in
+    (match file.opened, newfid_opt with
+    | Some _, _ ->
       error fs req "walk of open file"
     (* stricter? failwith or error? *)
-    | _, Some newfid when Hashtbl.mem fs.FS.fids newfid ->
+    | _, Some newfid when Hashtbl.mem fs.fids newfid ->
       error fs req (spf "clone to busy fid: %d" newfid)
     | _ when List.length xs > P.max_welem ->
       error fs req (spf "name too long: [%s]" (String.concat ";" xs))
@@ -148,7 +147,7 @@ let dispatch fs req request_typ =
             F.opened = None 
             (* todo: nrpart? *)
           } in
-          Hashtbl.add fs.FS.fids newfid newfile;
+          Hashtbl.add fs.fids newfid newfile;
           newfile
       in
       let rec walk qid entry acc xs =
@@ -182,7 +181,7 @@ let dispatch fs req request_typ =
         answer fs { req with P.typ = P.R (R.Walk qids) }
       with exn ->
         newfid_opt |> Option.iter (fun newfid ->
-          Hashtbl.remove fs.FS.fids newfid
+          Hashtbl.remove fs.fids newfid
         );
         (match exn with
         (* this can happen many times because /dev is a union-mount so
@@ -201,17 +200,17 @@ let dispatch fs req request_typ =
   (* Open *)
   | T.Open (fid, flags) ->
     check_fid "open" fid fs;
-    let file = Hashtbl.find fs.FS.fids fid in
+    let file = Hashtbl.find fs.fids fid in
     let w = file.F.w in
     (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
-    (match flags, file.F.entry.F.perm with
-    | { N.x = true; _}, _ 
-    | { N.r = true; _}, { N.r = false; _}
-    | { N.w = true; _}, { N.w = false; _}
-      -> error fs req "permission denied"
-    | _, _ when w.W.deleted ->
-      error fs req "window deleted"
-    | _ ->
+    let perm = file.F.entry.F.perm in
+    if flags.x || (flags.r && not perm.r)
+               || (flags.w && not perm.w)
+    then error fs req "permission denied"
+    else
+      if w.deleted
+      then error fs req "window deleted"
+      else 
       (* less: could do that in a worker thread *)
       (try 
          (match file.F.entry.F.code with
@@ -223,17 +222,17 @@ let dispatch fs req request_typ =
            ()
          );
          file.F.opened <- Some flags;
-         let iounit = fs.FS.message_size - P.io_header_size in
+         let iounit = fs.message_size - P.io_header_size in
          answer fs { req with P.typ = P.R (R.Open (file.F.qid, iounit)) }
        with Device.Error str ->
          error fs req str
       )
-    )
+
 
   (* Clunk *)
   | T.Clunk (fid) ->
     check_fid "clunk" fid fs;
-    let file = Hashtbl.find fs.FS.fids fid in
+    let file = Hashtbl.find fs.fids fid in
     (match file.F.opened with
     | Some _flags ->
       (match file.F.entry.F.code with
@@ -249,13 +248,13 @@ let dispatch fs req request_typ =
       (* todo: winclosechan *)
       ()
     );
-    Hashtbl.remove fs.FS.fids fid;
+    Hashtbl.remove fs.fids fid;
     answer fs { req with P.typ = P.R (R.Clunk) }
 
   (* Read *)
   | T.Read (fid, offset, count) ->
     check_fid "read" fid fs;
-    let file = Hashtbl.find fs.FS.fids fid in
+    let file = Hashtbl.find fs.fids fid in
     let w = file.F.w in
 
     (match file.F.entry.F.code with
@@ -279,7 +278,7 @@ let dispatch fs req request_typ =
   (* Write *)
   | T.Write (fid, offset, data) ->
     check_fid "write" fid fs;
-    let file = Hashtbl.find fs.FS.fids fid in
+    let file = Hashtbl.find fs.fids fid in
     let w = file.F.w in
 
     (match file.F.entry.F.code with
@@ -303,7 +302,7 @@ let dispatch fs req request_typ =
   (* Stat *)
   | T.Stat (fid) ->
     check_fid "stat" fid fs;
-    let file = Hashtbl.find fs.FS.fids fid in
+    let file = Hashtbl.find fs.fids fid in
     let short = file.F.entry in
     (* less: getclock *)
     let clock = 0 in
@@ -321,9 +320,9 @@ let dispatch fs req request_typ =
       N.atime = clock;
       N.mtime = clock;
 
-      N.uid = fs.FS.user;
-      N.gid = fs.FS.user;
-      N.muid = fs.FS.user;
+      N.uid = fs.user;
+      N.gid = fs.user;
+      N.muid = fs.user;
 
       N._typ = 0;
       N._dev = 0;
@@ -348,11 +347,11 @@ let dispatch fs req request_typ =
 (*****************************************************************************)
 
 (* the master *)
-let thread fs =
+let thread (fs : Fileserver.t) =
   (* less: threadsetname *)
   
   while true do
-    let req = P.read_9P_msg fs.FS.server_fd in
+    let req = P.read_9P_msg fs.server_fd in
 
     (* todo: should exit the whole proc if error *)
     if !Globals.debug_9P

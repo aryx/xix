@@ -101,7 +101,7 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
     while !i < cnt && term.output_point.i < term.nrunes do
       let pos = term.output_point.i in
       Bytes.set buf !i term.text.(pos);
-      term.output_point <- { i = pos + 1};
+      term.output_point <- { Terminal.i = pos + 1};
       incr i;
     done
   );
@@ -122,7 +122,7 @@ let cmd_in (w : Window.t) (cmd : cmd) =
     (* todo: delete timeout process *)
     Wm.close_win w
 
-  | Reshape (new_img) ->
+  | Reshape (new_img : Display.image) ->
     (* less: put all of that in Wm.resize_win ? *)
     if w.deleted
     (* less: free new_img if deleted, but when can happen? *)

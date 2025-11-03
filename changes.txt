@@ -14,7 +14,7 @@ TODO? use let* and let/ ? also doable to add in ocaml-light ?
 SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 
 ** testinfra
-- Dockerfile.light can now compile lib_graphivcs/, windows/, and kernel/
+- Dockerfile.light can now compile lib_graphics/, windows/, and kernel/
   so all OCaml code in xix now compiles with ocaml-light!
 
 * -----------------------------------------------------------

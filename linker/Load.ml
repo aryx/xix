@@ -11,7 +11,7 @@ module T = Types
 (* "Names", modifies global, modifies h *)
 let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : unit =
   (match global.priv with
-  | Some _ -> global.A.priv <- Some idfile
+  | Some _ -> global.priv <- Some idfile
   | None -> ()
   );
   (* populate symbol table with SXref if new entity *)

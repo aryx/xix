@@ -9,8 +9,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: unix.mli,v 1.27 1997/08/29 15:37:19 xleroy Exp $ *)
-
 (* Module [Unix]: interface to the Unix system *)
 
 (*** Error report *)

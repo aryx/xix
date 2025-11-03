@@ -140,30 +140,30 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
             | Some w1, Some w2 when w1 == w2 -> CurrentWin w1
             | Some w, _ -> OtherWin w
           in
-          (match under_mouse, m.buttons with
+          (match under_mouse with
           (* TODO: remove; just because hard to right click on QEMU and laptop*)
-          | Nothing , { left = true; _ } ->
+          | Nothing when m.buttons.left ->
             wm_menu caps m.pos Mouse.Left exitchan 
               mouse (display, desktop, view, font) fs
 
 
-          | ((*Nothing |*) CurrentWin _), { left = true; _ } ->
+          | ((*Nothing |*) CurrentWin _) when m.buttons.left ->
             ()
 
-          | Nothing,  { middle = true; _ } ->
+          | Nothing when m.buttons.middle ->
              middle_click_system m mouse
-          | CurrentWin (w : Window.t), { middle = true; _ } ->
+          | CurrentWin (w : Window.t) when m.buttons.middle ->
             if not w.mouse_opened
             then middle_click_system m mouse
 
-          | (Nothing | CurrentWin _), { right = true; _ } ->
+          | (Nothing | CurrentWin _) when m.buttons.right ->
             wm_menu caps m.pos Mouse.Right exitchan 
               mouse (display, desktop, view, font) fs
 
-          | OtherWin w, { left = true; _ } ->
+          | OtherWin w when m.buttons.left ->
             Wm.top_win w
             (* less: should drain and wait that release up, unless winborder *)
-          | OtherWin w, ({ middle = true; _ } | { right = true; _}) ->
+          | OtherWin w when m.buttons.middle || m.buttons.right ->
             Wm.top_win w
             (* todo: should goto again, may need to send event *)
             

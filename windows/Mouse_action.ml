@@ -69,7 +69,7 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
     | SweepUnclicked (old_img_opt) ->
       (match old_img_opt with
       | None -> transit (SweepReturn None)
-      | Some (old_img : Image.t) ->
+      | Some (old_img : Display.image) ->
         let r = old_img.r in
         if Rectangle.dx r < 100 || Rectangle.dy r < 3 * font.Font.height
         then transit (SweepRescue (false, old_img_opt))

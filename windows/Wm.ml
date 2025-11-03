@@ -43,7 +43,7 @@ let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.
 (*****************************************************************************)
 
 let draw_border (w : Window.t) (status : Window.border_status) =
-  let img = w.img in
+  let img : Display.image = w.img in
   (* less: if holding? *)
   let color = 
     match status with
@@ -203,7 +203,7 @@ let hide_win (w : Window.t) =
    * to respond to the Reshape command?
    *)
   then raise (Impossible "window already hidden");
-  let old_layer = w.img in
+  let old_layer : Display.image = w.img in
   let display = old_layer.display in
   (* this is an image! not a layer, so it will not be visible on screen *)
   let img = 
@@ -215,7 +215,7 @@ let hide_win (w : Window.t) =
   ()
 
 let show_win (w : Window.t) (desktop : Baselayer.t) =
-  let old_img = w.img in
+  let old_img : Display.image = w.img in
   (* back to a layer *)
   let layer = Layer.alloc desktop old_img.r Color.white in
   Hashtbl.remove Globals.hidden w.id;
@@ -229,13 +229,13 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 (*****************************************************************************)
 
 (* less: move boolean parameter, useless opti test dx/dy below catch it *)
-let resize_win (w : Window.t) (new_img : Image.t) =
-  let old_img = w.img in
-  let old_r = old_img.r in
-  let new_r = new_img.r in
+let resize_win (w : Window.t) (new_img : Display.image) =
+  let old_img : Display.image = w.img in
+  let old_r : Rectangle.t = old_img.r in
+  let new_r : Rectangle.t = new_img.r in
   if Rectangle.dx old_r = Rectangle.dx new_r && 
      Rectangle.dy old_r = Rectangle.dy new_r
-  then Draw.draw new_img new_r old_img None old_r.Rectangle.min;
+  then Draw.draw new_img new_r old_img None old_r.min;
   (* a layer or image, so when hiding this should make disappear the window *)
   Image.free old_img;
   (* less: screenr set in caller, but could do it here *)

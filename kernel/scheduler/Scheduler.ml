@@ -141,7 +141,7 @@ let sched () =
 (*****************************************************************************)
 
 (* from Running to Ready in right priority queue *)
-let ready (p : Process.t) : unit =
+let ready (p : Process_.t) : unit =
   (* less: splhi/splx? why? *)
   (* less: cpu->readied *)
   p.state <- Process_.Ready;

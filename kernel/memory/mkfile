@@ -1,0 +1,11 @@
+# -*- sh -*-
+TOP=../..
+
+INCLUDES= -I ../core -I ../concurrency_/ -I ../base  -I ../concurrency -I $TOP/lib_core/commons
+SRC= Kernel_memory.ml User_memory.ml \
+  Page.ml Pagetable.ml \
+  Proc_segment.ml Segment.ml \
+  sysbrk.ml
+
+<$TOP/mkconfig
+<$TOP/mkfiles/mklib

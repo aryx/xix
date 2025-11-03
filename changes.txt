@@ -8,18 +8,14 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
   need implement globbing, subshell, etc.
 
 ** internals
-TODO? use let* and let/ ? also doable to add in ocaml-light ?
 
 ** devinfra
-SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of syncweb)
 
 ** testinfra
-- Dockerfile.light can now compile lib_graphics/, windows/, and kernel/
-  so all OCaml code in xix now compiles with ocaml-light!
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (ELF Linux, va, ar v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/ utilities, resume windows, resume kernel)
+* 0.17 (Q4 2025) (ELF Linux, va, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/... utilities, resume windows and kernel)
 
 ** toolchain
 - support for ELF and Linux code generation in o5l and hello_linux_arm.exe
@@ -27,6 +23,7 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
 - port va (plan9 mips assembler) to OCaml (now called ova)
 - port ar to OCaml (v0) (now called oar)
+- port nm to OCaml (v0) (now called onm)
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
@@ -36,6 +33,8 @@ SEMI? switch to precommit and ocamlformat? (but avoid lex/ yacc/ because of sync
 - Dockerfile.light can now compile also 5a/5c/5l/cpp
   thx to the removal of the use of 'as' in the .mll files
   that is not supported by ocaml-light ocamlllex
+- Dockerfile.light can now compile lib_graphics/, windows/, and kernel/
+  so all OCaml code in xix now compiles with ocaml-light!
 
 ** devinfra
 - resume semgrep.jsonnet and semgrep.yml in CI

@@ -63,6 +63,6 @@ let canlock (q : t) : bool =
 (* so much better than those waserror/nexterror/poperror in C *)
 let with_lock (f : unit -> 'a) (x : t) : 'a =
   lock x;
-  Fun.protect f ~finally:(fun () ->
+  Fun.protect ~finally:(fun () ->
     unlock x
-  )
+  ) f

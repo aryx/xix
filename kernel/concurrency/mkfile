@@ -1,0 +1,10 @@
+# -*- sh -*-
+TOP=../..
+
+INCLUDES= -I ../core -I ../concurrency_/ -I $TOP/lib_core/commons -I ../base
+SRC= Tas.ml \
+  Spl.ml Ilock.ml Spinlock.ml Qlock.ml Ref.ml \
+  Counter.ml Rwlock.ml
+
+<$TOP/mkconfig
+<$TOP/mkfiles/mklib

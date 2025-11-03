@@ -1,0 +1,8 @@
+# -*- sh -*-
+TOP=../..
+
+INCLUDES=-I $TOP/lib_core/commons -I ../core
+SRC= Spl_.ml Ilock_.ml Spinlock_.ml Qlock_.ml Ref_.ml Rendez_.ml
+
+<$TOP/mkconfig
+<$TOP/mkfiles/mklib

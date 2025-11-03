@@ -17,7 +17,7 @@ let alloc () : t = {
   l = Spinlock.alloc ();
 }
 
-let sleep (rdz : t) (fcond : unit -> bool) : unit =
+let sleep (rdz : Rendez_.t) (fcond : unit -> bool) : unit =
   (* todo: splhi/splx *)
   (* less: sanity check nlocks *)
   let up : Process_.t = Globals.up () in
@@ -64,7 +64,7 @@ let wakeup (rdz : t) : pid option =
   Spinlock.lock rdz.l;
   let optp = rdz.p in
   optp |> Option.iter (fun pid ->
-    let p = Process.proc_of_pid pid in
+    let p : Process_.t = Process.proc_of_pid pid in
     Spinlock.lock p.rdzlock;
     (match p.state, p.rdz with
     | Process_.Wakeme, Some r when r == rdz -> ()

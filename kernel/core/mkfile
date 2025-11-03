@@ -1,0 +1,8 @@
+# -*- sh -*-
+TOP=../..
+
+INCLUDES=-I $TOP/lib_core/commons
+SRC= Arch.ml Conf.ml Error.ml Types.ml Print.ml
+
+<$TOP/mkconfig
+<$TOP/mkfiles/mklib

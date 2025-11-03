@@ -15,7 +15,9 @@ DIRS0=\
   compiler\
   lib_core/system/plan9\
   lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui \
-  windows
+  windows \
+  kernel/core kernel/concurrency_ kernel/base kernel/concurrency \
+  kernel/memory kernel/processes kernel/scheduler kernel/time
 
 # does not work yet with ocaml-light
 DIRS1=version_control

@@ -13,7 +13,7 @@ open User_memory.Operators
 
 let change_segment_top (addr : user_addr) (section : Process_.section) =
   let up : Process_.t = Globals.up () in
-  let seg : Segment.t =
+  let seg : Segment_.t =
     try Hashtbl.find up.seg section
     with Not_found -> Error.error Error.Ebadarg
   in
@@ -24,7 +24,7 @@ let change_segment_top (addr : user_addr) (section : Process_.section) =
     then raise Todo
     else begin
       (* make sure new_top does not overlap with another segment *)
-      up.seg |> Hashtbl.iter (fun section2 (seg2 : Segment.t) ->
+      up.seg |> Hashtbl.iter (fun section2 (seg2 : Segment_.t) ->
         if section2 <> section
         then
           if new_top >= seg2.base && new_top < seg2.top

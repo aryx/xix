@@ -55,7 +55,7 @@ let ptx offset =
   
 
 (* less: no seglock? *)
-let _add_page_to_segment (page : Page.t) (seg : t) : unit =
+let _add_page_to_segment (page : Page_.t) (seg : t) : unit =
   let (VU va) = page.va in
   let (VU base) = seg.base in
   let (VU top) = seg.top in
@@ -64,7 +64,7 @@ let _add_page_to_segment (page : Page.t) (seg : t) : unit =
   then failwith "add_page_to_segment: page out of segment range";
   
   let offset = va - base in
-  let pt : Pagetable.t =
+  let pt : Pagetable_.t =
     match seg.pagedir.(pdx offset) with
     | None -> 
       let pt = Pagetable.alloc () in

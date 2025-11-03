@@ -1,0 +1,13 @@
+# -*- sh -*-
+TOP=../..
+
+INCLUDES= -I ../core -I ../concurrency_/ -I ../base -I ../concurrency -I ../processes -I ../scheduler -I $TOP/lib_core/commons
+SRC= Hz_clock.ml \
+  Time.ml Timer.ml Timers.ml \
+  Alarms.ml \
+  Time_rendez.ml Timer_interrupt.ml \
+  syssleep.ml sysalarm.ml
+
+
+<$TOP/mkconfig
+<$TOP/mkfiles/mklib

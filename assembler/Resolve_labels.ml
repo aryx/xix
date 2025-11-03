@@ -1,3 +1,4 @@
+(*s: Resolve_labels.ml *)
 (* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -17,14 +18,17 @@ open Ast_asm
 (* Error management *)
 (*****************************************************************************)
 
+(*s: function [[Resolve_labels.error]] *)
 let error (s : string) (line, _locs) =
   (* TODO: use Location_cpp.Error instead or use locs at least! *)
   failwith (spf "%s at line %d" s line)
+(*e: function [[Resolve_labels.error]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Resolve_labels.resolve]] *)
 (* ocaml: see how little processing 5a actually does :) *)
 let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
   let pc : virt_pc ref = ref 0 in
@@ -96,3 +100,5 @@ let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
   )
   in
   ps', locs
+(*e: function [[Resolve_labels.resolve]] *)
+(*e: Resolve_labels.ml *)

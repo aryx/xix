@@ -1,3 +1,4 @@
+(*s: Lexer_asm.mll *)
 {
 (* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -8,6 +9,7 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(*s: function [[Lexer_asm.error]] *)
 (* Common parts of the different Plan 9 assembly lexers.
  * 
  * Limitations compared to 5a/va/...:
@@ -20,7 +22,9 @@ module L = Location_cpp
 
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
+(*e: function [[Lexer_asm.error]] *)
 
+(*s: function [[Lexer_asm.code_of_escape_char]] *)
 let code_of_escape_char c =
   match c with
   | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
@@ -34,10 +38,14 @@ let code_of_escape_char c =
 
   (* stricter: we disallow \ with unknown character *)
   | _ -> error "unknown escape sequence"
+(*e: function [[Lexer_asm.code_of_escape_char]] *)
 
+(*s: function [[Lexer_asm.string_of_ascii]] *)
 let string_of_ascii i =
   String.make 1 (Char.chr i)
+(*e: function [[Lexer_asm.string_of_ascii]] *)
 
+(*s: function [[Lexer_asm.char_]] *)
 (* needed only because of ocamllex limitations in ocaml-light
  * which does not support the 'as' feature.
  *)
@@ -45,14 +53,24 @@ let char_ lexbuf =
   let s = Lexing.lexeme lexbuf in
   String.get s 0
 }
+(*e: function [[Lexer_asm.char_]] *)
 
 (*****************************************************************************)
 (* Regexps aliases *)
 (*****************************************************************************)
+(*s: constant [[Lexer_asm.letter]] *)
 let letter = ['a'-'z''A'-'Z']
+(*e: constant [[Lexer_asm.letter]] *)
+(*s: constant [[Lexer_asm.space]] *)
 let space = [' ''\t']
+(*e: constant [[Lexer_asm.space]] *)
+(*s: constant [[Lexer_asm.digit]] *)
 let digit = ['0'-'9']
+(*e: constant [[Lexer_asm.digit]] *)
+(*s: constant [[Lexer_asm.hex]] *)
 let hex = (digit | ['A'-'F''a'-'f'])
+(*e: constant [[Lexer_asm.hex]] *)
+(*s: constant [[Lexer_asm.oct]] *)
 let oct = ['0'-'7']
 
 (*****************************************************************************)
@@ -134,6 +152,7 @@ rule token = parse
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         TINT (int_of_string ("0o" ^ s))  }
   | "0x" hex+        { TINT (int_of_string (Lexing.lexeme lexbuf)) }
+(*e: constant [[Lexer_asm.oct]] *)
   | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
 
   (* stricter: I impose some digit+ after '.' and after 'e' *)
@@ -209,3 +228,4 @@ and comment = parse
   | '*'           { comment lexbuf }
   | '\n'          { incr L.line; comment lexbuf }
   | eof           { error "end of file in comment" }
+(*e: Lexer_asm.mll *)

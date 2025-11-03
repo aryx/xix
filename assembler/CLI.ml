@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -37,14 +38,19 @@ open Regexp_.Operators
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
+(*s: type [[CLI.caps]] *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
+(*e: type [[CLI.caps]] *)
 
+(*s: constant [[CLI.dump_ast]] *)
 let dump_ast = ref false
+(*e: constant [[CLI.dump_ast]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[CLI.assemble5]] *)
 let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asm5.program =
   let prog = Parse_asm5.parse caps conf infile in
   let prog = Resolve_labels.resolve Ast_asm5.branch_opd_of_instr prog in
@@ -52,15 +58,19 @@ let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
         Logs.app (fun m -> m "AST = %s" s));
   prog
+(*e: function [[CLI.assemble5]] *)
 
+(*s: function [[CLI.assemblev]] *)
 let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asmv.program =
   let prog = Parse_asmv.parse caps conf infile in
   let prog = Resolve_labels.resolve Ast_asmv.branch_opd_of_instr prog in
   if !dump_ast 
   then Logs.app (fun m -> m "AST = %s" (Ast_asmv.show_program prog));
   prog
+(*e: function [[CLI.assemblev]] *)
 
 
+(*s: function [[CLI.assemble]] *)
 (* Will modify chan as a side effect *)
 let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
   match arch with
@@ -72,11 +82,13 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
       Object_file.save arch prog chan
   | _ -> 
    failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+(*e: function [[CLI.assemble]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[CLI.main]] *)
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   let arch = 
     (* alt: use Arch.arch_of_char argv.(0).(1) *)
@@ -203,4 +215,6 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
+(*e: function [[CLI.main]] *)
 
+(*e: CLI.ml *)

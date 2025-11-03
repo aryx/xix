@@ -1,3 +1,4 @@
+(*s: Parse_asm5.ml *)
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
@@ -16,6 +17,7 @@ open Ast_asm5
 (* Lexer *)
 (*****************************************************************************)
 
+(*s: function [[Parse_asm5.token]] *)
 let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   let tok = Lexer_asm.token lexbuf in
   match tok with
@@ -127,11 +129,13 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       | _ -> TIDENT s
       )
+(*e: function [[Parse_asm5.token]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Parse_asm5.parse]] *)
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program = 
   let hooks = Parse_cpp.{
      lexer = token;
@@ -148,8 +152,10 @@ let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.
   }
   in
   Parse_cpp.parse caps hooks conf file
+(*e: function [[Parse_asm5.parse]] *)
 
 
+(*s: function [[Parse_asm5.parse_no_cpp]] *)
 (* Simpler code path; possibly useful in tests *)
 let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
   L.line := 1;
@@ -158,4 +164,6 @@ let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
     Parser_asm5.program token lexbuf, []
   with Parsing.Parse_error ->
       failwith (spf "Syntax error: line %d" !L.line)
+(*e: function [[Parse_asm5.parse_no_cpp]] *)
 
+(*e: Parse_asm5.ml *)

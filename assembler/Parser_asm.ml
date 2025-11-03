@@ -1,3 +1,4 @@
+(*s: Parser_asm.ml *)
 open Common
 
 open Ast_asm
@@ -24,11 +25,16 @@ module L = Location_cpp
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Parser_asm.error]] *)
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
+(*e: function [[Parser_asm.error]] *)
 
+(*s: constant [[Parser_asm.noattr]] *)
 let noattr = { dupok = false; prof = true }
+(*e: constant [[Parser_asm.noattr]] *)
 
+(*s: function [[Parser_asm.attributes_of_int]] *)
 (* less: should use keywords in Asm5 instead of abusing integers
  * alt: anyway one can also use cpp to define NOPROF/DUPOK macros
  *)
@@ -43,6 +49,10 @@ let attributes_of_int i =
    | 3 -> { dupok = true; prof = false }
 
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
+(*e: function [[Parser_asm.attributes_of_int]] *)
 
+(*s: function [[Parser_asm.mk_e]] *)
 let mk_e name static = 
   { name; priv = if static then Some (-1) else None; signature = None; }
+(*e: function [[Parser_asm.mk_e]] *)
+(*e: Parser_asm.ml *)

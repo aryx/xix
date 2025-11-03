@@ -1,3 +1,5 @@
+(*s: Token_asm.ml *)
+(*s: type [[Token_asm.t]] *)
 type t =
   (* pseudo *)
   | TTEXT | TGLOBL
@@ -25,3 +27,5 @@ type t =
   (* for cpp; see also Parse_cpp.token_category *)
   | TSharp
   | EOF
+(*e: type [[Token_asm.t]] *)
+(*e: Token_asm.ml *)

@@ -1,3 +1,4 @@
+(*s: objects/Ast_asm5.ml *)
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -37,40 +38,63 @@ open Ast_asm
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
 
+(*s: type [[Ast_asm5.reg]] *)
 type reg = A.register (* between 0 and 15 *)
 [@@deriving show]
+(*e: type [[Ast_asm5.reg]] *)
 
+(*s: type [[Ast_asm5.freg]] *)
 type freg = A.fregister (* between 0 and 15 *)
 [@@deriving show]
+(*e: type [[Ast_asm5.freg]] *)
 
 (* ?? *)
+(*s: type [[Ast_asm5.creg]] *)
 type creg = C of int (* between 0 and 15 *)
+(*e: type [[Ast_asm5.creg]] *)
 
 (* reserved by linker *)
+(*s: constant [[Ast_asm5.rTMP]] *)
 let rTMP = R 11
+(*e: constant [[Ast_asm5.rTMP]] *)
+(*s: constant [[Ast_asm5.rSB]] *)
 let rSB  = R 12
+(*e: constant [[Ast_asm5.rSB]] *)
+(*s: constant [[Ast_asm5.rSP]] *)
 let rSP  = R 13
+(*e: constant [[Ast_asm5.rSP]] *)
 (* reserved by hardware *)
+(*s: constant [[Ast_asm5.rLINK]] *)
 let rLINK = R 14
+(*e: constant [[Ast_asm5.rLINK]] *)
+(*s: constant [[Ast_asm5.rPC]] *)
 let rPC   = R 15
+(*e: constant [[Ast_asm5.rPC]] *)
 
+(*s: constant [[Ast_asm5.nb_registers]] *)
 let nb_registers = 16
+(*e: constant [[Ast_asm5.nb_registers]] *)
 
+(*s: type [[Ast_asm5.arith_operand]] *)
 type arith_operand =
   | Imm of A.integer (* characters are converted to integers *)
   | Reg of reg
   (* can not be used with shift opcodes (SLL/SRL/SRA) *)
   | Shift of reg * shift_reg_op * 
              (reg, int (* between 0 and 31 *)) Either_.t
+(*e: type [[Ast_asm5.arith_operand]] *)
 
+(*s: type [[Ast_asm5.shift_reg_op]] *)
   and shift_reg_op =
     | Sh_logic_left | Sh_logic_right
     | Sh_arith_right | Sh_rotate_right
+(*e: type [[Ast_asm5.shift_reg_op]] *)
 [@@deriving show]
 
 (* alt: could almost be moved to Ast_asm.ml but Shift above of arith_operand
  * seems arm-specific
  *)
+(*s: type [[Ast_asm5.mov_operand]] *)
 type mov_operand = 
   (* Immediate shift register *)
   | Imsr of arith_operand
@@ -84,12 +108,14 @@ type mov_operand =
   | Entity of A.entity
 
 [@@deriving show]
+(*e: type [[Ast_asm5.mov_operand]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
 (* ------------------------------------------------------------------------- *)
 
 (* less: could probably factorize things and move stuff in Ast_asm.ml *)
+(*s: type [[Ast_asm5.instr]] *)
 type instr = 
   (* Arithmetic *)
   | Arith of arith_opcode * arith_cond option *
@@ -114,7 +140,9 @@ type instr =
   (* System *)
   | SWI of int (* value actually unused in Plan 9 and Linux *)
   | RFE (* virtual, sugar for MOVM *)
+(*e: type [[Ast_asm5.instr]] *)
 
+(*s: type [[Ast_asm5.arith_opcode]] *)
   and arith_opcode = 
     (* logic *)
     | AND | ORR | EOR
@@ -126,16 +154,24 @@ type instr =
     | BIC  | ADC | SBC  | RSB | RSC
     (* middle operand always empty (could lift up and put special type) *)
     | MOV | MVN (* MOV has no reading syntax in 5a, MOVE is used *)
+(*e: type [[Ast_asm5.arith_opcode]] *)
+(*s: type [[Ast_asm5.arith_cond]] *)
   and arith_cond = Set_condition (* .S *)
+(*e: type [[Ast_asm5.arith_cond]] *)
 
+(*s: type [[Ast_asm5.arithf_opcode]] *)
   and arithf_opcode =
     | ADD_ | SUB_ | MUL_ | DIV_
+(*e: type [[Ast_asm5.arithf_opcode]] *)
     
+(*s: type [[Ast_asm5.cmp_opcode]] *)
   and cmp_opcode = 
     | CMP
     (* less useful *)
     | TST | TEQ | CMN
+(*e: type [[Ast_asm5.cmp_opcode]] *)
 
+(*s: type [[Ast_asm5.condition]] *)
   and condition =
     (* equal, not equal *)
     | EQ | NE
@@ -147,10 +183,15 @@ type instr =
     | VS | VC
     (* always/never *)
     | AL | NV
+(*e: type [[Ast_asm5.condition]] *)
 
+(*s: type [[Ast_asm5.move_option]] *)
    and move_option = move_cond option
+(*e: type [[Ast_asm5.move_option]] *)
      (* this is used only with a MOV with an indirect with offset operand *)
+(*s: type [[Ast_asm5.move_cond]] *)
      and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+(*e: type [[Ast_asm5.move_cond]] *)
 
 [@@deriving show]
 
@@ -161,16 +202,21 @@ type instr =
 (* On the ARM every instructions can be prefixed with a condition.
  * Note that cond should be AL (Always) for B/Bxx instructions.
 *)
+(*s: type [[Ast_asm5.instr_with_cond]] *)
 type instr_with_cond = instr * condition
 [@@deriving show]
+(*e: type [[Ast_asm5.instr_with_cond]] *)
 
+(*s: type [[Ast_asm5.program]] *)
 type program = instr_with_cond A.program
 [@@deriving show]
+(*e: type [[Ast_asm5.program]] *)
 
 (*****************************************************************************)
 (* Extractors/Visitors *)
 (*****************************************************************************)
 
+(*s: function [[Ast_asm5.branch_opd_of_instr]] *)
 let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   (* less: could issue warning if cond <> AL when B or Bxx, or normalize? *)
   match fst instr with
@@ -179,7 +225,9 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
   | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> None
+(*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
+(*s: function [[Ast_asm5.visit_globals_instr]] *)
 let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   let mov_operand x =
     match x with
@@ -195,3 +243,5 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | Arith _ | ArithF _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> () 
+(*e: function [[Ast_asm5.visit_globals_instr]] *)
+(*e: objects/Ast_asm5.ml *)

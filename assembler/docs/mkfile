@@ -8,7 +8,7 @@ DOC=oas
 VERSION=1
 D=..
 SRC_ML=\
-  $D/Object_file.ml \
+  $D/objects/Object_file.ml \
   $D/Parse_asm5.ml \
   $D/Resolve_labels.ml \
   $D/CLI.ml

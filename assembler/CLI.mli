@@ -1,16 +1,24 @@
+(*s: CLI.mli *)
 (* Need:
  * - open_in: for argv derived input file but also for #include'd files
  *   because 5a/va/... are macroassemblers
  * - open_out for -o object file or argv[0].5
  * - env: for INCLUDE (for cpp)
  *)
+(*s: type [[CLI.caps (CLI.mli)]] *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
+(*e: type [[CLI.caps (CLI.mli)]] *)
 
+(*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)
 val main: <caps; ..> ->
   string array -> Exit.t
+(*e: signature [[CLI.main]] *)
 
+(*s: signature [[CLI.assemble]] *)
 (* main algorithm; works by side effect on outfile *)
 val assemble: <Cap.open_in; .. > ->
   Preprocessor.conf -> Arch.t -> Fpath.t (* infile *) -> Chan.o (* outfile *) ->
   unit
+(*e: signature [[CLI.assemble]] *)
+(*e: CLI.mli *)

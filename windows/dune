@@ -19,3 +19,5 @@
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as orio.bc))
 )
+
+(dirs :standard \ docs)

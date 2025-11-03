@@ -18,3 +18,5 @@
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5l.bc))
 )
+
+(dirs :standard \ docs)

@@ -1,13 +1,14 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES= -I ../core -I ../concurrency_/ -I $TOP/lib_core/commons
+INCLUDES= -I ../core -I ../concurrency_/ -I $TOP/lib_core/commons -I +threads
 SRC= Chan_.ml Device_.ml \
   Hooks.ml \
   Memory.ml Page_.ml Pagetable_.ml Segment_.ml \
   Timer_.ml \
   Process_.ml Cpu.ml \
-  Syscall.ml
+  Syscall.ml \
+  Globals.ml
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mklib

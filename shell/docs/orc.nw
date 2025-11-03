@@ -4775,7 +4775,7 @@ exit $status
 % rc in C: ? LOC (but more features)
 
 \ifallcode
-#include "Rc_extra.nw"
+#include "orc_extra.nw"
 \fi
 
 %******************************************************************************

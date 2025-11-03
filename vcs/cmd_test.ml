@@ -64,8 +64,11 @@ let test_unzip file =
 
 let test_zip file =
   let chan = open_in file in
-  let input = IO.input_channel chan in
-  let zipped = Zip.deflate input in
+  let _input = IO.input_channel chan in
+  let zipped = 
+    (* Zip.deflate input *)
+    failwith "Zip.deflate"
+  in
   let str = IO.read_all zipped in
   UConsole.print str
 (* TODO

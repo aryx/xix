@@ -1,0 +1,8 @@
+(library
+ (name xix_crypto)
+ (wrapped false)
+ (libraries
+    xix_commons
+  )
+ (preprocess (pps ppx_deriving.show))
+)

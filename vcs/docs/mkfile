@@ -7,8 +7,7 @@ DOC_EXTRA=
 VERSION=10
 
 SRC1= IO_.ml \
-     sha1.ml hexsha.ml \
-     unzip.ml zlib.ml compression.ml \
+     hexsha.ml \
      blob.ml tree.ml  user.ml commit.ml    objects.ml \
      refs.ml \
      index.ml \
@@ -30,8 +29,7 @@ SRC1= IO_.ml \
 #buggy: diff_simple.ml
 
 SRC2= IO_.mli \
-     sha1.mli hexsha.mli \
-     unzip.mli zlib.mli compression.mli \
+     hexsha.mli \
      blob.mli tree.mli  user.mli commit.mli    objects.mli \
      refs.mli \
      index.mli \
@@ -41,9 +39,14 @@ SRC2= IO_.mli \
      client.mli client_local.mli client_git.mli clients.mli \
      dump.mli  \
 
-SRC=$SRC1 $SRC2
+SRC3=$TOP/lib_core/crypto/sha1.ml $TOP/lib_core/crypto/sha1.mli \
+    $TOP/lib_core/compression/unzip.ml $TOP/lib_core/compression/unzip.mli \
+    $TOP/lib_core/compression/zlib.ml $TOP/lib_core/compression/zlib.mli \
+    $TOP/lib_core/compression/compression.ml $TOP/lib_core/compression/compression.mli \
 
-SRC_VIEWS=${SRC:%=../%}
+SRC=$SRC1 $SRC2 $SRC3
+
+SRC_VIEWS=${SRC1:%=../%} ${SRC2:%=../%} $SRC3
 
 SRC_ORIG=VCS.nw VCS_extra.nw
 

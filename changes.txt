@@ -27,13 +27,18 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
-  thanks to -nostdlib (and -nopervasives)
+  thanks to -nostdlib (and -nopervasives) with refined orga
+  lib_core/{base,core,collections,printing,regexps,parsing}
+- move sha1 and zip/unzip from vcs to new lib_core/{crypto,compression}
+
+** utilities
+- new utilities/ with cat.ml and pwd.ml OCaml port
 
 ** testinfra
 - Dockerfile.light can now compile also 5a/5c/5l/cpp
   thx to the removal of the use of 'as' in the .mll files
   that is not supported by ocaml-light ocamlllex
-- Dockerfile.light can now compile lib_graphics/, windows/, and kernel/
+- Dockerfile.light can now compile lib_graphics/, windows/, kernel/, utilities/
   so all OCaml code in xix now compiles with ocaml-light!
 
 ** devinfra
@@ -51,7 +56,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 * 0.16 (Q3 2025) (Dockerfile.light v0)
 
 ** testinfra
-- Finish Dockerfile.light that can compile mk/rc/lib_core/ with ocaml-light! 
+- Finish Dockerfile.light that can compile {mk,rc,lib_core} with ocaml-light! 
   see ocaml-light/changes.txt for all the stuff that was needed
 
 * 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
@@ -161,16 +166,17 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * 0.8 (Q4 2017) (git algorithms)
 
+** vcs
 diff3.ml
 simpler diff_myers.ml
 
 * 0.7 (Q3 2017) (git)
 
-port of dulwich and ocaml-git, 2 clones of git, to ocaml(light).
-
-Simplify code in ocaml-git by not using functors/lwt/mstruct/... 
-and complete with new code derived from dulwich (clone of git in python)
-or from entirely new code for the features not implemented by dulwich.
+** vcs
+- port of dulwich and ocaml-git, 2 clones of git, to ocaml(light).
+- Simplify code in ocaml-git by not using functors/lwt/mstruct/... 
+  and complete with new code derived from dulwich (clone of git in python)
+  or from entirely new code for the features not implemented by dulwich.
 
 
 * 0.6 (Q2 2017) (rio and libdraw, import lib_core, lib_system)

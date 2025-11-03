@@ -4112,7 +4112,7 @@ let do_action caps s xs =
 
 
 \ifallcode
-#include "Mk_extra.nw"
+#include "omk_extra.nw"
 \fi %ifallcode
 
 

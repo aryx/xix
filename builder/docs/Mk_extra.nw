@@ -72,6 +72,7 @@ let show_instrs _ = "NO DERIVING"
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 module G = Graph
 module R = Rules
@@ -200,6 +201,7 @@ module R = Rules
 <<mk/Env.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -478,7 +480,6 @@ open Job (* for the fields *)
 <<mk/Parse.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Fpath_.Operators
 
 <<function [[Parse.parse]]>>
 @
@@ -623,6 +624,7 @@ module Set = Set_
 <<mk/Shellenv.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 <<type [[Shellenv.t]]>>
 
@@ -637,6 +639,7 @@ open Common
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 (*****************************************************************************)
 (* Prelude *)

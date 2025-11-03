@@ -839,15 +839,16 @@ let nrunning = ref 0
  *  - env: for Env.initenv() so mk recipe can access env variables.
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
- *  - chdir: actually needed just for -debugger, we could remove
+ *  - open_in: for parsing the mkfile (and included files)
  *)
-type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.env; Cap.argv; Cap.chdir >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in >
 @
 %TODO: delete chdir and -debugger?
 
 <<signature [[CLI.main]]>>=
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; Cap.stdout; ..> -> string array -> Exit.t
+val main: <caps; Cap.stdout; ..> ->
+  string array -> Exit.t
 @
 
 <<toplevel [[Main._1]]>>=
@@ -873,11 +874,11 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
 
   let options = [
     <<[[CLI.main()]] [[options]] elements>>
-  ]
+  ] |> Arg.align
   in
   (* old: was Arg.parse but we want explicit argv control *)
   (try
-    Arg.parse_argv argv (Arg.align options) (fun t -> 
+    Arg.parse_argv argv options (fun t -> 
     match t with
     <<[[CLI.main()]] modify [[vars]] when definition-like argument>>
     | _ -> targets := t :: !targets
@@ -914,15 +915,15 @@ let usage =
 
 
 <<signature [[CLI.build_targets]]>>=
-val build_targets :
-  caps -> Fpath.t -> string list ref -> (string*string) list -> unit
+val build_targets : <caps; ..> ->
+  Fpath.t -> string list ref -> (string*string) list -> unit
 @
 % string list ref for targets, why? TODO: remove, so simpler code
 
 <<signature [[CLI.build_target]]>>=
 (* main algorithm *)
-val build_target :
-  caps -> Env.t -> Rules.rules -> string (* target *) -> unit                                                       
+val build_target : <caps; ..> ->
+  Env.t -> Rules.rules -> string (* target *) -> unit                                                       
 @
 % rename mk? to match better the C code? this function is the essence of mk
 
@@ -999,7 +1000,7 @@ vars_commandline: string Hashtbl_.set;
 \section{Building the target(s)}
 
 <<function [[CLI.build_targets]]>>=
-let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
+let build_targets (caps : <caps; .. >) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
 
     (* initialisation *)
     let env = Env.initenv caps in
@@ -1007,7 +1008,7 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
     <<[[CLI.build_targets()]] if debugger set>>
 
     (* parsing *)
-    let instrs = Parse.parse infile in
+    let instrs = FS.with_open_in caps Parse.parse infile in
     <<[[CLI.build_targets()]] possibly dump the AST>>
 
     (* evaluating (can modify targets with first targets in file if none provided) *)
@@ -1027,13 +1028,13 @@ let build_targets (caps : caps) (infile : Fpath.t) (targets : string list ref) (
 %trans: Parse.parse, Eval.eval!
 <<signature [[Parse.parse]]>>=
 (* !internally modifies Globals.line and Globals.file! *)
-val parse : Fpath.t -> Ast.instr list
+val parse : Chan.i -> Ast.instr list
 @
 
 <<signature [[Eval.eval]]>>=
 (* Evaluate the variables and backquotes in the mkfile (hence Cap.exec),
- * process the included files, index the rules, and return the 
- * final environment (actually modify by side effect the environment).
+ * process the included files (hence Cap.open_in), index the rules, and return
+ * the final environment (actually modify by side effect the environment).
  * 
  * Also sets the parameter to contain the first (simple) target found
  * in the file if it was not set already.
@@ -1042,7 +1043,7 @@ val parse : Fpath.t -> Ast.instr list
  * recursively to process '<file' instructions.
  *)
 val eval :
-  < Shell.caps ; .. > ->
+  < Shell.caps ; Cap.open_in; .. > ->
   Env.t ->
   string list ref ->
   Ast.instr list ->
@@ -1052,7 +1053,7 @@ val eval :
 
 % include has been expanded, vars too, only get simple/meta rules
 <<function [[CLI.build_target]]>>=
-let build_target (caps : caps) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
+let build_target (caps : <caps; ..>) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
    let root = Graph.build_graph target rules in
    <<[[CLI.build_target()]] possibly dump the graph>>
    
@@ -1140,10 +1141,9 @@ then failwith "nothing to mk";
 
 % parse and evaluate
 <<function [[Parse.parse]]>>=
-let parse (file : Fpath.t) : Ast.instr list =
-  file |> UChan.with_open_in (fun (chan : Chan.i) ->
+let parse (chan : Chan.i) : Ast.instr list =
     Globals.line := 1;
-    Globals.file := !!file;
+    Globals.file := Chan.origin chan;
 
     let lexbuf = Lexing.from_channel chan.Chan.ic in
     <<[[Parse.parse()]] nested [[lexfunc]] function>>
@@ -1152,11 +1152,11 @@ let parse (file : Fpath.t) : Ast.instr list =
     (* less: could track line of : and = *)
     with Parsing.Parse_error ->
       failwith (spf "%s:%d: Syntax error" !Globals.file !Globals.line)
-  )
 @
 
 
 <<constant [[Globals.file]]>>=
+(* TODO: use Chan.origin? *)
 let file = ref "<nofile>"
 @
 %$
@@ -1735,7 +1735,7 @@ word_elem:
 
 
 <<function [[Eval.eval]]>>=
-let eval (caps : < Cap.fork; Cap.exec; .. >) env targets_ref (xs : Ast.instr list) : Rules.rules * Env.t =
+let eval (caps : < Cap.fork; Cap.exec; Cap.open_in; .. >) env targets_ref (xs : Ast.instr list) : Rules.rules * Env.t =
   let simples = Hashtbl.create 101 in
   let metas = ref [] in
 
@@ -1807,7 +1807,7 @@ vars_we_set: string Hashtbl_.set;
         if not (Sys.file_exists file)
         then warning loc (spf "skipping missing include file: %s" file)
         else
-          let xs = Parse.parse (Fpath.v file) in
+          let xs = FS.with_open_in caps Parse.parse (Fpath.v file) in
           (* recurse *)
           instrs xs
     (* new? what does mk does? *)
@@ -1873,7 +1873,7 @@ then targets_ref := targets;
                    recipe = r.A.recipe;
                    loc = loc;
                  } in
-    metas |> Common.push rfinal
+    metas |> Stack_.push rfinal
 @
 
 <<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>=
@@ -1889,7 +1889,7 @@ then targets_ref := targets;
                    recipe = r.A.recipe;
                    loc = loc;
                  } in
-    metas |> Common.push rfinal
+    metas |> Stack_.push rfinal
 @
     
 <<[[Eval.eval()]] when [[Rule r]] case, match [[targets]], [[prereqs]] cases>>=
@@ -2077,12 +2077,12 @@ rs |> List.iter (fun r ->
      *)
     if r.R.recipe = None
     then ()
-    else arcs |> Common.push { dest = None; rule = rule_exec r }
+    else arcs |> Stack_.push { dest = None; rule = rule_exec r }
 
   else pre |> List.iter (fun prereq ->
     (* recurse *)
     let dest = apply_rules prereq rules in
-    arcs |> Common.push { dest = Some dest; rule = rule_exec r }
+    arcs |> Stack_.push { dest = Some dest; rule = rule_exec r }
   )
 );
 @
@@ -2122,12 +2122,12 @@ rs |> List.iter (fun r ->
         *)
        let pre = r.R.prereqs in
        if pre = []
-       then arcs |> Common.push { dest = None; rule = rule_exec_meta r stem }
+       then arcs |> Stack_.push { dest = None; rule = rule_exec_meta r stem }
        else pre |> List.iter (fun prereq_pat ->
          let prereq = Percent.subst prereq_pat stem in
          (* recurse *)
          let dest = apply_rules prereq rules in
-         arcs |> Common.push { dest = Some dest; rule=rule_exec_meta r stem }
+         arcs |> Stack_.push { dest = Some dest; rule=rule_exec_meta r stem }
       )
     )
   )
@@ -2605,7 +2605,7 @@ nodes |> List.iter (fun target ->
         then ()
         else begin
           Hashtbl.add hdone_prereqs prereq true;
-          Common.push prereq.G.name all_prereqs
+          Stack_.push prereq.G.name all_prereqs
         end
   )
 ));
@@ -2801,7 +2801,7 @@ val exec_shell: <Cap.exec; Cap.env; ..> -> Shellenv.t -> string list -> string l
 
 
 <<function [[Shell.feed_shell_input]]>>=
-let feed_shell_input inputs pipe_write =
+let feed_shell_input (inputs : string list) (pipe_write : Unix.file_descr) : unit =
   inputs |> List.iter (fun str ->
     let n = Unix.write pipe_write (Bytes.of_string str) 0 (String.length str) in
     if n < 0
@@ -3052,6 +3052,7 @@ let rc = {
  *)
 let shell_from_env_opt (caps : < Cap.env; .. >) : t option = 
   try 
+    Logs.info (fun m -> m "looking for $MKSHELL");
     let path = CapSys.getenv caps "MKSHELL" in
     match path with
     | s when s =~ ".*/rc$" -> Some { rc with path = Fpath.v path }
@@ -3144,7 +3145,7 @@ let level = ref (Some Logs.Warning) in
 
 
 <<[[CLI.main()]] logging initializations>>=
-Logs.set_level !level;
+Logs_.setup !level ();
 Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 @
 % will see with -v (or -debug), will not see by default (or when -quiet)
@@ -3354,7 +3355,7 @@ val exec_backquote :
 
 
 <<function [[Shell.exec_backquote]]>>=
-let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
+let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) (input : string) =
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
   let (pipe_read_output, pipe_write_output) = Unix.pipe () in
 
@@ -3393,7 +3394,7 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
         s ^ loop_read ()
     in
     let output = loop_read () in
-    Unix.waitpid [] pid |> ignore;
+    CapUnix.waitpid caps [] pid |> ignore;
     output
   end
 @
@@ -3436,7 +3437,7 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) input =
   then failwith "missing include program name";
   let shellenv = Env.shellenv_of_env env in
   let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-  let xs = Parse.parse (Fpath.v tmpfile) in
+  let xs = FS.with_open_in caps Parse.parse (Fpath.v tmpfile) in
   (* recurse *)
   instrs xs
 @
@@ -3446,7 +3447,7 @@ val exec_pipecmd :
   < caps ; .. > ->
   Shellenv.t ->
   string (* sh stdin (recipe) *) ->
-  Common.filename (* sh output*)
+  string (* sh output *)
 @
 
 <<function [[Shell.exec_pipecmd]]>>=
@@ -3475,7 +3476,7 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     
     feed_shell_input [input] pipe_write_input;
 
-    let (pid2, status) = Unix.waitpid [] pid in
+    let (pid2, status) = CapUnix.waitpid caps [] pid in
     if pid <> pid2
     then raise (Impossible "waitpid takes the specific pid");
     (match status with
@@ -3741,6 +3742,7 @@ if interactive
 then begin
   let tmpfile = Filename.temp_file "mk" "sh" in
   (try
+     (* nosemgrep: use-caps *)
      let chan = open_out tmpfile in
      inputs |> List.iter (fun s -> 
        output_string chan s; 
@@ -3826,10 +3828,12 @@ let debugger = ref false
 @
 
 <<[[CLI.build_targets()]] if debugger set>>=
+(* ???
 if !Flags.debugger then begin
   CapSys.chdir caps (Filename.dirname !!infile);
   Env.add_var env "objtype" ["386"]
 end;
+*)
 @
 
 \section{Exception backtraces}
@@ -4059,14 +4063,14 @@ let do_action caps s xs =
   | "-test_parser" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
-        let instrs = Parse.parse (Fpath.v file) in
+        let instrs = FS.with_open_in caps Parse.parse (Fpath.v file) in
         Console.print caps (spf "%s" (Ast.show_instrs instrs))
       )
   | "-test_eval" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
         let env = Env.initenv caps in
-        let instrs = Parse.parse (Fpath.v file) in
+        let instrs = FS.with_open_in caps Parse.parse (Fpath.v file) in
         let _rules, env = Eval.eval caps env (ref []) instrs in
         Env.dump_env env;
         ()

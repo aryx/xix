@@ -59,9 +59,9 @@ module O = Opcode
 
 <<shell/CLI.ml>>=
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
-
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 module R = Runtime
 module O = Opcode
@@ -163,6 +163,7 @@ module O = Opcode
 
 <<shell/Env.ml>>=
 open Common
+open Regexp_.Operators
 
 type t = (string * string list) list
 
@@ -272,6 +273,7 @@ let eflagok = ref false
 
 <<shell/Interpreter.ml>>=
 open Common
+open Regexp_.Operators
 
 module O = Opcode
 module R = Runtime
@@ -371,6 +373,7 @@ let show_codevec _ = "NO DERIVING"
 <<shell/PATH.ml>>=
 open Common
 open Fpath_.Operators
+open Regexp_.Operators
 
 module R = Runtime
 
@@ -402,6 +405,7 @@ module R = Runtime
 <<shell/Parse.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 module R = Runtime
 
@@ -561,6 +565,7 @@ let string_of_var (var : var) : string =
 <<shell/Status.ml>>=
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Regexp_.Operators
 
 module R = Runtime
 

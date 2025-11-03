@@ -723,7 +723,9 @@ type codevec = t array
 <<type [[Opcode.opcode]]>>=
 type t =
   | F of operation
+  (* The int can be a program counter, a file descriptor depending on ctx *)
   | I of int
+  (* command name and arguments from the user *)
   | S of string
 @
 % 'I' useful for Jump pc
@@ -1121,12 +1123,13 @@ waitstatus = NothingToWaitfor;
  *
  * alt: could remove Cap.exit and use Exit.ExitCode exn in Process.ml instead
 *)
-type caps = < Cap.fork; Cap.exec; Cap.wait; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
+type caps = < Cap.forkew; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 @
 
 <<signature [[CLI.main]]>>=
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> -> string array -> Exit.t
+val main: <caps; ..> ->
+  string array -> Exit.t
 @
 
 <<toplevel [[Main._1]]>>=
@@ -1151,11 +1154,11 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
 
   let options = [
     <<[[CLI.main()]] [[options]] elements>>
-  ]
+  ] |> Arg.align
   in
   (* old: was Arg.parse but we want explicit argv control *)
   (try 
-    Arg.parse_argv argv (Arg.align options) (fun t -> args := t::!args) usage;
+    Arg.parse_argv argv options (fun t -> args := t::!args) usage;
   with
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
@@ -1184,7 +1187,8 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
 
 
 <<signature [[CLI.interpret_bootstrap]]>>=
-val interpret_bootstrap : < caps > -> string list -> unit
+val interpret_bootstrap : < caps > ->
+  string list -> unit
 @
 
 
@@ -1887,7 +1891,7 @@ curtok := (!tok, s);
 <<[[Runtime.thread]] other fields>>=
 (* for error reporting (None when reading from stdin) *)
 (* less: file has to be mutable? could be a param of start? like chan? *)
-mutable file: Common.filename option;
+mutable file: Fpath.t option;
 line: int ref;
 @
 <<[[Runtime.mk_thread()]] set other fields>>=
@@ -1914,8 +1918,8 @@ let error s (curtok, curtokstr) =
   let t = R.cur () in
   let locstr =
     match t.R.file, t.R.iflag with
-    | Some f, false -> spf "%s:%d: " f !(t.R.line)
-    | Some f, true -> spf "%s: " f
+    | Some f, false -> spf "%s:%d: " !!f !(t.R.line)
+    | Some f, true -> spf "%s: " !!f
     | None, false -> spf "%d: " !(t.R.line)
     | None, true -> ""
   in
@@ -3586,7 +3590,7 @@ let ifnot = ref false
 
 <<function [[Compile.split_when_case]]>>=
 let split_when_case cmds =
-  cmds |> Common2.span (function
+  cmds |> List_.span (function
     | (A.Simple (A.Word ("case", false), _)) -> false
     | _ -> true
   )
@@ -3892,7 +3896,7 @@ let dochdir (caps : < Cap.chdir; .. >) s =
           let newt = R.mk_thread dotcmds 0 (Hashtbl.create 10) in
           R.runq := [newt];
           R.push_redir (R.Close (Unix.descr_of_in_channel chan));
-          newt.R.file <- Some file;
+          newt.R.file <- Some (Fpath.v file);
           newt.R.lexbuf <- Lexing.from_channel chan;
           newt.R.iflag <- iflag;
           (* push for $* *)
@@ -4193,7 +4197,7 @@ let level = ref (Some Logs.Warning) in
 @
 
 <<[[CLI.main()]] logging initializations>>=
-Logs.set_level !level;
+Logs_.setup !level ();
 Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
 @
 
@@ -4680,7 +4684,7 @@ let do_action caps s xs =
           (* for error reporting I need a runq *)
           let t = Runtime.mk_thread [||] 0 (Hashtbl.create 0) in
           R.runq := t::!R.runq;
-          t.R.file <- Some !!file;
+          t.R.file <- Some file;
 
           let rec loop () =
             let line = Parse.parse_line lexbuf in

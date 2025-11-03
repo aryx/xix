@@ -103,6 +103,7 @@ module R = Rules
  *  - env: for Env.initenv() so mk recipe can access env variables.
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
+ *  - open_in: for parsing the mkfile (and included files)
  *)
 type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in >
 (*e: type [[CLI.caps]] *)

@@ -70,7 +70,7 @@ type t = {
   mutable opened: Plan9.open_flags option;
 
   (* less: we could also use a wid *)
-  w: Window.t;
+  win: Window.t;
 
   (* less: nrpart for runes *)
 }

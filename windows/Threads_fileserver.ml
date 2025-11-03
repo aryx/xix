@@ -1,13 +1,14 @@
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
-module F = File
 module D = Device
-module W = Window
 module N = Plan9
 module P = Protocol_9P
 module T = P.Request
 module R = P.Response
+
+(* for record building for ocaml-light *)
+open File
 
 (*****************************************************************************)
 (* Prelude *)
@@ -19,13 +20,13 @@ module R = P.Response
 (*****************************************************************************)
 
 let all_devices = [
-  F.WinName , Virtual_draw.dev_winname;
-  F.Mouse   , Virtual_mouse.dev_mouse;
-  F.Cons    , Virtual_cons.dev_cons;
-  F.ConsCtl , Virtual_cons.dev_consctl;
+  File.WinName , Virtual_draw.dev_winname;
+  File.Mouse   , Virtual_mouse.dev_mouse;
+  File.Cons    , Virtual_cons.dev_cons;
+  File.ConsCtl , Virtual_cons.dev_consctl;
   
-  F.WinId   , Dev_wm.dev_winid;
-  F.Text    , Dev_textual_window.dev_text;
+  File.WinId   , Dev_wm.dev_winid;
+  File.Text    , Dev_textual_window.dev_text;
 ]
 
 (*****************************************************************************)
@@ -37,14 +38,15 @@ let device_of_devid (devid : File.devid) : Device.t =
     List.assoc devid all_devices
   with Not_found ->
     raise (Impossible (spf "all_devices is not correctly set; missing code %d"
-             (File.int_of_filecode (F.File devid))))
+             (File.int_of_filecode (File.File devid))))
 
 let toplevel_entries =
   all_devices |> List.map (fun (devid, dev) ->
-    { F.name = dev.D.name;
-      F.code = F.File devid;
-      F.type_ = Plan9.QTFile;
-      F.perm = dev.D.perm;
+    { File.
+      name = dev.D.name;
+      code = File.File devid;
+      type_ = Plan9.QTFile;
+      perm = dev.D.perm;
     }
   )
 
@@ -105,15 +107,15 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
        let w = Hashtbl.find Globals.windows wid in
 
        let entry = File.root_entry in
-       let file_id = entry.F.code, wid in
-       let qid = File.qid_of_fileid file_id entry.F.type_ in
+       let file_id = entry.code, wid in
+       let qid = File.qid_of_fileid file_id entry.type_ in
 
-       let file = { 
-         F.fid = rootfid; 
-         F.qid = qid; 
-         F.entry = entry;
-         F.opened = None;
-         F.w = w;
+       let file = { File.
+         fid = rootfid; 
+         qid = qid; 
+         entry = entry;
+         opened = None;
+         win = w;
        } in
        Hashtbl.add fs.fids rootfid file;
        answer fs {req with P.typ = P.R (R.Attach qid) }
@@ -126,7 +128,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   | T.Walk (fid, newfid_opt, xs) ->
     check_fid "walk" fid fs;
     let file : File.t = Hashtbl.find fs.fids fid in
-    let wid = file.w.W.id in
+    let wid = file.win.id in
     (match file.opened, newfid_opt with
     | Some _, _ ->
       error fs req "walk of open file"
@@ -142,9 +144,9 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
         | Some newfid ->
           (* clone *)
           (* less: incref on file.w *)
-          let newfile = { file with 
-            F.fid = newfid; 
-            F.opened = None 
+          let newfile = { file with File.
+            fid = newfid; 
+            opened = None 
             (* todo: nrpart? *)
           } in
           Hashtbl.add fs.fids newfid newfile;
@@ -157,14 +159,14 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
           if qid.N.typ <> N.QTDir
           (* will be catched below and transformed in an 9P Rerror message *)
           then failwith "not a directory";
-          (match entry.F.code, x with
+          (match entry.code, x with
           | _Qwsys, ".." -> failwith "walk: Todo '..'"
-          | F.Dir (F.Root), x ->
+          | File.Dir File.Root, x ->
             let entry = 
-              toplevel_entries |> List.find (fun entry -> entry.F.name = x)
+              toplevel_entries |> List.find (fun entry -> entry.name = x)
             in
-            let file_id = entry.F.code, wid in
-            let qid = File.qid_of_fileid file_id entry.F.type_ in
+            let file_id = entry.code, wid in
+            let qid = File.qid_of_fileid file_id entry.type_ in
             (* continue with other path elements *)
             walk qid entry (qid::acc) xs
           (* todo: Wsys, snarf *)
@@ -174,10 +176,10 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
       in
       (try 
         let final_qid, final_entry, qids = 
-          walk file.F.qid file.F.entry [] xs
+          walk file.qid file.entry [] xs
         in
-        file.F.qid <- final_qid;
-        file.F.entry <- final_entry;
+        file.qid <- final_qid;
+        file.entry <- final_entry;
         answer fs { req with P.typ = P.R (R.Walk qids) }
       with exn ->
         newfid_opt |> Option.iter (fun newfid ->
@@ -201,9 +203,9 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   | T.Open (fid, flags) ->
     check_fid "open" fid fs;
     let file = Hashtbl.find fs.fids fid in
-    let w = file.F.w in
+    let w = file.win in
     (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
-    let perm = file.F.entry.F.perm in
+    let perm = file.entry.perm in
     if flags.x || (flags.r && not perm.r)
                || (flags.w && not perm.w)
     then error fs req "permission denied"
@@ -213,17 +215,17 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
       else 
       (* less: could do that in a worker thread *)
       (try 
-         (match file.F.entry.F.code with
-         | F.File devid ->
+         (match file.entry.code with
+         | File.File devid ->
            let dev = device_of_devid devid in
            dev.D.open_ w
-         | F.Dir _dir ->
+         | File.Dir _dir ->
            (* todo: nothing to do for dir? ok to open a dir? *)
            ()
          );
-         file.F.opened <- Some flags;
+         file.opened <- Some flags;
          let iounit = fs.message_size - P.io_header_size in
-         answer fs { req with P.typ = P.R (R.Open (file.F.qid, iounit)) }
+         answer fs { req with P.typ = P.R (R.Open (file.qid, iounit)) }
        with Device.Error str ->
          error fs req str
       )
@@ -233,14 +235,14 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   | T.Clunk (fid) ->
     check_fid "clunk" fid fs;
     let file = Hashtbl.find fs.fids fid in
-    (match file.F.opened with
+    (match file.opened with
     | Some _flags ->
-      (match file.F.entry.F.code with
-      | F.File devid ->
+      (match file.entry.code with
+      | File.File devid ->
         let dev = device_of_devid devid in
-        dev.D.close file.F.w
+        dev.D.close file.win
         (* todo: wclose? *)
-      | F.Dir _ ->
+      | File.Dir _ ->
         ()
       )
     (* stricter? can clunk a file not opened? *)
@@ -255,12 +257,12 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   | T.Read (fid, offset, count) ->
     check_fid "read" fid fs;
     let file = Hashtbl.find fs.fids fid in
-    let w = file.F.w in
+    let w = file.win in
 
-    (match file.F.entry.F.code with
-    | _ when w.W.deleted ->
+    (match file.entry.code with
+    | _ when w.deleted ->
       error fs req "window deleted"
-    | F.File devid ->
+    | File.File devid ->
       (* a worker thread (less: opti: arena of workers? *)
       Thread.create (fun () ->
        (* less: getclock? *)
@@ -271,7 +273,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
        with Device.Error str ->
          error fs req str
       )) () |> ignore
-    | F.Dir _ ->
+    | File.Dir _ ->
       failwith "TODO: readdir"
     )
 
@@ -279,12 +281,12 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   | T.Write (fid, offset, data) ->
     check_fid "write" fid fs;
     let file = Hashtbl.find fs.fids fid in
-    let w = file.F.w in
+    let w = file.win in
 
-    (match file.F.entry.F.code with
-    | _ when w.W.deleted ->
+    (match file.entry.code with
+    | _ when w.deleted ->
       error fs req "window deleted"
-    | F.File devid ->
+    | File.File devid ->
       (* a worker thread (less: opti: arena of workers? *)
       Thread.create (fun () ->
        (try 
@@ -296,22 +298,22 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
        with Device.Error str ->
          error fs req str
       )) () |> ignore
-    | F.Dir _ ->
+    | File.Dir _ ->
       raise (Impossible "kernel should not call write on fid of a directory")
     )
   (* Stat *)
   | T.Stat (fid) ->
     check_fid "stat" fid fs;
     let file = Hashtbl.find fs.fids fid in
-    let short = file.F.entry in
+    let short = file.entry in
     (* less: getclock *)
     let clock = 0 in
     let dir_entry = {
-      N.name = short.F.name;
+      N.name = short.name;
       (* less: adjust version for snarf *)
-      N.qid = file.F.qid;
-      N.mode = (N.int_of_perm_property short.F.perm, 
-        match file.F.qid.N.typ with
+      N.qid = file.qid;
+      N.mode = (N.int_of_perm_property short.perm, 
+        match file.qid.N.typ with
         | N.QTDir -> N.DMDir
         | N.QTFile -> N.DMFile
       );

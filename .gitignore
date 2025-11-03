@@ -109,7 +109,7 @@ lineage.pdf
 /kernel/9minimal
 /windows/rio
 /debugger/ksym
-/version_control/ogit
+/vcs/ogit
 
 # test binaries
 /lib_graphics/draw/tests/hellodraw

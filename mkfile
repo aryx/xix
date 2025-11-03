@@ -21,7 +21,7 @@ DIRS0=\
   kernel/memory kernel/processes kernel/scheduler kernel/time
 
 # does not work yet with ocaml-light
-DIRS1=version_control
+DIRS1=vcs
 
 # works only under plan9 for now: 
 DIRS2=lib_core/commons_plan9 lib_system/plan9 lib_graphics windows

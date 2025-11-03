@@ -1,3 +1,4 @@
+(*s: executables/A_out.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -5,7 +6,9 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(*s: constant [[A_out.header_size]] *)
 let header_size = 32
+(*e: constant [[A_out.header_size]] *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -15,6 +18,7 @@ let header_size = 32
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[A_out.write_header]] *)
 (* entry point *)
 let write_header (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
 
@@ -30,3 +34,5 @@ let write_header (sizes : Exec_file.sections_size) (entry_addr : int) (chan : ou
   output_32 chan 0; (* ?? *)
   output_32 chan 0; (* pc_size *)
   ()
+(*e: function [[A_out.write_header]] *)
+(*e: executables/A_out.ml *)

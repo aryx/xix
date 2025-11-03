@@ -1,3 +1,4 @@
+(*s: Codegen5.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Either
@@ -22,6 +23,7 @@ open Types5
 (* Types and constants *)
 (*****************************************************************************)
 
+(*s: type [[Codegen5.pool]] *)
 type pool =
   (* note that it is not always an int! Sometimes it can be an
    * Address which will be resolved only at the very end.
@@ -29,35 +31,47 @@ type pool =
   | PoolOperand of Ast_asm.ximm
   (* todo: still don't know why we need that *)
   | LPOOL 
+(*e: type [[Codegen5.pool]] *)
 
+(*s: type [[Codegen5.action]] *)
 type action = {
   (* a multiple of 4 *)
   size: int;
   pool: pool option;
   binary: unit -> Bits.int32 list;
 }
+(*e: type [[Codegen5.action]] *)
 
+(*s: type [[Codegen5.mem_opcode]] *)
 type mem_opcode = LDR | STR
+(*e: type [[Codegen5.mem_opcode]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Codegen5.error]] *)
 let error node s =
   failwith (spf "%s at %s on %s" s 
               (T.s_of_loc node.n_loc)
               (T5.show_instr node.instr)
+(*e: function [[Codegen5.error]] *)
   )
 
+(*s: function [[Codegen5.int_of_bits]] *)
 let int_of_bits (n : node) (x : Bits.int32) : int =
   try
     Bits.int_of_bits32 x
   with Failure s -> error n s
+(*e: function [[Codegen5.int_of_bits]] *)
 
+(*s: function [[Codegen5.offset_to_R12]] *)
 let offset_to_R12 x =
   (* less: x - BIG at some point if want some optimisation *)
   x
+(*e: function [[Codegen5.offset_to_R12]] *)
 
+(*s: function [[Codegen5.base_and_offset_of_indirect]] *)
 let base_and_offset_of_indirect node symbols2 autosize x =
   match x with
   | Indirect (r, off) -> r, off 
@@ -82,23 +96,29 @@ let base_and_offset_of_indirect node symbols2 autosize x =
                        (A.s_of_global global))
       )
   | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
+(*e: function [[Codegen5.base_and_offset_of_indirect]] *)
 
 (*****************************************************************************)
 (* Operand classes *)
 (*****************************************************************************)
 
+(*s: function [[Codegen5.immrot]] *)
 let immrot x =
   if x >= 0 && x <= 0xff
   then Some (0, x)
   else raise Todo
+(*e: function [[Codegen5.immrot]] *)
 
+(*s: function [[Codegen5.immoffset]] *)
 let immoffset x =
   (x >= 0 && x <= 0xfff) || (x < 0 && x >= -0xfff)
+(*e: function [[Codegen5.immoffset]] *)
 
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
 
+(*s: function [[Codegen5.gcond]] *)
 (* gxxx below means gen_binary_code of xxx *)
 
 let gcond cond =
@@ -119,8 +139,10 @@ let gcond cond =
   | LE (S)   -> (0xd, 28)
   | AL            -> (0xe, 28)
   | NV            -> (0xf, 28)
+(*e: function [[Codegen5.gcond]] *)
 
 
+(*s: function [[Codegen5.gop_arith]] *)
 let gop_arith op =
   match op with
   | AND -> (0x0, 21)
@@ -139,21 +161,27 @@ let gop_arith op =
 
   | MUL | DIV | MOD -> raise (Impossible "should match those cases separately")
   | SLL | SRL | SRA -> raise (Impossible "should match those cases separately")
+(*e: function [[Codegen5.gop_arith]] *)
   
+(*s: function [[Codegen5.gsetbit]] *)
 let gsetbit opt =
   match opt with
   | None -> []
   | Some Set_condition -> [(1, 20)]
+(*e: function [[Codegen5.gsetbit]] *)
   
 
+(*s: function [[Codegen5.gop_shift]] *)
 let gop_shift op =
   match op with
   | SLL -> (0, 5)
   | SRL -> (1, 5)
   | SRA -> (2, 5)
   | _ -> raise (Impossible "should match those cases separately")
+(*e: function [[Codegen5.gop_shift]] *)
 
 
+(*s: function [[Codegen5.gop_cmp]] *)
 let gop_cmp op =
   match op with
   (* Set_condition set by default for comparison opcodes *)
@@ -161,28 +189,36 @@ let gop_cmp op =
   | TEQ -> [(0x9, 21); (1, 20)]
   | CMP -> [(0xa, 21); (1, 20)]
   | CMN -> [(0xb, 21); (1, 20)]
+(*e: function [[Codegen5.gop_cmp]] *)
 
+(*s: function [[Codegen5.gop_bitshift_register]] *)
 let gop_bitshift_register op =
   match op with
   | Sh_logic_left   -> (0x0, 5)
   | Sh_logic_right  -> (0x1, 5)
   | Sh_arith_right  -> (0x2, 5)
   | Sh_rotate_right -> (0x3, 5)
+(*e: function [[Codegen5.gop_bitshift_register]] *)
 
+(*s: function [[Codegen5.gop_rcon]] *)
 let gop_rcon x =
   match x with
   | Left (R r) -> [(r,8); (1, 4)]
   | Right i    -> [(i, 7); (0, 4)]
+(*e: function [[Codegen5.gop_rcon]] *)
 
 
 (*****************************************************************************)
 (* More complex code generation helpers *)
 (*****************************************************************************)
 
+(*s: function [[Codegen5.gshift]] *)
 let gshift (R rf) op2 rcon = 
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
+(*e: function [[Codegen5.gshift]] *)
 
 
+(*s: function [[Codegen5.gbranch_static]] *)
 let gbranch_static (nsrc : T5.node) cond is_bl =
   match nsrc.branch with
   | None -> raise (Impossible "resolving should have set the branch field")
@@ -197,10 +233,12 @@ let gbranch_static (nsrc : T5.node) cond is_bl =
        (if is_bl then (0x1, 24) else (0x0, 24)); 
        (v, 0) 
        ]
+(*e: function [[Codegen5.gbranch_static]] *)
 
 
 
 
+(*s: function [[Codegen5.gmem]] *)
 let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   [gcond cond; (0x1, 26) ] @
   (match opt with
@@ -226,7 +264,9 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
       else [(0, 23); (-offset, 0)]
   | Either.Right (R r) -> [(1, 25); (r, 0)]
   )
+(*e: function [[Codegen5.gmem]] *)
 
+(*s: function [[Codegen5.gload_from_pool]] *)
 let gload_from_pool (nsrc : T5.node) cond rt =
   match nsrc.branch with
   | None -> raise (Impossible "literal pool should be attached to node")
@@ -238,12 +278,14 @@ let gload_from_pool (nsrc : T5.node) cond rt =
       then raise (Impossible "layout text wrong, not word aligned node");
       (* LDR v(R15), RT (usually R11) *)
       gmem cond LDR Word None (Left v) rPC rt
+(*e: function [[Codegen5.gload_from_pool]] *)
       
 
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
 
+(*s: function [[Codegen5.rules]] *)
 (* conventions (matches the one used (inconsistently) in 5l):
  * - rf = register from (called Rm in refcard)
  * - rt = register to   (called Rd in refcard)
@@ -597,6 +639,7 @@ let rules symbols2 autosize init_data node =
         { size = 4; pool = None; binary = (fun () -> 
           [ [(0xe8fd8000, 0)] ]
         )}
+(*e: function [[Codegen5.rules]] *)
 
     (* --------------------------------------------------------------------- *)
     (* Other *)
@@ -608,11 +651,14 @@ let rules symbols2 autosize init_data node =
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Codegen5.size_of_instruction]] *)
 let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5.node) : int (* a multiple of 4 *) * pool option =
   let action  = rules symbols2 autosize None node in
   action.size, action.pool
+(*e: function [[Codegen5.size_of_instruction]] *)
 
 
+(*s: function [[Codegen5.gen]] *)
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5.code_graph) : T.word list =
 
   let res = ref [] in
@@ -657,3 +703,5 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
   );
 
   !res |> List.rev |> List.flatten
+(*e: function [[Codegen5.gen]] *)
+(*e: Codegen5.ml *)

@@ -1,3 +1,4 @@
+(*s: tools/nm.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Ast_asm
@@ -21,15 +22,20 @@ module A = Ast_asm
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
+(*s: type [[Nm.caps]] *)
 type caps = < Cap.open_in; Cap.stdout >
+(*e: type [[Nm.caps]] *)
 
+(*s: constant [[Nm.usage]] *)
 let usage = 
   "usage: nm [-options] file ..."
+(*e: constant [[Nm.usage]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Nm.visit_obj]] *)
 (* TODO: visit also the uses, not just the defs *)
 let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
   let (xs, _locs) = obj.prog in
@@ -47,6 +53,7 @@ let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
       (* TODO: visit the uses *)
       | Instr _x -> ()
       | LabelDef _ -> raise (Impossible "objects should not have LabelDef")
+(*e: function [[Nm.visit_obj]] *)
   )
 
 
@@ -54,6 +61,7 @@ let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[Nm.nm]] *)
 let nm (caps : < caps; ..> ) (file : Fpath.t) : unit =
   match () with
   | _ when Object_file.is_obj_filename file ->
@@ -68,11 +76,13 @@ let nm (caps : < caps; ..> ) (file : Fpath.t) : unit =
       objs |> List.iter (visit_obj caps)
   | _ -> 
       failwith "TODO: handle exec format"
+(*e: function [[Nm.nm]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Nm.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
 
@@ -112,12 +122,16 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
+(*e: function [[Nm.main]] *)
   )
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
+(*s: constant [[Nm._]] *)
 let _ = 
   Cap.main (fun (caps : Cap.all_caps) ->
      Exit.exit caps (Exit.catch (fun () -> main caps (CapSys.argv caps)))
+(*e: constant [[Nm._]] *)
   )
+(*e: tools/nm.ml *)

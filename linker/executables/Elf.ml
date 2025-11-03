@@ -1,3 +1,4 @@
+(*s: executables/Elf.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -13,41 +14,58 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 
+(*s: constant [[Elf.exec_header_32_size]] *)
 let exec_header_32_size = 52
+(*e: constant [[Elf.exec_header_32_size]] *)
+(*s: constant [[Elf.program_header_32_size]] *)
 let program_header_32_size = 32
+(*e: constant [[Elf.program_header_32_size]] *)
+(*s: constant [[Elf.section_header_32_size]] *)
 let section_header_32_size = 40
+(*e: constant [[Elf.section_header_32_size]] *)
 
 (* Text, Data, and Symbol table *)
+(*s: constant [[Elf.nb_program_headers]] *)
 let nb_program_headers = 2 (* TODO 3 *)
+(*e: constant [[Elf.nb_program_headers]] *)
 
+(*s: constant [[Elf.header_size]] *)
 let header_size =
   Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
   16
+(*e: constant [[Elf.header_size]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Exec header *)
 (* ------------------------------------------------------------------------- *)
 
+(*s: type [[Elf.ident_class]] *)
 type ident_class =
   | CNone
   | C32
   | C64
   | CNum (* ?? *)
 [@@warning "-37"]
+(*e: type [[Elf.ident_class]] *)
 
 (* alt: ident_data *)
+(*s: type [[Elf.byte_order]] *)
 type byte_order = 
   | BNone
   | BLSB (* Least Significant Bit *)
   | BMSB (* Most Significant bit *)
   | BNum (* ?? *)
 [@@warning "-37"]
+(*e: type [[Elf.byte_order]] *)
 
+(*s: type [[Elf.ident_version]] *)
 type ident_version =
   | VNone
   | VCurrent
 [@@warning "-37"]
+(*e: type [[Elf.ident_version]] *)
 
+(*s: type [[Elf.elf_type]] *)
 type elf_type =
   | TNone
   | TRel
@@ -55,7 +73,9 @@ type elf_type =
   | TDyn
   | TCore
 [@@warning "-37"]
+(*e: type [[Elf.elf_type]] *)
 
+(*s: type [[Elf.machine]] *)
 type machine =
   | MNone
 
@@ -81,11 +101,13 @@ type machine =
   | MPower
   | MPower64
 [@@warning "-37"]
+(*e: type [[Elf.machine]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Program header *)
 (* ------------------------------------------------------------------------- *)
 
+(*s: type [[Elf.program_header_type]] *)
 type program_header_type =
   | PH_None
   | PH_PT_Load
@@ -95,11 +117,14 @@ type program_header_type =
   | PH_Shlib
   | PH_Phdr
 [@@warning "-37"]
+(*e: type [[Elf.program_header_type]] *)
 
+(*s: type [[Elf.program_header_protection]] *)
 type program_header_protection =
   | R
   | W
   | X
+(*e: type [[Elf.program_header_protection]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Section header *)
@@ -108,25 +133,32 @@ type program_header_protection =
 (*****************************************************************************)
 (* Conversions *)
 (*****************************************************************************)
+(*s: function [[Elf.byte_of_class]] *)
 let byte_of_class (class_ : ident_class) : int =
   match class_ with
   | CNone -> 0
   | C32 -> 1
   | C64 -> 2
   | CNum -> 3
+(*e: function [[Elf.byte_of_class]] *)
 
+(*s: function [[Elf.byte_of_byte_order]] *)
 let byte_of_byte_order (bo : byte_order) : int =
   match bo with
   | BNone -> 0
   | BLSB -> 1
   | BMSB -> 2
   | BNum -> 3
+(*e: function [[Elf.byte_of_byte_order]] *)
 
+(*s: function [[Elf.int_of_version]] *)
 let int_of_version (v : ident_version) : int =
   match v with
   | VNone -> 0
   | VCurrent -> 1
+(*e: function [[Elf.int_of_version]] *)
 
+(*s: function [[Elf.int_of_elf_type]] *)
 let int_of_elf_type (t : elf_type) : int =
   match t with
   | TNone -> 0
@@ -134,7 +166,9 @@ let int_of_elf_type (t : elf_type) : int =
   | TExec -> 2
   | TDyn -> 3
   | TCore -> 4
+(*e: function [[Elf.int_of_elf_type]] *)
 
+(*s: function [[Elf.int_of_machine]] *)
 let int_of_machine (m : machine) : int =
   match m with
   | MNone -> 0
@@ -158,7 +192,9 @@ let int_of_machine (m : machine) : int =
   | MArm64 -> 183
 
   | MRiscv -> failwith "TODO: MRiscv"
+(*e: function [[Elf.int_of_machine]] *)
 
+(*s: function [[Elf.int_of_program_header_type]] *)
 let int_of_program_header_type (ph : program_header_type) : int =
   match ph with
   | PH_None -> 0
@@ -168,20 +204,26 @@ let int_of_program_header_type (ph : program_header_type) : int =
   | PH_Note -> 4
   | PH_Shlib -> 5
   | PH_Phdr -> 6
+(*e: function [[Elf.int_of_program_header_type]] *)
 
+(*s: function [[Elf.int_of_prot]] *)
 let int_of_prot (prot : program_header_protection) : int =
   match prot with
   | R -> 0x4
   | W -> 0x2
   | X -> 0x1
+(*e: function [[Elf.int_of_prot]] *)
 
+(*s: function [[Elf.int_of_prots]] *)
 let int_of_prots xs =
   List.fold_left (fun acc e -> acc + int_of_prot e) 0 xs
+(*e: function [[Elf.int_of_prots]] *)
 
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
 
+(*s: function [[Elf.write_ident]] *)
 (* first 16 bytes *)
 let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : unit =
   (* take care, using "\177ELF" like in C to OCaml does not work because
@@ -197,7 +239,9 @@ let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : u
   output_byte chan 0; (* abiversion = 3 *)
   output_string chan "\000\000\000\000\000\000\000";
   ()
+(*e: function [[Elf.write_ident]] *)
 
+(*s: function [[Elf.program_header_32]] *)
 let program_header_32 (endian: Endian.t) (ph: program_header_type)
   offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
   let (_, output_32) = Endian.output_functions_of_endian endian in
@@ -209,6 +253,7 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
   output_32 chan memsz;
   output_32 chan (int_of_prots prots);
   output_32 chan align
+(*e: function [[Elf.program_header_32]] *)
   
   
   
@@ -216,6 +261,7 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Elf.write_headers]] *)
 (* entry point *)
 let write_headers (config : Exec_file.linker_config)
  (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : int * int =
@@ -298,3 +344,5 @@ let write_headers (config : Exec_file.linker_config)
 
   Logs.debug (fun m -> m "after Program headers at pos %d" (pos_out chan));
   offset_disk_text, offset_disk_data
+(*e: function [[Elf.write_headers]] *)
+(*e: executables/Elf.ml *)

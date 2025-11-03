@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -53,19 +54,30 @@ module T = Types
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
+(*s: type [[CLI.caps]] *)
 type caps = < Cap.open_in; Cap.open_out >
+(*e: type [[CLI.caps]] *)
 
+(*s: constant [[CLI.init_text]] *)
 let init_text  = ref None
+(*e: constant [[CLI.init_text]] *)
+(*s: constant [[CLI.init_round]] *)
 let init_round = ref None
+(*e: constant [[CLI.init_round]] *)
+(*s: constant [[CLI.init_data]] *)
 let init_data  = ref None
+(*e: constant [[CLI.init_data]] *)
 (* note that this is not "main"; we give the opportunity to libc _main
  * to do a few things before calling user's main()
  *)
+(*s: constant [[CLI.init_entry]] *)
 let init_entry = ref "_main"
+(*e: constant [[CLI.init_entry]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+(*s: function [[CLI.config_of_header_type]] *)
 let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.linker_config =
   match header_type with
   | "a.out" | "a.out_plan9" ->
@@ -100,11 +112,13 @@ let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.lin
         entry_point = !init_entry;
       }
   | s -> failwith (spf "unknown -H option, format not handled: %s" s)
+(*e: function [[CLI.config_of_header_type]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[CLI.link5]] *)
 (* will modify chan as a side effect *)
 let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
   let arch : Ast_asm5.instr_with_cond Arch_linker.t = {
@@ -141,17 +155,21 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let instrs = Codegen5.gen symbols2 config graph in
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Execgen.gen config sizes instrs datas symbols2 chan
+(*e: function [[CLI.link5]] *)
 
+(*s: function [[CLI.link]] *)
 let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
   match arch with
   | Arch.Arm ->
      link5 caps config files chan
   | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+(*e: function [[CLI.link]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[CLI.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let arch = 
@@ -264,4 +282,6 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
              Exit.Code 1
          | _ -> raise exn
          )
+(*e: function [[CLI.main]] *)
   )
+(*e: CLI.ml *)

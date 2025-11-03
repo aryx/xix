@@ -1,3 +1,4 @@
+(*s: Rewrite5.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -11,6 +12,7 @@ module T5 = Types5
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Rewrite5.find_first_no_nop_node]] *)
 let rec find_first_no_nop_node nopt =
   match nopt with
   | None -> failwith "could not find non NOP node for branch"
@@ -19,11 +21,13 @@ let rec find_first_no_nop_node nopt =
       | T.V A.NOP -> find_first_no_nop_node n.next
       | _ -> Some n
       )
+(*e: function [[Rewrite5.find_first_no_nop_node]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Rewrite5.rewrite]] *)
 (* less: rewrite when profiling flag -p *)
 let rewrite (cg : T5.code_graph) : T5.code_graph =
   
@@ -130,4 +134,6 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
 
   (* works by side effect, still return first node *)
   cg
+(*e: function [[Rewrite5.rewrite]] *)
 
+(*e: Rewrite5.ml *)

@@ -1,3 +1,4 @@
+(*s: Execgen.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -12,6 +13,7 @@ module T5 = Types5
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Execgen.gen]] *)
 let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
   let entry_name : string = config.entry_point in
   let entry_addr : T.real_pc =
@@ -62,3 +64,5 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
       ds |> Array.iter (output_char chan.oc);
 
       ()
+(*e: function [[Execgen.gen]] *)
+(*e: Execgen.ml *)

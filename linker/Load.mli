@@ -1,4 +1,6 @@
+(*s: Load.mli *)
 
+(*s: signature [[Load.load]] *)
 (* Load all the object (and library) files and split in code vs data.
  * Will also relocate branching instructions.
  * less: return also LineDirective info per file.
@@ -8,3 +10,5 @@ val load:
   Fpath.t list ->
   'instr Arch_linker.t ->
   'instr Types.code array * Types.data list * Types.symbol_table
+(*e: signature [[Load.load]] *)
+(*e: Load.mli *)

@@ -1,3 +1,4 @@
+(*s: Load.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -8,6 +9,7 @@ module T = Types
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Load.process_global]] *)
 (* "Names", modifies global, modifies h *)
 let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : unit =
   (match global.priv with
@@ -16,11 +18,13 @@ let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : uni
   );
   (* populate symbol table with SXref if new entity *)
   T.lookup_global global h |> ignore
+(*e: function [[Load.process_global]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Load.load]] *)
 (* load() performs a few things:
  * - load objects (of course), and libraries (which are essentially objects)
  * - split and concatenate in code vs data all objects,
@@ -128,3 +132,5 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_link
   );
 
   Array.of_list (List.rev !code), List.rev !data, h
+(*e: function [[Load.load]] *)
+(*e: Load.ml *)

@@ -1,3 +1,4 @@
+(*s: libraries/Library_file.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
@@ -18,22 +19,31 @@ open Fpath_.Operators
  * TODO: do SYMDEF/ranlib indexing so can avoid objects that are not
  * needed by the linked program like in 5l/vl/...
  *)
+(*s: type [[Library_file.t]] *)
 type 'instr t = 'instr Object_file.t list
+(*e: type [[Library_file.t]] *)
 
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
 
+(*s: function [[Library_file.save]] *)
 let save (x : 'instr t) (chan : Chan.o) : unit =
   Logs.info (fun m -> m "Saving library in %s" (Chan.destination chan));
   output_value chan.oc (Object_file.version, x)
+(*e: function [[Library_file.save]] *)
 
+(*s: function [[Library_file.load]] *)
 let load (chan : Chan.i) : 'instr t =
   Logs.info (fun m -> m "Loading library %s" (Chan.origin chan));
   let (ver, x) = input_value chan.ic in
   if ver <> Object_file.version
   then raise Object_file.WrongVersion
   else x
+(*e: function [[Library_file.load]] *)
 
+(*s: function [[Library_file.is_lib_filename]] *)
 let is_lib_filename (file : Fpath.t) : bool =
   !!file =~ ".*\\.oa[5vi]?$"
+(*e: function [[Library_file.is_lib_filename]] *)
+(*e: libraries/Library_file.ml *)

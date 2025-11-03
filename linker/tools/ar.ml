@@ -1,3 +1,4 @@
+(*s: tools/ar.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -21,15 +22,20 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
+(*s: type [[Ar.caps]] *)
 type caps = < Cap.open_in; Cap.open_out >
+(*e: type [[Ar.caps]] *)
 
+(*s: constant [[Ar.usage]] *)
 let usage = 
   "usage: oar [-options] objects"
+(*e: constant [[Ar.usage]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[Ar.archive]] *)
 let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
   (* sanity checks *)
   (* TODO? sanity check all of same arch? *)
@@ -45,11 +51,13 @@ let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.
 
   let xs = objfiles |> List.map (FS.with_open_in caps Object_file.load) in
   Library_file.save xs chan
+(*e: function [[Ar.archive]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Ar.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
   let outfile = ref (Fpath.v "lib.oa") in
@@ -109,13 +117,17 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
+(*e: function [[Ar.main]] *)
   )
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
+(*s: constant [[Ar._]] *)
 let _ = 
   Cap.main (fun (caps : Cap.all_caps) ->
      let argv = CapSys.argv caps in
      Exit.exit caps (Exit.catch (fun () -> main caps argv))
+(*e: constant [[Ar._]] *)
   )
+(*e: tools/ar.ml *)

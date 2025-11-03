@@ -1,3 +1,4 @@
+(*s: Layout5.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -9,16 +10,19 @@ module A = Ast_asm
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Layout5.xdefine]] *)
 let xdefine h2 h symb v =
   (* stricter: we do not accept previous def of special symbols *)
   if Hashtbl.mem h symb || Hashtbl.mem h2 symb
   then failwith (spf "special symbol %s is already defined" (fst symb));
 
   Hashtbl.add h2 symb v
+(*e: function [[Layout5.xdefine]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
+(*s: function [[Layout5.layout_data]] *)
 let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 * (int * int)
   =
   let h2 = Hashtbl.create 101 in
@@ -93,9 +97,11 @@ let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 
   xdefine h2 symbols ("etext"  , T.Public) (T.SText2 0);
 
   h2, (data_size, bss_size)
+(*e: function [[Layout5.layout_data]] *)
 
 
 
+(*s: function [[Layout5.layout_text]] *)
 let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.code_graph) : T.symbol_table2 * T5.code_graph * int =
 
   let pc : T.real_pc ref = ref init_text in
@@ -175,4 +181,6 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
   Hashtbl.replace symbols2 ("etext", T.Public) (T.SText2 final_text);
   
   symbols2, cg, textsize
+(*e: function [[Layout5.layout_text]] *)
 
+(*e: Layout5.ml *)

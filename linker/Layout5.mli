@@ -1,11 +1,15 @@
+(*s: Layout5.mli *)
 
+(*s: signature [[Layout5.layout_data]] *)
 (* Returns symbol_table2 with SData2 and SBss2 entries populated.
  * Returns also data_size x bss_size.
  *)
 val layout_data: 
   Types.symbol_table -> Types.data list -> 
   Types.symbol_table2 * (int * int)
+(*e: signature [[Layout5.layout_data]] *)
 
+(*s: signature [[Layout5.layout_text]] *)
 (* Returns symbol_table2 with SText2 entries populated. 
  * Returns also nodes in code_graph with their real_pc field set.
  * Returns also text_size.
@@ -14,3 +18,5 @@ val layout_data:
 val layout_text: 
   Types.symbol_table2 -> Types.real_pc (* INITTEXT *) -> Types5.code_graph -> 
   Types.symbol_table2 * Types5.code_graph * int
+(*e: signature [[Layout5.layout_text]] *)
+(*e: Layout5.mli *)

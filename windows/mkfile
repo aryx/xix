@@ -17,7 +17,7 @@ SRC= \
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/system/plan9 \
  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
- -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
+ -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui -I +threads
 
 #LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_system/plan9/plan9.cma \
 # $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \

@@ -18,3 +18,6 @@ o%: %.ml
 clean nuke:V:
       rm -f *.cm[ioxa]
       rm -f $PROGS
+
+opt:V:
+      echo TODO

@@ -1,0 +1,45 @@
+TOP=../..
+
+SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
+#SYNCWEBFLAGS=-debug
+
+DOC=orio
+#DOC_EXTRA=control_flow.tex
+VERSION=1
+D=..
+SRC_ML=\
+  $D/Cursors.ml $D/Terminal.ml \
+  $D/Fileserver.ml \
+  $D/Processes_winshell.ml $D/Wm.ml $D/Threads_window.ml  \
+  $D/Mouse_action.ml             $D/Thread_mouse.ml \
+                              $D/Thread_keyboard.ml \
+  $D/Virtual_draw.ml $D/Virtual_mouse.ml $D/Virtual_cons.ml \
+  $D/Dev_wm.ml \
+  $D/Dev_textual_window.ml $D/Dev_graphical_window.ml \
+                              $D/Threads_fileserver.ml \
+  $D/CLI.ml
+
+SRC_ML_NO_MLI=\
+  $D/Window.ml $D/File.ml $D/Device.ml \
+  $D/Globals.ml \
+  $D/Main.ml \
+  $D/tests/hellorio.ml
+
+SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI
+
+SRC_ORIG=orio.nw Intro.nw orio_extra.nw
+
+
+<$TOP/docs/latex/mkcommon
+
+control_flow.tex: control_flow.dot
+   dot2tex $prereq --figonly > $target
+
+
+# steps to build index: see builder/docs/mkfile
+index:V:
+#    $INDEXER -lang cmt $TOP \
+#    | grep -v 'TODO_NO_SOURCE_FOUND' \
+#    | grep  'mk/' \
+#    > defs_and_uses.list.new
+#    mv defs_and_uses.list.new defs_and_uses.list

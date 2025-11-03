@@ -1,0 +1,3 @@
+#!/Users/pad/goken/bin/rc -m /Users/pad/goken/etc/rcmain.unix
+
+grep -E '^\\(chapter|section|subsection|label)' $*

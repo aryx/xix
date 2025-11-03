@@ -1,12 +1,19 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Fpath_.Operators
-open Chan
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of cat of Plan 9 *)
+(* An OCaml port of cat of Plan 9.
+ *
+ * Improvements over Plan 9 C version:
+ *  - no need sysfatal() calls and error management as default Unix exn
+ *    (e.g., file not found, write error, error reading) and its pretty printing
+ *    should be good enough
+ *  - no need open/close, use higher-order FS.with_open_in
+ *
+ * Still the OCaml version is longer than the C one.
+*)
 
 type caps = < Cap.open_in; Cap.stdout >
 
@@ -40,7 +47,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (match Array.to_list argv with
   | [] -> raise (Impossible "all programs have at least an argv0")
   | [_argv0] ->
-      let chan = { ic = stdin; origin = Chan.Stdin } in
+      let chan = Chan.{ ic = stdin; origin = Chan.Stdin } in
       cat caps chan
   | _argv0::xs ->
       xs |> Fpath_.of_strings |> List.iter (FS.with_open_in caps (cat caps))

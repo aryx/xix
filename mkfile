@@ -13,6 +13,7 @@ DIRS0=\
   assembler/objects assembler\
   linker/executables linker/libraries linker\
   compiler\
+  utilities/files\
   lib_core/system/plan9\
   lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui \
   windows \

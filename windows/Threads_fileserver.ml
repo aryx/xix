@@ -3,9 +3,9 @@ open Common
 
 module D = Device
 module N = Plan9
-module P = Protocol_9P
-module T = P.Request
-module R = P.Response
+module P9 = Protocol_9P
+module T = P9.Request
+module R = P9.Response
 
 (* for record building for ocaml-light *)
 open File
@@ -50,14 +50,14 @@ let toplevel_entries =
     }
   )
 
-let answer (fs : Fileserver.t) (res : P.message) =
+let answer (fs : Fileserver.t) (res : P9.message) =
   if !Globals.debug_9P
-  then Logs.debug (fun m -> m "%s" (P.str_of_msg res));
+  then Logs.debug (fun m -> m "%s" (P9.str_of_msg res));
 
-  P.write_9P_msg res fs.server_fd
+  P9.write_9P_msg res fs.server_fd
 
 let error fs req str =
-  let res = { req with P.typ = P.R (R.Error str) } in
+  let res = { req with P9.typ = P9.R (R.Error str) } in
   answer fs res
 
 (* less: could be check_and_find_fid to factorize more code in dispatch() *)
@@ -74,7 +74,7 @@ let check_fid op fid (fs : Fileserver.t) =
 (* for Version *)
 let first_message = ref true
 
-let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
+let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t) =
   match request_typ with
   (* Version *)
   | T.Version (msize, str) -> 
@@ -87,7 +87,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
       error fs req "version: unrecognized 9P version";
     | _ ->
       fs.message_size <- msize;
-      answer fs {req with P.typ = P.R (R.Version (msize, str)) }
+      answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
     )
 
   (* Attach *)
@@ -118,7 +118,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
          win = w;
        } in
        Hashtbl.add fs.fids rootfid file;
-       answer fs {req with P.typ = P.R (R.Attach qid) }
+       answer fs {req with P9.typ = P9.R (R.Attach qid) }
      with _exn ->
         error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
@@ -135,7 +135,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
     (* stricter? failwith or error? *)
     | _, Some newfid when Hashtbl.mem fs.fids newfid ->
       error fs req (spf "clone to busy fid: %d" newfid)
-    | _ when List.length xs > P.max_welem ->
+    | _ when List.length xs > P9.max_welem ->
       error fs req (spf "name too long: [%s]" (String.concat ";" xs))
     | _ ->
       let file =
@@ -180,7 +180,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
         in
         file.qid <- final_qid;
         file.entry <- final_entry;
-        answer fs { req with P.typ = P.R (R.Walk qids) }
+        answer fs { req with P9.typ = P9.R (R.Walk qids) }
       with exn ->
         newfid_opt |> Option.iter (fun newfid ->
           Hashtbl.remove fs.fids newfid
@@ -224,8 +224,8 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
            ()
          );
          file.opened <- Some flags;
-         let iounit = fs.message_size - P.io_header_size in
-         answer fs { req with P.typ = P.R (R.Open (file.qid, iounit)) }
+         let iounit = fs.message_size - P9.io_header_size in
+         answer fs { req with P9.typ = P9.R (R.Open (file.qid, iounit)) }
        with Device.Error str ->
          error fs req str
       )
@@ -251,7 +251,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
       ()
     );
     Hashtbl.remove fs.fids fid;
-    answer fs { req with P.typ = P.R (R.Clunk) }
+    answer fs { req with P9.typ = P9.R (R.Clunk) }
 
   (* Read *)
   | T.Read (fid, offset, count) ->
@@ -269,7 +269,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
        (try 
          let dev = device_of_devid devid in
          let data = dev.D.read_threaded offset count w in
-         answer fs { req with P.typ = P.R (R.Read data) }
+         answer fs { req with P9.typ = P9.R (R.Read data) }
        with Device.Error str ->
          error fs req str
       )) () |> ignore
@@ -294,7 +294,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
          (* less: case where want to let device return different count? *)
          let count = String.length data in
          dev.D.write_threaded offset data w;
-         answer fs { req with P.typ = P.R (R.Write count) }
+         answer fs { req with P9.typ = P9.R (R.Write count) }
        with Device.Error str ->
          error fs req str
       )) () |> ignore
@@ -330,7 +330,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
       N._dev = 0;
     }
     in
-    answer fs { req with P.typ = P.R (R.Stat dir_entry) }
+    answer fs { req with P9.typ = P9.R (R.Stat dir_entry) }
 
   (* Other *)
   | T.Create _ 
@@ -342,7 +342,7 @@ let dispatch (fs : Fileserver.t) (req : P.message) (request_typ : P.Request.t) =
   | T.Flush _
   | T.Auth _
     -> 
-    failwith (spf "TODO: req = %s" (P.str_of_msg req))
+    failwith (spf "TODO: req = %s" (P9.str_of_msg req))
 
 (*****************************************************************************)
 (* Entry point *)
@@ -353,17 +353,17 @@ let thread (fs : Fileserver.t) =
   (* less: threadsetname *)
   
   while true do
-    let req = P.read_9P_msg fs.server_fd in
+    let req : P9.message = P9.read_9P_msg fs.server_fd in
 
     (* todo: should exit the whole proc if error *)
     if !Globals.debug_9P
-    then Logs.debug (fun m -> m "%s" (P.str_of_msg req));
+    then Logs.debug (fun m -> m "%s" (P9.str_of_msg req));
 
-    (match req.P.typ with
-    | P.T x -> dispatch fs req x
-    | P.R _x ->
+    (match req.typ with
+    | P9.T x -> dispatch fs req x
+    | P9.R _x ->
       (* less: Ebadfcall *)
-      raise (Impossible (spf "got a response request: %s" (P.str_of_msg req)))
+      raise (Impossible (spf "got a response request: %s" (P9.str_of_msg req)))
     );
     (* for Version first-message check *)
     first_message := false

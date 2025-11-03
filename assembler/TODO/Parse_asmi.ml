@@ -3,9 +3,6 @@ open Common
 
 module L = Location_cpp
 
-(* for record-building for ocaml-light *)
-open Parse_cpp
-
 module T = Token_asm
 open Parser_asmi
 open Ast_asmi

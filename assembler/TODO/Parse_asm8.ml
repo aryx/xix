@@ -3,9 +3,6 @@ open Common
 
 module L = Location_cpp
 
-(* for record building for ocaml-light *)
-open Parse_cpp
-
 module T = Token_asm
 open Parser_asm8
 open Ast_asmi
@@ -73,7 +70,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
 (*****************************************************************************)
 
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm8.program = 
-  let hooks = { Parse_cpp.
+  let hooks = Parse_cpp.{
      lexer = token;
      parser = Parser_asm8.program;
      category = (fun t ->

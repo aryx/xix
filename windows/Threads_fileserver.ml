@@ -7,9 +7,6 @@ module P9 = Protocol_9P
 module T = P9.Request
 module R = P9.Response
 
-(* for record building for ocaml-light *)
-open File
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -42,7 +39,7 @@ let device_of_devid (devid : File.devid) : Device.t =
 
 let toplevel_entries =
   all_devices |> List.map (fun (devid, dev) ->
-    { File.
+    File.{
       name = dev.D.name;
       code = File.File devid;
       type_ = Plan9.QTFile;
@@ -110,7 +107,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
        let file_id = entry.code, wid in
        let qid = File.qid_of_fileid file_id entry.type_ in
 
-       let file = { File.
+       let file = File.{
          fid = rootfid; 
          qid = qid; 
          entry = entry;
@@ -144,15 +141,15 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
         | Some newfid ->
           (* clone *)
           (* less: incref on file.w *)
-          let newfile = { file with File.
-            fid = newfid; 
-            opened = None 
+          let newfile = { file with
+            File.fid = newfid; 
+            File.opened = None 
             (* todo: nrpart? *)
           } in
           Hashtbl.add fs.fids newfid newfile;
           newfile
       in
-      let rec walk qid entry acc xs =
+      let rec walk qid (entry : File.dir_entry_short) acc xs =
         match xs with
         | [] -> qid, entry, List.rev acc
         | x::xs ->
@@ -163,7 +160,8 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
           | _Qwsys, ".." -> failwith "walk: Todo '..'"
           | File.Dir File.Root, x ->
             let entry = 
-              toplevel_entries |> List.find (fun entry -> entry.name = x)
+              toplevel_entries |> List.find (fun (entry : File.dir_entry_short)->
+                       entry.name = x)
             in
             let file_id = entry.code, wid in
             let qid = File.qid_of_fileid file_id entry.type_ in

@@ -8,9 +8,6 @@ module A = Ast_asm
 open Parser_asm5
 open Ast_asm5
 
-(* for record building for ocaml-light *)
-open Parse_cpp
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -136,7 +133,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 (*****************************************************************************)
 
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program = 
-  let hooks = { Parse_cpp.
+  let hooks = Parse_cpp.{
      lexer = token;
      parser = Parser_asm5.program;
      category = (fun t ->

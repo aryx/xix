@@ -4,9 +4,6 @@ open Common
 module L = Location_cpp
 module T = Parser  (* T for Tokens *)
 
-(* for record-building for ocaml-light *)
-open Parse_cpp
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -16,7 +13,7 @@ open Parse_cpp
 (*****************************************************************************)
 
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
-  let hooks = { Parse_cpp.
+  let hooks = Parse_cpp.{
      lexer = Lexer.token;
      category = (fun t ->
        match t with

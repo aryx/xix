@@ -2,8 +2,6 @@
 open Common
 open Fpath_.Operators
 open Regexp_.Operators
-(* for record-building for ocaml-light *)
-open Preprocessor
 
 (*****************************************************************************)
 (* Prelude *)
@@ -75,7 +73,7 @@ let do_action (caps: < caps; .. >) thestring s xs =
   | "-test_parser" ->
       xs |> List.iter (fun file ->
         Logs.info (fun m -> m "processing %s" file);
-        let conf : Preprocessor.conf = {
+        let conf = Preprocessor.{
           defs = [];
           paths = [spf "/%s/include" thestring; "/sys/include";] |> Fpath_.of_strings;
           dir_source_file = Fpath.v ".";
@@ -306,7 +304,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           else outfile
           ) |> Fpath.v
         in
-        let conf : Preprocessor.conf = {
+        let conf = Preprocessor.{
           defs = !macro_defs;
           (* this order? *)
           paths = system_paths @ List.rev !include_paths;

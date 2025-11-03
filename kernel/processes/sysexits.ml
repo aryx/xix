@@ -1,15 +1,13 @@
 open Common
 
 open Types
-(* for record building for ocaml-light *)
-open Process_
 
 let (hooks: (Process.t -> unit) list ref) = ref []
 
 (* in C the str can be null pointer but better use empty string for that *)
 let syscall_exits (str : string) : unit =
 
-  let up = Globals.up () in
+  let up : Process_.t = Globals.up () in
   (* in C the code looks if parent is nil, but I use only parentpid
    * and so parent is nil can also mean RFNOWAIT so I instead
    * look if pid is 1 to check if boot process.
@@ -20,7 +18,7 @@ let syscall_exits (str : string) : unit =
   (* exit/await and my parent *)
   up.parent |> Option.iter (fun parent_pid ->
    try 
-    let parent = Process.proc_of_pid parent_pid in
+    let parent : Process_.t = Process.proc_of_pid parent_pid in
     (* note that in between maybe the parent exited and so we may have
      * a reference to a dead parent. Still, the GC should not have
      * collected it yet so we can still use lock on it.
@@ -38,7 +36,7 @@ let syscall_exits (str : string) : unit =
       (* to avoid accumulate wait records in badly written daemons *)
       if List.length parent.waitq < 128
       then begin 
-        let wmsg = { 
+        let wmsg = Process_.{ 
           child_pid = up.pid;
           child_exits = Printf.sprintf "%s %d: %s" up.name up.pid str;
         }

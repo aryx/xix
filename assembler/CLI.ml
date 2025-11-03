@@ -3,9 +3,6 @@ open Common
 open Fpath_.Operators
 open Regexp_.Operators
 
-(* for record building for ocaml-light *)
-open Preprocessor
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -177,7 +174,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
        [spf "/%s/include" thestring; "/sys/include";]
     ) |> Fpath_.of_strings
   in
-  let conf : Preprocessor.conf = {
+  let conf = Preprocessor.{
     defs = !macro_defs;
     (* this order? *)
     paths = system_paths @ List.rev !include_paths;

@@ -1,9 +1,6 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
-(* for record-building for ocaml-light *)
-open A_out 
-
 module T = Types
 module T5 = Types5
 

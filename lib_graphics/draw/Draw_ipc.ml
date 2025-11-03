@@ -6,9 +6,6 @@ open Point
 open Rectangle
 module M = Draw_marshal
 
-(* for record building *)
-open Display
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -22,7 +19,7 @@ open Display
 (*****************************************************************************)
 
 (* less: public parameter *)
-let name_image (img : Image.t) (name : string) =
+let name_image (img : Display.image) (name : string) =
   let public = true in
   let len = String.length name in
   (* stricter: *)
@@ -83,8 +80,7 @@ let get_named_image (display : Display.t) (name : string) : Image.t =
   in
 
   let chans = Channel.channels_of_str (str_at 2) in
-  let img =
-  {
+  let img = Display.{
     id = int_at 1;
     chans = chans;
     depth = Channel.depth_of_channels chans;

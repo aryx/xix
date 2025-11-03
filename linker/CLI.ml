@@ -4,10 +4,6 @@ open Fpath_.Operators
 
 module T = Types
 
-(* for record-building for ocaml-light *)
-open Types
-open Exec_file
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -74,8 +70,8 @@ let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.lin
   match header_type with
   | "a.out" | "a.out_plan9" ->
       let header_size = A_out.header_size in
-      { 
-        header_type = A_out;
+      Exec_file.{ 
+        header_type = Exec_file.A_out;
         arch;
         header_size;
         init_text  = 
@@ -90,8 +86,8 @@ let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.lin
       
   | "elf" | "elf_linux" ->
       let header_size = Elf.header_size in
-      { 
-        header_type = Elf;
+      Exec_file.{ 
+        header_type = Exec_file.Elf;
         arch;
         header_size;
         init_text  = 
@@ -130,13 +126,15 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let symbols2, graph(* why modify that??*), text_size = 
     Layout5.layout_text symbols2 config.init_text graph in
 
-  let sizes : Exec_file.sections_size = { text_size; data_size; bss_size } in
+  let sizes : Exec_file.sections_size = 
+    Exec_file.{ text_size; data_size; bss_size } 
+  in
   let init_data =  
     match config.init_data with
     | None -> Int_.rnd (text_size + config.init_text) config.init_round
     | Some x -> x
   in
-  let config = { config with init_data = Some init_data } in
+  let config = { config with Exec_file.init_data = Some init_data } in
   Logs.info (fun m -> m "final config is %s" 
         (Exec_file.show_linker_config config));
  

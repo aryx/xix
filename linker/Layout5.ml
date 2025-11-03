@@ -5,9 +5,6 @@ module T = Types
 module T5 = Types5
 module A = Ast_asm
 
-(* for record-building for ocaml-light *)
-open Types
-
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -135,8 +132,9 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
       | Codegen5.PoolOperand imm_or_ximm ->
           let instr = T.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
-          let node = { instr = instr; next = None; branch = None; real_pc = -1; 
-                           n_loc = n.n_loc } in
+          let node = Types.{ instr = instr; next = None; branch = None;
+                             real_pc = -1; 
+                             n_loc = n.n_loc } in
           if node.branch <> None
           then raise (Impossible "attaching literal to branching instruction");
 
@@ -150,7 +148,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
     (* todo: complex condition when possible out of offset range *)
     if n.next = None && !literal_pools <> [] then begin
       (* extend cg, and so the cg |> T5.iter, on the fly! *)
-      let rec aux prev xs =
+      let rec aux (prev : Ast_asm5.instr_with_cond Types.node) xs =
         match xs with
         | [] -> ()
         | x::xs ->
@@ -164,9 +162,9 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
 
   );
   if !Flags.debug_layout then begin
-    cg |> T.iter (fun n ->
+    cg |> T.iter (fun (n : Ast_asm5.instr_with_cond Types.node) ->
       Logs.app (fun m -> m  "%d: %s" n.real_pc (T5.show_instr n.instr));
-      n.branch |> Option.iter (fun n -> 
+      n.branch |> Option.iter (fun (n : Ast_asm5.instr_with_cond Types.node) -> 
         Logs.app (fun m -> m " -> branch: %d" n.real_pc)
       )
     );

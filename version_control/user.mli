@@ -8,7 +8,7 @@ type timezone_offset = int (* +/- hours, [-12, +12] *)
 type t = {
   name : string;
   email: string;
-  date : int64 (* seconds *) * timezone_offset;
+  date : Int64.t (* seconds *) * timezone_offset;
 }
 (*e: type [[User.t]] *)
 

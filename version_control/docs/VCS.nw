@@ -3041,7 +3041,7 @@ but also the date of the commit and the timezone of the author.
 type t = {
   name : string;
   email: string;
-  date : int64 (* seconds *) * timezone_offset;
+  date : Int64.t (* seconds *) * timezone_offset;
 }
 @
 %old: tz_offset (*option*)

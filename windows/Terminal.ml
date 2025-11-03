@@ -1,3 +1,4 @@
+(*s: Terminal.ml *)
 open Common
 
 open Point
@@ -38,13 +39,18 @@ module D = Display
  * 
  * less: make mutable instead of the fields in 't' below?
  *)
+(*s: type [[Terminal.position]] *)
 type position = {
   i: int;
 }
+(*e: type [[Terminal.position]] *)
+(*s: constant [[Terminal.zero]] *)
 let zero = 
   { i = 0 }
+(*e: constant [[Terminal.zero]] *)
 
 
+(*s: type [[Terminal.t]] *)
 type t = {
   (* the model *)
 
@@ -90,7 +96,9 @@ type t = {
   mutable is_selected: bool;
   (* alt: mutable colors: colors; *)
 }
+(*e: type [[Terminal.t]] *)
 
+(*s: type [[Terminal.colors]] *)
 type colors = {
   mutable background             : Image.t;
   mutable border                 : Image.t;
@@ -99,6 +107,8 @@ type colors = {
   mutable background_highlighted : Image.t;
   mutable text_highlighted       : Image.t;
 }
+(*e: type [[Terminal.colors]] *)
+(*s: constant [[Terminal.default_colors]] *)
 let default_colors = {
   background             = Display.fake_image;
   border                 = Display.fake_image;
@@ -106,24 +116,42 @@ let default_colors = {
   background_highlighted = Display.fake_image;
   text_highlighted       = Display.fake_image;
 }
+(*e: constant [[Terminal.default_colors]] *)
+(*s: constant [[Terminal.dark_grey]] *)
 let dark_grey = ref Display.fake_image
+(*e: constant [[Terminal.dark_grey]] *)
 
+(*s: constant [[Terminal.scrollbar_width]] *)
 let scrollbar_width = 12
+(*e: constant [[Terminal.scrollbar_width]] *)
 (* gap right of scrollbar *)
+(*s: constant [[Terminal.scrollbar_gap]] *)
 let scrollbar_gap = 4
+(*e: constant [[Terminal.scrollbar_gap]] *)
 
+(*s: constant [[Terminal.tick_width]] *)
 let tick_width = 3
+(*e: constant [[Terminal.tick_width]] *)
 
 (* temporary images *)
+(*s: constant [[Terminal.scrollbar_img]] *)
 let scrollbar_img = ref None
+(*e: constant [[Terminal.scrollbar_img]] *)
+(*s: constant [[Terminal.tick_img]] *)
 let tick_img = ref None
+(*e: constant [[Terminal.tick_img]] *)
 
 (*****************************************************************************)
 (* Debug *)
 (*****************************************************************************)
 
+(*s: constant [[Terminal.debug_keys_flag]] *)
 let debug_keys_flag = ref false
+(*e: constant [[Terminal.debug_keys_flag]] *)
+(*s: constant [[Terminal.debug_keys_pt]] *)
 let debug_keys_pt = ref Point.zero
+(*e: constant [[Terminal.debug_keys_pt]] *)
+(*s: function [[Terminal.debug_keys]] *)
 let debug_keys term key =
   if !debug_keys_flag
   then begin
@@ -136,11 +164,13 @@ let debug_keys term key =
       Text.string term.img !debug_keys_pt display.D.black Point.zero term.font
       (spf "%X" (Char.code key))
   end
+(*e: function [[Terminal.debug_keys]] *)
 
 (*****************************************************************************)
 (* Colors *)
 (*****************************************************************************)
 
+(*s: function [[Terminal.init_colors]] *)
 let init_colors display =
   if default_colors.background == Display.fake_image
   then begin
@@ -155,16 +185,22 @@ let init_colors display =
     (*/* greys are multiples of 0x11111100+0xFF, 14* being palest */*)
     dark_grey := Image.alloc_color display (Color.mk2 0x66 0x66 0x66);
   end
+(*e: function [[Terminal.init_colors]] *)
 
+(*s: function [[Terminal.colors_focused_window]] *)
 let colors_focused_window () = 
   default_colors
+(*e: function [[Terminal.colors_focused_window]] *)
+(*s: function [[Terminal.colors_unfocused_window]] *)
 let colors_unfocused_window () = 
   { default_colors with text_color = !dark_grey; text_highlighted = !dark_grey}
+(*e: function [[Terminal.colors_unfocused_window]] *)
 
 (*****************************************************************************)
 (* Scrollbar *)
 (*****************************************************************************)
 
+(*s: function [[Terminal.scroll_pos]] *)
 let scroll_pos r p0 p1 total =
   if total = 0 
   then r 
@@ -189,8 +225,10 @@ let scroll_pos r p0 p1 total =
       else maxy, miny
     in
     Rectangle.r r.min.x miny r.max.x maxy
+(*e: function [[Terminal.scroll_pos]] *)
     
   
+(*s: function [[Terminal.repaint_scrollbar]] *)
 let repaint_scrollbar term =
   let r = term.scrollr in
   
@@ -220,11 +258,13 @@ let repaint_scrollbar term =
   Draw.draw_color img r3 default_colors.border;
 
   Draw.draw term.img term.scrollr img None (Point.p 0 r1.min.y)
+(*e: function [[Terminal.repaint_scrollbar]] *)
 
 (*****************************************************************************)
 (* Text content *)
 (*****************************************************************************)
 
+(*s: function [[Terminal.visible_lines]] *)
 let visible_lines term =
   let maxlines = Rectangle.dy term.textr / term.font.Font.height in
   
@@ -241,8 +281,10 @@ let visible_lines term =
   in
   let xs, lastp = aux [] [] 0 term.origin_visible in
   List.rev xs, lastp
+(*e: function [[Terminal.visible_lines]] *)
 
 
+(*s: function [[Terminal.repaint_content]] *)
 let repaint_content term colors =
   let xs, lastp = visible_lines term in
   term.runes_visible <- lastp.i - term.origin_visible.i;
@@ -253,9 +295,11 @@ let repaint_content term colors =
       Text.string term.img !p colors.text_color Point.zero term.font s
     in
     p := { term.textr.min with y = !p.y + term.font.Font.height };
+(*e: function [[Terminal.repaint_content]] *)
   )
 
 (* helper to know if we should send runes on channel connected to an app *)
+(*s: function [[Terminal.newline_after_output_point]] *)
 (* "When newline, chars between output point and newline are sent."*)
 let newline_after_output_point term =
   (* todo: more elegant way? way to iter over array and stop until cond? *)
@@ -269,7 +313,9 @@ let newline_after_output_point term =
     else false
   in
   aux term.output_point
+(*e: function [[Terminal.newline_after_output_point]] *)
 
+(*s: function [[Terminal.move_origin_to_see]] *)
 (* assumes term.runes_visible is up to date, so 
  * !!do not call this function if you modified term.textr since the last 
  * repaint_content!!
@@ -279,11 +325,13 @@ let move_origin_to_see term pos =
      pos.i <= term.origin_visible.i + term.runes_visible
   then ()
   else failwith "TODO: move_origin_to_see out of range"
+(*e: function [[Terminal.move_origin_to_see]] *)
   
 (*****************************************************************************)
 (* Tick (cursor) *)
 (*****************************************************************************)
 
+(*s: function [[Terminal.point_of_position]] *)
 let point_of_position term pos =
   if pos.i >= term.origin_visible.i && 
      pos.i <=  term.origin_visible.i + term.runes_visible
@@ -305,9 +353,11 @@ let point_of_position term pos =
   else 
   (* anything out of textr  *)
   term.textr.max
+(*e: function [[Terminal.point_of_position]] *)
 
 
 
+(*s: function [[Terminal.repaint_tick]] *)
 let repaint_tick term colors =
   let img = Fun_.once tick_img (fun () ->
     let display = term.img.I.display in
@@ -342,12 +392,14 @@ let repaint_tick term colors =
     in
     Draw.draw term.img r img None Point.zero
   end
+(*e: function [[Terminal.repaint_tick]] *)
   
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Terminal.alloc]] *)
 let alloc (img : Image.t) (font : Font.t) : t =
   init_colors img.I.display;
   let r = 
@@ -378,7 +430,9 @@ let alloc (img : Image.t) (font : Font.t) : t =
     scrollr = scrollr;
     is_selected = true;
   }
+(*e: function [[Terminal.alloc]] *)
 
+(*s: function [[Terminal.insert_runes]] *)
 (* less: return pos? used only when delete lines in term.text? *)
 let insert_runes term pos runes =
   let n = List.length runes in
@@ -418,7 +472,9 @@ let insert_runes term pos runes =
   if pos.i < term.origin_visible.i
   then term.origin_visible <- { i = term.origin_visible.i + n };
   ()
+(*e: function [[Terminal.insert_runes]] *)
 
+(*s: function [[Terminal.delete_runes]] *)
 let delete_runes term pos n =
   (* stricter: *)
   if n = 0
@@ -448,8 +504,10 @@ let delete_runes term pos n =
   if pos2.i <= term.origin_visible.i
   then term.origin_visible <- { i = term.origin_visible.i -n };
   ()
+(*e: function [[Terminal.delete_runes]] *)
   
 
+(*s: function [[Terminal.repaint]] *)
 let repaint term =
   let colors = 
     if term.is_selected
@@ -471,6 +529,7 @@ let repaint term =
   repaint_scrollbar term;
   repaint_tick term colors;
   ()
+(*e: function [[Terminal.repaint]] *)
 
 (*****************************************************************************)
 (* External events *)
@@ -480,8 +539,11 @@ let repaint term =
  * So for now we need to reconstruct a rune from a series of chars
  * (the utf8 encoding of the rune).
  *)
+(*s: constant [[Terminal.previous_code]] *)
 let previous_code = ref 0
+(*e: constant [[Terminal.previous_code]] *)
 
+(*s: function [[Terminal.key_in]] *)
 let key_in term key =
   (match Char.code key with
 
@@ -557,8 +619,10 @@ let key_in term key =
   then ()
   else 
   repaint term
+(*e: function [[Terminal.key_in]] *)
 
 
+(*s: function [[Terminal.runes_in]] *)
 (* "when characters are sent from the host, they are inserted at
  * the output point and the output point is advanced."
  *)
@@ -567,9 +631,11 @@ let runes_in term runes =
   term.output_point <- { i = term.output_point.i + List.length runes };
   repaint term;
   ()
+(*e: function [[Terminal.runes_in]] *)
 
 (* "When newline, chars between output point and newline are sent."
  * let bytes_out term =
  * but the logic is in Threads_window.bytes_out to factorize code
  * with the logic when in raw-mode.
  *)
+(*e: Terminal.ml *)

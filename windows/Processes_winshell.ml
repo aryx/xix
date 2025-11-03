@@ -1,3 +1,4 @@
+(*s: Processes_winshell.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -5,6 +6,7 @@ open Fpath_.Operators
 module Unix1 = Unix
 module Unix2 = (*Thread*)Unix
 
+(*s: function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]] *)
 let run_cmd_in_window_in_child_of_fork
   (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
   (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
@@ -34,3 +36,5 @@ let run_cmd_in_window_in_child_of_fork
   (*Unix2*)CapUnix.execv caps cmd argv |> ignore;
   (* should never reach this point *)
   failwith "exec failed"
+(*e: function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]] *)
+(*e: Processes_winshell.ml *)

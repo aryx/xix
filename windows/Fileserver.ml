@@ -1,3 +1,4 @@
+(*s: Fileserver.ml *)
 open Common
 
 module Unix1 = Unix
@@ -15,6 +16,7 @@ module Unix2 = (*Thread*)Unix
  * No need to create 2 pipes for 2-way communication.
  *)
 
+(*s: type [[Fileserver.t]] *)
 type t = {
   (* the pipe *)
 
@@ -30,11 +32,13 @@ type t = {
   (* the files managed by the server currently-in-use by the client *)
   fids: (File.fid, File.t) Hashtbl.t;
 }
+(*e: type [[Fileserver.t]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Fileserver.init]] *)
 let init () =
   let (fd1, fd2) = Unix2.pipe () in
   (* the default threadUnix implementation just set non_block for fd2
@@ -55,3 +59,5 @@ let init () =
 
     fids = Hashtbl.create 101;
   }
+(*e: function [[Fileserver.init]] *)
+(*e: Fileserver.ml *)

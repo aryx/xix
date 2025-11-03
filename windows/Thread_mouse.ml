@@ -1,3 +1,4 @@
+(*s: Thread_mouse.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -9,21 +10,26 @@ open Common
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Thread_mouse.event]] *)
 type event =
   | Mouse of Mouse.state
+(*e: type [[Thread_mouse.event]] *)
   (* less: Resize? other? or use other thread and device? (cleaner) in which
    * no need for event type here.
    *)
 
+(*s: type [[Thread_mouse.under_mouse]] *)
 type under_mouse =
   | Nothing
   | CurrentWin of Window.t
   | OtherWin   of Window.t
+(*e: type [[Thread_mouse.under_mouse]] *)
 
 (*****************************************************************************)
 (* Menus *)
 (*****************************************************************************)
 
+(*s: function [[Thread_mouse.wm_menu]] *)
 (* bind to right-click *)
 let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button (exitchan : Exit.t Event.channel) 
     (mouse : Mouse.ctl) (display, desktop, view, font) (fs : Fileserver.t) =
@@ -73,14 +79,18 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button (exitchan : Exit.t 
   in
   Menu_ui.menu items pos button
     mouse (display, desktop, view, font)
+(*e: function [[Thread_mouse.wm_menu]] *)
 
+(*s: function [[Thread_mouse.middle_click_system]] *)
 let middle_click_system _m _mouse =
   Logs.err (fun m -> m "Todo: middle click")
+(*e: function [[Thread_mouse.middle_click_system]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Thread_mouse.thread]] *)
 let thread (caps : < Cap.fork; .. >) (exitchan, 
             mouse, (display, desktop, view, font), fs) =
   (* less: threadsetname *)
@@ -174,3 +184,5 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
       )
     )
   done
+(*e: function [[Thread_mouse.thread]] *)
+(*e: Thread_mouse.ml *)

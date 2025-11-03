@@ -1,3 +1,4 @@
+(*s: Device.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -11,6 +12,7 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 
+(*s: type [[Device.t]] *)
 type t = {
   (* ex: "winname", "cons" *)
   name: string;
@@ -32,7 +34,9 @@ type t = {
   read_threaded: int64 -> int -> Window.t -> string (* bytes *);
   write_threaded: int64 -> string (* bytes *) -> Window.t -> unit;
 }
+(*e: type [[Device.t]] *)
 
+(*s: constant [[Device.default]] *)
 let default = {
   name = "<default>";
   perm = Plan9.rw;
@@ -41,16 +45,20 @@ let default = {
   read_threaded = (fun _ _ _ -> "");
   write_threaded = (fun _ _ _ -> ());
 }
+(*e: constant [[Device.default]] *)
 
 (* This will be catched up by thread_fileserver to transform the
  * exception in an Rerror 9P response.
  *)
+(*s: exception [[Device.Error]] *)
 exception Error of string
+(*e: exception [[Device.Error]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Device.honor_offset_and_count]] *)
 let honor_offset_and_count offset count data =
   let len = String.length data in
   match () with
@@ -58,9 +66,13 @@ let honor_offset_and_count offset count data =
   | _ when offset + count > len ->
     String.sub data offset (len - offset)
   | _ -> data
+(*e: function [[Device.honor_offset_and_count]] *)
 
+(*s: function [[Device.honor_count]] *)
 let honor_count count data =
   let len = String.length data in
   if len <= count
   then data
   else String.sub data 0 count
+(*e: function [[Device.honor_count]] *)
+(*e: Device.ml *)

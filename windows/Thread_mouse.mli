@@ -1,4 +1,6 @@
+(*s: Thread_mouse.mli *)
 
+(*s: signature [[Thread_mouse.thread]] *)
 (* Reads from the mouse and sends the mouse state to the "current" window
  * if the cursor is in the windows rect. Otherwise might call the 
  * window manager to change the current window or also display a menu depending
@@ -10,3 +12,5 @@ val thread:
   Exit.t Event.channel * Mouse.ctl * 
   (Display.t * Baselayer.t * Image.t * Font.t) * Fileserver.t -> 
   unit
+(*e: signature [[Thread_mouse.thread]] *)
+(*e: Thread_mouse.mli *)

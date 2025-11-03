@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -22,20 +23,25 @@ open Common
 (*****************************************************************************)
 
 (* Need: see .mli *)
+(*s: type [[CLI.caps]] *)
 type caps = < 
+(*e: type [[CLI.caps]] *)
     Cap.draw; Cap.mouse; Cap.keyboard; 
     Cap.fork; Cap.exec; Cap.chdir;
     Cap.open_in;
     Cap.mount; Cap.bind
  >
 
+(*s: constant [[CLI.usage]] *)
 let usage = 
   "usage: rio [options]"
+(*e: constant [[CLI.usage]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
+(*s: function [[CLI.thread_main]] *)
 let thread_main (caps: < caps; .. >) : Exit.t =
 
   (* Rio, a graphical application *)
@@ -98,11 +104,13 @@ let thread_main (caps: < caps; .. >) : Exit.t =
   (* todo: kill all procs? all the winshell processes? *)
   (* todo: kill all threads? done when do exit no? *)
   exit_code
+(*e: function [[CLI.thread_main]] *)
     
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[CLI.main]] *)
 let main (caps : < caps; ..>) (argv : string array) : Exit.t =
 
   let backtrace = ref false in
@@ -151,3 +159,5 @@ let main (caps : < caps; ..>) (argv : string array) : Exit.t =
               Exit.Code 1
         | _ -> raise exn
         )
+(*e: function [[CLI.main]] *)
+(*e: CLI.ml *)

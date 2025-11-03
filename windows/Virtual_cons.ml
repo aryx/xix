@@ -1,6 +1,8 @@
+(*s: Virtual_cons.ml *)
 open Common
 open Device
 
+(*s: constant [[Virtual_cons.dev_cons]] *)
 let dev_cons = { Device.default with
   name = "cons";
   perm = Plan9.rw;
@@ -33,7 +35,9 @@ let dev_cons = { Device.default with
     Event.send chan_runes_out runes |> Event.sync;
   );
 }
+(*e: constant [[Virtual_cons.dev_cons]] *)
 
+(*s: constant [[Virtual_cons.dev_consctl]] *)
 let dev_consctl = { Device.default with
   name = "consctl";
   perm = Plan9.w;
@@ -73,3 +77,5 @@ let dev_consctl = { Device.default with
       raise (Error (spf "unknown control message: %s" str));
   );
 }
+(*e: constant [[Virtual_cons.dev_consctl]] *)
+(*e: Virtual_cons.ml *)

@@ -1,3 +1,4 @@
+(*s: Window.ml *)
 open Common
 
 (*****************************************************************************)
@@ -11,16 +12,24 @@ open Common
 (*****************************************************************************)
 
 (* window id *)
+(*s: type [[Window.wid]] *)
 type wid = int
+(*e: type [[Window.wid]] *)
 
+(*s: type [[Window.mouse_counter]] *)
 type mouse_counter = int
+(*e: type [[Window.mouse_counter]] *)
+(*s: type [[Window.topped_counter]] *)
 type topped_counter = int
+(*e: type [[Window.topped_counter]] *)
 
+(*s: type [[Window.cmd]] *)
 type cmd =
   | Delete
   (* for resize event but also for hide/show *)
   | Reshape of 
       Image.t (* can be Layer.t or an off-screen Image.t when hidden *)
+(*e: type [[Window.cmd]] *)
       (*Mouse.ctl*) (* needed for window_cursor() when repaint border *)
 (*
   | Move of Image.t * Rectangle.t
@@ -31,6 +40,7 @@ type cmd =
 
 
 (* The window type! *)
+(*s: type [[Window.t]] *)
 type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
@@ -173,33 +183,47 @@ type t = {
   mutable deleted: bool;
 
 }
+(*e: type [[Window.t]] *)
 
+(*s: constant [[Window.wid_counter]] *)
 let wid_counter = 
   ref 0
+(*e: constant [[Window.wid_counter]] *)
+(*s: constant [[Window.topped_counter]] *)
 let topped_counter =
   ref 0
+(*e: constant [[Window.topped_counter]] *)
 
 (* important convention to follow for rio and draw to cooperate correctly *)
+(*s: constant [[Window.window_border_size]] *)
 let window_border_size = Draw_rio.window_border_size (* 4 *)
+(*e: constant [[Window.window_border_size]] *)
 
+(*s: type [[Window.border_status]] *)
 type border_status = 
   | Selected
   | Unselected
+(*e: type [[Window.border_status]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Window.pt_inside_border]] *)
 (* old: was not an helper in rio-C, but should to be consistent with winborder.
  * alt: pt_on_content (window border vs window content in Windows.nw)
  *)
 let pt_inside_border pt w =
   Rectangle.pt_in_rect pt (Rectangle.insetrect window_border_size w.screenr)
+(*e: function [[Window.pt_inside_border]] *)
+(*s: function [[Window.pt_on_border]] *)
 (* old: was called winborder in rio-C *)
 let pt_on_border pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
+(*e: function [[Window.pt_on_border]] *)
 
 
+(*s: function [[Window.alloc]] *)
 (* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)
 let alloc (img : Display.image) (font : Font.t) : t = 
   incr wid_counter;
@@ -248,4 +272,6 @@ let alloc (img : Display.image) (font : Font.t) : t =
   }
   in
   w
+(*e: function [[Window.alloc]] *)
   (* less: incref? in caller? *)
+(*e: Window.ml *)

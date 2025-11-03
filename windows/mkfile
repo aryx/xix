@@ -13,7 +13,7 @@ SRC= \
   Dev_wm.ml \
   Dev_textual_window.ml Dev_graphical_window.ml \
                               Threads_fileserver.ml \
-  test.ml Main.ml
+  test.ml CLI.ml Main.ml
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/system/plan9 \
  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \

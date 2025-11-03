@@ -1,8 +1,10 @@
+(*s: Virtual_mouse.ml *)
 open Common
 
 open Device
 open Point
 
+(*s: constant [[Virtual_mouse.dev_mouse]] *)
 let dev_mouse = { (*Device.default with*)
   name = "mouse";
   perm = Plan9.rw;
@@ -41,7 +43,9 @@ let dev_mouse = { (*Device.default with*)
     failwith "TODO: virtual_mouse.write_threaded"
   );
 }
+(*e: constant [[Virtual_mouse.dev_mouse]] *)
 
+(*s: constant [[Virtual_mouse._dev_cursor]] *)
 let _dev_cursor = { (*Device.default with*)
   name = "cursor";
   perm = Plan9.rw;
@@ -59,3 +63,5 @@ let _dev_cursor = { (*Device.default with*)
     raise Todo
   );
 }
+(*e: constant [[Virtual_mouse._dev_cursor]] *)
+(*e: Virtual_mouse.ml *)

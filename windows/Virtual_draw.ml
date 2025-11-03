@@ -1,3 +1,4 @@
+(*s: Virtual_draw.ml *)
 open Common
 open Device
 
@@ -9,6 +10,7 @@ open Device
  * the environment instead of through a /dev virtual file.
  *)
 
+(*s: constant [[Virtual_draw.dev_winname]] *)
 let dev_winname = { Device.default with
   name = "winname";
   perm = Plan9.r;
@@ -20,3 +22,5 @@ let dev_winname = { Device.default with
     Device.honor_offset_and_count offset count str
   );
 }
+(*e: constant [[Virtual_draw.dev_winname]] *)
+(*e: Virtual_draw.ml *)

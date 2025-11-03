@@ -1,3 +1,4 @@
+(*s: Threads_fileserver.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -16,6 +17,7 @@ module R = P9.Response
 (* Constants *)
 (*****************************************************************************)
 
+(*s: constant [[Threads_fileserver.all_devices]] *)
 let all_devices = [
   File.WinName , Virtual_draw.dev_winname;
   File.Mouse   , Virtual_mouse.dev_mouse;
@@ -25,18 +27,22 @@ let all_devices = [
   File.WinId   , Dev_wm.dev_winid;
   File.Text    , Dev_textual_window.dev_text;
 ]
+(*e: constant [[Threads_fileserver.all_devices]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Threads_fileserver.device_of_devid]] *)
 let device_of_devid (devid : File.devid) : Device.t =
   try 
     List.assoc devid all_devices
   with Not_found ->
     raise (Impossible (spf "all_devices is not correctly set; missing code %d"
              (File.int_of_filecode (File.File devid))))
+(*e: function [[Threads_fileserver.device_of_devid]] *)
 
+(*s: constant [[Threads_fileserver.toplevel_entries]] *)
 let toplevel_entries =
   all_devices |> List.map (fun (devid, dev) ->
     File.{
@@ -46,22 +52,29 @@ let toplevel_entries =
       perm = dev.D.perm;
     }
   )
+(*e: constant [[Threads_fileserver.toplevel_entries]] *)
 
+(*s: function [[Threads_fileserver.answer]] *)
 let answer (fs : Fileserver.t) (res : P9.message) =
   if !Globals.debug_9P
   then Logs.debug (fun m -> m "%s" (P9.str_of_msg res));
 
   P9.write_9P_msg res fs.server_fd
+(*e: function [[Threads_fileserver.answer]] *)
 
+(*s: function [[Threads_fileserver.error]] *)
 let error fs req str =
   let res = { req with P9.typ = P9.R (R.Error str) } in
   answer fs res
+(*e: function [[Threads_fileserver.error]] *)
 
+(*s: function [[Threads_fileserver.check_fid]] *)
 (* less: could be check_and_find_fid to factorize more code in dispatch() *)
 let check_fid op fid (fs : Fileserver.t) =
   (* stricter: *)
   if not (Hashtbl.mem fs.fids fid)
   then failwith (spf "%s: unknown fid %d" op fid)
+(*e: function [[Threads_fileserver.check_fid]] *)
   
 
 (*****************************************************************************)
@@ -69,8 +82,11 @@ let check_fid op fid (fs : Fileserver.t) =
 (*****************************************************************************)
 
 (* for Version *)
+(*s: constant [[Threads_fileserver.first_message]] *)
 let first_message = ref true
+(*e: constant [[Threads_fileserver.first_message]] *)
 
+(*s: function [[Threads_fileserver.dispatch]] *)
 let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t) =
   match request_typ with
   (* Version *)
@@ -341,11 +357,13 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
   | T.Auth _
     -> 
     failwith (spf "TODO: req = %s" (P9.str_of_msg req))
+(*e: function [[Threads_fileserver.dispatch]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Threads_fileserver.thread]] *)
 (* the master *)
 let thread (fs : Fileserver.t) =
   (* less: threadsetname *)
@@ -366,3 +384,5 @@ let thread (fs : Fileserver.t) =
     (* for Version first-message check *)
     first_message := false
   done
+(*e: function [[Threads_fileserver.thread]] *)
+(*e: Threads_fileserver.ml *)

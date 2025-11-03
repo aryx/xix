@@ -1,3 +1,4 @@
+(*s: Wm.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -13,6 +14,7 @@ open Common
 
 (* less? move those cursor functions in cursors.ml? *)
 
+(*s: function [[Wm.window_cursor]] *)
 (* less: a rio_cursor? with lastcursor opti? and force parameter? *)
 let window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) : unit =
   let cursoropt = 
@@ -26,22 +28,28 @@ let window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) : unit =
   match cursoropt with
   | Some x -> Mouse.set_cursor mouse x
   | None -> Mouse.reset_cursor mouse
+(*e: function [[Wm.window_cursor]] *)
 
 
+(*s: function [[Wm._corner_cursor]] *)
 let _corner_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
   if Window.pt_on_border pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
+(*e: function [[Wm._corner_cursor]] *)
 
+(*s: function [[Wm.corner_cursor_or_window_cursor]] *)
 let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
   if Window.pt_on_border pt w
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
   else window_cursor w pt mouse
+(*e: function [[Wm.corner_cursor_or_window_cursor]] *)
 
 
 (*****************************************************************************)
 (* Borders and content *)
 (*****************************************************************************)
 
+(*s: function [[Wm.draw_border]] *)
 let draw_border (w : Window.t) (status : Window.border_status) =
   let img : Display.image = w.img in
   (* less: if holding? *)
@@ -51,8 +59,10 @@ let draw_border (w : Window.t) (status : Window.border_status) =
     | Window.Unselected -> !Globals.title_color_light
   in
   Polygon.border img img.r Window.window_border_size color Point.zero
+(*e: function [[Wm.draw_border]] *)
 
 (* repaint border, content for textual window, (and todo cursor?) *)
+(*s: function [[Wm.repaint]] *)
 (* old: was called wrepaint in rio-C *)
 let repaint (w : Window.t) =
   let status = 
@@ -65,8 +75,10 @@ let repaint (w : Window.t) =
   w.terminal.Terminal.is_selected <- (status = Window.Selected);
   if not w.mouse_opened 
   then Terminal.repaint w.terminal 
+(*e: function [[Wm.repaint]] *)
 
 
+(*s: function [[Wm.set_current_and_repaint]] *)
 (* old: was called wcurrent() in rio-C.
  * alt: this function also sets the window cursor in rio-C, but this
  * requires then to pass a mouse parameter, which in turn requires to
@@ -94,6 +106,7 @@ let set_current_and_repaint wopt (*mouse*) =
 
     (* todo: wakeup? why? *)
     ()
+(*e: function [[Wm.set_current_and_repaint]] *)
   )
 
 (*****************************************************************************)
@@ -105,6 +118,7 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
 )
 
+(*s: function [[Wm.new_win]] *)
 (* New window! new process! new thread!
  *
  * less: hideit, pid (but 0, or if != 0 -> use another func), scrolling
@@ -164,11 +178,13 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : 
     let winname = spf "window.%d" w.id in
     w.winname <- winname;
     Draw_ipc.name_image w.img winname;
+(*e: function [[Wm.new_win]] *)
     (* less: namecount and retry again if already used *)
   )
 
 
 
+(*s: function [[Wm.close_win]] *)
 let close_win (w : Window.t) =
   w.deleted <- true;
   Globals.win () |> Option.iter (fun w2 ->
@@ -182,8 +198,10 @@ let close_win (w : Window.t) =
   Layer.free w.img;
   w.img <- Image.fake_image;
   ()
+(*e: function [[Wm.close_win]] *)
 
 
+(*s: function [[Wm.top_win]] *)
 let top_win (w : Window.t) =
   if w.topped = !Window.topped_counter
   then ()
@@ -195,8 +213,10 @@ let top_win (w : Window.t) =
     incr Window.topped_counter;
     w.topped <- !Window.topped_counter;
   end
+(*e: function [[Wm.top_win]] *)
 
 
+(*s: function [[Wm.hide_win]] *)
 let hide_win (w : Window.t) =
   if Hashtbl.mem Globals.hidden w.id
   (* less: return -1? can happen if window thread take too much time
@@ -213,7 +233,9 @@ let hide_win (w : Window.t) =
   let cmd = Window.Reshape img in
   Event.send w.chan_cmd cmd |> Event.sync;
   ()
+(*e: function [[Wm.hide_win]] *)
 
+(*s: function [[Wm.show_win]] *)
 let show_win (w : Window.t) (desktop : Baselayer.t) =
   let old_img : Display.image = w.img in
   (* back to a layer *)
@@ -222,12 +244,14 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
   let cmd = Window.Reshape layer in
   Event.send w.chan_cmd cmd |> Event.sync;
   ()
+(*e: function [[Wm.show_win]] *)
 
 
 (*****************************************************************************)
 (* Helper for? *)
 (*****************************************************************************)
 
+(*s: function [[Wm.resize_win]] *)
 (* less: move boolean parameter, useless opti test dx/dy below catch it *)
 let resize_win (w : Window.t) (new_img : Display.image) =
   let old_img : Display.image = w.img in
@@ -250,3 +274,5 @@ let resize_win (w : Window.t) (new_img : Display.image) =
   (* todo: w.W.resized <- true *)
   (* todo: mouse counter ++ so transmit resize event *)
   ()
+(*e: function [[Wm.resize_win]] *)
+(*e: Wm.ml *)

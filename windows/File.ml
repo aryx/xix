@@ -1,3 +1,4 @@
+(*s: File.ml *)
 (* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -14,17 +15,24 @@ module N = Plan9
 (*****************************************************************************)
 
 (* This is maintained by the "client" (the kernel on behalf of a winshell) *)
+(*s: type [[File.fid]] *)
 type fid = Protocol_9P.fid
+(*e: type [[File.fid]] *)
 
 (* This is returned by the server (rio) to identify a file of the server *)
+(*s: type [[File.filecode]] *)
 type filecode = 
   | Dir of dir
   | File of devid
+(*e: type [[File.filecode]] *)
+(*s: type [[File.dir]] *)
   and dir = 
     (* '/' old: was called Qdir in rio-C *)
     | Root
+(*e: type [[File.dir]] *)
     (* less: '/wsys/' *)
   (* '/xxx' *)
+(*s: type [[File.devid]] *)
   and devid = 
     | WinName
     | Mouse
@@ -34,11 +42,15 @@ type filecode =
 
     | WinId
     | Text
+(*e: type [[File.devid]] *)
 
 (* will generate a Qid.path *)
+(*s: type [[File.fileid]] *)
 type fileid = filecode * Window.wid
+(*e: type [[File.fileid]] *)
 
 (* simpler than Plan9.dir_entry *)
+(*s: type [[File.dir_entry_short]] *)
 type dir_entry_short = { 
   name: string;
   code: filecode;
@@ -46,11 +58,15 @@ type dir_entry_short = {
   (* just for the user; group and other are 'noperm' *)
   perm: Plan9.perm_property;
 }
+(*e: type [[File.dir_entry_short]] *)
 
+(*s: constant [[File.root_entry]] *)
 let root_entry = 
   { name = "."; code = Dir Root; type_ = N.QTDir; perm =  N.rx }
+(*e: constant [[File.root_entry]] *)
 
 (* fid server-side state (a file) *)
+(*s: type [[File.t]] *)
 type t = {
   (* The fid is maintained by the "client" (the kernel on behalf of winshell).
    * It is the key used to access information about a file used by
@@ -74,11 +90,13 @@ type t = {
 
   (* less: nrpart for runes *)
 }
+(*e: type [[File.t]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[File.int_of_filecode]] *)
 let int_of_filecode = function
   | Dir Root -> 0
   | File WinName -> 1
@@ -87,17 +105,23 @@ let int_of_filecode = function
   | File ConsCtl -> 4
   | File WinId -> 5
   | File Text -> 6
+(*e: function [[File.int_of_filecode]] *)
 
+(*s: function [[File.int_of_fileid]] *)
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor
   int_of_filecode qxxx
+(*e: function [[File.int_of_fileid]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[File.qid_of_fileid]] *)
 let qid_of_fileid file_id typ =
   { path = int_of_fileid file_id;
     typ = typ;
     vers = 0;
   }
+(*e: function [[File.qid_of_fileid]] *)
+(*e: File.ml *)

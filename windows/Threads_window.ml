@@ -1,3 +1,4 @@
+(*s: Threads_window.ml *)
 open Common
 
 open Point
@@ -12,6 +13,7 @@ open Window
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Threads_window.event]] *)
 type event = 
   (* reading from keyboard thread *)
   | Key   of Keyboard.key
@@ -26,11 +28,13 @@ type event =
   | SentChannelsForConsRead
   (* producing and then consuming for thread_fileserver(Write Qcons) *)
   | SentChannelForConsWrite
+(*e: type [[Threads_window.event]] *)
 
 (*****************************************************************************)
 (* In and out helpers *)
 (*****************************************************************************)
 
+(*s: function [[Threads_window.key_in]] *)
 (* input from user *)
 let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
@@ -48,12 +52,16 @@ let key_in (w : Window.t) (key : Keyboard.key) =
       (* less: snarf *)
       Terminal.key_in w.terminal key
   end
+(*e: function [[Threads_window.key_in]] *)
 
+(*s: function [[Threads_window.runes_in]] *)
 (* output from application *)
 let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
   let runes = Event.receive chan |> Event.sync in
   Terminal.runes_in w.terminal runes
+(*e: function [[Threads_window.runes_in]] *)
 
+(*s: function [[Threads_window.mouse_in]] *)
 let mouse_in (w : Window.t) (m : Mouse.state) =
   w.last_mouse <- m;
   match w.mouse_opened with
@@ -66,7 +74,9 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
       w.last_buttons <- m.buttons
     end;
   | false -> failwith "mouse_in: mouse not opened todo"
+(*e: function [[Threads_window.mouse_in]] *)
 
+(*s: function [[Threads_window.mouse_out]] *)
 let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
   (*/* send a queued event or, if the queue is empty, the current state */
     /* if the queue has filled, we discard all the events it contained. */
@@ -82,8 +92,10 @@ let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
    *)
   w.last_count_sent <- counter;
   Event.send chan m |> Event.sync
+(*e: function [[Threads_window.mouse_out]] *)
 
 
+(*s: function [[Threads_window.bytes_out]] *)
 let bytes_out (w : Window.t) (chan_count, chan_bytes) =
   let cnt = Event.receive chan_count |> Event.sync in
   let buf = Bytes.create cnt in
@@ -112,9 +124,11 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
     else Bytes.to_string buf
   in
   Event.send chan_bytes str |> Event.sync
+(*e: function [[Threads_window.bytes_out]] *)
 
 
 
+(*s: function [[Threads_window.cmd_in]] *)
 let cmd_in (w : Window.t) (cmd : cmd) =
   match cmd with
   | Delete -> 
@@ -145,15 +159,19 @@ let cmd_in (w : Window.t) (cmd : cmd) =
     );
     (* less: Image.flush new_img, but useless cos done in thread () *)
     ()
+(*e: function [[Threads_window.cmd_in]] *)
 
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Threads_window.wrap]] *)
 let wrap f = 
   fun ev -> Event.wrap ev f
+(*e: function [[Threads_window.wrap]] *)
 
+(*s: function [[Threads_window.thread]] *)
 let thread (w : Window.t) =
   
   (* less: threadsetname *)
@@ -213,4 +231,6 @@ let thread (w : Window.t) =
     );
     if not w.deleted
     then Image.flush w.img;
+(*e: function [[Threads_window.thread]] *)
   done
+(*e: Threads_window.ml *)

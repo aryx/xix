@@ -1,6 +1,8 @@
+(*s: Mouse_action.ml *)
 open Common
 
 (* less: maybe the 'ref m' approach of point_to() is simpler for sweep() too *)
+(*s: type [[Mouse_action.sweep_state]] *)
 type sweep_state = 
   (* start, no buttons *)
   | SweepInit
@@ -17,7 +19,9 @@ type sweep_state =
   | SweepRescue of bool (* clicked state *) * Image.t option
   (* wait until no buttons *)
   | SweepDrain
+(*e: type [[Mouse_action.sweep_state]] *)
 
+(*s: function [[Mouse_action.sweep]] *)
 let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
   (* todo: menuing? but not sweeping? *)
   Mouse.set_cursor mouse Cursors.crosscursor;
@@ -103,8 +107,10 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
       else transit SweepDrain
   in
   transit SweepInit
+(*e: function [[Mouse_action.sweep]] *)
 
 
+(*s: function [[Mouse_action.point_to]] *)
 let point_to (mouse : Mouse.ctl) : Window.t option =
   (* todo: menuing? but not sweeping? *)
   Mouse.set_cursor mouse Cursors.sightcursor;
@@ -127,3 +133,5 @@ let point_to (mouse : Mouse.ctl) : Window.t option =
     Wm.corner_cursor_or_window_cursor w !m.Mouse.pos mouse
   );
   wopt
+(*e: function [[Mouse_action.point_to]] *)
+(*e: Mouse_action.ml *)

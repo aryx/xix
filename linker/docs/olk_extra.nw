@@ -1,0 +1,3438 @@
+\section{[[executables/]]}
+
+\subsection*{[[executables/A_out.ml]]}
+
+<<constant [[A_out.header_size]]>>=
+let header_size = 32
+@
+
+<<function [[A_out.write_header]]>>=
+(* entry point *)
+let write_header (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+
+  (* a.out uses big-endian integers even on low-endian architectures *)
+  let output_32 = Endian.Big.output_32 in
+
+  output_32 chan 0x647; (* Plan9 ARM magic *)
+  output_32 chan sizes.text_size;
+  output_32 chan sizes.data_size;
+  output_32 chan sizes.bss_size;
+  output_32 chan 0; (* TODO: symbol_size, for now stripped *)
+  output_32 chan entry_addr;
+  output_32 chan 0; (* ?? *)
+  output_32 chan 0; (* pc_size *)
+  ()
+@
+
+
+%-------------------------------------------------------------
+
+<<executables/A_out.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+<<constant [[A_out.header_size]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[A_out.write_header]]>>
+@
+
+
+\subsection*{[[executables/Elf.ml]]}
+
+<<constant [[Elf.exec_header_32_size]]>>=
+let exec_header_32_size = 52
+@
+
+<<constant [[Elf.program_header_32_size]]>>=
+let program_header_32_size = 32
+@
+
+<<constant [[Elf.section_header_32_size]]>>=
+let section_header_32_size = 40
+@
+
+<<constant [[Elf.nb_program_headers]]>>=
+let nb_program_headers = 2 (* TODO 3 *)
+@
+
+<<constant [[Elf.header_size]]>>=
+let header_size =
+  Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
+  16
+@
+
+<<type [[Elf.ident_class]]>>=
+type ident_class =
+  | CNone
+  | C32
+  | C64
+  | CNum (* ?? *)
+[@@warning "-37"]
+@
+
+<<type [[Elf.byte_order]]>>=
+type byte_order = 
+  | BNone
+  | BLSB (* Least Significant Bit *)
+  | BMSB (* Most Significant bit *)
+  | BNum (* ?? *)
+[@@warning "-37"]
+@
+
+<<type [[Elf.ident_version]]>>=
+type ident_version =
+  | VNone
+  | VCurrent
+[@@warning "-37"]
+@
+
+<<type [[Elf.elf_type]]>>=
+type elf_type =
+  | TNone
+  | TRel
+  | TExec
+  | TDyn
+  | TCore
+[@@warning "-37"]
+@
+
+<<type [[Elf.machine]]>>=
+type machine =
+  | MNone
+
+  (* main one; the one we want to support in xix *)
+  | MI386
+  | MAmd64
+  | MArm
+  | MArm64
+  | MMips
+  | MRiscv
+  (* | MRiscv64? *)
+
+  (* other: *)
+  | MM32
+  | MSparc
+  | MM68K
+  | MM88K
+  | MI486
+  | MI860
+  | MS370
+  | MMipsr4K
+  | MSparc64
+  | MPower
+  | MPower64
+[@@warning "-37"]
+@
+
+<<type [[Elf.program_header_type]]>>=
+type program_header_type =
+  | PH_None
+  | PH_PT_Load
+  | PH_Dynamic
+  | PH_Interp
+  | PH_Note
+  | PH_Shlib
+  | PH_Phdr
+[@@warning "-37"]
+@
+
+<<type [[Elf.program_header_protection]]>>=
+type program_header_protection =
+  | R
+  | W
+  | X
+@
+
+<<function [[Elf.byte_of_class]]>>=
+let byte_of_class (class_ : ident_class) : int =
+  match class_ with
+  | CNone -> 0
+  | C32 -> 1
+  | C64 -> 2
+  | CNum -> 3
+@
+
+<<function [[Elf.byte_of_byte_order]]>>=
+let byte_of_byte_order (bo : byte_order) : int =
+  match bo with
+  | BNone -> 0
+  | BLSB -> 1
+  | BMSB -> 2
+  | BNum -> 3
+@
+
+<<function [[Elf.int_of_version]]>>=
+let int_of_version (v : ident_version) : int =
+  match v with
+  | VNone -> 0
+  | VCurrent -> 1
+@
+
+<<function [[Elf.int_of_elf_type]]>>=
+let int_of_elf_type (t : elf_type) : int =
+  match t with
+  | TNone -> 0
+  | TRel -> 1
+  | TExec -> 2
+  | TDyn -> 3
+  | TCore -> 4
+@
+
+<<function [[Elf.int_of_machine]]>>=
+let int_of_machine (m : machine) : int =
+  match m with
+  | MNone -> 0
+  | MM32 -> 1
+  | MSparc -> 2
+  | MI386 -> 3
+  | MM68K -> 4
+  | MM88K -> 5
+  | MI486 -> 6
+  | MI860 -> 7
+  | MMips -> 8
+  | MS370 -> 9
+  | MMipsr4K -> 10
+
+  | MSparc64 -> 18
+  | MPower -> 20
+  | MPower64 -> 21
+
+  | MArm -> 40
+  | MAmd64 -> 62
+  | MArm64 -> 183
+
+  | MRiscv -> failwith "TODO: MRiscv"
+@
+
+<<function [[Elf.int_of_program_header_type]]>>=
+let int_of_program_header_type (ph : program_header_type) : int =
+  match ph with
+  | PH_None -> 0
+  | PH_PT_Load -> 1
+  | PH_Dynamic -> 2
+  | PH_Interp -> 3
+  | PH_Note -> 4
+  | PH_Shlib -> 5
+  | PH_Phdr -> 6
+@
+
+<<function [[Elf.int_of_prot]]>>=
+let int_of_prot (prot : program_header_protection) : int =
+  match prot with
+  | R -> 0x4
+  | W -> 0x2
+  | X -> 0x1
+@
+
+<<function [[Elf.int_of_prots]]>>=
+let int_of_prots xs =
+  List.fold_left (fun acc e -> acc + int_of_prot e) 0 xs
+@
+
+<<function [[Elf.write_ident]]>>=
+(* first 16 bytes *)
+let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : unit =
+  (* take care, using "\177ELF" like in C to OCaml does not work because
+   * in C \177 is interpreted as an octal number but in OCaml it's an int
+   * and 0o177 is different from 177. Simpler to use 0x7f.
+   *)
+  output_byte chan 0x7f;
+  output_string chan "ELF";
+  output_byte chan (byte_of_class class_);
+  output_byte chan (byte_of_byte_order bo);
+  output_byte chan (int_of_version VCurrent);
+  output_byte chan 0; (* osabi = SYSV; 255 = boot/embedded/standalone? *)
+  output_byte chan 0; (* abiversion = 3 *)
+  output_string chan "\000\000\000\000\000\000\000";
+  ()
+@
+
+<<function [[Elf.program_header_32]]>>=
+let program_header_32 (endian: Endian.t) (ph: program_header_type)
+  offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
+  let (_, output_32) = Endian.output_functions_of_endian endian in
+  output_32 chan (int_of_program_header_type ph);
+  output_32 chan offset;
+  output_32 chan vaddr;
+  output_32 chan paddr;
+  output_32 chan filesz;
+  output_32 chan memsz;
+  output_32 chan (int_of_prots prots);
+  output_32 chan align
+@
+
+<<function [[Elf.write_headers]]>>=
+(* entry point *)
+let write_headers (config : Exec_file.linker_config)
+ (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : int * int =
+  let arch = config.arch in
+
+  (* ELF ident part (first 16 bytes) *)
+
+  let endian = Arch.endian_of_arch arch in
+  let bo : byte_order =
+    match endian  with
+    | Endian.Little -> BLSB
+    | Endian.Big -> BMSB
+  in
+  let class_ : ident_class =
+    match Arch.bits_of_arch arch with
+    | Arch.Arch32 -> C32
+    | Arch.Arch64 -> C64
+  in
+  write_ident bo class_ chan;
+
+  (* Rest of ELF header (36 bytes => total 52 bytes) *)
+
+  let mach : machine =
+    match arch with
+    | Arch.Arm -> MArm
+    | Arch.Arm64 -> MArm64
+    | Arch.Mips -> MMips
+    | Arch.Riscv -> MRiscv
+    | Arch.Riscv64 -> failwith "TODO: Riscv64"
+    | Arch.X86 -> MI386 (* what about MI486? *)
+    | Arch.Amd64 -> MAmd64
+  in
+  let output_16, output_32 = Endian.output_functions_of_endian endian in
+  output_16 chan (int_of_elf_type TExec);
+  output_16 chan (int_of_machine mach);
+  output_32 chan (int_of_version VCurrent); (* again? *)
+  output_32 chan entry_addr;
+  output_32 chan exec_header_32_size; (* offset to first phdr *)
+  output_32 chan 0; (* TODO: offset to first shdr HEADR+textsize+datsize+symsize *)
+  (match arch with
+  | Arch.Arm ->
+        (* version5 EABI for Linux *)
+        output_32 chan 0x5000200;
+  | _ -> output_32 chan 0
+  );
+  output_16 chan exec_header_32_size;
+  output_16 chan program_header_32_size;
+  output_16 chan nb_program_headers; (* # of Phdrs *)
+  output_16 chan section_header_32_size;
+  output_16 chan 0; (* # of Shdrs, TODO 3 *)
+  output_16 chan 0; (* Shdr table index, TODO 2 *)
+
+  Logs.debug (fun m -> m "after ELF header at pos %d" (pos_out chan));
+
+  (* Program headers *)
+
+  (* Text *)
+  let offset_disk_text = config.header_size in
+  program_header_32 endian PH_PT_Load 
+   offset_disk_text (config.init_text, config.init_text)
+    (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
+
+  (* ELF Linux constrains that virtual
+   * address modulo a page must match file offset modulo
+   * a page, so simpler to start data at a page boundary
+   *)
+  let offset_disk_data = 
+    Int_.rnd (config.header_size + sizes.text_size) config.init_round
+  in
+  let init_data =
+    match config.init_data with
+    | None -> 
+        raise (Impossible "init_data should be set by now after layout_text")
+    | Some x -> x
+  in
+  program_header_32 endian PH_PT_Load
+    offset_disk_data (init_data, init_data)
+     (sizes.data_size, sizes.data_size + sizes.bss_size) [R; W; X]
+     config.init_round chan;
+
+  Logs.debug (fun m -> m "after Program headers at pos %d" (pos_out chan));
+  offset_disk_text, offset_disk_data
+@
+
+
+%-------------------------------------------------------------
+
+<<executables/Elf.ml>>=
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* ELF executable format types and IO helpers.
+ *
+ * spec: ???
+*)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+<<constant [[Elf.exec_header_32_size]]>>
+<<constant [[Elf.program_header_32_size]]>>
+<<constant [[Elf.section_header_32_size]]>>
+
+(* Text, Data, and Symbol table *)
+<<constant [[Elf.nb_program_headers]]>>
+
+<<constant [[Elf.header_size]]>>
+
+(* ------------------------------------------------------------------------- *)
+(* Exec header *)
+(* ------------------------------------------------------------------------- *)
+
+<<type [[Elf.ident_class]]>>
+
+(* alt: ident_data *)
+<<type [[Elf.byte_order]]>>
+
+<<type [[Elf.ident_version]]>>
+
+<<type [[Elf.elf_type]]>>
+
+<<type [[Elf.machine]]>>
+
+(* ------------------------------------------------------------------------- *)
+(* Program header *)
+(* ------------------------------------------------------------------------- *)
+
+<<type [[Elf.program_header_type]]>>
+
+<<type [[Elf.program_header_protection]]>>
+
+(* ------------------------------------------------------------------------- *)
+(* Section header *)
+(* ------------------------------------------------------------------------- *)
+
+(*****************************************************************************)
+(* Conversions *)
+(*****************************************************************************)
+<<function [[Elf.byte_of_class]]>>
+
+<<function [[Elf.byte_of_byte_order]]>>
+
+<<function [[Elf.int_of_version]]>>
+
+<<function [[Elf.int_of_elf_type]]>>
+
+<<function [[Elf.int_of_machine]]>>
+
+<<function [[Elf.int_of_program_header_type]]>>
+
+<<function [[Elf.int_of_prot]]>>
+
+<<function [[Elf.int_of_prots]]>>
+
+(*****************************************************************************)
+(* IO *)
+(*****************************************************************************)
+
+<<function [[Elf.write_ident]]>>
+
+<<function [[Elf.program_header_32]]>>
+  
+  
+  
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Elf.write_headers]]>>
+@
+
+
+\section{[[libraries/]]}
+
+\subsection*{[[libraries/Library_file.ml]]}
+
+<<type [[Library_file.t]]>>=
+type 'instr t = 'instr Object_file.t list
+@
+
+<<function [[Library_file.save]]>>=
+let save (x : 'instr t) (chan : Chan.o) : unit =
+  Logs.info (fun m -> m "Saving library in %s" (Chan.destination chan));
+  output_value chan.oc (Object_file.version, x)
+@
+
+<<function [[Library_file.load]]>>=
+let load (chan : Chan.i) : 'instr t =
+  Logs.info (fun m -> m "Loading library %s" (Chan.origin chan));
+  let (ver, x) = input_value chan.ic in
+  if ver <> Object_file.version
+  then raise Object_file.WrongVersion
+  else x
+@
+
+<<function [[Library_file.is_lib_filename]]>>=
+let is_lib_filename (file : Fpath.t) : bool =
+  !!file =~ ".*\\.oa[5vi]?$"
+@
+%$
+
+
+%-------------------------------------------------------------
+
+<<libraries/Library_file.ml>>=
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Regexp_.Operators
+open Fpath_.Operators
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Simple API to load/save archive library files (e.g., libc.a) *)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+(* An archive (.a) is really essentially just a list of objects, which in Plan 9
+ * are just a list of serialized assembly ASTs
+ *
+ * TODO: do SYMDEF/ranlib indexing so can avoid objects that are not
+ * needed by the linked program like in 5l/vl/...
+ *)
+<<type [[Library_file.t]]>>
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
+
+<<function [[Library_file.save]]>>
+
+<<function [[Library_file.load]]>>
+
+<<function [[Library_file.is_lib_filename]]>>
+@
+
+
+\section{[[./]]}
+
+\subsection*{[[Load.ml]]}
+
+<<function [[Load.process_global]]>>=
+(* "Names", modifies global, modifies h *)
+let process_global (global : A.global) (h : T.symbol_table) (idfile : int) : unit =
+  (match global.priv with
+  | Some _ -> global.priv <- Some idfile
+  | None -> ()
+  );
+  (* populate symbol table with SXref if new entity *)
+  T.lookup_global global h |> ignore
+@
+
+<<function [[Load.load]]>>=
+(* load() performs a few things:
+ * - load objects (of course), and libraries (which are essentially objects)
+ * - split and concatenate in code vs data all objects,
+ * - relocate absolute jumps,
+ * - "name" entities by assigning a unique name to every entities
+ *   (handling private symbols),
+ * - visit all entities (defs and uses) and add them in symbol table
+ *
+ * alt: take as a parameter (xs : Chan.i list);
+ *)
+let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_linker.t) : 'instr T.code array * T.data list * Types.symbol_table =
+
+  (* values to return *)
+  let code = ref [] in
+  let data = ref [] in
+  let h = Hashtbl.create 101 in
+
+  let pc : Types.virt_pc ref = ref 0 in
+  let idfile = ref 0 in
+
+  let process_obj (obj : 'instr Object_file.t) =
+    let file = Fpath.v "TODO" in
+    let prog = obj.prog in
+    let ipc : Types.virt_pc = !pc in
+    incr idfile;
+    
+
+    (* naming and populating symbol table h *)
+    prog |> A.visit_globals_program arch.visit_globals_instr 
+        (fun x -> process_global x h !idfile);
+
+    let (ps, _locs) = prog in
+    (* split and concatenate in code vs data, relocate branches, 
+     * and add definitions in symbol table h.
+     *)
+    ps |> List.iter (fun (p, line) ->
+      match p with
+      | A.Pseudo pseudo ->
+          (match pseudo with
+          | A.TEXT (global, attrs, size) ->
+              (* less: set curtext for better error managment *)
+              let v = T.lookup_global global h in
+              (match v.T.section with
+              | T.SXref -> v.T.section <- T.SText !pc;
+              | _ -> failwith (spf "redefinition of %s" global.name)
+              );
+              (* less: adjust autosize? *)
+              code |> Stack_.push (T.TEXT (global, attrs, size), (file, line));
+              incr pc;
+          | A.WORD v ->
+              code |> Stack_.push (T.WORD v, (file, line));
+              incr pc;
+            
+          | A.GLOBL (global, _attrs, size) -> 
+              let v = T.lookup_global global h in
+              (match v.T.section with
+              | T.SXref -> v.T.section <- T.SData size;
+              | _ -> failwith (spf "redefinition of %s" global.name)
+              );
+          | A.DATA (global, offset, size, v) -> 
+              data |> Stack_.push (T.DATA (global, offset, size, v))
+          )
+
+      | A.Virtual instr ->
+          code |> Stack_.push (T.V instr, (file, line));
+          incr pc;
+      | A.Instr instr ->
+
+          let relocate_branch opd =
+            match !opd with
+            | A.SymbolJump _ | A.IndirectJump _ -> ()
+            | A.Relative _ | A.LabelUse _ ->
+                raise (Impossible "Relative or LabelUse resolved by assembler")
+            | A.Absolute i -> opd := A.Absolute (i + ipc)
+          in
+          arch.branch_opd_of_instr instr |> Option.iter relocate_branch;
+          code |> Stack_.push (T.I instr, (file, line));
+          incr pc;
+
+      | A.LabelDef _ -> failwith (spf "label definition in object")
+    );
+  in
+
+  (* TODO: split in obj file vs libfile and process libfile at the end
+   * and leverage SYMDEF/ranlib index to optimize
+  *)
+  xs |> List.iter (fun file ->
+    match () with
+    | _ when Library_file.is_lib_filename file ->
+         let (objs : 'instr Library_file.t)  = 
+            file |> FS.with_open_in caps Library_file.load in
+         (* TODO: filter only the one needed because contain entities
+          * used in the object files
+          *)
+         objs |> List.iter (fun obj -> process_obj obj)
+    | _ when Object_file.is_obj_filename file ->
+      (* object loading is so much easier in ocaml :) *)
+      let (obj : 'instr Object_file.t) =
+            file |> FS.with_open_in caps Object_file.load in
+      process_obj obj
+     (* less: could check valid AST, range of registers, shift values, etc *)
+
+    | _ -> failwith (spf "file %s does not appear to be an obj or lib file"
+            !!file)
+  );
+
+  Array.of_list (List.rev !code), List.rev !data, h
+@
+
+
+%-------------------------------------------------------------
+
+<<Load.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+module A = Ast_asm
+module T = Types
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Load.process_global]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Load.load]]>>
+@
+
+
+\subsection*{[[Resolve.ml]]}
+
+<<function [[Resolve.build_graph]]>>=
+let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.code array) : 'instr T.code_graph =
+  let len = Array.length xs in
+
+  (* stricter: does not make sense to allow empty programs *)
+  if len = 0
+  then failwith "empty program";
+
+  (* graph initialization *)
+  let nodes : 'intr T.node array = xs |> Array.map (fun (instr, loc) ->
+    { T.instr = instr; next = None; branch = None; n_loc = loc; real_pc = -1 }
+  )
+  in
+
+  (* set the next fields *)
+  nodes |> Array.iteri (fun i n ->
+    if i+1 < len
+    then n.next <- Some nodes.(i+1)
+  );
+
+  (* set the branch fields *)
+  nodes |> Array.iter (fun n ->
+    match n.instr with
+    | T.TEXT _ | T.WORD _ -> ()
+    | T.V (A.RET | A.NOP) -> ()
+    | T.I instr ->
+        let resolve_branch_operand opd =
+          match !opd with
+          | A.IndirectJump _ -> None
+          | A.Relative _ | A.LabelUse _ ->
+              raise (Impossible "Relative and LabelUse resolved by assembler")
+          | A.SymbolJump x ->
+              (* resolve branching to symbols *)
+              (match (T.lookup_global x symbols).section with
+              | T.SText virt_pc -> 
+                  opd := A.Absolute virt_pc; 
+                  Some virt_pc
+              | T.SXref -> raise (Impossible "SXRef raised by Check.check")
+              (* stricter: 5l converts them to SText 0 to avoid reporting
+               * multiple times the same error but we fail early instead.
+               *)
+              | T.SData _ -> failwith "branching to a data symbol"
+              )
+          | A.Absolute virt_pc -> Some virt_pc
+        in
+        let adjust_virt_pc (virt_pc : T.virt_pc) =
+          if virt_pc < len
+          then n.branch <- Some nodes.(virt_pc)
+          else failwith (spf "branch out of range %d at %s" virt_pc
+                           (T.s_of_loc n.n_loc))
+        in
+        branch_opd_of_instr instr |> Option.iter (fun opd -> 
+            resolve_branch_operand opd |> Option.iter adjust_virt_pc)
+  );
+  nodes.(0)
+@
+
+
+%-------------------------------------------------------------
+
+<<Resolve.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+open Types
+module A = Ast_asm
+module T = Types
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Resolve.build_graph]]>>
+ 
+@
+
+
+\subsection*{[[Datagen.ml]]}
+
+<<function [[Datagen.gen]]>>=
+let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : Exec_file.sections_size) (ds : T.data list) : T.byte array =
+  let arr = Array.make sizes.data_size (Char.chr 0) in
+
+  ds |> List.iter (fun d ->
+    let T.DATA (global, offset2, size_slice, v) = d in
+    let info = Hashtbl.find symbols2 (T.symbol_of_global global) in
+    match info with
+    | T.SData2 (offset, T.Data) ->
+        let base = offset + offset2 in
+        (match v with
+        | A.Int _ | A.Float _ -> raise Todo
+        | A.String s -> 
+            for i = 0 to size_slice -1 do 
+              arr.(base + i) <- s.[i] 
+            done
+        | A.Address (A.Global (global2,_offsetTODO)) ->
+            let info2 = Hashtbl.find symbols2 (T.symbol_of_global global2) in
+            let _i = 
+              match info2 with
+              | T.SText2 real_pc -> real_pc
+              | T.SData2 (offset, _kind) -> init_data + offset
+            in
+            raise Todo
+        | (A.Address (A.Local _ | A.Param _)) -> raise Todo
+        )
+    | T.SData2 (_, T.Bss) -> raise (Impossible "layout_data missed a DATA")
+    | T.SText2 _ -> raise (Impossible "layout_data did this check")
+  );
+  arr
+@
+
+
+%-------------------------------------------------------------
+
+<<Datagen.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+module A = Ast_asm
+module T = Types
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Datagen.gen]]>>
+@
+
+
+\subsection*{[[Execgen.ml]]}
+
+<<function [[Execgen.gen]]>>=
+let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs : T.word list) (ds : T.byte array) (symbols2 : T.symbol_table2) (chan : Chan.o) : unit =
+  let entry_name : string = config.entry_point in
+  let entry_addr : T.real_pc =
+    try 
+      let v = Hashtbl.find symbols2 (entry_name, T.Public) in
+      (match v with
+      | T.SText2 pc  -> pc
+      | _ -> failwith (spf "entry not TEXT: %s" entry_name)
+      )
+    (* normally impossible if propagated correctly, see main.ml *)
+    with Not_found ->
+      (* less: 5l does instead default to INITTEXT *)
+     failwith (spf "entry not found: %s" entry_name)
+  in
+  let format = config.header_type in
+  Logs.info (fun m -> m "saving executable in %s" (Chan.destination chan));
+
+  match format with
+  | Exec_file.A_out ->
+      (* Header *)
+      A_out.write_header sizes entry_addr chan.oc;
+
+      (* Text section *)
+      cs |> List.iter (Endian.Little.output_32 chan.oc);
+
+      (* Data section (no seek to a page boundary; disk image != memory image) *)
+      ds |> Array.iter (output_char chan.oc);
+
+      (* todo: symbol table, program counter line table *)
+      ()
+
+  | Exec_file.Elf ->
+      (* Headers (ELF header + program headers) *)
+      let (offset_disk_text, offset_disk_data) = 
+        Elf.write_headers config sizes entry_addr chan.oc
+      in
+
+      (* bugfix: important seek! we are using Int_.rnd in CLI.ml for
+       * header_size and so after the program header we might need
+       * some padding, hence this seek.
+       *)
+      seek_out chan.oc offset_disk_text; (* = config.header_size *)
+      (* Text section *)
+      cs |> List.iter (Endian.Little.output_32 chan.oc);
+
+      (* Data section *)
+      seek_out chan.oc offset_disk_data;
+      ds |> Array.iter (output_char chan.oc);
+
+      ()
+@
+
+
+%-------------------------------------------------------------
+
+<<Execgen.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+module T = Types
+module T5 = Types5
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+  
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Execgen.gen]]>>
+@
+
+
+\subsection*{[[Layout5.ml]]}
+
+<<function [[Layout5.xdefine]]>>=
+let xdefine h2 h symb v =
+  (* stricter: we do not accept previous def of special symbols *)
+  if Hashtbl.mem h symb || Hashtbl.mem h2 symb
+  then failwith (spf "special symbol %s is already defined" (fst symb));
+
+  Hashtbl.add h2 symb v
+@
+
+<<function [[Layout5.layout_data]]>>=
+let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 * (int * int)
+  =
+  let h2 = Hashtbl.create 101 in
+
+  (* a set *)
+  let is_data = Hashtbl.create 101 in
+
+  (* step0: identify Data vs Bss (and sanity check DATA instructions) *)
+  ds |> List.iter (function
+    | T.DATA (global, offset, size_slice, _v) ->
+        (* sanity checks *)
+        (match (T.lookup_global global symbols).T.section with
+        | T.SData size ->
+            if offset + size_slice > size
+            then failwith (spf "initialize bounds (%d): %s" size
+                             (A.s_of_global global))
+        | T.SText _ -> failwith (spf "initialize TEXT, not a GLOBL for %s"
+                                   (A.s_of_global global))
+        | T.SXref -> raise (Impossible "SXRef detected by Check.check")
+        );
+        (* use replace cos can have multiple DATA for the same GLOBL *)
+        Hashtbl.replace is_data (T.symbol_of_global global) true
+  );
+
+  (* step1: sanity check sizes and align *)
+  symbols |> Hashtbl.iter (fun (s, _) v ->
+    match v.T.section with
+    (* less: do the small segment optimisation *)
+    | T.SData size ->
+        if size <= 0
+        then failwith (spf "%s: no size" s);
+
+        if size mod 4 <> 0
+        then v.T.section <- T.SData (Int_.rnd size 4)
+    | _ -> ()
+  );
+
+  let orig = ref 0 in
+
+  (* step2: layout Data section *)
+  symbols |> Hashtbl.iter (fun symb v ->
+    match v.T.section with
+    | T.SData size when Hashtbl.mem is_data symb ->
+        Hashtbl.add h2 symb (T.SData2 (!orig, T.Data));
+        orig := !orig + size;
+    | _ -> ()
+  );
+  orig := Int_.rnd !orig 8;
+  let data_size = !orig in
+
+  (* step3: layout Bss section *)
+  symbols |> Hashtbl.iter (fun symb v ->
+    match v.T.section with
+    | T.SData size when not (Hashtbl.mem is_data symb) ->
+        Hashtbl.add h2 symb (T.SData2(!orig, T.Bss));
+        orig := !orig + size;
+    | _ -> ()
+  );
+  orig := Int_.rnd !orig 8;
+  let bss_size = !orig - data_size in
+
+  (* define special symbols *)
+  xdefine h2 symbols ("bdata"  , T.Public) (T.SData2 (0, T.Data));
+  xdefine h2 symbols ("edata"  , T.Public) (T.SData2 (data_size, T.Data));
+  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size, T.Data));
+  xdefine h2 symbols ("setR12" , T.Public) (T.SData2 (0, T.Data));
+  (* This is incorrect but it will be corrected later. This has
+   * no consequence on the size of the code computed in layout_text
+   * because address resolution for procedures always use a literal
+   * pool.
+   *)
+  xdefine h2 symbols ("etext"  , T.Public) (T.SText2 0);
+
+  h2, (data_size, bss_size)
+@
+
+<<function [[Layout5.layout_text]]>>=
+let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.code_graph) : T.symbol_table2 * T5.code_graph * int =
+
+  let pc : T.real_pc ref = ref init_text in
+  (* less: could be a None, to be more precise, to detect use of local/param
+   * outside a procedure. But anyway at frontier of objects we
+   * are considered in TEXT of preceding obj which does not make
+   * much sense (we should do this kind of check in check.ml though).
+   *)
+  let autosize = ref 0 in
+  let literal_pools = ref [] in
+
+  cg |> T.iter (fun n ->
+    n.real_pc <- !pc;
+
+    let size, poolopt = 
+      Codegen5.size_of_instruction symbols2 !autosize n 
+    in
+    if size = 0
+    then
+      (match n.instr with
+      | T.TEXT (global, _, size) ->
+          (* remember that rewrite5 has adjusted autosize correctly *)
+          autosize := size;
+          (* Useful to find pc of entry point and to get the address of a
+           * procedure, e.g. in WORD $foo(SB)
+           *)
+          Hashtbl.add symbols2 (T.symbol_of_global global) (T.SText2 !pc);
+      | _ -> failwith (spf "zero-width instruction at %s" 
+                         (T.s_of_loc n.n_loc))
+      );
+    poolopt |> Option.iter (fun pool ->
+      match pool with
+      | Codegen5.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
+      | Codegen5.PoolOperand imm_or_ximm ->
+          let instr = T.WORD imm_or_ximm in
+          (* less: check if already present in literal_pools *)
+          let node = Types.{ instr = instr; next = None; branch = None;
+                             real_pc = -1; 
+                             n_loc = n.n_loc } in
+          if node.branch <> None
+          then raise (Impossible "attaching literal to branching instruction");
+
+          n.branch <- Some node;
+          literal_pools |> Stack_.push node;
+          
+    );
+    pc := !pc + size;
+
+    (* flush pool *)
+    (* todo: complex condition when possible out of offset range *)
+    if n.next = None && !literal_pools <> [] then begin
+      (* extend cg, and so the cg |> T5.iter, on the fly! *)
+      let rec aux (prev : Ast_asm5.instr_with_cond Types.node) xs =
+        match xs with
+        | [] -> ()
+        | x::xs ->
+            (* cg grows *)
+            prev.next <- Some x;
+            aux x xs
+      in
+      aux n !literal_pools;
+      literal_pools := [];
+    end;
+
+  );
+  if !Flags.debug_layout then begin
+    cg |> T.iter (fun (n : Ast_asm5.instr_with_cond Types.node) ->
+      Logs.app (fun m -> m  "%d: %s" n.real_pc (T5.show_instr n.instr));
+      n.branch |> Option.iter (fun (n : Ast_asm5.instr_with_cond Types.node) -> 
+        Logs.app (fun m -> m " -> branch: %d" n.real_pc)
+      )
+    );
+  end;
+
+  let final_text = Int_.rnd !pc 8 in
+  let textsize = final_text - init_text in
+  Hashtbl.replace symbols2 ("etext", T.Public) (T.SText2 final_text);
+  
+  symbols2, cg, textsize
+@
+%$
+
+
+%-------------------------------------------------------------
+
+<<Layout5.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+module T = Types
+module T5 = Types5
+module A = Ast_asm
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Layout5.xdefine]]>>
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+<<function [[Layout5.layout_data]]>>
+
+
+
+<<function [[Layout5.layout_text]]>>
+
+@
+
+
+\subsection*{[[Rewrite5.ml]]}
+
+<<function [[Rewrite5.find_first_no_nop_node]]>>=
+let rec find_first_no_nop_node nopt =
+  match nopt with
+  | None -> failwith "could not find non NOP node for branch"
+  | Some n ->
+      (match n.instr with
+      | T.V A.NOP -> find_first_no_nop_node n.next
+      | _ -> Some n
+      )
+@
+
+<<function [[Rewrite5.rewrite]]>>=
+(* less: rewrite when profiling flag -p *)
+let rewrite (cg : T5.code_graph) : T5.code_graph =
+  
+  (* a set *)
+  let is_leaf = Hashtbl.create 101 in
+
+  (* step1: mark is leaf and delete NOPs *)
+  cg |> T.iter_with_env (fun (curtext, prev_no_nop) n ->
+    match n.T.instr with
+    | T.TEXT (ent, _attrs, _size) ->
+        Hashtbl.add is_leaf ent true;
+        (Some ent, Some n)
+    | T.WORD _ -> (curtext, Some n)
+    | T.V instr ->
+        let env = 
+          match instr with
+          (* remove the NOP *)
+          | A.NOP ->
+              prev_no_nop |> Option.iter (fun prev ->
+                prev.T.next <- n.T.next;
+              );
+              (curtext, prev_no_nop)
+          | A.RET -> (curtext, Some n)
+        in
+        n.branch |> Option.iter (fun n2 ->
+          match n2.instr with
+          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
+          | _ -> ()
+        );
+        env
+        
+    | T.I (instr, _condXXX) ->
+        let env = 
+          match instr with
+          | A5.BL _ -> 
+              curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
+              (curtext, Some n)
+          | _ -> (curtext, Some n)
+        in
+        (* need that also here now that I moved NOP handling in T.V case? *)
+        n.branch |> Option.iter (fun n2 ->
+          match n2.instr with
+          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
+          | _ -> ()
+        );
+        env
+  ) (None, None);
+  
+  (* step2: transform *)
+  cg |> T.iter_with_env (fun autosize_opt n ->
+    match n.instr with
+    | T.TEXT (global, attrs, size) ->
+        if size mod 4 <> 0
+        then failwith (spf "size of locals should be a multiple of 4 for %s"
+                         (A.s_of_global global));
+        if size < 0 
+        then failwith "TODO: handle size local -4";
+        
+        let autosize_opt = 
+          if size == 0 && Hashtbl.mem is_leaf global
+          then None
+          else Some (size + 4)
+        in
+        autosize_opt |> Option.iter (fun autosize ->
+          (* for layout text we need to set the final autosize *)
+          n.instr <- T.TEXT (global, attrs, autosize);
+          (* MOVW.W R14, -autosize(SP) *)
+          let n1 = {
+            instr = T.I (A5.MOVE (A.Word, Some A5.WriteAddressBase, 
+                              A5.Imsr (A5.Reg A5.rLINK), 
+                              A5.Indirect (A5.rSP, -autosize)), A5.AL);
+            next = n.next;
+            branch = None;
+            n_loc = n.n_loc;
+            real_pc = -1;
+          }
+          in
+          n.next <- Some n1;
+        );
+        autosize_opt
+
+    | T.WORD _ -> autosize_opt
+    | T.V A.RET ->
+        n.instr <- T.I
+          ((match autosize_opt with
+           (* B (R14) *)
+           | None -> A5.B (ref (A.IndirectJump (A5.rLINK)))
+           (* MOVW.P autosize(SP), PC *)
+           | Some autosize -> A5.MOVE (A.Word, Some A5.PostOffsetWrite,
+                                   A5.Indirect (A5.rSP, autosize), 
+                                   A5.Imsr (A5.Reg A5.rPC))
+           ), A5.AL);
+        autosize_opt
+     | T.V A.NOP -> raise (Impossible "NOP was removed in step1")
+
+     | T.I (
+            ( A5.RFE | A5.Arith _ | A5.ArithF _ | A5.MOVE _
+            | A5.SWAP _ | A5.B _ | A5.BL _ | A5.Cmp _ | A5.CmpF _ | A5.Bxx _
+            | A5.SWI _
+            )
+            , _) ->
+        autosize_opt
+  ) None;
+
+  (* works by side effect, still return first node *)
+  cg
+@
+
+
+%-------------------------------------------------------------
+
+<<Rewrite5.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+module A = Ast_asm
+module A5 = Ast_asm5
+open Types
+module T = Types
+module T5 = Types5
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Rewrite5.find_first_no_nop_node]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Rewrite5.rewrite]]>>
+
+@
+
+
+\subsection*{[[Codegen5.ml]]}
+
+<<type [[Codegen5.pool]]>>=
+type pool =
+  (* note that it is not always an int! Sometimes it can be an
+   * Address which will be resolved only at the very end.
+   *)
+  | PoolOperand of Ast_asm.ximm
+  (* todo: still don't know why we need that *)
+  | LPOOL 
+@
+
+<<type [[Codegen5.action]]>>=
+type action = {
+  (* a multiple of 4 *)
+  size: int;
+  pool: pool option;
+  binary: unit -> Bits.int32 list;
+}
+@
+
+<<type [[Codegen5.mem_opcode]]>>=
+type mem_opcode = LDR | STR
+@
+
+<<function [[Codegen5.error]]>>=
+let error node s =
+  failwith (spf "%s at %s on %s" s 
+              (T.s_of_loc node.n_loc)
+              (T5.show_instr node.instr)
+@
+
+<<function [[Codegen5.int_of_bits]]>>=
+let int_of_bits (n : node) (x : Bits.int32) : int =
+  try
+    Bits.int_of_bits32 x
+  with Failure s -> error n s
+@
+
+<<function [[Codegen5.offset_to_R12]]>>=
+let offset_to_R12 x =
+  (* less: x - BIG at some point if want some optimisation *)
+  x
+@
+
+<<function [[Codegen5.base_and_offset_of_indirect]]>>=
+let base_and_offset_of_indirect node symbols2 autosize x =
+  match x with
+  | Indirect (r, off) -> r, off 
+  | Entity (Param (_s, off)) ->
+      (* remember that the +4 below is because we access the frame of the
+       * caller which for sure is not a leaf. Note that autosize
+       * here had possibly a +4 done if the current function
+       * was a leaf, but still we need another +4 because what matters
+       * now is the adjustment in the frame of the caller!
+       *)
+      rSP, autosize + 4 + off
+  | Entity (Local (_s, off)) -> 
+      rSP, autosize + off
+  | Entity (Global (global, off)) ->
+      let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+      (match v with
+        | T.SData2 (offset, _kind) ->
+          rSB, offset_to_R12 (offset + off)
+      (* stricter: allowed in 5l but I think with wrong codegen *)
+      | T.SText2 _ -> 
+          error node (spf "use of procedure %s in indirect with offset"
+                       (A.s_of_global global))
+      )
+  | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
+@
+
+<<function [[Codegen5.immrot]]>>=
+let immrot x =
+  if x >= 0 && x <= 0xff
+  then Some (0, x)
+  else raise Todo
+@
+
+<<function [[Codegen5.immoffset]]>>=
+let immoffset x =
+  (x >= 0 && x <= 0xfff) || (x < 0 && x >= -0xfff)
+@
+
+<<function [[Codegen5.gcond]]>>=
+(* gxxx below means gen_binary_code of xxx *)
+
+let gcond cond =
+  match cond with
+  | EQ            -> (0x0, 28)
+  | NE            -> (0x1, 28)
+  | GE (U) -> (0x2, 28)
+  | LT (U) -> (0x3, 28)
+  | MI            -> (0x4, 28)
+  | PL            -> (0x5, 28)
+  | VS            -> (0x6, 28)
+  | VC            -> (0x7, 28)
+  | GT (U) -> (0x8, 28)
+  | LE (U) -> (0x9, 28) 
+  | GE (S)   -> (0xa, 28) 
+  | LT (S)   -> (0xb, 28)
+  | GT (S)   -> (0xc, 28)
+  | LE (S)   -> (0xd, 28)
+  | AL            -> (0xe, 28)
+  | NV            -> (0xf, 28)
+@
+
+<<function [[Codegen5.gop_arith]]>>=
+let gop_arith op =
+  match op with
+  | AND -> (0x0, 21)
+  | EOR -> (0x1, 21)
+  | SUB -> (0x2, 21)
+  | RSB -> (0x3, 21)
+  | ADD -> (0x4, 21)
+  | ADC -> (0x5, 21)
+  | SBC -> (0x6, 21)
+  | RSC -> (0x7, 21)
+  (* TST 0x8, TEQ 0x9, CMP 0xa, CMN 0xb via gop_cmp below *)
+  | ORR -> (0xc, 21)
+  | MOV -> (0xd, 21) (* no reading syntax in 5a, but can be generated by 5l *)
+  | BIC -> (0xe, 21)
+  | MVN -> (0xf, 21)
+
+  | MUL | DIV | MOD -> raise (Impossible "should match those cases separately")
+  | SLL | SRL | SRA -> raise (Impossible "should match those cases separately")
+@
+
+<<function [[Codegen5.gsetbit]]>>=
+let gsetbit opt =
+  match opt with
+  | None -> []
+  | Some Set_condition -> [(1, 20)]
+@
+
+<<function [[Codegen5.gop_shift]]>>=
+let gop_shift op =
+  match op with
+  | SLL -> (0, 5)
+  | SRL -> (1, 5)
+  | SRA -> (2, 5)
+  | _ -> raise (Impossible "should match those cases separately")
+@
+
+<<function [[Codegen5.gop_cmp]]>>=
+let gop_cmp op =
+  match op with
+  (* Set_condition set by default for comparison opcodes *)
+  | TST -> [(0x8, 21); (1, 20)]
+  | TEQ -> [(0x9, 21); (1, 20)]
+  | CMP -> [(0xa, 21); (1, 20)]
+  | CMN -> [(0xb, 21); (1, 20)]
+@
+
+<<function [[Codegen5.gop_bitshift_register]]>>=
+let gop_bitshift_register op =
+  match op with
+  | Sh_logic_left   -> (0x0, 5)
+  | Sh_logic_right  -> (0x1, 5)
+  | Sh_arith_right  -> (0x2, 5)
+  | Sh_rotate_right -> (0x3, 5)
+@
+
+<<function [[Codegen5.gop_rcon]]>>=
+let gop_rcon x =
+  match x with
+  | Left (R r) -> [(r,8); (1, 4)]
+  | Right i    -> [(i, 7); (0, 4)]
+@
+
+<<function [[Codegen5.gshift]]>>=
+let gshift (R rf) op2 rcon = 
+  gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
+@
+
+<<function [[Codegen5.gbranch_static]]>>=
+let gbranch_static (nsrc : T5.node) cond is_bl =
+  match nsrc.branch with
+  | None -> raise (Impossible "resolving should have set the branch field")
+  | Some ndst -> 
+      let dst_pc = ndst.real_pc in
+      let v = (dst_pc - nsrc.real_pc) - 8 in
+      if v mod 4 <> 0
+      then raise (Impossible "layout text wrong, not word aligned node");
+      let v = (v asr 2) land 0xffffff in
+      (* less: stricter: warn if too big, but should never happens *)
+      [gcond cond; (0x5, 25);
+       (if is_bl then (0x1, 24) else (0x0, 24)); 
+       (v, 0) 
+       ]
+@
+
+<<function [[Codegen5.gmem]]>>=
+let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
+  [gcond cond; (0x1, 26) ] @
+  (match opt with
+  | None ->                  [(1, 24)] (* pre offset *)
+  | Some PostOffsetWrite ->  [(0, 24)]
+  | Some WriteAddressBase -> [(1, 24); (1, 21)]
+  ) @
+  [(match move_size with 
+   | Word -> (0, 22) 
+   | Byte _ -> (1, 22) 
+   | HalfWord _ -> raise (Impossible "should use different pattern rule")
+   );
+   (match op with 
+    | LDR -> (1, 20) 
+    | STR -> (0, 20)
+   );
+   (rbase, 16); (rt, 12);
+  ] @
+  (match offset_or_rm with
+  | Either.Left offset -> 
+      if offset >= 0 
+      then [(1, 23); (offset, 0)]
+      else [(0, 23); (-offset, 0)]
+  | Either.Right (R r) -> [(1, 25); (r, 0)]
+  )
+@
+
+<<function [[Codegen5.gload_from_pool]]>>=
+let gload_from_pool (nsrc : T5.node) cond rt =
+  match nsrc.branch with
+  | None -> raise (Impossible "literal pool should be attached to node")
+  | Some ndst ->
+      (* less: could assert the dst node is a WORD *)
+      let dst_pc = ndst.real_pc in
+      let v = (dst_pc - nsrc.real_pc) - 8 in
+      if v mod 4 <> 0
+      then raise (Impossible "layout text wrong, not word aligned node");
+      (* LDR v(R15), RT (usually R11) *)
+      gmem cond LDR Word None (Left v) rPC rt
+@
+
+<<function [[Codegen5.rules]]>>=
+(* conventions (matches the one used (inconsistently) in 5l):
+ * - rf = register from (called Rm in refcard)
+ * - rt = register to   (called Rd in refcard)
+ * - r  = register middle (called Rn in refcard)
+ *)
+let rules symbols2 autosize init_data node =
+  match node.instr with
+  (* --------------------------------------------------------------------- *)
+  (* Virtual *)
+  (* --------------------------------------------------------------------- *)
+   | T.V (A.RET | A.NOP) -> 
+      raise (Impossible "rewrite should have transformed RET/NOP")
+
+  (* --------------------------------------------------------------------- *)
+  (* Pseudo *)
+  (* --------------------------------------------------------------------- *)
+
+  (* TEXT instructions were kept just for better error reporting localisation *)
+  | T.TEXT (_, _, _) -> 
+      { size = 0; pool = None; binary = (fun () -> []) }
+
+  | T.WORD x ->
+      { size = 4; pool = None; binary = (fun () -> 
+        match x with
+        | Float _ -> raise Todo
+        | Int i -> [ [(i land 0xffffffff, 0)] ]
+        | String _s -> 
+            (* stricter? what does 5l do with that? confusing I think *)
+            error node "string not allowed with WORD; use DATA"
+        | Address (Global (global, _offsetTODO)) -> 
+            let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+            (match v with
+             | T.SText2 real_pc -> [ [(real_pc, 0)] ]
+             | T.SData2 (offset, _kind) -> 
+                 (match init_data with
+                 | None -> raise (Impossible "init_data should be set by now")
+                 | Some init_data -> [ [(init_data + offset, 0)] ]
+                 )
+            )
+        | Address (Param _ | Local _) -> raise Todo
+      )}
+
+  | T.I (instr, cond) ->
+    (match instr with
+    | ArithF _ | CmpF _ -> raise Todo
+    (* --------------------------------------------------------------------- *)
+    (* Arithmetics *)
+    (* --------------------------------------------------------------------- *)
+    | Arith ((AND|ORR|EOR|ADD|SUB|BIC|ADC|SBC|RSB|RSC|MVN|MOV) as op, opt,
+             from, middle, (R rt)) ->
+        let r =
+          if (op = MVN || op = MOV)
+          then 0
+          else 
+            match middle with 
+            | None -> rt 
+            | Some (R x) -> x 
+        in
+        let from_part =
+          match from with
+          | Reg (R rf)      -> [(rf, 0)]
+          | Shift (a, b, c) -> gshift a b c
+          | Imm i ->
+              (match immrot i with
+              | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
+              | None -> error node "TODO: LCON"
+              )
+        in
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; gop_arith op] @ gsetbit opt @ [(r, 16); (rt, 12)] 
+            @ from_part]
+        )}
+
+    (* SLL I, [R], RT -> MOV (R << c), RT *)
+    | Arith ((SLL|SRL|SRA) as op, opt, from, middle, (R rt)) ->
+        let r = 
+          match middle with 
+          | None -> rt 
+          | Some (R x) -> x 
+        in
+        let from_part = 
+          match from with
+          | Imm i ->
+              if i >= 0 && i <= 31
+              then [(i, 7)]
+              (* stricter: failwith, not silently truncate *)
+              else error node (spf "shit value out of range %d" i)
+          | Reg (R rf) -> [(rf, 8); (1, 4)]
+          (* stricter: I added that *)
+          | Shift _ -> error node "bitshift on shift operation not allowed"
+        in
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; gop_arith MOV] @ gsetbit opt @ [(rt, 12); gop_shift op]
+            @ from_part @ [(r, 0)]]
+        )}
+
+    | Arith (MUL, opt, from, middle, (R rt)) ->
+        let rf =
+          match from with
+          | Reg (R rf) -> rf
+          (* stricter: better error message *)
+          | Shift _ | Imm _ ->
+              error node "MUL can take only register operands"
+        in
+        let r = 
+          match middle with 
+          | None -> rt 
+          | Some (R x) -> x 
+        in
+        (* ?? *)
+        let (r, rf) = if rt = r then (rf, rt) else (r, rf) in
+        
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; (0x0, 21)] @ gsetbit opt 
+            @ [(rt, 16); (rf, 8); (0x9, 4); (r, 0) ]]
+        )}
+        
+
+
+    | Cmp (op, from, (R r)) ->
+        let from_part = 
+          match from with
+          | Reg (R rf) -> [(rf, 0)]
+          | Shift (a, b, c) -> gshift a b c
+          | Imm i ->
+              (match immrot i with
+              | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
+              | None -> error node "TODO"
+              )
+        in
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
+        )}
+        
+    | MOVE (Word, None, Imsr from, Imsr (Reg (R rt))) -> 
+        let from_part = 
+          match from with
+          | Reg (R rf) -> [(rf, 0)]
+          | Shift (a, b, c) -> gshift a b c
+          | Imm i ->
+              (match immrot i with
+              | Some (rot, v) -> [(1, 25); (rot, 8); (v, 0)]
+              | None -> error node "TODO"
+              )
+        in
+        let r = if !Flags.kencc_compatible then rt else 0 in
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ from_part]
+        )}
+
+    (* MOVBU R, RT -> ADD 0xff, R, RT *)
+    | MOVE (Byte U, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
+        { size = 4; pool = None; binary = (fun () ->
+          [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff, 0)]]
+        )}
+
+    (* MOVB RF, RT  -> SLL 24, RF, RT; SRA 24, RT, RT -> MOV (RF << 24), RT;...
+     * MOVH RF, RT  -> SLL 16, RF, RT; SRA 16, RT, RT -> ...
+     * MOVHU RF, RT -> SLL 16, RF, RT; SRL 16, RT, RT -> 
+     *)
+    | MOVE ((Byte _|HalfWord _)as size, None, Imsr(Reg(R rf)),Imsr(Reg(R rt)))->
+        let rop =
+          match size with
+          | Byte U | HalfWord U -> SRL
+          | Byte S   | HalfWord S -> SRA
+          | Word -> raise (Impossible "size matched in pattern")
+        in
+        let sh =
+          match size with
+          | Byte _ -> 24
+          | HalfWord _ -> 16
+          | Word -> raise (Impossible "size matched in pattern")
+        in
+        { size = 8; pool = None; binary = (fun () ->
+          [
+            [gcond cond; gop_arith MOV; (rt, 12); gop_shift SLL; (sh,7);(rf,0)];
+            [gcond cond; gop_arith MOV; (rt, 12); gop_shift rop; (sh,7);(rt,0)];
+          ]
+        )}
+
+    | Arith ((DIV|MOD), _, _, _, _) -> error node "TODO: DIV/MOD"
+
+    (* --------------------------------------------------------------------- *)
+    (* Control flow *)
+    (* --------------------------------------------------------------------- *)
+    | B x ->
+        if cond <> AL 
+        then raise (Impossible "B should always be with AL");
+        { size = 4; pool = Some LPOOL; binary = (fun () ->
+          match !x with
+          | Absolute _ -> [ gbranch_static node AL false ]
+          (* B (R) -> ADD 0, R, PC *)
+          | IndirectJump (R r) ->
+              let (R rt) = rPC in
+              [ [gcond AL; (1, 25); gop_arith ADD; (r, 16); (rt, 12); (0, 0)] ]
+          | _ -> raise (Impossible "5a or 5l should have resolved this branch")
+        )}
+    | BL x ->
+        (match !x with
+        | Absolute _ -> 
+            { size = 4; pool = None; binary = (fun () ->
+              [ gbranch_static node AL true ]
+            )}
+        (* BL (R) -> ADD $0, PC, LINK; ADD $0, R, PC *)
+        | IndirectJump (R r) ->
+           { size = 8; pool = None; binary = (fun () ->
+             let (R r2) = rPC in
+             let (R rt) = rLINK in
+              [ 
+                (* Remember that when PC is involved in input operand
+                 * there is an implicit +8 which is perfect for our case.
+                 *)
+                [gcond cond;(1, 25); gop_arith ADD; (r2, 16); (rt, 12); (0, 0)];
+                [gcond cond;(1, 25); gop_arith ADD; (r, 16);  (r2, 12); (0, 0)];
+              ]
+             )}
+        | _ -> raise (Impossible "5a or 5l should have resolved this branch")
+        )
+
+    | Bxx (cond2, x) ->
+        if cond <> AL 
+        then raise (Impossible "Bxx should always be with AL");
+        (match !x with
+        | Absolute _ -> 
+            { size = 4; pool = None; binary = (fun () ->
+              [ gbranch_static node cond2 false ]
+            )}
+        (* stricter: better error message at least? *)
+        | IndirectJump _ -> error node "Bxx supports only static jumps"
+        | _ -> raise (Impossible "5a or 5l should have resolved this branch")
+        )
+
+    (* --------------------------------------------------------------------- *)
+    (* Memory *)
+    (* --------------------------------------------------------------------- *)
+
+    (* Address *)
+    | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
+        (match ximm with
+        | Int _ | Float _ -> 
+           failwith "TODO: ?? because of refactor of imm_or_ximm"
+        | String _ -> 
+            (* stricter? what does 5l do with that? confusing I think *)
+            error node "string not allowed in MOVW; use DATA"
+        | Address (Global (global, _offsetTODO)) ->
+            let from_part_when_small_offset_to_R12 =
+              try 
+                let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+                match v with
+                | T.SData2 (offset, _kind) ->
+                    let final_offset = offset_to_R12 offset in
+                    (* super important condition! for bootstrapping
+                     * setR12 in MOVW $setR12(SB), R12 and not
+                     * transform it in ADD offset_set_R12, R12, R12.
+                     *)
+                    if final_offset = 0 
+                    then None
+                    else immrot final_offset
+                | T.SText2 _ -> None
+              (* layout_text has not been fully done yet so we may have
+               * the address of a procedure we don't know yet
+               *)
+              with Not_found -> None
+            in
+            (match from_part_when_small_offset_to_R12 with
+            | Some (rot, v) ->
+              (* MOVW $x(SB), RT -> ADD $offset_to_r12, R12, RT  *)
+              { size = 4; pool = None; binary = (fun () ->
+                let (R r) = rSB in
+                [[gcond cond; (1, 25); gop_arith ADD; (r, 16); (rt, 12); 
+                  (rot, 8); (v, 0)]]
+            )}
+            | None -> 
+              (* MOVW $L(SB), RT -> LDR x(R15), RT *)
+              { size = 4; pool=Some(PoolOperand(ximm)); binary=(fun () ->
+                [ gload_from_pool node cond (R rt) ]
+              )}
+            )
+        | Address (Local _ | Param _) -> raise Todo
+        )
+
+    (* Load *)
+
+    | MOVE ((Word | Byte U) as size, opt, from, Imsr (Reg rt)) ->
+        (match from with
+        | Imsr (Imm _ | Reg _) -> 
+            if size = Word 
+            then raise (Impossible "pattern covered before")
+            else error node "illegal combination?"
+        | Imsr (Shift _) -> error node "TODO"
+        | Ximm _ -> 
+            if size = Word 
+            then raise (Impossible "pattern covered before")
+            else error node "illegal combination"
+        | Indirect _ | Entity _ ->
+            let (rbase, offset) = 
+              base_and_offset_of_indirect node symbols2 autosize from in
+            if immoffset offset
+            then
+              { size = 4; pool = None; binary = (fun () -> 
+                [ gmem cond LDR size opt (Left offset) rbase rt ]
+              )}
+            else
+              error node "TODO: Large offset"
+        )
+
+    (* Store *)
+
+    (* note that works for Byte Signed and Unsigned here *)
+    | MOVE ((Word | Byte _) as size, opt, Imsr (Reg rf), dest) ->
+        (match dest with
+        | Imsr (Reg _) -> raise (Impossible "pattern covered before")
+        (* stricter: better error message *)
+        | Imsr _ | Ximm _ -> 
+            error node "illegal to store in an (extended) immediate"
+        | Indirect _ | Entity _ ->
+            let (rbase, offset) = 
+              base_and_offset_of_indirect node symbols2 autosize dest in
+            if immoffset offset
+            then
+              { size = 4; pool = None; binary = (fun () -> 
+                [ gmem cond STR size opt (Left offset) rbase rf ]
+              )}
+            else
+              error node "TODO: store with large offset"
+        )
+
+    (* Swap *)
+    | SWAP _ -> error node "TODO: SWAP"
+
+    (* Half words and signed bytes *)
+    | MOVE ((HalfWord _ | Byte _), _opt, _from, _dest) -> 
+        error node "TODO: half"
+
+    | MOVE (Word, _opt, _from, _dest) ->
+       (* stricter: better error message *)
+       error node "illegal combination: at least one operand must be a register"
+
+    (* --------------------------------------------------------------------- *)
+    (* System *)
+    (* --------------------------------------------------------------------- *)
+    | SWI i ->
+        if i <> 0
+        then error node (spf "SWI does not use its parameter under Plan 9/Linux");
+
+        { size = 4; pool = None; binary = (fun () ->
+          [ [gcond cond; (0xf, 24)] ]
+        )}
+    (* RFE -> MOVM.S.W.U 0(r13),[r15] *)
+    | RFE ->
+        { size = 4; pool = None; binary = (fun () -> 
+          [ [(0xe8fd8000, 0)] ]
+        )}
+@
+
+<<function [[Codegen5.size_of_instruction]]>>=
+let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5.node) : int (* a multiple of 4 *) * pool option =
+  let action  = rules symbols2 autosize None node in
+  action.size, action.pool
+@
+
+<<function [[Codegen5.gen]]>>=
+let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5.code_graph) : T.word list =
+
+  let res = ref [] in
+  let autosize = ref 0 in
+
+  (* just for sanity checking *)
+  let pc = ref config.init_text in
+
+  cg |> T.iter (fun n ->
+
+    let {size; binary; pool = _ }  = rules symbols2 !autosize config.init_data n in
+    let instrs = binary () in
+
+    if n.real_pc <> !pc
+    then raise (Impossible "Phase error, layout inconsistent with codegen");
+    if List.length instrs * 4 <> size
+    then raise (Impossible (spf "size of rule does not match #instrs at %s"
+                              (T.s_of_loc n.n_loc)));
+
+    let xs : Bits.int32 list = instrs |> List.map Assoc.sort_by_val_highfirst in
+    
+    if !Flags.debug_gen 
+    then begin 
+      Logs.app (fun m -> m "%s" (T5.show_instr n.instr));
+      Logs.app (fun m -> m "-->");
+      xs |> List.iter (fun x ->
+        let w = int_of_bits n x in
+        Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
+      );
+      Logs.app (fun m -> m ".");
+    end;
+
+    let xs = xs |> List.map (fun x -> int_of_bits n x) in
+    res |> Stack_.push xs;
+
+    pc := !pc + size;
+    (match n.instr with
+    (* after the resolve phase the size of a TEXT is the final autosize *)
+    | T.TEXT (_, _, size) -> autosize := size;
+    | _ -> ()
+    );
+  );
+
+  !res |> List.rev |> List.flatten
+@
+
+
+%-------------------------------------------------------------
+
+<<Codegen5.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Either
+
+open Ast_asm
+open Ast_asm5
+
+module T = Types
+module T5 = Types5
+open Types
+open Types5
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* ARM code generation.
+ *
+ * ocaml: No need for optab/oplook/ocmp/cmp as in 5l. Just use pattern matching!
+ *)
+
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
+<<type [[Codegen5.pool]]>>
+
+<<type [[Codegen5.action]]>>
+
+<<type [[Codegen5.mem_opcode]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Codegen5.error]]>>
+  )
+
+<<function [[Codegen5.int_of_bits]]>>
+
+<<function [[Codegen5.offset_to_R12]]>>
+
+<<function [[Codegen5.base_and_offset_of_indirect]]>>
+
+(*****************************************************************************)
+(* Operand classes *)
+(*****************************************************************************)
+
+<<function [[Codegen5.immrot]]>>
+
+<<function [[Codegen5.immoffset]]>>
+
+(*****************************************************************************)
+(* Code generation helpers *)
+(*****************************************************************************)
+
+<<function [[Codegen5.gcond]]>>
+
+
+<<function [[Codegen5.gop_arith]]>>
+  
+<<function [[Codegen5.gsetbit]]>>
+  
+
+<<function [[Codegen5.gop_shift]]>>
+
+
+<<function [[Codegen5.gop_cmp]]>>
+
+<<function [[Codegen5.gop_bitshift_register]]>>
+
+<<function [[Codegen5.gop_rcon]]>>
+
+
+(*****************************************************************************)
+(* More complex code generation helpers *)
+(*****************************************************************************)
+
+<<function [[Codegen5.gshift]]>>
+
+
+<<function [[Codegen5.gbranch_static]]>>
+
+
+
+
+<<function [[Codegen5.gmem]]>>
+
+<<function [[Codegen5.gload_from_pool]]>>
+      
+
+(*****************************************************************************)
+(* The rules! *)
+(*****************************************************************************)
+
+<<function [[Codegen5.rules]]>>
+
+    (* --------------------------------------------------------------------- *)
+    (* Other *)
+    (* --------------------------------------------------------------------- *)
+(*    | _ -> error node "illegal combination"*)
+    )
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+<<function [[Codegen5.size_of_instruction]]>>
+
+
+<<function [[Codegen5.gen]]>>
+@
+
+
+\subsection*{[[Check.ml]]}
+
+<<function [[Check.check]]>>=
+let check h =
+  h |> Hashtbl.iter (fun symb v ->
+    match v.section with
+    | SXref -> failwith (spf "%s: not defined" (T.s_of_symbol symb))
+    | _ -> ()
+@
+
+
+%-------------------------------------------------------------
+
+<<Check.ml>>=
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+
+open Types
+module T = Types
+
+<<function [[Check.check]]>>
+  )
+
+(* todo: could also check validity of object file:
+ *  - no duplicate DATA for same global.
+ *    for instance with int foo = 1; int foo = 2;  5c does not say anything,
+ *    but we should warn at least in linker because generated assembly
+ *    contains DATA concerning same global!
+ * less:
+ *  - registers are in range, 
+ *  - integers are in range,
+ *    ex with immediate in shifting operation:
+ *    if i >= 0 && i <= 31
+ *    then ...
+ *    else failwith "shift value out of range"
+ *  - that cond is AL for B and Bxx,
+ *  - that use Local or Param only when inside a Text (and for Local
+ *    that if fits the size specified),
+ *    | None -> error loc "use of parameter outside of procedure"
+ *    | None -> error loc "use of local outside of procedure"
+ *  - ...
+ * 
+ *  See use of error() in codegen5.ml, or notes about 5l in ocaml in
+ *  Linker.nw for more invariants to check.
+ *)
+@
+
+
+\subsection*{[[CLI.ml]]}
+
+<<type [[CLI.caps]]>>=
+type caps = < Cap.open_in; Cap.open_out >
+@
+
+<<constant [[CLI.init_text]]>>=
+let init_text  = ref None
+@
+
+<<constant [[CLI.init_round]]>>=
+let init_round = ref None
+@
+
+<<constant [[CLI.init_data]]>>=
+let init_data  = ref None
+@
+
+<<constant [[CLI.init_entry]]>>=
+let init_entry = ref "_main"
+@
+
+<<function [[CLI.config_of_header_type]]>>=
+let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.linker_config =
+  match header_type with
+  | "a.out" | "a.out_plan9" ->
+      let header_size = A_out.header_size in
+      Exec_file.{ 
+        header_type = Exec_file.A_out;
+        arch;
+        header_size;
+        init_text  = 
+        (match !init_text  with
+          | Some x -> x
+          | None -> 4096 + header_size
+        );
+        init_data = !init_data;
+        init_round = (match !init_round with Some x -> x | None -> 4096);
+        entry_point = !init_entry;
+      }
+      
+  | "elf" | "elf_linux" ->
+      let header_size = Elf.header_size in
+      Exec_file.{ 
+        header_type = Exec_file.Elf;
+        arch;
+        header_size;
+        init_text  = 
+        (match !init_text  with
+          | Some x -> x 
+          | None -> 0x8000 + header_size
+        );
+        init_data = !init_data;
+        init_round = (match !init_round with Some x -> x | None -> 4096);
+        entry_point = !init_entry;
+      }
+  | s -> failwith (spf "unknown -H option, format not handled: %s" s)
+@
+
+<<function [[CLI.link5]]>>=
+(* will modify chan as a side effect *)
+let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  let arch : Ast_asm5.instr_with_cond Arch_linker.t = {
+    Arch_linker.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
+    Arch_linker.visit_globals_instr = Ast_asm5.visit_globals_instr;
+  }
+  in
+  let (code, data, symbols) = Load.load caps files arch in
+
+  (* mark at least as SXref the entry point *)
+  T.lookup (config.entry_point, T.Public) None symbols |> ignore;
+  Check.check symbols;
+  
+  let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  let graph = Rewrite5.rewrite graph in
+
+  let symbols2, (data_size, bss_size) = 
+    Layout5.layout_data symbols data in
+  let symbols2, graph(* why modify that??*), text_size = 
+    Layout5.layout_text symbols2 config.init_text graph in
+
+  let sizes : Exec_file.sections_size = 
+    Exec_file.{ text_size; data_size; bss_size } 
+  in
+  let init_data =  
+    match config.init_data with
+    | None -> Int_.rnd (text_size + config.init_text) config.init_round
+    | Some x -> x
+  in
+  let config = { config with Exec_file.init_data = Some init_data } in
+  Logs.info (fun m -> m "final config is %s" 
+        (Exec_file.show_linker_config config));
+ 
+  let instrs = Codegen5.gen symbols2 config graph in
+  let datas  = Datagen.gen symbols2 init_data sizes data in
+  Execgen.gen config sizes instrs datas symbols2 chan
+@
+
+<<function [[CLI.link]]>>=
+let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  match arch with
+  | Arch.Arm ->
+     link5 caps config files chan
+  | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+@
+
+<<function [[CLI.main]]>>=
+let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+
+  let arch = 
+    match Filename.basename argv.(0) with
+    | "o5l" -> Arch.Arm
+    | "ovl" -> Arch.Mips
+    | s -> failwith (spf "arch could not detected from argv0 %s" s)
+  in
+
+  let thechar = Arch.thechar arch in
+  let thestring = Arch.thestring arch in
+  let thebin = spf "%c.out" thechar in
+  let usage = 
+    spf "usage: %s [-options] objects" argv.(0) 
+  in
+
+  let infiles = ref [] in
+  let outfile = ref (Fpath.v thebin) in
+
+  (* LATER: detect type depending on current host *)
+  let header_type = ref "elf" in
+
+  let level = ref (Some Logs.Warning) in
+  (* for debugging *)
+  let backtrace = ref false in
+
+  let options = [
+    "-o", Arg.String (fun s -> outfile := Fpath.v s),
+    spf " <file> output file (default is %s)" !!(!outfile);
+    
+    "-H", Arg.Set_string header_type,
+    spf " <str> executable (header) format (default is %s)" !header_type;
+    (* less: Arg support 0x1000 integer syntax? *)
+    "-T", Arg.Int (fun i -> init_text := Some i),
+    " <addr> start of text section";
+    "-R", Arg.Int (fun i -> init_round := Some i),
+    " <int> page boundary";
+    "-D", Arg.Int (fun i -> init_data := Some i),
+    " <addr> start of data section";
+
+    (* less: support integer value instead of string too? *)
+    "-E", Arg.Set_string init_entry,
+    spf " <str> entry point (default is %s)" !init_entry;
+
+    (* pad: I added that *)
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " guess what";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+
+    (* pad: I added that *)
+    "-backtrace", Arg.Set backtrace,
+    " dump the backtrace after an error";
+
+    "-debug_layout", Arg.Set Flags.debug_layout,
+    " debug layout code";
+    "-debug_gen", Arg.Set Flags.debug_gen,
+    " debug code generation";
+  ] |> Arg.align
+  in
+  (try
+    Arg.parse_argv argv options
+      (fun f -> infiles := Fpath.v f::!infiles) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "linker ran from %s with arch %s" 
+        (Sys.getcwd()) thestring);
+
+  (match List.rev !infiles with
+  | [] -> 
+      Arg.usage options usage; 
+      Exit.Code 1
+  | xs -> 
+        (* sanity checks *)
+      (match !init_data, !init_round with
+      | Some x, Some y -> 
+                failwith (spf "-D%d is ignored because of -R%d" x y)
+      | _ -> ()
+      );
+      let config : Exec_file.linker_config = 
+          config_of_header_type arch !header_type
+      in   
+      try 
+        (* the main call *)
+        !outfile |> FS.with_open_out caps (fun chan ->
+          link caps arch config xs chan
+        );
+        (* TODO: set exec bit on outfile *)
+        Exit.OK
+      with exn ->
+       if !backtrace
+       then raise exn
+       else 
+         (match exn with
+         | Failure s ->
+             Logs.err (fun m -> m "%s" s);
+             Exit.Code 1
+         (* not sure this exn is currently thrown but just in case *)
+         | Location_cpp.Error (s, loc) ->
+             (* TODO: actually we should pass locs! *)
+             let (file, line) = Location_cpp.final_loc_of_loc loc in
+             Logs.err (fun m -> m "%s:%d %s" !!file line s);
+             Exit.Code 1
+         | _ -> raise exn
+         )
+@
+
+
+%-------------------------------------------------------------
+
+<<CLI.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+
+module T = Types
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* An OCaml port of 5l/vl, the Plan 9 ARM/MIPS linkers.
+ *
+ * Main limitations compared to 5l/vl/...:
+ * - no -E digit 
+ *   (What was it anyway?)
+ * - no optimisation about small data, strings in text section
+ *   (really gain?)
+ * - no extensions not yet understood (import/export, dynamic linking)
+ *   (not sure it was used by any Plan 9 programs)
+ * - address of parameter or local is not supported
+ *   (Why would you want that? Does 5c generate that?)
+ *   update: actually I support it now no?
+ *
+ * Main limitations compared to 5l:
+ * - no half-word specialized instructions and immhalf()
+ *   (rare instructions anyway?)
+ *
+ * Better than 5l/vl/...:
+ * - greater code reuse across all linkers thanks to:
+ *    * use of marshalling for objects and libraries
+ *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
+ *      Load.load
+ * 
+ * todo?:
+ *  - -v is quite useful to debug "redefinition" linking errors
+ *    (see pb I had when linking bcm/ kernel)
+ *  - when get undefined symbol, print function you are currently in!
+ *    very useful to diagnose issue to give context and where to look for
+ *  - arith LCON less: NCON
+ *  - half word and byte load/store basic version
+ *  - endianess and datagen
+ *  - advanced instructions: floats, MULL, coprocessor, psr, etc
+ *  - library ranlib/symdef indexing
+ *  - profiling -p
+ *  - symbol table
+ *  - program counter line table
+ *  - nice error reporting for signature conflict, conflicting objects
+ *
+ * later:
+ *  - look at the 5l Go sources in the Golang source, maybe ideas to steal?
+ *)
+
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+(* Need: see .mli *)
+<<type [[CLI.caps]]>>
+
+<<constant [[CLI.init_text]]>>
+<<constant [[CLI.init_round]]>>
+<<constant [[CLI.init_data]]>>
+(* note that this is not "main"; we give the opportunity to libc _main
+ * to do a few things before calling user's main()
+ *)
+<<constant [[CLI.init_entry]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+<<function [[CLI.config_of_header_type]]>>
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+<<function [[CLI.link5]]>>
+
+<<function [[CLI.link]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[CLI.main]]>>
+  )
+@
+
+
+\section{[[executables/]]}
+
+\subsection*{[[executables/A_out.mli]]}
+
+<<signature [[A_out.header_size]]>>=
+val header_size: int
+@
+
+<<signature [[A_out.write_header]]>>=
+val write_header: 
+  Exec_file.sections_size -> int (* entry_addr *) -> out_channel -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<executables/A_out.mli>>=
+
+<<signature [[A_out.header_size]]>>
+
+<<signature [[A_out.write_header]]>>
+@
+
+
+\subsection*{[[executables/Elf.mli]]}
+
+<<signature [[Elf.header_size]]>>=
+val header_size: int
+@
+
+<<signature [[Elf.write_headers]]>>=
+(* return offset_disk_text and offset_disk_data for the caller to use seek_out *)
+val write_headers: 
+  Exec_file.linker_config -> Exec_file.sections_size -> int (* entry_addr *) ->
+  out_channel -> int * int
+@
+
+
+%-------------------------------------------------------------
+
+<<executables/Elf.mli>>=
+
+<<signature [[Elf.header_size]]>>
+
+<<signature [[Elf.write_headers]]>>
+@
+
+
+\section{[[libraries/]]}
+
+\subsection*{[[libraries/Library_file.mli]]}
+
+<<type [[Library_file.t (libraries/Library_file.mli)]]>>=
+type 'instr t = 'instr Object_file.t list
+@
+
+<<signature [[Library_file.load]]>>=
+(* may raise Object_file.WrongVersion *)
+val load:  Chan.i -> 'instr t
+@
+
+<<signature [[Library_file.save]]>>=
+val save : 'instr t -> Chan.o -> unit
+@
+
+<<signature [[Library_file.is_lib_filename]]>>=
+(* look whether finishes in .oa[5vi] or .oa *)
+val is_lib_filename: Fpath.t -> bool
+@
+
+
+%-------------------------------------------------------------
+
+<<libraries/Library_file.mli>>=
+(* An archive (.a) is really essentially just a list of objects, which in Plan 9
+ * are just a list of serialized assembly ASTs
+ *)
+<<type [[Library_file.t (libraries/Library_file.mli)]]>>
+
+<<signature [[Library_file.load]]>>
+
+<<signature [[Library_file.save]]>>
+
+<<signature [[Library_file.is_lib_filename]]>>
+@
+
+
+\section{[[./]]}
+
+\subsection*{[[Load.mli]]}
+
+<<signature [[Load.load]]>>=
+(* Load all the object (and library) files and split in code vs data.
+ * Will also relocate branching instructions.
+ * less: return also LineDirective info per file.
+ *)
+val load: 
+  <Cap.open_in; .. > ->
+  Fpath.t list ->
+  'instr Arch_linker.t ->
+  'instr Types.code array * Types.data list * Types.symbol_table
+@
+
+
+%-------------------------------------------------------------
+
+<<Load.mli>>=
+
+<<signature [[Load.load]]>>
+@
+
+
+\subsection*{[[Resolve.mli]]}
+
+<<signature [[Resolve.build_graph]]>>=
+(* !! will modify the code to resolve SymbolJump so take care!! 
+ * raise Failure in case of error.
+*)
+val build_graph:
+  ('instr -> Ast_asm.branch_operand option) ->
+  Types.symbol_table -> 'instr Types.code array -> 'instr Types.code_graph
+@
+
+
+%-------------------------------------------------------------
+
+<<Resolve.mli>>=
+
+<<signature [[Resolve.build_graph]]>>
+@
+
+
+\subsection*{[[Datagen.mli]]}
+
+<<signature [[Datagen.gen]]>>=
+(* uses only sizes.data_size *)
+val gen: 
+  Types.symbol_table2 -> Types.addr (* init_data *) -> Exec_file.sections_size ->
+  Types.data list ->
+  Types.byte array
+@
+
+
+%-------------------------------------------------------------
+
+<<Datagen.mli>>=
+
+<<signature [[Datagen.gen]]>>
+@
+
+
+\subsection*{[[Execgen.mli]]}
+
+<<signature [[Execgen.gen]]>>=
+val gen: 
+  Exec_file.linker_config -> Exec_file.sections_size ->
+  Types.word list (* code *) -> Types.byte array (* data *) ->
+  Types.symbol_table2 (* for finding entry point *) ->
+  Chan.o ->
+  unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Execgen.mli>>=
+
+<<signature [[Execgen.gen]]>>
+@
+
+
+\subsection*{[[Layout5.mli]]}
+
+<<signature [[Layout5.layout_data]]>>=
+(* Returns symbol_table2 with SData2 and SBss2 entries populated.
+ * Returns also data_size x bss_size.
+ *)
+val layout_data: 
+  Types.symbol_table -> Types.data list -> 
+  Types.symbol_table2 * (int * int)
+@
+
+<<signature [[Layout5.layout_text]]>>=
+(* Returns symbol_table2 with SText2 entries populated. 
+ * Returns also nodes in code_graph with their real_pc field set.
+ * Returns also text_size.
+ * !! works by side effect on code_graph and symbol_table2, so take care !!
+ *)
+val layout_text: 
+  Types.symbol_table2 -> Types.real_pc (* INITTEXT *) -> Types5.code_graph -> 
+  Types.symbol_table2 * Types5.code_graph * int
+@
+
+
+%-------------------------------------------------------------
+
+<<Layout5.mli>>=
+
+<<signature [[Layout5.layout_data]]>>
+
+<<signature [[Layout5.layout_text]]>>
+@
+
+
+\subsection*{[[Rewrite5.mli]]}
+
+<<signature [[Rewrite5.rewrite]]>>=
+(* Mostly TEXT/RET rewrite depending whether a function is a "leaf".
+ * !!actually works by side effect on graph so take care!! 
+ * may raise Failure in case of error.
+*)
+val rewrite: 
+  Types5.code_graph -> Types5.code_graph
+@
+
+
+%-------------------------------------------------------------
+
+<<Rewrite5.mli>>=
+
+<<signature [[Rewrite5.rewrite]]>>
+@
+
+
+\subsection*{[[Codegen5.mli]]}
+
+<<type [[Codegen5.pool (Codegen5.mli)]]>>=
+type pool =
+  | PoolOperand of Ast_asm.ximm
+  | LPOOL
+@
+
+<<signature [[Codegen5.size_of_instruction]]>>=
+(* This is used for the code layout. *)
+val size_of_instruction: 
+  Types.symbol_table2 -> int (* autosize*) -> Types5.node -> 
+  int (* a multiple of 4 *) * pool option
+@
+
+<<signature [[Codegen5.gen]]>>=
+(* uses only config.init_text and for sanity checking only *)
+val gen: 
+  Types.symbol_table2 -> Exec_file.linker_config -> Types5.code_graph -> 
+  Types.word list
+@
+
+
+%-------------------------------------------------------------
+
+<<Codegen5.mli>>=
+
+(* ?? *)
+<<type [[Codegen5.pool (Codegen5.mli)]]>>
+
+<<signature [[Codegen5.size_of_instruction]]>>
+
+<<signature [[Codegen5.gen]]>>
+
+@
+
+
+\subsection*{[[Check.mli]]}
+
+<<signature [[Check.check]]>>=
+(* Make sure there is no reference to undefined symbols. 
+ * raise Failure in case of error.
+ *)
+val check: 
+  Types.symbol_table -> unit
+@
+
+
+%-------------------------------------------------------------
+
+<<Check.mli>>=
+
+<<signature [[Check.check]]>>
+@
+
+
+\subsection*{[[CLI.mli]]}
+
+<<type [[CLI.caps (CLI.mli)]]>>=
+type caps = < Cap.open_in; Cap.open_out >
+@
+
+<<signature [[CLI.main]]>>=
+(* entry point (can also raise Exit.ExitCode) *)
+val main: <caps; ..> ->
+  string array -> Exit.t
+@
+
+<<signature [[CLI.link]]>>=
+(* main algorithm; works by side effect on outfile *)
+val link: < Cap.open_in; ..> ->
+  Arch.t -> Exec_file.linker_config -> Fpath.t list (* files *) ->
+  Chan.o (* outfile *) ->
+  unit
+@
+
+
+%-------------------------------------------------------------
+
+<<CLI.mli>>=
+(* Need:
+ * - open_in but should be only for argv derived files
+ * - open_out for -o exec file or 5.out
+ *)
+<<type [[CLI.caps (CLI.mli)]]>>
+
+<<signature [[CLI.main]]>>
+
+<<signature [[CLI.link]]>>
+@
+
+
+\subsection*{[[Types.ml]]}
+
+<<type [[Types.loc]]>>=
+type loc = Fpath.t * A.loc
+[@@deriving show]
+@
+
+<<type [[Types.byte]]>>=
+type byte = char
+[@@deriving show]
+@
+
+<<type [[Types.word]]>>=
+type word = int
+[@@deriving show]
+@
+
+<<type [[Types.addr]]>>=
+type addr = int
+[@@deriving show]
+@
+
+<<type [[Types.offset]]>>=
+type offset = int
+[@@deriving show]
+@
+
+<<type [[Types.symbol]]>>=
+type symbol = string * scope
+@
+
+<<type [[Types.scope]]>>=
+   and scope =
+     | Public
+     | Private of int (* represents a unique filename, less: use filename? *)
+@
+
+<<type [[Types.virt_pc]]>>=
+type virt_pc = A.virt_pc
+[@@deriving show]
+@
+
+<<type [[Types.section]]>>=
+type section =
+  | SText of virt_pc
+  | SData of int
+  | SXref
+[@@deriving show]
+@
+
+<<type [[Types.signature]]>>=
+type signature = int (* todo: * Common.filename *)
+[@@deriving show]
+@
+
+<<type [[Types.value]]>>=
+type value = {
+  mutable section: section;
+  sig_: signature option;
+}
+[@@deriving show]
+@
+
+<<type [[Types.symbol_table]]>>=
+type symbol_table = (symbol, value) Hashtbl.t
+@
+
+<<type [[Types.real_pc]]>>=
+type real_pc = int
+[@@deriving show]
+@
+
+<<type [[Types.section2]]>>=
+type section2 =
+  | SText2 of real_pc
+  (* offset to start of data section for ARM *)
+  | SData2 of offset * data_kind
+@
+
+<<type [[Types.data_kind]]>>=
+  and data_kind = Data | Bss
+@
+
+<<type [[Types.value2]]>>=
+type value2 = section2
+[@@deriving show]
+@
+
+<<type [[Types.symbol_table2]]>>=
+type symbol_table2 = (symbol, value2) Hashtbl.t
+@
+
+<<type [[Types.code]]>>=
+type 'instr code = ('instr code_bis * loc)
+@
+
+<<type [[Types.code_bis]]>>=
+and 'instr code_bis =
+  | TEXT of A.global * A.attributes * int
+  | WORD of A.ximm
+  | V of A.virtual_instr
+  | I of 'instr
+@
+
+<<type [[Types.data]]>>=
+type data = 
+  | DATA of A.global * A.offset * int * A.ximm
+[@@deriving show]
+@
+
+<<type [[Types.node]]>>=
+type 'instr node = {
+  (* can be altered during rewriting *)
+  mutable instr: 'instr code_bis;
+  mutable next: 'instr node option;
+  (* for branching instructions and also for instructions using the pool *)
+  mutable branch: 'instr node option;
+  
+  (* set after layout_text (set to -1 initially) *)
+  mutable real_pc: real_pc;
+
+  n_loc: loc;
+}
+[@@deriving show]
+@
+
+<<type [[Types.code_graph]]>>=
+type 'instr code_graph = 'instr node (* the first node *)
+[@@deriving show]
+@
+
+<<function [[Types.lookup]]>>=
+(* create new entry with SXRef if not found *)
+let lookup (k : symbol) (sigopt : signature option) (h : symbol_table) : value =
+  let v =
+    try
+      Hashtbl.find h k
+    with Not_found ->
+      let v = { section = SXref; sig_ = sigopt } in
+      Hashtbl.add h k v;
+      v
+  in
+  (match sigopt, v.sig_ with
+  | None, None -> ()
+  | Some i1, Some i2 ->
+      (* todo: report also offending object files *)
+      if i1 <> i2
+      then failwith (spf "incompatible type signatures %d and %d" i1 i2)
+  (* less: could report error when one define sig and not other *)
+  | _ -> ()
+  );
+  v
+@
+
+<<function [[Types.s_of_symbol]]>>=
+let s_of_symbol (s, scope) =
+  (* less: could print the object filename instead *)
+  s ^ (match scope with Public -> "" | Private _ -> "<>")
+@
+
+<<function [[Types.symbol_of_global]]>>=
+(* assert not Some -1 ! should have been set during loading! *)
+let symbol_of_global (e : A.global) : symbol =
+  e.name, (match e.priv with None -> Public | Some i -> Private i)
+@
+
+<<function [[Types.lookup_global]]>>=
+let lookup_global (x : A.global) (h : symbol_table) : value =
+  let symbol = symbol_of_global x in
+  lookup symbol x.signature h
+@
+
+<<function [[Types.s_of_loc]]>>=
+(* less: would need Hist mapping for this file to convert to original source *)
+let s_of_loc (file, line) =
+  spf "%s:%d" !!file line
+@
+
+<<function [[Types.iter]]>>=
+let rec iter f n =
+  f n;
+  n.next |> Option.iter (fun n -> iter f n)
+@
+
+<<function [[Types.iter_with_env]]>>=
+let rec iter_with_env f env n =
+  let env = f env n in
+  n.next |> Option.iter (fun n -> iter_with_env f env n)
+@
+
+
+%-------------------------------------------------------------
+
+<<Types.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+
+module A = Ast_asm
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+(* --------------------------------------- *)
+(* basic types *)
+(* --------------------------------------- *)
+
+(* a single line number is not enough anymore, we need also the filename *)
+<<type [[Types.loc]]>>
+
+(* 8 bits *)
+<<type [[Types.byte]]>>
+(* 32 bits *)
+<<type [[Types.word]]>>
+
+(* 32 bits *)
+<<type [[Types.addr]]>>
+(* 32 bits *)
+<<type [[Types.offset]]>>
+
+<<type [[Types.symbol]]>>
+<<type [[Types.scope]]>>
+[@@deriving show]
+
+(* --------------------------------------- *)
+(* The virtual pc world *)
+(* --------------------------------------- *)
+
+(* increments by 1. Used as index in some 'code array' or 'node array' *)
+<<type [[Types.virt_pc]]>>
+
+(* before layout *)
+<<type [[Types.section]]>>
+
+(* the filename is for safe linking error report *)
+<<type [[Types.signature]]>>
+
+<<type [[Types.value]]>>
+
+<<type [[Types.symbol_table]]>>
+(*[@@deriving show]*)
+
+(* --------------------------------------- *)
+(* The real pc world *)
+(* --------------------------------------- *)
+
+(* increments by 4 for ARM *)
+<<type [[Types.real_pc]]>>
+
+(* after layout *)
+<<type [[Types.section2]]>>
+<<type [[Types.data_kind]]>>
+[@@deriving show]
+
+<<type [[Types.value2]]>>
+
+<<type [[Types.symbol_table2]]>>
+(*[@@deriving show]*)
+
+(* --------------------------------------- *)
+(* Code vs Data *)
+(* --------------------------------------- *)
+
+
+(* Split Asm instructions in code vs data.
+ *
+ * For 'code' below we want to do some naming. We could copy many of 
+ * ast_asm.ml and replace 'global' with the fully resolved 'symbol'.
+ * But it would be a big copy paste. Instead, we opted for a mutable field 
+ * in ast_asm.ml set by the linker (see Ast_asm.entity.priv).
+ *)
+<<type [[Types.code]]>>
+(* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
+<<type [[Types.code_bis]]>>
+[@@deriving show]
+
+(* remember that GLOBL information is stored in symbol table  *)
+<<type [[Types.data]]>>
+
+
+(* graph via pointers, like in original 5l *)
+<<type [[Types.node]]>>
+
+<<type [[Types.code_graph]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Types.lookup]]>>
+
+<<function [[Types.s_of_symbol]]>>
+
+<<function [[Types.symbol_of_global]]>>
+
+<<function [[Types.lookup_global]]>>
+
+
+<<function [[Types.s_of_loc]]>>
+
+<<function [[Types.iter]]>>
+
+<<function [[Types.iter_with_env]]>>
+@
+
+
+\subsection*{[[Types5.ml]]}
+
+<<function [[Types5.show_instr]]>>=
+(* for ocaml-light, to work without deriving *)
+let show_instr _ = "NO DERIVING"
+[@@warning "-32"]
+@
+
+<<type [[Types5.instr]]>>=
+type instr = Ast_asm5.instr_with_cond Types.code_bis
+[@@deriving show]
+@
+
+<<type [[Types5.node]]>>=
+type node = Ast_asm5.instr_with_cond Types.node
+[@@deriving show]
+@
+
+<<type [[Types5.code_graph]]>>=
+type code_graph = Ast_asm5.instr_with_cond Types.code_graph
+[@@deriving show]
+@
+
+
+%-------------------------------------------------------------
+
+<<Types5.ml>>=
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
+<<function [[Types5.show_instr]]>>
+
+<<type [[Types5.instr]]>>
+
+<<type [[Types5.node]]>>
+
+<<type [[Types5.code_graph]]>>
+@
+
+
+\subsection*{[[Arch_linker.ml]]}
+
+<<type [[Arch_linker.t]]>>=
+type 'instr t = {
+  branch_opd_of_instr: 'instr -> A.branch_operand option;
+  visit_globals_instr: (A.global -> unit) -> 'instr -> unit;
+}
+@
+
+
+%-------------------------------------------------------------
+
+<<Arch_linker.ml>>=
+module A = Ast_asm
+
+(* Arch-specific methods allowing to factorize code in the linker
+ * (e.g., in Load.ml)
+ * alt: use a functor, but can't with ocaml-light and records are fine! 
+ *)
+<<type [[Arch_linker.t]]>>
+@
+
+
+\section{[[executables/]]}
+
+\subsection*{[[executables/Exec_file.ml]]}
+
+<<type [[Exec_file.addr]]>>=
+type addr = int
+[@@deriving show]
+@
+
+<<type [[Exec_file.header_type]]>>=
+type header_type =
+  | A_out (* Plan9 *)
+  | Elf (* Linux *)
+  (* TODO: | Elf64 | MachO | PE *)
+[@@deriving show]
+@
+
+<<type [[Exec_file.sections_size]]>>=
+type sections_size = {
+  text_size: int;
+  data_size: int;
+  bss_size: int;
+  (* TODO? symbol_size? more? *)
+}
+[@@deriving show]
+@
+
+<<function [[Exec_file.show_linker_config]]>>=
+(* for ocaml-light to work without deriving *)
+let show_linker_config _ = "NO DERIVING"
+[@@warning "-32"]
+@
+
+<<type [[Exec_file.linker_config]]>>=
+type linker_config = {
+  header_type: header_type;
+  arch: Arch.t;
+  header_size: int;
+
+  init_text: addr;
+  init_round: int;
+  init_data: addr option;
+
+  (* less: could be (string, addr) Common.either too *)
+  entry_point: string;
+}
+[@@deriving show]
+@
+
+
+%-------------------------------------------------------------
+
+<<executables/Exec_file.ml>>=
+
+<<type [[Exec_file.addr]]>>
+
+<<type [[Exec_file.header_type]]>>
+
+<<type [[Exec_file.sections_size]]>>
+
+<<function [[Exec_file.show_linker_config]]>>
+
+<<type [[Exec_file.linker_config]]>>
+@
+
+
+\section{[[./]]}
+
+\subsection*{[[Main.ml]]}
+
+<<toplevel [[Main._1]]>>=
+let _ = 
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     Exit.exit caps 
+        (Exit.catch (fun () -> 
+            CLI.main caps argv))
+@
+
+
+%-------------------------------------------------------------
+
+<<Main.ml>>=
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+(* open Xix_linker *)
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+<<toplevel [[Main._1]]>>
+  )
+@
+
+
+\section{[[tools/]]}
+
+\subsection*{[[tools/ar.ml]]}
+
+<<type [[Ar.caps]]>>=
+type caps = < Cap.open_in; Cap.open_out >
+@
+
+<<constant [[Ar.usage]]>>=
+let usage = 
+  "usage: oar [-options] objects"
+@
+
+<<function [[Ar.archive]]>>=
+let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
+  (* sanity checks *)
+  (* TODO? sanity check all of same arch? *)
+  objfiles |> List.iter (fun file ->
+    if not (Object_file.is_obj_filename file)
+    then failwith (spf "The file extension of %s does not match an object file"
+          !!file)
+  );
+  let libfile = Fpath.v (Chan.destination chan) in
+  if not (Library_file.is_lib_filename libfile)
+  then failwith (spf "The file extension of %s does not match a library file"
+          !!libfile);
+
+  let xs = objfiles |> List.map (FS.with_open_in caps Object_file.load) in
+  Library_file.save xs chan
+@
+
+<<function [[Ar.main]]>>=
+let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+  let infiles = ref [] in
+  let outfile = ref (Fpath.v "lib.oa") in
+
+  let level = ref (Some Logs.Warning) in
+  (* for debugging *)
+  let backtrace = ref false in
+
+  let options = [
+    "-o", Arg.String (fun s -> outfile := Fpath.v s),
+    spf " <file> output file (default is %s)" !!(!outfile);
+    
+    (* pad: I added that *)
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " guess what";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+
+    (* pad: I added that *)
+    "-backtrace", Arg.Set backtrace,
+    " dump the backtrace after an error";
+
+  ] |> Arg.align
+  in
+  (try
+    Arg.parse_argv argv options
+      (fun f -> infiles := Fpath.v f::!infiles) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "ar ran from %s" (Sys.getcwd()));
+
+  (match List.rev !infiles with
+  | [] -> 
+      Arg.usage options usage; 
+      Exit.Code 1
+  | xs -> 
+     try 
+        (* the main call *)
+        !outfile |> FS.with_open_out caps (fun chan ->
+          archive caps xs chan
+        );
+        Exit.OK
+  with exn ->
+    if !backtrace
+    then raise exn
+    else 
+      (match exn with
+      | Failure s ->
+          Logs.err (fun m -> m "%s" s);
+          Exit.Code 1
+      | _ -> raise exn
+      )
+@
+
+<<constant [[Ar._]]>>=
+let _ = 
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     Exit.exit caps (Exit.catch (fun () -> main caps argv))
+@
+
+
+%-------------------------------------------------------------
+
+<<tools/ar.ml>>=
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Fpath_.Operators
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* An OCaml port of ar, the Plan 9 (object) archiver.
+ *
+ * Main limitations compared to ar:
+ *  - no complex CLI flags; just 'oar objfiles [-o libfile]'
+ *    no ar vu, ar rcs, ... just archive!
+ *
+ * todo:
+ *  - index the archive a la SYMDEF/ranlib to reduce size of
+ *    binaries in the linker for unneeded object files
+ *
+ * later:
+ *)
+
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+<<type [[Ar.caps]]>>
+
+<<constant [[Ar.usage]]>>
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+<<function [[Ar.archive]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Ar.main]]>>
+  )
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+<<constant [[Ar._]]>>
+  )
+@
+
+
+\subsection*{[[tools/nm.ml]]}
+
+<<type [[Nm.caps]]>>=
+type caps = < Cap.open_in; Cap.stdout >
+@
+
+<<constant [[Nm.usage]]>>=
+let usage = 
+  "usage: nm [-options] file ..."
+@
+
+<<function [[Nm.visit_obj]]>>=
+(* TODO: visit also the uses, not just the defs *)
+let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
+  let (xs, _locs) = obj.prog in
+  (* visit the defs *)
+  xs |> List.iter (fun (line, _loc) ->
+      match line with
+      | Pseudo (TEXT (glob, _attrs, _int)) ->
+          let ident = A.s_of_global glob in
+          Console.print caps (spf " T %s" ident)
+      | Pseudo (GLOBL (glob, _attrs, _int)) ->
+          let ident = A.s_of_global glob in
+          Console.print caps (spf " D %s" ident)
+      | Pseudo (DATA _ | WORD _) -> ()
+      | Virtual (RET | NOP) -> ()
+      (* TODO: visit the uses *)
+      | Instr _x -> ()
+      | LabelDef _ -> raise (Impossible "objects should not have LabelDef")
+@
+
+<<function [[Nm.nm]]>>=
+let nm (caps : < caps; ..> ) (file : Fpath.t) : unit =
+  match () with
+  | _ when Object_file.is_obj_filename file ->
+      let obj : 'instr Object_file.t = 
+        FS.with_open_in caps Object_file.load file
+      in
+      visit_obj caps obj
+  | _ when Library_file.is_lib_filename file ->
+      let objs : 'instr Library_file.t =
+        FS.with_open_in caps Library_file.load file
+      in
+      objs |> List.iter (visit_obj caps)
+  | _ -> 
+      failwith "TODO: handle exec format"
+@
+
+<<function [[Nm.main]]>>=
+let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+  let infiles = ref [] in
+
+  let backtrace = ref false in
+  let level = ref (Some Logs.Warning) in
+
+  let options = [
+   (* TODO: support the many nm flags *)
+  ] |> Arg.align
+  in
+  (try
+    Arg.parse_argv argv options
+      (fun f -> infiles := Fpath.v f::!infiles) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "nm ran from %s" (Sys.getcwd()));
+
+  (match List.rev !infiles with
+  | [] -> 
+      Arg.usage options usage; 
+      Exit.Code 1
+  | xs -> 
+     try 
+        (* the main call *)
+        xs |> List.iter (nm caps);
+        Exit.OK
+     with exn ->
+     if !backtrace
+     then raise exn
+     else 
+      (match exn with
+      | Failure s ->
+          Logs.err (fun m -> m "%s" s);
+          Exit.Code 1
+      | _ -> raise exn
+      )
+@
+
+<<constant [[Nm._]]>>=
+let _ = 
+  Cap.main (fun (caps : Cap.all_caps) ->
+     Exit.exit caps (Exit.catch (fun () -> main caps (CapSys.argv caps)))
+@
+
+
+%-------------------------------------------------------------
+
+<<tools/nm.ml>>=
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Ast_asm
+module A = Ast_asm
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* An OCaml port of nm, the Plan 9 object/executable/library symbol inspector.
+ * 'nm' probably stands for "names" or "name map".
+ *
+ * Main limitations compared to nm:
+ *  - 
+ *
+ * todo:
+ *  - handle executable too
+ *
+ * later:
+ *)
+
+(*****************************************************************************)
+(* Types, constants, and globals *)
+(*****************************************************************************)
+<<type [[Nm.caps]]>>
+
+<<constant [[Nm.usage]]>>
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+<<function [[Nm.visit_obj]]>>
+  )
+
+
+(*****************************************************************************)
+(* Main algorithm *)
+(*****************************************************************************)
+
+<<function [[Nm.nm]]>>
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+
+<<function [[Nm.main]]>>
+  )
+
+(*****************************************************************************)
+(* Entry point *)
+(*****************************************************************************)
+<<constant [[Nm._]]>>
+  )
+@
+
+

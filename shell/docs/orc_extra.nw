@@ -1,8 +1,6 @@
 \chapter{Extra Code}
 
-\section{[[shell/]]}
-
-\subsection*{[[Ast.ml]]}
+\section{[[Ast.ml]]}
 
 %-------------------------------------------------------------
 
@@ -34,7 +32,7 @@ let show_line _ = "NO DERIVING"
 [@@deriving show]
 @
 
-\subsection*{[[Builtin.ml]]}
+\section{[[Builtin.ml]]}
 
 %-------------------------------------------------------------
 
@@ -53,7 +51,7 @@ module O = Opcode
 <<function [[Builtin.dispatch]]>>
 @
 
-\subsection*{[[CLI.ml]]}
+\section{[[CLI.ml]]}
 
 %-------------------------------------------------------------
 
@@ -121,7 +119,7 @@ module O = Opcode
 <<function [[CLI.main]]>>
 @
 
-\subsection*{[[Compile.ml]]}
+\section{[[Compile.ml]]}
 
 %-------------------------------------------------------------
 
@@ -157,7 +155,7 @@ module O = Opcode
 <<function [[Compile.compile]]>>
 @
 
-\subsection*{[[Env.ml]]}
+\section{[[Env.ml]]}
 
 %-------------------------------------------------------------
 
@@ -182,7 +180,7 @@ let read_environment (caps : < Cap.env; ..>) =
 
 @
 
-\subsection*{[[Error.ml]]}
+\section{[[Error.ml]]}
 
 %-------------------------------------------------------------
 
@@ -192,7 +190,7 @@ module R = Runtime
 <<function [[Error.error]]>>
 @
 
-\subsection*{[[Flags.ml]]}
+\section{[[Flags.ml]]}
 
 %-------------------------------------------------------------
 
@@ -224,7 +222,7 @@ open Common
 @
 
 
-\subsection*{[[Fn.ml]]}
+\section{[[Fn.ml]]}
 
 %-------------------------------------------------------------
 
@@ -234,14 +232,14 @@ module R = Runtime
 <<function [[Fn.flook]]>>
 @
 
-\subsection*{[[Glob.ml]]}
+\section{[[Glob.ml]]}
 
 %-------------------------------------------------------------
 
 <<shell/Glob.ml>>=
 @
 
-\subsection*{[[Globals.ml]]}
+\section{[[Globals.ml]]}
 
 <<constant [[Globals.eflagok]]>>=
 (* this is set after the first . of rcmain *)
@@ -259,7 +257,7 @@ let eflagok = ref false
 <<constant [[Globals.eflagok]]>>
 @
 
-\subsection*{[[Heredoc.ml]]}
+\section{[[Heredoc.ml]]}
 
 %-------------------------------------------------------------
 
@@ -267,7 +265,7 @@ let eflagok = ref false
 @
 
 
-\subsection*{[[Interpreter.ml]]}
+\section{[[Interpreter.ml]]}
 
 %-------------------------------------------------------------
 
@@ -299,7 +297,7 @@ module E = Error
 <<function [[Interpreter.interpret_operation]]>>
 @
 
-\subsection*{[[Main.ml]]}
+\section{[[Main.ml]]}
 
 %-------------------------------------------------------------
 
@@ -314,7 +312,7 @@ open Xix_shell
 <<toplevel [[Main._1]]>>
 @
 
-\subsection*{[[Op_process.ml]]}
+\section{[[Op_process.ml]]}
 
 %-------------------------------------------------------------
 
@@ -334,7 +332,7 @@ module E = Error
 @
 
 
-\subsection*{[[Op_repl.ml]]}
+\section{[[Op_repl.ml]]}
 
 %-------------------------------------------------------------
 
@@ -345,7 +343,7 @@ module R = Runtime
 <<function [[Op_repl.op_REPL]]>>
 @
 
-\subsection*{[[Opcode.ml]]}
+\section{[[Opcode.ml]]}
 
 %-------------------------------------------------------------
 
@@ -366,7 +364,7 @@ let show_codevec _ = "NO DERIVING"
 [@@deriving show]
 @
 
-\subsection*{[[PATH.ml]]}
+\section{[[PATH.ml]]}
 
 %-------------------------------------------------------------
 
@@ -381,7 +379,7 @@ module R = Runtime
 <<function [[PATH.find_in_path]]>>
 @
 
-\subsection*{[[Lexer.mli]]}
+\section{[[Lexer.mli]]}
 
 %-------------------------------------------------------------
 
@@ -391,14 +389,14 @@ module R = Runtime
 <<exception [[Lexer.Lexical_error]]>>
 @
 
-\subsection*{[[Lexer.mll]]}
+\section{[[Lexer.mll]]}
 
 %-------------------------------------------------------------
 
-\subsection*{[[Parser.mly]]}
+\section{[[Parser.mly]]}
 
 
-\subsection*{[[Parse.ml]]}
+\section{[[Parse.ml]]}
 
 %-------------------------------------------------------------
 
@@ -415,7 +413,7 @@ module R = Runtime
 @
 
 
-\subsection*{[[Pattern.ml]]}
+\section{[[Pattern.ml]]}
 
 <<type [[Pattern.pattern]]>>=
 type pattern = string
@@ -436,7 +434,7 @@ let match_str s1 s2 =
 <<function [[Pattern.match_str]]>>
 @
 
-\subsection*{[[Process.ml]]}
+\section{[[Process.ml]]}
 
 %-------------------------------------------------------------
 
@@ -457,7 +455,7 @@ module R = Runtime
 <<function [[Process.waitfor]]>>
 @
 
-\subsection*{[[Prompt.ml]]}
+\section{[[Prompt.ml]]}
 
 %-------------------------------------------------------------
 
@@ -470,7 +468,7 @@ module R = Runtime
 <<function [[Prompt.pprompt]]>>
 @
 
-\subsection*{[[Runtime.ml]]}
+\section{[[Runtime.ml]]}
 
 %-------------------------------------------------------------
 
@@ -558,7 +556,7 @@ let string_of_var (var : var) : string =
 @
 
 
-\subsection*{[[Status.ml]]}
+\section{[[Status.ml]]}
 
 %-------------------------------------------------------------
 
@@ -584,7 +582,7 @@ module R = Runtime
 <<function [[Status.truestatus]]>>
 @
 
-\subsection*{[[Var.ml]]}
+\section{[[Var.ml]]}
 
 %-------------------------------------------------------------
 
@@ -612,7 +610,7 @@ module R = Runtime
 @
 
 
-\subsection*{[[Builtin.mli]]}
+\section{[[Builtin.mli]]}
 
 %-------------------------------------------------------------
 
@@ -622,7 +620,7 @@ module R = Runtime
 <<signature [[Builtin.dispatch]]>>
 @
 
-\subsection*{[[CLI.mli]]}
+\section{[[CLI.mli]]}
 
 %-------------------------------------------------------------
 
@@ -636,7 +634,7 @@ module R = Runtime
 <<signature [[CLI.interpret_bootstrap]]>>
 @
 
-\subsection*{[[Compile.mli]]}
+\section{[[Compile.mli]]}
 
 %-------------------------------------------------------------
 
@@ -644,7 +642,7 @@ module R = Runtime
 <<signature [[Compile.compile]]>>
 @
 
-\subsection*{[[Env.mli]]}
+\section{[[Env.mli]]}
 
 %-------------------------------------------------------------
 
@@ -655,7 +653,7 @@ val read_environment : < Cap.env ; .. > -> t
 
 @
 
-\subsection*{[[Error.mli]]}
+\section{[[Error.mli]]}
 
 %-------------------------------------------------------------
 
@@ -663,7 +661,7 @@ val read_environment : < Cap.env ; .. > -> t
 <<signature [[Error.error]]>>
 @
 
-\subsection*{[[Fn.mli]]}
+\section{[[Fn.mli]]}
 
 %-------------------------------------------------------------
 
@@ -671,21 +669,21 @@ val read_environment : < Cap.env ; .. > -> t
 <<signature [[Fn.flook]]>>
 @
 
-\subsection*{[[Glob.mli]]}
+\section{[[Glob.mli]]}
 
 %-------------------------------------------------------------
 
 <<Glob.mli>>=
 @
 
-\subsection*{[[Heredoc.mli]]}
+\section{[[Heredoc.mli]]}
 
 %-------------------------------------------------------------
 
 <<Heredoc.mli>>=
 @
 
-\subsection*{[[Interpreter.mli]]}
+\section{[[Interpreter.mli]]}
 
 %-------------------------------------------------------------
 
@@ -693,7 +691,7 @@ val read_environment : < Cap.env ; .. > -> t
 <<signature [[Interpreter.interpret_operation]]>>
 @
 
-\subsection*{[[PATH.mli]]}
+\section{[[PATH.mli]]}
 
 %-------------------------------------------------------------
 
@@ -703,7 +701,7 @@ val read_environment : < Cap.env ; .. > -> t
 <<signature [[PATH.search_path_for_cmd]]>>
 @
 
-\subsection*{[[Parse.mli]]}
+\section{[[Parse.mli]]}
 
 %-------------------------------------------------------------
 
@@ -711,7 +709,7 @@ val read_environment : < Cap.env ; .. > -> t
 <<signature [[Parse.parse_line]]>>
 @
 
-\subsection*{[[Pattern.mli]]}
+\section{[[Pattern.mli]]}
 
 <<signature [[Pattern.match_str]]>>=
 val match_str : string -> pattern -> bool
@@ -726,7 +724,7 @@ val match_str : string -> pattern -> bool
 <<signature [[Pattern.match_str]]>>
 @
 
-\subsection*{[[Process.mli]]}
+\section{[[Process.mli]]}
 
 %-------------------------------------------------------------
 
@@ -739,7 +737,7 @@ val match_str : string -> pattern -> bool
 <<signature [[Process.s_of_unix_error]]>>
 @
 
-\subsection*{[[Prompt.mli]]}
+\section{[[Prompt.mli]]}
 
 %-------------------------------------------------------------
 
@@ -750,7 +748,7 @@ val match_str : string -> pattern -> bool
 <<signature [[Prompt.pprompt]]>>
 @
 
-\subsection*{[[Runtime.mli]]}
+\section{[[Runtime.mli]]}
 
 %-------------------------------------------------------------
 
@@ -791,7 +789,7 @@ val show_fn: fn -> string
 <<signature [[Runtime.mk_thread]]>>
 @
 
-\subsection*{[[Status.mli]]}
+\section{[[Status.mli]]}
 
 %-------------------------------------------------------------
 
@@ -804,7 +802,7 @@ val show_fn: fn -> string
 <<signature [[Status.truestatus]]>>
 @
 
-\subsection*{[[Var.mli]]}
+\section{[[Var.mli]]}
 
 %-------------------------------------------------------------
 

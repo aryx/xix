@@ -1,3 +1,4 @@
+(*s: Ast.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -39,19 +40,25 @@ open Common
 (*****************************************************************************)
 
 (* global linenumber after preprocessing *)
+(*s: type [[Ast.loc]] *)
 type loc = Location_cpp.loc
 [@@deriving show]
+(*e: type [[Ast.loc]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
+(*s: type [[Ast.name]] *)
 type name = string
 [@@deriving show]
+(*e: type [[Ast.name]] *)
 
 (* for scope *)
+(*s: type [[Ast.blockid]] *)
 type blockid = int (* same than Type_.blockid, repeated here for clarity *)
 [@@deriving show]
+(*e: type [[Ast.blockid]] *)
 
 (* A fully resolved and scoped name. 
  * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
@@ -61,22 +68,28 @@ type blockid = int (* same than Type_.blockid, repeated here for clarity *)
  * 
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
+(*s: type [[Ast.fullname]] *)
 type fullname = name * blockid (* same than Type_.fullname *)
 [@@deriving show]
+(*e: type [[Ast.fullname]] *)
 
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
  * Could be moved in a separate naming.ml, but not worth it for just two types.
  *)
+(*s: type [[Ast.idkind]] *)
 type idkind =
   | IdIdent
   | IdTypedef
   | IdEnumConstant
+(*e: type [[Ast.idkind]] *)
 
 (* to manage the scope of tags *)
+(*s: type [[Ast.tagkind]] *)
 type tagkind =
   | TagStruct
   | TagUnion
   | TagEnum
+(*e: type [[Ast.tagkind]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Types *)
@@ -90,10 +103,13 @@ type tagkind =
  * Note that 'type_' and 'expr' are mutually recursive (because of const_expr).
  * todo: qualifier type
  *)
+(*s: type [[Ast.typ]] *)
 type typ = {
   t: type_bis;
   t_loc: loc;
 }
+(*e: type [[Ast.typ]] *)
+(*s: type [[Ast.type_bis]] *)
   and type_bis = 
   | TBase of Type.t (* only the Basic stuff *)
   | TPointer of typ
@@ -106,9 +122,13 @@ type typ = {
    *)
   | TEnumName of fullname
   | TTypeName of fullname
+(*e: type [[Ast.type_bis]] *)
 
+(*s: type [[Ast.function_type]] *)
  and function_type = (typ * (parameter list * bool (* var args '...' *)))
+(*e: type [[Ast.function_type]] *)
 
+(*s: type [[Ast.parameter]] *)
   and parameter = {
     (* When part of a prototype, the name is not always mentionned, hence
      * the option below.
@@ -122,17 +142,21 @@ type typ = {
 
     p_type: typ;
   }
+(*e: type [[Ast.parameter]] *)
 
 
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
+(*s: type [[Ast.expr]] *)
 and expr = { 
   e: expr_bis;
   e_loc: loc;
   (* properly set during typechecking in typecheck.ml *)
   e_type: Type.t;
 }
+(*e: type [[Ast.expr]] *)
+(*s: type [[Ast.expr_bis]] *)
   and expr_bis = 
   (* Note that characters are transformed in Int at parsing time; no need Char*)
   | Int of string * Type.integer_type
@@ -182,15 +206,21 @@ and expr = {
   | RecordInit of (name * expr) list
   (* gccext: kenccext: *)
   | GccConstructor  of typ * expr (* always an ArrayInit (or RecordInit?) *)
+(*e: type [[Ast.expr_bis]] *)
 
+(*s: type [[Ast.argument]] *)
 and argument = expr
+(*e: type [[Ast.argument]] *)
 
 (* Because we call the preprocessor first, the remaining cases
  * where const_expr is not a constant are basic arithmetic expressions
  * like 2 < < 3, or enum constants.
  *)
+(*s: type [[Ast.const_expr]] *)
 and const_expr = expr
+(*e: type [[Ast.const_expr]] *)
 
+(*s: type [[Ast.unaryOp]] *)
   and unaryOp  = 
     (* less: could be lifted up; those are really important operators *)
     | GetRef | DeRef 
@@ -199,28 +229,42 @@ and const_expr = expr
     (* codegen: converted to -1 ^ x *)
     | Tilde 
     | Not 
+(*e: type [[Ast.unaryOp]] *)
+(*s: type [[Ast.assignOp]] *)
   and assignOp = SimpleAssign | OpAssign of arithOp
+(*e: type [[Ast.assignOp]] *)
+(*s: type [[Ast.fixOp]] *)
   and fixOp    = Dec | Inc
+(*e: type [[Ast.fixOp]] *)
 
+(*s: type [[Ast.binaryOp]] *)
   and binaryOp = Arith of arithOp | Logical of logicalOp
+(*e: type [[Ast.binaryOp]] *)
+(*s: type [[Ast.arithOp]] *)
        and arithOp   = 
          | Plus | Minus 
          | Mul | Div | Mod
          | ShiftLeft | ShiftRight 
          | And | Or | Xor
+(*e: type [[Ast.arithOp]] *)
+(*s: type [[Ast.logicalOp]] *)
        and logicalOp = 
          | Inf | Sup | InfEq | SupEq 
          | Eq | NotEq 
          | AndLog | OrLog
+(*e: type [[Ast.logicalOp]] *)
 [@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
 (* ------------------------------------------------------------------------- *)
+(*s: type [[Ast.stmt]] *)
 type stmt = {
   s: stmt_bis;
   s_loc: loc;
 }
+(*e: type [[Ast.stmt]] *)
+(*s: type [[Ast.stmt_bis]] *)
   and stmt_bis = 
   | ExprSt of expr
   (* empty statement is simply Block [] *)
@@ -251,16 +295,20 @@ type stmt = {
   | Default of stmt
 
   | Var of var_decl
+(*e: type [[Ast.stmt_bis]] *)
 
 (* Can we have a specific case type? It is hard in C because they mix labels
  * and 'case' a lot (see the code in the lexer of 5c).
  *)
+(*s: type [[Ast.case_list]] *)
 and case_list = stmt
+(*e: type [[Ast.case_list]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Variables *)
 (* ------------------------------------------------------------------------- *)
 
+(*s: type [[Ast.var_decl]] *)
 and var_decl = {
   v_name: fullname;
   v_loc: loc;
@@ -268,14 +316,18 @@ and var_decl = {
   v_type: typ;
   v_init: initialiser option;
 }
+(*e: type [[Ast.var_decl]] *)
  (* can have ArrayInit and RecordInit here in addition to other expr *)
+(*s: type [[Ast.initialiser]] *)
  and initialiser = expr
+(*e: type [[Ast.initialiser]] *)
 [@@deriving show]
 
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions *)
 (* ------------------------------------------------------------------------- *)
+(*s: type [[Ast.func_def]] *)
 type func_def = {
   (* functions have a global scope; no need for fullname here *)
   f_name: name;
@@ -287,8 +339,10 @@ type func_def = {
   f_body: stmt;
 }
 [@@deriving show]
+(*e: type [[Ast.func_def]] *)
 
 (* struct and union *)
+(*s: type [[Ast.struct_def]] *)
 type struct_def = {
   su_name: fullname;
   su_loc: loc;
@@ -296,7 +350,9 @@ type struct_def = {
   (* todo: bitfield annotation *)
   su_flds: field_def list;
 }
+(*e: type [[Ast.struct_def]] *)
   (* Not the same than var_decl; fields have no storage and can have bitflds.*)
+(*s: type [[Ast.field_def]] *)
   and field_def = { 
    (* kenccext: anonymous structure element get an artificial field name
     * (see is_gensymed()) 
@@ -305,32 +361,40 @@ type struct_def = {
     fld_loc: loc;
     fld_type: typ;
   }
+(*e: type [[Ast.field_def]] *)
 [@@deriving show]
 
+(*s: type [[Ast.enum_def]] *)
 type enum_def = { 
   (* this name is rarely used; C programmers rarely write 'enum Foo x;' *)
   enum_name: fullname;
   enum_loc: loc;
   enum_constants: enum_constant list;
 }
+(*e: type [[Ast.enum_def]] *)
+(*s: type [[Ast.enum_constant]] *)
   and enum_constant = {
   (* we also need to use 'fullname' for constants, to scope them *)
     ecst_name: fullname;
     ecst_loc: loc;
     ecst_value: const_expr option;
   }
+(*e: type [[Ast.enum_constant]] *)
 [@@deriving show]
 
+(*s: type [[Ast.type_def]] *)
 type type_def = { 
   typedef_name: fullname;
   typedef_loc: loc;
   typedef_type: typ;
 }
 [@@deriving show]
+(*e: type [[Ast.type_def]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
 (* ------------------------------------------------------------------------- *)
+(*s: type [[Ast.toplevel]] *)
 type toplevel =
   | StructDef of struct_def
   | TypeDef of type_def
@@ -339,17 +403,23 @@ type toplevel =
   | VarDecl of var_decl
   | FuncDef of func_def
 [@@deriving show]
+(*e: type [[Ast.toplevel]] *)
 
+(*s: type [[Ast.toplevels]] *)
 type toplevels = toplevel list
 [@@deriving show]
+(*e: type [[Ast.toplevels]] *)
 
+(*s: type [[Ast.program]] *)
 type program = toplevels * Location_cpp.location_history list
 [@@deriving show]
+(*e: type [[Ast.program]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Any *)
 (* ------------------------------------------------------------------------- *)
 (* for visitor and dumper *)
+(*s: type [[Ast.any]] *)
 type any =
   | Expr of expr
   | Stmt of stmt
@@ -358,18 +428,26 @@ type any =
   | Program of program
   | FinalType of Type.t
 [@@deriving show]
+(*e: type [[Ast.any]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+(*s: function [[Ast.tagkind_of_su]] *)
 let tagkind_of_su = function
   | Type.Struct -> TagStruct
   | Type.Union -> TagUnion
+(*e: function [[Ast.tagkind_of_su]] *)
 
+(*s: function [[Ast.unwrap]] *)
 let unwrap (name, _) = name    
+(*e: function [[Ast.unwrap]] *)
 
 open Common
 open Regexp_.Operators
+(*s: function [[Ast.is_gensymed]] *)
 (* see also Parser.gensym *)
 let is_gensymed str = 
   str =~ "|sym[0-9]+|.*"
+(*e: function [[Ast.is_gensymed]] *)
+(*e: Ast.ml *)

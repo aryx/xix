@@ -1,3 +1,4 @@
+(*s: ../macroprocessor/Preprocessor.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
@@ -12,6 +13,7 @@
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Preprocessor.conf]] *)
 type conf = {
   (* -D *)
   defs: (string * string) list;
@@ -21,3 +23,5 @@ type conf = {
   dir_source_file: Fpath.t;
 }
 [@@deriving show]
+(*e: type [[Preprocessor.conf]] *)
+(*e: ../macroprocessor/Preprocessor.ml *)

@@ -1,3 +1,4 @@
+(*s: ../macroprocessor/Ast_cpp.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
@@ -10,6 +11,7 @@
 (* The AST *)
 (*****************************************************************************)
 
+(*s: type [[Ast_cpp.directive]] *)
 type directive =
   | Include of Fpath.t * bool (* true if <>, false if "" *)
 
@@ -24,7 +26,9 @@ type directive =
   | Line of int * Fpath.t
   (* ex: #pragma lib "libc.a" -> Pragma("lib", ["libc.a"]) *)
   | Pragma of string * string list
+(*e: type [[Ast_cpp.directive]] *)
 
+(*s: type [[Ast_cpp.macro]] *)
   and macro = {
     name: string;
     (* Note that you can have None or Some [] for parameters.
@@ -39,4 +43,6 @@ type directive =
      *)
     body: string option
   }
+(*e: type [[Ast_cpp.macro]] *)
 [@@deriving show]
+(*e: ../macroprocessor/Ast_cpp.ml *)

@@ -1,3 +1,4 @@
+(*s: Rewrite.ml *)
 
 (* todo mandatory:
  *  - pointer arithmetic
@@ -6,3 +7,4 @@
  *  - OADDR/OIND simplifications
  *  - put constants on the right for commutative operations
  *)
+(*e: Rewrite.ml *)

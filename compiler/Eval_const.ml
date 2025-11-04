@@ -1,3 +1,4 @@
+(*s: Eval_const.ml *)
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -13,23 +14,34 @@ module E = Check
 (*****************************************************************************)
 
 (* less: return also float at some point? *)
+(*s: type [[Eval_const.integer]] *)
 type integer = int
+(*e: type [[Eval_const.integer]] *)
 
 (* less: could do that in rewrite.ml so no need to pass is to eval *)
+(*s: type [[Eval_const.env]] *)
 type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t 
+(*e: type [[Eval_const.env]] *)
 
+(*s: exception [[Eval_const.NotAConstant]] *)
 exception NotAConstant
+(*e: exception [[Eval_const.NotAConstant]] *)
 
 
 (* less: could factorize things in error.ml? *)
+(*s: type [[Eval_const.error]] *)
 type error = Check.error
+(*e: type [[Eval_const.error]] *)
 
+(*s: exception [[Eval_const.Error]] *)
 exception Error of error
+(*e: exception [[Eval_const.Error]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Eval_const.eval]] *)
 (* stricter: I do not handle float constants for enums *)
 let rec eval env e0 =
   match e0.e with
@@ -91,4 +103,6 @@ let rec eval env e0 =
 
   | _ -> 
     raise NotAConstant (* todo: more opporunities? *)
+(*e: function [[Eval_const.eval]] *)
 
+(*e: Eval_const.ml *)

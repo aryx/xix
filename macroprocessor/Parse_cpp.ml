@@ -1,3 +1,4 @@
+(*s: ../macroprocessor/Parse_cpp.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -35,13 +36,16 @@ open Ast_cpp
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Parse_cpp.token_category]] *)
 type token_category =
   | Eof
   | Sharp
   | Ident of string
   | Other
+(*e: type [[Parse_cpp.token_category]] *)
 [@@deriving show]
 
+(*s: type [[Parse_cpp.hook]] *)
 type ('token, 'ast) hook = {
   lexer: Lexing.lexbuf -> 'token;
   parser: (Lexing.lexbuf -> 'token) -> Lexing.lexbuf -> 'ast;
@@ -49,8 +53,10 @@ type ('token, 'ast) hook = {
   (* TODO: delete, redundant with Eof token_category above *)
   eof: 'token;
 }
+(*e: type [[Parse_cpp.hook]] *)
 
 (* similar to Ast_cpp.macro *)
+(*s: type [[Parse_cpp.macro]] *)
 type macro = {
   m_name: string;
   m_nbargs: int option;
@@ -65,31 +71,41 @@ type macro = {
    *)
   m_body: string;
 }
+(*e: type [[Parse_cpp.macro]] *)
 
 (*****************************************************************************)
 (* Globals *)
 (*****************************************************************************)
 
+(*s: constant [[Parse_cpp.hmacros]] *)
 let hmacros = Hashtbl.create 101
+(*e: constant [[Parse_cpp.hmacros]] *)
 
 (* cwd is used to manage #include "...". It is altered when you
  * include a file. cwd becomes the dirname of the included file??? 
  * TODO: dead? used?
  *)
+(*s: constant [[Parse_cpp._cwd]] *)
 let _cwd = ref (Sys.getcwd ())
+(*e: constant [[Parse_cpp._cwd]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Parse_cpp.error]] *)
 let error s =
   raise (L.Error (s, !L.line))
+(*e: function [[Parse_cpp.error]] *)
 
 
+(*s: function [[Parse_cpp.define_cmdline_def]] *)
 let define_cmdline_def (k, v) =
   Hashtbl.add hmacros k 
     { m_name = k; m_nbargs = None; m_varargs = false; m_body = v; }
+(*e: function [[Parse_cpp.define_cmdline_def]] *)
 
+(*s: function [[Parse_cpp.define]] *)
 let define (macro : D.macro) =
   let {D.name = s; params; varargs; body} = macro in
   (* We could forbid here 's' to conflict with C keyboard, but this
@@ -113,6 +129,7 @@ let define (macro : D.macro) =
 
     Hashtbl.add hmacros s macro
   end
+(*e: function [[Parse_cpp.define]] *)
 
 
 (* less: Could use Set instead of list for the set of include paths 
@@ -145,6 +162,7 @@ and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Parse_cpp.parse]] *)
 let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : Fpath.t) = 
   L.history := [];
   L.line := 1;
@@ -266,4 +284,6 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
               (if !last_ident = "" 
                then ""
                else spf ", last name: %s" !last_ident))
+(*e: function [[Parse_cpp.parse]] *)
   )
+(*e: ../macroprocessor/Parse_cpp.ml *)

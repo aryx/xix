@@ -1,3 +1,4 @@
+(*s: Check.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -19,11 +20,14 @@ open Ast
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Check.usedef]] *)
 type usedef = {
   mutable defined: Ast.loc option;
   mutable used: Ast.loc option;
 }
+(*e: type [[Check.usedef]] *)
 
+(*s: type [[Check.env]] *)
 type env = {
   ids:      (fullname, usedef * Ast.idkind) Hashtbl.t;
   tags:     (fullname, usedef * Ast.tagkind) Hashtbl.t;
@@ -35,13 +39,17 @@ type env = {
 
   (* todo: inbreakable: bool; incontinueable: bool *)
 }
+(*e: type [[Check.env]] *)
 
+(*s: type [[Check.error]] *)
 type error = 
   | Inconsistent of 
       string * Location_cpp.loc * (* error here *) 
       string * Location_cpp.loc   (* previous decl/def/whatever here *)
   | Misc of string * Location_cpp.loc
+(*e: type [[Check.error]] *)
 
+(*s: function [[Check.string_of_error]] *)
 let string_of_error err =
   match err with
   | Inconsistent (s1, loc1, s2, loc2) ->
@@ -51,20 +59,28 @@ let string_of_error err =
   | Misc (s, loc) ->
     let (file, line) = Location_cpp.final_loc_of_loc loc in
     spf "%s:%d error: %s" !!file line s
+(*e: function [[Check.string_of_error]] *)
 
+(*s: exception [[Check.Error]] *)
 exception Error of error
+(*e: exception [[Check.Error]] *)
 
+(*s: constant [[Check.failhard]] *)
 let failhard = ref false
+(*e: constant [[Check.failhard]] *)
 
+(*s: function [[Check.error]] *)
 let error err =
   if !failhard
   then raise (Error err)
   else Logs.err (fun m -> m "%s" (string_of_error err))
+(*e: function [[Check.error]] *)
  
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Check.inconsistent_tag]] *)
 let inconsistent_tag fullname loc usedef =
   let locbefore = 
     match usedef with
@@ -78,7 +94,9 @@ let inconsistent_tag fullname loc usedef =
       (unwrap fullname), loc,
     "previous use is here", locbefore
   ))
+(*e: function [[Check.inconsistent_tag]] *)
 
+(*s: function [[Check.check_inconsistent_or_redefined_tag]] *)
 let check_inconsistent_or_redefined_tag env fullname tagkind loc =
   try 
     let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
@@ -93,8 +111,10 @@ let check_inconsistent_or_redefined_tag env fullname tagkind loc =
     usedef.defined <- Some loc;
   with Not_found ->
     Hashtbl.add env.tags fullname ({defined = Some loc; used = None;}, tagkind)
+(*e: function [[Check.check_inconsistent_or_redefined_tag]] *)
 
 
+(*s: function [[Check.inconsistent_id]] *)
 let inconsistent_id fullname loc usedef =
   let locbefore = 
     match usedef with
@@ -105,8 +125,10 @@ let inconsistent_id fullname loc usedef =
     spf "redefinition of '%s' " (unwrap fullname), loc,
     "previous definition is here", locbefore
   ))
+(*e: function [[Check.inconsistent_id]] *)
 
 
+(*s: function [[Check.check_inconsistent_or_redefined_id]] *)
 let check_inconsistent_or_redefined_id env fullname idkind loc =
   try 
     let (usedef, oldidkind) = Hashtbl.find env.ids fullname in
@@ -125,7 +147,9 @@ let check_inconsistent_or_redefined_id env fullname idkind loc =
       )
   with Not_found ->
     Hashtbl.add env.ids fullname ({defined = Some loc; used = None; }, idkind)
+(*e: function [[Check.check_inconsistent_or_redefined_id]] *)
 
+(*s: function [[Check.check_unused_locals]] *)
 let check_unused_locals env =
   (* less: could also delete entries in env.ids *)
   env.local_ids |> List.iter (fun fullname ->
@@ -139,6 +163,7 @@ let check_unused_locals env =
     | { defined = None; used = _} -> 
           raise (Impossible "locals are always defined")
     | { defined = _; used = Some _ } -> ()
+(*e: function [[Check.check_unused_locals]] *)
   )
 
 
@@ -146,6 +171,7 @@ let check_unused_locals env =
 (* Use/Def *)
 (*****************************************************************************)
 
+(*s: function [[Check.check_usedef]] *)
 (* use of undefined, redefined, redeclared, unused, inconsistent tags, etc. *)
 let check_usedef program =
 
@@ -440,6 +466,7 @@ let check_usedef program =
 
   (* less: could check unused static var decl? *)
   ()
+(*e: function [[Check.check_usedef]] *)
 
 (*****************************************************************************)
 (* Unreachable code *)
@@ -450,5 +477,8 @@ let check_usedef program =
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Check.check_program]] *)
 let check_program (ast, _locs) =
   check_usedef ast
+(*e: function [[Check.check_program]] *)
+(*e: Check.ml *)

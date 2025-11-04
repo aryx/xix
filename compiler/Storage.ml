@@ -1,6 +1,8 @@
+(*s: Storage.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 (* No Typedef here, because a typedef is not a storage! *) 
+(*s: type [[Storage.t]] *)
 type t =
   | Local  (* local *)
   | Param  (* parameter *)
@@ -9,3 +11,5 @@ type t =
   | Static (* Private global less: could rename Private *)
   (* less:  | Inline? | Register? | ExternRegister? *)
 [@@deriving show]
+(*e: type [[Storage.t]] *)
+(*e: Storage.ml *)

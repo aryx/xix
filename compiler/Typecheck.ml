@@ -1,3 +1,4 @@
+(*s: Typecheck.ml *)
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
 open Either
@@ -45,9 +46,12 @@ module E = Check
 (*****************************************************************************)
 
 (* less: vlong? *)
+(*s: type [[Typecheck.integer]] *)
 type integer = int
+(*e: type [[Typecheck.integer]] *)
 
 (* Environment for typechecking *)
+(*s: type [[Typecheck.env]] *)
 type env = {
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
@@ -65,6 +69,8 @@ type env = {
   (* used to add some implicit GetRef for arrays and functions *)
   expr_context: expr_context;
 }
+(*e: type [[Typecheck.env]] *)
+(*s: type [[Typecheck.idinfo]] *)
   and idinfo = {
     typ: Type.t;
     sto: Storage.t;
@@ -72,30 +78,44 @@ type env = {
     (* typed initialisers (fake expression for function definitions) *)
     ini: Ast.initialiser option;
   }
+(*e: type [[Typecheck.idinfo]] *)
+(*s: type [[Typecheck.expr_context]] *)
 and expr_context = CtxWantValue | CtxGetRef | CtxSizeof
+(*e: type [[Typecheck.expr_context]] *)
 
 (* less: could factorize things in error.ml? *)
+(*s: type [[Typecheck.error]] *)
 type error = Check.error
+(*e: type [[Typecheck.error]] *)
 
+(*s: function [[Typecheck.string_of_error]] *)
 let string_of_error err =
   Check.string_of_error err
+(*e: function [[Typecheck.string_of_error]] *)
 
+(*s: exception [[Typecheck.Error]] *)
 exception Error of error
+(*e: exception [[Typecheck.Error]] *)
 
+(*s: function [[Typecheck.type_error]] *)
 let type_error _t loc =
   (* less: dump t? *)
   raise (Error (E.Misc ("incompatible type", loc)))
+(*e: function [[Typecheck.type_error]] *)
 
+(*s: function [[Typecheck.type_error2]] *)
 (* todo: for op xxx *)
 let type_error2 t1 t2 loc =
   let s1 = Dumper_.s_of_any (FinalType t1) in
   let s2 = Dumper_.s_of_any (FinalType t2) in
   raise (Error (E.Misc (spf "incompatible types (%s and %s)" s1 s2, loc)))
+(*e: function [[Typecheck.type_error2]] *)
 
 (*****************************************************************************)
 (* Types helpers *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.same_types]] *)
 (* if you declare multiple times the same global, we need to make sure
  * the types are the same. ex: 'extern int foo; ... int foo = 1;'
  * This is where we detect inconsistencies like 'int foo; void foo();'.
@@ -113,17 +133,21 @@ let same_types t1 t2 =
   | T.Pointer _,      T.Pointer T.Void -> true
   (* stricter: struct equality by name, not by fields *)
   | _ -> t1 = t2
+(*e: function [[Typecheck.same_types]] *)
    
 
+(*s: function [[Typecheck.merge_types]] *)
 (* if you declare multiple times the same global, we must merge types. *)
 let merge_types t1 _t2 =
   t1
+(*e: function [[Typecheck.merge_types]] *)
 
 (* when processing enumeration constants, we want to keep the biggest type *)
 (*
 let max_types t1 t2 = ...
 *)
 
+(*s: function [[Typecheck.check_compatible_binary]] *)
 (* when you apply an operation between two expressions, this
  * expression can be valid even if the types of those two expressions
  * are not the same. However, they must be "compatible". 
@@ -185,7 +209,9 @@ let check_compatible_binary op t1 t2 loc =
       )
     | _ -> type_error t1 loc
     )
+(*e: function [[Typecheck.check_compatible_binary]] *)
 
+(*s: function [[Typecheck.result_type_binary]] *)
 let result_type_binary t1 t2 =
   match t1, t2 with
   | T.I (T.Char, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
@@ -242,7 +268,9 @@ let result_type_binary t1 t2 =
     t1
 
   | _ -> raise (Impossible "case should be forbidden by compatibility policy")
+(*e: function [[Typecheck.result_type_binary]] *)
 
+(*s: function [[Typecheck.check_compatible_assign]] *)
 (* less: could run typ_ext hooks here? and return a new node? for
  * unnamed_inheritance.c?
  *)
@@ -274,7 +302,9 @@ let check_compatible_assign op t1 t2 loc =
     | (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) 
       -> check_compatible_binary (Arith op) t1 t2 loc
     )
+(*e: function [[Typecheck.check_compatible_assign]] *)
 
+(*s: function [[Typecheck.check_args_vs_params]] *)
 let rec check_args_vs_params es tparams varargs loc =
   match es, tparams, varargs with
   (* stricter? confusing to have foo() and foo(void) *)
@@ -301,11 +331,13 @@ let rec check_args_vs_params es tparams varargs loc =
        raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
     );
     check_args_vs_params es ts varargs loc
+(*e: function [[Typecheck.check_args_vs_params]] *)
     
 (*****************************************************************************)
 (* Storage helpers *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.merge_storage_toplevel]] *)
 (* If you declare multiple times the same global, we need to make sure
  * the storage declarations are compatible and we need to compute the
  * final (resolved) storage.
@@ -359,12 +391,14 @@ let merge_storage_toplevel name loc stoopt ini old =
 
     | Some (S.Global | S.Param), _ -> 
       raise (Impossible "param or global are not keywords")
+(*e: function [[Typecheck.merge_storage_toplevel]] *)
 
 
 (*****************************************************************************)
 (* Other helpers *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.lvalue]] *)
 (* we assume the typechecker has called expr() on 'e0' before, 
  * so Id of enum constants for example has been substituted to Int
  * and so are not considered an lvalue.
@@ -393,7 +427,9 @@ let lvalue e0 =
     -> false
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
+(*e: function [[Typecheck.lvalue]] *)
 
+(*s: function [[Typecheck.array_to_pointer]] *)
 (* When you mention an array in a context where you want to access the array
  * content, we prefix the array with a '&' and change its type from a T.Array
  * to a T.Pointer. This allows in turn to write typechecking rules
@@ -423,7 +459,9 @@ let array_to_pointer env e =
     )
     
   | _ -> e
+(*e: function [[Typecheck.array_to_pointer]] *)
 
+(*s: function [[Typecheck.unsugar_anon_structure_element]] *)
 (* X.foo --> X.|sym42|.foo *)
 let rec unsugar_anon_structure_element env e0 e name def =
   
@@ -457,12 +495,14 @@ let rec unsugar_anon_structure_element env e0 e name def =
   | _x::_y::_xs ->
     raise (Error(E.Misc(spf "ambiguous unnamed structure element %s" name,
                                e.e_loc)))
+(*e: function [[Typecheck.unsugar_anon_structure_element]] *)
   )
 
 (*****************************************************************************)
 (* AST Types to Types.t *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.type_]] *)
 (* Expand typedefs and resolve constant expressions. *)
 let rec type_ env typ0 =
   match typ0.t with
@@ -500,6 +540,7 @@ let rec type_ env typ0 =
   | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
   (* expand typedefs *)
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
+(*e: function [[Typecheck.type_]] *)
 
 (*****************************************************************************)
 (* Expression typechecking *)
@@ -734,6 +775,7 @@ and expropt env eopt =
 (* Statement *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.stmt]] *)
 (* The code below is boilerplate, mostly.
  * expr() should not do any side effect on the environment, so we can
  * call recursively in any order stmt() and expr() (including the
@@ -844,11 +886,13 @@ let rec stmt env st0 =
             v_init = ini }
     )
   }
+(*e: function [[Typecheck.stmt]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.check_and_annotate_program]] *)
 let check_and_annotate_program (prog: Ast.program) =
   let (ast, _locs) = prog in
 
@@ -1075,3 +1119,5 @@ let check_and_annotate_program (prog: Ast.program) =
   ast |> List.iter (toplevel env);
 
   env.ids, env.structs, List.rev !funcs
+(*e: function [[Typecheck.check_and_annotate_program]] *)
+(*e: Typecheck.ml *)

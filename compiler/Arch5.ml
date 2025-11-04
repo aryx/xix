@@ -1,9 +1,11 @@
+(*s: Arch5.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Arch_compiler
 module T = Type
 
+(*s: function [[Arch5.width_of_type]] *)
 let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
   match t with
   | T.Void -> 0
@@ -31,5 +33,9 @@ let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
       flds 
       |> List.map (fun (_fld, t) -> width_of_type env t)
       |> List.fold_left (+) 0
+(*e: function [[Arch5.width_of_type]] *)
 
+(*s: constant [[Arch5.arch]] *)
 let arch = { width_of_type }
+(*e: constant [[Arch5.arch]] *)
+(*e: Arch5.ml *)

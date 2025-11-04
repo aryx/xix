@@ -1,3 +1,4 @@
+(*s: Parse.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -12,6 +13,7 @@ module T = Parser  (* T for Tokens *)
 (* Entry points *)
 (*****************************************************************************)
 
+(*s: function [[Parse.parse]] *)
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
   let hooks = Parse_cpp.{
      lexer = Lexer.token;
@@ -41,9 +43,11 @@ let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.
   }
   in
   Parse_cpp.parse caps hooks conf file
+(*e: function [[Parse.parse]] *)
 
 
 
+(*s: function [[Parse.parse_no_cpp]] *)
 (* ?? what for ? *)
 let parse_no_cpp (chan : Chan.i) =
   L.line := 1;
@@ -52,4 +56,6 @@ let parse_no_cpp (chan : Chan.i) =
       Parser.prog Lexer.token lexbuf, []
     with Parsing.Parse_error ->
         failwith (spf "Syntax error: line %d" !L.line)
+(*e: function [[Parse.parse_no_cpp]] *)
   )
+(*e: Parse.ml *)

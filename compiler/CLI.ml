@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -58,7 +59,9 @@ open Regexp_.Operators
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (* Need: see .mli *)
+(*s: type [[CLI.caps]] *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
+(*e: type [[CLI.caps]] *)
 
 (*****************************************************************************)
 (* Helpers *)
@@ -68,6 +71,7 @@ type caps = < Cap.open_in; Cap.open_out; Cap.env >
 (* Testing *)
 (*****************************************************************************)
 
+(*s: function [[CLI.do_action]] *)
 let do_action (caps: < caps; .. >) thestring s xs =
   match s with
   | "-test_parser" ->
@@ -88,6 +92,7 @@ let do_action (caps: < caps; .. >) thestring s xs =
       )
 
   | _ -> failwith ("action not supported: " ^ s)
+(*e: function [[CLI.do_action]] *)
 
 (*****************************************************************************)
 (* Main algorithms *)
@@ -96,11 +101,14 @@ let do_action (caps: < caps; .. >) thestring s xs =
 (* TODO: move somewhere else, rename ids_structs_funcs? or use
  * record with fields!
  *)
+(*s: type [[CLI.frontend_result]] *)
 type frontend_result = 
   (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
   (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
   Ast.func_def list
+(*e: type [[CLI.frontend_result]] *)
 
+(*s: function [[CLI.frontend]] *)
 let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : frontend_result =
 
   let ast = Parse.parse caps conf infile in
@@ -132,7 +140,9 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   end;
 
   ids, structs, funcs
+(*e: function [[CLI.frontend]] *)
 
+(*s: function [[CLI.backend5]] *)
 let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
   let (asm, _locs) = Codegen5.codegen (ids, structs, funcs) in
@@ -148,23 +158,29 @@ let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
     );
   end;
   Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
+(*e: function [[CLI.backend5]] *)
 
+(*s: function [[CLI.compile5]] *)
 let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
   (outfile : Chan.o) =
   let (ids, structs, funcs) = 
     frontend caps conf infile in
   backend5 (ids, structs, funcs) outfile
+(*e: function [[CLI.compile5]] *)
 
+(*s: function [[CLI.compile]] *)
 let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t) (infile : Fpath.t) (outfile : Chan.o) : unit =
   match arch with
   | Arch.Arm -> compile5 caps conf infile outfile
   | _ -> 
    failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+(*e: function [[CLI.compile]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
+(*s: function [[CLI.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let arch = 
@@ -339,3 +355,5 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       | Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
       | _ -> raise exn
       )
+(*e: function [[CLI.main]] *)
+(*e: CLI.ml *)

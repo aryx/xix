@@ -1,7 +1,9 @@
+(*s: Error.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 
+(*s: function [[Error.warn]] *)
 let warn s loc =
   if !Flags.warn
   then 
@@ -10,7 +12,11 @@ let warn s loc =
     else 
       let (file, line) = Location_cpp.final_loc_of_loc loc in
       Logs.warn (fun m -> m "%s:%d: %s" !!file line s)
+(*e: function [[Error.warn]] *)
 
+(*s: function [[Error.errorexit]] *)
 let errorexit s =
   Logs.err (fun m -> m "%s" s);
   raise (Exit.ExitCode 1)
+(*e: function [[Error.errorexit]] *)
+(*e: Error.ml *)

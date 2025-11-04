@@ -1,10 +1,15 @@
+(*s: Type.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 (* renamed to Type_.ml because conflict with OCaml5 module name *)
 
+(*s: type [[Type.blockid]] *)
 type blockid = int
 [@@deriving show]
+(*e: type [[Type.blockid]] *)
+(*s: type [[Type.fullname]] *)
 type fullname = string * blockid
 [@@deriving show]
+(*e: type [[Type.fullname]] *)
 
 (* The C type system.
  *
@@ -16,6 +21,7 @@ type fullname = string * blockid
  * todoext: Bool! with strict bool checking. 
  * todoext: Enum of fullname with stricter checking.
  *)
+(*s: type [[Type.t]] *)
 type t =
   | Void
   | I of integer_type
@@ -29,35 +35,55 @@ type t =
   | Array of int option * t
   | Func of t * t list * bool (* varargs '...' *)
   | StructName of struct_kind * fullname
+(*e: type [[Type.t]] *)
 
+(*s: type [[Type.integer_type]] *)
   and integer_type = integer_kind * sign
+(*e: type [[Type.integer_type]] *)
+(*s: type [[Type.integer_kind]] *)
     and integer_kind = 
     | Char
     | Short
     | Int
     | Long
     | VLong
+(*e: type [[Type.integer_kind]] *)
+(*s: type [[Type.sign]] *)
     and sign = Signed | Unsigned
+(*e: type [[Type.sign]] *)
 
+(*s: type [[Type.float_type]] *)
   and float_type = 
   | Float
   | Double
+(*e: type [[Type.float_type]] *)
 
+(*s: type [[Type.struct_kind]] *)
  and struct_kind = Struct | Union
+(*e: type [[Type.struct_kind]] *)
 [@@deriving show]
 
+(*s: type [[Type.qualifier]] *)
 type qualifier = 
   | Volatile
   | Const
   (* less: unsupported: | Restrict | Inline *)
 [@@deriving show]
+(*e: type [[Type.qualifier]] *)
 
 
 
 (* note that the field can be gensym'ed for anonymous struct/union elements *)
 (* todo: bitfield *)
+(*s: type [[Type.structdef]] *)
 type structdef = (string * t) list
 [@@deriving show]
+(*e: type [[Type.structdef]] *)
 
+(*s: constant [[Type.int]] *)
 let int = I (Int, Signed)
+(*e: constant [[Type.int]] *)
+(*s: constant [[Type.long]] *)
 let long = I (Long, Signed)
+(*e: constant [[Type.long]] *)
+(*e: Type.ml *)

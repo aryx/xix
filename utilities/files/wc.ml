@@ -15,6 +15,8 @@ open Fpath_.Operators
  *  - no need sysfatal() calls and error management as default Unix exn
  *    (e.g., file not found) and its pretty printing should be good enough
  *  - no need open/close, use higher-order FS.with_open_in
+ *  - less globals, pass conf and stats explicitely (use mutable internally,
+ *    but still provide a more functional interface than in C)
  *
  * Still the OCaml version is longer than the C one.
  *

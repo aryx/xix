@@ -40,7 +40,6 @@ let cat (caps : < Cap.stdout; .. >) (chan : Chan.i) : unit =
 (* Entry point *)
 (*****************************************************************************)
 
-
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (* alt: use Arg and process -debug, -verbose, etc. *)
   Logs_.setup (Some Logs.Warning) ();

@@ -1,3 +1,4 @@
+(*s: Lexer.mll *)
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -300,3 +301,5 @@ and comment = parse
   | '*'           { comment lexbuf }
   | '\n'          { incr Location_cpp.line; comment lexbuf }
   | eof           { error "eof in comment" }
+
+(*e: Lexer.mll *)

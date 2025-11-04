@@ -1,5 +1,785 @@
 \section{[[./]]}
 
+\subsection*{[[Lexer.mll]]}
+
+<<Lexer.mll>>=
+{
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+open Regexp_.Operators
+
+open Parser
+module A = Ast
+module L = Location_cpp
+module T = Type
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Limitations compared to 5c:
+ *  - no L"" and L'' unicode strings or unicode characters
+ *  - no \x hexadecimal escape sequence in strings or characters
+ *  - no unicode identifier
+ *  - no typestr
+ *    (seems dead extension anyway)
+ *  - no signof
+ * 
+ * todo: handle big numbers here? or let later phases do that?
+ *  check for overflow, truncation, sign-extended character constant, etc
+ *  see yyerror and warn in Compiler.nw
+ *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+let error s =
+  raise (L.Error (spf "Lexical error: %s" s, !L.line))
+
+let loc () = !L.line
+
+let inttype_of_suffix sign size =
+  let sign =
+    match String.lowercase_ascii sign with
+      | "" -> T.Signed
+      | "u" -> T.Unsigned
+      | s -> error (spf "Impossible: wrong sign suffix: %s" s)
+  in
+  match String.lowercase_ascii size with
+  | "" -> T.Int, sign
+  | "l" -> T.Long, sign
+  | "ll" -> T.VLong, sign
+  | s -> error (spf "Impossible: wrong int size suffix: %s" s)
+
+let floattype_of_suffix s =
+  match String.lowercase_ascii s with
+  | "" -> T.Double
+  | "f" -> T.Float
+  | s -> error (spf "Impossible: wrong float size suffix: %s" s)
+
+(* dup: lexer_asm5.mll *)
+let code_of_escape_char c =
+  match c with
+  | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
+  | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
+
+  (* compatibility with plan 9 C code? *)
+  | 'f' -> Logs.err (fun m -> m "unknown \\f"); 0x00
+  (* could be removed, special 5c escape char *)
+  | 'a' -> 0x07 | 'v' -> 0x0b 
+
+  | '\\' | '\'' | '"' -> Char.code c 
+  (* stricter: we disallow \ with unknown character *)
+  | _ -> error "unknown escape sequence"
+
+(* dup: lexer_asm5.mll *)
+let string_of_ascii i =
+  String.make 1 (Char.chr i)
+
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let char_ lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
+
+}
+
+(*****************************************************************************)
+(* Regexps aliases *)
+(*****************************************************************************)
+let space = [' ''\t']
+let letter = ['a'-'z''A'-'Z']
+let digit = ['0'-'9']
+let oct = ['0'-'7']
+let hex = (digit | ['A'-'F''a'-'f'])
+
+(*****************************************************************************)
+(* Main rule *)
+(*****************************************************************************)
+
+rule token = parse
+
+  (* ----------------------------------------------------------------------- *)
+  (* Spacing/comments *)
+  (* ----------------------------------------------------------------------- *)
+  | [' ''\t']+    { token lexbuf }
+  | "//" [^'\n']* { token lexbuf }
+  | "/*"          { comment lexbuf }
+
+  | '\n'          { incr Location_cpp.line; token lexbuf }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Symbols *)
+  (* ----------------------------------------------------------------------- *)
+  | "+" { TPlus (loc()) } | "-" { TMinus (loc()) }
+  | "*" { TMul  (loc()) } | "/" { TDiv   (loc()) } | "%" { TMod (loc()) }
+
+  | "&"  { TAnd  (loc()) }  | "|"  { TOr     (loc()) } | "^" { TXor (loc()) }
+  | "<<" { TInfInf (* TLsh *) (loc()) } | ">>" { TSupSup (* TRsh *) (loc()) }
+  | "~"  { TTilde  (loc()) }
+
+  | "&&" { TAndAnd (loc()) } | "||" { TOrOr (loc()) }
+  | "!"  { TBang   (loc()) }
+
+  | "++" { TPlusPlus (loc()) } | "--" { TMinusMinus (loc()) }
+
+  | "="  { TEq   (loc()) }
+  | "==" { TEqEq (loc()) }  | "!=" { TBangEq (loc()) }
+
+  | "+=" { TOpEq (loc(), A.Plus) } | "-=" { TOpEq (loc(), A.Minus) }
+  | "*=" { TOpEq (loc(), A.Mul) }  | "/=" { TOpEq (loc(), A.Div) }
+  | "%=" { TOpEq (loc(), A.Mod) }
+  | "&=" { TOpEq (loc(), A.And) }        | "|="  { TOpEq (loc(), A.Or) }
+  | "^=" { TOpEq (loc(), A.Xor) }
+  | ">>="{ TOpEq (loc(), A.ShiftRight) } | "<<=" { TOpEq (loc(), A.ShiftLeft) }
+
+  | "<"  { TInf   (loc()) } | ">"  { TSup   (loc()) }
+  | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
+
+  | "(" { TOPar   (loc()) } | ")" { TCPar   (loc()) }
+  | "{" { TOBrace (loc()) } | "}" { TCBrace (loc()) }
+  | "[" { TOBra   (loc()) } | "]" { TCBra   (loc()) }
+             
+  | ","  { TComma (loc()) } | ";"  { TSemicolon (loc()) }
+  | "->" { TArrow (loc()) }
+  | "."  { TDot   (loc()) }
+  | "?"  { TQuestion (loc()) }
+  | ":"  { TColon    (loc()) }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Numbers *)
+  (* ----------------------------------------------------------------------- *)
+  (* dup: lexer_asm5.mll *)
+  | "0"  (oct+ (*as s*)) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+      { let (s, unsigned, long) = 
+           let s = Lexing.lexeme lexbuf in
+           s =~ "0\\([0-7]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+           Regexp_.matched3 s
+        in
+        TIConst(loc(), "0o" ^ s, inttype_of_suffix unsigned long)}
+  | "0x" (hex+ (*as s*))  (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+      { let (s, unsigned, long) = 
+           let s = Lexing.lexeme lexbuf in
+           s =~ "0x\\([0-9A-Fa-f]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+           Regexp_.matched3 s
+        in
+        TIConst(loc(), "0x" ^ s, inttype_of_suffix unsigned long)}
+  | "0x" { error "malformed hex constant" }
+  | (['0'-'9'] digit*) (*as s*) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+      { let (s, unsigned, long) = 
+           let s = Lexing.lexeme lexbuf in
+           s =~ "\\([0-9]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+           Regexp_.matched3 s
+        in
+        TIConst (loc(), s, inttype_of_suffix unsigned long)}
+
+  (* stricter: I impose some digit+ after '.' and after 'e' *)
+  | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) (*as s*)
+      (['F''f']* (*as float*))
+     { let (s, float) =
+          let s = Lexing.lexeme lexbuf in
+          s =~ "\\([^Ff]+\\)\\([Ff]*\\)$" |> ignore;
+          Regexp_.matched2 s
+        in
+        TFConst (loc(), s, floattype_of_suffix float) }
+
+  (* special regexp for better error message *)
+  | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
+     { error "malformed fp constant exponent" }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Strings and chars *)
+  (* ----------------------------------------------------------------------- *)
+  (* converting characters in integers *)
+  | "'" { TIConst (loc(), spf "%d" (char lexbuf), (T.Char, T.Signed)) }
+  | '"' { TString (loc(), string lexbuf, T.Array (None, T.I (T.Char,T.Signed)))}
+
+  (* ----------------------------------------------------------------------- *)
+  (* Keywords and identifiers *)
+  (* ----------------------------------------------------------------------- *)
+  | (letter | '_') (letter | digit | '_')* {
+      let s = Lexing.lexeme lexbuf in
+      match s with
+      | "static" -> Tstatic (loc()) 
+      | "extern" -> Textern (loc())
+      (* we could forbid those constructs; they are not really useful *)
+      | "auto" -> Tauto (loc()) 
+      | "register" -> Tregister (loc())
+
+      | "const" -> Tconst (loc()) | "volatile" -> Tvolatile (loc())
+      | "inline" -> Tinline (loc()) | "restrict" -> Trestrict (loc())
+
+      | "void" -> Tvoid (loc())
+      | "char" -> Tchar (loc()) | "short" -> Tshort (loc()) 
+      | "int"  -> Tint  (loc()) | "long"  -> Tlong  (loc())
+      | "float"  -> Tfloat  (loc()) | "double"   -> Tdouble   (loc())
+
+      | "signed" -> Tsigned (loc()) | "unsigned" -> Tunsigned (loc())
+
+      | "struct" -> Tstruct (loc()) | "union" -> Tunion (loc()) 
+      | "enum" -> Tenum (loc())
+      | "typedef" -> Ttypedef (loc())
+
+      | "if" -> Tif (loc()) | "else" -> Telse (loc())
+      | "while" -> Twhile (loc()) | "do" -> Tdo (loc()) | "for" -> Tfor (loc())
+      | "break" -> Tbreak (loc()) | "continue" -> Tcontinue (loc())
+      | "switch" -> Tswitch (loc()) 
+      | "case" -> Tcase (loc()) | "default" -> Tdefault (loc())
+      | "return" -> Treturn (loc()) | "goto" -> Tgoto (loc())
+
+      | "sizeof" -> Tsizeof (loc())
+      (* less: USED/SET here? or manage via symbol table *)
+
+      | _ ->
+        if Hashtbl.mem Globals.hids s
+        then 
+          (* typedef trick, because ambiguity in C grammar *)
+          (match Hashtbl.find Globals.hids s with
+          | A.IdIdent | A.IdEnumConstant -> TName (loc(), s)
+          | A.IdTypedef -> TTypeName (loc(), s)
+          )
+        else TName (loc(), s)
+  }
+
+  (* ----------------------------------------------------------------------- *)
+  (* CPP *)
+  (* ----------------------------------------------------------------------- *)
+  (* See ../macroprocessor/lexer_cpp.mll *)
+  | "#" { TSharp }
+
+  (* ----------------------------------------------------------------------- *)
+  | eof { EOF }
+  | _ (*as c*)   { let c = char_ lexbuf in
+                   error (spf "unrecognized character: '%c'" c) }
+
+(*****************************************************************************)
+(* String rule *)
+(*****************************************************************************)
+and string = parse
+  | '"' { "" }
+  | "\\" ((oct oct oct) (*as s*))
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
+  | "\\" (['a'-'z' '\\' '"'] (*as c*)) 
+      { let c = String.get (Lexing.lexeme lexbuf) 1 in
+        let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
+  (* strings can contain newline! but they must be escaped before *)
+  | '\\' '\n' { "\n" ^ string lexbuf }
+  | [^ '\\' '"' '\n']+   
+      { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
+  | '\n' { error "newline in string" }
+  | eof  { error "end of file in string" }
+  | _    { error "undefined character in string" }
+
+(*****************************************************************************)
+(* Character rule *)
+(*****************************************************************************)
+and char = parse
+  | "''"                            { Char.code '\'' }
+  (* less: 5c allows up to 8 octal number when in L'' mode *)
+  | "\\" ((oct oct? oct?) (*as s*)) "'" 
+      { let s = Lexing.lexeme lexbuf |>
+           String_.drop_prefix 1 |> String_.drop_suffix 1
+        in
+        int_of_string ("0o" ^ s) }
+  | "\\" (['a'-'z' '\\' '\''] (*as c*)) "'"       
+      { let c = String.get (Lexing.lexeme lexbuf) 1 in
+        code_of_escape_char c }
+  | '\\' '\n' { char lexbuf }
+  | [^ '\\' '\'' '\n'] (*as c*)  "'"    
+      { let c = String.get (Lexing.lexeme lexbuf) 0 in
+        Char.code c }
+  | '\n' { error "newline in character" }
+  | eof  { error "end of file in character" }
+  | _    { error "missing '" }
+
+(*****************************************************************************)
+(* Comment rule *)
+(*****************************************************************************)
+
+(* dup: lexer_asm5.mll *)
+and comment = parse
+  | "*/"          { token lexbuf }
+  | [^ '*' '\n']+ { comment lexbuf }
+  | '*'           { comment lexbuf }
+  | '\n'          { incr Location_cpp.line; comment lexbuf }
+  | eof           { error "eof in comment" }
+
+@
+
+\subsection*{[[Lexer_cpp.mll]]}
+
+<<macroprocessor/Lexer_cpp.mll>>=
+{
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+open Regexp_.Operators
+
+open Ast_cpp
+module L = Location_cpp
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* A port of plan 9 builtin preprocessing in OCaml.
+ *
+ * The main functions of the text preprocessors are:
+ *  - including other files
+ *  - expanding macros
+ *  - skipping text inside ifdefs
+ * 
+ *
+ * Limitations compared to cpp:
+ *  - no support for unicode
+ * 
+ * stricter: 
+ *  - no space allowed between '#' and the directive
+ *    (even though some people like to do  '#  ifdef', when have nested ifdefs,
+ *     but nested ifdefs are bad practice anyway)
+ *  - single '#' are not converted in #endif
+ *    (who does use that?)
+ *  - only space or comment between the directive and the newline; 
+ *    we do not skip any character
+ *    (who does put garbage there?)
+ *)
+
+let error s =
+  raise  (L.Error (spf "Lexical error in cpp: %s" s, !L.line))
+
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let symbol_after_space lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  s =~ ".*[ \t]\\([^ \t]+\\)" |> ignore; 
+  Regexp_.matched1 s
+let char lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
+
+}
+
+(*****************************************************************************)
+(* Regexps aliases *)
+(*****************************************************************************)
+let space  = [' ''\t']
+let letter = ['a'-'z''A'-'Z']
+let digit  = ['0'-'9']
+
+let symbol = (letter | '_') (letter | digit | '_')*
+
+(*****************************************************************************)
+(* Main rule *)
+(*****************************************************************************)
+
+(* pre: 'token' below assumes the '#' has already been consumed *)
+rule token = parse
+
+  (* note that filenames containing double quotes are not supported *)
+  | "include" space* '"' ([^ '"' '\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Include (Fpath.v file, false)  
+      }
+  | "include" space* '<' ([^ '>' '\n']+ (*as file*)) '>'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*<\\(.*\\)>" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Include(Fpath.v file, true) 
+      }
+  | "include" { error "syntax in #include" }
+
+  (* Macro definition part 1 *)
+  | "define" space+ (symbol (*as s1*)) '(' ([^')']* (*as s2*)) ')'
+      { let (s1, s2) =
+           let s = Lexing.lexeme lexbuf in s =~ "define[ \t]+\\(.*\\)(\\(.*\\))" |> ignore;
+           Regexp_.matched2 s in
+        let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
+        (* check if identifier or "..." for last one *)
+        let params, varargs = 
+          let rec aux xs =
+            match xs with
+            | [] -> [], false
+            (* todo: __VA_ARGS__ *)
+            | ["..."] -> [], true
+            | "..."::_ -> error "... should be the last parameter of a macro"
+            | x::xs ->
+               if x =~ "[A-Za-z_][A-Za-z_0-9]*" 
+               then let (params, bool) = aux xs in x::params, bool
+               else error (spf "wrong syntax for macro parameter: %s" x)
+          in
+          aux xs
+        in
+        let body = define_body s1 (List_.index_list_1 params) lexbuf in
+        Define { name = s1; params = Some (params); varargs = varargs;
+                 body = Some body }
+      }
+  (* a space after the symbol means the macro has no argument, even if
+   * this space is followed by a '('.
+   *)
+  | "define" space+ (symbol (*as s1*)) space+
+      { let s1 = symbol_after_space lexbuf in
+        let body = define_body s1 [] lexbuf in 
+        Define { name = s1; params = None; varargs = false; body = Some body}
+      }
+  (* if do '#define FOO+' then? we should return a syntax error because
+   * of the space_or_comment_and_newline below.
+   *)
+  | "define" space+ (symbol (*as s1*))
+      { let s1 = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf; 
+        Define { name = s1; params = None; varargs = false; body =  None }
+      }
+  | "define" { error "syntax in #define" }
+
+  (* stricter: require space_or_comment-only after sym *)
+  | "undef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf; 
+        Undef name
+      }
+  | "undef" { error "syntax in #undef" } 
+
+
+  | "ifdef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf;
+        Ifdef name 
+      }
+  | "ifndef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf;
+        Ifndef name
+      }
+  | "ifdef" { error "syntax in #ifdef" } 
+  | "ifndef" { error "syntax in #ifndef" } 
+
+  | "else"  
+      { space_or_comment_and_newline lexbuf; 
+        Else 
+      }
+  | "endif" 
+      { space_or_comment_and_newline lexbuf; 
+        Endif 
+      }
+
+  (* stricter: I impose a filename (with no quote in name, like original?) *)
+  | "line" space+ (digit+ (*as s1*)) space* ('"' ([^'"']* (*as s2*)) '"')
+      { 
+        let (s1, s2) =
+           let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([0-9]+\\).*\"(\\(.*\\)\"" |> ignore;
+           Regexp_.matched2 s in
+        space_or_comment_and_newline lexbuf;
+        Line (int_of_string s1, Fpath.v s2) }
+  | "line" { error "syntax in #line" }
+
+
+  | "pragma" space+ "lib" space* '"' ([^'"''\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("lib", [file]) 
+      }
+  | "pragma" space+ "src" space* '"' ([^'"''\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("src", [file]) 
+      }
+
+  | "pragma" space+ "varargck" space* "argpos" [^'\n']+
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) 
+      }
+  | "pragma" space+ "varargck" space* "type" [^'\n']+
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) 
+      }
+  | "pragma" space+ "varargck" space* "flag" [^'\n']+
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) 
+      }
+
+  | "pragma" space+ "incomplete" space+ (symbol (*as name*))
+      { let name = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([^ \t]+\\)" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("incomplete", [name]) 
+      }
+  (* stricter: we do not silently skip unknown pragmas *)
+  | "pragma"  { error "syntax in #pragma" }
+
+  | symbol { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
+
+(*****************************************************************************)
+(* Macro definition part 2, the body *)
+(*****************************************************************************)
+and define_body name params = parse
+  | symbol (*as s *)
+     { let s = Lexing.lexeme lexbuf in
+       try 
+        let i = List.assoc s params in
+        (* safe to use # for a special mark since C code can not
+         * use this symbol since it is reserved by cpp
+         *)
+        spf "#%d" i ^ define_body name params lexbuf
+      with Not_found ->
+        s ^ define_body name params lexbuf
+     }
+
+  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/' '#']+ (*as s *)
+      { let s = Lexing.lexeme lexbuf in
+        s ^ define_body name params lexbuf }
+
+  (* end of macro *)
+  | '\n' { incr Location_cpp.line; "" }
+
+  (* special cases *)
+  | ['\'' '"'] (*as c *)
+      { let c = char lexbuf in
+        let s = define_body_strchar c name params lexbuf in 
+        String.make 1 c ^ s ^ define_body name params lexbuf 
+      }
+
+  | "//" [^'\n']* { define_body name params lexbuf }
+  | "/*"          
+      { comment_star_no_newline lexbuf; 
+        define_body name params lexbuf 
+      }
+
+  | '/' { "/" ^ define_body name params lexbuf }
+  (* we escape single '#' by doubling it (classic) *)
+  | '#' { "##" ^ define_body name params lexbuf }
+
+  (* could do " " ^ but that is not what 5c does *)
+  | '\\' '\n' { incr Location_cpp.line; define_body name params lexbuf }
+  | '\\' { "\\" ^ define_body name params lexbuf }
+
+  | eof  { error (spf "eof in macro %s" name) }
+
+(*****************************************************************************)
+(* Strings and characters (part1) *)
+(*****************************************************************************)
+
+(* Diff with string/character handling in lexer.mll for C?
+ *  - need to recognize macro parameter (yes 5c does that! no need stringify)
+ *  - need to escape '#' to ##
+ *  - do not care about precise parsing of \\, octal, escaped char,
+ *    just return the string
+*)
+
+and define_body_strchar endchar name params = parse
+  (* no need for stringify! substitute also in strings *)
+  | symbol (*as s*)
+     { let s = Lexing.lexeme lexbuf in
+       try let i = List.assoc s params in
+        spf "#%d" i ^ define_body_strchar endchar name params lexbuf
+       with Not_found -> s ^ define_body_strchar endchar name params lexbuf
+     }
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\' '#']+ (*as s *)
+      { let s = Lexing.lexeme lexbuf in
+        s ^ define_body_strchar endchar name params lexbuf }
+
+  | '\\' '\n' 
+      { incr Location_cpp.line; define_body_strchar endchar name params lexbuf }
+  | '\\' _ (*as s*) 
+       { let s = Lexing.lexeme lexbuf in
+         s^define_body_strchar endchar name params lexbuf }
+
+  (* escape # to disambiguate with use of # to reference a parameter *)
+  | '#' { "##" ^ define_body_strchar endchar name params lexbuf }
+
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        if c = endchar 
+        then String.make 1 c
+        else String.make 1 c ^ define_body_strchar endchar name params lexbuf
+      }
+
+  | '\n' { error (spf "newline in character or string in macro %s" name) }
+  | eof  { error (spf "eof in macro %s" name) }
+
+(*****************************************************************************)
+(* Macro use *)
+(*****************************************************************************)
+
+(* Extracting the arguments. 
+ * Note that as opposed to the other rules in this file, here
+ * we do not parse a directive; we parse C code used as arguments to
+ * a macro. We still use ocamllex for that because it is convenient.
+ *)
+and macro_arguments = parse
+ | space* "("   
+     { let xs = macro_args 0 "" [] lexbuf in
+       let xs = List.rev xs in
+       if xs = [""] then [] else xs
+     }
+ (* stricter: better error message *)
+ | _ (*as c*) { let c = char lexbuf in 
+                error (spf "was expecting a '(' not %c for macro arguments" c) }
+ | eof    { error "was expecting a '(', not an eof for macro arguments" }
+
+and macro_args depth str args = parse
+ | ")" 
+     { if depth = 0 
+       then str::args
+       else macro_args (depth - 1) (str ^ ")") args lexbuf
+     }
+
+ | [^ '\'' '"' '/' ',' '\n' '(' ')']+ 
+     { macro_args depth (str ^ Lexing.lexeme lexbuf) args lexbuf }
+
+ | "," 
+     { if depth = 0 
+       (* todo: if reached varargs! *)
+       then macro_args 0 "" (str::args) lexbuf 
+       else macro_args depth (str ^ ",") args lexbuf
+     }
+
+ | "("  { macro_args (depth+1) (str^"(") args lexbuf }
+
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        let s = macro_args_strchar c lexbuf in 
+        macro_args depth (str ^ String.make 1 c ^ s) args lexbuf
+      }
+
+ | "//" [^ '\n']* { macro_args depth str args lexbuf }
+ | "/*" 
+     { comment_star_newline_ok lexbuf; 
+       macro_args depth (str^" ") args lexbuf 
+     }
+ | "/"  { macro_args depth     (str^"/") args lexbuf }
+
+ | '\n' { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
+
+ | _ (*as c*) { let c = char lexbuf in error (spf "unrecognized character: '%c'" c) }
+ (* stricter: better error message *)
+ | eof { error "eof in macro arguments" }
+
+(* Substituting the arguments.
+ * Note that the lexbuf here will be different. It will correspond
+ * to the string of the body of a macro.
+ *)
+and subst_args_in_macro_body name args = parse
+ | [^ '\n' '#']+ (*as s*) { 
+       let s = Lexing.lexeme lexbuf in
+       s ^ subst_args_in_macro_body name args lexbuf }
+ | "##" { "#" ^ subst_args_in_macro_body name args lexbuf }
+ | "#" (digit+ (*as s*)) 
+     { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+       let i = int_of_string s in
+       try 
+         let arg = List.nth args (i - 1) in
+         arg ^ subst_args_in_macro_body name args lexbuf
+       with Failure _ -> 
+         (* stricter: better error message *)
+         error (spf "could not find argument %d in macro of %s" i name)
+     }
+ (* the escaped newlines should have been removed *)
+ | '\n' { failwith "impossible: newline in macro body" }
+ | eof { "" }
+
+
+(*****************************************************************************)
+(* Strings and characters (part1) *)
+(*****************************************************************************)
+and macro_args_strchar endchar = parse
+  | [^ '\n' '\'' '"' '\\' ]+ (*as s*)  
+      { let s = Lexing.lexeme lexbuf in
+        s ^ macro_args_strchar endchar lexbuf }
+
+  | '\\' '\n' { incr Location_cpp.line; macro_args_strchar endchar lexbuf }
+  | '\\' _ (*as s*) 
+        { let s = Lexing.lexeme lexbuf in
+          s^macro_args_strchar endchar lexbuf }
+
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        if c = endchar 
+        then String.make 1 c
+        else String.make 1 c ^ macro_args_strchar endchar lexbuf
+      }
+  | '\n' { error (spf "newline in character or string") }
+  | eof  { error (spf "eof in character or string in macro argument") }
+
+
+(*****************************************************************************)
+(* Comments *)
+(*****************************************************************************)
+
+and space_or_comment_and_newline = parse
+  | space+        { space_or_comment_and_newline lexbuf }
+  | '\n'          { incr Location_cpp.line }
+
+  | "//" [^'\n']* { space_or_comment_and_newline lexbuf }
+  | "/*"          { comment_star_no_newline lexbuf; 
+                    space_or_comment_and_newline lexbuf }
+
+  (* stricter: new error message *)
+  | _ (*as c*)    { let c = char lexbuf in
+                    error (spf "unexpected character %c after directive" c) }
+  | eof           { error "expected newline, not EOF" }
+
+and comment_star_no_newline = parse
+  | "*/"          { }
+  | [^ '*' '\n']+ { comment_star_no_newline lexbuf }
+  | '*'           { comment_star_no_newline lexbuf }
+
+  | '\n'          { error "comment across newline" }
+  | eof           { error "eof in comment" }
+
+and comment_star_newline_ok = parse
+  | "*/"          { }
+  | [^ '*' '\n']+ { comment_star_newline_ok lexbuf }
+  | '*'           { comment_star_newline_ok lexbuf }
+  | '\n'          { incr Location_cpp.line; comment_star_newline_ok lexbuf }
+  | eof           { error "eof in comment" }
+
+
+(*****************************************************************************)
+(* Skipping, for ifdefs *)
+(*****************************************************************************)
+
+and skip_for_ifdef depth bol = parse
+  | '\n'         { incr Location_cpp.line; skip_for_ifdef depth true lexbuf }
+  | [' ' '\t']+  { skip_for_ifdef depth bol lexbuf }
+  | [^'#' '\n' ' ' '\t']+ { skip_for_ifdef depth false lexbuf }
+  
+  | "#endif" 
+      { if bol
+        then
+          if depth = 0 
+          (* done! just eat until newline *)
+          then space_or_comment_and_newline lexbuf
+          else skip_for_ifdef (depth - 1) false lexbuf
+        else skip_for_ifdef depth false lexbuf
+      }
+  | "#else" 
+      { if bol && depth = 0
+        then space_or_comment_and_newline lexbuf
+        else skip_for_ifdef depth false lexbuf
+      }
+  | "#ifdef" | "#ifndef" 
+      { if bol 
+        then skip_for_ifdef (depth + 1) false lexbuf 
+        else skip_for_ifdef depth false lexbuf
+      }
+
+  | "#" { skip_for_ifdef depth false lexbuf }
+
+  (* stricter: *)
+  | eof { error "eof in #ifdef or #ifndef" }  
+
+@
+
 \subsection*{[[Arch5.ml]]}
 
 <<function [[Arch5.width_of_type]]>>=

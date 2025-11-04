@@ -1,3 +1,4 @@
+(*s: macroprocessor/Lexer_cpp.mll *)
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -464,3 +465,5 @@ and skip_for_ifdef depth bol = parse
 
   (* stricter: *)
   | eof { error "eof in #ifdef or #ifndef" }  
+
+(*e: macroprocessor/Lexer_cpp.mll *)

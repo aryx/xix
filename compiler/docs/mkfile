@@ -24,8 +24,7 @@ SRC_ML_NO_MLI=\
 
 # also $D/Parser.mly but use different -lang
 SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI \
-
-#TODO:  $D/Lexer.mll $D2/Lexer_cpp.mll
+ $D/Lexer.mll $D2/Lexer_cpp.mll
 
 SRC_ORIG=occ.nw Intro.nw occ_extra.nw
 

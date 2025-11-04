@@ -32,6 +32,16 @@ let show_line _ = "NO DERIVING"
 [@@deriving show]
 @
 
+\section{[[Builtin.mli]]}
+
+%-------------------------------------------------------------
+
+<<Builtin.mli>>=
+<<signature [[Builtin.is_builtin]]>>
+
+<<signature [[Builtin.dispatch]]>>
+@
+
 \section{[[Builtin.ml]]}
 
 %-------------------------------------------------------------
@@ -49,6 +59,20 @@ module O = Opcode
 <<function [[Builtin.dochdir]]>>
 <<constant [[Builtin.dotcmds]]>>
 <<function [[Builtin.dispatch]]>>
+@
+
+\section{[[CLI.mli]]}
+
+%-------------------------------------------------------------
+
+<<CLI.mli>>=
+
+<<type [[CLI.caps]]>>
+
+<<signature [[CLI.main]]>>
+
+(* internals *)
+<<signature [[CLI.interpret_bootstrap]]>>
 @
 
 \section{[[CLI.ml]]}
@@ -119,6 +143,14 @@ module O = Opcode
 <<function [[CLI.main]]>>
 @
 
+\section{[[Compile.mli]]}
+
+%-------------------------------------------------------------
+
+<<Compile.mli>>=
+<<signature [[Compile.compile]]>>
+@
+
 \section{[[Compile.ml]]}
 
 %-------------------------------------------------------------
@@ -155,6 +187,17 @@ module O = Opcode
 <<function [[Compile.compile]]>>
 @
 
+\section{[[Env.mli]]}
+
+%-------------------------------------------------------------
+
+<<Env.mli>>=
+type t = (string * string list) list
+
+val read_environment : < Cap.env ; .. > -> t
+
+@
+
 \section{[[Env.ml]]}
 
 %-------------------------------------------------------------
@@ -178,6 +221,14 @@ let read_environment (caps : < Cap.env; ..>) =
     else failwith (spf "wrong format for environment variable: %s" s)
   )
 
+@
+
+\section{[[Error.mli]]}
+
+%-------------------------------------------------------------
+
+<<Error.mli>>=
+<<signature [[Error.error]]>>
 @
 
 \section{[[Error.ml]]}
@@ -222,6 +273,14 @@ open Common
 @
 
 
+\section{[[Fn.mli]]}
+
+%-------------------------------------------------------------
+
+<<Fn.mli>>=
+<<signature [[Fn.flook]]>>
+@
+
 \section{[[Fn.ml]]}
 
 %-------------------------------------------------------------
@@ -230,6 +289,13 @@ open Common
 module R = Runtime
 
 <<function [[Fn.flook]]>>
+@
+
+\section{[[Glob.mli]]}
+
+%-------------------------------------------------------------
+
+<<Glob.mli>>=
 @
 
 \section{[[Glob.ml]]}
@@ -257,6 +323,13 @@ let eflagok = ref false
 <<constant [[Globals.eflagok]]>>
 @
 
+\section{[[Heredoc.mli]]}
+
+%-------------------------------------------------------------
+
+<<Heredoc.mli>>=
+@
+
 \section{[[Heredoc.ml]]}
 
 %-------------------------------------------------------------
@@ -264,6 +337,14 @@ let eflagok = ref false
 <<shell/Heredoc.ml>>=
 @
 
+
+\section{[[Interpreter.mli]]}
+
+%-------------------------------------------------------------
+
+<<Interpreter.mli>>=
+<<signature [[Interpreter.interpret_operation]]>>
+@
 
 \section{[[Interpreter.ml]]}
 
@@ -296,6 +377,20 @@ module E = Error
 
 <<function [[Interpreter.interpret_operation]]>>
 @
+
+\section{[[Lexer.mli]]}
+
+%-------------------------------------------------------------
+
+<<Lexer.mli>>=
+<<signature [[Lexer.token]]>>
+
+<<exception [[Lexer.Lexical_error]]>>
+@
+
+\section{[[Lexer.mll]]}
+
+%-------------------------------------------------------------
 
 \section{[[Main.ml]]}
 
@@ -364,6 +459,16 @@ let show_codevec _ = "NO DERIVING"
 [@@deriving show]
 @
 
+\section{[[PATH.mli]]}
+
+%-------------------------------------------------------------
+
+<<PATH.mli>>=
+<<signature [[PATH.find_in_path]]>>
+
+<<signature [[PATH.search_path_for_cmd]]>>
+@
+
 \section{[[PATH.ml]]}
 
 %-------------------------------------------------------------
@@ -379,22 +484,16 @@ module R = Runtime
 <<function [[PATH.find_in_path]]>>
 @
 
-\section{[[Lexer.mli]]}
-
-%-------------------------------------------------------------
-
-<<Lexer.mli>>=
-<<signature [[Lexer.token]]>>
-
-<<exception [[Lexer.Lexical_error]]>>
-@
-
-\section{[[Lexer.mll]]}
-
-%-------------------------------------------------------------
-
 \section{[[Parser.mly]]}
 
+
+\section{[[Parse.mli]]}
+
+%-------------------------------------------------------------
+
+<<Parse.mli>>=
+<<signature [[Parse.parse_line]]>>
+@
 
 \section{[[Parse.ml]]}
 
@@ -412,6 +511,21 @@ module R = Runtime
 <<function [[Parse.parse_line]]>>
 @
 
+
+\section{[[Pattern.mli]]}
+
+<<signature [[Pattern.match_str]]>>=
+val match_str : string -> pattern -> bool
+@
+
+%-------------------------------------------------------------
+
+<<Pattern.mli>>=
+(* todo: Glob char *)
+<<type [[Pattern.pattern]]>>
+
+<<signature [[Pattern.match_str]]>>
+@
 
 \section{[[Pattern.ml]]}
 
@@ -432,6 +546,19 @@ let match_str s1 s2 =
 <<type [[Pattern.pattern]]>>
 
 <<function [[Pattern.match_str]]>>
+@
+
+\section{[[Process.mli]]}
+
+%-------------------------------------------------------------
+
+<<Process.mli>>=
+<<type [[Process.waitfor_result]]>>
+
+<<signature [[Process.return]]>>
+<<signature [[Process.exit]]>>
+<<signature [[Process.waitfor]]>>
+<<signature [[Process.s_of_unix_error]]>>
 @
 
 \section{[[Process.ml]]}
@@ -455,6 +582,17 @@ module R = Runtime
 <<function [[Process.waitfor]]>>
 @
 
+\section{[[Prompt.mli]]}
+
+%-------------------------------------------------------------
+
+<<Prompt.mli>>=
+<<signature [[Prompt.doprompt]]>>
+<<signature [[Prompt.prompt]]>>
+
+<<signature [[Prompt.pprompt]]>>
+@
+
 \section{[[Prompt.ml]]}
 
 %-------------------------------------------------------------
@@ -466,6 +604,47 @@ module R = Runtime
 <<constant [[Prompt.prompt]]>>
 
 <<function [[Prompt.pprompt]]>>
+@
+
+\section{[[Runtime.mli]]}
+
+%-------------------------------------------------------------
+
+<<Runtime.mli>>=
+
+<<type [[Runtime.varname]]>>
+<<type [[Runtime.value]]>>
+<<type [[Runtime.var]]>>
+
+val string_of_var : var -> string
+
+<<type [[Runtime.fn]]>>
+val show_fn: fn -> string
+
+<<type [[Runtime.thread]]>>
+<<type [[Runtime.redir]]>>
+
+<<type [[Runtime.waitstatus]]>>
+
+(* globals *)
+
+<<signature [[Runtime.globals]]>>
+<<signature [[Runtime.fns]]>>
+<<signature [[Runtime.runq]]>>
+
+(* API *)
+
+<<signature [[Runtime.cur]]>>
+<<signature [[Runtime.push_list]]>>
+<<signature [[Runtime.pop_list]]>>
+<<signature [[Runtime.push_word]]>>
+<<signature [[Runtime.pop_word]]>>
+<<signature [[Runtime.push_redir]]>>
+<<signature [[Runtime.pop_redir]]>>
+<<signature [[Runtime.turf_redir]]>>
+<<signature [[Runtime.doredir]]>>
+
+<<signature [[Runtime.mk_thread]]>>
 @
 
 \section{[[Runtime.ml]]}
@@ -556,6 +735,19 @@ let string_of_var (var : var) : string =
 @
 
 
+\section{[[Status.mli]]}
+
+%-------------------------------------------------------------
+
+<<Status.mli>>=
+(* helpers to manipulate the "status" special variable (see Var.ml) *)
+
+<<signature [[Status.setstatus]]>>
+<<signature [[Status.getstatus]]>>
+<<signature [[Status.concstatus]]>>
+<<signature [[Status.truestatus]]>>
+@
+
 \section{[[Status.ml]]}
 
 %-------------------------------------------------------------
@@ -582,6 +774,18 @@ module R = Runtime
 <<function [[Status.truestatus]]>>
 @
 
+\section{[[Var.mli]]}
+
+%-------------------------------------------------------------
+
+<<Var.mli>>=
+(* Helpers to manipulate rc shell variables *)
+
+<<signature [[Var.gvlook]]>>
+<<signature [[Var.vlook]]>>
+<<signature [[Var.setvar]]>>
+<<signature [[Var.vinit]]>>
+@
 \section{[[Var.ml]]}
 
 %-------------------------------------------------------------
@@ -610,207 +814,3 @@ module R = Runtime
 @
 
 
-\section{[[Builtin.mli]]}
-
-%-------------------------------------------------------------
-
-<<Builtin.mli>>=
-<<signature [[Builtin.is_builtin]]>>
-
-<<signature [[Builtin.dispatch]]>>
-@
-
-\section{[[CLI.mli]]}
-
-%-------------------------------------------------------------
-
-<<CLI.mli>>=
-
-<<type [[CLI.caps]]>>
-
-<<signature [[CLI.main]]>>
-
-(* internals *)
-<<signature [[CLI.interpret_bootstrap]]>>
-@
-
-\section{[[Compile.mli]]}
-
-%-------------------------------------------------------------
-
-<<Compile.mli>>=
-<<signature [[Compile.compile]]>>
-@
-
-\section{[[Env.mli]]}
-
-%-------------------------------------------------------------
-
-<<Env.mli>>=
-type t = (string * string list) list
-
-val read_environment : < Cap.env ; .. > -> t
-
-@
-
-\section{[[Error.mli]]}
-
-%-------------------------------------------------------------
-
-<<Error.mli>>=
-<<signature [[Error.error]]>>
-@
-
-\section{[[Fn.mli]]}
-
-%-------------------------------------------------------------
-
-<<Fn.mli>>=
-<<signature [[Fn.flook]]>>
-@
-
-\section{[[Glob.mli]]}
-
-%-------------------------------------------------------------
-
-<<Glob.mli>>=
-@
-
-\section{[[Heredoc.mli]]}
-
-%-------------------------------------------------------------
-
-<<Heredoc.mli>>=
-@
-
-\section{[[Interpreter.mli]]}
-
-%-------------------------------------------------------------
-
-<<Interpreter.mli>>=
-<<signature [[Interpreter.interpret_operation]]>>
-@
-
-\section{[[PATH.mli]]}
-
-%-------------------------------------------------------------
-
-<<PATH.mli>>=
-<<signature [[PATH.find_in_path]]>>
-
-<<signature [[PATH.search_path_for_cmd]]>>
-@
-
-\section{[[Parse.mli]]}
-
-%-------------------------------------------------------------
-
-<<Parse.mli>>=
-<<signature [[Parse.parse_line]]>>
-@
-
-\section{[[Pattern.mli]]}
-
-<<signature [[Pattern.match_str]]>>=
-val match_str : string -> pattern -> bool
-@
-
-%-------------------------------------------------------------
-
-<<Pattern.mli>>=
-(* todo: Glob char *)
-<<type [[Pattern.pattern]]>>
-
-<<signature [[Pattern.match_str]]>>
-@
-
-\section{[[Process.mli]]}
-
-%-------------------------------------------------------------
-
-<<Process.mli>>=
-<<type [[Process.waitfor_result]]>>
-
-<<signature [[Process.return]]>>
-<<signature [[Process.exit]]>>
-<<signature [[Process.waitfor]]>>
-<<signature [[Process.s_of_unix_error]]>>
-@
-
-\section{[[Prompt.mli]]}
-
-%-------------------------------------------------------------
-
-<<Prompt.mli>>=
-<<signature [[Prompt.doprompt]]>>
-<<signature [[Prompt.prompt]]>>
-
-<<signature [[Prompt.pprompt]]>>
-@
-
-\section{[[Runtime.mli]]}
-
-%-------------------------------------------------------------
-
-<<Runtime.mli>>=
-
-<<type [[Runtime.varname]]>>
-<<type [[Runtime.value]]>>
-<<type [[Runtime.var]]>>
-
-val string_of_var : var -> string
-
-<<type [[Runtime.fn]]>>
-val show_fn: fn -> string
-
-<<type [[Runtime.thread]]>>
-<<type [[Runtime.redir]]>>
-
-<<type [[Runtime.waitstatus]]>>
-
-(* globals *)
-
-<<signature [[Runtime.globals]]>>
-<<signature [[Runtime.fns]]>>
-<<signature [[Runtime.runq]]>>
-
-(* API *)
-
-<<signature [[Runtime.cur]]>>
-<<signature [[Runtime.push_list]]>>
-<<signature [[Runtime.pop_list]]>>
-<<signature [[Runtime.push_word]]>>
-<<signature [[Runtime.pop_word]]>>
-<<signature [[Runtime.push_redir]]>>
-<<signature [[Runtime.pop_redir]]>>
-<<signature [[Runtime.turf_redir]]>>
-<<signature [[Runtime.doredir]]>>
-
-<<signature [[Runtime.mk_thread]]>>
-@
-
-\section{[[Status.mli]]}
-
-%-------------------------------------------------------------
-
-<<Status.mli>>=
-(* helpers to manipulate the "status" special variable (see Var.ml) *)
-
-<<signature [[Status.setstatus]]>>
-<<signature [[Status.getstatus]]>>
-<<signature [[Status.concstatus]]>>
-<<signature [[Status.truestatus]]>>
-@
-
-\section{[[Var.mli]]}
-
-%-------------------------------------------------------------
-
-<<Var.mli>>=
-(* Helpers to manipulate rc shell variables *)
-
-<<signature [[Var.gvlook]]>>
-<<signature [[Var.vlook]]>>
-<<signature [[Var.setvar]]>>
-<<signature [[Var.vinit]]>>
-@

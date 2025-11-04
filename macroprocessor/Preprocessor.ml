@@ -1,4 +1,4 @@
-(*s: ../macroprocessor/Preprocessor.ml *)
+(*s: macroprocessor/Preprocessor.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
@@ -24,4 +24,4 @@ type conf = {
 }
 [@@deriving show]
 (*e: type [[Preprocessor.conf]] *)
-(*e: ../macroprocessor/Preprocessor.ml *)
+(*e: macroprocessor/Preprocessor.ml *)

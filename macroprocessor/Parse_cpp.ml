@@ -1,4 +1,4 @@
-(*s: ../macroprocessor/Parse_cpp.ml *)
+(*s: macroprocessor/Parse_cpp.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -286,4 +286,4 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
                else spf ", last name: %s" !last_ident))
 (*e: function [[Parse_cpp.parse]] *)
   )
-(*e: ../macroprocessor/Parse_cpp.ml *)
+(*e: macroprocessor/Parse_cpp.ml *)

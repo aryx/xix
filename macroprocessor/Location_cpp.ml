@@ -1,4 +1,4 @@
-(*s: ../macroprocessor/Location_cpp.ml *)
+(*s: macroprocessor/Location_cpp.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -130,4 +130,4 @@ let final_loc_of_loc (lineno : loc) : final_loc =
 let _final_loc_and_includers_of_loc _lineno =
   raise Todo
 (*e: function [[Location_cpp._final_loc_and_includers_of_loc]] *)
-(*e: ../macroprocessor/Location_cpp.ml *)
+(*e: macroprocessor/Location_cpp.ml *)

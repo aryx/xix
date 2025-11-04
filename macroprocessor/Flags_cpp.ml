@@ -1,4 +1,4 @@
-(*s: ../macroprocessor/Flags_cpp.ml *)
+(*s: macroprocessor/Flags_cpp.ml *)
 
 (* -f *)
 (*s: constant [[Flags_cpp.debug_line]] *)
@@ -12,4 +12,4 @@ let debug_include = ref false
 (*s: constant [[Flags_cpp.debug_macros]] *)
 let debug_macros = ref false
 (*e: constant [[Flags_cpp.debug_macros]] *)
-(*e: ../macroprocessor/Flags_cpp.ml *)
+(*e: macroprocessor/Flags_cpp.ml *)

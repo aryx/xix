@@ -1,4 +1,4 @@
-(*s: ../macroprocessor/Ast_cpp.ml *)
+(*s: macroprocessor/Ast_cpp.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
@@ -45,4 +45,4 @@ type directive =
   }
 (*e: type [[Ast_cpp.macro]] *)
 [@@deriving show]
-(*e: ../macroprocessor/Ast_cpp.ml *)
+(*e: macroprocessor/Ast_cpp.ml *)

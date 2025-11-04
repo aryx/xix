@@ -8,7 +8,7 @@ let warn = ref false
 let warnerror = ref false
 (*e: constant [[Flags.warnerror]] *)
 
-(* see also ../macroprocessor/flags_cpp.ml *)
+(* see also macroprocessor/flags_cpp.ml *)
 
 (*s: constant [[Flags.dump_tokens]] *)
 let dump_tokens = ref false

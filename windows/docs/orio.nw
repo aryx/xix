@@ -1,0 +1,429 @@
+\documentclass[12pt]{report}
+
+\input{latex/Packages}
+\input{latex/Config}
+\input{latex/Macros}
+
+%******************************************************************************
+% Prelude
+%******************************************************************************
+
+%------------------------------------------------------------------------------
+%history: 
+%------------------------------------------------------------------------------
+
+%thx to LP, I changed for the better a few things:
+
+%thx to this manual, better understand 5a/assembler:
+
+%history LP-ization:
+
+
+\begin{document}
+%******************************************************************************
+% Title
+%******************************************************************************
+\title{
+{\Huge 
+Principia Softwarica: The Plan~9 Windowing System [[rio]]
+}\\
+OCaml edition\\
+{version 0.1}
+}
+
+\author{
+Yoann Padioleau\\
+\texttt{yoann.padioleau@gmail.com}\\
+\\
+with code from\\
+Rob Pike and Yoann Padioleau
+}
+
+\maketitle 
+
+%\onecolumn
+\hrule
+\begin{quote}
+Copyright \copyright{} 2025 Yoann Padioleau \\
+Permission is granted to copy, distribute and/or modify this document,
+except all the source code it contains, under the terms of the GNU Free
+Documentation License, Version 1.3.
+\end{quote}
+\hrule
+%\twocolumn
+
+\begingroup
+\hypersetup{linkcolor=blue}
+% need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
+\tableofcontents
+\endgroup
+
+
+%******************************************************************************
+\chapter{Introduction}
+%******************************************************************************
+
+#include "Intro.nw"
+
+%\chapter{Overview}
+% now in Intro.nw too
+
+
+\section{Code organization}
+\label{tab:code-orga}
+
+\section{Software architecture}
+\subsection{Processes,  procs, and threads relationships}
+\label{sec:thread-archi}
+\label{fig:soft-archi-threads}
+\label{fig:hellorio-and-shell}
+\subsection{Trace of a new window creation}
+\label{sec:trace-new-window}
+\label{sec:new-namespace}
+\label{sec:new-thread}
+\label{sec:new-layer}
+\subsection{Trace of a mouse click}
+\label{sec:trace-mouse-click}
+\subsection{Trace of a key press}
+\label{sec:trace-key-press}
+\subsection{Trace of a drawing operation}
+\label{sec:trace-draw}
+
+\section{Book structure}
+
+%###############################################################################
+
+
+%******************************************************************************
+\chapter{Core Data Structures}
+%******************************************************************************
+\label{chap:core-ds}
+\section{Device handlers}
+\subsection{Output device: [[display]] and [[view]]}
+\subsection{Input devices: [[mousectl]] and [[keyboardctl]]}
+\section{Desktop, [[desktop]]}
+\section{Windows}
+\label{sec:core-ds-Windows}
+\subsection{[[Window]]}
+\subsection{[[windows]]}
+\subsection{[[current]]}
+\label{sec:current}
+\subsection{Graphical windows}
+\subsection{Textual windows}
+\section{Filesystem server}
+\subsection{[[FilSys]] and [[filsys]]}
+\subsection{File state: [[Fid]]}
+\subsection{Workers and jobs: [[Xfid]]}
+\subsection{9P callbacks: [[fcall]]}
+
+%******************************************************************************
+\chapter{[[main()]]}
+%******************************************************************************
+\label{chap:main}
+\section{Graphics initialization}
+\section{Mouse initialization}
+\section{Keyboard initialization}
+\section{Channels creation}
+\section{Threads creation}
+\section{Filesystem server initialization}
+\subsection{[[filsysinit()]]}
+\subsection{Worker allocator: [[xfidinit()]]}
+
+%******************************************************************************
+\chapter{Procs and Threads}
+%******************************************************************************
+\label{chap:processes-threads}
+\section{Keyboard thread}
+\section{Mouse thread}
+\subsection{Application mouse events}
+\subsection{Windowing system mouse events}
+\section{Window threads}
+\subsection{Keyboard events listening}
+\subsection{Mouse events listening}
+\subsection{Control events listening}
+\section{Filesystem server proc}
+\subsection{[[filsysproc()]]}
+\subsection{[[filsysversion()]]}
+\section{[[Xfid]] allocator thread}
+\section{[[Xfid]] threads}
+
+%******************************************************************************
+\chapter{Cursors}
+%******************************************************************************
+\label{chap:cursor}
+\section{Cursor graphics}
+\subsection{Classic cursors}
+\subsection{Border and corner cursors}
+\section{Setting the cursor}
+\subsection{[[riosetcursor()]]}
+\subsection{[[cornercursor()]]}
+\subsection{[[wsetcursor()]]}
+
+%******************************************************************************
+\chapter{Window Manager}
+%******************************************************************************
+\label{chap:wm}
+\section{Overview}
+\section{Right-click system menu}
+\section{Window borders click}
+\section{[[Wctlmesg]]}
+\section{Window creation}
+\subsection{Window thread creation: [[new()]]}
+\subsection{[[Window]] allocation: [[wmk()]]}
+\subsection{Window process creation: [[winshell()]]}
+\subsection{Namespace adjustments: [[filsysmount()]]}
+\subsection{Public layer: [[wsetname()]]}
+\subsection{Mouse action [[sweep()]]}
+\section{Window focus}
+\section{Window deletion}
+\subsection{[[delete()]]}
+\subsection{[[deletetimeoutproc()]] and [[deletethread()]]}
+\subsection{[[Deleted]] and [[Exited]]}
+\subsection{Mouse action [[pointto()]]}
+\section{Window move}
+\subsection{[[move()]]}
+\subsection{Mouse action [[drag()]]}
+\section{Window resize}
+\subsection{[[resize()]]}
+\subsection{Mouse action [[bandsize()]]}
+\section{Window visibility}
+\label{sec:window-hide}
+\subsection{[[hide()]]}
+\subsection{[[hiddden]]}
+\subsection{[[unhide()]]}
+
+%******************************************************************************
+\chapter{Filesystem Server}
+%******************************************************************************
+\label{chap:filesystem-server}
+\section{Additional data structures}
+\subsection{[[Qxxx]]}
+\subsection{[[dirtab]]}
+\section{[[filsysrespond()]]}
+\section{Attach}
+\subsection{[[filsysattach()]]}
+\subsection{[[xfidattach()]]}
+\section{Walk}
+\subsection{[[filsyswalk()]]}
+\subsection{Cloning [[fid]]}
+\subsection{[[..]]}
+\subsection{Error management}
+\section{Open}
+\subsection{[[filsysopen()]]}
+\subsection{[[xfidopen()]]}
+\section{Clunk/Close}
+\subsection{[[filsysclunk()]]}
+\subsection{[[xfidclose()]]}
+\section{Read}
+\subsection{[[filsysread()]]}
+\subsection{Reading a directory}
+\subsection{[[xfidread()]]}
+\section{Write}
+\subsection{[[filsyswrite()]]}
+\subsection{[[xfidwrite()]]}
+\section{Stats}
+\subsection{[[filsysstat()]]}
+\section{Forbidden operations}
+
+%******************************************************************************
+\chapter{Virtual Devices}
+%******************************************************************************
+\label{chap:virtual-devices}
+\section{[[/mnt/wsys/mouse]]}
+\subsection{Reading part1}
+\subsection{Writing}
+\section{[[/mnt/wsys/cons]]}
+\subsection{Reading part1}
+\subsection{Writing part1}
+\subsection{Bytes versus runes, partial runes}
+\section{[[/mnt/wsys/consctl]]}
+\section{[[/mnt/wsys/cursor]]}
+\section{[[/dev/draw/]] and [[/mnt/wsys/winname]]}
+
+%******************************************************************************
+\chapter{Graphical Windows}
+%******************************************************************************
+\label{chap:graphical-windows}
+\section{Graphical window setup}
+\subsection{[[initdraw()]]}
+\subsection{[[initmouse()]], mouse-open mode}
+\subsection{[[initkeyboard()]], raw-access mode}
+\section{Mouse events}
+\subsection{Mouse state queue}
+\subsection{[[/mnt/wsys/mouse]]  reading part2}
+\section{Keyboard events}
+\subsection{Raw keys queue}
+\subsection{[[/mnt/wsys/cons]] reading part2}
+\section{Resize events}
+\section{[[/mnt/wsys/window]]}
+
+%******************************************************************************
+\chapter{Textual Windows}
+%******************************************************************************
+\label{chap:textual-windows}
+\section{Textual window creation}
+\subsection{Scrollbar}
+\subsection{Frame}
+\section{Frame widget}
+\label{sec:frame-widget}
+\subsection{[[Frame]]}
+\subsection{[[frinit()]]}
+\subsection{Frame colors}
+\subsection{Frame tick}
+\subsection{Frame boxes}
+\subsection{Frame strings}
+\subsection{Frame rune position, point, and box number}
+\subsection{Frame selection}
+\section{Content modification}
+\subsection{[[winsert()]]}
+\subsection{Growing array}
+\section{Content rendering}
+\subsection{[[frinsert()]]}
+\subsection{[[frdelete()]]}
+\subsection{[[wshow()]]}
+\subsection{Drawing the scrollbar: [[wscrdraw()]]}
+\subsection{Drawing the tick: [[frtick()]]}
+\subsection{Drawing the text and the selection: [[frdrawsel()]]}
+\subsection{Moving the frame origin}
+\subsection{Selecting}
+\subsection{Repainting}
+\section{Keyboard events}
+\subsection{Text input queue}
+\subsection{[[/mnt/wsys/cons]] reading part3}
+\subsection{Navigation keys}
+\subsection{Special keys}
+\section{Application output events}
+\subsection{[[/mnt/wsys/cons]] writing part2}
+\section{Mouse events}
+\subsection{Middle click menu}
+\subsection{Other clicks}
+\section{Automatic scrolling mode}
+\section{Scroll bar interaction}
+\section{Resize}
+\section{[[/mnt/wsys/text]]}
+
+%******************************************************************************
+\chapter{Windowing System Files}
+%******************************************************************************
+\label{chap:window-files}
+\section{[[/mnt/wsys/winid]]}
+\section{[[/mnt/wsys/label]]}
+\section{[[/mnt/wsys/screen]]}
+\section{[[/mnt/wsys/wsys/]]}
+\section{[[/mnt/wsys/wctl]]}
+\label{sec:mnt-wsys-wctl}
+\subsection{Reading}
+\subsection{Writing (controlling windows)}
+
+%******************************************************************************
+\chapter{Advanced Topics TODO}
+%******************************************************************************
+\label{chap:advanced}
+\section{External mount: [[/srv/rio.user.pid]]}
+\section{Command-line control: [[/srv/riowctl.user.pid]]}
+\section{Recursive [[rio]]}
+\label{sec:recursive-rio}
+\section{Advanced terminal editing}
+\subsection{Snarf}
+\label{sec:snarf}
+\subsection{Plumb}
+\label{sec:plumb}
+\subsection{Auto complete}
+\label{sec:completion}
+\label{sec:wdir}
+\subsection{Word selection}
+\section{Automatic scrolling: [[rio -s]]}
+\section{Initial command: [[rio -i]]}
+\section{Fake keyboard input: [[rio -k]]}
+\subsection{[[rio -k]]}
+\subsection{[[wkeyboard]]}
+\subsection{[[/mnt/wsys/kdbin]]}
+\subsection{Keyboard hide}
+\section{Font selection: [[rio -f]]}
+\section{Holding mode}
+\section{Signals, notes}
+\section{Timer}
+\section{Flushing}
+\section{Security}
+\section{TODO [[Wakeup]]}
+\section{TODO [[Refresh]]}
+
+%******************************************************************************
+\chapter{Conclusion}
+%******************************************************************************
+\label{chap:conclusion}
+
+%###############################################################################
+
+\appendix
+
+%******************************************************************************
+\chapter{Debugging}
+%******************************************************************************
+\label{chap:debugging-appendix}
+
+%******************************************************************************
+\chapter{Error Management}
+%******************************************************************************
+\label{chap:error}
+\section{Error codes}
+\section{[[error()]], [[derror()]]}
+
+%******************************************************************************
+\chapter{Utilities}
+%******************************************************************************
+\label{chap:utilities}
+
+%******************************************************************************
+\chapter{Examples of Windowing System Applications TODO}
+%******************************************************************************
+\label{chap:examples}
+
+%******************************************************************************
+\chapter{Extra Code}
+%******************************************************************************
+
+#include "orio_extra.nw"
+
+
+\chapter*{Glossary}
+\addcontentsline{toc}{chapter}{Glossary}
+\label{sec:glossary}
+
+\begin{verbatim}
+API = Application Programming Interface
+GUI = Graphical User Interface
+IDE = Integrated Development Environment
+IPC = Inter Process Communication
+RPC = Remote Procedure Call
+LOC = Lines Of Code
+PTY = Pseudo TTY
+TTY = Teletype
+WIMP = Window Icon Menu Pointer
+MIME = Multipurpose Internet Mail Extensions
+PDA = Personal Digital Assistant
+\end{verbatim}
+
+
+\chapter*{Indexes}
+\addcontentsline{toc}{chapter}{Index}
+
+%src: wc.nw in noweb source
+Here is a list of the identifiers used, and where they appear.
+Underlined entries indicate the place of definition.
+This index is generated automatically.
+
+%\twocolumn does not work
+\nowebindex
+
+%\chapter{References} 
+\addcontentsline{toc}{chapter}{References}
+
+\bibliography{../docs/latex/Principia}
+\bibliographystyle{alpha}
+
+%******************************************************************************
+% Postlude
+%******************************************************************************
+
+\end{document}

@@ -51,7 +51,7 @@ let thread_main (caps: < caps; .. >) : Exit.t =
    * let view = display.image in
    * less: let viewr save?
    *)
-  let view : Image.t = Draw_rio.get_view caps display in
+  let view : Display.image = Draw_rio.get_view caps display in
   let font : Font.t = Font_default.load_default_font display in
 
   if !Globals.debug_draw

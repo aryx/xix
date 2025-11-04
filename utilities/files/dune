@@ -14,6 +14,11 @@
  (preprocess (pps ppx_deriving.show))
  (modes native byte)
 )
+(executable (name Wc) (modules Wc)
+ (libraries str unix xix_commons)
+ (preprocess (pps ppx_deriving.show))
+ (modes native byte)
+)
 
 
 (install
@@ -22,5 +27,6 @@
  (files
   (Cat.exe as ocat)
   (Pwd.exe as opwd)
+  (Wc.exe as owc)
  )
 )

@@ -363,6 +363,9 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
                failwith (spf "%s" (Unix.error_message error))
          done;
          Exit.Code 1
+      | Sys_error s ->
+         Logs.err (fun m -> m "mk: %s" s);
+         Exit.Code 2
       (*e: [[CLI.main()]] when [[Failure]] [[exn]] thrown in [[build_targets()]] *)
       | _ -> raise exn
       )

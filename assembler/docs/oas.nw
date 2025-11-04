@@ -1,0 +1,334 @@
+\documentclass[12pt]{report}
+
+\input{latex/Packages}
+\input{latex/Config}
+\input{latex/Macros}
+
+%******************************************************************************
+% Prelude
+%******************************************************************************
+
+%------------------------------------------------------------------------------
+%history: 
+%------------------------------------------------------------------------------
+
+%thx to LP, I changed for the better a few things:
+
+%thx to this manual, better understand 5a/assembler:
+
+%history LP-ization:
+
+
+\begin{document}
+%******************************************************************************
+% Title
+%******************************************************************************
+\title{
+{\Huge 
+Principia Softwarica: The ARM Assembler [[5a]]
+}\\
+OCaml edition\\
+{version 0.1}
+}
+
+\author{
+Yoann Padioleau\\
+\texttt{yoann.padioleau@gmail.com}\\
+\\
+with code from\\
+Rob Pike and Yoann Padioleau
+}
+
+\maketitle 
+
+%\onecolumn
+\hrule
+\begin{quote}
+Copyright \copyright{} 2025 Yoann Padioleau \\
+Permission is granted to copy, distribute and/or modify this document,
+except all the source code it contains, under the terms of the GNU Free
+Documentation License, Version 1.3.
+\end{quote}
+\hrule
+%\twocolumn
+
+\begingroup
+\hypersetup{linkcolor=blue}
+% need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
+\tableofcontents
+\endgroup
+
+
+%******************************************************************************
+\chapter{Introduction}
+%******************************************************************************
+
+#include "Intro.nw"
+
+%\chapter{Overview}
+% now in Intro.nw too
+
+\section{Code organization}
+\label{tab:code-orga}
+
+\section{Software architecture}
+\label{sec:archi}
+
+\section{Book structure}
+
+
+%******************************************************************************
+\chapter{Core Data Structures}
+%******************************************************************************
+\label{chap:core-ds}
+
+\section{[[Opcode]]}
+\label{sec:opcode}
+\section{[[Register]]}
+\section{[[Operand]]}
+\section{Instructions}
+\label{sec:outcode-signature}
+\section{Tokens and [[itab]]}
+\label{sec:token}
+\label{sec:union}
+\section{[[Sym]]bols and [[hash]] table}
+\label{sec:symbol-table}
+\section{[[Sym_kind]]}
+
+%******************************************************************************
+\chapter{Main Functions}
+%******************************************************************************
+\label{chap:main}
+
+\section{[[main()]]}
+\section{[[cinit()]]}
+\section{[[assemble()]]}
+\label{fig:assembler-ofile-outfile}
+
+%******************************************************************************
+\chapter{Input}
+%******************************************************************************
+\label{chap:input}
+\section{[[pinit()]]}
+\section{File management: [[iostack]]}
+\label{sec:iostack}
+\section{Buffer management: [[fi]]}
+\section{[[GETC()]]}
+
+%******************************************************************************
+\chapter{Lexing}
+%******************************************************************************
+\label{chap:lexing}
+\section{[[yylex()]]}
+\section{Peek, seek, and look ahead}
+\section{Newlines (and semicolons)}
+\label{sec:semicolon}
+\section{Comments}
+\label{sec:yylex-comments}
+\section{Mnemonics, symbols, and labels}
+\label{sec:yylex-identifiers}
+\section{Numbers}
+\subsection{Decimal numbers}
+\label{sec:yylex-decimal-numbers}
+\subsection{Hexadecimal and octal numbers}
+\subsection{Floating-point numbers}
+\section{Characters}
+\subsection{Escaped sequences}
+\subsection{Triple quotes}
+\subsection{[[escchar()]]}
+\subsection{Escaped newlines}
+\subsection{[[getc()]]}
+\section{Strings}
+
+%******************************************************************************
+\chapter{Preprocessing}
+%******************************************************************************
+\label{chap:preprocessing}
+
+\section{Directives dispatch: [[mactab]], and [[domacro()]]}
+\section{[[#include]]}
+\subsection{Include search path}
+\subsection{[[-I]]}
+\subsection{System paths}
+\subsection{[[macinc()]]}
+\section{[[#line]]}
+\label{sec:sharp-line}
+\subsection{Motivations}
+\subsection{[[maclin()]]}
+
+%******************************************************************************
+\chapter{Parsing}
+%******************************************************************************
+\label{chap:parsing}
+\section{Overview}
+\label{sec:semicolon-terminator-grammar}
+\label{sec:empty-instr}
+\section{Instructions}
+\subsection{Arithmetic and logic}
+\label{sec:bitshift-opcodes}
+\subsection{Memory}
+\subsection{Control flow}
+\label{sec:conditional-jump}
+\subsection{Software interrupt}
+\section{Label definitions and [[pc]]}
+\label{sec:label-def}
+\section{Operands}
+\label{sec:operands-grammar}
+\label{sec:imsr}
+\subsection{Registers}
+\subsection{Immediate constants}
+\subsection{ARM shifted registers}
+\label{sec:shift-register}
+\subsection{Memory (de)references, pointers}
+\subsection{Named memory locations, symbols}
+\label{sec:name-rule}
+\subsection{Code references, labels}
+\section{Pseudo instructions}
+\subsection{[[TEXT/GLOBL]]}
+\subsection{[[WORD/DATA]]}
+\label{sec:WORD}
+\subsection{[[END]]}
+\section{ARM conditional execution}
+\label{sec:cond-exec}
+\section{Special bits}
+\label{sec:special-bits}
+\subsection{Arithmetic instructions and [[.S]]}
+\subsection{Moves and [[.P]]/[[.W]]}
+\section{[[yyparse()]]}
+
+%******************************************************************************
+\chapter{Object Code Generation}
+%******************************************************************************
+\label{chap:generation}
+\section{Object format}
+\label{sec:object-format-complete}
+\label{fig:object-format-complete}
+\section{Instruction output: [[outcode()]]}
+\section{Operand output: [[outopd()]]}
+\section{Object file symbol table: [[h]] and [[ANAME]]}
+\label{sec:spreaded-symbol-table}
+\label{sec:symidx-sym-field}
+
+%******************************************************************************
+\chapter{Debugging Support}
+%******************************************************************************
+\label{chap:debugging}
+\section{Line origin history: [[Hist]]}
+\label{sec:line-history}
+\section{Recording history: [[linehist()]]}
+\label{fig:hist}
+\section{Displaying history: [[prfile()]]}
+\section{Saving history: [[outhist()]] and [[AHISTORY]]}
+\label{sec:object-file-history}
+
+%******************************************************************************
+\chapter{Advanced Topics TODO}
+%******************************************************************************
+\label{chap:advanced}
+\section{Other assembly language features}
+\subsection{Constant expressions}
+\label{sec:constant-expr}
+\subsection{Symbolic constants}
+\subsection{Optional commas}
+\section{Other instructions and registers}
+\subsection{Floating-point numbers}
+\label{sec:float}
+\subsection{Multiplication and accumulation}
+\subsection{64-bits multiplication}
+\subsection{Moving multiple registers at the same time}
+\label{sec:movm}
+\subsection{Program status register}
+\subsection{Mutual exclusion instructions}
+\subsection{Coprocessors}
+\section{Other pseudo opcodes}
+\subsection{Compiler-only opcodes}
+\subsection{Linker-only opcodes}
+\section{[[TEXT]] attributes}
+\label{sec:attributes}
+\section{Other preprocessing directives}
+\label{sec:preprocessing-rest}
+\subsection{[[#define]]}
+\label{sec:macro-sym-field}
+\label{sec:macro-expansion}
+\subsection{[[#undef]]}
+\subsection{[[#ifdef]]}
+\subsection{[[#pragma]]}
+\section{[[#pragma lib]] and automagic linking}
+\section{Processing multiple files}
+
+%******************************************************************************
+\chapter{Conclusion}
+%******************************************************************************
+\label{chap:conclusion}
+
+%##############################################################################
+
+\appendix
+
+%******************************************************************************
+\chapter{Debugging}
+%******************************************************************************
+\label{chap:debugging-appendix}
+\section{Line information debugging: [[5a -f]]}
+\label{sec:debug-line}
+\section{Macro debugging: [[5a -m]]}
+
+%******************************************************************************
+\chapter{Error Management}
+%******************************************************************************
+\label{chap:error}
+
+%******************************************************************************
+\chapter{Utilities}
+%******************************************************************************
+\label{chap:libc}
+\section{Buffer management}
+\label{sec:libbio}
+\section{Memory management}
+\label{sec:memory}
+
+%******************************************************************************
+\chapter{Examples of Assembly Programs TODO}
+%******************************************************************************
+\label{chap:examples}
+\section{[[hello.s]] and [[pwrite.s]]}
+\section{[[memset.s]]}
+\section{[[div.s]]}
+\label{sec:_divmod}
+\section{[[main9.s]]}
+\section{[[tas.s]]}
+\section{[[getcallerpc.s]]}
+
+%******************************************************************************
+\chapter{Extra Code}
+%******************************************************************************
+
+#include "oas_extra.nw"
+
+\chapter*{Glossary}
+\addcontentsline{toc}{chapter}{Glossary}
+\label{sec:glossary}
+
+\begin{verbatim}
+LOC = Lines Of Code
+\end{verbatim}
+
+\chapter*{Indexes}
+\addcontentsline{toc}{chapter}{Indexes}
+
+Here is a list of the identifiers used, and where they appear.
+Underlined entries indicate the place of definition.
+This index is generated automatically.
+
+\nowebindex
+
+\addcontentsline{toc}{chapter}{References}
+
+\bibliography{../docs/latex/Principia}
+\bibliographystyle{alpha}
+
+%******************************************************************************
+% Postlude
+%******************************************************************************
+
+\end{document}

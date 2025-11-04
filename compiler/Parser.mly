@@ -1,3 +1,4 @@
+/*(*s: Parser.mly *)*/
 %{
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -943,3 +944,5 @@ storage_and_type:
  | Ttypedef qualifiers type_ { Right (), $3 }
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
 
+
+/*(*e: Parser.mly *)*/

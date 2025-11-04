@@ -1186,110 +1186,6 @@ rule token = parse
 
 %-------------------------------------------------------------
 
-<<Lexer_asm.mll>>=
-{
-(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
-open Common
-
-open Token_asm
-module L = Location_cpp
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-<<function [[Lexer_asm.error]]>>
-
-<<function [[Lexer_asm.code_of_escape_char]]>>
-
-<<function [[Lexer_asm.string_of_ascii]]>>
-
-<<function [[Lexer_asm.char_]]>>
-
-(*****************************************************************************)
-(* Regexps aliases *)
-(*****************************************************************************)
-<<constant [[Lexer_asm.letter]]>>
-<<constant [[Lexer_asm.space]]>>
-<<constant [[Lexer_asm.digit]]>>
-<<constant [[Lexer_asm.hex]]>>
-<<constant [[Lexer_asm.oct]]>>
-  | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
-
-  (* stricter: I impose some digit+ after '.' and after 'e' *)
-  | (digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?
-     { TFLOAT (float_of_string (Lexing.lexeme lexbuf)) }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Chars/Strings *)
-  (* ----------------------------------------------------------------------- *)
-  | "'" { TINT (char lexbuf) }
-  | '"' 
-      { let s = string lexbuf in
-        (* less: why this limit though? *)
-        if String.length s > 8
-        then error ("string constant too long")
-        else TSTRING s
-      }
-
-  (* ----------------------------------------------------------------------- *)
-  (* CPP *)
-  (* ----------------------------------------------------------------------- *)
-  (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asmX.ml) *)
-  | "#" { TSharp }
-
-  (* ----------------------------------------------------------------------- *)
-  (* less: maybe return a fake semicolon the first time? *)
-  | eof { EOF }
-  | _ (*as c*)   { let c = char_ lexbuf in
-                   error (spf "unrecognized character: '%c'" c) }
-
-(*****************************************************************************)
-(* Rule char *)
-(*****************************************************************************)
-and char = parse
-  | "''"                            { Char.code '\'' }
-  | "\\" ((oct oct? oct?) (*as s*)) "'" 
-      { let s = Lexing.lexeme lexbuf |>
-           String_.drop_prefix 1 |> String_.drop_suffix 1 in
-         int_of_string ("0o" ^ s) }
-  | "\\" (['a'-'z'] (*as c*)) "'"       
-     { let c = String.get (Lexing.lexeme lexbuf) 1 in
-       code_of_escape_char c }
-  | [^ '\\' '\'' '\n'] (*as c*)  "'"    
-      { let c = String.get (Lexing.lexeme lexbuf) 0 in
-        Char.code c }
-  | '\n' { error "newline in character" }
-  | eof  { error "end of file in character" }
-  | _    { error "missing '" }
-
-(*****************************************************************************)
-(* Rule string *)
-(*****************************************************************************)
-and string = parse
-  | '"' { "" }
-  | "\\" ((oct oct oct) (*as s*))
-      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
-        let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
-  | "\\" (['a'-'z'] (*as c*)) 
-      { let c = String.get (Lexing.lexeme lexbuf) 1 in
-        let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
-  | [^ '\\' '"' '\n']+   
-      { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
-  | '\n' { error "newline in string" }
-  | eof  { error "end of file in string" }
-  | _    { error "undefined character in string" }
-
-(*****************************************************************************)
-(* Rule comment *)
-(*****************************************************************************)
-and comment = parse
-  | "*/"          { token lexbuf }
-  | [^ '*' '\n']+ { comment lexbuf }
-  | '*'           { comment lexbuf }
-  | '\n'          { incr L.line; comment lexbuf }
-  | eof           { error "end of file in comment" }
-@
-
 
 \section{[[Main.ml]]}
 
@@ -1596,6 +1492,29 @@ open Ast_asm5
 
 @
 
+\section{[[Parser_asm5.mly]]}
+
+\section{[[Resolve_labels.mli]]}
+
+<<signature [[Resolve_labels.resolve]]>>=
+(* The final program has neither labels (defs and uses) nor 
+ * relative jumps in branching instructions.
+ * Those are converted in absolute jumps.
+ * !!Actually works by side effect on input program so take care!!
+ *)
+val resolve: 
+  ('instr -> Ast_asm.branch_operand option) ->
+  'instr Ast_asm.program -> 'instr Ast_asm.program
+@
+
+
+%-------------------------------------------------------------
+
+<<Resolve_labels.mli>>=
+
+<<signature [[Resolve_labels.resolve]]>>
+@
+
 
 \section{[[Resolve_labels.ml]]}
 
@@ -1709,28 +1628,6 @@ open Ast_asm
 (*****************************************************************************)
 
 <<function [[Resolve_labels.resolve]]>>
-@
-
-
-\section{[[Resolve_labels.mli]]}
-
-<<signature [[Resolve_labels.resolve]]>>=
-(* The final program has neither labels (defs and uses) nor 
- * relative jumps in branching instructions.
- * Those are converted in absolute jumps.
- * !!Actually works by side effect on input program so take care!!
- *)
-val resolve: 
-  ('instr -> Ast_asm.branch_operand option) ->
-  'instr Ast_asm.program -> 'instr Ast_asm.program
-@
-
-
-%-------------------------------------------------------------
-
-<<Resolve_labels.mli>>=
-
-<<signature [[Resolve_labels.resolve]]>>
 @
 
 

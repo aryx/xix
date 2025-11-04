@@ -119,6 +119,113 @@ Documentation License, Version 1.3.
 \chapter{Lexing}
 %******************************************************************************
 \label{chap:lexing}
+
+<<Lexer_asm.mll>>=
+{
+(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+
+open Token_asm
+module L = Location_cpp
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+<<function [[Lexer_asm.error]]>>
+
+<<function [[Lexer_asm.code_of_escape_char]]>>
+
+<<function [[Lexer_asm.string_of_ascii]]>>
+
+<<function [[Lexer_asm.char_]]>>
+
+(*****************************************************************************)
+(* Regexps aliases *)
+(*****************************************************************************)
+<<constant [[Lexer_asm.letter]]>>
+<<constant [[Lexer_asm.space]]>>
+<<constant [[Lexer_asm.digit]]>>
+<<constant [[Lexer_asm.hex]]>>
+<<constant [[Lexer_asm.oct]]>>
+  | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
+
+  (* stricter: I impose some digit+ after '.' and after 'e' *)
+  | (digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?
+     { TFLOAT (float_of_string (Lexing.lexeme lexbuf)) }
+
+  (* ----------------------------------------------------------------------- *)
+  (* Chars/Strings *)
+  (* ----------------------------------------------------------------------- *)
+  | "'" { TINT (char lexbuf) }
+  | '"' 
+      { let s = string lexbuf in
+        (* less: why this limit though? *)
+        if String.length s > 8
+        then error ("string constant too long")
+        else TSTRING s
+      }
+
+  (* ----------------------------------------------------------------------- *)
+  (* CPP *)
+  (* ----------------------------------------------------------------------- *)
+  (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asmX.ml) *)
+  | "#" { TSharp }
+
+  (* ----------------------------------------------------------------------- *)
+  (* less: maybe return a fake semicolon the first time? *)
+  | eof { EOF }
+  | _ (*as c*)   { let c = char_ lexbuf in
+                   error (spf "unrecognized character: '%c'" c) }
+
+(*****************************************************************************)
+(* Rule char *)
+(*****************************************************************************)
+and char = parse
+  | "''"                            { Char.code '\'' }
+  | "\\" ((oct oct? oct?) (*as s*)) "'" 
+      { let s = Lexing.lexeme lexbuf |>
+           String_.drop_prefix 1 |> String_.drop_suffix 1 in
+         int_of_string ("0o" ^ s) }
+  | "\\" (['a'-'z'] (*as c*)) "'"       
+     { let c = String.get (Lexing.lexeme lexbuf) 1 in
+       code_of_escape_char c }
+  | [^ '\\' '\'' '\n'] (*as c*)  "'"    
+      { let c = String.get (Lexing.lexeme lexbuf) 0 in
+        Char.code c }
+  | '\n' { error "newline in character" }
+  | eof  { error "end of file in character" }
+  | _    { error "missing '" }
+
+(*****************************************************************************)
+(* Rule string *)
+(*****************************************************************************)
+and string = parse
+  | '"' { "" }
+  | "\\" ((oct oct oct) (*as s*))
+      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+        let i = int_of_string ("0o" ^ s) in string_of_ascii i ^ string lexbuf }
+  | "\\" (['a'-'z'] (*as c*)) 
+      { let c = String.get (Lexing.lexeme lexbuf) 1 in
+        let i = code_of_escape_char c in string_of_ascii i ^ string lexbuf  }
+  | [^ '\\' '"' '\n']+   
+      { let x = Lexing.lexeme lexbuf in x ^ string lexbuf }
+  | '\n' { error "newline in string" }
+  | eof  { error "end of file in string" }
+  | _    { error "undefined character in string" }
+
+(*****************************************************************************)
+(* Rule comment *)
+(*****************************************************************************)
+and comment = parse
+  | "*/"          { token lexbuf }
+  | [^ '*' '\n']+ { comment lexbuf }
+  | '*'           { comment lexbuf }
+  | '\n'          { incr L.line; comment lexbuf }
+  | eof           { error "end of file in comment" }
+@
+
+
+
 \section{[[yylex()]]}
 \section{Peek, seek, and look ahead}
 \section{Newlines (and semicolons)}
@@ -160,9 +267,392 @@ Documentation License, Version 1.3.
 \chapter{Parsing}
 %******************************************************************************
 \label{chap:parsing}
+
 \section{Overview}
 \label{sec:semicolon-terminator-grammar}
 \label{sec:empty-instr}
+
+
+<<Parser_asm5.mly>>=
+%{
+(* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+open Either
+
+open Ast_asm
+open Parser_asm
+open Ast_asm5
+module L = Location_cpp
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* The 5a ARM assembly grammar.
+ *
+ * Limitations compared to 5a:
+ *  - just imm for SWI
+ *
+ * todo:
+ *  - special bits
+ *  - lots of advanced instructions (float, mulm, ...)
+ *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+(* See Parser_asm.ml *)
+
+%}
+
+/*(*************************************************************************)*/
+/*(*1 Tokens *)*/
+/*(*************************************************************************)*/
+
+/*(*-----------------------------------------*)*/
+/*(*2 opcodes *)*/
+/*(*-----------------------------------------*)*/
+
+%token <Ast_asm5.arith_opcode> TARITH
+%token <Ast_asm5.arithf_opcode * Ast_asm.floatp_precision> TARITHF
+%token <Ast_asm.floatp_precision> TCMPF
+%token TMVN
+%token <Ast_asm.move_size> TMOV TSWAP
+%token TB  TBL
+%token <Ast_asm5.cmp_opcode> TCMP   
+%token <Ast_asm5.condition> TBx TCOND
+%token TSWI TRFE
+
+%token TRET TNOP
+
+%token TTEXT TGLOBL 
+%token TDATA TWORD 
+
+/*(*-----------------------------------------*)*/
+/*(*2 registers *)*/
+/*(*-----------------------------------------*)*/
+
+%token <Ast_asm.register> TRx
+%token <Ast_asm.fregister> TFx
+%token TR TF
+%token TPC TSB TFP TSP
+
+%token TC
+%token <Ast_asm5.creg> TCx
+
+/*(*-----------------------------------------*)*/
+/*(*2 Constants *)*/
+/*(*-----------------------------------------*)*/
+
+%token <int> TINT
+%token <float> TFLOAT
+%token <string> TSTRING
+
+/*(*-----------------------------------------*)*/
+/*(*2 Names *)*/
+/*(*-----------------------------------------*)*/
+%token <string> TIDENT
+
+/*(*-----------------------------------------*)*/
+/*(*2 Punctuation *)*/
+/*(*-----------------------------------------*)*/
+
+/*(* line number *)*/
+%token <int> TSEMICOLON 
+
+%token TCOLON TDOT TDOLLAR
+%token TC
+%token TOPAR TCPAR
+
+/*(*-----------------------------------------*)*/
+/*(*2 Operators *)*/
+/*(*-----------------------------------------*)*/
+
+%token TSHL TSHR   TSHMINUS TSHAT
+%token TPLUS TMINUS TTILDE TMUL TMOD
+%token TSLASH
+
+/*(*-----------------------------------------*)*/
+/*(*2 Misc *)*/
+/*(*-----------------------------------------*)*/
+%token TSharp
+%token EOF
+
+/*(*************************************************************************)*/
+/*(*1 Priorities *)*/
+/*(*************************************************************************)*/
+%left TOR
+%left TXOR
+%left TAND
+%left TLT TGT
+%left TPLUS TMINUS
+%left TMUL TSLASH TMOD
+
+/*(*************************************************************************)*/
+/*(*1 Rules type declaration *)*/
+/*(*************************************************************************)*/
+
+%type <Ast_asm5.instr_with_cond Ast_asm.lines> program
+%start program
+
+%%
+
+/*(*************************************************************************)*/
+/*(*1 Program (arch independent) *)*/
+/*(*************************************************************************)*/
+
+program: lines EOF { $1 }
+
+lines: 
+ | /*empty*/  { [] }
+ | line lines { $1 @ $2 }
+
+line: 
+ |               TSEMICOLON { [] }
+ | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
+ | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
+ | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
+
+ | label_def line           { $1::$2 }
+
+label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
+
+/*(*************************************************************************)*/
+/*(*1 Pseudo instructions (arch independent) *)*/
+/*(*************************************************************************)*/
+/*(* I can't factorize in attr_opt; shift/reduce conflict with TC *)*/
+pseudo_instr:
+ | TTEXT  global TC imm    
+     { TEXT  ($2, noattr, $4) }
+ | TGLOBL global TC imm    
+     { GLOBL ($2, noattr, $4) }
+
+ /*(* less: would be better to have mnemonics for attributes too *)*/
+ | TTEXT global TC con TC imm
+     { TEXT ($2, attributes_of_int $4, $6) }
+ | TGLOBL global TC con TC imm
+     { GLOBL ($2, attributes_of_int $4, $6) }
+
+ | TDATA global_and_offset TSLASH con TC ximm  
+     { DATA (fst $2, snd $2, $4, $6) }
+ | TWORD ximm
+     { WORD $2 }
+
+
+/*(* stricter: I introduced those intermediate rules *)*/
+global: name
+  { match $1 with
+    | Global (e, 0) -> e
+    | _ -> error "global (without any offset) expected"
+  } 
+
+global_and_offset: name
+  { match $1 with
+    | Global (e, n) -> (e, n)
+    | _ -> error "global with offset expected"
+  } 
+
+/*(*************************************************************************)*/
+/*(*1 Virtual instructions (arch independent) *)*/
+/*(*************************************************************************)*/
+
+virtual_instr:
+ /*(* was in instr before. stricter: no cond (nor comma) *)*/
+ | TRET                  { RET }
+
+/*(*************************************************************************)*/
+/*(*1 Instructions, arch specific!! *)*/
+/*(*************************************************************************)*/
+
+instr:
+ | TARITH cond  imsr TC reg TC reg 
+     { (Arith ($1, None, $3, Some $5, $7), $2) }
+ | TARITH cond  imsr TC reg  { (Arith ($1,  None, $3, None, $5), $2) }
+ | TMVN   cond  imsr TC reg  { (Arith (MVN, None, $3, None, $5), $2) }
+
+ | TARITHF cond frcon         TC freg  { (ArithF ($1, $3, None, $5), $2) }
+ | TARITHF cond frcon TC freg TC freg  { (ArithF ($1, $3, Some $5, $7), $2) }
+ | TCMPF cond freg TC freg             { (CmpF ($1, $3, $5), $2) }
+
+ | TMOV   cond  gen  TC gen     { (MOVE ($1, None, $3, $5), $2) }
+
+ | TSWAP  cond  reg  TC ireg    { (SWAP ($1, $5, $3, None), $2) }
+ | TSWAP  cond  ireg TC reg     { (SWAP ($1, $3, $5, None), $2) }
+ | TSWAP  cond  reg  TC ireg TC reg 
+     { (SWAP ($1, $5, $3, Some $7), $2) }
+
+ /*(*stricter: no cond here, use Bxx form, so normalized AST *)*/
+ | TB        branch           { (B $2, AL) }
+ | TBx       rel              { (Bxx ($1, $2), AL) }
+ | TBL  cond branch           { (BL $3, $2)}
+ | TCMP cond imsr TC reg  { (Cmp ($1, $3, $5), $2) } 
+
+ | TSWI cond imm { (SWI $3, $2) }
+ | TRFE cond     { (RFE, $2) }
+
+/*(*************************************************************************)*/
+/*(*1 Operands *)*/
+/*(*************************************************************************)*/
+
+imsr:
+ | imm   { Imm $1 }
+ | shift { $1 }
+ | reg   { Reg $1 }
+
+
+imm: TDOLLAR con      { $2 }
+
+reg:
+ | TRx                { $1 }
+ /*(* stricter? could remove, redundant with cpp *)*/
+ | TR TOPAR expr TCPAR 
+     { if $3 <= 15 && $3 >= 0
+       then R $3
+       else error "register value out of range"
+     }
+
+/*(* ARM specific *)*/
+shift:
+ | reg TSHL rcon     { Shift ($1, Sh_logic_left, $3)  }
+ | reg TSHR rcon     { Shift ($1, Sh_logic_right, $3)  }
+ | reg TSHMINUS rcon { Shift ($1, Sh_arith_right, $3)  }
+ | reg TSHAT rcon    { Shift ($1, Sh_rotate_right, $3)  }
+
+rcon:
+ | reg { Left $1 }
+ | con { if ($1 >= 0 && $1 <= 31)
+         then Right $1 
+         else error "shift value out of range" 
+       }
+
+
+
+gen:
+ | ximm  { match $1 with Int x -> Imsr (Imm x) | x -> Ximm x }
+ | shift { Imsr ($1) }
+ | reg   { Imsr (Reg $1) }
+
+ | ioreg { $1 }
+ | name                    { Entity $1 }
+ | con TOPAR pointer TCPAR { Entity ($3 None $1) }
+
+ximm:
+ | imm             { Int $1 }
+ | fcon            { Float $1 }
+ | TDOLLAR TSTRING { String $2 }
+ | TDOLLAR name    { Address $2 }
+
+ioreg:
+ | ireg     { Indirect ($1, 0) }
+ | con ireg { Indirect ($2, $1) }
+
+ireg: TOPAR reg TCPAR { $2 }
+
+
+
+branch: 
+ | rel               { $1 }
+ | global            { ref (SymbolJump $1) }
+ | ireg              { ref (IndirectJump $1) }
+
+rel:
+ | TIDENT offset        { ref (LabelUse ($1, $2)) }
+ | con TOPAR TPC TCPAR  { ref (Relative $1) }
+
+/*(*-----------------------------------------*)*/
+/*(*2 name and offset (arch independent)  *)*/
+/*(*-----------------------------------------*)*/
+
+name: 
+ | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
+
+pointer: 
+ | TSB  { (fun name_opt offset ->
+           match name_opt with
+           | None -> error "identifier expected"
+           | Some e -> Global (e, offset)
+          )
+         }
+ | TSP  { (fun name_opt offset ->
+           match name_opt with
+           | None -> Param (None, offset)
+           | Some ({name = s; priv = _false; signature = _}) -> Param (Some s, offset)
+           )
+         }
+ | TFP  { (fun name_opt offset ->
+           match name_opt with
+           | None -> Local (None, offset)
+           | Some ({name = s; priv = _false; signature = _}) -> Local (Some s, offset)
+           )
+         }
+
+
+offset:
+ | /* empty */ { 0 }
+ | TPLUS  con  { $2 }
+ | TMINUS con  { - $2 }
+
+/*(*-----------------------------------------*)*/
+/*(*2 float *)*/
+/*(*-----------------------------------------*)*/
+
+freg:
+ | TFx                { $1 }
+ | TF TOPAR con TCPAR 
+     { if $3 <= 15 && $3 >= 0
+       then FR $3
+       else error "register value out of range"
+     }
+
+frcon:
+  | freg { Right $1 }
+  | fcon { Left $1 }
+
+/*(*-----------------------------------------*)*/
+/*(*2 number constants and expressions (arch independent)  *)*/
+/*(*-----------------------------------------*)*/
+
+con:
+ | TINT { $1 }
+
+ | TMINUS con { - $2 }
+ | TPLUS  con { $2 }
+ | TTILDE con { lnot $2 }
+
+ | TOPAR expr TCPAR { $2 }
+
+fcon: 
+ | TDOLLAR TFLOAT { $2 }
+ | TDOLLAR TMINUS TFLOAT { -. $3 }
+
+expr:
+ | con { $1 }
+
+ | expr TPLUS expr  { $1 + $3 }
+ | expr TMINUS expr { $1 - $3 }
+ | expr TMUL expr   { $1 * $3 }
+ | expr TSLASH expr { $1 / $3 }
+ | expr TMOD expr   { $1 mod $3 }
+
+ | expr TLT TLT expr { $1 lsl $4 }
+ | expr TGT TGT expr { $1 asr $4 }
+
+ | expr TAND expr    { $1 land $3 }
+ | expr TOR expr     { $1 lor $3 }
+ | expr TXOR expr    { $1 lxor $3 }
+
+/*(*************************************************************************)*/
+/*(*1 Misc *)*/
+/*(*************************************************************************)*/
+
+/*(* todo: special bits or inline in previous rule? *)*/
+cond:
+ | /* empty */ { AL }
+ | TCOND  { $1 }
+
+@
+
+
 \section{Instructions}
 \subsection{Arithmetic and logic}
 \label{sec:bitshift-opcodes}

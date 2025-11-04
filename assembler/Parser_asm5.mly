@@ -1,3 +1,4 @@
+/*(*s: Parser_asm5.mly *)*/
 %{
 (* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
@@ -373,3 +374,5 @@ expr:
 cond:
  | /* empty */ { AL }
  | TCOND  { $1 }
+
+/*(*e: Parser_asm5.mly *)*/

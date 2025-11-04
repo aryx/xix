@@ -41,26 +41,19 @@ let show_instrs _ = "NO DERIVING"
 <<function [[Ast.dump_ast]]>>
 @
 
-\section{[[Parser.mly]]}
+\section{[[CLI.mli]]}
 
 %-------------------------------------------------------------
 
-\section{[[Lexer.mli]]}
+<<CLI.mli>>=
 
-%-------------------------------------------------------------
+<<type [[CLI.caps]]>>
 
-<<Lexer.mli>>=
+<<signature [[CLI.main]]>>
 
-<<type [[Lexer.state]]>>
-<<signature [[Lexer.state_]]>>
-
-<<signature [[Lexer.token]]>>
-<<signature [[Lexer.recipe]]>>
+<<signature [[CLI.build_target]]>>
+<<signature [[CLI.build_targets]]>>
 @
-
-\section{[[Lexer.mll]]}
-
-%-------------------------------------------------------------
 
 \section{[[CLI.ml]]}
 
@@ -192,6 +185,29 @@ module R = Rules
 <<function [[CLI.main]]>>
 @
 
+\section{[[Env.mli]]}
+
+%-------------------------------------------------------------
+
+<<Env.mli>>=
+open Common
+<<type [[Env.values]]>>
+
+<<type [[Env.t]]>>
+
+<<exception [[Env.Redefinition]]>>
+
+<<signature [[Env.add_var]]>>
+
+<<signature [[Env.initenv]]>>
+<<signature [[Env.shellenv_of_env]]>>
+
+(* internals *)
+
+<<signature [[Env.check_values]]>>
+<<signature [[Env.dump_env]]>>
+@
+
 \section{[[Env.ml]]}
 
 %-------------------------------------------------------------
@@ -232,6 +248,17 @@ open Regexp_.Operators
 <<function [[Env.initenv]]>>
 
 <<function [[Env.shellenv_of_env]]>>
+@
+
+\section{[[Eval.mli]]}
+
+%-------------------------------------------------------------
+
+<<Eval.mli>>=
+<<signature [[Eval.eval]]>>
+
+(* internals *)
+<<signature [[Eval.eval_words]]>>
 @
 
 \section{[[Eval.ml]]}
@@ -278,6 +305,16 @@ open Rules (* for the fields *)
 (*****************************************************************************)
 
 <<function [[Eval.eval]]>>
+@
+
+\section{[[File.mli]]}
+
+%-------------------------------------------------------------
+
+<<File.mli>>=
+<<signature [[File.timeof]]>>
+
+<<signature [[File.str_of_time]]>>
 @
 
 \section{[[File.ml]]}
@@ -330,6 +367,37 @@ open Fpath_.Operators
 
 <<constant [[Globals.line]]>>
 <<constant [[Globals.file]]>>
+@
+
+\section{[[Graph.mli]]}
+
+<<signature [[Graph.hnodes]]>>=
+val hnodes : (string, node) Hashtbl.t
+@
+
+%-------------------------------------------------------------
+
+<<Graph.mli>>=
+<<type [[Graph.node]]>>
+
+<<type [[Graph.arc]]>>
+<<type [[Graph.build_state]]>>
+
+<<type [[Graph.t]]>>
+
+<<signature [[Graph.hnodes]]>>
+
+<<signature [[Graph.build_graph]]>>
+
+<<signature [[Graph.update]]>>
+
+(* internals *)
+
+<<signature [[Graph.check_cycle]]>>
+
+<<signature [[Graph.check_ambiguous]]>>
+
+<<signature [[Graph.dump_graph]]>>
 @
 
 \section{[[Graph.ml]]}
@@ -421,6 +489,23 @@ module Set = Set_
 <<type [[Job.t]]>>
 @
 
+\section{[[Lexer.mli]]}
+
+%-------------------------------------------------------------
+
+<<Lexer.mli>>=
+
+<<type [[Lexer.state]]>>
+<<signature [[Lexer.state_]]>>
+
+<<signature [[Lexer.token]]>>
+<<signature [[Lexer.recipe]]>>
+@
+
+\section{[[Lexer.mll]]}
+
+%-------------------------------------------------------------
+
 \section{[[Main.ml]]}
 
 %-------------------------------------------------------------
@@ -434,6 +519,14 @@ open Xix_mk
 (*****************************************************************************)
 
 <<toplevel [[Main._1]]>>
+@
+
+\section{[[Outofdate.mli]]}
+
+%-------------------------------------------------------------
+
+<<Outofdate.mli>>=
+<<signature [[Outofdate.work]]>>
 @
 
 \section{[[Outofdate.ml]]}
@@ -471,6 +564,14 @@ open Job (* for the fields *)
 <<function [[Outofdate.work]]>>
 @
 
+\section{[[Parse.mli]]}
+
+%-------------------------------------------------------------
+
+<<Parse.mli>>=
+<<signature [[Parse.parse]]>>
+@
+
 \section{[[Parse.ml]]}
 
 %-------------------------------------------------------------
@@ -480,6 +581,31 @@ open Job (* for the fields *)
 open Common
 
 <<function [[Parse.parse]]>>
+@
+
+\section{[[Parser.mly]]}
+
+%-------------------------------------------------------------
+
+\section{[[Percent.mli]]}
+
+%-------------------------------------------------------------
+
+<<Percent.mli>>=
+<<type [[Percent.pattern]]>>
+<<type [[Percent.pattern_elem]]>>
+
+<<exception [[Percent.TooManyPercents]]>>
+<<exception [[Percent.PercentNotFound]]>>
+
+<<signature [[Percent.match_]]>>
+<<signature [[Percent.subst]]>>
+
+<<signature [[Percent.match_and_subst]]>>
+
+(* internals *)
+
+<<signature [[Percent.check_pattern]]>>
 @
 
 \section{[[Percent.ml]]}
@@ -542,6 +668,17 @@ open Common
 
 <<function [[Rules.has_recipe]]>>
 <<function [[Rules.is_meta]]>>
+@
+
+\section{[[Scheduler.mli]]}
+
+%-------------------------------------------------------------
+
+<<Scheduler.mli>>=
+<<signature [[Scheduler.nrunning]]>>
+
+<<signature [[Scheduler.run]]>>
+<<signature [[Scheduler.waitup]]>>
 @
 
 \section{[[Scheduler.ml]]}
@@ -615,6 +752,16 @@ module Set = Set_
 <<function [[Scheduler.waitup]]>>
 @
 
+\section{[[Shellenv.mli]]}
+
+%-------------------------------------------------------------
+
+<<Shellenv.mli>>=
+<<type [[Shellenv.t]]>>
+
+<<signature [[Shellenv.read_environment]]>>
+@
+
 \section{[[Shellenv.ml]]}
 
 %-------------------------------------------------------------
@@ -677,153 +824,6 @@ open Regexp_.Operators
 <<function [[Shell.exec_backquote]]>>
 
 <<function [[Shell.exec_pipecmd]]>>
-@
-
-\section{[[CLI.mli]]}
-
-%-------------------------------------------------------------
-
-<<CLI.mli>>=
-
-<<type [[CLI.caps]]>>
-
-<<signature [[CLI.main]]>>
-
-<<signature [[CLI.build_target]]>>
-<<signature [[CLI.build_targets]]>>
-@
-
-\section{[[Env.mli]]}
-
-%-------------------------------------------------------------
-
-<<Env.mli>>=
-open Common
-<<type [[Env.values]]>>
-
-<<type [[Env.t]]>>
-
-<<exception [[Env.Redefinition]]>>
-
-<<signature [[Env.add_var]]>>
-
-<<signature [[Env.initenv]]>>
-<<signature [[Env.shellenv_of_env]]>>
-
-(* internals *)
-
-<<signature [[Env.check_values]]>>
-<<signature [[Env.dump_env]]>>
-@
-
-\section{[[Eval.mli]]}
-
-%-------------------------------------------------------------
-
-<<Eval.mli>>=
-<<signature [[Eval.eval]]>>
-
-(* internals *)
-<<signature [[Eval.eval_words]]>>
-@
-
-\section{[[File.mli]]}
-
-%-------------------------------------------------------------
-
-<<File.mli>>=
-<<signature [[File.timeof]]>>
-
-<<signature [[File.str_of_time]]>>
-@
-
-\section{[[Graph.mli]]}
-
-<<signature [[Graph.hnodes]]>>=
-val hnodes : (string, node) Hashtbl.t
-@
-
-%-------------------------------------------------------------
-
-<<Graph.mli>>=
-<<type [[Graph.node]]>>
-
-<<type [[Graph.arc]]>>
-<<type [[Graph.build_state]]>>
-
-<<type [[Graph.t]]>>
-
-<<signature [[Graph.hnodes]]>>
-
-<<signature [[Graph.build_graph]]>>
-
-<<signature [[Graph.update]]>>
-
-(* internals *)
-
-<<signature [[Graph.check_cycle]]>>
-
-<<signature [[Graph.check_ambiguous]]>>
-
-<<signature [[Graph.dump_graph]]>>
-@
-
-\section{[[Outofdate.mli]]}
-
-%-------------------------------------------------------------
-
-<<Outofdate.mli>>=
-<<signature [[Outofdate.work]]>>
-@
-
-\section{[[Parse.mli]]}
-
-%-------------------------------------------------------------
-
-<<Parse.mli>>=
-<<signature [[Parse.parse]]>>
-@
-
-\section{[[Percent.mli]]}
-
-%-------------------------------------------------------------
-
-<<Percent.mli>>=
-<<type [[Percent.pattern]]>>
-<<type [[Percent.pattern_elem]]>>
-
-<<exception [[Percent.TooManyPercents]]>>
-<<exception [[Percent.PercentNotFound]]>>
-
-<<signature [[Percent.match_]]>>
-<<signature [[Percent.subst]]>>
-
-<<signature [[Percent.match_and_subst]]>>
-
-(* internals *)
-
-<<signature [[Percent.check_pattern]]>>
-@
-
-\section{[[Scheduler.mli]]}
-
-%-------------------------------------------------------------
-
-<<Scheduler.mli>>=
-<<signature [[Scheduler.nrunning]]>>
-
-<<signature [[Scheduler.run]]>>
-<<signature [[Scheduler.waitup]]>>
-@
-
-\section{[[Shellenv.mli]]}
-
-%-------------------------------------------------------------
-
-<<Shellenv.mli>>=
-<<type [[Shellenv.t]]>>
-
-<<signature [[Shellenv.read_environment]]>>
 @
 
 \section{[[Shell.mli]]}

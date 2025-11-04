@@ -1,9 +1,7 @@
 \chapter{Extra Code}
 
 
-\section{[[mk/]]}
-
-\subsection*{[[Ast.ml]]}
+\section{[[Ast.ml]]}
 
 %-------------------------------------------------------------
 
@@ -43,11 +41,11 @@ let show_instrs _ = "NO DERIVING"
 <<function [[Ast.dump_ast]]>>
 @
 
-\subsection*{[[Parser.mly]]}
+\section{[[Parser.mly]]}
 
 %-------------------------------------------------------------
 
-\subsection*{[[Lexer.mli]]}
+\section{[[Lexer.mli]]}
 
 %-------------------------------------------------------------
 
@@ -60,11 +58,11 @@ let show_instrs _ = "NO DERIVING"
 <<signature [[Lexer.recipe]]>>
 @
 
-\subsection*{[[Lexer.mll]]}
+\section{[[Lexer.mll]]}
 
 %-------------------------------------------------------------
 
-\subsection*{[[CLI.ml]]}
+\section{[[CLI.ml]]}
 
 %-------------------------------------------------------------
 
@@ -194,7 +192,7 @@ module R = Rules
 <<function [[CLI.main]]>>
 @
 
-\subsection*{[[Env.ml]]}
+\section{[[Env.ml]]}
 
 %-------------------------------------------------------------
 
@@ -236,7 +234,7 @@ open Regexp_.Operators
 <<function [[Env.shellenv_of_env]]>>
 @
 
-\subsection*{[[Eval.ml]]}
+\section{[[Eval.ml]]}
 
 %-------------------------------------------------------------
 
@@ -282,7 +280,7 @@ open Rules (* for the fields *)
 <<function [[Eval.eval]]>>
 @
 
-\subsection*{[[File.ml]]}
+\section{[[File.ml]]}
 
 %-------------------------------------------------------------
 
@@ -297,7 +295,7 @@ open Fpath_.Operators
 <<function [[File.str_of_time]]>>
 @
 
-\subsection*{[[Flags.ml]]}
+\section{[[Flags.ml]]}
 
 %-------------------------------------------------------------
 
@@ -319,7 +317,7 @@ open Fpath_.Operators
 <<constant [[Flags.debugger]]>>
 @
 
-\subsection*{[[Globals.ml]]}
+\section{[[Globals.ml]]}
 
 %-------------------------------------------------------------
 
@@ -334,7 +332,7 @@ open Fpath_.Operators
 <<constant [[Globals.file]]>>
 @
 
-\subsection*{[[Graph.ml]]}
+\section{[[Graph.ml]]}
 
 %-------------------------------------------------------------
 
@@ -414,7 +412,7 @@ module Set = Set_
 @
 %$
 
-\subsection*{[[Job.ml]]}
+\section{[[Job.ml]]}
 
 %-------------------------------------------------------------
 
@@ -423,7 +421,7 @@ module Set = Set_
 <<type [[Job.t]]>>
 @
 
-\subsection*{[[Main.ml]]}
+\section{[[Main.ml]]}
 
 %-------------------------------------------------------------
 
@@ -438,7 +436,7 @@ open Xix_mk
 <<toplevel [[Main._1]]>>
 @
 
-\subsection*{[[Outofdate.ml]]}
+\section{[[Outofdate.ml]]}
 
 %-------------------------------------------------------------
 
@@ -473,7 +471,7 @@ open Job (* for the fields *)
 <<function [[Outofdate.work]]>>
 @
 
-\subsection*{[[Parse.ml]]}
+\section{[[Parse.ml]]}
 
 %-------------------------------------------------------------
 
@@ -484,7 +482,7 @@ open Common
 <<function [[Parse.parse]]>>
 @
 
-\subsection*{[[Percent.ml]]}
+\section{[[Percent.ml]]}
 
 %-------------------------------------------------------------
 
@@ -530,7 +528,7 @@ open Common
 <<function [[Percent.match_and_subst]]>>
 @
 
-\subsection*{[[Rules.ml]]}
+\section{[[Rules.ml]]}
 
 %-------------------------------------------------------------
 
@@ -546,7 +544,7 @@ open Common
 <<function [[Rules.is_meta]]>>
 @
 
-\subsection*{[[Scheduler.ml]]}
+\section{[[Scheduler.ml]]}
 
 %-------------------------------------------------------------
 
@@ -617,7 +615,7 @@ module Set = Set_
 <<function [[Scheduler.waitup]]>>
 @
 
-\subsection*{[[Shellenv.ml]]}
+\section{[[Shellenv.ml]]}
 
 %-------------------------------------------------------------
 
@@ -631,7 +629,7 @@ open Regexp_.Operators
 <<function [[Shellenv.read_environment]]>>
 @
 
-\subsection*{[[Shell.ml]]}
+\section{[[Shell.ml]]}
 
 %-------------------------------------------------------------
 
@@ -681,7 +679,7 @@ open Regexp_.Operators
 <<function [[Shell.exec_pipecmd]]>>
 @
 
-\subsection*{[[CLI.mli]]}
+\section{[[CLI.mli]]}
 
 %-------------------------------------------------------------
 
@@ -695,7 +693,7 @@ open Regexp_.Operators
 <<signature [[CLI.build_targets]]>>
 @
 
-\subsection*{[[Env.mli]]}
+\section{[[Env.mli]]}
 
 %-------------------------------------------------------------
 
@@ -718,7 +716,7 @@ open Common
 <<signature [[Env.dump_env]]>>
 @
 
-\subsection*{[[Eval.mli]]}
+\section{[[Eval.mli]]}
 
 %-------------------------------------------------------------
 
@@ -729,7 +727,7 @@ open Common
 <<signature [[Eval.eval_words]]>>
 @
 
-\subsection*{[[File.mli]]}
+\section{[[File.mli]]}
 
 %-------------------------------------------------------------
 
@@ -739,7 +737,7 @@ open Common
 <<signature [[File.str_of_time]]>>
 @
 
-\subsection*{[[Graph.mli]]}
+\section{[[Graph.mli]]}
 
 <<signature [[Graph.hnodes]]>>=
 val hnodes : (string, node) Hashtbl.t
@@ -770,7 +768,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Graph.dump_graph]]>>
 @
 
-\subsection*{[[Outofdate.mli]]}
+\section{[[Outofdate.mli]]}
 
 %-------------------------------------------------------------
 
@@ -778,7 +776,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Outofdate.work]]>>
 @
 
-\subsection*{[[Parse.mli]]}
+\section{[[Parse.mli]]}
 
 %-------------------------------------------------------------
 
@@ -786,7 +784,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Parse.parse]]>>
 @
 
-\subsection*{[[Percent.mli]]}
+\section{[[Percent.mli]]}
 
 %-------------------------------------------------------------
 
@@ -807,7 +805,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Percent.check_pattern]]>>
 @
 
-\subsection*{[[Scheduler.mli]]}
+\section{[[Scheduler.mli]]}
 
 %-------------------------------------------------------------
 
@@ -818,7 +816,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Scheduler.waitup]]>>
 @
 
-\subsection*{[[Shellenv.mli]]}
+\section{[[Shellenv.mli]]}
 
 %-------------------------------------------------------------
 
@@ -828,7 +826,7 @@ val hnodes : (string, node) Hashtbl.t
 <<signature [[Shellenv.read_environment]]>>
 @
 
-\subsection*{[[Shell.mli]]}
+\section{[[Shell.mli]]}
 
 %-------------------------------------------------------------
 

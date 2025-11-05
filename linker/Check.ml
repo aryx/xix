@@ -11,8 +11,8 @@ let check h =
     match v.section with
     | SXref -> failwith (spf "%s: not defined" (T.s_of_symbol symb))
     | _ -> ()
-(*e: function [[Check.check]] *)
   )
+(*e: function [[Check.check]] *)
 
 (* todo: could also check validity of object file:
  *  - no duplicate DATA for same global.

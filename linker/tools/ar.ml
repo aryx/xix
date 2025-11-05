@@ -34,7 +34,6 @@ let usage =
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-
 (*s: function [[Ar.archive]] *)
 let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.o) : unit =
   (* sanity checks *)
@@ -56,7 +55,6 @@ let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Ar.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let infiles = ref [] in
@@ -117,8 +115,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
-(*e: function [[Ar.main]] *)
   )
+(*e: function [[Ar.main]] *)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -128,6 +126,6 @@ let _ =
   Cap.main (fun (caps : Cap.all_caps) ->
      let argv = CapSys.argv caps in
      Exit.exit caps (Exit.catch (fun () -> main caps argv))
-(*e: constant [[Ar._]] *)
   )
+(*e: constant [[Ar._]] *)
 (*e: tools/ar.ml *)

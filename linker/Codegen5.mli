@@ -1,7 +1,7 @@
 (*s: Codegen5.mli *)
 
-(* ?? *)
 (*s: type [[Codegen5.pool (Codegen5.mli)]] *)
+(* ?? *)
 type pool =
   | PoolOperand of Ast_asm.ximm
   | LPOOL

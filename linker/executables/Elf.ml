@@ -24,8 +24,8 @@ let program_header_32_size = 32
 let section_header_32_size = 40
 (*e: constant [[Elf.section_header_32_size]] *)
 
-(* Text, Data, and Symbol table *)
 (*s: constant [[Elf.nb_program_headers]] *)
+(* Text, Data, and Symbol table *)
 let nb_program_headers = 2 (* TODO 3 *)
 (*e: constant [[Elf.nb_program_headers]] *)
 
@@ -222,7 +222,6 @@ let int_of_prots xs =
 (*****************************************************************************)
 (* IO *)
 (*****************************************************************************)
-
 (*s: function [[Elf.write_ident]] *)
 (* first 16 bytes *)
 let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : unit =
@@ -255,12 +254,9 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
   output_32 chan align
 (*e: function [[Elf.program_header_32]] *)
   
-  
-  
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Elf.write_headers]] *)
 (* entry point *)
 let write_headers (config : Exec_file.linker_config)

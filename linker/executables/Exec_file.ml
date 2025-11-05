@@ -2,16 +2,16 @@
 
 (*s: type [[Exec_file.addr]] *)
 type addr = int
-[@@deriving show]
 (*e: type [[Exec_file.addr]] *)
+[@@deriving show]
 
 (*s: type [[Exec_file.header_type]] *)
 type header_type =
   | A_out (* Plan9 *)
   | Elf (* Linux *)
   (* TODO: | Elf64 | MachO | PE *)
-[@@deriving show]
 (*e: type [[Exec_file.header_type]] *)
+[@@deriving show]
 
 (*s: type [[Exec_file.sections_size]] *)
 type sections_size = {
@@ -20,8 +20,8 @@ type sections_size = {
   bss_size: int;
   (* TODO? symbol_size? more? *)
 }
-[@@deriving show]
 (*e: type [[Exec_file.sections_size]] *)
+[@@deriving show]
 
 (*s: function [[Exec_file.show_linker_config]] *)
 (* for ocaml-light to work without deriving *)
@@ -42,6 +42,6 @@ type linker_config = {
   (* less: could be (string, addr) Common.either too *)
   entry_point: string;
 }
-[@@deriving show]
 (*e: type [[Exec_file.linker_config]] *)
+[@@deriving show]
 (*e: executables/Exec_file.ml *)

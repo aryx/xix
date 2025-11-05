@@ -99,8 +99,6 @@ let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 
   h2, (data_size, bss_size)
 (*e: function [[Layout5.layout_data]] *)
 
-
-
 (*s: function [[Layout5.layout_text]] *)
 let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.code_graph) : T.symbol_table2 * T5.code_graph * int =
 
@@ -182,5 +180,4 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
   
   symbols2, cg, textsize
 (*e: function [[Layout5.layout_text]] *)
-
 (*e: Layout5.ml *)

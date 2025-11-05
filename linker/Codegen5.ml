@@ -55,8 +55,8 @@ let error node s =
   failwith (spf "%s at %s on %s" s 
               (T.s_of_loc node.n_loc)
               (T5.show_instr node.instr)
-(*e: function [[Codegen5.error]] *)
   )
+(*e: function [[Codegen5.error]] *)
 
 (*s: function [[Codegen5.int_of_bits]] *)
 let int_of_bits (n : node) (x : Bits.int32) : int =
@@ -207,7 +207,6 @@ let gop_rcon x =
   | Right i    -> [(i, 7); (0, 4)]
 (*e: function [[Codegen5.gop_rcon]] *)
 
-
 (*****************************************************************************)
 (* More complex code generation helpers *)
 (*****************************************************************************)
@@ -216,7 +215,6 @@ let gop_rcon x =
 let gshift (R rf) op2 rcon = 
   gop_rcon rcon @ [gop_bitshift_register op2; (rf, 0)]
 (*e: function [[Codegen5.gshift]] *)
-
 
 (*s: function [[Codegen5.gbranch_static]] *)
 let gbranch_static (nsrc : T5.node) cond is_bl =
@@ -234,8 +232,6 @@ let gbranch_static (nsrc : T5.node) cond is_bl =
        (v, 0) 
        ]
 (*e: function [[Codegen5.gbranch_static]] *)
-
-
 
 
 (*s: function [[Codegen5.gmem]] *)
@@ -280,11 +276,9 @@ let gload_from_pool (nsrc : T5.node) cond rt =
       gmem cond LDR Word None (Left v) rPC rt
 (*e: function [[Codegen5.gload_from_pool]] *)
       
-
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
-
 (*s: function [[Codegen5.rules]] *)
 (* conventions (matches the one used (inconsistently) in 5l):
  * - rf = register from (called Rm in refcard)
@@ -639,24 +633,22 @@ let rules symbols2 autosize init_data node =
         { size = 4; pool = None; binary = (fun () -> 
           [ [(0xe8fd8000, 0)] ]
         )}
-(*e: function [[Codegen5.rules]] *)
-
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)
-(*    | _ -> error node "illegal combination"*)
+    (*    | _ -> error node "illegal combination"*)
     )
+
+(*e: function [[Codegen5.rules]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-
 (*s: function [[Codegen5.size_of_instruction]] *)
 let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5.node) : int (* a multiple of 4 *) * pool option =
   let action  = rules symbols2 autosize None node in
   action.size, action.pool
 (*e: function [[Codegen5.size_of_instruction]] *)
-
 
 (*s: function [[Codegen5.gen]] *)
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5.code_graph) : T.word list =

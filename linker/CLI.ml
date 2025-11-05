@@ -53,8 +53,11 @@ module T = Types
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
-(* Need: see .mli *)
 (*s: type [[CLI.caps]] *)
+(* Need:
+ * - open_in but should be only for argv derived files
+ * - open_out for -o exec file or 5.out
+ *)
 type caps = < Cap.open_in; Cap.open_out >
 (*e: type [[CLI.caps]] *)
 
@@ -67,10 +70,11 @@ let init_round = ref None
 (*s: constant [[CLI.init_data]] *)
 let init_data  = ref None
 (*e: constant [[CLI.init_data]] *)
+
+(*s: constant [[CLI.init_entry]] *)
 (* note that this is not "main"; we give the opportunity to libc _main
  * to do a few things before calling user's main()
  *)
-(*s: constant [[CLI.init_entry]] *)
 let init_entry = ref "_main"
 (*e: constant [[CLI.init_entry]] *)
 
@@ -117,7 +121,6 @@ let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.lin
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-
 (*s: function [[CLI.link5]] *)
 (* will modify chan as a side effect *)
 let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
@@ -168,7 +171,6 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[CLI.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
@@ -282,6 +284,6 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
              Exit.Code 1
          | _ -> raise exn
          )
-(*e: function [[CLI.main]] *)
   )
+(*e: function [[CLI.main]] *)
 (*e: CLI.ml *)

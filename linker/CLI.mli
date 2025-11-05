@@ -1,11 +1,11 @@
 (*s: CLI.mli *)
+(*s: type [[CLI.caps]] *)
 (* Need:
  * - open_in but should be only for argv derived files
  * - open_out for -o exec file or 5.out
  *)
-(*s: type [[CLI.caps (CLI.mli)]] *)
 type caps = < Cap.open_in; Cap.open_out >
-(*e: type [[CLI.caps (CLI.mli)]] *)
+(*e: type [[CLI.caps]] *)
 
 (*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)

@@ -11,7 +11,6 @@ module T5 = Types5
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Rewrite5.find_first_no_nop_node]] *)
 let rec find_first_no_nop_node nopt =
   match nopt with
@@ -26,7 +25,6 @@ let rec find_first_no_nop_node nopt =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Rewrite5.rewrite]] *)
 (* less: rewrite when profiling flag -p *)
 let rewrite (cg : T5.code_graph) : T5.code_graph =
@@ -135,5 +133,4 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
   (* works by side effect, still return first node *)
   cg
 (*e: function [[Rewrite5.rewrite]] *)
-
 (*e: Rewrite5.ml *)

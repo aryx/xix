@@ -13,33 +13,33 @@ module A = Ast_asm
 (* basic types *)
 (* --------------------------------------- *)
 
-(* a single line number is not enough anymore, we need also the filename *)
 (*s: type [[Types.loc]] *)
+(* a single line number is not enough anymore, we need also the filename *)
 type loc = Fpath.t * A.loc
-[@@deriving show]
 (*e: type [[Types.loc]] *)
+[@@deriving show]
 
-(* 8 bits *)
 (*s: type [[Types.byte]] *)
+(* 8 bits *)
 type byte = char
-[@@deriving show]
 (*e: type [[Types.byte]] *)
-(* 32 bits *)
+[@@deriving show]
 (*s: type [[Types.word]] *)
+(* 32 bits *)
 type word = int
-[@@deriving show]
 (*e: type [[Types.word]] *)
+[@@deriving show]
 
-(* 32 bits *)
 (*s: type [[Types.addr]] *)
-type addr = int
-[@@deriving show]
-(*e: type [[Types.addr]] *)
 (* 32 bits *)
-(*s: type [[Types.offset]] *)
-type offset = int
+type addr = int
+(*e: type [[Types.addr]] *)
 [@@deriving show]
+(*s: type [[Types.offset]] *)
+(* 32 bits *)
+type offset = int
 (*e: type [[Types.offset]] *)
+[@@deriving show]
 
 (*s: type [[Types.symbol]] *)
 type symbol = string * scope
@@ -55,34 +55,34 @@ type symbol = string * scope
 (* The virtual pc world *)
 (* --------------------------------------- *)
 
-(* increments by 1. Used as index in some 'code array' or 'node array' *)
 (*s: type [[Types.virt_pc]] *)
+(* increments by 1. Used as index in some 'code array' or 'node array' *)
 type virt_pc = A.virt_pc
-[@@deriving show]
 (*e: type [[Types.virt_pc]] *)
+[@@deriving show]
 
-(* before layout *)
 (*s: type [[Types.section]] *)
+(* before layout *)
 type section =
   | SText of virt_pc
-  | SData of int
-  | SXref
-[@@deriving show]
+  | SData of int (* size *)
+  | SXref (* undefined, alt: section option and use None *)
 (*e: type [[Types.section]] *)
-
-(* the filename is for safe linking error report *)
-(*s: type [[Types.signature]] *)
-type signature = int (* todo: * Common.filename *)
 [@@deriving show]
+
+(*s: type [[Types.signature]] *)
+(* the filename is for safe linking error report *)
+type signature = int (* todo: * Common.filename *)
 (*e: type [[Types.signature]] *)
+[@@deriving show]
 
 (*s: type [[Types.value]] *)
 type value = {
   mutable section: section;
   sig_: signature option;
 }
-[@@deriving show]
 (*e: type [[Types.value]] *)
+[@@deriving show]
 
 (*s: type [[Types.symbol_table]] *)
 type symbol_table = (symbol, value) Hashtbl.t
@@ -93,14 +93,14 @@ type symbol_table = (symbol, value) Hashtbl.t
 (* The real pc world *)
 (* --------------------------------------- *)
 
-(* increments by 4 for ARM *)
 (*s: type [[Types.real_pc]] *)
+(* increments by 4 for ARM *)
 type real_pc = int
-[@@deriving show]
 (*e: type [[Types.real_pc]] *)
+[@@deriving show]
 
-(* after layout *)
 (*s: type [[Types.section2]] *)
+(* after layout *)
 type section2 =
   | SText2 of real_pc
   (* offset to start of data section for ARM *)
@@ -113,8 +113,8 @@ type section2 =
 
 (*s: type [[Types.value2]] *)
 type value2 = section2
-[@@deriving show]
 (*e: type [[Types.value2]] *)
+[@@deriving show]
 
 (*s: type [[Types.symbol_table2]] *)
 type symbol_table2 = (symbol, value2) Hashtbl.t
@@ -136,8 +136,8 @@ type symbol_table2 = (symbol, value2) Hashtbl.t
 (*s: type [[Types.code]] *)
 type 'instr code = ('instr code_bis * loc)
 (*e: type [[Types.code]] *)
-(* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
 (*s: type [[Types.code_bis]] *)
+(* a subset of Ast_asm5.line (no GLOBL/DATA, no LabelDef/LineDirective) *)
 and 'instr code_bis =
   | TEXT of A.global * A.attributes * int
   | WORD of A.ximm
@@ -146,12 +146,12 @@ and 'instr code_bis =
 (*e: type [[Types.code_bis]] *)
 [@@deriving show]
 
-(* remember that GLOBL information is stored in symbol table  *)
 (*s: type [[Types.data]] *)
+(* remember that GLOBL information is stored in symbol table  *)
 type data = 
   | DATA of A.global * A.offset * int * A.ximm
-[@@deriving show]
 (*e: type [[Types.data]] *)
+[@@deriving show]
 
 
 (* graph via pointers, like in original 5l *)
@@ -168,13 +168,13 @@ type 'instr node = {
 
   n_loc: loc;
 }
-[@@deriving show]
 (*e: type [[Types.node]] *)
+[@@deriving show]
 
 (*s: type [[Types.code_graph]] *)
 type 'instr code_graph = 'instr node (* the first node *)
-[@@deriving show]
 (*e: type [[Types.code_graph]] *)
+[@@deriving show]
 
 (*****************************************************************************)
 (* Helpers *)

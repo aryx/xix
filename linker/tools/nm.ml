@@ -53,9 +53,9 @@ let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
       (* TODO: visit the uses *)
       | Instr _x -> ()
       | LabelDef _ -> raise (Impossible "objects should not have LabelDef")
-(*e: function [[Nm.visit_obj]] *)
   )
 
+(*e: function [[Nm.visit_obj]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -122,8 +122,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           Exit.Code 1
       | _ -> raise exn
       )
-(*e: function [[Nm.main]] *)
   )
+(*e: function [[Nm.main]] *)
 
 (*****************************************************************************)
 (* Entry point *)
@@ -132,6 +132,6 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 let _ = 
   Cap.main (fun (caps : Cap.all_caps) ->
      Exit.exit caps (Exit.catch (fun () -> main caps (CapSys.argv caps)))
-(*e: constant [[Nm._]] *)
   )
+(*e: constant [[Nm._]] *)
 (*e: tools/nm.ml *)

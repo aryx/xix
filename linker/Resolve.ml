@@ -9,7 +9,6 @@ module T = Types
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Resolve.build_graph]] *)
 let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.code array) : 'instr T.code_graph =
   let len = Array.length xs in
@@ -66,5 +65,4 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
   );
   nodes.(0)
 (*e: function [[Resolve.build_graph]] *)
- 
 (*e: Resolve.ml *)

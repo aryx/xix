@@ -8,7 +8,6 @@ module T = Types
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Datagen.gen]] *)
 let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : Exec_file.sections_size) (ds : T.data list) : T.byte array =
   let arr = Array.make sizes.data_size (Char.chr 0) in

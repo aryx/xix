@@ -1,10 +1,10 @@
 (*s: libraries/Library_file.mli *)
+(*s: type [[Library_file.t]] *)
 (* An archive (.a) is really essentially just a list of objects, which in Plan 9
  * are just a list of serialized assembly ASTs
  *)
-(*s: type [[Library_file.t (libraries/Library_file.mli)]] *)
 type 'instr t = 'instr Object_file.t list
-(*e: type [[Library_file.t (libraries/Library_file.mli)]] *)
+(*e: type [[Library_file.t]] *)
 
 (*s: signature [[Library_file.load]] *)
 (* may raise Object_file.WrongVersion *)

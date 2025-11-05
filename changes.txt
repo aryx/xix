@@ -17,6 +17,10 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * 0.17 (Q4 2025) (ELF Linux, va, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/... utilities, resume windows and kernel)
 
+** general
+- renamed all binaries with an 'o' prefix (for ocaml): 
+  omk, orc, ogit, o5a, o5l, oar, onm, etc.
+
 ** toolchain
 - support for ELF and Linux code generation in o5l and hello_linux_arm.exe
   working! (and also the simpler exit_linux_arm.exe)
@@ -32,23 +36,30 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - move sha1 and zip/unzip from vcs to new lib_core/{crypto,compression}
 
 ** utilities
-- new utilities/ with cat.ml and pwd.ml OCaml port
+- new utilities/ with cat, pwd, and wc OCaml port (called ocat, opwd, ...)
 
 ** testinfra
 - Dockerfile.light can now compile also 5a/5c/5l/cpp
   thx to the removal of the use of 'as' in the .mll files
   that is not supported by ocaml-light ocamlllex
 - Dockerfile.light can now compile lib_graphics/, windows/, kernel/, utilities/
-  so all OCaml code in xix now compiles with ocaml-light!
+  so almost all OCaml code in xix now compiles with ocaml-light!
+  (only exception is vcs/)
 
 ** devinfra
 - resume semgrep.jsonnet and semgrep.yml in CI
 - use more Logs.info in 5a/5l/...
 
+** docs
+- started lpization of xix programs with oas.nw, olk.nw, occ.nw,
+  orio.nw (in addition to the now renamed omk.nw, orc.nw)
+
 ** internals
 - use uppercase module filenames, split Main.ml/CLI.ml, and start
   to use capabilities for 5a/5c/5l/cpp as well as lex/yacc
-- use Cap.open_out
+- use Cap.open_out, started new Cap.draw, Cap.keyboard, Cap.mouse
+  and Cap.mount, Cap.bind for orio
+- use more Chan.{i,o} types to reduce the need for Cap.open_{in,out}
 - resume the compilation of windows/ and kernel/ with dune and mkfile
   without requiring a plan9 ocamlc
 
@@ -112,10 +123,10 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * 0.14 (Q2 2024) (Logging, Testing, CI)
 
-** mk works again (but need rc from plan9port (a.k.a. 9base in Linux))
+** testinfra
+- mk works again (but need rc from plan9port (a.k.a. 9base in Linux))
 
-** dev infra
-
+** devinfra
 - Logging using poor's man Logs.ml
 
 * 0.13 (Q1 2024) (CI build and test and semgrep checks (testinfra))
@@ -128,17 +139,17 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 #  - tests
 
 ** internals
-
 - Started to use stdcompat for backward compatibility with
   old versions of OCaml.
 
-** devinfra/testinfra
-
+** testinfra
 - Github Actions (GHA) checks to make sure xix compiles.
   At least it compiles with 3.10.0 (thx to stdcompat), 4.04.0, 4.14.0,
   and even 5.1.0!
-- first semgrep checks in semgrep.jsonnet :) and semgrep GHA workflow.
 - some basic tests (also enforced in GHA) in test.sh
+
+** devinfra
+- first semgrep checks in semgrep.jsonnet :) and semgrep GHA workflow.
 
 * -----------------------------------------------------------
 

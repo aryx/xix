@@ -1,292 +1,7 @@
 \section{[[objects/Ast_asm.ml]]}
 
-<<type [[Ast_asm.loc]]>>=
-type loc = Location_cpp.loc
-[@@deriving show]
-@
-
-<<type [[Ast_asm.virt_pc]]>>=
-type virt_pc = int
-[@@deriving show]
-@
-
-<<type [[Ast_asm.integer]]>>=
-type integer = int 
-[@@deriving show]
-@
-
-<<type [[Ast_asm.floatp]]>>=
-type floatp = float 
-[@@deriving show]
-@
-
-<<type [[Ast_asm.offset]]>>=
-type offset = int
-[@@deriving show]
-@
-
-<<type [[Ast_asm.label]]>>=
-type label = string
-[@@deriving show]
-@
-
-<<type [[Ast_asm.symbol]]>>=
-type symbol = string
-[@@deriving show]
-@
-
-<<type [[Ast_asm.global]]>>=
-type global = {
-  name: symbol;
-  (* 'Some _' when entity is a private symbol (aka static symbol).
-   * mutable (ugly?) modifed by linker in naming phase.
-   *)
-  mutable priv: int option; 
-  (* for safe linking (generated only by 5c, not 5a) *)
-  signature: int option;
-}
-[@@deriving show]
-@
-
-<<type [[Ast_asm.register]]>>=
-type register = R of int (* between 0 and 15 on ARM *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm.fregister]]>>=
-type fregister = FR of int (* between 0 and 15 on ARM *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm.entity]]>>=
-type entity = 
-  | Param of symbol option * offset (* FP *)
-  | Local of symbol option * offset (* SP *)
-  (* stricter: we disallow anonymous offsets to SB *)
-  | Global of global * offset (* SB *) 
-[@@deriving show]
-@
-
-<<type [[Ast_asm.ximm]]>>=
-type ximm =
-  | Int of integer
-  | Float of floatp
-  | String of string (* limited to 8 characters *)
-  (* I used to disallow address of FP or SP, and offset to SB, but
-   * 5c needs this feature, so you can take the address of a local.
-   * old: Address of global.
-   *)
-  | Address of entity
-[@@deriving show]
-@
-
-<<type [[Ast_asm.branch_operand]]>>=
-type branch_operand = branch_operand2 ref
-@
-
-<<type [[Ast_asm.branch_operand2]]>>=
-and branch_operand2 =
-
-  (* resolved by assembler *)
-  (* relative to PC, in units of virtual_code_address *)
-  | Relative of int 
-  (* we could transform labels in symbols early-on, but nice to resolve ASAP *)
-  | LabelUse of label * offset (* useful to have offset? *)
-
-  (* resolved by linker *)
-  | SymbolJump of global (* no offset (it would not be used by 5l anyway) *)
-
-  (* after resolution *)
-  | Absolute of virt_pc
-
-  (* resolved dynamically by the machine (e.g., B (R14)) *)
-  | IndirectJump of register
-@
-
-<<type [[Ast_asm.sign]]>>=
-type sign = S (* Signed *) | U (* Unsigned *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm.move_size]]>>=
-type move_size = Word | HalfWord of sign | Byte of sign
-[@@deriving show]
-@
-
-<<type [[Ast_asm.floatp_precision]]>>=
-type floatp_precision = F (* Float *) | D (* Double *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm.pseudo_instr]]>>=
-type pseudo_instr =
-  (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of global * attributes * int (* size locals, (multiple of 4 on ARM) *)
-  | GLOBL of global (* can have offset? *) * attributes * int (* size *)
-
-  | DATA of global * offset * int (* size, should be in [1..8] *) * ximm
-  (* any ximm? even String? And Float? for float should have DWORD? *)
-  | WORD of ximm
-@
-
-<<type [[Ast_asm.attributes]]>>=
-  and attributes = { dupok: bool; prof: bool }
-@
-
-<<type [[Ast_asm.virtual_instr]]>>=
-type virtual_instr =
-  | RET
-  | NOP (* removed by linker *)
-  (* TODO? out MOV here with sizes and sign/unsigned *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm.line]]>>=
-type 'instr line = 
-  | Pseudo of pseudo_instr
-  | Virtual of virtual_instr
-  | Instr of 'instr
-
-  (* disappear after resolve *)
-  | LabelDef of label
-  (* less: PragmaLibDirective of string *)
-[@@deriving show {with_path = false}]
-@
-
-<<type [[Ast_asm.lines]]>>=
-type 'instr lines = ('instr line * loc) list
-[@@deriving show]
-@
-
-<<type [[Ast_asm.program]]>>=
-type 'instr program = 'instr lines * Location_cpp.location_history list
-[@@deriving show]
-@
-
-<<function [[Ast_asm.s_of_global]]>>=
-let s_of_global (x : global) : string = 
-  x.name ^ (match x.priv with None -> "" | Some _ -> "<>")
-@
-
-
-%-------------------------------------------------------------
-
-<<objects/Ast_asm.ml>>=
-(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
-open Common
-
-(*****************************************************************************)
-(* Prelude *)
-(*****************************************************************************)
-(* Types common to the different Plan 9 assembler ASTs.
- *
- * Note that in Plan 9 object files are mostly the serialized form of 
- * the assembly AST, which is why this file is in this directory.
- *
- * !!! If you modify this file please increment Object_file.version !!!
- *) 
-
-(*****************************************************************************)
-(*  AST related types *)
-(*****************************************************************************)
-
-(* ------------------------------------------------------------------------- *)
-(* Location *)
-(* ------------------------------------------------------------------------- *)
-
-(* (global) line# *)
-<<type [[Ast_asm.loc]]>>
-
-(* ------------------------------------------------------------------------- *)
-(* Numbers and Strings *)
-(* ------------------------------------------------------------------------- *)
-(* increments by unit of 1 *)
-<<type [[Ast_asm.virt_pc]]>>
-
-(* 'int' enough for ARM 32 bits? on 64 bits machine it is enough :) 
- * TODO: use Int64.t so sure it's enough for every arch.
- * alt: have separate type in each Ast_asmxxx.ml, with more precise size
- * but not worth it because it prevents more generalization in this file 
- * like imm_or_ximm, which in turn allow to generalize pseudo_instr,
- * and anyway Plan 9 asms are not a direct match of the machine assembly.
-*)
-<<type [[Ast_asm.integer]]>>
-
-(* floating point number.
- * TODO: float enough too? can contain 'double' C? 
- * alt? use explicit float record { Int32.t; Int32.t mantisse/exp } ?
-*)
-<<type [[Ast_asm.floatp]]>>
-
-(* can be 0, negative, or positive *)
-<<type [[Ast_asm.offset]]>>
-
-(* jmp labels *)
-<<type [[Ast_asm.label]]>>
-
-<<type [[Ast_asm.symbol]]>>
-
-<<type [[Ast_asm.global]]>>
-
-(* ------------------------------------------------------------------------- *)
-(* Operands *)
-(* ------------------------------------------------------------------------- *)
-
-<<type [[Ast_asm.register]]>>
-
-<<type [[Ast_asm.fregister]]>>
-
-<<type [[Ast_asm.entity]]>>
-
-(* extended immediate *)
-<<type [[Ast_asm.ximm]]>>
-
-(* I use a ref below so the code that resolves branches is shorter.
- * The ref is modified by the assembler and then by the linker.
- *)  
-<<type [[Ast_asm.branch_operand]]>>
-<<type [[Ast_asm.branch_operand2]]>>
-[@@deriving show]
-
-(* In a MOVE, sign is relevant only for a load operation *)
-<<type [[Ast_asm.sign]]>>
-
-(* TODO: add Dword? use shorter W_ | H_ | B_ | D_ ?  *)
-<<type [[Ast_asm.move_size]]>>
-
-<<type [[Ast_asm.floatp_precision]]>>
-
-(* ------------------------------------------------------------------------- *)
-(* Instructions *)
-(* ------------------------------------------------------------------------- *)
-
-<<type [[Ast_asm.pseudo_instr]]>>
-
-<<type [[Ast_asm.attributes]]>>
-[@@deriving show {with_path = false}]
-
-(* alt: move in arch-specific Ast_asmx.instr
- * alt: merge with pseudo_instr
-*)
-<<type [[Ast_asm.virtual_instr]]>>
-
-(* ------------------------------------------------------------------------- *)
-(* Program *)
-(* ------------------------------------------------------------------------- *)
-
-<<type [[Ast_asm.line]]>>
-
-<<type [[Ast_asm.lines]]>>
-
-(* The location_history allows to convert a loc to the right place *)
-<<type [[Ast_asm.program]]>>
-
-(*****************************************************************************)
-(*  Extractors/visitors *)
-(*****************************************************************************)
-
-<<function [[Ast_asm.s_of_global]]>>
-
+% for linker
+<<function [[Ast_asm.visit_globals_program]]>>=
 (* Visit globals (e.g., to populate symbol table with wanted symbols in linker).
  * This is more complicated than in 5l because we can not rely
  * on an ANAME or Operand.sym.
@@ -319,178 +34,149 @@ and visit_globals_branch_operand f x =
   | IndirectJump _ | Relative _ | LabelUse _ | Absolute _ -> ()
 @
 
+%-------------------------------------------------------------
+
+<<objects/Ast_asm.ml>>=
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Types common to the different Plan 9 assembler ASTs.
+ *
+ * Note that in Plan 9 object files are mostly the serialized form of 
+ * the assembly AST, which is why this file is in this directory.
+ *
+ * !!! If you modify this file please increment Object_file.version !!!
+ *) 
+
+(*****************************************************************************)
+(*  AST related types *)
+(*****************************************************************************)
+
+(* ------------------------------------------------------------------------- *)
+(* Location *)
+(* ------------------------------------------------------------------------- *)
+<<type [[Ast_asm.loc]]>>
+[@@deriving show]
+
+(* ------------------------------------------------------------------------- *)
+(* Numbers and Strings *)
+(* ------------------------------------------------------------------------- *)
+<<type [[Ast_asm.virt_pc]]>>
+[@@deriving show]
+
+(* 'int' enough for ARM 32 bits? on 64 bits machine it is enough :) 
+ * TODO: use Int64.t so sure it's enough for every arch.
+ * alt: have separate type in each Ast_asmxxx.ml, with more precise size
+ * but not worth it because it prevents more generalization in this file 
+ * like imm_or_ximm, which in turn allow to generalize pseudo_instr,
+ * and anyway Plan 9 asms are not a direct match of the machine assembly.
+*)
+<<type [[Ast_asm.integer]]>>
+[@@deriving show]
+
+(* floating point number.
+ * TODO: float enough too? can contain 'double' C? 
+ * alt? use explicit float record { Int32.t; Int32.t mantisse/exp } ?
+*)
+<<type [[Ast_asm.floatp]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.offset]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.label]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.symbol]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.global]]>>
+[@@deriving show]
+
+(* ------------------------------------------------------------------------- *)
+(* Operands *)
+(* ------------------------------------------------------------------------- *)
+<<type [[Ast_asm.register]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.fregister]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.entity]]>>
+[@@deriving show]
+
+(* extended immediate *)
+<<type [[Ast_asm.ximm]]>>
+[@@deriving show]
+
+(* I use a ref below so the code that resolves branches is shorter.
+ * The ref is modified by the assembler and then by the linker.
+ *)  
+<<type [[Ast_asm.branch_operand]]>>
+<<type [[Ast_asm.branch_operand2]]>>
+[@@deriving show]
+
+(* In a MOVE, sign is relevant only for a load operation *)
+<<type [[Ast_asm.sign]]>>
+[@@deriving show]
+
+(* TODO: add Dword? use shorter W_ | H_ | B_ | D_ ?  *)
+<<type [[Ast_asm.move_size]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.floatp_precision]]>>
+[@@deriving show]
+
+(* ------------------------------------------------------------------------- *)
+(* Instructions *)
+(* ------------------------------------------------------------------------- *)
+
+<<type [[Ast_asm.pseudo_instr]]>>
+
+<<type [[Ast_asm.attributes]]>>
+[@@deriving show {with_path = false}]
+
+(* alt: move in arch-specific Ast_asmx.instr
+ * alt: merge with pseudo_instr
+*)
+<<type [[Ast_asm.virtual_instr]]>>
+[@@deriving show]
+
+(* ------------------------------------------------------------------------- *)
+(* Program *)
+(* ------------------------------------------------------------------------- *)
+
+<<type [[Ast_asm.line]]>>
+[@@deriving show {with_path = false}]
+
+<<type [[Ast_asm.lines]]>>
+[@@deriving show]
+
+<<type [[Ast_asm.program]]>>
+[@@deriving show]
+
+(*****************************************************************************)
+(*  Extractors/visitors *)
+(*****************************************************************************)
+
+<<function [[Ast_asm.s_of_global]]>>
+
+<<function [[Ast_asm.visit_globals_program]]>>
+@
+
 
 \section{[[objects/Ast_asm5.ml]]}
 
-<<type [[Ast_asm5.reg]]>>=
-type reg = A.register (* between 0 and 15 *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm5.freg]]>>=
-type freg = A.fregister (* between 0 and 15 *)
-[@@deriving show]
-@
-
-<<type [[Ast_asm5.creg]]>>=
-type creg = C of int (* between 0 and 15 *)
-@
-
+% for compiler
 <<constant [[Ast_asm5.rTMP]]>>=
 let rTMP = R 11
 @
 
-<<constant [[Ast_asm5.rSB]]>>=
-let rSB  = R 12
-@
 
-<<constant [[Ast_asm5.rSP]]>>=
-let rSP  = R 13
-@
-
-<<constant [[Ast_asm5.rLINK]]>>=
-let rLINK = R 14
-@
-
-<<constant [[Ast_asm5.rPC]]>>=
-let rPC   = R 15
-@
-
-<<constant [[Ast_asm5.nb_registers]]>>=
-let nb_registers = 16
-@
-
-<<type [[Ast_asm5.arith_operand]]>>=
-type arith_operand =
-  | Imm of A.integer (* characters are converted to integers *)
-  | Reg of reg
-  (* can not be used with shift opcodes (SLL/SRL/SRA) *)
-  | Shift of reg * shift_reg_op * 
-             (reg, int (* between 0 and 31 *)) Either_.t
-@
-
-<<type [[Ast_asm5.shift_reg_op]]>>=
-  and shift_reg_op =
-    | Sh_logic_left | Sh_logic_right
-    | Sh_arith_right | Sh_rotate_right
-@
-
-<<type [[Ast_asm5.mov_operand]]>>=
-type mov_operand = 
-  (* Immediate shift register *)
-  | Imsr of arith_operand
-  (* eXtended immediate.
-   * (Ximm (Int x) is converted in Imsr (Imm x) in the parser
-   *)
-  | Ximm of ximm
-
-  | Indirect of reg * A.offset
-  (* another form of Indirect *)
-  | Entity of A.entity
-
-[@@deriving show]
-@
-
-<<type [[Ast_asm5.instr]]>>=
-type instr = 
-  (* Arithmetic *)
-  | Arith of arith_opcode * arith_cond option *
-      arith_operand (* src *) * reg option * reg (* dst *)
-  | ArithF of (arithf_opcode * A.floatp_precision) *
-      (A.floatp, freg) Either_.t * freg option * freg
-
-  (* Memory *)
-  | MOVE of A.move_size * move_option *
-      mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
-  | SWAP of A.move_size (* actually only (Byte x) *) * 
-       reg (* indirect *) * reg * reg option
-
-  (* Control flow *)
-  | B  of A.branch_operand (* branch *)
-  | BL of A.branch_operand (* branch and link *)
-  | Cmp of cmp_opcode * arith_operand * reg
-  | CmpF of A.floatp_precision * freg * freg
-  (* just Relative or LabelUse here for branch_operand *)
-  | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
-
-  (* System *)
-  | SWI of int (* value actually unused in Plan 9 and Linux *)
-  | RFE (* virtual, sugar for MOVM *)
-@
-
-<<type [[Ast_asm5.arith_opcode]]>>=
-  and arith_opcode = 
-    (* logic *)
-    | AND | ORR | EOR
-    (* arithmetic *)
-    | ADD | SUB   | MUL   | DIV | MOD (* DIV and MOD are virtual *)
-    (* bit shifting; immediate operand can only be between 0 and 31 *)
-    | SLL | SRL | SRA (* virtual, sugar for bitshift register *)
-    (* less useful *)
-    | BIC  | ADC | SBC  | RSB | RSC
-    (* middle operand always empty (could lift up and put special type) *)
-    | MOV | MVN (* MOV has no reading syntax in 5a, MOVE is used *)
-@
-
-<<type [[Ast_asm5.arith_cond]]>>=
-  and arith_cond = Set_condition (* .S *)
-@
-
-<<type [[Ast_asm5.arithf_opcode]]>>=
-  and arithf_opcode =
-    | ADD_ | SUB_ | MUL_ | DIV_
-@
-
-<<type [[Ast_asm5.cmp_opcode]]>>=
-  and cmp_opcode = 
-    | CMP
-    (* less useful *)
-    | TST | TEQ | CMN
-@
-
-<<type [[Ast_asm5.condition]]>>=
-  and condition =
-    (* equal, not equal *)
-    | EQ | NE
-    (* greater than, less than, greater or equal, less or equal *)
-    | GT of sign | LT of sign | GE of sign | LE of sign
-    (* minus/negative, plus/positive *)
-    | MI | PL 
-    (* overflow set/clear *)
-    | VS | VC
-    (* always/never *)
-    | AL | NV
-@
-
-<<type [[Ast_asm5.move_option]]>>=
-   and move_option = move_cond option
-@
-
-<<type [[Ast_asm5.move_cond]]>>=
-     and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
-@
-
-<<type [[Ast_asm5.instr_with_cond]]>>=
-type instr_with_cond = instr * condition
-[@@deriving show]
-@
-
-<<type [[Ast_asm5.program]]>>=
-type program = instr_with_cond A.program
-[@@deriving show]
-@
-
-<<function [[Ast_asm5.branch_opd_of_instr]]>>=
-let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
-  (* less: could issue warning if cond <> AL when B or Bxx, or normalize? *)
-  match fst instr with
-  (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> *)
-  | B opd -> Some opd
-  | BL opd -> Some opd
-  | Bxx (_cond, opd) -> Some opd
-  | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> None
-@
-
+% for linker
 <<function [[Ast_asm5.visit_globals_instr]]>>=
 let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   let mov_operand x =
@@ -508,7 +194,6 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | Arith _ | ArithF _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> () 
 @
-
 
 %-------------------------------------------------------------
 
@@ -551,10 +236,11 @@ open Ast_asm
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
-
 <<type [[Ast_asm5.reg]]>>
+[@@deriving show]
 
 <<type [[Ast_asm5.freg]]>>
+[@@deriving show]
 
 (* ?? *)
 <<type [[Ast_asm5.creg]]>>
@@ -578,6 +264,8 @@ open Ast_asm
  * seems arm-specific
  *)
 <<type [[Ast_asm5.mov_operand]]>>
+
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -605,12 +293,11 @@ open Ast_asm
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
-(* On the ARM every instructions can be prefixed with a condition.
- * Note that cond should be AL (Always) for B/Bxx instructions.
-*)
 <<type [[Ast_asm5.instr_with_cond]]>>
+[@@deriving show]
 
 <<type [[Ast_asm5.program]]>>
+[@@deriving show]
 
 (*****************************************************************************)
 (* Extractors/Visitors *)
@@ -624,45 +311,13 @@ open Ast_asm
 
 \section{[[objects/Object_file.mli]]}
 
-<<type [[Object_file.t (objects/Object_file.mli)]]>>=
-type 'instr t = {
-  prog:  'instr Ast_asm.program;
-  arch: Arch.t
-}
-@
-
-<<exception [[Object_file.WrongVersion (objects/Object_file.mli)]]>>=
-exception WrongVersion
-@
-
-<<signature [[Object_file.version]]>>=
-(* used also in Library_file.ml *)
-val version : int 
-@
-
-<<signature [[Object_file.load]]>>=
-(* may raise WrongVersion *)
-val load: Chan.i (* obj file *) -> 'instr t
-@
-
-<<signature [[Object_file.save]]>>=
-val save: Arch.t -> 'instr Ast_asm.program -> Chan.o (* obj file *) -> unit
-@
-
-<<signature [[Object_file.is_obj_filename]]>>=
-(* look whether the filename finishes in .o[5vi] *)
-val is_obj_filename : Fpath.t -> bool
-@
-
-
 %-------------------------------------------------------------
 
 <<objects/Object_file.mli>>=
 
-(* An object file (.o) in Plan 9 is really just a serialized assembly AST *)
-<<type [[Object_file.t (objects/Object_file.mli)]]>>
+<<type [[Object_file.t]]>>
 
-<<exception [[Object_file.WrongVersion (objects/Object_file.mli)]]>>
+<<exception [[Object_file.WrongVersion]]>>
 <<signature [[Object_file.version]]>>
 
 <<signature [[Object_file.load]]>>
@@ -674,48 +329,6 @@ val is_obj_filename : Fpath.t -> bool
 
 
 \section{[[objects/Object_file.ml]]}
-
-<<type [[Object_file.t]]>>=
-type 'instr t = {
-  prog:  'instr Ast_asm.program;
-  arch: Arch.t
-}
-@
-
-<<constant [[Object_file.version]]>>=
-let version = 6
-@
-
-<<function [[Object_file.save]]>>=
-(* TODO? can normalize before? or check every invariants?
- * TODO? pass and save arch name string? like in goken? and
- * check for it at loading time?
- *)
-let save (arch : Arch.t) (obj : 'instr Ast_asm.program) (chan : Chan.o) : unit =
-  Logs.info (fun m -> m "Saving %s object in %s" (Arch.thestring arch)
-      (Chan.destination chan));
-  output_value chan.oc (version, { prog = obj; arch })
-@
-
-<<exception [[Object_file.WrongVersion]]>>=
-exception WrongVersion
-@
-
-<<function [[Object_file.load]]>>=
-let load (chan : Chan.i) : 'instr t =
-  Logs.info (fun m -> m "Loading object %s" (Chan.origin chan));
-  let (ver, obj) = input_value chan.ic in
-  if ver <> version
-  then raise WrongVersion
-  else obj
-@
-
-<<function [[Object_file.is_obj_filename]]>>=
-let is_obj_filename (file : Fpath.t) : bool =
-  !!file =~ ".*\\.o[5v]$"
-@
-%$
-
 
 %-------------------------------------------------------------
 
@@ -732,12 +345,8 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-
-(* An object (.o) in Plan 9 is really just a serialized assembly AST
- * TODO? could also add file origin?
- *)
+(* TODO? could also add file origin? *)
 <<type [[Object_file.t]]>>
-
 
 (* less: could be sha1 of ast_asmxxx.ml for even safer marshalling *)
 <<constant [[Object_file.version]]>>
@@ -745,7 +354,10 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
-
+(* TODO? can normalize before? or check every invariants?
+ * TODO? pass and save arch name string? like in goken? and
+ * check for it at loading time?
+ *)
 <<function [[Object_file.save]]>>
 
 (* for slightly safer marshalling
@@ -761,61 +373,19 @@ open Fpath_.Operators
 
 \section{[[CLI.mli]]}
 
-<<type [[CLI.caps (CLI.mli)]]>>=
-type caps = < Cap.open_in; Cap.open_out; Cap.env >
-@
-
-<<signature [[CLI.main]]>>=
-(* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> ->
-  string array -> Exit.t
-@
-
-<<signature [[CLI.assemble]]>>=
-(* main algorithm; works by side effect on outfile *)
-val assemble: <Cap.open_in; .. > ->
-  Preprocessor.conf -> Arch.t -> Fpath.t (* infile *) -> Chan.o (* outfile *) ->
-  unit
-@
-
-
 %-------------------------------------------------------------
 
 <<CLI.mli>>=
-(* Need:
- * - open_in: for argv derived input file but also for #include'd files
- *   because 5a/va/... are macroassemblers
- * - open_out for -o object file or argv[0].5
- * - env: for INCLUDE (for cpp)
- *)
-<<type [[CLI.caps (CLI.mli)]]>>
+<<type [[CLI.caps]]>>
 
 <<signature [[CLI.main]]>>
 
 <<signature [[CLI.assemble]]>>
 @
 
-
 \section{[[CLI.ml]]}
 
-<<type [[CLI.caps]]>>=
-type caps = < Cap.open_in; Cap.open_out; Cap.env >
-@
-
-<<constant [[CLI.dump_ast]]>>=
-let dump_ast = ref false
-@
-
-<<function [[CLI.assemble5]]>>=
-let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asm5.program =
-  let prog = Parse_asm5.parse caps conf infile in
-  let prog = Resolve_labels.resolve Ast_asm5.branch_opd_of_instr prog in
-  if !dump_ast 
-  then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
-        Logs.app (fun m -> m "AST = %s" s));
-  prog
-@
-
+% for mips
 <<function [[CLI.assemblev]]>>=
 let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asmv.program =
   let prog = Parse_asmv.parse caps conf infile in
@@ -824,150 +394,6 @@ let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   then Logs.app (fun m -> m "AST = %s" (Ast_asmv.show_program prog));
   prog
 @
-
-<<function [[CLI.assemble]]>>=
-(* Will modify chan as a side effect *)
-let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
-  match arch with
-  | Arch.Arm -> 
-      let prog = assemble5 caps conf infile in
-      Object_file.save arch prog chan
-  | Arch.Mips -> 
-      let prog = assemblev caps conf infile in
-      Object_file.save arch prog chan
-  | _ -> 
-   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
-@
-
-<<function [[CLI.main]]>>=
-let main (caps: <caps; ..>) (argv: string array) : Exit.t =
-  let arch = 
-    (* alt: use Arch.arch_of_char argv.(0).(1) *)
-    match Filename.basename argv.(0) with
-    | "o5a" -> Arch.Arm
-    | "ova" -> Arch.Mips
-    | s -> failwith (spf "arch could not be detected from argv0 %s" s)
-  in
-
-  let thechar = Arch.thechar arch in
-  let thestring = Arch.thestring arch in
-
-  let usage = 
-    spf "usage: %s [-options] file.s" argv.(0)
-  in
-
-  (* alt: Fpath.t option ref *)
-  let infile  = ref "" in
-  let outfile = ref "" in
-
-  let level = ref (Some Logs.Warning) in
-  (* for debugging *)
-  let backtrace = ref false in
-
-  (* for cpp *)
-  let include_paths : Fpath.t list ref = ref [] in
-  let macro_defs = ref [] in
-
-  let options = [
-    "-o", Arg.Set_string outfile,
-    " <file> output file";
-
-    (* dup: same in compiler/CLI.ml *)
-    "-D", Arg.String (fun s ->
-      let (var, val_) = 
-        if s =~ "\\(.*\\)=\\(.*\\)"
-        then Regexp_.matched2 s
-        else (s, "1")
-      in
-      macro_defs := (var, val_)::!macro_defs
-    ), " <name=def> (or just <name>) define the name to the preprocessor";
-    "-I", Arg.String (fun s ->
-      include_paths := Fpath.v s::!include_paths
-    ), " <dir> add dir as a path to look for '#include <file>' files";
-
-    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-    " verbose mode";
-    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
-    " guess what";
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-
-    (* pad: I added that *)
-    "-dump_ast", Arg.Set dump_ast,
-    " dump the parsed AST";
-    (* pad: I added that *)
-    "-backtrace", Arg.Set backtrace,
-    " dump the backtrace after an error";
-  ] |> Arg.align
-  in
-  (try
-    Arg.parse_argv argv options (fun f -> 
-     if !infile <> ""
-     then failwith "already specified an input file";
-     infile := f;
-   ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
-  Logs_.setup !level ();
-  Logs.info (fun m -> m "assembler ran from %s with arch %s" 
-        (Sys.getcwd()) thestring);
-
-  if !infile = ""
-  then begin Arg.usage options usage; raise (Exit.ExitCode 1); end;
-
-  let outfile : Fpath.t = 
-    (if !outfile = ""
-    then
-      let b = Filename.basename !infile in
-      if b =~ "\\(.*\\)\\.s"
-      then Regexp_.matched1 b ^ (spf ".o%c" thechar)
-      else (b ^ (spf ".o%c" thechar))
-    else !outfile
-    ) |> Fpath.v
-  in
-
-  (* dup: same in compiler/CLI.ml *)
-  let system_paths : Fpath.t list =
-    (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
-     with Not_found ->
-       [spf "/%s/include" thestring; "/sys/include";]
-    ) |> Fpath_.of_strings
-  in
-  let conf = Preprocessor.{
-    defs = !macro_defs;
-    (* this order? *)
-    paths = system_paths @ List.rev !include_paths;
-    dir_source_file = Fpath.v (Filename.dirname !infile);
-  }
-  in
-
-  try 
-    (* main call *)
-    (* can't create chan from infile to avoid passing Cap.open_in because
-     * with cpp we need to open other files.
-     *)
-    outfile |> FS.with_open_out caps (fun chan ->
-        assemble caps conf arch (Fpath.v !infile) chan
-    );
-    Exit.OK
-  with exn ->
-    if !backtrace
-    then raise exn
-    else 
-      (match exn with
-      | Location_cpp.Error (s, loc) ->
-          (* less: could use final_loc_and_includers_of_loc loc *)
-          let (file, line) = Location_cpp.final_loc_of_loc loc in
-          Logs.err (fun m -> m "%s:%d %s" !!file line s);
-          Exit.Code 1
-      | _ -> raise exn
-      )
-@
-
 
 %-------------------------------------------------------------
 
@@ -1010,7 +436,6 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
-(* Need: see .mli *)
 <<type [[CLI.caps]]>>
 
 <<constant [[CLI.dump_ast]]>>
@@ -1020,184 +445,21 @@ open Regexp_.Operators
 (*****************************************************************************)
 
 <<function [[CLI.assemble5]]>>
-
 <<function [[CLI.assemblev]]>>
-
 
 <<function [[CLI.assemble]]>>
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[CLI.main]]>>
-
 @
-
 
 \section{[[Lexer_asm.mll]]}
 
-<<function [[Lexer_asm.error]]>>=
-(* Common parts of the different Plan 9 assembly lexers.
- * 
- * Limitations compared to 5a/va/...:
- *  - no unicode support
- *  - no uU lL suffix
- *    (but was skipped by 5a anyway)
- *  - no '=' used for constant definition
- *    (but can use cpp #define for that)
- *)
-
-let error s =
-  raise (L.Error (spf "Lexical error: %s" s, !L.line))
-@
-
-<<function [[Lexer_asm.code_of_escape_char]]>>=
-let code_of_escape_char c =
-  match c with
-  | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
-  | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
-
-  | 'f' -> error "unknown \\f"
-  (* could be removed, special 5a escape char *)
-  | 'a' -> 0x07 | 'v' -> 0x0b 
-  (* useful to generate C-compatible strings with special end marker *)
-  | 'z' -> 0
-
-  (* stricter: we disallow \ with unknown character *)
-  | _ -> error "unknown escape sequence"
-@
-
-<<function [[Lexer_asm.string_of_ascii]]>>=
-let string_of_ascii i =
-  String.make 1 (Char.chr i)
-@
-
-<<function [[Lexer_asm.char_]]>>=
-(* needed only because of ocamllex limitations in ocaml-light
- * which does not support the 'as' feature.
- *)
-let char_ lexbuf =
-  let s = Lexing.lexeme lexbuf in
-  String.get s 0
-}
-@
-
-<<constant [[Lexer_asm.letter]]>>=
-let letter = ['a'-'z''A'-'Z']
-@
-
-<<constant [[Lexer_asm.space]]>>=
-let space = [' ''\t']
-@
-
-<<constant [[Lexer_asm.digit]]>>=
-let digit = ['0'-'9']
-@
-
-<<constant [[Lexer_asm.hex]]>>=
-let hex = (digit | ['A'-'F''a'-'f'])
-@
-
-<<constant [[Lexer_asm.oct]]>>=
-let oct = ['0'-'7']
-
-(*****************************************************************************)
-(* Main rule *)
-(*****************************************************************************)
-rule token = parse
-
-  (* ----------------------------------------------------------------------- *)
-  (* Spacing/comments *)
-  (* ----------------------------------------------------------------------- *)
-  | space+ { token lexbuf }
-
-  | "//" [^'\n']* { token lexbuf }
-  | "/*"          { comment lexbuf }
-
-  (* newlines are converted in fake semicolons for the grammar *)
-  | '\n' { let old = !L.line in incr L.line; TSEMICOLON old }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Symbols *)
-  (* ----------------------------------------------------------------------- *)
-  | ';' { TSEMICOLON !L.line }
-
-  | ':' { TCOLON } | ',' { TCOMMA }
-  | '(' { TOPAR } | ')' { TCPAR }
-  | '$' { TDOLLAR }
-
-  | '+' { TPLUS } | '-' { TMINUS } 
-  (* '/' is used for division and for DATA too *)
-  | '*' { TMUL }  | '/' { TSLASH } | '%' { TMOD }
-
-  (* has to be before the rule for identifiers *)
-  | '.' { TDOT }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Mnemonics and identifiers *)
-  (* ----------------------------------------------------------------------- *)
-  | "R" (digit+ (*as s*)) 
-      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
-        let i = int_of_string s in 
-        (* the range check is arch-specific and must be done in Parse_asmX.ml *)
-        TRx (Ast_asm.R i)
-      }
-  | "F" (digit+ (*as s*)) 
-      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
-        let i = int_of_string s in 
-        (* the range check is arch-specific and must be done in Parse_asmX.ml *)
-        TFx (Ast_asm.FR i)
-      }
-
-  (* looser: actually for '.' 5a imposes to have an isalpha() after *)    
-  | (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
-      let s = Lexing.lexeme lexbuf in
-      (* alt: use Hashtbl.t *)
-      match s with
-      (* pseudo instructions *)
-      | "TEXT" -> TTEXT | "GLOBL" -> TGLOBL
-      | "WORD" -> TWORD | "DATA" -> TDATA
-
-      (* virtual instructions *)
-      | "RET" -> TRET
-      | "NOP" -> TNOP
- 
-      (* registers (see also the special rule above for R digit+) *)
-      | "R" -> TR
-      | "F" -> TF
-
-      (* pseudo registers *)
-      | "PC" -> TPC | "SB" -> TSB | "SP" -> TSP | "FP" -> TFP
-
-      (* each Parse_asmX.ml will refine and convert some TIDENT *)
-      | _ -> TIDENT s
-    }
-
-  (* ----------------------------------------------------------------------- *)
-  (* Numbers *)
-  (* ----------------------------------------------------------------------- *)
-  | "0"  (oct+ (*as s*)) 
-      { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
-        TINT (int_of_string ("0o" ^ s))  }
-  | "0x" hex+        { TINT (int_of_string (Lexing.lexeme lexbuf)) }
-@
-
-
 %-------------------------------------------------------------
 
-
 \section{[[Main.ml]]}
-
-<<toplevel [[Main._1]]>>=
-let _ = 
-  Cap.main (fun (caps : Cap.all_caps) ->
-     let argv = CapSys.argv caps in
-     Exit.exit caps 
-        (Exit.catch (fun () -> 
-            CLI.main caps argv))
-@
-
 
 %-------------------------------------------------------------
 
@@ -1210,43 +472,10 @@ let _ =
 (*****************************************************************************)
 
 <<toplevel [[Main._1]]>>
-  )
 @
 
 
 \section{[[Parser_asm.ml]]}
-
-<<function [[Parser_asm.error]]>>=
-let error s =
-  raise (L.Error (spf "Syntax error: %s" s, !L.line))
-@
-
-<<constant [[Parser_asm.noattr]]>>=
-let noattr = { dupok = false; prof = true }
-@
-
-<<function [[Parser_asm.attributes_of_int]]>>=
-(* less: should use keywords in Asm5 instead of abusing integers
- * alt: anyway one can also use cpp to define NOPROF/DUPOK macros
- *)
-let attributes_of_int i =
-   match i with 
-   | 0 -> noattr
-   (* NOPROF *)
-   | 1 -> { dupok = false; prof = false }
-   (* DUPOK *)
-   | 2 -> { dupok = true; prof = true }
-   (* both DUPOK and NOPROF *)
-   | 3 -> { dupok = true; prof = false }
-
-   | _ -> error (spf "unknown attribute or attribute combination: %d" i)
-@
-
-<<function [[Parser_asm.mk_e]]>>=
-let mk_e name static = 
-  { name; priv = if static then Some (-1) else None; signature = None; }
-@
-
 
 %-------------------------------------------------------------
 
@@ -1280,7 +509,6 @@ module L = Location_cpp
 <<function [[Parser_asm.error]]>>
 
 <<constant [[Parser_asm.noattr]]>>
-
 <<function [[Parser_asm.attributes_of_int]]>>
 
 <<function [[Parser_asm.mk_e]]>>
@@ -1288,17 +516,6 @@ module L = Location_cpp
 
 
 \section{[[Parse_asm5.mli]]}
-
-<<signature [[Parse_asm5.parse]]>>=
-(* will preprocess the code internally first *)
-val parse: 
-  < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast_asm5.program
-@
-
-<<signature [[Parse_asm5.parse_no_cpp]]>>=
-val parse_no_cpp: Chan.i -> Ast_asm5.program
-@
-
 
 %-------------------------------------------------------------
 
@@ -1311,152 +528,6 @@ val parse_no_cpp: Chan.i -> Ast_asm5.program
 
 
 \section{[[Parse_asm5.ml]]}
-
-<<function [[Parse_asm5.token]]>>=
-let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
-  let tok = Lexer_asm.token lexbuf in
-  match tok with
-
-  | T.TTEXT -> TTEXT
-  | T.TGLOBL -> TGLOBL
-  | T.TDATA -> TDATA
-  | T.TWORD -> TWORD
-  | T.TRET -> TRET
-  | T.TNOP -> TNOP
-  | T.TR -> TR
-  | T.TF -> TF
-  | T.TPC -> TPC
-  | T.TSB -> TSB
-  | T.TFP -> TFP
-  | T.TSP -> TSP
-  | T.TINT i -> TINT i
-  | T.TFLOAT f -> TFLOAT f
-  | T.TSTRING s -> TSTRING s
-  | T.TSEMICOLON i -> TSEMICOLON i
-  | T.TCOLON -> TCOLON 
-  | T.TDOT -> TDOT 
-  | T.TCOMMA-> TC
-  | T.TDOLLAR-> TDOLLAR
-  | T.TOPAR-> TOPAR
-  | T.TCPAR-> TCPAR
-  | T.TPLUS-> TPLUS
-  | T.TMINUS-> TMINUS
-  | T.TMUL-> TMUL
-  | T.TSLASH-> TSLASH
-  | T.TMOD-> TMOD
-  | T.TSharp-> TSharp
-  | T.EOF-> EOF
-
-  | T.TRx ((A.R i) as x) -> 
-      if i <= 15 && i >=0
-      then TRx x
-      else Lexer_asm.error ("register number not valid")
-  | T.TFx ((A.FR i) as x) -> 
-      if i <= 15 && i >=0
-      then TFx x
-      else Lexer_asm.error ("register number not valid")
-  | T.TIDENT s ->
-      (match s with
-      (* instructions *)
-      | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
-
-      | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
-      | "MUL" -> TARITH MUL | "DIV" -> TARITH DIV | "MOD" -> TARITH MOD
-      | "SLL" -> TARITH SLL | "SRL" -> TARITH SRL | "SRA" -> TARITH SRA
-
-      | "BIC" -> TARITH BIC
-      | "ADC" -> TARITH ADC | "SBC" -> TARITH SBC
-      | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC
-
-      | "MVN" -> TMVN
-
-      (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
-      | "MOVW" -> TMOV A.Word
-      | "MOVB" -> TMOV (A.Byte     A.S) | "MOVBU" -> TMOV (A.Byte     A.U)
-      | "MOVH" -> TMOV (A.HalfWord A.S) | "MOVHU" -> TMOV (A.HalfWord A.U)
-
-      | "B" -> TB | "BL" -> TBL
-      | "CMP" -> TCMP CMP 
-      | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
-
-      | "BEQ" -> TBx EQ | "BNE" -> TBx NE
-      | "BGT" -> TBx (GT A.S) | "BLT" -> TBx (LT A.S)
-      | "BGE" -> TBx (GE A.S) | "BLE" -> TBx (LE A.S)
-      | "BHI" -> TBx (GT A.U) | "BLO" -> TBx (LT A.U) 
-      | "BHS" -> TBx (GE A.U) | "BLS" -> TBx (LE A.U)
-      | "BMI" -> TBx MI | "BPL" -> TBx PL 
-      | "BVS" -> TBx VS | "BVC" -> TBx VC
-
-      | "SWI" -> TSWI
-      | "RFE" -> TRFE
-
-      (* conditions *)
-      | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 
-      | ".GE" -> TCOND (GE A.S)   | ".LE" -> TCOND (LE A.S)
-      | ".HI" -> TCOND (GT A.U) | ".LO" -> TCOND (LT A.U)
-      | ".HS" -> TCOND (GE A.U) | ".LS" -> TCOND (LE A.U)
-      | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
-      | ".VS" -> TCOND VS | ".VC" -> TCOND VC
-
-      (* less: special bits *)
-
-      (* float, MUL, ... *)
-      | "ADDF" -> TARITHF (ADD_, A.F)
-      | "SUBF" -> TARITHF (SUB_, A.F)
-      | "MULF" -> TARITHF (MUL_, A.F)
-      | "DIVF" -> TARITHF (DIV_, A.F)
-      | "ADDD" -> TARITHF (ADD_, A.D) 
-      | "SUBD" -> TARITHF (SUB_, A.D)
-      | "MULD" -> TARITHF (MUL_, A.D)
-      | "DIVD" -> TARITHF (DIV_, A.D)
-
-      | "CMPF" -> TCMPF A.F
-      | "CMPD" -> TCMPF A.D
-
-      (* advanced *)
-      | "C" -> TC
-      | _ when s =~ "^C\\([0-9]+\\)$" ->
-            let i = int_of_string (Regexp_.matched1 s) in
-            if i >= 0 && i <= 15
-            then TCx (C i)
-            else Lexer_asm.error ("register number not valid")
-
-      | _ -> TIDENT s
-      )
-@
-%$
-
-<<function [[Parse_asm5.parse]]>>=
-let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program = 
-  let hooks = Parse_cpp.{
-     lexer = token;
-     parser = Parser_asm5.program;
-     category = (fun t ->
-       match t with
-       | Parser_asm5.EOF -> Parse_cpp.Eof
-       | Parser_asm5.TSharp -> Parse_cpp.Sharp
-       | Parser_asm5.TIDENT s -> Parse_cpp.Ident s
-        (* stricter: I forbid to have macros overwrite keywords *)
-       | _ -> Parse_cpp.Other
-     );
-     eof = Parser_asm5.EOF;
-  }
-  in
-  Parse_cpp.parse caps hooks conf file
-@
-
-<<function [[Parse_asm5.parse_no_cpp]]>>=
-(* Simpler code path; possibly useful in tests *)
-let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
-  L.line := 1;
-  let lexbuf = Lexing.from_channel chan.ic in
-  try 
-    Parser_asm5.program token lexbuf, []
-  with Parsing.Parse_error ->
-      failwith (spf "Syntax error: line %d" !L.line)
-@
-
 
 %-------------------------------------------------------------
 
@@ -1478,35 +549,19 @@ open Ast_asm5
 (*****************************************************************************)
 (* Lexer *)
 (*****************************************************************************)
-
 <<function [[Parse_asm5.token]]>>
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-
 <<function [[Parse_asm5.parse]]>>
 
-
 <<function [[Parse_asm5.parse_no_cpp]]>>
-
 @
 
 \section{[[Parser_asm5.mly]]}
 
 \section{[[Resolve_labels.mli]]}
-
-<<signature [[Resolve_labels.resolve]]>>=
-(* The final program has neither labels (defs and uses) nor 
- * relative jumps in branching instructions.
- * Those are converted in absolute jumps.
- * !!Actually works by side effect on input program so take care!!
- *)
-val resolve: 
-  ('instr -> Ast_asm.branch_operand option) ->
-  'instr Ast_asm.program -> 'instr Ast_asm.program
-@
-
 
 %-------------------------------------------------------------
 
@@ -1517,87 +572,6 @@ val resolve:
 
 
 \section{[[Resolve_labels.ml]]}
-
-<<function [[Resolve_labels.error]]>>=
-let error (s : string) (line, _locs) =
-  (* TODO: use Location_cpp.Error instead or use locs at least! *)
-  failwith (spf "%s at line %d" s line)
-@
-
-<<function [[Resolve_labels.resolve]]>>=
-(* ocaml: see how little processing 5a actually does :) *)
-let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
-  let pc : virt_pc ref = ref 0 in
-  let h = Hashtbl.create 101 in
-
-  let (ps, locs) = prog in
-
-  (* first pass, process the label definitions, populate h *)
-  ps |> List.iter (fun (p, line) ->
-    (match p with
-    | LabelDef lbl -> 
-        (* better to check duplicate here than via lexing tricks *)
-        if Hashtbl.mem h lbl
-        then error (spf "redeclaration of %s" lbl) (line, locs);
-
-        Hashtbl.add h lbl !pc;
-        (* no incr pc; share pc if multiple labels at same place *)
-    (* coupling: must be consistent with second pass below and incr pc
-     * for the same cases!
-     *)
-    | Instr _ | Pseudo (TEXT _ | WORD _) | Virtual (RET | NOP) -> 
-        incr pc
-    | Pseudo (DATA _ | GLOBL _ ) -> ()
-    )
-  );
-
-  (* second pass, process the label uses, resolve some branch operands *)
-  pc := 0;
-  (* filter but modify also by side effect p *)
-  let ps' = ps |> List.filter (fun (p, line) ->
-    (match p with
-    (* no need to keep the labels in the object file *)
-    | LabelDef _ -> false
-
-    | Pseudo (TEXT _ | WORD _) -> 
-        incr pc; 
-        true
-    | Pseudo (DATA _ | GLOBL _) -> 
-        (* no pc increment here *)
-        true
-    | Virtual (RET | NOP) -> 
-        incr pc; 
-        true
-    | Instr instr ->
-
-        (* TODO? move nested function out? *)
-        let resolve_branch_operand (opd : branch_operand2 ref) : unit =
-          match !opd with
-          | SymbolJump _ | IndirectJump _ -> ()
-          (* Relative and LabelUse -> Absolute *)
-          | Relative i -> 
-              opd := Absolute (!pc + i)
-          | LabelUse (lbl, i) ->
-              (try
-                 let pc = Hashtbl.find h lbl in
-                 (* less: could keep label info also for debugging purpose? *)
-                 opd := Absolute (pc + i)
-               with Not_found ->
-                 error (spf "undefined label: %s" lbl) (line, locs)
-               )
-          | Absolute _ -> 
-              raise (Impossible "Absolute can't be made via assembly syntax")
-        in
-        branch_opd_of_instr instr |> Option.iter resolve_branch_operand;
-
-        incr pc;
-        true
-    )
-  )
-  in
-  ps', locs
-@
-
 
 %-------------------------------------------------------------
 
@@ -1620,54 +594,19 @@ open Ast_asm
 (*****************************************************************************)
 (* Error management *)
 (*****************************************************************************)
-
 <<function [[Resolve_labels.error]]>>
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[Resolve_labels.resolve]]>>
 @
 
 
 \section{[[Token_asm.ml]]}
 
-<<type [[Token_asm.t]]>>=
-type t =
-  (* pseudo *)
-  | TTEXT | TGLOBL
-  | TWORD | TDATA 
-  (* virtual *)
-  | TRET | TNOP
-  (* registers *)
-  | TR | TF
-  | TPC | TSB | TFP | TSP
-  | TRx of Ast_asm.register
-  | TFx of Ast_asm.fregister
-  (* immediate *)
-  | TINT of int
-  | TFLOAT of float
-  | TSTRING of string
-  (* names *)
-  | TIDENT of string
-  (* punctuation *)
-  | TSEMICOLON of int (* global line number *)
-  | TCOLON | TDOT | TCOMMA | TDOLLAR
-  | TOPAR | TCPAR
-  (* operators *)
-  | TPLUS | TMINUS
-  | TMUL | TSLASH | TMOD
-  (* for cpp; see also Parse_cpp.token_category *)
-  | TSharp
-  | EOF
-@
-
-
 %-------------------------------------------------------------
 
 <<Token_asm.ml>>=
 <<type [[Token_asm.t]]>>
 @
-
-

@@ -68,6 +68,9 @@ Documentation License, Version 1.3.
 %\chapter{Overview}
 % now in Intro.nw too
 
+\section{Output object format}
+\label{sec:object-format-part1}
+
 \section{Code organization}
 \label{tab:code-orga}
 
@@ -82,18 +85,517 @@ Documentation License, Version 1.3.
 %******************************************************************************
 \label{chap:core-ds}
 
-\section{[[Opcode]]}
-\label{sec:opcode}
-\section{[[Register]]}
-\section{[[Operand]]}
-\section{Instructions}
-\label{sec:outcode-signature}
-\section{Tokens and [[itab]]}
+%toc: tokens -> AST -> serialized object file
+
+%%\section{[[Opcode]]}
+%%\label{sec:opcode}
+%%\section{[[Register]]}
+%%\section{[[Operand]]}
+
+\section{Tokens} %% and [[itab]]
 \label{sec:token}
-\label{sec:union}
-\section{[[Sym]]bols and [[hash]] table}
-\label{sec:symbol-table}
-\section{[[Sym_kind]]}
+%%\label{sec:union}
+
+\subsection{General assembly tokens}
+
+<<type [[Token_asm.t]]>>=
+type t =
+  (* pseudo *)
+  | TTEXT | TGLOBL
+  | TWORD | TDATA 
+  (* virtual *)
+  | TRET | TNOP
+  (* registers *)
+  | TR | TF
+  | TPC | TSB | TFP | TSP
+  | TRx of Ast_asm.register
+  | TFx of Ast_asm.fregister
+  (* immediate *)
+  | TINT of int
+  | TFLOAT of float
+  | TSTRING of string
+  (* names *)
+  | TIDENT of string
+  (* punctuation *)
+  | TSEMICOLON of int (* global line number *)
+  | TCOLON | TDOT | TCOMMA | TDOLLAR
+  | TOPAR | TCPAR
+  (* operators *)
+  | TPLUS | TMINUS
+  | TMUL | TSLASH | TMOD
+  (* for cpp; see also Parse_cpp.token_category *)
+  | TSharp
+  | EOF
+@
+
+<<type [[Ast_asm.register]]>>=
+type register = R of int (* between 0 and 15 on ARM *)
+@
+% R0, R2, R3, ... R15
+
+\subsection{ARM assembly tokens}
+
+<<Parser tokens>>=
+/*(*-----------------------------------------*)*/
+/*(*2 opcodes *)*/
+/*(*-----------------------------------------*)*/
+
+%token <Ast_asm5.arith_opcode> TARITH
+%token <Ast_asm5.arithf_opcode * Ast_asm.floatp_precision> TARITHF
+%token <Ast_asm.floatp_precision> TCMPF
+%token TMVN
+%token <Ast_asm.move_size> TMOV TSWAP
+%token TB  TBL
+%token <Ast_asm5.cmp_opcode> TCMP   
+%token <Ast_asm5.condition> TBx TCOND
+%token TSWI TRFE
+/*(* virtual opcodes *)*/
+%token TRET TNOP
+/*(* pseudo opcodes *)*/
+%token TTEXT TGLOBL 
+%token TDATA TWORD 
+
+/*(*-----------------------------------------*)*/
+/*(*2 registers *)*/
+/*(*-----------------------------------------*)*/
+
+%token <Ast_asm.register> TRx
+%token <Ast_asm.fregister> TFx
+%token TR TF
+/*(* pseudo registers *)*/
+%token TPC TSB TFP TSP
+
+/*(* ARM specific registers *)*/
+%token TC
+%token <Ast_asm5.creg> TCx
+
+/*(*-----------------------------------------*)*/
+/*(*2 Constants *)*/
+/*(*-----------------------------------------*)*/
+
+%token <int> TINT
+%token <float> TFLOAT
+%token <string> TSTRING
+
+/*(*-----------------------------------------*)*/
+/*(*2 Names *)*/
+/*(*-----------------------------------------*)*/
+%token <string> TIDENT
+
+/*(*-----------------------------------------*)*/
+/*(*2 Punctuation *)*/
+/*(*-----------------------------------------*)*/
+
+/*(* the int is for the (global) line number *)*/
+%token <int> TSEMICOLON 
+
+%token TCOLON TDOT TDOLLAR
+%token TOPAR TCPAR
+
+/*(*-----------------------------------------*)*/
+/*(*2 Operators *)*/
+/*(*-----------------------------------------*)*/
+
+%token TSHL TSHR   TSHMINUS TSHAT
+%token TPLUS TMINUS TTILDE TMUL TMOD
+%token TSLASH
+
+/*(*-----------------------------------------*)*/
+/*(*2 Misc *)*/
+/*(*-----------------------------------------*)*/
+%token TSharp
+%token EOF
+@
+
+\subsection{Converting tokens}
+
+% and then convert one in the other. Boilerplate but can't reuse
+% because have to specify tokens in grammar? 
+
+<<function [[Parse_asm5.token]]>>=
+let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
+  let tok = Lexer_asm.token lexbuf in
+  match tok with
+  | T.TTEXT -> TTEXT
+  | T.TGLOBL -> TGLOBL
+  | T.TDATA -> TDATA
+  | T.TWORD -> TWORD
+  | T.TRET -> TRET
+  | T.TNOP -> TNOP
+  | T.TR -> TR
+  | T.TF -> TF
+  | T.TPC -> TPC
+  | T.TSB -> TSB
+  | T.TFP -> TFP
+  | T.TSP -> TSP
+  | T.TINT i -> TINT i
+  | T.TFLOAT f -> TFLOAT f
+  | T.TSTRING s -> TSTRING s
+  | T.TSEMICOLON i -> TSEMICOLON i
+  | T.TCOLON -> TCOLON 
+  | T.TDOT -> TDOT 
+  | T.TCOMMA-> TC
+  | T.TDOLLAR-> TDOLLAR
+  | T.TOPAR-> TOPAR
+  | T.TCPAR-> TCPAR
+  | T.TPLUS-> TPLUS
+  | T.TMINUS-> TMINUS
+  | T.TMUL-> TMUL
+  | T.TSLASH-> TSLASH
+  | T.TMOD-> TMOD
+  | T.TSharp-> TSharp
+  | T.EOF-> EOF
+  <<[[Parse_asm5.token]] match [[tok]] other cases>>
+@
+%$
+
+
+\section{Program AST}
+%%\label{sec:outcode-signature}
+%ocaml: new section, all together instead of Opcode/Operand/...
+
+\subsection{Location and other basic types}
+
+<<type [[Ast_asm.loc]]>>=
+(* (global) line# *)
+type loc = Location_cpp.loc
+@
+% see OCompiler book and full explanation?
+
+<<type [[Ast_asm.integer]]>>=
+type integer = int 
+@
+
+
+
+
+
+\subsection{General assembly instructions}
+
+<<type [[Ast_asm.program]]>>=
+(* The location_history allows to convert a loc to the right place *)
+type 'instr program = 'instr lines * Location_cpp.location_history list
+@
+
+<<type [[Ast_asm.lines]]>>=
+type 'instr lines = ('instr line * loc) list
+@
+
+<<type [[Ast_asm.line]]>>=
+type 'instr line = 
+  | Pseudo of pseudo_instr
+  | Virtual of virtual_instr
+  | Instr of 'instr
+
+  (* disappear after resolve *)
+  | LabelDef of label
+  (* less: PragmaLibDirective of string *)
+@
+
+\subsection{Pseudo instructions}
+
+<<type [[Ast_asm.pseudo_instr]]>>=
+type pseudo_instr =
+  (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
+  | TEXT of global * attributes * int (* size locals, (multiple of 4 on ARM) *)
+  | GLOBL of global (* can have offset? *) * attributes * int (* size *)
+
+  | DATA of global * offset * int (* size, should be in [1..8] *) * ximm
+  (* any ximm? even String? And Float? for float should have DWORD? *)
+  | WORD of ximm
+@
+
+<<type [[Ast_asm.global]]>>=
+type global = {
+  name: symbol;
+  <<[[Asm_asm.global]] other fields>>
+}
+@
+
+<<type [[Ast_asm.symbol]]>>=
+type symbol = string
+@
+
+<<type [[Ast_asm.offset]]>>=
+(* can be 0, negative, or positive *)
+type offset = int
+@
+
+
+<<type [[Ast_asm.ximm]]>>=
+type ximm =
+  | Int of integer
+  | String of string (* limited to 8 characters *)
+  <<[[Ast_asm.ximm]] other cases>>
+@
+
+<<[[Asm_asm.global]] other fields>>=
+(* 'Some _' when entity is a private symbol (aka static symbol).
+ * mutable (ugly?) modifed by linker in naming phase.
+ *)
+mutable priv: int option; 
+@
+
+<<function [[Ast_asm.s_of_global]]>>=
+let s_of_global (x : global) : string = 
+  x.name ^ (match x.priv with None -> "" | Some _ -> "<>")
+@
+
+
+<<[[Asm_asm.global]] other fields>>=
+(* for safe linking (generated only by 5c, not 5a) *)
+signature: int option;
+@
+
+\subsection{Virtual instructions}
+
+<<type [[Ast_asm.virtual_instr]]>>=
+type virtual_instr =
+  | RET
+  | NOP (* removed by linker *)
+  (* TODO? out MOV here with sizes and sign/unsigned *)
+@
+
+\subsection{Labels and jumps}
+
+<<type [[Ast_asm.label]]>>=
+(* jmp labels *)
+type label = string
+@
+
+<<type [[Ast_asm.virt_pc]]>>=
+(* increments by unit of 1 *)
+type virt_pc = int
+@
+
+<<type [[Ast_asm.branch_operand]]>>=
+type branch_operand = branch_operand2 ref
+@
+
+<<type [[Ast_asm.branch_operand2]]>>=
+and branch_operand2 =
+
+  (* resolved by assembler *)
+  (* relative to PC, in units of virtual_code_address *)
+  | Relative of int 
+  (* we could transform labels in symbols early-on, but nice to resolve ASAP *)
+  | LabelUse of label * offset (* useful to have offset? *)
+
+  (* resolved by linker *)
+  | SymbolJump of global (* no offset (it would not be used by 5l anyway) *)
+
+  (* after resolution *)
+  | Absolute of virt_pc
+
+  (* resolved dynamically by the machine (e.g., B (R14)) *)
+  | IndirectJump of register
+@
+
+\subsection{Entities}
+
+<<[[Ast_asm.ximm]] other cases>>=
+(* I used to disallow address of FP or SP, and offset to SB, but
+ * 5c needs this feature, so you can take the address of a local.
+ * old: Address of global.
+ *)
+| Address of entity
+@
+
+<<type [[Ast_asm.entity]]>>=
+type entity = 
+  | Param of symbol option * offset (* FP *)
+  | Local of symbol option * offset (* SP *)
+  (* stricter: we disallow anonymous offsets to SB *)
+  | Global of global * offset (* SB *) 
+@
+
+\subsection{ARM assembly instructions}
+
+<<type [[Ast_asm5.program]]>>=
+(* On the ARM every instructions can be prefixed with a condition.
+ * Note that cond should be AL (Always) for B/Bxx instructions.
+*)
+type program = instr_with_cond A.program
+@
+
+<<type [[Ast_asm5.instr_with_cond]]>>=
+type instr_with_cond = instr * condition
+@
+
+<<type [[Ast_asm5.condition]]>>=
+  and condition =
+    (* equal, not equal *)
+    | EQ | NE
+    (* greater than, less than, greater or equal, less or equal *)
+    | GT of sign | LT of sign | GE of sign | LE of sign
+    (* minus/negative, plus/positive *)
+    | MI | PL 
+    (* overflow set/clear *)
+    | VS | VC
+    (* always/never *)
+    | AL | NV
+@
+
+<<type [[Ast_asm.sign]]>>=
+type sign = S (* Signed *) | U (* Unsigned *)
+@
+
+
+<<type [[Ast_asm5.instr]]>>=
+type instr = 
+  (* Arithmetic *)
+  <<[[Ast_asm5.instr]] arithmetic instructions cases>>
+
+  (* Memory *)
+  <<[[Ast_asm5.instr]] memory instructions cases>>
+
+  (* Control flow *)
+  <<[[Ast_asm5.instr]] control-flow instructions cases>>
+
+  (* System *)
+  <<[[Ast_asm5.instr]] system instructions cases>>
+@
+
+
+\subsection{Special registers}
+
+<<type [[Ast_asm5.reg]]>>=
+type reg = A.register (* between 0 and 15 *)
+@
+
+<<constant [[Ast_asm5.rLINK]]>>=
+let rLINK = R 14
+@
+
+<<constant [[Ast_asm5.rPC]]>>=
+let rPC   = R 15
+@
+
+<<constant [[Ast_asm5.nb_registers]]>>=
+let nb_registers = 16
+@
+
+
+% those are different from PC and LINK; those are assembler/compiler conventions
+<<constant [[Ast_asm5.rSB]]>>=
+let rSB  = R 12
+@
+<<constant [[Ast_asm5.rSP]]>>=
+let rSP  = R 13
+@
+
+
+\subsection{Arithmetic instructions}
+
+<<[[Ast_asm5.instr]] arithmetic instructions cases>>=
+| Arith of arith_opcode * arith_cond option *
+    arith_operand (* src *) * reg option * reg (* dst *)
+@
+
+<<type [[Ast_asm5.arith_opcode]]>>=
+  and arith_opcode = 
+    (* logic *)
+    | AND | ORR | EOR
+    (* arithmetic *)
+    | ADD | SUB   | MUL   | DIV | MOD (* DIV and MOD are virtual *)
+    (* bit shifting; immediate operand can only be between 0 and 31 *)
+    | SLL | SRL | SRA (* virtual, sugar for bitshift register *)
+    (* less useful *)
+    | BIC  | ADC | SBC  | RSB | RSC
+    (* middle operand always empty (could lift up and put special type) *)
+    | MOV | MVN (* MOV has no reading syntax in 5a, MOVE is used *)
+@
+
+
+<<type [[Ast_asm5.arith_operand]]>>=
+type arith_operand =
+  | Imm of A.integer (* characters are converted to integers *)
+  | Reg of reg
+  (* can not be used with shift opcodes (SLL/SRL/SRA) *)
+  | Shift of reg * shift_reg_op * 
+             (reg, int (* between 0 and 31 *)) Either_.t
+@
+
+<<type [[Ast_asm5.shift_reg_op]]>>=
+  and shift_reg_op =
+    | Sh_logic_left | Sh_logic_right
+    | Sh_arith_right | Sh_rotate_right
+@
+
+
+\subsection{Memory instructions}
+
+<<[[Ast_asm5.instr]] memory instructions cases>>=
+| MOVE of A.move_size * move_option *
+    mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
+| SWAP of A.move_size (* actually only (Byte x) *) * 
+     reg (* indirect *) * reg * reg option
+@
+
+<<type [[Ast_asm.move_size]]>>=
+type move_size = Word | HalfWord of sign | Byte of sign
+@
+
+<<type [[Ast_asm5.mov_operand]]>>=
+type mov_operand = 
+  (* Immediate shift register *)
+  | Imsr of arith_operand
+  (* eXtended immediate.
+   * (Ximm (Int x) is converted in Imsr (Imm x) in the parser
+   *)
+  | Ximm of ximm
+
+  | Indirect of reg * A.offset
+  (* another form of Indirect *)
+  | Entity of A.entity
+@
+
+<<type [[Ast_asm5.move_option]]>>=
+   and move_option = move_cond option
+@
+%TODO: delete this intermediate? useful intermediate?
+
+\subsection{Branching instructions}
+
+<<[[Ast_asm5.instr]] control-flow instructions cases>>=
+| B  of A.branch_operand (* branch *)
+| BL of A.branch_operand (* branch and link *)
+| Cmp of cmp_opcode * arith_operand * reg
+(* just Relative or LabelUse here for branch_operand *)
+| Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
+@
+
+<<type [[Ast_asm5.cmp_opcode]]>>=
+  and cmp_opcode = 
+    | CMP
+    (* less useful *)
+    | TST | TEQ | CMN
+@
+
+
+\subsection{System instructions}
+
+<<[[Ast_asm5.instr]] system instructions cases>>=
+| SWI of int (* value actually unused in Plan 9 and Linux *)
+| RFE (* virtual, sugar for MOVM *)
+@
+
+%%\section{[[Sym]]bols and [[hash]] table}
+%%\label{sec:symbol-table}
+%%\section{[[Sym_kind]]}
+
+\section{Object file}
+
+% trivial, same as program AST just serialized
+
+<<type [[Object_file.t]]>>=
+(* An object file (.o) in Plan 9 is really just a serialized assembly AST *)
+type 'instr t = {
+  prog:  'instr Ast_asm.program;
+  arch: Arch.t
+}
+@
+
 
 %******************************************************************************
 \chapter{Main Functions}
@@ -101,24 +603,284 @@ Documentation License, Version 1.3.
 \label{chap:main}
 
 \section{[[main()]]}
-\section{[[cinit()]]}
+
+<<toplevel [[Main._1]]>>=
+let _ = 
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     Exit.exit caps 
+        (Exit.catch (fun () -> 
+            CLI.main caps argv))
+  )
+@
+
+<<type [[CLI.caps]]>>=
+(* Need:
+ * - open_in: for argv derived input file but also for #include'd files
+ *   because 5a/va/... are macroassemblers
+ * - open_out for -o object file or argv[0].5
+ * - env: for INCLUDE (for cpp)
+ *)
+type caps = < Cap.open_in; Cap.open_out; Cap.env >
+@
+
+<<signature [[CLI.main]]>>=
+(* entry point (can also raise Exit.ExitCode) *)
+val main: <caps; ..> ->
+  string array -> Exit.t
+@
+
+
+
+<<function [[CLI.main]]>>=
+let main (caps: <caps; ..>) (argv: string array) : Exit.t =
+  let arch = 
+    (* alt: use Arch.arch_of_char argv.(0).(1) *)
+    match Filename.basename argv.(0) with
+    | "o5a" -> Arch.Arm
+    | "ova" -> Arch.Mips
+    | s -> failwith (spf "arch could not be detected from argv0 %s" s)
+  in
+
+  let thechar = Arch.thechar arch in
+  let thestring = Arch.thestring arch in
+
+  let usage = 
+    spf "usage: %s [-options] file.s" argv.(0)
+  in
+
+  (* alt: Fpath.t option ref *)
+  let infile  = ref "" in
+  let outfile = ref "" in
+
+  let level = ref (Some Logs.Warning) in
+  (* for debugging *)
+  let backtrace = ref false in
+
+  (* for cpp *)
+  let include_paths : Fpath.t list ref = ref [] in
+  let macro_defs = ref [] in
+
+  let options = [
+    "-o", Arg.Set_string outfile,
+    " <file> output file";
+
+    (* dup: same in compiler/CLI.ml *)
+    "-D", Arg.String (fun s ->
+      let (var, val_) = 
+        if s =~ "\\(.*\\)=\\(.*\\)"
+        then Regexp_.matched2 s
+        else (s, "1")
+      in
+      macro_defs := (var, val_)::!macro_defs
+    ), " <name=def> (or just <name>) define the name to the preprocessor";
+    "-I", Arg.String (fun s ->
+      include_paths := Fpath.v s::!include_paths
+    ), " <dir> add dir as a path to look for '#include <file>' files";
+
+    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+    " verbose mode";
+    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+    " guess what";
+    "-quiet", Arg.Unit (fun () -> level := None),
+    " ";
+
+    (* pad: I added that *)
+    "-dump_ast", Arg.Set dump_ast,
+    " dump the parsed AST";
+    (* pad: I added that *)
+    "-backtrace", Arg.Set backtrace,
+    " dump the backtrace after an error";
+  ] |> Arg.align
+  in
+  (try
+    Arg.parse_argv argv options (fun f -> 
+     if !infile <> ""
+     then failwith "already specified an input file";
+     infile := f;
+   ) usage;
+  with
+  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  );
+  Logs_.setup !level ();
+  Logs.info (fun m -> m "assembler ran from %s with arch %s" 
+        (Sys.getcwd()) thestring);
+
+  if !infile = ""
+  then begin Arg.usage options usage; raise (Exit.ExitCode 1); end;
+
+  let outfile : Fpath.t = 
+    (if !outfile = ""
+    then
+      let b = Filename.basename !infile in
+      if b =~ "\\(.*\\)\\.s"
+      then Regexp_.matched1 b ^ (spf ".o%c" thechar)
+      else (b ^ (spf ".o%c" thechar))
+    else !outfile
+    ) |> Fpath.v
+  in
+
+  (* dup: same in compiler/CLI.ml *)
+  let system_paths : Fpath.t list =
+    (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
+     with Not_found ->
+       [spf "/%s/include" thestring; "/sys/include";]
+    ) |> Fpath_.of_strings
+  in
+  let conf = Preprocessor.{
+    defs = !macro_defs;
+    (* this order? *)
+    paths = system_paths @ List.rev !include_paths;
+    dir_source_file = Fpath.v (Filename.dirname !infile);
+  }
+  in
+
+  try 
+    (* main call *)
+    (* can't create chan from infile to avoid passing Cap.open_in because
+     * with cpp we need to open other files.
+     *)
+    outfile |> FS.with_open_out caps (fun chan ->
+        assemble caps conf arch (Fpath.v !infile) chan
+    );
+    Exit.OK
+  with exn ->
+    if !backtrace
+    then raise exn
+    else 
+      (match exn with
+      | Location_cpp.Error (s, loc) ->
+          (* less: could use final_loc_and_includers_of_loc loc *)
+          let (file, line) = Location_cpp.final_loc_of_loc loc in
+          Logs.err (fun m -> m "%s:%d %s" !!file line s);
+          Exit.Code 1
+      | _ -> raise exn
+      )
+@
+
+
+<<signature [[CLI.assemble]]>>=
+(* main algorithm; works by side effect on outfile *)
+val assemble: <Cap.open_in; .. > ->
+  Preprocessor.conf -> Arch.t -> Fpath.t (* infile *) -> Chan.o (* outfile *) ->
+  unit
+@
+
+%%\section{[[cinit()]]}
+
 \section{[[assemble()]]}
 \label{fig:assembler-ofile-outfile}
 
+<<function [[CLI.assemble]]>>=
+(* Will modify chan as a side effect *)
+let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
+  match arch with
+  | Arch.Arm -> 
+      let prog = assemble5 caps conf infile in
+      Object_file.save arch prog chan
+  | Arch.Mips -> 
+      let prog = assemblev caps conf infile in
+      Object_file.save arch prog chan
+  | _ -> 
+   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+@
+
+<<signature [[Object_file.save]]>>=
+val save: Arch.t -> 'instr Ast_asm.program -> Chan.o (* obj file *) -> unit
+@
+
+
+<<function [[CLI.assemble5]]>>=
+let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asm5.program =
+  let prog = Parse_asm5.parse caps conf infile in
+  let prog = Resolve_labels.resolve Ast_asm5.branch_opd_of_instr prog in
+  if !dump_ast 
+  then prog |> Meta_ast_asm5.vof_program |> OCaml.string_of_v |> (fun s -> 
+        Logs.app (fun m -> m "AST = %s" s));
+  prog
+@
+
+<<signature [[Parse_asm5.parse]]>>=
+(* will preprocess the code internally first *)
+val parse: 
+  < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast_asm5.program
+@
+
+
+<<signature [[Resolve_labels.resolve]]>>=
+(* The final program has neither labels (defs and uses) nor 
+ * relative jumps in branching instructions.
+ * Those are converted in absolute jumps.
+ * !!Actually works by side effect on input program so take care!!
+ *)
+val resolve: 
+  ('instr -> Ast_asm.branch_operand option) ->
+  'instr Ast_asm.program -> 'instr Ast_asm.program
+@
+
+\section{[[parse()]]}
+
+<<signature [[Parse_asm5.parse_no_cpp]]>>=
+val parse_no_cpp: Chan.i -> Ast_asm5.program
+@
+
+<<function [[Parse_asm5.parse_no_cpp]]>>=
+(* Simpler code path; possibly useful in tests *)
+let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
+  L.line := 1;
+  let lexbuf = Lexing.from_channel chan.ic in
+  try 
+    Parser_asm5.program token lexbuf, []
+  with Parsing.Parse_error ->
+      failwith (spf "Syntax error: line %d" !L.line)
+@
+
+% token() explain before
+
+
+
+<<function [[Parse_asm5.parse]]>>=
+let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program = 
+  let hooks = Parse_cpp.{
+     lexer = token;
+     parser = Parser_asm5.program;
+     category = (fun t ->
+       match t with
+       | Parser_asm5.EOF -> Parse_cpp.Eof
+       | Parser_asm5.TSharp -> Parse_cpp.Sharp
+       | Parser_asm5.TIDENT s -> Parse_cpp.Ident s
+        (* stricter: I forbid to have macros overwrite keywords *)
+       | _ -> Parse_cpp.Other
+     );
+     eof = Parser_asm5.EOF;
+  }
+  in
+  Parse_cpp.parse caps hooks conf file
+@
+
+
 %******************************************************************************
-\chapter{Input}
+%%\chapter{Input}
 %******************************************************************************
-\label{chap:input}
-\section{[[pinit()]]}
-\section{File management: [[iostack]]}
-\label{sec:iostack}
-\section{Buffer management: [[fi]]}
-\section{[[GETC()]]}
+%%\label{chap:input}
+%%\section{[[pinit()]]}
+%%\section{File management: [[iostack]]}
+%%\label{sec:iostack}
+%%\section{Buffer management: [[fi]]}
+%%\section{[[GETC()]]}
 
 %******************************************************************************
 \chapter{Lexing}
 %******************************************************************************
 \label{chap:lexing}
+
+
+%%\section{[[yylex()]]}
+
+\section{Overview}
 
 <<Lexer_asm.mll>>=
 {
@@ -131,12 +893,22 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* Common parts of the different Plan 9 assembly lexers.
+ * 
+ * Limitations compared to 5a/va/...:
+ *  - no unicode support
+ *  - no uU lL suffix
+ *    (but was skipped by 5a anyway)
+ *  - no '=' used for constant definition
+ *    (but can use cpp #define for that)
+ *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 <<function [[Lexer_asm.error]]>>
-
 <<function [[Lexer_asm.code_of_escape_char]]>>
-
 <<function [[Lexer_asm.string_of_ascii]]>>
-
 <<function [[Lexer_asm.char_]]>>
 
 (*****************************************************************************)
@@ -147,39 +919,318 @@ module L = Location_cpp
 <<constant [[Lexer_asm.digit]]>>
 <<constant [[Lexer_asm.hex]]>>
 <<constant [[Lexer_asm.oct]]>>
-  | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
 
-  (* stricter: I impose some digit+ after '.' and after 'e' *)
-  | (digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?
-     { TFLOAT (float_of_string (Lexing.lexeme lexbuf)) }
+(*****************************************************************************)
+(* Main rule *)
+(*****************************************************************************)
+<<rule [[Lexer_asm.token]]>>
+
+(*****************************************************************************)
+(* Rule char *)
+(*****************************************************************************)
+<<rule [[Lexer_asm.char]]>>
+
+(*****************************************************************************)
+(* Rule string *)
+(*****************************************************************************)
+<<rule [[Lexer_asm.string]]>>
+
+(*****************************************************************************)
+(* Rule comment *)
+(*****************************************************************************)
+<<rule [[Lexer_asm.comment]]>>
+@
+
+
+<<rule [[Lexer_asm.token]]>>=
+rule token = parse
+  (* ----------------------------------------------------------------------- *)
+  (* Spacing/comments *)
+  (* ----------------------------------------------------------------------- *)
+  <<[[Lexer_asm.token]] space/comment cases>>
+
+  (* ----------------------------------------------------------------------- *)
+  (* Symbols *)
+  (* ----------------------------------------------------------------------- *)
+  <<[[Lexer_asm.token]] symbol cases>>
+
+  (* ----------------------------------------------------------------------- *)
+  (* Mnemonics and identifiers *)
+  (* ----------------------------------------------------------------------- *)
+  <<[[Lexer_asm.token]] mnemonics/identifiers cases>>
+
+  (* ----------------------------------------------------------------------- *)
+  (* Numbers *)
+  (* ----------------------------------------------------------------------- *)
+  <<[[Lexer_asm.token]] numbers cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* Chars/Strings *)
   (* ----------------------------------------------------------------------- *)
-  | "'" { TINT (char lexbuf) }
-  | '"' 
-      { let s = string lexbuf in
-        (* less: why this limit though? *)
-        if String.length s > 8
-        then error ("string constant too long")
-        else TSTRING s
-      }
+  <<[[Lexer_asm.token]] chars/strings cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
-  (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asmX.ml) *)
-  | "#" { TSharp }
+  <<[[Lexer_asm.token]] cpp cases>>
 
   (* ----------------------------------------------------------------------- *)
   (* less: maybe return a fake semicolon the first time? *)
   | eof { EOF }
   | _ (*as c*)   { let c = char_ lexbuf in
                    error (spf "unrecognized character: '%c'" c) }
+@
 
-(*****************************************************************************)
-(* Rule char *)
-(*****************************************************************************)
+
+<<function [[Lexer_asm.error]]>>=
+let error s =
+  raise (L.Error (spf "Lexical error: %s" s, !L.line))
+@
+
+<<[[Lexer_asm.token]] cpp cases>>=
+(* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asmX.ml) *)
+| "#" { TSharp }
+@
+
+
+<<function [[Lexer_asm.char_]]>>=
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let char_ lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
+}
+@
+
+%%\section{Peek, seek, and look ahead}
+
+\section{Spaces and comments}
+
+<<constant [[Lexer_asm.space]]>>=
+let space = [' ''\t']
+@
+<<[[Lexer_asm.token]] space/comment cases>>=
+| space+ { token lexbuf }
+@
+
+<<[[Lexer_asm.token]] space/comment cases>>=
+| "//" [^'\n']* { token lexbuf }
+@
+
+<<[[Lexer_asm.token]] space/comment cases>>=
+| "/*"          { comment lexbuf }
+@
+
+%%\section{Comments}
+\label{sec:yylex-comments}
+
+<<rule [[Lexer_asm.comment]]>>=
+and comment = parse
+  | "*/"          { token lexbuf }
+  | [^ '*' '\n']+ { comment lexbuf }
+  | '*'           { comment lexbuf }
+  | '\n'          { incr L.line; comment lexbuf }
+  | eof           { error "end of file in comment" }
+@
+
+\section{Newlines and semicolons}
+\label{sec:semicolon}
+
+<<[[Lexer_asm.token]] space/comment cases>>=
+(* newlines are converted in fake semicolons for the grammar *)
+| '\n' { let old = !L.line in incr L.line; TSEMICOLON old }
+@
+
+<<[[Lexer_asm.token]] symbol cases>>=
+| ';' { TSEMICOLON !L.line }
+@
+
+
+\section{Punctuations and operators}
+
+<<[[Lexer_asm.token]] symbol cases>>=
+| ':' { TCOLON } | ',' { TCOMMA }
+| '(' { TOPAR } | ')' { TCPAR }
+| '$' { TDOLLAR }
+
+| '+' { TPLUS } | '-' { TMINUS } 
+(* '/' is used for division and for DATA too *)
+| '*' { TMUL }  | '/' { TSLASH } | '%' { TMOD }
+
+(* has to be before the rule for identifiers *)
+| '.' { TDOT }
+@
+
+
+\section{Mnemonics and labels}
+\label{sec:yylex-identifiers}
+
+<<constant [[Lexer_asm.letter]]>>=
+let letter = ['a'-'z''A'-'Z']
+@
+<<constant [[Lexer_asm.digit]]>>=
+let digit = ['0'-'9']
+@
+
+
+<<[[Lexer_asm.token]] mnemonics/identifiers cases>>=
+| "R" (digit+ (*as s*)) 
+    { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+      let i = int_of_string s in 
+      (* the range check is arch-specific and must be done in Parse_asmX.ml *)
+      TRx (Ast_asm.R i)
+    }
+| "F" (digit+ (*as s*)) 
+    { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+      let i = int_of_string s in 
+      (* the range check is arch-specific and must be done in Parse_asmX.ml *)
+      TFx (Ast_asm.FR i)
+    }
+@
+
+<<[[Parse_asm5.token]] match [[tok]] other cases>>=
+| T.TRx ((A.R i) as x) -> 
+    if i <= 15 && i >=0
+    then TRx x
+    else Lexer_asm.error ("register number not valid")
+| T.TFx ((A.FR i) as x) -> 
+    if i <= 15 && i >=0
+    then TFx x
+    else Lexer_asm.error ("register number not valid")
+@
+
+
+<<[[Lexer_asm.token]] mnemonics/identifiers cases>>=
+(* looser: actually for '.' 5a imposes to have an isalpha() after *)    
+| (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
+    let s = Lexing.lexeme lexbuf in
+    (* alt: use Hashtbl.t *)
+    match s with
+    (* pseudo instructions *)
+    | "TEXT" -> TTEXT | "GLOBL" -> TGLOBL
+    | "WORD" -> TWORD | "DATA" -> TDATA
+
+    (* virtual instructions *)
+    | "RET" -> TRET
+    | "NOP" -> TNOP
+
+    (* registers (see also the special rule above for R digit+) *)
+    | "R" -> TR
+    | "F" -> TF
+
+    (* pseudo registers *)
+    | "PC" -> TPC | "SB" -> TSB | "SP" -> TSP | "FP" -> TFP
+
+    (* each Parse_asmX.ml will refine and convert some TIDENT *)
+    | _ -> TIDENT s
+  }
+@
+
+% TIdent will be refined later!
+
+<<[[Parse_asm5.token]] match [[tok]] other cases>>=
+| T.TIDENT s ->
+    (match s with
+    (* instructions *)
+    | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
+
+    | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
+    | "MUL" -> TARITH MUL | "DIV" -> TARITH DIV | "MOD" -> TARITH MOD
+    | "SLL" -> TARITH SLL | "SRL" -> TARITH SRL | "SRA" -> TARITH SRA
+
+    | "BIC" -> TARITH BIC
+    | "ADC" -> TARITH ADC | "SBC" -> TARITH SBC
+    | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC
+
+    | "MVN" -> TMVN
+
+    (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
+    | "MOVW" -> TMOV A.Word
+    | "MOVB" -> TMOV (A.Byte     A.S) | "MOVBU" -> TMOV (A.Byte     A.U)
+    | "MOVH" -> TMOV (A.HalfWord A.S) | "MOVHU" -> TMOV (A.HalfWord A.U)
+
+    | "B" -> TB | "BL" -> TBL
+    | "CMP" -> TCMP CMP 
+    | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
+
+    | "BEQ" -> TBx EQ | "BNE" -> TBx NE
+    | "BGT" -> TBx (GT A.S) | "BLT" -> TBx (LT A.S)
+    | "BGE" -> TBx (GE A.S) | "BLE" -> TBx (LE A.S)
+    | "BHI" -> TBx (GT A.U) | "BLO" -> TBx (LT A.U) 
+    | "BHS" -> TBx (GE A.U) | "BLS" -> TBx (LE A.U)
+    | "BMI" -> TBx MI | "BPL" -> TBx PL 
+    | "BVS" -> TBx VS | "BVC" -> TBx VC
+
+    | "SWI" -> TSWI
+    | "RFE" -> TRFE
+
+    (* conditions *)
+    | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
+    | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 
+    | ".GE" -> TCOND (GE A.S)   | ".LE" -> TCOND (LE A.S)
+    | ".HI" -> TCOND (GT A.U) | ".LO" -> TCOND (LT A.U)
+    | ".HS" -> TCOND (GE A.U) | ".LS" -> TCOND (LE A.U)
+    | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
+    | ".VS" -> TCOND VS | ".VC" -> TCOND VC
+
+    <<[[Parse_asm5.token]] in [[TIDENT]] case, other cases>>
+
+    | _ -> TIDENT s
+    )
+@
+
+\section{Numbers}
+
+<<[[Lexer_asm.token]] numbers cases>>=
+<<[[Lexer_asm.token]] octal case>>
+<<[[Lexer_asm.token]] hexadecimal case>>
+<<[[Lexer_asm.token]] decimal case>>
+<<[[Lexer_asm.token]] float case>>
+@
+
+\subsection{Decimal numbers}
+\label{sec:yylex-decimal-numbers}
+
+<<[[Lexer_asm.token]] decimal case>>=
+| digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
+@
+
+\subsection{Hexadecimal and octal numbers}
+
+<<constant [[Lexer_asm.hex]]>>=
+let hex = (digit | ['A'-'F''a'-'f'])
+@
+<<[[Lexer_asm.token]] hexadecimal case>>=
+| "0x" hex+        { TINT (int_of_string (Lexing.lexeme lexbuf)) }
+@
+
+<<constant [[Lexer_asm.oct]]>>=
+let oct = ['0'-'7']
+@
+<<[[Lexer_asm.token]] octal case>>=
+| "0"  (oct+ (*as s*)) 
+    { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+      TINT (int_of_string ("0o" ^ s))  }
+@
+
+\subsection{Floating-point numbers}
+
+%alt: move later?
+<<[[Lexer_asm.token]] float case>>=
+(* stricter: I impose some digit+ after '.' and after 'e' *)
+| (digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?
+   { TFLOAT (float_of_string (Lexing.lexeme lexbuf)) }
+@
+
+\section{Characters}
+
+<<[[Lexer_asm.token]] chars/strings cases>>=
+| "'" { TINT (char lexbuf) }
+@
+% TINT! assembly does not know about chars, it is converted in an int
+
+<<rule [[Lexer_asm.char]]>>=
 and char = parse
   | "''"                            { Char.code '\'' }
   | "\\" ((oct oct? oct?) (*as s*)) "'" 
@@ -195,10 +1246,48 @@ and char = parse
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }
   | _    { error "missing '" }
+@
 
-(*****************************************************************************)
-(* Rule string *)
-(*****************************************************************************)
+
+\subsection{Escaped sequences}
+
+<<function [[Lexer_asm.code_of_escape_char]]>>=
+let code_of_escape_char c =
+  match c with
+  | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
+  | 't' -> Char.code '\t' | 'b' -> Char.code '\b' 
+
+  | 'f' -> error "unknown \\f"
+  (* could be removed, special 5a escape char *)
+  | 'a' -> 0x07 | 'v' -> 0x0b 
+  (* useful to generate C-compatible strings with special end marker *)
+  | 'z' -> 0
+
+  (* stricter: we disallow \ with unknown character *)
+  | _ -> error "unknown escape sequence"
+@
+
+\subsection{Triple quotes}
+
+%%\subsection{[[escchar()]]}
+
+\subsection{Escaped newlines}
+
+%%\subsection{[[getc()]]}
+
+\section{Strings}
+
+<<[[Lexer_asm.token]] chars/strings cases>>=
+| '"' 
+    { let s = string lexbuf in
+      (* less: why this limit though? *)
+      if String.length s > 8
+      then error ("string constant too long")
+      else TSTRING s
+    }
+@
+
+<<rule [[Lexer_asm.string]]>>=
 and string = parse
   | '"' { "" }
   | "\\" ((oct oct oct) (*as s*))
@@ -212,56 +1301,27 @@ and string = parse
   | '\n' { error "newline in string" }
   | eof  { error "end of file in string" }
   | _    { error "undefined character in string" }
-
-(*****************************************************************************)
-(* Rule comment *)
-(*****************************************************************************)
-and comment = parse
-  | "*/"          { token lexbuf }
-  | [^ '*' '\n']+ { comment lexbuf }
-  | '*'           { comment lexbuf }
-  | '\n'          { incr L.line; comment lexbuf }
-  | eof           { error "end of file in comment" }
 @
 
-
-
-\section{[[yylex()]]}
-\section{Peek, seek, and look ahead}
-\section{Newlines (and semicolons)}
-\label{sec:semicolon}
-\section{Comments}
-\label{sec:yylex-comments}
-\section{Mnemonics, symbols, and labels}
-\label{sec:yylex-identifiers}
-\section{Numbers}
-\subsection{Decimal numbers}
-\label{sec:yylex-decimal-numbers}
-\subsection{Hexadecimal and octal numbers}
-\subsection{Floating-point numbers}
-\section{Characters}
-\subsection{Escaped sequences}
-\subsection{Triple quotes}
-\subsection{[[escchar()]]}
-\subsection{Escaped newlines}
-\subsection{[[getc()]]}
-\section{Strings}
+<<function [[Lexer_asm.string_of_ascii]]>>=
+let string_of_ascii i =
+  String.make 1 (Char.chr i)
+@
 
 %******************************************************************************
-\chapter{Preprocessing}
+%%\chapter{Preprocessing}
 %******************************************************************************
-\label{chap:preprocessing}
-
-\section{Directives dispatch: [[mactab]], and [[domacro()]]}
-\section{[[#include]]}
-\subsection{Include search path}
-\subsection{[[-I]]}
-\subsection{System paths}
-\subsection{[[macinc()]]}
-\section{[[#line]]}
-\label{sec:sharp-line}
-\subsection{Motivations}
-\subsection{[[maclin()]]}
+%%\label{chap:preprocessing}
+%%\section{Directives dispatch: [[mactab]], and [[domacro()]]}
+%%\section{[[#include]]}
+%%\subsection{Include search path}
+%%\subsection{[[-I]]}
+%%\subsection{System paths}
+%%\subsection{[[macinc()]]}
+%%\section{[[#line]]}
+%%\label{sec:sharp-line}
+%%\subsection{Motivations}
+%%\subsection{[[maclin()]]}
 
 %******************************************************************************
 \chapter{Parsing}
@@ -269,9 +1329,16 @@ and comment = parse
 \label{chap:parsing}
 
 \section{Overview}
-\label{sec:semicolon-terminator-grammar}
-\label{sec:empty-instr}
 
+% show before code of Parse_asm5.parse with Parser_asm5.token(),
+% Lexer_asm.mll, etc.
+
+<<function [[Parser_asm.error]]>>=
+let error s =
+  raise (L.Error (spf "Syntax error: %s" s, !L.line))
+@
+
+\section{Grammar overview}
 
 <<Parser_asm5.mly>>=
 %{
@@ -307,162 +1374,161 @@ module L = Location_cpp
 /*(*************************************************************************)*/
 /*(*1 Tokens *)*/
 /*(*************************************************************************)*/
-
-/*(*-----------------------------------------*)*/
-/*(*2 opcodes *)*/
-/*(*-----------------------------------------*)*/
-
-%token <Ast_asm5.arith_opcode> TARITH
-%token <Ast_asm5.arithf_opcode * Ast_asm.floatp_precision> TARITHF
-%token <Ast_asm.floatp_precision> TCMPF
-%token TMVN
-%token <Ast_asm.move_size> TMOV TSWAP
-%token TB  TBL
-%token <Ast_asm5.cmp_opcode> TCMP   
-%token <Ast_asm5.condition> TBx TCOND
-%token TSWI TRFE
-
-%token TRET TNOP
-
-%token TTEXT TGLOBL 
-%token TDATA TWORD 
-
-/*(*-----------------------------------------*)*/
-/*(*2 registers *)*/
-/*(*-----------------------------------------*)*/
-
-%token <Ast_asm.register> TRx
-%token <Ast_asm.fregister> TFx
-%token TR TF
-%token TPC TSB TFP TSP
-
-%token TC
-%token <Ast_asm5.creg> TCx
-
-/*(*-----------------------------------------*)*/
-/*(*2 Constants *)*/
-/*(*-----------------------------------------*)*/
-
-%token <int> TINT
-%token <float> TFLOAT
-%token <string> TSTRING
-
-/*(*-----------------------------------------*)*/
-/*(*2 Names *)*/
-/*(*-----------------------------------------*)*/
-%token <string> TIDENT
-
-/*(*-----------------------------------------*)*/
-/*(*2 Punctuation *)*/
-/*(*-----------------------------------------*)*/
-
-/*(* line number *)*/
-%token <int> TSEMICOLON 
-
-%token TCOLON TDOT TDOLLAR
-%token TC
-%token TOPAR TCPAR
-
-/*(*-----------------------------------------*)*/
-/*(*2 Operators *)*/
-/*(*-----------------------------------------*)*/
-
-%token TSHL TSHR   TSHMINUS TSHAT
-%token TPLUS TMINUS TTILDE TMUL TMOD
-%token TSLASH
-
-/*(*-----------------------------------------*)*/
-/*(*2 Misc *)*/
-/*(*-----------------------------------------*)*/
-%token TSharp
-%token EOF
+<<Parser tokens>>
 
 /*(*************************************************************************)*/
 /*(*1 Priorities *)*/
 /*(*************************************************************************)*/
+<<Parser tokens priorities>>
+
+/*(*************************************************************************)*/
+/*(*1 Rules type declaration *)*/
+/*(*************************************************************************)*/
+<<Parser type declarations>>
+%start program
+
+%%
+<<Parser grammar>>
+@
+
+
+
+<<Parser tokens priorities>>=
 %left TOR
 %left TXOR
 %left TAND
 %left TLT TGT
 %left TPLUS TMINUS
 %left TMUL TSLASH TMOD
+@
 
-/*(*************************************************************************)*/
-/*(*1 Rules type declaration *)*/
-/*(*************************************************************************)*/
 
-%type <Ast_asm5.instr_with_cond Ast_asm.lines> program
-%start program
 
-%%
-
+<<Parser grammar>>=
 /*(*************************************************************************)*/
 /*(*1 Program (arch independent) *)*/
 /*(*************************************************************************)*/
 
-program: lines EOF { $1 }
+<<grammar rule [[program]]>>
+<<grammar rule [[lines]]>>
+<<grammar rule [[line]]>>
 
-lines: 
- | /*empty*/  { [] }
- | line lines { $1 @ $2 }
-
-line: 
- |               TSEMICOLON { [] }
- | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
- | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
- | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
-
- | label_def line           { $1::$2 }
-
-label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
+<<grammar rule [[label_def]]>>
 
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions (arch independent) *)*/
 /*(*************************************************************************)*/
 /*(* I can't factorize in attr_opt; shift/reduce conflict with TC *)*/
-pseudo_instr:
- | TTEXT  global TC imm    
-     { TEXT  ($2, noattr, $4) }
- | TGLOBL global TC imm    
-     { GLOBL ($2, noattr, $4) }
-
- /*(* less: would be better to have mnemonics for attributes too *)*/
- | TTEXT global TC con TC imm
-     { TEXT ($2, attributes_of_int $4, $6) }
- | TGLOBL global TC con TC imm
-     { GLOBL ($2, attributes_of_int $4, $6) }
-
- | TDATA global_and_offset TSLASH con TC ximm  
-     { DATA (fst $2, snd $2, $4, $6) }
- | TWORD ximm
-     { WORD $2 }
-
+<<grammar rule [[pseudo_instr]]>>
 
 /*(* stricter: I introduced those intermediate rules *)*/
-global: name
-  { match $1 with
-    | Global (e, 0) -> e
-    | _ -> error "global (without any offset) expected"
-  } 
-
-global_and_offset: name
-  { match $1 with
-    | Global (e, n) -> (e, n)
-    | _ -> error "global with offset expected"
-  } 
+<<grammar rule [[global]]>>
+<<grammar rule [[global_and_offset]]>>
 
 /*(*************************************************************************)*/
 /*(*1 Virtual instructions (arch independent) *)*/
 /*(*************************************************************************)*/
 
-virtual_instr:
- /*(* was in instr before. stricter: no cond (nor comma) *)*/
- | TRET                  { RET }
+<<grammar rule [[virtual_instr]]>>
 
 /*(*************************************************************************)*/
 /*(*1 Instructions, arch specific!! *)*/
 /*(*************************************************************************)*/
 
+<<grammar rule [[instr]]>>
+
+/*(*************************************************************************)*/
+/*(*1 Operands *)*/
+/*(*************************************************************************)*/
+
+<<grammar rule [[imsr]]>>
+
+<<grammar rule [[imm]]>>
+<<grammar rule [[reg]]>>
+<<grammar rule [[shift]]>>
+
+<<grammar rule [[rcon]]>>
+
+
+<<grammar rule [[gen]]>>
+
+<<grammar rule [[ximm]]>>
+
+<<grammar rule [[ioreg]]>>
+<<grammar rule [[ireg]]>>
+
+
+
+<<grammar rule [[branch]]>>
+<<grammar rule [[rel]]>>
+
+/*(*-----------------------------------------*)*/
+/*(*2 name and offset (arch independent)  *)*/
+/*(*-----------------------------------------*)*/
+
+<<grammar rule [[name]]>>
+<<grammar rule [[pointer]]>>
+
+<<grammar rule [[offset]]>>
+
+/*(*-----------------------------------------*)*/
+/*(*2 float *)*/
+/*(*-----------------------------------------*)*/
+
+<<grammar rule [[freg]]>>
+<<grammar rule [[frcon]]>>
+
+
+/*(*-----------------------------------------*)*/
+/*(*2 number constants and expressions (arch independent)  *)*/
+/*(*-----------------------------------------*)*/
+
+<<grammar rule [[con]]>>
+
+<<grammar rule [[fcon]]>>
+
+<<grammar rule [[expr]]>>
+
+/*(*************************************************************************)*/
+/*(*1 Misc *)*/
+/*(*************************************************************************)*/
+
+/*(* todo: special bits or inline in previous rule? *)*/
+<<grammar rule [[cond]]>>
+@
+
+
+
+<<Parser type declarations>>=
+%type <Ast_asm5.instr_with_cond Ast_asm.lines> program
+@
+
+
+\section{Program and lines}
+
+\label{sec:semicolon-terminator-grammar}
+\label{sec:empty-instr}
+
+<<grammar rule [[program]]>>=
+program: lines EOF { $1 }
+@
+
+<<grammar rule [[lines]]>>=
+lines: 
+ | /*empty*/  { [] }
+ | line lines { $1 @ $2 }
+@
+
+<<grammar rule [[line]]>>=
+line: 
+ |               TSEMICOLON { [] }
+ | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
+ <<[[line]] other cases>>
+@
+
+\section{Instructions}
+
+<<grammar rule [[instr]]>>=
 instr:
  | TARITH cond  imsr TC reg TC reg 
      { (Arith ($1, None, $3, Some $5, $7), $2) }
@@ -488,19 +1554,55 @@ instr:
 
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }
+@
 
-/*(*************************************************************************)*/
-/*(*1 Operands *)*/
-/*(*************************************************************************)*/
+\subsection{Arithmetic and logic}
+\label{sec:bitshift-opcodes}
 
+\subsection{Memory}
+
+\subsection{Control flow}
+\label{sec:conditional-jump}
+
+<<[[line]] other cases>>=
+| virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
+@
+
+<<grammar rule [[virtual_instr]]>>=
+virtual_instr:
+ /*(* was in instr before. stricter: no cond (nor comma) *)*/
+ | TRET                  { RET }
+@
+
+\subsection{Software interrupt}
+
+
+
+\section{Label definitions} %% and [[pc]]
+\label{sec:label-def}
+
+<<[[line]] other cases>>=
+| label_def line           { $1::$2 }
+@
+
+<<grammar rule [[label_def]]>>=
+label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
+@
+
+\section{Operands}
+\label{sec:operands-grammar}
+\label{sec:imsr}
+
+<<grammar rule [[imsr]]>>=
 imsr:
  | imm   { Imm $1 }
  | shift { $1 }
  | reg   { Reg $1 }
+@
 
+\subsection{Registers}
 
-imm: TDOLLAR con      { $2 }
-
+<<grammar rule [[reg]]>>=
 reg:
  | TRx                { $1 }
  /*(* stricter? could remove, redundant with cpp *)*/
@@ -509,23 +1611,50 @@ reg:
        then R $3
        else error "register value out of range"
      }
+@
 
+\subsection{Immediate constants}
+
+<<grammar rule [[imm]]>>=
+imm: TDOLLAR con      { $2 }
+@
+
+<<grammar rule [[con]]>>=
+con:
+ | TINT { $1 }
+ <<[[con]] other cases>>
+@
+
+<<[[con]] other cases>>=
+| TMINUS con { - $2 }
+| TPLUS  con { $2 }
+| TTILDE con { lnot $2 }
+@
+
+\subsection{ARM shifted registers}
+\label{sec:shift-register}
+
+<<grammar rule [[shift]]>>=
 /*(* ARM specific *)*/
 shift:
  | reg TSHL rcon     { Shift ($1, Sh_logic_left, $3)  }
  | reg TSHR rcon     { Shift ($1, Sh_logic_right, $3)  }
  | reg TSHMINUS rcon { Shift ($1, Sh_arith_right, $3)  }
  | reg TSHAT rcon    { Shift ($1, Sh_rotate_right, $3)  }
+@
 
+<<grammar rule [[rcon]]>>=
 rcon:
  | reg { Left $1 }
  | con { if ($1 >= 0 && $1 <= 31)
          then Right $1 
          else error "shift value out of range" 
        }
+@
 
+\subsection{Memory (de)references, pointers}
 
-
+<<grammar rule [[gen]]>>=
 gen:
  | ximm  { match $1 with Int x -> Imsr (Imm x) | x -> Ximm x }
  | shift { Imsr ($1) }
@@ -534,38 +1663,42 @@ gen:
  | ioreg { $1 }
  | name                    { Entity $1 }
  | con TOPAR pointer TCPAR { Entity ($3 None $1) }
+@
 
+<<grammar rule [[ximm]]>>=
 ximm:
  | imm             { Int $1 }
  | fcon            { Float $1 }
  | TDOLLAR TSTRING { String $2 }
  | TDOLLAR name    { Address $2 }
+@
 
+<<grammar rule [[ioreg]]>>=
 ioreg:
  | ireg     { Indirect ($1, 0) }
  | con ireg { Indirect ($2, $1) }
+@
 
+<<grammar rule [[ireg]]>>=
 ireg: TOPAR reg TCPAR { $2 }
+@
 
+\subsection{Named memory locations, symbols}
+\label{sec:name-rule}
 
-
-branch: 
- | rel               { $1 }
- | global            { ref (SymbolJump $1) }
- | ireg              { ref (IndirectJump $1) }
-
-rel:
- | TIDENT offset        { ref (LabelUse ($1, $2)) }
- | con TOPAR TPC TCPAR  { ref (Relative $1) }
-
-/*(*-----------------------------------------*)*/
-/*(*2 name and offset (arch independent)  *)*/
-/*(*-----------------------------------------*)*/
-
+<<grammar rule [[name]]>>=
 name: 
  | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
  | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
+@
 
+<<function [[Parser_asm.mk_e]]>>=
+let mk_e name static = 
+  { name; priv = if static then Some (-1) else None; signature = None; }
+@
+
+
+<<grammar rule [[pointer]]>>=
 pointer: 
  | TSB  { (fun name_opt offset ->
            match name_opt with
@@ -585,46 +1718,312 @@ pointer:
            | Some ({name = s; priv = _false; signature = _}) -> Local (Some s, offset)
            )
          }
+@
 
-
+<<grammar rule [[offset]]>>=
 offset:
  | /* empty */ { 0 }
  | TPLUS  con  { $2 }
  | TMINUS con  { - $2 }
+@
 
-/*(*-----------------------------------------*)*/
-/*(*2 float *)*/
-/*(*-----------------------------------------*)*/
+\subsection{Code references, labels}
 
-freg:
- | TFx                { $1 }
- | TF TOPAR con TCPAR 
-     { if $3 <= 15 && $3 >= 0
-       then FR $3
-       else error "register value out of range"
-     }
+<<grammar rule [[branch]]>>=
+branch: 
+ | rel               { $1 }
+ | global            { ref (SymbolJump $1) }
+ | ireg              { ref (IndirectJump $1) }
+@
 
-frcon:
-  | freg { Right $1 }
-  | fcon { Left $1 }
+<<grammar rule [[rel]]>>=
+rel:
+ | TIDENT offset        { ref (LabelUse ($1, $2)) }
+ | con TOPAR TPC TCPAR  { ref (Relative $1) }
+@
 
-/*(*-----------------------------------------*)*/
-/*(*2 number constants and expressions (arch independent)  *)*/
-/*(*-----------------------------------------*)*/
 
-con:
- | TINT { $1 }
+\section{Pseudo instructions}
 
- | TMINUS con { - $2 }
- | TPLUS  con { $2 }
- | TTILDE con { lnot $2 }
+<<[[line]] other cases>>=
+| pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
+@
 
- | TOPAR expr TCPAR { $2 }
+<<grammar rule [[pseudo_instr]]>>=
+pseudo_instr:
+ | TTEXT  global TC imm    
+     { TEXT  ($2, noattr, $4) }
+ | TGLOBL global TC imm    
+     { GLOBL ($2, noattr, $4) }
 
-fcon: 
- | TDOLLAR TFLOAT { $2 }
- | TDOLLAR TMINUS TFLOAT { -. $3 }
+ /*(* less: would be better to have mnemonics for attributes too *)*/
+ | TTEXT global TC con TC imm
+     { TEXT ($2, attributes_of_int $4, $6) }
+ | TGLOBL global TC con TC imm
+     { GLOBL ($2, attributes_of_int $4, $6) }
 
+ | TDATA global_and_offset TSLASH con TC ximm  
+     { DATA (fst $2, snd $2, $4, $6) }
+ | TWORD ximm
+     { WORD $2 }
+@
+
+<<grammar rule [[global]]>>=
+global: name
+  { match $1 with
+    | Global (e, 0) -> e
+    | _ -> error "global (without any offset) expected"
+  } 
+@
+
+<<grammar rule [[global_and_offset]]>>=
+global_and_offset: name
+  { match $1 with
+    | Global (e, n) -> (e, n)
+    | _ -> error "global with offset expected"
+  } 
+@
+
+\subsection{[[TEXT/GLOBL]]}
+
+\subsection{[[WORD/DATA]]}
+\label{sec:WORD}
+
+%%\subsection{[[END]]}
+
+\section{ARM conditional execution}
+\label{sec:cond-exec}
+
+<<grammar rule [[cond]]>>=
+cond:
+ | /* empty */ { AL }
+ | TCOND  { $1 }
+@
+% AL for ALways
+
+\section{Special bits}
+\label{sec:special-bits}
+
+\subsection{Arithmetic instructions and [[.S]]}
+%alt: move later?
+
+<<type [[Ast_asm5.arith_cond]]>>=
+  and arith_cond = Set_condition (* .S *)
+@
+
+\subsection{Moves and [[.P]]/[[.W]]}
+%alt: move later?
+
+<<type [[Ast_asm5.move_cond]]>>=
+     and move_cond = WriteAddressBase (* .W *) | PostOffsetWrite (* .P *)
+@
+
+%%\section{[[yyparse()]]}
+
+%******************************************************************************
+\chapter{Resolving}
+%******************************************************************************
+%ocaml: new chapter! separation of concern!
+\label{chap:resolving}
+
+
+<<function [[Resolve_labels.error]]>>=
+let error (s : string) (line, _locs) =
+  (* TODO: use Location_cpp.Error instead or use locs at least! *)
+  failwith (spf "%s at line %d" s line)
+@
+
+
+<<function [[Resolve_labels.resolve]]>>=
+(* ocaml: see how little processing 5a actually does :) *)
+let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
+  let pc : virt_pc ref = ref 0 in
+  let h = Hashtbl.create 101 in
+
+  let (ps, locs) = prog in
+
+  (* first pass, process the label definitions, populate h *)
+  ps |> List.iter (fun (p, line) ->
+    (match p with
+    | LabelDef lbl -> 
+        (* better to check duplicate here than via lexing tricks *)
+        if Hashtbl.mem h lbl
+        then error (spf "redeclaration of %s" lbl) (line, locs);
+
+        Hashtbl.add h lbl !pc;
+        (* no incr pc; share pc if multiple labels at same place *)
+    (* coupling: must be consistent with second pass below and incr pc
+     * for the same cases!
+     *)
+    | Instr _ | Pseudo (TEXT _ | WORD _) | Virtual (RET | NOP) -> 
+        incr pc
+    | Pseudo (DATA _ | GLOBL _ ) -> ()
+    )
+  );
+
+  (* second pass, process the label uses, resolve some branch operands *)
+  pc := 0;
+  (* filter but modify also by side effect p *)
+  let ps' = ps |> List.filter (fun (p, line) ->
+    (match p with
+    (* no need to keep the labels in the object file *)
+    | LabelDef _ -> false
+
+    | Pseudo (TEXT _ | WORD _) -> 
+        incr pc; 
+        true
+    | Pseudo (DATA _ | GLOBL _) -> 
+        (* no pc increment here *)
+        true
+    | Virtual (RET | NOP) -> 
+        incr pc; 
+        true
+    | Instr instr ->
+
+        (* TODO? move nested function out? *)
+        let resolve_branch_operand (opd : branch_operand2 ref) : unit =
+          match !opd with
+          | SymbolJump _ | IndirectJump _ -> ()
+          (* Relative and LabelUse -> Absolute *)
+          | Relative i -> 
+              opd := Absolute (!pc + i)
+          | LabelUse (lbl, i) ->
+              (try
+                 let pc = Hashtbl.find h lbl in
+                 (* less: could keep label info also for debugging purpose? *)
+                 opd := Absolute (pc + i)
+               with Not_found ->
+                 error (spf "undefined label: %s" lbl) (line, locs)
+               )
+          | Absolute _ -> 
+              raise (Impossible "Absolute can't be made via assembly syntax")
+        in
+        branch_opd_of_instr instr |> Option.iter resolve_branch_operand;
+
+        incr pc;
+        true
+    )
+  )
+  in
+  ps', locs
+@
+
+
+
+<<function [[Ast_asm5.branch_opd_of_instr]]>>=
+let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
+  (* less: could issue warning if cond <> AL when B or Bxx, or normalize? *)
+  match fst instr with
+  (* ocaml-light: | B opd | BL opd | Bxx (_, opd) -> *)
+  | B opd -> Some opd
+  | BL opd -> Some opd
+  | Bxx (_cond, opd) -> Some opd
+  | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> None
+@
+
+%******************************************************************************
+\chapter{Object Code Generation}
+%******************************************************************************
+\label{chap:generation}
+
+\section{Object format}
+%%\label{sec:object-format-complete}
+%%\label{fig:object-format-complete}
+
+<<signature [[Object_file.version]]>>=
+(* used also in Library_file.ml *)
+val version : int 
+@
+<<constant [[Object_file.version]]>>=
+let version = 6
+@
+
+<<signature [[Object_file.is_obj_filename]]>>=
+(* look whether the filename finishes in .o[5vi] *)
+val is_obj_filename : Fpath.t -> bool
+@
+
+<<function [[Object_file.is_obj_filename]]>>=
+let is_obj_filename (file : Fpath.t) : bool =
+  !!file =~ ".*\\.o[5v]$"
+@
+%$
+
+
+
+
+\section{Program output}
+%%\section{Instruction output: [[outcode()]]}
+%%\section{Operand output: [[outopd()]]}
+
+
+<<function [[Object_file.save]]>>=
+let save (arch : Arch.t) (obj : 'instr Ast_asm.program) (chan : Chan.o) : unit =
+  Logs.info (fun m -> m "Saving %s object in %s" (Arch.thestring arch)
+      (Chan.destination chan));
+  output_value chan.oc (version, { prog = obj; arch })
+@
+
+
+<<exception [[Object_file.WrongVersion]]>>=
+exception WrongVersion
+@
+
+<<signature [[Object_file.load]]>>=
+(* may raise WrongVersion *)
+val load: Chan.i (* obj file *) -> 'instr t
+@
+
+
+<<function [[Object_file.load]]>>=
+let load (chan : Chan.i) : 'instr t =
+  Logs.info (fun m -> m "Loading object %s" (Chan.origin chan));
+  let (ver, obj) = input_value chan.ic in
+  if ver <> version
+  then raise WrongVersion
+  else obj
+@
+
+
+\section{Object file symbol table} %% [[h]] and [[ANAME]]
+%%\label{sec:spreaded-symbol-table}
+%%\label{sec:symidx-sym-field}
+
+%******************************************************************************
+\chapter{Debugging Support}
+%******************************************************************************
+\label{chap:debugging}
+
+\section{Line origin history} %%: [[Hist]]
+\label{sec:line-history}
+
+\section{Recording history} %%: [[linehist()]]
+\label{fig:hist}
+
+\section{Displaying history} %%: [[prfile()]]
+
+\section{Saving history} %%: [[outhist()]] and [[AHISTORY]]
+\label{sec:object-file-history}
+
+%******************************************************************************
+\chapter{Advanced Topics}
+%******************************************************************************
+\label{chap:advanced}
+
+\section{Other assembly language features}
+
+<<[[Parse_asm5.token]] in [[TIDENT]] case, other cases>>=
+(* less: special bits *)
+@
+
+\subsection{Constant expressions}
+\label{sec:constant-expr}
+
+<<[[con]] other cases>>=
+| TOPAR expr TCPAR { $2 }
+@
+
+<<grammar rule [[expr]]>>=
 expr:
  | con { $1 }
 
@@ -640,111 +2039,163 @@ expr:
  | expr TAND expr    { $1 land $3 }
  | expr TOR expr     { $1 lor $3 }
  | expr TXOR expr    { $1 lxor $3 }
+@
 
-/*(*************************************************************************)*/
-/*(*1 Misc *)*/
-/*(*************************************************************************)*/
+%%\subsection{Symbolic constants}
 
-/*(* todo: special bits or inline in previous rule? *)*/
-cond:
- | /* empty */ { AL }
- | TCOND  { $1 }
+%%\subsection{Optional commas}
 
+\section{Other instructions and registers}
+
+\subsection{Floating-point numbers}
+\label{sec:float}
+
+<<type [[Ast_asm.floatp]]>>=
+type floatp = float 
+@
+
+<<[[Ast_asm.ximm]] other cases>>=
+| Float of floatp
+@
+
+<<[[Ast_asm5.instr]] arithmetic instructions cases>>=
+| ArithF of (arithf_opcode * A.floatp_precision) *
+    (A.floatp, freg) Either_.t * freg option * freg
+@
+
+<<type [[Ast_asm.fregister]]>>=
+type fregister = FR of int (* between 0 and 15 on ARM *)
+@
+
+<<type [[Ast_asm5.freg]]>>=
+type freg = A.fregister (* between 0 and 15 *)
+@
+
+<<[[Ast_asm5.instr]] control-flow instructions cases>>=
+| CmpF of A.floatp_precision * freg * freg
+@
+
+<<type [[Ast_asm5.arithf_opcode]]>>=
+  and arithf_opcode =
+    | ADD_ | SUB_ | MUL_ | DIV_
+@
+
+<<type [[Ast_asm.floatp_precision]]>>=
+type floatp_precision = F (* Float *) | D (* Double *)
+@
+
+<<[[Parse_asm5.token]] in [[TIDENT]] case, other cases>>=
+(* float, MUL, ... *)
+| "ADDF" -> TARITHF (ADD_, A.F)
+| "SUBF" -> TARITHF (SUB_, A.F)
+| "MULF" -> TARITHF (MUL_, A.F)
+| "DIVF" -> TARITHF (DIV_, A.F)
+| "ADDD" -> TARITHF (ADD_, A.D) 
+| "SUBD" -> TARITHF (SUB_, A.D)
+| "MULD" -> TARITHF (MUL_, A.D)
+| "DIVD" -> TARITHF (DIV_, A.D)
+
+| "CMPF" -> TCMPF A.F
+| "CMPD" -> TCMPF A.D
+@
+
+<<grammar rule [[freg]]>>=
+freg:
+ | TFx                { $1 }
+ | TF TOPAR con TCPAR 
+     { if $3 <= 15 && $3 >= 0
+       then FR $3
+       else error "register value out of range"
+     }
+@
+<<grammar rule [[frcon]]>>=
+frcon:
+  | freg { Right $1 }
+  | fcon { Left $1 }
+@
+
+<<grammar rule [[fcon]]>>=
+fcon: 
+ | TDOLLAR TFLOAT { $2 }
+ | TDOLLAR TMINUS TFLOAT { -. $3 }
 @
 
 
-\section{Instructions}
-\subsection{Arithmetic and logic}
-\label{sec:bitshift-opcodes}
-\subsection{Memory}
-\subsection{Control flow}
-\label{sec:conditional-jump}
-\subsection{Software interrupt}
-\section{Label definitions and [[pc]]}
-\label{sec:label-def}
-\section{Operands}
-\label{sec:operands-grammar}
-\label{sec:imsr}
-\subsection{Registers}
-\subsection{Immediate constants}
-\subsection{ARM shifted registers}
-\label{sec:shift-register}
-\subsection{Memory (de)references, pointers}
-\subsection{Named memory locations, symbols}
-\label{sec:name-rule}
-\subsection{Code references, labels}
-\section{Pseudo instructions}
-\subsection{[[TEXT/GLOBL]]}
-\subsection{[[WORD/DATA]]}
-\label{sec:WORD}
-\subsection{[[END]]}
-\section{ARM conditional execution}
-\label{sec:cond-exec}
-\section{Special bits}
-\label{sec:special-bits}
-\subsection{Arithmetic instructions and [[.S]]}
-\subsection{Moves and [[.P]]/[[.W]]}
-\section{[[yyparse()]]}
-
-%******************************************************************************
-\chapter{Object Code Generation}
-%******************************************************************************
-\label{chap:generation}
-\section{Object format}
-\label{sec:object-format-complete}
-\label{fig:object-format-complete}
-\section{Instruction output: [[outcode()]]}
-\section{Operand output: [[outopd()]]}
-\section{Object file symbol table: [[h]] and [[ANAME]]}
-\label{sec:spreaded-symbol-table}
-\label{sec:symidx-sym-field}
-
-%******************************************************************************
-\chapter{Debugging Support}
-%******************************************************************************
-\label{chap:debugging}
-\section{Line origin history: [[Hist]]}
-\label{sec:line-history}
-\section{Recording history: [[linehist()]]}
-\label{fig:hist}
-\section{Displaying history: [[prfile()]]}
-\section{Saving history: [[outhist()]] and [[AHISTORY]]}
-\label{sec:object-file-history}
-
-%******************************************************************************
-\chapter{Advanced Topics TODO}
-%******************************************************************************
-\label{chap:advanced}
-\section{Other assembly language features}
-\subsection{Constant expressions}
-\label{sec:constant-expr}
-\subsection{Symbolic constants}
-\subsection{Optional commas}
-\section{Other instructions and registers}
-\subsection{Floating-point numbers}
-\label{sec:float}
 \subsection{Multiplication and accumulation}
+
 \subsection{64-bits multiplication}
+
 \subsection{Moving multiple registers at the same time}
 \label{sec:movm}
+
 \subsection{Program status register}
+
 \subsection{Mutual exclusion instructions}
+
 \subsection{Coprocessors}
+
+<<type [[Ast_asm5.creg]]>>=
+type creg = C of int (* between 0 and 15 *)
+@
+
+<<[[Parse_asm5.token]] in [[TIDENT]] case, other cases>>=
+(* advanced *)
+| "C" -> TC
+| _ when s =~ "^C\\([0-9]+\\)$" ->
+      let i = int_of_string (Regexp_.matched1 s) in
+      if i >= 0 && i <= 15
+      then TCx (C i)
+      else Lexer_asm.error ("register number not valid")
+@
+
+
 \section{Other pseudo opcodes}
+
 \subsection{Compiler-only opcodes}
+
 \subsection{Linker-only opcodes}
+
+
 \section{[[TEXT]] attributes}
 \label{sec:attributes}
-\section{Other preprocessing directives}
-\label{sec:preprocessing-rest}
-\subsection{[[#define]]}
-\label{sec:macro-sym-field}
-\label{sec:macro-expansion}
-\subsection{[[#undef]]}
-\subsection{[[#ifdef]]}
-\subsection{[[#pragma]]}
-\section{[[#pragma lib]] and automagic linking}
-\section{Processing multiple files}
+
+<<type [[Ast_asm.attributes]]>>=
+  and attributes = { dupok: bool; prof: bool }
+@
+
+<<constant [[Parser_asm.noattr]]>>=
+let noattr = { dupok = false; prof = true }
+@
+
+<<function [[Parser_asm.attributes_of_int]]>>=
+(* less: should use keywords in Asm5 instead of abusing integers
+ * alt: anyway one can also use cpp to define NOPROF/DUPOK macros
+ *)
+let attributes_of_int i =
+   match i with 
+   | 0 -> noattr
+   (* NOPROF *)
+   | 1 -> { dupok = false; prof = false }
+   (* DUPOK *)
+   | 2 -> { dupok = true; prof = true }
+   (* both DUPOK and NOPROF *)
+   | 3 -> { dupok = true; prof = false }
+
+   | _ -> error (spf "unknown attribute or attribute combination: %d" i)
+@
+
+%%\section{Other preprocessing directives}
+%%\label{sec:preprocessing-rest}
+%%\subsection{[[#define]]}
+%%\label{sec:macro-sym-field}
+%%\label{sec:macro-expansion}
+%%\subsection{[[#undef]]}
+%%\subsection{[[#ifdef]]}
+%%\subsection{[[#pragma]]}
+
+%%\section{[[#pragma lib]] and automagic linking}
+
+%%\section{Processing multiple files}
 
 %******************************************************************************
 \chapter{Conclusion}
@@ -759,34 +2210,48 @@ cond:
 \chapter{Debugging}
 %******************************************************************************
 \label{chap:debugging-appendix}
+
+\section{AST debugging: [[5a -dump_ast]]}
+
+<<constant [[CLI.dump_ast]]>>=
+let dump_ast = ref false
+@
+
 \section{Line information debugging: [[5a -f]]}
 \label{sec:debug-line}
+
 \section{Macro debugging: [[5a -m]]}
 
 %******************************************************************************
-\chapter{Error Management}
+%%\chapter{Error Management}
 %******************************************************************************
-\label{chap:error}
+%%\label{chap:error}
 
 %******************************************************************************
-\chapter{Utilities}
+%%\chapter{Utilities}
 %******************************************************************************
-\label{chap:libc}
-\section{Buffer management}
-\label{sec:libbio}
-\section{Memory management}
-\label{sec:memory}
+%%\label{chap:libc}
+%%\section{Buffer management}
+%%\label{sec:libbio}
+%%\section{Memory management}
+%%\label{sec:memory}
 
 %******************************************************************************
-\chapter{Examples of Assembly Programs TODO}
+\chapter{Examples of Assembly Programs}
 %******************************************************************************
 \label{chap:examples}
+
 \section{[[hello.s]] and [[pwrite.s]]}
+
 \section{[[memset.s]]}
+
 \section{[[div.s]]}
 \label{sec:_divmod}
+
 \section{[[main9.s]]}
+
 \section{[[tas.s]]}
+
 \section{[[getcallerpc.s]]}
 
 %******************************************************************************

@@ -15,6 +15,7 @@
  (section bin)
  (files
   (Main.exe as o5l)
+  (Main.exe as ovl)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5l.bc))
 )

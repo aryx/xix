@@ -1,48 +1,3 @@
-// Inferno utils/5l/thumb.c
-// http://code.google.com/p/inferno-os/source/browse/utils/5l/thumb.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-#include "l.h"
-
-static int32 thumboprr(int);
-static int32 thumboprrr(int, int);
-static int32 thumbopirr(int , int);
-static int32 thumbopri(int);
-static int32 thumbophh(int);
-static int32 thumbopbra(int);
-static int32 thumbopmv(int, int);
-static void lowreg(Prog *, int);
-static void mult(Prog *, int, int);
-static void numr(Prog *, int, int, int);
-static void regis(Prog *, int, int, int);
-static void dis(int, int);
-
 // build a constant using neg, add and shift - only worth it if < 6 bytes */
 static int
 immbuildcon(int c, Prog *p)
@@ -1148,69 +1103,7 @@ if(debug['G']) print("%ux: %s: thumb\n", (uint32)(p->pc), p->from.sym->name);
 		break;
 	}
 
-	v = p->pc;
-	switch(o->size) {
-	default:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux:\t\t%P\n", v, p);
-		break;
-	case 2:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux\t%P\n", v, o1, p);
-		hputl(o1);
-		break;
-	case 4:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux %.8ux\t%P\n", v, o1, o2, p);
-		hputl(o1);
-		hputl(o2);
-		break;
-	case 6:
-		if(debug['a'])
-			Bprint(&bso, "%.8ux: %.8ux %.8ux %.8ux\t%P\n", v, o1, o2, o3, p);
-		hputl(o1);
-		hputl(o2);
-		hputl(o3);
-		break;
-	case 8:
-		if(debug['a'])
-			Bprint(&bso, "%.8ux: %.8ux %.8ux %.8ux %.8ux\t%P\n", v, o1, o2, o3, o4, p);
-		hputl(o1);
-		hputl(o2);
-		hputl(o3);
-		hputl(o4);
-		break;
-	case 10:
-		if(debug['a'])
-			Bprint(&bso, "%.8ux: %.8ux %.8ux %.8ux %.8ux %.8ux\t%P\n", v, o1, o2, o3, o4, o5, p);
-		hputl(o1);
-		hputl(o2);
-		hputl(o3);
-		hputl(o4);
-		hputl(o5);
-		break;
-	case 12:
-		if(debug['a'])
-			Bprint(&bso, "%.8ux: %.8ux %.8ux %.8ux %.8ux %.8ux %.8ux\t%P\n", v, o1, o2, o3, o4, o5, o6, p);
-		hputl(o1);
-		hputl(o2);
-		hputl(o3);
-		hputl(o4);
-		hputl(o5);
-		hputl(o6);
-		break;
-	case 14:
-		if(debug['a'])
-			Bprint(&bso, "%.8ux: %.8ux %.8ux %.8ux %.8ux %.8ux %.8ux %.8ux\t%P\n", v, o1, o2, o3, o4, o5, o6, o7, p);
-		hputl(o1);
-		hputl(o2);
-		hputl(o3);
-		hputl(o4);
-		hputl(o5);
-		hputl(o6);
-		hputl(o7);
-		break;
-	}
+    ...
 	if(debug['G']){
 		if(o->type == 17){
 			print("%x:	word %d\n", p->pc, (o2<<16)+o1);

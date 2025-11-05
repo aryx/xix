@@ -1,40 +1,3 @@
-// Inferno utils/5l/asm.c
-// http://code.google.com/p/inferno-os/source/browse/utils/5l/asm.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-// Writing object files.
-
-#include	"l.h"
-#include	"../ld/lib.h"
-#include	"../ld/elf_.h"
-
-int32	OFFSET;
 
 static Prog *PP;
 
@@ -49,12 +12,11 @@ entryvalue(void)
 	a = INITENTRY;
 	if(*a >= '0' && *a <= '9')
 		return atolwhex(a);
+
 	s = lookup(a, 0);
 	if(s->type == 0)
 		return INITTEXT;
-	if(s->type != STEXT)
-		diag("entry not text: %s", s->name);
-	return s->value;
+    ...
 }
 
 enum {
@@ -304,14 +266,13 @@ asmb(void)
 	strtabsize = 0;
 	symo = 0;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f asm\n", cputime());
-	Bflush(&bso);
 	OFFSET = HEADR;
 	seek(cout, OFFSET, 0);
+
 	pc = INITTEXT;
 	codeblk(pc, segtext.sect->len);
 	pc += segtext.sect->len;
+
 	if(seek(cout, 0, 1) != pc - segtext.vaddr + segtext.fileoff)
 		diag("text phase error");
 
@@ -322,6 +283,7 @@ asmb(void)
 
 	/* output data segment */
 	cursym = nil;
+
 	switch(HEADTYPE) {
 	case 0:
 	case 2:
@@ -343,9 +305,7 @@ asmb(void)
 	symsize = 0;
 	lcsize = 0;
 	if(!debug['s']) {
-		if(debug['v'])
-			Bprint(&bso, "%5.2f sym\n", cputime());
-		Bflush(&bso);
+        ...
 		switch(HEADTYPE) {
 		case 0:
 			debug['s'] = 1;
@@ -362,9 +322,7 @@ asmb(void)
 		}
 		if(!debug['s'])
 			asmsym();
-		if(debug['v'])
-			Bprint(&bso, "%5.2f pc\n", cputime());
-		Bflush(&bso);
+
 		if(!debug['s'])
 			asmlc();
 		if(!debug['s'])
@@ -379,25 +337,14 @@ asmb(void)
 	}
 
 	cursym = nil;
-	if(debug['v'])
-		Bprint(&bso, "%5.2f header\n", cputime());
-	Bflush(&bso);
+
 	OFFSET = 0;
 	seek(cout, OFFSET, SEEK__START);
+
+
 	switch(HEADTYPE) {
-	case 0:	/* no header */
-		break;
-	case 2:	/* plan 9 */
-		lput(0x647);			/* magic */
-		lput(textsize);			/* sizes */
-		lput(segdata.filelen);
-		lput(segdata.len - segdata.filelen);
-		lput(symsize);			/* nsyms */
-		lput(entryvalue());		/* va of entry */
-		lput(0L);
-		lput(lcsize);
-		break;
-	case 7:
+    ...
+ 	case 7:
 		/* elf arm */
 		eh = getElfEhdr();
 		fo = HEADR;
@@ -600,6 +547,7 @@ asmb(void)
 			diag("ELFRESERVE too small: %d > %d", a, ELFRESERVE);
 		break;
 	}
+
 	cflush();
 	if(debug['c']){
 		print("textsize=%d\n", textsize);
@@ -609,99 +557,6 @@ asmb(void)
 		print("lcsize=%d\n", lcsize);
 		print("total=%d\n", textsize+segdata.len+symsize+lcsize);
 	}
-}
-
-void
-cput(int c)
-{
-	cbp[0] = c;
-	cbp++;
-	cbc--;
-	if(cbc <= 0)
-		cflush();
-}
-
-/*
-void
-cput(int32 c)
-{
-	*cbp++ = c;
-	if(--cbc <= 0)
-		cflush();
-}
-*/
-
-void
-wput(int32 l)
-{
-
-	cbp[0] = l>>8;
-	cbp[1] = l;
-	cbp += 2;
-	cbc -= 2;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-wputl(ushort w)
-{
-	cput(w);
-	cput(w>>8);
-}
-
-
-void
-hput(int32 l)
-{
-
-	cbp[0] = l>>8;
-	cbp[1] = l;
-	cbp += 2;
-	cbc -= 2;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-lput(int32 l)
-{
-
-	cbp[0] = l>>24;
-	cbp[1] = l>>16;
-	cbp[2] = l>>8;
-	cbp[3] = l;
-	cbp += 4;
-	cbc -= 4;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-lputl(int32 l)
-{
-
-	cbp[3] = l>>24;
-	cbp[2] = l>>16;
-	cbp[1] = l>>8;
-	cbp[0] = l;
-	cbp += 4;
-	cbc -= 4;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-cflush(void)
-{
-	int n;
-
-	/* no bug if cbc < 0 since obuf(cbuf) followed by ibuf in buf! */
-	n = sizeof(buf.cbuf) - cbc;
-	if(n)
-		ewrite(cout, buf.cbuf, n);
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
 }
 
 void
@@ -774,22 +629,14 @@ asmout(Prog *p, Optab *o, int32 *out)
 	Reloc *rel;
 
 PP = p;
-	o1 = 0;
-	o2 = 0;
-	o3 = 0;
-	o4 = 0;
-	o5 = 0;
-	o6 = 0;
+    ...
 	armsize += o->size;
-if(debug['P']) print("%ux: %P	type %d\n", (uint32)(p->pc), p, o->type);
+
 	switch(o->type) {
-	default:
-		diag("unknown asm %d", o->type);
-		prasm(p);
-		break;
+    ...
 
 	case 0:		/* pseudo ops */
-if(debug['G']) print("%ux: %s: arm %d %d %d %d\n", (uint32)(p->pc), p->from.sym->name, p->from.sym->thumb, p->from.sym->foreign, p->from.sym->fnptr, p->from.sym->used);
+        ...
 		break;
 
 	case 1:		/* op R,[R],R */
@@ -1519,70 +1366,6 @@ if(debug['G']) print("%ux: %s: arm %d %d %d %d\n", (uint32)(p->pc), p->from.sym-
 		o1 |= (p->scond & C_SCOND) << 28;
 		break;
 	}
-	
-	out[0] = o1;
-	out[1] = o2;
-	out[2] = o3;
-	out[3] = o4;
-	out[4] = o5;
-	out[5] = o6;
-	return;
-
-	v = p->pc;
-	switch(o->size) {
-	default:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux:\t\t%P\n", v, p);
-		break;
-	case 4:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux\t%P\n", v, o1, p);
-		lputl(o1);
-		break;
-	case 8:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux %.8ux%P\n", v, o1, o2, p);
-		lputl(o1);
-		lputl(o2);
-		break;
-	case 12:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux %.8ux %.8ux%P\n", v, o1, o2, o3, p);
-		lputl(o1);
-		lputl(o2);
-		lputl(o3);
-		break;
-	case 16:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux %.8ux %.8ux %.8ux%P\n",
-				v, o1, o2, o3, o4, p);
-		lputl(o1);
-		lputl(o2);
-		lputl(o3);
-		lputl(o4);
-		break;
-	case 20:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux %.8ux %.8ux %.8ux %.8ux%P\n",
-				v, o1, o2, o3, o4, o5, p);
-		lputl(o1);
-		lputl(o2);
-		lputl(o3);
-		lputl(o4);
-		lputl(o5);
-		break;
-	case 24:
-		if(debug['a'])
-			Bprint(&bso, " %.8ux: %.8ux %.8ux %.8ux %.8ux %.8ux %.8ux%P\n",
-				v, o1, o2, o3, o4, o5, o6, p);
-		lputl(o1);
-		lputl(o2);
-		lputl(o3);
-		lputl(o4);
-		lputl(o5);
-		lputl(o6);
-		break;
-	}
 }
 
 int32
@@ -1845,6 +1628,8 @@ omvl(Prog *p, Adr *a, int dr)
 	return o1;
 }
 
+
+
 static Ieee chipfloats[] = {
 	{0x00000000, 0x00000000}, /* 0 */
 	{0x00000000, 0x3ff00000}, /* 1 */
@@ -1869,4 +1654,3 @@ chipfloat(Ieee *e)
 	}
 	return -1;
 }
-

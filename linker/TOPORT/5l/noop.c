@@ -1,37 +1,3 @@
-// Inferno utils/5l/noop.c
-// http://code.google.com/p/inferno-os/source/browse/utils/5l/noop.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-// Code transformations.
-
-#include	"l.h"
-#include	"../ld/lib.h"
 
 // see ../../runtime/proc.c:/StackGuard
 enum
@@ -116,29 +82,10 @@ noops(void)
 	int o, foreign;
 
 	/*
-	 * find leaf subroutines
-	 * strip NOPs
-	 * expand RET
+     ...
 	 * expand BECOME pseudo
 	 */
 
-#ifdef GOLANG
-	Prog *pmorestack;
-	Sym *symmorestack;
-
-	symmorestack = lookup("runtime.morestack", 0);
-	if(symmorestack->type != STEXT) {
-	  diag("runtime·morestack not defined");
-	  errorexit();
-	} else {
-	  pmorestack = symmorestack->text;
-	  pmorestack->reg |= NOSPLIT;
-	}
-#endif
-
-	if(debug['v'])
-		Bprint(&bso, "%5.2f noops\n", cputime());
-	Bflush(&bso);
 
 	q = P;
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
@@ -146,13 +93,7 @@ noops(void)
 			setarch(p);
 	
 			switch(p->as) {
-			case ATEXT:
-				p->mark |= LEAF;
-				break;
-	
-			case ARET:
-				break;
-	
+            ...
 			case ADIV:
 			case ADIVU:
 			case AMOD:
@@ -165,13 +106,11 @@ noops(void)
 				continue;
 	
 			case ANOP:
-				q1 = p->link;
-				q->link = q1;		/* q is non-nop */
+                ...
 				if(q1 != P)
 					q1->mark |= p->mark;
 				continue;
 	
-			case ABL:
 			case ABX:
 				cursym->text->mark &= ~LEAF;
 	
@@ -210,6 +149,7 @@ noops(void)
 	for(cursym = textp; cursym != nil; cursym = cursym->next) {
 		for(p = cursym->text; p != P; p = p->link) {
 			setarch(p);
+
 			o = p->as;
 			switch(o) {
 			case ATEXT:
@@ -244,10 +184,6 @@ noops(void)
 				}
 	
 				if(thumb){
-                    #ifdef GOLANG
-					if(!(p->reg & NOSPLIT))
-						diag("stack splitting not supported in thumb");
-                    #endif
 					if(!(cursym->text->mark & LEAF)){
 						q = movrr(nil, REGLINK, REGTMPT-1, p);
 						p->link = q;
@@ -276,9 +212,6 @@ noops(void)
 					}
 					break;
 				}
-#ifdef GOLANG	
-				if((p->reg & NOSPLIT))
-#endif
                 {
 					q1 = prg();
 					q1->as = AMOVW;
@@ -292,132 +225,6 @@ noops(void)
 					q1->link = p->link;
 					p->link = q1;
 				}
-#ifdef GOLANG
-                else if (autosize < StackBig) {
-					// split stack check for small functions
-					// MOVW			g_stackguard(g), R1
-					// CMP			R1, $-autosize(SP)
-					// MOVW.LO		$autosize, R1
-					// MOVW.LO		$args, R2
-					// MOVW.LO		R14, R3
-					// BL.LO			runtime.morestack(SB) // modifies LR
-					// MOVW.W		R14,$-autosize(SP)
-	
-					// TODO(kaib): add more trampolines
-					// TODO(kaib): put stackguard in register
-					// TODO(kaib): add support for -K and underflow detection
-	
-					// MOVW			g_stackguard(g), R1
-					p = appendp(p);
-					p->as = AMOVW;
-					p->from.type = D_OREG;
-					p->from.reg = REGG;
-					p->to.type = D_REG;
-					p->to.reg = 1;
-	
-					// CMP			R1, $-autosize(SP)
-					p = appendp(p);
-					p->as = ACMP;
-					p->from.type = D_REG;
-					p->from.reg = 1;
-					p->from.offset = -autosize;
-					p->reg = REGSP;
-	
-					// MOVW.LO		$autosize, R1
-					p = appendp(p);
-					p->as = AMOVW;
-					p->scond = C_SCOND_LO;
-					p->from.type = D_CONST;
-					p->from.offset = 0;
-					p->to.type = D_REG;
-					p->to.reg = 1;
-	
-					// MOVW.LO		$args +4, R2
-					// also need to store the extra 4 bytes.
-					p = appendp(p);
-					p->as = AMOVW;
-					p->scond = C_SCOND_LO;
-					p->from.type = D_CONST;
-					p->from.offset = ((cursym->text->to.offset2 + 3) & ~3) + 4;
-					p->to.type = D_REG;
-					p->to.reg = 2;
-	
-					// MOVW.LO	R14, R3
-					p = appendp(p);
-					p->as = AMOVW;
-					p->scond = C_SCOND_LO;
-					p->from.type = D_REG;
-					p->from.reg = REGLINK;
-					p->to.type = D_REG;
-					p->to.reg = 3;
-	
-					// BL.LO		runtime.morestack(SB) // modifies LR
-					p = appendp(p);
-					p->as = ABL;
-					p->scond = C_SCOND_LO;
-	 				p->to.type = D_BRANCH;
-					p->to.sym = symmorestack;
-					p->cond = pmorestack;
-	
-					// MOVW.W		R14,$-autosize(SP)
-					p = appendp(p);
-					p->as = AMOVW;
-	 				p->scond |= C_WBIT;
-					p->from.type = D_REG;
-					p->from.reg = REGLINK;
-					p->to.type = D_OREG;
-					p->to.offset = -autosize;
-					p->to.reg = REGSP;
-				} else { // > StackBig
-					// MOVW		$autosize, R1
-					// MOVW		$args, R2
-					// MOVW		R14, R3
-					// BL			runtime.morestack(SB) // modifies LR
-					// MOVW.W		R14,$-autosize(SP)
-	
-					// MOVW		$autosize, R1
-					p = appendp(p);
-					p->as = AMOVW;
-					p->from.type = D_CONST;
-					p->from.offset = autosize;
-					p->to.type = D_REG;
-					p->to.reg = 1;
-	
-					// MOVW		$args +4, R2
-					// also need to store the extra 4 bytes.
-					p = appendp(p);
-					p->as = AMOVW;
-					p->from.type = D_CONST;
-					p->from.offset = ((cursym->text->to.offset2 + 3) & ~3) + 4;
-					p->to.type = D_REG;
-					p->to.reg = 2;
-	
-					// MOVW	R14, R3
-					p = appendp(p);
-					p->as = AMOVW;
-					p->from.type = D_REG;
-					p->from.reg = REGLINK;
-					p->to.type = D_REG;
-					p->to.reg = 3;
-	
-					// BL		runtime.morestack(SB) // modifies LR
-					p = appendp(p);
-					p->as = ABL;
-	 				p->to.type = D_BRANCH;
-					p->to.sym = symmorestack;
-					p->cond = pmorestack;
-	
-					// MOVW.W		R14,$-autosize(SP)
-					p = appendp(p);
-					p->as = AMOVW;
-	 				p->scond |= C_WBIT;
-					p->from.type = D_REG;
-					p->from.reg = REGLINK;
-					p->to.type = D_OREG;
-					p->to.offset = -autosize;
-					p->to.reg = REGSP;
-				}
-#endif
 				break;
 	
 			case ARET:

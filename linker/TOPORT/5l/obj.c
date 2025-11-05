@@ -1,51 +1,4 @@
-// Inferno utils/5l/obj.c
-// http://code.google.com/p/inferno-os/source/browse/utils/5l/obj.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-// Reading object files.
-
-#define	EXTERN
-#include	"l.h"
-
-#include	"../ld/lib.h"
-#include	"../ld/elf_.h"
-#include	<ar.h>
-
 char	*noname		= "<none>";
-char	thechar		= '5';
-char	*thestring 	= "arm";
-
-/*
- *  -H0 no header
- *	-H2 -T4128 -R4096		is plan9 format
- *  -H7 is Linux ELF (default)
- */
 
 // ??
 static char*
@@ -57,7 +10,7 @@ linkername[] =
 void
 usage(void)
 {
-	fprint(2, "usage: 5l [-E entry] [-H head] [-L dir] [-T text] [-D data] [-R rnd] [-r path] [-o out] main.5\n");
+	fprint(2, "usage: ... [-L dir] [-r path]\n");
 	errorexit();
 }
 
@@ -66,274 +19,74 @@ main(int argc, char *argv[])
 {
 	int c, i;
 
-//debug['s'] = 1;  // qemu cannot handle symdat load
-	Binit(&bso, 1, OWRITE);
-	cout = -1;
-	listinit();
-	nerrors = 0;
-	outfile = "5.out";
-	HEADTYPE = -1;
-	INITTEXT = -1;
-	INITDAT = -1;
-	INITRND = -1;
-	INITENTRY = 0;
-
 	ARGBEGIN {
-	default:
-		c = ARGC();
-		if(c == 'l')
-			usage();
- 		if(c >= 0 && c < sizeof(debug))
-			debug[c]++;
-		break;
-	case 'o':
-		outfile = EARGF(usage());
-		break;
-	case 'E':
-		INITENTRY = EARGF(usage());
-		break;
 	case 'L':
 		Lflag(EARGF(usage()));
-		break;
-	case 'T':
-		INITTEXT = atolwhex(EARGF(usage()));
-		break;
-	case 'D':
-		INITDAT = atolwhex(EARGF(usage()));
-		break;
-	case 'R':
-		INITRND = atolwhex(EARGF(usage()));
 		break;
 #ifdef GOLANG
 	case 'r':
 		rpath = EARGF(usage());
 		break;
 #endif
-	case 'H':
-		HEADTYPE = atolwhex(EARGF(usage()));
-		/* do something about setting INITTEXT */
-		break;
 	case 'V':
 		print("%cl version %s\n", thechar, getgoversion());
 		errorexit();
 	} ARGEND
 
-	USED(argc);
 
-	if(argc != 1)
-		usage();
 
-	libinit();
-
-#ifdef GOLANG
-	if(rpath == nil)
-		rpath = smprint("%s/pkg/%s_%s", goroot, goos, goarch);
-#endif
-
-	if(HEADTYPE == -1) {
-        // Default to Linux ELF
-        // alt: use goos and detect Linux
-		HEADTYPE = 7;
-	}
-	switch(HEADTYPE) {
-	case 0:	/* no header */
-		HEADR = 0L;
-		if(INITTEXT == -1)
-			INITTEXT = 0;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4;
-		break;
-	case 2:	/* plan 9 */
-		HEADR = 32L;
-		if(INITTEXT == -1)
-			INITTEXT = 4128;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
-		break;
-	case 7:	/* arm elf */
-		debug['d'] = 1;	// no dynamic linking
-		elfinit();
-		HEADR = ELFRESERVE;
-		if(INITTEXT == -1)
-			INITTEXT = 0x8000 + HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
-		break;
-	default:
-		diag("unknown -H option");
-		errorexit();
-	}
-	if(INITDAT != 0 && INITRND != 0)
-		print("warning: -D0x%ux is ignored because of -R0x%ux\n",
-			INITDAT, INITRND);
-	if(debug['v'])
-		Bprint(&bso, "HEADER = -H0x%d -T0x%ux -D0x%ux -R0x%ux\n",
-			HEADTYPE, INITTEXT, INITDAT, INITRND);
-	Bflush(&bso);
-	zprg.as = AGOK;
-	zprg.scond = 14;
-	zprg.reg = NREG;
-	zprg.from.name = D_NONE;
-	zprg.from.type = D_NONE;
-	zprg.from.reg = NREG;
-	zprg.to = zprg.from;
-	buildop();
-	thumbbuildop();	// could build on demand
-	histgen = 0;
-	pc = 0;
 	dtype = 4;
-	nuxiinit();
 
 	version = 0;
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
+    ...
 
 	addlibpath("command line", "command line", argv[0], "main");
+
 	loadlib();
 
 	// mark some functions that are only referenced after linker code editing
 	// TODO(kaib): this doesn't work, the prog can't be found in runtime
 	for(i=0; i<nelem(linkername); i++)
 		mark(lookup(linkername[i], 0));
+
 	deadcode();
+
 	if(textp == nil) {
 		diag("no code");
 		errorexit();
 	}
 
 	patch();
+
 	if(debug['p'])
 		if(debug['1'])
 			doprof1();
 		else
 			doprof2();
+
 	doelf();
 	dodata();
+
 	follow();
+
 	softfloat();
+
 	noops();
 	span();
+
 	reloc();
+
 	asmb();
+
 	undef();
 
 	if(debug['c']){
 		thumbcount();
 		print("ARM size = %d\n", armsize);
 	}
-	if(debug['v']) {
-		Bprint(&bso, "%5.2f cpu time\n", cputime());
-		Bprint(&bso, "%d sizeof adr\n", sizeof(Adr));
-		Bprint(&bso, "%d sizeof prog\n", sizeof(Prog));
-	}
-	Bflush(&bso);
 	errorexit();
 }
 
-static void
-zaddr(Biobuf *f, Adr *a, Sym *h[])
-{
-	int i, c;
-	int32 l;
-	Sym *s;
-	Auto *u;
-
-	a->type = Bgetc(f);
-	a->reg = Bgetc(f);
-	c = Bgetc(f);
-	if(c < 0 || c > NSYM){
-		print("sym out of range: %d\n", c);
-		Bputc(f, ALAST+1);
-		return;
-	}
-	a->sym = h[c];
-	a->name = Bgetc(f);
-
-	if(a->reg < 0 || a->reg > NREG) {
-		print("register out of range %d\n", a->reg);
-		Bputc(f, ALAST+1);
-		return;	/*  force real diagnostic */
-	}
-
-	if(a->type == D_CONST || a->type == D_OCONST) {
-		if(a->name == D_EXTERN || a->name == D_STATIC) {
-			s = a->sym;
-			if(s != S && (s->type == STEXT || s->type == SCONST || s->type == SXREF)) {
-				if(0 && !s->fnptr && s->name[0] != '.')
-					print("%s used as function pointer\n", s->name);
-				s->fnptr = 1;	// over the top cos of SXREF
-			}
-		}
-	}
-
-	switch(a->type) {
-	default:
-		print("unknown type %d\n", a->type);
-		Bputc(f, ALAST+1);
-		return;	/*  force real diagnostic */
-
-	case D_NONE:
-	case D_REG:
-	case D_FREG:
-	case D_PSR:
-	case D_FPCR:
-		break;
-
-	case D_REGREG:
-		a->offset = Bgetc(f);
-		c++;
-		break;
-
-	case D_CONST2:
-		a->offset2 = Bget4(f);	// fall through
-	case D_BRANCH:
-	case D_OREG:
-	case D_CONST:
-	case D_OCONST:
-	case D_SHIFT:
-		a->offset = Bget4(f);
-		break;
-
-	case D_SCONST:
-		a->sval = mal(NSNAME);
-		Bread(f, a->sval, NSNAME);
-		c += NSNAME;
-		break;
-
-	case D_FCONST:
-		a->ieee.l = Bget4(f);
-		a->ieee.h = Bget4(f);
-		break;
-	}
-	s = a->sym;
-	if(s == S)
-		return;
-	i = a->name;
-	if(i != D_AUTO && i != D_PARAM)
-		return;
-
-	l = a->offset;
-	for(u=curauto; u; u=u->link)
-		if(u->asym == s)
-		if(u->type == i) {
-			if(u->aoffset > l)
-				u->aoffset = l;
-			return;
-		}
-
-	u = mal(sizeof(Auto));
-	u->link = curauto;
-	curauto = u;
-	u->asym = s;
-	u->aoffset = l;
-	u->type = i;
-}
 
 void
 nopout(Prog *p)

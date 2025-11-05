@@ -20,21 +20,20 @@ open Common
 (* ------------------------------------------------------------------------- *)
 (* Location *)
 (* ------------------------------------------------------------------------- *)
-
-(* (global) line# *)
 (*s: type [[Ast_asm.loc]] *)
+(* (global) line# *)
 type loc = Location_cpp.loc
-[@@deriving show]
 (*e: type [[Ast_asm.loc]] *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Numbers and Strings *)
 (* ------------------------------------------------------------------------- *)
-(* increments by unit of 1 *)
 (*s: type [[Ast_asm.virt_pc]] *)
+(* increments by unit of 1 *)
 type virt_pc = int
-[@@deriving show]
 (*e: type [[Ast_asm.virt_pc]] *)
+[@@deriving show]
 
 (* 'int' enough for ARM 32 bits? on 64 bits machine it is enough :) 
  * TODO: use Int64.t so sure it's enough for every arch.
@@ -45,8 +44,8 @@ type virt_pc = int
 *)
 (*s: type [[Ast_asm.integer]] *)
 type integer = int 
-[@@deriving show]
 (*e: type [[Ast_asm.integer]] *)
+[@@deriving show]
 
 (* floating point number.
  * TODO: float enough too? can contain 'double' C? 
@@ -54,52 +53,54 @@ type integer = int
 *)
 (*s: type [[Ast_asm.floatp]] *)
 type floatp = float 
-[@@deriving show]
 (*e: type [[Ast_asm.floatp]] *)
+[@@deriving show]
 
-(* can be 0, negative, or positive *)
 (*s: type [[Ast_asm.offset]] *)
+(* can be 0, negative, or positive *)
 type offset = int
-[@@deriving show]
 (*e: type [[Ast_asm.offset]] *)
-
-(* jmp labels *)
-(*s: type [[Ast_asm.label]] *)
-type label = string
 [@@deriving show]
+
+(*s: type [[Ast_asm.label]] *)
+(* jmp labels *)
+type label = string
 (*e: type [[Ast_asm.label]] *)
+[@@deriving show]
 
 (*s: type [[Ast_asm.symbol]] *)
 type symbol = string
-[@@deriving show]
 (*e: type [[Ast_asm.symbol]] *)
+[@@deriving show]
 
 (*s: type [[Ast_asm.global]] *)
 type global = {
   name: symbol;
+  (*s: [[Asm_asm.global]] other fields *)
   (* 'Some _' when entity is a private symbol (aka static symbol).
    * mutable (ugly?) modifed by linker in naming phase.
    *)
   mutable priv: int option; 
+  (*x: [[Asm_asm.global]] other fields *)
   (* for safe linking (generated only by 5c, not 5a) *)
   signature: int option;
+  (*e: [[Asm_asm.global]] other fields *)
 }
-[@@deriving show]
 (*e: type [[Ast_asm.global]] *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
-
 (*s: type [[Ast_asm.register]] *)
 type register = R of int (* between 0 and 15 on ARM *)
-[@@deriving show]
 (*e: type [[Ast_asm.register]] *)
+[@@deriving show]
 
 (*s: type [[Ast_asm.fregister]] *)
 type fregister = FR of int (* between 0 and 15 on ARM *)
-[@@deriving show]
 (*e: type [[Ast_asm.fregister]] *)
+[@@deriving show]
 
 (*s: type [[Ast_asm.entity]] *)
 type entity = 
@@ -107,22 +108,25 @@ type entity =
   | Local of symbol option * offset (* SP *)
   (* stricter: we disallow anonymous offsets to SB *)
   | Global of global * offset (* SB *) 
-[@@deriving show]
 (*e: type [[Ast_asm.entity]] *)
+[@@deriving show]
 
 (* extended immediate *)
 (*s: type [[Ast_asm.ximm]] *)
 type ximm =
   | Int of integer
-  | Float of floatp
   | String of string (* limited to 8 characters *)
+  (*s: [[Ast_asm.ximm]] other cases *)
   (* I used to disallow address of FP or SP, and offset to SB, but
    * 5c needs this feature, so you can take the address of a local.
    * old: Address of global.
    *)
   | Address of entity
-[@@deriving show]
+  (*x: [[Ast_asm.ximm]] other cases *)
+  | Float of floatp
+  (*e: [[Ast_asm.ximm]] other cases *)
 (*e: type [[Ast_asm.ximm]] *)
+[@@deriving show]
 
 (* I use a ref below so the code that resolves branches is shorter.
  * The ref is modified by the assembler and then by the linker.
@@ -153,19 +157,19 @@ and branch_operand2 =
 (* In a MOVE, sign is relevant only for a load operation *)
 (*s: type [[Ast_asm.sign]] *)
 type sign = S (* Signed *) | U (* Unsigned *)
-[@@deriving show]
 (*e: type [[Ast_asm.sign]] *)
+[@@deriving show]
 
 (* TODO: add Dword? use shorter W_ | H_ | B_ | D_ ?  *)
 (*s: type [[Ast_asm.move_size]] *)
 type move_size = Word | HalfWord of sign | Byte of sign
-[@@deriving show]
 (*e: type [[Ast_asm.move_size]] *)
+[@@deriving show]
 
 (*s: type [[Ast_asm.floatp_precision]] *)
 type floatp_precision = F (* Float *) | D (* Double *)
-[@@deriving show]
 (*e: type [[Ast_asm.floatp_precision]] *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -195,8 +199,8 @@ type virtual_instr =
   | RET
   | NOP (* removed by linker *)
   (* TODO? out MOV here with sizes and sign/unsigned *)
-[@@deriving show]
 (*e: type [[Ast_asm.virtual_instr]] *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)
@@ -211,19 +215,19 @@ type 'instr line =
   (* disappear after resolve *)
   | LabelDef of label
   (* less: PragmaLibDirective of string *)
-[@@deriving show {with_path = false}]
 (*e: type [[Ast_asm.line]] *)
+[@@deriving show {with_path = false}]
 
 (*s: type [[Ast_asm.lines]] *)
 type 'instr lines = ('instr line * loc) list
-[@@deriving show]
 (*e: type [[Ast_asm.lines]] *)
-
-(* The location_history allows to convert a loc to the right place *)
-(*s: type [[Ast_asm.program]] *)
-type 'instr program = 'instr lines * Location_cpp.location_history list
 [@@deriving show]
+
+(*s: type [[Ast_asm.program]] *)
+(* The location_history allows to convert a loc to the right place *)
+type 'instr program = 'instr lines * Location_cpp.location_history list
 (*e: type [[Ast_asm.program]] *)
+[@@deriving show]
 
 (*****************************************************************************)
 (*  Extractors/visitors *)
@@ -234,6 +238,7 @@ let s_of_global (x : global) : string =
   x.name ^ (match x.priv with None -> "" | Some _ -> "<>")
 (*e: function [[Ast_asm.s_of_global]] *)
 
+(*s: function [[Ast_asm.visit_globals_program]] *)
 (* Visit globals (e.g., to populate symbol table with wanted symbols in linker).
  * This is more complicated than in 5l because we can not rely
  * on an ANAME or Operand.sym.
@@ -264,4 +269,5 @@ and visit_globals_branch_operand f x =
   match !x with
   | SymbolJump ent -> f ent
   | IndirectJump _ | Relative _ | LabelUse _ | Absolute _ -> ()
+(*e: function [[Ast_asm.visit_globals_program]] *)
 (*e: objects/Ast_asm.ml *)

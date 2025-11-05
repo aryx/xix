@@ -37,16 +37,15 @@ open Ast_asm
 (* ------------------------------------------------------------------------- *)
 (* Operands *)
 (* ------------------------------------------------------------------------- *)
-
 (*s: type [[Ast_asm5.reg]] *)
 type reg = A.register (* between 0 and 15 *)
-[@@deriving show]
 (*e: type [[Ast_asm5.reg]] *)
+[@@deriving show]
 
 (*s: type [[Ast_asm5.freg]] *)
 type freg = A.fregister (* between 0 and 15 *)
-[@@deriving show]
 (*e: type [[Ast_asm5.freg]] *)
+[@@deriving show]
 
 (* ?? *)
 (*s: type [[Ast_asm5.creg]] *)
@@ -106,9 +105,9 @@ type mov_operand =
   | Indirect of reg * A.offset
   (* another form of Indirect *)
   | Entity of A.entity
+(*e: type [[Ast_asm5.mov_operand]] *)
 
 [@@deriving show]
-(*e: type [[Ast_asm5.mov_operand]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -118,28 +117,38 @@ type mov_operand =
 (*s: type [[Ast_asm5.instr]] *)
 type instr = 
   (* Arithmetic *)
+  (*s: [[Ast_asm5.instr]] arithmetic instructions cases *)
   | Arith of arith_opcode * arith_cond option *
       arith_operand (* src *) * reg option * reg (* dst *)
+  (*x: [[Ast_asm5.instr]] arithmetic instructions cases *)
   | ArithF of (arithf_opcode * A.floatp_precision) *
       (A.floatp, freg) Either_.t * freg option * freg
+  (*e: [[Ast_asm5.instr]] arithmetic instructions cases *)
 
   (* Memory *)
+  (*s: [[Ast_asm5.instr]] memory instructions cases *)
   | MOVE of A.move_size * move_option *
       mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
   | SWAP of A.move_size (* actually only (Byte x) *) * 
        reg (* indirect *) * reg * reg option
+  (*e: [[Ast_asm5.instr]] memory instructions cases *)
 
   (* Control flow *)
+  (*s: [[Ast_asm5.instr]] control-flow instructions cases *)
   | B  of A.branch_operand (* branch *)
   | BL of A.branch_operand (* branch and link *)
   | Cmp of cmp_opcode * arith_operand * reg
-  | CmpF of A.floatp_precision * freg * freg
   (* just Relative or LabelUse here for branch_operand *)
   | Bxx of condition * A.branch_operand (* virtual, sugar for B.XX *) 
+  (*x: [[Ast_asm5.instr]] control-flow instructions cases *)
+  | CmpF of A.floatp_precision * freg * freg
+  (*e: [[Ast_asm5.instr]] control-flow instructions cases *)
 
   (* System *)
+  (*s: [[Ast_asm5.instr]] system instructions cases *)
   | SWI of int (* value actually unused in Plan 9 and Linux *)
   | RFE (* virtual, sugar for MOVM *)
+  (*e: [[Ast_asm5.instr]] system instructions cases *)
 (*e: type [[Ast_asm5.instr]] *)
 
 (*s: type [[Ast_asm5.arith_opcode]] *)
@@ -199,18 +208,18 @@ type instr =
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 
+(*s: type [[Ast_asm5.instr_with_cond]] *)
+type instr_with_cond = instr * condition
+(*e: type [[Ast_asm5.instr_with_cond]] *)
+[@@deriving show]
+
+(*s: type [[Ast_asm5.program]] *)
 (* On the ARM every instructions can be prefixed with a condition.
  * Note that cond should be AL (Always) for B/Bxx instructions.
 *)
-(*s: type [[Ast_asm5.instr_with_cond]] *)
-type instr_with_cond = instr * condition
-[@@deriving show]
-(*e: type [[Ast_asm5.instr_with_cond]] *)
-
-(*s: type [[Ast_asm5.program]] *)
 type program = instr_with_cond A.program
-[@@deriving show]
 (*e: type [[Ast_asm5.program]] *)
+[@@deriving show]
 
 (*****************************************************************************)
 (* Extractors/Visitors *)

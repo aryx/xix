@@ -37,8 +37,13 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
-(* Need: see .mli *)
 (*s: type [[CLI.caps]] *)
+(* Need:
+ * - open_in: for argv derived input file but also for #include'd files
+ *   because 5a/va/... are macroassemblers
+ * - open_out for -o object file or argv[0].5
+ * - env: for INCLUDE (for cpp)
+ *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 (*e: type [[CLI.caps]] *)
 
@@ -59,7 +64,6 @@ let assemble5 (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
         Logs.app (fun m -> m "AST = %s" s));
   prog
 (*e: function [[CLI.assemble5]] *)
-
 (*s: function [[CLI.assemblev]] *)
 let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asmv.program =
   let prog = Parse_asmv.parse caps conf infile in
@@ -68,7 +72,6 @@ let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   then Logs.app (fun m -> m "AST = %s" (Ast_asmv.show_program prog));
   prog
 (*e: function [[CLI.assemblev]] *)
-
 
 (*s: function [[CLI.assemble]] *)
 (* Will modify chan as a side effect *)
@@ -87,7 +90,6 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[CLI.main]] *)
 let main (caps: <caps; ..>) (argv: string array) : Exit.t =
   let arch = 
@@ -216,5 +218,4 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
       | _ -> raise exn
       )
 (*e: function [[CLI.main]] *)
-
 (*e: CLI.ml *)

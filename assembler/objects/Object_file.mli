@@ -1,16 +1,16 @@
 (*s: objects/Object_file.mli *)
 
+(*s: type [[Object_file.t]] *)
 (* An object file (.o) in Plan 9 is really just a serialized assembly AST *)
-(*s: type [[Object_file.t (objects/Object_file.mli)]] *)
 type 'instr t = {
   prog:  'instr Ast_asm.program;
   arch: Arch.t
 }
-(*e: type [[Object_file.t (objects/Object_file.mli)]] *)
+(*e: type [[Object_file.t]] *)
 
-(*s: exception [[Object_file.WrongVersion (objects/Object_file.mli)]] *)
+(*s: exception [[Object_file.WrongVersion]] *)
 exception WrongVersion
-(*e: exception [[Object_file.WrongVersion (objects/Object_file.mli)]] *)
+(*e: exception [[Object_file.WrongVersion]] *)
 (*s: signature [[Object_file.version]] *)
 (* used also in Library_file.ml *)
 val version : int 

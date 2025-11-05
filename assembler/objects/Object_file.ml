@@ -11,17 +11,14 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-
-(* An object (.o) in Plan 9 is really just a serialized assembly AST
- * TODO? could also add file origin?
- *)
+(* TODO? could also add file origin? *)
 (*s: type [[Object_file.t]] *)
+(* An object file (.o) in Plan 9 is really just a serialized assembly AST *)
 type 'instr t = {
   prog:  'instr Ast_asm.program;
   arch: Arch.t
 }
 (*e: type [[Object_file.t]] *)
-
 
 (* less: could be sha1 of ast_asmxxx.ml for even safer marshalling *)
 (*s: constant [[Object_file.version]] *)
@@ -31,12 +28,11 @@ let version = 6
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
-
-(*s: function [[Object_file.save]] *)
 (* TODO? can normalize before? or check every invariants?
  * TODO? pass and save arch name string? like in goken? and
  * check for it at loading time?
  *)
+(*s: function [[Object_file.save]] *)
 let save (arch : Arch.t) (obj : 'instr Ast_asm.program) (chan : Chan.o) : unit =
   Logs.info (fun m -> m "Saving %s object in %s" (Arch.thestring arch)
       (Chan.destination chan));

@@ -9,7 +9,6 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(*s: function [[Lexer_asm.error]] *)
 (* Common parts of the different Plan 9 assembly lexers.
  * 
  * Limitations compared to 5a/va/...:
@@ -20,10 +19,13 @@ module L = Location_cpp
  *    (but can use cpp #define for that)
  *)
 
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+(*s: function [[Lexer_asm.error]] *)
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
 (*e: function [[Lexer_asm.error]] *)
-
 (*s: function [[Lexer_asm.code_of_escape_char]] *)
 let code_of_escape_char c =
   match c with
@@ -39,12 +41,10 @@ let code_of_escape_char c =
   (* stricter: we disallow \ with unknown character *)
   | _ -> error "unknown escape sequence"
 (*e: function [[Lexer_asm.code_of_escape_char]] *)
-
 (*s: function [[Lexer_asm.string_of_ascii]] *)
 let string_of_ascii i =
   String.make 1 (Char.chr i)
 (*e: function [[Lexer_asm.string_of_ascii]] *)
-
 (*s: function [[Lexer_asm.char_]] *)
 (* needed only because of ocamllex limitations in ocaml-light
  * which does not support the 'as' feature.
@@ -72,28 +72,33 @@ let hex = (digit | ['A'-'F''a'-'f'])
 (*e: constant [[Lexer_asm.hex]] *)
 (*s: constant [[Lexer_asm.oct]] *)
 let oct = ['0'-'7']
+(*e: constant [[Lexer_asm.oct]] *)
 
 (*****************************************************************************)
 (* Main rule *)
 (*****************************************************************************)
+(*s: rule [[Lexer_asm.token]] *)
 rule token = parse
-
   (* ----------------------------------------------------------------------- *)
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer_asm.token]] space/comment cases *)
   | space+ { token lexbuf }
-
+  (*x: [[Lexer_asm.token]] space/comment cases *)
   | "//" [^'\n']* { token lexbuf }
+  (*x: [[Lexer_asm.token]] space/comment cases *)
   | "/*"          { comment lexbuf }
-
+  (*x: [[Lexer_asm.token]] space/comment cases *)
   (* newlines are converted in fake semicolons for the grammar *)
   | '\n' { let old = !L.line in incr L.line; TSEMICOLON old }
+  (*e: [[Lexer_asm.token]] space/comment cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer_asm.token]] symbol cases *)
   | ';' { TSEMICOLON !L.line }
-
+  (*x: [[Lexer_asm.token]] symbol cases *)
   | ':' { TCOLON } | ',' { TCOMMA }
   | '(' { TOPAR } | ')' { TCPAR }
   | '$' { TDOLLAR }
@@ -104,10 +109,12 @@ rule token = parse
 
   (* has to be before the rule for identifiers *)
   | '.' { TDOT }
+  (*e: [[Lexer_asm.token]] symbol cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Mnemonics and identifiers *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer_asm.token]] mnemonics/identifiers cases *)
   | "R" (digit+ (*as s*)) 
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         let i = int_of_string s in 
@@ -120,7 +127,7 @@ rule token = parse
         (* the range check is arch-specific and must be done in Parse_asmX.ml *)
         TFx (Ast_asm.FR i)
       }
-
+  (*x: [[Lexer_asm.token]] mnemonics/identifiers cases *)
   (* looser: actually for '.' 5a imposes to have an isalpha() after *)    
   | (letter | '_' | '@' | '.') (letter | digit | '_' | '$' )* {
       let s = Lexing.lexeme lexbuf in
@@ -133,7 +140,7 @@ rule token = parse
       (* virtual instructions *)
       | "RET" -> TRET
       | "NOP" -> TNOP
- 
+
       (* registers (see also the special rule above for R digit+) *)
       | "R" -> TR
       | "F" -> TF
@@ -144,25 +151,36 @@ rule token = parse
       (* each Parse_asmX.ml will refine and convert some TIDENT *)
       | _ -> TIDENT s
     }
+  (*e: [[Lexer_asm.token]] mnemonics/identifiers cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Numbers *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer_asm.token]] numbers cases *)
+  (*s: [[Lexer_asm.token]] octal case *)
   | "0"  (oct+ (*as s*)) 
       { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
         TINT (int_of_string ("0o" ^ s))  }
+  (*e: [[Lexer_asm.token]] octal case *)
+  (*s: [[Lexer_asm.token]] hexadecimal case *)
   | "0x" hex+        { TINT (int_of_string (Lexing.lexeme lexbuf)) }
-(*e: constant [[Lexer_asm.oct]] *)
+  (*e: [[Lexer_asm.token]] hexadecimal case *)
+  (*s: [[Lexer_asm.token]] decimal case *)
   | digit+           { TINT (int_of_string (Lexing.lexeme lexbuf)) }
-
+  (*e: [[Lexer_asm.token]] decimal case *)
+  (*s: [[Lexer_asm.token]] float case *)
   (* stricter: I impose some digit+ after '.' and after 'e' *)
   | (digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?
      { TFLOAT (float_of_string (Lexing.lexeme lexbuf)) }
+  (*e: [[Lexer_asm.token]] float case *)
+  (*e: [[Lexer_asm.token]] numbers cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Chars/Strings *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer_asm.token]] chars/strings cases *)
   | "'" { TINT (char lexbuf) }
+  (*x: [[Lexer_asm.token]] chars/strings cases *)
   | '"' 
       { let s = string lexbuf in
         (* less: why this limit though? *)
@@ -170,22 +188,27 @@ rule token = parse
         then error ("string constant too long")
         else TSTRING s
       }
+  (*e: [[Lexer_asm.token]] chars/strings cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer_asm.token]] cpp cases *)
   (* See ../macroprocessor/Lexer_cpp.mll (called from Parse_asmX.ml) *)
   | "#" { TSharp }
+  (*e: [[Lexer_asm.token]] cpp cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* less: maybe return a fake semicolon the first time? *)
   | eof { EOF }
   | _ (*as c*)   { let c = char_ lexbuf in
                    error (spf "unrecognized character: '%c'" c) }
+(*e: rule [[Lexer_asm.token]] *)
 
 (*****************************************************************************)
 (* Rule char *)
 (*****************************************************************************)
+(*s: rule [[Lexer_asm.char]] *)
 and char = parse
   | "''"                            { Char.code '\'' }
   | "\\" ((oct oct? oct?) (*as s*)) "'" 
@@ -201,10 +224,12 @@ and char = parse
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }
   | _    { error "missing '" }
+(*e: rule [[Lexer_asm.char]] *)
 
 (*****************************************************************************)
 (* Rule string *)
 (*****************************************************************************)
+(*s: rule [[Lexer_asm.string]] *)
 and string = parse
   | '"' { "" }
   | "\\" ((oct oct oct) (*as s*))
@@ -218,14 +243,17 @@ and string = parse
   | '\n' { error "newline in string" }
   | eof  { error "end of file in string" }
   | _    { error "undefined character in string" }
+(*e: rule [[Lexer_asm.string]] *)
 
 (*****************************************************************************)
 (* Rule comment *)
 (*****************************************************************************)
+(*s: rule [[Lexer_asm.comment]] *)
 and comment = parse
   | "*/"          { token lexbuf }
   | [^ '*' '\n']+ { comment lexbuf }
   | '*'           { comment lexbuf }
   | '\n'          { incr L.line; comment lexbuf }
   | eof           { error "end of file in comment" }
+(*e: rule [[Lexer_asm.comment]] *)
 (*e: Lexer_asm.mll *)

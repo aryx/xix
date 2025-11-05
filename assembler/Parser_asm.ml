@@ -33,7 +33,6 @@ let error s =
 (*s: constant [[Parser_asm.noattr]] *)
 let noattr = { dupok = false; prof = true }
 (*e: constant [[Parser_asm.noattr]] *)
-
 (*s: function [[Parser_asm.attributes_of_int]] *)
 (* less: should use keywords in Asm5 instead of abusing integers
  * alt: anyway one can also use cpp to define NOPROF/DUPOK macros

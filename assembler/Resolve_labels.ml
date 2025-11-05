@@ -17,7 +17,6 @@ open Ast_asm
 (*****************************************************************************)
 (* Error management *)
 (*****************************************************************************)
-
 (*s: function [[Resolve_labels.error]] *)
 let error (s : string) (line, _locs) =
   (* TODO: use Location_cpp.Error instead or use locs at least! *)
@@ -27,7 +26,6 @@ let error (s : string) (line, _locs) =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Resolve_labels.resolve]] *)
 (* ocaml: see how little processing 5a actually does :) *)
 let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =

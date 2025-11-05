@@ -8,9 +8,6 @@ dodata(void)
 	Prog *p, *p1;
 	long orig, orig1, v;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f dodata\n", cputime());
-	Bflush(&bso);
 	for(p = datap; p != P; p = p->link) {
 		s = p->from.sym;
 		if(p->as == ADYNT || p->as == AINIT)
@@ -201,25 +198,10 @@ dodata(void)
 	xdefine("etext", STEXT, 0L);
 }
 
-void
-undef(void)
-{
-	int i;
-	Sym *s;
-
-	for(i=0; i<NHASH; i++)
-	for(s = hash[i]; s != S; s = s->link)
-		if(s->type == SXREF)
-			diag("%s: not defined", s->name);
-}
 
 void
 follow(void)
 {
-	if(debug['v'])
-		Bprint(&bso, "%5.2f follow\n", cputime());
-	Bflush(&bso);
-
 	firstp = prg();
 	lastp = firstp;
 	xfol(textp);
@@ -343,9 +325,6 @@ patch(void)
 	Sym *s;
 	int a;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f patch\n", cputime());
-	Bflush(&bso);
 	mkfwd();
 	s = lookup("exit", 0);
 	vexit = s->value;

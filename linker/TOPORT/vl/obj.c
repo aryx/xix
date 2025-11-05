@@ -1,42 +1,12 @@
 /* vl - mips linker */
-#define	EXTERN
-#include	"l.h"
-#include	<ar.h>
 
-char	*noname		= "<none>";
-char	symname[]	= SYMDEF;
-char	thechar		= 'v';
-char	*thestring 	= "mips";
 int little;
-
-char**	libdir;
-int	nlibdir	= 0;
-static	int	maxlibdir = 0;
 
 /*
  *	-H0						is headerless
  *  -H2 -T16416 -R16384	is plan9 format
  *  -H7 is Linux ELF (default)
  */
-
-
-
-int
-fileexists(char *s)
-{
-	uchar dirbuf[400];
-
-	/* it's fine if stat result doesn't fit in dirbuf, since even then the file exists */
-	return stat(s, dirbuf, sizeof(dirbuf)) >= 0;
-}
-
-
-void
-usage(void)
-{
-	diag("usage: %s [-options] objects", argv0);
-	errorexit();
-}
 
 void
 main(int argc, char *argv[])
@@ -45,100 +15,29 @@ main(int argc, char *argv[])
 	char *a;
 	char name[LIBNAMELEN];
 
-	Binit(&bso, 1, OWRITE);
-	cout = -1;
-	listinit();
-	outfile = 0;
-	nerrors = 0;
-	curtext = P;
-	HEADTYPE = -1;
-	INITTEXT = -1;
-	INITTEXTP = -1;
-	INITDAT = -1;
-	INITRND = -1;
-	INITENTRY = 0;
-
 	ARGBEGIN {
 	default:
-		c = ARGC();
-		if(c >= 0 && c < sizeof(debug))
-			debug[c]++;
-		break;
-	case 'o':
-		outfile = ARGF();
-		break;
-	case 'E':
-		a = ARGF();
-		if(a)
-			INITENTRY = a;
-		break;
 	case  'm':			/* for little-endian mips */
 		thechar = '0';
 		thestring = "spim";
 		little = 1;
-		break;
-	case 'T':
-		a = ARGF();
-		if(a)
-			INITTEXT = atolwhex(a);
 		break;
 	case 'P':
 		a = ARGF();
 		if(a)
 			INITTEXTP = atolwhex(a);
 		break;
-	case 'D':
-		a = ARGF();
-		if(a)
-			INITDAT = atolwhex(a);
-		break;
-	case 'R':
-		a = ARGF();
-		if(a)
-			INITRND = atolwhex(a);
-		break;
-	case 'H':
-		a = ARGF();
-		if(a)
-			HEADTYPE = atolwhex(a);
-		/* do something about setting INITTEXT */
-		break;
 	case 'L':
 		addlibpath(EARGF(usage()));
 		break;
 	} ARGEND
 
-	USED(argc);
-
-	if(*argv == 0)
-		usage();
-
-    //TODO? switch to GOROOT instead
-	//a = getenv("ccroot");
-	//if(a != nil && *a != '\0') {
-	//	if(!fileexists(a)) {
-	//		diag("nonexistent $ccroot: %s", a);
-	//		errorexit();
-	//	}
-	//}else
 		a = "";
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
-	if(HEADTYPE == -1) {
-        // Linux ELF
-        // alt: use goos and detect Linux
-        HEADTYPE = 7;
-	}
+
+
 	switch(HEADTYPE) {
-	case 0:	/* headerless */
-		HEADR = 0;
-		if(INITTEXT == -1)
-			INITTEXT = 0x80000000L+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
-		break;
 	case 2:	/* plan 9 */
 		HEADR = 32L;
 		if(INITDAT == -1)
@@ -157,40 +56,20 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	default:
-		diag("unknown -H option");
-		errorexit();
 	}
 
-	if (INITTEXTP == -1)
-		INITTEXTP = INITTEXT;
-	if(INITDAT != 0 && INITRND != 0)
-		print("warning: -D0x%lux is ignored because of -R0x%lux\n",
-			INITDAT, INITRND);
-	if(debug['v'])
-		Bprint(&bso, "HEADER = -H0x%d -T0x%lux -D0x%lux -R0x%lux\n",
-			HEADTYPE, INITTEXT, INITDAT, INITRND);
 
-	Bflush(&bso);
-	zprg.as = AGOK;
-	zprg.reg = NREG;
-	zprg.from.name = D_NONE;
-	zprg.from.type = D_NONE;
-	zprg.from.reg = NREG;
-	zprg.to = zprg.from;
-	buildop();
-	histgen = 0;
-	textp = P;
-	datap = P;
-	pc = 0;
 	dtype = 4;
+
 	if(outfile == 0) {
 		static char name[20];
 
 		snprint(name, sizeof name, "%c.out", thechar);
 		outfile = name;
 	}
+
 	cout = create(outfile, 1, 0775);
+
 	if(cout < 0) {
 		diag("cannot create %s: %r", outfile);
 		errorexit();
@@ -198,10 +77,7 @@ main(int argc, char *argv[])
 	nuxiinit();
 
 	version = 0;
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
-	firstp = prg();
-	lastp = firstp;
+
 
 	if(INITENTRY == 0) {
 		INITENTRY = "_main";
@@ -216,33 +92,29 @@ main(int argc, char *argv[])
 		objfile(*argv++);
 	if(!debug['l'])
 		loadlib();
+
 	firstp = firstp->link;
 	if(firstp == P)
 		goto out;
+
 	patch();
+
 	if(debug['p'])
 		if(debug['1'])
 			doprof1();
 		else
 			doprof2();
+
 	dodata();
 	follow();
+
 	if(firstp == P)
 		goto out;
+
 	noops();
 	span();
 	asmb();
 	undef();
-
-out:
-	if(debug['v']) {
-		Bprint(&bso, "%5.2f cpu time\n", cputime());
-		Bprint(&bso, "%ld memory used\n", thunk);
-		Bprint(&bso, "%d sizeof adr\n", sizeof(Adr));
-		Bprint(&bso, "%d sizeof prog\n", sizeof(Prog));
-	}
-	Bflush(&bso);
-	errorexit();
 }
 
 void
@@ -300,18 +172,6 @@ loop:
 	for(s = hash[h]; s != S; s = s->link)
 		if(s->type == SXREF)
 			goto loop;
-}
-
-void
-errorexit(void)
-{
-
-	if(nerrors) {
-		if(cout >= 0)
-			remove(outfile);
-		exits("error");
-	}
-	exits(0);
 }
 
 void
@@ -1056,78 +916,7 @@ eof:
 	diag("truncated object file: %s", pn);
 }
 
-Sym*
-lookup(char *symb, int v)
-{
-	Sym *s;
-	char *p;
-	long h;
-	int c, l;
 
-	h = v;
-	for(p=symb; c = *p; p++)
-		h = h+h+h + c;
-	l = (p - symb) + 1;
-	h &= 0xffffff;
-	h %= NHASH;
-	for(s = hash[h]; s != S; s = s->link)
-		if(s->version == v)
-		if(memcmp(s->name, symb, l) == 0)
-			return s;
-
-	while(nhunk < sizeof(Sym))
-		gethunk();
-	s = (Sym*)hunk;
-	nhunk -= sizeof(Sym);
-	hunk += sizeof(Sym);
-
-	s->name = malloc(l);
-	memmove(s->name, symb, l);
-
-	s->link = hash[h];
-	s->type = 0;
-	s->version = v;
-	s->value = 0;
-	hash[h] = s;
-	return s;
-}
-
-Prog*
-prg(void)
-{
-	Prog *p;
-
-	while(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
-	*p = zprg;
-	return p;
-}
-
-void
-gethunk(void)
-{
-	char *h;
-	long nh;
-
-	nh = NHUNK;
-	if(thunk >= 5L*NHUNK) {
-		nh = 5L*NHUNK;
-		if(thunk >= 25L*NHUNK)
-			nh = 25L*NHUNK;
-	}
-	h = sbrk(nh);
-	if(h == (char*)-1) {
-		diag("out of memory");
-		errorexit();
-	}
-	hunk = h;
-	nhunk = nh;
-	thunk += nh;
-}
 
 void
 doprof1(void)

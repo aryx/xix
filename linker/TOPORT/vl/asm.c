@@ -1,177 +1,8 @@
-#include	"l.h"
-
 /* can't include a.out.h due to name clashes, but these are taken from it */
 #define	_MAGIC(f, b)	((f)|((((4*(b))+0)*(b))+7))
 #define	V_MAGIC		_MAGIC(0, 16)		/* mips 3000 BE */
 #define	P_MAGIC		_MAGIC(0, 24)		/* mips 3000 LE */
 
-long	OFFSET;
-/*
-long	BADOFFSET	=	-1;
-
-		if(OFFSET <= BADOFFSET && OFFSET+4 > BADOFFSET)\
-			abort();\
-		OFFSET += 4;\
-
-		if(OFFSET == BADOFFSET)\
-			abort();\
-		OFFSET++;\
-*/
-
-#define LPUT(l) { \
-		if (little) { \
-			LLEPUT(l); \
-		} else { \
-			LBEPUT(l); \
-		} \
-	}
-
-#define	LLEPUT(c)\
-	{\
-		cbp[0] = (c);\
-		cbp[1] = (c)>>8;\
-		cbp[2] = (c)>>16;\
-		cbp[3] = (c)>>24;\
-		cbp += 4;\
-		cbc -= 4;\
-		if(cbc <= 0)\
-			cflush();\
-	}
-
-#define	LBEPUT(c)\
-	{\
-		cbp[0] = (c)>>24;\
-		cbp[1] = (c)>>16;\
-		cbp[2] = (c)>>8;\
-		cbp[3] = (c);\
-		cbp += 4;\
-		cbc -= 4;\
-		if(cbc <= 0)\
-			cflush();\
-	}
-
-#define HPUT(h) { \
-		if (little) { \
-			HLEPUT(h); \
-		} else { \
-			HBEPUT(h); \
-		} \
-	}
-
-#define	HLEPUT(c)\
-	{\
-		cbp[0] = (c);\
-		cbp[1] = (c)>>8;\
-		cbp += 2;\
-		cbc -= 2;\
-		if(cbc <= 0)\
-			cflush();\
-	}
-
-#define	HBEPUT(c)\
-	{\
-		cbp[0] = (c)>>8;\
-		cbp[1] = (c);\
-		cbp += 2;\
-		cbc -= 2;\
-		if(cbc <= 0)\
-			cflush();\
-	}
-
-
-#define	CPUT(c)\
-	{\
-		cbp[0] = (c);\
-		cbp++;\
-		cbc--;\
-		if(cbc <= 0)\
-			cflush();\
-	}
-
-void
-cput(long l)
-{
-	CPUT(l);
-}
-
-void
-objput(long l)	/* emit long in byte order appropriate to object machine */
-{
-	LPUT(l);
-}
-
-void
-objhput(short s)
-{
-	HPUT(s);
-}
-
-void
-wput(long l)
-{
-
-	cbp[0] = l>>8;
-	cbp[1] = l;
-	cbp += 2;
-	cbc -= 2;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-wputl(long l)
-{
-
-	cbp[0] = l;
-	cbp[1] = l>>8;
-	cbp += 2;
-	cbc -= 2;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-lput(long l)		/* emit long in big-endian byte order */
-{
-	LBEPUT(l);
-}
-
-void
-lputl(long l)		/* emit long in big-endian byte order */
-{
-	LLEPUT(l);
-}
-
-void
-llput(vlong v)
-{
-	lput(v>>32);
-	lput(v);
-}
-
-void
-llputl(vlong v)
-{
-	lputl(v);
-	lputl(v>>32);
-}
-
-long
-entryvalue(void)
-{
-	char *a;
-	Sym *s;
-
-	a = INITENTRY;
-	if(*a >= '0' && *a <= '9')
-		return atolwhex(a);
-	s = lookup(a, 0);
-	if(s->type == 0)
-		return INITTEXT;
-	if(s->type != STEXT && s->type != SLEAF)
-		diag("entry not text: %s", s->name);
-	return s->value;
-}
 
 void
 asmb(void)
@@ -180,12 +11,12 @@ asmb(void)
 	long t, etext;
 	Optab *o;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f asm\n", cputime());
-	Bflush(&bso);
+
 	OFFSET = HEADR;
 	seek(cout, OFFSET, 0);
+
 	pc = INITTEXT;
+
 	for(p = firstp; p != P; p = p->link) {
 		if(p->as == ATEXT) {
 			curtext = p;
@@ -206,9 +37,6 @@ asmb(void)
 		}
 		pc += o->size;
 	}
-	if(debug['a'])
-		Bprint(&bso, "\n");
-	Bflush(&bso);
 	cflush();
 
 	etext = INITTEXT + textsize;
@@ -280,33 +108,11 @@ asmb(void)
 		cflush();
 	}
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f header\n", cputime());
-	Bflush(&bso);
 	OFFSET = 0;
+
 	seek(cout, OFFSET, 0);
+
 	switch(HEADTYPE) {
-	case 0:
-		lput(0x160L<<16);		/* magic and sections */
-		lput(0L);			/* time and date */
-		lput(rnd(HEADR+textsize, 4096)+datsize);
-		lput(symsize);			/* nsyms */
-		lput((0x38L<<16)|7L);		/* size of optional hdr and flags */
-		lput((0413<<16)|0437L);		/* magic and version */
-		lput(rnd(HEADR+textsize, 4096));	/* sizes */
-		lput(datsize);
-		lput(bsssize);
-		lput(entryvalue());		/* va of entry */
-		lput(INITTEXT-HEADR);		/* va of base of text */
-		lput(INITDAT);			/* va of base of data */
-		lput(INITDAT+datsize);		/* va of base of bss */
-		lput(~0L);			/* gp reg mask */
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(0L);
-		lput(~0L);			/* gp value ?? */
-		break;
 	case 2:
 		if (little)
 			lput(P_MAGIC);		/* mips 3000 LE */
@@ -337,18 +143,6 @@ strnput(char *s, int n)
 	}
 	for(; n > 0; n--)
 		CPUT(0);
-}
-
-void
-cflush(void)
-{
-	int n;
-
-	n = sizeof(buf.cbuf) - cbc;
-	if(n)
-		write(cout, buf.cbuf, n);
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
 }
 
 void
@@ -693,29 +487,14 @@ datblk(long s, long n, int str)
 #define	FPW(x,y)\
 	(SP(2,1)|(20<<21)|((x)<<3)|((y)<<0))
 
-int vshift(int);
-
 int
 asmout(Prog *p, Optab *o, int aflag)
 {
-	long o1, o2, o3, o4, o5, o6, o7, v;
+	long v;
 	Prog *ct;
 	int r, a;
 
-	o1 = 0;
-	o2 = 0;
-	o3 = 0;
-	o4 = 0;
-	o5 = 0;
-	o6 = 0;
-	o7 = 0;
 	switch(o->type) {
-	default:
-		diag("unknown type %d", o->type);
-		if(!debug['a'])
-			prasm(p);
-		break;
-
 	case 0:		/* pseudo ops */
 		if(aflag) {
 			if(p->link) {
@@ -1127,65 +906,12 @@ asmout(Prog *p, Optab *o, int aflag)
 		o1 = v;
 		break;
 	}
+
 	if(aflag)
 		return o1;
-	v = p->pc;
-	switch(o->size) {
-	default:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux:\t\t%P\n", v, p);
-		break;
-	case 4:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux\t%P\n", v, o1, p);
-		LPUT(o1);
-		break;
-	case 8:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux%P\n", v, o1, o2, p);
-		LPUT(o1);
-		LPUT(o2);
-		break;
-	case 12:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux%P\n", v, o1, o2, o3, p);
-		LPUT(o1);
-		LPUT(o2);
-		LPUT(o3);
-		break;
-	case 16:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux %.8lux%P\n",
-				v, o1, o2, o3, o4, p);
-		LPUT(o1);
-		LPUT(o2);
-		LPUT(o3);
-		LPUT(o4);
-		break;
-	case 20:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux %.8lux %.8lux%P\n",
-				v, o1, o2, o3, o4, o5, p);
-		LPUT(o1);
-		LPUT(o2);
-		LPUT(o3);
-		LPUT(o4);
-		LPUT(o5);
-		break;
 
-	case 28:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux %.8lux %.8lux %.8lux %.8lux%P\n",
-				v, o1, o2, o3, o4, o5, o6, o7, p);
-		LPUT(o1);
-		LPUT(o2);
-		LPUT(o3);
-		LPUT(o4);
-		LPUT(o5);
-		LPUT(o6);
-		LPUT(o7);
-		break;
-	}
+	v = p->pc;
+
 	return 0;
 }
 

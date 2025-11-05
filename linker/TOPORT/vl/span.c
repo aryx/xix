@@ -1,4 +1,3 @@
-#include	"l.h"
 
 void
 pagebug(Prog *p)
@@ -38,10 +37,6 @@ span(void)
 	Optab *o;
 	int m, bflag, i;
 	long c, otxt, v;
-
-	if(debug['v'])
-		Bprint(&bso, "%5.2f span\n", cputime());
-	Bflush(&bso);
 
 	bflag = 0;
 	c = INITTEXT;

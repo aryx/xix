@@ -82,90 +82,150 @@ Documentation License, Version 1.3.
 \chapter{Core Data Structures}
 %******************************************************************************
 \label{chap:core-ds}
-\section{[[Sym]]bols and [[hash]] table}
-\label{sec:version}
-\section{[[Section]]}
-\section{[[Opcode]] and [[Operand]]}
-\label{sec:opcode-operand}
-\section{[[Instr]]uction}
+
+\section{Symbols and hash tables}
+%%\label{sec:version}
+
+%trans:
+% first job of linker is to link symbol defs to uses in separate modules
+% (objects) so global symbols are important.
+
+\section{Sections}
+
+%trans:
+% Ultimately Unix/Plan9 execs are simple: text, data, bss, stack.
+
+\subsection{The virtual PC world}
+
+% plan9 assembler/linker/compiler toolchain is special; object files are also
+% specials, not like traditional toolchains. Arm-specific but not
+% ARM! Stuff remain "virtual" (virtual instr, virtual registers, pseudo
+% instr, virtual PC)
+
+\subsection{The real PC world}
+
+%trans: ultimately resolved! to real instr, real Text/Data, real PC
+% (multiple of 4 on ARM).
+
+\section{Object files and programs}
+%%\label{sec:opcode-operand}
+
+%%\section{[[Instr]]uction}
+
 \section{List of instructions}
-\subsection{Code instructions: [[firstp/lastp]]}
-\subsection{Data instructions: [[datap]]}
-\section{Current instructions: [[curtext/curp]]}
-%---------------------------------------------
+
+\subsection{Code instructions} %%: [[firstp/lastp]]
+
+\subsection{Data instructions} %%: [[datap]]}
+
+%%\section{Current instructions: [[curtext/curp]]}
+
+\section{Code graph}
+
+\section{Executable header}
+
+% A_out, but see other in Section~\ref{}.
+
+\section{Linker configuration}
+
 
 %******************************************************************************
 \chapter{Main Functions}
 %******************************************************************************
 \label{chap:main}
+
 \section{[[main()]]}
+
 \subsection{Arguments processing}
+
 \subsection{Executable format choice: [[5l -H]]}
 \label{sec:choice-exec-format}
+
 \subsection{Executable entry point: [[5l -E]]}
 \label{sec:choice-entry-point}
+
 \subsection{Main flow}
 \label{sec:main-flow}
-\section{Loading the objects and libraries: [[objfile()]]}
+
+\section{Loading the objects and libraries: [[load()]]}
+
 \section{Resolving symbols, computing addresses}
-\section{Generating the executable: [[asmb()]]}
+
+\section{Generating the executable: [[Execgen.gen()]]}
 \label{sec:gen-executable}
+
 \subsection{Header}
 \label{sec:gen-header}
+
 \subsection{Text section}
 \label{sec:asmb-text-section-overview}
+
 \subsection{Data section}
+
 \subsection{Symbol and line table sections}
-\section{Checking for unresolved symbols: [[undef()]]}
+
+\section{Checking for unresolved symbols: [[check()]]}
 
 %******************************************************************************
 \chapter{Loading Objects}
 %******************************************************************************
 \label{chap:loading-objects}
-\section{Object file format: [[.5]]}
-\label{sec:object-format}
-\label{fig:object-format-complete}
+
+%%\section{Object file format: [[.5]]}
+%%\label{sec:object-format}
+%%\label{fig:object-format-complete}
+
+\section{[[load()]]}
+
 \section{A global and local program counter: [[pc]] and [[ipc]]}
-\section{Object code input: [[ldobj()]]}
-\subsection{Single instruction input}
-\subsection{Operand input: [[inopd()]]}
-\subsection{Buffered input: [[buf]]}
-\label{sec:ldobj-input-buffer}
-\label{fig:input-buffer}
-\label{fig:input-buffer2}
-\subsection{Object file symbol table: [[h]] and [[ANAME]]}
-\label{sec:object-file-symbol-table}
-\label{fig:object-h-hash}
-\subsection{Private symbols and version}
-\section{Opcode dispatch}
-\label{sec:opcode-dispatch}
-\subsection{[[A]]$xxx$}
-\label{sec:axxx}
-\label{sec:relocating}
-\subsection{[[ATEXT]] and [[autosize]]}
-\subsection{[[AGLOBL]]}
-\subsection{[[ADATA]]}
-\subsection{[[AEND]]}
-\label{sec:AEND}
-\subsection{[[AGOK]]}
-\label{sec:AGOK}
-\section{Safe linking}
-\label{sec:ASIGNAME}
-\subsection{Motivations}
-\subsection{[[ASIGNAME]] and [[5c -T]]}
-\subsection{Error management}
+
+%%\section{Object code input: [[ldobj()]]}
+%%\subsection{Single instruction input}
+%%\subsection{Operand input: [[inopd()]]}
+%%\subsection{Buffered input: [[buf]]}
+%%\label{sec:ldobj-input-buffer}
+%%\label{fig:input-buffer}
+%%\label{fig:input-buffer2}
+%%\subsection{Object file symbol table: [[h]] and [[ANAME]]}
+%%\label{sec:object-file-symbol-table}
+%%\label{fig:object-h-hash}
+%%\subsection{Private symbols and version}
+%%\section{Opcode dispatch}
+%%\label{sec:opcode-dispatch}
+%%\subsection{[[A]]$xxx$}
+%%\label{sec:axxx}
+%%\label{sec:relocating}
+%%\subsection{[[ATEXT]] and [[autosize]]}
+%%\subsection{[[AGLOBL]]}
+%%\subsection{[[ADATA]]}
+%%\subsection{[[AEND]]}
+%%\label{sec:AEND}
+%%\subsection{[[AGOK]]}
+%%\label{sec:AGOK}
+%%\section{Safe linking}
+%%\label{sec:ASIGNAME}
+%%\subsection{Motivations}
+%%\subsection{[[ASIGNAME]] and [[5c -T]]}
+%%\subsection{Error management}
 
 %******************************************************************************
-\chapter{Loading Libraries TODO}
+\chapter{Loading Libraries}
 %******************************************************************************
 \label{chap:loading-libraries}
+
 \section{Archive library format: [[.a]]}
+
 \section{Loading libraries manually: [[5l libxxx.a]]}
+
 \section{Loading libraries semi automatically: [[5l -lxxx]]}
 \label{sec:loading-libraries-semi-auto}
+
 \subsection{Library search path}
+
 \subsection{[[5l -L]]}
+
 \subsection{[[5l -lxxx]]}
+
 \section{Loading libraries automagically: [[#pragma lib "libxxx.a"]]}
 \label{sec:loading-libraries-magically}
 
@@ -173,122 +233,189 @@ Documentation License, Version 1.3.
 \chapter{Resolving}
 %******************************************************************************
 \label{chap:resolving}
+
 \section{Issues in symbol resolution}
+
 \subsection{Virtual program counter versus real code address}
 \label{sec:constraints-immediate-and-offset}
 \label{sec:dotext-big-picture}
+
 \subsection{Data address and code size mutual dependency}
 \label{sec:dodata-big-picture}
-\section{Building the code instructions graph: [[patch()]]}
+
+\section{Building the code instructions graph: [[build_graph()]]}
 \label{sec:patching}
+
 \subsection{Resolving branch instructions using symbols}
+
 \subsection{Finding instruction at [[pc]]}
 \label{sec:find-q}
-\subsection{Indexing [[pc]], forward links overlay}
+
+%%\subsection{Indexing [[pc]], forward links overlay}
+
 \section{Virtual opcodes rewriting: [[noops()]]}
+
 \subsection{Leaf procedure optimisation}
 \label{sec:leaf}
+
 \subsection{[[ATEXT]] patching}
 \label{sec:atext-patching}
+
 \subsection{[[ARET]] rewriting}
 \label{sec:ARET-rewrite}
+
 \subsection{[[ANOP]] stripping}
-\section{Laying out data: [[dodata()]]}
-\section{Laying out code: [[dotext()]]}
+
+\section{Laying out data: [[layout_data()]]}
+
+\section{Laying out code: [[layout_text()]]}
+
 \section{Defining special symbols: [[etext]], [[edata]], and [[end]]}
 \label{sec:special-symbols}
 \label{fig:special-symbols}
+
 \section{Mutual recursion in layout and [[SB/R12]]}
 \label{sec:sb-r12}
 
 %******************************************************************************
-\chapter{Code Generation Preparation}
+%%\chapter{Code Generation Preparation}
 %******************************************************************************
-\label{chap:codegen-prepare}
-\section{Additional data structures}
-\subsection{[[Optab]] and [[optab]]}
-\subsection{[[Oprange]]}
-\label{sec:operand-range}
-\subsection{[[Operand_class]]}
-\label{sec:operand-class}
-\section{[[oplook()]] and [[buildop()]]}
-\subsection{[[oplook()]] and [[cmp()]]}
-\subsection{[[buildop()]] and [[ocmp()]]}
-\label{sec:order-operand-class-matters}
-\subsection{Optimizations}
-\section{[[asmout()]]}
+%%\label{chap:codegen-prepare}
+%%\section{Additional data structures}
+%%\subsection{[[Optab]] and [[optab]]}
+%%\subsection{[[Oprange]]}
+%%\label{sec:operand-range}
+%%\subsection{[[Operand_class]]}
+%%\label{sec:operand-class}
+%%\section{[[oplook()]] and [[buildop()]]}
+%%\subsection{[[oplook()]] and [[cmp()]]}
+%%\subsection{[[buildop()]] and [[ocmp()]]}
+%%\label{sec:order-operand-class-matters}
+%%\subsection{Optimizations}
+%%\section{[[asmout()]]}
 
 %******************************************************************************
 \chapter{ARM Machine Code Generation}
 %******************************************************************************
 \label{chap:arm-codegen}
+
 \section{ARM instruction format}
+
 \section{Pseudo opcodes}
+
 \subsection{[[ATEXT]]}
+
 \subsection{[[AWORD]]}
+
 \section{Operand subclasses and [[instoffset]]}
 \label{sec:operand-subclasses}
+
 \subsection{[[D_CONST]], [[C_xCON]], and [[immrot()]]}
 \label{sec:operand-class-DCONST}
 \label{sec:clever-trick-numbers}
+
 \subsection{[[D_OREG]], [[C_xOREG]], and [[immaddr()]]}
 \label{sec:c-xoreg}
+
 \subsection{[[D_OREG]] with globals, [[C_xEXT]]}
 \label{sec:c-xext}
+
 \subsection{[[D_OREG]] with automatics, [[C_xAUTO]]}
 \label{sec:c-xauto}
+
 \subsection{[[D_ADDR]], [[C_xxCON]]}
+
+
 \section{Arithmetic and logic opcodes}
 \label{sec:arith-logic-gen}
+
 \subsection{Register-only operands}
+
 \subsection{Small rotatable immediate constant operand}
+
 \subsection{Bitshifted register}
+
 \subsection{Bitshift opcodes}
+
 \subsection{Byte and half word extractions}
+
 \subsection{Multiplication opcodes}
+
 \subsection{Large constant operand, [[REGTMP]], and literal pools}
 \label{sec:pool-and-reg-tmp}
+
+
+
 \section{Control flow opcodes}
 \label{sec:branching}
+
 \subsection{Direct jumps}
 \label{sec:direct-jumps}
+
 \subsection{Indirect jumps}
+
+
+
+
 \section{Memory opcodes}
+
 \subsection{Load}
 \label{sec:load}
+
 \subsection{Store}
 \label{sec:store}
+
 \subsection{Swaps}
+
 \subsection{Symbol addresses}
+
 \subsection{Half words and signed bytes}
 \label{sec:amovb-load}
+
+
+
+
 \section{Software interrupt opcodes}
+
 \section{Literal Pools}
 \label{sec:pool}
-\subsection{[[blitrl/elitrl]]}
-\subsection{[[addpool()]]}
-\subsection{[[flushpool()]]}
-\subsection{[[checkpool()]]}
-\subsection{[[LPOOL]]}
+
+%%\subsection{[[blitrl/elitrl]]}
+%%\subsection{[[addpool()]]}
+%%\subsection{[[flushpool()]]}
+%%\subsection{[[checkpool()]]}
+%%\subsection{[[LPOOL]]}
 
 %******************************************************************************
 \chapter{Debugging Support}
 %******************************************************************************
 \label{chap:debugging}
+
 \section{[[asmb()]] and the debugging tables}
+
 \section{Executable symbol table}
+
 \subsection{Symbol table format: [[putsymb()]]}
 \label{sec:exec-symbol-table}
 \label{fig:exec-symbol-table}
+
 \subsection{Globals and procedures symbols: [[asmsym()]]}
 \label{sec:asmsym}
+
 \subsection{Stack variables symbols}
+
 \subsection{Filename and line origin symbols}
+
+
 \section{File and line information}
+
+
 \subsection{Locations in objects: [[AHISTORY]]}
 \label{sec:line-number}
 \label{fig:hist}
+
 \subsection{Locations in [[5l]] memory}
+
 \subsection{Locations in executables}
 \label{sec:file-line-symbols}
 
@@ -296,55 +423,93 @@ Documentation License, Version 1.3.
 \chapter{Profiling Support}
 %******************************************************************************
 \label{chap:profiling}
+
 \section{[[5l -p]] and [[_mainp]]}
+
 \section{[[5l -p -1]] and [[__mcount]]}
+
 \section{[[5l -p]] and [[_profin()/_profout()]]}
 \label{sec:_profin}
+
 \section{Disabling profiling attribute: [[NOPROF]]}
 
 %******************************************************************************
-\chapter{Advanced Topics TODO}
+\chapter{Advanced Topics}
 %******************************************************************************
 \label{chap:advanced}
+
 \section{Dynamic linking}
 \label{sec:dynamic-linking}
+
 \subsection{Export table: [[5l -x]]}
+
 \subsection{Dynamic loading: [[5l -u]]}
+
 \subsection{[[SUNDEF]]}
-\subsection{XXX}
+
 \subsection{Relocatable address: [[C_ADDR]]}
+
 \section{Position independent code (PIC)}
+
 \section{Optimizations}
 \label{sec:optimisations}
+
 \subsection{Opcode rewriting}
+
 \subsection{Operand rewriting}
 \label{sec:BIG}
+
 \subsection{Small data first}
+
 \subsection{Compacting chains of [[AB]], [[brloop()]]}
+
 \subsection{Removing useless instructions, [[follow()]]}
 \label{sec:opti-follow}
+
+
 \section{Overriding symbol attribute: [[DUPOK]]}
 \label{sec:dupok-nop}
+
+
+
 \section{Other executable formats}
 \label{sec:other-executable-formats}
+
 \subsection{ELF (Linux)}
+
 \subsection{OMach (mac OS)}
+
 \subsection{PE (Windows)}
+
+
 \section{Other instructions}
+
+
 \subsection{Float operations}
+
 \subsection{Division}
 \label{sec:div-mod}
+
 \subsection{Long multiplication}
 \label{sec:mull}
+
 \subsection{Multiple registers move}
 \label{sec:movm}
+
 \subsection{Status register}
+
 \subsection{Half words and bytes moves since ARMv4}
 \label{sec:armv4}
+
 \subsection{Shifted moves}
+
+
 \section{Compiler-only pseudo opcodes}
-\section{[[5l -E digits]]}
-\section{Strings in text segment: [[5l -t]]}
+
+
+%%\section{[[5l -E digits]]}
+
+%%\section{Strings in text segment: [[5l -t]]}
 
 %******************************************************************************
 \chapter{Conclusion}
@@ -359,22 +524,32 @@ Documentation License, Version 1.3.
 \chapter{Debugging}
 %******************************************************************************
 \label{chap:debugging-appendix}
+
 \section{Dumpers}
 \label{sec:dumpers}
-\subsection{Instruction dumper: [[Pconv()]]}
-\subsection{Opcode dumper: [[Aconv()]]}
-\subsection{Operand dumper: [[Dconv()]]}
-\subsection{Symbol kind dumper: [[Nconv()]]}
-\subsection{Conditional execution dumper: [[Cconv()]]}
-\subsection{String dumper: [[Sconv()]]}
+
+%%\subsection{Instruction dumper: [[Pconv()]]}
+%%\subsection{Opcode dumper: [[Aconv()]]}
+%%\subsection{Operand dumper: [[Dconv()]]}
+%%\subsection{Symbol kind dumper: [[Nconv()]]}
+%%\subsection{Conditional execution dumper: [[Cconv()]]}
+%%\subsection{String dumper: [[Sconv()]]}
+
 \section{Verbose mode: [[5l -v]]}
+
 \section{Objects loading debugging: [[5l -W]]}
 \label{sec:debugging-loading}
-\section{Opcode table debugging: [[5l -t]]}
+% used in Intro chapter
+
+
+%%\section{Opcode table debugging: [[5l -t]]}
+
 \section{Machine code generation debugging: [[5l -a]]}
 \label{sec:debugging-generated-code}
-\section{Symbol table debugging: [[5l -n]]}
-\section{Line table debugging: [[5l -V]]}
+% used in Intro chapter
+
+%%\section{Symbol table debugging: [[5l -n]]}
+%%\section{Line table debugging: [[5l -V]]}
 
 %******************************************************************************
 \chapter{Error Management}
@@ -387,30 +562,34 @@ Documentation License, Version 1.3.
 \label{chap:profiling-appendix}
 
 %******************************************************************************
-\chapter{Utilities}
+%%\chapter{Utilities}
 %******************************************************************************
-\label{chap:libc}
-\section{Memory management}
-\section{Buffer management}
-\label{sec:buffer-management}
-\subsection{Output buffer}
-\subsection{Input buffer}
-\section{File management}
-\section{String processing}
-\label{sec:string-processing}
-\section{Mathematic functions}
+%%\label{chap:libc}
+%%\section{Memory management}
+%%\section{Buffer management}
+%%\label{sec:buffer-management}
+%%\subsection{Output buffer}
+%%\subsection{Input buffer}
+%%\section{File management}
+%%\section{String processing}
+%%\label{sec:string-processing}
+%%\section{Mathematic functions}
 
 %******************************************************************************
-\chapter{Linker-related Programs TODO}
+\chapter{Linker-related Programs}
 %******************************************************************************
 \label{chap:linker-related-programs}
-\section{[[include/mach.h]]}
-\section{[[size]]}
-\label{sec:size-code}
-\section{[[strip]]}
-\label{sec:strip}
+
+%%\section{[[include/mach.h]]}
+
+%%\section{[[size]]}
+%%\label{sec:size-code}
+%%\section{[[strip]]}
+%%\label{sec:strip}
+
 \section{[[nm]]}
 \label{sec:nm-code}
+
 \section{[[ar]]}
 \label{sec:ar-code}
 

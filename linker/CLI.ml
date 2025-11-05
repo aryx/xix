@@ -82,7 +82,12 @@ let init_entry = ref "_main"
 (* Helpers *)
 (*****************************************************************************)
 (*s: function [[CLI.config_of_header_type]] *)
-let config_of_header_type (arch : Arch.t) (header_type : string) : Exec_file.linker_config =
+let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exec_file.linker_config =
+  (* sanity checks *)
+  (match !init_data, !init_round with
+  | Some x, Some y -> failwith (spf "-D%d is ignored because of -R%d" x y)
+  | _ -> ()
+  );
   match header_type with
   | "a.out" | "a.out_plan9" ->
       let header_size = A_out.header_size in
@@ -252,14 +257,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       Arg.usage options usage; 
       Exit.Code 1
   | xs -> 
-        (* sanity checks *)
-      (match !init_data, !init_round with
-      | Some x, Some y -> 
-                failwith (spf "-D%d is ignored because of -R%d" x y)
-      | _ -> ()
-      );
       let config : Exec_file.linker_config = 
-          config_of_header_type arch !header_type
+          config_of_header_type_and_flags arch !header_type
       in   
       try 
         (* the main call *)

@@ -11,7 +11,7 @@ module A = Ast_asm
 (*****************************************************************************)
 
 (*s: function [[Layout5.xdefine]] *)
-let xdefine h2 h symb v =
+let xdefine (h2 : T.symbol_table2) (h : T.symbol_table) (symb : T.symbol) (v : T.section2) =
   (* stricter: we do not accept previous def of special symbols *)
   if Hashtbl.mem h symb || Hashtbl.mem h2 symb
   then failwith (spf "special symbol %s is already defined" (fst symb));

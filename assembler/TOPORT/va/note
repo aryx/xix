@@ -1,29 +1,39 @@
 gen address
 
+DONE
 $con
 	type = D_CONST
 	offset = con
 
+DONE?
 $name+con(P)
 	type = D_CONST
 	offset = con
 	name = P
 
+DONE
 $"xxx"
 	type = D_SCONST
 
+DONE
 $1.0
 	type = D_FCONST
 
+
+
+
+?????
 con
 	type = D_OREG
 	offset = con
 
+DONE
 name+con(P)
 	type = D_OREG
 	offset = con
 	name = P
 
+DONE
 con(R1)
 	type = D_OREG
 	offset = con
@@ -35,9 +45,11 @@ name+con(P)(R1)
 	name = P
 	reg = 1
 
+DONE
 R1
 	type = D_REG
 	reg = 1
+
 
 MOVB[U]
 	LB[U], SB

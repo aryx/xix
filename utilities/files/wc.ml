@@ -116,13 +116,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      "-w", Arg.Unit (fun () -> conf.show_words <- true),
       " show words count";
       (* LATER: -r for runes, -b for ?? *)
-  ] |> Arg.align
-  in
-
-  let conf =
-    if conf =*= empty_conf ()
-    then { show_lines = true; show_chars = true; show_words = true }
-    else conf
+  ]
   in
   (try 
     Arg.parse_argv argv options (fun t -> args := t::!args) 
@@ -134,13 +128,18 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (* alt: use Arg and process -debug, -verbose, etc. *)
   Logs_.setup (Some Logs.Warning) ();
 
-  (match Array.to_list argv with
-  | [] -> raise (Impossible "all programs have at least an argv0")
-  | [_argv0] ->
+  let conf =
+    if conf =*= empty_conf ()
+    then { show_lines = true; show_chars = true; show_words = true }
+    else conf
+  in
+
+  (match List.rev !args with
+  | [] ->
       let chan = Chan.{ ic = stdin; origin = Chan.Stdin } in
       let stats = wc caps chan in
       report caps conf stats None
-  | _argv0::xs ->
+  | xs ->
       let files = Fpath_.of_strings xs in
       let statxs = 
           files |> List.map (fun file ->

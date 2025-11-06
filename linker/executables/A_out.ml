@@ -14,12 +14,20 @@ let header_size = 32
 (*****************************************************************************)
 (*s: function [[A_out.write_header]] *)
 (* entry point *)
-let write_header (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+let write_header (arch : Arch.t) (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
 
   (* a.out uses big-endian integers even on low-endian architectures *)
   let output_32 = Endian.Big.output_32 in
 
-  output_32 chan 0x647; (* Plan9 ARM magic *)
+  let magic =
+    match arch with
+    | Arch.Arm -> 0x647 (* Plan9 ARM magic *)
+    | Arch.Mips -> failwith "TODO: A_out magic for Mips"
+    | Arch.Riscv | Arch.Riscv64 | Arch.X86 | Arch.Amd64 | Arch.Arm64 ->
+        failwith (spf "arch not supported yet: %s" (Arch.to_string arch))
+  in
+
+  output_32 chan magic; 
   output_32 chan sizes.text_size;
   output_32 chan sizes.data_size;
   output_32 chan sizes.bss_size;

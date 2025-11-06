@@ -68,6 +68,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
   cg |> T.iter_with_env (fun autosize_opt n ->
     match n.instr with
     | T.TEXT (global, attrs, size) ->
+        (* sanity checks *)
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
                          (A.s_of_global global));
@@ -82,7 +83,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         autosize_opt |> Option.iter (fun autosize ->
           (* for layout text we need to set the final autosize *)
           n.instr <- T.TEXT (global, attrs, autosize);
-          (* MOVW.W R14, -autosize(SP) *)
+          (* decrement SP and save rLINK in one operation:
+           *   MOVW.W R14, -autosize(SP) 
+           *)
           let n1 = {
             instr = T.I (A5.MOVE (A.Word, Some A5.WriteAddressBase, 
                               A5.Imsr (A5.Reg A5.rLINK), 
@@ -103,7 +106,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           ((match autosize_opt with
            (* B (R14) *)
            | None -> A5.B (ref (A.IndirectJump (A5.rLINK)))
-           (* MOVW.P autosize(SP), PC *)
+           (* increment SP and restore rPC in one operation:
+            *    MOVW.P autosize(SP), PC 
+            *)
            | Some autosize -> A5.MOVE (A.Word, Some A5.PostOffsetWrite,
                                    A5.Indirect (A5.rSP, autosize), 
                                    A5.Imsr (A5.Reg A5.rPC))

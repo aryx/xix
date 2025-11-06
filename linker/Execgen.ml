@@ -29,7 +29,7 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
   match format with
   | Exec_file.A_out ->
       (* Header *)
-      A_out.write_header sizes entry_addr chan.oc;
+      A_out.write_header config.arch sizes entry_addr chan.oc;
 
       (* Text section *)
       cs |> List.iter (Endian.Little.output_32 chan.oc);

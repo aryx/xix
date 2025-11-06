@@ -12,14 +12,6 @@ module T5 = Types5
 (* Helpers *)
 (*****************************************************************************)
 (*s: function [[Rewrite5.find_first_no_nop_node]] *)
-let rec find_first_no_nop_node nopt =
-  match nopt with
-  | None -> failwith "could not find non NOP node for branch"
-  | Some n ->
-      (match n.instr with
-      | T.V A.NOP -> find_first_no_nop_node n.next
-      | _ -> Some n
-      )
 (*e: function [[Rewrite5.find_first_no_nop_node]] *)
 
 (*****************************************************************************)
@@ -52,7 +44,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         in
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
-          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
+          | T.V A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env
@@ -68,7 +60,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         (* need that also here now that I moved NOP handling in T.V case? *)
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
-          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
+          | T.V A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env

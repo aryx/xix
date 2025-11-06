@@ -9,9 +9,10 @@ SRC= Flags.ml\
  Types.ml Types5.ml Typesv.ml \
  Arch_linker.ml \
  Load.ml Check.ml Resolve.ml \
- Rewrite5.ml Codegen5.ml Rewritev.ml Codegenv.ml \
- Datagen.ml \
+ Rewrite.ml Rewrite5.ml Rewritev.ml \
  Layout.ml Layout5.ml Layoutv.ml \
+ Codegen.ml Codegen5.ml Codegenv.ml \
+ Datagen.ml \
  Execgen.ml \
  CLI.ml Main.ml
 

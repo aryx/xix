@@ -3,7 +3,6 @@
 open Common
 
 module T = Types
-module T5 = Types5
 
 (*****************************************************************************)
 (* Entry point *)

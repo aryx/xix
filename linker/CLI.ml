@@ -165,11 +165,51 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   Execgen.gen config sizes instrs datas symbols2 chan
 (*e: function [[CLI.link5]] *)
 
+(* will modify chan as a side effect *)
+let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  let arch : Ast_asmv.instr Arch_linker.t = {
+    Arch_linker.branch_opd_of_instr = Ast_asmv.branch_opd_of_instr;
+    Arch_linker.visit_globals_instr = Ast_asmv.visit_globals_instr;
+  }
+  in
+  let (code, data, symbols) = Load.load caps files arch in
+
+  (* mark at least as SXref the entry point *)
+  T.lookup (config.entry_point, T.Public) None symbols |> ignore;
+  Check.check symbols;
+  
+  let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  (*let graph = Rewrite5.rewrite graph in*)
+
+  let symbols2, (data_size, bss_size) = 
+    Layoutv.layout_data symbols data in
+  let symbols2, graph(* why modify that??*), text_size = 
+    Layoutv.layout_text symbols2 config.init_text graph in
+
+  let sizes : Exec_file.sections_size = 
+    Exec_file.{ text_size; data_size; bss_size } 
+  in
+  let init_data =  
+    match config.init_data with
+    | None -> Int_.rnd (text_size + config.init_text) config.init_round
+    | Some x -> x
+  in
+  let config = { config with Exec_file.init_data = Some init_data } in
+  Logs.info (fun m -> m "final config is %s" 
+        (Exec_file.show_linker_config config));
+ 
+  let instrs = Codegenv.gen symbols2 config graph in
+  let datas  = Datagen.gen symbols2 init_data sizes data in
+  Execgen.gen config sizes instrs datas symbols2 chan
+
+
 (*s: function [[CLI.link]] *)
 let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
   match arch with
   | Arch.Arm ->
      link5 caps config files chan
+  | Arch.Mips ->
+     linkv caps config files chan
   | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 (*e: function [[CLI.link]] *)
 

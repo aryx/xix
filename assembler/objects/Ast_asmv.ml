@@ -169,3 +169,22 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | Bxx (_, _, opd) -> Some opd
   | Arith _ | ArithF _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
   | TLB _ -> None
+
+let visit_globals_instr (_f : global -> unit) (_i : instr) : unit =
+  failwith "TODO"
+(*
+  let mov_operand x =
+    match x with
+    | Entity (A.Global (x, _)) -> f x
+    | Entity (A.Param _ | A.Local _) -> ()
+    | Ximm x -> A.visit_globals_ximm f x
+    | Imsr _ | Indirect _ -> ()
+  in
+  match fst i with
+  | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
+  (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
+  | B b -> A.visit_globals_branch_operand f b
+  | BL b -> A.visit_globals_branch_operand f b
+  | Bxx (_, b) -> A.visit_globals_branch_operand f b
+  | Arith _ | ArithF _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> () 
+*)

@@ -5,13 +5,14 @@ TOP=..
 # but in theory the linker does not need it
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables -I $TOP/linker/libraries
 
+# Layout is after Codegen because it calls the Codegen.size_of_instruction
 SRC= Flags.ml\
  Types.ml Types5.ml Typesv.ml \
  Arch_linker.ml \
  Load.ml Check.ml Resolve.ml \
  Rewrite.ml Rewrite5.ml Rewritev.ml \
- Layout.ml Layout5.ml Layoutv.ml \
  Codegen.ml Codegen5.ml Codegenv.ml \
+ Layout.ml Layout5.ml Layoutv.ml \
  Datagen.ml \
  Execgen.ml \
  CLI.ml Main.ml

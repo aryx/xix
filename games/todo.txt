@@ -6,6 +6,9 @@
 ** see Code classics Vol1 and Vol2 that I recently bought.
 Port them from python to OCaml and reuse its assets.
 
+** port Core wars from dewdney to ocaml-elm-playground!
+see software-src/emulator/pmars/
+
 ** https://github.com/KDE/kde1-kdegames
 
 ** Web version

@@ -108,6 +108,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let conf : conf = empty_conf () in
   let args = ref [] in
+  let level = ref (Some Logs.Warning) in
   let options = [
      "-l", Arg.Unit (fun () -> conf.show_lines <- true),
       " show lines count";
@@ -116,7 +117,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      "-w", Arg.Unit (fun () -> conf.show_words <- true),
       " show words count";
       (* LATER: -r for runes, -b for ?? *)
-  ]
+     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     " verbose mode";
+  ] |> Arg.align
   in
   (try 
     Arg.parse_argv argv options (fun t -> args := t::!args) 
@@ -126,7 +129,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
   (* alt: use Arg and process -debug, -verbose, etc. *)
-  Logs_.setup (Some Logs.Warning) ();
+  Logs_.setup !level ();
 
   let conf =
     if conf =*= empty_conf ()

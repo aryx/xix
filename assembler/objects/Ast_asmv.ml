@@ -160,6 +160,7 @@ type program = instr A.program
 (*****************************************************************************)
 let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   match instr with
+  (* ocaml-light: could factorize more (JMP opd | RFE opd | ...) -> Some opd *)
   | JMP opd -> Some opd
   | RFE opd -> Some opd
   | JAL opd -> Some opd
@@ -170,21 +171,43 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | Arith _ | ArithF _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
   | TLB _ -> None
 
-let visit_globals_instr (_f : global -> unit) (_i : instr) : unit =
-  failwith "TODO"
-(*
+let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_operand x =
     match x with
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
-    | Ximm x -> A.visit_globals_ximm f x
-    | Imsr _ | Indirect _ -> ()
+    | GReg _ | Indirect _ -> ()
   in
-  match fst i with
-  | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
-  (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
-  | B b -> A.visit_globals_branch_operand f b
-  | BL b -> A.visit_globals_branch_operand f b
-  | Bxx (_, b) -> A.visit_globals_branch_operand f b
-  | Arith _ | ArithF _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> () 
-*)
+  let mov_vgen x =
+    match x with
+    | Gen x -> mov_operand x
+  in
+  match i with
+  | Move1 (_, x1, gen2) -> 
+      (match x1 with
+      | Either.Left gen1 -> mov_operand gen1
+      | Either.Right ximm1 -> A.visit_globals_ximm f ximm1
+      );
+      mov_operand gen2
+  | Move2 (_, x1, vgen2) -> 
+      (match x1 with
+      | Either.Left vgen1 -> mov_vgen vgen1
+      | Either.Right ximm1 -> A.visit_globals_ximm f ximm1
+      );
+      mov_vgen vgen2
+
+  | JMP b -> A.visit_globals_branch_operand f b
+  | RFE b -> A.visit_globals_branch_operand f b
+  | JAL b -> A.visit_globals_branch_operand f b
+  | JALReg (_, b) -> A.visit_globals_branch_operand f b
+  | BEQ (gen, _, b) ->
+      mov_operand gen;
+      A.visit_globals_branch_operand f b
+  | BNE (gen, _, b) ->
+      mov_operand gen;
+      A.visit_globals_branch_operand f b
+  | Bxx (_, gen, b) ->
+      mov_operand gen;
+      A.visit_globals_branch_operand f b
+  | Arith _ | NOR _ | ArithMul _ | ArithF _ 
+  | SYSCALL | BREAK | TLB _ -> () 

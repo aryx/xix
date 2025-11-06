@@ -6,9 +6,12 @@ TOP=..
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables -I $TOP/linker/libraries
 
 SRC= Flags.ml\
- Types.ml Types5.ml Arch_linker.ml \
- Load.ml Check.ml Resolve.ml\
- Rewrite5.ml Codegen5.ml Datagen.ml Layout5.ml\
+ Types.ml Types5.ml Typesv.ml \
+ Arch_linker.ml \
+ Load.ml Check.ml Resolve.ml \
+ Rewrite5.ml Codegen5.ml Rewritev.ml Codegenv.ml \
+ Datagen.ml \
+ Layout.ml Layout5.ml Layoutv.ml \
  Execgen.ml \
  CLI.ml Main.ml
 

@@ -29,7 +29,7 @@ module T = Types
  * - greater code reuse across all linkers thanks to:
  *    * use of marshalling for objects and libraries
  *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
- *      Load.load
+ *      Load.load, Layout.layout_data
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors
@@ -144,7 +144,9 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
-    Layout5.layout_data symbols data in
+    Layout.layout_data symbols data in
+  Layout.xdefine symbols2 symbols ("setR12" , T.Public) (T.SData2 (0, T.Data));
+
   let symbols2, graph(* why modify that??*), text_size = 
     Layout5.layout_text symbols2 config.init_text graph in
 
@@ -179,10 +181,12 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   Check.check symbols;
   
   let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
-  (*let graph = Rewrite5.rewrite graph in*)
+  let graph = Rewritev.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
-    Layoutv.layout_data symbols data in
+    Layout.layout_data symbols data in
+  (* less: 0 + BIG ? *)
+  Layout.xdefine symbols2 symbols ("setR30" , T.Public) (T.SData2 (0, T.Data));
   let symbols2, graph(* why modify that??*), text_size = 
     Layoutv.layout_text symbols2 config.init_text graph in
 

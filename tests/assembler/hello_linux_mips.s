@@ -18,7 +18,6 @@ TEXT _start(SB), $0
         SYSCALL
 
         /* exit(0) */
-        //MOVW    $42, R4              /* exit code                */
 	MOVW    $0, R4              /* exit code                */
         MOVW    $4001, R2           /* syscall = exit           */
         SYSCALL
@@ -29,4 +28,3 @@ TEXT _start(SB), $0
 GLOBL   msg(SB), $13
 DATA    msg+0(SB)/8, $"Hello, w"
 DATA    msg+8(SB)/5, $"orld\n"
-

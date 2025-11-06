@@ -52,8 +52,8 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
       );
     poolopt |> Option.iter (fun pool ->
       match pool with
-      | Codegen5.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
-      | Codegen5.PoolOperand imm_or_ximm ->
+      | Codegen.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
+      | Codegen.PoolOperand imm_or_ximm ->
           let instr = T.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
           let node = Types.{ instr = instr; next = None; branch = None;

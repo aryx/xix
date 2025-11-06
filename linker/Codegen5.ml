@@ -10,6 +10,7 @@ module T = Types
 module T5 = Types5
 open Types
 open Types5
+open Codegen
 
 (*****************************************************************************)
 (* Prelude *)
@@ -24,22 +25,9 @@ open Types5
 (*****************************************************************************)
 
 (*s: type [[Codegen5.pool]] *)
-type pool =
-  (* note that it is not always an int! Sometimes it can be an
-   * Address which will be resolved only at the very end.
-   *)
-  | PoolOperand of Ast_asm.ximm
-  (* todo: still don't know why we need that *)
-  | LPOOL 
 (*e: type [[Codegen5.pool]] *)
 
 (*s: type [[Codegen5.action]] *)
-type action = {
-  (* a multiple of 4 *)
-  size: int;
-  pool: pool option;
-  binary: unit -> Bits.int32 list;
-}
 (*e: type [[Codegen5.action]] *)
 
 (*s: type [[Codegen5.mem_opcode]] *)

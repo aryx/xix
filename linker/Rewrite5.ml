@@ -31,9 +31,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
     | T.WORD _ -> (curtext, Some n)
-    | T.V instr ->
+    | T.V vinstr ->
         let env = 
-          match instr with
+          match vinstr with
           (* remove the NOP *)
           | A.NOP ->
               prev_no_nop |> Option.iter (fun prev ->
@@ -42,10 +42,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
         in
-        n.branch |> Option.iter (fun n2 ->
-          match n2.instr with
-          | T.V A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
-          | _ -> ()
+        (* NOP and RET should not have branch set *)
+        n.branch |> Option.iter (fun _n2 ->
+          raise (Impossible "branch should not be set on virtual instr")
         );
         env
         
@@ -57,7 +56,6 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
               (curtext, Some n)
           | _ -> (curtext, Some n)
         in
-        (* need that also here now that I moved NOP handling in T.V case? *)
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
           | T.V A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 

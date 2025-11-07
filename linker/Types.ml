@@ -144,7 +144,7 @@ and 'instr code_bis =
   | V of A.virtual_instr
   | I of 'instr
 (*e: type [[Types.code_bis]] *)
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 (*s: type [[Types.data]] *)
 (* remember that GLOBL information is stored in symbol table  *)

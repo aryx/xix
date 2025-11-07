@@ -95,12 +95,12 @@ type global = {
 (*s: type [[Ast_asm.register]] *)
 type register = R of int (* between 0 and 15 on ARM *)
 (*e: type [[Ast_asm.register]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (*s: type [[Ast_asm.fregister]] *)
 type fregister = FR of int (* between 0 and 15 on ARM *)
 (*e: type [[Ast_asm.fregister]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (*s: type [[Ast_asm.entity]] *)
 type entity = 
@@ -109,7 +109,7 @@ type entity =
   (* stricter: we disallow anonymous offsets to SB *)
   | Global of global * offset (* SB *) 
 (*e: type [[Ast_asm.entity]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (* extended immediate *)
 (*s: type [[Ast_asm.ximm]] *)
@@ -126,7 +126,7 @@ type ximm =
   | Float of floatp
   (*e: [[Ast_asm.ximm]] other cases *)
 (*e: type [[Ast_asm.ximm]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (* I use a ref below so the code that resolves branches is shorter.
  * The ref is modified by the assembler and then by the linker.
@@ -152,24 +152,24 @@ and branch_operand2 =
   (* resolved dynamically by the machine (e.g., B (R14)) *)
   | IndirectJump of register
 (*e: type [[Ast_asm.branch_operand2]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (* In a MOVE, sign is relevant only for a load operation *)
 (*s: type [[Ast_asm.sign]] *)
 type sign = S (* Signed *) | U (* Unsigned *)
 (*e: type [[Ast_asm.sign]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (* TODO: add Dword? use shorter W_ | H_ | B_ | D_ ?  *)
 (*s: type [[Ast_asm.move_size]] *)
 type move_size = Word | HalfWord of sign | Byte of sign
 (*e: type [[Ast_asm.move_size]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (*s: type [[Ast_asm.floatp_precision]] *)
 type floatp_precision = F (* Float *) | D (* Double *)
 (*e: type [[Ast_asm.floatp_precision]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (* ------------------------------------------------------------------------- *)
 (* Instructions *)
@@ -200,7 +200,7 @@ type virtual_instr =
   | NOP (* removed by linker *)
   (* TODO? out MOV here with sizes and sign/unsigned *)
 (*e: type [[Ast_asm.virtual_instr]] *)
-[@@deriving show]
+[@@deriving show { with_path = false}]
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)

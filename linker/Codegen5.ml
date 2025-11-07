@@ -284,7 +284,6 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
-
   (* TEXT instructions were kept just for better error reporting localisation *)
   | T.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
@@ -632,12 +631,14 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
+(* TODO: could reuse this code and only things changing are the rules to pass?*)
 (*s: function [[Codegen5.size_of_instruction]] *)
 let size_of_instruction (env : Codegen.env) (node : T5.node) : int (* a multiple of 4 *) * pool option =
   let action  = rules env None node in
   action.size, action.pool
 (*e: function [[Codegen5.size_of_instruction]] *)
 
+(* TODO: could reuse this code and only things changing are the rules to pass?*)
 (*s: function [[Codegen5.gen]] *)
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5.code_graph) : T.word list =
 

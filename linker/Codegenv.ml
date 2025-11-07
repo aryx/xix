@@ -9,6 +9,7 @@ module T = Types
 module Tv = Typesv
 open Types
 open Typesv
+open Codegen
 
 (*****************************************************************************)
 (* Prelude *)
@@ -24,17 +25,166 @@ open Typesv
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+let error node s =
+  failwith (spf "%s at %s on %s" s 
+              (T.s_of_loc node.n_loc)
+              (Tv.show_instr node.instr)
+  )
+let int_of_bits (n : node) (x : Bits.int32) : int =
+  try
+    Bits.int_of_bits32 x
+  with Failure s -> error n s
+
+(*****************************************************************************)
+(* Operand classes *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Code generation helpers *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* More complex code generation helpers *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* The rules! *)
+(*****************************************************************************)
+(* conventions (matches the one used (inconsistently) in vl?):
+ * - rf? = register from (called ?? in refcard)
+ * - rt? = register to   (called ?? in refcard)
+ * - r?  = register middle (called ?? in refcard)
+ *)
+
+let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
+  match node.instr with
+
+  (* --------------------------------------------------------------------- *)
+  (* Virtual *)
+  (* --------------------------------------------------------------------- *)
+   | T.V (A.RET | A.NOP) -> 
+      raise (Impossible "rewrite should have transformed RET/NOP")
+
+  (* --------------------------------------------------------------------- *)
+  (* Pseudo *)
+  (* --------------------------------------------------------------------- *)
+  (* TEXT instructions were kept just for better error reporting localisation *)
+  | T.TEXT (_, _, _) -> 
+      { size = 0; pool = None; binary = (fun () -> []) }
+
+  | T.WORD x ->
+      { size = 4; pool = None; binary = (fun () -> 
+        match x with
+        | Float _ -> raise Todo
+        | Int i -> [ [(i land 0xffffffff, 0)] ]
+        | String _s -> 
+            (* stricter? what does 5l do with that? confusing I think *)
+            error node "string not allowed with WORD; use DATA"
+        | Address (Global (global, _offsetTODO)) -> 
+            let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+            (match v with
+             | T.SText2 real_pc -> [ [(real_pc, 0)] ]
+             | T.SData2 (offset, _kind) -> 
+                 (match init_data with
+                 | None -> raise (Impossible "init_data should be set by now")
+                 | Some init_data -> [ [(init_data + offset, 0)] ]
+                 )
+            )
+        | Address (Param _ | Local _) -> raise Todo
+      )}
+
+
+  | T.I instr ->
+    (match instr with
+     (SYSCALL|BREAK
+     |Arith (_, _, _, R _)|NOR (_, _, _)|ArithMul (_, R _, _, R _)|ArithF _
+     |Move1 (_, _, _)|Move2 (_, _, Gen _)
+     |JMP _|RFE _|JAL _|JALReg (R _, _)
+     |BEQ (_, _, _)|BNE (_, _, _)|Bxx (_, _, _)
+     |TLB _
+     ) -> 
+       failwith (spf "Codegenv: instr not handled: %s"
+                (Tv.show_instr node.instr))
+
+    (* --------------------------------------------------------------------- *)
+    (* Arithmetics *)
+    (* --------------------------------------------------------------------- *)
+
+    (* --------------------------------------------------------------------- *)
+    (* Control flow *)
+    (* --------------------------------------------------------------------- *)
+
+    (* --------------------------------------------------------------------- *)
+    (* Memory *)
+    (* --------------------------------------------------------------------- *)
+
+    (* --------------------------------------------------------------------- *)
+    (* System *)
+    (* --------------------------------------------------------------------- *)
+    (* --------------------------------------------------------------------- *)
+    (* Other *)
+    (* --------------------------------------------------------------------- *)
+    (*    | _ -> error node "illegal combination"*)
+    )
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
 
-let size_of_instruction  (_env : Codegen.env) (_node : Tv.node) : int (* a multiple of 4 *) * Codegen.pool option =
-  failwith "TODO4"
+(* TODO: factorize with Codegen5.ml *)
+let size_of_instruction  (env : Codegen.env) (node : Tv.node) : int (* a multiple of 4 *) * Codegen.pool option =
+  let action  = rules env None node in
+  action.size, action.pool
 
+(* TODO: factorize with Codegen5.ml *)
+let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
+   (cg : Tv.code_graph) : T.word list =
 
-let gen (_symbols2 : T.symbol_table2) (_config : Exec_file.linker_config) (_cg : Tv.code_graph) : T.word list =
-  failwith "TODO5"
+  let res = ref [] in
+  let autosize = ref 0 in
+
+  let pc = ref config.init_text in
+
+  cg |> T.iter (fun n ->
+
+    let {size; binary; pool = _ }  = 
+        rules Codegen.{ syms = symbols2; autosize = !autosize }
+        config.init_data n 
+    in
+    let instrs = binary () in
+
+    if n.real_pc <> !pc
+    then raise (Impossible "Phase error, layout inconsistent with codegen");
+    if List.length instrs * 4 <> size
+    then raise (Impossible (spf "size of rule does not match #instrs at %s"
+                              (T.s_of_loc n.n_loc)));
+
+    let xs : Bits.int32 list = instrs |> List.map Assoc.sort_by_val_highfirst in
+    
+    if !Flags.debug_gen 
+    then begin 
+      Logs.app (fun m -> m "%s" (Tv.show_instr n.instr));
+      Logs.app (fun m -> m "-->");
+      xs |> List.iter (fun x ->
+        let w = int_of_bits n x in
+        Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
+      );
+      Logs.app (fun m -> m ".");
+    end;
+
+    let xs = xs |> List.map (fun x -> int_of_bits n x) in
+    res |> Stack_.push xs;
+
+    pc := !pc + size;
+    (match n.instr with
+    (* after the resolve phase the size of a TEXT is the final autosize *)
+    | T.TEXT (_, _, size) -> autosize := size;
+    | _ -> ()
+    );
+  );
+
+  !res |> List.rev |> List.flatten
+
 
 
 

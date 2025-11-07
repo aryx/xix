@@ -15,14 +15,14 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (ELF Linux, va, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/... utilities, resume windows and kernel)
+* 0.17 (Q4 2025) (ELF Linux, va, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/wc/... utilities, resume windows and kernel)
 
 ** general
 - renamed all binaries with an 'o' prefix (for ocaml): 
   omk, orc, ogit, o5a, o5l, oar, onm, etc.
 
 ** toolchain
-- support for ELF and Linux code generation in o5l and hello_linux_arm.exe
+- support for ELF and Linux code generation in o5l and got hello_linux_arm.exe
   working! (and also the simpler exit_linux_arm.exe)
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
 - port va (plan9 mips assembler) to OCaml (now called ova)
@@ -41,10 +41,10 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 ** testinfra
 - Dockerfile.light can now compile also 5a/5c/5l/cpp
   thx to the removal of the use of 'as' in the .mll files
-  that is not supported by ocaml-light ocamlllex
+  ('as' is not supported by ocaml-light ocamlllex)
 - Dockerfile.light can now compile lib_graphics/, windows/, kernel/, utilities/
   so almost all OCaml code in xix now compiles with ocaml-light!
-  (only exception is vcs/)
+  (only exception is vcs/ which require Int32.ml and custom blocks porting)
 
 ** devinfra
 - resume semgrep.jsonnet and semgrep.yml in CI

@@ -24,6 +24,9 @@ module T = Types
  * Main limitations compared to 5l:
  * - no half-word specialized instructions and immhalf()
  *   (rare instructions anyway?)
+ * Main limitations compared to vl:
+ *  - no sched/nosched support (no scheduling)
+ *    (but better not to be too smart? in fact vl was only linker doing that)
  *
  * Better than 5l/vl/...:
  * - greater code reuse across all linkers thanks to:

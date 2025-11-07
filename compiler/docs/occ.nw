@@ -1606,6 +1606,7 @@ storage_and_type:
 %******************************************************************************
 \chapter{Assembly-level Optimisations}
 %******************************************************************************
+
 \section{Nop detection}
 \section{ARM special instructions}
 \section{Register passing argument: [[REGARG]]}

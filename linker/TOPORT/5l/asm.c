@@ -1,4 +1,3 @@
-
 static Prog *PP;
 
 char linuxdynld[] = "/lib/ld-linux.so.2";
@@ -297,8 +296,6 @@ asmb(void)
 		if(!debug['s'])
 			asmlc();
 		if(!debug['s'])
-			asmthumbmap();
-		if(!debug['s'])
 			strnput("", INITRND-(8+symsize+lcsize)%INITRND);
 		cflush();
 		seek(cout, symo, 0);
@@ -540,49 +537,7 @@ outt(int32 f, int32 l)
 	lput(l);
 }
 
-void
-asmthumbmap(void)
-{
-	int32 pc, lastt;
-	Prog *p;
 
-	if(!seenthumb)
-		return;
-	pc = 0;
-	lastt = -1;
-	for(cursym = textp; cursym != nil; cursym = cursym->next) {
-		p = cursym->text;
-		pc = p->pc - INITTEXT;
-		setarch(p);
-		if(thumb){
-			if(p->from.sym->foreign){	// 8 bytes of ARM first
-				if(lastt >= 0){
-					outt(lastt, pc-1);
-					lastt = -1;
-				}
-				pc += 8;
-			}
-			if(lastt < 0)
-				lastt = pc;
-		}
-		else{
-			if(p->from.sym->foreign){	// 4 bytes of THUMB first
-				if(lastt < 0)
-					lastt = pc;
-				pc += 4;
-			}
-			if(lastt >= 0){
-				outt(lastt, pc-1);
-				lastt = -1;
-			}
-		}
-		if(cursym->next == nil)
-			for(; p != P; p = p->link)
-				pc = p->pc = INITTEXT;
-	}
-	if(lastt >= 0)
-		outt(lastt, pc+1);
-}
 
 void
 asmout(Prog *p, Optab *o, int32 *out)
@@ -1272,11 +1227,7 @@ PP = p;
 #ifdef CALLEEBX
 		diag("bx $i case (arm)");
 #endif
-		if(!seenthumb)
-			diag("ABX $I and seenthumb==0");
 		v = p->cond->pc;
-		if(p->to.sym->thumb)
-			v |= 1;	// T bit
 		o1 = olr(8, REGPC, REGTMP, p->scond&C_SCOND);	// mov 8(PC), Rtmp
 		o2 = oprrr(AADD, p->scond) | immrot(8) | (REGPC<<16) | (REGLINK<<12);	// add 8,PC, LR
 		o3 = ((p->scond&C_SCOND)<<28) | (0x12fff<<8) | (1<<4) | REGTMP;		// bx Rtmp
@@ -1300,8 +1251,6 @@ PP = p;
 		o3 = ((p->scond&C_SCOND)<<28) | (0x12fff<<8) | (1<<4) | REGTMP;		// BX Rtmp
 		break;
 	case 76:	/* bx O(R) when returning from fn*/
-		if(!seenthumb)
-			diag("ABXRET and seenthumb==0");
 		aclass(&p->to);
 // print("ARM BXRET %d(R%d)\n", instoffset, p->to.reg);
 		if(instoffset != 0)

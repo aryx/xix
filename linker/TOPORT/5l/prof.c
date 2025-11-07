@@ -39,7 +39,7 @@ doprof1(void)
 			p->from.sym = s;
 			p->from.offset = n*4 + 4;
 			p->to.type = D_REG;
-			p->to.reg = thumb ? REGTMPT : REGTMP;
+			p->to.reg = REGTMP;
 
 			q = prg();
 			q->line = p->line;
@@ -51,7 +51,7 @@ doprof1(void)
 			p->from.type = D_CONST;
 			p->from.offset = 1;
 			p->to.type = D_REG;
-			p->to.reg = thumb ? REGTMPT : REGTMP;
+			p->to.reg = REGTMP;
 
 			q = prg();
 			q->line = p->line;
@@ -61,7 +61,7 @@ doprof1(void)
 			p = q;
 			p->as = AMOVW;
 			p->from.type = D_REG;
-			p->from.reg = thumb ? REGTMPT : REGTMP;
+			p->from.reg = REGTMP;
 			p->to.type = D_OREG;
 			p->to.name = D_EXTERN;
 			p->to.sym = s;

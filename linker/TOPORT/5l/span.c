@@ -30,34 +30,6 @@ ispad(Prog *p)
 int
 fninc(Sym *s)
 {
-	if(thumb){
-		if(s->thumb){
-			if(s->foreign)
-				return 8;
-			else
-				return 0;
-		}
-		else{
-			if(s->foreign)
-				return 0;
-			else
-				diag("T A !foreign in fninc");
-		}
-	}
-	else{
-		if(s->thumb){
-			if(s->foreign)
-				return 0;
-			else
-				diag("A T !foreign in fninc");
-		}
-		else{
-			if(s->foreign)
-				return 4;
-			else
-				return 0;
-		}
-	}
 	return 0;
 }
 
@@ -67,15 +39,10 @@ fnpinc(Sym *s)
 	if(!s->fnptr){	// a simplified case BX O(R) -> BL O(R)
 		if(!debug['f'])
 			diag("fnptr == 0 in fnpinc");
-		if(s->foreign)
-			diag("bad usage in fnpinc %s %d %d %d", s->name, s->used, s->foreign, s->thumb);
 		return 0;
 	}
 	/* 0, 1, 2, 3 squared */
-	if(s->thumb)
-		return s->foreign ? 9 : 1;
-	else
-		return s->foreign ? 4 : 0;
+		return 0;
 }
 
 static Prog *
@@ -134,7 +101,6 @@ span(void)
 	Optab *o;
 	int m, bflag, i, v;
 	int32 c, otxt, out[6];
-	int lastthumb = -1;
 	Section *rosect, *sect;
 	Sym *sym;
 	uchar *bp;
@@ -152,7 +118,6 @@ span(void)
 		p->pc = c;
 		cursym->value = c;
 
-		lastthumb = thumb;
 		autosize = p->to.offset + 4;
 		if(p->from.sym != S)
 			p->from.sym->value = c;
@@ -160,18 +125,13 @@ span(void)
 		if(c-otxt >= 1L<<17)
 			bflag = 1;
 		otxt = c;
-		if(thumb && blitrl)
-			pool.extra += brextra(p);
 
 		for(op = p, p = p->link; p != P; op = p, p = p->link) {
-			setarch(p);
 			p->pc = c;
 			o = oplook(p);
 			m = o->size;
 			// must check literal pool here in case p generates many instructions
 			if(blitrl){
-				if(thumb && isbranch(p))
-					pool.extra += brextra(p);
 				if(checkpool(op, p->as == ACASE ? casesz(p) : m))
 					c = p->pc = scan(op, p, c);
 			}
@@ -196,8 +156,6 @@ span(void)
 			c += m;
 		}
 		if(blitrl){
-			if(thumb && isbranch(op))
-				pool.extra += brextra(op);
 			if(checkpool(op, 0))
 				c = scan(op, P, c);
 		}
@@ -220,8 +178,6 @@ span(void)
 			for(p = cursym->text; p != P; p = p->link) {
 				setarch(p);
 				p->pc = c;
-				if(thumb && isbranch(p))
-					nocache(p);
 				o = oplook(p);
 /* very large branches
 				if(o->type == 6 && p->cond) {
@@ -263,73 +219,7 @@ span(void)
 		}
 	}
 
-	if(seenthumb){		// branch resolution
-		int passes = 0;
-		int lastc = 0;
-		int again;
-		Prog *oop;
 
-	loop:
-		passes++;
-		if(passes > 100){
-			diag("span looping !");
-			errorexit();
-		}
-		c = INITTEXT;
-		oop = op = nil;
-		again = 0;
-		for(cursym = textp; cursym != nil; cursym = cursym->next) {
-			cursym->value = c;
-			for(p = cursym->text; p != P; oop = op, op = p, p = p->link) {
-				setarch(p);
-				if(p->pc != c)
-					again = 1;
-				p->pc = c;
-				if(thumb && isbranch(p))
-					nocache(p);
-				o = oplook(p);
-				m = o->size;
-				if(passes == 1 && thumb && isbranch(p)){	// start conservative so unneeded alignment is not added
-					if(p->as == ABL)
-						m = 4;
-					else
-						m = 2;
-					p->align = 0;
-				}
-				if(p->align){
-					if((p->align == 4 && (c&3)) || (p->align == 2 && !(c&3))){
-						if(ispad(op)){
-							oop->link = p;
-							op = oop;
-							c -= 2;
-							p->pc = c;
-						}
-						else{
-							op->link = pad(op, c);
-							op = op->link;
-							c += 2;
-							p->pc = c;
-						}
-						again = 1;
-					}
-				}
-				if(m == 0) {
-					if(p->as == ATEXT) {
-						autosize = p->to.offset + 4;
-						if(p->from.sym != S)
-							p->from.sym->value = c;
-						continue;
-					}
-				}
-				c += m;
-			}
-			cursym->size = c - cursym->value;
-		}
-		if(c != lastc || again){
-			lastc = c;
-			goto loop;
-		}
-	}
 	c = rnd(c, 8);
 	xdefine("etext", STEXT, c);
 	textsize = c - INITTEXT;
@@ -423,13 +313,7 @@ span(void)
 int
 checkpool(Prog *p, int sz)
 {
-	if(thumb){
-		if(pool.size >= 0x3fc || (p->pc+sz+pool.extra+2+2)+(pool.size-4)-pool.start-4 >= 0x3fc)
-			return flushpool(p, 1, 0);
-		else if(p->link == P)
-			return flushpool(p, 2, 0);
-		return 0;
-	}
+
 	if(pool.size >= 0xffc || immaddr((p->pc+sz+4)+4+pool.size - pool.start+8) == 0)
 		return flushpool(p, 1, 0);
 	else if(p->link == P)
@@ -472,9 +356,6 @@ addpool(Prog *p, Adr *a)
 	Prog *q, t;
 	int c;
 
-	if(thumb)
-		c = thumbaclass(a, p);
-	else
 		c = aclass(a);
 
 	t = zprg;
@@ -600,9 +481,6 @@ symaddr(Sym *s)
 	case STEXT:
 #ifdef CALLEEBX
 		v += fnpinc(s);
-#else
-		if(s->thumb)
-			v++;	// T bit
 #endif
 		break;
 	
@@ -787,31 +665,21 @@ oplook(Prog *p)
 	Optab *otab;
 	Oprang *orange;
 
-	if(thumb){
-		otab = thumboptab;
-		orange = thumboprange;
-	}
-	else{
+
 		otab = optab;
 		orange = oprange;
-	}
+
 	a1 = p->optab;
 	if(a1)
 		return otab+(a1-1);
 	a1 = p->from.class;
 	if(a1 == 0) {
-		if(thumb)
-			a1 = thumbaclass(&p->from, p) + 1;
-		else
 			a1 = aclass(&p->from) + 1;
 		p->from.class = a1;
 	}
 	a1--;
 	a3 = p->to.class;
 	if(a3 == 0) {
-		if(thumb)
-			a3 = thumbaclass(&p->to, p) + 1;
-		else
 			a3 = aclass(&p->to) + 1;
 		p->to.class = a3;
 	}

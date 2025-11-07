@@ -79,7 +79,6 @@ main(int argc, char *argv[])
 	undef();
 
 	if(debug['c']){
-		thumbcount();
 		print("ARM size = %d\n", armsize);
 	}
 	errorexit();
@@ -307,8 +306,6 @@ loop:
 		else
 			textp = s;
 		etextp = s;
-		setarch(p);
-		setthumb(p);
 		p->align = 4;
 		autosize = (p->to.offset+3L) & ~3L;
 		p->to.offset = autosize;
@@ -316,7 +313,6 @@ loop:
 		s->type = STEXT;
 		s->text = p;
 		s->value = pc;
-		s->thumb = thumb;
 		lastp = p;
 		p->pc = pc;
 		pc++;
@@ -356,13 +352,9 @@ loop:
 	case AMULD:
 	case ADIVF:
 	case ADIVD:
-		if(thumb)
-			puntfp(p);
 		goto casedef;
 
 	case AMOVF:
-		if(thumb)
-			puntfp(p);
 		if(skip)
 			goto casedef;
 
@@ -383,8 +375,6 @@ loop:
 		goto casedef;
 
 	case AMOVD:
-		if(thumb)
-			puntfp(p);
 		if(skip)
 			goto casedef;
 
@@ -435,7 +425,5 @@ puntfp(Prog *p)
 	USED(p);
 	/* floating point - punt for now */
 	cursym->text->reg = NREG;	/* ARM */
-	cursym->thumb = 0;
-	thumb = 0;
 	// print("%s: generating ARM code (contains floating point ops %d)\n", curtext->from.sym->name, p->line);
 }

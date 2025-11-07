@@ -1,8 +1,3 @@
-struct	Sym
-{
-	short	become;
-	short	frame;
-};
 
 struct	Autom
 {

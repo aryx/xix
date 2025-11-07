@@ -31,9 +31,9 @@ DIRS3=kernel
 
 DIRS=$DIRS0 #$DIRS1 #$DIRS2 #DIRS3
 
-#TODO: add tests/
-TESTDIRS=\
-  assembler/tests compiler/tests linker/tests
+#TODO: rename to TESTDIRS, reduce to just tests/ and in tests/ recurse
+TESTDIRS1=\
+  tests/assembler tests/compiler tests/linker
 
 # works only under plan9 for now
 TESTDIRS2=windows/tests lib_system/plan9/tests

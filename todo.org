@@ -17,6 +17,12 @@ and just start from the go-translated code of Russ Cox!
 Use my Go parser to automate the translation?
  or use chatGPT to semi-automate the translation?
 
+*** LATER: Core war implementation in OCaml? with Graphics? See Armchair universe
+articles
+
+*** LATER port 7a/7l/7c to ocaml!
+
+
 * Last
 
 * Ported (partially working)

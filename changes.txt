@@ -15,7 +15,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (ELF Linux, va, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/wc/... utilities, resume windows and kernel)
+* 0.17 (Q4 2025) (ELF Linux, va/vl v0, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/wc/... utilities, resume windows and kernel)
 
 ** general
 - renamed all binaries with an 'o' prefix (for ocaml): 
@@ -26,6 +26,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
   working! (and also the simpler exit_linux_arm.exe)
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
 - port va (plan9 mips assembler) to OCaml (now called ova)
+- partial port of vl (plan9 mips linker) to OCaml (now called ovl)
+  enough for exit_linux_mips.exe to work
 - port ar to OCaml (v0) (now called oar)
 - port nm to OCaml (v0) (now called onm)
 

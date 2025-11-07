@@ -9,8 +9,23 @@ module A = Ast_asm
 (*****************************************************************************)
 let xdefine (h2 : T.symbol_table2) (h : T.symbol_table) (symb : T.symbol) (v : T.section2) : unit =
   (* stricter: we do not accept previous def of special symbols *)
-  if Hashtbl.mem h symb || Hashtbl.mem h2 symb
+  if Hashtbl.mem h2 symb
   then failwith (spf "special symbol %s is already defined" (fst symb));
+
+  (* also add to h so that Check.check will not yell for xdefine'd
+   * constants such as setR30, setR12, etext, etc
+   *)
+  let v1 = T.lookup symb None h in
+  (match v1.section with
+  | T.SXref -> 
+        (* the actual section is not important; this is just for Check.check()
+         * to not yell for special symbols.
+         * alt: could derive the section from section2
+         *)
+        v1.section <- SData 0
+  | T.SText _ | T.SData _ -> 
+     failwith (spf "special symbol %s is already defined" (fst symb))
+  );
 
   Hashtbl.add h2 symb v
 

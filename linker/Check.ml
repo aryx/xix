@@ -10,7 +10,7 @@ let check h =
   h |> Hashtbl.iter (fun symb v ->
     match v.section with
     | SXref -> failwith (spf "%s: not defined" (T.s_of_symbol symb))
-    | _ -> ()
+    | SText _ | SData _ -> ()
   )
 (*e: function [[Check.check]] *)
 

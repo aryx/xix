@@ -93,8 +93,6 @@ nopout(Prog *p)
 	p->to.type = D_NONE;
 }
 
-static void puntfp(Prog *);
-
 void
 ldobj1(Biobuf *f, char *pkg, int64 len, char *pn)
 {

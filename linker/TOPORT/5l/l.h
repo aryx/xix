@@ -174,26 +174,14 @@ enum
 
 #ifndef COFFCVT
 
-EXTERN	int32	autosize;
-
-
 EXTERN	int32 	elfdatsize;
 
 
-EXTERN	char*	noname;
-EXTERN	int	xrefresolv;
-
-EXTERN	int32	lcsize;
 EXTERN	char	literal[32];
-EXTERN	int	nerrors;
-EXTERN	int32	instoffset;
 
 
-
-EXTERN	uchar	repop[ALAST];
 EXTERN	char*	rpath;
 EXTERN	uint32	stroffset;
-EXTERN	int32	symsize;
 
 EXTERN	int	dtype;
 

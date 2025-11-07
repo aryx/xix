@@ -5,9 +5,6 @@ static struct {
 	uint32	extra;
 } pool;
 
-int	checkpool(Prog*, int);
-int 	flushpool(Prog*, int, int);
-
 int
 isbranch(Prog *p)
 {

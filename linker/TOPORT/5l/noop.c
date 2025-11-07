@@ -1,91 +1,12 @@
-
-// see ../../runtime/proc.c:/StackGuard
-enum
-{
-	StackBig = 4096,
-};
-
 static	Sym*	sym_div;
 static	Sym*	sym_divu;
 static	Sym*	sym_mod;
 static	Sym*	sym_modu;
 
-static Prog *
-movrr(Prog *q, int rs, int rd, Prog *p)
-{
-	if(q == nil)
-		q = prg();
-	q->as = AMOVW;
-	q->line = p->line;
-	q->from.type = D_REG;
-	q->from.reg = rs;
-	q->to.type = D_REG;
-	q->to.reg = rd;
-	q->link = p->link;
-	return q;
-}
-
-static Prog *
-fnret(Prog *q, int rs, int foreign, Prog *p)
-{
-	q = movrr(q, rs, REGPC, p);
-	if(foreign){	// BX rs
-		q->as = ABXRET;
-		q->from.type = D_NONE;
-		q->from.reg = NREG;
-		q->to.reg = rs;
-	}
-	return q;
-}
-
-static Prog *
-aword(int32 w, Prog *p)
-{
-	Prog *q;
-
-	q = prg();
-	q->as = AWORD;
-	q->line = p->line;
-	q->from.type = D_NONE;
-	q->reg = NREG;
-	q->to.type = D_CONST;
-	q->to.offset = w;
-	q->link = p->link;
-	p->link = q;
-	return q;
-}
-
-static Prog *
-adword(int32 w1, int32 w2, Prog *p)
-{
-	Prog *q;
-
-	q = prg();
-	q->as = ADWORD;
-	q->line = p->line;
-	q->from.type = D_CONST;
-	q->from.offset = w1;
-	q->reg = NREG;
-	q->to.type = D_CONST;
-	q->to.offset = w2;
-	q->link = p->link;
-	p->link = q;
-	return q;
-}
-
 void
 noops(void)
 {
-	Prog *p, *q, *q1, *q2;
-	int o, foreign;
-
-	/*
-     ...
-	 * expand BECOME pseudo
-	 */
-
-
-	q = P;
+    ...
 	for(...) {
 			switch(p->as) {
             ...
@@ -153,30 +74,9 @@ noops(void)
 				}
 	
 				if(!autosize && !(cursym->text->mark & LEAF)) {
-					if(debug['v'])
-						Bprint(&bso, "save suppressed in: %s\n",
-							cursym->name);
-					Bflush(&bso);
 					cursym->text->mark |= LEAF;
 				}
                 ...
-                ...
-				break;
-	
-			case ARET:
-
-				if(cursym->text->mark & LEAF) {
-					if(!autosize) {
-
-						p->as = AB;
-						p->from = zprg.from;
-						p->to.type = D_OREG;
-						p->to.offset = 0;
-						p->to.reg = REGLINK;
-						break;
-					}
-				}
-
 				break;
 	
 			case ADIV:
@@ -288,20 +188,6 @@ noops(void)
 				q1->to.type = D_REG;
 				q1->to.reg = REGSP;
 	
-				break;
-			case AMOVW:
-				break;
-			case AMOVB:
-			case AMOVBU:
-			case AMOVH:
-			case AMOVHU:
-				break;
-			case AMOVM:
-				break;
-			case AB:
-				break;
-			case ABL:
-			case ABX:
 				break;
 			}
 		}

@@ -122,15 +122,6 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
 
   | T.I instr ->
     (match instr with
-     (Arith (_, _, _, R _)|NOR (_, _, _)|ArithMul (_, R _, _, R _)|ArithF _
-     |Move1 (_, _, _)
-     |RFE _|JAL _|JALReg (R _, _)
-     |BEQ (_, _, _)|BNE (_, _, _)|Bxx (_, _, _)
-     |TLB _
-     ) -> 
-       failwith (spf "Codegenv: instr not handled: %s"
-                (Tv.show_instr node.instr))
-
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)
@@ -143,6 +134,7 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
        | Some i -> 
            { size = 4; pool = None; binary = (fun () ->
                let r = R 0 in
+               (* TODO: can also be let op = OR if exactly ANDCON *)
                let op = ADD (W, U) in
                [ op_irr op i r rt ]
             ) }
@@ -157,16 +149,10 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
         let r = R 0 in
         let op_jmp = op 1 0 in
         { size = 4; pool = None; binary = (fun () -> [ op_rrr op_jmp (R 0) r2 r ]) }
-    | JMP _ ->
-       failwith (spf "Codegenv: instr not handled: %s"
-                (Tv.show_instr node.instr))
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)
-    | Move2 (_, _, _) ->
-       failwith (spf "Codegenv: instr not handled: %s"
-                (Tv.show_instr node.instr))
 
     (* --------------------------------------------------------------------- *)
     (* System *)
@@ -180,6 +166,15 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)
+    |(Arith (_, _, _, R _)|NOR (_, _, _)|ArithMul (_, R _, _, R _)|ArithF _
+     |Move1 (_, _, _)| Move2 _
+     |RFE _|JAL _|JALReg (R _, _)|JMP _
+     |BEQ (_, _, _)|BNE (_, _, _)|Bxx (_, _, _)
+     |TLB _
+     ) -> 
+       failwith (spf "Codegenv: TODO: instr not handled: %s"
+                (Tv.show_instr node.instr))
+
     (*    | _ -> error node "illegal combination"*)
     )
 

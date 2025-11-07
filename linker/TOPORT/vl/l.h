@@ -1,6 +1,3 @@
-
-
-
 struct	Sym
 {
 	short	become;

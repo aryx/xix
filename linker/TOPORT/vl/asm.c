@@ -3,147 +3,23 @@
 #define	V_MAGIC		_MAGIC(0, 16)		/* mips 3000 BE */
 #define	P_MAGIC		_MAGIC(0, 24)		/* mips 3000 LE */
 
-
 void
 asmb(void)
 {
-	Prog *p;
-	long t, etext;
-	Optab *o;
-
-
-	OFFSET = HEADR;
-	seek(cout, OFFSET, 0);
-
-	pc = INITTEXT;
-
-	for(p = firstp; p != P; p = p->link) {
-		if(p->as == ATEXT) {
-			curtext = p;
-			autosize = p->to.offset + 4;
-		}
-		if(p->pc != pc) {
-			diag("phase error %lux sb %lux",
-				p->pc, pc);
-			if(!debug['a'])
-				prasm(curp);
-			pc = p->pc;
-		}
-		curp = p;
-		o = oplook(p);	/* could probably avoid this call */
-		if(asmout(p, o, 0)) {
-			p = p->link;
-			pc += 4;
-		}
-		pc += o->size;
-	}
-	cflush();
-
-	etext = INITTEXT + textsize;
-	for(t = pc; t < etext; t += sizeof(buf)-100) {
-		if(etext-t > sizeof(buf)-100)
-			datblk(t, sizeof(buf)-100, 1);
-		else
-			datblk(t, etext-t, 1);
-	}
-
-	Bflush(&bso);
-	cflush();
-
-	curtext = P;
-	switch(HEADTYPE) {
-	case 0:
-		OFFSET = rnd(HEADR+textsize, 4096);
-		seek(cout, OFFSET, 0);
-		break;
-	case 2:
-		OFFSET = HEADR+textsize;
-		seek(cout, OFFSET, 0);
-		break;
-	case 7:
-        //goken: ELF Linux constrains that virtual
-        // address modulo page must match file offset modulo
-        // page, so simpler to start data at a page boundary
-        //coupling: must match the code generating the ELF
-        // section and ELF program header in elf.c
-		OFFSET = rnd(HEADR+textsize, INITRND);
-		seek(cout, OFFSET, SEEK__START);
-        break;
-	}
-
-	for(t = 0; t < datsize; t += sizeof(buf)-100) {
-		if(datsize-t > sizeof(buf)-100)
-			datblk(t, sizeof(buf)-100, 0);
-		else
-			datblk(t, datsize-t, 0);
-	}
-
-	symsize = 0;
-	lcsize = 0;
-	if(!debug['s']) {
-		if(debug['v'])
-			Bprint(&bso, "%5.2f sym\n", cputime());
-		Bflush(&bso);
-		switch(HEADTYPE) {
-		case 0:
-			OFFSET = rnd(HEADR+textsize, 4096)+datsize;
-			seek(cout, OFFSET, 0);
-			break;
-		case 2:
-			OFFSET = HEADR+textsize+datsize;
-			seek(cout, OFFSET, 0);
-			break;
-        //TODO? no symbol table for ELF? this is why set debug['S'] = 1
-        // before?
-        case 7:
-            break;
-		}
-		if(!debug['s'])
-			asmsym();
-		if(debug['v'])
-			Bprint(&bso, "%5.2f pc\n", cputime());
-		Bflush(&bso);
-		if(!debug['s'])
-			asmlc();
-		cflush();
-	}
-
-	OFFSET = 0;
-
-	seek(cout, OFFSET, 0);
-
+    ...
 	switch(HEADTYPE) {
 	case 2:
 		if (little)
 			lput(P_MAGIC);		/* mips 3000 LE */
 		else
 			lput(V_MAGIC);		/* mips 3000 BE */
-		lput(textsize);			/* sizes */
-		lput(datsize);
-		lput(bsssize);
-		lput(symsize);			/* nsyms */
-		lput(entryvalue());		/* va of entry */
-		lput(0L);
-		lput(lcsize);
-		break;
 	case 7: // ELF
-		debug['S'] = 1;			/* symbol table */
 		elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
 		break;
 	}
 	cflush();
 }
 
-void
-strnput(char *s, int n)
-{
-	for(; *s; s++){
-		CPUT(*s);
-		n--;
-	}
-	for(; n > 0; n--)
-		CPUT(0);
-}
 
 void
 nopstat(char *f, Count *c)
@@ -157,116 +33,19 @@ nopstat(char *f, Count *c)
 void
 asmsym(void)
 {
-	Prog *p;
-	Auto *a;
-	Sym *s;
-	int h;
-
-	s = lookup("etext", 0);
-	if(s->type == STEXT)
-		putsymb(s->name, 'T', s->value, s->version);
-
-	for(h=0; h<NHASH; h++)
-		for(s=hash[h]; s!=S; s=s->link)
 			switch(s->type) {
-			case SCONST:
-				putsymb(s->name, 'D', s->value, s->version);
-				continue;
-
+            ...
 			case SSTRING:
 				putsymb(s->name, 'T', s->value, s->version);
-				continue;
-
-			case SDATA:
-				putsymb(s->name, 'D', s->value+INITDAT, s->version);
 				continue;
 
 			case SBSS:
 				putsymb(s->name, 'B', s->value+INITDAT, s->version);
 				continue;
 
-			case SFILE:
-				putsymb(s->name, 'f', s->value, s->version);
-				continue;
 			}
-
-	for(p=textp; p!=P; p=p->cond) {
-		s = p->from.sym;
-		if(s->type != STEXT && s->type != SLEAF)
-			continue;
-
-		/* filenames first */
-		for(a=p->to.autom; a; a=a->link)
-			if(a->type == D_FILE)
-				putsymb(a->asym->name, 'z', a->aoffset, 0);
-			else
-			if(a->type == D_FILE1)
-				putsymb(a->asym->name, 'Z', a->aoffset, 0);
-
-		if(s->type == STEXT)
-			putsymb(s->name, 'T', s->value, s->version);
-		else
-			putsymb(s->name, 'L', s->value, s->version);
-
-		/* frame, auto and param after */
-		putsymb(".frame", 'm', p->to.offset+4, 0);
-		for(a=p->to.autom; a; a=a->link)
-			if(a->type == D_AUTO)
-				putsymb(a->asym->name, 'a', -a->aoffset, 0);
-			else
-			if(a->type == D_PARAM)
-				putsymb(a->asym->name, 'p', a->aoffset, 0);
-	}
-	if(debug['v'] || debug['n'])
-		Bprint(&bso, "symsize = %lud\n", symsize);
-	Bflush(&bso);
 }
 
-void
-putsymb(char *s, int t, long v, int ver)
-{
-	int i, f;
-
-	if(t == 'f')
-		s++;
-	LBEPUT(v);
-	if(ver)
-		t += 'a' - 'A';
-	CPUT(t+0x80);			/* 0x80 is variable length */
-
-	if(t == 'Z' || t == 'z') {
-		CPUT(s[0]);
-		for(i=1; s[i] != 0 || s[i+1] != 0; i += 2) {
-			CPUT(s[i]);
-			CPUT(s[i+1]);
-		}
-		CPUT(0);
-		CPUT(0);
-		i++;
-	}
-	else {
-		for(i=0; s[i]; i++)
-			CPUT(s[i]);
-		CPUT(0);
-	}
-	symsize += 4 + 1 + i + 1;
-
-	if(debug['n']) {
-		if(t == 'z' || t == 'Z') {
-			Bprint(&bso, "%c %.8lux ", t, v);
-			for(i=1; s[i] != 0 || s[i+1] != 0; i+=2) {
-				f = ((s[i]&0xff) << 8) | (s[i+1]&0xff);
-				Bprint(&bso, "/%x", f);
-			}
-			Bprint(&bso, "\n");
-			return;
-		}
-		if(ver)
-			Bprint(&bso, "%c %.8lux %s<%d>\n", t, v, s, ver);
-		else
-			Bprint(&bso, "%c %.8lux %s\n", t, v, s);
-	}
-}
 
 #define	MINLC	4
 void

@@ -1,28 +1,21 @@
-#include	"l.h"
-
 void
 noops(void)
 {
-	Prog *p, *p1, *q, *q1;
-	int o, curframe, curbecome, maxbecome;
-
+	int curframe, curbecome, maxbecome;
 	/*
-	 * find leaf subroutines
+
 	 * become sizes
 	 * frame sizes
-	 * strip NOPs
-	 * expand RET
+
+
 	 * expand BECOME pseudo
 	 */
-
-
+    ...
 	curframe = 0;
 	curbecome = 0;
 	maxbecome = 0;
-	curtext = 0;
 
-	q = P;
-	for(p = firstp; p != P; p = p->link) {
+	for(...) {
 
 		/* find out how much arg space is used in this TEXT */
 		if(p->to.type == D_OREG && p->to.reg == REGSP)
@@ -40,10 +33,10 @@ noops(void)
 			curframe = 0;
 			curbecome = 0;
 
-			p->mark |= LABEL|LEAF|SYNC;
+			p->mark |= LABEL|SYNC|...;
 			if(p->link)
 				p->link->mark |= LABEL;
-			curtext = p;
+            ...
 			break;
 
 		/* too hard, just leave alone */
@@ -91,20 +84,12 @@ noops(void)
 			break;
 
 		case ANOP:
-			q1 = p->link;
-			q->link = q1;		/* q is non-nop */
-			q1->mark |= p->mark;
+            ...
 			continue;
 
 		case ABCASE:
 			p->mark |= LABEL|SYNC;
 			goto dstlab;
-
-		case ABGEZAL:
-		case ABLTZAL:
-		case AJAL:
-			if(curtext != P)
-				curtext->mark &= ~LEAF;
 
 		case AJMP:
 		case ABEQ:
@@ -147,12 +132,8 @@ noops(void)
 		print("max become = %d\n", maxbecome);
 	xdefine("ALEFbecome", STEXT, maxbecome);
 
-	curtext = 0;
-	for(p = firstp; p != P; p = p->link) {
+	for(...) {
 		switch(p->as) {
-		case ATEXT:
-			curtext = p;
-			break;
 		case AJAL:
 			if(curtext != P && curtext->from.sym != S && curtext->to.offset >= 0) {
 				o = maxbecome - curtext->from.sym->frame;
@@ -172,19 +153,10 @@ noops(void)
 		}
 	}
 
-	for(p = firstp; p != P; p = p->link) {
-		o = p->as;
+	for(...) {
 		switch(o) {
 		case ATEXT:
-			curtext = p;
-			autosize = p->to.offset + 4;
-			if(autosize <= 4)
-			if(curtext->mark & LEAF) {
-				p->to.offset = -4;
-				autosize = 0;
-			}
-
-			q = p;
+            ...
 			if(autosize) {
 				q = prg();
 				q->as = AADD;
@@ -197,6 +169,7 @@ noops(void)
 				q->link = p->link;
 				p->link = q;
 			} else
+
 			if(!(curtext->mark & LEAF)) {
 				if(debug['v'])
 					Bprint(&bso, "save suppressed in: %s\n",
@@ -228,7 +201,9 @@ noops(void)
 			nocache(p);
 			if(p->from.type == D_CONST)
 				goto become;
+
 			if(curtext->mark & LEAF) {
+
 				if(!autosize) {
 					p->as = AJMP;
 					p->from = zprg.from;
@@ -238,6 +213,7 @@ noops(void)
 					p->mark |= BRANCH;
 					break;
 				}
+                // else
 
 				p->as = AADD;
 				p->from.type = D_CONST;
@@ -257,6 +233,7 @@ noops(void)
 				p->link = q;
 				break;
 			}
+            // else
 			p->as = AMOVW;
 			p->from.type = D_OREG;
 			p->from.offset = 0;
@@ -349,6 +326,8 @@ noops(void)
 	curtext = P;
 	q = P;		/* p - 1 */
 	q1 = firstp;	/* top of block */
+
+
 	o = 0;		/* count of instructions */
 	for(p = firstp; p != P; p = p1) {
 		p1 = p->link;

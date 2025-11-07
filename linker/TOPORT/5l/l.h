@@ -36,11 +36,9 @@ struct	Prog
 	union
 	{
 		int32	u0regused;
-		Prog*	u0forwd;
 	} u0;
     ...
 	Prog*	dlink;
-	uchar	mark;
 	uchar	align;
 };
 
@@ -191,20 +189,12 @@ enum
 EXTERN	int32	autosize;
 
 
-EXTERN	Auto*	curauto;
-EXTERN	Auto*	curhist;
-EXTERN	Prog*	curp;
-
-EXTERN	Sym*	cursym;
-
-EXTERN	Sym*	datap;
 EXTERN	int32 	elfdatsize;
 
 
-EXTERN	Sym*	etextp;
 EXTERN	char*	noname;
 EXTERN	int	xrefresolv;
-EXTERN	Prog*	lastp;
+
 EXTERN	int32	lcsize;
 EXTERN	char	literal[32];
 EXTERN	int	nerrors;
@@ -217,11 +207,7 @@ EXTERN	uchar	repop[ALAST];
 EXTERN	char*	rpath;
 EXTERN	uint32	stroffset;
 EXTERN	int32	symsize;
-EXTERN	Sym*	textp;
 
-EXTERN	int	version;
-EXTERN	char	xcmp[C_GOK+1][C_GOK+1];
-EXTERN	Prog	zprg;
 EXTERN	int	dtype;
 
 EXTERN	int	armv4;
@@ -230,12 +216,9 @@ EXTERN	int	seenthumb;
 EXTERN	int	armsize;
 
 extern	char*	anames[];
-extern	Optab	optab[];
-extern	Optab	thumboptab[];
 
 EXTERN	Prog*	blitrl;
 EXTERN	Prog*	elitrl;
-
 
 EXTERN	Prog*	prog_div;
 EXTERN	Prog*	prog_divu;

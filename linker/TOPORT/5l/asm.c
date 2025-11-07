@@ -266,41 +266,12 @@ asmb(void)
 	strtabsize = 0;
 	symo = 0;
 
-	OFFSET = HEADR;
-	seek(cout, OFFSET, 0);
-
-	pc = INITTEXT;
-	codeblk(pc, segtext.sect->len);
-	pc += segtext.sect->len;
-
-	if(seek(cout, 0, 1) != pc - segtext.vaddr + segtext.fileoff)
-		diag("text phase error");
-
 	/* output read-only data in text segment */
 	sect = segtext.sect->next;
 	seek(cout, sect->vaddr - segtext.vaddr + segtext.fileoff, 0);
 	datblk(sect->vaddr, sect->len);
 
-	/* output data segment */
-	cursym = nil;
-
-	switch(HEADTYPE) {
-	case 0:
-	case 2:
-		OFFSET = HEADR+textsize;
-		seek(cout, OFFSET, SEEK__START);
-		break;
-	case 7:
-		OFFSET = rnd(segtext.fileoff+segtext.filelen, INITRND);
-		seek(cout, OFFSET, SEEK__START);
-		break;
-	default:
-		diag("unknown -H option");
-		errorexit();
-	}
-	segdata.fileoff = seek(cout, 0, SEEK__CUR);
-	datblk(INITDAT, segdata.filelen);
-
+    ...
 	/* output symbol table */
 	symsize = 0;
 	lcsize = 0;
@@ -336,12 +307,7 @@ asmb(void)
 		cflush();
 	}
 
-	cursym = nil;
-
-	OFFSET = 0;
-	seek(cout, OFFSET, SEEK__START);
-
-
+    ...
 	switch(HEADTYPE) {
     ...
  	case 7:
@@ -548,11 +514,8 @@ asmb(void)
 		break;
 	}
 
-	cflush();
 	if(debug['c']){
-		print("textsize=%d\n", textsize);
-		print("datsize=%d\n", segdata.filelen);
-		print("bsssize=%d\n", segdata.len - segdata.filelen);
+        ...
 		print("symsize=%d\n", symsize);
 		print("lcsize=%d\n", lcsize);
 		print("total=%d\n", textsize+segdata.len+symsize+lcsize);
@@ -624,7 +587,7 @@ asmthumbmap(void)
 void
 asmout(Prog *p, Optab *o, int32 *out)
 {
-	int32 o1, o2, o3, o4, o5, o6, v;
+	int32 v;
 	int r, rf, rt, rt2;
 	Reloc *rel;
 

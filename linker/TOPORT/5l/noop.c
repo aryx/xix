@@ -10,8 +10,6 @@ static	Sym*	sym_divu;
 static	Sym*	sym_mod;
 static	Sym*	sym_modu;
 
-static void setdiv(int);
-
 static Prog *
 movrr(Prog *q, int rs, int rd, Prog *p)
 {
@@ -88,8 +86,7 @@ noops(void)
 
 
 	q = P;
-	for(cursym = textp; cursym != nil; cursym = cursym->next) {
-		for(p = cursym->text; p != P; p = p->link) {
+	for(...) {
 			setarch(p);
 	
 			switch(p->as) {
@@ -146,8 +143,7 @@ noops(void)
 		}
 	}
 
-	for(cursym = textp; cursym != nil; cursym = cursym->next) {
-		for(p = cursym->text; p != P; p = p->link) {
+	for(...) {
 			setarch(p);
 
 			o = p->as;
@@ -177,11 +173,7 @@ noops(void)
 						p = aword(0x4778, p);	// thumb bx pc and 2 bytes padding
 				}
 #endif
-				if(cursym->text->mark & LEAF) {
-					cursym->leaf = 1;
-					if(!autosize)
-						break;
-				}
+                ...
 	
 				if(thumb){
 					if(!(cursym->text->mark & LEAF)){
@@ -211,33 +203,20 @@ noops(void)
 						p->link = q2;
 					}
 					break;
-				}
-                {
-					q1 = prg();
-					q1->as = AMOVW;
-					q1->scond |= C_WBIT;
-					q1->line = p->line;
-					q1->from.type = D_REG;
-					q1->from.reg = REGLINK;
-					q1->to.type = D_OREG;
-					q1->to.offset = -autosize;
-					q1->to.reg = REGSP;
-					q1->link = p->link;
-					p->link = q1;
-				}
+				} 
+                ...
 				break;
 	
 			case ARET:
-				nocache(p);
 				foreign = seenthumb && (cursym->foreign || cursym->fnptr);
-// print("%s %d %d\n", cursym->name, cursym->foreign, cursym->fnptr);
+
 				if(cursym->text->mark & LEAF) {
 					if(!autosize) {
 						if(thumb){
 							p = fnret(p, REGLINK, foreign, p);
 							break;
 						}
-// if(foreign) print("ABXRET 1 %s\n", cursym->name);
+
 						p->as = foreign ? ABXRET : AB;
 						p->from = zprg.from;
 						p->to.type = D_OREG;
@@ -289,7 +268,6 @@ noops(void)
 					break;
 				}
 				if(foreign) {
-// if(foreign) print("ABXRET 3 %s\n", cursym->name);
 #define	R	1
 					p->as = AMOVW;
 					p->from.type = D_OREG;
@@ -320,13 +298,8 @@ noops(void)
 #undef	R
 				}
 				else {
-					p->as = AMOVW;
-					p->scond |= C_PBIT;
-					p->from.type = D_OREG;
-					p->from.offset = autosize;
-					p->from.reg = REGSP;
-					p->to.type = D_REG;
-					p->to.reg = REGPC;
+                  ...
+
 				}
 				break;
 	
@@ -655,12 +628,4 @@ setdiv(int as)
 	}
 	if(thumb != p->from.sym->thumb)
 		p->from.sym->foreign = 1;
-}
-
-void
-nocache(Prog *p)
-{
-	p->optab = 0;
-	p->from.class = 0;
-	p->to.class = 0;
 }

@@ -1,5 +1,3 @@
-char	*noname		= "<none>";
-
 // ??
 static char*
 linkername[] =
@@ -155,6 +153,7 @@ loop:
 			goto eof;
 		}
 		x = expandpkg(name, pkg);
+
 		s = lookup(x, r);
 		if(x != name)
 			free(x);
@@ -276,12 +275,7 @@ loop:
 		unmal(p, sizeof *p);
 		break;
 
-	case AGOK:
-		diag("unknown opcode\n%P", p);
-		p->pc = pc;
-		pc++;
-		break;
-
+    ...
 	case ATEXT:
 		if(cursym != nil && cursym->text) {
 			histtoauto();
@@ -352,8 +346,6 @@ loop:
 	case AMOVFW:
 	case AMOVFD:
 	case AMOVDF:
-	// case AMOVF:
-	// case AMOVD:
 	case ACMPF:
 	case ACMPD:
 	case AADDF:
@@ -437,16 +429,6 @@ eof:
 	diag("truncated object file: %s", pn);
 }
 
-Prog*
-prg(void)
-{
-	Prog *p;
-
-	p = mal(sizeof(Prog));
-	*p = zprg;
-	return p;
-}
-
 static void
 puntfp(Prog *p)
 {
@@ -456,16 +438,4 @@ puntfp(Prog *p)
 	cursym->thumb = 0;
 	thumb = 0;
 	// print("%s: generating ARM code (contains floating point ops %d)\n", curtext->from.sym->name, p->line);
-}
-
-Prog*
-appendp(Prog *q)
-{
-	Prog *p;
-
-	p = prg();
-	p->link = q->link;
-	q->link = p;
-	p->line = q->line;
-	return p;
 }

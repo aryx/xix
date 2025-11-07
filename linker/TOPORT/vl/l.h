@@ -2,7 +2,6 @@
 struct	Autom
 {
 	Sym*	asym;
-	Auto*	link;
 	long	aoffset;
 	short	type;
 };
@@ -57,7 +56,6 @@ enum
 /* mark flags */
 	FOLL		= 1<<0,
 	LABEL		= 1<<1,
-	LEAF		= 1<<2,
 	SYNC		= 1<<3,
 	BRANCH		= 1<<4,
 	LOAD		= 1<<5,
@@ -74,8 +72,6 @@ enum
 EXTERN	char	fnuxi4[4];	/* for 3l [sic] */
 EXTERN	char	fnuxi8[8];
 
-EXTERN	int	xrefresolv;
-
 EXTERN	char	inuxi1[1];
 EXTERN	char	inuxi2[2];
 EXTERN	char	inuxi4[4];
@@ -83,10 +79,6 @@ EXTERN	char	inuxi4[4];
 EXTERN	char	literal[32];
 
 EXTERN	uchar	repop[ALAST];
-
-
-EXTERN	int	version;
-
 
 EXTERN	int	dtype;
 EXTERN	int	little;
@@ -100,6 +92,3 @@ EXTERN	struct
 	Count	page;
 	Count	jump;
 } nop;
-
-extern	char*	anames[];
-extern	Optab	optab[];

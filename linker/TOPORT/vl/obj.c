@@ -2,19 +2,9 @@
 
 int little;
 
-/*
- *	-H0						is headerless
- *  -H2 -T16416 -R16384	is plan9 format
- *  -H7 is Linux ELF (default)
- */
-
 void
 main(int argc, char *argv[])
 {
-	int c;
-	char *a;
-	char name[LIBNAMELEN];
-
 	ARGBEGIN {
 	default:
 	case  'm':			/* for little-endian mips */
@@ -32,7 +22,7 @@ main(int argc, char *argv[])
 		break;
 	} ARGEND
 
-		a = "";
+	a = "";
 	snprint(name, sizeof(name), "%s/%s/lib", a, thestring);
 	addlibpath(name);
 
@@ -61,129 +51,16 @@ main(int argc, char *argv[])
 
 	dtype = 4;
 
-	if(outfile == 0) {
-		static char name[20];
-
-		snprint(name, sizeof name, "%c.out", thechar);
-		outfile = name;
-	}
-
-	cout = create(outfile, 1, 0775);
-
-	if(cout < 0) {
-		diag("cannot create %s: %r", outfile);
-		errorexit();
-	}
 	nuxiinit();
+    ...
 
-	version = 0;
-
-
-	if(INITENTRY == 0) {
-		INITENTRY = "_main";
-		if(debug['p'])
-			INITENTRY = "_mainp";
-		if(!debug['l'])
-			lookup(INITENTRY, 0)->type = SXREF;
-	} else if(!(*INITENTRY >= '0' && *INITENTRY <= '9'))
-		lookup(INITENTRY, 0)->type = SXREF;
-
-	while(*argv)
-		objfile(*argv++);
-	if(!debug['l'])
-		loadlib();
-
-	firstp = firstp->link;
-	if(firstp == P)
-		goto out;
-
-	patch();
-
-	if(debug['p'])
-		if(debug['1'])
-			doprof1();
-		else
-			doprof2();
-
-	dodata();
-	follow();
-
-	if(firstp == P)
-		goto out;
-
-	noops();
 	span();
 	asmb();
-	undef();
-}
-
-void
-addlibpath(char *arg)
-{
-	char **p;
-
-	if(nlibdir >= maxlibdir) {
-		if(maxlibdir == 0)
-			maxlibdir = 8;
-		else
-			maxlibdir *= 2;
-		p = malloc(maxlibdir*sizeof(*p));
-		if(p == nil) {
-			diag("out of memory");
-			errorexit();
-		}
-		memmove(p, libdir, nlibdir*sizeof(*p));
-		free(libdir);
-		libdir = p;
-	}
-	libdir[nlibdir++] = strdup(arg);
-}
-
-char*
-findlib(char *file)
-{
-	int i;
-	char name[LIBNAMELEN];
-
-	for(i = 0; i < nlibdir; i++) {
-		snprint(name, sizeof(name), "%s/%s", libdir[i], file);
-		if(fileexists(name))
-			return libdir[i];
-	}
-	return nil;
-}
-
-void
-loadlib(void)
-{
-	int i;
-	long h;
-	Sym *s;
-
-loop:
-	xrefresolv = 0;
-	for(i=0; i<libraryp; i++) {
-		if(debug['v'])
-			Bprint(&bso, "%5.2f autolib: %s (from %s)\n", cputime(), library[i], libraryobj[i]);
-		objfile(library[i]);
-	}
-	if(xrefresolv)
-	for(h=0; h<nelem(hash); h++)
-	for(s = hash[h]; s != S; s = s->link)
-		if(s->type == SXREF)
-			goto loop;
 }
 
 void
 objfile(char *file)
 {
-	long off, esym, cnt, l;
-	int f, work;
-	Sym *s;
-	char magbuf[SARMAG];
-	char name[100], pname[150];
-	struct ar_hdr arhdr;
-	char *e, *start, *stop;
 
 	if(file[0] == '-' && file[1] == 'l') {
 		if(debug['9'])
@@ -194,94 +71,8 @@ objfile(char *file)
 		strcat(name, ".a");
 		file = name;
 	}
-	if(debug['v'])
-		Bprint(&bso, "%5.2f ldobj: %s\n", cputime(), file);
-	Bflush(&bso);
-	f = open(file, 0);
-	if(f < 0) {
-		diag("cannot open file: %s", file);
-		errorexit();
-	}
-	l = read(f, magbuf, SARMAG);
-	if(l != SARMAG || strncmp(magbuf, ARMAG, SARMAG)){
-		/* load it as a regular file */
-		l = seek(f, 0L, 2);
-		seek(f, 0L, 0);
-		ldobj(f, l, file);
-		close(f);
-		return;
-	}
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f ldlib: %s\n", cputime(), file);
-	l = read(f, &arhdr, SAR_HDR);
-	if(l != SAR_HDR) {
-		diag("%s: short read on archive file symbol header", file);
-		goto out;
-	}
-	if(strncmp(arhdr.name, symname, strlen(symname))) {
-		diag("%s: first entry not symbol header", file);
-		goto out;
-	}
-
-	esym = SARMAG + SAR_HDR + atolwhex(arhdr.size);
-	off = SARMAG + SAR_HDR;
-
-	/*
-	 * just bang the whole symbol file into memory
-	 */
-	seek(f, off, 0);
-	cnt = esym - off;
-	start = malloc(cnt + 10);
-	cnt = read(f, start, cnt);
-	if(cnt <= 0){
-		close(f);
-		return;
-	}
-	stop = &start[cnt];
-	memset(stop, 0, 10);
-
-	work = 1;
-	while(work){
-		if(debug['v'])
-			Bprint(&bso, "%5.2f library pass: %s\n", cputime(), file);
-		Bflush(&bso);
-		work = 0;
-		for(e = start; e < stop; e = strchr(e+5, 0) + 1) {
-			s = lookup(e+5, 0);
-			if(s->type != SXREF)
-				continue;
-			sprint(pname, "%s(%s)", file, s->name);
-			if(debug['v'])
-				Bprint(&bso, "%5.2f library: %s\n", cputime(), pname);
-			Bflush(&bso);
-			l = e[1] & 0xff;
-			l |= (e[2] & 0xff) << 8;
-			l |= (e[3] & 0xff) << 16;
-			l |= (e[4] & 0xff) << 24;
-			seek(f, l, 0);
-			/* need readn to read the dumps (at least) */
-			l = readn(f, &arhdr, SAR_HDR);
-			if(l != SAR_HDR)
-				goto bad;
-			if(strncmp(arhdr.fmag, ARFMAG, sizeof(arhdr.fmag)))
-				goto bad;
-			l = atolwhex(arhdr.size);
-			ldobj(f, l, pname);
-			if(s->type == SXREF) {
-				diag("%s: failed to load: %s", file, s->name);
-				errorexit();
-			}
-			work = 1;
-			xrefresolv = 1;
-		}
-	}
-	return;
-
-bad:
-	diag("%s: bad or out of date archive", file);
-out:
-	close(f);
+    ...
 }
 
 int
@@ -291,59 +82,7 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	int l;
 	Sym *s;
 	Auto *u;
-
-	c = p[2];
-	if(c < 0 || c > NSYM){
-		print("sym out of range: %d\n", c);
-		p[0] = ALAST+1;
-		return 0;
-	}
-	a->type = p[0];
-	a->reg = p[1];
-	a->sym = h[c];
-	a->name = p[3];
-	c = 4;
-
-	if(a->reg < 0 || a->reg > NREG) {
-		print("register out of range %d\n", a->reg);
-		p[0] = ALAST+1;
-		return 0;	/*  force real diagnostic */
-	}
-
 	switch(a->type) {
-	default:
-		print("unknown type %d\n", a->type);
-		p[0] = ALAST+1;
-		return 0;	/*  force real diagnostic */
-
-	case D_NONE:
-	case D_REG:
-	case D_FREG:
-	case D_MREG:
-	case D_FCREG:
-	case D_LO:
-	case D_HI:
-		break;
-
-	case D_BRANCH:
-	case D_OREG:
-	case D_CONST:
-	case D_OCONST:
-		a->offset = p[4] | (p[5]<<8) |
-			(p[6]<<16) | (p[7]<<24);
-		c += 4;
-		break;
-
-	case D_SCONST:
-		while(nhunk < NSNAME)
-			gethunk();
-		a->sval = (char*)hunk;
-		nhunk -= NSNAME;
-		hunk += NSNAME;
-
-		memmove(a->sval, p+4, NSNAME);
-		c += NSNAME;
-		break;
 
 	case D_FCONST:
 		while(nhunk < sizeof(Ieee))
@@ -359,190 +98,9 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 		c += 8;
 		break;
 	}
-	s = a->sym;
-	if(s == S)
-		return c;
-	i = a->name;
-	if(i != D_AUTO && i != D_PARAM)
-		return c;
-
-	l = a->offset;
-	for(u=curauto; u; u=u->link)
-		if(u->asym == s)
-		if(u->type == i) {
-			if(u->aoffset > l)
-				u->aoffset = l;
-			return c;
-		}
-
-	while(nhunk < sizeof(Auto))
-		gethunk();
-	u = (Auto*)hunk;
-	nhunk -= sizeof(Auto);
-	hunk += sizeof(Auto);
-
-	u->link = curauto;
-	curauto = u;
-	u->asym = s;
-	u->aoffset = l;
-	u->type = i;
-	return c;
+...
 }
 
-void
-addlib(char *obj)
-{
-	char fn1[LIBNAMELEN], fn2[LIBNAMELEN], comp[LIBNAMELEN], *p, *name;
-	int i, search;
-
-	if(histfrogp <= 0)
-		return;
-
-	name = fn1;
-	search = 0;
-	if(histfrog[0]->name[1] == '/') {
-		sprint(name, "");
-		i = 1;
-	} else if(histfrog[0]->name[1] == '.') {
-		sprint(name, ".");
-		i = 0;
-	} else {
-		sprint(name, "");
-		i = 0;
-		search = 1;
-	}
-
-	for(; i<histfrogp; i++) {
-		snprint(comp, sizeof comp, histfrog[i]->name+1);
-		for(;;) {
-			p = strstr(comp, "$O");
-			if(p == 0)
-				break;
-			memmove(p+1, p+2, strlen(p+2)+1);
-			p[0] = thechar;
-		}
-		for(;;) {
-			p = strstr(comp, "$M");
-			if(p == 0)
-				break;
-			if(strlen(comp)+strlen(thestring)-2+1 >= sizeof comp) {
-				diag("library component too long");
-				return;
-			}
-			memmove(p+strlen(thestring), p+2, strlen(p+2)+1);
-			memmove(p, thestring, strlen(thestring));
-		}
-		if(strlen(fn1) + strlen(comp) + 3 >= sizeof(fn1)) {
-			diag("library component too long");
-			return;
-		}
-		if(i > 0 || !search)
-			strcat(fn1, "/");
-		strcat(fn1, comp);
-	}
-
-	cleanname(name);
-
-	if(search){
-		p = findlib(name);
-		if(p != nil){
-			snprint(fn2, sizeof(fn2), "%s/%s", p, name);
-			name = fn2;
-		}
-	}
-
-	for(i=0; i<libraryp; i++)
-		if(strcmp(name, library[i]) == 0)
-			return;
-	if(libraryp == nelem(library)){
-		diag("too many autolibs; skipping %s", name);
-		return;
-	}
-
-	p = malloc(strlen(name) + 1);
-	strcpy(p, name);
-	library[libraryp] = p;
-	p = malloc(strlen(obj) + 1);
-	strcpy(p, obj);
-	libraryobj[libraryp] = p;
-	libraryp++;
-}
-
-void
-addhist(long line, int type)
-{
-	Auto *u;
-	Sym *s;
-	int i, j, k;
-
-	u = malloc(sizeof(Auto));
-	s = malloc(sizeof(Sym));
-	s->name = malloc(2*(histfrogp+1) + 1);
-
-	u->asym = s;
-	u->type = type;
-	u->aoffset = line;
-	u->link = curhist;
-	curhist = u;
-
-	j = 1;
-	for(i=0; i<histfrogp; i++) {
-		k = histfrog[i]->value;
-		s->name[j+0] = k>>8;
-		s->name[j+1] = k;
-		j += 2;
-	}
-}
-
-void
-histtoauto(void)
-{
-	Auto *l;
-
-	while(l = curhist) {
-		curhist = l->link;
-		l->link = curauto;
-		curauto = l;
-	}
-}
-
-void
-collapsefrog(Sym *s)
-{
-	int i;
-
-	/*
-	 * bad encoding of path components only allows
-	 * MAXHIST components. if there is an overflow,
-	 * first try to collapse xxx/..
-	 */
-	for(i=1; i<histfrogp; i++)
-		if(strcmp(histfrog[i]->name+1, "..") == 0) {
-			memmove(histfrog+i-1, histfrog+i+1,
-				(histfrogp-i-1)*sizeof(histfrog[0]));
-			histfrogp--;
-			goto out;
-		}
-
-	/*
-	 * next try to collapse .
-	 */
-	for(i=0; i<histfrogp; i++)
-		if(strcmp(histfrog[i]->name+1, ".") == 0) {
-			memmove(histfrog+i, histfrog+i+1,
-				(histfrogp-i-1)*sizeof(histfrog[0]));
-			goto out;
-		}
-
-	/*
-	 * last chance, just truncate from front
-	 */
-	memmove(histfrog+0, histfrog+1,
-		(histfrogp-1)*sizeof(histfrog[0]));
-
-out:
-	histfrog[histfrogp-1] = s;
-}
 
 void
 nopout(Prog *p)
@@ -552,280 +110,18 @@ nopout(Prog *p)
 	p->to.type = D_NONE;
 }
 
-uchar*
-readsome(int f, uchar *buf, uchar *good, uchar *stop, int max)
-{
-	int n;
-
-	n = stop - good;
-	memmove(buf, good, stop - good);
-	stop = buf + n;
-	n = MAXIO - n;
-	if(n > max)
-		n = max;
-	n = read(f, stop, n);
-	if(n <= 0)
-		return 0;
-	return stop + n;
-}
-
 void
 ldobj(int f, long c, char *pn)
 {
-	long ipc;
-	Prog *p, *t;
-	uchar *bloc, *bsize, *stop;
-	Sym *h[NSYM], *s, *di;
-	int v, o, r, skip;
-    int hlen;
-
-	bsize = buf.xbuf;
-	bloc = buf.xbuf;
-	di = S;
-
-    //coupling: va/lex.c and and vc/swt.c
-    hlen = strlen("mips\n\n!\n");
-    seek(f, hlen, SEEK__CUR);
-    c-=hlen;
-
-newloop:
-	memset(h, 0, sizeof(h));
-	version++;
-	histfrogp = 0;
-	ipc = pc;
-	skip = 0;
-
-loop:
-	if(c <= 0)
-		goto eof;
-	r = bsize - bloc;
-	if(r < 100 && r < c) {		/* enough for largest prog */
-		bsize = readsome(f, buf.xbuf, bloc, bsize, c);
-		if(bsize == 0)
-			goto eof;
-		bloc = buf.xbuf;
-		goto loop;
-	}
-	o = bloc[0];		/* as */
-	if(o <= AXXX || o >= ALAST) {
-		diag("%s: line %ld: opcode out of range %d", pn, pc-ipc, o);
-		print("	probably not a .%c file\n", thechar);
-		errorexit();
-	}
-	if(o == ANAME || o == ASIGNAME) {
-		if(o == ASIGNAME) {
-			bloc += 4;
-			c -= 4;
-		}
-		stop = memchr(&bloc[3], 0, bsize-&bloc[3]);
-		if(stop == 0){
-			bsize = readsome(f, buf.xbuf, bloc, bsize, c);
-			if(bsize == 0)
-				goto eof;
-			bloc = buf.xbuf;
-			stop = memchr(&bloc[3], 0, bsize-&bloc[3]);
-			if(stop == 0){
-				fprint(2, "%s: name too long\n", pn);
-				errorexit();
-			}
-		}
-		v = bloc[1];	/* type */
-		o = bloc[2];	/* sym */
-		bloc += 3;
-		c -= 3;
-
-		r = 0;
-		if(v == D_STATIC)
-			r = version;
-		s = lookup((char*)bloc, r);
-		c -= &stop[1] - bloc;
-		bloc = stop + 1;
-
-		if(debug['W'])
-			print("	ANAME	%s\n", s->name);
-		h[o] = s;
-		if((v == D_EXTERN || v == D_STATIC) && s->type == 0)
-			s->type = SXREF;
-		if(v == D_FILE) {
-			if(s->type != SFILE) {
-				histgen++;
-				s->type = SFILE;
-				s->value = histgen;
-			}
-			if(histfrogp < MAXHIST) {
-				histfrog[histfrogp] = s;
-				histfrogp++;
-			} else
-				collapsefrog(s);
-		}
-		goto loop;
-	}
-
-	if(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
+    ...
 	p->as = o;
 	p->reg = bloc[1] & 0x7f;
 	if(bloc[1] & 0x80)
 		p->mark = NOSCHED;
-	p->line = bloc[2] | (bloc[3]<<8) | (bloc[4]<<16) | (bloc[5]<<24);
-
-	r = zaddr(bloc+6, &p->from, h) + 6;
-	r += zaddr(bloc+r, &p->to, h);
-	bloc += r;
-	c -= r;
-
-	if(p->reg < 0 || p->reg > NREG)
-		diag("register out of range %d", p->reg);
-
-	p->link = P;
-	p->cond = P;
-
-	if(debug['W'])
-		print("%P\n", p);
+    ...
 
 	switch(o) {
-	case AHISTORY:
-		if(p->to.offset == -1) {
-			addlib(pn);
-			histfrogp = 0;
-			goto loop;
-		}
-		addhist(p->line, D_FILE);		/* 'z' */
-		if(p->to.offset)
-			addhist(p->to.offset, D_FILE1);	/* 'Z' */
-		histfrogp = 0;
-		goto loop;
-
-	case AEND:
-		histtoauto();
-		if(curtext != P)
-			curtext->to.autom = curauto;
-		curauto = 0;
-		curtext = P;
-		if(c)
-			goto newloop;
-		return;
-
-	case AGLOBL:
-		s = p->from.sym;
-		if(s == S) {
-			diag("GLOBL must have a name\n%P", p);
-			errorexit();
-		}
-		if(s->type == 0 || s->type == SXREF) {
-			s->type = SBSS;
-			s->value = 0;
-		}
-		if(s->type != SBSS) {
-			diag("redefinition: %s\n%P", s->name, p);
-			s->type = SBSS;
-			s->value = 0;
-		}
-		if(p->to.offset > s->value)
-			s->value = p->to.offset;
-		break;
-
-	case ADYNT:
-		if(p->to.sym == S) {
-			diag("DYNT without a sym\n%P", p);
-			break;
-		}
-		di = p->to.sym;
-		p->reg = 4;
-		if(di->type == SXREF) {
-			if(debug['z'])
-				Bprint(&bso, "%P set to %d\n", p, dtype);
-			di->type = SCONST;
-			di->value = dtype;
-			dtype += 4;
-		}
-		if(p->from.sym == S)
-			break;
-
-		p->from.offset = di->value;
-		p->from.sym->type = SDATA;
-		if(curtext == P) {
-			diag("DYNT not in text: %P", p);
-			break;
-		}
-		p->to.sym = curtext->from.sym;
-		p->to.type = D_CONST;
-		p->link = datap;
-		datap = p;
-		break;
-
-	case AINIT:
-		if(p->from.sym == S) {
-			diag("INIT without a sym\n%P", p);
-			break;
-		}
-		if(di == S) {
-			diag("INIT without previous DYNT\n%P", p);
-			break;
-		}
-		p->from.offset = di->value;
-		p->from.sym->type = SDATA;
-		p->link = datap;
-		datap = p;
-		break;
-	
-	case ADATA:
-		if(p->from.sym == S) {
-			diag("DATA without a sym\n%P", p);
-			break;
-		}
-		p->link = datap;
-		datap = p;
-		break;
-
-	case AGOK:
-		diag("unknown opcode\n%P", p);
-		p->pc = pc;
-		pc++;
-		break;
-
-	case ATEXT:
-		if(curtext != P) {
-			histtoauto();
-			curtext->to.autom = curauto;
-			curauto = 0;
-		}
-		skip = 0;
-		curtext = p;
-		autosize = (p->to.offset+3L) & ~3L;
-		p->to.offset = autosize;
-		autosize += 4;
-		s = p->from.sym;
-		if(s == S) {
-			diag("TEXT must have a name\n%P", p);
-			errorexit();
-		}
-		if(s->type != 0 && s->type != SXREF) {
-			if(p->reg & DUPOK) {
-				skip = 1;
-				goto casedef;
-			}
-			diag("redefinition: %s\n%P", s->name, p);
-		}
-		s->type = STEXT;
-		s->value = pc;
-		lastp->link = p;
-		lastp = p;
-		p->pc = pc;
-		pc++;
-		if(textp == P) {
-			textp = p;
-			etextp = p;
-			goto loop;
-		}
-		etextp->cond = p;
-		etextp = p;
-		break;
-
+    ...
 	case ASUB:
 	case ASUBU:
 		if(p->from.type == D_CONST)
@@ -911,9 +207,7 @@ loop:
 		break;
 	}
 	goto loop;
-
-eof:
-	diag("truncated object file: %s", pn);
+    ...
 }
 
 
@@ -925,9 +219,6 @@ doprof1(void)
 	long n;
 	Prog *p, *q;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f profile 1\n", cputime());
-	Bflush(&bso);
 	s = lookup("__mcount", 0);
 	n = 1;
 	for(p = firstp->link; p != P; p = p->link) {
@@ -1011,10 +302,6 @@ doprof2(void)
 {
 	Sym *s2, *s4;
 	Prog *p, *q, *q2, *ps2, *ps4;
-
-	if(debug['v'])
-		Bprint(&bso, "%5.2f profile 2\n", cputime());
-	Bflush(&bso);
 
 	if(debug['e']){
 		s2 = lookup("_tracein", 0);

@@ -6,10 +6,6 @@ module T = Types
 module T5 = Types5
 module A = Ast_asm
 
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
 (*s: function [[Layout5.xdefine]] *)
 (*e: function [[Layout5.xdefine]] *)
 
@@ -19,6 +15,9 @@ module A = Ast_asm
 (*s: function [[Layout5.layout_data]] *)
 (*e: function [[Layout5.layout_data]] *)
 
+(* TODO: seems reusable if pass Codegen5.size_of_instruction? move
+ * to Latout.ml with layout_date?
+ *)
 (*s: function [[Layout5.layout_text]] *)
 let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.code_graph) : T.symbol_table2 * T5.code_graph * int =
 

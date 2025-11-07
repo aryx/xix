@@ -2,10 +2,10 @@
 open Common
 
 module A = Ast_asm
-module Av = Ast_asmv
-open Types
 module T = Types
 module Tv = Typesv
+open Types
+open Ast_asmv
 
 (*****************************************************************************)
 (* Helpers *)
@@ -17,8 +17,7 @@ module Tv = Typesv
 
 let rewrite (cg : Tv.code_graph) : Tv.code_graph =
 
-  (* a set *)
-  let is_leaf = Hashtbl.create 101 in
+  let is_leaf : A.global Hashtbl_.set  = Hashtbl_.create () in
 
   (* step1: mark is leaf and delete NOPs *)
   cg |> T.iter_with_env (fun (curtext, prev_no_nop) n ->
@@ -47,7 +46,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
     | T.I (instr) ->
         let env = 
           match instr with
-          | Av.JAL _ | Av.Bxx ((GEZAL | LTZAL), _, _) -> 
+          | JAL _ | Bxx ((GEZAL | LTZAL), _, _) -> 
               curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
           | _ -> (curtext, Some n)
@@ -70,12 +69,16 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
                          (A.s_of_global global));
         if size < 0 
         then failwith "TODO: handle size local -4";
-        
+
         let autosize_opt = 
+          (* TODO? in theory can do something different when size == 0 and not
+           * leaf but simpler to have less cases
+           *)
           if size == 0 && Hashtbl.mem is_leaf global
           then begin 
              Logs.debug (fun m -> m "found a leaf procedure without locals: %s" 
                           (A.s_of_global global));
+             (* not needed: n.instr <- T.TEXT (global, attrs, 0) *)
              None
           end
           (* + 4 extra space for saving rLINK *)
@@ -84,15 +87,21 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
         autosize_opt |> Option.iter (fun autosize ->
           (* for layout text we need to set the final autosize *)
           n.instr <- T.TEXT (global, attrs, autosize);
-          (* MOVW.W R14, -autosize(SP) *)
-          let n1 = {
-            instr = failwith "XXXTEXT" (*T.I (A5.MOVE (A.Word, Some A5.WriteAddressBase, 
-                              A5.Imsr (A5.Reg A5.rLINK), 
-                              A5.Indirect (A5.rSP, -autosize)), A5.AL)*);
+          (* ADD $-autosize, SP
+           * MOVW RLINK, 0(SP)
+           *)
+          let rec n1 = {
+            instr = T.I (Arith (ADD (W, A.S), 
+                         Imm (- autosize), None, rSP));
+            next = Some n2;
+            branch = None; n_loc = n.n_loc; real_pc = -1;
+          }
+          and n2 = {
+            instr = T.I (Move2 (W__,  
+                              Either.Left (Gen (GReg rLINK)), 
+                              Gen (Indirect (rSP, 0))));
             next = n.next;
-            branch = None;
-            n_loc = n.n_loc;
-            real_pc = -1;
+            branch = None; n_loc = n.n_loc; real_pc = -1;
           }
           in
           n.next <- Some n1;
@@ -101,27 +110,47 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
 
     | T.WORD _ -> autosize_opt
     | T.V A.RET ->
-        n.instr <- T.I
-          ((match autosize_opt with
-           (* B (R14) *)
-           | None -> failwith "XXXRET" (*A5.B (ref (A.IndirectJump (A5.rLINK)))*)
-           (* MOVW.P autosize(SP), PC *)
-           | Some _autosize -> (* A5.MOVE (A.Word, Some A5.PostOffsetWrite,
-                                   A5.Indirect (A5.rSP, autosize), 
-                                   A5.Imsr (A5.Reg A5.rPC)) *)
-              failwith "XXXRET2"
-           ));
+        (match autosize_opt with
+        | None -> 
+            (* JMP (RLINK) *)
+            n.instr <- T.I (JMP (ref (A.IndirectJump (rLINK))))
+         | Some autosize ->
+           (* MOVW 0(SP), R2
+            * ADD $autosize, SP
+            * JMP (R2)
+            * alt? why not reusing rLINK instead of an extra R2?
+            *)
+            n.instr <- T.I (Move2 (W__,
+                           Either.Left (Gen (Indirect (rSP, 0))),
+                           Gen (GReg r2TMP)));
+
+            let rec n1 = {
+              instr = T.I (Arith (ADD (W, A.S), 
+                         Imm (autosize), None, rSP));
+              next = Some n2;
+              branch = None; n_loc = n.n_loc; real_pc = -1;
+             }
+            and n2 = {
+              instr = T.I (JMP (ref (A.IndirectJump (r2TMP)))) ;
+              next = n.next;
+              branch = None; n_loc = n.n_loc; real_pc = -1;
+          }
+          in
+          n.next <- Some n1;
+
+        );
         autosize_opt
      | T.V A.NOP -> raise (Impossible "NOP was removed in step1")
 
-     | T.I  ( Av.Arith _ | Av.NOR _ | Av.ArithMul _ | Av.ArithF _ 
-            | Av.Move1 _ | Av.Move2 _
-            | Av.JMP _ | Av.RFE _ | Av.JAL _ | Av.JALReg _ | Av.BEQ _ | Av.BNE _
-            | Av.Bxx _
-            | Av.SYSCALL | Av.BREAK | Av.TLB _
+     | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _ 
+            | Move1 _ | Move2 _
+            | JMP _ | RFE _ | JAL _ | JALReg _ | BEQ _ | BNE _
+            | Bxx _
+            | SYSCALL | BREAK | TLB _
             ) ->
         autosize_opt
   ) None;
+
   (* works by side effect, still return first node *)
   cg
 

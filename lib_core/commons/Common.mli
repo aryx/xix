@@ -132,6 +132,7 @@ module Assoc :
 
 module Hashtbl_ :
   sig
+    val create : unit -> ('a, 'b) Hashtbl.t
     val of_list : ('a * 'b) list -> ('a, 'b) Hashtbl.t
     val to_list : ('a, 'b) Hashtbl.t -> ('a * 'b) list
 

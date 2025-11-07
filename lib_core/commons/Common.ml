@@ -351,8 +351,12 @@ end
 
 module Hashtbl_ = struct    
 
+let create () =
+  (* why 101? why not *)
+  Hashtbl.create 101
+
 let of_list xs =
-  let h = Hashtbl.create 101 in
+  let h = create () in
   xs |> List.iter (fun (k, v) -> Hashtbl.replace h k v);
   h
 

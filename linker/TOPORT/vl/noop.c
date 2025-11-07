@@ -94,47 +94,11 @@ noops(void)
 		switch(o) {
 		case ATEXT:
             ...
-			if(autosize) {
-				q = prg();
-				q->as = AADD;
-				q->line = p->line;
-				q->from.type = D_CONST;
-				q->from.offset = -autosize;
-				q->to.type = D_REG;
-				q->to.reg = REGSP;
-
-				q->link = p->link;
-				p->link = q;
-			} else
-
-            // else (not LEAF)
-			q1 = prg();
-			q1->as = AMOVW;
-			q1->line = p->line;
-			q1->from.type = D_REG;
-			q1->from.reg = REGLINK;
-			q1->to.type = D_OREG;
-			q1->from.offset = 0;
-			q1->to.reg = REGSP;
-
-			q1->link = q->link;
-			q->link = q1;
-			break;
-
 		case ARET:
 
 			if(curtext->mark & LEAF) {
 
-				if(!autosize) {
-					p->as = AJMP;
-					p->from = zprg.from;
-					p->to.type = D_OREG;
-					p->to.offset = 0;
-					p->to.reg = REGLINK;
-					p->mark |= BRANCH;
-					break;
-				}
-                // else
+                // else when leaf and autosize > 0 (special opti worth it?)
 
 				p->as = AADD;
 				p->from.type = D_CONST;
@@ -154,38 +118,11 @@ noops(void)
 				p->link = q;
 				break;
 			}
-            // else
-			p->as = AMOVW;
-			p->from.type = D_OREG;
-			p->from.offset = 0;
-			p->from.reg = REGSP;
-			p->to.type = D_REG;
-			p->to.reg = 2;
-
-			q = p;
+            // else not a leaf
+            ...
 			if(autosize) {
-				q = prg();
-				q->as = AADD;
-				q->line = p->line;
-				q->from.type = D_CONST;
-				q->from.offset = autosize;
-				q->to.type = D_REG;
-				q->to.reg = REGSP;
-
-				q->link = p->link;
-				p->link = q;
+              ...
 			}
-
-			q1 = prg();
-			q1->as = AJMP;
-			q1->line = p->line;
-			q1->to.type = D_OREG;
-			q1->to.offset = 0;
-			q1->to.reg = 2;
-			q1->mark |= BRANCH;
-
-			q1->link = q->link;
-			q->link = q1;
 			break;
 
 	}

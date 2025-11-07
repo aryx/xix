@@ -49,6 +49,7 @@ let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 
         if size <= 0
         then failwith (spf "%s: no size" s);
 
+        (* TODO? ARM specific? *)
         if size mod 4 <> 0
         then v.T.section <- T.SData (Int_.rnd size 4)
     | _ -> ()
@@ -64,6 +65,7 @@ let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 
         orig := !orig + size;
     | _ -> ()
   );
+  (* TODO? ARM specific? *)
   orig := Int_.rnd !orig 8;
   let data_size = !orig in
 

@@ -42,6 +42,9 @@ let rSB = R 30
 (* reserved by hardware *)
 let rLINK = R 31
 
+(* TODO: why the linker also use R2 and not use rTMP instead? *)
+let r2TMP = R 2
+
 let nb_registers = 32
 
 

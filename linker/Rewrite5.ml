@@ -21,8 +21,7 @@ module T5 = Types5
 (* less: rewrite when profiling flag -p *)
 let rewrite (cg : T5.code_graph) : T5.code_graph =
   
-  (* a set *)
-  let is_leaf = Hashtbl.create 101 in
+  let is_leaf : A.global Hashtbl_.set = Hashtbl_.create () in
 
   (* step1: mark is leaf and delete NOPs *)
   cg |> T.iter_with_env (fun (curtext, prev_no_nop) n ->

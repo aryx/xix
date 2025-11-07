@@ -78,6 +78,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
                           (A.s_of_global global));
              None
           end
+          (* + 4 extra space for saving rLINK *)
           else Some (size + 4)
         in
         autosize_opt |> Option.iter (fun autosize ->

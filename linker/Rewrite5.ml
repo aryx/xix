@@ -77,7 +77,12 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         
         let autosize_opt = 
           if size == 0 && Hashtbl.mem is_leaf global
-          then None
+          then begin
+             Logs.debug (fun m -> m "found a leaf procedure without locals: %s" 
+                          (A.s_of_global global));
+             None
+          end
+          (* + 4 extra space for saving rLINK *)
           else Some (size + 4)
         in
         autosize_opt |> Option.iter (fun autosize ->

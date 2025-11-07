@@ -24,7 +24,13 @@ type action = {
   binary: unit -> Bits.int32 list;
 }
 
+type env = {
+  syms: Types.symbol_table2;
+  (* for the codegen/size_of_instruction to know how to handle instructions
+   * using (FP) (the frame pointer)
+   *)
+  autosize: int;
+}
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-

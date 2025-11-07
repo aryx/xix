@@ -85,7 +85,10 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           else Some (size + 4)
         in
         autosize_opt |> Option.iter (fun autosize ->
-          (* for layout text we need to set the final autosize *)
+          (* for layout text we need to set the final autosize so that
+           * size_of_instruction can get passed autosize and can correctly
+           * handle instructions using (FP) (the frame pointer).
+           *)
           n.instr <- T.TEXT (global, attrs, autosize);
           (* decrement SP and save rLINK in one operation:
            *   MOVW.W R14, -autosize(SP) 

@@ -273,7 +273,7 @@ let gload_from_pool (nsrc : T5.node) cond rt =
  * - rt = register to   (called Rd in refcard)
  * - r  = register middle (called Rn in refcard)
  *)
-let rules symbols2 autosize init_data node =
+let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   match node.instr with
   (* --------------------------------------------------------------------- *)
   (* Virtual *)
@@ -298,7 +298,7 @@ let rules symbols2 autosize init_data node =
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed with WORD; use DATA"
         | Address (Global (global, _offsetTODO)) -> 
-            let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+            let v = Hashtbl.find env.syms (T.symbol_of_global global) in
             (match v with
              | T.SText2 real_pc -> [ [(real_pc, 0)] ]
              | T.SData2 (offset, _kind) -> 
@@ -515,7 +515,7 @@ let rules symbols2 autosize init_data node =
         | Address (Global (global, _offsetTODO)) ->
             let from_part_when_small_offset_to_R12 =
               try 
-                let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+                let v = Hashtbl.find env.syms (T.symbol_of_global global) in
                 match v with
                 | T.SData2 (offset, _kind) ->
                     let final_offset = offset_to_R12 offset in
@@ -564,7 +564,7 @@ let rules symbols2 autosize init_data node =
             else error node "illegal combination"
         | Indirect _ | Entity _ ->
             let (rbase, offset) = 
-              base_and_offset_of_indirect node symbols2 autosize from in
+              base_and_offset_of_indirect node env.syms env.autosize from in
             if immoffset offset
             then
               { size = 4; pool = None; binary = (fun () -> 
@@ -585,7 +585,7 @@ let rules symbols2 autosize init_data node =
             error node "illegal to store in an (extended) immediate"
         | Indirect _ | Entity _ ->
             let (rbase, offset) = 
-              base_and_offset_of_indirect node symbols2 autosize dest in
+              base_and_offset_of_indirect node env.syms env.autosize dest in
             if immoffset offset
             then
               { size = 4; pool = None; binary = (fun () -> 
@@ -633,8 +633,8 @@ let rules symbols2 autosize init_data node =
 (* Entry points *)
 (*****************************************************************************)
 (*s: function [[Codegen5.size_of_instruction]] *)
-let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5.node) : int (* a multiple of 4 *) * pool option =
-  let action  = rules symbols2 autosize None node in
+let size_of_instruction (env : Codegen.env) (node : T5.node) : int (* a multiple of 4 *) * pool option =
+  let action  = rules env None node in
   action.size, action.pool
 (*e: function [[Codegen5.size_of_instruction]] *)
 
@@ -649,7 +649,10 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
 
   cg |> T.iter (fun n ->
 
-    let {size; binary; pool = _ }  = rules symbols2 !autosize config.init_data n in
+    let {size; binary; pool = _ }  = 
+        rules { Codegen.syms = symbols2; autosize = !autosize }
+        config.init_data n 
+    in
     let instrs = binary () in
 
     if n.real_pc <> !pc

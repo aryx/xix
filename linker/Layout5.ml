@@ -34,7 +34,8 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
     n.real_pc <- !pc;
 
     let size, poolopt = 
-      Codegen5.size_of_instruction symbols2 !autosize n 
+      Codegen5.size_of_instruction 
+          Codegen.{syms = symbols2; autosize = !autosize} n 
     in
     if size = 0
     then

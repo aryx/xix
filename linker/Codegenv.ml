@@ -39,9 +39,33 @@ let int_of_bits (n : node) (x : Bits.int32) : int =
 (* Operand classes *)
 (*****************************************************************************)
 
+(* TODO: also 0x7fff, -0x8000, and 0 special cases *)
+let constant_kind i =
+  if i <= 0xffff
+  then Some i
+  else None
+
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
+
+let op (x : int) (y : int) : Bits.t =
+  [(x, 3); (y, 0)]
+
+let sp (x : int) (y : int) : Bits.t =
+  [(x, 29); (y, 26)]
+
+let opirr (code : arith_opcode) : Bits.t =
+  match code with
+  | ADD (W, U) -> sp 1 1
+  | OR -> sp 1 5
+  | _ -> failwith "TODO:opirr"
+  
+let op_irr (op : arith_opcode) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
+  opirr op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
+
+let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
+  op @ [(r1, 16); (r2, 21); (r3, 11)]
 
 (*****************************************************************************)
 (* More complex code generation helpers *)
@@ -68,7 +92,9 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
-  (* TEXT instructions were kept just for better error reporting localisation *)
+  (* TEXT instructions were kept just for better error reporting localisation 
+   * case 0: /* pseudo ops */
+   *)
   | T.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
 
@@ -96,10 +122,9 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
 
   | T.I instr ->
     (match instr with
-     (SYSCALL|BREAK
-     |Arith (_, _, _, R _)|NOR (_, _, _)|ArithMul (_, R _, _, R _)|ArithF _
-     |Move1 (_, _, _)|Move2 (_, _, Gen _)
-     |JMP _|RFE _|JAL _|JALReg (R _, _)
+     (Arith (_, _, _, R _)|NOR (_, _, _)|ArithMul (_, R _, _, R _)|ArithF _
+     |Move1 (_, _, _)
+     |RFE _|JAL _|JALReg (R _, _)
      |BEQ (_, _, _)|BNE (_, _, _)|Bxx (_, _, _)
      |TLB _
      ) -> 
@@ -110,17 +135,48 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)
 
+    (* Constant to register move (move but no memory involved) 
+     * case 3:		/* mov $soreg, r ==> or/add $i,o,r */
+    *)
+    | Move2 (W__, (Right (Int i)), Gen (GReg rt)) ->
+       (match constant_kind i with
+       | Some i -> 
+           { size = 4; pool = None; binary = (fun () ->
+               let r = R 0 in
+               let op = ADD (W, U) in
+               [ op_irr op i r rt ]
+            ) }
+       | None -> failwith "TODO: LCON"
+       )
+
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
     (* --------------------------------------------------------------------- *)
+    (* case 18:	/* jmp [r1],0(r2) */ *)
+    | JMP { contents = (IndirectJump r2) } ->
+        let r = R 0 in
+        let op_jmp = op 1 0 in
+        { size = 4; pool = None; binary = (fun () -> [ op_rrr op_jmp (R 0) r2 r ]) }
+    | JMP _ ->
+       failwith (spf "Codegenv: instr not handled: %s"
+                (Tv.show_instr node.instr))
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)
+    | Move2 (_, _, _) ->
+       failwith (spf "Codegenv: instr not handled: %s"
+                (Tv.show_instr node.instr))
 
     (* --------------------------------------------------------------------- *)
     (* System *)
     (* --------------------------------------------------------------------- *)
+    (* case 5:		/* syscall */ *)
+    | SYSCALL ->
+       { size = 4; pool = None; binary = (fun () -> [op 1 4]) }
+    | BREAK ->
+       { size = 4; pool = None; binary = (fun () -> [op 1 5]) }
+
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)

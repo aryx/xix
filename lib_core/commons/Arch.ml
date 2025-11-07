@@ -30,6 +30,11 @@ type bits =
 let endian_of_arch = function
   | Arm -> Endian.Little
   | Arm64 -> Endian.Little
+  (* Mips is a bi-endian. The PS1 is a little-endian R3000,
+   * but other machines are big-endian R3000.
+   * By default on plan9 vl is big-endian and 0l (spim) is little endian.
+   * TODO: if put Big here I get a segfault with ovl, why ???
+   *)
   | Mips -> Endian.Little
   | Riscv -> Endian.Little
   | Riscv64 -> Endian.Little

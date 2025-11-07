@@ -19,9 +19,7 @@
 
 Optab	optab[] =
 {
-	{ ATEXT,	C_LEXT,	C_NONE,	C_LCON, 	 0, 0, 0 },
-	{ ATEXT,	C_LEXT,	C_REG,	C_LCON, 	 0, 0, 0 },
-
+    ...
 	{ AMOVW,	C_REG,	C_NONE,	C_REG,		 1, 4, 0 },
 	{ AMOVV,	C_REG,	C_NONE,	C_REG,		 1, 4, 0 },
 	{ AMOVB,	C_REG,	C_NONE,	C_REG,		12, 8, 0 },
@@ -106,8 +104,7 @@ Optab	optab[] =
 	{ AMOVW,	C_SACON,C_NONE,	C_REG,		 3, 4, REGSP },
 	{ AMOVW,	C_LECON,C_NONE,	C_REG,		26, 12, REGSB },
 	{ AMOVW,	C_LACON,C_NONE,	C_REG,		26, 12, REGSP },
-	{ AMOVW,	C_ADDCON,C_NONE,C_REG,		 3, 4, REGZERO },
-	{ AMOVW,	C_ANDCON,C_NONE,C_REG,		 3, 4, REGZERO },
+    ...
 
 	{ AMOVW,	C_UCON, C_NONE, C_REG,		24, 4, 0 },
 	{ AMOVW,	C_LCON,	C_NONE,	C_REG,		19, 8, 0 },
@@ -146,7 +143,6 @@ Optab	optab[] =
 	{ ASLL,		C_SCON,	C_REG,	C_REG,		16, 4, 0 },
 	{ ASLL,		C_SCON,	C_NONE,	C_REG,		16, 4, 0 },
 
-	{ ASYSCALL,	C_NONE,	C_NONE,	C_NONE,		 5, 4, 0 },
 
 	{ ABEQ,		C_REG,	C_REG,	C_SBRA,		 6, 4, 0 },
 	{ ABEQ,		C_REG,	C_NONE,	C_SBRA,		 6, 4, 0 },
@@ -156,7 +152,7 @@ Optab	optab[] =
 	{ AJMP,		C_NONE,	C_NONE,	C_LBRA,		11, 4, 0 },
 	{ AJAL,		C_NONE,	C_NONE,	C_LBRA,		11, 4, 0 },
 
-	{ AJMP,		C_NONE,	C_NONE,	C_ZOREG,	18, 4, REGZERO },
+    ...
 	{ AJAL,		C_NONE,	C_NONE,	C_ZOREG,	18, 4, REGLINK },
 
 	{ AMOVW,	C_SEXT,	C_NONE,	C_FREG,		27, 4, REGSB },
@@ -223,10 +219,9 @@ Optab	optab[] =
 	{ ABREAK,	C_REG,	C_NONE,	C_SEXT,		 7, 4, REGSB },	/* really CACHE instruction */
 	{ ABREAK,	C_REG,	C_NONE,	C_SAUTO,	 7, 4, REGSP },
 	{ ABREAK,	C_REG,	C_NONE,	C_SOREG,	 7, 4, REGZERO },
-	{ ABREAK,	C_NONE,	C_NONE,	C_NONE,		 5, 4, 0 },
+    ...
 
 	{ ACASE,	C_REG,	C_NONE,	C_NONE,		 45, 28, 0 },
 	{ ABCASE,	C_LCON,	C_NONE,	C_LBRA,		 46, 4, 0 },
 
-	{ AXXX,		C_NONE,	C_NONE,	C_NONE,		 0, 4, 0 },
 };

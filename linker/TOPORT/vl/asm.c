@@ -240,10 +240,8 @@ datblk(long s, long n, int str)
 	write(cout, buf.dbuf, n);
 }
 
-#define	OP_RRR(op,r1,r2,r3)\
-	(op|(((r1)&31L)<<16)|(((r2)&31L)<<21)|(((r3)&31L)<<11))
-#define	OP_IRR(op,i,r2,r3)\
-	(op|((i)&0xffffL)|(((r2)&31L)<<21)|(((r3)&31L)<<16))
+
+
 #define	OP_SRR(op,s,r2,r3)\
 	(op|(((s)&31L)<<6)|(((r2)&31L)<<16)|(((r3)&31L)<<11))
 #define	OP_FRRR(op,r1,r2,r3)\
@@ -253,8 +251,9 @@ datblk(long s, long n, int str)
 
 #define	OP(x,y)\
 	(((x)<<3)|((y)<<0))
-#define	SP(x,y)\
-	(((x)<<29)|((y)<<26))
+
+
+
 #define	BCOND(x,y)\
 	(((x)<<19)|((y)<<16))
 #define	MMU(x,y)\
@@ -274,24 +273,7 @@ asmout(Prog *p, Optab *o, int aflag)
 	int r, a;
 
 	switch(o->type) {
-	case 0:		/* pseudo ops */
-		if(aflag) {
-			if(p->link) {
-				if(p->as == ATEXT) {
-					ct = curtext;
-					o2 = autosize;
-					curtext = p;
-					autosize = p->to.offset + 4;
-					o1 = asmout(p->link, oplook(p->link), aflag);
-					curtext = ct;
-					autosize = o2;
-				} else
-					o1 = asmout(p->link, oplook(p->link), aflag);
-			}
-			return o1;
-		}
-		break;
-
+    ...
 	case 1:		/* mov[v] r1,r2 ==> OR r1,r0,r2 */
 		o1 = OP_RRR(oprrr(AOR), p->from.reg, REGZERO, p->to.reg);
 		break;
@@ -304,14 +286,14 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 3:		/* mov $soreg, r ==> or/add $i,o,r */
-		v = regoff(&p->from);
-		r = p->from.reg;
+		///v = regoff(&p->from);
+		///r = p->from.reg;
 		if(r == NREG)
 			r = o->param;
 		a = AADDU;
-		if(o->a1 == C_ANDCON)
-			a = AOR;
-		o1 = OP_IRR(opirr(a), v, r, p->to.reg);
+		///if(o->a1 == C_ANDCON)
+		///	a = AOR;
+		///o1 = OP_IRR(opirr(a), v, r, p->to.reg);
 		break;
 
 	case 4:		/* add $scon,[r1],r2 */
@@ -323,8 +305,6 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 5:		/* syscall */
-		if(aflag)
-			return 0;
 		o1 = oprrr(p->as);
 		break;
 
@@ -429,8 +409,6 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 18:	/* jmp [r1],0(r2) */
-		if(aflag)
-			return 0;
 		r = p->reg;
 		if(r == NREG)
 			r = o->param;
@@ -733,11 +711,9 @@ oprrr(int a)
 	case AMUL:	return OP(3,0);
 	case AMULU:	return OP(3,1);
 
-	case AJMP:	return OP(1,0);
 	case AJAL:	return OP(1,1);
 
-	case ABREAK:	return OP(1,5);
-	case ASYSCALL:	return OP(1,4);
+    ...
 	case ATLBP:	return MMU(1,0);
 	case ATLBR:	return MMU(0,1);
 	case ATLBWI:	return MMU(0,2);
@@ -787,11 +763,11 @@ opirr(int a)
 {
 	switch(a) {
 	case AADD:	return SP(1,0);
-	case AADDU:	return SP(1,1);
+	//case AADDU:	return SP(1,1);
 	case ASGT:	return SP(1,2);
 	case ASGTU:	return SP(1,3);
 	case AAND:	return SP(1,4);
-	case AOR:	return SP(1,5);
+	///case AOR:	return SP(1,5);
 	case AXOR:	return SP(1,6);
 	case ALAST:	return SP(1,7);
 	case ASLL:	return OP(0,0);

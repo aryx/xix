@@ -6,5 +6,6 @@
    testo ounit2
    xix_commons
  )
+ (flags (:standard -w -14)) ; for illegal backslash but does not seem to work :(
  (preprocess (pps ppx_deriving.show))
 )

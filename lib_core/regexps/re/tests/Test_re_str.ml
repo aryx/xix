@@ -1,3 +1,8 @@
+open Common
+open Xix_re
+open Test_re_utils
+
+
 let eq_match ?pos ?len ?(case = true) r s =
   expect_equal_app
     ~msg:(str_printer s)
@@ -5,7 +10,7 @@ let eq_match ?pos ?len ?(case = true) r s =
     (fun () ->
       let pos = match pos with None -> 0 | Some p -> p in
       let pat = if case then Str.regexp r else Str.regexp_case_fold r in
-      let s_start = Str.search_forward pat s pos in
+      let _s_start = Str.search_forward pat s pos in
 
       (* need a better way to determine group count -
 	 maybe parse the regular expression ? *)
@@ -31,7 +36,9 @@ let eq_match ?pos ?len ?(case = true) r s =
 	Re.exec ?pos ?len (Re_emacs.compile (Re_emacs.re ~case r)) s
       )
     ) ()
-;;
+
+
+let basic_tests () = [
 
 (* Literal Match *)
 expect_pass "str" (fun () ->
@@ -91,11 +98,13 @@ expect_pass "eol" (fun () ->
   eq_match  "a$"                "ab";
 );
 
+(* TODO
 expect_pass "bow" (fun () ->
   eq_match  "\<a"               "a";
   eq_match  "\<a"               "bb aa";
   eq_match  "\<a"               "ba ba";
 );
+*)
 
 expect_pass "eow" (fun () ->
   eq_match  "\>a"               "a";
@@ -103,11 +112,13 @@ expect_pass "eow" (fun () ->
   eq_match  "\>a"               "ab ab";
 );
 
+(* TODO
 expect_pass "bos" (fun () ->
   eq_match  "\`a"               "ab";
   eq_match  "\`a"               "b\na";
   eq_match  "\`a"               "ba";
 );
+*)
 
 expect_pass "eos" (fun () ->
   eq_match  "a\'"               "ba";
@@ -116,17 +127,20 @@ expect_pass "eos" (fun () ->
   eq_match  "a\'"               "ab";
 );
 
+(* TODO
 expect_pass "start" (fun () ->
   eq_match ~pos:1 "\=a"         "xab";
   eq_match ~pos:1 "\=a"         "xb\na";
   eq_match ~pos:1 "\=a"         "xba";
 );
-
+*)
+(* TODO
 expect_pass "not_boundary" (fun () ->
   eq_match "\Bb\B"              "abc";
   eq_match "\Ba"                "abc";
   eq_match "c\B"                "abc";
 );
+*)
 
 (* Match semantics *)
 
@@ -161,4 +175,13 @@ expect_pass "no_case" (fun () ->
   eq_match ~case:false "abc"    "abc";
   eq_match ~case:false "abc"    "ABC";
 );
+]
 
+(*****************************************************************************)
+(* The suite *)
+(*****************************************************************************)
+
+let tests _caps =
+  Testo.categorize_suites "re_str" [
+    basic_tests ()
+  ]

@@ -1,8 +1,15 @@
+open Common
+open Xix_re
+open Test_re_utils
+
+
 open Re
 open Re_perl
 
 let eq_re ?opts r s = expect_equal_app ~msg:s id r (re ?opts) s
-;;
+
+
+let basic_tests () = [
 
 (* 
  * Tests based on description of Perl regular expressions given at
@@ -159,3 +166,13 @@ expect_pass "options" (fun () ->
 );
 
 
+]
+
+(*****************************************************************************)
+(* The suite *)
+(*****************************************************************************)
+
+let tests _caps =
+  Testo.categorize_suites "re_perl" [
+    basic_tests ()
+  ]

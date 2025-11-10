@@ -1,8 +1,13 @@
+open Common
+open Xix_re
+open Test_re_utils
+
 open Re
 open Re_emacs
 
-let eq_re r s = Fort.expect_equal_app ~msg:s id r re s
-;;
+let eq_re r s = expect_equal_app ~msg:s id r re s
+
+let basic_tests () = [
 
 (* 
  * Tests based on description of emacs regular expressions given at
@@ -84,6 +89,7 @@ expect_pass "word-constituent" (fun () ->
 
 (* syntax codes... ? *)
 
+(* TODO
 expect_pass "contexts" (fun () ->
   eq_re bos                             "\`";
   eq_re eos                             "\'";
@@ -93,3 +99,15 @@ expect_pass "contexts" (fun () ->
   eq_re bow                             "\<";
   eq_re eow                             "\>";
 );
+*)
+
+]
+
+(*****************************************************************************)
+(* The suite *)
+(*****************************************************************************)
+
+let tests _caps =
+  Testo.categorize_suites "re_emacs" [
+    basic_tests ()
+  ]

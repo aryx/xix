@@ -15,9 +15,7 @@
    xix_re_tests
  )
  ; 'byte' is for ocamldebug
- ; TODO: add back native but got weird
- ;  error about missing caml_tuplify5 in lib_core/regexp/re/automata.o
- (modes byte))
+ (modes native byte))
 
 (install
  (package xix)

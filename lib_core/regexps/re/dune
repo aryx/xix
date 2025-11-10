@@ -1,6 +1,8 @@
 (library
  (name xix_re)
- (wrapped false)
+ ; testo is using itself ocaml-re so to avoid
+ ; conflict better to wrap it in Xix_re to avoid conflicts
+ ;(wrapped false)
  (libraries
     xix_commons
   )

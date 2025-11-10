@@ -98,7 +98,7 @@ let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 
   (* define special symbols *)
   xdefine h2 symbols ("bdata"  , T.Public) (T.SData2 (0, T.Data));
   xdefine h2 symbols ("edata"  , T.Public) (T.SData2 (data_size, T.Data));
-  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size, T.Data));
+  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size, T.Bss));
   (* This is incorrect but it will be corrected later. This has
    * no consequence on the size of the code computed in layout_text
    * because address resolution for procedures always use a literal

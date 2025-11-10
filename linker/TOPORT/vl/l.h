@@ -22,7 +22,6 @@ enum
 	SSTRING,
 
 	C_NONE		= 0,
-	C_REG,
 	C_FREG,
 	C_FCREG,
 	C_MREG,
@@ -49,7 +48,6 @@ enum
 	C_ZOREG,
 	C_SOREG,
 	C_LOREG,
-	C_GOK,
 
 	NSCHED		= 20,
 

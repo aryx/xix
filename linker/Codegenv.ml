@@ -55,14 +55,64 @@ let op (x : int) (y : int) : Bits.t =
 let sp (x : int) (y : int) : Bits.t =
   [(x, 29); (y, 26)]
 
-let opirr (code : arith_opcode) : Bits.t =
+let opirr_arith_opcode (code : arith_opcode) : Bits.t =
   match code with
+  | ADD (W, S) -> sp 1 0
   | ADD (W, U) -> sp 1 1
+  | ADD (V, S) -> sp 3 0
+  | ADD (V, U) -> sp 3 1
+
+  | SGT S -> sp 1 2
+  | SGT U -> sp 1 3
+  | AND -> sp 1 4
   | OR -> sp 1 5
+  | XOR -> sp 1 6
+
+  | SLL W -> op 0 0
+  | SRL W -> op 0 2
+  | SRA W -> op 0 3
+
+  | SLL V -> op 7 0
+  | SRL V -> op 7 2
+  | SRA V -> op 7 3
   | _ -> failwith "TODO:opirr"
+
+let _oprrr_arith_opcode (code : arith_opcode) : Bits.t =
+  match code with
+  | ADD (W, S) -> op 4 0
+  | ADD (W, U) -> op 4 1
+  | ADD (V, S) -> op 5 4
+  | ADD (V, U) -> op 5 5
+
+  | SGT S -> op 5 2
+  | SGT U -> op 5 3
+
+  | AND -> op 4 4
+  | OR -> op 4 5
+  | XOR -> op 4 6
+
+  | SUB (W, S) -> op 4 2
+  | SUB (W, U) -> op 4 3
+
+  | SLL W -> op 0 4
+  | SRL W -> op 0 6
+  | SRA W -> op 0 7
+
+  | _ -> failwith "TODO:oprrr"
+
+let _oprrr_mul_opcode (code : mul_opcode) : Bits.t =
+  match code with
+  | REM S | DIV (W, S) -> op 3 2
+  | REM U | DIV (W, U) -> op 3 3
+  | MUL (W, S) -> op 3 0
+  | MUL (W, U) -> op 3 1
+  | DIV (V, S) -> op 3 6
+  | DIV (V, U) -> op 3 7
+
+  | _ -> failwith "TODO:oprrr_mul"
   
 let op_irr (op : arith_opcode) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
-  opirr op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
+  opirr_arith_opcode op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
 let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(r1, 16); (r2, 21); (r3, 11)]

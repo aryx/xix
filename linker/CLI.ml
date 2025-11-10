@@ -117,7 +117,13 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
         init_text  = 
         (match !init_text  with
           | Some x -> x 
-          | None -> 0x8000 + header_size
+          | None -> 
+              (match arch with
+              | Arm -> 0x8000
+              | Mips -> 0x400000
+              | _ -> 
+                failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
+              ) + header_size
         );
         init_data = !init_data;
         init_round = (match !init_round with Some x -> x | None -> 4096);

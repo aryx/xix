@@ -13,9 +13,6 @@ asmb(void)
 			lput(P_MAGIC);		/* mips 3000 LE */
 		else
 			lput(V_MAGIC);		/* mips 3000 BE */
-	case 7: // ELF
-		elf32(MIPS, little? ELFDATA2LSB: ELFDATA2MSB, 0, nil);
-		break;
 	}
 	cflush();
 }
@@ -249,13 +246,10 @@ datblk(long s, long n, int str)
 #define	OP_JMP(op,i)\
 		((op)|((i)&0x3ffffffL))
 
-#define	OP(x,y)\
-	(((x)<<3)|((y)<<0))
-
-
 
 #define	BCOND(x,y)\
 	(((x)<<19)|((y)<<16))
+
 #define	MMU(x,y)\
 	(SP(2,0)|(16<<21)|((x)<<3)|((y)<<0))
 #define	FPF(x,y)\
@@ -690,27 +684,8 @@ long
 oprrr(int a)
 {
 	switch(a) {
-	case AADD:	return OP(4,0);
-	case AADDU:	return OP(4,1);
-	case ASGT:	return OP(5,2);
-	case ASGTU:	return OP(5,3);
-	case AAND:	return OP(4,4);
-	case AOR:	return OP(4,5);
-	case AXOR:	return OP(4,6);
-	case ASUB:	return OP(4,2);
-	case ASUBU:	return OP(4,3);
 	case ANOR:	return OP(4,7);
-	case ASLL:	return OP(0,4);
-	case ASRL:	return OP(0,6);
-	case ASRA:	return OP(0,7);
-
-	case AREM:
-	case ADIV:	return OP(3,2);
-	case AREMU:
-	case ADIVU:	return OP(3,3);
-	case AMUL:	return OP(3,0);
-	case AMULU:	return OP(3,1);
-
+    ...
 	case AJAL:	return OP(1,1);
 
     ...
@@ -748,31 +723,17 @@ oprrr(int a)
 	case ACMPGTD:	return FPD(7,4);
 	case ACMPGEF:	return FPF(7,6);
 	case ACMPGED:	return FPD(7,6);
-
-	case ADIVV:	return OP(3,6);
-	case ADIVVU:	return OP(3,7);
-	case AADDV:	return OP(5,4);
-	case AADDVU:	return OP(5,5);
+    ...
 	}
-	diag("bad rrr %d", a);
-	return 0;
 }
 
 long
 opirr(int a)
 {
 	switch(a) {
-	case AADD:	return SP(1,0);
-	//case AADDU:	return SP(1,1);
-	case ASGT:	return SP(1,2);
-	case ASGTU:	return SP(1,3);
-	case AAND:	return SP(1,4);
-	///case AOR:	return SP(1,5);
-	case AXOR:	return SP(1,6);
-	case ALAST:	return SP(1,7);
-	case ASLL:	return OP(0,0);
-	case ASRL:	return OP(0,2);
-	case ASRA:	return OP(0,3);
+    ...
+	case ALAST:	return SP(1,7); // ???
+    ...
 
 	case AJMP:	return SP(0,2);
 	case AJAL:	return SP(0,3);
@@ -815,19 +776,10 @@ opirr(int a)
 	case AMOVV+ALAST:	return SP(6,7);
 	case AMOVF+ALAST:	return SP(6,1);
 
-	case ASLLV:		return OP(7,0);
-	case ASRLV:		return OP(7,2);
-	case ASRAV:		return OP(7,3);
 	case ASLLV+ALAST:	return OP(7,4);
 	case ASRLV+ALAST:	return OP(7,6);
 	case ASRAV+ALAST:	return OP(7,7);
-
-	case AADDV:		return SP(3,0);
-	case AADDVU:		return SP(3,1);
 	}
-	diag("bad irr %d", a);
-abort();
-	return 0;
 }
 
 int

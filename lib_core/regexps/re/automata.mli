@@ -15,7 +15,7 @@ type rep_kind = [ `Greedy | `Non_greedy ]
 
 type expr
 type def =
-    Cst of Cset.t
+  | Cst of Cset.t
   | Alt of expr list
   | Seq of sem * expr * expr
   | Eps
@@ -50,7 +50,7 @@ val rename : ids -> expr -> expr
 type idx = int
 type mark_offsets = (mark * idx) list
 type e =
-    TSeq of e list * expr * sem
+  | TSeq of e list * expr * sem
   | TExp of mark_offsets * expr
   | TMatch of mark_offsets
 

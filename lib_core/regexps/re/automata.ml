@@ -31,7 +31,7 @@ type idx = int
 type expr = { id : int; def : def }
 
 and def =
-    Cst of Cset.t
+  | Cst of Cset.t
   | Alt of expr list
   | Seq of sem * expr * expr
   | Eps
@@ -46,7 +46,7 @@ let def e = e.def
 type mark_offsets = (int * int) list
 
 type e =
-    TSeq of e list * expr * sem
+  | TSeq of e list * expr * sem
   | TExp of mark_offsets * expr
   | TMatch of mark_offsets
 

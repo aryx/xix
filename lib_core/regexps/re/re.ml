@@ -20,15 +20,6 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
 
-(*??
-let rec first f l =
-  match l with
-    []     -> None
-  | x :: r -> match f x with
-                None          -> first f r
-              | Some _ as res -> res
-*)
-
 let rec iter n f v = if n = 0 then v else iter (n - 1) f (f v)
 
 (****)
@@ -41,8 +32,8 @@ type 'a match_info =
   | `Failed
   | `Running ]
 
-type state =
-  { idx : int;
+type state = { 
+    idx : int;
         (* Index of the current position in the position table.
            Not yet computed transitions point to a dummy state where
            [idx] is set to [unknown];
@@ -60,11 +51,12 @@ type state =
            - possibly, the list of marks (and the corresponding indices)
              corresponding to the best match *)
     desc : Automata.state
-        (* Description of this state of the automata *) }
+        (* Description of this state of the automata *) 
+}
 
 (* Automata (compiled regular expression) *)
-type re =
-  { initial : Automata.expr;
+type re = {
+    initial : Automata.expr;
         (* The whole regular expression *)
     mutable initial_states : (int * state) list;
         (* Initial states, indexed by initial category *)
@@ -82,13 +74,14 @@ type re =
     states : state Automata.States.t;
         (* States of the deterministic automata *)
     group_count : int
-        (* Number of groups in the regular expression *) }
+        (* Number of groups in the regular expression *) 
+}
 
 let print_re ch re = Automata.print_expr ch re.initial
 
 (* Information used during matching *)
-type info =
-  { re : re;
+type info = { 
+    re : re;
         (* The automata *)
     i_cols : string;
         (* Color table ([x.i_cols = x.re.cols])
@@ -99,7 +92,8 @@ type info =
     mutable pos : int;
         (* Position where the match is started *)
     mutable last : int
-        (* Position where the match should stop *) }
+        (* Position where the match should stop *) 
+}
 
 (****)
 
@@ -131,7 +125,6 @@ let unknown_state =
     next = dummy_next; final = [];
     desc = Automata.dummy_state }
 
-(*?? let count = ref 0*)
 let mk_state ncol ((idx, _, _, _, _) as desc) =
   let break_state =
     match Automata.status desc with
@@ -171,24 +164,6 @@ let validate info s pos st =
   let st' = find_state info.re desc' in
   st.next.(c) <- st'
 
-(*
-let rec loop info s pos st =
-  if pos < info.last then
-    let st' = st.next.(Char.code info.i_cols.[Char.code s.[pos]]) in
-    let idx = st'.idx in
-    if idx >= 0 then begin
-      info.positions.(idx) <- pos;
-      loop info s (pos + 1) st'
-    end else if idx = break then begin
-      info.positions.(st'.real_idx) <- pos;
-      st'
-    end else begin (* Unknown *)
-      validate info s pos st;
-      loop info s pos st
-    end
-  else
-    st
-*)
 
 let rec loop info s pos st =
   if pos < info.last then
@@ -253,8 +228,6 @@ let find_initial_state re cat =
     in
     re.initial_states <- (cat, st) :: re.initial_states;
     st
-
-(*?? let dummy_substrings = `Match ("", [], [||], 0) *)
 
 let get_color re s pos =
   if pos < 0 then -1 else
@@ -363,8 +336,6 @@ let cseq c c' = Cset.seq (Char.code c) (Char.code c')
 let cadd c s = Cset.add (Char.code c) s
 let csingle c = Cset.single (Char.code c)
 
-(* ?? let rec interval i j = if i > j then [] else i :: interval (i + 1) j *)
-
 let rec cset_hash_rec l =
   match l with
     []        -> 0
@@ -398,10 +369,8 @@ let trans_set cache (cm : bytes) s =
 
 (****)
 
-(* ?? type sem_status = Compulsory | Indicative *)
-
 type regexp =
-    Set of Cset.t
+  | Set of Cset.t
   | Sequence of regexp list
   | Alternative of regexp list
   | Repeat of regexp * int * int option
@@ -858,15 +827,6 @@ let exec_partial ?(pos = 0) ?(len = -1) re s =
     `Match _ -> `Full
   | `Running -> `Partial
   | `Failed  -> `Mismatch
-
-(*??
-let rec find_mark (i : int) l =
-  match l with
-    [] ->
-      raise Not_found
-  | (j, idx) :: r ->
-      if i = j then idx else find_mark i r
-*)
 
 let get (s, marks, pos, _) i =
   if 2 * i + 1 >= Array.length marks then raise Not_found;

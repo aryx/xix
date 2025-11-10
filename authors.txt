@@ -1,12 +1,12 @@
 Most of the code in this repository was written by Yoann Padioleau except:
  - lex/                                by Xavier Leroy        (from ocaml)
- - lib_core/{stdlib,collections,strings,meta,concurrency}
+ - lib_core/{core,base,collections,concurrency,parsing,printing,system}
    by Xavier Leroy et al. (from ocaml)
  - commons/IO.ml                       by Nicolas Canasse     (from exblib)
- - version_control/sha.ml              by Daniel Bunzli       (from uuidm)
+ - lib_core/crypto/sha.ml              by Daniel Bunzli       (from uuidm)
+ - lib_core/compression/zlib.ml        by Xavier Leroy        (from camlzip)
+ - lib_core/compression/unzip.ml       by Nicolas Canasse     (from extlib)
  - version_control/hexsha.ml           by Thomas Gazagnaire   (from ocaml-hex)
- - version_control/zlib.ml             by Xavier Leroy        (from camlzip)
- - version_control/unzip.ml            by Nicolas Canasse     (from extlib)
  - version_control/diff_myers.ml       by OOHASHI Daichi      (from ocaml-diff)
  - version_control/{index,user,...}.ml by Thomas Gazagnaire   (from ocaml-git)
 

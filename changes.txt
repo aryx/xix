@@ -19,7 +19,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 ** general
 - renamed all binaries with an 'o' prefix (for ocaml): 
-  omk, orc, ogit, o5a, o5l, oar, onm, etc.
+  omk, orc (haha), ogit, o5a, o5l, oar, onm, etc.
 
 ** toolchain
 - support for ELF and Linux code generation in o5l and got hello_linux_arm.exe
@@ -36,6 +36,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
   thanks to -nostdlib (and -nopervasives) with refined orga
   lib_core/{base,core,collections,printing,regexps,parsing}
 - move sha1 and zip/unzip from vcs to new lib_core/{crypto,compression}
+- import ocaml-re in lib_core/regexps/re/ and split files for
+  some better separation of concerns
 
 ** utilities
 - new utilities/ with cat, pwd, and wc OCaml port (called ocat, opwd, ...)
@@ -46,7 +48,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
   ('as' is not supported by ocaml-light ocamlllex)
 - Dockerfile.light can now compile lib_graphics/, windows/, kernel/, utilities/
   so almost all OCaml code in xix now compiles with ocaml-light!
-  (only exception is vcs/ which require Int32.ml and custom blocks porting)
+  (only exception is vcs/ which require Int32.ml and custom blocks porting);
+  orio and o9 are not running yet, but at least they compile.
 
 ** devinfra
 - resume semgrep.jsonnet and semgrep.yml in CI

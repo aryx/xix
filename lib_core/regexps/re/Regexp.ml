@@ -2,11 +2,12 @@
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Regexp building.
+(* Regexp AST and build helpers.
  *
  * history
- * - was defined in re.ml with many other types but better to separate
- *   concerns given re.ml was really huge
+ * - was defined in re.ml with many other types, and kept abstract in re.mli
+ *   but better to separate concerns given re.ml was really huge. In any
+ *   case it can still remain abstract in re.mli
 *)
 
 (*****************************************************************************)
@@ -17,16 +18,22 @@ type t =
   | Set of Cset.t
   | Sequence of t list
   | Alternative of t list
+  (* ints ?? *)
   | Repeat of t * int * int option
 
   | Beg_of_line | End_of_line
   | Beg_of_word | End_of_word | Not_bound
   | Beg_of_str | End_of_str
-  | Last_end_of_line | Start | Stop
+  (* ?? *)
+  | Last_end_of_line 
+  (* ?? *)
+  | Start | Stop
 
+  (* ?? *)
   | Sem of Automata.sem * t
   | Sem_greedy of Automata.rep_kind * t
 
+  (* ?? *)
   | Group of t | No_group of t | Nest of t
 
   | Case of t | No_case of t
@@ -34,6 +41,10 @@ type t =
   | Intersection of t list
   | Complement of t list
   | Difference of t * t
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let rec is_charset (r : t) : bool =
   match r with
@@ -80,14 +91,12 @@ let char c = Set (csingle c)
 
 let alt l =
   match l with
-    [r] -> r
+  | [r] -> r
   | _   -> Alternative l
 let seq l =
   match l with
-    [r] -> r
+  | [r] -> r
   | _   -> Sequence l
-let empty = alt []
-let epsilon = seq []
 let repn r i j =
   if i < 0 then invalid_arg "Re.repn";
   begin match j with Some j when j < i -> invalid_arg "Re.repn" | _ -> () end;
@@ -139,14 +148,26 @@ let diff r r' =
   if is_charset r'' then r'' else
   invalid_arg "Re.diff"
 
+let case r = Case r
+let no_case r = No_case r
+
+(*****************************************************************************)
+(* Shortcuts *)
+(*****************************************************************************)
+
+let empty = alt []
+let epsilon = seq []
+
 let any = Set cany
 let notnl = Set (Cset.diff cany (csingle '\n'))
 
 let lower = alt [rg 'a' 'z'; char '\181'; rg '\223' '\246'; rg '\248' '\255']
 let upper = alt [rg 'A' 'Z'; rg '\192' '\214'; rg '\216' '\222']
+
 let alpha = alt [lower; upper; char '\170'; char '\186']
 let digit = rg '0' '9'
 let alnum = alt [alpha; digit]
+
 let ascii = rg '\000' '\127'
 let blank = set "\t "
 let cntrl = alt [rg '\000' '\031'; rg '\127' '\159']
@@ -158,7 +179,3 @@ let punct =
        rg '\182' '\185'; rg '\187' '\191'; char '\215'; char '\247']
 let space = alt [char ' '; rg '\009' '\013']
 let xdigit = alt [digit; rg 'a' 'f'; rg 'A' 'Z']
-
-let case r = Case r
-let no_case r = No_case r
-

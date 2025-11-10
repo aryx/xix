@@ -105,7 +105,7 @@ let glob_parse init s =
   let res = expr () in
   res
 
-let rec mul l l' =
+let mul l l' =
   List.flatten (List.map (fun s -> List.map (fun s' -> s ^ s') l') l)
 
 let explode str =

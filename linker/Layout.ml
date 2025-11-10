@@ -22,7 +22,7 @@ let xdefine (h2 : T.symbol_table2) (h : T.symbol_table) (symb : T.symbol) (v : T
          * to not yell for special symbols.
          * alt: could derive the section from section2
          *)
-        v1.section <- SData 0
+        v1.section <- T.SData 0
   | T.SText _ | T.SData _ -> 
      failwith (spf "special symbol %s is already defined" (fst symb))
   );

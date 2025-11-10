@@ -20,12 +20,14 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
 
+(*??
 let rec first f l =
   match l with
     []     -> None
   | x :: r -> match f x with
                 None          -> first f r
               | Some _ as res -> res
+*)
 
 let rec iter n f v = if n = 0 then v else iter (n - 1) f (f v)
 
@@ -129,7 +131,7 @@ let unknown_state =
     next = dummy_next; final = [];
     desc = Automata.dummy_state }
 
-let count = ref 0
+(*?? let count = ref 0*)
 let mk_state ncol ((idx, _, _, _, _) as desc) =
   let break_state =
     match Automata.status desc with
@@ -252,7 +254,7 @@ let find_initial_state re cat =
     re.initial_states <- (cat, st) :: re.initial_states;
     st
 
-let dummy_substrings = `Match ("", [], [||], 0)
+(*?? let dummy_substrings = `Match ("", [], [||], 0) *)
 
 let get_color re s pos =
   if pos < 0 then -1 else
@@ -361,13 +363,13 @@ let cseq c c' = Cset.seq (Char.code c) (Char.code c')
 let cadd c s = Cset.add (Char.code c) s
 let csingle c = Cset.single (Char.code c)
 
-let rec interval i j = if i > j then [] else i :: interval (i + 1) j
+(* ?? let rec interval i j = if i > j then [] else i :: interval (i + 1) j *)
 
 let rec cset_hash_rec l =
   match l with
     []        -> 0
   | (i, j)::r -> i + 13 * j + 257 * cset_hash_rec r
-let cset_hash l = (cset_hash_rec l) land 0x3FFFFFFF
+(* ?? let cset_hash l = (cset_hash_rec l) land 0x3FFFFFFF *)
 
 module CSetMap =
   Map.Make
@@ -377,10 +379,10 @@ module CSetMap =
       let c = compare i j in if c <> 0 then c else compare u v
    end)
 
-let trans_set cache cm s =
+let trans_set cache (cm : bytes) s =
   match s with
     [i, j] when i = j ->
-      csingle cm.[i]
+      csingle (Bytes.get cm i)
   | _ ->
       let v = (cset_hash_rec s, s) in
       try
@@ -388,7 +390,7 @@ let trans_set cache cm s =
       with Not_found ->
         let l =
           List.fold_right
-            (fun (i, j) l -> Cset.union (cseq cm.[i] cm.[j]) l)
+            (fun (i, j) l -> Cset.union (cseq (Bytes.get cm i) (Bytes.get cm j)) l)
             s Cset.empty
         in
         cache := CSetMap.add v l !cache;
@@ -396,7 +398,7 @@ let trans_set cache cm s =
 
 (****)
 
-type sem_status = Compulsory | Indicative
+(* ?? type sem_status = Compulsory | Indicative *)
 
 type regexp =
     Set of Cset.t
@@ -434,10 +436,10 @@ let rec is_charset r =
 (**** Colormap ****)
 
 (*XXX Use a better algorithm allowing non-contiguous regions? *)
-let rec split s cm =
+let rec split s (cm : bytes) =
   match s with
     []    -> ()
-  | (i, j)::r -> cm.[i] <- '\001'; cm.[j + 1] <- '\001'; split r cm
+  | (i, j)::r -> Bytes.set cm i '\001'; Bytes.set cm (j + 1) '\001'; split r cm
 
 let cupper =
   Cset.union (cseq 'A' 'Z') (Cset.union (cseq '\192' '\214') (cseq '\216' '\222'))
@@ -447,7 +449,7 @@ let cdigit = cseq '0' '9'
 let calnum = Cset.union calpha cdigit
 let cword = cadd '_' calnum
 
-let colorize c regexp =
+let colorize (c : bytes) (regexp : regexp) =
   let lnl = ref false in
   let rec colorize regexp =
     match regexp with
@@ -473,20 +475,20 @@ let colorize c regexp =
   colorize regexp;
   !lnl
 
-let make_cmap () = String.make 257 '\000'
+let make_cmap () = Bytes.make 257 '\000'
 
-let flatten_cmap cm =
-  let c = String.create 256 in
-  let col_repr = String.create 256 in
+let flatten_cmap (cm : bytes) =
+  let c = Bytes.create 256 in
+  let col_repr = Bytes.create 256 in
   let v = ref 0 in
-  c.[0] <- '\000';
-  col_repr.[0] <- '\000';
+  Bytes.set c 0 '\000';
+  Bytes.set col_repr 0 '\000';
   for i = 1 to 255 do
-    if cm.[i] <> '\000' then incr v;
-    c.[i] <- Char.chr !v;
-    col_repr.[!v] <- Char.chr i
+    if Bytes.get cm i <> '\000' then incr v;
+    Bytes.set c i (Char.chr !v);
+    Bytes.set col_repr !v (Char.chr i)
   done;
-  (c, String.sub col_repr 0 (!v + 1), !v + 1)
+  (c, Bytes.sub_string col_repr 0 (!v + 1), !v + 1)
 
 (**** Compilation ****)
 
@@ -520,7 +522,7 @@ let enforce_kind ids kind kind' cr =
   |  _               -> cr
 
 (* XXX should probably compute a category mask *)
-let rec translate ids kind ign_group ign_case greedy pos cache c r =
+let rec translate ids kind ign_group ign_case greedy pos cache (c : bytes) r =
   match r with
     Set s ->
       (A.cst ids (trans_set cache c s), kind)
@@ -532,7 +534,7 @@ let rec translate ids kind ign_group ign_case greedy pos cache c r =
           let (cr, kind') =
             translate ids kind ign_group ign_case greedy pos cache c r' in
           (enforce_kind ids kind kind' cr, kind)
-      | l' ->
+      | _l' ->
           (A.alt ids
              (List.map
                 (fun r' ->
@@ -731,7 +733,7 @@ let compile_1 regexp =
       `First false false `Greedy pos (ref CSetMap.empty) col regexp in
   let r = enforce_kind ids `First kind r in
 (*Format.eprintf "<%d %d>@." !ids ncol;*)
-  mk_re r col col_repr ncol lnl (!pos / 2)
+  mk_re r (Bytes.to_string col) col_repr ncol lnl (!pos / 2)
 
 (****)
 
@@ -846,7 +848,7 @@ let execp ?(pos = 0) ?(len = -1) re s =
   if pos < 0 || len < -1 || pos + len > String.length s then
     invalid_arg "Re.execp";
   match match_str false re s pos len with
-    `Match substr -> true
+    `Match _substr -> true
   | _             -> false
 
 let exec_partial ?(pos = 0) ?(len = -1) re s =
@@ -857,12 +859,14 @@ let exec_partial ?(pos = 0) ?(len = -1) re s =
   | `Running -> `Partial
   | `Failed  -> `Mismatch
 
+(*??
 let rec find_mark (i : int) l =
   match l with
     [] ->
       raise Not_found
   | (j, idx) :: r ->
       if i = j then idx else find_mark i r
+*)
 
 let get (s, marks, pos, _) i =
   if 2 * i + 1 >= Array.length marks then raise Not_found;
@@ -872,7 +876,7 @@ let get (s, marks, pos, _) i =
   let p2 = pos.(marks.(2 * i + 1)) - 1 in
   String.sub s p1 (p2 - p1)
 
-let get_ofs (s, marks, pos, _) i =
+let get_ofs (_s, marks, pos, _) i =
   if 2 * i + 1 >= Array.length marks then raise Not_found;
   let m1 = marks.(2 * i) in
   if m1 = -1 then raise Not_found;
@@ -880,14 +884,14 @@ let get_ofs (s, marks, pos, _) i =
   let p2 = pos.(marks.(2 * i + 1)) - 1 in
   (p1, p2)
 
-let test (s, marks, pos, _) i =
+let test (_s, marks, _pos, _) i =
   if 2 * i >= Array.length marks then false else
   let idx = marks.(2 * i) in
   idx <> -1
 
 let dummy_offset = (-1, -1)
 
-let get_all_ofs (s, marks, pos, count) =
+let get_all_ofs (_s, marks, pos, count) =
   let res = Array.make count dummy_offset in
   for i = 0 to Array.length marks / 2 - 1 do
     let m1 = marks.(2 * i) in

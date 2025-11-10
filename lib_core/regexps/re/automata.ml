@@ -20,13 +20,22 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Types *)
+(*****************************************************************************)
+
 type sem = [ `Longest | `Shortest | `First ]
 
 type rep_kind = [ `Greedy | `Non_greedy ]
 
+(* ?? *)
 type category = int
+(* ?? *)
 type mark = int
-type idx = int
 
 type expr = { id : int; def : def }
 
@@ -43,14 +52,24 @@ and def =
 
 let def e = e.def
 
-type mark_offsets = (int * int) list
+type ids = int ref
 
+let create_ids () = ref 0
+
+(* ?? *)
+type idx = int
+
+type mark_offsets = (mark * idx) list
+
+(* ?? *)
 type e =
   | TSeq of e list * expr * sem
   | TExp of mark_offsets * expr
   | TMatch of mark_offsets
 
-(****)
+(*****************************************************************************)
+(* Printer *)
+(*****************************************************************************)
 
 let print_kind ch k =
   Format.fprintf ch "%s"
@@ -59,7 +78,7 @@ let print_kind ch k =
      | `Longest  -> "long"
      | `First    -> "first")
 
-let rec print_expr ch e =
+let rec print_expr ch (e : expr) =
   match e.def with
     Cst l ->
       Format.fprintf ch "@[<3>(cst@ %a)@]" Cset.print l;
@@ -129,10 +148,9 @@ let rec first f l =
         None          -> first f r
       | Some _ as res -> res
 
-(****)
-
-type ids = int ref
-let create_ids () = ref 0
+(*****************************************************************************)
+(* Builders *)
+(*****************************************************************************)
 
 let eps_expr = { id = 0; def = Eps }
 
@@ -195,7 +213,8 @@ let rec rename ids x =
   | Rep (g, k, y) ->
       mk_expr ids (Rep (g, k, rename ids y))
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 type hash = int
 type mark_infos = int array
@@ -262,7 +281,9 @@ module States =
        let hash (_, _, _, _, h) = h
      end)
 
-(**** Find a free index ****)
+(*****************************************************************************)
+(* Find a free index *)
+(*****************************************************************************)
 
 type working_area = bool array ref
 
@@ -296,7 +317,9 @@ let free_index tbl_ref l =
   if idx = len then tbl_ref := Array.make (2 * len) false;
   idx
 
-(**** Computation of the next state ****)
+(*****************************************************************************)
+(* Computation of the next state *)
+(*****************************************************************************)
 
 let remove_matches l =
   List.filter (fun x -> match x with TMatch _ -> false | _ -> true) l
@@ -433,7 +456,8 @@ let delta tbl_ref cat' char (_, cat, expr, _, _) =
   let expr'' = set_idx used idx expr' in
   mk_state idx cat' expr''
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 let rec red_tr l =
   match l with
@@ -450,7 +474,8 @@ let simpl_tr l =
     (fun (s1, _) (s2, _) -> compare s1 s2)
   (red_tr (List.sort (fun (_, st1) (_, st2) -> compare_state st1 st2) l))
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 let rec prepend s x l =
   match s, l with
@@ -631,7 +656,8 @@ Format.eprintf "@[<3>@[%a@]: %a / %a@]@." Cset.print s print_state expr print_st
             categories rem)
        der [])
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 let flatten_match m =
   let ma = List.fold_left (fun ma (i, _) -> max ma i) (-1) m in

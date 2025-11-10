@@ -11,8 +11,6 @@
 (*                                                                     *)
 (***********************************************************************)
 
-(* $Id: re_str.mli,v 1.1 2002/01/16 14:16:04 vouillon Exp $ *)
-
 (* Module [Str]: regular expressions and high-level string processing *)
 
 (*** Regular expressions *)

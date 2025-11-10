@@ -20,9 +20,15 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
 let rec iter n f v = if n = 0 then v else iter (n - 1) f (f v)
 
-(****)
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
 
 let unknown = -2
 let break = -3
@@ -95,7 +101,8 @@ type info = {
         (* Position where the match should stop *) 
 }
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 let cat_inexistant = 1
 let cat_letter = 2
@@ -116,7 +123,8 @@ let category re c =
   | _ ->
       cat_not_letter
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 let dummy_next = [||]
 
@@ -145,7 +153,9 @@ let find_state re desc =
     Automata.States.add re.states desc st;
     st
 
-(**** Match with marks ****)
+(*****************************************************************************)
+(* Match with marks *)
+(*****************************************************************************)
 
 let delta info cat c st =
   let (idx, _, _, _, _) as desc = Automata.delta info.re.tbl cat c st.desc in
@@ -328,7 +338,9 @@ let mk_re init cols col_repr ncol lnl group_count =
     states = Automata.States.create 97;
     group_count = group_count }
 
-(**** Character sets ****)
+(*****************************************************************************)
+(* Character sets *)
+(*****************************************************************************)
 
 let cany = [0, 255]
 
@@ -367,7 +379,8 @@ let trans_set cache (cm : bytes) s =
         cache := CSetMap.add v l !cache;
         l
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 type regexp =
   | Set of Cset.t
@@ -402,7 +415,10 @@ let rec is_charset r =
   | Not_bound | Last_end_of_line | Start | Stop | Group _ | Nest _ ->
       false
 
-(**** Colormap ****)
+(*****************************************************************************)
+(* Colormap *)
+(*****************************************************************************)
+
 
 (*XXX Use a better algorithm allowing non-contiguous regions? *)
 let rec split s (cm : bytes) =
@@ -459,7 +475,9 @@ let flatten_cmap (cm : bytes) =
   done;
   (c, Bytes.sub_string col_repr 0 (!v + 1), !v + 1)
 
-(**** Compilation ****)
+(*****************************************************************************)
+(* Compilation *)
+(*****************************************************************************)
 
 let sequence l =
   match l with
@@ -621,7 +639,9 @@ and trans_seq ids kind ign_group ign_case greedy pos cache c l =
       else
         A.seq ids kind' cr' cr''
 
-(**** Case ****)
+(*****************************************************************************)
+(* Case *)
+(*****************************************************************************)
 
 let case_insens s =
   Cset.union s (Cset.union (Cset.offset 32 (Cset.inter s cupper))
@@ -686,7 +706,8 @@ let rec handle_case ign_case r =
       Set (Cset.inter (as_set (handle_case ign_case r))
              (Cset.diff cany (as_set (handle_case ign_case r'))))
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 let compile_1 regexp =
   let regexp = handle_case false regexp in
@@ -704,7 +725,8 @@ let compile_1 regexp =
 (*Format.eprintf "<%d %d>@." !ids ncol;*)
   mk_re r (Bytes.to_string col) col_repr ncol lnl (!pos / 2)
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 type t = regexp
 
@@ -800,7 +822,8 @@ let xdigit = alt [digit; rg 'a' 'f'; rg 'A' 'Z']
 let case r = Case r
 let no_case r = No_case r
 
-(****)
+(*****************************************************************************)
+(*****************************************************************************)
 
 type substrings = (string * Automata.mark_infos * int array * int)
 
@@ -916,3 +939,4 @@ Rep: e = T,e | ()
 Bounded repetition
   a{0,3} = (a,(a,a?)?)?
 *)
+

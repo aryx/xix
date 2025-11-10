@@ -1,8 +1,6 @@
 (*
    RE - A regular expression library
-
    Copyright (C) 2001 Jerome Vouillon
-   email: Jerome.Vouillon@pps.jussieu.fr
 *)
 
 (* Regular expressions *)
@@ -25,11 +23,11 @@ type def =
   | Before of category
   | After of category
 val def : expr -> def
-val print_expr : Format.formatter -> expr -> unit
 
 type ids
 val create_ids : unit -> ids
 
+(* builders *)
 val cst : ids -> Cset.t -> expr
 val empty : ids -> expr
 val alt : ids -> expr list -> expr
@@ -43,8 +41,6 @@ val after : ids -> category -> expr
 
 val rename : ids -> expr -> expr
 
-(****)
-
 (* States of the automata *)
 
 type idx = int
@@ -54,19 +50,18 @@ type e =
   | TExp of mark_offsets * expr
   | TMatch of mark_offsets
 
-val print_state : Format.formatter -> e list -> unit
 
 type hash
 type mark_infos = int array
 type status = [`Failed | `Match of mark_infos | `Running]
+
 type state =
   idx * category * e list * status option ref * hash
+
 val dummy_state : state
 val mk_state : idx -> category -> e list -> state
 val create_state : category -> expr -> state
 module States : Hashtbl.S with type key = state
-
-(****)
 
 (* Computation of the states following a given state *)
 
@@ -79,6 +74,9 @@ val deriv :
   working_area -> Cset.t -> (category * Cset.t) list -> state ->
   (Cset.t * state) list
 
-(****)
 
 val status : state -> status
+
+(* debugging helpers *)
+val print_expr : Format.formatter -> expr -> unit
+val print_state : Format.formatter -> e list -> unit

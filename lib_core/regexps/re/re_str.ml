@@ -13,8 +13,6 @@
 
 (* Modified by Jerome.Vouillon@pps.jussieu.fr for integration in RE *)
 
-(* $Id: re_str.ml,v 1.3 2002/07/03 15:47:54 vouillon Exp $ *)
-
 type regexp =
   { re : Re.t;
     mutable mtch : Re.re option;

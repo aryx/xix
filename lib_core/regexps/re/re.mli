@@ -1,8 +1,6 @@
 (*
    RE - A regular expression library
-
    Copyright (C) 2001 Jerome Vouillon
-   email: Jerome.Vouillon@pps.jussieu.fr
 *)
 
 type t              (* Regular expression *)

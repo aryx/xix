@@ -20,6 +20,10 @@
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
 
+(*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+
 exception Parse_error
 
 let gany = Re.compl [Re.char '/']
@@ -33,6 +37,10 @@ let beg_start =
 
 let beg_start' =
   Re.seq [notdot; Re.rep gany]
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let glob_parse init s =
   let i = ref 0 in
@@ -108,6 +116,7 @@ let glob_parse init s =
 let mul l l' =
   List.flatten (List.map (fun s -> List.map (fun s' -> s ^ s') l') l)
 
+(* for {} extended glob globx *)
 let explode str =
   let l = String.length str in
   let rec expl inner s i acc beg =
@@ -131,7 +140,12 @@ let explode str =
   in
   List.rev (fst (expl false 0 0 [] [""]))
 
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
 let glob' nodot s = glob_parse (if nodot then Beg else Mid) s
 let glob s = glob' true s
+
 let globx' nodot s = Re.alt (List.map (glob' nodot) (explode s))
 let globx s = globx' true s

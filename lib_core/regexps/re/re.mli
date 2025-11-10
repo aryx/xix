@@ -34,6 +34,12 @@ val get_all_ofs : substrings -> (int * int) array
 val test : substrings -> int -> bool
       (* Test whether a group matched *)
 
+(* Internal debugging *)
+val print_re : Format.formatter -> re -> unit
+
+
+(* NOW also in Regexp.mli *)
+
 (* String expressions (literal match) *)
 val str : string -> t
 val char : char -> t
@@ -104,8 +110,3 @@ val xdigit : t
 (* Case modifiers *)
 val case : t -> t                      (* Case sensitive matching *)
 val no_case : t -> t                   (* Case insensitive matching *)
-
-(****)
-
-(* Internal debugging *)
-val print_re : Format.formatter -> re -> unit

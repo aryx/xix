@@ -339,14 +339,9 @@ let mk_re init cols col_repr ncol lnl group_count =
     group_count = group_count }
 
 (*****************************************************************************)
-(* Character sets *)
+(* Compilation helpers *)
 (*****************************************************************************)
-
-let cany = [0, 255]
-
-let cseq c c' = Cset.seq (Char.code c) (Char.code c')
-let cadd c s = Cset.add (Char.code c) s
-let csingle c = Cset.single (Char.code c)
+open Regexp
 
 let rec cset_hash_rec l =
   match l with
@@ -361,6 +356,10 @@ module CSetMap =
     let compare (i, u) (j, v) =
       let c = compare i j in if c <> 0 then c else compare u v
    end)
+
+(* copy paste of Regexp.ml helpers *)
+let csingle c = Cset.single (Char.code c)
+let cseq c c' = Cset.seq (Char.code c) (Char.code c')
 
 let trans_set cache (cm : bytes) s =
   match s with
@@ -380,45 +379,8 @@ let trans_set cache (cm : bytes) s =
         l
 
 (*****************************************************************************)
-(*****************************************************************************)
-
-type regexp =
-  | Set of Cset.t
-  | Sequence of regexp list
-  | Alternative of regexp list
-  | Repeat of regexp * int * int option
-  | Beg_of_line | End_of_line
-  | Beg_of_word | End_of_word | Not_bound
-  | Beg_of_str | End_of_str
-  | Last_end_of_line | Start | Stop
-  | Sem of Automata.sem * regexp
-  | Sem_greedy of Automata.rep_kind * regexp
-  | Group of regexp | No_group of regexp | Nest of regexp
-  | Case of regexp | No_case of regexp
-  | Intersection of regexp list
-  | Complement of regexp list
-  | Difference of regexp * regexp
-
-let rec is_charset r =
-  match r with
-    Set _ ->
-      true
-  | Alternative l | Intersection l | Complement l ->
-      List.for_all is_charset l
-  | Difference (r, r') ->
-      is_charset r && is_charset r'
-  | Sem (_, r) | Sem_greedy (_, r)
-  | No_group r | Case r | No_case r ->
-      is_charset r
-  | Sequence _ | Repeat _ | Beg_of_line | End_of_line
-  | Beg_of_word | End_of_word | Beg_of_str | End_of_str
-  | Not_bound | Last_end_of_line | Start | Stop | Group _ | Nest _ ->
-      false
-
-(*****************************************************************************)
 (* Colormap *)
 (*****************************************************************************)
-
 
 (*XXX Use a better algorithm allowing non-contiguous regions? *)
 let rec split s (cm : bytes) =
@@ -426,15 +388,15 @@ let rec split s (cm : bytes) =
     []    -> ()
   | (i, j)::r -> Bytes.set cm i '\001'; Bytes.set cm (j + 1) '\001'; split r cm
 
-let cupper =
-  Cset.union (cseq 'A' 'Z') (Cset.union (cseq '\192' '\214') (cseq '\216' '\222'))
-let clower = Cset.offset 32 cupper
+let cadd c s = Cset.add (Char.code c) s
+
 let calpha = cadd '\170' (cadd '\186' (Cset.union clower cupper))
 let cdigit = cseq '0' '9'
 let calnum = Cset.union calpha cdigit
+
 let cword = cadd '_' calnum
 
-let colorize (c : bytes) (regexp : regexp) =
+let colorize (c : bytes) (regexp : Regexp.t) =
   let lnl = ref false in
   let rec colorize regexp =
     match regexp with
@@ -709,7 +671,7 @@ let rec handle_case ign_case r =
 (*****************************************************************************)
 (*****************************************************************************)
 
-let compile_1 regexp =
+let compile_1 (regexp : t) : re =
   let regexp = handle_case false regexp in
   let c = make_cmap () in
   let need_lnl = colorize c regexp in
@@ -725,109 +687,12 @@ let compile_1 regexp =
 (*Format.eprintf "<%d %d>@." !ids ncol;*)
   mk_re r (Bytes.to_string col) col_repr ncol lnl (!pos / 2)
 
-(*****************************************************************************)
-(*****************************************************************************)
-
-type t = regexp
-
-let str s =
-  let l = ref [] in
-  for i = String.length s - 1 downto 0 do
-    l := Set (csingle s.[i]) :: !l
-  done;
-  Sequence !l
-let char c = Set (csingle c)
-
-let alt l =
-  match l with
-    [r] -> r
-  | _   -> Alternative l
-let seq l =
-  match l with
-    [r] -> r
-  | _   -> Sequence l
-let empty = alt []
-let epsilon = seq []
-let repn r i j =
-  if i < 0 then invalid_arg "Re.repn";
-  begin match j with Some j when j < i -> invalid_arg "Re.repn" | _ -> () end;
-  Repeat (r, i, j)
-let rep r = repn r 0 None
-let rep1 r = repn r 1 None
-let opt r = repn r 0 (Some 1)
-let bol = Beg_of_line
-let eol = End_of_line
-let bow = Beg_of_word
-let eow = End_of_word
-let word r = seq [bow; r; eow]
-let not_boundary = Not_bound
-let bos = Beg_of_str
-let eos = End_of_str
-let leol = Last_end_of_line
-let start = Start
-let stop = Stop
-let longest r = Sem (`Longest, r)
-let shortest r = Sem (`Shortest, r)
-let first r = Sem (`First, r)
-let greedy r = Sem_greedy (`Greedy, r)
-let non_greedy r = Sem_greedy (`Non_greedy, r)
-let group r = Group r
-let no_group r = No_group r
-let nest r = Nest r
-
-let set str =
-  let s = ref [] in
-  for i = 0 to String.length str - 1 do
-    s := Cset.union (csingle str.[i]) !s
-  done;
-  Set !s
-
-let rg c c' = Set (cseq c c')
-
-let inter l =
-  let r = Intersection l in
-  if is_charset r then r else
-  invalid_arg "Re.inter"
-
-let compl l =
-  let r = Complement l in
-  if is_charset r then r else
-  invalid_arg "Re.compl"
-
-let diff r r' =
-  let r'' = Difference (r, r') in
-  if is_charset r'' then r'' else
-  invalid_arg "Re.diff"
-
-let any = Set cany
-let notnl = Set (Cset.diff cany (csingle '\n'))
-
-let lower = alt [rg 'a' 'z'; char '\181'; rg '\223' '\246'; rg '\248' '\255']
-let upper = alt [rg 'A' 'Z'; rg '\192' '\214'; rg '\216' '\222']
-let alpha = alt [lower; upper; char '\170'; char '\186']
-let digit = rg '0' '9'
-let alnum = alt [alpha; digit]
-let ascii = rg '\000' '\127'
-let blank = set "\t "
-let cntrl = alt [rg '\000' '\031'; rg '\127' '\159']
-let graph = alt [rg '\033' '\126'; rg '\160' '\255']
-let print = alt [rg '\032' '\126'; rg '\160' '\255']
-let punct =
-  alt [rg '\033' '\047'; rg '\058' '\064'; rg '\091' '\096';
-       rg '\123' '\126'; rg '\160' '\169'; rg '\171' '\180';
-       rg '\182' '\185'; rg '\187' '\191'; char '\215'; char '\247']
-let space = alt [char ' '; rg '\009' '\013']
-let xdigit = alt [digit; rg 'a' 'f'; rg 'A' 'Z']
-
-let case r = Case r
-let no_case r = No_case r
+let compile (r : t) : re = compile_1 (seq [shortest (rep any); group r])
 
 (*****************************************************************************)
 (*****************************************************************************)
 
 type substrings = (string * Automata.mark_infos * int array * int)
-
-let compile r = compile_1 (seq [shortest (rep any); group r])
 
 let exec ?(pos = 0) ?(len = -1) re s =
   if pos < 0 || len < -1 || pos + len > String.length s then
@@ -939,4 +804,64 @@ Rep: e = T,e | ()
 Bounded repetition
   a{0,3} = (a,(a,a?)?)?
 *)
+
+(*****************************************************************************)
+(* Exposing Regexp.ml builders *)
+(*****************************************************************************)
+type t = Regexp.t
+
+(* new: this is needed now that regexp has been moved to Regexp.ml
+ * to remain backward compatible with the Re API
+ *)
+let str = Regexp.str
+let char = Regexp.char
+let alt = Regexp.alt
+let seq = Regexp.seq
+let empty = Regexp.empty
+let epsilon = Regexp.epsilon
+let rep = Regexp.rep
+let rep1 = Regexp.rep1
+let repn = Regexp.repn
+let opt = Regexp.opt
+let bol = Regexp.bol
+let eol = Regexp.eol
+let bow = Regexp.bow
+let eow = Regexp.eow
+let bos = Regexp.bos
+let eos = Regexp.eos
+let leol = Regexp.leol
+let start = Regexp.start
+let stop = Regexp.stop
+let word = Regexp.word
+let not_boundary = Regexp.not_boundary
+let longest = Regexp.longest
+let shortest = Regexp.shortest
+let first = Regexp.first
+let greedy = Regexp.greedy
+let non_greedy = Regexp.non_greedy
+let group = Regexp.group
+let no_group = Regexp.no_group
+let nest = Regexp.nest
+let set = Regexp.set
+let rg = Regexp.rg
+let inter = Regexp.inter
+let diff = Regexp.diff
+let compl = Regexp.compl
+let any = Regexp.any
+let notnl = Regexp.notnl
+let alnum = Regexp.alnum
+let alpha = Regexp.alpha
+let ascii = Regexp.ascii
+let blank = Regexp.blank
+let cntrl = Regexp.cntrl
+let digit = Regexp.digit
+let graph = Regexp.graph
+let lower = Regexp.lower
+let print = Regexp.print
+let punct = Regexp.punct
+let space = Regexp.space
+let upper = Regexp.upper
+let xdigit = Regexp.xdigit
+let case = Regexp.case
+let no_case = Regexp.no_case
 

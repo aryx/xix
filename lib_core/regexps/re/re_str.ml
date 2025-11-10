@@ -117,12 +117,12 @@ let rec replace orig repl p res q len =
   if p < len then begin
     let c = repl.[p] in
     if c <> '\\' then begin
-      res.[q] <- c;
+      Bytes.set res q c;
       replace orig repl (p + 1) res (q + 1) len
     end else begin
       match repl.[p + 1] with
         '\\' ->
-          res.[q] <- '\\';
+          Bytes.set res q '\\';
           replace orig repl (p + 2) res (q + 1) len
       | '0' .. '9' as c ->
           let d =
@@ -140,30 +140,30 @@ let rec replace orig repl p res q len =
           in
           replace repl orig (p + 2) res (q + d) len
       | c ->
-          res.[q] <- '\\';
-          res.[q + 1] <- c;
+          Bytes.set res q '\\';
+          Bytes.set res (q + 1) c;
           replace repl orig (p + 2) res (q + 2) len
     end
   end
 
 let replacement_text repl orig =
   let len = String.length repl in
-  let res = String.create (repl_length repl 0 0 len) in
+  let res = Bytes.create (repl_length repl 0 0 len) in
   replace orig repl 0 res 0 (String.length repl);
-  res
+  Bytes.to_string res
 
 let quote s =
   let len = String.length s in
-  let buf = String.create (2 * len) in
+  let buf = Bytes.create (2 * len) in
   let pos = ref 0 in
   for i = 0 to len - 1 do
     match s.[i] with
       '[' | ']' | '*' | '.' | '\\' | '?' | '+' | '^' | '$' as c ->
-        buf.[!pos] <- '\\'; buf.[!pos + 1] <- c; pos := !pos + 2
+        Bytes.set buf !pos '\\'; Bytes.set buf (!pos + 1) c; pos := !pos + 2
     | c ->
-        buf.[!pos] <- c; pos := !pos + 1
+        Bytes.set buf !pos c; pos := !pos + 1
   done;
-  String.sub buf 0 !pos
+  Bytes.sub_string buf 0 !pos
 
 let string_before s n = String.sub s 0 n
 

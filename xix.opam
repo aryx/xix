@@ -26,6 +26,7 @@ depends: [
   "camlzip"
   # Extra deps when compiling xix with (optional!) advanced tooling
   "dune"
+  "ounit2"
   "testo"
   "ocamlformat"
   "merlin"

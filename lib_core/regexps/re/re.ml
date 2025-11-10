@@ -447,7 +447,7 @@ let cdigit = cseq '0' '9'
 let calnum = Cset.union calpha cdigit
 let cword = cadd '_' calnum
 
-let rec colorize c regexp =
+let colorize c regexp =
   let lnl = ref false in
   let rec colorize regexp =
     match regexp with

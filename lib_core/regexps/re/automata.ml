@@ -72,7 +72,7 @@ let rec print_expr ch e =
         print_kind k print_expr e print_expr e'
   | Eps ->
       Format.fprintf ch "eps"
-  | Rep (rk, k, e) ->
+  | Rep (_rk, k, e) ->
       Format.fprintf ch "@[<3>(rep@ %a %a)@]" print_kind k print_expr e
   | Mark i ->
       Format.fprintf ch "@[<3>(mark@ %d)@]" i
@@ -95,11 +95,11 @@ let rec print_state_rec ch e y =
   match e with
     TMatch marks ->
       Format.fprintf ch "@[<2>(Match@ %a)@]" print_marks marks
-  | TSeq (l', x, kind) ->
+  | TSeq (l', x, _kind) ->
       Format.fprintf ch "@[<2>(Seq@ ";
       print_state_lst ch l' x;
       Format.fprintf ch " %a)@]" print_expr x
-  | TExp (marks, {def = Eps}) ->
+  | TExp (marks, {def = Eps; id = _}) ->
       Format.fprintf ch "(Exp %d (%a) (eps))" y.id print_marks marks
   | TExp (marks, x) ->
       Format.fprintf ch "(Exp %d (%a) %a)" x.id print_marks marks print_expr x
@@ -179,7 +179,7 @@ let texp marks x = TExp (marks, x)
 let tseq kind x y rem =
   match x with
     []                          -> rem
-  | [TExp (marks, {def = Eps})] -> TExp (marks, y) :: rem
+  | [TExp (marks, {def = Eps; id = _})] -> TExp (marks, y) :: rem
   | _                           -> TSeq (x, y, kind) :: rem
 
 (****)
@@ -247,7 +247,7 @@ let equal_state (idx1, cat1, desc1, _, h1) (idx2, cat2, desc2, _, h2) =
   (h1 : int) = h2 && (idx1 : int) = idx2 &&
   (cat1 : int) = cat2 && equal_e desc1 desc2
 
-let compare_state (idx1, cat1, desc1, _, h1) (idx2, cat2, desc2, _, h2) =
+let compare_state (_idx1, cat1, desc1, _, h1) (_idx2, cat2, desc2, _, h2) =
   let c = compare (h1 : int) h2 in
   if c <> 0 then c else
   let c = compare (cat1 : int) cat2 in
@@ -313,19 +313,19 @@ let rec remove_duplicates prev l y =
   match l with
     [] ->
       ([], prev)
-  | TMatch _ as x :: r -> (* Truncate after first match *)
+  | TMatch _ as x :: _r -> (* Truncate after first match *)
       ([x], prev)
   | TSeq (l', x, kind) :: r ->
       let (l'', prev') = remove_duplicates prev l' x in
       let (r', prev'') = remove_duplicates prev' r y in
       (tseq kind l'' x r', prev'')
-  | TExp (marks, {def = Eps}) as e :: r ->
+  | TExp (_marks, {def = Eps; id = _}) as e :: r ->
       if List.memq y.id prev then
         remove_duplicates prev r y
       else
         let (r', prev') = remove_duplicates (y.id :: prev) r y in
         (e :: r', prev')
-  | TExp (marks, x) as e :: r ->
+  | TExp (_marks, x) as e :: r ->
       if List.memq x.id prev then
         remove_duplicates prev r y
       else
@@ -351,7 +351,7 @@ let rec set_idx used idx l =
   | TExp (marks, x) :: r ->
       TExp (marks_set_idx used idx marks, x) :: set_idx used idx r
 
-let rec filter_marks b e marks =
+let filter_marks b e marks =
   List.filter (fun (i, _) -> i < b || i > e) marks
 
 let rec delta_1 marks c cat' cat x rem =
@@ -458,7 +458,7 @@ let rec prepend s x l =
       l
   | _, [] ->
       []
-  | (c, c') :: r, ([d, d'], x') :: r' when c' < d ->
+  | (_c, c') :: r, ([d, _d'], _x') :: _r' when c' < d ->
       prepend r x l
   | (c, c') :: r, ([d, d'], x') :: r' ->
       if c <= d then begin
@@ -563,7 +563,7 @@ and deriv_2 all_chars categories marks cat l rem =
 and deriv_seq all_chars categories cat kind y z rem =
   if
     List.exists
-      (fun (s, xl) ->
+      (fun (_s, xl) ->
          List.exists (fun x -> match x with TMatch _ -> true | _ -> false) xl)
       y
   then
@@ -635,7 +635,7 @@ Format.eprintf "@[<3>@[%a@]: %a / %a@]@." Cset.print s print_state expr print_st
 
 let flatten_match m =
   let ma = List.fold_left (fun ma (i, _) -> max ma i) (-1) m in
-  let res = Array.create (ma + 1) (-1) in
+  let res = Array.make (ma + 1) (-1) in
   List.iter (fun (i, v) -> res.(i) <- v) m;
   res
 

@@ -1,0 +1,10 @@
+(library
+ (name xix_re_tests)
+ (wrapped false)
+ (libraries
+   testo
+   xix_commons
+   xix_re
+ )
+ (preprocess (pps ppx_deriving.show))
+)

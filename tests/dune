@@ -12,9 +12,12 @@
    ; testsuites
    xix_mk_tests
    xix_shell_tests
+   xix_re_tests
  )
  ; 'byte' is for ocamldebug
- (modes native byte))
+ ; TODO: add back native but got weird
+ ;  error about missing caml_tuplify5 in lib_core/regexp/re/automata.o
+ (modes byte))
 
 (install
  (package xix)

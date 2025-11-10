@@ -23,6 +23,7 @@ let tests caps _env =
     [ test_hello; ];
     Test_mk.tests caps;
     Test_shell.tests caps;
+    Test_re.tests caps;
   ]
 
 

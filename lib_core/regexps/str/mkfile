@@ -1,6 +1,6 @@
 # -*- sh -*-
 
-TOP=../..
+TOP=../../..
 INCLUDES=-I .
 
 #alt: merge with lib_core/strings/ but str.ml relies on C lib -lstr

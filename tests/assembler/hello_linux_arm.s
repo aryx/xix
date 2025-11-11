@@ -3,7 +3,12 @@
 // -------------------------------------------
 TEXT _start(SB), $0
 
-	//setR12 ??
+	// the MOVW below is optional and not used by 5l and
+        // if you set BIG to 0 in l.h then it is also not needed for
+        // 5l_ because $msg(SB) further below will have the same value
+        // than $setR12(SB) and will be treated specially to not
+        // use R12.
+        // MOVW $setR12(SB), R12
 
         /* write(1, msg, len) */
 	MOVW    $1, R0              /* fd = 1 (stdout) */

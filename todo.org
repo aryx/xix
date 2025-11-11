@@ -22,6 +22,9 @@ articles
 
 *** LATER port 7a/7l/7c to ocaml!
 
+*** LATER port Mach-O and PE windows binaries to xix?
+hmm but that would require to also port 7l or 6l to be able to
+test on my machines
 
 * Last
 

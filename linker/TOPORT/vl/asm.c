@@ -409,11 +409,11 @@ asmout(Prog *p, Optab *o, int aflag)
 		o1 = OP_RRR(oprrr(p->as), 0, p->to.reg, r);
 		break;
 
-	case 19:	/* mov $lcon,r ==> lu+or */
-		v = regoff(&p->from);
-		o1 = OP_IRR(opirr(ALAST), v>>16, REGZERO, p->to.reg);
-		o2 = OP_IRR(opirr(AOR), v, p->to.reg, p->to.reg);
-		break;
+	//case 19:	/* mov $lcon,r ==> lu+or */
+	//	v = regoff(&p->from);
+	//	o1 = OP_IRR(opirr(ALAST), v>>16, REGZERO, p->to.reg);
+	//	o2 = OP_IRR(opirr(AOR), v, p->to.reg, p->to.reg);
+	//	break;
 
 	case 20:	/* mov lohi,r */
 		r = OP(2,0);		/* mfhi */
@@ -732,7 +732,7 @@ opirr(int a)
 {
 	switch(a) {
     ...
-	case ALAST:	return SP(1,7); // ???
+	//case ALAST:	return SP(1,7); // abused for extra codes
     ...
 
 	case AJMP:	return SP(0,2);
@@ -764,6 +764,7 @@ opirr(int a)
 
 	case ABREAK:	return SP(5,7);
 
+    // abused, should define an opirr2
 	case AMOVWL+ALAST:	return SP(4,2);
 	case AMOVWR+ALAST:	return SP(4,6);
 	case AMOVVL+ALAST:	return SP(3,2);

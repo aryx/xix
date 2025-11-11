@@ -160,7 +160,7 @@ type sign = S (* Signed *) | U (* Unsigned *)
 (*e: type [[Ast_asm.sign]] *)
 [@@deriving show { with_path = false}]
 
-(* TODO: add Dword? use shorter W_ | H_ | B_ | D_ ?  *)
+(* TODO: add Dword? use shorter W_ | H_ | B_ | D_ | V_ ?  *)
 (*s: type [[Ast_asm.move_size]] *)
 type move_size = Word | HalfWord of sign | Byte of sign
 (*e: type [[Ast_asm.move_size]] *)

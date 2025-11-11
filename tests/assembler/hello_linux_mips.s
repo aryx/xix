@@ -26,9 +26,9 @@ TEXT _start(SB), $0
         SYSCALL
 
 // test case for nm/onm
-TEXT never_executed(SB), $0
-	JAL unknown_function(SB)
-	RET
+//TEXT never_executed(SB), $0
+//	JAL unknown_function(SB)
+//	RET
 
 // -------------------------------------------
 // data section

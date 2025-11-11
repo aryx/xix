@@ -87,9 +87,9 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
   );
   if !Flags.debug_layout then begin
     cg |> T.iter (fun (n : Ast_asm5.instr_with_cond Types.node) ->
-      Logs.app (fun m -> m  "%d: %s" n.real_pc (T5.show_instr n.instr));
+      Logs.app (fun m -> m  "0x%x: %s" n.real_pc (T5.show_instr n.instr));
       n.branch |> Option.iter (fun (n : Ast_asm5.instr_with_cond Types.node) -> 
-        Logs.app (fun m -> m " -> branch: %d" n.real_pc)
+        Logs.app (fun m -> m " -> branch: 0x%x" n.real_pc)
       )
     );
   end;

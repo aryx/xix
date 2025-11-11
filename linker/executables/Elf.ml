@@ -25,13 +25,18 @@ let section_header_32_size = 40
 (*e: constant [[Elf.section_header_32_size]] *)
 
 (*s: constant [[Elf.nb_program_headers]] *)
-(* Text, Data, and Symbol table *)
-let nb_program_headers = 2 (* TODO 3 *)
+(* Text, Data, and (TODO) Symbol table *)
+let nb_program_headers = 2 (* TODO 3 in which case remove + 1 below *)
 (*e: constant [[Elf.nb_program_headers]] *)
 
 (*s: constant [[Elf.header_size]] *)
+(* the + 1 below is just to be compatible with 5l/vl/... and use
+ * the same INITTEXT which makes it easier to compare the output for
+ * correctness.
+ * alt: could use kencc_compatible flag, but requires to make it a func
+ *)
 let header_size =
-  Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
+  Int_.rnd (exec_header_32_size + (nb_program_headers + 1) * program_header_32_size)
   16
 (*e: constant [[Elf.header_size]] *)
 

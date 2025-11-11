@@ -107,7 +107,7 @@ Optab	optab[] =
     ...
 
 	{ AMOVW,	C_UCON, C_NONE, C_REG,		24, 4, 0 },
-	{ AMOVW,	C_LCON,	C_NONE,	C_REG,		19, 8, 0 },
+	//{ AMOVW,	C_LCON,	C_NONE,	C_REG,		19, 8, 0 },
 
 	{ AMOVW,	C_HI,	C_NONE,	C_REG,		20, 4, 0 },
 	{ AMOVV,	C_HI,	C_NONE,	C_REG,		20, 4, 0 },

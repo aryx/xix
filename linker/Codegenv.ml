@@ -45,6 +45,10 @@ let constant_kind i =
   then Some i
   else None
 
+(* LATER? x - BIG optimisation *)
+let offset_to_R30 x =
+  x
+
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
@@ -77,7 +81,7 @@ let opirr_arith_opcode (code : arith_opcode) : Bits.t =
   | SRA V -> op 7 3
   | _ -> failwith "TODO:opirr"
 
-let _oprrr_arith_opcode (code : arith_opcode) : Bits.t =
+let oprrr_arith_opcode (code : arith_opcode) : Bits.t =
   match code with
   | ADD (W, S) -> op 4 0
   | ADD (W, U) -> op 4 1
@@ -111,8 +115,8 @@ let _oprrr_mul_opcode (code : mul_opcode) : Bits.t =
 
   | _ -> failwith "TODO:oprrr_mul"
   
-let op_irr (op : arith_opcode) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
-  opirr_arith_opcode op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
+let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
+  op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
 let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(r1, 16); (r2, 21); (r3, 11)]
@@ -176,9 +180,15 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)
 
-(* TODO ZCON case 1: 
+    (* case 1:		/* mov[v] r1,r2 ==> OR r1,r0,r2 */ where r1 = RO
+     * which was C_ZCON case in vl span.c which was then accepted for C_REG
+     * in span.c cmp() and so was matching the entry in optab.c:
+     * { AMOVW,	C_REG,	C_NONE,	C_REG,		 1, 4, 0 },
+     *)
     | Move2 (W__, (Right (Int 0)), Gen (GReg rt)) ->
-*)
+       { size = 4; pool = None; binary = (fun () ->
+          [ op_rrr (oprrr_arith_opcode OR) rZERO rZERO rt ]
+        ) }
 
     (* Constant to register move (move but no memory involved) 
      * case 3:		/* mov $soreg, r ==> or/add $i,o,r */
@@ -190,7 +200,7 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
                let r = rZERO in
                (* TODO: can also be let op = OR if exactly ANDCON *)
                let op = ADD (W, U) in
-               [ op_irr op i r rt ]
+               [ op_irr (opirr_arith_opcode op) i r rt ]
             ) }
        | None -> failwith "TODO: LCON"
        )
@@ -207,10 +217,60 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)
-    | Move2 (W__, Right _ximm, Gen (GReg _reg)) ->
-        failwith "XXXX"
-(* TODO: copy some of Codegen5.ml code, until reach Global entity
-*)
+
+    (* Address *)
+    | Move2 (W__, Right ximm, Gen (GReg rt)) ->
+        (match ximm with
+        | Int _ | Float _ -> 
+           failwith "TODO: ?? because of refactor of imm_or_ximm"
+        | String _ -> 
+            (* stricter? what does vl do with that? confusing I think *)
+            error node "string not allowed in MOVW; use DATA"
+        | Address (Global (global, _offsetTODO)) ->
+            let from_part_when_small_offset_to_R30 =
+              try 
+                let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+                match v with
+                | T.SData2 (offset, _kind) ->
+                    let final_offset = offset_to_R30 offset in
+                    (* super important condition! for bootstrapping
+                     * setR30 in MOVW $setR30(SB), R30 and not
+                     * transform it in ADD offset_set_R30, R30, R30.
+                     *)
+                    if final_offset = 0 
+                    then None
+                    else failwith "TODO: final_offset <> 0"
+                | T.SText2 _real_pc -> None
+              (* layout_text has not been fully done yet so we may have
+               * the address of a procedure we don't know yet
+               *)
+              with Not_found -> None
+            in
+            (match from_part_when_small_offset_to_R30 with
+            | Some _ ->
+                 failwith "TODO: from_part_when_small_offset_to_R30 is a Some"
+            | None ->
+              (* case 19:	/* mov $lcon,r ==> lu+or */ *)
+              { size = 8; pool=None; binary=(fun () ->
+              (* similar to WORD case *)
+              let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+              let lcon =
+                match v with
+                | T.SText2 real_pc -> real_pc
+                | T.SData2 (offset, _kind) -> 
+                  (match init_data with
+                  | None -> raise (Impossible "init_data should be set by now")
+                  | Some init_data -> init_data + offset
+                  )
+                in
+                [
+                   op_irr (sp 1 7) (lcon lsr 16) rZERO rt;
+                   op_irr (opirr_arith_opcode OR) lcon rt rt;
+                ]
+              )}
+            )
+        | Address (Local _ | Param _) -> raise Todo
+        )
 
     (* --------------------------------------------------------------------- *)
     (* System *)
@@ -272,12 +332,15 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s -->" (Tv.show_instr n.instr));
+      Logs.app (fun m -> m " %.8x: %s (%s)"
+                 !pc 
+                  (xs |> List.map (fun x -> spf "%.8x" (int_of_bits n x))
+                      |> String.concat " ")
+                  (Tv.show_instr n.instr));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
-        Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
+        Logs.debug (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
       );
-      Logs.app (fun m -> m ".");
     end;
 
     let xs = xs |> List.map (fun x -> int_of_bits n x) in

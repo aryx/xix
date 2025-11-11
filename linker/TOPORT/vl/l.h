@@ -22,31 +22,31 @@ enum
 	SSTRING,
 
 	C_NONE		= 0,
-	C_FREG,
+	C_FREG, // 1
 	C_FCREG,
 	C_MREG,
 	C_HI,
-	C_LO,
+	C_LO, // 5
 	C_ZCON,
 	C_SCON,
 	C_ADD0CON,
 	C_AND0CON,
-	C_ADDCON,
+	C_ADDCON, // 10
 	C_ANDCON,
 	C_UCON,
 	C_LCON,
 	C_SACON,
-	C_SECON,
+	C_SECON, // 15
 	C_LACON,
 	C_LECON,
 	C_SBRA,
 	C_LBRA,
-	C_SAUTO,
+	C_SAUTO, // 20
 	C_SEXT,
 	C_LAUTO,
 	C_LEXT,
 	C_ZOREG,
-	C_SOREG,
+	C_SOREG, // 25
 	C_LOREG,
 
 	NSCHED		= 20,

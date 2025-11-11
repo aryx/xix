@@ -315,12 +315,12 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 7:		/* mov r, soreg ==> sw o(r) */
-		r = p->to.reg;
+		//r = p->to.reg;
 		if(r == NREG)
 			r = o->param;
-		v = regoff(&p->to);
-		o1 = OP_IRR(opirr(p->as), v, r, p->from.reg);
-		break;
+		//v = regoff(&p->to);
+		//o1 = OP_IRR(opirr(p->as), v, r, p->from.reg);
+		//break;
 
 	case 8:		/* mov soreg, r ==> lw o(r) */
 		r = p->from.reg;
@@ -754,9 +754,9 @@ opirr(int a)
 	case AMOVBU:	return SP(5,0);
 	case AMOVH:
 	case AMOVHU:	return SP(5,1);
-	case AMOVW:	return SP(5,3);
-	case AMOVV:	return SP(7,7);
-	case AMOVF:	return SP(7,1);
+	//case AMOVW:	return SP(5,3);
+	//case AMOVV:	return SP(7,7);
+	//case AMOVF:	return SP(7,1);
 	case AMOVWL:	return SP(5,2);
 	case AMOVWR:	return SP(5,6);
 	case AMOVVL:	return SP(5,4);

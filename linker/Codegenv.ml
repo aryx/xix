@@ -81,6 +81,13 @@ let opirr_arith_opcode (code : arith_opcode) : Bits.t =
   | SRA V -> op 7 3
   | _ -> failwith "TODO:opirr"
 
+let opirr_move2 (code : move2_size) : Bits.t =
+  match code with
+  | W__ -> sp 5 3
+  | V__ -> sp 7 7
+  | F__ -> sp 7 1
+  | D__ -> failwith "TODO: opirr_move2 D__ = ?"
+
 let oprrr_arith_opcode (code : arith_opcode) : Bits.t =
   match code with
   | ADD (W, S) -> op 4 0
@@ -129,9 +136,9 @@ let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
 (* The rules! *)
 (*****************************************************************************)
 (* conventions (matches the one used (inconsistently) in vl?):
- * - rf? = register from (called ?? in refcard)
- * - rt? = register to   (called ?? in refcard)
- * - r?  = register middle (called ?? in refcard)
+ * - rf = register from (p->from.reg in vl)
+ * - rt = register to (p->to.reg in vl)
+ * - r_opt  = register middle (optional, p->reg in vl)
  *)
 
 let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
@@ -221,7 +228,9 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     | JMP { contents = (IndirectJump r2) } ->
         let r = rZERO in
         let op_jmp = op 1 0 in
-        { size = 4; pool = None; binary = (fun () -> [ op_rrr op_jmp rZERO r2 r ]) }
+        { size = 4; pool = None; binary = (fun () -> 
+           [ op_rrr op_jmp rZERO r2 r ]
+         ) }
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
@@ -280,6 +289,20 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
             )
         | Address (Local _ | Param _) -> raise Todo
         )
+
+    (* Load *)
+
+    (* Store *)
+
+    (* case 7:		/* mov r, soreg ==> sw o(r) */ *)
+    | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rt, offset))) ->
+        (* TODO: need look for offset if SOREG or LOREG *)
+        { size = 4; pool = None; binary = (fun () ->
+          let r = rt in
+          (* TODO: regoff *)
+          let v = offset in
+          [ op_irr (opirr_move2 W__) v r rf ]
+         ) }
 
     (* --------------------------------------------------------------------- *)
     (* System *)

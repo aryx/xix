@@ -9,6 +9,7 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objec
 SRC= Flags.ml\
  Types.ml Types5.ml Typesv.ml \
  Load.ml Check.ml Resolve.ml \
+ Profile.ml \
  Rewrite.ml Rewrite5.ml Rewritev.ml \
  Codegen.ml Codegen5.ml Codegenv.ml \
  Layout.ml Layout5.ml Layoutv.ml \

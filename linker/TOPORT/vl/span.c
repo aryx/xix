@@ -1,35 +1,5 @@
 
 void
-pagebug(Prog *p)
-{
-	Prog *q;
-
-	switch(p->as) {
-	case ABGEZAL:
-	case ABLTZAL:
-	case AJAL:
-	case ABEQ:
-	case ABGEZ:
-	case ABGTZ:
-	case ABLEZ:
-	case ABLTZ:
-	case ABNE:
-	case ABFPT:
-	case ABFPF:
-	case AJMP:
-		q = prg();
-		*q = *p;
-		p->link = q;
-		p->as = ANOR;
-		p->optab = 0;
-		p->from = zprg.from;
-		p->from.type = D_REG;
-		p->from.reg = REGZERO;
-		p->to = p->from;
-	}
-}
-
-void
 span(void)
 {
 	Prog *p, *q;
@@ -43,10 +13,6 @@ span(void)
 	otxt = c;
 	for(p = firstp; p != P; p = p->link) {
 
-		/* bug in early 4000 chips delayslot on page boundary */
-		if((c&(0x1000-1)) == 0xffc)
-			pagebug(p);
-
 		p->pc = c;
 		o = oplook(p);
 		m = o->size;
@@ -58,6 +24,7 @@ span(void)
 				autosize = p->to.offset + 4;
 				if(p->from.sym != S)
 					p->from.sym->value = c;
+
 				/* need passes to resolve branches */
 				if(c-otxt >= 1L<<17)
 					bflag = 1;
@@ -82,9 +49,6 @@ span(void)
 		bflag = 0;
 		c = INITTEXT;
 		for(p = firstp; p != P; p = p->link) {
-			/* bug in early 4000 chips delayslot on page boundary */
-			if((c&(0x1000-1)) == 0xffc)
-				pagebug(p);
 
 			p->pc = c;
 			o = oplook(p);
@@ -154,9 +118,7 @@ span(void)
 	}
 	if(INITRND)
 		INITDAT = rnd(c, INITRND);
-	if(debug['v'])
-		Bprint(&bso, "tsize = %lux\n", textsize);
-	Bflush(&bso);
+
 }
 		
 long
@@ -175,21 +137,7 @@ aclass(Adr *a)
 	int t;
 
 	switch(a->type) {
-	case D_NONE:
-		return C_NONE;
-
-	case D_REG:
-		return C_REG;
-
-	case D_FREG:
-		return C_FREG;
-
-	case D_FCREG:
-		return C_FCREG;
-
-	case D_MREG:
-		return C_MREG;
-
+    ...
 	case D_OREG:
 		switch(a->name) {
 		case D_EXTERN:

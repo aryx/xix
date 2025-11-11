@@ -32,25 +32,28 @@ module T = Types
  * - greater code reuse across all linkers thanks to:
  *    * use of marshalling for objects and libraries
  *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
- *      Load.load, Layout.layout_data
+ *      Load.load, Layout.layout_data, Profiling.rewrite
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors
  *    (see pb I had when linking bcm/ kernel)
  *  - when get undefined symbol, print function you are currently in!
  *    very useful to diagnose issue to give context and where to look for
- *  - arith LCON less: NCON
- *  - half word and byte load/store basic version
- *  - endianess and datagen
- *  - advanced instructions: floats, MULL, coprocessor, psr, etc
  *  - library ranlib/symdef indexing
  *  - profiling -p
  *  - symbol table
  *  - program counter line table
  *  - nice error reporting for signature conflict, conflicting objects
+ * todo 5l:
+ *  - arith LCON less: NCON
+ *  - half word and byte load/store basic version
+ *  - endianess and datagen
+ *  - advanced instructions: floats, MULL, coprocessor, psr, etc
+ * todo vl:
+ *  - a lot
  *
  * later:
- *  - look at the 5l Go sources in the Golang source, maybe ideas to steal?
+ *  - look at the 5l/vl/... Go sources in the Golang source, ideas to steal?
  *)
 
 (*****************************************************************************)
@@ -138,10 +141,8 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
 (*s: function [[CLI.link5]] *)
 (* will modify chan as a side effect *)
 let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
-  let arch : Ast_asm5.instr_with_cond Arch_linker.t = {
-    Arch_linker.branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
-    Arch_linker.visit_globals_instr = Ast_asm5.visit_globals_instr;
-  }
+  let arch : Ast_asm5.instr_with_cond Arch_linker.t = 
+    Arch_linker.of_arch config.arch
   in
   let (code, data, symbols) = Load.load caps files arch in
 
@@ -182,11 +183,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
 
 (* similar to link5 *)
 let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
-  let arch : Ast_asmv.instr Arch_linker.t = {
-    Arch_linker.branch_opd_of_instr = Ast_asmv.branch_opd_of_instr;
-    Arch_linker.visit_globals_instr = Ast_asmv.visit_globals_instr;
-  }
-  in
+  let arch : Ast_asmv.instr Arch_linker.t = Arch_linker.of_arch config.arch in
   let (code, data, symbols) = Load.load caps files arch in
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
@@ -271,7 +268,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     "-E", Arg.Set_string init_entry,
     spf " <str> entry point (default is %s)" !init_entry;
 
-    (* pad: I added that *)
+    (* pad: I added that. alt: call Logs_.cli_flags level *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose mode";
     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),

@@ -109,12 +109,15 @@ module T = Types
  * Main limitations compared to 5l:
  * - no half-word specialized instructions and immhalf()
  *   (rare instructions anyway?)
+ * Main limitations compared to vl:
+ *  - no sched/nosched support (no scheduling)
+ *    (but better not to be too smart? in fact vl was only linker doing that)
  *
  * Better than 5l/vl/...:
  * - greater code reuse across all linkers thanks to:
  *    * use of marshalling for objects and libraries
  *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
- *      Load.load
+ *      Load.load, Layout.layout_data
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors
@@ -156,6 +159,39 @@ module T = Types
 (*****************************************************************************)
 <<function [[CLI.link5]]>>
 
+(* similar to link5 *)
+let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  let arch : Ast_asmv.instr Arch_linker.t = {
+    Arch_linker.branch_opd_of_instr = Ast_asmv.branch_opd_of_instr;
+    Arch_linker.visit_globals_instr = Ast_asmv.visit_globals_instr;
+  }
+  in
+  let (code, data, symbols) = Load.load caps files arch in
+  T.lookup (config.entry_point, T.Public) None symbols |> ignore;
+  let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  let graph = Rewritev.rewrite graph in
+  let symbols2, (data_size, bss_size) = 
+    Layout.layout_data symbols data in
+  Layout.xdefine symbols2 symbols ("setR30" , T.Public) (T.SData2 (0, T.Data));
+  Check.check symbols;
+  let symbols2, graph, text_size = 
+    Layoutv.layout_text symbols2 config.init_text graph in
+  let sizes : Exec_file.sections_size = 
+    Exec_file.{ text_size; data_size; bss_size } 
+  in
+  let init_data =  
+    match config.init_data with
+    | None -> Int_.rnd (text_size + config.init_text) config.init_round
+    | Some x -> x
+  in
+  let config = { config with Exec_file.init_data = Some init_data } in
+  Logs.info (fun m -> m "final config is %s" 
+        (Exec_file.show_linker_config config));
+  let instrs = Codegenv.gen symbols2 config graph in
+  let datas  = Datagen.gen symbols2 init_data sizes data in
+  Execgen.gen config sizes instrs datas symbols2 chan
+
+
 <<function [[CLI.link]]>>
 
 (*****************************************************************************)
@@ -168,10 +204,6 @@ module T = Types
 \section{[[Codegen5.mli]]}
 
 <<type [[Codegen5.pool (Codegen5.mli)]]>>=
-(* ?? *)
-type pool =
-  | PoolOperand of Ast_asm.ximm
-  | LPOOL
 @
 
 %-------------------------------------------------------------
@@ -184,19 +216,15 @@ type pool =
 
 <<signature [[Codegen5.gen]]>>
 
+(* internals *)
+val rules: Codegen.env -> Types.addr option -> Types5.node -> Codegen.action
+
 @
 
 
 \section{[[Codegen5.ml]]}
 
 <<type [[Codegen5.pool]]>>=
-type pool =
-  (* note that it is not always an int! Sometimes it can be an
-   * Address which will be resolved only at the very end.
-   *)
-  | PoolOperand of Ast_asm.ximm
-  (* todo: still don't know why we need that *)
-  | LPOOL 
 @
 
 
@@ -419,6 +447,7 @@ module T = Types
 module T5 = Types5
 open Types
 open Types5
+open Codegen
 
 (*****************************************************************************)
 (* Prelude *)
@@ -500,8 +529,10 @@ open Types5
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
+(* TODO: could reuse this code and only things changing are the rules to pass?*)
 <<function [[Codegen5.size_of_instruction]]>>
 
+(* TODO: could reuse this code and only things changing are the rules to pass?*)
 <<function [[Codegen5.gen]]>>
 @
 
@@ -553,7 +584,6 @@ module T = Types
 open Common
 
 module T = Types
-module T5 = Types5
 
 (*****************************************************************************)
 (* Entry point *)
@@ -587,10 +617,6 @@ module T = Types
 module T5 = Types5
 module A = Ast_asm
 
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
-
 <<function [[Layout5.xdefine]]>>
 
 (*****************************************************************************)
@@ -598,6 +624,9 @@ module A = Ast_asm
 (*****************************************************************************)
 <<function [[Layout5.layout_data]]>>
 
+(* TODO: seems reusable if pass Codegen5.size_of_instruction? move
+ * to Latout.ml with layout_date?
+ *)
 <<function [[Layout5.layout_text]]>>
 @
 
@@ -704,14 +733,6 @@ module T = Types
 \section{[[Rewrite5.ml]]}
 
 <<function [[Rewrite5.find_first_no_nop_node]]>>=
-let rec find_first_no_nop_node nopt =
-  match nopt with
-  | None -> failwith "could not find non NOP node for branch"
-  | Some n ->
-      (match n.instr with
-      | T.V A.NOP -> find_first_no_nop_node n.next
-      | _ -> Some n
-      )
 @
 
 %-------------------------------------------------------------
@@ -875,7 +896,7 @@ module A = Ast_asm
  *)
 <<type [[Types.code]]>>
 <<type [[Types.code_bis]]>>
-[@@deriving show]
+[@@deriving show {with_path = false}]
 
 <<type [[Types.data]]>>
 [@@deriving show]
@@ -1060,7 +1081,7 @@ open Common
 (*****************************************************************************)
 <<function [[Elf.write_ident]]>>
 
-<<function [[Elf.program_header_32]]>>  
+<<function [[Elf.program_header_32]]>>
   
 (*****************************************************************************)
 (* Entry point *)

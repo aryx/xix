@@ -545,7 +545,13 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
         init_text  = 
         (match !init_text  with
           | Some x -> x 
-          | None -> 0x8000 + header_size
+          | None -> 
+              (match arch with
+              | Arm -> 0x8000
+              | Mips -> 0x400000
+              | _ -> 
+                failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
+              ) + header_size
         );
         init_data = !init_data;
         init_round = (match !init_round with Some x -> x | None -> 4096);
@@ -571,6 +577,8 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
   match arch with
   | Arch.Arm ->
      link5 caps config files chan
+  | Arch.Mips ->
+     linkv caps config files chan
   | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 @
 
@@ -586,13 +594,19 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
 
   (* mark at least as SXref the entry point *)
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
-  Check.check symbols;
   
   let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
-    Layout5.layout_data symbols data in
+    Layout.layout_data symbols data in
+  Layout.xdefine symbols2 symbols ("setR12" , T.Public) (T.SData2 (0, T.Data));
+
+  (* can only check for undefined symbols after layout_data which 
+   * can xdefine new symbols (e.g., etext)
+   *)
+  Check.check symbols;
+
   let symbols2, graph(* why modify that??*), text_size = 
     Layout5.layout_text symbols2 config.init_text graph in
 
@@ -778,7 +792,7 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
   match format with
   | Exec_file.A_out ->
       (* Header *)
-      A_out.write_header sizes entry_addr chan.oc;
+      A_out.write_header config.arch sizes entry_addr chan.oc;
 
       (* Text section *)
       cs |> List.iter (Endian.Little.output_32 chan.oc);
@@ -816,17 +830,26 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
 
 <<signature [[A_out.write_header]]>>=
 val write_header: 
+  Arch.t ->
   Exec_file.sections_size -> int (* entry_addr *) -> out_channel -> unit
 @
 
 <<function [[A_out.write_header]]>>=
 (* entry point *)
-let write_header (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
+let write_header (arch : Arch.t) (sizes : Exec_file.sections_size) (entry_addr : int) (chan : out_channel) : unit =
 
   (* a.out uses big-endian integers even on low-endian architectures *)
   let output_32 = Endian.Big.output_32 in
 
-  output_32 chan 0x647; (* Plan9 ARM magic *)
+  let magic =
+    match arch with
+    | Arch.Arm -> 0x647 (* Plan9 ARM magic *)
+    | Arch.Mips -> failwith "TODO: A_out magic for Mips"
+    | Arch.Riscv | Arch.Riscv64 | Arch.X86 | Arch.Amd64 | Arch.Arm64 ->
+        failwith (spf "arch not supported yet: %s" (Arch.to_string arch))
+  in
+
+  output_32 chan magic; 
   output_32 chan sizes.text_size;
   output_32 chan sizes.data_size;
   output_32 chan sizes.bss_size;
@@ -902,7 +925,7 @@ let check h =
   h |> Hashtbl.iter (fun symb v ->
     match v.section with
     | SXref -> failwith (spf "%s: not defined" (T.s_of_symbol symb))
-    | _ -> ()
+    | SText _ | SData _ -> ()
   )
 @
 
@@ -1123,8 +1146,7 @@ val rewrite:
 (* less: rewrite when profiling flag -p *)
 let rewrite (cg : T5.code_graph) : T5.code_graph =
   
-  (* a set *)
-  let is_leaf = Hashtbl.create 101 in
+  let is_leaf : A.global Hashtbl_.set = Hashtbl_.create () in
 
   (* step1: mark is leaf and delete NOPs *)
   cg |> T.iter_with_env (fun (curtext, prev_no_nop) n ->
@@ -1133,9 +1155,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
     | T.WORD _ -> (curtext, Some n)
-    | T.V instr ->
+    | T.V vinstr ->
         let env = 
-          match instr with
+          match vinstr with
           (* remove the NOP *)
           | A.NOP ->
               prev_no_nop |> Option.iter (fun prev ->
@@ -1144,10 +1166,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
         in
-        n.branch |> Option.iter (fun n2 ->
-          match n2.instr with
-          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
-          | _ -> ()
+        (* NOP and RET should not have branch set *)
+        n.branch |> Option.iter (fun _n2 ->
+          raise (Impossible "branch should not be set on virtual instr")
         );
         env
         
@@ -1159,10 +1180,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
               (curtext, Some n)
           | _ -> (curtext, Some n)
         in
-        (* need that also here now that I moved NOP handling in T.V case? *)
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
-          | T.V A.NOP -> n.branch <- find_first_no_nop_node n2.next 
+          | T.V A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env
@@ -1172,6 +1192,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
   cg |> T.iter_with_env (fun autosize_opt n ->
     match n.instr with
     | T.TEXT (global, attrs, size) ->
+        (* sanity checks *)
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
                          (A.s_of_global global));
@@ -1180,13 +1201,23 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         
         let autosize_opt = 
           if size == 0 && Hashtbl.mem is_leaf global
-          then None
+          then begin
+             Logs.debug (fun m -> m "found a leaf procedure without locals: %s" 
+                          (A.s_of_global global));
+             None
+          end
+          (* + 4 extra space for saving rLINK *)
           else Some (size + 4)
         in
         autosize_opt |> Option.iter (fun autosize ->
-          (* for layout text we need to set the final autosize *)
+          (* for layout text we need to set the final autosize so that
+           * size_of_instruction can get passed autosize and can correctly
+           * handle instructions using (FP) (the frame pointer).
+           *)
           n.instr <- T.TEXT (global, attrs, autosize);
-          (* MOVW.W R14, -autosize(SP) *)
+          (* decrement SP and save rLINK in one operation:
+           *   MOVW.W R14, -autosize(SP) 
+           *)
           let n1 = {
             instr = T.I (A5.MOVE (A.Word, Some A5.WriteAddressBase, 
                               A5.Imsr (A5.Reg A5.rLINK), 
@@ -1207,7 +1238,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           ((match autosize_opt with
            (* B (R14) *)
            | None -> A5.B (ref (A.IndirectJump (A5.rLINK)))
-           (* MOVW.P autosize(SP), PC *)
+           (* increment SP and restore rPC in one operation:
+            *    MOVW.P autosize(SP), PC 
+            *)
            | Some autosize -> A5.MOVE (A.Word, Some A5.PostOffsetWrite,
                                    A5.Indirect (A5.rSP, autosize), 
                                    A5.Imsr (A5.Reg A5.rPC))
@@ -1244,90 +1277,10 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
 \section{Laying out data: [[layout_data()]]}
 
 <<signature [[Layout5.layout_data]]>>=
-(* Returns symbol_table2 with SData2 and SBss2 entries populated.
- * Returns also data_size x bss_size.
- *)
-val layout_data: 
-  Types.symbol_table -> Types.data list -> 
-  Types.symbol_table2 * (int * int)
 @
 
 
 <<function [[Layout5.layout_data]]>>=
-let layout_data (symbols : T.symbol_table) (ds : T.data list) : T.symbol_table2 * (int * int)
-  =
-  let h2 = Hashtbl.create 101 in
-
-  (* a set *)
-  let is_data = Hashtbl.create 101 in
-
-  (* step0: identify Data vs Bss (and sanity check DATA instructions) *)
-  ds |> List.iter (function
-    | T.DATA (global, offset, size_slice, _v) ->
-        (* sanity checks *)
-        (match (T.lookup_global global symbols).T.section with
-        | T.SData size ->
-            if offset + size_slice > size
-            then failwith (spf "initialize bounds (%d): %s" size
-                             (A.s_of_global global))
-        | T.SText _ -> failwith (spf "initialize TEXT, not a GLOBL for %s"
-                                   (A.s_of_global global))
-        | T.SXref -> raise (Impossible "SXRef detected by Check.check")
-        );
-        (* use replace cos can have multiple DATA for the same GLOBL *)
-        Hashtbl.replace is_data (T.symbol_of_global global) true
-  );
-
-  (* step1: sanity check sizes and align *)
-  symbols |> Hashtbl.iter (fun (s, _) v ->
-    match v.T.section with
-    (* less: do the small segment optimisation *)
-    | T.SData size ->
-        if size <= 0
-        then failwith (spf "%s: no size" s);
-
-        if size mod 4 <> 0
-        then v.T.section <- T.SData (Int_.rnd size 4)
-    | _ -> ()
-  );
-
-  let orig = ref 0 in
-
-  (* step2: layout Data section *)
-  symbols |> Hashtbl.iter (fun symb v ->
-    match v.T.section with
-    | T.SData size when Hashtbl.mem is_data symb ->
-        Hashtbl.add h2 symb (T.SData2 (!orig, T.Data));
-        orig := !orig + size;
-    | _ -> ()
-  );
-  orig := Int_.rnd !orig 8;
-  let data_size = !orig in
-
-  (* step3: layout Bss section *)
-  symbols |> Hashtbl.iter (fun symb v ->
-    match v.T.section with
-    | T.SData size when not (Hashtbl.mem is_data symb) ->
-        Hashtbl.add h2 symb (T.SData2(!orig, T.Bss));
-        orig := !orig + size;
-    | _ -> ()
-  );
-  orig := Int_.rnd !orig 8;
-  let bss_size = !orig - data_size in
-
-  (* define special symbols *)
-  xdefine h2 symbols ("bdata"  , T.Public) (T.SData2 (0, T.Data));
-  xdefine h2 symbols ("edata"  , T.Public) (T.SData2 (data_size, T.Data));
-  xdefine h2 symbols ("end"    , T.Public) (T.SData2 (data_size + bss_size, T.Data));
-  xdefine h2 symbols ("setR12" , T.Public) (T.SData2 (0, T.Data));
-  (* This is incorrect but it will be corrected later. This has
-   * no consequence on the size of the code computed in layout_text
-   * because address resolution for procedures always use a literal
-   * pool.
-   *)
-  xdefine h2 symbols ("etext"  , T.Public) (T.SText2 0);
-
-  h2, (data_size, bss_size)
 @
 
 \section{Laying out code: [[layout_text()]]}
@@ -1360,7 +1313,8 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
     n.real_pc <- !pc;
 
     let size, poolopt = 
-      Codegen5.size_of_instruction symbols2 !autosize n 
+      Codegen5.size_of_instruction 
+          Codegen.{syms = symbols2; autosize = !autosize} n 
     in
     if size = 0
     then
@@ -1377,8 +1331,8 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
       );
     poolopt |> Option.iter (fun pool ->
       match pool with
-      | Codegen5.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
-      | Codegen5.PoolOperand imm_or_ximm ->
+      | Codegen.LPOOL -> Logs.err (fun m -> m "TODO: LPOOL")
+      | Codegen.PoolOperand imm_or_ximm ->
           let instr = T.WORD imm_or_ximm in
           (* less: check if already present in literal_pools *)
           let node = Types.{ instr = instr; next = None; branch = None;
@@ -1431,8 +1385,7 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : T5.co
 <<signature [[Codegen5.size_of_instruction]]>>=
 (* This is used for the code layout. *)
 val size_of_instruction: 
-  Types.symbol_table2 -> int (* autosize*) -> Types5.node -> 
-  int (* a multiple of 4 *) * pool option
+  Codegen.env -> Types5.node -> int (* a multiple of 4 *) * Codegen.pool option
 @
 
 
@@ -1441,12 +1394,6 @@ val size_of_instruction:
 \label{fig:special-symbols}
 
 <<function [[Layout5.xdefine]]>>=
-let xdefine (h2 : T.symbol_table2) (h : T.symbol_table) (symb : T.symbol) (v : T.section2) =
-  (* stricter: we do not accept previous def of special symbols *)
-  if Hashtbl.mem h symb || Hashtbl.mem h2 symb
-  then failwith (spf "special symbol %s is already defined" (fst symb));
-
-  Hashtbl.add h2 symb v
 @
 
 
@@ -1482,12 +1429,6 @@ let xdefine (h2 : T.symbol_table2) (h : T.symbol_table) (symb : T.symbol) (v : T
 \section{Additional data structures}
 
 <<type [[Codegen5.action]]>>=
-type action = {
-  (* a multiple of 4 *)
-  size: int;
-  pool: pool option;
-  binary: unit -> Bits.int32 list;
-}
 @
 
 <<type [[Codegen5.mem_opcode]]>>=
@@ -1516,7 +1457,10 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
 
   cg |> T.iter (fun n ->
 
-    let {size; binary; pool = _ }  = rules symbols2 !autosize config.init_data n in
+    let {size; binary; pool = _ }  = 
+        rules { Codegen.syms = symbols2; autosize = !autosize }
+        config.init_data n 
+    in
     let instrs = binary () in
 
     if n.real_pc <> !pc
@@ -1529,8 +1473,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s" (T5.show_instr n.instr));
-      Logs.app (fun m -> m "-->");
+      Logs.app (fun m -> m "%s -->" (T5.show_instr n.instr));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
         Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);
@@ -1570,7 +1513,7 @@ let error node s =
  * - rt = register to   (called Rd in refcard)
  * - r  = register middle (called Rn in refcard)
  *)
-let rules symbols2 autosize init_data node =
+let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   match node.instr with
   (* --------------------------------------------------------------------- *)
   (* Virtual *)
@@ -1581,7 +1524,6 @@ let rules symbols2 autosize init_data node =
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
-
   (* TEXT instructions were kept just for better error reporting localisation *)
   | T.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
@@ -1595,7 +1537,7 @@ let rules symbols2 autosize init_data node =
             (* stricter? what does 5l do with that? confusing I think *)
             error node "string not allowed with WORD; use DATA"
         | Address (Global (global, _offsetTODO)) -> 
-            let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+            let v = Hashtbl.find env.syms (T.symbol_of_global global) in
             (match v with
              | T.SText2 real_pc -> [ [(real_pc, 0)] ]
              | T.SData2 (offset, _kind) -> 
@@ -1812,7 +1754,7 @@ let rules symbols2 autosize init_data node =
         | Address (Global (global, _offsetTODO)) ->
             let from_part_when_small_offset_to_R12 =
               try 
-                let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+                let v = Hashtbl.find env.syms (T.symbol_of_global global) in
                 match v with
                 | T.SData2 (offset, _kind) ->
                     let final_offset = offset_to_R12 offset in
@@ -1861,7 +1803,7 @@ let rules symbols2 autosize init_data node =
             else error node "illegal combination"
         | Indirect _ | Entity _ ->
             let (rbase, offset) = 
-              base_and_offset_of_indirect node symbols2 autosize from in
+              base_and_offset_of_indirect node env.syms env.autosize from in
             if immoffset offset
             then
               { size = 4; pool = None; binary = (fun () -> 
@@ -1882,7 +1824,7 @@ let rules symbols2 autosize init_data node =
             error node "illegal to store in an (extended) immediate"
         | Indirect _ | Entity _ ->
             let (rbase, offset) = 
-              base_and_offset_of_indirect node symbols2 autosize dest in
+              base_and_offset_of_indirect node env.syms env.autosize dest in
             if immoffset offset
             then
               { size = 4; pool = None; binary = (fun () -> 
@@ -1927,8 +1869,8 @@ let rules symbols2 autosize init_data node =
 @
 
 <<function [[Codegen5.size_of_instruction]]>>=
-let size_of_instruction (symbols2 : T.symbol_table2) (autosize : int) (node : T5.node) : int (* a multiple of 4 *) * pool option =
-  let action  = rules symbols2 autosize None node in
+let size_of_instruction (env : Codegen.env) (node : T5.node) : int (* a multiple of 4 *) * pool option =
+  let action  = rules env None node in
   action.size, action.pool
 @
 

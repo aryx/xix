@@ -23,6 +23,10 @@ open Fpath_.Operators
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (*s: type [[Ar.caps]] *)
+(* Needs:
+ *  - open_in: for argv-derived object files
+ *  - open_out: for lib.oa output file
+ *)
 type caps = < Cap.open_in; Cap.open_out >
 (*e: type [[Ar.caps]] *)
 
@@ -64,25 +68,16 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (* for debugging *)
   let backtrace = ref false in
 
-  let options = [
+  let options = ([
     "-o", Arg.String (fun s -> outfile := Fpath.v s),
     spf " <file> output file (default is %s)" !!(!outfile);
     
     (* pad: I added that *)
-    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-    " verbose mode";
-    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
-    " guess what";
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-
-    (* pad: I added that *)
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
 
-  ] |> Arg.align
+  ] @ Logs_.cli_flags level) 
+   |> Arg.align
   in
   (try
     Arg.parse_argv argv options

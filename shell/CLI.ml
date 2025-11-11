@@ -210,7 +210,7 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     " print exit status after any command where the status is non-null";
     (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
-    (* TODO: move in a CLI_common.ml *)
+    (* alt: reuse Logs_.cli_flags *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose mode";
     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),

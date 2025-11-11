@@ -7,7 +7,7 @@ module A = Ast_asm
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of nm, the Plan 9 object/executable/library symbol inspector.
+(* An OCaml port of nm, the Plan 9 object/library/executable symbol inspector.
  * 'nm' probably stands for "names" or "name map".
  *
  * Main limitations compared to nm:
@@ -23,6 +23,10 @@ module A = Ast_asm
 (* Types, constants, and globals *)
 (*****************************************************************************)
 (*s: type [[Nm.caps]] *)
+(* Needs:
+ *  - open_in: should be only for argv-derived files
+ *  - stdout: the T|D|U ... output of nm
+ *)
 type caps = < Cap.open_in; Cap.stdout >
 (*e: type [[Nm.caps]] *)
 
@@ -89,9 +93,10 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let backtrace = ref false in
   let level = ref (Some Logs.Warning) in
 
-  let options = [
+  let options = ([
    (* TODO: support the many nm flags *)
-  ] |> Arg.align
+  ] @ Logs_.cli_flags level
+  ) |> Arg.align
   in
   (try
     Arg.parse_argv argv options

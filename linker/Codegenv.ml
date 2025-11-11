@@ -21,6 +21,7 @@ open Codegen
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
+type mem_opcode = LDR | STR
 
 (*****************************************************************************)
 (* Helpers *)
@@ -81,12 +82,20 @@ let opirr_arith_opcode (code : arith_opcode) : Bits.t =
   | SRA V -> op 7 3
   | _ -> failwith "TODO:opirr"
 
-let opirr_move2 (code : move2_size) : Bits.t =
-  match code with
-  | W__ -> sp 5 3
-  | V__ -> sp 7 7
-  | F__ -> sp 7 1
-  | D__ -> failwith "TODO: opirr_move2 D__ = ?"
+let opirr_mem (code : move2_size) (dir : mem_opcode) : Bits.t =
+  match code, dir with
+  | W__, STR  -> sp 5 3
+  | W__, LDR -> sp 4 3
+  | V__, STR -> sp 7 7
+  | V__, LDR -> sp 6 7
+  | F__, STR -> sp 7 1
+  | F__, LDR -> sp 6 1
+  | D__, _ -> failwith "TODO: opirr_mem D__ = ?"
+
+let opirr_jmp (is_jal : bool) : Bits.t =
+  if is_jal
+  then sp 0 3
+  else sp 0 2
 
 let oprrr_arith_opcode (code : arith_opcode) : Bits.t =
   match code with
@@ -128,9 +137,22 @@ let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
 let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(r1, 16); (r2, 21); (r3, 11)]
 
+let op_jmp (op : Bits.t) (i : int) : Bits.t =
+  op @ [(i land 0x3ffffff, 0)]
+
 (*****************************************************************************)
 (* More complex code generation helpers *)
 (*****************************************************************************)
+
+let gbranch_static (nsrc : Tv.node) is_jal : Bits.t =
+  match nsrc.branch with
+  | None -> raise (Impossible "resolving should have set the branch field")
+  | Some ndst ->
+      let dst_pc = ndst.real_pc in
+      if dst_pc mod 4 <> 0
+      then raise (Impossible "layout text wrong, not word aligned node");
+      let v = dst_pc lsr 2 in
+      op_jmp (opirr_jmp is_jal) v
 
 (*****************************************************************************)
 (* The rules! *)
@@ -225,13 +247,17 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* Control flow *)
     (* --------------------------------------------------------------------- *)
     (* case 18:	/* jmp [r1],0(r2) */ *)
-    | JMP { contents = (IndirectJump r2) } ->
+    | JMP { contents = (IndirectJump rt) } ->
         let r = rZERO in
         let op_jmp = op 1 0 in
         { size = 4; pool = None; binary = (fun () -> 
-           [ op_rrr op_jmp rZERO r2 r ]
+           [ op_rrr op_jmp rZERO rt r ]
          ) }
-
+    (* case 11:	/* jmp lbra */ *)
+    | JAL { contents = (Absolute _) } ->
+        { size = 4; pool = None; binary = (fun () ->
+          [ gbranch_static node true ]
+          ) }
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)
@@ -292,6 +318,15 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
 
     (* Load *)
 
+    (* case 8:		/* mov soreg, r ==> lw o(r) */ *)
+    | Move2 (W__, Left (Gen (Indirect (rf, offset))), Gen (GReg rt)) ->
+         { size = 4; pool = None; binary = (fun () ->
+           let r = rf in
+           (* TODO: regoff *)
+           let v = offset in
+           [ op_irr (opirr_mem W__ LDR) v r rt ]
+         ) }
+
     (* Store *)
 
     (* case 7:		/* mov r, soreg ==> sw o(r) */ *)
@@ -301,7 +336,7 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
           let r = rt in
           (* TODO: regoff *)
           let v = offset in
-          [ op_irr (opirr_move2 W__) v r rf ]
+          [ op_irr (opirr_mem W__ STR) v r rf ]
          ) }
 
     (* --------------------------------------------------------------------- *)

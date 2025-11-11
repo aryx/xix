@@ -260,7 +260,7 @@ datblk(long s, long n, int str)
 	(SP(2,1)|(20<<21)|((x)<<3)|((y)<<0))
 
 int
-asmout(Prog *p, Optab *o, int aflag)
+asmout(Prog *p, Optab *o)
 {
 	long v;
 	Prog *ct;
@@ -303,8 +303,6 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 6:		/* beq r1,[r2],sbra */
-		if(aflag)
-			return 0;
 		if(p->cond == P)
 			v = -4 >> 2;
 		else
@@ -323,12 +321,12 @@ asmout(Prog *p, Optab *o, int aflag)
 		//break;
 
 	case 8:		/* mov soreg, r ==> lw o(r) */
-		r = p->from.reg;
+		//r = p->from.reg;
 		if(r == NREG)
 			r = o->param;
-		v = regoff(&p->from);
-		o1 = OP_IRR(opirr(p->as+ALAST), v, r, p->to.reg);
-		break;
+		//v = regoff(&p->from);
+		//o1 = OP_IRR(opirr(p->as+ALAST), v, r, p->to.reg);
+		//break;
 
 	case 9:		/* asl r1,[r2],r3 */
 		r = p->reg;
@@ -350,13 +348,13 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 11:	/* jmp lbra */
-		if(aflag)
-			return 0;
 		if(p->cond == P)
 			v = p->pc >> 2;
 		else
-			v = p->cond->pc >> 2;
+			//v = p->cond->pc >> 2;
 		o1 = OP_JMP(opirr(p->as), v);
+
+
 		if(!debug['Y'] && p->link && p->cond && isnop(p->link)) {
 			nop.branch.count--;
 			nop.branch.outof--;
@@ -406,7 +404,7 @@ asmout(Prog *p, Optab *o, int aflag)
 		r = p->reg;
 		if(r == NREG)
 			r = o->param;
-		o1 = OP_RRR(oprrr(p->as), 0, p->to.reg, r);
+		//o1 = OP_RRR(oprrr(p->as), 0, p->to.reg, r);
 		break;
 
 	//case 19:	/* mov $lcon,r ==> lu+or */
@@ -611,15 +609,11 @@ asmout(Prog *p, Optab *o, int aflag)
 		break;
 
 	case 39:	/* rfe ==> jmp+rfe */
-		if(aflag)
-			return 0;
 		o1 = OP_RRR(oprrr(AJMP), 0, p->to.reg, REGZERO);
 		o2 = oprrr(p->as);
 		break;
 
 	case 40:	/* word */
-		if(aflag)
-			return 0;
 		o1 = regoff(&p->to);
 		break;
 
@@ -657,9 +651,6 @@ asmout(Prog *p, Optab *o, int aflag)
 		o1 = v;
 		break;
 	}
-
-	if(aflag)
-		return o1;
 
 	v = p->pc;
 
@@ -735,8 +726,8 @@ opirr(int a)
 	//case ALAST:	return SP(1,7); // abused for extra codes
     ...
 
-	case AJMP:	return SP(0,2);
-	case AJAL:	return SP(0,3);
+	//case AJMP:	return SP(0,2);
+	//case AJAL:	return SP(0,3);
 	case ABEQ:	return SP(0,4);
 	case ABNE:	return SP(0,5);
 
@@ -773,9 +764,9 @@ opirr(int a)
 	case AMOVBU+ALAST:	return SP(4,4);
 	case AMOVH+ALAST:	return SP(4,1);
 	case AMOVHU+ALAST:	return SP(4,5);
-	case AMOVW+ALAST:	return SP(4,3);
-	case AMOVV+ALAST:	return SP(6,7);
-	case AMOVF+ALAST:	return SP(6,1);
+	//case AMOVW+ALAST:	return SP(4,3);
+	//case AMOVV+ALAST:	return SP(6,7);
+	//case AMOVF+ALAST:	return SP(6,1);
 
 	case ASLLV+ALAST:	return OP(7,4);
 	case ASRLV+ALAST:	return OP(7,6);

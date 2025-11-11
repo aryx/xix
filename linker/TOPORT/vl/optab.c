@@ -58,6 +58,7 @@ Optab	optab[] =
 	{ AMOVBU,	C_REG,	C_NONE,	C_SOREG,	 7, 4, REGZERO },
 	{ AMOVWL,	C_REG,	C_NONE,	C_SOREG,	 7, 4, REGZERO },
 
+    // Store
 	{ AMOVW,	C_SEXT,	C_NONE,	C_REG,		 8, 4, REGSB },
 	{ AMOVV,	C_SEXT,	C_NONE,	C_REG,		 8, 4, REGSB },
 	{ AMOVB,	C_SEXT,	C_NONE,	C_REG,		 8, 4, REGSB },
@@ -149,7 +150,7 @@ Optab	optab[] =
 	{ ABLEZ,	C_REG,	C_NONE,	C_SBRA,		 6, 4, 0 },
 	{ ABFPT,	C_NONE,	C_NONE,	C_SBRA,		 6, 4, 0 },
 
-	{ AJMP,		C_NONE,	C_NONE,	C_LBRA,		11, 4, 0 },
+	//{ AJMP,		C_NONE,	C_NONE,	C_LBRA,		11, 4, 0 },
 	{ AJAL,		C_NONE,	C_NONE,	C_LBRA,		11, 4, 0 },
 
     ...

@@ -130,6 +130,28 @@ local cap_rules = [
       exclude: [] + exclude_dirs,
     },
   },
+  {
+    id: 'do-not-use-obj-magic',
+    # Cap.open_in
+    match: 'Obj.magic',
+    languages: ['ocaml'],
+    severity: 'ERROR',
+    message: |||
+       Do not use Obj.magic!
+    |||,
+    paths: {
+      exclude: [ 
+	"lib_core/commons/Dumper.ml", 
+	"lib_core/misc/camlinternalOO.ml",
+	"lib_core/parsing/Parsing.ml",
+	"lib_core/printing/Format.ml",
+	"lib_core/printing/Printexc.ml",
+	"lib_core/printing/Printf.ml",
+	"lib_parsing/Lexing_.ml",
+	"lib_parsing/Parsing_.ml",
+        ] + exclude_dirs,
+    },
+  },
 ];
 							   
 // ----------------------------------------------------------------------------

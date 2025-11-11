@@ -136,7 +136,7 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   (* --------------------------------------------------------------------- *)
   (* Virtual *)
   (* --------------------------------------------------------------------- *)
-   | T.V (A.RET | A.NOP) -> 
+   | T.Virt (A.RET | A.NOP) -> 
       raise (Impossible "rewrite should have transformed RET/NOP")
 
   (* --------------------------------------------------------------------- *)
@@ -176,6 +176,10 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)
 
+(* TODO ZCON case 1: 
+    | Move2 (W__, (Right (Int 0)), Gen (GReg rt)) ->
+*)
+
     (* Constant to register move (move but no memory involved) 
      * case 3:		/* mov $soreg, r ==> or/add $i,o,r */
     *)
@@ -183,7 +187,7 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
        (match constant_kind i with
        | Some i -> 
            { size = 4; pool = None; binary = (fun () ->
-               let r = R 0 in
+               let r = rZERO in
                (* TODO: can also be let op = OR if exactly ANDCON *)
                let op = ADD (W, U) in
                [ op_irr op i r rt ]
@@ -196,13 +200,17 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
     (* case 18:	/* jmp [r1],0(r2) */ *)
     | JMP { contents = (IndirectJump r2) } ->
-        let r = R 0 in
+        let r = rZERO in
         let op_jmp = op 1 0 in
-        { size = 4; pool = None; binary = (fun () -> [ op_rrr op_jmp (R 0) r2 r ]) }
+        { size = 4; pool = None; binary = (fun () -> [ op_rrr op_jmp rZERO r2 r ]) }
 
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)
+    | Move2 (W__, Right _ximm, Gen (GReg _reg)) ->
+        failwith "XXXX"
+(* TODO: copy some of Codegen5.ml code, until reach Global entity
+*)
 
     (* --------------------------------------------------------------------- *)
     (* System *)
@@ -264,8 +272,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s" (Tv.show_instr n.instr));
-      Logs.app (fun m -> m "-->");
+      Logs.app (fun m -> m "%s -->" (Tv.show_instr n.instr));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
         Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);

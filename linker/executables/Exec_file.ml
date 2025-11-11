@@ -27,13 +27,25 @@ type sections_size = {
 (* for ocaml-light to work without deriving *)
 let show_linker_config _ = "NO DERIVING"
 [@@warning "-32"]
+let show_profile_kind _ = "NO DERIVING"
+[@@warning "-32"]
 (*e: function [[Exec_file.show_linker_config]] *)
+
+type profile_kind =
+  (* count #times a function is called (use __mcount) *)
+  | ProfileCount
+  (* count the time spent in a function (use _profin()/profout()) *)
+  | ProfileTime
+  (* Profile and trace (use _tracin/_traceout) *)
+  | ProfileTrace
+[@@deriving show { with_path = false }]
 
 (*s: type [[Exec_file.linker_config]] *)
 type linker_config = {
   header_type: header_type;
   arch: Arch.t;
   header_size: int;
+  profile: profile_kind option;
 
   init_text: addr;
   init_round: int;

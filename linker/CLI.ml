@@ -40,7 +40,6 @@ module T = Types
  *  - when get undefined symbol, print function you are currently in!
  *    very useful to diagnose issue to give context and where to look for
  *  - library ranlib/symdef indexing
- *  - profiling -p
  *  - symbol table
  *  - program counter line table
  *  - nice error reporting for signature conflict, conflicting objects
@@ -84,6 +83,8 @@ let init_data  = ref None
 let init_entry = ref "_main"
 (*e: constant [[CLI.init_entry]] *)
 
+let profile : Exec_file.profile_kind option ref = ref None
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -94,6 +95,7 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
   | Some x, Some y -> failwith (spf "-D%d is ignored because of -R%d" x y)
   | _ -> ()
   );
+  let profile = !profile in
   match header_type with
   | "a.out" | "a.out_plan9" ->
       let header_size = A_out.header_size in
@@ -109,6 +111,7 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
         init_data = !init_data;
         init_round = (match !init_round with Some x -> x | None -> 4096);
         entry_point = !init_entry;
+        profile;
       }
       
   | "elf" | "elf_linux" ->
@@ -131,6 +134,7 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
         init_data = !init_data;
         init_round = (match !init_round with Some x -> x | None -> 4096);
         entry_point = !init_entry;
+        profile;
       }
   | s -> failwith (spf "unknown -H option, format not handled: %s" s)
 (*e: function [[CLI.config_of_header_type]] *)
@@ -150,6 +154,12 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   
   let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  let graph, new_data =
+    match config.profile with
+    | None -> graph, []
+    | Some kind -> Profile.rewrite kind symbols graph
+  in
+  let data = data @ new_data in
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
@@ -187,6 +197,12 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let (code, data, symbols) = Load.load caps files arch in
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  let graph, new_data =
+    match config.profile with
+    | None -> graph, []
+    | Some kind -> Profile.rewrite kind symbols graph
+  in
+  let data = data @ new_data in
   let graph = Rewritev.rewrite graph in
   let symbols2, (data_size, bss_size) = 
     Layout.layout_data symbols data in
@@ -267,6 +283,15 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     (* less: support integer value instead of string too? *)
     "-E", Arg.Set_string init_entry,
     spf " <str> entry point (default is %s)" !init_entry;
+
+    "-p", Arg.Unit (fun () -> profile := Some Exec_file.ProfileTime),
+    " profile time spent in a function";
+    "-p_time", Arg.Unit (fun () -> profile := Some Exec_file.ProfileTime),
+    " profile time spent in a function";
+    "-p_count", Arg.Unit (fun () -> profile := Some Exec_file.ProfileCount),
+    " profile number of times a function is called";
+    "-trace", Arg.Unit (fun () -> profile := Some Exec_file.ProfileTrace),
+    " profile and trace when a function is called";
 
     (* pad: I added that. alt: call Logs_.cli_flags level *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),

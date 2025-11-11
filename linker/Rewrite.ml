@@ -13,6 +13,6 @@ let rec find_first_no_nop_node nopt =
   | None -> failwith "could not find non NOP node for branch"
   | Some (n : 'a T.node) ->
       (match n.instr with
-      | T.V A.NOP -> find_first_no_nop_node n.next
+      | T.Virt A.NOP -> find_first_no_nop_node n.next
       | _ -> Some n
       )

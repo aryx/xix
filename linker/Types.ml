@@ -141,7 +141,7 @@ type 'instr code = ('instr code_bis * loc)
 and 'instr code_bis =
   | TEXT of A.global * A.attributes * int
   | WORD of A.ximm
-  | V of A.virtual_instr
+  | Virt of A.virtual_instr
   | I of 'instr
 (*e: type [[Types.code_bis]] *)
 [@@deriving show {with_path = false}]

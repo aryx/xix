@@ -89,7 +89,7 @@ let load (caps : < Cap.open_in; ..>) (xs : Fpath.t list) (arch: 'instr Arch_link
           )
 
       | A.Virtual instr ->
-          code |> Stack_.push (T.V instr, (file, line));
+          code |> Stack_.push (T.Virt instr, (file, line));
           incr pc;
       | A.Instr instr ->
 

@@ -278,7 +278,7 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   (* --------------------------------------------------------------------- *)
   (* Virtual *)
   (* --------------------------------------------------------------------- *)
-   | T.V (A.RET | A.NOP) -> 
+   | T.Virt (A.RET | A.NOP) -> 
       raise (Impossible "rewrite should have transformed RET/NOP")
 
   (* --------------------------------------------------------------------- *)
@@ -666,8 +666,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s" (T5.show_instr n.instr));
-      Logs.app (fun m -> m "-->");
+      Logs.app (fun m -> m "%s -->" (T5.show_instr n.instr));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
         Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);

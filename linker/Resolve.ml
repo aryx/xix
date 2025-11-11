@@ -33,7 +33,7 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
   nodes |> Array.iter (fun n ->
     match n.instr with
     | T.TEXT _ | T.WORD _ -> ()
-    | T.V (A.RET | A.NOP) -> ()
+    | T.Virt (A.RET | A.NOP) -> ()
     | T.I instr ->
         let resolve_branch_operand opd =
           match !opd with

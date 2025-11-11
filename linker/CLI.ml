@@ -119,8 +119,8 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
           | Some x -> x 
           | None -> 
               (match arch with
-              | Arm -> 0x8000
-              | Mips -> 0x400000
+              | Arch.Arm -> 0x8000
+              | Arch.Mips -> 0x400000
               | _ -> 
                 failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
               ) + header_size

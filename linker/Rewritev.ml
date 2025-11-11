@@ -26,7 +26,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
         Hashtbl.add is_leaf ent true;
         (Some ent, Some n)
     | T.WORD _ -> (curtext, Some n)
-    | T.V vinstr ->
+    | T.Virt vinstr ->
         let env = 
           match vinstr with
           (* remove the NOP *)
@@ -53,7 +53,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
         in
         n.branch |> Option.iter (fun n2 ->
           match n2.instr with
-          | T.V A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
+          | T.Virt A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
           | _ -> ()
         );
         env
@@ -109,7 +109,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
         autosize_opt
 
     | T.WORD _ -> autosize_opt
-    | T.V A.RET ->
+    | T.Virt A.RET ->
         (match autosize_opt with
         | None -> 
             (* JMP (RLINK) *)
@@ -140,7 +140,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
 
         );
         autosize_opt
-     | T.V A.NOP -> raise (Impossible "NOP was removed in step1")
+     | T.Virt A.NOP -> raise (Impossible "NOP was removed in step1")
 
      | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _ 
             | Move1 _ | Move2 _

@@ -1,4 +1,5 @@
 (*s: Arch_linker.ml *)
+open Common
 module A = Ast_asm
 
 (* Arch-specific methods allowing to factorize code in the linker
@@ -11,4 +12,22 @@ type 'instr t = {
   visit_globals_instr: (A.global -> unit) -> 'instr -> unit;
 }
 (*e: type [[Arch_linker.t]] *)
+
+(* Obj.magic!! Take care!! *)
+let of_arch (arch : Arch.t) : 'instr t =
+  match arch with
+  | Arch.Arm -> 
+     (* nosemgrep: do-not-use-obj-magic *)
+     Obj.magic {
+       branch_opd_of_instr = Ast_asm5.branch_opd_of_instr;
+       visit_globals_instr = Ast_asm5.visit_globals_instr;
+     }
+  | Arch.Mips -> 
+     (* nosemgrep: do-not-use-obj-magic *)
+     Obj.magic {
+       branch_opd_of_instr = Ast_asmv.branch_opd_of_instr;
+       visit_globals_instr = Ast_asmv.visit_globals_instr;
+     }
+  | _ -> failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
+
 (*e: Arch_linker.ml *)

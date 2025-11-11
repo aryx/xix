@@ -8,7 +8,6 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objec
 # Layout is after Codegen because it calls the Codegen.size_of_instruction
 SRC= Flags.ml\
  Types.ml Types5.ml Typesv.ml \
- Arch_linker.ml \
  Load.ml Check.ml Resolve.ml \
  Rewrite.ml Rewrite5.ml Rewritev.ml \
  Codegen.ml Codegen5.ml Codegenv.ml \

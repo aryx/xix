@@ -40,24 +40,39 @@ let usage =
 (*****************************************************************************)
 
 (*s: function [[Nm.visit_obj]] *)
-(* TODO: visit also the uses, not just the defs *)
 let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
   let (xs, _locs) = obj.prog in
-  (* visit the defs *)
+  (* step1: visit the defs *)
+  let defs = Hashtbl_.create () in
   xs |> List.iter (fun (line, _loc) ->
       match line with
       | Pseudo (TEXT (glob, _attrs, _int)) ->
+          Hashtbl.add defs glob true;
           let ident = A.s_of_global glob in
           Console.print caps (spf " T %s" ident)
       | Pseudo (GLOBL (glob, _attrs, _int)) ->
+          Hashtbl.add defs glob true;
           let ident = A.s_of_global glob in
           Console.print caps (spf " D %s" ident)
       | Pseudo (DATA _ | WORD _) -> ()
       | Virtual (RET | NOP) -> ()
-      (* TODO: visit the uses *)
+      (* will visit the uses below *)
       | Instr _x -> ()
       | LabelDef _ -> raise (Impossible "objects should not have LabelDef")
-  )
+  );
+  (* step2: visit the uses *)
+  let arch_methods : 'instr Arch_linker.t = Arch_linker.of_arch obj.arch in
+  xs |> List.iter (fun (line, _loc) ->
+      match line with
+      | Instr x ->
+          x |> arch_methods.visit_globals_instr (fun glob ->
+              if not (Hashtbl.mem defs glob)
+              then
+                let ident = A.s_of_global glob in
+                Console.print caps (spf " U %s" ident)
+          )
+      | Pseudo _ | Virtual _ | LabelDef _ -> ()
+   )
 
 (*e: function [[Nm.visit_obj]] *)
 

@@ -180,6 +180,15 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
     (* Arithmetics *)
     (* --------------------------------------------------------------------- *)
 
+    (* case 4:		/* add $scon,[r1],r2 */ *)
+    | Arith (ADD (W, S) as op, Imm i, r_opt, rt) ->
+        (* TODO: C_ADD0CON vs C_ANDCON generate different opcodes *)
+        { size = 4; pool = None; binary = (fun () ->
+            let v = i in
+            let r = r_opt ||| rt in
+            [ op_irr (opirr_arith_opcode op) v r rt ]
+         ) }
+
     (* case 1:		/* mov[v] r1,r2 ==> OR r1,r0,r2 */ where r1 = RO
      * which was C_ZCON case in vl span.c which was then accepted for C_REG
      * in span.c cmp() and so was matching the entry in optab.c:

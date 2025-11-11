@@ -33,6 +33,9 @@ module T = Types
  *    * use of marshalling for objects and libraries
  *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
  *      Load.load, Layout.layout_data, Profiling.rewrite
+ * - less error management code because some states are not possible by
+ *   construction (e.g., no need to check for sym in D_EXTERN C case because
+ *   Global in OCaml always has a symbol attached)
  * 
  * todo?:
  *  - -v is quite useful to debug "redefinition" linking errors

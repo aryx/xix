@@ -120,8 +120,8 @@ Optab	optab[] =
 
 	{ AMUL,		C_REG,	C_REG,	C_NONE,		22, 4, 0 },
 
-	{ AADD,		C_ADD0CON,C_REG,C_REG,		 4, 4, 0 },
-	{ AADD,		C_ADD0CON,C_NONE,C_REG,		 4, 4, 0 },
+	//{ AADD,		C_ADD0CON,C_REG,C_REG,		 4, 4, 0 },
+	//{ AADD,		C_ADD0CON,C_NONE,C_REG,		 4, 4, 0 },
 	{ AADD,		C_ANDCON,C_REG,	C_REG,		10, 8, 0 },
 	{ AADD,		C_ANDCON,C_NONE,C_REG,		10, 8, 0 },
 

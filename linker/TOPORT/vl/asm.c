@@ -290,13 +290,13 @@ asmout(Prog *p, Optab *o, int aflag)
 		///o1 = OP_IRR(opirr(a), v, r, p->to.reg);
 		break;
 
-	case 4:		/* add $scon,[r1],r2 */
-		v = regoff(&p->from);
-		r = p->reg;
-		if(r == NREG)
-			r = p->to.reg;
-		o1 = OP_IRR(opirr(p->as), v, r, p->to.reg);
-		break;
+	//case 4:		/* add $scon,[r1],r2 */
+		//v = regoff(&p->from);
+		//r = p->reg;
+		//if(r == NREG)
+		//	r = p->to.reg;
+		//o1 = OP_IRR(opirr(p->as), v, r, p->to.reg);
+		//break;
 
 	case 5:		/* syscall */
 		o1 = oprrr(p->as);

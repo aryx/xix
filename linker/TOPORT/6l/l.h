@@ -1,82 +1,19 @@
-// Inferno utils/6l/l.h
-// http://code.google.com/p/inferno-os/source/browse/utils/6l/l.h
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-#include	<u.h>
-#include	<libc.h>
-#include	<bio.h>
-#include	"../6l/6.out.h"
-
-#ifndef	EXTERN
-#define	EXTERN	extern
-#endif
-
 enum
 {
 	PtrSize = 8
 };
 
-#define	P		((Prog*)0)
-#define	S		((Sym*)0)
-#define	TNAME		(cursym?cursym->name:noname)
-#define	cput(c)\
-	{ *cbp++ = c;\
-	if(--cbc <= 0)\
-		cflush(); }
-
-typedef	struct	Adr	Adr;
-typedef	struct	Prog	Prog;
-typedef	struct	Sym	Sym;
-typedef	struct	Auto	Auto;
-typedef	struct	Optab	Optab;
-typedef	struct	Movtab	Movtab;
-typedef	struct	Reloc	Reloc;
-
 struct	Adr
 {
 	union
 	{
-		vlong	u0offset;
-		char	u0scon[8];
-		Prog	*u0cond;	/* not used, but should be D_BRANCH */
 		Ieee	u0ieee;
 		char	*u0sbig;
 	} u0;
-	Sym*	sym;
-	short	type;
 	char	index;
 	char	scale;
 };
 
-#define	offset	u0.u0offset
-#define	scon	u0.u0scon
-#define	cond	u0.u0cond
 #define	ieee	u0.u0ieee
 #define	sbig	u0.u0sbig
 
@@ -91,15 +28,14 @@ struct	Reloc
 
 struct	Prog
 {
-	Adr	from;
-	Adr	to;
-	Prog*	forwd;
+
 	Prog*	comefrom;
-	Prog*	link;
+
 	Prog*	pcond;	/* work on this */
+
 	vlong	pc;
 	int32	spadj;
-	int32	line;
+
 	short	as;
 	char	ft;	/* oclass cache */
 	char	tt;
@@ -121,15 +57,12 @@ struct	Auto
 };
 struct	Sym
 {
-	char*	name;
-	short	type;
-	short	version;
+
 	uchar	dupok;
 	uchar	reachable;
 	uchar	dynexport;
 	int32	sig;
-	Sym*	hash;	// in hash table
-	Sym*	next;	// in text or data list
+
 	vlong	value;
 	vlong	size;
 	Sym*	gotype;
@@ -151,7 +84,6 @@ struct	Sym
 };
 struct	Optab
 {
-	short	as;
 	uchar*	ytab;
 	uchar	prefix;
 	uchar	op[20];
@@ -173,22 +105,14 @@ enum
 	STEXT		= 1,
 	SELFDATA,
 	SRODATA,
-	SDATA,
-	SBSS,
 
-	SXREF,
 	SMACHO,
 	SFILE,
 	SCONST,
 	SFIXED,
 
-	NHASH		= 10007,
-	NHUNK		= 100000,
-	MINSIZ		= 8,
-	STRINGSZ	= 200,
 	MINLC		= 1,
 	MAXIO		= 8192,
-	MAXHIST		= 20,				/* limit of path elements for history symbols */
 
 	Yxxx		= 0,
 	Ynone,
@@ -289,24 +213,6 @@ enum
 	Maxand	= 10,		/* in -a output width of the byte codes */
 };
 
-EXTERN union
-{
-	struct
-	{
-		char	obuf[MAXIO];			/* output buffer */
-		uchar	ibuf[MAXIO];			/* input buffer */
-	} u;
-	char	dbuf[1];
-} buf;
-
-#define	cbuf	u.obuf
-#define	xbuf	u.ibuf
-
-#pragma	varargck	type	"A"	uint
-#pragma	varargck	type	"D"	Adr*
-#pragma	varargck	type	"P"	Prog*
-#pragma	varargck	type	"R"	int
-#pragma	varargck	type	"S"	char*
 
 EXTERN	int32	HEADR;
 EXTERN	int32	HEADTYPE;
@@ -314,7 +220,7 @@ EXTERN	vlong	INITDAT;
 EXTERN	int32	INITRND;
 EXTERN	vlong	INITTEXT;
 EXTERN	char*	INITENTRY;		/* entry point */
-EXTERN	Biobuf	bso;
+
 EXTERN	int	cbc;
 EXTERN	char*	cbp;
 EXTERN	char*	pcstr;
@@ -361,65 +267,41 @@ EXTERN	int	elfstrsize;
 EXTERN	char*	elfstrdat;
 EXTERN	int	elftextsh;
 
-extern	Optab	optab[];
-extern	Optab*	opindex[];
-extern	char*	anames[];
-
-int	Aconv(Fmt*);
-int	Dconv(Fmt*);
-int	Pconv(Fmt*);
-int	Rconv(Fmt*);
-int	Sconv(Fmt*);
-void	addhist(int32, int);
 void	addstackmark(void);
 Prog*	appendp(Prog*);
-void	asmb(void);
 void	asmdyn(void);
 void	asmins(Prog*);
 void	asmsym(void);
 void	asmelfsym(void);
-vlong	atolwhex(char*);
-Prog*	brchain(Prog*);
-Prog*	brloop(Prog*);
-void	buildop(void);
-void	cflush(void);
-Prog*	copyp(Prog*);
-vlong	cpos(void);
-double	cputime(void);
-void	datblk(int32, int32);
+
 void	deadcode(void);
-void	diag(char*, ...);
-void	dodata(void);
+
 void	doelf(void);
 void	domacho(void);
 
 void	dostkoff(void);
-vlong	entryvalue(void);
-void	follow(void);
-void	gethunk(void);
+
 void	gotypestrings(void);
-void	listinit(void);
-Sym*	lookup(char*, int);
-void	lputb(int32);
-void	lputl(int32);
+
 void	instinit(void);
 void	main(int, char*[]);
-void*	mysbrk(uint32);
+
 Prog*	newtext(Prog*, Sym*);
 void	nopout(Prog*);
 int	opsize(Prog*);
-void	patch(void);
-Prog*	prg(void);
+
+
 void	parsetextconst(vlong);
 int	relinv(int);
+
 vlong	rnd(vlong, vlong);
 void	span(void);
-void	undef(void);
+
 vlong	symaddr(Sym*);
 void	vputl(uint64);
 void	wputb(uint16);
 void	wputl(uint16);
-void	xdefine(char*, int, vlong);
+
 
 void	machseg(char*, vlong, vlong, vlong, vlong, uint32, uint32, uint32, uint32);
 void	machsymseg(uint32, uint32);
@@ -433,11 +315,6 @@ uint32	machheadr(void);
 #define	WPUT(a)	wputl(a)
 #define	VPUT(a)	vputl(a)
 
-#pragma	varargck	type	"D"	Adr*
-#pragma	varargck	type	"P"	Prog*
-#pragma	varargck	type	"R"	int
-#pragma	varargck	type	"A"	int
-#pragma	varargck	argpos	diag 1
 
 /* Used by ../ld/dwarf.c */
 enum

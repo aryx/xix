@@ -1,41 +1,4 @@
-// Inferno utils/6c/6.out.h
-// http://code.google.com/p/inferno-os/source/browse/utils/6c/6.out.h
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
 
-#define	NSYM	50
-#define	NSNAME	8
-
-#define NOPROF	(1<<0)
-#define DUPOK	(1<<1)
-#ifdef GOLANG
-#define NOSPLIT	(1<<2)
-#endif
 #define RODATA	(1<<3)
 
 /*
@@ -44,8 +7,6 @@
 
 enum	as
 {
-	AXXX,
-
 	AAAA,
 	AAAD,
 	AAAM,
@@ -392,12 +353,8 @@ enum	as
 	AFYL2X,
 	AFYL2XP1,
 
-	AEND,
 
-	ADYNT_,
-	AINIT_,
 
-	ASIGNAME,
 
 	/* extra 32-bit operations */
 	ACMPXCHGB,
@@ -735,7 +692,6 @@ enum	as
 
 	AMODE,
 
-	ALAST
 };
 
 enum
@@ -813,13 +769,6 @@ enum
 	D_NONE		= 111,
 
 	D_BRANCH	= 112,
-	D_EXTERN	= 113,
-	D_STATIC	= 114,
-	D_AUTO		= 115,
-	D_PARAM		= 116,
-	D_CONST		= 117,
-	D_FCONST	= 118,
-	D_SCONST	= 119,
 	D_ADDR		= 120,
 
 	D_FILE,
@@ -849,19 +798,3 @@ enum
 	FREGEXT		= D_X0+15	/* first external register */
 };
 
-/*
- * this is the ranlib header
- */
-#define	SYMDEF	"__.SYMDEF"
-
-/*
- * this is the simulated IEEE floating point
- */
-typedef	struct	ieee	Ieee;
-struct	ieee
-{
-	int32	l;	/* contains ls-man	0xffffffff */
-	int32	h;	/* contains sign	0x80000000
-				    exp		0x7ff00000
-				    ms-man	0x000fffff */
-};

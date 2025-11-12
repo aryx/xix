@@ -1,44 +1,7 @@
-// Inferno utils/6l/obj.c
-// http://code.google.com/p/inferno-os/source/browse/utils/6l/obj.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-// Reading object files.
-
-#define	EXTERN
-#include	"l.h"
-
 #include	"../ld/lib.h"
 #include	"../ld/elf_.h"
 #include	"../ld/macho.h"
 #include	"../ld/dwarf.h"
-
-#include	<ar.h>
 
 char	*noname		= "<none>";
 char	thechar		= '6';
@@ -71,65 +34,24 @@ main(int argc, char *argv[])
 {
 	int c;
 
-	Binit(&bso, 1, OWRITE);
-	cout = -1;
-	listinit();
-	memset(debug, 0, sizeof(debug));
-	nerrors = 0;
+
 	outfile = "6.out";
-	HEADTYPE = -1;
-	INITTEXT = -1;
-	INITDAT = -1;
-	INITRND = -1;
-	INITENTRY = 0;
+
 
 	ARGBEGIN {
 	default:
-		c = ARGC();
 		if(c == 'l')
 			usage();
- 		if(c >= 0 && c < sizeof(debug))
-			debug[c]++;
-		break;
-	case 'o': /* output to (next arg) */
-		outfile = EARGF(usage());
-		break;
-	case 'E':
-		INITENTRY = EARGF(usage());
-		break;
-	case 'H':
-		HEADTYPE = atolwhex(EARGF(usage()));
-		break;
 	case 'L':
 		Lflag(EARGF(usage()));
 		break;
-	case 'T':
-		INITTEXT = atolwhex(EARGF(usage()));
-		break;
-	case 'D':
-		INITDAT = atolwhex(EARGF(usage()));
-		break;
-	case 'R':
-		INITRND = atolwhex(EARGF(usage()));
-		break;
-#ifdef GOLANG
-	case 'r':
-		rpath = EARGF(usage());
-		break;
-#endif
 	case 'V':
 		print("%cl version %s\n", thechar, getgoversion());
 		errorexit();
 	} ARGEND
 
-	if(argc != 1)
-		usage();
 
 	libinit();
-#ifdef GOLANG
-	if(rpath == nil)
-		rpath = smprint("%s/pkg/%s_%s", goroot, goos, goarch);
-#endif
 
 	if(HEADTYPE == -1) {
 		HEADTYPE = 2;
@@ -231,42 +153,27 @@ main(int argc, char *argv[])
 
 	pcstr = "%.6llux ";
 	nuxiinit();
+
 	histgen = 0;
-	pc = 0;
+
 	dtype = 4;
-	version = 0;
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
 
 	addlibpath("command line", "command line", argv[0], "main");
 	loadlib();
 	deadcode();
-	patch();
-	follow();
+
+
 	doelf();
 	if(HEADTYPE == 6)
 		domacho();
-	dodata();
+
+
 	dostkoff();
 	paramspace = "SP";	/* (FP) now (SP) on output */
-	if(debug['p'])
-		if(debug['1'])
-			doprof1();
-		else
-			doprof2();
+
 	span();
 	reloc();
-	asmb();
-	undef();
-	if(debug['v']) {
-		Bprint(&bso, "%5.2f cpu time\n", cputime());
-		Bprint(&bso, "%d symbols\n", nsymbol);
-		Bprint(&bso, "%d sizeof adr\n", sizeof(Adr));
-		Bprint(&bso, "%d sizeof prog\n", sizeof(Prog));
-	}
-	Bflush(&bso);
 
-	errorexit();
 }
 
 static Sym*
@@ -700,36 +607,3 @@ eof:
 	diag("truncated object file: %s", pn);
 }
 
-Prog*
-prg(void)
-{
-	Prog *p;
-
-	p = mal(sizeof(*p));
-
-	*p = zprg;
-	return p;
-}
-
-Prog*
-copyp(Prog *q)
-{
-	Prog *p;
-
-	p = prg();
-	*p = *q;
-	return p;
-}
-
-Prog*
-appendp(Prog *q)
-{
-	Prog *p;
-
-	p = prg();
-	p->link = q->link;
-	q->link = p;
-	p->line = q->line;
-	p->mode = q->mode;
-	return p;
-}

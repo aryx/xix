@@ -1,41 +1,3 @@
-// Inferno utils/6l/asm.c
-// http://code.google.com/p/inferno-os/source/browse/utils/6l/asm.c
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-// Writing object files.
-
-#include	"l.h"
-#include	"../ld/lib.h"
-#include	"../ld/elf_.h"
-#include	"../ld/dwarf.h"
-#include	"../ld/macho.h"
-
 #define	Dbufslop	100
 
 #define PADDR(a)	((uint32)(a) & ~0x80000000)
@@ -47,68 +9,6 @@ char freebsddynld[] = "/libexec/ld-elf.so.1";
 
 char	zeroes[32];
 
-vlong
-entryvalue(void)
-{
-	char *a;
-	Sym *s;
-
-	a = INITENTRY;
-	if(*a >= '0' && *a <= '9')
-		return atolwhex(a);
-	s = lookup(a, 0);
-	if(s->type == 0)
-		return INITTEXT;
-	if(s->type != STEXT)
-		diag("entry not text: %s", s->name);
-	return s->value;
-}
-
-void
-wputl(uint16 w)
-{
-	cput(w);
-	cput(w>>8);
-}
-
-void
-wputb(uint16 w)
-{
-	cput(w>>8);
-	cput(w);
-}
-
-void
-lputb(int32 l)
-{
-	cput(l>>24);
-	cput(l>>16);
-	cput(l>>8);
-	cput(l);
-}
-
-void
-vputb(uint64 v)
-{
-	lputb(v>>32);
-	lputb(v);
-}
-
-void
-lputl(int32 l)
-{
-	cput(l);
-	cput(l>>8);
-	cput(l>>16);
-	cput(l>>24);
-}
-
-void
-vputl(uint64 v)
-{
-	lputl(v);
-	lputl(v>>32);
-}
 
 vlong
 datoff(vlong addr)
@@ -357,9 +257,6 @@ asmb(void)
 	ElfShdr *sh;
 	Section *sect;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f asmb\n", cputime());
-	Bflush(&bso);
 
 	segtext.fileoff = 0;
 	elftextsh = 0;

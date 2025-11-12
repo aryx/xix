@@ -305,8 +305,6 @@ double	cputime(void);
 void	datblk(long, long, int);
 void	diag(char*, ...);
 void	dodata(void);
-void	doprof1(void);
-void	doprof2(void);
 vlong	entryvalue(void);
 void	errorexit(void);
 void	exchange(Prog*);

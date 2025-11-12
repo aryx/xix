@@ -18,13 +18,7 @@ Dconv(Fmt *fp)
 			sprint(str, "%N(R%d)(CONST)", a, a->reg);
 		break;
 
-	case D_OREG:
-		if(a->reg != NREG)
-			sprint(str, "%N(R%d)", a, a->reg);
-		else
-			sprint(str, "%N", a);
-		break;
-
+    ...
 	case D_MREG:
 		sprint(str, "M%d", a->reg);
 		if(a->name != D_NONE || a->sym != S)

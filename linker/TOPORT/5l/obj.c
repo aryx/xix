@@ -56,12 +56,7 @@ main(int argc, char *argv[])
 
 	patch();
 
-	if(debug['p'])
-		if(debug['1'])
-			doprof1();
-		else
-			doprof2();
-
+    ...
 	doelf();
 	dodata();
 

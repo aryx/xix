@@ -193,52 +193,6 @@ ldobj(int f, long c, char *pn)
 
 
 void
-doprof1(void)
-{
-	for(...) {
-		if(p->as == ATEXT) {
-            ...
-			q = prg();
-			q->line = p->line;
-			q->pc = p->pc;
-			q->link = p->link;
-			p->link = q;
-			p = q;
-			p->as = AADDU;
-			p->from.type = D_CONST;
-			p->from.offset = 1;
-			p->to.type = D_REG;
-			p->to.reg = REGTMP;
-
-			q = prg();
-			q->line = p->line;
-			q->pc = p->pc;
-			q->link = p->link;
-			p->link = q;
-			p = q;
-			p->as = AMOVW;
-			p->from.type = D_REG;
-			p->from.reg = REGTMP;
-			p->to.type = D_OREG;
-			p->to.name = D_EXTERN;
-			p->to.sym = s;
-			p->to.offset = n*4 + 4;
-            ...
-		}
-	}
-
-	q->as = ADATA;
-	q->from.type = D_OREG;
-	q->from.name = D_EXTERN;
-	q->from.sym = s;
-	q->reg = 4;
-	q->to.type = D_CONST;
-	q->to.offset = n;
-    ...
-
-}
-
-void
 doprof2(void)
 {
 	Sym *s2, *s4;

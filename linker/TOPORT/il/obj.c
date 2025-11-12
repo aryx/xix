@@ -198,11 +198,7 @@ main(int argc, char *argv[])
 	if(firstp == P)
 		goto out;
 	patch();
-	if(debug['p'])
-		if(debug['1'])
-			doprof1();
-		else
-			doprof2();
+    ...
 	dodata();
 	follow();
 	if(firstp == P)
@@ -1210,11 +1206,6 @@ doprof1(void)
 	long n;
 	Prog *p, *q;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f profile 1\n", cputime());
-	Bflush(&bso);
-	s = lookup("__mcount", 0);
-	n = 1;
 	for(p = firstp->link; p != P; p = p->link) {
 		if(p->as == ATEXT) {
 			q = prg();

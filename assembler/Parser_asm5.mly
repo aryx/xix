@@ -147,9 +147,9 @@ label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
 /*(* I can't factorize in attr_opt; shift/reduce conflict with TC *)*/
 pseudo_instr:
  | TTEXT  global TC imm    
-     { TEXT  ($2, noattr, $4) }
+     { TEXT  ($2, default_attr, $4) }
  | TGLOBL global TC imm    
-     { GLOBL ($2, noattr, $4) }
+     { GLOBL ($2, default_attr, $4) }
 
  /*(* less: would be better to have mnemonics for attributes too *)*/
  | TTEXT global TC con TC imm

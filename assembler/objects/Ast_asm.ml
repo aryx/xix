@@ -187,9 +187,11 @@ type pseudo_instr =
 (*e: type [[Ast_asm.pseudo_instr]] *)
 
 (*s: type [[Ast_asm.attributes]] *)
-  and attributes = { dupok: bool; prof: bool }
+  and attributes = { dupok: bool; no_prof: bool }
 (*e: type [[Ast_asm.attributes]] *)
 [@@deriving show {with_path = false}]
+
+let default_attr = { dupok = false; no_prof = false }
 
 (* alt: move in arch-specific Ast_asmx.instr
  * alt: merge with pseudo_instr

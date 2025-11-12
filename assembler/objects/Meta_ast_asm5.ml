@@ -244,10 +244,10 @@ and vof_virtual_instr =
   | Store _ -> Ocaml.VSum (("Store ...", []))
   | Call _ -> Ocaml.VSum (("Call ...", []))
 
-and vof_attributes { dupok = v_dupok; prof = v_prof } =
+and vof_attributes { dupok = v_dupok; no_prof = v_prof } =
   let bnds = [] in
   let arg = Ocaml.vof_bool v_prof in
-  let bnd = ("prof", arg) in
+  let bnd = ("no_prof", arg) in
   let bnds = bnd :: bnds in
   let arg = Ocaml.vof_bool v_dupok in
   let bnd = ("dupok", arg) in let bnds = bnd :: bnds in Ocaml.VDict bnds

@@ -44,7 +44,10 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
   cg |> T.iter (fun n ->
       match n.instr with
       (* less: could look for NOPROF? *)
-      | T.TEXT (ent, _attrs, _size) ->
+      | T.TEXT (ent, (attrs : A.attributes), _size) ->
+          if attrs.no_prof
+          then ()
+          else begin
           data |> Stack_.push 
             (T.DATA (mcount, !count * 4, 4 (* size *), 
               A.Address (A.Global (ent, 0))));
@@ -68,6 +71,7 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
           n.next <- Some n1;
 
           count := !count + 2;
+          end
       | T.WORD _ | T.Virt _ | T.I _ ->
           ()
   );

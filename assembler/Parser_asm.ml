@@ -31,7 +31,6 @@ let error s =
 (*e: function [[Parser_asm.error]] *)
 
 (*s: constant [[Parser_asm.noattr]] *)
-let noattr = { dupok = false; prof = true }
 (*e: constant [[Parser_asm.noattr]] *)
 (*s: function [[Parser_asm.attributes_of_int]] *)
 (* less: should use keywords in Asm5 instead of abusing integers
@@ -39,13 +38,13 @@ let noattr = { dupok = false; prof = true }
  *)
 let attributes_of_int i =
    match i with 
-   | 0 -> noattr
+   | 0 -> default_attr
    (* NOPROF *)
-   | 1 -> { dupok = false; prof = false }
+   | 1 -> { dupok = false; no_prof = true }
    (* DUPOK *)
-   | 2 -> { dupok = true; prof = true }
+   | 2 -> { dupok = true; no_prof = false }
    (* both DUPOK and NOPROF *)
-   | 3 -> { dupok = true; prof = false }
+   | 3 -> { dupok = true; no_prof = true }
 
    | _ -> error (spf "unknown attribute or attribute combination: %d" i)
 (*e: function [[Parser_asm.attributes_of_int]] *)

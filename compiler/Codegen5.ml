@@ -164,7 +164,6 @@ let fake_loc = -1
 let fake_pc = -1
 (*e: constant [[Codegen5.fake_pc]] *)
 (*s: constant [[Codegen5.noattr]] *)
-let noattr = { prof = false; dupok = false}
 (*e: constant [[Codegen5.noattr]] *)
 
 (*s: function [[Codegen5.add_instr]] *)
@@ -934,7 +933,7 @@ let codegen (ids, structs, funcs) : Ast_asm5.program =
     let fullname = (name, 0) in
     let idinfo = Hashtbl.find env.ids fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)
-    let attrs = noattr in
+    let attrs = A.default_attr in
 
     let spc = add_fake_instr env "TEXT" in
     

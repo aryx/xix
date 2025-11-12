@@ -1,3 +1,8 @@
+//#LATER: falloc.c mod.c pass.c pobj.c sub.c were actually
+//# in ld/ in 9cc because forsyth probably thought they 
+//# were general enough and could be used by other linkers
+//# but for now I've added just in 7l/ 
+
 #include	"l.h"
 
 /*

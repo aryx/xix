@@ -27,7 +27,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
 - port va (plan9 mips assembler) to OCaml (now called ova)
 - partial port of vl (plan9 mips linker) to OCaml (now called ovl)
-  enough for exit_linux_mips.exe to work
+  enough for exit_linux_mips.exe and hellow_linux_mips.exe to work!
 - port ar to OCaml (v0) (now called oar)
 - port nm to OCaml (v0) (now called onm)
 
@@ -52,7 +52,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
   orio and o9 are not running yet, but at least they compile.
 
 ** devinfra
-- resume semgrep.jsonnet and semgrep.yml in CI
+- resume semgrep.jsonnet and semgrep.yml in CI and forbid more constructs
+  (e.g., Obj.magic, forbid more caps related functions)
 - use more Logs.info in 5a/5l/...
 
 ** docs

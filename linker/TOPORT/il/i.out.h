@@ -1,9 +1,4 @@
-#define	NSNAME	8
-#define	NSYM	50
 #define	NREG	32
-
-#define NOPROF	(1<<0)
-#define DUPOK	(1<<1)
 
 /*
  * Register roles are influenced by the compressed extension:
@@ -34,8 +29,6 @@ enum
 
 enum	as
 {
-	AXXX = 0,
-
 	/* processor instructions */
 	AADD,
 	AADDW,
@@ -176,8 +169,6 @@ enum	as
 	AMOVUVF,
 	AMOVVD,
 	AMOVUVD,
-
-	ALAST,
 };
 
 /* type/name */
@@ -205,21 +196,4 @@ enum
 	D_FILE,
 	D_FILE1,
 	D_VCONST,
-};
-
-/*
- * this is the ranlib header
- */
-#define	SYMDEF	"__.SYMDEF"
-
-/*
- * this is the simulated IEEE floating point
- */
-typedef	struct	ieee	Ieee;
-struct	ieee
-{
-	long	l;	/* contains ls-man	0xffffffff */
-	long	h;	/* contains sign	0x80000000
-				    exp		0x7ff00000
-				    ms-man	0x000fffff */
 };

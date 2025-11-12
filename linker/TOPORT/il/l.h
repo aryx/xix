@@ -1,28 +1,5 @@
-#include	<u.h>
-#include	<libc.h>
-#include	<bio.h>
-#include	"i.out.h"
-#include	"../ld/elf.h"
-
-//TODO? factorize with new ld/ld.h
-#ifndef	EXTERN
-#define	EXTERN	extern
-#endif
 
 typedef vlong xlong;
-
-typedef	struct	Adr	Adr;
-typedef	struct	Sym	Sym;
-typedef	struct	Autom	Auto;
-typedef	struct	Prog	Prog;
-typedef	struct	Optab	Optab;
-typedef	struct	Oprang	Oprang;
-typedef	uchar	Opcross[32][32];
-typedef	struct	Count	Count;
-
-#define	P		((Prog*)0)
-#define	S		((Sym*)0)
-#define	TNAME		(curtext&&curtext->from.sym?curtext->from.sym->name:noname)
 
 struct	Adr
 {
@@ -44,46 +21,25 @@ struct	Adr
 	char	class;
 };
 
-#define	offset	u0.u0offset
-#define	sval	u0.u0sval
-#define	ieee	u0.u0ieee
-#define	vval	u0.u0vval
-
-#define	autom	u1.u1autom
-#define	sym	u1.u1sym
-
 struct	Prog
 {
-	Adr	from;
-	Adr	to;
+    ...
 	union
 	{
 		long	u0regused;
 		Prog*	u0forwd;
 	} u0;
-	Prog*	cond;
-	Prog*	link;
-	long	pc;
-	long	line;
-	uchar	mark;
-	uchar	optab;
-	char	as;
-	char	reg;
 };
-#define	regused	u0.u0regused
-#define	forwd	u0.u0forwd
 
 struct	Sym
 {
-	char	*name;
-	short	type;
-	short	version;
 	short	become;
 	short	frame;
+
 	ushort	file;
-	long	value;
+
 	long	sig;
-	Sym*	link;
+
 };
 struct	Autom
 {
@@ -92,11 +48,10 @@ struct	Autom
 	long	aoffset;
 	short	type;
 };
+
 struct	Optab
 {
-	char	as;
-	char	a1;
-	char	a3;
+    ...
 	char	type;
 	char	ctype;
 	char	size;
@@ -104,11 +59,7 @@ struct	Optab
 	char	func3;
 	short	param;
 };
-struct	Oprang
-{
-	Optab*	start;
-	Optab*	stop;
-};
+
 struct	Count
 {
 	long	count;
@@ -118,19 +69,16 @@ struct	Count
 enum
 {
 	STEXT		= 1,
-	SDATA,
-	SBSS,
 	SDATA1,
-	SXREF,
 	SLEAF,
 	SFILE,
 	SCONST,
 	SSTRING,
 
 	C_NONE		= 0,
-	C_REG,
+    ...
 	C_CTLREG,
-	C_FREG,
+    ...
 	C_ZREG,
 	C_ZCON,
 	C_SCON,
@@ -168,12 +116,9 @@ enum
 
 	BIG		= 2048,
 	STRINGSZ	= 200,
-	NHASH		= 10007,
-	NHUNK		= 100000,
 	MINSIZ		= 64,
 	NENT		= 100,
 	MAXIO		= 8192,
-	MAXHIST		= 20,				/* limit of path elements for history symbols */
 };
 
 /* Major opcodes */
@@ -184,26 +129,16 @@ enum {
 	OBRANCH, OJALR,	    Ores_1,	OJAL,	   OSYSTEM, Ores_2, Ocustom_3,	O80b
 };
 
-EXTERN union
-{
-	struct
-	{
-		uchar	obuf[MAXIO];			/* output buffer */
-		uchar	ibuf[MAXIO];			/* input buffer */
-	} u;
-	char	dbuf[1];
-} buf;
-
-#define	cbuf	u.obuf
-#define	xbuf	u.ibuf
 
 EXTERN	long	HEADR;			/* length of header */
 EXTERN	int	HEADTYPE;		/* type of header */
+
 EXTERN	xlong	INITDAT;		/* data location */
 EXTERN	xlong	INITRND;		/* data round above text location */
 EXTERN	xlong	INITTEXT;		/* text location */
 EXTERN	xlong	INITTEXTP;		/* text location (physical) */
 EXTERN	char*	INITENTRY;		/* entry point */
+
 EXTERN	long	autosize;
 EXTERN	Biobuf	bso;
 EXTERN	long	bsssize;
@@ -269,91 +204,5 @@ EXTERN	struct
 	Count	jump;
 } nop;
 
-extern	char*	anames[];
-extern	Optab	optab[];
-extern	char	thechar;
-
-#pragma	varargck	type	"A"	int
-#pragma	varargck	type	"D"	Adr*
-#pragma	varargck	type	"N"	Adr*
-#pragma	varargck	type	"P"	Prog*
-#pragma	varargck	type	"S"	char*
-
-#pragma	varargck	argpos	diag 1
-
-int	Aconv(Fmt*);
-int	Dconv(Fmt*);
-int	Nconv(Fmt*);
-int	Pconv(Fmt*);
-int	Sconv(Fmt*);
-int	aclass(Adr*);
-void	addhist(long, int);
-void	append(Prog*, Prog*);
-void	asmb(void);
 int	asmcompressed(Prog*, Optab*, int, int);
-void	asmlc(void);
-int	asmout(Prog*, Optab*, int);
-void	asmsym(void);
-vlong	atolwhex(char*);
-Prog*	brloop(Prog*);
-void	buildop(void);
-void	buildrep(int, int);
-void	cflush(void);
-int	cmp(int, int);
-int	compound(Prog*);
-double	cputime(void);
-void	datblk(long, long, int);
-void	diag(char*, ...);
-void	dodata(void);
-vlong	entryvalue(void);
-void	errorexit(void);
-void	exchange(Prog*);
-int	find1(long, int);
-void	follow(void);
-void	gethunk(void);
-void	histtoauto(void);
-double	ieeedtod(Ieee*);
-long	ieeedtof(Ieee*);
-int	isnop(Prog*);
-void	ldobj(int, long, char*);
-void	loadlib(void);
-void	listinit(void);
-Sym*	lookup(char*, int);
-void	cput(int);
-void	llput(vlong);
-void	llputl(vlong);
-void	lput(long);
-void	lputl(long);
-void	bput(long);
-void	mkfwd(void);
-void*	mysbrk(ulong);
-void	names(void);
-void	nocache(Prog*);
-void	noops(void);
-void	nuxiinit(void);
-void	objfile(char*);
-int	ocmp(void*, void*);
-long	opirr(int);
-Optab*	oplook(Prog*);
-long	oprrr(int);
-void	patch(void);
-void	prasm(Prog*);
-void	prepend(Prog*, Prog*);
-Prog*	prg(void);
-int	pseudo(Prog*);
-void	putsymb(char*, int, vlong, int);
-long	regoff(Adr*);
-int		classreg(Adr*);
-int	relinv(int);
-int relrev(int);
-vlong	rnd(vlong, vlong);
-void	span(void);
-void	strnput(char*, int);
-void	undef(void);
-int	vconshift(vlong);
-void	wput(long);
-void	wputl(long);
-void	xdefine(char*, int, long);
-void	xfol(Prog*);
-void	xfol(Prog*);
-void	nopstat(char*, Count*);
+...

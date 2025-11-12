@@ -15,10 +15,6 @@ noops(void)
 	 * expand BECOME pseudo
 	 */
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f noops\n", cputime());
-	Bflush(&bso);
-
 	curframe = 0;
 	curbecome = 0;
 	maxbecome = 0;

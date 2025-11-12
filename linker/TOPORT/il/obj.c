@@ -22,18 +22,6 @@ main(int argc, char *argv[])
 	int c;
 	char *a;
 
-	Binit(&bso, 1, OWRITE);
-	cout = -1;
-	listinit();
-	outfile = 0;
-	nerrors = 0;
-	curtext = P;
-	HEADTYPE = -1;
-	INITTEXT = -1;
-	INITTEXTP = -1;
-	INITDAT = -1;
-	INITRND = -1;
-	INITENTRY = 0;
 	ptrsize = 4;
 
 	a = strrchr(argv[0], '/');
@@ -43,73 +31,25 @@ main(int argc, char *argv[])
 		a++;
 	if(*a == 'j')
 		thechar = 'j';
+
 	ARGBEGIN {
 	default:
-		c = ARGC();
-		if(c >= 0 && c < sizeof(debug))
-			debug[c]++;
-		break;
-	case 'o':
-		outfile = ARGF();
-		break;
-	case 'E':
-		a = ARGF();
-		if(a)
-			INITENTRY = a;
-		break;
-	case 'T':
-		a = ARGF();
-		if(a)
-			INITTEXT = atolwhex(a);
-		break;
 	case 'P':
 		a = ARGF();
 		if(a)
 			INITTEXTP = atolwhex(a);
 		break;
-	case 'D':
-		a = ARGF();
-		if(a)
-			INITDAT = atolwhex(a);
-		break;
-	case 'R':
-		a = ARGF();
-		if(a)
-			INITRND = atolwhex(a);
-		break;
-	case 'H':
-		a = ARGF();
-		if(a)
-			HEADTYPE = atolwhex(a);
-		break;
 	} ARGEND
 
-	USED(argc);
 
-	if(*argv == 0) {
-		diag("usage: %cl [-options] objects", thechar);
-		errorexit();
-	}
 	if(debug['j'])
 		thechar = 'j';
 	if(thechar == 'j'){
 		thestring = "riscv64";
 		ptrsize = 8;
 	}
-	if(HEADTYPE == -1) {
-        // Default to ELF Linux
-        HEADTYPE = 7;
-	}
+
 	switch(HEADTYPE) {
-	case 0:	/* headerless */
-		HEADR = 0;
-		if(INITTEXT == -1)
-			INITTEXT = 0;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 8;
-		break;
 	case 2:	/* plan 9 */
 		HEADR = 32L;
 		if(INITTEXT == -1)
@@ -130,126 +70,19 @@ main(int argc, char *argv[])
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	default:
-		diag("unknown -H option");
-		errorexit();
-
 	}
-	if (INITTEXTP == -1)
-		INITTEXTP = INITTEXT;
-	if(INITDAT != 0 && INITRND != 0)
-		print("warning: -D0x%llux is ignored because of -R0x%llux\n",
-			INITDAT, INITRND);
-	if(debug['v'])
-		Bprint(&bso, "HEADER = -H0x%d -T0x%llux -D0x%llux -R0x%llux\n",
-			HEADTYPE, INITTEXT, INITDAT, INITRND);
-	Bflush(&bso);
-	zprg.as = AGOK;
-	zprg.reg = NREG;
-	zprg.from.name = D_NONE;
-	zprg.from.type = D_NONE;
-	zprg.from.reg = NREG;
-	zprg.to = zprg.from;
+
 	nopalign = zprg;
 	nopalign.as = AADD;
 	nopalign.from.type = D_CONST;
 	nopalign.to.type = D_REG;
 	nopalign.to.reg = REGZERO;
 	nopalign.reg = REGZERO;
-	buildop();
-	histgen = 0;
-	textp = P;
-	datap = P;
-	pc = 0;
+
 	dtype = 4;
-	if(outfile == 0) {
-		static char name[20];
 
-		snprint(name, sizeof name, "%c.out", thechar);
-		outfile = name;
-	}
-	cout = create(outfile, 1, 0775);
-	if(cout < 0) {
-		diag("%s: cannot create", outfile);
-		errorexit();
-	}
-	nuxiinit();
-
-	version = 0;
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
-	firstp = prg();
-	lastp = firstp;
-
-	if(INITENTRY == 0) {
-		INITENTRY = "_main";
-		if(debug['p'])
-			INITENTRY = "_mainp";
-		if(!debug['l'])
-			lookup(INITENTRY, 0)->type = SXREF;
-	} else
-		lookup(INITENTRY, 0)->type = SXREF;
-
-	while(*argv)
-		objfile(*argv++);
-	if(!debug['l'])
-		loadlib();
-	firstp = firstp->link;
-	if(firstp == P)
-		goto out;
-	patch();
     ...
-	dodata();
-	follow();
-	if(firstp == P)
-		goto out;
-	noops();
-	span();
-	asmb();
-	undef();
-
-out:
-	if(debug['v']) {
-		Bprint(&bso, "%5.2f cpu time\n", cputime());
-		Bprint(&bso, "%ld memory used\n", thunk);
-		Bprint(&bso, "%d sizeof adr\n", sizeof(Adr));
-		Bprint(&bso, "%d sizeof prog\n", sizeof(Prog));
-	}
-	Bflush(&bso);
-	errorexit();
-}
-
-void
-loadlib(void)
-{
-	int i;
-	long h;
-	Sym *s;
-
-loop:
-	xrefresolv = 0;
-	for(i=0; i<libraryp; i++) {
-		if(debug['v'])
-			Bprint(&bso, "%5.2f autolib: %s (from %s)\n", cputime(), library[i], libraryobj[i]);
-		objfile(library[i]);
-	}
-	if(xrefresolv)
-	for(h=0; h<nelem(hash); h++)
-	for(s = hash[h]; s != S; s = s->link)
-		if(s->type == SXREF)
-			goto loop;
-}
-
-void
-errorexit(void)
-{
-
-	if(nerrors) {
-		if(cout >= 0)
-			remove(outfile);
-		exits("error");
-	}
-	exits(0);
+	nuxiinit();
 }
 
 void

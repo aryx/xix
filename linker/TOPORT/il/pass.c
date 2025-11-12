@@ -10,9 +10,6 @@ dodata(void)
 	int odd;
 	long long vv;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f dodata\n", cputime());
-	Bflush(&bso);
 	for(p = datap; p != P; p = p->link) {
 		s = p->from.sym;
 		if(p->as == ADYNT || p->as == AINIT)
@@ -241,23 +238,9 @@ dodata(void)
 	}
 	datsize += orig;
 	xdefine("setSB", SDATA, 0L+BIG);
-	xdefine("bdata", SDATA, 0L);
-	xdefine("edata", SDATA, datsize);
-	xdefine("end", SBSS, datsize+bsssize);
-	xdefine("etext", STEXT, 0L);
+    ...
 }
 
-void
-undef(void)
-{
-	int i;
-	Sym *s;
-
-	for(i=0; i<NHASH; i++)
-	for(s = hash[i]; s != S; s = s->link)
-		if(s->type == SXREF)
-			diag("%s: not defined", s->name);
-}
 
 int
 relinv(int a)
@@ -286,21 +269,6 @@ relrev(int a)
 	case ABLEU:	return ABGEU;
 	}
 	return 0;
-}
-
-void
-follow(void)
-{
-	if(debug['v'])
-		Bprint(&bso, "%5.2f follow\n", cputime());
-	Bflush(&bso);
-
-	firstp = prg();
-	lastp = firstp;
-	xfol(textp);
-
-	firstp = firstp->link;
-	lastp->link = P;
 }
 
 void
@@ -403,9 +371,6 @@ patch(void)
 	Sym *s;
 	int a;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f patch\n", cputime());
-	Bflush(&bso);
 	mkfwd();
 	s = lookup("exit", 0);
 	vexit = s->value;
@@ -456,113 +421,7 @@ patch(void)
 	}
 }
 
-#define	LOG	5
-void
-mkfwd(void)
-{
-	Prog *p;
-	long dwn[LOG], cnt[LOG], i;
-	Prog *lst[LOG];
 
-	for(i=0; i<LOG; i++) {
-		if(i == 0)
-			cnt[i] = 1; else
-			cnt[i] = LOG * cnt[i-1];
-		dwn[i] = 1;
-		lst[i] = P;
-	}
-	i = 0;
-	for(p = firstp; p != P; p = p->link) {
-		if(p->as == ATEXT)
-			curtext = p;
-		i--;
-		if(i < 0)
-			i = LOG-1;
-		p->forwd = P;
-		dwn[i]--;
-		if(dwn[i] <= 0) {
-			dwn[i] = cnt[i];
-			if(lst[i] != P)
-				lst[i]->forwd = p;
-			lst[i] = p;
-		}
-	}
-}
-
-Prog*
-brloop(Prog *p)
-{
-	Prog *q;
-	int c;
-
-	for(c=0; p!=P;) {
-		if(p->as != AJMP)
-			return p;
-		q = p->cond;
-		if(q <= p) {
-			c++;
-			if(q == p || c > 5000)
-				break;
-		}
-		p = q;
-	}
-	return P;
-}
-
-xlong
-atolwhex(char *s)
-{
-	xlong n;
-	int f;
-
-	n = 0;
-	f = 0;
-	while(*s == ' ' || *s == '\t')
-		s++;
-	if(*s == '-' || *s == '+') {
-		if(*s++ == '-')
-			f = 1;
-		while(*s == ' ' || *s == '\t')
-			s++;
-	}
-	if(s[0]=='0' && s[1]){
-		if(s[1]=='x' || s[1]=='X'){
-			s += 2;
-			for(;;){
-				if(*s >= '0' && *s <= '9')
-					n = n*16 + *s++ - '0';
-				else if(*s >= 'a' && *s <= 'f')
-					n = n*16 + *s++ - 'a' + 10;
-				else if(*s >= 'A' && *s <= 'F')
-					n = n*16 + *s++ - 'A' + 10;
-				else
-					break;
-			}
-		} else
-			while(*s >= '0' && *s <= '7')
-				n = n*8 + *s++ - '0';
-	} else
-		while(*s >= '0' && *s <= '9')
-			n = n*10 + *s++ - '0';
-	if(f)
-		n = -n;
-	return n;
-}
-
-vlong
-rnd(vlong v, vlong r)
-{
-	vlong c;
-
-	if(r <= 0)
-		return v;
-	v += r - 1;
-	c = v % r;
-	if(c < 0)
-		c += r;
-	v -= c;
-	return v;
-}
 
 int
 vconshift(vlong constant)

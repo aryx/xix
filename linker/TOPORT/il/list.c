@@ -1,22 +1,5 @@
 #include "l.h"
 
-void
-listinit(void)
-{
-
-	fmtinstall('A', Aconv);
-	fmtinstall('D', Dconv);
-	fmtinstall('P', Pconv);
-	fmtinstall('S', Sconv);
-	fmtinstall('N', Nconv);
-}
-
-void
-prasm(Prog *p)
-{
-	print("%P\n", p);
-}
-
 int
 Pconv(Fmt *fp)
 {

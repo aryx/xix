@@ -9,10 +9,6 @@ span(void)
 	int m, bflag, i, spass;
 	long c, otxt, v;
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f span\n", cputime());
-	Bflush(&bso);
-
 	bflag = 0;
 	c = 0;
 	otxt = c;
@@ -168,17 +164,6 @@ span(void)
 	Bflush(&bso);
 }
 		
-void
-xdefine(char *p, int t, long v)
-{
-	Sym *s;
-
-	s = lookup(p, 0);
-	if(s->type == 0 || s->type == SXREF) {
-		s->type = t;
-		s->value = v;
-	}
-}
 
 long
 regoff(Adr *a)
@@ -343,60 +328,6 @@ aclass(Adr *a)
 	return C_GOK;
 }
 
-Optab*
-oplook(Prog *p)
-{
-	int a1, a2, a3, r;
-	char *c1, *c3;
-	Optab *o, *e;
-
-	a1 = p->optab;
-	if(a1)
-		return optab+(a1-1);
-	a1 = p->from.class;
-	if(a1 == 0) {
-		a1 = aclass(&p->from) + 1;
-		p->from.class = a1;
-	}
-	a1--;
-	a3 = p->to.class;
-	if(a3 == 0) {
-		a3 = aclass(&p->to) + 1;
-		p->to.class = a3;
-	}
-	a3--;
-	a2 = C_NONE;
-	if(p->reg != NREG)
-		a2 = C_REG;
-	r = p->as;
-	o = oprange[r].start;
-	if(o == 0) {
-		a1 = opcross[repop[r]][a1][a3];
-		if(a1) {
-			p->optab = a1+1;
-			return optab+a1;
-		}
-		o = oprange[r].stop; /* just generate an error */
-		a1 = p->from.class - 1;
-	}
-	e = oprange[r].stop;
-
-	c1 = xcmp[a1];
-	c3 = xcmp[a3];
-	for(; o<e; o++)
-		if(c1[o->a1])
-		if(c3[o->a3]) {
-			p->optab = (o-optab)+1;
-			return o;
-		}
-	diag("illegal combination %A %d %d %d",
-		p->as, a1, a2, a3);
-	if(!debug['a'])
-		prasm(p);
-	o = optab;
-	p->optab = (o-optab)+1;
-	return o;
-}
 
 int
 cmp(int a, int b)
@@ -451,75 +382,4 @@ cmp(int a, int b)
 		break;
 	}
 	return 0;
-}
-
-int
-ocmp(void *a1, void *a2)
-{
-	Optab *p1, *p2;
-	int n;
-
-	p1 = (Optab*)a1;
-	p2 = (Optab*)a2;
-	n = p1->as - p2->as;
-	if(n)
-		return n;
-	n = p1->a1 - p2->a1;
-	if(n)
-		return n;
-	n = p1->a3 - p2->a3;
-	if(n)
-		return n;
-	return 0;
-}
-
-void
-buildop(void)
-{
-	int i, n, r;
-
-	for(i=0; i<32; i++)
-		for(n=0; n<32; n++)
-			xcmp[i][n] = cmp(n, i);
-	for(n=0; optab[n].as != AXXX; n++)
-		;
-	qsort(optab, n, sizeof(optab[0]), ocmp);
-	for(i=0; i<n; i++) {
-		r = optab[i].as;
-		oprange[r].start = optab+i;
-		while(optab[i].as == r)
-			i++;
-		oprange[r].stop = optab+i;
-		i--;
-	}
-
-	buildrep(1, AMOVW);
-}
-
-void
-buildrep(int x, int as)
-{
-	Opcross *p;
-	Optab *e, *s, *o;
-	int a1, a3, n;
-
-	if(C_GOK >= 32 || x >= nelem(opcross)) {
-		diag("assumptions fail in buildrep");
-		errorexit();
-	}
-	repop[as] = x;
-	p = (opcross + x);
-	s = oprange[as].start;
-	e = oprange[as].stop;
-	for(o=e-1; o>=s; o--) {
-		n = o-optab;
-		for(a1=0; a1<32; a1++) {
-			if(!xcmp[a1][o->a1])
-				continue;
-			for(a3=0; a3<32; a3++)
-				if(xcmp[a3][o->a3])
-					(*p)[a1][a3] = n;
-		}
-	}
-	oprange[as].start = 0;
 }

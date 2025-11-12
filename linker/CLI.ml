@@ -32,7 +32,7 @@ module T = Types
  * - greater code reuse across all linkers thanks to:
  *    * use of marshalling for objects and libraries
  *    * factorized analysis such as Resolve.build_graph, Datagen.gen,
- *      Load.load, Layout.layout_data, Profiling.rewrite
+ *      Load.load, Layout.layout_data, Profile.rewrite
  * - less error management code because some states are not possible by
  *   construction (e.g., no need to check for sym in D_EXTERN C case because
  *   Global in OCaml always has a symbol attached)

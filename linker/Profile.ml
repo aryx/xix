@@ -7,12 +7,16 @@ module T = Types
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Profiling instrumentation, either profiling the count or time spent in
- * functions (see also Exec_file.profile_kind).
+(* Profiling instrumentation.
  *
- * As opposed to 5l/vl/... we are able to factorize code across archs
- * by introducing new virtual instructions in Ast_asm.ml: Load, Store, Add,
- * and Call.
+ * Depending on profile_kind it can either profile the number of times
+ * a function is called or the time spent in a functions (see also
+ * Exec_file.profile_kind).
+ *
+ * Better than 5l/vl/il:
+ *  - As opposed to 5l/vl/... we are able to factorize code across archs
+ *    by introducing new virtual instructions in Ast_asm.ml: Load, Store, Add,
+ *    and Call!!
  *
  * TODO: handle ProfileTime and Trace 
  *)

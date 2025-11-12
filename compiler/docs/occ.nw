@@ -75,10 +75,15 @@ Documentation License, Version 1.3.
 %******************************************************************************
 \chapter{Core Data Structures}
 %******************************************************************************
+
 \section{Abstract syntax tree: [[Node]]}
+
 \section{[[Type]] system}
+
 \section{[[Storage_class]]}
+
 \section{Node and type attributes}
+
 \section{[[Sym]]bols and [[hash]] table}
 \subsection{[[Sym]]}
 \subsection{[[hash]]}
@@ -86,17 +91,25 @@ Documentation License, Version 1.3.
 \subsection{Identifier symbols}
 \subsection{Tag symbols}
 \subsection{Other symbols}
+
 \section{Declarations, namespaces, and scope: [[Decl]]}
+
 \section{[[Token]]}
+
 \section{Assembly [[Instr]]uction output}
 
 %******************************************************************************
 \chapter{[[main()]]}
 %******************************************************************************
+
 \section{Arguments processing}
+
 \section{[[compile()]]}
+
 \section{[[gclean()]]}
+
 \section{Initializations}
+
 \subsection{[[tinit()]]}
 \subsection{[[cinit()]]}
 \subsection{[[ginit()]]}
@@ -105,6 +118,7 @@ Documentation License, Version 1.3.
 %******************************************************************************
 \chapter{Input}
 %******************************************************************************
+
 \section{Files management: [[iostack]]}
 \section{Buffer management: [[fi]]}
 \section{[[GETC()]]}
@@ -112,7 +126,6 @@ Documentation License, Version 1.3.
 %******************************************************************************
 \chapter{Lexing}
 %******************************************************************************
-
 
 <<Lexer.mll>>=
 {
@@ -422,44 +435,74 @@ and comment = parse
 
 \section{[[yylex()]]}
 \section{Peek, seek, and look ahead}
+
 \section{Comments}
+
 \section{Keywords and identifiers}
+
 \subsection{Unicode identifiers}
 \subsection{Typedef trick}
+
 \section{Operators}
+
 \section{Numbers}
+
 \subsection{Decimals}
+
 \subsection{[[convvtox()]]}
+
 \subsection{Hexadecimals and octals}
+
 \subsection{Unsigned numbers}
+
 \subsection{Long numbers}
+
 \subsection{Floats}
+
 \section{Characters}
+
 \subsection{Escaping characters}
+
 \subsection{Unicode characters}
+
 \section{Strings}
+
 \subsection{Unicode strings}
 
 %******************************************************************************
 \chapter{Preprocessing}
 %******************************************************************************
+
 \section{[[mactab]] and [[domacro()]] dispatch}
+
 \section{[[#include]]}
+
 \subsection{Include paths, [[-I]]}
+
 \subsection{Tracing origin and [[Hist]]}
+
 \subsection{[[#include]]}
+
 \section{[[#define]]}
+
 \subsection{[[-D]]}
+
 \subsection{[[#define]]}
+
 \subsection{Macro Expansion}
+
 \section{[[#undef]]}
+
 \section{[[#ifdef]]}
+
 \section{[[#pragma]]}
+
 \section{[[#line]]}
 
 %******************************************************************************
 \chapter{Parsing}
 %******************************************************************************
+
 \section{Overview}
 
 <<Parser.mly>>=
@@ -1412,60 +1455,108 @@ storage_and_type:
 @
 
 \section{Declarations and definitions, part one}
+
 \subsection{No-declarator declarations}
+
 \subsection{Declarator-based declarations}
+
 \subsection{Entity declarations, the declarator}
+
 \subsection{Function definitions}
+
 \section{Statements}
+
 \subsection{Blocks}
+
 \subsection{Conditionals}
+
 \subsection{Loops}
+
 \subsection{Control flow jumps}
+
 \subsection{Labels and goto}
+
 \subsection{Switch}
+
 \section{Expressions}
+
 \subsection{Numeric constants}
+
 \subsection{String constants}
+
 \subsection{Entity uses}
+
 \subsection{Arithmetic expressions}
+
 \subsection{Boolean expressions}
+
 \subsection{Assignments}
+
 \subsection{Pointers}
+
 \subsection{Array accesses}
+
 \subsection{Field accesses}
+
 \subsection{Function calls}
+
 \subsection{Cast}
+
 \subsection{Ternary expressions}
+
 \subsection{Prefix/postfix}
+
 \subsection{[[sizeof()]]}
+
 \section{Initializers and designators}
+
 \section{Types and storage classes}
+
 \subsection{Basic types}
+
 \subsection{Storage classes}
+
 \subsection{Qualifiers}
+
 \subsection{Structures and unions}
+
 \subsection{Enums}
+
 \subsection{Pointer and array types}
+
 \subsection{Function types, parameter types}
+
 \subsection{Typedefs}
+
 \section{Declarations and definitions, part two}
+
 \subsection{Globals, external declarator}
+
 \subsection{Function parameters}
+
 \subsection{Locals, automatic declarator}
+
 \subsection{Types, abstract declarator}
 
 %******************************************************************************
 \chapter{Checking}
 %******************************************************************************
+
 \section{Overview}
+
 \section{Printing warnings: [[5c -w]] and [[5c -W]]}
+
 \section{Symbol resolution}
+
 \section{Storage resolution}
+
 \subsection{xdecl}
 \subsection{doinit}
 \subsection{pdecl}
 \subsection{adecl}
+
 \section{Typechecking helpers}
+
 \subsection{Overview}
 \subsection{Type equality: [[sametype()]]}
 \subsection{generic [[void*]] pointer conversions: [[5c -V]]}
@@ -1475,132 +1566,243 @@ storage_and_type:
 \subsection{Compatibility policies: [[txxx]]}
 \subsection{Typechecker: [[tcom()]]}
 \subsection{Array to pointer conversions}
+
 \section{Typechecking expressions}
+
 \subsection{Numeric constants}
+
 \subsection{String constants}
+
 \subsection{Entity uses}
+
 \subsection{Arithmetic expressions}
+
 \subsection{Arithmetic conversions}
+
 \subsection{Pointer arithmetic}
+
 \subsection{Boolean expressions}
+
 \subsection{Assignments}
+
 \subsection{Pointers}
+
 \subsection{Array accesses}
+
 \subsection{Field accesses}
+
 \subsection{Function calls}
+
 \subsection{Cast}
+
 \subsection{Ternary expressions}
+
 \subsection{Prefix/postfix}
+
 \subsection{[[sizeof()]]}
+
 \section{Typechecking statements}
+
 \subsection{[[return]]}
+
 \subsection{[[switch]]}
+
 \subsection{[[if]]}
+
 \section{Typechecking declarations and constant evaluation}
+
 \subsection{Enumerations}
+
 \subsection{Arrays}
+
 \subsection{Functions}
+
 \subsection{Typedef expansions}
+
 \section{Lint checking}
+
 \subsection{Unused variables}
+
 \subsection{Used before set}
+
 \subsection{False positives silencing: [[SET()/USED()]]}
+
 \subsection{Redeclared or unused labels}
+
 \subsection{Unreachable code}
+
 \subsection{Missing return}
+
 \subsection{Unused expression}
+
 \subsection{Constant if: [[5c -c]]}
+
 \subsection{Out of range shifting}
+
 \subsection{Useless comparisons}
+
 \section{Const checking}
 
 %******************************************************************************
 \chapter{Assembly Generation}
 %******************************************************************************
+
 \section{Overview}
+
 \section{[[pc]], [[p]], and [[nextpc()]]}
+
 \section{Functions: [[codgen()]]}
+
 \subsection{[[gpseudo()]]}
+
 \subsection{[[gbranch()]]}
+
 \subsection{[[patch()]]}
+
 \subsection{Offset}
+
 \section{Statements: [[gen()]]}
+
 \subsection{Blocks, sequences}
+
 \subsection{Conditionals}
+
 \subsection{Switch}
+
 \subsection{Labels and goto}
+
 \subsection{Loops}
+
 \subsection{Control flow jumps}
+
 \section{Register allocation}
+
 \subsection{[[reg]]}
+
 \subsection{[[OREGISTER]]}
+
 \subsection{[[nodreg()]]}
+
 \subsection{[[regfree()]]}
+
 \section{Typechecking, expliciting, annotating, and rewriting: [[complex()]]}
+
 \section{Addressability and complexity: [[xcom()]]}
+
 \subsection{Addressable: [[INDEXED]]}
+
 \subsection{Addressability: [[addable]]}
+
 \subsection{Complexity: [[complex]]}
+
 \subsection{[[FNX]]}
+
 \section{Basic expressions}
+
 \subsection{[[gmove()]]}
 \subsection{Conversions}
 \subsection{[[gins()]]}
 \subsection{[[naddr()]]}
 \subsection{[[regalloc()]]}
+
 \section{Expressions: [[cgen()]]}
+
 \subsection{Numeric constants}
+
 \subsection{Entity uses}
+
 \subsection{String constants}
+
 \subsection{Arithmetic expressions}
+
 \subsection{Boolean expressions}
+
 \subsection{Assignments part 1}
+
 \subsection{Pointers}
+
 \subsection{Assignments part 2}
+
 \subsection{Assignments and arithmetic}
+
 \subsection{Function calls}
+
 \subsection{Array accesses}
+
 \subsection{Field accesses}
+
 \subsection{Cast}
+
 \subsection{Ternary expressions}
+
 \subsection{Prefix/postfix}
+
 \subsection{[[sizeof()]]}
+
 \section{Boolean expressions}
+
 \section{Other topics}
+
 \subsection{Sizes}
+
 \subsection{First argument}
+
 \subsection{Alignment}
+
 \subsection{Toplevel globals}
+
 \subsection{Initializers}
+
 \subsection{[[gextern()]]}
+
 \section{Advanced assembly generation}
+
 \subsection{Function calls}
+
 \subsection{Switch}
 
 %******************************************************************************
 \chapter{Object File Generation}
 %******************************************************************************
+
 \section{Object format}
+
 \section{Instruction output: [[outcode()]]}
+
 \section{Operand output: [[zaddr()]]}
+
 \section{Symbol table, [[zname()]], [[h]] and [[ANAME]]}
+
 \section{File and line information: [[outhist()]]}
 
 %******************************************************************************
 \chapter{AST-level Optimizations}
 %******************************************************************************
+
 \section{AST simplifications}
+
 \subsection{General rewrites: [[ccom()]]}
+
 \subsection{Constant evaluation: [[evconst()]]}
+
 \section{Comma hoisting: [[comma()]]}
+
 \section{Bitshifting opportunities}
+
 \section{And opportunities}
+
 \section{Immediate operands}
+
 \subsection{Substraction}
+
 \subsection{Addition, or, etc.}
+
 \subsection{Multiplication}
+
 \section{Associative-commutative arithmetic optimisations}
+
 \subsection{[[Term]]}
+
 \subsection{[[acom()]]}
 
 %******************************************************************************
@@ -1632,30 +1834,43 @@ storage_and_type:
 %******************************************************************************
 \chapter{Linking Support}
 %******************************************************************************
+
 \section{[[#pragma lib]] and automagic linking}
+
 \section{Safe linking with type signatures: [[5c -T]]}
+
 \subsection{[[sign()]]}
+
 \subsection{[[#pragma incomplete]]}
 
 %******************************************************************************
 \chapter{Debugging Support}
 %******************************************************************************
+
 \section{General debugging metadata}
+
 \section{Acid debugger metadata: [[5c -a]]}
+
 \subsection{Entities}
+
 \subsection{Structure/union definitions}
+
 \section{Pickle: [[5c -Z]]}
 
 %******************************************************************************
 \chapter{Profiling Support}
 %******************************************************************************
+
 \section{Text attributes}
+
 \section{[[#pragma profile]]}
 
 %******************************************************************************
 \chapter{Advanced Topics TODO}
 %******************************************************************************
+
 \section{Advanced C features}
+
 \subsection{Function and function pointer automatic conversions}
 \subsection{Array and pointer automatic conversions}
 \subsection{Local [[static]]}
@@ -1663,7 +1878,9 @@ storage_and_type:
 \subsection{Bitfields}
 \subsection{Old style prototypes}
 \subsection{[[_Noreturn()]]}
+
 \section{C extensions}
+
 \subsection{Typing extensions: [[typeext()]]}
 \subsection{Unnamed structure elements}
 \subsection{Struct constructors}
@@ -1671,21 +1888,30 @@ storage_and_type:
 \subsection{Type reflection: [[typestr()]]}
 \subsection{Signature reflection: [[signof()]]}
 \subsection{Format's arguments checking}
+
 \section{Floats}
+
 \section{Big values}
+
 \subsection{Complex types}
 \subsection{Complex return value}
 \subsection{Complex argument}
 \subsection{Complex expression}
 \subsection{[[vlong]] constant}
+
 \section{64 bits operations}
 \subsection{[[com64init()]]}
 \subsection{Rewriting: [[com64()]]}
 \subsection{[[bool64()]]}
+
 \section{Endianness}
+
 \section{Using an external preprocessor: [[/bin/cpp]]}
+
 \section{Processing multiple files}
+
 \section{Other optimizations}
+
 \subsection{Packing: [[#pragma pack]]}
 \subsection{Minimizing [[#line]] history}
 
@@ -1700,33 +1926,43 @@ storage_and_type:
 %******************************************************************************
 \chapter{Debugging}
 %******************************************************************************
+
 \section{Dumpers}
+
 \subsection{[[cc/]] [[Fmt]] data structures}
 \subsection{[[5c/]] [[Fmt]] data structures}
 \subsection{[[xxxnames[]]]}
 \subsection{AST dumper: [[prtree()]] and [[5c -x]]}
+
 \section{[[5c -v]], verbose mode}
+
 \section{Preprocessing debugging}
 \subsection{Macro debugging: [[5c -m]]}
 \subsection{File inclusion debugging: [[5c -e]]}
 \subsection{Line information debugging: [[5c -f]]: }
+
 \section{Parsing debugging}
 \subsection{Printing names: [[5c -L]]}
 \subsection{Printing declarations: [[5c -d]]}
+
 \section{Typing debugging}
 \subsection{Printing expression type trees: [[5c -t]]}
+
 \section{Code generation debugging}
 \subsection{Printing processed opcodes: [[5c -G]]}
 \subsection{Printing code generation information: [[5c -g]]}
 \subsection{Printing generated assembly: [[5c -S]]}
+
 \section{Optimization debugging}
 \subsection{Printing arithmetic trees: [[5c -m]]}
 \subsection{Printing registerization: [[5c -r]]}
+
 \section{Printing initializations: [[5c -i]]}
 
 %******************************************************************************
 \chapter{Error Management}
 %******************************************************************************
+
 \subsection{[[errorexit()]]}
 \subsection{[[yyerror()]]}
 \subsection{[[diag()]]}
@@ -1736,6 +1972,7 @@ storage_and_type:
 %******************************************************************************
 \chapter{Libc}
 %******************************************************************************
+
 \section{Memory management}
 \section{String management}
 \section{Bit operations}

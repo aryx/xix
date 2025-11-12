@@ -1033,97 +1033,10 @@ gethunk(void)
 }
 
 void
-doprof1(void)
-{
-	Sym *s;
-	long n;
-	Prog *p, *q;
-
-	for(p = firstp->link; p != P; p = p->link) {
-		if(p->as == ATEXT) {
-			q = prg();
-			q->line = p->line;
-			q->link = datap;
-			datap = q;
-			q->as = ADATA;
-			q->from.type = D_OREG;
-			q->from.name = D_EXTERN;
-			q->from.offset = n*4;
-			q->from.sym = s;
-			q->reg = 4;
-			q->to = p->from;
-			q->to.type = D_CONST;
-
-			q = prg();
-			q->line = p->line;
-			q->pc = p->pc;
-			q->link = p->link;
-			p->link = q;
-			p = q;
-			p->as = AMOVW;
-			p->from.type = D_OREG;
-			p->from.name = D_EXTERN;
-			p->from.sym = s;
-			p->from.offset = n*4 + 4;
-			p->to.type = D_REG;
-			p->to.reg = REGTMP;
-
-			q = prg();
-			q->line = p->line;
-			q->pc = p->pc;
-			q->link = p->link;
-			p->link = q;
-			p = q;
-			p->as = AADD;
-			p->from.type = D_CONST;
-			p->from.offset = 1;
-			p->to.type = D_REG;
-			p->to.reg = REGTMP;
-
-			q = prg();
-			q->line = p->line;
-			q->pc = p->pc;
-			q->link = p->link;
-			p->link = q;
-			p = q;
-			p->as = AMOVW;
-			p->from.type = D_REG;
-			p->from.reg = REGTMP;
-			p->to.type = D_OREG;
-			p->to.name = D_EXTERN;
-			p->to.sym = s;
-			p->to.offset = n*4 + 4;
-
-			n += 2;
-			continue;
-		}
-	}
-	q = prg();
-	q->line = 0;
-	q->link = datap;
-	datap = q;
-
-	q->as = ADATA;
-	q->from.type = D_OREG;
-	q->from.name = D_EXTERN;
-	q->from.sym = s;
-	q->reg = 4;
-	q->to.type = D_CONST;
-	q->to.offset = n;
-
-	s->type = SBSS;
-	s->value = n*4;
-}
-
-void
 doprof2(void)
 {
 	Sym *s2, *s4;
 	Prog *p, *q, *q2, *ps2, *ps4;
-
-	if(debug['v'])
-		Bprint(&bso, "%5.2f profile 2\n", cputime());
-	Bflush(&bso);
 
 	if(debug['e']){
 		s2 = lookup("_tracein", 0);

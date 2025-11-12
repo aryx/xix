@@ -129,7 +129,7 @@ module String_ = struct
 let show_max max_len str =
   let len = String.length str in
   if len > max_len then
-    Printf.sprintf "%s (%i bytes)"
+    Printf.sprintf "%s (%d bytes)"
       (String.sub str 0 max_len ^ "...")
       (String.length str)
   else Printf.sprintf "%s" str

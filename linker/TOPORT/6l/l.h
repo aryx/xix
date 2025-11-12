@@ -392,8 +392,7 @@ void	diag(char*, ...);
 void	dodata(void);
 void	doelf(void);
 void	domacho(void);
-void	doprof1(void);
-void	doprof2(void);
+
 void	dostkoff(void);
 vlong	entryvalue(void);
 void	follow(void);

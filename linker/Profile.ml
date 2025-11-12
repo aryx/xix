@@ -56,6 +56,10 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
             (T.DATA (mcount, !count * 4, 4 (* size *), 
               A.Address (A.Global (ent, 0))));
 
+          (* LATER: in 6l/8l it can do in one ADD 1, __mcount+8(SB) operation
+           * so maybe we should run a peephole optimizer in o6l for
+           * the virtual instructions?
+           *)
           let rec n1 = T.{
            instr = T.Virt (A.Load (A.Global (mcount, !count * 4 + 4), rTMP));
            next = Some n2;

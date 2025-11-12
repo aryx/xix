@@ -47,7 +47,7 @@ let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
     (* coupling: must be consistent with second pass below and incr pc
      * for the same cases!
      *)
-    | Instr _ | Pseudo (TEXT _ | WORD _) | Virtual (RET | NOP) -> 
+    | Instr _ | Pseudo (TEXT _ | WORD _) | Virtual _ -> 
         incr pc
     | Pseudo (DATA _ | GLOBL _ ) -> ()
     )
@@ -67,7 +67,7 @@ let resolve branch_opd_of_instr (prog : 'instr program) : 'instr program =
     | Pseudo (DATA _ | GLOBL _) -> 
         (* no pc increment here *)
         true
-    | Virtual (RET | NOP) -> 
+    | Virtual _ -> 
         incr pc; 
         true
     | Instr instr ->

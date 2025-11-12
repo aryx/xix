@@ -196,9 +196,15 @@ type pseudo_instr =
 *)
 (*s: type [[Ast_asm.virtual_instr]] *)
 type virtual_instr =
+  (* removed by linker *)
   | RET
-  | NOP (* removed by linker *)
-  (* TODO? out MOV here with sizes and sign/unsigned *)
+  | NOP
+  (* new: I introduced those to factorize code in Profile.ml *)
+  | Call of global (* transformed in BL in 5l, JAL in vl, etc. *)
+  | Load of entity * register
+  | Store of register * entity
+  | Add of sign * integer (* or ximm? *) * register
+
 (*e: type [[Ast_asm.virtual_instr]] *)
 [@@deriving show { with_path = false}]
 
@@ -251,12 +257,21 @@ let rec visit_globals_program visit_instr (f : global -> unit) (prog : 'instr pr
     match x with
     | Pseudo y ->
       (match y with
-      | TEXT (ent, _, _) -> f ent
-      | GLOBL (ent, _, _) -> f ent
-      | DATA (ent, _, _, ix) -> f ent; visit_globals_ximm f ix
+      | TEXT (glob, _, _) -> f glob
+      | GLOBL (glob, _, _) -> f glob
+      | DATA (glob, _, _, ix) -> f glob; visit_globals_ximm f ix
       | WORD (ix) -> visit_globals_ximm f ix
       )
-    | Virtual (RET | NOP) | LabelDef _ -> ()
+    | LabelDef _ -> ()
+    | Virtual virt ->
+          (match virt with
+          | RET | NOP -> ()
+          | Call glob -> f glob
+          | Load (Global (glob, _), _) -> f glob
+          | Store (_, Global (glob, _)) -> f glob
+          | Load _ | Store _ -> ()
+          | Add _ -> ()
+          )
     | Instr instr ->
       visit_instr f instr
   )

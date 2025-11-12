@@ -46,6 +46,10 @@ module Int_ :
 
 module String_ :
   sig
+    (* if the string is longer than max_len then it will be abbreviated
+     * as "<str ... (<n> bytes)"
+     *)
+    val show_max: int (* max_len *) -> string -> string
     (* those functions doe not raise exn; if the integer is higher than the
      * length of the string, the empty string is returned.
      *)

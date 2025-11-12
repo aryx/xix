@@ -403,7 +403,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
                  !pc 
                   (xs |> List.map (fun x -> spf "%.8x" (int_of_bits n x))
                       |> String.concat " ")
-                  (Tv.show_instr n.instr));
+                  (Str.global_replace (Str.regexp "[\n\t ]+") " " (Tv.show_instr n.instr) |> String_.show_max 40));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
         Logs.debug (fun m -> m "%s (0x%x)" (Dumper.dump x) w);

@@ -195,37 +195,9 @@ ldobj(int f, long c, char *pn)
 void
 doprof1(void)
 {
-	//s = lookup("__mcount", 0);
-	//n = 1;
-	for(p = firstp->link; p != P; p = p->link) {
+	for(...) {
 		if(p->as == ATEXT) {
-			//q = prg();
-			//q->line = p->line;
-			//q->link = datap;
-			//datap = q;
-			//q->as = ADATA;
-			//q->from.type = D_OREG;
-			//q->from.name = D_EXTERN;
-			//q->from.offset = n*4;
-			//q->from.sym = s;
-			//q->reg = 4;
-			//q->to = p->from;
-			//q->to.type = D_CONST;
-
-			q = prg();
-			q->line = p->line;
-			q->pc = p->pc;
-			q->link = p->link;
-			p->link = q;
-			p = q;
-			p->as = AMOVW;
-			p->from.type = D_OREG;
-			p->from.name = D_EXTERN;
-			p->from.sym = s;
-			p->from.offset = n*4 + 4;
-			p->to.type = D_REG;
-			p->to.reg = REGTMP;
-
+            ...
 			q = prg();
 			q->line = p->line;
 			q->pc = p->pc;
@@ -251,15 +223,9 @@ doprof1(void)
 			p->to.name = D_EXTERN;
 			p->to.sym = s;
 			p->to.offset = n*4 + 4;
-
-			n += 2;
-			continue;
+            ...
 		}
 	}
-	q = prg();
-	q->line = 0;
-	q->link = datap;
-	datap = q;
 
 	q->as = ADATA;
 	q->from.type = D_OREG;
@@ -268,9 +234,8 @@ doprof1(void)
 	q->reg = 4;
 	q->to.type = D_CONST;
 	q->to.offset = n;
+    ...
 
-	s->type = SBSS;
-	s->value = n*4;
 }
 
 void

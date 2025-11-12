@@ -1,6 +1,8 @@
 TOP=.
 <mkconfig
 
+#TODO? should be a builtin env var? and define it both in mk and omk
+# to be argv0 ?
 MK=omk
 
 # STDLIB is defined or not (usually not) in mkconfig
@@ -23,13 +25,7 @@ DIRS0=\
 # does not work yet with ocaml-light
 DIRS1=vcs
 
-# works only under plan9 for now: 
-DIRS2=lib_core/commons_plan9 lib_system/plan9 lib_graphics windows
-
-# works only from scratch:
-DIRS3=kernel
-
-DIRS=$DIRS0 #$DIRS1 #$DIRS2 #DIRS3
+DIRS=$DIRS0 #$DIRS1
 
 #TODO: rename to TESTDIRS, reduce to just tests/ and in tests/ recurse
 TESTDIRS1=\

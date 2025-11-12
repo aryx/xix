@@ -73,8 +73,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 * 0.16 (Q3 2025) (Dockerfile.light v0)
 
 ** testinfra
-- Finish Dockerfile.light that can compile {mk,rc,lib_core} with ocaml-light! 
-  see ocaml-light/changes.txt for all the stuff that was needed
+- Finish Dockerfile.light that can compile {mk,rc,lib_core/commons} with
+  ocaml-light! see ocaml-light/changes.txt for all the stuff that was needed
 
 * 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.

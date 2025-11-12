@@ -55,7 +55,7 @@ let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
           let ident = A.s_of_global glob in
           Console.print caps (spf " D %s" ident)
       | Pseudo (DATA _ | WORD _) -> ()
-      | Virtual (RET | NOP) -> ()
+      | Virtual _ -> ()
       (* will visit the uses below *)
       | Instr _x -> ()
       | LabelDef _ -> raise (Impossible "objects should not have LabelDef")

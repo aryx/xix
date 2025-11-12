@@ -36,6 +36,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
               );
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
+          | A.Call _ | A.Load _ | A.Store _ | A.Add _ -> (curtext, Some n)
         in
         (* NOP and RET should not have branch set *)
         n.branch |> Option.iter (fun _n2 ->
@@ -109,9 +110,11 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
         autosize_opt
 
     | T.WORD _ -> autosize_opt
-    | T.Virt A.RET ->
-        (match autosize_opt with
-        | None -> 
+    | T.Virt virt ->
+        (match virt with
+        | A.RET ->
+          (match autosize_opt with
+          | None -> 
             (* JMP (RLINK) *)
             n.instr <- T.I (JMP (ref (A.IndirectJump (rLINK))))
          | Some autosize ->
@@ -137,10 +140,21 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
           }
           in
           n.next <- Some n1;
-
         );
-        autosize_opt
-     | T.Virt A.NOP -> raise (Impossible "NOP was removed in step1")
+       
+        | A.NOP -> raise (Impossible "NOP was removed in step1")
+        | A.Call glob -> 
+            n.instr <- T.I (JAL (ref (A.SymbolJump glob)));
+        | A.Add (sign, i, reg) ->
+            n.instr <- T.I (Arith (ADD (W, sign), Imm i, None, reg))
+        | A.Load (ent, reg) ->
+            n.instr <- T.I (Move2 (W__, Either.Left (Gen (Entity ent)),
+                                        Gen (GReg reg)))
+        | A.Store (reg, ent) ->
+            n.instr <- T.I (Move2 (W__, Either.Left (Gen (GReg reg)),
+                                        (Gen (Entity ent))))
+       );
+       autosize_opt
 
      | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _ 
             | Move1 _ | Move2 _

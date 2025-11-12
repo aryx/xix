@@ -165,12 +165,11 @@ let gbranch_static (nsrc : Tv.node) is_jal : Bits.t =
 
 let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
   match node.instr with
-
   (* --------------------------------------------------------------------- *)
   (* Virtual *)
   (* --------------------------------------------------------------------- *)
-   | T.Virt (A.RET | A.NOP) -> 
-      raise (Impossible "rewrite should have transformed RET/NOP")
+   | T.Virt _ -> 
+      raise (Impossible "rewrite should have transformed virtual instrs")
 
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)

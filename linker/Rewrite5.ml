@@ -1,5 +1,5 @@
 (*s: Rewrite5.ml *)
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module A = Ast_asm
@@ -40,6 +40,7 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
               );
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
+          | A.Call _ | A.Load _ | A.Store _ | A.Add _ -> (curtext, Some n)
         in
         (* NOP and RET should not have branch set *)
         n.branch |> Option.iter (fun _n2 ->
@@ -108,7 +109,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         autosize_opt
 
     | T.WORD _ -> autosize_opt
-    | T.Virt A.RET ->
+    | T.Virt virt ->
+      (match virt with
+      | A.RET ->
         n.instr <- T.I
           ((match autosize_opt with
            (* B (R14) *)
@@ -120,8 +123,11 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
                                    A5.Indirect (A5.rSP, autosize), 
                                    A5.Imsr (A5.Reg A5.rPC))
            ), A5.AL);
-        autosize_opt
-     | T.Virt A.NOP -> raise (Impossible "NOP was removed in step1")
+
+      | A.NOP -> raise (Impossible "NOP was removed in step1")
+      | (A.Call _ | A.Add _ | A.Load _ | A.Store _) -> raise Todo
+      );
+      autosize_opt
 
      | T.I (
             ( A5.RFE | A5.Arith _ | A5.ArithF _ | A5.MOVE _

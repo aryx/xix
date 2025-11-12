@@ -24,7 +24,9 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr) (sizes : Exec_file.sec
             for i = 0 to size_slice -1 do 
               arr.(base + i) <- s.[i] 
             done
-        | A.Address (A.Global (global2,_offsetTODO)) ->
+        | A.Address (A.Global (global2, offset_global)) ->
+            (* TODO? always true? *)
+            assert (offset_global = 0);
             let info2 = Hashtbl.find symbols2 (T.symbol_of_global global2) in
             let _i = 
               match info2 with

@@ -44,25 +44,17 @@ main(int argc, char *argv[])
 
 	nuxiinit();
     ...
-
-	span();
-	asmb();
 }
 
 void
 objfile(char *file)
 {
-
 	if(file[0] == '-' && file[1] == 'l') {
-		if(debug['9'])
-			sprint(name, "/%s/lib/lib", thestring);
-		else
-			sprint(name, "/usr/%clib/lib", thechar);
+		sprint(name, "/usr/%clib/lib", thechar);
 		strcat(name, file+2);
 		strcat(name, ".a");
 		file = name;
 	}
-
     ...
 }
 
@@ -76,12 +68,9 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	switch(a->type) {
 
 	case D_FCONST:
-		while(nhunk < sizeof(Ieee))
-			gethunk();
+        ...
 		a->ieee = (Ieee*)hunk;
-		nhunk -= NSNAME;
-		hunk += NSNAME;
-
+        ...
 		a->ieee->l = p[4] | (p[5]<<8) |
 			(p[6]<<16) | (p[7]<<24);
 		a->ieee->h = p[8] | (p[9]<<8) |
@@ -206,26 +195,22 @@ ldobj(int f, long c, char *pn)
 void
 doprof1(void)
 {
-	Sym *s;
-	long n;
-	Prog *p, *q;
-
-	s = lookup("__mcount", 0);
-	n = 1;
+	//s = lookup("__mcount", 0);
+	//n = 1;
 	for(p = firstp->link; p != P; p = p->link) {
 		if(p->as == ATEXT) {
-			q = prg();
-			q->line = p->line;
-			q->link = datap;
-			datap = q;
-			q->as = ADATA;
-			q->from.type = D_OREG;
-			q->from.name = D_EXTERN;
-			q->from.offset = n*4;
-			q->from.sym = s;
-			q->reg = 4;
-			q->to = p->from;
-			q->to.type = D_CONST;
+			//q = prg();
+			//q->line = p->line;
+			//q->link = datap;
+			//datap = q;
+			//q->as = ADATA;
+			//q->from.type = D_OREG;
+			//q->from.name = D_EXTERN;
+			//q->from.offset = n*4;
+			//q->from.sym = s;
+			//q->reg = 4;
+			//q->to = p->from;
+			//q->to.type = D_CONST;
 
 			q = prg();
 			q->line = p->line;

@@ -149,7 +149,7 @@ and 'instr code_bis =
 (*s: type [[Types.data]] *)
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 
-  | DATA of A.global * A.offset * int * A.ximm
+  | DATA of A.global * A.offset * int (* size (<= 8) *) * A.ximm
 (*e: type [[Types.data]] *)
 [@@deriving show]
 

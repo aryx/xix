@@ -160,7 +160,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let graph, new_data =
     match config.profile with
     | None -> graph, []
-    | Some kind -> Profile.rewrite kind symbols graph
+    | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
   in
   let data = data @ new_data in
   let graph = Rewrite5.rewrite graph in
@@ -203,7 +203,7 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let graph, new_data =
     match config.profile with
     | None -> graph, []
-    | Some kind -> Profile.rewrite kind symbols graph
+    | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
   in
   let data = data @ new_data in
   let graph = Rewritev.rewrite graph in

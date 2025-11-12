@@ -5,14 +5,80 @@ module A = Ast_asm
 module T = Types
 
 (*****************************************************************************)
-(* Helpers *)
+(* Prelude *)
 (*****************************************************************************)
+(* Profiling instrumentation, either profiling the count or time spent in
+ * functions (see also Exec_file.profile_kind).
+ *
+ * As opposed to 5l/vl/... we are able to factorize code across archs
+ * by introducing new virtual instructions in Ast_asm.ml: Load, Store, Add,
+ * and Call.
+ *
+ * TODO: handle ProfileTime and Trace 
+ *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-let rewrite (conf : Exec_file.profile_kind) (_syms : T.symbol_table) (cg : 'i T.code_graph) : 'i T.code_graph * T.data list =
+(* polymorphic! work across archs! *)
+let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol_table) (cg : 'i T.code_graph) : 'i T.code_graph * T.data list =
   Logs.info (fun m -> m "Adding profiling instrumentation %s" 
         (Exec_file.show_profile_kind conf));
-  cg, []
+  let data = ref [] in
+ 
+  (match conf with
+  | Exec_file.ProfileCount -> ()
+  | _ -> failwith "profiling mode not handled yet"
+  );
+
+  (* start at 1 cos __mcount+0 will contain the size of it so one
+   * can then easily iterate over it in _mainp()
+   *)
+  let count = ref 1 in
+
+  let mcount : A.global = 
+    A.{ name = "__mcount"; priv = None; signature = None } 
+  in
+
+  cg |> T.iter (fun n ->
+      match n.instr with
+      (* less: could look for NOPROF? *)
+      | T.TEXT (ent, _attrs, _size) ->
+          data |> Stack_.push 
+            (T.DATA (mcount, !count * 4, 4 (* size *), 
+              A.Address (A.Global (ent, 0))));
+
+          let rec n1 = T.{
+           instr = T.Virt (A.Load (A.Global (mcount, !count * 4 + 4), rTMP));
+           next = Some n2;
+           branch = None; n_loc = n.n_loc; real_pc = - 1;
+          }
+          and n2 = T.{
+           instr = T.Virt (A.NOP);
+           next = Some n3;
+           branch = None; n_loc = n.n_loc; real_pc = - 1;
+          }
+          and n3 = T.{
+           instr = T.Virt (A.NOP);
+           next = n.next;
+           branch = None; n_loc = n.n_loc; real_pc = - 1;
+          }
+          in
+          n.next <- Some n1;
+
+          count := !count + 2;
+      | T.WORD _ | T.Virt _ | T.I _ ->
+          ()
+  );
+  let v : T.value = T.lookup_global mcount syms in
+  (match v.section with
+  | T.SXref -> v.section <- T.SData (!count * 4)
+  | _ -> failwith (spf "redefinition of %s" mcount.name)
+  );
+  (* TODO: add __mcount+0 and then List.rev !data 
+   * even though order should not matter as Datagen will accept
+   * DATA in any order as long as the offset is set correctly.
+   *)
+
+  cg, List.rev !data

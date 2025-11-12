@@ -27,9 +27,11 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
 - port va (plan9 mips assembler) to OCaml (now called ova)
 - partial port of vl (plan9 mips linker) to OCaml (now called ovl)
-  enough for exit_linux_mips.exe and hellow_linux_mips.exe to work!
+  enough for exit_linux_mips.exe and hello_linux_mips.exe to work!
 - port ar to OCaml (v0) (now called oar)
 - port nm to OCaml (v0) (now called onm)
+- port of the -p and -p_count (was called -p -1 in kencc) basic profiling
+  instrumentation in o5l/ovl/... (the code is now mostly generic)
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)

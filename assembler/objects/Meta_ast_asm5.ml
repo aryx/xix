@@ -239,6 +239,10 @@ and vof_virtual_instr =
   function
   | RET -> Ocaml.VSum (("RET", []))
   | NOP -> Ocaml.VSum (("NOP", []))
+  | Add _ -> Ocaml.VSum (("Add ...", []))
+  | Load _ -> Ocaml.VSum (("Load ...", []))
+  | Store _ -> Ocaml.VSum (("Store ...", []))
+  | Call _ -> Ocaml.VSum (("Call ...", []))
 
 and vof_attributes { dupok = v_dupok; prof = v_prof } =
   let bnds = [] in

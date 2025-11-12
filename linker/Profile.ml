@@ -58,12 +58,16 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
            branch = None; n_loc = n.n_loc; real_pc = - 1;
           }
           and n2 = T.{
-           instr = T.Virt (A.NOP);
+           (* less: in vl they use ADDU but in 5l regular ADD but matter?
+            * should be same machine opcode in the end no because of 
+            * 2-complement arch?
+            *)
+           instr = T.Virt (A.Add (A.S, 1, rTMP));
            next = Some n3;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
           }
           and n3 = T.{
-           instr = T.Virt (A.NOP);
+           instr = T.Virt (A.Store (rTMP, A.Global (mcount, !count * 4 + 4)));
            next = n.next;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
           }
@@ -80,9 +84,12 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
   | T.SXref -> v.section <- T.SData (!count * 4)
   | _ -> failwith (spf "redefinition of %s" mcount.name)
   );
-  (* TODO: add __mcount+0 and then List.rev !data 
+  (* add __mcount+0 and then List.rev !data 
    * even though order should not matter as Datagen will accept
    * DATA in any order as long as the offset is set correctly.
    *)
+  let mcount_0 =
+    T.DATA (mcount, 0, 4 (* size *), A.Int !count)
+  in
 
-  cg, List.rev !data
+  cg, mcount_0 :: List.rev !data

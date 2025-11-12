@@ -7,10 +7,10 @@ module T = Types
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Profiling instrumentation.
+(* Profiling instrumentation (-p, -p_time, -p_count).
  *
  * Depending on profile_kind it can either profile the number of times
- * a function is called or the time spent in a functions (see also
+ * a function is called or the time spent in a function (see also
  * Exec_file.profile_kind).
  *
  * Better than 5l/vl/il:
@@ -27,17 +27,18 @@ module T = Types
 
 (* polymorphic! work across archs! *)
 let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol_table) (cg : 'i T.code_graph) : 'i T.code_graph * T.data list =
-  Logs.info (fun m -> m "Adding profiling instrumentation %s" 
+  Logs.info (fun m -> m "Profiling instrumentation %s" 
         (Exec_file.show_profile_kind conf));
   let data = ref [] in
  
   (match conf with
   | Exec_file.ProfileCount -> ()
-  | _ -> failwith "profiling mode not handled yet"
+  | _ -> failwith "profiling mode not supported yet"
   );
 
-  (* start at 1 cos __mcount+0 will contain the size of it so one
-   * can then easily iterate over it in _mainp()
+  (* start at 1 cos __mcount+0 will contain the size of it
+   * (see mcount_0 defined later) so one
+   * can then easily iterate over the __mcount array in _mainp().
    *)
   let count = ref 1 in
 
@@ -47,7 +48,6 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
 
   cg |> T.iter (fun n ->
       match n.instr with
-      (* less: could look for NOPROF? *)
       | T.TEXT (ent, (attrs : A.attributes), _size) ->
           if attrs.no_prof
           then ()
@@ -57,8 +57,8 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
               A.Address (A.Global (ent, 0))));
 
           (* LATER: in 6l/8l it can do in one ADD 1, __mcount+8(SB) operation
-           * so maybe we should run a peephole optimizer in o6l for
-           * the virtual instructions?
+           * so maybe we should run a peephole optimizer in Rewrite6.ml for
+           * those sequences of virtual instructions?
            *)
           let rec n1 = T.{
            instr = T.Virt (A.Load (A.Global (mcount, !count * 4 + 4), rTMP));
@@ -93,7 +93,7 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
   | _ -> failwith (spf "redefinition of %s" mcount.name)
   );
   (* add __mcount+0 and then List.rev !data 
-   * even though order should not matter as Datagen will accept
+   * even though the order should not matter as Datagen will accept
    * DATA in any order as long as the offset is set correctly.
    *)
   let mcount_0 =

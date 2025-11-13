@@ -91,7 +91,7 @@ type arith_operand =
 [@@deriving show]
 
 (* alt: could almost be moved to Ast_asm.ml but Shift above of arith_operand
- * seems arm-specific
+ * is arm-specific
  *)
 (*s: type [[Ast_asm5.mov_operand]] *)
 type mov_operand = 

@@ -14,7 +14,7 @@
 
 %thx to LP, I changed for the better a few things:
 
-%thx to this manual, better understand 5a/assembler:
+%thx to this manual, better understand 5c/compiler:
 
 %history LP-ization:
 
@@ -43,7 +43,6 @@ Ken Thompson and Yoann Padioleau
 
 \maketitle 
 
-%\onecolumn
 \hrule
 \begin{quote}
 Copyright \copyright{} 2025 Yoann Padioleau \\
@@ -52,11 +51,9 @@ except all the source code it contains, under the terms of the GNU Free
 Documentation License, Version 1.3.
 \end{quote}
 \hrule
-%\twocolumn
 
 \begingroup
 \hypersetup{linkcolor=blue}
-% need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
 \tableofcontents
 \endgroup
 
@@ -67,7 +64,9 @@ Documentation License, Version 1.3.
 #include "Intro.nw"
 
 \section{Code organization}
+
 \section{Software architecture}
+
 \section{Book structure}
 
 %###############################################################################
@@ -76,27 +75,27 @@ Documentation License, Version 1.3.
 \chapter{Core Data Structures}
 %******************************************************************************
 
-\section{Abstract syntax tree: [[Node]]}
+\section{Tokens}
 
-\section{[[Type]] system}
+\section{Abstract syntax tree} %%: [[Node]]
 
-\section{[[Storage_class]]}
+\section{Type system}
 
-\section{Node and type attributes}
+\section{Storage class}%[[Storage_class]]
 
-\section{[[Sym]]bols and [[hash]] table}
-\subsection{[[Sym]]}
-\subsection{[[hash]]}
-\subsection{[[slookup()]] and [[lookup()]]}
-\subsection{Identifier symbols}
-\subsection{Tag symbols}
-\subsection{Other symbols}
+%%\section{Node and type attributes}
 
-\section{Declarations, namespaces, and scope: [[Decl]]}
+%%\section{[[Sym]]bols and [[hash]] table}
+%%\subsection{[[Sym]]}
+%%\subsection{[[hash]]}
+%%\subsection{[[slookup()]] and [[lookup()]]}
+%%\subsection{Identifier symbols}
+%%\subsection{Tag symbols}
+%%\subsection{Other symbols}
 
-\section{[[Token]]}
+\section{Declarations, namespaces, and scope}%%: [[Decl]]
 
-\section{Assembly [[Instr]]uction output}
+\section{Assembly instruction output}
 
 %******************************************************************************
 \chapter{[[main()]]}
@@ -106,26 +105,27 @@ Documentation License, Version 1.3.
 
 \section{[[compile()]]}
 
-\section{[[gclean()]]}
+%%\section{[[gclean()]]}
 
-\section{Initializations}
-
-\subsection{[[tinit()]]}
-\subsection{[[cinit()]]}
-\subsection{[[ginit()]]}
-\subsection{[[arginit()]]}
+%%\section{Initializations}
+%%\subsection{[[tinit()]]}
+%%\subsection{[[cinit()]]}
+%%\subsection{[[ginit()]]}
+%%\subsection{[[arginit()]]}
 
 %******************************************************************************
-\chapter{Input}
+%%\chapter{Input}
 %******************************************************************************
-
-\section{Files management: [[iostack]]}
-\section{Buffer management: [[fi]]}
-\section{[[GETC()]]}
+%%\section{Files management: [[iostack]]}
+%%\section{Buffer management: [[fi]]}
+%%\section{[[GETC()]]}
 
 %******************************************************************************
 \chapter{Lexing}
 %******************************************************************************
+\label{chap:lexing}
+
+\section{Overview}
 
 <<Lexer.mll>>=
 {
@@ -433,8 +433,8 @@ and comment = parse
 
 @
 
-\section{[[yylex()]]}
-\section{Peek, seek, and look ahead}
+%%\section{[[yylex()]]}
+%%\section{Peek, seek, and look ahead}
 
 \section{Comments}
 
@@ -449,7 +449,7 @@ and comment = parse
 
 \subsection{Decimals}
 
-\subsection{[[convvtox()]]}
+%%\subsection{[[convvtox()]]}
 
 \subsection{Hexadecimals and octals}
 
@@ -473,13 +473,487 @@ and comment = parse
 \chapter{Preprocessing}
 %******************************************************************************
 
-\section{[[mactab]] and [[domacro()]] dispatch}
+\section{Overview}
+
+%%\section{[[mactab]] and [[domacro()]] dispatch}
+
+\section{Lexing}
+
+<<macroprocessor/Lexer_cpp.mll>>=
+{
+(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+open Common
+open Regexp_.Operators
+
+open Ast_cpp
+module L = Location_cpp
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* A port of plan 9 builtin preprocessing in OCaml.
+ *
+ * The main functions of the text preprocessors are:
+ *  - including other files
+ *  - expanding macros
+ *  - skipping text inside ifdefs
+ * 
+ *
+ * Limitations compared to cpp:
+ *  - no support for unicode
+ * 
+ * stricter: 
+ *  - no space allowed between '#' and the directive
+ *    (even though some people like to do  '#  ifdef', when have nested ifdefs,
+ *     but nested ifdefs are bad practice anyway)
+ *  - single '#' are not converted in #endif
+ *    (who does use that?)
+ *  - only space or comment between the directive and the newline; 
+ *    we do not skip any character
+ *    (who does put garbage there?)
+ *)
+
+let error s =
+  raise  (L.Error (spf "Lexical error in cpp: %s" s, !L.line))
+
+(* needed only because of ocamllex limitations in ocaml-light
+ * which does not support the 'as' feature.
+ *)
+let symbol_after_space lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  s =~ ".*[ \t]\\([^ \t]+\\)" |> ignore; 
+  Regexp_.matched1 s
+let char lexbuf =
+  let s = Lexing.lexeme lexbuf in
+  String.get s 0
+
+}
+
+(*****************************************************************************)
+(* Regexps aliases *)
+(*****************************************************************************)
+let space  = [' ''\t']
+let letter = ['a'-'z''A'-'Z']
+let digit  = ['0'-'9']
+
+let symbol = (letter | '_') (letter | digit | '_')*
+
+(*****************************************************************************)
+(* Main rule *)
+(*****************************************************************************)
+
+(* pre: 'token' below assumes the '#' has already been consumed *)
+rule token = parse
+
+  (* note that filenames containing double quotes are not supported *)
+  | "include" space* '"' ([^ '"' '\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Include (Fpath.v file, false)  
+      }
+  | "include" space* '<' ([^ '>' '\n']+ (*as file*)) '>'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*<\\(.*\\)>" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Include(Fpath.v file, true) 
+      }
+  | "include" { error "syntax in #include" }
+
+  (* Macro definition part 1 *)
+  | "define" space+ (symbol (*as s1*)) '(' ([^')']* (*as s2*)) ')'
+      { let (s1, s2) =
+           let s = Lexing.lexeme lexbuf in s =~ "define[ \t]+\\(.*\\)(\\(.*\\))" |> ignore;
+           Regexp_.matched2 s in
+        let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
+        (* check if identifier or "..." for last one *)
+        let params, varargs = 
+          let rec aux xs =
+            match xs with
+            | [] -> [], false
+            (* todo: __VA_ARGS__ *)
+            | ["..."] -> [], true
+            | "..."::_ -> error "... should be the last parameter of a macro"
+            | x::xs ->
+               if x =~ "[A-Za-z_][A-Za-z_0-9]*" 
+               then let (params, bool) = aux xs in x::params, bool
+               else error (spf "wrong syntax for macro parameter: %s" x)
+          in
+          aux xs
+        in
+        let body = define_body s1 (List_.index_list_1 params) lexbuf in
+        Define { name = s1; params = Some (params); varargs = varargs;
+                 body = Some body }
+      }
+  (* a space after the symbol means the macro has no argument, even if
+   * this space is followed by a '('.
+   *)
+  | "define" space+ (symbol (*as s1*)) space+
+      { let s1 = symbol_after_space lexbuf in
+        let body = define_body s1 [] lexbuf in 
+        Define { name = s1; params = None; varargs = false; body = Some body}
+      }
+  (* if do '#define FOO+' then? we should return a syntax error because
+   * of the space_or_comment_and_newline below.
+   *)
+  | "define" space+ (symbol (*as s1*))
+      { let s1 = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf; 
+        Define { name = s1; params = None; varargs = false; body =  None }
+      }
+  | "define" { error "syntax in #define" }
+
+  (* stricter: require space_or_comment-only after sym *)
+  | "undef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf; 
+        Undef name
+      }
+  | "undef" { error "syntax in #undef" } 
+
+
+  | "ifdef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf;
+        Ifdef name 
+      }
+  | "ifndef" space+ (symbol (*as name*))
+      { let name = symbol_after_space lexbuf in
+        space_or_comment_and_newline lexbuf;
+        Ifndef name
+      }
+  | "ifdef" { error "syntax in #ifdef" } 
+  | "ifndef" { error "syntax in #ifndef" } 
+
+  | "else"  
+      { space_or_comment_and_newline lexbuf; 
+        Else 
+      }
+  | "endif" 
+      { space_or_comment_and_newline lexbuf; 
+        Endif 
+      }
+
+  (* stricter: I impose a filename (with no quote in name, like original?) *)
+  | "line" space+ (digit+ (*as s1*)) space* ('"' ([^'"']* (*as s2*)) '"')
+      { 
+        let (s1, s2) =
+           let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([0-9]+\\).*\"(\\(.*\\)\"" |> ignore;
+           Regexp_.matched2 s in
+        space_or_comment_and_newline lexbuf;
+        Line (int_of_string s1, Fpath.v s2) }
+  | "line" { error "syntax in #line" }
+
+
+  | "pragma" space+ "lib" space* '"' ([^'"''\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("lib", [file]) 
+      }
+  | "pragma" space+ "src" space* '"' ([^'"''\n']+ (*as file*)) '"'
+      { let file = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("src", [file]) 
+      }
+
+  | "pragma" space+ "varargck" space* "argpos" [^'\n']+
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) 
+      }
+  | "pragma" space+ "varargck" space* "type" [^'\n']+
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) 
+      }
+  | "pragma" space+ "varargck" space* "flag" [^'\n']+
+      { space_or_comment_and_newline lexbuf; 
+        Pragma("varargck", ["TODO"]) 
+      }
+
+  | "pragma" space+ "incomplete" space+ (symbol (*as name*))
+      { let name = 
+          let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([^ \t]+\\)" |> ignore; 
+          Regexp_.matched1 s in
+        space_or_comment_and_newline lexbuf; 
+        Pragma("incomplete", [name]) 
+      }
+  (* stricter: we do not silently skip unknown pragmas *)
+  | "pragma"  { error "syntax in #pragma" }
+
+  | symbol { error (spf "unknown #: %s" (Lexing.lexeme lexbuf)) }
+
+(*****************************************************************************)
+(* Macro definition part 2, the body *)
+(*****************************************************************************)
+and define_body name params = parse
+  | symbol (*as s *)
+     { let s = Lexing.lexeme lexbuf in
+       try 
+        let i = List.assoc s params in
+        (* safe to use # for a special mark since C code can not
+         * use this symbol since it is reserved by cpp
+         *)
+        spf "#%d" i ^ define_body name params lexbuf
+      with Not_found ->
+        s ^ define_body name params lexbuf
+     }
+
+  | [^ '\n' '_''a'-'z''A'-'Z' '\'' '"' '\\' '/' '#']+ (*as s *)
+      { let s = Lexing.lexeme lexbuf in
+        s ^ define_body name params lexbuf }
+
+  (* end of macro *)
+  | '\n' { incr Location_cpp.line; "" }
+
+  (* special cases *)
+  | ['\'' '"'] (*as c *)
+      { let c = char lexbuf in
+        let s = define_body_strchar c name params lexbuf in 
+        String.make 1 c ^ s ^ define_body name params lexbuf 
+      }
+
+  | "//" [^'\n']* { define_body name params lexbuf }
+  | "/*"          
+      { comment_star_no_newline lexbuf; 
+        define_body name params lexbuf 
+      }
+
+  | '/' { "/" ^ define_body name params lexbuf }
+  (* we escape single '#' by doubling it (classic) *)
+  | '#' { "##" ^ define_body name params lexbuf }
+
+  (* could do " " ^ but that is not what 5c does *)
+  | '\\' '\n' { incr Location_cpp.line; define_body name params lexbuf }
+  | '\\' { "\\" ^ define_body name params lexbuf }
+
+  | eof  { error (spf "eof in macro %s" name) }
+
+(*****************************************************************************)
+(* Strings and characters (part1) *)
+(*****************************************************************************)
+
+(* Diff with string/character handling in lexer.mll for C?
+ *  - need to recognize macro parameter (yes 5c does that! no need stringify)
+ *  - need to escape '#' to ##
+ *  - do not care about precise parsing of \\, octal, escaped char,
+ *    just return the string
+*)
+
+and define_body_strchar endchar name params = parse
+  (* no need for stringify! substitute also in strings *)
+  | symbol (*as s*)
+     { let s = Lexing.lexeme lexbuf in
+       try let i = List.assoc s params in
+        spf "#%d" i ^ define_body_strchar endchar name params lexbuf
+       with Not_found -> s ^ define_body_strchar endchar name params lexbuf
+     }
+  | [^ '\n' '_' 'a'-'z''A'-'Z' '\'' '"' '\\' '#']+ (*as s *)
+      { let s = Lexing.lexeme lexbuf in
+        s ^ define_body_strchar endchar name params lexbuf }
+
+  | '\\' '\n' 
+      { incr Location_cpp.line; define_body_strchar endchar name params lexbuf }
+  | '\\' _ (*as s*) 
+       { let s = Lexing.lexeme lexbuf in
+         s^define_body_strchar endchar name params lexbuf }
+
+  (* escape # to disambiguate with use of # to reference a parameter *)
+  | '#' { "##" ^ define_body_strchar endchar name params lexbuf }
+
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        if c = endchar 
+        then String.make 1 c
+        else String.make 1 c ^ define_body_strchar endchar name params lexbuf
+      }
+
+  | '\n' { error (spf "newline in character or string in macro %s" name) }
+  | eof  { error (spf "eof in macro %s" name) }
+
+(*****************************************************************************)
+(* Macro use *)
+(*****************************************************************************)
+
+(* Extracting the arguments. 
+ * Note that as opposed to the other rules in this file, here
+ * we do not parse a directive; we parse C code used as arguments to
+ * a macro. We still use ocamllex for that because it is convenient.
+ *)
+and macro_arguments = parse
+ | space* "("   
+     { let xs = macro_args 0 "" [] lexbuf in
+       let xs = List.rev xs in
+       if xs = [""] then [] else xs
+     }
+ (* stricter: better error message *)
+ | _ (*as c*) { let c = char lexbuf in 
+                error (spf "was expecting a '(' not %c for macro arguments" c) }
+ | eof    { error "was expecting a '(', not an eof for macro arguments" }
+
+and macro_args depth str args = parse
+ | ")" 
+     { if depth = 0 
+       then str::args
+       else macro_args (depth - 1) (str ^ ")") args lexbuf
+     }
+
+ | [^ '\'' '"' '/' ',' '\n' '(' ')']+ 
+     { macro_args depth (str ^ Lexing.lexeme lexbuf) args lexbuf }
+
+ | "," 
+     { if depth = 0 
+       (* todo: if reached varargs! *)
+       then macro_args 0 "" (str::args) lexbuf 
+       else macro_args depth (str ^ ",") args lexbuf
+     }
+
+ | "("  { macro_args (depth+1) (str^"(") args lexbuf }
+
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        let s = macro_args_strchar c lexbuf in 
+        macro_args depth (str ^ String.make 1 c ^ s) args lexbuf
+      }
+
+ | "//" [^ '\n']* { macro_args depth str args lexbuf }
+ | "/*" 
+     { comment_star_newline_ok lexbuf; 
+       macro_args depth (str^" ") args lexbuf 
+     }
+ | "/"  { macro_args depth     (str^"/") args lexbuf }
+
+ | '\n' { incr Location_cpp.line; macro_args depth     (str^" ") args lexbuf }
+
+ | _ (*as c*) { let c = char lexbuf in error (spf "unrecognized character: '%c'" c) }
+ (* stricter: better error message *)
+ | eof { error "eof in macro arguments" }
+
+(* Substituting the arguments.
+ * Note that the lexbuf here will be different. It will correspond
+ * to the string of the body of a macro.
+ *)
+and subst_args_in_macro_body name args = parse
+ | [^ '\n' '#']+ (*as s*) { 
+       let s = Lexing.lexeme lexbuf in
+       s ^ subst_args_in_macro_body name args lexbuf }
+ | "##" { "#" ^ subst_args_in_macro_body name args lexbuf }
+ | "#" (digit+ (*as s*)) 
+     { let s = Lexing.lexeme lexbuf |> String_.drop_prefix 1 in
+       let i = int_of_string s in
+       try 
+         let arg = List.nth args (i - 1) in
+         arg ^ subst_args_in_macro_body name args lexbuf
+       with Failure _ -> 
+         (* stricter: better error message *)
+         error (spf "could not find argument %d in macro of %s" i name)
+     }
+ (* the escaped newlines should have been removed *)
+ | '\n' { failwith "impossible: newline in macro body" }
+ | eof { "" }
+
+
+(*****************************************************************************)
+(* Strings and characters (part1) *)
+(*****************************************************************************)
+and macro_args_strchar endchar = parse
+  | [^ '\n' '\'' '"' '\\' ]+ (*as s*)  
+      { let s = Lexing.lexeme lexbuf in
+        s ^ macro_args_strchar endchar lexbuf }
+
+  | '\\' '\n' { incr Location_cpp.line; macro_args_strchar endchar lexbuf }
+  | '\\' _ (*as s*) 
+        { let s = Lexing.lexeme lexbuf in
+          s^macro_args_strchar endchar lexbuf }
+
+  | ['\'' '"'] (*as c*)
+      { let c = char lexbuf in
+        if c = endchar 
+        then String.make 1 c
+        else String.make 1 c ^ macro_args_strchar endchar lexbuf
+      }
+  | '\n' { error (spf "newline in character or string") }
+  | eof  { error (spf "eof in character or string in macro argument") }
+
+
+(*****************************************************************************)
+(* Comments *)
+(*****************************************************************************)
+
+and space_or_comment_and_newline = parse
+  | space+        { space_or_comment_and_newline lexbuf }
+  | '\n'          { incr Location_cpp.line }
+
+  | "//" [^'\n']* { space_or_comment_and_newline lexbuf }
+  | "/*"          { comment_star_no_newline lexbuf; 
+                    space_or_comment_and_newline lexbuf }
+
+  (* stricter: new error message *)
+  | _ (*as c*)    { let c = char lexbuf in
+                    error (spf "unexpected character %c after directive" c) }
+  | eof           { error "expected newline, not EOF" }
+
+and comment_star_no_newline = parse
+  | "*/"          { }
+  | [^ '*' '\n']+ { comment_star_no_newline lexbuf }
+  | '*'           { comment_star_no_newline lexbuf }
+
+  | '\n'          { error "comment across newline" }
+  | eof           { error "eof in comment" }
+
+and comment_star_newline_ok = parse
+  | "*/"          { }
+  | [^ '*' '\n']+ { comment_star_newline_ok lexbuf }
+  | '*'           { comment_star_newline_ok lexbuf }
+  | '\n'          { incr Location_cpp.line; comment_star_newline_ok lexbuf }
+  | eof           { error "eof in comment" }
+
+
+(*****************************************************************************)
+(* Skipping, for ifdefs *)
+(*****************************************************************************)
+
+and skip_for_ifdef depth bol = parse
+  | '\n'         { incr Location_cpp.line; skip_for_ifdef depth true lexbuf }
+  | [' ' '\t']+  { skip_for_ifdef depth bol lexbuf }
+  | [^'#' '\n' ' ' '\t']+ { skip_for_ifdef depth false lexbuf }
+  
+  | "#endif" 
+      { if bol
+        then
+          if depth = 0 
+          (* done! just eat until newline *)
+          then space_or_comment_and_newline lexbuf
+          else skip_for_ifdef (depth - 1) false lexbuf
+        else skip_for_ifdef depth false lexbuf
+      }
+  | "#else" 
+      { if bol && depth = 0
+        then space_or_comment_and_newline lexbuf
+        else skip_for_ifdef depth false lexbuf
+      }
+  | "#ifdef" | "#ifndef" 
+      { if bol 
+        then skip_for_ifdef (depth + 1) false lexbuf 
+        else skip_for_ifdef depth false lexbuf
+      }
+
+  | "#" { skip_for_ifdef depth false lexbuf }
+
+  (* stricter: *)
+  | eof { error "eof in #ifdef or #ifndef" }  
+
+@
 
 \section{[[#include]]}
 
 \subsection{Include paths, [[-I]]}
 
-\subsection{Tracing origin and [[Hist]]}
+\subsection{Tracing origin} %% and [[Hist]]
 
 \subsection{[[#include]]}
 
@@ -1550,22 +2024,30 @@ storage_and_type:
 
 \section{Storage resolution}
 
-\subsection{xdecl}
-\subsection{doinit}
-\subsection{pdecl}
-\subsection{adecl}
+%%\subsection{xdecl}
+%%\subsection{doinit}
+%%\subsection{pdecl}
+%%\subsection{adecl}
 
 \section{Typechecking helpers}
 
 \subsection{Overview}
-\subsection{Type equality: [[sametype()]]}
+
+\subsection{Type equality} %%: [[sametype()]]
+
 \subsection{generic [[void*]] pointer conversions: [[5c -V]]}
-\subsection{Type merge: [[tmerge()]]}
-\subsection{Set of types constants: [[typexxx[]]]}
-\subsection{Type compatibility: [[tcompat()]]}
-\subsection{Compatibility policies: [[txxx]]}
-\subsection{Typechecker: [[tcom()]]}
+
+\subsection{Type merge} %%: [[tmerge()]]
+%%\subsection{Set of types constants: [[typexxx[]]]}
+
+\subsection{Type compatibility} %%: [[tcompat()]]
+
+\subsection{Compatibility policies} %%: [[txxx]]
+
+\subsection{Typechecker} %%: [[tcom()]]
+
 \subsection{Array to pointer conversions}
+
 
 \section{Typechecking expressions}
 
@@ -1651,17 +2133,14 @@ storage_and_type:
 
 \section{[[pc]], [[p]], and [[nextpc()]]}
 
-\section{Functions: [[codgen()]]}
+\section{Functions} %%: [[codgen()]]
 
-\subsection{[[gpseudo()]]}
+%%\subsection{[[gpseudo()]]}
+%%\subsection{[[gbranch()]]}
+%%\subsection{[[patch()]]}
+%%\subsection{Offset}
 
-\subsection{[[gbranch()]]}
-
-\subsection{[[patch()]]}
-
-\subsection{Offset}
-
-\section{Statements: [[gen()]]}
+\section{Statements} %%: [[gen()]]
 
 \subsection{Blocks, sequences}
 
@@ -1677,35 +2156,32 @@ storage_and_type:
 
 \section{Register allocation}
 
-\subsection{[[reg]]}
+%%\subsection{[[reg]]}
+%%\subsection{[[OREGISTER]]}
+%%\subsection{[[nodreg()]]}
+%%\subsection{[[regfree()]]}
 
-\subsection{[[OREGISTER]]}
+\section{Typechecking, expliciting, annotating, and rewriting}%%: [[complex()]]}
 
-\subsection{[[nodreg()]]}
+\section{Addressability and complexity}%%: [[xcom()]]
 
-\subsection{[[regfree()]]}
+\subsection{Addressable} %%: [[INDEXED]]
 
-\section{Typechecking, expliciting, annotating, and rewriting: [[complex()]]}
+\subsection{Addressability} %%: [[addable]]
 
-\section{Addressability and complexity: [[xcom()]]}
+\subsection{Complexity} %%: [[complex]]
 
-\subsection{Addressable: [[INDEXED]]}
-
-\subsection{Addressability: [[addable]]}
-
-\subsection{Complexity: [[complex]]}
-
-\subsection{[[FNX]]}
+%%\subsection{[[FNX]]}
 
 \section{Basic expressions}
 
-\subsection{[[gmove()]]}
-\subsection{Conversions}
-\subsection{[[gins()]]}
-\subsection{[[naddr()]]}
-\subsection{[[regalloc()]]}
+%%\subsection{[[gmove()]]}
+%%\subsection{Conversions}
+%%\subsection{[[gins()]]}
+%%\subsection{[[naddr()]]}
+%%\subsection{[[regalloc()]]}
 
-\section{Expressions: [[cgen()]]}
+\section{Expressions} %: [[cgen()]]
 
 \subsection{Numeric constants}
 
@@ -1753,7 +2229,7 @@ storage_and_type:
 
 \subsection{Initializers}
 
-\subsection{[[gextern()]]}
+%%\subsection{[[gextern()]]}
 
 \section{Advanced assembly generation}
 
@@ -1767,13 +2243,11 @@ storage_and_type:
 
 \section{Object format}
 
-\section{Instruction output: [[outcode()]]}
+\section{Instruction output} %%: [[outcode()]]
 
-\section{Operand output: [[zaddr()]]}
-
-\section{Symbol table, [[zname()]], [[h]] and [[ANAME]]}
-
-\section{File and line information: [[outhist()]]}
+%%\section{Operand output: [[zaddr()]]}
+%%\section{Symbol table, [[zname()]], [[h]] and [[ANAME]]}
+%%\section{File and line information: [[outhist()]]}
 
 %******************************************************************************
 \chapter{AST-level Optimizations}
@@ -1781,11 +2255,11 @@ storage_and_type:
 
 \section{AST simplifications}
 
-\subsection{General rewrites: [[ccom()]]}
+\subsection{General rewrites}%%: [[ccom()]]
 
-\subsection{Constant evaluation: [[evconst()]]}
+\subsection{Constant evaluation}%%: [[evconst()]]
 
-\section{Comma hoisting: [[comma()]]}
+\section{Comma hoisting}%: [[comma()]]
 
 \section{Bitshifting opportunities}
 
@@ -1801,34 +2275,39 @@ storage_and_type:
 
 \section{Associative-commutative arithmetic optimisations}
 
-\subsection{[[Term]]}
-
-\subsection{[[acom()]]}
+%%\subsection{[[Term]]}
+%%\subsection{[[acom()]]}
 
 %******************************************************************************
 \chapter{Assembly-level Optimisations}
 %******************************************************************************
 
 \section{Nop detection}
+
 \section{ARM special instructions}
+
 \section{Register passing argument: [[REGARG]]}
+
 \section{Register allocation optimisations}
-\subsection{[[regopt()]]}
-\subsection{[[noretval()]]}
-\subsection{Pass 1}
-\subsection{Pass 2}
-\subsection{Pass 3}
-\subsection{Pass 4}
-\subsection{pass 5}
-\subsection{pass 6}
-\subsection{pass 7, peep hole optimizations}
-\subsection{pass 8}
-\subsection{pass 9}
-\subsection{[[Bits]]}
-\subsection{[[Var]]}
-\subsection{[[Reg]]}
-\subsection{[[XXX]]}
-\section{Peephole optimizer: [[peep()]]}
+
+%%\subsection{[[regopt()]]}
+%%\subsection{[[noretval()]]}
+%%\subsection{Pass 1}
+%%\subsection{Pass 2}
+%%\subsection{Pass 3}
+%%\subsection{Pass 4}
+%%\subsection{pass 5}
+%%\subsection{pass 6}
+%%\subsection{pass 7, peep hole optimizations}
+%%\subsection{pass 8}
+%%\subsection{pass 9}
+%%\subsection{[[Bits]]}
+%%\subsection{[[Var]]}
+%%\subsection{[[Reg]]}
+%%\subsection{[[XXX]]}
+
+\section{Peephole optimizer}%%: [[peep()]]
+
 \section{Dominators}
 
 %******************************************************************************
@@ -1872,21 +2351,33 @@ storage_and_type:
 \section{Advanced C features}
 
 \subsection{Function and function pointer automatic conversions}
+
 \subsection{Array and pointer automatic conversions}
+
 \subsection{Local [[static]]}
+
 \subsection{Local [[volatile]]}
+
 \subsection{Bitfields}
+
 \subsection{Old style prototypes}
+
 \subsection{[[_Noreturn()]]}
 
 \section{C extensions}
 
-\subsection{Typing extensions: [[typeext()]]}
+\subsection{Typing extensions}%%: [[typeext()]]
+
 \subsection{Unnamed structure elements}
+
 \subsection{Struct constructors}
+
 \subsection{Per-processor storage: [[extern register]]}
+
 \subsection{Type reflection: [[typestr()]]}
+
 \subsection{Signature reflection: [[signof()]]}
+
 \subsection{Format's arguments checking}
 
 \section{Floats}
@@ -1894,26 +2385,31 @@ storage_and_type:
 \section{Big values}
 
 \subsection{Complex types}
+
 \subsection{Complex return value}
+
 \subsection{Complex argument}
+
 \subsection{Complex expression}
+
 \subsection{[[vlong]] constant}
 
 \section{64 bits operations}
-\subsection{[[com64init()]]}
-\subsection{Rewriting: [[com64()]]}
-\subsection{[[bool64()]]}
+
+%%\subsection{[[com64init()]]}
+%%\subsection{Rewriting: [[com64()]]}
+%%\subsection{[[bool64()]]}
 
 \section{Endianness}
 
-\section{Using an external preprocessor: [[/bin/cpp]]}
-
-\section{Processing multiple files}
+%%\section{Using an external preprocessor: [[/bin/cpp]]}
+%%\section{Processing multiple files}
 
 \section{Other optimizations}
 
 \subsection{Packing: [[#pragma pack]]}
-\subsection{Minimizing [[#line]] history}
+
+%%\subsection{Minimizing [[#line]] history}
 
 %******************************************************************************
 \chapter{Conclusion}
@@ -1929,32 +2425,43 @@ storage_and_type:
 
 \section{Dumpers}
 
-\subsection{[[cc/]] [[Fmt]] data structures}
-\subsection{[[5c/]] [[Fmt]] data structures}
-\subsection{[[xxxnames[]]]}
-\subsection{AST dumper: [[prtree()]] and [[5c -x]]}
+%%\subsection{[[cc/]] [[Fmt]] data structures}
+%%\subsection{[[5c/]] [[Fmt]] data structures}
+%%\subsection{[[xxxnames[]]]}
+\subsection{AST dumper: [[5c -x]]} %% [[prtree()]] and
 
 \section{[[5c -v]], verbose mode}
 
 \section{Preprocessing debugging}
+
 \subsection{Macro debugging: [[5c -m]]}
+
 \subsection{File inclusion debugging: [[5c -e]]}
-\subsection{Line information debugging: [[5c -f]]: }
+
+\subsection{Line information debugging: [[5c -f]]}
 
 \section{Parsing debugging}
+
 \subsection{Printing names: [[5c -L]]}
+
 \subsection{Printing declarations: [[5c -d]]}
 
 \section{Typing debugging}
+
 \subsection{Printing expression type trees: [[5c -t]]}
 
 \section{Code generation debugging}
+
 \subsection{Printing processed opcodes: [[5c -G]]}
+
 \subsection{Printing code generation information: [[5c -g]]}
+
 \subsection{Printing generated assembly: [[5c -S]]}
 
 \section{Optimization debugging}
+
 \subsection{Printing arithmetic trees: [[5c -m]]}
+
 \subsection{Printing registerization: [[5c -r]]}
 
 \section{Printing initializations: [[5c -i]]}
@@ -1970,15 +2477,14 @@ storage_and_type:
 \subsection{Error location}
 
 %******************************************************************************
-\chapter{Libc}
+%%\chapter{Libc}
 %******************************************************************************
-
-\section{Memory management}
-\section{String management}
-\section{Bit operations}
-\section{Mathematic functions}
-\section{Key/value data structure}
-\section{Portability}
+%%\section{Memory management}
+%%\section{String management}
+%%\section{Bit operations}
+%%\section{Mathematic functions}
+%%\section{Key/value data structure}
+%%\section{Portability}
 
 %******************************************************************************
 \chapter{Extra Code}

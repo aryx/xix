@@ -39,10 +39,7 @@ main(int argc, char *argv[])
 		break;
 	}
 
-
 	dtype = 4;
-
-	nuxiinit();
     ...
 }
 
@@ -307,63 +304,6 @@ doprof2(void)
 			continue;
 		}
 	}
-}
-
-void
-nuxiinit(void)
-{
-	int i, c;
-
-	for(i=0; i<4; i++)
-		if (!little) {			/* normal big-endian case */
-			c = find1(0x01020304L, i+1);
-			if(i >= 2)
-				inuxi2[i-2] = c;
-			if(i >= 3)
-				inuxi1[i-3] = c;
-			inuxi4[i] = c;
-			fnuxi8[i] = c+4;
-			fnuxi8[i+4] = c;
-		} else {			/* oddball little-endian case */
-			c = find1(0x04030201L, i+1);
-			if(i < 2)
-				inuxi2[i] = c;
-			if(i < 1)
-				inuxi1[i] = c;
-			inuxi4[i] = c;
-			fnuxi4[i] = c;
-			fnuxi8[i] = c;
-			fnuxi8[i+4] = c+4;
-		}
-	if(debug['v']) {
-		Bprint(&bso, "inuxi = ");
-		for(i=0; i<1; i++)
-			Bprint(&bso, "%d", inuxi1[i]);
-		Bprint(&bso, " ");
-		for(i=0; i<2; i++)
-			Bprint(&bso, "%d", inuxi2[i]);
-		Bprint(&bso, " ");
-		for(i=0; i<4; i++)
-			Bprint(&bso, "%d", inuxi4[i]);
-		Bprint(&bso, "\nfnuxi = ");
-		for(i=0; i<8; i++)
-			Bprint(&bso, "%d", fnuxi8[i]);
-		Bprint(&bso, "\n");
-	}
-	Bflush(&bso);
-}
-
-int
-find1(long l, int c)
-{
-	char *p;
-	int i;
-
-	p = (char*)&l;
-	for(i=0; i<4; i++)
-		if(*p++ == c)
-			return i;
-	return 0;
 }
 
 long

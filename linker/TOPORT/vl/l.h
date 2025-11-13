@@ -1,18 +1,3 @@
-
-struct	Autom
-{
-	Sym*	asym;
-	long	aoffset;
-	short	type;
-};
-
-
-struct	Count
-{
-	long	count;
-	long	outof;
-};
-
 enum
 {
 	SDATA1,
@@ -60,23 +45,10 @@ enum
 	FCMP		= 1<<6,
 	NOSCHED		= 1<<7,
 
-	BIG		= 32766,
-	STRINGSZ	= 200,
-	MINSIZ		= 64,
-	NENT		= 100,
 };
 
 
-EXTERN	char	fnuxi4[4];	/* for 3l [sic] */
-EXTERN	char	fnuxi8[8];
-
-EXTERN	char	inuxi1[1];
-EXTERN	char	inuxi2[2];
-EXTERN	char	inuxi4[4];
-
 EXTERN	char	literal[32];
-
-EXTERN	uchar	repop[ALAST];
 
 EXTERN	int	dtype;
 EXTERN	int	little;

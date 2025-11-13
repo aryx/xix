@@ -14,7 +14,6 @@ asmb(void)
 		else
 			lput(V_MAGIC);		/* mips 3000 BE */
 	}
-	cflush();
 }
 
 
@@ -58,21 +57,14 @@ asmlc(void)
 		if(p->line == oldlc || p->as == ATEXT || p->as == ANOP) {
 			if(p->as == ATEXT)
 				curtext = p;
-			if(debug['V'])
-				Bprint(&bso, "%6lux %P\n",
-					p->pc, p);
 			continue;
 		}
-		if(debug['V'])
-			Bprint(&bso, "\t\t%6ld", lcsize);
 		v = (p->pc - oldpc) / MINLC;
 		while(v) {
 			s = 127;
 			if(v < 127)
 				s = v;
 			CPUT(s+128);	/* 129-255 +pc */
-			if(debug['V'])
-				Bprint(&bso, " pc+%ld*%d(%ld)", s, MINLC, s+128);
 			v -= s;
 			lcsize++;
 		}
@@ -85,33 +77,13 @@ asmlc(void)
 			CPUT(s>>16);
 			CPUT(s>>8);
 			CPUT(s);
-			if(debug['V']) {
-				if(s > 0)
-					Bprint(&bso, " lc+%ld(%d,%ld)\n",
-						s, 0, s);
-				else
-					Bprint(&bso, " lc%ld(%d,%ld)\n",
-						s, 0, s);
-				Bprint(&bso, "%6lux %P\n",
-					p->pc, p);
-			}
 			lcsize += 5;
 			continue;
 		}
 		if(s > 0) {
 			CPUT(0+s);	/* 1-64 +lc */
-			if(debug['V']) {
-				Bprint(&bso, " lc+%ld(%ld)\n", s, 0+s);
-				Bprint(&bso, "%6lux %P\n",
-					p->pc, p);
-			}
 		} else {
 			CPUT(64-s);	/* 65-128 -lc */
-			if(debug['V']) {
-				Bprint(&bso, " lc%ld(%ld)\n", s, 64-s);
-				Bprint(&bso, "%6lux %P\n",
-					p->pc, p);
-			}
 		}
 		lcsize++;
 	}
@@ -120,37 +92,15 @@ asmlc(void)
 		CPUT(s);
 		lcsize++;
 	}
-	if(debug['v'] || debug['V'])
-		Bprint(&bso, "lcsize = %ld\n", lcsize);
-	Bflush(&bso);
 }
 
 void
 datblk(long s, long n, int str)
 {
-	Prog *p;
-	char *cast;
-	long l, fl, j, d;
-	int i, c;
-
-	memset(buf.dbuf, 0, n+100);
-	for(p = datap; p != P; p = p->link) {
-		curp = p;
+	for(...) {
 		if(str != (p->from.sym->type == SSTRING))
 			continue;
-		l = p->from.sym->value + p->from.offset - s;
-		c = p->reg;
-		i = 0;
-		if(l < 0) {
-			if(l+c <= 0)
-				continue;
-			while(l < 0) {
-				l++;
-				i++;
-			}
-		}
-		if(l >= n)
-			continue;
+        ...
 		if(p->as != AINIT && p->as != ADYNT) {
 			for(j=l+(c-i)-1; j>=l; j--)
 				if(buf.dbuf[j]) {
@@ -160,9 +110,6 @@ datblk(long s, long n, int str)
 				}
 		}
 		switch(p->to.type) {
-		default:
-			diag("unknown mode in initialization\n%P", p);
-			break;
 
 		case D_FCONST:
 			switch(c) {
@@ -184,57 +131,7 @@ datblk(long s, long n, int str)
 				break;
 			}
 			break;
-
-		case D_SCONST:
-			for(; i<c; i++) {
-				buf.dbuf[l] = p->to.sval[i];
-				l++;
-			}
-			break;
-
-		case D_CONST:
-			d = p->to.offset;
-			if(p->to.sym) {
-				switch(p->to.sym->type) {
-				case STEXT:
-				case SLEAF:
-				case SSTRING:
-					d += p->to.sym->value;
-					break;
-				case SDATA:
-				case SBSS:
-					d += p->to.sym->value + INITDAT;
-					break;
-				}
-			}
-			cast = (char*)&d;
-			switch(c) {
-			default:
-				diag("bad nuxi %d %d\n%P", c, i, curp);
-				break;
-			case 1:
-				for(; i<c; i++) {
-					buf.dbuf[l] = cast[inuxi1[i]];
-					l++;
-				}
-				break;
-			case 2:
-				for(; i<c; i++) {
-					buf.dbuf[l] = cast[inuxi2[i]];
-					l++;
-				}
-				break;
-			case 4:
-				for(; i<c; i++) {
-					buf.dbuf[l] = cast[inuxi4[i]];
-					l++;
-				}
-				break;
-			}
-			break;
-		}
-	}
-	write(cout, buf.dbuf, n);
+        ...
 }
 
 
@@ -717,11 +614,6 @@ opirr(int a)
 {
 	switch(a) {
     ...
-	//case ALAST:	return SP(1,7); // abused for extra codes
-    ...
-
-	//case AJMP:	return SP(0,2);
-	//case AJAL:	return SP(0,3);
 	case ABEQ:	return SP(0,4);
 	case ABNE:	return SP(0,5);
 

@@ -3,20 +3,13 @@
 void
 dodata(void)
 {
-	int i, t;
-	Sym *s;
-	Prog *p, *p1;
 	long orig, orig1, v;
 
-	for(p = datap; p != P; p = p->link) {
+	for(...) {
 		s = p->from.sym;
 		if(p->as == ADYNT || p->as == AINIT)
 			s->value = dtype;
-		if(s->type == SBSS)
-			s->type = SDATA;
-		if(s->type != SDATA)
-			diag("initialize non-data (%d): %s\n%P",
-				s->type, s->name, p);
+        ...
 		v = p->from.offset + p->reg;
 		if(v > s->value)
 			diag("initialize bounds (%ld): %s\n%P",

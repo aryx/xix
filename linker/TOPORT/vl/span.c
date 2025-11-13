@@ -2,39 +2,22 @@
 void
 span(void)
 {
-	Prog *p, *q;
-	Sym *setext, *s;
-	Optab *o;
-	int m, bflag, i;
-	long c, otxt, v;
-
+    ...
 	bflag = 0;
+
 	c = INITTEXT;
 	otxt = c;
-	for(p = firstp; p != P; p = p->link) {
-
-		p->pc = c;
-		o = oplook(p);
-		m = o->size;
-
+	for(...) {
 		if(m == 0) {
-
 			if(p->as == ATEXT) {
-				curtext = p;
-				autosize = p->to.offset + 4;
-				if(p->from.sym != S)
-					p->from.sym->value = c;
-
+                ...
 				/* need passes to resolve branches */
 				if(c-otxt >= 1L<<17)
 					bflag = 1;
 				otxt = c;
 				continue;
 			}
-			diag("zero-width instruction\n%P", p);
-			continue;
 		}
-		c += m;
 	}
 
 	/*
@@ -121,38 +104,15 @@ span(void)
 
 }
 		
-long
-regoff(Adr *a)
-{
-
-	instoffset = 0;
-	aclass(a);
-	return instoffset;
-}
-
 int
 aclass(Adr *a)
 {
-	Sym *s;
-	int t;
-
 	switch(a->type) {
     ...
 	case D_OREG:
 		switch(a->name) {
 		case D_EXTERN:
 		case D_STATIC:
-			if(a->sym == 0 || a->sym->name == 0) {
-				print("null sym external\n");
-				print("%D\n", a);
-				return C_GOK;
-			}
-			t = a->sym->type;
-			if(t == 0 || t == SXREF) {
-				diag("undefined external: %s in %s",
-					a->sym->name, TNAME);
-				a->sym->type = SDATA;
-			}
 			instoffset = a->sym->value + a->offset - BIG;
 			if(instoffset >= -BIG && instoffset < BIG)
 				return C_SEXT;
@@ -269,15 +229,14 @@ aclass(Adr *a)
 	case D_BRANCH:
 		return C_SBRA;
 	}
-	return C_GOK;
+    ...
 }
 
 int
 cmp(int a, int b)
 {
 
-	if(a == b)
-		return 1;
+    ...
 	switch(a) {
 	case C_LCON:
 		if(b == C_ZCON || b == C_SCON || b == C_UCON ||
@@ -337,7 +296,6 @@ cmp(int a, int b)
 	}
 	return 0;
 }
-
 
 void
 buildop(void)
@@ -455,16 +413,8 @@ buildop(void)
 			break;
 		case AMOVV:
 			buildrep(8, AMOVV);
-			break;
-		case ABREAK:
-		case AWORD:
-		case ARFE:
-		case AJAL:
-		case AJMP:
-		case ATEXT:
-		case ACASE:
-		case ABCASE:
-			break;
+			break;e
+        ...
 		}
 	}
 }

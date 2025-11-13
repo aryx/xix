@@ -12,9 +12,6 @@ enum
 	DELAY	= BRANCH|LOAD|FCMP,
 };
 
-typedef	struct	Sch	Sch;
-typedef	struct	Dep	Dep;
-
 struct	Dep
 {
 	ulong	ireg;
@@ -31,12 +28,6 @@ struct	Sch
 	char	nop;
 	char	comp;
 };
-
-void	regsused(Sch*, Prog*);
-int	depend(Sch*, Sch*);
-int	conflict(Sch*, Sch*);
-int	offoverlap(Sch*, Sch*);
-void	dumpbits(Sch*, Dep*);
 
 void
 sched(Prog *p0, Prog *pe)

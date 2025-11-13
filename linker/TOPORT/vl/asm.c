@@ -612,7 +612,7 @@ asmout(Prog *p, Optab *o)
 
 	case 40:	/* word */
 		//o1 = regoff(&p->to);
-		break;
+		//break;
 
 	case 41:	/* movw r,fcr */
 		o1 = OP_RRR(SP(2,1)|(2<<21), REGZERO, 0, p->to.reg); 	/* mfcc1 */
@@ -648,10 +648,7 @@ asmout(Prog *p, Optab *o)
 		o1 = v;
 		break;
 	}
-
-	v = p->pc;
-
-	return 0;
+    ...
 }
 
 int

@@ -34,13 +34,9 @@ main(int argc, char *argv[])
 
 
 	dtype = 4;
-
-	version = 0;
     ...
 
 	addlibpath("command line", "command line", argv[0], "main");
-
-	loadlib();
 
 	// mark some functions that are only referenced after linker code editing
 	// TODO(kaib): this doesn't work, the prog can't be found in runtime
@@ -54,39 +50,19 @@ main(int argc, char *argv[])
 		errorexit();
 	}
 
-	patch();
 
     ...
 	doelf();
-	dodata();
-
-	follow();
 
 	softfloat();
 
-	noops();
-	span();
-
 	reloc();
-
-	asmb();
-
-	undef();
 
 	if(debug['c']){
 		print("ARM size = %d\n", armsize);
 	}
-	errorexit();
 }
 
-
-void
-nopout(Prog *p)
-{
-	p->as = ANOP;
-	p->from.type = D_NONE;
-	p->to.type = D_NONE;
-}
 
 void
 ldobj1(Biobuf *f, char *pkg, int64 len, char *pn)

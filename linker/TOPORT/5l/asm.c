@@ -5,16 +5,8 @@ char linuxdynld[] = "/lib/ld-linux.so.2";
 int32
 entryvalue(void)
 {
-	char *a;
-	Sym *s;
-
-	a = INITENTRY;
 	if(*a >= '0' && *a <= '9')
 		return atolwhex(a);
-
-	s = lookup(a, 0);
-	if(s->type == 0)
-		return INITTEXT;
     ...
 }
 

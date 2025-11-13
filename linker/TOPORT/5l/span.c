@@ -118,6 +118,7 @@ span(void)
 		autosize = p->to.offset + 4;
 		if(p->from.sym != S)
 			p->from.sym->value = c;
+
 		/* need passes to resolve branches */
 		if(c-otxt >= 1L<<17)
 			bflag = 1;
@@ -411,15 +412,6 @@ xdefine(char *p, int t, int32 v)
 }
 
 int32
-regoff(Adr *a)
-{
-
-	instoffset = 0;
-	aclass(a);
-	return instoffset;
-}
-
-int32
 immrot(uint32 v)
 {
 	int i;
@@ -499,21 +491,6 @@ aclass(Adr *a)
 	int t;
 
 	switch(a->type) {
-	case D_NONE:
-		return C_NONE;
-
-	case D_REG:
-		return C_REG;
-
-	case D_REGREG:
-		return C_REGREG;
-
-	case D_SHIFT:
-		return C_SHIFT;
-
-	case D_FREG:
-		return C_FREG;
-
 	case D_FPCR:
 		return C_FCR;
 
@@ -521,18 +498,9 @@ aclass(Adr *a)
 		switch(a->name) {
 		case D_EXTERN:
 		case D_STATIC:
-			if(a->sym == 0 || a->sym->name == 0) {
-				print("null sym external\n");
-				print("%D\n", a);
-				return C_GOK;
-			}
 			s = a->sym;
 			t = s->type;
-			if(t == 0 || t == SXREF) {
-				diag("undefined external: %s in %s",
-					s->name, TNAME);
-				s->type = SDATA;
-			}
+            ...
 			instoffset = s->value + a->offset;
 			return C_ADDR;
 		case D_AUTO:
@@ -580,20 +548,12 @@ aclass(Adr *a)
 		}
 		return C_GOK;
 
-	case D_PSR:
-		return C_PSR;
-
 	case D_OCONST:
 		switch(a->name) {
 		case D_EXTERN:
 		case D_STATIC:
 			s = a->sym;
 			t = s->type;
-			if(t == 0 || t == SXREF) {
-				diag("undefined external: %s in %s",
-					s->name, TNAME);
-				s->type = SDATA;
-			}
 			instoffset = symaddr(s) + a->offset;
 			return C_LCON;
 		}
@@ -650,79 +610,13 @@ aclass(Adr *a)
 	case D_BRANCH:
 		return C_SBRA;
 	}
-	return C_GOK;
-}
-
-Optab*
-oplook(Prog *p)
-{
-	int a1, a2, a3, r;
-	char *c1, *c3;
-	Optab *o, *e;
-	Optab *otab;
-	Oprang *orange;
-
-
-		otab = optab;
-		orange = oprange;
-
-	a1 = p->optab;
-	if(a1)
-		return otab+(a1-1);
-	a1 = p->from.class;
-	if(a1 == 0) {
-			a1 = aclass(&p->from) + 1;
-		p->from.class = a1;
-	}
-	a1--;
-	a3 = p->to.class;
-	if(a3 == 0) {
-			a3 = aclass(&p->to) + 1;
-		p->to.class = a3;
-	}
-	a3--;
-	a2 = C_NONE;
-	if(p->reg != NREG)
-		a2 = C_REG;
-	r = p->as;
-	o = orange[r].start;
-	if(o == 0) {
-		a1 = opcross[repop[r]][a1][a2][a3];
-		if(a1) {
-			p->optab = a1+1;
-			return otab+a1;
-		}
-		o = orange[r].stop; /* just generate an error */
-	}
-	if(debug['O']) {
-		print("oplook %A %O %O %O\n",
-			(int)p->as, a1, a2, a3);
-		print("		%d %d\n", p->from.type, p->to.type);
-	}
-	e = orange[r].stop;
-	c1 = xcmp[a1];
-	c3 = xcmp[a3];
-	for(; o<e; o++)
-		if(o->a2 == a2)
-		if(c1[o->a1])
-		if(c3[o->a3]) {
-			p->optab = (o-otab)+1;
-			return o;
-		}
-	diag("illegal combination %A %O %O %O, %d %d",
-		p->as, a1, a2, a3, p->from.type, p->to.type);
-	prasm(p);
-	if(o == 0)
-		o = otab;
-	return o;
+    ...
 }
 
 int
 cmp(int a, int b)
 {
-
-	if(a == b)
-		return 1;
+    ...
 	switch(a) {
 	case C_LCON:
 		if(b == C_RCON || b == C_NCON)
@@ -766,9 +660,8 @@ cmp(int a, int b)
 
 	case C_HREG:
 		return cmp(C_SP, b) || cmp(C_PC, b);
-
 	}
-	return 0;
+    ...
 }
 
 int

@@ -81,10 +81,7 @@ struct	Sym
 
 struct	Autom
 {
-	Sym*	asym;
-	Auto*	link;
-	int32	aoffset;
-	short	type;
+    ...
 	Sym*	gotype;
 };
 
@@ -120,7 +117,6 @@ enum
 	V4		= 1<<3,	/* arm v4 arch */
 
 	C_NONE		= 0,
-	C_REG,
 	C_REGREG,
 	C_SHIFT,
 	C_FREG,
@@ -175,9 +171,6 @@ enum
 #ifndef COFFCVT
 
 EXTERN	int32 	elfdatsize;
-
-
-EXTERN	char	literal[32];
 
 
 EXTERN	char*	rpath;

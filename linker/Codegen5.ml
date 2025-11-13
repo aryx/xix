@@ -279,36 +279,9 @@ let gload_from_pool (nsrc : 'a T.node) cond rt =
  *)
 let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
-  (* --------------------------------------------------------------------- *)
   (* Reusable *)
-  (* --------------------------------------------------------------------- *)
-   | T.Virt _ | T.TEXT _ -> 
+   | T.Virt _ | T.TEXT _ | T.WORD _ -> 
       Codegen.default_rules env init_data node
-
-  (* --------------------------------------------------------------------- *)
-  (* Pseudo *)
-  (* --------------------------------------------------------------------- *)
-  | T.WORD x ->
-      { size = 4; x = None; binary = (fun () -> 
-        match x with
-        | Float _ -> raise Todo
-        | Int i -> [ [(i land 0xffffffff, 0)] ]
-        | String _s -> 
-            (* stricter? what does 5l do with that? confusing I think *)
-            error node "string not allowed with WORD; use DATA"
-        | Address (Global (global, _offsetTODO)) -> 
-            let v = Hashtbl.find env.syms (T.symbol_of_global global) in
-            (match v with
-             | T.SText2 real_pc -> [ [(real_pc, 0)] ]
-             | T.SData2 (offset, _kind) -> 
-                 (match init_data with
-                 | None -> raise (Impossible "init_data should be set by now")
-                 | Some init_data -> [ [(init_data + offset, 0)] ]
-                 )
-            )
-        | Address (Param _ | Local _) -> raise Todo
-      )}
-
   | T.I (instr, cond) ->
     (match instr with
     | ArithF _ | CmpF _ -> raise Todo

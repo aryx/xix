@@ -92,6 +92,8 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
     | T.SData2 (_, T.Bss) -> raise (Impossible "layout_data missed a DATA")
     | T.SText2 _ -> raise (Impossible "layout_data did this check")
   );
+
+  (* TODO? -debug_data and output its content? *)
   arr
 (*e: function [[Datagen.gen]] *)
 (*e: Datagen.ml *)

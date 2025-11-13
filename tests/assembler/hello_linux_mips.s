@@ -31,6 +31,7 @@ TEXT _start(SB), NO_PROF, $0
 TEXT never_executed(SB), $0
 	//JAL unknown_function(SB)
 	JAL never_executed(SB)
+	WORD $0x12345678
 	RET
 
 // -------------------------------------------

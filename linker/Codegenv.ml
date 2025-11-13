@@ -204,35 +204,9 @@ let gbranch_static (nsrc : 'a T.node) (is_jal : bool) : Bits.t =
 
 let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
-  (* --------------------------------------------------------------------- *)
   (* Reusable *)
-  (* --------------------------------------------------------------------- *)
-   | T.Virt _ | T.TEXT _ -> 
+   | T.Virt _ | T.TEXT _ | T.WORD _ -> 
       Codegen.default_rules env init_data node
-
-  (* alt: could be moved to Codegen.ml and reused *)
-  | T.WORD x ->
-      { size = 4; x = None; binary = (fun () -> 
-        match x with
-        | Float _ -> raise Todo
-        | Int i -> [ [(i land 0xffffffff, 0)] ]
-        | String _s -> 
-            (* stricter? what does 5l do with that? confusing I think *)
-            error node "string not allowed with WORD; use DATA"
-        | Address (Global (global, _offsetTODO)) -> 
-            let v = Hashtbl.find env.syms (T.symbol_of_global global) in
-            (match v with
-             | T.SText2 real_pc -> [ [(real_pc, 0)] ]
-             | T.SData2 (offset, _kind) -> 
-                 (match init_data with
-                 | None -> raise (Impossible "init_data should be set by now")
-                 | Some init_data -> [ [(init_data + offset, 0)] ]
-                 )
-            )
-        | Address (Param _ | Local _) -> raise Todo
-      )}
-
-
   | T.I instr ->
     (match instr with
     (* --------------------------------------------------------------------- *)
@@ -324,9 +298,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             | Some _ ->
                  failwith "TODO: from_part_when_small_offset_to_R30 is a Some"
             | None ->
+
               (* case 19:	/* mov $lcon,r ==> lu+or */ *)
               { size = 8; x = None; binary = (fun () ->
               (* similar to WORD case *)
+              (* TODO: introduce helper lcon_address_of_global *)
               let v = Hashtbl.find env.syms (T.symbol_of_global global) in
               let lcon =
                 match v with
@@ -412,8 +388,6 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      ) -> 
        failwith (spf "Codegenv: TODO: instr not handled: %s"
                 (Typesv.show_instr node.instr))
-
-    (*    | _ -> error node "illegal combination"*)
     )
 
 (*****************************************************************************)

@@ -1,8 +1,6 @@
 (* This is used for the code layout. *)
 val size_of_instruction: 
-  Codegen.env -> Ast_asmv.instr Types.node -> 
-  int (* a multiple of 4 *) * Codegen.pool option
-
+  Codegen.env -> Ast_asmv.instr Types.node -> int (* a multiple of 4 *)
 
 (* uses only config.init_text and for sanity checking only *)
 val gen: 

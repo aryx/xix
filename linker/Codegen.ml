@@ -9,19 +9,11 @@
 (* Types *)
 (*****************************************************************************)
 
-type pool =
-  (* note that it is not always an int! Sometimes it can be an
-   * Address which will be resolved only at the very end.
-   *)
-  | PoolOperand of Ast_asm.ximm
-  (* todo: still don't know why we need that *)
-  | LPOOL 
-
-type action = {
+type 'xtra action = {
   (* a multiple of 4 *)
   size: int;
-  pool: pool option;
   binary: unit -> Bits.int32 list;
+  x: 'xtra option;
 }
 
 type env = {
@@ -34,3 +26,5 @@ type env = {
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
+(* reusable rules across archs *)

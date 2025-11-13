@@ -217,11 +217,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
    * case 0: /* pseudo ops */
    *)
   | T.TEXT (_, _, _) -> 
-      { size = 0; pool = None; binary = (fun () -> []) }
+      { size = 0; x = None; binary = (fun () -> []) }
 
   (* alt: could be moved to Codegen.ml and reused *)
   | T.WORD x ->
-      { size = 4; pool = None; binary = (fun () -> 
+      { size = 4; x = None; binary = (fun () -> 
         match x with
         | Float _ -> raise Todo
         | Int i -> [ [(i land 0xffffffff, 0)] ]
@@ -251,7 +251,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* case 4:		/* add $scon,[r1],r2 */ *)
     | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) ->
         (* TODO: C_ADD0CON vs C_ANDCON generate different opcodes *)
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
             let v = i in
             let r = r_opt ||| rt in
             [ op_irr (opirr_arith_opcode op) v r rt ]
@@ -263,7 +263,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * { AMOVW,	C_REG,	C_NONE,	C_REG,		 1, 4, 0 },
      *)
     | Move2 (W__, (Right (Int 0)), Gen (GReg rt)) ->
-       { size = 4; pool = None; binary = (fun () ->
+       { size = 4; x = None; binary = (fun () ->
           [ op_rrr (oprrr_arith_opcode OR) rZERO rZERO rt ]
         ) }
 
@@ -273,7 +273,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | Move2 (W__, (Right (Int i)), Gen (GReg rt)) ->
        (match constant_kind i with
        | Some i -> 
-           { size = 4; pool = None; binary = (fun () ->
+           { size = 4; x = None; binary = (fun () ->
                let r = rZERO in
                (* TODO: can also be let op = OR if exactly ANDCON *)
                let op = ADD (W, U) in
@@ -289,12 +289,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | JMP { contents = (IndirectJump rt) } ->
         let r = rZERO in
         let op_jmp = op 1 0 in
-        { size = 4; pool = None; binary = (fun () -> 
+        { size = 4; x = None; binary = (fun () -> 
            [ op_rrr op_jmp rZERO rt r ]
          ) }
     (* case 11:	/* jmp lbra */ *)
     | JAL { contents = (Absolute _) } ->
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [ gbranch_static node true ]
           ) }
     (* --------------------------------------------------------------------- *)
@@ -334,7 +334,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                  failwith "TODO: from_part_when_small_offset_to_R30 is a Some"
             | None ->
               (* case 19:	/* mov $lcon,r ==> lu+or */ *)
-              { size = 8; pool=None; binary=(fun () ->
+              { size = 8; x = None; binary = (fun () ->
               (* similar to WORD case *)
               let v = Hashtbl.find env.syms (T.symbol_of_global global) in
               let lcon =
@@ -358,7 +358,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* case 35:	/* mov r,lext/luto/oreg ==> sw o(r) */ *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Entity ent)) ->
-        { size = 16; pool = None; binary = (fun () ->
+        { size = 16; x = None; binary = (fun () ->
           let (rbase, offset) =
                  base_and_offset_of_entity node env.syms env.autosize ent
           in
@@ -371,7 +371,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           ) }
     (* case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */ *)    
     | Move2 (W__, Left (Gen (Entity ent)), Gen (GReg rt)) ->
-        { size = 16; pool = None; binary = (fun () ->
+        { size = 16; x = None; binary = (fun () ->
             let (rbase, offset) =
                  base_and_offset_of_entity node env.syms env.autosize ent
             in
@@ -386,7 +386,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* case 7:		/* mov r, soreg ==> sw o(r) */ *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rt, offset))) ->
         (* TODO: need look for offset if SOREG or LOREG *)
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           let r = rt in
           (* TODO: regoff *)
           let v = offset in
@@ -394,7 +394,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
          ) }
     (* case 8:		/* mov soreg, r ==> lw o(r) */ *)
     | Move2 (W__, Left (Gen (Indirect (rf, offset))), Gen (GReg rt)) ->
-         { size = 4; pool = None; binary = (fun () ->
+         { size = 4; x = None; binary = (fun () ->
            let r = rf in
            (* TODO: regoff *)
            let v = offset in
@@ -406,9 +406,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
     (* case 5:		/* syscall */ *)
     | SYSCALL ->
-       { size = 4; pool = None; binary = (fun () -> [op 1 4]) }
+       { size = 4; x = None; binary = (fun () -> [op 1 4]) }
     | BREAK ->
-       { size = 4; pool = None; binary = (fun () -> [op 1 5]) }
+       { size = 4; x = None; binary = (fun () -> [op 1 5]) }
 
     (* --------------------------------------------------------------------- *)
     (* Other *)
@@ -429,12 +429,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 (* Entry points *)
 (*****************************************************************************)
 
-(* TODO: factorize with Codegen5.ml *)
-let size_of_instruction  (env : Codegen.env) (node : 'a T.node) : int (* a multiple of 4 *) * Codegen.pool option =
-  let action  = rules env None node in
-  action.size, action.pool
 
-(* TODO: factorize with Codegen5.ml *)
+(* must return a multiple of 4 *)
+let size_of_instruction  (env : Codegen.env) (node : 'a T.node) : int =
+  let action  = rules env None node in
+  action.size
+
+(* TODO: could factorize parts with Codegen5.ml *)
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
    (cg : 'a T.code_graph) : T.word list =
 
@@ -445,7 +446,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
 
   cg |> T.iter (fun n ->
 
-    let {size; binary; pool = _ }  = 
+    let {size; binary; x = _ }  = 
         rules Codegen.{ syms = symbols2; autosize = !autosize }
         config.init_data n 
     in

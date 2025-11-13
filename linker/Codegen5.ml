@@ -22,6 +22,13 @@ open Codegen
 (*****************************************************************************)
 
 (*s: type [[Codegen5.pool]] *)
+type pool =
+  (* note that it is not always an int! Sometimes it can be an
+   * Address which will be resolved only at the very end.
+   *)
+  | PoolOperand of Ast_asm.ximm
+  (* todo: still don't know why we need that *)
+  | LPOOL 
 (*e: type [[Codegen5.pool]] *)
 
 (*s: type [[Codegen5.action]] *)
@@ -283,10 +290,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   (* --------------------------------------------------------------------- *)
   (* TEXT instructions were kept just for better error reporting localisation *)
   | T.TEXT (_, _, _) -> 
-      { size = 0; pool = None; binary = (fun () -> []) }
+      { size = 0; x = None; binary = (fun () -> []) }
 
   | T.WORD x ->
-      { size = 4; pool = None; binary = (fun () -> 
+      { size = 4; x = None; binary = (fun () -> 
         match x with
         | Float _ -> raise Todo
         | Int i -> [ [(i land 0xffffffff, 0)] ]
@@ -332,7 +339,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               | None -> error node "TODO: LCON"
               )
         in
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [[gcond cond; gop_arith op] @ gsetbit opt @ [(r, 16); (rt, 12)] 
             @ from_part]
         )}
@@ -355,7 +362,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           (* stricter: I added that *)
           | Shift _ -> error node "bitshift on shift operation not allowed"
         in
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [[gcond cond; gop_arith MOV] @ gsetbit opt @ [(rt, 12); gop_shift op]
             @ from_part @ [(r, 0)]]
         )}
@@ -376,7 +383,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         (* ?? *)
         let (r, rf) = if rt = r then (rf, rt) else (r, rf) in
         
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [[gcond cond; (0x0, 21)] @ gsetbit opt 
             @ [(rt, 16); (rf, 8); (0x9, 4); (r, 0) ]]
         )}
@@ -394,7 +401,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               | None -> error node "TODO"
               )
         in
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
         )}
         
@@ -410,13 +417,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               )
         in
         let r = if !Flags.kencc_compatible then rt else 0 in
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ from_part]
         )}
 
     (* MOVBU R, RT -> ADD 0xff, R, RT *)
     | MOVE (Byte U, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff, 0)]]
         )}
 
@@ -437,7 +444,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           | HalfWord _ -> 16
           | Word -> raise (Impossible "size matched in pattern")
         in
-        { size = 8; pool = None; binary = (fun () ->
+        { size = 8; x = None; binary = (fun () ->
           [
             [gcond cond; gop_arith MOV; (rt, 12); gop_shift SLL; (sh,7);(rf,0)];
             [gcond cond; gop_arith MOV; (rt, 12); gop_shift rop; (sh,7);(rt,0)];
@@ -452,7 +459,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | B x ->
         if cond <> AL 
         then raise (Impossible "B should always be with AL");
-        { size = 4; pool = Some LPOOL; binary = (fun () ->
+        { size = 4; x = Some LPOOL; binary = (fun () ->
           match !x with
           | Absolute _ -> [ gbranch_static node AL false ]
           (* B (R) -> ADD 0, R, PC *)
@@ -464,12 +471,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | BL x ->
         (match !x with
         | Absolute _ -> 
-            { size = 4; pool = None; binary = (fun () ->
+            { size = 4; x = None; binary = (fun () ->
               [ gbranch_static node AL true ]
             )}
         (* BL (R) -> ADD $0, PC, LINK; ADD $0, R, PC *)
         | IndirectJump (R r) ->
-           { size = 8; pool = None; binary = (fun () ->
+           { size = 8; x = None; binary = (fun () ->
              let (R r2) = rPC in
              let (R rt) = rLINK in
               [ 
@@ -488,7 +495,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         then raise (Impossible "Bxx should always be with AL");
         (match !x with
         | Absolute _ -> 
-            { size = 4; pool = None; binary = (fun () ->
+            { size = 4; x = None; binary = (fun () ->
               [ gbranch_static node cond2 false ]
             )}
         (* stricter: better error message at least? *)
@@ -531,14 +538,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             (match from_part_when_small_offset_to_R12 with
             | Some (rot, v) ->
               (* MOVW $x(SB), RT -> ADD $offset_to_r12, R12, RT  *)
-              { size = 4; pool = None; binary = (fun () ->
+              { size = 4; x = None; binary = (fun () ->
                 let (R r) = rSB in
                 [[gcond cond; (1, 25); gop_arith ADD; (r, 16); (rt, 12); 
                   (rot, 8); (v, 0)]]
             )}
             | None -> 
               (* MOVW $L(SB), RT -> LDR x(R15), RT *)
-              { size = 4; pool=Some(PoolOperand(ximm)); binary=(fun () ->
+              { size = 4; x = Some (PoolOperand ximm); binary = (fun () ->
                 [ gload_from_pool node cond (R rt) ]
               )}
             )
@@ -563,7 +570,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               base_and_offset_of_indirect node env.syms env.autosize from in
             if immoffset offset
             then
-              { size = 4; pool = None; binary = (fun () -> 
+              { size = 4; x = None; binary = (fun () -> 
                 [ gmem cond LDR size opt (Left offset) rbase rt ]
               )}
             else
@@ -584,7 +591,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
             if immoffset offset
             then
-              { size = 4; pool = None; binary = (fun () -> 
+              { size = 4; x = None; binary = (fun () -> 
                 [ gmem cond STR size opt (Left offset) rbase rf ]
               )}
             else
@@ -609,12 +616,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         if i <> 0
         then error node (spf "SWI does not use its parameter under Plan 9/Linux");
 
-        { size = 4; pool = None; binary = (fun () ->
+        { size = 4; x = None; binary = (fun () ->
           [ [gcond cond; (0xf, 24)] ]
         )}
     (* RFE -> MOVM.S.W.U 0(r13),[r15] *)
     | RFE ->
-        { size = 4; pool = None; binary = (fun () -> 
+        { size = 4; x = None; binary = (fun () -> 
           [ [(0xe8fd8000, 0)] ]
         )}
     (* --------------------------------------------------------------------- *)
@@ -632,7 +639,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 (*s: function [[Codegen5.size_of_instruction]] *)
 let size_of_instruction (env : Codegen.env) (node : 'a T.node) : int (* a multiple of 4 *) * pool option =
   let action  = rules env None node in
-  action.size, action.pool
+  action.size, action.x
 (*e: function [[Codegen5.size_of_instruction]] *)
 
 (* TODO: could reuse this code and only things changing are the rules to pass?*)
@@ -648,7 +655,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
 
   cg |> T.iter (fun n ->
 
-    let {size; binary; pool = _ }  = 
+    let {size; binary; x = _ }  = 
         rules { Codegen.syms = symbols2; autosize = !autosize }
         config.init_data n 
     in

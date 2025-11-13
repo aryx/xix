@@ -4,6 +4,7 @@
  * !! works by side effect on code_graph and symbol_table2, so take care !!
  *)
 val layout_text: 
-  Types.symbol_table2 -> Types.real_pc (* INITTEXT *) -> Typesv.code_graph -> 
-  Types.symbol_table2 * Typesv.code_graph * int
+  Types.symbol_table2 -> Types.real_pc (* INITTEXT *) ->
+  Ast_asmv.instr Types.code_graph -> 
+  Types.symbol_table2 * Ast_asmv.instr Types.code_graph * int
 

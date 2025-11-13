@@ -4,4 +4,4 @@
  * may raise Failure in case of error.
 *)
 val rewrite: 
-  Typesv.code_graph -> Typesv.code_graph
+  Ast_asmv.instr Types.code_graph -> Ast_asmv.instr Types.code_graph

@@ -11,9 +11,3 @@ let show_instr _ = "NO DERIVING"
 
 type instr = Ast_asmv.instr Types.code_bis
 [@@deriving show]
-
-type node = Ast_asmv.instr Types.node
-[@@deriving show]
-
-type code_graph = Ast_asmv.instr Types.code_graph
-[@@deriving show]

@@ -11,7 +11,7 @@ module A = Ast_asm
 
 (* TODO: factorize with Layout5.ml and move layout_text in Layout.ml? *)
 let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) 
-  (cg : Tv.code_graph) : T.symbol_table2 * Tv.code_graph * int =
+  (cg : 'a T.code_graph) : T.symbol_table2 * 'a T.code_graph * int =
 
   let pc : T.real_pc ref = ref init_text in
   let autosize = ref 0 in

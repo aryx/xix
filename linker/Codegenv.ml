@@ -372,13 +372,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 (*****************************************************************************)
 
 (* TODO: factorize with Codegen5.ml *)
-let size_of_instruction  (env : Codegen.env) (node : Tv.node) : int (* a multiple of 4 *) * Codegen.pool option =
+let size_of_instruction  (env : Codegen.env) (node : 'a T.node) : int (* a multiple of 4 *) * Codegen.pool option =
   let action  = rules env None node in
   action.size, action.pool
 
 (* TODO: factorize with Codegen5.ml *)
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
-   (cg : Tv.code_graph) : T.word list =
+   (cg : 'a T.code_graph) : T.word list =
 
   let res = ref [] in
   let autosize = ref 0 in

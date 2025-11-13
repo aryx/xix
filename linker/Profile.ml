@@ -7,16 +7,18 @@ module T = Types
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Profiling instrumentation (-p, -p_time, -p_count).
+(* Profiling instrumentation of TEXT and RET (-p, -p_time, -p_count).
  *
  * Depending on profile_kind it can either profile the number of times
- * a function is called or the time spent in a function (see also
- * Exec_file.profile_kind).
+ * a function is called (-p_count) or the time spent in a function (-p_time).
+ * See also Exec_file.profile_kind.
  *
  * Better than 5l/vl/il:
  *  - As opposed to 5l/vl/... we are able to factorize code across archs
  *    by introducing new virtual instructions in Ast_asm.ml: Load, Store, Add,
  *    and Call!!
+ *    update: actually for 8l/6l it does not completely work, but at least
+ *    for 5l/vl/il/7l it worked!
  *
  * TODO: handle ProfileTime and Trace 
  *)
@@ -26,9 +28,11 @@ module T = Types
 (*****************************************************************************)
 
 (* polymorphic! work across archs! *)
-let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol_table) (cg : 'i T.code_graph) : 'i T.code_graph * T.data list =
-  Logs.info (fun m -> m "Profiling instrumentation %s" 
-        (Exec_file.show_profile_kind conf));
+let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register)
+    (syms : T.symbol_table) (cg : 'i T.code_graph) :
+    'i T.code_graph * T.data list =
+  Logs.info (fun m -> 
+      m "Profiling instrumentation %s" (Exec_file.show_profile_kind conf));
   let data = ref [] in
  
   (match conf with
@@ -53,8 +57,10 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register) (syms : T.symbol
           then ()
           else begin
           data |> Stack_.push 
-            (T.DATA (mcount, !count * 4, 4 (* size *), 
-              A.Address (A.Global (ent, 0))));
+            (T.DATA ( mcount, 
+                     !count * 4,
+                     4 (* size *), 
+                     A.Address (A.Global (ent, 0))));
 
           (* LATER: in 6l/8l it can do in one ADD 1, __mcount+8(SB) operation
            * so maybe we should run a peephole optimizer in Rewrite6.ml for

@@ -3,8 +3,6 @@ open Common
 
 module A = Ast_asm
 module T = Types
-module Tv = Typesv
-open Types
 open Ast_asmv
 
 (*****************************************************************************)
@@ -15,7 +13,7 @@ open Ast_asmv
 (* Entry point *)
 (*****************************************************************************)
 
-let rewrite (cg : Tv.code_graph) : Tv.code_graph =
+let rewrite (cg : instr T.code_graph) : instr T.code_graph =
 
   let is_leaf : A.global Hashtbl_.set  = Hashtbl_.create () in
 
@@ -52,7 +50,7 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
               (curtext, Some n)
           | _ -> (curtext, Some n)
         in
-        n.branch |> Option.iter (fun n2 ->
+        n.branch |> Option.iter (fun (n2 : 'a T.node) ->
           match n2.instr with
           | T.Virt A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
           | _ -> ()
@@ -91,13 +89,13 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
           (* ADD $-autosize, SP
            * MOVW RLINK, 0(SP)
            *)
-          let rec n1 = {
+          let rec n1 = T.{
             instr = T.I (Arith (ADD (W, A.S), 
                          Imm (- autosize), None, rSP));
             next = Some n2;
             branch = None; n_loc = n.n_loc; real_pc = -1;
           }
-          and n2 = {
+          and n2 = T.{
             instr = T.I (Move2 (W__,  
                               Either.Left (Gen (GReg rLINK)), 
                               Gen (Indirect (rSP, 0))));
@@ -127,13 +125,13 @@ let rewrite (cg : Tv.code_graph) : Tv.code_graph =
                            Either.Left (Gen (Indirect (rSP, 0))),
                            Gen (GReg r2TMP)));
 
-            let rec n1 = {
+            let rec n1 = T.{
               instr = T.I (Arith (ADD (W, A.S), 
                          Imm (autosize), None, rSP));
               next = Some n2;
               branch = None; n_loc = n.n_loc; real_pc = -1;
              }
-            and n2 = {
+            and n2 = T.{
               instr = T.I (JMP (ref (A.IndirectJump (r2TMP)))) ;
               next = n.next;
               branch = None; n_loc = n.n_loc; real_pc = -1;

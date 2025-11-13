@@ -7,8 +7,6 @@ open Ast_asmv
 
 module T = Types
 module Tv = Typesv
-open Types
-open Typesv
 open Codegen
 
 (*****************************************************************************)
@@ -16,25 +14,26 @@ open Codegen
 (*****************************************************************************)
 (* Mips code generation.
  *
+ * The 'case <n>: ... ' comments below refer to code in vl/asm.c so one
+ * can easily check the corresponding C code in vl that was used
+ * as model for the OCaml code.
  *)
 
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
+(* Load and Store (copy pasted from Codegen5.ml) *)
 type mem_opcode = LDR | STR
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-let error node s =
-  failwith (spf "%s at %s on %s" s 
-              (T.s_of_loc node.n_loc)
-              (Tv.show_instr node.instr)
-  )
-let int_of_bits (n : node) (x : Bits.int32) : int =
-  try
-    Bits.int_of_bits32 x
-  with Failure s -> error n s
+let error (node : 'a T.node) (s : string) =
+  failwith 
+    (spf "%s at %s on %s" s  (T.s_of_loc node.n_loc) (Tv.show_instr node.instr))
+let int_of_bits (n : 'a T.node) (x : Bits.int32) : int =
+  try Bits.int_of_bits32 x with
+  | Failure s -> error n s
 
 (*****************************************************************************)
 (* Operand classes *)
@@ -53,6 +52,10 @@ let offset_to_R30 x =
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
+(* the functions names below are a bit cryptic but I followed the conventions
+ * used in vl/asm.c (those names probably derives from the Mips architecture
+ * manual).
+ *)
 
 let op (x : int) (y : int) : Bits.t =
   [(x, 3); (y, 0)]
@@ -144,26 +147,28 @@ let op_jmp (op : Bits.t) (i : int) : Bits.t =
 (* More complex code generation helpers *)
 (*****************************************************************************)
 
-let gbranch_static (nsrc : Tv.node) is_jal : Bits.t =
+let gbranch_static (nsrc : 'a T.node) (is_jal : bool) : Bits.t =
   match nsrc.branch with
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some ndst ->
       let dst_pc = ndst.real_pc in
+      (* sanity check *)
       if dst_pc mod 4 <> 0
       then raise (Impossible "layout text wrong, not word aligned node");
+
       let v = dst_pc lsr 2 in
       op_jmp (opirr_jmp is_jal) v
 
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
-(* conventions (matches the one used (inconsistently) in vl?):
+(* conventions:
  * - rf = register from (p->from.reg in vl)
  * - rt = register to (p->to.reg in vl)
  * - r_opt  = register middle (optional, p->reg in vl)
  *)
 
-let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
+let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
   (* --------------------------------------------------------------------- *)
   (* Virtual *)

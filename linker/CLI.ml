@@ -198,7 +198,8 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config)
   (* arch-specific phase *)
   let instrs = Codegen5.gen symbols2 config graph in
 
-  let datas  = Datagen.gen symbols2 init_data sizes data in
+  let endian = Arch.endian_of_arch config.arch in
+  let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 (*e: function [[CLI.link5]] *)
 
@@ -229,7 +230,8 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   Logs.info (fun m -> m "final config is %s" 
         (Exec_file.show_linker_config config));
   let instrs = Codegenv.gen symbols2 config graph in
-  let datas  = Datagen.gen symbols2 init_data sizes data in
+  let endian = Arch.endian_of_arch config.arch in
+  let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 
 

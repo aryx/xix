@@ -10,7 +10,7 @@
  * on very old versions of OCaml like 3.10 that we want to support. Moreover,
  * it uses advanced features like functors and first-class modules
  * (as in `module Log = (val Logs.src_log src : Logs.LOG)`) that we don't want
- * to rely on because we plan to compile Xix with "ocaml light" (our own
+ * to rely on because we also compile Xix with "ocaml light" (our own
  * fork of ocaml). Enter this file.
  *
  * alternatives:

@@ -1,6 +1,7 @@
 (*
    Wrapper around Printexc to ensure or at least encourage uniform
    exception tracing.
+   Martin Jambon.
 *)
 
 type t = exn * Printexc.raw_backtrace

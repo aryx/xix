@@ -4,8 +4,9 @@
  * Copyright (C) 2009-2012 Facebook
  * Copyright (C) 2025 Yoann Padioleau
  * 
- * Most of the code in this file was inspired by code by Thomas Gazagnaire.
- * Here is the original copyright:
+ * Most of the code in this file was inspired by code by Thomas Gazagnaire
+ * in orm-sqlite (itself coming from some some xen-api-libs project).
+ * Here was the original copyright:
  * 
  * Copyright (c) 2009 Thomas Gazagnaire <thomas@gazagnaire.com>
  *

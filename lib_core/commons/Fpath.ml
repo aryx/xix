@@ -14,6 +14,7 @@
 (* Types *)
 (*****************************************************************************)
 
+(* 't' for type *)
 type t = string (* N.B. a path is never "" or something is wrooong. *)
 [@@deriving show]
 
@@ -21,6 +22,7 @@ type t = string (* N.B. a path is never "" or something is wrooong. *)
 (* Entry points *)
 (*****************************************************************************)
 
+(* 'v' for value *)
 let v (s : string) : t =
   if s = ""
   then failwith "invalid empty path"

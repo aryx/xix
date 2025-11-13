@@ -10,11 +10,13 @@ open Common
 
 (* supported archs by the xix toolchain *)
 type t =
+  (* RISC *)
+  | Mips
   | Arm
   | Arm64
-  | Mips
   | Riscv
   | Riscv64
+  (* CISC *)
   | X86
   | Amd64
 [@@deriving show]

@@ -1,6 +1,5 @@
 (* Dump an OCaml value into a printable string.
  * By Richard W.M. Jones (rich@annexia.org).
- * Dumper.mli 1.1 2005/02/03 23:07:47 rich Exp
  *)
 
 (* Dump any OCaml data-structure in a string. dump() relies on the Obj module

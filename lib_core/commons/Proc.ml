@@ -6,8 +6,10 @@
 (* Process helpers.
  *
  * history:
- *  - harrop article and pfff/commons/parallel.ml
+ *  - harrop article on fork-based parallelism
+ *  - pfff/commons/parallel.ml
  *  - pfff/commons/distribution.ml
+ *  - semgrep/commons/CapProcess.ml
  *  - xix/lib_core/commons/CapProcess.ml
  *
  * alt: we could name this file Process.ml but this conflict with 
@@ -22,7 +24,7 @@
 (* clearer than abusing int everywhere *)
 type pid = int
 
-(* was using `Res and `Exn before but can't with ocaml-light *)
+(* ocaml-light: old: was using `Res and `Exn before but can't with light *)
 type ('a, 'exn) res_or_exn =
   | Res of 'a
   | Exn of 'exn

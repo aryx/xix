@@ -4,12 +4,14 @@ open Common
 
 (*
  * alternatives:
+ *  - uchar.ml?
  *  - extlib/utf8.ml ?
  *  - batteries?
  *  - camomile?
+ *  - buenzli lib? uusomething?
  *)
 
-(* todo: use unicode! *)
+(* todo: use unicode! use Uchar.t? *)
 type t = char
 
 (* todo: should return partial bytes if not full runes *)

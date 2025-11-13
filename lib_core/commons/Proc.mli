@@ -1,4 +1,7 @@
 
+(* alias clearer than abusing ints *)
+type pid = int
+
 (* Run a closure in a separate children process and returns its value.
  *
  * This is especially useful in a testing context such as e2e testing of a CLI
@@ -9,14 +12,12 @@
  * Limitations: 
  *  - the closure may raise exceptions, but you will not
  *    be able to match them in the caller because of Marshal.ml limitations
- *    (see the note about it in CapProcess.ml and marshal.mli).
+ *    (see the note about it in Proc.ml and marshal.mli).
  *    If you want to, you will need to define a regular type (e.g.,
  *    type exn_res = ExnNot_found of string) and in the closure convert
  *    exns in variants of this regular type).
  *  - the closure may not use [exit] (UnixExit is fine) as this will
  *    raise an End_of_file error.
- * history:
- *  - was called CapProcess.ml in semgrep
  *)
 val apply_in_child_process :
   < Cap.fork; Cap.wait; .. > -> (*?flags:Marshal.extern_flags list ->*)
@@ -35,4 +36,3 @@ val apply_in_child_process_promise :
   unit ->
   'b
 
-type pid = int

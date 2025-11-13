@@ -23,7 +23,7 @@ let output_32 (chan : out_channel) (word : int) : unit =
   if word < 0 && word > 0xffffffff
   then raise (Impossible (spf "should call lput with a uint32 not %d" word));
 
-  (* could also use land 0xFF ? what about negative numbers? *)
+  (* could also use land 0xFF ? *)
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in
   let x3 = Char.chr ((word lsr 16) mod 256) in
@@ -40,7 +40,7 @@ let output_16 (chan : out_channel) (word : int) : unit =
   if word < 0 && word > 0xffff
   then raise (Impossible (spf "should call lput with a uint16 not %d" word));
 
-  (* could also use land 0xFF ? what about negative numbers? *)
+  (* could also use land 0xFF ? *)
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in
   (* big part first; most-significant byte first *)
@@ -61,7 +61,6 @@ module Little = struct
 let output_32 (chan : out_channel) (word : int) : unit =
   if word < 0 && word > 0xffffffff
   then raise (Impossible (spf "should call with a uint32 not %d" word));
-  (* TODO? sanity check not > 32 bits uint? *)
 
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in
@@ -77,7 +76,6 @@ let output_32 (chan : out_channel) (word : int) : unit =
 let output_16 (chan : out_channel) (word : int) : unit =
   if word < 0 && word > 0xffff
   then raise (Impossible (spf "should call with a uint16 not %d" word));
-  (* TODO? sanity check not > 32 bits uint? *)
 
   let x1 = Char.chr (word mod 256) in
   let x2 = Char.chr ((word lsr 8) mod 256) in

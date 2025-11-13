@@ -7,9 +7,6 @@ open Ast_asm
 open Ast_asm5
 
 module T = Types
-module T5 = Types5
-open Types
-open Types5
 open Codegen
 
 (*****************************************************************************)
@@ -39,15 +36,15 @@ type mem_opcode = LDR | STR
 (*****************************************************************************)
 
 (*s: function [[Codegen5.error]] *)
-let error node s =
+let error (node : 'a T.node) (s : string) =
   failwith (spf "%s at %s on %s" s 
               (T.s_of_loc node.n_loc)
-              (T5.show_instr node.instr)
+              (Types5.show_instr node.instr)
   )
 (*e: function [[Codegen5.error]] *)
 
 (*s: function [[Codegen5.int_of_bits]] *)
-let int_of_bits (n : node) (x : Bits.int32) : int =
+let int_of_bits (n : 'a T.node) (x : Bits.int32) : int =
   try
     Bits.int_of_bits32 x
   with Failure s -> error n s
@@ -205,7 +202,7 @@ let gshift (R rf) op2 rcon =
 (*e: function [[Codegen5.gshift]] *)
 
 (*s: function [[Codegen5.gbranch_static]] *)
-let gbranch_static (nsrc : T5.node) cond is_bl =
+let gbranch_static (nsrc : 'a T.node) cond is_bl =
   match nsrc.branch with
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some ndst -> 
@@ -251,7 +248,7 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
 (*e: function [[Codegen5.gmem]] *)
 
 (*s: function [[Codegen5.gload_from_pool]] *)
-let gload_from_pool (nsrc : T5.node) cond rt =
+let gload_from_pool (nsrc : 'a T.node) cond rt =
   match nsrc.branch with
   | None -> raise (Impossible "literal pool should be attached to node")
   | Some ndst ->
@@ -273,7 +270,7 @@ let gload_from_pool (nsrc : T5.node) cond rt =
  * - rt = register to   (called Rd in refcard)
  * - r  = register middle (called Rn in refcard)
  *)
-let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
+let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
   (* --------------------------------------------------------------------- *)
   (* Virtual *)
@@ -633,14 +630,15 @@ let rules (env : Codegen.env) (init_data : addr option) (node : 'a T.node) =
 (*****************************************************************************)
 (* TODO: could reuse this code and only things changing are the rules to pass?*)
 (*s: function [[Codegen5.size_of_instruction]] *)
-let size_of_instruction (env : Codegen.env) (node : T5.node) : int (* a multiple of 4 *) * pool option =
+let size_of_instruction (env : Codegen.env) (node : 'a T.node) : int (* a multiple of 4 *) * pool option =
   let action  = rules env None node in
   action.size, action.pool
 (*e: function [[Codegen5.size_of_instruction]] *)
 
 (* TODO: could reuse this code and only things changing are the rules to pass?*)
 (*s: function [[Codegen5.gen]] *)
-let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5.code_graph) : T.word list =
+let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) 
+  (cg : 'a T.code_graph) : T.word list =
 
   let res = ref [] in
   let autosize = ref 0 in
@@ -666,7 +664,7 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config) (cg : T5
     
     if !Flags.debug_gen 
     then begin 
-      Logs.app (fun m -> m "%s -->" (T5.show_instr n.instr));
+      Logs.app (fun m -> m "%s -->" (Types5.show_instr n.instr));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
         Logs.app (fun m -> m "%s (0x%x)" (Dumper.dump x) w);

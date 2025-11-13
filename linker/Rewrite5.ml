@@ -3,10 +3,8 @@
 open Common
 
 module A = Ast_asm
-module A5 = Ast_asm5
-open Types
 module T = Types
-module T5 = Types5
+open Ast_asm5
 
 (*****************************************************************************)
 (* Helpers *)
@@ -19,7 +17,7 @@ module T5 = Types5
 (*****************************************************************************)
 (*s: function [[Rewrite5.rewrite]] *)
 (* less: rewrite when profiling flag -p *)
-let rewrite (cg : T5.code_graph) : T5.code_graph =
+let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
   
   let is_leaf : A.global Hashtbl_.set = Hashtbl_.create () in
 
@@ -51,12 +49,12 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
     | T.I (instr, _condXXX) ->
         let env = 
           match instr with
-          | A5.BL _ -> 
+          | BL _ -> 
               curtext |> Option.iter (fun p -> Hashtbl.remove is_leaf p);
               (curtext, Some n)
           | _ -> (curtext, Some n)
         in
-        n.branch |> Option.iter (fun n2 ->
+        n.branch |> Option.iter (fun (n2 : 'a T.node) ->
           match n2.instr with
           | T.Virt A.NOP -> n.branch <- Rewrite.find_first_no_nop_node n2.next 
           | _ -> ()
@@ -94,10 +92,10 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
           (* decrement SP and save rLINK in one operation:
            *   MOVW.W R14, -autosize(SP) 
            *)
-          let n1 = {
-            instr = T.I (A5.MOVE (A.Word, Some A5.WriteAddressBase, 
-                              A5.Imsr (A5.Reg A5.rLINK), 
-                              A5.Indirect (A5.rSP, -autosize)), A5.AL);
+          let n1 = T.{
+            instr = T.I (MOVE (A.Word, Some WriteAddressBase, 
+                              Imsr (Reg rLINK), 
+                              Indirect (rSP, -autosize)), AL);
             next = n.next;
             branch = None;
             n_loc = n.n_loc;
@@ -115,14 +113,14 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
         n.instr <- T.I
           ((match autosize_opt with
            (* B (R14) *)
-           | None -> A5.B (ref (A.IndirectJump (A5.rLINK)))
+           | None -> B (ref (A.IndirectJump rLINK))
            (* increment SP and restore rPC in one operation:
             *    MOVW.P autosize(SP), PC 
             *)
-           | Some autosize -> A5.MOVE (A.Word, Some A5.PostOffsetWrite,
-                                   A5.Indirect (A5.rSP, autosize), 
-                                   A5.Imsr (A5.Reg A5.rPC))
-           ), A5.AL);
+           | Some autosize -> MOVE (A.Word, Some PostOffsetWrite,
+                                   Indirect (rSP, autosize), 
+                                   Imsr (Reg rPC))
+           ), AL);
 
       | A.NOP -> raise (Impossible "NOP was removed in step1")
       | (A.Call _ | A.Add _ | A.Load _ | A.Store _) -> raise Todo
@@ -130,9 +128,9 @@ let rewrite (cg : T5.code_graph) : T5.code_graph =
       autosize_opt
 
      | T.I (
-            ( A5.RFE | A5.Arith _ | A5.ArithF _ | A5.MOVE _
-            | A5.SWAP _ | A5.B _ | A5.BL _ | A5.Cmp _ | A5.CmpF _ | A5.Bxx _
-            | A5.SWI _
+            ( RFE | Arith _ | ArithF _ | MOVE _
+            | SWAP _ | B _ | BL _ | Cmp _ | CmpF _ | Bxx _
+            | SWI _
             )
             , _) ->
         autosize_opt

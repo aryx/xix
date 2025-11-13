@@ -280,18 +280,14 @@ let gload_from_pool (nsrc : 'a T.node) cond rt =
 let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
   (* --------------------------------------------------------------------- *)
-  (* Virtual *)
+  (* Reusable *)
   (* --------------------------------------------------------------------- *)
-   | T.Virt _ -> 
-      raise (Impossible "rewrite should have transformed virtual instrs")
+   | T.Virt _ | T.TEXT _ -> 
+      Codegen.default_rules env init_data node
 
   (* --------------------------------------------------------------------- *)
   (* Pseudo *)
   (* --------------------------------------------------------------------- *)
-  (* TEXT instructions were kept just for better error reporting localisation *)
-  | T.TEXT (_, _, _) -> 
-      { size = 0; x = None; binary = (fun () -> []) }
-
   | T.WORD x ->
       { size = 4; x = None; binary = (fun () -> 
         match x with

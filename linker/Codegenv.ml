@@ -205,19 +205,10 @@ let gbranch_static (nsrc : 'a T.node) (is_jal : bool) : Bits.t =
 let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
   (* --------------------------------------------------------------------- *)
-  (* Virtual *)
+  (* Reusable *)
   (* --------------------------------------------------------------------- *)
-   | T.Virt _ -> 
-      raise (Impossible "rewrite should have transformed virtual instrs")
-
-  (* --------------------------------------------------------------------- *)
-  (* Pseudo *)
-  (* --------------------------------------------------------------------- *)
-  (* TEXT instructions were kept just for better error reporting localisation 
-   * case 0: /* pseudo ops */
-   *)
-  | T.TEXT (_, _, _) -> 
-      { size = 0; x = None; binary = (fun () -> []) }
+   | T.Virt _ | T.TEXT _ -> 
+      Codegen.default_rules env init_data node
 
   (* alt: could be moved to Codegen.ml and reused *)
   | T.WORD x ->

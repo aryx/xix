@@ -1,4 +1,6 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
+open Common
+module T = Types
 
 (*****************************************************************************)
 (* Prelude *)
@@ -28,3 +30,17 @@ type env = {
 (*****************************************************************************)
 
 (* reusable rules across archs *)
+let default_rules (_env : env) (_init_data : T.addr option) 
+    (node : 'a T.node) : 'xtra action =
+  match node.instr with
+   | T.Virt _ -> 
+      raise (Impossible "rewrite should have transformed virtual instrs")
+  (* TEXT instructions were kept just for better error reporting localisation 
+   * case 0: /* pseudo ops */
+   *)
+  | T.TEXT (_, _, _) -> 
+      { size = 0; x = None; binary = (fun () -> []) }
+  | T.WORD _ ->
+      failwith "WORD not handled yet"
+  | T.I _ ->
+      raise (Impossible "codegen should not call default_rules for instr")

@@ -32,32 +32,41 @@ enum	as
 	/* processor instructions */
 	AADD,
 	AADDW,
+
 	AAMO_D,
 	AAMO_W,
+
 	AAND,
+
 	ABEQ,
 	ABGE,
 	ABGEU,
 	ABLT,
 	ABLTU,
 	ABNE,
+
 	ACSRRC,
 	ACSRRCI,
 	ACSRRS,
 	ACSRRSI,
 	ACSRRW,
 	ACSRRWI,
+
 	ADIV,
 	ADIVU,
 	ADIVUW,
 	ADIVW,
+
 	AFENCE,
 	AFENCE_I,
+
 	AJAL,
 	AJALR,
+
 	ALR_D,
 	ALR_W,
 	ALUI,
+
 	AMOVB,
 	AMOVBU,
 	AMOVH,
@@ -65,31 +74,42 @@ enum	as
 	AMOV,
 	AMOVW,
 	AMOVWU,
+
 	AMUL,
 	AMULH,
 	AMULHSU,
 	AMULHU,
 	AMULW,
+
 	AOR,
+
 	AREM,
 	AREMU,
 	AREMUW,
 	AREMW,
+
 	ASC_D,
 	ASC_W,
+
 	ASLL,
 	ASLLW,
+
 	ASLT,
 	ASLTU,
+
 	ASRA,
 	ASRAW,
 	ASRL,
 	ASRLW,
+
 	ASUB,
 	ASUBW,
+
 	ASWAP_D,
 	ASWAP_W,
+
 	ASYS,
+
 	AXOR,
 
 	/* floating point */
@@ -103,14 +123,19 @@ enum	as
 	AMOVWD,     /* FCVT.D.W */
 	AMOVUD,     /* FCVT.D.WU */
 	AMOVDW,     /* FCVT.W.D */
+
 	AADDF,      /* FADD.S */
 	AADDD,      /* FADD.D */
+
 	ASUBF,      /* FSUB.S */
 	ASUBD,      /* FSUB.D */
+
 	AMULF,      /* FMUL.S */
 	AMULD,      /* FMUL.D */
+
 	ADIVF,      /* FDIV.S */
 	ADIVD,      /* FDIV.D */
+
 	ACMPLTF,     /* FLT.S */
 	ACMPLTD,     /* FLT.D */
 	ACMPEQF,     /* FEQ.S */
@@ -142,25 +167,15 @@ enum	as
 	ABGTU,
 	ABLE,
 	ABLEU,
+
 	ASGT,
 	ASGTU,
+
 	AJMP,
-	ARET,
-	ANOP,
+    ...
 
 	/* C compiler pseudo-ops */
-	ADATA,
-	AGLOBL,
-	AGOK,
-	AHISTORY,
-	ANAME,
-	ATEXT,
-	AWORD,
-	AEND,
-	ADYNT,
-	AINIT,
-	ASIGNAME,
-
+    ...
 	/* RV64 extension */
 	ADWORD,
 	AMOVFV,
@@ -174,26 +189,11 @@ enum	as
 /* type/name */
 enum
 {
-	D_GOK	= 0,
-	D_NONE,
-
-/* name */
-	D_EXTERN,
-	D_STATIC,
-	D_AUTO,
-	D_PARAM,
 
 /* type */
-	D_BRANCH,
-	D_OREG,
-	D_CONST,
-	D_FCONST,
-	D_SCONST,
-	D_REG,
 	D_CTLREG,
 	D_FREG,
 	D_FCREG,
-	D_FILE,
-	D_FILE1,
 	D_VCONST,
+    ...
 };

@@ -1,10 +1,3 @@
-#define	EXTERN
-#include	"l.h"
-
-#include	<ar.h>
-
-char	*noname		= "<none>";
-char	symname[]	= SYMDEF;
 char	thechar		= 'i';
 char	*thestring 	= "riscv";
 
@@ -13,8 +6,6 @@ char	*thestring 	= "riscv";
  *	-H2 -T4128 -R4096		is plan9 format
  *	-H7 -T0x4000A0 -R4		is elf executable
  */
-
-int little;
 
 void
 main(int argc, char *argv[])
@@ -80,118 +71,21 @@ main(int argc, char *argv[])
 	nopalign.reg = REGZERO;
 
 	dtype = 4;
-
     ...
-	nuxiinit();
 }
 
 void
 objfile(char *file)
 {
-	long off, esym, cnt, l;
-	int f, work;
-	Sym *s;
-	char magbuf[SARMAG];
-	char name[100], pname[150];
-	struct ar_hdr arhdr;
-	char *e, *start, *stop;
-
+    ...
 	if(file[0] == '-' && file[1] == 'l') {
-		if(debug['9'])
-			sprint(name, "/%s/lib/lib", thestring);
-		else
-			sprint(name, "/usr/%clib/lib", thechar);
+		sprint(name, "/usr/%clib/lib", thechar);
 		strcat(name, file+2);
 		strcat(name, ".a");
 		file = name;
 	}
-	if(debug['v'])
-		Bprint(&bso, "%5.2f ldobj: %s\n", cputime(), file);
-	Bflush(&bso);
-	f = open(file, 0);
-	if(f < 0) {
-		diag("cannot open file: %s", file);
-		errorexit();
-	}
-	l = read(f, magbuf, SARMAG);
-	if(l != SARMAG || strncmp(magbuf, ARMAG, SARMAG)){
-		/* load it as a regular file */
-		l = seek(f, 0L, 2);
-		seek(f, 0L, 0);
-		ldobj(f, l, file);
-		close(f);
-		return;
-	}
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f ldlib: %s\n", cputime(), file);
-	l = read(f, &arhdr, SAR_HDR);
-	if(l != SAR_HDR) {
-		diag("%s: short read on archive file symbol header", file);
-		goto out;
-	}
-	if(strncmp(arhdr.name, symname, strlen(symname))) {
-		diag("%s: first entry not symbol header", file);
-		goto out;
-	}
-
-	esym = SARMAG + SAR_HDR + atolwhex(arhdr.size);
-	off = SARMAG + SAR_HDR;
-
-	/*
-	 * just bang the whole symbol file into memory
-	 */
-	seek(f, off, 0);
-	cnt = esym - off;
-	start = malloc(cnt + 10);
-	cnt = read(f, start, cnt);
-	if(cnt <= 0){
-		close(f);
-		return;
-	}
-	stop = &start[cnt];
-	memset(stop, 0, 10);
-
-	work = 1;
-	while(work){
-		if(debug['v'])
-			Bprint(&bso, "%5.2f library pass: %s\n", cputime(), file);
-		Bflush(&bso);
-		work = 0;
-		for(e = start; e < stop; e = strchr(e+5, 0) + 1) {
-			s = lookup(e+5, 0);
-			if(s->type != SXREF)
-				continue;
-			sprint(pname, "%s(%s)", file, s->name);
-			if(debug['v'])
-				Bprint(&bso, "%5.2f library: %s\n", cputime(), pname);
-			Bflush(&bso);
-			l = e[1] & 0xff;
-			l |= (e[2] & 0xff) << 8;
-			l |= (e[3] & 0xff) << 16;
-			l |= (e[4] & 0xff) << 24;
-			seek(f, l, 0);
-			l = read(f, &arhdr, SAR_HDR);
-			if(l != SAR_HDR)
-				goto bad;
-			if(strncmp(arhdr.fmag, ARFMAG, sizeof(arhdr.fmag)))
-				goto bad;
-			l = atolwhex(arhdr.size);
-			ldobj(f, l, pname);
-			if(s->type == SXREF) {
-				diag("%s: failed to load: %s", file, s->name);
-				errorexit();
-			}
-			work = 1;
-			xrefresolv = 1;
-		}
-	}
 	return;
-
-bad:
-	diag("%s: bad or out of date archive", file);
-out:
-	close(f);
 }
 
 int
@@ -202,34 +96,8 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 	Sym *s;
 	Auto *u;
 
-	c = p[2];
-	if(c < 0 || c > NSYM){
-		print("sym out of range: %d\n", c);
-		p[0] = ALAST+1;
-		return 0;
-	}
-	a->type = p[0];
-	a->reg = p[1];
-	a->sym = h[c];
-	a->name = p[3];
-	c = 4;
-
-	if(a->reg < 0 || a->reg > NREG) {
-		print("register out of range %d\n", a->reg);
-		p[0] = ALAST+1;
-		return 0;	/*  force real diagnostic */
-	}
 
 	switch(a->type) {
-	default:
-		print("unknown type %d\n", a->type);
-		p[0] = ALAST+1;
-		return 0;	/*  force real diagnostic */
-
-	case D_NONE:
-	case D_REG:
-	case D_FREG:
-		break;
 
 	case D_CTLREG:
 	case D_BRANCH:
@@ -238,17 +106,6 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 		a->offset = p[4] | (p[5]<<8) |
 			(p[6]<<16) | (p[7]<<24);
 		c += 4;
-		break;
-
-	case D_SCONST:
-		while(nhunk < NSNAME)
-			gethunk();
-		a->sval = (char*)hunk;
-		nhunk -= NSNAME;
-		hunk += NSNAME;
-
-		memmove(a->sval, p+4, NSNAME);
-		c += NSNAME;
 		break;
 
 	case D_VCONST:
@@ -297,19 +154,7 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 				u->aoffset = l;
 			return c;
 		}
-
-	while(nhunk < sizeof(Auto))
-		gethunk();
-	u = (Auto*)hunk;
-	nhunk -= sizeof(Auto);
-	hunk += sizeof(Auto);
-
-	u->link = curauto;
-	curauto = u;
-	u->asym = s;
-	u->aoffset = l;
-	u->type = i;
-	return c;
+   ...
 }
 
 void
@@ -329,9 +174,6 @@ addlib(char *obj)
 		sprint(name, ".");
 		i = 0;
 	} else {
-		if(debug['9'])
-			sprint(name, "/%s/lib", thestring);
-		else
 			sprint(name, "/usr/%clib", thechar);
 		i = 0;
 	}
@@ -380,193 +222,13 @@ addlib(char *obj)
 	libraryp++;
 }
 
-void
-addhist(long line, int type)
-{
-	Auto *u;
-	Sym *s;
-	int i, j, k;
 
-	u = malloc(sizeof(Auto));
-	s = malloc(sizeof(Sym));
-	s->name = malloc(2*(histfrogp+1) + 1);
-
-	u->asym = s;
-	u->type = type;
-	u->aoffset = line;
-	u->link = curhist;
-	curhist = u;
-
-	j = 1;
-	for(i=0; i<histfrogp; i++) {
-		k = histfrog[i]->value;
-		s->name[j+0] = k>>8;
-		s->name[j+1] = k;
-		j += 2;
-	}
-}
-
-void
-histtoauto(void)
-{
-	Auto *l;
-
-	while(l = curhist) {
-		curhist = l->link;
-		l->link = curauto;
-		curauto = l;
-	}
-}
-
-void
-collapsefrog(Sym *s)
-{
-	int i;
-
-	/*
-	 * bad encoding of path components only allows
-	 * MAXHIST components. if there is an overflow,
-	 * first try to collapse xxx/..
-	 */
-	for(i=1; i<histfrogp; i++)
-		if(strcmp(histfrog[i]->name+1, "..") == 0) {
-			memmove(histfrog+i-1, histfrog+i+1,
-				(histfrogp-i-1)*sizeof(histfrog[0]));
-			histfrogp--;
-			goto out;
-		}
-
-	/*
-	 * next try to collapse .
-	 */
-	for(i=0; i<histfrogp; i++)
-		if(strcmp(histfrog[i]->name+1, ".") == 0) {
-			memmove(histfrog+i, histfrog+i+1,
-				(histfrogp-i-1)*sizeof(histfrog[0]));
-			goto out;
-		}
-
-	/*
-	 * last chance, just truncate from front
-	 */
-	memmove(histfrog+0, histfrog+1,
-		(histfrogp-1)*sizeof(histfrog[0]));
-
-out:
-	histfrog[histfrogp-1] = s;
-}
-
-void
-nopout(Prog *p)
-{
-	p->as = ANOP;
-	p->from.type = D_NONE;
-	p->to.type = D_NONE;
-}
-
-uchar*
-readsome(int f, uchar *buf, uchar *good, uchar *stop, int max)
-{
-	int n;
-
-	n = stop - good;
-	memmove(buf, good, stop - good);
-	stop = buf + n;
-	n = MAXIO - n;
-	if(n > max)
-		n = max;
-	n = read(f, stop, n);
-	if(n <= 0)
-		return 0;
-	return stop + n;
-}
 
 void
 ldobj(int f, long c, char *pn)
 {
-	long ipc;
-	Prog *p, *t;
-	uchar *bloc, *bsize, *stop;
-	Sym *h[NSYM], *s, *di;
-	int v, o, r, skip;
-	ulong sig;
-	static int files;
-	static char **filen;
-	char **nfilen;
-    int hlen;
-
-	if((files&15) == 0){
-		nfilen = malloc((files+16)*sizeof(char*));
-		memmove(nfilen, filen, files*sizeof(char*));
-		free(filen);
-		filen = nfilen;
-	}
-	filen[files++] = strdup(pn);
-
-	bsize = buf.xbuf;
-	bloc = buf.xbuf;
-	di = S;
-
-    //coupling: ia/lex.c and and ic/swt.c
-    hlen = strlen("riscv\n\n!\n");
-    seek(f, hlen, SEEK__CUR);
-    c-=hlen;
-
-newloop:
-	memset(h, 0, sizeof(h));
-	version++;
-	histfrogp = 0;
-	ipc = pc;
-	skip = 0;
-
-loop:
-	if(c <= 0)
-		goto eof;
-	r = bsize - bloc;
-	if(r < 100 && r < c) {		/* enough for largest prog */
-		bsize = readsome(f, buf.xbuf, bloc, bsize, c);
-		if(bsize == 0)
-			goto eof;
-		bloc = buf.xbuf;
-		goto loop;
-	}
-	o = bloc[0];		/* as */
-	if(o <= AXXX || o >= ALAST) {
-		diag("%s: line %ld: opcode out of range %d", pn, pc-ipc, o);
-		print("	probably not a .%c file\n", thechar);
-		errorexit();
-	}
-	if(o == ANAME || o == ASIGNAME) {
-		sig = 0;
-		if(o == ASIGNAME){
-			sig = bloc[1] | (bloc[2]<<8) | (bloc[3]<<16) | (bloc[4]<<24);
-			bloc += 4;
-			c -= 4;
-		}
-		stop = memchr(&bloc[3], 0, bsize-&bloc[3]);
-		if(stop == 0){
-			bsize = readsome(f, buf.xbuf, bloc, bsize, c);
-			if(bsize == 0)
-				goto eof;
-			bloc = buf.xbuf;
-			stop = memchr(&bloc[3], 0, bsize-&bloc[3]);
-			if(stop == 0){
-				fprint(2, "%s: name too long\n", pn);
-				errorexit();
-			}
-		}
-		v = bloc[1];	/* type */
-		o = bloc[2];	/* sym */
-		bloc += 3;
-		c -= 3;
-
-		r = 0;
-		if(v == D_STATIC)
-			r = version;
-		s = lookup((char*)bloc, r);
-		c -= &stop[1] - bloc;
-		bloc = stop + 1;
-
+    ...
+   
 		if(debug['S'] && r == 0)
 			sig = 1729;
 		if(sig != 0){
@@ -575,50 +237,6 @@ loop:
 			s->sig = sig;
 			s->file = files-1;
 		}
-
-		if(debug['W'])
-			print("	ANAME	%s\n", s->name);
-		h[o] = s;
-		if((v == D_EXTERN || v == D_STATIC) && s->type == 0)
-			s->type = SXREF;
-		if(v == D_FILE) {
-			if(s->type != SFILE) {
-				histgen++;
-				s->type = SFILE;
-				s->value = histgen;
-			}
-			if(histfrogp < MAXHIST) {
-				histfrog[histfrogp] = s;
-				histfrogp++;
-			} else
-				collapsefrog(s);
-		}
-		goto loop;
-	}
-
-	if(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
-	p->as = o;
-	p->reg = bloc[1];
-	p->line = bloc[2] | (bloc[3]<<8) | (bloc[4]<<16) | (bloc[5]<<24);
-
-	r = zaddr(bloc+6, &p->from, h) + 6;
-	r += zaddr(bloc+r, &p->to, h);
-	bloc += r;
-	c -= r;
-
-	if(p->reg < 0 || p->reg > NREG)
-		diag("register out of range %d", p->reg);
-
-	p->link = P;
-	p->cond = P;
-
-	if(debug['W'])
-		print("%P\n", p);
 
 	if(thechar == 'i') {
 		switch(o) {
@@ -952,85 +570,9 @@ loop:
 		break;
 	}
 	goto loop;
-
-eof:
-	diag("truncated object file: %s", pn);
+   ...
 }
 
-Sym*
-lookup(char *symb, int v)
-{
-	Sym *s;
-	char *p;
-	long h;
-	int c, l;
-
-	h = v;
-	for(p=symb; c = *p; p++)
-		h = h+h+h + c;
-	l = (p - symb) + 1;
-	if(h < 0)
-		h = ~h;
-	h %= NHASH;
-	for(s = hash[h]; s != S; s = s->link)
-		if(s->version == v)
-		if(memcmp(s->name, symb, l) == 0)
-			return s;
-
-	while(nhunk < sizeof(Sym))
-		gethunk();
-	s = (Sym*)hunk;
-	nhunk -= sizeof(Sym);
-	hunk += sizeof(Sym);
-
-	s->name = malloc(l);
-	memmove(s->name, symb, l);
-
-	s->link = hash[h];
-	s->type = 0;
-	s->version = v;
-	s->value = 0;
-	s->sig = 0;
-	hash[h] = s;
-	return s;
-}
-
-Prog*
-prg(void)
-{
-	Prog *p;
-
-	while(nhunk < sizeof(Prog))
-		gethunk();
-	p = (Prog*)hunk;
-	nhunk -= sizeof(Prog);
-	hunk += sizeof(Prog);
-
-	*p = zprg;
-	return p;
-}
-
-void
-gethunk(void)
-{
-	char *h;
-	long nh;
-
-	nh = NHUNK;
-	if(thunk >= 5L*NHUNK) {
-		nh = 5L*NHUNK;
-		if(thunk >= 25L*NHUNK)
-			nh = 25L*NHUNK;
-	}
-	h = sbrk(nh);
-	if(h == (char*)-1) {
-		diag("out of memory");
-		errorexit();
-	}
-	hunk = h;
-	nhunk = nh;
-	thunk += nh;
-}
 
 void
 doprof2(void)
@@ -1152,8 +694,6 @@ doprof2(void)
 void
 nuxiinit(void)
 {
-	int i, c;
-
 	for(i=0; i<4; i++){
 		c = find1(0x04030201L, i+1);
 		if(i < 2)
@@ -1167,39 +707,8 @@ nuxiinit(void)
 		fnuxi8[i] = c;
 		fnuxi8[i+4] = c+4;
 	}
-	if(debug['v']) {
-		Bprint(&bso, "inuxi = ");
-		for(i=0; i<1; i++)
-			Bprint(&bso, "%d", inuxi1[i]);
-		Bprint(&bso, " ");
-		for(i=0; i<2; i++)
-			Bprint(&bso, "%d", inuxi2[i]);
-		Bprint(&bso, " ");
-		for(i=0; i<4; i++)
-			Bprint(&bso, "%d", inuxi4[i]);
-		Bprint(&bso, " ");
-		for(i=0; i<8; i++)
-			Bprint(&bso, "%d", inuxi8[i]);
-		Bprint(&bso, "\nfnuxi = ");
-		for(i=0; i<8; i++)
-			Bprint(&bso, "%d", fnuxi8[i]);
-		Bprint(&bso, "\n");
-	}
-	Bflush(&bso);
 }
 
-int
-find1(long l, int c)
-{
-	char *p;
-	int i;
-
-	p = (char*)&l;
-	for(i=0; i<4; i++)
-		if(*p++ == c)
-			return i;
-	return 0;
-}
 
 long
 ieeedtof(Ieee *ieeep)

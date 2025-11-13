@@ -3,42 +3,12 @@
 void
 noops(void)
 {
-	Prog *p, *q, *q1;
-	int o, curframe, curbecome, maxbecome;
+	for(...) {
 
-	/*
-	 * find leaf subroutines
-	 * become sizes
-	 * frame sizes
-	 * strip NOPs
-	 * expand RET
-	 * expand BECOME pseudo
-	 */
-
-	curframe = 0;
-	curbecome = 0;
-	maxbecome = 0;
-	curtext = 0;
-
-	q = P;
-	for(p = firstp; p != P; p = p->link) {
-
-		/* find out how much arg space is used in this TEXT */
-		if(p->to.type == D_OREG && p->to.reg == REGSP)
-			if(p->to.offset > curframe)
-				curframe = p->to.offset;
 
 		switch(p->as) {
 		case ATEXT:
-			if(curtext && curtext->from.sym) {
-				curtext->from.sym->frame = curframe;
-				curtext->from.sym->become = curbecome;
-				if(curbecome > maxbecome)
-					maxbecome = curbecome;
-			}
-			curframe = 0;
-			curbecome = 0;
-
+            ...
 			p->mark |= LABEL|LEAF|SYNC;
 			if(p->link)
 				p->link->mark |= LABEL;
@@ -111,23 +81,8 @@ noops(void)
 		q = p;
 	}
 
-	if(curtext && curtext->from.sym) {
-		curtext->from.sym->frame = curframe;
-		curtext->from.sym->become = curbecome;
-		if(curbecome > maxbecome)
-			maxbecome = curbecome;
-	}
-
-	if(debug['b'])
-		print("max become = %d\n", maxbecome);
-	xdefine("ALEFbecome", STEXT, maxbecome);
-
-	curtext = 0;
-	for(p = firstp; p != P; p = p->link) {
+	for(...) {
 		switch(p->as) {
-		case ATEXT:
-			curtext = p;
-			break;
 		case AJAL:
 			if(curtext != P && curtext->from.sym != S && curtext->to.offset >= 0) {
 				o = maxbecome - curtext->from.sym->frame;
@@ -147,11 +102,9 @@ noops(void)
 		}
 	}
 
-	for(p = firstp; p != P; p = p->link) {
-		o = p->as;
+	for(...) {
 		switch(o) {
 		case ATEXT:
-			curtext = p;
 			autosize = p->to.offset + ptrsize;
 			if(autosize <= ptrsize) {
 				if(curtext->mark & LEAF || autosize <= 0) {
@@ -324,14 +277,4 @@ noops(void)
 			break;
 		}
 	}
-
-	curtext = P;
-}
-
-void
-nocache(Prog *p)
-{
-	p->optab = 0;
-	p->from.class = 0;
-	p->to.class = 0;
 }

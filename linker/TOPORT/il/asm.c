@@ -1,62 +1,19 @@
-#include	"l.h"
-
-long	OFFSET;
-
-xlong
-entryvalue(void)
-{
-	char *a;
-	Sym *s;
-
-	a = INITENTRY;
-	if(*a >= '0' && *a <= '9')
-		return atolwhex(a);
-	s = lookup(a, 0);
-	if(s->type == 0)
-		return INITTEXT;
-	if(s->type != STEXT && s->type != SLEAF)
-		diag("entry not text: %s", s->name);
-	return s->value + INITTEXT;
-}
 
 void
 asmb(void)
 {
-	Prog *p;
-	long t, etext;
-	Optab *o;
-
-	if(debug['v'])
-		Bprint(&bso, "%5.2f asm\n", cputime());
-	Bflush(&bso);
-	OFFSET = HEADR;
-	seek(cout, OFFSET, 0);
-	pc = 0;
-	for(p = firstp; p != P; p = p->link) {
+	for(...) {
 		if(p->as == ATEXT) {
 			/* align on word boundary */
 			if(!debug['c'] && (pc & 2) != 0){
 				nopalign.pc = pc;
 				pc += asmout(&nopalign, oplook(&nopalign), 0);
 			}
-			curtext = p;
 			autosize = p->to.offset + ptrsize;
 		}
-		if(p->pc != pc) {
-			diag("phase error %lux sb %lux",
-				p->pc, pc);
-			if(!debug['a'])
-				prasm(curp);
-			pc = p->pc;
-		}
-		curp = p;
-		o = oplook(p);	/* could probably avoid this call */
+        ...
 		pc += asmout(p, o, 0);
 	}
-	if(debug['a'])
-		Bprint(&bso, "\n");
-	Bflush(&bso);
-	cflush();
 
 	etext = textsize;
 	for(t = pc; t < etext; t += sizeof(buf)-100) {
@@ -66,10 +23,6 @@ asmb(void)
 			datblk(t, etext-t, 1);
 	}
 
-	Bflush(&bso);
-	cflush();
-
-	curtext = P;
 	switch(HEADTYPE) {
 	case 0:
 		OFFSET = rnd(HEADR+textsize, 4096);
@@ -90,20 +43,8 @@ asmb(void)
         break;
 	}
 
-
-	for(t = 0; t < datsize; t += sizeof(buf)-100) {
-		if(datsize-t > sizeof(buf)-100)
-			datblk(t, sizeof(buf)-100, 0);
-		else
-			datblk(t, datsize-t, 0);
-	}
-
-	symsize = 0;
-	lcsize = 0;
+    ...
 	if(!debug['s']) {
-		if(debug['v'])
-			Bprint(&bso, "%5.2f sym\n", cputime());
-		Bflush(&bso);
 		switch(HEADTYPE) {
 		case 0:
 			OFFSET = rnd(HEADR+textsize, 4096)+datsize;
@@ -118,21 +59,9 @@ asmb(void)
         case 7:
             break;
 		}
-		if(!debug['s'])
-			asmsym();
-		if(debug['v'])
-			Bprint(&bso, "%5.2f pc\n", cputime());
-		Bflush(&bso);
-		if(!debug['s'])
-			asmlc();
-		cflush();
+        ...
 	}
 
-	if(debug['v'])
-		Bprint(&bso, "%5.2f header\n", cputime());
-	Bflush(&bso);
-	OFFSET = 0;
-	seek(cout, OFFSET, 0);
 	switch(HEADTYPE) {
 	case 2:
 		/* XXX expanded header needed? */
@@ -157,105 +86,6 @@ asmb(void)
 }
 
 void
-strnput(char *s, int n)
-{
-	for(; *s; s++){
-		cput(*s);
-		n--;
-	}
-	for(; n > 0; n--)
-		cput(0);
-}
-
-void
-cput(int c)
-{
-	cbp[0] = c;
-	cbp++;
-	cbc--;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-wput(long l)
-{
-
-	cbp[0] = l>>8;
-	cbp[1] = l;
-	cbp += 2;
-	cbc -= 2;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-wputl(long l)
-{
-
-	cbp[0] = l;
-	cbp[1] = l>>8;
-	cbp += 2;
-	cbc -= 2;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-lput(long l)
-{
-
-	cbp[0] = l>>24;
-	cbp[1] = l>>16;
-	cbp[2] = l>>8;
-	cbp[3] = l;
-	cbp += 4;
-	cbc -= 4;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-lputl(long l)
-{
-
-	cbp[3] = l>>24;
-	cbp[2] = l>>16;
-	cbp[1] = l>>8;
-	cbp[0] = l;
-	cbp += 4;
-	cbc -= 4;
-	if(cbc <= 0)
-		cflush();
-}
-
-void
-llput(vlong v)
-{
-	lput(v>>32);
-	lput(v);
-}
-
-void
-llputl(vlong v)
-{
-	lputl(v);
-	lputl(v>>32);
-}
-
-void
-cflush(void)
-{
-	int n;
-
-	n = sizeof(buf.cbuf) - cbc;
-	if(n)
-		write(cout, buf.cbuf, n);
-	cbp = buf.cbuf;
-	cbc = sizeof(buf.cbuf);
-}
-
-void
 nopstat(char *f, Count *c)
 {
 	if(c->outof)
@@ -276,8 +106,8 @@ asmsym(void)
 	if(s->type == STEXT)
 		putsymb(s->name, 'T', s->value+INITTEXT, s->version);
 
-	for(h=0; h<NHASH; h++)
-		for(s=hash[h]; s!=S; s=s->link)
+	for(...)
+		for(...)
 			switch(s->type) {
 			case SCONST:
 				putsymb(s->name, 'D', s->value, s->version);
@@ -285,10 +115,6 @@ asmsym(void)
 
 			case SSTRING:
 				putsymb(s->name, 'T', s->value, s->version);
-				continue;
-
-			case SDATA:
-				putsymb(s->name, 'D', s->value+INITDAT, s->version);
 				continue;
 
 			case SBSS:
@@ -468,43 +294,12 @@ asmlc(void)
 void
 datblk(long s, long n, int str)
 {
-	Prog *p;
-	char *cast;
 	vlong d;
 	long l, fl, j;
-	int i, c;
-
-	memset(buf.dbuf, 0, n+100);
-	for(p = datap; p != P; p = p->link) {
-		curp = p;
-		if(str != (p->from.sym->type == SSTRING))
-			continue;
-		l = p->from.sym->value + p->from.offset - s;
-		c = p->reg;
-		i = 0;
-		if(l < 0) {
-			if(l+c <= 0)
-				continue;
-			while(l < 0) {
-				l++;
-				i++;
-			}
-		}
-		if(l >= n)
-			continue;
-		if(p->as != AINIT && p->as != ADYNT) {
-			for(j=l+(c-i)-1; j>=l; j--)
-				if(buf.dbuf[j]) {
-					print("%P\n", p);
-					diag("multiple initialization");
-					break;
-				}
-		}
+    ...
+	for(...) {
+        ...
 		switch(p->to.type) {
-		default:
-			diag("unknown mode in initialization\n%P", p);
-			break;
-
 		case D_FCONST:
 			switch(c) {
 			default:
@@ -523,13 +318,6 @@ datblk(long s, long n, int str)
 					l++;
 				}
 				break;
-			}
-			break;
-
-		case D_SCONST:
-			for(; i<c; i++) {
-				buf.dbuf[l] = p->to.sval[i];
-				l++;
 			}
 			break;
 
@@ -553,37 +341,13 @@ datblk(long s, long n, int str)
 					break;
 				}
 			}
-			cast = (char*)&d;
 			switch(c) {
-			default:
-				diag("bad nuxi %d %d\n%P", c, i, curp);
-				break;
-			case 1:
-				for(; i<c; i++) {
-					buf.dbuf[l] = cast[inuxi1[i]];
-					l++;
-				}
-				break;
-			case 2:
-				for(; i<c; i++) {
-					buf.dbuf[l] = cast[inuxi2[i]];
-					l++;
-				}
-				break;
-			case 4:
-				for(; i<c; i++) {
-					buf.dbuf[l] = cast[inuxi4[i]];
-					l++;
-				}
-				break;
+            ...
 			case 8:
 				for(; i<c; i++) {
 					buf.dbuf[l] = cast[inuxi8[i]];
 					l++;
 				}
-				break;
-			}
-			break;
 		}
 		if(debug['d'] && i == c) {
 			Bprint(&bso, "%.8llux", l+s+INITDAT-c);
@@ -632,8 +396,6 @@ int
 asmout(Prog *p, Optab *o, int aflag)
 {
 	vlong vv;
-	long o1, o2, o3, v;
-	int r;
 
 	o1 = 0;
 	o2 = 0;
@@ -676,6 +438,8 @@ asmout(Prog *p, Optab *o, int aflag)
 	}
 	if(aflag >= 2)
 		return o->size;
+
+
 	switch(o->type) {
 	default:
 		diag("unknown type %d", o->type);
@@ -938,33 +702,6 @@ asmout(Prog *p, Optab *o, int aflag)
 	case 26:		/* pseudo ops */
 		break;
 	}
-	if(aflag)
-		return o1;
-	v = p->pc + INITTEXT;
-	switch(o->size) {
-	default:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux:\t\t%P\n", v, p);
-		break;
-	case 4:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux\t%P\n", v, o1, p);
-		lputl(o1);
-		break;
-	case 8:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux%P\n", v, o1, o2, p);
-		lputl(o1);
-		lputl(o2);
-		break;
-	case 12:
-		if(debug['a'])
-			Bprint(&bso, " %.8lux: %.8lux %.8lux %.8lux%P\n", v, o1, o2, o3, p);
-		lputl(o1);
-		lputl(o2);
-		lputl(o3);
-		break;
-	}
-	return o->size;
+    ...
 }
 

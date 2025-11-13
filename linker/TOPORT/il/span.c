@@ -3,11 +3,7 @@
 void
 span(void)
 {
-	Prog *p, *q;
 	Sym *setext, *s;
-	Optab *o;
-	int m, bflag, i, spass;
-	long c, otxt, v;
 
 	bflag = 0;
 	c = 0;
@@ -15,9 +11,8 @@ span(void)
 	for(p = firstp; p != P; p = p->link) {
 		if(p->as == ATEXT)
 			c = (c + 3) & ~3;
-		p->pc = c;
-		o = oplook(p);
-		m = o->size;
+
+        ...
 		if(!debug['c']){
 			if(o->ctype && asmout(p, o, 2) == 2){
 				bflag = 1;
@@ -165,15 +160,6 @@ span(void)
 }
 		
 
-long
-regoff(Adr *a)
-{
-
-	instoffset = 0;
-	a->class = aclass(a) + 1;
-	return instoffset;
-}
-
 int
 classreg(Adr *a)
 {
@@ -200,33 +186,12 @@ aclass(Adr *a)
 	int t;
 
 	switch(a->type) {
-	case D_NONE:
-		return C_NONE;
-
-	case D_REG:
-		return C_REG;
-
-	case D_CTLREG:
-		return C_CTLREG;
-
-	case D_FREG:
-		return C_FREG;
-
 	case D_OREG:
 		switch(a->name) {
 		case D_EXTERN:
 		case D_STATIC:
-			if(a->sym == 0 || a->sym->name == 0) {
-				print("null sym external\n");
-				print("%D\n", a);
-				return C_GOK;
-			}
 			t = a->sym->type;
-			if(t == 0 || t == SXREF) {
-				diag("undefined external: %s in %s",
-					a->sym->name, TNAME);
-				a->sym->type = SDATA;
-			}
+            ...
 			instoffset = a->sym->value + a->offset - BIG;
 			if(instoffset >= -BIG && instoffset < BIG)
 				return C_SEXT;
@@ -251,9 +216,6 @@ aclass(Adr *a)
 			return C_LOREG;
 		}
 		return C_GOK;
-
-	case D_FCONST:
-		return C_FCON;
 
 	case D_VCONST:
 		return C_VCON;
@@ -325,16 +287,13 @@ aclass(Adr *a)
 	case D_BRANCH:
 		return C_SBRA;
 	}
-	return C_GOK;
 }
 
 
 int
 cmp(int a, int b)
 {
-
-	if(a == b)
-		return 1;
+    ...
 	switch(a) {
 	case C_LCON:
 		if(b == C_ZCON || b == C_SCON || b == C_UCON)
@@ -381,5 +340,4 @@ cmp(int a, int b)
 			return 1;
 		break;
 	}
-	return 0;
 }

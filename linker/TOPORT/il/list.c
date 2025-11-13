@@ -31,19 +31,6 @@ Pconv(Fmt *fp)
 }
 
 int
-Aconv(Fmt *fp)
-{
-	char *s;
-	int a;
-
-	a = va_arg(fp->args, int);
-	s = "???";
-	if(a >= AXXX && a < ALAST)
-		s = anames[a];
-	return fmtstrcpy(fp, s);
-}
-
-int
 Dconv(Fmt *fp)
 {
 	char str[STRINGSZ];
@@ -170,66 +157,4 @@ Nconv(Fmt *fp)
 	}
 
 	return fmtstrcpy(fp, str);
-}
-
-int
-Sconv(Fmt *fp)
-{
-	int i, c;
-	char str[STRINGSZ], *p, *a;
-
-	a = va_arg(fp->args, char*);
-	p = str;
-	for(i=0; i<sizeof(long); i++) {
-		c = a[i] & 0xff;
-		if(c >= 'a' && c <= 'z' ||
-		   c >= 'A' && c <= 'Z' ||
-		   c >= '0' && c <= '9' ||
-		   c == ' ' || c == '%') {
-			*p++ = c;
-			continue;
-		}
-		*p++ = '\\';
-		switch(c) {
-		case 0:
-			*p++ = 'z';
-			continue;
-		case '\\':
-		case '"':
-			*p++ = c;
-			continue;
-		case '\n':
-			*p++ = 'n';
-			continue;
-		case '\t':
-			*p++ = 't';
-			continue;
-		}
-		*p++ = (c>>6) + '0';
-		*p++ = ((c>>3) & 7) + '0';
-		*p++ = (c & 7) + '0';
-	}
-	*p = 0;
-	return fmtstrcpy(fp, str);
-}
-
-void
-diag(char *fmt, ...)
-{
-	char buf[STRINGSZ], *tn;
-	va_list arg;
-
-	tn = "??none??";
-	if(curtext != P && curtext->from.sym != S)
-		tn = curtext->from.sym->name;
-	va_start(arg, fmt);
-	vseprint(buf, buf+sizeof(buf), fmt, arg);
-	va_end(arg);
-	print("%s: %s\n", tn, buf);
-
-	nerrors++;
-	if(nerrors > 10) {
-		print("too many errors\n");
-		errorexit();
-	}
 }

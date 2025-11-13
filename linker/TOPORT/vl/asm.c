@@ -243,9 +243,6 @@ datblk(long s, long n, int str)
 	(op|(((s)&31L)<<6)|(((r2)&31L)<<16)|(((r3)&31L)<<11))
 #define	OP_FRRR(op,r1,r2,r3)\
 	(op|(((r1)&31L)<<16)|(((r2)&31L)<<11)|(((r3)&31L)<<6))
-#define	OP_JMP(op,i)\
-		((op)|((i)&0x3ffffffL))
-
 
 #define	BCOND(x,y)\
 	(((x)<<19)|((y)<<16))
@@ -284,9 +281,9 @@ asmout(Prog *p, Optab *o)
 		///r = p->from.reg;
 		if(r == NREG)
 			r = o->param;
-		a = AADDU;
-		///if(o->a1 == C_ANDCON)
-		///	a = AOR;
+		//a = AADDU;
+		if(o->a1 == C_ANDCON)
+			a = AOR;
 		///o1 = OP_IRR(opirr(a), v, r, p->to.reg);
 		break;
 
@@ -299,8 +296,8 @@ asmout(Prog *p, Optab *o)
 		//break;
 
 	case 5:		/* syscall */
-		o1 = oprrr(p->as);
-		break;
+		//o1 = oprrr(p->as);
+		//break;
 
 	case 6:		/* beq r1,[r2],sbra */
 		if(p->cond == P)
@@ -569,30 +566,30 @@ asmout(Prog *p, Optab *o)
 		 * because the mips 4000 in 64-bit mode
 		 * does a 64-bit add and it will screw up.
 		 */
-		v = regoff(&p->to);
-		r = p->to.reg;
-		if(r == NREG)
-			r = o->param;
+		//v = regoff(&p->to);
+		//r = p->to.reg;
+		//if(r == NREG)
+		//	r = o->param;
 		if(r == REGTMP)
 			diag("cant synthesize large constant\n%P", p);
-		o1 = OP_IRR(opirr(ALAST), v>>16, REGZERO, REGTMP);
-		o2 = OP_IRR(opirr(AOR), v, REGTMP, REGTMP);
-		o3 = OP_RRR(oprrr(AADDU), r, REGTMP, REGTMP);
-		o4 = OP_IRR(opirr(p->as), 0, REGTMP, p->from.reg);
-		break;
+		//o1 = OP_IRR(opirr(ALAST), v>>16, REGZERO, REGTMP);
+		//o2 = OP_IRR(opirr(AOR), v, REGTMP, REGTMP);
+		//o3 = OP_RRR(oprrr(AADDU), r, REGTMP, REGTMP);
+		//o4 = OP_IRR(opirr(p->as), 0, REGTMP, p->from.reg);
+		//break;
 
 	case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */
-		v = regoff(&p->from);
-		r = p->from.reg;
-		if(r == NREG)
-			r = o->param;
+		//v = regoff(&p->from);
+		//r = p->from.reg;
+		//if(r == NREG)
+		//	r = o->param;
 		if(r == REGTMP)
 			diag("cant synthesize large constant\n%P", p);
-		o1 = OP_IRR(opirr(ALAST), v>>16, REGZERO, REGTMP);
-		o2 = OP_IRR(opirr(AOR), v, REGTMP, REGTMP);
-		o3 = OP_RRR(oprrr(AADDU), r, REGTMP, REGTMP);
-		o4 = OP_IRR(opirr(p->as+ALAST), 0, REGTMP, p->to.reg);
-		break;
+		//o1 = OP_IRR(opirr(ALAST), v>>16, REGZERO, REGTMP);
+		//o2 = OP_IRR(opirr(AOR), v, REGTMP, REGTMP);
+		//o3 = OP_RRR(oprrr(AADDU), r, REGTMP, REGTMP);
+		//o4 = OP_IRR(opirr(p->as+ALAST), 0, REGTMP, p->to.reg);
+		//break;
 
 	case 37:	/* movw r,mr */
 		r = SP(2,0)|(4<<21);		/* mtc0 */
@@ -614,7 +611,7 @@ asmout(Prog *p, Optab *o)
 		break;
 
 	case 40:	/* word */
-		o1 = regoff(&p->to);
+		//o1 = regoff(&p->to);
 		break;
 
 	case 41:	/* movw r,fcr */

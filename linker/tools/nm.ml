@@ -53,6 +53,7 @@ let visit_obj (caps : < Cap.stdout; .. >) (obj : 'instr Object_file.t) : unit =
       | Pseudo (GLOBL (glob, _attrs, _int)) ->
           Hashtbl.add defs glob true;
           let ident = A.s_of_global glob in
+          (* TODO: could be a 'B' if SBSS so need check if some DATA for it? *)
           Console.print caps (spf " D %s" ident)
       | Pseudo (DATA _ | WORD _) -> ()
       | Virtual _ -> ()

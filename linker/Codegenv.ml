@@ -49,12 +49,39 @@ let constant_kind i =
 let offset_to_R30 x =
   x
 
+let base_and_offset_of_entity node symbols2 autosize x =
+  match x with
+  (* | Indirect (r, off) -> r, off  *)
+  | (Param (_s, off)) ->
+      (* remember that the +4 below is because we access the frame of the
+       * caller which for sure is not a leaf. Note that autosize
+       * here had possibly a +4 done if the current function
+       * was a leaf, but still we need another +4 because what matters
+       * now is the adjustment in the frame of the caller!
+       *)
+      rSP, autosize + 4 + off
+  | (Local (_s, off)) -> 
+      rSP, autosize + off
+  | (Global (global, off)) ->
+      let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
+      (match v with
+        | T.SData2 (offset, _kind) ->
+          rSB, offset_to_R30 (offset + off)
+      (* stricter: allowed in 5l but I think with wrong codegen *)
+      | T.SText2 _ -> 
+          error node (spf "use of procedure %s in indirect with offset"
+                       (A.s_of_global global))
+      )
+
+
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
 (* the functions names below are a bit cryptic but I followed the conventions
- * used in vl/asm.c (those names probably derives from the Mips architecture
- * manual).
+ * used in vl/asm.c (some of those names probably derives from the Mips
+ * architecture manual).
+ * irr: when the function take immediate register register
+ * rrr: when the function take register register register
  *)
 
 let op (x : int) (y : int) : Bits.t =
@@ -143,6 +170,13 @@ let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
 let op_jmp (op : Bits.t) (i : int) : Bits.t =
   op @ [(i land 0x3ffffff, 0)]
 
+(* opcode to load immediate 16bits to a register
+ * (ex of use: 'op_irr op_last (lcon lsr 16) rZERO rt').
+ * Was called ALAST in vl where they abused this ALAST marker to
+ * encode additional instructions.
+ *)
+let op_last = sp 1 7
+
 (*****************************************************************************)
 (* More complex code generation helpers *)
 (*****************************************************************************)
@@ -185,6 +219,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   | T.TEXT (_, _, _) -> 
       { size = 0; pool = None; binary = (fun () -> []) }
 
+  (* alt: could be moved to Codegen.ml and reused *)
   | T.WORD x ->
       { size = 4; pool = None; binary = (fun () -> 
         match x with
@@ -214,7 +249,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
 
     (* case 4:		/* add $scon,[r1],r2 */ *)
-    | Arith (ADD (W, S) as op, Imm i, r_opt, rt) ->
+    | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) ->
         (* TODO: C_ADD0CON vs C_ANDCON generate different opcodes *)
         { size = 4; pool = None; binary = (fun () ->
             let v = i in
@@ -234,7 +269,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* Constant to register move (move but no memory involved) 
      * case 3:		/* mov $soreg, r ==> or/add $i,o,r */
-    *)
+     *)
     | Move2 (W__, (Right (Int i)), Gen (GReg rt)) ->
        (match constant_kind i with
        | Some i -> 
@@ -311,27 +346,42 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   | Some init_data -> init_data + offset
                   )
                 in
-                [
-                   op_irr (sp 1 7) (lcon lsr 16) rZERO rt;
-                   op_irr (opirr_arith_opcode OR) lcon rt rt;
+                [ op_irr op_last (lcon lsr 16) rZERO rt;
+                  op_irr (opirr_arith_opcode OR) lcon rt rt;
                 ]
               )}
             )
         | Address (Local _ | Param _) -> raise Todo
         )
 
-    (* Load *)
+    (* Store/Load *)
 
-    (* case 8:		/* mov soreg, r ==> lw o(r) */ *)
-    | Move2 (W__, Left (Gen (Indirect (rf, offset))), Gen (GReg rt)) ->
-         { size = 4; pool = None; binary = (fun () ->
-           let r = rf in
-           (* TODO: regoff *)
-           let v = offset in
-           [ op_irr (opirr_mem W__ LDR) v r rt ]
-         ) }
-
-    (* Store *)
+    (* case 35:	/* mov r,lext/luto/oreg ==> sw o(r) */ *)
+    | Move2 (W__, Left (Gen (GReg rf)), Gen (Entity ent)) ->
+        { size = 16; pool = None; binary = (fun () ->
+          let (rbase, offset) =
+                 base_and_offset_of_entity node env.syms env.autosize ent
+          in
+          let v = offset in
+          [ op_irr op_last (v lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) v rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem W__ STR) 0 rTMP rf;
+          ]
+          ) }
+    (* case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */ *)    
+    | Move2 (W__, Left (Gen (Entity ent)), Gen (GReg rt)) ->
+        { size = 16; pool = None; binary = (fun () ->
+            let (rbase, offset) =
+                 base_and_offset_of_entity node env.syms env.autosize ent
+            in
+            let v = offset in
+            [ op_irr op_last (v lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) v rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr (opirr_mem W__ LDR) 0 rTMP rt;
+            ]
+          ) }
 
     (* case 7:		/* mov r, soreg ==> sw o(r) */ *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rt, offset))) ->
@@ -341,6 +391,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           (* TODO: regoff *)
           let v = offset in
           [ op_irr (opirr_mem W__ STR) v r rf ]
+         ) }
+    (* case 8:		/* mov soreg, r ==> lw o(r) */ *)
+    | Move2 (W__, Left (Gen (Indirect (rf, offset))), Gen (GReg rt)) ->
+         { size = 4; pool = None; binary = (fun () ->
+           let r = rf in
+           (* TODO: regoff *)
+           let v = offset in
+           [ op_irr (opirr_mem W__ LDR) v r rt ]
          ) }
 
     (* --------------------------------------------------------------------- *)

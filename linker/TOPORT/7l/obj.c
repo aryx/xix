@@ -212,20 +212,7 @@ main(int argc, char *argv[])
 		}
 		export();
 	}
-	patch();
-	if(debug['p'])
-		if(debug['1'])
-			doprof1();
-		else
-			doprof2();
-	dodata();
-	follow();
-	if(firstp == P)
-		goto out;
-	noops();
-	span();
-	asmb();
-	undef();
+    ...
 
 out:
 	if(debug['v']) {

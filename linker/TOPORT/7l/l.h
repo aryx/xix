@@ -262,8 +262,7 @@ int	chipfloat(Ieee*);
 int	cmp(int, int);
 int	compound(Prog*);
 void	datblk(long, long, int);
-void	doprof1(void);
-void	doprof2(void);
+
 void	dynreloc(Sym*, long, int);
 vlong	entryvalue(void);
 int	isnop(Prog*);

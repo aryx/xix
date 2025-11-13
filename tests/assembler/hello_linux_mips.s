@@ -3,10 +3,12 @@
 // R2 → $v0
 // R3–R10 → $a0–$a7
 
+#define NO_PROF 1
+
 // -------------------------------------------
 // main procedure
 // -------------------------------------------
-TEXT _start(SB), $0
+TEXT _start(SB), NO_PROF, $0
 
 	// optional MOVW if set BIG to 0 in l.h in which case $msg(SB)
         // further below will have the same value then $setR30(SB) and

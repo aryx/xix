@@ -52,15 +52,21 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register)
 
   cg |> T.iter (fun n ->
       match n.instr with
-      | T.TEXT (ent, (attrs : A.attributes), _size) ->
+      | T.TEXT (glob, (attrs : A.attributes), _size) ->
+          (* Note that we should not instrument _mainp (or any other entry point)
+           * as SB has not been set yet but the instrumentation relies
+           * on __mcount(SB) access working, so don't forget to set NOPROF
+           * for those procedures.
+           *)
           if attrs.no_prof
-          then ()
+          then Logs.info (fun m -> m "skipping instrumentation for %s (NO_PROF)"
+                 (A.s_of_global glob))
           else begin
           data |> Stack_.push 
             (T.DATA ( mcount, 
                      !count * 4,
                      4 (* size *), 
-                     A.Address (A.Global (ent, 0))));
+                     A.Address (A.Global (glob, 0))));
 
           (* LATER: in 6l/8l it can do in one ADD 1, __mcount+8(SB) operation
            * so maybe we should run a peephole optimizer in Rewrite6.ml for
@@ -76,7 +82,7 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register)
             * should be same machine opcode in the end no because of 
             * 2-complement arch?
             *)
-           instr = T.Virt (A.Add (A.S, 1, rTMP));
+           instr = T.Virt (A.Add (A.U, 1, rTMP));
            next = Some n3;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
           }

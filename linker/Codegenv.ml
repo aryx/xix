@@ -6,7 +6,6 @@ open Ast_asm
 open Ast_asmv
 
 module T = Types
-module Tv = Typesv
 open Codegen
 
 (*****************************************************************************)
@@ -30,7 +29,8 @@ type mem_opcode = LDR | STR
 (*****************************************************************************)
 let error (node : 'a T.node) (s : string) =
   failwith 
-    (spf "%s at %s on %s" s  (T.s_of_loc node.n_loc) (Tv.show_instr node.instr))
+    (spf "%s at %s on %s" s (T.s_of_loc node.n_loc)
+        (Typesv.show_instr node.instr))
 let int_of_bits (n : 'a T.node) (x : Bits.int32) : int =
   try Bits.int_of_bits32 x with
   | Failure s -> error n s
@@ -362,7 +362,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      |TLB _
      ) -> 
        failwith (spf "Codegenv: TODO: instr not handled: %s"
-                (Tv.show_instr node.instr))
+                (Typesv.show_instr node.instr))
 
     (*    | _ -> error node "illegal combination"*)
     )
@@ -407,7 +407,8 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
                  !pc 
                   (xs |> List.map (fun x -> spf "%.8x" (int_of_bits n x))
                       |> String.concat " ")
-                  (Str.global_replace (Str.regexp "[\n\t ]+") " " (Tv.show_instr n.instr) |> String_.show_max 40));
+                  (Str.global_replace (Str.regexp "[\n\t ]+") " " 
+                     (Typesv.show_instr n.instr) |> String_.show_max 40));
       xs |> List.iter (fun x ->
         let w = int_of_bits n x in
         Logs.debug (fun m -> m "%s (0x%x)" (Dumper.dump x) w);

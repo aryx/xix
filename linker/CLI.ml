@@ -92,7 +92,8 @@ let profile : Exec_file.profile_kind option ref = ref None
 (* Helpers *)
 (*****************************************************************************)
 (*s: function [[CLI.config_of_header_type]] *)
-let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exec_file.linker_config =
+let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
+    Exec_file.linker_config =
   (* sanity checks *)
   (match !init_data, !init_round with
   | Some x, Some y -> failwith (spf "-D%d is ignored because of -R%d" x y)
@@ -147,7 +148,9 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) : Exe
 (*****************************************************************************)
 (*s: function [[CLI.link5]] *)
 (* will modify chan as a side effect *)
-let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config)
+    (files : Fpath.t list) (chan : Chan.o) :
+    unit =
   let arch : Ast_asm5.instr_with_cond Arch_linker.t = 
     Arch_linker.of_arch config.arch
   in
@@ -163,6 +166,8 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
     | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
   in
   let data = data @ new_data in
+
+  (* arch-specific phase *)
   let graph = Rewrite5.rewrite graph in
 
   let symbols2, (data_size, bss_size) = 
@@ -174,7 +179,8 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
    *)
   Check.check symbols;
 
-  let symbols2, graph(* why modify that??*), text_size = 
+  (* arch-specific phase *)
+  let symbols2, graph(* why return it? modified ?? *), text_size = 
     Layout5.layout_text symbols2 config.init_text graph in
 
   let sizes : Exec_file.sections_size = 
@@ -187,9 +193,11 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   in
   let config = { config with Exec_file.init_data = Some init_data } in
   Logs.info (fun m -> m "final config is %s" 
-        (Exec_file.show_linker_config config));
+                          (Exec_file.show_linker_config config));
  
+  (* arch-specific phase *)
   let instrs = Codegen5.gen symbols2 config graph in
+
   let datas  = Datagen.gen symbols2 init_data sizes data in
   Execgen.gen config sizes instrs datas symbols2 chan
 (*e: function [[CLI.link5]] *)
@@ -201,8 +209,7 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   T.lookup (config.entry_point, T.Public) None symbols |> ignore;
   let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
   let graph, new_data =
-    match config.profile with
-    | None -> graph, []
+    match config.profile with | None -> graph, []
     | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
   in
   let data = data @ new_data in
@@ -213,13 +220,10 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   Check.check symbols;
   let symbols2, graph, text_size = 
     Layoutv.layout_text symbols2 config.init_text graph in
-  let sizes : Exec_file.sections_size = 
-    Exec_file.{ text_size; data_size; bss_size } 
-  in
+  let sizes = Exec_file.{ text_size; data_size; bss_size } in
   let init_data =  
-    match config.init_data with
+    match config.init_data with | Some x -> x
     | None -> Int_.rnd (text_size + config.init_text) config.init_round
-    | Some x -> x
   in
   let config = { config with Exec_file.init_data = Some init_data } in
   Logs.info (fun m -> m "final config is %s" 

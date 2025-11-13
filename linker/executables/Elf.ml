@@ -280,6 +280,8 @@ let write_headers (config : Exec_file.linker_config)
     match Arch.bits_of_arch arch with
     | Arch.Arch32 -> C32
     | Arch.Arch64 -> C64
+    | Arch.Arch8 | Arch.Arch16 -> 
+        failwith "8 and 16 bits arch not supported by ELF"
   in
   write_ident bo class_ chan;
 

@@ -146,6 +146,10 @@ and 'instr code_bis =
 (*e: type [[Types.code_bis]] *)
 [@@deriving show {with_path = false}]
 
+(* for ocaml-light to work without deriving *)
+let show_data _ = "NO DERIVING"
+[@@warning "-32"]
+
 (*s: type [[Types.data]] *)
 (* remember that GLOBL information is stored in symbol table  *)
 type data = 

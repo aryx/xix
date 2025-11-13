@@ -21,7 +21,10 @@ type t =
   | Amd64
 [@@deriving show]
 
+(* alt: rename to B8 | B16 | ... ? or Int8 | Int16 | ... ? *)
 type bits =
+  | Arch8
+  | Arch16
   | Arch32
   | Arch64
 
@@ -51,6 +54,14 @@ let bits_of_arch = function
   | Riscv64 -> Arch64
   | X86 -> Arch32
   | Amd64 -> Arch64
+
+let bits_of_intsize (n : int) : bits =
+  match n with
+  | 1 -> Arch8
+  | 2 -> Arch16
+  | 4 -> Arch32
+  | 8 -> Arch64
+  | n -> failwith (spf "bits_of_intsize of %d not in {1,2,4,8} set" n)
 
 (*****************************************************************************)
 (* Plan9 arch char/string conventions *)

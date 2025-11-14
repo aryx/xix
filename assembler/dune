@@ -21,6 +21,7 @@
  (files
   (Main.exe as o5a)
   (Main.exe as ova)
+  (Main.exe as oia)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5a.bc))
 )

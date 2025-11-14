@@ -37,9 +37,6 @@ let rLINK = R 31
 (* always contain the value 0 *)
 let rZERO = R 0
 
-(* TODO: why the linker also use R2 and not use rTMP instead? *)
-let r2TMP = R 2
-
 let nb_registers = 32
 let nb_fregisters = 32 (* ?? *)
 

@@ -7,7 +7,7 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5a/va, the Plan 9 ARM/MIPS assemblers.
+(* An OCaml port of 5a/va/ia, the Plan 9 ARM/MIPS/RISCV assemblers.
  *
  * Main limitations compared to 5a/va/...:
  *  - no multiple files processing in parallel 
@@ -26,7 +26,7 @@ open Regexp_.Operators
  *    * use simple marshal again for cpp line history
  * 
  * todo:
- *  - port remaining assembler: ia, 7a, 8a, 6a (increasing difficulty)
+ *  - port remaining assembler: 7a, 8a, 6a (increasing difficulty)
  * later:
  *  - look at the 5a Go sources in the Golang source, maybe ideas to steal?
  *  - follow the new design by Rob Pike of Go assembler to factorize things
@@ -107,6 +107,7 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     match Filename.basename argv.(0) with
     | "o5a" -> Arch.Arm
     | "ova" -> Arch.Mips
+    | "oia" -> Arch.Riscv
     | s -> failwith (spf "arch could not be detected from argv0 %s" s)
   in
 

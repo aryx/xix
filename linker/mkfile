@@ -11,6 +11,7 @@ SRC= Flags.ml\
  Load.ml Check.ml Resolve.ml \
  Profile.ml \
  Rewrite.ml Rewrite5.ml Rewritev.ml \
+ Optimize.ml Optimize5.ml Optimizev.ml \
  Codegen.ml Codegen5.ml Codegenv.ml \
  Layout.ml Layout5.ml Layoutv.ml \
  Datagen.ml \

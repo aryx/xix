@@ -32,6 +32,9 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - port nm to OCaml (v0) (now called onm)
 - port of the -p and -p_count (was called -p -1 in kencc) basic profiling
   instrumentation in o5l/ovl/... (the code is now mostly generic)
+- introduce new virtual instrs: Add, Load, Store, and Call so that certain
+  code such as profiling instrumentation can be made generic and work
+  across multiple archs
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
@@ -78,7 +81,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - Finish Dockerfile.light that can compile {mk,rc,lib_core/commons} with
   ocaml-light! see ocaml-light/changes.txt for all the stuff that was needed
 
-* 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin/ocamlformat (tools))
+* 0.15 (Q2 2025) (Cap.ml, Dockerfile/Nix/Testo (testinfra), dune/merlin (tools))
 # Resume again after one year of inactivity due to my work on Semgrep.
 # Bring again like last year good stuff I learned from Semgrep:
 #  - Cap.ml! capabilities!! XiX can innovate not only on being far smaller, and
@@ -149,6 +152,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 ** internals
 - Started to use stdcompat for backward compatibility with
   old versions of OCaml.
+  update: in 2025 I dropped stdcompat but improved ocaml-light enough
+  to compile xix
 
 ** testinfra
 - Github Actions (GHA) checks to make sure xix compiles.
@@ -173,6 +178,8 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 ** internals
 - use of merlin (mk .merlin) via Efuns
+  update: in 2025 I rely on dune instead of mk to generate the appropriate
+  files for merlin and Efuns is able to use it (because it calls merlin).
 
 * 0.10 (Q2 2018) ()
 

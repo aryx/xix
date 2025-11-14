@@ -49,7 +49,6 @@ module T = Types
  * todo 5l:
  *  - arith LCON less: NCON
  *  - half word and byte load/store basic version
- *  - endianess and datagen
  *  - advanced instructions: floats, MULL, coprocessor, psr, etc
  * todo vl:
  *  - a lot
@@ -70,23 +69,26 @@ type caps = < Cap.open_in; Cap.open_out >
 (*e: type [[CLI.caps]] *)
 
 (*s: constant [[CLI.init_text]] *)
-let init_text  = ref None
+let init_text : T.addr option ref  = ref None
 (*e: constant [[CLI.init_text]] *)
 (*s: constant [[CLI.init_round]] *)
-let init_round = ref None
+let init_round : int option ref = ref None
 (*e: constant [[CLI.init_round]] *)
 (*s: constant [[CLI.init_data]] *)
-let init_data  = ref None
+let init_data : T.addr option ref  = ref None
 (*e: constant [[CLI.init_data]] *)
 
 (*s: constant [[CLI.init_entry]] *)
+let init_entry : string option ref = ref None
+(*e: constant [[CLI.init_entry]] *)
+
 (* note that this is not "main"; we give the opportunity to libc _main
  * to do a few things before calling user's main()
  *)
-let init_entry = ref "_main"
-(*e: constant [[CLI.init_entry]] *)
+let default_entry_point = "_main"
 
 let profile : Exec_file.profile_kind option ref = ref None
+
 
 (*****************************************************************************)
 (* Helpers *)
@@ -99,7 +101,15 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
   | Some x, Some y -> failwith (spf "-D%d is ignored because of -R%d" x y)
   | _ -> ()
   );
+  let entry_point =
+    match !init_entry, !profile with
+    | None, None -> default_entry_point
+    | None, Some _ -> "_mainp"
+    | Some s, _ -> s
+  in
+
   let profile = !profile in
+  
   match header_type with
   | "a.out" | "a.out_plan9" ->
       let header_size = A_out.header_size in
@@ -114,7 +124,7 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
         );
         init_data = !init_data;
         init_round = (match !init_round with Some x -> x | None -> 4096);
-        entry_point = !init_entry;
+        entry_point;
         profile;
       }
       
@@ -137,7 +147,7 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
         );
         init_data = !init_data;
         init_round = (match !init_round with Some x -> x | None -> 4096);
-        entry_point = !init_entry;
+        entry_point;
         profile;
       }
   | s -> failwith (spf "unknown -H option, format not handled: %s" s)
@@ -169,6 +179,7 @@ let link5 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config)
 
   (* arch-specific phase *)
   let graph = Rewrite5.rewrite graph in
+  (* TODO? Optimize5.rewrite ? like ADD -N => SUB N *)
 
   let symbols2, (data_size, bss_size) = 
     Layout.layout_data symbols data in
@@ -249,7 +260,7 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[CLI.main]] *)
-let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+let main (caps : <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
 
   let arch = 
     match Filename.basename argv.(0) with
@@ -290,8 +301,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     " <addr> start of data section";
 
     (* less: support integer value instead of string too? *)
-    "-E", Arg.Set_string init_entry,
-    spf " <str> entry point (default is %s)" !init_entry;
+    "-E", Arg.String (fun s -> init_entry := Some s),
+    spf " <str> entry point (default is %s)" default_entry_point;
 
     "-p", Arg.Unit (fun () -> profile := Some Exec_file.ProfileTime),
     " profile time spent in a function";
@@ -326,8 +337,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     Arg.parse_argv argv options
       (fun f -> infiles := Fpath.v f::!infiles) usage;
   with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  | Arg.Bad msg -> Console.print caps msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> Console.print caps msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
   Logs.info (fun m -> m "linker ran from %s with arch %s" 

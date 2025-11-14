@@ -111,11 +111,6 @@ fcreg:
 	}
 
 ximm:	
-|	'$' oreg
-	{
-		$$ = $2;
-		$$.type = D_CONST;
-	}
 |	'$' '*' '$' oreg
 	{
 		$$ = $4;
@@ -142,7 +137,6 @@ gen:
 
 
 oreg:
-	name
 |	name '(' sreg ')'
 	{
 		$$ = $1;

@@ -8,7 +8,7 @@
 #define	REGMAX		8
 #define	REGEXT		10
 /* compiler allocates external registers R10 down */
-#define	REGTMP		11
+//#define	REGTMP		11
 
 
 #define	REGTMPT		7	/* used by the loader for thumb code */
@@ -41,8 +41,8 @@ enum	as
 	AMOVF,
 	AMOVD,
 
-//	ASQRTF,
-//	ASQRTD,
+/*	ASQRTF, */
+/*	ASQRTD, */
 
 	AMULU,
 	ADIVU,
@@ -85,7 +85,7 @@ enum	as
 };
 
 /* scond byte */
-#define	C_SCOND	((1<<4)-1)
+//#define	C_SCOND	((1<<4)-1)
 #define	C_SBIT	(1<<4)
 #define	C_PBIT	(1<<5)
 #define	C_WBIT	(1<<6)

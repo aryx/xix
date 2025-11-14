@@ -88,23 +88,7 @@ inst:
 	}
 
 
-cond:
-|	cond LCOND
-	{
-		$$ = ($1 & ~C_SCOND) | $2;
-	}
-|	cond LS
-	{
-		$$ = $1 | $2;
-	}
-
-
 ximm:	
-|	'$' oreg
-	{
-		$$ = $2;
-		$$.type = D_CONST;
-	}
 |	'$' '*' '$' oreg
 	{
 		$$ = $4;

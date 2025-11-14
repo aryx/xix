@@ -422,7 +422,8 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
           [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
         )}
-        
+
+    (* case ?? *)        
     | MOVE (Word, None, Imsr from, Imsr (Reg (R rt))) -> 
         let from_part = 
           match from with
@@ -439,12 +440,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ from_part]
         )}
 
+    (* case ?? *)        
     (* MOVBU R, RT -> ADD 0xff, R, RT *)
     | MOVE (Byte U, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
         { size = 4; x = None; binary = (fun () ->
           [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff, 0)]]
         )}
 
+    (* case ?? *)        
     (* MOVB RF, RT  -> SLL 24, RF, RT; SRA 24, RT, RT -> MOV (RF << 24), RT;...
      * MOVH RF, RT  -> SLL 16, RF, RT; SRA 16, RT, RT -> ...
      * MOVHU RF, RT -> SLL 16, RF, RT; SRL 16, RT, RT -> 
@@ -523,6 +526,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )
 
+    (* case ?? *)        
     | Bxx (cond2, x) ->
         if cond <> AL 
         then raise (Impossible "Bxx should always be with AL");
@@ -541,6 +545,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
 
     (* Address *)
+    (* case ?? *)        
     | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
         (match ximm with
         | Int _ | Float _ -> 
@@ -588,6 +593,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* Load *)
 
+    (* case ?? *)        
     | MOVE ((Word | Byte U) as size, opt, from, Imsr (Reg rt)) ->
         (match from with
         | Imsr (Imm _ | Reg _) -> 
@@ -613,6 +619,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* Store *)
 
+    (* case ?? *)        
     (* note that works for Byte Signed and Unsigned here *)
     | MOVE ((Word | Byte _) as size, opt, Imsr (Reg rf), dest) ->
         (match dest with
@@ -662,7 +669,6 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)
-    (*    | _ -> error node "illegal combination"*)
     )
 
 (*e: function [[Codegen5.rules]] *)

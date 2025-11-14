@@ -206,6 +206,9 @@ type virtual_instr =
   | Load of entity * register
   | Store of register * entity
   | Add of sign * integer (* or ximm? *) * register
+  (* TODO? 
+   * | Case of ??? (* compiler-only virtual instr *) 
+   *)
 
 (*e: type [[Ast_asm.virtual_instr]] *)
 [@@deriving show { with_path = false}]

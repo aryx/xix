@@ -1,7 +1,6 @@
 void
 main(int argc, char *argv[])
 {
-
 	thechar = 'i';
 	p = strrchr(argv[0], '/');
 	if(p == nil)

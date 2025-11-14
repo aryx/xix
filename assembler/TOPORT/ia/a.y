@@ -2,12 +2,6 @@
 {
 	vlong	lval;
 }
-%left	'|'
-%left	'^'
-%left	'&'
-%left	'<' '>'
-%left	'+' '-'
-%left	'*' '/' '%'
 %token	<lval>	LADD LMUL LBEQ LBR LBRET LCALL LFLT2 LFLT3
 %token	<lval>	LMOVB LMOVBU LMOVW LMOVF LLUI LSYS LSYS0 LCSR LSWAP LAMO
 %token	<lval>	LCONST LSP LSB LFP LPC LREG LFREG LR FR LCTL

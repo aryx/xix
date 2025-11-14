@@ -535,64 +535,59 @@ void
 asmout(Prog *p, Optab *o, int32 *out)
 {
 	int32 v;
-	int r, rf, rt, rt2;
 	Reloc *rel;
-
-PP = p;
     ...
 	armsize += o->size;
-
 	switch(o->type) {
     ...
+	//case 0:		/* pseudo ops */
+        //...
+		//break;
 
-	case 0:		/* pseudo ops */
-        ...
-		break;
-
-	case 1:		/* op R,[R],R */
-		o1 = oprrr(p->as, p->scond);
-		rf = p->from.reg;
-		rt = p->to.reg;
-		r = p->reg;
+	//case 1:		/* op R,[R],R */
+		//o1 = oprrr(p->as, p->scond);
+		//rf = p->from.reg;
+		//rt = p->to.reg;
+		//r = p->reg;
 		if(p->to.type == D_NONE)
 			rt = 0;
-		if(p->as == AMOVW || p->as == AMVN)
-			r = 0;
-		else if(r == NREG)
-			r = rt;
-		o1 |= rf | (r<<16) | (rt<<12);
-		break;
+		//if(p->as == AMOVW || p->as == AMVN)
+		//	r = 0;
+		//else if(r == NREG)
+		//	r = rt;
+		//o1 |= rf | (r<<16) | (rt<<12);
+		//break;
 
-	case 2:		/* movbu $I,[R],R */
-		aclass(&p->from);
-		o1 = oprrr(p->as, p->scond);
-		o1 |= immrot(instoffset);
-		rt = p->to.reg;
-		r = p->reg;
+	//case 2:		/* movbu $I,[R],R */
+		//aclass(&p->from);
+		//o1 = oprrr(p->as, p->scond);
+		//o1 |= immrot(instoffset);
+		//rt = p->to.reg;
+		//r = p->reg;
 		if(p->to.type == D_NONE)
 			rt = 0;
-		if(p->as == AMOVW || p->as == AMVN)
-			r = 0;
-		else if(r == NREG)
-			r = rt;
-		o1 |= (r<<16) | (rt<<12);
-		break;
+		//if(p->as == AMOVW || p->as == AMVN)
+		//	r = 0;
+		//else if(r == NREG)
+		//	r = rt;
+		//o1 |= (r<<16) | (rt<<12);
+		//break;
 
 	case 3:		/* add R<<[IR],[R],R */
 	mov:
-		aclass(&p->from);
-		o1 = oprrr(p->as, p->scond);
+		//aclass(&p->from);
+		//o1 = oprrr(p->as, p->scond);
 		o1 |= p->from.offset;
-		rt = p->to.reg;
-		r = p->reg;
+		//rt = p->to.reg;
+		//r = p->reg;
 		if(p->to.type == D_NONE)
 			rt = 0;
-		if(p->as == AMOVW || p->as == AMVN)
-			r = 0;
-		else if(r == NREG)
-			r = rt;
-		o1 |= (r<<16) | (rt<<12);
-		break;
+		//if(p->as == AMOVW || p->as == AMVN)
+		//	r = 0;
+		//else if(r == NREG)
+		//	r = rt;
+		//o1 |= (r<<16) | (rt<<12);
+		//break;
 
 	case 4:		/* add $I,[R],R */
 		aclass(&p->from);
@@ -607,69 +602,70 @@ PP = p;
 
 	case 5:		/* bra s */
 		v = -8;
-		if(p->cond != P)
-			v = (p->cond->pc - pc) - 8;
+		//if(p->cond != P)
+		//	v = (p->cond->pc - pc) - 8;
 #ifdef CALLEEBX
 		if(p->as == ABL)
 			v += fninc(p->to.sym);
 #endif
-		o1 = opbra(p->as, p->scond);
-		o1 |= (v >> 2) & 0xffffff;
-		break;
+		//o1 = opbra(p->as, p->scond);
+		//o1 |= (v >> 2) & 0xffffff;
+		//break;
 
-	case 6:		/* b ,O(R) -> add $O,R,PC */
-		aclass(&p->to);
-		o1 = oprrr(AADD, p->scond);
-		o1 |= immrot(instoffset);
-		o1 |= p->to.reg << 16;
-		o1 |= REGPC << 12;
-		break;
+	//case 6:		/* b ,O(R) -> add $O,R,PC */
+		//aclass(&p->to);
+		//o1 = oprrr(AADD, p->scond);
+		//o1 |= immrot(instoffset);
+		//o1 |= p->to.reg << 16;
+		//o1 |= REGPC << 12;
+		//break;
 
-	case 7:		/* bl ,O(R) -> mov PC,link; add $O,R,PC */
-		aclass(&p->to);
-		o1 = oprrr(AADD, p->scond);
-		o1 |= immrot(0);
-		o1 |= REGPC << 16;
-		o1 |= REGLINK << 12;
+	//case 7:		/* bl ,O(R) -> mov PC,link; add $O,R,PC */
+		//aclass(&p->to);
+		//o1 = oprrr(AADD, p->scond);
+		//o1 |= immrot(0);
+		//o1 |= REGPC << 16;
+		//o1 |= REGLINK << 12;
 
-		o2 = oprrr(AADD, p->scond);
-		o2 |= immrot(instoffset);
-		o2 |= p->to.reg << 16;
-		o2 |= REGPC << 12;
-		break;
+		//o2 = oprrr(AADD, p->scond);
+		//o2 |= immrot(instoffset);
+		//o2 |= p->to.reg << 16;
+		//o2 |= REGPC << 12;
+		//break;
 
-	case 8:		/* sll $c,[R],R -> mov (R<<$c),R */
+    // C_RCON
+	//case 8:		/* sll $c,[R],R -> mov (R<<$c),R */
 		aclass(&p->from);
-		o1 = oprrr(p->as, p->scond);
-		r = p->reg;
-		if(r == NREG)
-			r = p->to.reg;
-		o1 |= r;
-		o1 |= (instoffset&31) << 7;
-		o1 |= p->to.reg << 12;
-		break;
+		//o1 = oprrr(p->as, p->scond);
+		//r = p->reg;
+		//if(r == NREG)
+		//	r = p->to.reg;
+		//o1 |= r;
+		//o1 |= (instoffset&31) << 7;
+		//o1 |= p->to.reg << 12;
+		//break;
 
-	case 9:		/* sll R,[R],R -> mov (R<<R),R */
-		o1 = oprrr(p->as, p->scond);
-		r = p->reg;
-		if(r == NREG)
-			r = p->to.reg;
-		o1 |= r;
-		o1 |= (p->from.reg << 8) | (1<<4);
-		o1 |= p->to.reg << 12;
-		break;
+	//case 9:		/* sll R,[R],R -> mov (R<<R),R */
+		//o1 = oprrr(p->as, p->scond);
+		//r = p->reg;
+		//if(r == NREG)
+		//	r = p->to.reg;
+		//o1 |= r;
+		//o1 |= (p->from.reg << 8) | (1<<4);
+		//o1 |= p->to.reg << 12;
+		//break;
 
-	case 10:	/* swi [$con] */
-		o1 = oprrr(p->as, p->scond);
+	//case 10:	/* swi [$con] */
+		//o1 = oprrr(p->as, p->scond);
 		if(p->to.type != D_NONE) {
 			aclass(&p->to);
 			o1 |= instoffset & 0xffffff;
 		}
-		break;
+		//break;
 
-	case 11:	/* word */
-		aclass(&p->to);
-		o1 = instoffset;
+	//case 11:	/* word */
+		//aclass(&p->to);
+		//o1 = instoffset;
 		if(p->to.sym != S) {
 			rel = addrel(cursym);
 			rel->off = pc - cursym->value;
@@ -679,7 +675,7 @@ PP = p;
 			rel->add = p->to.offset;
 			o1 = 0;
 		}
-		break;
+		//break;
 
 	case 12:	/* movw $lcon, reg */
 		o1 = omvl(p, &p->from, p->to.reg);
@@ -721,24 +717,19 @@ PP = p;
 		}
 		break;
 
-	case 15:	/* mul r,[r,]r */
-		o1 = oprrr(p->as, p->scond);
-		rf = p->from.reg;
-		rt = p->to.reg;
-		r = p->reg;
-		if(r == NREG)
-			r = rt;
-		if(rt == r) {
-			r = rf;
-			rf = rt;
-		}
-		if(0)
-		if(rt == r || rf == REGPC || r == REGPC || rt == REGPC) {
-			diag("bad registers in MUL");
-			prasm(p);
-		}
-		o1 |= (rf<<8) | r | (rt<<16);
-		break;
+	//case 15:	/* mul r,[r,]r */
+		//o1 = oprrr(p->as, p->scond);
+		//rf = p->from.reg;
+		//rt = p->to.reg;
+		//r = p->reg;
+		//if(r == NREG)
+		//	r = rt;
+		//if(rt == r) {
+		//	r = rf;
+		//	rf = rt;
+		//}
+		//o1 |= (rf<<8) | r | (rt<<16);
+		//break;
 
 
 	case 16:	/* div r,[r,]r */
@@ -960,9 +951,9 @@ PP = p;
 		o1 |= (p->scond & C_SCOND) << 28;
 		break;
 
-	case 41:	/* rfe -> movm.s.w.u 0(r13),[r15] */
-		o1 = 0xe8fd8000;
-		break;
+	//case 41:	/* rfe -> movm.s.w.u 0(r13),[r15] */
+		//o1 = 0xe8fd8000;
+		//break;
 
 	case 50:	/* floating point store */
 		v = regoff(&p->to);
@@ -1277,39 +1268,40 @@ oprrr(int a, int sc)
 {
 	int32 o;
 
-	o = (sc & C_SCOND) << 28;
-	if(sc & C_SBIT)
-		o |= 1 << 20;
+	//o = (sc & C_SCOND) << 28;
+	//if(sc & C_SBIT)
+	//	o |= 1 << 20;
 	if(sc & (C_PBIT|C_WBIT))
 		diag(".P/.W on dp instruction");
+
 	switch(a) {
 	case AMULU:
-	case AMUL:	return o | (0x0<<21) | (0x9<<4);
+	//case AMUL:	return o | (0x0<<21) | (0x9<<4);
 	case AMULA:	return o | (0x1<<21) | (0x9<<4);
 	case AMULLU:	return o | (0x4<<21) | (0x9<<4);
 	case AMULL:	return o | (0x6<<21) | (0x9<<4);
 	case AMULALU:	return o | (0x5<<21) | (0x9<<4);
 	case AMULAL:	return o | (0x7<<21) | (0x9<<4);
-	case AAND:	return o | (0x0<<21);
-	case AEOR:	return o | (0x1<<21);
-	case ASUB:	return o | (0x2<<21);
-	case ARSB:	return o | (0x3<<21);
-	case AADD:	return o | (0x4<<21);
-	case AADC:	return o | (0x5<<21);
-	case ASBC:	return o | (0x6<<21);
-	case ARSC:	return o | (0x7<<21);
-	case ATST:	return o | (0x8<<21) | (1<<20);
-	case ATEQ:	return o | (0x9<<21) | (1<<20);
-	case ACMP:	return o | (0xa<<21) | (1<<20);
-	case ACMN:	return o | (0xb<<21) | (1<<20);
-	case AORR:	return o | (0xc<<21);
-	case AMOVW:	return o | (0xd<<21);
-	case ABIC:	return o | (0xe<<21);
-	case AMVN:	return o | (0xf<<21);
-	case ASLL:	return o | (0xd<<21) | (0<<5);
-	case ASRL:	return o | (0xd<<21) | (1<<5);
-	case ASRA:	return o | (0xd<<21) | (2<<5);
-	case ASWI:	return o | (0xf<<24);
+	//case AAND:	return o | (0x0<<21);
+	//case AEOR:	return o | (0x1<<21);
+	//case ASUB:	return o | (0x2<<21);
+	//case ARSB:	return o | (0x3<<21);
+	//case AADD:	return o | (0x4<<21);
+	//case AADC:	return o | (0x5<<21);
+	//case ASBC:	return o | (0x6<<21);
+	//case ARSC:	return o | (0x7<<21);
+	//case ATST:	return o | (0x8<<21) | (1<<20);
+	//case ATEQ:	return o | (0x9<<21) | (1<<20);
+	//case ACMP:	return o | (0xa<<21) | (1<<20);
+	//case ACMN:	return o | (0xb<<21) | (1<<20);
+	//case AORR:	return o | (0xc<<21);
+	//case AMOVW:	return o | (0xd<<21);
+	//case ABIC:	return o | (0xe<<21);
+	//case AMVN:	return o | (0xf<<21);
+	//case ASLL:	return o | (0xd<<21) | (0<<5);
+	//case ASRL:	return o | (0xd<<21) | (1<<5);
+	//case ASRA:	return o | (0xd<<21) | (2<<5);
+	//case ASWI:	return o | (0xf<<24);
 
 	case AADDD:	return o | (0xe<<24) | (0x0<<20) | (1<<8) | (1<<7);
 	case AADDF:	return o | (0xe<<24) | (0x0<<20) | (1<<8);
@@ -1341,31 +1333,28 @@ int32
 opbra(int a, int sc)
 {
 
-	if(sc & (C_SBIT|C_PBIT|C_WBIT))
-		diag(".S/.P/.W on bra instruction");
-	sc &= C_SCOND;
 	if(a == ABL)
-		return (sc<<28)|(0x5<<25)|(0x1<<24);
+		//return (sc<<28)|(0x5<<25)|(0x1<<24);
 	if(sc != 0xe)
 		diag(".COND on bcond instruction");
 	switch(a) {
-	case ABEQ:	return (0x0<<28)|(0x5<<25);
-	case ABNE:	return (0x1<<28)|(0x5<<25);
+	//case ABEQ:	return (0x0<<28)|(0x5<<25);
+	//case ABNE:	return (0x1<<28)|(0x5<<25);
 	case ABCS:	return (0x2<<28)|(0x5<<25);
 	case ABHS:	return (0x2<<28)|(0x5<<25);
 	case ABCC:	return (0x3<<28)|(0x5<<25);
 	case ABLO:	return (0x3<<28)|(0x5<<25);
-	case ABMI:	return (0x4<<28)|(0x5<<25);
-	case ABPL:	return (0x5<<28)|(0x5<<25);
-	case ABVS:	return (0x6<<28)|(0x5<<25);
-	case ABVC:	return (0x7<<28)|(0x5<<25);
+	//case ABMI:	return (0x4<<28)|(0x5<<25);
+	//case ABPL:	return (0x5<<28)|(0x5<<25);
+	//case ABVS:	return (0x6<<28)|(0x5<<25);
+	//case ABVC:	return (0x7<<28)|(0x5<<25);
 	case ABHI:	return (0x8<<28)|(0x5<<25);
 	case ABLS:	return (0x9<<28)|(0x5<<25);
 	case ABGE:	return (0xa<<28)|(0x5<<25);
 	case ABLT:	return (0xb<<28)|(0x5<<25);
 	case ABGT:	return (0xc<<28)|(0x5<<25);
 	case ABLE:	return (0xd<<28)|(0x5<<25);
-	case AB:	return (0xe<<28)|(0x5<<25);
+	//case AB:	return (0xe<<28)|(0x5<<25);
 	}
 	diag("bad bra %A", a);
 	prasm(curp);

@@ -9,14 +9,14 @@
  */
 enum
 {
-	REGZERO		= 0,	/* always zero */
+	//REGZERO		= 0,	/* always zero */
 
-	REGLINK		= 1,	/* call return address */
+	//REGLINK		= 1,	/* call return address */
 
-	REGSP		= 2,	/* stack pointer */
-	REGSB		= 3,	/* static base */
+	//REGSP		= 2,	/* stack pointer */
+	//REGSB		= 3,	/* static base */
 
-	REGTMP		= 4,	/* assembler temporary */
+	//REGTMP		= 4,	/* assembler temporary */
 
 	REGEXT		= 7,	/* extern reg from here down */
 

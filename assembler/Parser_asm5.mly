@@ -288,8 +288,8 @@ rel:
 /*(*-----------------------------------------*)*/
 
 name: 
- | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
- | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
+ | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_g $1 false)) $2 }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_g $1 true, $4) }
 
 pointer: 
  | TSB  { (fun name_opt offset ->

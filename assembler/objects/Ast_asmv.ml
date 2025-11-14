@@ -10,6 +10,13 @@ open Ast_asm
 (* Abstract Syntax Tree (AST) for the assembly language supported by va.
  * I call this language Asmv.
  *
+ * Asmv is pretty simple; it was one of the main motivation for RISC, to
+ * have a reduced/simpler instruction set. There is no CALL/RET
+ * in MIPS (but there are virtual CALL/RET in ova) but instead the JAL for
+ * Jump and Link and the special LINK register.
+ * R0 is also a special register which always contain the integer 0.
+ * Note also the special TLB instructions ??
+ *
  * !!! If you modify this file please increment Object_file.version !!!
  *)
 

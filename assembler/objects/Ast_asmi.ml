@@ -10,6 +10,34 @@ open Ast_asm
 (* Abstract Syntax Tree (AST) for the assembly language supported by ia/ja.
  * I call this language Asmi.
  *
+ * Asmi continue the old RISC tradition of fairly simple assembly language.
+ * Like in the MIPS there is a LINK register and JAL instruction (and JALR).
+ * There is a special instruction LUI to load upper (large) immediate
+ * constants and AUIPC for large jmps.
+ * Note also the special FENCE instructions for multicore ??
+ *
+ * In the original doc the registers are named x0 to x31 but certain
+ * registers have also alternative and more readable names that
+ * illustrate how the should/could be used:
+ *  - "special registers": 
+ *     * zero (x0) always 0, 
+ *     * ra (x1) return address (a.k.a. LINK in MIPS/ARM)
+ *     * sp (x2) stack pointer
+ *     * gp (x3) global pointer = SB in plan9 philosophy!
+ *       so RISCV basically followed what the plan9 guys did for a long time
+ *     * tp (x4) thread pointer ???
+ *  - a0-a8 are "argument and return registers" and correspond to
+ *    x10-x17 (a0 = regarg0/regret0, a1 = regarg1, regret1, a2-a7 args2-7)
+ *  - s0-s11 are "saved registers" which are registers that should be
+ *    preserved across function calls. If function uses them they should
+ *    save/restore them (usually via the stack). They correspond to
+ *    x8, x9, x18-x27 (s0 = fp = x8 for saved register / frame pointer,
+ *    s1 = x9, s2-s11 = x18-x27 for saved registers)
+ *  - t0-t6 for "temporary registers" and correspond to
+ *    x5-x7, x28-x31 (t0-t2 = x5-x7, t3-t6 = x28-x31).
+ *
+ * Note the possiblities to return multiple values.
+
  * !!! If you modify this file please increment Object_file.version !!!
  *)
 
@@ -28,17 +56,17 @@ type freg = A.fregister (* between 0 and 31 *)
 [@@deriving show]
 
 (* reserved by the linker *)
-let rTMP = R 28
-let rSP = R 29
-let rSB = R 30
+let rTMP = R 4 (* supposed to be "thread pointer" in riscv spec *)
+let rSP = R 2
+let rSB = R 3
 (* reserved by hardware *)
-let rLINK = R 31
+let rLINK = R 1
 
 (* always contain the value 0 *)
 let rZERO = R 0
 
 let nb_registers = 32
-let nb_fregisters = 32 (* ?? *)
+let nb_fregisters = 32
 
 
 (* alt: could call it arith_operand but use imr like in the original grammar *)

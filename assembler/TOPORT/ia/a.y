@@ -4,46 +4,12 @@
 }
 %token	<lval>	LADD LMUL LBEQ LBR LBRET LCALL LFLT2 LFLT3
 %token	<lval>	LMOVB LMOVBU LMOVW LMOVF LLUI LSYS LSYS0 LCSR LSWAP LAMO
-%token	<lval>	LCONST LSP LSB LFP LPC LREG LFREG LR FR LCTL
-%token	<lval>	LDATA LTEXT LWORD
-%token	<sval>	LSCONST
+%token	<lval>	LCTL
 %token	<dval>	LFCONST
-%token	<sym>	LNAME LLAB LVAR
-%type	<lval>	con expr pointer offset sreg freg oprrr
+%type	<lval>	sreg freg oprrr
 %type	<gen>	rreg dreg ctlreg drreg
-%type	<gen>	addr name oreg rel imm ximm fimm
+%type	<gen>	addr
 %%
-prog:
-|	prog line
-
-line:
-	LLAB ':'
-	{
-		if($1->value != pc)
-			yyerror("redeclaration of %s", $1->name);
-		$1->value = pc;
-	}
-	line
-|	LNAME ':'
-	{
-		$1->type = LLAB;
-		$1->value = pc;
-	}
-	line
-|	LNAME '=' expr ';'
-	{
-		$1->type = LVAR;
-		$1->value = $3;
-	}
-|	LVAR '=' expr ';'
-	{
-		if($1->value != $3)
-			yyerror("redeclaration of %s", $1->name);
-		$1->value = $3;
-	}
-|	';'
-|	inst ';'
-|	error ';'
 
 inst:
 	LADD imm ',' rreg
@@ -62,6 +28,7 @@ inst:
 	{
 		outcode($1, &$2, $4, &$6);
 	}
+
 
 |	LFLT2 drreg ',' drreg
 	{
@@ -102,6 +69,7 @@ inst:
 		outcode($1, &nullgen, NREG, &nullgen);
 	}
 
+
 |	LCALL sreg ',' addr
 	{
 		outcode($1, &nullgen, $2, &$4);
@@ -123,6 +91,8 @@ inst:
 	{
 		outcode($1, &$2, NREG, &$4);
 	}
+
+
 
 |	LMOVF addr ',' dreg
 	{
@@ -228,56 +198,13 @@ inst:
 		outcode($1, &$4, ($2<<16)|$6, &$8);
 	}
 
-|	LTEXT name ',' imm
-	{
-		outcode($1, &$2, NREG, &$4);
-	}
-|	LTEXT name ',' con ',' imm
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-
-|	LDATA name '/' con ',' imm
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-|	LDATA name '/' con ',' ximm
-	{
-		outcode($1, &$2, $4, &$6);
-	}
-|	LDATA name '/' con ',' fimm
-	{
-		outcode($1, &$2, $4, &$6);
-	}
 
 |	LWORD imm
 	{
 		outcode($1, &nullgen, NREG, &$2);
 	}
 
-rel:
-	con '(' LPC ')'
-	{
-		$$ = nullgen;
-		$$.type = D_BRANCH;
-		$$.offset = $1 + pc;
-	}
-|	LNAME offset
-	{
-		$$ = nullgen;
-		if(pass == 2)
-			yyerror("undefined label: %s", $1->name);
-		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $2;
-	}
-|	LLAB offset
-	{
-		$$ = nullgen;
-		$$.type = D_BRANCH;
-		$$.sym = $1;
-		$$.offset = $1->value + $2;
-	}
+
 
 oprrr:
 	LADD
@@ -285,7 +212,7 @@ oprrr:
 
 addr:
 	oreg
-|	name
+|   ...
 
 oreg:
 	'(' sreg ')'
@@ -312,40 +239,7 @@ name:
 		$$.sym = S;
 		$$.offset = $1;
 	}
-|	LNAME offset '(' pointer ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.name = $4;
-		$$.sym = $1;
-		$$.offset = $2;
-	}
-|	LNAME '<' '>' offset '(' LSB ')'
-	{
-		$$ = nullgen;
-		$$.type = D_OREG;
-		$$.name = D_STATIC;
-		$$.sym = $1;
-		$$.offset = $4;
-	}
-
-offset:
-	{
-		$$ = 0;
-	}
-|	'+' con
-	{
-		$$ = $2;
-	}
-|	'-' con
-	{
-		$$ = -$2;
-	}
-
-pointer:
-	LSB
-|	LSP
-|	LFP
+    ...
 
 rreg:
 	sreg
@@ -395,107 +289,11 @@ ctlreg:
 		$$.offset = $3;
 	}
 
-ximm:
-	'$' addr
-	{
-		$$ = $2;
-		$$.type = D_CONST;
-	}
-|	'$' LSCONST
-	{
-		$$ = nullgen;
-		$$.type = D_SCONST;
-		memcpy($$.sval, $2, sizeof($$.sval));
-	}
-
-fimm:
-	'$' LFCONST
-	{
-		$$ = nullgen;
-		$$.type = D_FCONST;
-		$$.dval = $2;
-	}
-|	'$' '-' LFCONST
-	{
-		$$ = nullgen;
-		$$.type = D_FCONST;
-		$$.dval = -$3;
-	}
-
 imm:
 	'$' con
 	{
-		$$ = nullgen;
-		$$.type = D_CONST;
-		$$.offset = $2;
 		if(thechar == 'j' && (vlong)$$.offset != $2){
 			$$.type = D_VCONST;
 			$$.vval = $2;
 		}
-	}
-
-con:
-	LCONST
-|	LVAR
-	{
-		$$ = $1->value;
-	}
-|	'-' con
-	{
-		$$ = -$2;
-	}
-|	'+' con
-	{
-		$$ = $2;
-	}
-|	'~' con
-	{
-		$$ = ~$2;
-	}
-|	'(' expr ')'
-	{
-		$$ = $2;
-	}
-
-expr:
-	con
-|	expr '+' expr
-	{
-		$$ = $1 + $3;
-	}
-|	expr '-' expr
-	{
-		$$ = $1 - $3;
-	}
-|	expr '*' expr
-	{
-		$$ = $1 * $3;
-	}
-|	expr '/' expr
-	{
-		$$ = $1 / $3;
-	}
-|	expr '%' expr
-	{
-		$$ = $1 % $3;
-	}
-|	expr '<' '<' expr
-	{
-		$$ = $1 << $4;
-	}
-|	expr '>' '>' expr
-	{
-		$$ = $1 >> $4;
-	}
-|	expr '&' expr
-	{
-		$$ = $1 & $3;
-	}
-|	expr '^' expr
-	{
-		$$ = $1 ^ $3;
-	}
-|	expr '|' expr
-	{
-		$$ = $1 | $3;
 	}

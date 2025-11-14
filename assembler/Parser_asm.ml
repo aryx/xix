@@ -50,7 +50,7 @@ let attributes_of_int i =
 (*e: function [[Parser_asm.attributes_of_int]] *)
 
 (*s: function [[Parser_asm.mk_e]] *)
-let mk_e name static = 
+let mk_g (name : string) (static : bool) : global = 
   { name; priv = if static then Some (-1) else None; signature = None; }
 (*e: function [[Parser_asm.mk_e]] *)
 (*e: Parser_asm.ml *)

@@ -12,7 +12,7 @@ module L = Location_cpp
 (* Prelude *)
 (*****************************************************************************)
 (* 
- * Limitations compared to va (see also Parser_asm.ml top comment):
+ * Limitations compared to ia/ja (see also Parser_asm.ml top comment):
  *  - 
  * todo:
  *  - SCHED/NOSCHED ?
@@ -34,13 +34,11 @@ module L = Location_cpp
 
 %token <Ast_asmi.arith_opcode> TARITH
 %token <Ast_asmi.arithf_opcode * Ast_asm.floatp_precision> TARITHF
-%token TNOR
 %token <Ast_asmi.mul_opcode> TMULOP
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
 %token TBEQ TBNE
 %token <Ast_asmi.b_condition> TB
-%token <Ast_asmi.tlb_kind> TTLB
 %token <Ast_asmi.move1_size> TMOVE1
 %token <Ast_asmi.move2_size> TMOVE2
 
@@ -179,7 +177,7 @@ global_and_offset: name
 /*(*1 Virtual instructions *)*/
 /*(*************************************************************************)*/
 virtual_instr:
- /*(* was in instr before. stricter: no cond (nor comma) *)*/
+ /*(* was in instr before *)*/
  | TRET                  { RET }
 
 /*(*************************************************************************)*/
@@ -188,8 +186,7 @@ virtual_instr:
 instr:
  | TARITH imr TC reg TC reg     { Arith ($1, $2, Some $4, $6) }
  | TARITH imr        TC reg     { Arith ($1, $2, None, $4) }
- | TNOR   imr TC reg TC imr     { NOR ($2, Some $4, $6) }
- | TNOR   imr        TC imr     { NOR ($2, None, $4) }
+
  | TMULOP reg TC reg TC reg     { ArithMul ($1, $2, Some $4, $6) }
  | TMULOP reg        TC reg     { ArithMul ($1, $2, None, $4) }
 
@@ -213,7 +210,6 @@ instr:
  | TB gen TC rel             { Bxx ($1, $2, $4) }
 
  | TSYSCALL { SYSCALL }
- | TTLB { TLB $1 }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
@@ -240,7 +236,7 @@ gen:
 
 ximm:
  | imm             { Int $1 }
- | TDOLLAR fcon    { Float $2 }
+ | fcon            { Float $1 }
  | TDOLLAR TSTRING { String $2 }
  | TDOLLAR name    { Address $2 }
 
@@ -272,8 +268,8 @@ vlgen:
 /*(*-----------------------------------------*)*/
 
 name: 
- | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
- | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
+ | TIDENT         offset TOPAR pointer TCPAR { $4 (Some (mk_g $1 false)) $2 }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_g $1 true, $4) }
 
 pointer: 
  | TSB  { (fun name_opt offset ->

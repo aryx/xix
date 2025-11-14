@@ -31,6 +31,13 @@ let of_arch (arch : Arch.t) : 'instr t =
        visit_globals_instr = Ast_asmv.visit_globals_instr;
        rTMP = Ast_asmv.rTMP;
      }
+  | Arch.Riscv -> 
+     (* nosemgrep: do-not-use-obj-magic *)
+     Obj.magic {
+       branch_opd_of_instr = Ast_asmi.branch_opd_of_instr;
+       visit_globals_instr = Ast_asmi.visit_globals_instr;
+       rTMP = Ast_asmi.rTMP;
+     }
   | _ -> failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
 
 (*e: Arch_linker.ml *)

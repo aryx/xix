@@ -15,6 +15,12 @@ open Ast_asm
  * mostly arch independent and can be reused in other plan9 assemblers
  * (e.g. va, ia, 7a).
  *
+ * Asm5 is a simple RISC assembly language. The main innovations of ARM
+ * are the shifted registers operands, to easily represent
+ * big and "useful" integers (integers which are powers of 2) in a compact way,
+ * and the fact that every instruction can be tagged with a condition.
+ * Like in the MIPS there is a LINK register.
+ *
  * !!! If you modify this file please increment Object_file.version !!!
  * 
  * TODO: 

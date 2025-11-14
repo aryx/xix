@@ -177,7 +177,7 @@ global_and_offset: name
 /*(*1 Virtual instructions *)*/
 /*(*************************************************************************)*/
 virtual_instr:
- /*(* was in instr before. stricter: no cond (nor comma) *)*/
+ /*(* was in instr before *)*/
  | TRET                  { RET }
 
 /*(*************************************************************************)*/
@@ -238,7 +238,7 @@ gen:
 
 ximm:
  | imm             { Int $1 }
- | TDOLLAR fcon    { Float $2 }
+ | fcon            { Float $1 }
  | TDOLLAR TSTRING { String $2 }
  | TDOLLAR name    { Address $2 }
 
@@ -270,8 +270,8 @@ vlgen:
 /*(*-----------------------------------------*)*/
 
 name: 
- | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_e $1 false)) $2 }
- | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_e $1 true, $4) }
+ | TIDENT offset         TOPAR pointer TCPAR { $4 (Some (mk_g $1 false)) $2 }
+ | TIDENT TLT TGT offset TOPAR TSB     TCPAR { Global (mk_g $1 true, $4) }
 
 pointer: 
  | TSB  { (fun name_opt offset ->

@@ -125,16 +125,16 @@ type instr =
     (* logic *)
     | AND | OR | XOR
     (* arithmetic *)
-    | ADD of size * A.sign  | SUB of size * A.sign (* converted to ADD(-) in vl *)
+    | ADD of size  | SUB of size
     (* bitshifting *)
     | SLL of size | SRA of size | SRL of size
     (* less useful *)
-    | SGT of A.sign
+    | SLT of A.sign
 
   and size = W (* word, 32 bits *) | V (* vlong, 64 bits *)
   and mul_opcode =
-    (* TODO? in va/a.h there is REMVU/REMV but not in va/lex.c, weird *)
-    | MUL of size * A.sign | DIV of size * A.sign | REM of A.sign
+    | MUL (* lots of MUL *)(*size * A.sign*) 
+    | DIV of size * A.sign | REM of A.sign
 
   (* ABS/NEG are unary and can't take middle register. Same for CMPFxx 
    * alt: define separate ArithFUnary CmpF constructs
@@ -156,6 +156,9 @@ type instr =
     | F__ (* Float *) | D__ (* Double *)
 
   and b_condition =
+    | EQ | NE
+    | LT of A.sign | GT of A.sign
+    | LE of A.sign | GE of A.sign
     (* Great/Less Equal Zero (AL = ?) *)
     | GEZ | GEZAL | GTZ | LEZ | LTZ | LTZAL
 

@@ -56,7 +56,10 @@ itab[] =
 	"SUB",		LADD,	ASUB,
 	"SUBW",		LADD,	ASUBW,
 
+
+
 	"MUL",		LMUL,	AMUL,
+
 	"MULH",		LMUL,	AMULH,
 	"MULHSU",	LMUL,	AMULHSU,
 	"MULHU",	LMUL,	AMULHU,
@@ -67,6 +70,7 @@ itab[] =
 	"REMU",		LMUL,	AREMU,
 
 	"MULW",		LMUL,	AMULW,
+
 	"DIVW",		LMUL,	ADIVW,
 	"DIVUW",	LMUL,	ADIVUW,
 	"REMW",		LMUL,	AREMW,

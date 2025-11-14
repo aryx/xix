@@ -1,4 +1,4 @@
-#define	NREG	32
+//#define	NREG	32
 
 /*
  * Register roles are influenced by the compressed extension:

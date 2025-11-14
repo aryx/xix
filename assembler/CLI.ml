@@ -73,6 +73,13 @@ let assemblev (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   prog
 (*e: function [[CLI.assemblev]] *)
 
+let assemblei (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Ast_asmi.program =
+  let prog = Parse_asmi.parse caps conf infile in
+  let prog = Resolve_labels.resolve Ast_asmi.branch_opd_of_instr prog in
+  if !dump_ast 
+  then Logs.app (fun m -> m "AST = %s" (Ast_asmi.show_program prog));
+  prog
+
 (*s: function [[CLI.assemble]] *)
 (* Will modify chan as a side effect *)
 let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.t) (infile : Fpath.t) (chan : Chan.o) : unit =
@@ -82,6 +89,9 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
       Object_file.save arch prog chan
   | Arch.Mips -> 
       let prog = assemblev caps conf infile in
+      Object_file.save arch prog chan
+  | Arch.Riscv -> 
+      let prog = assemblei caps conf infile in
       Object_file.save arch prog chan
   | _ -> 
    failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))

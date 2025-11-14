@@ -6,6 +6,7 @@ SRC= Token_asm.ml Lexer_asm.ml \
  Parser_asm.ml \
  Parser_asm5.ml Parse_asm5.ml \
  Parser_asmv.ml Parse_asmv.ml \
+ Parser_asmi.ml Parse_asmi.ml \
  Check_asm5.ml \
  Resolve_labels.ml \
  CLI.ml Main.ml

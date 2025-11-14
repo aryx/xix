@@ -13,6 +13,7 @@
 (ocamllex Lexer_asm)
 (ocamlyacc Parser_asm5)
 (ocamlyacc Parser_asmv)
+(ocamlyacc Parser_asmi)
 
 (install
  (package xix)

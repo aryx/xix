@@ -1,13 +1,12 @@
-(*s: Parse_asm5.ml *)
-(* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp_.Operators
 
 module L = Location_cpp
 module T = Token_asm
 module A = Ast_asm
-open Parser_asm5
-open Ast_asm5
+open Parser_asmi
+open Ast_asmi
 
 (*****************************************************************************)
 (* Prelude *)
@@ -16,8 +15,7 @@ open Ast_asm5
 (*****************************************************************************)
 (* Lexer *)
 (*****************************************************************************)
-(*s: function [[Parse_asm5.token]] *)
-let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
+let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
   let tok = Lexer_asm.token lexbuf in
   match tok with
   | T.TTEXT -> TTEXT
@@ -49,19 +47,20 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TMOD-> TMOD
   | T.TSharp-> TSharp
   | T.EOF-> EOF
-  (*s: [[Parse_asm5.token]] match [[tok]] other cases *)
+
   | T.TRx ((A.R i) as x) -> 
-      if i < Ast_asm5.nb_registers && i >=0
+      if i < Ast_asmi.nb_registers && i >=0
       then TRx x
       else Lexer_asm.error ("register number not valid")
   | T.TFx ((A.FR i) as x) -> 
-      if i < Ast_asm5.nb_fregisters && i >=0
+      if i < Ast_asmi.nb_fregisters && i >=0
       then TFx x
       else Lexer_asm.error ("register number not valid")
-  (*x: [[Parse_asm5.token]] match [[tok]] other cases *)
+
   | T.TIDENT s ->
       (match s with
       (* instructions *)
+(*
       | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
 
       | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
@@ -73,8 +72,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC
 
       | "MVN" -> TMVN
+*)
 
       (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
+(*
       | "MOVW" -> TMOV A.Word
       | "MOVB" -> TMOV (A.Byte     A.S) | "MOVBU" -> TMOV (A.Byte     A.U)
       | "MOVH" -> TMOV (A.HalfWord A.S) | "MOVHU" -> TMOV (A.HalfWord A.U)
@@ -103,9 +104,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
       | ".VS" -> TCOND VS | ".VC" -> TCOND VC
 
-      (*s: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* less: special bits *)
-      (*x: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* float, MUL, ... *)
       | "ADDF" -> TARITHF (ADD_, A.F)
       | "SUBF" -> TARITHF (SUB_, A.F)
@@ -118,7 +117,6 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       | "CMPF" -> TCMPF A.F
       | "CMPD" -> TCMPF A.D
-      (*x: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* advanced *)
       | "C" -> TC
       | _ when s =~ "^C\\([0-9]+\\)$" ->
@@ -126,43 +124,38 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
             if i >= 0 && i <= 15
             then TCx (C i)
             else Lexer_asm.error ("register number not valid")
-      (*e: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
-
+*)
       | _ -> TIDENT s
       )
-  (*e: [[Parse_asm5.token]] match [[tok]] other cases *)
-(*e: function [[Parse_asm5.token]] *)
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-(*s: function [[Parse_asm5.parse]] *)
-let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast_asm5.program = 
+
+let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
+      (file : Fpath.t) :
+    Ast_asmi.program = 
   let hooks = Parse_cpp.{
      lexer = token;
-     parser = Parser_asm5.program;
+     parser = Parser_asmi.program;
      category = (fun t ->
        match t with
-       | Parser_asm5.EOF -> Parse_cpp.Eof
-       | Parser_asm5.TSharp -> Parse_cpp.Sharp
-       | Parser_asm5.TIDENT s -> Parse_cpp.Ident s
+       | Parser_asmi.EOF -> Parse_cpp.Eof
+       | Parser_asmi.TSharp -> Parse_cpp.Sharp
+       | Parser_asmi.TIDENT s -> Parse_cpp.Ident s
         (* stricter: I forbid to have macros overwrite keywords *)
        | _ -> Parse_cpp.Other
      );
-     eof = Parser_asm5.EOF;
+     eof = Parser_asmi.EOF;
   }
   in
   Parse_cpp.parse caps hooks conf file
-(*e: function [[Parse_asm5.parse]] *)
 
-(*s: function [[Parse_asm5.parse_no_cpp]] *)
 (* Simpler code path; possibly useful in tests *)
-let parse_no_cpp (chan : Chan.i) : Ast_asm5.program =
+let parse_no_cpp (chan : Chan.i) : Ast_asmi.program =
   L.line := 1;
   let lexbuf = Lexing.from_channel chan.ic in
   try 
-    Parser_asm5.program token lexbuf, []
+    Parser_asmi.program token lexbuf, []
   with Parsing.Parse_error ->
       failwith (spf "Syntax error: line %d" !L.line)
-(*e: function [[Parse_asm5.parse_no_cpp]] *)
-(*e: Parse_asm5.ml *)

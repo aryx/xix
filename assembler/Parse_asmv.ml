@@ -52,11 +52,11 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.EOF-> EOF
 
   | T.TRx ((A.R i) as x) -> 
-      if i <= 31 && i >=0
+      if i < Ast_asmv.nb_registers && i >=0
       then TRx x
       else Lexer_asm.error ("register number not valid")
   | T.TFx ((A.FR i) as x) -> 
-      if i <= 31 && i >=0
+      if i < Ast_asmv.nb_fregisters && i >=0
       then TFx x
       else Lexer_asm.error ("register number not valid")
 

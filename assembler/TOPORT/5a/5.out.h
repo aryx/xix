@@ -13,6 +13,7 @@
 
 #define	REGTMPT		7	/* used by the loader for thumb code */
 
+// 8? I thought it was 16, see FREGTMP below
 #define	NFREG		8
 
 #define	FREGRET		0

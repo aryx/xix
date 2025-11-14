@@ -7,8 +7,8 @@ open Ast_asm
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Abstract Syntax Tree (AST) for the assembly language supported by va.
- * I call this language Asmv.
+(* Abstract Syntax Tree (AST) for the assembly language supported by ia/ja.
+ * I call this language Asmi.
  *
  * !!! If you modify this file please increment Object_file.version !!!
  *)
@@ -27,14 +27,6 @@ type reg = A.register (* between 0 and 31 *)
 type freg = A.fregister (* between 0 and 31 *)
 [@@deriving show]
 
-(* ?? *)
-type mreg = M of int (* between 0 and 31 *)
-[@@deriving show]
-
-(* ?? *)
-type fcrreg = FCR of int (* between 0 and 31 *)
-[@@deriving show]
-
 (* reserved by the linker *)
 let rTMP = R 28
 let rSP = R 29
@@ -49,7 +41,7 @@ let rZERO = R 0
 let r2TMP = R 2
 
 let nb_registers = 32
-let nb_fregisters = 32
+let nb_fregisters = 32 (* ?? *)
 
 
 (* alt: could call it arith_operand but use imr like in the original grammar *)

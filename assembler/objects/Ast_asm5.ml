@@ -73,6 +73,7 @@ let rPC   = R 15
 (*s: constant [[Ast_asm5.nb_registers]] *)
 let nb_registers = 16
 (*e: constant [[Ast_asm5.nb_registers]] *)
+let nb_fregisters = 16
 
 (*s: type [[Ast_asm5.arith_operand]] *)
 type arith_operand =

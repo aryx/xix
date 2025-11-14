@@ -36,5 +36,7 @@ Parser_asm5.ml Parser_asm5.mli: Parser_asm5.mly
 	$OCAMLYACC $prereq
 Parser_asmv.ml Parser_asmv.mli: Parser_asmv.mly
 	$OCAMLYACC $prereq
+Parser_asmi.ml Parser_asmi.mli: Parser_asmi.mly
+	$OCAMLYACC $prereq
 
 NUKEFILES=$AUTOGEN

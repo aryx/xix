@@ -16,13 +16,7 @@ asmb(void)
 	}
 
 	etext = textsize;
-	for(t = pc; t < etext; t += sizeof(buf)-100) {
-		if(etext-t > sizeof(buf)-100)
-			datblk(t, sizeof(buf)-100, 1);
-		else
-			datblk(t, etext-t, 1);
-	}
-
+    ...
 	switch(HEADTYPE) {
 	case 0:
 		OFFSET = rnd(HEADR+textsize, 4096);
@@ -704,4 +698,3 @@ asmout(Prog *p, Optab *o, int aflag)
 	}
     ...
 }
-

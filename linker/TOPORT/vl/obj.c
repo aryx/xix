@@ -80,14 +80,6 @@ zaddr(uchar *p, Adr *a, Sym *h[])
 
 
 void
-nopout(Prog *p)
-{
-	p->as = ANOP;
-	p->from.type = D_NONE;
-	p->to.type = D_NONE;
-}
-
-void
 ldobj(int f, long c, char *pn)
 {
     ...

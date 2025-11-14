@@ -37,12 +37,12 @@ enum
 	NSCHED		= 20,
 
 /* mark flags */
-	FOLL		= 1<<0,
 	LABEL		= 1<<1,
 	SYNC		= 1<<3,
 	BRANCH		= 1<<4,
 	LOAD		= 1<<5,
 	FCMP		= 1<<6,
+
 	NOSCHED		= 1<<7,
 
 };

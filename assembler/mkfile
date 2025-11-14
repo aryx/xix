@@ -2,6 +2,8 @@ TOP=..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/assembler/objects -I $TOP/macroprocessor
 
+# coupling: if you add a Parse_asmx.ml, please update also
+#  AUTOGEN below and add ocamlyacc rules too
 SRC= Token_asm.ml Lexer_asm.ml \
  Parser_asm.ml \
  Parser_asm5.ml Parse_asm5.ml \
@@ -26,6 +28,7 @@ PROG=o5a
 AUTOGEN=Lexer_asm.ml \
   Parser_asm5.ml Parser_asm5.mli \
   Parser_asmv.ml Parser_asmv.mli \
+  Parser_asmi.ml Parser_asmi.mli \
 
 beforedepend:V: $AUTOGEN
 depend:V: beforedepend

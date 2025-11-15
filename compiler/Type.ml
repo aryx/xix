@@ -11,6 +11,7 @@ type fullname = string * blockid
 [@@deriving show]
 (*e: type [[Type.fullname]] *)
 
+(*s: type [[Type.t]] *)
 (* The C type system.
  *
  * There is no Typedef below. The typechecker expands typedefs. 
@@ -21,7 +22,6 @@ type fullname = string * blockid
  * todoext: Bool! with strict bool checking. 
  * todoext: Enum of fullname with stricter checking.
  *)
-(*s: type [[Type.t]] *)
 type t =
   | Void
   | I of integer_type
@@ -73,9 +73,9 @@ type qualifier =
 
 
 
+(*s: type [[Type.structdef]] *)
 (* note that the field can be gensym'ed for anonymous struct/union elements *)
 (* todo: bitfield *)
-(*s: type [[Type.structdef]] *)
 type structdef = (string * t) list
 [@@deriving show]
 (*e: type [[Type.structdef]] *)

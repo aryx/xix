@@ -79,7 +79,6 @@ let error err =
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Check.inconsistent_tag]] *)
 let inconsistent_tag fullname loc usedef =
   let locbefore = 
@@ -113,7 +112,6 @@ let check_inconsistent_or_redefined_tag env fullname tagkind loc =
     Hashtbl.add env.tags fullname ({defined = Some loc; used = None;}, tagkind)
 (*e: function [[Check.check_inconsistent_or_redefined_tag]] *)
 
-
 (*s: function [[Check.inconsistent_id]] *)
 let inconsistent_id fullname loc usedef =
   let locbefore = 
@@ -126,7 +124,6 @@ let inconsistent_id fullname loc usedef =
     "previous definition is here", locbefore
   ))
 (*e: function [[Check.inconsistent_id]] *)
-
 
 (*s: function [[Check.check_inconsistent_or_redefined_id]] *)
 let check_inconsistent_or_redefined_id env fullname idkind loc =
@@ -163,14 +160,12 @@ let check_unused_locals env =
     | { defined = None; used = _} -> 
           raise (Impossible "locals are always defined")
     | { defined = _; used = Some _ } -> ()
-(*e: function [[Check.check_unused_locals]] *)
   )
-
+(*e: function [[Check.check_unused_locals]] *)
 
 (*****************************************************************************)
 (* Use/Def *)
 (*****************************************************************************)
-
 (*s: function [[Check.check_usedef]] *)
 (* use of undefined, redefined, redeclared, unused, inconsistent tags, etc. *)
 let check_usedef program =
@@ -476,7 +471,6 @@ let check_usedef program =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Check.check_program]] *)
 let check_program (ast, _locs) =
   check_usedef ast

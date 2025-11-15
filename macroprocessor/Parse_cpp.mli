@@ -1,23 +1,24 @@
 (*s: macroprocessor/Parse_cpp.mli *)
 
-(*s: type [[Parse_cpp.token_category (macroprocessor/Parse_cpp.mli)]] *)
+(*s: type [[Parse_cpp.token_category]] *)
 type token_category =
   | Eof
   | Sharp
   | Ident of string
   | Other
-(*e: type [[Parse_cpp.token_category (macroprocessor/Parse_cpp.mli)]] *)
+(*e: type [[Parse_cpp.token_category]] *)
 [@@deriving show]
 
 (* wrapper around a parser/lexer (e.g., 5c) to preprocess first the file *)
-(*s: type [[Parse_cpp.hook (macroprocessor/Parse_cpp.mli)]] *)
+(*s: type [[Parse_cpp.hook]] *)
 type ('token, 'ast) hook = {
   lexer: Lexing.lexbuf -> 'token;
   parser: (Lexing.lexbuf -> 'token) -> Lexing.lexbuf -> 'ast;
   category: 'token -> token_category;
+  (* TODO: delete, redundant with Eof token_category above *)
   eof: 'token;
 }
-(*e: type [[Parse_cpp.hook (macroprocessor/Parse_cpp.mli)]] *)
+(*e: type [[Parse_cpp.hook]] *)
 
 (*s: signature [[Parse_cpp.parse]] *)
 (* Wrapper function around a parser/lexer.

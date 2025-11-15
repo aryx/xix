@@ -284,6 +284,6 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
               (if !last_ident = "" 
                then ""
                else spf ", last name: %s" !last_ident))
-(*e: function [[Parse_cpp.parse]] *)
   )
+(*e: function [[Parse_cpp.parse]] *)
 (*e: macroprocessor/Parse_cpp.ml *)

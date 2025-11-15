@@ -1,20 +1,20 @@
 (*s: Check.mli *)
 
-(*s: type [[Check.error (Check.mli)]] *)
-type error =
+(*s: type [[Check.error]] *)
+type error = 
   | Inconsistent of 
       string * Location_cpp.loc * (* error here *) 
       string * Location_cpp.loc   (* previous decl/def/whatever here *)
   | Misc of string * Location_cpp.loc
-(*e: type [[Check.error (Check.mli)]] *)
+(*e: type [[Check.error]] *)
 
 (*s: signature [[Check.string_of_error]] *)
 val string_of_error: error -> string
 (*e: signature [[Check.string_of_error]] *)
 
-(*s: exception [[Check.Error (Check.mli)]] *)
+(*s: exception [[Check.Error]] *)
 exception Error of error
-(*e: exception [[Check.Error (Check.mli)]] *)
+(*e: exception [[Check.Error]] *)
 (*s: signature [[Check.failhard]] *)
 val failhard : bool ref
 (*e: signature [[Check.failhard]] *)

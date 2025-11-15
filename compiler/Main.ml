@@ -12,6 +12,6 @@ let _ =
      Exit.exit caps 
         (Exit.catch (fun () -> 
             CLI.main caps argv))
-(*e: toplevel [[Main._1]] *)
   )
+(*e: toplevel [[Main._1]] *)
 (*e: Main.ml *)

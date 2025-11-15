@@ -39,8 +39,8 @@ open Common
 (* The AST related types *)
 (*****************************************************************************)
 
-(* global linenumber after preprocessing *)
 (*s: type [[Ast.loc]] *)
+(* global linenumber after preprocessing *)
 type loc = Location_cpp.loc
 [@@deriving show]
 (*e: type [[Ast.loc]] *)
@@ -54,12 +54,13 @@ type name = string
 [@@deriving show]
 (*e: type [[Ast.name]] *)
 
-(* for scope *)
 (*s: type [[Ast.blockid]] *)
+(* for scope *)
 type blockid = int (* same than Type_.blockid, repeated here for clarity *)
 [@@deriving show]
 (*e: type [[Ast.blockid]] *)
 
+(*s: type [[Ast.fullname]] *)
 (* A fully resolved and scoped name. 
  * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
  * Instead, I use a unique blockid and an external hash or environment that
@@ -68,23 +69,22 @@ type blockid = int (* same than Type_.blockid, repeated here for clarity *)
  * 
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
-(*s: type [[Ast.fullname]] *)
 type fullname = name * blockid (* same than Type_.fullname *)
 [@@deriving show]
 (*e: type [[Ast.fullname]] *)
 
+(*s: type [[Ast.idkind]] *)
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
  * Could be moved in a separate naming.ml, but not worth it for just two types.
  *)
-(*s: type [[Ast.idkind]] *)
 type idkind =
   | IdIdent
   | IdTypedef
   | IdEnumConstant
 (*e: type [[Ast.idkind]] *)
 
-(* to manage the scope of tags *)
 (*s: type [[Ast.tagkind]] *)
+(* to manage the scope of tags *)
 type tagkind =
   | TagStruct
   | TagUnion
@@ -94,6 +94,7 @@ type tagkind =
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
+(*s: type [[Ast.typ]] *)
 (* What are the differences between typ below and Type.t? 
  * - typedef expansion is not done here
  * - constant expressions are not resolved yet 
@@ -103,7 +104,6 @@ type tagkind =
  * Note that 'type_' and 'expr' are mutually recursive (because of const_expr).
  * todo: qualifier type
  *)
-(*s: type [[Ast.typ]] *)
 type typ = {
   t: type_bis;
   t_loc: loc;
@@ -144,7 +144,6 @@ type typ = {
   }
 (*e: type [[Ast.parameter]] *)
 
-
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
 (* ------------------------------------------------------------------------- *)
@@ -152,13 +151,15 @@ type typ = {
 and expr = { 
   e: expr_bis;
   e_loc: loc;
+  (*s: [[Ast.expr]] other fields *)
   (* properly set during typechecking in typecheck.ml *)
   e_type: Type.t;
+  (*e: [[Ast.expr]] other fields *)
 }
 (*e: type [[Ast.expr]] *)
 (*s: type [[Ast.expr_bis]] *)
   and expr_bis = 
-  (* Note that characters are transformed in Int at parsing time; no need Char*)
+  (* Note that characters are transformed in Int at parsing time; no need Char *)
   | Int of string * Type.integer_type
   | Float of string * Type.float_type
   (* codegen: converted to Id after typechecking *)
@@ -212,11 +213,11 @@ and expr = {
 and argument = expr
 (*e: type [[Ast.argument]] *)
 
+(*s: type [[Ast.const_expr]] *)
 (* Because we call the preprocessor first, the remaining cases
  * where const_expr is not a constant are basic arithmetic expressions
  * like 2 < < 3, or enum constants.
  *)
-(*s: type [[Ast.const_expr]] *)
 and const_expr = expr
 (*e: type [[Ast.const_expr]] *)
 
@@ -270,6 +271,7 @@ type stmt = {
   (* empty statement is simply Block [] *)
   | Block of stmt list
 
+  (* else is optional and represented as an empty Block *)
   | If of expr * stmt * stmt
 
   (* expr must have an integer type; it can not be a pointer like in a If *)
@@ -297,10 +299,10 @@ type stmt = {
   | Var of var_decl
 (*e: type [[Ast.stmt_bis]] *)
 
+(*s: type [[Ast.case_list]] *)
 (* Can we have a specific case type? It is hard in C because they mix labels
  * and 'case' a lot (see the code in the lexer of 5c).
  *)
-(*s: type [[Ast.case_list]] *)
 and case_list = stmt
 (*e: type [[Ast.case_list]] *)
 
@@ -317,8 +319,8 @@ and var_decl = {
   v_init: initialiser option;
 }
 (*e: type [[Ast.var_decl]] *)
- (* can have ArrayInit and RecordInit here in addition to other expr *)
 (*s: type [[Ast.initialiser]] *)
+ (* can have ArrayInit and RecordInit here in addition to other expr *)
  and initialiser = expr
 (*e: type [[Ast.initialiser]] *)
 [@@deriving show]
@@ -341,8 +343,8 @@ type func_def = {
 [@@deriving show]
 (*e: type [[Ast.func_def]] *)
 
-(* struct and union *)
 (*s: type [[Ast.struct_def]] *)
+(* struct and union *)
 type struct_def = {
   su_name: fullname;
   su_loc: loc;
@@ -351,8 +353,8 @@ type struct_def = {
   su_flds: field_def list;
 }
 (*e: type [[Ast.struct_def]] *)
-  (* Not the same than var_decl; fields have no storage and can have bitflds.*)
 (*s: type [[Ast.field_def]] *)
+  (* Not the same than var_decl; fields have no storage and can have bitflds.*)
   and field_def = { 
    (* kenccext: anonymous structure element get an artificial field name
     * (see is_gensymed()) 
@@ -418,8 +420,8 @@ type program = toplevels * Location_cpp.location_history list
 (* ------------------------------------------------------------------------- *)
 (* Any *)
 (* ------------------------------------------------------------------------- *)
-(* for visitor and dumper *)
 (*s: type [[Ast.any]] *)
+(* for visitor and dumper *)
 type any =
   | Expr of expr
   | Stmt of stmt

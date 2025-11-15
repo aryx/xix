@@ -28,12 +28,14 @@ module T = Type
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
+(*s: function [[Lexer.error]] *)
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
-
+(*e: function [[Lexer.error]] *)
+(*s: function [[Lexer.loc]] *)
 let loc () = !L.line
-
+(*e: function [[Lexer.loc]] *)
+(*s: function [[Lexer.inttype_of_suffix]] *)
 let inttype_of_suffix sign size =
   let sign =
     match String.lowercase_ascii sign with
@@ -46,14 +48,16 @@ let inttype_of_suffix sign size =
   | "l" -> T.Long, sign
   | "ll" -> T.VLong, sign
   | s -> error (spf "Impossible: wrong int size suffix: %s" s)
-
+(*e: function [[Lexer.inttype_of_suffix]] *)
+(*s: function [[Lexer.floattype_of_suffix]] *)
 let floattype_of_suffix s =
   match String.lowercase_ascii s with
   | "" -> T.Double
   | "f" -> T.Float
   | s -> error (spf "Impossible: wrong float size suffix: %s" s)
-
+(*e: function [[Lexer.floattype_of_suffix]] *)
 (* dup: lexer_asm5.mll *)
+(*s: function [[Lexer.code_of_escape_char]] *)
 let code_of_escape_char c =
   match c with
   | 'n' -> Char.code '\n' | 'r' -> Char.code '\r' 
@@ -67,47 +71,61 @@ let code_of_escape_char c =
   | '\\' | '\'' | '"' -> Char.code c 
   (* stricter: we disallow \ with unknown character *)
   | _ -> error "unknown escape sequence"
-
+(*e: function [[Lexer.code_of_escape_char]] *)
 (* dup: lexer_asm5.mll *)
+(*s: function [[Lexer.string_of_ascii]] *)
 let string_of_ascii i =
   String.make 1 (Char.chr i)
-
+(*e: function [[Lexer.string_of_ascii]] *)
+(*s: function [[Lexer.char_]] *)
 (* needed only because of ocamllex limitations in ocaml-light
  * which does not support the 'as' feature.
  *)
 let char_ lexbuf =
   let s = Lexing.lexeme lexbuf in
   String.get s 0
-
+(*e: function [[Lexer.char_]] *)
 }
 
 (*****************************************************************************)
 (* Regexps aliases *)
 (*****************************************************************************)
+(*s: constant [[Lexer.space]] *)
 let space = [' ''\t']
+(*e: constant [[Lexer.space]] *)
+(*s: constant [[Lexer.letter]] *)
 let letter = ['a'-'z''A'-'Z']
+(*e: constant [[Lexer.letter]] *)
+(*s: constant [[Lexer.digit]] *)
 let digit = ['0'-'9']
+(*e: constant [[Lexer.digit]] *)
+(*s: constant [[Lexer.oct]] *)
 let oct = ['0'-'7']
+(*e: constant [[Lexer.oct]] *)
+(*s: constant [[Lexer.hex]] *)
 let hex = (digit | ['A'-'F''a'-'f'])
+(*e: constant [[Lexer.hex]] *)
 
 (*****************************************************************************)
 (* Main rule *)
 (*****************************************************************************)
-
+(*s: rule [[Lexer.token]] *)
 rule token = parse
-
   (* ----------------------------------------------------------------------- *)
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer.token]] space/comment cases *)
   | [' ''\t']+    { token lexbuf }
   | "//" [^'\n']* { token lexbuf }
   | "/*"          { comment lexbuf }
 
   | '\n'          { incr Location_cpp.line; token lexbuf }
+  (*e: [[Lexer.token]] space/comment cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Symbols *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer.token]] symbol cases *)
   | "+" { TPlus (loc()) } | "-" { TMinus (loc()) }
   | "*" { TMul  (loc()) } | "/" { TDiv   (loc()) } | "%" { TMod (loc()) }
 
@@ -136,17 +154,19 @@ rule token = parse
   | "(" { TOPar   (loc()) } | ")" { TCPar   (loc()) }
   | "{" { TOBrace (loc()) } | "}" { TCBrace (loc()) }
   | "[" { TOBra   (loc()) } | "]" { TCBra   (loc()) }
-             
+           
   | ","  { TComma (loc()) } | ";"  { TSemicolon (loc()) }
   | "->" { TArrow (loc()) }
   | "."  { TDot   (loc()) }
   | "?"  { TQuestion (loc()) }
   | ":"  { TColon    (loc()) }
+  (*e: [[Lexer.token]] symbol cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Numbers *)
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
+  (*s: [[Lexer.token]] number cases *)
   | "0"  (oct+ (*as s*)) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
@@ -183,17 +203,22 @@ rule token = parse
   (* special regexp for better error message *)
   | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
      { error "malformed fp constant exponent" }
+  (*e: [[Lexer.token]] number cases *)
 
   (* ----------------------------------------------------------------------- *)
-  (* Strings and chars *)
+  (* Chars/Strings *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer.token]] chars/strings cases *)
   (* converting characters in integers *)
   | "'" { TIConst (loc(), spf "%d" (char lexbuf), (T.Char, T.Signed)) }
+  (*x: [[Lexer.token]] chars/strings cases *)
   | '"' { TString (loc(), string lexbuf, T.Array (None, T.I (T.Char,T.Signed)))}
+  (*e: [[Lexer.token]] chars/strings cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* Keywords and identifiers *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer.token]] keywords/identifiers cases *)
   | (letter | '_') (letter | digit | '_')* {
       let s = Lexing.lexeme lexbuf in
       match s with
@@ -237,21 +262,26 @@ rule token = parse
           )
         else TName (loc(), s)
   }
+  (*e: [[Lexer.token]] keywords/identifiers cases *)
 
   (* ----------------------------------------------------------------------- *)
   (* CPP *)
   (* ----------------------------------------------------------------------- *)
+  (*s: [[Lexer.token]] cpp cases *)
   (* See ../macroprocessor/lexer_cpp.mll *)
   | "#" { TSharp }
+  (*e: [[Lexer.token]] cpp cases *)
 
   (* ----------------------------------------------------------------------- *)
   | eof { EOF }
   | _ (*as c*)   { let c = char_ lexbuf in
                    error (spf "unrecognized character: '%c'" c) }
+(*e: rule [[Lexer.token]] *)
 
 (*****************************************************************************)
 (* String rule *)
 (*****************************************************************************)
+(*s: rule [[Lexer.string]] *)
 and string = parse
   | '"' { "" }
   | "\\" ((oct oct oct) (*as s*))
@@ -267,10 +297,12 @@ and string = parse
   | '\n' { error "newline in string" }
   | eof  { error "end of file in string" }
   | _    { error "undefined character in string" }
+(*e: rule [[Lexer.string]] *)
 
 (*****************************************************************************)
 (* Character rule *)
 (*****************************************************************************)
+(*s: rule [[Lexer.char]] *)
 and char = parse
   | "''"                            { Char.code '\'' }
   (* less: 5c allows up to 8 octal number when in L'' mode *)
@@ -289,17 +321,19 @@ and char = parse
   | '\n' { error "newline in character" }
   | eof  { error "end of file in character" }
   | _    { error "missing '" }
+(*e: rule [[Lexer.char]] *)
 
 (*****************************************************************************)
 (* Comment rule *)
 (*****************************************************************************)
 
 (* dup: lexer_asm5.mll *)
+(*s: rule [[Lexer.comment]] *)
 and comment = parse
   | "*/"          { token lexbuf }
   | [^ '*' '\n']+ { comment lexbuf }
   | '*'           { comment lexbuf }
   | '\n'          { incr Location_cpp.line; comment lexbuf }
   | eof           { error "eof in comment" }
-
+(*e: rule [[Lexer.comment]] *)
 (*e: Lexer.mll *)

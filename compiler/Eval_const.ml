@@ -40,7 +40,6 @@ exception Error of error
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Eval_const.eval]] *)
 (* stricter: I do not handle float constants for enums *)
 let rec eval env e0 =
@@ -104,5 +103,4 @@ let rec eval env e0 =
   | _ -> 
     raise NotAConstant (* todo: more opporunities? *)
 (*e: function [[Eval_const.eval]] *)
-
 (*e: Eval_const.ml *)

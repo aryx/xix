@@ -1,26 +1,29 @@
 (*s: macroprocessor/Location_cpp.mli *)
 
-(*s: type [[Location_cpp.loc (macroprocessor/Location_cpp.mli)]] *)
+(*s: type [[Location_cpp.loc]] *)
 type loc = int
 [@@deriving show]
-(*e: type [[Location_cpp.loc (macroprocessor/Location_cpp.mli)]] *)
-(*s: type [[Location_cpp.final_loc (macroprocessor/Location_cpp.mli)]] *)
+(*e: type [[Location_cpp.loc]] *)
+(*s: type [[Location_cpp.final_loc]] *)
 type final_loc = Fpath.t * int
 [@@deriving show]
-(*e: type [[Location_cpp.final_loc (macroprocessor/Location_cpp.mli)]] *)
+(*e: type [[Location_cpp.final_loc]] *)
 
-(*s: type [[Location_cpp.location_history (macroprocessor/Location_cpp.mli)]] *)
+(*s: type [[Location_cpp.location_history]] *)
 type location_history = {
   location_event: location_event;
   global_line: loc;
 }
-(*e: type [[Location_cpp.location_history (macroprocessor/Location_cpp.mli)]] *)
-(*s: type [[Location_cpp.location_event (macroprocessor/Location_cpp.mli)]] *)
+(*e: type [[Location_cpp.location_history]] *)
+(*s: type [[Location_cpp.location_event]] *)
   and location_event =
+    (* #include "foo.h" *)
     | Include of Fpath.t
+    (* #line 1 "foo.c" *)
     | Line of int * Fpath.t
+    (* end of #include, back to includer *)
     | Eof
-(*e: type [[Location_cpp.location_event (macroprocessor/Location_cpp.mli)]] *)
+(*e: type [[Location_cpp.location_event]] *)
 [@@deriving show]
 
 (*s: signature [[Location_cpp.history]] *)
@@ -31,9 +34,9 @@ val history: location_history list ref
 val line: loc ref
 (*e: signature [[Location_cpp.line]] *)
 
-(*s: exception [[Location_cpp.Error (macroprocessor/Location_cpp.mli)]] *)
+(*s: exception [[Location_cpp.Error]] *)
 exception Error of string * loc
-(*e: exception [[Location_cpp.Error (macroprocessor/Location_cpp.mli)]] *)
+(*e: exception [[Location_cpp.Error]] *)
 
 
 (*s: signature [[Location_cpp.add_event]] *)

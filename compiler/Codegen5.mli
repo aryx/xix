@@ -1,14 +1,14 @@
 (*s: Codegen5.mli *)
 
-(*s: type [[Codegen5.error (Codegen5.mli)]] *)
+(*s: type [[Codegen5.error]] *)
 type error = Check.error
-(*e: type [[Codegen5.error (Codegen5.mli)]] *)
+(*e: type [[Codegen5.error]] *)
 (*s: signature [[Codegen5.string_of_error]] *)
 val string_of_error: error -> string
 (*e: signature [[Codegen5.string_of_error]] *)
-(*s: exception [[Codegen5.Error (Codegen5.mli)]] *)
+(*s: exception [[Codegen5.Error]] *)
 exception Error of error
-(*e: exception [[Codegen5.Error (Codegen5.mli)]] *)
+(*e: exception [[Codegen5.Error]] *)
 
 (*s: signature [[Codegen5.codegen]] *)
 (* can raise Error *)

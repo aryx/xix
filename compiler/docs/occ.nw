@@ -194,8 +194,9 @@ type idkind =
 (* to recognize typedefs in the lexer *)
 let hids: (string, Ast.idkind) Hashtbl.t = 
   Hashtbl.create 101
-% see section{section:typedef-trick}
 @
+% see section{section:typedef-trick}
+
 
 <<type [[Ast.tagkind]]>>=
 (* to manage the scope of tags *)
@@ -687,7 +688,7 @@ type frontend_result =
 @
 
 <<type [[Typecheck.idinfo]]>>=
-  and idinfo = {
+type idinfo = {
     typ: Type.t;
     sto: Storage.t;
     loc: Location_cpp.loc;
@@ -2622,6 +2623,7 @@ let warn s loc =
 \section{Typechecking helpers}
 
 <<type [[Typecheck.env]]>>=
+(* Environment for typechecking *)
 type env = {
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
@@ -3904,7 +3906,7 @@ let codegen (ids, structs, funcs) : Ast_asm5.program =
     let fullname = (name, 0) in
     let idinfo = Hashtbl.find env.ids fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)
-    let attrs = noattr in
+    let attrs = A.default_attr in
 
     let spc = add_fake_instr env "TEXT" in
     

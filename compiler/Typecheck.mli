@@ -1,24 +1,24 @@
 (*s: Typecheck.mli *)
 
-(*s: type [[Typecheck.idinfo (Typecheck.mli)]] *)
+(*s: type [[Typecheck.idinfo]] *)
 type idinfo = {
     typ: Type.t;
     sto: Storage.t;
     loc: Location_cpp.loc;
-    (* typed initialisers *)
+    (* typed initialisers (fake expression for function definitions) *)
     ini: Ast.initialiser option;
   }
-(*e: type [[Typecheck.idinfo (Typecheck.mli)]] *)
+(*e: type [[Typecheck.idinfo]] *)
 
-(*s: type [[Typecheck.error (Typecheck.mli)]] *)
+(*s: type [[Typecheck.error]] *)
 type error = Check.error
-(*e: type [[Typecheck.error (Typecheck.mli)]] *)
+(*e: type [[Typecheck.error]] *)
 (*s: signature [[Typecheck.string_of_error]] *)
 val string_of_error: error -> string
 (*e: signature [[Typecheck.string_of_error]] *)
-(*s: exception [[Typecheck.Error (Typecheck.mli)]] *)
+(*s: exception [[Typecheck.Error]] *)
 exception Error of error
-(*e: exception [[Typecheck.Error (Typecheck.mli)]] *)
+(*e: exception [[Typecheck.Error]] *)
 
 (*s: signature [[Typecheck.check_and_annotate_program]] *)
 (* Returns resolved type and storage information for identifiers and tags.

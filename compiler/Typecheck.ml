@@ -50,8 +50,17 @@ module E = Check
 type integer = int
 (*e: type [[Typecheck.integer]] *)
 
-(* Environment for typechecking *)
+(*s: type [[Typecheck.idinfo]] *)
+type idinfo = {
+    typ: Type.t;
+    sto: Storage.t;
+    loc: Location_cpp.loc;
+    (* typed initialisers (fake expression for function definitions) *)
+    ini: Ast.initialiser option;
+  }
+(*e: type [[Typecheck.idinfo]] *)
 (*s: type [[Typecheck.env]] *)
+(* Environment for typechecking *)
 type env = {
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids:  (Ast.fullname, idinfo) Hashtbl.t;
@@ -70,15 +79,6 @@ type env = {
   expr_context: expr_context;
 }
 (*e: type [[Typecheck.env]] *)
-(*s: type [[Typecheck.idinfo]] *)
-  and idinfo = {
-    typ: Type.t;
-    sto: Storage.t;
-    loc: Location_cpp.loc;
-    (* typed initialisers (fake expression for function definitions) *)
-    ini: Ast.initialiser option;
-  }
-(*e: type [[Typecheck.idinfo]] *)
 (*s: type [[Typecheck.expr_context]] *)
 and expr_context = CtxWantValue | CtxGetRef | CtxSizeof
 (*e: type [[Typecheck.expr_context]] *)
@@ -135,7 +135,6 @@ let same_types t1 t2 =
   | _ -> t1 = t2
 (*e: function [[Typecheck.same_types]] *)
    
-
 (*s: function [[Typecheck.merge_types]] *)
 (* if you declare multiple times the same global, we must merge types. *)
 let merge_types t1 _t2 =
@@ -546,6 +545,7 @@ let rec type_ env typ0 =
 (* Expression typechecking *)
 (*****************************************************************************)
 
+(*s: function [[Typecheck.expr]] *)
 let rec expr env e0 =
   (* default env for recursive call *)
   let newenv = { env with expr_context = CtxWantValue } in
@@ -764,12 +764,13 @@ let rec expr env e0 =
   | RecordInit _
   | GccConstructor _
       -> raise Todo
-
-
+(*e: function [[Typecheck.expr]] *)
+(*s: function [[Typecheck.expropt]] *)
 and expropt env eopt = 
     match eopt with
     | None -> None
     | Some e -> Some (expr env e)
+(*e: function [[Typecheck.expropt]] *)
 
 (*****************************************************************************)
 (* Statement *)

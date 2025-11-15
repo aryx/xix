@@ -58,14 +58,15 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
-(* Need: see .mli *)
 (*s: type [[CLI.caps]] *)
+(* Need:
+ * - open_in: for argv derived file but also for #include'd files
+ *   because 5c does its own preprocessing
+ * - open_out for -o object file or 5.argv[0]
+ * - env: for INCLUDE (for cpp)
+ *)
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 (*e: type [[CLI.caps]] *)
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
 
 (*****************************************************************************)
 (* Testing *)
@@ -98,10 +99,11 @@ let do_action (caps: < caps; .. >) thestring s xs =
 (* Main algorithms *)
 (*****************************************************************************)
 
-(* TODO: move somewhere else, rename ids_structs_funcs? or use
- * record with fields!
- *)
 (*s: type [[CLI.frontend_result]] *)
+(* TODO: move somewhere else, rename ids_structs_funcs? or use
+ * record with fields! Frontend.result ? Frontend.entities? Frontend.t ?
+ * and use a record!
+ *)
 type frontend_result = 
   (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
   (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
@@ -159,7 +161,6 @@ let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
   end;
   Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
 (*e: function [[CLI.backend5]] *)
-
 (*s: function [[CLI.compile5]] *)
 let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
   (outfile : Chan.o) =

@@ -547,7 +547,6 @@ let fake_pc = -1
 @
 
 <<constant [[Codegen5.noattr]]>>=
-let noattr = { prof = false; dupok = false}
 @
 
 <<function [[Codegen5.add_instr]]>>=
@@ -1760,9 +1759,8 @@ module E = Check
 (* less: vlong? *)
 <<type [[Typecheck.integer]]>>
 
-(* Environment for typechecking *)
-<<type [[Typecheck.env]]>>
 <<type [[Typecheck.idinfo]]>>
+<<type [[Typecheck.env]]>>
 <<type [[Typecheck.expr_context]]>>
 
 (* less: could factorize things in error.ml? *)

@@ -34,8 +34,8 @@ module E = Check
 (* Types *)
 (*****************************************************************************)
 
-(* Environment for code generation *)
 (*s: type [[Codegen5.env]] *)
+(* Environment for code generation *)
 type env = {
 
   (* computed by previous typechecking phase *)
@@ -90,8 +90,8 @@ let rRET = R 0
 (*e: constant [[Codegen5.rRET]] *)
 (* opti: let rARG = A.R 0 *)
 
-(* for 'extern register xx;', used in ARM kernel *)
 (*s: constant [[Codegen5.rEXT1]] *)
+(* for 'extern register xx;', used in ARM kernel *)
 let rEXT1 = R 10
 (*e: constant [[Codegen5.rEXT1]] *)
 (*s: constant [[Codegen5.rEXT2]] *)
@@ -111,13 +111,12 @@ let regs_initial =
 (*e: constant [[Codegen5.regs_initial]] *)
    
   
-
 (*s: type [[Codegen5.integer]] *)
 type integer = int
 (*e: type [[Codegen5.integer]] *)
 
-(* some form of instruction selection *)
 (*s: type [[Codegen5.operand_able]] *)
+(* some form of instruction selection *)
 type operand_able = 
  { opd: operand_able_kind;
    typ: Type.t;
@@ -135,7 +134,6 @@ and operand_able_kind =
  (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
 (*e: type [[Codegen5.operand_able_kind]] *)
-
 
 
 (*s: type [[Codegen5.error]] *)
@@ -406,7 +404,6 @@ let rec complexity e =
     | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
 (*e: function [[Codegen5.complexity]] *)
 
-
 (*****************************************************************************)
 (* Register allocation helpers *)
 (*****************************************************************************)
@@ -486,7 +483,6 @@ let opd_regfree env opd =
   | _ -> raise (Impossible "opd_regfree on non-register operand")
 (*e: function [[Codegen5.opd_regfree]] *)
 
-
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
@@ -560,7 +556,6 @@ let gmove_opt env opd1 opd2opt =
     (* less: should have warned about unused opd in check.ml *)
     ()
 (*e: function [[Codegen5.gmove_opt]] *)
-
 
 (*****************************************************************************)
 (* Expression *)
@@ -901,11 +896,9 @@ let rec stmt env st0 =
     raise Todo
 (*e: function [[Codegen5.stmt]] *)
 
-
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
-
 (*s: function [[Codegen5.codegen]] *)
 let codegen (ids, structs, funcs) : Ast_asm5.program =
   let env = {

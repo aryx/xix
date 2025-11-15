@@ -100,18 +100,10 @@ let do_action (caps: < caps; .. >) thestring s xs =
 (*****************************************************************************)
 
 (*s: type [[CLI.frontend_result]] *)
-(* TODO: move somewhere else, rename ids_structs_funcs? or use
- * record with fields! Frontend.result ? Frontend.entities? Frontend.t ?
- * and use a record!
- *)
-type frontend_result = 
-  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
-  Ast.func_def list
 (*e: type [[CLI.frontend_result]] *)
 
 (*s: function [[CLI.frontend]] *)
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : frontend_result =
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Typecheck.typed_program =
 
   let ast = Parse.parse caps conf infile in
 
@@ -140,14 +132,13 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
       Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
   end;
-
-  ids, structs, funcs
+  Typecheck.{ ids; structs; funcs }
 (*e: function [[CLI.frontend]] *)
 
 (*s: function [[CLI.backend5]] *)
-let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
+let backend5 (tast : Typecheck.typed_program)  (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
-  let (asm, _locs) = Codegen5.codegen (ids, structs, funcs) in
+  let (asm, _locs) = Codegen5.codegen tast in
 
   if !Flags.dump_asm
   then begin
@@ -162,11 +153,10 @@ let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
   Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
 (*e: function [[CLI.backend5]] *)
 (*s: function [[CLI.compile5]] *)
-let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
-  (outfile : Chan.o) =
-  let (ids, structs, funcs) = 
-    frontend caps conf infile in
-  backend5 (ids, structs, funcs) outfile
+let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
+    (infile : Fpath.t) (outfile : Chan.o) =
+  let tast : Typecheck.typed_program = frontend caps conf infile in
+  backend5 tast outfile
 (*e: function [[CLI.compile5]] *)
 
 (*s: function [[CLI.compile]] *)

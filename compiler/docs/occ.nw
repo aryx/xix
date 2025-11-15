@@ -664,6 +664,8 @@ type t =
 
 \section{Frontend result: typed entities}
 
+%TODO: Typecheck.result? with alt: Frontend.result ?
+
 <<type [[CLI.frontend_result]]>>=
 (* TODO: move somewhere else, rename ids_structs_funcs? or use
  * record with fields! Frontend.result ? Frontend.entities? Frontend.t ?

@@ -59,6 +59,13 @@ type idinfo = {
     ini: Ast.initialiser option;
   }
 (*e: type [[Typecheck.idinfo]] *)
+
+type typed_program = {
+  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  funcs: Ast.func_def list;
+}
+
 (*s: type [[Typecheck.env]] *)
 (* Environment for typechecking *)
 type env = {

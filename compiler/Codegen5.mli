@@ -13,10 +13,6 @@ exception Error of error
 (*s: signature [[Codegen5.codegen]] *)
 (* can raise Error *)
 val codegen: 
-  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t * 
-  Ast.func_def list 
-  -> 
-  Ast_asm5.program
+  Typecheck.typed_program ->  Ast_asm5.program
 (*e: signature [[Codegen5.codegen]] *)
 (*e: Codegen5.mli *)

@@ -10,6 +10,21 @@ type idinfo = {
   }
 (*e: type [[Typecheck.idinfo]] *)
 
+(* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
+type typed_program = {
+  (* resolved type and storage information for identifiers and tags *)
+  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  (* functions annotated with types for each expression nodes
+   * (so you can more easily generate code later).
+   * 
+   * The enum constants should also be internally resolved and replaced
+   * with constants and some constant expressions (e.g., for
+   * array size) should also be resolved (and evaluated).
+   *)
+  funcs: Ast.func_def list;
+}
+
 (*s: type [[Typecheck.error]] *)
 type error = Check.error
 (*e: type [[Typecheck.error]] *)

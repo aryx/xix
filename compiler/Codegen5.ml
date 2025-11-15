@@ -900,10 +900,10 @@ let rec stmt env st0 =
 (* Main entry point *)
 (*****************************************************************************)
 (*s: function [[Codegen5.codegen]] *)
-let codegen (ids, structs, funcs) : Ast_asm5.program =
+let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
   let env = {
-    ids = ids;
-    structs = structs;
+    ids = tp.ids;
+    structs = tp.structs;
     arch = Arch5.arch;
 
     pc = ref 0;
@@ -922,7 +922,7 @@ let codegen (ids, structs, funcs) : Ast_asm5.program =
     regs          = Array.make 0 16;
   } in
 
-  funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
+  tp.funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
     let fullname = (name, 0) in
     let idinfo = Hashtbl.find env.ids fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)

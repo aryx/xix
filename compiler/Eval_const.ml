@@ -13,13 +13,13 @@ module E = Check
 (* Types *)
 (*****************************************************************************)
 
-(* less: return also float at some point? *)
 (*s: type [[Eval_const.integer]] *)
+(* less: return also float at some point? *)
 type integer = int
 (*e: type [[Eval_const.integer]] *)
 
-(* less: could do that in rewrite.ml so no need to pass is to eval *)
 (*s: type [[Eval_const.env]] *)
+(* less: could do that in rewrite.ml so no need to pass is to eval *)
 type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t 
 (*e: type [[Eval_const.env]] *)
 
@@ -27,9 +27,8 @@ type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t
 exception NotAConstant
 (*e: exception [[Eval_const.NotAConstant]] *)
 
-
-(* less: could factorize things in error.ml? *)
 (*s: type [[Eval_const.error]] *)
+(* less: could factorize things in error.ml? *)
 type error = Check.error
 (*e: type [[Eval_const.error]] *)
 

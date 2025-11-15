@@ -529,19 +529,6 @@ type integer = int
 @
 
 
-<<type [[Codegen5.error]]>>=
-type error = Check.error
-@
-
-<<function [[Codegen5.string_of_error]]>>=
-let string_of_error err =
-  Check.string_of_error err
-@
-
-<<exception [[Codegen5.Error]]>>=
-exception Error of error
-@
-
 <<constant [[Codegen5.fake_instr]]>>=
 let fake_instr = A.Virtual A.NOP
 @
@@ -1053,12 +1040,6 @@ open Fpath_.Operators
 
 \section{[[Eval_const.mli]]}
 
-<<signature [[Eval_const.eval]]>>=
-(* may raise NotAConstant or Error *)
-val eval: env -> Ast.expr -> integer
-@
-
-
 %-------------------------------------------------------------
 
 <<Eval_const.mli>>=
@@ -1077,26 +1058,6 @@ val eval: env -> Ast.expr -> integer
 
 \section{[[Eval_const.ml]]}
 
-<<type [[Eval_const.integer]]>>=
-type integer = int
-@
-
-<<type [[Eval_const.env]]>>=
-type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t 
-@
-
-<<exception [[Eval_const.NotAConstant]]>>=
-exception NotAConstant
-@
-
-<<type [[Eval_const.error]]>>=
-type error = Check.error
-@
-
-<<exception [[Eval_const.Error]]>>=
-exception Error of error
-@
-
 %-------------------------------------------------------------
 
 <<Eval_const.ml>>=
@@ -1114,16 +1075,12 @@ module E = Check
 (* Types *)
 (*****************************************************************************)
 
-(* less: return also float at some point? *)
 <<type [[Eval_const.integer]]>>
 
-(* less: could do that in rewrite.ml so no need to pass is to eval *)
 <<type [[Eval_const.env]]>>
 
 <<exception [[Eval_const.NotAConstant]]>>
 
-
-(* less: could factorize things in error.ml? *)
 <<type [[Eval_const.error]]>>
 
 <<exception [[Eval_const.Error]]>>
@@ -1137,15 +1094,10 @@ module E = Check
 
 \section{[[Flags.ml]]}
 
-
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
 @
-
-<<constant [[Flags.backtrace]]>>=
-let backtrace = ref false
-@
-
+%TODO: delete
 
 %-------------------------------------------------------------
 
@@ -1166,9 +1118,7 @@ let backtrace = ref false
 <<constant [[Flags.backtrace]]>>
 @
 
-
 \section{[[Globals.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -1179,7 +1129,6 @@ let backtrace = ref false
 
 <<global [[Globals.hids]]>>
 @
-
 
 \section{[[Lexer.mll]]}
 
@@ -1197,7 +1146,6 @@ let backtrace = ref false
 <<toplevel [[Main._1]]>>
 @
 
-
 \section{[[Parse.mli]]}
 
 %-------------------------------------------------------------
@@ -1209,9 +1157,7 @@ let backtrace = ref false
 <<signature [[Parse.parse_no_cpp]]>>
 @
 
-
 \section{[[Parse.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -1244,7 +1190,6 @@ module T = Parser  (* T for Tokens *)
 <<Rewrite.mli>>=
 @
 
-
 \section{[[Rewrite.ml]]}
 
 %-------------------------------------------------------------
@@ -1260,7 +1205,6 @@ module T = Parser  (* T for Tokens *)
  *)
 @
 
-
 \section{[[Storage.ml]]}
 
 %-------------------------------------------------------------
@@ -1271,7 +1215,6 @@ module T = Parser  (* T for Tokens *)
 <<type [[Storage.t]]>>
 [@@deriving show]
 @
-
 
 \section{[[Type.ml]]}
 
@@ -1308,7 +1251,6 @@ module T = Parser  (* T for Tokens *)
 <<constant [[Type.long]]>>
 @
 
-
 \section{[[Typecheck.mli]]}
 
 %-------------------------------------------------------------
@@ -1324,14 +1266,11 @@ module T = Parser  (* T for Tokens *)
 <<signature [[Typecheck.check_and_annotate_program]]>>
 @
 
-
 \section{[[Typecheck.ml]]}
 
 <<type [[Typecheck.integer]]>>=
 type integer = int
 @
-
-
 
 
 

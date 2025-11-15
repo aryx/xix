@@ -6,13 +6,6 @@ type env = {
 }
 @
 
-<<type [[Arch_compiler.t]]>>=
-type t = {
-  width_of_type: env -> Type.t -> int;
-}
-@
-
-
 %-------------------------------------------------------------
 
 <<Arch_compiler.ml>>=
@@ -27,13 +20,7 @@ with ATEXT, ANOP, ARET, etc.
 *)
 @
 
-
 \section{[[Arch5.mli]]}
-
-<<signature [[Arch5.arch]]>>=
-val arch: Arch_compiler.t
-@
-
 
 %-------------------------------------------------------------
 
@@ -44,41 +31,6 @@ val arch: Arch_compiler.t
 
 
 \section{[[Arch5.ml]]}
-
-<<function [[Arch5.width_of_type]]>>=
-let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
-  match t with
-  | T.Void -> 0
-  | T.I (inttype, _sign) ->
-    (match inttype with
-    | T.Char -> 1
-    | T.Short -> 2
-    | T.Int -> 4
-    | T.Long -> 4
-    | T.VLong -> 8
-    )
-  | T.F T.Float -> 4
-  | T.F T.Double -> 8
-  | T.Pointer _ -> 4
-
-  | T.Func _ -> raise (Impossible "width of Func")
-  | T.Array (iopt, t) ->
-    (match iopt with
-    | None -> raise (Impossible "width of incomplete array")
-    | Some i -> i * width_of_type env t
-    )
-  | T.StructName (_su, fullname) ->
-      let (_su, flds) = Hashtbl.find env.structs fullname in
-      (* todo: align so extra size *)
-      flds 
-      |> List.map (fun (_fld, t) -> width_of_type env t)
-      |> List.fold_left (+) 0
-@
-
-<<constant [[Arch5.arch]]>>=
-let arch = { width_of_type }
-@
-
 
 %-------------------------------------------------------------
 
@@ -97,346 +49,6 @@ module T = Type
 
 \section{[[Ast.ml]]}
 
-<<type [[Ast.loc]]>>=
-type loc = Location_cpp.loc
-[@@deriving show]
-@
-
-<<type [[Ast.name]]>>=
-type name = string
-[@@deriving show]
-@
-
-<<type [[Ast.blockid]]>>=
-type blockid = int (* same than Type_.blockid, repeated here for clarity *)
-[@@deriving show]
-@
-
-<<type [[Ast.fullname]]>>=
-type fullname = name * blockid (* same than Type_.fullname *)
-[@@deriving show]
-@
-
-<<type [[Ast.idkind]]>>=
-type idkind =
-  | IdIdent
-  | IdTypedef
-  | IdEnumConstant
-@
-
-<<type [[Ast.tagkind]]>>=
-type tagkind =
-  | TagStruct
-  | TagUnion
-  | TagEnum
-@
-
-<<type [[Ast.typ]]>>=
-type typ = {
-  t: type_bis;
-  t_loc: loc;
-}
-@
-
-<<type [[Ast.type_bis]]>>=
-  and type_bis = 
-  | TBase of Type.t (* only the Basic stuff *)
-  | TPointer of typ
-  | TArray of const_expr option * typ
-  | TFunction of function_type
-
-  | TStructName of Type.struct_kind * fullname
-  (* In C an enum is really like an int. However, we could do
-   * extended checks at some point to do more strict type checking! 
-   *)
-  | TEnumName of fullname
-  | TTypeName of fullname
-@
-
-<<type [[Ast.function_type]]>>=
- and function_type = (typ * (parameter list * bool (* var args '...' *)))
-@
-
-<<type [[Ast.parameter]]>>=
-  and parameter = {
-    (* When part of a prototype, the name is not always mentionned, hence
-     * the option below.
-     * 
-     * I use 'fullname' here for consistency; parameters are treated like,
-     * locals, so we can have below simply 'Id of fullname' and have 
-     * no differences between accessing a local or a parameter.
-     *)
-    p_name: fullname option;
-    p_loc: loc;
-
-    p_type: typ;
-  }
-@
-
-<<type [[Ast.expr]]>>=
-and expr = { 
-  e: expr_bis;
-  e_loc: loc;
-  (* properly set during typechecking in typecheck.ml *)
-  e_type: Type.t;
-}
-@
-
-<<type [[Ast.expr_bis]]>>=
-  and expr_bis = 
-  (* Note that characters are transformed in Int at parsing time; no need Char*)
-  | Int of string * Type.integer_type
-  | Float of string * Type.float_type
-  (* codegen: converted to Id after typechecking *)
-  | String of string * Type.t (* always array of chars for now, no unicode *)
-
-  (* Global, local, parameter, enum constant (can be scoped), function.
-   * Not that the storage, type, usage of ids is computed later and stored
-   * in external hashtbl.
-   * codegen: Id converted to Int when the fullname refers to a enum constant 
-   *)
-  | Id of fullname
-
-  | Call of expr * argument list
-
-  (* should be a statement really *)
-  | Assign of assignOp * expr * expr
-
-  (* codegen: converted to pointer arithmetic, *(x+y) *)
-  | ArrayAccess of expr * expr (* x[y] *)
-  (* codegen: converted to pointer offset access *)
-  | RecordAccess of expr * name (* x.y *)
-  (* codegen: converted to RecordAccess, ( *x ).y *)
-  | RecordPtAccess of expr * name (* x->y,  and not x.y!! *)
-
-  (* less: bool (* explicit cast (xcast) *) *)
-  | Cast of typ * expr
-
-  | Postfix of expr * fixOp
-  | Prefix of fixOp * expr
-  (* contains GetRef and Deref!! pointers!  *)
-  | Unary of unaryOp * expr
-  | Binary of expr * binaryOp * expr
-
-  | CondExpr of expr * expr * expr
-  (* 'x, y', but really should be a statement, and could be removed.
-   * I think mostly used in 'for(...;...;...)' 
-   *)
-  | Sequence of expr * expr
-
-  (* codegen: converted to Int *)
-  | SizeOf of (expr, typ) Either_.t
-
-  (* should appear only in a variable initializer, or after GccConstructor *)
-  | ArrayInit of (const_expr option * expr) list
-  | RecordInit of (name * expr) list
-  (* gccext: kenccext: *)
-  | GccConstructor  of typ * expr (* always an ArrayInit (or RecordInit?) *)
-@
-
-<<type [[Ast.argument]]>>=
-and argument = expr
-@
-
-<<type [[Ast.const_expr]]>>=
-and const_expr = expr
-@
-
-<<type [[Ast.unaryOp]]>>=
-  and unaryOp  = 
-    (* less: could be lifted up; those are really important operators *)
-    | GetRef | DeRef 
-    (* codegen: converted to binary operation with 0 (-x => 0-x) *)
-    | UnPlus |  UnMinus 
-    (* codegen: converted to -1 ^ x *)
-    | Tilde 
-    | Not 
-@
-
-<<type [[Ast.assignOp]]>>=
-  and assignOp = SimpleAssign | OpAssign of arithOp
-@
-
-<<type [[Ast.fixOp]]>>=
-  and fixOp    = Dec | Inc
-@
-
-<<type [[Ast.binaryOp]]>>=
-  and binaryOp = Arith of arithOp | Logical of logicalOp
-@
-
-<<type [[Ast.arithOp]]>>=
-       and arithOp   = 
-         | Plus | Minus 
-         | Mul | Div | Mod
-         | ShiftLeft | ShiftRight 
-         | And | Or | Xor
-@
-
-<<type [[Ast.logicalOp]]>>=
-       and logicalOp = 
-         | Inf | Sup | InfEq | SupEq 
-         | Eq | NotEq 
-         | AndLog | OrLog
-@
-
-<<type [[Ast.stmt]]>>=
-type stmt = {
-  s: stmt_bis;
-  s_loc: loc;
-}
-@
-
-<<type [[Ast.stmt_bis]]>>=
-  and stmt_bis = 
-  | ExprSt of expr
-  (* empty statement is simply Block [] *)
-  | Block of stmt list
-
-  | If of expr * stmt * stmt
-
-  (* expr must have an integer type; it can not be a pointer like in a If *)
-  | Switch of expr * case_list
-
-  | While of expr * stmt
-  | DoWhile of stmt * expr
-  | For of (expr option, var_decl list) Either_.t * 
-           expr option * 
-           expr option * 
-           stmt
-
-  | Return of expr option
-  (* no argument to continue or break as in PHP *)
-  | Continue | Break
-
-  (* labels have a function scope, so no need to use 'fullname' here *)
-  | Label of name * stmt
-  | Goto of name
-
-  (* should occur only in Switch *)
-  | Case of expr * stmt
-  | Default of stmt
-
-  | Var of var_decl
-@
-
-<<type [[Ast.case_list]]>>=
-and case_list = stmt
-@
-
-<<type [[Ast.var_decl]]>>=
-and var_decl = {
-  v_name: fullname;
-  v_loc: loc;
-  v_storage: Storage.t option;
-  v_type: typ;
-  v_init: initialiser option;
-}
-@
-
-<<type [[Ast.initialiser]]>>=
- and initialiser = expr
-@
-
-<<type [[Ast.func_def]]>>=
-type func_def = {
-  (* functions have a global scope; no need for fullname here *)
-  f_name: name;
-  f_loc: loc;
-  (* everything except Param or Auto *)
-  f_storage: Storage.t option;
-  f_type: function_type;
-  (* always a Block *)
-  f_body: stmt;
-}
-[@@deriving show]
-@
-
-<<type [[Ast.struct_def]]>>=
-type struct_def = {
-  su_name: fullname;
-  su_loc: loc;
-  su_kind: Type.struct_kind;
-  (* todo: bitfield annotation *)
-  su_flds: field_def list;
-}
-@
-
-<<type [[Ast.field_def]]>>=
-  and field_def = { 
-   (* kenccext: anonymous structure element get an artificial field name
-    * (see is_gensymed()) 
-    *)
-    fld_name: name;
-    fld_loc: loc;
-    fld_type: typ;
-  }
-@
-
-<<type [[Ast.enum_def]]>>=
-type enum_def = { 
-  (* this name is rarely used; C programmers rarely write 'enum Foo x;' *)
-  enum_name: fullname;
-  enum_loc: loc;
-  enum_constants: enum_constant list;
-}
-@
-
-<<type [[Ast.enum_constant]]>>=
-  and enum_constant = {
-  (* we also need to use 'fullname' for constants, to scope them *)
-    ecst_name: fullname;
-    ecst_loc: loc;
-    ecst_value: const_expr option;
-  }
-@
-
-<<type [[Ast.type_def]]>>=
-type type_def = { 
-  typedef_name: fullname;
-  typedef_loc: loc;
-  typedef_type: typ;
-}
-[@@deriving show]
-@
-
-<<type [[Ast.toplevel]]>>=
-type toplevel =
-  | StructDef of struct_def
-  | TypeDef of type_def
-  | EnumDef of enum_def
-  (* globals, but also extern decls and prototypes *)
-  | VarDecl of var_decl
-  | FuncDef of func_def
-[@@deriving show]
-@
-
-<<type [[Ast.toplevels]]>>=
-type toplevels = toplevel list
-[@@deriving show]
-@
-
-<<type [[Ast.program]]>>=
-type program = toplevels * Location_cpp.location_history list
-[@@deriving show]
-@
-
-<<type [[Ast.any]]>>=
-type any =
-  | Expr of expr
-  | Stmt of stmt
-  | Type of typ
-  | Toplevel of toplevel
-  | Program of program
-  | FinalType of Type.t
-[@@deriving show]
-@
-
-<<function [[Ast.tagkind_of_su]]>>=
-let tagkind_of_su = function
-  | Type.Struct -> TagStruct
-  | Type.Union -> TagUnion
-@
 
 <<function [[Ast.unwrap]]>>=
 let unwrap (name, _) = name    
@@ -492,7 +104,6 @@ open Common
 (* The AST related types *)
 (*****************************************************************************)
 
-(* global linenumber after preprocessing *)
 <<type [[Ast.loc]]>>
 
 (* ------------------------------------------------------------------------- *)
@@ -501,46 +112,23 @@ open Common
 
 <<type [[Ast.name]]>>
 
-(* for scope *)
 <<type [[Ast.blockid]]>>
 
-(* A fully resolved and scoped name. 
- * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
- * Instead, I use a unique blockid and an external hash or environment that
- * maps this fullname to the appropriate information.
- * I think it offers a better separation of concerns.
- * 
- * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
- *)
 <<type [[Ast.fullname]]>>
 
-(* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
- * Could be moved in a separate naming.ml, but not worth it for just two types.
- *)
 <<type [[Ast.idkind]]>>
 
-(* to manage the scope of tags *)
 <<type [[Ast.tagkind]]>>
 
 (* ------------------------------------------------------------------------- *)
 (* Types *)
 (* ------------------------------------------------------------------------- *)
-(* What are the differences between typ below and Type.t? 
- * - typedef expansion is not done here
- * - constant expressions are not resolved yet 
- *  (those expressions can involve enum constants which will be resolved later).
- * Again, I think it offers a better separation of concerns.
- * 
- * Note that 'type_' and 'expr' are mutually recursive (because of const_expr).
- * todo: qualifier type
- *)
 <<type [[Ast.typ]]>>
 <<type [[Ast.type_bis]]>>
 
 <<type [[Ast.function_type]]>>
 
 <<type [[Ast.parameter]]>>
-
 
 (* ------------------------------------------------------------------------- *)
 (* Expression *)
@@ -550,10 +138,6 @@ open Common
 
 <<type [[Ast.argument]]>>
 
-(* Because we call the preprocessor first, the remaining cases
- * where const_expr is not a constant are basic arithmetic expressions
- * like 2 < < 3, or enum constants.
- *)
 <<type [[Ast.const_expr]]>>
 
 <<type [[Ast.unaryOp]]>>
@@ -571,9 +155,6 @@ open Common
 <<type [[Ast.stmt]]>>
 <<type [[Ast.stmt_bis]]>>
 
-(* Can we have a specific case type? It is hard in C because they mix labels
- * and 'case' a lot (see the code in the lexer of 5c).
- *)
 <<type [[Ast.case_list]]>>
 
 (* ------------------------------------------------------------------------- *)
@@ -581,7 +162,6 @@ open Common
 (* ------------------------------------------------------------------------- *)
 
 <<type [[Ast.var_decl]]>>
- (* can have ArrayInit and RecordInit here in addition to other expr *)
 <<type [[Ast.initialiser]]>>
 [@@deriving show]
 
@@ -591,9 +171,7 @@ open Common
 (* ------------------------------------------------------------------------- *)
 <<type [[Ast.func_def]]>>
 
-(* struct and union *)
 <<type [[Ast.struct_def]]>>
-  (* Not the same than var_decl; fields have no storage and can have bitflds.*)
 <<type [[Ast.field_def]]>>
 [@@deriving show]
 
@@ -615,7 +193,6 @@ open Common
 (* ------------------------------------------------------------------------- *)
 (* Any *)
 (* ------------------------------------------------------------------------- *)
-(* for visitor and dumper *)
 <<type [[Ast.any]]>>
 
 (*****************************************************************************)
@@ -633,41 +210,15 @@ open Regexp_.Operators
 
 \section{[[Check.mli]]}
 
-<<type [[Check.error (Check.mli)]]>>=
-type error =
-  | Inconsistent of 
-      string * Location_cpp.loc * (* error here *) 
-      string * Location_cpp.loc   (* previous decl/def/whatever here *)
-  | Misc of string * Location_cpp.loc
-@
-
-<<signature [[Check.string_of_error]]>>=
-val string_of_error: error -> string
-@
-
-<<exception [[Check.Error (Check.mli)]]>>=
-exception Error of error
-@
-
-<<signature [[Check.failhard]]>>=
-val failhard : bool ref
-@
-
-<<signature [[Check.check_program]]>>=
-(* can raise Error if failhard, otherwise print on stderr *)
-val check_program: Ast.program -> unit
-@
-
-
 %-------------------------------------------------------------
 
 <<Check.mli>>=
 
-<<type [[Check.error (Check.mli)]]>>
+<<type [[Check.error]]>>
 
 <<signature [[Check.string_of_error]]>>
 
-<<exception [[Check.Error (Check.mli)]]>>
+<<exception [[Check.Error]]>>
 <<signature [[Check.failhard]]>>
 
 <<signature [[Check.check_program]]>>
@@ -676,61 +227,6 @@ val check_program: Ast.program -> unit
 
 \section{[[Check.ml]]}
 
-<<type [[Check.usedef]]>>=
-type usedef = {
-  mutable defined: Ast.loc option;
-  mutable used: Ast.loc option;
-}
-@
-
-<<type [[Check.env]]>>=
-type env = {
-  ids:      (fullname, usedef * Ast.idkind) Hashtbl.t;
-  tags:     (fullname, usedef * Ast.tagkind) Hashtbl.t;
-
-  (* to reset after each function (because labels have a function scope) *)
-  mutable labels:   (string, usedef) Hashtbl.t;
-  (* block scope *)
-  mutable local_ids: fullname list;
-
-  (* todo: inbreakable: bool; incontinueable: bool *)
-}
-@
-
-<<type [[Check.error]]>>=
-type error = 
-  | Inconsistent of 
-      string * Location_cpp.loc * (* error here *) 
-      string * Location_cpp.loc   (* previous decl/def/whatever here *)
-  | Misc of string * Location_cpp.loc
-@
-
-<<function [[Check.string_of_error]]>>=
-let string_of_error err =
-  match err with
-  | Inconsistent (s1, loc1, s2, loc2) ->
-    let (file1, line1) = Location_cpp.final_loc_of_loc loc1 in
-    let (file2, line2) = Location_cpp.final_loc_of_loc loc2 in
-    spf "%s:%d error: %s\n%s:%d note: %s" !!file1 line1 s1 !!file2 line2 s2
-  | Misc (s, loc) ->
-    let (file, line) = Location_cpp.final_loc_of_loc loc in
-    spf "%s:%d error: %s" !!file line s
-@
-
-<<exception [[Check.Error]]>>=
-exception Error of error
-@
-
-<<constant [[Check.failhard]]>>=
-let failhard = ref false
-@
-
-<<function [[Check.error]]>>=
-let error err =
-  if !failhard
-  then raise (Error err)
-  else Logs.err (fun m -> m "%s" (string_of_error err))
-@
 
 <<function [[Check.inconsistent_tag]]>>=
 let inconsistent_tag fullname loc usedef =
@@ -799,324 +295,6 @@ let check_inconsistent_or_redefined_id env fullname idkind loc =
     Hashtbl.add env.ids fullname ({defined = Some loc; used = None; }, idkind)
 @
 
-<<function [[Check.check_unused_locals]]>>=
-let check_unused_locals env =
-  (* less: could also delete entries in env.ids *)
-  env.local_ids |> List.iter (fun fullname ->
-    let (usedef, idkind) = Hashtbl.find env.ids fullname in
-    assert (idkind = IdIdent);
-    match usedef with
-    | { defined = Some loc; used = None } ->
-        (* 5c says whether 'auto' or 'param' *) 
-        Error.warn 
-          (spf "variable declared and not used: '%s'" (unwrap fullname)) loc
-    | { defined = None; used = _} -> 
-          raise (Impossible "locals are always defined")
-    | { defined = _; used = Some _ } -> ()
-@
-
-<<function [[Check.check_usedef]]>>=
-(* use of undefined, redefined, redeclared, unused, inconsistent tags, etc. *)
-let check_usedef program =
-
-  let rec toplevel env = function
-    | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
-      (* checking the tag *)
-
-      let tagkind = Ast.tagkind_of_su su in
-      check_inconsistent_or_redefined_tag env fullname tagkind loc;
-
-      (* checking the fields *)
-
-      let hflds = Hashtbl.create 11 in
-      flds |> List.iter 
-       (fun {fld_name = name; fld_loc = loc; fld_type = typ} ->
-          (* stricter: 5c reports at use time, clang does immediately *)
-          if Hashtbl.mem hflds name
-          then error (Inconsistent (spf "duplicate member '%s'" name, loc,
-                                    "previous declaration is here", 
-                                    Hashtbl.find hflds name));
-          Hashtbl.add hflds name loc;
-          type_ env typ
-      )
-
-    | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }->
-      (* checking the tag *)
-
-      let tagkind = TagEnum in
-      check_inconsistent_or_redefined_tag env fullname tagkind loc;
-
-      (* checking the constants *)
-
-      csts |> List.iter 
-          (fun { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
-            check_inconsistent_or_redefined_id env fullname IdEnumConstant loc;
-            eopt |> Option.iter (expr env)
-          );
-
-    | TypeDef { typedef_name = fullname; typedef_loc = loc; typedef_type =typ}->
-      check_inconsistent_or_redefined_id env fullname IdTypedef loc;
-      type_ env typ
-
-    (* todo: if use struct tags params, they must be complete at this point *)
-    | FuncDef { f_name = name; f_loc = loc; f_type = ftyp; f_body = st; f_storage = _ } ->
-      let fullname = name, 0 in
-      (if Hashtbl.mem env.ids fullname &&
-          snd (Hashtbl.find env.ids fullname) = IdIdent
-      (* this can be ok, you can redeclare toplevel identifiers as you
-       * can give a final storage. It depends on the situation, 
-       * see typecheck.ml
-       *)
-       then ()
-       else check_inconsistent_or_redefined_id env fullname IdIdent loc
-      );
-      type_ env {t = TFunction ftyp; t_loc = loc };
-      (* new function scope *)
-      let env = { env with local_ids = []; labels = Hashtbl.create 11 } in
-      let (_tret, (tparams, _dots)) = ftyp in
-      tparams |> List.iter (fun { p_name = fullnameopt; p_loc; p_type = _} ->
-        fullnameopt |> Option.iter (fun fullname ->
-          check_inconsistent_or_redefined_id env fullname IdIdent p_loc;
-          env.local_ids <- fullname :: env.local_ids;
-        );
-      );
-
-      (* We could match st to a Block and avoid new scope for it, but
-       * it does not matter here. We do it correctly in parser.mly so
-       * a parameter and local with the same name will have the same
-       * blockid so we will detect if you redefine an entity even
-       * if in different scope here.
-       *)
-      stmt env st;
-
-      (* check function scope *)
-      check_unused_locals env;
-      env.labels |> Hashtbl.iter (fun name usedef ->
-        match usedef with
-        | { defined = Some _; used = Some _ } -> ()
-        | { used = Some loc; defined = None } ->
-            error (Misc (spf "use of undeclared label '%s'" name, loc))
-        | { defined = Some loc; used = None } ->
-            Error.warn (spf "label declared and not used '%s'" name) loc
-        | { defined = None; used = None } -> 
-          raise (Impossible "at least one of used or defined")
-      );
-        
-    | VarDecl { v_name = fullname; v_loc; v_type = t; v_init = eopt; v_storage = _} ->
-      (if Hashtbl.mem env.ids fullname &&
-          snd (Hashtbl.find env.ids fullname) = IdIdent
-      (* this can be ok, you can redeclare toplevel identifiers as you
-       * can give a final storage. It depends on the situation, 
-       * see typecheck.ml
-       *)
-       then ()
-       else check_inconsistent_or_redefined_id env fullname IdIdent v_loc
-      );
-      type_ env t;
-      eopt |> Option.iter (expr env)
-
-  and stmt env st0 =
-    match st0.s with
-    | ExprSt e -> expr env e
-    | Block xs ->
-        (* new block scope *)
-        let env = { env with local_ids = [] } in
-        List.iter (stmt env) xs;
-        (* check block scope *)
-        check_unused_locals env
-    | If (e, st1, st2) ->
-        expr env e;
-        stmt env st1;
-        stmt env st2;
-    (* ocaml-light: | While (e, st)  | Switch (e, st) | Case (e, st) *)
-    | While (e, st) ->
-        expr env e;
-        stmt env st;
-    | Switch (e, st) ->
-        expr env e;
-        stmt env st;
-    | Case (e, st) ->
-        expr env e;
-        stmt env st;
-    | DoWhile (st, e) ->
-        stmt env st;
-        expr env e
-    | For (e1either, e2opt, e3opt, st) ->
-        (* new block scope again *)
-        let env = { env with local_ids = [] } in
-        (match e1either with
-        | Left e1opt -> e1opt |> Option.iter (expr env)
-        | Right decls ->
-            decls |> List.iter (fun decl -> 
-              stmt env ({s = Var decl; s_loc = decl.v_loc }) 
-            )
-        );
-        e2opt |> Option.iter (expr env);
-        e3opt |> Option.iter (expr env);
-        stmt env st;
-        (* check block scope *)
-        check_unused_locals env
-
-    | Return eopt -> eopt |> Option.iter (expr env)
-    (* todo: check that inside something that be continue/break *)
-    | Continue | Break -> ()
-
-    (* checks on labels are done in FuncDef once we analyzed the whole body *)
-    | Label (name, st) ->
-        (try
-           let usedef = Hashtbl.find env.labels name in
-           usedef.defined |> Option.iter (fun locprev ->
-             error (Inconsistent (spf "redefinition of label '%s'" name, 
-                                  st0.s_loc,
-                                  "previous definition is here", locprev))
-           );
-           usedef.defined <- Some st0.s_loc;
-         with Not_found ->
-           Hashtbl.add env.labels name 
-             {defined = Some st0.s_loc; used = None}
-        );
-        stmt env st;
-    | Goto name ->
-        (try 
-           let usedef = Hashtbl.find env.labels name in
-           usedef.used <- Some st0.s_loc
-         with Not_found ->
-           Hashtbl.add env.labels name { defined = None; used = Some st0.s_loc }
-        )
-    | Default st -> stmt env st
-
-    | Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; v_storage = _ } ->
-      (* less: before adding in environment? can have recursive use? *)
-      eopt |> Option.iter (expr env);
-    (* todo: if local VarDEcl, can actually have stuff nested like
-     *  extern int i;  in which case we must go back to global
-     *  scope for i! so rewrite AST? or just in typecheck.ml
-     *  generate right storage for it.
-     * can also be nested prototype (but I should forbid it
-     *)
-      check_inconsistent_or_redefined_id env fullname IdIdent loc;
-      env.local_ids <- fullname :: env.local_ids;
-      type_ env typ;
-
-  and expr env e0 =
-    match e0.e with
-    | Int _ | Float _ | String _ -> ()
-    | Id fullname ->
-        (try 
-           let (usedef, _idkind) = Hashtbl.find env.ids fullname in
-           usedef.used <- Some e0.e_loc
-         with Not_found ->
-           (* todo: can be USED or SET *)
-           raise (Impossible (spf "ids are always declared first: %s" 
-                                (unwrap fullname)))
-        )
-    | Call (e, es) -> exprs env (e::es)
-    (* ocaml-light: | Assign (_, e1, e2) | Binary (e1, _, e2) | Sequence (e1, e2) | ArrayAccess (e1, e2) *)
-    | Assign (_, e1, e2) -> exprs env [e1; e2]
-    | Binary (e1, _, e2) -> exprs env [e1; e2]
-    | Sequence (e1, e2) -> exprs env [e1; e2]
-    | ArrayAccess (e1, e2) -> exprs env [e1; e2]
-    (* ocaml-light: | RecordAccess (e, _) | RecordPtAccess (e, _) 
-    | Postfix (e, _) | Prefix (_, e) | Unary (_, e) *)
-    | RecordAccess (e, _) -> expr env e
-    | RecordPtAccess (e, _) -> expr env e
-    | Postfix (e, _) -> expr env e
-    | Prefix (_, e) -> expr env e
-    | Unary (_, e) -> expr env e
-    (* ocaml-light: | Cast (typ, e) | GccConstructor (typ, e) *)
-    | Cast (typ, e) ->
-      type_ env typ;
-      expr env e
-    | GccConstructor (typ, e) ->
-      type_ env typ;
-      expr env e
-    | CondExpr (e1, e2, e3) -> exprs env [e1; e2; e3]
-    | SizeOf either ->
-        (match either with
-        | Left e -> expr env e
-        | Right t -> type_ env t
-        )
-    | ArrayInit xs -> 
-      xs |> List.iter (fun (eopt, e) -> 
-        eopt |> Option.iter (expr env);
-        expr env e
-      )
-    | RecordInit xs -> xs |> List.iter (fun (_, e) -> expr env e)
-
-  and exprs env xs = xs |> List.iter (expr env)
-
-  and type_ env = fun typ ->
-    match typ.t with
-    | TBase _ -> ()
-    | TPointer t -> type_ env t
-    | TArray (eopt, t) -> 
-      eopt |> Option.iter (expr env);
-      type_ env t;
-    | TFunction (tret, (params, _dots)) ->
-      type_ env tret;
-      params |> List.iter (fun p ->
-        (* nothing to do with p.p_name here *)
-        type_ env p.p_type
-      )
-    | TStructName (_, _) | TEnumName _ ->
-      let tagkind, fullname = 
-        match typ.t with
-        | TStructName (su, fullname) -> Ast.tagkind_of_su su, fullname
-        | TEnumName fullname -> TagEnum, fullname
-        | _ -> raise (Impossible "see pattern above")
-      in
-      (try 
-        let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
-        if tagkind <> oldtagkind
-        then inconsistent_tag fullname typ.t_loc usedef;
-        usedef.used <- Some typ.t_loc;
-      with Not_found ->
-        (* forward decl *)
-        Hashtbl.add env.tags fullname 
-          ({defined = None; used = Some typ.t_loc; }, tagkind)
-      )
-    | TTypeName fullname ->
-        (try 
-           let (usedef, idkind) = Hashtbl.find env.ids fullname in
-           if idkind <> IdTypedef
-           then raise (Impossible "typename returned only if typedef in scope");
-           usedef.used <- Some typ.t_loc
-         with Not_found ->
-           raise (Impossible "typename returned only if typedef in scope")
-        )
-  in
-  
-  let env = {
-    ids = Hashtbl.create 101;
-    tags = Hashtbl.create 101;
-    labels = Hashtbl.create 101;
-    local_ids = [];
-  }
-  in
-  program |> List.iter (toplevel env);
-
-  (* stricter: check if used but not defined tags (5c does not, clang does) *)
-  env.tags |> Hashtbl.iter (fun fullname (usedef, _idkind) ->
-    match usedef with
-    | { used = Some loc; defined = None } ->
-      error (Misc (spf "use of tag '%s' that is never completed"
-                          (unwrap fullname), loc))
-    (* this can happen, header file are big and can cover multiple modules *)
-    | { defined = Some _; used = None } -> ()
-    (* perfect *)
-    | { defined = Some _; used = Some _} -> ()
-    | { defined = None; used = None } -> raise (Impossible "one or the other")
-  );
-
-  (* less: could check unused static var decl? *)
-  ()
-@
-
-<<function [[Check.check_program]]>>=
-let check_program (ast, _locs) =
-  check_usedef ast
-@
-
 
 %-------------------------------------------------------------
 
@@ -1159,25 +337,19 @@ open Ast
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 <<function [[Check.inconsistent_tag]]>>
 
 <<function [[Check.check_inconsistent_or_redefined_tag]]>>
 
-
 <<function [[Check.inconsistent_id]]>>
-
 
 <<function [[Check.check_inconsistent_or_redefined_id]]>>
 
 <<function [[Check.check_unused_locals]]>>
-  )
-
 
 (*****************************************************************************)
 (* Use/Def *)
 (*****************************************************************************)
-
 <<function [[Check.check_usedef]]>>
 
 (*****************************************************************************)
@@ -1188,41 +360,16 @@ open Ast
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[Check.check_program]]>>
 @
 
 
 \section{[[CLI.mli]]}
 
-<<type [[CLI.caps (CLI.mli)]]>>=
-type caps = < Cap.open_in; Cap.open_out; Cap.env >
-@
-
-<<signature [[CLI.main]]>>=
-(* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> ->
-  string array -> Exit.t
-@
-
-<<signature [[CLI.compile]]>>=
-(* main algorithm; works by side effect on outfile *)
-val compile: < Cap.open_in; .. > ->
-  Preprocessor.conf -> Arch.t -> Fpath.t (* infile *) -> Chan.o (* outfile *) ->
-  unit
-@
-
-
 %-------------------------------------------------------------
 
 <<CLI.mli>>=
-(* Need:
- * - open_in: for argv derived file but also for #include'd files
- *   because 5c does its own preprocessing
- * - open_out for -o object file or 5.argv[0]
- * - env: for INCLUDE (for cpp)
- *)
-<<type [[CLI.caps (CLI.mli)]]>>
+<<type [[CLI.caps]]>>
 
 <<signature [[CLI.main]]>>
 
@@ -1231,286 +378,6 @@ val compile: < Cap.open_in; .. > ->
 
 
 \section{[[CLI.ml]]}
-
-<<type [[CLI.caps]]>>=
-type caps = < Cap.open_in; Cap.open_out; Cap.env >
-@
-
-<<function [[CLI.do_action]]>>=
-let do_action (caps: < caps; .. >) thestring s xs =
-  match s with
-  | "-test_parser" ->
-      xs |> List.iter (fun file ->
-        Logs.info (fun m -> m "processing %s" file);
-        let conf = Preprocessor.{
-          defs = [];
-          paths = [spf "/%s/include" thestring; "/sys/include";] |> Fpath_.of_strings;
-          dir_source_file = Fpath.v ".";
-        }
-        in
-        try 
-          let _ = Parse.parse caps conf (Fpath.v file) in
-          ()
-        with Location_cpp.Error (s, loc) ->
-          let (file, line) = Location_cpp.final_loc_of_loc loc in
-          failwith (spf "%s:%d %s" !!file line s)
-      )
-
-  | _ -> failwith ("action not supported: " ^ s)
-@
-
-<<type [[CLI.frontend_result]]>>=
-type frontend_result = 
-  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
-  Ast.func_def list
-@
-
-<<function [[CLI.frontend]]>>=
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : frontend_result =
-
-  let ast = Parse.parse caps conf infile in
-
-  (* debug *)
-  if !Flags.dump_ast
-  then Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.Program ast)));
-
-  (* use/def checking, unused entity, redefinitions, etc. *)
-  Check.check_program ast;
-  (* typedef expansion, type and storage resolution, etc. *)
-  let (ids, structs, funcs) = 
-    Typecheck.check_and_annotate_program ast 
-  in
-  
-  (* debug *)
-  if !Flags.dump_typed_ast
-  then begin 
-    ids |> Hashtbl.iter (fun k v ->
-      match v.Typecheck.sto with
-      | Storage.Global | Storage.Static ->
-        Logs.app (fun m -> m "%s" (Ast.unwrap k));
-        Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
-      | _ -> ()
-    );
-    funcs |> List.iter (fun func ->
-      Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
-    );
-  end;
-
-  ids, structs, funcs
-@
-
-<<function [[CLI.backend5]]>>=
-let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
-  (* todo: Rewrite.rewrite *)
-  let (asm, _locs) = Codegen5.codegen (ids, structs, funcs) in
-
-  if !Flags.dump_asm
-  then begin
-    let pc = ref 0 in
-    asm |> List.iter (fun (instr, _loc) ->
-      (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
-      let v = Meta_ast_asm5.vof_line instr in
-      Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
-      incr pc;
-    );
-  end;
-  Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
-@
-
-<<function [[CLI.compile5]]>>=
-let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
-  (outfile : Chan.o) =
-  let (ids, structs, funcs) = 
-    frontend caps conf infile in
-  backend5 (ids, structs, funcs) outfile
-@
-
-<<function [[CLI.compile]]>>=
-let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t) (infile : Fpath.t) (outfile : Chan.o) : unit =
-  match arch with
-  | Arch.Arm -> compile5 caps conf infile outfile
-  | _ -> 
-   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
-@
-
-<<function [[CLI.main]]>>=
-let main (caps : <caps; ..>) (argv : string array) : Exit.t =
-
-  let arch = 
-    match Filename.basename argv.(0) with
-    | "o5c" -> Arch.Arm
-    | "ovc" -> Arch.Mips
-    | s -> failwith (spf "arch could not detected from argv0 %s" s)
-  in
-
-  let thechar = Arch.thechar arch in
-  let thestring = Arch.thestring arch in
-
-  let usage = 
-    spf "usage: %s [-options] file.c" argv.(0)
-  in
-
-  (* in *)
-  let args = ref [] in
-  (* out *)
-  let outfile = ref "" in
-
-  (* for cpp *)
-  let include_paths : Fpath.t list ref = ref [] in
-  let macro_defs = ref [] in
-
-  (* Ansi Posix Environment for plan9 *)
-  let ape = ref false in 
-
-  let level = ref (Some Logs.Warning) in
-  (* for debugging *)
-  let action = ref "" in
-  let backtrace = ref false in
-
-  let options = [
-    "-o", Arg.Set_string outfile,
-    " <file> place output (an object) in file";
-
-    "-D", Arg.String (fun s ->
-      let (var, val_) = 
-        if s =~ "\\(.*\\)=\\(.*\\)"
-        then Regexp_.matched2 s
-        else (s, "1")
-      in
-      macro_defs := (var, val_)::!macro_defs
-    ), " <name=def> (or just <name>) define name for preprocessor";
-    "-I", Arg.String (fun s ->
-      include_paths := Fpath.v s::!include_paths
-    ), " <dir> add dir as a path to look for '#include <file>' files";
-    "-ape", Arg.Set ape,
-    " ";
-
-    "-w", Arg.Set Flags.warn,
-    " enable warnings";
-    "-werror", Arg.Set Flags.warnerror,
-    " warnings generate error exceptions";
-
-    "-S", Arg.Set Flags.dump_asm,
-    " dump the generated assembly";
-
-    "-e", Arg.Set Flags_cpp.debug_include, " ";
-    "-f", Arg.Set Flags_cpp.debug_line, " ";
-    "-m", Arg.Set Flags_cpp.debug_macros, " ";
-
-    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-    " verbose mode";
-    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
-    " guess what";
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-
-    (* pad: I added long names for those options *)
-    "-debug_include", Arg.Set Flags_cpp.debug_include, " ";
-    "-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
-    "-debug_macros",    Arg.Set Flags_cpp.debug_macros, " ";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
-    " dump the typed AST";
-    "-dump_asm", Arg.Set Flags.dump_asm,
-    " dump the generated assembly";
-
-    (* pad: I added that *)
-    "-backtrace", Arg.Set backtrace,
-    " dump the backtrace after an error";
-  ] |> Arg.align
-  in
-  (try
-    Arg.parse_argv argv options (fun t -> 
-      args := t::!args
-    ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
-  Logs_.setup !level ();
-  Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
-
-  (* less: process the old style -Dname=val and -Idir attached *)
-
-  (* to test and debug components of mk *)
-  if !action <> "" then begin 
-    do_action caps thestring !action (List.rev !args); 
-    raise (Exit.ExitCode 0 )
-  end;
-
-  try 
-    (match !args, !outfile with
-    | [], "" -> 
-        Arg.usage options usage;
-        Exit.Code 1
-    | [cfile], outfile ->
-        let base = Filename.basename cfile in
-        let system_paths : Fpath.t list =
-          (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
-          with Not_found ->
-            [spf "/%s/include" thestring; 
-             "/sys/include";
-            ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
-          ) |> Fpath_.of_strings
-        in
-        
-        let outfile : Fpath.t = 
-          (if outfile = ""
-          then
-            if base =~ "\\(.*\\)\\.c"
-            then Regexp_.matched1 base ^ (spf ".%c" thechar)
-            else base ^ (spf ".%c" thechar)
-          else outfile
-          ) |> Fpath.v
-        in
-        let conf = Preprocessor.{
-          defs = !macro_defs;
-          (* this order? *)
-          paths = system_paths @ List.rev !include_paths;
-          dir_source_file = Fpath.v (Filename.dirname cfile);
-        }
-        in
-        outfile |> FS.with_open_out caps (fun chan ->
-          compile caps conf arch (Fpath.v cfile) chan
-        );
-        Exit.OK
-    | _ -> 
-      (* stricter: *)
-        failwith 
-          "compiling multiple files at the same time is not supported; use mk"
-    )
-  with exn ->
-    if !backtrace
-    then raise exn
-    else 
-      (match exn with
-      | Failure s -> 
-          (* useful to indicate that error comes from 5c? *)
-          Error.errorexit (spf "%cc: %s" thechar s)
-      | Location_cpp.Error (s, loc) ->
-          (* less: could use final_loc_and_includers_of_loc loc *)
-          let (file, line) = Location_cpp.final_loc_of_loc loc in
-          Error.errorexit (spf "%s:%d %s" !!file line s)
-      (* ocaml-light: | Check.Error err | Typecheck.Error err | Eval_const.Error err | Codegen5.Error err  *)
-      | Check.Error err -> Error.errorexit (Check.string_of_error err)
-      | Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
-      | Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
-      | Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
-      | _ -> raise exn
-      )
-@
-
 
 %-------------------------------------------------------------
 
@@ -1574,12 +441,7 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Types, constants, and globals *)
 (*****************************************************************************)
-(* Need: see .mli *)
 <<type [[CLI.caps]]>>
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
 
 (*****************************************************************************)
 (* Testing *)
@@ -1591,15 +453,11 @@ open Regexp_.Operators
 (* Main algorithms *)
 (*****************************************************************************)
 
-(* TODO: move somewhere else, rename ids_structs_funcs? or use
- * record with fields!
- *)
 <<type [[CLI.frontend_result]]>>
 
 <<function [[CLI.frontend]]>>
 
 <<function [[CLI.backend5]]>>
-
 <<function [[CLI.compile5]]>>
 
 <<function [[CLI.compile]]>>
@@ -1614,36 +472,17 @@ open Regexp_.Operators
 
 \section{[[Codegen5.mli]]}
 
-<<type [[Codegen5.error (Codegen5.mli)]]>>=
-type error = Check.error
-@
-
 <<signature [[Codegen5.string_of_error]]>>=
 val string_of_error: error -> string
 @
-
-<<exception [[Codegen5.Error (Codegen5.mli)]]>>=
-exception Error of error
-@
-
-<<signature [[Codegen5.codegen]]>>=
-(* can raise Error *)
-val codegen: 
-  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t * 
-  Ast.func_def list 
-  -> 
-  Ast_asm5.program
-@
-
 
 %-------------------------------------------------------------
 
 <<Codegen5.mli>>=
 
-<<type [[Codegen5.error (Codegen5.mli)]]>>
+<<type [[Codegen5.error]]>>
 <<signature [[Codegen5.string_of_error]]>>
-<<exception [[Codegen5.Error (Codegen5.mli)]]>>
+<<exception [[Codegen5.Error]]>>
 
 <<signature [[Codegen5.codegen]]>>
 @
@@ -1651,61 +490,13 @@ val codegen:
 
 \section{[[Codegen5.ml]]}
 
-<<type [[Codegen5.env]]>>=
-type env = {
-
-  (* computed by previous typechecking phase *)
-
-  ids:     (Ast.fullname, TC.idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
-
-  (* less: compute offset for each field?
-   * fields: (Ast.fullname * string, A.offset) Hashtbl.t
-   *)
-
-  arch: Arch_compiler.t;
-
-  (* the output *)
-
-  pc: Ast_asm.virt_pc ref;
-
-  (* growing array *)
-  code: (A5.instr_with_cond A.line * A.loc) array ref;
-  (* should contain only DATA or GLOBL *)
-  data: (A5.instr_with_cond A.line * A.loc) list ref;
-
-  (* reinitialized for each function *)
-
-  (* reference counting the used registers (size = 16), 
-   * really a (A.register, int) Hashtbl.t;
-   *)
-  regs: int array;
-
-  size_locals: int ref;
-  offset_locals: int ref;
-  (* for parameters and locals *)
-  offsets: (Ast.fullname, int) Hashtbl.t;
-
-  (* for goto/labels *)
-  labels: (string, Ast_asm.virt_pc) Hashtbl.t;
-  (* if the label is defined after the goto, when we process the label,
-   * we need to update previous goto instructions.
-   *)
-  forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
-
-  (* for loops (and switch) *)
-  (* reinitialized for each block scope *)
-  break_pc: Ast_asm.virt_pc option;
-  continue_pc: Ast_asm.virt_pc option;
-
-}
-@
 
 <<constant [[Codegen5.rRET]]>>=
 let rRET = R 0
 @
 
 <<constant [[Codegen5.rEXT1]]>>=
+(* for 'extern register xx;', used in ARM kernel *)
 let rEXT1 = R 10
 @
 
@@ -1729,25 +520,6 @@ let regs_initial =
 type integer = int
 @
 
-<<type [[Codegen5.operand_able]]>>=
-type operand_able = 
- { opd: operand_able_kind;
-   typ: Type.t;
-   loc: Ast.loc;
- }
-@
-
-<<type [[Codegen5.operand_able_kind]]>>=
-and operand_able_kind =
- | ConstI of integer
- | Register of register
-
- (* indirect *)
- | Name of Ast.fullname * offset
- | Indirect of register * offset
- (* was not "addressable" in original 5c, but I think it should *)
- | Addr of Ast.fullname
-@
 
 <<type [[Codegen5.error]]>>=
 type error = Check.error
@@ -1898,114 +670,7 @@ let arith_instr_of_op op r1 r2 r3 =
   )
 @
 
-<<function [[Codegen5.operand_able]]>>=
-let operand_able e0 =
-  let kind_opt = 
-    match e0.e with
-    | Int (s, _inttype) -> Some (ConstI (int_of_string s))
-    (* todo: float handling *)
-    | Float _ -> None
-    | Id fullname -> Some (Name (fullname, 0))
-    | Unary (op, e) ->
-      (match op with
-      (* special case to handle *(&arr + <cst>) *)
-      | DeRef  ->
-        (match e.e with
-        (* less: this should be handled in rewrite.ml *(&x) ==> x *)
-        | (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })) -> Some (Name (fullname, 0))
-        (* less: should normalize constant to left or right in rewrite.ml *)
-        | Binary ({ e = Int (s1, _); e_loc=_;e_type=_ }, 
-                  Arith Plus, 
-                  {e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ })
-          -> Some (Name (fullname, int_of_string s1))
-        | Binary ({e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ }, 
-                  Arith Plus, 
-                  { e = Int (s1, _); e_loc=_;e_type=_a })
-          -> Some (Name (fullname, int_of_string s1))
-        | _ -> None
-        )
 
-      | GetRef -> 
-        (match e.e with
-        (* why 5c does not make OADDR (ONAME) an addressable node? *)
-        | Id fullname -> Some (Addr fullname)
-        | _ -> None
-        )
-   
-      | (UnPlus | UnMinus | Tilde) -> 
-        raise (Impossible "should have been converted")
-      | Not -> None
-      )
-    (* less: could be operand_able if we do constant_evaluation later *)
-    | Binary (_e1, _op, _e2) -> None
-    | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
-      -> None
-    
-    | Cast _ -> raise Todo
-    | RecordAccess _ -> raise Todo
-    
-    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
-      raise (Impossible "should have been converted")
-    | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
-      None
-  in
-  match kind_opt with
-  | None -> None
-  | Some opd -> Some { opd = opd; typ = e0.e_type; loc = e0.e_loc }
-@
-
-<<constant [[Codegen5.fn_complexity]]>>=
-let fn_complexity = 100 
-@
-
-<<function [[Codegen5.complexity]]>>=
-(* less: could optimize by caching result in node, so no need
- * call again complexity on subtree later
- *)
-let rec complexity e =
-  if operand_able e <> None
-  then 0
-  else 
-    match e.e with
-    | Int _ | Float _ | String _ | Id _ -> 0
-    | Call _ -> fn_complexity
-    | Assign _ | ArrayAccess _ | Binary _ | Sequence _ ->
-      let (e1, e2) =
-        match e.e with
-        | Assign (_, e1, e2) -> e1, e2
-        | ArrayAccess (e1, e2) -> e1, e2
-        | Binary (e1, _, e2) -> e1, e2
-        | Sequence (e1, e2) -> e1, e2
-        | _ -> raise (Impossible "see pattern match above")
-      in
-      let n1 = complexity e1 in
-      let n2 = complexity e2 in
-      if n1 = n2
-      then 1 + n1
-      else max n1 n2
-
-    | CondExpr (e1, e2, e3) -> 
-      complexity {e with e = Sequence (e1, { e with e = Sequence (e2, e3) } ) }
-
-    | RecordAccess _ | RecordPtAccess _ | Cast _ | Postfix _ | Prefix _ | Unary _
-      -> 
-       let e =
-         match e.e with
-         | RecordAccess (e, _) -> e
-         | RecordPtAccess (e, _) -> e
-         | Cast (_, e) -> e
-         | Postfix (e, _) -> e
-         | Prefix (_, e) -> e
-         | Unary (_, e) -> e
-         | _ -> raise (Impossible "see pattern match above")
-      in
-      let n = complexity e in
-      if n = 0 then 1 else n
-    (* should be converted in Int anyway *)
-    | SizeOf _ -> 0
-
-    | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
-@
 
 <<function [[Codegen5.reguse]]>>=
 let reguse env (A.R x) =
@@ -2090,148 +755,6 @@ let gmove_opt env opd1 opd2opt =
     ()
 @
 
-<<function [[Codegen5.expr]]>>=
-(* todo: inrel ? 
- * todo: if complex type node
- * less: dst_opd always a register? maybe, but still need to carry
- *  also its type and loc, so maybe easier to always wrap it in an operand?
- *)
-let rec expr env e0 dst_opd_opt =
-
-  match operand_able e0 with
-  | Some opd1 -> gmove_opt env opd1 dst_opd_opt
-  | None ->
-    (match e0.e with
-    | Sequence (e1, e2) -> 
-      expr env e1 None;
-      expr env e2 dst_opd_opt
-    
-    (* less: lots of possible opti *)
-    | Binary (e1, op, e2) ->
-      (match op with
-      | Arith (Plus | Minus 
-              | And | Or | Xor 
-              | ShiftLeft | ShiftRight
-              | Mul | Div | Mod) ->
-        let n1 = complexity e1 in
-        let n2 = complexity e2 in
-        let opdres, opdother = 
-          if n1 >= n2
-          then begin
-            let opd1reg = opd_regalloc env e1.e_type e1.e_loc dst_opd_opt in
-            expr env e1 (Some opd1reg);
-            let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-            expr env e2 (Some opd2reg);
-            (match opd1reg.opd, opd2reg.opd with
-            | Register r1, Register r2 ->
-              (* again reverse order SUB r2 r1 ... means r1 - r2 *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A5.AL)) 
-                e0.e_loc;
-            | _ -> raise (Impossible "both operands comes from opd_regalloc")
-            );
-            opd1reg, opd2reg
-          end
-          else begin
-            let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
-            expr env e2 (Some opd2reg);
-            let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
-            expr env e1 (Some opd1reg);
-            (match opd1reg.opd, opd2reg.opd with
-            | Register r1, Register r2 ->
-              (* This time we store result in r2! important and subtle.
-               * This avoids some extra MOVW; see plus_chain.c
-               *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A5.AL)) 
-                e0.e_loc;
-            | _ -> raise (Impossible "both operands comes from opd_regalloc")
-            );
-            opd2reg, opd1reg
-          end
-        in
-        (* This is why it is better for opdres to be the register
-         * allocated from dst_opd_opt so the MOVW below can become a NOP
-         * and be removed.
-         *)
-        gmove_opt env opdres dst_opd_opt;
-
-        opd_regfree env opdres;
-        opd_regfree env opdother;
-            
-      | Logical _ ->
-        raise Todo
-      )
-    
-    | Assign (op, e1, e2) ->
-      (match op with
-      | SimpleAssign ->
-        (match operand_able e1, operand_able e2, dst_opd_opt with
-        (* ex: x = 1; *)
-        | Some opd1, Some opd2, None -> 
-          (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
-          gmove env opd2 opd1
-
-        (* ex: return x = 1;, x = y = z, ... *)
-        | Some _opd1, Some _opd2, Some _dst ->
-          raise Todo
-
-
-        (* ex: y = &x;, y = x + y, ... *)
-        | Some opd1, None, None ->
-          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-          expr env e2 (Some opd2reg);
-          gmove env opd2reg opd1;
-          opd_regfree env opd2reg;
-
-        (* ex: return x = x+y;, x = y = z, ... *)
-        | Some opd1, None, Some dst ->
-          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-          expr env e2 (Some opd2reg);
-          gmove env opd2reg opd1;
-          gmove env opd2reg dst; (* only diff with case above *)
-          opd_regfree env opd2reg;
-
-
-        (* ex: *x = 1; *)
-        | None, _, _ ->
-          raise Todo
-        )
-      | OpAssign _op ->
-        raise Todo
-      )
-    | Unary (op, e) ->
-      (match op with
-      | GetRef -> 
-        (match e.e  with
-        | Id _fullname -> 
-          raise (Impossible "handled in operand_able()")
-        | Unary (DeRef, _) ->
-          raise (Impossible "should be simplified in rewrite.ml")
-        | _ -> 
-          raise (Impossible "not an lvalue?")
-        )
-
-      | DeRef ->
-        (* less: opti of Deref of Add with constant? *)
-        let opd1reg = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
-        expr env e (Some opd1reg);
-        gmove_opt env
-          (match opd1reg.opd with
-          | Register r -> { opd = Indirect (r, 0); loc = e.e_loc;
-                            typ = e0.e_type }
-          | _ -> raise (Impossible "opd_regalloc_e returns always Register")
-          ) dst_opd_opt;
-        opd_regfree env opd1reg;
-        
-
-      | (UnPlus | UnMinus | Tilde) -> 
-        raise (Impossible "should have been converted")
-      | Not -> raise Todo
-      )
-    | _ -> 
-      Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
-      raise Todo
-    )
-@
 
 <<function [[Codegen5.expr_cond]]>>=
 let expr_cond env e0 =
@@ -2253,260 +776,6 @@ let expropt env eopt =
   match eopt with
   | None -> ()
   | Some e -> expr env e None
-@
-
-<<function [[Codegen5.stmt]]>>=
-let rec stmt env st0 =
-  match st0.s with
-  | ExprSt e -> expr env e None
-  | Block xs -> xs |> List.iter (stmt env)
-  | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
-      let idinfo = Hashtbl.find env.ids fullname in
-      (* todo: generate code for idinfo.ini *)
-
-      (* update env.offsets *)
-      let t = idinfo.TC.typ in
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
-      in
-      (* todo: align *)
-      env.offset_locals := !(env.offset_locals) + sizet;
-      env.size_locals := !(env.size_locals) + sizet;
-      Hashtbl.add env.offsets fullname !(env.offset_locals);
-  | Return eopt ->
-    (match eopt with
-    | None ->
-      add_instr env (A.Virtual A.RET) st0.s_loc
-    | Some e ->
-      (* todo: if type compatible with R0 *)
-      with_reg env rRET (fun () ->
-        let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
-        expr env e (Some dst);
-        add_instr env (A.Virtual A.RET) st0.s_loc
-      )
-    )
-
-  | Label (name, st) ->
-    let here = !(env.pc) in
-    Hashtbl.add env.labels name here;
-    if Hashtbl.mem env.forward_gotos name
-    then begin
-      let xs = Hashtbl.find env.forward_gotos name in
-      xs |> List.iter (fun xpc -> patch_fake_goto env xpc here);
-      (* not really necessary because can not define the same label twice *)
-      Hashtbl.remove env.forward_gotos name
-    end;
-    (* todo? generate dummy Goto +1? *)
-    stmt env st
-  | Goto name ->
-    let here = !(env.pc) in
-    let dstpc = 
-      if Hashtbl.mem env.labels name
-      then Hashtbl.find env.labels name
-      else begin
-        Hashtbl.replace env.forward_gotos name
-          (here:: (if Hashtbl.mem env.forward_gotos name
-                  then Hashtbl.find env.forward_gotos name
-                  else []));
-        fake_pc
-      end
-    in
-    add_instr env (A.Instr (A5.B (ref (A.Absolute dstpc)), A5.AL)) st0.s_loc;
-    
-  | If (e, st1, st2) ->
-    let goto_else_or_end = ref (expr_cond env e) in
-    if st1.s <> Block []
-    then stmt env st1;
-    if st2.s <> Block []
-    then begin
-      let goto_end = add_fake_goto env st2.s_loc in
-      patch_fake_goto env !goto_else_or_end !(env.pc);
-      stmt env st2;
-      goto_else_or_end := goto_end;
-    end;
-    patch_fake_goto env !goto_else_or_end !(env.pc)
-
-  | While (e, st) ->
-    let goto_entry        = add_fake_goto env e.e_loc in
-    let goto_for_continue = add_fake_goto env e.e_loc in
-    let goto_for_break    = add_fake_goto env e.e_loc in
-    patch_fake_goto env goto_for_continue !(env.pc);
-    patch_fake_goto env goto_entry !(env.pc);
-    
-    let goto_else = expr_cond env e in
-    patch_fake_goto env goto_else goto_for_break;
-
-    let env = { env with 
-      break_pc = Some goto_for_break; 
-      continue_pc = Some goto_for_continue;
-    }
-    in
-    stmt env st;
-
-    (* less: should be last loc of st? *)
-    let loc = e.e_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
-    patch_fake_goto env goto_for_break !(env.pc)
-
-  | DoWhile (st, e) ->
-
-    let goto_entry        = add_fake_goto env e.e_loc in
-    let goto_for_continue = add_fake_goto env e.e_loc in
-    let goto_for_break    = add_fake_goto env e.e_loc in
-    patch_fake_goto env goto_for_continue !(env.pc);
-    (* for a while: patch_fake_goto env goto_entry env.pc; *)
-    
-    let goto_else = expr_cond env e in
-    patch_fake_goto env goto_else goto_for_break;
-    (* for a dowhile! *)
-    patch_fake_goto env goto_entry !(env.pc);
-
-    let env = { env with 
-      break_pc = Some goto_for_break; 
-      continue_pc = Some goto_for_continue;
-    }
-    in
-    stmt env st;
-
-    (* less: should be last loc of st? *)
-    let loc = e.e_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
-    patch_fake_goto env goto_for_break !(env.pc)
-
-  | Break -> 
-    (match env.break_pc with
-    | Some dst ->
-      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
-    | None -> raise (Impossible "should be detected in check.ml")
-    )
-  | Continue ->
-    (match env.continue_pc with
-    | Some dst ->
-      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
-    | None -> raise (Impossible "should be detected in check.ml")
-    )
-
-  | For (e1either, e2opt, e3opt, st) ->
-    (match e1either with
-    | Left e1opt -> expropt env e1opt
-    (* todo: scope, should reset autoffset once processed loop *)
-    | Right decls -> 
-      decls |> List.iter (fun var -> stmt env { s = Var var; s_loc=var.v_loc});
-    );
-    let goto_entry        = add_fake_goto env st0.s_loc in
-    let goto_for_continue = add_fake_goto env st0.s_loc in
-    let goto_for_break    = add_fake_goto env st0.s_loc in
-
-    patch_fake_goto env goto_for_continue !(env.pc);
-    expropt env e3opt;
-    patch_fake_goto env goto_entry !(env.pc);
-    (match e2opt with
-    | None -> ()
-    | Some e2 -> 
-      let goto_else = expr_cond env e2 in
-      patch_fake_goto env goto_else goto_for_break;
-    );
-    
-    let env = { env with 
-      break_pc = Some goto_for_break; 
-      continue_pc = Some goto_for_continue;
-    }
-    in
-    stmt env st;
-
-    let loc = st0.s_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
-    patch_fake_goto env goto_for_break !(env.pc)
-
-  | Switch _ 
-  | Case _ | Default _ -> 
-    raise Todo
-@
-
-<<function [[Codegen5.codegen]]>>=
-let codegen (ids, structs, funcs) : Ast_asm5.program =
-  let env = {
-    ids = ids;
-    structs = structs;
-    arch = Arch5.arch;
-
-    pc = ref 0;
-    code = ref [||];
-    data = ref [];
-
-    size_locals = ref 0;
-    offset_locals = ref 0;
-    offsets       = Hashtbl.create 0;
-    labels        = Hashtbl.create 0;
-    forward_gotos = Hashtbl.create 0;
-
-    break_pc = None;
-    continue_pc = None;
-
-    regs          = Array.make 0 16;
-  } in
-
-  funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
-    let fullname = (name, 0) in
-    let idinfo = Hashtbl.find env.ids fullname in
-    (* todo: if Flag.profile (can be disabled by #pragma) *)
-    let attrs = noattr in
-
-    let spc = add_fake_instr env "TEXT" in
-    
-    (* set offsets for parameters *)
-    let offsets = Hashtbl.create 11 in
-    let (_typret, (typparams, _varargs)) = typ in
-    let t = idinfo.TC.typ in
-    let tparams = 
-      match t with
-      | T.Func (_tret, tparams, _varargs) -> tparams
-      | _ -> raise (Impossible "not a FUNC")
-    in
-    assert (List.length tparams = List.length typparams);
-    let xs = List_.zip typparams tparams in
-    let offset = ref 0 in
-    xs |> List.iter (fun (p, t) ->
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
-      in
-      p.p_name |> Option.iter (fun fullname ->
-        Hashtbl.add offsets fullname !offset
-      );
-      (* todo: align *)
-      offset := !offset + sizet;
-    );
-    
-    
-    (* todo: align offset_locals with return type *)
-    let env = { env with
-      size_locals = ref 0;
-      offset_locals = ref 0;
-      offsets       = offsets;
-      labels        = Hashtbl.create 11;
-      forward_gotos = Hashtbl.create 11;
-      regs          = Array.copy regs_initial;
-    }
-    in
-    stmt env st;
-
-    set_instr env spc 
-      (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
-                         !(env.size_locals)))) f_loc;
-    add_instr env (A.Virtual A.RET) f_loc;
-
-    (* sanity check register allocation *)
-    env.regs |> Array.iteri (fun i v ->
-      if regs_initial.(i) <> v
-      then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
-    );
-  );
-
-  (* todo: generate code for ids after, for CGLOBAL *)
-  let instrs = 
-    (Array.sub !(env.code) 0 !(env.pc) |> Array.to_list) @
-      List.rev !(env.data)
-  in
-  let locs = [] in
-  instrs, locs
 @
 
 
@@ -2548,26 +817,21 @@ module E = Check
 (* Types *)
 (*****************************************************************************)
 
-(* Environment for code generation *)
 <<type [[Codegen5.env]]>>
 
 <<constant [[Codegen5.rRET]]>>
 (* opti: let rARG = A.R 0 *)
 
-(* for 'extern register xx;', used in ARM kernel *)
 <<constant [[Codegen5.rEXT1]]>>
 <<constant [[Codegen5.rEXT2]]>>
 
 <<constant [[Codegen5.regs_initial]]>>
    
   
-
 <<type [[Codegen5.integer]]>>
 
-(* some form of instruction selection *)
 <<type [[Codegen5.operand_able]]>>
 <<type [[Codegen5.operand_able_kind]]>>
-
 
 
 <<type [[Codegen5.error]]>>
@@ -2621,7 +885,6 @@ module E = Check
 
 <<function [[Codegen5.complexity]]>>
 
-
 (*****************************************************************************)
 (* Register allocation helpers *)
 (*****************************************************************************)
@@ -2638,7 +901,6 @@ module E = Check
 <<function [[Codegen5.opd_regalloc]]>>
 
 <<function [[Codegen5.opd_regfree]]>>
-
 
 (*****************************************************************************)
 (* Code generation helpers *)
@@ -2707,7 +969,6 @@ and gmove_aux env move_size opd1 opd2 =
 
 <<function [[Codegen5.gmove_opt]]>>
 
-
 (*****************************************************************************)
 (* Expression *)
 (*****************************************************************************)
@@ -2723,26 +984,15 @@ and gmove_aux env move_size opd1 opd2 =
 (*****************************************************************************)
 <<function [[Codegen5.stmt]]>>
 
-
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
-
 <<function [[Codegen5.codegen]]>>
 
 @
 
 
 \section{[[Dumper_.mli]]}
-
-<<signature [[Dumper_.s_of_any]]>>=
-val s_of_any: Ast.any -> string
-@
-
-<<signature [[Dumper_.s_of_any_with_types]]>>=
-val s_of_any_with_types: Ast.any -> string
-@
-
 
 %-------------------------------------------------------------
 
@@ -2756,24 +1006,6 @@ val s_of_any_with_types: Ast.any -> string
 
 \section{[[Dumper_.ml]]}
 
-<<function [[Dumper_.s_of_any]]>>=
-(* less: could have s_of_any_with_pos *)
-let s_of_any x =
-  Meta_ast.show_types := false;
-  Meta_ast.show_all_pos := false;
-  let v = Meta_ast.vof_any x in
-  OCaml.string_of_v v
-@
-
-<<function [[Dumper_.s_of_any_with_types]]>>=
-let s_of_any_with_types x =
-  Meta_ast.show_types := true;
-  Meta_ast.show_all_pos := false;
-  let v = Meta_ast.vof_any x in
-  OCaml.string_of_v v
-@
-
-
 %-------------------------------------------------------------
 
 <<Dumper_.ml>>=
@@ -2785,15 +1017,6 @@ let s_of_any_with_types x =
 
 
 \section{[[Error.mli]]}
-
-<<signature [[Error.warn]]>>=
-val warn: string -> Location_cpp.loc -> unit
-@
-
-<<signature [[Error.errorexit]]>>=
-(* this raises Exit.ExitCode 1 *)
-val errorexit: string -> 'a
-@
 
 
 %-------------------------------------------------------------
@@ -2807,24 +1030,6 @@ val errorexit: string -> 'a
 
 
 \section{[[Error.ml]]}
-
-<<function [[Error.warn]]>>=
-let warn s loc =
-  if !Flags.warn
-  then 
-    if !Flags.warnerror
-    then raise (Location_cpp.Error (spf "Warning: %s" s, loc))
-    else 
-      let (file, line) = Location_cpp.final_loc_of_loc loc in
-      Logs.warn (fun m -> m "%s:%d: %s" !!file line s)
-@
-
-<<function [[Error.errorexit]]>>=
-let errorexit s =
-  Logs.err (fun m -> m "%s" s);
-  raise (Exit.ExitCode 1)
-@
-
 
 %-------------------------------------------------------------
 
@@ -2841,26 +1046,6 @@ open Fpath_.Operators
 
 \section{[[Eval_const.mli]]}
 
-<<exception [[Eval_const.NotAConstant (Eval_const.mli)]]>>=
-exception NotAConstant
-@
-
-<<type [[Eval_const.error (Eval_const.mli)]]>>=
-type error = Check.error
-@
-
-<<exception [[Eval_const.Error (Eval_const.mli)]]>>=
-exception Error of error
-@
-
-<<type [[Eval_const.integer (Eval_const.mli)]]>>=
-type integer = int
-@
-
-<<type [[Eval_const.env (Eval_const.mli)]]>>=
-type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t 
-@
-
 <<signature [[Eval_const.eval]]>>=
 (* may raise NotAConstant or Error *)
 val eval: env -> Ast.expr -> integer
@@ -2871,13 +1056,13 @@ val eval: env -> Ast.expr -> integer
 
 <<Eval_const.mli>>=
 
-<<exception [[Eval_const.NotAConstant (Eval_const.mli)]]>>
+<<exception [[Eval_const.NotAConstant]]>>
 
-<<type [[Eval_const.error (Eval_const.mli)]]>>
-<<exception [[Eval_const.Error (Eval_const.mli)]]>>
+<<type [[Eval_const.error]]>>
+<<exception [[Eval_const.Error]]>>
 
-<<type [[Eval_const.integer (Eval_const.mli)]]>>
-<<type [[Eval_const.env (Eval_const.mli)]]>>
+<<type [[Eval_const.integer]]>>
+<<type [[Eval_const.env]]>>
 
 <<signature [[Eval_const.eval]]>>
 @
@@ -2904,71 +1089,6 @@ type error = Check.error
 <<exception [[Eval_const.Error]]>>=
 exception Error of error
 @
-
-<<function [[Eval_const.eval]]>>=
-(* stricter: I do not handle float constants for enums *)
-let rec eval env e0 =
-  match e0.e with
-  (* todo: enough for big integers? 
-   * todo: we should also return an inttype in addition to the integer value.
-   *)
-  | Int (s, _inttype) -> int_of_string s
-  | Id fullname ->
-     if Hashtbl.mem env fullname
-     then
-       let (i, _inttype) = Hashtbl.find env fullname in
-       i
-     else raise NotAConstant
-  | Binary (e1, op, e2) ->
-    let i1 = eval env e1 in
-    let i2 = eval env e2 in
-    (match op with
-    | Arith op -> 
-      (match op with
-      | Plus -> i1 + i2
-      | Minus -> i1 - i2
-      | Mul -> i1 * i2
-      | Div -> 
-        (* stricter: error, not warning *)
-        if i2 = 0 
-        then raise (Error (E.Misc ("divide by zero", e0.e_loc)))
-        else i1 / i2
-      | Mod -> 
-        if i2 = 0 
-        then raise (Error (E.Misc ("modulo by zero", e0.e_loc)))
-        else i1 mod i2
-      | And -> i1 land i2
-      | Or -> i1 lor i2
-      | Xor -> i1 lxor i2
-      | ShiftLeft -> i1 lsl i2
-      (* less: could be asr! need type information! *)
-      | ShiftRight -> i1 lsr i2
-      )
-    | Logical op ->
-      (match op with
-      | Eq    -> if i1 =  i2 then 1 else 0
-      | NotEq -> if i1 <> i2 then 1 else 0
-      | Inf   -> if i1 <  i2 then 1 else 0
-      | Sup   -> if i1 >  i2 then 1 else 0
-      | InfEq -> if i1 <= i2 then 1 else 0
-      | SupEq -> if i1 >= i2 then 1 else 0
-      | AndLog -> raise Todo
-      | OrLog -> raise Todo
-      )
-    )
-  | Unary (op, e) ->
-    let i = eval env e in
-    (match op with
-    | UnPlus -> i
-    | UnMinus -> - i
-    | Tilde -> lnot i (* sure? *)
-    | _ -> raise Todo
-    )
-
-  | _ -> 
-    raise NotAConstant (* todo: more opporunities? *)
-@
-
 
 %-------------------------------------------------------------
 
@@ -3004,37 +1124,12 @@ module E = Check
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[Eval_const.eval]]>>
-
 @
 
 
 \section{[[Flags.ml]]}
 
-<<constant [[Flags.warn]]>>=
-let warn = ref false
-@
-
-<<constant [[Flags.warnerror]]>>=
-let warnerror = ref false
-@
-
-<<constant [[Flags.dump_tokens]]>>=
-let dump_tokens = ref false
-@
-
-<<constant [[Flags.dump_ast]]>>=
-let dump_ast = ref false
-@
-
-<<constant [[Flags.dump_typed_ast]]>>=
-let dump_typed_ast = ref false
-@
-
-<<constant [[Flags.dump_asm]]>>=
-let dump_asm = ref false
-@
 
 <<constant [[Flags.debugger]]>>=
 let debugger = ref false
@@ -3075,25 +1170,13 @@ let backtrace = ref false
 
 (* See also globals in ../macroprocessor/location_cpp.ml  *)
 
-(* to recognize typedefs in the lexer *)
-let (hids: (string, Ast.idkind) Hashtbl.t) = 
-  Hashtbl.create 101
+<<global [[Globals.hids]]>>
 @
 
 
 \section{[[Lexer.mll]]}
 
 \section{[[Main.ml]]}
-
-<<toplevel [[Main._1]]>>=
-let _ = 
-  Cap.main (fun (caps : Cap.all_caps) ->
-     let argv = CapSys.argv caps in
-     Exit.exit caps 
-        (Exit.catch (fun () -> 
-            CLI.main caps argv))
-@
-
 
 %-------------------------------------------------------------
 
@@ -3105,24 +1188,10 @@ let _ =
 (* Entry point *)
 (*****************************************************************************)
 <<toplevel [[Main._1]]>>
-  )
 @
 
 
 \section{[[Parse.mli]]}
-
-<<signature [[Parse.parse]]>>=
-(* will call cpp internally first *)
-val parse: 
-  < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast.program
-@
-
-<<signature [[Parse.parse_no_cpp]]>>=
-(* internals *)
-val parse_no_cpp:
-  Chan.i -> Ast.program
-@
-
 
 %-------------------------------------------------------------
 
@@ -3135,49 +1204,6 @@ val parse_no_cpp:
 
 
 \section{[[Parse.ml]]}
-
-<<function [[Parse.parse]]>>=
-let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
-  let hooks = Parse_cpp.{
-     lexer = Lexer.token;
-     category = (fun t ->
-       match t with
-       | T.EOF    -> Parse_cpp.Eof
-       | T.TSharp -> Parse_cpp.Sharp
-
-       (* ocaml-light: | T.TName (_, s) | T.TTypeName (_, s) *)
-       | T.TName (_, s)  -> Parse_cpp.Ident s
-       | T.TTypeName (_, s) -> Parse_cpp.Ident s
-        (* stricter: I forbid to have macros overwrite keywords *)
-        (*
-        | T.Tvoid | T.Tchar | T.Tshort | T.Tint | T.Tlong
-        | T.Tdouble | T.Tfloat | T.Tsigned | T.Tunsigned
-        | T.Tstruct | T.Tunion | T.Tenum | T.Ttypedef
-        | T.Tconst | T.Tvolatile | T.Trestrict | T.Tinline
-        | T.Tauto | T.Tstatic | T.Textern | T.Tregister
-        | T.Tif | T.Telse | T.Twhile | T.Tdo | T.Tfor 
-        | T.Tbreak | T.Tcontinue | T.Treturn | T.Tgoto
-        | T.Tswitch | T.Tcase | T.Tdefault | T.Tsizeof
-        *)
-       | _ -> Parse_cpp.Other
-     );
-   parser = Parser.prog;
-   eof = T.EOF;
-  }
-  in
-  Parse_cpp.parse caps hooks conf file
-@
-
-<<function [[Parse.parse_no_cpp]]>>=
-(* ?? what for ? *)
-let parse_no_cpp (chan : Chan.i) =
-  L.line := 1;
-  let lexbuf = Lexing.from_channel chan.ic in
-  (try 
-      Parser.prog Lexer.token lexbuf, []
-    with Parsing.Parse_error ->
-        failwith (spf "Syntax error: line %d" !L.line)
-@
 
 
 %-------------------------------------------------------------
@@ -3199,16 +1225,12 @@ module T = Parser  (* T for Tokens *)
 
 <<function [[Parse.parse]]>>
 
-
-
 <<function [[Parse.parse_no_cpp]]>>
-  )
 @
 
 \section{[[Parser.mly]]}
 
 \section{[[Rewrite.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -3217,7 +1239,6 @@ module T = Parser  (* T for Tokens *)
 
 
 \section{[[Rewrite.ml]]}
-
 
 %-------------------------------------------------------------
 
@@ -3235,18 +1256,6 @@ module T = Parser  (* T for Tokens *)
 
 \section{[[Storage.ml]]}
 
-<<type [[Storage.t]]>>=
-type t =
-  | Local  (* local *)
-  | Param  (* parameter *)
-  | Extern (* public global defined elsewhere *)
-  | Global (* public global defined here *)
-  | Static (* Private global less: could rename Private *)
-  (* less:  | Inline? | Register? | ExternRegister? *)
-[@@deriving show]
-@
-
-
 %-------------------------------------------------------------
 
 <<Storage.ml>>=
@@ -3259,81 +1268,6 @@ type t =
 
 \section{[[Type.ml]]}
 
-<<type [[Type.blockid]]>>=
-type blockid = int
-[@@deriving show]
-@
-
-<<type [[Type.fullname]]>>=
-type fullname = string * blockid
-[@@deriving show]
-@
-
-<<type [[Type.t]]>>=
-type t =
-  | Void
-  | I of integer_type
-  | F of float_type
-  | Pointer of t
-  (* Why not unsugar Array to Pointer? Because the type system checks 
-   * for some array incompatibilities. int[2] != int[3].
-   * However, the Array type usually gets converted to Pointer
-   * during typechecking.
-   *)
-  | Array of int option * t
-  | Func of t * t list * bool (* varargs '...' *)
-  | StructName of struct_kind * fullname
-@
-
-<<type [[Type.integer_type]]>>=
-  and integer_type = integer_kind * sign
-@
-
-<<type [[Type.integer_kind]]>>=
-    and integer_kind = 
-    | Char
-    | Short
-    | Int
-    | Long
-    | VLong
-@
-
-<<type [[Type.sign]]>>=
-    and sign = Signed | Unsigned
-@
-
-<<type [[Type.float_type]]>>=
-  and float_type = 
-  | Float
-  | Double
-@
-
-<<type [[Type.struct_kind]]>>=
- and struct_kind = Struct | Union
-@
-
-<<type [[Type.qualifier]]>>=
-type qualifier = 
-  | Volatile
-  | Const
-  (* less: unsupported: | Restrict | Inline *)
-[@@deriving show]
-@
-
-<<type [[Type.structdef]]>>=
-type structdef = (string * t) list
-[@@deriving show]
-@
-
-<<constant [[Type.int]]>>=
-let int = I (Int, Signed)
-@
-
-<<constant [[Type.long]]>>=
-let long = I (Long, Signed)
-@
-
-
 %-------------------------------------------------------------
 
 <<Type.ml>>=
@@ -3343,16 +1277,6 @@ let long = I (Long, Signed)
 <<type [[Type.blockid]]>>
 <<type [[Type.fullname]]>>
 
-(* The C type system.
- *
- * There is no Typedef below. The typechecker expands typedefs. 
- * There is no Enum either because variables using enum 
- * (as in 'enum Foo x;') gets their type expanded to an integer type.
- *
- * less: put qualifier here?
- * todoext: Bool! with strict bool checking. 
- * todoext: Enum of fullname with stricter checking.
- *)
 <<type [[Type.t]]>>
 
 <<type [[Type.integer_type]]>>
@@ -3368,8 +1292,6 @@ let long = I (Long, Signed)
 
 
 
-(* note that the field can be gensym'ed for anonymous struct/union elements *)
-(* todo: bitfield *)
 <<type [[Type.structdef]]>>
 
 <<constant [[Type.int]]>>
@@ -3379,56 +1301,15 @@ let long = I (Long, Signed)
 
 \section{[[Typecheck.mli]]}
 
-<<type [[Typecheck.idinfo (Typecheck.mli)]]>>=
-type idinfo = {
-    typ: Type.t;
-    sto: Storage.t;
-    loc: Location_cpp.loc;
-    (* typed initialisers *)
-    ini: Ast.initialiser option;
-  }
-@
-
-<<type [[Typecheck.error (Typecheck.mli)]]>>=
-type error = Check.error
-@
-
-<<signature [[Typecheck.string_of_error]]>>=
-val string_of_error: error -> string
-@
-
-<<exception [[Typecheck.Error (Typecheck.mli)]]>>=
-exception Error of error
-@
-
-<<signature [[Typecheck.check_and_annotate_program]]>>=
-(* Returns resolved type and storage information for identifiers and tags.
- * Annotate also with types each expression nodes in the returned functions
- * (so you can more easily generate code later).
- * 
- * It also internally resolves enum constants and replaces them
- * with constants and evaluates some constant expressions (e.g., for
- * array size).
- * 
- * can raise Error.
- *)
-val check_and_annotate_program: 
-  Ast.program -> 
-  (Ast.fullname, idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
-  Ast.func_def list
-@
-
-
 %-------------------------------------------------------------
 
 <<Typecheck.mli>>=
 
-<<type [[Typecheck.idinfo (Typecheck.mli)]]>>
+<<type [[Typecheck.idinfo]]>>
 
-<<type [[Typecheck.error (Typecheck.mli)]]>>
+<<type [[Typecheck.error]]>>
 <<signature [[Typecheck.string_of_error]]>>
-<<exception [[Typecheck.Error (Typecheck.mli)]]>>
+<<exception [[Typecheck.Error]]>>
 
 <<signature [[Typecheck.check_and_annotate_program]]>>
 @
@@ -3440,92 +1321,9 @@ val check_and_annotate_program:
 type integer = int
 @
 
-<<type [[Typecheck.env]]>>=
-type env = {
-  (* those 2 fields will be returned ultimately by check_and_annotate_program *)
-  ids:  (Ast.fullname, idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
-  (* internal *)
-  typedefs: (Ast.fullname, Type.t) Hashtbl.t;
-  (* stricter: no float enum *)
-  enums: (fullname, Type.integer_type) Hashtbl.t;
-  (* stricter: no support for float enum constants either *)
-  constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
-  (* return type of function; used to typecheck Return *)
-  return_type: Type.t;
-  (* used to add some implicit GetRef for arrays and functions *)
-  expr_context: expr_context;
-}
-@
 
-<<type [[Typecheck.idinfo]]>>=
-  and idinfo = {
-    typ: Type.t;
-    sto: Storage.t;
-    loc: Location_cpp.loc;
-    (* typed initialisers (fake expression for function definitions) *)
-    ini: Ast.initialiser option;
-  }
-@
-
-<<type [[Typecheck.expr_context]]>>=
-and expr_context = CtxWantValue | CtxGetRef | CtxSizeof
-@
-
-<<type [[Typecheck.error]]>>=
-type error = Check.error
-@
-
-<<function [[Typecheck.string_of_error]]>>=
-let string_of_error err =
-  Check.string_of_error err
-@
-
-<<exception [[Typecheck.Error]]>>=
-exception Error of error
-@
-
-<<function [[Typecheck.type_error]]>>=
-let type_error _t loc =
-  (* less: dump t? *)
-  raise (Error (E.Misc ("incompatible type", loc)))
-@
-
-<<function [[Typecheck.type_error2]]>>=
-(* todo: for op xxx *)
-let type_error2 t1 t2 loc =
-  let s1 = Dumper_.s_of_any (FinalType t1) in
-  let s2 = Dumper_.s_of_any (FinalType t2) in
-  raise (Error (E.Misc (spf "incompatible types (%s and %s)" s1 s2, loc)))
-@
-
-<<function [[Typecheck.same_types]]>>=
-(* if you declare multiple times the same global, we need to make sure
- * the types are the same. ex: 'extern int foo; ... int foo = 1;'
- * This is where we detect inconsistencies like 'int foo; void foo();'.
- * 
- * Because we expand typedefs before calling same_types, and because
- * we do struct equality by name not fields, testing the equality of 
- * two types is simple.
- *)
-let same_types t1 t2 =
-  match t1, t2 with
-  (* 'void*' can match any pointer! The generic trick of C
-   * (but only when the pointer is at the top of the type).
-   *)
-  | T.Pointer T.Void, T.Pointer _      -> true
-  | T.Pointer _,      T.Pointer T.Void -> true
-  (* stricter: struct equality by name, not by fields *)
-  | _ -> t1 = t2
-@
-
-<<function [[Typecheck.merge_types]]>>=
-(* if you declare multiple times the same global, we must merge types. *)
-let merge_types t1 _t2 =
-  t1
-@
 
 <<function [[Typecheck.check_compatible_binary]]>>=
 (* when you apply an operation between two expressions, this
@@ -3908,347 +1706,6 @@ let rec type_ env typ0 =
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
 @
 
-<<function [[Typecheck.stmt]]>>=
-(* The code below is boilerplate, mostly.
- * expr() should not do any side effect on the environment, so we can
- * call recursively in any order stmt() and expr() (including the
- * reverse order of evaluation of OCaml for arguments).
- *)
-let rec stmt env st0 =
-  { st0 with s = 
-    (match st0.s with
-    | ExprSt e -> ExprSt (expr env e)
-    | Block xs -> Block (List.map (stmt env) xs)
-
-    | If (e, st1, st2) -> 
-      let e = expr env e in
-      (match e.e_type with
-      | T.I _ | T.F _ | T.Pointer _ -> ()
-      (* stricter: error when does not typecheck, not just set null type on e *)
-      | _ -> type_error e.e_type e.e_loc
-      );
-      If (e, stmt env st1, stmt env st2)
-
-    | Switch (e, xs) -> 
-      let e = expr env e in
-      (* ensure e is a number! not a pointer *)
-      (match e.e_type with
-      | T.I _ | T.F _ -> ()
-      | _ -> type_error e.e_type e.e_loc
-      );
-      Switch (e, stmt env xs)
-
-    (* less: should enforce int expr? *)
-    | Case (e, st) -> Case (expr env e, stmt env st)
-    | Default st -> Default (stmt env st)
-
-    (* stricter? should require Bool, not abuse pointer *)
-    | While (e, st) -> 
-      While (expr env e, stmt env st)
-    | DoWhile (st, e) -> 
-      DoWhile (stmt env st, expr env e)
-
-    | For (e1either, e2opt, e3opt, st) ->
-      (* we may have to do side effects on the environment, so we process
-       * e1either first
-       *)
-      let e1either = 
-        (match e1either with 
-        | Left e1opt -> Left (expropt env e1opt)
-        | Right _decls -> raise Todo
-        )
-      in
-      For (e1either, expropt env e2opt, expropt env e3opt, stmt env st)
-
-    | Return eopt -> 
-      Return 
-        (match eopt with
-        | None -> 
-          if env.return_type = T.Void
-          then None 
-          (* stricter: error, not warn *)
-          else raise (Error (E.Misc ("null return of a typed function", 
-                                     st0.s_loc)))
-        | Some e -> 
-          let e = expr env e in
-          check_compatible_assign SimpleAssign env.return_type e.e_type e.e_loc;
-          (* todo: add cast *)
-          Some e
-        )
-    | Continue -> Continue
-    | Break -> Break
-    | Label (name, st) -> Label (name, stmt env st)
-    | Goto name -> Goto name
-    | Var { v_name = fullname; v_loc = loc; v_type = typ;
-            v_storage = stoopt; v_init = eopt} -> 
-
-      let t = type_ env typ in
-      let ini = expropt env eopt in
-      (match t with
-      (* stricter: forbid nested prototypes *)
-      | T.Func _ -> 
-         raise (Error(E.Misc("prototypes inside functions are forbidden",loc)));
-      | _ -> ()
-      );
-      let sto =
-        match stoopt with
-        | None -> S.Local
-        (* stricter? forbid? confusing anyway to shadow locals *)
-        | Some S.Extern ->
-          raise(Error(E.Misc 
-                     ("extern declaration inside functions are forbidden",loc)))
-        | Some S.Static -> 
-          raise Todo
-        | Some S.Local -> 
-          (* stricter: I warn at least *)
-          Error.warn "useless auto keyword" loc;
-          S.Local
-        | Some (S.Global | S.Param) -> 
-          raise (Impossible "global/param are not keywords")
-      in
-
-      (match ini with
-      | None -> ()
-      | Some e ->
-        (* less: no const checking for this assign *)
-        check_compatible_assign (SimpleAssign) t e.e_type loc
-        (* todo: add cast if not same type *)
-      );
-      Hashtbl.add env.ids fullname { typ = t; sto = sto; ini = ini; loc = loc };
-      Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
-            v_init = ini }
-    )
-  }
-@
-
-<<function [[Typecheck.check_and_annotate_program]]>>=
-let check_and_annotate_program (prog: Ast.program) =
-  let (ast, _locs) = prog in
-
-  let funcs = ref [] in
-
-  let toplevel env = function
-    | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
-      Hashtbl.add env.structs fullname 
-        (su, flds |> List.map 
-            (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
-              let t = type_ env typ in
-              (* kenccext: c99ext?:
-               * less: if there are multiple anon structure elements, we 
-               * could check eagerly if no ambiguous fields instead
-               * of checking it when you use a field.
-               *)
-              (match Ast.is_gensymed name, t with
-              | false, _ -> ()
-              | true, T.StructName _ -> ()
-              | true, _ -> 
-                raise (Error (E.Misc 
-                       ("unnamed structure element must be struct/union", loc)))
-              );
-              (name, t)
-            )
-        )
-
-    | TypeDef { typedef_name = fullname; typedef_loc = _loc; typedef_type =typ}->
-      Hashtbl.add env.typedefs fullname (type_ env typ)
-
-    | EnumDef { enum_name = fullname; enum_loc = _loc; enum_constants = csts }
-      ->
-      (* stricter: no support for float enum constants *)
-      let lastvalue = ref 0 in
-      let maxt = ref (T.Int, T.Signed) in
-      csts |> List.iter (fun 
-        { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
-          (match eopt with
-          | Some e ->
-            (try 
-               (* less: should also return an integer type *)
-               let i = Eval_const.eval env.constants e in
-               let t = (T.Int, T.Signed) in
-               (* todo: maxt := max_types !maxt t; *)
-               Hashtbl.add env.constants fullname (i, t);
-               lastvalue := i;
-             with Eval_const.NotAConstant ->
-               raise (Error (E.Misc (spf "enum not a constant: %s"
-                                            (unwrap fullname), loc)))
-            )
-          | None ->
-            (* todo: curt *)
-            let t = (T.Int ,T.Signed) in
-            Hashtbl.add env.constants fullname (!lastvalue, t);
-          );
-          incr lastvalue
-      );
-      Hashtbl.add env.enums fullname !maxt
-
-    (* remember that VarDecl covers also prototypes *)
-    | VarDecl { v_name = fullname; v_loc = loc; v_type = typ;
-                v_storage = stoopt; v_init = eopt} ->
-      let t = type_ env typ in
-      let ini = expropt env eopt in
-
-      (* step 0: typechecking initializer *)
-      (match ini with
-      | None -> ()
-      | Some e ->
-        (* less: no const checking for this assign *)
-        check_compatible_assign (SimpleAssign) t e.e_type loc
-      );
-
-      (* step1: check for weird declarations *)
-      (match t, ini, stoopt with
-      | T.Func _, Some _, _ -> 
-        raise (Error(E.Misc 
-                     ("illegal initializer (only var can be initialized)",loc)))
-      (* stricter: 5c says nothing, clang just warns *)
-      | _, Some _, Some S.Extern ->
-        raise (Error (E.Misc ("'extern' variable has an initializer", loc)))
-      | _ -> ()
-      );
-
-      (try 
-         (* step2: check for weird redeclarations *)
-         let old = Hashtbl.find env.ids fullname in
-
-         (* check type compatibility *)
-         if not (same_types t old.typ)
-         then raise (Error (E.Inconsistent (
-              (* less: could dump both type using vof_type *)
-               spf "redefinition of '%s' with a different type" 
-                 (unwrap fullname), loc,
-               "previous definition is here", old.loc)))
-         else
-           let finalt = 
-             merge_types t old.typ in
-           let finalini = 
-             match ini, old.ini with
-             | Some x, None  -> Some x
-             | None, Some x -> Some x
-             | None, None -> None
-             | Some _x, Some _y ->
-               raise (Error (E.Inconsistent (
-               spf "redefinition of '%s'" (unwrap fullname), loc,
-               "previous definition is here", old.loc)))
-           in
-           (* check storage compatibility and compute final storage *)
-           let finalsto = 
-             merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
-
-           Hashtbl.replace env.ids fullname 
-             {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
-       with Not_found ->
-         let finalsto =
-           match stoopt with
-           | None -> S.Global
-           | Some S.Extern -> S.Extern
-           | Some S.Static -> S.Static
-           | Some S.Local -> 
-             raise (Error(E.Misc 
-                          ("illegal storage class for file-scoped entity",loc)))
-           | Some (S.Global | S.Param) -> 
-             raise (Impossible "global or param are not keywords")
-         in
-         Hashtbl.add env.ids fullname 
-           {typ = t; sto = finalsto; loc = loc; ini = ini }
-      )
-
-
-    | FuncDef ({f_name=name; f_loc=loc; f_type=ftyp; 
-               f_storage=stoopt; f_body=st;} as def) ->
-      (* less: lots of code in common with Var_decl; we could factorize
-       * but a few things are different still.
-       *)
-      let t = type_ env ({t = TFunction ftyp; t_loc = loc}) in
-      let fullname = (name, 0) in
-      (* we use a fake initializer for function definitions to 
-       * be able to store those definitions in env.ids. That way
-       * we can detect function redefinitions, useless redeclarations, etc.
-       *)
-      let ini = Some { e = Id fullname; e_loc = loc; e_type = T.Void } in
-
-      (try 
-         (* check for weird redeclarations *)
-         let old = Hashtbl.find env.ids fullname in
-
-         (* check type compatibility *)
-         if not (same_types t old.typ)
-         then raise (Error (E.Inconsistent (
-              (* less: could dump both type using vof_type *)
-               spf "redefinition of '%s' with a different type" 
-                 (unwrap fullname), loc,
-               "previous definition is here", old.loc)))
-         else
-           let finalt = 
-             merge_types t old.typ in
-           let finalini = 
-             match ini, old.ini with
-             | Some x, None -> Some x
-             | None, Some x -> Some x
-             | None, None -> None
-             | Some _x, Some _y ->
-               raise (Error (E.Inconsistent (
-               spf "redefinition of '%s'" (unwrap fullname), loc,
-               "previous definition is here", old.loc)))
-           in
-           (* check storage compatibility and compute final storage *)
-           let finalsto = 
-             merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
-
-           Hashtbl.replace env.ids fullname 
-             {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
-       with Not_found ->
-         let finalsto =
-           match stoopt with
-           | None -> S.Global
-           | Some S.Static -> S.Static
-           (* different than for VarDecl here *)
-           | Some S.Extern -> 
-             raise (Error (E.Misc ("'extern' function with initializer", loc)))
-           | Some S.Local -> 
-             raise (Error(E.Misc 
-                          ("illegal storage class for file-scoped entity",loc)))
-           | Some (S.Global | S.Param) -> 
-             raise (Impossible "global or param are not keywords")
-         in
-         Hashtbl.add env.ids fullname 
-           {typ = t; sto = finalsto; loc = loc; ini = ini }
-      );
-
-      (* add params in environment before process st *)
-      let (tret, (tparams, _dots)) = ftyp in
-      tparams |> List.iter (fun p ->
-        p.p_name |> Option.iter (fun fullname ->
-          let t = type_ env p.p_type in
-          (match t with
-          (* stricter: 5c and clang says nothing, could convert in pointer *) 
-          | T.Array _ | T.Func _ -> type_error t p.p_loc
-          (* todo: convert small types to int? see paramconv? *)
-          | _ -> ()
-          );
-          Hashtbl.add env.ids fullname 
-            {typ = t; sto = S.Param; loc = loc; ini = None }
-        )
-      );
-      (* the expressions inside the statements are now annontated with types *)
-      let st = stmt { env with return_type = type_ env tret } st in
-      funcs := { def with f_body = st }::!funcs;
-  in
-
-  let env = {
-    ids = Hashtbl.create 101;
-    structs = Hashtbl.create 101;
-    typedefs = Hashtbl.create 101;
-    enums = Hashtbl.create 101;
-    constants = Hashtbl.create 101;
-    
-    return_type = T.Void;
-    expr_context = CtxWantValue;
-  }
-  in
-  ast |> List.iter (toplevel env);
-
-  env.ids, env.structs, List.rev !funcs
-@
 
 
 %-------------------------------------------------------------
@@ -4325,7 +1782,6 @@ module E = Check
 
 <<function [[Typecheck.same_types]]>>
    
-
 <<function [[Typecheck.merge_types]]>>
 
 (* when processing enumeration constants, we want to keep the biggest type *)
@@ -4369,230 +1825,8 @@ let max_types t1 t2 = ...
 (* Expression typechecking *)
 (*****************************************************************************)
 
-let rec expr env e0 =
-  (* default env for recursive call *)
-  let newenv = { env with expr_context = CtxWantValue } in
-
-  match e0.e with
-  | Int    (_s, inttype)   -> { e0 with e_type = T.I inttype }
-  | Float  (_s, floattype) -> { e0 with e_type = T.F floattype }
-  (* less: transform in Id later? *)
-  | String (_s, t)         -> { e0 with e_type = t } |> array_to_pointer env
-  | Id fullname ->
-     if Hashtbl.mem env.constants fullname
-     then
-       let (i, inttype) = Hashtbl.find env.constants fullname in
-       { e0 with e = Int (spf "%d" i, inttype); e_type = T.I inttype }
-     else
-       let idinfo = Hashtbl.find env.ids fullname in
-       { e0 with e_type = idinfo.typ } |> array_to_pointer env
-  | Sequence (e1, e2) -> 
-    let e1 = expr newenv e1 in
-    let e2 = expr newenv e2 in
-    { e0 with e = Sequence (e1, e2); e_type = e2.e_type }
-
-  | Binary (e1, op, e2) ->
-    let e1 = expr newenv e1 in
-    let e2 = expr newenv e2 in
-    check_compatible_binary op e1.e_type e2.e_type e0.e_loc;
-    (* todo: add casts if left and right not the same types? or do it later? *)
-    let finalt = 
-      match op with
-      | Arith Minus ->
-        (match e1.e_type, e2.e_type with
-        | T.Pointer _, T.Pointer _ -> T.long
-        | _ -> result_type_binary e1.e_type e2.e_type
-        )
-      | Arith (Plus | Mul | Div | Mod    
-              | And | Or | Xor
-              (* todo: also add T.int cast when shl/shr on right operand *)
-              | ShiftLeft | ShiftRight
-              ) -> result_type_binary e1.e_type e2.e_type
-      | Logical (Eq | NotEq  
-                | Inf | Sup | InfEq | SupEq
-                | AndLog | OrLog
-                ) ->
-        T.int
-    in
-    { e0 with e = Binary (e1, op, e2); e_type = finalt }
-
-  | Unary (op, e) ->
-    (match op with
-    | UnPlus -> 
-      let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Plus,e) in
-      expr env { e0 with e = e }
-    | UnMinus -> 
-      let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Minus,e)in
-      expr env { e0 with e = e }
-    | Tilde ->
-      let e = Binary ({e0 with e = Int ("-1",(T.Int,T.Signed))}, Arith Xor,e) in
-      expr env { e0 with e = e }
-    | Not ->
-      let e = expr newenv e in
-      (match e.e_type with
-      (* what about T.Array? see array_to_pointer above *)
-      | T.I _ | T.F _ | T.Pointer _ -> ()
-      | _ -> type_error e.e_type e.e_loc 
-      );
-      { e0 with e = Unary (Not, e); e_type = T.int }
-
-    | GetRef ->
-      (* we dont want an additional '&' added before an array *)
-      let e = expr { env with expr_context = CtxGetRef } e in
-      if not (lvalue (e))
-      then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
-      (* less: warn if take address of array or function, ADDROP *)
-      { e0 with e = Unary (GetRef, e); e_type = T.Pointer (e.e_type) }
-
-    | DeRef ->
-      let e = expr newenv e in
-      (match e.e_type with
-      | T.Pointer t -> 
-        { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer env
-      (* what about T.Array? see array_to_pointer() *)
-      | _ -> type_error e.e_type e.e_loc
-      )
-    )
-  | Assign (op, e1, e2) ->
-    let e1 = expr newenv e1 in
-    let e2 = expr newenv e2 in
-    if not (lvalue (e1))
-    then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
-    check_compatible_assign op e1.e_type e2.e_type e0.e_loc;
-    (* todo: add cast on e2 if not same type,
-     * todo: mixedasop thing?
-     *)
-    { e0 with e = Assign (op, e1, e2); e_type = e1.e_type }
-
-
-  (* x[y] --> *(x+y) *)
-  | ArrayAccess (e1, e2) ->
-    let e = Unary (DeRef, { e0 with e = Binary (e1, Arith Plus, e2) }) in
-    expr env { e0 with e = e }
-  (* x->y --> ( *x).y *)
-  | RecordPtAccess (e, name) ->
-    let e = RecordAccess ({ e0 with e = Unary (DeRef, e)}, name) in
-    expr env { e0 with e = e }
-
-  | RecordAccess (e, name) ->
-    let e = expr newenv e in
-    (match e.e_type with
-    | T.StructName (_su, fullname) ->
-      let (_su2, def) = Hashtbl.find env.structs fullname in
-      (try
-         let t = List.assoc name def in
-         { e0 with e = RecordAccess (e, name); e_type = t } 
-          |> array_to_pointer env
-       with Not_found ->
-         if def |> List.exists (fun (fld, _) -> Ast.is_gensymed fld)
-         then 
-           try 
-             unsugar_anon_structure_element env e0 e name def 
-               |>array_to_pointer env
-           with Not_found ->
-             raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
-                                 e.e_loc)))
-         else
-           raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
-                               e.e_loc)))
-      )
-    | _ -> type_error e.e_type e.e_loc
-    )
-  | Call (e, es) ->
-    (* less: should disable implicit OADDR for function here in env *)
-    let e = expr newenv e in
-    (match e.e_type with
-    | T.Pointer (T.Func (_tret, _tparams, _varargs)) ->
-      (* stricter?: we could forbid it, but annoying for my print in libc.h *)
-      let e = { e with e = Unary (DeRef, e); } in
-      expr newenv { e0 with e = Call (e, es) }
-    | T.Func (tret, tparams, varargs) ->
-       (* we enable GetRef for array here (and functions) *)
-      let es = List.map (expr { env with expr_context = CtxWantValue }) es in
-      check_args_vs_params es tparams varargs e0.e_loc;
-      (* todo: add cast *)
-      (* less: format checking *)
-      { e0 with e = Call (e, es); e_type = tret }
-    | _ -> type_error e.e_type e.e_loc
-    )
-  | Cast (typ, e) ->
-    let t = type_ env typ in
-    let e = expr newenv e in
-    (match e.e_type, t with
-    | T.I _, (T.I _ | T.F _ | T.Pointer _ | T.Void)
-    | T.F _, (T.I _ | T.F _ | T.Void)
-    | T.Pointer _, (T.I _ | T.Pointer _ | T.Void)
-      -> ()
-    (* less: seems pretty useless *)
-    | T.Void, T.Void -> ()
-    (* less: seems pretty useless *)
-    | T.StructName (su1, _) , T.StructName (su2, _) when su1 = su2 -> ()
-    | T.StructName _, T.Void -> ()
-    | _ -> type_error2 e.e_type t e0.e_loc
-    );
-    { e0 with e = Cast (typ, e); e_type = t } (* |> array_to_pointer ? *)
-
-  | CondExpr (e1, e2, e3) ->
-    let e1 = expr newenv e1 in
-    let e2 = expr newenv e2 in
-    let e3 = expr newenv e3 in
-    (* stricter? should enforce e1.e_type is a Bool *)
-    check_compatible_binary (Logical Eq) e2.e_type e3.e_type e0.e_loc;
-    (* todo: special nil handling? need? *)
-    let finalt = result_type_binary e2.e_type e3.e_type in
-    (* todo: add cast *)
-    { e0 with e = CondExpr (e1, e2, e3); e_type = finalt }
-
-  (* ocaml-light: | Postfix (e, op) | Prefix (op, e) *)
-  | Postfix (_, _) | Prefix (_, _) ->
-    let (e, op) =
-        match e0.e with
-        | Postfix (e, op) -> e, op
-        | Prefix (op, e) -> e, op
-        | _ -> raise (Impossible "pattern match only those cases")
-    in
-    let e = expr newenv e in
-    if not (lvalue (e))
-    then raise (Error (E.Misc ("not an l-value", e.e_loc)));
-    check_compatible_binary (Arith Plus) e.e_type T.int e0.e_loc;
-    (match e.e_type with
-    | T.Pointer T.Void ->
-      raise (Error (E.Misc ("inc/dec of a void pointer", e.e_loc)));
-    | _ -> ()
-    );
-    { e0 with e = 
-        (match e0.e with 
-        | Postfix _ -> Postfix (e, op)
-        | Prefix _ -> Prefix (op, e)
-        | _ -> raise (Impossible "pattern match only those cases")
-        ); e_type = e.e_type }
-
-  | SizeOf(te) ->
-    (match te with
-    | Left e ->
-      (* we pass a special context because if t2 mentions an array, 
-       * we want the size of the array, not the size of a pointer to an array
-       *)
-      let e = expr { env with expr_context = CtxSizeof  } e in
-      { e0 with e = SizeOf (Left e); e_type = T.int }
-    (* todo: build a fake expression but with the right expanded type
-     * so the codegen later does not have to redo the job of expanding
-     * typedefs.
-     *)
-    | Right typ ->
-      { e0 with e = SizeOf (Right typ); e_type = T.int }
-    )
-
-  | ArrayInit _
-  | RecordInit _
-  | GccConstructor _
-      -> raise Todo
-
-
-and expropt env eopt = 
-    match eopt with
-    | None -> None
-    | Some e -> Some (expr env e)
+<<function [[Typecheck.expr]]>>
+<<function [[Typecheck.expropt]]>>
 
 (*****************************************************************************)
 (* Statement *)
@@ -4610,22 +1844,6 @@ and expropt env eopt =
 
 \section{[[macroprocessor/Ast_cpp.ml]]}
 
-<<type [[Ast_cpp.directive]]>>=
-type directive =
-  | Include of Fpath.t * bool (* true if <>, false if "" *)
-
-  | Define of macro
-  | Undef of string
-
-  | Ifdef of string
-  | Ifndef of string
-  | Else
-  | Endif
-
-  | Line of int * Fpath.t
-  (* ex: #pragma lib "libc.a" -> Pragma("lib", ["libc.a"]) *)
-  | Pragma of string * string list
-@
 
 <<type [[Ast_cpp.macro]]>>=
   and macro = {
@@ -4669,28 +1887,12 @@ type directive =
 
 \section{[[macroprocessor/Flags_cpp.ml]]}
 
-<<constant [[Flags_cpp.debug_line]]>>=
-let debug_line = ref false
-@
-
-<<constant [[Flags_cpp.debug_include]]>>=
-let debug_include = ref false
-@
-
-<<constant [[Flags_cpp.debug_macros]]>>=
-let debug_macros = ref false
-@
-
-
 %-------------------------------------------------------------
 
 <<macroprocessor/Flags_cpp.ml>>=
 
-(* -f *)
 <<constant [[Flags_cpp.debug_line]]>>
-(* -e *)
 <<constant [[Flags_cpp.debug_include]]>>
-(* -m *)
 <<constant [[Flags_cpp.debug_macros]]>>
 @
 
@@ -4699,30 +1901,6 @@ let debug_macros = ref false
 
 
 \section{[[macroprocessor/Location_cpp.mli]]}
-
-<<type [[Location_cpp.loc (macroprocessor/Location_cpp.mli)]]>>=
-type loc = int
-[@@deriving show]
-@
-
-<<type [[Location_cpp.final_loc (macroprocessor/Location_cpp.mli)]]>>=
-type final_loc = Fpath.t * int
-[@@deriving show]
-@
-
-<<type [[Location_cpp.location_history (macroprocessor/Location_cpp.mli)]]>>=
-type location_history = {
-  location_event: location_event;
-  global_line: loc;
-}
-@
-
-<<type [[Location_cpp.location_event (macroprocessor/Location_cpp.mli)]]>>=
-  and location_event =
-    | Include of Fpath.t
-    | Line of int * Fpath.t
-    | Eof
-@
 
 <<signature [[Location_cpp.history]]>>=
 (* both should be reseted each time you parse a new file *)
@@ -4733,9 +1911,6 @@ val history: location_history list ref
 val line: loc ref
 @
 
-<<exception [[Location_cpp.Error (macroprocessor/Location_cpp.mli)]]>>=
-exception Error of string * loc
-@
 
 <<signature [[Location_cpp.add_event]]>>=
 (* add to history *)
@@ -4760,17 +1935,17 @@ val dump_event:
 
 <<macroprocessor/Location_cpp.mli>>=
 
-<<type [[Location_cpp.loc (macroprocessor/Location_cpp.mli)]]>>
-<<type [[Location_cpp.final_loc (macroprocessor/Location_cpp.mli)]]>>
+<<type [[Location_cpp.loc]]>>
+<<type [[Location_cpp.final_loc]]>>
 
-<<type [[Location_cpp.location_history (macroprocessor/Location_cpp.mli)]]>>
-<<type [[Location_cpp.location_event (macroprocessor/Location_cpp.mli)]]>>
+<<type [[Location_cpp.location_history]]>>
+<<type [[Location_cpp.location_event]]>>
 [@@deriving show]
 
 <<signature [[Location_cpp.history]]>>
 <<signature [[Location_cpp.line]]>>
 
-<<exception [[Location_cpp.Error (macroprocessor/Location_cpp.mli)]]>>
+<<exception [[Location_cpp.Error]]>>
 
 
 <<signature [[Location_cpp.add_event]]>>
@@ -4946,22 +2121,6 @@ open Fpath_.Operators
 
 \section{[[macroprocessor/Parse_cpp.mli]]}
 
-<<type [[Parse_cpp.token_category (macroprocessor/Parse_cpp.mli)]]>>=
-type token_category =
-  | Eof
-  | Sharp
-  | Ident of string
-  | Other
-@
-
-<<type [[Parse_cpp.hook (macroprocessor/Parse_cpp.mli)]]>>=
-type ('token, 'ast) hook = {
-  lexer: Lexing.lexbuf -> 'token;
-  parser: (Lexing.lexbuf -> 'token) -> Lexing.lexbuf -> 'ast;
-  category: 'token -> token_category;
-  eof: 'token;
-}
-@
 
 <<signature [[Parse_cpp.parse]]>>=
 (* Wrapper function around a parser/lexer.
@@ -4981,11 +2140,11 @@ val parse:
 
 <<macroprocessor/Parse_cpp.mli>>=
 
-<<type [[Parse_cpp.token_category (macroprocessor/Parse_cpp.mli)]]>>
+<<type [[Parse_cpp.token_category]]>>
 [@@deriving show]
 
 (* wrapper around a parser/lexer (e.g., 5c) to preprocess first the file *)
-<<type [[Parse_cpp.hook (macroprocessor/Parse_cpp.mli)]]>>
+<<type [[Parse_cpp.hook]]>>
 
 <<signature [[Parse_cpp.parse]]>>
 
@@ -5196,6 +2355,7 @@ let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : F
               (if !last_ident = "" 
                then ""
                else spf ", last name: %s" !last_ident))
+  )
 @
 
 
@@ -5302,7 +2462,6 @@ and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
 (*****************************************************************************)
 
 <<function [[Parse_cpp.parse]]>>
-  )
 @
 
 
@@ -5337,8 +2496,5 @@ type conf = {
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 <<type [[Preprocessor.conf]]>>
 @
-
-

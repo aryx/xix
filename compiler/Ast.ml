@@ -42,8 +42,8 @@ open Common
 (*s: type [[Ast.loc]] *)
 (* global linenumber after preprocessing *)
 type loc = Location_cpp.loc
-[@@deriving show]
 (*e: type [[Ast.loc]] *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Name *)
@@ -51,14 +51,14 @@ type loc = Location_cpp.loc
 
 (*s: type [[Ast.name]] *)
 type name = string
-[@@deriving show]
 (*e: type [[Ast.name]] *)
+[@@deriving show]
 
 (*s: type [[Ast.blockid]] *)
 (* for scope *)
 type blockid = int (* same than Type_.blockid, repeated here for clarity *)
-[@@deriving show]
 (*e: type [[Ast.blockid]] *)
+[@@deriving show]
 
 (*s: type [[Ast.fullname]] *)
 (* A fully resolved and scoped name. 
@@ -70,8 +70,8 @@ type blockid = int (* same than Type_.blockid, repeated here for clarity *)
  * 'name' below can be a gensym'ed name for anonymous struct/union/enum.
  *)
 type fullname = name * blockid (* same than Type_.fullname *)
-[@@deriving show]
 (*e: type [[Ast.fullname]] *)
+[@@deriving show]
 
 (*s: type [[Ast.idkind]] *)
 (* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
@@ -340,8 +340,8 @@ type func_def = {
   (* always a Block *)
   f_body: stmt;
 }
-[@@deriving show]
 (*e: type [[Ast.func_def]] *)
+[@@deriving show]
 
 (*s: type [[Ast.struct_def]] *)
 (* struct and union *)
@@ -404,18 +404,18 @@ type toplevel =
   (* globals, but also extern decls and prototypes *)
   | VarDecl of var_decl
   | FuncDef of func_def
-[@@deriving show]
 (*e: type [[Ast.toplevel]] *)
+[@@deriving show]
 
 (*s: type [[Ast.toplevels]] *)
 type toplevels = toplevel list
-[@@deriving show]
 (*e: type [[Ast.toplevels]] *)
+[@@deriving show]
 
 (*s: type [[Ast.program]] *)
 type program = toplevels * Location_cpp.location_history list
-[@@deriving show]
 (*e: type [[Ast.program]] *)
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Any *)

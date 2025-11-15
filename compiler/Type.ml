@@ -4,12 +4,12 @@
 
 (*s: type [[Type.blockid]] *)
 type blockid = int
-[@@deriving show]
 (*e: type [[Type.blockid]] *)
+[@@deriving show]
 (*s: type [[Type.fullname]] *)
 type fullname = string * blockid
-[@@deriving show]
 (*e: type [[Type.fullname]] *)
+[@@deriving show]
 
 (*s: type [[Type.t]] *)
 (* The C type system.
@@ -68,17 +68,16 @@ type qualifier =
   | Volatile
   | Const
   (* less: unsupported: | Restrict | Inline *)
-[@@deriving show]
 (*e: type [[Type.qualifier]] *)
-
+[@@deriving show]
 
 
 (*s: type [[Type.structdef]] *)
 (* note that the field can be gensym'ed for anonymous struct/union elements *)
 (* todo: bitfield *)
 type structdef = (string * t) list
-[@@deriving show]
 (*e: type [[Type.structdef]] *)
+[@@deriving show]
 
 (*s: constant [[Type.int]] *)
 let int = I (Int, Signed)

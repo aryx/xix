@@ -105,16 +105,20 @@ open Common
 (*****************************************************************************)
 
 <<type [[Ast.loc]]>>
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Name *)
 (* ------------------------------------------------------------------------- *)
 
 <<type [[Ast.name]]>>
+[@@deriving show]
 
 <<type [[Ast.blockid]]>>
+[@@deriving show]
 
 <<type [[Ast.fullname]]>>
+[@@deriving show]
 
 <<type [[Ast.idkind]]>>
 
@@ -170,6 +174,7 @@ open Common
 (* Definitions *)
 (* ------------------------------------------------------------------------- *)
 <<type [[Ast.func_def]]>>
+[@@deriving show]
 
 <<type [[Ast.struct_def]]>>
 <<type [[Ast.field_def]]>>
@@ -185,10 +190,13 @@ open Common
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 <<type [[Ast.toplevel]]>>
+[@@deriving show]
 
 <<type [[Ast.toplevels]]>>
+[@@deriving show]
 
 <<type [[Ast.program]]>>
+[@@deriving show]
 
 (* ------------------------------------------------------------------------- *)
 (* Any *)
@@ -1260,8 +1268,8 @@ module T = Parser  (* T for Tokens *)
 <<Storage.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
-(* No Typedef here, because a typedef is not a storage! *) 
 <<type [[Storage.t]]>>
+[@@deriving show]
 @
 
 
@@ -1274,7 +1282,9 @@ module T = Parser  (* T for Tokens *)
 (* renamed to Type_.ml because conflict with OCaml5 module name *)
 
 <<type [[Type.blockid]]>>
+[@@deriving show]
 <<type [[Type.fullname]]>>
+[@@deriving show]
 
 <<type [[Type.t]]>>
 
@@ -1288,10 +1298,11 @@ module T = Parser  (* T for Tokens *)
 [@@deriving show]
 
 <<type [[Type.qualifier]]>>
-
+[@@deriving show]
 
 
 <<type [[Type.structdef]]>>
+[@@deriving show]
 
 <<constant [[Type.int]]>>
 <<constant [[Type.long]]>>

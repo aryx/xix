@@ -200,16 +200,11 @@ instr:
  | TJMP branch { JMP $2 }
  | TJAL branch { JAL $2 }
  /*(* was just nireg here for branch *)*/
- | TJAL reg TC branch { JALReg ($2, $4) }
-
- | TBEQ gen TC rel           { BEQ ($2, None, $4) }
- | TBNE gen TC rel           { BNE ($2, None, $4) }
- | TBEQ gen TC reg TC rel    { BEQ ($2, Some $4, $6) }
- | TBNE gen TC reg TC rel    { BNE ($2, Some $4, $6) }
+ | TJAL reg TC branch { JALR ($2, $4) }
 
  | TB gen TC rel             { Bxx ($1, $2, $4) }
 
- | TSYSCALL { SYSCALL }
+ | TSYSCALL { ECALL }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/

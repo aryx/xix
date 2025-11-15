@@ -94,47 +94,51 @@ type vgen =
 type instr =
   (* Arithmetic *)
   | Arith of arith_opcode * imr * reg option * reg
-  | NOR of imr * reg option * imr
   | ArithMul of mul_opcode * reg * reg option * reg
   (* TODO: in theory takes F | D | W, not just A.floatp_precision *)
   | ArithF of (arithf_opcode * A.floatp_precision) *
        freg * freg option * freg
+  (* Special RISCV *)
+  | LUI
 
   (* Memory (Load/Store) *)
   (* "one side must be a register" *)
   | Move1 of move1_size * (gen, ximm) Either_.t * gen
   (* "one side must be a register" *)
   | Move2 of move2_size * (vgen, ximm) Either_.t * vgen
+  (* Special RISCV *)
+  | FENCE_I
 
   (* Control flow *)
   | JMP of A.branch_operand
-  | RFE of A.branch_operand
   | JAL of A.branch_operand (* jump and link *)
-  | JALReg of reg * A.branch_operand (* no Relative|LabelUse here *) 
+  | JALR of reg * A.branch_operand (* no Relative|LabelUse here *) 
   (* "left side must be register" *)
-  | BEQ of gen * reg option * A.branch_operand (* just Relative|LabelUse *)
-  | BNE of gen * reg option * A.branch_operand (* just Relative|LabelUse *)
   | Bxx of b_condition * gen * A.branch_operand (* just Relative|LabelUse *)
+  (* Special RISCV *)
+  (*| AUIPC ? *)
 
   (* System *)
-  | SYSCALL
+  | ECALL
   | BREAK
-  | TLB of tlb_kind
+  (* ?? *)
+  | SYS
 
   and arith_opcode =
     (* logic *)
     | AND | OR | XOR
     (* arithmetic *)
-    | ADD of size  | SUB of size
+    | ADD of w option  | SUB of w option
     (* bitshifting *)
-    | SLL of size | SRA of size | SRL of size
-    (* less useful *)
+    | SLL of w option | SRA of w option | SRL of w option
+    (* ?? *)
     | SLT of A.sign
 
-  and size = W (* word, 32 bits *) | V (* vlong, 64 bits *)
+  (* alt: W ...| V (* vlong, 64 bits *) *)
+  and w = W (* word, forcing 32 bits *) 
   and mul_opcode =
-    | MUL (* lots of MUL *)(*size * A.sign*) 
-    | DIV of size * A.sign | REM of A.sign
+    | MUL (* TODO: lots of MUL *)(*size * A.sign*) 
+    | DIV of w option * A.sign | REM of w option * A.sign
 
   (* ABS/NEG are unary and can't take middle register. Same for CMPFxx 
    * alt: define separate ArithFUnary CmpF constructs
@@ -159,12 +163,6 @@ type instr =
     | EQ | NE
     | LT of A.sign | GT of A.sign
     | LE of A.sign | GE of A.sign
-    (* Great/Less Equal Zero (AL = ?) *)
-    | GEZ | GEZAL | GTZ | LEZ | LTZ | LTZAL
-
-  and tlb_kind =
-    (* ?? *)
-    | P_ | R_ | WI | WR
 
 [@@deriving show {with_path = false}]
 
@@ -186,14 +184,13 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   match instr with
   (* ocaml-light: could factorize more (JMP opd | RFE opd | ...) -> Some opd *)
   | JMP opd -> Some opd
-  | RFE opd -> Some opd
   | JAL opd -> Some opd
-  | JALReg (_, opd) -> Some opd
-  | BEQ (_, _, opd) -> Some opd
-  | BNE (_, _, opd) -> Some opd
+  | JALR (_, opd) -> Some opd
   | Bxx (_, _, opd) -> Some opd
-  | Arith _ | ArithF _ | NOR _ | ArithMul _ | Move1 _ | Move2 _ | SYSCALL | BREAK
-  | TLB _ -> None
+  | Arith _ | ArithF _ | ArithMul _ | LUI 
+  | Move1 _ | Move2 _ | FENCE_I
+  | ECALL | SYS | BREAK
+     -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_operand x =
@@ -221,17 +218,11 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       mov_vgen vgen2
 
   | JMP b -> A.visit_globals_branch_operand f b
-  | RFE b -> A.visit_globals_branch_operand f b
   | JAL b -> A.visit_globals_branch_operand f b
-  | JALReg (_, b) -> A.visit_globals_branch_operand f b
-  | BEQ (gen, _, b) ->
-      mov_operand gen;
-      A.visit_globals_branch_operand f b
-  | BNE (gen, _, b) ->
-      mov_operand gen;
-      A.visit_globals_branch_operand f b
+  | JALR (_, b) -> A.visit_globals_branch_operand f b
   | Bxx (_, gen, b) ->
       mov_operand gen;
       A.visit_globals_branch_operand f b
-  | Arith _ | NOR _ | ArithMul _ | ArithF _ 
-  | SYSCALL | BREAK | TLB _ -> () 
+  | Arith _ | ArithMul _ | ArithF _ | LUI
+  | FENCE_I
+  | ECALL | SYS | BREAK -> () 

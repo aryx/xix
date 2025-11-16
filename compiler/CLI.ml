@@ -114,25 +114,25 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let (ids, structs, funcs) = 
+  let typed_program : Typecheck.typed_program = 
     Typecheck.check_and_annotate_program ast 
   in
   
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
-    ids |> Hashtbl.iter (fun k v ->
+    typed_program.ids |> Hashtbl.iter (fun k v ->
       match v.Typecheck.sto with
       | Storage.Global | Storage.Static ->
         Logs.app (fun m -> m "%s" (Ast.unwrap k));
         Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
       | _ -> ()
     );
-    funcs |> List.iter (fun func ->
+    typed_program.funcs |> List.iter (fun func ->
       Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
   end;
-  Typecheck.{ ids; structs; funcs }
+  typed_program
 (*e: function [[CLI.frontend]] *)
 
 (*s: function [[CLI.backend5]] *)

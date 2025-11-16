@@ -40,8 +40,8 @@ type env = {
 
   (* computed by previous typechecking phase *)
 
-  ids:     (Ast.fullname, TC.idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  ids_:     (Ast.fullname, TC.idinfo) Hashtbl.t;
+  structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   (* less: compute offset for each field?
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
@@ -245,7 +245,7 @@ let symbol fullname = Ast.unwrap fullname
 
 (*s: function [[Codegen5.entity_of_id]] *)
 let entity_of_id env fullname offset_extra =
-  let idinfo = Hashtbl.find env.ids fullname in
+  let idinfo = Hashtbl.find env.ids_ fullname in
   match idinfo.TC.sto with
   | S.Param -> 
     let offset = Hashtbl.find env.offsets fullname + offset_extra in
@@ -735,12 +735,12 @@ let rec stmt env st0 =
   | ExprSt e -> expr env e None
   | Block xs -> xs |> List.iter (stmt env)
   | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
-      let idinfo = Hashtbl.find env.ids fullname in
+      let idinfo = Hashtbl.find env.ids_ fullname in
       (* todo: generate code for idinfo.ini *)
 
       (* update env.offsets *)
       let t = idinfo.TC.typ in
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
+      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
       in
       (* todo: align *)
       env.offset_locals := !(env.offset_locals) + sizet;
@@ -902,8 +902,9 @@ let rec stmt env st0 =
 (*s: function [[Codegen5.codegen]] *)
 let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
   let env = {
-    ids = tp.ids;
-    structs = tp.structs;
+    ids_ = tp.ids;
+    structs_ = tp.structs;
+
     arch = Arch5.arch;
 
     pc = ref 0;
@@ -924,7 +925,7 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
 
   tp.funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
     let fullname = (name, 0) in
-    let idinfo = Hashtbl.find env.ids fullname in
+    let idinfo = Hashtbl.find env.ids_ fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)
     let attrs = A.default_attr in
 
@@ -943,7 +944,7 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
     let xs = List_.zip typparams tparams in
     let offset = ref 0 in
     xs |> List.iter (fun (p, t) ->
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
+      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
       in
       p.p_name |> Option.iter (fun fullname ->
         Hashtbl.add offsets fullname !offset

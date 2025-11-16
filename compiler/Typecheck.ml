@@ -70,8 +70,8 @@ type typed_program = {
 (* Environment for typechecking *)
 type env = {
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
-  ids:  (Ast.fullname, idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  ids_:  (Ast.fullname, idinfo) Hashtbl.t;
+  structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   (* internal *)
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
@@ -469,7 +469,7 @@ let array_to_pointer env e =
 
 (*s: function [[Typecheck.unsugar_anon_structure_element]] *)
 (* X.foo --> X.|sym42|.foo *)
-let rec unsugar_anon_structure_element env e0 e name def =
+let rec unsugar_anon_structure_element (env : env) e0 e name def =
   
   let res = ref [] in
 
@@ -481,7 +481,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
       then
         (match t with
         | T.StructName (_su, fullname) ->
-          let (_su2, def) = Hashtbl.find env.structs fullname in
+          let (_su2, def) = Hashtbl.find env.structs_ fullname in
           (try 
              let e = 
                unsugar_anon_structure_element env e0
@@ -510,7 +510,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
 
 (*s: function [[Typecheck.type_]] *)
 (* Expand typedefs and resolve constant expressions. *)
-let rec type_ env typ0 =
+let rec type_ (env : env) typ0 =
   match typ0.t with
   | TBase t -> t
   | TPointer typ -> T.Pointer (type_ env typ)
@@ -568,7 +568,7 @@ let rec expr env e0 =
        let (i, inttype) = Hashtbl.find env.constants fullname in
        { e0 with e = Int (spf "%d" i, inttype); e_type = T.I inttype }
      else
-       let idinfo = Hashtbl.find env.ids fullname in
+       let idinfo = Hashtbl.find env.ids_ fullname in
        { e0 with e_type = idinfo.typ } |> array_to_pointer env
   | Sequence (e1, e2) -> 
     let e1 = expr newenv e1 in
@@ -662,7 +662,7 @@ let rec expr env e0 =
     let e = expr newenv e in
     (match e.e_type with
     | T.StructName (_su, fullname) ->
-      let (_su2, def) = Hashtbl.find env.structs fullname in
+      let (_su2, def) = Hashtbl.find env.structs_ fullname in
       (try
          let t = List.assoc name def in
          { e0 with e = RecordAccess (e, name); e_type = t } 
@@ -889,7 +889,7 @@ let rec stmt env st0 =
         check_compatible_assign (SimpleAssign) t e.e_type loc
         (* todo: add cast if not same type *)
       );
-      Hashtbl.add env.ids fullname { typ = t; sto = sto; ini = ini; loc = loc };
+      Hashtbl.add env.ids_ fullname { typ = t; sto = sto; ini = ini; loc = loc };
       Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
             v_init = ini }
     )
@@ -901,14 +901,14 @@ let rec stmt env st0 =
 (*****************************************************************************)
 
 (*s: function [[Typecheck.check_and_annotate_program]] *)
-let check_and_annotate_program (prog: Ast.program) =
+let check_and_annotate_program (prog: Ast.program) : typed_program =
   let (ast, _locs) = prog in
 
   let funcs = ref [] in
 
-  let toplevel env = function
+  let toplevel (env : env) = function
     | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
-      Hashtbl.add env.structs fullname 
+      Hashtbl.add env.structs_ fullname 
         (su, flds |> List.map 
             (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
               let t = type_ env typ in
@@ -987,7 +987,7 @@ let check_and_annotate_program (prog: Ast.program) =
 
       (try 
          (* step2: check for weird redeclarations *)
-         let old = Hashtbl.find env.ids fullname in
+         let old = Hashtbl.find env.ids_ fullname in
 
          (* check type compatibility *)
          if not (same_types t old.typ)
@@ -1013,7 +1013,7 @@ let check_and_annotate_program (prog: Ast.program) =
            let finalsto = 
              merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
 
-           Hashtbl.replace env.ids fullname 
+           Hashtbl.replace env.ids_ fullname 
              {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
        with Not_found ->
          let finalsto =
@@ -1027,7 +1027,7 @@ let check_and_annotate_program (prog: Ast.program) =
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")
          in
-         Hashtbl.add env.ids fullname 
+         Hashtbl.add env.ids_ fullname 
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       )
 
@@ -1047,7 +1047,7 @@ let check_and_annotate_program (prog: Ast.program) =
 
       (try 
          (* check for weird redeclarations *)
-         let old = Hashtbl.find env.ids fullname in
+         let old = Hashtbl.find env.ids_ fullname in
 
          (* check type compatibility *)
          if not (same_types t old.typ)
@@ -1073,7 +1073,7 @@ let check_and_annotate_program (prog: Ast.program) =
            let finalsto = 
              merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
 
-           Hashtbl.replace env.ids fullname 
+           Hashtbl.replace env.ids_ fullname 
              {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
        with Not_found ->
          let finalsto =
@@ -1089,7 +1089,7 @@ let check_and_annotate_program (prog: Ast.program) =
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")
          in
-         Hashtbl.add env.ids fullname 
+         Hashtbl.add env.ids_ fullname 
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       );
 
@@ -1104,7 +1104,7 @@ let check_and_annotate_program (prog: Ast.program) =
           (* todo: convert small types to int? see paramconv? *)
           | _ -> ()
           );
-          Hashtbl.add env.ids fullname 
+          Hashtbl.add env.ids_ fullname 
             {typ = t; sto = S.Param; loc = loc; ini = None }
         )
       );
@@ -1114,8 +1114,9 @@ let check_and_annotate_program (prog: Ast.program) =
   in
 
   let env = {
-    ids = Hashtbl.create 101;
-    structs = Hashtbl.create 101;
+    ids_ = Hashtbl.create 101;
+    structs_ = Hashtbl.create 101;
+
     typedefs = Hashtbl.create 101;
     enums = Hashtbl.create 101;
     constants = Hashtbl.create 101;
@@ -1126,6 +1127,6 @@ let check_and_annotate_program (prog: Ast.program) =
   in
   ast |> List.iter (toplevel env);
 
-  env.ids, env.structs, List.rev !funcs
+  { ids = env.ids_; structs = env.structs_; funcs = List.rev !funcs }
 (*e: function [[Typecheck.check_and_annotate_program]] *)
 (*e: Typecheck.ml *)

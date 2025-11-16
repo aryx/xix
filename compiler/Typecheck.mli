@@ -14,6 +14,7 @@ type idinfo = {
 type typed_program = {
   (* resolved type and storage information for identifiers and tags *)
   ids: (Ast.fullname, idinfo) Hashtbl.t;
+  (* resolved struct definitions *)
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
   (* functions annotated with types for each expression nodes
    * (so you can more easily generate code later).
@@ -47,9 +48,6 @@ exception Error of error
  * can raise Error.
  *)
 val check_and_annotate_program: 
-  Ast.program -> 
-  (Ast.fullname, idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
-  Ast.func_def list
+  Ast.program -> typed_program
 (*e: signature [[Typecheck.check_and_annotate_program]] *)
 (*e: Typecheck.mli *)

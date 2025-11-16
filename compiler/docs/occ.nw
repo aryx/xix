@@ -667,14 +667,6 @@ type t =
 %TODO: Typecheck.result? with alt: Frontend.result ?
 
 <<type [[CLI.frontend_result]]>>=
-(* TODO: move somewhere else, rename ids_structs_funcs? or use
- * record with fields! Frontend.result ? Frontend.entities? Frontend.t ?
- * and use a record!
- *)
-type frontend_result = 
-  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
-  Ast.func_def list
 @
 
 <<type [[Typecheck.idinfo]]>>=
@@ -926,18 +918,17 @@ let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.
 @
 
 <<function [[CLI.compile5]]>>=
-let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (infile : Fpath.t)
-  (outfile : Chan.o) =
-  let (ids, structs, funcs) = 
-    frontend caps conf infile in
-  backend5 (ids, structs, funcs) outfile
+let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
+    (infile : Fpath.t) (outfile : Chan.o) =
+  let tast : Typecheck.typed_program = frontend caps conf infile in
+  backend5 tast outfile
 @
 
 \section{Frontend}
 
 
 <<function [[CLI.frontend]]>>=
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : frontend_result =
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Typecheck.typed_program =
 
   let ast = Parse.parse caps conf infile in
 
@@ -948,34 +939,33 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let (ids, structs, funcs) = 
+  let typed_program : Typecheck.typed_program = 
     Typecheck.check_and_annotate_program ast 
   in
   
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
-    ids |> Hashtbl.iter (fun k v ->
+    typed_program.ids |> Hashtbl.iter (fun k v ->
       match v.Typecheck.sto with
       | Storage.Global | Storage.Static ->
         Logs.app (fun m -> m "%s" (Ast.unwrap k));
         Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
       | _ -> ()
     );
-    funcs |> List.iter (fun func ->
+    typed_program.funcs |> List.iter (fun func ->
       Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
   end;
-
-  ids, structs, funcs
+  typed_program
 @
 
 \section{Backend}
 
 <<function [[CLI.backend5]]>>=
-let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
+let backend5 (tast : Typecheck.typed_program)  (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
-  let (asm, _locs) = Codegen5.codegen (ids, structs, funcs) in
+  let (asm, _locs) = Codegen5.codegen tast in
 
   if !Flags.dump_asm
   then begin
@@ -993,11 +983,7 @@ let backend5 (ids, structs, funcs)  (chan : Chan.o) : unit =
 <<signature [[Codegen5.codegen]]>>=
 (* can raise Error *)
 val codegen: 
-  (Ast.fullname, Typecheck.idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t * 
-  Ast.func_def list 
-  -> 
-  Ast_asm5.program
+  Typecheck.typed_program ->  Ast_asm5.program
 @
 
 %%\section{[[gclean()]]}
@@ -2558,10 +2544,7 @@ val check_program: Ast.program -> unit
  * can raise Error.
  *)
 val check_and_annotate_program: 
-  Ast.program -> 
-  (Ast.fullname, idinfo) Hashtbl.t *
-  (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t *
-  Ast.func_def list
+  Ast.program -> typed_program
 @
 %TODO: return Frontend.result or Typecheck.result?
 
@@ -2616,8 +2599,8 @@ let warn s loc =
 (* Environment for typechecking *)
 type env = {
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
-  ids:  (Ast.fullname, idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  ids_:  (Ast.fullname, idinfo) Hashtbl.t;
+  structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   (* internal *)
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
@@ -2716,7 +2699,7 @@ let rec expr env e0 =
        let (i, inttype) = Hashtbl.find env.constants fullname in
        { e0 with e = Int (spf "%d" i, inttype); e_type = T.I inttype }
      else
-       let idinfo = Hashtbl.find env.ids fullname in
+       let idinfo = Hashtbl.find env.ids_ fullname in
        { e0 with e_type = idinfo.typ } |> array_to_pointer env
   | Sequence (e1, e2) -> 
     let e1 = expr newenv e1 in
@@ -2810,7 +2793,7 @@ let rec expr env e0 =
     let e = expr newenv e in
     (match e.e_type with
     | T.StructName (_su, fullname) ->
-      let (_su2, def) = Hashtbl.find env.structs fullname in
+      let (_su2, def) = Hashtbl.find env.structs_ fullname in
       (try
          let t = List.assoc name def in
          { e0 with e = RecordAccess (e, name); e_type = t } 
@@ -3068,7 +3051,7 @@ let rec stmt env st0 =
         check_compatible_assign (SimpleAssign) t e.e_type loc
         (* todo: add cast if not same type *)
       );
-      Hashtbl.add env.ids fullname { typ = t; sto = sto; ini = ini; loc = loc };
+      Hashtbl.add env.ids_ fullname { typ = t; sto = sto; ini = ini; loc = loc };
       Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
             v_init = ini }
     )
@@ -3085,14 +3068,14 @@ let rec stmt env st0 =
 \section{Typechecking declarations and constant evaluation}
 
 <<function [[Typecheck.check_and_annotate_program]]>>=
-let check_and_annotate_program (prog: Ast.program) =
+let check_and_annotate_program (prog: Ast.program) : typed_program =
   let (ast, _locs) = prog in
 
   let funcs = ref [] in
 
-  let toplevel env = function
+  let toplevel (env : env) = function
     | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
-      Hashtbl.add env.structs fullname 
+      Hashtbl.add env.structs_ fullname 
         (su, flds |> List.map 
             (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
               let t = type_ env typ in
@@ -3171,7 +3154,7 @@ let check_and_annotate_program (prog: Ast.program) =
 
       (try 
          (* step2: check for weird redeclarations *)
-         let old = Hashtbl.find env.ids fullname in
+         let old = Hashtbl.find env.ids_ fullname in
 
          (* check type compatibility *)
          if not (same_types t old.typ)
@@ -3197,7 +3180,7 @@ let check_and_annotate_program (prog: Ast.program) =
            let finalsto = 
              merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
 
-           Hashtbl.replace env.ids fullname 
+           Hashtbl.replace env.ids_ fullname 
              {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
        with Not_found ->
          let finalsto =
@@ -3211,7 +3194,7 @@ let check_and_annotate_program (prog: Ast.program) =
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")
          in
-         Hashtbl.add env.ids fullname 
+         Hashtbl.add env.ids_ fullname 
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       )
 
@@ -3231,7 +3214,7 @@ let check_and_annotate_program (prog: Ast.program) =
 
       (try 
          (* check for weird redeclarations *)
-         let old = Hashtbl.find env.ids fullname in
+         let old = Hashtbl.find env.ids_ fullname in
 
          (* check type compatibility *)
          if not (same_types t old.typ)
@@ -3257,7 +3240,7 @@ let check_and_annotate_program (prog: Ast.program) =
            let finalsto = 
              merge_storage_toplevel (unwrap fullname) loc stoopt ini old in
 
-           Hashtbl.replace env.ids fullname 
+           Hashtbl.replace env.ids_ fullname 
              {typ = finalt; sto = finalsto; loc = loc; ini = finalini }
        with Not_found ->
          let finalsto =
@@ -3273,7 +3256,7 @@ let check_and_annotate_program (prog: Ast.program) =
            | Some (S.Global | S.Param) -> 
              raise (Impossible "global or param are not keywords")
          in
-         Hashtbl.add env.ids fullname 
+         Hashtbl.add env.ids_ fullname 
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       );
 
@@ -3288,7 +3271,7 @@ let check_and_annotate_program (prog: Ast.program) =
           (* todo: convert small types to int? see paramconv? *)
           | _ -> ()
           );
-          Hashtbl.add env.ids fullname 
+          Hashtbl.add env.ids_ fullname 
             {typ = t; sto = S.Param; loc = loc; ini = None }
         )
       );
@@ -3298,8 +3281,9 @@ let check_and_annotate_program (prog: Ast.program) =
   in
 
   let env = {
-    ids = Hashtbl.create 101;
-    structs = Hashtbl.create 101;
+    ids_ = Hashtbl.create 101;
+    structs_ = Hashtbl.create 101;
+
     typedefs = Hashtbl.create 101;
     enums = Hashtbl.create 101;
     constants = Hashtbl.create 101;
@@ -3310,7 +3294,7 @@ let check_and_annotate_program (prog: Ast.program) =
   in
   ast |> List.iter (toplevel env);
 
-  env.ids, env.structs, List.rev !funcs
+  { ids = env.ids_; structs = env.structs_; funcs = List.rev !funcs }
 @
 
 
@@ -3851,8 +3835,8 @@ type env = {
 
   (* computed by previous typechecking phase *)
 
-  ids:     (Ast.fullname, TC.idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  ids_:     (Ast.fullname, TC.idinfo) Hashtbl.t;
+  structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   (* less: compute offset for each field?
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
@@ -3905,10 +3889,11 @@ exception Error of error
 @
 
 <<function [[Codegen5.codegen]]>>=
-let codegen (ids, structs, funcs) : Ast_asm5.program =
+let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
   let env = {
-    ids = ids;
-    structs = structs;
+    ids_ = tp.ids;
+    structs_ = tp.structs;
+
     arch = Arch5.arch;
 
     pc = ref 0;
@@ -3927,9 +3912,9 @@ let codegen (ids, structs, funcs) : Ast_asm5.program =
     regs          = Array.make 0 16;
   } in
 
-  funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
+  tp.funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
     let fullname = (name, 0) in
-    let idinfo = Hashtbl.find env.ids fullname in
+    let idinfo = Hashtbl.find env.ids_ fullname in
     (* todo: if Flag.profile (can be disabled by #pragma) *)
     let attrs = A.default_attr in
 
@@ -3948,7 +3933,7 @@ let codegen (ids, structs, funcs) : Ast_asm5.program =
     let xs = List_.zip typparams tparams in
     let offset = ref 0 in
     xs |> List.iter (fun (p, t) ->
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
+      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
       in
       p.p_name |> Option.iter (fun fullname ->
         Hashtbl.add offsets fullname !offset
@@ -4010,12 +3995,12 @@ let rec stmt env st0 =
   | ExprSt e -> expr env e None
   | Block xs -> xs |> List.iter (stmt env)
   | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
-      let idinfo = Hashtbl.find env.ids fullname in
+      let idinfo = Hashtbl.find env.ids_ fullname in
       (* todo: generate code for idinfo.ini *)
 
       (* update env.offsets *)
       let t = idinfo.TC.typ in
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs} t
+      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
       in
       (* todo: align *)
       env.offset_locals := !(env.offset_locals) + sizet;

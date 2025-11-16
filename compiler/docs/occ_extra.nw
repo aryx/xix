@@ -2,6 +2,7 @@
 
 <<type [[Arch_compiler.env]]>>=
 type env = {
+  (* same than Typecheck.typed_program.structs? *)
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 }
 @
@@ -14,6 +15,10 @@ type env = {
 <<type [[Arch_compiler.env]]>>
 
 <<type [[Arch_compiler.t]]>>
+
+(* TODO? instead of Arch5, ... could also define an of_arch function
+ * here, like I did for Arch_linker
+ *)
 
 (* todo? have a portable asm? ast_asm_common.ml? 
 with ATEXT, ANOP, ARET, etc.
@@ -619,7 +624,7 @@ let symbol fullname = Ast.unwrap fullname
 
 <<function [[Codegen5.entity_of_id]]>>=
 let entity_of_id env fullname offset_extra =
-  let idinfo = Hashtbl.find env.ids fullname in
+  let idinfo = Hashtbl.find env.ids_ fullname in
   match idinfo.TC.sto with
   | S.Param -> 
     let offset = Hashtbl.find env.offsets fullname + offset_extra in
@@ -1259,6 +1264,22 @@ module T = Parser  (* T for Tokens *)
 
 <<type [[Typecheck.idinfo]]>>
 
+(* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
+type typed_program = {
+  (* resolved type and storage information for identifiers and tags *)
+  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  (* resolved struct definitions *)
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  (* functions annotated with types for each expression nodes
+   * (so you can more easily generate code later).
+   * 
+   * The enum constants should also be internally resolved and replaced
+   * with constants and some constant expressions (e.g., for
+   * array size) should also be resolved (and evaluated).
+   *)
+  funcs: Ast.func_def list;
+}
+
 <<type [[Typecheck.error]]>>
 <<signature [[Typecheck.string_of_error]]>>
 <<exception [[Typecheck.Error]]>>
@@ -1581,7 +1602,7 @@ let array_to_pointer env e =
 
 <<function [[Typecheck.unsugar_anon_structure_element]]>>=
 (* X.foo --> X.|sym42|.foo *)
-let rec unsugar_anon_structure_element env e0 e name def =
+let rec unsugar_anon_structure_element (env : env) e0 e name def =
   
   let res = ref [] in
 
@@ -1593,7 +1614,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
       then
         (match t with
         | T.StructName (_su, fullname) ->
-          let (_su2, def) = Hashtbl.find env.structs fullname in
+          let (_su2, def) = Hashtbl.find env.structs_ fullname in
           (try 
              let e = 
                unsugar_anon_structure_element env e0
@@ -1617,7 +1638,7 @@ let rec unsugar_anon_structure_element env e0 e name def =
 
 <<function [[Typecheck.type_]]>>=
 (* Expand typedefs and resolve constant expressions. *)
-let rec type_ env typ0 =
+let rec type_ (env : env) typ0 =
   match typ0.t with
   | TBase t -> t
   | TPointer typ -> T.Pointer (type_ env typ)
@@ -1710,6 +1731,13 @@ module E = Check
 <<type [[Typecheck.integer]]>>
 
 <<type [[Typecheck.idinfo]]>>
+
+type typed_program = {
+  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  funcs: Ast.func_def list;
+}
+
 <<type [[Typecheck.env]]>>
 <<type [[Typecheck.expr_context]]>>
 

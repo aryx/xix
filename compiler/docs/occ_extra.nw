@@ -1,28 +1,19 @@
 \section{[[Arch_compiler.ml]]}
 
-<<type [[Arch_compiler.env]]>>=
-type env = {
-  (* same than Typecheck.typed_program.structs? *)
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
-}
-@
-
 %-------------------------------------------------------------
 
 <<Arch_compiler.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
 <<type [[Arch_compiler.env]]>>
-
 <<type [[Arch_compiler.t]]>>
 
 (* TODO? instead of Arch5, ... could also define an of_arch function
  * here, like I did for Arch_linker
+ *
+ * todo? have a portable asm? ast_asm_common.ml? 
+ * with ATEXT, ANOP, ARET, etc.
  *)
-
-(* todo? have a portable asm? ast_asm_common.ml? 
-with ATEXT, ANOP, ARET, etc.
-*)
 @
 
 \section{[[Arch5.mli]]}
@@ -51,20 +42,7 @@ module T = Type
 <<constant [[Arch5.arch]]>>
 @
 
-
 \section{[[Ast.ml]]}
-
-
-<<function [[Ast.unwrap]]>>=
-let unwrap (name, _) = name    
-@
-
-<<function [[Ast.is_gensymed]]>>=
-(* see also Parser.gensym *)
-let is_gensymed str = 
-  str =~ "|sym[0-9]+|.*"
-@
-
 
 %-------------------------------------------------------------
 
@@ -220,7 +198,6 @@ open Regexp_.Operators
 <<function [[Ast.is_gensymed]]>>
 @
 
-
 \section{[[Check.mli]]}
 
 %-------------------------------------------------------------
@@ -237,77 +214,7 @@ open Regexp_.Operators
 <<signature [[Check.check_program]]>>
 @
 
-
 \section{[[Check.ml]]}
-
-
-<<function [[Check.inconsistent_tag]]>>=
-let inconsistent_tag fullname loc usedef =
-  let locbefore = 
-    match usedef with
-    (* ocaml-light: | { defined = Some loc; _ } | { used = Some loc; _ } *)
-    | { defined = Some loc; used = _ } -> loc
-    | { used = Some loc; defined = _ } -> loc
-    | _ -> raise (Impossible "must have a def or a use")
-  in
-  error (Inconsistent (
-    spf "use of '%s' with tag type that does not match previous declaration "
-      (unwrap fullname), loc,
-    "previous use is here", locbefore
-  ))
-@
-
-<<function [[Check.check_inconsistent_or_redefined_tag]]>>=
-let check_inconsistent_or_redefined_tag env fullname tagkind loc =
-  try 
-    let (usedef, oldtagkind) = Hashtbl.find env.tags fullname in
-    if tagkind <> oldtagkind
-    then inconsistent_tag fullname loc usedef;
-    (* the tag may not have be defined, as in a previous 'struct Foo x;' *)
-    usedef.defined |> Option.iter (fun locdef ->
-      error (Inconsistent (spf "redefinition of '%s'" (unwrap fullname), loc,
-                     "previous definition is here", locdef))
-    );
-    (* now it's defined *)
-    usedef.defined <- Some loc;
-  with Not_found ->
-    Hashtbl.add env.tags fullname ({defined = Some loc; used = None;}, tagkind)
-@
-
-<<function [[Check.inconsistent_id]]>>=
-let inconsistent_id fullname loc usedef =
-  let locbefore = 
-    match usedef with
-    | { defined = Some loc; used = _ } -> loc
-    | { defined = None; used = _ } -> raise (Impossible "id always defined first")
-  in
-  error (Inconsistent (
-    spf "redefinition of '%s' " (unwrap fullname), loc,
-    "previous definition is here", locbefore
-  ))
-@
-
-<<function [[Check.check_inconsistent_or_redefined_id]]>>=
-let check_inconsistent_or_redefined_id env fullname idkind loc =
-  try 
-    let (usedef, oldidkind) = Hashtbl.find env.ids fullname in
-    if idkind <> oldidkind
-    then inconsistent_id fullname loc usedef
-    else
-      (match usedef.defined with
-      | Some locdef ->
-        (* stricter: 5c allows at least for same typedef; I do not. *)
-        error (Inconsistent (spf "redefinition of '%s'" (unwrap fullname), loc,
-                             "previous definition is here", locdef))
-      (* the id must be defined, there is no forward use of ids
-       * (enum constants, typedefs, variables)
-       *)
-      | None -> raise (Impossible "ids are always defined before being used")
-      )
-  with Not_found ->
-    Hashtbl.add env.ids fullname ({defined = Some loc; used = None; }, idkind)
-@
-
 
 %-------------------------------------------------------------
 
@@ -325,8 +232,8 @@ open Ast
 (* This module makes sure every entity used is defined. In some cases
  * it also checks if an entity is unused, or if it is incorrectly redeclared.
  * 
- * For typechecking see typecheck.ml.
- * For naming and scope resolving see parser.mly.
+ * For typechecking see Typecheck.ml.
+ * For naming and scope resolving see Parser.mly.
  *)
 
 (*****************************************************************************)
@@ -360,6 +267,8 @@ open Ast
 
 <<function [[Check.check_unused_locals]]>>
 
+<<function [[Check.check_labels]]>>
+
 (*****************************************************************************)
 (* Use/Def *)
 (*****************************************************************************)
@@ -376,7 +285,6 @@ open Ast
 <<function [[Check.check_program]]>>
 @
 
-
 \section{[[CLI.mli]]}
 
 %-------------------------------------------------------------
@@ -388,7 +296,6 @@ open Ast
 
 <<signature [[CLI.compile]]>>
 @
-
 
 \section{[[CLI.ml]]}
 
@@ -476,16 +383,10 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[CLI.main]]>>
 @
 
-
 \section{[[Codegen5.mli]]}
-
-<<signature [[Codegen5.string_of_error]]>>=
-val string_of_error: error -> string
-@
 
 %-------------------------------------------------------------
 
@@ -497,7 +398,6 @@ val string_of_error: error -> string
 
 <<signature [[Codegen5.codegen]]>>
 @
-
 
 \section{[[Codegen5.ml]]}
 
@@ -835,11 +735,9 @@ module E = Check
 <<function [[Codegen5.string_of_error]]>>
 <<exception [[Codegen5.Error]]>>
 
-
 (*****************************************************************************)
 (* Instructions  *)
 (*****************************************************************************)
-
 <<constant [[Codegen5.fake_instr]]>>
 <<constant [[Codegen5.fake_loc]]>>
 <<constant [[Codegen5.fake_pc]]>>
@@ -856,11 +754,9 @@ module E = Check
  
 <<function [[Codegen5.patch_fake_goto]]>>
 
-
 (*****************************************************************************)
 (* C to Asm helpers  *)
 (*****************************************************************************)
-
 <<function [[Codegen5.global_of_id]]>>
 
 <<function [[Codegen5.symbol]]>>
@@ -875,7 +771,6 @@ module E = Check
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
-
 <<function [[Codegen5.operand_able]]>>
 
 <<constant [[Codegen5.fn_complexity]]>>
@@ -885,7 +780,6 @@ module E = Check
 (*****************************************************************************)
 (* Register allocation helpers *)
 (*****************************************************************************)
-
 <<function [[Codegen5.reguse]]>>
 
 <<function [[Codegen5.regfree]]>>
@@ -893,7 +787,6 @@ module E = Check
 <<function [[Codegen5.with_reg]]>>
   
 <<function [[Codegen5.regalloc]]>>
-
 
 <<function [[Codegen5.opd_regalloc]]>>
 
@@ -969,7 +862,6 @@ and gmove_aux env move_size opd1 opd2 =
 (*****************************************************************************)
 (* Expression *)
 (*****************************************************************************)
-
 <<function [[Codegen5.expr]]>>
 
 <<function [[Codegen5.expr_cond]]>>
@@ -985,7 +877,6 @@ and gmove_aux env move_size opd1 opd2 =
 (* Main entry point *)
 (*****************************************************************************)
 <<function [[Codegen5.codegen]]>>
-
 @
 
 
@@ -1000,7 +891,6 @@ and gmove_aux env move_size opd1 opd2 =
 <<signature [[Dumper_.s_of_any_with_types]]>>
 @
 
-
 \section{[[Dumper_.ml]]}
 
 %-------------------------------------------------------------
@@ -1012,9 +902,7 @@ and gmove_aux env move_size opd1 opd2 =
 <<function [[Dumper_.s_of_any_with_types]]>>
 @
 
-
 \section{[[Error.mli]]}
-
 
 %-------------------------------------------------------------
 
@@ -1024,7 +912,6 @@ and gmove_aux env move_size opd1 opd2 =
 
 <<signature [[Error.errorexit]]>>
 @
-
 
 \section{[[Error.ml]]}
 
@@ -1039,7 +926,6 @@ open Fpath_.Operators
 
 <<function [[Error.errorexit]]>>
 @
-
 
 \section{[[Eval_const.mli]]}
 
@@ -1057,7 +943,6 @@ open Fpath_.Operators
 
 <<signature [[Eval_const.eval]]>>
 @
-
 
 \section{[[Eval_const.ml]]}
 
@@ -1094,7 +979,6 @@ module E = Check
 <<function [[Eval_const.eval]]>>
 @
 
-
 \section{[[Flags.ml]]}
 
 <<constant [[Flags.debugger]]>>=
@@ -1107,8 +991,8 @@ let debugger = ref false
 <<Flags.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
-<<constant [[Flags.warn]]>>
-<<constant [[Flags.warnerror]]>>
+<<global [[Flags.warn]]>>
+<<global [[Flags.warnerror]]>>
 
 (* see also macroprocessor/flags_cpp.ml *)
 
@@ -1225,7 +1109,8 @@ module T = Parser  (* T for Tokens *)
 
 <<Type.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-(* renamed to Type_.ml because conflict with OCaml5 module name *)
+
+(* TODO? rename to Type_.ml because conflict with OCaml5 module name *)
 
 <<type [[Type.blockid]]>>
 [@@deriving show]
@@ -1276,391 +1161,6 @@ module T = Parser  (* T for Tokens *)
 <<type [[Typecheck.integer]]>>=
 type integer = int
 @
-
-
-
-<<function [[Typecheck.check_compatible_binary]]>>=
-(* when you apply an operation between two expressions, this
- * expression can be valid even if the types of those two expressions
- * are not the same. However, they must be "compatible". 
- * The compatibility policy depends on the operation of the expression.
- * 
- * less: better error messages, for instance when want to add 2 pointers.
- *)
-let check_compatible_binary op t1 t2 loc =
-  match op with
-  | Arith Plus ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _)
-    | T.Pointer _, T.I _
-    | T.I _, T.Pointer _
-      -> ()
-    (* you can not add 2 pointers *)
-    | T.Pointer _, T.Pointer _
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Arith Minus ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _)
-    (* you can not sub a pointer to an int (but can sub an int to a pointer) *)
-    | T.Pointer _, T.I _
-      -> ()
-    (* you can sub 2 pointers (if they have the same types, and the
-     * result is a long). same_types() will allow a void* to match any pointer.
-     *)
-    | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Arith (Mul | Div) ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Arith (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) ->
-    (match t1, t2 with
-    | (T.I _), (T.I _ ) 
-      -> ()
-    (* stricter: I do not allow T.Int _ with T.F _, 5c does (clang does not) *)
-    | _ -> type_error2 t1 t2 loc
-    )
-
-  | Logical (Eq | NotEq  | Inf | Sup | InfEq | SupEq) ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-    | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
-    (* you can not compare two structures! no deep equality (nor arrays) *)
-    | _ -> type_error2 t1 t2 loc
-    )
-  | Logical (AndLog | OrLog) ->
-    (* stricter? should impose Bool! *)
-    (match t1 with
-    | (T.I _ | T.F _ | T.Pointer _) ->
-      (match t2 with
-      | (T.I _ | T.F _ | T.Pointer _) -> ()
-      | _ -> type_error t2 loc
-      )
-    | _ -> type_error t1 loc
-    )
-@
-
-<<function [[Typecheck.result_type_binary]]>>=
-let result_type_binary t1 t2 =
-  match t1, t2 with
-  | T.I (T.Char, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Char, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
-  | T.I (T.Char, T.Unsigned), (T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Short, T.Signed), (T.I ((T.Char|T.Short), sign)) -> 
-      T.I (T.Short, sign)
-  | T.I (T.Short, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Short, T.Unsigned), (T.I ((T.Char|T.Short), _)) -> 
-      T.I (T.Short, T.Unsigned)
-  | T.I (T.Short, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
-  | T.I (T.Short, T.Unsigned), (T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Int, T.Signed), (T.I ((T.Char|T.Short|T.Int), sign)) -> 
-      T.I (T.Int, sign)
-  | T.I (T.Int, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Int, T.Unsigned), (T.I ((T.Char|T.Short|T.Int), _)) -> 
-      T.I (T.Int, T.Unsigned)
-  | T.I (T.Int, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
-  | T.I (T.Int, T.Unsigned), (T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Long, T.Signed), (T.I ((T.Char|T.Short|T.Int|T.Long), sign))-> 
-      T.I (T.Long, sign)
-  | T.I (T.Long, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.Long, T.Unsigned), (T.I ((T.Char|T.Short|T.Int|T.Long), _)) -> 
-      T.I (T.Long, T.Unsigned)
-  | T.I (T.Long, T.Unsigned), T.I (x, _) -> T.I (x, T.Unsigned)
-  | T.I (T.Long, T.Unsigned), (T.F _ | T.Pointer _) -> t2
-
-  | T.I (T.VLong, T.Signed),(T.I ((T.Char|T.Short|T.Int|T.Long|T.VLong),sign))->
-      T.I (T.VLong, sign)
-  | T.I (T.VLong, T.Signed), (T.F _ | T.Pointer _) -> t2
-
-  | T.F T.Float, (T.I _ | T.F T.Float) -> T.F T.Float
-  | T.F T.Float, T.F T.Double -> T.F T.Double
-  | T.F T.Float, T.Pointer _ -> t2
-
-  | T.F T.Double, (T.I _ | T.F _) -> T.F T.Double
-  | T.F T.Double, T.Pointer _ -> t2
-
-  | T.Pointer _, (T.I _ | T.F _) -> t1
-
-  (* see same_types special handling of void* pointers *)
-  | T.Pointer T.Void, T.Pointer _ -> t2
-  | T.Pointer _, T.Pointer T.Void -> t1
-
-  | T.Pointer _, T.Pointer _ ->
-    assert (t1 = t2);
-    t1
-
-  | _ -> raise (Impossible "case should be forbidden by compatibility policy")
-@
-
-<<function [[Typecheck.check_compatible_assign]]>>=
-(* less: could run typ_ext hooks here? and return a new node? for
- * unnamed_inheritance.c?
- *)
-let check_compatible_assign op t1 t2 loc =
-  match op with
-  | SimpleAssign ->
-    (match t1, t2 with
-    | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-    (* 'void*' special handling done in same_types() *)
-    | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
-    | T.StructName (su1, name1), T.StructName (su2, name2) 
-      when su1 = su2 && name1 = name2 -> ()
-    | _ -> type_error2 t1 t2 loc
-    )
-  (* not exactly the same rule than in check_compatible_binary *)
-  | OpAssign op ->
-    (match op with
-    | (Plus | Minus) ->
-      (match t1, t2 with
-      | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
-      (* you can not x += y or x-=y when both x and y are pointers
-       * even though you can do x - y because the result type is a long
-       * (and so you can not assign than back into x).
-       *)
-      | T.Pointer _, T.I _ -> ()
-      | _ -> type_error2 t1 t2 loc
-      )
-    | (Mul | Div) 
-    | (Mod   | And | Or | Xor  | ShiftLeft | ShiftRight ) 
-      -> check_compatible_binary (Arith op) t1 t2 loc
-    )
-@
-
-<<function [[Typecheck.check_args_vs_params]]>>=
-let rec check_args_vs_params es tparams varargs loc =
-  match es, tparams, varargs with
-  (* stricter? confusing to have foo() and foo(void) *)
-  | [], ([] | [T.Void]), _ -> ()
-  | [], _, _ -> 
-    raise (Error (E.Misc ("not enough function arguments", loc)))
-  | _e::_es, [], false -> 
-    raise (Error (E.Misc ("too many function arguments", loc)))
-  | e::es, [], true -> 
-    (match e.e_type with
-    | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
-    | _ -> type_error e.e_type loc
-    );
-    check_args_vs_params es [] true loc
-  | e::es, t::ts, _ ->
-    (match e.e_type with
-    | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
-    | _ -> type_error e.e_type loc
-    );
-    (try 
-       (* todo: convert to int small types? see tcoma *)
-       check_compatible_assign SimpleAssign t e.e_type e.e_loc
-     with Error _ ->
-       raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
-    );
-    check_args_vs_params es ts varargs loc
-@
-
-<<function [[Typecheck.merge_storage_toplevel]]>>=
-(* If you declare multiple times the same global, we need to make sure
- * the storage declarations are compatible and we need to compute the
- * final (resolved) storage.
- * This function works for toplevel entities (globals but also functions).
- *)
-let merge_storage_toplevel name loc stoopt ini old =
-  match stoopt, old.sto with
-    (* The None cases first *)
-  
-    (* this is ok, a header file can declare many externs and a C file
-     * can then selectively "implements" some of those declarations.
-     *)
-    | None, S.Extern -> S.Global
-    | None, S.Global ->
-        (* stricter: even clang does not say anything here *)
-        if ini = None
-        then raise (Error (E.Inconsistent (
-          spf "useless redeclaration of '%s'" name, loc,
-          "previous definition is here", old.loc)))
-        else S.Global
-
-    (* stricter: 5c just warns for this *)
-    | (None | Some S.Extern), S.Static ->
-      raise (Error (E.Inconsistent (
-       spf "non-static declaration of '%s' follows static declaration" name,loc,
-       "previous definition is here", old.loc)))
-    | _, (S.Local | S.Param) -> 
-      raise (Impossible "globals can't be auto or param")
-
-    (* The Some cases *)
-
-    (* stricter: useless extern *)
-    | Some S.Extern, (S.Global | S.Extern) ->
-      raise (Error (E.Inconsistent (
-        spf "useless extern declaration of '%s'" name, loc,
-        "previous definition is here", old.loc)))
-
-    | Some S.Local, _ ->
-      raise (Error(E.Misc("illegal storage class for file-scoped entity", loc)))
-    | Some S.Static, (S.Extern | S.Global) ->
-      raise (Error (E.Inconsistent (
-       spf "static declaration of '%s' follows non-static declaration" name,loc,
-       "previous definition is here", old.loc)))
-
-    | Some S.Static, S.Static ->
-        if ini = None
-        then raise (Error (E.Inconsistent (
-          spf "useless redeclaration of '%s'" name, loc,
-          "previous definition is here", old.loc)))
-        else S.Static
-
-    | Some (S.Global | S.Param), _ -> 
-      raise (Impossible "param or global are not keywords")
-@
-
-<<function [[Typecheck.lvalue]]>>=
-(* we assume the typechecker has called expr() on 'e0' before, 
- * so Id of enum constants for example has been substituted to Int
- * and so are not considered an lvalue.
- *)
-let lvalue e0 =
-  match e0.e with
-  | Id _ 
-  | Unary (DeRef, _)
-  (* todo: lvalue only if leftpart is a lvalue. But when it can not be
-   * a lvalue? if bitfield?
-   *)
-  | RecordAccess _
-    -> true
-  (* Strings are transformed at some point in Id.
-   * We must consider them as an lvalue, because an Id is an lvalue 
-   * and because if a string is passed as an argument to a function, we want
-   * to pass the address of this string (see array_to_pointer()).
-   *)
-  | String _ -> 
-    (* raise (Impossible "transformed before") *)
-    true
-
-  | Int _ | Float _
-  | Binary _ 
-  | Unary ((GetRef | UnPlus |  UnMinus | Tilde | Not), _)
-    -> false
-  | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
-  | _ -> raise Todo
-@
-
-<<function [[Typecheck.array_to_pointer]]>>=
-(* When you mention an array in a context where you want to access the array
- * content, we prefix the array with a '&' and change its type from a T.Array
- * to a T.Pointer. This allows in turn to write typechecking rules
- * mentioning only Pointer (see for example check_compatible_binary).
- *)
-let array_to_pointer env e =
-  match e.e_type with
-  | T.Array (_, t) ->
-    (match env.expr_context with
-    | CtxWantValue -> 
-      if not (lvalue (e))
-      then raise (Error (E.Misc ("not an l-value", e.e_loc)));
-
-      { e = Unary (GetRef, e); e_type = T.Pointer t; e_loc = e.e_loc }
-    | CtxGetRef -> 
-      Error.warn "address of array ignored" e.e_loc;
-      e
-    | CtxSizeof -> e
-    )
-  (* stricter? do something for Function? or force to put address? *)
-  | T.Func _ ->
-    (match env.expr_context with
-    | CtxWantValue -> 
-      Error.warn "you should get the address of the function" e.e_loc;
-      e
-    | _ -> e
-    )
-    
-  | _ -> e
-@
-
-<<function [[Typecheck.unsugar_anon_structure_element]]>>=
-(* X.foo --> X.|sym42|.foo *)
-let rec unsugar_anon_structure_element (env : env) e0 e name def =
-  
-  let res = ref [] in
-
-  def |> List.iter (fun (fldname, t) ->
-    if fldname = name
-    then res |> Stack_.push { e0 with e = RecordAccess (e, name); e_type = t }
-    else
-      if Ast.is_gensymed fldname
-      then
-        (match t with
-        | T.StructName (_su, fullname) ->
-          let (_su2, def) = Hashtbl.find env.structs_ fullname in
-          (try 
-             let e = 
-               unsugar_anon_structure_element env e0
-                 ({ e with e = RecordAccess (e, fldname); e_type = t })
-                 name def
-             in
-             res |> Stack_.push e
-           with Not_found -> ()
-          )
-        | _ -> raise (Impossible "checked anon elements are struct/union")
-        )
-      else ()
-  );
-  (match !res with
-  | [x] -> x
-  | [] -> raise Not_found
-  | _x::_y::_xs ->
-    raise (Error(E.Misc(spf "ambiguous unnamed structure element %s" name,
-                               e.e_loc)))
-@
-
-<<function [[Typecheck.type_]]>>=
-(* Expand typedefs and resolve constant expressions. *)
-let rec type_ (env : env) typ0 =
-  match typ0.t with
-  | TBase t -> t
-  | TPointer typ -> T.Pointer (type_ env typ)
-  | TArray (eopt, typ) ->
-      (match eopt with
-      | None -> T.Array (None, type_ env typ)
-      | Some e ->
-        (try 
-           let i = Eval_const.eval env.constants e in
-           T.Array (Some i, type_ env typ)
-         with Eval_const.NotAConstant ->
-           raise (Error
-                  (E.Misc("array size must be a positive constant",typ0.t_loc)))
-        )
-      )
-  | TFunction (tret, (tparams, tdots)) ->
-      T.Func (type_ env tret, 
-                tparams |> List.map (fun p -> 
-                  let t = type_ env p.p_type in
-                  (match t with
-                  (* libc.h has a 'typedef long jmp_buf[2]' and then functions
-                   * like 'int setjmp(jmp_buf)' so we need to support that.
-                   * less: could warn?
-                   *)
-                  | T.Array (_, t) -> T.Pointer t
-                  (* stricter: could transform T.Func in pointer *)
-                  | T.Func _ -> type_error t p.p_loc
-                  | _ -> t
-                  )
-                ), tdots)
-  | TStructName (su, fullname) -> T.StructName (su, fullname)
-  (* expand enums *)
-  | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
-  (* expand typedefs *)
-  | TTypeName fullname -> Hashtbl.find env.typedefs fullname
-@
-
-
 
 %-------------------------------------------------------------
 
@@ -1757,68 +1257,40 @@ let max_types t1 t2 = ...
 (*****************************************************************************)
 (* Storage helpers *)
 (*****************************************************************************)
-
 <<function [[Typecheck.merge_storage_toplevel]]>>
-
 
 (*****************************************************************************)
 (* Other helpers *)
 (*****************************************************************************)
-
 <<function [[Typecheck.lvalue]]>>
 
 <<function [[Typecheck.array_to_pointer]]>>
 
 <<function [[Typecheck.unsugar_anon_structure_element]]>>
-  )
 
 (*****************************************************************************)
 (* AST Types to Types.t *)
 (*****************************************************************************)
-
 <<function [[Typecheck.type_]]>>
 
 (*****************************************************************************)
 (* Expression typechecking *)
 (*****************************************************************************)
-
 <<function [[Typecheck.expr]]>>
 <<function [[Typecheck.expropt]]>>
 
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
-
 <<function [[Typecheck.stmt]]>>
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[Typecheck.check_and_annotate_program]]>>
 @
 
-
 \section{[[macroprocessor/Ast_cpp.ml]]}
-
-
-<<type [[Ast_cpp.macro]]>>=
-  and macro = {
-    name: string;
-    (* Note that you can have None or Some [] for parameters.
-     * The first is a macro without parameter, the second a macro with 
-     * 0 parameters (but that still needs to be called by FOO())
-     *)
-    params: string list option;
-    varargs: bool;
-    (* The body below has been processed and every parameter occurence
-     * is replaced by a #xxx where xxx is the number corresponding to the
-     * ith parameter.
-     *)
-    body: string option
-  }
-@
-
 
 %-------------------------------------------------------------
 
@@ -1828,8 +1300,7 @@ let max_types t1 t2 = ...
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An Abstract Syntax Tree (AST) for the C Pre-Processor (CPP) directives.
-*)
+(* An Abstract Syntax Tree (AST) for the C Pre-Processor (CPP) directives. *)
 
 (*****************************************************************************)
 (* The AST *)
@@ -1840,7 +1311,6 @@ let max_types t1 t2 = ...
 <<type [[Ast_cpp.macro]]>>
 [@@deriving show]
 @
-
 
 \section{[[macroprocessor/Flags_cpp.ml]]}
 
@@ -1853,21 +1323,9 @@ let max_types t1 t2 = ...
 <<constant [[Flags_cpp.debug_macros]]>>
 @
 
-
 \section{[[macroprocessor/Lexer_cpp.mll]]}
 
-
 \section{[[macroprocessor/Location_cpp.mli]]}
-
-<<signature [[Location_cpp.history]]>>=
-(* both should be reseted each time you parse a new file *)
-val history: location_history list ref
-@
-
-<<signature [[Location_cpp.line]]>>=
-val line: loc ref
-@
-
 
 <<signature [[Location_cpp.add_event]]>>=
 (* add to history *)
@@ -1886,7 +1344,6 @@ val final_loc_of_loc:
 val dump_event:
   location_event -> unit
 @
-
 
 %-------------------------------------------------------------
 
@@ -1915,41 +1372,6 @@ val dump_event:
 
 
 \section{[[macroprocessor/Location_cpp.ml]]}
-
-<<type [[Location_cpp.loc]]>>=
-type loc = int
-[@@deriving show]
-@
-
-<<type [[Location_cpp.final_loc]]>>=
-type final_loc = Fpath.t * int
-[@@deriving show]
-@
-
-<<type [[Location_cpp.location_history]]>>=
-type location_history = {
-  location_event: location_event;
-  global_line: loc;
-}
-@
-
-<<type [[Location_cpp.location_event]]>>=
-  and location_event =
-    (* #include "foo.h" *)
-    | Include of Fpath.t
-    (* #line 1 "foo.c" *)
-    | Line of int * Fpath.t
-    (* end of #include, back to includer *)
-    | Eof
-@
-
-<<constant [[Location_cpp.history]]>>=
-let history = ref []
-@
-
-<<constant [[Location_cpp.line]]>>=
-let line = ref 1
-@
 
 <<exception [[Location_cpp.Error]]>>=
 exception Error of string * loc
@@ -2036,11 +1458,11 @@ open Fpath_.Operators
 (* Types and globals *)
 (*****************************************************************************)
 
-(* global line number, after pre-processing *)
 <<type [[Location_cpp.loc]]>>
+[@@deriving show]
 
-(* final readable location *)
 <<type [[Location_cpp.final_loc]]>>
+[@@deriving show]
 
 <<type [[Location_cpp.location_history]]>>
 <<type [[Location_cpp.location_event]]>>
@@ -2049,10 +1471,6 @@ open Fpath_.Operators
 (* TODO? move to local in Parse_cpp.ml? *)
 <<constant [[Location_cpp.history]]>>
 
-(* Global line number (after pre-processing).
- * Note that you need another data structure to map a global line number 
- * to a (file, line) pair (see history and final_loc_of_loc below).
- *)
 <<constant [[Location_cpp.line]]>>
 
 <<exception [[Location_cpp.Error]]>>
@@ -2066,7 +1484,6 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-
 <<function [[Location_cpp.add_event]]>>
 
 
@@ -2075,23 +1492,7 @@ open Fpath_.Operators
 <<function [[Location_cpp._final_loc_and_includers_of_loc]]>>
 @
 
-
 \section{[[macroprocessor/Parse_cpp.mli]]}
-
-
-<<signature [[Parse_cpp.parse]]>>=
-(* Wrapper function around a parser/lexer.
- *
- * Regarding Cap.open_in, [parse] will [open_in] the passed file parameter but
- * may also [open_in] other files as [parse] will recursively process
- * [#include] directives.
- *)
-val parse: 
-  < Cap.open_in; .. > ->
-  ('token, 'ast) hook -> Preprocessor.conf -> Fpath.t -> 
-  'ast * Location_cpp.location_history list
-@
-
 
 %-------------------------------------------------------------
 
@@ -2107,214 +1508,7 @@ val parse:
 
 @
 
-
 \section{[[macroprocessor/Parse_cpp.ml]]}
-
-<<type [[Parse_cpp.token_category]]>>=
-type token_category =
-  | Eof
-  | Sharp
-  | Ident of string
-  | Other
-@
-
-<<type [[Parse_cpp.hook]]>>=
-type ('token, 'ast) hook = {
-  lexer: Lexing.lexbuf -> 'token;
-  parser: (Lexing.lexbuf -> 'token) -> Lexing.lexbuf -> 'ast;
-  category: 'token -> token_category;
-  (* TODO: delete, redundant with Eof token_category above *)
-  eof: 'token;
-}
-@
-
-<<type [[Parse_cpp.macro]]>>=
-type macro = {
-  m_name: string;
-  m_nbargs: int option;
-  m_varargs: bool; (* use "..." *)
-
-  (* body contains #xxx substrings corresponding to the parameter of the macro.
-   * For instance, #define foo(a,b) a+b --> {name="foo";nbargs=2;body="#1+#2"}.
-   * 
-   * Is there a risk of having numbers squashed with the macro parameter?
-   * No, because if you have 'a1+b' then 'a1' is a separate identifier 
-   * so you can not generate #11+#2 .
-   *)
-  m_body: string;
-}
-@
-
-<<constant [[Parse_cpp.hmacros]]>>=
-let hmacros = Hashtbl.create 101
-@
-
-<<constant [[Parse_cpp._cwd]]>>=
-let _cwd = ref (Sys.getcwd ())
-@
-
-<<function [[Parse_cpp.error]]>>=
-let error s =
-  raise (L.Error (s, !L.line))
-@
-
-<<function [[Parse_cpp.define_cmdline_def]]>>=
-let define_cmdline_def (k, v) =
-  Hashtbl.add hmacros k 
-    { m_name = k; m_nbargs = None; m_varargs = false; m_body = v; }
-@
-
-<<function [[Parse_cpp.define]]>>=
-let define (macro : D.macro) =
-  let {D.name = s; params; varargs; body} = macro in
-  (* We could forbid here 's' to conflict with C keyboard, but this
-   * should be done in the caller, as cpp can be used with different
-   * languages, which may use different keywords.
-   *)
-  let sbody = match body with Some x -> x | None -> "1" in
-  if Hashtbl.mem hmacros s
-  then error (spf "macro redefined: %s" s)
-  else begin
-    let macro =
-      match params with
-      | None -> 
-          { m_name = s; m_nbargs = None; m_varargs = false; m_body = sbody }
-      | Some params ->
-          { m_name = s; m_nbargs = Some (List.length params); 
-            m_varargs = varargs; m_body = sbody }
-    in
-    if !Flags_cpp.debug_macros
-    then Logs.app (fun m -> m "#define %s %s" s macro.m_body);
-
-    Hashtbl.add hmacros s macro
-  end
-@
-
-<<function [[Parse_cpp.parse]]>>=
-let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : Fpath.t) = 
-  L.history := [];
-  L.line := 1;
-  Hashtbl.clear hmacros;
-  conf.defs |> List.iter define_cmdline_def;
-
-  let chan = CapStdlib.open_in caps !!file in
-  Logs.info (fun m -> m "opening %s" !!file);
-
-  L.add_event (L.Include file);
-  let lexbuf = Lexing.from_channel chan in
-  let stack = ref [(Some chan, lexbuf)] in
-  (* less: let push x = check if too deep? *)
-
-  (* for more precise error reporting *)
-  let last_ident = ref "" in
-
-  let rec lexfunc () =
-    match !stack with
-    | (chanopt, lexbuf)::xs ->
-        let t = hooks.lexer lexbuf in
-        let categ = hooks.category t in
-
-        (match categ with
-        | Eof -> 
-            stack := xs;
-            chanopt |> Option.iter (fun chan ->
-              close_in chan;
-              L.add_event L.Eof;
-            );
-            lexfunc ()
-
-        | Sharp ->
-
-            (* treating cpp directives *)
-            let t = Lexer_cpp.token lexbuf in
-            (match t with
-            | D.Include (f, system_hdr) ->
-                let path = find_include conf f system_hdr in
-                (try 
-                  let chan = CapStdlib.open_in caps !!path in
-                  Logs.info (fun m -> m "opening included file %s" !!path);
-                  L.add_event (L.Include path);
-                  let lexbuf = Lexing.from_channel chan in
-                  (* less: 
-                     if List.length stack > 1000
-                     then error "macro/io expansion too deep"
-                  *)
-                  stack := (Some chan, lexbuf)::!stack;
-                with Failure s ->
-                  error s
-                )
-            | D.Define macro_ast ->
-               (* todo: stricter: forbid s to conflict with C keyboard *)
-                define macro_ast
-            | D.Undef s ->
-                (* stricter: check that was defined *)
-                if not (Hashtbl.mem hmacros s)
-                then error (spf "macro %s was not defined" s);
-                Hashtbl.remove hmacros s
-            | D.Line (line, file) ->
-                L.add_event (L.Line (line, file));
-            (* less: for "lib" should add a L.PragmaLib event? *)
-            | D.Pragma _ -> ()
-            | D.Ifdef s ->
-                if Hashtbl.mem hmacros s
-                then ()
-                else Lexer_cpp.skip_for_ifdef 0 true lexbuf
-            | D.Ifndef s ->
-                if not (Hashtbl.mem hmacros s)
-                then ()
-                else Lexer_cpp.skip_for_ifdef 0 true lexbuf
-            | D.Else ->
-                Lexer_cpp.skip_for_ifdef 0 true lexbuf
-            | D.Endif -> ()
-            );
-            lexfunc ()
-
-        | Ident s ->
-            last_ident := s;
-            if Hashtbl.mem hmacros s
-            then 
-              let macro = Hashtbl.find hmacros s in
-              match macro.m_nbargs with
-              | None ->
-                  let body = macro.m_body in
-                  if !Flags_cpp.debug_macros
-                  then Logs.app (fun m -> m "#expand %s %s" s body);
-                  let lexbuf = Lexing.from_string body in
-                  stack := (None, lexbuf)::!stack;
-                  lexfunc ()
-              | Some n ->
-                  let args = Lexer_cpp.macro_arguments lexbuf in
-                  if List.length args <> n
-                  then error (spf "argument mismatch expanding: %s" s)
-                  else begin
-                    let body = macro.m_body in
-                    let lexbuf = Lexing.from_string body in
-                    let body = 
-                      Lexer_cpp.subst_args_in_macro_body s args lexbuf in
-                    if !Flags_cpp.debug_macros
-                    then Logs.app (fun m -> m "#expand %s %s" s body);
-                    let lexbuf = Lexing.from_string body in
-                    stack := (None, lexbuf)::!stack;
-                    lexfunc ()
-                  end
-            else t
-        | _ -> t
-        )
-    (* no more stack, could raise Impossible instead? *)           
-    | [] -> hooks.eof
-  in
-
-  (try 
-    let ast = hooks.parser (fun _lexbuf -> lexfunc ()) lexbuf in
-    ast, !L.history
-  with Parsing.Parse_error ->
-    error ("Syntax error" ^ 
-              (if !last_ident = "" 
-               then ""
-               else spf ", last name: %s" !last_ident))
-  )
-@
-
 
 %-------------------------------------------------------------
 
@@ -2355,31 +1549,23 @@ open Ast_cpp
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 <<type [[Parse_cpp.token_category]]>>
 [@@deriving show]
 
 <<type [[Parse_cpp.hook]]>>
 
-(* similar to Ast_cpp.macro *)
 <<type [[Parse_cpp.macro]]>>
 
 (*****************************************************************************)
 (* Globals *)
 (*****************************************************************************)
-
 <<constant [[Parse_cpp.hmacros]]>>
 
-(* cwd is used to manage #include "...". It is altered when you
- * include a file. cwd becomes the dirname of the included file??? 
- * TODO: dead? used?
- *)
 <<constant [[Parse_cpp._cwd]]>>
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 <<function [[Parse_cpp.error]]>>
 
 
@@ -2387,55 +1573,16 @@ open Ast_cpp
 
 <<function [[Parse_cpp.define]]>>
 
-
-(* less: Could use Set instead of list for the set of include paths 
- * todo: if absolute path, need to find it.
-*)
-let rec find_include (conf : Preprocessor.conf) (f : Fpath.t) (system : bool) =
-  if system
-  then find_include_bis conf.paths f
-  else find_include_bis (conf.dir_source_file::conf.paths) f
-and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
-  match paths with 
-  (* stricter: better error message *)
-  | [] -> failwith (spf "could not find %s in include paths" !!f)
-  | x::xs ->
-      let path : Fpath.t = 
-        if !!x = "."
-        (* this will handle also absolute path *)
-        then f
-        else x // f 
-      in
-      if Sys.file_exists !!path
-      then begin
-        if !Flags.debug_include
-        then Logs.app (fun m -> m "%d: %s" !L.line !!path);
-        path
-      end
-      else find_include_bis xs f
+<<function [[Parse_cpp.find_include]]>>
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 <<function [[Parse_cpp.parse]]>>
 @
 
 
 \section{[[macroprocessor/Preprocessor.ml]]}
-
-<<type [[Preprocessor.conf]]>>=
-type conf = {
-  (* -D *)
-  defs: (string * string) list;
-  (* -I + system paths (e.g., /usr/include) *)
-  paths: Fpath.t list;
-  (* the directory of the C file so it is looked for "" but not for <> *)
-  dir_source_file: Fpath.t;
-}
-[@@deriving show]
-@
-
 
 %-------------------------------------------------------------
 
@@ -2454,4 +1601,5 @@ type conf = {
 (* Types *)
 (*****************************************************************************)
 <<type [[Preprocessor.conf]]>>
+[@@deriving show]
 @

@@ -466,8 +466,6 @@ open Regexp_.Operators
 (* Main algorithms *)
 (*****************************************************************************)
 
-<<type [[CLI.frontend_result]]>>
-
 <<function [[CLI.frontend]]>>
 
 <<function [[CLI.backend5]]>>
@@ -1264,21 +1262,7 @@ module T = Parser  (* T for Tokens *)
 
 <<type [[Typecheck.idinfo]]>>
 
-(* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
-type typed_program = {
-  (* resolved type and storage information for identifiers and tags *)
-  ids: (Ast.fullname, idinfo) Hashtbl.t;
-  (* resolved struct definitions *)
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
-  (* functions annotated with types for each expression nodes
-   * (so you can more easily generate code later).
-   * 
-   * The enum constants should also be internally resolved and replaced
-   * with constants and some constant expressions (e.g., for
-   * array size) should also be resolved (and evaluated).
-   *)
-  funcs: Ast.func_def list;
-}
+<<type [[Typecheck.typed_program]]>>
 
 <<type [[Typecheck.error]]>>
 <<signature [[Typecheck.string_of_error]]>>
@@ -1732,11 +1716,8 @@ module E = Check
 
 <<type [[Typecheck.idinfo]]>>
 
-type typed_program = {
-  ids: (Ast.fullname, idinfo) Hashtbl.t;
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
-  funcs: Ast.func_def list;
-}
+(* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
+<<type [[Typecheck.typed_program]]>>
 
 <<type [[Typecheck.env]]>>
 <<type [[Typecheck.expr_context]]>>

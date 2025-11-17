@@ -67,6 +67,9 @@ Documentation License, Version 1.3.
 
 \section{Software architecture}
 
+%data flow:
+% tokens -> AST -> Typed AST + env -> ASM -> serialized object file
+
 \section{Book structure}
 
 %###############################################################################
@@ -76,6 +79,7 @@ Documentation License, Version 1.3.
 %******************************************************************************
 
 %toc: tokens -> AST -> Typed AST + env -> ASM -> serialized object file
+% so essentially same than data flow picture
 
 \section{Tokens}
 
@@ -83,16 +87,19 @@ Documentation License, Version 1.3.
 /*(*-----------------------------------------*)*/
 /*(*2 Constants and identifiers *)*/
 /*(*-----------------------------------------*)*/
-%token <Ast.loc * string> TName TTypeName
 %token <Ast.loc * string * Type.integer_type> TIConst
 %token <Ast.loc * string * Type.float_type> TFConst
 %token <Ast.loc * string * Type.t> TString
+%token <Ast.loc * string> TName TTypeName
 @
+
+% Ast.loc next section
+% Type.xxx_type also soon
 
 % TName vs TTypeName! subtle and problematic! C not context-free!
 % need global to remember context
 
-% TString Type.t ??
+% TString Type.t because Array of char or Array of unicode
 
 <<Parser tokens>>=
 /*(*-----------------------------------------*)*/
@@ -143,7 +150,11 @@ Documentation License, Version 1.3.
 @
 % TSharp special for cpp preprocessor, see \ref{chap:preprocessing}
 
+%ex: show list of tokens for simple helloc.c!
+% -dump_tokens and ref to appendix
+
 \section{Abstract syntax tree} %%: [[Node]]
+
 
 \subsection{Location and other basic types}
 
@@ -235,6 +246,7 @@ type typ = {
   | TArray of const_expr option * typ
   | TFunction of function_type
 
+  (* no StructDef here; they are lifted up; just StructName *)
   | TStructName of Type.struct_kind * fullname
   (* In C an enum is really like an int. However, we could do
    * extended checks at some point to do more strict type checking! 
@@ -407,7 +419,7 @@ type stmt = {
  *)
 and case_list = stmt
 @
-% ugly? move Case/Default out? 
+
 
 \subsection{Declarations and definitions}
 
@@ -428,6 +440,9 @@ type toplevels = toplevel list
 <<type [[Ast.program]]>>=
 type program = toplevels * Location_cpp.location_history list
 @
+
+%ex: show AST for simple helloc.c!
+% -dump_ast and ref to appendix
 
 \subsubsection{Variables}
 
@@ -575,7 +590,7 @@ type t =
 (* properly set during typechecking in typecheck.ml *)
 e_type: Type.t;
 @
-
+% not typ here! Type.t!
 
 <<type [[Type.integer_type]]>>=
   and integer_type = integer_kind * sign
@@ -610,12 +625,7 @@ type qualifier =
   | Const
   (* less: unsupported: | Restrict | Inline *)
 @
-
-<<type [[Type.structdef]]>>=
-(* note that the field can be gensym'ed for anonymous struct/union elements *)
-(* todo: bitfield *)
-type structdef = (string * t) list
-@
+%TODO: not used for now
 
 
 <<constant [[Type.int]]>>=
@@ -649,7 +659,8 @@ type t =
   | Static (* Private global less: could rename Private *)
   (* less:  | Inline? | Register? | ExternRegister? *)
 @
-
+% typedef in the grammar is put with extern/static/volatile but ugly
+% and abuse
 
 %%\section{Node and type attributes}
 
@@ -662,12 +673,30 @@ type t =
 %%\subsection{Other symbols}
 %%\section{Declarations, namespaces, and scope}%%: [[Decl]]
 
-\section{Frontend result: typed entities}
+\section{Frontend result: typed program}
 
-%TODO: Typecheck.result? with alt: Frontend.result ?
 
-<<type [[CLI.frontend_result]]>>=
+<<type [[Typecheck.typed_program]]>>=
+type typed_program = {
+  (* resolved type and storage information for identifiers and tags *)
+  ids: (Ast.fullname, idinfo) Hashtbl.t;
+
+  (* resolved struct definitions *)
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+
+  (* functions annotated with types for each expression nodes
+   * (so you can more easily generate code later).
+   * 
+   * The enum constants should also be internally resolved and replaced
+   * with constants and some constant expressions (e.g., for
+   * array size) should also be resolved (and evaluated).
+   *)
+  funcs: Ast.func_def list;
+}
 @
+%ex: of simple program and dump of typed_program? deriving show?
+%  use Hashtblt_.t with my own deriving!
+% -dump_typed_ast
 
 <<type [[Typecheck.idinfo]]>>=
 type idinfo = {
@@ -677,6 +706,15 @@ type idinfo = {
     (* typed initialisers (fake expression for function definitions) *)
     ini: Ast.initialiser option;
   }
+@
+
+<<type [[Type.structdef]]>>=
+(* Note that the field can be gensym'ed for anonymous struct/union elements.
+ * Note also structdef is not part of Type.t above; structdef is used
+ * instead in Typecheck.typed_program
+ * todo: bitfield
+ *)
+type structdef = (string * t) list
 @
 
 
@@ -691,18 +729,30 @@ type idinfo = {
 %******************************************************************************
 \label{chap:main}
 
+%trans:
+%toc:
+
 \section{[[main()]]}
+
+% first, the entry point, actually not main, in OCaml any toplevel
+% definition is evaluated at runtime, var def, constant def, or func def
+% here let _ var we don't care about name, we only care about effect
+% of its evaluation
 
 <<toplevel [[Main._1]]>>=
 let _ = 
   Cap.main (fun (caps : Cap.all_caps) ->
      let argv = CapSys.argv caps in
-     Exit.exit caps 
-        (Exit.catch (fun () -> 
-            CLI.main caps argv))
+     Exit.exit caps (Exit.catch (fun () ->
+         CLI.main caps argv))
   )
 @
 
+<<signature [[CLI.main]]>>=
+(* entry point (can also raise Exit.ExitCode) *)
+val main: <caps; ..> ->
+  string array -> Exit.t
+@
 
 <<type [[CLI.caps]]>>=
 (* Need:
@@ -714,193 +764,58 @@ let _ =
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 @
 
-<<signature [[CLI.main]]>>=
-(* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> ->
-  string array -> Exit.t
-@
+
+\subsection{[[main()]] skeleton}
+% skeleton main
 
 <<function [[CLI.main]]>>=
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
-
-  let arch = 
-    match Filename.basename argv.(0) with
-    | "o5c" -> Arch.Arm
-    | "ovc" -> Arch.Mips
-    | s -> failwith (spf "arch could not detected from argv0 %s" s)
-  in
-
-  let thechar = Arch.thechar arch in
-  let thestring = Arch.thestring arch in
-
-  let usage = 
-    spf "usage: %s [-options] file.c" argv.(0)
-  in
+  <<[[CLI.main()]] set [[arch]] and [[thechar]]>>
+  let usage = spf "usage: %s [-options] file.c" argv.(0) in
 
   (* in *)
   let args = ref [] in
   (* out *)
   let outfile = ref "" in
 
-  (* for cpp *)
-  let include_paths : Fpath.t list ref = ref [] in
-  let macro_defs = ref [] in
-
-  (* Ansi Posix Environment for plan9 *)
-  let ape = ref false in 
-
-  let level = ref (Some Logs.Warning) in
-  (* for debugging *)
-  let action = ref "" in
-  let backtrace = ref false in
+  <<[[CLI.main()]] macroprocessor locals>>
+  <<[[CLI.main()]] other locals>>
 
   let options = [
-    "-o", Arg.Set_string outfile,
-    " <file> place output (an object) in file";
-
-    "-D", Arg.String (fun s ->
-      let (var, val_) = 
-        if s =~ "\\(.*\\)=\\(.*\\)"
-        then Regexp_.matched2 s
-        else (s, "1")
-      in
-      macro_defs := (var, val_)::!macro_defs
-    ), " <name=def> (or just <name>) define name for preprocessor";
-    "-I", Arg.String (fun s ->
-      include_paths := Fpath.v s::!include_paths
-    ), " <dir> add dir as a path to look for '#include <file>' files";
-    "-ape", Arg.Set ape,
-    " ";
-
-    "-w", Arg.Set Flags.warn,
-    " enable warnings";
-    "-werror", Arg.Set Flags.warnerror,
-    " warnings generate error exceptions";
-
-    "-S", Arg.Set Flags.dump_asm,
-    " dump the generated assembly";
-
-    "-e", Arg.Set Flags_cpp.debug_include, " ";
-    "-f", Arg.Set Flags_cpp.debug_line, " ";
-    "-m", Arg.Set Flags_cpp.debug_macros, " ";
-
-    "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
-    "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
-    " verbose mode";
-    "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
-    " guess what";
-    "-quiet", Arg.Unit (fun () -> level := None),
-    " ";
-
-    (* pad: I added long names for those options *)
-    "-debug_include", Arg.Set Flags_cpp.debug_include, " ";
-    "-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
-    "-debug_macros",    Arg.Set Flags_cpp.debug_macros, " ";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
-    " dump the typed AST";
-    "-dump_asm", Arg.Set Flags.dump_asm,
-    " dump the generated assembly";
-
-    (* pad: I added that *)
-    "-backtrace", Arg.Set backtrace,
-    " dump the backtrace after an error";
+    <<[[CLI.main()]] [[options]] elements>>
   ] |> Arg.align
   in
-  (try
-    Arg.parse_argv argv options (fun t -> 
-      args := t::!args
-    ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
-  Logs_.setup !level ();
-  Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
-
+  <<[[CLI.main()]] parse [[argv]] and set [[args]] and flags>>
+  <<[[CLI.main()]] logging setup>>
   (* less: process the old style -Dname=val and -Idir attached *)
-
-  (* to test and debug components of mk *)
-  if !action <> "" then begin 
-    do_action caps thestring !action (List.rev !args); 
-    raise (Exit.ExitCode 0 )
-  end;
+  <<[[CLI.main()]] [[action]] management>>
 
   try 
-    (match !args, !outfile with
-    | [], "" -> 
-        Arg.usage options usage;
-        Exit.Code 1
-    | [cfile], outfile ->
-        let base = Filename.basename cfile in
-        let system_paths : Fpath.t list =
-          (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
-          with Not_found ->
-            [spf "/%s/include" thestring; 
-             "/sys/include";
-            ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
-          ) |> Fpath_.of_strings
-        in
-        
-        let outfile : Fpath.t = 
-          (if outfile = ""
-          then
-            if base =~ "\\(.*\\)\\.c"
-            then Regexp_.matched1 base ^ (spf ".%c" thechar)
-            else base ^ (spf ".%c" thechar)
-          else outfile
-          ) |> Fpath.v
-        in
-        let conf = Preprocessor.{
-          defs = !macro_defs;
-          (* this order? *)
-          paths = system_paths @ List.rev !include_paths;
-          dir_source_file = Fpath.v (Filename.dirname cfile);
-        }
-        in
-        outfile |> FS.with_open_out caps (fun chan ->
-          compile caps conf arch (Fpath.v cfile) chan
-        );
-        Exit.OK
-    | _ -> 
-      (* stricter: *)
-        failwith 
-          "compiling multiple files at the same time is not supported; use mk"
-    )
+    <<[[CLI.main()]] matching [[args]] and [[outfile]]>>
   with exn ->
-    if !backtrace
-    then raise exn
-    else 
-      (match exn with
-      | Failure s -> 
-          (* useful to indicate that error comes from 5c? *)
-          Error.errorexit (spf "%cc: %s" thechar s)
-      | Location_cpp.Error (s, loc) ->
-          (* less: could use final_loc_and_includers_of_loc loc *)
-          let (file, line) = Location_cpp.final_loc_of_loc loc in
-          Error.errorexit (spf "%s:%d %s" !!file line s)
-      (* ocaml-light: | Check.Error err | Typecheck.Error err | Eval_const.Error err | Codegen5.Error err  *)
-      | Check.Error err -> Error.errorexit (Check.string_of_error err)
-      | Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
-      | Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
-      | Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
-      | _ -> raise exn
-      )
+    <<[[CLI.main()]] when [[exn]]>>
 @
 
 
-\section{Arguments processing}
+<<[[CLI.main()]] [[options]] elements>>=
+"-o", Arg.Set_string outfile,
+" <file> place output (an object) in file";
+@
 
-\section{[[compile()]]}
+%ex: o5c foo.c -o foo.o =>
+%  file is foo.c, outfile is foo.o
+
+\subsection{Main code path}
+
+<<[[CLI.main()]] main code path with [[cfile]] and [[outfile]]>>=
+let outfile : Fpath.t = 
+  <<[[CLI.main()]] main code path, define [[outfile]]>>
+in
+<<[[CLI.main()]] main code path, define macropreprocessor [[conf]]>>
+outfile |> FS.with_open_out caps (fun chan ->
+  compile caps conf arch (Fpath.v cfile) chan
+);
+@
 
 <<signature [[CLI.compile]]>>=
 (* main algorithm; works by side effect on outfile *)
@@ -908,19 +823,111 @@ val compile: < Cap.open_in; .. > ->
   Preprocessor.conf -> Arch.t -> Fpath.t (* infile *) -> Chan.o (* outfile *) ->
   unit
 @
+% conf will see in \ref{chap:preprocessing}
+
+<<[[CLI.main()]] set [[arch]] and [[thechar]]>>=
+let arch : Arch.t = 
+  match Filename.basename argv.(0) with
+  | "o5c" -> Arch.Arm
+  | "ovc" -> Arch.Mips
+  | s -> failwith (spf "arch could not detected from argv0 %s" s)
+in
+
+let thechar = Arch.thechar arch in
+let thestring = Arch.thestring arch in
+@
+
+
+<<[[CLI.main()]] main code path, define [[outfile]]>>=
+let base = Filename.basename cfile in
+(if outfile = ""
+then
+  if base =~ "\\(.*\\)\\.c"
+  then Regexp_.matched1 base ^ (spf ".%c" thechar)
+  else base ^ (spf ".%c" thechar)
+else outfile
+) |> Fpath.v
+@
+
+
+\subsection{Arguments processing}
+
+<<[[CLI.main()]] parse [[argv]] and set [[args]] and flags>>=
+(try
+  Arg.parse_argv argv options (fun t -> 
+    args := t::!args
+  ) usage;
+with
+| Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
+| Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+);
+@
+
+<<[[CLI.main()]] matching [[args]] and [[outfile]]>>=
+(match !args, !outfile with
+| [], "" -> 
+    Arg.usage options usage;
+    Exit.Code 1
+| [cfile], outfile ->
+    <<[[CLI.main()]] main code path with [[cfile]] and [[outfile]]>>
+    Exit.OK
+| _ -> 
+  (* stricter: *)
+    failwith 
+      "compiling multiple files at the same time is not supported; use mk"
+)
+@
+
+
+\subsection{Error management}
+
+<<[[CLI.main()]] when [[exn]]>>=
+<<[[CLI.main()]] when [[exn]] if [[backtrace]]>>
+else 
+  <<[[CLI.main()]] match [[exn]]>>
+@
+% see ref{chap:error-management}
+
+<<[[CLI.main()]] match [[exn]]>>=
+(match exn with
+| Failure s -> 
+    (* useful to indicate that error comes from 5c? *)
+    Error.errorexit (spf "%cc: %s" thechar s)
+<<[[CLI.main()]] match [[exn]] other cases>>
+| _ -> raise exn
+)
+@
+
+<<[[CLI.main()]] match [[exn]] other cases>>=
+| Location_cpp.Error (s, loc) ->
+    (* less: could use final_loc_and_includers_of_loc loc *)
+    let (file, line) = Location_cpp.final_loc_of_loc loc in
+    Error.errorexit (spf "%s:%d %s" !!file line s)
+(* ocaml-light: | Check.Error err | Typecheck.Error err | Eval_const.Error err | Codegen5.Error err  *)
+| Check.Error err -> Error.errorexit (Check.string_of_error err)
+| Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
+| Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
+| Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
+@
+
+\section{[[compile()]]}
+
 
 <<function [[CLI.compile]]>>=
-let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t) (infile : Fpath.t) (outfile : Chan.o) : unit =
+let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t)
+    (infile : Fpath.t) (outfile : Chan.o) :
+    unit =
   match arch with
   | Arch.Arm -> compile5 caps conf infile outfile
   | _ -> 
-   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 @
 
 <<function [[CLI.compile5]]>>=
 let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
     (infile : Fpath.t) (outfile : Chan.o) =
-  let tast : Typecheck.typed_program = frontend caps conf infile in
+  let tast : Typecheck.typed_program =
+    frontend caps conf infile in
   backend5 tast outfile
 @
 
@@ -928,13 +935,12 @@ let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
 
 
 <<function [[CLI.frontend]]>>=
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Typecheck.typed_program =
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
+     (infile : Fpath.t) :
+    Typecheck.typed_program =
 
   let ast = Parse.parse caps conf infile in
-
-  (* debug *)
-  if !Flags.dump_ast
-  then Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.Program ast)));
+  <<[[CLI.frontend()]] if [[dump_ast]]>>
 
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
@@ -942,22 +948,8 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   let typed_program : Typecheck.typed_program = 
     Typecheck.check_and_annotate_program ast 
   in
-  
-  (* debug *)
-  if !Flags.dump_typed_ast
-  then begin 
-    typed_program.ids |> Hashtbl.iter (fun k v ->
-      match v.Typecheck.sto with
-      | Storage.Global | Storage.Static ->
-        Logs.app (fun m -> m "%s" (Ast.unwrap k));
-        Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
-      | _ -> ()
-    );
-    typed_program.funcs |> List.iter (fun func ->
-      Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
-    );
-  end;
-  typed_program
+  <<[[CLI.frontend()]] if [[dump_typed_ast]]>>
+    typed_program
 @
 
 \section{Backend}
@@ -966,17 +958,7 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
 let backend5 (tast : Typecheck.typed_program)  (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
   let (asm, _locs) = Codegen5.codegen tast in
-
-  if !Flags.dump_asm
-  then begin
-    let pc = ref 0 in
-    asm |> List.iter (fun (instr, _loc) ->
-      (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
-      let v = Meta_ast_asm5.vof_line instr in
-      Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
-      incr pc;
-    );
-  end;
+  <<[[CLI.backend5()]] if [[dump_asm]]>>
   Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
 @
 
@@ -1190,6 +1172,7 @@ let digit = ['0'-'9']
 <<[[Lexer.token]] keywords/identifiers cases>>=
 | (letter | '_') (letter | digit | '_')* {
     let s = Lexing.lexeme lexbuf in
+
     match s with
     | "static" -> Tstatic (loc()) 
     | "extern" -> Textern (loc())
@@ -1222,13 +1205,7 @@ let digit = ['0'-'9']
     (* less: USED/SET here? or manage via symbol table *)
 
     | _ ->
-      if Hashtbl.mem Globals.hids s
-      then 
-        (* typedef trick, because ambiguity in C grammar *)
-        (match Hashtbl.find Globals.hids s with
-        | A.IdIdent | A.IdEnumConstant -> TName (loc(), s)
-        | A.IdTypedef -> TTypeName (loc(), s)
-        )
+      <<[[Lexer.token()]] in identifier case, typedef trick>>
       else TName (loc(), s)
 }
 @
@@ -1237,6 +1214,18 @@ let digit = ['0'-'9']
 
 \subsection{Typedef trick}
 \label{section:typedef-trick}
+
+<<[[Lexer.token()]] in identifier case, typedef trick>>=
+if Hashtbl.mem Globals.hids s
+then 
+  (* typedef trick, because ambiguity in C grammar *)
+  (match Hashtbl.find Globals.hids s with
+  | A.IdIdent | A.IdEnumConstant -> TName (loc(), s)
+  | A.IdTypedef -> TTypeName (loc(), s)
+  )
+@
+
+%ex: void main() { foo foo; } => foo?
 
 \section{Operators}
 
@@ -1280,21 +1269,22 @@ let digit = ['0'-'9']
 \section{Numbers}
 
 <<[[Lexer.token]] number cases>>=
-| "0"  (oct+ (*as s*)) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
-    { let (s, unsigned, long) = 
-         let s = Lexing.lexeme lexbuf in
-         s =~ "0\\([0-7]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
-         Regexp_.matched3 s
-      in
-      TIConst(loc(), "0o" ^ s, inttype_of_suffix unsigned long)}
-| "0x" (hex+ (*as s*))  (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
-    { let (s, unsigned, long) = 
-         let s = Lexing.lexeme lexbuf in
-         s =~ "0x\\([0-9A-Fa-f]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
-         Regexp_.matched3 s
-      in
-      TIConst(loc(), "0x" ^ s, inttype_of_suffix unsigned long)}
+<<[[Lexer.token]] octal case>>
+<<[[Lexer.token]] hexadecimal case>>
 | "0x" { error "malformed hex constant" }
+
+<<[[Lexer.token]] decimal case>>
+
+<<[[Lexer.token]] float case>>
+(* special regexp for better error message *)
+| (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
+   { error "malformed fp constant exponent" }
+@
+
+
+\subsection{Decimals}
+
+<<[[Lexer.token]] decimal case>>=
 | (['0'-'9'] digit*) (*as s*) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
     { let (s, unsigned, long) = 
          let s = Lexing.lexeme lexbuf in
@@ -1302,25 +1292,7 @@ let digit = ['0'-'9']
          Regexp_.matched3 s
       in
       TIConst (loc(), s, inttype_of_suffix unsigned long)}
-
-(* stricter: I impose some digit+ after '.' and after 'e' *)
-| ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) (*as s*)
-    (['F''f']* (*as float*))
-   { let (s, float) =
-        let s = Lexing.lexeme lexbuf in
-        s =~ "\\([^Ff]+\\)\\([Ff]*\\)$" |> ignore;
-        Regexp_.matched2 s
-      in
-      TFConst (loc(), s, floattype_of_suffix float) }
-
-(* special regexp for better error message *)
-| (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
-   { error "malformed fp constant exponent" }
 @
-
-
-
-\subsection{Decimals}
 
 %%\subsection{[[convvtox()]]}
 
@@ -1330,8 +1302,28 @@ let digit = ['0'-'9']
 let oct = ['0'-'7']
 @
 
+<<[[Lexer.token]] octal case>>=
+| "0"  (oct+ (*as s*)) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+    { let (s, unsigned, long) = 
+         let s = Lexing.lexeme lexbuf in
+         s =~ "0\\([0-7]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+         Regexp_.matched3 s
+      in
+      TIConst(loc(), "0o" ^ s, inttype_of_suffix unsigned long)}
+@
+
 <<constant [[Lexer.hex]]>>=
 let hex = (digit | ['A'-'F''a'-'f'])
+@
+
+<<[[Lexer.token]] hexadecimal case>>=
+| "0x" (hex+ (*as s*))  (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
+    { let (s, unsigned, long) = 
+         let s = Lexing.lexeme lexbuf in
+         s =~ "0x\\([0-9A-Fa-f]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
+         Regexp_.matched3 s
+      in
+      TIConst(loc(), "0x" ^ s, inttype_of_suffix unsigned long)}
 @
 
 
@@ -1355,6 +1347,18 @@ let inttype_of_suffix sign size =
 \subsection{Long numbers}
 
 \subsection{Floats}
+
+<<[[Lexer.token]] float case>>=
+(* stricter: I impose some digit+ after '.' and after 'e' *)
+| ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) (*as s*)
+    (['F''f']* (*as float*))
+   { let (s, float) =
+        let s = Lexing.lexeme lexbuf in
+        s =~ "\\([^Ff]+\\)\\([Ff]*\\)$" |> ignore;
+        Regexp_.matched2 s
+      in
+      TFConst (loc(), s, floattype_of_suffix float) }
+@
 
 <<function [[Lexer.floattype_of_suffix]]>>=
 let floattype_of_suffix s =
@@ -1477,6 +1481,8 @@ let parse_no_cpp (chan : Chan.i) =
   )
 @
 
+%trans:
+% seen Lexer.token before, now Parser.prog
 
 
 <<Parser.mly>>=
@@ -2566,6 +2572,13 @@ let warn = ref false
 
 <<constant [[Flags.warnerror]]>>=
 let warnerror = ref false
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-w", Arg.Set Flags.warn,
+" enable warnings";
+"-werror", Arg.Set Flags.warnerror,
+" warnings generate error exceptions";
 @
 
 
@@ -4642,9 +4655,42 @@ let rec expr env e0 dst_opd_opt =
 %******************************************************************************
 \chapter{Preprocessing}
 %******************************************************************************
+\label{chap:preprocessing}
 %alt: in appendix
 
 \section{Overview}
+
+<<[[CLI.main()]] main code path, define macropreprocessor [[conf]]>>=
+let system_paths : Fpath.t list =
+  <<[[CLI.main()]] main code path, define [[system_paths]]>>
+in
+let conf = Preprocessor.{
+  defs = !macro_defs;
+  (* this order? *)
+  paths = system_paths @ List.rev !include_paths;
+  dir_source_file = Fpath.v (Filename.dirname cfile);
+}
+in
+@
+
+<<[[CLI.main()]] main code path, define [[system_paths]]>>=
+  (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
+  with Not_found ->
+    [spf "/%s/include" thestring; 
+     "/sys/include";
+    ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
+  ) |> Fpath_.of_strings
+@
+
+<<[[CLI.main()]] other locals>>=
+(* Ansi Posix Environment for plan9 *)
+let ape = ref false in 
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-ape", Arg.Set ape,
+" ";
+@
+
 
 <<function [[Parse.parse]]>>=
 let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (file : Fpath.t) : Ast.program = 
@@ -5172,9 +5218,21 @@ and skip_for_ifdef depth bol = parse
 
 @
 
+
 \section{[[#include]]}
 
 \subsection{Include paths, [[-I]]}
+
+<<[[CLI.main()]] macroprocessor locals>>=
+(* for cpp *)
+let include_paths : Fpath.t list ref = ref [] in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-I", Arg.String (fun s ->
+  include_paths := Fpath.v s::!include_paths
+), " <dir> add dir as a path to look for '#include <file>' files";
+@
 
 \subsection{Tracing origin} %% and [[Hist]]
 
@@ -5183,6 +5241,21 @@ and skip_for_ifdef depth bol = parse
 \section{[[#define]]}
 
 \subsection{[[-D]]}
+
+<<[[CLI.main()]] macroprocessor locals>>=
+let macro_defs = ref [] in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-D", Arg.String (fun s ->
+  let (var, val_) = 
+    if s =~ "\\(.*\\)=\\(.*\\)"
+    then Regexp_.matched2 s
+    else (s, "1")
+  in
+  macro_defs := (var, val_)::!macro_defs
+), " <name=def> (or just <name>) define name for preprocessor";
+@
 
 \subsection{[[#define]]}
 
@@ -5275,7 +5348,43 @@ and skip_for_ifdef depth bol = parse
 \chapter{Debugging}
 %******************************************************************************
 
+
 \section{Dumpers}
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-dump_tokens", Arg.Set Flags.dump_tokens,
+" dump the tokens as they are generated";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_ast", Arg.Set Flags.dump_ast,
+" dump the parsed AST";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
+" dump the typed AST";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-dump_asm", Arg.Set Flags.dump_asm,
+" dump the generated assembly";
+@
+
+<<[[CLI.frontend()]] if [[dump_ast]]>>=
+(* debug *)
+if !Flags.dump_ast
+then Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.Program ast)));
+@
+
+<<[[CLI.main()]] other locals>>=
+(* for debugging *)
+let action = ref "" in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+@
+
 
 <<constant [[Flags.dump_tokens]]>>=
 let dump_tokens = ref false
@@ -5317,6 +5426,13 @@ let dump_ast = ref false
 @
 
 
+<<[[CLI.main()]] [[action]] management>>=
+(* to test and debug components of mk *)
+if !action <> "" then begin 
+  do_action caps thestring !action (List.rev !args); 
+  raise (Exit.ExitCode 0 )
+end;
+@
 
 <<function [[CLI.do_action]]>>=
 let do_action (caps: < caps; .. >) thestring s xs =
@@ -5344,7 +5460,41 @@ let do_action (caps: < caps; .. >) thestring s xs =
 
 \section{[[5c -v]], verbose mode}
 
+<<[[CLI.main()]] other locals>>=
+let level = ref (Some Logs.Warning) in
+@
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-v", Arg.Unit (fun () -> level := Some Logs.Info),
+ " verbose mode";
+"-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
+" verbose mode";
+"-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+" guess what";
+"-quiet", Arg.Unit (fun () -> level := None),
+" ";
+@
+
+<<[[CLI.main()]] logging setup>>=
+Logs_.setup !level ();
+Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
+@
+
 \section{Preprocessing debugging}
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-e", Arg.Set Flags_cpp.debug_include, " ";
+"-f", Arg.Set Flags_cpp.debug_line, " ";
+"-m", Arg.Set Flags_cpp.debug_macros, " ";
+@
+
+
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added long names for those options *)
+"-debug_include", Arg.Set Flags_cpp.debug_include, " ";
+"-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
+"-debug_macros",    Arg.Set Flags_cpp.debug_macros, " ";
+@
 
 \subsection{Macro debugging: [[5c -m]]}
 
@@ -5391,6 +5541,23 @@ let s_of_any_with_types x =
   OCaml.string_of_v v
 @
 
+<<[[CLI.frontend()]] if [[dump_typed_ast]]>>=
+(* debug *)
+if !Flags.dump_typed_ast
+then begin 
+  typed_program.ids |> Hashtbl.iter (fun k v ->
+    match v.Typecheck.sto with
+    | Storage.Global | Storage.Static ->
+      Logs.app (fun m -> m "%s" (Ast.unwrap k));
+      Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
+    | _ -> ()
+  );
+  typed_program.funcs |> List.iter (fun func ->
+    Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
+  );
+end;
+@
+
 
 \subsection{Printing expression type trees: [[5c -t]]}
 
@@ -5401,11 +5568,30 @@ let s_of_any_with_types x =
 let dump_asm = ref false
 @
 
+<<[[CLI.backend5()]] if [[dump_asm]]>>=
+if !Flags.dump_asm
+then begin
+  let pc = ref 0 in
+  asm |> List.iter (fun (instr, _loc) ->
+    (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
+    let v = Meta_ast_asm5.vof_line instr in
+    Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
+    incr pc;
+  );
+end;
+@
+
 \subsection{Printing processed opcodes: [[5c -G]]}
 
 \subsection{Printing code generation information: [[5c -g]]}
 
 \subsection{Printing generated assembly: [[5c -S]]}
+
+<<[[CLI.main()]] [[options]] elements>>=
+"-S", Arg.Set Flags.dump_asm,
+" dump the generated assembly";
+@
+
 
 
 \section{Optimization debugging}
@@ -5483,8 +5669,23 @@ let string_of_error err =
 
 \subsection{Backtraces}
 
+
 <<constant [[Flags.backtrace]]>>=
 let backtrace = ref false
+@
+
+<<[[CLI.main()]] other locals>>=
+let backtrace = ref false in
+@
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: I added that *)
+"-backtrace", Arg.Set backtrace,
+" dump the backtrace after an error";
+@
+
+<<[[CLI.main()]] when [[exn]] if [[backtrace]]>>=
+if !backtrace
+then raise exn
 @
 
 

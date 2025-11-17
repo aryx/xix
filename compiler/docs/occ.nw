@@ -157,15 +157,17 @@ Documentation License, Version 1.3.
 \section{Abstract syntax tree} %%: [[Node]]
 
 
-\subsection{Location and other basic types}
+\subsection{Location}
 
 <<type [[Ast.loc]]>>=
 (* global linenumber after preprocessing *)
 type loc = Location_cpp.loc
 @
 % See chapter{chap:preprocessing} again.
+% =~ int for line number
 
 \subsection{Names and namespaces}
+%alt: and scopes
 
 <<type [[Ast.name]]>>=
 type name = string
@@ -178,7 +180,8 @@ type blockid = int (* same than Type_.blockid, repeated here for clarity *)
 
 <<type [[Ast.fullname]]>>=
 (* A fully resolved and scoped name. 
- * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
+ *
+ * 5c: uses a reference to a symbol in a symbol table to fully qualify a name.
  * Instead, I use a unique blockid and an external hash or environment that
  * maps this fullname to the appropriate information.
  * I think it offers a better separation of concerns.
@@ -203,7 +206,7 @@ type idkind =
 let hids: (string, Ast.idkind) Hashtbl.t = 
   Hashtbl.create 101
 @
-% see section{section:typedef-trick}
+% see section{sec:typedef-trick}
 
 
 <<type [[Ast.tagkind]]>>=
@@ -1128,7 +1131,7 @@ let error s =
 <<function [[Lexer.loc]]>>=
 let loc () = !L.line
 @
-
+% see \ref{sec:preprocessing-line}
 
 <<function [[Lexer.char_]]>>=
 (* needed only because of ocamllex limitations in ocaml-light
@@ -1145,7 +1148,7 @@ let char_ lexbuf =
 (* See ../macroprocessor/lexer_cpp.mll *)
 | "#" { TSharp }
 @
-
+% see \ref{sec:preprocessing-sharp}
 
 
 
@@ -1232,7 +1235,7 @@ let digit = ['0'-'9']
 \subsection{Unicode identifiers}
 
 \subsection{Typedef trick}
-\label{section:typedef-trick}
+\label{sec:typedef-trick}
 
 <<[[Lexer.token()]] in identifier case, typedef trick>>=
 if Hashtbl.mem Globals.hids s
@@ -1274,6 +1277,9 @@ then
 | "<"  { TInf   (loc()) } | ">"  { TSup   (loc()) }
 | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
 @
+
+\section{Punctuation}
+%new:
 
 <<[[Lexer.token]] symbol cases>>=
 | "(" { TOPar   (loc()) } | ")" { TCPar   (loc()) }
@@ -1475,6 +1481,8 @@ let string_of_ascii i =
 %******************************************************************************
 \label{chap:parsing}
 
+
+
 \section{Overview}
 
 <<signature [[Parse.parse]]>>=
@@ -1549,111 +1557,22 @@ module L = Location_cpp
 <<function [[Parser.mk_t]]>>
 <<function [[Parser.mk_st]]>>
 
+<<global [[Parser.defs]]>>
+<<function [[Parser.get_and_reset]]>>
 
-(* 'defs' contains things we lift up in the AST (struct defs, enums, typedefs).
- * Note that we tag those defs with a blockid, so there is no escape-scope
- * problem.
- *)
-let defs =
-  ref []
+<<type [[Parser.env]]>>
 
-let get_and_reset x =
-  let v = !x in
-  x := [];
-  v
+<<function [[Parser.add_id]]>>
+<<function [[Parser.add_tag]]>>
 
-(* to manage scope (used notably to recognize typedefs in the lexer) *)
-type env = {
-  (* there are mainly two namespaces in C: one for ids and one for tags *)
-  ids:  (string, idkind * Ast.blockid) Hashtbl.t;
-  tags: (string, tagkind * Ast.blockid) Hashtbl.t;
+<<global [[Parser.env]]>>
 
-  mutable block: Ast.blockid;
+<<global [[Parser.block_counter]]>>
 
-  mutable ids_scope:  (string list) list;
-  mutable tags_scope: (string list) list;
-  mutable block_scope: Ast.blockid list;
+<<function [[Parser.gensym]]>>
 
-}
-(* alt: could have a recursive environment with 'parent: env;' and so
- * we could remove the need for those xxx_scope.
- * we would need then a lookup_id and lookup_tag that would
- * possibly look in the parent field.
- *)
-
-(* Should we warn if 'id' already declared? No, because at the toplevel
- * it is ok to redeclare the same variable or prototype.
- * So better to do those checks in another phase (in check.ml and typecheck.ml).
- *)
-let add_id env id idkind =
-  Hashtbl.add Globals.hids id idkind;
-  Hashtbl.add env.ids id (idkind, env.block);
-  match env.ids_scope with
-  | xs::xss -> env.ids_scope <- (id::xs)::xss
-  | [] -> env.ids_scope <- [[id]]
-
-let add_tag env tag tagkind =
-  Hashtbl.add env.tags tag (tagkind, env.block);
-  match env.tags_scope with
-  | xs::xss -> env.tags_scope <- (tag::xs)::xss
-  | [] -> env.tags_scope <- [[tag]]
-
-
-
-let env = {
-  ids = Hashtbl.create 101;
-  tags = Hashtbl.create 101;
-  block = 0;
-  
-  ids_scope = [];
-  tags_scope = [];
-  block_scope = [];
-}
-
-(* a few builtins.
- * less: 5c manages USED/SET at a lower level; they are lexical keywords
- * and they are in the AST with special nodes (OUSED/OSET)
- *)
-let _ =
-  add_id env "USED" IdIdent;
-  add_id env "SET" IdIdent;
-  ()
-
-let block_counter = ref 0
-
-(* for anonymous struct/union/enum and structure elements *)
-let gensym_counter = ref 0
-let gensym () =
-  incr gensym_counter;
-  spf "|sym%d|" !gensym_counter
-
-
-let new_scope env =
-  incr block_counter;
-  env.block_scope <- env.block :: env.block_scope;
-  env.block <- !block_counter;
-  env.ids_scope <- []::env.ids_scope;
-  env.tags_scope <- []::env.tags_scope;
-  ()
-
-let pop_scope env =
-  (match env.block_scope, env.ids_scope, env.tags_scope with
-  | x::xs, ys::yss, zs::zss -> 
-      env.block <- x;
-      env.block_scope <- xs;
-      ys |> List.iter (fun id ->
-        Hashtbl.remove env.ids id;
-        Hashtbl.remove Globals.hids id;
-      );
-      zs |> List.iter (fun tag -> 
-        Hashtbl.remove env.tags tag
-      );
-      env.ids_scope <- yss;
-      env.tags_scope <- zss;
-  | _ -> raise (Impossible "pop empty declaration stack, grammar wrong")
-  )
-  (* less: return an optional list of instructions at some point *)
-
+<<function [[Parser.new_scope]]>>
+<<function [[Parser.pop_scope]]>>
 %}
 
 /*(*************************************************************************)*/
@@ -1677,11 +1596,6 @@ let pop_scope env =
 @
 
 
-
-
-
-
-
 <<function [[Parser.error]]>>=
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
@@ -1697,6 +1611,129 @@ let mk_t t loc = { t = t; t_loc = loc }
 @
 <<function [[Parser.mk_st]]>>=
 let mk_st st loc = { s = st; s_loc = loc }
+@
+
+\section{Parsing environment and scope management}
+
+<<type [[Parser.env]]>>=
+(* To manage scope (used notably to recognize typedefs in the lexer)
+ *
+ * alt: could have a recursive environment with 'parent: env;' and so
+ * we could remove the need for those xxx_scope.
+ * we would need then a lookup_id and lookup_tag that would
+ * possibly look in the parent field.
+ *)
+type env = {
+  (* there are mainly two namespaces in C: one for ids and one for tags *)
+  ids:  (string, idkind * Ast.blockid) Hashtbl.t;
+  tags: (string, tagkind * Ast.blockid) Hashtbl.t;
+
+  mutable block: Ast.blockid;
+
+  mutable ids_scope:  (string list) list;
+  mutable tags_scope: (string list) list;
+  mutable block_scope: Ast.blockid list;
+}
+@
+
+<<global [[Parser.env]]>>=
+let env = {
+  ids = Hashtbl_.create ();
+  tags = Hashtbl_.create ();
+  block = 0;
+  
+  ids_scope = [];
+  tags_scope = [];
+  block_scope = [];
+}
+@
+
+<<function [[Parser.add_id]]>>=
+(* Should we warn if 'id' already declared? No, because at the toplevel
+ * it is ok to redeclare the same variable or prototype.
+ * So better to do those checks in another phase (in Check.ml and Typecheck.ml).
+ *)
+let add_id env id idkind =
+  Hashtbl.add Globals.hids id idkind;
+
+  Hashtbl.add env.ids id (idkind, env.block);
+  match env.ids_scope with
+  | xs::xss -> env.ids_scope <- (id::xs)::xss
+  | [] -> env.ids_scope <- [[id]]
+@
+% Globals.hids!
+
+<<function [[Parser.add_tag]]>>=
+let add_tag env tag tagkind =
+  Hashtbl.add env.tags tag (tagkind, env.block);
+  match env.tags_scope with
+  | xs::xss -> env.tags_scope <- (tag::xs)::xss
+  | [] -> env.tags_scope <- [[tag]]
+@
+
+<<global [[Parser.block_counter]]>>=
+let block_counter = ref 0
+@
+
+<<function [[Parser.new_scope]]>>=
+let new_scope env =
+  incr block_counter;
+  env.block_scope <- env.block :: env.block_scope;
+  env.block <- !block_counter;
+  env.ids_scope <- []::env.ids_scope;
+  env.tags_scope <- []::env.tags_scope;
+  ()
+@
+
+<<function [[Parser.pop_scope]]>>=
+let pop_scope env =
+  (match env.block_scope, env.ids_scope, env.tags_scope with
+  | x::xs, ys::yss, zs::zss -> 
+      env.block <- x;
+      env.block_scope <- xs;
+      ys |> List.iter (fun id ->
+        Hashtbl.remove env.ids id;
+        Hashtbl.remove Globals.hids id;
+      );
+      zs |> List.iter (fun tag -> 
+        Hashtbl.remove env.tags tag
+      );
+      env.ids_scope <- yss;
+      env.tags_scope <- zss;
+  | _ -> raise (Impossible "pop empty declaration stack, grammar wrong")
+  )
+  (* less: return an optional list of instructions at some point *)
+@
+% remember Hashtbl.add can handle multiple times same key and remove
+% will remove last binding, so perfect for us
+
+\section{Lifting nested definitions to the toplevel}
+
+<<global [[Parser.defs]]>>=
+(* 'defs' contains things we lift up in the AST (struct defs, enums, typedefs).
+ * Note that we tag those defs with a blockid, so there is no escape-scope
+ * problem.
+ *)
+let defs =
+  ref []
+@
+
+<<function [[Parser.get_and_reset]]>>=
+let get_and_reset x =
+  let v = !x in
+  x := [];
+  v
+@
+
+\section{Naming anonymous definitions}
+\label{sec:gensyn}
+
+<<function [[Parser.gensym]]>>=
+(* for anonymous struct/union/enum and structure elements *)
+let gensym_counter = ref 0
+let gensym () =
+  incr gensym_counter;
+  spf "|sym%d|" !gensym_counter
 @
 
 \section{Grammar overview}
@@ -3220,6 +3257,17 @@ env.tags |> Hashtbl.iter (fun fullname (usedef, _idkind) ->
 
 \subsection{False positives silencing: [[SET()/USED()]]}
 
+<<toplevel [[Parser._1]]>>=
+(* a few builtins.
+ * less: 5c manages USED/SET at a lower level; they are lexical keywords
+ * and they are in the AST with special nodes (OUSED/OSET)
+ *)
+let _ =
+  add_id env "USED" IdIdent;
+  add_id env "SET" IdIdent;
+  ()
+@
+
 %%\subsection{Redeclared or unused labels}
 \subsection{Use of undeclared labels or unused labels}
 
@@ -4165,6 +4213,8 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
 @
 % return_type set when visiting function, we well see soon
 
+%alt:\subsection{Var}
+% later instead
 
 %\section{Typechecking types}
 %later in typedef expansion
@@ -4332,6 +4382,7 @@ let rec type_ (env : env) typ0 =
     (* todo: add cast if not same type *)
   );
   Hashtbl.add env.ids_ fullname { typ = t; sto = sto; ini = ini; loc = loc };
+
   Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
         v_init = ini }
 @
@@ -4671,18 +4722,24 @@ let rec eval (env : env) (e0 : expr) : integer =
 \chapter{Assembly Generation}
 %******************************************************************************
 
+
+
 \section{Overview}
+
+
+\section{Arch specific settings}
 
 <<type [[Arch_compiler.t]]>>=
 type t = {
   width_of_type: env -> Type.t -> int;
 }
 @
-
-<<signature [[Arch5.arch]]>>=
-val arch: Arch_compiler.t
+<<type [[Arch_compiler.env]]>>=
+type env = {
+  (* same than Typecheck.typed_program.structs? *)
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+}
 @
-
 
 <<function [[Arch5.width_of_type]]>>=
 let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
@@ -4714,26 +4771,23 @@ let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
       |> List.fold_left (+) 0
 @
 
-<<type [[Arch_compiler.env]]>>=
-type env = {
-  (* same than Typecheck.typed_program.structs? *)
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
-}
+<<signature [[Arch5.arch]]>>=
+val arch: Arch_compiler.t
 @
-
-
 <<constant [[Arch5.arch]]>>=
 let arch = { width_of_type }
 @
 
+\section{Code generation environment}
 
+% again, and [[env]] type, like for parsing, use/def check, typechecking,
+% eval_const
 
 <<type [[Codegen5.env]]>>=
 (* Environment for code generation *)
 type env = {
 
   (* computed by previous typechecking phase *)
-
   ids_:     (Ast.fullname, TC.idinfo) Hashtbl.t;
   structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
@@ -4758,34 +4812,16 @@ type env = {
    * really a (A.register, int) Hashtbl.t;
    *)
   regs: int array;
-
-  size_locals: int ref;
-  offset_locals: int ref;
-  (* for parameters and locals *)
-  offsets: (Ast.fullname, int) Hashtbl.t;
-
-  (* for goto/labels *)
-  labels: (string, Ast_asm.virt_pc) Hashtbl.t;
-  (* if the label is defined after the goto, when we process the label,
-   * we need to update previous goto instructions.
-   *)
-  forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
-
-  (* for loops (and switch) *)
-  (* reinitialized for each block scope *)
-  break_pc: Ast_asm.virt_pc option;
-  continue_pc: Ast_asm.virt_pc option;
-
+  <<[[Codegen5.env]] other function fields>>
 }
 @
 
 
-<<type [[Codegen5.error]]>>=
-type error = Check.error
-@
-<<exception [[Codegen5.Error]]>>=
-exception Error of error
-@
+
+
+
+
+\section{[[codegen()]] skeleton}
 
 <<function [[Codegen5.codegen]]>>=
 let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
@@ -4799,85 +4835,41 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
     code = ref [||];
     data = ref [];
 
+    (* TODO: move in nested struct so then can reuse default_xxx () *)
     size_locals = ref 0;
     offset_locals = ref 0;
-    offsets       = Hashtbl.create 0;
-    labels        = Hashtbl.create 0;
-    forward_gotos = Hashtbl.create 0;
+    offsets       = Hashtbl_.create ();
+    labels        = Hashtbl_.create ();
+    forward_gotos = Hashtbl_.create ();
 
     break_pc = None;
     continue_pc = None;
 
-    regs          = Array.make 0 16;
+    regs          = Array.make 0 A5.nb_registers;
   } in
 
-  tp.funcs |> List.iter (fun { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } ->
-    let fullname = (name, 0) in
-    let idinfo = Hashtbl.find env.ids_ fullname in
-    (* todo: if Flag.profile (can be disabled by #pragma) *)
-    let attrs = A.default_attr in
-
-    let spc = add_fake_instr env "TEXT" in
-    
-    (* set offsets for parameters *)
-    let offsets = Hashtbl.create 11 in
-    let (_typret, (typparams, _varargs)) = typ in
-    let t = idinfo.TC.typ in
-    let tparams = 
-      match t with
-      | T.Func (_tret, tparams, _varargs) -> tparams
-      | _ -> raise (Impossible "not a FUNC")
-    in
-    assert (List.length tparams = List.length typparams);
-    let xs = List_.zip typparams tparams in
-    let offset = ref 0 in
-    xs |> List.iter (fun (p, t) ->
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
-      in
-      p.p_name |> Option.iter (fun fullname ->
-        Hashtbl.add offsets fullname !offset
-      );
-      (* todo: align *)
-      offset := !offset + sizet;
-    );
-    
-    
-    (* todo: align offset_locals with return type *)
-    let env = { env with
-      size_locals = ref 0;
-      offset_locals = ref 0;
-      offsets       = offsets;
-      labels        = Hashtbl.create 11;
-      forward_gotos = Hashtbl.create 11;
-      regs          = Array.copy regs_initial;
-    }
-    in
-    stmt env st;
-
-    set_instr env spc 
-      (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
-                         !(env.size_locals)))) f_loc;
-    add_instr env (A.Virtual A.RET) f_loc;
-
-    (* sanity check register allocation *)
-    env.regs |> Array.iteri (fun i v ->
-      if regs_initial.(i) <> v
-      then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
-    );
-  );
+  <<function [[Codegen5.codegen_func]]>>
+  tp.funcs |> List.iter (codegen_func env);
 
   (* todo: generate code for ids after, for CGLOBAL *)
   let instrs = 
     (Array.sub !(env.code) 0 !(env.pc) |> Array.to_list) @
-      List.rev !(env.data)
+     List.rev !(env.data)
   in
+  (* TODO *)
   let locs = [] in
   instrs, locs
 @
 
+<<type [[Codegen5.error]]>>=
+type error = Check.error
+@
+<<exception [[Codegen5.Error]]>>=
+exception Error of error
+@
 
 
-\section{[[pc]], [[p]], and [[nextpc()]]}
+%%\section{[[pc]], [[p]], and [[nextpc()]]}
 
 \section{Functions} %%: [[codgen()]]
 
@@ -4886,188 +4878,534 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
 %%\subsection{[[patch()]]}
 %%\subsection{Offset}
 
+<<function [[Codegen5.codegen_func]]>>=
+let codegen_func env func =
+  let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
+
+  let fullname = (name, 0) in
+  let idinfo = Hashtbl.find env.ids_ fullname in
+  (* todo: if Flag.profile (can be disabled by #pragma) *)
+  let attrs = A.default_attr in
+
+  let spc = add_fake_instr env "TEXT" in
+
+  <<[[Codegen5.codegen_func()]] set [[offsets]] for parameters>>
+  <<[[Codegen5.codegen_func()]] adjust [[env]]>>
+
+  stmt env st;
+
+  set_instr env spc 
+    (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
+                       !(env.size_locals)))) f_loc;
+  add_instr env (A.Virtual A.RET) f_loc;
+
+  <<[[Codegen5.codegen_func()]] sanity check [[env.regs]]>>
+in
+@
+
+
+<<function [[Codegen5.add_fake_instr]]>>=
+let add_fake_instr env str =
+  let spc = !(env.pc) in
+  add_instr env (A.LabelDef (str ^ "(fake)")) fake_loc;
+  spc
+@
+
+<<function [[Codegen5.set_instr]]>>=
+let set_instr env pc instr loc =
+  if pc >= !(env.pc)
+  then failwith (spf "set_instr: pc > env.pc (%d >= %d)" pc !(env.pc));
+  !(env.code).(pc) <- (instr, loc)
+@
+
+
+<<function [[Codegen5.add_instr]]>>=
+let add_instr env instr loc = 
+  (* grow array if necessary *)
+  if !(env.pc) >= Array.length !(env.code)
+  then begin
+    let increment = 100 in
+    let newcode = 
+      Array.make (Array.length !(env.code) + increment)  (fake_instr, fake_loc)
+    in
+    Array.blit !(env.code) (Array.length !(env.code)) newcode 0 0;
+    env.code := newcode
+  end;
+
+  !(env.code).(!(env.pc)) <- (instr, loc);
+  incr env.pc;
+  ()
+@
+
+<<constant [[Codegen5.fake_instr]]>>=
+let fake_instr = A.Virtual A.NOP
+@
+<<constant [[Codegen5.fake_loc]]>>=
+let fake_loc = -1
+@
+<<constant [[Codegen5.fake_pc]]>>=
+let fake_pc = -1
+@
+
+
+
+<<function [[Codegen5.global_of_id]]>>=
+let global_of_id fullname idinfo = 
+  { name = Ast.unwrap fullname;
+    priv = 
+      (match idinfo.TC.sto with
+      | S.Static -> Some (-1)
+      | S.Global | S.Extern -> None
+      | _ -> raise (Impossible "global can be only Static/Global/Extern")
+      );
+    (* less: analyse idinfo.typ *)
+    signature = None;
+  }
+@
+
+
+<<[[Codegen5.env]] other function fields>>=
+size_locals: int ref;
+@
+% will be modified in stmt() call by side effect
+
+<<[[Codegen5.env]] other function fields>>=
+(* for parameters and locals *)
+offsets: (Ast.fullname, int) Hashtbl.t;
+@
+
+<<[[Codegen5.codegen_func()]] set [[offsets]] for parameters>>=
+(* set offsets for parameters *)
+let offsets = Hashtbl_.create () in
+
+let (_typret, (typparams, _varargs)) = typ in
+
+let t = idinfo.TC.typ in
+let tparams = 
+  match t with
+  | T.Func (_tret, tparams, _varargs) -> tparams
+  | _ -> raise (Impossible "not a FUNC")
+in
+assert (List.length tparams = List.length typparams);
+
+let xs = List_.zip typparams tparams in
+
+let offset = ref 0 in
+xs |> List.iter (fun (p, t) ->
+  let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t in
+  p.p_name |> Option.iter (fun fullname ->
+    Hashtbl.add offsets fullname !offset
+  );
+  (* todo: align *)
+  offset := !offset + sizet;
+);
+@  
+
+
+<<[[Codegen5.codegen_func()]] adjust [[env]]>>=
+(* todo: align offset_locals with return type *)
+let env = { env with
+  size_locals = ref 0;
+  offset_locals = ref 0;
+  offsets       = offsets;
+  labels        = Hashtbl_.create ();
+  forward_gotos = Hashtbl_.create ();
+  regs          = Array.copy regs_initial;
+}
+in
+@
+
+
+<<[[Codegen5.codegen_func()]] sanity check [[env.regs]]>>=
+(* sanity check register allocation *)
+env.regs |> Array.iteri (fun i v ->
+  if regs_initial.(i) <> v
+  then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
+);
+@
+
 \section{Statements} %%: [[gen()]]
 
 <<function [[Codegen5.stmt]]>>=
 let rec stmt env st0 =
   match st0.s with
-  | ExprSt e -> expr env e None
-  | Block xs -> xs |> List.iter (stmt env)
-  | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
-      let idinfo = Hashtbl.find env.ids_ fullname in
-      (* todo: generate code for idinfo.ini *)
-
-      (* update env.offsets *)
-      let t = idinfo.TC.typ in
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
-      in
-      (* todo: align *)
-      env.offset_locals := !(env.offset_locals) + sizet;
-      env.size_locals := !(env.size_locals) + sizet;
-      Hashtbl.add env.offsets fullname !(env.offset_locals);
-  | Return eopt ->
-    (match eopt with
-    | None ->
-      add_instr env (A.Virtual A.RET) st0.s_loc
-    | Some e ->
-      (* todo: if type compatible with R0 *)
-      with_reg env rRET (fun () ->
-        let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
-        expr env e (Some dst);
-        add_instr env (A.Virtual A.RET) st0.s_loc
-      )
-    )
-
-  | Label (name, st) ->
-    let here = !(env.pc) in
-    Hashtbl.add env.labels name here;
-    if Hashtbl.mem env.forward_gotos name
-    then begin
-      let xs = Hashtbl.find env.forward_gotos name in
-      xs |> List.iter (fun xpc -> patch_fake_goto env xpc here);
-      (* not really necessary because can not define the same label twice *)
-      Hashtbl.remove env.forward_gotos name
-    end;
-    (* todo? generate dummy Goto +1? *)
-    stmt env st
-  | Goto name ->
-    let here = !(env.pc) in
-    let dstpc = 
-      if Hashtbl.mem env.labels name
-      then Hashtbl.find env.labels name
-      else begin
-        Hashtbl.replace env.forward_gotos name
-          (here:: (if Hashtbl.mem env.forward_gotos name
-                  then Hashtbl.find env.forward_gotos name
-                  else []));
-        fake_pc
-      end
-    in
-    add_instr env (A.Instr (A5.B (ref (A.Absolute dstpc)), A5.AL)) st0.s_loc;
-    
-  | If (e, st1, st2) ->
-    let goto_else_or_end = ref (expr_cond env e) in
-    if st1.s <> Block []
-    then stmt env st1;
-    if st2.s <> Block []
-    then begin
-      let goto_end = add_fake_goto env st2.s_loc in
-      patch_fake_goto env !goto_else_or_end !(env.pc);
-      stmt env st2;
-      goto_else_or_end := goto_end;
-    end;
-    patch_fake_goto env !goto_else_or_end !(env.pc)
-
-  | While (e, st) ->
-    let goto_entry        = add_fake_goto env e.e_loc in
-    let goto_for_continue = add_fake_goto env e.e_loc in
-    let goto_for_break    = add_fake_goto env e.e_loc in
-    patch_fake_goto env goto_for_continue !(env.pc);
-    patch_fake_goto env goto_entry !(env.pc);
-    
-    let goto_else = expr_cond env e in
-    patch_fake_goto env goto_else goto_for_break;
-
-    let env = { env with 
-      break_pc = Some goto_for_break; 
-      continue_pc = Some goto_for_continue;
-    }
-    in
-    stmt env st;
-
-    (* less: should be last loc of st? *)
-    let loc = e.e_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
-    patch_fake_goto env goto_for_break !(env.pc)
-
-  | DoWhile (st, e) ->
-
-    let goto_entry        = add_fake_goto env e.e_loc in
-    let goto_for_continue = add_fake_goto env e.e_loc in
-    let goto_for_break    = add_fake_goto env e.e_loc in
-    patch_fake_goto env goto_for_continue !(env.pc);
-    (* for a while: patch_fake_goto env goto_entry env.pc; *)
-    
-    let goto_else = expr_cond env e in
-    patch_fake_goto env goto_else goto_for_break;
-    (* for a dowhile! *)
-    patch_fake_goto env goto_entry !(env.pc);
-
-    let env = { env with 
-      break_pc = Some goto_for_break; 
-      continue_pc = Some goto_for_continue;
-    }
-    in
-    stmt env st;
-
-    (* less: should be last loc of st? *)
-    let loc = e.e_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
-    patch_fake_goto env goto_for_break !(env.pc)
-
-  | Break -> 
-    (match env.break_pc with
-    | Some dst ->
-      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
-    | None -> raise (Impossible "should be detected in check.ml")
-    )
-  | Continue ->
-    (match env.continue_pc with
-    | Some dst ->
-      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
-    | None -> raise (Impossible "should be detected in check.ml")
-    )
-
-  | For (e1either, e2opt, e3opt, st) ->
-    (match e1either with
-    | Left e1opt -> expropt env e1opt
-    (* todo: scope, should reset autoffset once processed loop *)
-    | Right decls -> 
-      decls |> List.iter (fun var -> stmt env { s = Var var; s_loc=var.v_loc});
-    );
-    let goto_entry        = add_fake_goto env st0.s_loc in
-    let goto_for_continue = add_fake_goto env st0.s_loc in
-    let goto_for_break    = add_fake_goto env st0.s_loc in
-
-    patch_fake_goto env goto_for_continue !(env.pc);
-    expropt env e3opt;
-    patch_fake_goto env goto_entry !(env.pc);
-    (match e2opt with
-    | None -> ()
-    | Some e2 -> 
-      let goto_else = expr_cond env e2 in
-      patch_fake_goto env goto_else goto_for_break;
-    );
-    
-    let env = { env with 
-      break_pc = Some goto_for_break; 
-      continue_pc = Some goto_for_continue;
-    }
-    in
-    stmt env st;
-
-    let loc = st0.s_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
-    patch_fake_goto env goto_for_break !(env.pc)
-
-  | Switch _ 
-  | Case _ | Default _ -> 
-    raise Todo
+  <<[[Codegen5.stmt]] match [[st0.s]] cases>>
 @
+
+\subsection{Local variables}
+%new:
+
+<<[[Codegen5.env]] other function fields>>=
+offset_locals: int ref;
+@
+
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
+    let idinfo = Hashtbl.find env.ids_ fullname in
+    (* todo: generate code for idinfo.ini *)
+
+    (* update env.offsets *)
+    let t = idinfo.TC.typ in
+    let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
+    in
+
+    (* todo: align *)
+    env.offset_locals := !(env.offset_locals) + sizet;
+    env.size_locals := !(env.size_locals) + sizet;
+    Hashtbl.add env.offsets fullname !(env.offset_locals);
+@
+
+
+
 
 \subsection{Blocks, sequences}
 
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| ExprSt e -> expr env e None
+| Block xs -> xs |> List.iter (stmt env)
+@
+
+
 \subsection{Conditionals}
 
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| If (e, st1, st2) ->
+  let goto_else_or_end = ref (expr_cond env e) in
+  if st1.s <> Block []
+  then stmt env st1;
+  if st2.s <> Block []
+  then begin
+    let goto_end = add_fake_goto env st2.s_loc in
+    patch_fake_goto env !goto_else_or_end !(env.pc);
+    stmt env st2;
+    goto_else_or_end := goto_end;
+  end;
+  patch_fake_goto env !goto_else_or_end !(env.pc)
+@
+
+<<function [[Codegen5.add_fake_goto]]>>=
+let add_fake_goto env loc =
+  let spc = !(env.pc) in
+  add_instr env (A.Instr (A5.B (ref (Absolute fake_pc)), A5.AL)) loc;
+  spc
+@
+
+<<function [[Codegen5.patch_fake_goto]]>>=
+let patch_fake_goto env pcgoto pcdest =
+  match !(env.code).(pcgoto) with
+  (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
+  (* ocaml-light: | A5.Instr (A5.B aref, A5.AL), _loc | A5.Instr (A5.Bxx (_, aref), A5.AL), _loc *)
+  | A.Instr (A5.B aref, A5.AL), _loc ->
+    if !aref = (Absolute fake_pc)
+    then aref := Absolute pcdest
+    else raise (Impossible "patching already resolved branch")
+  | A.Instr (A5.Bxx (_, aref), A5.AL), _loc ->
+    if !aref = (Absolute fake_pc)
+    then aref := Absolute pcdest
+    else raise (Impossible "patching already resolved branch")
+  | _ -> raise (Impossible "patching non jump instruction")
+@
+
+<<function [[Codegen5.expr_cond]]>>=
+let expr_cond env e0 =
+  (* todo: *)
+  with_reg env rRET (fun () ->
+    let dst = { opd = Register rRET; typ = e0.e_type; loc = e0.e_loc } in
+    expr env e0 (Some dst);
+    (* less: actually should be last loc of e0 *)
+    let loc = e0.e_loc in
+    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, rRET), A5.AL)) loc;
+    let pc = !(env.pc) in
+    add_instr env (A.Instr (A5.Bxx (A5.EQ,(ref (A.Absolute fake_pc))),A5.AL)) loc;
+    pc
+  )
+@
+
 \subsection{Switch}
+%alt: move later?
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| Switch _ 
+| Case _ | Default _ -> 
+  raise Todo
+@
 
 \subsection{Labels and goto}
 
+<<[[Codegen5.env]] other function fields>>=
+(* for goto/labels *)
+labels: (string, Ast_asm.virt_pc) Hashtbl.t;
+
+(* if the label is defined after the goto, when we process the label,
+ * we need to update previous goto instructions.
+ *)
+forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
+@
+
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| Label (name, st) ->
+  let here = !(env.pc) in
+  Hashtbl.add env.labels name here;
+  if Hashtbl.mem env.forward_gotos name
+  then begin
+    let xs = Hashtbl.find env.forward_gotos name in
+    xs |> List.iter (fun xpc -> patch_fake_goto env xpc here);
+    (* not really necessary because can not define the same label twice *)
+    Hashtbl.remove env.forward_gotos name
+  end;
+  (* todo? generate dummy Goto +1? *)
+  stmt env st
+@
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| Goto name ->
+  let here = !(env.pc) in
+  let dstpc = 
+    if Hashtbl.mem env.labels name
+    then Hashtbl.find env.labels name
+    else begin
+      Hashtbl.replace env.forward_gotos name
+        (here:: (if Hashtbl.mem env.forward_gotos name
+                then Hashtbl.find env.forward_gotos name
+                else []));
+      fake_pc
+    end
+  in
+  add_instr env (A.Instr (A5.B (ref (A.Absolute dstpc)), A5.AL)) st0.s_loc;
+@
+
 \subsection{Loops}
+
+<<[[Codegen5.env]] other function fields>>=
+(* for loops (and switch) *)
+(* reinitialized for each block scope *)
+break_pc: Ast_asm.virt_pc option;
+continue_pc: Ast_asm.virt_pc option;
+@
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| While (e, st) ->
+  let goto_entry        = add_fake_goto env e.e_loc in
+  let goto_for_continue = add_fake_goto env e.e_loc in
+  let goto_for_break    = add_fake_goto env e.e_loc in
+  patch_fake_goto env goto_for_continue !(env.pc);
+  patch_fake_goto env goto_entry !(env.pc);
+  
+  let goto_else = expr_cond env e in
+  patch_fake_goto env goto_else goto_for_break;
+
+  let env = { env with 
+    break_pc = Some goto_for_break; 
+    continue_pc = Some goto_for_continue;
+  }
+  in
+  stmt env st;
+
+  (* less: should be last loc of st? *)
+  let loc = e.e_loc in
+  add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
+  patch_fake_goto env goto_for_break !(env.pc)
+@
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| DoWhile (st, e) ->
+
+  let goto_entry        = add_fake_goto env e.e_loc in
+  let goto_for_continue = add_fake_goto env e.e_loc in
+  let goto_for_break    = add_fake_goto env e.e_loc in
+  patch_fake_goto env goto_for_continue !(env.pc);
+  (* for a while: patch_fake_goto env goto_entry env.pc; *)
+  
+  let goto_else = expr_cond env e in
+  patch_fake_goto env goto_else goto_for_break;
+  (* for a dowhile! *)
+  patch_fake_goto env goto_entry !(env.pc);
+
+  let env = { env with 
+    break_pc = Some goto_for_break; 
+    continue_pc = Some goto_for_continue;
+  }
+  in
+  stmt env st;
+
+  (* less: should be last loc of st? *)
+  let loc = e.e_loc in
+  add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
+  patch_fake_goto env goto_for_break !(env.pc)
+@
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| Break -> 
+  (match env.break_pc with
+  | Some dst ->
+    add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
+  | None -> raise (Impossible "should be detected in check.ml")
+  )
+| Continue ->
+  (match env.continue_pc with
+  | Some dst ->
+    add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
+  | None -> raise (Impossible "should be detected in check.ml")
+  )
+@
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| For (e1either, e2opt, e3opt, st) ->
+  (match e1either with
+  | Left e1opt -> expropt env e1opt
+  (* todo: scope, should reset autoffset once processed loop *)
+  | Right decls -> 
+    decls |> List.iter (fun var -> stmt env { s = Var var; s_loc=var.v_loc});
+  );
+  let goto_entry        = add_fake_goto env st0.s_loc in
+  let goto_for_continue = add_fake_goto env st0.s_loc in
+  let goto_for_break    = add_fake_goto env st0.s_loc in
+
+  patch_fake_goto env goto_for_continue !(env.pc);
+  expropt env e3opt;
+  patch_fake_goto env goto_entry !(env.pc);
+  (match e2opt with
+  | None -> ()
+  | Some e2 -> 
+    let goto_else = expr_cond env e2 in
+    patch_fake_goto env goto_else goto_for_break;
+  );
+  
+  let env = { env with 
+    break_pc = Some goto_for_break; 
+    continue_pc = Some goto_for_continue;
+  }
+  in
+  stmt env st;
+
+  let loc = st0.s_loc in
+  add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
+  patch_fake_goto env goto_for_break !(env.pc)
+@
 
 \subsection{Control flow jumps}
 
+<<constant [[Codegen5.rRET]]>>=
+let rRET = R 0
+@
+%TODO: use A5.rRET?
+
+<<[[Codegen5.stmt]] match [[st0.s]] cases>>=
+| Return eopt ->
+  (match eopt with
+  | None ->
+    add_instr env (A.Virtual A.RET) st0.s_loc
+
+  | Some e ->
+    (* todo: if type compatible with R0 *)
+    with_reg env rRET (fun () ->
+      let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
+      expr env e (Some dst);
+
+      add_instr env (A.Virtual A.RET) st0.s_loc
+    )
+  )
+@
+
+
 \section{Register allocation}
+
+<<constant [[Codegen5.regs_initial]]>>=
+let regs_initial = 
+  let arr = Array.make A5.nb_registers 0 in
+  [A5.rLINK; A5.rPC;       (* hardware reseved *)
+   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
+   rEXT1; rEXT2;         (* compiler reserved *)
+  ] |> List.iter (fun (R x) ->
+    arr.(x) <- 1
+  );
+  arr
+@
+
+<<constant [[Codegen5.rEXT1]]>>=
+(* for 'extern register xx;', used in ARM kernel *)
+let rEXT1 = R 10
+@
+
+<<constant [[Codegen5.rEXT2]]>>=
+let rEXT2 = R 9
+@
+
+<<function [[Codegen5.reguse]]>>=
+let reguse env (A.R x) =
+  env.regs.(x) <- env.regs.(x) + 1
+@
+
+<<function [[Codegen5.regfree]]>>=
+let regfree env (A.R x) = 
+  env.regs.(x) <- env.regs.(x) - 1;
+  if env.regs.(x) < 0
+  then raise (Error (E.Misc ("error in regfree", fake_loc)))
+@
+
+<<function [[Codegen5.with_reg]]>>=
+let with_reg env r f =
+  (* less: care about exn? meh, if exn then no recovery anyway *)
+  reguse env r;
+  let res = f() in
+  regfree env r;
+  res
+@
+
+<<function [[Codegen5.regalloc]]>>=
+let regalloc env loc =
+  (* less: lasti trick? *)
+  let rec aux i n =
+    (* This happens in extreme case when the expression tree has a huge
+     * depth everywhere. In that case, we should allocate a new temporary
+     * on the stack but this complexifies the algorithm.
+     *)
+    if i >= n 
+    then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
+
+    if env.regs.(i) = 0
+    then begin
+      env.regs.(i) <- 1;
+      i
+    end
+    else aux (i+1) n
+  in
+  aux 0 (Array.length env.regs)
+@
+
+<<function [[Codegen5.opd_regalloc]]>>=
+(* We can reuse a previous register if 'tgtopt' is a register.
+ * See for example return.c where we can reuse R0 instead of a new R1.
+ *)
+let opd_regalloc env typ loc tgtopt =
+  match typ with
+  | T.I _ | T.Pointer _ ->
+    let i = 
+      match tgtopt with
+      | Some { opd = Register (A.R x); typ=_; loc=_ } -> 
+        reguse env (A.R x);
+        x
+      | _ -> regalloc env loc
+    in
+    { opd = Register (A.R i); typ; loc }
+  | _ -> raise Todo
+@
+
+<<function [[Codegen5.opd_regfree]]>>=
+(*
+let opd_regalloc_opd env opd tgtopt =
+  opd_regalloc env opd.typ opd.loc tgtopt
+let opd_regalloc_e env e tgtopt =
+  opd_regalloc env e.e_type e.e_loc tgtopt
+*)
+
+let opd_regfree env opd =
+  match opd.opd with
+  | Register r -> regfree env r;
+  | _ -> raise (Impossible "opd_regfree on non-register operand")
+@
 
 %%\subsection{[[reg]]}
 %%\subsection{[[OREGISTER]]}
@@ -5076,11 +5414,16 @@ let rec stmt env st0 =
 
 \section{Typechecking, expliciting, annotating, and rewriting}%%: [[complex()]]}
 
+
+
+
 \section{Addressability and complexity}%%: [[xcom()]]
 
 \subsection{Addressable} %%: [[INDEXED]]
+% ??
 
 \subsection{Addressability} %%: [[addable]]
+% addressability? bad term? operand_ability better?
 
 <<type [[Codegen5.operand_able]]>>=
 (* some form of instruction selection *)
@@ -5102,6 +5445,7 @@ and operand_able_kind =
  (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
 @
+% can be an assembly move operand?
 
 
 <<function [[Codegen5.operand_able]]>>=
@@ -5112,7 +5456,9 @@ let operand_able e0 =
     (* todo: float handling *)
     | Float _ -> None
     | Id fullname -> Some (Name (fullname, 0))
+
     | Unary (op, e) ->
+
       (match op with
       (* special case to handle *(&arr + <cst>) *)
       | DeRef  ->
@@ -5142,6 +5488,7 @@ let operand_able e0 =
         raise (Impossible "should have been converted")
       | Not -> None
       )
+
     (* less: could be operand_able if we do constant_evaluation later *)
     | Binary (_e1, _op, _e2) -> None
     | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
@@ -5221,14 +5568,6 @@ let rec complexity e =
 
 \section{Basic expressions}
 
-%%\subsection{[[gmove()]]}
-%%\subsection{Conversions}
-%%\subsection{[[gins()]]}
-%%\subsection{[[naddr()]]}
-%%\subsection{[[regalloc()]]}
-
-\section{Expressions} %: [[cgen()]]
-
 <<function [[Codegen5.expr]]>>=
 (* todo: inrel ? 
  * todo: if complex type node
@@ -5241,136 +5580,142 @@ let rec expr env e0 dst_opd_opt =
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
     (match e0.e with
-    | Sequence (e1, e2) -> 
-      expr env e1 None;
-      expr env e2 dst_opd_opt
-    
-    (* less: lots of possible opti *)
-    | Binary (e1, op, e2) ->
-      (match op with
-      | Arith (Plus | Minus 
-              | And | Or | Xor 
-              | ShiftLeft | ShiftRight
-              | Mul | Div | Mod) ->
-        let n1 = complexity e1 in
-        let n2 = complexity e2 in
-        let opdres, opdother = 
-          if n1 >= n2
-          then begin
-            let opd1reg = opd_regalloc env e1.e_type e1.e_loc dst_opd_opt in
-            expr env e1 (Some opd1reg);
-            let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-            expr env e2 (Some opd2reg);
-            (match opd1reg.opd, opd2reg.opd with
-            | Register r1, Register r2 ->
-              (* again reverse order SUB r2 r1 ... means r1 - r2 *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A5.AL)) 
-                e0.e_loc;
-            | _ -> raise (Impossible "both operands comes from opd_regalloc")
-            );
-            opd1reg, opd2reg
-          end
-          else begin
-            let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
-            expr env e2 (Some opd2reg);
-            let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
-            expr env e1 (Some opd1reg);
-            (match opd1reg.opd, opd2reg.opd with
-            | Register r1, Register r2 ->
-              (* This time we store result in r2! important and subtle.
-               * This avoids some extra MOVW; see plus_chain.c
-               *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A5.AL)) 
-                e0.e_loc;
-            | _ -> raise (Impossible "both operands comes from opd_regalloc")
-            );
-            opd2reg, opd1reg
-          end
-        in
-        (* This is why it is better for opdres to be the register
-         * allocated from dst_opd_opt so the MOVW below can become a NOP
-         * and be removed.
-         *)
-        gmove_opt env opdres dst_opd_opt;
-
-        opd_regfree env opdres;
-        opd_regfree env opdother;
-            
-      | Logical _ ->
-        raise Todo
-      )
-    
-    | Assign (op, e1, e2) ->
-      (match op with
-      | SimpleAssign ->
-        (match operand_able e1, operand_able e2, dst_opd_opt with
-        (* ex: x = 1; *)
-        | Some opd1, Some opd2, None -> 
-          (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
-          gmove env opd2 opd1
-
-        (* ex: return x = 1;, x = y = z, ... *)
-        | Some _opd1, Some _opd2, Some _dst ->
-          raise Todo
-
-
-        (* ex: y = &x;, y = x + y, ... *)
-        | Some opd1, None, None ->
-          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-          expr env e2 (Some opd2reg);
-          gmove env opd2reg opd1;
-          opd_regfree env opd2reg;
-
-        (* ex: return x = x+y;, x = y = z, ... *)
-        | Some opd1, None, Some dst ->
-          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-          expr env e2 (Some opd2reg);
-          gmove env opd2reg opd1;
-          gmove env opd2reg dst; (* only diff with case above *)
-          opd_regfree env opd2reg;
-
-
-        (* ex: *x = 1; *)
-        | None, _, _ ->
-          raise Todo
-        )
-      | OpAssign _op ->
-        raise Todo
-      )
-    | Unary (op, e) ->
-      (match op with
-      | GetRef -> 
-        (match e.e  with
-        | Id _fullname -> 
-          raise (Impossible "handled in operand_able()")
-        | Unary (DeRef, _) ->
-          raise (Impossible "should be simplified in rewrite.ml")
-        | _ -> 
-          raise (Impossible "not an lvalue?")
-        )
-
-      | DeRef ->
-        (* less: opti of Deref of Add with constant? *)
-        let opd1reg = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
-        expr env e (Some opd1reg);
-        gmove_opt env
-          (match opd1reg.opd with
-          | Register r -> { opd = Indirect (r, 0); loc = e.e_loc;
-                            typ = e0.e_type }
-          | _ -> raise (Impossible "opd_regalloc_e returns always Register")
-          ) dst_opd_opt;
-        opd_regfree env opd1reg;
-        
-
-      | (UnPlus | UnMinus | Tilde) -> 
-        raise (Impossible "should have been converted")
-      | Not -> raise Todo
-      )
+    <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>
     | _ -> 
       Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo
     )
 @
+
+<<function [[Codegen5.expropt]]>>=
+let expropt env eopt =
+  match eopt with
+  | None -> ()
+  | Some e -> expr env e None
+@
+
+
+\subsection{[[gmove()]]}
+
+<<function [[Codegen5.gmove_opt]]>>=
+let gmove_opt env opd1 opd2opt = 
+  match opd2opt with
+  | Some opd2 -> gmove env opd1 opd2
+  | None ->
+    (* less: should have warned about unused opd in check.ml *)
+    ()
+@
+
+<<function [[Codegen5.gmove]]>>=
+(* Even though two arguments are operand_able, it does not mean
+ * we can move one into the other with one instruction. 
+ * In theory, 5a supports general MOVW, but 5l restricts those
+ * MOVW to only store and load (not both at the same time).
+ * This is why we must decompose below the move in 2 instructions
+ * sometimes.
+ *)
+let rec gmove env opd1 opd2 =
+  match opd1.opd with
+  (* a load *)
+  | Name _ | Indirect _ ->
+    let move_size = 
+      match opd1.typ with
+      | T.I (T.Int, _) | T.Pointer _ -> A.Word
+      | _ -> raise Todo
+    in
+    (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
+    let opd1reg = opd_regalloc env opd1.typ opd1.loc (Some opd2) in
+    gmove_aux env move_size opd1 opd1reg;
+    gmove env opd1reg opd2;
+    opd_regfree env opd1reg
+  | _ ->
+    (match opd2.opd with
+    (* a store *)
+    | Name _ | Indirect _ ->
+      let move_size =
+        match opd2.typ with
+        | T.I (T.Int, _) | T.Pointer _ -> A.Word
+        | _ -> raise Todo
+      in
+      (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
+      let opd2reg = opd_regalloc env opd2.typ opd2.loc None in
+      gmove env opd1 opd2reg;
+      gmove_aux env move_size opd2reg opd2;
+      opd_regfree env opd2reg
+
+    | _ -> 
+      (* the simple cases *)
+      let move_size = 
+        match opd1.typ, opd2.typ with
+        | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
+        | T.Pointer _, T.Pointer _ -> A.Word
+        (* todo: lots of opti related to float *)
+        | _ -> raise Todo
+      in
+      gmove_aux env move_size opd1 opd2
+    )
+
+(* At this point, either opd1 or opd2 references memory (but not both),
+ * so we can do the move in one instruction.
+ *)
+and gmove_aux env move_size opd1 opd2 =
+  (* less: should happen only for register? *)
+  if opd1.opd = opd2.opd
+  then ()
+  else 
+  add_instr env 
+    (A.Instr (A5.MOVE (move_size, None, 
+                      mov_operand_of_opd env opd1,
+                      mov_operand_of_opd env opd2), A5.AL)) opd1.loc
+@
+
+
+<<function [[Codegen5.mov_operand_of_opd]]>>=
+(* less: opportunity for bitshifted registers? *)
+let mov_operand_of_opd env opd =
+  match opd.opd with
+  | ConstI i   -> A5.Imsr (A5.Imm i)
+  | Register r -> A5.Imsr (A5.Reg r)
+  | Name (fullname, offset) -> A5.Entity (entity_of_id env fullname offset)
+  | Indirect (r, offset) -> A5.Indirect (r, offset)
+  | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
+@
+
+
+<<function [[Codegen5.entity_of_id]]>>=
+let entity_of_id env fullname offset_extra =
+  let idinfo = Hashtbl.find env.ids_ fullname in
+  match idinfo.TC.sto with
+  | S.Param -> 
+    let offset = Hashtbl.find env.offsets fullname + offset_extra in
+    Param (Some (symbol fullname), offset)
+  | S.Local ->
+    let offset = Hashtbl.find env.offsets fullname + offset_extra in
+    (* - offset for locals *)
+    A.Local (Some (symbol fullname), - offset)
+  | S.Static | S.Global | S.Extern ->
+    let offset = offset_extra in
+    A.Global (global_of_id fullname idinfo, offset)
+@
+
+<<function [[Codegen5.symbol]]>>=
+let symbol fullname = Ast.unwrap fullname
+@
+
+%%\subsection{Conversions}
+%%\subsection{[[gins()]]}
+%%\subsection{[[naddr()]]}
+%%\subsection{[[regalloc()]]}
+
+\section{Expressions} %: [[cgen()]]
+
+
+<<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
+| Sequence (e1, e2) -> 
+  expr env e1 None;
+  expr env e2 dst_opd_opt
+@
+
 
 
 \subsection{Numeric constants}
@@ -5381,11 +5726,162 @@ let rec expr env e0 dst_opd_opt =
 
 \subsection{Arithmetic expressions}
 
+<<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
+(* less: lots of possible opti *)
+| Binary (e1, op, e2) ->
+  (match op with
+  | Arith (Plus | Minus 
+          | And | Or | Xor 
+          | ShiftLeft | ShiftRight
+          | Mul | Div | Mod) ->
+    let n1 = complexity e1 in
+    let n2 = complexity e2 in
+    let opdres, opdother = 
+      if n1 >= n2
+      then begin
+        let opd1reg = opd_regalloc env e1.e_type e1.e_loc dst_opd_opt in
+        expr env e1 (Some opd1reg);
+        let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
+        expr env e2 (Some opd2reg);
+        (match opd1reg.opd, opd2reg.opd with
+        | Register r1, Register r2 ->
+          (* again reverse order SUB r2 r1 ... means r1 - r2 *)
+          add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A5.AL)) 
+            e0.e_loc;
+        | _ -> raise (Impossible "both operands comes from opd_regalloc")
+        );
+        opd1reg, opd2reg
+      end
+      else begin
+        let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
+        expr env e2 (Some opd2reg);
+        let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
+        expr env e1 (Some opd1reg);
+        (match opd1reg.opd, opd2reg.opd with
+        | Register r1, Register r2 ->
+          (* This time we store result in r2! important and subtle.
+           * This avoids some extra MOVW; see plus_chain.c
+           *)
+          add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A5.AL)) 
+            e0.e_loc;
+        | _ -> raise (Impossible "both operands comes from opd_regalloc")
+        );
+        opd2reg, opd1reg
+      end
+    in
+    (* This is why it is better for opdres to be the register
+     * allocated from dst_opd_opt so the MOVW below can become a NOP
+     * and be removed.
+     *)
+    gmove_opt env opdres dst_opd_opt;
+
+    opd_regfree env opdres;
+    opd_regfree env opdother;
+        
+  | Logical _ ->
+    raise Todo
+  )
+@
+
+<<function [[Codegen5.arith_instr_of_op]]>>=
+let arith_instr_of_op op r1 r2 r3 =
+  A5.Arith (
+    (match op with
+    | Arith op ->
+      (match op with 
+      | Plus -> A5.ADD | Minus -> A5.SUB
+      | And -> A5.AND | Or -> A5.ORR | Xor -> A5.EOR
+      (* todo: need type info for A.SLR *)
+      | ShiftLeft -> A5.SLL | ShiftRight -> A5.SRA
+      (* todo: need type info for A.MULU, etc *)
+      | Mul -> A5.MUL | Div -> A5.DIV | Mod -> A5.MOD
+      )
+    | Logical _ -> raise Todo
+    ),
+    None, 
+    A5.Reg r1, Some r2, r3
+  )
+@
+
+
 \subsection{Boolean expressions}
 
 \subsection{Assignments part 1}
 
+<<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
+| Assign (op, e1, e2) ->
+  (match op with
+  | SimpleAssign ->
+    (match operand_able e1, operand_able e2, dst_opd_opt with
+    (* ex: x = 1; *)
+    | Some opd1, Some opd2, None -> 
+      (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
+      gmove env opd2 opd1
+
+    (* ex: return x = 1;, x = y = z, ... *)
+    | Some _opd1, Some _opd2, Some _dst ->
+      raise Todo
+
+
+    (* ex: y = &x;, y = x + y, ... *)
+    | Some opd1, None, None ->
+      let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
+      expr env e2 (Some opd2reg);
+      gmove env opd2reg opd1;
+      opd_regfree env opd2reg;
+
+    (* ex: return x = x+y;, x = y = z, ... *)
+    | Some opd1, None, Some dst ->
+      let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
+      expr env e2 (Some opd2reg);
+      gmove env opd2reg opd1;
+      gmove env opd2reg dst; (* only diff with case above *)
+      opd_regfree env opd2reg;
+
+
+    (* ex: *x = 1; *)
+    | None, _, _ ->
+      raise Todo
+    )
+  | OpAssign _op ->
+    raise Todo
+  )
+@
+
+
 \subsection{Pointers}
+
+<<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
+| Unary (op, e) ->
+  (match op with
+  | GetRef -> 
+    (match e.e  with
+    | Id _fullname -> 
+      raise (Impossible "handled in operand_able()")
+    | Unary (DeRef, _) ->
+      raise (Impossible "should be simplified in rewrite.ml")
+    | _ -> 
+      raise (Impossible "not an lvalue?")
+    )
+
+  | DeRef ->
+    (* less: opti of Deref of Add with constant? *)
+    let opd1reg = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
+    expr env e (Some opd1reg);
+    gmove_opt env
+      (match opd1reg.opd with
+      | Register r -> { opd = Indirect (r, 0); loc = e.e_loc;
+                        typ = e0.e_type }
+      | _ -> raise (Impossible "opd_regalloc_e returns always Register")
+      ) dst_opd_opt;
+    opd_regfree env opd1reg;
+    
+
+  | (UnPlus | UnMinus | Tilde) -> 
+    raise (Impossible "should have been converted")
+  | Not -> raise Todo
+  )
+@
 
 \subsection{Assignments part 2}
 
@@ -5406,7 +5902,12 @@ let rec expr env e0 dst_opd_opt =
 \subsection{[[sizeof()]]}
 
 
+
+
 \section{Boolean expressions}
+
+
+
 
 \section{Other topics}
 
@@ -5421,6 +5922,8 @@ let rec expr env e0 dst_opd_opt =
 \subsection{Initializers}
 
 %%\subsection{[[gextern()]]}
+
+
 
 \section{Advanced assembly generation}
 

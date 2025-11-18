@@ -686,6 +686,19 @@ let debugger = ref false
 
 \section{[[Lexer.mll]]}
 
+<<Lexer helpers>>=
+<<function [[Lexer.error]]>>
+<<function [[Lexer.loc]]>>
+<<function [[Lexer.inttype_of_suffix]]>>
+<<function [[Lexer.floattype_of_suffix]]>>
+(* dup: lexer_asm5.mll *)
+<<function [[Lexer.code_of_escape_char]]>>
+(* dup: lexer_asm5.mll *)
+<<function [[Lexer.string_of_ascii]]>>
+<<function [[Lexer.char_]]>>
+@
+
+
 \section{[[Main.ml]]}
 
 %-------------------------------------------------------------

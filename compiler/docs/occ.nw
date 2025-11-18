@@ -17,9 +17,6 @@
 
 %thx to this manual, I better understand 5c/compiler:
 
-%history LP-ization:
-
-
 \begin{document}
 %******************************************************************************
 % Title
@@ -93,6 +90,7 @@ Documentation License, Version 1.3.
 %token <Ast.loc * string * Type.t> TString
 %token <Ast.loc * string> TName TTypeName
 @
+% yacc tokens, see \book{CompilerGenerator}
 
 % Ast.loc next section
 % Type.xxx_type also soon
@@ -120,7 +118,7 @@ Documentation License, Version 1.3.
 %token <Ast.loc> Tsizeof
 @
 
-% classic: types, qualifiers, storage, stmts, and misc
+% classic: types, qualifiers, storage, stmts, and one expr keyword
 
 <<Parser tokens>>=
 /*(*-----------------------------------------*)*/
@@ -197,8 +195,8 @@ type fullname = name * blockid (* same than Type_.fullname *)
 @
 
 <<type [[Ast.idkind]]>>=
-(* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
- * Could be moved in a separate naming.ml, but not worth it for just two types.
+(* Used in Globals.ml/Lexer.mll/Parser.mly to recognize typedef identifiers.
+ * alt: could be moved in a separate Naming.ml, but not worth it for just two types.
  *)
 type idkind =
   | IdIdent
@@ -225,12 +223,6 @@ type tagkind =
 % TagEnum is different from EnumConstant! it's to allow 'enum xx'
 % as types (but nobody uses that? or enum tag considered a typedef alias?)
 
-<<function [[Ast.tagkind_of_su]]>>=
-let tagkind_of_su = function
-  | Type.Struct -> TagStruct
-  | Type.Union -> TagUnion
-@
-
 \subsection{Types}
 
 <<type [[Ast.typ]]>>=
@@ -251,7 +243,7 @@ type typ = {
 
 <<type [[Ast.type_bis]]>>=
   and type_bis = 
-  | TBase of Type.t (* only the Basic stuff *)
+  | TBase of Type.t (* only the basic stuff *)
   | TPointer of typ
   | TArray of const_expr option * typ
   | TFunction of function_type
@@ -266,6 +258,16 @@ type typ = {
 @
 % Type.t later
 % function_type later
+
+<<type [[Type.struct_kind]]>>=
+ and struct_kind = Struct | Union
+@
+
+<<function [[Ast.tagkind_of_su]]>>=
+let tagkind_of_su = function
+  | Type.Struct -> TagStruct
+  | Type.Union -> TagUnion
+@
 
 \subsection{Expressions}
 
@@ -322,11 +324,8 @@ and expr = {
   (* codegen: converted to Int *)
   | SizeOf of (expr, typ) Either_.t
 
-  (* should appear only in a variable initializer, or after GccConstructor *)
-  | ArrayInit of (const_expr option * expr) list
-  | RecordInit of (name * expr) list
-  (* gccext: kenccext: *)
-  | GccConstructor  of typ * expr (* always an ArrayInit (or RecordInit?) *)
+  <<[[Ast.expr]] initialiser cases>>
+  <<[[Ast.expr]] extension cases>>
 @
 
 <<type [[Ast.argument]]>>=
@@ -471,6 +470,18 @@ and var_decl = {
  and initialiser = expr
 @
 
+<<[[Ast.expr]] initialiser cases>>=
+(* should appear only in a variable initializer, or after GccConstructor *)
+| ArrayInit of (const_expr option * expr) list
+| RecordInit of (name * expr) list
+@
+
+<<[[Ast.expr]] extension cases>>=
+(* gccext: kenccext: *)
+| GccConstructor  of typ * expr (* always an ArrayInit (or RecordInit?) *)
+@
+%TODO: move in Advanced topics?
+
 \subsubsection{Functions}
 
 <<type [[Ast.func_def]]>>=
@@ -564,6 +575,9 @@ type type_def = {
 [@@deriving show]
 @
 
+%ex: of typedef.c and see dumped AST
+
+
 
 \section{Type system}
 
@@ -583,14 +597,17 @@ type type_def = {
  * todoext: Enum of fullname with stricter checking.
  *)
 type t =
+  (* basic types *)
   | Void
   | I of integer_type
   | F of float_type
+
+  (* composite types *)
   | Pointer of t
   (* Why not unsugar Array to Pointer? Because the type system checks 
    * for some array incompatibilities. int[2] != int[3].
    * However, the Array type usually gets converted to Pointer
-   * during typechecking.
+   * during typechecking (see array_to_pointer())
    *)
   | Array of int option * t
   | Func of t * t list * bool (* varargs '...' *)
@@ -627,9 +644,6 @@ e_type: Type.t;
   | Double
 @
 
-<<type [[Type.struct_kind]]>>=
- and struct_kind = Struct | Union
-@
 
 <<type [[Type.qualifier]]>>=
 type qualifier = 
@@ -639,6 +653,7 @@ type qualifier =
 @
 %TODO: not used for now
 
+% a few useful shortcuts
 
 <<constant [[Type.int]]>>=
 let int = I (Int, Signed)
@@ -654,7 +669,6 @@ let long = I (Long, Signed)
 <<type [[Type.blockid]]>>=
 type blockid = int
 @
-
 <<type [[Type.fullname]]>>=
 type fullname = string * blockid
 @
@@ -721,6 +735,7 @@ type idinfo = {
     ini: Ast.initialiser option;
   }
 @
+%TODO: also used for tags?? like said in ids; field comment? true?
 
 <<type [[Type.structdef]]>>=
 (* Note that the field can be gensym'ed for anonymous struct/union elements.
@@ -857,8 +872,8 @@ let base = Filename.basename cfile in
 (if outfile = ""
 then
   if base =~ "\\(.*\\)\\.c"
-  then Regexp_.matched1 base ^ (spf ".%c" thechar)
-  else base ^ (spf ".%c" thechar)
+  then Regexp_.matched1 base ^ (spf ".o%c" thechar)
+  else base ^ (spf ".o%c" thechar)
 else outfile
 ) |> Fpath.v
 @
@@ -1044,15 +1059,7 @@ module T = Type
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-<<function [[Lexer.error]]>>
-<<function [[Lexer.loc]]>>
-<<function [[Lexer.inttype_of_suffix]]>>
-<<function [[Lexer.floattype_of_suffix]]>>
-(* dup: lexer_asm5.mll *)
-<<function [[Lexer.code_of_escape_char]]>>
-(* dup: lexer_asm5.mll *)
-<<function [[Lexer.string_of_ascii]]>>
-<<function [[Lexer.char_]]>>
+<<Lexer helpers>>
 }
 
 (*****************************************************************************)
@@ -1240,7 +1247,9 @@ let digit = ['0'-'9']
 
 \subsection{Unicode identifiers}
 
-\subsection{Typedef trick}
+%TOPORT
+
+\subsection{Typedef trick, part 1}
 \label{sec:typedef-trick-part1}
 
 <<[[Lexer.token()]] in identifier case, typedef trick>>=
@@ -1284,7 +1293,7 @@ then
 | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
 @
 
-\section{Punctuation}
+\section{Punctuations}
 %new:
 
 <<[[Lexer.token]] symbol cases>>=
@@ -1449,6 +1458,8 @@ let code_of_escape_char c =
 
 \subsection{Unicode characters}
 
+%TOPORT
+
 \section{Strings}
 
 <<[[Lexer.token]] chars/strings cases>>=
@@ -1481,6 +1492,7 @@ let string_of_ascii i =
 
 \subsection{Unicode strings}
 
+%TOPORT
 
 %******************************************************************************
 \chapter{Parsing}
@@ -1583,21 +1595,12 @@ module L = Location_cpp
 
 % start prog!!
 
+
+
+
 <<function [[Parser.error]]>>=
 let error s =
   raise (L.Error (spf "Syntax error: %s" s, !L.line))
-@
-
-<<function [[Parser.mk_e]]>>=
-let mk_e e loc = { e = e; e_loc = loc; e_type = T.Void }
-@
-% e_type set later in Typechecking phase
-
-<<function [[Parser.mk_t]]>>=
-let mk_t t loc = { t = t; t_loc = loc }
-@
-<<function [[Parser.mk_st]]>>=
-let mk_st st loc = { s = st; s_loc = loc }
 @
 
 \section{Parsing environment and scope management}
@@ -1830,6 +1833,7 @@ let gensym () =
 @
 
 
+% do not LP split, order matters!
 <<Parser tokens priorities>>=
 /*(* must be at the top so that it has the lowest priority *)*/
 %nonassoc LOW_PRIORITY_RULE
@@ -1872,99 +1876,24 @@ prog1:
  |  /*(*empty*)*/ { [] }
  | prog1 xdecl    { $1 @ $2 }
 @
+%new: I introduced prog1 intermediate for EOF needed in prog in OCaml
 
 \section{Declarations and definitions, part one}
 
 % xdecl for "external" decl, for toplevel decl outside func (external?)
 
 <<rule [[Parser.xdecl]]>>=
-xdecl: 
- | storage_and_type        TSemicolon 
-     { (* stricter: *)
-       if !defs = [] 
-       then error "declaration without any identifier";
-       get_and_reset defs;
-     }
- | storage_and_type xdlist TSemicolon 
-     { (* less: could suggest to separate struct/enum def from vardecl *)
-       get_and_reset defs @
-       ($2 |> List.map (fun (((id, loc), typ2), init) ->
-          let (sto_or_typedef, typ1) = $1 in
-          let typ = typ2 typ1 in
-          (match sto_or_typedef, init with
-          | Left sto, _ -> 
-              add_id env id IdIdent;
-              VarDecl { v_name = (id, env.block (* 0 *));
-                        v_loc = loc;
-                        v_type = typ;
-                        v_storage = sto;
-                        v_init = init;
-                      }
-          (* stricter: clang also reports this, but not 5c *)
-          | Right (), Some _ ->
-              error "initializer with typedef"
-          | Right (), None ->
-              add_id env id IdTypedef;
-              TypeDef { typedef_name = (id, env.block); 
-                        typedef_loc = loc; 
-                        typedef_type = typ; 
-                      }
-          )
-        )) 
-     }
-
- | storage_and_type_xdecor block_no_new_scope
-     { let ((id, loc), ft, sto) = $1 in
-       pop_scope env;
-       [ FuncDef { f_name = id;
-                   f_loc = loc;
-                   f_type = ft;
-                   f_body = $2;
-                   f_storage = sto; 
-                 }
-       ]
-     }
-@
-
-<<rule [[Parser.storage_and_type_xdecor]]>>=
-storage_and_type_xdecor: storage_and_type xdecor
-    { (* stricter: *)
-      if !defs <> []
-      then error "move struct or typedef definition outside the function";
-      let ((id, loc), typ2) = $2 in
-      let (sto_or_typedef, typ1) = $1 in
-      let typ = typ2 typ1 in
-      (match typ.t, sto_or_typedef with
-      | TFunction (ret, (params, varargs)), Left sto -> 
-          (* add in global scope the function name *)
-          add_id env id IdIdent;
-          (* add in new scope the parameters *)
-          new_scope env;
-          let params = params |> List.map (fun p ->
-            match p.p_name with
-            | Some (id, _) -> 
-                add_id env id IdIdent;
-                { p with p_name = Some (id, env.block) }
-            | None -> p
-          )
-          in
-          let ft = (ret, (params, varargs)) in
-          ((id, loc), ft, sto)
-      (* stricter: *)
-      | TFunction _, Right _ ->
-          error "a function definition can not be a type definition"
-      (* stricter: it could be TTypeName that resolves to a TFunction, but 
-       * I resolve typedefs later so I have to forbid it here, and it is
-       * confusing anyway as you can not see the parameter.
-       *)
-      | _, _ -> error "not a function type"
-      )
-    }
+xdecl:
+  <<[[Parser.xdecl]] cases>> 
 @
 
 
+
+
+
+%TODO: move later
 % adecl for automatic declarations, for stuff inside functions or blocks ?
-% quite similar to xdecl
+% very similar to xdecl
 <<rule [[Parser.adecl]]>>=
 adecl:
  | storage_and_type        TSemicolon 
@@ -1998,14 +1927,53 @@ adecl:
        ))
      }
 @
-
 <<rule [[Parser.adlist]]>>=
 adlist: xdlist { $1 }
 @
 
 \subsection{No-declarator declarations}
 
+<<[[Parser.xdecl]] cases>>=
+| storage_and_type        TSemicolon 
+    { (* stricter: *)
+      if !defs = [] 
+      then error "declaration without any identifier";
+      get_and_reset defs;
+    }
+@
+
+
 \subsection{Declarator-based declarations}
+
+<<[[Parser.xdecl]] cases>>=
+| storage_and_type xdlist TSemicolon 
+    { (* less: could suggest to separate struct/enum def from vardecl *)
+      get_and_reset defs @
+      ($2 |> List.map (fun (((id, loc), typ2), init) ->
+         let (sto_or_typedef, typ1) = $1 in
+         let typ = typ2 typ1 in
+         (match sto_or_typedef, init with
+         | Left sto, _ -> 
+             add_id env id IdIdent;
+             VarDecl { v_name = (id, env.block (* 0 *));
+                       v_loc = loc;
+                       v_type = typ;
+                       v_storage = sto;
+                       v_init = init;
+                     }
+         (* stricter: clang also reports this, but not 5c *)
+         | Right (), Some _ ->
+             error "initializer with typedef"
+         | Right (), None ->
+             add_id env id IdTypedef;
+             TypeDef { typedef_name = (id, env.block); 
+                       typedef_loc = loc; 
+                       typedef_type = typ; 
+                     }
+         )
+       )) 
+    }
+@
 
 <<rule [[Parser.xdlist]]>>=
 xdlist:
@@ -2014,10 +1982,12 @@ xdlist:
 
  | xdlist TComma xdlist { $1 @ $3 }
 @
-
+%5c: the TEq init case is delayed to later
 
 
 \subsection{Entity declarations, the declarator}
+
+% xdecor = identifier for now.
 
 <<rule [[Parser.xdecor]]>>=
 /*
@@ -2043,10 +2013,7 @@ xdlist:
  *)*/
 xdecor:
  | xdecor2                { $1 }
- | TMul qualifiers xdecor 
-     { let (id, f) = $3 in 
-       id, (fun x -> f (mk_t (TPointer x) $1))
-     }
+ <<[[Parser.xdecor]] other cases>>
 @
 
 <<other declarator related rules>>=
@@ -2056,26 +2023,109 @@ xdecor2:
      { (snd $1, fst $1), (fun x -> x) }
  | TOPar xdecor TCPar 
      { $2 }
- | xdecor2 TOBra zexpr TCBra 
-     { let (id, f) = $1 in 
-       (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
-       id, (fun x -> f (mk_t (TArray ($3, x)) $2))
-     }
- /*(* add parameters in scope in caller, when processing the function body *)*/
- | xdecor2 TOPar zparamlist TCPar
-     { let (id, f) = $1 in 
-       (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
-       id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
-     }
+ <<[[Parser.xdecor2]] other cases>>
 @
 
+
+<<rule [[Parser.tag]]>>=
+tag: 
+ | TName     { $1 }
+ | TTypeName { $1 }
+@
+% different namespace than struct/union/enum tags or idents(and types) so
+% don't care if already used for ident or type
+
+
+
+
+%TODO: move later
+<<[[Parser.xdecor]] other cases>>=
+| TMul qualifiers xdecor 
+    { let (id, f) = $3 in 
+      id, (fun x -> f (mk_t (TPointer x) $1))
+    }
+@
+
+%TODO: move later
+<<[[Parser.xdecor2]] other cases>>=
+| xdecor2 TOBra zexpr TCBra 
+    { let (id, f) = $1 in 
+      (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
+      id, (fun x -> f (mk_t (TArray ($3, x)) $2))
+    }
+/*(* add parameters in scope in caller, when processing the function body *)*/
+| xdecor2 TOPar zparamlist TCPar
+    { let (id, f) = $1 in 
+      (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
+      id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
+    }
+@
 
 \subsection{Function definitions}
 
 
+<<[[Parser.xdecl]] cases>>=
+| storage_and_type_xdecor block_no_new_scope
+    { let ((id, loc), ft, sto) = $1 in
+      pop_scope env;
+      [ FuncDef { f_name = id;
+                  f_loc = loc;
+                  f_type = ft;
+                  f_body = $2;
+                  f_storage = sto; 
+                }
+      ]
+    }
+@
+
+<<rule [[Parser.storage_and_type_xdecor]]>>=
+storage_and_type_xdecor: storage_and_type xdecor
+    { (* stricter: *)
+      if !defs <> []
+      then error "move struct or typedef definition outside the function";
+
+      let ((id, loc), typ2) = $2 in
+      let (sto_or_typedef, typ1) = $1 in
+      let typ = typ2 typ1 in
+
+      (match typ.t, sto_or_typedef with
+      | TFunction (ret, (params, varargs)), Left sto -> 
+          (* add in global scope the function name *)
+          add_id env id IdIdent;
+          (* add in new scope the parameters *)
+          new_scope env;
+          let params = params |> List.map (fun p ->
+            match p.p_name with
+            | Some (id, _) -> 
+                add_id env id IdIdent;
+                { p with p_name = Some (id, env.block) }
+            | None -> p
+          )
+          in
+          let ft = (ret, (params, varargs)) in
+          ((id, loc), ft, sto)
+
+      (* stricter: *)
+      | TFunction _, Right _ ->
+          error "a function definition can not be a type definition"
+      (* stricter: it could be TTypeName that resolves to a TFunction, but 
+       * I resolve typedefs later so I have to forbid it here, and it is
+       * confusing anyway as you can not see the parameter.
+       *)
+      | _, _ -> error "not a function type"
+      )
+    }
+@
+
+
+<<rule [[Parser.block_no_new_scope]]>>=
+block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
+@
+% sill see soon why call that way and what is slist (statement list)
 
 
 \section{Statements}
+
 
 <<rule [[Parser.stmnt]]>>=
 stmnt: 
@@ -2096,6 +2146,10 @@ ulstmnt:
 @
 %cexpr for comma expr
 
+<<function [[Parser.mk_st]]>>=
+let mk_st st loc = { s = st; s_loc = loc }
+@
+
 
 \subsection{Blocks}
 
@@ -2103,11 +2157,11 @@ ulstmnt:
 | block { $1 }
 @
 
-% also seen before in funcdef
 
 <<rule [[Parser.block]]>>=
 block: tobrace slist tcbrace { mk_st (Block $2) $1 }
 @
+% seen similar before in funcdef
 
 <<other block related rules>>=
 <<rule [[Parser.tobrace]]>>
@@ -2123,9 +2177,8 @@ slist:
  | slist adecl   { $1 @ $2 }
  | slist stmnt   { $1 @ [$2] }
 @
-% seen adecl before
 % and back to stmnt!
-
+% adecl for locals
 
 <<rule [[Parser.tobrace]]>>=
 tobrace: TOBrace { new_scope env; $1 }
@@ -2134,10 +2187,6 @@ tobrace: TOBrace { new_scope env; $1 }
 tcbrace: TCBrace { pop_scope env; $1 } 
 @
 
-<<rule [[Parser.block_no_new_scope]]>>=
-block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
-@
-% used by funcdef above
 
 
 \subsection{Conditionals}
@@ -2216,13 +2265,6 @@ forexpr:
 | Tgoto tag TSemicolon      { mk_st (Goto (snd $2)) $1 }
 @
 
-<<rule [[Parser.tag]]>>=
-tag: 
- | TName     { $1 }
- | TTypeName { $1 }
-@
-% different namespace than struct/union/enum tags or idents(and types) so
-% don't care if already used for ident or type
 
 % also used for su?
 
@@ -2254,103 +2296,59 @@ label:
 | Tdefault   TColon  { (fun st -> mk_st (Default st) $2) }
 @
 
+
+
+
 \section{Expressions}
 
 <<rule [[Parser.expr]]>>=
 expr:
  | xuexpr { $1 }
-
- | expr TPlus expr   { mk_e (Binary ($1, Arith Plus, $3)) $2 }
- | expr TMinus expr  { mk_e (Binary ($1, Arith Minus, $3)) $2 }
- | expr TMul expr    { mk_e (Binary ($1, Arith Mul, $3)) $2 }
- | expr TDiv expr    { mk_e (Binary ($1, Arith Div, $3)) $2 }
- | expr TMod expr    { mk_e (Binary ($1, Arith Mod, $3)) $2 }
-
- | expr TAnd expr    { mk_e (Binary ($1, Arith And, $3)) $2 }
- | expr TXor expr    { mk_e (Binary ($1, Arith Xor, $3)) $2 }
- | expr TOr expr     { mk_e (Binary ($1, Arith Or, $3)) $2 }
-
- | expr TSupSup expr { mk_e (Binary ($1, Arith ShiftRight, $3)) $2 }
- | expr TInfInf expr { mk_e (Binary ($1, Arith ShiftLeft , $3)) $2 }
-
- | expr TAndAnd expr { mk_e (Binary ($1, Logical AndLog, $3)) $2 }
- | expr TOrOr expr   { mk_e (Binary ($1, Logical OrLog, $3)) $2 }
-
- | expr TEqEq expr   { mk_e (Binary ($1, Logical Eq, $3)) $2 }
- | expr TBangEq expr { mk_e (Binary ($1, Logical NotEq, $3)) $2 }
-
- | expr TInf expr    { mk_e (Binary ($1, Logical Inf, $3)) $2 }
- | expr TSup expr    { mk_e (Binary ($1, Logical Sup, $3)) $2 }
- | expr TInfEq expr  { mk_e (Binary ($1, Logical InfEq, $3)) $2 }
- | expr TSupEq expr  { mk_e (Binary ($1, Logical SupEq, $3)) $2 }
-
-
- | expr TEq expr     { mk_e (Assign (SimpleAssign, $1, $3)) $2 }
- | expr TOpEq expr   { mk_e (Assign (OpAssign (snd $2), $1, $3)) (fst $2) }
-
- | expr TQuestion cexpr TColon expr { mk_e (CondExpr ($1, $3, $5)) $2 }
+ <<[[Parser.expr]] other cases>>
 @
 
 <<other expr related rules>>=
+<<rule [[Parser.xuexpr]]>>
+<<rule [[Parser.uexpr]]>>
+<<rule [[Parser.pexpr]]>>
+<<rule [[Parser.cexpr]]>>
+<<rule [[Parser.lexpr]]>>
+@
+
+% xu = extended unary(cast), u = unary, p = primary, c = comma
+%  intermediate for priority (%left/%right not enough always?)
+
+<<rule [[Parser.xuexpr]]>>=
 xuexpr:
  | uexpr { $1 }
+ <<[[Parser.xuexpr]] other cases>>
+@
 
- | TOPar qualifier_and_type abdecor TCPar xuexpr  { mk_e (Cast ($3 $2, $5)) $1 }
 
+<<rule [[Parser.uexpr]]>>=
 uexpr:
  | pexpr { $1 }
+ <<[[Parser.uexpr]] other cases>>
+@
 
- | TPlus xuexpr  { mk_e (Unary (UnPlus, $2)) $1 }
- | TMinus xuexpr { mk_e (Unary (UnMinus, $2)) $1 }
-
- | TBang xuexpr  { mk_e (Unary (Not, $2)) $1 }
- | TTilde xuexpr { mk_e (Unary (Tilde, $2)) $1 }
-
- | TMul xuexpr  { mk_e (Unary (DeRef, $2)) $1 }
- | TAnd xuexpr  { mk_e (Unary (GetRef, $2)) $1 }
-
- | TPlusPlus xuexpr   { mk_e (Prefix (Inc, $2)) $1 }
- | TMinusMinus xuexpr { mk_e (Prefix (Dec, $2)) $1 } 
-
+<<rule [[Parser.pexpr]]>>=
 pexpr:
- | TOPar cexpr TCPar { $2 }
+ <<[[Parser.pexpr]] cases>>
+@
 
- /*(* less: could do implicit declaration of unknown function *)*/
- | pexpr TOPar zelist TCPar { mk_e (Call ($1, $3)) $2 }
- /*(* stricter: was cexpr, but ugly to allow cexpr here *)*/
- | pexpr TOBra expr TCBra  { mk_e (ArrayAccess ($1, $3)) $2 }
- /*(* we could unsugar here RecordPtAccess; instead we do it in typecheck.ml*)*/
- | pexpr TDot tag   { mk_e (RecordAccess ($1, snd $3)) $2 }
- | pexpr TArrow tag { mk_e (RecordPtAccess ($1, snd $3)) $2 } 
 
- | TName   
-     { let (loc, id) = $1 in
-       try 
-         let (idkind, blockid) = Hashtbl.find env.ids id in
-         assert (idkind <> IdTypedef);
-         mk_e (Id (id, blockid)) loc
-       with Not_found ->
-         (* stricter: if caller is Call, still forbid implicit decl of func! *)
-         error (spf "name not declared: %s" id)
-         (*Id ($1, 0)*)
-     }
 
- | TIConst { let (loc, a,b) = $1 in mk_e (Int (a,b))    loc } 
- | TFConst { let (loc, a,b) = $1 in mk_e (Float (a,b))  loc }
- | string  { let (loc, a,b) = $1 in mk_e (String (a,b)) loc }
+<<[[Parser.pexpr]] cases>>=
+| TOPar cexpr TCPar { $2 }
+@
 
- | pexpr TPlusPlus   { mk_e (Postfix ($1, Inc)) $2 }
- | pexpr TMinusMinus { mk_e (Postfix ($1, Dec)) $2 } 
-
- | Tsizeof TOPar qualifier_and_type abdecor TCPar 
-     { mk_e (SizeOf (Right ($4 $3))) $1 }
- | Tsizeof uexpr 
-     { mk_e (SizeOf (Left $2)) $1 }
-
+<<rule [[Parser.cexpr]]>>=
 cexpr:
  | expr { $1 }
  | cexpr TComma cexpr { mk_e (Sequence ($1, $3)) $2 }
+@
 
+<<rule [[Parser.lexpr]]>>=
 /*(*todo: (long expr) is wrapping expr in a (long) cast *)*/
 lexpr: expr { $1 }
 @
@@ -2364,20 +2362,28 @@ zexpr:
 zcexpr:
  | /*(*empty*)*/ { None }
  | cexpr         { Some $1 }
-
-zelist:
- | /*(*empty*)*/ { [] }
- | elist         { $1 }
-
-elist:
- | expr { [$1] }
- | elist TComma elist { $1 @ $3 }
 @
+
 
 \subsection{Numeric constants}
 
+<<[[Parser.pexpr]] cases>>=
+| TIConst { let (loc, a,b) = $1 in mk_e (Int (a,b))    loc } 
+| TFConst { let (loc, a,b) = $1 in mk_e (Float (a,b))  loc }
+@
+
+<<function [[Parser.mk_e]]>>=
+let mk_e e loc = { e = e; e_loc = loc; e_type = T.Void }
+@
+% e_type set later in Typechecking phase
+
+%5c: split it finer subsubsection Integer, Floats
 
 \subsection{String constants}
+
+<<[[Parser.pexpr]] cases>>=
+| string  { let (loc, a,b) = $1 in mk_e (String (a,b)) loc }
+@
 
 <<rule [[Parser.string]]>>=
 string:
@@ -2393,28 +2399,151 @@ string:
 
 \subsection{Entity uses}
 
+<<[[Parser.pexpr]] cases>>=
+| TName   
+    { let (loc, id) = $1 in
+      try 
+        let (idkind, blockid) = Hashtbl.find env.ids id in
+        assert (idkind <> IdTypedef);
+        mk_e (Id (id, blockid)) loc
+      with Not_found ->
+        (* stricter: if caller is Call, still forbid implicit decl of func! *)
+        error (spf "name not declared: %s" id)
+        (*Id ($1, 0)*)
+    }
+@
+
 \subsection{Arithmetic expressions}
+
+<<[[Parser.uexpr]] other cases>>=
+| TPlus xuexpr  { mk_e (Unary (UnPlus, $2)) $1 }
+| TMinus xuexpr { mk_e (Unary (UnMinus, $2)) $1 }
+@
+
+<<[[Parser.expr]] other cases>>=
+| expr TPlus expr   { mk_e (Binary ($1, Arith Plus, $3)) $2 }
+| expr TMinus expr  { mk_e (Binary ($1, Arith Minus, $3)) $2 }
+| expr TMul expr    { mk_e (Binary ($1, Arith Mul, $3)) $2 }
+| expr TDiv expr    { mk_e (Binary ($1, Arith Div, $3)) $2 }
+| expr TMod expr    { mk_e (Binary ($1, Arith Mod, $3)) $2 }
+@
+
+<<[[Parser.expr]] other cases>>=
+| expr TSupSup expr { mk_e (Binary ($1, Arith ShiftRight, $3)) $2 }
+| expr TInfInf expr { mk_e (Binary ($1, Arith ShiftLeft , $3)) $2 }
+@
+
 
 \subsection{Boolean expressions}
 
+<<[[Parser.expr]] other cases>>=
+| expr TAnd expr    { mk_e (Binary ($1, Arith And, $3)) $2 }
+| expr TXor expr    { mk_e (Binary ($1, Arith Xor, $3)) $2 }
+| expr TOr expr     { mk_e (Binary ($1, Arith Or, $3)) $2 }
+@
+
+<<[[Parser.uexpr]] other cases>>=
+| TBang xuexpr  { mk_e (Unary (Not, $2)) $1 }
+| TTilde xuexpr { mk_e (Unary (Tilde, $2)) $1 }
+@
+
+<<[[Parser.expr]] other cases>>=
+| expr TAndAnd expr { mk_e (Binary ($1, Logical AndLog, $3)) $2 }
+| expr TOrOr expr   { mk_e (Binary ($1, Logical OrLog, $3)) $2 }
+@
+
+<<[[Parser.expr]] other cases>>=
+| expr TEqEq expr   { mk_e (Binary ($1, Logical Eq, $3)) $2 }
+| expr TBangEq expr { mk_e (Binary ($1, Logical NotEq, $3)) $2 }
+@
+<<[[Parser.expr]] other cases>>=
+| expr TInf expr    { mk_e (Binary ($1, Logical Inf, $3)) $2 }
+| expr TSup expr    { mk_e (Binary ($1, Logical Sup, $3)) $2 }
+| expr TInfEq expr  { mk_e (Binary ($1, Logical InfEq, $3)) $2 }
+| expr TSupEq expr  { mk_e (Binary ($1, Logical SupEq, $3)) $2 }
+@
+
 \subsection{Assignments}
+
+%ugly: should be a statement!
+<<[[Parser.expr]] other cases>>=
+| expr TEq expr     { mk_e (Assign (SimpleAssign, $1, $3)) $2 }
+| expr TOpEq expr   { mk_e (Assign (OpAssign (snd $2), $1, $3)) (fst $2) }
+@
 
 \subsection{Pointers}
 
+<<[[Parser.uexpr]] other cases>>=
+| TMul xuexpr  { mk_e (Unary (DeRef, $2)) $1 }
+| TAnd xuexpr  { mk_e (Unary (GetRef, $2)) $1 }
+@
+
 \subsection{Array accesses}
+
+<<[[Parser.pexpr]] cases>>=
+/*(* stricter: was cexpr, but ugly to allow cexpr here *)*/
+| pexpr TOBra expr TCBra  { mk_e (ArrayAccess ($1, $3)) $2 }
+@
 
 \subsection{Field accesses}
 
+<<[[Parser.pexpr]] cases>>=
+/*(* we could unsugar here RecordPtAccess; instead we do it in typecheck.ml*)*/
+| pexpr TDot tag   { mk_e (RecordAccess ($1, snd $3)) $2 }
+| pexpr TArrow tag { mk_e (RecordPtAccess ($1, snd $3)) $2 } 
+@
+
+
 \subsection{Function calls}
+
+<<[[Parser.pexpr]] cases>>=
+/*(* less: could do implicit declaration of unknown function *)*/
+| pexpr TOPar zelist TCPar { mk_e (Call ($1, $3)) $2 }
+@
+
+<<other expr ebnf rules>>=
+zelist:
+ | /*(*empty*)*/ { [] }
+ | elist         { $1 }
+@
+<<other expr ebnf rules>>=
+elist:
+ | expr { [$1] }
+ | elist TComma elist { $1 @ $3 }
+@
 
 \subsection{Cast}
 
+<<[[Parser.xuexpr]] other cases>>=
+| TOPar qualifier_and_type abdecor TCPar xuexpr  { mk_e (Cast ($3 $2, $5)) $1 }
+@
+
 \subsection{Ternary expressions}
+
+<<[[Parser.expr]] other cases>>=
+| expr TQuestion cexpr TColon expr { mk_e (CondExpr ($1, $3, $5)) $2 }
+@
 
 \subsection{Prefix/postfix}
 
+<<[[Parser.uexpr]] other cases>>=
+| TPlusPlus xuexpr   { mk_e (Prefix (Inc, $2)) $1 }
+| TMinusMinus xuexpr { mk_e (Prefix (Dec, $2)) $1 } 
+@
+
+<<[[Parser.pexpr]] cases>>=
+| pexpr TPlusPlus   { mk_e (Postfix ($1, Inc)) $2 }
+| pexpr TMinusMinus { mk_e (Postfix ($1, Dec)) $2 } 
+@
+
 \subsection{[[sizeof()]]}
 
+<<[[Parser.pexpr]] cases>>=
+| Tsizeof TOPar qualifier_and_type abdecor TCPar 
+    { mk_e (SizeOf (Right ($4 $3))) $1 }
+| Tsizeof uexpr 
+    { mk_e (SizeOf (Left $2)) $1 }
+@
 
 
 \section{Initializers and designators}
@@ -2464,6 +2593,11 @@ type_:
   | simple_type  { let (t, loc) = $1 in mk_t (Ast.TBase t) loc }
   | complex_type { $1 }
 @
+
+<<function [[Parser.mk_t]]>>=
+let mk_t t loc = { t = t; t_loc = loc }
+@
+
 
 <<rule [[Parser.simple_type]]>>=
 simple_type:

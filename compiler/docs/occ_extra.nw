@@ -737,6 +737,30 @@ module T = Parser  (* T for Tokens *)
 
 \section{[[Parser.mly]]}
 
+<<Parser helpers>>=
+<<function [[Parser.error]]>>
+<<function [[Parser.mk_e]]>>
+<<function [[Parser.mk_t]]>>
+<<function [[Parser.mk_st]]>>
+
+<<global [[Parser.defs]]>>
+<<function [[Parser.get_and_reset]]>>
+
+<<type [[Parser.env]]>>
+
+<<function [[Parser.add_id]]>>
+<<function [[Parser.add_tag]]>>
+
+<<global [[Parser.env]]>>
+
+<<global [[Parser.block_counter]]>>
+
+<<function [[Parser.gensym]]>>
+
+<<function [[Parser.new_scope]]>>
+<<function [[Parser.pop_scope]]>>
+@
+
 \section{[[Rewrite.mli]]}
 
 %-------------------------------------------------------------

@@ -97,6 +97,9 @@ Documentation License, Version 1.3.
 % Ast.loc next section
 % Type.xxx_type also soon
 
+% string now int or float because delay evaluation
+% (also tricky because OCaml ints are not as a big as in C)
+
 % TName vs TTypeName! subtle and problematic! C not context-free!
 % need global to remember context
 
@@ -154,6 +157,8 @@ Documentation License, Version 1.3.
 %ex: show list of tokens for simple helloc.c!
 % -dump_tokens and ref to appendix
 
+
+
 \section{Abstract syntax tree} %%: [[Node]]
 
 
@@ -206,7 +211,8 @@ type idkind =
 let hids: (string, Ast.idkind) Hashtbl.t = 
   Hashtbl.create 101
 @
-% see section{sec:typedef-trick}
+\label{sec:typedef-trick-part0}
+% see section{sec:typedef-trick-part1}
 
 
 <<type [[Ast.tagkind]]>>=
@@ -1235,7 +1241,7 @@ let digit = ['0'-'9']
 \subsection{Unicode identifiers}
 
 \subsection{Typedef trick}
-\label{sec:typedef-trick}
+\label{sec:typedef-trick-part1}
 
 <<[[Lexer.token()]] in identifier case, typedef trick>>=
 if Hashtbl.mem Globals.hids s
@@ -1552,27 +1558,7 @@ module L = Location_cpp
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-<<function [[Parser.error]]>>
-<<function [[Parser.mk_e]]>>
-<<function [[Parser.mk_t]]>>
-<<function [[Parser.mk_st]]>>
-
-<<global [[Parser.defs]]>>
-<<function [[Parser.get_and_reset]]>>
-
-<<type [[Parser.env]]>>
-
-<<function [[Parser.add_id]]>>
-<<function [[Parser.add_tag]]>>
-
-<<global [[Parser.env]]>>
-
-<<global [[Parser.block_counter]]>>
-
-<<function [[Parser.gensym]]>>
-
-<<function [[Parser.new_scope]]>>
-<<function [[Parser.pop_scope]]>>
+<<Parser helpers>>
 %}
 
 /*(*************************************************************************)*/
@@ -1595,6 +1581,7 @@ module L = Location_cpp
 <<Parser grammar>>
 @
 
+% start prog!!
 
 <<function [[Parser.error]]>>=
 let error s =
@@ -1662,6 +1649,7 @@ let add_id env id idkind =
   | [] -> env.ids_scope <- [[id]]
 @
 % Globals.hids!
+\label{sec:typedef-trick-part2}
 
 <<function [[Parser.add_tag]]>>=
 let add_tag env tag tagkind =
@@ -1693,6 +1681,7 @@ let pop_scope env =
       env.block_scope <- xs;
       ys |> List.iter (fun id ->
         Hashtbl.remove env.ids id;
+
         Hashtbl.remove Globals.hids id;
       );
       zs |> List.iter (fun tag -> 
@@ -1706,6 +1695,7 @@ let pop_scope env =
 @
 % remember Hashtbl.add can handle multiple times same key and remove
 % will remove last binding, so perfect for us
+\label{sec:typedef-trick-part3}
 
 \section{Lifting nested definitions to the toplevel}
 
@@ -1738,15 +1728,13 @@ let gensym () =
 
 \section{Grammar overview}
 
+
 <<Parser grammar>>=
 /*(*************************************************************************)*/
 /*(*1 Program *)*/
 /*(*************************************************************************)*/
-prog: prog1 EOF   { $1 }
-
-prog1:
- |  /*(*empty*)*/ { [] }
- | prog1 xdecl    { $1 @ $2 }
+<<rule [[Parser.prog]]>>
+<<rule [[Parser.prog1]]>>
 
 /*(*************************************************************************)*/
 /*(*1 Declarations *)*/
@@ -1755,7 +1743,157 @@ prog1:
 /*(*-----------------------------------------*)*/
 /*(*2 External declarators *)*/
 /*(*-----------------------------------------*)*/
+<<rule [[Parser.xdecl]]>>
+<<rule [[Parser.xdlist]]>>
+<<rule [[Parser.storage_and_type_xdecor]]>>
 
+/*(*-----------------------------------------*)*/
+/*(*2 Automatic declarators *)*/
+/*(*-----------------------------------------*)*/
+<<rule [[Parser.adecl]]>>
+<<rule [[Parser.adlist]]>>
+
+/*(*************************************************************************)*/
+/*(*1 Statements *)*/
+/*(*************************************************************************)*/
+<<rule [[Parser.block]]>>
+<<other block related rules>>
+
+<<rule [[Parser.stmnt]]>>
+<<rule [[Parser.ulstmnt]]>>
+<<other stmt related rules>>
+
+/*(*************************************************************************)*/
+/*(*1 Expressions *)*/
+/*(*************************************************************************)*/
+<<rule [[Parser.expr]]>>
+<<other expr related rules>>
+<<other expr ebnf rules>>
+
+<<rule [[Parser.string]]>>
+
+/*(*************************************************************************)*/
+/*(*1 Initializers *)*/
+/*(*************************************************************************)*/
+<<rule [[Parser.init]]>>
+<<other init related rules>>
+
+/*(*************************************************************************)*/
+/*(*1 Types *)*/
+/*(*************************************************************************)*/
+
+/*(*-----------------------------------------*)*/
+/*(*2 Types part 1 (left part of a type) *)*/
+/*(*-----------------------------------------*)*/
+<<rule [[Parser.type_]]>>
+<<rule [[Parser.simple_type]]>>
+<<rule [[Parser.complex_type]]>>
+
+<<other struct related rules>>
+
+/*(*-----------------------------------------*)*/
+/*(*2 Types part 2 (right part of a type) *)*/
+/*(*-----------------------------------------*)*/
+/*
+(* declarator return a couple: 
+ *  (name, partial type (a function to be applied to return type))
+ *
+ * Note that with 'int* foo(int)' we must return 
+ * TFunction(Pointer int, [int]) and not Pointer (Func(int,[int])).
+ * The grammar parses the xdecor part  '*foo(int)' as:
+ *         *
+ *         |
+ *         ()
+ *       /   \
+ *      foo     [ int]
+ * 
+ * So when we return the partial function for TMul, we must
+ * apply first TPointer to the return type 'x', and then apply
+ * the function for xdecor.
+ * 
+ * 
+ * 
+ * less: handle qualifiers
+ *)*/
+<<rule [[Parser.xdecor]]>>
+<<other declarator related rules>>
+
+<<rule [[Parser.paramlist]]>>
+<<rule [[Parser.zparamlist]]>>
+
+/*(*-----------------------------------------*)*/
+<<rule [[Parser.abdecor]]>>
+<<other abstract declarator related rules>>
+
+/*(*-----------------------------------------*)*/
+/*(*3 qualifiers *)*/
+/*(*-----------------------------------------*)*/
+<<rule [[Parser.qualifier]]>>
+<<other qualifier related rules>>
+
+/*(*************************************************************************)*/
+/*(*1 Struct/union/enum body *)*/
+/*(*************************************************************************)*/
+<<rule [[Parser.sbody]]>>
+<<other structure body related rules>>
+
+<<rule [[Parser.enum]]>>
+<<rule [[Parser.const_expr]]>>
+
+/*(*************************************************************************)*/
+/*(*1 Storage, qualifiers *)*/
+/*(*************************************************************************)*/
+<<rule [[Parser.storage]]>>
+<<rule [[Parser.storage_and_type]]>>
+@
+
+
+<<Parser tokens priorities>>=
+/*(* must be at the top so that it has the lowest priority *)*/
+%nonassoc LOW_PRIORITY_RULE
+/*(* see conflicts.txt *)*/
+%nonassoc Telse
+
+/*(* in 5c but not in orig_c.mly *)*/
+%left   TSemicolon
+%left   TComma
+%right  TEq TOpEq
+%right  TQuestion TColon
+
+/*(* same than in orig_c.mly *)*/
+%left   TOrOr
+%left   TAndAnd
+%left   TOr
+%left   TXor
+%left   TAnd
+%left   TEqEq TBangEq
+%left   TInf TSup TInfEq TSupEq
+%left   TInfInf TSupSup
+%left   TPlus TMinus
+%left   TMul TDiv TMod
+
+/*(* in 5c but not in orig_c.mly *)*/
+%right  TMinusMinus TPlusPlus TArrow TDot TOBra TOPar
+@
+
+<<Parser type declarations>>=
+%type <Ast.toplevels> prog
+@
+
+<<rule [[Parser.prog]]>>=
+prog: prog1 EOF   { $1 }
+@
+<<rule [[Parser.prog1]]>>=
+prog1:
+ |  /*(*empty*)*/ { [] }
+ | prog1 xdecl    { $1 @ $2 }
+@
+
+\section{Declarations and definitions, part one}
+
+% xdecl for "external" decl, for toplevel decl outside func (external?)
+
+<<rule [[Parser.xdecl]]>>=
 xdecl: 
  | storage_and_type        TSemicolon 
      { (* stricter: *)
@@ -1802,7 +1940,9 @@ xdecl:
                  }
        ]
      }
+@
 
+<<rule [[Parser.storage_and_type_xdecor]]>>=
 storage_and_type_xdecor: storage_and_type xdecor
     { (* stricter: *)
       if !defs <> []
@@ -1836,18 +1976,12 @@ storage_and_type_xdecor: storage_and_type xdecor
       | _, _ -> error "not a function type"
       )
     }
-
-xdlist:
- | xdecor          { [$1, None] }
- | xdecor TEq init { [$1, Some $3] }
-
- | xdlist TComma xdlist { $1 @ $3 }
+@
 
 
-/*(*-----------------------------------------*)*/
-/*(*2 Automatic declarators *)*/
-/*(*-----------------------------------------*)*/
-
+% adecl for automatic declarations, for stuff inside functions or blocks ?
+% quite similar to xdecl
+<<rule [[Parser.adecl]]>>=
 adecl:
  | storage_and_type        TSemicolon 
      { if !defs = [] 
@@ -1879,70 +2013,155 @@ adecl:
           )
        ))
      }
+@
 
+<<rule [[Parser.adlist]]>>=
 adlist: xdlist { $1 }
+@
 
-/*(*************************************************************************)*/
-/*(*1 Statements *)*/
-/*(*************************************************************************)*/
+\subsection{No-declarator declarations}
 
+\subsection{Declarator-based declarations}
+
+<<rule [[Parser.xdlist]]>>=
+xdlist:
+ | xdecor          { [$1, None] }
+ | xdecor TEq init { [$1, Some $3] }
+
+ | xdlist TComma xdlist { $1 @ $3 }
+@
+
+
+
+\subsection{Entity declarations, the declarator}
+
+<<rule [[Parser.xdecor]]>>=
+xdecor:
+ | xdecor2                { $1 }
+ | TMul qualifiers xdecor 
+     { let (id, f) = $3 in 
+       id, (fun x -> f (mk_t (TPointer x) $1))
+     }
+@
+
+<<other declarator related rules>>=
+/*(* use 'tag' here too, because you can have 'foo foo;' declarations *)*/
+xdecor2:
+ | tag                
+     { (snd $1, fst $1), (fun x -> x) }
+ | TOPar xdecor TCPar 
+     { $2 }
+ | xdecor2 TOBra zexpr TCBra 
+     { let (id, f) = $1 in 
+       (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
+       id, (fun x -> f (mk_t (TArray ($3, x)) $2))
+     }
+ /*(* add parameters in scope in caller, when processing the function body *)*/
+ | xdecor2 TOPar zparamlist TCPar
+     { let (id, f) = $1 in 
+       (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
+       id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
+     }
+@
+
+
+\subsection{Function definitions}
+
+
+
+\section{Statements}
+
+\subsection{Blocks}
+
+<<rule [[Parser.block]]>>=
 block: tobrace slist tcbrace { mk_st (Block $2) $1 }
+@
 
-tobrace: TOBrace { new_scope env; $1 }
-tcbrace: TCBrace { pop_scope env; $1 } 
+<<other block related rules>>=
+<<rule [[Parser.tobrace]]>>
+<<rule [[Parser.tcbrace]]>>
+<<rule [[Parser.block_no_new_scope]]>>
+<<rule [[Parser.slist]]>>
+@
 
-block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
-
+<<rule [[Parser.slist]]>>=
 slist:
  | /*(*empty*)*/ { [] }
  | slist adecl   { $1 @ $2 }
  | slist stmnt   { $1 @ [$2] }
+@
+% seen adecl before
 
+<<rule [[Parser.stmnt]]>>=
 stmnt: 
  | ulstmnt        { $1 }
  | labels ulstmnt { $1 $2 }
+@
 
 
+<<rule [[Parser.tobrace]]>>=
+tobrace: TOBrace { new_scope env; $1 }
+@
 
+<<rule [[Parser.tcbrace]]>>=
+tcbrace: TCBrace { pop_scope env; $1 } 
+@
+
+<<rule [[Parser.block_no_new_scope]]>>=
+block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
+@
+% used by funcdef above
+
+
+% ulstmnt for unlabel stmt
+<<rule [[Parser.ulstmnt]]>>=
 ulstmnt: 
- | cexpr TSemicolon { mk_st (ExprSt $1) $2 }
- /*(* used when do for(...) ; to have an empty statement *)*/
- |       TSemicolon { mk_st (Block []) $1 }
+ <<[[Parser.ulstmnt]] cases>>
+@
 
- | block { $1 }
 
- | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
-     { 
-       if $5.s = Block []
-       then Error.warn "empty if body" $5.s_loc;
-       mk_st (If ($3, $5, mk_st (Block[]) $1)) $1
-     }
- | Tif TOPar cexpr TCPar stmnt Telse stmnt 
-     { 
-       if $5.s = Block []
-       then Error.warn "empty if body" $5.s_loc;
-       if $7.s = Block []
-       then Error.warn "empty else body" $7.s_loc;
-       mk_st (If ($3, $5, $7)) $1
-     }
- /*(* stricter: I impose a block, not any stmnt *)*/
- | Tswitch TOPar cexpr TCPar block 
-     { (* less: generate (0:int - (0:int - x)) *)
-       mk_st (Switch ($3, $5)) $1
-     }
+<<[[Parser.ulstmnt]] cases>>=
+| cexpr TSemicolon { mk_st (ExprSt $1) $2 }
+/*(* used when do for(...) ; to have an empty statement *)*/
+|       TSemicolon { mk_st (Block []) $1 }
 
- | Twhile TOPar cexpr TCPar stmnt                { mk_st (While ($3, $5)) $1 }
- | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { mk_st (DoWhile ($2, $5)) $1 }
- | tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt
-     { pop_scope env;
-       mk_st (For ($3, $5, $7, $9)) $1
-     }
+| block { $1 }
 
- | Treturn zcexpr TSemicolon { mk_st (Return $2) $1 }
- | Tbreak TSemicolon         { mk_st Break $1 }
- | Tcontinue TSemicolon      { mk_st Continue $1 } 
- | Tgoto tag TSemicolon      { mk_st (Goto (snd $2)) $1 }
+| Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
+    { 
+      if $5.s = Block []
+      then Error.warn "empty if body" $5.s_loc;
+      mk_st (If ($3, $5, mk_st (Block[]) $1)) $1
+    }
+| Tif TOPar cexpr TCPar stmnt Telse stmnt 
+    { 
+      if $5.s = Block []
+      then Error.warn "empty if body" $5.s_loc;
+      if $7.s = Block []
+      then Error.warn "empty else body" $7.s_loc;
+      mk_st (If ($3, $5, $7)) $1
+    }
+/*(* stricter: I impose a block, not any stmnt *)*/
+| Tswitch TOPar cexpr TCPar block 
+    { (* less: generate (0:int - (0:int - x)) *)
+      mk_st (Switch ($3, $5)) $1
+    }
 
+| Twhile TOPar cexpr TCPar stmnt                { mk_st (While ($3, $5)) $1 }
+| Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { mk_st (DoWhile ($2, $5)) $1 }
+| tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt
+    { pop_scope env;
+      mk_st (For ($3, $5, $7, $9)) $1
+    }
+
+| Treturn zcexpr TSemicolon { mk_st (Return $2) $1 }
+| Tbreak TSemicolon         { mk_st Break $1 }
+| Tcontinue TSemicolon      { mk_st Continue $1 } 
+| Tgoto tag TSemicolon      { mk_st (Goto (snd $2)) $1 }
+@
+
+
+<<other stmt related rules>>=
 tag: 
  | TName     { $1 }
  | TTypeName { $1 }
@@ -1983,11 +2202,23 @@ label:
  | TName      TColon  { (fun st -> mk_st (Label (snd $1, st)) $2)  }
  | Tcase expr TColon  { (fun st -> mk_st (Case ($2, st)) $3) }
  | Tdefault   TColon  { (fun st -> mk_st (Default st) $2) }
+@
 
-/*(*************************************************************************)*/
-/*(*1 Expressions *)*/
-/*(*************************************************************************)*/
+\subsection{Conditionals}
 
+\subsection{Loops}
+
+\subsection{Control flow jumps}
+
+\subsection{Labels and goto}
+
+\subsection{Switch}
+
+
+
+\section{Expressions}
+
+<<rule [[Parser.expr]]>>=
 expr:
  | xuexpr { $1 }
 
@@ -2020,7 +2251,9 @@ expr:
  | expr TOpEq expr   { mk_e (Assign (OpAssign (snd $2), $1, $3)) (fst $2) }
 
  | expr TQuestion cexpr TColon expr { mk_e (CondExpr ($1, $3, $5)) $2 }
+@
 
+<<other expr related rules>>=
 xuexpr:
  | uexpr { $1 }
 
@@ -2080,24 +2313,15 @@ cexpr:
  | expr { $1 }
  | cexpr TComma cexpr { mk_e (Sequence ($1, $3)) $2 }
 
-
-string:
- | TString        { $1 }
- | string TString 
-     { let (loc1, s1,t1) = $1 in let (_loc2, s2,t2) = $2 in
-       (* stricter: better error message, 5c just says "syntax error" *)
-       if t1 <> t2
-       then error "incompatible strings"
-       else loc1, s1 ^ s2, t1
-     }
+/*(*todo: (long expr) is wrapping expr in a (long) cast *)*/
+lexpr: expr { $1 }
+@
 
 
+<<other expr ebnf rules>>=
 zexpr:
  | /*(*empty*)*/ { None }
  | lexpr         { Some $1 }
-
-/*(*todo: (long expr) is wrapping expr in a (long) cast *)*/
-lexpr: expr { $1 }
 
 zcexpr:
  | /*(*empty*)*/ { None }
@@ -2110,411 +2334,23 @@ zelist:
 elist:
  | expr { [$1] }
  | elist TComma elist { $1 @ $3 }
-
-/*(*************************************************************************)*/
-/*(*1 Initializers *)*/
-/*(*************************************************************************)*/
-
-init: 
- | expr                  { $1 }
- | TOBrace ilist comma_opt TCBrace 
-     { match $2 with
-       | [] -> raise (Impossible "grammar force at least one element")
-       | (Left x)::xs ->
-           mk_e (ArrayInit (x::(xs |> List.map (function
-             | Left x -> x
-             | Right _ -> error "mixing array and record initializer forbidden"
-           )))) $1
-       | (Right x)::xs ->
-           mk_e (RecordInit (x::(xs |> List.map (function
-             | Right x -> x
-             | Left _ -> error "mixing array and record initializer forbidden"
-           )))) $1
-     }
-
-comma_opt:
- | /*(*empty*)*/ { }
- | TComma { }
-
-ilist:
- | init2              { [$1] }
- | ilist TComma init2 { $1 @ [$3] }
-
-init2:
- | init          { Left (None, $1) }
- | qual TEq init { $1 $3 }
-
-qual:
- | TOBra lexpr TCBra { (fun x -> Left (Some $2, x)) }
- | TDot tag          { (fun x -> Right (snd $2, x)) }
-
-
-/*(*************************************************************************)*/
-/*(*1 Types *)*/
-/*(*************************************************************************)*/
-
-/*(*-----------------------------------------*)*/
-/*(*2 Types part 1 (left part of a type) *)*/
-/*(*-----------------------------------------*)*/
-
-simple_type:
- | Tchar            { (T.I (T.Char, T.Signed), $1) }
- /*(* meh, I should remove all Signed variants *)*/
- | Tsigned Tchar    { (T.I (T.Char, T.Signed), $1) }
- | Tunsigned Tchar  { (T.I (T.Char, T.Unsigned), $1) }
-
- | Tshort           { (T.I (T.Short, T.Signed), $1) }
- | Tunsigned Tshort { (T.I (T.Short, T.Unsigned), $1) }
-
- | Tint             { (T.I (T.Int, T.Signed), $1) }
- | Tunsigned Tint   { (T.I (T.Int, T.Unsigned), $1) }
- /*(*bad: should be removed, but for compatibility with plan9 code I keep it*)*/
- | Tunsigned        { (T.I (T.Int, T.Unsigned), $1) }
-
- | Tlong            { (T.I (T.Long, T.Signed), $1) }
- | Tunsigned Tlong  { (T.I (T.Long, T.Unsigned), $1) }
-
- | Tlong Tlong      { (T.I (T.VLong, T.Signed), $1) }
- | Tunsigned Tlong Tlong { (T.I (T.VLong, T.Unsigned), $1) }
-
-
- | Tfloat  { (T.F (T.Float), $1) }
- | Tdouble { (T.F (T.Double), $1) }
-
- | Tvoid   { (T.Void, $1) }
-/*(* less: allow more combinations, so better than just "syntax error"? *)*/
-
-
-su:
- | Tstruct { T.Struct, $1 }
- | Tunion  { T.Union, $1 }
-
-tag_opt:
- | tag           { snd $1 }
- | /*(*empty*)*/ { gensym () }
-
-complex_type:
- | su tag { 
-     let (su, loc) = $1 in
-     let (_, id) = $2 in
-     try 
-       let (_tagkind, bid) = Hashtbl.find env.tags id in
-       (* assert takind = $1? let check.ml do this check *)
-       let fullname = id, bid in
-       mk_t (Ast.TStructName (su, fullname)) loc
-     with Not_found ->
-       (* will check in check.ml whether struct defined later *)
-       let fullname = id, 0 (* less: or env.block? *) in
-       mk_t (Ast.TStructName (su, fullname)) loc
- }
- | su tag_opt sbody {
-     let (su, loc) = $1 in
-     let id = $2 in
-     let fullname = id, env.block in
-     (* check if already defined in check.ml *)
-     defs := (StructDef { su_name = fullname; 
-                          su_loc = loc;
-                          su_kind = su; 
-                          su_flds = $3 })::!defs;
-     add_tag env id (Ast.tagkind_of_su su);
-     mk_t (Ast.TStructName (su, fullname)) loc
- }
-
-
- | Tenum tag   { 
-     let (_, id) = $2 in
-     try 
-       let (_tagkind, bid) = Hashtbl.find env.tags id in
-       let fullname = id, bid in
-       mk_t (Ast.TEnumName (fullname)) $1
-     with Not_found ->
-       let fullname = id, 0 (* less: or env.block? *) in
-       mk_t (Ast.TEnumName (fullname)) $1
-    }
- | Tenum tag_opt TOBrace enum TCBrace {
-     let id = $2 in
-     let fullname = id, env.block in
-     defs := (EnumDef { enum_name = fullname;
-                        enum_loc = $1;
-                        enum_constants = $4 })::!defs;
-     add_tag env id TagEnum;
-     mk_t (Ast.TEnumName fullname) $1
- }
-
- | TTypeName 
-     { let (loc, id) = $1 in
-       try 
-         let (idkind, bid) = Hashtbl.find env.ids id in 
-         assert (idkind = IdTypedef);
-         mk_t (Ast.TTypeName (id, bid)) loc
-       with Not_found -> 
-         raise (Impossible (spf "could not find typedef for %s" id))
-     }
-
-type_:
-  | simple_type  { let (t, loc) = $1 in mk_t (Ast.TBase t) loc }
-  | complex_type { $1 }
-
-/*(*-----------------------------------------*)*/
-/*(*2 Types part 2 (right part of a type) *)*/
-/*(*-----------------------------------------*)*/
-/*
-(* declarator return a couple: 
- *  (name, partial type (a function to be applied to return type))
- *
- * Note that with 'int* foo(int)' we must return 
- * TFunction(Pointer int, [int]) and not Pointer (Func(int,[int])).
- * The grammar parses the xdecor part  '*foo(int)' as:
- *         *
- *         |
- *         ()
- *       /   \
- *      foo     [ int]
- * 
- * So when we return the partial function for TMul, we must
- * apply first TPointer to the return type 'x', and then apply
- * the function for xdecor.
- * 
- * 
- * 
- * less: handle qualifiers
- *)*/
-
-xdecor:
- | xdecor2                { $1 }
- | TMul qualifiers xdecor 
-     { let (id, f) = $3 in 
-       id, (fun x -> f (mk_t (TPointer x) $1))
-     }
-
-/*(* use 'tag' here too, because you can have 'foo foo;' declarations *)*/
-xdecor2:
- | tag                
-     { (snd $1, fst $1), (fun x -> x) }
- | TOPar xdecor TCPar 
-     { $2 }
- | xdecor2 TOBra zexpr TCBra 
-     { let (id, f) = $1 in 
-       (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
-       id, (fun x -> f (mk_t (TArray ($3, x)) $2))
-     }
- /*(* add parameters in scope in caller, when processing the function body *)*/
- | xdecor2 TOPar zparamlist TCPar
-     { let (id, f) = $1 in 
-       (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
-       id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
-     }
-
-
-
-zparamlist:
- | /*(*empty*)*/ { [], false }
- | paramlist     { $1 }
-
-paramlist:
- | qualifier_and_type xdecor  
-     { let ((id, loc), typ2) = $2 in
-       (* the final blockid will be assigned when we create the scope of the
-        * function body.
-        *)
-       [{p_name = Some (id, -1); p_loc = loc; p_type = typ2 $1 }], false
-     }
- | qualifier_and_type abdecor 
-     { [{ p_name = None; p_loc = $1.t_loc; p_type = $2 $1 }], false }
-
- | paramlist TComma paramlist 
-     { let (xs, isdot1) = $1 in
-       let (ys, isdot2) = $3 in
-       (* stricter: 5c does not report *)
-       if isdot1
-       then error "dots allowed only in last parameter position";
-       xs @ ys, isdot2
-     }
- | TDot TDot TDot { [], true }
-
-
-/*(*-----------------------------------------*)*/
-
-abdecor:
- | /*(*empty*)*/ { (fun x -> x) }
- | abdecor1      { $1 }
-
-abdecor1:
- | TMul qualifiers          { (fun x -> mk_t (TPointer x) $1) }
- | TMul qualifiers abdecor1 { (fun x -> $3 (mk_t (TPointer x) $1)) }
- | abdecor2  { $1 }
-
-abdecor2:
- | abdecor3 { $1 }
- | abdecor2 TOPar zparamlist TCPar { (fun x -> $1 (mk_t (TFunction (x, $3))$2))}
- | abdecor2 TOBra zexpr TCBra      { (fun x -> $1 (mk_t (TArray ($3, x))$2))}
-
-abdecor3:
- | TOPar TCPar          { (fun x -> mk_t (TFunction (x, ([], false))) $1)  }
- | TOBra zexpr TCBra    { (fun x -> mk_t (TArray ($2, x)) $1) }
- | TOPar abdecor1 TCPar { $2 }
-
-/*(*-----------------------------------------*)*/
-/*(*3 qualifiers *)*/
-/*(*-----------------------------------------*)*/
-
-qualifier:
- | Tconst    { T.Const }
- | Tvolatile { T.Volatile }
- | Trestrict { error "restrict not supported" }
-
-qualifier_and_type: qualifiers type_ { $2 }
-/*(* less: allow storage here, so better than just "syntax error"? *)*/
-
-qualifiers:
- | /*(*empty*)*/        { [] }
- | qualifiers qualifier { $1 @ [$2] }
-
-/*(*************************************************************************)*/
-/*(*1 Struct/union/enum body *)*/
-/*(*************************************************************************)*/
-
-/*(* note that a structure does not define a new scope *)*/
-sbody: TOBrace edecl TCBrace { $2 }
-
-edecl:
- |       edecl_elem TSemicolon { $1 }
- | edecl edecl_elem TSemicolon { $1 @ $2 }
-
-edecl_elem: 
- | qualifier_and_type edlist
-   { $2 |> List.map (fun ((id, loc), typ2) -> 
-       (* note that this element can introduce a nested struct definition! *)
-       let typ1 = $1 in
-       let typ = typ2 typ1 in
-       { fld_name = id; fld_loc = loc; fld_type = typ }
-     )
-   }
-/*(* kenccext: c99ext? unnamed structure elt; used in u.h/regexp.h/bio.h/.. *)*/
- | qualifier_and_type
-   { let s = gensym () in
-    (* note that this anon elt can even be a nested anon struct definition! *)
-     let typ = $1 in
-     (* check that struct/union done later after typedef expansion *)
-     [ { fld_name = s; fld_loc = typ.t_loc; fld_type = typ } ]
-   }
-
-/*(* todo: bitfield *)*/
-edlist:
- | edecor               { [$1] }
- | edlist TComma edecor { $1 @ [$3] }
-
-edecor: xdecor { $1 }
-
-
-
-enum:
- | TName                
-     { let (loc, id) = $1 in
-       add_id env id IdEnumConstant; 
-       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = None}] 
-     }
- | TName TEq const_expr 
-     { let (loc, id) = $1 in
-      (* note that const_expr can reference enum constants defined before *)
-       add_id env id IdEnumConstant;
-       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = Some $3}] 
-     }
-
- | enum TComma enum { $1 @ $3 }
- | enum TComma      { $1 }
-
-const_expr: expr { $1 }
-
-/*(*************************************************************************)*/
-/*(*1 Storage, qualifiers *)*/
-/*(*************************************************************************)*/
-
-/*(* less: allow some combinations? like extern register? *)*/
-storage:
- | Tauto     { Storage.Local }
- | Tstatic   { Storage.Static }
- | Textern   { Storage.Extern }
- /*(* stricter: 5c just skips register declarations, I forbid them *)*/
- | Tregister { error "register not supported" }
- | Tinline   { error "inline not supported" }
-/*(* less: allow more combinations, so better than just "syntax error"? *)*/
-
-
-/*(* stricter: I impose an order. c(lass) then g(arbage) then t(type). *)*/
-storage_and_type:
- |          qualifiers type_ { Left None, $2 }
- | storage  qualifiers type_ { Left (Some $1), $3 }
- | Ttypedef qualifiers type_ { Right (), $3 }
-/*(* less: allow more combinations, so better than just "syntax error"? *)*/
 @
-
-
-<<Parser tokens priorities>>=
-/*(* must be at the top so that it has the lowest priority *)*/
-%nonassoc LOW_PRIORITY_RULE
-/*(* see conflicts.txt *)*/
-%nonassoc Telse
-
-/*(* in 5c but not in orig_c.mly *)*/
-%left   TSemicolon
-%left   TComma
-%right  TEq TOpEq
-%right  TQuestion TColon
-
-/*(* same than in orig_c.mly *)*/
-%left   TOrOr
-%left   TAndAnd
-%left   TOr
-%left   TXor
-%left   TAnd
-%left   TEqEq TBangEq
-%left   TInf TSup TInfEq TSupEq
-%left   TInfInf TSupSup
-%left   TPlus TMinus
-%left   TMul TDiv TMod
-
-/*(* in 5c but not in orig_c.mly *)*/
-%right  TMinusMinus TPlusPlus TArrow TDot TOBra TOPar
-@
-
-<<Parser type declarations>>=
-%type <Ast.toplevels> prog
-@
-
-\section{Declarations and definitions, part one}
-
-\subsection{No-declarator declarations}
-
-\subsection{Declarator-based declarations}
-
-\subsection{Entity declarations, the declarator}
-
-\subsection{Function definitions}
-
-
-
-\section{Statements}
-
-\subsection{Blocks}
-
-\subsection{Conditionals}
-
-\subsection{Loops}
-
-\subsection{Control flow jumps}
-
-\subsection{Labels and goto}
-
-\subsection{Switch}
-
-
-
-\section{Expressions}
 
 \subsection{Numeric constants}
 
 \subsection{String constants}
+
+<<rule [[Parser.string]]>>=
+string:
+ | TString        { $1 }
+ | string TString 
+     { let (loc1, s1,t1) = $1 in let (_loc2, s2,t2) = $2 in
+       (* stricter: better error message, 5c just says "syntax error" *)
+       if t1 <> t2
+       then error "incompatible strings"
+       else loc1, s1 ^ s2, t1
+     }
+@
 
 \subsection{Entity uses}
 
@@ -2544,21 +2380,264 @@ storage_and_type:
 
 \section{Initializers and designators}
 
+<<rule [[Parser.init]]>>=
+init: 
+ | expr                  { $1 }
+ | TOBrace ilist comma_opt TCBrace 
+     { match $2 with
+       | [] -> raise (Impossible "grammar force at least one element")
+       | (Left x)::xs ->
+           mk_e (ArrayInit (x::(xs |> List.map (function
+             | Left x -> x
+             | Right _ -> error "mixing array and record initializer forbidden"
+           )))) $1
+       | (Right x)::xs ->
+           mk_e (RecordInit (x::(xs |> List.map (function
+             | Right x -> x
+             | Left _ -> error "mixing array and record initializer forbidden"
+           )))) $1
+     }
+@
 
+<<other init related rules>>=
+comma_opt:
+ | /*(*empty*)*/ { }
+ | TComma { }
+
+ilist:
+ | init2              { [$1] }
+ | ilist TComma init2 { $1 @ [$3] }
+
+init2:
+ | init          { Left (None, $1) }
+ | qual TEq init { $1 $3 }
+
+qual:
+ | TOBra lexpr TCBra { (fun x -> Left (Some $2, x)) }
+ | TDot tag          { (fun x -> Right (snd $2, x)) }
+@
 
 
 \section{Types and storage classes}
 
+<<rule [[Parser.type_]]>>=
+type_:
+  | simple_type  { let (t, loc) = $1 in mk_t (Ast.TBase t) loc }
+  | complex_type { $1 }
+@
+
+<<rule [[Parser.simple_type]]>>=
+simple_type:
+ <<[[Parser.simple_type]] cases>>
+@
+
+<<rule [[Parser.complex_type]]>>=
+complex_type:
+ <<[[Parser.complex_type]] cases>>
+@
+
+
 \subsection{Basic types}
+
+
+<<[[Parser.simple_type]] cases>>=
+| Tchar            { (T.I (T.Char, T.Signed), $1) }
+/*(* meh, I should remove all Signed variants *)*/
+| Tsigned Tchar    { (T.I (T.Char, T.Signed), $1) }
+| Tunsigned Tchar  { (T.I (T.Char, T.Unsigned), $1) }
+
+| Tshort           { (T.I (T.Short, T.Signed), $1) }
+| Tunsigned Tshort { (T.I (T.Short, T.Unsigned), $1) }
+
+| Tint             { (T.I (T.Int, T.Signed), $1) }
+| Tunsigned Tint   { (T.I (T.Int, T.Unsigned), $1) }
+/*(*bad: should be removed, but for compatibility with plan9 code I keep it*)*/
+| Tunsigned        { (T.I (T.Int, T.Unsigned), $1) }
+
+| Tlong            { (T.I (T.Long, T.Signed), $1) }
+| Tunsigned Tlong  { (T.I (T.Long, T.Unsigned), $1) }
+
+| Tlong Tlong      { (T.I (T.VLong, T.Signed), $1) }
+| Tunsigned Tlong Tlong { (T.I (T.VLong, T.Unsigned), $1) }
+
+
+| Tfloat  { (T.F (T.Float), $1) }
+| Tdouble { (T.F (T.Double), $1) }
+
+| Tvoid   { (T.Void, $1) }
+/*(* less: allow more combinations, so better than just "syntax error"? *)*/
+@
 
 \subsection{Storage classes}
 
+<<rule [[Parser.storage]]>>=
+/*(* less: allow some combinations? like extern register? *)*/
+storage:
+ | Tauto     { Storage.Local }
+ | Tstatic   { Storage.Static }
+ | Textern   { Storage.Extern }
+ /*(* stricter: 5c just skips register declarations, I forbid them *)*/
+ | Tregister { error "register not supported" }
+ | Tinline   { error "inline not supported" }
+/*(* less: allow more combinations, so better than just "syntax error"? *)*/
+@
+
+<<rule [[Parser.storage_and_type]]>>=
+/*(* stricter: I impose an order. c(lass) then g(arbage) then t(type). *)*/
+storage_and_type:
+ |          qualifiers type_ { Left None, $2 }
+ | storage  qualifiers type_ { Left (Some $1), $3 }
+ | Ttypedef qualifiers type_ { Right (), $3 }
+/*(* less: allow more combinations, so better than just "syntax error"? *)*/
+@
+
 \subsection{Qualifiers}
+
+<<rule [[Parser.qualifier]]>>=
+qualifier:
+ | Tconst    { T.Const }
+ | Tvolatile { T.Volatile }
+ | Trestrict { error "restrict not supported" }
+@
+
+<<other qualifier related rules>>=
+qualifier_and_type: qualifiers type_ { $2 }
+/*(* less: allow storage here, so better than just "syntax error"? *)*/
+
+qualifiers:
+ | /*(*empty*)*/        { [] }
+ | qualifiers qualifier { $1 @ [$2] }
+@
 
 \subsection{Structures and unions}
 
+<<[[Parser.complex_type]] cases>>=
+| su tag { 
+    let (su, loc) = $1 in
+    let (_, id) = $2 in
+    try 
+      let (_tagkind, bid) = Hashtbl.find env.tags id in
+      (* assert takind = $1? let check.ml do this check *)
+      let fullname = id, bid in
+      mk_t (Ast.TStructName (su, fullname)) loc
+    with Not_found ->
+      (* will check in check.ml whether struct defined later *)
+      let fullname = id, 0 (* less: or env.block? *) in
+      mk_t (Ast.TStructName (su, fullname)) loc
+}
+| su tag_opt sbody {
+    let (su, loc) = $1 in
+    let id = $2 in
+    let fullname = id, env.block in
+    (* check if already defined in check.ml *)
+    defs := (StructDef { su_name = fullname; 
+                         su_loc = loc;
+                         su_kind = su; 
+                         su_flds = $3 })::!defs;
+    add_tag env id (Ast.tagkind_of_su su);
+    mk_t (Ast.TStructName (su, fullname)) loc
+}
+@
+
+<<other struct related rules>>=
+<<rule [[Parser.su]]>>
+<<rule [[Parser.tag_opt]]>>
+@
+
+<<rule [[Parser.su]]>>=
+su:
+ | Tstruct { T.Struct, $1 }
+ | Tunion  { T.Union, $1 }
+@
+
+<<rule [[Parser.tag_opt]]>>=
+tag_opt:
+ | tag           { snd $1 }
+ | /*(*empty*)*/ { gensym () }
+@
+
+
+<<rule [[Parser.sbody]]>>=
+/*(* note that a structure does not define a new scope *)*/
+sbody: TOBrace edecl TCBrace { $2 }
+@
+
+<<other structure body related rules>>=
+edecl:
+ |       edecl_elem TSemicolon { $1 }
+ | edecl edecl_elem TSemicolon { $1 @ $2 }
+
+edecl_elem: 
+ | qualifier_and_type edlist
+   { $2 |> List.map (fun ((id, loc), typ2) -> 
+       (* note that this element can introduce a nested struct definition! *)
+       let typ1 = $1 in
+       let typ = typ2 typ1 in
+       { fld_name = id; fld_loc = loc; fld_type = typ }
+     )
+   }
+/*(* kenccext: c99ext? unnamed structure elt; used in u.h/regexp.h/bio.h/.. *)*/
+ | qualifier_and_type
+   { let s = gensym () in
+    (* note that this anon elt can even be a nested anon struct definition! *)
+     let typ = $1 in
+     (* check that struct/union done later after typedef expansion *)
+     [ { fld_name = s; fld_loc = typ.t_loc; fld_type = typ } ]
+   }
+
+/*(* todo: bitfield *)*/
+edlist:
+ | edecor               { [$1] }
+ | edlist TComma edecor { $1 @ [$3] }
+
+edecor: xdecor { $1 }
+@
 
 \subsection{Enums}
+
+<<[[Parser.complex_type]] cases>>=
+| Tenum tag   { 
+    let (_, id) = $2 in
+    try 
+      let (_tagkind, bid) = Hashtbl.find env.tags id in
+      let fullname = id, bid in
+      mk_t (Ast.TEnumName (fullname)) $1
+    with Not_found ->
+      let fullname = id, 0 (* less: or env.block? *) in
+      mk_t (Ast.TEnumName (fullname)) $1
+   }
+| Tenum tag_opt TOBrace enum TCBrace {
+    let id = $2 in
+    let fullname = id, env.block in
+    defs := (EnumDef { enum_name = fullname;
+                       enum_loc = $1;
+                       enum_constants = $4 })::!defs;
+    add_tag env id TagEnum;
+    mk_t (Ast.TEnumName fullname) $1
+}
+@
+
+<<rule [[Parser.enum]]>>=
+enum:
+ | TName                
+     { let (loc, id) = $1 in
+       add_id env id IdEnumConstant; 
+       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = None}] 
+     }
+ | TName TEq const_expr 
+     { let (loc, id) = $1 in
+      (* note that const_expr can reference enum constants defined before *)
+       add_id env id IdEnumConstant;
+       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = Some $3}] 
+     }
+
+ | enum TComma enum { $1 @ $3 }
+ | enum TComma      { $1 }
+@
+
+<<rule [[Parser.const_expr]]>>=
+const_expr: expr { $1 }
+@
 
 \subsection{Pointer and array types}
 
@@ -2567,6 +2646,17 @@ storage_and_type:
 
 \subsection{Typedefs}
 
+<<[[Parser.complex_type]] cases>>=
+| TTypeName 
+    { let (loc, id) = $1 in
+      try 
+        let (idkind, bid) = Hashtbl.find env.ids id in 
+        assert (idkind = IdTypedef);
+        mk_t (Ast.TTypeName (id, bid)) loc
+      with Not_found -> 
+        raise (Impossible (spf "could not find typedef for %s" id))
+    }
+@
 
 
 
@@ -2576,11 +2666,61 @@ storage_and_type:
 
 \subsection{Function parameters}
 
+<<rule [[Parser.paramlist]]>>=
+paramlist:
+ | qualifier_and_type xdecor  
+     { let ((id, loc), typ2) = $2 in
+       (* the final blockid will be assigned when we create the scope of the
+        * function body.
+        *)
+       [{p_name = Some (id, -1); p_loc = loc; p_type = typ2 $1 }], false
+     }
+ | qualifier_and_type abdecor 
+     { [{ p_name = None; p_loc = $1.t_loc; p_type = $2 $1 }], false }
+
+ | paramlist TComma paramlist 
+     { let (xs, isdot1) = $1 in
+       let (ys, isdot2) = $3 in
+       (* stricter: 5c does not report *)
+       if isdot1
+       then error "dots allowed only in last parameter position";
+       xs @ ys, isdot2
+     }
+ | TDot TDot TDot { [], true }
+@
+
+<<rule [[Parser.zparamlist]]>>=
+zparamlist:
+ | /*(*empty*)*/ { [], false }
+ | paramlist     { $1 }
+@
+
 \subsection{Locals, automatic declarator}
 
 \subsection{Types, abstract declarator}
 
+<<rule [[Parser.abdecor]]>>=
+abdecor:
+ | /*(*empty*)*/ { (fun x -> x) }
+ | abdecor1      { $1 }
+@
 
+<<other abstract declarator related rules>>=
+abdecor1:
+ | TMul qualifiers          { (fun x -> mk_t (TPointer x) $1) }
+ | TMul qualifiers abdecor1 { (fun x -> $3 (mk_t (TPointer x) $1)) }
+ | abdecor2  { $1 }
+
+abdecor2:
+ | abdecor3 { $1 }
+ | abdecor2 TOPar zparamlist TCPar { (fun x -> $1 (mk_t (TFunction (x, $3))$2))}
+ | abdecor2 TOBra zexpr TCBra      { (fun x -> $1 (mk_t (TArray ($3, x))$2))}
+
+abdecor3:
+ | TOPar TCPar          { (fun x -> mk_t (TFunction (x, ([], false))) $1)  }
+ | TOBra zexpr TCBra    { (fun x -> mk_t (TArray ($2, x)) $1) }
+ | TOPar abdecor1 TCPar { $2 }
+@
 
 
 %******************************************************************************

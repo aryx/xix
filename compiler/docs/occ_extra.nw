@@ -761,6 +761,14 @@ module T = Parser  (* T for Tokens *)
 <<function [[Parser.pop_scope]]>>
 @
 
+<<other stmt related rules>>=
+<<rule [[Parser.tag]]>>
+<<rule [[Parser.tfor]]>>
+<<rule [[Parser.forexpr]]>>
+<<rule [[Parser.labels]]>>
+<<rule [[Parser.label]]>>
+@
+
 \section{[[Rewrite.mli]]}
 
 %-------------------------------------------------------------

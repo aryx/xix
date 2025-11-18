@@ -1492,7 +1492,7 @@ let string_of_ascii i =
 \section{Overview}
 
 <<signature [[Parse.parse]]>>=
-(* will call cpp internally first *)
+(* will macropreprocess internally first *)
 val parse: 
   < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast.program
 @
@@ -1602,6 +1602,10 @@ let mk_st st loc = { s = st; s_loc = loc }
 
 \section{Parsing environment and scope management}
 
+<<global [[Parser.block_counter]]>>=
+let block_counter : Ast.blockid ref = ref 0
+@
+
 <<type [[Parser.env]]>>=
 (* To manage scope (used notably to recognize typedefs in the lexer)
  *
@@ -1623,6 +1627,7 @@ type env = {
 }
 @
 
+
 <<global [[Parser.env]]>>=
 let env = {
   ids = Hashtbl_.create ();
@@ -1634,6 +1639,7 @@ let env = {
   block_scope = [];
 }
 @
+%TODO? use block = !block_counter ? cleaner?
 
 <<function [[Parser.add_id]]>>=
 (* Should we warn if 'id' already declared? No, because at the toplevel
@@ -1659,15 +1665,12 @@ let add_tag env tag tagkind =
   | [] -> env.tags_scope <- [[tag]]
 @
 
-<<global [[Parser.block_counter]]>>=
-let block_counter = ref 0
-@
 
 <<function [[Parser.new_scope]]>>=
 let new_scope env =
   incr block_counter;
-  env.block_scope <- env.block :: env.block_scope;
   env.block <- !block_counter;
+  env.block_scope <- env.block :: env.block_scope;
   env.ids_scope <- []::env.ids_scope;
   env.tags_scope <- []::env.tags_scope;
   ()
@@ -1739,7 +1742,6 @@ let gensym () =
 /*(*************************************************************************)*/
 /*(*1 Declarations *)*/
 /*(*************************************************************************)*/
-
 /*(*-----------------------------------------*)*/
 /*(*2 External declarators *)*/
 /*(*-----------------------------------------*)*/
@@ -1781,7 +1783,6 @@ let gensym () =
 /*(*************************************************************************)*/
 /*(*1 Types *)*/
 /*(*************************************************************************)*/
-
 /*(*-----------------------------------------*)*/
 /*(*2 Types part 1 (left part of a type) *)*/
 /*(*-----------------------------------------*)*/
@@ -1794,33 +1795,14 @@ let gensym () =
 /*(*-----------------------------------------*)*/
 /*(*2 Types part 2 (right part of a type) *)*/
 /*(*-----------------------------------------*)*/
-/*
-(* declarator return a couple: 
- *  (name, partial type (a function to be applied to return type))
- *
- * Note that with 'int* foo(int)' we must return 
- * TFunction(Pointer int, [int]) and not Pointer (Func(int,[int])).
- * The grammar parses the xdecor part  '*foo(int)' as:
- *         *
- *         |
- *         ()
- *       /   \
- *      foo     [ int]
- * 
- * So when we return the partial function for TMul, we must
- * apply first TPointer to the return type 'x', and then apply
- * the function for xdecor.
- * 
- * 
- * 
- * less: handle qualifiers
- *)*/
 <<rule [[Parser.xdecor]]>>
 <<other declarator related rules>>
 
 <<rule [[Parser.paramlist]]>>
 <<rule [[Parser.zparamlist]]>>
 
+/*(*-----------------------------------------*)*/
+/*(* abstract declarators *)*/
 /*(*-----------------------------------------*)*/
 <<rule [[Parser.abdecor]]>>
 <<other abstract declarator related rules>>
@@ -1875,6 +1857,8 @@ let gensym () =
 /*(* in 5c but not in orig_c.mly *)*/
 %right  TMinusMinus TPlusPlus TArrow TDot TOBra TOPar
 @
+
+
 
 <<Parser type declarations>>=
 %type <Ast.toplevels> prog
@@ -2036,6 +2020,27 @@ xdlist:
 \subsection{Entity declarations, the declarator}
 
 <<rule [[Parser.xdecor]]>>=
+/*
+(* declarator return a couple: 
+ *  (name, partial type (a function to be applied to return type))
+ *
+ * Note that with 'int* foo(int)' we must return 
+ * TFunction(Pointer int, [int]) and not Pointer (Func(int,[int])).
+ * The grammar parses the xdecor part  '*foo(int)' as:
+ *         *
+ *         |
+ *         ()
+ *       /   \
+ *      foo     [ int]
+ * 
+ * So when we return the partial function for TMul, we must
+ * apply first TPointer to the return type 'x', and then apply
+ * the function for xdecor.
+ * 
+ * 
+ * 
+ * less: handle qualifiers
+ *)*/
 xdecor:
  | xdecor2                { $1 }
  | TMul qualifiers xdecor 
@@ -2069,9 +2074,36 @@ xdecor2:
 
 
 
+
 \section{Statements}
 
+<<rule [[Parser.stmnt]]>>=
+stmnt: 
+ |        ulstmnt { $1 }
+ | labels ulstmnt { $1 $2 }
+@
+
+
+<<rule [[Parser.ulstmnt]]>>=
+ulstmnt: 
+ <<[[Parser.ulstmnt]] cases>>
+@
+
+<<[[Parser.ulstmnt]] cases>>=
+| cexpr TSemicolon { mk_st (ExprSt $1) $2 }
+/*(* used when do for(...) ; to have an empty statement *)*/
+|       TSemicolon { mk_st (Block []) $1 }
+@
+%cexpr for comma expr
+
+
 \subsection{Blocks}
+
+<<[[Parser.ulstmnt]] cases>>=
+| block { $1 }
+@
+
+% also seen before in funcdef
 
 <<rule [[Parser.block]]>>=
 block: tobrace slist tcbrace { mk_st (Block $2) $1 }
@@ -2080,8 +2112,9 @@ block: tobrace slist tcbrace { mk_st (Block $2) $1 }
 <<other block related rules>>=
 <<rule [[Parser.tobrace]]>>
 <<rule [[Parser.tcbrace]]>>
-<<rule [[Parser.block_no_new_scope]]>>
 <<rule [[Parser.slist]]>>
+
+<<rule [[Parser.block_no_new_scope]]>>
 @
 
 <<rule [[Parser.slist]]>>=
@@ -2091,18 +2124,12 @@ slist:
  | slist stmnt   { $1 @ [$2] }
 @
 % seen adecl before
-
-<<rule [[Parser.stmnt]]>>=
-stmnt: 
- | ulstmnt        { $1 }
- | labels ulstmnt { $1 $2 }
-@
+% and back to stmnt!
 
 
 <<rule [[Parser.tobrace]]>>=
 tobrace: TOBrace { new_scope env; $1 }
 @
-
 <<rule [[Parser.tcbrace]]>>=
 tcbrace: TCBrace { pop_scope env; $1 } 
 @
@@ -2113,20 +2140,9 @@ block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
 % used by funcdef above
 
 
-% ulstmnt for unlabel stmt
-<<rule [[Parser.ulstmnt]]>>=
-ulstmnt: 
- <<[[Parser.ulstmnt]] cases>>
-@
-
+\subsection{Conditionals}
 
 <<[[Parser.ulstmnt]] cases>>=
-| cexpr TSemicolon { mk_st (ExprSt $1) $2 }
-/*(* used when do for(...) ; to have an empty statement *)*/
-|       TSemicolon { mk_st (Block []) $1 }
-
-| block { $1 }
-
 | Tif TOPar cexpr TCPar stmnt %prec LOW_PRIORITY_RULE 
     { 
       if $5.s = Block []
@@ -2141,34 +2157,24 @@ ulstmnt:
       then Error.warn "empty else body" $7.s_loc;
       mk_st (If ($3, $5, $7)) $1
     }
-/*(* stricter: I impose a block, not any stmnt *)*/
-| Tswitch TOPar cexpr TCPar block 
-    { (* less: generate (0:int - (0:int - x)) *)
-      mk_st (Switch ($3, $5)) $1
-    }
+@
 
+\subsection{Loops}
+
+<<[[Parser.ulstmnt]] cases>>=
 | Twhile TOPar cexpr TCPar stmnt                { mk_st (While ($3, $5)) $1 }
 | Tdo stmnt Twhile TOPar cexpr TCPar TSemicolon { mk_st (DoWhile ($2, $5)) $1 }
 | tfor TOPar forexpr TSemicolon zcexpr TSemicolon zcexpr TCPar stmnt
     { pop_scope env;
       mk_st (For ($3, $5, $7, $9)) $1
     }
-
-| Treturn zcexpr TSemicolon { mk_st (Return $2) $1 }
-| Tbreak TSemicolon         { mk_st Break $1 }
-| Tcontinue TSemicolon      { mk_st Continue $1 } 
-| Tgoto tag TSemicolon      { mk_st (Goto (snd $2)) $1 }
 @
 
-
-<<other stmt related rules>>=
-tag: 
- | TName     { $1 }
- | TTypeName { $1 }
-
-
+<<rule [[Parser.tfor]]>>=
 tfor: Tfor { new_scope env; $1 }
+@
 
+<<rule [[Parser.forexpr]]>>=
 forexpr: 
  | zcexpr 
      { Left $1 }
@@ -2192,29 +2198,61 @@ forexpr:
           )
        ))
      }
-
-labels:
- | label        { (fun st -> $1 st)  }
- | labels label { (fun st -> $1 ($2 st)) }
-
-label:
- /*(* less: not tag here? can not conflict with typedef? *)*/
- | TName      TColon  { (fun st -> mk_st (Label (snd $1, st)) $2)  }
- | Tcase expr TColon  { (fun st -> mk_st (Case ($2, st)) $3) }
- | Tdefault   TColon  { (fun st -> mk_st (Default st) $2) }
 @
-
-\subsection{Conditionals}
-
-\subsection{Loops}
 
 \subsection{Control flow jumps}
 
+<<[[Parser.ulstmnt]] cases>>=
+| Treturn zcexpr TSemicolon { mk_st (Return $2) $1 }
+@
+<<[[Parser.ulstmnt]] cases>>=
+| Tbreak TSemicolon         { mk_st Break $1 }
+| Tcontinue TSemicolon      { mk_st Continue $1 } 
+@
+
 \subsection{Labels and goto}
+
+<<[[Parser.ulstmnt]] cases>>=
+| Tgoto tag TSemicolon      { mk_st (Goto (snd $2)) $1 }
+@
+
+<<rule [[Parser.tag]]>>=
+tag: 
+ | TName     { $1 }
+ | TTypeName { $1 }
+@
+% different namespace than struct/union/enum tags or idents(and types) so
+% don't care if already used for ident or type
+
+% also used for su?
+
+<<rule [[Parser.labels]]>>=
+labels:
+ | label        { (fun st -> $1 st)  }
+ | labels label { (fun st -> $1 ($2 st)) }
+@
+
+<<rule [[Parser.label]]>>=
+label:
+ /*(* less: not tag here? can not conflict with typedef? *)*/
+ | TName      TColon  { (fun st -> mk_st (Label (snd $1, st)) $2)  }
+ <<[[Parser.label]] other cases>>
+@
 
 \subsection{Switch}
 
+<<[[Parser.ulstmnt]] cases>>=
+/*(* stricter: I impose a block, not any stmnt *)*/
+| Tswitch TOPar cexpr TCPar block 
+    { (* less: generate (0:int - (0:int - x)) *)
+      mk_st (Switch ($3, $5)) $1
+    }
+@
 
+<<[[Parser.label]] other cases>>=
+| Tcase expr TColon  { (fun st -> mk_st (Case ($2, st)) $3) }
+| Tdefault   TColon  { (fun st -> mk_st (Default st) $2) }
+@
 
 \section{Expressions}
 
@@ -2337,6 +2375,7 @@ elist:
 @
 
 \subsection{Numeric constants}
+
 
 \subsection{String constants}
 
@@ -2525,6 +2564,10 @@ qualifiers:
       let fullname = id, 0 (* less: or env.block? *) in
       mk_t (Ast.TStructName (su, fullname)) loc
 }
+@
+% tag again
+
+<<[[Parser.complex_type]] cases>>=
 | su tag_opt sbody {
     let (su, loc) = $1 in
     let id = $2 in
@@ -2555,7 +2598,7 @@ tag_opt:
  | tag           { snd $1 }
  | /*(*empty*)*/ { gensym () }
 @
-
+% gensym!! no anonymous struct/union
 
 <<rule [[Parser.sbody]]>>=
 /*(* note that a structure does not define a new scope *)*/
@@ -2606,6 +2649,9 @@ edecor: xdecor { $1 }
       let fullname = id, 0 (* less: or env.block? *) in
       mk_t (Ast.TEnumName (fullname)) $1
    }
+@
+
+<<[[Parser.complex_type]] cases>>=
 | Tenum tag_opt TOBrace enum TCBrace {
     let id = $2 in
     let fullname = id, env.block in
@@ -2639,7 +2685,9 @@ enum:
 const_expr: expr { $1 }
 @
 
+
 \subsection{Pointer and array types}
+
 
 \subsection{Function types, parameter types}
 

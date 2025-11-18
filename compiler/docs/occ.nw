@@ -1887,50 +1887,6 @@ xdecl:
   <<[[Parser.xdecl]] cases>> 
 @
 
-
-
-
-
-%TODO: move later
-% adecl for automatic declarations, for stuff inside functions or blocks ?
-% very similar to xdecl
-<<rule [[Parser.adecl]]>>=
-adecl:
- | storage_and_type        TSemicolon 
-     { if !defs = [] 
-       then error "declaration without any identifier";
-       (* stricter: *)
-       error "move struct or typedef definitions to the toplevel";
-       (* TODO? could allow at least structdef and just return [] here *)
-     }
-
- | storage_and_type adlist TSemicolon 
-     { (* stricter: *)
-       if !defs <> [] 
-       then error "move struct or typedef definitions to the toplevel";
-       (* less: could factorize code with xdecl *)
-       ($2 |> List.map (fun (((id, loc), typ2), init) ->
-          let (sto_or_typedef, typ1) = $1 in
-          let typ = typ2 typ1 in
-          (match sto_or_typedef with
-          | Left sto -> 
-              add_id env id IdIdent;
-              mk_st (Var { v_name = (id, env.block);
-                           v_loc = loc;
-                           v_type = typ;
-                           v_storage = sto;
-                           v_init = init;
-                         }) loc
-          (* stricter: *)
-          | Right () -> error "typedefs not at the toplevel are forbidden"
-          )
-       ))
-     }
-@
-<<rule [[Parser.adlist]]>>=
-adlist: xdlist { $1 }
-@
-
 \subsection{No-declarator declarations}
 
 <<[[Parser.xdecl]] cases>>=
@@ -1978,12 +1934,9 @@ adlist: xdlist { $1 }
 <<rule [[Parser.xdlist]]>>=
 xdlist:
  | xdecor          { [$1, None] }
- | xdecor TEq init { [$1, Some $3] }
-
+ <<[[Parser.xdlist]] other cases>>
  | xdlist TComma xdlist { $1 @ $3 }
 @
-%5c: the TEq init case is delayed to later
-
 
 \subsection{Entity declarations, the declarator}
 
@@ -2035,31 +1988,6 @@ tag:
 % different namespace than struct/union/enum tags or idents(and types) so
 % don't care if already used for ident or type
 
-
-
-
-%TODO: move later
-<<[[Parser.xdecor]] other cases>>=
-| TMul qualifiers xdecor 
-    { let (id, f) = $3 in 
-      id, (fun x -> f (mk_t (TPointer x) $1))
-    }
-@
-
-%TODO: move later
-<<[[Parser.xdecor2]] other cases>>=
-| xdecor2 TOBra zexpr TCBra 
-    { let (id, f) = $1 in 
-      (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
-      id, (fun x -> f (mk_t (TArray ($3, x)) $2))
-    }
-/*(* add parameters in scope in caller, when processing the function body *)*/
-| xdecor2 TOPar zparamlist TCPar
-    { let (id, f) = $1 in 
-      (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
-      id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
-    }
-@
 
 \subsection{Function definitions}
 
@@ -2412,6 +2340,7 @@ string:
         (*Id ($1, 0)*)
     }
 @
+% Can have TTypeName here?
 
 \subsection{Arithmetic expressions}
 
@@ -2428,6 +2357,19 @@ string:
 | expr TMod expr    { mk_e (Binary ($1, Arith Mod, $3)) $2 }
 @
 
+
+% Bit operation
+
+<<[[Parser.expr]] other cases>>=
+| expr TAnd expr    { mk_e (Binary ($1, Arith And, $3)) $2 }
+| expr TXor expr    { mk_e (Binary ($1, Arith Xor, $3)) $2 }
+| expr TOr expr     { mk_e (Binary ($1, Arith Or, $3)) $2 }
+@
+
+<<[[Parser.uexpr]] other cases>>=
+| TTilde xuexpr { mk_e (Unary (Tilde, $2)) $1 }
+@
+
 <<[[Parser.expr]] other cases>>=
 | expr TSupSup expr { mk_e (Binary ($1, Arith ShiftRight, $3)) $2 }
 | expr TInfInf expr { mk_e (Binary ($1, Arith ShiftLeft , $3)) $2 }
@@ -2437,20 +2379,14 @@ string:
 \subsection{Boolean expressions}
 
 <<[[Parser.expr]] other cases>>=
-| expr TAnd expr    { mk_e (Binary ($1, Arith And, $3)) $2 }
-| expr TXor expr    { mk_e (Binary ($1, Arith Xor, $3)) $2 }
-| expr TOr expr     { mk_e (Binary ($1, Arith Or, $3)) $2 }
+| expr TAndAnd expr { mk_e (Binary ($1, Logical AndLog, $3)) $2 }
+| expr TOrOr expr   { mk_e (Binary ($1, Logical OrLog, $3)) $2 }
 @
 
 <<[[Parser.uexpr]] other cases>>=
 | TBang xuexpr  { mk_e (Unary (Not, $2)) $1 }
-| TTilde xuexpr { mk_e (Unary (Tilde, $2)) $1 }
 @
 
-<<[[Parser.expr]] other cases>>=
-| expr TAndAnd expr { mk_e (Binary ($1, Logical AndLog, $3)) $2 }
-| expr TOrOr expr   { mk_e (Binary ($1, Logical OrLog, $3)) $2 }
-@
 
 <<[[Parser.expr]] other cases>>=
 | expr TEqEq expr   { mk_e (Binary ($1, Logical Eq, $3)) $2 }
@@ -2548,6 +2484,11 @@ elist:
 
 \section{Initializers and designators}
 
+<<[[Parser.xdlist]] other cases>>=
+| xdecor TEq init { [$1, Some $3] }
+@
+
+
 <<rule [[Parser.init]]>>=
 init: 
  | expr                  { $1 }
@@ -2568,18 +2509,33 @@ init:
 @
 
 <<other init related rules>>=
-comma_opt:
- | /*(*empty*)*/ { }
- | TComma { }
+<<rule [[Parser.comma_opt]]>>
+<<rule [[Parser.ilist]]>>
+<<rule [[Parser.ilist2]]>>
+<<rule [[Parser.qual]]>>
+@
 
+<<rule [[Parser.ilist]]>>=
 ilist:
  | init2              { [$1] }
  | ilist TComma init2 { $1 @ [$3] }
+@
 
+<<rule [[Parser.comma_opt]]>>=
+comma_opt:
+ | /*(*empty*)*/ { }
+ | TComma { }
+@
+
+
+<<rule [[Parser.ilist2]]>>=
 init2:
  | init          { Left (None, $1) }
  | qual TEq init { $1 $3 }
+@
 
+
+<<rule [[Parser.qual]]>>=
 qual:
  | TOBra lexpr TCBra { (fun x -> Left (Some $2, x)) }
  | TDot tag          { (fun x -> Right (snd $2, x)) }
@@ -2660,9 +2616,11 @@ storage:
 storage_and_type:
  |          qualifiers type_ { Left None, $2 }
  | storage  qualifiers type_ { Left (Some $1), $3 }
- | Ttypedef qualifiers type_ { Right (), $3 }
+ <<[[Parser.storage_and_type]] other cases>>
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
 @
+
+% will see Typedef case later
 
 \subsection{Qualifiers}
 
@@ -2684,6 +2642,10 @@ qualifiers:
 
 \subsection{Structures and unions}
 
+
+\subsubsection{Structure/union uses}
+% or forward decl?
+
 <<[[Parser.complex_type]] cases>>=
 | su tag { 
     let (su, loc) = $1 in
@@ -2700,6 +2662,15 @@ qualifiers:
 }
 @
 % tag again
+
+<<rule [[Parser.su]]>>=
+su:
+ | Tstruct { T.Struct, $1 }
+ | Tunion  { T.Union, $1 }
+@
+
+
+\subsubsection{Structure/union definitions}
 
 <<[[Parser.complex_type]] cases>>=
 | su tag_opt sbody {
@@ -2721,12 +2692,6 @@ qualifiers:
 <<rule [[Parser.tag_opt]]>>
 @
 
-<<rule [[Parser.su]]>>=
-su:
- | Tstruct { T.Struct, $1 }
- | Tunion  { T.Union, $1 }
-@
-
 <<rule [[Parser.tag_opt]]>>=
 tag_opt:
  | tag           { snd $1 }
@@ -2734,10 +2699,14 @@ tag_opt:
 @
 % gensym!! no anonymous struct/union
 
+
 <<rule [[Parser.sbody]]>>=
 /*(* note that a structure does not define a new scope *)*/
 sbody: TOBrace edecl TCBrace { $2 }
 @
+
+
+%%\subsubsection{Fields}
 
 <<other structure body related rules>>=
 edecl:
@@ -2772,6 +2741,8 @@ edecor: xdecor { $1 }
 
 \subsection{Enums}
 
+\subsubsection{Enumeration type uses and definitions}
+
 <<[[Parser.complex_type]] cases>>=
 | Tenum tag   { 
     let (_, id) = $2 in
@@ -2796,6 +2767,8 @@ edecor: xdecor { $1 }
     mk_t (Ast.TEnumName fullname) $1
 }
 @
+
+\subsubsection{Enumeration constant definitions}
 
 <<rule [[Parser.enum]]>>=
 enum:
@@ -2822,8 +2795,33 @@ const_expr: expr { $1 }
 
 \subsection{Pointer and array types}
 
+<<[[Parser.xdecor]] other cases>>=
+| TMul qualifiers xdecor 
+    { let (id, f) = $3 in 
+      id, (fun x -> f (mk_t (TPointer x) $1))
+    }
+@
+
+<<[[Parser.xdecor2]] other cases>>=
+| xdecor2 TOBra zexpr TCBra 
+    { let (id, f) = $1 in 
+      (* bug: not 'id, (fun x -> mk_t (TArray ($3, f x)) $2)' *)
+      id, (fun x -> f (mk_t (TArray ($3, x)) $2))
+    }
+@
 
 \subsection{Function types, parameter types}
+
+<<[[Parser.xdecor2]] other cases>>=
+/*(* add parameters in scope in caller, when processing the function body *)*/
+| xdecor2 TOPar zparamlist TCPar
+    { let (id, f) = $1 in 
+      (* bug: not 'id, (fun x -> mk_t (TFunction (f x, $3)) $2)' *)
+      id, (fun x -> f (mk_t (TFunction (x, $3)) $2)) 
+    }
+@
+
+% will see zparamlist later
 
 
 \subsection{Typedefs}
@@ -2840,11 +2838,19 @@ const_expr: expr { $1 }
     }
 @
 
+<<[[Parser.storage_and_type]] other cases>>=
+| Ttypedef qualifiers type_ { Right (), $3 }
+@
+% typedef const int myint;
+
+
 
 
 \section{Declarations and definitions, part two}
 
 \subsection{Globals, external declarator}
+
+% have seen already before xdecl, xdlist, xdecor, xdecor2
 
 \subsection{Function parameters}
 
@@ -2879,6 +2885,48 @@ zparamlist:
 
 \subsection{Locals, automatic declarator}
 
+% adecl for automatic declarations, for stuff inside functions or blocks ?
+% very similar to xdecl. Why can't use xdecl instead?
+% no func def here!
+
+<<rule [[Parser.adecl]]>>=
+adecl:
+ | storage_and_type        TSemicolon 
+     { if !defs = [] 
+       then error "declaration without any identifier";
+       (* stricter: *)
+       error "move struct or typedef definitions to the toplevel";
+       (* TODO? could allow at least structdef and just return [] here *)
+     }
+
+ | storage_and_type adlist TSemicolon 
+     { (* stricter: *)
+       if !defs <> [] 
+       then error "move struct or typedef definitions to the toplevel";
+       (* less: could factorize code with xdecl *)
+       ($2 |> List.map (fun (((id, loc), typ2), init) ->
+          let (sto_or_typedef, typ1) = $1 in
+          let typ = typ2 typ1 in
+          (match sto_or_typedef with
+          | Left sto -> 
+              add_id env id IdIdent;
+              mk_st (Var { v_name = (id, env.block);
+                           v_loc = loc;
+                           v_type = typ;
+                           v_storage = sto;
+                           v_init = init;
+                         }) loc
+          (* stricter: *)
+          | Right () -> error "typedefs not at the toplevel are forbidden"
+          )
+       ))
+     }
+@
+<<rule [[Parser.adlist]]>>=
+adlist: xdlist { $1 }
+@
+
+
 \subsection{Types, abstract declarator}
 
 <<rule [[Parser.abdecor]]>>=
@@ -2903,6 +2951,8 @@ abdecor3:
  | TOBra zexpr TCBra    { (fun x -> mk_t (TArray ($2, x)) $1) }
  | TOPar abdecor1 TCPar { $2 }
 @
+
+% subtle, and ugly
 
 
 %******************************************************************************
@@ -4090,6 +4140,7 @@ let lvalue (e0 : expr) : bool =
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
   | _ -> raise Todo
 @
+%5c: was done via an 'addable' (address-able) field
 
 <<function [[Typecheck.check_compatible_assign]]>>=
 (* less: could run typ_ext hooks here? and return a new node? for

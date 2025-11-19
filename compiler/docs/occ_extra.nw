@@ -408,6 +408,7 @@ type integer = int
 <<Codegen5.ml>>=
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
+open Eq.Operators
 open Either
 
 open Ast_asm
@@ -851,6 +852,7 @@ module T = Parser  (* T for Tokens *)
 %-------------------------------------------------------------
 
 <<Typecheck.mli>>=
+open Common
 
 <<type [[Typecheck.idinfo]]>>
 

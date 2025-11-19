@@ -5444,7 +5444,7 @@ let tparams =
   | T.Func (_tret, tparams, _varargs) -> tparams
   | _ -> raise (Impossible "not a FUNC")
 in
-assert (List.length tparams = List.length typparams);
+assert (List.length tparams =|= List.length typparams);
 
 let xs = List_.zip typparams tparams in
 
@@ -5540,7 +5540,7 @@ let regalloc (env : env) loc =
     if i >= n 
     then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
 
-    if env.regs.(i) = 0
+    if env.regs.(i) =|= 0
     then begin
       env.regs.(i) <- 1;
       i
@@ -5697,11 +5697,11 @@ let patch_fake_goto env pcgoto pcdest =
   (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
   (* ocaml-light: | A5.Instr (A5.B aref, A5.AL), _loc | A5.Instr (A5.Bxx (_, aref), A5.AL), _loc *)
   | A.Instr (A5.B aref, A5.AL), _loc ->
-    if !aref = (Absolute fake_pc)
+    if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
   | A.Instr (A5.Bxx (_, aref), A5.AL), _loc ->
-    if !aref = (Absolute fake_pc)
+    if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
   | _ -> raise (Impossible "patching non jump instruction")
@@ -5710,12 +5710,12 @@ let patch_fake_goto env pcgoto pcdest =
 <<function [[Codegen5.expr_cond]]>>=
 let expr_cond (env : env) (e0 : expr) : virt_pc =
   (* todo: *)
-  with_reg env rRET (fun () ->
-    let dst = { opd = Register rRET; typ = e0.e_type; loc = e0.e_loc } in
+  with_reg env A5.rRET (fun () ->
+    let dst = { opd = Register A5.rRET; typ = e0.e_type; loc = e0.e_loc } in
     expr env e0 (Some dst);
     (* less: actually should be last loc of e0 *)
     let loc = e0.e_loc in
-    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, rRET), A5.AL)) loc;
+    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, A5.rRET), A5.AL)) loc;
     let pc = !(env.pc) in
     add_instr env (A.Instr (A5.Bxx (A5.EQ,(ref (A.Absolute fake_pc))),A5.AL)) loc;
     pc
@@ -5903,7 +5903,7 @@ continue_pc: Ast_asm.virt_pc option;
 
   | Some e ->
     (* todo: if type compatible with R0 *)
-    with_reg env rRET (fun () ->
+    with_reg env A5.rRET (fun () ->
       let dst = { opd = Register A5.rRET; typ = e.e_type; loc = e.e_loc } in
       expr env e (Some dst);
 
@@ -5925,7 +5925,7 @@ continue_pc: Ast_asm.virt_pc option;
  * less: dst_opd always a register? maybe, but still need to carry
  *  also its type and loc, so maybe easier to always wrap it in an operand?
  *)
-let rec expr (env : env) (e0 : Expr) (dst_opd_opt : operand_able option) : unit=
+let rec expr (env : env) (e0 : expr) (dst_opd_opt : operand_able option) : unit=
   match operand_able e0 with
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
@@ -5947,7 +5947,7 @@ let expropt (env : env) (eopt : expr option) : unit =
 \subsection{Operand part 2}
 
 <<function [[Codegen5.operand_able]]>>=
-let operand_able (e0 : expr) : operand_able =
+let operand_able (e0 : expr) : operand_able option =
   let kind_opt = 
     match e0.e with
     <<[[operand_able()]] match [[e0.e]] cases>>
@@ -6037,7 +6037,8 @@ let operand_able (e0 : expr) : operand_able =
 \subsection{[[gmove()]]}
 
 <<function [[Codegen5.gmove_opt]]>>=
-let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) : = 
+let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) :
+    unit = 
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
   | None ->
@@ -6053,7 +6054,7 @@ let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) 
  * This is why we must decompose below the move in 2 instructions
  * sometimes.
  *)
-let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
+let rec gmove (env : env) (opd1 : operand_able) (opd2 : operand_able) : unit =
   match opd1.opd with
 
   (* a load *)
@@ -6069,7 +6070,7 @@ let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
     gmove env opd1reg opd2;
     opd_regfree env opd1reg
 
-  | ConstI | other ->
+  | ConstI _ | Register _ | Addr _  ->
 
     (match opd2.opd with
 
@@ -6086,7 +6087,7 @@ let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
       gmove_aux env move_size opd2reg opd2;
       opd_regfree env opd2reg
 
-    | ConstI | other -> 
+    | ConstI _ | Register _ | Addr _ -> 
 
       (* the simple cases *)
       let move_size = 
@@ -6102,7 +6103,7 @@ let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
 (* At this point, either opd1 or opd2 references memory (but not both),
  * so we can do the move in one instruction.
  *)
-and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
+and gmove_aux env move_size (opd1 : operand_able) (opd2 : operand_able) : unit =
   (* less: should happen only for register? *)
   if opd1.opd =*= opd2.opd
   then ()
@@ -6116,7 +6117,7 @@ and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
 
 <<function [[Codegen5.mov_operand_of_opd]]>>=
 (* less: opportunity for bitshifted registers? *)
-let mov_operand_of_opd env (opd : opd) : A5.move_operand =
+let mov_operand_of_opd env (opd : operand_able) : A5.mov_operand =
   match opd.opd with
   | ConstI i   -> A5.Imsr (A5.Imm i)
   | Register r -> A5.Imsr (A5.Reg r)
@@ -6201,7 +6202,7 @@ let rec complexity (e : expr) : int =
       in
       let n1 = complexity e1 in
       let n2 = complexity e2 in
-      if n1 = n2
+      if n1 =|= n2
       then 1 + n1
       else max n1 n2
 
@@ -6221,7 +6222,7 @@ let rec complexity (e : expr) : int =
          | _ -> raise (Impossible "see pattern match above")
       in
       let n = complexity e in
-      if n = 0 then 1 else n
+      if n =|= 0 then 1 else n
     (* should be converted in Int anyway *)
     | SizeOf _ -> 0
 

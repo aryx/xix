@@ -136,6 +136,10 @@ module Assoc :
 
 module Hashtbl_ :
   sig
+    (* just for deriving show *)
+    type ('k, 'v) t = ('k, 'v) Hashtbl.t
+    [@@deriving show]
+
     val create : unit -> ('a, 'b) Hashtbl.t
     val of_list : ('a * 'b) list -> ('a, 'b) Hashtbl.t
     val to_list : ('a, 'b) Hashtbl.t -> ('a * 'b) list

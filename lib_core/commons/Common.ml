@@ -204,9 +204,31 @@ let ( ||| ) a b =
 (* ------------------------------------------------------------------------- *)
 
 module Either_ = struct
+
     (* just for deriving show *)
     type ('a, 'b) t = ('a, 'b) Either.t =  Left of 'a | Right of 'b
     [@@deriving show {with_path = false }]
+
+(* If you don't want to use [@@deriving show] above, you
+ * can copy-paste manually the generated code by getting the
+ * result of ocamlfind ocamlc -dsource ... on this code
+ *  type ('a, 'b) either =
+ *  | Left of 'a
+ *  | Right of 'b
+ *  [@@deriving show]
+ *
+ * which should look like this:
+ * let pp_either = fun poly_a -> fun poly_b -> fun fmt -> function
+ *   | Left a0 ->
+ *       (Format.fprintf fmt "(@[<2>Left@ ";
+ *        (poly_a fmt) a0;
+ *        Format.fprintf fmt "@])")
+ *   | Right a0 ->
+ *       (Format.fprintf fmt "(@[<2>Right@ ";
+ *        (poly_b fmt) a0;
+ *        Format.fprintf fmt "@])")
+ *)
+
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -358,6 +380,28 @@ end
 (* ------------------------------------------------------------------------- *)
 
 module Hashtbl_ = struct    
+
+(* for allowing deriving show on Hashtbl *)
+type ('k, 'v) t = ('k, 'v) Hashtbl.t
+
+let pp poly_a poly_b fmt h =
+  (* similar to OCaml.string_of_v for VDict case *)
+  Format.fprintf fmt "{@[";
+  h |> Hashtbl.iter (fun k v ->
+      Format.fprintf fmt "@,";
+      poly_a fmt k;
+      Format.fprintf fmt "=";
+      poly_b fmt v;
+      Format.fprintf fmt ";@ ";
+  );
+  Format.fprintf fmt "@]}"
+(* 'show' below is needed when using [deriving show] in .mli but we don't care
+ * about it; only pp above matters for our purpose which is to enable deriving
+ * show on user types that use Hashtbl.t (that now must be simply switched
+ * to Hashtbl_.t)
+ *)
+let show _polya _poly_b _h = "NO SHOW"
+
 
 let create () =
   (* why 101? why not *)

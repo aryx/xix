@@ -60,15 +60,20 @@ type idinfo = {
     ini: Ast.initialiser option;
   }
 (*e: type [[Typecheck.idinfo]] *)
+[@@deriving show]
+
+(* for ocaml-light to work without deriving *)
+let show_typed_program _ = "NO DERIVING"
+[@@warning "-32"]
 
 (* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
 (*s: type [[Typecheck.typed_program]] *)
 type typed_program = {
   (* resolved type and storage information for identifiers and tags *)
-  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  ids: (Ast.fullname, idinfo) Hashtbl_.t;
 
   (* resolved struct definitions *)
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl_.t;
 
   (* functions annotated with types for each expression nodes
    * (so you can more easily generate code later).
@@ -80,6 +85,7 @@ type typed_program = {
   funcs: Ast.func_def list;
 }
 (*e: type [[Typecheck.typed_program]] *)
+[@@deriving show]
 
 (*s: type [[Typecheck.env]] *)
 (* Environment for typechecking *)
@@ -311,7 +317,7 @@ let result_type_binary (t1 : Type.t) (t2 : Type.t) : Type.t =
  *)
 let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
   match op with
-  | SimpleAssign ->
+  | Eq_ ->
     (match t1, t2 with
     | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
     (* 'void*' special handling done in same_types() *)
@@ -369,7 +375,7 @@ let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
     );
     (try 
        (* todo: convert to int small types? see tcoma *)
-       check_compatible_assign SimpleAssign t e.e_type e.e_loc
+       check_compatible_assign Eq_ t e.e_type e.e_loc
      with Error _ ->
        (* TODO? actual error message of 5c? *)
        raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
@@ -954,7 +960,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
                                      st0.s_loc)))
         | Some e -> 
           let e = expr env e in
-          check_compatible_assign SimpleAssign env.return_type e.e_type e.e_loc;
+          check_compatible_assign Eq_ env.return_type e.e_type e.e_loc;
           (* todo: add cast *)
           Some e
         )
@@ -991,7 +997,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
       | None -> ()
       | Some e ->
         (* less: no const checking for this assign *)
-        check_compatible_assign (SimpleAssign) t e.e_type loc
+        check_compatible_assign Eq_ t e.e_type loc
         (* todo: add cast if not same type *)
       );
       Hashtbl.add env.ids_ fullname { typ = t; sto; ini; loc };
@@ -1083,7 +1089,7 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
       | None -> ()
       | Some e ->
         (* less: no const checking for this assign *)
-        check_compatible_assign (SimpleAssign) t e.e_type loc
+        check_compatible_assign Eq_ t e.e_type loc
       );
 
       (* step1: check for weird declarations *)

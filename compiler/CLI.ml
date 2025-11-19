@@ -121,6 +121,8 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
+      Logs.app (fun m -> m "%s" (Typecheck.show_typed_program typed_program));
+(*
     typed_program.ids |> Hashtbl.iter (fun k v ->
       match v.Typecheck.sto with
       | Storage.Global | Storage.Static ->
@@ -131,6 +133,7 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
     typed_program.funcs |> List.iter (fun func ->
       Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
+*)
   end;
   (*e: [[CLI.frontend()]] if [[dump_typed_ast]] *)
   typed_program

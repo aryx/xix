@@ -28,6 +28,7 @@ type typed_program = {
   funcs: Ast.func_def list;
 }
 (*e: type [[Typecheck.typed_program]] *)
+val show_typed_program: typed_program -> string
 
 (*s: type [[Typecheck.error]] *)
 type error = Check.error

@@ -630,7 +630,7 @@ let rec expr env e0 dst_opd_opt =
     (*x: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
     | Assign (op, e1, e2) ->
       (match op with
-      | SimpleAssign ->
+      | Eq_ ->
         (match operand_able e1, operand_able e2, dst_opd_opt with
         (* ex: x = 1; *)
         | Some opd1, Some opd2, None -> 

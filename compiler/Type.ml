@@ -65,7 +65,7 @@ type t =
 (*s: type [[Type.struct_kind]] *)
  and struct_kind = Struct | Union
 (*e: type [[Type.struct_kind]] *)
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (*s: type [[Type.qualifier]] *)
 type qualifier = 

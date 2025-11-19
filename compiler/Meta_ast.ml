@@ -193,7 +193,7 @@ and vof_unaryOp =
   | Not -> Ocaml.VSum (("Not", []))
 and vof_assignOp =
   function
-  | SimpleAssign -> Ocaml.VSum (("SimpleAssign", []))
+  | Eq_ -> Ocaml.VSum (("Eq_", []))
   | OpAssign v1 ->
       let v1 = vof_arithOp v1 in Ocaml.VSum (("OpAssign", [ v1 ]))
 and vof_fixOp =

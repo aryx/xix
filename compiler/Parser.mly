@@ -512,7 +512,7 @@ expr:
  | expr TSupEq expr  { mk_e (Binary ($1, Logical SupEq, $3)) $2 }
 
 
- | expr TEq expr     { mk_e (Assign (SimpleAssign, $1, $3)) $2 }
+ | expr TEq expr     { mk_e (Assign (Eq_, $1, $3)) $2 }
  | expr TOpEq expr   { mk_e (Assign (OpAssign (snd $2), $1, $3)) (fst $2) }
 
  | expr TQuestion cexpr TColon expr { mk_e (CondExpr ($1, $3, $5)) $2 }

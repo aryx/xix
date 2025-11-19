@@ -238,7 +238,7 @@ and const_expr = expr
     | Not 
 (*e: type [[Ast.unaryOp]] *)
 (*s: type [[Ast.assignOp]] *)
-  and assignOp = SimpleAssign | OpAssign of arithOp
+  and assignOp = Eq_ | OpAssign of arithOp
 (*e: type [[Ast.assignOp]] *)
 (*s: type [[Ast.fixOp]] *)
   and fixOp    = Dec | Inc
@@ -260,7 +260,7 @@ and const_expr = expr
          | Eq | NotEq 
          | AndLog | OrLog
 (*e: type [[Ast.logicalOp]] *)
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
@@ -329,7 +329,7 @@ and var_decl = {
  (* can have ArrayInit and RecordInit here in addition to other expr *)
  and initialiser = expr
 (*e: type [[Ast.initialiser]] *)
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions *)
@@ -346,7 +346,7 @@ type func_def = {
   f_body: stmt;
 }
 (*e: type [[Ast.func_def]] *)
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 
 (*s: type [[Ast.struct_def]] *)
 (* struct and union *)
@@ -369,7 +369,7 @@ type struct_def = {
     fld_type: typ;
   }
 (*e: type [[Ast.field_def]] *)
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 
 (*s: type [[Ast.enum_def]] *)
 type enum_def = { 
@@ -387,7 +387,7 @@ type enum_def = {
     ecst_value: const_expr option;
   }
 (*e: type [[Ast.enum_constant]] *)
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (*s: type [[Ast.type_def]] *)
 type type_def = { 
@@ -395,7 +395,7 @@ type type_def = {
   typedef_loc: loc;
   typedef_type: typ;
 }
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 (*e: type [[Ast.type_def]] *)
 
 (* ------------------------------------------------------------------------- *)
@@ -410,7 +410,7 @@ type toplevel =
   | VarDecl of var_decl
   | FuncDef of func_def
 (*e: type [[Ast.toplevel]] *)
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (*s: type [[Ast.toplevels]] *)
 type toplevels = toplevel list
@@ -434,7 +434,7 @@ type any =
   | Toplevel of toplevel
   | Program of program
   | FinalType of Type.t
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 (*e: type [[Ast.any]] *)
 
 (*****************************************************************************)

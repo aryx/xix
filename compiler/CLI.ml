@@ -121,19 +121,18 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
-      Logs.app (fun m -> m "%s" (Typecheck.show_typed_program typed_program));
-(*
-    typed_program.ids |> Hashtbl.iter (fun k v ->
-      match v.Typecheck.sto with
-      | Storage.Global | Storage.Static ->
-        Logs.app (fun m -> m "%s" (Ast.unwrap k));
-        Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
-      | _ -> ()
+    (* Logs.app (fun m -> m "%s" (Typecheck.show_typed_program typed_program));*)
+    typed_program.ids |> Hashtbl.iter (fun (k : Ast.fullname) (v : Typecheck.idinfo) ->
+      match v.sto with
+      | Storage.Global | Storage.Static | Storage.Extern ->
+        Logs.app (fun m -> m "%s: %s" (Ast.unwrap k)
+                              (Dumper_.s_of_any (Ast.FinalType v.typ)));
+      | Storage.Param | Storage.Local -> ()
     );
     typed_program.funcs |> List.iter (fun func ->
-      Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
+      Logs.app (fun m -> m "%s" 
+                (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
-*)
   end;
   (*e: [[CLI.frontend()]] if [[dump_typed_ast]] *)
   typed_program

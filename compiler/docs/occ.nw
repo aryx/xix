@@ -352,7 +352,7 @@ and const_expr = expr
 @
 
 <<type [[Ast.assignOp]]>>=
-  and assignOp = SimpleAssign | OpAssign of arithOp
+  and assignOp = Eq_ | OpAssign of arithOp
 @
 
 <<type [[Ast.fixOp]]>>=
@@ -572,7 +572,7 @@ type type_def = {
   typedef_loc: loc;
   typedef_type: typ;
 }
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 @
 
 %ex: of typedef.c and see dumped AST
@@ -707,10 +707,10 @@ type t =
 <<type [[Typecheck.typed_program]]>>=
 type typed_program = {
   (* resolved type and storage information for identifiers and tags *)
-  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  ids: (Ast.fullname, idinfo) Hashtbl_.t;
 
   (* resolved struct definitions *)
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl_.t;
 
   (* functions annotated with types for each expression nodes
    * (so you can more easily generate code later).
@@ -822,6 +822,11 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   try 
     <<[[CLI.main()]] matching [[args]] and [[outfile]]>>
   with exn ->
+    if Sys.file_exists !outfile
+    then begin 
+       Logs.info (fun m -> m "removing %s because of error" !outfile);
+       Sys.remove !outfile;
+    end;
     <<[[CLI.main()]] when [[exn]]>>
 @
 
@@ -840,6 +845,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 let outfile : Fpath.t = 
   <<[[CLI.main()]] main code path, define [[outfile]]>>
 in
+        
 <<[[CLI.main()]] main code path, define macropreprocessor [[conf]]>>
 outfile |> FS.with_open_out caps (fun chan ->
   compile caps conf arch (Fpath.v cfile) chan
@@ -869,12 +875,17 @@ let thestring = Arch.thestring arch in
 
 <<[[CLI.main()]] main code path, define [[outfile]]>>=
 let base = Filename.basename cfile in
-(if outfile = ""
-then
-  if base =~ "\\(.*\\)\\.c"
-  then Regexp_.matched1 base ^ (spf ".o%c" thechar)
-  else base ^ (spf ".o%c" thechar)
-else outfile
+(if outstr = ""
+then begin
+  let res = 
+    if base =~ "\\(.*\\)\\.c"
+    then Regexp_.matched1 base ^ (spf ".o%c" thechar)
+    else base ^ (spf ".o%c" thechar)
+  in
+  outfile := res;
+  res
+end
+else outstr
 ) |> Fpath.v
 @
 
@@ -897,7 +908,7 @@ with
 | [], "" -> 
     Arg.usage options usage;
     Exit.Code 1
-| [cfile], outfile ->
+| [cfile], outstr ->
     <<[[CLI.main()]] main code path with [[cfile]] and [[outfile]]>>
     Exit.OK
 | _ -> 
@@ -951,18 +962,12 @@ else
 let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t)
     (infile : Fpath.t) (outfile : Chan.o) :
     unit =
-  match arch with
-  | Arch.Arm -> compile5 caps conf infile outfile
-  | _ -> 
-     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+  let tast : Typecheck.typed_program = frontend caps conf infile in
+  let asm_prog : 'a Ast_asm.program = backend arch tast in
+  Object_file.save arch asm_prog outfile
 @
 
 <<function [[CLI.compile5]]>>=
-let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
-    (infile : Fpath.t) (outfile : Chan.o) =
-  let tast : Typecheck.typed_program =
-    frontend caps conf infile in
-  backend5 tast outfile
 @
 
 \section{[[frontend()]]}
@@ -989,11 +994,17 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
 \section{[[backend()]]}
 
 <<function [[CLI.backend5]]>>=
-let backend5 (tast : Typecheck.typed_program) (chan : Chan.o) : unit =
+let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
+    'a Ast_asm.program =
+
   (* todo: Rewrite.rewrite *)
-  let (asm, _locs) = Codegen5.codegen tast in
-  <<[[CLI.backend5()]] if [[dump_asm]]>>
-  Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
+  match arch with
+  | Arch.Arm -> 
+    let (asm, _locs) = Codegen5.codegen tast in
+    <<[[CLI.backend5()]] if [[dump_asm]]>>
+  | _ -> 
+     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+  
 @
 
 <<signature [[Codegen5.codegen]]>>=
@@ -2962,11 +2973,13 @@ abdecor3:
 \chapter{Checking}
 %******************************************************************************
 \label{chap:checking}
-
+%alt: Use/def checking
 
 \section{Overview}
 
-% 2 checks, use/def (and scope), and typecheck the big one!
+% main check: use/def (and scope) and few smaller one
+
+%alt: 2 checks, use/def (and scope), and typecheck the big one!
 
 <<signature [[Check.check_program]]>>=
 (* can raise Error if failhard, otherwise print on stderr *)
@@ -3001,52 +3014,15 @@ let error err =
 val failhard : bool ref
 @
 <<constant [[Check.failhard]]>>=
-let failhard = ref false
+let failhard = ref true
 @
 % who sets that?
 
 
 
-<<signature [[Typecheck.check_and_annotate_program]]>>=
-(* Returns resolved type and storage information for identifiers and tags.
- * Annotate also with types each expression nodes in the returned functions
- * (so you can more easily generate code later).
- * 
- * It also internally resolves enum constants and replaces them
- * with constants and evaluates some constant expressions (e.g., for
- * array size).
- * 
- * can raise Error.
- *)
-val check_and_annotate_program: 
-  Ast.program -> typed_program
-@
-% can raise Error, but here important part is typed_program
-
-
-<<exception [[Typecheck.Error]]>>=
-exception Error of error
-@
-
-<<type [[Typecheck.error]]>>=
-type error = Check.error
-@
-% reuse. Ex of typecheck error raised: ??
-
-
-%alt: define our own IncompatibleType exn or error kind?
-<<function [[Typecheck.type_error]]>>=
-let type_error _t loc =
-  (* less: dump t? *)
-  raise (Error (E.Misc ("incompatible type", loc)))
-@
-
-<<function [[Typecheck.type_error2]]>>=
-(* todo: for op xxx *)
-let type_error2 t1 t2 loc =
-  let s1 = Dumper_.s_of_any (FinalType t1) in
-  let s2 = Dumper_.s_of_any (FinalType t2) in
-  raise (Error (E.Misc (spf "incompatible types (%s and %s)" s1 s2, loc)))
+<<function [[Check.check_program]]>>=
+let check_program (prog : Ast.program) : unit =
+  check_usedef prog
 @
 
 \section{Printing warnings: [[5c -w]] and [[5c -W]]}
@@ -3101,32 +3077,11 @@ let warn s loc =
 %%\subsection{pdecl}
 %%\subsection{adecl}
 
-\section{Use/def checking}
+%\section{Use/def checking}
 %alt: Lint checking
 
-<<function [[Check.check_program]]>>=
-let check_program (prog : Ast.program) : unit =
-  check_usedef prog
-@
 
-<<function [[Check.check_usedef]]>>=
-(* use of undefined, redefined, redeclared, unused, inconsistent tags, etc. *)
-let check_usedef (program : Ast.program) : unit =
-
-  <<function [[Check.check_usedef.toplevel]]>>
-  <<function [[Check.check_usedef.stmt]]>>
-  <<function [[Check.check_usedef.expr]]>>
-  <<function [[Check.check_usedef.type_]]>>
-
-  <<[[Check.check_usedef()]] set initial [[env]]>>
-  fst program |> List.iter (toplevel env);
-
-  <<[[Check.check_usedef()]] check used but not defined tags after program visit>>
-  (* less: could check unused static var decl? *)
-  ()
-@
-
-\subsection{Checking environment}
+\section{Checking environment}
 
 <<type [[Check.usedef]]>>=
 type usedef = {
@@ -3164,6 +3119,24 @@ let env = {
 in
 @
 
+\section{Checking a program}
+
+<<function [[Check.check_usedef]]>>=
+(* use of undefined, redefined, redeclared, unused, inconsistent tags, etc. *)
+let check_usedef (program : Ast.program) : unit =
+
+  <<function [[Check.check_usedef.toplevel]]>>
+  <<function [[Check.check_usedef.stmt]]>>
+  <<function [[Check.check_usedef.expr]]>>
+  <<function [[Check.check_usedef.type_]]>>
+
+  <<[[Check.check_usedef()]] set initial [[env]]>>
+  fst program |> List.iter (toplevel env);
+
+  <<[[Check.check_usedef()]] check used but not defined tags after program visit>>
+  (* less: could check unused static var decl? *)
+  ()
+@
 
 \subsection{Checking toplevel definitions}
 
@@ -3517,6 +3490,8 @@ in
     )
 @
 
+\section{Checks}
+
 \subsection{Inconsistent or redefined tag}
 
 <<function [[Check.check_inconsistent_or_redefined_tag]]>>=
@@ -3681,8 +3656,58 @@ let check_labels env =
 
 
 
+%******************************************************************************
+\chapter{Typechecking}
+%******************************************************************************
+\label{chap:typechecking}
+%alt: \section{Type checking} part of Checking chapter
 
-\section{Type checking}
+
+\section{Overview}
+
+<<signature [[Typecheck.check_and_annotate_program]]>>=
+(* Returns resolved type and storage information for identifiers and tags.
+ * Annotate also with types each expression nodes in the returned functions
+ * (so you can more easily generate code later).
+ * 
+ * It also internally resolves enum constants and replaces them
+ * with constants and evaluates some constant expressions (e.g., for
+ * array size).
+ * 
+ * can raise Error.
+ *)
+val check_and_annotate_program: 
+  Ast.program -> typed_program
+@
+% can raise Error, but here important part is typed_program
+
+
+<<exception [[Typecheck.Error]]>>=
+exception Error of error
+@
+
+<<type [[Typecheck.error]]>>=
+type error = Check.error
+@
+% reuse. Ex of typecheck error raised: ??
+
+
+%alt: define our own IncompatibleType exn or error kind?
+<<function [[Typecheck.type_error]]>>=
+let type_error _t loc =
+  (* less: dump t? *)
+  raise (Error (E.Misc ("incompatible type", loc)))
+@
+
+<<function [[Typecheck.type_error2]]>>=
+(* todo: for op xxx *)
+let type_error2 t1 t2 loc =
+  let s1 = Dumper_.s_of_any (FinalType t1) in
+  let s2 = Dumper_.s_of_any (FinalType t2) in
+  raise (Error (E.Misc (spf "incompatible types (%s and %s)" s1 s2, loc)))
+@
+
+
 
 %trans: saw check if defined what you use
 % now we will see if use correctly given the type of what was defined
@@ -3704,7 +3729,7 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
 % saw typed_program before, with ids, structs, funcs
 
 
-\subsection{Typechecking environment}
+\section{Typechecking environment}
 
 <<type [[Typecheck.env]]>>=
 (* Environment for typechecking *)
@@ -3760,6 +3785,8 @@ in
 @
 
 %\subsection{Typechecking helpers}
+
+\section{Typechecking helpers}
 
 \subsection{Type equality} %%: [[sametype()]]
 
@@ -3841,7 +3868,9 @@ let array_to_pointer (env : env) (e : expr) : expr =
 %\subsection{lvalue check}
 % later with Assign
 
-\section{Typechecking expressions}
+%alt:\section{Typechecking programs}
+
+\section{Expressions}
 
 %trans: ok, now let's see the actual typechecking code
 
@@ -4163,7 +4192,7 @@ let lvalue (e0 : expr) : bool =
  *)
 let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
   match op with
-  | SimpleAssign ->
+  | Eq_ ->
     (match t1, t2 with
     | (T.I _ | T.F _), (T.I _ | T.F _) -> ()
     (* 'void*' special handling done in same_types() *)
@@ -4395,7 +4424,7 @@ let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
     );
     (try 
        (* todo: convert to int small types? see tcoma *)
-       check_compatible_assign SimpleAssign t e.e_type e.e_loc
+       check_compatible_assign Eq_ t e.e_type e.e_loc
      with Error _ ->
        (* TODO? actual error message of 5c? *)
        raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
@@ -4514,7 +4543,7 @@ let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
 
 
 
-\section{Typechecking statements}
+\section{Statements}
 
 <<function [[Typecheck.stmt]]>>=
 (* The code below is boilerplate, mostly.
@@ -4623,7 +4652,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
                                  st0.s_loc)))
     | Some e -> 
       let e = expr env e in
-      check_compatible_assign SimpleAssign env.return_type e.e_type e.e_loc;
+      check_compatible_assign Eq_ env.return_type e.e_type e.e_loc;
       (* todo: add cast *)
       Some e
     )
@@ -4636,7 +4665,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
 %\section{Typechecking types}
 %later in typedef expansion
 
-\section{Typechecking declarations} %% and constant evaluation
+\section{Declarations} %% and constant evaluation
 
 
 <<function [[Typecheck.check_and_annotate_program.toplevel]]>>=
@@ -4803,7 +4832,7 @@ let rec type_ (env : env) (typ0 : typ) : Type.t =
   | None -> ()
   | Some e ->
     (* less: no const checking for this assign *)
-    check_compatible_assign (SimpleAssign) t e.e_type loc
+    check_compatible_assign Eq_ t e.e_type loc
     (* todo: add cast if not same type *)
   );
   Hashtbl.add env.ids_ fullname { typ = t; sto; ini; loc };
@@ -4828,7 +4857,7 @@ let rec type_ (env : env) (typ0 : typ) : Type.t =
   | None -> ()
   | Some e ->
     (* less: no const checking for this assign *)
-    check_compatible_assign (SimpleAssign) t e.e_type loc
+    check_compatible_assign Eq_ t e.e_type loc
   );
 
   (* step1: check for weird declarations *)
@@ -5153,7 +5182,8 @@ let rec eval (env : env) (e0 : expr) : integer =
 \section{Overview}
 
 
-\section{Arch specific settings}
+\section{Arch-specific settings}
+%alt: Type width
 
 <<type [[Arch_compiler.t]]>>=
 type t = {
@@ -5452,6 +5482,148 @@ env.regs |> Array.iteri (fun i v ->
 );
 @
 
+\section{Register allocation}
+
+<<constant [[Codegen5.regs_initial]]>>=
+let regs_initial = 
+  let arr = Array.make A5.nb_registers 0 in
+  [A5.rLINK; A5.rPC;       (* hardware reseved *)
+   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
+   rEXT1; rEXT2;         (* compiler reserved *)
+  ] |> List.iter (fun (R x) ->
+    arr.(x) <- 1
+  );
+  arr
+@
+
+<<constant [[Codegen5.rEXT1]]>>=
+(* for 'extern register xx;', used in ARM kernel *)
+let rEXT1 = R 10
+@
+<<constant [[Codegen5.rEXT2]]>>=
+let rEXT2 = R 9
+@
+% move to Ast_asm5.ml instead?
+
+<<function [[Codegen5.reguse]]>>=
+let reguse env (A.R x) =
+  env.regs.(x) <- env.regs.(x) + 1
+@
+
+<<function [[Codegen5.regfree]]>>=
+let regfree env (A.R x) = 
+  env.regs.(x) <- env.regs.(x) - 1;
+  if env.regs.(x) < 0
+  then raise (Error (E.Misc ("error in regfree", fake_loc)))
+@
+
+<<function [[Codegen5.with_reg]]>>=
+let with_reg env (r : A.register) f =
+  (* less: care about exn? meh, if exn then no recovery anyway *)
+  reguse env r;
+  let res = f () in
+  regfree env r;
+  res
+@
+% use this when you know the register you want to use,
+% ex rRET
+
+
+<<function [[Codegen5.regalloc]]>>=
+let regalloc (env : env) loc =
+  (* less: lasti trick? *)
+  let rec aux i n =
+    (* This happens in extreme case when the expression tree has a huge
+     * depth everywhere. In that case, we should allocate a new temporary
+     * on the stack but this complexifies the algorithm.
+     *)
+    if i >= n 
+    then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
+
+    if env.regs.(i) = 0
+    then begin
+      env.regs.(i) <- 1;
+      i
+    end
+    else aux (i+1) n
+  in
+  aux 0 (Array.length env.regs)
+@
+
+\section{Operand part 1}
+% better name? 5c uses that term? or add-able?
+
+%TODO: rename just operand? or just opd ? topd (typed operand) ?
+<<type [[Codegen5.operand_able]]>>=
+(* some form of instruction selection *)
+type operand_able = 
+ { opd: operand_able_kind;
+   typ: Type.t;
+   loc: Ast.loc;
+ }
+@
+
+% something that can fit in operand of ASM instructions
+% of either Move or Arith or JMP instructions.
+<<type [[Codegen5.operand_able_kind]]>>=
+and operand_able_kind =
+ | ConstI of integer
+ | Register of register
+
+ (* indirect *)
+ | Name of Ast.fullname * offset
+ | Indirect of register * offset
+
+ (* was not "addressable" in original 5c, but I think it should *)
+ | Addr of Ast.fullname
+@
+% can be an assembly move operand?
+
+% and trick is if something not operand_able, then will allocate
+% intermediate register and store computation for it in it, and then
+% return that register which is now operand_able!
+
+<<function [[Codegen5.opd_regalloc]]>>=
+(* We can reuse a previous register if 'tgtopt' is a register.
+ * See for example return.c where we can reuse R0 instead of a new R1.
+ *)
+let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : operand_able option) : operand_able =
+  match typ with
+  | T.I _ | T.Pointer _ ->
+    let i = 
+      match tgtopt with
+      | Some { opd = Register (A.R x); typ=_; loc=_ } -> 
+        reguse env (A.R x);
+        x
+      | _ -> regalloc env loc
+    in
+    { opd = Register (A.R i); typ; loc }
+  | _ -> raise Todo
+@
+
+% reguse, when regfree? below
+
+
+<<function [[Codegen5.opd_regfree]]>>=
+(*
+let opd_regalloc_opd env opd tgtopt =
+  opd_regalloc env opd.typ opd.loc tgtopt
+let opd_regalloc_e env e tgtopt =
+  opd_regalloc env e.e_type e.e_loc tgtopt
+*)
+let opd_regfree env opd =
+  match opd.opd with
+  | Register r -> regfree env r;
+  | _ -> raise (Impossible "opd_regfree on non-register operand")
+@
+
+%%\subsection{[[reg]]}
+%%\subsection{[[OREGISTER]]}
+%%\subsection{[[nodreg()]]}
+%%\subsection{[[regfree()]]}
+
+
+
 \section{Statements} %%: [[gen()]]
 
 <<function [[Codegen5.stmt]]>>=
@@ -5536,7 +5708,7 @@ let patch_fake_goto env pcgoto pcdest =
 @
 
 <<function [[Codegen5.expr_cond]]>>=
-let expr_cond env e0 =
+let expr_cond (env : env) (e0 : expr) : virt_pc =
   (* todo: *)
   with_reg env rRET (fun () ->
     let dst = { opd = Register rRET; typ = e0.e_type; loc = e0.e_loc } in
@@ -5549,6 +5721,8 @@ let expr_cond env e0 =
     pc
   )
 @
+
+% who will adjust fake_pc? patch_fake_goto above
 
 \subsection{Switch}
 %alt: move later?
@@ -5574,8 +5748,10 @@ forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
 
 <<[[Codegen5.stmt]] match [[st0.s]] cases>>=
 | Label (name, st) ->
+
   let here = !(env.pc) in
   Hashtbl.add env.labels name here;
+
   if Hashtbl.mem env.forward_gotos name
   then begin
     let xs = Hashtbl.find env.forward_gotos name in
@@ -5605,13 +5781,6 @@ forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
 @
 
 \subsection{Loops}
-
-<<[[Codegen5.env]] other function fields>>=
-(* for loops (and switch) *)
-(* reinitialized for each block scope *)
-break_pc: Ast_asm.virt_pc option;
-continue_pc: Ast_asm.virt_pc option;
-@
 
 <<[[Codegen5.stmt]] match [[st0.s]] cases>>=
 | While (e, st) ->
@@ -5663,6 +5832,14 @@ continue_pc: Ast_asm.virt_pc option;
   add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
   patch_fake_goto env goto_for_break !(env.pc)
 @
+
+<<[[Codegen5.env]] other function fields>>=
+(* for loops (and switch) *)
+(* reinitialized for each block scope *)
+break_pc: Ast_asm.virt_pc option;
+continue_pc: Ast_asm.virt_pc option;
+@
+
 
 <<[[Codegen5.stmt]] match [[st0.s]] cases>>=
 | Break -> 
@@ -5716,9 +5893,7 @@ continue_pc: Ast_asm.virt_pc option;
 \subsection{Control flow jumps}
 
 <<constant [[Codegen5.rRET]]>>=
-let rRET = R 0
 @
-%TODO: use A5.rRET?
 
 <<[[Codegen5.stmt]] match [[st0.s]] cases>>=
 | Return eopt ->
@@ -5729,7 +5904,7 @@ let rRET = R 0
   | Some e ->
     (* todo: if type compatible with R0 *)
     with_reg env rRET (fun () ->
-      let dst = { opd = Register rRET; typ = e.e_type; loc = e.e_loc } in
+      let dst = { opd = Register A5.rRET; typ = e.e_type; loc = e.e_loc } in
       expr env e (Some dst);
 
       add_instr env (A.Virtual A.RET) st0.s_loc
@@ -5738,203 +5913,262 @@ let rRET = R 0
 @
 
 
-\section{Register allocation}
+\section{Basic expressions}
 
-<<constant [[Codegen5.regs_initial]]>>=
-let regs_initial = 
-  let arr = Array.make A5.nb_registers 0 in
-  [A5.rLINK; A5.rPC;       (* hardware reseved *)
-   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
-   rEXT1; rEXT2;         (* compiler reserved *)
-  ] |> List.iter (fun (R x) ->
-    arr.(x) <- 1
-  );
-  arr
-@
+%trans: seen stmts, and preview of expr with expr_cond in if, or
+% return eopt, let's see expr now.
 
-<<constant [[Codegen5.rEXT1]]>>=
-(* for 'extern register xx;', used in ARM kernel *)
-let rEXT1 = R 10
-@
 
-<<constant [[Codegen5.rEXT2]]>>=
-let rEXT2 = R 9
-@
-
-<<function [[Codegen5.reguse]]>>=
-let reguse env (A.R x) =
-  env.regs.(x) <- env.regs.(x) + 1
-@
-
-<<function [[Codegen5.regfree]]>>=
-let regfree env (A.R x) = 
-  env.regs.(x) <- env.regs.(x) - 1;
-  if env.regs.(x) < 0
-  then raise (Error (E.Misc ("error in regfree", fake_loc)))
-@
-
-<<function [[Codegen5.with_reg]]>>=
-let with_reg env r f =
-  (* less: care about exn? meh, if exn then no recovery anyway *)
-  reguse env r;
-  let res = f() in
-  regfree env r;
-  res
-@
-
-<<function [[Codegen5.regalloc]]>>=
-let regalloc env loc =
-  (* less: lasti trick? *)
-  let rec aux i n =
-    (* This happens in extreme case when the expression tree has a huge
-     * depth everywhere. In that case, we should allocate a new temporary
-     * on the stack but this complexifies the algorithm.
-     *)
-    if i >= n 
-    then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
-
-    if env.regs.(i) = 0
-    then begin
-      env.regs.(i) <- 1;
-      i
-    end
-    else aux (i+1) n
-  in
-  aux 0 (Array.length env.regs)
-@
-
-<<function [[Codegen5.opd_regalloc]]>>=
-(* We can reuse a previous register if 'tgtopt' is a register.
- * See for example return.c where we can reuse R0 instead of a new R1.
+<<function [[Codegen5.expr]]>>=
+(* todo: inrel ? 
+ * todo: if complex type node
+ * less: dst_opd always a register? maybe, but still need to carry
+ *  also its type and loc, so maybe easier to always wrap it in an operand?
  *)
-let opd_regalloc env typ loc tgtopt =
-  match typ with
-  | T.I _ | T.Pointer _ ->
-    let i = 
-      match tgtopt with
-      | Some { opd = Register (A.R x); typ=_; loc=_ } -> 
-        reguse env (A.R x);
-        x
-      | _ -> regalloc env loc
-    in
-    { opd = Register (A.R i); typ; loc }
-  | _ -> raise Todo
+let rec expr (env : env) (e0 : Expr) (dst_opd_opt : operand_able option) : unit=
+  match operand_able e0 with
+  | Some opd1 -> gmove_opt env opd1 dst_opd_opt
+  | None ->
+    (match e0.e with
+    <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>
+    | _ -> 
+      Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
+      raise Todo
+    )
 @
 
-<<function [[Codegen5.opd_regfree]]>>=
-(*
-let opd_regalloc_opd env opd tgtopt =
-  opd_regalloc env opd.typ opd.loc tgtopt
-let opd_regalloc_e env e tgtopt =
-  opd_regalloc env e.e_type e.e_loc tgtopt
-*)
-
-let opd_regfree env opd =
-  match opd.opd with
-  | Register r -> regfree env r;
-  | _ -> raise (Impossible "opd_regfree on non-register operand")
+<<function [[Codegen5.expropt]]>>=
+let expropt (env : env) (eopt : expr option) : unit =
+  match eopt with
+  | None -> ()
+  | Some e -> expr env e None
 @
 
-%%\subsection{[[reg]]}
-%%\subsection{[[OREGISTER]]}
-%%\subsection{[[nodreg()]]}
-%%\subsection{[[regfree()]]}
-
-\section{Typechecking, expliciting, annotating, and rewriting}%%: [[complex()]]}
-
-
-
-
-\section{Addressability and complexity}%%: [[xcom()]]
-
-\subsection{Addressable} %%: [[INDEXED]]
-% ??
-
-\subsection{Addressability} %%: [[addable]]
-% addressability? bad term? operand_ability better?
-
-<<type [[Codegen5.operand_able]]>>=
-(* some form of instruction selection *)
-type operand_able = 
- { opd: operand_able_kind;
-   typ: Type.t;
-   loc: Ast.loc;
- }
-@
-
-<<type [[Codegen5.operand_able_kind]]>>=
-and operand_able_kind =
- | ConstI of integer
- | Register of register
-
- (* indirect *)
- | Name of Ast.fullname * offset
- | Indirect of register * offset
- (* was not "addressable" in original 5c, but I think it should *)
- | Addr of Ast.fullname
-@
-% can be an assembly move operand?
-
+\subsection{Operand part 2}
 
 <<function [[Codegen5.operand_able]]>>=
-let operand_able e0 =
+let operand_able (e0 : expr) : operand_able =
   let kind_opt = 
     match e0.e with
-    | Int (s, _inttype) -> Some (ConstI (int_of_string s))
-    (* todo: float handling *)
-    | Float _ -> None
-    | Id fullname -> Some (Name (fullname, 0))
-
-    | Unary (op, e) ->
-
-      (match op with
-      (* special case to handle *(&arr + <cst>) *)
-      | DeRef  ->
-        (match e.e with
-        (* less: this should be handled in rewrite.ml *(&x) ==> x *)
-        | (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })) -> Some (Name (fullname, 0))
-        (* less: should normalize constant to left or right in rewrite.ml *)
-        | Binary ({ e = Int (s1, _); e_loc=_;e_type=_ }, 
-                  Arith Plus, 
-                  {e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ })
-          -> Some (Name (fullname, int_of_string s1))
-        | Binary ({e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ }, 
-                  Arith Plus, 
-                  { e = Int (s1, _); e_loc=_;e_type=_a })
-          -> Some (Name (fullname, int_of_string s1))
-        | _ -> None
-        )
-
-      | GetRef -> 
-        (match e.e with
-        (* why 5c does not make OADDR (ONAME) an addressable node? *)
-        | Id fullname -> Some (Addr fullname)
-        | _ -> None
-        )
-   
-      | (UnPlus | UnMinus | Tilde) -> 
-        raise (Impossible "should have been converted")
-      | Not -> None
-      )
-
-    (* less: could be operand_able if we do constant_evaluation later *)
-    | Binary (_e1, _op, _e2) -> None
-    | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
-      -> None
-    
-    | Cast _ -> raise Todo
-    | RecordAccess _ -> raise Todo
-    
-    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
-      raise (Impossible "should have been converted")
-    | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
-      None
+    <<[[operand_able()]] match [[e0.e]] cases>>
   in
   match kind_opt with
   | None -> None
-  | Some opd -> Some { opd = opd; typ = e0.e_type; loc = e0.e_loc }
+  | Some opd -> Some { opd; typ = e0.e_type; loc = e0.e_loc }
 @
 
+
+<<[[operand_able()]] match [[e0.e]] cases>>=
+(* less: could be operand_able if we do constant_evaluation later *)
+| Binary (_e1, _op, _e2) -> None
+| Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
+  -> None
+
+| Cast _ -> raise Todo
+| RecordAccess _ -> raise Todo
+
+| String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+  raise (Impossible "should have been converted")
+| ArrayInit _ | RecordInit _ | GccConstructor _ -> 
+  None
+@
+
+
+\subsection{Numeric constants}
+
+<<[[operand_able()]] match [[e0.e]] cases>>=
+| Int (s, _inttype) -> Some (ConstI (int_of_string s))
+@
+
+<<[[operand_able()]] match [[e0.e]] cases>>=
+(* todo: float handling *)
+| Float _ -> None
+@
+
+
+\subsection{Entity uses}
+
+<<[[operand_able()]] match [[e0.e]] cases>>=
+| Id fullname -> Some (Name (fullname, 0))
+@
+
+\subsection{Pointers part1}
+
+
+%XXXX
+<<[[operand_able()]] match [[e0.e]] cases>>=
+| Unary (op, e) ->
+
+  (match op with
+
+  (* special case to handle *(&arr + <cst>) *)
+  | DeRef  ->
+
+    (match e.e with
+    (* less: this should be handled in rewrite.ml *(&x) ==> x *)
+    | (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })) -> Some (Name (fullname, 0))
+    (* less: should normalize constant to left or right in rewrite.ml *)
+    | Binary ({ e = Int (s1, _); e_loc=_;e_type=_ }, 
+              Arith Plus, 
+              {e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ })
+      -> Some (Name (fullname, int_of_string s1))
+    | Binary ({e = (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })); e_loc=_;e_type=_ }, 
+              Arith Plus, 
+              { e = Int (s1, _); e_loc=_;e_type=_a })
+      -> Some (Name (fullname, int_of_string s1))
+    | _ -> None
+    )
+
+  | GetRef -> 
+
+    (match e.e with
+    (* why 5c does not make OADDR (ONAME) an addressable node? *)
+    | Id fullname -> Some (Addr fullname)
+    | _ -> None
+    )
+
+  | (UnPlus | UnMinus | Tilde) -> 
+    raise (Impossible "should have been converted")
+  | Not -> None
+  )
+@
+
+
+\subsection{[[gmove()]]}
+
+<<function [[Codegen5.gmove_opt]]>>=
+let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) : = 
+  match opd2opt with
+  | Some opd2 -> gmove env opd1 opd2
+  | None ->
+    (* less: should have warned about unused opd in check.ml *)
+    ()
+@
+
+<<function [[Codegen5.gmove]]>>=
+(* Even though two arguments are operand_able, it does not mean
+ * we can move one into the other with one instruction. 
+ * In theory, 5a supports general MOVW, but 5l restricts those
+ * MOVW to only store and load (not both at the same time).
+ * This is why we must decompose below the move in 2 instructions
+ * sometimes.
+ *)
+let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
+  match opd1.opd with
+
+  (* a load *)
+  | Name _ | Indirect _ ->
+    let move_size = 
+      match opd1.typ with
+      | T.I (T.Int, _) | T.Pointer _ -> A.Word
+      | _ -> raise Todo
+    in
+    (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
+    let opd1reg = opd_regalloc env opd1.typ opd1.loc (Some opd2) in
+    gmove_aux env move_size opd1 opd1reg;
+    gmove env opd1reg opd2;
+    opd_regfree env opd1reg
+
+  | ConstI | other ->
+
+    (match opd2.opd with
+
+    (* a store *)
+    | Name _ | Indirect _ ->
+      let move_size =
+        match opd2.typ with
+        | T.I (T.Int, _) | T.Pointer _ -> A.Word
+        | _ -> raise Todo
+      in
+      (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
+      let opd2reg = opd_regalloc env opd2.typ opd2.loc None in
+      gmove env opd1 opd2reg;
+      gmove_aux env move_size opd2reg opd2;
+      opd_regfree env opd2reg
+
+    | ConstI | other -> 
+
+      (* the simple cases *)
+      let move_size = 
+        match opd1.typ, opd2.typ with
+        | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
+        | T.Pointer _, T.Pointer _ -> A.Word
+        (* todo: lots of opti related to float *)
+        | _ -> raise Todo
+      in
+      gmove_aux env move_size opd1 opd2
+    )
+
+(* At this point, either opd1 or opd2 references memory (but not both),
+ * so we can do the move in one instruction.
+ *)
+and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
+  (* less: should happen only for register? *)
+  if opd1.opd =*= opd2.opd
+  then ()
+  else 
+  add_instr env 
+    (A.Instr (A5.MOVE (move_size, None, 
+                      mov_operand_of_opd env opd1,
+                      mov_operand_of_opd env opd2), A5.AL)) opd1.loc
+@
+
+
+<<function [[Codegen5.mov_operand_of_opd]]>>=
+(* less: opportunity for bitshifted registers? *)
+let mov_operand_of_opd env (opd : opd) : A5.move_operand =
+  match opd.opd with
+  | ConstI i   -> A5.Imsr (A5.Imm i)
+  | Register r -> A5.Imsr (A5.Reg r)
+  | Name (fullname, offset) -> A5.Entity (entity_of_id env fullname offset)
+  | Indirect (r, offset) -> A5.Indirect (r, offset)
+  | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
+@
+
+
+<<function [[Codegen5.entity_of_id]]>>=
+let entity_of_id env fullname offset_extra =
+  let idinfo = Hashtbl.find env.ids_ fullname in
+  match idinfo.TC.sto with
+  | S.Param -> 
+    let offset = Hashtbl.find env.offsets fullname + offset_extra in
+    Param (Some (symbol fullname), offset)
+  | S.Local ->
+    let offset = Hashtbl.find env.offsets fullname + offset_extra in
+    (* - offset for locals *)
+    A.Local (Some (symbol fullname), - offset)
+  | S.Static | S.Global | S.Extern ->
+    let offset = offset_extra in
+    A.Global (global_of_id fullname idinfo, offset)
+@
+
+<<function [[Codegen5.symbol]]>>=
+let symbol fullname = Ast.unwrap fullname
+@
+
+%%\subsection{Conversions}
+%%\subsection{[[gins()]]}
+%%\subsection{[[naddr()]]}
+%%\subsection{[[regalloc()]]}
+
+%%\subsection{Typechecking, expliciting, annotating, and rewriting}%%: [[complex()]]}
+%%\subsection{Addressability and complexity}%%: [[xcom()]]
+%%\subsubsection{Addressable} %%: [[INDEXED]]
+% ??
+%%\subsubsection{Addressability} %%: [[addable]]
+% addressability? bad term? operand_ability better?
+
+
+
+\section{Complex expressions} %: [[cgen()]]
+
+%trans: when not operand able, what do we do?
+
+<<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
+| Sequence (e1, e2) -> 
+  expr env e1 None;
+  expr env e2 dst_opd_opt
+@
 
 \subsection{Complexity} %%: [[complex]]
 
@@ -5944,11 +6178,12 @@ let operand_able e0 =
 let fn_complexity = 100 
 @
 
+% =~ depth of expression tree
 <<function [[Codegen5.complexity]]>>=
 (* less: could optimize by caching result in node, so no need
  * call again complexity on subtree later
  *)
-let rec complexity e =
+let rec complexity (e : expr) : int =
   if operand_able e <> None
   then 0
   else 
@@ -5993,177 +6228,24 @@ let rec complexity e =
     | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
 @
 
-
-\section{Basic expressions}
-
-<<function [[Codegen5.expr]]>>=
-(* todo: inrel ? 
- * todo: if complex type node
- * less: dst_opd always a register? maybe, but still need to carry
- *  also its type and loc, so maybe easier to always wrap it in an operand?
- *)
-let rec expr env e0 dst_opd_opt =
-
-  match operand_able e0 with
-  | Some opd1 -> gmove_opt env opd1 dst_opd_opt
-  | None ->
-    (match e0.e with
-    <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>
-    | _ -> 
-      Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
-      raise Todo
-    )
-@
-
-<<function [[Codegen5.expropt]]>>=
-let expropt env eopt =
-  match eopt with
-  | None -> ()
-  | Some e -> expr env e None
-@
-
-
-\subsection{[[gmove()]]}
-
-<<function [[Codegen5.gmove_opt]]>>=
-let gmove_opt env opd1 opd2opt = 
-  match opd2opt with
-  | Some opd2 -> gmove env opd1 opd2
-  | None ->
-    (* less: should have warned about unused opd in check.ml *)
-    ()
-@
-
-<<function [[Codegen5.gmove]]>>=
-(* Even though two arguments are operand_able, it does not mean
- * we can move one into the other with one instruction. 
- * In theory, 5a supports general MOVW, but 5l restricts those
- * MOVW to only store and load (not both at the same time).
- * This is why we must decompose below the move in 2 instructions
- * sometimes.
- *)
-let rec gmove env opd1 opd2 =
-  match opd1.opd with
-  (* a load *)
-  | Name _ | Indirect _ ->
-    let move_size = 
-      match opd1.typ with
-      | T.I (T.Int, _) | T.Pointer _ -> A.Word
-      | _ -> raise Todo
-    in
-    (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
-    let opd1reg = opd_regalloc env opd1.typ opd1.loc (Some opd2) in
-    gmove_aux env move_size opd1 opd1reg;
-    gmove env opd1reg opd2;
-    opd_regfree env opd1reg
-  | _ ->
-    (match opd2.opd with
-    (* a store *)
-    | Name _ | Indirect _ ->
-      let move_size =
-        match opd2.typ with
-        | T.I (T.Int, _) | T.Pointer _ -> A.Word
-        | _ -> raise Todo
-      in
-      (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
-      let opd2reg = opd_regalloc env opd2.typ opd2.loc None in
-      gmove env opd1 opd2reg;
-      gmove_aux env move_size opd2reg opd2;
-      opd_regfree env opd2reg
-
-    | _ -> 
-      (* the simple cases *)
-      let move_size = 
-        match opd1.typ, opd2.typ with
-        | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
-        | T.Pointer _, T.Pointer _ -> A.Word
-        (* todo: lots of opti related to float *)
-        | _ -> raise Todo
-      in
-      gmove_aux env move_size opd1 opd2
-    )
-
-(* At this point, either opd1 or opd2 references memory (but not both),
- * so we can do the move in one instruction.
- *)
-and gmove_aux env move_size opd1 opd2 =
-  (* less: should happen only for register? *)
-  if opd1.opd = opd2.opd
-  then ()
-  else 
-  add_instr env 
-    (A.Instr (A5.MOVE (move_size, None, 
-                      mov_operand_of_opd env opd1,
-                      mov_operand_of_opd env opd2), A5.AL)) opd1.loc
-@
-
-
-<<function [[Codegen5.mov_operand_of_opd]]>>=
-(* less: opportunity for bitshifted registers? *)
-let mov_operand_of_opd env opd =
-  match opd.opd with
-  | ConstI i   -> A5.Imsr (A5.Imm i)
-  | Register r -> A5.Imsr (A5.Reg r)
-  | Name (fullname, offset) -> A5.Entity (entity_of_id env fullname offset)
-  | Indirect (r, offset) -> A5.Indirect (r, offset)
-  | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
-@
-
-
-<<function [[Codegen5.entity_of_id]]>>=
-let entity_of_id env fullname offset_extra =
-  let idinfo = Hashtbl.find env.ids_ fullname in
-  match idinfo.TC.sto with
-  | S.Param -> 
-    let offset = Hashtbl.find env.offsets fullname + offset_extra in
-    Param (Some (symbol fullname), offset)
-  | S.Local ->
-    let offset = Hashtbl.find env.offsets fullname + offset_extra in
-    (* - offset for locals *)
-    A.Local (Some (symbol fullname), - offset)
-  | S.Static | S.Global | S.Extern ->
-    let offset = offset_extra in
-    A.Global (global_of_id fullname idinfo, offset)
-@
-
-<<function [[Codegen5.symbol]]>>=
-let symbol fullname = Ast.unwrap fullname
-@
-
-%%\subsection{Conversions}
-%%\subsection{[[gins()]]}
-%%\subsection{[[naddr()]]}
-%%\subsection{[[regalloc()]]}
-
-\section{Expressions} %: [[cgen()]]
-
-
-<<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
-| Sequence (e1, e2) -> 
-  expr env e1 None;
-  expr env e2 dst_opd_opt
-@
-
-
-
-\subsection{Numeric constants}
-
-\subsection{Entity uses}
-
 \subsection{String constants}
+
 
 \subsection{Arithmetic expressions}
 
 <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
 (* less: lots of possible opti *)
 | Binary (e1, op, e2) ->
+
   (match op with
   | Arith (Plus | Minus 
           | And | Or | Xor 
           | ShiftLeft | ShiftRight
           | Mul | Div | Mod) ->
+
     let n1 = complexity e1 in
     let n2 = complexity e2 in
+
     let opdres, opdother = 
       if n1 >= n2
       then begin
@@ -6239,7 +6321,7 @@ let arith_instr_of_op op r1 r2 r3 =
 <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
 | Assign (op, e1, e2) ->
   (match op with
-  | SimpleAssign ->
+  | Eq_ ->
     (match operand_able e1, operand_able e2, dst_opd_opt with
     (* ex: x = 1; *)
     | Some opd1, Some opd2, None -> 
@@ -6277,10 +6359,11 @@ let arith_instr_of_op op r1 r2 r3 =
 @
 
 
-\subsection{Pointers}
+\subsection{Pointers part2}
 
 <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>=
 | Unary (op, e) ->
+
   (match op with
   | GetRef -> 
     (match e.e  with
@@ -7706,7 +7789,7 @@ type any =
   | Toplevel of toplevel
   | Program of program
   | FinalType of Type.t
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 @
 
 <<constant [[Flags.dump_ast]]>>=
@@ -7835,15 +7918,17 @@ let s_of_any_with_types x =
 (* debug *)
 if !Flags.dump_typed_ast
 then begin 
-  typed_program.ids |> Hashtbl.iter (fun k v ->
-    match v.Typecheck.sto with
-    | Storage.Global | Storage.Static ->
-      Logs.app (fun m -> m "%s" (Ast.unwrap k));
-      Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.FinalType v.Typecheck.typ)));
-    | _ -> ()
+  (* Logs.app (fun m -> m "%s" (Typecheck.show_typed_program typed_program));*)
+  typed_program.ids |> Hashtbl.iter (fun (k : Ast.fullname) (v : Typecheck.idinfo) ->
+    match v.sto with
+    | Storage.Global | Storage.Static | Storage.Extern ->
+      Logs.app (fun m -> m "%s: %s" (Ast.unwrap k)
+                            (Dumper_.s_of_any (Ast.FinalType v.typ)));
+    | Storage.Param | Storage.Local -> ()
   );
   typed_program.funcs |> List.iter (fun func ->
-    Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
+    Logs.app (fun m -> m "%s" 
+              (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
   );
 end;
 @
@@ -7869,6 +7954,8 @@ then begin
     incr pc;
   );
 end;
+(* nosemgrep: do-not-use-obj-magic *)
+Obj.magic asm, !Location_cpp.history
 @
 
 \subsection{Printing processed opcodes: [[5c -G]]}

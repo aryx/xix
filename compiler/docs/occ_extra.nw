@@ -133,7 +133,7 @@ open Common
 <<type [[Ast.binaryOp]]>>
 <<type [[Ast.arithOp]]>>
 <<type [[Ast.logicalOp]]>>
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (* ------------------------------------------------------------------------- *)
 (* Statement *)
@@ -149,21 +149,21 @@ open Common
 
 <<type [[Ast.var_decl]]>>
 <<type [[Ast.initialiser]]>>
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions *)
 (* ------------------------------------------------------------------------- *)
 <<type [[Ast.func_def]]>>
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 
 <<type [[Ast.struct_def]]>>
 <<type [[Ast.field_def]]>>
-[@@deriving show]
+[@@deriving show { with_path = false } ]
 
 <<type [[Ast.enum_def]]>>
 <<type [[Ast.enum_constant]]>>
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 <<type [[Ast.type_def]]>>
 
@@ -171,7 +171,7 @@ open Common
 (* Program *)
 (* ------------------------------------------------------------------------- *)
 <<type [[Ast.toplevel]]>>
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 <<type [[Ast.toplevels]]>>
 [@@deriving show]
@@ -833,7 +833,7 @@ module T = Parser  (* T for Tokens *)
 <<type [[Type.float_type]]>>
 
 <<type [[Type.struct_kind]]>>
-[@@deriving show]
+[@@deriving show { with_path = false }]
 
 <<type [[Type.qualifier]]>>
 [@@deriving show]
@@ -855,6 +855,7 @@ module T = Parser  (* T for Tokens *)
 <<type [[Typecheck.idinfo]]>>
 
 <<type [[Typecheck.typed_program]]>>
+val show_typed_program: typed_program -> string
 
 <<type [[Typecheck.error]]>>
 <<signature [[Typecheck.string_of_error]]>>
@@ -923,9 +924,15 @@ module E = Check
 <<type [[Typecheck.integer]]>>
 
 <<type [[Typecheck.idinfo]]>>
+[@@deriving show]
+
+(* for ocaml-light to work without deriving *)
+let show_typed_program _ = "NO DERIVING"
+[@@warning "-32"]
 
 (* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
 <<type [[Typecheck.typed_program]]>>
+[@@deriving show]
 
 <<type [[Typecheck.env]]>>
 <<type [[Typecheck.expr_context]]>>

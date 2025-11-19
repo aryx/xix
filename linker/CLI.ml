@@ -360,6 +360,12 @@ let main (caps : <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
         (* TODO: set exec bit on outfile *)
         Exit.OK
       with exn ->
+       let outfile = !!(!outfile) in
+       if Sys.file_exists outfile
+       then begin 
+         Logs.info (fun m -> m "removing %s because of error" outfile);
+         Sys.remove outfile;
+       end;
        if !backtrace
        then raise exn
        else 

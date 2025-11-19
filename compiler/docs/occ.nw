@@ -5341,6 +5341,7 @@ let add_fake_instr env str =
 let set_instr env pc instr loc =
   if pc >= !(env.pc)
   then failwith (spf "set_instr: pc > env.pc (%d >= %d)" pc !(env.pc));
+
   !(env.code).(pc) <- (instr, loc)
 @
 
@@ -5382,7 +5383,8 @@ let global_of_id fullname idinfo =
       (match idinfo.TC.sto with
       | S.Static -> Some (-1)
       | S.Global | S.Extern -> None
-      | _ -> raise (Impossible "global can be only Static/Global/Extern")
+      | S.Local | S.Param ->
+          raise (Impossible "global can be only Static/Global/Extern")
       );
     (* less: analyse idinfo.typ *)
     signature = None;
@@ -5467,9 +5469,9 @@ offset_locals: int ref;
 
 
 <<[[Codegen5.stmt]] match [[st0.s]] cases>>=
-| Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_} ->
+| Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_iniTODO} ->
     let idinfo = Hashtbl.find env.ids_ fullname in
-    (* todo: generate code for idinfo.ini *)
+    (* todo: generate code for idinfo.ini, handle static locals, etc. *)
 
     (* update env.offsets *)
     let t = idinfo.TC.typ in
@@ -5481,7 +5483,7 @@ offset_locals: int ref;
     env.size_locals := !(env.size_locals) + sizet;
     Hashtbl.add env.offsets fullname !(env.offset_locals);
 @
-
+% diff offset_locals and size_locals??
 
 
 

@@ -3,7 +3,7 @@ int** foo() {
 
   //&(&x);
 
-  // 5a and ast_asm5.ml didnt to get the address of
+  // 5a and ast_asm5.ml didnt support to get the address of
   // a local or parameter originally, but you need this
   // feature!
   return &x;

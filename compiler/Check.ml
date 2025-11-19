@@ -67,7 +67,7 @@ exception Error of error
 (*e: exception [[Check.Error]] *)
 
 (*s: constant [[Check.failhard]] *)
-let failhard = ref false
+let failhard = ref true
 (*e: constant [[Check.failhard]] *)
 
 (*s: function [[Check.error]] *)

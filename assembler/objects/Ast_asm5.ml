@@ -76,6 +76,8 @@ let rLINK = R 14
 let rPC   = R 15
 (*e: constant [[Ast_asm5.rPC]] *)
 
+let rRET = R 0
+
 (*s: constant [[Ast_asm5.nb_registers]] *)
 let nb_registers = 16
 (*e: constant [[Ast_asm5.nb_registers]] *)

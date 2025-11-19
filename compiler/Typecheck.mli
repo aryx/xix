@@ -1,4 +1,5 @@
 (*s: Typecheck.mli *)
+open Common
 
 (*s: type [[Typecheck.idinfo]] *)
 type idinfo = {
@@ -13,10 +14,10 @@ type idinfo = {
 (*s: type [[Typecheck.typed_program]] *)
 type typed_program = {
   (* resolved type and storage information for identifiers and tags *)
-  ids: (Ast.fullname, idinfo) Hashtbl.t;
+  ids: (Ast.fullname, idinfo) Hashtbl_.t;
 
   (* resolved struct definitions *)
-  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+  structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl_.t;
 
   (* functions annotated with types for each expression nodes
    * (so you can more easily generate code later).

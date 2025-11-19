@@ -4,8 +4,7 @@
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An Abstract Syntax Tree (AST) for the C Pre-Processor (CPP) directives.
-*)
+(* An Abstract Syntax Tree (AST) for the C Pre-Processor (CPP) directives. *)
 
 (*****************************************************************************)
 (* The AST *)

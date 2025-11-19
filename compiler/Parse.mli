@@ -1,7 +1,7 @@
 (*s: Parse.mli *)
 
 (*s: signature [[Parse.parse]] *)
-(* will call cpp internally first *)
+(* will macropreprocess internally first *)
 val parse: 
   < Cap.open_in; .. > -> Preprocessor.conf -> Fpath.t -> Ast.program
 (*e: signature [[Parse.parse]] *)

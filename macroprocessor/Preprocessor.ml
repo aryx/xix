@@ -21,6 +21,6 @@ type conf = {
   (* the directory of the C file so it is looked for "" but not for <> *)
   dir_source_file: Fpath.t;
 }
-[@@deriving show]
 (*e: type [[Preprocessor.conf]] *)
+[@@deriving show]
 (*e: macroprocessor/Preprocessor.ml *)

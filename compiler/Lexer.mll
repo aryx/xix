@@ -28,6 +28,7 @@ module T = Type
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+(*s: Lexer helpers *)
 (*s: function [[Lexer.error]] *)
 let error s =
   raise (L.Error (spf "Lexical error: %s" s, !L.line))
@@ -85,6 +86,7 @@ let char_ lexbuf =
   let s = Lexing.lexeme lexbuf in
   String.get s 0
 (*e: function [[Lexer.char_]] *)
+(*e: Lexer helpers *)
 }
 
 (*****************************************************************************)
@@ -115,10 +117,11 @@ rule token = parse
   (* Spacing/comments *)
   (* ----------------------------------------------------------------------- *)
   (*s: [[Lexer.token]] space/comment cases *)
-  | [' ''\t']+    { token lexbuf }
+  | space+        { token lexbuf }
+  (*x: [[Lexer.token]] space/comment cases *)
   | "//" [^'\n']* { token lexbuf }
   | "/*"          { comment lexbuf }
-
+  (*x: [[Lexer.token]] space/comment cases *)
   | '\n'          { incr Location_cpp.line; token lexbuf }
   (*e: [[Lexer.token]] space/comment cases *)
 
@@ -150,7 +153,7 @@ rule token = parse
 
   | "<"  { TInf   (loc()) } | ">"  { TSup   (loc()) }
   | "<=" { TInfEq (loc()) } | ">=" { TSupEq (loc()) }
-
+  (*x: [[Lexer.token]] symbol cases *)
   | "(" { TOPar   (loc()) } | ")" { TCPar   (loc()) }
   | "{" { TOBrace (loc()) } | "}" { TCBrace (loc()) }
   | "[" { TOBra   (loc()) } | "]" { TCBra   (loc()) }
@@ -167,6 +170,7 @@ rule token = parse
   (* ----------------------------------------------------------------------- *)
   (* dup: lexer_asm5.mll *)
   (*s: [[Lexer.token]] number cases *)
+  (*s: [[Lexer.token]] octal case *)
   | "0"  (oct+ (*as s*)) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
@@ -174,6 +178,8 @@ rule token = parse
            Regexp_.matched3 s
         in
         TIConst(loc(), "0o" ^ s, inttype_of_suffix unsigned long)}
+  (*e: [[Lexer.token]] octal case *)
+  (*s: [[Lexer.token]] hexadecimal case *)
   | "0x" (hex+ (*as s*))  (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
@@ -181,7 +187,10 @@ rule token = parse
            Regexp_.matched3 s
         in
         TIConst(loc(), "0x" ^ s, inttype_of_suffix unsigned long)}
+  (*e: [[Lexer.token]] hexadecimal case *)
   | "0x" { error "malformed hex constant" }
+
+  (*s: [[Lexer.token]] decimal case *)
   | (['0'-'9'] digit*) (*as s*) (['U''u']? (*as unsigned*)) (['L''l']* (*as long*))
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
@@ -189,7 +198,9 @@ rule token = parse
            Regexp_.matched3 s
         in
         TIConst (loc(), s, inttype_of_suffix unsigned long)}
+  (*e: [[Lexer.token]] decimal case *)
 
+  (*s: [[Lexer.token]] float case *)
   (* stricter: I impose some digit+ after '.' and after 'e' *)
   | ((digit+ | digit* '.' digit+) (['e''E'] ('+' | '-')? digit+)?) (*as s*)
       (['F''f']* (*as float*))
@@ -199,7 +210,7 @@ rule token = parse
           Regexp_.matched2 s
         in
         TFConst (loc(), s, floattype_of_suffix float) }
-
+  (*e: [[Lexer.token]] float case *)
   (* special regexp for better error message *)
   | (digit+ | digit* '.' digit+) ['e''E'] ('+' | '-')?
      { error "malformed fp constant exponent" }
@@ -221,6 +232,7 @@ rule token = parse
   (*s: [[Lexer.token]] keywords/identifiers cases *)
   | (letter | '_') (letter | digit | '_')* {
       let s = Lexing.lexeme lexbuf in
+
       match s with
       | "static" -> Tstatic (loc()) 
       | "extern" -> Textern (loc())
@@ -253,6 +265,7 @@ rule token = parse
       (* less: USED/SET here? or manage via symbol table *)
 
       | _ ->
+        (*s: [[Lexer.token()]] in identifier case, typedef trick *)
         if Hashtbl.mem Globals.hids s
         then 
           (* typedef trick, because ambiguity in C grammar *)
@@ -260,6 +273,7 @@ rule token = parse
           | A.IdIdent | A.IdEnumConstant -> TName (loc(), s)
           | A.IdTypedef -> TTypeName (loc(), s)
           )
+        (*e: [[Lexer.token()]] in identifier case, typedef trick *)
         else TName (loc(), s)
   }
   (*e: [[Lexer.token]] keywords/identifiers cases *)
@@ -326,7 +340,6 @@ and char = parse
 (*****************************************************************************)
 (* Comment rule *)
 (*****************************************************************************)
-
 (* dup: lexer_asm5.mll *)
 (*s: rule [[Lexer.comment]] *)
 and comment = parse

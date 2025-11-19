@@ -62,7 +62,8 @@ type blockid = int (* same than Type_.blockid, repeated here for clarity *)
 
 (*s: type [[Ast.fullname]] *)
 (* A fully resolved and scoped name. 
- * 5c uses a reference to a symbol in a symbol table to fully qualify a name.
+ *
+ * 5c: uses a reference to a symbol in a symbol table to fully qualify a name.
  * Instead, I use a unique blockid and an external hash or environment that
  * maps this fullname to the appropriate information.
  * I think it offers a better separation of concerns.
@@ -74,8 +75,8 @@ type fullname = name * blockid (* same than Type_.fullname *)
 [@@deriving show]
 
 (*s: type [[Ast.idkind]] *)
-(* Used in globals.ml/lexer.mll/parser.mly to recognize typedef identifiers.
- * Could be moved in a separate naming.ml, but not worth it for just two types.
+(* Used in Globals.ml/Lexer.mll/Parser.mly to recognize typedef identifiers.
+ * alt: could be moved in a separate Naming.ml, but not worth it for just two types.
  *)
 type idkind =
   | IdIdent
@@ -111,11 +112,12 @@ type typ = {
 (*e: type [[Ast.typ]] *)
 (*s: type [[Ast.type_bis]] *)
   and type_bis = 
-  | TBase of Type.t (* only the Basic stuff *)
+  | TBase of Type.t (* only the basic stuff *)
   | TPointer of typ
   | TArray of const_expr option * typ
   | TFunction of function_type
 
+  (* no StructDef here; they are lifted up; just StructName *)
   | TStructName of Type.struct_kind * fullname
   (* In C an enum is really like an int. However, we could do
    * extended checks at some point to do more strict type checking! 
@@ -202,11 +204,15 @@ and expr = {
   (* codegen: converted to Int *)
   | SizeOf of (expr, typ) Either_.t
 
+  (*s: [[Ast.expr]] initialiser cases *)
   (* should appear only in a variable initializer, or after GccConstructor *)
   | ArrayInit of (const_expr option * expr) list
   | RecordInit of (name * expr) list
+  (*e: [[Ast.expr]] initialiser cases *)
+  (*s: [[Ast.expr]] extension cases *)
   (* gccext: kenccext: *)
   | GccConstructor  of typ * expr (* always an ArrayInit (or RecordInit?) *)
+  (*e: [[Ast.expr]] extension cases *)
 (*e: type [[Ast.expr_bis]] *)
 
 (*s: type [[Ast.argument]] *)
@@ -324,7 +330,6 @@ and var_decl = {
  and initialiser = expr
 (*e: type [[Ast.initialiser]] *)
 [@@deriving show]
-
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions *)

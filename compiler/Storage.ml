@@ -6,9 +6,11 @@
 type t =
   | Local  (* local *)
   | Param  (* parameter *)
+
   | Extern (* public global defined elsewhere *)
   | Global (* public global defined here *)
   | Static (* Private global less: could rename Private *)
+
   (* less:  | Inline? | Register? | ExternRegister? *)
 (*e: type [[Storage.t]] *)
 [@@deriving show]

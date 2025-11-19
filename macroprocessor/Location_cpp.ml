@@ -14,17 +14,17 @@ open Fpath_.Operators
 (* Types and globals *)
 (*****************************************************************************)
 
-(* global line number, after pre-processing *)
 (*s: type [[Location_cpp.loc]] *)
+(* global line number, after pre-processing *)
 type loc = int
-[@@deriving show]
 (*e: type [[Location_cpp.loc]] *)
-
-(* final readable location *)
-(*s: type [[Location_cpp.final_loc]] *)
-type final_loc = Fpath.t * int
 [@@deriving show]
+
+(*s: type [[Location_cpp.final_loc]] *)
+(* final readable location *)
+type final_loc = Fpath.t * int
 (*e: type [[Location_cpp.final_loc]] *)
+[@@deriving show]
 
 (*s: type [[Location_cpp.location_history]] *)
 type location_history = {
@@ -48,11 +48,11 @@ type location_history = {
 let history = ref []
 (*e: constant [[Location_cpp.history]] *)
 
+(*s: constant [[Location_cpp.line]] *)
 (* Global line number (after pre-processing).
  * Note that you need another data structure to map a global line number 
  * to a (file, line) pair (see history and final_loc_of_loc below).
  *)
-(*s: constant [[Location_cpp.line]] *)
 let line = ref 1
 (*e: constant [[Location_cpp.line]] *)
 
@@ -81,7 +81,6 @@ let dump_event (event : location_event) : unit =
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-
 (*s: function [[Location_cpp.add_event]] *)
 let add_event (event : location_event) : unit =
   (* alt: use Logs.debug instead of a flag *)

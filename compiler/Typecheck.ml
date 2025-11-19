@@ -1,6 +1,7 @@
 (*s: Typecheck.ml *)
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
+open Eq.Operators
 open Either
 
 open Ast
@@ -60,15 +61,30 @@ type idinfo = {
   }
 (*e: type [[Typecheck.idinfo]] *)
 
+(* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
+(*s: type [[Typecheck.typed_program]] *)
 type typed_program = {
+  (* resolved type and storage information for identifiers and tags *)
   ids: (Ast.fullname, idinfo) Hashtbl.t;
+
+  (* resolved struct definitions *)
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+
+  (* functions annotated with types for each expression nodes
+   * (so you can more easily generate code later).
+   * 
+   * The enum constants should also be internally resolved and replaced
+   * with constants and some constant expressions (e.g., for
+   * array size) should also be resolved (and evaluated).
+   *)
   funcs: Ast.func_def list;
 }
+(*e: type [[Typecheck.typed_program]] *)
 
 (*s: type [[Typecheck.env]] *)
 (* Environment for typechecking *)
 type env = {
+
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids_:  (Ast.fullname, idinfo) Hashtbl.t;
   structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
@@ -77,17 +93,27 @@ type env = {
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
   (* stricter: no float enum *)
   enums: (fullname, Type.integer_type) Hashtbl.t;
+
   (* stricter: no support for float enum constants either *)
   constants: (Ast.fullname, integer * Type.integer_type) Hashtbl.t;
 
   (* return type of function; used to typecheck Return *)
   return_type: Type.t;
+
+  (*s: [[Typecheck.env]] other fields *)
   (* used to add some implicit GetRef for arrays and functions *)
   expr_context: expr_context;
+  (*e: [[Typecheck.env]] other fields *)
 }
 (*e: type [[Typecheck.env]] *)
 (*s: type [[Typecheck.expr_context]] *)
-and expr_context = CtxWantValue | CtxGetRef | CtxSizeof
+and expr_context = 
+  | CtxWantValue 
+  (*s: [[Typecheck.expr_context]] other cases *)
+  | CtxGetRef 
+  (*x: [[Typecheck.expr_context]] other cases *)
+  | CtxSizeof
+  (*e: [[Typecheck.expr_context]] other cases *)
 (*e: type [[Typecheck.expr_context]] *)
 
 (* less: could factorize things in error.ml? *)
@@ -131,21 +157,24 @@ let type_error2 t1 t2 loc =
  * we do struct equality by name not fields, testing the equality of 
  * two types is simple.
  *)
-let same_types t1 t2 =
+let same_types (t1 : Type.t) (t2 : Type.t) : bool =
   match t1, t2 with
+
   (* 'void*' can match any pointer! The generic trick of C
    * (but only when the pointer is at the top of the type).
    *)
   | T.Pointer T.Void, T.Pointer _      -> true
   | T.Pointer _,      T.Pointer T.Void -> true
+
   (* stricter: struct equality by name, not by fields *)
-  | _ -> t1 = t2
+  | _ -> t1 =*= t2
 (*e: function [[Typecheck.same_types]] *)
    
 (*s: function [[Typecheck.merge_types]] *)
 (* if you declare multiple times the same global, we must merge types. *)
 let merge_types t1 _t2 =
   t1
+  (* TODO? what is doing 5c? *)
 (*e: function [[Typecheck.merge_types]] *)
 
 (* when processing enumeration constants, we want to keep the biggest type *)
@@ -161,7 +190,7 @@ let max_types t1 t2 = ...
  * 
  * less: better error messages, for instance when want to add 2 pointers.
  *)
-let check_compatible_binary op t1 t2 loc =
+let check_compatible_binary op (t1 : Type.t) (t2 : Type.t) loc : unit =
   match op with
   | Arith Plus ->
     (match t1, t2 with
@@ -218,7 +247,7 @@ let check_compatible_binary op t1 t2 loc =
 (*e: function [[Typecheck.check_compatible_binary]] *)
 
 (*s: function [[Typecheck.result_type_binary]] *)
-let result_type_binary t1 t2 =
+let result_type_binary (t1 : Type.t) (t2 : Type.t) : Type.t =
   match t1, t2 with
   | T.I (T.Char, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
 
@@ -270,7 +299,7 @@ let result_type_binary t1 t2 =
   | T.Pointer _, T.Pointer T.Void -> t1
 
   | T.Pointer _, T.Pointer _ ->
-    assert (t1 = t2);
+    assert (t1 =*= t2);
     t1
 
   | _ -> raise (Impossible "case should be forbidden by compatibility policy")
@@ -280,7 +309,7 @@ let result_type_binary t1 t2 =
 (* less: could run typ_ext hooks here? and return a new node? for
  * unnamed_inheritance.c?
  *)
-let check_compatible_assign op t1 t2 loc =
+let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
   match op with
   | SimpleAssign ->
     (match t1, t2 with
@@ -288,7 +317,7 @@ let check_compatible_assign op t1 t2 loc =
     (* 'void*' special handling done in same_types() *)
     | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
     | T.StructName (su1, name1), T.StructName (su2, name2) 
-      when su1 = su2 && name1 = name2 -> ()
+      when su1 =*= su2 && name1 =*= name2 -> ()
     | _ -> type_error2 t1 t2 loc
     )
   (* not exactly the same rule than in check_compatible_binary *)
@@ -311,29 +340,38 @@ let check_compatible_assign op t1 t2 loc =
 (*e: function [[Typecheck.check_compatible_assign]] *)
 
 (*s: function [[Typecheck.check_args_vs_params]] *)
-let rec check_args_vs_params es tparams varargs loc =
+let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
   match es, tparams, varargs with
+
   (* stricter? confusing to have foo() and foo(void) *)
   | [], ([] | [T.Void]), _ -> ()
+
   | [], _, _ -> 
     raise (Error (E.Misc ("not enough function arguments", loc)))
+
   | _e::_es, [], false -> 
     raise (Error (E.Misc ("too many function arguments", loc)))
+
   | e::es, [], true -> 
     (match e.e_type with
+    (* ??? *)
     | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
+    (* TODO: enumerate possible remaining, and why type_error? *)
     | _ -> type_error e.e_type loc
     );
     check_args_vs_params es [] true loc
+
   | e::es, t::ts, _ ->
     (match e.e_type with
     | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
+    (* TODO: enumerate possible remaining, and why type_error? *)
     | _ -> type_error e.e_type loc
     );
     (try 
        (* todo: convert to int small types? see tcoma *)
        check_compatible_assign SimpleAssign t e.e_type e.e_loc
      with Error _ ->
+       (* TODO? actual error message of 5c? *)
        raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
     );
     check_args_vs_params es ts varargs loc
@@ -342,7 +380,6 @@ let rec check_args_vs_params es tparams varargs loc =
 (*****************************************************************************)
 (* Storage helpers *)
 (*****************************************************************************)
-
 (*s: function [[Typecheck.merge_storage_toplevel]] *)
 (* If you declare multiple times the same global, we need to make sure
  * the storage declarations are compatible and we need to compute the
@@ -359,7 +396,7 @@ let merge_storage_toplevel name loc stoopt ini old =
     | None, S.Extern -> S.Global
     | None, S.Global ->
         (* stricter: even clang does not say anything here *)
-        if ini = None
+        if ini =*= None
         then raise (Error (E.Inconsistent (
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))
@@ -389,7 +426,7 @@ let merge_storage_toplevel name loc stoopt ini old =
        "previous definition is here", old.loc)))
 
     | Some S.Static, S.Static ->
-        if ini = None
+        if ini =*= None
         then raise (Error (E.Inconsistent (
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))
@@ -399,17 +436,15 @@ let merge_storage_toplevel name loc stoopt ini old =
       raise (Impossible "param or global are not keywords")
 (*e: function [[Typecheck.merge_storage_toplevel]] *)
 
-
 (*****************************************************************************)
 (* Other helpers *)
 (*****************************************************************************)
-
 (*s: function [[Typecheck.lvalue]] *)
 (* we assume the typechecker has called expr() on 'e0' before, 
  * so Id of enum constants for example has been substituted to Int
  * and so are not considered an lvalue.
  *)
-let lvalue e0 =
+let lvalue (e0 : expr) : bool =
   match e0.e with
   | Id _ 
   | Unary (DeRef, _)
@@ -418,6 +453,7 @@ let lvalue e0 =
    *)
   | RecordAccess _
     -> true
+
   (* Strings are transformed at some point in Id.
    * We must consider them as an lvalue, because an Id is an lvalue 
    * and because if a string is passed as an argument to a function, we want
@@ -432,6 +468,7 @@ let lvalue e0 =
   | Unary ((GetRef | UnPlus |  UnMinus | Tilde | Not), _)
     -> false
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
+  (* TODO? what remains? should be just false no? *)
   | _ -> raise Todo
 (*e: function [[Typecheck.lvalue]] *)
 
@@ -441,20 +478,25 @@ let lvalue e0 =
  * to a T.Pointer. This allows in turn to write typechecking rules
  * mentioning only Pointer (see for example check_compatible_binary).
  *)
-let array_to_pointer env e =
+let array_to_pointer (env : env) (e : expr) : expr =
   match e.e_type with
   | T.Array (_, t) ->
+
     (match env.expr_context with
     | CtxWantValue -> 
       if not (lvalue (e))
       then raise (Error (E.Misc ("not an l-value", e.e_loc)));
 
       { e = Unary (GetRef, e); e_type = T.Pointer t; e_loc = e.e_loc }
+    (*s: [[array_to_pointer()]] when [[Array]] case, match context cases *)
     | CtxGetRef -> 
       Error.warn "address of array ignored" e.e_loc;
       e
+    (*x: [[array_to_pointer()]] when [[Array]] case, match context cases *)
     | CtxSizeof -> e
+    (*e: [[array_to_pointer()]] when [[Array]] case, match context cases *)
     )
+
   (* stricter? do something for Function? or force to put address? *)
   | T.Func _ ->
     (match env.expr_context with
@@ -463,7 +505,7 @@ let array_to_pointer env e =
       e
     | _ -> e
     )
-    
+  
   | _ -> e
 (*e: function [[Typecheck.array_to_pointer]] *)
 
@@ -501,16 +543,15 @@ let rec unsugar_anon_structure_element (env : env) e0 e name def =
   | _x::_y::_xs ->
     raise (Error(E.Misc(spf "ambiguous unnamed structure element %s" name,
                                e.e_loc)))
-(*e: function [[Typecheck.unsugar_anon_structure_element]] *)
   )
+(*e: function [[Typecheck.unsugar_anon_structure_element]] *)
 
 (*****************************************************************************)
 (* AST Types to Types.t *)
 (*****************************************************************************)
-
 (*s: function [[Typecheck.type_]] *)
 (* Expand typedefs and resolve constant expressions. *)
-let rec type_ (env : env) typ0 =
+let rec type_ (env : env) (typ0 : typ) : Type.t =
   match typ0.t with
   | TBase t -> t
   | TPointer typ -> T.Pointer (type_ env typ)
@@ -542,26 +583,34 @@ let rec type_ (env : env) typ0 =
                   )
                 ), tdots)
   | TStructName (su, fullname) -> T.StructName (su, fullname)
-  (* expand enums *)
+  (* expand enums! *)
   | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
-  (* expand typedefs *)
+  (* expand typedefs! *)
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
 (*e: function [[Typecheck.type_]] *)
 
 (*****************************************************************************)
 (* Expression typechecking *)
 (*****************************************************************************)
-
 (*s: function [[Typecheck.expr]] *)
-let rec expr env e0 =
+let rec expr (env : env) (e0 : expr) : expr (* but type annotated *) =
   (* default env for recursive call *)
   let newenv = { env with expr_context = CtxWantValue } in
 
   match e0.e with
+  (*s: [[Typecheck.expr()]] match [[e0.e]] cases *)
+  | Sequence (e1, e2) -> 
+    let e1 = expr newenv e1 in
+    let e2 = expr newenv e2 in
+    { e0 with e = Sequence (e1, e2); e_type = e2.e_type }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Int    (_s, inttype)   -> { e0 with e_type = T.I inttype }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Float  (_s, floattype) -> { e0 with e_type = T.F floattype }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   (* less: transform in Id later? *)
   | String (_s, t)         -> { e0 with e_type = t } |> array_to_pointer env
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Id fullname ->
      if Hashtbl.mem env.constants fullname
      then
@@ -570,47 +619,55 @@ let rec expr env e0 =
      else
        let idinfo = Hashtbl.find env.ids_ fullname in
        { e0 with e_type = idinfo.typ } |> array_to_pointer env
-  | Sequence (e1, e2) -> 
-    let e1 = expr newenv e1 in
-    let e2 = expr newenv e2 in
-    { e0 with e = Sequence (e1, e2); e_type = e2.e_type }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
 
   | Binary (e1, op, e2) ->
     let e1 = expr newenv e1 in
     let e2 = expr newenv e2 in
+
     check_compatible_binary op e1.e_type e2.e_type e0.e_loc;
+
     (* todo: add casts if left and right not the same types? or do it later? *)
-    let finalt = 
+    let finalt : Type.t = 
       match op with
+
       | Arith Minus ->
         (match e1.e_type, e2.e_type with
-        | T.Pointer _, T.Pointer _ -> T.long
+        | T.Pointer _, T.Pointer _ -> T.long (* TODO? depend on Arch.t? *)
         | _ -> result_type_binary e1.e_type e2.e_type
         )
+
       | Arith (Plus | Mul | Div | Mod    
               | And | Or | Xor
               (* todo: also add T.int cast when shl/shr on right operand *)
               | ShiftLeft | ShiftRight
-              ) -> result_type_binary e1.e_type e2.e_type
+              ) -> 
+        result_type_binary e1.e_type e2.e_type
+
       | Logical (Eq | NotEq  
                 | Inf | Sup | InfEq | SupEq
                 | AndLog | OrLog
                 ) ->
+        (* ugly: should be a T.Bool! C is ugly. *)
         T.int
     in
     { e0 with e = Binary (e1, op, e2); e_type = finalt }
-
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Unary (op, e) ->
     (match op with
+    (* + E -~> 0 + E *)
     | UnPlus -> 
       let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Plus,e) in
       expr env { e0 with e = e }
+    (* - E -~> 0 - E *)
     | UnMinus -> 
       let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Minus,e)in
       expr env { e0 with e = e }
+    (* ~ E -~> -1 ^ E *)
     | Tilde ->
       let e = Binary ({e0 with e = Int ("-1",(T.Int,T.Signed))}, Arith Xor,e) in
       expr env { e0 with e = e }
+
     | Not ->
       let e = expr newenv e in
       (match e.e_type with
@@ -619,55 +676,63 @@ let rec expr env e0 =
       | _ -> type_error e.e_type e.e_loc 
       );
       { e0 with e = Unary (Not, e); e_type = T.int }
+     (*s: [[Typecheck.expr()]] in [[Unary]], match [[op]] other cases *)
+     | GetRef ->
 
-    | GetRef ->
-      (* we dont want an additional '&' added before an array *)
-      let e = expr { env with expr_context = CtxGetRef } e in
-      if not (lvalue (e))
-      then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
-      (* less: warn if take address of array or function, ADDROP *)
-      { e0 with e = Unary (GetRef, e); e_type = T.Pointer (e.e_type) }
+         (* we dont want an additional '&' added before an array *)
+         let e = expr { env with expr_context = CtxGetRef } e in
 
-    | DeRef ->
-      let e = expr newenv e in
-      (match e.e_type with
-      | T.Pointer t -> 
-        { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer env
-      (* what about T.Array? see array_to_pointer() *)
-      | _ -> type_error e.e_type e.e_loc
-      )
-    )
+         if not (lvalue (e))
+         then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
+
+         (* less: warn if take address of array or function, ADDROP *)
+         { e0 with e = Unary (GetRef, e); 
+                   e_type = T.Pointer (e.e_type) }
+     (*x: [[Typecheck.expr()]] in [[Unary]], match [[op]] other cases *)
+     | DeRef ->
+         let e = expr newenv e in
+
+         (match e.e_type with
+         | T.Pointer t -> 
+           { e0 with e = Unary (DeRef, e); 
+                     e_type = t } |> array_to_pointer env
+         (* what about T.Array? no need, see array_to_pointer() *)
+         | _ -> type_error e.e_type e.e_loc
+         )
+     (*e: [[Typecheck.expr()]] in [[Unary]], match [[op]] other cases *)
+     )
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Assign (op, e1, e2) ->
     let e1 = expr newenv e1 in
     let e2 = expr newenv e2 in
+
     if not (lvalue (e1))
     then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
+
     check_compatible_assign op e1.e_type e2.e_type e0.e_loc;
+
     (* todo: add cast on e2 if not same type,
      * todo: mixedasop thing?
      *)
     { e0 with e = Assign (op, e1, e2); e_type = e1.e_type }
-
-
-  (* x[y] --> *(x+y) *)
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
+  (* x[y] --> *(x+y), pointer arithmetic power *)
   | ArrayAccess (e1, e2) ->
     let e = Unary (DeRef, { e0 with e = Binary (e1, Arith Plus, e2) }) in
     expr env { e0 with e = e }
-  (* x->y --> ( *x).y *)
-  | RecordPtAccess (e, name) ->
-    let e = RecordAccess ({ e0 with e = Unary (DeRef, e)}, name) in
-    expr env { e0 with e = e }
-
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | RecordAccess (e, name) ->
     let e = expr newenv e in
+
     (match e.e_type with
     | T.StructName (_su, fullname) ->
       let (_su2, def) = Hashtbl.find env.structs_ fullname in
       (try
          let t = List.assoc name def in
-         { e0 with e = RecordAccess (e, name); e_type = t } 
-          |> array_to_pointer env
+         { e0 with e = RecordAccess (e, name);
+                   e_type = t } |> array_to_pointer env
        with Not_found ->
+         (*s: [[Typecheck.expr()]] when field name not found and gensymed field exn *)
          if def |> List.exists (fun (fld, _) -> Ast.is_gensymed fld)
          then 
            try 
@@ -676,32 +741,50 @@ let rec expr env e0 =
            with Not_found ->
              raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
                                  e.e_loc)))
-         else
+         (*e: [[Typecheck.expr()]] when field name not found and gensymed field exn *)
+         else 
            raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
-                               e.e_loc)))
+                        e.e_loc)))
       )
     | _ -> type_error e.e_type e.e_loc
     )
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
+  (* x->y --> ( *x).y *)
+  | RecordPtAccess (e, name) ->
+    let e = RecordAccess ({ e0 with e = Unary (DeRef, e)}, name) in
+    expr env { e0 with e = e }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Call (e, es) ->
     (* less: should disable implicit OADDR for function here in env *)
     let e = expr newenv e in
+
     (match e.e_type with
+    | T.Func (tret, tparams, varargs) ->
+       (* we enable GetRef for array here (and functions) 
+        * TODO? why not use newenv?
+        *)
+      let es = List.map (expr { env with expr_context = CtxWantValue }) es in
+
+      check_args_vs_params es tparams varargs e0.e_loc;
+
+      (* todo: add cast *)
+      (* less: format checking *)
+      { e0 with e = Call (e, es); 
+                e_type = tret }
+
     | T.Pointer (T.Func (_tret, _tparams, _varargs)) ->
       (* stricter?: we could forbid it, but annoying for my print in libc.h *)
       let e = { e with e = Unary (DeRef, e); } in
       expr newenv { e0 with e = Call (e, es) }
-    | T.Func (tret, tparams, varargs) ->
-       (* we enable GetRef for array here (and functions) *)
-      let es = List.map (expr { env with expr_context = CtxWantValue }) es in
-      check_args_vs_params es tparams varargs e0.e_loc;
-      (* todo: add cast *)
-      (* less: format checking *)
-      { e0 with e = Call (e, es); e_type = tret }
+
     | _ -> type_error e.e_type e.e_loc
     )
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Cast (typ, e) ->
+
     let t = type_ env typ in
     let e = expr newenv e in
+
     (match e.e_type, t with
     | T.I _, (T.I _ | T.F _ | T.Pointer _ | T.Void)
     | T.F _, (T.I _ | T.F _ | T.Void)
@@ -710,23 +793,28 @@ let rec expr env e0 =
     (* less: seems pretty useless *)
     | T.Void, T.Void -> ()
     (* less: seems pretty useless *)
-    | T.StructName (su1, _) , T.StructName (su2, _) when su1 = su2 -> ()
+    | T.StructName (su1, _) , T.StructName (su2, _) when su1 =*= su2 -> ()
     | T.StructName _, T.Void -> ()
     | _ -> type_error2 e.e_type t e0.e_loc
     );
-    { e0 with e = Cast (typ, e); e_type = t } (* |> array_to_pointer ? *)
-
+    { e0 with e = Cast (typ, e); 
+              e_type = t } (* |> array_to_pointer ? *)
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | CondExpr (e1, e2, e3) ->
     let e1 = expr newenv e1 in
     let e2 = expr newenv e2 in
     let e3 = expr newenv e3 in
+
     (* stricter? should enforce e1.e_type is a Bool *)
     check_compatible_binary (Logical Eq) e2.e_type e3.e_type e0.e_loc;
+
     (* todo: special nil handling? need? *)
     let finalt = result_type_binary e2.e_type e3.e_type in
-    (* todo: add cast *)
-    { e0 with e = CondExpr (e1, e2, e3); e_type = finalt }
 
+    (* todo: add cast *)
+    { e0 with e = CondExpr (e1, e2, e3); 
+              e_type = finalt }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   (* ocaml-light: | Postfix (e, op) | Prefix (op, e) *)
   | Postfix (_, _) | Prefix (_, _) ->
     let (e, op) =
@@ -736,36 +824,46 @@ let rec expr env e0 =
         | _ -> raise (Impossible "pattern match only those cases")
     in
     let e = expr newenv e in
+
     if not (lvalue (e))
     then raise (Error (E.Misc ("not an l-value", e.e_loc)));
+
     check_compatible_binary (Arith Plus) e.e_type T.int e0.e_loc;
+
     (match e.e_type with
     | T.Pointer T.Void ->
       raise (Error (E.Misc ("inc/dec of a void pointer", e.e_loc)));
     | _ -> ()
     );
+
     { e0 with e = 
         (match e0.e with 
         | Postfix _ -> Postfix (e, op)
         | Prefix _ -> Prefix (op, e)
         | _ -> raise (Impossible "pattern match only those cases")
-        ); e_type = e.e_type }
-
+        ); 
+        e_type = e.e_type }
+  (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | SizeOf(te) ->
+
     (match te with
     | Left e ->
       (* we pass a special context because if t2 mentions an array, 
        * we want the size of the array, not the size of a pointer to an array
        *)
       let e = expr { env with expr_context = CtxSizeof  } e in
-      { e0 with e = SizeOf (Left e); e_type = T.int }
+      { e0 with e = SizeOf (Left e); 
+                e_type = T.int }
+
     (* todo: build a fake expression but with the right expanded type
      * so the codegen later does not have to redo the job of expanding
      * typedefs.
      *)
     | Right typ ->
-      { e0 with e = SizeOf (Right typ); e_type = T.int }
+      { e0 with e = SizeOf (Right typ); 
+                e_type = T.int }
     )
+  (*e: [[Typecheck.expr()]] match [[e0.e]] cases *)
 
   | ArrayInit _
   | RecordInit _
@@ -773,7 +871,7 @@ let rec expr env e0 =
       -> raise Todo
 (*e: function [[Typecheck.expr]] *)
 (*s: function [[Typecheck.expropt]] *)
-and expropt env eopt = 
+and expropt (env : env) (eopt : expr option) : expr option = 
     match eopt with
     | None -> None
     | Some e -> Some (expr env e)
@@ -782,47 +880,25 @@ and expropt env eopt =
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
-
 (*s: function [[Typecheck.stmt]] *)
 (* The code below is boilerplate, mostly.
  * expr() should not do any side effect on the environment, so we can
  * call recursively in any order stmt() and expr() (including the
  * reverse order of evaluation of OCaml for arguments).
  *)
-let rec stmt env st0 =
+let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
   { st0 with s = 
     (match st0.s with
+    (*s: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     | ExprSt e -> ExprSt (expr env e)
     | Block xs -> Block (List.map (stmt env) xs)
-
-    | If (e, st1, st2) -> 
-      let e = expr env e in
-      (match e.e_type with
-      | T.I _ | T.F _ | T.Pointer _ -> ()
-      (* stricter: error when does not typecheck, not just set null type on e *)
-      | _ -> type_error e.e_type e.e_loc
-      );
-      If (e, stmt env st1, stmt env st2)
-
-    | Switch (e, xs) -> 
-      let e = expr env e in
-      (* ensure e is a number! not a pointer *)
-      (match e.e_type with
-      | T.I _ | T.F _ -> ()
-      | _ -> type_error e.e_type e.e_loc
-      );
-      Switch (e, stmt env xs)
-
-    (* less: should enforce int expr? *)
-    | Case (e, st) -> Case (expr env e, stmt env st)
-    | Default st -> Default (stmt env st)
-
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     (* stricter? should require Bool, not abuse pointer *)
     | While (e, st) -> 
       While (expr env e, stmt env st)
     | DoWhile (st, e) -> 
       DoWhile (stmt env st, expr env e)
-
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     | For (e1either, e2opt, e3opt, st) ->
       (* we may have to do side effects on the environment, so we process
        * e1either first
@@ -834,12 +910,44 @@ let rec stmt env st0 =
         )
       in
       For (e1either, expropt env e2opt, expropt env e3opt, stmt env st)
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
+    | Continue -> Continue
+    | Break -> Break
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
+    | Label (name, st) -> Label (name, stmt env st)
+    | Goto name -> Goto name
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
+    | If (e, st1, st2) -> 
+      let e = expr env e in
 
+      (match e.e_type with
+      (* ugly: no real bool type in C; abuse int, float, and worse pointers *)
+      | T.I _ | T.F _ | T.Pointer _ -> ()
+      (* stricter: error when does not typecheck, not just set null type on e *)
+      (* TODO: list remaining cases explicitely *)
+      | _ -> type_error e.e_type e.e_loc
+      );
+      If (e, stmt env st1, stmt env st2)
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
+    | Switch (e, xs) -> 
+      let e = expr env e in
+
+      (* ensure e is a number! not a pointer *)
+      (match e.e_type with
+      | T.I _ | T.F _ -> ()
+      | _ -> type_error e.e_type e.e_loc
+      );
+      Switch (e, stmt env xs)
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
+    (* less: should enforce int expr? *)
+    | Case (e, st) -> Case (expr env e, stmt env st)
+    | Default st -> Default (stmt env st)
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     | Return eopt -> 
       Return 
         (match eopt with
         | None -> 
-          if env.return_type = T.Void
+          if env.return_type =*= T.Void
           then None 
           (* stricter: error, not warn *)
           else raise (Error (E.Misc ("null return of a typed function", 
@@ -850,10 +958,7 @@ let rec stmt env st0 =
           (* todo: add cast *)
           Some e
         )
-    | Continue -> Continue
-    | Break -> Break
-    | Label (name, st) -> Label (name, stmt env st)
-    | Goto name -> Goto name
+    (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     | Var { v_name = fullname; v_loc = loc; v_type = typ;
             v_storage = stoopt; v_init = eopt} -> 
 
@@ -889,9 +994,11 @@ let rec stmt env st0 =
         check_compatible_assign (SimpleAssign) t e.e_type loc
         (* todo: add cast if not same type *)
       );
-      Hashtbl.add env.ids_ fullname { typ = t; sto = sto; ini = ini; loc = loc };
+      Hashtbl.add env.ids_ fullname { typ = t; sto; ini; loc };
+
       Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
             v_init = ini }
+    (*e: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     )
   }
 (*e: function [[Typecheck.stmt]] *)
@@ -899,19 +1006,23 @@ let rec stmt env st0 =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Typecheck.check_and_annotate_program]] *)
 let check_and_annotate_program (prog: Ast.program) : typed_program =
   let (ast, _locs) = prog in
 
   let funcs = ref [] in
 
+  (*s: function [[Typecheck.check_and_annotate_program.toplevel]] *)
   let toplevel (env : env) = function
+    (*s: [[Typecheck.check_and_annotate_program.toplevel()]] cases *)
     | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
+
       Hashtbl.add env.structs_ fullname 
         (su, flds |> List.map 
             (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
               let t = type_ env typ in
+
+              (*s: [[Typecheck.check_and_annotate_program()]] if gensymed name *)
               (* kenccext: c99ext?:
                * less: if there are multiple anon structure elements, we 
                * could check eagerly if no ambiguous fields instead
@@ -924,13 +1035,11 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
                 raise (Error (E.Misc 
                        ("unnamed structure element must be struct/union", loc)))
               );
+              (*e: [[Typecheck.check_and_annotate_program()]] if gensymed name *)
               (name, t)
             )
         )
-
-    | TypeDef { typedef_name = fullname; typedef_loc = _loc; typedef_type =typ}->
-      Hashtbl.add env.typedefs fullname (type_ env typ)
-
+    (*x: [[Typecheck.check_and_annotate_program.toplevel()]] cases *)
     | EnumDef { enum_name = fullname; enum_loc = _loc; enum_constants = csts }
       ->
       (* stricter: no support for float enum constants *)
@@ -959,7 +1068,10 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
           incr lastvalue
       );
       Hashtbl.add env.enums fullname !maxt
-
+    (*x: [[Typecheck.check_and_annotate_program.toplevel()]] cases *)
+    | TypeDef { typedef_name = fullname; typedef_loc = _loc; typedef_type =typ}->
+      Hashtbl.add env.typedefs fullname (type_ env typ)
+    (*x: [[Typecheck.check_and_annotate_program.toplevel()]] cases *)
     (* remember that VarDecl covers also prototypes *)
     | VarDecl { v_name = fullname; v_loc = loc; v_type = typ;
                 v_storage = stoopt; v_init = eopt} ->
@@ -1030,10 +1142,10 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
          Hashtbl.add env.ids_ fullname 
            {typ = t; sto = finalsto; loc = loc; ini = ini }
       )
-
-
+    (*x: [[Typecheck.check_and_annotate_program.toplevel()]] cases *)
     | FuncDef ({f_name=name; f_loc=loc; f_type=ftyp; 
                f_storage=stoopt; f_body=st;} as def) ->
+
       (* less: lots of code in common with Var_decl; we could factorize
        * but a few things are different still.
        *)
@@ -1110,21 +1222,26 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
       );
       (* the expressions inside the statements are now annontated with types *)
       let st = stmt { env with return_type = type_ env tret } st in
+
       funcs := { def with f_body = st }::!funcs;
+    (*e: [[Typecheck.check_and_annotate_program.toplevel()]] cases *)
   in
-
+  (*e: function [[Typecheck.check_and_annotate_program.toplevel]] *)
+  (*s: [[Typecheck.check_and_annotate_program()]] set initial [[env]] *)
   let env = {
-    ids_ = Hashtbl.create 101;
-    structs_ = Hashtbl.create 101;
+    ids_ = Hashtbl_.create ();
+    structs_ = Hashtbl_.create ();
 
-    typedefs = Hashtbl.create 101;
-    enums = Hashtbl.create 101;
-    constants = Hashtbl.create 101;
-    
+    typedefs = Hashtbl_.create ();
+    enums = Hashtbl_.create ();
+    constants = Hashtbl_.create ();
+  
     return_type = T.Void;
     expr_context = CtxWantValue;
   }
   in
+  (*e: [[Typecheck.check_and_annotate_program()]] set initial [[env]] *)
+
   ast |> List.iter (toplevel env);
 
   { ids = env.ids_; structs = env.structs_; funcs = List.rev !funcs }

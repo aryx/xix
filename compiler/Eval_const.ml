@@ -31,7 +31,6 @@ exception NotAConstant
 (* less: could factorize things in error.ml? *)
 type error = Check.error
 (*e: type [[Eval_const.error]] *)
-
 (*s: exception [[Eval_const.Error]] *)
 exception Error of error
 (*e: exception [[Eval_const.Error]] *)
@@ -41,12 +40,13 @@ exception Error of error
 (*****************************************************************************)
 (*s: function [[Eval_const.eval]] *)
 (* stricter: I do not handle float constants for enums *)
-let rec eval env e0 =
+let rec eval (env : env) (e0 : expr) : integer =
   match e0.e with
   (* todo: enough for big integers? 
    * todo: we should also return an inttype in addition to the integer value.
    *)
   | Int (s, _inttype) -> int_of_string s
+
   | Id fullname ->
      if Hashtbl.mem env fullname
      then
@@ -80,6 +80,7 @@ let rec eval env e0 =
       )
     | Logical op ->
       (match op with
+      (* ugly: bools are considered ints in C *)
       | Eq    -> if i1 =  i2 then 1 else 0
       | NotEq -> if i1 <> i2 then 1 else 0
       | Inf   -> if i1 <  i2 then 1 else 0

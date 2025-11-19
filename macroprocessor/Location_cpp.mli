@@ -1,12 +1,13 @@
 (*s: macroprocessor/Location_cpp.mli *)
 
 (*s: type [[Location_cpp.loc]] *)
+(* global line number, after pre-processing *)
 type loc = int
-[@@deriving show]
 (*e: type [[Location_cpp.loc]] *)
-(*s: type [[Location_cpp.final_loc]] *)
-type final_loc = Fpath.t * int
 [@@deriving show]
+(*s: type [[Location_cpp.final_loc]] *)
+(* final readable location *)
+type final_loc = Fpath.t * int
 (*e: type [[Location_cpp.final_loc]] *)
 
 (*s: type [[Location_cpp.location_history]] *)

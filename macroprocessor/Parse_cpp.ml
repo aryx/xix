@@ -35,7 +35,6 @@ open Ast_cpp
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 (*s: type [[Parse_cpp.token_category]] *)
 type token_category =
   | Eof
@@ -55,8 +54,8 @@ type ('token, 'ast) hook = {
 }
 (*e: type [[Parse_cpp.hook]] *)
 
-(* similar to Ast_cpp.macro *)
 (*s: type [[Parse_cpp.macro]] *)
+(* similar to Ast_cpp.macro *)
 type macro = {
   m_name: string;
   m_nbargs: int option;
@@ -76,23 +75,21 @@ type macro = {
 (*****************************************************************************)
 (* Globals *)
 (*****************************************************************************)
-
 (*s: constant [[Parse_cpp.hmacros]] *)
 let hmacros = Hashtbl.create 101
 (*e: constant [[Parse_cpp.hmacros]] *)
 
+(*s: constant [[Parse_cpp._cwd]] *)
 (* cwd is used to manage #include "...". It is altered when you
  * include a file. cwd becomes the dirname of the included file??? 
  * TODO: dead? used?
  *)
-(*s: constant [[Parse_cpp._cwd]] *)
 let _cwd = ref (Sys.getcwd ())
 (*e: constant [[Parse_cpp._cwd]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Parse_cpp.error]] *)
 let error s =
   raise (L.Error (s, !L.line))
@@ -131,7 +128,7 @@ let define (macro : D.macro) =
   end
 (*e: function [[Parse_cpp.define]] *)
 
-
+(*s: function [[Parse_cpp.find_include]] *)
 (* less: Could use Set instead of list for the set of include paths 
  * todo: if absolute path, need to find it.
 *)
@@ -157,11 +154,11 @@ and find_include_bis (paths : Fpath.t list) (f : Fpath.t) : Fpath.t =
         path
       end
       else find_include_bis xs f
+(*e: function [[Parse_cpp.find_include]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Parse_cpp.parse]] *)
 let parse (caps : < Cap.open_in; ..>) hooks (conf : Preprocessor.conf) (file : Fpath.t) = 
   L.history := [];

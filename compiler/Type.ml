@@ -1,6 +1,7 @@
 (*s: Type.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
-(* renamed to Type_.ml because conflict with OCaml5 module name *)
+
+(* TODO? rename to Type_.ml because conflict with OCaml5 module name *)
 
 (*s: type [[Type.blockid]] *)
 type blockid = int
@@ -23,14 +24,17 @@ type fullname = string * blockid
  * todoext: Enum of fullname with stricter checking.
  *)
 type t =
+  (* basic types *)
   | Void
   | I of integer_type
   | F of float_type
+
+  (* composite types *)
   | Pointer of t
   (* Why not unsugar Array to Pointer? Because the type system checks 
    * for some array incompatibilities. int[2] != int[3].
    * However, the Array type usually gets converted to Pointer
-   * during typechecking.
+   * during typechecking (see array_to_pointer())
    *)
   | Array of int option * t
   | Func of t * t list * bool (* varargs '...' *)
@@ -73,8 +77,11 @@ type qualifier =
 
 
 (*s: type [[Type.structdef]] *)
-(* note that the field can be gensym'ed for anonymous struct/union elements *)
-(* todo: bitfield *)
+(* Note that the field can be gensym'ed for anonymous struct/union elements.
+ * Note also structdef is not part of Type.t above; structdef is used
+ * instead in Typecheck.typed_program
+ * todo: bitfield
+ *)
 type structdef = (string * t) list
 (*e: type [[Type.structdef]] *)
 [@@deriving show]

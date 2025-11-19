@@ -99,17 +99,17 @@ let do_action (caps: < caps; .. >) thestring s xs =
 (* Main algorithms *)
 (*****************************************************************************)
 
-(*s: type [[CLI.frontend_result]] *)
-(*e: type [[CLI.frontend_result]] *)
-
 (*s: function [[CLI.frontend]] *)
-let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : Fpath.t) : Typecheck.typed_program =
+let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
+     (infile : Fpath.t) :
+    Typecheck.typed_program =
 
   let ast = Parse.parse caps conf infile in
-
+  (*s: [[CLI.frontend()]] if [[dump_ast]] *)
   (* debug *)
   if !Flags.dump_ast
   then Logs.app (fun m -> m "%s" (Dumper_.s_of_any (Ast.Program ast)));
+  (*e: [[CLI.frontend()]] if [[dump_ast]] *)
 
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
@@ -117,7 +117,7 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
   let typed_program : Typecheck.typed_program = 
     Typecheck.check_and_annotate_program ast 
   in
-  
+  (*s: [[CLI.frontend()]] if [[dump_typed_ast]] *)
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
@@ -132,14 +132,15 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf) (infile : F
       Logs.app (fun m -> m "%s" (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
   end;
+  (*e: [[CLI.frontend()]] if [[dump_typed_ast]] *)
   typed_program
 (*e: function [[CLI.frontend]] *)
 
 (*s: function [[CLI.backend5]] *)
-let backend5 (tast : Typecheck.typed_program)  (chan : Chan.o) : unit =
+let backend5 (tast : Typecheck.typed_program) (chan : Chan.o) : unit =
   (* todo: Rewrite.rewrite *)
   let (asm, _locs) = Codegen5.codegen tast in
-
+  (*s: [[CLI.backend5()]] if [[dump_asm]] *)
   if !Flags.dump_asm
   then begin
     let pc = ref 0 in
@@ -150,31 +151,34 @@ let backend5 (tast : Typecheck.typed_program)  (chan : Chan.o) : unit =
       incr pc;
     );
   end;
+  (*e: [[CLI.backend5()]] if [[dump_asm]] *)
   Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
 (*e: function [[CLI.backend5]] *)
 (*s: function [[CLI.compile5]] *)
 let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
     (infile : Fpath.t) (outfile : Chan.o) =
-  let tast : Typecheck.typed_program = frontend caps conf infile in
+  let tast : Typecheck.typed_program =
+    frontend caps conf infile in
   backend5 tast outfile
 (*e: function [[CLI.compile5]] *)
 
 (*s: function [[CLI.compile]] *)
-let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t) (infile : Fpath.t) (outfile : Chan.o) : unit =
+let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t)
+    (infile : Fpath.t) (outfile : Chan.o) :
+    unit =
   match arch with
   | Arch.Arm -> compile5 caps conf infile outfile
   | _ -> 
-   failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 (*e: function [[CLI.compile]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[CLI.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
-
-  let arch = 
+  (*s: [[CLI.main()]] set [[arch]] and [[thechar]] *)
+  let arch : Arch.t = 
     match Filename.basename argv.(0) with
     | "o5c" -> Arch.Arm
     | "ovc" -> Arch.Mips
@@ -183,32 +187,50 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let thechar = Arch.thechar arch in
   let thestring = Arch.thestring arch in
-
-  let usage = 
-    spf "usage: %s [-options] file.c" argv.(0)
-  in
+  (*e: [[CLI.main()]] set [[arch]] and [[thechar]] *)
+  let usage = spf "usage: %s [-options] file.c" argv.(0) in
 
   (* in *)
   let args = ref [] in
   (* out *)
   let outfile = ref "" in
 
+  (*s: [[CLI.main()]] macroprocessor locals *)
   (* for cpp *)
   let include_paths : Fpath.t list ref = ref [] in
+  (*x: [[CLI.main()]] macroprocessor locals *)
   let macro_defs = ref [] in
-
+  (*e: [[CLI.main()]] macroprocessor locals *)
+  (*s: [[CLI.main()]] other locals *)
   (* Ansi Posix Environment for plan9 *)
   let ape = ref false in 
-
-  let level = ref (Some Logs.Warning) in
+  (*x: [[CLI.main()]] other locals *)
   (* for debugging *)
   let action = ref "" in
+  (*x: [[CLI.main()]] other locals *)
+  let level = ref (Some Logs.Warning) in
+  (*x: [[CLI.main()]] other locals *)
   let backtrace = ref false in
+  (*e: [[CLI.main()]] other locals *)
 
   let options = [
+    (*s: [[CLI.main()]] [[options]] elements *)
     "-o", Arg.Set_string outfile,
     " <file> place output (an object) in file";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-w", Arg.Set Flags.warn,
+    " enable warnings";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-werror", Arg.Set Flags.warnerror,
+    " warnings generate error exceptions";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-ape", Arg.Set ape,
+    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-I", Arg.String (fun s ->
+      include_paths := Fpath.v s::!include_paths
+    ), " <dir> add dir as a path to look for '#include <file>' files";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-D", Arg.String (fun s ->
       let (var, val_) = 
         if s =~ "\\(.*\\)=\\(.*\\)"
@@ -217,24 +239,23 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       in
       macro_defs := (var, val_)::!macro_defs
     ), " <name=def> (or just <name>) define name for preprocessor";
-    "-I", Arg.String (fun s ->
-      include_paths := Fpath.v s::!include_paths
-    ), " <dir> add dir as a path to look for '#include <file>' files";
-    "-ape", Arg.Set ape,
-    " ";
-
-    "-w", Arg.Set Flags.warn,
-    " enable warnings";
-    "-werror", Arg.Set Flags.warnerror,
-    " warnings generate error exceptions";
-
-    "-S", Arg.Set Flags.dump_asm,
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* pad: I added that *)
+    "-dump_tokens", Arg.Set Flags.dump_tokens,
+    " dump the tokens as they are generated";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_ast", Arg.Set Flags.dump_ast,
+    " dump the parsed AST";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
+    " dump the typed AST";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-dump_asm", Arg.Set Flags.dump_asm,
     " dump the generated assembly";
-
-    "-e", Arg.Set Flags_cpp.debug_include, " ";
-    "-f", Arg.Set Flags_cpp.debug_line, " ";
-    "-m", Arg.Set Flags_cpp.debug_macros, " ";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
+    (* pad: I added that *)
+    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose mode";
     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
@@ -243,30 +264,26 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     " guess what";
     "-quiet", Arg.Unit (fun () -> level := None),
     " ";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-e", Arg.Set Flags_cpp.debug_include, " ";
+    "-f", Arg.Set Flags_cpp.debug_line, " ";
+    "-m", Arg.Set Flags_cpp.debug_macros, " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added long names for those options *)
     "-debug_include", Arg.Set Flags_cpp.debug_include, " ";
     "-debug_line",      Arg.Set Flags_cpp.debug_line, " ";
     "-debug_macros",    Arg.Set Flags_cpp.debug_macros, " ";
-
-    (* pad: I added that *)
-    "-test_parser", Arg.Unit (fun () -> action := "-test_parser"), " ";
-
-    (* pad: I added that *)
-    "-dump_tokens", Arg.Set Flags.dump_tokens,
-    " dump the tokens as they are generated";
-    "-dump_ast", Arg.Set Flags.dump_ast,
-    " dump the parsed AST";
-    "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
-    " dump the typed AST";
-    "-dump_asm", Arg.Set Flags.dump_asm,
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-S", Arg.Set Flags.dump_asm,
     " dump the generated assembly";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: I added that *)
     "-backtrace", Arg.Set backtrace,
     " dump the backtrace after an error";
+    (*e: [[CLI.main()]] [[options]] elements *)
   ] |> Arg.align
   in
+  (*s: [[CLI.main()]] parse [[argv]] and set [[args]] and flags *)
   (try
     Arg.parse_argv argv options (fun t -> 
       args := t::!args
@@ -275,41 +292,50 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
+  (*e: [[CLI.main()]] parse [[argv]] and set [[args]] and flags *)
+  (*s: [[CLI.main()]] logging setup *)
   Logs_.setup !level ();
   Logs.info (fun m -> m "assembler ran from %s" (Sys.getcwd()));
-
+  (*e: [[CLI.main()]] logging setup *)
   (* less: process the old style -Dname=val and -Idir attached *)
-
+  (*s: [[CLI.main()]] [[action]] management *)
   (* to test and debug components of mk *)
   if !action <> "" then begin 
     do_action caps thestring !action (List.rev !args); 
     raise (Exit.ExitCode 0 )
   end;
+  (*e: [[CLI.main()]] [[action]] management *)
 
   try 
+    (*s: [[CLI.main()]] matching [[args]] and [[outfile]] *)
     (match !args, !outfile with
     | [], "" -> 
         Arg.usage options usage;
         Exit.Code 1
     | [cfile], outfile ->
-        let base = Filename.basename cfile in
-        let system_paths : Fpath.t list =
-          (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
-          with Not_found ->
-            [spf "/%s/include" thestring; 
-             "/sys/include";
-            ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
-          ) |> Fpath_.of_strings
-        in
-        
+        (*s: [[CLI.main()]] main code path with [[cfile]] and [[outfile]] *)
         let outfile : Fpath.t = 
+          (*s: [[CLI.main()]] main code path, define [[outfile]] *)
+          let base = Filename.basename cfile in
           (if outfile = ""
           then
             if base =~ "\\(.*\\)\\.c"
-            then Regexp_.matched1 base ^ (spf ".%c" thechar)
-            else base ^ (spf ".%c" thechar)
+            then Regexp_.matched1 base ^ (spf ".o%c" thechar)
+            else base ^ (spf ".o%c" thechar)
           else outfile
           ) |> Fpath.v
+          (*e: [[CLI.main()]] main code path, define [[outfile]] *)
+        in
+        (*s: [[CLI.main()]] main code path, define macropreprocessor [[conf]] *)
+        let system_paths : Fpath.t list =
+          (*s: [[CLI.main()]] main code path, define [[system_paths]] *)
+            (try CapSys.getenv caps "INCLUDE" |> Str.split (Str.regexp "[ \t]+")
+            with Not_found ->
+              [spf "/%s/include" thestring; 
+               "/sys/include";
+              ] |> (fun xs -> if !ape then "/sys/include/ape"::xs else xs)
+            ) |> Fpath_.of_strings
+          (*e: [[CLI.main()]] main code path, define [[system_paths]] *)
         in
         let conf = Preprocessor.{
           defs = !macro_defs;
@@ -318,33 +344,46 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
           dir_source_file = Fpath.v (Filename.dirname cfile);
         }
         in
+        (*e: [[CLI.main()]] main code path, define macropreprocessor [[conf]] *)
         outfile |> FS.with_open_out caps (fun chan ->
           compile caps conf arch (Fpath.v cfile) chan
         );
+        (*e: [[CLI.main()]] main code path with [[cfile]] and [[outfile]] *)
         Exit.OK
     | _ -> 
       (* stricter: *)
         failwith 
           "compiling multiple files at the same time is not supported; use mk"
     )
+    (*e: [[CLI.main()]] matching [[args]] and [[outfile]] *)
   with exn ->
+    (*s: [[CLI.main()]] when [[exn]] *)
+    (*s: [[CLI.main()]] when [[exn]] if [[backtrace]] *)
     if !backtrace
     then raise exn
+    (*e: [[CLI.main()]] when [[exn]] if [[backtrace]] *)
     else 
+      (*s: [[CLI.main()]] match [[exn]] *)
       (match exn with
       | Failure s -> 
           (* useful to indicate that error comes from 5c? *)
           Error.errorexit (spf "%cc: %s" thechar s)
+
+      (*s: [[CLI.main()]] match [[exn]] other cases *)
       | Location_cpp.Error (s, loc) ->
           (* less: could use final_loc_and_includers_of_loc loc *)
           let (file, line) = Location_cpp.final_loc_of_loc loc in
           Error.errorexit (spf "%s:%d %s" !!file line s)
-      (* ocaml-light: | Check.Error err | Typecheck.Error err | Eval_const.Error err | Codegen5.Error err  *)
+      (* ocaml-light: | Check.Error err | Typecheck.Error err | ...  *)
       | Check.Error err -> Error.errorexit (Check.string_of_error err)
       | Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
       | Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
       | Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
+      (*e: [[CLI.main()]] match [[exn]] other cases *)
+
       | _ -> raise exn
       )
+      (*e: [[CLI.main()]] match [[exn]] *)
+    (*e: [[CLI.main()]] when [[exn]] *)
 (*e: function [[CLI.main]] *)
 (*e: CLI.ml *)

@@ -32,5 +32,4 @@ val parse:
   ('token, 'ast) hook -> Preprocessor.conf -> Fpath.t -> 
   'ast * Location_cpp.location_history list
 (*e: signature [[Parse_cpp.parse]] *)
-
 (*e: macroprocessor/Parse_cpp.mli *)

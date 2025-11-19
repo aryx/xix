@@ -10,12 +10,14 @@ type idinfo = {
   }
 (*e: type [[Typecheck.idinfo]] *)
 
-(* alt: Frontend.result, Frontend.entities, Frontend.t, Typecheck.result *)
+(*s: type [[Typecheck.typed_program]] *)
 type typed_program = {
   (* resolved type and storage information for identifiers and tags *)
   ids: (Ast.fullname, idinfo) Hashtbl.t;
+
   (* resolved struct definitions *)
   structs: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
+
   (* functions annotated with types for each expression nodes
    * (so you can more easily generate code later).
    * 
@@ -25,6 +27,7 @@ type typed_program = {
    *)
   funcs: Ast.func_def list;
 }
+(*e: type [[Typecheck.typed_program]] *)
 
 (*s: type [[Typecheck.error]] *)
 type error = Check.error

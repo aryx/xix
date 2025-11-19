@@ -1,12 +1,12 @@
 (*s: Flags.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 
-(*s: constant [[Flags.warn]] *)
+(*s: global [[Flags.warn]] *)
 let warn = ref false
-(*e: constant [[Flags.warn]] *)
-(*s: constant [[Flags.warnerror]] *)
+(*e: global [[Flags.warn]] *)
+(*s: global [[Flags.warnerror]] *)
 let warnerror = ref false
-(*e: constant [[Flags.warnerror]] *)
+(*e: global [[Flags.warnerror]] *)
 
 (* see also macroprocessor/flags_cpp.ml *)
 

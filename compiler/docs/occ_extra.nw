@@ -874,6 +874,7 @@ type integer = int
 <<Typecheck.ml>>=
 (* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
 open Common
+open Eq.Operators
 open Either
 
 open Ast
@@ -1039,6 +1040,7 @@ let max_types t1 t2 = ...
 <<macroprocessor/Location_cpp.mli>>=
 
 <<type [[Location_cpp.loc]]>>
+[@@deriving show]
 <<type [[Location_cpp.final_loc]]>>
 
 <<type [[Location_cpp.location_history]]>>

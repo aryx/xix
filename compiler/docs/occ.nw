@@ -1884,7 +1884,7 @@ prog1:
 
 <<rule [[Parser.xdecl]]>>=
 xdecl:
-  <<[[Parser.xdecl]] cases>> 
+  <<[[Parser.xdecl]] cases>>
 @
 
 \subsection{No-declarator declarations}
@@ -3105,8 +3105,8 @@ let warn s loc =
 %alt: Lint checking
 
 <<function [[Check.check_program]]>>=
-let check_program (ast, _locs) : unit =
-  check_usedef ast
+let check_program (prog : Ast.program) : unit =
+  check_usedef prog
 @
 
 <<function [[Check.check_usedef]]>>=
@@ -3118,10 +3118,10 @@ let check_usedef (program : Ast.program) : unit =
   <<function [[Check.check_usedef.expr]]>>
   <<function [[Check.check_usedef.type_]]>>
 
-  <<[[Check.check_usedef()]] set initial [[env]]>>  
-  program |> List.iter (toplevel env);
+  <<[[Check.check_usedef()]] set initial [[env]]>>
+  fst program |> List.iter (toplevel env);
 
-  <<[[Check.check_usedef()]] check used but not defined tags after program visit>>  
+  <<[[Check.check_usedef()]] check used but not defined tags after program visit>>
   (* less: could check unused static var decl? *)
   ()
 @
@@ -3860,7 +3860,7 @@ let rec expr (env : env) (e0 : expr) : expr (* but type annotated *) =
 @
 
 <<function [[Typecheck.expropt]]>>=
-and expropt (env : env) (eopt : expr opt) : expr opt = 
+and expropt (env : env) (eopt : expr option) : expr option = 
     match eopt with
     | None -> None
     | Some e -> Some (expr env e)
@@ -3966,6 +3966,8 @@ and expropt (env : env) (eopt : expr opt) : expr opt =
     | _ -> type_error e.e_type e.e_loc 
     );
     { e0 with e = Unary (Not, e); e_type = T.int }
+   <<[[Typecheck.expr()]] in [[Unary]], match [[op]] other cases>>
+   )
 @
 % ugly C, Not x is T.int, grrr
 
@@ -4089,7 +4091,7 @@ let result_type_binary (t1 : Type.t) (t2 : Type.t) : Type.t =
   | T.Pointer _, T.Pointer T.Void -> t1
 
   | T.Pointer _, T.Pointer _ ->
-    assert (t1 = t2);
+    assert (t1 =*= t2);
     t1
 
   | _ -> raise (Impossible "case should be forbidden by compatibility policy")
@@ -4191,7 +4193,7 @@ let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
 
 \subsection{Pointers}
 
-<<[[Typecheck.expr()]] match [[e0.e]] cases>>=
+<<[[Typecheck.expr()]] in [[Unary]], match [[op]] other cases>>=
 | GetRef ->
 
     (* we dont want an additional '&' added before an array *)
@@ -4216,7 +4218,7 @@ let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
   e
 @
 
-<<[[Typecheck.expr()]] match [[e0.e]] cases>>=
+<<[[Typecheck.expr()]] in [[Unary]], match [[op]] other cases>>=
 | DeRef ->
     let e = expr newenv e in
 
@@ -4227,7 +4229,6 @@ let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
     (* what about T.Array? no need, see array_to_pointer() *)
     | _ -> type_error e.e_type e.e_loc
     )
-  )
 @
 
 
@@ -4418,7 +4419,7 @@ let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
   (* less: seems pretty useless *)
   | T.Void, T.Void -> ()
   (* less: seems pretty useless *)
-  | T.StructName (su1, _) , T.StructName (su2, _) when su1 = su2 -> ()
+  | T.StructName (su1, _) , T.StructName (su2, _) when su1 =*= su2 -> ()
   | T.StructName _, T.Void -> ()
   | _ -> type_error2 e.e_type t e0.e_loc
   );
@@ -4615,7 +4616,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
   Return 
     (match eopt with
     | None -> 
-      if env.return_type = T.Void
+      if env.return_type =*= T.Void
       then None 
       (* stricter: error, not warn *)
       else raise (Error (E.Misc ("null return of a typed function", 
@@ -4994,7 +4995,7 @@ let merge_storage_toplevel name loc stoopt ini old =
     | None, S.Extern -> S.Global
     | None, S.Global ->
         (* stricter: even clang does not say anything here *)
-        if ini = None
+        if ini =*= None
         then raise (Error (E.Inconsistent (
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))
@@ -5024,7 +5025,7 @@ let merge_storage_toplevel name loc stoopt ini old =
        "previous definition is here", old.loc)))
 
     | Some S.Static, S.Static ->
-        if ini = None
+        if ini =*= None
         then raise (Error (E.Inconsistent (
           spf "useless redeclaration of '%s'" name, loc,
           "previous definition is here", old.loc)))

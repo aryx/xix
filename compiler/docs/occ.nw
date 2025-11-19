@@ -1894,6 +1894,7 @@ xdecl:
     { (* stricter: *)
       if !defs = [] 
       then error "declaration without any identifier";
+
       get_and_reset defs;
     }
 @
@@ -1905,27 +1906,21 @@ xdecl:
 | storage_and_type xdlist TSemicolon 
     { (* less: could suggest to separate struct/enum def from vardecl *)
       get_and_reset defs @
-      ($2 |> List.map (fun (((id, loc), typ2), init) ->
+      ($2 |> List.map (fun (((id, loc), typ2), v_init) ->
          let (sto_or_typedef, typ1) = $1 in
          let typ = typ2 typ1 in
-         (match sto_or_typedef, init with
-         | Left sto, _ -> 
+         (match sto_or_typedef, v_init with
+         | Left v_storage, _ -> 
              add_id env id IdIdent;
              VarDecl { v_name = (id, env.block (* 0 *));
-                       v_loc = loc;
-                       v_type = typ;
-                       v_storage = sto;
-                       v_init = init;
-                     }
+                       v_loc = loc; v_type = typ; v_storage; v_init; }
          (* stricter: clang also reports this, but not 5c *)
          | Right (), Some _ ->
              error "initializer with typedef"
          | Right (), None ->
              add_id env id IdTypedef;
              TypeDef { typedef_name = (id, env.block); 
-                       typedef_loc = loc; 
-                       typedef_type = typ; 
-                     }
+                       typedef_loc = loc; typedef_type = typ; }
          )
        )) 
     }
@@ -1994,18 +1989,15 @@ tag:
 
 <<[[Parser.xdecl]] cases>>=
 | storage_and_type_xdecor block_no_new_scope
-    { let ((id, loc), ft, sto) = $1 in
+    { let ((id, f_loc), f_type, f_storage) = $1 in
+      (* pop_scope from new_scope done in storage_and_type_xdecor *)
       pop_scope env;
-      [ FuncDef { f_name = id;
-                  f_loc = loc;
-                  f_type = ft;
-                  f_body = $2;
-                  f_storage = sto; 
-                }
-      ]
+      [ FuncDef { f_name = id; f_loc; f_type; f_body = $2; f_storage; } ]
     }
 @
 
+% intermerdiate rule so have opportunity to do stuff before entering
+% in block_no_new_scope
 <<rule [[Parser.storage_and_type_xdecor]]>>=
 storage_and_type_xdecor: storage_and_type xdecor
     { (* stricter: *)
@@ -2020,6 +2012,7 @@ storage_and_type_xdecor: storage_and_type xdecor
       | TFunction (ret, (params, varargs)), Left sto -> 
           (* add in global scope the function name *)
           add_id env id IdIdent;
+
           (* add in new scope the parameters *)
           new_scope env;
           let params = params |> List.map (fun p ->
@@ -2050,6 +2043,7 @@ storage_and_type_xdecor: storage_and_type xdecor
 block_no_new_scope: TOBrace slist TCBrace { mk_st (Block $2) $1 }
 @
 % sill see soon why call that way and what is slist (statement list)
+% no_new_scope because done in storage_and_type_xdecor
 
 
 \section{Statements}
@@ -2066,13 +2060,14 @@ stmnt:
 ulstmnt: 
  <<[[Parser.ulstmnt]] cases>>
 @
+% ul for unlabeled
 
 <<[[Parser.ulstmnt]] cases>>=
 | cexpr TSemicolon { mk_st (ExprSt $1) $2 }
 /*(* used when do for(...) ; to have an empty statement *)*/
 |       TSemicolon { mk_st (Block []) $1 }
 @
-%cexpr for comma expr
+%cexpr for comma expr but =~ expr
 
 <<function [[Parser.mk_st]]>>=
 let mk_st st loc = { s = st; s_loc = loc }
@@ -2106,7 +2101,7 @@ slist:
  | slist stmnt   { $1 @ [$2] }
 @
 % and back to stmnt!
-% adecl for locals
+% adecl for locals, see later
 
 <<rule [[Parser.tobrace]]>>=
 tobrace: TOBrace { new_scope env; $1 }
@@ -2147,6 +2142,12 @@ tcbrace: TCBrace { pop_scope env; $1 }
     }
 @
 
+<<other expr ebnf rules>>=
+zcexpr:
+ | /*(*empty*)*/ { None }
+ | cexpr         { Some $1 }
+@
+
 <<rule [[Parser.tfor]]>>=
 tfor: Tfor { new_scope env; $1 }
 @
@@ -2158,18 +2159,13 @@ forexpr:
  | storage_and_type adlist 
      { Right 
          (* less: could factorize code with xdecl *)
-         ($2 |> List.map (fun (((id, loc), typ2), init) ->
+         ($2 |> List.map (fun (((id, v_loc), typ2), v_init) ->
           let (sto_or_typedef, typ1) = $1 in
-          let typ = typ2 typ1 in
+          let v_type = typ2 typ1 in
           (match sto_or_typedef with
-          | Left sto -> 
+          | Left v_storage -> 
             add_id env id IdIdent;
-            { v_name = (id, env.block);
-              v_loc = loc;
-              v_type = typ;
-              v_storage = sto;
-              v_init = init;
-            }
+            { v_name = (id, env.block); v_loc; v_type; v_storage; v_init; }
           (* stricter: *)
           | Right _ -> error "typedefs inside 'for' are forbidden"
           )
@@ -2182,6 +2178,7 @@ forexpr:
 <<[[Parser.ulstmnt]] cases>>=
 | Treturn zcexpr TSemicolon { mk_st (Return $2) $1 }
 @
+
 <<[[Parser.ulstmnt]] cases>>=
 | Tbreak TSemicolon         { mk_st Break $1 }
 | Tcontinue TSemicolon      { mk_st Continue $1 } 
@@ -2275,22 +2272,7 @@ cexpr:
  | expr { $1 }
  | cexpr TComma cexpr { mk_e (Sequence ($1, $3)) $2 }
 @
-
-<<rule [[Parser.lexpr]]>>=
-/*(*todo: (long expr) is wrapping expr in a (long) cast *)*/
-lexpr: expr { $1 }
-@
-
-
-<<other expr ebnf rules>>=
-zexpr:
- | /*(*empty*)*/ { None }
- | lexpr         { Some $1 }
-
-zcexpr:
- | /*(*empty*)*/ { None }
- | cexpr         { Some $1 }
-@
+%ugly C, can have sequence also in expression, hmmm
 
 
 \subsection{Numeric constants}
@@ -2340,7 +2322,7 @@ string:
         (*Id ($1, 0)*)
     }
 @
-% Can have TTypeName here?
+% Can have TTypeName here? no, see the assert.
 
 \subsection{Arithmetic expressions}
 
@@ -2454,6 +2436,9 @@ elist:
 | TOPar qualifier_and_type abdecor TCPar xuexpr  { mk_e (Cast ($3 $2, $5)) $1 }
 @
 
+% abdecor, abstract declarator, no name, just type with left and right part
+% without anything in the middle as in  int[]
+
 \subsection{Ternary expressions}
 
 <<[[Parser.expr]] other cases>>=
@@ -2541,6 +2526,11 @@ qual:
  | TDot tag          { (fun x -> Right (snd $2, x)) }
 @
 
+<<rule [[Parser.lexpr]]>>=
+/*(*todo: (long expr) is wrapping expr in a (long) cast *)*/
+lexpr: expr { $1 }
+@
+
 
 \section{Types and storage classes}
 
@@ -2619,6 +2609,7 @@ storage_and_type:
  <<[[Parser.storage_and_type]] other cases>>
 /*(* less: allow more combinations, so better than just "syntax error"? *)*/
 @
+% referenced a few times: in toplevel xdecl, in for, in function def
 
 % will see Typedef case later
 
@@ -2674,16 +2665,13 @@ su:
 
 <<[[Parser.complex_type]] cases>>=
 | su tag_opt sbody {
-    let (su, loc) = $1 in
+    let (su_kind, su_loc) = $1 in
     let id = $2 in
     let fullname = id, env.block in
     (* check if already defined in check.ml *)
-    defs := (StructDef { su_name = fullname; 
-                         su_loc = loc;
-                         su_kind = su; 
-                         su_flds = $3 })::!defs;
-    add_tag env id (Ast.tagkind_of_su su);
-    mk_t (Ast.TStructName (su, fullname)) loc
+    defs := (StructDef { su_name = fullname; su_loc; su_kind; su_flds = $3 })::!defs;
+    add_tag env id (Ast.tagkind_of_su su_kind);
+    mk_t (Ast.TStructName (su_kind, fullname)) loc
 }
 @
 
@@ -2697,7 +2685,7 @@ tag_opt:
  | tag           { snd $1 }
  | /*(*empty*)*/ { gensym () }
 @
-% gensym!! no anonymous struct/union
+% gensym!! no anonymous struct/union, which simplifies things
 
 
 <<rule [[Parser.sbody]]>>=
@@ -2739,6 +2727,9 @@ edlist:
 edecor: xdecor { $1 }
 @
 
+% note that no storage in edecl_elem, we use qualified_and_type, not
+% storage_and_type
+
 \subsection{Enums}
 
 \subsubsection{Enumeration type uses and definitions}
@@ -2749,22 +2740,20 @@ edecor: xdecor { $1 }
     try 
       let (_tagkind, bid) = Hashtbl.find env.tags id in
       let fullname = id, bid in
-      mk_t (Ast.TEnumName (fullname)) $1
+      mk_t (Ast.TEnumName fullname) $1
     with Not_found ->
       let fullname = id, 0 (* less: or env.block? *) in
-      mk_t (Ast.TEnumName (fullname)) $1
+      mk_t (Ast.TEnumName fullname) $1
    }
 @
 
 <<[[Parser.complex_type]] cases>>=
 | Tenum tag_opt TOBrace enum TCBrace {
     let id = $2 in
-    let fullname = id, env.block in
-    defs := (EnumDef { enum_name = fullname;
-                       enum_loc = $1;
-                       enum_constants = $4 })::!defs;
+    let enum_name = id, env.block in
+    defs := (EnumDef { enum_name; enum_loc = $1; enum_constants = $4 })::!defs;
     add_tag env id TagEnum;
-    mk_t (Ast.TEnumName fullname) $1
+    mk_t (Ast.TEnumName enum_name) $1
 }
 @
 
@@ -2775,13 +2764,13 @@ enum:
  | TName                
      { let (loc, id) = $1 in
        add_id env id IdEnumConstant; 
-       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = None}] 
+       [ { ecst_name = (id, env.block); ecst_loc = loc; ecst_value = None } ] 
      }
  | TName TEq const_expr 
      { let (loc, id) = $1 in
       (* note that const_expr can reference enum constants defined before *)
        add_id env id IdEnumConstant;
-       [{ecst_name = (id, env.block); ecst_loc = loc; ecst_value = Some $3}] 
+       [ { ecst_name = (id, env.block); ecst_loc = loc; ecst_value = Some $3 } ] 
      }
 
  | enum TComma enum { $1 @ $3 }
@@ -2794,6 +2783,7 @@ const_expr: expr { $1 }
 
 
 \subsection{Pointer and array types}
+%alt: types part 2, the right part
 
 <<[[Parser.xdecor]] other cases>>=
 | TMul qualifiers xdecor 
@@ -2801,6 +2791,7 @@ const_expr: expr { $1 }
       id, (fun x -> f (mk_t (TPointer x) $1))
     }
 @
+% qualifiers also here, subtle!
 
 <<[[Parser.xdecor2]] other cases>>=
 | xdecor2 TOBra zexpr TCBra 
@@ -2809,6 +2800,13 @@ const_expr: expr { $1 }
       id, (fun x -> f (mk_t (TArray ($3, x)) $2))
     }
 @
+
+<<other expr ebnf rules>>=
+zexpr:
+ | /*(*empty*)*/ { None }
+ | lexpr         { Some $1 }
+@
+
 
 \subsection{Function types, parameter types}
 
@@ -2821,7 +2819,12 @@ const_expr: expr { $1 }
     }
 @
 
-% will see zparamlist later
+% will see paramlist later
+<<rule [[Parser.zparamlist]]>>=
+zparamlist:
+ | /*(*empty*)*/ { [], false }
+ | paramlist     { $1 }
+@
 
 
 \subsection{Typedefs}
@@ -2842,11 +2845,15 @@ const_expr: expr { $1 }
 | Ttypedef qualifiers type_ { Right (), $3 }
 @
 % typedef const int myint;
-
+% Right () and many Right cases before (and will see a few more later)
 
 
 
 \section{Declarations and definitions, part two}
+% a bit ugly to have those 2 parts, but good way to also see again the split
+% type left/right,
+% some typedef handling, some xdecor, so good way to recapitulate in another
+% way stuff we've seen before.
 
 \subsection{Globals, external declarator}
 
@@ -2857,11 +2864,11 @@ const_expr: expr { $1 }
 <<rule [[Parser.paramlist]]>>=
 paramlist:
  | qualifier_and_type xdecor  
-     { let ((id, loc), typ2) = $2 in
+     { let ((id, p_loc), typ2) = $2 in
        (* the final blockid will be assigned when we create the scope of the
         * function body.
         *)
-       [{p_name = Some (id, -1); p_loc = loc; p_type = typ2 $1 }], false
+       [ { p_name = Some (id, -1); p_loc; p_type = typ2 $1 } ], false
      }
  | qualifier_and_type abdecor 
      { [{ p_name = None; p_loc = $1.t_loc; p_type = $2 $1 }], false }
@@ -2872,16 +2879,12 @@ paramlist:
        (* stricter: 5c does not report *)
        if isdot1
        then error "dots allowed only in last parameter position";
+
        xs @ ys, isdot2
      }
  | TDot TDot TDot { [], true }
 @
 
-<<rule [[Parser.zparamlist]]>>=
-zparamlist:
- | /*(*empty*)*/ { [], false }
- | paramlist     { $1 }
-@
 
 \subsection{Locals, automatic declarator}
 
@@ -2894,6 +2897,7 @@ adecl:
  | storage_and_type        TSemicolon 
      { if !defs = [] 
        then error "declaration without any identifier";
+
        (* stricter: *)
        error "move struct or typedef definitions to the toplevel";
        (* TODO? could allow at least structdef and just return [] here *)
@@ -2903,19 +2907,16 @@ adecl:
      { (* stricter: *)
        if !defs <> [] 
        then error "move struct or typedef definitions to the toplevel";
+
        (* less: could factorize code with xdecl *)
-       ($2 |> List.map (fun (((id, loc), typ2), init) ->
+       ($2 |> List.map (fun (((id, v_loc), typ2), v_init) ->
           let (sto_or_typedef, typ1) = $1 in
-          let typ = typ2 typ1 in
+          let v_type = typ2 typ1 in
           (match sto_or_typedef with
-          | Left sto -> 
+          | Left v_storage -> 
               add_id env id IdIdent;
               mk_st (Var { v_name = (id, env.block);
-                           v_loc = loc;
-                           v_type = typ;
-                           v_storage = sto;
-                           v_init = init;
-                         }) loc
+                           v_loc; v_type; v_storage; v_init;}) loc
           (* stricter: *)
           | Right () -> error "typedefs not at the toplevel are forbidden"
           )
@@ -2928,6 +2929,8 @@ adlist: xdlist { $1 }
 
 
 \subsection{Types, abstract declarator}
+
+% nice to see all rules together for once.
 
 <<rule [[Parser.abdecor]]>>=
 abdecor:
@@ -3059,8 +3062,6 @@ let warn = ref false
 "-w", Arg.Set Flags.warn,
 " enable warnings";
 @
-
-
 <<signature [[Error.warn]]>>=
 val warn: string -> Location_cpp.loc -> unit
 @
@@ -3085,6 +3086,7 @@ let warn s loc =
       let (file, line) = Location_cpp.final_loc_of_loc loc in
       Logs.warn (fun m -> m "%s:%d: %s" !!file line s)
 @
+% final_loc_of_loc described later
 
 % actually used before during parsing, for empty body warnings
 %TODO? or move here this code?
@@ -3132,8 +3134,8 @@ type usedef = {
   mutable used: Ast.loc option;
 }
 @
-% so can detect bother 'used but not defined' and 'defined but not used' errors
-% (first worse than second)
+% so can detect both 'used but not defined' and 'defined but not used' errors
+% (first worse than second).
 
 <<type [[Check.env]]>>=
 type env = {
@@ -3173,13 +3175,12 @@ let rec toplevel env = function
 
 <<[[Check.check_usedef.toplevel()]] match cases>>=
 | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
-  (* checking the tag *)
 
+  (* checking the tag *)
   let tagkind = Ast.tagkind_of_su su in
   check_inconsistent_or_redefined_tag env fullname tagkind loc;
 
   (* checking the fields *)
-
   let hflds = Hashtbl_.create () in
   flds |> List.iter 
    (fun {fld_name = name; fld_loc = loc; fld_type = typ} ->
@@ -3197,13 +3198,12 @@ let rec toplevel env = function
 
 <<[[Check.check_usedef.toplevel()]] match cases>>=
 | EnumDef { enum_name = fullname; enum_loc = loc; enum_constants = csts }->
-  (* checking the tag *)
 
+  (* checking the tag *)
   let tagkind = TagEnum in
   check_inconsistent_or_redefined_tag env fullname tagkind loc;
 
   (* checking the constants *)
-
   csts |> List.iter 
       (fun { ecst_name = fullname; ecst_loc = loc; ecst_value = eopt } ->
         check_inconsistent_or_redefined_id env fullname IdEnumConstant loc;
@@ -3216,6 +3216,23 @@ let rec toplevel env = function
   check_inconsistent_or_redefined_id env fullname IdTypedef loc;
   type_ env typ
 @
+
+<<[[Check.check_usedef.toplevel()]] match cases>>=
+| VarDecl { v_name = fullname; v_loc; v_type = t; v_init = eopt; v_storage = _} ->
+
+  (if Hashtbl.mem env.ids fullname &&
+      snd (Hashtbl.find env.ids fullname) = IdIdent
+  (* this can be ok, you can redeclare toplevel identifiers as you
+   * can give a final storage. It depends on the situation, 
+   * see typecheck.ml
+   *)
+   then ()
+   else check_inconsistent_or_redefined_id env fullname IdIdent v_loc
+  );
+  type_ env t;
+  eopt |> Option.iter (expr env)
+@
+
 
 <<[[Check.check_usedef.toplevel()]] match cases>>=
 (* todo: if use struct tags params, they must be complete at this point *)
@@ -3258,21 +3275,6 @@ let rec toplevel env = function
   check_labels env;
 @
     
-<<[[Check.check_usedef.toplevel()]] match cases>>=
-| VarDecl { v_name = fullname; v_loc; v_type = t; v_init = eopt; v_storage = _} ->
-
-  (if Hashtbl.mem env.ids fullname &&
-      snd (Hashtbl.find env.ids fullname) = IdIdent
-  (* this can be ok, you can redeclare toplevel identifiers as you
-   * can give a final storage. It depends on the situation, 
-   * see typecheck.ml
-   *)
-   then ()
-   else check_inconsistent_or_redefined_id env fullname IdIdent v_loc
-  );
-  type_ env t;
-  eopt |> Option.iter (expr env)
-@
 
 \subsection{Checking statements}
 
@@ -3297,6 +3299,22 @@ and stmt env st0 =
 @
 % but hashtbl populated in children? ok? need Hashtbl.remove
 % for all locals ?
+
+<<[[Check.check_usedef.stmt()]] match [[st0.s]] cases>>=
+| Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; v_storage = _ } ->
+  (* less: before adding in environment? can have recursive use? *)
+  eopt |> Option.iter (expr env);
+  (* todo: if local VarDEcl, can actually have stuff nested like
+   *  extern int i;  in which case we must go back to global
+   *  scope for i! so rewrite AST? or just in typecheck.ml
+   *  generate right storage for it.
+   * can also be nested prototype (but I should forbid it
+   *)
+  check_inconsistent_or_redefined_id env fullname IdIdent loc;
+  env.local_ids <- fullname :: env.local_ids;
+  type_ env typ;
+@
+
 
 <<[[Check.check_usedef.stmt()]] match [[st0.s]] cases>>=
 | If (e, st1, st2) ->
@@ -3375,20 +3393,6 @@ and stmt env st0 =
 | Default st -> stmt env st
 @
 
-<<[[Check.check_usedef.stmt()]] match [[st0.s]] cases>>=
-| Var { v_name = fullname; v_loc = loc; v_type = typ; v_init = eopt; v_storage = _ } ->
-  (* less: before adding in environment? can have recursive use? *)
-  eopt |> Option.iter (expr env);
-  (* todo: if local VarDEcl, can actually have stuff nested like
-   *  extern int i;  in which case we must go back to global
-   *  scope for i! so rewrite AST? or just in typecheck.ml
-   *  generate right storage for it.
-   * can also be nested prototype (but I should forbid it
-   *)
-  check_inconsistent_or_redefined_id env fullname IdIdent loc;
-  env.local_ids <- fullname :: env.local_ids;
-  type_ env typ;
-@
 
 \subsection{Checking expressions}
 
@@ -3414,7 +3418,8 @@ and exprs env xs = xs |> List.iter (expr env)
                             (unwrap fullname)))
     )
 @
-% Why impossible? seems classic use but not defined case?
+% Why impossible? seems classic use but not defined case? because
+% fullname so already resolved during parsing I think
 
 <<function [[Ast.unwrap]]>>=
 let unwrap (name, _) = name    
@@ -3704,13 +3709,13 @@ let check_and_annotate_program (prog: Ast.program) : typed_program =
 <<type [[Typecheck.env]]>>=
 (* Environment for typechecking *)
 type env = {
+
   (* those 2 fields will be returned ultimately by check_and_annotate_program *)
   ids_:  (Ast.fullname, idinfo) Hashtbl.t;
   structs_: (Ast.fullname, Type.struct_kind * Type.structdef) Hashtbl.t;
 
   (* internal *)
   typedefs: (Ast.fullname, Type.t) Hashtbl.t;
-
   (* stricter: no float enum *)
   enums: (fullname, Type.integer_type) Hashtbl.t;
 
@@ -3767,7 +3772,7 @@ in
  * we do struct equality by name not fields, testing the equality of 
  * two types is simple.
  *)
-let same_types t1 t2 =
+let same_types (t1 : Type.t) (t2 : Type.t) : bool =
   match t1, t2 with
 
   (* 'void*' can match any pointer! The generic trick of C
@@ -3899,8 +3904,6 @@ and expropt (env : env) (eopt : expr opt) : expr opt =
 @
 % enum constant replaced by Int
 
-% array_to_pointer ?
-
 
 \subsection{Arithmetic and boolean expressions}
 
@@ -3918,7 +3921,7 @@ and expropt (env : env) (eopt : expr opt) : expr opt =
 
     | Arith Minus ->
       (match e1.e_type, e2.e_type with
-      | T.Pointer _, T.Pointer _ -> T.long
+      | T.Pointer _, T.Pointer _ -> T.long (* TODO? depend on Arch.t? *)
       | _ -> result_type_binary e1.e_type e2.e_type
       )
 
@@ -3933,6 +3936,7 @@ and expropt (env : env) (eopt : expr opt) : expr opt =
               | Inf | Sup | InfEq | SupEq
               | AndLog | OrLog
               ) ->
+      (* ugly: should be a T.Bool! C is ugly. *)
       T.int
   in
   { e0 with e = Binary (e1, op, e2); e_type = finalt }
@@ -3941,15 +3945,19 @@ and expropt (env : env) (eopt : expr opt) : expr opt =
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
 | Unary (op, e) ->
   (match op with
+  (* + E -~> 0 + E *)
   | UnPlus -> 
     let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Plus,e) in
     expr env { e0 with e = e }
+  (* - E -~> 0 - E *)
   | UnMinus -> 
     let e = Binary ({e0 with e = Int ("0",(T.Int,T.Signed))}, Arith Minus,e)in
     expr env { e0 with e = e }
+  (* ~ E -~> -1 ^ E *)
   | Tilde ->
     let e = Binary ({e0 with e = Int ("-1",(T.Int,T.Signed))}, Arith Xor,e) in
     expr env { e0 with e = e }
+
   | Not ->
     let e = expr newenv e in
     (match e.e_type with
@@ -3969,7 +3977,7 @@ and expropt (env : env) (eopt : expr opt) : expr opt =
  * 
  * less: better error messages, for instance when want to add 2 pointers.
  *)
-let check_compatible_binary op t1 t2 loc =
+let check_compatible_binary op (t1 : Type.t) (t2 : Type.t) loc : unit =
   match op with
   | Arith Plus ->
     (match t1, t2 with
@@ -4027,8 +4035,9 @@ let check_compatible_binary op t1 t2 loc =
 
 \subsection{Arithmetic conversions}
 
+% =~ lub ?
 <<function [[Typecheck.result_type_binary]]>>=
-let result_type_binary t1 t2 =
+let result_type_binary (t1 : Type.t) (t2 : Type.t) : Type.t =
   match t1, t2 with
   | T.I (T.Char, T.Signed), (T.I _ | T.F _ | T.Pointer _) -> t2
 
@@ -4088,6 +4097,8 @@ let result_type_binary t1 t2 =
 
 \subsection{Pointer arithmetic}
 
+% seen before, can substract pointer, can do arith ops with pointers
+
 %%\subsection{Boolean expressions}
 
 \subsection{Assignments}
@@ -4124,6 +4135,7 @@ let lvalue (e0 : expr) : bool =
    *)
   | RecordAccess _
     -> true
+
   (* Strings are transformed at some point in Id.
    * We must consider them as an lvalue, because an Id is an lvalue 
    * and because if a string is passed as an argument to a function, we want
@@ -4138,6 +4150,7 @@ let lvalue (e0 : expr) : bool =
   | Unary ((GetRef | UnPlus |  UnMinus | Tilde | Not), _)
     -> false
   | ArrayAccess _ | RecordPtAccess _ -> raise (Impossible "transformed before")
+  (* TODO? what remains? should be just false no? *)
   | _ -> raise Todo
 @
 %5c: was done via an 'addable' (address-able) field
@@ -4146,7 +4159,7 @@ let lvalue (e0 : expr) : bool =
 (* less: could run typ_ext hooks here? and return a new node? for
  * unnamed_inheritance.c?
  *)
-let check_compatible_assign op t1 t2 loc =
+let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
   match op with
   | SimpleAssign ->
     (match t1, t2 with
@@ -4154,7 +4167,7 @@ let check_compatible_assign op t1 t2 loc =
     (* 'void*' special handling done in same_types() *)
     | T.Pointer _, T.Pointer _ when same_types t1 t2 -> ()
     | T.StructName (su1, name1), T.StructName (su2, name2) 
-      when su1 = su2 && name1 = name2 -> ()
+      when su1 =*= su2 && name1 =*= name2 -> ()
     | _ -> type_error2 t1 t2 loc
     )
   (* not exactly the same rule than in check_compatible_binary *)
@@ -4179,7 +4192,7 @@ let check_compatible_assign op t1 t2 loc =
 \subsection{Pointers}
 
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
-  | GetRef ->
+| GetRef ->
 
     (* we dont want an additional '&' added before an array *)
     let e = expr { env with expr_context = CtxGetRef } e in
@@ -4188,8 +4201,11 @@ let check_compatible_assign op t1 t2 loc =
     then raise (Error (E.Misc ("not an l-value", e0.e_loc)));
 
     (* less: warn if take address of array or function, ADDROP *)
-    { e0 with e = Unary (GetRef, e); e_type = T.Pointer (e.e_type) }
+    { e0 with e = Unary (GetRef, e); 
+              e_type = T.Pointer (e.e_type) }
 @
+%5c: add-able, for address-able, that is you are able to GetRef it
+% to get its address
 
 <<[[Typecheck.expr_context]] other cases>>=
 | CtxGetRef 
@@ -4201,14 +4217,14 @@ let check_compatible_assign op t1 t2 loc =
 @
 
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
-  | DeRef ->
+| DeRef ->
     let e = expr newenv e in
 
     (match e.e_type with
     | T.Pointer t -> 
-      { e0 with e = Unary (DeRef, e); e_type = t } |> array_to_pointer env
-
-    (* what about T.Array? see array_to_pointer() *)
+      { e0 with e = Unary (DeRef, e); 
+                e_type = t } |> array_to_pointer env
+    (* what about T.Array? no need, see array_to_pointer() *)
     | _ -> type_error e.e_type e.e_loc
     )
   )
@@ -4218,7 +4234,7 @@ let check_compatible_assign op t1 t2 loc =
 \subsection{Array accesses}
 
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
-(* x[y] --> *(x+y) *)
+(* x[y] --> *(x+y), pointer arithmetic power *)
 | ArrayAccess (e1, e2) ->
   let e = Unary (DeRef, { e0 with e = Binary (e1, Arith Plus, e2) }) in
   expr env { e0 with e = e }
@@ -4236,26 +4252,41 @@ let check_compatible_assign op t1 t2 loc =
     let (_su2, def) = Hashtbl.find env.structs_ fullname in
     (try
        let t = List.assoc name def in
-       { e0 with e = RecordAccess (e, name); e_type = t } 
-        |> array_to_pointer env
+       { e0 with e = RecordAccess (e, name);
+                 e_type = t } |> array_to_pointer env
      with Not_found ->
-       if def |> List.exists (fun (fld, _) -> Ast.is_gensymed fld)
-       then 
-         try 
-           unsugar_anon_structure_element env e0 e name def 
-             |>array_to_pointer env
-         with Not_found ->
-           raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
-                               e.e_loc)))
-       else
+       <<[[Typecheck.expr()]] when field name not found and gensymed field exn>>
+       else 
          raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
-                             e.e_loc)))
+                      e.e_loc)))
     )
   | _ -> type_error e.e_type e.e_loc
   )
 @
 
+<<[[Typecheck.expr()]] match [[e0.e]] cases>>=
+(* x->y --> ( *x).y *)
+| RecordPtAccess (e, name) ->
+  let e = RecordAccess ({ e0 with e = Unary (DeRef, e)}, name) in
+  expr env { e0 with e = e }
+@
 
+
+
+
+%TODO: move later
+<<[[Typecheck.expr()]] when field name not found and gensymed field exn>>=
+if def |> List.exists (fun (fld, _) -> Ast.is_gensymed fld)
+then 
+  try 
+    unsugar_anon_structure_element env e0 e name def 
+      |>array_to_pointer env
+  with Not_found ->
+    raise (Error(E.Misc(spf "not a member of struct/union: %s" name,
+                        e.e_loc)))
+@
+
+% kenccext? remove it? or move to advanced topic ?
 <<function [[Typecheck.unsugar_anon_structure_element]]>>=
 (* X.foo --> X.|sym42|.foo *)
 let rec unsugar_anon_structure_element (env : env) e0 e name def =
@@ -4301,12 +4332,6 @@ let is_gensymed str =
 
 
 
-<<[[Typecheck.expr()]] match [[e0.e]] cases>>=
-(* x->y --> ( *x).y *)
-| RecordPtAccess (e, name) ->
-  let e = RecordAccess ({ e0 with e = Unary (DeRef, e)}, name) in
-  expr env { e0 with e = e }
-@
 
 \subsection{Function calls}
 
@@ -4317,14 +4342,17 @@ let is_gensymed str =
 
   (match e.e_type with
   | T.Func (tret, tparams, varargs) ->
-     (* we enable GetRef for array here (and functions) *)
+     (* we enable GetRef for array here (and functions) 
+      * TODO? why not use newenv?
+      *)
     let es = List.map (expr { env with expr_context = CtxWantValue }) es in
 
     check_args_vs_params es tparams varargs e0.e_loc;
 
     (* todo: add cast *)
     (* less: format checking *)
-    { e0 with e = Call (e, es); e_type = tret }
+    { e0 with e = Call (e, es); 
+              e_type = tret }
 
   | T.Pointer (T.Func (_tret, _tparams, _varargs)) ->
     (* stricter?: we could forbid it, but annoying for my print in libc.h *)
@@ -4335,8 +4363,9 @@ let is_gensymed str =
   )
 @
 
+%TODO: LP split
 <<function [[Typecheck.check_args_vs_params]]>>=
-let rec check_args_vs_params es tparams varargs loc =
+let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
   match es, tparams, varargs with
 
   (* stricter? confusing to have foo() and foo(void) *)
@@ -4350,7 +4379,9 @@ let rec check_args_vs_params es tparams varargs loc =
 
   | e::es, [], true -> 
     (match e.e_type with
+    (* ??? *)
     | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
+    (* TODO: enumerate possible remaining, and why type_error? *)
     | _ -> type_error e.e_type loc
     );
     check_args_vs_params es [] true loc
@@ -4358,12 +4389,14 @@ let rec check_args_vs_params es tparams varargs loc =
   | e::es, t::ts, _ ->
     (match e.e_type with
     | T.I _ | T.F _ | T.Pointer _ | T.StructName _ -> ()
+    (* TODO: enumerate possible remaining, and why type_error? *)
     | _ -> type_error e.e_type loc
     );
     (try 
        (* todo: convert to int small types? see tcoma *)
        check_compatible_assign SimpleAssign t e.e_type e.e_loc
      with Error _ ->
+       (* TODO? actual error message of 5c? *)
        raise (Error (E.Misc ("argument prototype mismatch", e.e_loc)))
     );
     check_args_vs_params es ts varargs loc
@@ -4373,6 +4406,7 @@ let rec check_args_vs_params es tparams varargs loc =
 
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
 | Cast (typ, e) ->
+
   let t = type_ env typ in
   let e = expr newenv e in
 
@@ -4388,7 +4422,8 @@ let rec check_args_vs_params es tparams varargs loc =
   | T.StructName _, T.Void -> ()
   | _ -> type_error2 e.e_type t e0.e_loc
   );
-  { e0 with e = Cast (typ, e); e_type = t } (* |> array_to_pointer ? *)
+  { e0 with e = Cast (typ, e); 
+            e_type = t } (* |> array_to_pointer ? *)
 @
 
 \subsection{Ternary expressions}
@@ -4406,7 +4441,8 @@ let rec check_args_vs_params es tparams varargs loc =
   let finalt = result_type_binary e2.e_type e3.e_type in
 
   (* todo: add cast *)
-  { e0 with e = CondExpr (e1, e2, e3); e_type = finalt }
+  { e0 with e = CondExpr (e1, e2, e3); 
+            e_type = finalt }
 @
 
 
@@ -4439,26 +4475,31 @@ let rec check_args_vs_params es tparams varargs loc =
       | Postfix _ -> Postfix (e, op)
       | Prefix _ -> Prefix (op, e)
       | _ -> raise (Impossible "pattern match only those cases")
-      ); e_type = e.e_type }
+      ); 
+      e_type = e.e_type }
 @
 
 \subsection{[[sizeof()]]}
 
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
 | SizeOf(te) ->
+
   (match te with
   | Left e ->
     (* we pass a special context because if t2 mentions an array, 
      * we want the size of the array, not the size of a pointer to an array
      *)
     let e = expr { env with expr_context = CtxSizeof  } e in
-    { e0 with e = SizeOf (Left e); e_type = T.int }
+    { e0 with e = SizeOf (Left e); 
+              e_type = T.int }
+
   (* todo: build a fake expression but with the right expanded type
    * so the codegen later does not have to redo the job of expanding
    * typedefs.
    *)
   | Right typ ->
-    { e0 with e = SizeOf (Right typ); e_type = T.int }
+    { e0 with e = SizeOf (Right typ); 
+              e_type = T.int }
   )
 @
 
@@ -4530,16 +4571,17 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
 
 
 
-
 \subsection{[[if]]}
 
 <<[[Typecheck.stmt()]] match [[st0.s]] cases>>=
 | If (e, st1, st2) -> 
   let e = expr env e in
+
   (match e.e_type with
   (* ugly: no real bool type in C; abuse int, float, and worse pointers *)
   | T.I _ | T.F _ | T.Pointer _ -> ()
   (* stricter: error when does not typecheck, not just set null type on e *)
+  (* TODO: list remaining cases explicitely *)
   | _ -> type_error e.e_type e.e_loc
   );
   If (e, stmt env st1, stmt env st2)
@@ -4551,6 +4593,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
 <<[[Typecheck.stmt()]] match [[st0.s]] cases>>=
 | Switch (e, xs) -> 
   let e = expr env e in
+
   (* ensure e is a number! not a pointer *)
   (match e.e_type with
   | T.I _ | T.F _ -> ()
@@ -4605,25 +4648,33 @@ in
 
 <<[[Typecheck.check_and_annotate_program.toplevel()]] cases>>=
 | StructDef { su_kind=su; su_name=fullname; su_loc=loc; su_flds=flds }->
+
   Hashtbl.add env.structs_ fullname 
     (su, flds |> List.map 
         (fun {fld_name = name; fld_loc=_; fld_type = typ } ->
           let t = type_ env typ in
-          (* kenccext: c99ext?:
-           * less: if there are multiple anon structure elements, we 
-           * could check eagerly if no ambiguous fields instead
-           * of checking it when you use a field.
-           *)
-          (match Ast.is_gensymed name, t with
-          | false, _ -> ()
-          | true, T.StructName _ -> ()
-          | true, _ -> 
-            raise (Error (E.Misc 
-                   ("unnamed structure element must be struct/union", loc)))
-          );
+
+          <<[[Typecheck.check_and_annotate_program()]] if gensymed name>>
           (name, t)
         )
     )
+@
+
+
+%TODO: move to advanced topics
+<<[[Typecheck.check_and_annotate_program()]] if gensymed name>>=
+(* kenccext: c99ext?:
+ * less: if there are multiple anon structure elements, we 
+ * could check eagerly if no ambiguous fields instead
+ * of checking it when you use a field.
+ *)
+(match Ast.is_gensymed name, t with
+| false, _ -> ()
+| true, T.StructName _ -> ()
+| true, _ -> 
+  raise (Error (E.Misc 
+         ("unnamed structure element must be struct/union", loc)))
+);
 @
 
 \subsection{Enumerations}
@@ -4674,7 +4725,7 @@ in
 
 <<function [[Typecheck.type_]]>>=
 (* Expand typedefs and resolve constant expressions. *)
-let rec type_ (env : env) typ0 =
+let rec type_ (env : env) (typ0 : typ) : Type.t =
   match typ0.t with
   | TBase t -> t
   | TPointer typ -> T.Pointer (type_ env typ)
@@ -4706,9 +4757,9 @@ let rec type_ (env : env) typ0 =
                   )
                 ), tdots)
   | TStructName (su, fullname) -> T.StructName (su, fullname)
-  (* expand enums *)
+  (* expand enums! *)
   | TEnumName fullname -> T.I (Hashtbl.find env.enums fullname)
-  (* expand typedefs *)
+  (* expand typedefs! *)
   | TTypeName fullname -> Hashtbl.find env.typedefs fullname
 @
 
@@ -4754,7 +4805,7 @@ let rec type_ (env : env) typ0 =
     check_compatible_assign (SimpleAssign) t e.e_type loc
     (* todo: add cast if not same type *)
   );
-  Hashtbl.add env.ids_ fullname { typ = t; sto = sto; ini = ini; loc = loc };
+  Hashtbl.add env.ids_ fullname { typ = t; sto; ini; loc };
 
   Var { v_name = fullname; v_loc = loc; v_type = typ; v_storage = stoopt;
         v_init = ini }
@@ -4844,6 +4895,7 @@ let rec type_ (env : env) typ0 =
 <<[[Typecheck.check_and_annotate_program.toplevel()]] cases>>=
 | FuncDef ({f_name=name; f_loc=loc; f_type=ftyp; 
            f_storage=stoopt; f_body=st;} as def) ->
+
   (* less: lots of code in common with Var_decl; we could factorize
    * but a few things are different still.
    *)
@@ -4999,7 +5051,6 @@ type env = (Ast.fullname, integer * Type.integer_type) Hashtbl.t
 type integer = int
 @
 
-
 <<exception [[Eval_const.NotAConstant]]>>=
 exception NotAConstant
 @
@@ -5026,6 +5077,7 @@ let rec eval (env : env) (e0 : expr) : integer =
    * todo: we should also return an inttype in addition to the integer value.
    *)
   | Int (s, _inttype) -> int_of_string s
+
   | Id fullname ->
      if Hashtbl.mem env fullname
      then
@@ -7249,6 +7301,93 @@ let define_cmdline_def (k, v) =
     { m_name = k; m_nbargs = None; m_varargs = false; m_body = v; }
 @
 
+<<signature [[Location_cpp.add_event]]>>=
+(* add to history *)
+val add_event: 
+  location_event -> unit
+@
+
+<<signature [[Location_cpp.final_loc_of_loc]]>>=
+(* !uses history! you should avoid this function in a multifile processing
+ * context (e.g., in the linker) *)
+val final_loc_of_loc: 
+    loc -> final_loc
+@
+
+<<signature [[Location_cpp.dump_event]]>>=
+val dump_event:
+  location_event -> unit
+@
+
+
+<<exception [[Location_cpp.Error]]>>=
+exception Error of string * loc
+@
+
+<<function [[Location_cpp.dump_event]]>>=
+(* for 5c -f 
+ * alt: just rely on deriving show but kept this for compatibility with kencc
+ *)
+let dump_event (event : location_event) : unit =
+  match event with
+  | Include file -> 
+      Logs.app (fun m -> m "%4d: %s" !line !!file)
+  | Line (local_line, file) -> 
+      Logs.app (fun m -> m "%4d: %s (#line %d)" !line !!file local_line)
+  | Eof -> 
+      Logs.app (fun m -> m "%4d: <pop>" !line)
+@
+
+<<function [[Location_cpp.add_event]]>>=
+let add_event (event : location_event) : unit =
+  (* alt: use Logs.debug instead of a flag *)
+  if !Flags_cpp.debug_line
+  then dump_event event;
+  history := {location_event = event; global_line = !line }::!history
+@
+
+<<function [[Location_cpp.final_loc_of_loc]]>>=
+(* 'history' contains the list of location_events in reverse order
+ * since we always add an event to the end, for instance: 
+ * [200; 150; 130; 60; 1]. The first step is to reverse this list:
+ * [1; 60; 130; 150; 200]. Then, if we look for information about line 135, 
+ * we want to stop when we encounter 150,
+ * so when lineno < x.global_line below succeed for the first time.
+ *)
+let final_loc_of_loc (lineno : loc) : final_loc =
+  let rec aux (lastfile, lastlineno, lastdelta) stack xs =
+    match xs with
+    | [] -> lastfile, lineno - lastlineno + lastdelta
+    | x::xs ->
+      if lineno < x.global_line 
+      then lastfile, lineno - lastlineno + lastdelta
+      else
+        (match x.location_event, stack with
+        | Eof, (lastfile, _lastlineno, lastdelta)::ys ->
+            (* bugfix: wrong!! TODO *)
+            aux (lastfile, x.global_line, lastdelta) ys xs
+        | Eof, [] -> 
+            failwith ("impossible: wrong location history, unpaired Eof")
+        | Include file, ys ->
+            aux (file, x.global_line, 1)
+              ((lastfile, lastlineno, lastdelta)::ys) xs
+        | Line (line, file), _y::ys ->
+            aux (file, x.global_line, line) ys xs
+        | Line (line, file), [] ->
+            (* todo: wrong *)
+            aux (file, x.global_line, line) [] xs
+        )
+  in
+  aux (Fpath.v "<nofile>", 0, 0) [] (List.rev !history)
+@
+
+<<function [[Location_cpp._final_loc_and_includers_of_loc]]>>=
+let _final_loc_and_includers_of_loc _lineno =
+  raise Todo
+@
+
+
+
 
 
 \section{[[#include]]}
@@ -7758,7 +7897,7 @@ end;
 %******************************************************************************
 \label{chap:error-management}
 
-\subsection{[[errorexit()]]}
+\section{[[errorexit()]]}
 
 <<signature [[Error.errorexit]]>>=
 (* this raises Exit.ExitCode 1 *)
@@ -7772,11 +7911,11 @@ let errorexit s =
 
 % also show Error.warn before
 
-\subsection{Lexing error}
+\section{Lexing error}
 
-\subsection{Parsing error}%%[[yyerror()]]
+\section{Parsing error}%%[[yyerror()]]
 
-\subsection{Typechecking error}
+\section{Typechecking error}
 
 <<signature [[Typecheck.string_of_error]]>>=
 val string_of_error: error -> string
@@ -7786,7 +7925,7 @@ let string_of_error err =
   Check.string_of_error err
 @
 
-\subsection{Checking error}
+\section{Checking error}
 
 <<signature [[Check.string_of_error]]>>=
 val string_of_error: error -> string
@@ -7805,7 +7944,7 @@ let string_of_error err =
 @
 
 
-\subsection{Code generation error}
+\section{Code generation error}
 
 <<signature [[Codegen5.string_of_error]]>>=
 val string_of_error: error -> string
@@ -7815,11 +7954,11 @@ let string_of_error err =
   Check.string_of_error err
 @
 
-\subsection{[[diag()]]}
+%\section{[[diag()]]}
 
-\subsection{[[fatal()]]}
+%\section{[[fatal()]]}
 
-\subsection{Backtraces}
+\section{Backtraces}
 
 
 <<constant [[Flags.backtrace]]>>=
@@ -7841,7 +7980,7 @@ then raise exn
 @
 
 
-\subsection{Error location}
+\section{Error location}
 
 %******************************************************************************
 %%\chapter{Libc}

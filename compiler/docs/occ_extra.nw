@@ -25,7 +25,6 @@
 <<signature [[Arch5.arch]]>>
 @
 
-
 \section{[[Arch5.ml]]}
 
 %-------------------------------------------------------------
@@ -523,7 +522,6 @@ module E = Check
 (* Code generation helpers *)
 (*****************************************************************************)
 <<function [[Codegen5.gmove]]>>
-
 <<function [[Codegen5.gmove_opt]]>>
 
 (*****************************************************************************)
@@ -545,7 +543,6 @@ module E = Check
 (*****************************************************************************)
 <<function [[Codegen5.codegen]]>>
 @
-
 
 \section{[[Dumper_.mli]]}
 
@@ -637,7 +634,6 @@ module E = Check
 <<exception [[Eval_const.NotAConstant]]>>
 
 <<type [[Eval_const.error]]>>
-
 <<exception [[Eval_const.Error]]>>
 
 (*****************************************************************************)
@@ -697,7 +693,6 @@ let debugger = ref false
 <<function [[Lexer.string_of_ascii]]>>
 <<function [[Lexer.char_]]>>
 @
-
 
 \section{[[Main.ml]]}
 
@@ -1039,24 +1034,6 @@ let max_types t1 t2 = ...
 
 \section{[[macroprocessor/Location_cpp.mli]]}
 
-<<signature [[Location_cpp.add_event]]>>=
-(* add to history *)
-val add_event: 
-  location_event -> unit
-@
-
-<<signature [[Location_cpp.final_loc_of_loc]]>>=
-(* !uses history! you should avoid this function in a multifile processing
- * context (e.g., in the linker) *)
-val final_loc_of_loc: 
-    loc -> final_loc
-@
-
-<<signature [[Location_cpp.dump_event]]>>=
-val dump_event:
-  location_event -> unit
-@
-
 %-------------------------------------------------------------
 
 <<macroprocessor/Location_cpp.mli>>=
@@ -1082,75 +1059,7 @@ val dump_event:
 <<signature [[Location_cpp.dump_event]]>>
 @
 
-
 \section{[[macroprocessor/Location_cpp.ml]]}
-
-<<exception [[Location_cpp.Error]]>>=
-exception Error of string * loc
-@
-
-<<function [[Location_cpp.dump_event]]>>=
-(* for 5c -f 
- * alt: just rely on deriving show but kept this for compatibility with kencc
- *)
-let dump_event (event : location_event) : unit =
-  match event with
-  | Include file -> 
-      Logs.app (fun m -> m "%4d: %s" !line !!file)
-  | Line (local_line, file) -> 
-      Logs.app (fun m -> m "%4d: %s (#line %d)" !line !!file local_line)
-  | Eof -> 
-      Logs.app (fun m -> m "%4d: <pop>" !line)
-@
-
-<<function [[Location_cpp.add_event]]>>=
-let add_event (event : location_event) : unit =
-  (* alt: use Logs.debug instead of a flag *)
-  if !Flags_cpp.debug_line
-  then dump_event event;
-  history := {location_event = event; global_line = !line }::!history
-@
-
-<<function [[Location_cpp.final_loc_of_loc]]>>=
-(* 'history' contains the list of location_events in reverse order
- * since we always add an event to the end, for instance: 
- * [200; 150; 130; 60; 1]. The first step is to reverse this list:
- * [1; 60; 130; 150; 200]. Then, if we look for information about line 135, 
- * we want to stop when we encounter 150,
- * so when lineno < x.global_line below succeed for the first time.
- *)
-let final_loc_of_loc (lineno : loc) : final_loc =
-  let rec aux (lastfile, lastlineno, lastdelta) stack xs =
-    match xs with
-    | [] -> lastfile, lineno - lastlineno + lastdelta
-    | x::xs ->
-      if lineno < x.global_line 
-      then lastfile, lineno - lastlineno + lastdelta
-      else
-        (match x.location_event, stack with
-        | Eof, (lastfile, _lastlineno, lastdelta)::ys ->
-            (* bugfix: wrong!! TODO *)
-            aux (lastfile, x.global_line, lastdelta) ys xs
-        | Eof, [] -> 
-            failwith ("impossible: wrong location history, unpaired Eof")
-        | Include file, ys ->
-            aux (file, x.global_line, 1)
-              ((lastfile, lastlineno, lastdelta)::ys) xs
-        | Line (line, file), _y::ys ->
-            aux (file, x.global_line, line) ys xs
-        | Line (line, file), [] ->
-            (* todo: wrong *)
-            aux (file, x.global_line, line) [] xs
-        )
-  in
-  aux (Fpath.v "<nofile>", 0, 0) [] (List.rev !history)
-@
-
-<<function [[Location_cpp._final_loc_and_includers_of_loc]]>>=
-let _final_loc_and_includers_of_loc _lineno =
-  raise Todo
-@
-
 
 %-------------------------------------------------------------
 
@@ -1217,7 +1126,6 @@ open Fpath_.Operators
 <<type [[Parse_cpp.hook]]>>
 
 <<signature [[Parse_cpp.parse]]>>
-
 @
 
 \section{[[macroprocessor/Parse_cpp.ml]]}
@@ -1292,7 +1200,6 @@ open Ast_cpp
 (*****************************************************************************)
 <<function [[Parse_cpp.parse]]>>
 @
-
 
 \section{[[macroprocessor/Preprocessor.ml]]}
 

@@ -137,39 +137,40 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
 (*e: function [[CLI.frontend]] *)
 
 (*s: function [[CLI.backend5]] *)
-let backend5 (tast : Typecheck.typed_program) (chan : Chan.o) : unit =
+let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
+    'a Ast_asm.program =
+
   (* todo: Rewrite.rewrite *)
-  let (asm, _locs) = Codegen5.codegen tast in
-  (*s: [[CLI.backend5()]] if [[dump_asm]] *)
-  if !Flags.dump_asm
-  then begin
-    let pc = ref 0 in
-    asm |> List.iter (fun (instr, _loc) ->
-      (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
-      let v = Meta_ast_asm5.vof_line instr in
-      Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
-      incr pc;
-    );
-  end;
-  (*e: [[CLI.backend5()]] if [[dump_asm]] *)
-  Object_file.save Arch.Arm (asm, !Location_cpp.history) chan
+  match arch with
+  | Arch.Arm -> 
+    let (asm, _locs) = Codegen5.codegen tast in
+    (*s: [[CLI.backend5()]] if [[dump_asm]] *)
+    if !Flags.dump_asm
+    then begin
+      let pc = ref 0 in
+      asm |> List.iter (fun (instr, _loc) ->
+        (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
+        let v = Meta_ast_asm5.vof_line instr in
+        Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
+        incr pc;
+      );
+    end;
+    Obj.magic asm, !Location_cpp.history
+    (*e: [[CLI.backend5()]] if [[dump_asm]] *)
+  | _ -> 
+     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+  
 (*e: function [[CLI.backend5]] *)
 (*s: function [[CLI.compile5]] *)
-let compile5 (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf)
-    (infile : Fpath.t) (outfile : Chan.o) =
-  let tast : Typecheck.typed_program =
-    frontend caps conf infile in
-  backend5 tast outfile
 (*e: function [[CLI.compile5]] *)
 
 (*s: function [[CLI.compile]] *)
 let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.t)
     (infile : Fpath.t) (outfile : Chan.o) :
     unit =
-  match arch with
-  | Arch.Arm -> compile5 caps conf infile outfile
-  | _ -> 
-     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+  let tast : Typecheck.typed_program = frontend caps conf infile in
+  let asm_prog : 'a Ast_asm.program = backend arch tast in
+  Object_file.save arch asm_prog outfile
 (*e: function [[CLI.compile]] *)
 
 (*****************************************************************************)

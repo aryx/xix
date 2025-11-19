@@ -316,20 +316,26 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     | [], "" -> 
         Arg.usage options usage;
         Exit.Code 1
-    | [cfile], outfile ->
+    | [cfile], outstr ->
         (*s: [[CLI.main()]] main code path with [[cfile]] and [[outfile]] *)
         let outfile : Fpath.t = 
           (*s: [[CLI.main()]] main code path, define [[outfile]] *)
           let base = Filename.basename cfile in
-          (if outfile = ""
-          then
-            if base =~ "\\(.*\\)\\.c"
-            then Regexp_.matched1 base ^ (spf ".o%c" thechar)
-            else base ^ (spf ".o%c" thechar)
-          else outfile
+          (if outstr = ""
+          then begin
+            let res = 
+              if base =~ "\\(.*\\)\\.c"
+              then Regexp_.matched1 base ^ (spf ".o%c" thechar)
+              else base ^ (spf ".o%c" thechar)
+            in
+            outfile := res;
+            res
+          end
+          else outstr
           ) |> Fpath.v
           (*e: [[CLI.main()]] main code path, define [[outfile]] *)
         in
+        
         (*s: [[CLI.main()]] main code path, define macropreprocessor [[conf]] *)
         let system_paths : Fpath.t list =
           (*s: [[CLI.main()]] main code path, define [[system_paths]] *)
@@ -361,6 +367,11 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     )
     (*e: [[CLI.main()]] matching [[args]] and [[outfile]] *)
   with exn ->
+    if Sys.file_exists !outfile
+    then begin 
+       Logs.info (fun m -> m "removing %s because of error" !outfile);
+       Sys.remove !outfile;
+    end;
     (*s: [[CLI.main()]] when [[exn]] *)
     (*s: [[CLI.main()]] when [[exn]] if [[backtrace]] *)
     if !backtrace

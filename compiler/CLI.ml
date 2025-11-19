@@ -155,6 +155,7 @@ let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
         incr pc;
       );
     end;
+    (* nosemgrep: do-not-use-obj-magic *)
     Obj.magic asm, !Location_cpp.history
     (*e: [[CLI.backend5()]] if [[dump_asm]] *)
   | _ -> 

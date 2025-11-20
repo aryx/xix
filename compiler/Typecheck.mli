@@ -48,7 +48,10 @@ exception Error of error
  * 
  * It also internally resolves enum constants and replaces them
  * with constants and evaluates some constant expressions (e.g., for
- * array size).
+ * array size). It also does a few simple rewrites like +x => x + 0,
+ * -x => 0 - x, add & before arrays in certain context, add some
+ * explicit Cast operations, convert ArrayAccess in pointer arithmetic
+ * operation, etc.
  * 
  * can raise Error.
  *)

@@ -4,7 +4,7 @@
 (*s: type [[Storage.t]] *)
 (* No Typedef here, because a typedef is not a storage! *) 
 type t =
-  | Local  (* local *)
+  | Local  (* local (a.k.a., Auto) *)
   | Param  (* parameter *)
 
   | Extern (* public global defined elsewhere *)

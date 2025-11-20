@@ -346,6 +346,7 @@ let check_compatible_assign op (t1 : Type.t) (t2 : Type.t) loc : unit =
 (*e: function [[Typecheck.check_compatible_assign]] *)
 
 (*s: function [[Typecheck.check_args_vs_params]] *)
+(* 5c: was called tcoma() *)
 let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
   match es, tparams, varargs with
 
@@ -449,6 +450,7 @@ let merge_storage_toplevel name loc stoopt ini old =
 (* we assume the typechecker has called expr() on 'e0' before, 
  * so Id of enum constants for example has been substituted to Int
  * and so are not considered an lvalue.
+ * 5c: was cached in an 'addable' field
  *)
 let lvalue (e0 : expr) : bool =
   match e0.e with
@@ -657,6 +659,11 @@ let rec expr (env : env) (e0 : expr) : expr (* but type annotated *) =
         (* ugly: should be a T.Bool! C is ugly. *)
         T.int
     in
+    (* TODO: add int cast for ShiftLeft, ShiftRight right operand 
+     * TODO: call arith() to do "usual arithmetic conversions"? or do that
+     * alt: later in Codegen? on in Rewrite.ml? 
+     *)
+
     { e0 with e = Binary (e1, op, e2); e_type = finalt }
   (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Unary (op, e) ->
@@ -787,6 +794,7 @@ let rec expr (env : env) (e0 : expr) : expr (* but type annotated *) =
     )
   (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Cast (typ, e) ->
+    (* todo? set special env ADDROF|CASTOF? CASTOF seemed unused *)
 
     let t = type_ env typ in
     let e = expr newenv e in
@@ -817,7 +825,7 @@ let rec expr (env : env) (e0 : expr) : expr (* but type annotated *) =
     (* todo: special nil handling? need? *)
     let finalt = result_type_binary e2.e_type e3.e_type in
 
-    (* todo: add cast *)
+    (* todo: add cast, and special nil handling *)
     { e0 with e = CondExpr (e1, e2, e3); 
               e_type = finalt }
   (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
@@ -938,11 +946,15 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
     | Switch (e, xs) -> 
       let e = expr env e in
 
-      (* ensure e is a number! not a pointer *)
+      (* ensure e is a number! not a pointer 
+       * TODO? I originally accepted T.F _  but I think that was a bug as
+       * 5c does not seem to allow it.
+       *)
       (match e.e_type with
-      | T.I _ | T.F _ -> ()
+      | T.I _ -> ()
       | _ -> type_error e.e_type e.e_loc
       );
+      (* TODO: do the 0:int - (0:int - x) rewrite? *)
       Switch (e, stmt env xs)
     (*x: [[Typecheck.stmt()]] match [[st0.s]] cases *)
     (* less: should enforce int expr? *)
@@ -1013,6 +1025,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[Typecheck.check_and_annotate_program]] *)
+(* 5c: was called tcom *)
 let check_and_annotate_program (prog: Ast.program) : typed_program =
   let (ast, _locs) = prog in
 

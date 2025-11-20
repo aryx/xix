@@ -1,6 +1,16 @@
 open Fpath_.Operators
 open Chan
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+(* Capability-aware filesystem operations.
+ *)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
+
 (* capabilities-aware version of UChan.ml *)
 let with_open_in (_caps : < Cap.open_in; .. >) = 
   (* nosemgrep: use-caps *)
@@ -21,3 +31,8 @@ let cat (caps : < Cap.open_in; .. >) (file : Fpath.t) : string list =
   in
   cat_aux [] () |> List.rev
   )
+
+let remove (_caps : < Cap.open_out; ..>) (file : Fpath.t) =
+  (* alt: Logs.info (fun m -> m "deleting %s" !!file); *)
+  (* nosemgrep: use-caps *)
+  Sys.remove !!file

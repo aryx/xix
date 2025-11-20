@@ -217,11 +217,10 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     );
     Exit.OK
   with exn ->
-    let outfile = !!outfile in
-    if Sys.file_exists outfile
+    if Sys.file_exists !!outfile
     then begin 
-        Logs.info (fun m -> m "removing %s because of error" outfile);
-        Sys.remove outfile;
+        Logs.info (fun m -> m "removing %s because of error" !!outfile);
+        FS.remove caps outfile;
     end;
 
     if !backtrace

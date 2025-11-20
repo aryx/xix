@@ -172,7 +172,7 @@ let run (caps : < Shell.caps; .. >) (job : Job.t) : unit =
 
 (*s: function [[Scheduler.waitup]] *)
 (* can call sched () hence the need for Shell.caps, not just Cap.wait *)
-let waitup (caps : < Shell.caps; .. >) () =
+let waitup (caps : < Shell.caps; Cap.open_out; .. >) () =
   let (pid, ret) = 
     try 
       CapUnix.wait caps () 
@@ -213,7 +213,7 @@ let waitup (caps : < Shell.caps; .. >) () =
           if Sys.file_exists f
           then begin
             Logs.info (fun m -> m "deleting %s" f);
-            Sys.remove f
+            FS.remove caps (Fpath.v f)
           end
         );
       (*e: [[Scheduler.waitup()]] job exited with error code [[n]], if [[Delete]] rule *)

@@ -27,7 +27,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - start of multi-arch assembler/linker/compiler detecting arch with argv0
 - port va (plan9 mips assembler) to OCaml (now called ova)
 - partial port of vl (plan9 mips linker) to OCaml (now called ovl)
-  enough for exit_linux_mips.exe and hello_linux_mips.exe to work!
+  enough for hello_linux_mips.exe to work! (and also exit_linux_mips.exe).
 - port ar to OCaml (v0) (now called oar)
 - port nm to OCaml (v0) (now called onm)
 - port of the -p and -p_count (was called -p -1 in kencc) basic profiling
@@ -70,6 +70,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
   to use capabilities for 5a/5c/5l/cpp as well as lex/yacc
 - use Cap.open_out, started new Cap.draw, Cap.keyboard, Cap.mouse
   and Cap.mount, Cap.bind for orio
+- forbid Sys.remove and use Cap.open_out and FS.remove instead
 - use more Chan.{i,o} types to reduce the need for Cap.open_{in,out}
 - resume the compilation of windows/ and kernel/ with dune and mkfile
   without requiring a plan9 ocamlc

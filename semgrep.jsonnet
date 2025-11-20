@@ -71,6 +71,9 @@ local cap_rules = [
 	# Cap.open_out
         'open_out',
         'UChan.with_open_out',
+	# Cap.open_out
+        'Sys.remove',
+        'Unix.unlink',
         # print_string, print_int, print_bool, ...
         # Cap.tmp
          # Filename.temp_file

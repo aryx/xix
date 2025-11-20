@@ -370,7 +370,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     if Sys.file_exists !outfile
     then begin 
        Logs.info (fun m -> m "removing %s because of error" !outfile);
-       Sys.remove !outfile;
+       FS.remove caps (Fpath.v !outfile);
     end;
     (*s: [[CLI.main()]] when [[exn]] *)
     (*s: [[CLI.main()]] when [[exn]] if [[backtrace]] *)

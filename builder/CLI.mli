@@ -7,8 +7,9 @@
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - open_in: for parsing the mkfile (and included files)
+ *  - open_out: to delete target files when error in recipe process
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in; Cap.open_out >
 (*e: type [[CLI.caps]] *)
 
 (*s: signature [[CLI.main]] *)

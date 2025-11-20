@@ -104,8 +104,9 @@ module R = Rules
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - open_in: for parsing the mkfile (and included files)
+ *  - open_out: to delete target files when error in recipe process
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in; Cap.open_out >
 (*e: type [[CLI.caps]] *)
 
 (*s: constant [[CLI.usage]] *)
@@ -336,7 +337,7 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
 
   (* Let's go! *)
   try 
-    build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
+    build_targets caps (Fpath.v !infile) targets !vars;
     Exit.OK
   with exn ->
     (*s: [[CLI.main()]] when [[exn]] thrown in [[build_targets()]] *)

@@ -1,5 +1,3 @@
-#include "gc.h"
-
 void
 cgen(Node *n, Node *nn)
 {

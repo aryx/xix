@@ -261,24 +261,8 @@ gextern(Sym *s, Node *a, int32 o, int32 w)
 
 void	zname(Biobuf*, Sym*, int);
 char*	zaddr(char*, Adr*, int);
-void	zwrite(Biobuf*, Prog*, int, int);
 void	outhist(Biobuf*);
 
-void
-zwrite(Biobuf *b, Prog *p, int sf, int st)
-{
-	char bf[100], *bp;
-
-	bf[0] = p->as;
-	bf[1] = p->reg;
-	bf[2] = p->lineno;
-	bf[3] = p->lineno>>8;
-	bf[4] = p->lineno>>16;
-	bf[5] = p->lineno>>24;
-	bp = zaddr(bf+6, &p->from, sf);
-	bp = zaddr(bp, &p->to, st);
-	Bwrite(b, bf, bp-bf);
-}
 
 void
 outcode(void)

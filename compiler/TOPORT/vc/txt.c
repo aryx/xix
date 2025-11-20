@@ -8,9 +8,12 @@ ginit(void)
 
 	thechar = 'v';
 	thestring = "mips";
+
 	exregoffset = REGEXT;
 	exfregoffset = FREGEXT;
-	listinit();
+
+
+
 	nstring = 0;
 	mnstring = 0;
 	nrathole = 0;
@@ -18,17 +21,9 @@ ginit(void)
 	breakpc = -1;
 	continpc = -1;
 	cases = C;
-	firstp = P;
-	lastp = P;
+
 	tfield = types[TLONG];
 
-	zprog.link = P;
-	zprog.as = AGOK;
-	zprog.reg = NREG;
-	zprog.from.type = D_NONE;
-	zprog.from.name = D_NONE;
-	zprog.from.reg = NREG;
-	zprog.to = zprog.from;
 
 	regnode.op = OREGISTER;
 	regnode.class = CEXREG;

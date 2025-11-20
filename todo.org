@@ -559,18 +559,23 @@ original had 3?
 
 ** libcore
 
+*** RELAX compile ocaml-re with ocaml-light, remove `Greedy poly variant
+# can be useful for glob port, to reuse re_glob.ml, but first it needs
+# to compile with ocaml-light!
+
+remove also use of functorized Set and Hashtbl
+default polymorphic compare should be good enough
+
+
 *** less: lib_core: revert fix for 4.14.2 and try to compile lib_core with ocaml-light!
 or possibly fix ocaml-light itself to use the latest naming conventions
 for some of those primitives
-
 
 *** LATER: add semgrep-libs/libs/process_limits/
 other stuff to copy from semgrep-libs/?
 maybe Unix.realpath!
 
-*** Last
-
-**** RELAX port part of Cmd.ml and add also the exec part in it, but
+*** RELAX port part of Cmd.ml and add also the exec part in it, but
 with capabilities only! and then add in
 CapUnix and CapSys should use Cmd
 

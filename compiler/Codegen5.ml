@@ -1,5 +1,5 @@
 (*s: Codegen5.ml *)
-(* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Eq.Operators
 open Either
@@ -114,25 +114,24 @@ let regs_initial =
    
   
 (*s: type [[Codegen5.integer]] *)
-type integer = int
 (*e: type [[Codegen5.integer]] *)
 
 (*s: type [[Codegen5.operand_able]] *)
-(* some form of instruction selection *)
-type operand_able = 
- { opd: operand_able_kind;
+(* operand *)
+type opd = 
+ { opd: operand_kind;
    typ: Type.t;
    loc: Ast.loc;
  }
 (*e: type [[Codegen5.operand_able]] *)
 (*s: type [[Codegen5.operand_able_kind]] *)
-and operand_able_kind =
- | ConstI of integer
- | Register of register
+and operand_kind =
+ | ConstI of Ast_asm.integer
+ | Register of Ast_asm.register
 
  (* indirect *)
- | Name of Ast.fullname * offset
- | Indirect of register * offset
+ | Name of Ast.fullname * Ast_asm.offset
+ | Indirect of Ast_asm.register * Ast_asm.offset
 
  (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
@@ -261,7 +260,7 @@ let entity_of_id env fullname offset_extra =
 
 (*s: function [[Codegen5.mov_operand_of_opd]] *)
 (* less: opportunity for bitshifted registers? *)
-let mov_operand_of_opd env (opd : operand_able) : A5.mov_operand =
+let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
   match opd.opd with
   | ConstI i   -> A5.Imsr (A5.Imm i)
   | Register r -> A5.Imsr (A5.Reg r)
@@ -294,7 +293,7 @@ let arith_instr_of_op op r1 r2 r3 =
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
 (*s: function [[Codegen5.operand_able]] *)
-let operand_able (e0 : expr) : operand_able option =
+let operand_able (e0 : expr) : opd option =
   let kind_opt = 
     match e0.e with
     (*s: [[operand_able()]] match [[e0.e]] cases *)
@@ -461,7 +460,7 @@ let regalloc (env : env) loc =
 (* We can reuse a previous register if 'tgtopt' is a register.
  * See for example return.c where we can reuse R0 instead of a new R1.
  *)
-let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : operand_able option) : operand_able =
+let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : opd option) : opd =
   match typ with
   | T.I _ | T.Pointer _ ->
     let i = 
@@ -499,7 +498,7 @@ let opd_regfree env opd =
  * This is why we must decompose below the move in 2 instructions
  * sometimes.
  *)
-let rec gmove (env : env) (opd1 : operand_able) (opd2 : operand_able) : unit =
+let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
   match opd1.opd with
 
   (* a load *)
@@ -548,7 +547,7 @@ let rec gmove (env : env) (opd1 : operand_able) (opd2 : operand_able) : unit =
 (* At this point, either opd1 or opd2 references memory (but not both),
  * so we can do the move in one instruction.
  *)
-and gmove_aux env move_size (opd1 : operand_able) (opd2 : operand_able) : unit =
+and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
   (* less: should happen only for register? *)
   if opd1.opd =*= opd2.opd
   then ()
@@ -559,7 +558,7 @@ and gmove_aux env move_size (opd1 : operand_able) (opd2 : operand_able) : unit =
                       mov_operand_of_opd env opd2), A5.AL)) opd1.loc
 (*e: function [[Codegen5.gmove]] *)
 (*s: function [[Codegen5.gmove_opt]] *)
-let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) :
+let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
     unit = 
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
@@ -577,7 +576,7 @@ let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) 
  * less: dst_opd always a register? maybe, but still need to carry
  *  also its type and loc, so maybe easier to always wrap it in an operand?
  *)
-let rec expr (env : env) (e0 : expr) (dst_opd_opt : operand_able option) : unit=
+let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   match operand_able e0 with
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->

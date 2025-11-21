@@ -1,4 +1,4 @@
-#define	REGZERO		0
+//#define	REGZERO		0
 
 #define	REGRET		1
 #define	REGARG		1

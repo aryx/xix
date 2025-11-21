@@ -199,10 +199,6 @@ inst:
 	}
 
 
-|	LWORD imm
-	{
-		outcode($1, &nullgen, NREG, &$2);
-	}
 
 
 

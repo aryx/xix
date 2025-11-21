@@ -85,8 +85,6 @@ itab[] =
 	"SWPBU",	LTYPE9, ASWPBU,
 	"SWPW",		LTYPE9, ASWPW,
 
-	"CASE",		LTYPED, ACASE,
-
 	"MCR",		LTYPEJ, 0,
 	"MRC",		LTYPEJ, 1,
 };

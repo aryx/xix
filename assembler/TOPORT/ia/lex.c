@@ -2,6 +2,7 @@ void
 main(int argc, char *argv[])
 {
 	thechar = 'i';
+
 	p = strrchr(argv[0], '/');
 	if(p == nil)
 		p = argv[0];
@@ -12,6 +13,7 @@ main(int argc, char *argv[])
 
 	if(debug['j'])
 		thechar = 'j';
+
 	thestring = (thechar == 'j'? "riscv64" : "riscv");
 }
 
@@ -23,12 +25,6 @@ assemble(char *file)
 	else
 		dodefine("XLEN=4");
 
-	Bprint(&obuf, "\n!\n");
-
-	if(thechar == 'j')
-		dodefine("XLEN=8");
-	else
-		dodefine("XLEN=4");
 }
 
 itab[] =

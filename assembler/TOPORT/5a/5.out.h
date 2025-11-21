@@ -1,7 +1,8 @@
 #define	ALLTHUMBS	(1<<2)
 
-#define	REGRET		0
+//#define	REGRET		0
 #define	REGARG		0
+
 /* compiler allocates R1 up as temps */
 /* compiler allocates register variables R2 up */
 #define	REGMIN		2

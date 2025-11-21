@@ -261,7 +261,8 @@ let entity_of_id env fullname offset_extra =
 
 
 (*s: function [[Codegen5.mov_operand_of_opd]] *)
-(* less: opportunity for bitshifted registers? *)
+(* 5c: part of naddr()
+ * less: opportunity for bitshifted registers? *)
 let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
   match opd.opd with
   | ConstI i   -> A5.Imsr (A5.Imm i)
@@ -549,6 +550,7 @@ let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
 
 (* At this point, either opd1 or opd2 references memory (but not both),
  * so we can do the move in one instruction.
+ * 5c: called gins()
  *)
 and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
   (* less: should happen only for register? *)
@@ -566,6 +568,7 @@ let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
   | None ->
+    (* SURE? should we still registerize and all? *)
     (* less: should have warned about unused opd in check.ml *)
     ()
 (*e: function [[Codegen5.gmove_opt]] *)
@@ -578,6 +581,7 @@ let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
  * todo: if complex type node
  * less: dst_opd always a register? maybe, but still need to carry
  *  also its type and loc, so maybe easier to always wrap it in an operand?
+ * 5c: called cgen/cgenrel()?
  *)
 let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   match operand_able e0 with
@@ -729,6 +733,7 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
 (*e: function [[Codegen5.expr]] *)
 
 (*s: function [[Codegen5.expr_cond]] *)
+(* 5c: bcomplex? ()" *)
 let expr_cond (env : env) (e0 : expr) : virt_pc =
   (* todo: *)
   with_reg env A5.rRET (fun () ->
@@ -754,7 +759,7 @@ let expropt (env : env) (eopt : expr option) : unit =
 (* Statement *)
 (*****************************************************************************)
 (*s: function [[Codegen5.stmt]] *)
-let rec stmt env st0 =
+let rec stmt (env : env) (st0 : stmt) : unit =
   match st0.s with
   (*s: [[Codegen5.stmt]] match [[st0.s]] cases *)
   | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_iniTODO} ->
@@ -935,6 +940,7 @@ let rec stmt env st0 =
 (*****************************************************************************)
 (*s: function [[Codegen5.codegen]] *)
 let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
+  (* TODO: lift up, env_of_tp *)
   let env = {
     ids_ = tp.ids;
     structs_ = tp.structs;
@@ -959,6 +965,7 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
   } in
 
   (*s: function [[Codegen5.codegen_func]] *)
+  (* TODO: lift up and type *)
   let codegen_func env func =
     let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
 
@@ -970,6 +977,7 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
     let spc = add_fake_instr env "TEXT" in
 
     (*s: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
+    (* TODO: introduce helper *)
     (* set offsets for parameters *)
     let offsets = Hashtbl_.create () in
 

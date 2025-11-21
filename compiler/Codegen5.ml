@@ -438,9 +438,9 @@ let with_reg env (r : A.register) f =
 (*e: function [[Codegen5.with_reg]] *)
   
 (*s: function [[Codegen5.regalloc]] *)
-let regalloc (env : env) loc =
+let regalloc (env : env) loc : int =
   (* less: lasti trick? *)
-  let rec aux i n =
+  let rec aux (i : int) (n : int) : int =
     (* This happens in extreme case when the expression tree has a huge
      * depth everywhere. In that case, we should allocate a new temporary
      * on the stack but this complexifies the algorithm.
@@ -448,6 +448,7 @@ let regalloc (env : env) loc =
     if i >= n 
     then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
 
+    (* TODO: lasti opti *)
     if env.regs.(i) =|= 0
     then begin
       env.regs.(i) <- 1;

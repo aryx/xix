@@ -678,7 +678,7 @@ type fullname = string * blockid
 <<type [[Storage.t]]>>=
 (* No Typedef here, because a typedef is not a storage! *) 
 type t =
-  | Local  (* local *)
+  | Local  (* local (a.k.a., Auto) *)
   | Param  (* parameter *)
 
   | Extern (* public global defined elsewhere *)
@@ -3672,7 +3672,10 @@ let check_labels env =
  * 
  * It also internally resolves enum constants and replaces them
  * with constants and evaluates some constant expressions (e.g., for
- * array size).
+ * array size). It also does a few simple rewrites like +x => x + 0,
+ * -x => 0 - x, add & before arrays in certain context, add some
+ * explicit Cast operations, convert ArrayAccess in pointer arithmetic
+ * operation, etc.
  * 
  * can raise Error.
  *)
@@ -3713,6 +3716,7 @@ let type_error2 t1 t2 loc =
 % now we will see if use correctly given the type of what was defined
 
 <<function [[Typecheck.check_and_annotate_program]]>>=
+(* 5c: was called tcom *)
 let check_and_annotate_program (prog: Ast.program) : typed_program =
   let (ast, _locs) = prog in
 
@@ -3968,6 +3972,11 @@ and expropt (env : env) (eopt : expr option) : expr option =
       (* ugly: should be a T.Bool! C is ugly. *)
       T.int
   in
+  (* TODO: add int cast for ShiftLeft, ShiftRight right operand 
+   * TODO: call arith() to do "usual arithmetic conversions"? or do that
+   * alt: later in Codegen? on in Rewrite.ml? 
+   *)
+
   { e0 with e = Binary (e1, op, e2); e_type = finalt }
 @
 
@@ -4156,6 +4165,7 @@ let result_type_binary (t1 : Type.t) (t2 : Type.t) : Type.t =
 (* we assume the typechecker has called expr() on 'e0' before, 
  * so Id of enum constants for example has been substituted to Int
  * and so are not considered an lvalue.
+ * 5c: was cached in an 'addable' field
  *)
 let lvalue (e0 : expr) : bool =
   match e0.e with
@@ -4395,6 +4405,7 @@ let is_gensymed str =
 
 %TODO: LP split
 <<function [[Typecheck.check_args_vs_params]]>>=
+(* 5c: was called tcoma() *)
 let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
   match es, tparams, varargs with
 
@@ -4436,6 +4447,7 @@ let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
 
 <<[[Typecheck.expr()]] match [[e0.e]] cases>>=
 | Cast (typ, e) ->
+  (* todo? set special env ADDROF|CASTOF? CASTOF seemed unused *)
 
   let t = type_ env typ in
   let e = expr newenv e in
@@ -4470,7 +4482,7 @@ let rec check_args_vs_params (es : expr list) tparams (varargs : bool) loc =
   (* todo: special nil handling? need? *)
   let finalt = result_type_binary e2.e_type e3.e_type in
 
-  (* todo: add cast *)
+  (* todo: add cast, and special nil handling *)
   { e0 with e = CondExpr (e1, e2, e3); 
             e_type = finalt }
 @
@@ -4624,11 +4636,15 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
 | Switch (e, xs) -> 
   let e = expr env e in
 
-  (* ensure e is a number! not a pointer *)
+  (* ensure e is a number! not a pointer 
+   * TODO? I originally accepted T.F _  but I think that was a bug as
+   * 5c does not seem to allow it.
+   *)
   (match e.e_type with
-  | T.I _ | T.F _ -> ()
+  | T.I _ -> ()
   | _ -> type_error e.e_type e.e_loc
   );
+  (* TODO: do the 0:int - (0:int - x) rewrite? *)
   Switch (e, stmt env xs)
 @
 
@@ -5555,9 +5571,9 @@ let regalloc (env : env) loc =
 
 %TODO: rename just operand? or just opd ? topd (typed operand) ?
 <<type [[Codegen5.operand_able]]>>=
-(* some form of instruction selection *)
-type operand_able = 
- { opd: operand_able_kind;
+(* operand *)
+type opd = 
+ { opd: operand_kind;
    typ: Type.t;
    loc: Ast.loc;
  }
@@ -5566,13 +5582,13 @@ type operand_able =
 % something that can fit in operand of ASM instructions
 % of either Move or Arith or JMP instructions.
 <<type [[Codegen5.operand_able_kind]]>>=
-and operand_able_kind =
- | ConstI of integer
- | Register of register
+and operand_kind =
+ | ConstI of Ast_asm.integer
+ | Register of Ast_asm.register
 
  (* indirect *)
- | Name of Ast.fullname * offset
- | Indirect of register * offset
+ | Name of Ast.fullname * Ast_asm.offset
+ | Indirect of Ast_asm.register * Ast_asm.offset
 
  (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
@@ -5587,7 +5603,7 @@ and operand_able_kind =
 (* We can reuse a previous register if 'tgtopt' is a register.
  * See for example return.c where we can reuse R0 instead of a new R1.
  *)
-let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : operand_able option) : operand_able =
+let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : opd option) : opd =
   match typ with
   | T.I _ | T.Pointer _ ->
     let i = 
@@ -5925,7 +5941,7 @@ continue_pc: Ast_asm.virt_pc option;
  * less: dst_opd always a register? maybe, but still need to carry
  *  also its type and loc, so maybe easier to always wrap it in an operand?
  *)
-let rec expr (env : env) (e0 : expr) (dst_opd_opt : operand_able option) : unit=
+let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   match operand_able e0 with
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
@@ -5947,7 +5963,7 @@ let expropt (env : env) (eopt : expr option) : unit =
 \subsection{Operand part 2}
 
 <<function [[Codegen5.operand_able]]>>=
-let operand_able (e0 : expr) : operand_able option =
+let operand_able (e0 : expr) : opd option =
   let kind_opt = 
     match e0.e with
     <<[[operand_able()]] match [[e0.e]] cases>>
@@ -6037,7 +6053,7 @@ let operand_able (e0 : expr) : operand_able option =
 \subsection{[[gmove()]]}
 
 <<function [[Codegen5.gmove_opt]]>>=
-let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) :
+let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
     unit = 
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
@@ -6054,7 +6070,7 @@ let gmove_opt (env : env) (opd1 : operand_able) (opd2opt : operand_able option) 
  * This is why we must decompose below the move in 2 instructions
  * sometimes.
  *)
-let rec gmove (env : env) (opd1 : operand_able) (opd2 : operand_able) : unit =
+let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
   match opd1.opd with
 
   (* a load *)
@@ -6103,7 +6119,7 @@ let rec gmove (env : env) (opd1 : operand_able) (opd2 : operand_able) : unit =
 (* At this point, either opd1 or opd2 references memory (but not both),
  * so we can do the move in one instruction.
  *)
-and gmove_aux env move_size (opd1 : operand_able) (opd2 : operand_able) : unit =
+and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
   (* less: should happen only for register? *)
   if opd1.opd =*= opd2.opd
   then ()
@@ -6117,7 +6133,7 @@ and gmove_aux env move_size (opd1 : operand_able) (opd2 : operand_able) : unit =
 
 <<function [[Codegen5.mov_operand_of_opd]]>>=
 (* less: opportunity for bitshifted registers? *)
-let mov_operand_of_opd env (opd : operand_able) : A5.mov_operand =
+let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
   match opd.opd with
   | ConstI i   -> A5.Imsr (A5.Imm i)
   | Register r -> A5.Imsr (A5.Reg r)

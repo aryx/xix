@@ -400,13 +400,12 @@ open Regexp_.Operators
 \section{[[Codegen5.ml]]}
 
 <<type [[Codegen5.integer]]>>=
-type integer = int
 @
 
 %-------------------------------------------------------------
 
 <<Codegen5.ml>>=
-(* Copyright 2016, 2017 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Eq.Operators
 open Either

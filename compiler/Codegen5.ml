@@ -66,6 +66,7 @@ type env = {
   regs: int array;
   (*s: [[Codegen5.env]] other function fields *)
   size_locals: int ref;
+  (* TODO: size_maxargs: int ref; (* 5c: maxargssafe *) *)
   (*x: [[Codegen5.env]] other function fields *)
   (* for parameters and locals *)
   offsets: (Ast.fullname, int) Hashtbl.t;
@@ -297,6 +298,8 @@ let arith_instr_of_op op r1 r2 r3 =
 let operand_able (e0 : expr) : opd option =
   let kind_opt = 
     match e0.e with
+    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+      raise (Impossible "should have been converted")
     (*s: [[operand_able()]] match [[e0.e]] cases *)
     (* less: could be operand_able if we do constant_evaluation later *)
     | Binary (_e1, _op, _e2) -> None
@@ -306,8 +309,6 @@ let operand_able (e0 : expr) : opd option =
     | Cast _ -> raise Todo
     | RecordAccess _ -> raise Todo
 
-    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
-      raise (Impossible "should have been converted")
     | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
       None
     (*x: [[operand_able()]] match [[e0.e]] cases *)
@@ -582,6 +583,10 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
     (match e0.e with
+    | Int _ | Float _ | Id _ ->
+        raise (Impossible "handled in operand_able()")
+    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+        raise (Impossible "should have been converted before")    
     (*s: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
     | Sequence (e1, e2) -> 
       expr env e1 None;
@@ -714,7 +719,9 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       | Not -> raise Todo
       )
     (*e: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
-    | _ -> 
+    | Call _ | RecordAccess _ | Cast _ | Postfix _ | Prefix _
+    | CondExpr _ | ArrayInit _ | RecordInit _ | GccConstructor _
+      -> 
       Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo
     )
@@ -1005,6 +1012,7 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
     set_instr env spc 
       (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
                          !(env.size_locals)))) f_loc;
+    (* TODO: + env.size_maxargs *)
     add_instr env (A.Virtual A.RET) f_loc;
 
     (*s: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)

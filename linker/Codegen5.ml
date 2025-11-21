@@ -77,10 +77,13 @@ let base_and_offset_of_indirect node symbols2 autosize x =
       (* remember that the +4 below is because we access the frame of the
        * caller which for sure is not a leaf. Note that autosize
        * here had possibly a +4 done if the current function
-       * was a leaf, but still we need another +4 because what matters
+       * was also not a leaf, but still we need another +4 because what matters
        * now is the adjustment in the frame of the caller!
        *)
       rSP, autosize + 4 + off
+  (* note that for locals the offset is negative as in -4(SP), and so
+   * will be converted as SP+autofize (to compute the old version of SP) - 4
+   *)
   | Entity (Local (_s, off)) -> 
       rSP, autosize + off
   | Entity (Global (global, off)) ->

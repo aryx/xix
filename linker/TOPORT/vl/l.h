@@ -7,11 +7,13 @@ enum
 	SSTRING,
 
 	C_NONE		= 0,
+
 	C_FREG, // 1
 	C_FCREG,
 	C_MREG,
 	C_HI,
 	C_LO, // 5
+
 	C_ZCON,
 	C_SCON,
 	C_ADD0CON,

@@ -1,5 +1,3 @@
-static Prog *PP;
-
 char linuxdynld[] = "/lib/ld-linux.so.2";
 
 int32
@@ -1356,9 +1354,6 @@ opbra(int a, int sc)
 	case ABLE:	return (0xd<<28)|(0x5<<25);
 	//case AB:	return (0xe<<28)|(0x5<<25);
 	}
-	diag("bad bra %A", a);
-	prasm(curp);
-	return 0;
 }
 
 int32

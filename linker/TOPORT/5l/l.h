@@ -16,7 +16,6 @@ struct	Adr
     ...
 	uchar	index; // not used on arm, required by ld/go.c
 	int32	offset2; // argsize
-	char	class;
 	Sym*	gotype;
 };
 
@@ -38,7 +37,6 @@ struct	Prog
 		int32	u0regused;
 	} u0;
     ...
-	Prog*	dlink;
 	uchar	align;
 };
 

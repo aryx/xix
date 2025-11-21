@@ -1,4 +1,3 @@
-
 Optab	optab[] =
 {
 	/* struct Optab:

@@ -192,7 +192,7 @@ asmout(Prog *p, Optab *o)
 		//o1 = OP_IRR(opirr(p->as), v, r, p->to.reg);
 		//break;
 
-	case 5:		/* syscall */
+	//case 5:		/* syscall */
 		//o1 = oprrr(p->as);
 		//break;
 
@@ -206,7 +206,7 @@ asmout(Prog *p, Optab *o)
 		o1 = OP_IRR(opirr(p->as), v, p->from.reg, p->reg);
 		break;
 
-	case 7:		/* mov r, soreg ==> sw o(r) */
+	//case 7:		/* mov r, soreg ==> sw o(r) */
 		//r = p->to.reg;
 		if(r == NREG)
 			r = o->param;
@@ -214,7 +214,7 @@ asmout(Prog *p, Optab *o)
 		//o1 = OP_IRR(opirr(p->as), v, r, p->from.reg);
 		//break;
 
-	case 8:		/* mov soreg, r ==> lw o(r) */
+	//case 8:		/* mov soreg, r ==> lw o(r) */
 		//r = p->from.reg;
 		if(r == NREG)
 			r = o->param;
@@ -456,7 +456,7 @@ asmout(Prog *p, Optab *o)
 		o2 = OP_RRR(SP(2,1)|(4<<21), REGTMP, 0, p->to.reg);	/* mtc1 */
 		break;
 
-	case 35:	/* mov r,lext/luto/oreg ==> sw o(r) */
+	//case 35:	/* mov r,lext/luto/oreg ==> sw o(r) */
 		/*
 		 * the lowbits of the constant cannot
 		 * be moved into the offset of the load
@@ -475,7 +475,7 @@ asmout(Prog *p, Optab *o)
 		//o4 = OP_IRR(opirr(p->as), 0, REGTMP, p->from.reg);
 		//break;
 
-	case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */
+	//case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */
 		//v = regoff(&p->from);
 		//r = p->from.reg;
 		//if(r == NREG)
@@ -507,7 +507,7 @@ asmout(Prog *p, Optab *o)
 		o2 = oprrr(p->as);
 		break;
 
-	case 40:	/* word */
+	//case 40:	/* word */
 		//o1 = regoff(&p->to);
 		//break;
 

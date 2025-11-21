@@ -138,6 +138,7 @@ aclass(Adr *a)
 		}
 		return C_GOK;
 
+    // ????
 	case D_HI:
 		return C_LO;
 	case D_LO:

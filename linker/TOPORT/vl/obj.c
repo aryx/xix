@@ -1,5 +1,3 @@
-/* vl - mips linker */
-
 int little;
 
 void

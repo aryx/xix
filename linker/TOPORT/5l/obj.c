@@ -67,10 +67,6 @@ main(int argc, char *argv[])
 void
 ldobj1(Biobuf *f, char *pkg, int64 len, char *pn)
 {
-	int32 ipc;
-	Prog *p;
-	Sym *h[NSYM], *s, *di;
-	int v, o, r, skip;
 	uint32 sig;
 	char *name;
 	int ntext;
@@ -78,31 +74,11 @@ ldobj1(Biobuf *f, char *pkg, int64 len, char *pn)
 	char src[1024], *x;
 	Prog *lastp;
 
-	lastp = nil;
-	ntext = 0;
-	eof = Boffset(f) + len;
-	di = S;
-	src[0] = 0;
-
-newloop:
-	memset(h, 0, sizeof(h));
-	version++;
-	histfrogp = 0;
-	ipc = pc;
-	skip = 0;
-
 loop:
 	if(f->state == Bracteof || Boffset(f) >= eof)
 		goto eof;
 	o = Bgetc(f);
-	if(o == Beof)
-		goto eof;
 
-	if(o <= AXXX || o >= ALAST) {
-		diag("%s:#%lld: opcode out of range: %#ux", pn, Boffset(f), o);
-		print("	probably not a .5 file\n");
-		errorexit();
-	}
 	if(o == ANAME || o == ASIGNAME) {
 		sig = 0;
 		if(o == ASIGNAME)

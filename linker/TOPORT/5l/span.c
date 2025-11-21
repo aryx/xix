@@ -667,28 +667,11 @@ cmp(int a, int b)
 int
 ocmp(const void *a1, const void *a2)
 {
-	Optab *p1, *p2;
-	int n;
-
-	p1 = (Optab*)a1;
-	p2 = (Optab*)a2;
-	n = p1->as - p2->as;
-	if(n)
-		return n;
+    ...
 	n = (p2->flag&V4) - (p1->flag&V4);	/* architecture version */
 	if(n)
 		return n;
-	n = p1->a1 - p2->a1;
-	if(n)
-		return n;
-	n = p1->a2 - p2->a2;
-	if(n)
-		return n;
-	n = p1->a3 - p2->a3;
-	if(n)
-		return n;
-	return 0;
-}
+
 
 void
 buildop(void)
@@ -696,28 +679,12 @@ buildop(void)
 	int i, n, r;
 
 	armv4 = !debug['h'];
-	for(i=0; i<C_GOK; i++)
-		for(n=0; n<C_GOK; n++)
-			xcmp[i][n] = cmp(n, i);
 	for(n=0; optab[n].as != AXXX; n++)
 		if((optab[n].flag & V4) && !armv4) {
 			optab[n].as = AXXX;
 			break;
 		}
-	qsort(optab, n, sizeof(optab[0]), ocmp);
-	for(i=0; i<n; i++) {
-		r = optab[i].as;
-		oprange[r].start = optab+i;
-		while(optab[i].as == r)
-			i++;
-		oprange[r].stop = optab+i;
-		i--;
-
-		switch(r)
-		{
-		default:
-			diag("unknown op in build: %A", r);
-			errorexit();
+     ...
 		case AADD:
 			oprange[AAND] = oprange[r];
 			oprange[AEOR] = oprange[r];
@@ -734,8 +701,8 @@ buildop(void)
 			oprange[ATEQ] = oprange[r];
 			oprange[ACMN] = oprange[r];
 			break;
-		case AMVN:
-			break;
+		//case AMVN:
+		//	break;
 		case ABEQ:
 			oprange[ABNE] = oprange[r];
 			oprange[ABCS] = oprange[r];
@@ -818,9 +785,9 @@ buildop(void)
 			oprange[AMULLU] = oprange[r];
 			oprange[AMULALU] = oprange[r];
 			break;
-		case ALDREX:
-		case ASTREX:
-			break;
+		//case ALDREX:
+		//case ASTREX:
+		//	break;
 		}
 	}
 }

@@ -103,6 +103,7 @@ let rEXT2 = R 9
 (*s: constant [[Codegen5.regs_initial]] *)
 let regs_initial = 
   let arr = Array.make A5.nb_registers 0 in
+  (* note that rRET is not in the list; it can be used! *)
   [A5.rLINK; A5.rPC;       (* hardware reseved *)
    A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
    rEXT1; rEXT2;         (* compiler reserved *)

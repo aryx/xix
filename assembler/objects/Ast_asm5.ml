@@ -76,6 +76,7 @@ let rLINK = R 14
 let rPC   = R 15
 (*e: constant [[Ast_asm5.rPC]] *)
 
+(* used by the compiler for calling conventions *)
 let rRET = R 0
 
 (*s: constant [[Ast_asm5.nb_registers]] *)

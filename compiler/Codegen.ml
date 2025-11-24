@@ -114,12 +114,16 @@ let regs_initial =
 (*e: constant [[Codegen.regs_initial]] *)
 
 (*s: function [[Codegen.env_of_tp]] *)
-let env_of_tp (tp : Typecheck.typed_program) : env =   
+let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : env =   
   {
     ids_ = tp.ids;
     structs_ = tp.structs;
 
-    arch = Arch5.arch;
+    arch = 
+      (match arch with
+      | Arch.Arm -> Arch5.arch;
+      | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
+      );
 
     pc = ref 0;
     code = ref [||];
@@ -1101,8 +1105,8 @@ let codegen_func (env : env) (func : func_def) : unit =
 (* Main entry point *)
 (*****************************************************************************)
 (*s: function [[Codegen.codegen]] *)
-let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
-  let env = env_of_tp tp in
+let codegen (arch : Arch.t) (tp : Typecheck.typed_program) : Ast_asm5.program =
+  let env = env_of_tp arch tp in
   tp.funcs |> List.iter (codegen_func env);
 
   (* todo: generate code for ids after, for CGLOBAL *)

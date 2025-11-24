@@ -7,7 +7,7 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5c, the Plan 9 C compiler for ARM.
+(* An OCaml port of 5c/vc, the Plan 9 C compiler for ARM and MIPS.
  *
  * Main limitations compared to 5c/vc/...:
  *  - no unicode support
@@ -20,7 +20,7 @@ open Regexp_.Operators
  *  - no error recovery, we stop at the first error (except in check.ml)
  *    (but compiler now fast enough and errors have a domino effect anyway)
  *  - no support for certain kencc extensions: 
- *     * STILL? unnamed structure element
+ *     * unnamed structure element
  *       (confusing anyway, and annoying when porting code to gcc/clang)
  *     * typestr
  *       (seems dead)
@@ -61,7 +61,7 @@ open Regexp_.Operators
 (*s: type [[CLI.caps]] *)
 (* Need:
  * - open_in: for argv derived file but also for #include'd files
- *   because 5c does its own preprocessing
+ *   because 5c does its own macropreprocessing
  * - open_out for -o object file or 5.argv[0]
  * - env: for INCLUDE (for cpp)
  *)
@@ -114,28 +114,28 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
   (* use/def checking, unused entity, redefinitions, etc. *)
   Check.check_program ast;
   (* typedef expansion, type and storage resolution, etc. *)
-  let typed_program : Typecheck.typed_program = 
+  let tp : Typecheck.typed_program = 
     Typecheck.check_and_annotate_program ast 
   in
   (*s: [[CLI.frontend()]] if [[dump_typed_ast]] *)
   (* debug *)
   if !Flags.dump_typed_ast
   then begin 
-    (* Logs.app (fun m -> m "%s" (Typecheck.show_typed_program typed_program));*)
-    typed_program.ids |> Hashtbl.iter (fun (k : Ast.fullname) (v : Typecheck.idinfo) ->
+    (* alt: Logs.app (fun m -> m "%s" (Typecheck.show_typed_program tp));*)
+    tp.ids |> Hashtbl.iter (fun (k : Ast.fullname) (v : Typecheck.idinfo) ->
       match v.sto with
       | Storage.Global | Storage.Static | Storage.Extern ->
         Logs.app (fun m -> m "%s: %s" (Ast.unwrap k)
                               (Dumper_.s_of_any (Ast.FinalType v.typ)));
       | Storage.Param | Storage.Local -> ()
     );
-    typed_program.funcs |> List.iter (fun func ->
+    tp.funcs |> List.iter (fun func ->
       Logs.app (fun m -> m "%s" 
                 (Dumper_.s_of_any_with_types (Ast.Toplevel (Ast.FuncDef func))))
     );
   end;
   (*e: [[CLI.frontend()]] if [[dump_typed_ast]] *)
-  typed_program
+  tp
 (*e: function [[CLI.frontend]] *)
 
 (*s: function [[CLI.backend5]] *)
@@ -143,10 +143,11 @@ let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
     'a Ast_asm.program =
 
   let tast = Rewrite.rewrite tast in
+  let (asm, _locs) = Codegen.codegen arch tast in
   match arch with
   | Arch.Arm -> 
-    let (asm, _locs) = Codegen.codegen tast in
     (*s: [[CLI.backend5()]] if [[dump_asm]] *)
+    (* debug *)
     if !Flags.dump_asm
     then begin
       let pc = ref 0 in

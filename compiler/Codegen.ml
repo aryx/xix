@@ -230,10 +230,6 @@ let patch_fake_goto (env : 'i env) (pcgoto : A.virt_pc) (pcdest : A.virt_pc) =
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
 
-  | A.Instr (A5.B aref, A5.AL), _loc ->
-    if !aref =*= (Absolute fake_pc)
-    then aref := Absolute pcdest
-    else raise (Impossible "patching already resolved branch")
   | A.Instr (A5.Bxx (_, aref), A5.AL), _loc ->
     if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
@@ -327,9 +323,9 @@ let arith_instr_of_op op r1 r2 r3 =
 (*e: function [[Codegen.arith_instr_of_op]] *)
 
 (* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
-let argument_operand (_env : 'i env) (arg: argument) (curarg : int) : opd =
+let argument_operand (env : 'i env) (arg: argument) (curarg : int) : opd =
   (* add 4 for space for REGLINK in callee *)
-  { opd = Indirect (A5.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
+  { opd = Indirect (env.a.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
     typ = arg.e_type;
     loc = arg.e_loc;
   }
@@ -777,9 +773,9 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
              add_instr env (A.Instr (A5.BL (ref (branch_operand_of_opd env opd)),
                                      A5.AL)) e0.e_loc;
              dst_opd_opt |> Option.iter (fun dst_opd ->
-                with_reg env A5.rRET (fun () ->
+                with_reg env env.a.rRET (fun () ->
                     (* TODO? need Cast? 5c does gopcode(OAS, ...) *)
-                    let src_opd = { opd = Register A5.rRET; typ = e0.e_type;
+                    let src_opd = { opd = Register env.a.rRET; typ = e0.e_type;
                                     loc = e0.e_loc;} in
                     gmove env src_opd dst_opd
                 );
@@ -821,12 +817,12 @@ and arguments (env : 'i env) (xs : argument list) : unit =
 (* 5c: bcomplex? () *)
 let expr_cond (env : 'i env) (e0 : expr) : virt_pc =
   (* todo: *)
-  with_reg env A5.rRET (fun () ->
-    let dst = { opd = Register A5.rRET; typ = e0.e_type; loc = e0.e_loc } in
+  with_reg env env.a.rRET (fun () ->
+    let dst = { opd = Register env.a.rRET; typ = e0.e_type; loc = e0.e_loc } in
     expr env e0 (Some dst);
     (* less: actually should be last loc of e0 *)
     let loc = e0.e_loc in
-    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, A5.rRET), A5.AL)) loc;
+    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, env.a.rRET), A5.AL)) loc;
     let pc = !(env.pc) in
     add_instr env (A.Instr (A5.Bxx (A5.EQ,(ref (A.Absolute fake_pc))),A5.AL)) loc;
     pc
@@ -1010,8 +1006,8 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
 
     | Some e ->
       (* todo: if type compatible with R0 *)
-      with_reg env A5.rRET (fun () ->
-        let dst = { opd = Register A5.rRET; typ = e.e_type; loc = e.e_loc } in
+      with_reg env env.a.rRET (fun () ->
+        let dst = { opd = Register env.a.rRET; typ = e.e_type; loc = e.e_loc } in
         expr env e (Some dst);
 
         add_instr env (A.Virtual A.RET) st0.s_loc

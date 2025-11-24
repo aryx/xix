@@ -57,6 +57,8 @@ let regs_initial =
 let arch = { 
     width_of_type;
     regs_initial;
+    rSP = A5.rSP;
+    rRET = A5.rRET;
   }
 (*e: constant [[Arch5.arch]] *)
 (*e: Arch5.ml *)

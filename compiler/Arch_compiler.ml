@@ -12,6 +12,8 @@ type t = {
   width_of_type: env -> Type.t -> int;
   (* really a (Ast_asm.register, bool) Hashtbl.t *)
   regs_initial: int array;
+  rSP: Ast_asm.register;
+  rRET: Ast_asm.register;
 }
 (*e: type [[Arch_compiler.t]] *)
 (*e: Arch_compiler.ml *)

@@ -13,6 +13,7 @@
    xix_mk_tests
    xix_shell_tests
    xix_re_tests
+   xix_compiler_tests
  )
  ; 'byte' is for ocamldebug
  (modes native byte))

@@ -1,0 +1,28 @@
+executing: o5x --help
+usage: o5c [-options] file.c
+  -o               <file> place output (an object) in file
+  -w               enable warnings
+  -werror          warnings generate error exceptions
+  -ape             
+  -I               <dir> add dir as a path to look for '#include <file>' files
+  -D               <name=def> (or just <name>) define name for preprocessor
+  -dump_tokens     dump the tokens as they are generated
+  -dump_ast        dump the parsed AST
+  -dump_typed_ast  dump the typed AST
+  -dump_asm        dump the generated assembly
+  -test_parser     
+  -v               verbose mode
+  -verbose         verbose mode
+  -debug           guess what
+  -quiet           
+  -e               
+  -f               
+  -m               
+  -debug_include   
+  -debug_line      
+  -debug_macros    
+  -S               dump the generated assembly
+  -backtrace       dump the backtrace after an error
+  -help            Display this list of options
+  --help           Display this list of options
+

@@ -24,6 +24,8 @@ let tests caps _env =
     Test_mk.tests caps;
     Test_shell.tests caps;
 
+    Test_compiler.tests caps;
+
     Test_re.tests caps;
     Test_re_str.tests caps;
     Test_re_emacs.tests caps;

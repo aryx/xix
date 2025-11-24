@@ -1,5 +1,31 @@
 (executable
  (name Main)
+ (modules Main)
+ (libraries
+   str unix
+   xix_compiler
+ )
+ ; 'byte' is for ocamldebug
+ (modes native byte))
+
+(library
+  (name xix_compiler)
+  (wrapped true)
+  ; coupling: mkfile SRC variable
+  (modules
+    Flags
+    Type Meta_type   Storage Meta_storage
+    Ast Meta_ast
+    Dumper_
+    Globals
+    Error
+    Parser Lexer Parse
+    Arch_compiler
+    Check Eval_const Typecheck
+    Rewrite
+    Arch5 Codegen5
+    CLI
+  )
  (libraries
    str unix
    xix_commons

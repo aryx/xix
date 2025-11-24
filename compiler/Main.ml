@@ -1,6 +1,6 @@
 (*s: Main.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
-(* open Xix_compiler *)
+open Xix_compiler
 
 (*****************************************************************************)
 (* Entry point *)

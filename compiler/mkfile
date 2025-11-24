@@ -4,6 +4,7 @@ INCLUDES=-I $TOP/lib_core/commons \
   -I $TOP/macroprocessor \
   -I $TOP/assembler/objects
 
+#coupling: dune file library (modules ...)
 SRC= Flags.ml \
   Type.ml Meta_type.ml   Storage.ml Meta_storage.ml \
   Ast.ml Meta_ast.ml \

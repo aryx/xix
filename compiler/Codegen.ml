@@ -214,7 +214,7 @@ let add_fake_instr env str =
 (*e: function [[Codegen.add_fake_instr]] *)
 
 (*s: function [[Codegen.add_fake_goto]] *)
-let add_fake_goto env loc =
+let add_fake_goto (env : 'i env) loc =
   let spc = !(env.pc) in
   add_instr env (A.Instr (A5.B (ref (Absolute fake_pc)), A5.AL)) loc;
   spc

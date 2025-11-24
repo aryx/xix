@@ -34,7 +34,8 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
               );
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
-          | A.Call _ | A.Load _ | A.Store _ | A.AddI _ -> (curtext, Some n)
+          | A.Call _ | A.Load _ | A.Store _ | A.AddI _ | A.Jmp _ ->
+             (curtext, Some n)
         in
         (* NOP and RET should not have branch set *)
         n.branch |> Option.iter (fun _n2 ->
@@ -151,6 +152,8 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
         | A.Store (reg, ent) ->
             n.instr <- T.I (Move2 (W__, Either.Left (Gen (GReg reg)),
                                         (Gen (Entity ent))))
+        | A.Jmp opd ->
+            n.instr <- T.I (JMP opd)
        );
        autosize_opt
 

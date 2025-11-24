@@ -29,22 +29,18 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
     then n.next <- Some nodes.(i+1)
   );
 
+
   (* set the branch fields *)
   nodes |> Array.iter (fun n ->
-    match n.instr with
-    | T.TEXT _ | T.WORD _ -> ()
-    | T.Virt (A.RET | A.NOP) -> ()
-    | T.Virt (A.Call _ | A.AddI _ | A.Load _ | A.Store _) ->
-        raise (Impossible "those virtual instrs should appear only after build_graph")
-    | T.I instr ->
-        let resolve_branch_operand opd =
-          match !opd with
-          | A.IndirectJump _ -> None
-          | A.Relative _ | A.LabelUse _ ->
-              raise (Impossible "Relative and LabelUse resolved by assembler")
-          | A.SymbolJump x ->
-              (* resolve branching to symbols *)
-              (match (T.lookup_global x symbols).section with
+
+    let resolve_branch_operand opd =
+      match !opd with
+      | A.IndirectJump _ -> None
+      | A.Relative _ | A.LabelUse _ ->
+            raise (Impossible "Relative and LabelUse resolved by assembler")
+      | A.SymbolJump x ->
+            (* resolve branching to symbols *)
+            (match (T.lookup_global x symbols).section with
               | T.SText virt_pc -> 
                   opd := A.Absolute virt_pc; 
                   Some virt_pc
@@ -53,15 +49,24 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
                * multiple times the same error but we fail early instead.
                *)
               | T.SData _ -> failwith "branching to a data symbol"
-              )
-          | A.Absolute virt_pc -> Some virt_pc
-        in
-        let adjust_virt_pc (virt_pc : T.virt_pc) =
-          if virt_pc < len
-          then n.branch <- Some nodes.(virt_pc)
-          else failwith (spf "branch out of range %d at %s" virt_pc
-                           (T.s_of_loc n.n_loc))
-        in
+            )
+        | A.Absolute virt_pc -> Some virt_pc
+      in
+      let adjust_virt_pc (virt_pc : T.virt_pc) =
+        if virt_pc < len
+        then n.branch <- Some nodes.(virt_pc)
+        else failwith (spf "branch out of range %d at %s" virt_pc
+              (T.s_of_loc n.n_loc))
+    in
+
+    match n.instr with
+    | T.TEXT _ | T.WORD _ -> ()
+    | T.Virt (A.RET | A.NOP) -> ()
+    | T.Virt (A.Call _ | A.AddI _ | A.Load _ | A.Store _) -> ()
+        (* alt: raise (Impossible "those virtual instrs should appear only after build_graph") *)
+    | T.Virt (A.Jmp opd) ->
+          resolve_branch_operand opd |> Option.iter adjust_virt_pc
+    | T.I instr ->
         branch_opd_of_instr instr |> Option.iter (fun opd -> 
             resolve_branch_operand opd |> Option.iter adjust_virt_pc)
   );

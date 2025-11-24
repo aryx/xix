@@ -165,7 +165,7 @@ let fake_pc = -1
 (*e: constant [[Codegen5.fake_pc]] *)
 
 (*s: function [[Codegen5.add_instr]] *)
-let add_instr env instr loc = 
+let add_instr env instr loc =
   (* grow array if necessary *)
   if !(env.pc) >= Array.length !(env.code)
   then begin

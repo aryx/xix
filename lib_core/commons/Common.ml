@@ -87,6 +87,12 @@ let rec rnd x v =
   then x
   else rnd (x+1) v
 
+let maxround max v rnd_ =
+  let v = rnd v rnd_ in
+  if v > max
+  then v
+  else max
+
 (* found on stack overflow *)
 let is_power_of_2 x =
   x <> 0 && 

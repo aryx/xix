@@ -64,8 +64,8 @@ type env = {
    *)
   regs: int array;
   (*s: [[Codegen5.env]] other function fields *)
-  size_locals: int ref;
-  size_maxargs: int ref; (* 5c: maxargssafe *)
+  mutable size_locals: int;
+  mutable size_maxargs: int; (* 5c: maxargssafe *)
   (*x: [[Codegen5.env]] other function fields *)
   (* for parameters and locals *)
   offsets: (Ast.fullname, int) Hashtbl.t;
@@ -126,8 +126,8 @@ let env_of_tp (tp : Typecheck.typed_program) : env =
     data = ref [];
 
     (* TODO: move in nested struct so then can reuse default_xxx () *)
-    size_locals = ref 0;
-    size_maxargs = ref 0;
+    size_locals = 0;
+    size_maxargs = 0;
     offset_locals = ref 0;
     offsets       = Hashtbl_.create ();
     labels        = Hashtbl_.create ();
@@ -330,6 +330,14 @@ let arith_instr_of_op op r1 r2 r3 =
     A5.Reg r1, Some r2, r3
   )
 (*e: function [[Codegen5.arith_instr_of_op]] *)
+
+(* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
+let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
+  (* add 4 for space for REGLINK in callee *)
+  { opd = Indirect (A5.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
+    typ = arg.e_type;
+    loc = arg.e_loc;
+  }
 
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
@@ -793,8 +801,25 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       raise Todo
     )
 (*e: function [[Codegen5.expr]] *)
-and arguments (_env : env) (_xs : argument list) : unit =
-  
+and arguments (env : env) (xs : argument list) : unit =
+  let curarg = ref 0 in
+  xs |> List.iter (fun (arg : argument) ->
+      (* TODO: if complex argument type or complex arg *)
+      (* TODO: if use REGARG and curarg is 0 *)
+      let opd = opd_regalloc env arg.e_type arg.e_loc None in
+      expr env arg (Some opd);
+      let opd2 = argument_operand env arg !curarg in
+      let sizet = 
+        env.arch.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
+      in
+      (* TODO: cursafe, curarg align before and after *)
+      curarg := !curarg + sizet;
+      (* TODO: 5c does gopcode(OAS, tn1, Z, tn2) *)
+      gmove env opd opd2;
+      opd_regfree env opd
+  );
+  (* TODO: 4 -> SZ_LONG *)
+  env.size_maxargs <- Int_.maxround env.size_maxargs !curarg 4;
   ()
 
 (*s: function [[Codegen5.expr_cond]] *)
@@ -838,7 +863,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
 
       (* todo: align *)
       env.offset_locals := !(env.offset_locals) + sizet;
-      env.size_locals := !(env.size_locals) + sizet;
+      env.size_locals <- env.size_locals + sizet;
       Hashtbl.add env.offsets fullname !(env.offset_locals);
   (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
   | ExprSt e -> expr env e None
@@ -1044,7 +1069,8 @@ let codegen_func (env : env) (func : func_def) : unit =
   (*s: [[Codegen5.codegen_func()]] adjust [[env]] *)
   (* todo: align offset_locals with return type *)
   let env = { env with
-    size_locals = ref 0;
+    size_locals = 0;
+    size_maxargs = 0;
     offset_locals = ref 0;
     offsets       = offsets;
     labels        = Hashtbl_.create ();
@@ -1058,7 +1084,7 @@ let codegen_func (env : env) (func : func_def) : unit =
 
   set_instr env spc 
     (A.Pseudo (A.TEXT (global_of_id env fullname, attrs, 
-                       !(env.size_locals) + !(env.size_maxargs)))) f_loc;
+                       env.size_locals + env.size_maxargs))) f_loc;
   add_instr env (A.Virtual A.RET) f_loc;
 
   (*s: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)

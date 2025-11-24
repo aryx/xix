@@ -38,7 +38,8 @@ type int64 = int
 
 module Int_ :
   sig
-    val rnd: int -> int -> int
+    val rnd: int (* n *) -> int (* rnd_ *) -> int
+    val maxround: int (* max *) -> int (* n *) -> int (* rnd_ *) -> int
 
     val log2: int -> int
     val roundup: int -> int (* power of 2 *) -> int

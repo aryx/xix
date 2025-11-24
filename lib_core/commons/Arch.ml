@@ -1,5 +1,3 @@
-open Common
-
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -61,7 +59,7 @@ let bits_of_intsize (n : int) : bits =
   | 2 -> Arch16
   | 4 -> Arch32
   | 8 -> Arch64
-  | n -> failwith (spf "bits_of_intsize of %d not in {1,2,4,8} set" n)
+  | n -> failwith (Printf.sprintf "bits_of_intsize of %d not in {1,2,4,8} set" n)
 
 (*****************************************************************************)
 (* Plan9 arch char/string conventions *)
@@ -97,7 +95,7 @@ let arch_of_char (c : char) : t =
   | 'j' -> Riscv64 
   | '8' -> X86 
   | '6' -> Amd64 
-  | _ -> failwith (spf "unrecognized arch character %c" c)
+  | _ -> failwith (Printf.sprintf "unrecognized arch character %c" c)
 
 (*****************************************************************************)
 (* Misc *)

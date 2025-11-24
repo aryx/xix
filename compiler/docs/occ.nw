@@ -5297,6 +5297,7 @@ type env = {
 
 <<function [[Codegen5.codegen]]>>=
 let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
+  (* TODO: lift up, env_of_tp *)
   let env = {
     ids_ = tp.ids;
     structs_ = tp.structs;
@@ -5351,6 +5352,7 @@ exception Error of error
 %%\subsection{Offset}
 
 <<function [[Codegen5.codegen_func]]>>=
+(* TODO: lift up and type *)
 let codegen_func env func =
   let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
 
@@ -5369,6 +5371,7 @@ let codegen_func env func =
   set_instr env spc 
     (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
                        !(env.size_locals)))) f_loc;
+  (* TODO: + env.size_maxargs *)
   add_instr env (A.Virtual A.RET) f_loc;
 
   <<[[Codegen5.codegen_func()]] sanity check [[env.regs]]>>
@@ -5393,7 +5396,7 @@ let set_instr env pc instr loc =
 
 
 <<function [[Codegen5.add_instr]]>>=
-let add_instr env instr loc = 
+let add_instr env instr loc =
   (* grow array if necessary *)
   if !(env.pc) >= Array.length !(env.code)
   then begin
@@ -5440,6 +5443,7 @@ let global_of_id fullname idinfo =
 
 <<[[Codegen5.env]] other function fields>>=
 size_locals: int ref;
+(* TODO: size_maxargs: int ref; (* 5c: maxargssafe *) *)
 @
 % will be modified in stmt() call by side effect
 
@@ -5449,6 +5453,7 @@ offsets: (Ast.fullname, int) Hashtbl.t;
 @
 
 <<[[Codegen5.codegen_func()]] set [[offsets]] for parameters>>=
+(* TODO: introduce helper *)
 (* set offsets for parameters *)
 let offsets = Hashtbl_.create () in
 
@@ -5503,6 +5508,7 @@ env.regs |> Array.iteri (fun i v ->
 <<constant [[Codegen5.regs_initial]]>>=
 let regs_initial = 
   let arr = Array.make A5.nb_registers 0 in
+  (* note that rRET is not in the list; it can be used! *)
   [A5.rLINK; A5.rPC;       (* hardware reseved *)
    A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
    rEXT1; rEXT2;         (* compiler reserved *)
@@ -5546,9 +5552,9 @@ let with_reg env (r : A.register) f =
 
 
 <<function [[Codegen5.regalloc]]>>=
-let regalloc (env : env) loc =
+let regalloc (env : env) loc : int =
   (* less: lasti trick? *)
-  let rec aux i n =
+  let rec aux (i : int) (n : int) : int =
     (* This happens in extreme case when the expression tree has a huge
      * depth everywhere. In that case, we should allocate a new temporary
      * on the stack but this complexifies the algorithm.
@@ -5556,6 +5562,7 @@ let regalloc (env : env) loc =
     if i >= n 
     then raise (Error(E.Misc("out of fixed registers; rewrite your code",loc)));
 
+    (* TODO: lasti opti *)
     if env.regs.(i) =|= 0
     then begin
       env.regs.(i) <- 1;
@@ -5643,7 +5650,7 @@ let opd_regfree env opd =
 \section{Statements} %%: [[gen()]]
 
 <<function [[Codegen5.stmt]]>>=
-let rec stmt env st0 =
+let rec stmt (env : env) (st0 : stmt) : unit =
   match st0.s with
   <<[[Codegen5.stmt]] match [[st0.s]] cases>>
 @
@@ -5724,6 +5731,7 @@ let patch_fake_goto env pcgoto pcdest =
 @
 
 <<function [[Codegen5.expr_cond]]>>=
+(* 5c: bcomplex? () *)
 let expr_cond (env : env) (e0 : expr) : virt_pc =
   (* todo: *)
   with_reg env A5.rRET (fun () ->
@@ -5940,14 +5948,21 @@ continue_pc: Ast_asm.virt_pc option;
  * todo: if complex type node
  * less: dst_opd always a register? maybe, but still need to carry
  *  also its type and loc, so maybe easier to always wrap it in an operand?
+ * 5c: called cgen/cgenrel()?
  *)
 let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   match operand_able e0 with
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
     (match e0.e with
+    | Int _ | Float _ | Id _ ->
+        raise (Impossible "handled in operand_able()")
+    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+        raise (Impossible "should have been converted before")    
     <<[[Codegen5.expr()]] when not operand able, match [[e0.e]] cases>>
-    | _ -> 
+    | Call _ | RecordAccess _ | Cast _ | Postfix _ | Prefix _
+    | CondExpr _ | ArrayInit _ | RecordInit _ | GccConstructor _
+      -> 
       Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo
     )
@@ -5966,6 +5981,8 @@ let expropt (env : env) (eopt : expr option) : unit =
 let operand_able (e0 : expr) : opd option =
   let kind_opt = 
     match e0.e with
+    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+      raise (Impossible "should have been converted")
     <<[[operand_able()]] match [[e0.e]] cases>>
   in
   match kind_opt with
@@ -5983,8 +6000,6 @@ let operand_able (e0 : expr) : opd option =
 | Cast _ -> raise Todo
 | RecordAccess _ -> raise Todo
 
-| String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
-  raise (Impossible "should have been converted")
 | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
   None
 @
@@ -6058,6 +6073,7 @@ let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
   | None ->
+    (* SURE? should we still registerize and all? *)
     (* less: should have warned about unused opd in check.ml *)
     ()
 @
@@ -6118,6 +6134,7 @@ let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
 
 (* At this point, either opd1 or opd2 references memory (but not both),
  * so we can do the move in one instruction.
+ * 5c: called gins()
  *)
 and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
   (* less: should happen only for register? *)
@@ -6132,7 +6149,8 @@ and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
 
 
 <<function [[Codegen5.mov_operand_of_opd]]>>=
-(* less: opportunity for bitshifted registers? *)
+(* 5c: part of naddr()
+ * less: opportunity for bitshifted registers? *)
 let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
   match opd.opd with
   | ConstI i   -> A5.Imsr (A5.Imm i)

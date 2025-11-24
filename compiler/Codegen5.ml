@@ -250,7 +250,8 @@ let patch_fake_goto env pcgoto pcdest =
 (* C to Asm helpers  *)
 (*****************************************************************************)
 (*s: function [[Codegen5.global_of_id]] *)
-let global_of_id fullname idinfo = 
+let global_of_id env fullname = 
+  let idinfo = Hashtbl.find env.ids_ fullname in
   { name = Ast.unwrap fullname;
     priv = 
       (match idinfo.TC.sto with
@@ -281,7 +282,7 @@ let entity_of_id env fullname offset_extra =
     A.Local (Some (symbol fullname), - offset)
   | S.Static | S.Global | S.Extern ->
     let offset = offset_extra in
-    A.Global (global_of_id fullname idinfo, offset)
+    A.Global (global_of_id env fullname, offset)
 (*e: function [[Codegen5.entity_of_id]] *)
 
 
@@ -296,6 +297,19 @@ let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
   | Indirect (r, offset) -> A5.Indirect (r, offset)
   | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
 (*e: function [[Codegen5.mov_operand_of_opd]] *)
+
+(* 5c: part of naddr() called from gopcode *)
+let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
+  match opd.opd with
+  | Name (fullname, offset) ->
+      assert (offset =|= 0);
+      A.SymbolJump (global_of_id env fullname)
+  | ConstI _ -> raise (Impossible "calling an int can't typecheck")
+  | Register _ -> raise (Impossible "calling a register can't typecheck")
+  | Indirect (r, offset) -> 
+      assert (offset =|= 0);
+      A.IndirectJump r
+  | Addr _ -> raise Todo
 
 (*s: function [[Codegen5.arith_instr_of_op]] *)
 let arith_instr_of_op op r1 r2 r3 =
@@ -604,9 +618,7 @@ let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
 (*s: function [[Codegen5.expr]] *)
 (* todo: inrel ? 
  * todo: if complex type node
- * less: dst_opd always a register? maybe, but still need to carry
- *  also its type and loc, so maybe easier to always wrap it in an operand?
- * 5c: called cgen/cgenrel()?
+ * 5c: called cgen/cgenrel()
  *)
 let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   match operand_able e0 with
@@ -748,14 +760,42 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
         raise (Impossible "should have been converted")
       | Not -> raise Todo
       )
+    | Call (e, es) ->
+        if complexity e >= fn_complexity
+        then 
+          (* (foo(...))(...), so function call in e itself *)
+          raise Todo
+        else begin
+          arguments env es;
+          (match operand_able e with
+          (* complex call *)
+          | None -> raise Todo
+          | Some opd ->
+             add_instr env (A.Instr (A5.BL (ref (branch_operand_of_opd env opd)),
+                                     A5.AL)) e0.e_loc;
+             dst_opd_opt |> Option.iter (fun dst_opd ->
+                with_reg env A5.rRET (fun () ->
+                    (* TODO? need Cast? 5c does gopcode(OAS, ...) *)
+                    let src_opd = { opd = Register A5.rRET; typ = e0.e_type;
+                                    loc = e0.e_loc;} in
+                    gmove env src_opd dst_opd
+                );
+             );
+             
+          );
+          ()
+        end
     (*e: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
-    | Call _ | RecordAccess _ | Cast _ | Postfix _ | Prefix _
+    | RecordAccess _ | Cast _ | Postfix _ | Prefix _
     | CondExpr _ | ArrayInit _ | RecordInit _ | GccConstructor _
       -> 
       Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo
     )
 (*e: function [[Codegen5.expr]] *)
+and arguments (_env : env) (_xs : argument list) : unit =
+  
+  ()
 
 (*s: function [[Codegen5.expr_cond]] *)
 (* 5c: bcomplex? () *)
@@ -1017,7 +1057,7 @@ let codegen_func (env : env) (func : func_def) : unit =
   stmt env st;
 
   set_instr env spc 
-    (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
+    (A.Pseudo (A.TEXT (global_of_id env fullname, attrs, 
                        !(env.size_locals) + !(env.size_maxargs)))) f_loc;
   add_instr env (A.Virtual A.RET) f_loc;
 

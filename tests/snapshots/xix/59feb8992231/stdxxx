@@ -1,0 +1,14 @@
+ 0: Pseudo(
+  TEXT({name="foo"; priv=None; sig=None; }, {dupok=false; no_prof=false; }, 4))
+ 1: (MOVE(Word, None, Entity(Param(Some("x"), 0)), Imsr(Reg(R(0)))), AL)
+ 2: (Cmp(CMP, Imm(0), R(0)), AL)
+ 3: (Bxx(EQ, Ref(Absolute(7))), AL)
+ 4: (MOVE(Word, None, Imsr(Imm(1)), Imsr(Reg(R(0)))), AL)
+ 5: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("res"), -4))), AL)
+ 6: (B(Ref(Absolute(9))), AL)
+ 7: (MOVE(Word, None, Imsr(Imm(2)), Imsr(Reg(R(0)))), AL)
+ 8: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("res"), -4))), AL)
+ 9: (MOVE(Word, None, Entity(Local(Some("res"), -4)), Imsr(Reg(R(0)))), AL)
+10: Virtual(RET)
+11: Virtual(RET)
+executing: o5x -S tests/compiler/codegen/if.c

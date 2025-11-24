@@ -1,0 +1,8 @@
+ 0: Pseudo(
+  TEXT({name="foo"; priv=None; sig=None; }, {dupok=false; no_prof=false; }, 4))
+ 1: (MOVE(Word, None, Entity(Local(Some("x"), -4)), Imsr(Reg(R(0)))), AL)
+ 2: (MOVE(Word, None, Imsr(Imm(1)), Imsr(Reg(R(1)))), AL)
+ 3: (Arith(ADD, None, Reg(R(1)), Some(R(0)), R(0)), AL)
+ 4: Virtual(RET)
+ 5: Virtual(RET)
+executing: o5x -S tests/compiler/codegen/enum.c

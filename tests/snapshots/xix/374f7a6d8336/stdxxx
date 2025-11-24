@@ -1,0 +1,15 @@
+ 0: Pseudo(
+  TEXT({name="foo"; priv=None; sig=None; }, {dupok=false; no_prof=false; }, 4))
+ 1: (MOVE(Word, None, Entity(Param(Some("x"), 0)), Imsr(Reg(R(0)))), AL)
+ 2: (MOVE(Word, None, Imsr(Imm(2)), Imsr(Reg(R(1)))), AL)
+ 3: (Arith(ADD, None, Reg(R(1)), Some(R(0)), R(0)), AL)
+ 4: (MOVE(Word, None, Entity(Global({name="z"; priv=None; sig=None; }, 0)),
+   Imsr(Reg(R(1)))),
+ AL)
+ 5: (Arith(ADD, None, Reg(R(1)), Some(R(0)), R(0)), AL)
+ 6: (MOVE(Word, None, Imsr(Reg(R(0))), Imsr(Reg(R(1)))), AL)
+ 7: (MOVE(Word, None, Imsr(Reg(R(1))), Entity(Local(Some("y"), -4))), AL)
+ 8: (MOVE(Word, None, Entity(Local(Some("y"), -4)), Imsr(Reg(R(0)))), AL)
+ 9: Virtual(RET)
+10: Virtual(RET)
+executing: o5x -S tests/compiler/codegen/function.c

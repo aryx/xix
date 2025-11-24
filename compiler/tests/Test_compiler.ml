@@ -51,7 +51,27 @@ let e2e_tests caps =
 let codegen_tests caps =
   (* LATER: use Glob.glob "*.c" *)
   let files = [
-      "call.c";
+    "call.c";
+    "address_local.c";
+    "assign.c";
+    "break.c";
+    "dowhile.c";
+    "enum.c";
+    "function.c";
+    "goto.c";
+    "if.c";
+    "local.c";
+    "params.c";
+    "return.c";
+    "simple.c";
+    "trivial.c";
+    "while.c";
+(* TODO:
+    "array.c";
+    "pointer.c";
+    "helloraw.c";
+    "arithmetic.c";
+*)
     ]
   in
   let tests = files |> List.map (fun file ->

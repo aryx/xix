@@ -1,0 +1,6 @@
+ 0: Pseudo(
+  TEXT({name="foo"; priv=None; sig=None; }, {dupok=false; no_prof=false; }, 0))
+ 1: (MOVE(Word, None, Imsr(Imm(42)), Imsr(Reg(R(0)))), AL)
+ 2: Virtual(RET)
+ 3: Virtual(RET)
+executing: o5x -S tests/compiler/codegen/trivial.c

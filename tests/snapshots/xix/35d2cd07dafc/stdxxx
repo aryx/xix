@@ -1,0 +1,18 @@
+ 0: Pseudo(
+  TEXT({name="foo"; priv=None; sig=None; }, {dupok=false; no_prof=false; }, 4))
+ 1: (MOVE(Word, None, Imsr(Imm(1)), Imsr(Reg(R(0)))), AL)
+ 2: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("x"), -4))), AL)
+ 3: (B(Ref(Absolute(6))), AL)
+ 4: (B(Ref(Absolute(6))), AL)
+ 5: (B(Ref(Absolute(13))), AL)
+ 6: (MOVE(Word, None, Entity(Local(Some("x"), -4)), Imsr(Reg(R(0)))), AL)
+ 7: (Cmp(CMP, Imm(0), R(0)), AL)
+ 8: (Bxx(EQ, Ref(Absolute(5))), AL)
+ 9: (MOVE(Word, None, Imsr(Imm(2)), Imsr(Reg(R(0)))), AL)
+10: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("x"), -4))), AL)
+11: (B(Ref(Absolute(5))), AL)
+12: (B(Ref(Absolute(4))), AL)
+13: (MOVE(Word, None, Entity(Local(Some("x"), -4)), Imsr(Reg(R(0)))), AL)
+14: Virtual(RET)
+15: Virtual(RET)
+executing: o5x -S tests/compiler/codegen/break.c

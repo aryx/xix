@@ -216,15 +216,20 @@ let add_fake_instr env str =
 (*s: function [[Codegen.add_fake_goto]] *)
 let add_fake_goto (env : 'i env) loc =
   let spc = !(env.pc) in
-  add_instr env (A.Instr (A5.B (ref (Absolute fake_pc)), A5.AL)) loc;
+  add_instr env (A.Virtual (A.Jmp (ref (Absolute fake_pc)))) loc;
   spc
 (*e: function [[Codegen.add_fake_goto]] *)
  
 (*s: function [[Codegen.patch_fake_goto]] *)
-let patch_fake_goto env pcgoto pcdest =
+let patch_fake_goto (env : 'i env) (pcgoto : A.virt_pc) (pcdest : A.virt_pc) =
   match !(env.code).(pcgoto) with
   (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
   (* ocaml-light: | A5.Instr (A5.B aref, A5.AL), _loc | A5.Instr (A5.Bxx (_, aref), A5.AL), _loc *)
+  | A.Virtual (A.Jmp aref), _loc ->
+    if !aref =*= (Absolute fake_pc)
+    then aref := Absolute pcdest
+    else raise (Impossible "patching already resolved branch")
+
   | A.Instr (A5.B aref, A5.AL), _loc ->
     if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
@@ -904,7 +909,7 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
         fake_pc
       end
     in
-    add_instr env (A.Instr (A5.B (ref (A.Absolute dstpc)), A5.AL)) st0.s_loc;
+    add_instr env (A.Virtual (A.Jmp (ref (A.Absolute dstpc)))) st0.s_loc;
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | While (e, st) ->
     let goto_entry        = add_fake_goto env e.e_loc in
@@ -925,7 +930,7 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
 
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
+    add_instr env (A.Virtual (A.Jmp (ref(A.Absolute goto_for_continue)))) loc;
     patch_fake_goto env goto_for_break !(env.pc)
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | DoWhile (st, e) ->
@@ -950,19 +955,19 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
 
     (* less: should be last loc of st? *)
     let loc = e.e_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
+    add_instr env (A.Virtual (A.Jmp (ref(A.Absolute goto_for_continue)))) loc;
     patch_fake_goto env goto_for_break !(env.pc)
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Break -> 
     (match env.break_pc with
     | Some dst ->
-      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
+      add_instr env (A.Virtual (A.Jmp (ref(A.Absolute dst)))) st0.s_loc;
     | None -> raise (Impossible "should be detected in check.ml")
     )
   | Continue ->
     (match env.continue_pc with
     | Some dst ->
-      add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
+      add_instr env (A.Virtual (A.Jmp (ref(A.Absolute dst)))) st0.s_loc;
     | None -> raise (Impossible "should be detected in check.ml")
     )
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
@@ -995,7 +1000,7 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
     stmt env st;
 
     let loc = st0.s_loc in
-    add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
+    add_instr env (A.Virtual (A.Jmp (ref(A.Absolute goto_for_continue)))) loc;
     patch_fake_goto env goto_for_break !(env.pc)
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Return eopt ->

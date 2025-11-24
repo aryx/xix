@@ -733,7 +733,7 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
 (*e: function [[Codegen5.expr]] *)
 
 (*s: function [[Codegen5.expr_cond]] *)
-(* 5c: bcomplex? ()" *)
+(* 5c: bcomplex? () *)
 let expr_cond (env : env) (e0 : expr) : virt_pc =
   (* todo: *)
   with_reg env A5.rRET (fun () ->

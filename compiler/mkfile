@@ -28,3 +28,9 @@ PROG=o5c
 <$TOP/mkconfig
 <$TOP/mkfiles/mkprog
 <$TOP/mkfiles/mkparser
+
+#coupling: mkcommon
+Main.cmo: Main.ml
+	  $OCAMLC $COMPFLAGS $INCLUDES -pp ../scripts/remove_xix_open.sh -c Main.ml
+Main.cmx: Main.ml
+	  $OCAMLOPT $OPTFLAGS $INCLUDES -pp ../scripts/remove_xix_open.sh -c Main.ml

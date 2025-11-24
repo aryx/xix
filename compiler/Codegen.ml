@@ -90,27 +90,12 @@ type 'i env = {
 
 (*s: constant [[Codegen.rRET]] *)
 (*e: constant [[Codegen.rRET]] *)
-(* opti: let rARG = A.R 0 *)
-
 (*s: constant [[Codegen.rEXT1]] *)
-(* for 'extern register xx;', used in ARM kernel *)
-let rEXT1 = R 10
 (*e: constant [[Codegen.rEXT1]] *)
 (*s: constant [[Codegen.rEXT2]] *)
-let rEXT2 = R 9
 (*e: constant [[Codegen.rEXT2]] *)
 
 (*s: constant [[Codegen.regs_initial]] *)
-let regs_initial = 
-  let arr = Array.make A5.nb_registers 0 in
-  (* note that rRET is not in the list; it can be used! *)
-  [A5.rLINK; A5.rPC;       (* hardware reseved *)
-   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
-   rEXT1; rEXT2;         (* compiler reserved *)
-  ] |> List.iter (fun (R x) ->
-    arr.(x) <- 1
-  );
-  arr
 (*e: constant [[Codegen.regs_initial]] *)
 
 (*s: function [[Codegen.env_of_tp]] *)
@@ -1080,7 +1065,7 @@ let codegen_func (env : 'i env) (func : func_def) : unit =
     offsets       = offsets;
     labels        = Hashtbl_.create ();
     forward_gotos = Hashtbl_.create ();
-    regs          = Array.copy regs_initial;
+    regs          = Array.copy env.a.regs_initial;
   }
   in
   (*e: [[Codegen.codegen_func()]] adjust [[env]] *)
@@ -1095,7 +1080,7 @@ let codegen_func (env : 'i env) (func : func_def) : unit =
   (*s: [[Codegen.codegen_func()]] sanity check [[env.regs]] *)
   (* sanity check register allocation *)
   env.regs |> Array.iteri (fun i v ->
-    if regs_initial.(i) <> v
+    if env.a.regs_initial.(i) <> v
     then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
   );
   (*e: [[Codegen.codegen_func()]] sanity check [[env.regs]] *)

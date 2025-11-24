@@ -1,8 +1,9 @@
 (*s: Arch5.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-
+open Ast_asm
 open Arch_compiler
+module A5 = Ast_asm5
 module T = Type
 
 (*s: function [[Arch5.width_of_type]] *)
@@ -35,7 +36,27 @@ let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
       |> List.fold_left (+) 0
 (*e: function [[Arch5.width_of_type]] *)
 
+(* opti: let rARG = A.R 0 *)
+
+(* for 'extern register xx;', used in ARM kernel *)
+let rEXT1 = R 10
+let rEXT2 = R 9
+
+let regs_initial = 
+  let arr = Array.make A5.nb_registers 0 in
+  (* note that rRET is not in the list; it can be used! *)
+  [A5.rLINK; A5.rPC;       (* hardware reseved *)
+   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
+   rEXT1; rEXT2;         (* compiler reserved *)
+  ] |> List.iter (fun (R x) ->
+    arr.(x) <- 1
+  );
+  arr
+
 (*s: constant [[Arch5.arch]] *)
-let arch = { width_of_type }
+let arch = { 
+    width_of_type;
+    regs_initial;
+  }
 (*e: constant [[Arch5.arch]] *)
 (*e: Arch5.ml *)

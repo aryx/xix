@@ -10,13 +10,8 @@ type env = {
 (*s: type [[Arch_compiler.t]] *)
 type t = {
   width_of_type: env -> Type.t -> int;
+  (* really a (Ast_asm.register, bool) Hashtbl.t *)
+  regs_initial: int array;
 }
 (*e: type [[Arch_compiler.t]] *)
-
-(* TODO? instead of Arch5, ... could also define an of_arch function
- * here, like I did for Arch_linker
- *
- * todo? have a portable asm? ast_asm_common.ml? 
- * with ATEXT, ANOP, ARET, etc.
- *)
 (*e: Arch_compiler.ml *)

@@ -492,7 +492,28 @@ module E = Check
 
 <<function [[Codegen5.mov_operand_of_opd]]>>
 
+(* 5c: part of naddr() called from gopcode *)
+let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
+  match opd.opd with
+  | Name (fullname, offset) ->
+      assert (offset =|= 0);
+      A.SymbolJump (global_of_id env fullname)
+  | ConstI _ -> raise (Impossible "calling an int can't typecheck")
+  | Register _ -> raise (Impossible "calling a register can't typecheck")
+  | Indirect (r, offset) -> 
+      assert (offset =|= 0);
+      A.IndirectJump r
+  | Addr _ -> raise Todo
+
 <<function [[Codegen5.arith_instr_of_op]]>>
+
+(* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
+let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
+  (* add 4 for space for REGLINK in callee *)
+  { opd = Indirect (A5.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
+    typ = arg.e_type;
+    loc = arg.e_loc;
+  }
 
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
@@ -528,6 +549,26 @@ module E = Check
 (* Expression *)
 (*****************************************************************************)
 <<function [[Codegen5.expr]]>>
+and arguments (env : env) (xs : argument list) : unit =
+  let curarg = ref 0 in
+  xs |> List.iter (fun (arg : argument) ->
+      (* TODO: if complex argument type or complex arg *)
+      (* TODO: if use REGARG and curarg is 0 *)
+      let opd = opd_regalloc env arg.e_type arg.e_loc None in
+      expr env arg (Some opd);
+      let opd2 = argument_operand env arg !curarg in
+      let sizet = 
+        env.arch.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
+      in
+      (* TODO: cursafe, curarg align before and after *)
+      curarg := !curarg + sizet;
+      (* TODO: 5c does gopcode(OAS, tn1, Z, tn2) *)
+      gmove env opd opd2;
+      opd_regfree env opd
+  );
+  (* TODO: 4 -> SZ_LONG *)
+  env.size_maxargs <- Int_.maxround env.size_maxargs !curarg 4;
+  ()
 
 <<function [[Codegen5.expr_cond]]>>
 
@@ -705,7 +746,7 @@ let debugger = ref false
 
 <<Main.ml>>=
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
-(* open Xix_compiler *)
+open Xix_compiler
 
 (*****************************************************************************)
 (* Entry point *)

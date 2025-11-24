@@ -19,10 +19,9 @@ module E = Check
 (* Prelude *)
 (*****************************************************************************)
 (*
- * todo:
- *   - funcalls
+ * TODO:
  *   - fields, structures
- * todo later:
+ * LATER:
  *   - firstarg opti
  *   - alignment 
  *     * fields (sualign)
@@ -66,7 +65,7 @@ type env = {
   regs: int array;
   (*s: [[Codegen5.env]] other function fields *)
   size_locals: int ref;
-  (* TODO: size_maxargs: int ref; (* 5c: maxargssafe *) *)
+  size_maxargs: int ref; (* 5c: maxargssafe *)
   (*x: [[Codegen5.env]] other function fields *)
   (* for parameters and locals *)
   offsets: (Ast.fullname, int) Hashtbl.t;
@@ -113,7 +112,33 @@ let regs_initial =
   );
   arr
 (*e: constant [[Codegen5.regs_initial]] *)
-   
+
+(*s: function [[Codegen5.env_of_tp]] *)
+let env_of_tp (tp : Typecheck.typed_program) : env =   
+  {
+    ids_ = tp.ids;
+    structs_ = tp.structs;
+
+    arch = Arch5.arch;
+
+    pc = ref 0;
+    code = ref [||];
+    data = ref [];
+
+    (* TODO: move in nested struct so then can reuse default_xxx () *)
+    size_locals = ref 0;
+    size_maxargs = ref 0;
+    offset_locals = ref 0;
+    offsets       = Hashtbl_.create ();
+    labels        = Hashtbl_.create ();
+    forward_gotos = Hashtbl_.create ();
+
+    break_pc = None;
+    continue_pc = None;
+
+    regs          = Array.make 0 A5.nb_registers;
+  }
+(*e: function [[Codegen5.env_of_tp]] *)
   
 (*s: type [[Codegen5.integer]] *)
 (*e: type [[Codegen5.integer]] *)
@@ -936,103 +961,82 @@ let rec stmt (env : env) (st0 : stmt) : unit =
 (*e: function [[Codegen5.stmt]] *)
 
 (*****************************************************************************)
+(* Function *)
+(*****************************************************************************)
+(*s: function [[Codegen5.codegen_func]] *)
+let codegen_func (env : env) (func : func_def) : unit =
+  let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
+
+  let fullname = (name, 0) in
+  let idinfo = Hashtbl.find env.ids_ fullname in
+  (* todo: if Flag.profile (can be disabled by #pragma) *)
+  let attrs = A.default_attr in
+
+  let spc = add_fake_instr env "TEXT" in
+
+  (*s: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
+  (* TODO: introduce helper *)
+  (* set offsets for parameters *)
+  let offsets = Hashtbl_.create () in
+
+  let (_typret, (typparams, _varargs)) = typ in
+
+  let t = idinfo.TC.typ in
+  let tparams = 
+    match t with
+    | T.Func (_tret, tparams, _varargs) -> tparams
+    | _ -> raise (Impossible "not a FUNC")
+  in
+  assert (List.length tparams =|= List.length typparams);
+
+  let xs = List_.zip typparams tparams in
+
+  let offset = ref 0 in
+  xs |> List.iter (fun (p, t) ->
+    let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t in
+    p.p_name |> Option.iter (fun fullname ->
+      Hashtbl.add offsets fullname !offset
+    );
+    (* todo: align *)
+    offset := !offset + sizet;
+  );
+  (*e: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
+  (*s: [[Codegen5.codegen_func()]] adjust [[env]] *)
+  (* todo: align offset_locals with return type *)
+  let env = { env with
+    size_locals = ref 0;
+    offset_locals = ref 0;
+    offsets       = offsets;
+    labels        = Hashtbl_.create ();
+    forward_gotos = Hashtbl_.create ();
+    regs          = Array.copy regs_initial;
+  }
+  in
+  (*e: [[Codegen5.codegen_func()]] adjust [[env]] *)
+
+  stmt env st;
+
+  set_instr env spc 
+    (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
+                       !(env.size_locals) + !(env.size_maxargs)))) f_loc;
+  add_instr env (A.Virtual A.RET) f_loc;
+
+  (*s: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)
+  (* sanity check register allocation *)
+  env.regs |> Array.iteri (fun i v ->
+    if regs_initial.(i) <> v
+    then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
+  );
+  (*e: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)
+  ()
+(*e: function [[Codegen5.codegen_func]] *)
+
+(*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
 (*s: function [[Codegen5.codegen]] *)
 let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
-  (* TODO: lift up, env_of_tp *)
-  let env = {
-    ids_ = tp.ids;
-    structs_ = tp.structs;
-
-    arch = Arch5.arch;
-
-    pc = ref 0;
-    code = ref [||];
-    data = ref [];
-
-    (* TODO: move in nested struct so then can reuse default_xxx () *)
-    size_locals = ref 0;
-    offset_locals = ref 0;
-    offsets       = Hashtbl_.create ();
-    labels        = Hashtbl_.create ();
-    forward_gotos = Hashtbl_.create ();
-
-    break_pc = None;
-    continue_pc = None;
-
-    regs          = Array.make 0 A5.nb_registers;
-  } in
-
-  (*s: function [[Codegen5.codegen_func]] *)
-  (* TODO: lift up and type *)
-  let codegen_func env func =
-    let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
-
-    let fullname = (name, 0) in
-    let idinfo = Hashtbl.find env.ids_ fullname in
-    (* todo: if Flag.profile (can be disabled by #pragma) *)
-    let attrs = A.default_attr in
-
-    let spc = add_fake_instr env "TEXT" in
-
-    (*s: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
-    (* TODO: introduce helper *)
-    (* set offsets for parameters *)
-    let offsets = Hashtbl_.create () in
-
-    let (_typret, (typparams, _varargs)) = typ in
-
-    let t = idinfo.TC.typ in
-    let tparams = 
-      match t with
-      | T.Func (_tret, tparams, _varargs) -> tparams
-      | _ -> raise (Impossible "not a FUNC")
-    in
-    assert (List.length tparams =|= List.length typparams);
-
-    let xs = List_.zip typparams tparams in
-
-    let offset = ref 0 in
-    xs |> List.iter (fun (p, t) ->
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t in
-      p.p_name |> Option.iter (fun fullname ->
-        Hashtbl.add offsets fullname !offset
-      );
-      (* todo: align *)
-      offset := !offset + sizet;
-    );
-    (*e: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
-    (*s: [[Codegen5.codegen_func()]] adjust [[env]] *)
-    (* todo: align offset_locals with return type *)
-    let env = { env with
-      size_locals = ref 0;
-      offset_locals = ref 0;
-      offsets       = offsets;
-      labels        = Hashtbl_.create ();
-      forward_gotos = Hashtbl_.create ();
-      regs          = Array.copy regs_initial;
-    }
-    in
-    (*e: [[Codegen5.codegen_func()]] adjust [[env]] *)
-
-    stmt env st;
-
-    set_instr env spc 
-      (A.Pseudo (A.TEXT (global_of_id fullname idinfo, attrs, 
-                         !(env.size_locals)))) f_loc;
-    (* TODO: + env.size_maxargs *)
-    add_instr env (A.Virtual A.RET) f_loc;
-
-    (*s: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)
-    (* sanity check register allocation *)
-    env.regs |> Array.iteri (fun i v ->
-      if regs_initial.(i) <> v
-      then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
-    );
-    (*e: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)
-  in
-  (*e: function [[Codegen5.codegen_func]] *)
+  let env = env_of_tp tp in
   tp.funcs |> List.iter (codegen_func env);
 
   (* todo: generate code for ids after, for CGLOBAL *)

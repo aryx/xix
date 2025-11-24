@@ -425,10 +425,9 @@ module E = Check
 (* Prelude *)
 (*****************************************************************************)
 (*
- * todo:
- *   - funcalls
+ * TODO:
  *   - fields, structures
- * todo later:
+ * LATER:
  *   - firstarg opti
  *   - alignment 
  *     * fields (sualign)
@@ -450,7 +449,8 @@ module E = Check
 <<constant [[Codegen5.rEXT2]]>>
 
 <<constant [[Codegen5.regs_initial]]>>
-   
+
+<<function [[Codegen5.env_of_tp]]>>
   
 <<type [[Codegen5.integer]]>>
 
@@ -537,6 +537,11 @@ module E = Check
 (* Statement *)
 (*****************************************************************************)
 <<function [[Codegen5.stmt]]>>
+
+(*****************************************************************************)
+(* Function *)
+(*****************************************************************************)
+<<function [[Codegen5.codegen_func]]>>
 
 (*****************************************************************************)
 (* Main entry point *)

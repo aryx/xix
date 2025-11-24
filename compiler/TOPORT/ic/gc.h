@@ -1,6 +1,3 @@
-#include	"../cc/cc.h"
-#include	"../il/i.out.h"
-
 /*
  * zc/riscv
  * RISC-V 32-bit

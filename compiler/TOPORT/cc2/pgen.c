@@ -5,7 +5,6 @@ argsize(void)
 	Type *t;
 	int32 s;
 
-//print("t=%T\n", thisfn);
 	s = align(0, thisfn->link, Aarg0);
 	for(t=thisfn->down; t!=T; t=t->down) {
 		switch(t->etype) {
@@ -20,7 +19,6 @@ argsize(void)
 			s = align(s, t, Aarg2);
 			break;
 		}
-//print("	%d %T\n", s, t);
 	}
 	if(thechar == '6')
 		s = (s+7) & ~7;

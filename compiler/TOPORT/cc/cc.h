@@ -1,71 +1,5 @@
-// Inferno utils/cc/cc.h
-// http://code.google.com/p/inferno-os/source/browse/utils/cc/cc.h
-//
-//	Copyright © 1994-1999 Lucent Technologies Inc.  All rights reserved.
-//	Portions Copyright © 1995-1997 C H Forsyth (forsyth@terzarima.net)
-//	Portions Copyright © 1997-1999 Vita Nuova Limited
-//	Portions Copyright © 2000-2007 Vita Nuova Holdings Limited (www.vitanuova.com)
-//	Portions Copyright © 2004,2006 Bruce Ellis
-//	Portions Copyright © 2005-2007 C H Forsyth (forsyth@terzarima.net)
-//	Revisions Copyright © 2000-2007 Lucent Technologies Inc. and others
-//	Portions Copyright © 2009 The Go Authors.  All rights reserved.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-// THE SOFTWARE.
-
-#include <u.h>
-#include <libc.h>
-#include <bio.h>
-#include <ctype.h>
-
 #pragma	lib	"../cc/cc.a$O"
 
-#ifndef	EXTERN
-#define EXTERN	extern
-#endif
-
-#undef	getc
-#undef	ungetc
-#undef	BUFSIZ
-
-#define	getc	ccgetc
-#define	ungetc	ccungetc
-
-typedef	struct	Node	Node;
-typedef	struct	Sym	Sym;
-typedef	struct	Type	Type;
-typedef	struct	Funct	Funct;
-typedef	struct	Decl	Decl;
-typedef	struct	Io	Io;
-typedef	struct	Hist	Hist;
-typedef	struct	Term	Term;
-typedef	struct	Init	Init;
-typedef	struct	Bits	Bits;
-typedef	struct	Dynimp	Dynimp;
-typedef	struct	Dynexp	Dynexp;
-
-#define	NHUNK		50000L
-#define	BUFSIZ		8192
-#define	NSYMB		500
-#define	NHASH		1024
-#define	STRINGSZ	200
-#define	HISTSZ		20
-#define YYMAXDEPTH	500
 #define	NTERM		10
 #define	MAXALIGN	7
 
@@ -81,10 +15,6 @@ struct	Bits
 
 struct	Node
 {
-	Node*	left;
-	Node*	right;
-	void*	label;
-	int32	pc;
 	int	reg;
 	int32	xoffset;
 	double	fconst;		/* fp constant */
@@ -92,43 +22,19 @@ struct	Node
 	char*	cstring;	/* character string */
 	ushort*	rstring;	/* rune string */
 
-	Sym*	sym;
-	Type*	type;
-	int32	lineno;
-	uchar	op;
 	uchar	oldop;
 	uchar	xcast;
 	uchar	class;
 	uchar	etype;
-	uchar	complex;
-	uchar	addable;
+
 	uchar	scale;
 	uchar	garb;
 };
-#define	Z	((Node*)0)
 
 struct	Sym
 {
-	Sym*	link;
-	Type*	type;
-	Type*	suetag;
-	Type*	tenum;
-	char*	macro;
-	int32	varlineno;
-	int32	offset;
-	vlong	vconst;
-	double	fconst;
-	Node*	label;
-	ushort	lexical;
-	char	*name;
-	ushort	block;
-	ushort	sueblock;
-	uchar	class;
-	uchar	sym;
-	uchar	aused;
 	uchar	sig;
 };
-#define	S	((Sym*)0)
 
 enum{
 	SIGNONE = 0,
@@ -138,71 +44,13 @@ enum{
 	SIGNINTERN = 1729*325*1729,
 };
 
-struct	Decl
-{
-	Decl*	link;
-	Sym*	sym;
-	Type*	type;
-	int32	varlineno;
-	int32	offset;
-	short	val;
-	ushort	block;
-	uchar	class;
-	uchar	aused;
-};
-#define	D	((Decl*)0)
-
 struct	Type
 {
-	Sym*	sym;
-	Sym*	tag;
-	Funct*	funct;
-	Type*	link;
-	Type*	down;
-	int32	width;
-	int32	offset;
-	int32	lineno;
 	uchar	shift;
 	uchar	nbits;
-	uchar	etype;
 	uchar	garb;
+    ...
 };
-
-#define	T	((Type*)0)
-#define	NODECL	((void(*)(int, Type*, Sym*))0)
-
-struct	Init			/* general purpose initialization */
-{
-	int	code;
-	uint32	value;
-	char*	s;
-};
-
-EXTERN struct
-{
-	char*	p;
-	int	c;
-} fi;
-
-struct	Io
-{
-	Io*	link;
-	char*	p;
-	char	b[BUFSIZ];
-	short	c;
-	short	f;
-};
-#define	I	((Io*)0)
-
-struct	Hist
-{
-	Hist*	link;
-	char*	name;
-	int32	line;
-	int32	offset;
-};
-#define	H	((Hist*)0)
-EXTERN Hist*	hist;
 
 struct	Term
 {
@@ -223,13 +71,6 @@ enum
 	NALIGN,
 };
 
-enum
-{
-	DMARK,
-	DAUTO,
-	DSUE,
-	DLABEL,
-};
 enum
 {
 	OXXX,

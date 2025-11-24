@@ -36,7 +36,7 @@ module E = Check
 
 (*s: type [[Codegen.env]] *)
 (* Environment for code generation *)
-type env = {
+type 'i env = {
 
   (* computed by previous typechecking phase *)
   ids_:     (Ast.fullname, TC.idinfo) Hashtbl.t;
@@ -53,9 +53,9 @@ type env = {
   pc: Ast_asm.virt_pc ref;
 
   (* growing array *)
-  code: (A5.instr_with_cond A.line * A.loc) array ref;
-  (* should contain only DATA or GLOBL *)
-  data: (A5.instr_with_cond A.line * A.loc) list ref;
+  code: ('i Ast_asm.line * A.loc) array ref;
+  (* should contain only DATA or GLOBL (TODO? restrict to pseudo_instr?) *)
+  data: ('i Ast_asm.line * A.loc) list ref;
 
   (* reinitialized for each function *)
 
@@ -114,7 +114,7 @@ let regs_initial =
 (*e: constant [[Codegen.regs_initial]] *)
 
 (*s: function [[Codegen.env_of_tp]] *)
-let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : env =   
+let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =   
   let arch_compiler: Arch_compiler.t =
     match arch with
     | Arch.Arm -> Arch5.arch;
@@ -139,11 +139,9 @@ let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : env =
     offsets       = Hashtbl_.create ();
     labels        = Hashtbl_.create ();
     forward_gotos = Hashtbl_.create ();
-
     break_pc = None;
     continue_pc = None;
-
-    regs          = Array.make 0 A5.nb_registers;
+    regs          = [||];
   }
 (*e: function [[Codegen.env_of_tp]] *)
   
@@ -296,7 +294,7 @@ let entity_of_id env fullname offset_extra =
 (*s: function [[Codegen.mov_operand_of_opd]] *)
 (* 5c: part of naddr()
  * less: opportunity for bitshifted registers? *)
-let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
+let mov_operand_of_opd (env : 'i env) (opd : opd) : A5.mov_operand =
   match opd.opd with
   | ConstI i   -> A5.Imsr (A5.Imm i)
   | Register r -> A5.Imsr (A5.Reg r)
@@ -306,7 +304,7 @@ let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
 (*e: function [[Codegen.mov_operand_of_opd]] *)
 
 (* 5c: part of naddr() called from gopcode *)
-let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
+let branch_operand_of_opd (env : 'i env) (opd : opd) : A.branch_operand2 =
   match opd.opd with
   | Name (fullname, offset) ->
       assert (offset =|= 0);
@@ -339,7 +337,7 @@ let arith_instr_of_op op r1 r2 r3 =
 (*e: function [[Codegen.arith_instr_of_op]] *)
 
 (* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
-let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
+let argument_operand (_env : 'i env) (arg: argument) (curarg : int) : opd =
   (* add 4 for space for REGLINK in callee *)
   { opd = Indirect (A5.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
     typ = arg.e_type;
@@ -493,7 +491,7 @@ let with_reg env (r : A.register) f =
 (*e: function [[Codegen.with_reg]] *)
   
 (*s: function [[Codegen.regalloc]] *)
-let regalloc (env : env) loc : int =
+let regalloc (env : 'i env) loc : int =
   (* less: lasti trick? *)
   let rec aux (i : int) (n : int) : int =
     (* This happens in extreme case when the expression tree has a huge
@@ -518,7 +516,7 @@ let regalloc (env : env) loc : int =
 (* We can reuse a previous register if 'tgtopt' is a register.
  * See for example return.c where we can reuse R0 instead of a new R1.
  *)
-let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : opd option) : opd =
+let opd_regalloc (env : 'i env) (typ : Type.t) loc (tgtopt : opd option) : opd =
   match typ with
   | T.I _ | T.Pointer _ ->
     let i = 
@@ -556,7 +554,7 @@ let opd_regfree env opd =
  * This is why we must decompose below the move in 2 instructions
  * sometimes.
  *)
-let rec gmove (env : env) (opd1 : opd) (opd2 : opd) : unit =
+let rec gmove (env : 'i env) (opd1 : opd) (opd2 : opd) : unit =
   match opd1.opd with
 
   (* a load *)
@@ -617,7 +615,7 @@ and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
                       mov_operand_of_opd env opd2), A5.AL)) opd1.loc
 (*e: function [[Codegen.gmove]] *)
 (*s: function [[Codegen.gmove_opt]] *)
-let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
+let gmove_opt (env : 'i env) (opd1 : opd) (opd2opt : opd option) :
     unit = 
   match opd2opt with
   | Some opd2 -> gmove env opd1 opd2
@@ -635,7 +633,7 @@ let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
  * todo: if complex type node
  * 5c: called cgen/cgenrel()
  *)
-let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
+let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
   match operand_able e0 with
   | Some opd1 -> gmove_opt env opd1 dst_opd_opt
   | None ->
@@ -808,7 +806,7 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       raise Todo
     )
 (*e: function [[Codegen.expr]] *)
-and arguments (env : env) (xs : argument list) : unit =
+and arguments (env : 'i env) (xs : argument list) : unit =
   let curarg = ref 0 in
   xs |> List.iter (fun (arg : argument) ->
       (* TODO: if complex argument type or complex arg *)
@@ -831,7 +829,7 @@ and arguments (env : env) (xs : argument list) : unit =
 
 (*s: function [[Codegen.expr_cond]] *)
 (* 5c: bcomplex? () *)
-let expr_cond (env : env) (e0 : expr) : virt_pc =
+let expr_cond (env : 'i env) (e0 : expr) : virt_pc =
   (* todo: *)
   with_reg env A5.rRET (fun () ->
     let dst = { opd = Register A5.rRET; typ = e0.e_type; loc = e0.e_loc } in
@@ -846,7 +844,7 @@ let expr_cond (env : env) (e0 : expr) : virt_pc =
 (*e: function [[Codegen.expr_cond]] *)
 
 (*s: function [[Codegen.expropt]] *)
-let expropt (env : env) (eopt : expr option) : unit =
+let expropt (env : 'i env) (eopt : expr option) : unit =
   match eopt with
   | None -> ()
   | Some e -> expr env e None
@@ -856,7 +854,7 @@ let expropt (env : env) (eopt : expr option) : unit =
 (* Statement *)
 (*****************************************************************************)
 (*s: function [[Codegen.stmt]] *)
-let rec stmt (env : env) (st0 : stmt) : unit =
+let rec stmt (env : 'i env) (st0 : stmt) : unit =
   match st0.s with
   (*s: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_iniTODO} ->
@@ -1036,7 +1034,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
 (* Function *)
 (*****************************************************************************)
 (*s: function [[Codegen.codegen_func]] *)
-let codegen_func (env : env) (func : func_def) : unit =
+let codegen_func (env : 'i env) (func : func_def) : unit =
   let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
 
   let fullname = (name, 0) in

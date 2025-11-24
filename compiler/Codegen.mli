@@ -13,6 +13,6 @@ exception Error of error
 (*s: signature [[Codegen.codegen]] *)
 (* can raise Error *)
 val codegen: 
-  Arch.t -> Typecheck.typed_program ->  Ast_asm5.program
+  Arch.t -> Typecheck.typed_program ->  'i Ast_asm.program
 (*e: signature [[Codegen.codegen]] *)
 (*e: Codegen.mli *)

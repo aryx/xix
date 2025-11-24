@@ -1096,7 +1096,7 @@ let codegen_func (env : 'i env) (func : func_def) : unit =
 (* Main entry point *)
 (*****************************************************************************)
 (*s: function [[Codegen.codegen]] *)
-let codegen (arch : Arch.t) (tp : Typecheck.typed_program) : Ast_asm5.program =
+let codegen (arch : Arch.t) (tp : Typecheck.typed_program) : 'i Ast_asm.program =
   let env = env_of_tp arch tp in
   tp.funcs |> List.iter (codegen_func env);
 
@@ -1107,6 +1107,6 @@ let codegen (arch : Arch.t) (tp : Typecheck.typed_program) : Ast_asm5.program =
   in
   (* TODO *)
   let locs = [] in
-  instrs, locs
+  Obj.magic instrs, locs
 (*e: function [[Codegen.codegen]] *)
 (*e: Codegen.ml *)

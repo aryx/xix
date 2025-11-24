@@ -239,7 +239,7 @@ and vof_virtual_instr =
   function
   | RET -> Ocaml.VSum (("RET", []))
   | NOP -> Ocaml.VSum (("NOP", []))
-  | Add _ -> Ocaml.VSum (("Add ...", []))
+  | AddI _ -> Ocaml.VSum (("AddI ...", []))
   | Load _ -> Ocaml.VSum (("Load ...", []))
   | Store _ -> Ocaml.VSum (("Store ...", []))
   | Call _ -> Ocaml.VSum (("Call ...", []))

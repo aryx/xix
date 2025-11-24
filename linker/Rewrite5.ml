@@ -38,7 +38,7 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
               );
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
-          | A.Call _ | A.Load _ | A.Store _ | A.Add _ -> (curtext, Some n)
+          | A.Call _ | A.Load _ | A.Store _ | A.AddI _ -> (curtext, Some n)
         in
         (* NOP and RET should not have branch set *)
         n.branch |> Option.iter (fun _n2 ->
@@ -123,7 +123,7 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
            ), AL);
 
       | A.NOP -> raise (Impossible "NOP was removed in step1")
-      | (A.Call _ | A.Add _ | A.Load _ | A.Store _) -> raise Todo
+      | (A.Call _ | A.AddI _ | A.Load _ | A.Store _) -> raise Todo
       );
       autosize_opt
 

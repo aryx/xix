@@ -82,7 +82,7 @@ let rewrite (conf : Exec_file.profile_kind) (rTMP : A.register)
             * should be same machine opcode in the end no because of 
             * 2-complement arch?
             *)
-           instr = T.Virt (A.Add (A.U, 1, rTMP));
+           instr = T.Virt (A.AddI (A.U, 1, rTMP));
            next = Some n3;
            branch = None; n_loc = n.n_loc; real_pc = - 1;
           }

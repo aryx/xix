@@ -178,7 +178,7 @@ type floatp_precision = F (* Float *) | D (* Double *)
 (*s: type [[Ast_asm.pseudo_instr]] *)
 type pseudo_instr =
   (* stricter: we allow only SB for TEXT and GLOBL, and no offset *)
-  | TEXT of global * attributes * int (* size locals, (multiple of 4 on ARM) *)
+  | TEXT of global * attributes * int (* size locals+args (4n on ARM) *)
   | GLOBL of global (* can have offset? *) * attributes * int (* size *)
 
   | DATA of global * offset * int (* size, should be in [1..8] *) * ximm
@@ -205,7 +205,7 @@ type virtual_instr =
   | Call of global (* transformed in BL in 5l, JAL in vl, etc. *)
   | Load of entity * register
   | Store of register * entity
-  | Add of sign * integer (* or ximm? *) * register
+  | AddI of sign * integer (* or ximm? *) * register
   (* TODO? 
    * | Case of ??? (* compiler-only virtual instr *) 
    *)
@@ -274,7 +274,7 @@ let rec visit_globals_program visit_instr (f : global -> unit) (prog : 'instr pr
           | Load (Global (glob, _), _) -> f glob
           | Store (_, Global (glob, _)) -> f glob
           | Load _ | Store _ -> ()
-          | Add _ -> ()
+          | AddI _ -> ()
           )
     | Instr instr ->
       visit_instr f instr

@@ -110,7 +110,7 @@ type mov_operand =
   (* eXtended immediate.
    * (Ximm (Int x) is converted in Imsr (Imm x) in the parser
    *)
-  | Ximm of ximm
+  | Ximm of A.ximm
 
   | Indirect of reg * A.offset
   (* another form of Indirect *)

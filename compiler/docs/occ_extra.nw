@@ -384,27 +384,27 @@ open Regexp_.Operators
 <<function [[CLI.main]]>>
 @
 
-\section{[[Codegen5.mli]]}
+\section{[[Codegen.mli]]}
 
 %-------------------------------------------------------------
 
-<<Codegen5.mli>>=
+<<Codegen.mli>>=
 
-<<type [[Codegen5.error]]>>
-<<signature [[Codegen5.string_of_error]]>>
-<<exception [[Codegen5.Error]]>>
+<<type [[Codegen.error]]>>
+<<signature [[Codegen.string_of_error]]>>
+<<exception [[Codegen.Error]]>>
 
-<<signature [[Codegen5.codegen]]>>
+<<signature [[Codegen.codegen]]>>
 @
 
-\section{[[Codegen5.ml]]}
+\section{[[Codegen.ml]]}
 
-<<type [[Codegen5.integer]]>>=
+<<type [[Codegen.integer]]>>=
 @
 
 %-------------------------------------------------------------
 
-<<Codegen5.ml>>=
+<<Codegen.ml>>=
 (* Copyright 2016, 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Eq.Operators
@@ -440,57 +440,57 @@ module E = Check
 (* Types *)
 (*****************************************************************************)
 
-<<type [[Codegen5.env]]>>
+<<type [[Codegen.env]]>>
 
-<<constant [[Codegen5.rRET]]>>
+<<constant [[Codegen.rRET]]>>
 (* opti: let rARG = A.R 0 *)
 
-<<constant [[Codegen5.rEXT1]]>>
-<<constant [[Codegen5.rEXT2]]>>
+<<constant [[Codegen.rEXT1]]>>
+<<constant [[Codegen.rEXT2]]>>
 
-<<constant [[Codegen5.regs_initial]]>>
+<<constant [[Codegen.regs_initial]]>>
 
-<<function [[Codegen5.env_of_tp]]>>
+<<function [[Codegen.env_of_tp]]>>
   
-<<type [[Codegen5.integer]]>>
+<<type [[Codegen.integer]]>>
 
-<<type [[Codegen5.operand_able]]>>
-<<type [[Codegen5.operand_able_kind]]>>
+<<type [[Codegen.operand_able]]>>
+<<type [[Codegen.operand_able_kind]]>>
 
 
-<<type [[Codegen5.error]]>>
-<<function [[Codegen5.string_of_error]]>>
-<<exception [[Codegen5.Error]]>>
+<<type [[Codegen.error]]>>
+<<function [[Codegen.string_of_error]]>>
+<<exception [[Codegen.Error]]>>
 
 (*****************************************************************************)
 (* Instructions  *)
 (*****************************************************************************)
-<<constant [[Codegen5.fake_instr]]>>
-<<constant [[Codegen5.fake_loc]]>>
-<<constant [[Codegen5.fake_pc]]>>
+<<constant [[Codegen.fake_instr]]>>
+<<constant [[Codegen.fake_loc]]>>
+<<constant [[Codegen.fake_pc]]>>
 
-<<function [[Codegen5.add_instr]]>>
+<<function [[Codegen.add_instr]]>>
 
-<<function [[Codegen5.set_instr]]>>
+<<function [[Codegen.set_instr]]>>
 
 
-<<function [[Codegen5.add_fake_instr]]>>
+<<function [[Codegen.add_fake_instr]]>>
 
-<<function [[Codegen5.add_fake_goto]]>>
+<<function [[Codegen.add_fake_goto]]>>
  
-<<function [[Codegen5.patch_fake_goto]]>>
+<<function [[Codegen.patch_fake_goto]]>>
 
 (*****************************************************************************)
 (* C to Asm helpers  *)
 (*****************************************************************************)
-<<function [[Codegen5.global_of_id]]>>
+<<function [[Codegen.global_of_id]]>>
 
-<<function [[Codegen5.symbol]]>>
+<<function [[Codegen.symbol]]>>
 
-<<function [[Codegen5.entity_of_id]]>>
+<<function [[Codegen.entity_of_id]]>>
 
 
-<<function [[Codegen5.mov_operand_of_opd]]>>
+<<function [[Codegen.mov_operand_of_opd]]>>
 
 (* 5c: part of naddr() called from gopcode *)
 let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
@@ -505,7 +505,7 @@ let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
       A.IndirectJump r
   | Addr _ -> raise Todo
 
-<<function [[Codegen5.arith_instr_of_op]]>>
+<<function [[Codegen.arith_instr_of_op]]>>
 
 (* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
 let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
@@ -518,37 +518,37 @@ let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
-<<function [[Codegen5.operand_able]]>>
+<<function [[Codegen.operand_able]]>>
 
-<<constant [[Codegen5.fn_complexity]]>>
+<<constant [[Codegen.fn_complexity]]>>
 
-<<function [[Codegen5.complexity]]>>
+<<function [[Codegen.complexity]]>>
 
 (*****************************************************************************)
 (* Register allocation helpers *)
 (*****************************************************************************)
-<<function [[Codegen5.reguse]]>>
+<<function [[Codegen.reguse]]>>
 
-<<function [[Codegen5.regfree]]>>
+<<function [[Codegen.regfree]]>>
 
-<<function [[Codegen5.with_reg]]>>
+<<function [[Codegen.with_reg]]>>
   
-<<function [[Codegen5.regalloc]]>>
+<<function [[Codegen.regalloc]]>>
 
-<<function [[Codegen5.opd_regalloc]]>>
+<<function [[Codegen.opd_regalloc]]>>
 
-<<function [[Codegen5.opd_regfree]]>>
+<<function [[Codegen.opd_regfree]]>>
 
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
-<<function [[Codegen5.gmove]]>>
-<<function [[Codegen5.gmove_opt]]>>
+<<function [[Codegen.gmove]]>>
+<<function [[Codegen.gmove_opt]]>>
 
 (*****************************************************************************)
 (* Expression *)
 (*****************************************************************************)
-<<function [[Codegen5.expr]]>>
+<<function [[Codegen.expr]]>>
 and arguments (env : env) (xs : argument list) : unit =
   let curarg = ref 0 in
   xs |> List.iter (fun (arg : argument) ->
@@ -570,24 +570,24 @@ and arguments (env : env) (xs : argument list) : unit =
   env.size_maxargs <- Int_.maxround env.size_maxargs !curarg 4;
   ()
 
-<<function [[Codegen5.expr_cond]]>>
+<<function [[Codegen.expr_cond]]>>
 
-<<function [[Codegen5.expropt]]>>
+<<function [[Codegen.expropt]]>>
 
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
-<<function [[Codegen5.stmt]]>>
+<<function [[Codegen.stmt]]>>
 
 (*****************************************************************************)
 (* Function *)
 (*****************************************************************************)
-<<function [[Codegen5.codegen_func]]>>
+<<function [[Codegen.codegen_func]]>>
 
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
-<<function [[Codegen5.codegen]]>>
+<<function [[Codegen.codegen]]>>
 @
 
 \section{[[Dumper_.mli]]}

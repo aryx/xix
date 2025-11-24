@@ -142,10 +142,10 @@ let frontend (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
 let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
     'a Ast_asm.program =
 
-  (* todo: Rewrite.rewrite *)
+  let tast = Rewrite.rewrite tast in
   match arch with
   | Arch.Arm -> 
-    let (asm, _locs) = Codegen5.codegen tast in
+    let (asm, _locs) = Codegen.codegen tast in
     (*s: [[CLI.backend5()]] if [[dump_asm]] *)
     if !Flags.dump_asm
     then begin
@@ -393,7 +393,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       | Check.Error err -> Error.errorexit (Check.string_of_error err)
       | Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
       | Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
-      | Codegen5.Error err -> Error.errorexit (Check.string_of_error err)
+      | Codegen.Error err -> Error.errorexit (Check.string_of_error err)
       (*e: [[CLI.main()]] match [[exn]] other cases *)
 
       | _ -> raise exn

@@ -1,4 +1,4 @@
-(*s: Codegen5.ml *)
+(*s: Codegen.ml *)
 (* Copyright 2016, 2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Eq.Operators
@@ -34,7 +34,7 @@ module E = Check
 (* Types *)
 (*****************************************************************************)
 
-(*s: type [[Codegen5.env]] *)
+(*s: type [[Codegen.env]] *)
 (* Environment for code generation *)
 type env = {
 
@@ -63,15 +63,15 @@ type env = {
    * really a (A.register, int) Hashtbl.t;
    *)
   regs: int array;
-  (*s: [[Codegen5.env]] other function fields *)
+  (*s: [[Codegen.env]] other function fields *)
   mutable size_locals: int;
   mutable size_maxargs: int; (* 5c: maxargssafe *)
-  (*x: [[Codegen5.env]] other function fields *)
+  (*x: [[Codegen.env]] other function fields *)
   (* for parameters and locals *)
   offsets: (Ast.fullname, int) Hashtbl.t;
-  (*x: [[Codegen5.env]] other function fields *)
+  (*x: [[Codegen.env]] other function fields *)
   offset_locals: int ref;
-  (*x: [[Codegen5.env]] other function fields *)
+  (*x: [[Codegen.env]] other function fields *)
   (* for goto/labels *)
   labels: (string, Ast_asm.virt_pc) Hashtbl.t;
 
@@ -79,28 +79,28 @@ type env = {
    * we need to update previous goto instructions.
    *)
   forward_gotos: (string, Ast_asm.virt_pc list) Hashtbl.t;
-  (*x: [[Codegen5.env]] other function fields *)
+  (*x: [[Codegen.env]] other function fields *)
   (* for loops (and switch) *)
   (* reinitialized for each block scope *)
   break_pc: Ast_asm.virt_pc option;
   continue_pc: Ast_asm.virt_pc option;
-  (*e: [[Codegen5.env]] other function fields *)
+  (*e: [[Codegen.env]] other function fields *)
 }
-(*e: type [[Codegen5.env]] *)
+(*e: type [[Codegen.env]] *)
 
-(*s: constant [[Codegen5.rRET]] *)
-(*e: constant [[Codegen5.rRET]] *)
+(*s: constant [[Codegen.rRET]] *)
+(*e: constant [[Codegen.rRET]] *)
 (* opti: let rARG = A.R 0 *)
 
-(*s: constant [[Codegen5.rEXT1]] *)
+(*s: constant [[Codegen.rEXT1]] *)
 (* for 'extern register xx;', used in ARM kernel *)
 let rEXT1 = R 10
-(*e: constant [[Codegen5.rEXT1]] *)
-(*s: constant [[Codegen5.rEXT2]] *)
+(*e: constant [[Codegen.rEXT1]] *)
+(*s: constant [[Codegen.rEXT2]] *)
 let rEXT2 = R 9
-(*e: constant [[Codegen5.rEXT2]] *)
+(*e: constant [[Codegen.rEXT2]] *)
 
-(*s: constant [[Codegen5.regs_initial]] *)
+(*s: constant [[Codegen.regs_initial]] *)
 let regs_initial = 
   let arr = Array.make A5.nb_registers 0 in
   (* note that rRET is not in the list; it can be used! *)
@@ -111,9 +111,9 @@ let regs_initial =
     arr.(x) <- 1
   );
   arr
-(*e: constant [[Codegen5.regs_initial]] *)
+(*e: constant [[Codegen.regs_initial]] *)
 
-(*s: function [[Codegen5.env_of_tp]] *)
+(*s: function [[Codegen.env_of_tp]] *)
 let env_of_tp (tp : Typecheck.typed_program) : env =   
   {
     ids_ = tp.ids;
@@ -138,20 +138,20 @@ let env_of_tp (tp : Typecheck.typed_program) : env =
 
     regs          = Array.make 0 A5.nb_registers;
   }
-(*e: function [[Codegen5.env_of_tp]] *)
+(*e: function [[Codegen.env_of_tp]] *)
   
-(*s: type [[Codegen5.integer]] *)
-(*e: type [[Codegen5.integer]] *)
+(*s: type [[Codegen.integer]] *)
+(*e: type [[Codegen.integer]] *)
 
-(*s: type [[Codegen5.operand_able]] *)
+(*s: type [[Codegen.operand_able]] *)
 (* operand *)
 type opd = 
  { opd: operand_kind;
    typ: Type.t;
    loc: Ast.loc;
  }
-(*e: type [[Codegen5.operand_able]] *)
-(*s: type [[Codegen5.operand_able_kind]] *)
+(*e: type [[Codegen.operand_able]] *)
+(*s: type [[Codegen.operand_able_kind]] *)
 and operand_kind =
  | ConstI of Ast_asm.integer
  | Register of Ast_asm.register
@@ -162,34 +162,34 @@ and operand_kind =
 
  (* was not "addressable" in original 5c, but I think it should *)
  | Addr of Ast.fullname
-(*e: type [[Codegen5.operand_able_kind]] *)
+(*e: type [[Codegen.operand_able_kind]] *)
 
 
-(*s: type [[Codegen5.error]] *)
+(*s: type [[Codegen.error]] *)
 type error = Check.error
-(*e: type [[Codegen5.error]] *)
-(*s: function [[Codegen5.string_of_error]] *)
+(*e: type [[Codegen.error]] *)
+(*s: function [[Codegen.string_of_error]] *)
 let string_of_error err =
   Check.string_of_error err
-(*e: function [[Codegen5.string_of_error]] *)
-(*s: exception [[Codegen5.Error]] *)
+(*e: function [[Codegen.string_of_error]] *)
+(*s: exception [[Codegen.Error]] *)
 exception Error of error
-(*e: exception [[Codegen5.Error]] *)
+(*e: exception [[Codegen.Error]] *)
 
 (*****************************************************************************)
 (* Instructions  *)
 (*****************************************************************************)
-(*s: constant [[Codegen5.fake_instr]] *)
+(*s: constant [[Codegen.fake_instr]] *)
 let fake_instr = A.Virtual A.NOP
-(*e: constant [[Codegen5.fake_instr]] *)
-(*s: constant [[Codegen5.fake_loc]] *)
+(*e: constant [[Codegen.fake_instr]] *)
+(*s: constant [[Codegen.fake_loc]] *)
 let fake_loc = -1
-(*e: constant [[Codegen5.fake_loc]] *)
-(*s: constant [[Codegen5.fake_pc]] *)
+(*e: constant [[Codegen.fake_loc]] *)
+(*s: constant [[Codegen.fake_pc]] *)
 let fake_pc = -1
-(*e: constant [[Codegen5.fake_pc]] *)
+(*e: constant [[Codegen.fake_pc]] *)
 
-(*s: function [[Codegen5.add_instr]] *)
+(*s: function [[Codegen.add_instr]] *)
 let add_instr env instr loc =
   (* grow array if necessary *)
   if !(env.pc) >= Array.length !(env.code)
@@ -205,32 +205,32 @@ let add_instr env instr loc =
   !(env.code).(!(env.pc)) <- (instr, loc);
   incr env.pc;
   ()
-(*e: function [[Codegen5.add_instr]] *)
+(*e: function [[Codegen.add_instr]] *)
 
-(*s: function [[Codegen5.set_instr]] *)
+(*s: function [[Codegen.set_instr]] *)
 let set_instr env pc instr loc =
   if pc >= !(env.pc)
   then failwith (spf "set_instr: pc > env.pc (%d >= %d)" pc !(env.pc));
 
   !(env.code).(pc) <- (instr, loc)
-(*e: function [[Codegen5.set_instr]] *)
+(*e: function [[Codegen.set_instr]] *)
 
 
-(*s: function [[Codegen5.add_fake_instr]] *)
+(*s: function [[Codegen.add_fake_instr]] *)
 let add_fake_instr env str =
   let spc = !(env.pc) in
   add_instr env (A.LabelDef (str ^ "(fake)")) fake_loc;
   spc
-(*e: function [[Codegen5.add_fake_instr]] *)
+(*e: function [[Codegen.add_fake_instr]] *)
 
-(*s: function [[Codegen5.add_fake_goto]] *)
+(*s: function [[Codegen.add_fake_goto]] *)
 let add_fake_goto env loc =
   let spc = !(env.pc) in
   add_instr env (A.Instr (A5.B (ref (Absolute fake_pc)), A5.AL)) loc;
   spc
-(*e: function [[Codegen5.add_fake_goto]] *)
+(*e: function [[Codegen.add_fake_goto]] *)
  
-(*s: function [[Codegen5.patch_fake_goto]] *)
+(*s: function [[Codegen.patch_fake_goto]] *)
 let patch_fake_goto env pcgoto pcdest =
   match !(env.code).(pcgoto) with
   (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
@@ -244,12 +244,12 @@ let patch_fake_goto env pcgoto pcdest =
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
   | _ -> raise (Impossible "patching non jump instruction")
-(*e: function [[Codegen5.patch_fake_goto]] *)
+(*e: function [[Codegen.patch_fake_goto]] *)
 
 (*****************************************************************************)
 (* C to Asm helpers  *)
 (*****************************************************************************)
-(*s: function [[Codegen5.global_of_id]] *)
+(*s: function [[Codegen.global_of_id]] *)
 let global_of_id env fullname = 
   let idinfo = Hashtbl.find env.ids_ fullname in
   { name = Ast.unwrap fullname;
@@ -263,13 +263,13 @@ let global_of_id env fullname =
     (* less: analyse idinfo.typ *)
     signature = None;
   }
-(*e: function [[Codegen5.global_of_id]] *)
+(*e: function [[Codegen.global_of_id]] *)
 
-(*s: function [[Codegen5.symbol]] *)
+(*s: function [[Codegen.symbol]] *)
 let symbol fullname = Ast.unwrap fullname
-(*e: function [[Codegen5.symbol]] *)
+(*e: function [[Codegen.symbol]] *)
 
-(*s: function [[Codegen5.entity_of_id]] *)
+(*s: function [[Codegen.entity_of_id]] *)
 let entity_of_id env fullname offset_extra =
   let idinfo = Hashtbl.find env.ids_ fullname in
   match idinfo.TC.sto with
@@ -283,10 +283,10 @@ let entity_of_id env fullname offset_extra =
   | S.Static | S.Global | S.Extern ->
     let offset = offset_extra in
     A.Global (global_of_id env fullname, offset)
-(*e: function [[Codegen5.entity_of_id]] *)
+(*e: function [[Codegen.entity_of_id]] *)
 
 
-(*s: function [[Codegen5.mov_operand_of_opd]] *)
+(*s: function [[Codegen.mov_operand_of_opd]] *)
 (* 5c: part of naddr()
  * less: opportunity for bitshifted registers? *)
 let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
@@ -296,7 +296,7 @@ let mov_operand_of_opd (env : env) (opd : opd) : A5.mov_operand =
   | Name (fullname, offset) -> A5.Entity (entity_of_id env fullname offset)
   | Indirect (r, offset) -> A5.Indirect (r, offset)
   | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
-(*e: function [[Codegen5.mov_operand_of_opd]] *)
+(*e: function [[Codegen.mov_operand_of_opd]] *)
 
 (* 5c: part of naddr() called from gopcode *)
 let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
@@ -311,7 +311,7 @@ let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
       A.IndirectJump r
   | Addr _ -> raise Todo
 
-(*s: function [[Codegen5.arith_instr_of_op]] *)
+(*s: function [[Codegen.arith_instr_of_op]] *)
 let arith_instr_of_op op r1 r2 r3 =
   A5.Arith (
     (match op with
@@ -329,7 +329,7 @@ let arith_instr_of_op op r1 r2 r3 =
     None, 
     A5.Reg r1, Some r2, r3
   )
-(*e: function [[Codegen5.arith_instr_of_op]] *)
+(*e: function [[Codegen.arith_instr_of_op]] *)
 
 (* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
 let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
@@ -342,7 +342,7 @@ let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
 (*****************************************************************************)
 (* Operand able, instruction selection  *)
 (*****************************************************************************)
-(*s: function [[Codegen5.operand_able]] *)
+(*s: function [[Codegen.operand_able]] *)
 let operand_able (e0 : expr) : opd option =
   let kind_opt = 
     match e0.e with
@@ -406,13 +406,13 @@ let operand_able (e0 : expr) : opd option =
   match kind_opt with
   | None -> None
   | Some opd -> Some { opd; typ = e0.e_type; loc = e0.e_loc }
-(*e: function [[Codegen5.operand_able]] *)
+(*e: function [[Codegen.operand_able]] *)
 
-(*s: constant [[Codegen5.fn_complexity]] *)
+(*s: constant [[Codegen.fn_complexity]] *)
 let fn_complexity = 100 
-(*e: constant [[Codegen5.fn_complexity]] *)
+(*e: constant [[Codegen.fn_complexity]] *)
 
-(*s: function [[Codegen5.complexity]] *)
+(*s: function [[Codegen.complexity]] *)
 (* less: could optimize by caching result in node, so no need
  * call again complexity on subtree later
  *)
@@ -459,33 +459,33 @@ let rec complexity (e : expr) : int =
     | SizeOf _ -> 0
 
     | ArrayInit _ | RecordInit _ | GccConstructor _ -> raise Todo
-(*e: function [[Codegen5.complexity]] *)
+(*e: function [[Codegen.complexity]] *)
 
 (*****************************************************************************)
 (* Register allocation helpers *)
 (*****************************************************************************)
-(*s: function [[Codegen5.reguse]] *)
+(*s: function [[Codegen.reguse]] *)
 let reguse env (A.R x) =
   env.regs.(x) <- env.regs.(x) + 1
-(*e: function [[Codegen5.reguse]] *)
+(*e: function [[Codegen.reguse]] *)
 
-(*s: function [[Codegen5.regfree]] *)
+(*s: function [[Codegen.regfree]] *)
 let regfree env (A.R x) = 
   env.regs.(x) <- env.regs.(x) - 1;
   if env.regs.(x) < 0
   then raise (Error (E.Misc ("error in regfree", fake_loc)))
-(*e: function [[Codegen5.regfree]] *)
+(*e: function [[Codegen.regfree]] *)
 
-(*s: function [[Codegen5.with_reg]] *)
+(*s: function [[Codegen.with_reg]] *)
 let with_reg env (r : A.register) f =
   (* less: care about exn? meh, if exn then no recovery anyway *)
   reguse env r;
   let res = f () in
   regfree env r;
   res
-(*e: function [[Codegen5.with_reg]] *)
+(*e: function [[Codegen.with_reg]] *)
   
-(*s: function [[Codegen5.regalloc]] *)
+(*s: function [[Codegen.regalloc]] *)
 let regalloc (env : env) loc : int =
   (* less: lasti trick? *)
   let rec aux (i : int) (n : int) : int =
@@ -505,9 +505,9 @@ let regalloc (env : env) loc : int =
     else aux (i+1) n
   in
   aux 0 (Array.length env.regs)
-(*e: function [[Codegen5.regalloc]] *)
+(*e: function [[Codegen.regalloc]] *)
 
-(*s: function [[Codegen5.opd_regalloc]] *)
+(*s: function [[Codegen.opd_regalloc]] *)
 (* We can reuse a previous register if 'tgtopt' is a register.
  * See for example return.c where we can reuse R0 instead of a new R1.
  *)
@@ -523,9 +523,9 @@ let opd_regalloc (env : env) (typ : Type.t) loc (tgtopt : opd option) : opd =
     in
     { opd = Register (A.R i); typ; loc }
   | _ -> raise Todo
-(*e: function [[Codegen5.opd_regalloc]] *)
+(*e: function [[Codegen.opd_regalloc]] *)
 
-(*s: function [[Codegen5.opd_regfree]] *)
+(*s: function [[Codegen.opd_regfree]] *)
 (*
 let opd_regalloc_opd env opd tgtopt =
   opd_regalloc env opd.typ opd.loc tgtopt
@@ -536,12 +536,12 @@ let opd_regfree env opd =
   match opd.opd with
   | Register r -> regfree env r;
   | _ -> raise (Impossible "opd_regfree on non-register operand")
-(*e: function [[Codegen5.opd_regfree]] *)
+(*e: function [[Codegen.opd_regfree]] *)
 
 (*****************************************************************************)
 (* Code generation helpers *)
 (*****************************************************************************)
-(*s: function [[Codegen5.gmove]] *)
+(*s: function [[Codegen.gmove]] *)
 (* Even though two arguments are operand_able, it does not mean
  * we can move one into the other with one instruction. 
  * In theory, 5a supports general MOVW, but 5l restricts those
@@ -608,8 +608,8 @@ and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
     (A.Instr (A5.MOVE (move_size, None, 
                       mov_operand_of_opd env opd1,
                       mov_operand_of_opd env opd2), A5.AL)) opd1.loc
-(*e: function [[Codegen5.gmove]] *)
-(*s: function [[Codegen5.gmove_opt]] *)
+(*e: function [[Codegen.gmove]] *)
+(*s: function [[Codegen.gmove_opt]] *)
 let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
     unit = 
   match opd2opt with
@@ -618,12 +618,12 @@ let gmove_opt (env : env) (opd1 : opd) (opd2opt : opd option) :
     (* SURE? should we still registerize and all? *)
     (* less: should have warned about unused opd in check.ml *)
     ()
-(*e: function [[Codegen5.gmove_opt]] *)
+(*e: function [[Codegen.gmove_opt]] *)
 
 (*****************************************************************************)
 (* Expression *)
 (*****************************************************************************)
-(*s: function [[Codegen5.expr]] *)
+(*s: function [[Codegen.expr]] *)
 (* todo: inrel ? 
  * todo: if complex type node
  * 5c: called cgen/cgenrel()
@@ -637,11 +637,11 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
         raise (Impossible "handled in operand_able()")
     | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
         raise (Impossible "should have been converted before")    
-    (*s: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
+    (*s: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     | Sequence (e1, e2) -> 
       expr env e1 None;
       expr env e2 dst_opd_opt
-    (*x: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
+    (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     (* less: lots of possible opti *)
     | Binary (e1, op, e2) ->
 
@@ -699,7 +699,7 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       | Logical _ ->
         raise Todo
       )
-    (*x: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
+    (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     | Assign (op, e1, e2) ->
       (match op with
       | Eq_ ->
@@ -737,7 +737,7 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       | OpAssign _op ->
         raise Todo
       )
-    (*x: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
+    (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     | Unary (op, e) ->
 
       (match op with
@@ -793,14 +793,14 @@ let rec expr (env : env) (e0 : expr) (dst_opd_opt : opd option) : unit=
           );
           ()
         end
-    (*e: [[Codegen5.expr()]] when not operand able, match [[e0.e]] cases *)
+    (*e: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     | RecordAccess _ | Cast _ | Postfix _ | Prefix _
     | CondExpr _ | ArrayInit _ | RecordInit _ | GccConstructor _
       -> 
       Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo
     )
-(*e: function [[Codegen5.expr]] *)
+(*e: function [[Codegen.expr]] *)
 and arguments (env : env) (xs : argument list) : unit =
   let curarg = ref 0 in
   xs |> List.iter (fun (arg : argument) ->
@@ -822,7 +822,7 @@ and arguments (env : env) (xs : argument list) : unit =
   env.size_maxargs <- Int_.maxround env.size_maxargs !curarg 4;
   ()
 
-(*s: function [[Codegen5.expr_cond]] *)
+(*s: function [[Codegen.expr_cond]] *)
 (* 5c: bcomplex? () *)
 let expr_cond (env : env) (e0 : expr) : virt_pc =
   (* todo: *)
@@ -836,22 +836,22 @@ let expr_cond (env : env) (e0 : expr) : virt_pc =
     add_instr env (A.Instr (A5.Bxx (A5.EQ,(ref (A.Absolute fake_pc))),A5.AL)) loc;
     pc
   )
-(*e: function [[Codegen5.expr_cond]] *)
+(*e: function [[Codegen.expr_cond]] *)
 
-(*s: function [[Codegen5.expropt]] *)
+(*s: function [[Codegen.expropt]] *)
 let expropt (env : env) (eopt : expr option) : unit =
   match eopt with
   | None -> ()
   | Some e -> expr env e None
-(*e: function [[Codegen5.expropt]] *)
+(*e: function [[Codegen.expropt]] *)
 
 (*****************************************************************************)
 (* Statement *)
 (*****************************************************************************)
-(*s: function [[Codegen5.stmt]] *)
+(*s: function [[Codegen.stmt]] *)
 let rec stmt (env : env) (st0 : stmt) : unit =
   match st0.s with
-  (*s: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*s: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_iniTODO} ->
       let idinfo = Hashtbl.find env.ids_ fullname in
       (* todo: generate code for idinfo.ini, handle static locals, etc. *)
@@ -865,10 +865,10 @@ let rec stmt (env : env) (st0 : stmt) : unit =
       env.offset_locals := !(env.offset_locals) + sizet;
       env.size_locals <- env.size_locals + sizet;
       Hashtbl.add env.offsets fullname !(env.offset_locals);
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | ExprSt e -> expr env e None
   | Block xs -> xs |> List.iter (stmt env)
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | If (e, st1, st2) ->
     let goto_else_or_end = ref (expr_cond env e) in
     if st1.s <> Block []
@@ -881,11 +881,11 @@ let rec stmt (env : env) (st0 : stmt) : unit =
       goto_else_or_end := goto_end;
     end;
     patch_fake_goto env !goto_else_or_end !(env.pc)
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Switch _ 
   | Case _ | Default _ -> 
     raise Todo
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Label (name, st) ->
 
     let here = !(env.pc) in
@@ -900,7 +900,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
     end;
     (* todo? generate dummy Goto +1? *)
     stmt env st
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Goto name ->
     let here = !(env.pc) in
     let dstpc = 
@@ -915,7 +915,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
       end
     in
     add_instr env (A.Instr (A5.B (ref (A.Absolute dstpc)), A5.AL)) st0.s_loc;
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | While (e, st) ->
     let goto_entry        = add_fake_goto env e.e_loc in
     let goto_for_continue = add_fake_goto env e.e_loc in
@@ -937,7 +937,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
     let loc = e.e_loc in
     add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | DoWhile (st, e) ->
 
     let goto_entry        = add_fake_goto env e.e_loc in
@@ -962,7 +962,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
     let loc = e.e_loc in
     add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Break -> 
     (match env.break_pc with
     | Some dst ->
@@ -975,7 +975,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
       add_instr env (A.Instr (A5.B (ref(A.Absolute dst)), A5.AL)) st0.s_loc;
     | None -> raise (Impossible "should be detected in check.ml")
     )
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | For (e1either, e2opt, e3opt, st) ->
     (match e1either with
     | Left e1opt -> expropt env e1opt
@@ -1007,7 +1007,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
     let loc = st0.s_loc in
     add_instr env (A.Instr (A5.B (ref(A.Absolute goto_for_continue)), A5.AL)) loc;
     patch_fake_goto env goto_for_break !(env.pc)
-  (*x: [[Codegen5.stmt]] match [[st0.s]] cases *)
+  (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | Return eopt ->
     (match eopt with
     | None ->
@@ -1022,13 +1022,13 @@ let rec stmt (env : env) (st0 : stmt) : unit =
         add_instr env (A.Virtual A.RET) st0.s_loc
       )
     )
-  (*e: [[Codegen5.stmt]] match [[st0.s]] cases *)
-(*e: function [[Codegen5.stmt]] *)
+  (*e: [[Codegen.stmt]] match [[st0.s]] cases *)
+(*e: function [[Codegen.stmt]] *)
 
 (*****************************************************************************)
 (* Function *)
 (*****************************************************************************)
-(*s: function [[Codegen5.codegen_func]] *)
+(*s: function [[Codegen.codegen_func]] *)
 let codegen_func (env : env) (func : func_def) : unit =
   let { f_name=name; f_loc; f_body=st; f_type=typ; f_storage=_ } = func in
 
@@ -1039,7 +1039,7 @@ let codegen_func (env : env) (func : func_def) : unit =
 
   let spc = add_fake_instr env "TEXT" in
 
-  (*s: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
+  (*s: [[Codegen.codegen_func()]] set [[offsets]] for parameters *)
   (* TODO: introduce helper *)
   (* set offsets for parameters *)
   let offsets = Hashtbl_.create () in
@@ -1065,8 +1065,8 @@ let codegen_func (env : env) (func : func_def) : unit =
     (* todo: align *)
     offset := !offset + sizet;
   );
-  (*e: [[Codegen5.codegen_func()]] set [[offsets]] for parameters *)
-  (*s: [[Codegen5.codegen_func()]] adjust [[env]] *)
+  (*e: [[Codegen.codegen_func()]] set [[offsets]] for parameters *)
+  (*s: [[Codegen.codegen_func()]] adjust [[env]] *)
   (* todo: align offset_locals with return type *)
   let env = { env with
     size_locals = 0;
@@ -1078,7 +1078,7 @@ let codegen_func (env : env) (func : func_def) : unit =
     regs          = Array.copy regs_initial;
   }
   in
-  (*e: [[Codegen5.codegen_func()]] adjust [[env]] *)
+  (*e: [[Codegen.codegen_func()]] adjust [[env]] *)
 
   stmt env st;
 
@@ -1087,20 +1087,20 @@ let codegen_func (env : env) (func : func_def) : unit =
                        env.size_locals + env.size_maxargs))) f_loc;
   add_instr env (A.Virtual A.RET) f_loc;
 
-  (*s: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)
+  (*s: [[Codegen.codegen_func()]] sanity check [[env.regs]] *)
   (* sanity check register allocation *)
   env.regs |> Array.iteri (fun i v ->
     if regs_initial.(i) <> v
     then raise (Error (E.Misc (spf "reg %d left allocated" i, f_loc)));
   );
-  (*e: [[Codegen5.codegen_func()]] sanity check [[env.regs]] *)
+  (*e: [[Codegen.codegen_func()]] sanity check [[env.regs]] *)
   ()
-(*e: function [[Codegen5.codegen_func]] *)
+(*e: function [[Codegen.codegen_func]] *)
 
 (*****************************************************************************)
 (* Main entry point *)
 (*****************************************************************************)
-(*s: function [[Codegen5.codegen]] *)
+(*s: function [[Codegen.codegen]] *)
 let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
   let env = env_of_tp tp in
   tp.funcs |> List.iter (codegen_func env);
@@ -1113,5 +1113,5 @@ let codegen (tp : Typecheck.typed_program) : Ast_asm5.program =
   (* TODO *)
   let locs = [] in
   instrs, locs
-(*e: function [[Codegen5.codegen]] *)
-(*e: Codegen5.ml *)
+(*e: function [[Codegen.codegen]] *)
+(*e: Codegen.ml *)

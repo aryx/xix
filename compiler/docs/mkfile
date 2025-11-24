@@ -11,7 +11,7 @@ D2=$TOP/macroprocessor
 SRC_ML=\
   $D/Arch5.ml $D/Dumper_.ml $D/Error.ml \
   $D/Parse.ml $D/Check.ml $D/Typecheck.ml \
-  $D/Eval_const.ml $D/Rewrite.ml $D/Codegen5.ml \
+  $D/Eval_const.ml $D/Rewrite.ml $D/Codegen.ml \
   $D/CLI.ml \
   $D2/Location_cpp.ml $D2/Parse_cpp.ml
 

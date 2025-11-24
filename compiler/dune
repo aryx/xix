@@ -23,7 +23,8 @@
     Arch_compiler
     Check Eval_const Typecheck
     Rewrite
-    Arch5 Codegen5
+    Codegen
+    Arch5 
     CLI
   )
  (libraries

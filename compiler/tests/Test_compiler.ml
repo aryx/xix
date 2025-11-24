@@ -51,25 +51,31 @@ let e2e_tests caps =
 let codegen_tests caps =
   (* LATER: use Glob.glob "*.c" *)
   let files = [
-    "call.c";
-    "address_local.c";
-    "assign.c";
-    "break.c";
-    "dowhile.c";
-    "enum.c";
-    "function.c";
-    "goto.c";
+    "trivial.c";
+
     "if.c";
+    "while.c";
+    "dowhile.c";
+    "goto.c";
+    "break.c";
+
+    "simple.c";
+    "assign.c";
+    "function.c";
     "local.c";
     "params.c";
     "return.c";
-    "simple.c";
-    "trivial.c";
-    "while.c";
+    "call.c";
+
+    "address_local.c";
+    "enum.c";
+
 (* TODO:
     "array.c";
     "pointer.c";
+
     "helloraw.c";
+
     "arithmetic.c";
 *)
     ]

@@ -222,15 +222,15 @@ let add_fake_goto (env : 'i env) loc =
  
 (*s: function [[Codegen.patch_fake_goto]] *)
 let patch_fake_goto (env : 'i env) (pcgoto : A.virt_pc) (pcdest : A.virt_pc) =
-  match !(env.code).(pcgoto) with
+  match fst !(env.code).(pcgoto) with
   (* TODO? what about BL? time to factorize B | BL | Bxx ? *)
-  (* ocaml-light: | A5.Instr (A5.B aref, A5.AL), _loc | A5.Instr (A5.Bxx (_, aref), A5.AL), _loc *)
-  | A.Virtual (A.Jmp aref), _loc ->
+  (* ocaml-light: | Instr (B aref) | A.Instr (A.Bxx aref) -> ... *)
+  | A.Virtual (A.Jmp aref) ->
     if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
 
-  | A.Instr (A5.Bxx (_, aref), A5.AL), _loc ->
+  | A.Instr (A5.Bxx (_, aref), A5.AL) ->
     if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
@@ -780,13 +780,15 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
                     gmove env src_opd dst_opd
                 );
              );
-             
           );
           ()
         end
     (*e: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
-    | RecordAccess _ | Cast _ | Postfix _ | Prefix _
-    | CondExpr _ | ArrayInit _ | RecordInit _ | GccConstructor _
+    | RecordAccess _
+    | Cast _
+    | Postfix _ | Prefix _
+    | CondExpr _
+    | ArrayInit _ | RecordInit _ | GccConstructor _
       -> 
       Logs.err (fun m -> m "%s" (Dumper_.s_of_any (Expr e0)));
       raise Todo

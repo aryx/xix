@@ -45,8 +45,8 @@ type env = {
   (* less: compute offset for each field?
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
    *)
-
-  arch: Arch_compiler.t;
+  arch: Arch.t;
+  a: Arch_compiler.t;
 
   (* the output *)
 
@@ -115,15 +115,18 @@ let regs_initial =
 
 (*s: function [[Codegen.env_of_tp]] *)
 let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : env =   
+  let arch_compiler: Arch_compiler.t =
+    match arch with
+    | Arch.Arm -> Arch5.arch;
+    | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
+        
+  in
+
   {
     ids_ = tp.ids;
     structs_ = tp.structs;
-
-    arch = 
-      (match arch with
-      | Arch.Arm -> Arch5.arch;
-      | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
-      );
+    arch;
+    a = arch_compiler;
 
     pc = ref 0;
     code = ref [||];
@@ -814,7 +817,7 @@ and arguments (env : env) (xs : argument list) : unit =
       expr env arg (Some opd);
       let opd2 = argument_operand env arg !curarg in
       let sizet = 
-        env.arch.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
+        env.a.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
       in
       (* TODO: cursafe, curarg align before and after *)
       curarg := !curarg + sizet;
@@ -862,7 +865,7 @@ let rec stmt (env : env) (st0 : stmt) : unit =
 
       (* update env.offsets *)
       let t = idinfo.TC.typ in
-      let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t
+      let sizet = env.a.width_of_type {Arch_compiler.structs = env.structs_} t
       in
 
       (* todo: align *)
@@ -1062,7 +1065,7 @@ let codegen_func (env : env) (func : func_def) : unit =
 
   let offset = ref 0 in
   xs |> List.iter (fun (p, t) ->
-    let sizet = env.arch.width_of_type {Arch_compiler.structs = env.structs_} t in
+    let sizet = env.a.width_of_type {Arch_compiler.structs = env.structs_} t in
     p.p_name |> Option.iter (fun fullname ->
       Hashtbl.add offsets fullname !offset
     );

@@ -15,4 +15,4 @@
 13: (MOVE(Word, None, Entity(Local(Some("x"), -4)), Imsr(Reg(R(0)))), AL)
 14: Virtual(RET)
 15: Virtual(RET)
-executing: o5x -S tests/compiler/codegen/break.c
+executing: o5c -S tests/compiler/codegen/break.c

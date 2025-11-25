@@ -20,10 +20,10 @@ let run_main (caps : <CLI.caps; ..>) (cmd : string) : (Exit.t, string) result =
    * tests; simpler to just fork.
    *)
   Proc.apply_in_child_process caps (fun () ->
-      print_string (spf "executing: o5x %s\n" cmd);
+      print_string (spf "executing: %s\n" cmd);
       try 
         Ok (Exit.catch (fun () -> 
-              CLI.main caps (Array.of_list ("o5c" :: args))))
+              CLI.main caps (Array.of_list args)))
       with
       (* actually impossible *)
       | Failure s -> failwith (spf "impossible, failure %s should be catched" s)
@@ -44,7 +44,7 @@ let e2e_tests caps =
   Testo.categorize "e2e" [
     (* TODO: use Exit_code.ml to remove the need for End_of_file catch *)
     t ~checked_output:(Testo.stdxxx ()) "--help" (fun () ->
-        run_main caps "--help" |> ok_or_fail
+        run_main caps "o5c --help" |> ok_or_fail
     )
   ]
 
@@ -83,7 +83,7 @@ let codegen_tests caps =
   let tests = files |> List.map (fun file ->
       let path = Fpath.v "tests/compiler/codegen" / file in
       t ~checked_output:(Testo.stdxxx ()) !!path (fun () ->
-        run_main caps (spf "-S %s" !!path) |> ok_or_fail
+        run_main caps (spf "o5c -S %s" !!path) |> ok_or_fail
       )
     )
   in

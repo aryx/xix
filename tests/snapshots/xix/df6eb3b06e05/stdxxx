@@ -1,4 +1,4 @@
-executing: o5x --help
+executing: o5c --help
 usage: o5c [-options] file.c
   -o               <file> place output (an object) in file
   -w               enable warnings

@@ -202,12 +202,13 @@ type virtual_instr =
   | RET
   | NOP
   (* new: to factorize code in linker/Profile.ml (and later in Codegen.ml) *)
-  | Call of global (* transformed in BL in 5l, JAL in vl, etc. *)
   | Load of entity * register
   | Store of register * entity
   | AddI of sign * integer (* or ximm? *) * register
   (* new: to factorize code in compiler/Codegen.ml *)
   | Jmp of branch_operand
+  (* alt: 'Call of global' but here can also accept indirect register *)
+  | JmpAndLink of branch_operand
   (* TODO? 
    * | Case of ??? (* compiler-only virtual instr *) 
    *)
@@ -272,12 +273,12 @@ let rec visit_globals_program visit_instr (f : global -> unit) (prog : 'instr pr
     | Virtual virt ->
           (match virt with
           | RET | NOP -> ()
-          | Call glob -> f glob
           | Load (Global (glob, _), _) -> f glob
           | Store (_, Global (glob, _)) -> f glob
           | Load _ | Store _ -> ()
           | AddI _ -> ()
           | Jmp x -> visit_globals_branch_operand f x
+          | JmpAndLink x -> visit_globals_branch_operand f x
           )
     | Instr instr ->
       visit_instr f instr

@@ -34,7 +34,7 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
               );
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
-          | A.Call _ | A.Load _ | A.Store _ | A.AddI _ | A.Jmp _ ->
+          | A.Load _ | A.Store _ | A.AddI _ | A.Jmp _ | A.JmpAndLink _ ->
              (curtext, Some n)
         in
         (* NOP and RET should not have branch set *)
@@ -142,8 +142,8 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
         );
        
         | A.NOP -> raise (Impossible "NOP was removed in step1")
-        | A.Call glob -> 
-            n.instr <- T.I (JAL (ref (A.SymbolJump glob)));
+        | A.JmpAndLink opd -> 
+            n.instr <- T.I (JAL opd)
         | A.AddI (sign, i, reg) ->
             n.instr <- T.I (Arith (ADD (W, sign), Imm i, None, reg))
         | A.Load (ent, reg) ->

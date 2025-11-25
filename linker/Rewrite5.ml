@@ -38,7 +38,8 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
               );
               (curtext, prev_no_nop)
           | A.RET -> (curtext, Some n)
-          | A.Call _ | A.Load _ | A.Store _ | A.AddI _ | A.Jmp _ ->
+          | A.Load _ | A.Store _ | A.AddI _
+          | A.Jmp _ | A.JmpAndLink _ ->
               (curtext, Some n)
         in
         (* NOP and RET should not have branch set *)
@@ -124,7 +125,9 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
            ), AL);
 
       | A.NOP -> raise (Impossible "NOP was removed in step1")
-      | (A.Call _ | A.AddI _ | A.Load _ | A.Store _ | A.Jmp _) -> raise Todo
+      | A.JmpAndLink opd ->
+          n.instr <- T.I (BL opd, AL)
+      | (A.AddI _ | A.Load _ | A.Store _ | A.Jmp _) -> raise Todo
       );
       autosize_opt
 

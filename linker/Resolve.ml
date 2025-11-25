@@ -66,9 +66,11 @@ let build_graph branch_opd_of_instr (symbols : T.symbol_table) (xs : 'instr T.co
     match n.instr with
     | T.TEXT _ | T.WORD _ -> ()
     | T.Virt (A.RET | A.NOP) -> ()
-    | T.Virt (A.Call _ | A.AddI _ | A.Load _ | A.Store _) -> ()
+    | T.Virt (A.AddI _ | A.Load _ | A.Store _) -> ()
         (* alt: raise (Impossible "those virtual instrs should appear only after build_graph") *)
     | T.Virt (A.Jmp opd) ->
+          resolve_branch_operand opd symbols |> Option.iter adjust_virt_pc
+    | T.Virt (A.JmpAndLink opd) ->
           resolve_branch_operand opd symbols |> Option.iter adjust_virt_pc
     | T.I instr ->
         branch_opd_of_instr instr |> Option.iter (fun opd -> 

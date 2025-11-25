@@ -242,9 +242,10 @@ and vof_virtual_instr =
   | AddI _ -> Ocaml.VSum (("AddI ...", []))
   | Load _ -> Ocaml.VSum (("Load ...", []))
   | Store _ -> Ocaml.VSum (("Store ...", []))
-  | Call _ -> Ocaml.VSum (("Call ...", []))
   | Jmp v1 -> 
       let v1 = vof_branch_operand v1 in Ocaml.VSum (("Jmp", [ v1 ]))
+  | JmpAndLink v1 -> 
+      let v1 = vof_branch_operand v1 in Ocaml.VSum (("JmpAndLink", [ v1 ]))
 
 and vof_attributes { dupok = v_dupok; no_prof = v_prof } =
   let bnds = [] in

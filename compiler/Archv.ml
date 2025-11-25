@@ -48,7 +48,7 @@ let rEXT2 = A.R 9
 let regs_initial = 
   let arr = Array.make Av.nb_registers 0 in
   (* note that rRET is not in the list; it can be used! *)
-  [Av.rLINK; (*Av.rPC;*)       (* hardware reseved *)
+  [Av.rLINK; Av.rZERO; (*Av.rPC;*)       (* hardware reseved *)
    Av.rTMP; Av.rSB; Av.rSP; (* linker reserved *)
    (*rEXT1; rEXT2;*)         (* compiler reserved *)
   ] |> List.iter (fun (A.R x) ->

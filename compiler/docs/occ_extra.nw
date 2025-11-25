@@ -5,15 +5,25 @@
 <<Arch_compiler.ml>>=
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 
+(* operand *)
+type opd = 
+ { opd: operand_kind;
+   typ: Type.t;
+   loc: Ast.loc;
+ }
+and operand_kind =
+ | ConstI of Ast_asm.integer
+ | Register of Ast_asm.register
+
+ (* indirect *)
+ | Name of Ast.fullname * Ast_asm.offset
+ | Indirect of Ast_asm.register * Ast_asm.offset
+
+ (* was not "addressable" in original 5c, but I think it should *)
+ | Addr of Ast.fullname
+
 <<type [[Arch_compiler.env]]>>
 <<type [[Arch_compiler.t]]>>
-
-(* TODO? instead of Arch5, ... could also define an of_arch function
- * here, like I did for Arch_linker
- *
- * todo? have a portable asm? ast_asm_common.ml? 
- * with ATEXT, ANOP, ARET, etc.
- *)
 @
 
 \section{[[Arch5.mli]]}
@@ -30,13 +40,68 @@
 %-------------------------------------------------------------
 
 <<Arch5.ml>>=
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-
 open Arch_compiler
+module C = Ast
+module A = Ast_asm
 module T = Type
 
+module A5 = Ast_asm5
+
 <<function [[Arch5.width_of_type]]>>
+
+(* opti: let rARGopt = Some (A.R 0) *)
+
+(* for 'extern register xx;', used in ARM kernel *)
+let rEXT1 = A.R 10
+let rEXT2 = A.R 9
+
+let regs_initial = 
+  let arr = Array.make A5.nb_registers 0 in
+  (* note that rRET is not in the list; it can be used! *)
+  [A5.rLINK; A5.rPC;       (* hardware reseved *)
+   A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
+   rEXT1; rEXT2;         (* compiler reserved *)
+  ] |> List.iter (fun (A.R x) ->
+    arr.(x) <- 1
+  );
+  arr
+
+(* alt: add binaryOp to Ast_asm.ml so generalize to a few archs *)
+let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
+  A5.Arith (
+    (match op with
+    | C.Arith op ->
+      (match op with 
+      | C.Plus -> A5.ADD | C.Minus -> A5.SUB
+      | C.And -> A5.AND | C.Or -> A5.ORR | C.Xor -> A5.EOR
+      (* todo: need type info for A.SLR *)
+      | C.ShiftLeft -> A5.SLL | C.ShiftRight -> A5.SRA
+      (* todo: need type info for A.MULU, etc *)
+      | C.Mul -> A5.MUL | C.Div -> A5.DIV | C.Mod -> A5.MOD
+      )
+    | C.Logical _ -> raise Todo
+    ),
+    None, 
+    A5.Reg r1, Some r2, r3
+  ), A5.AL
+
+(* 5c: part of naddr()
+ * less: opportunity for bitshifted registers? *)
+let mov_operand_of_opd entity_of_id (opd : opd) : A5.mov_operand =
+  match opd.opd with
+  | ConstI i   -> A5.Imsr (A5.Imm i)
+  | Register r -> A5.Imsr (A5.Reg r)
+  | Name (fullname, offset) -> A5.Entity (entity_of_id fullname offset)
+  | Indirect (r, offset) -> A5.Indirect (r, offset)
+  | Addr fullname -> A5.Ximm (A.Address (entity_of_id fullname 0))
+
+let move_instr_of_opds entity_of_id (move_size : A.move_size) 
+     (opd1: opd) (opd2: opd) : A5.instr_with_cond =
+  A5.MOVE (move_size, None, 
+                      mov_operand_of_opd entity_of_id opd1,
+                      mov_operand_of_opd entity_of_id opd2), A5.AL
 
 <<constant [[Arch5.arch]]>>
 @
@@ -308,7 +373,7 @@ open Regexp_.Operators
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of 5c, the Plan 9 C compiler for ARM.
+(* An OCaml port of 5c/vc, the Plan 9 C compiler for ARM and MIPS.
  *
  * Main limitations compared to 5c/vc/...:
  *  - no unicode support
@@ -321,7 +386,7 @@ open Regexp_.Operators
  *  - no error recovery, we stop at the first error (except in check.ml)
  *    (but compiler now fast enough and errors have a domino effect anyway)
  *  - no support for certain kencc extensions: 
- *     * STILL? unnamed structure element
+ *     * unnamed structure element
  *       (confusing anyway, and annoying when porting code to gcc/clang)
  *     * typestr
  *       (seems dead)
@@ -410,11 +475,14 @@ open Common
 open Eq.Operators
 open Either
 
+open Arch_compiler
 open Ast_asm
 open Ast
 module C = Ast
 module A = Ast_asm
-module A5 = Ast_asm5
+(* can't depend on Ast_Asm5 or Ast_asmv here! the code needs to
+ * work for all archs!
+ *)
 
 module T = Type
 module S = Storage
@@ -443,8 +511,6 @@ module E = Check
 <<type [[Codegen.env]]>>
 
 <<constant [[Codegen.rRET]]>>
-(* opti: let rARG = A.R 0 *)
-
 <<constant [[Codegen.rEXT1]]>>
 <<constant [[Codegen.rEXT2]]>>
 
@@ -493,7 +559,7 @@ module E = Check
 <<function [[Codegen.mov_operand_of_opd]]>>
 
 (* 5c: part of naddr() called from gopcode *)
-let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
+let branch_operand_of_opd (env : 'i env) (opd : opd) : A.branch_operand2 =
   match opd.opd with
   | Name (fullname, offset) ->
       assert (offset =|= 0);
@@ -508,9 +574,9 @@ let branch_operand_of_opd (env : env) (opd : opd) : A.branch_operand2 =
 <<function [[Codegen.arith_instr_of_op]]>>
 
 (* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
-let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
+let argument_operand (env : 'i env) (arg: argument) (curarg : int) : opd =
   (* add 4 for space for REGLINK in callee *)
-  { opd = Indirect (A5.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
+  { opd = Indirect (env.a.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
     typ = arg.e_type;
     loc = arg.e_loc;
   }
@@ -549,7 +615,7 @@ let argument_operand (_env : env) (arg: argument) (curarg : int) : opd =
 (* Expression *)
 (*****************************************************************************)
 <<function [[Codegen.expr]]>>
-and arguments (env : env) (xs : argument list) : unit =
+and arguments (env : 'i env) (xs : argument list) : unit =
   let curarg = ref 0 in
   xs |> List.iter (fun (arg : argument) ->
       (* TODO: if complex argument type or complex arg *)
@@ -558,7 +624,7 @@ and arguments (env : env) (xs : argument list) : unit =
       expr env arg (Some opd);
       let opd2 = argument_operand env arg !curarg in
       let sizet = 
-        env.arch.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
+        env.a.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
       in
       (* TODO: cursafe, curarg align before and after *)
       curarg := !curarg + sizet;
@@ -578,6 +644,11 @@ and arguments (env : env) (xs : argument list) : unit =
 (* Statement *)
 (*****************************************************************************)
 <<function [[Codegen.stmt]]>>
+
+(*****************************************************************************)
+(* Global *)
+(*****************************************************************************)
+(* TODO, in env.ids ? iter over it? *)
 
 (*****************************************************************************)
 (* Function *)
@@ -828,6 +899,7 @@ module T = Parser  (* T for Tokens *)
 %-------------------------------------------------------------
 
 <<Rewrite.mli>>=
+val rewrite: Typecheck.typed_program -> Typecheck.typed_program
 @
 
 \section{[[Rewrite.ml]]}
@@ -843,6 +915,9 @@ module T = Parser  (* T for Tokens *)
  *  - OADDR/OIND simplifications
  *  - put constants on the right for commutative operations
  *)
+
+let rewrite (tast: Typecheck.typed_program) : Typecheck.typed_program =
+  tast
 @
 
 \section{[[Storage.ml]]}

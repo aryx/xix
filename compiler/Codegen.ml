@@ -108,8 +108,11 @@ type 'i env = {
 let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =   
   let arch_compiler: 'i Arch_compiler.t =
     match arch with
+    (* nosemgrep: do-not-use-obj-magic *)
     | Arch.Arm -> Obj.magic Arch5.arch
+    (* nosemgrep: do-not-use-obj-magic *)
     | Arch.Mips -> Obj.magic Archv.arch
+    (* nosemgrep: do-not-use-obj-magic *)
     | Arch.Riscv -> Obj.magic Archi.arch
     | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
         

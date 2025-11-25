@@ -157,9 +157,11 @@ let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
           let v = Meta_ast_asm5.vof_line instr in
           Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
         | Arch.Mips ->
+          (* nosemgrep: do-not-use-obj-magic *)
           let instr = Obj.magic line in
           Logs.app (fun m -> m  "%2d: %s" !pc (Ast_asmv.show_line instr));
         | Arch.Riscv ->
+          (* nosemgrep: do-not-use-obj-magic *)
           let instr = Obj.magic line in
           Logs.app (fun m -> m  "%2d: %s" !pc (Ast_asmi.show_line instr));
         | _ -> 

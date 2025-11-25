@@ -24,12 +24,11 @@
 11: (Instr
    (Move2 (W__, (Left (Gen (Entity (Local ((Some "x"), -4))))),
       (Gen (GReg (R 2))))))
-12: (Instr (Move2 (W__, (Left (Gen (GReg (R 2)))), (Gen (GReg (R 3))))))
-13: (Instr (Move2 (W__, (Left (Gen (GReg (R 3)))), (Gen (Indirect ((R 29), 4))))))
-14: (Virtual
+12: (Instr (Move2 (W__, (Left (Gen (GReg (R 2)))), (Gen (Indirect ((R 29), 4))))))
+13: (Virtual
    (JmpAndLink
       ref ((SymbolJump
               { Ast_asm.name = "foo"; priv = None; signature = None }))))
+14: (Virtual RET)
 15: (Virtual RET)
-16: (Virtual RET)
 executing: ovc -S tests/compiler/codegen/call.c

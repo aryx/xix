@@ -7,9 +7,8 @@
    Imsr(Reg(R(1)))),
  AL)
  5: (Arith(ADD, None, Reg(R(1)), None, R(0)), AL)
- 6: (MOVE(Word, None, Imsr(Reg(R(0))), Imsr(Reg(R(1)))), AL)
- 7: (MOVE(Word, None, Imsr(Reg(R(1))), Entity(Local(Some("y"), -4))), AL)
- 8: (MOVE(Word, None, Entity(Local(Some("y"), -4)), Imsr(Reg(R(0)))), AL)
+ 6: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("y"), -4))), AL)
+ 7: (MOVE(Word, None, Entity(Local(Some("y"), -4)), Imsr(Reg(R(0)))), AL)
+ 8: Virtual(RET)
  9: Virtual(RET)
-10: Virtual(RET)
 executing: o5c -S tests/compiler/codegen/function.c

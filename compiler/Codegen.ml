@@ -66,6 +66,7 @@ type 'i env = {
    * really a (A.register, int) Hashtbl.t;
    *)
   regs: int array;
+  (* TODO: fregs *)
   (*s: [[Codegen.env]] other function fields *)
   mutable size_locals: int;
   mutable size_maxargs: int; (* 5c: maxargssafe *)
@@ -503,70 +504,78 @@ let opd_regfree env opd =
  * This is why we must decompose below the move in 2 instructions
  * sometimes.
  *)
-let rec gmove (env : 'i env) (opd1 : opd) (opd2 : opd) : unit =
-  match opd1.opd with
+let rec gmove (env : 'i env) (from : opd) (to_ : opd) : unit =
+  match from.opd with
 
-  (* a load *)
+  (* a memory load *)
   | Name _ | Indirect _ ->
     let move_size = 
-      match opd1.typ with
+      match from.typ with
       | T.I (T.Int, _) | T.Pointer _ -> A.Word
       | _ -> raise Todo
     in
-    (* less: opti which does opd_regfree env opd2 (Some opd2)? worth it? *)
-    let opd1reg = opd_regalloc env opd1.typ opd1.loc (Some opd2) in
-    gmove_aux env move_size opd1 opd1reg;
-    gmove env opd1reg opd2;
-    opd_regfree env opd1reg
+    (* less: opti which does opd_regfree env to_ (Some to_)? worth it? *)
+    let fromreg = opd_regalloc env from.typ from.loc (Some to_) in
+    gmove_aux env move_size from fromreg;
+    (* recurse! *)
+    gmove env fromreg to_;
+    opd_regfree env fromreg
 
+  (* else *)
   | ConstI _ | Register _ | Addr _  ->
 
-    (match opd2.opd with
+    (match to_.opd with
 
-    (* a store *)
+    (* a memory store *)
     | Name _ | Indirect _ ->
       let move_size =
-        match opd2.typ with
+        match to_.typ with
         | T.I (T.Int, _) | T.Pointer _ -> A.Word
         | _ -> raise Todo
       in
-      (* less: opti which does opd_regfree env opd2 (Some opd1)?? *)
-      let opd2reg = opd_regalloc env opd2.typ opd2.loc None in
-      gmove env opd1 opd2reg;
-      gmove_aux env move_size opd2reg opd2;
-      opd_regfree env opd2reg
+      let to_reg = 
+         if from.typ =*= to_.typ
+         (* TODO: explain opti, can see its effect on simple.c *)
+         then opd_regalloc env to_.typ to_.loc (Some from)
+         else opd_regalloc env to_.typ to_.loc None 
+      in
+      (* recurse! *)
+      gmove env from to_reg;
+      gmove_aux env move_size to_reg to_;
+      opd_regfree env to_reg
 
+    (* else *)
     | ConstI _ | Register _ | Addr _ -> 
 
       (* the simple cases *)
       let move_size = 
-        match opd1.typ, opd2.typ with
+        match from.typ, to_.typ with
         | T.I (T.Int, _), T.I (T.Int, _) -> A.Word
         | T.Pointer _, T.Pointer _ -> A.Word
         (* todo: lots of opti related to float *)
         | _ -> raise Todo
       in
-      gmove_aux env move_size opd1 opd2
+      gmove_aux env move_size from to_
     )
 
-(* At this point, either opd1 or opd2 references memory (but not both),
+(* At this point, either from or to_ references memory (but not both),
  * so we can do the move in one instruction.
  * 5c: called gins()
  *)
-and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
+and gmove_aux env move_size (from : opd) (to_ : opd) : unit =
   (* less: should happen only for register? *)
-  if opd1.opd =*= opd2.opd
+  if from.opd =*= to_.opd
   then ()
   else 
   add_instr env 
-    (A.Instr (env.a.move_instr_of_opds (entity_of_id env) move_size opd1 opd2))
-    opd1.loc
+    (A.Instr (env.a.move_instr_of_opds (entity_of_id env) move_size from to_))
+    from.loc
 (*e: function [[Codegen.gmove]] *)
 (*s: function [[Codegen.gmove_opt]] *)
-let gmove_opt (env : 'i env) (opd1 : opd) (opd2opt : opd option) :
+let gmove_opt (env : 'i env) (from : opd) (to_opt : opd option) :
     unit = 
-  match opd2opt with
-  | Some opd2 -> gmove env opd1 opd2
+  match to_opt with
+  | Some to_ -> gmove env from to_
   | None ->
     (* SURE? should we still registerize and all? *)
     (* less: should have warned about unused opd in check.ml *)
@@ -778,9 +787,9 @@ and arguments (env : 'i env) (xs : argument list) : unit =
   ()
 
 (*s: function [[Codegen.expr_cond]] *)
-(* 5c: bcomplex? () *)
+(* 5c: called bcomplex() and boolgen() *)
 let expr_cond (env : 'i env) (e0 : expr) : virt_pc =
-  (* todo: *)
+  (* todo:  call complex() on e0 to rewrite *)
   with_reg env env.a.rRET (fun () ->
     let dst = { opd = Register env.a.rRET; typ = e0.e_type; loc = e0.e_loc } in
     expr env e0 (Some dst);
@@ -804,6 +813,7 @@ let expropt (env : 'i env) (eopt : expr option) : unit =
 (* Statement *)
 (*****************************************************************************)
 (*s: function [[Codegen.stmt]] *)
+(* 5c: called gen() *)
 let rec stmt (env : 'i env) (st0 : stmt) : unit =
   match st0.s with
   (*s: [[Codegen.stmt]] match [[st0.s]] cases *)
@@ -922,13 +932,13 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
     (match env.break_pc with
     | Some dst ->
       add_instr env (A.Virtual (A.Jmp (ref(A.Absolute dst)))) st0.s_loc;
-    | None -> raise (Impossible "should be detected in check.ml")
+    | None -> raise (Impossible "not in a loop (should be detected in check.ml)")
     )
   | Continue ->
     (match env.continue_pc with
     | Some dst ->
       add_instr env (A.Virtual (A.Jmp (ref(A.Absolute dst)))) st0.s_loc;
-    | None -> raise (Impossible "should be detected in check.ml")
+    | None -> raise (Impossible "not in a loop (should be detected in check.ml)")
     )
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | For (e1either, e2opt, e3opt, st) ->
@@ -969,7 +979,9 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
       add_instr env (A.Virtual A.RET) st0.s_loc
 
     | Some e ->
-      (* todo: if type compatible with R0 *)
+      (* todo: if type compatible with R0, TODO: call complex(e) and uncomma
+       * TODO: if complex type
+       *)
       with_reg env env.a.rRET (fun () ->
         let dst = { opd = Register env.a.rRET; typ = e.e_type; loc = e.e_loc } in
         expr env e (Some dst);

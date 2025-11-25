@@ -8,13 +8,12 @@
    (Move2 (W__, (Left (Gen (Entity (Param ((Some "y"), 4))))),
       (Gen (GReg (R 2))))))
  3: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), None, (R 1))))
- 4: (Instr (Move2 (W__, (Left (Gen (GReg (R 1)))), (Gen (GReg (R 2))))))
- 5: (Instr
-   (Move2 (W__, (Left (Gen (GReg (R 2)))),
+ 4: (Instr
+   (Move2 (W__, (Left (Gen (GReg (R 1)))),
       (Gen (Entity (Local ((Some "z"), -4)))))))
- 6: (Instr
+ 5: (Instr
    (Move2 (W__, (Left (Gen (Entity (Local ((Some "z"), -4))))),
       (Gen (GReg (R 1))))))
+ 6: (Virtual RET)
  7: (Virtual RET)
- 8: (Virtual RET)
 executing: ovc -S tests/compiler/codegen/simple.c

@@ -15,13 +15,12 @@
                   { Ast_asm.name = "z"; priv = None; signature = None }, 0))))),
       (Gen (GReg (R 2))))))
  5: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), None, (R 1))))
- 6: (Instr (Move2 (W__, (Left (Gen (GReg (R 1)))), (Gen (GReg (R 2))))))
- 7: (Instr
-   (Move2 (W__, (Left (Gen (GReg (R 2)))),
+ 6: (Instr
+   (Move2 (W__, (Left (Gen (GReg (R 1)))),
       (Gen (Entity (Local ((Some "y"), -4)))))))
- 8: (Instr
+ 7: (Instr
    (Move2 (W__, (Left (Gen (Entity (Local ((Some "y"), -4))))),
       (Gen (GReg (R 1))))))
+ 8: (Virtual RET)
  9: (Virtual RET)
-10: (Virtual RET)
 executing: ovc -S tests/compiler/codegen/function.c

@@ -12,9 +12,8 @@
  9: (MOVE(Word, None, Imsr(Imm(0)), Imsr(Reg(R(0)))), AL)
 10: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("x"), -4))), AL)
 11: (MOVE(Word, None, Entity(Local(Some("x"), -4)), Imsr(Reg(R(1)))), AL)
-12: (MOVE(Word, None, Imsr(Reg(R(1))), Imsr(Reg(R(2)))), AL)
-13: (MOVE(Word, None, Imsr(Reg(R(2))), Indirect(R(13), 4)), AL)
-14: Virtual(JmpAndLink(Ref(SymbolJump({name="foo"; priv=None; sig=None; }))))
+12: (MOVE(Word, None, Imsr(Reg(R(1))), Indirect(R(13), 4)), AL)
+13: Virtual(JmpAndLink(Ref(SymbolJump({name="foo"; priv=None; sig=None; }))))
+14: Virtual(RET)
 15: Virtual(RET)
-16: Virtual(RET)
 executing: o5c -S tests/compiler/codegen/call.c

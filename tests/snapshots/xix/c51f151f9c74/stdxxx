@@ -1,0 +1,26 @@
+ 0: (Pseudo
+   (TEXT ({ Ast_asm.name = "foo"; priv = None; signature = None },
+      { dupok = false; no_prof = false }, 4)))
+ 1: (Instr (Move2 (W__, (Right (Int 0)), (Gen (GReg (R 5))))))
+ 2: (Instr
+   (Move2 (W__, (Left (Gen (GReg (R 5)))),
+      (Gen (Entity (Local ((Some "x"), -4)))))))
+ 3: (Virtual (Jmp ref ((Absolute 9))))
+ 4: (Virtual (Jmp ref ((Absolute 6))))
+ 5: (Virtual (Jmp ref ((Absolute 12))))
+ 6: (Instr
+   (Move2 (W__, (Left (Gen (Entity (Local ((Some "x"), -4))))),
+      (Gen (GReg (R 8))))))
+ 7: (Virtual (Cmp (0, (R 8))))
+ 8: (Virtual (JEq ref ((Absolute 5))))
+ 9: (Instr (Move2 (W__, (Right (Int 1)), (Gen (GReg (R 5))))))
+10: (Instr
+   (Move2 (W__, (Left (Gen (GReg (R 5)))),
+      (Gen (Entity (Local ((Some "x"), -4)))))))
+11: (Virtual (Jmp ref ((Absolute 4))))
+12: (Instr
+   (Move2 (W__, (Left (Gen (Entity (Local ((Some "x"), -4))))),
+      (Gen (GReg (R 8))))))
+13: (Virtual RET)
+14: (Virtual RET)
+executing: oic -S tests/compiler/codegen/dowhile.c

@@ -80,7 +80,7 @@ let codegen_tests caps =
 *)
     ]
   in
-  let archs = ["o5c"; "ovc"] in
+  let archs = ["o5c"; "ovc"; "oic"] in
   let tests =
     archs |> List.map (fun arch ->
         files |> List.map (fun file ->

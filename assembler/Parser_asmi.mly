@@ -212,7 +212,7 @@ instr:
 
 imr:
  | imm   { Imm $1 }
- | reg   { IReg $1 }
+ | reg   { Reg $1 }
 
 imm: TDOLLAR con      { $2 }
 

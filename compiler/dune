@@ -25,7 +25,7 @@
     Check Eval_const Typecheck
     Rewrite
     Codegen
-    Arch5 Archv
+    Arch5 Archv Archi
     CLI
   )
  (libraries
@@ -47,6 +47,7 @@
  (files
   (Main.exe as o5c)
   (Main.exe as ovc)
+  (Main.exe as oic)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5c.bc))
 )

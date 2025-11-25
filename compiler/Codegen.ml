@@ -110,6 +110,7 @@ let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =
     match arch with
     | Arch.Arm -> Obj.magic Arch5.arch
     | Arch.Mips -> Obj.magic Archv.arch
+    | Arch.Riscv -> Obj.magic Archi.arch
     | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
         
   in

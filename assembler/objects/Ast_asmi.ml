@@ -18,7 +18,7 @@ open Ast_asm
  *
  * In the original doc the registers are named x0 to x31 but certain
  * registers have also alternative and more readable names that
- * illustrate how the should/could be used:
+ * illustrate how they should/could be used:
  *  - "special registers": 
  *     * zero (x0) always 0, 
  *     * ra (x1) return address (a.k.a. LINK in MIPS/ARM)
@@ -65,6 +65,9 @@ let rLINK = R 1
 (* always contain the value 0 *)
 let rZERO = R 0
 
+(* used by the cmpiler for calling conventions *)
+let rRET = R 8
+
 let nb_registers = 32
 let nb_fregisters = 32
 
@@ -72,7 +75,7 @@ let nb_fregisters = 32
 (* alt: could call it arith_operand but use imr like in the original grammar *)
 type imr =
   | Imm of A.integer
-  | IReg of reg
+  | Reg of reg
 [@@deriving show {with_path = false}]
 
 (* alt: could call move_operand1 but follow naming of original grammar *)
@@ -173,6 +176,11 @@ type instr =
 (* for ocaml-light to work without deriving *)
 let show_program _ = "NO DERIVING"
 [@@warning "-32"]
+let show_line _ = "NO DERIVING"
+[@@warning "-32"]
+
+type line = instr A.line
+[@@deriving show]
 
 type program = instr A.program
 [@@deriving show]

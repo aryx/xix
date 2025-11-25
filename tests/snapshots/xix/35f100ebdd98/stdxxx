@@ -1,0 +1,9 @@
+ 0: (Pseudo
+   (TEXT ({ Ast_asm.name = "foo"; priv = None; signature = None },
+      { dupok = false; no_prof = false }, 4)))
+ 1: (Instr
+   (Move2 (W__, (Right (Address (Local ((Some "x"), -4)))),
+      (Gen (GReg (R 8))))))
+ 2: (Virtual RET)
+ 3: (Virtual RET)
+executing: oic -S tests/compiler/codegen/address_local.c

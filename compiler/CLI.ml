@@ -159,6 +159,9 @@ let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
         | Arch.Mips ->
           let instr = Obj.magic line in
           Logs.app (fun m -> m  "%2d: %s" !pc (Ast_asmv.show_line instr));
+        | Arch.Riscv ->
+          let instr = Obj.magic line in
+          Logs.app (fun m -> m  "%2d: %s" !pc (Ast_asmi.show_line instr));
         | _ -> 
          failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
         );
@@ -192,6 +195,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     match Filename.basename argv.(0) with
     | "o5c" -> Arch.Arm
     | "ovc" -> Arch.Mips
+    | "oic" -> Arch.Riscv
     | s -> failwith (spf "arch could not detected from argv0 %s" s)
   in
 

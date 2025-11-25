@@ -15,7 +15,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (ELF Linux, va/vl v0, ar/nm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, cat/pwd/wc/... utilities, resume windows and kernel)
+* 0.17 (Q4 2025) (ELF Linux, oia v0, ova/ovl v0, o5c/ovc/oic v0, oar/onm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, ocat/opwd/owc/... utilities, resume windows and kernel)
 
 ** general
 - renamed all binaries with an 'o' prefix (for ocaml): 
@@ -35,6 +35,11 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - introduce new virtual instrs: Add, Load, Store, and Call so that certain
   code such as profiling instrumentation can be made generic and work
   across multiple archs
+- resume work on o5c: support basic calls and cleanup code
+- generalize Codegen5.ml in o5c so it can be used also
+  for ovc/oic v0 with new Cmp, Jmp, JmpAndLink virtual instructions
+  in Ast_asm.ml and new arch-specific methods in Arch5.ml, Archv.ml, and
+  Archi.ml with interface in Arch_compiler.ml
 
 ** libcore
 - compile our own stdlib (mostly a copy from ocaml-light stdlib)
@@ -64,6 +69,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 ** docs
 - started lpization of xix programs with oas.nw, olk.nw, occ.nw,
   orio.nw (in addition to the now renamed omk.nw, orc.nw)
+- basic LP distribute of extra.nw for oas.nw, olk.nw, and occ.nw
 
 ** internals
 - use uppercase module filenames, split Main.ml/CLI.ml, and start

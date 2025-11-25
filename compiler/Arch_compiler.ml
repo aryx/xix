@@ -7,6 +7,10 @@ type opd =
    typ: Type.t;
    loc: Ast.loc;
  }
+
+(* TODO? 'Add of ...' case for stuff that can be converted still
+ * in operand in gins() (gmove_aux and move_instr_of_opds) ?
+ *)
 and operand_kind =
  | ConstI of Ast_asm.integer
  | Register of Ast_asm.register

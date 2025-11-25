@@ -68,17 +68,19 @@ type 'i env = {
   regs: int array;
   (* TODO: fregs *)
   (*s: [[Codegen.env]] other function fields *)
+  (* 5c: stkoff *)
   mutable size_locals: int;
-  mutable size_maxargs: int; (* 5c: maxargssafe *)
+  (* 5c: maxargssafe *)
+  mutable size_maxargs: int; 
   (*x: [[Codegen.env]] other function fields *)
-  (* for parameters and locals *)
+  (* for parameters and locals. 5c: autoffset *)
   offsets: (Ast.fullname, int) Hashtbl.t;
   (*x: [[Codegen.env]] other function fields *)
+  (* ?? *)
   offset_locals: int ref;
   (*x: [[Codegen.env]] other function fields *)
   (* for goto/labels *)
   labels: (string, Ast_asm.virt_pc) Hashtbl.t;
-
   (* if the label is defined after the goto, when we process the label,
    * we need to update previous goto instructions.
    *)
@@ -250,6 +252,7 @@ let symbol fullname = Ast.unwrap fullname
 (*e: function [[Codegen.symbol]] *)
 
 (*s: function [[Codegen.entity_of_id]] *)
+(* 5c: part of naddr() and adecl() *)
 let entity_of_id (env : 'i env) (fullname : fullname) (offset_extra : int) :
      A.entity =
   let idinfo = Hashtbl.find env.ids_ fullname in
@@ -258,6 +261,7 @@ let entity_of_id (env : 'i env) (fullname : fullname) (offset_extra : int) :
     let offset = Hashtbl.find env.offsets fullname + offset_extra in
     Param (Some (symbol fullname), offset)
   | S.Local ->
+    (* TODO?? should negate offset befor addition of offset_extra? *)
     let offset = Hashtbl.find env.offsets fullname + offset_extra in
     (* - offset for locals *)
     A.Local (Some (symbol fullname), - offset)
@@ -304,16 +308,19 @@ let operand_able (e0 : expr) : opd option =
     | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
       raise (Impossible "should have been converted")
     (*s: [[operand_able()]] match [[e0.e]] cases *)
-    (* less: could be operand_able if we do constant_evaluation later *)
+    (* less: could be operand_able if we call complex() and do
+     * some constant_evaluation, some Add are operand_able!
+     *)
     | Binary (_e1, _op, _e2) -> None
+
     | Call _ | Assign _ | Postfix _ | Prefix _ | CondExpr _ | Sequence _
       -> None
+    | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
+      None
 
     | Cast _ -> raise Todo
     | RecordAccess _ -> raise Todo
 
-    | ArrayInit _ | RecordInit _ | GccConstructor _ -> 
-      None
     (*x: [[operand_able()]] match [[e0.e]] cases *)
     | Int (s, _inttype) -> Some (ConstI (int_of_string s))
     (*x: [[operand_able()]] match [[e0.e]] cases *)
@@ -331,7 +338,8 @@ let operand_able (e0 : expr) : opd option =
 
         (match e.e with
         (* less: this should be handled in rewrite.ml *(&x) ==> x *)
-        | (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })) -> Some (Name (fullname, 0))
+        | (Unary (GetRef, { e = Id fullname; e_loc=_;e_type=_ })) ->
+           Some (Name (fullname, 0))
         (* less: should normalize constant to left or right in rewrite.ml *)
         | Binary ({ e = Int (s1, _); e_loc=_;e_type=_ }, 
                   Arith Plus, 
@@ -345,7 +353,6 @@ let operand_able (e0 : expr) : opd option =
         )
 
       | GetRef -> 
-
         (match e.e with
         (* why 5c does not make OADDR (ONAME) an addressable node? *)
         | Id fullname -> Some (Addr fullname)
@@ -465,6 +472,7 @@ let regalloc (env : 'i env) loc : int =
 (*s: function [[Codegen.opd_regalloc]] *)
 (* We can reuse a previous register if 'tgtopt' is a register.
  * See for example return.c where we can reuse R0 instead of a new R1.
+ * 5c: called regalloc()
  *)
 let opd_regalloc (env : 'i env) (typ : Type.t) loc (tgtopt : opd option) : opd =
   match typ with
@@ -503,6 +511,7 @@ let opd_regfree env opd =
  * MOVW to only store and load (not both at the same time).
  * This is why we must decompose below the move in 2 instructions
  * sometimes.
+ * TODO: lots of conversion to add if types differ
  *)
 let rec gmove (env : 'i env) (from : opd) (to_ : opd) : unit =
   match from.opd with
@@ -563,7 +572,10 @@ let rec gmove (env : 'i env) (from : opd) (to_ : opd) : unit =
  * 5c: called gins()
  *)
 and gmove_aux env move_size (from : opd) (to_ : opd) : unit =
-  (* less: should happen only for register? *)
+  (* 5c: opti part of gmove(), 'sameaddr()'
+   * less: should happen only for register? sameaddr more general
+   * than the test below?
+   *)
   if from.opd =*= to_.opd
   then ()
   else 
@@ -587,7 +599,8 @@ let gmove_opt (env : 'i env) (from : opd) (to_opt : opd option) :
 (*****************************************************************************)
 (*s: function [[Codegen.expr]] *)
 (* todo: inrel ? 
- * todo: if complex type node
+ * todo: if complex type node (typesuv)
+ * todo: call complex() to rewrite?
  * 5c: called cgen/cgenrel()
  *)
 let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
@@ -605,7 +618,7 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       expr env e2 dst_opd_opt
     (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     (* less: lots of possible opti *)
-    | Binary (e1, op, e2) ->
+    | Binary (l, op, r) ->
 
       (match op with
       | Arith (Plus | Minus 
@@ -613,16 +626,16 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
               | ShiftLeft | ShiftRight
               | Mul | Div | Mod) ->
 
-        let n1 = complexity e1 in
-        let n2 = complexity e2 in
+        let n1 = complexity l in
+        let n2 = complexity r in
 
         let opdres, opdother = 
           if n1 >= n2
           then begin
-            let opd1reg = opd_regalloc env e1.e_type e1.e_loc dst_opd_opt in
-            expr env e1 (Some opd1reg);
-            let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-            expr env e2 (Some opd2reg);
+            let opd1reg = opd_regalloc env l.e_type l.e_loc dst_opd_opt in
+            expr env l (Some opd1reg);
+            let opd2reg = opd_regalloc env r.e_type r.e_loc None in
+            expr env r (Some opd2reg);
             (match opd1reg.opd, opd2reg.opd with
             | Register r1, Register r2 ->
               (* again reverse order SUB r2 r1 ... means r1 - r2 *)
@@ -633,10 +646,10 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
             opd1reg, opd2reg
           end
           else begin
-            let opd2reg = opd_regalloc env e2.e_type e2.e_loc dst_opd_opt in
-            expr env e2 (Some opd2reg);
-            let opd1reg = opd_regalloc env e1.e_type e1.e_loc None in
-            expr env e1 (Some opd1reg);
+            let opd2reg = opd_regalloc env r.e_type r.e_loc dst_opd_opt in
+            expr env r (Some opd2reg);
+            let opd1reg = opd_regalloc env l.e_type l.e_loc None in
+            expr env l (Some opd1reg);
             (match opd1reg.opd, opd2reg.opd with
             | Register r1, Register r2 ->
               (* This time we store result in r2! important and subtle.

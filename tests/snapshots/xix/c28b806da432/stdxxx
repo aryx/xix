@@ -1,0 +1,9 @@
+ 0: (Pseudo
+   (TEXT ({ Ast_asm.name = "foo"; priv = None; signature = None },
+      { dupok = false; no_prof = false }, 0)))
+ 1: (Instr
+   (Move2 (W__, (Left (Gen (Entity (Param ((Some "x"), 0))))),
+      (Gen (GReg (R 1))))))
+ 2: (Virtual RET)
+ 3: (Virtual RET)
+executing: ovc -S tests/compiler/codegen/params.c

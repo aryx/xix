@@ -1,0 +1,7 @@
+ 0: (Pseudo
+   (TEXT ({ Ast_asm.name = "foo"; priv = None; signature = None },
+      { dupok = false; no_prof = false }, 0)))
+ 1: (Instr (Move2 (W__, (Right (Int 42)), (Gen (GReg (R 1))))))
+ 2: (Virtual RET)
+ 3: (Virtual RET)
+executing: ovc -S tests/compiler/codegen/trivial.c

@@ -80,12 +80,21 @@ let codegen_tests caps =
 *)
     ]
   in
-  let tests = files |> List.map (fun file ->
-      let path = Fpath.v "tests/compiler/codegen" / file in
-      t ~checked_output:(Testo.stdxxx ()) !!path (fun () ->
-        run_main caps (spf "o5c -S %s" !!path) |> ok_or_fail
-      )
-    )
+  let archs = ["o5c"; "ovc"] in
+  let tests =
+    archs |> List.map (fun arch ->
+        files |> List.map (fun file ->
+            let path = Fpath.v "tests/compiler/codegen" / file in
+            let testname = 
+              if arch = "o5c" 
+              (* to not change snapshot path for the o5c tests *)
+              then !!path
+              else spf "%s (%s)" !!path arch
+            in
+            t ~checked_output:(Testo.stdxxx ()) testname (fun () ->
+                run_main caps (spf "%s -S %s" arch !!path) |> ok_or_fail
+            )
+       )) |> List.flatten
   in
   Testo.categorize "codegen" tests
 

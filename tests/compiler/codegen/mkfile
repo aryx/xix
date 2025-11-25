@@ -1,3 +1,2 @@
 clean nuke:V:
-        rm -f *.5 *.out *.s *.o5
-
+        rm -f *.5 *.out *.s *.o[5vi]

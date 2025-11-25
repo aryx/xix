@@ -57,7 +57,9 @@ let regs_initial =
   );
   arr
 
-(* alt: add binaryOp to Ast_asm.ml so generalize to a few archs *)
+(* alt: add binaryOp to Ast_asm.ml so generalize to a few archs 
+ * 5c: part of gopcode()
+*)
 let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
   let r2_opt = 
     if r2 =*= r3
@@ -92,6 +94,7 @@ let mov_operand_of_opd entity_of_id (opd : opd) : A5.mov_operand =
   | Indirect (r, offset) -> A5.Indirect (r, offset)
   | Addr fullname -> A5.Ximm (A.Address (entity_of_id fullname 0))
 
+(* 5c: part of gins() *)
 let move_instr_of_opds entity_of_id (move_size : A.move_size) 
      (opd1: opd) (opd2: opd) : A5.instr_with_cond =
   A5.MOVE (move_size, None, 

@@ -569,7 +569,7 @@ let rec gmove (env : 'i env) (from : opd) (to_ : opd) : unit =
 
 (* At this point, either from or to_ references memory (but not both),
  * so we can do the move in one instruction.
- * 5c: called gins()
+ * 5c: called gins() and used for gopcode() too here
  *)
 and gmove_aux env move_size (from : opd) (to_ : opd) : unit =
   (* 5c: opti part of gmove(), 'sameaddr()'
@@ -639,6 +639,7 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
             (match opd1reg.opd, opd2reg.opd with
             | Register r1, Register r2 ->
               (* again reverse order SUB r2 r1 ... means r1 - r2 *)
+              (* TODO: in 5c the middle r1 is None actually *)
               add_instr env (A.Instr (env.a.arith_instr_of_op op r2 r1 r1)) 
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
@@ -665,9 +666,9 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
         (* This is why it is better for opdres to be the register
          * allocated from dst_opd_opt so the MOVW below can become a NOP
          * and be removed.
+         * TODO? 5c calls gopcode(OAS, ...) instead of gmove_opt
          *)
         gmove_opt env opdres dst_opd_opt;
-
         opd_regfree env opdres;
         opd_regfree env opdother;
         

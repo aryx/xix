@@ -1,14 +1,3 @@
-#include "gc.h"
-
-
-Prog*
-gtext(Sym *s, int32 stkoff)
-{
-	gpseudo(ATEXT, s, nodconst(stkoff));
-	return p;
-}
-
-
 void
 noretval(int n)
 {
@@ -197,25 +186,13 @@ xcom(Node *n)
 	if(n->addable >= 10)
 		return;
 
-	if(l != Z)
-		n->complex = l->complex;
-	if(r != Z) {
-		if(r->complex == n->complex)
-			n->complex = r->complex+1;
-		else
-		if(r->complex > n->complex)
-			n->complex = r->complex;
-	}
-	if(n->complex == 0)
-		n->complex++;
+    ...
 
 	if(com64(n))
 		return;
 
 	switch(n->op) {
-	case OFUNC:
-		n->complex = FNX;
-		break;
+    ...
 
 	case OADD:
 	case OXOR:

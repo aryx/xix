@@ -1,5 +1,3 @@
-#include "gc.h"
-
 void	addsplits(void);
 
 Reg*

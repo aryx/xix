@@ -1,18 +1,3 @@
-/*
- * vc/mips
- * Mips 3000
- */
-#define	SZ_CHAR		1
-#define	SZ_SHORT	2
-#define	SZ_INT		4
-#define	SZ_LONG		4
-#define	SZ_IND		4
-#define	SZ_FLOAT	4
-#define	SZ_VLONG	8
-#define	SZ_DOUBLE	8
-
-
-#define	INDEXED	9
 
 struct	Case
 {
@@ -22,7 +7,6 @@ struct	Case
 	char	def;
 	char isv;
 };
-#define	C	((Case*)0)
 
 struct	C1
 {
@@ -80,7 +64,7 @@ struct	Reg
 	Reg*	link;
 	Prog*	prog;
 };
-#define	R	((Reg*)0)
+
 
 #define	NRGN	600
 struct	Rgn
@@ -91,17 +75,14 @@ struct	Rgn
 	short	regno;
 };
 
-EXTERN	long	breakpc;
 EXTERN	long	nbreak;
 EXTERN	Case*	cases;
-EXTERN	Node	constnode;
+
 EXTERN	Node	fconstnode;
 EXTERN	long	continpc;
-EXTERN	long	curarg;
+
 EXTERN	long	cursafe;
-EXTERN	Prog*	firstp;
-EXTERN	Prog*	lastp;
-EXTERN	long	maxargsafe;
+
 EXTERN	int	mnstring;
 
 //kengo: new
@@ -110,18 +91,17 @@ EXTERN	int	retok;
 EXTERN	Multab	multab[20];
 EXTERN	int	hintabsize;
 EXTERN	Node*	nodrat;
-EXTERN	Node*	nodret;
+
 EXTERN	Node*	nodsafe;
 EXTERN	long	nrathole;
 EXTERN	long	nstring;
-EXTERN	Prog*	p;
-EXTERN	long	pc;
+
 EXTERN	Node	regnode;
 EXTERN	char	string[NSNAME];
 EXTERN	Sym*	symrathole;
 EXTERN	Node	znode;
-EXTERN	Prog	zprog;
-EXTERN	int	reg[NREG+NREG];
+
+
 EXTERN	long	exregoffset;
 EXTERN	long	exfregoffset;
 
@@ -162,5 +142,4 @@ EXTERN	long*	idom;
 EXTERN	Reg**	rpo2r;
 EXTERN	long	maxnr;
 
-extern	char*	anames[];
 extern	Hintab	hintab[];

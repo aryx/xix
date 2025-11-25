@@ -1,5 +1,3 @@
-#include "gc.h"
-
 /*
  * code sequences for multiply by constant.
  * [a-l][0-3]

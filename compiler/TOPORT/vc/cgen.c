@@ -1,42 +1,7 @@
 void
 cgen(Node *n, Node *nn)
 {
-	Node *l, *r;
-	Prog *p1;
-	Node nod, nod1, nod2, nod3, nod4;
-	int o;
-	long v, curs;
-
-	if(debug['g']) {
-		prtree(nn, "cgen lhs");
-		prtree(n, "cgen");
-	}
-	if(n == Z || n->type == T)
-		return;
-	if(typesuv[n->type->etype]) {
-		sugen(n, nn, n->type->width);
-		return;
-	}
-	l = n->left;
-	r = n->right;
-	o = n->op;
-	if(n->addable >= INDEXED) {
-		if(nn == Z) {
-			switch(o) {
-			default:
-				nullwarn(Z, Z);
-				break;
-			case OINDEX:
-				nullwarn(l, r);
-				break;
-			}
-			return;
-		}
-		gmove(n, nn);
-		return;
-	}
-	curs = cursafe;
-
+    ...
 	if(n->complex >= FNX)
 	if(l->complex >= FNX)
 	if(r != Z && r->complex >= FNX)
@@ -64,9 +29,6 @@ cgen(Node *n, Node *nn)
 	}
 
 	switch(o) {
-	default:
-		diag(n, "unknown op in cgen: %O", o);
-		break;
 
 	case OAS:
 		if(l->op == OBIT)
@@ -299,21 +261,21 @@ cgen(Node *n, Node *nn)
 			return;
 		}
 		o = reg[REGARG];
-		gargs(r, &nod, &nod1);
+		///gargs(r, &nod, &nod1);
 		if(l->addable < INDEXED) {
 			reglcgen(&nod, l, Z);
 			gopcode(OFUNC, Z, Z, &nod);
 			regfree(&nod);
 		} else
-			gopcode(OFUNC, Z, Z, l);
+			///gopcode(OFUNC, Z, Z, l);
 		if(REGARG)
 			if(o != reg[REGARG])
 				reg[REGARG]--;
-		if(nn != Z) {
-			regret(&nod, n);
-			gopcode(OAS, &nod, Z, nn);
-			regfree(&nod);
-		}
+		///if(nn != Z) {
+		///	regret(&nod, n);
+		///	gopcode(OAS, &nod, Z, nn);
+		///	regfree(&nod);
+		///}
 		break;
 
 	case OIND:
@@ -368,11 +330,6 @@ cgen(Node *n, Node *nn)
 			break;
 		}
 		boolgen(n, 1, nn);
-		break;
-
-	case OCOMMA:
-		cgen(l, Z);
-		cgen(r, nn);
 		break;
 
 	case OCAST:
@@ -550,12 +507,7 @@ lcgen(Node *n, Node *nn)
 	Prog *p1;
 	Node nod;
 
-	if(debug['g']) {
-		prtree(nn, "lcgen lhs");
-		prtree(n, "lcgen");
-	}
-	if(n == Z || n->type == T)
-		return;
+    ...
 	if(nn == Z) {
 		nn = &nod;
 		regalloc(&nod, n, Z);
@@ -614,10 +566,7 @@ boolgen(Node *n, int true, Node *nn)
 	Node *l, *r, nod, nod1;
 	long curs;
 
-	if(debug['g']) {
-		prtree(nn, "boolgen lhs");
-		prtree(n, "boolgen");
-	}
+    ...
 	curs = cursafe;
 	l = n->left;
 	r = n->right;
@@ -863,12 +812,7 @@ sugen(Node *n, Node *nn, long w)
 	long pc1;
 	int i, m, c;
 
-	if(n == Z || n->type == T)
-		return;
-	if(debug['g']) {
-		prtree(nn, "sugen lhs");
-		prtree(n, "sugen");
-	}
+    ...
 	if(nn == nodrat)
 		if(w > nrathole)
 			nrathole = w;

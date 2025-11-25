@@ -1,4 +1,7 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+
+(* MIPS R3000 *)
+
 open Common
 open Eq.Operators
 open Either

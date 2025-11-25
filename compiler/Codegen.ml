@@ -770,8 +770,8 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
           (* complex call *)
           | None -> raise Todo
           | Some opd ->
-             add_instr env (A.Instr (A5.BL (ref (branch_operand_of_opd env opd)),
-                                     A5.AL)) e0.e_loc;
+             add_instr env (A.Virtual (A.JmpAndLink
+                            (ref (branch_operand_of_opd env opd)))) e0.e_loc;
              dst_opd_opt |> Option.iter (fun dst_opd ->
                 with_reg env env.a.rRET (fun () ->
                     (* TODO? need Cast? 5c does gopcode(OAS, ...) *)

@@ -50,6 +50,7 @@ Pconv(Fmt *fp)
 		strcat(sc, ".W");
 	if(s & C_UBIT)		/* ambiguous with FBIT */
 		strcat(sc, ".U");
+
 	if(a == AMOVM) {
 		if(p->from.type == D_CONST)
 			sprint(str, "	%A%s	%R,%D", a, sc, &p->from, &p->to);
@@ -75,18 +76,6 @@ Pconv(Fmt *fp)
 	return fmtstrcpy(fp, str);
 }
 
-int
-Aconv(Fmt *fp)
-{
-	char *s;
-	int a;
-
-	a = va_arg(fp->args, int);
-	s = "???";
-	if(a >= AXXX && a < ALAST)
-		s = anames[a];
-	return fmtstrcpy(fp, s);
-}
 
 int
 Dconv(Fmt *fp)
@@ -98,23 +87,6 @@ Dconv(Fmt *fp)
 
 	a = va_arg(fp->args, Adr*);
 	switch(a->type) {
-
-	default:
-		sprint(str, "GOK-type(%d)", a->type);
-		break;
-
-	case D_NONE:
-		str[0] = 0;
-		if(a->name != D_NONE || a->reg != NREG || a->sym != S)
-			sprint(str, "%N(R%d)(NONE)", a, a->reg);
-		break;
-
-	case D_CONST:
-		if(a->reg != NREG)
-			sprint(str, "$%N(R%d)", a, a->reg);
-		else
-			sprint(str, "$%N", a);
-		break;
 
 	case D_CONST2:
 		sprint(str, "$%d-%d", a->offset, a->offset2);
@@ -131,25 +103,6 @@ Dconv(Fmt *fp)
 			sprint(str+strlen(str), "(R%d)", a->reg);
 		break;
 
-	case D_OREG:
-		if(a->reg != NREG)
-			sprint(str, "%N(R%d)", a, a->reg);
-		else
-			sprint(str, "%N", a);
-		break;
-
-	case D_REG:
-		sprint(str, "R%d", a->reg);
-		if(a->name != D_NONE || a->sym != S)
-			sprint(str, "%N(R%d)(REG)", a, a->reg);
-		break;
-
-	case D_FREG:
-		sprint(str, "F%d", a->reg);
-		if(a->name != D_NONE || a->sym != S)
-			sprint(str, "%N(R%d)(REG)", a, a->reg);
-		break;
-
 	case D_PSR:
 		sprint(str, "PSR");
 		if(a->name != D_NONE || a->sym != S)
@@ -158,14 +111,6 @@ Dconv(Fmt *fp)
 
 	case D_BRANCH:
 		sprint(str, "%d(PC)", a->offset-pc);
-		break;
-
-	case D_FCONST:
-		sprint(str, "$%.17e", a->dval);
-		break;
-
-	case D_SCONST:
-		sprint(str, "$\"%S\"", a->sval);
 		break;
 	}
 	return fmtstrcpy(fp, str);

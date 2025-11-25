@@ -1,9 +1,3 @@
-
-/*
- * 5c/arm
- * Arm 7500
- */
-
 #define	R0ISZERO	0
 
 struct	Adr
@@ -13,8 +7,6 @@ struct	Adr
 	char	type;
 	char	etype;
 };
-
-#define	INDEXED	9
 
 struct	Case
 {
@@ -94,35 +86,31 @@ struct	Rgn
 };
 
 
-EXTERN	int32	breakpc;
 EXTERN	int32	nbreak;
 EXTERN	Case*	cases;
-EXTERN	Node	constnode;
 EXTERN	Node	fconstnode;
 EXTERN	int32	continpc;
-EXTERN	int32	curarg;
+
 EXTERN	int32	cursafe;
-EXTERN	Prog*	firstp;
+
 EXTERN	int32	isbigendian;
-EXTERN	Prog*	lastp;
-EXTERN	int32	maxargsafe;
+
 EXTERN	int	mnstring;
 EXTERN	Multab	multab[20];
 EXTERN	int	retok;
 EXTERN	int	hintabsize;
 EXTERN	Node*	nodrat;
-EXTERN	Node*	nodret;
+
 EXTERN	Node*	nodsafe;
 EXTERN	int32	nrathole;
 EXTERN	int32	nstring;
-EXTERN	Prog*	p;
-EXTERN	int32	pc;
+
 EXTERN	Node	regnode;
 EXTERN	char	string[NSNAME];
 EXTERN	Sym*	symrathole;
 EXTERN	Node	znode;
-EXTERN	Prog	zprog;
-EXTERN	char	reg[NREG+NFREG];
+
+
 EXTERN	int32	exregoffset;
 EXTERN	int32	exfregoffset;
 EXTERN	int	suppress;

@@ -303,23 +303,7 @@ gextern(Sym *s, Node *a, int32 o, int32 w)
 void
 outcode(void)
 {
-	struct { Sym *sym; short type; } h[NSYM];
-	Prog *p;
-	Sym *s;
-	int sf, st, t, sym;
-
-	if(debug['S']) {
-		for(p = firstp; p != P; p = p->link)
-			if(p->as != ADATA && p->as != AGLOBL)
-				pc--;
-		for(p = firstp; p != P; p = p->link) {
-			print("%P\n", p);
-			if(p->as != ADATA && p->as != AGLOBL)
-				pc++;
-		}
-	}
-
-	Bprint(&outbuf, "%s\n", thestring);
+    ...
 	if(ndynimp > 0 || ndynexp > 0) {
 		int i;
 
@@ -334,78 +318,13 @@ outcode(void)
 			Bprint(&outbuf, "dynexport %s %s\n", dynexp[i].local, dynexp[i].remote);
 		Bprint(&outbuf, "\n$$\n\n");
 	}
-	Bprint(&outbuf, "!\n");
-
-	outhist(&outbuf);
-	for(sym=0; sym<NSYM; sym++) {
-		h[sym].sym = S;
-		h[sym].type = 0;
-	}
-	sym = 1;
-	for(p = firstp; p != P; p = p->link) {
-	jackpot:
-		sf = 0;
-		s = p->from.sym;
-		while(s != S) {
-			sf = s->sym;
-			if(sf < 0 || sf >= NSYM)
-				sf = 0;
-			t = p->from.name;
-			if(h[sf].type == t)
-			if(h[sf].sym == s)
-				break;
-			s->sym = sym;
-			zname(&outbuf, s, t);
-			h[sym].sym = s;
-			h[sym].type = t;
-			sf = sym;
-			sym++;
-			if(sym >= NSYM)
-				sym = 1;
-			break;
-		}
-		st = 0;
-		s = p->to.sym;
-		while(s != S) {
-			st = s->sym;
-			if(st < 0 || st >= NSYM)
-				st = 0;
-			t = p->to.name;
-			if(h[st].type == t)
-			if(h[st].sym == s)
-				break;
-			s->sym = sym;
-			zname(&outbuf, s, t);
-			h[sym].sym = s;
-			h[sym].type = t;
-			st = sym;
-			sym++;
-			if(sym >= NSYM)
-				sym = 1;
-			if(st == sf)
-				goto jackpot;
-			break;
-		}
-		zwrite(&outbuf, p, sf, st);
-	}
-	firstp = P;
-	lastp = P;
+    ...
 }
 
 void
 outhist(Biobuf *b)
 {
-	Hist *h;
-	char *p, *q, *op, c;
-	Prog pg;
-	int n;
-
-	pg = zprog;
-	pg.as = AHISTORY;
-	c = pathchar();
 	for(h = hist; h != H; h = h->link) {
-		p = h->name;
-		op = 0;
 		/* on windows skip drive specifier in pathname */
 		if(systemtype(Windows) && p && p[1] == ':'){
 			p += 2;
@@ -493,21 +412,7 @@ zaddr(char *bp, Adr *a, int s)
 	int32 l;
 	Ieee e;
 
-	bp[0] = a->type;
-	bp[1] = a->reg;
-	bp[2] = s;
-	bp[3] = a->name;
-	bp += 4;
 	switch(a->type) {
-	default:
-		diag(Z, "unknown type %d in zaddr", a->type);
-
-	case D_NONE:
-	case D_REG:
-	case D_FREG:
-	case D_PSR:
-		break;
-
 	case D_CONST2:
 		l = a->offset2;
 		bp[0] = l;
@@ -515,23 +420,6 @@ zaddr(char *bp, Adr *a, int s)
 		bp[2] = l>>16;
 		bp[3] = l>>24;
 		bp += 4;	// fall through
-	case D_OREG:
-	case D_CONST:
-	case D_BRANCH:
-	case D_SHIFT:
-		l = a->offset;
-		bp[0] = l;
-		bp[1] = l>>8;
-		bp[2] = l>>16;
-		bp[3] = l>>24;
-		bp += 4;
-		break;
-
-	case D_SCONST:
-		memmove(bp, a->sval, NSNAME);
-		bp += NSNAME;
-		break;
-
 	case D_FCONST:
 		ieeedtod(&e, a->dval);
 		l = e.l;
@@ -616,13 +504,4 @@ align(int32 i, Type *t, int op)
 	if(debug['A'])
 		print("align %s %d %T = %d\n", bnames[op], i, t, o);
 	return o;
-}
-
-int32
-maxround(int32 max, int32 v)
-{
-	v = xround(v, SZ_LONG);
-	if(v > max)
-		return v;
-	return max;
 }

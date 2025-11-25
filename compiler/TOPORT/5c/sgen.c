@@ -3,15 +3,15 @@ Prog*
 gtext(Sym *s, int32 stkoff)
 {
 	int32 a;
-	
     a = argsize();
 
-	gpseudo(ATEXT, s, nodconst(stkoff));
+	///gpseudo(ATEXT, s, nodconst(stkoff));
 	p->to.type = D_CONST2;
 	p->to.offset2 = a;
-	return p;
+	///return p;
 }
 
+/// ??
 void
 noretval(int n)
 {
@@ -46,15 +46,7 @@ noretval(int n)
 void
 xcom(Node *n)
 {
-	Node *l, *r;
-	int t;
-
-	if(n == Z)
-		return;
-	l = n->left;
-	r = n->right;
-	n->addable = 0;
-	n->complex = 0;
+    ...
 	switch(n->op) {
 	case OCONST:
 		n->addable = 20;
@@ -193,26 +185,12 @@ xcom(Node *n)
 	if(n->addable >= 10)
 		return;
 
-	if(l != Z)
-		n->complex = l->complex;
-	if(r != Z) {
-		if(r->complex == n->complex)
-			n->complex = r->complex+1;
-		else
-		if(r->complex > n->complex)
-			n->complex = r->complex;
-	}
-	if(n->complex == 0)
-		n->complex++;
-
+    ...
 	if(com64(n))
 		return;
 
 	switch(n->op) {
-	case OFUNC:
-		n->complex = FNX;
-		break;
-
+    ...
 	case OADD:
 	case OXOR:
 	case OAND:

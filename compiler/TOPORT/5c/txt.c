@@ -10,9 +10,6 @@ ginit(void)
 	mnstring = 0;
 	nrathole = 0;
 
-	pc = 0;
-	breakpc = -1;
-	continpc = -1;
 	cases = C;
 
 	tfield = types[TLONG];
@@ -23,12 +20,6 @@ ginit(void)
 	regnode.complex = 0;
 	regnode.addable = 11;
 	regnode.type = types[TLONG];
-
-	constnode.op = OCONST;
-	constnode.class = CXXX;
-	constnode.complex = 0;
-	constnode.addable = 20;
-	constnode.type = types[TLONG];
 
 	fconstnode.op = OCONST;
 	fconstnode.class = CXXX;
@@ -65,8 +56,7 @@ ginit(void)
 	complex(nodret);
 
 	com64init();
-
-	memset(reg, 0, sizeof(reg));
+    ...
 }
 
 void
@@ -75,14 +65,13 @@ gclean(void)
 	int i;
 	Sym *s;
 
-	for(i=0; i<NREG; i++)
-		if(reg[i])
-			diag(Z, "reg %d left allocated", i);
+    ...
 	for(i=NREG; i<NREG+NFREG; i++)
 		if(reg[i])
 			diag(Z, "freg %d left allocated", i-NREG);
 	while(mnstring)
 		outstring("", 1L);
+
 	symstring->type->width = nstring;
 	symrathole->type->width = nrathole;
 	for(i=0; i<NHASH; i++)
@@ -103,23 +92,6 @@ gclean(void)
 }
 
 void
-nextpc(void)
-{
-
-	p = alloc(sizeof(*p));
-	*p = zprog;
-	p->lineno = nearln;
-	pc++;
-	if(firstp == P) {
-		firstp = p;
-		lastp = p;
-		return;
-	}
-	lastp->link = p;
-	lastp = p;
-}
-
-void
 gargs(Node *n, Node *tn1, Node *tn2)
 {
 	int32 regs;
@@ -128,11 +100,11 @@ gargs(Node *n, Node *tn1, Node *tn2)
 	regs = cursafe;
 
 	fnxp = fnxargs;
-	garg1(n, tn1, tn2, 0, &fnxp);	/* compile fns to temps */
+	///garg1(n, tn1, tn2, 0, &fnxp);	/* compile fns to temps */
 
 	curarg = 0;
 	fnxp = fnxargs;
-	garg1(n, tn1, tn2, 1, &fnxp);	/* compile normal args and temps */
+	///garg1(n, tn1, tn2, 1, &fnxp);	/* compile normal args and temps */
 
 	cursafe = regs;
 }
@@ -142,13 +114,6 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 {
 	Node nod;
 
-	if(n == Z)
-		return;
-	if(n->op == OLIST) {
-		garg1(n->left, tn1, tn2, f, fnxp);
-		garg1(n->right, tn1, tn2, f, fnxp);
-		return;
-	}
 	if(f == 0) {
 		if(n->complex >= FNX) {
 			regsalloc(*fnxp, n);
@@ -180,22 +145,15 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 			cgen(n, tn1);
 		return;
 	}
-	regalloc(tn1, n, Z);
+	///regalloc(tn1, n, Z);
 	if(n->complex >= FNX) {
 		cgen(*fnxp, tn1);
 		(*fnxp)++;
 	} else
-		cgen(n, tn1);
-	regaalloc(tn2, n);
-	gopcode(OAS, tn1, Z, tn2);
-	regfree(tn1);
-}
-
-Node*
-nodconst(int32 v)
-{
-	constnode.vconst = v;
-	return &constnode;
+		///cgen(n, tn1);
+	///regaalloc(tn2, n);
+	///gopcode(OAS, tn1, Z, tn2);
+	///regfree(tn1);
 }
 
 Node*
@@ -226,11 +184,11 @@ regret(Node *n, Node *nn)
 {
 	int r;
 
-	r = REGRET;
+	///r = REGRET;
 	if(typefd[nn->type->etype])
 		r = FREGRET+NREG;
-	nodreg(n, nn, r);
-	reg[r]++;
+	///nodreg(n, nn, r);
+	///reg[r]++;
 }
 
 int
@@ -261,11 +219,11 @@ regalloc(Node *n, Node *tn, Node *o)
 	case TLONG:
 	case TULONG:
 	case TIND:
-		if(o != Z && o->op == OREGISTER) {
-			i = o->reg;
-			if(i >= 0 && i < NREG)
-				goto out;
-		}
+		///if(o != Z && o->op == OREGISTER) {
+		///	i = o->reg;
+		///	if(i >= 0 && i < NREG)
+		///		goto out;
+		///}
 		j = lasti + REGRET+1;
 		for(i=REGRET+1; i<NREG; i++) {
 			if(j >= NREG)
@@ -276,8 +234,7 @@ regalloc(Node *n, Node *tn, Node *o)
 			}
 			j++;
 		}
-		diag(tn, "out of fixed registers");
-		goto err;
+		...
 
 	case TFLOAT:
 	case TDOUBLE:
@@ -305,41 +262,13 @@ err:
 	nodreg(n, tn, 0);
 	return;
 out:
-	reg[i]++;
+	///reg[i]++;
 /* 	lasti++;	*** StrongARM does register forwarding */
 	if(lasti >= 5)
 		lasti = 0;
 	nodreg(n, tn, i);
 }
 
-void
-regialloc(Node *n, Node *tn, Node *o)
-{
-	Node nod;
-
-	nod = *tn;
-	nod.type = types[TIND];
-	regalloc(n, &nod, o);
-}
-
-void
-regfree(Node *n)
-{
-	int i;
-
-	i = 0;
-	if(n->op != OREGISTER && n->op != OINDREG)
-		goto err;
-	i = n->reg;
-	if(i < 0 || i >= sizeof(reg))
-		goto err;
-	if(reg[i] <= 0)
-		goto err;
-	reg[i]--;
-	return;
-err:
-	diag(n, "error in regfree: %d", i);
-}
 
 void
 regsalloc(Node *n, Node *nn)
@@ -367,26 +296,14 @@ void
 regaalloc(Node *n, Node *nn)
 {
 	curarg = align(curarg, nn->type, Aarg1);
-	*n = *nn;
-	n->op = OINDREG;
-	n->reg = REGSP;
-	n->xoffset = curarg + SZ_LONG;
-	n->complex = 0;
-	n->addable = 20;
+	///*n = *nn;
+	///n->op = OINDREG;
+	///n->reg = REGSP;
+	///n->xoffset = curarg + SZ_LONG;
+	///n->complex = 0;
+	///n->addable = 20;
 	curarg = align(curarg, nn->type, Aarg2);
-	maxargsafe = maxround(maxargsafe, cursafe+curarg);
-}
-
-void
-regind(Node *n, Node *nn)
-{
-
-	if(n->op != OREGISTER) {
-		diag(n, "regind not OREGISTER");
-		return;
-	}
-	n->op = OINDREG;
-	n->type = nn->type;
+	///maxargsafe = maxround(maxargsafe, cursafe+curarg);
 }
 
 void
@@ -414,77 +331,51 @@ naddr(Node *n, Adr *a)
 {
 	int32 v;
 
-	a->type = D_NONE;
-	if(n == Z)
-		return;
 	switch(n->op) {
-	default:
-	bad:
-		diag(n, "bad in naddr: %O", n->op);
-		break;
 
 	case OREGISTER:
-		a->type = D_REG;
-		a->sym = S;
-		a->reg = n->reg;
+		///a->type = D_REG;
+		///a->sym = S;
+		///a->reg = n->reg;
 		if(a->reg >= NREG) {
 			a->type = D_FREG;
 			a->reg -= NREG;
 		}
-		break;
+		///break;
 
 	case OIND:
-		naddr(n->left, a);
-		if(a->type == D_REG) {
-			a->type = D_OREG;
-			break;
-		}
-		if(a->type == D_CONST) {
-			a->type = D_OREG;
-			break;
-		}
-		goto bad;
+		///naddr(n->left, a);
+		///if(a->type == D_REG) {
+		///	a->type = D_OREG;
+		///	break;
+		///}
+		///if(a->type == D_CONST) {
+		///	a->type = D_OREG;
+		///	break;
+		///}
+		///goto bad;
 
 	case OINDREG:
-		a->type = D_OREG;
-		a->sym = S;
-		a->offset = n->xoffset;
-		a->reg = n->reg;
-		break;
+		///a->type = D_OREG;
+		///a->sym = S;
+		///a->offset = n->xoffset;
+		///a->reg = n->reg;
+		///break;
 
 	case ONAME:
-		a->etype = n->etype;
-		a->type = D_OREG;
-		a->name = D_STATIC;
-		a->sym = n->sym;
-		a->offset = n->xoffset;
-		if(n->class == CSTATIC)
-			break;
-		if(n->class == CEXTERN || n->class == CGLOBL) {
-			a->name = D_EXTERN;
-			break;
-		}
-		if(n->class == CAUTO) {
-			a->name = D_AUTO;
-			break;
-		}
-		if(n->class == CPARAM) {
-			a->name = D_PARAM;
-			break;
-		}
-		goto bad;
+        ....
 
 	case OCONST:
-		a->sym = S;
-		a->reg = NREG;
+		///a->sym = S;
+		///a->reg = NREG;
 		if(typefd[n->type->etype]) {
 			a->type = D_FCONST;
 			a->dval = n->fconst;
 		} else {
-			a->type = D_CONST;
-			a->offset = n->vconst;
+			///a->type = D_CONST;
+			///a->offset = n->vconst;
 		}
-		break;
+		///break;
 
 	case OADDR:
 		naddr(n->left, a);
@@ -535,27 +426,13 @@ gmovm(Node *f, Node *t, int w)
 void
 gmove(Node *f, Node *t)
 {
-	int ft, tt, a;
-	Node nod;
+    ...
 
-	ft = f->type->etype;
-	tt = t->type->etype;
-
-	if(ft == TDOUBLE && f->op == OCONST) {
-	}
-	if(ft == TFLOAT && f->op == OCONST) {
-	}
-
-	/*
-	 * a load --
-	 * put it into a register then
-	 * worry what to do with it.
-	 */
 	if(f->op == ONAME || f->op == OINDREG || f->op == OIND) {
 		switch(ft) {
 		default:
-			a = AMOVW;
-			break;
+			///a = AMOVW;
+			///break;
 		case TFLOAT:
 			a = AMOVF;
 			break;
@@ -578,23 +455,18 @@ gmove(Node *f, Node *t)
 		if(typechlp[ft] && typeilp[tt])
 			regalloc(&nod, t, t);
 		else
-			regalloc(&nod, f, t);
-		gins(a, f, &nod);
-		gmove(&nod, t);
-		regfree(&nod);
-		return;
+			///regalloc(&nod, f, t);
+		///gins(a, f, &nod);
+		///gmove(&nod, t);
+		///regfree(&nod);
+		///return;
 	}
 
-	/*
-	 * a store --
-	 * put it into a register then
-	 * store it.
-	 */
 	if(t->op == ONAME || t->op == OINDREG || t->op == OIND) {
 		switch(tt) {
 		default:
-			a = AMOVW;
-			break;
+			///a = AMOVW;
+			///break;
 		case TUCHAR:
 			a = AMOVBU;
 			break;
@@ -615,14 +487,14 @@ gmove(Node *f, Node *t)
 			a = AMOVD;
 			break;
 		}
-		if(ft == tt)
-			regalloc(&nod, t, f);
-		else
-			regalloc(&nod, t, Z);
-		gmove(f, &nod);
-		gins(a, &nod, t);
-		regfree(&nod);
-		return;
+		///if(ft == tt)
+		///	regalloc(&nod, t, f);
+		///else
+		///	regalloc(&nod, t, Z);
+		///gmove(f, &nod);
+		///gins(a, &nod, t);
+		///regfree(&nod);
+		///return;
 	}
 
 	/*
@@ -815,12 +687,6 @@ gmove(Node *f, Node *t)
 		}
 		break;
 	}
-	if(a == AGOK)
-		diag(Z, "bad opcode in gmove %T -> %T", f->type, t->type);
-	if(a == AMOVW || a == AMOVF || a == AMOVD)
-	if(samaddr(f, t))
-		return;
-	gins(a, f, t);
 }
 
 void
@@ -851,20 +717,6 @@ gmover(Node *f, Node *t)
 		gmove(f, t);
 	else
 		gins(a, f, t);
-}
-
-void
-gins(int a, Node *f, Node *t)
-{
-
-	nextpc();
-	p->as = a;
-	if(f != Z)
-		naddr(f, &p->from);
-	if(t != Z)
-		naddr(t, &p->to);
-	if(debug['g'])
-		print("%P\n", p);
 }
 
 void
@@ -1082,53 +934,6 @@ samaddr(Node *f, Node *t)
 	return 0;
 }
 
-void
-gbranch(int o)
-{
-	int a;
-
-	a = AGOK;
-	switch(o) {
-	case ORETURN:
-		a = ARET;
-		break;
-	case OGOTO:
-		a = AB;
-		break;
-	}
-	nextpc();
-	if(a == AGOK) {
-		diag(Z, "bad in gbranch %O",  o);
-		nextpc();
-	}
-	p->as = a;
-}
-
-void
-patch(Prog *op, int32 pc)
-{
-
-	op->to.offset = pc;
-	op->to.type = D_BRANCH;
-}
-
-void
-gpseudo(int a, Sym *s, Node *n)
-{
-
-	nextpc();
-	p->as = a;
-	p->from.type = D_OREG;
-	p->from.sym = s;
-	p->from.name = D_EXTERN;
-	if(a == ATEXT)
-		p->reg = textflag;
-	if(s->class == CSTATIC)
-		p->from.name = D_STATIC;
-	naddr(n, &p->to);
-	if(a == ADATA || a == AGLOBL)
-		pc--;
-}
 
 int
 sconst(Node *n)

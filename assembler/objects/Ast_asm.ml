@@ -209,6 +209,9 @@ type virtual_instr =
   | Jmp of branch_operand
   (* alt: 'Call of global' but here can also accept indirect register *)
   | JmpAndLink of branch_operand
+  (* TODO: generalize at some point, but enough for now for o5c/ovc *)
+  | Cmp of integer * register
+  | JEq of branch_operand
   (* TODO? 
    * | Case of ??? (* compiler-only virtual instr *) 
    *)
@@ -277,8 +280,10 @@ let rec visit_globals_program visit_instr (f : global -> unit) (prog : 'instr pr
           | Store (_, Global (glob, _)) -> f glob
           | Load _ | Store _ -> ()
           | AddI _ -> ()
+          | Cmp _ -> ()
           | Jmp x -> visit_globals_branch_operand f x
           | JmpAndLink x -> visit_globals_branch_operand f x
+          | JEq x -> visit_globals_branch_operand f x
           )
     | Instr instr ->
       visit_instr f instr

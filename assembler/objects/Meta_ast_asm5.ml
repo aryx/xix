@@ -242,10 +242,16 @@ and vof_virtual_instr =
   | AddI _ -> Ocaml.VSum (("AddI ...", []))
   | Load _ -> Ocaml.VSum (("Load ...", []))
   | Store _ -> Ocaml.VSum (("Store ...", []))
+  | Cmp (v1, v2) ->
+      let v1 = vof_integer v1 in
+      let v2 = vof_register v2 in
+      Ocaml.VSum (("Cmp", [ v1; v2 ]))
   | Jmp v1 -> 
       let v1 = vof_branch_operand v1 in Ocaml.VSum (("Jmp", [ v1 ]))
   | JmpAndLink v1 -> 
       let v1 = vof_branch_operand v1 in Ocaml.VSum (("JmpAndLink", [ v1 ]))
+  | JEq v1 -> 
+      let v1 = vof_branch_operand v1 in Ocaml.VSum (("JEq", [ v1 ]))
 
 and vof_attributes { dupok = v_dupok; no_prof = v_prof } =
   let bnds = [] in

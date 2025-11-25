@@ -229,8 +229,7 @@ let patch_fake_goto (env : 'i env) (pcgoto : A.virt_pc) (pcdest : A.virt_pc) =
     if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
-
-  | A.Instr (A5.Bxx (_, aref), A5.AL) ->
+  | A.Virtual (A.JEq aref) ->
     if !aref =*= (Absolute fake_pc)
     then aref := Absolute pcdest
     else raise (Impossible "patching already resolved branch")
@@ -824,9 +823,9 @@ let expr_cond (env : 'i env) (e0 : expr) : virt_pc =
     expr env e0 (Some dst);
     (* less: actually should be last loc of e0 *)
     let loc = e0.e_loc in
-    add_instr env (A.Instr (A5.Cmp (A5.CMP, A5.Imm 0, env.a.rRET), A5.AL)) loc;
+    add_instr env (A.Virtual (A.Cmp (0, env.a.rRET))) loc;
     let pc = !(env.pc) in
-    add_instr env (A.Instr (A5.Bxx (A5.EQ,(ref (A.Absolute fake_pc))),A5.AL)) loc;
+    add_instr env (A.Virtual (A.JEq (ref (A.Absolute fake_pc)))) loc;
     pc
   )
 (*e: function [[Codegen.expr_cond]] *)

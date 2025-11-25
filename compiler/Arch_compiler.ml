@@ -8,12 +8,16 @@ type env = {
 }
 (*e: type [[Arch_compiler.env]] *)
 (*s: type [[Arch_compiler.t]] *)
-type t = {
+type 'instr t = {
   width_of_type: env -> Type.t -> int;
   (* really a (Ast_asm.register, bool) Hashtbl.t *)
   regs_initial: int array;
   rSP: Ast_asm.register;
   rRET: Ast_asm.register;
+
+  arith_instr_of_op: 
+    Ast.binaryOp -> Ast_asm.register -> Ast_asm.register -> Ast_asm.register ->
+    'instr;
 }
 (*e: type [[Arch_compiler.t]] *)
 (*e: Arch_compiler.ml *)

@@ -3,6 +3,7 @@
 open Common
 open Ast_asm
 open Arch_compiler
+module C = Ast
 module A5 = Ast_asm5
 module T = Type
 
@@ -53,12 +54,31 @@ let regs_initial =
   );
   arr
 
+let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
+  A5.Arith (
+    (match op with
+    | C.Arith op ->
+      (match op with 
+      | C.Plus -> A5.ADD | C.Minus -> A5.SUB
+      | C.And -> A5.AND | C.Or -> A5.ORR | C.Xor -> A5.EOR
+      (* todo: need type info for A.SLR *)
+      | C.ShiftLeft -> A5.SLL | C.ShiftRight -> A5.SRA
+      (* todo: need type info for A.MULU, etc *)
+      | C.Mul -> A5.MUL | C.Div -> A5.DIV | C.Mod -> A5.MOD
+      )
+    | C.Logical _ -> raise Todo
+    ),
+    None, 
+    A5.Reg r1, Some r2, r3
+  ), A5.AL
+
 (*s: constant [[Arch5.arch]] *)
 let arch = { 
     width_of_type;
     regs_initial;
     rSP = A5.rSP;
     rRET = A5.rRET;
+    arith_instr_of_op;
   }
 (*e: constant [[Arch5.arch]] *)
 (*e: Arch5.ml *)

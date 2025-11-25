@@ -46,7 +46,7 @@ type 'i env = {
    * fields: (Ast.fullname * string, A.offset) Hashtbl.t
    *)
   arch: Arch.t;
-  a: Arch_compiler.t;
+  a: 'i Arch_compiler.t;
 
   (* the output *)
 
@@ -100,7 +100,7 @@ type 'i env = {
 
 (*s: function [[Codegen.env_of_tp]] *)
 let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =   
-  let arch_compiler: Arch_compiler.t =
+  let arch_compiler: 'i Arch_compiler.t =
     match arch with
     | Arch.Arm -> Arch5.arch;
     | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
@@ -302,23 +302,6 @@ let branch_operand_of_opd (env : 'i env) (opd : opd) : A.branch_operand2 =
   | Addr _ -> raise Todo
 
 (*s: function [[Codegen.arith_instr_of_op]] *)
-let arith_instr_of_op (op : binaryOp) r1 r2 r3 =
-  A5.Arith (
-    (match op with
-    | Arith op ->
-      (match op with 
-      | Plus -> A5.ADD | Minus -> A5.SUB
-      | And -> A5.AND | Or -> A5.ORR | Xor -> A5.EOR
-      (* todo: need type info for A.SLR *)
-      | ShiftLeft -> A5.SLL | ShiftRight -> A5.SRA
-      (* todo: need type info for A.MULU, etc *)
-      | Mul -> A5.MUL | Div -> A5.DIV | Mod -> A5.MOD
-      )
-    | Logical _ -> raise Todo
-    ),
-    None, 
-    A5.Reg r1, Some r2, r3
-  )
 (*e: function [[Codegen.arith_instr_of_op]] *)
 
 (* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
@@ -654,7 +637,7 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
             (match opd1reg.opd, opd2reg.opd with
             | Register r1, Register r2 ->
               (* again reverse order SUB r2 r1 ... means r1 - r2 *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r1, A5.AL)) 
+              add_instr env (A.Instr (env.a.arith_instr_of_op op r2 r1 r1)) 
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
             );
@@ -670,7 +653,7 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
               (* This time we store result in r2! important and subtle.
                * This avoids some extra MOVW; see plus_chain.c
                *)
-              add_instr env (A.Instr (arith_instr_of_op op r2 r1 r2, A5.AL)) 
+              add_instr env (A.Instr (env.a.arith_instr_of_op op r2 r1 r2)) 
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
             );

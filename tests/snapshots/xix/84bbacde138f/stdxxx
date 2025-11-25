@@ -5,7 +5,7 @@
    (Move2 (W__, (Left (Gen (Entity (Param ((Some "x"), 0))))),
       (Gen (GReg (R 1))))))
  2: (Instr (Move2 (W__, (Right (Int 2)), (Gen (GReg (R 2))))))
- 3: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), (Some (R 1)), (R 1))))
+ 3: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), None, (R 1))))
  4: (Instr
    (Move2 (W__,
       (Left
@@ -14,7 +14,7 @@
                (Global (
                   { Ast_asm.name = "z"; priv = None; signature = None }, 0))))),
       (Gen (GReg (R 2))))))
- 5: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), (Some (R 1)), (R 1))))
+ 5: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), None, (R 1))))
  6: (Instr (Move2 (W__, (Left (Gen (GReg (R 1)))), (Gen (GReg (R 2))))))
  7: (Instr
    (Move2 (W__, (Left (Gen (GReg (R 2)))),

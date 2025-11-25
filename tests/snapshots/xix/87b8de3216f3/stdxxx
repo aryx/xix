@@ -4,7 +4,7 @@
  2: (MOVE(Word, None, Imsr(Reg(R(0))), Entity(Local(Some("b"), -4))), AL)
  3: (MOVE(Word, None, Entity(Local(Some("b"), -4)), Imsr(Reg(R(0)))), AL)
  4: (MOVE(Word, None, Entity(Param(Some("a"), 0)), Imsr(Reg(R(1)))), AL)
- 5: (Arith(ADD, None, Reg(R(1)), Some(R(0)), R(0)), AL)
+ 5: (Arith(ADD, None, Reg(R(1)), None, R(0)), AL)
  6: Virtual(RET)
  7: Virtual(RET)
 executing: o5c -S tests/compiler/codegen/local.c

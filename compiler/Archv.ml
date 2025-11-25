@@ -1,5 +1,6 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Eq.Operators
 open Either
 open Arch_compiler
 module C = Ast
@@ -63,18 +64,24 @@ let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
   let sign = A.S in
   match op with
   | C.Arith op ->
+     let r2_opt = 
+       if r2 =*= r3
+       then None
+       else Some r2
+      in
+
       (match op with 
-      | C.Plus -> Av.Arith (Av.ADD (size, sign), Av.Reg r1, Some r2, r3)
-      | C.Minus -> Av.Arith (Av.SUB (size, sign), Av.Reg r1, Some r2, r3)
-      | C.And -> Av.Arith (Av.AND, Av.Reg r1, Some r2, r3)
-      | C.Or -> Av.Arith (Av.OR, Av.Reg r1, Some r2, r3)
-      | C.Xor -> Av.Arith (Av.XOR, Av.Reg r1, Some r2, r3)
+      | C.Plus -> Av.Arith (Av.ADD (size, sign), Av.Reg r1, r2_opt, r3)
+      | C.Minus -> Av.Arith (Av.SUB (size, sign), Av.Reg r1, r2_opt, r3)
+      | C.And -> Av.Arith (Av.AND, Av.Reg r1, r2_opt, r3)
+      | C.Or -> Av.Arith (Av.OR, Av.Reg r1, r2_opt, r3)
+      | C.Xor -> Av.Arith (Av.XOR, Av.Reg r1, r2_opt, r3)
       (* todo: need type info for A.SLR *)
-      | C.ShiftLeft -> Av.Arith (Av.SLL size, Av.Reg r1, Some r2, r3)
-      | C.ShiftRight -> Av.Arith (Av.SRA size, Av.Reg r1, Some r2, r3)
+      | C.ShiftLeft -> Av.Arith (Av.SLL size, Av.Reg r1, r2_opt, r3)
+      | C.ShiftRight -> Av.Arith (Av.SRA size, Av.Reg r1, r2_opt, r3)
       (* todo: need type info for A.MULU, etc *)
-      | C.Mul -> Av.ArithMul (Av.MUL (size, sign), r1, Some r2, r3)
-      | C.Div -> Av.ArithMul (Av.DIV (size, sign), r1, Some r2, r3)
+      | C.Mul -> Av.ArithMul (Av.MUL (size, sign), r1, r2_opt, r3)
+      | C.Div -> Av.ArithMul (Av.DIV (size, sign), r1, r2_opt, r3)
       | C.Mod -> raise Todo
       )
   | C.Logical _ -> raise Todo

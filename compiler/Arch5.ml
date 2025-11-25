@@ -1,6 +1,7 @@
 (*s: Arch5.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Eq.Operators
 open Arch_compiler
 module C = Ast
 module A = Ast_asm
@@ -58,6 +59,12 @@ let regs_initial =
 
 (* alt: add binaryOp to Ast_asm.ml so generalize to a few archs *)
 let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
+  let r2_opt = 
+    if r2 =*= r3
+    then None
+    else Some r2
+  in
+
   A5.Arith (
     (match op with
     | C.Arith op ->
@@ -72,7 +79,7 @@ let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
     | C.Logical _ -> raise Todo
     ),
     None, 
-    A5.Reg r1, Some r2, r3
+    A5.Reg r1, r2_opt, r3
   ), A5.AL
 
 (* 5c: part of naddr()

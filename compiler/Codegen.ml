@@ -302,7 +302,7 @@ let branch_operand_of_opd (env : 'i env) (opd : opd) : A.branch_operand2 =
   | Addr _ -> raise Todo
 
 (*s: function [[Codegen.arith_instr_of_op]] *)
-let arith_instr_of_op op r1 r2 r3 =
+let arith_instr_of_op (op : binaryOp) r1 r2 r3 =
   A5.Arith (
     (match op with
     | Arith op ->

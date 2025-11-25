@@ -11,6 +11,7 @@
 (library
   (name xix_compiler)
   (wrapped true)
+
   ; coupling: mkfile SRC variable
   (modules
     Flags
@@ -24,7 +25,7 @@
     Check Eval_const Typecheck
     Rewrite
     Codegen
-    Arch5 
+    Arch5 Archv
     CLI
   )
  (libraries
@@ -45,6 +46,7 @@
  (section bin)
  (files
   (Main.exe as o5c)
+  (Main.exe as ovc)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5c.bc))
 )

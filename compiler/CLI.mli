@@ -2,7 +2,7 @@
 (*s: type [[CLI.caps]] *)
 (* Need:
  * - open_in: for argv derived file but also for #include'd files
- *   because 5c does its own preprocessing
+ *   because 5c does its own macropreprocessing
  * - open_out for -o object file or 5.argv[0]
  * - env: for INCLUDE (for cpp)
  *)

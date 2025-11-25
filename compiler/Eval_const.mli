@@ -13,7 +13,9 @@ exception Error of error
 (*e: exception [[Eval_const.Error]] *)
 
 (*s: type [[Eval_const.integer]] *)
-(* less: return also float at some point? *)
+(* less: return also float at some point? 
+ * TODO: use Int64.t (vlong) like in 5c
+ *)
 type integer = int
 (*e: type [[Eval_const.integer]] *)
 (*s: type [[Eval_const.env]] *)

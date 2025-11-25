@@ -144,25 +144,30 @@ let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
 
   let tast = Rewrite.rewrite tast in
   let (asm, _locs) = Codegen.codegen arch tast in
-  match arch with
-  | Arch.Arm -> 
     (*s: [[CLI.backend5()]] if [[dump_asm]] *)
     (* debug *)
     if !Flags.dump_asm
     then begin
       let pc = ref 0 in
-      asm |> List.iter (fun (instr, _loc) ->
-        (* less: use a assembly pretty printer instead? easier to debug? 5c -S *)
-        let v = Meta_ast_asm5.vof_line instr in
-        Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
+      asm |> List.iter (fun (line, _loc) ->
+        (match arch with
+        | Arch.Arm ->
+          let instr = line in
+          (* less: use a assembly pretty printer? easier to debug? 5c -S *)
+          let v = Meta_ast_asm5.vof_line instr in
+          Logs.app (fun m -> m  "%2d: %s" !pc (OCaml.string_of_v v));
+        | Arch.Mips ->
+          let instr = Obj.magic line in
+          Logs.app (fun m -> m  "%2d: %s" !pc (Ast_asmv.show_line instr));
+        | _ -> 
+         failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
+        );
         incr pc;
       );
     end;
     (* nosemgrep: do-not-use-obj-magic *)
     Obj.magic asm, !Location_cpp.history
     (*e: [[CLI.backend5()]] if [[dump_asm]] *)
-  | _ -> 
-     failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
   
 (*e: function [[CLI.backend5]] *)
 (*s: function [[CLI.compile5]] *)

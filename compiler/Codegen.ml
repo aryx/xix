@@ -105,7 +105,8 @@ type 'i env = {
 let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =   
   let arch_compiler: 'i Arch_compiler.t =
     match arch with
-    | Arch.Arm -> Arch5.arch;
+    | Arch.Arm -> Obj.magic Arch5.arch
+    | Arch.Mips -> Obj.magic Archv.arch
     | _ -> failwith (spf "unsupported arch: %s" (Arch.to_string arch))
         
   in
@@ -1071,6 +1072,6 @@ let codegen (arch : Arch.t) (tp : Typecheck.typed_program) : 'i Ast_asm.program 
   in
   (* TODO *)
   let locs = [] in
-  Obj.magic instrs, locs
+  instrs, locs
 (*e: function [[Codegen.codegen]] *)
 (*e: Codegen.ml *)

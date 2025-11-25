@@ -4,6 +4,7 @@ open Common
 open Eq.Operators
 open Either
 
+open Arch_compiler
 open Ast_asm
 open Ast
 module C = Ast
@@ -109,7 +110,7 @@ let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =
 
   {
     ids_ = tp.ids;
-    structs_ = tp.structs;
+    structs_ = tp.Typecheck.structs;
     arch;
     a = arch_compiler;
 
@@ -134,24 +135,9 @@ let env_of_tp (arch: Arch.t) (tp : Typecheck.typed_program) : 'i env =
 (*e: type [[Codegen.integer]] *)
 
 (*s: type [[Codegen.operand_able]] *)
-(* operand *)
-type opd = 
- { opd: operand_kind;
-   typ: Type.t;
-   loc: Ast.loc;
- }
+type opd = Arch_compiler.opd
 (*e: type [[Codegen.operand_able]] *)
 (*s: type [[Codegen.operand_able_kind]] *)
-and operand_kind =
- | ConstI of Ast_asm.integer
- | Register of Ast_asm.register
-
- (* indirect *)
- | Name of Ast.fullname * Ast_asm.offset
- | Indirect of Ast_asm.register * Ast_asm.offset
-
- (* was not "addressable" in original 5c, but I think it should *)
- | Addr of Ast.fullname
 (*e: type [[Codegen.operand_able_kind]] *)
 
 
@@ -260,7 +246,8 @@ let symbol fullname = Ast.unwrap fullname
 (*e: function [[Codegen.symbol]] *)
 
 (*s: function [[Codegen.entity_of_id]] *)
-let entity_of_id env fullname offset_extra =
+let entity_of_id (env : 'i env) (fullname : fullname) (offset_extra : int) :
+     A.entity =
   let idinfo = Hashtbl.find env.ids_ fullname in
   match idinfo.TC.sto with
   | S.Param -> 

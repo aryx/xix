@@ -242,7 +242,7 @@ and vof_virtual_instr =
   | AddI _ -> Ocaml.VSum (("AddI ...", []))
   | Load _ -> Ocaml.VSum (("Load ...", []))
   | Store _ -> Ocaml.VSum (("Store ...", []))
-  | Cmp (v1, v2) ->
+  | Ast_asm.Cmp (v1, v2) ->
       let v1 = vof_integer v1 in
       let v2 = vof_register v2 in
       Ocaml.VSum (("Cmp", [ v1; v2 ]))

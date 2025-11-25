@@ -1,11 +1,12 @@
 (*s: Arch5.ml *)
-(* Copyright 2016 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Ast_asm
 open Arch_compiler
 module C = Ast
-module A5 = Ast_asm5
+module A = Ast_asm
 module T = Type
+
+module A5 = Ast_asm5
 
 (*s: function [[Arch5.width_of_type]] *)
 let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
@@ -29,6 +30,7 @@ let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
     | None -> raise (Impossible "width of incomplete array")
     | Some i -> i * width_of_type env t
     )
+  (* TODO: if union then width is not a sum but a max! *)
   | T.StructName (_su, fullname) ->
       let (_su, flds) = Hashtbl.find env.structs fullname in
       (* todo: align so extra size *)
@@ -37,11 +39,11 @@ let rec width_of_type (env : Arch_compiler.env) (t : Type.t) : int =
       |> List.fold_left (+) 0
 (*e: function [[Arch5.width_of_type]] *)
 
-(* opti: let rARG = A.R 0 *)
+(* opti: let rARGopt = Some (A.R 0) *)
 
 (* for 'extern register xx;', used in ARM kernel *)
-let rEXT1 = R 10
-let rEXT2 = R 9
+let rEXT1 = A.R 10
+let rEXT2 = A.R 9
 
 let regs_initial = 
   let arr = Array.make A5.nb_registers 0 in
@@ -49,11 +51,12 @@ let regs_initial =
   [A5.rLINK; A5.rPC;       (* hardware reseved *)
    A5.rTMP; A5.rSB; A5.rSP; (* linker reserved *)
    rEXT1; rEXT2;         (* compiler reserved *)
-  ] |> List.iter (fun (R x) ->
+  ] |> List.iter (fun (A.R x) ->
     arr.(x) <- 1
   );
   arr
 
+(* alt: add binaryOp to Ast_asm.ml so generalize to a few archs *)
 let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
   A5.Arith (
     (match op with

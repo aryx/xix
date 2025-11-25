@@ -1,19 +1,3 @@
-#define	EXTERN
-#include "gc.h"
-
-void
-listinit(void)
-{
-
-	fmtinstall('A', Aconv);
-	fmtinstall('P', Pconv);
-	fmtinstall('S', Sconv);
-	fmtinstall('N', Nconv);
-	fmtinstall('B', Bconv);
-	fmtinstall('D', Dconv);
-	fmtinstall('R', Rconv);
-}
-
 int
 Bconv(Fmt *fp)
 {

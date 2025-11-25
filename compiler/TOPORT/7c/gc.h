@@ -1,6 +1,3 @@
-#include	"../cc/cc.h"
-#include	"../7l/7.out.h"
-
 /*
  * 7c/arm64
  * Arm64

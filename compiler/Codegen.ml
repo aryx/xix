@@ -476,7 +476,7 @@ let regalloc (env : 'i env) loc : int =
 (*s: function [[Codegen.opd_regalloc]] *)
 (* We can reuse a previous register if 'tgtopt' is a register.
  * See for example return.c where we can reuse R0 instead of a new R1.
- * 5c: called regalloc()
+ * 5c: called regalloc(), and also used for regialloc
  *)
 let opd_regalloc (env : 'i env) (typ : Type.t) loc (tgtopt : opd option) : opd =
   match typ with
@@ -675,12 +675,14 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
         gmove_opt env opdres dst_opd_opt;
         opd_regfree env opdres;
         opd_regfree env opdother;
-        
+
+      (* TODO: AndLog, OrLog with boolgen and patch *)      
       | Logical _ ->
         raise Todo
       )
     (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     | Assign (op, e1, e2) ->
+      (* TODO: if bitfield assign, if not operand able, when funcall *)
       (match op with
       | Eq_ ->
         (match operand_able e1, operand_able e2, dst_opd_opt with
@@ -727,25 +729,31 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
           raise (Impossible "handled in operand_able()")
         | Unary (DeRef, _) ->
           raise (Impossible "should be simplified in rewrite.ml")
+        (* TODO: can be complex expr, need lcgen() ? like for Ternary! *)
         | _ -> 
           raise (Impossible "not an lvalue?")
         )
 
       | DeRef ->
+        (* TODO: nullwarn if dst_opd_opt is None like in 5c? *)
         (* less: opti of Deref of Add with constant? *)
         let opd1reg = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
         expr env e (Some opd1reg);
         gmove_opt env
           (match opd1reg.opd with
+          (* 5c: code in separate regind() *)          
           | Register r -> { opd = Indirect (r, 0); loc = e.e_loc;
                             typ = e0.e_type }
-          | _ -> raise (Impossible "opd_regalloc_e returns always Register")
+          | _ -> 
+             (* alt: "regind not OREGISTER" *)
+             raise (Impossible "opd_regalloc_e returns always Register")
           ) dst_opd_opt;
         opd_regfree env opd1reg;
     
 
       | (UnPlus | UnMinus | Tilde) -> 
         raise (Impossible "should have been converted")
+      (* TODO: boolgen *)
       | Not -> raise Todo
       )
     | Call (e, es) ->

@@ -9,7 +9,9 @@ open Ast_asm
 open Ast
 module C = Ast
 module A = Ast_asm
-module A5 = Ast_asm5
+(* can't depend on Ast_Asm5 or Ast_asmv here! the code needs to
+ * work for all archs!
+ *)
 
 module T = Type
 module S = Storage
@@ -264,15 +266,6 @@ let entity_of_id (env : 'i env) (fullname : fullname) (offset_extra : int) :
 
 
 (*s: function [[Codegen.mov_operand_of_opd]] *)
-(* 5c: part of naddr()
- * less: opportunity for bitshifted registers? *)
-let mov_operand_of_opd (env : 'i env) (opd : opd) : A5.mov_operand =
-  match opd.opd with
-  | ConstI i   -> A5.Imsr (A5.Imm i)
-  | Register r -> A5.Imsr (A5.Reg r)
-  | Name (fullname, offset) -> A5.Entity (entity_of_id env fullname offset)
-  | Indirect (r, offset) -> A5.Indirect (r, offset)
-  | Addr fullname -> A5.Ximm (A.Address (entity_of_id env fullname 0))
 (*e: function [[Codegen.mov_operand_of_opd]] *)
 
 (* 5c: part of naddr() called from gopcode *)
@@ -565,9 +558,8 @@ and gmove_aux env move_size (opd1 : opd) (opd2 : opd) : unit =
   then ()
   else 
   add_instr env 
-    (A.Instr (A5.MOVE (move_size, None, 
-                      mov_operand_of_opd env opd1,
-                      mov_operand_of_opd env opd2), A5.AL)) opd1.loc
+    (A.Instr (env.a.move_instr_of_opds (entity_of_id env) move_size opd1 opd2))
+    opd1.loc
 (*e: function [[Codegen.gmove]] *)
 (*s: function [[Codegen.gmove_opt]] *)
 let gmove_opt (env : 'i env) (opd1 : opd) (opd2opt : opd option) :
@@ -986,6 +978,11 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
     )
   (*e: [[Codegen.stmt]] match [[st0.s]] cases *)
 (*e: function [[Codegen.stmt]] *)
+
+(*****************************************************************************)
+(* Global *)
+(*****************************************************************************)
+(* TODO, in env.ids ? iter over it? *)
 
 (*****************************************************************************)
 (* Function *)

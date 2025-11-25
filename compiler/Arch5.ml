@@ -75,6 +75,22 @@ let arith_instr_of_op (op : C.binaryOp) r1 r2 r3 =
     A5.Reg r1, Some r2, r3
   ), A5.AL
 
+(* 5c: part of naddr()
+ * less: opportunity for bitshifted registers? *)
+let mov_operand_of_opd entity_of_id (opd : opd) : A5.mov_operand =
+  match opd.opd with
+  | ConstI i   -> A5.Imsr (A5.Imm i)
+  | Register r -> A5.Imsr (A5.Reg r)
+  | Name (fullname, offset) -> A5.Entity (entity_of_id fullname offset)
+  | Indirect (r, offset) -> A5.Indirect (r, offset)
+  | Addr fullname -> A5.Ximm (A.Address (entity_of_id fullname 0))
+
+let move_instr_of_opds entity_of_id (move_size : A.move_size) 
+     (opd1: opd) (opd2: opd) : A5.instr_with_cond =
+  A5.MOVE (move_size, None, 
+                      mov_operand_of_opd entity_of_id opd1,
+                      mov_operand_of_opd entity_of_id opd2), A5.AL
+
 (*s: constant [[Arch5.arch]] *)
 let arch = { 
     width_of_type;
@@ -82,6 +98,7 @@ let arch = {
     rSP = A5.rSP;
     rRET = A5.rRET;
     arith_instr_of_op;
+    move_instr_of_opds;
   }
 (*e: constant [[Arch5.arch]] *)
 (*e: Arch5.ml *)

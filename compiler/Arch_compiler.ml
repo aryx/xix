@@ -37,6 +37,9 @@ type 'instr t = {
   arith_instr_of_op: 
     Ast.binaryOp -> Ast_asm.register -> Ast_asm.register -> Ast_asm.register ->
     'instr;
+  move_instr_of_opds:
+    (Ast.fullname -> Ast_asm.offset -> Ast_asm.entity) (* entity_of_id *) ->
+    Ast_asm.move_size -> opd -> opd -> 'instr;
 }
 (*e: type [[Arch_compiler.t]] *)
 (*e: Arch_compiler.ml *)

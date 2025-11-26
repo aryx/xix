@@ -616,7 +616,7 @@ let rec expr (env : env) (e0 : expr) : expr (* but type annotated *) =
   (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Float  (_s, floattype) -> { e0 with e_type = T.F floattype }
   (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
-  (* less: transform in Id later? *)
+  (* 5c: transformed in Id (ONAME), but better later *)
   | String (_s, t)         -> { e0 with e_type = t } |> array_to_pointer env
   (*x: [[Typecheck.expr()]] match [[e0.e]] cases *)
   | Id fullname ->

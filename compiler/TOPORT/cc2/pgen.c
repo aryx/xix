@@ -92,7 +92,9 @@ supgen(Node *n)
 	warnreach = 0;
 	spc = pc;
 	sp = lastp;
+
 	gen(n);
+
 	lastp = sp;
 	pc = spc;
 	sp->link = nil;

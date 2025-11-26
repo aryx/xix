@@ -34,28 +34,22 @@ xcom(Node *n)
 {
 	Node *l, *r;
 	int t;
-
-	if(n == Z)
-		return;
-	l = n->left;
-	r = n->right;
-	n->addable = 0;
-	n->complex = 0;
+    ...
 	switch(n->op) {
 	case OCONST:
-		n->addable = 20;
+		///n->addable = 20;
 		return;
 
 	case OREGISTER:
-		n->addable = 11;
+		///n->addable = 11;
 		return;
 
 	case OINDREG:
-		n->addable = 12;
+		///n->addable = 12;
 		return;
 
 	case ONAME:
-		n->addable = 10;
+		///n->addable = 10;
 		return;
 
 	case OADDR:
@@ -210,4 +204,3 @@ xcom(Node *n)
 		break;
 	}
 }
-

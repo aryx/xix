@@ -296,8 +296,9 @@ let branch_operand_of_opd (env : 'i env) (opd : opd) : A.branch_operand2 =
 
 (* 5c: called regaalloc() but actually didn't allocate reg so was a bad name *)
 let argument_operand (env : 'i env) (arg: argument) (curarg : int) : opd =
-  (* add 4 for space for REGLINK in callee *)
-  { opd = Indirect (env.a.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
+  (* add 4 for space for REGLINK in callee 
+   * TODO: was + SZ_LONG but should probably use + env.a.size_rlink *)
+  { opd = Indirect (env.a.rSP, curarg + 4);
     typ = arg.e_type;
     loc = arg.e_loc;
   }
@@ -771,9 +772,9 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
                             (ref (branch_operand_of_opd env opd)))) e0.e_loc;
              dst_opd_opt |> Option.iter (fun dst_opd ->
                 with_reg env env.a.rRET (fun () ->
-                    let src_opd = { opd = Register env.a.rRET; typ = e0.e_type;
+                    let nod = { opd = Register env.a.rRET; typ = e0.e_type;
                                     loc = e0.e_loc;} in
-                    gmove env src_opd dst_opd
+                    gmove env nod dst_opd
                 );
              );
           );
@@ -807,7 +808,9 @@ and arguments (env : 'i env) (xs : argument list) : unit =
       gmove env tn1 tn2;
       opd_regfree env tn1
   );
-  (* TODO: 4 -> SZ_LONG *)
+  (* TODO: in 5c: SZ_LONG, in ic there was ewidth[TIND] so should
+   * probably use env.a.size_pointer 
+   *)
   env.size_maxargs <- Int_.maxround env.size_maxargs !curarg 4;
   ()
 

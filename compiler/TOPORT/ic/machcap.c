@@ -1,5 +1,3 @@
-#include "gc.h"
-
 int
 machcap(Node *n)
 {

@@ -88,9 +88,7 @@ gclean(void)
 			continue;
 		gpseudo(AGLOBL, s, nodconst(s->type->width));
 	}
-	nextpc();
-	p->as = AEND;
-	outcode();
+   ...
 }
 
 void
@@ -134,15 +132,17 @@ garg1(Node *n, Node *tn1, Node *tn2, int f, Node **fnxp)
 		gopcode(OAS, n, Z, tn2);
 		return;
 	}
-	regalloc(tn1, n, Z);
+
+
+	///regalloc(tn1, n, Z);
 	if(n->complex >= FNX) {
 		cgen(*fnxp, tn1);
 		(*fnxp)++;
 	} else
-		cgen(n, tn1);
-	regaalloc(tn2, n);
-	gopcode(OAS, tn1, Z, tn2);
-	regfree(tn1);
+		///cgen(n, tn1);
+	///regaalloc(tn2, n);
+	///gopcode(OAS, tn1, Z, tn2);
+	///regfree(tn1);
 }
 
 
@@ -311,15 +311,11 @@ void
 naddr(Node *n, Adr *a)
 {
 	case OCONST:
-		a->sym = S;
-		a->reg = NREG;
 		if(typefd[n->type->etype]) {
 			a->type = D_FCONST;
 			a->dval = n->fconst;
-		} else {
-			a->type = D_CONST;
-			a->offset = n->vconst;
-		}
+		} 
+        ...
 		break;
 
 	case OADDR:
@@ -805,16 +801,14 @@ gmove(Node *f, Node *t)
 void
 gopcode(int o, Node *f1, Node *f2, Node *t)
 {
-	int a, et;
-	Adr ta;
-
+    ...
 	et = TLONG;
 	if(f1 != Z && f1->type != T)
 		et = f1->type->etype;
-	a = AGOK;
+    ...
 	switch(o) {
 	case OAS:
-		gmove(f1, t);
+		///gmove(f1, t);
 		return;
 
 	case OASADD:
@@ -868,7 +862,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		break;
 
 	case OFUNC:
-		a = AJAL;
+		///a = AJAL;
 		break;
 
 	case OCOND:
@@ -1051,22 +1045,13 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 			print("%P\n", p);
 		return;
 	}
-	if(a == AGOK)
-		diag(Z, "bad in gopcode %O", o);
-	nextpc();
-	p->as = a;
-	if(f1 != Z)
-		naddr(f1, &p->from);
 	if(f2 != Z) {
-		naddr(f2, &ta);
-		p->reg = ta.reg;
+		///naddr(f2, &ta);
+		///p->reg = ta.reg;
 		if(ta.type == D_CONST && ta.offset == 0)
 			p->reg = REGZERO;
 	}
-	if(t != Z)
-		naddr(t, &p->to);
-	if(debug['g'])
-		print("%P\n", p);
+    ...
 }
 
 int
@@ -1083,25 +1068,6 @@ samaddr(Node *f, Node *t)
 		return 1;
 	}
 	return 0;
-}
-
-void
-gpseudo(int a, Sym *s, Node *n)
-{
-
-	nextpc();
-	p->as = a;
-	p->from.type = D_OREG;
-	p->from.sym = s;
-	if(a == ATEXT)
-		//kengo: was before: p->reg = (profileflg ? 0 : NOPROF);
-	        p->reg = textflag;
-	p->from.name = D_EXTERN;
-	if(s->class == CSTATIC)
-		p->from.name = D_STATIC;
-	naddr(n, &p->to);
-	if(a == ADATA || a == AGLOBL)
-		pc--;
 }
 
 int

@@ -1,5 +1,3 @@
-#include "gc.h"
-
 void
 peep(void)
 {

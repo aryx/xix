@@ -75,11 +75,9 @@ struct	Rgn
 	short	regno;
 };
 
-EXTERN	long	nbreak;
 EXTERN	Case*	cases;
 
 EXTERN	Node	fconstnode;
-EXTERN	long	continpc;
 
 EXTERN	long	cursafe;
 

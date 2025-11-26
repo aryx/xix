@@ -361,6 +361,7 @@ let operand_able (e0 : expr) : opd option =
         (match e.e with
         (* why 5c does not make OADDR (ONAME) an addressable node? *)
         | Id fullname -> Some (Addr fullname)
+
         | _ -> None
         )
 
@@ -615,7 +616,8 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
     (match e0.e with
     | Int _ | Float _ | Id _ ->
         raise (Impossible "handled in operand_able()")
-    | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
+    | String _
+    | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
         raise (Impossible "should have been converted before")    
     (*s: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     | Sequence (l, r) -> 

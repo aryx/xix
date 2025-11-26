@@ -75,6 +75,7 @@ ocamlc$OPT $OCAMLCFLAGS -c Console.mli
 ocamlc$OPT $OCAMLCFLAGS -c UConsole.mli
 ocamlc$OPT $OCAMLCFLAGS -c Common.mli
 ocamlc$OPT $OCAMLCFLAGS -c IO.mli
+ocamlc$OPT $OCAMLCFLAGS -c Tmp.mli
 ocamlc$OPT $OCAMLCFLAGS -c Logs.mli
 ocamlc$OPT $OCAMLCFLAGS -c Logs_.mli
 ocamlc$OPT $OCAMLCFLAGS -c Fpath.mli
@@ -103,12 +104,13 @@ ocamlc$OPT $OCAMLCFLAGS -c UChan.ml
 ocamlc$OPT $OCAMLCFLAGS -c FS.ml
 ocamlc$OPT $OCAMLCFLAGS -c Date.ml
 ocamlc$OPT $OCAMLCFLAGS -c IO.ml
+ocamlc$OPT $OCAMLCFLAGS -c Tmp.ml
 ocamlc$OPT $OCAMLCFLAGS -c OCaml.ml
 ocamlc$OPT $OCAMLCFLAGS -c Exception.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exception.ml
 ocamlc$OPT $OCAMLCFLAGS -c Exit.mli
 ocamlc$OPT $OCAMLCFLAGS -c Exit.ml
-ocamlc$OPT -I . Set_.cmo Map_.cmo Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo Common.cmo OCaml.cmo IO.cmo Logs.cmo Logs_.cmo Fpath.cmo Fpath_.cmo Ftype.cmo Chan.cmo UChan.cmo FS.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
+ocamlc$OPT -I . Set_.cmo Map_.cmo Dumper.cmo Cap.cmo CapStdlib.cmo CapSys.cmo CapUnix.cmo Console.cmo UConsole.cmo Common.cmo OCaml.cmo IO.cmo Logs.cmo Logs_.cmo Fpath.cmo Fpath_.cmo Ftype.cmo Chan.cmo UChan.cmo FS.cmo Tmp.cmo Date.cmo Exception.cmo Exit.cmo -a -o lib.cma
 
 cd $TOP/builder
 ocamlyacc Parser.mly

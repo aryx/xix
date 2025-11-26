@@ -17,7 +17,7 @@
   Console UConsole
   Logs Logs_
   Exit Exception
-  Chan UChan FS IO
+  Chan UChan FS IO Tmp
   Cmd Proc
   Date Bits Rune
   Fpath_ Ftype

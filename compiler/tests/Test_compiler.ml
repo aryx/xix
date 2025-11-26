@@ -93,6 +93,7 @@ let codegen_tests caps =
               | _ -> spf "%s (%s)" !!path cmd
             in
             t ~checked_output:(Testo.stdxxx ()) testname (fun () ->
+                (* alt: -o /dev/null *)
                 Tmp.with_new_file caps file (spf "o%c" (Arch.thechar arch))
                 (fun tmpfile ->
                   run_main caps (spf "%s -S %s -o %s" cmd !!path !!tmpfile)

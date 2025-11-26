@@ -617,9 +617,9 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
     | String _ | ArrayAccess _ | RecordPtAccess _ | SizeOf _ -> 
         raise (Impossible "should have been converted before")    
     (*s: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
-    | Sequence (e1, e2) -> 
-      expr env e1 None;
-      expr env e2 dst_opd_opt
+    | Sequence (l, r) -> 
+      expr env l None;
+      expr env r dst_opd_opt
     (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
     (* less: lots of possible opti *)
     | Binary (l, op, r) ->
@@ -681,39 +681,39 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
         raise Todo
       )
     (*x: [[Codegen.expr()]] when not operand able, match [[e0.e]] cases *)
-    | Assign (op, e1, e2) ->
-      (* TODO: if bitfield assign, if not operand able, when funcall *)
+    | Assign (op, l, r) ->
+      (* TODO: if bitfield assign, if not operand able, when funcall, etc. *)
       (match op with
       | Eq_ ->
-        (match operand_able e1, operand_able e2, dst_opd_opt with
+        (match operand_able l, operand_able r, dst_opd_opt with
         (* ex: x = 1; *)
-        | Some opd1, Some opd2, None -> 
-          (* note that e1=e2 -->  MOVW opd2,opd1, (right->left -> left->right)*)
-          gmove env opd2 opd1
+        | Some lopd, Some ropd, None -> 
+          (* note that l=r -->  MOVW ropd,lopd (right->left -> left->right)*)
+          gmove env ropd lopd
 
         (* ex: return x = 1;, x = y = z, ... *)
-        | Some _opd1, Some _opd2, Some _dst ->
+        | Some _lopd, Some _ropd, Some _dst ->
           raise Todo
 
 
         (* ex: y = &x;, y = x + y, ... *)
-        | Some opd1, None, None ->
-          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-          expr env e2 (Some opd2reg);
-          gmove env opd2reg opd1;
+        | Some lopd, None, None ->
+          let opd2reg = opd_regalloc env r.e_type r.e_loc None in
+          expr env r (Some opd2reg);
+          gmove env opd2reg lopd;
           opd_regfree env opd2reg;
 
         (* ex: return x = x+y;, x = y = z, ... *)
-        | Some opd1, None, Some dst ->
-          let opd2reg = opd_regalloc env e2.e_type e2.e_loc None in
-          expr env e2 (Some opd2reg);
-          gmove env opd2reg opd1;
-          gmove env opd2reg dst; (* only diff with case above *)
-          opd_regfree env opd2reg;
-
+        | Some lopd, None, Some dst ->
+          let nod = opd_regalloc env r.e_type r.e_loc (Some dst) in
+          expr env r (Some nod);
+          gmove env nod lopd;
+          gmove env nod dst; (* only diff with case above *)
+          opd_regfree env nod;
 
         (* ex: *x = 1; *)
         | None, _, _ ->
+          (* TODO: compute complexity l, complexity r *)
           raise Todo
         )
       | OpAssign _op ->

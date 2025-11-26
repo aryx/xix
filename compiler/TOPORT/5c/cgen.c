@@ -55,20 +55,20 @@ _cgen(Node *n, Node *nn, int inrel)
 			goto bitas;
 
 
-		if(l->addable >= INDEXED && l->complex < FNX) {
-			if(nn != Z || r->addable < INDEXED) {
+		///if(l->addable >= INDEXED && l->complex < FNX) {
+			///if(nn != Z || r->addable < INDEXED) {
 				if(r->complex >= FNX && nn == Z)
 					regret(&nod, r);
 				else
-					regalloc(&nod, r, nn);
-				cgen(r, &nod);
-				gmove(&nod, l);
-				if(nn != Z)
-					gmove(&nod, nn);
+					///regalloc(&nod, r, nn);
+				//cgen(r, &nod);
+				//gmove(&nod, l);
+				///if(nn != Z)
+					///gmove(&nod, nn);
 				regfree(&nod);
 			} else
-				gmove(r, l);
-			break;
+				///gmove(r, l);
+			///break;
 		}
 		if(l->complex >= r->complex) {
 			reglcgen(&nod1, l, Z);
@@ -388,11 +388,6 @@ _cgen(Node *n, Node *nn, int inrel)
 		}
 		boolgen(n, 1, nn);
 		break;
-
-	///case OCOMMA:
-	///	cgen(l, Z);
-	///	cgen(r, nn);
-	///	break;
 
 	case OCAST:
 		if(nn == Z) {

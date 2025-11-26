@@ -64,6 +64,7 @@ let codegen_tests caps =
     "function.c";
     "local.c";
     "params.c";
+    "init.c";
     "return.c";
     "call.c";
 

@@ -1008,6 +1008,7 @@ let rec stmt (env : env) (st0 : stmt) : stmt (* with exprs inside annotated *) =
       (match ini with
       | None -> ()
       | Some e ->
+        (* alt: convert the whole Var in an Assign like in 5c? *)
         (* less: no const checking for this assign *)
         check_compatible_assign Eq_ t e.e_type loc
         (* todo: add cast if not same type *)

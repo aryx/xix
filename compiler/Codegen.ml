@@ -76,7 +76,7 @@ type 'i env = {
   (* for parameters and locals. 5c: autoffset *)
   offsets: (Ast.fullname, int) Hashtbl.t;
   (*x: [[Codegen.env]] other function fields *)
-  (* ?? *)
+  (* less: seems redundant with size_locals, could use just size_locals *)
   offset_locals: int ref;
   (*x: [[Codegen.env]] other function fields *)
   (* for goto/labels *)
@@ -845,12 +845,14 @@ let expropt (env : 'i env) (eopt : expr option) : unit =
 let rec stmt (env : 'i env) (st0 : stmt) : unit =
   match st0.s with
   (*s: [[Codegen.stmt]] match [[st0.s]] cases *)
-  | Var { v_name = fullname; v_loc=_;v_storage=_;v_type=_;v_init=_iniTODO} ->
+  (* 5c: not treated in gen() but in cgen *)
+  | Var { v_name = fullname; v_loc;v_storage=_;v_type=_;v_init} ->
       let idinfo = Hashtbl.find env.ids_ fullname in
-      (* todo: generate code for idinfo.ini, handle static locals, etc. *)
+      let t = idinfo.TC.typ in
+      (* less: assert equal to v_type? *)
+      (* todo: handle static locals, etc. *)
 
       (* update env.offsets *)
-      let t = idinfo.TC.typ in
       let sizet = env.a.width_of_type {Arch_compiler.structs = env.structs_} t
       in
 
@@ -858,6 +860,16 @@ let rec stmt (env : 'i env) (st0 : stmt) : unit =
       env.offset_locals := !(env.offset_locals) + sizet;
       env.size_locals <- env.size_locals + sizet;
       Hashtbl.add env.offsets fullname !(env.offset_locals);
+      
+      (* 5c: Var with Init, represented via OASI in 5c, was converted
+       * in regular assign (OAS) during the tcomo() typechecking
+       *)
+      let e_loc = v_loc in
+      let var : C.expr = { e = Id fullname; e_type = t; e_loc} in
+      v_init |> Option.iter (fun ini ->
+        expr env { e = Assign (Eq_, var, ini); e_type = t; e_loc} None
+      )
+
   (*x: [[Codegen.stmt]] match [[st0.s]] cases *)
   | ExprSt e -> expr env e None
   | Block xs -> xs |> List.iter (stmt env)

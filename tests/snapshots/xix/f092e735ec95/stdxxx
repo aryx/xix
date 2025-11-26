@@ -16,4 +16,3 @@
       (Gen (GReg (R 1))))))
  6: (Virtual RET)
  7: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/simple.c

@@ -8,4 +8,3 @@
  3: (Instr (Arith ((ADD (W, S)), (Reg (R 2)), None, (R 1))))
  4: (Virtual RET)
  5: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/enum.c

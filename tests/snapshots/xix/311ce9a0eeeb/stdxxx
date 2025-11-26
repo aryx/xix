@@ -10,4 +10,3 @@
       (Gen (GReg (R 1))))))
  4: (Virtual RET)
  5: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/return.c

@@ -5,4 +5,3 @@
  3: (MOVE(Word, None, Entity(Local(Some("x"), -4)), Imsr(Reg(R(0)))), AL)
  4: Virtual(RET)
  5: Virtual(RET)
-executing: o5c -S tests/compiler/codegen/assign.c

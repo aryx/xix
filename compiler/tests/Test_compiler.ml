@@ -20,7 +20,7 @@ let run_main (caps : <CLI.caps; ..>) (cmd : string) : (Exit.t, string) result =
    * tests; simpler to just fork.
    *)
   Proc.apply_in_child_process caps (fun () ->
-      print_string (spf "executing: %s\n" cmd);
+      (* print_string (spf "executing: %s\n" cmd); *)
       try 
         Ok (Exit.catch (fun () -> 
               CLI.main caps (Array.of_list args)))
@@ -80,19 +80,24 @@ let codegen_tests caps =
 *)
     ]
   in
-  let archs = ["o5c"; "ovc"; "oic"] in
+  let archs = [Arch.Arm; Arch.Mips; Arch.Riscv] in
   let tests =
     archs |> List.map (fun arch ->
         files |> List.map (fun file ->
             let path = Fpath.v "tests/compiler/codegen" / file in
+            let cmd = spf "o%cc" (Arch.thechar arch) in
             let testname = 
-              if arch = "o5c" 
+              match arch with
               (* to not change snapshot path for the o5c tests *)
-              then !!path
-              else spf "%s (%s)" !!path arch
+              | Arch.Arm -> !!path
+              | _ -> spf "%s (%s)" !!path cmd
             in
             t ~checked_output:(Testo.stdxxx ()) testname (fun () ->
-                run_main caps (spf "%s -S %s" arch !!path) |> ok_or_fail
+                Tmp.with_new_file caps file (spf "o%c" (Arch.thechar arch))
+                (fun tmpfile ->
+                  run_main caps (spf "%s -S %s -o %s" cmd !!path !!tmpfile)
+                  |> ok_or_fail
+                )
             )
        )) |> List.flatten
   in

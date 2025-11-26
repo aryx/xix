@@ -31,4 +31,3 @@
               { Ast_asm.name = "foo"; priv = None; signature = None }))))
 14: (Virtual RET)
 15: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/call.c

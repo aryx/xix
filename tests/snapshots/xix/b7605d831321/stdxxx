@@ -24,4 +24,3 @@
       (Gen (GReg (R 1))))))
 12: (Virtual RET)
 13: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/goto.c

@@ -7,4 +7,3 @@
  5: (MOVE(Word, None, Entity(Local(Some("z"), -4)), Imsr(Reg(R(0)))), AL)
  6: Virtual(RET)
  7: Virtual(RET)
-executing: o5c -S tests/compiler/codegen/simple.c

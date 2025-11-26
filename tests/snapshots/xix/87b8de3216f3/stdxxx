@@ -7,4 +7,3 @@
  5: (Arith(ADD, None, Reg(R(1)), None, R(0)), AL)
  6: Virtual(RET)
  7: Virtual(RET)
-executing: o5c -S tests/compiler/codegen/local.c

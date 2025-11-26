@@ -23,4 +23,3 @@
       (Gen (GReg (R 8))))))
 13: (Virtual RET)
 14: (Virtual RET)
-executing: oic -S tests/compiler/codegen/while.c

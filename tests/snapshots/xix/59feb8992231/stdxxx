@@ -11,4 +11,3 @@
  9: (MOVE(Word, None, Entity(Local(Some("res"), -4)), Imsr(Reg(R(0)))), AL)
 10: Virtual(RET)
 11: Virtual(RET)
-executing: o5c -S tests/compiler/codegen/if.c

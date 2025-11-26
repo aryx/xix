@@ -16,4 +16,3 @@
 13: Virtual(JmpAndLink(Ref(SymbolJump({name="foo"; priv=None; sig=None; }))))
 14: Virtual(RET)
 15: Virtual(RET)
-executing: o5c -S tests/compiler/codegen/call.c

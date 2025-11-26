@@ -23,4 +23,3 @@
       (Gen (GReg (R 1))))))
 13: (Virtual RET)
 14: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/dowhile.c

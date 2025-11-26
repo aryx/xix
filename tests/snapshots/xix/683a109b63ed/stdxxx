@@ -6,4 +6,3 @@
       (Gen (GReg (R 1))))))
  2: (Virtual RET)
  3: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/address_local.c

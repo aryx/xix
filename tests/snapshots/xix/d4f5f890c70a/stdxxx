@@ -24,4 +24,3 @@
       (Gen (GReg (R 1))))))
 14: (Virtual RET)
 15: (Virtual RET)
-executing: ovc -S tests/compiler/codegen/break.c

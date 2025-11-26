@@ -14,4 +14,3 @@
  5: (Instr (Arith ((ADD None), (Reg (R 5)), None, (R 8))))
  6: (Virtual RET)
  7: (Virtual RET)
-executing: oic -S tests/compiler/codegen/local.c

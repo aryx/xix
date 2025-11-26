@@ -28,33 +28,13 @@ argsize(void)
 }
 
 void
-codgen(Node *n, Node *nn)
+codgen(...)
 {
-	Prog *sp;
-	Node *n1, nod, nod1;
-
 	cursafe = 0;
-	curarg = 0;
-	maxargsafe = 0;
-
-	/*
-	 * isolate name
-	 */
-	for(n1 = nn;; n1 = n1->left) {
-		if(n1 == Z) {
-			diag(nn, "cant find function name");
-			return;
-		}
-		if(n1->op == ONAME)
-			break;
-	}
-	nearln = nn->lineno;
-
+    ...
     //TODO: do not do p = gtext(...), WEIRD
     // pointer change from 0xaaaa to 0xffff, weird
-    gtext(n1->sym, stkoff);
-	sp = p;
-    //printf("p 1 = %#lx\n", p);
+    ///gtext(n1->sym, stkoff);
 
 	/*
 	 * isolate first argument
@@ -80,18 +60,22 @@ codgen(Node *n, Node *nn)
 
 	canreach = 1;
 	warnreach = 1;
-	gen(n);
+
+	///gen(n);
+
 	if(canreach && thisfn->link->etype != TVOID)
 		warn(Z, "no return at end of function: %s", n1->sym->name);
+
 	noretval(3);
-	gbranch(ORETURN);
+
+	///gbranch(ORETURN);
 
 	if(!debug['N'] || debug['R'] || debug['P'])
 		regopt(sp);
 
 	if(thechar=='6' || thechar=='7')	/* [sic] */
 		maxargsafe = xround(maxargsafe, 8);
-	sp->to.offset += maxargsafe;
+	///sp->to.offset += maxargsafe;
 }
 
 void
@@ -131,21 +115,13 @@ uncomma(Node *n)
 void
 gen(Node *n)
 {
-	Node *l, nod;
-	Prog *sp, *spc, *spb;
 	Case *cn;
 	long sbc, scc;
 	int snbreak, sncontin;
-	int f, o, oldreach;
+	int f, oldreach;
+    ...
 
 loop:
-	if(n == Z)
-		return;
-	nearln = n->lineno;
-	o = n->op;
-	if(debug['G'])
-		if(o != OLIST)
-			print("%L %O\n", nearln, o);
 
 	if(!canreach) {
 		switch(o) {
@@ -170,27 +146,19 @@ loop:
 
 	default:
 		complex(n);
-		cgen(n, Z);
-		break;
-
-	case OLIST:
-		gen(n->left);
-
-	rloop:
-		n = n->right;
-		goto loop;
+		///cgen(n, Z);
+		///break;
 
 	case ORETURN:
 		canreach = 0;
 		warnreach = !suppress;
 		complex(n);
-		if(n->type == T)
-			break;
+
 		l = n->left;
 		if(l == Z) {
 			noretval(3);
-			gbranch(ORETURN);
-			break;
+			///gbranch(ORETURN);
+			///break;
 		}
 		if(typecmplx[n->type->etype]) {
 			sugen(l, nodret, n->type->width);
@@ -198,49 +166,29 @@ loop:
 			gbranch(ORETURN);
 			break;
 		}
-		regret(&nod, n);
-		cgen(l, &nod);
-		regfree(&nod);
+		///regret(&nod, n);
+		///cgen(l, &nod);
+		///regfree(&nod);
+
 		if(typefd[n->type->etype])
 			noretval(1);
 		else
 			noretval(2);
-		gbranch(ORETURN);
+		///gbranch(ORETURN);
 		break;
 
 	case OLABEL:
 		canreach = 1;
-		l = n->left;
-		if(l) {
-			l->pc = pc;
-			if(l->label)
-				patch(l->label, pc);
-		}
-		gbranch(OGOTO);	/* prevent self reference in reg */
-		patch(p, pc);
+        ...
 		goto rloop;
 
 	case OGOTO:
 		canreach = 0;
 		warnreach = !suppress;
-		n = n->left;
-		if(n == Z)
-			return;
-		if(n->complex == 0) {
-			diag(Z, "label undefined: %s", n->sym->name);
-			return;
-		}
+        ...
 		if(suppress)
 			return;
-		gbranch(OGOTO);
-		if(n->pc) {
-			patch(p, n->pc);
-			return;
-		}
-		if(n->label)
-			patch(n->label, pc-1);
-		n->label = p;
-		return;
+        ...
 
 	case OCASE:
 		canreach = 1;
@@ -323,39 +271,12 @@ loop:
 
 	case OWHILE:
 	case ODWHILE:
-		l = n->left;
-		gbranch(OGOTO);		/* entry */
-		sp = p;
-
-		scc = continpc;
-		continpc = pc;
-		gbranch(OGOTO);
-		spc = p;
-
-		sbc = breakpc;
-		breakpc = pc;
-		snbreak = nbreak;
-		nbreak = 0;
-		gbranch(OGOTO);
-		spb = p;
-
-		patch(spc, pc);
-		if(n->op == OWHILE)
-			patch(sp, pc);
-		bcomplex(l, Z);		/* test */
-		patch(p, breakpc);
+        ...
+		///bcomplex(l, Z);		/* test */
+		///patch(p, breakpc);
 		if(l->op != OCONST || vconst(l) == 0)
 			nbreak++;
-
-		if(n->op == ODWHILE)
-			patch(sp, pc);
-		gen(n->right);		/* body */
-		gbranch(OGOTO);
-		patch(p, continpc);
-
-		patch(spb, pc);
-		continpc = scc;
-		breakpc = sbc;
+        ...
 		canreach = nbreak!=0;
 		if(canreach == 0)
 			warnreach = !suppress;
@@ -363,14 +284,14 @@ loop:
 		break;
 
 	case OFOR:
-		l = n->left;
+		///l = n->left;
 		if(!canreach && l->right->left && warnreach) {
 			warn(n, "unreachable code FOR");
 			warnreach = 0;
 		}
-		gen(l->right->left);	/* init */
-		gbranch(OGOTO);		/* entry */
-		sp = p;
+		///gen(l->right->left);	/* init */
+		///gbranch(OGOTO);		/* entry */
+		///sp = p;
 
 		/*
 		 * if there are no incoming labels in the
@@ -380,32 +301,9 @@ loop:
 			warn(n, "unreachable code %O", o);
 			warnreach = 0;
 		}
-
-		scc = continpc;
-		continpc = pc;
-		gbranch(OGOTO);
-		spc = p;
-
-		sbc = breakpc;
-		breakpc = pc;
-		snbreak = nbreak;
-		nbreak = 0;
-		sncontin = ncontin;
-		ncontin = 0;
-		gbranch(OGOTO);
-		spb = p;
-
-		patch(spc, pc);
-		gen(l->right->right);	/* inc */
-		patch(sp, pc);
-		if(l->left != Z) {	/* test */
-			bcomplex(l->left, Z);
-			patch(p, breakpc);
-			if(l->left->op != OCONST || vconst(l->left) == 0)
-				nbreak++;
-		}
+        ...
 		canreach = 1;
-		gen(n->right);		/* body */
+        ...
 		if(canreach){
 			gbranch(OGOTO);
 			patch(p, continpc);
@@ -417,8 +315,6 @@ loop:
 		}
 
 		patch(spb, pc);
-		continpc = scc;
-		breakpc = sbc;
 		canreach = nbreak!=0;
 		if(canreach == 0)
 			warnreach = !suppress;
@@ -427,22 +323,14 @@ loop:
 		break;
 
 	case OCONTINUE:
-		if(continpc < 0) {
-			diag(n, "continue not in a loop");
-			break;
-		}
-		gbranch(OGOTO);
-		patch(p, continpc);
+        ...
 		ncontin++;
 		canreach = 0;
 		warnreach = !suppress;
 		break;
 
 	case OBREAK:
-		if(breakpc < 0) {
-			diag(n, "break not in a loop");
-			break;
-		}
+        ...
 		/*
 		 * Don't complain about unreachable break statements.
 		 * There are breaks hidden in yacc's output and some people
@@ -452,8 +340,7 @@ loop:
 		 */
 		if(!canreach)
 			break;
-		gbranch(OGOTO);
-		patch(p, breakpc);
+        ...
 		nbreak++;
 		canreach = 0;
 		warnreach = !suppress;

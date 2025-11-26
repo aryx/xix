@@ -16,8 +16,9 @@ open Regexp_.Operators
 (* Need:
  *  - exec/fork/wait: obviously as we run a shell
  *  - env: for MKSHELL
+ *  - tmp: for interactive feature and pipecmd
  *)
-type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env >
+type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env; Cap.tmp >
 (*e: type [[Shell.caps]] *)
 
 (*s: type [[Shell.t]] *)
@@ -137,8 +138,7 @@ let feed_shell_input (inputs : string list) (pipe_write : Unix.file_descr) : uni
 (*****************************************************************************)
 
 (*s: function [[Shell.exec_recipe]] *)
-(* returns a pid *)
-let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
+let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : Proc.pid =
   let pid = CapUnix.fork caps () in
   
   (* children case *)
@@ -151,10 +151,10 @@ let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flag
      *)
     if interactive 
     then begin
-      let tmpfile = Filename.temp_file "mk" "sh" in
-      (try
+      Tmp.with_new_file caps "mk" "sh" (fun tmpfile ->
+        (try
          (* nosemgrep: use-caps *)
-         let chan = open_out tmpfile in
+         let chan = open_out !!tmpfile in
          inputs |> List.iter (fun s -> 
            output_string chan s; 
            output_string chan "\n"
@@ -162,9 +162,9 @@ let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flag
          close_out chan
        with Sys_error s -> 
          failwith (spf "Could not create temporary file (error = %s)" s)
-      ); 
-      exec_shell caps shellenv flags [tmpfile]
-      (* less: delete tmpfile *)
+        ); 
+        exec_shell caps shellenv flags [!!tmpfile]
+    )
     (* unreachable *)
     end 
     (*e: [[Shell.exec_recipe]] when children case, if [[interactive]] *)
@@ -241,8 +241,9 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) (input : string)
 (*e: function [[Shell.exec_backquote]] *)
 
 (*s: function [[Shell.exec_pipecmd]] *)
-let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
-  let tmpfile = Filename.temp_file "mk" "sh" in
+let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) (input : string) :
+     Fpath.t =
+  let tmpfile = Tmp.new_file caps "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
 
   let pid = CapUnix.fork caps () in
@@ -253,7 +254,7 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     Unix.dup2 pipe_read_input Unix.stdin;
     Unix.close pipe_read_input;
     Unix.close pipe_write_input;
-    let fd = Unix.openfile tmpfile [Unix.O_WRONLY] 0o640 in
+    let fd = Unix.openfile !!tmpfile [Unix.O_WRONLY] 0o640 in
     Unix.dup2 fd Unix.stdout;
     Unix.close fd;
 

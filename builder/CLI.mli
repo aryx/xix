@@ -8,8 +8,9 @@
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - open_in: for parsing the mkfile (and included files)
  *  - open_out: to delete target files when error in recipe process
+ *  - Cap.tmp: for :I: interactive feature and pipe cmd
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in; Cap.open_out >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in; Cap.open_out; Cap.tmp >
 (*e: type [[CLI.caps]] *)
 
 (*s: signature [[CLI.main]] *)

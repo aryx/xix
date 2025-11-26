@@ -6,6 +6,10 @@
 type t
 [@@deriving show]
 
+(* The type for extensions. *)
+type ext = string
+[@@deriving show]
+
 (* [v s] is the string [s] as a path *)
 val v : string -> t
 

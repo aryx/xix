@@ -18,6 +18,10 @@
 type t = string (* N.B. a path is never "" or something is wrooong. *)
 [@@deriving show]
 
+(* The type for extensions. *)
+type ext = string
+[@@deriving show]
+
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)

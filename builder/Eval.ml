@@ -293,7 +293,8 @@ let eval (caps : < Cap.fork; Cap.exec; Cap.open_in; .. >) env targets_ref (xs : 
         then failwith "missing include program name";
         let shellenv = Env.shellenv_of_env env in
         let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-        let xs = FS.with_open_in caps Parse.parse (Fpath.v tmpfile) in
+        let xs = FS.with_open_in caps Parse.parse tmpfile in
+        (* TODO? delete tmpfile? *)
         (* recurse *)
         instrs xs
       (*e: [[Eval.eval()]] match instruction kind cases *)

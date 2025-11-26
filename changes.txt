@@ -77,6 +77,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - use Cap.open_out, started new Cap.draw, Cap.keyboard, Cap.mouse
   and Cap.mount, Cap.bind for orio
 - forbid Sys.remove and use Cap.open_out and FS.remove instead
+- forbid Filename.temp_file and use Cap.tmp and new Tmp.ml
 - use more Chan.{i,o} types to reduce the need for Cap.open_{in,out}
 - resume the compilation of windows/ and kernel/ with dune and mkfile
   without requiring a plan9 ocamlc

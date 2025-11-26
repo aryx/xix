@@ -76,7 +76,7 @@ local cap_rules = [
         'Unix.unlink',
         # print_string, print_int, print_bool, ...
         # Cap.tmp
-         # Filename.temp_file
+        'Filename.temp_file',
 	]
     },
     languages: ['ocaml'],
@@ -87,7 +87,7 @@ local cap_rules = [
     |||,
     paths: {
       exclude: ['threadUnix.ml',
-	        'Filename.ml', # for Sys.getenv TMPDIR
+	        'Filename.ml', # for Sys.getenv TMPDIR, and temp_file
 		] + exclude_dirs,
     },
   },

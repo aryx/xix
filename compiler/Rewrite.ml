@@ -127,8 +127,9 @@ and map_expr env v =
   let e = map_expr_bis env e_loc e in
   let e_loc = map_loc env e_loc in
   let e_type = map_type env e_type in
-  (match e_type with
-  | Type.Void -> error "Impossible: got void type" e_loc
+  (match e, e_type with
+  | Call _, Type.Void -> ()
+  | _, Type.Void -> error "Impossible: got void type" e_loc
   | _ -> ()
   );
   {e; e_loc; e_type}

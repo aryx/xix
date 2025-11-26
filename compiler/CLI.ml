@@ -68,6 +68,8 @@ open Regexp_.Operators
 type caps = < Cap.open_in; Cap.open_out; Cap.env >
 (*e: type [[CLI.caps]] *)
 
+let dump_rewrote_ast = ref false
+
 (*****************************************************************************)
 (* Testing *)
 (*****************************************************************************)
@@ -143,6 +145,10 @@ let backend (arch : Arch.t) (tast : Typecheck.typed_program) :
     'a Ast_asm.program =
 
   let tast = Rewrite.rewrite tast in
+  if !dump_rewrote_ast
+  then Logs.app (fun m -> m "Rewrote AST: %s" 
+           (Typecheck.show_typed_program tast));
+
   let (asm, _locs) = Codegen.codegen arch tast in
     (*s: [[CLI.backend5()]] if [[dump_asm]] *)
     (* debug *)
@@ -264,6 +270,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
     " dump the parsed AST";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-dump_typed_ast", Arg.Set Flags.dump_typed_ast,
+    " dump the typed AST";
+    "-dump_rewrote_ast", Arg.Set dump_rewrote_ast,
     " dump the typed AST";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-dump_asm", Arg.Set Flags.dump_asm,

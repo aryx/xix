@@ -65,7 +65,7 @@ _cgen(Node *n, Node *nn, int inrel)
 				//gmove(&nod, l);
 				///if(nn != Z)
 					///gmove(&nod, nn);
-				regfree(&nod);
+				///regfree(&nod);
 			} else
 				///gmove(r, l);
 			///break;

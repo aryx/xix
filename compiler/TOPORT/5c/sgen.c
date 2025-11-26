@@ -1,10 +1,8 @@
-
 Prog*
 gtext(Sym *s, int32 stkoff)
 {
 	int32 a;
     a = argsize();
-
 	///gpseudo(ATEXT, s, nodconst(stkoff));
 	p->to.type = D_CONST2;
 	p->to.offset2 = a;
@@ -49,19 +47,19 @@ xcom(Node *n)
     ...
 	switch(n->op) {
 	case OCONST:
-		n->addable = 20;
+		///n->addable = 20;
 		return;
 
 	case OREGISTER:
-		n->addable = 11;
+		///n->addable = 11;
 		return;
 
 	case OINDREG:
-		n->addable = 12;
+		///n->addable = 12;
 		return;
 
 	case ONAME:
-		n->addable = 10;
+		///n->addable = 10;
 		return;
 
 	case OADDR:

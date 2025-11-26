@@ -34,13 +34,7 @@ char *extra [] = {
 int
 Pconv(Fmt *fp)
 {
-	char str[STRINGSZ], sc[20];
-	Prog *p;
-	int a, s;
-
-	p = va_arg(fp->args, Prog*);
-	a = p->as;
-	s = p->scond;
+    ...
 	strcpy(sc, extra[s & C_SCOND]);
 	if(s & C_SBIT)
 		strcat(sc, ".S");
@@ -50,30 +44,7 @@ Pconv(Fmt *fp)
 		strcat(sc, ".W");
 	if(s & C_UBIT)		/* ambiguous with FBIT */
 		strcat(sc, ".U");
-
-	if(a == AMOVM) {
-		if(p->from.type == D_CONST)
-			sprint(str, "	%A%s	%R,%D", a, sc, &p->from, &p->to);
-		else
-		if(p->to.type == D_CONST)
-			sprint(str, "	%A%s	%D,%R", a, sc, &p->from, &p->to);
-		else
-			sprint(str, "	%A%s	%D,%D", a, sc, &p->from, &p->to);
-	} else
-	if(a == ADATA)
-		sprint(str, "	%A	%D/%d,%D", a, &p->from, p->reg, &p->to);
-	else
-	if(p->as == ATEXT)
-		sprint(str, "	%A	%D,%d,%D", a, &p->from, p->reg, &p->to);
-	else
-	if(p->reg == NREG)
-		sprint(str, "	%A%s	%D,%D", a, sc, &p->from, &p->to);
-	else
-	if(p->from.type != D_FREG)
-		sprint(str, "	%A%s	%D,R%d,%D", a, sc, &p->from, p->reg, &p->to);
-	else
-		sprint(str, "	%A%s	%D,F%d,%D", a, sc, &p->from, p->reg, &p->to);
-	return fmtstrcpy(fp, str);
+    ...
 }
 
 
@@ -112,6 +83,7 @@ Dconv(Fmt *fp)
 	case D_BRANCH:
 		sprint(str, "%d(PC)", a->offset-pc);
 		break;
+    ...
 	}
 	return fmtstrcpy(fp, str);
 }
@@ -126,6 +98,7 @@ Rconv(Fmt *fp)
 	a = va_arg(fp->args, Adr*);
 	sprint(str, "GOK-reglist");
 	switch(a->type) {
+    ...
 	case D_CONST:
 	case D_CONST2:
 		if(a->reg != NREG)
@@ -145,94 +118,5 @@ Rconv(Fmt *fp)
 		}
 		strcat(str, "]");
 	}
-	return fmtstrcpy(fp, str);
-}
-
-int
-Sconv(Fmt *fp)
-{
-	int i, c;
-	char str[STRINGSZ], *p, *a;
-
-	a = va_arg(fp->args, char*);
-	p = str;
-	for(i=0; i<NSNAME; i++) {
-		c = a[i] & 0xff;
-		if(c >= 'a' && c <= 'z' ||
-		   c >= 'A' && c <= 'Z' ||
-		   c >= '0' && c <= '9' ||
-		   c == ' ' || c == '%') {
-			*p++ = c;
-			continue;
-		}
-		*p++ = '\\';
-		switch(c) {
-		case 0:
-			*p++ = 'z';
-			continue;
-		case '\\':
-		case '"':
-			*p++ = c;
-			continue;
-		case '\n':
-			*p++ = 'n';
-			continue;
-		case '\t':
-			*p++ = 't';
-			continue;
-		case '\r':
-			*p++ = 'r';
-			continue;
-		case '\f':
-			*p++ = 'f';
-			continue;
-		}
-		*p++ = (c>>6) + '0';
-		*p++ = ((c>>3) & 7) + '0';
-		*p++ = (c & 7) + '0';
-	}
-	*p = 0;
-	return fmtstrcpy(fp, str);
-}
-
-int
-Nconv(Fmt *fp)
-{
-	char str[STRINGSZ];
-	Adr *a;
-	Sym *s;
-
-	a = va_arg(fp->args, Adr*);
-	s = a->sym;
-	if(s == S) {
-		sprint(str, "%d", a->offset);
-		goto out;
-	}
-	switch(a->name) {
-	default:
-		sprint(str, "GOK-name(%d)", a->name);
-		break;
-
-	case D_NONE:
-		sprint(str, "%d", a->offset);
-		break;
-
-	case D_EXTERN:
-		sprint(str, "%s+%d(SB)", s->name, a->offset);
-		break;
-
-	case D_STATIC:
-		sprint(str, "%s<>+%d(SB)", s->name, a->offset);
-		break;
-
-	case D_AUTO:
-		sprint(str, "%s-%d(SP)", s->name, -a->offset);
-		break;
-
-	case D_PARAM:
-		sprint(str, "%s+%d(FP)", s->name, a->offset);
-		break;
-	}
-out:
 	return fmtstrcpy(fp, str);
 }

@@ -294,7 +294,7 @@ let branch_operand_of_opd (env : 'i env) (opd : opd) : A.branch_operand2 =
 (*s: function [[Codegen.arith_instr_of_op]] *)
 (*e: function [[Codegen.arith_instr_of_op]] *)
 
-(* 5c: regaalloc but actually didn't allocate reg so was a bad name *)
+(* 5c: called regaalloc() but actually didn't allocate reg so was a bad name *)
 let argument_operand (env : 'i env) (arg: argument) (curarg : int) : opd =
   (* add 4 for space for REGLINK in callee *)
   { opd = Indirect (env.a.rSP, curarg + 4 (* TODO: SZ_LONG *)) ;
@@ -528,11 +528,11 @@ let rec gmove (env : 'i env) (from : opd) (to_ : opd) : unit =
       | _ -> raise Todo
     in
     (* less: opti which does opd_regfree env to_ (Some to_)? worth it? *)
-    let fromreg = opd_regalloc env from.typ from.loc (Some to_) in
-    gmove_aux env move_size from fromreg;
+    let nod = opd_regalloc env from.typ from.loc (Some to_) in
+    gmove_aux env move_size from nod;
     (* recurse! *)
-    gmove env fromreg to_;
-    opd_regfree env fromreg
+    gmove env nod to_;
+    opd_regfree env nod
 
   (* else *)
   | ConstI _ | Register _ | Addr _  ->
@@ -546,16 +546,16 @@ let rec gmove (env : 'i env) (from : opd) (to_ : opd) : unit =
         | T.I (T.Int, _) | T.Pointer _ -> A.Word
         | _ -> raise Todo
       in
-      let to_reg = 
+      let nod = 
          if from.typ =*= to_.typ
          (* TODO: explain opti, can see its effect on simple.c *)
          then opd_regalloc env to_.typ to_.loc (Some from)
          else opd_regalloc env to_.typ to_.loc None 
       in
       (* recurse! *)
-      gmove env from to_reg;
-      gmove_aux env move_size to_reg to_;
-      opd_regfree env to_reg
+      gmove env from nod;
+      gmove_aux env move_size nod to_;
+      opd_regfree env nod
 
     (* else *)
     | ConstI _ | Register _ | Addr _ -> 
@@ -671,7 +671,6 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
         (* This is why it is better for opdres to be the register
          * allocated from dst_opd_opt so the MOVW below can become a NOP
          * and be removed.
-         * TODO? 5c calls gopcode(OAS, ...) instead of gmove_opt
          *)
         gmove_opt env opdres dst_opd_opt;
         opd_regfree env opdres;
@@ -738,10 +737,10 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
       | DeRef ->
         (* TODO: nullwarn if dst_opd_opt is None like in 5c? *)
         (* less: opti of Deref of Add with constant? *)
-        let opd1reg = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
-        expr env e (Some opd1reg);
+        let nod = opd_regalloc env e.e_type e.e_loc dst_opd_opt in
+        expr env e (Some nod);
         gmove_opt env
-          (match opd1reg.opd with
+          (match nod.opd with
           (* 5c: code in separate regind() *)          
           | Register r -> { opd = Indirect (r, 0); loc = e.e_loc;
                             typ = e0.e_type }
@@ -749,7 +748,7 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
              (* alt: "regind not OREGISTER" *)
              raise (Impossible "opd_regalloc_e returns always Register")
           ) dst_opd_opt;
-        opd_regfree env opd1reg;
+        opd_regfree env nod;
     
 
       | (UnPlus | UnMinus | Tilde) -> 
@@ -772,7 +771,6 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
                             (ref (branch_operand_of_opd env opd)))) e0.e_loc;
              dst_opd_opt |> Option.iter (fun dst_opd ->
                 with_reg env env.a.rRET (fun () ->
-                    (* TODO? need Cast? 5c does gopcode(OAS, ...) *)
                     let src_opd = { opd = Register env.a.rRET; typ = e0.e_type;
                                     loc = e0.e_loc;} in
                     gmove env src_opd dst_opd
@@ -794,20 +792,20 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
 (*e: function [[Codegen.expr]] *)
 and arguments (env : 'i env) (xs : argument list) : unit =
   let curarg = ref 0 in
-  xs |> List.iter (fun (arg : argument) ->
+  xs |> List.iter (fun (n : argument) ->
       (* TODO: if complex argument type or complex arg *)
       (* TODO: if use REGARG and curarg is 0 *)
-      let opd = opd_regalloc env arg.e_type arg.e_loc None in
-      expr env arg (Some opd);
-      let opd2 = argument_operand env arg !curarg in
+      (* 5c: use tn1/tn2 names like in 5c for better code comparison *)
+      let tn1 = opd_regalloc env n.e_type n.e_loc None in
+      expr env n (Some tn1);
+      let tn2 = argument_operand env n !curarg in
       let sizet = 
-        env.a.width_of_type {Arch_compiler.structs = env.structs_} arg.e_type
+        env.a.width_of_type {Arch_compiler.structs = env.structs_} n.e_type
       in
       (* TODO: cursafe, curarg align before and after *)
       curarg := !curarg + sizet;
-      (* TODO: 5c does gopcode(OAS, tn1, Z, tn2) *)
-      gmove env opd opd2;
-      opd_regfree env opd
+      gmove env tn1 tn2;
+      opd_regfree env tn1
   );
   (* TODO: 4 -> SZ_LONG *)
   env.size_maxargs <- Int_.maxround env.size_maxargs !curarg 4;

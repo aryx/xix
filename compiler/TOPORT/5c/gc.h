@@ -86,10 +86,8 @@ struct	Rgn
 };
 
 
-EXTERN	int32	nbreak;
 EXTERN	Case*	cases;
 EXTERN	Node	fconstnode;
-EXTERN	int32	continpc;
 
 EXTERN	int32	cursafe;
 
@@ -144,6 +142,7 @@ EXTERN	int	change;
 
 EXTERN	Reg*	firstr;
 EXTERN	Reg*	lastr;
+
 EXTERN	Reg	zreg;
 EXTERN	Reg*	freer;
 EXTERN	Var	var[NVAR];

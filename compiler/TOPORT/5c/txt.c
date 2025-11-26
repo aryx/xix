@@ -86,9 +86,7 @@ gclean(void)
 			continue;
 		gpseudo(AGLOBL, s, nodconst(s->type->width));
 	}
-	nextpc();
-	p->as = AEND;
-	outcode();
+    ...
 }
 
 void
@@ -168,15 +166,6 @@ nodfconst(double d)
 {
 	fconstnode.fconst = d;
 	return &fconstnode;
-}
-
-void
-nodreg(Node *n, Node *nn, int reg)
-{
-	*n = regnode;
-	n->reg = reg;
-	n->type = nn->type;
-	n->lineno = nn->lineno;
 }
 
 void
@@ -731,7 +720,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 	a = AGOK;
 	switch(o) {
 	case OAS:
-		gmove(f1, t);
+		///gmove(f1, t);
 		return;
 
 	case OASADD:
@@ -791,7 +780,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		break;
 
 	case OFUNC:
-		a = ABL;
+		///a = ABL;
 		break;
 
 	case OASMUL:
@@ -902,20 +891,7 @@ gopcode(int o, Node *f1, Node *f2, Node *t)
 		f2 = Z;
 		break;
 	}
-	if(a == AGOK)
-		diag(Z, "bad in gopcode %O", o);
-	nextpc();
-	p->as = a;
-	if(f1 != Z)
-		naddr(f1, &p->from);
-	if(f2 != Z) {
-		naddr(f2, &ta);
-		p->reg = ta.reg;
-	}
-	if(t != Z)
-		naddr(t, &p->to);
-	if(debug['g'])
-		print("%P\n", p);
+   ...
 }
 
 int

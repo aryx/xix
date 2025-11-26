@@ -321,62 +321,6 @@ outcode(void)
     ...
 }
 
-void
-outhist(Biobuf *b)
-{
-	for(h = hist; h != H; h = h->link) {
-		/* on windows skip drive specifier in pathname */
-		if(systemtype(Windows) && p && p[1] == ':'){
-			p += 2;
-			c = *p;
-		}
-		if(p && p[0] != c && h->offset == 0 && pathname){
-			/* on windows skip drive specifier in pathname */
-			if(systemtype(Windows) && pathname[1] == ':') {
-				op = p;
-				p = pathname+2;
-				c = *p;
-			} else if(pathname[0] == c){
-				op = p;
-				p = pathname;
-			}
-		}
-		while(p) {
-			q = utfrune(p, c);
-			if(q) {
-				n = q-p;
-				if(n == 0){
-					n = 1;	/* leading "/" */
-					*p = '/';	/* don't emit "\" on windows */
-				}
-				q++;
-			} else {
-				n = strlen(p);
-				q = 0;
-			}
-			if(n) {
-				Bputc(b, ANAME);
-				Bputc(b, D_FILE);
-				Bputc(b, 1);
-				Bputc(b, '<');
-				Bwrite(b, p, n);
-				Bputc(b, 0);
-			}
-			p = q;
-			if(p == 0 && op) {
-				p = op;
-				op = 0;
-			}
-		}
-		pg.lineno = h->line;
-		pg.to.type = zprog.to.type;
-		pg.to.offset = h->offset;
-		if(h->offset)
-			pg.to.type = D_CONST;
-
-		zwrite(b, &pg, 0, 0);
-	}
-}
 
 void
 zname(Biobuf *b, Sym *s, int t)

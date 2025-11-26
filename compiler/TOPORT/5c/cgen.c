@@ -187,22 +187,7 @@ _cgen(Node *n, Node *nn, int inrel)
 			if(mulcon(n, nn))
 				break;
 		}
-		if(l->complex >= r->complex) {
-			regalloc(&nod, l, nn);
-			cgen(l, &nod);
-			regalloc(&nod1, r, Z);
-			cgen(r, &nod1);
-			gopcode(o, &nod1, Z, &nod);
-		} else {
-			regalloc(&nod, r, nn);
-			cgen(r, &nod);
-			regalloc(&nod1, l, Z);
-			cgen(l, &nod1);
-			gopcode(o, &nod, &nod1, &nod);
-		}
-		gopcode(OAS, &nod, Z, nn);
-		regfree(&nod);
-		regfree(&nod1);
+        ...
 		break;
 
 	case OASLSHR:

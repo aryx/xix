@@ -630,17 +630,18 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
               | ShiftLeft | ShiftRight
               | Mul | Div | Mod) ->
 
-        let n1 = complexity l in
-        let n2 = complexity r in
+        let lcomplex = complexity l in
+        let rcomplex = complexity r in
 
         let opdres, opdother = 
-          if n1 >= n2
+          if lcomplex >= rcomplex
           then begin
-            let opd1reg = opd_regalloc env l.e_type l.e_loc dst_opd_opt in
-            expr env l (Some opd1reg);
-            let opd2reg = opd_regalloc env r.e_type r.e_loc None in
-            expr env r (Some opd2reg);
-            (match opd1reg.opd, opd2reg.opd with
+            (* 5c: use nod/nod1 like in 5c to make it easy to compare code *)
+            let nod = opd_regalloc env l.e_type l.e_loc dst_opd_opt in
+            expr env l (Some nod);
+            let nod1 = opd_regalloc env r.e_type r.e_loc None in
+            expr env r (Some nod1);
+            (match nod.opd, nod1.opd with
             | Register r1, Register r2 ->
               (* again reverse order SUB r2 r1 ... means r1 - r2 *)
               (* TODO: in 5c the middle r1 is None actually *)
@@ -648,14 +649,14 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
             );
-            opd1reg, opd2reg
+            nod, nod1
           end
           else begin
-            let opd2reg = opd_regalloc env r.e_type r.e_loc dst_opd_opt in
-            expr env r (Some opd2reg);
-            let opd1reg = opd_regalloc env l.e_type l.e_loc None in
-            expr env l (Some opd1reg);
-            (match opd1reg.opd, opd2reg.opd with
+            let nod = opd_regalloc env r.e_type r.e_loc dst_opd_opt in
+            expr env r (Some nod);
+            let nod1 = opd_regalloc env l.e_type l.e_loc None in
+            expr env l (Some nod1);
+            (match nod1.opd, nod.opd with
             | Register r1, Register r2 ->
               (* This time we store result in r2! important and subtle.
                * This avoids some extra MOVW; see plus_chain.c
@@ -664,7 +665,7 @@ let rec expr (env : 'i env) (e0 : expr) (dst_opd_opt : opd option) : unit=
                 e0.e_loc;
             | _ -> raise (Impossible "both operands comes from opd_regalloc")
             );
-            opd2reg, opd1reg
+            nod, nod1
           end
         in
         (* This is why it is better for opdres to be the register

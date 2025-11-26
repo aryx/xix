@@ -4,8 +4,7 @@ ginit(void)
 	exregoffset = REGEXT;
 	exfregoffset = FREGEXT;
 
-	nstring = 0;
-	mnstring = 0;
+    ...
 	nrathole = 0;
 	cases = C;
 
@@ -72,9 +71,11 @@ gclean(void)
 	for(i=NREG; i<NREG+NREG; i+=2)
 		if(reg[i])
 			diag(Z, "freg %d left allocated", i-NREG);
+
 	while(mnstring)
 		outstring("", 1L);
 	symstring->type->width = nstring;
+
 	symrathole->type->width = nrathole;
 	for(i=0; i<NHASH; i++)
 	for(s = hash[i]; s != S; s = s->link) {

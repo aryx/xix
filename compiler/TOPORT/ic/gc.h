@@ -85,14 +85,14 @@ EXTERN	Node	vconstnode;
 
 EXTERN	long	cursafe;
 
-EXTERN	int	mnstring;
+
 EXTERN	Multab	multab[20];
 EXTERN	int	hintabsize;
 EXTERN	Node*	nodrat;
 
 EXTERN	Node*	nodsafe;
 EXTERN	long	nrathole;
-EXTERN	long	nstring;
+
 
 
 EXTERN	Node	vregnode;
@@ -140,6 +140,3 @@ EXTERN	Var	var[NVAR];
 EXTERN	long*	idom;
 EXTERN	Reg**	rpo2r;
 EXTERN	long	maxnr;
-
-extern	char*	anames[];
-extern	Hintab	hintab[];

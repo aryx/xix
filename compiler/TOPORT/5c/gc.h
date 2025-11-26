@@ -93,7 +93,6 @@ EXTERN	int32	cursafe;
 
 EXTERN	int32	isbigendian;
 
-EXTERN	int	mnstring;
 EXTERN	Multab	multab[20];
 EXTERN	int	retok;
 EXTERN	int	hintabsize;
@@ -101,7 +100,6 @@ EXTERN	Node*	nodrat;
 
 EXTERN	Node*	nodsafe;
 EXTERN	int32	nrathole;
-EXTERN	int32	nstring;
 
 EXTERN	Node	regnode;
 EXTERN	char	string[NSNAME];
@@ -150,4 +148,3 @@ EXTERN	int32*	idom;
 EXTERN	Reg**	rpo2r;
 EXTERN	int32	maxnr;
 
-extern	Hintab	hintab[];

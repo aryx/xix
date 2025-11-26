@@ -45,27 +45,14 @@ static long ncast64[];
 void
 ginit(void)
 {
-	int i;
-	Type *t;
-
-    // hardcoded i for now and skip main above
-	thechar = 'i';
-    thestring = "riscv";
-    ewidth[TIND] = 4;
-
-
 	exregoffset = REGEXT;
 	exfregoffset = FREGEXT;
-	listinit();
-	nstring = 0;
-	mnstring = 0;
+    ...
 	nrathole = 0;
-	pc = 0;
-	breakpc = -1;
-	continpc = -1;
+
+
 	cases = C;
-	firstp = P;
-	lastp = P;
+
 	tfield = types[TLONG];
 
 	if(thechar == 'j'){
@@ -74,14 +61,6 @@ ginit(void)
         // like for 7c, need to add in cc.h and pgen.c from 9cc
 		typecmplx = typesu;
 	}
-
-	zprog.link = P;
-	zprog.as = AGOK;
-	zprog.reg = NREG;
-	zprog.from.type = D_NONE;
-	zprog.from.name = D_NONE;
-	zprog.from.reg = NREG;
-	zprog.to = zprog.from;
 
 	regnode.op = OREGISTER;
 	regnode.class = CEXREG;
@@ -92,12 +71,6 @@ ginit(void)
 
 	vregnode = regnode;
 	vregnode.type = types[TVLONG];
-
-	constnode.op = OCONST;
-	constnode.class = CXXX;
-	constnode.complex = 0;
-	constnode.addable = 20;
-	constnode.type = types[TLONG];
 
 	vconstnode = constnode;
 	vconstnode.type = types[TVLONG];
@@ -141,12 +114,7 @@ ginit(void)
 	}else{
 		memmove(ncast, ncast64, NTYPE*sizeof(long));
 	}
-
-	for(i=0; i<nelem(reg); i++) {
-		reg[i] = 0;
-		if(i == REGZERO)
-			reg[i] = 1;
-	}
+   ...
 }
 
 void
@@ -155,16 +123,15 @@ gclean(void)
 	int i;
 	Sym *s;
 
-	for(i=0; i<NREG; i++)
-		if(i != REGZERO)
-			if(reg[i])
-				diag(Z, "reg %d left allocated", i);
 	for(i=NREG; i<NREG+NREG; i++)
 		if(reg[i])
 			diag(Z, "freg %d left allocated", i-NREG);
+
 	while(mnstring)
 		outstring("", 1L);
 	symstring->type->width = nstring;
+
+
 	symrathole->type->width = nrathole;
 	for(i=0; i<NHASH; i++)
 	for(s = hash[i]; s != S; s = s->link) {

@@ -81,8 +81,6 @@ EXTERN	Node	fconstnode;
 
 EXTERN	long	cursafe;
 
-EXTERN	int	mnstring;
-
 //kengo: new
 EXTERN	int	retok;
 
@@ -92,12 +90,10 @@ EXTERN	Node*	nodrat;
 
 EXTERN	Node*	nodsafe;
 EXTERN	long	nrathole;
-EXTERN	long	nstring;
 
 EXTERN	Node	regnode;
 EXTERN	char	string[NSNAME];
 EXTERN	Sym*	symrathole;
-EXTERN	Node	znode;
 
 
 EXTERN	long	exregoffset;
@@ -140,4 +136,3 @@ EXTERN	long*	idom;
 EXTERN	Reg**	rpo2r;
 EXTERN	long	maxnr;
 
-extern	Hintab	hintab[];

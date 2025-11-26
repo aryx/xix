@@ -120,30 +120,6 @@ bitstore(Node *b, Node *n1, Node *n2, Node *n3, Node *nn)
 	regfree(n3);
 }
 
-int32
-outstring(char *s, int32 n)
-{
-	long r;
-
-	if(suppress)
-		return nstring;
-	r = nstring;
-	while(n) {
-		string[mnstring] = *s++;
-		mnstring++;
-		nstring++;
-		if(mnstring >= NSNAME) {
-			gpseudo(ADATA, symstring, nodconst(0L));
-			p->from.offset += nstring - NSNAME;
-			p->reg = NSNAME;
-			p->to.type = D_SCONST;
-			memmove(p->to.sval, string, NSNAME);
-			mnstring = 0;
-		}
-		n--;
-	}
-	return r;
-}
 
 int
 mulcon(Node *n, Node *nn)

@@ -18,7 +18,11 @@ module E = Check
  *  - it assigns a final storage to every identifiers
  *  - it assigns a type to every expressions
  *  - it returns a typed AST and also transforms this AST
- *    (e.g., enum constants are replaced by their value)
+ *      * enum constants are replaced by their value
+ *      * unary +/-/~ are replaced with binary op
+ *      * add & before arrays in certain context
+ *      * add explicit Cast operations
+ *      * convert ArrayAccess in pointer arithtmetic operation
  * 
  * Thanks to the naming done in parser.mly and the unambiguous Ast.fullname,
  * we do not have to handle scope here. 

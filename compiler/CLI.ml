@@ -404,6 +404,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       (* ocaml-light: | Check.Error err | Typecheck.Error err | ...  *)
       | Check.Error err -> Error.errorexit (Check.string_of_error err)
       | Typecheck.Error err -> Error.errorexit (Check.string_of_error err)
+      | Rewrite.Error err -> Error.errorexit (Check.string_of_error err)
       | Eval_const.Error err -> Error.errorexit (Check.string_of_error err)
       | Codegen.Error err -> Error.errorexit (Check.string_of_error err)
       (*e: [[CLI.main()]] match [[exn]] other cases *)

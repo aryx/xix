@@ -1,7 +1,9 @@
 (*s: Rewrite.ml *)
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Ast
-(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+
+module E = Check
 
 (*****************************************************************************)
 (* Prelude *)
@@ -27,13 +29,20 @@ type env = {
   foo: unit;
 }
 
+type error = Check.error
+let string_of_error err =
+  Check.string_of_error err
+exception Error of error
+
+let error msg loc =
+  (* less: dump t? *)
+  raise (Error (E.Misc (msg, loc)))
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
 (*e: Rewrite.ml *)
-let todo _env _v = failwith "TODO"
-
 let map_option f env x = 
   Option.map (f env) x
 let map_list f env x = 
@@ -45,6 +54,10 @@ let map_string _env x = x
 (* Boilerplate visitor *)
 (*****************************************************************************)
 
+(* TODO *)
+let map_type (_env : env) (t : Type.t) : Type.t =
+  t
+
 let map_loc _env v = v
 
 let map_name _env (v : string) = v
@@ -54,29 +67,8 @@ let map_blockid _env (v : int) = v
 let map_fullname env (v1, v2) =
   let v1 = map_name env v1 in
   let v2 = map_blockid env v2 in
-  todo env (v1, v2)
+  (v1, v2)
 
-(*
-let rec map_idkind env v =
-  match v with
-  | IdIdent ->
-      todo env ()
-  | IdTypedef ->
-      todo env ()
-  | IdEnumConstant ->
-      todo env ()
-*)
-
-(*
-let rec map_tagkind env v =
-  match v with
-  | TagStruct ->
-      todo env ()
-  | TagUnion ->
-      todo env ()
-  | TagEnum ->
-      todo env ()
-*)
 
 let rec map_typ env v =
   let {t; t_loc} = v in
@@ -88,37 +80,37 @@ and map_type_bis env v =
   match v with
   | TBase v ->
       (* TODO: let v = Type.map_t env v in *)
-      todo env v
+      TBase v
   | TPointer v ->
       let v = map_typ env v in
-      todo env v
+      TPointer v
   | TArray (v1, v2) ->
       let v1 = (map_option map_const_expr) env v1 in
       let v2 = map_typ env v2 in
-      todo env (v1, v2)
+      TArray (v1, v2)
   | TFunction v ->
       let v = map_function_type env v in
-      todo env v
+      TFunction v
   | TStructName (v1, v2) ->
       (* TODO: let v1 = Type.map_struct_kind env v1 in *)
       let v2 = map_fullname env v2 in
-      todo env (v1, v2)
+      TStructName (v1, v2)
   | TEnumName v ->
       let v = map_fullname env v in
-      todo env v
+      TEnumName v
   | TTypeName v ->
       let v = map_fullname env v in
-      todo env v
+      TTypeName v
 
 and map_function_type env (v1, v2) =
   let v1 = map_typ env v1 in
   let map_tuple env (v1, v2) =
     let v1 = (map_list map_parameter) env v1 in
     let v2 = map_bool env v2 in
-    todo env (v1, v2)
+    (v1, v2)
   in
   let v2 = map_tuple env v2 in
-  todo env (v1, v2)
+  (v1, v2)
 
 and map_parameter env v =
   let {p_name; p_loc; p_type} = v in
@@ -132,108 +124,104 @@ and map_parameter env v =
 
 and map_expr env v =
   let {e; e_loc; e_type} = v in
-  let e = map_expr_bis env e in
+  let e = map_expr_bis env e_loc e in
   let e_loc = map_loc env e_loc in
   
-  let e_type = ignore e_type;
-    (* Type.map_t env e_type *) raise Todo
-  in
+  let e_type = map_type env e_type in
   {e; e_loc; e_type}
 
-and map_expr_bis env v =
+and map_expr_bis env loc v =
   match v with
   | Int (v1, v2) ->
       let v1 = map_string env v1 in
       (* TODO let v2 = Type.map_integer_type env v2 in *)
-      todo env (v1, v2)
+      Int (v1, v2)
   | Float (v1, v2) ->
       let v1 = map_string env v1 in
       (* TODO let v2 = Type.map_float_type env v2 in *)
-      todo env (v1, v2)
+      Float (v1, v2)
   | String (v1, v2) ->
       let v1 = map_string env v1 in
       (* TODO let v2 = Type.map_t env v2 in *)
-      todo env (v1, v2)
+      String (v1, v2)
   | Id v ->
       let v = map_fullname env v in
-      todo env v
+      Id v
   | Call (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = (map_list map_argument) env v2 in
-      todo env (v1, v2)
+      Call (v1, v2)
   | Assign (v1, v2, v3) ->
       let v1 = map_assignOp env v1 in
       let v2 = map_expr env v2 in
       let v3 = map_expr env v3 in
-      todo env (v1, v2, v3)
-  | ArrayAccess (v1, v2) ->
-      let v1 = map_expr env v1 in
-      let v2 = map_expr env v2 in
-      todo env (v1, v2)
+      Assign (v1, v2, v3)
+  | ArrayAccess (_v1, _v2) ->
+      error "Impossible: ArrayAccess removed in Typecheck.ml" loc
   | RecordAccess (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = map_name env v2 in
-      todo env (v1, v2)
-  | RecordPtAccess (v1, v2) ->
-      let v1 = map_expr env v1 in
-      let v2 = map_name env v2 in
-      todo env (v1, v2)
+      RecordAccess (v1, v2)
+  | RecordPtAccess (_v1, _v2) ->
+      error "Impossible: RecordPtAccess removed in Typecheck.ml" loc
   | Cast (v1, v2) ->
       let v1 = map_typ env v1 in
       let v2 = map_expr env v2 in
-      todo env (v1, v2)
+      Cast (v1, v2)
   | Postfix (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = map_fixOp env v2 in
-      todo env (v1, v2)
+      Postfix (v1, v2)
   | Prefix (v1, v2) ->
       let v1 = map_fixOp env v1 in
       let v2 = map_expr env v2 in
-      todo env (v1, v2)
+      Prefix (v1, v2)
   | Unary (v1, v2) ->
+      (match v1 with
+      | UnPlus | UnMinus | Tilde ->
+          error "Impossible: unary +/-/~ removed in Typecheck.ml" loc
+      | Not | GetRef | DeRef  -> ()
+      );
       let v1 = map_unaryOp env v1 in
       let v2 = map_expr env v2 in
-      todo env (v1, v2)
+      Unary (v1, v2)
   | Binary (v1, v2, v3) ->
       let v1 = map_expr env v1 in
       let v2 = map_binaryOp env v2 in
       let v3 = map_expr env v3 in
-      todo env (v1, v2, v3)
+      Binary (v1, v2, v3)
   | CondExpr (v1, v2, v3) ->
       let v1 = map_expr env v1 in
       let v2 = map_expr env v2 in
       let v3 = map_expr env v3 in
-      todo env (v1, v2, v3)
+      CondExpr (v1, v2, v3)
   | Sequence (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = map_expr env v2 in
-      todo env (v1, v2)
-  | SizeOf _v ->
-      raise Todo
-(*
-      let v = TodoTyAppManyArgs env v in
-      todo env v
-*)
+      Sequence (v1, v2)
+  | SizeOf v ->
+    (* TODO match v with **)
+     SizeOf v
   | ArrayInit v ->
       let map_tuple env (v1, v2) =
         let v1 = (map_option map_const_expr) env v1 in
         let v2 = map_expr env v2 in
-        todo env (v1, v2)
+        (v1, v2)
       in
       let v = (map_list map_tuple) env v in
-      todo env v
+      ArrayInit v
   | RecordInit v ->
       let map_tuple env (v1, v2) =
         let v1 = map_name env v1 in
         let v2 = map_expr env v2 in
-        todo env (v1, v2)
+        (v1, v2)
       in
       let v = (map_list map_tuple) env v in
-      todo env v
+      RecordInit v
   | GccConstructor (v1, v2) ->
       let v1 = map_typ env v1 in
       let v2 = map_expr env v2 in
-      todo env (v1, v2)
+      GccConstructor (v1, v2)
 
 and map_argument env v =
   map_expr env v
@@ -241,87 +229,17 @@ and map_argument env v =
 and map_const_expr env v =
   map_expr env v
 
-and map_unaryOp env v =
-  match v with
-  | GetRef ->
-      todo env ()
-  | DeRef ->
-      todo env ()
-  | UnPlus ->
-      todo env ()
-  | UnMinus ->
-      todo env ()
-  | Tilde ->
-      todo env ()
-  | Not ->
-      todo env ()
+and map_unaryOp _env v = v
 
-and map_assignOp env v =
-  match v with
-  | Eq_ ->
-      todo env ()
-  | OpAssign v ->
-      let v = map_arithOp env v in
-      todo env v
+and map_assignOp _env v = v
 
-and map_fixOp env v =
-  match v with
-  | Dec ->
-      todo env ()
-  | Inc ->
-      todo env ()
+and map_fixOp _env v = v
 
-and map_binaryOp env v =
-  match v with
-  | Arith v ->
-      let v = map_arithOp env v in
-      todo env v
-  | Logical v ->
-      let v = map_logicalOp env v in
-      todo env v
+and map_binaryOp _env v = v
 
-and map_arithOp env v =
-  match v with
-  | Plus ->
-      todo env ()
-  | Minus ->
-      todo env ()
-  | Mul ->
-      todo env ()
-  | Div ->
-      todo env ()
-  | Mod ->
-      todo env ()
-  | ShiftLeft ->
-      todo env ()
-  | ShiftRight ->
-      todo env ()
-  | And ->
-      todo env ()
-  | Or ->
-      todo env ()
-  | Xor ->
-      todo env ()
+and _map_arithOp _env v = v
 
-and map_logicalOp env v =
-  match v with
-  | Inf ->
-      todo env ()
-  | Sup ->
-      todo env ()
-  | InfEq ->
-      todo env ()
-  | SupEq ->
-      todo env ()
-  | Eq ->
-      todo env ()
-  | NotEq ->
-      todo env ()
-  | AndLog ->
-      todo env ()
-  | OrLog ->
-      todo env ()
-
+and _map_logicalOp _env v = v
 
 
 let rec map_stmt env v =
@@ -334,59 +252,57 @@ and map_stmt_bis env v =
   match v with
   | ExprSt v ->
       let v = map_expr env v in
-      todo env v
+      ExprSt v
   | Block v ->
       let v = (map_list map_stmt) env v in
-      todo env v
+      Block v
   | If (v1, v2, v3) ->
       let v1 = map_expr env v1 in
       let v2 = map_stmt env v2 in
       let v3 = map_stmt env v3 in
-      todo env (v1, v2, v3)
+      If (v1, v2, v3)
   | Switch (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = map_case_list env v2 in
-      todo env (v1, v2)
+      Switch (v1, v2)
   | While (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = map_stmt env v2 in
-      todo env (v1, v2)
+      While (v1, v2)
   | DoWhile (v1, v2) ->
       let v1 = map_stmt env v1 in
       let v2 = map_expr env v2 in
-      todo env (v1, v2)
+      DoWhile (v1, v2)
   | For (v1, v2, v3, v4) ->
-      let v1 = ignore v1;
-        (* TodoTyAppManyArgs env v1  *) raise Todo
-      in
+      (* TODO match v1  *)
       let v2 = (map_option map_expr) env v2 in
       let v3 = (map_option map_expr) env v3 in
       let v4 = map_stmt env v4 in
-      todo env (v1, v2, v3, v4)
+      For (v1, v2, v3, v4)
   | Return v ->
       let v = (map_option map_expr) env v in
-      todo env v
+      Return v
   | Continue ->
-      todo env ()
+      Continue
   | Break ->
-      todo env ()
+      Break
   | Label (v1, v2) ->
       let v1 = map_name env v1 in
       let v2 = map_stmt env v2 in
-      todo env (v1, v2)
+      Label (v1, v2)
   | Goto v ->
       let v = map_name env v in
-      todo env v
+      Goto v
   | Case (v1, v2) ->
       let v1 = map_expr env v1 in
       let v2 = map_stmt env v2 in
-      todo env (v1, v2)
+      Case (v1, v2)
   | Default v ->
       let v = map_stmt env v in
-      todo env v
+      Default v
   | Var v ->
       let v = map_var_decl env v in
-      todo env v
+      Var v
 
 and map_case_list env v =
   map_stmt env v
@@ -412,6 +328,7 @@ let map_func_def env v =
   let f_body = map_stmt env f_body in
   {f_name; f_loc; f_storage; f_type; f_body}
 
+(*
 let rec map_struct_def env v =
   let {su_name; su_loc; su_kind; su_flds} = v in
   let su_name = map_fullname env su_name in
@@ -474,6 +391,7 @@ let _map_program env (v1, v2) =
   (* TODO let v2 = (map_list Location_cpp.map_location_history) env v2 in *)
   todo env (v1, v2)
 
+*)
 (*
 let rec map_any env v =
   match v with
@@ -502,5 +420,7 @@ let rec map_any env v =
 (*****************************************************************************)
 
 let rewrite (tast: Typecheck.typed_program) : Typecheck.typed_program =
-  let _env = { foo = () } in
-  tast
+  let env = { foo = () } in
+
+  let funcs = tast.funcs |> List.map (map_func_def env) in
+  { tast with funcs }

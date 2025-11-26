@@ -10,9 +10,9 @@ module E = Check
 (*****************************************************************************)
 (* This module does many things:
  *  - TODO convert String in Id
- *  - TODO sanity check constructs have been transformed
+ *  - sanity check constructs have been transformed
  *    correctly in the typechecker
- *  - TODO sanity check each expression has a type (not the default T.Void)
+ *  - sanity check each expression has a type (not the default T.Void)
  *
  * todo mandatory:
  *  - pointer arithmetic
@@ -126,8 +126,11 @@ and map_expr env v =
   let {e; e_loc; e_type} = v in
   let e = map_expr_bis env e_loc e in
   let e_loc = map_loc env e_loc in
-  
   let e_type = map_type env e_type in
+  (match e_type with
+  | Type.Void -> error "Impossible: got void type" e_loc
+  | _ -> ()
+  );
   {e; e_loc; e_type}
 
 and map_expr_bis env loc v =

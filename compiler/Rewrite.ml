@@ -427,4 +427,4 @@ let rewrite (tast: Typecheck.typed_program) : Typecheck.typed_program =
   let env = { foo = () } in
 
   let funcs = tast.funcs |> List.map (map_func_def env) in
-  { tast with funcs }
+  { tast with Typecheck.funcs }

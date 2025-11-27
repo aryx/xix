@@ -9,6 +9,9 @@ Port them from python to OCaml and reuse its assets.
 ** port Core wars from dewdney to ocaml-elm-playground!
 see software-src/emulator/pmars/
 
+Core war implementation in OCaml? with Graphics? See Armchair universe
+articles
+
 ** https://github.com/KDE/kde1-kdegames
 
 ** Web version

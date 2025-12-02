@@ -6,13 +6,18 @@
 # release omk on OPAM and finish .nw (and reference too Make.nw?)
 # then finish orc (globbing, ...) enough to work with mk, and finish .nw
 # then efuns .nw and easy installation independent of semgrep parsers
-# then finish o5a/o5c/o5l (and oia/oic/oil), and capabilities testbed!
+# then finish o5a/o5c/o5l (and oia/oic/oil)
 # then finish ogit and .nw
 # then finish olex/oyacc and .nw
 # then finish ocaml-light .nw
 # make it work in plan9 and release graphics, windows, and even kernel!
 
 ** LATER
+
+*** LATER resume building and running o9 kernel on Raspberry Pi and qemu-system-arm
+
+*** LATER FUN resume building and running orio (on Raspberry Pi? via ocaml-light plan9?)
+# need first to resume ocaml-light for plan9
 
 *** LATER port Mach-O and PE windows binaries to xix
 hmm but that would require to also port 7l or 6l to be able to
@@ -27,7 +32,9 @@ is not too bad to port.
 
 * Ported (partially working)
 
-** rc in ocaml
+** orc
+
+*** RELAX add shell/TOPORT/ and builder/TOPORT and start clean?
 
 *** Last
 
@@ -97,7 +104,7 @@ still pb?
 $foo(...) SUB
 lastdol? for caret insertion?
 
-** mk in ocaml
+** omk
 
 *** Last
 
@@ -172,7 +179,7 @@ so mk does not loop forever on mk-infinite
 *** see PB_WITH_MKDEBUG also for dependencies
 wrong. mk depend does not solve the issue.
 
-** ocamllex
+** olex
 opportunity to have a debug mode where better see the lexer
  and parser actions and what's going on!
 
@@ -198,7 +205,7 @@ it's an optimisation
 *** later: ocamllex: understand lex running, lex_engine
 it's an optimisation
 
-** ocamlyacc
+** oyacc
 
 *** try ocamllex and ocamlyacc bootstrap? :)
 need lalr? conflicts?
@@ -210,7 +217,7 @@ need lalr? conflicts?
 *** LATER: opportunity to add EBNF to yacc!
 hmm but then can't use regular ocamlyacc so maybe not
 
-** git in ocaml 
+** ogit
 (start from dulwich? ocaml-git?), so self sustaining, can use it
  to communicate with github! can use it to do stuff under plan9 itself!
 
@@ -291,7 +298,7 @@ do tree_changes)
 
 *** less: read tags
 
-** rio in ocaml
+** orio
 Now that I understand better the ocaml thread implementation, I can port 
 rio to ocaml and test it under qemu-system-386 (or even qemu-system-arm?)
 
@@ -427,8 +434,41 @@ actually might be bad. Maybe better to be fully cooperative,
 otherwise may need some mutex at a few places (e.g. for
 atomic access to the queue)
 
-** 5c in ocaml
-5c -w -I/arm/include -I/sys/include
+** o5c/ovc/oic in ocaml
+o5c -w -I/arm/include -I/sys/include
+
+*** Last
+
+**** port canreach, warnreach, etc. but in separate phase in Check.ml
+and remove TOPORT/ corresponding code
+
+**** less: fix more codegen/tests for ovc
+
+call.c, apparently can MOVW $0, -4(SP) directly without
+ using intermediate register. when mov something else like
+ $1, $2, then use intermediate register, but when zero go directly
+ special opti in MIPS because special instruction for it?
+
+break.c, if.c, ...: single BEQ instead of CMP and then JEQ
+
+**** less: fix more codegen/tests for o5c (and ovc)
+ array.c: missing GLOBL
+  and handle correctly codegen for array.c, multiply by size of int so 12
+  not 3 for offset
+
+ enum.c looks ok but use extra register instead of ADDI with immediate
+
+ function.c some reorg on order of arith expr, maybe acom?
+
+ break.c: use Relative PC jump instead of Absolute so hard to compare
+
+**** testinfra on o5l too, on binary output on tests/linker/execgen/ ?
+
+**** less: use debug['X'] to also disable ccom, acom, etc?
+do it when I see the need and see o5c output differs from 5c_
+
+**** less: why 5c -S output so different from 5c_ -S on simple example like local.c?
+
 
 *** EASY handle strings, at least OSTRING
 
@@ -544,15 +584,50 @@ look at (correct) original code to report error in 5c
 *** fix shift/reduce conflict? still 6
 original had 3?
 
-** 5l in ocaml
+** o5l/ovl/oil/ in ocaml
 
-** 5a in ocaml
+*** resume goken/machines/vi to help debugging xix ovl?
+make the syscall emulated on Linux so can run vi
+just like I run qemu-mips on my Linux machine.
+
+
+*** FUN port il to ocaml!
+or must wait it works in goken (at least riscv32)?
+
+**** LATER Move Layoutv.ml in Layout.ml and make code more polymorphic
+by passing down size_of_instructions? can do that
+when porting il?
+
+
+** o5a/ova/oia/ in ocaml
+
+*** Last
+
+**** RELAX finish comment ported code in 5l/asm.c and optab.c, add the case X:
+comment
+
+**** add profile.s test case (multi-archs assembly?)
+
+
+**** resume vi in goken to test a_out support in ovl?
+
+**** goken/5l (not 5l_) does not need setR12? how does it work?
+because $msg(SB) has same value than $setR12(SB) and so does not
+require R12 to be set? get an L_CON in aclass() for it ?
+
+**** less: ovl: try also big-endian? why segfault with qemu?
+
+**** port 6a/6l? path towards then Mach-O and PE exec formats
+and can test on surface book 2 and my apple mini?
+
+or maybe 8a/8l is easier incremental path? and maybe can
+reuse most code when then porting 6a/6l?
 
 *** ----------------------------
 
 *** give better error message on quote.s and accept '\''
 
-** libcore
+** olibcore
 
 *** RELAX compile ocaml-re with ocaml-light, remove `Greedy poly variant
 # can be useful for glob port, to reuse re_glob.ml, but first it needs
@@ -599,6 +674,12 @@ need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
 
 ** Dev infra
 
+*** RELAX xix: check for Unix.openfile in semgrep.jsonnet
+
+
+*** why 'exit 0' in hellorio.ml is not flagged by 'make check'?
+because in tests/ ?
+
 * Partially ported
 
 ** lib_system
@@ -607,6 +688,11 @@ need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
 pb when try build .a because need mk-C extension for libs.
 
 ** draw in ocaml?
+
+*** less: try hide some records like Display.t? use accessor
+in public API instead? so can make Display.t an abstract type?
+same for Image.t ? or useful to see the record in the sig to actually
+understand how it works?
 
 *** use camlidl? or implement low-level stuff that writes
 into /dev/draw/x/ directly?

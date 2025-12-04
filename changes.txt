@@ -19,7 +19,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 ** general
 - renamed all binaries with an 'o' prefix (for ocaml): 
-  omk, orc (haha), ogit, o5a, o5l, oar, onm, etc.
+  omk, orc (haha), ogit, o5a, o5l, oil (haha), oar, onm, etc.
 
 ** toolchain
 - support for ELF and Linux code generation in o5l and got hello_linux_arm.exe

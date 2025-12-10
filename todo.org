@@ -6,7 +6,7 @@
 # release omk on OPAM and finish .nw (and reference too Make.nw?)
 # then finish orc (globbing, ...) enough to work with mk, and finish .nw
 # then efuns .nw and easy installation independent of semgrep parsers
-# then finish o5a/o5c/o5l (and oia/oic/oil)
+# then finish o5a/o5c/o5l (and ova/ovc/ovl and oia/oic/oil)
 # then finish ogit and .nw
 # then finish olex/oyacc and .nw
 # then finish ocaml-light .nw
@@ -27,6 +27,16 @@ is not too bad to port.
 *** LATER port also 8a/8c/8l to ocaml? and other archs?
 
 *** LATER port 7a/7l/7c to ocaml!
+
+*** add wasm arch and assembler/linker/compiler for it!
+
+*** LATER implement ziglang on top of xix assemblers/linkers
+as an alternative to the C compiler. Zig as a better C.
+
+(instead of depending on cmake, gcc/clang, llvm/lld/... like the current
+ziglang)
+
+pretty cool language and improvement over C.
 
 * Last
 
@@ -180,8 +190,8 @@ so mk does not loop forever on mk-infinite
 wrong. mk depend does not solve the issue.
 
 ** olex
-opportunity to have a debug mode where better see the lexer
- and parser actions and what's going on!
+#opportunity to have a debug mode where better see the lexer
+# and parser actions and what's going on!
 
 *** 'as' feature
 hmm maybe not if complexify too much the code
@@ -586,11 +596,6 @@ original had 3?
 
 ** o5l/ovl/oil/ in ocaml
 
-*** resume goken/machines/vi to help debugging xix ovl?
-make the syscall emulated on Linux so can run vi
-just like I run qemu-mips on my Linux machine.
-
-
 *** FUN port il to ocaml!
 or must wait it works in goken (at least riscv32)?
 
@@ -598,6 +603,10 @@ or must wait it works in goken (at least riscv32)?
 by passing down size_of_instructions? can do that
 when porting il?
 
+
+*** resume goken/machines/vi to help debugging xix ovl?
+make the syscall emulated on Linux so can run vi
+just like I run qemu-mips on my Linux machine.
 
 ** o5a/ova/oia/ in ocaml
 
@@ -607,7 +616,6 @@ when porting il?
 comment
 
 **** add profile.s test case (multi-archs assembly?)
-
 
 **** resume vi in goken to test a_out support in ovl?
 
@@ -676,7 +684,6 @@ need to compile it also for ocaml-light, mkfile and boostrap-mk.sh
 
 *** RELAX xix: check for Unix.openfile in semgrep.jsonnet
 
-
 *** why 'exit 0' in hellorio.ml is not flagged by 'make check'?
 because in tests/ ?
 
@@ -694,12 +701,6 @@ in public API instead? so can make Display.t an abstract type?
 same for Image.t ? or useful to see the record in the sig to actually
 understand how it works?
 
-*** use camlidl? or implement low-level stuff that writes
-into /dev/draw/x/ directly?
-
-***  client/server with simple marshalling protocol?
-type msg = Draw of ... | Line of ... | Alloc of ...
-
 *** memdraw in ocaml
 do no need kernel to have memdraw or memlayer. Can be used entirely
 in userspace
@@ -708,6 +709,12 @@ can port memdraw first and can even test under qemu thx to 9 in ocaml
 DONE can also port draw first and test for rio. 2 independent halves.
 
 **** continue go through Graphics.nw; add %ocaml
+
+*** less: use camlidl? or implement low-level stuff that writes
+into /dev/draw/x/ directly?
+
+*** LATER client/server with simple marshalling protocol?
+type msg = Draw of ... | Line of ... | Alloc of ...
 
 ** Kernel in ocaml
 So can do draw and then rio in ocaml? How?
@@ -845,15 +852,6 @@ stuff embedding scheme interpreter I saw recently, femtolisp?
 minoca OS?
 redox?
 
-** xv6 in ocaml for ARM?
-Can learn another way to write an OS. 
-Can contrast some of the design decisions in plan9 and also compare 
-the choice of variable names (e.g., xv6 also use a cpu and up), but it seems
-xv6 is quite similar to 9 (ken thompson wrote both in some sense so normal)
-
-*** how xv6_rpi_port handle the keyboard?
-seems it does not handle it ... it uses UART?
-
 * To port
 
 ** utilities/ in ocaml
@@ -900,6 +898,15 @@ run on 5i!! woohoo! will have 8 queens in Tiger running!
 
 Can even generate directly Asm5 using OCaml constructor and ast_asm5.ml!
 Safer than generating strings (similar to 5c in the end).
+
+** xv6 in ocaml for ARM?
+Can learn another way to write an OS. 
+Can contrast some of the design decisions in plan9 and also compare 
+the choice of variable names (e.g., xv6 also use a cpu and up), but it seems
+xv6 is quite similar to 9 (ken thompson wrote both in some sense so normal)
+
+*** how xv6_rpi_port handle the keyboard?
+seems it does not handle it ... it uses UART?
 
 ** 5i in ocaml
 

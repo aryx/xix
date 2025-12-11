@@ -5,8 +5,14 @@ open Fpath_.Operators
 
 (* could be moved in graph.ml *)
 (*s: function [[File.timeof]] *)
-(* opti? time cache, and flag to skip cache if want refresh *)
-let timeof file =
+(* Note that it is useful to have a subsecond float precision here
+ * because now machines can build many files under a second
+ * and we need when comparing two files to know which one was
+ * made last even if they were made in the same second
+ *
+ * opti? time cache, and flag to skip cache if want refresh 
+*)
+let timeof (file : Fpath.t) : float =
   try 
     (* bugfix: use stat, not lstat, to get the time of what is pointed
      * by the symlink, not the symlink

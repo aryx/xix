@@ -14,10 +14,10 @@
 
 ** LATER
 
-*** LATER resume building and running o9 kernel on Raspberry Pi and qemu-system-arm
-
 *** LATER FUN resume building and running orio (on Raspberry Pi? via ocaml-light plan9?)
 # need first to resume ocaml-light for plan9
+
+*** LATER resume building and running o9 kernel on Raspberry Pi and qemu-system-arm
 
 *** LATER port Mach-O and PE windows binaries to xix
 hmm but that would require to also port 7l or 6l to be able to
@@ -28,15 +28,28 @@ is not too bad to port.
 
 *** LATER port 7a/7l/7c to ocaml!
 
-*** add wasm arch and assembler/linker/compiler for it!
+*** LATER add wasm arch and assembler/linker/compiler for it!
 
 *** LATER implement ziglang on top of xix assemblers/linkers
 as an alternative to the C compiler. Zig as a better C.
 
-(instead of depending on cmake, gcc/clang, llvm/lld/... like the current
-ziglang)
+Zix (Zig with xix) as an improvement over Zig itself too, depending
+on just ocaml instead of depending on cmake, gcc/clang, llvm/lld/... like
+the current ziglang.
 
-pretty cool language and improvement over C.
+Pretty cool language and improvement over C. Maybe can add to C incrementally?
+ - EASY i32, u32, etc.
+ - automatic overflow detection at runtime? (strict debug mode)
+ - automatic runtime memory bug detection (leak, double free, etc.)
+   integrating by default the best of valgrind
+ - good stack traces
+ - overflow ok with +%= 
+ - error type ! and try/catch/...
+ - option type and no null by default
+ - pointer (not null), and slice for explicit pointer arithmetic
+ - if/while/for as expression too, better switch syntax
+ - better syntax for types []xx, not mixed left/right part
+ - HARDER: comptime?
 
 * Last
 

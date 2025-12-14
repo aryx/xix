@@ -67,6 +67,9 @@ lineage.pdf
 /builder/docs/Mk*.pdf
 /shell/docs/Rc*.pdf
 
+# Articles
+/docs/iwp9/xix_iwp9.pdf
+
 # Parsers
 /assembler/Lexer_asm.ml
 /assembler/Parser_asm[5v].ml

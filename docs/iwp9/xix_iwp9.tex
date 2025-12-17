@@ -1,6 +1,5 @@
 \documentclass{article}
 
-
 \title{
 XiX: Plan 9 in OCaml
 }
@@ -18,7 +17,61 @@ An abstract
 
 \section{Introduction}
 
+% XiX (which stands for Xix is Xix, first fully recursive), is a port of
+% parts of plan9 to OCaml. Right now mk, rc, toolchain (assembler, linker
+% C compiler) enough for helloprintf.c for arm, mips, riscv,
+% but also utilities, and windowing system rio! and some rudimentary
+% kernel.
 
+% real original motiv was principia softwarica (see principia paper)
+% to explain the code of plan9 (kernel, windowiong system, graphics and
+% network stack, mk, rc, toolchain, etc.)
+% Best way to fully understand is to port, to write the code yourself,
+% even if port, and also test if needed all of it to fully understand
+% when it does not work why need certain code.
+
+% But now useful on its own.
+% C is great but old. Rust, Ziglang new contenders.
+% Actually some r9 projects for Rust, and ziglang kinda new toolchain)
+% but OCaml has pros compared to Rust/Ziglang. For many programs, simpler
+% to not handle memory. Actually original code was not doing much memory
+% management. Simple mm. But even simpler now. And OCaml has lots
+% of nice things like ADTs for more readable compilation in linker,
+% no need optab.c, ocmp, ... just direct pattern matching on advanced
+% SHOW code diff C vs OCaml.
+
+% plan9 was rethinking and simplifying Unix. Xix is also rethinking
+% and simplifying Plan9. Remove more features. Less code!
+% even less code than plan9! STEPS project! So even easier 
+% to teach. Actually series of books explaining the code, ocaml editions
+% of C books in principia softwarica.
+
+%TOC:
+% - compoments:
+%   * omk/orc, less features, just essential, so LOC/LOE comparison?
+%     can even do mk+rc in same binary? rc as a lib! easy with OCaml!
+%     so even better than plan9! perf improv?
+%   * toolchain: assembler/linker/compiler, ar, more reusable code!
+%     reuse more in asm, linker, compiler! lots of code dupe in plan9
+%     use 'a instr polymorphic type, helpers, arch interfaces, etc.
+%     nice use of marshalling to reduce code of IO and special object/ar formats
+%     archs: arm, mips, riscv (RISC is simpler)
+%     OS: plan9 and Linux ELF
+%   * orio and threads, and 9p in OCaml for draw device interaction
+%   * oed, and other utilities: oawk,
+%   * olex, oyacc
+%   * git! not in plan9
+%   * lib_core, lib_graphics
+%   * kernel (rudimentary)
+% - LOC/LOE! compare books on mk vs omk
+% - git, docker, GHA, testsuite (not much tests in plan9), bootstrap-mk.sh,
+%   easy to test on Linux/macOS/Windows (plan9 not so easy by comparison,
+%   might have slow down also adoption)
+% - ocaml for plan9 (and myocaml)
+% - Software engineering lessons and improvements after 30 years:
+%   abuse int, abuse strings, code dupe, error mangagement OK_0, OK_1,
+%   bools, ...
+%   we learned stuff in 30 years.
 
 \section{Conclusion}
 

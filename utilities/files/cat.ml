@@ -15,7 +15,7 @@ open Common
  * Still the OCaml version is longer than the C one.
 *)
 
-type caps = < Cap.open_in; Cap.stdout >
+type caps = < Cap.open_in; Cap.stdout; Cap.stdin >
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -46,7 +46,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (match Array.to_list argv with
   | [] -> raise (Impossible "all programs have at least an argv0")
   | [_argv0] ->
-      let chan = Chan.{ ic = stdin; origin = Chan.Stdin } in
+      let chan = Chan.{ ic = Console.stdin caps; origin = Chan.Stdin } in
       cat caps chan
   | _argv0::xs ->
       xs |> Fpath_.of_strings |> List.iter (FS.with_open_in caps (cat caps))

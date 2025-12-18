@@ -12,7 +12,7 @@ open Fpath_.Operators
  *
  * opti? time cache, and flag to skip cache if want refresh 
 *)
-let timeof (file : Fpath.t) : float =
+let timeof (file : Fpath.t) : float option =
   try 
     (* bugfix: use stat, not lstat, to get the time of what is pointed
      * by the symlink, not the symlink

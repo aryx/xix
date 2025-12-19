@@ -16,7 +16,7 @@ open Fpath_.Operators
  *  - no fixed-size array for saved file, buffers, lines, etc.
 *)
 
-type caps = < Cap.stdin; Cap.stdout; Cap.open_in; Cap.open_out >
+type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
 
 (*****************************************************************************)
 (* Types and globals *)
@@ -38,7 +38,7 @@ type env = {
   (* growing array of line offsets in tfname. 1-indexed array but the 0
    * entry is used as a sentinel.
    *)
-  zero : file_offset array;
+  mutable zero : file_offset array;
   (* index in zero *)
   mutable dot: lineno;
   mutable dol: lineno;
@@ -47,7 +47,7 @@ type env = {
   mutable addr2: lineno;
 
   (* can't use {in/out}_channel because we need to both read and write
-   * the temporary file
+   * the temporary file, hence the use of the more general Unix.file_descr
    *)
   tfile : Unix_.file_descr;
 
@@ -56,33 +56,64 @@ type env = {
   vflag: bool;
   (* used just in putchr() so could be removed almost *)
   oflag: bool;
+
+  (* to read the commands from *)
+  stdin: Lexing_.lexbuf;
+  (* stdout unless oflag is set in which case it's stderr *)
+  out: out_channel [@printer fun fmt _ -> 
+        Format.fprintf fmt "<out_channel>"];
 }
 [@@deriving show]
 
-let init (vflag : bool) (oflag : bool) : env =
+let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : env =
   { zero = Array.make 10 0;
     dot = 0;
     dol = 0;
     addr1 = 0;
     addr2 = 0;
 
-    tfile = Unix.openfile !!tfname [ Unix.O_RDWR; Unix.O_CREAT ] 0o644;
+    tfile = Unix.openfile !!tfname [ Unix.O_RDWR; Unix.O_CREAT ] 0o600;
     vflag = if oflag then false else vflag;
     oflag;
     savedfile = if oflag then Fpath.v "/fd/1" else Fpath.v "NOFILE";
+    stdin = Lexing.from_channel (Console.stdin caps);
+    out = if oflag then Console.stderr caps else Console.stdout caps;
   }
 
 (* TODO? type cmd = Read of range | ... ? *)
 
 (*****************************************************************************)
+(* Error management *)
+(*****************************************************************************)
+
+exception Error of string
+
+let error_1 (out : out_channel) s =
+  output_string out s
+
+(*****************************************************************************)
+(* Commands *)
+(*****************************************************************************)
+
+let quit (_e : env) =
+  failwith "TODO"
+
+(*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
+
+let commands caps (e : env) : unit =
+  Console.print caps "TODO";
+
+  let _t : Token.t = Lexer.token e.stdin in
+  let _ = failwith "XXX" in
+  ()
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
 
-let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
+let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let args = ref [] in
   let level = ref (Some Logs.Warning) in
   let vflag = ref true in
@@ -105,20 +136,32 @@ let main (_caps : <caps; ..>) (argv : string array) : Exit.t =
   | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
   | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
   );
-  (* alt: use Arg and process -debug, -verbose, etc. *)
   Logs_.setup !level ();
 
-  let env = init !vflag !oflag in
-  let env =
-    match List.rev !args with
-    | [] -> env
-    | [file] -> { env with savedfile = Fpath.v file }
-    | _::_::_ -> failwith "too many arguments" 
-  in
+  let env = init caps !vflag !oflag in
   (* ed: was globp *)
-  let _first_command =
-    if !oflag then 'a' else 'r'
-  in
+  let first_command = ref None in
+
+  (match !args with
+  | [] -> ()
+  | [file] -> 
+        env.savedfile <- Fpath.v file;
+        first_command := Some 'r'
+  | _::_::_ -> failwith "too many arguments" 
+  );
+  if !oflag then first_command := Some 'a';
   Logs.info (fun m -> m "env = %s" (show_env env));
-  
+
+  while true do
+    (* when neither commands() nor quit() raise Error, then
+     * quit() will proceed and raise Exit.ExitCode which
+     * will exit the loop (and be caught in Main._)
+     *)
+    try (
+        commands caps env;
+        quit env;
+    )
+    with 
+      Error s -> error_1 env.out s
+  done;
   Exit.OK

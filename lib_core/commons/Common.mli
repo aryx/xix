@@ -163,3 +163,10 @@ module Unix_ :
     type file_descr = Unix.file_descr
     [@@deriving show]
   end
+
+module Lexing_ : 
+  sig
+    (* just for deriving show *)
+    type lexbuf = Lexing.lexbuf
+    [@@deriving show]
+  end

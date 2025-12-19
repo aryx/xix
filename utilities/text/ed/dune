@@ -1,0 +1,19 @@
+(executable
+ (name Main)
+ (libraries
+   str unix
+   xix_commons
+ )
+ (preprocess (pps ppx_deriving.show))
+ (modes native byte)
+)
+
+(ocamllex Lexer)
+
+(install
+ (package xix)
+ (section bin)
+ (files
+  (Main.exe as oed)
+ )
+)

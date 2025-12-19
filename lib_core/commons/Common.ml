@@ -448,22 +448,11 @@ module Unix_ = struct
     let show_file_descr _fd = "<fd>"
 end
 
-(* If you don't want to use [@@deriving show] above, you
- * can copy-paste manually the generated code by getting the
- * result of ocamlfind ocamlc -dsource ... on this code
- *  type ('a, 'b) either =
- *  | Left of 'a
- *  | Right of 'b
- *  [@@deriving show]
- *
- * which should look like this:
- * let pp_either = fun poly_a -> fun poly_b -> fun fmt -> function
- *   | Left a0 ->
- *       (Format.fprintf fmt "(@[<2>Left@ ";
- *        (poly_a fmt) a0;
- *        Format.fprintf fmt "@])")
- *   | Right a0 ->
- *       (Format.fprintf fmt "(@[<2>Right@ ";
- *        (poly_b fmt) a0;
- *        Format.fprintf fmt "@])")
- *)
+module Lexing_ = struct
+    (* just for deriving show *)
+    type lexbuf = Lexing.lexbuf
+
+    let pp_lexbuf fmt _lexbuf =
+      Format.fprintf fmt "<lexbuf>"
+    let show_lexbuf _lexbuf = "<lexbuf>"
+end

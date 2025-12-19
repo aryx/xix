@@ -12,7 +12,7 @@ yoann.padioleau@gmail.com
 \maketitle
 
 \begin{abstract}
-An abstract
+XiX is a work-in-progress port of parts of Plan 9 to OCaml.
 \end{abstract}
 
 \section{Introduction}
@@ -20,8 +20,8 @@ An abstract
 % XiX (which stands for Xix is Xix, first fully recursive), is a port of
 % parts of plan9 to OCaml. Right now mk, rc, toolchain (assembler, linker
 % C compiler) enough for helloprintf.c for arm, mips, riscv,
-% but also utilities, and windowing system rio! and some rudimentary
-% kernel.
+% but also utilities (grep? sed? awk? ed?), and windowing system rio!
+% (with graphics!) and some rudimentary kernel.
 
 % real original motiv was principia softwarica (see principia paper)
 % to explain the code of plan9 (kernel, windowiong system, graphics and
@@ -47,7 +47,7 @@ An abstract
 % of C books in principia softwarica.
 
 %TOC:
-% - compoments:
+% - components:
 %   * omk/orc, less features, just essential, so LOC/LOE comparison?
 %     can even do mk+rc in same binary? rc as a lib! easy with OCaml!
 %     so even better than plan9! perf improv?
@@ -58,12 +58,16 @@ An abstract
 %     archs: arm, mips, riscv (RISC is simpler)
 %     OS: plan9 and Linux ELF
 %   * orio and threads, and 9p in OCaml for draw device interaction
-%   * oed, and other utilities: oawk,
+%     significant! can replace rio by orio on plan9 (more on OCaml for plan9 below)
+%     screenshot?
+%   * oed, and other utilities: oawk, ogrep, osed
 %   * olex, oyacc
 %   * git! not in plan9
 %   * lib_core, lib_graphics
 %   * kernel (rudimentary)
 % - LOC/LOE! compare books on mk vs omk
+% - on OCaml
+%   also capabilities!
 % - git, docker, GHA, testsuite (not much tests in plan9), bootstrap-mk.sh,
 %   easy to test on Linux/macOS/Windows (plan9 not so easy by comparison,
 %   might have slow down also adoption)
@@ -72,6 +76,7 @@ An abstract
 %   abuse int, abuse strings, code dupe, error mangagement OK_0, OK_1,
 %   bools, ...
 %   we learned stuff in 30 years.
+% - Future work
 
 \section{Conclusion}
 

@@ -153,3 +153,13 @@ module Hashtbl_ :
     val memoized :
       ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
   end
+
+(*****************************************************************************)
+(* Misc *)
+(*****************************************************************************)
+module Unix_ : 
+  sig
+    (* just for deriving show *)
+    type file_descr = Unix.file_descr
+    [@@deriving show]
+  end

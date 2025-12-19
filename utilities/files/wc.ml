@@ -103,7 +103,6 @@ let wc (_caps : < Cap.stdout; .. >) (chan : Chan.i) : stats =
 (* Entry point *)
 (*****************************************************************************)
 
-
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let conf : conf = empty_conf () in

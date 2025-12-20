@@ -41,7 +41,7 @@ let commands caps (e : Env.t) : unit =
       (match c with
       | 'a' -> failwith "TODO: a"
       | 'r' -> 
-          let file = Parse.filename e in
+          let file = Parse.filename e c in
           Commands.read caps e file      
       | c -> failwith (spf "unsupported command '%c'" c)
       );
@@ -96,7 +96,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (match !args with
   | [] -> ()
   | [file] -> 
-        env.savedfile <- Fpath.v file;
+        env.savedfile <- Some (Fpath.v file);
         first_command := Some 'r'
   | _::_::_ -> failwith "too many arguments" 
   );

@@ -12,11 +12,15 @@ open Env
 (* Helpers *)
 (*****************************************************************************)
 
-let setwide (_e : Env.t) : unit =
-  failwith "TODO: setwide"
+let setwide (e : Env.t) : unit =
+  (* TODO: if not e.given *)
+  e.addr1 <- if e.dol > 0 then 1 else 0;
+  e.addr2 <- e.dol;
+  ()
 
-let squeeze (_e : Env.t) (_n : int) : unit =
-  failwith "TODO: squeeze"
+let squeeze (e : Env.t) (i : int) : unit =
+  if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2
+  then Error.e ""
 
 let append (_e : Env.t) _getfile _addr2 : unit =
   failwith "TODO: append"

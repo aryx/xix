@@ -46,7 +46,7 @@ type t = {
   mutable addr2: lineno;
 
   (* for w, r, f *)
-  mutable savedfile: Fpath.t;
+  mutable savedfile: Fpath.t option;
   mutable fchange: bool;
   (* set by ? effect is to printcom() *)
   mutable pflag: bool;
@@ -64,7 +64,7 @@ type t = {
 let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
   let out = if oflag then Console.stderr caps else Console.stdout caps in
   (* will be overwritten possibly in the caller by argv[1] *)
-  let savedfile = if oflag then Fpath.v "/fd/1" else Fpath.v "NOFILE" in
+  let savedfile = if oflag then Some (Fpath.v "/fd/1") else None in
   { 
     tfile =
       (try

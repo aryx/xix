@@ -48,6 +48,7 @@ type t = {
   (* for w, r, f *)
   mutable savedfile: Fpath.t option;
   mutable fchange: bool;
+  mutable count: int;
   (* set by ? effect is to printcom() *)
   mutable pflag: bool;
 
@@ -71,6 +72,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
         Unix.openfile !!tfname [ Unix.O_RDWR; Unix.O_CREAT ] 0o600
       with Unix.Unix_error _ ->
         (* alt: just no try and rely on default exn and backtrace *)
+        (* alt: call Out.putxxx funcs but mutual recursion *)
         output_string out "?TMP\n";
         (* ed was doing exits(nil) = exit 0 *)
         raise (Exit.ExitCode 0)
@@ -87,6 +89,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
 
     savedfile;
     fchange = false;
+    count = 0;
     pflag = false;
 
     vflag = if oflag then false else vflag;

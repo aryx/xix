@@ -22,15 +22,18 @@ let squeeze (e : Env.t) (i : int) : unit =
   if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2
   then Error.e ""
 
-let append (_e : Env.t) _getfile _addr2 : unit =
-  failwith "TODO: append"
-
 (* was called exfile *)
 let exit_file (_e : Env.t) : unit =
   failwith "TODO: exit_file"
 
-let getfile () =
+(* will return the string with ending \n or None when reached EOF *)
+let getfile (e : Env.t) (_chan : Chan.i) () : string option =
+  (* alt: do that in caller, again cleaner than in filename *)
+  e.count <- e.count + 1;
   failwith "TODO: getfile"
+
+let append (_e : Env.t) _getfile _addr : unit =
+  failwith "TODO: append"
 
 (*****************************************************************************)
 (* Commands *)
@@ -38,11 +41,11 @@ let getfile () =
 
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
   try 
-    file |> FS.with_open_in caps (fun _chan ->
+    file |> FS.with_open_in caps (fun chan ->
         setwide e;
         squeeze e 0;
         let change = (e.dol != 0) in
-        append e getfile e.addr2;
+        append e (getfile e chan) e.addr2;
         exit_file e;
         e.fchange <- change;
         

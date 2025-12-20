@@ -13,8 +13,9 @@ module T = Token
  *  - no unicode (runes) support
  *
  * Improvements over Plan 9 C version:
- *  - far less globals
+ *  - far less globals!
  *  - no fixed-size array for saved file, buffers, lines, etc.
+ *  - no hard limits on max line size, max size of temp file, 
 *)
 
 type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
@@ -27,7 +28,8 @@ let print_com (_e : Env.t) : unit =
   failwith "TODO: print_com"
 
 let commands caps (e : Env.t) : unit =
-  while true do
+  let done_ = ref false in
+  while not !done_ do
     if e.pflag then begin
         e.pflag <- false;
         e.addr1 <- e.dot;
@@ -35,13 +37,13 @@ let commands caps (e : Env.t) : unit =
         print_com e;
     end;
 
-    let t  = Parse.next_token e in
+    let t  = In.token e in
     (match t with
     | T.Letter c ->
       (match c with
       | 'a' -> failwith "TODO: a"
       | 'r' -> 
-          let file = Parse.filename e c in
+          let file = In.filename e c in
           Commands.read caps e file      
       | c -> failwith (spf "unsupported command '%c'" c)
       );
@@ -50,7 +52,8 @@ let commands caps (e : Env.t) : unit =
        * better not use Error.error here by default.
        *)
     | T.EOF ->
-       raise (Exit.ExitCode 0)
+       (* not raise (Exit.ExitCode 0) because we need to get to quit! *)
+       done_ := true
     | t -> failwith (spf "unexpected token %s" (Token.show t))
     )
   done

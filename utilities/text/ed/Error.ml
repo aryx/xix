@@ -9,6 +9,8 @@ let e s =
   raise (Error s)
 
 (* this will be called from CLI.main() in an handler for the Error exn *)
-let error_1 (env : Env.t) (s : string) : unit =
+let error_1 (e : Env.t) (s : string) : unit =
   (* TODO: reset globals too? *)
-  output_string env.out (spf "?%s\n" s)
+  Out.putchr e '?';
+  Out.putst e s;
+  ()

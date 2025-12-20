@@ -21,7 +21,7 @@ type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
 (* Main algorithm *)
 (*****************************************************************************)
 
-let commands caps (e : env) : unit =
+let commands caps (e : Env.t) : unit =
   Console.print caps "TODO";
 
   let _t : Token.t = Lexer.token e.stdin in
@@ -34,18 +34,21 @@ let commands caps (e : env) : unit =
 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let args = ref [] in
-  let level = ref (Some Logs.Warning) in
+  (* in "interactive/verbose" mode by default *)
   let vflag = ref true in
   let oflag = ref false in
+  let level = ref (Some Logs.Warning) in
+
   let options = [
      "-", Arg.Clear vflag,
-     " reset verbose mode";
+     " non-interactive mode (opposite of verbose)";
+    (* 'w' will write to stdout; useful for filters and pipelines *)
      "-o", Arg.Set oflag,
-     " output to standard output (instead of editing a file)";
+     " write output to standard output instead of modifying the file";
 
      (* new: *)
      "-v", Arg.Unit (fun () -> level := Some Logs.Info),
-     " verbose mode";
+     " verbose logging mode";
   ] |> Arg.align
   in
   (try 
@@ -57,7 +60,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   );
   Logs_.setup !level ();
 
-  let env = init caps !vflag !oflag in
+  let env : Env.t = Env.init caps !vflag !oflag in
   (* ed: was globp *)
   let first_command = ref None in
 
@@ -69,7 +72,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   | _::_::_ -> failwith "too many arguments" 
   );
   if !oflag then first_command := Some 'a';
-  Logs.info (fun m -> m "env = %s" (show_env env));
+  Logs.info (fun m -> m "env = %s" (Env.show env));
 
   while true do
     (* when neither commands() nor quit() raise Error, then

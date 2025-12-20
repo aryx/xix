@@ -1,11 +1,12 @@
 type t =
-  | TSpaces
-  | TNewline
-  | TEOF
+  | Spaces
+  | Newline
+  | EOF
 
-  | TLetter of char
-  | TInt of int
-  | TString of string
+  | Letter of char
+  | Int of int
+  | String of string
 
-  | TComma
+  | Comma
   (* TODO: TPlus, TMinus, TPlusPlus, ... *)
+[@@deriving show]

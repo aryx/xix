@@ -2,6 +2,8 @@
 open Common
 
 open Env
+module T = Token
+
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -21,12 +23,37 @@ type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
 (* Main algorithm *)
 (*****************************************************************************)
 
-let commands caps (e : Env.t) : unit =
-  Console.print caps "TODO";
+let print_com (_e : Env.t) : unit =
+  failwith "TODO: print_com"
 
-  let _t : Token.t = Lexer.token e.stdin in
-  let _ = failwith "XXX" in
-  ()
+let commands caps (e : Env.t) : unit =
+  while true do
+    if e.pflag then begin
+        e.pflag <- false;
+        e.addr1 <- e.dot;
+        e.addr2 <- e.dot;
+        print_com e;
+    end;
+
+    let t  = Parse.next_token e in
+    (match t with
+    | T.Letter c ->
+      (match c with
+      | 'a' -> failwith "TODO: a"
+      | 'r' -> 
+          let file = Parse.filename e in
+          Commands.read caps e file      
+      | c -> failwith (spf "unsupported command '%c'" c)
+      );
+      (* ed: Error.error "", but because relied on the commands
+       * doing some 'continue' which we can't in OCaml so
+       * better not use Error.error here by default.
+       *)
+    | T.EOF ->
+       raise (Exit.ExitCode 0)
+    | t -> failwith (spf "unexpected token %s" (Token.show t))
+    )
+  done
 
 (*****************************************************************************)
 (* Entry point *)
@@ -49,6 +76,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      (* new: *)
      "-v", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose logging mode";
+     "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
+     " debug logging mode";
   ] |> Arg.align
   in
   (try 
@@ -84,6 +113,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         Commands.quit env;
     )
     with 
-      Error.Error s -> Error.error_1 env.out s
+      Error.Error s -> 
+        Error.error_1 env ("?" ^ s)
   done;
   Exit.OK

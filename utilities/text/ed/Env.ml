@@ -48,6 +48,8 @@ type t = {
   (* for w, r, f *)
   mutable savedfile: Fpath.t;
   mutable fchange: bool;
+  (* set by ? effect is to printcom() *)
+  mutable pflag: bool;
 
   vflag: bool;
   (* used just in putchr() so could be removed almost *)
@@ -69,7 +71,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
         Unix.openfile !!tfname [ Unix.O_RDWR; Unix.O_CREAT ] 0o600
       with Unix.Unix_error _ ->
         (* alt: just no try and rely on default exn and backtrace *)
-        Error.error_1 out "TMP";
+        output_string out "?TMP\n";
         (* ed was doing exits(nil) = exit 0 *)
         raise (Exit.ExitCode 0)
        )
@@ -85,6 +87,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
 
     savedfile;
     fchange = false;
+    pflag = false;
 
     vflag = if oflag then false else vflag;
     oflag;

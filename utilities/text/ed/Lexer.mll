@@ -19,11 +19,11 @@ let digit = ['0'-'9']
 (*****************************************************************************)
 
 rule token = parse
-  | space+        { TSpaces }
-  | '\n'          { TNewline }
-  | letter as c   { TLetter c }
-  | digit+        { TInt (int_of_string (Lexing.lexeme lexbuf)) }
-  | [^' ''\n']+       { TString (Lexing.lexeme lexbuf) }
-  | ','  { TComma }
-  | eof { TEOF }
+  | space+        { Spaces }
+  | '\n'          { Newline }
+  | letter as c   { Letter c }
+  | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }
+  | [^' ''\n']+       { String (Lexing.lexeme lexbuf) }
+  | ','  { Comma }
+  | eof { EOF }
   

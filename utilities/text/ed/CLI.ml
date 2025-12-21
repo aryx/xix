@@ -53,11 +53,13 @@ let commands caps (e : Env.t) : unit =
          In.newline e;
          Commands.printcom e;
       | 'f' ->
+         (* alt: move in Commands.file() *)
          Commands.setnoaddr e;
          let file : Fpath.t = In.filename e c in
          assert (e.savedfile = Some file);
          Out.putst e !!file;
       | '=' ->
+         (* alt: move in Commands.print_dot_line_number() *)
          Commands.setwide e;
          Commands.squeeze e 0;
          In.newline e;
@@ -73,6 +75,7 @@ let commands caps (e : Env.t) : unit =
                     (Env.show e)
                     (FS.cat caps Env.tfname |> String.concat "\n"));
 
+      (* reading *)
 
       | 'r' -> 
           let file : Fpath.t = In.filename e c in
@@ -80,8 +83,8 @@ let commands caps (e : Env.t) : unit =
 
       (* modifying *)
 
-      | 'a' -> failwith "TODO: a"
-      | 'i' -> failwith "TODO: i"
+      | 'a' -> Commands.add e 0
+      | 'i' -> Commands.add e (-1)
 
       (* other *)
 

@@ -194,3 +194,13 @@ let printcom (e : Env.t) : unit =
   e.dot <- e.addr2;
   (* TODO: reset flags *)
   ()
+
+(* used for 'a' and 'i' *)
+let add (e : Env.t) (i : int) =
+  if i <> 0 && (e.given || e.dol > 0) then begin
+     e.addr1 <- e.addr1 - 1;
+     e.addr2 <- e.addr2 - 1;
+  end;
+  squeeze e 0;
+  In.newline e;
+  append e (In.gettty e) e.addr2 |> ignore;

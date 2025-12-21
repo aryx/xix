@@ -75,7 +75,7 @@ let gety (e : Env.t) : string =
  * This has a similar interface to getfile() so it can be passed to
  * append().
  *)
-let gettty (e : Env.t) : string option =
+let gettty (e : Env.t) () : string option =
   let s = gety e in
   if s = ".\n"
   then None

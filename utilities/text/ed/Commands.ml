@@ -13,9 +13,10 @@ open Env
 (*****************************************************************************)
 
 let setwide (e : Env.t) : unit =
-  (* TODO: if not e.given *)
-  e.addr1 <- if e.dol > 0 then 1 else 0;
-  e.addr2 <- e.dol;
+  if not e.given then begin
+    e.addr1 <- if e.dol > 0 then 1 else 0;
+    e.addr2 <- e.dol;
+  end;
   ()
 
 let squeeze (e : Env.t) (i : lineno) : unit =
@@ -48,6 +49,9 @@ let string_of_chars (xs : char list) : string =
   List.iteri (Bytes.set b) xs;
   Bytes.to_string b
 
+(*****************************************************************************)
+(* getfile/putfile (from/to savedfile) *)
+(*****************************************************************************)
 
 (* will return the string with ending \n or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
@@ -86,6 +90,10 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
     ...
 *)
 
+(*****************************************************************************)
+(* getline/putline (from/to tfile) *)
+(*****************************************************************************)
+
 (* store line in tfile and return its offset *)
 let putline (e : Env.t) (line : string) : file_offset =
   e.fchange <- true;
@@ -96,7 +104,7 @@ let putline (e : Env.t) (line : string) : file_offset =
   e.tline <- e.tline + len;
   old_tline
 
-(* dual of putline(), retrieve line in tfile *)
+(* dual of putline(), retrieve line in tfile (without trailing '\n') *)
 let getline (e : Env.t) (tl : file_offset)  : string =
   Unix.lseek e.tfile tl Unix.SEEK_SET |> ignore;
   (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
@@ -109,10 +117,15 @@ let getline (e : Env.t) (tl : file_offset)  : string =
     let c : char = Bytes.get bytes 0 in
     if n = 1 && c <> '\n'
     then aux (c::acc)
+    (* no need to add the \n, putshst will add it *)
     else string_of_chars (List.rev acc)
   in
   aux []
 
+
+(*****************************************************************************)
+(* append in tfile and adjust e.zero *)
+(*****************************************************************************)
 
 (* f can be getfile() above or In.gettty() *)
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
@@ -159,11 +172,11 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
         append e (getfile e chan) e.addr2 |> ignore;
         exfile e;
         e.fchange <- change;
-        
     )
   with Sys_error str ->
-      Logs.err (fun m -> m "Sys_error: %s" str);
-      Error.e !!file
+    Logs.err (fun m -> m "Sys_error: %s" str);
+    Error.e !!file
+
 
 (* 'w' *)
 let write (_e : Env.t) =
@@ -182,6 +195,7 @@ let quit (e : Env.t) : unit =
   Sys.remove !!Env.tfname;
   raise (Exit.ExitCode 0)
 
+
 (* 'p' *)
 let printcom (e : Env.t) : unit =
   nonzero e;
@@ -199,6 +213,7 @@ let printcom (e : Env.t) : unit =
   (* TODO: reset flags *)
   ()
 
+
 (* used for 'a' and 'i' *)
 let add (e : Env.t) (i : int) =
   if i <> 0 && (e.given || e.dol > 0) then begin
@@ -207,4 +222,5 @@ let add (e : Env.t) (i : int) =
   end;
   squeeze e 0;
   In.newline e;
-  append e (In.gettty e) e.addr2 |> ignore;
+  append e (In.gettty e) e.addr2 |> ignore
+

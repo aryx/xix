@@ -456,3 +456,12 @@ module Lexing_ = struct
       Format.fprintf fmt "<lexbuf>"
     let show_lexbuf _lexbuf = "<lexbuf>"
 end
+
+module Out_channel_ = struct
+    (* just for deriving show *)
+    type t = out_channel
+
+    let pp fmt _x =
+      Format.fprintf fmt "<out_channel>"
+    let show _x = "<out_channel>"
+end

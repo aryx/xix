@@ -31,9 +31,9 @@ type t = {
   (* to read the user commands from (and also line input in 'a'/'i' modes) *)
   stdin: Lexing_.lexbuf;
   (* stdout unless oflag is set in which case it's stderr *)
-  out: out_channel [@printer fun fmt _ -> Format.fprintf fmt "<out_channel>"];
+  out: Out_channel_.t;
 
-  (* This is the temporary tfname file, ed's backing store!
+  (* This is the temporary tfname file, ed backing store!
    * Note that we can't use the OCaml usual {in/out}_channel type because we
    * need to both read and write in the temporary file, hence the use of the
    * more general Unix.file_descr.
@@ -43,8 +43,7 @@ type t = {
   mutable tline : file_offset;
 
   (* growing array of line offsets in tfile. 1-indexed array but the 0
-   * entry is used as a sentinel.
-   * map lineno -> file_offset
+   * entry is used as a sentinel. map lineno -> file_offset.
    *)
   mutable zero : file_offset array;
   (* index entried in zero *)
@@ -78,7 +77,7 @@ type t = {
 [@@deriving show]
 
 (*****************************************************************************)
-(* API *)
+(* init() *)
 (*****************************************************************************)
 
 let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =

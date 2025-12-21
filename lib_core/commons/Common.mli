@@ -170,3 +170,10 @@ module Lexing_ :
     type lexbuf = Lexing.lexbuf
     [@@deriving show]
   end
+
+module Out_channel_ : 
+  sig
+    (* just for deriving show *)
+    type t = out_channel
+    [@@deriving show]
+  end

@@ -26,7 +26,9 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
       )
   | T.Spaces ->
       (match token e with
-      (* TODO? in theory could also be Letter c or Int for weird filenames *)
+      (* TODO? in theory could also be Letter c or Int for weird filenames 
+       * TODO: maybe could call another Lexer.filename func!
+       *)
       | T.String str ->
           (match token e with
           | T.Newline -> 

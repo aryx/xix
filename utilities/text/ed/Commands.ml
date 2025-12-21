@@ -20,7 +20,10 @@ let setwide (e : Env.t) : unit =
 
 let squeeze (e : Env.t) (i : int) : unit =
   if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2
-  then Error.e ""
+  then begin
+      Logs.warn (fun m -> m "can't squeeze");
+      Error.e "";
+  end
 
 (* was called exfile *)
 let exit_file (_e : Env.t) : unit =
@@ -50,7 +53,8 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
         e.fchange <- change;
         
     )
-  with Sys_error _str ->
+  with Sys_error str ->
+      Logs.err (fun m -> m "Sys_error: %s" str);
       Error.e !!file
 
 
@@ -58,6 +62,7 @@ let quit (e : Env.t) : unit =
   if e.vflag && e.fchange && e.dol != 0 then begin
       (* so a second quit will actually quit *)
       e.fchange <- false;
+      Logs.warn (fun m -> m "trying to quit with modified buffer");
       Error.e ""
   end;
   (* alt: could also Unix.close e.tfile *)

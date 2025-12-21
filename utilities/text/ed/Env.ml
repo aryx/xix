@@ -5,6 +5,9 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
+(* A set of globals used by many functions.
+ *
+ *)
 
 (*****************************************************************************)
 (* Types and constants *)
@@ -22,38 +25,44 @@ type lineno = int
 [@@deriving show]
 
 type t = {
+  (* to read the commands from *)
+  stdin: Lexing_.lexbuf;
+  (* stdout unless oflag is set in which case it's stderr *)
+  out: out_channel [@printer fun fmt _ -> Format.fprintf fmt "<out_channel>"];
+
   (* This is the temporary tfname file. We can't use the OCaml usual
    * {in/out}_channel type because we need to both read and write in
    * the temporary file, hence the use of the more general Unix.file_descr.
    *)
   tfile : Unix_.file_descr;
-
-  (* to read the commands from *)
-  stdin: Lexing_.lexbuf;
-  (* stdout unless oflag is set in which case it's stderr *)
-  out: out_channel [@printer fun fmt _ -> 
-        Format.fprintf fmt "<out_channel>"];
-
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel.
    *)
   mutable zero : file_offset array;
-  (* index in zero *)
+  (* index entried in zero *)
+  (* current line *)
   mutable dot: lineno;
+  (* last line (dollar) *)
   mutable dol: lineno;
   (* alt: separate "range" type *)
+  (* for 1,3p commands, those are "cursors" *)
   mutable addr1: lineno;
   mutable addr2: lineno;
 
   (* for w, r, f *)
   mutable savedfile: Fpath.t option;
+  (* did the buffer changed (mostly tested with dol > 0) *)
   mutable fchange: bool;
+  (* count #chars read, or number of lines; displayed by Out.putd *)
   mutable count: int;
-  (* set by ? effect is to printcom() *)
+  (* set by ? effect is to print_com() in commands () before each command  *)
   mutable pflag: bool;
 
+  (* verbose (a.k.a. interactive) flag, cleared by 'ed -' *)
   vflag: bool;
-  (* used just in putchr() so could be removed almost *)
+  (* output flag, set by 'ed -o'.
+   * used just in Out.putchr() so could be removed almost.
+   *)
   oflag: bool;
 }
 [@@deriving show]
@@ -67,20 +76,20 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
   (* will be overwritten possibly in the caller by argv[1] *)
   let savedfile = if oflag then Some (Fpath.v "/fd/1") else None in
   { 
+    stdin = Lexing.from_channel (Console.stdin caps);
+    out;
+
     tfile =
       (try
         Unix.openfile !!tfname [ Unix.O_RDWR; Unix.O_CREAT ] 0o600
-      with Unix.Unix_error _ ->
+      with Unix.Unix_error (err, s1, s2) ->
+        Logs.err (fun m -> m "%s %s %s" (Unix.error_message err) s1 s2);
         (* alt: just no try and rely on default exn and backtrace *)
         (* alt: call Out.putxxx funcs but mutual recursion *)
         output_string out "?TMP\n";
         (* ed was doing exits(nil) = exit 0 *)
         raise (Exit.ExitCode 0)
-       )
-    ;
-    stdin = Lexing.from_channel (Console.stdin caps);
-    out;
-
+       );
     zero = Array.make 10 0;
     dot = 0;
     dol = 0;

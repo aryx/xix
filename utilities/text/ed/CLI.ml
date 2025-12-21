@@ -16,6 +16,7 @@ module T = Token
  *  - far less globals!
  *  - no fixed-size array for saved file, buffers, lines, etc.
  *  - no hard limits on max line size, max size of temp file, 
+ *  - clearer error messages (via logging)
 *)
 
 type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
@@ -29,7 +30,9 @@ let print_com (_e : Env.t) : unit =
 
 let commands caps (e : Env.t) : unit =
   let done_ = ref false in
+
   while not !done_ do
+
     if e.pflag then begin
         e.pflag <- false;
         e.addr1 <- e.dot;
@@ -77,10 +80,12 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      " write output to standard output instead of modifying the file";
 
      (* new: *)
-     "-v", Arg.Unit (fun () -> level := Some Logs.Info),
+     "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose logging mode";
      "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
      " debug logging mode";
+     "-quiet", Arg.Unit (fun () -> level := None),
+     " quite logging mode";
   ] |> Arg.align
   in
   (try 

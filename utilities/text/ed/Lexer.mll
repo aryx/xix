@@ -23,7 +23,7 @@ let digit = ['0'-'9']
 rule token = parse
   | space+        { Spaces }
   | '\n'          { Newline }
-  | letter as c   { Letter c }
+  | (letter | '=') as c   { Char c }
   | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }
   | [^' ''\n']+       { String (Lexing.lexeme lexbuf) }
   | ','  { Comma }

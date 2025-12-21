@@ -28,7 +28,12 @@ let squeeze (e : Env.t) (i : lineno) : unit =
 let nonzero (e : Env.t) =
   squeeze e 1
 
-
+let setnoaddr (e : Env.t) =
+  if e.given
+  then begin
+      Logs.err (fun m -> m "setnoaddr ??");
+      Error.e "";
+  end
 
 (* ed: "exit" file =~ close file *)
 let exfile (e : Env.t) : unit =
@@ -91,11 +96,12 @@ let putline (e : Env.t) (line : string) : file_offset =
   e.tline <- e.tline + len;
   old_tline
 
+(* dual of putline(), retrieve line in tfile *)
 let getline (e : Env.t) (tl : file_offset)  : string =
   Unix.lseek e.tfile tl Unix.SEEK_SET |> ignore;
   (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
    * need to close it which unfortunately also close the file_descr so
-   * we do our own input_line below.
+   * we do our own adhoc input_line below.
    *)
   let bytes = Bytes.of_string " " in
   let rec aux acc =
@@ -143,6 +149,7 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
 (* Commands *)
 (*****************************************************************************)
 
+(* 'r' *)
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
   try 
     file |> FS.with_open_in caps (fun chan ->
@@ -159,6 +166,7 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
       Error.e !!file
 
 
+(* 'q' *)
 let quit (e : Env.t) : unit =
   if e.vflag && e.fchange && e.dol != 0 then begin
       (* so a second quit will actually quit *)
@@ -170,6 +178,7 @@ let quit (e : Env.t) : unit =
   Sys.remove !!Env.tfname;
   raise (Exit.ExitCode 0)
 
+(* 'p' *)
 let printcom (e : Env.t) : unit =
   nonzero e;
 

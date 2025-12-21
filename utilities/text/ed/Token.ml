@@ -3,7 +3,8 @@ type t =
   | Newline
   | EOF
 
-  | Letter of char
+  (* letter or '=' *)
+  | Char of char
   | Int of int
   | String of string
 

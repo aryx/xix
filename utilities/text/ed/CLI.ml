@@ -1,5 +1,6 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 open Env
 module T = Token
@@ -44,16 +45,26 @@ let commands caps (e : Env.t) : unit =
     let t  = In.token e in
     (match t with
 
-    | T.Letter c ->
+    | T.Char c ->
       (match c with
+      (* inspecting *)
+
       | 'p' | 'P' ->
          In.newline e;
          Commands.printcom e;
-      | 'r' -> 
-          let file : Fpath.t = In.filename e c in
-          Commands.read caps e file      
-      | 'a' -> failwith "TODO: a"
-      | 'i' -> failwith "TODO: i"
+      | 'f' ->
+         Commands.setnoaddr e;
+         let file : Fpath.t = In.filename e c in
+         assert (e.savedfile = Some file);
+         Out.putst e !!file;
+      | '=' ->
+         Commands.setwide e;
+         Commands.squeeze e 0;
+         In.newline e;
+         e.count <- e.addr2;
+         Out.putd e;
+         Out.putchr e '\n';
+                
       (* new: *)
       | 'X' -> 
          In.newline e;
@@ -61,6 +72,19 @@ let commands caps (e : Env.t) : unit =
          Logs.app (fun m -> m "env = %s\ntfile content =\n%s"
                     (Env.show e)
                     (FS.cat caps Env.tfname |> String.concat "\n"));
+
+
+      | 'r' -> 
+          let file : Fpath.t = In.filename e c in
+          Commands.read caps e file      
+
+      (* modifying *)
+
+      | 'a' -> failwith "TODO: a"
+      | 'i' -> failwith "TODO: i"
+
+      (* other *)
+
       | c -> failwith (spf "unsupported command '%c'" c)
       );
       (* ed: Error.error "", but because relied on the commands

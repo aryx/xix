@@ -81,12 +81,19 @@ let commands caps (e : Env.t) : unit =
           let file : Fpath.t = In.filename e c in
           Commands.read caps e file      
 
+      (* writing *)
+
       (* modifying *)
 
       | 'a' -> Commands.add e 0
       | 'i' -> Commands.add e (-1)
 
       (* other *)
+      | 'q' | 'Q' ->
+         if c = 'Q' then e.fchange <- false;
+         Commands.setnoaddr e;
+         In.newline e;
+         Commands.quit e;
 
       | c -> failwith (spf "unsupported command '%c'" c)
       );

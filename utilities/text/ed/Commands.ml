@@ -18,7 +18,7 @@ let setwide (e : Env.t) : unit =
   e.addr2 <- e.dol;
   ()
 
-let squeeze (e : Env.t) (i : int) : unit =
+let squeeze (e : Env.t) (i : lineno) : unit =
   if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2
   then begin
       Logs.warn (fun m -> m "can't squeeze");
@@ -72,7 +72,7 @@ let putline (e : Env.t) (_line : string) : file_offset =
   failwith "TODO: putline"
 
 (* f can be getfile() above or In.gettty() *)
-let append (e : Env.t) (f : unit -> string option) (addr : int) : int =
+let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
   e.dot <- addr;
   let nline = ref 0 in
   let rec aux () =

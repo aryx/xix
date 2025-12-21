@@ -7,11 +7,13 @@ let putchr (e : Env.t) (c : char) =
   output_char e.out c;
   if c = '\n' then flush e.out
 
+(* pre: str should not contain '\n' ? *)
 let putst (e : Env.t) (str : string) : unit =
+  (* ugly? should set after putchr \n? also who uses col? *)
+  e.col <- 0;
   (* iterate over str and call putchr to get a chance
    * for the listf code above
    *)
-  e.col <- 0;
   String.iter (putchr e) str;
   putchr e '\n';
   ()

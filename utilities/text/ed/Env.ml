@@ -20,7 +20,9 @@ let tfname = Fpath.v "/tmp/oed.scratch"
 type file_offset = int
 [@@deriving show]
 
-(* ed uses 1-indexed line numbers, but 0 is also used as a special value *)
+(* ed uses 1-indexed line numbers, but 0 is also used as a special value.
+ * alt: call it cursor?
+*)
 type lineno = int
 [@@deriving show]
 
@@ -42,6 +44,7 @@ type t = {
 
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel.
+   * map lineno -> file_offset
    *)
   mutable zero : file_offset array;
   (* index entried in zero *)

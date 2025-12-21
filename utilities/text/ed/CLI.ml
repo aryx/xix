@@ -49,7 +49,10 @@ let commands caps (e : Env.t) : unit =
       (* new: *)
       | 'X' -> 
          In.newline e;
-         Logs.info (fun m -> m "env = %s" (Env.show e));
+         Unix.fsync e.tfile;
+         Logs.info (fun m -> m "env = %s\ntfile content =\n%s"
+                    (Env.show e)
+                    (FS.cat caps Env.tfname |> String.concat "\n"));
       | c -> failwith (spf "unsupported command '%c'" c)
       );
       (* ed: Error.error "", but because relied on the commands

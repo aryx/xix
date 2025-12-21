@@ -30,13 +30,77 @@ let exit_file (_e : Env.t) : unit =
   failwith "TODO: exit_file"
 
 (* will return the string with ending \n or None when reached EOF *)
-let getfile (e : Env.t) (_chan : Chan.i) () : string option =
-  (* alt: do that in caller, again cleaner than in filename *)
-  e.count <- e.count + 1;
-  failwith "TODO: getfile"
+let getfile (e : Env.t) (chan : Chan.i) () : string option =
+  (* alt: use Stdlib.input_line which does some extra magic around newlines
+   * and EOF we want, because ed also uniformize the lack of newline before EOF
+   * (see the "\\n appended" message below),but we want to to match exactly what
+   * ed does and display the same error message so we need to go lower level
+   * than input_line and use input_char directly.
+   *)
+  try 
+    let s = input_line chan.ic ^ "\n" in
+    e.count <- e.count + String.length s;
+    Some s
+  with End_of_file -> None
+  
+(* TODO:
+  let string_of_chars xs =
+    (* alt: do that in caller, again cleaner than in filename *)
+    e.count <- e.count + List.length xs;
+    failwith "TODO"
+  in
+  let rec aux acc
+    let copt : char option =
+      try Some (input_char chan.i)
+      with End_of_file -> None
+    in
+    (match copt with
+    | None -> 
+        if acc = []
+        then None
+        else begin 
+           Out.putstr e "\\n appended";
+           Some (('\n'::acc) |> List.rev |> string_of_chars)
+        end
+     | Some c -> aux (c::acc)
+    ...
+*)
 
-let append (_e : Env.t) _getfile _addr : unit =
-  failwith "TODO: append"
+(* store line in tfile and return its offset *)
+let putline (e : Env.t) (_line : string) : file_offset =
+  e.fchange <- true;
+  failwith "TODO: putline"
+
+(* f can be getfile() above or In.gettty() *)
+let append (e : Env.t) (f : unit -> string option) (addr : int) : int =
+  e.dot <- addr;
+  let nline = ref 0 in
+  let rec aux () =
+    match f () with
+    | None -> (* EOF *) !nline
+    | Some str ->
+        if e.dol > Array.length e.zero
+        then begin
+            failwith "TODO: grow array"
+        end;
+
+        let tl = putline e str in
+        incr nline;
+
+        e.dol <- e.dol + 1;
+        let a1 = ref e.dol in
+        let a2 = ref (!a1 + 1) in
+        e.dot <- e.dot + 1;
+        let rdot = e.dot in
+        while !a1 > rdot do
+          e.zero.(!a2) <- e.zero.(!a1);
+          decr a2; decr a1;
+        done;
+        e.zero.(rdot) <- tl;
+        (* TODO: update zero *)
+        aux ()
+  in
+  aux ()
 
 (*****************************************************************************)
 (* Commands *)
@@ -48,7 +112,7 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
         setwide e;
         squeeze e 0;
         let change = (e.dol != 0) in
-        append e (getfile e chan) e.addr2;
+        append e (getfile e chan) e.addr2 |> ignore;
         exit_file e;
         e.fchange <- change;
         

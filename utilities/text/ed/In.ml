@@ -71,6 +71,8 @@ let gety (e : Env.t) : string =
 
 (* Read a line from stdin. Return None when the user entered ".\n" on a single
  * line meaning the end of interactive input.
+ * This has a similar interface to getfile() so it can be passed to
+ * append().
  *)
 let gettty (e : Env.t) : string option =
   let s = gety e in

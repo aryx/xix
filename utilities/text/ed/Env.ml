@@ -26,16 +26,20 @@ type lineno = int
 
 (* The globals *)
 type t = {
-  (* to read the user commands from (and also line input in 'a'/'i') *)
+  (* to read the user commands from (and also line input in 'a'/'i' modes) *)
   stdin: Lexing_.lexbuf;
   (* stdout unless oflag is set in which case it's stderr *)
   out: out_channel [@printer fun fmt _ -> Format.fprintf fmt "<out_channel>"];
 
-  (* This is the temporary tfname file. We can't use the OCaml usual
-   * {in/out}_channel type because we need to both read and write in
-   * the temporary file, hence the use of the more general Unix.file_descr.
+  (* This is the temporary tfname file, ed's backing store!
+   * Note that we can't use the OCaml usual {in/out}_channel type because we
+   * need to both read and write in the temporary file, hence the use of the
+   * more general Unix.file_descr.
    *)
   tfile : Unix_.file_descr;
+  (* current write file offset in tfile to append new lines *)
+  tline : file_offset;
+
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel.
    *)
@@ -56,9 +60,9 @@ type t = {
   mutable fchange: bool;
   (* count #chars read, or number of lines; displayed by Out.putd() *)
   mutable count: int;
-  (* set by ? effect is to Out.printcom() in commands () before the next cmd *)
+  (* set by ?? effect is to Out.printcom() in commands () before the next cmd *)
   mutable pflag: bool;
-  (* ?? *)
+  (* ?? what functions rely on column number set? *)
   mutable col: int;
 
   (* verbose (a.k.a. interactive) flag, cleared by 'ed -' *)
@@ -95,6 +99,11 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
         (* ed was doing exits(nil) = exit 0 so we do the same *)
         raise (Exit.ExitCode 0)
        );
+    (* sentinel value so that file offsets 0 and 1 are reserved and no
+     * real line offsets in zero[] can have those values
+     *)
+    tline = 2;
+
     zero = Array.make 10 0;
     dot = 0;
     dol = 0;

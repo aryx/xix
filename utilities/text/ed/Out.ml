@@ -4,14 +4,17 @@ open Common
 
 let putchr (e : Env.t) (c : char) =
   (* TODO: if listf *)
-  output_char e.out c
+  output_char e.out c;
+  if c = '\n' then flush e.out
 
 let putst (e : Env.t) (str : string) : unit =
-  (* TODO: iterate over str and call putchr to get a chance
-   * for the listf code
-   * TODO: e.col <- 0
+  (* iterate over str and call putchr to get a chance
+   * for the listf code above
    *)
-  output_string e.out (spf "%s\n" str)
+  e.col <- 0;
+  String.iter (putchr e) str;
+  putchr e '\n';
+  ()
 
 let printcom (_e : Env.t) : unit =
   failwith "TODO: print_com"

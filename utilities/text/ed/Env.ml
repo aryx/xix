@@ -58,6 +58,8 @@ type t = {
   mutable count: int;
   (* set by ? effect is to Out.printcom() in commands () before the next cmd *)
   mutable pflag: bool;
+  (* ?? *)
+  mutable col: int;
 
   (* verbose (a.k.a. interactive) flag, cleared by 'ed -' *)
   vflag: bool;
@@ -103,6 +105,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
     fchange = false;
     count = 0;
     pflag = false;
+    col = 0;
 
     vflag = if oflag then false else vflag;
     oflag;

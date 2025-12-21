@@ -7,12 +7,19 @@ module T = Token
 (* Reading mostly commands from stdin *)
 
 (*****************************************************************************)
-(* Helpers *)
+(* Error management *)
 (*****************************************************************************)
 
-let unexpected (t : Token.t) =
-  Logs.err (fun m -> m "unexpected token: %s" (Token.show t));
+let was_expecting (expect : string) =
+  Logs.err (fun m -> m "was expecting %s" expect);
   Error.e ""
+
+let was_expecting_but_got (expect : string) (tok : Token.t) =
+  was_expecting (spf "%s, but got %s" expect (Token.show tok))
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 (*****************************************************************************)
 (* API *)
@@ -23,40 +30,50 @@ let token (e : Env.t) : Token.t =
   Logs.debug (fun m -> m "tok = %s" (Token.show t));
   t
 
+let newline (e : Env.t) : unit =
+  match token e with
+  | T.Newline -> ()
+  | t -> was_expecting_but_got "newline" t
+
 let filename (e : Env.t) (cmd : char) : Fpath.t =
   (* alt: do it in the caller, clearer; will be incremented
    * when reading the file in getfile
    *)
   e.count <- 0;
+
   match token e with
   | T.Newline | T.EOF ->
       (* no file specified, use maybe e.savedfile then *)
       (match e.savedfile with
-      | None when cmd <> 'f' -> Error.e ""
+      | None when cmd <> 'f' -> 
+            Logs.err (fun m -> m "no savedfile and no filename given");
+            Error.e ""
       | None -> failwith "TODO?? what does ed in that case?"
       | Some file -> file
       )
   | T.Spaces ->
+      let str = Lexer.filename e.stdin in
+      if str = ""
+      then was_expecting "a non empty filename";
       (match token e with
-      (* TODO? in theory could also be Letter c or Int for weird filenames 
-       * TODO: maybe could call another Lexer.filename func!
-       *)
-      | T.String str ->
-          (match token e with
-          | T.Newline -> 
-                  let file = Fpath.v str in
-                  if e.savedfile = None || cmd = 'e' || cmd = 'f'
-                  then e.savedfile <- Some file;
-                  file
-          | _ -> Error.e ""
-          )
-      | _ -> Error.e ""
+      | T.Newline -> 
+            let file = Fpath.v str in
+            if e.savedfile = None || cmd = 'e' || cmd = 'f'
+            then e.savedfile <- Some file;
+            file
+      | t -> was_expecting_but_got "a newline" t
       )
-  | _ -> Error.e ""
+  | t -> was_expecting_but_got "a newline or space and filename" t
 
+let gety (e : Env.t) : string =
+  Lexer.line e.stdin
+  
 
 (* Read a line from stdin. Return None when the user entered ".\n" on a single
  * line meaning the end of interactive input.
  *)
-let gettty (_e : Env.t) : string option =
-  failwith "TODO: getty"
+let gettty (e : Env.t) : string option =
+  let s = gety e in
+  if s = ".\n"
+  then None
+  else Some s

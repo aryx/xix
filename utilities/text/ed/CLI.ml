@@ -41,10 +41,15 @@ let commands caps (e : Env.t) : unit =
     (match t with
     | T.Letter c ->
       (match c with
+     
       | 'a' -> failwith "TODO: a"
       | 'r' -> 
-          let file = In.filename e c in
+          let file : Fpath.t = In.filename e c in
           Commands.read caps e file      
+      (* new: *)
+      | 'X' -> 
+         In.newline e;
+         Logs.info (fun m -> m "env = %s" (Env.show e));
       | c -> failwith (spf "unsupported command '%c'" c)
       );
       (* ed: Error.error "", but because relied on the commands

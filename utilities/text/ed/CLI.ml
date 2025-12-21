@@ -62,7 +62,7 @@ let commands caps (e : Env.t) : unit =
     | T.EOF ->
        (* not raise (Exit.ExitCode 0) because we need to get to quit()! *)
        done_ := true
-    | t -> failwith (spf "unexpected token %s" (Token.show t))
+    | t -> In.was_expecting_but_got "a letter" t
     )
   done
 
@@ -80,7 +80,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let options = [
      "-", Arg.Clear vflag,
      " non-interactive mode (opposite of verbose)";
-    (* 'w' will write to stdout; useful for filters and pipelines *)
+    (* when '-o', command 'w' will write to stdout (useful for filters) *)
      "-o", Arg.Set oflag,
      " write output to standard output instead of modifying the file";
 

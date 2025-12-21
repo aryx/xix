@@ -18,12 +18,14 @@ let putst (e : Env.t) (str : string) : unit =
   putchr e '\n';
   ()
 
+(* origin: put shell string? *)
+let putshst (e : Env.t) (str : string) : unit =
+  (* no diff between rune and chars in oed *)
+  putst e str
+
 let rec putd (e : Env.t) : unit =
   let r = e.count mod 10 in
   e.count <- e.count / 10;
   if e.count > 0
   then putd e;
   putchr e (Char.chr (Char.code '0' + r))
-
-let printcom (_e : Env.t) : unit =
-  failwith "TODO: print_com"

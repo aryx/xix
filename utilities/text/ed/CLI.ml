@@ -34,23 +34,31 @@ let commands caps (e : Env.t) : unit =
         e.pflag <- false;
         e.addr1 <- e.dot;
         e.addr2 <- e.dot;
-        Out.printcom e;
+        Commands.printcom e;
     end;
+
+    (* TODO: set addr1, addr2 depending on user input *)
+    e.addr2 <- e.dot;
+    e.addr1 <- e.addr2;
 
     let t  = In.token e in
     (match t with
+
     | T.Letter c ->
       (match c with
-     
-      | 'a' -> failwith "TODO: a"
+      | 'p' | 'P' ->
+         In.newline e;
+         Commands.printcom e;
       | 'r' -> 
           let file : Fpath.t = In.filename e c in
           Commands.read caps e file      
+      | 'a' -> failwith "TODO: a"
+      | 'i' -> failwith "TODO: i"
       (* new: *)
       | 'X' -> 
          In.newline e;
          Unix.fsync e.tfile;
-         Logs.info (fun m -> m "env = %s\ntfile content =\n%s"
+         Logs.app (fun m -> m "env = %s\ntfile content =\n%s"
                     (Env.show e)
                     (FS.cat caps Env.tfname |> String.concat "\n"));
       | c -> failwith (spf "unsupported command '%c'" c)
@@ -59,6 +67,18 @@ let commands caps (e : Env.t) : unit =
        * doing some 'continue' which we can't in OCaml so
        * better not use Error.error here by default.
        *)
+
+    (* TODO: even regular ed seems not do work for newline *)
+    | T.Newline ->
+        (* print when no command specified, as in 1\n *)
+        (* TODO: if a1 = None *)
+        let a1 = e.dot + 1 in
+        e.addr2 <- a1;
+        e.addr1 <- a1;
+        
+        (* TODO: if lastsep = ';' *)
+        Commands.printcom e;
+
     | T.EOF ->
        (* not raise (Exit.ExitCode 0) because we need to get to quit()! *)
        done_ := true

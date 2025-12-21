@@ -51,10 +51,12 @@ type t = {
   mutable dot: lineno;
   (* last line (dollar) *)
   mutable dol: lineno;
+
   (* alt: separate "range" type *)
   (* for 1,3p commands, those are "cursors" *)
   mutable addr1: lineno;
   mutable addr2: lineno;
+  mutable given: bool;
 
   (* for 'w', 'r', 'f' *)
   mutable savedfile: Fpath.t option;
@@ -111,6 +113,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
     dol = 0;
     addr1 = 0;
     addr2 = 0;
+    given = false;
 
     savedfile;
     fchange = false;

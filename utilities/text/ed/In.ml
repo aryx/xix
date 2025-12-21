@@ -32,7 +32,8 @@ let token (e : Env.t) : Token.t =
 
 let newline (e : Env.t) : unit =
   match token e with
-  | T.Newline -> ()
+  | T.Newline | T.EOF -> ()
+  (* TODO: if special chars pln ? *)
   | t -> was_expecting_but_got "newline" t
 
 let filename (e : Env.t) (cmd : char) : Fpath.t =

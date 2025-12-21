@@ -25,6 +25,11 @@ let squeeze (e : Env.t) (i : lineno) : unit =
       Error.e "";
   end
 
+let nonzero (e : Env.t) =
+  squeeze e 1
+
+
+
 (* ed: "exit" file =~ close file *)
 let exfile (e : Env.t) : unit =
   (* TODO: if om == OWRITE *)
@@ -32,6 +37,12 @@ let exfile (e : Env.t) : unit =
       Out.putd e;
       Out.putchr e '\n';
   end
+
+let string_of_chars (xs : char list) : string = 
+  let b = Bytes.create (List.length xs) in
+  List.iteri (Bytes.set b) xs;
+  Bytes.to_string b
+
 
 (* will return the string with ending \n or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
@@ -79,6 +90,23 @@ let putline (e : Env.t) (line : string) : file_offset =
   Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
   e.tline <- e.tline + len;
   old_tline
+
+let getline (e : Env.t) (tl : file_offset)  : string =
+  Unix.lseek e.tfile tl Unix.SEEK_SET |> ignore;
+  (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
+   * need to close it which unfortunately also close the file_descr so
+   * we do our own input_line below.
+   *)
+  let bytes = Bytes.of_string " " in
+  let rec aux acc =
+    let n = Unix.read e.tfile bytes 0 1 in
+    let c : char = Bytes.get bytes 0 in
+    if n = 1 && c <> '\n'
+    then aux (c::acc)
+    else string_of_chars (List.rev acc)
+  in
+  aux []
+
 
 (* f can be getfile() above or In.gettty() *)
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
@@ -141,3 +169,19 @@ let quit (e : Env.t) : unit =
   (* alt: could also Unix.close e.tfile *)
   Sys.remove !!Env.tfname;
   raise (Exit.ExitCode 0)
+
+let printcom (e : Env.t) : unit =
+  nonzero e;
+
+  let a1 = ref e.addr1 in
+  let rec aux () =
+    (* TODO: if listn *)
+    Out.putshst e (getline e e.zero.(!a1));
+    incr a1;
+    if !a1 <= e.addr2
+    then aux ();
+  in
+  aux ();
+  e.dot <- e.addr2;
+  (* TODO: reset flags *)
+  ()

@@ -4,7 +4,8 @@ module T = Token
 (* Reading mostly commands from stdin *)
 
 let unexpected (t : Token.t) =
-  failwith (spf "unexpected token: %s" (Token.show t))  
+  Logs.err (fun m -> m "unexpected token: %s" (Token.show t));
+  Error.e ""
 
 let token (e : Env.t) : Token.t =
   let t = Lexer.token e.stdin in

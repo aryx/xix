@@ -25,9 +25,6 @@ type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
 (* Main algorithm *)
 (*****************************************************************************)
 
-let print_com (_e : Env.t) : unit =
-  failwith "TODO: print_com"
-
 let commands caps (e : Env.t) : unit =
   let done_ = ref false in
 
@@ -37,7 +34,7 @@ let commands caps (e : Env.t) : unit =
         e.pflag <- false;
         e.addr1 <- e.dot;
         e.addr2 <- e.dot;
-        print_com e;
+        Out.printcom e;
     end;
 
     let t  = In.token e in
@@ -55,7 +52,7 @@ let commands caps (e : Env.t) : unit =
        * better not use Error.error here by default.
        *)
     | T.EOF ->
-       (* not raise (Exit.ExitCode 0) because we need to get to quit! *)
+       (* not raise (Exit.ExitCode 0) because we need to get to quit()! *)
        done_ := true
     | t -> failwith (spf "unexpected token %s" (Token.show t))
     )
@@ -67,7 +64,7 @@ let commands caps (e : Env.t) : unit =
 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let args = ref [] in
-  (* in "interactive/verbose" mode by default *)
+  (* "verbose(interactive)" mode is set by default *)
   let vflag = ref true in
   let oflag = ref false in
   let level = ref (Some Logs.Warning) in
@@ -79,7 +76,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      "-o", Arg.Set oflag,
      " write output to standard output instead of modifying the file";
 
-     (* new: *)
+     (* new: this is verbose *logging*, different from interactive mode *)
      "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose logging mode";
      "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
@@ -104,9 +101,11 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (match !args with
   | [] -> ()
   | [file] -> 
-        env.savedfile <- Some (Fpath.v file);
-        first_command := Some 'r'
-  | _::_::_ -> failwith "too many arguments" 
+      env.savedfile <- Some (Fpath.v file);
+      first_command := Some 'r'
+  | _::_::_ -> 
+      (* stricter: *)
+      failwith "too many arguments" 
   );
   if !oflag then first_command := Some 'a';
   Logs.info (fun m -> m "env = %s" (Env.show env));
@@ -114,14 +113,12 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   while true do
     (* when neither commands() nor quit() raise Error, then
      * quit() will proceed and raise Exit.ExitCode which
-     * will exit the loop (and be caught in Main._)
+     * will exit this loop (and be caught in Main._)
      *)
     try (
         commands caps env;
         Commands.quit env;
     )
-    with 
-      Error.Error s -> 
-        Error.error_1 env ("?" ^ s)
+    with Error.Error s -> Error.error_1 env ("?" ^ s)
   done;
   Exit.OK

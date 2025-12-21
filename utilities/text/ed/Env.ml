@@ -24,8 +24,9 @@ type file_offset = int
 type lineno = int
 [@@deriving show]
 
+(* The globals *)
 type t = {
-  (* to read the commands from *)
+  (* to read the user commands from (and also line input in 'a'/'i') *)
   stdin: Lexing_.lexbuf;
   (* stdout unless oflag is set in which case it's stderr *)
   out: out_channel [@printer fun fmt _ -> Format.fprintf fmt "<out_channel>"];
@@ -49,13 +50,13 @@ type t = {
   mutable addr1: lineno;
   mutable addr2: lineno;
 
-  (* for w, r, f *)
+  (* for 'w', 'r', 'f' *)
   mutable savedfile: Fpath.t option;
   (* did the buffer changed (mostly tested with dol > 0) *)
   mutable fchange: bool;
-  (* count #chars read, or number of lines; displayed by Out.putd *)
+  (* count #chars read, or number of lines; displayed by Out.putd() *)
   mutable count: int;
-  (* set by ? effect is to print_com() in commands () before each command  *)
+  (* set by ? effect is to Out.printcom() in commands () before the next cmd *)
   mutable pflag: bool;
 
   (* verbose (a.k.a. interactive) flag, cleared by 'ed -' *)
@@ -73,7 +74,9 @@ type t = {
 
 let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
   let out = if oflag then Console.stderr caps else Console.stdout caps in
-  (* will be overwritten possibly in the caller by argv[1] *)
+  (* will be overwritten possibly in the caller by argv[1] 
+   * TODO: works on Linux? /fd/1 exists?
+   *)
   let savedfile = if oflag then Some (Fpath.v "/fd/1") else None in
   { 
     stdin = Lexing.from_channel (Console.stdin caps);
@@ -87,7 +90,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
         (* alt: just no try and rely on default exn and backtrace *)
         (* alt: call Out.putxxx funcs but mutual recursion *)
         output_string out "?TMP\n";
-        (* ed was doing exits(nil) = exit 0 *)
+        (* ed was doing exits(nil) = exit 0 so we do the same *)
         raise (Exit.ExitCode 0)
        );
     zero = Array.make 10 0;
@@ -104,5 +107,3 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
     vflag = if oflag then false else vflag;
     oflag;
   }
-
-(* TODO? type cmd = Read of range | ... ? *)

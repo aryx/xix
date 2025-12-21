@@ -1,11 +1,22 @@
 open Common
 module T = Token
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
 (* Reading mostly commands from stdin *)
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
 
 let unexpected (t : Token.t) =
   Logs.err (fun m -> m "unexpected token: %s" (Token.show t));
   Error.e ""
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 let token (e : Env.t) : Token.t =
   let t = Lexer.token e.stdin in
@@ -42,3 +53,10 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
       | _ -> Error.e ""
       )
   | _ -> Error.e ""
+
+
+(* Read a line from stdin. Return None when the user entered ".\n" on a single
+ * line meaning the end of interactive input.
+ *)
+let gettty (_e : Env.t) : string option =
+  failwith "TODO: getty"

@@ -12,3 +12,6 @@ let putst (e : Env.t) (str : string) : unit =
    * TODO: e.col <- 0
    *)
   output_string e.out (spf "%s\n" str)
+
+let printcom (_e : Env.t) : unit =
+  failwith "TODO: print_com"

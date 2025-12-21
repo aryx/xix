@@ -15,7 +15,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 * -----------------------------------------------------------
 
-* 0.17 (Q4 2025) (ELF Linux, oia v0, ova/ovl v0, o5c/ovc/oic v0, oar/onm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, ocat/opwd/owc/... utilities, resume windows and kernel)
+* 0.17 (Q4 2025) (ELF Linux, oia v0, ova/ovl v0, o5c/ovc/oic v0, oar/onm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, ocat/opwd/owc/oed/... utilities, resume windows and kernel)
 
 ** general
 - renamed all binaries with an 'o' prefix (for ocaml): 
@@ -28,7 +28,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 - port va (plan9 mips assembler) to OCaml (now called ova)
 - partial port of vl (plan9 mips linker) to OCaml (now called ovl)
   enough for hello_linux_mips.exe to work! (and also exit_linux_mips.exe).
-- port ar to OCaml (v0) (now called oar)
+- port ar to OCaml (v0) (now called oar) using simpler archive format
 - port nm to OCaml (v0) (now called onm)
 - port of the -p and -p_count (was called -p -1 in kencc) basic profiling
   instrumentation in o5l/ovl/... (the code is now mostly generic)
@@ -51,6 +51,7 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 
 ** utilities
 - new utilities/ with cat, pwd, and wc OCaml port (called ocat, opwd, ...)
+- new utilities/text/ed port (v0)
 
 ** testinfra
 - Dockerfile.light can now compile also 5a/5c/5l/cpp

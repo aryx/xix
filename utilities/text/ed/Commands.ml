@@ -165,6 +165,10 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
       Logs.err (fun m -> m "Sys_error: %s" str);
       Error.e !!file
 
+(* 'w' *)
+let write (_e : Env.t) =
+  failwith "TODO: write"
+
 
 (* 'q' *)
 let quit (e : Env.t) : unit =

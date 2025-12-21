@@ -82,6 +82,9 @@ let commands caps (e : Env.t) : unit =
           Commands.read caps e file      
 
       (* writing *)
+      | 'w' | 'W' ->
+         if c = 'W' then e.wrapp <- true;
+         Commands.write e;
 
       (* modifying *)
 

@@ -60,8 +60,11 @@ type t = {
 
   (* for 'w', 'r', 'f' *)
   mutable savedfile: Fpath.t option;
+  (* write append, for 'W' *)
+  mutable wrapp : bool;
   (* did the buffer changed (mostly tested with dol > 0) *)
   mutable fchange: bool;
+
   (* count #chars read, or number of lines; displayed by Out.putd() *)
   mutable count: int;
   (* set by ?? effect is to Out.printcom() in commands () before the next cmd *)
@@ -117,6 +120,7 @@ let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
 
     savedfile;
     fchange = false;
+    wrapp = false;
     count = 0;
     pflag = false;
     col = 0;

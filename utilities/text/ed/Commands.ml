@@ -25,9 +25,13 @@ let squeeze (e : Env.t) (i : lineno) : unit =
       Error.e "";
   end
 
-(* was called exfile *)
-let exit_file (_e : Env.t) : unit =
-  failwith "TODO: exit_file"
+(* ed: "exit" file =~ close file *)
+let exfile (e : Env.t) : unit =
+  (* TODO: if om == OWRITE *)
+  if e.vflag then begin
+      Out.putd e;
+      Out.putchr e '\n';
+  end
 
 (* will return the string with ending \n or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
@@ -67,9 +71,14 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
 *)
 
 (* store line in tfile and return its offset *)
-let putline (e : Env.t) (_line : string) : file_offset =
+let putline (e : Env.t) (line : string) : file_offset =
   e.fchange <- true;
-  failwith "TODO: putline"
+  let old_tline = e.tline in
+  Unix.lseek e.tfile e.tline Unix.SEEK_SET |> ignore;
+  let len = String.length line in
+  Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
+  e.tline <- e.tline + len;
+  old_tline
 
 (* f can be getfile() above or In.gettty() *)
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
@@ -113,7 +122,7 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
         squeeze e 0;
         let change = (e.dol != 0) in
         append e (getfile e chan) e.addr2 |> ignore;
-        exit_file e;
+        exfile e;
         e.fchange <- change;
         
     )

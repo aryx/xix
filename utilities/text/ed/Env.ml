@@ -40,7 +40,7 @@ type t = {
    *)
   tfile : Unix_.file_descr;
   (* current write file offset in tfile to append new lines *)
-  tline : file_offset;
+  mutable tline : file_offset;
 
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel.

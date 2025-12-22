@@ -26,7 +26,7 @@ type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
 (* Main algorithm *)
 (*****************************************************************************)
 
-let commands caps (e : Env.t) : unit =
+let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
   let done_ = ref false in
 
   while not !done_ do

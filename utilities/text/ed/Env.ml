@@ -85,7 +85,8 @@ type t = {
 (* init() *)
 (*****************************************************************************)
 
-let init (caps : < Cap.stdin; ..>) (vflag : bool) (oflag : bool) : t =
+let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
+     (vflag : bool) (oflag : bool) : t =
   let out = if oflag then Console.stderr caps else Console.stdout caps in
   (* will be overwritten possibly in the caller by argv[1] 
    * TODO: works on Linux? /fd/1 exists?

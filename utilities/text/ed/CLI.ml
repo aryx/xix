@@ -84,6 +84,7 @@ let commands caps (e : Env.t) : unit =
       (* writing *)
       | 'w' | 'W' ->
          if c = 'W' then e.wrapp <- true;
+         (* TODO: if [wW][qQ] *)
          let file : Fpath.t = In.filename e c in
          Commands.write caps e file;
 

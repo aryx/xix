@@ -40,7 +40,9 @@ type mode = READ | WRITE
 
 (* ed: "exit" file =~ close file *)
 let exfile (e : Env.t) (_m : mode) : unit =
-  (* TODO: if om == OWRITE *)
+  (* ed: is using passed mode to flush if WRITE but no need in ocaml
+   * because closing the channel will flush any remaining io
+   *)
   if e.vflag then begin
       Out.putd e;
       Out.putchr e '\n';
@@ -125,9 +127,9 @@ let putfile (e : Env.t) (chan : Chan.o) : unit =
   let a1 = ref e.addr1 in
   let rec aux () =
     let l = getline e e.zero.(!a1) ^ "\n" in
+    incr a1;
     e.count <- e.count + String.length l;
     output_string chan.oc l;
-    incr a1;
     if !a1 <= e.addr2
     then aux ()
   in
@@ -192,17 +194,17 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
 let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
   try 
     file |> FS.with_open_out caps (fun chan ->
-        (* TODO: when wq *)
+        (* TODO: when wq (or do in caller in CLI.ml) *)
         setwide e;
         squeeze e (if e.dol > 0 then 1 else 0);
-        (* TODO: e.wrapp open without create mode? *)
 
+        (* TODO: e.wrapp open without create mode? *)
         e.wrapp <- false;
         if e.dol > 0
         then putfile e chan;
 
         exfile e WRITE;
-        if e.addr1 = 1 && e.addr2 = e.dol
+        if e.addr1 <= 1 && e.addr2 = e.dol
         then e.fchange <- false;
         (* TODO: when wq *)
     )
@@ -211,18 +213,15 @@ let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
     Error.e !!file
 
 
-
-(* 'q' *)
-let quit (e : Env.t) : unit =
-  if e.vflag && e.fchange && e.dol != 0 then begin
-      (* so a second quit will actually quit *)
-      e.fchange <- false;
-      Logs.warn (fun m -> m "trying to quit with modified buffer");
-      Error.e ""
+(* used for 'a' and 'i' *)
+let add (e : Env.t) (i : int) =
+  if i <> 0 && (e.given || e.dol > 0) then begin
+     e.addr1 <- e.addr1 - 1;
+     e.addr2 <- e.addr2 - 1;
   end;
-  (* alt: could also Unix.close e.tfile *)
-  Sys.remove !!Env.tfname;
-  raise (Exit.ExitCode 0)
+  squeeze e 0;
+  In.newline e;
+  append e (In.gettty e) e.addr2 |> ignore
 
 
 (* 'p' *)
@@ -242,14 +241,18 @@ let printcom (e : Env.t) : unit =
   (* TODO: reset flags *)
   ()
 
-
-(* used for 'a' and 'i' *)
-let add (e : Env.t) (i : int) =
-  if i <> 0 && (e.given || e.dol > 0) then begin
-     e.addr1 <- e.addr1 - 1;
-     e.addr2 <- e.addr2 - 1;
+(* 'q' *)
+let quit (e : Env.t) : unit =
+  if e.vflag && e.fchange && e.dol != 0 then begin
+      (* so a second quit will actually quit *)
+      e.fchange <- false;
+      Logs.warn (fun m -> m "trying to quit with modified buffer");
+      Error.e ""
   end;
-  squeeze e 0;
-  In.newline e;
-  append e (In.gettty e) e.addr2 |> ignore
+  (* alt: could also Unix.close e.tfile *)
+  Sys.remove !!Env.tfname;
+  raise (Exit.ExitCode 0)
+
+
+
 

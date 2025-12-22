@@ -36,24 +36,54 @@ let setnoaddr (e : Env.t) =
       Error.e "";
   end
 
+type mode = READ | WRITE
+
 (* ed: "exit" file =~ close file *)
-let exfile (e : Env.t) : unit =
+let exfile (e : Env.t) (_m : mode) : unit =
   (* TODO: if om == OWRITE *)
   if e.vflag then begin
       Out.putd e;
       Out.putchr e '\n';
   end
 
-let string_of_chars (xs : char list) : string = 
-  let b = Bytes.create (List.length xs) in
-  List.iteri (Bytes.set b) xs;
-  Bytes.to_string b
+(*****************************************************************************)
+(* getline/putline (from/to tfile) *)
+(*****************************************************************************)
+
+(* store line in tfile and return its offset *)
+let putline (e : Env.t) (line : string) : file_offset =
+  e.fchange <- true;
+  let old_tline = e.tline in
+  Unix.lseek e.tfile e.tline Unix.SEEK_SET |> ignore;
+  let len = String.length line in
+  Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
+  e.tline <- e.tline + len;
+  old_tline
+
+(* dual of putline(), retrieve line in tfile (without trailing '\n') *)
+let getline (e : Env.t) (tl : file_offset)  : string =
+  Unix.lseek e.tfile tl Unix.SEEK_SET |> ignore;
+  (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
+   * need to close it which unfortunately also close the file_descr so
+   * we do our own adhoc input_line below.
+   *)
+  let bytes = Bytes.of_string " " in
+  let rec aux acc =
+    let n = Unix.read e.tfile bytes 0 1 in
+    let c : char = Bytes.get bytes 0 in
+    if n = 1 && c <> '\n'
+    then aux (c::acc)
+    (* no need to add the \n, putshst will add it *)
+    else String_.of_chars (List.rev acc)
+  in
+  aux []
+
 
 (*****************************************************************************)
 (* getfile/putfile (from/to savedfile) *)
 (*****************************************************************************)
 
-(* will return the string with ending \n or None when reached EOF *)
+(* will return one line with ending \n or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
   (* alt: use Stdlib.input_line which does some extra magic around newlines
    * and EOF we want, because ed also uniformize the lack of newline before EOF
@@ -90,38 +120,18 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
     ...
 *)
 
-(*****************************************************************************)
-(* getline/putline (from/to tfile) *)
-(*****************************************************************************)
-
-(* store line in tfile and return its offset *)
-let putline (e : Env.t) (line : string) : file_offset =
-  e.fchange <- true;
-  let old_tline = e.tline in
-  Unix.lseek e.tfile e.tline Unix.SEEK_SET |> ignore;
-  let len = String.length line in
-  Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
-  e.tline <- e.tline + len;
-  old_tline
-
-(* dual of putline(), retrieve line in tfile (without trailing '\n') *)
-let getline (e : Env.t) (tl : file_offset)  : string =
-  Unix.lseek e.tfile tl Unix.SEEK_SET |> ignore;
-  (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
-   * need to close it which unfortunately also close the file_descr so
-   * we do our own adhoc input_line below.
-   *)
-  let bytes = Bytes.of_string " " in
-  let rec aux acc =
-    let n = Unix.read e.tfile bytes 0 1 in
-    let c : char = Bytes.get bytes 0 in
-    if n = 1 && c <> '\n'
-    then aux (c::acc)
-    (* no need to add the \n, putshst will add it *)
-    else string_of_chars (List.rev acc)
+(* dual of getfile() but this time writing all the lines, not just one *)
+let putfile (e : Env.t) (chan : Chan.o) : unit =
+  let a1 = ref e.addr1 in
+  let rec aux () =
+    let l = getline e e.zero.(!a1) ^ "\n" in
+    e.count <- e.count + String.length l;
+    output_string chan.oc l;
+    incr a1;
+    if !a1 <= e.addr2
+    then aux ()
   in
-  aux []
-
+  aux ()
 
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
@@ -170,7 +180,7 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
         squeeze e 0;
         let change = (e.dol != 0) in
         append e (getfile e chan) e.addr2 |> ignore;
-        exfile e;
+        exfile e READ;
         e.fchange <- change;
     )
   with Sys_error str ->
@@ -179,8 +189,27 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
 
 
 (* 'w' *)
-let write (_e : Env.t) =
-  failwith "TODO: write"
+let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
+  try 
+    file |> FS.with_open_out caps (fun chan ->
+        (* TODO: when wq *)
+        setwide e;
+        squeeze e (if e.dol > 0 then 1 else 0);
+        (* TODO: e.wrapp open without create mode? *)
+
+        e.wrapp <- false;
+        if e.dol > 0
+        then putfile e chan;
+
+        exfile e WRITE;
+        if e.addr1 = 1 && e.addr2 = e.dol
+        then e.fchange <- false;
+        (* TODO: when wq *)
+    )
+  with Sys_error str ->
+    Logs.err (fun m -> m "Sys_error: %s" str);
+    Error.e !!file
+
 
 
 (* 'q' *)

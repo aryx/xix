@@ -15,6 +15,8 @@ type byte = char
 (* builtin since OCaml 4.02 (bytes are mutable strings) *)
 
 exception Todo
+
+(* alt: use assert false (Martin) *)
 exception Impossible of string
 
 (*****************************************************************************)
@@ -152,6 +154,11 @@ let drop_suffix n s =
   let len = String.length s in
   if n >= len then ""
   else String.sub s 0 (len - n)
+
+let of_chars (xs : char list) : string = 
+  let b = Bytes.create (List.length xs) in
+  List.iteri (Bytes.set b) xs;
+  Bytes.to_string b
 
 end
 

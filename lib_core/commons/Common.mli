@@ -11,6 +11,7 @@ exception Impossible of string
 (* Printing *)
 (*****************************************************************************)
 
+(* shorter than Printf.sprintf *)
 val spf : ('a, unit, string) format -> 'a
 
 module Fmt_ : 
@@ -51,11 +52,13 @@ module String_ :
      * as "<str ... (<n> bytes)"
      *)
     val show_max: int (* max_len *) -> string -> string
-    (* those functions doe not raise exn; if the integer is higher than the
+    (* those functions do not raise exn; if the integer is higher than the
      * length of the string, the empty string is returned.
      *)
     val drop_prefix: int -> string -> string
     val drop_suffix: int -> string -> string
+
+    val of_chars : char list -> string
   end
 
 (*****************************************************************************)

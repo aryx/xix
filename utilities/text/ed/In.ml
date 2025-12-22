@@ -78,5 +78,8 @@ let gety (e : Env.t) : string =
 let gettty (e : Env.t) () : string option =
   let s = gety e in
   if s = ".\n"
-  then None
+  then begin
+    Logs.info (fun m -> m "end of input, back to ed");
+    None
+  end
   else Some s

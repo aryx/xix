@@ -90,15 +90,19 @@ let commands caps (e : Env.t) : unit =
 
       (* modifying *)
 
-      | 'a' -> Commands.add e 0
-      | 'i' -> Commands.add e (-1)
+      | 'a' -> 
+         Logs.info (fun m -> m "append mode");
+         Commands.add e 0
+      | 'i' -> 
+         Logs.info (fun m -> m "insert mode");
+         Commands.add e (-1)
 
       (* other *)
       | 'q' | 'Q' ->
          if c = 'Q' then e.fchange <- false;
          Commands.setnoaddr e;
          In.newline e;
-         Commands.quit e;
+         Commands.quit caps e;
 
       | c -> failwith (spf "unsupported command '%c'" c)
       );
@@ -175,7 +179,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
       failwith "too many arguments" 
   );
   if !oflag then first_command := Some 'a';
-  Logs.info (fun m -> m "env = %s" (Env.show env));
+  Logs.debug (fun m -> m "env = %s" (Env.show env));
 
   while true do
     (* when neither commands() nor quit() raise Error, then
@@ -184,7 +188,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      *)
     try (
         commands caps env;
-        Commands.quit env;
+        Commands.quit caps env;
     )
     with Error.Error s -> Error.error_1 env ("?" ^ s)
   done;

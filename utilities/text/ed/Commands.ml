@@ -41,7 +41,7 @@ type mode = READ | WRITE
 (* ed: "exit" file =~ close file *)
 let exfile (e : Env.t) (_m : mode) : unit =
   (* ed: is using passed mode to flush if WRITE but no need in ocaml
-   * because closing the channel will flush any remaining io
+   * because closing the channel will flush any remaining IO.
    *)
   if e.vflag then begin
       Out.putd e;
@@ -85,7 +85,7 @@ let getline (e : Env.t) (tl : file_offset)  : string =
 (* getfile/putfile (from/to savedfile) *)
 (*****************************************************************************)
 
-(* will return one line with ending \n or None when reached EOF *)
+(* will return one line (with ending '\n') or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
   (* alt: use Stdlib.input_line which does some extra magic around newlines
    * and EOF we want, because ed also uniformize the lack of newline before EOF
@@ -124,16 +124,11 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
 
 (* dual of getfile() but this time writing all the lines, not just one *)
 let putfile (e : Env.t) (chan : Chan.o) : unit =
-  let a1 = ref e.addr1 in
-  let rec aux () =
-    let l = getline e e.zero.(!a1) ^ "\n" in
-    incr a1;
+  for a1 = e.addr1 to e.addr2 do
+    let l = getline e e.zero.(a1) ^ "\n" in
     e.count <- e.count + String.length l;
     output_string chan.oc l;
-    if !a1 <= e.addr2
-    then aux ()
-  in
-  aux ()
+  done
 
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
@@ -174,6 +169,25 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
 (* Commands *)
 (*****************************************************************************)
 
+(* ------------------------------------------------------------------------- *)
+(* Inspecting *)
+(* ------------------------------------------------------------------------- *)
+
+(* 'p' *)
+let printcom (e : Env.t) : unit =
+  nonzero e;
+  for a1 = e.addr1 to e.addr2 do
+    (* TODO: if listn *)
+    Out.putshst e (getline e e.zero.(a1));
+  done;
+  e.dot <- e.addr2;
+  (* TODO: reset flags *)
+  ()
+
+(* ------------------------------------------------------------------------- *)
+(* Reading *)
+(* ------------------------------------------------------------------------- *)
+
 (* 'r' *)
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
   try 
@@ -189,6 +203,9 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
     Logs.err (fun m -> m "Sys_error: %s" str);
     Error.e !!file
 
+(* ------------------------------------------------------------------------- *)
+(* Writing *)
+(* ------------------------------------------------------------------------- *)
 
 (* 'w' *)
 let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
@@ -212,6 +229,9 @@ let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
     Logs.err (fun m -> m "Sys_error: %s" str);
     Error.e !!file
 
+(* ------------------------------------------------------------------------- *)
+(* Modifying *)
+(* ------------------------------------------------------------------------- *)
 
 (* used for 'a' and 'i' *)
 let add (e : Env.t) (i : int) =
@@ -223,26 +243,12 @@ let add (e : Env.t) (i : int) =
   In.newline e;
   append e (In.gettty e) e.addr2 |> ignore
 
-
-(* 'p' *)
-let printcom (e : Env.t) : unit =
-  nonzero e;
-
-  let a1 = ref e.addr1 in
-  let rec aux () =
-    (* TODO: if listn *)
-    Out.putshst e (getline e e.zero.(!a1));
-    incr a1;
-    if !a1 <= e.addr2
-    then aux ();
-  in
-  aux ();
-  e.dot <- e.addr2;
-  (* TODO: reset flags *)
-  ()
+(* ------------------------------------------------------------------------- *)
+(* Other *)
+(* ------------------------------------------------------------------------- *)
 
 (* 'q' *)
-let quit (e : Env.t) : unit =
+let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   if e.vflag && e.fchange && e.dol != 0 then begin
       (* so a second quit will actually quit *)
       e.fchange <- false;
@@ -250,7 +256,7 @@ let quit (e : Env.t) : unit =
       Error.e ""
   end;
   (* alt: could also Unix.close e.tfile *)
-  Sys.remove !!Env.tfname;
+  FS.remove caps Env.tfname;
   raise (Exit.ExitCode 0)
 
 

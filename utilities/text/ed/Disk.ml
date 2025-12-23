@@ -16,6 +16,9 @@ let putline (e : Env.t) (line : string) : Env.file_offset =
   e.fchange <- true;
   let old_tline = e.tline in
   Unix.lseek e.tfile e.tline Unix.SEEK_SET |> ignore;
+  (* alt: could use a different terminator like '\0' in C but simpler to
+   * use \n *)
+  let line = line ^ "\n" in
   let len = String.length line in
   Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
   e.tline <- e.tline + len;
@@ -44,7 +47,7 @@ let getline (e : Env.t) (tl : Env.file_offset)  : string =
 (* getfile/putfile (from/to savedfile) *)
 (*****************************************************************************)
 
-(* will return one line (with ending '\n') or None when reached EOF *)
+(* will return one line (without trailing '\n') or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
   (* alt: use Stdlib.input_line which does some extra magic around newlines
    * and EOF we want, because ed also uniformize the lack of newline before EOF
@@ -53,8 +56,9 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
    * than input_line and use input_char directly.
    *)
   try 
-    let s = input_line chan.ic ^ "\n" in
-    e.count <- e.count + String.length s;
+    (* 's' will not have the trailing '\n' *)
+    let s = input_line chan.ic in
+    e.count <- e.count + String.length s + 1 (* to count the new line *);
     Some s
   with End_of_file -> None
   

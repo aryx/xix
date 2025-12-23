@@ -15,7 +15,8 @@ module T = Token
 
 let newline (e : Env.t) : unit =
   match Parser.consume e.in_ with
-  | T.Newline | T.EOF -> ()
+  | T.Newline -> ()
+  | T.EOF -> ()
   (* TODO: if special chars pln ? *)
   | t -> Parser.was_expecting_but_got "newline" t
 
@@ -49,18 +50,19 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
       )
   | t -> Parser.was_expecting_but_got "a newline or space and filename" t
 
+(* return a line (without trailing '\n') *)
 let gety (e : Env.t) : string =
   Lexer.line e.in_.stdin
   
 
-(* Read a line from stdin. Return None when the user entered ".\n" on a single
+(* Read a line from stdin. Return None when the user entered "." on a single
  * line meaning the end of interactive input.
  * This has a similar interface to getfile() so it can be passed to
  * append().
  *)
 let gettty (e : Env.t) () : string option =
   let s = gety e in
-  if s = ".\n"
+  if s = "."
   then begin
     Logs.info (fun m -> m "end of input, back to ed");
     None

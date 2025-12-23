@@ -72,7 +72,7 @@ and regexp delim = parse
 (* Other rules *)
 (*****************************************************************************)
 and line = parse
-  | [^ '\n' ]* '\n' { Lexing.lexeme lexbuf }
+  | ([^ '\n' ]* as s) '\n' { s }
   | eof { failwith "eof" (* alt: None? *) }
 
 and filename = parse

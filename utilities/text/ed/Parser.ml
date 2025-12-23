@@ -8,7 +8,7 @@ module T = Token
 (*****************************************************************************)
 (* Parsing user input using the lexer.
  *
- * alt: yacc, but overkill; recursive descent seems simpler for ed use case.
+ * alt: yacc, but overkill; peek/consume tokens seems simpler for ed use case.
  *)
 
 (*****************************************************************************)
@@ -125,12 +125,15 @@ let parse_address (st : state) : A.t =
  * it seems equivalent to "1,$" or ".,$" but I'm not sure
  *)
 let parse_address_range (st : state) : A.range =
+  let t1 = peek st in
+
   (* optional first address *)
-  let first =
-    match peek st with
+  let first : A.t option =
+    match t1 with
     | T.Plus | T.Minus | T.Caret
     | T.Dot | T.Dollar | T.Int _ | T.Mark _ | T.Slash _ | T.Question _
       ->
+        (* this will consume some tokens in st *)
         Some (parse_address st)
     | T.Comma | T.Semicolon ->
         None
@@ -138,16 +141,28 @@ let parse_address_range (st : state) : A.range =
         None
   in
 
-  match peek st with
-  | T.Comma ->
+  let t2 = peek st in
+  match t2 with
+  | T.Comma | T.Semicolon ->
       ignore (consume st);
-      (* TODO: parse_address_opt to accept just "," ? *)
-      let second = parse_address st in
-      A.{ addr1 = first; addr2 = second; given = true; set_dot = false; }
-  | T.Semicolon ->
-      ignore (consume st);
-      let second = parse_address st in
-      A.{ addr1 = first; addr2 = second; given = true; set_dot = true; }
+      let second = 
+        match peek st with
+        | T.Plus | T.Minus | T.Caret
+          | T.Dot | T.Dollar | T.Int _ | T.Mark _ | T.Slash _ | T.Question _
+          -> parse_address st 
+        (* a missing second address default to '$' *)
+        | T.EOF | T.Spaces | T.Newline | T.Char _ | T.Comma | T.Semicolon 
+          -> A.Last
+      in
+      A.{
+         (* a missing first address in a range default to '1' so
+          * a range like "," will be parsed as "1,$"
+          *)
+          addr1 = (match first with Some _ -> first | None -> Some (A.Line 1)); 
+          addr2 = second;
+          given = true; 
+          set_dot = (t2 = T.Semicolon);
+         }
   | _ ->
       (* single address or none *)
       (match first with

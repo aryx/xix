@@ -61,9 +61,13 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
     match f () with
     | None -> (* EOF *) !nline
     | Some str ->
-        if e.dol > Array.length e.zero
+        if e.dol + 2 >= Array.length e.zero 
         then begin
-            failwith "TODO: grow array"
+            let oldz = e.zero in
+            let len = Array.length oldz in
+            let newz  = Array.make (len + 512) 0 in
+            Array.blit oldz 0 newz 0 len;
+            e.zero <- newz;
         end;
 
         let tl = Disk.putline e str in

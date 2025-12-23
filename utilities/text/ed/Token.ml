@@ -1,13 +1,16 @@
-type t =
-  | Spaces
-  | Newline
-  | EOF
+(* The tokens *)
 
+type t =
+  | Spaces | Newline | EOF
   (* letter or '=' *)
   | Char of char
   | Int of int
-  | String of string
 
-  | Comma
-  (* TODO: TPlus, TMinus, TPlusPlus, ... *)
+  | Dot | Dollar
+  | Comma | Semicolon
+  
+  | Plus | Minus | Caret
+
+  | Slash of string | Question of string
+  | Mark of char
 [@@deriving show]

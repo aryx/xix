@@ -20,7 +20,26 @@ module T = Token
  *  - clearer error messages (via logging)
 *)
 
-type caps = < Cap.stdin; Cap.stdout; Cap.stderr; Cap.open_in; Cap.open_out >
+type caps = < 
+    Cap.stdin; Cap.stdout; Cap.stderr;
+    Cap.open_in; Cap.open_out;
+  >
+
+(*****************************************************************************)
+(* Helpers *)
+(*****************************************************************************)
+
+(* this will be called from CLI.main() in an handler for the Error exn *)
+let error_1 (e : Env.t) (s : string) : unit =
+  (* TODO: reset globals too? *)
+  Out.putchr e '?';
+  Out.putst e s;
+  ()
+
+(* alt: move in ? Address.ml? *)
+let eval_range (_e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
+  Logs.debug (fun m -> m "range = %s" (Address.show_range r));
+  failwith "TODO: eval_range"
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -38,11 +57,15 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
     end;
 
-    (* TODO: set addr1, addr2 depending on user input *)
-    e.addr2 <- e.dot;
-    e.addr1 <- e.addr2;
+    let range : Address.range = 
+      Parser.parse_address_range e.in_ 
+    in
+    let (addr1, addr2) = eval_range e range in
+    e.addr1 <- addr1;
+    e.addr2 <- addr2;
+    e.given <- range.given;
 
-    let t  = In.token e in
+    let t  = Parser.consume e.in_ in
     (match t with
 
     | T.Char c ->
@@ -125,7 +148,7 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
     | T.EOF ->
        (* not raise (Exit.ExitCode 0) because we need to get to quit()! *)
        done_ := true
-    | t -> In.was_expecting_but_got "a letter" t
+    | t -> Parser.was_expecting_but_got "a letter" t
     )
   done
 
@@ -190,6 +213,6 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         commands caps env;
         Commands.quit caps env;
     )
-    with Error.Error s -> Error.error_1 env ("?" ^ s)
+    with Error.Error s -> error_1 env ("?" ^ s)
   done;
   Exit.OK

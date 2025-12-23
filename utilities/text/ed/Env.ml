@@ -29,7 +29,7 @@ type lineno = int
 (* The globals *)
 type t = {
   (* to read the user commands from (and also line input in 'a'/'i' modes) *)
-  stdin: Lexing_.lexbuf;
+  in_: Parser.state;
   (* stdout unless oflag is set in which case it's stderr *)
   out: Out_channel_.t;
 
@@ -52,8 +52,9 @@ type t = {
   (* last line (dollar) *)
   mutable dol: lineno;
 
-  (* alt: separate "range" type *)
-  (* for 1,3p commands, those are "cursors" *)
+  (* for 1,3p commands. See also Address.range, but here we have
+   * concrete line number, not symbolic "addresses".
+   *)
   mutable addr1: lineno;
   mutable addr2: lineno;
   mutable given: bool;
@@ -93,7 +94,7 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
    *)
   let savedfile = if oflag then Some (Fpath.v "/fd/1") else None in
   { 
-    stdin = Lexing.from_channel (Console.stdin caps);
+    in_ = Parser.init caps;
     out;
 
     tfile =

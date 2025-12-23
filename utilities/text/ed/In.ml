@@ -4,37 +4,20 @@ module T = Token
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Reading mostly commands from stdin *)
-
-(*****************************************************************************)
-(* Error management *)
-(*****************************************************************************)
-
-let was_expecting (expect : string) =
-  Logs.err (fun m -> m "was expecting %s" expect);
-  Error.e ""
-
-let was_expecting_but_got (expect : string) (tok : Token.t) =
-  was_expecting (spf "%s, but got %s" expect (Token.show tok))
-
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
+(* Additional helpers to read from stdin.
+ *
+ * alt: could be merged with Parser.ml
+ *)
 
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
 
-let token (e : Env.t) : Token.t =
-  let t = Lexer.token e.stdin in
-  Logs.debug (fun m -> m "tok = %s" (Token.show t));
-  t
-
 let newline (e : Env.t) : unit =
-  match token e with
+  match Parser.consume e.in_ with
   | T.Newline | T.EOF -> ()
   (* TODO: if special chars pln ? *)
-  | t -> was_expecting_but_got "newline" t
+  | t -> Parser.was_expecting_but_got "newline" t
 
 let filename (e : Env.t) (cmd : char) : Fpath.t =
   (* alt: do it in the caller, clearer; will be incremented
@@ -42,7 +25,7 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
    *)
   e.count <- 0;
 
-  match token e with
+  match Parser.consume e.in_ with
   | T.Newline | T.EOF ->
       (* no file specified, use maybe e.savedfile then *)
       (match e.savedfile with
@@ -53,21 +36,21 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
       | Some file -> file
       )
   | T.Spaces ->
-      let str = Lexer.filename e.stdin in
+      let str = Lexer.filename e.in_.stdin in
       if str = ""
-      then was_expecting "a non empty filename";
-      (match token e with
+      then Parser.was_expecting "a non empty filename";
+      (match Parser.consume e.in_ with
       | T.Newline -> 
             let file = Fpath.v str in
             if e.savedfile = None || cmd = 'e' || cmd = 'f'
             then e.savedfile <- Some file;
             file
-      | t -> was_expecting_but_got "a newline" t
+      | t -> Parser.was_expecting_but_got "a newline" t
       )
-  | t -> was_expecting_but_got "a newline or space and filename" t
+  | t -> Parser.was_expecting_but_got "a newline or space and filename" t
 
 let gety (e : Env.t) : string =
-  Lexer.line e.stdin
+  Lexer.line e.in_.stdin
   
 
 (* Read a line from stdin. Return None when the user entered ".\n" on a single

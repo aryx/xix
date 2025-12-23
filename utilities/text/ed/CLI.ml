@@ -4,6 +4,7 @@ open Fpath_.Operators
 
 open Env
 module T = Token
+module A = Address
 
 (*****************************************************************************)
 (* Prelude *)
@@ -36,10 +37,25 @@ let error_1 (e : Env.t) (s : string) : unit =
   Out.putst e s;
   ()
 
-(* alt: move in ? Address.ml? *)
-let eval_range (_e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
+let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
+  match a with
+  | A.Current -> e.dot
+  | A.Last -> e.dol
+  | A.Line n -> n
+  | A.Mark _ -> failwith "TODO: Mark"
+  | A.SearchFwd _ | A.SearchBwd _ -> failwith "TODO: SearchXxx"
+  | A.Relative (x, n) -> eval_address e x + n
+
+let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
   Logs.debug (fun m -> m "range = %s" (Address.show_range r));
-  failwith "TODO: eval_range"
+
+  let addr2 = eval_address e r.addr2 in
+  let addr1 =
+    match r.addr1 with
+    | None -> addr2
+    | Some a -> eval_address e a
+  in
+  addr1, addr2
 
 (*****************************************************************************)
 (* Main algorithm *)

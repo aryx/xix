@@ -13,21 +13,22 @@ open Common
 (*****************************************************************************)
 
 (* store line in tfile and return its offset *)
-let putline (e : Env.t) (line : string) : Env.file_offset =
+let putline (e : Env.t) (line : string) : Env.tfile_offset =
   e.fchange <- true;
-  let old_tline = e.tline in
-  Unix.lseek e.tfile e.tline Unix.SEEK_SET |> ignore;
+  let Tfile_offset old_tline = e.tline in
+  Unix.lseek e.tfile old_tline Unix.SEEK_SET |> ignore;
   (* alt: could use a different terminator like '\0' in C but simpler to
    * use \n *)
   let line = line ^ "\n" in
   let len = String.length line in
   Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
-  e.tline <- old_tline + len;
-  old_tline
+  e.tline <- Tfile_offset (old_tline + len);
+  Tfile_offset old_tline
 
 (* dual of putline(), retrieve line in tfile (without trailing '\n') *)
-let getline (e : Env.t) (tl : Env.file_offset)  : string =
-  Unix.lseek e.tfile tl Unix.SEEK_SET |> ignore;
+let getline (e : Env.t) (tl : Env.tfile_offset)  : string =
+  let Tfile_offset offset = tl in
+  Unix.lseek e.tfile offset Unix.SEEK_SET |> ignore;
   (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
    * need to close it which unfortunately also close the file_descr so
    * we do our own adhoc input_line below.

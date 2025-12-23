@@ -17,18 +17,18 @@ open Fpath_.Operators
 let tfname = Fpath.v "/tmp/oed.scratch"
 
 (* offset in tfname file content *)
-type file_offset = int
+type tfile_offset = Tfile_offset of int
 [@@deriving show]
 
 type offset_and_mark = {
   (* offset in tfile *)
-  offset: file_offset;
+  offset: tfile_offset;
   (* used by the 'g' or 'v' commands to mark matched lines *)
   mutable mark: bool;
 }
 [@@deriving show]
 (* alt: use None *)
-let no_line = { offset = 0; mark = false }
+let no_line = { offset = Tfile_offset 0; mark = false }
 
 (* ed uses 1-indexed line numbers, but 0 is also used as a special value.
  * alt: call it cursor?
@@ -53,7 +53,7 @@ type t = {
    *)
   tfile : Unix_.file_descr;
   (* current write file offset in tfile to append new lines *)
-  mutable tline : file_offset;
+  mutable tline : tfile_offset;
 
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel. map lineno -> file_offset.
@@ -126,7 +126,7 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
     (* sentinel value so that file offsets 0 and 1 are reserved and no
      * real line offsets in zero[] can have those values
      *)
-    tline = 2;
+    tline = Tfile_offset 2;
 
     zero = Array.make 10 no_line;
     dot = 0;

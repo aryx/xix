@@ -135,6 +135,15 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
       | 'i' -> 
          Logs.info (fun m -> m "insert mode");
          Commands.add e (-1)
+      | 'd' ->
+         Commands.nonzero e;
+         In.newline e;
+         Commands.rdelete e e.addr1 e.addr2;
+      | 'c' ->
+         Commands.nonzero e;
+         In.newline e;
+         Commands.rdelete e e.addr1 e.addr2;
+         Commands.append e (In.gettty e) (e.addr1 - 1) |> ignore;
 
       (* other *)
       | 'q' | 'Q' ->

@@ -166,6 +166,25 @@ let add (e : Env.t) (i : int) =
   In.newline e;
   append e (In.gettty e) e.addr2 |> ignore
 
+(* used for 'r' and 'c' *)
+let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
+  let a1 = ref ad1 in
+  let a2 = ref (ad2 + 1) in
+  let a3 = e.dol in
+  e.dol <- e.dol - (!a2 - !a1);
+  let rec aux () =
+    e.zero.(!a1) <- e.zero.(!a2);
+    incr a1;
+    incr a2;
+    if !a2 <= a3
+    then aux ()
+  in
+  aux ();
+  a1 := ad1;
+  if !a1 > e.dol then a1 := e.dol;
+  e.dot <- !a1;
+  e.fchange <- true
+
 (* ------------------------------------------------------------------------- *)
 (* Other *)
 (* ------------------------------------------------------------------------- *)

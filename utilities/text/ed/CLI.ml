@@ -211,7 +211,7 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
       done;
       List.rev !xs |> List.iter (fun a1 ->
           e.dot <- a1;
-          e.in_.globp <- Some (Lexing.from_string line);
+          e.in_.globp <- Some (Lexing.from_string (line ^ "\n"));
           (* recurse!! *)
           commands caps e;
       );

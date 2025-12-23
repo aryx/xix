@@ -65,7 +65,7 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
         then begin
             let oldz = e.zero in
             let len = Array.length oldz in
-            let newz  = Array.make (len + 512) 0 in
+            let newz  = Array.make (len + 512) Env.no_line in
             Array.blit oldz 0 newz 0 len;
             e.zero <- newz;
         end;
@@ -82,7 +82,7 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
           e.zero.(!a2) <- e.zero.(!a1);
           decr a2; decr a1;
         done;
-        e.zero.(rdot) <- tl;
+        e.zero.(rdot) <- {offset = tl; mark = false};
         (* TODO: update zero *)
         aux ()
   in
@@ -101,7 +101,7 @@ let printcom (e : Env.t) : unit =
   nonzero e;
   for a1 = e.addr1 to e.addr2 do
     (* TODO: if listn *)
-    Out.putshst e (Disk.getline e e.zero.(a1));
+    Out.putshst e (Disk.getline e e.zero.(a1).offset);
   done;
   e.dot <- e.addr2;
   (* TODO: reset flags *)

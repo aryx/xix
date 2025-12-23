@@ -88,7 +88,7 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
 (* dual of getfile() but this time writing all the lines, not just one *)
 let putfile (e : Env.t) (chan : Chan.o) : unit =
   for a1 = e.addr1 to e.addr2 do
-    let l = getline e e.zero.(a1) ^ "\n" in
+    let l = getline e e.zero.(a1).offset ^ "\n" in
     e.count <- e.count + String.length l;
     output_string chan.oc l;
   done

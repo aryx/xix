@@ -58,7 +58,7 @@ let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
   addr1, addr2
 
 let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
-  let line = Disk.getline e e.zero.(addr) in
+  let line = Disk.getline e e.zero.(addr).offset in
   Str.string_match re line 0
 
 (*****************************************************************************)
@@ -177,14 +177,16 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
 
     | T.EOF ->
-       (* not raise (Exit.ExitCode 0) because we need to get to quit()! *)
+       (* not raise (Exit.ExitCode 0) because we need to get to quit()
+        * or to return to global() caller when nested call to commands().
+        *)
        done_ := true
     | t -> Parser.was_expecting_but_got "a letter" t
     )
   done;
   Logs.debug (fun m -> m "commands <-");
 
-(* g/re/p, v/re/p *)
+(* g/re/cmd, v/re/cmd *)
 and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 
   e.in_.globp |> Option.iter (fun _ ->
@@ -200,21 +202,43 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
       (* TODO: Lexer.line_or_escaped_lines *)
       let line = Lexer.line e.in_.stdin in
       let line = if line = "" then "p" else line in
-      
-      (* TODO: mark? need it? *)
-      let xs : lineno list ref = ref [] in
+
+      (* step1: marking the matching lines *)
       (* ed: was starting at 0, but then special casing it later in match()
-       * so simpler to start at 1 *)
+       * so simpler to start at 1 
+       * old: I was recording in a local xs the list of matched lineno, but
+       * it does not work because commands() in step2 below may modify 
+       * zero which would invalidate the matched lineno of step1
+       *)
       for a1 = 1 to e.dol do
         if a1 >= e.addr1 && a1 <= e.addr2 && match_ e re a1 = pos_or_neg then
-          Stack_.push a1 xs
+          e.zero.(a1).mark <- true
       done;
-      List.rev !xs |> List.iter (fun a1 ->
-          e.dot <- a1;
-          e.in_.globp <- Some (Lexing.from_string (line ^ "\n"));
-          (* recurse!! *)
-          commands caps e;
-      );
+
+      (* step2: processing the matching lines
+       * old: for a1 = 1 to e.dol, but can't work because
+       * commands() below might modify zero and reduce it in which case
+       * dol will change dynamicaly.
+       *)
+      let rec aux a =
+        let a1 = ref a in
+        if !a1 <= e.dol then begin
+          if e.zero.(!a1).mark then begin
+            e.zero.(!a1).mark <- false;
+            e.dot <- !a1;
+            (* ugly: need trailing \n otherwise T.EOF would be consumed
+             * too early by In.Newline().
+             *)
+            e.in_.globp <- Some (Lexing.from_string (line ^ "\n"));
+            (* recurse!! *)
+            commands caps e;
+            (* need to restart from scratch, but with one less marked line *)
+            a1 := 0
+          end;
+          aux (!a1 + 1)
+        end
+      in
+      aux 1
   
   | t -> Parser.was_expecting_but_got "a regexp" t
 

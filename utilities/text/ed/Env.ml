@@ -20,6 +20,16 @@ let tfname = Fpath.v "/tmp/oed.scratch"
 type file_offset = int
 [@@deriving show]
 
+type offset_and_mark = {
+  (* offset in tfile *)
+  offset: file_offset;
+  (* used by the 'g' or 'v' commands to mark matched lines *)
+  mutable mark: bool;
+}
+[@@deriving show]
+(* alt: use None *)
+let no_line = { offset = 0; mark = false }
+
 (* ed uses 1-indexed line numbers, but 0 is also used as a special value.
  * alt: call it cursor?
 *)
@@ -47,8 +57,10 @@ type t = {
 
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel. map lineno -> file_offset.
+   * The bool is a mark used to remember a matching line in g/re/x
+   * operations.
    *)
-  mutable zero : file_offset array;
+  mutable zero : offset_and_mark array;
   (* index entried in zero *)
   (* current line *)
   mutable dot: lineno;
@@ -116,7 +128,7 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
      *)
     tline = 2;
 
-    zero = Array.make 10 0;
+    zero = Array.make 10 no_line;
     dot = 0;
     dol = 0;
     addr1 = 0;

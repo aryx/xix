@@ -1,3 +1,4 @@
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -21,7 +22,7 @@ let putline (e : Env.t) (line : string) : Env.file_offset =
   let line = line ^ "\n" in
   let len = String.length line in
   Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
-  e.tline <- e.tline + len;
+  e.tline <- old_tline + len;
   old_tline
 
 (* dual of putline(), retrieve line in tfile (without trailing '\n') *)

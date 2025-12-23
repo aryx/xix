@@ -3,7 +3,7 @@
 type t =
   | Current (* '.' *)
   | Last    (* '$' *)
-  | Line of int
+  | Line of int (* <n> *)
   | Mark of char (* \a *)
   | SearchFwd of string (* /.../ *)
   | SearchBwd of string (* ?...? *)

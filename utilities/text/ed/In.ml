@@ -1,3 +1,4 @@
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 module T = Token
 
@@ -16,6 +17,10 @@ module T = Token
 let newline (e : Env.t) : unit =
   match Parser.consume e.in_ with
   | T.Newline -> ()
+  (* tricky but is useful to treat EOF as a newline sometimes
+   * like for globp "r" but sometimes not in g/re/x globp context so that
+   * it is consumed by commands() leading to returning from commands().
+   *)
   | T.EOF -> ()
   (* TODO: if special chars pln ? *)
   | t -> Parser.was_expecting_but_got "newline" t

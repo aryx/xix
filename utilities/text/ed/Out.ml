@@ -1,6 +1,14 @@
+(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
 (* Displaying text *)
+
+(*****************************************************************************)
+(* API *)
+(*****************************************************************************)
 
 let putchr (e : Env.t) (c : char) =
   (* TODO: if listf *)
@@ -23,6 +31,7 @@ let putshst (e : Env.t) (str : string) : unit =
   (* no diff between rune and chars in oed *)
   putst e str
 
+(* display e.count *)
 let rec putd (e : Env.t) : unit =
   let r = e.count mod 10 in
   e.count <- e.count / 10;

@@ -1,5 +1,6 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+
 module A = Address
 module T = Token
 
@@ -17,7 +18,7 @@ module T = Token
 
 type state = {
   stdin: Lexing_.lexbuf;
-  (* for insert "virtual" commands to process before stdin *)
+  (* for inserting "virtual" commands to process before stdin *)
   mutable globp: Lexing_.lexbuf option;
   mutable lookahead : Token.t option;
 }
@@ -102,14 +103,13 @@ let rec parse_relatives (base : A.t) (st : state) : A.t =
       base
 
 let parse_address (st : state) : A.t =
-  match peek st with
-  (* implicit '.' for leading + - ^ *)
-  | T.Plus | T.Minus | T.Caret ->
-      parse_relatives A.Current st
-
-  | _ ->
-      let base =
-        match consume st with
+  let base =
+    match peek st with
+    | T.Plus | T.Minus | T.Caret ->
+      (* implicit '.' for leading + - ^ *)
+      A.Current
+    | _ ->
+        (match consume st with
         | T.Dot -> A.Current
         | T.Dollar -> A.Last
         | T.Int n -> A.Line n
@@ -117,16 +117,13 @@ let parse_address (st : state) : A.t =
         | T.Slash r -> A.SearchFwd r
         | T.Question r -> A.SearchBwd r
         | _ -> was_expecting "valid address"
-      in
-      parse_relatives base st
+        )
+  in
+  parse_relatives base st
 
 
-(* TODO: How should be parsed just "," ? according to mkenam.sh
- * it seems equivalent to "1,$" or ".,$" but I'm not sure
- *)
 let parse_address_range (st : state) : A.range =
   let t1 = peek st in
-
   (* optional first address *)
   let first : A.t option =
     match t1 with
@@ -144,7 +141,7 @@ let parse_address_range (st : state) : A.range =
   let t2 = peek st in
   match t2 with
   | T.Comma | T.Semicolon ->
-      ignore (consume st);
+      consume st |> ignore;
       let second = 
         match peek st with
         | T.Plus | T.Minus | T.Caret

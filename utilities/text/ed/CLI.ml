@@ -80,12 +80,12 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
 
     let range : Address.range = Parser.parse_address_range e.in_ in
     let (addr1, addr2) = eval_range e range in
+    (* TODO: use range.set_dot! *)
     e.addr1 <- addr1;
     e.addr2 <- addr2;
     e.given <- range.given;
 
-    let t  = Parser.consume e.in_ in
-    (match t with
+    (match Parser.consume e.in_ with
 
     | T.Char c ->
       (match c with
@@ -159,18 +159,18 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          Commands.quit caps e;
 
       | c -> failwith (spf "unsupported command '%c'" c)
-      );
-      (* ed: Error.error "", but because relied on the commands
+      )
+      (* ed: was doing error(Q) here but because ed relied on the commands
        * doing some 'continue' which we can't in OCaml so
-       * better not use Error.error here by default.
+       * better not use Error.e here
        *)
 
-    (* TODO: even regular ed seems not do work for newline *)
     | T.Newline ->
         (* print when no command specified, as in 1\n *)
 
-        (* ed: was a1 == nil but simpler look at given *)
+        (* ed: was a1 == nil but simpler to look at given *)
         if not range.given then begin
+          (* so any subsequent newline will display a successive line *)
           let a1 = e.dot + 1 in
           e.addr2 <- a1;
           e.addr1 <- a1;
@@ -179,7 +179,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
 
     | T.EOF ->
-       (* not raise (Exit.ExitCode 0) because we need to get to quit()
+       (* old: raise (Exit.ExitCode 0) but bad because we need to get to quit()
         * or to return to global() caller when nested call to commands().
         *)
        done_ := true
@@ -206,7 +206,7 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
       let line = if line = "" then "p" else line in
 
       (* step1: marking the matching lines *)
-      (* ed: was starting at 0, but then special casing it later in match()
+      (* ed: was starting at 0, but then special case later in match()
        * so simpler to start at 1 
        * old: I was recording in a local xs the list of matched lineno, but
        * it does not work because commands() in step2 below may modify 
@@ -219,13 +219,12 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 
       (* step2: processing the matching lines
        * old: for a1 = 1 to e.dol, but can't work because
-       * commands() below might modify zero and reduce it in which case
+       * commands() below might modify zero and delete lines in which case
        * dol will change dynamicaly.
        *)
-      let rec aux a =
-        let a1 = ref a in
-        if !a1 <= e.dol then begin
-          if e.zero.(!a1).mark then begin
+      let a1 = ref 1 in
+      while !a1 <= e.dol do
+        if e.zero.(!a1).mark then begin
             e.zero.(!a1).mark <- false;
             e.dot <- !a1;
             (* ugly: need trailing \n otherwise T.EOF would be consumed
@@ -236,11 +235,9 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
             commands caps e;
             (* need to restart from scratch, but with one less marked line *)
             a1 := 0
-          end;
-          aux (!a1 + 1)
-        end
-      in
-      aux 1
+        end;
+        incr a1
+      done
   
   | t -> Parser.was_expecting_but_got "a regexp" t
 
@@ -249,10 +246,12 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 (*****************************************************************************)
 
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+
   let args = ref [] in
   (* "verbose(interactive)" mode is set by default *)
   let vflag = ref true in
   let oflag = ref false in
+
   let level = ref (Some Logs.Warning) in
 
   let options = [

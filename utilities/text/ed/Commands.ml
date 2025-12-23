@@ -21,8 +21,7 @@ let setwide (e : Env.t) : unit =
   ()
 
 let squeeze (e : Env.t) (i : lineno) : unit =
-  if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2
-  then begin
+  if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2 then begin
       Logs.warn (fun m -> m "can't squeeze");
       Error.e "";
   end
@@ -31,8 +30,7 @@ let nonzero (e : Env.t) =
   squeeze e 1
 
 let setnoaddr (e : Env.t) =
-  if e.given
-  then begin
+  if e.given then begin
       Logs.err (fun m -> m "setnoaddr ??");
       Error.e "";
   end
@@ -57,6 +55,7 @@ let exfile (e : Env.t) (_m : mode) : unit =
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
   e.dot <- addr;
   let nline = ref 0 in
+
   let rec aux () =
     match f () with
     | None -> (* EOF *) !nline
@@ -200,7 +199,3 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   (* alt: could also Unix.close e.tfile *)
   FS.remove caps Env.tfname;
   raise (Exit.ExitCode 0)
-
-
-
-

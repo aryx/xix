@@ -1,5 +1,5 @@
 
-(* An "address" is a way to specific a line number symbolically or literally *)
+(* An "address" is a way to specify a line number symbolically or literally *)
 type t =
   | Current (* '.' *)
   | Last    (* '$' *)

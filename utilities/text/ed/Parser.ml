@@ -44,17 +44,14 @@ let was_expecting_but_got (expect : string) (tok : Token.t) =
 (*****************************************************************************)
 
 (* Do not use! this is internal! You should use peek() or consume() instead. *)
-let rec next_token (st : state) : Token.t =
+let next_token (st : state) : Token.t =
   let t = 
     match st.globp with
     | Some lexbuf ->
         let t = Lexer.token lexbuf in
         if t = T.EOF
-        then begin
-            st.globp <- None;
-            next_token st
-          end
-        else t
+        then st.globp <- None;
+        t
     | None ->
         Lexer.token st.stdin
   in

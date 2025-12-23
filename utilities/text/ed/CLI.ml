@@ -205,19 +205,17 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   Logs_.setup !level ();
 
   let env : Env.t = Env.init caps !vflag !oflag in
-  (* ed: was globp *)
-  let first_command = ref None in
 
   (match !args with
   | [] -> ()
   | [file] -> 
       env.savedfile <- Some (Fpath.v file);
-      first_command := Some 'r'
+      env.in_.globp <- Some (Lexing.from_string "r")
   | _::_::_ -> 
       (* stricter: *)
       failwith "too many arguments" 
   );
-  if !oflag then first_command := Some 'a';
+  if !oflag then env.in_.globp <- Some (Lexing.from_string "a");
   Logs.debug (fun m -> m "env = %s" (Env.show env));
 
   while true do

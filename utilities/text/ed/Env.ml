@@ -26,6 +26,9 @@ type file_offset = int
 type lineno = int
 [@@deriving show]
 
+(* alt: Re.t *)
+type regex = Str.regexp
+
 (* The globals *)
 type t = {
   (* to read the user commands from (and also line input in 'a'/'i' modes) *)

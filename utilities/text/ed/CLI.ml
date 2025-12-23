@@ -57,11 +57,16 @@ let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
   in
   addr1, addr2
 
+let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
+  let line = Disk.getline e e.zero.(addr) in
+  Str.string_match re line 0
+
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 
-let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
+let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
+  Logs.debug (fun m -> m "commands ->");
   let done_ = ref false in
 
   while not !done_ do
@@ -73,9 +78,7 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
     end;
 
-    let range : Address.range = 
-      Parser.parse_address_range e.in_ 
-    in
+    let range : Address.range = Parser.parse_address_range e.in_  in
     let (addr1, addr2) = eval_range e range in
     e.addr1 <- addr1;
     e.addr2 <- addr2;
@@ -105,7 +108,6 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          e.count <- e.addr2;
          Out.putd e;
          Out.putchr e '\n';
-                
       (* new: *)
       | 'X' -> 
          In.newline e;
@@ -145,6 +147,10 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          Commands.rdelete e e.addr1 e.addr2;
          Commands.append e (In.gettty e) (e.addr1 - 1) |> ignore;
 
+      (* globals *)
+      | 'g' -> global caps e true
+      | 'v' -> global caps e false
+
       (* other *)
       | 'q' | 'Q' ->
          if c = 'Q' then e.fchange <- false;
@@ -175,7 +181,42 @@ let commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
        done_ := true
     | t -> Parser.was_expecting_but_got "a letter" t
     )
-  done
+  done;
+  Logs.debug (fun m -> m "commands <-");
+
+(* g/re/p, v/re/p *)
+and global caps (e : Env.t) (pos_or_neg : bool) : unit =
+
+  e.in_.globp |> Option.iter (fun _ ->
+      Logs.err (fun m -> m "global command already in");
+      Error.e ""
+  );
+  Commands.setwide e;
+  Commands.squeeze e (if e.dol > 0 then 1 else 0);
+
+  match Parser.consume e.in_ with
+  | Slash str ->
+      let re = Str.regexp str in
+      (* TODO: Lexer.line_or_escaped_lines *)
+      let line = Lexer.line e.in_.stdin in
+      let line = if line = "" then "p" else line in
+      
+      (* TODO: mark? need it? *)
+      let xs : lineno list ref = ref [] in
+      (* ed: was starting at 0, but then special casing it later in match()
+       * so simpler to start at 1 *)
+      for a1 = 1 to e.dol do
+        if a1 >= e.addr1 && a1 <= e.addr2 && match_ e re a1 = pos_or_neg then
+          Stack_.push a1 xs
+      done;
+      List.rev !xs |> List.iter (fun a1 ->
+          e.dot <- a1;
+          e.in_.globp <- Some (Lexing.from_string line);
+          (* recurse!! *)
+          commands caps e;
+      );
+  
+  | t -> Parser.was_expecting_but_got "a regexp" t
 
 (*****************************************************************************)
 (* Entry point *)

@@ -78,7 +78,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
     end;
 
-    let range : Address.range = Parser.parse_address_range e.in_  in
+    let range : Address.range = Parser.parse_address_range e.in_ in
     let (addr1, addr2) = eval_range e range in
     e.addr1 <- addr1;
     e.addr2 <- addr2;
@@ -168,11 +168,13 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
     (* TODO: even regular ed seems not do work for newline *)
     | T.Newline ->
         (* print when no command specified, as in 1\n *)
-        (* TODO: if a1 = None *)
-        let a1 = e.dot + 1 in
-        e.addr2 <- a1;
-        e.addr1 <- a1;
-        
+
+        (* ed: was a1 == nil but simpler look at given *)
+        if not range.given then begin
+          let a1 = e.dot + 1 in
+          e.addr2 <- a1;
+          e.addr1 <- a1;
+        end;
         (* TODO: if lastsep = ';' *)
         Commands.printcom e;
 

@@ -121,6 +121,9 @@ let parse_address (st : state) : A.t =
       parse_relatives base st
 
 
+(* TODO: How should be parsed just "," ? according to mkenam.sh
+ * it seems equivalent to "1,$" or ".,$" but I'm not sure
+ *)
 let parse_address_range (st : state) : A.range =
   (* optional first address *)
   let first =
@@ -138,6 +141,7 @@ let parse_address_range (st : state) : A.range =
   match peek st with
   | T.Comma ->
       ignore (consume st);
+      (* TODO: parse_address_opt to accept just "," ? *)
       let second = parse_address st in
       A.{ addr1 = first; addr2 = second; given = true; set_dot = false; }
   | T.Semicolon ->

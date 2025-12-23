@@ -25,8 +25,11 @@ let putline (e : Env.t) (line : string) : Env.tfile_offset =
   e.tline <- Tfile_offset (old_tline + len);
   Tfile_offset old_tline
 
-(* dual of putline(), retrieve line in tfile (without trailing '\n') *)
-let getline (e : Env.t) (tl : Env.tfile_offset)  : string =
+(* dual of putline(), retrieve line in tfile (without trailing '\n') 
+ * ed: was taking an Env.tfile_offset but cleaner to take addr
+ *)
+let getline (e : Env.t) (addr : Env.lineno)  : string =
+  let tl = e.zero.(addr).offset in
   let Tfile_offset offset = tl in
   Unix.lseek e.tfile offset Unix.SEEK_SET |> ignore;
   (* alt: Stdlib.input_line (Unix.in_channel_of_descr ...) but then
@@ -90,7 +93,7 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
 (* dual of getfile() but this time writing all the lines, not just one *)
 let putfile (e : Env.t) (chan : Chan.o) : unit =
   for a1 = e.addr1 to e.addr2 do
-    let l = getline e e.zero.(a1).offset ^ "\n" in
+    let l = getline e a1 ^ "\n" in
     e.count <- e.count + String.length l;
     output_string chan.oc l;
   done

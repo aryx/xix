@@ -100,7 +100,7 @@ let printcom (e : Env.t) : unit =
   nonzero e;
   for a1 = e.addr1 to e.addr2 do
     (* TODO: if listn *)
-    Out.putshst e (Disk.getline e e.zero.(a1).offset);
+    Out.putshst e (Disk.getline e a1);
   done;
   e.dot <- e.addr2;
   (* TODO: reset flags *)

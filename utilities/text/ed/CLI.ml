@@ -58,7 +58,7 @@ let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
   addr1, addr2
 
 let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
-  let line = Disk.getline e e.zero.(addr).offset in
+  let line = Disk.getline e addr in
   Str.string_match re line 0
 
 (*****************************************************************************)

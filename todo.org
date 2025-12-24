@@ -2,6 +2,13 @@
 
 * Big plan
 
+** TODO changes.txt
+fix o5c for helloc.exe
+
+rc/mk
+TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
+  need implement globbing, subshell, etc.
+
 ** big plan
 # release omk on OPAM and finish .nw (and reference too Make.nw?)
 # then finish orc (globbing, ...) enough to work with mk, and finish .nw

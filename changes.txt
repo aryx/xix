@@ -1,20 +1,5 @@
 # -*- org -*-
 
-* TODO
-fix o5c for helloc.exe
-
-** rc/mk
-TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
-  need implement globbing, subshell, etc.
-
-** internals
-
-** devinfra
-
-** testinfra
-
-* -----------------------------------------------------------
-
 * 0.17 (Q4 2025) (ELF Linux, oia v0, ova/ovl v0, o5c/ovc/oic v0, oar/onm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, ocat/opwd/owc/oed/... utilities, resume windows and kernel)
 
 ** general

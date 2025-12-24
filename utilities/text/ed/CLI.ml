@@ -30,13 +30,6 @@ type caps = <
 (* Helpers *)
 (*****************************************************************************)
 
-(* this will be called from CLI.main() in an handler for the Error exn *)
-let error_1 (e : Env.t) (s : string) : unit =
-  (* TODO: reset globals too? *)
-  Out.putchr e '?';
-  Out.putst e s;
-  ()
-
 let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
   let line = Disk.getline e addr in
   (* old: Str.string_match re line 0
@@ -65,17 +58,20 @@ let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
       in
       (* TODO: use A.SearchFwd of regex instead of str? compile earlier? *)
       let re = Str.regexp re_str in
+      (* starting point *)
       let b = e.dot (* TODO: need to be `a` instead like in C? *) in
       let rec aux (a : Env.lineno) : Env.lineno =
         let a = a + dir in
         let a =
           match () with
+          (* wrap around start/end of buffer *)
           | _ when a <= 0 -> e.dol
           | _ when a > e.dol -> 1
           | _ -> a
         in
         match () with
         | _ when match_ e re a -> a
+        (* back to starting point and nothing was found *)
         | _ when a = b ->
             Logs.warn (fun m -> m "search for %s had no match" re_str);
             Error.e ""
@@ -338,6 +334,10 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         commands caps env;
         Commands.quit caps env;
     )
-    with Error.Error s -> error_1 env ("?" ^ s)
+    with Error.Error s -> 
+        (* ed: was in a separate error_1 function *)
+        (* TODO: reset globals too? *)
+        Out.putchr env '?';
+        Out.putst env s;
   done;
   Exit.OK

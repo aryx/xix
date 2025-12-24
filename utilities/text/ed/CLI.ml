@@ -37,13 +37,53 @@ let error_1 (e : Env.t) (s : string) : unit =
   Out.putst e s;
   ()
 
+let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
+  let line = Disk.getline e addr in
+  (* old: Str.string_match re line 0
+   * but we need unanchored search *)
+  try
+    Str.search_forward re line 0 |> ignore;
+    true
+   with Not_found -> false
+  
+
+(* TODO? need to pass [[a]] like in C with e.dot and adjust [[a]] as we go
+ * like in C? so that /.../ and ?...? start from the right place?
+ *)
 let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
   match a with
   | A.Current -> e.dot
   | A.Last -> e.dol
   | A.Line n -> n
   | A.Mark _ -> failwith "TODO: Mark"
-  | A.SearchFwd _ | A.SearchBwd _ -> failwith "TODO: SearchXxx"
+  | A.SearchFwd _ | A.SearchBwd _ -> 
+      let dir, re_str = 
+        match a with 
+        | A.SearchFwd re -> 1, re
+        | A.SearchBwd re -> -1, re
+        | _ -> raise (Impossible "cases matched above")
+      in
+      (* TODO: use A.SearchFwd of regex instead of str? compile earlier? *)
+      let re = Str.regexp re_str in
+      let b = e.dot (* TODO: need to be `a` instead like in C? *) in
+      let rec aux (a : Env.lineno) : Env.lineno =
+        let a = a + dir in
+        let a =
+          match () with
+          | _ when a <= 0 -> e.dol
+          | _ when a > e.dol -> 1
+          | _ -> a
+        in
+        match () with
+        | _ when match_ e re a -> a
+        | _ when a = b ->
+            Logs.warn (fun m -> m "search for %s had no match" re_str);
+            Error.e ""
+        | _ ->
+            aux a
+      in
+      aux e.dot
+
   | A.Relative (x, n) -> eval_address e x + n
 
 let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
@@ -56,10 +96,6 @@ let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
     | Some a -> eval_address e a
   in
   addr1, addr2
-
-let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
-  let line = Disk.getline e addr in
-  Str.string_match re line 0
 
 (*****************************************************************************)
 (* Main algorithm *)

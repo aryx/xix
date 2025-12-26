@@ -1,3 +1,4 @@
+(*s: CLI.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -21,15 +22,16 @@ module A = Address
  *  - clearer error messages (via logging)
 *)
 
+(*s: type [[CLI.caps]] *)
 type caps = < 
     Cap.stdin; Cap.stdout; Cap.stderr;
     Cap.open_in; Cap.open_out;
   >
-
+(*e: type [[CLI.caps]] *)
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
+(*s: function [[CLI.match_]] *)
 let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
   let line = Disk.getline e addr in
   (* old: Str.string_match re line 0
@@ -38,8 +40,9 @@ let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
     Str.search_forward re line 0 |> ignore;
     true
    with Not_found -> false
+(*e: function [[CLI.match_]] *)
   
-
+(*s: function [[CLI.eval_address]] *)
 (* TODO? need to pass [[a]] like in C with e.dot and adjust [[a]] as we go
  * like in C? so that /.../ and ?...? start from the right place?
  *)
@@ -81,7 +84,8 @@ let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
       aux e.dot
 
   | A.Relative (x, n) -> eval_address e x + n
-
+(*e: function [[CLI.eval_address]] *)
+(*s: function [[CLI.eval_range]] *)
 let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
   Logs.debug (fun m -> m "range = %s" (Address.show_range r));
 
@@ -92,11 +96,12 @@ let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
     | Some a -> eval_address e a
   in
   addr1, addr2
+(*e: function [[CLI.eval_range]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-
+(*s: function [[CLI.commands]] *)
 let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
   Logs.debug (fun m -> m "commands ->");
   let done_ = ref false in
@@ -219,7 +224,8 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
     )
   done;
   Logs.debug (fun m -> m "commands <-");
-
+(*e: function [[CLI.commands]] *)
+(*s: function [[CLI.global]] *)
 (* g/re/cmd, v/re/cmd *)
 and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 
@@ -272,11 +278,12 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
       done
   
   | t -> Parser.was_expecting_but_got "a regexp" t
+(*e: function [[CLI.global]] *)
 
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
+(*s: function [[CLI.main]] *)
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let args = ref [] in
@@ -341,3 +348,5 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         Out.putst env s;
   done;
   Exit.OK
+(*e: function [[CLI.main]] *)
+(*e: CLI.ml *)

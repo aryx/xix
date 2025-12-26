@@ -1,3 +1,4 @@
+(*s: Lexer.mll *)
 {
 open Common
 open Token
@@ -9,13 +10,20 @@ open Token
  * addresses or commands by Parser.ml
  *)
 
+(*s: constant [[Lexer.buf]] *)
 let buf = Buffer.create 32
 }
+(*e: constant [[Lexer.buf]] *)
 (*****************************************************************************)
 (* Regexps aliases *)
 (*****************************************************************************)
+(*s: constant [[Lexer.space]] *)
 let space = [' ''\t']
+(*e: constant [[Lexer.space]] *)
+(*s: constant [[Lexer.letter]] *)
 let letter = ['a'-'z''A'-'Z''_']
+(*e: constant [[Lexer.letter]] *)
+(*s: constant [[Lexer.digit]] *)
 let digit = ['0'-'9']
 
 (*****************************************************************************)
@@ -31,6 +39,7 @@ rule token = parse
   (* for the addresses *)
   | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }
   | '.' { Dot } | '$' { Dollar }
+(*e: constant [[Lexer.digit]] *)
   | ',' { Comma } | ';' { Semicolon }
   | '+' { Plus } | '-' { Minus } | '^' { Caret }
   | '\'' ['a'-'z'] as s { Mark s.[1] }
@@ -78,3 +87,4 @@ and line = parse
 and filename = parse
   | [^ '\n' ' ']* { Lexing.lexeme lexbuf }
   | eof { failwith "eof" }
+(*e: Lexer.mll *)

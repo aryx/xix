@@ -1,4 +1,5 @@
-
+(*s: Address.ml *)
+(*s: type [[Address.t]] *)
 (* An "address" is a way to specify a line number symbolically or literally *)
 type t =
   | Current (* '.' *)
@@ -9,7 +10,8 @@ type t =
   | SearchBwd of string (* ?...? *)
   | Relative of t * int (* -, +, ^ *)
 [@@deriving show]
-
+(*e: type [[Address.t]] *)
+(*s: type [[Address.range]] *)
 (* What is parsed before a command. For instance 1,3p will be parsed as
  * { addr1 = Some (Line 1); addr2 = Line 3; given = true; set_dot = false}.
  *)
@@ -20,3 +22,5 @@ type range = {
   set_dot : bool;
 }
 [@@deriving show]
+(*e: type [[Address.range]] *)
+(*e: Address.ml *)

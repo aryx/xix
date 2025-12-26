@@ -1,3 +1,4 @@
+(*s: In.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 module T = Token
@@ -14,6 +15,7 @@ module T = Token
 (* API *)
 (*****************************************************************************)
 
+(*s: function [[In.newline]] *)
 let newline (e : Env.t) : unit =
   match Parser.consume e.in_ with
   | T.Newline -> ()
@@ -24,7 +26,9 @@ let newline (e : Env.t) : unit =
   | T.EOF -> ()
   (* TODO: if special chars pln ? *)
   | t -> Parser.was_expecting_but_got "newline" t
+(*e: function [[In.newline]] *)
 
+(*s: function [[In.filename]] *)
 let filename (e : Env.t) (cmd : char) : Fpath.t =
   (* alt: do it in the caller, clearer; will be incremented
    * when reading the file in getfile
@@ -54,12 +58,16 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
       | t -> Parser.was_expecting_but_got "a newline" t
       )
   | t -> Parser.was_expecting_but_got "a newline or space and filename" t
+(*e: function [[In.filename]] *)
 
+(*s: function [[In.gety]] *)
 (* return a line (without trailing '\n') *)
 let gety (e : Env.t) : string =
   Lexer.line e.in_.stdin
+(*e: function [[In.gety]] *)
   
 
+(*s: function [[In.gettty]] *)
 (* Read a line from stdin. Return None when the user entered "." on a single
  * line meaning the end of interactive input.
  * This has a similar interface to getfile() so it can be passed to
@@ -73,3 +81,5 @@ let gettty (e : Env.t) () : string option =
     None
   end
   else Some s
+(*e: function [[In.gettty]] *)
+(*e: In.ml *)

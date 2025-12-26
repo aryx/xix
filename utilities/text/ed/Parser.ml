@@ -1,3 +1,4 @@
+(*s: Parser.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -16,34 +17,43 @@ module T = Token
 (* Types *)
 (*****************************************************************************)
 
+(*s: type [[Parser.state]] *)
 type state = {
   stdin: Lexing_.lexbuf;
   (* for inserting "virtual" commands to process before stdin *)
   mutable globp: Lexing_.lexbuf option;
   mutable lookahead : Token.t option;
 }
+(*e: type [[Parser.state]] *)
 [@@deriving show]
 
+(*s: function [[Parser.init]] *)
 let init (caps : < Cap.stdin; ..>) : state =
   { stdin = Lexing.from_channel (Console.stdin caps);
     globp = None;
     lookahead = None;
   }
+(*e: function [[Parser.init]] *)
 
 (*****************************************************************************)
 (* Error management *)
 (*****************************************************************************)
+(*s: function [[Parser.was_expecting]] *)
 let was_expecting (expect : string) =
   Logs.err (fun m -> m "was expecting %s" expect);
   Error.e ""
+(*e: function [[Parser.was_expecting]] *)
 
+(*s: function [[Parser.was_expecting_but_got]] *)
 let was_expecting_but_got (expect : string) (tok : Token.t) =
   was_expecting (spf "%s, but got %s" expect (Token.show tok))
+(*e: function [[Parser.was_expecting_but_got]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Parser.next_token]] *)
 (* Do not use! this is internal! You should use peek() or consume() instead. *)
 let next_token (st : state) : Token.t =
   let t = 
@@ -58,11 +68,13 @@ let next_token (st : state) : Token.t =
   in
   Logs.debug (fun m -> m "tok = %s" (Token.show t));
   t
+(*e: function [[Parser.next_token]] *)
 
 (*****************************************************************************)
 (* peek/consume *)
 (*****************************************************************************)
          
+(*s: function [[Parser.peek]] *)
 let peek (st : state) : Token.t =
   match st.lookahead with
   | Some t -> t
@@ -70,16 +82,20 @@ let peek (st : state) : Token.t =
       let t = next_token st in
       st.lookahead <- Some t;
       t
+(*e: function [[Parser.peek]] *)
 
+(*s: function [[Parser.consume]] *)
 let consume (st : state) : Token.t =
   match st.lookahead with
   | Some t -> st.lookahead <- None; t
   | None -> next_token st
+(*e: function [[Parser.consume]] *)
 
 (*****************************************************************************)
 (* Parsing addresses *)
 (*****************************************************************************)
 
+(*s: function [[Parser.parse_delta]] *)
 let parse_delta (st : state) : int =
   match consume st with
   | T.Plus ->
@@ -93,7 +109,9 @@ let parse_delta (st : state) : int =
   | T.Caret -> -1
   | _ ->
       was_expecting "relative operator"
+(*e: function [[Parser.parse_delta]] *)
 
+(*s: function [[Parser.parse_relatives]] *)
 let rec parse_relatives (base : A.t) (st : state) : A.t =
   match peek st with
   | T.Plus | T.Minus | T.Caret ->
@@ -101,7 +119,9 @@ let rec parse_relatives (base : A.t) (st : state) : A.t =
       parse_relatives (A.Relative (base, d)) st
   | _ ->
       base
+(*e: function [[Parser.parse_relatives]] *)
 
+(*s: function [[Parser.parse_address]] *)
 let parse_address (st : state) : A.t =
   let base =
     match peek st with
@@ -120,8 +140,10 @@ let parse_address (st : state) : A.t =
         )
   in
   parse_relatives base st
+(*e: function [[Parser.parse_address]] *)
 
 
+(*s: function [[Parser.parse_address_range]] *)
 let parse_address_range (st : state) : A.range =
   let t1 = peek st in
   (* optional first address *)
@@ -168,6 +190,7 @@ let parse_address_range (st : state) : A.range =
       | None ->
           A.{ addr1 = None; addr2 = Current; given = false; set_dot = false; }
       )
+(*e: function [[Parser.parse_address_range]] *)
 
 (*****************************************************************************)
 (* Parsing Commands *)
@@ -178,3 +201,4 @@ let parse_address_range (st : state) : A.range =
 (* Parsing Filenames and user text *)
 (*****************************************************************************)
 (* Done in In.ml instead *)
+(*e: Parser.ml *)

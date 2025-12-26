@@ -1,3 +1,4 @@
+(*s: Commands.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -13,30 +14,37 @@ open Env
 (* Helpers *)
 (*****************************************************************************)
 
+(*s: function [[Commands.setwide]] *)
 let setwide (e : Env.t) : unit =
   if not e.given then begin
     e.addr1 <- if e.dol > 0 then 1 else 0;
     e.addr2 <- e.dol;
   end;
   ()
-
+(*e: function [[Commands.setwide]] *)
+(*s: function [[Commands.squeeze]] *)
 let squeeze (e : Env.t) (i : lineno) : unit =
   if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2 then begin
       Logs.warn (fun m -> m "can't squeeze");
       Error.e "";
   end
-
+(*e: function [[Commands.squeeze]] *)
+(*s: function [[Commands.nonzero]] *)
 let nonzero (e : Env.t) =
   squeeze e 1
-
+(*e: function [[Commands.nonzero]] *)
+(*s: function [[Commands.setnoaddr]] *)
 let setnoaddr (e : Env.t) =
   if e.given then begin
       Logs.err (fun m -> m "setnoaddr ??");
       Error.e "";
   end
+(*e: function [[Commands.setnoaddr]] *)
 
+(*s: type [[Commands.mode]] *)
 type mode = READ | WRITE
-
+(*e: type [[Commands.mode]] *)
+(*s: function [[Commands.exfile]] *)
 (* ed: "exit" file =~ close file *)
 let exfile (e : Env.t) (_m : mode) : unit =
   (* ed: is using passed mode to flush if WRITE but no need in ocaml
@@ -46,11 +54,12 @@ let exfile (e : Env.t) (_m : mode) : unit =
       Out.putd e;
       Out.putchr e '\n';
   end
+(*e: function [[Commands.exfile]] *)
 
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
 (*****************************************************************************)
-
+(*s: function [[Commands.append]] *)
 (* f can be getfile() above or In.gettty() *)
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
   e.dot <- addr;
@@ -86,6 +95,7 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
         aux ()
   in
   aux ()
+(*e: function [[Commands.append]] *)
 
 (*****************************************************************************)
 (* Commands *)
@@ -94,7 +104,7 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
 (* ------------------------------------------------------------------------- *)
 (* Inspecting *)
 (* ------------------------------------------------------------------------- *)
-
+(*s: function [[Commands.printcom]] *)
 (* 'p' *)
 let printcom (e : Env.t) : unit =
   nonzero e;
@@ -105,11 +115,12 @@ let printcom (e : Env.t) : unit =
   e.dot <- e.addr2;
   (* TODO: reset flags *)
   ()
+(*e: function [[Commands.printcom]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Reading *)
 (* ------------------------------------------------------------------------- *)
-
+(*s: function [[Commands.read]] *)
 (* 'r' *)
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
   try 
@@ -124,11 +135,12 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
   with Sys_error str ->
     Logs.err (fun m -> m "Sys_error: %s" str);
     Error.e !!file
+(*e: function [[Commands.read]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Writing *)
 (* ------------------------------------------------------------------------- *)
-
+(*s: function [[Commands.write]] *)
 (* 'w' *)
 let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
   try 
@@ -150,11 +162,12 @@ let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
   with Sys_error str ->
     Logs.err (fun m -> m "Sys_error: %s" str);
     Error.e !!file
+(*e: function [[Commands.write]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Modifying *)
 (* ------------------------------------------------------------------------- *)
-
+(*s: function [[Commands.add]] *)
 (* used for 'a' and 'i' *)
 let add (e : Env.t) (i : int) =
   if i <> 0 && (e.given || e.dol > 0) then begin
@@ -164,7 +177,9 @@ let add (e : Env.t) (i : int) =
   squeeze e 0;
   In.newline e;
   append e (In.gettty e) e.addr2 |> ignore
+(*e: function [[Commands.add]] *)
 
+(*s: function [[Commands.rdelete]] *)
 (* used for 'r' and 'c' *)
 let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
   let a1 = ref ad1 in
@@ -183,11 +198,12 @@ let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
   if !a1 > e.dol then a1 := e.dol;
   e.dot <- !a1;
   e.fchange <- true
+(*e: function [[Commands.rdelete]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Other *)
 (* ------------------------------------------------------------------------- *)
-
+(*s: function [[Commands.quit]] *)
 (* 'q' *)
 let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   if e.vflag && e.fchange && e.dol != 0 then begin
@@ -199,3 +215,5 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   (* alt: could also Unix.close e.tfile *)
   FS.remove caps Env.tfname;
   raise (Exit.ExitCode 0)
+(*e: function [[Commands.quit]] *)
+(*e: Commands.ml *)

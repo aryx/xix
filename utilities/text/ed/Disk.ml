@@ -1,3 +1,4 @@
+(*s: Disk.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 
@@ -11,7 +12,7 @@ open Common
 (*****************************************************************************)
 (* getline/putline (from/to tfile) *)
 (*****************************************************************************)
-
+(*s: function [[Disk.putline]] *)
 (* store line in tfile and return its offset *)
 let putline (e : Env.t) (line : string) : Env.tfile_offset =
   e.fchange <- true;
@@ -24,7 +25,8 @@ let putline (e : Env.t) (line : string) : Env.tfile_offset =
   Unix.write e.tfile (Bytes.of_string line) 0 len |> ignore;
   e.tline <- Tfile_offset (old_tline + len);
   Tfile_offset old_tline
-
+(*e: function [[Disk.putline]] *)
+(*s: function [[Disk.getline]] *)
 (* dual of putline(), retrieve line in tfile (without trailing '\n') 
  * ed: was taking an Env.tfile_offset but cleaner to take addr
  *)
@@ -46,12 +48,12 @@ let getline (e : Env.t) (addr : Env.lineno)  : string =
     else String_.of_chars (List.rev acc)
   in
   aux []
-
+(*e: function [[Disk.getline]] *)
 
 (*****************************************************************************)
 (* getfile/putfile (from/to savedfile) *)
 (*****************************************************************************)
-
+(*s: function [[Disk.getfile]] *)
 (* will return one line (without trailing '\n') or None when reached EOF *)
 let getfile (e : Env.t) (chan : Chan.i) () : string option =
   (* alt: use Stdlib.input_line which does some extra magic around newlines
@@ -66,6 +68,7 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
     e.count <- e.count + String.length s + 1 (* to count the new line *);
     Some s
   with End_of_file -> None
+(*e: function [[Disk.getfile]] *)
   
 (* TODO:
   let string_of_chars xs =
@@ -89,7 +92,7 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
      | Some c -> aux (c::acc)
     ...
 *)
-
+(*s: function [[Disk.putfile]] *)
 (* dual of getfile() but this time writing all the lines, not just one *)
 let putfile (e : Env.t) (chan : Chan.o) : unit =
   for a1 = e.addr1 to e.addr2 do
@@ -97,3 +100,5 @@ let putfile (e : Env.t) (chan : Chan.o) : unit =
     e.count <- e.count + String.length l;
     output_string chan.oc l;
   done
+(*e: function [[Disk.putfile]] *)
+(*e: Disk.ml *)

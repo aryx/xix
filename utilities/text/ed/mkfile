@@ -1,0 +1,29 @@
+TOP=../../..
+
+SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
+#SYNCWEBFLAGS=-debug
+
+DOC=oed
+#DOC_EXTRA=control_flow.tex
+VERSION=1
+D=.
+SRC_ML=$D/CLI.ml $D/Commands.ml $D/Disk.ml $D/In.ml $D/Out.ml $D/Parser.ml 
+
+SRC_ML_NO_MLI=$D/Address.ml $D/Env.ml $D/Error.ml $D/Main.ml $D/Token.ml
+
+SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI $D/Lexer.mll
+
+SRC_ORIG=oed.nw
+
+<$TOP/docs/latex/mkcommon
+
+#control_flow.tex: control_flow.dot
+#   dot2tex $prereq --figonly > $target
+
+# see mk/docs/mkfile for how to produce the right files for the INDEXER to work
+index:V:
+    $INDEXER -lang cmt $TOP \
+    | grep -v 'TODO_NO_SOURCE_FOUND' \
+    | grep  'shell/' \
+    > defs_and_uses.list.new
+    mv defs_and_uses.list.new defs_and_uses.list

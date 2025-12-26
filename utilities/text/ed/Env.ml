@@ -1,3 +1,4 @@
+(*s: Env.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
@@ -14,32 +15,45 @@ open Fpath_.Operators
 (*****************************************************************************)
 
 (* LATER: use Tmp.with_new_file *)
+(*s: constant [[Env.tfname]] *)
 let tfname = Fpath.v "/tmp/oed.scratch"
+(*e: constant [[Env.tfname]] *)
 
+(*s: type [[Env.tfile_offset]] *)
 (* offset in tfname file content *)
 type tfile_offset = Tfile_offset of int
+(*e: type [[Env.tfile_offset]] *)
 [@@deriving show]
 
+(*s: type [[Env.offset_and_mark]] *)
 type offset_and_mark = {
   (* offset in tfile *)
   offset: tfile_offset;
   (* used by the 'g' or 'v' commands to mark matched lines *)
   mutable mark: bool;
 }
+(*e: type [[Env.offset_and_mark]] *)
 [@@deriving show]
 (* alt: use None *)
+(*s: constant [[Env.no_line]] *)
 let no_line = { offset = Tfile_offset 0; mark = false }
+(*e: constant [[Env.no_line]] *)
 
 (* ed uses 1-indexed line numbers, but 0 is also used as a special value.
  * alt: call it cursor?
 *)
+(*s: type [[Env.lineno]] *)
 type lineno = int
+(*e: type [[Env.lineno]] *)
 [@@deriving show]
 
 (* alt: Re.t *)
+(*s: type [[Env.regex]] *)
 type regex = Str.regexp
+(*e: type [[Env.regex]] *)
 
 (* The globals *)
+(*s: type [[Env.t]] *)
 type t = {
   (* to read the user commands from (and also line input in 'a'/'i' modes) *)
   in_: Parser.state;
@@ -95,12 +109,14 @@ type t = {
    *)
   oflag: bool;
 }
+(*e: type [[Env.t]] *)
 [@@deriving show]
 
 (*****************************************************************************)
 (* init() *)
 (*****************************************************************************)
 
+(*s: function [[Env.init]] *)
 let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
      (vflag : bool) (oflag : bool) : t =
   let out = if oflag then Console.stderr caps else Console.stdout caps in
@@ -145,3 +161,5 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
     vflag = if oflag then false else vflag;
     oflag;
   }
+(*e: function [[Env.init]] *)
+(*e: Env.ml *)

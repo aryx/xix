@@ -10,10 +10,11 @@ module A = Address
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of ed of Unix and Plan 9.
+(* An OCaml port of ed from Plan 9 (and before from Unix).
  *
- * Limitations compared to Plan9 version:
+ * Limitations compared to Plan 9 version:
  *  - no unicode (runes) support
+ *  - lots of missing features (&, \1, marks, etc.)
  *
  * Improvements over Plan 9 C version:
  *  - far less globals!
@@ -31,38 +32,34 @@ type caps = <
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
+
 (*s: function [[CLI.match_]] *)
-let match_ (e : Env.t) (re : Env.regex) (addr : Env.lineno) : bool =
-  let line = Disk.getline e addr in
-  (* old: Str.string_match re line 0
-   * but we need unanchored search *)
-  try
-    Str.search_forward re line 0 |> ignore;
-    true
-   with Not_found -> false
 (*e: function [[CLI.match_]] *)
   
 (*s: function [[CLI.eval_address]] *)
 (* TODO? need to pass [[a]] like in C with e.dot and adjust [[a]] as we go
  * like in C? so that /.../ and ?...? start from the right place?
+ * alt: could be moved in Address.ml
  *)
-let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
-  match a with
+let rec eval_address (e : Env.t) (adr : Address.t) : Env.lineno =
+  match adr with
   | A.Current -> e.dot
   | A.Last -> e.dol
   | A.Line n -> n
   | A.Mark _ -> failwith "TODO: Mark"
   | A.SearchFwd _ | A.SearchBwd _ -> 
       let dir, re_str = 
-        match a with 
+        match adr with 
         | A.SearchFwd re -> 1, re
         | A.SearchBwd re -> -1, re
         | _ -> raise (Impossible "cases matched above")
       in
-      (* TODO: use A.SearchFwd of regex instead of str? compile earlier? *)
+      (* less: opti: use A.SearchFwd of regex instead of str *)
       let re = Str.regexp re_str in
       (* starting point *)
-      let b = e.dot (* TODO: need to be `a` instead like in C? *) in
+      (* TODO: ed: need to be `a` instead like in C ? *)
+      let a = e.dot in
+      let b = a  in
       let rec aux (a : Env.lineno) : Env.lineno =
         let a = a + dir in
         let a =
@@ -73,7 +70,7 @@ let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
           | _ -> a
         in
         match () with
-        | _ when match_ e re a -> a
+        | _ when Commands.match_ e re a -> a
         (* back to starting point and nothing was found *)
         | _ when a = b ->
             Logs.warn (fun m -> m "search for %s had no match" re_str);
@@ -81,7 +78,7 @@ let rec eval_address (e : Env.t) (a : Address.t) : Env.lineno =
         | _ ->
             aux a
       in
-      aux e.dot
+      aux a
 
   | A.Relative (x, n) -> eval_address e x + n
 (*e: function [[CLI.eval_address]] *)
@@ -184,6 +181,10 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          Commands.rdelete e e.addr1 e.addr2;
          Commands.append e (In.gettty e) (e.addr1 - 1) |> ignore;
 
+      | 's' ->
+          Commands.nonzero e;
+          Commands.substitute e (e.in_.globp <> None);
+
       (* globals *)
       | 'g' -> global caps e true
       | 'v' -> global caps e false
@@ -252,7 +253,8 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
        * zero which would invalidate the matched lineno of step1
        *)
       for a1 = 1 to e.dol do
-        if a1 >= e.addr1 && a1 <= e.addr2 && match_ e re a1 = pos_or_neg then
+        if a1 >= e.addr1 && a1 <= e.addr2 &&
+            Commands.match_ e re a1 = pos_or_neg then
           e.zero.(a1).mark <- true
       done;
 

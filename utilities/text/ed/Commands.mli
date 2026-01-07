@@ -24,6 +24,8 @@ val rdelete: Env.t -> Env.lineno -> Env.lineno -> unit
 (* 'q' (need open_out to remove Env.tfname from the filesystem) *)
 val quit: < Cap.open_out; ..> -> Env.t -> unit
 (*e: signature [[Commands.quit]] *)
+(* 's' *)
+val substitute: Env.t -> bool (* inglob *) -> unit
 
 (*s: signature [[Commands.setwide]] *)
 (* helpers *)
@@ -38,6 +40,8 @@ val nonzero: Env.t -> unit
 (*s: signature [[Commands.setnoaddr]] *)
 val setnoaddr: Env.t -> unit
 (*e: signature [[Commands.setnoaddr]] *)
+val match_str: Env.regex -> string -> bool
+val match_: Env.t -> Env.regex -> Env.lineno -> bool
 
 (*s: signature [[Commands.append]] *)
 (* return number of lines added, but usually ignored by caller *)

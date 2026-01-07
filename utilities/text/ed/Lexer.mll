@@ -46,8 +46,8 @@ rule token = parse
   | ',' { Comma } | ';' { Semicolon }
   | '+' { Plus } | '-' { Minus } | '^' { Caret }
   | '\'' ['a'-'z'] as s { Mark s.[1] }
-  | '/'              { Buffer.clear buf; regexp '/' lexbuf }
-  | '?'              { Buffer.clear buf; regexp '?' lexbuf }
+  | '/'              { Buffer.clear buf; Slash (regexp '/' lexbuf) }
+  | '?'              { Buffer.clear buf; Question (regexp '?' lexbuf) }
 
   | eof { EOF }
 (*e: function [[Lexer.token]] *)
@@ -62,7 +62,7 @@ and regexp delim = parse
     }
   | '/' {
       if delim = '/'
-      then Slash (Buffer.contents buf)
+      then Buffer.contents buf
       else begin
         Buffer.add_char buf '/';
         regexp delim lexbuf
@@ -70,7 +70,7 @@ and regexp delim = parse
      }
   | '?' {
       if delim = '?'
-      then Question (Buffer.contents buf)
+      then Buffer.contents buf
       else begin
         Buffer.add_char buf '?';
         regexp delim lexbuf

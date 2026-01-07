@@ -56,6 +56,17 @@ let exfile (e : Env.t) (_m : mode) : unit =
   end
 (*e: function [[Commands.exfile]] *)
 
+let match_str (re : Env.regex) (str: string) : bool =
+  (* old: Str.string_match re line 0, but we need unanchored search *)
+  try
+    Str.search_forward re str 0 |> ignore;
+    true
+   with Not_found -> false
+
+let match_ (e : Env.t) (re : Env.regex) (addr : Env.lineno) : bool =
+  let line = Disk.getline e addr in
+  match_str re line
+
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
 (*****************************************************************************)
@@ -199,6 +210,41 @@ let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
   e.dot <- !a1;
   e.fchange <- true
 (*e: function [[Commands.rdelete]] *)
+
+(* used for 's' *)
+let substitute (e : Env.t) (_inglob: bool) : unit =
+  (* TODO: handle inglob *)
+  match Parser.consume e.in_ with
+  (* handle | Question re_str? does not really make sense. *)
+  | Slash re_str ->
+      let re = Str.regexp re_str in
+      (* ugly: *) 
+      Buffer.clear Lexer.buf;
+      let subst_str = Lexer.regexp '/' e.in_.stdin in
+      (* TODO: parse 's/.../.../g' *)
+      In.newline e;
+
+      for a1 = e.addr1 to e.addr2 do
+        let line = Disk.getline e a1 in
+        (* TODO: handle 's/.../.../g' *)
+        if match_str re line
+        then begin
+           let loc1 = Str.match_beginning () in
+           let loc2 = Str.match_end () in
+           let len = String.length line in
+           
+           let before = String.sub line 0 loc1 in
+           let _matched = String.sub line loc1 (loc2 - loc1) in
+           let after = String.sub line loc2 (len - loc2) in
+           (* TODO: handle & and \1 in subst_str *)
+           let newline = before ^ subst_str ^ after in
+           let tl = Disk.putline e newline in
+           (* TODO: mark? *)
+           e.zero.(a1) <- { offset = tl; mark = false }
+        end
+      done
+
+  | t -> Parser.was_expecting_but_got "a regexp" t
 
 (* ------------------------------------------------------------------------- *)
 (* Other *)

@@ -26,6 +26,8 @@ val quit: < Cap.open_out; ..> -> Env.t -> unit
 (*e: signature [[Commands.quit]] *)
 (* 's' *)
 val substitute: Env.t -> bool (* inglob *) -> unit
+(* '!' *)
+val callunix: <Cap.forkew; ..> -> Env.t -> unit
 
 (*s: signature [[Commands.setwide]] *)
 (* helpers *)

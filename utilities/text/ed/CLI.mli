@@ -2,7 +2,9 @@
 (*s: type [[CLI.caps]] *)
 type caps = < 
     Cap.stdin; Cap.stdout; Cap.stderr;
-    Cap.open_in; Cap.open_out;
+    Cap.open_in; (* for 'r' *)
+    Cap.open_out; (* for 'w' *)
+    Cap.forkew; (* for '!' *)
   >
 (*e: type [[CLI.caps]] *)
 (*s: signature [[CLI.main]] *)

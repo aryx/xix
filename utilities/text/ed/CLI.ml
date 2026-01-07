@@ -26,7 +26,9 @@ module A = Address
 (*s: type [[CLI.caps]] *)
 type caps = < 
     Cap.stdin; Cap.stdout; Cap.stderr;
-    Cap.open_in; Cap.open_out;
+    Cap.open_in; (* for 'r' *)
+    Cap.open_out; (* for 'w' *)
+    Cap.forkew; (* for '!' *)
   >
 (*e: type [[CLI.caps]] *)
 (*****************************************************************************)
@@ -136,6 +138,9 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
       | 'v' -> global caps e false
 
       (* other *)
+      | '!' -> 
+         Commands.callunix caps e
+
       | 'q' | 'Q' ->
          if c = 'Q' then e.fchange <- false;
          Commands.setnoaddr e;

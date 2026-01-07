@@ -36,7 +36,7 @@ rule token = parse
   | '\n'          { Newline }
 
   (* for the command *)
-  | (letter | '=') as c   { Char c }
+  | (letter | '=' | '!') as c   { Char c }
 
   (* for the addresses *)
   | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }

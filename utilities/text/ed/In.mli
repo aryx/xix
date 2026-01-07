@@ -10,6 +10,9 @@ val newline: Env.t -> unit
 val filename: Env.t -> char (* 'f' or 'e' or ? *) -> Fpath.t
 (*e: signature [[In.filename]] *)
 
+(* return a line (without trailing '\n') *)
+val gety :  Env.t -> string
+
 (*s: signature [[In.gettty]] *)
 (* Used to read a set of lines from stdin until a single "." on a line
  * is entered marking the end of user text input.

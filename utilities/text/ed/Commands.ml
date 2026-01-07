@@ -255,4 +255,16 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   FS.remove caps Env.tfname;
   raise (Exit.ExitCode 0)
 (*e: function [[Commands.quit]] *)
+
+(* '! *)
+let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
+  setnoaddr e;
+  let s = In.gety e in
+
+  (* ed: was calling rc -c but here we reuse (Cap)Sys.command which relies
+   * on the default shell
+   *)
+  let _ret = CapSys.command caps s in
+  if e.vflag
+  then Out.putst e "!"
 (*e: Commands.ml *)

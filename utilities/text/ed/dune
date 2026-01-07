@@ -17,3 +17,5 @@
   (Main.exe as oed)
  )
 )
+
+(dirs :standard \ docs)

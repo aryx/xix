@@ -1,4 +1,4 @@
-TOP=../../..
+TOP=../../../..
 
 SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml 
 #SYNCWEBFLAGS=-debug
@@ -6,7 +6,7 @@ SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 DOC=oed
 #DOC_EXTRA=control_flow.tex
 VERSION=1
-D=.
+D=..
 SRC_ML=$D/CLI.ml $D/Commands.ml $D/Disk.ml $D/In.ml $D/Out.ml $D/Parser.ml 
 
 SRC_ML_NO_MLI=$D/Address.ml $D/Env.ml $D/Error.ml $D/Main.ml $D/Token.ml

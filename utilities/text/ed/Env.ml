@@ -52,8 +52,8 @@ type lineno = int
 type regex = Str.regexp
 (*e: type [[Env.regex]] *)
 
-(* The globals *)
 (*s: type [[Env.t]] *)
+(* The globals *)
 type t = {
   (* to read the user commands from (and also line input in 'a'/'i' modes) *)
   in_: Parser.state;
@@ -141,6 +141,8 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
        );
     (* sentinel value so that file offsets 0 and 1 are reserved and no
      * real line offsets in zero[] can have those values
+     * TODO? mark is using a separate bool field now so we could
+     * use Tfile_offset 1 too and so start at 1 (or even 0?) now.
      *)
     tline = Tfile_offset 2;
 

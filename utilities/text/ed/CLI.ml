@@ -1,5 +1,5 @@
 (*s: CLI.ml *)
-(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2025, 2026 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 
@@ -32,7 +32,7 @@ type caps = <
 (* Helpers *)
 (*****************************************************************************)
 (*s: function [[CLI.match_]] *)
-let match_ (e : Env.t) (re : Env.regex) (addr : lineno) : bool =
+let match_ (e : Env.t) (re : Env.regex) (addr : Env.lineno) : bool =
   let line = Disk.getline e addr in
   (* old: Str.string_match re line 0
    * but we need unanchored search *)
@@ -212,7 +212,8 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
           e.addr2 <- a1;
           e.addr1 <- a1;
         end;
-        (* TODO: if lastsep = ';' *)
+        (* note that printcom() will internally set e.dot to e.addr2
+         * TODO: if lastsep = ';' *)
         Commands.printcom e;
 
     | T.EOF ->
@@ -306,15 +307,15 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      "-debug", Arg.Unit (fun () -> level := Some Logs.Debug),
      " debug logging mode";
      "-quiet", Arg.Unit (fun () -> level := None),
-     " quite logging mode";
+     " quiet logging mode";
   ] |> Arg.align
   in
   (try 
     Arg.parse_argv argv options (fun t -> args := t::!args) 
-      (spf "usage: %s [-lwc] [file ...]" argv.(0));
+      (spf "usage: %s [options] [file]" argv.(0));
   with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
+  | Arg.Bad msg -> Console.eprint caps msg; raise (Exit.ExitCode 2)
+  | Arg.Help msg -> Console.print caps msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
 
@@ -342,7 +343,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         Commands.quit caps env;
     )
     with Error.Error s -> 
-        (* ed: was in a separate error_1 function *)
+        (* ed: was in a separate error_1() function *)
         (* TODO: reset globals too? *)
         Out.putchr env '?';
         Out.putst env s;

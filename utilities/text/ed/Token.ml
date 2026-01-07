@@ -15,6 +15,6 @@ type t =
   | Plus | Minus | Caret
   | Slash of string | Question of string
   | Mark of char
-[@@deriving show]
 (*e: type [[Token.t]] *)
+[@@deriving show]
 (*e: Token.ml *)

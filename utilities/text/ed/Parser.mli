@@ -1,14 +1,14 @@
 (*s: Parser.mli *)
 open Common
 
-(*s: type [[Parser.state (Parser.mli)]] *)
+(*s: type [[Parser.state]] *)
 type state = {
   stdin: Lexing_.lexbuf;
   (* for inserting "virtual" commands to process before stdin *)
   mutable globp: Lexing_.lexbuf option;
   mutable lookahead : Token.t option;
 }
-(*e: type [[Parser.state (Parser.mli)]] *)
+(*e: type [[Parser.state]] *)
 [@@deriving show]
 
 (*s: signature [[Parser.init]] *)

@@ -39,10 +39,10 @@ type offset_and_mark = {
 let no_line = { offset = Tfile_offset 0; mark = false }
 (*e: constant [[Env.no_line]] *)
 
+(*s: type [[Env.lineno]] *)
 (* ed uses 1-indexed line numbers, but 0 is also used as a special value.
  * alt: call it cursor?
 *)
-(*s: type [[Env.lineno]] *)
 type lineno = int
 (*e: type [[Env.lineno]] *)
 [@@deriving show]
@@ -115,7 +115,6 @@ type t = {
 (*****************************************************************************)
 (* init() *)
 (*****************************************************************************)
-
 (*s: function [[Env.init]] *)
 let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
      (vflag : bool) (oflag : bool) : t =

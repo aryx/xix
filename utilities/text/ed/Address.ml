@@ -9,8 +9,8 @@ type t =
   | SearchFwd of string (* /.../ *)
   | SearchBwd of string (* ?...? *)
   | Relative of t * int (* -, +, ^ *)
-[@@deriving show]
 (*e: type [[Address.t]] *)
+[@@deriving show]
 (*s: type [[Address.range]] *)
 (* What is parsed before a command. For instance 1,3p will be parsed as
  * { addr1 = Some (Line 1); addr2 = Line 3; given = true; set_dot = false}.
@@ -21,6 +21,6 @@ type range = {
   given : bool;
   set_dot : bool;
 }
-[@@deriving show]
 (*e: type [[Address.range]] *)
+[@@deriving show]
 (*e: Address.ml *)

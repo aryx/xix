@@ -25,10 +25,12 @@ let letter = ['a'-'z''A'-'Z''_']
 (*e: constant [[Lexer.letter]] *)
 (*s: constant [[Lexer.digit]] *)
 let digit = ['0'-'9']
+(*e: constant [[Lexer.digit]] *)
 
 (*****************************************************************************)
 (* Main rule *)
 (*****************************************************************************)
+(*s: function [[Lexer.token]] *)
 rule token = parse
   | space+        { Spaces }
   | '\n'          { Newline }
@@ -39,7 +41,8 @@ rule token = parse
   (* for the addresses *)
   | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }
   | '.' { Dot } | '$' { Dollar }
-(*e: constant [[Lexer.digit]] *)
+
+
   | ',' { Comma } | ';' { Semicolon }
   | '+' { Plus } | '-' { Minus } | '^' { Caret }
   | '\'' ['a'-'z'] as s { Mark s.[1] }
@@ -47,7 +50,8 @@ rule token = parse
   | '?'              { Buffer.clear buf; regexp '?' lexbuf }
 
   | eof { EOF }
-
+(*e: function [[Lexer.token]] *)
+(*s: function [[Lexer.regexp]] *)
 and regexp delim = parse
   | '\\' (_ as c) {
       Buffer.add_char buf '\\'; Buffer.add_char buf c;
@@ -76,15 +80,19 @@ and regexp delim = parse
       Buffer.add_char buf c;
       regexp delim lexbuf
     }
+(*e: function [[Lexer.regexp]] *)
 
 (*****************************************************************************)
 (* Other rules *)
 (*****************************************************************************)
+(*s: function [[Lexer.line]] *)
 and line = parse
   | ([^ '\n' ]* as s) '\n' { s }
   | eof { failwith "eof" (* alt: None? *) }
-
+(*e: function [[Lexer.line]] *)
+(*s: function [[Lexer.filename]] *)
 and filename = parse
   | [^ '\n' ' ']* { Lexing.lexeme lexbuf }
   | eof { failwith "eof" }
+(*e: function [[Lexer.filename]] *)
 (*e: Lexer.mll *)

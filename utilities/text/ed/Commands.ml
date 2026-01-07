@@ -1,5 +1,5 @@
 (*s: Commands.ml *)
-(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2025, 2026 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 
@@ -60,7 +60,7 @@ let exfile (e : Env.t) (_m : mode) : unit =
 (* append in tfile and adjust e.zero *)
 (*****************************************************************************)
 (*s: function [[Commands.append]] *)
-(* f can be getfile() above or In.gettty() *)
+(* f can be Disk.getfile() or In.gettty() *)
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
   e.dot <- addr;
   let nline = ref 0 in

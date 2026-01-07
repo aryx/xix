@@ -40,7 +40,7 @@ val setnoaddr: Env.t -> unit
 (*e: signature [[Commands.setnoaddr]] *)
 
 (*s: signature [[Commands.append]] *)
-(* return nubber of lines added, but usually ignored by caller *)
+(* return number of lines added, but usually ignored by caller *)
 val append: Env.t -> (unit -> string option) -> Env.lineno -> int
 (*e: signature [[Commands.append]] *)
 (*e: Commands.mli *)

@@ -44,7 +44,7 @@ type range = {
 (*****************************************************************************)
 
 (*
-val parse_address_range: state -> Address.range
+val parse_range: state -> Address.range
 *)
 
 let parse_delta (st : Parser.state) : int =
@@ -88,7 +88,7 @@ let parse_address (st : Parser.state) : t =
   in
   parse_relatives base st
 
-let parse_address_range (st : Parser.state) : range =
+let parse_range (st : Parser.state) : range =
   let t1 = P.peek st in
   (* optional first address *)
   let first : t option =
@@ -138,3 +138,59 @@ let parse_address_range (st : Parser.state) : range =
 (*****************************************************************************)
 (* Evaluating *)
 (*****************************************************************************)
+
+(* TODO? need to pass [[a]] like in C with e.dot and adjust [[a]] as we go
+ * like in C? so that /.../ and ?...? start from the right place?
+ * alt: could be moved in Address.ml
+ *)
+let rec eval_address (e : Env.t) (adr : t) : Env.lineno =
+  match adr with
+  | Current -> e.dot
+  | Last -> e.dol
+  | Line n -> n
+  | Mark _ -> failwith "TODO: Mark"
+  | SearchFwd _ | SearchBwd _ -> 
+      let dir, re_str = 
+        match adr with 
+        | SearchFwd re -> 1, re
+        | SearchBwd re -> -1, re
+        | _ -> raise (Impossible "cases matched above")
+      in
+      (* less: opti: use SearchFwd of regex instead of str *)
+      let re = Str.regexp re_str in
+      (* starting point *)
+      (* TODO: ed: need to be `a` instead like in C ? *)
+      let a = e.dot in
+      let b = a  in
+      let rec aux (a : Env.lineno) : Env.lineno =
+        let a = a + dir in
+        let a =
+          match () with
+          (* wrap around start/end of buffer *)
+          | _ when a <= 0 -> e.dol
+          | _ when a > e.dol -> 1
+          | _ -> a
+        in
+        match () with
+        | _ when Commands.match_ e re a -> a
+        (* back to starting point and nothing was found *)
+        | _ when a = b ->
+            Logs.warn (fun m -> m "search for %s had no match" re_str);
+            Error.e ""
+        | _ ->
+            aux a
+      in
+      aux a
+
+  | Relative (x, n) -> eval_address e x + n
+
+let eval_range (e : Env.t) (r : range) : Env.lineno * Env.lineno =
+  Logs.debug (fun m -> m "range = %s" (show_range r));
+
+  let addr2 = eval_address e r.addr2 in
+  let addr1 =
+    match r.addr1 with
+    | None -> addr2
+    | Some a -> eval_address e a
+  in
+  addr1, addr2

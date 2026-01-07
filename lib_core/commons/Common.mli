@@ -1,3 +1,5 @@
+(* Common simple functions and small extensions to standard modules *)
+
 (*****************************************************************************)
 (* Core types and exceptions *)
 (*****************************************************************************)

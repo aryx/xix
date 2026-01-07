@@ -10,7 +10,7 @@ module A = Address
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* An OCaml port of ed from Plan 9 (and before from Unix).
+(* An OCaml port of ed from Plan 9 (and Unix).
  *
  * Limitations compared to Plan 9 version:
  *  - no unicode (runes) support
@@ -37,62 +37,8 @@ type caps = <
 (*e: function [[CLI.match_]] *)
   
 (*s: function [[CLI.eval_address]] *)
-(* TODO? need to pass [[a]] like in C with e.dot and adjust [[a]] as we go
- * like in C? so that /.../ and ?...? start from the right place?
- * alt: could be moved in Address.ml
- *)
-let rec eval_address (e : Env.t) (adr : Address.t) : Env.lineno =
-  match adr with
-  | A.Current -> e.dot
-  | A.Last -> e.dol
-  | A.Line n -> n
-  | A.Mark _ -> failwith "TODO: Mark"
-  | A.SearchFwd _ | A.SearchBwd _ -> 
-      let dir, re_str = 
-        match adr with 
-        | A.SearchFwd re -> 1, re
-        | A.SearchBwd re -> -1, re
-        | _ -> raise (Impossible "cases matched above")
-      in
-      (* less: opti: use A.SearchFwd of regex instead of str *)
-      let re = Str.regexp re_str in
-      (* starting point *)
-      (* TODO: ed: need to be `a` instead like in C ? *)
-      let a = e.dot in
-      let b = a  in
-      let rec aux (a : Env.lineno) : Env.lineno =
-        let a = a + dir in
-        let a =
-          match () with
-          (* wrap around start/end of buffer *)
-          | _ when a <= 0 -> e.dol
-          | _ when a > e.dol -> 1
-          | _ -> a
-        in
-        match () with
-        | _ when Commands.match_ e re a -> a
-        (* back to starting point and nothing was found *)
-        | _ when a = b ->
-            Logs.warn (fun m -> m "search for %s had no match" re_str);
-            Error.e ""
-        | _ ->
-            aux a
-      in
-      aux a
-
-  | A.Relative (x, n) -> eval_address e x + n
 (*e: function [[CLI.eval_address]] *)
 (*s: function [[CLI.eval_range]] *)
-let eval_range (e : Env.t) (r : Address.range) : Env.lineno * Env.lineno =
-  Logs.debug (fun m -> m "range = %s" (Address.show_range r));
-
-  let addr2 = eval_address e r.addr2 in
-  let addr1 =
-    match r.addr1 with
-    | None -> addr2
-    | Some a -> eval_address e a
-  in
-  addr1, addr2
 (*e: function [[CLI.eval_range]] *)
 
 (*****************************************************************************)
@@ -112,8 +58,8 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
     end;
 
-    let range : Address.range = Address.parse_address_range e.in_ in
-    let (addr1, addr2) = eval_range e range in
+    let range : Address.range = Address.parse_range e.in_ in
+    let (addr1, addr2) = Address.eval_range e range in
     (* TODO: use range.set_dot! *)
     e.addr1 <- addr1;
     e.addr2 <- addr2;
@@ -290,8 +236,10 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let args = ref [] in
+
   (* "verbose(interactive)" mode is set by default *)
   let vflag = ref true in
+  (* when '-o', the command 'w' will write to stdout (useful for filters) *)
   let oflag = ref false in
 
   let level = ref (Some Logs.Warning) in
@@ -299,7 +247,6 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let options = [
      "-", Arg.Clear vflag,
      " non-interactive mode (opposite of verbose)";
-    (* when '-o', command 'w' will write to stdout (useful for filters) *)
      "-o", Arg.Set oflag,
      " write output to standard output instead of modifying the file";
 

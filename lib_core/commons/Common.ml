@@ -3,7 +3,13 @@
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* A lighter pad's Common.ml (see also semgrep/libs/commons/Common.ml) *)
+(* Common functions and small extensions to standard modules.
+ * 
+ * A lighter pad's Common.ml (see also semgrep/libs/commons/Common.ml).
+ *
+ * Note that you not put functions requiring capabilities in this file;
+ * Common.ml should be reserved to simple "pure" functions.
+ *)
 
 (*****************************************************************************)
 (* Core types and exns *)

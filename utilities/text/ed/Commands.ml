@@ -56,16 +56,9 @@ let exfile (e : Env.t) (_m : mode) : unit =
   end
 (*e: function [[Commands.exfile]] *)
 
-let match_str (re : Env.regex) (str: string) : bool =
-  (* old: Str.string_match re line 0, but we need unanchored search *)
-  try
-    Str.search_forward re str 0 |> ignore;
-    true
-   with Not_found -> false
-
-let match_ (e : Env.t) (re : Env.regex) (addr : Env.lineno) : bool =
+let match_ (e : Env.t) (re : Regex.t) (addr : Env.lineno) : bool =
   let line = Disk.getline e addr in
-  match_str re line
+  Regex.match_str re line
 
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
@@ -227,7 +220,7 @@ let substitute (e : Env.t) (_inglob: bool) : unit =
       for a1 = e.addr1 to e.addr2 do
         let line = Disk.getline e a1 in
         (* TODO: handle 's/.../.../g' *)
-        if match_str re line
+        if Regex.match_str re line
         then begin
            let loc1 = Str.match_beginning () in
            let loc2 = Str.match_end () in

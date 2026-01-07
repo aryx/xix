@@ -40,8 +40,7 @@ val nonzero: Env.t -> unit
 (*s: signature [[Commands.setnoaddr]] *)
 val setnoaddr: Env.t -> unit
 (*e: signature [[Commands.setnoaddr]] *)
-val match_str: Env.regex -> string -> bool
-val match_: Env.t -> Env.regex -> Env.lineno -> bool
+val match_: Env.t -> Regex.t -> Env.lineno -> bool
 
 (*s: signature [[Commands.append]] *)
 (* return number of lines added, but usually ignored by caller *)

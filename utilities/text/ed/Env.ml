@@ -1,14 +1,12 @@
 (*s: Env.ml *)
-(* Copyright 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2025, 2026 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* A set of globals used by many functions.
- *
- *)
+(* A set of globals used by many functions packed in an "environment" record *)
 
 (*****************************************************************************)
 (* Types and constants *)
@@ -49,7 +47,6 @@ type lineno = int
 
 (* alt: Re.t *)
 (*s: type [[Env.regex]] *)
-type regex = Str.regexp
 (*e: type [[Env.regex]] *)
 
 (*s: type [[Env.t]] *)

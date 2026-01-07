@@ -23,7 +23,6 @@ val consume: state -> Token.t
 (*e: signature [[Parser.consume]] *)
 
 (*s: signature [[Parser.parse_address_range]] *)
-val parse_address_range: state -> Address.range
 (*e: signature [[Parser.parse_address_range]] *)
 
 (*s: signature [[Parser.was_expecting]] *)

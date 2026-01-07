@@ -112,7 +112,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         Commands.printcom e;
     end;
 
-    let range : Address.range = Parser.parse_address_range e.in_ in
+    let range : Address.range = Address.parse_address_range e.in_ in
     let (addr1, addr2) = eval_range e range in
     (* TODO: use range.set_dot! *)
     e.addr1 <- addr1;

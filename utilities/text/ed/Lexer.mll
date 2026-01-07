@@ -51,6 +51,9 @@ rule token = parse
 
   | eof { EOF }
 (*e: function [[Lexer.token]] *)
+(*****************************************************************************)
+(* Regexp rule *)
+(*****************************************************************************)
 (*s: function [[Lexer.regexp]] *)
 and regexp delim = parse
   | '\\' (_ as c) {
@@ -88,11 +91,11 @@ and regexp delim = parse
 (*s: function [[Lexer.line]] *)
 and line = parse
   | ([^ '\n' ]* as s) '\n' { s }
-  | eof { failwith "eof" (* alt: None? *) }
+  | eof { failwith "eof in Lexer.line()" (* alt: None? *) }
 (*e: function [[Lexer.line]] *)
 (*s: function [[Lexer.filename]] *)
 and filename = parse
   | [^ '\n' ' ']* { Lexing.lexeme lexbuf }
-  | eof { failwith "eof" }
+  | eof { failwith "eof in Lexer.filename()" }
 (*e: function [[Lexer.filename]] *)
 (*e: Lexer.mll *)

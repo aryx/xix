@@ -37,7 +37,6 @@ type range = {
 }
 (*e: type [[Address.range]] *)
 [@@deriving show]
-(*e: Address.ml *)
 
 (*****************************************************************************)
 (* Parsing *)
@@ -194,3 +193,4 @@ let eval_range (e : Env.t) (r : range) : Env.lineno * Env.lineno =
     | Some a -> eval_address e a
   in
   addr1, addr2
+(*e: Address.ml *)

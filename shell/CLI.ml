@@ -182,7 +182,8 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
 (*****************************************************************************)
 
 (*s: function [[CLI.main]] *)
-let main (caps : <caps; .. >) (argv : string array) : Exit.t =
+let main (caps : <caps; Cap.stdout; Cap.stderr; .. >) (argv : string array) :
+    Exit.t =
   let args = ref [] in
   (*s: [[CLI.main()]] debugging initializations *)
   let level = ref (Some Logs.Warning) in
@@ -249,13 +250,8 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     (*e: [[CLI.main()]] [[options]] elements *)
   ] |> Arg.align
   in
-  (* old: was Arg.parse but we want explicit argv control *)
-  (try 
-    Arg.parse_argv argv options (fun t -> args := t::!args) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun t -> args := t::!args) usage;
   (*s: [[CLI.main()]] logging initializations *)
   Logs_.setup !level ();
   Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));

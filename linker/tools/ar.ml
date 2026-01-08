@@ -60,7 +60,8 @@ let archive (caps : < Cap.open_in; ..> ) (objfiles : Fpath.t list) (chan : Chan.
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[Ar.main]] *)
-let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
   let infiles = ref [] in
   let outfile = ref (Fpath.v "lib.oa") in
 
@@ -79,13 +80,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   ] @ Logs_.cli_flags level) 
    |> Arg.align
   in
-  (try
-    Arg.parse_argv argv options
+  (* This may raise ExitCode *) 
+  Arg_.parse_argv caps argv options
       (fun f -> infiles := Fpath.v f::!infiles) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
   Logs_.setup !level ();
   Logs.info (fun m -> m "ar ran from %s" (Sys.getcwd()));
 

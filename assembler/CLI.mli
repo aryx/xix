@@ -11,7 +11,7 @@ type caps = < Cap.open_in; Cap.open_out; Cap.env >
 
 (*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> ->
+val main: <caps; Cap.stdout; Cap.stderr; ..> ->
   string array -> Exit.t
 (*e: signature [[CLI.main]] *)
 

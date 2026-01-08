@@ -197,7 +197,8 @@ let compile (caps : < Cap.open_in; ..>) (conf : Preprocessor.conf) (arch : Arch.
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[CLI.main]] *)
-let main (caps : <caps; ..>) (argv : string array) : Exit.t =
+let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
   (*s: [[CLI.main()]] set [[arch]] and [[thechar]] *)
   let arch : Arch.t = 
     match Filename.basename argv.(0) with
@@ -308,14 +309,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   ] |> Arg.align
   in
   (*s: [[CLI.main()]] parse [[argv]] and set [[args]] and flags *)
-  (try
-    Arg.parse_argv argv options (fun t -> 
-      args := t::!args
-    ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun t -> args := t::!args) usage;
   (*e: [[CLI.main()]] parse [[argv]] and set [[args]] and flags *)
   (*s: [[CLI.main()]] logging setup *)
   Logs_.setup !level ();

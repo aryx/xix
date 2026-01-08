@@ -260,7 +260,8 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[CLI.main]] *)
-let main (caps : <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
+let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
 
   let arch = 
     match Filename.basename argv.(0) with
@@ -333,13 +334,9 @@ let main (caps : <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     " debug code generation";
   ] |> Arg.align
   in
-  (try
-    Arg.parse_argv argv options
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options
       (fun f -> infiles := Fpath.v f::!infiles) usage;
-  with
-  | Arg.Bad msg -> Console.print caps msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> Console.print caps msg; raise (Exit.ExitCode 0)
-  );
   Logs_.setup !level ();
   Logs.info (fun m -> m "linker ran from %s with arch %s" 
         (Sys.getcwd()) thestring);

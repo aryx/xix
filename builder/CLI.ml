@@ -237,7 +237,8 @@ let build_targets (caps : <caps; .. >) (infile : Fpath.t) (targets : string list
 (*****************************************************************************)
 
 (*s: function [[CLI.main]] *)
-let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
+let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -309,21 +310,17 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     (*e: [[CLI.main()]] [[options]] elements *)
   ] |> Arg.align
   in
-  (* old: was Arg.parse but we want explicit argv control *)
-  (try
-    Arg.parse_argv argv options (fun t -> 
+  (* This may raise ExitCode
+   * old: was Arg.parse but we want explicit argv control *)
+  Arg_.parse_argv caps argv options (fun t -> 
     match t with
     (*s: [[CLI.main()]] modify [[vars]] when definition-like argument *)
-      | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
+    | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
         let (var, value) = Regexp_.matched2 t in
         vars := (var, value)::!vars;
     (*e: [[CLI.main()]] modify [[vars]] when definition-like argument *)
     | _ -> targets := t :: !targets
     ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
   (*s: [[CLI.main()]] logging initializations *)
   Logs_.setup !level ();
   Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));

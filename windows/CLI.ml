@@ -111,7 +111,8 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 (*****************************************************************************)
 
 (*s: function [[CLI.main]] *)
-let main (caps : < caps; ..>) (argv : string array) : Exit.t =
+let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
 
   let backtrace = ref false in
   let level = ref (Some Logs.Warning) in
@@ -136,13 +137,8 @@ let main (caps : < caps; ..>) (argv : string array) : Exit.t =
     " ";
   ] |> Arg.align
   in
-  (try
-    Arg.parse_argv argv options
-      (fun _f -> Arg.usage options usage) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun _f -> Arg.usage options usage) usage;
   Logs_.setup !level ();
   Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
 

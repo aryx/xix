@@ -101,7 +101,8 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[CLI.main]] *)
-let main (caps: <caps; ..>) (argv: string array) : Exit.t =
+let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
+    Exit.t =
   let arch = 
     (* alt: use Arch.arch_of_char argv.(0).(1) *)
     match Filename.basename argv.(0) with
@@ -164,16 +165,12 @@ let main (caps: <caps; ..>) (argv: string array) : Exit.t =
     " dump the backtrace after an error";
   ] |> Arg.align
   in
-  (try
-    Arg.parse_argv argv options (fun f -> 
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun f -> 
      if !infile <> ""
      then failwith "already specified an input file";
      infile := f;
    ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
   Logs_.setup !level ();
   Logs.info (fun m -> m "assembler ran from %s with arch %s" 
         (Sys.getcwd()) thestring);

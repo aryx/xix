@@ -82,12 +82,12 @@ let usage () =
 (*****************************************************************************)
 
 (*s: function [[Main.main]] *)
-let main () =
+let main (caps : < Cap.stdout; Cap.stderr; ..>) (argv : string array) : Exit.t =
   (*s: [[Main.main()]] GC settings *)
   Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
   (*e: [[Main.main()]] GC settings *)
   (*s: [[Main.main()]] sanity check arguments *)
-  if Array.length Sys.argv < 2
+  if Array.length argv < 2
   then begin
     (*s: [[Main.main()]] print usage and exit *)
     UConsole.print (usage ());
@@ -98,7 +98,7 @@ let main () =
   else begin
     let cmd = 
       try 
-        commands |> List.find (fun cmd -> cmd.Cmd_.name = Sys.argv.(1))
+        commands |> List.find (fun cmd -> cmd.Cmd_.name = argv.(1))
       with Not_found ->
         (*s: [[Main.main()]] print usage and exit *)
         UConsole.print (usage ());
@@ -106,7 +106,7 @@ let main () =
         (*e: [[Main.main()]] print usage and exit *)
     in
     (*s: [[Main.main()]] execute [[cmd.f]] *)
-    let argv = Array.sub Sys.argv 1 (Array.length Sys.argv -1) in
+    let argv = Array.sub argv 1 (Array.length argv -1) in
     let usage_msg_cmd = spf "usage: %s %s%s"
       (Filename.basename Sys.argv.(0))
       cmd.Cmd_.name
@@ -114,18 +114,15 @@ let main () =
     in
     let remaining_args = ref [] in
     (*s: [[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]] *)
-    (try 
-     (* todo: look if --help and factorize treatment of usage for subcmds *)
-       Arg.parse_argv argv (Arg.align cmd.Cmd_.options) 
-         (fun arg -> Stack_.push arg remaining_args) usage_msg_cmd;
-     with Arg.Bad str | Arg.Help str->  
-       prerr_string str;
-       exit 1
-    );
+    (* This may raise ExitCode *)
+    (* todo: look if --help and factorize treatment of usage for subcmds *)
+    Arg_.parse_argv caps argv (Arg.align cmd.Cmd_.options) 
+       (fun arg -> Stack_.push arg remaining_args) usage_msg_cmd;
     (*e: [[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]] *)
     (* finally! *)
     try 
-      cmd.Cmd_.f (List.rev !remaining_args)
+      cmd.Cmd_.f (List.rev !remaining_args);
+      Exit.OK
     with 
       | Cmd_.ShowUsage ->
         Arg.usage (Arg.align cmd.Cmd_.options) usage_msg_cmd;
@@ -136,6 +133,9 @@ let main () =
         
 (*s: toplevel [[Main._1]] *)
 let _ =
-  main ()
+  Cap.main (fun (caps : Cap.all_caps) ->
+     let argv = CapSys.argv caps in
+     Exit.exit caps (Exit.catch (fun () -> main caps argv))
+  )
 (*e: toplevel [[Main._1]] *)
 (*e: version_control/main.ml *)

@@ -9,7 +9,7 @@ type caps = < Cap.open_in; Cap.open_out >
 
 (*s: signature [[CLI.main]] *)
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; Cap.stdout; ..> ->
+val main: <caps; Cap.stdout; Cap.stderr; ..> ->
   string array -> Exit.t
 (*e: signature [[CLI.main]] *)
 

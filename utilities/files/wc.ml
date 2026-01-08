@@ -120,14 +120,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      " verbose mode";
   ] |> Arg.align
   in
-  (try 
-    Arg.parse_argv argv options (fun t -> args := t::!args) 
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun t -> args := t::!args) 
       (spf "usage: %s [-lwc] [file ...]" argv.(0));
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
-  (* alt: use Arg and process -debug, -verbose, etc. *)
   Logs_.setup !level ();
 
   let conf =

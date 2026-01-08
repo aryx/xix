@@ -174,8 +174,7 @@ let rec eval_address (e : Env.t) (adr : t) : Env.lineno =
         | _ when Commands.match_ e re a -> a
         (* back to starting point and nothing was found *)
         | _ when a = b ->
-            Logs.warn (fun m -> m "search for %s had no match" re_str);
-            Error.e ""
+            Error.e_warn (spf "search for %s had no match" re_str)
         | _ ->
             aux a
       in

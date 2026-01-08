@@ -24,10 +24,8 @@ let setwide (e : Env.t) : unit =
 (*e: function [[Commands.setwide]] *)
 (*s: function [[Commands.squeeze]] *)
 let squeeze (e : Env.t) (i : lineno) : unit =
-  if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2 then begin
-      Logs.warn (fun m -> m "can't squeeze");
-      Error.e "";
-  end
+  if e.addr1 < i || e.addr2 > e.dol || e.addr1 > e.addr2 
+  then Error.e_warn "can't squeeze"
 (*e: function [[Commands.squeeze]] *)
 (*s: function [[Commands.nonzero]] *)
 let nonzero (e : Env.t) =
@@ -35,10 +33,8 @@ let nonzero (e : Env.t) =
 (*e: function [[Commands.nonzero]] *)
 (*s: function [[Commands.setnoaddr]] *)
 let setnoaddr (e : Env.t) =
-  if e.given then begin
-      Logs.err (fun m -> m "setnoaddr ??");
-      Error.e "";
-  end
+  if e.given
+  then Error.e_err "setnoaddr ??"
 (*e: function [[Commands.setnoaddr]] *)
 
 (*s: type [[Commands.mode]] *)
@@ -138,7 +134,7 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
     )
   with Sys_error str ->
     Logs.err (fun m -> m "Sys_error: %s" str);
-    Error.e !!file
+    Error.e_legacy !!file
 (*e: function [[Commands.read]] *)
 
 (* ------------------------------------------------------------------------- *)
@@ -165,7 +161,7 @@ let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
     )
   with Sys_error str ->
     Logs.err (fun m -> m "Sys_error: %s" str);
-    Error.e !!file
+    Error.e_legacy !!file
 (*e: function [[Commands.write]] *)
 
 (* ------------------------------------------------------------------------- *)
@@ -248,8 +244,7 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   if e.vflag && e.fchange && e.dol != 0 then begin
       (* so a second quit will actually quit *)
       e.fchange <- false;
-      Logs.warn (fun m -> m "trying to quit with modified buffer");
-      Error.e ""
+      Error.e_warn "trying to quit with modified buffer"
   end;
   (* alt: could also Unix.close e.tfile *)
   FS.remove caps Env.tfname;
@@ -261,6 +256,8 @@ let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
   setnoaddr e;
   let s = In.gety e in
 
+  if e.rflag 
+  then Error.e_err "restricted mode on";
   (* ed: was calling rc -c but here we reuse (Cap)Sys.command which relies
    * on the default shell
    *)

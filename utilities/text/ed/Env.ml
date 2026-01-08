@@ -96,6 +96,8 @@ type t = {
   mutable count: int;
   (* set by ?? effect is to Out.printcom() in commands () before the next cmd *)
   mutable pflag: bool;
+  
+
   (* ?? what functions rely on column number set? *)
   mutable col: int;
 
@@ -105,6 +107,8 @@ type t = {
    * used just in Out.putchr() so could be removed almost.
    *)
   oflag: bool;
+  (* new: from GNU ed, "restrited mode" *)
+  rflag: bool;
 }
 (*e: type [[Env.t]] *)
 [@@deriving show]
@@ -114,7 +118,7 @@ type t = {
 (*****************************************************************************)
 (*s: function [[Env.init]] *)
 let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
-     (vflag : bool) (oflag : bool) : t =
+     (vflag : bool) (oflag : bool) (rflag:  bool) : t =
   let out = if oflag then Console.stderr caps else Console.stdout caps in
   (* will be overwritten possibly in the caller by argv[1] 
    * TODO: works on Linux? /fd/1 exists?
@@ -158,6 +162,7 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
 
     vflag = if oflag then false else vflag;
     oflag;
+    rflag;
   }
 (*e: function [[Env.init]] *)
 (*e: Env.ml *)

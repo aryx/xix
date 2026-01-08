@@ -39,8 +39,7 @@ let init (caps : < Cap.stdin; ..>) : state =
 (*****************************************************************************)
 (*s: function [[Parser.was_expecting]] *)
 let was_expecting (expect : string) =
-  Logs.err (fun m -> m "was expecting %s" expect);
-  Error.e ""
+  Error.e_err (spf "was expecting %s" expect)
 (*e: function [[Parser.was_expecting]] *)
 
 (*s: function [[Parser.was_expecting_but_got]] *)

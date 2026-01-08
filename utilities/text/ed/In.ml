@@ -39,9 +39,7 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
   | T.Newline | T.EOF ->
       (* no file specified, use maybe e.savedfile then *)
       (match e.savedfile with
-      | None when cmd <> 'f' -> 
-            Logs.err (fun m -> m "no savedfile and no filename given");
-            Error.e ""
+      | None when cmd <> 'f' -> Error.e_err "no savedfile and no filename given"
       | None -> failwith "TODO?? what does ed in that case?"
       | Some file -> file
       )

@@ -183,8 +183,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
 and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 
   e.in_.globp |> Option.iter (fun _ ->
-      Logs.err (fun m -> m "global command already in");
-      Error.e ""
+      Error.e_err "global command already in"
   );
   Commands.setwide e;
   Commands.squeeze e (if e.dol > 0 then 1 else 0);
@@ -246,6 +245,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let vflag = ref true in
   (* when '-o', the command 'w' will write to stdout (useful for filters) *)
   let oflag = ref false in
+  (* new, restricted ed *)
+  let rflag = ref false in
 
   let level = ref (Some Logs.Warning) in
 
@@ -253,7 +254,9 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      "-", Arg.Clear vflag,
      " non-interactive mode (opposite of verbose)";
      "-o", Arg.Set oflag,
-     " write output to standard output instead of modifying the file";
+     " write buffer to standard output";
+     "-r", Arg.Set rflag,
+     " restricted mode: no shell commands; edits limited to current directory";
 
      (* new: this is verbose *logging*, different from interactive mode *)
      "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
@@ -273,7 +276,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   );
   Logs_.setup !level ();
 
-  let env : Env.t = Env.init caps !vflag !oflag in
+  let env : Env.t = Env.init caps !vflag !oflag !rflag in
 
   (match !args with
   | [] -> ()

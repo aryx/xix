@@ -7,11 +7,11 @@ DOC=oed
 #DOC_EXTRA=control_flow.tex
 VERSION=1
 D=..
-SRC_ML=$D/CLI.ml $D/Commands.ml $D/Disk.ml $D/In.ml $D/Out.ml $D/Parser.ml 
+SRC_ML=$D/CLI.ml $D/Commands.ml $D/Address.ml $D/Disk.ml $D/In.ml $D/Out.ml $D/Parser.ml 
 
-SRC_ML_NO_MLI=$D/Address.ml $D/Env.ml $D/Error.ml $D/Main.ml $D/Token.ml
+SRC_ML_NO_MLI= $D/Env.ml $D/Error.ml $D/Main.ml $D/Token.ml $D/Regex.ml
 
-SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI $D/Lexer.mll
+SRC_VIEWS= $SRC_ML ${SRC_ML:%.ml=%.mli} $SRC_ML_NO_MLI $D/Lexer.mll $D/Lexer.mli
 
 SRC_ORIG=oed.nw
 

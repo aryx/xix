@@ -56,6 +56,10 @@ let match_ (e : Env.t) (re : Regex.t) (addr : Env.lineno) : bool =
   let line = Disk.getline e addr in
   Regex.match_str re line
 
+let file_in_current_dir (file : Fpath.t) : bool =
+  (* alt: use Unix.realpath, follow symlink and compare to cwd *)
+  Fpath.is_seg !!file
+
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
 (*****************************************************************************)
@@ -123,6 +127,8 @@ let printcom (e : Env.t) : unit =
 (*s: function [[Commands.read]] *)
 (* 'r' *)
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
+  if e.rflag && not (file_in_current_dir file)
+  then Error.e_err (spf "restricted mode on, can't access %s" !!file);
   try 
     file |> FS.with_open_in caps (fun chan ->
         setwide e;
@@ -143,6 +149,8 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
 (*s: function [[Commands.write]] *)
 (* 'w' *)
 let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
+  if e.rflag && not (file_in_current_dir file)
+  then Error.e_err (spf "restricted mode on, can't access %s" !!file);
   try 
     file |> FS.with_open_out caps (fun chan ->
         (* TODO: when wq (or do in caller in CLI.ml) *)

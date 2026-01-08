@@ -21,6 +21,7 @@ module A = Address
  *  - no fixed-size array for saved file, buffers, lines, etc.
  *  - no hard limits on max line size, max size of temp file, 
  *  - clearer error messages (via logging)
+ *  - support -r restricted mode like in GNU ed
 *)
 
 (*s: type [[CLI.caps]] *)

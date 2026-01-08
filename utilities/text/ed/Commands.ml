@@ -127,6 +127,7 @@ let printcom (e : Env.t) : unit =
 (*s: function [[Commands.read]] *)
 (* 'r' *)
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
+  (* ocaml-light: see callunix() comment below *)
   if e.rflag && not (file_in_current_dir file)
   then Error.e_err (spf "restricted mode on, can't access %s" !!file);
   try 
@@ -149,6 +150,7 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
 (*s: function [[Commands.write]] *)
 (* 'w' *)
 let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
+  (* ocaml-light: see callunix() comment below *)
   if e.rflag && not (file_in_current_dir file)
   then Error.e_err (spf "restricted mode on, can't access %s" !!file);
   try 
@@ -263,7 +265,9 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
 let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
   setnoaddr e;
   let s = In.gety e in
-
+  (* needed only for ocaml-light who does not support method call
+   * and so can't provide the dynamic caps of CLI.restrict_caps
+   *)
   if e.rflag 
   then Error.e_err "restricted mode on";
   (* ed: was calling rc -c but here we reuse (Cap)Sys.command which relies

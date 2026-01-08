@@ -133,7 +133,8 @@ and fake_display = {
 
 
 (* less: devdir? windir? errorfn? *)
-let init (_caps : < Cap.draw; .. >) =
+let init (caps : < Cap.draw; .. >) =
+  let _ = caps#draw in
   (* less: OCEXEC *)
   let ctlfd = 
     (* less: could use finalize to close if exn at least *)

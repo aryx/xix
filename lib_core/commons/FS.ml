@@ -12,12 +12,14 @@ open Chan
 (*****************************************************************************)
 
 (* capabilities-aware version of UChan.ml *)
-let with_open_in (_caps : < Cap.open_in; .. >) = 
+let with_open_in (caps : < Cap.open_in; .. >) f file = 
+  let _ = caps#open_in !!file in
   (* nosemgrep: use-caps *)
-  UChan.with_open_in
-let with_open_out (_caps : < Cap.open_out; .. >) = 
+  UChan.with_open_in f file
+let with_open_out (caps : < Cap.open_out; .. >) f file = 
+  let _ = caps#open_out !!file in
   (* nosemgrep: use-caps *)
-  UChan.with_open_out
+  UChan.with_open_out f file
 
 (* tail recursive efficient version *)
 let cat (caps : < Cap.open_in; .. >) (file : Fpath.t) : string list =
@@ -32,7 +34,8 @@ let cat (caps : < Cap.open_in; .. >) (file : Fpath.t) : string list =
   cat_aux [] () |> List.rev
   )
 
-let remove (_caps : < Cap.open_out; ..>) (file : Fpath.t) =
+let remove (caps : < Cap.open_out; ..>) (file : Fpath.t) =
   (* alt: Logs.info (fun m -> m "deleting %s" !!file); *)
+  let _ = caps#open_out !!file in
   (* nosemgrep: use-caps *)
   Sys.remove !!file

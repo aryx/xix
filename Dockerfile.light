@@ -3,6 +3,9 @@
 # see https://github.com/aryx/ocaml-light/blob/main/Dockerfile
 FROM padator/ocaml-light
 
+# sanity checking the version
+RUN ocamlc -version
+
 # 9base for rc (TODO: delete once we can bootstrap a working bin/rc)
 RUN apt-get install -y 9base
 

@@ -38,13 +38,37 @@
  *  - use an effect system, but not ready yet for OCaml
  *  - use semgrep rules, but this would be more of a blacklist approach
  *    whereas here it is more a whitelist approach
- *    update: we actually combine Cap, TCB with now semgrep rules, see
- *    the forbid_xxx.jsonnet rules in this directory.
+ *    update: we actually combine Cap with semgrep rules now, see
+ *    the use-caps and do-not-use-xxx rules in semgrep.jsonnet.
+ *
+ * history:
+ *  - use plain records to encode caps statically
+ *  - use object types of OCaml as extensible records to encode caps statically
+ *    (as done originally in EIO but they later switched to (ugly) open variants
+ *     because of Jane Street's hate of objects)
+ *    Using plain records was simpler, however, objects,
+ *    which can be seen as extensible records, are nice because you can have
+ *    signatures like <network: Cap.Network.t; fs: Cap.FS.t; ..> without having
+ *    to name this type and without having to introduce yet another record
+ *    for the combination of those 2 capabilities.
+ *    Objects are a bit to records what polymorphic variants are to variants,
+ *    that is [ taint | search ] allow to merge variants without introducing
+ *    an intermediate name. Polymorphic variants are extensible Sum types,
+ *    objects are extensible Product types!
+ *  - use intermediate types like shortcut 'type open_in = <open_in: FS.open_in>'
+ *    that can be combined (and even concatenated) easily with
+ *    '<Cap.open_in; Cap.stdout; Cap.forkew>'
+ *  - use '..' as in '< Cap.open_in; Cap.stdout; ..>'
+ *  - add dynamic checks too so one can override also dynamically caps
+ *    thx to the new 'type open_in = <open_in: string -> FS.open_in>'.
+ *    Now we need to access the caps in CapSys.ml for example to give the
+ *    opportunity to raise an exn in some overriden caps.
  *
  * LATER:
  *  - could move in xix/lib_system/ at some point
- *  - exn (ability to thrown exn)
- *  - comparison? forbid polymorphic equal, forbid compare, force deriving
+ *  - exn caps (ability to throw or not certain exn) that you can see
+ *    in the type?
+ *  - comparison caps? forbid polymorphic equal, forbid compare, force deriving
  *  - refs? (and globals)
  *
  * Assumed (ambient) capabilities:
@@ -56,8 +80,8 @@
 (* Core type *)
 (**************************************************************************)
 
-(* Note that it's important this type is not exported in Cap.mli!
- * Each capability must be seen as an independent abstract type
+(* Note that it is important for this type to NOT be exported in Cap.mli!
+ * Each capability must be seen as an independent abstract type.
  *)
 type cap = unit
 
@@ -84,6 +108,9 @@ end
 (**************************************************************************)
 (* Files *)
 (**************************************************************************)
+(* The OCaml in_channel and out_channel are already good capabilities we
+ * can reuse.
+ *)
 
 (**************************************************************************)
 (* Exec *)
@@ -163,31 +190,14 @@ module Misc = struct
 end
 
 (**************************************************************************)
-(* The powerbox *)
+(* Shortcuts *)
 (**************************************************************************)
-(* Entry point giving all the authories, a.k.a. the "Powerbox"
- *
- * references:
- *  - "How Emily Tamed the Caml"
- *     https://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
- *
- * I was using plain records before, which was simple. However, objects,
- * which can be seen as extensible records, are nice because you can have
- * signatures like <network: Cap.Network.t; fs: Cap.FS.t; ..> without having
- * to name this type and without having to introduce yet another record
- * for the combination of those 2 capabilities.
- *
- * Objects are a bit to records what polymorphic variants are to variants,
- * that is [ taint | search ] allow to merge variants without introducing
- * an intermediate name. Polymorphic variants are extensible Sum types,
- * objects are extensible Product types!
- *)
 
 (* fs *)
 type readdir = < readdir : FS_.readdir >
 type tmp = < tmp : FS_.tmp >
-type open_in = < open_in : FS_.open_in >
-type open_out = < open_out : FS_.open_out >
+type open_in = < open_in : string -> FS_.open_in >
+type open_out = < open_out : string -> FS_.open_out >
 type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
@@ -243,13 +253,24 @@ let no_caps : no_caps = object end
 (* shortcuts *)
 type forkew = < fork; exec; wait >
 
+
+(**************************************************************************)
+(* The powerbox *)
+(**************************************************************************)
+(* Entry point giving all the authories, a.k.a. the "Powerbox"
+ *
+ * references:
+ *  - "How Emily Tamed the Caml"
+ *     https://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
+ *)
+
 let powerbox : all_caps =
   object
     (* fs *)
     method readdir = ()
     method tmp = ()
-    method open_in = ()
-    method open_out = ()
+    method open_in _path = ()
+    method open_out _path = ()
 
     (* console *)
     method stdin = ()

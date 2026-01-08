@@ -74,7 +74,8 @@ let to_code (x : t) : code =
 (* API *)
 (*****************************************************************************)
 
-let exit _caps t =
+let exit caps t =
+  let _ = caps#exit in
   let code = to_code t in
   (* nosemgrep: do-not-use-exit *)
   exit code

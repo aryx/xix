@@ -48,7 +48,8 @@ let thread_keyboard (ctl : ctl) =
 (* Entry points *)
 (*****************************************************************************)
   
-let init (_caps : < Cap.keyboard; ..>) =
+let init (caps : < Cap.keyboard; ..>) =
+  let _ = caps#keyboard in
   let (chan: key Event.channel) = Event.new_channel () in
   let fd      = Unix1.openfile "/dev/cons"    [Unix1.O_RDONLY] 0o666 in
   let consctl = Unix1.openfile "/dev/consctl" [Unix1.O_WRONLY] 0o666 in

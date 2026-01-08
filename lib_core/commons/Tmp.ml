@@ -1,6 +1,7 @@
 open Fpath_.Operators
 
-let new_file (_caps : < Cap.tmp; ..>) prefix suffix =
+let new_file (caps : < Cap.tmp; ..>) prefix suffix =
+  let _ = caps#tmp in
   (* nosemgrep: use-caps *)
   let filename = Filename.temp_file prefix ("." ^ suffix) in
   Logs.info (fun m -> m "creating %s" filename);

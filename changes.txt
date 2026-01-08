@@ -1,5 +1,16 @@
 # -*- org -*-
 
+* 0.18 (Q1 2026) (oed v1, dynamic caps)
+
+** utilities
+- oed: improve enough so can run mkenam.sh ed script
+  and also new -r restricted mode
+
+** internals
+- add dynamic capabilities checks infra (useful for oed -r)
+
+* -----------------------------------------------------------
+
 * 0.17 (Q4 2025) (ELF Linux, oia v0, ova/ovl v0, o5c/ovc/oic v0, oar/onm v0, Dockerfile.light v1, CLI.ml and caps, semgrep GHA, libcore v0, ocat/opwd/owc/oed/... utilities, resume windows and kernel)
 
 ** general

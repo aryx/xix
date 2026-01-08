@@ -1,4 +1,4 @@
-oed - 5.out.h <<'!'
+oed -r - 5.out.h <<'!'
 v/^	A/d
 1,$s/^	A/	"/
 1,$s/, *$/",/
@@ -9,6 +9,6 @@ char*	anames[] =
 $a
 };
 .
-w enam.c
+w /tmp/enam.c
 q
 !

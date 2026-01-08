@@ -209,10 +209,22 @@ let success str = style_string Success str
 
 (* %! is to flush *)
 
-let print _caps str = Printf.printf "%s\n%!" str
-let print_no_nl _caps str = Printf.printf "%s%!" str
-let eprint _caps str = Printf.eprintf "%s\n%!" str
+let print caps str = 
+  let _ = caps#stdout in
+  Printf.printf "%s\n%!" str
+let print_no_nl caps str = 
+  let _ = caps#stdout in
+  Printf.printf "%s%!" str
+let eprint caps str = 
+  let _ = caps#stderr in
+  Printf.eprintf "%s\n%!" str
 
-let stdin _caps = stdin
-let stdout _caps = stdout
-let stderr _caps = stderr
+let stdin caps = 
+  let _ = caps#stdin in
+  stdin
+let stdout caps = 
+  let _ = caps#stdout in
+  stdout
+let stderr caps = 
+  let _ = caps#stderr in
+  stderr

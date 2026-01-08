@@ -1,18 +1,36 @@
-(* nosemgrep: use-caps *)
-let execv (_caps : < Cap.exec; ..>) = Unix.execv
-(* nosemgrep: use-caps *)
-let execve (_caps : < Cap.exec; ..>) = Unix.execve
-(* nosemgrep: use-caps *)
-let system (_caps : < Cap.fork; ..>) = Unix.system
-(* nosemgrep: use-caps *)
-let fork (_caps : < Cap.fork; ..>) = Unix.fork
-(* nosemgrep: use-caps *)
-let wait (_caps : < Cap.wait; ..>) = Unix.wait
-(* nosemgrep: use-caps *)
-let waitpid (_caps : < Cap.wait; ..>) = Unix.waitpid
-(* nosemgrep: use-caps *)
-let kill (_caps : < Cap.kill; ..>) = Unix.kill
-(* nosemgrep: use-caps *)
-let environment (_caps : < Cap.env; ..>) = Unix.environment
-(* nosemgrep: use-caps *)
-let chdir (_caps : < Cap.chdir; ..>) = Unix.chdir
+let execv (caps : < Cap.exec; ..>) = 
+  let _ = caps#exec in
+  (* nosemgrep: use-caps *)
+  Unix.execv
+let execve (caps : < Cap.exec; ..>) = 
+  let _ = caps#exec in
+  (* nosemgrep: use-caps *)
+  Unix.execve
+let system (caps : < Cap.fork; ..>) =
+  let _ = caps#fork in
+  (* nosemgrep: use-caps *)
+  Unix.system
+let fork (caps : < Cap.fork; ..>) =
+  let _ = caps#fork in
+  (* nosemgrep: use-caps *)
+  Unix.fork
+let wait (caps : < Cap.wait; ..>) = 
+  let _ = caps#wait in
+  (* nosemgrep: use-caps *)
+  Unix.wait
+let waitpid (caps : < Cap.wait; ..>) = 
+  let _ = caps#wait in
+  (* nosemgrep: use-caps *)
+  Unix.waitpid
+let kill (caps : < Cap.kill; ..>) = 
+  let _ = caps#kill in
+  (* nosemgrep: use-caps *)
+  Unix.kill
+let environment (caps : < Cap.env; ..>) = 
+  let _ = caps#env in
+  (* nosemgrep: use-caps *)
+  Unix.environment
+let chdir (caps : < Cap.chdir; ..>) = 
+  let _ = caps#chdir in
+  (* nosemgrep: use-caps *)
+  Unix.chdir

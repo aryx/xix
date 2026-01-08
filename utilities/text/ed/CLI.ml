@@ -17,12 +17,16 @@ module A = Address
  *  - lots of missing features (&, \1, marks, etc.)
  *
  * Improvements over Plan 9 C version:
+ *  - support -r restricted mode like in GNU ed
+ *  - clearer error messages (via logging)
  *  - far less globals!
  *  - no fixed-size array for saved file, buffers, lines, etc.
  *  - no hard limits on max line size, max size of temp file, 
- *  - clearer error messages (via logging)
- *  - support -r restricted mode like in GNU ed
 *)
+
+(*****************************************************************************)
+(* Caps *)
+(*****************************************************************************)
 
 (*s: type [[CLI.caps]] *)
 type caps = < 
@@ -32,9 +36,28 @@ type caps = <
     Cap.forkew; (* for '!' *)
   >
 (*e: type [[CLI.caps]] *)
-(*****************************************************************************)
-(* Helpers *)
-(*****************************************************************************)
+
+let restrict_caps rflag (x : < caps; ..>) =
+  object
+    method exec = 
+      if rflag then Error.e_err "!restricted mode on!"
+      else x#exec
+    method open_in file = 
+      if rflag && not (Fpath.is_seg file)
+      then Error.e_err (spf "!restricted mode on, can't read %s!" file)
+      else x#open_in file
+    method open_out file = 
+      if rflag && not (Fpath.is_seg file) &&
+         (* need open_out to delete tmp file in Commands.quit() *)
+         not (file = !!Env.tfname)
+      then Error.e_err (spf "!restricted mode on, can't write %s!" file)
+      else x#open_out file
+    method fork = x#fork
+    method wait = x#wait
+    method stdin = x#stdin
+    method stdout = x#stdout
+    method stderr = x#stderr
+  end
 
 (*s: function [[CLI.match_]] *)
 (*e: function [[CLI.match_]] *)
@@ -43,6 +66,7 @@ type caps = <
 (*e: function [[CLI.eval_address]] *)
 (*s: function [[CLI.eval_range]] *)
 (*e: function [[CLI.eval_range]] *)
+
 
 (*****************************************************************************)
 (* Main algorithm *)
@@ -91,7 +115,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          e.count <- e.addr2;
          Out.putd e;
          Out.putchr e '\n';
-      (* new: *)
+      (* new: dumping internal state (useful for debugging) *)
       | 'X' -> 
          In.newline e;
          Unix.fsync e.tfile;
@@ -106,6 +130,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
           Commands.read caps e file      
 
       (* writing *)
+
       | 'w' | 'W' ->
          if c = 'W' then e.wrapp <- true;
          (* TODO: if [wW][qQ] *)
@@ -129,16 +154,17 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          In.newline e;
          Commands.rdelete e e.addr1 e.addr2;
          Commands.append e (In.gettty e) (e.addr1 - 1) |> ignore;
-
       | 's' ->
           Commands.nonzero e;
           Commands.substitute e (e.in_.globp <> None);
 
       (* globals *)
+
       | 'g' -> global caps e true
       | 'v' -> global caps e false
 
       (* other *)
+
       | '!' -> 
          Commands.callunix caps e
 
@@ -172,6 +198,11 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
     | T.EOF ->
        (* old: raise (Exit.ExitCode 0) but bad because we need to get to quit()
         * or to return to global() caller when nested call to commands().
+        * TODO? raise (Exit.ExitCode 2) instead and check whether in nested
+        * commands? so this would force people to use 'q' to quit cleanly
+        * (so an error during quit in a script would fail and would
+        * make the whole script fail when EOF is reached)
+        * or raise EOF and capture it in global() ?
         *)
        done_ := true
     | t -> Parser.was_expecting_but_got "a letter" t
@@ -246,7 +277,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   let vflag = ref true in
   (* when '-o', the command 'w' will write to stdout (useful for filters) *)
   let oflag = ref false in
-  (* new, restricted ed *)
+  (* new: restricted ed *)
   let rflag = ref false in
 
   let level = ref (Some Logs.Warning) in
@@ -276,6 +307,8 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   | Arg.Help msg -> Console.print caps msg; raise (Exit.ExitCode 0)
   );
   Logs_.setup !level ();
+
+  let caps = restrict_caps !rflag caps in
 
   let env : Env.t = Env.init caps !vflag !oflag !rflag in
 

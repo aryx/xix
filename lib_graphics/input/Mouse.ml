@@ -144,7 +144,8 @@ let thread_mouse ctl =
 
 
 (* less: take image parameter? *)
-let init (_caps : < Cap.mouse; ..>) =
+let init (caps : < Cap.mouse; ..>) =
+  let _ = caps#mouse in
   try 
    let (chan: state Event.channel) = Event.new_channel () in
    let fd        = Unix1.openfile "/dev/mouse"  [Unix1.O_RDWR] 0o666 in

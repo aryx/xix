@@ -1,13 +1,28 @@
 
-(* nosemgrep: use-caps *)
-let chdir (_caps : < Cap.chdir; ..>) = Sys.chdir
-(* nosemgrep: do-not-use-argv *)
-let argv (_caps : < Cap.argv; .. >) = Sys.argv
-(* nosemgrep: use-caps *)
-let getenv (_caps : < Cap.env; ..>) = Sys.getenv
-(* nosemgrep: use-caps *)
+let chdir (caps : < Cap.chdir; ..>) = 
+  let _ = caps#chdir in
+  (* nosemgrep: use-caps *)
+  Sys.chdir
+
+let argv (caps : < Cap.argv; .. >) = 
+  let _ = caps#argv in
+  (* nosemgrep: do-not-use-argv *)
+  Sys.argv
+
+let getenv (caps : < Cap.env; ..>) = 
+  let _ = caps#env in
+  (* nosemgrep: use-caps *)
+  Sys.getenv
 (* TODO: add to ocaml-light
-let getenv_opt (_caps : < Cap.env; ..>) = Sys.getenv_opt
+let getenv_opt (caps : < Cap.env; ..>) = 
+  let _ = caps#env in
+  (* nosemgrep: use-caps *)
+  Sys.getenv_opt
 *)
-(* nosemgrep: use-caps *)
-let command (_caps : < Cap.fork; Cap.exec; Cap.wait; .. >) = Sys.command
+
+let command (caps : < Cap.fork; Cap.exec; Cap.wait; .. >) = 
+  let _ = caps#fork in
+  let _ = caps#exec in
+  let _ = caps#wait in
+  (* nosemgrep: use-caps *)
+  Sys.command

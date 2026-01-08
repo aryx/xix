@@ -107,8 +107,12 @@ type process = < argv ; env; process_single ; process_multi >
 (* fs *)
 type readdir = < readdir : FS_.readdir >
 type tmp = < tmp : FS_.tmp >
-type open_in = < open_in : FS_.open_in >
-type open_out = < open_out : FS_.open_out >
+(* note that open_in/open_out take a file path (as a string) as parameter so
+ * one can do extra dynamic check before granting the cap by overwriting
+ * the open_in/open_out method from the passed all_caps.
+ *)
+type open_in = < open_in : string -> FS_.open_in >
+type open_out = < open_out : string -> FS_.open_out >
 type fs = < readdir ; tmp; open_in; open_out >
 
 (* exec *)

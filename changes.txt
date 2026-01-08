@@ -4,10 +4,16 @@
 
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script
-  and also new -r restricted mode
+  and add a new -r restricted mode (like in GNU ed)
+
+** libcore
+- new Arg_.ml small wrapper around Arg to factorize code in xix programs
+
+** docs
+- basic lpization of oed in in principia/docs/principia/oed.nw next to ed.nw
 
 ** internals
-- add dynamic capabilities checks infra (useful for oed -r)
+- add dynamic capability check infra (useful for oed -r)
 
 * -----------------------------------------------------------
 
@@ -226,7 +232,7 @@
 
 ** kernel
 - port more of the kernel C code to ocaml 
- (core DS, concurrency, memory, process, interrupts, virtual memory,
+  (core DS, concurrency, memory, process, interrupts, virtual memory,
   scheduling, and timing chapters).
 
 

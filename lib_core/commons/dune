@@ -21,6 +21,7 @@
   Cmd Proc
   Date Bits Rune
   Fpath_ Ftype
+  Arg_
   Arch OS Endian
  )   
  (libraries

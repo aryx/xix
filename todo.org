@@ -5,7 +5,9 @@
 ** TODO changes.txt
 fix o5c for helloc.exe
 
-rc/mk
+finish rc enough so can use it with mk on xix itself! remove dependency to 9base
+ in Dockerfile and Dockerfile.light!
+
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
   need implement globbing, subshell, etc.
 

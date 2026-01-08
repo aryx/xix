@@ -299,27 +299,23 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      " quiet logging mode";
   ] |> Arg.align
   in
-  (try 
-    Arg.parse_argv argv options (fun t -> args := t::!args) 
-      (spf "usage: %s [options] [file]" argv.(0));
-  with
-  | Arg.Bad msg -> Console.eprint caps msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> Console.print caps msg; raise (Exit.ExitCode 0)
-  );
+  (* may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun t -> args := t::!args) 
+    (spf "usage: %s [options] [file]" argv.(0));
   Logs_.setup !level ();
 
   let caps = restrict_caps !rflag caps in
 
   let env : Env.t = Env.init caps !vflag !oflag !rflag in
 
+  (* env adjustments *)
   (match !args with
   | [] -> ()
   | [file] -> 
       env.savedfile <- Some (Fpath.v file);
       env.in_.globp <- Some (Lexing.from_string "r")
-  | _::_::_ -> 
-      (* stricter: *)
-      failwith "too many arguments" 
+  (* stricter: *)
+  | _::_::_ -> failwith "too many arguments" 
   );
   if !oflag then env.in_.globp <- Some (Lexing.from_string "a");
   Logs.debug (fun m -> m "env = %s" (Env.show env));
@@ -339,6 +335,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         Out.putchr env '?';
         Out.putst env s;
   done;
+  (* should never reach *)
   Exit.OK
 (*e: function [[CLI.main]] *)
 (*e: CLI.ml *)

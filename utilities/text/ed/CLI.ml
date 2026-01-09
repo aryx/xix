@@ -59,32 +59,23 @@ let restrict_caps rflag (x : < caps; ..>) =
     method stderr = x#stderr
   end
 
-(*s: function [[CLI.match_]] *)
-(*e: function [[CLI.match_]] *)
-  
-(*s: function [[CLI.eval_address]] *)
-(*e: function [[CLI.eval_address]] *)
-(*s: function [[CLI.eval_range]] *)
-(*e: function [[CLI.eval_range]] *)
-
-
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
 (*s: function [[CLI.commands]] *)
 let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
   Logs.debug (fun m -> m "commands ->");
+
   let done_ = ref false in
-
   while not !done_ do
-
+    (*s: [[CLI.commands()]], at loop start, if [[pflag]] *)
     if e.pflag then begin
         e.pflag <- false;
         e.addr1 <- e.dot;
         e.addr2 <- e.dot;
         Commands.printcom e;
     end;
-
+    (*e: [[CLI.commands()]], at loop start, if [[pflag]] *)
     let range : Address.range = Address.parse_range e.in_ in
     let (addr1, addr2) = Address.eval_range e range in
     (* TODO: use range.set_dot! *)
@@ -93,20 +84,21 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
     e.given <- range.given;
 
     (match Parser.consume e.in_ with
-
     | T.Char c ->
       (match c with
       (* inspecting *)
-
+      (*s: [[CLI.commands()]] match [[c]] inspecting cases *)
       | 'p' | 'P' ->
          In.newline e;
          Commands.printcom e;
+      (*x: [[CLI.commands()]] match [[c]] inspecting cases *)
       | 'f' ->
          (* alt: move in Commands.file() *)
          Commands.setnoaddr e;
          let file : Fpath.t = In.filename e c in
          assert (e.savedfile = Some file);
          Out.putst e !!file;
+      (*x: [[CLI.commands()]] match [[c]] inspecting cases *)
       | '=' ->
          (* alt: move in Commands.print_dot_line_number() *)
          Commands.setwide e;
@@ -115,6 +107,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          e.count <- e.addr2;
          Out.putd e;
          Out.putchr e '\n';
+      (*x: [[CLI.commands()]] match [[c]] inspecting cases *)
       (* new: dumping internal state (useful for debugging) *)
       | 'X' -> 
          In.newline e;
@@ -122,57 +115,62 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
          Logs.app (fun m -> m "env = %s\ntfile content =\n%s"
                     (Env.show e)
                     (FS.cat caps Env.tfname |> String.concat "\n"));
-
+      (*e: [[CLI.commands()]] match [[c]] inspecting cases *)
       (* reading *)
-
+      (*s: [[CLI.commands()]] match [[c]] reading case *)
       | 'r' -> 
           let file : Fpath.t = In.filename e c in
-          Commands.read caps e file      
-
+          Commands.read caps e file
+      (*e: [[CLI.commands()]] match [[c]] reading case *)
       (* writing *)
-
+      (*s: [[CLI.commands()]] match [[c]] writing cases *)
       | 'w' | 'W' ->
          if c = 'W' then e.wrapp <- true;
          (* TODO: if [wW][qQ] *)
          let file : Fpath.t = In.filename e c in
          Commands.write caps e file;
-
+      (*e: [[CLI.commands()]] match [[c]] writing cases *)
       (* modifying *)
-
+      (*s: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'a' -> 
          Logs.info (fun m -> m "append mode");
          Commands.add e 0
+      (*x: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'i' -> 
          Logs.info (fun m -> m "insert mode");
          Commands.add e (-1)
+      (*x: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'd' ->
          Commands.nonzero e;
          In.newline e;
          Commands.rdelete e e.addr1 e.addr2;
+      (*x: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'c' ->
          Commands.nonzero e;
          In.newline e;
          Commands.rdelete e e.addr1 e.addr2;
          Commands.append e (In.gettty e) (e.addr1 - 1) |> ignore;
+      (*x: [[CLI.commands()]] match [[c]] modifying cases *)
       | 's' ->
           Commands.nonzero e;
           Commands.substitute e (e.in_.globp <> None);
-
+      (*e: [[CLI.commands()]] match [[c]] modifying cases *)
       (* globals *)
-
+      (*s: [[CLI.commands()]] match [[c]] global cases *)
       | 'g' -> global caps e true
       | 'v' -> global caps e false
-
+      (*e: [[CLI.commands()]] match [[c]] global cases *)
       (* other *)
-
-      | '!' -> 
-         Commands.callunix caps e
-
+      (*s: [[CLI.commands()]] match [[c]] other cases *)
       | 'q' | 'Q' ->
          if c = 'Q' then e.fchange <- false;
          Commands.setnoaddr e;
          In.newline e;
          Commands.quit caps e;
+      (*x: [[CLI.commands()]] match [[c]] other cases *)
+      | '!' -> 
+         Commands.callunix caps e
+      (*e: [[CLI.commands()]] match [[c]] other cases *)
 
       | c -> failwith (spf "unsupported command '%c'" c)
       )
@@ -182,6 +180,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
        *)
 
     | T.Newline ->
+        (*s: [[CLI.commands()]] [[Newline]] case *)
         (* print when no command specified, as in 1\n *)
 
         (* ed: was a1 == nil but simpler to look at given *)
@@ -194,6 +193,7 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
         (* note that printcom() will internally set e.dot to e.addr2
          * TODO: if lastsep = ';' *)
         Commands.printcom e;
+        (*e: [[CLI.commands()]] [[Newline]] case *)
 
     | T.EOF ->
        (* old: raise (Exit.ExitCode 0) but bad because we need to get to quit()
@@ -272,24 +272,30 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
 
   let args = ref [] in
-
+  (*s: [[CLI.main()]] local flags *)
   (* "verbose(interactive)" mode is set by default *)
   let vflag = ref true in
+  (*x: [[CLI.main()]] local flags *)
   (* when '-o', the command 'w' will write to stdout (useful for filters) *)
   let oflag = ref false in
+  (*x: [[CLI.main()]] local flags *)
   (* new: restricted ed *)
   let rflag = ref false in
-
+  (*x: [[CLI.main()]] local flags *)
   let level = ref (Some Logs.Warning) in
+  (*e: [[CLI.main()]] local flags *)
 
   let options = [
+     (*s: [[CLI.main()]] local [[options]] elements *)
      "-", Arg.Clear vflag,
      " non-interactive mode (opposite of verbose)";
+     (*x: [[CLI.main()]] local [[options]] elements *)
      "-o", Arg.Set oflag,
      " write buffer to standard output";
+     (*x: [[CLI.main()]] local [[options]] elements *)
      "-r", Arg.Set rflag,
      " restricted mode: no shell commands; edits limited to current directory";
-
+     (*x: [[CLI.main()]] local [[options]] elements *)
      (* new: this is verbose *logging*, different from interactive mode *)
      "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),
      " verbose logging mode";
@@ -297,18 +303,23 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
      " debug logging mode";
      "-quiet", Arg.Unit (fun () -> level := None),
      " quiet logging mode";
+     (*e: [[CLI.main()]] local [[options]] elements *)
   ] |> Arg.align
   in
   (* may raise ExitCode *)
   Arg_.parse_argv caps argv options (fun t -> args := t::!args) 
     (spf "usage: %s [options] [file]" argv.(0));
+  (*s: [[CLI.main()]] setup logging after parsed argv *)
   Logs_.setup !level ();
+  (*e: [[CLI.main()]] setup logging after parsed argv *)
 
+  (*s: [[CLI.main()]] restrict caps *)
   let caps = restrict_caps !rflag caps in
+  (*e: [[CLI.main()]] restrict caps *)
 
   let env : Env.t = Env.init caps !vflag !oflag !rflag in
 
-  (* env adjustments *)
+  (*s: [[CLI.main()]] env adjustments *)
   (match !args with
   | [] -> ()
   | [file] -> 
@@ -319,6 +330,7 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   );
   if !oflag then env.in_.globp <- Some (Lexing.from_string "a");
   Logs.debug (fun m -> m "env = %s" (Env.show env));
+  (*e: [[CLI.main()]] env adjustments *)
 
   while true do
     (* when neither commands() nor quit() raise Error, then
@@ -330,10 +342,12 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
         Commands.quit caps env;
     )
     with Error.Error s -> 
+        (*s: [[CLI.main()]] exn handler for [[Error.Error s]] *)
         (* ed: was in a separate error_1() function *)
         (* TODO: reset globals too? *)
         Out.putchr env '?';
         Out.putst env s;
+        (*e: [[CLI.main()]] exn handler for [[Error.Error s]] *)
   done;
   (* should never reach *)
   Exit.OK

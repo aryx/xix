@@ -45,70 +45,80 @@ type lineno = int
 (*e: type [[Env.lineno]] *)
 [@@deriving show]
 
-(* alt: Re.t *)
-(*s: type [[Env.regex]] *)
-(*e: type [[Env.regex]] *)
-
 (*s: type [[Env.t]] *)
 (* The globals *)
 type t = {
+  (*s: [[Env.t]] in/out fields *)
   (* to read the user commands from (and also line input in 'a'/'i' modes) *)
   in_: Parser.state;
+  (*x: [[Env.t]] in/out fields *)
   (* stdout unless oflag is set in which case it's stderr *)
   out: Out_channel_.t;
-
+  (*e: [[Env.t]] in/out fields *)
+  (*s: [[Env.t]] temporary file fields *)
   (* This is the temporary tfname file, ed backing store!
    * Note that we can't use the OCaml usual {in/out}_channel type because we
    * need to both read and write in the temporary file, hence the use of the
    * more general Unix.file_descr.
    *)
   tfile : Unix_.file_descr;
+  (*x: [[Env.t]] temporary file fields *)
   (* current write file offset in tfile to append new lines *)
   mutable tline : tfile_offset;
-
+  (*e: [[Env.t]] temporary file fields *)
+  (*s: [[Env.t]] zero field *)
   (* growing array of line offsets in tfile. 1-indexed array but the 0
    * entry is used as a sentinel. map lineno -> file_offset.
    * The bool is a mark used to remember a matching line in g/re/x
    * operations.
    *)
   mutable zero : offset_and_mark array;
+  (*e: [[Env.t]] zero field *)
+  (*s: [[Env.t]] cursor fields *)
   (* index entried in zero *)
   (* current line *)
   mutable dot: lineno;
   (* last line (dollar) *)
   mutable dol: lineno;
-
+  (*x: [[Env.t]] cursor fields *)
   (* for 1,3p commands. See also Address.range, but here we have
    * concrete line number, not symbolic "addresses".
    *)
   mutable addr1: lineno;
   mutable addr2: lineno;
   mutable given: bool;
-
-  (* for 'w', 'r', 'f' *)
-  mutable savedfile: Fpath.t option;
-  (* write append, for 'W' *)
-  mutable wrapp : bool;
+  (*e: [[Env.t]] cursor fields *)
+  (*s: [[Env.t]] other fields *)
   (* did the buffer changed (mostly tested with dol > 0) *)
   mutable fchange: bool;
-
+  (*x: [[Env.t]] other fields *)
   (* count #chars read, or number of lines; displayed by Out.putd() *)
   mutable count: int;
+  (*x: [[Env.t]] other fields *)
   (* set by ?? effect is to Out.printcom() in commands () before the next cmd *)
   mutable pflag: bool;
-  
-
+  (*x: [[Env.t]] other fields *)
   (* ?? what functions rely on column number set? *)
   mutable col: int;
-
+  (*x: [[Env.t]] other fields *)
+  (* for 'w', 'r', 'f' *)
+  mutable savedfile: Fpath.t option;
+  (*x: [[Env.t]] other fields *)
+  (* write append, for 'W' *)
+  mutable wrapp : bool;
+  (*e: [[Env.t]] other fields *)
+  (*s: [[Env.t]] flag fields *)
   (* verbose (a.k.a. interactive) flag, cleared by 'ed -' *)
   vflag: bool;
+  (*x: [[Env.t]] flag fields *)
   (* output flag, set by 'ed -o'.
    * used just in Out.putchr() so could be removed almost.
    *)
   oflag: bool;
+  (*x: [[Env.t]] flag fields *)
   (* new: from GNU ed, "restrited mode" *)
   rflag: bool;
+  (*e: [[Env.t]] flag fields *)
 }
 (*e: type [[Env.t]] *)
 [@@deriving show]
@@ -119,6 +129,7 @@ type t = {
 (*s: function [[Env.init]] *)
 let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
      (vflag : bool) (oflag : bool) (rflag:  bool) : t =
+
   let out = if oflag then Console.stderr caps else Console.stdout caps in
   (* will be overwritten possibly in the caller by argv[1] 
    * TODO: works on Linux? /fd/1 exists?

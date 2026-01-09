@@ -19,21 +19,26 @@ type t =
   | Current (* '.' *)
   | Last    (* '$' *)
   | Line of int (* <n> *)
-  | Mark of char (* \a *)
+  | Relative of t * int (* -, +, ^ *)
+  (*s: [[Address.t]] other cases *)
   | SearchFwd of string (* /.../ *)
   | SearchBwd of string (* ?...? *)
-  | Relative of t * int (* -, +, ^ *)
+  (*x: [[Address.t]] other cases *)
+  | Mark of char (* \a *)
+  (*e: [[Address.t]] other cases *)
 (*e: type [[Address.t]] *)
 [@@deriving show]
 (*s: type [[Address.range]] *)
-(* What is parsed before a command. For instance 1,3p will be parsed as
+(* What is parsed before a command. For instance 1,3 will be parsed as
  * { addr1 = Some (Line 1); addr2 = Line 3; given = true; set_dot = false}.
  *)
 type range = {
   addr1 : t option;
   addr2 : t;
   given : bool;
+  (*s: [[Address.range]] other fields *)
   set_dot : bool;
+  (*e: [[Address.range]] other fields *)
 }
 (*e: type [[Address.range]] *)
 [@@deriving show]
@@ -68,6 +73,7 @@ let rec parse_relatives (base : t) (st : Parser.state) : t =
   | _ ->
       base
 
+(*s: function [[Address.parse_address]] *)
 let parse_address (st : Parser.state) : t =
   let base =
     match P.peek st with
@@ -86,7 +92,8 @@ let parse_address (st : Parser.state) : t =
         )
   in
   parse_relatives base st
-
+(*e: function [[Address.parse_address]] *)
+(*s: function [[Address.parse_range]] *)
 let parse_range (st : Parser.state) : range =
   let t1 = P.peek st in
   (* optional first address *)
@@ -133,6 +140,7 @@ let parse_range (st : Parser.state) : range =
       | None ->
           { addr1 = None; addr2 = Current; given = false; set_dot = false; }
       )
+(*e: function [[Address.parse_range]] *)
 
 (*****************************************************************************)
 (* Evaluating *)
@@ -140,8 +148,8 @@ let parse_range (st : Parser.state) : range =
 
 (* TODO? need to pass [[a]] like in C with e.dot and adjust [[a]] as we go
  * like in C? so that /.../ and ?...? start from the right place?
- * alt: could be moved in Address.ml
  *)
+(*s: function [[Address.eval_address]] *)
 let rec eval_address (e : Env.t) (adr : t) : Env.lineno =
   match adr with
   | Current -> e.dot
@@ -181,7 +189,8 @@ let rec eval_address (e : Env.t) (adr : t) : Env.lineno =
       aux a
 
   | Relative (x, n) -> eval_address e x + n
-
+(*e: function [[Address.eval_address]] *)
+(*s: function [[Address.eval_range]] *)
 let eval_range (e : Env.t) (r : range) : Env.lineno * Env.lineno =
   Logs.debug (fun m -> m "range = %s" (show_range r));
 
@@ -192,4 +201,5 @@ let eval_range (e : Env.t) (r : range) : Env.lineno * Env.lineno =
     | Some a -> eval_address e a
   in
   addr1, addr2
+(*e: function [[Address.eval_range]] *)
 (*e: Address.ml *)

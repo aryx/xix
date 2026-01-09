@@ -6,20 +6,25 @@ type t =
   | Current (* '.' *)
   | Last    (* '$' *)
   | Line of int (* <n> *)
-  | Mark of char (* \a *)
+  | Relative of t * int (* -, +, ^ *)
+  (*s: [[Address.t]] other cases *)
   | SearchFwd of string (* /.../ *)
   | SearchBwd of string (* ?...? *)
-  | Relative of t * int (* -, +, ^ *)
+  (*x: [[Address.t]] other cases *)
+  | Mark of char (* \a *)
+  (*e: [[Address.t]] other cases *)
 (*e: type [[Address.t]] *)
 (*s: type [[Address.range]] *)
-(* What is parsed before a command. For instance 1,3p will be parsed as
+(* What is parsed before a command. For instance 1,3 will be parsed as
  * { addr1 = Some (Line 1); addr2 = Line 3; given = true; set_dot = false}.
  *)
 type range = {
   addr1 : t option;
   addr2 : t;
   given : bool;
+  (*s: [[Address.range]] other fields *)
   set_dot : bool;
+  (*e: [[Address.range]] other fields *)
 }
 (*e: type [[Address.range]] *)
 

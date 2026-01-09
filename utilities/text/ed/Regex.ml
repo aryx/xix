@@ -1,5 +1,6 @@
 (*s: Regex.ml *)
 
+(* alt: Re.t *)
 (*s: type [[Regex.t]] *)
 type t = Str.regexp
 (*e: type [[Regex.t]] *)

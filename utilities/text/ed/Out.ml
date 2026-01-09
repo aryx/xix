@@ -10,7 +10,6 @@ open Common
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
-
 (*s: function [[Out.putchr]] *)
 let putchr (e : Env.t) (c : char) =
   (* TODO: if listf *)
@@ -30,7 +29,6 @@ let putst (e : Env.t) (str : string) : unit =
   putchr e '\n';
   ()
 (*e: function [[Out.putst]] *)
-
 (*s: function [[Out.putshst]] *)
 (* origin: put shell string? *)
 let putshst (e : Env.t) (str : string) : unit =

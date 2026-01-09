@@ -19,9 +19,11 @@ module T = Token
 (*s: type [[Parser.state]] *)
 type state = {
   stdin: Lexing_.lexbuf;
+  mutable lookahead : Token.t option;
+  (*s: [[Parser.state]] other fields *)
   (* for inserting "virtual" commands to process before stdin *)
   mutable globp: Lexing_.lexbuf option;
-  mutable lookahead : Token.t option;
+  (*e: [[Parser.state]] other fields *)
 }
 (*e: type [[Parser.state]] *)
 [@@deriving show]
@@ -29,8 +31,8 @@ type state = {
 (*s: function [[Parser.init]] *)
 let init (caps : < Cap.stdin; ..>) : state =
   { stdin = Lexing.from_channel (Console.stdin caps);
-    globp = None;
     lookahead = None;
+    globp = None;
   }
 (*e: function [[Parser.init]] *)
 
@@ -93,19 +95,6 @@ let consume (st : state) : Token.t =
 (* Parsing addresses *)
 (*****************************************************************************)
 (* Done in Address.ml *)
-
-(*s: function [[Parser.parse_delta]] *)
-(*e: function [[Parser.parse_delta]] *)
-
-(*s: function [[Parser.parse_relatives]] *)
-(*e: function [[Parser.parse_relatives]] *)
-
-(*s: function [[Parser.parse_address]] *)
-(*e: function [[Parser.parse_address]] *)
-
-
-(*s: function [[Parser.parse_address_range]] *)
-(*e: function [[Parser.parse_address_range]] *)
 
 (*****************************************************************************)
 (* Parsing Commands *)

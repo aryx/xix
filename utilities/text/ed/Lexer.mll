@@ -38,17 +38,22 @@ rule token = parse
   (* for the command *)
   | (letter | '=' | '!') as c   { Char c }
 
+  (*s: [[Lexer.token()]] other cases *)
   (* for the addresses *)
   | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }
   | '.' { Dot } | '$' { Dollar }
 
 
   | ',' { Comma } | ';' { Semicolon }
-  | '+' { Plus } | '-' { Minus } | '^' { Caret }
-  | '\'' ['a'-'z'] as s { Mark s.[1] }
+  | '+' { Plus } | '-' { Minus }
+  (*x: [[Lexer.token()]] other cases *)
   | '/'              { Buffer.clear buf; Slash (regexp '/' lexbuf) }
   | '?'              { Buffer.clear buf; Question (regexp '?' lexbuf) }
-
+  (*x: [[Lexer.token()]] other cases *)
+  | '\'' ['a'-'z'] as s { Mark s.[1] }
+  (*x: [[Lexer.token()]] other cases *)
+  | '^' { Caret }
+  (*e: [[Lexer.token()]] other cases *)
   | eof { EOF }
 (*e: function [[Lexer.token]] *)
 (*****************************************************************************)

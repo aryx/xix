@@ -4,9 +4,11 @@ open Common
 (*s: type [[Parser.state]] *)
 type state = {
   stdin: Lexing_.lexbuf;
+  mutable lookahead : Token.t option;
+  (*s: [[Parser.state]] other fields *)
   (* for inserting "virtual" commands to process before stdin *)
   mutable globp: Lexing_.lexbuf option;
-  mutable lookahead : Token.t option;
+  (*e: [[Parser.state]] other fields *)
 }
 (*e: type [[Parser.state]] *)
 [@@deriving show]
@@ -21,9 +23,6 @@ val peek : state -> Token.t
 (*s: signature [[Parser.consume]] *)
 val consume: state -> Token.t
 (*e: signature [[Parser.consume]] *)
-
-(*s: signature [[Parser.parse_address_range]] *)
-(*e: signature [[Parser.parse_address_range]] *)
 
 (*s: signature [[Parser.was_expecting]] *)
 (* internals that are used outside for now *)

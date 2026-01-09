@@ -52,9 +52,11 @@ let exfile (e : Env.t) (_m : mode) : unit =
   end
 (*e: function [[Commands.exfile]] *)
 
+(*s: function [[Commands.match_]] *)
 let match_ (e : Env.t) (re : Regex.t) (addr : Env.lineno) : bool =
   let line = Disk.getline e addr in
   Regex.match_str re line
+(*e: function [[Commands.match_]] *)
 
 let file_in_current_dir (file : Fpath.t) : bool =
   (* alt: use Unix.realpath, follow symlink and compare to cwd *)

@@ -58,9 +58,11 @@ let match_ (e : Env.t) (re : Regex.t) (addr : Env.lineno) : bool =
   Regex.match_str re line
 (*e: function [[Commands.match_]] *)
 
+(*s: function [[Commands.file_in_current_dir]] *)
 let file_in_current_dir (file : Fpath.t) : bool =
   (* alt: use Unix.realpath, follow symlink and compare to cwd *)
   Fpath.is_seg !!file
+(*e: function [[Commands.file_in_current_dir]] *)
 
 (*****************************************************************************)
 (* append in tfile and adjust e.zero *)
@@ -106,7 +108,6 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
 (*****************************************************************************)
 (* Commands *)
 (*****************************************************************************)
-
 (* ------------------------------------------------------------------------- *)
 (* Inspecting *)
 (* ------------------------------------------------------------------------- *)
@@ -122,7 +123,6 @@ let printcom (e : Env.t) : unit =
   (* TODO: reset flags *)
   ()
 (*e: function [[Commands.printcom]] *)
-
 (* ------------------------------------------------------------------------- *)
 (* Reading *)
 (* ------------------------------------------------------------------------- *)
@@ -145,7 +145,6 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
     Logs.err (fun m -> m "Sys_error: %s" str);
     Error.e_legacy !!file
 (*e: function [[Commands.read]] *)
-
 (* ------------------------------------------------------------------------- *)
 (* Writing *)
 (* ------------------------------------------------------------------------- *)
@@ -175,7 +174,6 @@ let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
     Logs.err (fun m -> m "Sys_error: %s" str);
     Error.e_legacy !!file
 (*e: function [[Commands.write]] *)
-
 (* ------------------------------------------------------------------------- *)
 (* Modifying *)
 (* ------------------------------------------------------------------------- *)
@@ -190,7 +188,6 @@ let add (e : Env.t) (i : int) =
   In.newline e;
   append e (In.gettty e) e.addr2 |> ignore
 (*e: function [[Commands.add]] *)
-
 (*s: function [[Commands.rdelete]] *)
 (* used for 'r' and 'c' *)
 let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
@@ -212,6 +209,7 @@ let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
   e.fchange <- true
 (*e: function [[Commands.rdelete]] *)
 
+(*s: function [[Commands.substitute]] *)
 (* used for 's' *)
 let substitute (e : Env.t) (_inglob: bool) : unit =
   (* TODO: handle inglob *)
@@ -246,6 +244,7 @@ let substitute (e : Env.t) (_inglob: bool) : unit =
       done
 
   | t -> Parser.was_expecting_but_got "a regexp" t
+(*e: function [[Commands.substitute]] *)
 
 (* ------------------------------------------------------------------------- *)
 (* Other *)
@@ -262,7 +261,7 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
   FS.remove caps Env.tfname;
   raise (Exit.ExitCode 0)
 (*e: function [[Commands.quit]] *)
-
+(*s: function [[Commands.callunix]] *)
 (* '! *)
 let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
   setnoaddr e;
@@ -278,4 +277,5 @@ let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
   let _ret = CapSys.command caps s in
   if e.vflag
   then Out.putst e "!"
+(*e: function [[Commands.callunix]] *)
 (*e: Commands.ml *)

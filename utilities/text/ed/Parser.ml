@@ -43,7 +43,6 @@ let init (caps : < Cap.stdin; ..>) : state =
 let was_expecting (expect : string) =
   Error.e_err (spf "was expecting %s" expect)
 (*e: function [[Parser.was_expecting]] *)
-
 (*s: function [[Parser.was_expecting_but_got]] *)
 let was_expecting_but_got (expect : string) (tok : Token.t) =
   was_expecting (spf "%s, but got %s" expect (Token.show tok))
@@ -52,7 +51,6 @@ let was_expecting_but_got (expect : string) (tok : Token.t) =
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Parser.next_token]] *)
 (* Do not use! this is internal! You should use peek() or consume() instead. *)
 let next_token (st : state) : Token.t =
@@ -73,7 +71,6 @@ let next_token (st : state) : Token.t =
 (*****************************************************************************)
 (* peek/consume *)
 (*****************************************************************************)
-         
 (*s: function [[Parser.peek]] *)
 let peek (st : state) : Token.t =
   match st.lookahead with
@@ -83,7 +80,6 @@ let peek (st : state) : Token.t =
       st.lookahead <- Some t;
       t
 (*e: function [[Parser.peek]] *)
-
 (*s: function [[Parser.consume]] *)
 let consume (st : state) : Token.t =
   match st.lookahead with

@@ -27,7 +27,6 @@ module A = Address
 (*****************************************************************************)
 (* Caps *)
 (*****************************************************************************)
-
 (*s: type [[CLI.caps]] *)
 type caps = < 
     Cap.stdin; Cap.stdout; Cap.stderr;
@@ -37,6 +36,7 @@ type caps = <
   >
 (*e: type [[CLI.caps]] *)
 
+(*s: function [[CLI.restrict_caps]] *)
 let restrict_caps rflag (x : < caps; ..>) =
   object
     method exec = 
@@ -58,6 +58,7 @@ let restrict_caps rflag (x : < caps; ..>) =
     method stdout = x#stdout
     method stderr = x#stderr
   end
+(*e: function [[CLI.restrict_caps]] *)
 
 (*****************************************************************************)
 (* Main algorithm *)

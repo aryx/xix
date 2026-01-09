@@ -14,7 +14,6 @@ module T = Token
 (*****************************************************************************)
 (* API *)
 (*****************************************************************************)
-
 (*s: function [[In.newline]] *)
 let newline (e : Env.t) : unit =
   match Parser.consume e.in_ with
@@ -63,8 +62,6 @@ let filename (e : Env.t) (cmd : char) : Fpath.t =
 let gety (e : Env.t) : string =
   Lexer.line e.in_.stdin
 (*e: function [[In.gety]] *)
-  
-
 (*s: function [[In.gettty]] *)
 (* Read a line from stdin. Return None when the user entered "." on a single
  * line meaning the end of interactive input.

@@ -12,7 +12,6 @@ module T = Token
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 (*s: type [[Address.t]] *)
 (* An "address" is a way to specify a line number symbolically or literally *)
 type t =
@@ -46,11 +45,7 @@ type range = {
 (*****************************************************************************)
 (* Parsing *)
 (*****************************************************************************)
-
-(*
-val parse_range: state -> Address.range
-*)
-
+(*s: function [[Address.parse_delta]] *)
 let parse_delta (st : Parser.state) : int =
   match P.consume st with
   | T.Plus ->
@@ -64,7 +59,8 @@ let parse_delta (st : Parser.state) : int =
   | T.Caret -> -1
   | _ ->
       P.was_expecting "relative operator"
-
+(*e: function [[Address.parse_delta]] *)
+(*s: function [[Address.parse_relatives]] *)
 let rec parse_relatives (base : t) (st : Parser.state) : t =
   match P.peek st with
   | T.Plus | T.Minus | T.Caret ->
@@ -72,6 +68,7 @@ let rec parse_relatives (base : t) (st : Parser.state) : t =
       parse_relatives (Relative (base, d)) st
   | _ ->
       base
+(*e: function [[Address.parse_relatives]] *)
 
 (*s: function [[Address.parse_address]] *)
 let parse_address (st : Parser.state) : t =

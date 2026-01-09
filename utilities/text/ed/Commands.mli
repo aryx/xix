@@ -24,10 +24,14 @@ val rdelete: Env.t -> Env.lineno -> Env.lineno -> unit
 (* 'q' (need open_out to remove Env.tfname from the filesystem) *)
 val quit: < Cap.open_out; ..> -> Env.t -> unit
 (*e: signature [[Commands.quit]] *)
+(*s: signature [[Commands.substitute]] *)
 (* 's' *)
 val substitute: Env.t -> bool (* inglob *) -> unit
+(*e: signature [[Commands.substitute]] *)
+(*s: signature [[Commands.callunix]] *)
 (* '!' *)
 val callunix: <Cap.forkew; ..> -> Env.t -> unit
+(*e: signature [[Commands.callunix]] *)
 
 (*s: signature [[Commands.setwide]] *)
 (* helpers *)
@@ -42,7 +46,9 @@ val nonzero: Env.t -> unit
 (*s: signature [[Commands.setnoaddr]] *)
 val setnoaddr: Env.t -> unit
 (*e: signature [[Commands.setnoaddr]] *)
+(*s: signature [[Commands.match_]] *)
 val match_: Env.t -> Regex.t -> Env.lineno -> bool
+(*e: signature [[Commands.match_]] *)
 
 (*s: signature [[Commands.append]] *)
 (* return number of lines added, but usually ignored by caller *)

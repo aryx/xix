@@ -1,5 +1,4 @@
 (*s: Disk.mli *)
-
 (*s: signature [[Disk.putline]] *)
 (* store line (with added trailing '\n') in tfile and return its offset *)
 val putline : Env.t -> string -> Env.tfile_offset

@@ -11,7 +11,6 @@ open Fpath_.Operators
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-
 (* LATER: use Tmp.with_new_file *)
 (*s: constant [[Env.tfname]] *)
 let tfname = Fpath.v "/tmp/oed.scratch"
@@ -56,8 +55,8 @@ type t = {
   out: Out_channel_.t;
   (*e: [[Env.t]] in/out fields *)
   (*s: [[Env.t]] temporary file fields *)
-  (* This is the temporary tfname file, ed backing store!
-   * Note that we can't use the OCaml usual {in/out}_channel type because we
+  (* This is the opened temporary tfname file; ed backing store!
+   * Note that we can't use the usual {in/out}_channel OCaml types because we
    * need to both read and write in the temporary file, hence the use of the
    * more general Unix.file_descr.
    *)
@@ -67,10 +66,9 @@ type t = {
   mutable tline : tfile_offset;
   (*e: [[Env.t]] temporary file fields *)
   (*s: [[Env.t]] zero field *)
-  (* growing array of line offsets in tfile. 1-indexed array but the 0
-   * entry is used as a sentinel. map lineno -> file_offset.
-   * The bool is a mark used to remember a matching line in g/re/x
-   * operations.
+  (* Growing array of line offsets in tfile. It is a 1-indexed array but the 0
+   * entry is used as a sentinel. This array maps lineno -> tfile_offset.
+   * The mark is used to remember a matching line in g/re/x operations.
    *)
   mutable zero : offset_and_mark array;
   (*e: [[Env.t]] zero field *)
@@ -89,23 +87,23 @@ type t = {
   mutable given: bool;
   (*e: [[Env.t]] cursor fields *)
   (*s: [[Env.t]] other fields *)
+  (* for 'w', 'r', 'f' *)
+  mutable savedfile: Fpath.t option;
+  (*x: [[Env.t]] other fields *)
   (* did the buffer changed (mostly tested with dol > 0) *)
   mutable fchange: bool;
-  (*x: [[Env.t]] other fields *)
-  (* count #chars read, or number of lines; displayed by Out.putd() *)
-  mutable count: int;
-  (*x: [[Env.t]] other fields *)
-  (* set by ?? effect is to Out.printcom() in commands () before the next cmd *)
-  mutable pflag: bool;
   (*x: [[Env.t]] other fields *)
   (* ?? what functions rely on column number set? *)
   mutable col: int;
   (*x: [[Env.t]] other fields *)
-  (* for 'w', 'r', 'f' *)
-  mutable savedfile: Fpath.t option;
+  (* count #chars read, or number of lines; displayed by Out.putd() *)
+  mutable count: int;
   (*x: [[Env.t]] other fields *)
   (* write append, for 'W' *)
   mutable wrapp : bool;
+  (*x: [[Env.t]] other fields *)
+  (* set by ?? effect is to Out.printcom() in commands () before the next cmd *)
+  mutable pflag: bool;
   (*e: [[Env.t]] other fields *)
   (*s: [[Env.t]] flag fields *)
   (* verbose (a.k.a. interactive) flag, cleared by 'ed -' *)
@@ -130,15 +128,19 @@ type t = {
 let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
      (vflag : bool) (oflag : bool) (rflag:  bool) : t =
 
+  (*s: [[Env.init()]] set local [[out]] *)
   let out = if oflag then Console.stderr caps else Console.stdout caps in
+  (*e: [[Env.init()]] set local [[out]] *)
+  (*s: [[Env.init()]] set local [[savedfile]] *)
   (* will be overwritten possibly in the caller by argv[1] 
    * TODO: works on Linux? /fd/1 exists?
    *)
   let savedfile = if oflag then Some (Fpath.v "/fd/1") else None in
+  (*e: [[Env.init()]] set local [[savedfile]] *)
   { 
     in_ = Parser.init caps;
     out;
-
+    (*s: [[Env.init()]] [[tfile]] field *)
     tfile =
       (try
         Unix.openfile !!tfname [ Unix.O_RDWR; Unix.O_CREAT ] 0o600
@@ -150,12 +152,15 @@ let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>)
         (* ed was doing exits(nil) = exit 0 so we do the same *)
         raise (Exit.ExitCode 0)
        );
+    (*e: [[Env.init()]] [[tfile]] field *)
+    (*s: [[Env.init()]] [[tline]] field *)
     (* sentinel value so that file offsets 0 and 1 are reserved and no
      * real line offsets in zero[] can have those values
      * TODO? mark is using a separate bool field now so we could
      * use Tfile_offset 1 too and so start at 1 (or even 0?) now.
      *)
     tline = Tfile_offset 2;
+    (*e: [[Env.init()]] [[tline]] field *)
 
     zero = Array.make 10 no_line;
     dot = 0;

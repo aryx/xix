@@ -15,7 +15,6 @@ module T = Token
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 (*s: type [[Parser.state]] *)
 type state = {
   stdin: Lexing_.lexbuf;
@@ -56,15 +55,18 @@ let was_expecting_but_got (expect : string) (tok : Token.t) =
 let next_token (st : state) : Token.t =
   let t = 
     match st.globp with
+    (*s: [[Parser.next_token()]] match [[globp]] cases *)
     | Some lexbuf ->
         let t = Lexer.token lexbuf in
         if t = T.EOF
         then st.globp <- None;
         t
-    | None ->
-        Lexer.token st.stdin
+    (*e: [[Parser.next_token()]] match [[globp]] cases *)
+    | None -> Lexer.token st.stdin
   in
+  (*s: [[Parser.next_token()]] debug token *)
   Logs.debug (fun m -> m "tok = %s" (Token.show t));
+  (*e: [[Parser.next_token()]] debug token *)
   t
 (*e: function [[Parser.next_token]] *)
 
@@ -101,5 +103,4 @@ let consume (st : state) : Token.t =
 (* Parsing Filenames and user text *)
 (*****************************************************************************)
 (* Done in In.ml instead *)
-
 (*e: Parser.ml *)

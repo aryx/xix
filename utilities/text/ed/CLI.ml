@@ -35,7 +35,6 @@ type caps = <
     Cap.forkew; (* for '!' *)
   >
 (*e: type [[CLI.caps]] *)
-
 (*s: function [[CLI.restrict_caps]] *)
 let restrict_caps rflag (x : < caps; ..>) =
   object
@@ -65,8 +64,9 @@ let restrict_caps rflag (x : < caps; ..>) =
 (*****************************************************************************)
 (*s: function [[CLI.commands]] *)
 let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
+  (*s: [[CLI.commands()]] debug start *)
   Logs.debug (fun m -> m "commands ->");
-
+  (*e: [[CLI.commands()]] debug start *)
   let done_ = ref false in
   while not !done_ do
     (*s: [[CLI.commands()]], at loop start, if [[pflag]] *)
@@ -134,11 +134,15 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
       (* modifying *)
       (*s: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'a' -> 
+         (*s: [[CLI.commands()]] in [['a']] case, log append mode *)
          Logs.info (fun m -> m "append mode");
+         (*e: [[CLI.commands()]] in [['a']] case, log append mode *)
          Commands.add e 0
       (*x: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'i' -> 
+         (*s: [[CLI.commands()]] in [['i']] case, log insert mode *)
          Logs.info (fun m -> m "insert mode");
+         (*e: [[CLI.commands()]] in [['i']] case, log insert mode *)
          Commands.add e (-1)
       (*x: [[CLI.commands()]] match [[c]] modifying cases *)
       | 'd' ->
@@ -209,7 +213,9 @@ let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
     | t -> Parser.was_expecting_but_got "a letter" t
     )
   done;
+  (*s: [[CLI.commands()]] debug end *)
   Logs.debug (fun m -> m "commands <-");
+  (*e: [[CLI.commands()]] debug end *)
 (*e: function [[CLI.commands]] *)
 (*s: function [[CLI.global]] *)
 (* g/re/cmd, v/re/cmd *)
@@ -313,13 +319,11 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (*s: [[CLI.main()]] setup logging after parsed argv *)
   Logs_.setup !level ();
   (*e: [[CLI.main()]] setup logging after parsed argv *)
-
   (*s: [[CLI.main()]] restrict caps *)
   let caps = restrict_caps !rflag caps in
   (*e: [[CLI.main()]] restrict caps *)
 
   let env : Env.t = Env.init caps !vflag !oflag !rflag in
-
   (*s: [[CLI.main()]] env adjustments *)
   (match !args with
   | [] -> ()
@@ -329,8 +333,12 @@ let main (caps : <caps; ..>) (argv : string array) : Exit.t =
   (* stricter: *)
   | _::_::_ -> failwith "too many arguments" 
   );
+  (*s: [[CLI.main()]] env adjustments if [[oflag]] *)
   if !oflag then env.in_.globp <- Some (Lexing.from_string "a");
+  (*e: [[CLI.main()]] env adjustments if [[oflag]] *)
+  (*s: [[CLI.main()]] debug env *)
   Logs.debug (fun m -> m "env = %s" (Env.show env));
+  (*e: [[CLI.main()]] debug env *)
   (*e: [[CLI.main()]] env adjustments *)
 
   while true do

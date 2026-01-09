@@ -1,5 +1,4 @@
 (*s: Address.mli *)
-
 (*s: type [[Address.t]] *)
 (* An "address" is a way to specify a line number symbolically or literally *)
 type t =
@@ -16,7 +15,7 @@ type t =
 (*e: type [[Address.t]] *)
 (*s: type [[Address.range]] *)
 (* What is parsed before a command. For instance 1,3 will be parsed as
- * { addr1 = Some (Line 1); addr2 = Line 3; given = true; set_dot = false}.
+ * { addr1 = Some (Line 1); addr2 = Line 3; given = true; ...}.
  *)
 type range = {
   addr1 : t option;

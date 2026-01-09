@@ -1,13 +1,10 @@
 (*s: Lexer.mli *)
-
 (*s: signature [[Lexer.token]] *)
 val token: Lexing.lexbuf -> Token.t
 (*e: signature [[Lexer.token]] *)
-
 (*s: signature [[Lexer.regexp]] *)
 val regexp: char -> Lexing.lexbuf -> string
 (*e: signature [[Lexer.regexp]] *)
-
 (*s: signature [[Lexer.filename]] *)
 val filename: Lexing.lexbuf -> string
 (*e: signature [[Lexer.filename]] *)

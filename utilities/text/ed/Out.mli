@@ -1,5 +1,4 @@
 (*s: Out.mli *)
-
 (*s: signature [[Out.putchr]] *)
 val putchr: Env.t -> char -> unit
 (*e: signature [[Out.putchr]] *)

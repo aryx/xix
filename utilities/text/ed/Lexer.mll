@@ -9,7 +9,6 @@ open Token
 (* Splitting the user input in tokens which are then assembled in
  * addresses or commands by Parser.ml
  *)
-
 (*s: constant [[Lexer.buf]] *)
 let buf = Buffer.create 32
 (*e: constant [[Lexer.buf]] *)
@@ -43,8 +42,7 @@ rule token = parse
   | digit+        { Int (int_of_string (Lexing.lexeme lexbuf)) }
   | '.' { Dot } | '$' { Dollar }
 
-
-  | ',' { Comma } | ';' { Semicolon }
+  | ',' { Comma } 
   | '+' { Plus } | '-' { Minus }
   (*x: [[Lexer.token()]] other cases *)
   | '/'              { Buffer.clear buf; Slash (regexp '/' lexbuf) }
@@ -53,6 +51,8 @@ rule token = parse
   | '\'' ['a'-'z'] as s { Mark s.[1] }
   (*x: [[Lexer.token()]] other cases *)
   | '^' { Caret }
+  (*x: [[Lexer.token()]] other cases *)
+  | ';' { Semicolon }
   (*e: [[Lexer.token()]] other cases *)
   | eof { EOF }
 (*e: function [[Lexer.token]] *)
@@ -62,32 +62,20 @@ rule token = parse
 (*s: function [[Lexer.regexp]] *)
 and regexp delim = parse
   | '\\' (_ as c) {
-      Buffer.add_char buf '\\'; Buffer.add_char buf c;
-      regexp delim lexbuf
+      Buffer.add_char buf '\\'; Buffer.add_char buf c; regexp delim lexbuf
     }
   | '/' {
       if delim = '/'
       then Buffer.contents buf
-      else begin
-        Buffer.add_char buf '/';
-        regexp delim lexbuf
-      end
+      else begin Buffer.add_char buf '/'; regexp delim lexbuf end
      }
   | '?' {
       if delim = '?'
       then Buffer.contents buf
-      else begin
-        Buffer.add_char buf '?';
-        regexp delim lexbuf
-      end
+      else begin Buffer.add_char buf '?'; regexp delim lexbuf end
     }
-  | '\n' | eof {
-      failwith "Unterminated regular expression"
-    }
-  | _ as c {
-      Buffer.add_char buf c;
-      regexp delim lexbuf
-    }
+  | '\n' | eof { failwith "Unterminated regular expression" }
+  | _ as c { Buffer.add_char buf c; regexp delim lexbuf }
 (*e: function [[Lexer.regexp]] *)
 
 (*****************************************************************************)

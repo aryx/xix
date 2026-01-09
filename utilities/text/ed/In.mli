@@ -1,12 +1,11 @@
 (*s: In.mli *)
-
 (*s: signature [[In.newline]] *)
 (* check the next token is a newline (or EOF) and consume it *)
 val newline: Env.t -> unit
 (*e: signature [[In.newline]] *)
 (*s: signature [[In.filename]] *)
 (* read a filename from stdin or from Env.savedfile otherwise *)
-val filename: Env.t -> char (* 'f' or 'e' or ? *) -> Fpath.t
+val filename: Env.t -> char (* 'f' or 'e' or 'r' or ? *) -> Fpath.t
 (*e: signature [[In.filename]] *)
 
 (*s: signature [[In.gety]] *)

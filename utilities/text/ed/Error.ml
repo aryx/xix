@@ -1,5 +1,4 @@
 (*s: Error.ml *)
-
 (*s: exception [[Error.Error]] *)
 exception Error of string
 (*e: exception [[Error.Error]] *)
@@ -18,7 +17,7 @@ let e_err s =
 
 (*s: function [[Error.e_legacy]] *)
 (* the raise will effectively jump on the exn handler in CLI.main()
- * (emulating the longjmp done in C).
+ * ed: we emulate the longjmp done in C.
  *)
 let e_legacy s =
   raise (Error s)

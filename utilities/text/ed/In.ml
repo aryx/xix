@@ -7,7 +7,6 @@ module T = Token
 (* Prelude *)
 (*****************************************************************************)
 (* Additional helpers to read from stdin.
- *
  * alt: could be merged with Parser.ml
  *)
 
@@ -29,18 +28,19 @@ let newline (e : Env.t) : unit =
 
 (*s: function [[In.filename]] *)
 let filename (e : Env.t) (cmd : char) : Fpath.t =
+  (*s: [[In.filename()]] reset [[count]] *)
   (* alt: do it in the caller, clearer; will be incremented
    * when reading the file in getfile
    *)
   e.count <- 0;
-
+  (*e: [[In.filename()]] reset [[count]] *)
   match Parser.consume e.in_ with
   | T.Newline | T.EOF ->
       (* no file specified, use maybe e.savedfile then *)
       (match e.savedfile with
+      | Some file -> file
       | None when cmd <> 'f' -> Error.e_err "no savedfile and no filename given"
       | None -> failwith "TODO?? what does ed in that case?"
-      | Some file -> file
       )
   | T.Spaces ->
       let str = Lexer.filename e.in_.stdin in
@@ -72,7 +72,9 @@ let gettty (e : Env.t) () : string option =
   let s = gety e in
   if s = "."
   then begin
+    (*s: [[In.gettty()]] log end of input *)
     Logs.info (fun m -> m "end of input, back to ed");
+    (*e: [[In.gettty()]] log end of input *)
     None
   end
   else Some s

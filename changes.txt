@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.18 (Q1 2026) (oed v1, dynamic caps)
+* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions)
 
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script
@@ -10,10 +10,10 @@
 - new Arg_.ml small wrapper around Arg to factorize code in xix programs
 
 ** docs
-- basic lpization of oed in in principia/docs/principia/oed.nw next to ed.nw
+- lpization of oed in in principia/docs/principia/oed.nw (next to ed.nw)
 
 ** internals
-- add dynamic capability check infra (useful for oed -r)
+- add dynamic capability restriction infra (useful for oed -r)
 
 * -----------------------------------------------------------
 

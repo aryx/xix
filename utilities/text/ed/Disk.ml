@@ -69,29 +69,6 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
     Some s
   with End_of_file -> None
 (*e: function [[Disk.getfile]] *)
-  
-(* TODO:
-  let string_of_chars xs =
-    (* alt: do that in caller, again cleaner than in filename *)
-    e.count <- e.count + List.length xs;
-    failwith "TODO"
-  in
-  let rec aux acc
-    let copt : char option =
-      try Some (input_char chan.i)
-      with End_of_file -> None
-    in
-    (match copt with
-    | None -> 
-        if acc = []
-        then None
-        else begin 
-           Out.putstr e "\\n appended";
-           Some (('\n'::acc) |> List.rev |> string_of_chars)
-        end
-     | Some c -> aux (c::acc)
-    ...
-*)
 (*s: function [[Disk.putfile]] *)
 (* dual of getfile() but this time writing all the lines, not just one *)
 let putfile (e : Env.t) (chan : Chan.o) : unit =

@@ -13,7 +13,6 @@ open Env
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Commands.setwide]] *)
 let setwide (e : Env.t) : unit =
   if not e.given then begin
@@ -68,7 +67,7 @@ let file_in_current_dir (file : Fpath.t) : bool =
 (* append in tfile and adjust e.zero *)
 (*****************************************************************************)
 (*s: function [[Commands.append]] *)
-(* f can be Disk.getfile() or In.gettty() *)
+(* f can be Disk.getfile() or In.gettty() (or even getsub()?) *)
 let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
   e.dot <- addr;
   let nline = ref 0 in
@@ -76,7 +75,8 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
   let rec aux () =
     match f () with
     | None -> (* EOF *) !nline
-    | Some str ->
+    | Some line ->
+        (*s: [[Commands.append()]] grow [[zero]] if needed *)
         if e.dol + 2 >= Array.length e.zero 
         then begin
             let oldz = e.zero in
@@ -85,21 +85,22 @@ let append (e : Env.t) (f : unit -> string option) (addr : lineno) : int =
             Array.blit oldz 0 newz 0 len;
             e.zero <- newz;
         end;
-
-        let tl = Disk.putline e str in
+        (*e: [[Commands.append()]] grow [[zero]] if needed *)
+        let tl = Disk.putline e line in
         incr nline;
-
         e.dol <- e.dol + 1;
+        (* insert new line after e.dot *)
+        e.dot <- e.dot + 1;
+
+        (* shift zero entries from e.dol down to e.dot up one by one *)
         let a1 = ref e.dol in
         let a2 = ref (!a1 + 1) in
-        e.dot <- e.dot + 1;
-        let rdot = e.dot in
-        while !a1 > rdot do
+        while !a1 > e.dot do
           e.zero.(!a2) <- e.zero.(!a1);
           decr a2; decr a1;
         done;
-        e.zero.(rdot) <- {offset = tl; mark = false};
-        (* TODO: update zero *)
+        (* finally insert the new line reference in zero *)
+        e.zero.(e.dot) <- {offset = tl; mark = false};
         aux ()
   in
   aux ()
@@ -129,9 +130,11 @@ let printcom (e : Env.t) : unit =
 (*s: function [[Commands.read]] *)
 (* 'r' *)
 let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
+  (*s: [[Commands.read()]] restricted mode check *)
   (* ocaml-light: see callunix() comment below *)
   if e.rflag && not (file_in_current_dir file)
   then Error.e_err (spf "restricted mode on, can't access %s" !!file);
+  (*e: [[Commands.read()]] restricted mode check *)
   try 
     file |> FS.with_open_in caps (fun chan ->
         setwide e;
@@ -151,9 +154,11 @@ let read (caps : < Cap.open_in; .. >) (e : Env.t) (file : Fpath.t) : unit =
 (*s: function [[Commands.write]] *)
 (* 'w' *)
 let write (caps : < Cap.open_out; ..>) (e : Env.t) (file : Fpath.t) : unit =
+  (*s: [[Commands.write()]] restricted mode check *)
   (* ocaml-light: see callunix() comment below *)
   if e.rflag && not (file_in_current_dir file)
   then Error.e_err (spf "restricted mode on, can't access %s" !!file);
+  (*e: [[Commands.write()]] restricted mode check *)
   try 
     file |> FS.with_open_out caps (fun chan ->
         (* TODO: when wq (or do in caller in CLI.ml) *)
@@ -237,6 +242,7 @@ let substitute (e : Env.t) (_inglob: bool) : unit =
            let after = String.sub line loc2 (len - loc2) in
            (* TODO: handle & and \1 in subst_str *)
            let newline = before ^ subst_str ^ after in
+
            let tl = Disk.putline e newline in
            (* TODO: mark? *)
            e.zero.(a1) <- { offset = tl; mark = false }
@@ -252,11 +258,13 @@ let substitute (e : Env.t) (_inglob: bool) : unit =
 (*s: function [[Commands.quit]] *)
 (* 'q' *)
 let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
+  (*s: [[Commands.quit()]] check if modified buffer *)
   if e.vflag && e.fchange && e.dol != 0 then begin
       (* so a second quit will actually quit *)
       e.fchange <- false;
       Error.e_warn "trying to quit with modified buffer"
   end;
+  (*e: [[Commands.quit()]] check if modified buffer *)
   (* alt: could also Unix.close e.tfile *)
   FS.remove caps Env.tfname;
   raise (Exit.ExitCode 0)
@@ -266,11 +274,13 @@ let quit (caps : <Cap.open_out; ..>) (e : Env.t) : unit =
 let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
   setnoaddr e;
   let s = In.gety e in
+  (*s: [[Commands.callunix()]] restricted mode check *)
   (* needed only for ocaml-light who does not support method call
    * and so can't provide the dynamic caps of CLI.restrict_caps
    *)
   if e.rflag 
   then Error.e_err "restricted mode on";
+  (*e: [[Commands.callunix()]] restricted mode check *)
   (* ed: was calling rc -c but here we reuse (Cap)Sys.command which relies
    * on the default shell
    *)

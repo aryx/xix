@@ -20,9 +20,9 @@ let getenv_opt (caps : < Cap.env; ..>) =
   Sys.getenv_opt
 *)
 
-let command (caps : < Cap.fork; Cap.exec; Cap.wait; .. >) = 
+let command (caps : < Cap.fork; Cap.exec; Cap.wait; .. >) cmd = 
   let _ = caps#fork in
-  let _ = caps#exec in
+  let _ = caps#exec cmd in
   let _ = caps#wait in
   (* nosemgrep: use-caps *)
-  Sys.command
+  Sys.command cmd

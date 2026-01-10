@@ -5,8 +5,32 @@
  * no way to build/forge them except by calling the restricted (statically
  * and dynamically) Cap.main() below. This function is passing all capabilities
  * to the entry point of your program; this entry point can then restrict
- * the set of capabilities to pass to other functions by using the :> cast
- * operator.
+ * statically the set of capabilities to pass to other functions by using
+ * the :> cast operator.
+ *
+ * Note that you can further restrict dynamically capabilities by
+ * overriding the passed object. For example, here is some code from
+ * oed to further restrict exec/open:
+ *
+ *    type caps = < Cap.exec; Cap.open_in; Cap.open_out; Cap.fork; Cap.stdin>
+ *    let restrict_caps rflag (x : < caps; ..>) =
+ *      object
+ *        method exec _cmd = 
+ *          if rflag then failwith "!restricted mode on!"
+ *          else x#exec cmd
+ *        method open_in file = 
+ *          if rflag && not (Fpath.is_seg file)
+ *          then failwith (spf "!restricted mode on, can't read %s!" file)
+ *          else x#open_in file
+ *        method open_out file = 
+ *          if rflag && not (Fpath.is_seg file) &&
+ *             (* need open_out to delete tmp file in Commands.quit() *)
+ *             not (file = !!Env.tfname)
+ *          then failwith (spf "!restricted mode on, can't write %s!" file)
+ *          else x#open_out file
+ *        method fork = x#fork
+ *        ...
+ *      end
  *)
 
 (**************************************************************************)
@@ -49,7 +73,8 @@ end
 module FS_ : sig
   type readdir
   type tmp
-  (* TODO: refine in open_argv, open_pwd, open_root *)
+  (* we could refine in open_argv, open_pwd, open_root but you can also implement
+   * those restrictions dynamically like in restrict_caps() above *)
   type open_in
   type open_out
 end
@@ -57,12 +82,16 @@ end
 module Exec : sig
   (* note that you can make your own exec capability (e.g., git_exec)
    * a subtype of this one by defining your own function
-   * that takes Exec.t and gives the subcapability
+   * that takes Exec.t and gives the subcapability.
+   * You can also restrict the cap dynamically like in restrict_caps() above.
    *)
   type t
 end
 
 module Network : sig
+  (* You can also restrict the cap dynamically like in restrict_caps() above
+   * for example to whitelist a set of IPs.
+   *)
   type t
 end
 
@@ -75,7 +104,7 @@ module Misc : sig
 end
 
 (**************************************************************************)
-(* Shortcut aliases *)
+(* Shortcuts *)
 (**************************************************************************)
 
 (* console *)
@@ -105,21 +134,24 @@ type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir; mount
 type process = < argv ; env; process_single ; process_multi >
 
 (* fs *)
-type readdir = < readdir : FS_.readdir >
-type tmp = < tmp : FS_.tmp >
 (* note that open_in/open_out take a file path (as a string) as parameter so
  * one can do extra dynamic check before granting the cap by overwriting
- * the open_in/open_out method from the passed all_caps.
+ * the open_in/open_out method from the passed all_caps like in
+ * restrict_caps() above.
  *)
-type open_in = < open_in : string -> FS_.open_in >
-type open_out = < open_out : string -> FS_.open_out >
+type open_in = < open_in : string (* path *) -> FS_.open_in >
+type open_out = < open_out : string (* path *) -> FS_.open_out >
+type readdir = < readdir : string (* path *) -> FS_.readdir >
+type tmp = < tmp : FS_.tmp >
 type fs = < readdir ; tmp; open_in; open_out >
 
 (* exec *)
-type exec = < exec : Exec.t >
+type exec = < exec : string (* cmd *) -> Exec.t >
+(* shortcut *)
+type forkew = < fork; exec; wait >
 
 (* network *)
-type network = < network : Network.t >
+type network = < network : string (* IP or name *) -> Network.t >
 
 (* misc *)
 type random = < random : Misc.random >
@@ -129,7 +161,6 @@ type misc = < random >
 (* Powerbox *)
 (**************************************************************************)
 
-(* alt: called "Stdenv.Base.env" in EIO *)
 type all_caps =
   < console
   ; process
@@ -152,9 +183,6 @@ type no_caps = < >
  * pass the no_caps below.
  *)
 val no_caps : no_caps
-
-(* shortcuts *)
-type forkew = < fork; exec; wait >
 
 (**************************************************************************)
 (* Temporary unsafe caps to help migration *)

@@ -1,15 +1,17 @@
-let execv (caps : < Cap.exec; ..>) = 
-  let _ = caps#exec in
+let execv (caps : < Cap.exec; ..>) cmd argv = 
+  let _ = caps#exec cmd in
   (* nosemgrep: use-caps *)
-  Unix.execv
-let execve (caps : < Cap.exec; ..>) = 
-  let _ = caps#exec in
+  Unix.execv cmd argv
+let execve (caps : < Cap.exec; ..>) cmd argv env = 
+  let _ = caps#exec cmd in
   (* nosemgrep: use-caps *)
-  Unix.execve
-let system (caps : < Cap.fork; ..>) =
+  Unix.execve cmd argv env
+let system (caps : < Cap.fork; Cap.exec; Cap.wait; ..>) cmd =
   let _ = caps#fork in
+  let _ = caps#exec cmd in
+  let _ = caps#wait in
   (* nosemgrep: use-caps *)
-  Unix.system
+  Unix.system cmd
 let fork (caps : < Cap.fork; ..>) =
   let _ = caps#fork in
   (* nosemgrep: use-caps *)

@@ -48,9 +48,9 @@
  *     because of Jane Street's hate of objects)
  *    Using plain records was simpler, however, objects,
  *    which can be seen as extensible records, are nice because you can have
- *    signatures like <network: Cap.Network.t; fs: Cap.FS.t; ..> without having
+ *    signatures like <network: Cap.Network.t; fs: Cap.FS.t> without having
  *    to name this type and without having to introduce yet another record
- *    for the combination of those 2 capabilities.
+ *    for the combination of those two capabilities.
  *    Objects are a bit to records what polymorphic variants are to variants,
  *    that is [ taint | search ] allow to merge variants without introducing
  *    an intermediate name. Polymorphic variants are extensible Sum types,
@@ -59,8 +59,8 @@
  *    that can be combined (and even concatenated) easily with
  *    '<Cap.open_in; Cap.stdout; Cap.forkew>'
  *  - use '..' as in '< Cap.open_in; Cap.stdout; ..>'
- *  - add dynamic checks too so one can override also dynamically caps
- *    thx to the new 'type open_in = <open_in: string -> FS.open_in>'.
+ *  - add dynamic checks too so one can override also dynamically caps!
+ *    Thx to the new 'type open_in = <open_in: string -> FS.open_in>'.
  *    Now we need to access the caps in CapSys.ml for example to give the
  *    opportunity to raise an exn in some overriden caps.
  *
@@ -89,7 +89,7 @@ type cap = unit
 (* Network *)
 (**************************************************************************)
 
-(* TODO: sub capabilities: host, url, ports, get vs post *)
+(* TODO: sub caps? host, url, ports, get vs post? or restrict dynamically ?*)
 module Network = struct
   type t = cap
 end
@@ -116,7 +116,7 @@ end
 (* Exec *)
 (**************************************************************************)
 
-(* TODO: sub capabilities exec a particular program 'git_cmd Exec.t' *)
+(* TODO: sub caps exec a particular program 'git_cmd Exec.t' or dynamic? *)
 module Exec = struct
   type t = cap
 end
@@ -158,7 +158,7 @@ end
 (* Console *)
 (**************************************************************************)
 
-(* TODO: ugly but I had to rename Console and FS to add an underscore
+(* TODO: ugly: but I had to rename Console and FS to add an underscore
  * because ocamldep in ocaml-light does not handle nested module well
  * and if I use Console below I then get a cycle when compiling.
  * This seems to be an issue only if the file Console.ml or FS.ml
@@ -194,10 +194,10 @@ end
 (**************************************************************************)
 
 (* fs *)
-type readdir = < readdir : FS_.readdir >
+type readdir = < readdir : string (* path *) -> FS_.readdir >
 type tmp = < tmp : FS_.tmp >
-type open_in = < open_in : string -> FS_.open_in >
-type open_out = < open_out : string -> FS_.open_out >
+type open_in = < open_in : string (* path *) -> FS_.open_in >
+type open_out = < open_out : string (* path *) -> FS_.open_out >
 type fs = < readdir ; tmp; open_in; open_out >
 
 (* console *)
@@ -228,10 +228,12 @@ type process_single = < signal ; time_limit ; memory_limit ; exit ; chdir; mount
 type process = < argv ; env; process_single ; process_multi >
 
 (* exec *)
-type exec = < exec : Exec.t >
+type exec = < exec : string (* cmd *) -> Exec.t >
+(* shortcut *)
+type forkew = < fork; exec; wait >
 
 (* networl *)
-type network = < network : Network.t >
+type network = < network : string (* IP *) -> Network.t >
 
 (* misc *)
 type random = < random : Misc.random >
@@ -250,10 +252,6 @@ type no_caps = < >
 
 let no_caps : no_caps = object end
 
-(* shortcuts *)
-type forkew = < fork; exec; wait >
-
-
 (**************************************************************************)
 (* The powerbox *)
 (**************************************************************************)
@@ -262,12 +260,36 @@ type forkew = < fork; exec; wait >
  * references:
  *  - "How Emily Tamed the Caml"
  *     https://www.hpl.hp.com/techreports/2006/HPL-2006-116.html
+ *
+ * Note that you can further restrict dynamically capabilities by
+ * overriding the passed object. For example, here is some code from
+ * oed to further restrict exec/open:
+ *
+ *    type caps = < Cap.exec; Cap.open_in; Cap.open_out; Cap.fork; Cap.stdin>
+ *    let restrict_caps rflag (x : < caps; ..>) =
+ *      object
+ *        method exec _cmd = 
+ *          if rflag then failwith "!restricted mode on!"
+ *          else x#exec cmd
+ *        method open_in file = 
+ *          if rflag && not (Fpath.is_seg file)
+ *          then failwith (spf "!restricted mode on, can't read %s!" file)
+ *          else x#open_in file
+ *        method open_out file = 
+ *          if rflag && not (Fpath.is_seg file) &&
+ *             (* need open_out to delete tmp file in Commands.quit() *)
+ *             not (file = !!Env.tfname)
+ *          then failwith (spf "!restricted mode on, can't write %s!" file)
+ *          else x#open_out file
+ *        method fork = x#fork
+ *        ...
+ *      end
  *)
 
 let powerbox : all_caps =
   object
     (* fs *)
-    method readdir = ()
+    method readdir _path = ()
     method tmp = ()
     method open_in _path = ()
     method open_out _path = ()
@@ -298,8 +320,8 @@ let powerbox : all_caps =
     method random = ()
 
     (* dangerous stuff *)
-    method exec = ()
-    method network = ()
+    method exec _cmd = ()
+    method network _ip = ()
   end
 
 (**************************************************************************)
@@ -318,7 +340,7 @@ let tmp_caps_UNSAFE () =
 
 let already_called_main = ref false
 
-(* TODO: in addition to the dynamic check below, we could also
+(* In addition to the dynamic check below, we could also
  * write a semgrep rule to forbid any call to Cap.main() except
  * in Main.ml (via a nosemgrep or paths: exclude:)
  *)

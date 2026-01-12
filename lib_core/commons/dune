@@ -14,7 +14,7 @@
   Eq Ord
   Common
   Dumper OCaml
-  Console UConsole
+  Console
   Logs Logs_
   Exit Exception
   Chan UChan FS IO Tmp

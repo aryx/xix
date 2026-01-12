@@ -4,14 +4,14 @@
 (*e: copyright ocamlgit *)
 
 (*s: function [[Cmd_rm.rm]] *)
-let rm r relpaths =
+let rm caps r relpaths =
   (* less: not super efficient, could use hashes to speedup things *)
   r.Repository.index <-
     relpaths |> List.fold_left (fun idx relpath ->
           (* todo: -f? remove also file *)
       Index.remove_entry idx relpath
     ) r.Repository.index;
-  Repository.write_index r
+  Repository.write_index caps r
 (*e: function [[Cmd_rm.rm]] *)
 
 (*s: constant [[Cmd_rm.cmd]] *)
@@ -30,7 +30,7 @@ let cmd = { Cmd_.
       let r, relpaths = 
               Repository.find_root_open_and_adjust_paths caps
                 (Fpath_.of_strings xs) in
-      rm r relpaths
+      rm caps r relpaths
   );
 }
 (*e: constant [[Cmd_rm.cmd]] *)

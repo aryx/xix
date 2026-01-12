@@ -76,9 +76,9 @@ let index_to_filename r =
 
 (*s: function [[Repository.with_file_out_with_lock]] *)
 (* todo: see code of _Gitfile.__init__ O_EXCL ... *)
-let with_file_out_with_lock f (file : Fpath.t) =
+let with_file_out_with_lock caps f (file : Fpath.t) =
   (* todo: create .lock file and then rename *)
-  UChan.with_open_out (fun (chan : Chan.o) -> f chan.oc) file
+  FS.with_open_out caps (fun (chan : Chan.o) -> f chan.oc) file
 (*e: function [[Repository.with_file_out_with_lock]] *)
 
 
@@ -168,7 +168,7 @@ let add_ref_if_new caps r aref refval =
     let lastref = List.hd (List.rev refs) in
     let file = ref_to_filename r lastref in
     (* todo: ensure dirname exists *)
-    file |> with_file_out_with_lock (fun ch ->
+    file |> with_file_out_with_lock caps (fun ch ->
       (* todo: check file does not exist aleady; then return false! *)
       ch |> IO.output_channel |> IO_.with_close_out (Refs.write refval);
       true
@@ -188,7 +188,7 @@ let set_ref_if_same_old caps r aref _oldh newh =
   let lastref = List.hd (List.rev refs) in
   let file = ref_to_filename r lastref in
   try 
-    file |> with_file_out_with_lock (fun ch ->
+    file |> with_file_out_with_lock caps (fun ch ->
       (* TODO generate some IO.No_more_input 
       let prev = read_ref r lastref in
       if prev <> (Refs.Hash oldh)
@@ -207,7 +207,7 @@ let set_ref caps r aref newh =
   let (refs, _) = follow_ref caps r aref in
   let lastref = List.hd (List.rev refs) in
   let file = ref_to_filename r lastref in
-  file |> with_file_out_with_lock (fun ch ->
+  file |> with_file_out_with_lock caps (fun ch ->
     ch |> IO.output_channel |> IO_.with_close_out 
         (Refs.write (Refs.Hash newh))
   )
@@ -216,9 +216,9 @@ let set_ref caps r aref newh =
 
 (*s: function [[Repository.write_ref]] *)
 (* low-level *)
-let write_ref r aref content =
+let write_ref caps r aref content =
   let file = ref_to_filename r aref in
-  file |> with_file_out_with_lock (fun ch ->
+  file |> with_file_out_with_lock caps (fun ch ->
     ch |> IO.output_channel |> IO_.with_close_out (Refs.write content))
 (*e: function [[Repository.write_ref]] *)
 
@@ -289,7 +289,7 @@ let rec read_objectish caps r objectish =
 (*e: function [[Repository.read_objectish]] *)
 
 (*s: function [[Repository.add_obj]] *)
-let add_obj r obj =
+let add_obj caps r obj =
   let bytes = 
     IO.output_bytes () |> IO_.with_close_out (Objects.write obj) in
   let sha = Sha1.sha1 (Bytes.to_string bytes) in
@@ -303,7 +303,7 @@ let add_obj r obj =
   if (Sys.file_exists !!file)
   then sha (* deduplication! nothing to write, can share objects *)
   else begin
-    file |> with_file_out_with_lock (fun ch ->
+    file |> with_file_out_with_lock caps (fun ch ->
       let ic = IO.input_bytes bytes in
       let oc = IO.output_channel ch in
       Compression.compress ic oc;
@@ -329,9 +329,9 @@ let read_index r =
 (*e: function [[Repository.read_index]] *)
 
 (*s: function [[Repository.write_index]] *)
-let write_index r =
+let write_index caps r =
   let path = index_to_filename r in
-  path |> with_file_out_with_lock (fun ch ->
+  path |> with_file_out_with_lock caps (fun ch ->
     ch |> IO.output_channel |> IO_.with_close_out (Index.write r.index)
   )
 (*e: function [[Repository.write_index]] *)
@@ -369,12 +369,12 @@ let add_in_index caps (r : t) (relpaths : Fpath.t list) : unit =
     in
     let blob = 
         Objects.Blob (content_from_path_and_unix_stat caps full_path stat) in
-    let sha = add_obj r blob in
+    let sha = add_obj caps r blob in
     let entry = Index.mk_entry relpath sha stat in
     r.index <- Index.add_entry r.index entry;
     (*e: [[Repository.add_in_index()]] adding [[relpath]] *)
   );
-  write_index r
+  write_index caps r
 (*e: function [[Repository.add_in_index]] *)
 
 (*****************************************************************************)
@@ -386,7 +386,7 @@ let add_in_index caps (r : t) (relpaths : Fpath.t list) : unit =
 let commit_index caps r author committer message =
   let aref = Refs.Head in
   let root_tree = Index.trees_of_index r.index 
-    (fun t -> add_obj r (Objects.Tree t)) 
+    (fun t -> add_obj caps r (Objects.Tree t)) 
   in
   (* todo: execute pre-commit hook *)
   (*s: [[Repository.commit_index()]] read merge message if needed *)
@@ -400,7 +400,7 @@ let commit_index caps r author committer message =
     match follow_ref caps r aref |> snd with
     | None ->
       (* first commit so refs/heads/master does not even exist yet *)
-      let sha = add_obj r (Objects.Commit commit) in
+      let sha = add_obj caps r (Objects.Commit commit) in
       (*s: [[Repository.commit_index()]] add ref when first commit *)
       add_ref_if_new caps r aref (Refs.Hash sha)
       (*e: [[Repository.commit_index()]] add ref when first commit *)
@@ -410,7 +410,7 @@ let commit_index caps r author committer message =
       let merge_heads = [] in
       (*e: [[Repository.commit_index()]] set [[merge_heads]] *)
       let commit = { commit with Commit.parents = old_head :: merge_heads } in
-      let sha = add_obj r (Objects.Commit commit) in
+      let sha = add_obj caps r (Objects.Commit commit) in
       (*s: [[Repository.commit_index()]] update ref when not first commit *)
       set_ref_if_same_old caps r aref old_head sha
       (*e: [[Repository.commit_index()]] update ref when not first commit *)
@@ -499,7 +499,7 @@ let set_worktree_and_index_to_tree caps r tree =
   );
   let index = List.rev !new_index in
   r.index <- index;
-  write_index r;
+  write_index caps r;
   hcurrent |> Hashtbl.iter (fun file used ->
     if not used
     then 

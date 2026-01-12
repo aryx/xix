@@ -190,7 +190,7 @@ let fetch_objects caps src dst =
     in
     (* todo: count objects progress *)
     (* pr2 (spf "adding %s" (Hexsha.of_sha sha1)); *)
-    let sha2 = Repository.add_obj dst obj in
+    let sha2 = Repository.add_obj caps dst obj in
     assert (sha1 = sha2)
   )
 (*e: function [[Client_local.fetch_objects]] *)

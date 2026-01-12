@@ -16,7 +16,7 @@ let checkout (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) r str =
     let tree = Repository.read_tree caps r commit.Commit.tree in
 
     (* todo: order of operation? set ref before index? reverse? *)
-    Repository.write_ref r (Refs.Head) (Refs.OtherRef refname);
+    Repository.write_ref caps r (Refs.Head) (Refs.OtherRef refname);
     Repository.set_worktree_and_index_to_tree caps r tree;
     Console.print caps (spf "Switched to branch '%s'" str);
     (* less: if master, then check if up-to-date with origin/master *)
@@ -28,7 +28,7 @@ let checkout (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) r str =
     let treeid = commit.Commit.tree in
     let tree = Repository.read_tree caps r treeid in
     (* todo: order of operation? set ref before index? reverse? *)
-    Repository.write_ref r (Refs.Head) (Refs.Hash commitid);
+    Repository.write_ref caps r (Refs.Head) (Refs.Hash commitid);
     Repository.set_worktree_and_index_to_tree caps r tree;
     Console.print caps (spf "Note: checking out '%s'." str);
     Console.print caps ("You are in 'detached HEAD' state");

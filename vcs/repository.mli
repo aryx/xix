@@ -61,7 +61,8 @@ val read_blob: < Cap.open_in; ..> ->
   t -> Sha1.t -> Blob.t
 (*e: signature [[Repository.read_blob]] *)
 (*s: signature [[Repository.add_obj]] *)
-val add_obj: t -> Objects.t -> Sha1.t
+val add_obj: < Cap.open_out; .. > -> 
+  t -> Objects.t -> Sha1.t
 (*e: signature [[Repository.add_obj]] *)
 (*s: signature [[Repository.has_obj]] *)
 val has_obj: t -> Sha1.t -> bool
@@ -73,7 +74,8 @@ val read_ref: <Cap.open_in; ..> ->
   t -> Refs.t -> Refs.ref_content
 (*e: signature [[Repository.read_ref]] *)
 (*s: signature [[Repository.write_ref]] *)
-val write_ref: t -> Refs.t -> Refs.ref_content -> unit
+val write_ref: < Cap.open_out; ..> ->
+  t -> Refs.t -> Refs.ref_content -> unit
 (*e: signature [[Repository.write_ref]] *)
 (*s: signature [[Repository.follow_ref]] *)
 val follow_ref: <Cap.open_in; ..> ->
@@ -88,7 +90,7 @@ val all_refs: t -> Refs.refname list
 (*e: signature [[Repository.all_refs]] *)
 (*s: signature [[Repository.set_ref]] *)
 (* better than write_ref, will follow symbolic ref *)
-val set_ref: < Cap.open_in; ..> ->
+val set_ref: < Cap.open_in; Cap.open_out; ..> ->
   t -> Refs.t -> Commit.hash -> unit
 (*e: signature [[Repository.set_ref]] *)
 (*s: signature [[Repository.del_ref]] *)
@@ -110,15 +112,16 @@ val set_ref_if_same_old: < Cap.open_out; Cap.open_in; .. > ->
 val read_index: t -> Index.t
 (*e: signature [[Repository.read_index]] *)
 (*s: signature [[Repository.write_index]] *)
-val write_index: t -> unit
+val write_index: < Cap.open_out; ..> ->
+  t -> unit
 (*e: signature [[Repository.write_index]] *)
 (*s: signature [[Repository.add_in_index]] *)
-val add_in_index: < Cap.open_in; ..> ->
+val add_in_index: < Cap.open_in; Cap.open_out; ..> ->
   t -> Fpath.t list -> unit
 (*e: signature [[Repository.add_in_index]] *)
 
 (*s: signature [[Repository.commit_index]] *)
-val commit_index: < Cap.open_in; .. > ->
+val commit_index: < Cap.open_in; Cap.open_out; .. > ->
   t -> User.t (* author *) -> User.t (* committer *) -> string (* msg *) -> unit
 (*e: signature [[Repository.commit_index]] *)
 (*s: signature [[Repository.set_worktree_and_index_to_tree]] *)

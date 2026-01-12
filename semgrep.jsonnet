@@ -31,7 +31,7 @@ local semgrep_rules = [
 // ----------------------------------------------------------------------------
 
 // lex and yacc are also part of ocaml-light so better not impose caps there
-local exclude_dirs = ['lex/', 'yacc/', 'todo/', 'repository.ml'];
+local exclude_dirs = ['lex/', 'yacc/', 'todo/'];
 
 // partial copy of semgrep/TCB/forbid_xxx.jsonnet
 local cap_rules = [

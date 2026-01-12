@@ -5,7 +5,7 @@
 open Common
 
 (*s: function [[Cmd_show.show]] *)
-let show r objectish =
+let show (caps : < Cap.stdout; ..>) r objectish =
   let sha, obj = Repository.read_objectish r objectish in
   match obj with
   (*s: [[Cmd_show.show()]] match obj cases *)
@@ -14,12 +14,12 @@ let show r objectish =
   (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Tree x ->
     (* =~ git ls-tree --names-only *)
-    UConsole.print (spf "tree %s\n" (Hexsha.of_sha sha));
-    Tree.show x
+    Console.print caps (spf "tree %s\n" (Hexsha.of_sha sha));
+    Tree.show caps x
   (*x: [[Cmd_show.show()]] match obj cases *)
   | Objects.Commit x -> 
-    UConsole.print (spf "commit %s" (Hexsha.of_sha sha));
-    Commit.show x;
+    Console.print caps (spf "commit %s" (Hexsha.of_sha sha));
+    Commit.show caps x;
     let tree2 = Repository.read_tree r x.Commit.tree in
     let tree1 = 
       try 
@@ -35,7 +35,7 @@ let show r objectish =
         (Repository.read_blob r)
         tree1 tree2 
     in
-    changes |> List.iter Diff_unified.show_change
+    changes |> List.iter (Diff_unified.show_change caps)
   (*x: [[Cmd_show.show()]] match obj cases *)
   (*e: [[Cmd_show.show()]] match obj cases *)
 (*e: function [[Cmd_show.show]] *)
@@ -46,13 +46,13 @@ let cmd = { Cmd_.
   usage = " <objectish>";
   (* less: --oneline *)
   options = [];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
-    | [] -> show r (Repository.ObjByRef (Refs.Head))
+    | [] -> show caps r (Repository.ObjByRef (Refs.Head))
     | xs ->
       xs |> List.iter (fun str ->
-        show r (Repository.parse_objectish str)
+        show caps r (Repository.parse_objectish str)
       )
   );
 }

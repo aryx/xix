@@ -5,7 +5,7 @@
 open Common
 
 (*s: function [[Cmd_checkout.checkout]] *)
-let checkout r str =
+let checkout (caps : < Cap.stdout; ..>) r str =
   let all_refs = Repository.all_refs r in
   let refname = "refs/heads/" ^ str in
 
@@ -18,7 +18,7 @@ let checkout r str =
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.OtherRef refname);
     Repository.set_worktree_and_index_to_tree r tree;
-    UConsole.print (spf "Switched to branch '%s'" str);
+    Console.print caps (spf "Switched to branch '%s'" str);
     (* less: if master, then check if up-to-date with origin/master *)
 
   (*s: [[Cmd_checkout.checkout()]] cases *)
@@ -30,8 +30,8 @@ let checkout r str =
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.Hash commitid);
     Repository.set_worktree_and_index_to_tree r tree;
-    UConsole.print (spf "Note: checking out '%s'." str);
-    UConsole.print ("You are in 'detached HEAD' state");
+    Console.print caps (spf "Note: checking out '%s'." str);
+    Console.print caps ("You are in 'detached HEAD' state");
   (*e: [[Cmd_checkout.checkout()]] cases *)
   | _ -> raise Cmd_.ShowUsage
 (*e: function [[Cmd_checkout.checkout]] *)
@@ -56,11 +56,11 @@ let cmd = { Cmd_.
      *)
    (*e: [[Cmd_checkout.cmd]] command-line options *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     (*s: [[Cmd_checkout.cmd]] match args cases *)
-    | [str] -> checkout r str
+    | [str] -> checkout caps r str
     (*x: [[Cmd_checkout.cmd]] match args cases *)
     | [] -> update r
     (*e: [[Cmd_checkout.cmd]] match args cases *)

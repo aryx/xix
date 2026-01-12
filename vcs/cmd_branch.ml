@@ -8,7 +8,7 @@ open Regexp_.Operators
 
 (*s: function [[Cmd_branch.list_branches]] *)
 (* less: remote_flag set with --all to also list remote refs *)
-let list_branches r =
+let list_branches (caps : < Cap.stdout; ..>) r =
   let head_branch = Repository.read_ref r (Refs.Head) in
   let all_refs = Repository.all_refs r in
   all_refs |> List.iter (fun refname ->
@@ -20,7 +20,7 @@ let list_branches r =
         then "* "
         else "  "
       in
-      UConsole.print (spf "%s%s" prefix short)
+      Console.print caps (spf "%s%s" prefix short)
   )
 (*e: function [[Cmd_branch.list_branches]] *)
 
@@ -40,7 +40,7 @@ let create_branch r name (* sha *) =
 (*e: function [[Cmd_branch.create_branch]] *)
 
 (*s: function [[Cmd_branch.delete_branch]] *)
-let delete_branch r name force =
+let delete_branch (caps: < Cap.stdout; ..>) r name force =
   let refname = "refs/heads/" ^ name in
   let aref = Refs.Ref refname in
   let sha = Repository.follow_ref_some r aref in
@@ -50,7 +50,7 @@ let delete_branch r name force =
   then ();
   (*e: [[Cmd_branch.delete_branch()]] sanity check if branch merged unless force *)
   Repository.del_ref r aref;
-  UConsole.print (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
+  Console.print caps (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
 (*e: function [[Cmd_branch.delete_branch]] *)
 
 (* less: rename_branch *)
@@ -82,22 +82,22 @@ let cmd = { Cmd_.
     "-D",       Arg.Set del_force, " delete branch (even if not merged)";
     (*e: [[Cmd_branch.cmd]] command-line options *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     (*s: [[Cmd_branch.cmd]] match args cases *)
     | [_name;_objectish] ->
       raise Todo
     (*x: [[Cmd_branch.cmd]] match args cases *)
-    | [] -> list_branches r
+    | [] -> list_branches caps r
     (*x: [[Cmd_branch.cmd]] match args cases *)
 
     | [name] ->
       (match () with
       (*s: [[Cmd_branch.cmd]] when one argument, when flags cases *)
-      | _ when !del_flag  -> delete_branch r name false
+      | _ when !del_flag  -> delete_branch caps r name false
       (*x: [[Cmd_branch.cmd]] when one argument, when flags cases *)
-      | _ when !del_force -> delete_branch r name true
+      | _ when !del_force -> delete_branch caps r name true
       (*e: [[Cmd_branch.cmd]] when one argument, when flags cases *)
       | _ -> create_branch r name
       )

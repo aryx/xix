@@ -44,7 +44,8 @@ val write: t -> bytes IO.output -> unit
 (*e: signature [[Tree.write]] *)
 
 (*s: signature [[Tree.show]] *)
-val show: t -> unit
+val show: <Cap.stdout; ..> ->
+   t -> unit
 (*e: signature [[Tree.show]] *)
 
 (*s: signature [[Tree.walk_tree]] *)

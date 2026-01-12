@@ -212,9 +212,9 @@ let write t ch =
 (*****************************************************************************)
 
 (*s: function [[Tree.show]] *)
-let show xs =
+let show caps (xs : entry list) : unit =
   xs |> List.iter (fun entry ->
-    UConsole.print (spf "%s%s" entry.name
+    Console.print caps (spf "%s%s" entry.name
           (match entry.perm with
           | Dir -> "/"
           | _ -> ""

@@ -27,7 +27,8 @@ type objectish =
 
 (* repo *)
 (*s: signature [[Repository.init]] *)
-val init: Fpath.t -> unit
+val init: < Cap.stdout; ..> -> 
+  Fpath.t -> unit
 (*e: signature [[Repository.init]] *)
 (*s: signature [[Repository.open_]] *)
 val open_: Fpath.t -> t

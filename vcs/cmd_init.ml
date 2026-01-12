@@ -14,10 +14,10 @@ let cmd = { Cmd_.
    (* less: -bare, --quiet *)
    (*e: [[Cmd_init.cmd]] command-line options *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     match args with
-    | []    -> Repository.init (Fpath.v ".")
-    | [dir] -> Repository.init (Fpath.v dir)
+    | []    -> Repository.init caps (Fpath.v ".")
+    | [dir] -> Repository.init caps (Fpath.v dir)
     | _ -> raise Cmd_.ShowUsage
   );
 }

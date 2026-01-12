@@ -13,15 +13,15 @@ let rec cmd = { Cmd_.
   name = "help";
   usage = "";
   options = ["-a", Arg.Set list_extra, " see all commands"];
-  f = (fun _caps _args ->
+  f = (fun caps _args ->
     let xs = 
       if !list_extra
       then Cmds.main_commands @ Cmds.extra_commands @ [cmd]
       else Cmds.main_commands
     in
-    UConsole.print ("Available commands: ");
+    Console.print caps ("Available commands: ");
     xs |> List.iter (fun cmd ->
-      UConsole.print (spf "  %s" cmd.Cmd_.name);
+      Console.print caps (spf "  %s" cmd.Cmd_.name);
     );
   );
 }

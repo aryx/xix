@@ -5,10 +5,10 @@
 
 (*s: function [[Cmd_clone.clone]] *)
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)
-let clone url (path_dst : Fpath.t) =
+let clone caps url (path_dst : Fpath.t) =
   let client = Clients.client_of_url url in
   
-  Repository.init path_dst;
+  Repository.init caps path_dst;
   let dst = Repository.open_ path_dst in
 
   (* less: allow to grab from different head? *)
@@ -30,10 +30,10 @@ let cmd = { Cmd_.
   options = [
     (* less: --bare, --progress, --depth *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     match args with
-    | [url]     -> clone url (Fpath.v ".")
-    | [url;dst] -> clone url (Fpath.v dst)
+    | [url]     -> clone caps url (Fpath.v ".")
+    | [url;dst] -> clone caps url (Fpath.v dst)
     | _ -> raise Cmd_.ShowUsage
   );
 }

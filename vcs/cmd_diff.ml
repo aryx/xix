@@ -11,7 +11,7 @@ let diff_worktree_vs_index caps r =
       r.Repository.worktree 
       r.Repository.index 
   in
-  changes |> List.iter Diff_unified.show_change
+  changes |> List.iter (Diff_unified.show_change caps)
 (*e: function [[Cmd_diff.diff_worktree_vs_index]] *)
 
 (*s: constant [[Cmd_diff.cmd]] *)

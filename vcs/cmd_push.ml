@@ -7,7 +7,7 @@ open Fpath_.Operators
 
 (*s: function [[Cmd_push.push]] *)
 (* =~ git fetch + git merge but inverting dst and src  *)
-let push src_repo (url_dst : string) =
+let push (caps : < Cap.stdout; ..>) src_repo (url_dst : string) =
   let url = src_repo.Repository.worktree in
   let dst = Repository.open_ (Fpath.v url_dst) in
   (* todo: detect if clean repo? status is empty? *)
@@ -27,7 +27,7 @@ let push src_repo (url_dst : string) =
   | _ when current_HEAD_sha = remote_HEAD_sha -> ()
   | _ when Hashtbl.mem ancestors_remote_HEAD current_HEAD_sha ->
     (* easy case *)
-    UConsole.print (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
+    Console.print caps (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
     Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in
@@ -43,13 +43,13 @@ let cmd = { Cmd_.
   options = [
     (* less: --all, --force, --progress *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let src, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 
       failwith "TODO: use remote information in config file"
     | [url] -> 
-      push src url
+      push caps src url
     | _ -> raise Cmd_.ShowUsage
   );
 }

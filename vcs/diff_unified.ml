@@ -27,13 +27,13 @@ open Fpath_.Operators
 (*****************************************************************************)
 
 (*s: function [[Diff_unified.print]] *)
-let print = function
+let print caps = function
   | Diff.Equal s -> 
-    print_string (" " ^ s)
+    Console.print_no_nl caps (" " ^ s)
   | Diff.Deleted s -> 
-    print_string ("-" ^ s)
+    Console.print_no_nl caps ("-" ^ s)
   | Diff.Added s -> 
-    print_string ("+" ^ s)
+    Console.print_no_nl caps ("+" ^ s)
 (*e: function [[Diff_unified.print]] *)
 
 (*s: function [[Diff_unified.print_header]] *)
@@ -50,7 +50,7 @@ let nContext = 3
 (*e: constant [[Diff_unified.nContext]] *)
 
 (*s: function [[Diff_unified.show_unified_diff]] *)
-let show_unified_diff diffs =
+let show_unified_diff caps diffs =
   (* naive: no contextual:  diffs |> List.iter print *)
   let rec aux context_lines nctx_before nctx_after nold nnew diffs =
     match diffs with
@@ -61,7 +61,7 @@ let show_unified_diff diffs =
       | Diff.Equal _s ->
         (match () with
         | _ when nctx_after > 0 ->
-          print x;
+          print caps x;
           aux [] 0 (nctx_after - 1) (nold + 1) (nnew + 1) xs
         | _ when nctx_before < nContext ->
           aux (x::context_lines) (nctx_before + 1) 0 (nold + 1) (nnew + 1) xs
@@ -73,14 +73,14 @@ let show_unified_diff diffs =
       | Diff.Deleted _s  ->
         let prevs = List_.take nctx_before context_lines |> List.rev in
         if prevs <> [] then print_header nctx_before nold nnew;
-        prevs |> List.iter print;
-        print x;
+        prevs |> List.iter (print caps);
+        print caps x;
         aux [] 0 nContext (nold + 1) (nnew) xs
       | Diff.Added _s ->
         let prevs = List_.take nctx_before context_lines |> List.rev in
         if prevs <> [] then print_header nctx_before nold nnew;
-        prevs |> List.iter print;
-        print x;
+        prevs |> List.iter (print caps);
+        print caps x;
         aux [] 0 nContext (nold) (nnew+1) xs
       )
   in
@@ -93,7 +93,7 @@ let show_unified_diff diffs =
 (*****************************************************************************)
 
 (*s: function [[Diff_unified.show_change]] *)
-let show_change change =
+let show_change (caps : < Cap.stdout; ..>) change =
   (* less: if mode is gitlink? *)
   let (old_path, old_content), (new_path, new_content) = 
     match change with
@@ -110,9 +110,9 @@ let show_change change =
   let diffs = Diffs.diff (Lazy.force old_content) (Lazy.force new_content) in
   if not (diffs |> List.for_all (function Diff.Equal _ -> true | _ -> false))
   then begin
-    UConsole.print (spf "diff --git %s %s" !!old_path !!new_path);
+    Console.print caps (spf "diff --git %s %s" !!old_path !!new_path);
     (* less: display change of modes *)
-    show_unified_diff diffs
+    show_unified_diff caps diffs
   end
 (*e: function [[Diff_unified.show_change]] *)
 (*e: version_control/diff_unified.ml *)

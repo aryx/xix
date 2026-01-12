@@ -31,7 +31,8 @@ val write: t -> 'a IO.output -> unit
 (*e: signature [[Commit.write]] *)
 
 (*s: signature [[Commit.show]] *)
-val show: t -> unit
+val show: <Cap.stdout; ..> ->
+  t -> unit
 (*e: signature [[Commit.show]] *)
 
 (*s: signature [[Commit.collect_ancestors]] *)

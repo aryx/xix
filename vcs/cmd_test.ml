@@ -37,7 +37,7 @@ let test_diff (caps : < Cap.open_in; Cap.stdout; ..>)
   then begin
     Console.print caps (spf "diff --git %s %s" !!file1 !!file2);
     (* less: display change of modes *)
-    Diff_unified.show_unified_diff diffs
+    Diff_unified.show_unified_diff caps diffs
   end
 
 let test_diff3 (caps : < Cap.open_in; Cap.stdout; ..>)

@@ -517,7 +517,7 @@ let set_worktree_and_index_to_tree r tree =
 (*****************************************************************************)
 
 (*s: function [[Repository.init]] *)
-let init (root : Fpath.t) =
+let init (caps: < Cap.stdout; ..>) (root : Fpath.t) =
   if not (Sys.file_exists !!root)
   then Unix.mkdir !!root dirperm;
 
@@ -549,7 +549,7 @@ let init (root : Fpath.t) =
   (* less: config file, description, hooks, etc *)
   Sys.chdir !!root;
   let absolute = Sys.getcwd () |> Fpath.v in
-  UConsole.print (spf "Initialized empty Git repository in %s" !!(absolute / ".git/"))
+  Console.print caps (spf "Initialized empty Git repository in %s" !!(absolute / ".git/"))
 (*e: function [[Repository.init]] *)
 
 (*s: function [[Repository.open_]] *)

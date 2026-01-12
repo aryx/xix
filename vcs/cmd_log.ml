@@ -8,35 +8,35 @@ open Fpath_.Operators
 (* todo: git log --graph --oneline --decorate --all *)
 
 (*s: function [[Cmd_log.print_commit]] *)
-let print_commit sha commit =
-  UConsole.print (spf "commit: %s" (Hexsha.of_sha sha));
+let print_commit caps sha commit =
+  Console.print caps (spf "commit: %s" (Hexsha.of_sha sha));
   (match commit.Commit.parents with
   | [] | [_] -> ()
   | _x::xs ->
-    UConsole.print (spf "merge: %s" 
+    Console.print caps (spf "merge: %s" 
           (xs |> List.map Hexsha.of_sha |> String.concat "..."));
   );
   let author = commit.Commit.author in
-  UConsole.print (spf "Author: %s <%s>" author.User.name author.User.email);
+  Console.print caps (spf "Author: %s <%s>" author.User.name author.User.email);
   let committer = commit.Commit.committer in
   if author <> committer
   then 
-    UConsole.print (spf "Committer: %s <%s>" committer.User.name committer.User.email);
-  UConsole.print (spf "Date:   %s" (User.string_of_date author.User.date));
-  UConsole.print "";
-  UConsole.print ("    " ^ commit.Commit.message);
+    Console.print caps (spf "Committer: %s <%s>" committer.User.name committer.User.email);
+  Console.print caps (spf "Date:   %s" (User.string_of_date author.User.date));
+  Console.print caps "";
+  Console.print caps ("    " ^ commit.Commit.message);
   ()
 (*e: function [[Cmd_log.print_commit]] *)
 
 (*s: function [[Cmd_log.print_change]] *)
-let print_change change =
+let print_change caps change =
   match change with
   | Change.Add entry ->
-    UConsole.print (spf "A       %s" !!(entry.Change.path))
+    Console.print caps (spf "A       %s" !!(entry.Change.path))
   | Change.Del entry ->
-    UConsole.print (spf "D       %s" !!(entry.Change.path))
+    Console.print caps (spf "D       %s" !!(entry.Change.path))
   | Change.Modify (entry1, _entry2) ->
-    UConsole.print (spf "M       %s" !!(entry1.Change.path))
+    Console.print caps (spf "M       %s" !!(entry1.Change.path))
 (*e: function [[Cmd_log.print_change]] *)
 
 
@@ -48,10 +48,10 @@ let name_status = ref false
 (* todo: track only selected paths 
  * (and then rename detection to track correctly)
  *)
-let log r =
+let log caps r =
   let start = Repository.follow_ref_some r (Refs.Head) in
   start |> Commit.walk_history (Repository.read_commit r) (fun sha commit ->
-    print_commit sha commit;
+    print_commit caps sha commit;
     (*s: [[Cmd_log.log()]] if [[--name-status]] flag *)
     if !name_status
     then begin
@@ -71,8 +71,8 @@ let log r =
         tree2
         tree1
       in
-      changes |> List.iter print_change;
-      UConsole.print "";
+      changes |> List.iter (print_change caps);
+      Console.print caps "";
     (*e: [[Cmd_log.log()]] if [[--name-status]] flag *)
     end
   )
@@ -88,10 +88,10 @@ let cmd = { Cmd_.
     (* todo: -1, -10 *)
     (* less: --reverse *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
-    | [] -> log r
+    | [] -> log caps r
     (* todo: git log path *)
     (* less: revision range *)
     | _xs -> raise Cmd_.ShowUsage

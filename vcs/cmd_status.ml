@@ -65,48 +65,48 @@ let status_of_repository caps r =
 
 (*s: function [[Cmd_status.print_change_long]] *)
 (* very similar to Cmd_log.print_change, but with more indentation *)
-let print_change_long change =
+let print_change_long (caps : < Cap.stdout; ..>) change =
   match change with
   | Change.Add entry ->
-    UConsole.print (spf "	new file:	%s" !!(entry.Change.path))
+    Console.print caps (spf "	new file:	%s" !!(entry.Change.path))
   | Change.Del entry ->
-    UConsole.print (spf "	deleted:	%s" !!(entry.Change.path))
+    Console.print caps (spf "	deleted:	%s" !!(entry.Change.path))
   | Change.Modify (entry1, _entry2) ->
-    UConsole.print (spf "	modified:	%s" !!(entry1.Change.path))
+    Console.print caps (spf "	modified:	%s" !!(entry1.Change.path))
 (*e: function [[Cmd_status.print_change_long]] *)
 
 
 (*s: function [[Cmd_status.print_status_long]] *)
-let print_status_long st =
+let print_status_long (caps : <Cap.stdout; ..>) st =
   if st.staged <> []
   then begin
-    UConsole.print "Changes to be committed:";
+    Console.print caps "Changes to be committed:";
 (*  (use "git reset HEAD <file>..." to unstage) *)
-    UConsole.print "";
-    st.staged |> List.iter print_change_long;
-    UConsole.print "";
+    Console.print caps "";
+    st.staged |> List.iter (print_change_long caps);
+    Console.print caps "";
   end;
   if st.unstaged <> []
   then begin
-    UConsole.print "Changes not staged for commit:";
-    UConsole.print "";
+    Console.print caps "Changes not staged for commit:";
+    Console.print caps "";
 (*
   (use "git add/rm <file>..." to update what will be committed)
   (use "git checkout -- <file>..." to discard changes in working directory)
 *)
 
-    st.unstaged |> List.iter print_change_long;
-    UConsole.print "";
+    st.unstaged |> List.iter (print_change_long caps);
+    Console.print caps "";
   end;
   if st.untracked <> []
   then begin
-    UConsole.print "Untracked files:";
+    Console.print caps "Untracked files:";
 (*  (use "git add <file>..." to include in what will be committed) *)
-    UConsole.print "";
+    Console.print caps "";
     st.untracked |> List.iter (fun file ->
-      UConsole.print (spf "	%s" !!file)
+      Console.print caps (spf "	%s" !!file)
     );
-    UConsole.print "";
+    Console.print caps "";
   end
 (*e: function [[Cmd_status.print_status_long]] *)
     
@@ -125,7 +125,7 @@ let status caps r =
   let st = status_of_repository caps r in
   if !short_format
   then print_status_short st
-  else print_status_long st
+  else print_status_long caps st
 (*e: function [[Cmd_status.status]] *)
 
 (*s: constant [[Cmd_status.cmd]] *)

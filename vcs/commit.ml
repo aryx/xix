@@ -175,13 +175,13 @@ let write commit ch =
 (*****************************************************************************)
 
 (*s: function [[Commit.show]] *)
-let show x =
-  UConsole.print (spf "Author: %s <%s>" x.author.User.name x.author.User.email);
+let show (caps : < Cap.stdout; ..>) x =
+  Console.print caps (spf "Author: %s <%s>" x.author.User.name x.author.User.email);
   (* less: date of author or committer? *)
   let date = x.author.User.date in
-  UConsole.print (spf "Date:   %s" (User.string_of_date date));
-  UConsole.print "";
-  UConsole.print ("    " ^ x.message)
+  Console.print caps (spf "Date:   %s" (User.string_of_date date));
+  Console.print caps "";
+  Console.print caps ("    " ^ x.message)
   (* showing diff done in caller in Cmd_show.show *)        
 (*e: function [[Commit.show]] *)
 (*e: version_control/commit.ml *)

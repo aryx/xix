@@ -6,7 +6,7 @@ open Common
 
 (*s: function [[Cmd_pull.pull]] *)
 (* =~ git fetch + git merge *)
-let pull dst url =
+let pull (caps: < Cap.stdout; ..>) dst url =
   (* todo: detect if clean repo? status is empty? *)
   let client = Clients.client_of_url url in
 
@@ -23,7 +23,7 @@ let pull dst url =
   | _ when remote_HEAD_sha = current_HEAD_sha -> ()
   | _ when Hashtbl.mem ancestors_remote_HEAD current_HEAD_sha ->
     (* easy case *)
-    UConsole.print (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
+    Console.print caps (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
     Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in
@@ -38,13 +38,13 @@ let cmd = { Cmd_.
   usage = " [options] [<url repository>]";
   options = [
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let dst, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 
       failwith "TODO: use remote information in config file"
     | [url] -> 
-      pull dst url
+      pull caps dst url
     | _ -> raise Cmd_.ShowUsage
   );
 }

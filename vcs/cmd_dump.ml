@@ -14,7 +14,7 @@ let index = ref false
 
 (*s: function [[Cmd_dump.dump_object]] *)
 (* =~ git cat-file -p *)
-let dump_object (caps : < Cap.open_in; ..>) (file : Fpath.t) =
+let dump_object (caps : < Cap.open_in; Cap.stdout; ..>) (file : Fpath.t) =
  file |> FS.with_open_in caps (fun (chan : Chan.i) ->
   let input = IO.input_channel chan.ic in
   let unzipped = Unzip.inflate input in
@@ -27,7 +27,7 @@ let dump_object (caps : < Cap.open_in; ..>) (file : Fpath.t) =
     else begin
       let obj = Objects.read unzipped in
       let v = Dump.vof_obj obj in
-      UConsole.print (OCaml.string_of_v v)
+      Console.print caps (OCaml.string_of_v v)
     end
   with Unzip.Error _err ->
     failwith "unzip error"
@@ -36,12 +36,12 @@ let dump_object (caps : < Cap.open_in; ..>) (file : Fpath.t) =
 
 (*s: function [[Cmd_dump.dump_index]] *)
 (* =~ dulwich dump-index, =~ git ls-files --stage *)
-let dump_index (caps : < Cap.open_in; ..>) (file : Fpath.t) =
+let dump_index (caps : < Cap.open_in; Cap.stdout; ..>) (file : Fpath.t) =
  file |> FS.with_open_in caps (fun (chan : Chan.i) ->
   let input = IO.input_channel chan.ic in
   let index = Index.read input in
   let v = Dump.vof_index index in
-  UConsole.print (OCaml.string_of_v v)
+  Console.print caps (OCaml.string_of_v v)
  )
 (*e: function [[Cmd_dump.dump_index]] *)
 

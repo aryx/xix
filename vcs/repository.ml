@@ -243,10 +243,10 @@ let all_refs (r : t) : Refs.refname list =
 (*****************************************************************************)
 
 (*s: function [[Repository.read_obj]] *)
-let read_obj r h =
+let read_obj caps r h =
   (* todo: look for packed obj *)
   let path = h |> Hexsha.of_sha |> hexsha_to_filename r in
-  path |> UChan.with_open_in (fun (ch : Chan.i) ->
+  path |> FS.with_open_in caps (fun (ch : Chan.i) ->
     (* less: check read everything from channel? *)
     (* todo: check if sha consistent? *)
     ch.ic |> IO.input_channel |> Compression.decompress |> Objects.read
@@ -254,20 +254,20 @@ let read_obj r h =
 (*e: function [[Repository.read_obj]] *)
 
 (*s: function [[Repository.read_commit]] *)
-let read_commit r h =
-  match read_obj r h with
+let read_commit caps r h =
+  match read_obj caps r h with
   | Objects.Commit x -> x
   | _ -> failwith "read_commit: was expecting a commit"
 (*e: function [[Repository.read_commit]] *)
 (*s: function [[Repository.read_tree]] *)
-let read_tree r h =
-  match read_obj r h with
+let read_tree caps r h =
+  match read_obj caps r h with
   | Objects.Tree x -> x
   | _ -> failwith "read_tree: was expecting a tree"
 (*e: function [[Repository.read_tree]] *)
 (*s: function [[Repository.read_blob]] *)
-let read_blob r h =
-  match read_obj r h with
+let read_blob caps r h =
+  match read_obj caps r h with
   | Objects.Blob x -> x
   | _ -> failwith "read_blob: was expecting a blob"
 (*e: function [[Repository.read_blob]] *)
@@ -279,11 +279,11 @@ let rec read_objectish caps r objectish =
     (match follow_ref caps r aref |> snd with
     | None -> failwith (spf "could not resolve %s" (Refs.string_of_ref aref))
     | Some sha -> 
-      sha, read_obj r sha
+      sha, read_obj caps r sha
     )
   | ObjByHex hexsha ->
     let sha = Hexsha.to_sha hexsha in
-    sha, read_obj r sha
+    sha, read_obj caps r sha
   | ObjByBranch str ->
     read_objectish caps r (ObjByRef (Refs.Ref ("refs/heads/" ^ str)))
 (*e: function [[Repository.read_objectish]] *)
@@ -338,14 +338,15 @@ let write_index r =
 
     
 (*s: function [[Repository.content_from_path_and_unix_stat]] *)
-let content_from_path_and_unix_stat (full_path : Fpath.t) (stat : Unix.stats) : string =
+let content_from_path_and_unix_stat caps (full_path : Fpath.t) 
+    (stat : Unix.stats) : string =
   match stat.Unix.st_kind with
   (*s: [[Repository.content_from_path_and_unix_stat()]] match kind cases *)
   | Unix.S_LNK ->
     Unix.readlink !!full_path
   (*e: [[Repository.content_from_path_and_unix_stat()]] match kind cases *)
   | Unix.S_REG ->
-    full_path |> UChan.with_open_in (fun (ch : Chan.i) ->
+    full_path |> FS.with_open_in caps (fun (ch : Chan.i) ->
       ch.ic |> IO.input_channel |> IO.read_all
     )
   | _ -> failwith (spf "Repository.add_in_index: %s kind not handled" 
@@ -353,7 +354,7 @@ let content_from_path_and_unix_stat (full_path : Fpath.t) (stat : Unix.stats) : 
 (*e: function [[Repository.content_from_path_and_unix_stat]] *)
 
 (*s: function [[Repository.add_in_index]] *)
-let add_in_index (r : t) (relpaths : Fpath.t list) : unit =
+let add_in_index caps (r : t) (relpaths : Fpath.t list) : unit =
   (*s: [[Repository.add_in_index()]] sanity check [[relpaths]] *)
   assert (relpaths |> List.for_all (fun p -> Filename.is_relative !!p));
   (*e: [[Repository.add_in_index()]] sanity check [[relpaths]] *)
@@ -366,7 +367,8 @@ let add_in_index (r : t) (relpaths : Fpath.t list) : unit =
         failwith (spf "Repository.add_in_index: %s does not exist anymore"
                     !!relpath)
     in
-    let blob = Objects.Blob (content_from_path_and_unix_stat full_path stat) in
+    let blob = 
+        Objects.Blob (content_from_path_and_unix_stat caps full_path stat) in
     let sha = add_obj r blob in
     let entry = Index.mk_entry relpath sha stat in
     r.index <- Index.add_entry r.index entry;
@@ -471,7 +473,7 @@ let set_worktree_and_index_to_tree caps r tree =
     r.index |> List.map (fun e -> e.Index.path, false) |> Hashtbl_.of_list in
   let new_index = ref [] in
   (* less: honor file mode from config file? *)
-  tree |> Tree.walk_tree (read_tree r) (Fpath.v "XXX") (fun relpath entry ->
+  tree |> Tree.walk_tree (read_tree caps r) (Fpath.v "XXX") (fun relpath entry ->
     let perm = entry.Tree.perm in
     match perm with
     | Tree.Dir -> 
@@ -487,7 +489,7 @@ let set_worktree_and_index_to_tree caps r tree =
       if not (Sys.file_exists (Filename.dirname !!fullpath))
       then Unix.mkdir (Filename.dirname !!fullpath) dirperm;
       let sha = entry.Tree.id in
-      let blob = read_blob r sha in
+      let blob = read_blob caps r sha in
       let stat = build_file_from_blob caps fullpath blob perm in
       Hashtbl.replace hcurrent relpath true;
       Stack_.push (Index.mk_entry relpath sha stat) new_index;

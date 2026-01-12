@@ -50,24 +50,24 @@ let name_status = ref false
  *)
 let log caps r =
   let start = Repository.follow_ref_some caps r (Refs.Head) in
-  start |> Commit.walk_history (Repository.read_commit r) (fun sha commit ->
+  start |> Commit.walk_history (Repository.read_commit caps r) (fun sha commit ->
     print_commit caps sha commit;
     (*s: [[Cmd_log.log()]] if [[--name-status]] flag *)
     if !name_status
     then begin
-      let tree1 = Repository.read_tree r commit.Commit.tree in
+      let tree1 = Repository.read_tree caps r commit.Commit.tree in
       let tree2 =
         match commit.Commit.parents with
         | [] -> []
         | [sha] -> 
-          let commit2 = Repository.read_commit r sha in
-          Repository.read_tree r commit2.Commit.tree
+          let commit2 = Repository.read_commit caps r sha in
+          Repository.read_tree caps r commit2.Commit.tree
         | _x::_y::_xs ->
           failwith "TODO: log: handle merge"
       in
       let changes = Changes.changes_tree_vs_tree
-        (Repository.read_tree r)
-        (Repository.read_blob r)
+        (Repository.read_tree caps r)
+        (Repository.read_blob caps r)
         tree2
         tree1
       in

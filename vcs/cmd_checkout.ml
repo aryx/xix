@@ -12,8 +12,8 @@ let checkout (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) r str =
   match () with
   | _ when List.mem refname all_refs ->
     let commitid = Repository.follow_ref_some caps r (Refs.Ref refname) in
-    let commit = Repository.read_commit r commitid in
-    let tree = Repository.read_tree r commit.Commit.tree in
+    let commit = Repository.read_commit caps r commitid in
+    let tree = Repository.read_tree caps r commit.Commit.tree in
 
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.OtherRef refname);
@@ -24,9 +24,9 @@ let checkout (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) r str =
   (*s: [[Cmd_checkout.checkout()]] cases *)
   | _ when Hexsha.is_hexsha str ->
     let commitid = Hexsha.to_sha str in
-    let commit = Repository.read_commit r commitid in
+    let commit = Repository.read_commit caps r commitid in
     let treeid = commit.Commit.tree in
-    let tree = Repository.read_tree r treeid in
+    let tree = Repository.read_tree caps r treeid in
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.Hash commitid);
     Repository.set_worktree_and_index_to_tree caps r tree;

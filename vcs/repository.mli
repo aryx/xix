@@ -41,20 +41,24 @@ val find_root_open_and_adjust_paths: < Cap.open_in; ..> ->
 
 (* objects *)
 (*s: signature [[Repository.read_obj]] *)
-val read_obj: t -> Sha1.t -> Objects.t
+val read_obj: < Cap.open_in; ..> ->
+  t -> Sha1.t -> Objects.t
 (*e: signature [[Repository.read_obj]] *)
 (*s: signature [[Repository.read_objectish]] *)
 val read_objectish: <Cap.open_in; ..> -> 
   t -> objectish -> Sha1.t * Objects.t
 (*e: signature [[Repository.read_objectish]] *)
 (*s: signature [[Repository.read_commit]] *)
-val read_commit: t -> Sha1.t -> Commit.t
+val read_commit: < Cap.open_in; ..> ->
+  t -> Sha1.t -> Commit.t
 (*e: signature [[Repository.read_commit]] *)
 (*s: signature [[Repository.read_tree]] *)
-val read_tree: t -> Sha1.t -> Tree.t
+val read_tree: < Cap.open_in; ..> ->
+  t -> Sha1.t -> Tree.t
 (*e: signature [[Repository.read_tree]] *)
 (*s: signature [[Repository.read_blob]] *)
-val read_blob: t -> Sha1.t -> Blob.t
+val read_blob: < Cap.open_in; ..> ->
+  t -> Sha1.t -> Blob.t
 (*e: signature [[Repository.read_blob]] *)
 (*s: signature [[Repository.add_obj]] *)
 val add_obj: t -> Objects.t -> Sha1.t
@@ -109,7 +113,8 @@ val read_index: t -> Index.t
 val write_index: t -> unit
 (*e: signature [[Repository.write_index]] *)
 (*s: signature [[Repository.add_in_index]] *)
-val add_in_index: t -> Fpath.t list -> unit
+val add_in_index: < Cap.open_in; ..> ->
+  t -> Fpath.t list -> unit
 (*e: signature [[Repository.add_in_index]] *)
 
 (*s: signature [[Repository.commit_index]] *)

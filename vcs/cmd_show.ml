@@ -20,19 +20,19 @@ let show (caps : < Cap.stdout; Cap.open_in; ..>) r objectish =
   | Objects.Commit x -> 
     Console.print caps (spf "commit %s" (Hexsha.of_sha sha));
     Commit.show caps x;
-    let tree2 = Repository.read_tree r x.Commit.tree in
+    let tree2 = Repository.read_tree caps r x.Commit.tree in
     let tree1 = 
       try 
-        let parent1 = Repository.read_commit r (List.hd x.Commit.parents) in
-        Repository.read_tree r parent1.Commit.tree 
+        let parent1 = Repository.read_commit caps r (List.hd x.Commit.parents) in
+        Repository.read_tree caps r parent1.Commit.tree 
       with Failure _ ->
       (* no parent *)
         []
     in
     let changes = 
       Changes.changes_tree_vs_tree 
-        (Repository.read_tree r) 
-        (Repository.read_blob r)
+        (Repository.read_tree caps r) 
+        (Repository.read_blob caps r)
         tree1 tree2 
     in
     changes |> List.iter (Diff_unified.show_change caps)

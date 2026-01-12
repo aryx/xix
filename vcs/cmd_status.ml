@@ -20,9 +20,9 @@ type status = {
 (*s: function [[Cmd_status.changes_index_vs_HEAD]] *)
 let changes_index_vs_HEAD caps r =
   let commitid = Repository.follow_ref_some caps r (Refs.Head) in
-  let commit = Repository.read_commit r commitid in
+  let commit = Repository.read_commit caps r commitid in
   let treeid = commit.Commit.tree in
-  Changes.changes_index_vs_tree (Repository.read_tree r) 
+  Changes.changes_index_vs_tree (Repository.read_tree caps r) 
     r.Repository.index
     treeid
 (*e: function [[Cmd_status.changes_index_vs_HEAD]] *)
@@ -52,13 +52,13 @@ let untracked r =
 
 
 (*s: function [[Cmd_status.status_of_repository]] *)
-let status_of_repository caps r =
+let status_of_repository caps (r : Repository.t) =
   { staged = changes_index_vs_HEAD caps r;
     unstaged = 
       Changes.changes_worktree_vs_index caps
-        (Repository.read_blob r)
-        r.Repository.worktree 
-        r.Repository.index;
+        (Repository.read_blob caps r)
+        r.worktree 
+        r.index;
     untracked = untracked r;
   }
 (*e: function [[Cmd_status.status_of_repository]] *)

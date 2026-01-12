@@ -7,7 +7,7 @@
 let diff_worktree_vs_index caps r =
   let changes = 
     Changes.changes_worktree_vs_index caps
-      (Repository.read_blob r)
+      (Repository.read_blob caps r)
       r.Repository.worktree 
       r.Repository.index 
   in

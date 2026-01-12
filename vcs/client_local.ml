@@ -49,7 +49,7 @@ let mk_graph_walker caps (r : Repository.t) : graph_walker =
       todos := xs;
       Hashtbl.add hdone x true;
       last_round := Some x;
-      let commit = Repository.read_commit r x in
+      let commit = Repository.read_commit caps r x in
       let parents = commit.Commit.parents in
       parents |> List.iter (fun parent ->
         if Hashtbl.mem hdone parent
@@ -112,16 +112,16 @@ let find_top_common_commits caps src dst =
 (*e: function [[Client_local.find_top_common_commits]] *)
 
 (*s: function [[Client_local.iter_missing_objects]] *)
-let iter_missing_objects top_common_commits top_wanted_commits src f =
+let iter_missing_objects caps top_common_commits top_wanted_commits src f =
   (* less: split_commits_and_tags? *)
   let all_common_commits = 
-    Commit.collect_ancestors (Repository.read_commit src) top_common_commits 
+    Commit.collect_ancestors (Repository.read_commit caps src) top_common_commits 
       (Hashtbl.create 101) in
   (* bugfix: do not forget Hashtbl.copy because collect_ancestors modify 
    * the second parameter by side effect
    *)
   let missing_commits = 
-    Commit.collect_ancestors (Repository.read_commit src) top_wanted_commits 
+    Commit.collect_ancestors (Repository.read_commit caps src) top_wanted_commits 
       (Hashtbl.copy all_common_commits)
   in
 
@@ -134,8 +134,8 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
   (* expensive loop below? so use parallel threads? *)
   all_common_commits |> Hashtbl.iter (fun commit_sha _true ->
     Hashtbl.add dst_have_sha commit_sha true;
-    let commit = Repository.read_commit src commit_sha in
-    collect_filetree (Repository.read_tree src) commit.Commit.tree dst_have_sha
+    let commit = Repository.read_commit caps src commit_sha in
+    collect_filetree (Repository.read_tree caps src) commit.Commit.tree dst_have_sha
   );
 
   (* and now let's iterate over all missing commits *)
@@ -149,7 +149,7 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
       (if is_blob
        then f sha None
        else begin
-        let obj = Repository.read_obj src sha in
+        let obj = Repository.read_obj caps src sha in
         f sha (Some obj);
         (match obj with
         | Objects.Commit commit ->
@@ -180,12 +180,12 @@ let fetch_objects caps src dst =
   let top_wanted_commits = [Repository.follow_ref_some caps src Refs.Head] in
   (* less: shallows? unshallows? *)
   let top_common_commits = find_top_common_commits caps src dst in
-  iter_missing_objects top_common_commits top_wanted_commits src 
+  iter_missing_objects caps top_common_commits top_wanted_commits src 
     (fun sha1 obj_opt ->
     (* less: opti: copy raw files directly without unmarshalling/marshalling *)
     let obj = 
       match obj_opt with
-      | None -> Repository.read_obj src sha1
+      | None -> Repository.read_obj caps src sha1
       | Some obj -> obj
     in
     (* todo: count objects progress *)

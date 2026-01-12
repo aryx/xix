@@ -29,7 +29,7 @@ let cmd = { Cmd_.
               Repository.find_root_open_and_adjust_paths caps 
                 (Fpath_.of_strings xs) in
       (* less: support directories *)
-      add r relpaths
+      add caps r relpaths
   );
 }
 (*e: constant [[Cmd_add.cmd]] *)

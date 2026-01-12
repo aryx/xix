@@ -16,7 +16,7 @@ let pull (caps: < Cap.stdout; Cap.open_out; Cap.open_in; ..>) dst url =
   (* detect if need merge, if current HEAD not parent of new HEAD *)
   let current_HEAD_sha = Repository.follow_ref_some caps dst (Refs.Head) in
   let ancestors_remote_HEAD = 
-    Commit.collect_ancestors (Repository.read_commit dst) [remote_HEAD_sha]
+    Commit.collect_ancestors (Repository.read_commit caps dst) [remote_HEAD_sha]
       (Hashtbl.create 101)
   in
   (match () with
@@ -25,8 +25,8 @@ let pull (caps: < Cap.stdout; Cap.open_out; Cap.open_in; ..>) dst url =
     (* easy case *)
     Console.print caps (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
     Repository.set_ref caps dst (Refs.Head) remote_HEAD_sha;
-    let commit = Repository.read_commit dst remote_HEAD_sha in
-    let tree = Repository.read_tree dst (commit.Commit.tree) in
+    let commit = Repository.read_commit caps dst remote_HEAD_sha in
+    let tree = Repository.read_tree caps dst (commit.Commit.tree) in
     Repository.set_worktree_and_index_to_tree caps dst tree
   | _ -> failwith "TODO: git pull need merge"
   )

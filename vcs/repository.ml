@@ -439,12 +439,12 @@ let build_file_from_blob caps (fullpath : Fpath.t) blob perm =
     (match oldstat with
     (* opti: if same content, no need to write anything *)
     | Some { Unix.st_size = x; _ } when x = String.length blob && 
-      (fullpath |> UChan.with_open_in (fun (ch : Chan.i) -> 
+      (fullpath |> FS.with_open_in caps (fun (ch : Chan.i) -> 
         (ch.ic |> IO.input_channel |> IO.read_all ) = blob
        )) ->
       ()
     | _ ->
-      fullpath |> UChan.with_open_out (fun (ch : Chan.o) ->
+      fullpath |> FS.with_open_out caps (fun (ch : Chan.o) ->
         output_bytes ch.oc (Bytes.of_string blob)
       );
       (* less: honor filemode? *)

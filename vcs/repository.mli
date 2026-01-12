@@ -116,7 +116,7 @@ val commit_index: < Cap.open_in; .. > ->
   t -> User.t (* author *) -> User.t (* committer *) -> string (* msg *) -> unit
 (*e: signature [[Repository.commit_index]] *)
 (*s: signature [[Repository.set_worktree_and_index_to_tree]] *)
-val set_worktree_and_index_to_tree: < Cap.open_out; ..> ->
+val set_worktree_and_index_to_tree: < Cap.open_out; Cap.open_in; ..> ->
   t -> Tree.t -> unit
 (*e: signature [[Repository.set_worktree_and_index_to_tree]] *)
 

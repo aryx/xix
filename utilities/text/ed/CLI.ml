@@ -63,7 +63,8 @@ let restrict_caps rflag (x : < caps; ..>) =
 (* Main algorithm *)
 (*****************************************************************************)
 (*s: function [[CLI.commands]] *)
-let rec commands (caps : < Cap.open_in; Cap.open_out; ..>) (e : Env.t) : unit =
+let rec commands (caps : < Cap.open_in; Cap.open_out; Cap.forkew; ..>)
+                 (e : Env.t) : unit =
   (*s: [[CLI.commands()]] debug start *)
   Logs.debug (fun m -> m "commands ->");
   (*e: [[CLI.commands()]] debug start *)

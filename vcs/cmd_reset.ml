@@ -5,8 +5,8 @@
 open Common
 
 (*s: function [[Cmd_reset.reset_hard]] *)
-let reset_hard (caps : < Cap.stdout; Cap.open_out; ..>) r =
-  let commitid = Repository.follow_ref_some r (Refs.Head) in
+let reset_hard (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) r =
+  let commitid = Repository.follow_ref_some caps r (Refs.Head) in
   let commit = Repository.read_commit r commitid in
   let tree = Repository.read_tree r commit.Commit.tree in
 

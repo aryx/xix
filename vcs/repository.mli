@@ -27,7 +27,7 @@ type objectish =
 
 (* repo *)
 (*s: signature [[Repository.init]] *)
-val init: < Cap.stdout; Cap.chdir; ..> -> 
+val init: < Cap.stdout; Cap.chdir; Cap.open_out; Cap.open_in; ..> -> 
   Fpath.t -> unit
 (*e: signature [[Repository.init]] *)
 (*s: signature [[Repository.open_]] *)
@@ -43,7 +43,8 @@ val find_root_open_and_adjust_paths:
 val read_obj: t -> Sha1.t -> Objects.t
 (*e: signature [[Repository.read_obj]] *)
 (*s: signature [[Repository.read_objectish]] *)
-val read_objectish: t -> objectish -> Sha1.t * Objects.t
+val read_objectish: <Cap.open_in; ..> -> 
+  t -> objectish -> Sha1.t * Objects.t
 (*e: signature [[Repository.read_objectish]] *)
 (*s: signature [[Repository.read_commit]] *)
 val read_commit: t -> Sha1.t -> Commit.t
@@ -63,23 +64,27 @@ val has_obj: t -> Sha1.t -> bool
 
 (* refs *)
 (*s: signature [[Repository.read_ref]] *)
-val read_ref: t -> Refs.t -> Refs.ref_content
+val read_ref: <Cap.open_in; ..> ->
+  t -> Refs.t -> Refs.ref_content
 (*e: signature [[Repository.read_ref]] *)
 (*s: signature [[Repository.write_ref]] *)
 val write_ref: t -> Refs.t -> Refs.ref_content -> unit
 (*e: signature [[Repository.write_ref]] *)
 (*s: signature [[Repository.follow_ref]] *)
-val follow_ref: t -> Refs.t -> Refs.t list * Commit.hash option
+val follow_ref: <Cap.open_in; ..> ->
+  t -> Refs.t -> Refs.t list * Commit.hash option
 (*e: signature [[Repository.follow_ref]] *)
 (*s: signature [[Repository.follow_ref_some]] *)
-val follow_ref_some: t -> Refs.t -> Commit.hash
+val follow_ref_some: <Cap.open_in; ..> ->
+  t -> Refs.t -> Commit.hash
 (*e: signature [[Repository.follow_ref_some]] *)
 (*s: signature [[Repository.all_refs]] *)
 val all_refs: t -> Refs.refname list
 (*e: signature [[Repository.all_refs]] *)
 (*s: signature [[Repository.set_ref]] *)
 (* better than write_ref, will follow symbolic ref *)
-val set_ref: t -> Refs.t -> Commit.hash -> unit
+val set_ref: < Cap.open_in; ..> ->
+  t -> Refs.t -> Commit.hash -> unit
 (*e: signature [[Repository.set_ref]] *)
 (*s: signature [[Repository.del_ref]] *)
 val del_ref: <Cap.open_out; ..> -> 
@@ -87,10 +92,12 @@ val del_ref: <Cap.open_out; ..> ->
 (*e: signature [[Repository.del_ref]] *)
 (* atomic op *)
 (*s: signature [[Repository.add_ref_if_new]] *)
-val add_ref_if_new: t -> Refs.t -> Refs.ref_content -> bool
+val add_ref_if_new: < Cap.open_out; Cap.open_in; .. > ->
+  t -> Refs.t -> Refs.ref_content -> bool
 (*e: signature [[Repository.add_ref_if_new]] *)
 (*s: signature [[Repository.set_ref_if_same_old]] *)
-val set_ref_if_same_old: t -> Refs.t -> Sha1.t -> Sha1.t -> bool
+val set_ref_if_same_old: < Cap.open_out; Cap.open_in; .. > ->
+  t -> Refs.t -> Sha1.t -> Sha1.t -> bool
 (*e: signature [[Repository.set_ref_if_same_old]] *)
 
 (* index *)
@@ -105,7 +112,7 @@ val add_in_index: t -> Fpath.t list -> unit
 (*e: signature [[Repository.add_in_index]] *)
 
 (*s: signature [[Repository.commit_index]] *)
-val commit_index: 
+val commit_index: < Cap.open_in; .. > ->
   t -> User.t (* author *) -> User.t (* committer *) -> string (* msg *) -> unit
 (*e: signature [[Repository.commit_index]] *)
 (*s: signature [[Repository.set_worktree_and_index_to_tree]] *)

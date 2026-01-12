@@ -15,7 +15,7 @@ open Regexp_.Operators
 
 (*s: function [[Clients.client_of_url]] *)
 (* old: was called get_transport_and_path (and xxx_from_url) in dulwich *)
-let client_of_url url =
+let client_of_url caps url =
   match url with
   (*s: [[Clients.client_of_url()]] match url cases *)
   (* less: should use URL parsing library *)
@@ -30,7 +30,7 @@ let client_of_url url =
   (*e: [[Clients.client_of_url()]] match url cases *)
   | s -> 
     if Sys.file_exists s
-    then Client_local.mk_client (Fpath.v s)
+    then Client_local.mk_client caps (Fpath.v s)
     else failwith (spf "remote repository URL not supported: %s" url)
 (*e: function [[Clients.client_of_url]] *)
 (*e: version_control/clients.ml *)

@@ -49,7 +49,7 @@ let name_status = ref false
  * (and then rename detection to track correctly)
  *)
 let log caps r =
-  let start = Repository.follow_ref_some r (Refs.Head) in
+  let start = Repository.follow_ref_some caps r (Refs.Head) in
   start |> Commit.walk_history (Repository.read_commit r) (fun sha commit ->
     print_commit caps sha commit;
     (*s: [[Cmd_log.log()]] if [[--name-status]] flag *)

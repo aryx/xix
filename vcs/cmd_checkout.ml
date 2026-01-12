@@ -5,13 +5,13 @@
 open Common
 
 (*s: function [[Cmd_checkout.checkout]] *)
-let checkout (caps : < Cap.stdout; Cap.open_out; ..>) r str =
+let checkout (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) r str =
   let all_refs = Repository.all_refs r in
   let refname = "refs/heads/" ^ str in
 
   match () with
   | _ when List.mem refname all_refs ->
-    let commitid = Repository.follow_ref_some r (Refs.Ref refname) in
+    let commitid = Repository.follow_ref_some caps r (Refs.Ref refname) in
     let commit = Repository.read_commit r commitid in
     let tree = Repository.read_tree r commit.Commit.tree in
 

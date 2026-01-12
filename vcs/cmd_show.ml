@@ -5,8 +5,8 @@
 open Common
 
 (*s: function [[Cmd_show.show]] *)
-let show (caps : < Cap.stdout; ..>) r objectish =
-  let sha, obj = Repository.read_objectish r objectish in
+let show (caps : < Cap.stdout; Cap.open_in; ..>) r objectish =
+  let sha, obj = Repository.read_objectish caps r objectish in
   match obj with
   (*s: [[Cmd_show.show()]] match obj cases *)
   | Objects.Blob x -> 

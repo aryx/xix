@@ -127,23 +127,23 @@ let rec walk_dir f (dir : Fpath.t) : unit =
 (*****************************************************************************)
 
 (*s: function [[Repository.read_ref]] *)
-let read_ref r aref =
+let read_ref caps r aref =
   (* less: packed refs *)
   let file = ref_to_filename r aref in
-  file |> UChan.with_open_in (fun (ch : Chan.i) ->
+  file |> FS.with_open_in caps (fun (ch : Chan.i) ->
     ch.ic |> IO.input_channel |> Refs.read
   )
 (*e: function [[Repository.read_ref]] *)
 
 (*s: function [[Repository.follow_ref]] *)
-let rec follow_ref r aref =
+let rec follow_ref caps r aref =
   (* less: check if depth > 5? *)
   try (
-  let content = read_ref r aref in
+  let content = read_ref caps r aref in
   match content with
   | Refs.Hash sha -> [aref], Some sha
   | Refs.OtherRef refname ->
-    let (xs, shaopt) = follow_ref r (Refs.Ref refname) in
+    let (xs, shaopt) = follow_ref caps r (Refs.Ref refname) in
     aref::xs, shaopt
   ) 
   (* inexistent ref file, can happen at the beginning when have .git/HEAD
@@ -153,15 +153,15 @@ let rec follow_ref r aref =
 (*e: function [[Repository.follow_ref]] *)
 
 (*s: function [[Repository.follow_ref_some]] *)
-let follow_ref_some r aref =
-  match follow_ref r aref |> snd with
+let follow_ref_some caps r aref =
+  match follow_ref caps r aref |> snd with
   | Some sha -> sha
   | None -> failwith (spf "could not follow %s" (Refs.string_of_ref aref))
 (*e: function [[Repository.follow_ref_some]] *)
 
 (*s: function [[Repository.add_ref_if_new]] *)
-let add_ref_if_new r aref refval =
-  let (refs, shaopt) = follow_ref r aref in
+let add_ref_if_new caps r aref refval =
+  let (refs, shaopt) = follow_ref caps r aref in
   if shaopt <> None
   then false
   else begin
@@ -183,8 +183,8 @@ let del_ref caps r aref =
 (*e: function [[Repository.del_ref]] *)
 
 (*s: function [[Repository.set_ref_if_same_old]] *)
-let set_ref_if_same_old r aref _oldh newh =
-  let (refs, _) = follow_ref r aref in
+let set_ref_if_same_old caps r aref _oldh newh =
+  let (refs, _) = follow_ref caps r aref in
   let lastref = List.hd (List.rev refs) in
   let file = ref_to_filename r lastref in
   try 
@@ -203,8 +203,8 @@ let set_ref_if_same_old r aref _oldh newh =
 (*e: function [[Repository.set_ref_if_same_old]] *)
 
 (*s: function [[Repository.set_ref]] *)
-let set_ref r aref newh =
-  let (refs, _) = follow_ref r aref in
+let set_ref caps r aref newh =
+  let (refs, _) = follow_ref caps r aref in
   let lastref = List.hd (List.rev refs) in
   let file = ref_to_filename r lastref in
   file |> with_file_out_with_lock (fun ch ->
@@ -273,10 +273,10 @@ let read_blob r h =
 (*e: function [[Repository.read_blob]] *)
 
 (*s: function [[Repository.read_objectish]] *)
-let rec read_objectish r objectish =
+let rec read_objectish caps r objectish =
   match objectish with
   | ObjByRef aref -> 
-    (match follow_ref r aref |> snd with
+    (match follow_ref caps r aref |> snd with
     | None -> failwith (spf "could not resolve %s" (Refs.string_of_ref aref))
     | Some sha -> 
       sha, read_obj r sha
@@ -285,7 +285,7 @@ let rec read_objectish r objectish =
     let sha = Hexsha.to_sha hexsha in
     sha, read_obj r sha
   | ObjByBranch str ->
-    read_objectish r (ObjByRef (Refs.Ref ("refs/heads/" ^ str)))
+    read_objectish caps r (ObjByRef (Refs.Ref ("refs/heads/" ^ str)))
 (*e: function [[Repository.read_objectish]] *)
 
 (*s: function [[Repository.add_obj]] *)
@@ -381,7 +381,7 @@ let add_in_index (r : t) (relpaths : Fpath.t list) : unit =
 
 (* less: move to cmd_commit.ml? *)
 (*s: function [[Repository.commit_index]] *)
-let commit_index r author committer message =
+let commit_index caps r author committer message =
   let aref = Refs.Head in
   let root_tree = Index.trees_of_index r.index 
     (fun t -> add_obj r (Objects.Tree t)) 
@@ -395,12 +395,12 @@ let commit_index r author committer message =
                  author = author; committer = committer; message = message } in
 
   let ok =
-    match follow_ref r aref |> snd with
+    match follow_ref caps r aref |> snd with
     | None ->
       (* first commit so refs/heads/master does not even exist yet *)
       let sha = add_obj r (Objects.Commit commit) in
       (*s: [[Repository.commit_index()]] add ref when first commit *)
-      add_ref_if_new r aref (Refs.Hash sha)
+      add_ref_if_new caps r aref (Refs.Hash sha)
       (*e: [[Repository.commit_index()]] add ref when first commit *)
     | Some old_head ->
       (*s: [[Repository.commit_index()]] set [[merge_heads]] *)
@@ -410,7 +410,7 @@ let commit_index r author committer message =
       let commit = { commit with Commit.parents = old_head :: merge_heads } in
       let sha = add_obj r (Objects.Commit commit) in
       (*s: [[Repository.commit_index()]] update ref when not first commit *)
-      set_ref_if_same_old r aref old_head sha
+      set_ref_if_same_old caps r aref old_head sha
       (*e: [[Repository.commit_index()]] update ref when not first commit *)
   in
   if not ok
@@ -543,7 +543,7 @@ let init (caps: < Cap.stdout; Cap.chdir; ..>) (root : Fpath.t) =
     dotgit = root / ".git";
     index = Index.empty;
   } in
-  add_ref_if_new r Refs.Head Refs.default_head_content |> ignore;
+  add_ref_if_new caps r Refs.Head Refs.default_head_content |> ignore;
   (*e: [[Repository.init()]] create [[.git/HEAD]] *)
 
   (* less: config file, description, hooks, etc *)

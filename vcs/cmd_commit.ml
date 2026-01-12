@@ -43,7 +43,7 @@ let cmd = { Cmd_.
     "--message", Arg.Set_string message, " <msg> commit message";
     (*e: [[Cmd_commit.cmd]] command-line options *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     match args with
     | [] -> 
       let r, _ = Repository.find_root_open_and_adjust_paths [] in
@@ -72,7 +72,7 @@ let cmd = { Cmd_.
         else raise Todo
       in
       (*e: [[Cmd_commit.cmd]] compute [[committer]] user *)
-      commit r author committer !message
+      commit caps r author committer !message
     | _xs -> raise Cmd_.ShowUsage
   );
 }

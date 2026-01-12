@@ -6,15 +6,15 @@ open Common
 
 (*s: function [[Cmd_pull.pull]] *)
 (* =~ git fetch + git merge *)
-let pull (caps: < Cap.stdout; Cap.open_out; ..>) dst url =
+let pull (caps: < Cap.stdout; Cap.open_out; Cap.open_in; ..>) dst url =
   (* todo: detect if clean repo? status is empty? *)
-  let client = Clients.client_of_url url in
+  let client = Clients.client_of_url caps url in
 
   (* less: allow to grab from multiple heads, not just HEAD *)
   let remote_HEAD_sha = client.Client.fetch dst in
   
   (* detect if need merge, if current HEAD not parent of new HEAD *)
-  let current_HEAD_sha = Repository.follow_ref_some dst (Refs.Head) in
+  let current_HEAD_sha = Repository.follow_ref_some caps dst (Refs.Head) in
   let ancestors_remote_HEAD = 
     Commit.collect_ancestors (Repository.read_commit dst) [remote_HEAD_sha]
       (Hashtbl.create 101)
@@ -24,7 +24,7 @@ let pull (caps: < Cap.stdout; Cap.open_out; ..>) dst url =
   | _ when Hashtbl.mem ancestors_remote_HEAD current_HEAD_sha ->
     (* easy case *)
     Console.print caps (spf "fast forward to %s" (Hexsha.of_sha remote_HEAD_sha));
-    Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
+    Repository.set_ref caps dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in
     Repository.set_worktree_and_index_to_tree caps dst tree

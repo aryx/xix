@@ -6,14 +6,14 @@
 (*s: function [[Cmd_clone.clone]] *)
 (* =~ git pull from scratch (itself =~ git fetch + git merge) *)
 let clone caps url (path_dst : Fpath.t) =
-  let client = Clients.client_of_url url in
+  let client = Clients.client_of_url caps url in
   
   Repository.init caps path_dst;
   let dst = Repository.open_ path_dst in
 
   (* less: allow to grab from different head? *)
   let remote_HEAD_sha = client.Client.fetch dst in
-  Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
+  Repository.set_ref caps dst (Refs.Head) remote_HEAD_sha;
 
   (* =~ reset index *)
   let commit = Repository.read_commit dst remote_HEAD_sha in

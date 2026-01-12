@@ -8,8 +8,8 @@ open Regexp_.Operators
 
 (*s: function [[Cmd_branch.list_branches]] *)
 (* less: remote_flag set with --all to also list remote refs *)
-let list_branches (caps : < Cap.stdout; ..>) r =
-  let head_branch = Repository.read_ref r (Refs.Head) in
+let list_branches (caps : < Cap.stdout; Cap.open_in; ..>) r =
+  let head_branch = Repository.read_ref caps r (Refs.Head) in
   let all_refs = Repository.all_refs r in
   all_refs |> List.iter (fun refname ->
     if refname =~ "^refs/heads/\\(.*\\)"
@@ -25,7 +25,7 @@ let list_branches (caps : < Cap.stdout; ..>) r =
 (*e: function [[Cmd_branch.list_branches]] *)
 
 (*s: function [[Cmd_branch.create_branch]] *)
-let create_branch r name (* sha *) =
+let create_branch caps r name (* sha *) =
   let refname = "refs/heads/" ^ name in
   (*s: [[Cmd_branch.create_branch()]] sanity check refname *)
   let all_refs = Repository.all_refs r in
@@ -33,17 +33,18 @@ let create_branch r name (* sha *) =
   (* less: unless -force *)
   then failwith (spf "A branch named '%s' already exists." name);
   (*e: [[Cmd_branch.create_branch()]] sanity check refname *)
-  let sha = Repository.follow_ref_some r (Refs.Head) in
-  let ok = Repository.add_ref_if_new r (Refs.Ref refname) (Refs.Hash sha) in
+  let sha = Repository.follow_ref_some caps r (Refs.Head) in
+  let ok = Repository.add_ref_if_new caps r (Refs.Ref refname) (Refs.Hash sha) in
   if not ok
   then failwith (spf "could not create branch '%s'" name)
 (*e: function [[Cmd_branch.create_branch]] *)
 
 (*s: function [[Cmd_branch.delete_branch]] *)
-let delete_branch (caps: < Cap.stdout; Cap.open_out; ..>) r name force =
+let delete_branch (caps: < Cap.stdout; Cap.open_out; Cap.open_in; ..>) 
+     r name force =
   let refname = "refs/heads/" ^ name in
   let aref = Refs.Ref refname in
-  let sha = Repository.follow_ref_some r aref in
+  let sha = Repository.follow_ref_some caps r aref in
   (*s: [[Cmd_branch.delete_branch()]] sanity check if branch merged unless force *)
   if not force
   (* todo: detect if fully merged branch! *)    
@@ -99,7 +100,7 @@ let cmd = { Cmd_.
       (*x: [[Cmd_branch.cmd]] when one argument, when flags cases *)
       | _ when !del_force -> delete_branch caps r name true
       (*e: [[Cmd_branch.cmd]] when one argument, when flags cases *)
-      | _ -> create_branch r name
+      | _ -> create_branch caps r name
       )
     (*e: [[Cmd_branch.cmd]] match args cases *)
     | _ -> raise Cmd_.ShowUsage

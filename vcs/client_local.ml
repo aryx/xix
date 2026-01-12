@@ -26,12 +26,12 @@ type graph_walker = {
 (*e: type [[Client_local.graph_walker]] *)
 
 (*s: function [[Client_local.ml_graph_walker]] *)
-let (mk_graph_walker: Repository.t -> graph_walker) = fun r ->
+let mk_graph_walker caps (r : Repository.t) : graph_walker =
   (* less: start just from HEAD? *)
   let heads = 
     Repository.all_refs r |> List.filter_map (fun aref ->
       if aref =~ "refs/heads/"
-      then Some (Repository.follow_ref_some r (Refs.Ref aref))
+      then Some (Repository.follow_ref_some caps r (Refs.Ref aref))
       else None
     )
   in
@@ -93,9 +93,9 @@ let rec collect_filetree read_tree treeid have_sha =
  
 (*s: function [[Client_local.find_top_common_commits]] *)
 (* find the common frontline *)
-let find_top_common_commits src dst =
+let find_top_common_commits caps src dst =
   let top_commons = Hashtbl.create 101 in
-  let walker = mk_graph_walker dst in
+  let walker = mk_graph_walker caps dst in
 
   let rec loop_while_sha commit_sha_opt =
     commit_sha_opt |> Option.iter (fun commit_sha ->
@@ -175,11 +175,11 @@ let iter_missing_objects top_common_commits top_wanted_commits src f =
 
 
 (*s: function [[Client_local.fetch_objects]] *)
-let fetch_objects src dst =
+let fetch_objects caps src dst =
   (* less: determine_wants from pull command *)
-  let top_wanted_commits = [Repository.follow_ref_some src Refs.Head] in
+  let top_wanted_commits = [Repository.follow_ref_some caps src Refs.Head] in
   (* less: shallows? unshallows? *)
-  let top_common_commits = find_top_common_commits src dst in
+  let top_common_commits = find_top_common_commits caps src dst in
   iter_missing_objects top_common_commits top_wanted_commits src 
     (fun sha1 obj_opt ->
     (* less: opti: copy raw files directly without unmarshalling/marshalling *)
@@ -200,14 +200,14 @@ let fetch_objects src dst =
 (*****************************************************************************)
 
 (*s: function [[Client_local.mk_client]] *)
-let mk_client (path : Fpath.t) =
+let mk_client caps (path : Fpath.t) =
   { Client.
     url = !!path;
     fetch = (fun dst ->
       let src = Repository.open_ path in
-      fetch_objects src dst;
+      fetch_objects caps src dst;
       (* less: all_refs *)
-      Repository.follow_ref_some src Refs.Head
+      Repository.follow_ref_some caps src Refs.Head
    );
   }
 (*e: function [[Client_local.mk_client]] *)

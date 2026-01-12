@@ -12,6 +12,8 @@
  *  - https://roscidus.com/blog/blog/2023/04/26/lambda-capabilities/
  *
  * related work:
+ *  - TODO: recent OCaml lib for openBSD:
+ *    https://codeberg.org/removewingman/restricted
  *  - https://en.wikipedia.org/wiki/E_(programming_language) which
  *    itself led to Emily which was about adding capabilities in OCaml
  *    https://www.hpl.hp.com/techreports/2006/HPL-2006-116.html

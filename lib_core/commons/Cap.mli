@@ -1,6 +1,30 @@
 (* Capabilities implemented as simple abstract types and explicit
  * (object) arguments/parameters ("Lambda the ultimate security tool").
  *
+ * Here is an example of use:
+ *
+ *   let foo (caps : < Cap.stdout; ..>) str =
+ *      CapConsole.print caps str
+ *
+ *   let bar (caps : < Cap.stdout; Cap.stderr; ..) str = 
+ *      CapConsole.eprint caps str;
+ *      foo str
+ *   
+ *   let _main =
+ *     Cap.main (fun all_caps -> bar all_caps)
+ *
+ * Thx to capabilities, you can see in the signature of functions the
+ * set of capabilities that are needed, a bit like an effect system.
+ *
+ * Note that you must also find a way to forbid your code to call
+ * the dangerous standard lib functions that are not capability-aware
+ * (e.g., Stdlib.printf, Unix.stdout, etc.). One way is to use a tool
+ * like Semgrep (see xix/semgrep.jsonnet file for an example).
+ *
+ * For more information, see xix/utilities/text/ed/ for a simple example of
+ * use of capabilities in a real program.
+ *
+ *
  * Note that most of the types below are on purpose abstract and there is
  * no way to build/forge them except by calling the restricted (statically
  * and dynamically) Cap.main() below. This function is passing all capabilities

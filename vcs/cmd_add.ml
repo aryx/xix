@@ -21,7 +21,7 @@ let cmd = { Cmd_.
      *)
     (*e: [[Cmd_add.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     match args with
     | [] -> Logs.app (fun m -> m "Nothing specified, nothing added.")
     | xs ->

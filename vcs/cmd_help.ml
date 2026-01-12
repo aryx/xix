@@ -13,7 +13,7 @@ let rec cmd = { Cmd_.
   name = "help";
   usage = "";
   options = ["-a", Arg.Set list_extra, " see all commands"];
-  f = (fun _args ->
+  f = (fun _caps _args ->
     let xs = 
       if !list_extra
       then Cmds.main_commands @ Cmds.extra_commands @ [cmd]

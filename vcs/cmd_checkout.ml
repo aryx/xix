@@ -56,7 +56,7 @@ let cmd = { Cmd_.
      *)
    (*e: [[Cmd_checkout.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     (*s: [[Cmd_checkout.cmd]] match args cases *)

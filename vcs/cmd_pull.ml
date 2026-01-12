@@ -38,7 +38,7 @@ let cmd = { Cmd_.
   usage = " [options] [<url repository>]";
   options = [
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let dst, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 

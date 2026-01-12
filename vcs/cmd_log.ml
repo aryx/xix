@@ -88,7 +88,7 @@ let cmd = { Cmd_.
     (* todo: -1, -10 *)
     (* less: --reverse *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
     | [] -> log r

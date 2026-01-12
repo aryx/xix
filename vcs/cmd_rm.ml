@@ -23,7 +23,7 @@ let cmd = { Cmd_.
     (* less: -f force, -r recursive, --quiet *)
     (*e: [[Cmd_rm.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     match args with
     | [] -> raise Cmd_.ShowUsage
     | xs ->

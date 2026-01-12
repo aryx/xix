@@ -43,7 +43,7 @@ let cmd = { Cmd_.
   options = [
     (* less: --all, --force, --progress *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let src, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 

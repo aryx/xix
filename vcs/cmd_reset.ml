@@ -40,7 +40,7 @@ let cmd = { Cmd_.
     "--mixed", Arg.Set mixed, " reset HEAD and index";
     (*e: [[Cmd_reset.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> 

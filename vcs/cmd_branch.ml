@@ -82,7 +82,7 @@ let cmd = { Cmd_.
     "-D",       Arg.Set del_force, " delete branch (even if not merged)";
     (*e: [[Cmd_branch.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     (*s: [[Cmd_branch.cmd]] match args cases *)

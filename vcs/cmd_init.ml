@@ -14,7 +14,7 @@ let cmd = { Cmd_.
    (* less: -bare, --quiet *)
    (*e: [[Cmd_init.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     match args with
     | []    -> Repository.init (Fpath.v ".")
     | [dir] -> Repository.init (Fpath.v dir)

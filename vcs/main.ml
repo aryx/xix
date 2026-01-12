@@ -59,7 +59,7 @@ open Common
  *  - look go-git, better basis? more complete than ocamlgit?
  *)
 
-type caps = < Cap.stdout; Cap.stderr >
+type caps = Cmd_.caps
 
 (*****************************************************************************)
 (* Helpers *)
@@ -123,7 +123,7 @@ let main (caps : < caps; ..>) (argv : string array) : Exit.t =
     (*e: [[Main.main()]] parse [[argv]] for cmd options and [[remaining_args]] *)
     (* finally! *)
     try 
-      cmd.Cmd_.f (List.rev !remaining_args);
+      cmd.Cmd_.f (caps :> Cmd_.caps) (List.rev !remaining_args);
       Exit.OK
     with 
       | Cmd_.ShowUsage ->

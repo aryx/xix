@@ -137,7 +137,7 @@ let cmd = { Cmd_.
     "--long", Arg.Clear short_format, " show status in long format (default)";
     (* less: --branch, --ignored *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
     | [] -> status r

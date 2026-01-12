@@ -19,7 +19,7 @@ let cmd = { Cmd_.
   name = "diff";
   usage = " ";
   options = [];
-  f = (fun args ->
+  f = (fun _caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
     | [] -> diff_worktree_vs_index r

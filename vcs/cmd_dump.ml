@@ -3,6 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
+open Fpath_.Operators
 
 (*s: constant [[Cmd_dump.raw]] *)
 let raw = ref false
@@ -13,8 +14,8 @@ let index = ref false
 
 (*s: function [[Cmd_dump.dump_object]] *)
 (* =~ git cat-file -p *)
-let dump_object file =
-  let chan = open_in file in
+let dump_object (_caps : < Cap.open_in; ..>) (file : Fpath.t) =
+  let chan = open_in !!file in
   let input = IO.input_channel chan in
   let unzipped = Unzip.inflate input in
   
@@ -34,8 +35,8 @@ let dump_object file =
 
 (*s: function [[Cmd_dump.dump_index]] *)
 (* =~ dulwich dump-index, =~ git ls-files --stage *)
-let dump_index file =
-  let chan = open_in file in
+let dump_index (_caps : < Cap.open_in; ..>) (file : Fpath.t) =
+  let chan = open_in !!file in
   let input = IO.input_channel chan in
   let index = Index.read input in
   let v = Dump.vof_index index in
@@ -43,10 +44,10 @@ let dump_index file =
 (*e: function [[Cmd_dump.dump_index]] *)
 
 (*s: function [[Cmd_dump.dump]] *)
-let dump file =
+let dump caps (file : Fpath.t) =
   if !index
-  then dump_index file
-  else dump_object file
+  then dump_index caps file
+  else dump_object caps file
 (*e: function [[Cmd_dump.dump]] *)
 
 (*s: constant [[Cmd_dump.cmd]] *)
@@ -57,9 +58,9 @@ let cmd = { Cmd_.
     "-raw", Arg.Set raw, " do not pretty print";
     "-index", Arg.Set index, " pretty print index content";
   ];
-  f = (fun args ->
+  f = (fun caps args ->
     match args with
-    | [file] -> dump file
+    | [file] -> dump caps (Fpath.v file)
     | _ -> failwith (spf "dump command [%s] not supported"
                        (String.concat ";" args))
   );

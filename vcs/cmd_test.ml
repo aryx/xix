@@ -104,7 +104,7 @@ let cmd = { Cmd_.
   name = "test";
   usage = " ";
   options = [];
-  f = (fun args ->
+  f = (fun _caps args ->
     match args with
     | ["sha1"; str] -> test_sha1 str
     | ["sha1"] -> test_sha1 "what is up, doc?"

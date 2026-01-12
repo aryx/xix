@@ -30,7 +30,7 @@ let cmd = { Cmd_.
   options = [
     (* less: --bare, --progress, --depth *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     match args with
     | [url]     -> clone url (Fpath.v ".")
     | [url;dst] -> clone url (Fpath.v dst)

@@ -43,7 +43,7 @@ let cmd = { Cmd_.
     "--message", Arg.Set_string message, " <msg> commit message";
     (*e: [[Cmd_commit.cmd]] command-line options *)
   ];
-  f = (fun args ->
+  f = (fun _caps args ->
     match args with
     | [] -> 
       let r, _ = Repository.find_root_open_and_adjust_paths [] in

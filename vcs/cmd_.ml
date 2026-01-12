@@ -1,5 +1,7 @@
 (*s: version_control/cmd_.ml *)
 
+type caps = < Cap.open_in >
+
 (*s: type [[Cmd_.t]] *)
 type t = {
   name: string;
@@ -7,7 +9,7 @@ type t = {
   options: (Arg.key * Arg.spec * Arg.doc) list;
 
   (* the command! *)
-  f: string list -> unit;
+  f: <caps> -> string list -> unit;
   (* less: man: when do git -help get short help, and with --help man page *)
 }
 (*e: type [[Cmd_.t]] *)

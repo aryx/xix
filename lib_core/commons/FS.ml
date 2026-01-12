@@ -1,4 +1,5 @@
 open Fpath_.Operators
+(* for fields *)
 open Chan
 
 (*****************************************************************************)
@@ -15,11 +16,21 @@ open Chan
 let with_open_in (caps : < Cap.open_in; .. >) f file = 
   let _ = caps#open_in !!file in
   (* nosemgrep: use-caps *)
-  UChan.with_open_in f file
+  let chan : in_channel =
+    (* nosemgrep: do-not-use-open-in *)
+    open_in !!file 
+  in
+  let ichan : Chan.i = { ic = chan; origin = Chan.File file } in
+  Fun.protect ~finally:(fun () -> close_in chan) (fun () -> f ichan)
 let with_open_out (caps : < Cap.open_out; .. >) f file = 
   let _ = caps#open_out !!file in
   (* nosemgrep: use-caps *)
-  UChan.with_open_out f file
+  let chan : out_channel =
+    (* nosemgrep: use-caps *)
+    open_out !!file 
+  in
+  let ochan : Chan.o = { oc = chan; dest = Chan.OutFile file } in
+  Fun.protect ~finally:(fun () -> close_out chan) (fun () -> f ochan)
 
 (* tail recursive efficient version *)
 let cat (caps : < Cap.open_in; .. >) (file : Fpath.t) : string list =

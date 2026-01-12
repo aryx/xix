@@ -19,7 +19,7 @@ local semgrep_rules = [
     severity: 'ERROR',
     message: |||
       It is easy to forget to close `open_in` with `close_in`.
-      Use `FS.with_open_in()` (or `UChan.with_open_in`) instead.
+      Use `FS.with_open_in()` instead.
     |||,
     paths: {
       exclude: ['todo/'],
@@ -67,10 +67,8 @@ local cap_rules = [
 	 'open_in_bin',
 	 #'open_in',
          #'Unix.openfile',
-         'UChan.with_open_in',
 	# Cap.open_out
         'open_out',
-        'UChan.with_open_out',
 	# Cap.open_out
         'Sys.remove',
         'Unix.unlink',
@@ -82,7 +80,7 @@ local cap_rules = [
     languages: ['ocaml'],
     severity: 'ERROR',
     message: |||
-       Do not use Sys.xxx or Unix.xxx (or UChan.xxx). Use CapSys or CapUnix and
+       Do not use Sys.xxx or Unix.xxx. Use CapSys or CapUnix and
        capabilities for dangerous functions.
     |||,
     paths: {

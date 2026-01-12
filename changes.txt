@@ -8,6 +8,7 @@
 
 ** libcore
 - new Arg_.ml small wrapper around Arg to factorize code in xix programs
+- removed UConsole.ml and UChan.ml (use Console.ml and FS.ml instead)
 
 ** docs
 - lpization of oed in in principia/docs/principia/oed.nw (next to ed.nw)

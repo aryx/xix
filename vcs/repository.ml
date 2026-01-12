@@ -517,7 +517,7 @@ let set_worktree_and_index_to_tree r tree =
 (*****************************************************************************)
 
 (*s: function [[Repository.init]] *)
-let init (caps: < Cap.stdout; ..>) (root : Fpath.t) =
+let init (caps: < Cap.stdout; Cap.chdir; ..>) (root : Fpath.t) =
   if not (Sys.file_exists !!root)
   then Unix.mkdir !!root dirperm;
 
@@ -547,7 +547,7 @@ let init (caps: < Cap.stdout; ..>) (root : Fpath.t) =
   (*e: [[Repository.init()]] create [[.git/HEAD]] *)
 
   (* less: config file, description, hooks, etc *)
-  Sys.chdir !!root;
+  CapSys.chdir caps !!root;
   let absolute = Sys.getcwd () |> Fpath.v in
   Console.print caps (spf "Initialized empty Git repository in %s" !!(absolute / ".git/"))
 (*e: function [[Repository.init]] *)

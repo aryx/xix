@@ -37,5 +37,6 @@ let cat (caps : < Cap.open_in; .. >) (file : Fpath.t) : string list =
 let remove (caps : < Cap.open_out; ..>) (file : Fpath.t) =
   (* alt: Logs.info (fun m -> m "deleting %s" !!file); *)
   let _ = caps#open_out !!file in
+  (* alt: use Unix.unlink? *)
   (* nosemgrep: use-caps *)
   Sys.remove !!file

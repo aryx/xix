@@ -5,7 +5,7 @@
 open Common
 
 (*s: function [[Cmd_checkout.checkout]] *)
-let checkout (caps : < Cap.stdout; ..>) r str =
+let checkout (caps : < Cap.stdout; Cap.open_out; ..>) r str =
   let all_refs = Repository.all_refs r in
   let refname = "refs/heads/" ^ str in
 
@@ -17,7 +17,7 @@ let checkout (caps : < Cap.stdout; ..>) r str =
 
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.OtherRef refname);
-    Repository.set_worktree_and_index_to_tree r tree;
+    Repository.set_worktree_and_index_to_tree caps r tree;
     Console.print caps (spf "Switched to branch '%s'" str);
     (* less: if master, then check if up-to-date with origin/master *)
 
@@ -29,7 +29,7 @@ let checkout (caps : < Cap.stdout; ..>) r str =
     let tree = Repository.read_tree r treeid in
     (* todo: order of operation? set ref before index? reverse? *)
     Repository.write_ref r (Refs.Head) (Refs.Hash commitid);
-    Repository.set_worktree_and_index_to_tree r tree;
+    Repository.set_worktree_and_index_to_tree caps r tree;
     Console.print caps (spf "Note: checking out '%s'." str);
     Console.print caps ("You are in 'detached HEAD' state");
   (*e: [[Cmd_checkout.checkout()]] cases *)

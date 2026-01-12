@@ -36,3 +36,6 @@ let chdir (caps : < Cap.chdir; ..>) =
   let _ = caps#chdir in
   (* nosemgrep: use-caps *)
   Unix.chdir
+let unlink (caps : < Cap.open_out; ..>) file =
+  let _ = caps#open_out file in
+  Unix.unlink

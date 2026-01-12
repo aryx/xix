@@ -6,7 +6,7 @@ open Common
 
 (*s: function [[Cmd_pull.pull]] *)
 (* =~ git fetch + git merge *)
-let pull (caps: < Cap.stdout; ..>) dst url =
+let pull (caps: < Cap.stdout; Cap.open_out; ..>) dst url =
   (* todo: detect if clean repo? status is empty? *)
   let client = Clients.client_of_url url in
 
@@ -27,7 +27,7 @@ let pull (caps: < Cap.stdout; ..>) dst url =
     Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in
-    Repository.set_worktree_and_index_to_tree dst tree
+    Repository.set_worktree_and_index_to_tree caps dst tree
   | _ -> failwith "TODO: git pull need merge"
   )
 (*e: function [[Cmd_pull.pull]] *)

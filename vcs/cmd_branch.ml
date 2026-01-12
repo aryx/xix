@@ -40,7 +40,7 @@ let create_branch r name (* sha *) =
 (*e: function [[Cmd_branch.create_branch]] *)
 
 (*s: function [[Cmd_branch.delete_branch]] *)
-let delete_branch (caps: < Cap.stdout; ..>) r name force =
+let delete_branch (caps: < Cap.stdout; Cap.open_out; ..>) r name force =
   let refname = "refs/heads/" ^ name in
   let aref = Refs.Ref refname in
   let sha = Repository.follow_ref_some r aref in
@@ -49,7 +49,7 @@ let delete_branch (caps: < Cap.stdout; ..>) r name force =
   (* todo: detect if fully merged branch! *)    
   then ();
   (*e: [[Cmd_branch.delete_branch()]] sanity check if branch merged unless force *)
-  Repository.del_ref r aref;
+  Repository.del_ref caps r aref;
   Console.print caps (spf "Deleted branch %s (was %s)" name (Hexsha.of_sha sha))
 (*e: function [[Cmd_branch.delete_branch]] *)
 

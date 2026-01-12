@@ -82,7 +82,8 @@ val all_refs: t -> Refs.refname list
 val set_ref: t -> Refs.t -> Commit.hash -> unit
 (*e: signature [[Repository.set_ref]] *)
 (*s: signature [[Repository.del_ref]] *)
-val del_ref: t -> Refs.t -> unit
+val del_ref: <Cap.open_out; ..> -> 
+  t -> Refs.t -> unit
 (*e: signature [[Repository.del_ref]] *)
 (* atomic op *)
 (*s: signature [[Repository.add_ref_if_new]] *)
@@ -108,7 +109,7 @@ val commit_index:
   t -> User.t (* author *) -> User.t (* committer *) -> string (* msg *) -> unit
 (*e: signature [[Repository.commit_index]] *)
 (*s: signature [[Repository.set_worktree_and_index_to_tree]] *)
-val set_worktree_and_index_to_tree:
+val set_worktree_and_index_to_tree: < Cap.open_out; ..> ->
   t -> Tree.t -> unit
 (*e: signature [[Repository.set_worktree_and_index_to_tree]] *)
 

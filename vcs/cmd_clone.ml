@@ -18,7 +18,7 @@ let clone caps url (path_dst : Fpath.t) =
   (* =~ reset index *)
   let commit = Repository.read_commit dst remote_HEAD_sha in
   let tree = Repository.read_tree dst (commit.Commit.tree) in
-  Repository.set_worktree_and_index_to_tree dst tree
+  Repository.set_worktree_and_index_to_tree caps dst tree
 (*e: function [[Cmd_clone.clone]] *)
 
 (* todo: when clone then repo should have a "refs/remotes/origin/master" *)

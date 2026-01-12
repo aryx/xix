@@ -7,7 +7,7 @@ open Fpath_.Operators
 
 (*s: function [[Cmd_push.push]] *)
 (* =~ git fetch + git merge but inverting dst and src  *)
-let push (caps : < Cap.stdout; ..>) src_repo (url_dst : string) =
+let push (caps : < Cap.stdout; Cap.open_out; ..>) src_repo (url_dst : string) =
   let url = src_repo.Repository.worktree in
   let dst = Repository.open_ (Fpath.v url_dst) in
   (* todo: detect if clean repo? status is empty? *)
@@ -31,7 +31,7 @@ let push (caps : < Cap.stdout; ..>) src_repo (url_dst : string) =
     Repository.set_ref dst (Refs.Head) remote_HEAD_sha;
     let commit = Repository.read_commit dst remote_HEAD_sha in
     let tree = Repository.read_tree dst (commit.Commit.tree) in
-    Repository.set_worktree_and_index_to_tree dst tree
+    Repository.set_worktree_and_index_to_tree caps dst tree
   | _ -> failwith "TODO: git pull need merge"
   )
 (*e: function [[Cmd_push.push]] *)

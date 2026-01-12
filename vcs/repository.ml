@@ -177,9 +177,9 @@ let add_ref_if_new r aref refval =
 (*e: function [[Repository.add_ref_if_new]] *)
 
 (*s: function [[Repository.del_ref]] *)
-let del_ref r aref =
+let del_ref caps r aref =
   let file = ref_to_filename r aref in
-  Unix.unlink !!file
+  FS.remove caps file
 (*e: function [[Repository.del_ref]] *)
 
 (*s: function [[Repository.set_ref_if_same_old]] *)
@@ -424,7 +424,7 @@ let commit_index r author committer message =
 (*****************************************************************************)
 
 (*s: function [[Repository.build_file_from_blob]] *)
-let build_file_from_blob (fullpath : Fpath.t) blob perm =
+let build_file_from_blob caps (fullpath : Fpath.t) blob perm =
   let oldstat =
     try 
       Some (Unix.lstat !!fullpath)
@@ -433,7 +433,7 @@ let build_file_from_blob (fullpath : Fpath.t) blob perm =
   (match perm with 
   | Tree.Link -> 
     if oldstat <> None
-    then Unix.unlink !!fullpath;
+    then FS.remove caps fullpath;
     Unix.symlink blob !!fullpath;
   | Tree.Normal | Tree.Exec ->
     (match oldstat with
@@ -465,7 +465,7 @@ let build_file_from_blob (fullpath : Fpath.t) blob perm =
 
 
 (*s: function [[Repository.set_worktree_and_index_to_tree]] *)
-let set_worktree_and_index_to_tree r tree =
+let set_worktree_and_index_to_tree caps r tree =
   (* todo: need lock on index? on worktree? *)
   let hcurrent = 
     r.index |> List.map (fun e -> e.Index.path, false) |> Hashtbl_.of_list in
@@ -488,7 +488,7 @@ let set_worktree_and_index_to_tree r tree =
       then Unix.mkdir (Filename.dirname !!fullpath) dirperm;
       let sha = entry.Tree.id in
       let blob = read_blob r sha in
-      let stat = build_file_from_blob fullpath blob perm in
+      let stat = build_file_from_blob caps fullpath blob perm in
       Hashtbl.replace hcurrent relpath true;
       Stack_.push (Index.mk_entry relpath sha stat) new_index;
     (*s: [[Repository.set_worktree_and_index_to_tree()]] walk tree cases *)
@@ -503,7 +503,7 @@ let set_worktree_and_index_to_tree r tree =
     then 
       (* todo: should check if modified? otherwise lose modif! *)
       let fullpath = r.worktree // file in
-      Unix.unlink !!fullpath
+      FS.remove caps fullpath
   )
   (* less: delete if a dir became empty, just walk_dir? *)
 (*e: function [[Repository.set_worktree_and_index_to_tree]] *)

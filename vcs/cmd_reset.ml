@@ -5,12 +5,12 @@
 open Common
 
 (*s: function [[Cmd_reset.reset_hard]] *)
-let reset_hard (caps : < Cap.stdout; ..>) r =
+let reset_hard (caps : < Cap.stdout; Cap.open_out; ..>) r =
   let commitid = Repository.follow_ref_some r (Refs.Head) in
   let commit = Repository.read_commit r commitid in
   let tree = Repository.read_tree r commit.Commit.tree in
 
-  Repository.set_worktree_and_index_to_tree r tree;
+  Repository.set_worktree_and_index_to_tree caps r tree;
   Console.print caps (spf "HEAD is now at %s %s" 
         (String.sub (Hexsha.of_sha commitid) 0 6)
         (String.sub commit.Commit.message 0 40))

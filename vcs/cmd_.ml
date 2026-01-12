@@ -1,6 +1,6 @@
 (*s: version_control/cmd_.ml *)
 
-type caps = < Cap.stdout; Cap.open_in; Cap.chdir;  >
+type caps = < Cap.stdout; Cap.open_in; Cap.open_out; Cap.chdir;  >
 
 (*s: type [[Cmd_.t]] *)
 type t = {

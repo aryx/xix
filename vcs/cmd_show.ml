@@ -47,7 +47,7 @@ let cmd = { Cmd_.
   (* less: --oneline *)
   options = [];
   f = (fun caps args ->
-    let r, _ = Repository.find_root_open_and_adjust_paths [] in
+    let r, _ = Repository.find_root_open_and_adjust_paths caps [] in
     match args with
     | [] -> show caps r (Repository.ObjByRef (Refs.Head))
     | xs ->

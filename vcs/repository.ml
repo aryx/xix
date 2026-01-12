@@ -553,7 +553,7 @@ let init (caps: < Cap.stdout; Cap.chdir; ..>) (root : Fpath.t) =
 (*e: function [[Repository.init]] *)
 
 (*s: function [[Repository.open_]] *)
-let open_ (root : Fpath.t) = 
+let open_ (caps : < Cap.open_in; ..>) (root : Fpath.t) = 
   let path = root / ".git" in
   if Sys.file_exists !!path &&
      (Unix.stat !!path).Unix.st_kind = Unix.S_DIR
@@ -564,7 +564,7 @@ let open_ (root : Fpath.t) =
       index = 
         (if Sys.file_exists !!(path / "index")
          then 
-          (path / "index") |> UChan.with_open_in (fun (ch : Chan.i) ->
+          (path / "index") |> FS.with_open_in caps (fun (ch : Chan.i) ->
             ch.ic |> IO.input_channel |> Index.read)
          else Index.empty
         );
@@ -576,9 +576,10 @@ let open_ (root : Fpath.t) =
 (*e: function [[Repository.open_]] *)
 
 (*s: function [[Repository.find_dotgit_root_and_open]] *)
-let find_root_open_and_adjust_paths (paths : Fpath.t list) : t * Fpath.t list = 
+let find_root_open_and_adjust_paths caps (paths : Fpath.t list) :
+    t * Fpath.t list = 
   (* todo: allow git from different location *)
-  let r = open_ (Fpath.v ".") in
+  let r = open_ caps (Fpath.v ".") in
   (* todo: support also absolute paths and transform in relpaths *)
   let relpaths = paths |> List.map (fun path ->
     if Filename.is_relative !!path

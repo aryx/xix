@@ -10,7 +10,7 @@ open Fpath_.Operators
 let push (caps : < Cap.stdout; Cap.open_out; Cap.open_in; ..>) src_repo
      (url_dst : string) =
   let url = src_repo.Repository.worktree in
-  let dst = Repository.open_ (Fpath.v url_dst) in
+  let dst = Repository.open_ caps (Fpath.v url_dst) in
   (* todo: detect if clean repo? status is empty? *)
   let client = Clients.client_of_url caps !!url in
 
@@ -45,7 +45,7 @@ let cmd = { Cmd_.
     (* less: --all, --force, --progress *)
   ];
   f = (fun caps args ->
-    let src, _ = Repository.find_root_open_and_adjust_paths [] in
+    let src, _ = Repository.find_root_open_and_adjust_paths caps [] in
     match args with
     | [] -> 
       failwith "TODO: use remote information in config file"

@@ -21,11 +21,13 @@ let cmd = { Cmd_.
      *)
     (*e: [[Cmd_add.cmd]] command-line options *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     match args with
     | [] -> Logs.app (fun m -> m "Nothing specified, nothing added.")
     | xs ->
-      let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings xs) in
+      let r, relpaths = 
+              Repository.find_root_open_and_adjust_paths caps 
+                (Fpath_.of_strings xs) in
       (* less: support directories *)
       add r relpaths
   );

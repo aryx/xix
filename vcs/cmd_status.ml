@@ -138,7 +138,9 @@ let cmd = { Cmd_.
     (* less: --branch, --ignored *)
   ];
   f = (fun caps args ->
-    let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
+    let r, relpaths = 
+          Repository.find_root_open_and_adjust_paths caps
+            (Fpath_.of_strings args) in
     match relpaths with
     | [] -> status caps r
     | _xs -> raise Cmd_.ShowUsage

@@ -39,7 +39,7 @@ let cmd = { Cmd_.
   options = [
   ];
   f = (fun caps args ->
-    let dst, _ = Repository.find_root_open_and_adjust_paths [] in
+    let dst, _ = Repository.find_root_open_and_adjust_paths caps [] in
     match args with
     | [] -> 
       failwith "TODO: use remote information in config file"

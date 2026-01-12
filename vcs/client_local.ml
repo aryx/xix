@@ -204,7 +204,7 @@ let mk_client caps (path : Fpath.t) =
   { Client.
     url = !!path;
     fetch = (fun dst ->
-      let src = Repository.open_ path in
+      let src = Repository.open_ caps path in
       fetch_objects caps src dst;
       (* less: all_refs *)
       Repository.follow_ref_some caps src Refs.Head

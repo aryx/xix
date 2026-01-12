@@ -20,7 +20,7 @@ let cmd = { Cmd_.
   usage = " ";
   options = [];
   f = (fun caps args ->
-    let r, _ = Repository.find_root_open_and_adjust_paths [] in
+    let r, _ = Repository.find_root_open_and_adjust_paths caps [] in
     match args with
     | [] -> diff_worktree_vs_index caps r
     | _xs -> raise Cmd_.ShowUsage

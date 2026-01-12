@@ -31,10 +31,11 @@ val init: < Cap.stdout; Cap.chdir; Cap.open_out; Cap.open_in; ..> ->
   Fpath.t -> unit
 (*e: signature [[Repository.init]] *)
 (*s: signature [[Repository.open_]] *)
-val open_: Fpath.t -> t
+val open_: < Cap.open_in; ..> ->
+  Fpath.t -> t
 (*e: signature [[Repository.open_]] *)
 (*s: signature [[Repository.find_dotgit_root_and_open]] *)
-val find_root_open_and_adjust_paths: 
+val find_root_open_and_adjust_paths: < Cap.open_in; ..> ->
  Fpath.t list -> t * Fpath.t list
 (*e: signature [[Repository.find_dotgit_root_and_open]] *)
 

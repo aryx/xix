@@ -9,7 +9,7 @@ let clone caps url (path_dst : Fpath.t) =
   let client = Clients.client_of_url caps url in
   
   Repository.init caps path_dst;
-  let dst = Repository.open_ path_dst in
+  let dst = Repository.open_ caps path_dst in
 
   (* less: allow to grab from different head? *)
   let remote_HEAD_sha = client.Client.fetch dst in

@@ -46,7 +46,7 @@ let cmd = { Cmd_.
   f = (fun caps args ->
     match args with
     | [] -> 
-      let r, _ = Repository.find_root_open_and_adjust_paths [] in
+      let r, _ = Repository.find_root_open_and_adjust_paths caps [] in
       (*s: [[Cmd_commit.cmd]] compute [[today]] *)
       let today = 
         (Int64.of_float (Unix.time ()),

@@ -89,7 +89,9 @@ let cmd = { Cmd_.
     (* less: --reverse *)
   ];
   f = (fun caps args ->
-    let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
+    let r, relpaths = 
+          Repository.find_root_open_and_adjust_paths caps
+            (Fpath_.of_strings args) in
     match relpaths with
     | [] -> log caps r
     (* todo: git log path *)

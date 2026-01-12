@@ -4,9 +4,9 @@
 (*e: copyright ocamlgit *)
 
 (*s: function [[Cmd_diff.diff_worktree_vs_index]] *)
-let diff_worktree_vs_index r =
+let diff_worktree_vs_index caps r =
   let changes = 
-    Changes.changes_worktree_vs_index 
+    Changes.changes_worktree_vs_index caps
       (Repository.read_blob r)
       r.Repository.worktree 
       r.Repository.index 
@@ -19,10 +19,10 @@ let cmd = { Cmd_.
   name = "diff";
   usage = " ";
   options = [];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let r, _ = Repository.find_root_open_and_adjust_paths [] in
     match args with
-    | [] -> diff_worktree_vs_index r
+    | [] -> diff_worktree_vs_index caps r
     | _xs -> raise Cmd_.ShowUsage
   );
 }

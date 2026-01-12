@@ -40,12 +40,13 @@ let skip_tree_and_adjust_path read_blob dirpath entry_opt =
 
 (*s: function [[Changes.content_from_path_and_stat_index]] *)
 (* similar to Repository.content_from_path_and_unix_stat *)
-let content_from_path_and_stat_index (path : Fpath.t) stat_info =
+let content_from_path_and_stat_index (caps : < Cap.open_in; ..>)
+     (path : Fpath.t) stat_info =
   match stat_info.Index.mode with
   | Index.Link ->
     Unix.readlink !!path
   | Index.Normal | Index.Exec ->
-      path |> UChan.with_open_in (fun (ch : Chan.i) ->
+      path |> FS.with_open_in caps (fun (ch : Chan.i) ->
         ch.ic |> IO.input_channel |> IO.read_all
       )
   (*s: [[Changes.content_from_path_and_stat_index()]] match mode cases *)
@@ -96,7 +97,8 @@ let changes_tree_vs_tree read_tree read_blob tree1 tree2 =
  * and then just do set differences to compute new, deleted, and
  * for changes just look intersection and check if same content.
  *)
-let changes_worktree_vs_index read_blob worktree index =
+let changes_worktree_vs_index (caps : < Cap.open_in; ..> )
+     read_blob worktree index =
   index |> List.map (fun entry ->
     let old_stat = entry.Index.stats in
     let path = worktree // entry.Index.path in
@@ -122,7 +124,7 @@ let changes_worktree_vs_index read_blob worktree index =
          Change.Add { Change.path = entry.Index.path;
                       mode = new_stat.Index.mode;
                       content = lazy 
-                        (content_from_path_and_stat_index path new_stat)}
+                        (content_from_path_and_stat_index caps path new_stat)}
           ]
       | _ -> 
         [Change.Modify (
@@ -132,7 +134,7 @@ let changes_worktree_vs_index read_blob worktree index =
           { Change.path = entry.Index.path;
             mode = new_stat.Index.mode;
             content = lazy 
-              (content_from_path_and_stat_index path new_stat) }
+              (content_from_path_and_stat_index caps path new_stat) }
         )]
       )
   ) |> List.flatten

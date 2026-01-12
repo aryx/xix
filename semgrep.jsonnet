@@ -1,5 +1,5 @@
 // Semgrep rules for XiX, mostly to enforce the use of capabilities
-// (see lib_core/commons/Cap.ml).
+// (see lib_core/commons/Cap.mli).
 
 // ----------------------------------------------------------------------------
 // Simple rules
@@ -31,7 +31,7 @@ local semgrep_rules = [
 // ----------------------------------------------------------------------------
 
 // lex and yacc are also part of ocaml-light so better not impose caps there
-local exclude_dirs = ['lex/', 'yacc/', 'vcs', 'todo/'];
+local exclude_dirs = ['lex/', 'yacc/', 'todo/', 'repository.ml'];
 
 // partial copy of semgrep/TCB/forbid_xxx.jsonnet
 local cap_rules = [
@@ -133,6 +133,8 @@ local cap_rules = [
       exclude: [] + exclude_dirs,
     },
   },
+  # This is very important! otherwise anything can forge capabilities
+  # by simple using 'Obj.magic ()'.
   {
     id: 'do-not-use-obj-magic',
     # Cap.open_in

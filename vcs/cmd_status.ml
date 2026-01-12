@@ -52,10 +52,10 @@ let untracked r =
 
 
 (*s: function [[Cmd_status.status_of_repository]] *)
-let status_of_repository r =
+let status_of_repository caps r =
   { staged = changes_index_vs_HEAD r;
     unstaged = 
-      Changes.changes_worktree_vs_index 
+      Changes.changes_worktree_vs_index caps
         (Repository.read_blob r)
         r.Repository.worktree 
         r.Repository.index;
@@ -121,8 +121,8 @@ let short_format = ref false
 (*e: constant [[Cmd_status.short_format]] *)
 
 (*s: function [[Cmd_status.status]] *)
-let status r =
-  let st = status_of_repository r in
+let status caps r =
+  let st = status_of_repository caps r in
   if !short_format
   then print_status_short st
   else print_status_long st
@@ -137,10 +137,10 @@ let cmd = { Cmd_.
     "--long", Arg.Clear short_format, " show status in long format (default)";
     (* less: --branch, --ignored *)
   ];
-  f = (fun _caps args ->
+  f = (fun caps args ->
     let r, relpaths = Repository.find_root_open_and_adjust_paths (Fpath_.of_strings args) in
     match relpaths with
-    | [] -> status r
+    | [] -> status caps r
     | _xs -> raise Cmd_.ShowUsage
   );
 }

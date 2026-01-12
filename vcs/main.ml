@@ -59,6 +59,8 @@ open Common
  *  - look go-git, better basis? more complete than ocamlgit?
  *)
 
+type caps = < Cap.stdout; Cap.stderr >
+
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
@@ -82,7 +84,7 @@ let usage () =
 (*****************************************************************************)
 
 (*s: function [[Main.main]] *)
-let main (caps : < Cap.stdout; Cap.stderr; ..>) (argv : string array) : Exit.t =
+let main (caps : < caps; ..>) (argv : string array) : Exit.t =
   (*s: [[Main.main()]] GC settings *)
   Gc.set {(Gc.get ()) with Gc.stack_limit = 1000 * 1024 * 1024};
   (*e: [[Main.main()]] GC settings *)
@@ -90,8 +92,8 @@ let main (caps : < Cap.stdout; Cap.stderr; ..>) (argv : string array) : Exit.t =
   if Array.length argv < 2
   then begin
     (*s: [[Main.main()]] print usage and exit *)
-    UConsole.print (usage ());
-    exit 1
+    Console.print caps (usage ());
+    raise (Exit.ExitCode 1)
     (*e: [[Main.main()]] print usage and exit *)
   end
   (*e: [[Main.main()]] sanity check arguments *)
@@ -101,14 +103,14 @@ let main (caps : < Cap.stdout; Cap.stderr; ..>) (argv : string array) : Exit.t =
         commands |> List.find (fun cmd -> cmd.Cmd_.name = argv.(1))
       with Not_found ->
         (*s: [[Main.main()]] print usage and exit *)
-        UConsole.print (usage ());
-        exit 1
+        Console.print caps (usage ());
+        raise (Exit.ExitCode 1)
         (*e: [[Main.main()]] print usage and exit *)
     in
     (*s: [[Main.main()]] execute [[cmd.f]] *)
     let argv = Array.sub argv 1 (Array.length argv -1) in
     let usage_msg_cmd = spf "usage: %s %s%s"
-      (Filename.basename Sys.argv.(0))
+      (Filename.basename argv.(0))
       cmd.Cmd_.name
       cmd.Cmd_.usage
     in
@@ -126,7 +128,7 @@ let main (caps : < Cap.stdout; Cap.stderr; ..>) (argv : string array) : Exit.t =
     with 
       | Cmd_.ShowUsage ->
         Arg.usage (Arg.align cmd.Cmd_.options) usage_msg_cmd;
-        exit 1
+        raise (Exit.ExitCode 1)
     (*e: [[Main.main()]] execute [[cmd.f]] *)
   end
 (*e: function [[Main.main]] *)

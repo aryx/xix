@@ -9,6 +9,7 @@ yoann.padioleau@gmail.com
 }
 
 \begin{document}
+\date{}
 \maketitle
 
 \begin{abstract}
@@ -35,7 +36,9 @@ XiX is a work-in-progress port of parts of Plan 9 to OCaml.
 % Actually some r9 projects for Rust, and ziglang kinda new toolchain,
 % but OCaml has pros compared to Rust/Ziglang. For many programs, simpler
 % to not handle memory. Actually original code was not doing much memory
-% management. Simple mm. But even simpler now. And OCaml has lots
+% management. Simple mm. But even simpler now. 
+
+% Moreover OCaml has lots
 % of nice things like ADTs for more readable compilation in linker,
 % no need optab.c, ocmp, ... just direct pattern matching on advanced
 % SHOW code diff C vs OCaml.
@@ -66,10 +69,10 @@ XiX is a work-in-progress port of parts of Plan 9 to OCaml.
 %     * libdraw (user side) for orio (below)
 %   * ogit! not in plan9
 %   * kernel (rudimentary)
-% - ocaml for plan9 (and ocaml-light), especially for orio which requires plan9
+% - Plan9 in OCaml, but also OCaml in Plan9 :)
+%   ocaml for plan9 (and ocaml-light), especially for orio which requires plan9
 %   to work. Port of old ocaml version, simpler,
-%   less dependencies, more traditional C and simple use of libc and stdio
-%   (use of APE)
+%   less dependencies, more traditional C and simple use of libc (and stdio? need  APE?)
 % - LOC/LOE! compare books on mk vs omk
 % - on OCaml
 %   also capabilities!

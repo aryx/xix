@@ -20,7 +20,7 @@
   Chan FS IO Tmp
   Cmd Proc
   Date Bits Rune
-  Fpath_ Ftype
+  Fpath_ ; Ftype
   Arg_
   Arch OS Endian
  )   

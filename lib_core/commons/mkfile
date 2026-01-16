@@ -10,6 +10,8 @@ INCLUDES=-I .
 # before but simpler to merge with commons for just those two files
 # and to free lib_core/collections/ for the ocaml stdlib collection files
 
+#Ftype.ml
+
 #coupling: dune '(modules ...)' stanza
 SRC=\
  Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
@@ -18,7 +20,7 @@ SRC=\
  Common.ml \
  Dumper.ml OCaml.ml \
  Console.ml \
- Fpath.ml Fpath_.ml Ftype.ml \
+ Fpath.ml Fpath_.ml \
  Logs.ml Logs_.ml \
  Chan.ml FS.ml IO.ml Tmp.ml \
  Cmd.ml Proc.ml \

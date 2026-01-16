@@ -48,7 +48,7 @@ let init (caps : < Cap.env; .. >) =
     match k, vs with
     | "PATH", [x] ->
        Logs.info (fun m -> m "adjust $PATH to $path");
-       let vs = Regexp_.split "[:]" x in
+       let vs = Regexp.split "[:]" x in
        let k = "path" in
        setvar k vs
     | _ -> setvar k vs

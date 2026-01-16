@@ -2,7 +2,7 @@
 (* Copyright 2015, 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -139,7 +139,7 @@ let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     "-D", Arg.String (fun s ->
       let (var, val_) = 
         if s =~ "\\(.*\\)=\\(.*\\)"
-        then Regexp_.matched2 s
+        then Regexp.matched2 s
         else (s, "1")
       in
       macro_defs := (var, val_)::!macro_defs
@@ -183,7 +183,7 @@ let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     then
       let b = Filename.basename !infile in
       if b =~ "\\(.*\\)\\.s"
-      then Regexp_.matched1 b ^ (spf ".o%c" thechar)
+      then Regexp.matched1 b ^ (spf ".o%c" thechar)
       else (b ^ (spf ".o%c" thechar))
     else !outfile
     ) |> Fpath.v

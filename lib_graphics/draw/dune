@@ -4,7 +4,7 @@
  (libraries
     stdcompat
     threads
-    xix_commons
+    xix_commons xix_regexp
     xix_geometry
   )
  (preprocess (pps ppx_deriving.show))

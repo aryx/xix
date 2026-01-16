@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions)
+* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v0)
 
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script
@@ -9,6 +9,14 @@
 ** libcore
 - new Arg_.ml small wrapper around Arg to factorize code in xix programs
 - removed UConsole.ml and UChan.ml (use Console.ml and FS.ml instead)
+- lib_core/commons does not depend anymore on Unix or Str. You can
+  produce pure ocaml programs that use lib_core/commons (no need to link
+  any external C libs).
+- new lib_core/regexps/Regexp.ml extracted from lib_core/commons/Common.ml
+
+** build infra
+- preliminary plan9 support; you can link some xix programs (e.g., ocat, opwd)
+  with ocaml-light for plan9
 
 ** docs
 - lpization of oed in in principia/docs/principia/oed.nw (next to ed.nw)
@@ -57,7 +65,7 @@
 - new utilities/text/ed port (v0)
 
 ** testinfra
-- Dockerfile.light can now compile also 5a/5c/5l/cpp
+- Dockerfile.light can now compile also 5a/5c/5l/cpp with ocaml-light
   thx to the removal of the use of 'as' in the .mll files
   ('as' is not supported by ocaml-light ocamlllex)
 - Dockerfile.light can now compile lib_graphics/, windows/, kernel/, utilities/

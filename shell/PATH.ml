@@ -1,7 +1,7 @@
 (*s: shell/PATH.ml *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 module R = Runtime
 

@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 (*s: type [[Cmd_status.status]] *)
 type status = {
@@ -40,7 +40,7 @@ let untracked r =
       let path = dir / file in
       let path = 
         if !!path =~ "^\\./\\(.*\\)"
-        then Fpath.v (Regexp_.matched1 !!path)
+        then Fpath.v (Regexp.matched1 !!path)
         else path
       in
       if not (Hashtbl.mem h path)

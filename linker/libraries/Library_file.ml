@@ -1,7 +1,7 @@
 (*s: libraries/Library_file.ml *)
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 open Fpath_.Operators
 
 (*****************************************************************************)

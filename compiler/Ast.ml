@@ -451,7 +451,7 @@ let unwrap (name, _) = name
 (*e: function [[Ast.unwrap]] *)
 
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 (*s: function [[Ast.is_gensymed]] *)
 (* see also Parser.gensym *)
 let is_gensymed str = 

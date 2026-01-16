@@ -2,7 +2,7 @@
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 module G = Graph
 module R = Rules
@@ -316,7 +316,7 @@ let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     match t with
     (*s: [[CLI.main()]] modify [[vars]] when definition-like argument *)
     | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
-        let (var, value) = Regexp_.matched2 t in
+        let (var, value) = Regexp.matched2 t in
         vars := (var, value)::!vars;
     (*e: [[CLI.main()]] modify [[vars]] when definition-like argument *)
     | _ -> targets := t :: !targets

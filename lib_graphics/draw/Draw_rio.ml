@@ -1,6 +1,6 @@
 (* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 module D = Display
 module I = Display

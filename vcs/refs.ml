@@ -1,6 +1,6 @@
 (*s: version_control/refs.ml *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 (*****************************************************************************)
 (* Types *)
@@ -55,7 +55,7 @@ let read ch =
   let str = IO.read_all ch in
   (* less: check finish by newline? *)
   match str with
-  | _ when str =~ "^ref: \\(.*\\)$" -> OtherRef (Regexp_.matched1 str)
+  | _ when str =~ "^ref: \\(.*\\)$" -> OtherRef (Regexp.matched1 str)
   | _ -> Hash (str |> IO.input_string |> Hexsha.read |> Hexsha.to_sha)
 (*e: function [[Refs.read]] *)
 

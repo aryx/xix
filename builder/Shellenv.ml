@@ -1,7 +1,7 @@
 (*s: mk/Shellenv.ml *)
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 (*s: type [[Shellenv.t]] *)
 type t = (string * string list) list
@@ -12,8 +12,8 @@ let read_environment (caps : < Cap.env; ..>) =
   CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"
     then
-      let (var, str) = Regexp_.matched2 s in
-      var, Regexp_.split "[ \t]+" str
+      let (var, str) = Regexp.matched2 s in
+      var, Regexp.split "[ \t]+" str
     else failwith (spf "wrong format for environment variable: %s" s)
   )
 (*e: function [[Shellenv.read_environment]] *)

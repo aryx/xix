@@ -2,7 +2,7 @@
 
 TOP=../..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/assembler/objects
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps -I $TOP/assembler/objects
 SRC=Library_file.ml
 
 <$TOP/mkconfig

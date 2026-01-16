@@ -5,7 +5,7 @@
  (wrapped false)
  (libraries
     stdcompat
-    xix_commons
+    xix_commons xix_regexp
   )
  (preprocess (pps ppx_deriving.show))
 )

@@ -1,7 +1,7 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps -I $TOP/macroprocessor
 
 SRC=Ast_asm.ml \
   Ast_asm5.ml Meta_ast_asm5.ml \

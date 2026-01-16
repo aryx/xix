@@ -1,7 +1,7 @@
 (*s: Parse_asm5.ml *)
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 module L = Location_cpp
 module T = Token_asm
@@ -122,7 +122,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       (* advanced *)
       | "C" -> TC
       | _ when s =~ "^C\\([0-9]+\\)$" ->
-            let i = int_of_string (Regexp_.matched1 s) in
+            let i = int_of_string (Regexp.matched1 s) in
             if i >= 0 && i <= 15
             then TCx (C i)
             else Lexer_asm.error ("register number not valid")

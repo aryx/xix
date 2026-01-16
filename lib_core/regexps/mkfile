@@ -1,0 +1,9 @@
+# -*- sh -*-
+
+TOP=../..
+INCLUDES=-I ../commons
+
+SRC=Regexp.ml
+
+<$TOP/mkconfig
+<$TOP/mkfiles/mklib

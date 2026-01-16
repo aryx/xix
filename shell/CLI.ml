@@ -2,7 +2,7 @@
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 module R = Runtime
 module O = Opcode
@@ -274,7 +274,7 @@ let main (caps : <caps; Cap.stdout; Cap.stderr; .. >) (argv : string array) :
   argv |> Array.iter (fun s ->
     if s =~ "^-\\([a-zA-Z]\\)"
     then begin
-      let letter = Regexp_.matched1 s in
+      let letter = Regexp.matched1 s in
       let char = String.get letter 0 in
       Hashtbl.add Flags.hflags char true
     end

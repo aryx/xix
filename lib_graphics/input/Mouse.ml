@@ -1,6 +1,6 @@
 (* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 open Point
 
@@ -118,7 +118,7 @@ let thread_mouse ctl =
     let str_at n = 
       let s = Bytes.sub_string buf (1 + (n * 12)) 12 in
       if s =~ "^[ ]*\\([^ ]+\\)[ ]*$"
-      then Regexp_.matched1 s
+      then Regexp.matched1 s
       else failwith (spf "not a /dev/mouse entry, got %s" s)
     in
     let int_at n = 

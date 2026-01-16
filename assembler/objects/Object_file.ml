@@ -1,7 +1,7 @@
 (*s: objects/Object_file.ml *)
 (* Copyright 2015, 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 open Fpath_.Operators
 
 (*****************************************************************************)

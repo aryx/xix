@@ -3,6 +3,7 @@
  (modules Main)
  (libraries
    str unix
+   xix_regexp
    xix_shell
  )
  ; 'byte' is for ocamldebug
@@ -28,6 +29,7 @@
   )
   (libraries
    xix_commons
+   xix_regexp
    xix_profiling
   )
  (preprocess (pps ppx_deriving.show ppx_profiling))

@@ -1,6 +1,6 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 module L = Location_cpp
 module T = Token_asm
@@ -123,13 +123,13 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       (* advanced *)
       | "M" -> TM
       | _ when s =~ "^M\\([0-9]+\\)$" ->
-            let i = int_of_string (Regexp_.matched1 s) in
+            let i = int_of_string (Regexp.matched1 s) in
             if i >= 0 && i <= 31
             then TMx (M i)
             else Lexer_asm.error ("register number not valid")
       | "FCR" -> TFCR
       | _ when s =~ "^FCR\\([0-9]+\\)$" ->
-            let i = int_of_string (Regexp_.matched1 s) in
+            let i = int_of_string (Regexp.matched1 s) in
             if i >= 0 && i <= 31
             then TFCRx (FCR i)
             else Lexer_asm.error ("register number not valid")

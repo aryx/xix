@@ -1,7 +1,7 @@
 (*s: shell/Status.ml *)
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 module R = Runtime
 

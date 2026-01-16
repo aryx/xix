@@ -3,7 +3,7 @@
 (* Copyright 2017 Yoann Padioleau, see copyright.txt *)
 (*e: copyright ocamlgit *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 
 (*s: function [[Cmd_branch.list_branches]] *)
@@ -14,7 +14,7 @@ let list_branches (caps : < Cap.stdout; Cap.open_in; ..>) r =
   all_refs |> List.iter (fun refname ->
     if refname =~ "^refs/heads/\\(.*\\)"
     then 
-      let short = Regexp_.matched1 refname in
+      let short = Regexp.matched1 refname in
       let prefix = 
         if (Refs.OtherRef refname = head_branch)
         then "* "

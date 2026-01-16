@@ -3,7 +3,7 @@
  (libraries
    str unix
    camlzip
-   xix_commons xix_crypto xix_compression
+   xix_commons xix_regexp xix_crypto xix_compression
  )
  ; 'byte' is for ocamldebug
  (modes native byte))

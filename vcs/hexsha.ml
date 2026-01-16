@@ -18,7 +18,7 @@
  *)
 (*e: copyright ocaml-hex *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 (*****************************************************************************)
 (* Prelude *)

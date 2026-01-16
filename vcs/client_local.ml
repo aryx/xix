@@ -4,7 +4,7 @@
 (*e: copyright ocamlgit *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 (*****************************************************************************)
 (* Prelude *)

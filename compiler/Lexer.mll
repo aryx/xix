@@ -2,7 +2,7 @@
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 open Parser
 module A = Ast
@@ -175,7 +175,7 @@ rule token = parse
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
            s =~ "0\\([0-7]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
-           Regexp_.matched3 s
+           Regexp.matched3 s
         in
         TIConst(loc(), "0o" ^ s, inttype_of_suffix unsigned long)}
   (*e: [[Lexer.token]] octal case *)
@@ -184,7 +184,7 @@ rule token = parse
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
            s =~ "0x\\([0-9A-Fa-f]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
-           Regexp_.matched3 s
+           Regexp.matched3 s
         in
         TIConst(loc(), "0x" ^ s, inttype_of_suffix unsigned long)}
   (*e: [[Lexer.token]] hexadecimal case *)
@@ -195,7 +195,7 @@ rule token = parse
       { let (s, unsigned, long) = 
            let s = Lexing.lexeme lexbuf in
            s =~ "\\([0-9]+\\)\\([Uu]?\\)\\([Ll]*\\)" |> ignore;
-           Regexp_.matched3 s
+           Regexp.matched3 s
         in
         TIConst (loc(), s, inttype_of_suffix unsigned long)}
   (*e: [[Lexer.token]] decimal case *)
@@ -207,7 +207,7 @@ rule token = parse
      { let (s, float) =
           let s = Lexing.lexeme lexbuf in
           s =~ "\\([^Ff]+\\)\\([Ff]*\\)$" |> ignore;
-          Regexp_.matched2 s
+          Regexp.matched2 s
         in
         TFConst (loc(), s, floattype_of_suffix float) }
   (*e: [[Lexer.token]] float case *)

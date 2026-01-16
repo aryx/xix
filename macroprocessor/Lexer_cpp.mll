@@ -2,7 +2,7 @@
 {
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 open Ast_cpp
 module L = Location_cpp
@@ -41,7 +41,7 @@ let error s =
 let symbol_after_space lexbuf =
   let s = Lexing.lexeme lexbuf in
   s =~ ".*[ \t]\\([^ \t]+\\)" |> ignore; 
-  Regexp_.matched1 s
+  Regexp.matched1 s
 let char lexbuf =
   let s = Lexing.lexeme lexbuf in
   String.get s 0
@@ -68,14 +68,14 @@ rule token = parse
   | "include" space* '"' ([^ '"' '\n']+ (*as file*)) '"'
       { let file = 
           let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
-          Regexp_.matched1 s in
+          Regexp.matched1 s in
         space_or_comment_and_newline lexbuf; 
         Include (Fpath.v file, false)  
       }
   | "include" space* '<' ([^ '>' '\n']+ (*as file*)) '>'
       { let file = 
           let s = Lexing.lexeme lexbuf in s =~ ".*<\\(.*\\)>" |> ignore; 
-          Regexp_.matched1 s in
+          Regexp.matched1 s in
         space_or_comment_and_newline lexbuf; 
         Include(Fpath.v file, true) 
       }
@@ -85,7 +85,7 @@ rule token = parse
   | "define" space+ (symbol (*as s1*)) '(' ([^')']* (*as s2*)) ')'
       { let (s1, s2) =
            let s = Lexing.lexeme lexbuf in s =~ "define[ \t]+\\(.*\\)(\\(.*\\))" |> ignore;
-           Regexp_.matched2 s in
+           Regexp.matched2 s in
         let xs = Str.split (Str.regexp "[ \t]*,[ \t]*") s2 in
         (* check if identifier or "..." for last one *)
         let params, varargs = 
@@ -160,7 +160,7 @@ rule token = parse
       { 
         let (s1, s2) =
            let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([0-9]+\\).*\"(\\(.*\\)\"" |> ignore;
-           Regexp_.matched2 s in
+           Regexp.matched2 s in
         space_or_comment_and_newline lexbuf;
         Line (int_of_string s1, Fpath.v s2) }
   | "line" { error "syntax in #line" }
@@ -169,14 +169,14 @@ rule token = parse
   | "pragma" space+ "lib" space* '"' ([^'"''\n']+ (*as file*)) '"'
       { let file = 
           let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
-          Regexp_.matched1 s in
+          Regexp.matched1 s in
         space_or_comment_and_newline lexbuf; 
         Pragma("lib", [file]) 
       }
   | "pragma" space+ "src" space* '"' ([^'"''\n']+ (*as file*)) '"'
       { let file = 
           let s = Lexing.lexeme lexbuf in s =~ ".*\"\\(.*\\)\"" |> ignore; 
-          Regexp_.matched1 s in
+          Regexp.matched1 s in
         space_or_comment_and_newline lexbuf; 
         Pragma("src", [file]) 
       }
@@ -197,7 +197,7 @@ rule token = parse
   | "pragma" space+ "incomplete" space+ (symbol (*as name*))
       { let name = 
           let s = Lexing.lexeme lexbuf in s =~ ".*[ \t]+\\([^ \t]+\\)" |> ignore; 
-          Regexp_.matched1 s in
+          Regexp.matched1 s in
         space_or_comment_and_newline lexbuf; 
         Pragma("incomplete", [name]) 
       }

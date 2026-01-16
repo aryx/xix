@@ -1,13 +1,12 @@
 (*s: Parser.mli *)
-open Common
 
 (*s: type [[Parser.state]] *)
 type state = {
-  stdin: Lexing_.lexbuf;
+  stdin: Lexing.lexbuf;
   mutable lookahead : Token.t option;
   (*s: [[Parser.state]] other fields *)
   (* for inserting "virtual" commands to process before stdin *)
-  mutable globp: Lexing_.lexbuf option;
+  mutable globp: Lexing.lexbuf option;
   (*e: [[Parser.state]] other fields *)
 }
 (*e: type [[Parser.state]] *)

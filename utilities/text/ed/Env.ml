@@ -9,6 +9,20 @@ open Fpath_.Operators
 (* A set of globals used by many functions packed in an "environment" record *)
 
 (*****************************************************************************)
+(* Hack for deriving show *)
+(*****************************************************************************)
+module Unix_ = struct
+    type file_descr = Unix.file_descr
+    let pp_file_descr fmt _fd =
+      Format.fprintf fmt "<fd>"
+end
+module Out_channel_ = struct
+    type t = out_channel
+    let pp fmt _x =
+      Format.fprintf fmt "<out_channel>"
+end
+
+(*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
 (* LATER: use Tmp.with_new_file *)

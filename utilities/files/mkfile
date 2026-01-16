@@ -3,7 +3,8 @@ TOP=../..
 PROGS=ocat opwd
 
 INCLUDES=-I $TOP/lib_core/commons
-SYSLIBS=str.cma unix.cma
+# no unix.cma here!
+SYSLIBS= str.cma
 LIBS=$TOP/lib_core/commons/lib.cma
 
 all:V: $PROGS

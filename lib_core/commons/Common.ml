@@ -1,4 +1,4 @@
-(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015-2026 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -7,8 +7,12 @@
  * 
  * A lighter pad's Common.ml (see also semgrep/libs/commons/Common.ml).
  *
- * Note that you not put functions requiring capabilities in this file;
+ * DO NOT put functions requiring capabilities in this file;
  * Common.ml should be reserved to simple "pure" functions.
+ *
+ * DO NOT put functions depending on Unix or Str or any libraries requiring
+ * C code so that one can compile programs using Common and remain
+ * pure bytecode programs.
  *)
 
 (*****************************************************************************)
@@ -446,35 +450,4 @@ let hashset_of_list (xs : 'a list) : 'a set =
 
 let hashset_to_list h = to_list h |> List.map fst
 
-end
-
-(*****************************************************************************)
-(* Misc *)
-(*****************************************************************************)
-
-module Unix_ = struct
-    (* just for deriving show *)
-    type file_descr = Unix.file_descr
-
-    let pp_file_descr fmt _fd =
-      Format.fprintf fmt "<fd>"
-    let show_file_descr _fd = "<fd>"
-end
-
-module Lexing_ = struct
-    (* just for deriving show *)
-    type lexbuf = Lexing.lexbuf
-
-    let pp_lexbuf fmt _lexbuf =
-      Format.fprintf fmt "<lexbuf>"
-    let show_lexbuf _lexbuf = "<lexbuf>"
-end
-
-module Out_channel_ = struct
-    (* just for deriving show *)
-    type t = out_channel
-
-    let pp fmt _x =
-      Format.fprintf fmt "<out_channel>"
-    let show _x = "<out_channel>"
 end

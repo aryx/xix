@@ -158,27 +158,3 @@ module Hashtbl_ :
     val memoized :
       ('a, 'b) Hashtbl.t -> 'a -> (unit -> 'b) -> 'b
   end
-
-(*****************************************************************************)
-(* Misc *)
-(*****************************************************************************)
-module Unix_ : 
-  sig
-    (* just for deriving show *)
-    type file_descr = Unix.file_descr
-    [@@deriving show]
-  end
-
-module Lexing_ : 
-  sig
-    (* just for deriving show *)
-    type lexbuf = Lexing.lexbuf
-    [@@deriving show]
-  end
-
-module Out_channel_ : 
-  sig
-    (* just for deriving show *)
-    type t = out_channel
-    [@@deriving show]
-  end

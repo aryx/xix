@@ -1,7 +1,6 @@
 TOP=../..
 
-#TODO: owc ?
-PROGS=ocat opwd
+PROGS=ocat opwd owc
 
 INCLUDES=-I $TOP/lib_core/commons
 # no unix.cma and no str.cma here!

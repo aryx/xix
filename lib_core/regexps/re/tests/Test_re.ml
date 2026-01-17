@@ -14,18 +14,22 @@ open Test_re_utils
 open Re
 
 let re_match ?pos ?len r s res =
+  let pos = match pos with None -> 0 | Some x -> x in
+  let len = match len with None -> -1 | Some x -> x in
   expect_equal_app
     ~msg:(str_printer s)
     ~printer:arr_ofs_printer
     id res
-    (fun () -> get_all_ofs (exec ?pos ?len (compile r) s)) ()
+    (fun () -> get_all_ofs (exec (*?*)pos (*?*)len (compile r) s)) ()
 
 let re_fail ?pos ?len r s =
+  let pos = match pos with None -> 0 | Some x -> x in
+  let len = match len with None -> -1 | Some x -> x in
   expect_equal_app
     ~msg:(str_printer s)
     ~printer:arr_ofs_printer
     not_found ()
-    (fun () -> get_all_ofs (exec ?pos ?len (compile r) s)) ()
+    (fun () -> get_all_ofs (exec (*?*)pos (*?*)len (compile r) s)) ()
 
 (* Substring Extraction *)
 
@@ -35,7 +39,7 @@ let substring_tests () =
           opt   (group (char 'a')); 
           group (char 'b')]
   in
-  let m = exec (compile r) "ab" in
+  let m = exec 0 (-1) (compile r) "ab" in
   Testo.categorize "substring" [
 
   expect_pass "get" (fun () ->
@@ -345,7 +349,7 @@ expect_pass "group" (fun () ->
   in
   expect_eq_arr_ofs
     id [|(0,2);(0,1);(-1,-1);(1,2)|]
-    (fun () -> get_all_ofs (exec (compile r) "ab")) ()
+    (fun () -> get_all_ofs (exec 0 (-1) (compile r) "ab")) ()
 );
 
 expect_pass "no_group" (fun () ->
@@ -358,7 +362,7 @@ expect_pass "no_group" (fun () ->
   in
   expect_eq_arr_ofs
     id [|(0,2)|]
-    (fun () -> get_all_ofs (exec (compile r) "ab")) ()
+    (fun () -> get_all_ofs (exec 0 (-1) (compile r) "ab")) ()
 );
 
 expect_pass "nest" (fun () ->
@@ -430,7 +434,7 @@ let fixed_bugs_tests () =
 
 expect_pass "bugs" (fun () ->
   try
-    ignore (Re.compile (Xix_re.Re_perl.re "(.*?)(\\WPl|\\Bpl)(.*)"))
+    ignore (Re.compile (Xix_re.Re_perl.re [] "(.*?)(\\WPl|\\Bpl)(.*)"))
   with _ ->
     failwith "bug in Re.handle_case"
 );

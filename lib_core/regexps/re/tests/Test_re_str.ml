@@ -4,11 +4,14 @@ open Test_re_utils
 
 
 let eq_match ?pos ?len ?(case = true) r s =
+  let pos = match pos with None -> 0 | Some x -> x in
+  let len = match len with None -> -1 | Some x -> x in
+
   expect_equal_app
     ~msg:(str_printer s)
     ~printer:arr_ofs_printer
     (fun () ->
-      let pos = match pos with None -> 0 | Some p -> p in
+      (*let pos = match pos with None -> 0 | Some p -> p in*)
       let pat = if case then Str.regexp r else Str.regexp_case_fold r in
       let _s_start = Str.search_forward pat s pos in
 
@@ -16,7 +19,7 @@ let eq_match ?pos ?len ?(case = true) r s =
 	 maybe parse the regular expression ? *)
       let n_groups =
 	try
-	  let m = Re.exec ~pos ?len (Re.compile (Re_emacs.re ~case r)) s in
+	  let m = Re.exec (*~*)pos (*?*)len (Re.compile (Re_emacs.re (*~*)case r)) s in
 	  Array.length (Re.get_all_ofs m)
 	with _ -> 0
       in
@@ -33,7 +36,7 @@ let eq_match ?pos ?len ?(case = true) r s =
     ) ()
     (fun () ->
       Re.get_all_ofs (
-	Re.exec ?pos ?len (Re_emacs.compile (Re_emacs.re ~case r)) s
+	Re.exec (*?*)pos (*?*)len (Re_emacs.compile (Re_emacs.re (*~*)case r)) s
       )
     ) ()
 

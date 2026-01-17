@@ -5,7 +5,7 @@ open Test_re_utils
 open Re
 open Re_emacs
 
-let eq_re r s = expect_equal_app ~msg:s id r re s
+let eq_re r s = expect_equal_app ~msg:s id r (re true) s
 
 let basic_tests () = [
 
@@ -55,13 +55,13 @@ expect_pass "special characters" (fun () ->
 expect_pass "historical compatibility (not supported)" (fun () ->
   expect_equal_app
     (fun () -> raise Parse_error) ()
-    re "*ab";
+    (re true) "*ab";
   expect_equal_app
     (fun () -> raise Parse_error) ()
-    re "+ab";
+    (re true) "+ab";
   expect_equal_app
     (fun () -> raise Parse_error) ()
-    re "?ab";
+    (re true) "?ab";
 );
 
 expect_pass "alternative" (fun () ->
@@ -79,7 +79,7 @@ expect_pass "grouping" (fun () ->
 expect_pass "backreferences" (fun () ->
   expect_equal_app
     (fun () -> raise Not_supported) ()
-    re "\0"
+    (re true) "\0"
 );
 
 expect_pass "word-constituent" (fun () ->

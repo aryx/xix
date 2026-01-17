@@ -6,7 +6,9 @@ open Test_re_utils
 open Re
 open Re_perl
 
-let eq_re ?opts r s = expect_equal_app ~msg:s id r (re ?opts) s
+let eq_re ?opts r s = 
+  let opts = match opts with None -> [] | Some xs -> xs in
+  expect_equal_app ~msg:s id r (re (*?*)opts) s
 
 
 let basic_tests () = [
@@ -120,7 +122,7 @@ expect_pass "zero-width assertions" (fun () ->
 expect_pass "backreferences" (fun () ->
   expect_equal_app
     (fun () -> raise Not_supported) ()
-    re "\0"
+    (re []) "\0"
 );
 
 expect_pass "comments" (fun () ->
@@ -144,24 +146,24 @@ expect_pass "clustering" (fun () ->
 (* pattern-match modifiers *)
 
 expect_pass "options" (fun () ->
-  eq_re ~opts:[`Anchored]
+  eq_re ~opts:[Anchored]
     (seq [start; char 'a'])             "a";
-  eq_re ~opts:[`Caseless]
+  eq_re ~opts:[Caseless]
     (no_case (char 'b'))                "b";
-  eq_re ~opts:[`Dollar_endonly]
+  eq_re ~opts:[Dollar_endonly]
     leol                                "$";
-  eq_re ~opts:[`Dollar_endonly; `Multiline]
+  eq_re ~opts:[Dollar_endonly; Multiline]
     eol                                 "$";
-  eq_re ~opts:[`Dotall]
+  eq_re ~opts:[Dotall]
     any                                 ".";
   (* Extended ? *)
-  eq_re ~opts:[`Multiline]
+  eq_re ~opts:[Multiline]
     bol                                 "^";
-  eq_re ~opts:[`Multiline]
+  eq_re ~opts:[Multiline]
     eol                                 "$";
-  eq_re ~opts:[`Ungreedy]
+  eq_re ~opts:[Ungreedy]
     (non_greedy (rep (char 'a')))       "a*";
-  eq_re ~opts:[`Ungreedy]
+  eq_re ~opts:[Ungreedy]
     (greedy (rep (char 'a')))           "a*?";
 );
 

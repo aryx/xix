@@ -19,7 +19,7 @@
    License along with this library; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
-open Regexp
+open Regexp_AST
 open Compile_regexp
 module A = Automata
 
@@ -43,7 +43,7 @@ module A = Automata
 
 type partial_result = Full | Partial | Mismatch 
 
-type t = Regexp.t
+type t = Regexp_AST.t
 type re = Compile_regexp.re
 
 let print_re ch re = Automata.print_expr ch re.initial
@@ -348,6 +348,8 @@ Bounded repetition
 (* new: this is needed now that regexp has been moved to Regexp.ml
  * to remain backward compatible with the Re API
  *)
+module Regexp = Regexp_AST
+
 let str = Regexp.str
 let char = Regexp.char
 let alt = Regexp.alt

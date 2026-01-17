@@ -21,7 +21,7 @@ type re = {
 }
 
 (* entry point *)
-val compile: Regexp.t -> re
+val compile: Regexp_AST.t -> re
 
 (* helpers used also in re.ml *)
 type category = int

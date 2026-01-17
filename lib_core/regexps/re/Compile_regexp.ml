@@ -19,7 +19,7 @@
    License along with this library; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 *)
-open Regexp
+open Regexp_AST
 
 (*****************************************************************************)
 (* Prelude *)
@@ -175,7 +175,7 @@ let calnum = Cset.union calpha cdigit
 
 let cword = cadd '_' calnum
 
-let colorize (c : bytes) (regexp : Regexp.t) =
+let colorize (c : bytes) (regexp : Regexp_AST.t) =
   let lnl = ref false in
   let rec colorize regexp =
     match regexp with

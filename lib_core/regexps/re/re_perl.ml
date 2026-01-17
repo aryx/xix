@@ -23,6 +23,11 @@
 exception Parse_error
 exception Not_supported
 
+(* was anon `Char | `Set in bracket() *)
+type 'a anon = 
+  | XChar of char 
+  | XSet of 'a
+
 let parse multiline dollar_endonly dotall ungreedy s =
   let i = ref 0 in
   let l = String.length s in
@@ -150,18 +155,18 @@ let parse multiline dollar_endonly dotall ungreedy s =
   and bracket s =
     if s <> [] && accept ']' then s else begin
       match char () with
-        `Char c ->
+        XChar c ->
           if accept '-' then begin
             if accept ']' then Re.char c :: Re.char '-' :: s else begin
               match char () with
-                `Char c' ->
+                XChar c' ->
                   bracket (Re.rg c c' :: s)
-              | `Set st' ->
+              | XSet st' ->
                   Re.char c :: Re.char '-' :: st' :: s
             end
           end else
             bracket (Re.char c :: s)
-      | `Set st ->
+      | XSet st ->
           bracket (st :: s)
     end
   and char () =
@@ -174,33 +179,33 @@ let parse multiline dollar_endonly dotall ungreedy s =
         let c = get () in
         if not (accept '.') then raise Not_supported;
         if not (accept ']') then raise Parse_error;
-        `Char c
+        XChar c
       end else
-        `Char c
+        XChar c
     end else if c = '\\' then begin
       let c = get () in
 (* XXX
    \127, ...
 *)
       match c with
-        'b' -> `Char '\008'
-      | 'n' -> `Char '\n' (*XXX*)
-      | 'r' -> `Char '\r' (*XXX*)
-      | 't' -> `Char '\t' (*XXX*)
-      | 'w' -> `Set (Re.alt [Re.alnum; Re.char '_'])
-      | 'W' -> `Set (Re.compl [Re.alnum; Re.char '_'])
-      | 's' -> `Set (Re.space)
-      | 'S' -> `Set (Re.compl [Re.space])
-      | 'd' -> `Set (Re.digit)
-      | 'D' -> `Set (Re.compl [Re.digit])
+        'b' -> XChar '\008'
+      | 'n' -> XChar '\n' (*XXX*)
+      | 'r' -> XChar '\r' (*XXX*)
+      | 't' -> XChar '\t' (*XXX*)
+      | 'w' -> XSet (Re.alt [Re.alnum; Re.char '_'])
+      | 'W' -> XSet (Re.compl [Re.alnum; Re.char '_'])
+      | 's' -> XSet (Re.space)
+      | 'S' -> XSet (Re.compl [Re.space])
+      | 'd' -> XSet (Re.digit)
+      | 'D' -> XSet (Re.compl [Re.digit])
       | 'a'..'z' | 'A'..'Z' ->
           raise Parse_error
       | '0'..'9' ->
           raise Not_supported
       | _ ->
-          `Char c
+          XChar c
     end else
-      `Char c
+      XChar c
   and comment () =
     if accept ')' then Re.epsilon else begin incr i; comment () end
   in
@@ -209,19 +214,19 @@ let parse multiline dollar_endonly dotall ungreedy s =
   res
 
 type opt =
-  [ `Ungreedy | `Dotall | `Dollar_endonly
-  | `Multiline | `Anchored | `Caseless ]
+  | Ungreedy | Dotall | Dollar_endonly
+  | Multiline | Anchored | Caseless
 
-let re  ?(opts = []) s =
+let re  (*?(opts = []) *) opts s =
   let r =
     parse
-      (List.memq `Multiline opts) (List.memq `Dollar_endonly opts)
-      (List.memq `Dotall opts) (List.memq `Ungreedy opts)
+      (List.mem Multiline opts) (List.mem Dollar_endonly opts)
+      (List.mem Dotall opts) (List.mem Ungreedy opts)
       s
   in
-  let r = if List.memq `Anchored opts then Re.seq [Re.start; r] else r in
-  let r = if List.memq `Caseless opts then Re.no_case r else r in
+  let r = if List.mem Anchored opts then Re.seq [Re.start; r] else r in
+  let r = if List.mem Caseless opts then Re.no_case r else r in
   r
 
 let compile = Re.compile
-let compile_pat ?(opts = []) s = compile (re ~opts s)
+let compile_pat (*?(opts = [])*) opts s = compile (re (*~*)opts s)

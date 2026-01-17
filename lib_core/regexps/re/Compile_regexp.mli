@@ -1,17 +1,10 @@
 
-type 'a match_info =
-  [ `Match of 'a
-  | `Failed
-  | `Running ]
-
 (* see .mli for more info *)
 type state = { 
     idx : int;
     real_idx : int;
     next : state array;
-    mutable final :
-      (Automata.category *
-       (Automata.idx * Automata.mark_infos match_info)) list;
+    mutable final : (Automata.category * (Automata.idx * Automata.status)) list;
     desc : Automata.state
 }
 

@@ -10,7 +10,6 @@
 (*  linking exception.                                                 *)
 (*                                                                     *)
 (***********************************************************************)
-
 (* Modified by Jerome.Vouillon@pps.jussieu.fr for integration in RE *)
 
 type regexp =
@@ -19,7 +18,7 @@ type regexp =
     mutable srch : Re.re option }
 
 let compile_regexp s c =
-  { re = Re_emacs.re ~case:(not c) s;
+  { re = Re_emacs.re (*~case:*)(not c) s;
     mtch = None;
     srch = None }
 
@@ -39,7 +38,7 @@ let state = ref None
 
 let string_match re s p =
   try
-    state := Some (Re.exec ~pos:p (get_mtch re) s);
+    state := Some (Re.exec (*~pos:*)p (*~len:*)(-1) (get_mtch re) s);
     true
   with Not_found ->
     state := None;
@@ -47,15 +46,15 @@ let string_match re s p =
 
 let string_partial_match re s p =
   match
-    Re.exec_partial ~pos:p (get_mtch re) s
+    Re.exec_partial (*~pos:*)p (*~len:*)(-1) (get_mtch re) s
   with
-    `Full     -> string_match re s p
-  | `Partial  -> true
-  | `Mismatch -> false
+    Re.Full     -> string_match re s p
+  | Re.Partial  -> true
+  | Re.Mismatch -> false
 
 let search_forward re s p =
   try
-    let res = Re.exec ~pos:p (get_srch re) s in
+    let res = Re.exec (*~pos:*)p (*~len:*)(-1) (get_srch re) s in
     state := Some res;
     fst (Re.get_ofs res 0)
   with Not_found ->
@@ -64,7 +63,7 @@ let search_forward re s p =
 
 let rec search_backward re s p =
   try
-    let res = Re.exec ~pos:p (get_mtch re) s in
+    let res = Re.exec (*~pos:*)p (*~len:*)(-1) (get_mtch re) s in
     state := Some res;
     p
   with Not_found ->

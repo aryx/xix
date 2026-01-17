@@ -1,16 +1,20 @@
 type regexp = Re.re
 
-let regexp ?(flags = []) pat =
+(* was anon `CASELESS before *)
+type flag =
+  | CASELESS
+
+let regexp (*?(flags = [])*) flags pat =
   let opts = List.map (function
-    | `CASELESS -> `Caseless
+    | CASELESS -> Re_perl.Caseless
   ) flags in
-  Re_perl.compile_pat ~opts pat
+  Re_perl.compile_pat (*~*)opts pat
 
-let extract ~rex s =
-  Re.get_all (Re.exec rex s)
+let extract (*~*)rex s =
+  Re.get_all (Re.exec (*~pos:*)0 (*~len:*)(-1) rex s)
 
-let exec ~rex ?pos s =
-  Re.exec rex ?pos s
+let exec (*~*)rex (*?*)pos s =
+  Re.exec rex (*?*)pos s
 
 let get_substring s i =
   Re.get s i
@@ -18,16 +22,16 @@ let get_substring s i =
 let get_substring_ofs s i =
   Re.get_ofs s i
 
-let pmatch ~rex s =
+let pmatch (*~*)rex s =
   Re.execp rex s
 
-let substitute ~rex ~subst str =
+let substitute (*~*)rex (*~*)subst str =
   let b = Buffer.create 1024 in
   let rec loop pos =
     if pos >= String.length str then
       Buffer.contents b
-    else if Re.execp ~pos rex str then (
-      let ss = Re.exec ~pos rex str in
+    else if Re.execp (*~*)pos (*~len:*)(-1) rex str then (
+      let ss = Re.exec (*~*)pos (*~len:*)(-1) rex str in
       let start, fin = Re.get_ofs ss 0 in
       let pat = Re.get ss 0 in
       Buffer.add_substring b str pos (start - pos);
@@ -40,12 +44,12 @@ let substitute ~rex ~subst str =
   in
   loop 0
 
-let split ~rex str =
+let split (*~*)rex str =
   let rec loop accu pos =
     if pos >= String.length str then
       List.rev accu
-    else if Re.execp ~pos rex str then (
-      let ss = Re.exec ~pos rex str in
+    else if Re.execp (*~*)pos (*~len:*)(-1) rex str then (
+      let ss = Re.exec (*~*)pos (*~len:*)(-1) rex str in
       let start, fin = Re.get_ofs ss 0 in
       let s = String.sub str pos (start - pos) in
       loop (s :: accu) fin
@@ -69,9 +73,9 @@ let quote s =
     match String.unsafe_get s i with
     | '\\' | '^' | '$' | '.' | '[' | '|'
     | '('  | ')' | '?' | '*' | '+' | '{' as c ->
-      Bytes.unsafe_set buf !pos '\\';
+      Bytes.(*unsafe_*)set buf !pos '\\';
       incr pos;
-      Bytes.unsafe_set buf !pos c; incr pos
-    | c -> Bytes.unsafe_set buf !pos c; incr pos
+      Bytes.(*unsafe_*)set buf !pos c; incr pos
+    | c -> Bytes.(*unsafe_*)set buf !pos c; incr pos
   done;
   string_unsafe_sub buf 0 !pos

@@ -143,13 +143,13 @@ let parse newline s =
   if not (eos ()) then raise Parse_error;
   res
 
-type opt = [`ICase | `NoSub | `Newline]
+type opt = ICase | NoSub | Newline
 
-let re ?(opts = []) s =
-  let r = parse (List.memq `Newline opts) s in
-  let r = if List.memq `ICase opts then Re.no_case r else r in
-  let r = if List.memq `NoSub opts then Re.no_group r else r in
+let re (*?(opts = []) *) opts s =
+  let r = parse (List.mem Newline opts) s in
+  let r = if List.mem ICase opts then Re.no_case r else r in
+  let r = if List.mem NoSub opts then Re.no_group r else r in
   r
 
 let compile re = Re.compile (Re.longest re)
-let compile_pat ?(opts = []) s = compile (re ~opts s)
+let compile_pat (*?(opts = [])*) opts s = compile (re (*~*)opts s)

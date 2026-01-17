@@ -8,8 +8,8 @@
 type category = int
 type mark = int
 
-type sem = [ `Longest | `Shortest | `First ]
-type rep_kind = [ `Greedy | `Non_greedy ]
+type sem = Longest | Shortest | First
+type rep_kind = Greedy | Non_greedy
 
 type expr
 type def =
@@ -53,7 +53,8 @@ type e =
 
 type hash
 type mark_infos = int array
-type status = [`Failed | `Match of mark_infos | `Running]
+type 'a match_info = Failed | Match of 'a | Running
+type status = mark_infos match_info
 
 type state =
   idx * category * e list * status option ref * hash
@@ -61,7 +62,15 @@ type state =
 val dummy_state : state
 val mk_state : idx -> category -> e list -> state
 val create_state : category -> expr -> state
+(*
 module States : Hashtbl.S with type key = state
+*)
+module States : sig
+  type 'a t
+  val create : int -> 'a t
+  val find : 'a t -> state -> 'a
+  val add : 'a t -> state -> 'a -> unit
+end
 
 (* Computation of the states following a given state *)
 

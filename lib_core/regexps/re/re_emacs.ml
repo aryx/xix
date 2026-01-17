@@ -116,7 +116,7 @@ let parse s =
   if not (eos ()) then raise Parse_error;
   res
 
-let re ?(case = true) s = let r = parse s in if case then r else Re.no_case r
+let re (*?(case = true)*) case s = let r = parse s in if case then r else Re.no_case r
 
 let compile = Re.compile
-let compile_pat ?(case = true) s = compile (re ~case s)
+let compile_pat (*?(case = true)*) case s = compile (re (*~*)case s)

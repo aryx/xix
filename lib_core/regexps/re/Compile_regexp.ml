@@ -29,11 +29,6 @@ open Regexp
 (* Types and constants *)
 (*****************************************************************************)
 
-type 'a match_info =
-  [ `Match of 'a
-  | `Failed
-  | `Running ]
-
 type state = { 
     idx : int;
         (* Index of the current position in the position table.
@@ -46,8 +41,7 @@ type state = {
     next : state array;
         (* Transition table, indexed by color *)
     mutable final :
-      (Automata.category *
-       (Automata.idx * Automata.mark_infos match_info)) list;
+      (Automata.category * (Automata.idx * Automata.status)) list;
         (* Mapping from the category of the next character to
            - the index where the next position should be saved
            - possibly, the list of marks (and the corresponding indices)
@@ -116,6 +110,7 @@ let rec cset_hash_rec l =
   | (i, j)::r -> i + 13 * j + 257 * cset_hash_rec r
 (* ?? let cset_hash l = (cset_hash_rec l) land 0x3FFFFFFF *)
 
+(*
 module CSetMap =
   Map.Make
   (struct
@@ -123,6 +118,20 @@ module CSetMap =
     let compare (i, u) (j, v) =
       let c = compare i j in if c <> 0 then c else compare u v
    end)
+*)
+module CSetMap = struct
+  let find _a _b = failwith "TODO"
+  let add _a _b _c = failwith "TODO2"
+
+  type t_key = int * (int * int) list
+  type 'a _tTODO = (t_key, 'a) Map_.t
+
+  let empty = Map_.empty
+(*
+    let compare (i, u) (j, v) =
+      let c = compare i j in if c <> 0 then c else compare u v
+*)
+end
 
 (* copy paste of Regexp.ml helpers *)
 let csingle c = Cset.single (Char.code c)
@@ -177,9 +186,11 @@ let colorize (c : bytes) (regexp : Regexp.t) =
     | Beg_of_str | End_of_str
     | Start | Stop              -> ()
     | Last_end_of_line          -> lnl := true
-    | Sem (_, r)
-    | Sem_greedy (_, r)
-    | Group r | No_group r
+    (* ocaml-light: was factorized before *)
+    | Sem (_, r)                   -> colorize r
+    | Sem_greedy (_, r)                   -> colorize r
+    | Group r                    -> colorize r
+    | No_group r                   -> colorize r
     | Nest r                    -> colorize r
     | Case _ | No_case _
     | Intersection _
@@ -233,8 +244,8 @@ module A = Automata
 
 let enforce_kind ids kind kind' cr =
   match kind, kind' with
-    `First, `First -> cr
-  | `First, k       -> A.seq ids k cr (A.eps ids)
+    A.First, A.First -> cr
+  | A.First, k       -> A.seq ids k cr (A.eps ids)
   |  _               -> cr
 
 let rec iter n f v = if n = 0 then v else iter (n - 1) f (f v)
@@ -273,11 +284,11 @@ let rec translate ids kind ign_group ign_case greedy pos cache (c : bytes) r =
         | Some j ->
             let f =
               match greedy with
-                `Greedy ->
+                A.Greedy ->
                   fun rem ->
                     A.alt ids
                       [A.seq ids kind' (A.rename ids cr) rem; A.eps ids]
-              | `Non_greedy ->
+              | A.Non_greedy ->
                   fun rem ->
                     A.alt ids
                       [A.eps ids; A.seq ids kind' (A.rename ids cr) rem]
@@ -290,20 +301,20 @@ let rec translate ids kind ign_group ign_case greedy pos cache (c : bytes) r =
   | End_of_line ->
       (A.before ids (cat_inexistant lor cat_newline), kind)
   | Beg_of_word ->
-      (A.seq ids `First
+      (A.seq ids A.First
            (A.after ids (cat_inexistant lor cat_not_letter))
            (A.before ids (cat_inexistant lor cat_letter)),
        kind)
   | End_of_word ->
-      (A.seq ids `First
+      (A.seq ids A.First
            (A.after ids (cat_inexistant lor cat_letter))
            (A.before ids (cat_inexistant lor cat_not_letter)),
        kind)
   | Not_bound ->
-      (A.alt ids [A.seq ids `First
+      (A.alt ids [A.seq ids A.First
                     (A.after ids cat_letter)
                     (A.before ids cat_letter);
-                  A.seq ids `First
+                  A.seq ids A.First
                     (A.after ids cat_letter)
                     (A.before ids cat_letter)],
        kind)
@@ -332,8 +343,8 @@ let rec translate ids kind ign_group ign_case greedy pos cache (c : bytes) r =
         pos := !pos + 2;
         let (cr, kind') =
           translate ids kind ign_group ign_case greedy pos cache c r' in
-        (A.seq ids `First (A.mark ids p) (
-         A.seq ids `First cr (A.mark ids (p + 1))),
+        (A.seq ids A.First (A.mark ids p) (
+         A.seq ids A.First cr (A.mark ids (p + 1))),
          kind')
   | No_group r' ->
       translate ids kind true ign_case greedy pos cache c r'
@@ -346,7 +357,7 @@ let rec translate ids kind ign_group ign_case greedy pos cache (c : bytes) r =
       if e < b then
         (cr, kind')
       else
-        (A.seq ids `First (A.erase ids b e) cr, kind')
+        (A.seq ids A.First (A.erase ids b e) cr, kind')
   | Difference _ | Complement _ | Intersection _ | No_case _ | Case _ ->
       assert false
 
@@ -452,8 +463,8 @@ let compile_1 (regexp : t) : re =
   let pos = ref 0 in
   let (r, kind) =
     translate ids
-      `First false false `Greedy pos (ref CSetMap.empty) col regexp in
-  let r = enforce_kind ids `First kind r in
+      A.First false false A.Greedy pos (ref CSetMap.empty) col regexp in
+  let r = enforce_kind ids A.First kind r in
 (*Format.eprintf "<%d %d>@." !ids ncol;*)
   mk_re r (Bytes.to_string col) col_repr ncol lnl (!pos / 2)
 

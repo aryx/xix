@@ -7,20 +7,21 @@ type t              (* Regular expression *)
 type re             (* Compiled regular expression *)
 type substrings     (* Match informations *)
 
+type partial_result = Full | Partial | Mismatch 
 (* Compilation and execution of a regular expression *)
 val compile : t -> re
 val exec :
-  ?pos:int ->    (* Default: 0 *)
-  ?len:int ->    (* Default: -1 (until end of string) *)
+  (*?pos:*)int ->    (* Default: 0 *)
+  (*?len:*)int ->    (* Default: -1 (until end of string) *)
   re -> string -> substrings
 val execp :
-  ?pos:int ->    (* Default: 0 *)
-  ?len:int ->    (* Default: -1 (until end of string) *)
+  (*?pos:*)int ->    (* Default: 0 *)
+  (*?len:*)int ->    (* Default: -1 (until end of string) *)
   re -> string -> bool
 val exec_partial :
-  ?pos:int ->    (* Default: 0 *)
-  ?len:int ->    (* Default: -1 (until end of string) *)
-  re -> string -> [ `Full | `Partial | `Mismatch ]
+  (*?pos:*)int ->    (* Default: 0 *)
+  (*?len:*)int ->    (* Default: -1 (until end of string) *)
+  re -> string -> partial_result
 
 (* Substring extraction *)
 val get : substrings -> int -> string

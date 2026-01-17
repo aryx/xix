@@ -21,6 +21,7 @@
 *)
 open Regexp
 open Compile_regexp
+module A = Automata
 
 (*****************************************************************************)
 (* Prelude *)
@@ -39,6 +40,8 @@ open Compile_regexp
 (* See also Regexp.t and Compile_regexp.re for types now defined in separate 
  * modules that used to be defined here.
  *)
+
+type partial_result = Full | Partial | Mismatch 
 
 type t = Regexp.t
 type re = Compile_regexp.re
@@ -98,7 +101,7 @@ let unknown_state =
 let mk_state ncol ((idx, _, _, _, _) as desc) =
   let break_state =
     match Automata.status desc with
-      `Running -> false
+      A.Running -> false
     | _        -> true
   in
   { idx = if break_state then break else idx;
@@ -107,7 +110,7 @@ let mk_state ncol ((idx, _, _, _, _) as desc) =
     final = [];
     desc = desc }
 
-let find_state re desc =
+let find_state (re : re) (desc : A.state) : state =
   try
     Automata.States.find re.states desc
   with Not_found ->
@@ -182,7 +185,7 @@ let rec loop_no_mark info s pos last st =
   else
     st
 
-let final info st cat =
+let final (info : info) (st : state) (cat : category) =
   try
     List.assq cat st.final
   with Not_found ->
@@ -288,10 +291,15 @@ let match_str (groups : bool) (re : re) (s : string) (pos : int) (len : int) =
       res
   in
   match res with
-  | `Match m ->
-      `Match (s, m, info.positions, re.group_count)
-  | (`Failed | `Running) as res ->
+  | A.Match m ->
+      A.Match (s, m, info.positions, re.group_count)
+  (* ocaml-light: can't factorize *)
+(*
+  | (A.Failed | A.Running) as res ->
       res
+*)
+  | A.Failed -> A.Failed
+  | A.Running -> A.Running
 
 
 (**********************************)
@@ -398,27 +406,27 @@ let no_case = Regexp.no_case
 
 let compile = Compile_regexp.compile
 
-let exec ?(pos = 0) ?(len = -1) (re : re) (s : string) : substrings =
+let exec (*?(pos = 0) ?(len = -1)*) pos len (re : re) (s : string) : substrings =
   if pos < 0 || len < -1 || pos + len > String.length s then
     invalid_arg "Re.exec";
   match match_str true re s pos len with
-    `Match substr -> substr
+    A.Match substr -> substr
   | _             -> raise Not_found
 
-let execp ?(pos = 0) ?(len = -1) (re : re) (s : string) : bool =
+let execp (*?(pos = 0) ?(len = -1)*) pos len (re : re) (s : string) : bool =
   if pos < 0 || len < -1 || pos + len > String.length s then
     invalid_arg "Re.execp";
   match match_str false re s pos len with
-    `Match _substr -> true
+    A.Match _substr -> true
   | _             -> false
 
-let exec_partial ?(pos = 0) ?(len = -1) (re : re) (s : string) =
+let exec_partial (*?(pos = 0) ?(len = -1)*) pos len (re : re) (s : string) =
   if pos < 0 || len < -1 || pos + len > String.length s then
     invalid_arg "Re.exec_partial";
   match match_str false re s pos len with
-    `Match _ -> `Full
-  | `Running -> `Partial
-  | `Failed  -> `Mismatch
+    A.Match _ -> Full
+  | A.Running -> Partial
+  | A.Failed  -> Mismatch
 
 
 

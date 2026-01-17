@@ -8,13 +8,13 @@ exception Parse_error
 exception Not_supported
 
 type opt =
-  [ `Ungreedy | `Dotall | `Dollar_endonly
-  | `Multiline | `Anchored | `Caseless ]
+  | Ungreedy | Dotall | Dollar_endonly
+  | Multiline | Anchored | Caseless
 
 (* Parsing of a Perl-style regular expression *)
-val re : ?opts:opt list -> string -> Re.t
+val re : (*?opts:*)opt list -> string -> Re.t
 
 (* Regular expression compilation *)
 val compile : Re.t -> Re.re
       (* (Same as [Re.compile]) *)
-val compile_pat : ?opts:opt list -> string -> Re.re
+val compile_pat : (*?opts:*)opt list -> string -> Re.re

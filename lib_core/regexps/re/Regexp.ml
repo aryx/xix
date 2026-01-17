@@ -1,4 +1,5 @@
 
+module A = Automata
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
@@ -50,13 +51,18 @@ let rec is_charset (r : t) : bool =
   match r with
     Set _ ->
       true
-  | Alternative l | Intersection l | Complement l ->
-      List.for_all is_charset l
+  (* ocaml-light: was factorized before *)
+  | Alternative l -> List.for_all is_charset l
+  | Intersection l -> List.for_all is_charset l
+  | Complement l -> List.for_all is_charset l
   | Difference (r, r') ->
       is_charset r && is_charset r'
-  | Sem (_, r) | Sem_greedy (_, r)
-  | No_group r | Case r | No_case r ->
-      is_charset r
+  (* ocaml-light: was factorized before *)
+  | Sem (_, r) -> is_charset r
+  | Sem_greedy (_, r)-> is_charset r
+  | No_group r -> is_charset r
+  | Case r -> is_charset r
+  | No_case r -> is_charset r
   | Sequence _ | Repeat _ | Beg_of_line | End_of_line
   | Beg_of_word | End_of_word | Beg_of_str | End_of_str
   | Not_bound | Last_end_of_line | Start | Stop | Group _ | Nest _ ->
@@ -115,11 +121,11 @@ let eos = End_of_str
 let leol = Last_end_of_line
 let start = Start
 let stop = Stop
-let longest r = Sem (`Longest, r)
-let shortest r = Sem (`Shortest, r)
-let first r = Sem (`First, r)
-let greedy r = Sem_greedy (`Greedy, r)
-let non_greedy r = Sem_greedy (`Non_greedy, r)
+let longest r = Sem (A.Longest, r)
+let shortest r = Sem (A.Shortest, r)
+let first r = Sem (A.First, r)
+let greedy r = Sem_greedy (A.Greedy, r)
+let non_greedy r = Sem_greedy (A.Non_greedy, r)
 let group r = Group r
 let no_group r = No_group r
 let nest r = Nest r

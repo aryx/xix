@@ -24,6 +24,8 @@ val mem : c -> t -> bool
 
 type hash
 val hash : t -> hash
+(*
 module Map : Map.S with type key = hash * t
+*)
 
 val print : Format.formatter -> t -> unit

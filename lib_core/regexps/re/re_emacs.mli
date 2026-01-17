@@ -8,9 +8,9 @@ exception Parse_error
 exception Not_supported
 
 (* Parsing of an Emacs-style regular expression *)
-val re : ?case:bool -> string -> Re.t
+val re : (*?case:*)bool -> string -> Re.t
 
 (* Regular expression compilation *)
 val compile : Re.t -> Re.re
       (* Same as [Re.compile] *)
-val compile_pat : ?case:bool -> string -> Re.re
+val compile_pat : (*?case:*)bool -> string -> Re.re

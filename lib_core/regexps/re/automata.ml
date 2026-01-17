@@ -24,13 +24,20 @@
 (* Prelude *)
 (*****************************************************************************)
 
+module List_ = struct
+(* TODO: for ocaml-light *)
+let rec remove_assq x = function
+  | [] -> []
+  | (a, _ as pair) :: l -> if a == x then l else pair :: remove_assq x l
+end
+
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
 
-type sem = [ `Longest | `Shortest | `First ]
+type sem = Longest | Shortest | First
 
-type rep_kind = [ `Greedy | `Non_greedy ]
+type rep_kind = Greedy | Non_greedy
 
 (* ?? *)
 type category = int
@@ -74,9 +81,9 @@ type e =
 let print_kind ch k =
   Format.fprintf ch "%s"
     (match k with
-       `Shortest -> "short"
-     | `Longest  -> "long"
-     | `First    -> "first")
+       Shortest -> "short"
+     | Longest  -> "long"
+     | First    -> "first")
 
 let rec print_expr ch (e : expr) =
   match e.def with
@@ -177,7 +184,7 @@ let seq ids kind x y =
     Alt [], _                 -> x
   | _, Alt []                 -> y
   | Eps, _                    -> y
-  | _, Eps when kind = `First -> x
+  | _, Eps when kind = First -> x
   | _                         -> mk_expr ids (Seq (kind, x, y))
 
 let eps ids = mk_expr ids Eps
@@ -218,7 +225,10 @@ let rec rename ids x =
 
 type hash = int
 type mark_infos = int array
-type status = [`Failed | `Match of mark_infos | `Running]
+
+type 'a match_info = Failed | Match of 'a | Running
+type status = mark_infos match_info
+
 type state = int * category * e list * status option ref * hash
 
 let dummy_state = (-1, -1, [], ref None, -1)
@@ -273,6 +283,7 @@ let compare_state (_idx1, cat1, desc1, _, h1) (_idx2, cat2, desc2, _, h2) =
   if c <> 0 then c else
   compare desc1 desc2
 
+(* TODO
 module States =
   Hashtbl.Make
     (struct
@@ -280,6 +291,13 @@ module States =
        let equal = equal_state
        let hash (_, _, _, _, h) = h
      end)
+*)
+module States = struct
+  type 'a t = (state, 'a) Hashtbl.t
+  let create n = Hashtbl.create n
+  let find _a _b = failwith "TODO:find"
+  let add _a _b _c = failwith "TODO:add"
+end
 
 (*****************************************************************************)
 (* Find a free index *)
@@ -398,13 +416,13 @@ let rec delta_1 marks c cat' cat x rem =
         | Some marks' -> (remove_matches y', marks')
       in
       begin match rep_kind with
-        `Greedy     -> tseq kind y'' x (TMatch marks' :: rem)
-      | `Non_greedy -> TMatch marks :: tseq kind y'' x rem
+        Greedy     -> tseq kind y'' x (TMatch marks' :: rem)
+      | Non_greedy -> TMatch marks :: tseq kind y'' x rem
       end
   | Eps ->
       TMatch marks :: rem
   | Mark i ->
-      TMatch ((i, -1) :: List.remove_assq i marks) :: rem
+      TMatch ((i, -1) :: List_.remove_assq i marks) :: rem
   | Erase (b, e) ->
       TMatch (filter_marks b e marks) :: rem
   | Before cat'' ->
@@ -425,11 +443,11 @@ and delta_seq c cat' cat kind y z rem =
       tseq kind y z rem
   | Some marks ->
       match kind with
-        `Longest ->
+        Longest ->
           tseq kind (remove_matches y) z (delta_1 marks c cat' cat z rem)
-      | `Shortest ->
+      | Shortest ->
           delta_1 marks c cat' cat z (tseq kind (remove_matches y) z rem)
-      | `First ->
+      | First ->
           let (y', y'') = split_at_match y in
           tseq kind y' z (delta_1 marks c cat' cat z (tseq kind y'' z rem))
 
@@ -521,7 +539,7 @@ let rec merge_marks old nw =
     [] ->
       old
   | (i, v) :: rem ->
-      let nw' = merge_marks (List.remove_assq i old) rem in
+      let nw' = merge_marks (List_.remove_assq i old) rem in
       if v = -2 then
         nw'
       else
@@ -563,14 +581,14 @@ let rec deriv_1 all_chars categories marks cat x rem =
            in
            prepend s
              (match rep_kind with
-                `Greedy     -> tseq kind z' x [TMatch marks']
-              | `Non_greedy -> TMatch marks :: tseq kind z' x [])
+                Greedy     -> tseq kind z' x [TMatch marks']
+              | Non_greedy -> TMatch marks :: tseq kind z' x [])
              rem)
         y' rem
   | Eps ->
       prepend all_chars [TMatch marks] rem
   | Mark i ->
-      prepend all_chars [TMatch ((i, -1) :: List.remove_assq i marks)] rem
+      prepend all_chars [TMatch ((i, -1) :: List_.remove_assq i marks)] rem
   | Erase (b, e) ->
       prepend all_chars
         [TMatch (remove_marks b e (filter_marks b e marks))] rem
@@ -604,13 +622,13 @@ and deriv_seq all_chars categories cat kind y z rem =
          | Some marks ->
              let z'' = prepend_marks marks z' in
              match kind with
-               `Longest ->
+               Longest ->
                  prepend s (tseq kind (remove_matches y) z []) (
                  prepend_deriv (restrict s z'') rem)
-             | `Shortest ->
+             | Shortest ->
                  prepend_deriv (restrict s z'') (
                  prepend s (tseq kind (remove_matches y) z []) rem)
-             | `First ->
+             | First ->
                  let (y', y'') = split_at_match y in
                  prepend s (tseq kind y' z []) (
                  prepend_deriv (restrict s z'') (
@@ -672,9 +690,9 @@ let status (_, _, desc, status, _) =
   | None ->
       let st =
         match desc with
-          []            -> `Failed
-        | TMatch m :: _ -> `Match (flatten_match m)
-        | _             -> `Running
+          []            -> Failed
+        | TMatch m :: _ -> Match (flatten_match m)
+        | _             -> Running
       in
       status := Some st;
       st

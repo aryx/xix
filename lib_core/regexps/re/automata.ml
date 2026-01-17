@@ -283,7 +283,8 @@ let compare_state (_idx1, cat1, desc1, _, h1) (_idx2, cat2, desc2, _, h2) =
   if c <> 0 then c else
   compare desc1 desc2
 
-(* TODO
+(* TODO the tests seem to pass even with general Hashtbl and
+ Pervasives.equal, so not sure we need to do this equal_state Hashtbl
 module States =
   Hashtbl.Make
     (struct
@@ -295,8 +296,8 @@ module States =
 module States = struct
   type 'a t = (state, 'a) Hashtbl.t
   let create n = Hashtbl.create n
-  let find _a _b = failwith "TODO:find"
-  let add _a _b _c = failwith "TODO:add"
+  let find a b = Hashtbl.find a b
+  let add a b c = Hashtbl.add a b c
 end
 
 (*****************************************************************************)

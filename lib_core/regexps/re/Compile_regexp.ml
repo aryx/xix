@@ -120,13 +120,16 @@ module CSetMap =
    end)
 *)
 module CSetMap = struct
-  let find _a _b = failwith "TODO"
-  let add _a _b _c = failwith "TODO2"
+  let find a b = Map_.find a b
+  let add a b c = Map_.add a b c
 
   type t_key = int * (int * int) list
   type 'a _tTODO = (t_key, 'a) Map_.t
 
   let empty = Map_.empty
+  (* TODO? the tests seems to pass with general Pervasives.compare
+     so we can just use Map_ for now
+   *)
 (*
     let compare (i, u) (j, v) =
       let c = compare i j in if c <> 0 then c else compare u v

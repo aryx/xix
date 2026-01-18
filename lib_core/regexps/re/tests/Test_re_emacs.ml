@@ -1,8 +1,7 @@
 open Common
-open Xix_re
 open Test_re_utils
 
-open Re
+open Re_core
 open Re_emacs
 
 let eq_re r s = expect_equal_app ~msg:s id r (re true) s

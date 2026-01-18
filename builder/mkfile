@@ -1,6 +1,6 @@
 TOP=..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps/re
 
 #coupling: library stanza in dune file and docs/mkfile:SRC_VIEW
 SRC= Globals.ml Flags.ml \
@@ -12,7 +12,7 @@ SRC= Globals.ml Flags.ml \
   CLI.ml Main.ml
 
 SYSLIBS=str.cma unix.cma
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/re/lib.cma
 
 PROG=omk
 

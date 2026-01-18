@@ -1,4 +1,6 @@
-type regexp = Re.re
+type regexp = Regexp.re
+
+module Re = Re_core
 
 (* was anon `CASELESS before *)
 type flag =

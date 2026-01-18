@@ -2,7 +2,7 @@
  (name xix_re_tests)
  (wrapped false)
  (libraries
-   xix_re
+   xix_regexp
    testo ounit2
    xix_commons
  )

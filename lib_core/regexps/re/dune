@@ -1,8 +1,13 @@
+; Regexp.ml used to be in Common.ml but it was depending at the
+; time on Str that requires C code but it is cleaner to keep Common pure
+; ocaml and move the regexp stuff in a separate lib.
+; Then it was merged with ocaml-re
+
 (library
- (name xix_re)
+ (name xix_regexp)
  ; testo is using itself ocaml-re so to avoid
  ; conflict better to wrap it in Xix_re to avoid conflicts
- ;(wrapped false)
+ (wrapped false)
  (libraries
     xix_commons
   )

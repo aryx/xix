@@ -18,12 +18,12 @@ exception Not_supported
 type opt = ICase | NoSub | Newline
 
 (* Parsing of a Posix extended regular expression *)
-val re : (*?opts:*)(opt list) -> string -> Re.t
+val re : (*?opts:*)(opt list) -> string -> Regexp.t
 
 (* Regular expression compilation *)
-val compile : Re.t -> Re.re
+val compile : Regexp.t -> Regexp.re
    (* [compile r] is defined as [Re.compile (Re.longest r)] *)
-val compile_pat : (*?opts:*)(opt list) -> string -> Re.re
+val compile_pat : (*?opts:*)(opt list) -> string -> Regexp.re
 
 (*
 Deviation from the standard / ambiguities in the standard

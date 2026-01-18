@@ -28,6 +28,7 @@ What we could (should?) do:
 
 Note that it should be possible to handle "(((ab)c)d)e" efficiently
 *)
+module Re = Re_core
 
 exception Parse_error
 exception Not_supported

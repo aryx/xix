@@ -1,5 +1,5 @@
 open Common
-open Xix_re
+module Re = Re_core
 open Test_re_utils
 
 

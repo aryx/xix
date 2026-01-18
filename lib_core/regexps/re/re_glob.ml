@@ -24,6 +24,8 @@
 (* Types and constants *)
 (*****************************************************************************)
 
+module Re = Re_core
+
 exception Parse_error
 
 let gany = Re.compl [Re.char '/']

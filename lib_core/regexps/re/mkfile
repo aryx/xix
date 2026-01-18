@@ -4,8 +4,9 @@ TOP=../../..
 INCLUDES=-I $TOP/lib_core/commons
 
 SRC=cset.ml automata.ml Regexp_AST.ml Compile_regexp.ml \
-  re.ml re_emacs.ml re_str.ml re_glob.ml \
-  re_perl.ml re_pcre.ml re_posix.ml
+  Re_core.ml re_emacs.ml re_str.ml re_glob.ml \
+  re_perl.ml re_pcre.ml re_posix.ml \
+  Regexp.ml
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mklib

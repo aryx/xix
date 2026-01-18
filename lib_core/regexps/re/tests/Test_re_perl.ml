@@ -1,9 +1,8 @@
 open Common
-open Xix_re
 open Test_re_utils
 
 
-open Re
+open Re_core
 open Re_perl
 
 let eq_re ?opts r s = 

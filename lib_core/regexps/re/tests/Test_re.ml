@@ -1,5 +1,4 @@
 open Common
-open Xix_re
 open Test_re_utils
 
 (*****************************************************************************)
@@ -11,7 +10,7 @@ open Test_re_utils
 (* Was in ocaml-re/lib_test/test_re.ml *)
 (*****************************************************************************)
 
-open Re
+open Re_core
 
 let re_match ?pos ?len r s res =
   let pos = match pos with None -> 0 | Some x -> x in
@@ -434,7 +433,7 @@ let fixed_bugs_tests () =
 
 expect_pass "bugs" (fun () ->
   try
-    ignore (Re.compile (Xix_re.Re_perl.re [] "(.*?)(\\WPl|\\Bpl)(.*)"))
+    ignore (Re_core.compile (Re_perl.re [] "(.*?)(\\WPl|\\Bpl)(.*)"))
   with _ ->
     failwith "bug in Re.handle_case"
 );

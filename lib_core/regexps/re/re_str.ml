@@ -11,6 +11,7 @@
 (*                                                                     *)
 (***********************************************************************)
 (* Modified by Jerome.Vouillon@pps.jussieu.fr for integration in RE *)
+module Re = Re_core
 
 type regexp =
   { re : Re.t;

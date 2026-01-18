@@ -2,7 +2,6 @@
  (name Main)
  (modules Main)
  (libraries
-   unix
    xix_compiler
  )
  ; 'byte' is for ocamldebug

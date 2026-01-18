@@ -1,11 +1,12 @@
 # -*- sh -*-
 COMPFLAGS=-g $EXTRA_FLAGS
-LINKFLAGS=-g -custom -cclib -lunix -cclib -lstr
+#old: -cclib -lstr not needed with pure-ocaml ocaml-re in lib_core/regexps/
+LINKFLAGS=-g -custom -cclib -lunix
 #pad: ugly hack with this opt suffix that were made just for
 # linux with -32
 # the -static is optional but nice to show we can statically link
 # with ocaml light!!
-OPTLINKFLAGS=-cclib -lunixopt -cclib -lstropt -ccopt -static
+OPTLINKFLAGS=-cclib -lunixopt -ccopt -static
 
 OCAMLC=ocamlc
 OCAMLLEX=ocamllex

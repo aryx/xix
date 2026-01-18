@@ -1,5 +1,8 @@
 open Common
 
+(* one line change :) *)
+module Str = Re_str
+
 type t = Re_core.t
 type re = Re_core.re
 

@@ -13,7 +13,7 @@ SRC= Token_asm.ml Lexer_asm.ml \
  Resolve_labels.ml \
  CLI.ml Main.ml
 
-SYSLIBS=str.cma unix.cma
+SYSLIBS=
 LIBS= $TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
   $TOP/macroprocessor/lib.cma $TOP/assembler/objects/lib.cma \
   

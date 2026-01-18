@@ -28,17 +28,24 @@ module A = Automata
 (*****************************************************************************)
 (* Regexp library entry point.
  *
+ * Note that this library does not depend on any C code as opposed to
+ * Str so it can be used to produce pure OCaml bytecode programs.
+ *
  * The regexp AST is now in Regexp.ml and the compilation part in
  * Compile_regexp.ml so what remains here is mostly the execution parts:
  *  - running a match 
  *  - handling groups
+ *
+ * history:
+ *  - was called re.ml originally but to avoid conflict with Testo which is
+ *    using internally the real ocaml-re it was renamed to Re_core.ml
  *)
 
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-(* See also Regexp.t and Compile_regexp.re for types now defined in separate 
- * modules that used to be defined here.
+(* See also Regexp_AST.t and Compile_regexp.re for types now defined in
+ * separate modules that used to be defined here.
  *)
 
 type partial_result = Full | Partial | Mismatch 

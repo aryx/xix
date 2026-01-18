@@ -8,7 +8,7 @@ MK=omk
 # STDLIB is defined or not (usually not) in mkconfig
 
 DIRS0=\
-  $STDLIB lib_core/commons lib_core/regexps/re \
+  $STDLIB lib_core/commons lib_core/regexps \
   builder shell\
   lib_parsing generators/lex generators/yacc\
   macroprocessor\

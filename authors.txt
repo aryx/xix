@@ -2,7 +2,7 @@ Most of the code in this repository was written by Yoann Padioleau except:
  - generators/lex/                     by Xavier Leroy        (from ocaml)
  - lib_core/{core,base,collections,concurrency,parsing,printing,system}
    by Xavier Leroy et al. (from ocaml)
- - lib_core/regexps/re/                by Jerome Vouillon     (from ocaml-re)
+ - lib_core/regexps/                by Jerome Vouillon     (from ocaml-re)
  - lib_core/commons/IO.ml              by Nicolas Canasse     (from exblib)
  - lib_core/crypto/sha1.ml             by Daniel Bunzli       (from uuidm)
  - lib_core/compression/zlib.ml        by Xavier Leroy        (from camlzip)

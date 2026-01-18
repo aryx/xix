@@ -1,6 +1,6 @@
 TOP=..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps/re
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps
 
 SRC= Flags_cpp.ml Location_cpp.ml Ast_cpp.ml Lexer_cpp.ml Preprocessor.ml \
  Parse_cpp.ml

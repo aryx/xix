@@ -1,5 +1,5 @@
 (*s: Regex.ml *)
-(* alt: Re.t *)
+module Str = Re_str
 (*s: type [[Regex.t]] *)
 type t = Str.regexp
 (*e: type [[Regex.t]] *)

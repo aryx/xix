@@ -1,7 +1,7 @@
 (executable
  (name Main)
  (libraries
-   str unix
+   unix
    xix_commons
    xix_cpp
    xix_objects

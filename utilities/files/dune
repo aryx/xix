@@ -2,7 +2,7 @@
  (name Cat)
  (modules Cat)
  (libraries
-   str unix
+   unix
    xix_commons
  )
  (preprocess (pps ppx_deriving.show))

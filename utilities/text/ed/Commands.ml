@@ -2,6 +2,7 @@
 (* Copyright 2025, 2026 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
+module Str = Re_str
 
 open Env
 

@@ -3,6 +3,7 @@
 open Common
 open Fpath_.Operators
 open Regexp.Operators
+module Str = Re_str
 
 (*****************************************************************************)
 (* Prelude *)

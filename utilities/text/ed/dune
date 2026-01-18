@@ -1,8 +1,8 @@
 (executable
  (name Main)
  (libraries
-   str unix
-   xix_commons
+   unix
+   xix_commons xix_regexp
  )
  (preprocess (pps ppx_deriving.show))
  (modes native byte)

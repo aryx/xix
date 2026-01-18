@@ -1,6 +1,7 @@
 (* Copyright 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Either
+module Str = Re_str
 
 open Ast_asm
 open Ast_asmv

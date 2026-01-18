@@ -3,6 +3,7 @@
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
 open Regexp.Operators
+module Str = Re_str
 
 open Ast_cpp
 module L = Location_cpp

@@ -1,6 +1,7 @@
 (*s: Address.ml *)
 (* Copyright 2025, 2026 Yoann Padioleau, see copyright.txt *)
 open Common
+module Str = Re_str
 
 module P = Parser
 module T = Token

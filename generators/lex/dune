@@ -1,7 +1,7 @@
 (executable
  (name main)
  (libraries
-   str unix
+   unix
    xix_commons
  )
  ; 'byte' is for ocamldebug

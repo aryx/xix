@@ -3,6 +3,7 @@
 open Common
 open Either
 open Fpath_.Operators
+module Str = Re_str
 
 module A = Ast
 module E = Env

@@ -57,6 +57,8 @@ let adjust_env job =
   env
 (*e: function [[Scheduler.adjust_env]] *)
 
+module Str = Re_str
+
 (*s: function [[Scheduler.shprint]] *)
 let shprint env s =
   let s = 

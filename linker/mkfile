@@ -3,7 +3,7 @@
 TOP=..
 # need -I macroprocessor/ because object files contains Location_cpp data
 # but in theory the linker does not need it
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables -I $TOP/linker/libraries
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables -I $TOP/linker/libraries
 
 # Layout is after Codegen because it calls the Codegen.size_of_instruction
 SRC= Flags.ml\

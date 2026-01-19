@@ -15,7 +15,7 @@ SRC=  Flags.ml Globals.ml \
   Op_repl.ml Op_process.ml \
   Interpreter.ml CLI.ml Main.ml
 
-SYSLIBS=str.cma unix.cma
+SYSLIBS=unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma
 
 PROG=rc

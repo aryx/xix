@@ -7,7 +7,7 @@ DEPS=lib_core/commons \
 SRC=hellodraw.ml
 
 PROG=hellodraw
-SYSLIBS=unix.cma str.cma graphics.cma
+SYSLIBS=unix.cma graphics.cma
 
 
 INCLUDES=${DEPS:%=-I $TOP/%}

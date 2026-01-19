@@ -18,7 +18,7 @@ SRC= Flags.ml \
   Arch5.ml Archv.ml Archi.ml Codegen.ml \
   CLI.ml Main.ml
 
-SYSLIBS=unix.cma
+SYSLIBS=
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
  $TOP/macroprocessor/lib.cma \
  $TOP/assembler/objects/lib.cma

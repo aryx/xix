@@ -8,7 +8,7 @@ DEPS=lib_core/commons \
 SRC= hellogui.ml
 
 PROG=hellogui
-SYSLIBS=str.cma graphics.cma
+SYSLIBS=graphics.cma
 
 INCLUDES=${DEPS:%=-I $TOP/%}
 LIBS=${DEPS:%=$TOP/%/lib.cma}

@@ -28,7 +28,7 @@ INCLUDES=-I $TOP/lib_core/commons
 
 LIBS=$TOP/lib_core/commons/lib.cma
 
-SYSLIBS=unix.cma str.cma
+SYSLIBS=unix.cma
 
 PROG=ogit
 

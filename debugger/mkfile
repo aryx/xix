@@ -5,7 +5,7 @@ INCLUDES=-I $TOP/lib_core/commons
 
 SRC= ksym.ml
 
-SYSLIBS=str.cma
+SYSLIBS=
 LIBS=$TOP/lib_core/commons/lib.cma
 
 # or use Principia spirit! THE assembler! so call it simply 'assembler' ? :)

@@ -16,13 +16,12 @@ SRC= Ast.ml\
  Output.ml Dump.ml \
  Tests.ml CLI.ml Main.ml
 
-# need str.cma and commons/lib.cma because of Common.Stack_.nth
+# need commons/lib.cma because of Common.Stack_.nth
 # but we could inline this function in parsing_.ml to avoid those deps.
-SYSLIBS=str.cma
-LIBS=$TOP/lib_core/commons/lib.cma \
-  $TOP/lib_parsing/lib.cma
+SYSLIBS=
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_parsing/lib.cma
 
-PROG=ocamlyacc
+PROG=oyacc
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mkprog

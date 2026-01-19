@@ -50,8 +50,8 @@ OCAMLCFLAGS="-I $EXTERNAL_LIB -g"
 #coupling: mkconfig LINKFLAGS
 if test "$use_ocaml_light" = "yes"; then
     #LATER: not needed once ocaml-light automatically includes C libs
-    # when using unix.cma and str.cma
-    EXTRALINKFLAGS="-cclib -lunix -cclib -lstr -custom -g"
+    # when using unix.cma
+    EXTRALINKFLAGS="-cclib -lunix -custom -g"
 else    
     EXTRALINKFLAGS="-I $EXTERNAL_LIB stdcompat.cma -custom -g"
 fi    
@@ -171,7 +171,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -c Outofda
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -c CLI.mli
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -c CLI.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -pp ../scripts/remove_xix_open.sh -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/regexps str.cma unix.cma ../lib_core/commons/lib.cma ../lib_core/regexps/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo CLI.cmo Main.cmo -o omk
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/regexps unix.cma ../lib_core/commons/lib.cma ../lib_core/regexps/lib.cma Globals.cmo Flags.cmo Ast.cmo Parser.cmo Lexer.cmo Parse.cmo Shellenv.cmo Shell.cmo Percent.cmo Env.cmo Rules.cmo Eval.cmo File.cmo Graph.cmo Job.cmo Scheduler.cmo Outofdate.cmo CLI.cmo Main.cmo -o omk
 
 cd $TOP/shell/
 ocamlyacc Parser.mly
@@ -218,7 +218,7 @@ ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -c CLI.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -c Parse.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -c Interpreter.ml
 ocamlc$OPT $OCAMLCFLAGS -I ../lib_core/commons -I ../lib_core/regexps -pp ../scripts/remove_xix_open.sh -c Main.ml
-ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/regexps str.cma unix.cma ../lib_core/commons/lib.cma ../lib_core/regexps/lib.cma Flags.cmo Globals.cmo Ast.cmo Opcode.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Env.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo -o orc
+ocamlc$OPT $EXTRALINKFLAGS -I ../lib_core/commons -I ../lib_core/regexps unix.cma ../lib_core/commons/lib.cma ../lib_core/regexps/lib.cma Flags.cmo Globals.cmo Ast.cmo Opcode.cmo Compile.cmo Runtime.cmo Pattern.cmo Fn.cmo Env.cmo Var.cmo Prompt.cmo Status.cmo PATH.cmo Process.cmo Error.cmo Parser.cmo Lexer.cmo Parse.cmo Builtin.cmo Op_repl.cmo Op_process.cmo Interpreter.cmo CLI.cmo Main.cmo -o orc
 
 cd $TOP
 cp builder/omk shell/orc bin/

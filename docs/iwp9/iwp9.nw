@@ -165,60 +165,57 @@ on \plan and Linux.
 Finally, the port of [[rio]], [[libdraw]], and [[lib9p]]
 reached the point where one can substitute [[rio]] by [[orio]]
 in \plan and not notice any difference.
-% SCREENSHOT!
-In fact, [[orio]] is the only program in the list that requires
+% orio use thread lib of ocaml, and funny story leroy added first
+% thread C library to Linux for OCaml long time ago.
+Note that [[orio]] is the only program in the list that requires
 \plan to run as it relies on services and namespaces only
 provided by the \plan kernel.
 %actually I also ported a rudimentary kernel.
 % but also utilities (ed, hoc? grep? sed? awk?), 
 
+
+% screenshot with orio, ocamlrun, oas, olk, occ, even ocat test.s :)
+
 \section{\ocaml in \plan}
 
-\begin{verbatim}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Fork of \ocaml 1.07 available at \url{https://github.com/aryx/ocaml-light}.
-Simpler to port, less dependencies.
-% so many forks :)
-Enough to compile \xix because \xix code does not use
-recent features of \ocaml.
-%recent, meaning from the last 20 years, hmmm
-
-Just need byterun/, because ocaml compiler in OCaml
-and bytecode interpreter in C. Once interpreter ported, done, and
-C is easy to port. Just had to remove ifdefs, use plan9 libc, and
-add a few functions.
+To be able to run [[orio]], an \ocaml program, in \plan requires
+first to port \ocaml itself to \plan, but noone did.
 %
-Actually I use
-\goken\furl{https://github.com/aryx/goken9cc}
-(I submitted a separate work-in-progress paper to this workshop
-describing the motivations and features of Goken).
+Fortunately, \ocaml has two compilers: one producing optimized
+native code, called [[ocamlopt]], and one producing a portable
+{\em bytecode}, called [[ocamlc]], that must then be interpreted
+by a bytecode interpreter, called [[ocamlrun]].
+% a kind of VM, like nodejs, java, etc.
+%
+Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, but
+the bytecode interpreter is a small C program (12 000 LOC) with
+very few external dependencies.
+%
+I just had to add a few [[ifdef]]s, add a few functions using the \plan
+C library, and use the \plan C compiler to cross-compile this
+C code to produce an [[ocamlrun]] [[a.out]] binary that could run
+under \plan.
+%Actually I use
+%\goken\furl{https://github.com/aryx/goken9cc}
+%(I submitted a separate work-in-progress paper to this workshop
+%describing the motivations and features of Goken).
+%
+Thanks to this [[ocamlrun]] you can then run [[ocamlc]] itself (it's a pure
+bytecode program) to compile other programs.
+% more complicated, for orio need also to link C code, but
+% same idea of using plan9 C compiler to assist.
 
-% screenshot with orio, ocamlrun, oas, olk, occ, 
-% even ocat test.s
 
+This work is available at \url{https://github.com/aryx/ocaml-light}.
+I started from an old version of OCaml (1.07) because it had less
+% so many forks :)
+dependencies than recent versions, making the porting work less difficult.
+%
+This old version though is enough to compile \xix because the \xix code
+does not use any recent features of \ocaml.
+%recent, meaning from the last 20 years, hmmm 
 
-\end{verbatim}
-
-\section{C vs \ocaml}
+\section{C vs \ocaml discussion}
 
 \begin{verbatim}
 %LOC, not as big diff as one would claim.
@@ -240,21 +237,11 @@ describing the motivations and features of Goken).
 % no need optab.c, ocmp, ... just direct pattern matching on advanced
 % SHOW code diff C vs OCaml.
 
-
-
 % plan9 was rethinking and simplifying Unix. Xix is also rethinking
 % and simplifying Plan9. Remove more features. Less code!
 % even less code than plan9! STEPS project! So even easier 
 % to teach. Actually series of books explaining the code, ocaml editions
 % of C books in principia softwarica.
-
-
-
-
-
-
-
-
 
 \end{verbatim}
 

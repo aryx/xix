@@ -28,18 +28,21 @@ yoann.padioleau@gmail.com
 
 \begin{abstract}
 XiX is a work-in-progress project to port parts of \plan to \ocaml:
-its build system [[mk]], its shell [[rc]], its ARM and Mips toolchain [[[5v][acl]]],
-but also its windowing system [[rio]], and more.
+its build system [[mk]],
+its shell [[rc]],
+its ARM and Mips toolchains [[[5v][acl]]], but also
+its windowing system [[rio]],
+and more.
 %other: ed, lex/yacc, cat/ls/...
 \end{abstract}
 
 \section{Introduction}
-\xix, which stands for ``\xix is \xix''\footnote{\xix is the first project with a fully recursive acronym.},
+\xix, which stands for ``\xix is \xix''\footnote{\xix is the first project with
+a fully recursive acronym.},
 is a port of the C source code of major \plan programs to
 \ocaml\furl{https://ocaml.org},
 an industrial-strength functional programming language.
-%with an emphasis on expressiveness and safety.
-%alt: a functional programming language.
+%alt: ... with an emphasis on expressiveness and safety.
 %
 Table~\ref{tab:ports} presents the current state of the project.
 The code of \xix is available at \url{https://github.com/aryx/xix}.
@@ -50,8 +53,9 @@ The first question about this project that comes to mind is why?
 The main motivation for \xix comes actually from another project of
 mine called {\em \principia}\furl{https://github.com/aryx/principia-softwarica}
 (I submitted a separate paper to this workshop describing 
-\principia). In short, \principia is a series of books explaining the code
-of \plan programs essential to the programmer such as the linker,
+\principia).
+In short, \principia is a series of books explaining the code
+of \plan programs that are essential to the programmer such as the linker,
 assembler, build system, up to the windowing system.
 %
 One strategy to fully understand a program, in order to explain its
@@ -62,7 +66,7 @@ good programmers are lazy, to not implement certain features initially judged
 as accessory, and so to focus on the main parts of the program.
 %
 The process of discovering what are those essential parts already
-helps to understand the original code.
+helps in understanding the original code.
 %
 Moreover, very often the final ported program does not work
 at first because those features judged as accessory turned out to be essential,
@@ -76,20 +80,25 @@ most familiar with, and as it happens it is also my favourite.
 The port reached a point though where the \xix programs are actually 
 useful on their own, independently of \principia.
 %
-Indeed, first \ocaml programs are usually portable and most \xix
-programs are working without any extra effort on Linux, macOS, and Windows
+Indeed, first, \ocaml programs are usually portable and
+thanks to the \ocaml compiler targeting multiple architectures
+and operating systems
+most \xix programs are working without any extra effort
+on Linux, macOS, and Windows
 (plan9port\furl{https://9fans.github.io/plan9port/} also helps to
-run \plan programs on Linux and macOS).
+run \plan programs on Linux and macOS),
+on amd64 or arm64 architectures.
 %
-Then
-
-\begin{verbatim}
-can experiment more easily, and add more features. Ex??
-
-
-
-
-\end{verbatim}
+Second, the \ocaml code being smaller (see Table~\ref{tab:ports}),
+and arguably clearer, I found it easier to modify and I now usually
+experiment with new features 
+(e.g., adding support for an [[MKSHELL]] environment variable in [[mk]])
+first in \ocaml, and only later port the feature to the original C code.
+%
+% mk + rc embedded, without extra fork, just reset state of
+% interpreter, easier on functional programs with usually less
+% globals
+%
 % then long term easier to explain its code so candidate for \principia II.
 
 \begin{table}[htbp]
@@ -134,23 +143,77 @@ Utilities         & [[cat pwd wc]]  & 173   & [[ocat opwd owc]]  & 220 \\
 
 \section{Current state}
 
-\begin{verbatim}
-omk/orc good, can actually use the pair to drive
-the build process of xix itself.
+The port of [[mk]] to \ocaml, called [[omk]] (for [[o]]caml [[mk]]),
+is almost complete with only a few advanced features missing.
+% ex missing ?
+The same is true for the shell [[orc]] and editor [[oed]].
+%
+In fact, the pair [[omk/orc]] is mature enough that it can now be used
+to drive the building process of \xix itself, dogfooding those tools.
 
-toolchain enough for helloprintf.c for arm, mips, riscv
-targeting both Plan9 and Linux!
 
-ed is almost complete, just few advanced features missing.
+The ARM and Mips assembler [[oas]], linker [[olk]], and C compiler [[occ]]
+are far from complete. 
+%
+However, they can already be used to
+compile and assemble a toy [[helloprintf.c]] program, and to produce
+[[a.out]] and [[ELF]] binaries that can run respectively
+on \plan and Linux.
+% also riscv
 
-then windowing system rio!
-with graphics and comm! it works! see screenshot
-this can actually only work under plan9. need plan9 kernel.
 
-actually some rudimentary kernel.
+Finally, the port of [[rio]], [[libdraw]], and [[lib9p]]
+reached the point where one can substitute [[rio]] by [[orio]]
+in \plan and not notice any difference.
+% SCREENSHOT!
+In fact, [[orio]] is the only program in the list that requires
+\plan to run as it relies on services and namespaces only
+provided by the \plan kernel.
+%actually I also ported a rudimentary kernel.
 % but also utilities (ed, hoc? grep? sed? awk?), 
 
+\section{\ocaml in \plan}
 
+\begin{verbatim}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fork of \ocaml 1.07 available at \url{https://github.com/aryx/ocaml-light}.
+Simpler to port, less dependencies.
+% so many forks :)
+Enough to compile \xix because \xix code does not use
+recent features of \ocaml.
+%recent, meaning from the last 20 years, hmmm
+
+Just need byterun/, because ocaml compiler in OCaml
+and bytecode interpreter in C. Once interpreter ported, done, and
+C is easy to port. Just had to remove ifdefs, use plan9 libc, and
+add a few functions.
+%
+Actually I use
+\goken\furl{https://github.com/aryx/goken9cc}
+(I submitted a separate work-in-progress paper to this workshop
+describing the motivations and features of Goken).
+
+% screenshot with orio, ocamlrun, oas, olk, occ, 
+% even ocat test.s
 
 
 \end{verbatim}
@@ -231,32 +294,6 @@ actually some rudimentary kernel.
 %   bools, ...
 %   we learned stuff in 30 years.
 % - Future work
-
-\section{\ocaml in \plan}
-
-\begin{verbatim}
-Fork of \ocaml 1.07 available at \url{https://github.com/aryx/ocaml-light}.
-Simpler to port, less dependencies.
-% so many forks :)
-Enough to compile \xix because \xix code does not use
-recent features of \ocaml.
-%recent, meaning from the last 20 years, hmmm
-
-Just need byterun/, because ocaml compiler in OCaml
-and bytecode interpreter in C. Once interpreter ported, done, and
-C is easy to port. Just had to remove ifdefs, use plan9 libc, and
-add a few functions.
-%
-Actually I use
-\goken\furl{https://github.com/aryx/goken9cc}
-(I submitted a separate work-in-progress paper to this workshop
-describing the motivations and features of Goken).
-
-% screenshot with orio, ocamlrun, oas, olk, occ, 
-% even ocat test.s
-
-
-\end{verbatim}
 
 \section{Conclusion}
 

@@ -1,6 +1,6 @@
 \documentclass{article}
 %CONFIG:
-%\usepackage{fullpage}
+\usepackage{fullpage}
 
 \input{../../principia/docs/latex/Packages}
 \usepackage{caption}
@@ -183,9 +183,17 @@ Note that [[orio]] is the only program in the list that requires
 provided by the \plan kernel.
 %actually I also ported a rudimentary kernel.
 % but also utilities (ed, hoc? grep? sed? awk?), 
-
+See Figure~\ref{fig:orio}.
 
 % screenshot with orio, ocamlrun, oas, olk, occ, even ocat test.s :)
+
+\begin{figure*}
+\centering
+\includegraphics[%angle=90, 
+  height=8cm]{plan9}
+\caption{[[orio]] in action.}
+\label{fig:orio}
+\end{figure*}
 
 \section{\ocaml in \plan}
 

@@ -8,6 +8,7 @@ pdf:V: $DOC.pdf
 
 $DOC.pdf: $DOC.tex
    pdflatex $DOC.tex
+   pdflatex $DOC.tex
 
 #   bibtex $DOC
 #   pdflatex $DOC.tex

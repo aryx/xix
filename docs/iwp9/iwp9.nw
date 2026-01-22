@@ -51,32 +51,37 @@ The main motivation for \xix comes actually from another project of
 mine called {\em \principia}\furl{https://github.com/aryx/principia-softwarica}
 (I submitted a separate paper to this workshop describing 
 \principia). In short, \principia is a series of books explaining the code
-of the \plan programs essential to the programmer such as the linker,
+of \plan programs essential to the programmer such as the linker,
 assembler, build system, up to the windowing system.
 %
 One strategy to fully understand a program, in order to explain its
 code in a book, is suprisingly to try to port it to another language.
 %
-Indeed, during the porting of a program, is is tempting, because great programmers
-are lazy, to not implement certain features initially judged 
+Indeed, during the porting of a program, it is tempting, because
+good programmers are lazy, to not implement certain features initially judged 
 as accessory, and so to focus on the main parts of the program.
 %
 This already helps to understand better the original code.
 %
 Moreover, very often the final ported program does not work
 initially because those accessory features turned out to be essential,
-which again helps to better understand the original and hidden
+which again helps to better understand the original code and its hidden
 subtelities.
 
+
 I chose OCaml mainly because it is the programming language I am the
-most familiar with, and as it happens it is also my favourite language.
+most familiar with, and as it happens it is also my favourite.
 %
 The port reached a point though where the \xix programs are actually 
 useful on their own, independently of \principia.
 %
-Indeed, ... unix, macos, windows (ok plan9port). and then start
-to have new features (rc embedded in mk, more??)
-
+Indeed, first \ocaml programs are usually portable and most \xix
+programs are working without any extra effort on Linux, macOS, and Windows
+(plan9port\furl{https://9fans.github.io/plan9port/} also helps to
+run \plan programs on Linux and macOS).
+%
+Then can experiment more easily, and add more features. Ex??
+% then long term easier to explain its code so candidate for \principia II.
 
 \begin{table}[htbp]
 \centering
@@ -85,21 +90,25 @@ to have new features (rc embedded in mk, more??)
 \textbf{Category} & \textbf{\plan Program(s)} & \textbf{LOC} & \textbf{\xix Program} & \textbf{LOC} \\
 \hline
 
-Build system & [[mk]] & 4350 & [[omk]] & 0 \\
-Shell & [[rc]] & 6500 & [[orc]] & 0 \\
-Assembler & [[5a va]] & 0 & [[oas]] & 0 \\
+% I used syncweb -loc to compute those numbers on principia and xix.
+% For multi-archs programs, I used syncweb -loc and then manually
+% added wc -l *.[chly] or wc -l *.ml* for the other archs code.
+
+Build system      & [[mk]]          & 4350  & [[omk]]            & 2240 \\
+Shell             & [[rc]]          & 6500  & [[orc]]            & 2190 \\
+Assembler         & [[5a va]]       & 3020  & [[oas]]            & 2190 \\
 % also ia, but better hide for now
-Linker & [[5l vl]] & 0 & [[olk]] & 0 \\
-C Compiler & [[5c vc]] & 0 & [[occ]] & 0 \\
+Linker            & [[5l vl]]       & 12980 & [[olk]]            & 2910 \\
+C Compiler        & [[5c vc libcc]]    & 28000 & [[occ]]            & 5310 \\
 % lex yacc? but not really plan9 prog in the first place and
 % the code does not come from a port really
-Editor & [[ed]] & 1600 & [[oed]] & 0 \\
-Graphics & [[libdraw]] & 0 & [[lib_odraw]] & 0 \\
-Communication & [[lib9p]] & 0 & [[lib_o9p]] & 0 \\
-Windowing system & [[rio]] & 8800 & [[orio]] & 0 \\
-Utilities & [[cat pwd wc]] & 0 & [[ocat opwd owc]] & 0 \\
+Editor            & [[ed]]          & 1600  & [[oed]]            & 1220 \\
+Graphics          & [[libdraw]]     & 7280  & [[lib_odraw]]      & 2940 \\
+Communication     & [[lib9p]]       & 2920     & [[lib_plan9]]   & 1080 \\
+Windowing system  & [[rio]]         & 5960  & [[orio]]           & 2820 \\
+Utilities         & [[cat pwd wc]]  & 173   & [[ocat opwd owc]]  & 220 \\
 \hline
-\textbf{Total: } & & 182550 & & 4690 \\
+\textbf{Total: } & & 72783 & & 23120 \\
 %origin: the total was computed by chatGPT by copy pasting table
 % and asking to compute total
 \hline
@@ -108,7 +117,7 @@ Utilities & [[cat pwd wc]] & 0 & [[ocat opwd owc]] & 0 \\
 \caption{%
 \plan and \xix Programs Statistics.\\
 {\footnotesize
-(\textbf{LOC} = lines of code)
+(\textbf{LOC} = lines of code, including code comments)
 }
 }
 \label{tab:ports}

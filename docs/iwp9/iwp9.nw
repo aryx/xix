@@ -158,7 +158,7 @@ The same is true for the shell [[orc]] and editor [[oed]].
 %
 In fact, the pair [[omk/orc]] is mature enough that it can now be used
 to drive the building process of \xix itself, dogfooding\footnote{
-The build of this \LaTeX{} article was driven by [[omk]].
+The build of this \LaTeX{} article was also driven by [[omk]].
 }
 those tools.
 

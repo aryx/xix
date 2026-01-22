@@ -1,0 +1,17 @@
+DOC=iwp9
+SRC_ORIG=$DOC.nw
+
+SYNCWEB=syncweb $SYNCWEBFLAGS
+#SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang C
+
+pdf:V: $DOC.pdf
+
+$DOC.pdf: $DOC.tex
+   pdflatex $DOC.tex
+
+#   bibtex $DOC
+#   pdflatex $DOC.tex
+#   pdflatex $DOC.tex
+
+$DOC.tex:D: $SRC_ORIG
+	$SYNCWEB -to_tex $DOC.nw defs_and_uses.list

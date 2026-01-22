@@ -1,7 +1,21 @@
 \documentclass{article}
+%CONFIG:
+%\usepackage{fullpage}
+
+\input{../../principia/docs/latex/Packages}
+
+%alt: \input{../latex/Noweb}
+\usepackage{../../principia/docs/latex/noweb}
+ \noweboptions{footnotesizecode,nomargintag}
+ \def\nwendcode{\endtrivlist \endgroup}
+ \let\nwdocspar=\par
+\usepackage{../../principia/docs/latex/syncweb}
+
+\newif\iffinal\newif\ifverbose\newif\ifallcode
+\input{../../principia/docs/latex/Macros}
 
 \title{
-XiX: Plan 9 in OCaml
+XiX: \plan in \ocaml
 }
 \author{
 Yoann Padioleau\\
@@ -13,10 +27,86 @@ yoann.padioleau@gmail.com
 \maketitle
 
 \begin{abstract}
-XiX is a work-in-progress port of parts of Plan 9 to OCaml.
+XiX is a work-in-progress project to port parts of \plan to \ocaml:
+its build system [[mk]], its shell [[rc]], the \plan assemblers, linkers,
+and C compilers, but also its windowing system [[rio]], and more.
+%other: ed, lex, yacc, ls/cat/...
 \end{abstract}
 
 \section{Introduction}
+\xix, which stands for ``\xix is \xix''\footnote{\xix is the first project with a fully recursive acronym.},
+is a port of the C source code of major \plan programs to
+\ocaml\furl{https://ocaml.org},
+an industrial-strength functional programming language
+with an emphasis on expressiveness and safety.
+%alt:a functional programming language.
+%
+Table~\ref{tab:ports} presents the current state of the project.
+
+
+The first question about this project that comes to mind is why?
+%
+The main motivation for \xix comes actually from another project of
+mine called \principia (submitted to the \plan workshop in a separate
+paper). In short, \principia is a series of books explaining the code
+of \plan programs essential to the programmer such as the linker,
+assembler, build system, up to the windowing system.
+%
+One strategy to fully understand a program, in order to explain its
+code in a book, is to port it to another language (e.g., OCaml, the
+language I am the most familiar with).  
+%
+Indeed, ...
+
+
+The port reached a point where the \xix programs are actually 
+useful on their own, independently of \principia.
+%
+Indeed, ...
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{l l r l r}
+\hline
+\textbf{Category} & \textbf{\plan Program(s)} & \textbf{LOC} & \textbf{\xix Program} & \textbf{LOC} \\
+\hline
+
+Build system & [[mk]] & 4350 & [[omk]] & 0 \\
+Shell & [[rc]] & 6500 & [[orc]] & 0 \\
+Assembler & [[5a va]] & 0 & [[oas]] & 0 \\
+% also ia, but better hide for now
+Linker & [[5l vl]] & 0 & [[olk]] & 0 \\
+C Compiler & [[5c vc]] & 0 & [[occ]] & 0 \\
+% lex yacc? but not really plan9 prog in the first place and
+% the code does not come from a port really
+Editor & [[ed]] & 1600 & [[oed]] & 0 \\
+Graphics & [[libdraw]] & 0 & [[lib_odraw]] & 0 \\
+Communication & [[lib9p]] & 0 & [[lib_o9p]] & 0 \\
+Windowing system & [[rio]] & 8800 & [[orio]] & 0 \\
+Utilities & [[cat pwd wc]] & 0 & [[ocat opwd owc]] & 0 \\
+\hline
+\textbf{Total: } & & 182550 & & 4690 \\
+%origin: the total was computed by chatGPT by copy pasting table
+% and asking to compute total
+\hline
+
+\end{tabular}
+\caption{%
+\plan and \xix Programs Statistics.\\
+{\footnotesize
+(\textbf{LOC} = lines of code)
+}
+}
+\label{tab:ports}
+\end{table}
+
+\section{C vs \ocaml}
+
+%LOC, not as big diff as one would claim.
+% And not even totally fair.
+% So C with clever trick can be very expressive, see pattern
+% matching encoded via table, ocmp, etc.
+% BUT! LOE will be bigger!
 
 % XiX (which stands for Xix is Xix, first fully recursive), is a port of
 % parts of plan9 to OCaml. Right now mk, rc, toolchain (assembler, linker
@@ -85,6 +175,8 @@ XiX is a work-in-progress port of parts of Plan 9 to OCaml.
 %   bools, ...
 %   we learned stuff in 30 years.
 % - Future work
+
+\section{\ocaml in \plan}
 
 \section{Conclusion}
 

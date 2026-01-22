@@ -42,13 +42,15 @@ with an emphasis on expressiveness and safety.
 %alt:a functional programming language.
 %
 Table~\ref{tab:ports} presents the current state of the project.
+The code of \xix is available at \url{https://github.com/aryx/xix}.
 
 
 The first question about this project that comes to mind is why?
 %
 The main motivation for \xix comes actually from another project of
-mine called \principia (submitted to the \plan workshop in a separate
-paper). In short, \principia is a series of books explaining the code
+mine called {\em \principia}\furl{https://github.com/aryx/principia-softwarica}
+(I submitted a separate paper to this workshop describing 
+\principia). In short, \principia is a series of books explaining the code
 of \plan programs essential to the programmer such as the linker,
 assembler, build system, up to the windowing system.
 %
@@ -56,13 +58,15 @@ One strategy to fully understand a program, in order to explain its
 code in a book, is to port it to another language (e.g., OCaml, the
 language I am the most familiar with).  
 %
-Indeed, ...
+Indeed, ... force to test feature, remove, understand why needed.
 
 
-The port reached a point where the \xix programs are actually 
+The port reached a point though where the \xix programs are actually 
 useful on their own, independently of \principia.
 %
-Indeed, ...
+Indeed, ... unix, macos, windows (ok plan9port). and then start
+to have new features (rc embedded in mk, more??)
+
 
 \begin{table}[htbp]
 \centering
@@ -177,6 +181,24 @@ Utilities & [[cat pwd wc]] & 0 & [[ocat opwd owc]] & 0 \\
 % - Future work
 
 \section{\ocaml in \plan}
+
+Fork of \ocaml 1.07 available at \url{https://github.com/aryx/ocaml-light}.
+Simpler to port, less dependencies.
+% so many forks :)
+Enough to compile \xix because \xix code does not use
+recent features of \ocaml.
+%recent, meaning from the last 20 years, hmmm
+
+Just need byterun/, because ocaml compiler in OCaml
+and bytecode interpreter in C. Once interpreter ported, done, and
+C is easy to port. Just had to remove ifdefs, use plan9 libc, and
+add a few functions.
+%
+Actually I use
+\goken\furl{https://github.com/aryx/goken9cc}
+(I submitted a separate work-in-progress paper to this workshop
+describing the motivations and features of Goken).
+
 
 \section{Conclusion}
 

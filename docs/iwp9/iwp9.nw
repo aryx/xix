@@ -3,6 +3,11 @@
 %\usepackage{fullpage}
 
 \input{../../principia/docs/latex/Packages}
+\usepackage{caption}
+\captionsetup{
+  justification=centering,
+  singlelinecheck=false
+}
 
 %alt: \input{../latex/Noweb}
 \usepackage{../../principia/docs/latex/noweb}
@@ -37,6 +42,7 @@ and more.
 \end{abstract}
 
 \section{Introduction}
+
 \xix, which stands for ``\xix is \xix''\footnote{\xix is the first project with
 a fully recursive acronym.},
 is a port of the C source code of major \plan programs to
@@ -45,6 +51,7 @@ an industrial-strength functional programming language.
 %alt: ... with an emphasis on expressiveness and safety.
 %
 Table~\ref{tab:ports} presents the current state of the project.
+%
 The code of \xix is available at \url{https://github.com/aryx/xix}.
 
 
@@ -52,8 +59,8 @@ The first question about this project that comes to mind is why?
 %
 The main motivation for \xix comes actually from another project of
 mine called {\em \principia}\furl{https://github.com/aryx/principia-softwarica}
-(I submitted a separate paper to this workshop describing 
-\principia).
+(I submitted a separate paper to this workshop describing \principia).
+%
 In short, \principia is a series of books explaining the code
 of \plan programs that are essential to the programmer such as the linker,
 assembler, build system, up to the windowing system.
@@ -74,8 +81,9 @@ which again helps to better understand the original code and its hidden
 subtelities.
 
 
-I chose OCaml mainly because it is the programming language I am the
+I chose \ocaml mainly because it is the programming language I am the
 most familiar with, and as it happens it is also my favourite.
+% cite semgrep, pfff, coccinelle?
 %
 The port reached a point though where the \xix programs are actually 
 useful on their own, independently of \principia.
@@ -87,7 +95,7 @@ most \xix programs are working without any extra effort
 on Linux, macOS, and Windows
 (plan9port\furl{https://9fans.github.io/plan9port/} also helps to
 run \plan programs on Linux and macOS),
-on amd64 or arm64 architectures.
+on amd64 and arm64 architectures.
 %
 Second, the \ocaml code being smaller (see Table~\ref{tab:ports}),
 and arguably clearer, I found it easier to modify and I now usually
@@ -149,7 +157,10 @@ is almost complete with only a few advanced features missing.
 The same is true for the shell [[orc]] and editor [[oed]].
 %
 In fact, the pair [[omk/orc]] is mature enough that it can now be used
-to drive the building process of \xix itself, dogfooding those tools.
+to drive the building process of \xix itself, dogfooding\footnote{
+The build of this \LaTeX{} article was driven by [[omk]].
+}
+those tools.
 
 
 The ARM and Mips assembler [[oas]], linker [[olk]], and C compiler [[occ]]
@@ -168,7 +179,7 @@ in \plan and not notice any difference.
 % orio use thread lib of ocaml, and funny story leroy added first
 % thread C library to Linux for OCaml long time ago.
 Note that [[orio]] is the only program in the list that requires
-\plan to run as it relies on services and namespaces only
+\plan to run as it relies on features such as namespaces only
 provided by the \plan kernel.
 %actually I also ported a rudimentary kernel.
 % but also utilities (ed, hoc? grep? sed? awk?), 
@@ -192,7 +203,7 @@ the bytecode interpreter is a small C program (12 000 LOC) with
 very few external dependencies.
 %
 I just had to add a few [[ifdef]]s, add a few functions using the \plan
-C library, and use the \plan C compiler to cross-compile this
+C library, and finally use the \plan C compiler to cross-compile this
 C code to produce an [[ocamlrun]] [[a.out]] binary that could run
 under \plan.
 %Actually I use
@@ -207,35 +218,66 @@ bytecode program) to compile other programs.
 
 
 This work is available at \url{https://github.com/aryx/ocaml-light}.
-I started from an old version of OCaml (1.07) because it had less
+I started from an old version of \ocaml (1.07) because it had less
 % so many forks :)
 dependencies than recent versions, making the porting work less difficult.
 %
-This old version though is enough to compile \xix because the \xix code
+This old version though is good enough to compile \xix because the \xix code
 does not use any recent features of \ocaml.
 %recent, meaning from the last 20 years, hmmm 
 
 \section{C vs \ocaml discussion}
 
-\begin{verbatim}
-%LOC, not as big diff as one would claim.
-% And not even totally fair.
-% adv feature usually adds 10% to the LOC.
-% So C with clever trick can be very expressive, see pattern
-% matching encoded via table, ocmp, etc.
-% constantly suprised by C.
+The numbers in Table~\ref{tab:ports} seems to indicate that
+for the programs that have been almost fully ported 
+([[mk]], [[rc]], [[ed]], and [[rio]]),
+the ratio of LOC between C and \ocaml is around 2, meaning
+\ocaml is 2x more succint than C. 
+%
+However, the comparison is not totally fair because there
+are still advanced features in the C versions not ported
+yet to \ocaml, so the real ratio is probably closer to 1.5.
+
+
+This is far lower than what functional programmers zealots
+(including myself) would claim when comparing C to \ocaml.
+%
+In fact, I have been constantly surprised while reading and porting
+the code of those \plan programs by the succintness and ingeniosity of
+the C code.
+%
+For example, C lacks \ocaml algebraic data types (ADTs, similar
+to tagged unions), pattern-matching, parametric polymorphism, closures,
+garbage collection, and more.
+%
+Still, the code of the \plan linkers use
+simple enums to
+represent the opcodes and abstract syntax trees (ASTs) of assembled programs,
+enums and simple comparison functions to
+represent a hierarchy of operand classes, 
+a giant literal array containing enum constants
+associated with a function using a giant switch
+to represent cases for machine code generation.
+%
+All of those together allows to very succintely
+encode the final machine code generation phase of the linker.
+%
+The \ocaml code instead use ADTs and simple pattern matching
+to encode the same machine code generation, which looks
+more elegant and natural, but in the end the \ocaml code is not
+that much smaller than the C code.
+% no need optab.c, ocmp, ... just direct pattern matching on advanced
+% SHOW code diff C vs OCaml.
 % BUT! LOE will be bigger!
+
 
 % C is great but old. Rust, Ziglang new contenders.
 % Actually some r9 projects for Rust, and ziglang kinda new toolchain,
 % but OCaml has pros compared to Rust/Ziglang. For many programs, simpler
-% to not handle memory. Actually original code was not doing much memory
-% management. Simple mm. But even simpler now. 
+% to not handle memory. 
+% Actually original code was not doing much memory management. 
+% Simple mm. But even simpler now. 
 
-% Moreover OCaml has lots
-% of nice things like ADTs for more readable compilation in linker,
-% no need optab.c, ocmp, ... just direct pattern matching on advanced
-% SHOW code diff C vs OCaml.
 
 % plan9 was rethinking and simplifying Unix. Xix is also rethinking
 % and simplifying Plan9. Remove more features. Less code!
@@ -243,7 +285,6 @@ does not use any recent features of \ocaml.
 % to teach. Actually series of books explaining the code, ocaml editions
 % of C books in principia softwarica.
 
-\end{verbatim}
 
 %TOC:
 % - components:

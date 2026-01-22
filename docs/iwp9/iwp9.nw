@@ -39,7 +39,7 @@ is a port of the C source code of major \plan programs to
 \ocaml\furl{https://ocaml.org},
 an industrial-strength functional programming language
 with an emphasis on expressiveness and safety.
-%alt:a functional programming language.
+%alt: a functional programming language.
 %
 Table~\ref{tab:ports} presents the current state of the project.
 The code of \xix is available at \url{https://github.com/aryx/xix}.
@@ -51,16 +51,26 @@ The main motivation for \xix comes actually from another project of
 mine called {\em \principia}\furl{https://github.com/aryx/principia-softwarica}
 (I submitted a separate paper to this workshop describing 
 \principia). In short, \principia is a series of books explaining the code
-of \plan programs essential to the programmer such as the linker,
+of the \plan programs essential to the programmer such as the linker,
 assembler, build system, up to the windowing system.
 %
 One strategy to fully understand a program, in order to explain its
-code in a book, is to port it to another language (e.g., OCaml, the
-language I am the most familiar with).  
+code in a book, is suprisingly to try to port it to another language.
 %
-Indeed, ... force to test feature, remove, understand why needed.
+Indeed, during the porting of a program, is is tempting, because great programmers
+are lazy, to not implement certain features initially judged 
+as accessory, and so to focus on the main parts of the program.
+%
+This already helps to understand better the original code.
+%
+Moreover, very often the final ported program does not work
+initially because those accessory features turned out to be essential,
+which again helps to better understand the original and hidden
+subtelities.
 
-
+I chose OCaml mainly because it is the programming language I am the
+most familiar with, and as it happens it is also my favourite language.
+%
 The port reached a point though where the \xix programs are actually 
 useful on their own, independently of \principia.
 %
@@ -108,6 +118,7 @@ Utilities & [[cat pwd wc]] & 0 & [[ocat opwd owc]] & 0 \\
 
 %LOC, not as big diff as one would claim.
 % And not even totally fair.
+% adv feature usually adds 10% to the LOC.
 % So C with clever trick can be very expressive, see pattern
 % matching encoded via table, ocmp, etc.
 % BUT! LOE will be bigger!
@@ -199,6 +210,8 @@ Actually I use
 (I submitted a separate work-in-progress paper to this workshop
 describing the motivations and features of Goken).
 
+% screenshot with orio, ocamlrun, oas, olk, occ, 
+% even ocat test.s
 
 \section{Conclusion}
 

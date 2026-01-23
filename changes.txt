@@ -5,6 +5,7 @@
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script
   and add a new -r restricted mode (like in GNU ed)
+- new ogrep, just a small wrapper around lib_core/regexps really
 
 ** libcore
 - new Arg_.ml small wrapper around Arg to factorize code in xix programs

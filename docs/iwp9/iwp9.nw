@@ -48,6 +48,7 @@ a fully recursive acronym.},
 is a port of the C source code of major \plan programs to
 \ocaml\furl{https://ocaml.org},
 an industrial-strength functional programming language.
+%alt: statically typed
 %alt: ... with an emphasis on expressiveness and safety.
 %
 Table~\ref{tab:ports} presents the current state of the project.
@@ -102,10 +103,15 @@ and arguably clearer, I found it easier to modify and I now usually
 experiment with new features 
 (e.g., adding support for an [[MKSHELL]] environment variable in [[mk]])
 first in \ocaml, and only later port the feature to the original C code.
-%
+%said-later:
 % mk + rc embedded, without extra fork, just reset state of
 % interpreter, easier on functional programs with usually less
 % globals
+%
+Finally, \ocaml programs are ususally safer as segmentation faults
+or buffer overflows can not happen for example.
+%well actually it can happen, but usually in C code linked with OCaml code
+%said-later: more details on C vs OCaml
 %
 % then long term easier to explain its code so candidate for \principia II.
 
@@ -154,7 +160,7 @@ Utilities         & [[cat pwd wc]]  & 173   & [[ocat opwd owc]]  & 220 \\
 
 The port of [[mk]] to \ocaml, called [[omk]] (for [[o]]caml [[mk]]),
 is almost complete with only a few advanced features missing.
-% ex missing ?
+% give ex of missing feature ?
 The same is true for the shell [[orc]] and editor [[oed]].
 %
 In fact, the pair [[omk/orc]] is mature enough that it can now be used
@@ -171,27 +177,33 @@ However, they can already be used to
 compile and assemble a toy [[helloprintf.c]] program, and to produce
 [[a.out]] and [[ELF]] binaries that can run respectively
 on \plan and Linux.
-% also riscv
+% also RISCV
 
 
 Finally, the port of [[rio]], [[libdraw]], and [[lib9p]]
 reached the point where one can substitute [[rio]] by [[orio]]
-in \plan and not notice any difference.
-% orio use thread lib of ocaml, and funny story leroy added first
+in \plan and not notice any difference,
+like in Figure~\ref{fig:orio}, which illustrates also the use
+of a few other \xix programs.
+% screenshot with orio, ocamlrun, oas, olk, occ, even ocat test.s :)
+% omk, orc
+%
+% orio use thread lib of ocaml, and funny story Leroy added first
 % thread C library to Linux for OCaml long time ago.
 Note that [[orio]] is the only program in the list that requires
 \plan to run as it relies on features such as namespaces only
 provided by the \plan kernel.
 %actually I also ported a rudimentary kernel.
 % but also utilities (ed, hoc? grep? sed? awk?), 
-See Figure~\ref{fig:orio}.
 
-% screenshot with orio, ocamlrun, oas, olk, occ, even ocat test.s :)
+%alt:
+%Figure~\ref{fig:orio} illustrates the use of most of those programs
+%running under \plan, for real, including the windowing system [[orio]].
 
 \begin{figure*}
 \centering
 \includegraphics[%angle=90, 
-  height=8cm]{plan9}
+  height=7.5cm]{plan9}
 \caption{[[orio]] in action.}
 \label{fig:orio}
 \end{figure*}
@@ -201,10 +213,12 @@ See Figure~\ref{fig:orio}.
 To be able to run [[orio]], an \ocaml program, in \plan requires
 first to port \ocaml itself to \plan, but noone did.
 %
-Fortunately, \ocaml has two compilers: one producing optimized
-native code, called [[ocamlopt]], and one producing a portable
-{\em bytecode}, called [[ocamlc]], that must then be interpreted
-by a bytecode interpreter, called [[ocamlrun]].
+Fortunately, \ocaml has two compilers: 
+one producing optimized {\em native code}, called [[ocamlopt]], and
+one producing a portable {\em bytecode} for a {\em virtual machine}, called [[ocamlc]];
+% instead of object code for a real machine
+this bytecode must then be interpreted by a bytecode interpreter,
+called [[ocamlrun]].
 % a kind of VM, like nodejs, java, etc.
 %
 Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, but
@@ -213,7 +227,7 @@ very few external dependencies.
 %
 I just had to add a few [[ifdef]]s, add a few functions calling the \plan
 C library, and finally use the \plan C compiler to cross-compile this
-C code to produce an [[ocamlrun]] [[a.out]] binary that could run
+C code to produce an [[ocamlrun]] ([[a.out]]) binary that could run
 under \plan.
 %Actually I use
 %\goken\furl{https://github.com/aryx/goken9cc}
@@ -235,7 +249,36 @@ This old version though is good enough to compile \xix because the \xix code
 does not use any recent features of \ocaml.
 %recent, meaning from the last 20 years, hmmm 
 
-\section{C vs \ocaml discussion}
+\section{C vs \ocaml}
+
+C is a great programming language, and a real improvement over assembly.
+It is arguably the best language to implement system programs\footnote{
+Maybe nowadays Rust and Zig are also strong candidates.
+} 
+such as kernels, virtual machines, just-in-time compilers, etc.
+%
+C can also be used as a ``portable assembler''; 
+% \cite?
+this makes C a great language to implement efficiently core libraries,
+which can even be used from programs written in different programming languages.
+%
+For many applications though, especially applications
+without strong constraints on memory, speed, or latency, it can
+be far more productive for the programmer to use higher-level
+languages. 
+%
+Programming in C is indeed error-prone, with
+recurring bugs such as buffer overflows, segmentation faults,
+or security holes.
+% in fact, coreutils now in Rust, people use Zig, or Go
+%
+OCaml, a statically-typed functional language, is arguably more expressive
+and less error-prone than C;
+\l ultimate lang IMHO, even in 2015! actually early ML were in Bell Labs too
+it is almost impossible to
+have many of the bugs mentioned above while programming
+in OCaml.
+
 
 The numbers in Table~\ref{tab:ports} seems to indicate that
 for the programs that have been almost fully ported 
@@ -246,8 +289,7 @@ the ratio of LOC between C and \ocaml is around 2, meaning
 However, the comparison is not totally fair because there
 are still advanced features in the C versions not ported
 yet to \ocaml, so the real ratio is probably closer to 1.5.
-
-
+%
 This is far lower than what functional programmers zealots
 (including myself) would claim when comparing C to \ocaml.
 %
@@ -264,19 +306,21 @@ simple enums to
 represent the opcodes and abstract syntax trees (ASTs) of assembled programs,
 enums and simple comparison functions to
 represent a hierarchy of operand classes, 
-a giant literal array containing enum constants
-associated with a function using a giant switch
-to represent cases for machine code generation.
+a large literal array containing enum constants
+associated with a function using a simple switch
+to represent cases for machine-code generation.
 %
 All of those together allows to very succintely
-encode the final machine code generation phase of the linker.
+encode the final machine-code generation phase of the linker.
 %
 The \ocaml code instead uses ADTs and simple pattern matching
-to encode the same machine code generation, which looks
+to encode the same machine-code generation, which looks
 more elegant and natural, but in the end the \ocaml code is not
 that much smaller than the C code.
+%
 % no need optab.c, ocmp, ... just direct pattern matching on advanced
 % SHOW code diff C vs OCaml.
+Is is though arguably clearer to understand.
 % BUT! LOE will be bigger!
 
 
@@ -333,5 +377,15 @@ that much smaller than the C code.
 % - Future work
 
 \section{Future work}
+
+\begin{verbatim}
+Enjoy!
+2
+3
+4
+5
+6
+7
+\end{verbatim}
 
 \end{document}

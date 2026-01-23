@@ -125,6 +125,7 @@ Shell             & [[rc]]          & 6500  & [[orc]]            & 2190 \\
 Assembler         & [[5a va]]       & 3020  & [[oas]]            & 2190 \\
 % also ia, but better hide for now
 Linker            & [[5l vl]]       & 12980 & [[olk]]            & 2910 \\
+% also ar and nm here, and oar onm
 C Compiler        & [[5c vc libcc]]    & 28000 & [[occ]]            & 5310 \\
 % lex yacc? but not really plan9 prog in the first place and
 % the code does not come from a port really

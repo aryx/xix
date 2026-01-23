@@ -10,6 +10,8 @@ type substrings     (* Match informations *)
 type partial_result = Full | Partial | Mismatch 
 (* Compilation and execution of a regular expression *)
 val compile : t -> re
+
+(* may raise Not_found *)
 val exec :
   (*?pos:*)int ->    (* Default: 0 *)
   (*?len:*)int ->    (* Default: -1 (until end of string) *)
@@ -22,6 +24,8 @@ val exec_partial :
   (*?pos:*)int ->    (* Default: 0 *)
   (*?len:*)int ->    (* Default: -1 (until end of string) *)
   re -> string -> partial_result
+
+(* TODO: exec_opt *)
 
 (* Substring extraction *)
 val get : substrings -> int -> string

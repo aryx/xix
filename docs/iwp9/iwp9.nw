@@ -210,7 +210,7 @@ Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, but
 the bytecode interpreter is a small C program (12 000 LOC) with
 very few external dependencies.
 %
-I just had to add a few [[ifdef]]s, add a few functions using the \plan
+I just had to add a few [[ifdef]]s, add a few functions calling the \plan
 C library, and finally use the \plan C compiler to cross-compile this
 C code to produce an [[ocamlrun]] [[a.out]] binary that could run
 under \plan.
@@ -270,7 +270,7 @@ to represent cases for machine code generation.
 All of those together allows to very succintely
 encode the final machine code generation phase of the linker.
 %
-The \ocaml code instead use ADTs and simple pattern matching
+The \ocaml code instead uses ADTs and simple pattern matching
 to encode the same machine code generation, which looks
 more elegant and natural, but in the end the \ocaml code is not
 that much smaller than the C code.
@@ -331,6 +331,6 @@ that much smaller than the C code.
 %   we learned stuff in 30 years.
 % - Future work
 
-\section{Conclusion}
+\section{Future work}
 
 \end{document}

@@ -31,6 +31,7 @@ type conf = {
 (* Main algorithm *)
 (*****************************************************************************)
 
+(* alt: call oed (core functions or program itself) *)
 let grep (caps : < Cap.stdout; ..>) (conf : conf) (re_str : string)
      (chan : Chan.i) : unit =
   Logs.info (fun m -> m "processing: %s with regexp |%s|" 

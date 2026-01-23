@@ -15,10 +15,11 @@ module T = Token
 (*****************************************************************************)
 (* Hack for deriving show *)
 (*****************************************************************************)
-module Lexing_ = struct
+module Lexing = struct
     type lexbuf = Lexing.lexbuf
     let pp_lexbuf fmt _lexbuf =
       Format.fprintf fmt "<lexbuf>"
+    let from_channel = Lexing.from_channel
 end
 
 (*****************************************************************************)
@@ -26,11 +27,11 @@ end
 (*****************************************************************************)
 (*s: type [[Parser.state]] *)
 type state = {
-  stdin: Lexing_.lexbuf;
+  stdin: Lexing.lexbuf;
   mutable lookahead : Token.t option;
   (*s: [[Parser.state]] other fields *)
   (* for inserting "virtual" commands to process before stdin *)
-  mutable globp: Lexing_.lexbuf option;
+  mutable globp: Lexing.lexbuf option;
   (*e: [[Parser.state]] other fields *)
 }
 (*e: type [[Parser.state]] *)

@@ -200,6 +200,12 @@ provided by the \plan kernel.
 %Figure~\ref{fig:orio} illustrates the use of most of those programs
 %running under \plan, for real, including the windowing system [[orio]].
 
+% could also talk about o9! preliminary, enough to get hello
+% link ocamlrun C code with libmemdraw, plan9 libc pool.c, etc.
+% and bcm/ C starting code.
+% ocaml on bare metal, and port main data structures (Proc, Cpu, ...) and main
+% algo (schedule, sysbrk, sysfork, ...) but not connected.
+
 \begin{figure*}
 \centering
 \includegraphics[%angle=90, 

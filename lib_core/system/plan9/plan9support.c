@@ -1,3 +1,5 @@
+
+// mlvalues.h includes config.h which now includes u.h and libc.h for plan9
 #include <mlvalues.h>
 #include <alloc.h>
 #include <callback.h>
@@ -5,8 +7,6 @@
 #include <fail.h>
 
 #include "plan9support.h"
-
-#include <lib9.h>
 
 // mostly a copy paste of otherlibs/unix/unixsupport.c adapted for plan9
 

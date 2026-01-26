@@ -1,6 +1,8 @@
 
+#ifndef OS_PLAN9
 // from syscall.h
 #define	ERRMAX	128
+#endif
 
 #define Nothing ((value) 0)
 

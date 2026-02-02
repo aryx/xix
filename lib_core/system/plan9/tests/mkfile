@@ -1,46 +1,28 @@
 # -*- sh -*-
-
 TOP=../../../..
-#TODO: hardcoded for now
+
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/system/plan9
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/system/plan9/lib.cma
+SYSLIBS=unix.cma
+
+PTOP=$TOP/principia
 objtype=386
+CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
+OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
+#-cclib $CAMLLIB/libthreads.a
+CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/main.8 -cclib $CAMLLIB/libplan9.a
 
-#############################################################################
-# OCaml-light Compilers
-#############################################################################
 
-#TODO: ugly, hard-coded path
-OCAML=/home/pad/ocaml-light
-#OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
-OCAMLC=ocamlc
-OCAMLDEP=ocamldep
-
-#############################################################################
-# Principia libs
-#############################################################################
-PRINCIPIA=$TOP/principia
-
-#############################################################################
-# Config
-#############################################################################
-
-OCAMLINCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/system/plan9
-
-OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
-
-OCAMLLDFLAGS=-thread -custom -g -I $PRINCIPIA/ROOT/$objtype/lib/ocaml
-
+#OCAMLCFLAGS=$OCAMLINCLUDES -thread -g
+#OCAMLLDFLAGS=-thread -custom -g -I $PRINCIPIA/ROOT/$objtype/lib/ocaml
 # for the linker
 #CAMLLIB=/usr/local/lib/ocaml
-CAMLLIB=$PRINCIPIA/ROOT/usr/local/lib/ocaml
-
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/system/plan9/lib.cma
-
-SYSLIBS=unix.cma threads.cma
-CCLIBS= \
-        -cclib $TOP/lib_core/system/plan9/libplan9.a\
-        -cclib $PRINCIPIA/ROOT/386/lib/ocaml/libunix.a\
-        -cclib $PRINCIPIA/ROOT/386/lib/ocaml/libthreads.a\
-        -cclib $OCAML/byterun/main.8
+#CAMLLIB=$PRINCIPIA/ROOT/usr/local/lib/ocaml
+#CCLIBS= \
+#        -cclib $TOP/lib_core/system/plan9/libplan9.a\
+#        -cclib $PRINCIPIA/ROOT/386/lib/ocaml/libunix.a\
+#        -cclib $PRINCIPIA/ROOT/386/lib/ocaml/libthreads.a\
+#        -cclib $OCAML/byterun/main.8
 
 #############################################################################
 # Toplevel targets
@@ -50,11 +32,11 @@ PROGS=test_bind test_mount
 
 all:V: $PROGS
 
-test_bind: $LIBS test_bind.cmo
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
+test_bind: $LIBS test_bind.ml
+	$OCAMLC -custom -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
-test_mount: $LIBS test_mount.cmo
-	$OCAMLC  -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
+test_mount: $LIBS test_mount.ml
+	$OCAMLC -custom -verbose $OCAMLLDFLAGS -o $target $SYSLIBS $prereq $CCLIBS
 
 clean nuke:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS

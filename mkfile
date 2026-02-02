@@ -6,8 +6,6 @@ TOP=.
 MK=omk
 
 # STDLIB is defined or not (usually not) in mkconfig
-
-#TODO: does not work yet with ocaml-light: vcs
 DIRS=\
   $STDLIB lib_core/commons lib_core/regexps \
   builder shell\
@@ -16,8 +14,14 @@ DIRS=\
   assembler/objects assembler\
   linker/executables linker/libraries linker\
   compiler\
-  utilities/files\
-  lib_core/system/plan9\
+  utilities/files
+
+#TODO: does not work yet with ocaml-light: vcs
+
+# this does not work anymore with OCaml5 (no ThreadUnix) and
+# while it may compile for Unix, it can only work when run on Plan9
+DIRS_PLAN9=\
+  lib_core/system/plan9 \
   lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui \
   windows \
   kernel/core kernel/concurrency_ kernel/base kernel/concurrency \
@@ -43,9 +47,17 @@ depend:V: depend.directories
 
 # alternate style to the %.directories trick; even simpler
 clean nuke:V:
-	for(i in $DIRS $TESTDIRS) @{
+	for(i in $DIRS $DIRS_PLAN9 $TESTDIRS) @{
 		cd $i
 		$MK $MKFLAGS $target
+	}
+
+# those targets require to have run 'mk all' first
+plan9.%:V:
+	for(i in $DIRS_PLAN9) @{
+		echo $i/
+		cd $i
+		$MK $MKFLAGS $stem
 	}
 
 # too many dupes for now (e.g., Ast.ml in mutliple dirs)

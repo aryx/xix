@@ -27,9 +27,12 @@ ENV MKSHELL="/usr/bin/rc"
 RUN cp mkfiles/mkconfig.light mkconfig
 RUN omk depend
 RUN omk all
-
 #TODO: disabled for now, does not build on arm64
 #RUN mk opt.light
+
+# just check it compiles; it will not run under Unix but it compiles
+RUN omk plan9.depend
+RUN omk plan9.all
 
 # Basic test
 RUN ./builder/omk -help

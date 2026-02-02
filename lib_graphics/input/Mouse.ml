@@ -5,7 +5,7 @@ open Regexp.Operators
 open Point
 
 module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
+module Unix2 = ThreadUnix
 
 module C = Cursor
 module M = Draw_marshal

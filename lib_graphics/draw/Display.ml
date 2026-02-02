@@ -6,7 +6,7 @@ open Point
 open Rectangle
 
 module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
+module Unix2 = ThreadUnix
 
 module M = Draw_marshal
 

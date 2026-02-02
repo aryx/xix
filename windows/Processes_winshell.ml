@@ -4,7 +4,7 @@ open Common
 open Fpath_.Operators
 
 module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
+module Unix2 = ThreadUnix
 
 (*s: function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]] *)
 let run_cmd_in_window_in_child_of_fork

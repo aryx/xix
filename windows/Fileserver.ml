@@ -2,7 +2,7 @@
 open Common
 
 module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
+module Unix2 = ThreadUnix
 
 (*****************************************************************************)
 (* Prelude *)

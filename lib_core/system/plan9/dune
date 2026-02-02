@@ -7,4 +7,11 @@
     xix_commons
   )
  (preprocess (pps ppx_deriving.show))
+ (foreign_stubs
+    (language c)
+    (names bind errstr mount plan9support)
+    (flags
+     (:standard
+       ;(:when (os plan9) -DOS_PLAN9)
+     )))
 )

@@ -1,5 +1,6 @@
 (* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
+open Fpath_.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -94,7 +95,7 @@ let _ = Callback.register_exception "Plan9.Plan9_error"
 (* Conversions and builders *)
 (*****************************************************************************)
 
-let _mk_dir_entry name qid perm = 
+let mk_dir_entry name qid perm = 
   { name = name; qid = qid; mode = perm;
     length = 0;
     atime = 0; mtime = 0;
@@ -142,12 +143,10 @@ let int_of_perm_property (perm : perm_property) : int =
 (* FFI *)
 (*****************************************************************************)
 
-(* TODO
 external plan9_bind: string -> string -> int -> int = 
   "plan9_bind"
 external plan9_mount: Unix.file_descr -> int -> string -> int -> string -> int =
   "plan9_mount"
-*)
 (* string must not be more than errmax, and you should set the first
  * char to '\000' if you want to reset the error string in the kernel
  * for this process.
@@ -157,20 +156,22 @@ external errstr: string -> int -> unit =
   "plan9_errstr"
 *)
 
-(* TODO: use instead the external above *)
+(* alt: use instead the external above *)
+(*
 let plan9_bind _ _ _ =
   failwith "TODO: plan9_bind external"
 let plan9_mount _ _ _ _ _ =
   failwith "TODO: plan9_mount external"
+*)
 
 (* less: flags? and a namespace_flags_to_int that fold lor? *)
 let bind (caps : < Cap.bind; .. >)
  (src : Fpath.t) (dst : Fpath.t) (flag : namespace_flag) : unit =
   let _ = caps#bind in
-  plan9_bind src dst (int_of_namespace_flag flag) |> ignore
+  plan9_bind !!src !!dst (int_of_namespace_flag flag) |> ignore
 
 let mount (caps : < Cap.mount; .. >)
   fd int1 (dst : Fpath.t) (flag : namespace_flag) (args : string) =
   let _ = caps#mount in
-  plan9_mount fd int1 dst (int_of_namespace_flag flag) args |> ignore
+  plan9_mount fd int1 !!dst (int_of_namespace_flag flag) args |> ignore
 

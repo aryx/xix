@@ -71,5 +71,8 @@ val read_9P_msg:
 val write_9P_msg: 
   message -> Unix.file_descr -> unit
 
+val pdir_entry: Plan9.dir_entry -> string
+
+
 (* to debug *)
 val str_of_msg: message -> string

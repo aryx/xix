@@ -65,3 +65,6 @@ val mount:
   < Cap.mount; .. > ->
   Unix.file_descr -> int (* ?? *) -> Fpath.t (* dst *) -> namespace_flag ->
   string (* args *) -> unit
+
+
+val mk_dir_entry: string -> qid -> perm_int * dir_entry_mode -> dir_entry

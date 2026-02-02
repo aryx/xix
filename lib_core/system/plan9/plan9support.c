@@ -1,4 +1,6 @@
 
+#ifdef OS_PLAN9_APE
+
 // mlvalues.h includes config.h which now includes u.h and libc.h for plan9
 #include <mlvalues.h>
 #include <alloc.h>
@@ -40,3 +42,5 @@ void p9error(char *cmdname)
   errstr(buf, ERRMAX);
   plan9_error(cmdname, copy_string(buf));
 }
+
+#endif

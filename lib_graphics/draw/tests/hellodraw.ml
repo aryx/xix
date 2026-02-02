@@ -3,7 +3,7 @@ open Common
 let main (caps : < Cap.draw; .. >) =
   let display : Display.t = Draw.init caps "Hello Draw" in
   Display.debug display;
-  let view : Image.t = display.image in
+  let view : Display.image (* Image.t *) = display.image in
   let color : Image.t = 
     Image.alloc display Rectangle.r_1x1 Channel.rgb24 true (* repl *)
       Color.magenta

@@ -7,7 +7,8 @@ MK=omk
 
 # STDLIB is defined or not (usually not) in mkconfig
 
-DIRS0=\
+#TODO: does not work yet with ocaml-light: vcs
+DIRS=\
   $STDLIB lib_core/commons lib_core/regexps \
   builder shell\
   lib_parsing generators/lex generators/yacc\
@@ -21,11 +22,6 @@ DIRS0=\
   windows \
   kernel/core kernel/concurrency_ kernel/base kernel/concurrency \
   kernel/memory kernel/processes kernel/scheduler kernel/time
-
-# does not work yet with ocaml-light
-DIRS1=vcs
-
-DIRS=$DIRS0 #$DIRS1
 
 #TODO: rename to TESTDIRS, reduce to just tests/ and in tests/ recurse
 TESTDIRS1=\

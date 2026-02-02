@@ -1,18 +1,18 @@
+# -*- sh -*-
 TOP=../../..
 
-INCLUDES=-I $TOP/lib_core/commons2 \
+INCLUDES=-I $TOP/lib_core/commons \
   -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
+ $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma
+SYSLIBS=unix.cma
 
-LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
- $TOP/lib_graphics/draw/lib.cma
-
-SYSLIBS=unix.cma threads.cma
-CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
-        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
-        -cclib /home/pad/github/fork-ocaml/byterun/main.8
-
-<$TOP/mkconfig2
-</$objtype/mkfile
+PTOP=$TOP/principia
+objtype=386
+#alt:</$TOP/mkconfig
+CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
+OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
+CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/main.8
 
 #############################################################################
 # Toplevel targets
@@ -23,11 +23,11 @@ PROGS=hellodraw test_font
 
 all:V: $PROGS
 
-hellodraw: $LIBS hellodraw.cmo
-	$OCAMLC  -verbose $LINKFLAGS -o $target $SYSLIBS $prereq $CCLIBS
+hellodraw: $LIBS hellodraw.ml
+	$OCAMLC  -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
 
-test_font: $LIBS test_font.cmo
-	$OCAMLC  -verbose $LINKFLAGS -o $target $SYSLIBS $prereq $CCLIBS
+test_font: $LIBS test_font.ml
+	$OCAMLC  -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
 
 # need to unset CAMLLIB above to be able to compile this program
 gen_font_default: gen_font_default.ml ../font_default.ml

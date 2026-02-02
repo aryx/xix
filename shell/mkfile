@@ -18,7 +18,7 @@ SRC=  Flags.ml Globals.ml \
 SYSLIBS=unix.cma
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma
 
-PROG=rc
+PROG=orc
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mkprog

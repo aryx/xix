@@ -3,9 +3,9 @@ open Common
 module D = Display
 module I = Display (* image type is in display.ml *)
 
-let main () =
+let main (caps : < Cap.draw; .. >) =
 
-  let display = Draw.init "Hello Draw" in
+  let display = Draw.init caps "Hello Draw" in
   let view = display.D.image in
 
   Display.debug display;
@@ -25,5 +25,7 @@ let main () =
   Display.flush display;
   while true do () done
 
-let _ = 
-  main ()
+
+let _ =
+   Cap.main (fun caps -> main caps)
+

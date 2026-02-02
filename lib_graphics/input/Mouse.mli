@@ -42,5 +42,3 @@ val mk: Point.t -> button -> state
 
 (* helpers *)
 val int_of_buttons: buttons -> int
-
-

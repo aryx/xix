@@ -3,7 +3,7 @@ open Common
 module I = Display
 
 type event =
-  | Mouse of Mouse.t
+  | Mouse of Mouse.state
   | Key of Keyboard.key
   (* less: Resize *)
 
@@ -15,8 +15,8 @@ let redraw display view pos bgcolor =
   Display.flush display
   
 
-let thread_main () =
-  let display = Draw.init "Hello Rio" in
+let thread_main (caps : < Cap.draw; ..>)  =
+  let display = Draw.init caps "Hello Rio" in
   (* less: getwindow? *)
   let view = display.I.image in
 
@@ -43,7 +43,7 @@ let thread_main () =
     | Key c ->
       if c = 'q'
       then exit 0
-      else pr (spf "%c" c)
+      else print_string (spf "%c\n" c)
     (* less: 
      * | Resize -> view := getwindow display
      *)
@@ -52,4 +52,4 @@ let thread_main () =
   done
 
 let _ =
-  thread_main ()
+  Cap.main (fun caps -> thread_main caps)

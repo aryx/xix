@@ -1,3 +1,28 @@
+# -*- sh -*-
+TOP=../../..
 
-hellodraw2: hellodraw2.cmo mkfile
-	$OCAMLC -verbose $OCAMLLDFLAGS -thread -custom -o $target unix.cma threads.cma $LIBS hellorio.cmo -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a -cclib /home/pad/github/fork-ocaml/byterun/main.8
+INCLUDES=-I $TOP/lib_core/commons \
+  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
+  -I $TOP/lib_graphics/input
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
+ $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
+ $TOP/lib_graphics/input/lib.cma
+SYSLIBS=unix.cma threads.cma
+
+PTOP=$TOP/principia
+objtype=386
+#alt:</$TOP/mkconfig
+CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
+OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
+CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8
+
+PROGS=hellodraw2
+
+all:V: $PROGS
+
+
+hellodraw2: $LIBS hellodraw2.ml
+	$OCAMLC -thread  -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
+
+clean:V:
+	rm -f *.cma *.cmo *.cmi *.8 $PROGS

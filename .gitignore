@@ -68,7 +68,8 @@ lineage.pdf
 /shell/docs/Rc*.pdf
 
 # Articles
-/docs/iwp9/xix_iwp9.pdf
+/docs/iwp9/iwp9.pdf
+/docs/iwp9/iwp9.tex
 
 # Parsers
 /assembler/Lexer_asm.ml
@@ -127,5 +128,6 @@ lineage.pdf
 /linker/tests/5.out
 /linker/tests/test_out
 /lib_gui/tests/hellogui
-
+/lib_core/system/plan9/tests/test_bind
+/lib_core/system/plan9/tests/test_mount
 # ----------------------------------------------------------------------------

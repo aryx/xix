@@ -9,7 +9,8 @@ type event =
   (* less: Resize *)
 
 (*s: function [[Hellorio.redraw]] *)
-let redraw (display : Display.t) (view : Image.t) (pos : Point.t) (bgcolor : Image.t) =
+let redraw (display : Display.t) (view : Display.image (*Image.t*))
+     (pos : Point.t) (bgcolor : Image.t) =
   Draw.draw view view.r bgcolor None Point.zero;
   (* todo: Text.string *)
   Line.line view pos (Point.add pos (Point.p 100 100))
@@ -22,7 +23,7 @@ let redraw (display : Display.t) (view : Image.t) (pos : Point.t) (bgcolor : Ima
 (* the Keyboard.init() and Mouse.init() below create other threads *)
 let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) =
   let display = Draw.init caps "Hello Rio" in
-  let view = Draw_rio.get_view caps display in
+  let view : Display.image = Draw_rio.get_view caps display in
 
   let kbd = Keyboard.init caps in
   let mouse = Mouse.init caps in

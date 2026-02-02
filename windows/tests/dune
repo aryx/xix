@@ -1,11 +1,9 @@
 (executable
  (name Hellorio)
  (libraries
-   str unix
+   unix
    xix_commons
    xix_graphics_input
-   xix_plan9
-   xix_graphics_ui
  )
  (preprocess (pps ppx_deriving.show))
  (modes native byte))

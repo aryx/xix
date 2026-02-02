@@ -1,26 +1,29 @@
+# -*- sh -*-
 TOP=../..
 
-INCLUDES=-I $TOP/lib_core/commons2 \
-  -I $TOP/lib_graphics/geometry \
-  -I $TOP/lib_graphics/draw \
+INCLUDES=-I $TOP/lib_core/commons \
+  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
   -I $TOP/lib_graphics/input
-
-LIBS=$TOP/lib_core/commons2/lib.cma $TOP/lib_graphics/geometry/lib.cma \
- $TOP/lib_graphics/draw/lib.cma $TOP/lib_graphics/input/lib.cma
-
+LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
+ $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
+  $TOP/lib_graphics/input/lib.cma
 SYSLIBS=unix.cma threads.cma
-CCLIBS= -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libunix.a\
-        -cclib /home/pad/plan9/ROOT/386/lib/ocaml/libthreads.a\
-        -cclib /home/pad/github/fork-ocaml/byterun/main.8
 
-PROGS=test_rio_graph_app1 hellorio test_rio_console_app1
+PTOP=$TOP/principia
+objtype=386
+#alt:</$TOP/mkconfig
+CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
+OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
+CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8
 
-<$TOP/mkconfig2
 
-#essentially a copy-paste of <$TOP/mkprog but handling multiple progs
-</$objtype/mkfile
+PROGS=hellorio
+#test_rio_graph_app1  test_rio_console_app1
 
 all:V: $PROGS
+
+hellorio: $LIBS hellorio.ml
+        $OCAMLC -thread  -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
 
 test_rio_graph_app1: test_rio_graph_app1.cmo
 	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
@@ -28,8 +31,6 @@ test_rio_graph_app1: test_rio_graph_app1.cmo
 test_rio_console_app1: test_rio_console_app1.cmo
 	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
 
-hellorio: hellorio.cmo
-	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target
 
 clean nuke:V:
 	rm -f $PROGS *.cm[ioxa] *.cmxa  *.o *.a  *.annot *.cmt*

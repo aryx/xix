@@ -63,6 +63,7 @@ pkgs.mkShell {
        # let's keep the default (5.3.0)
        # opam switch create 4.14.0
        # update: 4.14.2 might work as it fixed regressions with modern gcc
+       opam switch create 4.14.2
 
        # Note that the 'opam install' part is now done outside
        # the shellHook in ./configure

@@ -12,5 +12,7 @@ SRC= Channel.ml Color.ml \
      Baselayer.ml Layer.ml \
      Draw_rio.ml
 
+EXTRA_FLAGS=-thread
+
 <$TOP/mkconfig
 <$TOP/mkfiles/mklib

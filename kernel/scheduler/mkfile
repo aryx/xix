@@ -1,9 +1,11 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES= -I ../core -I ../concurrency_/ -I ../base -I ../concurrency -I ../memory -I ../processes -I $TOP/lib_core/commons -I +threads
+INCLUDES= -I ../core -I ../concurrency_/ -I ../base -I ../concurrency -I ../memory -I ../processes -I $TOP/lib_core/commons
+
 SRC= Rendez.ml Hz_sched.ml Scheduler.ml
 
+EXTRA_FLAGS=-thread
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mklib

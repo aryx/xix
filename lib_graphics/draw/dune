@@ -2,6 +2,7 @@
  (name xix_draw)
  (wrapped false)
  (libraries
+    threads
     xix_commons xix_regexp
     xix_geometry
   )

@@ -1,7 +1,8 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES= -I ../core -I ../concurrency_/ -I $TOP/lib_core/commons -I +threads
+INCLUDES= -I ../core -I ../concurrency_/ -I $TOP/lib_core/commons
+
 SRC= Chan_.ml Device_.ml \
   Hooks.ml \
   Memory.ml Page_.ml Pagetable_.ml Segment_.ml \
@@ -9,6 +10,8 @@ SRC= Chan_.ml Device_.ml \
   Process_.ml Cpu.ml \
   Syscall.ml \
   Globals.ml
+
+EXTRA_FLAGS=-thread
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mklib

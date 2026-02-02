@@ -1,9 +1,12 @@
 # -*- sh -*-
 TOP=../..
 
-INCLUDES= -I ../core -I ../concurrency_/ -I ../base -I ../concurrency -I ../memory -I $TOP/lib_core/commons -I +threads
+INCLUDES= -I ../core -I ../concurrency_/ -I ../base -I ../concurrency -I ../memory -I $TOP/lib_core/commons
+
 SRC= Process.ml Kproc.ml \
   sysexec.ml sysrfork.ml sysexits.ml
+
+EXTRA_FLAGS=-thread
 
 
 <$TOP/mkconfig

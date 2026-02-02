@@ -2,6 +2,7 @@
 
 TOP=../../..
 INCLUDES=-I . -I $TOP/lib_core/commons
+EXTRA_FLAGS=-thread
 
 SRC=Plan9.ml Protocol_9P.ml
 

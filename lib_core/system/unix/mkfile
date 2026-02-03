@@ -1,12 +1,9 @@
-# -*- sh -*-
-
 TOP=../../..
 INCLUDES=-I .
 
 #alt: merge with lib_core/system/ but unix.ml relies on C lib -lunix
 # so simpler to separate it like it's separated in the original stdlib
-SRC=\
-  Unix.ml
+SRC=Unix.ml
 
 <$TOP/mkconfig
 <$TOP/mkfiles/mklib

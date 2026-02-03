@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons

@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=..
 
 # We could have lexing.ml and parsing.ml. It would work with ocamlc,

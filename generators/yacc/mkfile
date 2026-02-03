@@ -1,4 +1,3 @@
-# -*- sh -*-
 # The parser generator
 
 TOP=../..

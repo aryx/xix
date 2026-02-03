@@ -1,6 +1,5 @@
-# -*- sh -*-
-
 TOP=../..
+
 INCLUDES=-I .
 
 #history: Buffer.ml/Digest.ml were in a separate lib_core/strings/

@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=../..
 
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps -I $TOP/lib_graphics/geometry

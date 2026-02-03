@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=../..
 
 INCLUDES= -I ../core -I ../concurrency_/ -I $TOP/lib_core/commons

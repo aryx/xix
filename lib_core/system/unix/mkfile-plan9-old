@@ -1,5 +1,3 @@
-# -*- sh -*-
-
 </$objtype/mkfile
 
 all:V: unix.cma

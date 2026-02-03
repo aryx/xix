@@ -1,6 +1,7 @@
 TOP=..
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps -I $TOP/assembler/objects -I $TOP/macroprocessor
+INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps \
+  -I $TOP/assembler/objects -I $TOP/macroprocessor
 
 # coupling: if you add a Parse_asmx.ml, please update also
 #  AUTOGEN below and add ocamlyacc rules too

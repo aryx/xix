@@ -1,8 +1,7 @@
 TOP=.
 <mkconfig
 
-#TODO? should be a builtin env var? and define it both in mk and omk
-# to be argv0 ?
+#TODO: should be a builtin env var defined both in mk and omk to be argv0
 MK=omk
 
 # STDLIB is defined or not (usually not) in mkconfig

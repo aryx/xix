@@ -1,5 +1,5 @@
-# -*- sh -*-
 TOP=../..
+<$TOP/mkconfig
 
 INCLUDES=-I $TOP/lib_core/commons \
   -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
@@ -9,21 +9,13 @@ LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
   $TOP/lib_graphics/input/lib.cma
 SYSLIBS=unix.cma threads.cma
 
-PTOP=$TOP/principia
-objtype=386
-#alt:</$TOP/mkconfig
-CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
-OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
-CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8
-
-
 PROGS=hellorio
 #test_rio_graph_app1  test_rio_console_app1
 
 all:V: $PROGS
 
 hellorio: $LIBS hellorio.ml
-        $OCAMLC -thread  -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
+        $OCAMLC $INCLUDES -thread -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
 
 test_rio_graph_app1: test_rio_graph_app1.cmo
 	$OCAMLC $LINKFLAGS $EXTRALINKFLAGS $INCLUDES $SYSLIBS $LIBS $prereq $CCLIBS -o $target

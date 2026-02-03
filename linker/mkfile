@@ -1,6 +1,5 @@
-# -*- sh -*-
-
 TOP=..
+
 # need -I macroprocessor/ because object files contains Location_cpp data
 # but in theory the linker does not need it
 INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/regexps -I $TOP/macroprocessor -I $TOP/assembler/objects -I $TOP/linker/executables -I $TOP/linker/libraries

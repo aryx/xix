@@ -27,8 +27,7 @@ DIRS_PLAN9=\
   kernel/memory kernel/processes kernel/scheduler kernel/time
 
 #TODO: rename to TESTDIRS, reduce to just tests/ and in tests/ recurse
-TESTDIRS1=\
-  tests/assembler tests/compiler tests/linker
+TESTDIRS1=tests/assembler tests/compiler tests/linker
 
 # works only under plan9 for now
 TESTDIRS2=windows/tests lib_system/plan9/tests

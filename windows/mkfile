@@ -1,4 +1,3 @@
-# -*- sh -*-
 TOP=..
 
 SRC= \
@@ -20,17 +19,12 @@ INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/system/plan9 \
  -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
 
 LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
-  $TOP/lib_core/system/plan9/lib.cma \
+ $TOP/lib_core/system/plan9/lib.cma \
  $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
  $TOP/lib_graphics/input/lib.cma $TOP/lib_graphics/ui/lib.cma
 
 SYSLIBS=unix.cma threads.cma
 
-#PTOP=$TOP/principia
-#objtype=386
-##alt:</$TOP/mkconfig
-#CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
-#OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
 #CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8 -cclib $TOP/lib_core/system/plan9/libplan9.a
 
 PROG=orio
@@ -38,6 +32,7 @@ PROG=orio
 EXTRA_FLAGS=-thread
 
 <$TOP/mkconfig
+#TODO: switch to mkprog for plan9
 #<$TOP/mkfiles/mkprog
 <$TOP/mkfiles/mklib
 
@@ -46,5 +41,6 @@ EXTRA_FLAGS=-thread
 #	cp $PROG $ROOT/tests/xxx/
 #    cd /home/pad/plan9; make disk; make run
 #
-#loc:V:
-#	wc -l *.ml*
+
+loc:V:
+	wc -l *.ml*

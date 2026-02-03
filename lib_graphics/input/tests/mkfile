@@ -1,5 +1,5 @@
-# -*- sh -*-
 TOP=../../..
+<$TOP/mkconfig
 
 INCLUDES=-I $TOP/lib_core/commons \
   -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
@@ -9,20 +9,12 @@ LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
  $TOP/lib_graphics/input/lib.cma
 SYSLIBS=unix.cma threads.cma
 
-PTOP=$TOP/principia
-objtype=386
-#alt:</$TOP/mkconfig
-CAMLLIB=$PTOP/ROOT/$objtype/lib/ocaml
-OCAMLC=/usr/local/bin/ocamlrun /usr/local/bin/ocamlc $INCLUDES
-CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8
-
 PROGS=hellodraw2
 
 all:V: $PROGS
 
-
 hellodraw2: $LIBS hellodraw2.ml
-	$OCAMLC -thread  -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
+	$OCAMLC $INCLUDES -thread -verbose $SYSLIBS -custom $prereq -o $target $CCLIBS
 
 clean:V:
 	rm -f *.cma *.cmo *.cmi *.8 $PROGS

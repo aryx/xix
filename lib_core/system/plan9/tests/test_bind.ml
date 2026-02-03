@@ -2,7 +2,7 @@ open Common
 
 let main (caps : < Cap.bind; Cap.stdout; ..>) =
   let res = 
-    Plan9.bind caps (Fpath.v "/tests/xxx") (Fpath.v "/") Plan9.MRepl
+    Plan9.bind caps (Fpath.v "/tests/bytecode") (Fpath.v "/") Plan9.MRepl
   in
   (*
   let file = Unix.openfile "/test_plan9" [Unix.O_RDWR] 0o666 in

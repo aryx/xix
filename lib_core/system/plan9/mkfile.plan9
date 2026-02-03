@@ -1,5 +1,3 @@
-# -*- sh -*-
-
 TOP=../../../principia
 <$TOP/mkconfig
 <$TOP/mkfiles/$objtype/mkfile
@@ -25,13 +23,9 @@ OCAML=/home/pad/ocaml-light
 INCLUDES=-I$OCAML/byterun -I$TOP/APE/include -I$TOP/APE/include/$objtype 
 CC=pcc
 CFLAGS=-FV -c -D_POSIX_SOURCE -D_PLAN9_SOURCE -DOS_PLAN9_APE $INCLUDES
-#LD=pcc
-#LDFLAGS=
-
-ROOT=$TOP/ROOT
 
 install:V: $LIB
-	cp $LIB $ROOT/$objtype/lib/ocaml
+	cp $LIB $TOP/ROOT/$objtype/lib/ocaml
 
 clean:V:
 	rm -f *.[58] y.tab.? y.output y.error $CLEANFILES

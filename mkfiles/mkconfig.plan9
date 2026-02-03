@@ -1,13 +1,24 @@
 # -*- sh -*-
+# config for plan9 by using ocaml-light, pcc (from goken), and principia APE
 
-OCAML=/home/pad/github/fork-ocaml
-OCAMLC=$OCAML/byterun/ocamlrun $OCAML/ocamlc
+# This assumes 'ocamlc' (usually in /usr/local/bin/ in the PATH) is ocaml-light
+# with utils/config.ml modified to call 'pcc' instead of 'gcc', and this
+# assumes 'pcc' (from goken) is also in the PATH.
+OCAMLC=ocamlc
 OCAMLDEP=ocamldep
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc -v
 
-COMPFLAGS=-thread -g
-LINKFLAGS=-thread -custom -g -I /home/pad/plan9/ROOT/$objtype/lib/ocaml
-#-verbose
+COMPFLAGS=-g $EXTRA_FLAGS
 
-# for the linker
-#CAMLLIB=/usr/local/lib/ocaml
-CAMLLIB=/home/pad/plan9/ROOT/usr/local/lib/ocaml
+# hardcoded for now
+#alt:</$TOP/principia/mkconfig
+objtype=386
+# For the linker to find libcamlrun.a
+# This assumes ocaml-light has installed libcamlrun.a but also libunix.a
+# and libthreads.a as well as stdlib .cm* in this directory. 
+#old: CAMLLIB=/usr/local/lib/ocaml
+CAMLLIB=$TOP/principia/ROOT/$objtype/lib/ocaml
+# This assumes you have principia and compiled/installed its APE libraries
+CCLIBS=-cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8 -cclib -L$TOP/principia/ROOT/$objtype/lib/ape
+LINKFLAGS=-custom

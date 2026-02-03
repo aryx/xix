@@ -25,11 +25,11 @@ LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
 
 SYSLIBS=unix.cma threads.cma
 
-#CCLIBS= -cclib $CAMLLIB/libunix.a -cclib $CAMLLIB/libthreads.a -cclib $CAMLLIB/main.8 -cclib $TOP/lib_core/system/plan9/libplan9.a
+CCLIBS_EXTRA=-cclib $TOP/lib_core/system/plan9/libplan9.a
+EXTRA_FLAGS=-thread
+EXTRALINKFLAGS=-thread
 
 PROG=orio
-
-EXTRA_FLAGS=-thread
 
 <$TOP/mkconfig
 #TODO: switch to mkprog for plan9

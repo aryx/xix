@@ -1,6 +1,5 @@
-# -*- sh -*-
-
 TOP=../../..
+
 INCLUDES=-I . -I $TOP/lib_core/commons
 EXTRA_FLAGS=-thread
 

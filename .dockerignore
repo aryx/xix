@@ -3,6 +3,6 @@
 /_opamroot
 /mkconfig
 
-*.cm*
-*.o
-*.a
+**/*.cm*
+**/*.o
+**/*.a

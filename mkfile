@@ -1,6 +1,15 @@
 TOP=.
 <mkconfig
 
+###############################################################################
+# Prelude
+###############################################################################
+# Toplevel mkfile to compile xix using omk/orc
+
+###############################################################################
+# Vars
+###############################################################################
+
 #TODO: should be a builtin env var defined both in mk and omk to be argv0
 MK=omk
 
@@ -32,22 +41,30 @@ TESTDIRS1=tests/assembler tests/compiler tests/linker
 # works only under plan9 for now
 TESTDIRS2=windows/tests lib_system/plan9/tests
 
+###############################################################################
+# Main targets
+###############################################################################
+
 all:V: all.directories
 opt:V: opt.directories
 depend:V: depend.directories
-
-%.directories:V:
-	for(i in $DIRS) @{
-		echo $i/
-		cd $i
-		$MK $MKFLAGS $stem
-	}
 
 # alternate style to the %.directories trick; even simpler
 clean nuke:V:
 	for(i in $DIRS $DIRS_PLAN9 $TESTDIRS) @{
 		cd $i
 		$MK $MKFLAGS $target
+	}
+
+###############################################################################
+# Helpers
+###############################################################################
+
+%.directories:V:
+	for(i in $DIRS) @{
+		echo $i/
+		cd $i
+		$MK $MKFLAGS $stem
 	}
 
 # those targets require to have run 'mk all' first
@@ -57,6 +74,10 @@ plan9.%:V:
 		cd $i
 		$MK $MKFLAGS $stem
 	}
+
+###############################################################################
+# Pad's dev infra targets
+###############################################################################
 
 # too many dupes for now (e.g., Ast.ml in mutliple dirs)
 graph:QV:

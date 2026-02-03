@@ -1,4 +1,5 @@
 # -*- sh -*-
+# default config, the one used by configure by default
 
 OPT=.opt
 

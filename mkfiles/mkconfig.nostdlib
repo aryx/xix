@@ -1,9 +1,10 @@
-STDLIB=lib_core/core lib_core/base lib_core/collections lib_core/regexps/str lib_core/printing lib_core/system lib_core/parsing lib_core/system/unix lib_core/misc
+# config to also compile the standard library in lib_core/{core,base,...}
+
+STDLIB=lib_core/core lib_core/base lib_core/collections \
+       lib_core/regexps/str lib_core/printing lib_core/system \
+       lib_core/parsing lib_core/system/unix lib_core/misc
 
 COMPFLAGS=-nostdlib -I $TOP/lib_core/core -I $TOP/lib_core/base -I $TOP/lib_core/collections -I $TOP/lib_core/regexps/str -I $TOP/lib_core/parsing -I $TOP/lib_core/printing -I $TOP/lib_core/system -I $TOP/lib_core/system/unix  -I $TOP/lib_core/misc
-
-#STDLIB=lib_core/latest
-#COMPFLAGS=-nostdlib -I $TOP/lib_core/latest
 
 # for the linker to find -lcamlrun even with -nostdlib
 LIBOCAML=`ocamlc -where`
@@ -14,6 +15,7 @@ LINKFLAGS=-nostdlib -g -custom $TOP/lib_core/core/lib.cma $TOP/lib_core/base/lib
 
 
 OPTLINKFLAGS=
+
 OCAMLC=ocamlc
 OCAMLLEX=ocamllex
 OCAMLYACC=ocamlyacc -v

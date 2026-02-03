@@ -1,9 +1,12 @@
+# basic config, should work with most ocaml installations
+
 COMPFLAGS=
 OPTFLAGS=$COMPFLAGS
 LINKFLAGS=-g -custom
 OPTLINKFLAGS=
+
 OCAMLC=ocamlc
 OCAMLLEX=ocamllex
-OCAMLYACC=ocamlyacc -v
+OCAMLYACC=ocamlyacc
 OCAMLDEP=ocamldep
 OCAMLOPT=ocamlopt

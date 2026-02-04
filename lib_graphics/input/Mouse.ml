@@ -104,7 +104,7 @@ type ctl = {
   (*mutable state: Mouse.t;*)
 }
 
-let thread_mouse ctl =
+let thread_mouse (ctl : ctl) : unit =
   (* less: threadsetname? *)
   (* 'm':1 [xpos:4] [ypos:4] [button:4] [mseg:4] *)
   let bufsize = 1 + 4*12 in

@@ -83,7 +83,7 @@ module O = Opcode
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 module R = Runtime
 module O = Opcode
@@ -204,7 +204,7 @@ val read_environment : < Cap.env ; .. > -> t
 
 <<shell/Env.ml>>=
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 type t = (string * string list) list
 
@@ -216,8 +216,8 @@ let read_environment (caps : < Cap.env; ..>) =
   CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"
     then
-      let (var, str) = Regexp_.matched2 s in
-      var, Regexp_.split "[ \t]+" str
+      let (var, str) = Regexp.matched2 s in
+      var, Regexp.split "[ \t]+" str
     else failwith (spf "wrong format for environment variable: %s" s)
   )
 
@@ -352,7 +352,7 @@ let eflagok = ref false
 
 <<shell/Interpreter.ml>>=
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 module O = Opcode
 module R = Runtime
@@ -476,7 +476,7 @@ let show_codevec _ = "NO DERIVING"
 <<shell/PATH.ml>>=
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 module R = Runtime
 
@@ -755,7 +755,7 @@ let string_of_var (var : var) : string =
 <<shell/Status.ml>>=
 (* Copyright 2016, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 module R = Runtime
 

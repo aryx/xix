@@ -3,6 +3,7 @@
 %coupling: see Config.tex
 
 \input{latex/Packages}
+\input{latex/Noweb}
 \input{latex/Config}
 \input{latex/Macros}
 
@@ -1130,7 +1131,7 @@ type caps = < Cap.forkew; Cap.chdir; Cap.env; Cap.exit; Cap.open_in >
 
 <<signature [[CLI.main]]>>=
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> ->
+val main: <caps; Cap.stdout; Cap.stderr; ..> ->
   string array -> Exit.t
 @
 
@@ -1150,7 +1151,8 @@ let _ =
 
 
 <<function [[CLI.main]]>>=
-let main (caps : <caps; .. >) (argv : string array) : Exit.t =
+let main (caps : <caps; Cap.stdout; Cap.stderr; .. >) (argv : string array) :
+    Exit.t =
   let args = ref [] in
   <<[[CLI.main()]] debugging initializations>>
 
@@ -1158,13 +1160,8 @@ let main (caps : <caps; .. >) (argv : string array) : Exit.t =
     <<[[CLI.main()]] [[options]] elements>>
   ] |> Arg.align
   in
-  (* old: was Arg.parse but we want explicit argv control *)
-  (try 
-    Arg.parse_argv argv options (fun t -> args := t::!args) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun t -> args := t::!args) usage;
   <<[[CLI.main()]] logging initializations>>
   <<[[CLI.main()]] CLI action processing>>
   Var.init caps;
@@ -3957,7 +3954,7 @@ let hflags: char Hashtbl_.set = Hashtbl.create 10
 argv |> Array.iter (fun s ->
   if s =~ "^-\\([a-zA-Z]\\)"
   then begin
-    let letter = Regexp_.matched1 s in
+    let letter = Regexp.matched1 s in
     let char = String.get letter 0 in
     Hashtbl.add Flags.hflags char true
   end
@@ -4019,7 +4016,7 @@ let init (caps : < Cap.env; .. >) =
     match k, vs with
     | "PATH", [x] ->
        Logs.info (fun m -> m "adjust $PATH to $path");
-       let vs = Regexp_.split "[:]" x in
+       let vs = Regexp.split "[:]" x in
        let k = "path" in
        setvar k vs
     | _ -> setvar k vs
@@ -4187,7 +4184,7 @@ let level = ref (Some Logs.Warning) in
 
 <<[[CLI.main()]] [[options]] elements>>=
 (* pad: I added that *)
-(* TODO: move in a CLI_common.ml *)
+(* alt: reuse Logs_.cli_flags *)
 "-v", Arg.Unit (fun () -> level := Some Logs.Info),
  " verbose mode";
 "-verbose", Arg.Unit (fun () -> level := Some Logs.Info),

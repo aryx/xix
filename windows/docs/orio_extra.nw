@@ -7,7 +7,8 @@ type caps = <
 
 <<signature [[CLI.main]]>>=
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; ..> -> string array -> Exit.t
+val main: <caps; Cap.stdout; Cap.stderr; ..> ->
+  string array -> Exit.t
 @
 
 <<signature [[CLI.thread_main]]>>=
@@ -61,7 +62,7 @@ let thread_main (caps: < caps; .. >) : Exit.t =
    * let view = display.image in
    * less: let viewr save?
    *)
-  let view : Image.t = Draw_rio.get_view caps display in
+  let view : Display.image = Draw_rio.get_view caps display in
   let font : Font.t = Font_default.load_default_font display in
 
   if !Globals.debug_draw
@@ -117,7 +118,8 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 @
 
 <<function [[CLI.main]]>>=
-let main (caps : < caps; ..>) (argv : string array) : Exit.t =
+let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
 
   let backtrace = ref false in
   let level = ref (Some Logs.Warning) in
@@ -142,13 +144,8 @@ let main (caps : < caps; ..>) (argv : string array) : Exit.t =
     " ";
   ] |> Arg.align
   in
-  (try
-    Arg.parse_argv argv options
-      (fun _f -> Arg.usage options usage) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
+  (* This may raise ExitCode *)
+  Arg_.parse_argv caps argv options (fun _f -> Arg.usage options usage) usage;
   Logs_.setup !level ();
   Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
 
@@ -1057,7 +1054,7 @@ let init () =
 open Common
 
 module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
+module Unix2 = ThreadUnix
 
 (*****************************************************************************)
 (* Prelude *)
@@ -1425,7 +1422,7 @@ open Common
 open Fpath_.Operators
 
 module Unix1 = Unix
-module Unix2 = (*Thread*)Unix
+module Unix2 = ThreadUnix
 
 <<function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>
 @
@@ -4205,7 +4202,8 @@ type event =
 @
 
 <<function [[Hellorio.redraw]]>>=
-let redraw (display : Display.t) (view : Image.t) (pos : Point.t) (bgcolor : Image.t) =
+let redraw (display : Display.t) (view : Display.image (*Image.t*))
+     (pos : Point.t) (bgcolor : Image.t) =
   Draw.draw view view.r bgcolor None Point.zero;
   (* todo: Text.string *)
   Line.line view pos (Point.add pos (Point.p 100 100))
@@ -4217,7 +4215,7 @@ let redraw (display : Display.t) (view : Image.t) (pos : Point.t) (bgcolor : Ima
 (* the Keyboard.init() and Mouse.init() below create other threads *)
 let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) =
   let display = Draw.init caps "Hello Rio" in
-  let view = Draw_rio.get_view caps display in
+  let view : Display.image = Draw_rio.get_view caps display in
 
   let kbd = Keyboard.init caps in
   let mouse = Mouse.init caps in

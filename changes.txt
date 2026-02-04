@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v0)
+* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v1)
 
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script
@@ -16,7 +16,7 @@
 - new lib_core/regexps/Regexp.ml extracted from lib_core/commons/Common.ml
 
 ** build infra
-- preliminary plan9 support; you can link some xix programs (e.g., ocat, opwd)
+- plan9 support resumed; you can link xix programs (e.g., orio, ocat, opwd)
   with ocaml-light for plan9
 
 ** docs

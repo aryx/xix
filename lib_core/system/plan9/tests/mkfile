@@ -28,10 +28,9 @@ clean nuke:V:
 depend:V:
 	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
 
-ROOT=$PRINCIPIA/ROOT/
 test:V:
-	cp $PROGS $ROOT/tests/xxx/
-    cd /home/pad/plan9; make disk; make run
+	cp $PROGS $TOP/principia/ROOT/tests/bytecode/
+	cd /home/pad/principia; omk disk; omk run
 
 #############################################################################
 # Meta rules

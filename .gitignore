@@ -73,20 +73,20 @@ lineage.pdf
 
 # Parsers
 /assembler/Lexer_asm.ml
-/assembler/Parser_asm[5v].ml
-/assembler/Parser_asm[5v].mli
+/assembler/Parser_asm[5vi].ml
+/assembler/Parser_asm[5vi].mli
 
 /builder/Lexer.ml
 /builder/Parser.ml
 /builder/Parser.mli
 
-/lex/Lexer.ml
-/lex/Parser.ml
-/lex/Parser.mli
+/generators/lex/Lexer.ml
+/generators/lex/Parser.ml
+/generators/lex/Parser.mli
 
-/yacc/Lexer.ml
-/yacc/Parser.ml
-/yacc/Parser.mli
+/generators/yacc/Lexer.ml
+/generators/yacc/Parser.ml
+/generators/yacc/Parser.mli
 
 /shell/Lexer.ml
 /shell/Parser.ml
@@ -99,21 +99,25 @@ lineage.pdf
 
 /macroprocessor/Lexer_cpp.ml
 
+
 # binaries
 /bin/omk
 /bin/orc
-# TODO: move to bin/
-/assembler/5a
-/linker/5l
-/compiler/5c
-/lex/ocamllex
-/yacc/ocamlyacc
+
 /builder/omk
 /shell/orc
+/assembler/o5a
+/linker/o5l
+/compiler/o5c
+/generators/lex/olex
+/generators/yacc/oyacc
 /kernel/9minimal
-/windows/rio
 /debugger/ksym
 /vcs/ogit
+/utilities/files/ocat
+/utilities/files/opwd
+/utilities/files/owc
+/windows/orio
 
 # test binaries
 /lib_graphics/draw/tests/hellodraw
@@ -130,4 +134,6 @@ lineage.pdf
 /lib_gui/tests/hellogui
 /lib_core/system/plan9/tests/test_bind
 /lib_core/system/plan9/tests/test_mount
+lib_core/system/plan9/tests/test_bind_ape
+lib_core/system/plan9/tests/test_bind_c
 # ----------------------------------------------------------------------------

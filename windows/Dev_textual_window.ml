@@ -19,6 +19,4 @@ let dev_text = { Device.default with
   );
 }
 (*e: constant [[Dev_textual_window.dev_text]] *)
-
-
 (*e: Dev_textual_window.ml *)

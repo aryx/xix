@@ -1,5 +1,5 @@
 (*s: Thread_keyboard.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -10,9 +10,8 @@ open Common
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Thread_keyboard.thread]] *)
-let thread (kbd : Keyboard.ctl) =
+let thread (kbd : Keyboard.ctl) : unit =
   (* less: threadsetname *)
 
   while true do
@@ -27,6 +26,6 @@ let thread (kbd : Keyboard.ctl) =
     Globals.win () |> Option.iter (fun (win : Window.t) ->
       Event.send win.chan_keyboard key |> Event.sync
     )
-(*e: function [[Thread_keyboard.thread]] *)
   done
+(*e: function [[Thread_keyboard.thread]] *)
 (*e: Thread_keyboard.ml *)

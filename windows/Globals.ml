@@ -4,14 +4,20 @@ open Common
 
 module W = Window
 
-let (windows: (Window.wid, Window.t) Hashtbl.t) = Hashtbl.create 11
+(*s: global [[Globals.windows]] *)
+let windows: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
+(*e: global [[Globals.windows]] *)
+(*s: global [[Globals.hidden]] *)
 (* a subset of 'windows' *)
-let (hidden: (Window.wid, Window.t) Hashtbl.t) = Hashtbl.create 11
+let hidden: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
+(*e: global [[Globals.hidden]] *)
 
+(*s: global [[Globals.current]] *)
 (* the man page of rio (rio(1)) uses the term 'current' 
  * old: was called 'input' in rio-C
  *)
-let (current: Window.t option ref)  = ref None
+let current: Window.t option ref  = ref None
+(*e: global [[Globals.current]] *)
 
 (*s: function [[Globals.win]] *)
 (* a bit like cpu(), up() in the kernel, a convenient global *)

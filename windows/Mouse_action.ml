@@ -109,7 +109,6 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
   transit SweepInit
 (*e: function [[Mouse_action.sweep]] *)
 
-
 (*s: function [[Mouse_action.point_to]] *)
 let point_to (mouse : Mouse.ctl) : Window.t option =
   (* todo: menuing? but not sweeping? *)

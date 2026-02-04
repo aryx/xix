@@ -1,5 +1,5 @@
 (*s: File.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2027 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Plan9 (* for the fields *)
@@ -14,13 +14,13 @@ module N = Plan9
 (* Types and constants *)
 (*****************************************************************************)
 
-(* This is maintained by the "client" (the kernel on behalf of a winshell) *)
 (*s: type [[File.fid]] *)
+(* This is maintained by the "client" (the kernel on behalf of a winshell) *)
 type fid = Protocol_9P.fid
 (*e: type [[File.fid]] *)
 
-(* This is returned by the server (rio) to identify a file of the server *)
 (*s: type [[File.filecode]] *)
+(* This is returned by the server (rio) to identify a file of the server *)
 type filecode = 
   | Dir of dir
   | File of devid
@@ -44,13 +44,13 @@ type filecode =
     | Text
 (*e: type [[File.devid]] *)
 
-(* will generate a Qid.path *)
 (*s: type [[File.fileid]] *)
+(* will generate a Qid.path *)
 type fileid = filecode * Window.wid
 (*e: type [[File.fileid]] *)
 
-(* simpler than Plan9.dir_entry *)
 (*s: type [[File.dir_entry_short]] *)
+(* simpler than Plan9.dir_entry *)
 type dir_entry_short = { 
   name: string;
   code: filecode;
@@ -65,8 +65,8 @@ let root_entry =
   { name = "."; code = Dir Root; type_ = N.QTDir; perm =  N.rx }
 (*e: constant [[File.root_entry]] *)
 
-(* fid server-side state (a file) *)
 (*s: type [[File.t]] *)
+(* fid server-side state (a file) *)
 type t = {
   (* The fid is maintained by the "client" (the kernel on behalf of winshell).
    * It is the key used to access information about a file used by
@@ -116,7 +116,6 @@ let int_of_fileid (qxxx, wid) =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[File.qid_of_fileid]] *)
 let qid_of_fileid file_id typ =
   { path = int_of_fileid file_id;

@@ -53,7 +53,6 @@ let key_in (w : Window.t) (key : Keyboard.key) =
       Terminal.key_in w.terminal key
   end
 (*e: function [[Threads_window.key_in]] *)
-
 (*s: function [[Threads_window.runes_in]] *)
 (* output from application *)
 let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
@@ -75,7 +74,6 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
     end;
   | false -> failwith "mouse_in: mouse not opened todo"
 (*e: function [[Threads_window.mouse_in]] *)
-
 (*s: function [[Threads_window.mouse_out]] *)
 let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
   (*/* send a queued event or, if the queue is empty, the current state */
@@ -93,7 +91,6 @@ let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
   w.last_count_sent <- counter;
   Event.send chan m |> Event.sync
 (*e: function [[Threads_window.mouse_out]] *)
-
 
 (*s: function [[Threads_window.bytes_out]] *)
 let bytes_out (w : Window.t) (chan_count, chan_bytes) =
@@ -125,8 +122,6 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
   in
   Event.send chan_bytes str |> Event.sync
 (*e: function [[Threads_window.bytes_out]] *)
-
-
 
 (*s: function [[Threads_window.cmd_in]] *)
 let cmd_in (w : Window.t) (cmd : cmd) =
@@ -161,11 +156,9 @@ let cmd_in (w : Window.t) (cmd : cmd) =
     ()
 (*e: function [[Threads_window.cmd_in]] *)
 
-
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Threads_window.wrap]] *)
 let wrap f = 
   fun ev -> Event.wrap ev f
@@ -231,6 +224,6 @@ let thread (w : Window.t) =
     );
     if not w.deleted
     then Image.flush w.img;
-(*e: function [[Threads_window.thread]] *)
   done
+(*e: function [[Threads_window.thread]] *)
 (*e: Threads_window.ml *)

@@ -1,5 +1,5 @@
 (*s: Cursors.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 open Cursor
@@ -9,11 +9,10 @@ open Rectangle
 (*****************************************************************************)
 (* Classic cursors *)
 (*****************************************************************************)
-
 (* See also 'arrow' defined in the kernel and in lib_graphics/input/cursor.ml *)
 
-(* when create a new window (sweep()) *)
 (*s: constant [[Cursors.crosscursor]] *)
+(* when create a new window (sweep()) *)
 let crosscursor = {
   offset = { x = -7; y = -7; };
   clr = Cursor.ints_to_bytes
@@ -30,9 +29,8 @@ let crosscursor = {
     |];
 }
 (*e: constant [[Cursors.crosscursor]] *)
-
-(* when move a window (drag()) *)
 (*s: constant [[Cursors.boxcursor]] *)
+(* when move a window (drag()) *)
 let boxcursor = {
   offset =  {x = -7; y = -7; };
   clr = Cursor.ints_to_bytes
@@ -49,10 +47,8 @@ let boxcursor = {
     |];
 }
 (*e: constant [[Cursors.boxcursor]] *)
-
-
-(* when select a window (point_to()) *)
 (*s: constant [[Cursors.sightcursor]] *)
+(* when select a window (point_to()) *)
 let sightcursor = {
   offset =  {x = -7; y = -7; };
   clr = Cursor.ints_to_bytes
@@ -69,7 +65,6 @@ let sightcursor = {
     |];
 }
 (*e: constant [[Cursors.sightcursor]] *)
-
 
 (* for holding mode *)
 (*s: constant [[Cursors._whitearrow]] *)
@@ -89,7 +84,6 @@ let _whitearrow = {
     |];
 }
 (*e: constant [[Cursors._whitearrow]] *)
-
 (* ?? *)
 (*s: constant [[Cursors._query]] *)
 let _query = {
@@ -119,7 +113,6 @@ type corner =
   | Left                | Right
   | BottomLeft | Bottom | BottomRight
 (*e: type [[Cursors.corner]] *)
-
 (*s: type [[Cursors.portion]] *)
 type portion = Inf | Middle | Sup
 (*e: type [[Cursors.portion]] *)
@@ -155,7 +148,6 @@ let which_corner r p =
   | Sup, Sup -> BottomRight
 (*e: function [[Cursors.which_corner]] *)
 
-
 (*s: constant [[Cursors.tl]] *)
 let tl = {
   offset =  {x = -4; y = -4; };
@@ -173,7 +165,6 @@ let tl = {
     |];
 }
 (*e: constant [[Cursors.tl]] *)
-
 (*s: constant [[Cursors.t]] *)
 let t = {
   offset =  {x = -7; y = -8; };
@@ -191,7 +182,6 @@ let t = {
     |];
 }
 (*e: constant [[Cursors.t]] *)
-
 (*s: constant [[Cursors.tr]] *)
 let tr = {
   offset =  {x = -11; y = -4; };
@@ -209,7 +199,6 @@ let tr = {
     |];
 }
 (*e: constant [[Cursors.tr]] *)
-
 (*s: constant [[Cursors.r]] *)
 let r = {
   offset =  {x = -8; y = -7; };
@@ -227,7 +216,6 @@ let r = {
     |];
 }
 (*e: constant [[Cursors.r]] *)
-
 (*s: constant [[Cursors.br]] *)
 let br = {
   offset =  {x = -11; y = -11; };
@@ -245,7 +233,6 @@ let br = {
     |];
 }
 (*e: constant [[Cursors.br]] *)
-
 (*s: constant [[Cursors.b]] *)
 let b = {
   offset =  {x = -7; y = -7; };
@@ -263,7 +250,6 @@ let b = {
     |];
 }
 (*e: constant [[Cursors.b]] *)
-
 (*s: constant [[Cursors.bl]] *)
 let bl = {
   offset =  {x = -4; y = -11; };
@@ -281,7 +267,6 @@ let bl = {
     |];
 }
 (*e: constant [[Cursors.bl]] *)
-
 (*s: constant [[Cursors.l]] *)
 let l = {
   offset =  {x = -7; y = -7; };

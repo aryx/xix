@@ -17,7 +17,6 @@ let redraw (display : Display.t) (view : Display.image (*Image.t*))
     Line.EndSquare Line.EndSquare 2 display.black Point.zero;
   Display.flush display
 (*e: function [[Hellorio.redraw]] *)
-  
 
 (*s: function [[Hellorio.thread_main]] *)
 (* the Keyboard.init() and Mouse.init() below create other threads *)
@@ -60,8 +59,6 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
 
 (*s: constant [[Hellorio._]] *)
 let _ =
-  Cap.main (fun caps ->
-      thread_main caps
-  )
+  Cap.main (fun caps -> thread_main caps)
 (*e: constant [[Hellorio._]] *)
 (*e: tests/hellorio.ml *)

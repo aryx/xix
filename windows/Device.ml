@@ -1,5 +1,5 @@
 (*s: Device.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -11,7 +11,6 @@ open Common
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-
 (*s: type [[Device.t]] *)
 type t = {
   (* ex: "winname", "cons" *)
@@ -35,7 +34,6 @@ type t = {
   write_threaded: int64 -> string (* bytes *) -> Window.t -> unit;
 }
 (*e: type [[Device.t]] *)
-
 (*s: constant [[Device.default]] *)
 let default = {
   name = "<default>";
@@ -47,17 +45,16 @@ let default = {
 }
 (*e: constant [[Device.default]] *)
 
+(*s: exception [[Device.Error]] *)
 (* This will be catched up by thread_fileserver to transform the
  * exception in an Rerror 9P response.
  *)
-(*s: exception [[Device.Error]] *)
 exception Error of string
 (*e: exception [[Device.Error]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Device.honor_offset_and_count]] *)
 let honor_offset_and_count offset count data =
   let len = String.length data in
@@ -67,7 +64,6 @@ let honor_offset_and_count offset count data =
     String.sub data offset (len - offset)
   | _ -> data
 (*e: function [[Device.honor_offset_and_count]] *)
-
 (*s: function [[Device.honor_count]] *)
 let honor_count count data =
   let len = String.length data in

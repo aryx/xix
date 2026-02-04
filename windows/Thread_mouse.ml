@@ -1,5 +1,5 @@
 (*s: Thread_mouse.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -89,7 +89,6 @@ let middle_click_system _m _mouse =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Thread_mouse.thread]] *)
 let thread (caps : < Cap.fork; .. >) (exitchan, 
             mouse, (display, desktop, view, font), fs) =

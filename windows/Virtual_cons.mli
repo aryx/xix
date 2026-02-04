@@ -1,5 +1,4 @@
 (*s: Virtual_cons.mli *)
-
 (*s: signature [[Virtual_cons.dev_cons]] *)
 (* virtual "/dev/cons" *)
 val dev_cons    : Device.t

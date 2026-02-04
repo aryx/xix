@@ -1,5 +1,5 @@
 (*s: Threads_fileserver.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 module D = Device
@@ -362,7 +362,6 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Threads_fileserver.thread]] *)
 (* the master *)
 let thread (fs : Fileserver.t) =

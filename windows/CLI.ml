@@ -1,5 +1,5 @@
 (*s: CLI.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
@@ -21,17 +21,22 @@ open Common
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
-
-(* Need: see .mli *)
 (*s: type [[CLI.caps]] *)
+(* Need:
+ * - draw/mouse/keyboard because rio multiplexes access to those devices
+ * - fork/exec/chdir when creating new windows which trigger new rc
+ *   processes run possibly from different directories.
+ * - open_in: for /dev/winname access
+ * - mount/bind: for the window to mount the rio fileserver to /mnt/wsys
+ *   and then bind it to /dev for virtual /dev/{cons,mouse,...}
+ *)
 type caps = < 
-(*e: type [[CLI.caps]] *)
-    Cap.draw; Cap.mouse; Cap.keyboard; 
+    Cap.draw; Cap.mouse; Cap.keyboard;
     Cap.fork; Cap.exec; Cap.chdir;
     Cap.open_in;
     Cap.mount; Cap.bind
- >
-
+  >
+(*e: type [[CLI.caps]] *)
 (*s: constant [[CLI.usage]] *)
 let usage = 
   "usage: rio [options]"
@@ -40,7 +45,6 @@ let usage =
 (*****************************************************************************)
 (* Main algorithm *)
 (*****************************************************************************)
-
 (*s: function [[CLI.thread_main]] *)
 let thread_main (caps: < caps; .. >) : Exit.t =
 
@@ -109,7 +113,6 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[CLI.main]] *)
 let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     Exit.t =

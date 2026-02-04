@@ -1,5 +1,4 @@
 (*s: Thread_mouse.mli *)
-
 (*s: signature [[Thread_mouse.thread]] *)
 (* Reads from the mouse and sends the mouse state to the "current" window
  * if the cursor is in the windows rect. Otherwise might call the 

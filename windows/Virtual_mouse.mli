@@ -1,10 +1,10 @@
 (*s: Virtual_mouse.mli *)
-
 (*s: signature [[Virtual_mouse.dev_mouse]] *)
 (* a virtual "/dev/mouse" *)
 val dev_mouse: Device.t
 (*e: signature [[Virtual_mouse.dev_mouse]] *)
-
+(*s: signature [[Virtual_mouse.dev_cursor]] *)
 (* a virtual "/dev/cursor" *)
 (* val dev_cursor: Device.t *)
+(*e: signature [[Virtual_mouse.dev_cursor]] *)
 (*e: Virtual_mouse.mli *)

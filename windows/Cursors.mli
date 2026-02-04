@@ -9,12 +9,12 @@ val boxcursor   : Cursor.t
 (*s: signature [[Cursors.sightcursor]] *)
 val sightcursor : Cursor.t
 (*e: signature [[Cursors.sightcursor]] *)
-(*s: signature [[Cursors.which_corner_cursor]] *)
 (*
 val whitearrow: Cursor.t
 val query: Cursor.t
 *)
 
+(*s: signature [[Cursors.which_corner_cursor]] *)
 val which_corner_cursor: Rectangle.t -> Point.t -> Cursor.t
 (*e: signature [[Cursors.which_corner_cursor]] *)
 (*e: Cursors.mli *)

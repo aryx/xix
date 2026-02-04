@@ -4,15 +4,14 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* The data structure to store all the information about a window!
-*)
+(* The data structure to store all the information about a window! *)
 
 (*****************************************************************************)
 (* Types and constants *)
 (*****************************************************************************)
 
-(* window id *)
 (*s: type [[Window.wid]] *)
+(* window id *)
 type wid = int
 (*e: type [[Window.wid]] *)
 
@@ -29,7 +28,6 @@ type cmd =
   (* for resize event but also for hide/show *)
   | Reshape of 
       Image.t (* can be Layer.t or an off-screen Image.t when hidden *)
-(*e: type [[Window.cmd]] *)
       (*Mouse.ctl*) (* needed for window_cursor() when repaint border *)
 (*
   | Move of Image.t * Rectangle.t
@@ -37,10 +35,10 @@ type cmd =
   | Wakeup
   (* less: RawOff | RawOn? HoldOn | HoldOff *)
 *)
+(*e: type [[Window.cmd]] *)
 
-
-(* The window type! *)
 (*s: type [[Window.t]] *)
+(* The window type! *)
 type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
@@ -194,8 +192,8 @@ let topped_counter =
   ref 0
 (*e: constant [[Window.topped_counter]] *)
 
-(* important convention to follow for rio and draw to cooperate correctly *)
 (*s: constant [[Window.window_border_size]] *)
+(* important convention to follow for rio and draw to cooperate correctly *)
 let window_border_size = Draw_rio.window_border_size (* 4 *)
 (*e: constant [[Window.window_border_size]] *)
 
@@ -221,7 +219,6 @@ let pt_inside_border pt w =
 let pt_on_border pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
 (*e: function [[Window.pt_on_border]] *)
-
 
 (*s: function [[Window.alloc]] *)
 (* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)

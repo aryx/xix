@@ -1,12 +1,11 @@
 (*s: Wm.ml *)
-(* Copyright 2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2017-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* The Window Manager.
- *)
+(* The Window Manager *)
 
 (*****************************************************************************)
 (* Cursors *)
@@ -30,7 +29,6 @@ let window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) : unit =
   | None -> Mouse.reset_cursor mouse
 (*e: function [[Wm.window_cursor]] *)
 
-
 (*s: function [[Wm._corner_cursor]] *)
 let _corner_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
   if Window.pt_on_border pt w
@@ -44,11 +42,9 @@ let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.
   else window_cursor w pt mouse
 (*e: function [[Wm.corner_cursor_or_window_cursor]] *)
 
-
 (*****************************************************************************)
 (* Borders and content *)
 (*****************************************************************************)
-
 (*s: function [[Wm.draw_border]] *)
 let draw_border (w : Window.t) (status : Window.border_status) =
   let img : Display.image = w.img in
@@ -76,7 +72,6 @@ let repaint (w : Window.t) =
   if not w.mouse_opened 
   then Terminal.repaint w.terminal 
 (*e: function [[Wm.repaint]] *)
-
 
 (*s: function [[Wm.set_current_and_repaint]] *)
 (* old: was called wcurrent() in rio-C.
@@ -106,8 +101,8 @@ let set_current_and_repaint wopt (*mouse*) =
 
     (* todo: wakeup? why? *)
     ()
-(*e: function [[Wm.set_current_and_repaint]] *)
   )
+(*e: function [[Wm.set_current_and_repaint]] *)
 
 (*****************************************************************************)
 (* Wm *)
@@ -178,11 +173,9 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : 
     let winname = spf "window.%d" w.id in
     w.winname <- winname;
     Draw_ipc.name_image w.img winname;
-(*e: function [[Wm.new_win]] *)
     (* less: namecount and retry again if already used *)
   )
-
-
+(*e: function [[Wm.new_win]] *)
 
 (*s: function [[Wm.close_win]] *)
 let close_win (w : Window.t) =
@@ -200,7 +193,6 @@ let close_win (w : Window.t) =
   ()
 (*e: function [[Wm.close_win]] *)
 
-
 (*s: function [[Wm.top_win]] *)
 let top_win (w : Window.t) =
   if w.topped = !Window.topped_counter
@@ -214,7 +206,6 @@ let top_win (w : Window.t) =
     w.topped <- !Window.topped_counter;
   end
 (*e: function [[Wm.top_win]] *)
-
 
 (*s: function [[Wm.hide_win]] *)
 let hide_win (w : Window.t) =
@@ -246,11 +237,9 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
   ()
 (*e: function [[Wm.show_win]] *)
 
-
 (*****************************************************************************)
 (* Helper for? *)
 (*****************************************************************************)
-
 (*s: function [[Wm.resize_win]] *)
 (* less: move boolean parameter, useless opti test dx/dy below catch it *)
 let resize_win (w : Window.t) (new_img : Display.image) =

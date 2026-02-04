@@ -21,8 +21,8 @@ type t = {
   (* the pipe *)
 
   (* clients_fd will be shared by all the winshell processes *)
-  clients_fd: Unix1.file_descr;
-  server_fd: Unix1.file_descr;
+  clients_fd: Unix.file_descr;
+  server_fd: Unix.file_descr;
 
   (* for security *)
   user: string;
@@ -37,7 +37,6 @@ type t = {
 (*****************************************************************************)
 (* Entry point *)
 (*****************************************************************************)
-
 (*s: function [[Fileserver.init]] *)
 let init () =
   let (fd1, fd2) = Unix2.pipe () in
@@ -57,7 +56,7 @@ let init () =
     user = "pad";
     message_size = 8192 + Protocol_9P.io_header_size;
 
-    fids = Hashtbl.create 101;
+    fids = Hashtbl_.create ();
   }
 (*e: function [[Fileserver.init]] *)
 (*e: Fileserver.ml *)

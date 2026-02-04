@@ -12,7 +12,7 @@ CCLIBS_EXTRA=-cclib $TOP/lib_core/system/plan9/libplan9.a
 # Toplevel targets
 #############################################################################
 
-PROGS=test_bind test_mount
+PROGS=test_bind test_mount test_bind_c test_bind_ape
 
 all:V: $PROGS
 
@@ -28,9 +28,19 @@ clean nuke:V:
 depend:V:
 	$OCAMLDEP $OCAMLINCLUDES *.ml* */*.ml* | grep -v -e '.* :$' > .depend
 
-test:V:
+install:V:
 	cp $PROGS $TOP/principia/ROOT/tests/bytecode/
-	cd /home/pad/principia; omk disk; omk run
+	#cd /home/pad/principia; omk disk; omk run
+
+test_bind_c: test_bind_c.c
+	8c -I/home/pad/principia/include/ALL/ -I/home/pad/principia/include/arch/386/ test_bind_c.c
+	8l -L/home/pad/principia/ROOT/386/lib/ -o test_bind_c test_bind_c.8 
+
+
+CFLAGS=-FV -D_POSIX_SOURCE -D_PLAN9_SOURCE -DOS_PLAN9_APE -I$TOP/principia/APE/include -I$TOP/principia/APE/include/$objtype 
+
+test_bind_ape: test_bind_ape.c
+	pcc -v -o test_bind_ape $CFLAGS -L$TOP/principia/ROOT/386/lib/ape test_bind_ape.c 
 
 #############################################################################
 # Meta rules

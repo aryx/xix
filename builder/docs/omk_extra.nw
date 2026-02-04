@@ -63,7 +63,7 @@ let show_instrs _ = "NO DERIVING"
 (* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 module G = Graph
 module R = Rules
@@ -215,7 +215,7 @@ open Common
 <<mk/Env.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 (*****************************************************************************)
 (* Prelude *)
@@ -270,6 +270,7 @@ open Regexp_.Operators
 open Common
 open Either
 open Fpath_.Operators
+module Str = Re_str
 
 module A = Ast
 module E = Env
@@ -717,6 +718,8 @@ module Set = Set_
 
 <<function [[Scheduler.adjust_env]]>>
 
+module Str = Re_str
+
 <<function [[Scheduler.shprint]]>>
 
 (*****************************************************************************)
@@ -769,7 +772,7 @@ module Set = Set_
 <<mk/Shellenv.ml>>=
 (* Copyright 2016 Yoann Padioleau, see copyright.txt *)
 open Common
-open Regexp_.Operators
+open Regexp.Operators
 
 <<type [[Shellenv.t]]>>
 
@@ -784,7 +787,7 @@ open Regexp_.Operators
 (* Copyright 2016, 2018 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
-open Regexp_.Operators
+open Regexp.Operators
 
 (*****************************************************************************)
 (* Prelude *)

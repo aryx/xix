@@ -755,8 +755,14 @@ val timeof : Fpath.t -> float option
 @
 
 <<function [[File.timeof]]>>=
-(* opti? time cache, and flag to skip cache if want refresh *)
-let timeof file =
+(* Note that it is useful to have a subsecond float precision here
+ * because now machines can build many files under a second
+ * and we need when comparing two files to know which one was
+ * made last even if they were made in the same second
+ *
+ * opti? time cache, and flag to skip cache if want refresh 
+*)
+let timeof (file : Fpath.t) : float option =
   try 
     (* bugfix: use stat, not lstat, to get the time of what is pointed
      * by the symlink, not the symlink
@@ -843,14 +849,16 @@ let nrunning = ref 0
  *    Also MKSHELL in Shell.ml and NPROC in Scheduler.ml
  *  - argv: for setting MKFLAGS also in Env.initenv()
  *  - open_in: for parsing the mkfile (and included files)
+ *  - open_out: to delete target files when error in recipe process
+ *  - Cap.tmp: for :I: interactive feature and pipe cmd
  *)
-type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in >
+type caps = < Cap.forkew; Cap.env; Cap.argv; Cap.open_in; Cap.open_out; Cap.tmp >
 @
 %TODO: delete chdir and -debugger?
 
 <<signature [[CLI.main]]>>=
 (* entry point (can also raise Exit.ExitCode) *)
-val main: <caps; Cap.stdout; ..> ->
+val main: <caps; Cap.stdout; Cap.stderr; ..> ->
   string array -> Exit.t
 @
 
@@ -869,7 +877,8 @@ let _ =
 
 
 <<function [[CLI.main]]>>=
-let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
+let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
+    Exit.t =
   let infile  = ref "mkfile" in
   let targets = ref [] in
   let vars = ref [] in
@@ -879,23 +888,19 @@ let main (caps: <caps; Cap.stdout; ..>) (argv : string array) : Exit.t =
     <<[[CLI.main()]] [[options]] elements>>
   ] |> Arg.align
   in
-  (* old: was Arg.parse but we want explicit argv control *)
-  (try
-    Arg.parse_argv argv options (fun t -> 
+  (* This may raise ExitCode
+   * old: was Arg.parse but we want explicit argv control *)
+  Arg_.parse_argv caps argv options (fun t -> 
     match t with
     <<[[CLI.main()]] modify [[vars]] when definition-like argument>>
     | _ -> targets := t :: !targets
     ) usage;
-  with
-  | Arg.Bad msg -> UConsole.eprint msg; raise (Exit.ExitCode 2)
-  | Arg.Help msg -> UConsole.print msg; raise (Exit.ExitCode 0)
-  );
   <<[[CLI.main()]] logging initializations>>
   <<[[CLI.main()]] CLI action processing>>
 
   (* Let's go! *)
   try 
-    build_targets (caps :> caps ) (Fpath.v !infile) targets !vars;
+    build_targets caps (Fpath.v !infile) targets !vars;
     Exit.OK
   with exn ->
     <<[[CLI.main()]] when [[exn]] thrown in [[build_targets()]]>>
@@ -950,6 +955,9 @@ val build_target : <caps; ..> ->
          failwith (spf "%s" (Unix.error_message error))
    done;
    Exit.Code 1
+| Sys_error s ->
+   Logs.err (fun m -> m "mk: %s" s);
+   Exit.Code 2
 @
 % why not Scheduler.waitup ()?
 %alt: Move in Process management, Exit section later?
@@ -962,8 +970,8 @@ val build_target : <caps; ..> ->
 
 
 <<[[CLI.main()]] modify [[vars]] when definition-like argument>>=
-  | _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
-    let (var, value) = Regexp_.matched2 t in
+| _ when t =~ "^\\(.*\\)=\\(.*\\)$" ->
+    let (var, value) = Regexp.matched2 t in
     vars := (var, value)::!vars;
 @
 
@@ -1109,7 +1117,8 @@ val work :
 %TODO: ugly Out param, better return a bool instead?
 
 <<signature [[Scheduler.waitup]]>>=
-val waitup : < Shell.caps ; Cap.env; .. > -> unit -> unit
+(* need Cap.open_out to delete target file if error in recipe process *)
+val waitup : < Shell.caps ; Cap.open_out; .. > -> unit -> unit
 @
 
 
@@ -2692,13 +2701,12 @@ let sched (caps : < Shell.caps; .. >) () =
 %TODO: move try/with inside let job
 
 <<signature [[Shell.exec_recipe]]>>=
-val exec_recipe :
-  < caps; .. > ->
+val exec_recipe : < caps; .. > ->
   Shellenv.t ->
   string list (* shell arguments (e.g., ["-e"]) *) ->
   string list (* shell stdin lines (the recipe) *) ->
   bool (* interactive *) ->
-  int (* pid *)
+  Proc.pid
 @
 
 <<constant [[Scheduler.running]]>>=
@@ -2754,15 +2762,15 @@ let shprint env s =
 (* Need:
  *  - exec/fork/wait: obviously as we run a shell
  *  - env: for MKSHELL
+ *  - tmp: for the :I: interactive feature and pipecmd
  *)
-type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env >
+type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env; Cap.tmp >
 @
 
 % ??? -> <>
 % (double) fork pipe exec classic
 <<function [[Shell.exec_recipe]]>>=
-(* returns a pid *)
-let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : int =
+let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flags inputs (interactive : bool) : Proc.pid =
   let pid = CapUnix.fork caps () in
   
   (* children case *)
@@ -2798,8 +2806,8 @@ let exec_recipe (caps : < Cap.fork; Cap.exec; .. >) (shellenv : Shellenv.t) flag
 % reorder if pid2 <>0 to pid2 = 0 to better match enclosing
 
 <<signature [[Shell.exec_shell]]>>=
-val exec_shell: <Cap.exec; Cap.env; ..> -> Shellenv.t -> string list -> string list ->
-  unit
+val exec_shell: <Cap.exec; Cap.env; ..> ->
+  Shellenv.t -> string list -> string list -> unit
 @
 
 
@@ -2824,7 +2832,7 @@ let feed_shell_input (inputs : string list) (pipe_write : Unix.file_descr) : uni
 % main -> build_target -> work(); <> -> ???
 <<function [[Scheduler.waitup]]>>=
 (* can call sched () hence the need for Shell.caps, not just Cap.wait *)
-let waitup (caps : < Shell.caps; .. >) () =
+let waitup (caps : < Shell.caps; Cap.open_out; .. >) () =
   let (pid, ret) = 
     try 
       CapUnix.wait caps () 
@@ -3000,8 +3008,8 @@ let read_environment (caps : < Cap.env; ..>) =
   CapUnix.environment caps () |> Array.to_list |> List.map (fun s ->
     if s =~ "\\([^=]+\\)=\\(.*\\)"
     then
-      let (var, str) = Regexp_.matched2 s in
-      var, Regexp_.split "[ \t]+" str
+      let (var, str) = Regexp.matched2 s in
+      var, Regexp.split "[ \t]+" str
     else failwith (spf "wrong format for environment variable: %s" s)
   )
 @
@@ -3349,11 +3357,8 @@ and backquote2 = parse
 %\subsection{Adjusting [[exec_recipe()]]}
 
 <<signature [[Shell.exec_backquote]]>>=
-val exec_backquote :
-  < caps; .. > ->
-  Shellenv.t ->
-  string (* sh stdin (recipe) *) ->
-  string (* sh output *)
+val exec_backquote : < caps; .. > ->
+  Shellenv.t -> string (* sh stdin (recipe) *) -> string (* sh output *)
 @
 
 
@@ -3440,22 +3445,22 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) (input : string)
   then failwith "missing include program name";
   let shellenv = Env.shellenv_of_env env in
   let tmpfile = Shell.exec_pipecmd caps shellenv recipe in
-  let xs = FS.with_open_in caps Parse.parse (Fpath.v tmpfile) in
+  let xs = FS.with_open_in caps Parse.parse tmpfile in
+  (* TODO? delete tmpfile? *)
   (* recurse *)
   instrs xs
 @
 
 <<signature [[Shell.exec_pipecmd]]>>=
-val exec_pipecmd :
-  < caps ; .. > ->
-  Shellenv.t ->
-  string (* sh stdin (recipe) *) ->
-  string (* sh output *)
+val exec_pipecmd : < caps ; .. > ->
+  Shellenv.t -> string (* sh stdin (recipe) *) ->
+  Fpath.t (* tmpfile containing sh output *)
 @
 
 <<function [[Shell.exec_pipecmd]]>>=
-let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
-  let tmpfile = Filename.temp_file "mk" "sh" in
+let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) (input : string) :
+     Fpath.t =
+  let tmpfile = Tmp.new_file caps "mk" "sh" in
   let (pipe_read_input, pipe_write_input)   = Unix.pipe () in
 
   let pid = CapUnix.fork caps () in
@@ -3466,7 +3471,7 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) input =
     Unix.dup2 pipe_read_input Unix.stdin;
     Unix.close pipe_read_input;
     Unix.close pipe_write_input;
-    let fd = Unix.openfile tmpfile [Unix.O_WRONLY] 0o640 in
+    let fd = Unix.openfile !!tmpfile [Unix.O_WRONLY] 0o640 in
     Unix.dup2 fd Unix.stdout;
     Unix.close fd;
 
@@ -3699,7 +3704,7 @@ then
     if Sys.file_exists f
     then begin
       Logs.info (fun m -> m "deleting %s" f);
-      Sys.remove f
+      FS.remove caps (Fpath.v f)
     end
   );
 @
@@ -3743,10 +3748,10 @@ let interactive = Set.mem Ast.Interactive rule.R.attrs2 in
  *)
 if interactive 
 then begin
-  let tmpfile = Filename.temp_file "mk" "sh" in
-  (try
+  Tmp.with_new_file caps "mk" "sh" (fun tmpfile ->
+    (try
      (* nosemgrep: use-caps *)
-     let chan = open_out tmpfile in
+     let chan = open_out !!tmpfile in
      inputs |> List.iter (fun s -> 
        output_string chan s; 
        output_string chan "\n"
@@ -3754,9 +3759,9 @@ then begin
      close_out chan
    with Sys_error s -> 
      failwith (spf "Could not create temporary file (error = %s)" s)
-  ); 
-  exec_shell caps shellenv flags [tmpfile]
-  (* less: delete tmpfile *)
+    ); 
+    exec_shell caps shellenv flags [!!tmpfile]
+)
 (* unreachable *)
 end 
 @

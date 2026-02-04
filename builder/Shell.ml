@@ -16,7 +16,7 @@ open Regexp.Operators
 (* Need:
  *  - exec/fork/wait: obviously as we run a shell
  *  - env: for MKSHELL
- *  - tmp: for interactive feature and pipecmd
+ *  - tmp: for the :I: interactive feature and pipecmd
  *)
 type caps = < Cap.exec; Cap.fork; Cap.wait; Cap.env; Cap.tmp >
 (*e: type [[Shell.caps]] *)

@@ -66,8 +66,8 @@ let sightcursor = {
 }
 (*e: constant [[Cursors.sightcursor]] *)
 
-(* for holding mode *)
 (*s: constant [[Cursors._whitearrow]] *)
+(* for holding mode *)
 let _whitearrow = {
   offset =  {x = 0; y = 0; };
   clr = Cursor.ints_to_bytes
@@ -84,8 +84,8 @@ let _whitearrow = {
     |];
 }
 (*e: constant [[Cursors._whitearrow]] *)
-(* ?? *)
 (*s: constant [[Cursors._query]] *)
+(* ?? *)
 let _query = {
   offset =  {x = -7;y = -7; };
   clr = Cursor.ints_to_bytes

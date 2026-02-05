@@ -44,7 +44,6 @@ val resize_win:
   Window.t -> Image.t -> unit
 (*e: signature [[Wm.resize_win]] *)
 
-
 (* helpers for borders *)
 
 (*s: signature [[Wm.set_current_and_repaint]] *)
@@ -55,9 +54,9 @@ val set_current_and_repaint:
   Window.t option -> unit
 (*e: signature [[Wm.set_current_and_repaint]] *)
 
-(*s: signature [[Wm.corner_cursor_or_window_cursor]] *)
 (* helpers for cursors *)
 
+(*s: signature [[Wm.corner_cursor_or_window_cursor]] *)
 val corner_cursor_or_window_cursor: 
   Window.t -> Point.t -> Mouse.ctl -> unit
 (*e: signature [[Wm.corner_cursor_or_window_cursor]] *)

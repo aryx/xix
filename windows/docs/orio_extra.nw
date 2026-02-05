@@ -38,6 +38,7 @@ open Common
 (* Types and constants *)
 (*****************************************************************************)
 <<type [[CLI.caps]]>>
+
 <<constant [[CLI.usage]]>>
 
 (*****************************************************************************)
@@ -60,6 +61,7 @@ open Common
 <<signature [[Cursors.crosscursor]]>>
 <<signature [[Cursors.boxcursor]]>>
 <<signature [[Cursors.sightcursor]]>>
+
 (*
 val whitearrow: Cursor.t
 val query: Cursor.t
@@ -89,9 +91,7 @@ open Rectangle
 <<constant [[Cursors.boxcursor]]>>
 <<constant [[Cursors.sightcursor]]>>
 
-(* for holding mode *)
 <<constant [[Cursors._whitearrow]]>>
-(* ?? *)
 <<constant [[Cursors._query]]>>
 
 (*****************************************************************************)
@@ -117,28 +117,7 @@ open Rectangle
 <<function [[Cursors.which_corner_cursor]]>>
 @
 
-
 \section{[[Device.ml]]}
-
-
-<<function [[Device.honor_offset_and_count]]>>=
-let honor_offset_and_count offset count data =
-  let len = String.length data in
-  match () with
-  | _ when offset > len -> ""
-  | _ when offset + count > len ->
-    String.sub data offset (len - offset)
-  | _ -> data
-@
-
-<<function [[Device.honor_count]]>>=
-let honor_count count data =
-  let len = String.length data in
-  if len <= count
-  then data
-  else String.sub data 0 count
-@
-
 
 %-------------------------------------------------------------
 
@@ -182,10 +161,6 @@ open Common
 
 \section{[[Dev_textual_window.mli]]}
 
-<<signature [[Dev_textual_window.dev_text]]>>=
-val dev_text: Device.t
-@
-
 %-------------------------------------------------------------
 
 <<Dev_textual_window.mli>>=
@@ -194,21 +169,6 @@ val dev_text: Device.t
 
 
 \section{[[Dev_textual_window.ml]]}
-
-<<constant [[Dev_textual_window.dev_text]]>>=
-let dev_text = { Device.default with
-  name = "text";
-  perm = Plan9.r;
-  read_threaded = (fun offset count w ->
-    let term = w.W.terminal in 
-    let str = Bytes.create term.T.nrunes in
-    for i = 0 to term.T.nrunes - 1 do
-      Bytes.set str i term.T.text.(i);
-    done;
-    Device.honor_offset_and_count offset count (Bytes.to_string str)
-  );
-}
-@
 
 %-------------------------------------------------------------
 
@@ -246,47 +206,6 @@ open Device
 \section{[[File.ml]]}
 
 
-
-<<type [[File.dir]]>>=
-  and dir = 
-    (* '/' old: was called Qdir in rio-C *)
-    | Root
-@
-
-<<type [[File.devid]]>>=
-  and devid = 
-    | WinName
-    | Mouse
-    (* todo: Cursor ... *)
-    | Cons
-    | ConsCtl
-
-    | WinId
-    | Text
-@
-
-<<type [[File.fileid]]>>=
-(* will generate a Qid.path *)
-type fileid = filecode * Window.wid
-@
-
-<<type [[File.dir_entry_short]]>>=
-(* simpler than Plan9.dir_entry *)
-type dir_entry_short = { 
-  name: string;
-  code: filecode;
-  type_: Plan9.qid_type;
-  (* just for the user; group and other are 'noperm' *)
-  perm: Plan9.perm_property;
-}
-@
-
-<<constant [[File.root_entry]]>>=
-let root_entry = 
-  { name = "."; code = Dir Root; type_ = N.QTDir; perm =  N.rx }
-@
-
-
 <<function [[File.int_of_filecode]]>>=
 let int_of_filecode = function
   | Dir Root -> 0
@@ -311,7 +230,6 @@ let qid_of_fileid file_id typ =
     vers = 0;
   }
 @
-
 
 %-------------------------------------------------------------
 
@@ -351,7 +269,6 @@ module N = Plan9
 (* Helpers *)
 (*****************************************************************************)
 <<function [[File.int_of_filecode]]>>
-
 <<function [[File.int_of_fileid]]>>
 
 (*****************************************************************************)
@@ -425,12 +342,10 @@ module W = Window
 <<constant [[Globals.debug_9P]]>>
 <<constant [[Globals.debug_draw]]>>
 
-(* less: could be in global, or could pass it around so more functional
+(* alt: could be in global but better to pass it around so more functional
  * mousectl
  * kbdctl
  * fs
- * 
- * less: could be in global, or could pass it explicitely so more functional
  * let display = ref Display.fake_display
  * let view = ref Display.fake_image
  * let font = ref Font.fake_font
@@ -442,7 +357,6 @@ module W = Window
 <<constant [[Globals.title_color]]>>
 <<constant [[Globals.title_color_light]]>>
 @
-
 
 \section{[[Main.ml]]}
 
@@ -485,53 +399,13 @@ open Common
 
 \section{[[Processes_winshell.mli]]}
 
-<<signature [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>=
-val run_cmd_in_window_in_child_of_fork:
-  < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. > ->
-  string -> string array -> Window.t -> Fileserver.t -> unit
-@
-
-
 %-------------------------------------------------------------
 
 <<Processes_winshell.mli>>=
 <<signature [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>
 @
 
-
 \section{[[Processes_winshell.ml]]}
-
-<<function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>=
-let run_cmd_in_window_in_child_of_fork
-  (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
-  (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
-  (*Unix1*)CapUnix.chdir caps !!(w.pwd);
-  (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
-    
-  (*/* close server end so mount won't hang if exiting */*)
-  Unix1.close fs.server_fd;
-  (* todo: close on exec? *)
-
-  Plan9.mount caps fs.clients_fd (-1) (Fpath.v "/mnt/wsys") Plan9.MRepl (spf "%d" w.id);
-  Plan9.bind caps (Fpath.v "/mnt/wsys") (Fpath.v "/dev") Plan9.MBefore;
-
-  (* less: wclose for ref counting *)
-  (* todo: handle errors? Unix_error? then communicate failure to parent? *)
-  (* bugfix: do not forget the last perm argument below! otherwise partial
-   * application and stdin/stdout are never reopened (in fact the dup
-   * below even crashes the plan9 kernel)
-   *)
-  Unix1.close Unix1.stdin;
-  let _fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
-  Unix1.close Unix1.stdout;
-  let _fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
-  Unix1.dup2 Unix1.stdout Unix1.stderr; 
-
-  (* less: notify nil *)
-  (*Unix2*)CapUnix.execv caps cmd argv |> ignore;
-  (* should never reach this point *)
-  failwith "exec failed"
-@
 
 %-------------------------------------------------------------
 
@@ -549,41 +423,6 @@ module Unix2 = ThreadUnix
 
 \section{[[Terminal.mli]]}
 
-<<type [[Terminal.position (Terminal.mli)]]>>=
-type position = {
-  i: int;
-}
-@
-
-<<type [[Terminal.t (Terminal.mli)]]>>=
-type t = {
-  (* the model *)
-
-  mutable text: Rune.t array;
-  mutable nrunes: int;
-
-  mutable cursor: position;
-  mutable end_selection: position option;
-
-  mutable output_point: position;
-
-  (* the view *)
-
-  img: Image.t;
-
-  r: Rectangle.t;
-  textr: Rectangle.t;
-  scrollr: Rectangle.t;
-
-  mutable origin_visible: position;
-  mutable runes_visible: int;
-
-  font: Font.t;
-
-  mutable is_selected: bool;
-}
-@
-
 <<signature [[Terminal.alloc]]>>=
 val alloc: Image.t -> Font.t -> t
 @
@@ -596,13 +435,12 @@ val newline_after_output_point: t -> bool
 val repaint: t -> unit
 @
 
-
 %-------------------------------------------------------------
 
 <<Terminal.mli>>=
-<<type [[Terminal.position (Terminal.mli)]]>>
+<<type [[Terminal.position]]>>
 
-<<type [[Terminal.t (Terminal.mli)]]>>
+<<type [[Terminal.t]]>>
 
 <<signature [[Terminal.alloc]]>>
 
@@ -706,6 +544,7 @@ let scrollbar_width = 12
 @
 
 <<constant [[Terminal.scrollbar_gap]]>>=
+(* gap right of scrollbar *)
 let scrollbar_gap = 4
 @
 
@@ -1176,7 +1015,6 @@ let runes_in term runes =
   ()
 @
 
-
 %-------------------------------------------------------------
 
 <<Terminal.ml>>=
@@ -1223,7 +1061,6 @@ module D = Display
 <<type [[Terminal.position]]>>
 <<constant [[Terminal.zero]]>>
 
-
 <<type [[Terminal.t]]>>
 
 <<type [[Terminal.colors]]>>
@@ -1231,7 +1068,6 @@ module D = Display
 <<constant [[Terminal.dark_grey]]>>
 
 <<constant [[Terminal.scrollbar_width]]>>
-(* gap right of scrollbar *)
 <<constant [[Terminal.scrollbar_gap]]>>
 
 <<constant [[Terminal.tick_width]]>>
@@ -1251,7 +1087,6 @@ module D = Display
 (*****************************************************************************)
 (* Colors *)
 (*****************************************************************************)
-
 <<function [[Terminal.init_colors]]>>
 
 <<function [[Terminal.colors_focused_window]]>>
@@ -1260,9 +1095,7 @@ module D = Display
 (*****************************************************************************)
 (* Scrollbar *)
 (*****************************************************************************)
-
 <<function [[Terminal.scroll_pos]]>>
-    
   
 <<function [[Terminal.repaint_scrollbar]]>>
 
@@ -1330,56 +1163,6 @@ module D = Display
 
 \section{[[Threads_fileserver.ml]]}
 
-<<constant [[Threads_fileserver.all_devices]]>>=
-let all_devices = [
-  File.WinName , Virtual_draw.dev_winname;
-  File.Mouse   , Virtual_mouse.dev_mouse;
-  File.Cons    , Virtual_cons.dev_cons;
-  File.ConsCtl , Virtual_cons.dev_consctl;
-  
-  File.WinId   , Dev_wm.dev_winid;
-  File.Text    , Dev_textual_window.dev_text;
-]
-@
-
-<<function [[Threads_fileserver.device_of_devid]]>>=
-let device_of_devid (devid : File.devid) : Device.t =
-  try 
-    List.assoc devid all_devices
-  with Not_found ->
-    raise (Impossible (spf "all_devices is not correctly set; missing code %d"
-             (File.int_of_filecode (File.File devid))))
-@
-
-<<constant [[Threads_fileserver.toplevel_entries]]>>=
-let toplevel_entries =
-  all_devices |> List.map (fun (devid, dev) ->
-    File.{
-      name = dev.D.name;
-      code = File.File devid;
-      type_ = Plan9.QTFile;
-      perm = dev.D.perm;
-    }
-  )
-@
-
-<<function [[Threads_fileserver.answer]]>>=
-let answer (fs : Fileserver.t) (res : P9.message) =
-  if !Globals.debug_9P
-  then Logs.debug (fun m -> m "%s" (P9.str_of_msg res));
-
-  P9.write_9P_msg res fs.server_fd
-@
-
-
-<<function [[Threads_fileserver.check_fid]]>>=
-(* less: could be check_and_find_fid to factorize more code in dispatch() *)
-let check_fid op fid (fs : Fileserver.t) =
-  (* stricter: *)
-  if not (Hashtbl.mem fs.fids fid)
-  then failwith (spf "%s: unknown fid %d" op fid)
-@
-
 %-------------------------------------------------------------
 
 <<Threads_fileserver.ml>>=
@@ -1418,7 +1201,6 @@ module R = P9.Response
 (*****************************************************************************)
 (* Dispatch *)
 (*****************************************************************************)
-
 <<constant [[Threads_fileserver.first_message]]>>
 
 <<function [[Threads_fileserver.dispatch]]>>
@@ -1428,7 +1210,6 @@ module R = P9.Response
 (*****************************************************************************)
 <<function [[Threads_fileserver.thread]]>>
 @
-
 
 \section{[[Thread_keyboard.mli]]}
 
@@ -1457,7 +1238,6 @@ open Common
 <<function [[Thread_keyboard.thread]]>>
 @
 
-
 \section{[[Thread_mouse.mli]]}
 %-------------------------------------------------------------
 
@@ -1466,71 +1246,6 @@ open Common
 @
 
 \section{[[Thread_mouse.ml]]}
-
-
-<<type [[Thread_mouse.under_mouse]]>>=
-type under_mouse =
-  | Nothing
-  | CurrentWin of Window.t
-  | OtherWin   of Window.t
-@
-
-<<function [[Thread_mouse.wm_menu]]>>=
-(* bind to right-click *)
-let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button (exitchan : Exit.t Event.channel) 
-    (mouse : Mouse.ctl) (display, desktop, view, font) (fs : Fileserver.t) =
-  (* todo: set (and later restore) sweeping to true *)
-
-  let items = [
-    (* less: the first item get selected the very first time; QEMU bug?  *)
-    "New", (fun () ->
-      let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
-      img_opt |> Option.iter (fun img ->
-        (* 
-           Wm.new_win img "/tests/xxx/test_rio_graph_app1" 
-             [|"/tests/xxx/test_rio_graph_app1"|] None (mouse, fs, font)
-           Wm.new_win img "/tests/rio/8.out" 
-             [|"/tests/rio/8.out"|] None (mouse, fs, font)
-           Wm.new_win img "/tests/xxx/hellorio" 
-             [|"/tests/xxx/hellorio"|] None (mouse, fs, font)
-           Wm.new_win img "/tests/xxx/test_rio_console_app1" 
-             [|"/tests/xxx/test_rio_console_app1"|] None (mouse, fs, font)
-        *)
-           Wm.new_win caps img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
-      )
-    );
-    (* old: was Reshape but here it's really resizing *)
-    "Resize", (fun () -> raise Todo);
-    "Move", (fun () -> raise Todo);
-    "Delete", (fun () -> 
-      let wopt = Mouse_action.point_to mouse in
-      wopt |> Option.iter (fun (w : Window.t) ->
-        let cmd = Window.Delete in
-        Event.send w.chan_cmd cmd |> Event.sync;
-      ));
-    "Hide", (fun () -> 
-      let wopt = Mouse_action.point_to mouse in
-      wopt |> Option.iter (fun w ->
-        Wm.hide_win w
-      ));
-    "Exit", (fun () ->
-      Event.send exitchan Exit.OK |> Event.sync;
-    );
-  ] @
-  (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, (w : Window.t)) ->
-    (* less: could sort by name, or time it was put in hidden hash *)
-    w.label, (fun () -> 
-      Wm.show_win w desktop
-    )))
-  in
-  Menu_ui.menu items pos button
-    mouse (display, desktop, view, font)
-@
-
-<<function [[Thread_mouse.middle_click_system]]>>=
-let middle_click_system _m _mouse =
-  Logs.err (fun m -> m "Todo: middle click")
-@
 
 %-------------------------------------------------------------
 
@@ -1567,7 +1282,6 @@ open Common
 <<function [[Thread_mouse.thread]]>>
 @
 
-
 \section{[[Threads_window.mli]]}
 
 %-------------------------------------------------------------
@@ -1576,10 +1290,7 @@ open Common
 <<signature [[Threads_window.thread]]>>
 @
 
-
 \section{[[Threads_window.ml]]}
-
-
 
 
 <<function [[Threads_window.mouse_out]]>>=
@@ -1631,12 +1342,6 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
   Event.send chan_bytes str |> Event.sync
 @
 
-
-<<function [[Threads_window.wrap]]>>=
-let wrap f = 
-  fun ev -> Event.wrap ev f
-@
-
 %-------------------------------------------------------------
 
 <<Threads_window.ml>>=
@@ -1653,13 +1358,11 @@ open Window
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 <<type [[Threads_window.event]]>>
 
 (*****************************************************************************)
 (* In and out helpers *)
 (*****************************************************************************)
-
 <<function [[Threads_window.key_in]]>>
 <<function [[Threads_window.runes_in]]>>
 
@@ -1677,7 +1380,6 @@ open Window
 
 <<function [[Threads_window.thread]]>>
 @
-
 
 \section{[[Virtual_cons.mli]]}
 
@@ -1728,7 +1430,6 @@ open Device
 <<constant [[Virtual_draw.dev_winname]]>>
 @
 
-
 \section{[[Virtual_mouse.mli]]}
 
 %-------------------------------------------------------------
@@ -1737,7 +1438,6 @@ open Device
 <<signature [[Virtual_mouse.dev_mouse]]>>
 <<signature [[Virtual_mouse.dev_cursor]]>>
 @
-
 
 \section{[[Virtual_mouse.ml]]}
 
@@ -1771,59 +1471,6 @@ type border_status =
   | Selected
   | Unselected
 @
-
-
-<<function [[Window.alloc]]>>=
-(* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)
-let alloc (img : Display.image) (font : Font.t) : t = 
-  incr wid_counter;
-  incr topped_counter;
-
-  let w = 
-  { 
-    id = !wid_counter;
-    winname = "";
-    label = "<unnamed>";
-
-    img = img;
-    screenr = img.r;
-    mouse_cursor = None;
-
-    chan_mouse    = Event.new_channel ();
-    chan_keyboard = Event.new_channel ();
-    chan_cmd      = Event.new_channel ();
-
-    chan_devmouse_read = Event.new_channel ();
-    mouseclicks_queue = Queue.create ();
-    mouse_counter = 0;
-    last_count_sent = 0;
-    last_mouse = Mouse.fake_state;
-    last_buttons = Mouse.nobuttons;
-
-    chan_devcons_read  = Event.new_channel ();
-    chan_devcons_write = Event.new_channel ();
-    raw_keys = Queue.create ();
-
-    terminal = Terminal.alloc img font;
-
-    topped = !topped_counter;
-
-    mouse_opened   = false;
-    consctl_opened = false;
-    raw_mode       = false;
-
-    deleted = false;
-
-    auto_scroll = false;
-
-    pwd = Fpath.v (Sys.getcwd ());
-    (* set later in Wm.ml in the caller *)
-    pid = -1;
-  }
-  in
-  w
-@
-
 
 %-------------------------------------------------------------
 
@@ -1913,186 +1560,6 @@ let repaint (w : Window.t) =
   then Terminal.repaint w.terminal 
 @
 
-<<function [[Wm.set_current_and_repaint]]>>=
-(* old: was called wcurrent() in rio-C.
- * alt: this function also sets the window cursor in rio-C, but this
- * requires then to pass a mouse parameter, which in turn requires to
- * pass the mouse in Reshape, which then requires to pass the mouse
- * parameter to hide_win and show_win and other functions which is
- * not super elegant. This is why I prefer to not pass a mouse parameter
- * which means the user may have to move the mouse to see the cursor
- * correctly updated after certain wm operations. I think this
- * tradeoff is ok.
- *)
-let set_current_and_repaint wopt (*mouse*) =
-  (* less: if wkeyboard *)
-  let old = !Globals.current in
-  Globals.current := wopt;
-  (match old, wopt with
-  | Some w2, Some w when not (w2 == w) ->
-    (* bugfix: was doing repaint w, hmm *)
-    repaint w2
-  | _ -> ()
-  );
-  wopt |> Option.iter (fun w ->
-    repaint w;
-    (* TODO: do that in caller? so no need pass mouse? *)
-    (* window_cursor w ptTODO mouse;*)
-
-    (* todo: wakeup? why? *)
-    ()
-  )
-@
-
-<<function [[Wm.new_win]]>>=
-(* New window! new process! new thread!
- *
- * less: hideit, pid (but 0, or if != 0 -> use another func), scrolling
- *
- * CLI.thread_main -> Thread_mouse.thread -> Thread_mouse.wm_menu -> <>
- *)
-let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : string) (argv : string array) (pwd_opt : Fpath.t option)
-    (_mouse, fs, font) : unit =
-
-  (* A new Window.t *)
-
-  (* less: cpid channel?  *)
-  (* less: scrollit *)
-  let w : Window.t = Window.alloc img font in
-  (* less: wscrdraw here? (instead of in alloc, ugly) and draw(cols[BACK])? *)
-  (* less: incref? *)
-
-  (* simpler: draw_border w Window.Selected;
-   * but done already later in set_current_and_repaint_borders
-   *)
-
-  (* A new window thread *)
-
-  Hashtbl.add Globals.windows w.id w;
-  let _win_thread = Thread.create !threads_window_thread_func w in
-
-  (* less: if not hideit *)
-  set_current_and_repaint (Some w);
-  Image.flush img;
-
-  (* A new window process *)
-
-  pwd_opt |> Option.iter (fun str -> w.pwd <- str);
-
-  (* TODO: Thread.critical_section := true; *)
-  Logs.warn (fun m -> m "TODO: Thread.critical_section");
-  let res = CapUnix.fork caps () in
-  (match res with
-  | -1 -> failwith "fork returned -1"
-  | 0 ->
-    (* child *)
-    Processes_winshell.run_cmd_in_window_in_child_of_fork caps cmd argv w fs
-  | pid -> 
-    (* parent *)
-    (* TODO: Thread.critical_section := false; *)
-    w.pid <- pid;
-
-    (* todo: how know if pb in child that require us then from
-     * delete the window? need a cpid!
-     *)
-
-    (* old: was in wsetpid() *)
-    w.label <- spf "rc %d" pid;
-    (* less: notefd *)
-
-    (* less: not too late? race with child to access /dev/winname? *)
-    let winname = spf "window.%d" w.id in
-    w.winname <- winname;
-    Draw_ipc.name_image w.img winname;
-    (* less: namecount and retry again if already used *)
-  )
-@
-
-<<function [[Wm.close_win]]>>=
-let close_win (w : Window.t) =
-  w.deleted <- true;
-  Globals.win () |> Option.iter (fun w2 ->
-    if w2 == w
-    then Globals.current := None;
-    (* less: window_cursor  ?*)
-  );
-  (* less: if wkeyboard *)
-  Hashtbl.remove Globals.hidden w.id;
-  Hashtbl.remove Globals.windows w.id;
-  Layer.free w.img;
-  w.img <- Image.fake_image;
-  ()
-@
-
-<<function [[Wm.top_win]]>>=
-let top_win (w : Window.t) =
-  if w.topped = !Window.topped_counter
-  then ()
-  else begin
-    Layer.put_to_top w.img;
-    set_current_and_repaint (Some w);
-    Image.flush w.img;
-
-    incr Window.topped_counter;
-    w.topped <- !Window.topped_counter;
-  end
-@
-
-<<function [[Wm.hide_win]]>>=
-let hide_win (w : Window.t) =
-  if Hashtbl.mem Globals.hidden w.id
-  (* less: return -1? can happen if window thread take too much time
-   * to respond to the Reshape command?
-   *)
-  then raise (Impossible "window already hidden");
-  let old_layer : Display.image = w.img in
-  let display = old_layer.display in
-  (* this is an image! not a layer, so it will not be visible on screen *)
-  let img = 
-    Image.alloc display w.screenr old_layer.chans false Color.white in
-  (* less: return 0 or 1 if can or can not allocate? *)
-  Hashtbl.add Globals.hidden w.id w;
-  let cmd = Window.Reshape img in
-  Event.send w.chan_cmd cmd |> Event.sync;
-  ()
-@
-
-<<function [[Wm.show_win]]>>=
-let show_win (w : Window.t) (desktop : Baselayer.t) =
-  let old_img : Display.image = w.img in
-  (* back to a layer *)
-  let layer = Layer.alloc desktop old_img.r Color.white in
-  Hashtbl.remove Globals.hidden w.id;
-  let cmd = Window.Reshape layer in
-  Event.send w.chan_cmd cmd |> Event.sync;
-  ()
-@
-
-<<function [[Wm.resize_win]]>>=
-(* less: move boolean parameter, useless opti test dx/dy below catch it *)
-let resize_win (w : Window.t) (new_img : Display.image) =
-  let old_img : Display.image = w.img in
-  let old_r : Rectangle.t = old_img.r in
-  let new_r : Rectangle.t = new_img.r in
-  if Rectangle.dx old_r = Rectangle.dx new_r && 
-     Rectangle.dy old_r = Rectangle.dy new_r
-  then Draw.draw new_img new_r old_img None old_r.min;
-  (* a layer or image, so when hiding this should make disappear the window *)
-  Image.free old_img;
-  (* less: screenr set in caller, but could do it here *)
-  w.img <- new_img;
-  (* todo: wsetname *)
-
-  (* todo: textual window update *)
-  draw_border w Window.Selected;
-  incr Window.topped_counter;
-  w.topped <- !Window.topped_counter;
-
-  (* todo: w.W.resized <- true *)
-  (* todo: mouse counter ++ so transmit resize event *)
-  ()
-@
-
 %-------------------------------------------------------------
 
 <<Wm.ml>>=
@@ -2130,10 +1597,7 @@ open Common
 (* Wm *)
 (*****************************************************************************)
 
-(* will be set to Threads_window.thread in CLI.ml *)
-let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
-  failwith "threads_window_thread_func undefined"
-)
+<<global [[Wm.threads_window_thread_func]]>>
 
 <<function [[Wm.new_win]]>>
 
@@ -2151,77 +1615,7 @@ let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
 <<function [[Wm.resize_win]]>>
 @
 
-
 \section{[[Wm.mli]]}
-
-<<signature [[Wm.new_win]]>>=
-(* This is called from Thread_mouse.ml when right-click and select New.
- * Internally it will:
- * - create a new Window.t and adds it to Globals.windows
- * - create a new window thread
- * - fork a new process, mount /mnt/wsys from fileserver and then binds
- *   /mnt/wsys to /dev so the process will have virtual /dev/{cons,winname,...}
- *   and finally run the cmd in it
- *)
-val new_win:
-  < Cap.fork; Cap.exec; Cap.chdir; Cap.mount; Cap.bind; .. > ->
-  Image.t -> string (* cmd *) -> string array (* argv (including argv0) *) ->
-  Fpath.t option (* pwd option *) ->
-  (Mouse.ctl * Fileserver.t * Font.t) ->
-  unit
-@
-
-<<signature [[Wm.close_win]]>>=
-val close_win:
-  Window.t -> unit
-@
-
-<<signature [[Wm.hide_win]]>>=
-(* (those actions used to have a mouse parameter to also update the cursor) *)
-val hide_win:
-  Window.t ->  unit
-@
-
-<<signature [[Wm.show_win]]>>=
-val show_win:
-  Window.t -> Baselayer.t -> unit
-@
-
-<<signature [[Wm.top_win]]>>=
-val top_win:
-  Window.t -> unit
-@
-
-<<signature [[Wm.resize_win]]>>=
-val resize_win:
-  Window.t -> Image.t -> unit
-@
-
-<<signature [[Wm.set_current_and_repaint]]>>=
-(* this also used to have a mouse parameter (should be renamed then
- * set_current_and_repaint_borders_content_and_cursor)
- *)
-val set_current_and_repaint:
-  Window.t option -> unit
-@
-
-<<signature [[Wm.corner_cursor_or_window_cursor]]>>=
-(* helpers for cursors *)
-
-val corner_cursor_or_window_cursor: 
-  Window.t -> Point.t -> Mouse.ctl -> unit
-@
-
-<<signature [[Wm.window_cursor]]>>=
-val window_cursor: 
-  Window.t -> Point.t -> Mouse.ctl -> unit
-@
-
-<<signature [[Wm.threads_window_thread_func]]>>=
-(* for mutual dependencies in new_win *)
-val threads_window_thread_func: (Window.t -> unit) ref
-@
-
 
 %-------------------------------------------------------------
 
@@ -2240,10 +1634,11 @@ val threads_window_thread_func: (Window.t -> unit) ref
 
 <<signature [[Wm.resize_win]]>>
 
-
 (* helpers for borders *)
 
 <<signature [[Wm.set_current_and_repaint]]>>
+
+(* helpers for cursors *)
 
 <<signature [[Wm.corner_cursor_or_window_cursor]]>>
 
@@ -2251,7 +1646,6 @@ val threads_window_thread_func: (Window.t -> unit) ref
 
 <<signature [[Wm.threads_window_thread_func]]>>
 @
-
 
 \section{[[tests/hellorio.ml]]}
 

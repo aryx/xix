@@ -12,7 +12,6 @@ open Window
 (*****************************************************************************)
 (* Types *)
 (*****************************************************************************)
-
 (*s: type [[Threads_window.event]] *)
 type event = 
   (* reading from keyboard thread *)
@@ -35,7 +34,6 @@ type event =
 (*****************************************************************************)
 (* In and out helpers *)
 (*****************************************************************************)
-
 (*s: function [[Threads_window.key_in]] *)
 (* input from user *)
 let key_in (w : Window.t) (key : Keyboard.key) =
@@ -139,14 +137,17 @@ let cmd_in (w : Window.t) (cmd : cmd) =
   (*x: [[Threads_window.cmd_in()]] match [[cmd]] cases *)
   | Reshape (new_img : Display.image) ->
     (* less: put all of that in Wm.resize_win ? *)
+
     if w.deleted
     (* less: free new_img if deleted, but when can happen? *)
     then failwith "window already deleted";
+
     let r = new_img.r in
     w.screenr <- r;
     Wm.resize_win w new_img;
     (* less: set wctlready to true *)
     (* todo: delete timeout proc for old name of window *)
+
     (match Rectangle.dx r, Globals.win () with
     | 0, Some w2 when w2 == w ->
       Wm.set_current_and_repaint None

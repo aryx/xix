@@ -37,6 +37,7 @@ type caps = <
     Cap.mount; Cap.bind
   >
 (*e: type [[CLI.caps]] *)
+
 (*s: constant [[CLI.usage]] *)
 let usage = 
   "usage: rio [options]"

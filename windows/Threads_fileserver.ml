@@ -77,7 +77,6 @@ let check_fid op fid (fs : Fileserver.t) =
 (*****************************************************************************)
 (* Dispatch *)
 (*****************************************************************************)
-
 (*s: constant [[Threads_fileserver.first_message]] *)
 (* for Version *)
 let first_message = ref true

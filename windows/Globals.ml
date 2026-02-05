@@ -47,12 +47,10 @@ let debug_9P = ref false
 let debug_draw = ref false
 (*e: constant [[Globals.debug_draw]] *)
 
-(* less: could be in global, or could pass it around so more functional
+(* alt: could be in global but better to pass it around so more functional
  * mousectl
  * kbdctl
  * fs
- * 
- * less: could be in global, or could pass it explicitely so more functional
  * let display = ref Display.fake_display
  * let view = ref Display.fake_image
  * let font = ref Font.fake_font

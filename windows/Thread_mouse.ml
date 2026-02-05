@@ -31,15 +31,24 @@ type under_mouse =
 
 (*s: function [[Thread_mouse.wm_menu]] *)
 (* bind to right-click *)
-let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button (exitchan : Exit.t Event.channel) 
-    (mouse : Mouse.ctl) (display, desktop, view, font) (fs : Fileserver.t) =
+let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
+     (exitchan : Exit.t Event.channel) 
+     (mouse : Mouse.ctl) 
+     (display, desktop, view, font) 
+     (fs : Fileserver.t) =
   (* todo: set (and later restore) sweeping to true *)
 
   let items = [
+    (*s: [[Thread_mouse.wm_menu()]] [[items]] elements *)
+    "Exit", (fun () ->
+      Event.send exitchan Exit.OK |> Event.sync;
+    );
+    (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
     (* less: the first item get selected the very first time; QEMU bug?  *)
     "New", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
       img_opt |> Option.iter (fun img ->
+         Wm.new_win caps img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
         (* 
            Wm.new_win img "/tests/xxx/test_rio_graph_app1" 
              [|"/tests/xxx/test_rio_graph_app1"|] None (mouse, fs, font)
@@ -50,32 +59,35 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button (exitchan : Exit.t 
            Wm.new_win img "/tests/xxx/test_rio_console_app1" 
              [|"/tests/xxx/test_rio_console_app1"|] None (mouse, fs, font)
         *)
-           Wm.new_win caps img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
       )
     );
-    (* old: was Reshape but here it's really resizing *)
-    "Resize", (fun () -> raise Todo);
-    "Move", (fun () -> raise Todo);
+    (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
     "Delete", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
       wopt |> Option.iter (fun (w : Window.t) ->
         let cmd = Window.Delete in
         Event.send w.chan_cmd cmd |> Event.sync;
       ));
+    (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
+    "Move", (fun () -> raise Todo);
+    (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
+    (* old: was Reshape but here it's really resizing *)
+    "Resize", (fun () -> raise Todo);
+    (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
     "Hide", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
       wopt |> Option.iter (fun w ->
         Wm.hide_win w
       ));
-    "Exit", (fun () ->
-      Event.send exitchan Exit.OK |> Event.sync;
-    );
+    (*e: [[Thread_mouse.wm_menu()]] [[items]] elements *)
   ] @
-  (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, (w : Window.t)) ->
-    (* less: could sort by name, or time it was put in hidden hash *)
-    w.label, (fun () -> 
-      Wm.show_win w desktop
-    )))
+    (*s: [[Thread_mouse.wm_menu()]] [[items]] hidden window elements *)
+    (Globals.hidden |> Hashtbl_.to_list |> List.map (fun (_wid, (w : Window.t)) ->
+        (* less: could sort by name, or time it was put in hidden hash *)
+        w.label, (fun () -> 
+          Wm.show_win w desktop
+        )))
+    (*e: [[Thread_mouse.wm_menu()]] [[items]] hidden window elements *)
   in
   Menu_ui.menu items pos button
     mouse (display, desktop, view, font)
@@ -149,39 +161,43 @@ let thread (caps : < Cap.fork; .. >)
         if Mouse.has_click m
         then 
           let under_mouse =
+            (*s: [[Thread_mouse.thread()]] compute [[under_mouse]] *)
             match wopt, Globals.win () with
             | None, _ -> Nothing
             (* less: look if w2.topped > 0? seems useless *)
             | Some w1, Some w2 when w1 == w2 -> CurrentWin w1
             | Some w, _ -> OtherWin w
+            (*e: [[Thread_mouse.thread()]] compute [[under_mouse]] *)
           in
           (match under_mouse with
+          (*s: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           (* TODO: remove; just because hard to right click on QEMU and laptop*)
           | Nothing when m.buttons.left ->
             wm_menu caps m.pos Mouse.Left exitchan 
               mouse (display, desktop, view, font) fs
-
-
+          (*x: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | ((*Nothing |*) CurrentWin _) when m.buttons.left ->
             ()
-
+          (*x: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | Nothing when m.buttons.middle ->
              middle_click_system m mouse
+          (*x: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | CurrentWin (w : Window.t) when m.buttons.middle ->
             if not w.mouse_opened
             then middle_click_system m mouse
-
+          (*x: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | (Nothing | CurrentWin _) when m.buttons.right ->
             wm_menu caps m.pos Mouse.Right exitchan 
               mouse (display, desktop, view, font) fs
-
+          (*x: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | OtherWin w when m.buttons.left ->
             Wm.top_win w
             (* less: should drain and wait that release up, unless winborder *)
+          (*x: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | OtherWin w when m.buttons.middle || m.buttons.right ->
             Wm.top_win w
             (* todo: should goto again, may need to send event *)
-    
+          (*e: [[Thread_mouse.thread()]] match [[under_mouse]] cases *)
           | _ -> raise (Impossible "Mouse.has_click so one field is true")
           );
         (* todo: reset moving *)

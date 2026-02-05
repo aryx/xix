@@ -108,7 +108,6 @@ let int_of_filecode = function
   | File WinId -> 5
   | File Text -> 6
 (*e: function [[File.int_of_filecode]] *)
-
 (*s: function [[File.int_of_fileid]] *)
 let int_of_fileid (qxxx, wid) = 
   (wid lsl 8) lor

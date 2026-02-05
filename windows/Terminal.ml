@@ -49,7 +49,6 @@ let zero =
   { i = 0 }
 (*e: constant [[Terminal.zero]] *)
 
-
 (*s: type [[Terminal.t]] *)
 type t = {
   (* the model *)
@@ -124,8 +123,8 @@ let dark_grey = ref Display.fake_image
 (*s: constant [[Terminal.scrollbar_width]] *)
 let scrollbar_width = 12
 (*e: constant [[Terminal.scrollbar_width]] *)
-(* gap right of scrollbar *)
 (*s: constant [[Terminal.scrollbar_gap]] *)
+(* gap right of scrollbar *)
 let scrollbar_gap = 4
 (*e: constant [[Terminal.scrollbar_gap]] *)
 
@@ -169,7 +168,6 @@ let debug_keys term key =
 (*****************************************************************************)
 (* Colors *)
 (*****************************************************************************)
-
 (*s: function [[Terminal.init_colors]] *)
 let init_colors display =
   if default_colors.background == Display.fake_image
@@ -199,7 +197,6 @@ let colors_unfocused_window () =
 (*****************************************************************************)
 (* Scrollbar *)
 (*****************************************************************************)
-
 (*s: function [[Terminal.scroll_pos]] *)
 let scroll_pos r p0 p1 total =
   if total = 0 
@@ -226,7 +223,6 @@ let scroll_pos r p0 p1 total =
     in
     Rectangle.r r.min.x miny r.max.x maxy
 (*e: function [[Terminal.scroll_pos]] *)
-    
   
 (*s: function [[Terminal.repaint_scrollbar]] *)
 let repaint_scrollbar term =

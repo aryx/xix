@@ -74,7 +74,7 @@ let repaint (w : Window.t) =
 (*e: function [[Wm.repaint]] *)
 
 (*s: function [[Wm.set_current_and_repaint]] *)
-(* old: was called wcurrent() in rio-C.
+(* old: was called wcurrent() in rio.
  * alt: this function also sets the window cursor in rio-C, but this
  * requires then to pass a mouse parameter, which in turn requires to
  * pass the mouse in Reshape, which then requires to pass the mouse
@@ -108,10 +108,12 @@ let set_current_and_repaint wopt (*mouse*) =
 (* Wm *)
 (*****************************************************************************)
 
+(*s: global [[Wm.threads_window_thread_func]] *)
 (* will be set to Threads_window.thread in CLI.ml *)
-let (threads_window_thread_func: (Window.t -> unit) ref) = ref (fun _ ->
+let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
 )
+(*e: global [[Wm.threads_window_thread_func]] *)
 
 (*s: function [[Wm.new_win]] *)
 (* New window! new process! new thread!

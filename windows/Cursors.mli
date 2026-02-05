@@ -9,6 +9,7 @@ val boxcursor   : Cursor.t
 (*s: signature [[Cursors.sightcursor]] *)
 val sightcursor : Cursor.t
 (*e: signature [[Cursors.sightcursor]] *)
+
 (*
 val whitearrow: Cursor.t
 val query: Cursor.t

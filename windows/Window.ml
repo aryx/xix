@@ -138,10 +138,6 @@ type t = {
   (*e: [[Window.t]] command fields *)
 
   (* ---------------------------------------------------------------- *)
-  (* Resize *)
-  (* ---------------------------------------------------------------- *)
-
-  (* ---------------------------------------------------------------- *)
   (* Process *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] process fields *)
@@ -167,6 +163,13 @@ type t = {
   (*e: [[Window.t]] wm fields *)
 
   (* ---------------------------------------------------------------- *)
+  (* Textual Window *)
+  (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] textual window fields *)
+  terminal: Terminal.t;
+  (*e: [[Window.t]] textual window fields *)
+
+  (* ---------------------------------------------------------------- *)
   (* Graphical Window *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] graphical window fields *)
@@ -176,13 +179,6 @@ type t = {
   (*x: [[Window.t]] graphical window fields *)
   mutable mouse_opened: bool;
   (*e: [[Window.t]] graphical window fields *)
-
-  (* ---------------------------------------------------------------- *)
-  (* Textual Window *)
-  (* ---------------------------------------------------------------- *)
-  (*s: [[Window.t]] textual window fields *)
-  terminal: Terminal.t;
-  (*e: [[Window.t]] textual window fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
@@ -228,14 +224,14 @@ type border_status =
 (*****************************************************************************)
 
 (*s: function [[Window.pt_inside_border]] *)
-(* old: was not an helper in rio-C, but should to be consistent with winborder.
+(* old: was not an helper in rio, but should to be consistent with winborder.
  * alt: pt_on_content (window border vs window content in Windows.nw)
  *)
 let pt_inside_border pt w =
   Rectangle.pt_in_rect pt (Rectangle.insetrect window_border_size w.screenr)
 (*e: function [[Window.pt_inside_border]] *)
 (*s: function [[Window.pt_on_border]] *)
-(* old: was called winborder in rio-C *)
+(* old: was called winborder in rio *)
 let pt_on_border pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
 (*e: function [[Window.pt_on_border]] *)

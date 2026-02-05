@@ -222,10 +222,6 @@ type t = {
   <<[[Window.t]] command fields>>
 
   (* ---------------------------------------------------------------- *)
-  (* Resize *)
-  (* ---------------------------------------------------------------- *)
-
-  (* ---------------------------------------------------------------- *)
   (* Process *)
   (* ---------------------------------------------------------------- *)
   <<[[Window.t]] process fields>>
@@ -241,14 +237,14 @@ type t = {
   <<[[Window.t]] wm fields>>
 
   (* ---------------------------------------------------------------- *)
-  (* Graphical Window *)
-  (* ---------------------------------------------------------------- *)
-  <<[[Window.t]] graphical window fields>>
-
-  (* ---------------------------------------------------------------- *)
   (* Textual Window *)
   (* ---------------------------------------------------------------- *)
   <<[[Window.t]] textual window fields>>
+
+  (* ---------------------------------------------------------------- *)
+  (* Graphical Window *)
+  (* ---------------------------------------------------------------- *)
+  <<[[Window.t]] graphical window fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
@@ -373,9 +369,6 @@ mutable pwd: Fpath.t;
 <<[[Window.t]] config fields>>=
 mutable auto_scroll: bool;
 @
-<<[[Window.t]] wm fields>>=
-mutable topped: topped_counter;
-@
 
 <<[[Window.t]] graphical window fields>>=
 (* can also be used in textual windows, but more rare *)
@@ -399,6 +392,10 @@ let topped_counter =
   ref 0
 @
 
+<<[[Window.t]] wm fields>>=
+mutable topped: topped_counter;
+@
+
 
 %XXX
 <<global [[Globals.hidden]]>>=
@@ -411,7 +408,7 @@ let hidden: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
 
 <<global [[Globals.current]]>>=
 (* the man page of rio (rio(1)) uses the term 'current' 
- * old: was called 'input' in rio-C
+ * old: was called 'input' in rio
  *)
 let current: Window.t option ref  = ref None
 @
@@ -450,12 +447,18 @@ type t = {
 
   (* for security *)
   user: string;
-  (* refined after Tversion first message *)
-  mutable message_size: int;
 
   (* the files managed by the server currently-in-use by the client *)
   fids: (File.fid, File.t) Hashtbl.t;
+
+  <<[[Fileserver.t]] other fields>>
 }
+@
+
+%XXX
+<<[[Fileserver.t]] other fields>>=
+(* refined after Tversion first message *)
+mutable message_size: int;
 @
 
 \subsection{File state and file ids}
@@ -479,7 +482,6 @@ type t = {
   mutable opened: Plan9.open_flags option;
 
   <<[[File.t]] other fields>>
-
 }
 @
 
@@ -499,7 +501,7 @@ win: Window.t;
 (* less: nrpart for runes *)
 @
 
-
+%XXX
 <<type [[File.filecode]]>>=
 (* This is returned by the server (rio) to identify a file of the server *)
 type filecode = 
@@ -617,18 +619,14 @@ let usage =
 <<function [[CLI.main]]>>=
 let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     Exit.t =
-
   <<[[CLI.main()]] locals>>
-
   let options = [
     <<[[CLI.main()]] [[options]] elements>>
   ] |> Arg.align
   in
   (* This may raise ExitCode *)
   Arg_.parse_argv caps argv options (fun _f -> Arg.usage options usage) usage;
-
   <<[[CLI.main()]] logging setup>>
-
   try 
     (* the main call *)
     thread_main caps
@@ -699,9 +697,7 @@ let title_color_light = ref Display.fake_image
 @
 
 %%\section{Mouse initialization}
-
 %%\section{Keyboard initialization}
-
 %%\section{Channels creation}
 
 \section{Threads creation}
@@ -951,7 +947,7 @@ then
 
 
 <<function [[Globals.window_at_point]]>>=
-(* old: was called wpointto in rio-C *)
+(* old: was called wpointto in rio *)
 let window_at_point pt =
   let res = ref None in
   windows |> Hashtbl.iter (fun _k w ->
@@ -1810,13 +1806,13 @@ let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.
 @
 
 <<function [[Window.pt_on_border]]>>=
-(* old: was called winborder in rio-C *)
+(* old: was called winborder in rio *)
 let pt_on_border pt w =
   Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
 @
 
 <<function [[Window.pt_inside_border]]>>=
-(* old: was not an helper in rio-C, but should to be consistent with winborder.
+(* old: was not an helper in rio, but should to be consistent with winborder.
  * alt: pt_on_content (window border vs window content in Windows.nw)
  *)
 let pt_inside_border pt w =

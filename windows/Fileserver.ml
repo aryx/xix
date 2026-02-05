@@ -26,11 +26,14 @@ type t = {
 
   (* for security *)
   user: string;
-  (* refined after Tversion first message *)
-  mutable message_size: int;
 
   (* the files managed by the server currently-in-use by the client *)
   fids: (File.fid, File.t) Hashtbl.t;
+
+  (*s: [[Fileserver.t]] other fields *)
+  (* refined after Tversion first message *)
+  mutable message_size: int;
+  (*e: [[Fileserver.t]] other fields *)
 }
 (*e: type [[Fileserver.t]] *)
 

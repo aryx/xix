@@ -14,7 +14,7 @@ let hidden: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
 
 (*s: global [[Globals.current]] *)
 (* the man page of rio (rio(1)) uses the term 'current' 
- * old: was called 'input' in rio-C
+ * old: was called 'input' in rio
  *)
 let current: Window.t option ref  = ref None
 (*e: global [[Globals.current]] *)
@@ -26,7 +26,7 @@ let win () =
 (*e: function [[Globals.win]] *)
 
 (*s: function [[Globals.window_at_point]] *)
-(* old: was called wpointto in rio-C *)
+(* old: was called wpointto in rio *)
 let window_at_point pt =
   let res = ref None in
   windows |> Hashtbl.iter (fun _k w ->

@@ -120,13 +120,11 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 (*s: function [[CLI.main]] *)
 let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     Exit.t =
-
   (*s: [[CLI.main()]] locals *)
   let level = ref (Some Logs.Warning) in
   (*x: [[CLI.main()]] locals *)
   let backtrace = ref false in
   (*e: [[CLI.main()]] locals *)
-
   let options = [
     (*s: [[CLI.main()]] [[options]] elements *)
     "-s", Arg.Unit (fun () -> raise Todo),
@@ -155,12 +153,10 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
   in
   (* This may raise ExitCode *)
   Arg_.parse_argv caps argv options (fun _f -> Arg.usage options usage) usage;
-
   (*s: [[CLI.main()]] logging setup *)
   Logs_.setup !level ();
   Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
   (*e: [[CLI.main()]] logging setup *)
-
   try 
     (* the main call *)
     thread_main caps

@@ -205,32 +205,6 @@ open Device
 
 \section{[[File.ml]]}
 
-
-<<function [[File.int_of_filecode]]>>=
-let int_of_filecode = function
-  | Dir Root -> 0
-  | File WinName -> 1
-  | File Mouse -> 2
-  | File Cons -> 3
-  | File ConsCtl -> 4
-  | File WinId -> 5
-  | File Text -> 6
-@
-
-<<function [[File.int_of_fileid]]>>=
-let int_of_fileid (qxxx, wid) = 
-  (wid lsl 8) lor
-  int_of_filecode qxxx
-@
-
-<<function [[File.qid_of_fileid]]>>=
-let qid_of_fileid file_id typ =
-  { path = int_of_fileid file_id;
-    typ = typ;
-    vers = 0;
-  }
-@
-
 %-------------------------------------------------------------
 
 <<File.ml>>=

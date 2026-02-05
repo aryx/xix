@@ -508,13 +508,6 @@ win: Window.t;
 
 %XXX
 <<[[File.t]] other fields>>=
-(* The qid is what is returned by the "server" to identify a file (or dir).
- * It is mutable because a fid can be 'walked' to point to another file
- * on the server.
- *)
-mutable qid: Plan9.qid;
-@
-<<[[File.t]] other fields>>=
 (* less: nrpart for runes *)
 @
 
@@ -1981,6 +1974,11 @@ let run_cmd_in_window_in_child_of_fork
   failwith "exec failed"
 @
 
+% pass down w.id so fileserver knows when see an Attach from which windows
+% it comes from! and any other request like Walk will start from
+% root fid where we have the window, so can propagate the info to new
+% fids
+
 \subsection{Namespace adjustments}%%: [[filsysmount()]]}
 
 \subsection{Public layer: [[wsetname()]]}
@@ -2453,6 +2451,7 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 \section{Attach}
 
 % when is this called? just after Plan9.mount of winshell?
+% probably, and get passed the w.id!
 
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* Attach *)
@@ -2489,6 +2488,44 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
   (* less: incref, qunlock *)
   ))
 @
+
+% win = w!!
+
+% return qid that encode the file_id which itself encodes the wid
+
+<<[[File.t]] other fields>>=
+(* The qid is what is returned by the "server" to identify a file (or dir).
+ * It is mutable because a fid can be 'walked' to point to another file
+ * on the server.
+ *)
+mutable qid: Plan9.qid;
+@
+
+<<function [[File.qid_of_fileid]]>>=
+let qid_of_fileid file_id typ =
+  { path = int_of_fileid file_id;
+    typ = typ;
+    vers = 0;
+  }
+@
+
+<<function [[File.int_of_fileid]]>>=
+let int_of_fileid (qxxx, wid) = 
+  (wid lsl 8) lor
+  int_of_filecode qxxx
+@
+
+<<function [[File.int_of_filecode]]>>=
+let int_of_filecode = function
+  | Dir Root -> 0
+  | File WinName -> 1
+  | File Mouse -> 2
+  | File Cons -> 3
+  | File ConsCtl -> 4
+  | File WinId -> 5
+  | File Text -> 6
+@
+
 
 %%\subsection{[[filsysattach()]]}
 %%\subsection{[[xfidattach()]]}
@@ -2531,6 +2568,7 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
         if qid.N.typ <> N.QTDir
         (* will be catched below and transformed in an 9P Rerror message *)
         then failwith "not a directory";
+
         (match entry.code, x with
         | _Qwsys, ".." -> failwith "walk: Todo '..'"
         | File.Dir File.Root, x ->
@@ -2542,6 +2580,7 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
           let qid = File.qid_of_fileid file_id entry.type_ in
           (* continue with other path elements *)
           walk qid entry (qid::acc) xs
+
         (* todo: Wsys, snarf *)
         | _ -> 
           raise (Impossible "should be catched by 'not a directory' above")

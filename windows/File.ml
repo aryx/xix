@@ -85,13 +85,13 @@ type t = {
   (* less: we could also use a wid *)
   win: Window.t;
   (*x: [[File.t]] other fields *)
+  (* less: nrpart for runes *)
+  (*x: [[File.t]] other fields *)
   (* The qid is what is returned by the "server" to identify a file (or dir).
    * It is mutable because a fid can be 'walked' to point to another file
    * on the server.
    *)
   mutable qid: Plan9.qid;
-  (*x: [[File.t]] other fields *)
-  (* less: nrpart for runes *)
   (*e: [[File.t]] other fields *)
 }
 (*e: type [[File.t]] *)

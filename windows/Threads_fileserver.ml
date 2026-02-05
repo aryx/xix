@@ -170,6 +170,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
           if qid.N.typ <> N.QTDir
           (* will be catched below and transformed in an 9P Rerror message *)
           then failwith "not a directory";
+
           (match entry.code, x with
           | _Qwsys, ".." -> failwith "walk: Todo '..'"
           | File.Dir File.Root, x ->
@@ -181,6 +182,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
             let qid = File.qid_of_fileid file_id entry.type_ in
             (* continue with other path elements *)
             walk qid entry (qid::acc) xs
+
           (* todo: Wsys, snarf *)
           | _ -> 
             raise (Impossible "should be catched by 'not a directory' above")

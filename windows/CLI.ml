@@ -86,12 +86,6 @@ let thread_main (caps: < caps; .. >) : Exit.t =
   (* Rio, a concurrent application *)
   let (exit_chan: Exit.t Event.channel) = Event.new_channel () in
   (*s: [[CLI.thread_main()]] threads creation *)
-  (* To break some mutual dependencies.
-   * The mouse right-click and menu will trigger the creation
-   * of new windows and new window threads and call this function.
-   *)
-  Wm.threads_window_thread_func := Threads_window.thread;
-  (*x: [[CLI.thread_main()]] threads creation *)
   let mouse : Mouse.ctl = Mouse.init caps in
   let kbd : Keyboard.ctl = Keyboard.init caps in
 
@@ -106,6 +100,12 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 
   let _fileserver_master_thread =
     Thread.create Threads_fileserver.thread fs in
+  (*x: [[CLI.thread_main()]] threads creation *)
+  (* To break some mutual dependencies.
+   * The mouse right-click and menu will trigger the creation
+   * of new windows and new window threads and call this function.
+   *)
+  Wm.threads_window_thread_func := Threads_window.thread;
   (*e: [[CLI.thread_main()]] threads creation *)
 
   (* Wait *)

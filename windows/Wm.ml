@@ -122,7 +122,8 @@ let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
  *
  * CLI.thread_main -> Thread_mouse.thread -> Thread_mouse.wm_menu -> <>
  *)
-let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : string) (argv : string array) (pwd_opt : Fpath.t option)
+let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
+    (cmd : string) (argv : string array) (pwd_opt : Fpath.t option)
     (_mouse, fs, font) : unit =
 
   (* A new Window.t *)
@@ -151,7 +152,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : 
   pwd_opt |> Option.iter (fun str -> w.pwd <- str);
 
   (* TODO: Thread.critical_section := true; *)
-  Logs.warn (fun m -> m "TODO: Thread.critical_section");
+  (* Logs.warn (fun m -> m "TODO: Thread.critical_section"); *)
   let res = CapUnix.fork caps () in
   (match res with
   | -1 -> failwith "fork returned -1"

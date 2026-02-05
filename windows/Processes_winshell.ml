@@ -28,8 +28,10 @@ let run_cmd_in_window_in_child_of_fork
    *)
   Unix1.close Unix1.stdin;
   let _fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
+  (* TODO? assert fd = 0? possible in OCaml? *)
   Unix1.close Unix1.stdout;
   let _fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
+  (* TODO? assert fd = 1? possible in OCaml? *)
   Unix1.dup2 Unix1.stdout Unix1.stderr; 
 
   (* less: notify nil *)

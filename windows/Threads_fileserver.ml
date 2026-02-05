@@ -54,9 +54,10 @@ let toplevel_entries =
 
 (*s: function [[Threads_fileserver.answer]] *)
 let answer (fs : Fileserver.t) (res : P9.message) =
+  (*s: [[Threads_fileserver.answer()]] debug *)
   if !Globals.debug_9P
   then Logs.debug (fun m -> m "%s" (P9.str_of_msg res));
-
+  (*e: [[Threads_fileserver.answer()]] debug *)
   P9.write_9P_msg res fs.server_fd
 (*e: function [[Threads_fileserver.answer]] *)
 

@@ -144,6 +144,7 @@ let thread (caps : < Cap.fork; .. >)
           (* todo: why if click then not corner cursor? *)
           else Wm.window_cursor w m.pos  mouse
           );
+
           (* less: send logical coordinates *)
           Event.send w.chan_mouse m |> Event.sync
         )

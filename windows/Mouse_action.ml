@@ -12,6 +12,7 @@ type sweep_state =
   | SweepMove of Point.t * Point.t * Image.t option
   (* release right click *)
   | SweepUnclicked of Image.t option
+  (*s: [[Mouse_action.sweep_state]] other cases *)
   (* to factorize cornercursor *)
   | SweepReturn of Image.t option
 
@@ -19,6 +20,7 @@ type sweep_state =
   | SweepRescue of bool (* clicked state *) * Image.t option
   (* wait until no buttons *)
   | SweepDrain
+  (*e: [[Mouse_action.sweep_state]] other cases *)
 (*e: type [[Mouse_action.sweep_state]] *)
 
 (*s: function [[Mouse_action.sweep]] *)
@@ -27,6 +29,7 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
   Mouse.set_cursor mouse Cursors.crosscursor;
 
   let rec transit = function
+    (*s: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepInit ->
       let m = Mouse.read mouse in
       if not (Mouse.has_click m)
@@ -37,9 +40,11 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
         if Mouse.has_button m Mouse.Left
         then transit (SweepRightClicked m.Mouse.pos)
         else transit (SweepRescue (true, None))
+    (*x: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepRightClicked p0 ->
       (* less: onsceen (using clipr) *)
       transit (SweepMove (p0, p0, None))
+    (*x: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepMove (p0, p1, old_img_opt) ->
       let m = Mouse.flush_and_read display mouse in
       (match () with
@@ -70,6 +75,7 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
         assert(Mouse.has_click m);
         transit (SweepRescue (true, old_img_opt))
       )
+    (*x: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepUnclicked (old_img_opt) ->
       (match old_img_opt with
       | None -> transit (SweepReturn None)
@@ -89,22 +95,25 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
           transit (SweepReturn (Some img))
         end
       )
+    (*x: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepReturn img_opt ->
       (* todo: cornercursor? pos! *)
       (* less: moveto to force cursor update? ugly ... *)
       (* less: menuing = false *)
       img_opt
-
+    (*x: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepRescue (clicked_state, old_img_opt) ->
       old_img_opt |> Option.iter Layer.free;
       if clicked_state
       then transit SweepDrain
       else transit (SweepReturn None)
+    (*x: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
     | SweepDrain ->
       let m = Mouse.read mouse in
       if not (Mouse.has_click m)
       then transit (SweepReturn None)
       else transit SweepDrain
+    (*e: [[Mouse_action.sweep()]] match [[sweep_state]] cases *)
   in
   transit SweepInit
 (*e: function [[Mouse_action.sweep]] *)

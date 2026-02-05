@@ -15,7 +15,7 @@
 
 %thx to LP, I changed for the better a few things:
 
-%thx to this manual, better understand rio/windowing-system:
+%thx to this manual, I better understand rio/windowing-system:
 
 %history LP-ization:
 
@@ -143,7 +143,7 @@ in
 
 \section{Software architecture}
 
-\subsection{Processes,  procs, and threads relationships}
+\subsection{Threads relationships}%%Processes,  procs, and threads relationships}
 \label{sec:thread-archi}
 \label{fig:soft-archi-threads}
 \label{fig:hellorio-and-shell}
@@ -183,10 +183,6 @@ in
 
 \section{Desktop}%%, [[desktop]]}
 %ocaml: also not a global anymore
-
-<<constant [[Globals.red]]>>=
-let red               = ref Display.fake_image
-@
 
 \section{Windows}
 \label{sec:core-ds-Windows}
@@ -310,8 +306,7 @@ mutable screenr: Rectangle.t;
 (* writable through /mnt/wsys/cursor *)
 mutable mouse_cursor: Cursor.t option;
 @
-
-
+%XXX
 <<[[Window.t]] mouse fields>>=
 (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
  * The channel inside the channel will be used to write a mouse state
@@ -336,7 +331,7 @@ mutable last_mouse: Mouse.state;
 mutable last_buttons: Mouse.buttons;
 @
 
-
+%XXX
 <<[[Window.t]] keyboard fields>>=
 (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
  * The first channel will be used by thread_fileserver to indicate the
@@ -357,19 +352,12 @@ chan_devcons_write: (Rune.t list Event.channel) Event.channel;
 raw_keys: Keyboard.key Queue.t;
 @
 
-
-<<[[Window.t]] process fields>>=
-(* not really mutable, but set after Window.alloc() *)
-mutable pid: int;
-(* can be changed through /mnt/wsys/wdir *)
-mutable pwd: Fpath.t;
-(* todo? notefd *)
-@
-
+%XXX
 <<[[Window.t]] config fields>>=
 mutable auto_scroll: bool;
 @
 
+%XXX
 <<[[Window.t]] graphical window fields>>=
 (* can also be used in textual windows, but more rare *)
 mutable consctl_opened: bool;
@@ -383,6 +371,7 @@ mutable raw_mode: bool;
 let windows: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
 @
 
+% move later? quite important to understand so better here probably
 <<type [[Window.topped_counter]]>>=
 type topped_counter = int
 @
@@ -473,39 +462,9 @@ type t = {
 }
 @
 
-%XXX
 <<[[File.t]] other fields>>=
-(* The qid is what is returned by the "server" to identify a file (or dir).
- * It is mutable because a fid can be 'walked' to point to another file
- * on the server.
- *)
-mutable qid: Plan9.qid;
 (* for stat (mutable for the same reason than qid above) *)
 mutable entry: dir_entry_short;
-
-(* less: we could also use a wid *)
-win: Window.t;
-
-(* less: nrpart for runes *)
-@
-
-%XXX
-<<type [[File.filecode]]>>=
-(* This is returned by the server (rio) to identify a file of the server *)
-type filecode = 
-  | Dir of dir
-  | File of devid
-@
-<<type [[File.dir]]>>=
-  and dir = 
-    (* '/' old: was called Qdir in rio-C *)
-    | Root
-@
-
-
-<<type [[File.fileid]]>>=
-(* will generate a Qid.path *)
-type fileid = filecode * Window.wid
 @
 
 <<type [[File.dir_entry_short]]>>=
@@ -519,10 +478,53 @@ type dir_entry_short = {
 }
 @
 
+<<type [[File.filecode]]>>=
+(* This is returned by the server (rio) to identify a file of the server *)
+type filecode = 
+  | Dir of dir
+  | File of devid
+@
+<<type [[File.dir]]>>=
+  and dir = 
+    (* '/' old: was called Qdir in rio *)
+    | Root
+@
+
 <<constant [[File.root_entry]]>>=
 let root_entry = 
   { name = "."; code = Dir Root; type_ = N.QTDir; perm =  N.rx }
 @
+
+
+
+<<[[File.t]] other fields>>=
+(* less: we could also use a wid *)
+win: Window.t;
+@
+% get back the window of the process doing the request! very important!
+% how do we get the window?
+
+
+
+%XXX
+<<[[File.t]] other fields>>=
+(* The qid is what is returned by the "server" to identify a file (or dir).
+ * It is mutable because a fid can be 'walked' to point to another file
+ * on the server.
+ *)
+mutable qid: Plan9.qid;
+@
+<<[[File.t]] other fields>>=
+(* less: nrpart for runes *)
+@
+
+
+%XXX
+<<type [[File.fileid]]>>=
+(* will generate a Qid.path *)
+type fileid = filecode * Window.wid
+@
+
 
 %%\subsection{Workers and jobs: [[Xfid]]}
 
@@ -701,6 +703,8 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 
 \section{Graphics initialization}
 
+% similar start to hellorio.ml
+
 <<[[CLI.thread_main()]] graphics initializations>>=
 let display : Display.t = Draw.init caps "orio" in
 (* alt: simpler (but does not allow rio under rio in): 
@@ -728,6 +732,12 @@ Draw.draw_color view view.r background;
 Display.flush display;
 @
 
+% desktop! baselayer on top of which can put layers
+% useful for?
+
+<<constant [[Globals.red]]>>=
+let red               = ref Display.fake_image
+@
 <<constant [[Globals.title_color]]>>=
 let title_color       = ref Display.fake_image
 @
@@ -741,27 +751,7 @@ let title_color_light = ref Display.fake_image
 
 \section{Threads creation}
 
-%XXX
-<<signature [[Wm.threads_window_thread_func]]>>=
-(* for mutual dependencies in new_win *)
-val threads_window_thread_func: (Window.t -> unit) ref
-@
-<<[[CLI.thread_main()]] threads creation>>=
-(* To break some mutual dependencies.
- * The mouse right-click and menu will trigger the creation
- * of new windows and new window threads and call this function.
- *)
-Wm.threads_window_thread_func := Threads_window.thread;
-@
-% must be done before we create thhe mouse thread?
-<<global [[Wm.threads_window_thread_func]]>>=
-(* will be set to Threads_window.thread in CLI.ml *)
-let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
-  failwith "threads_window_thread_func undefined"
-)
-@
-
-
+% again similar to hellorio.ml
 <<[[CLI.thread_main()]] threads creation>>=
 let mouse : Mouse.ctl = Mouse.init caps in
 let kbd : Keyboard.ctl = Keyboard.init caps in
@@ -781,7 +771,7 @@ let _fileserver_master_thread =
 
 \section{Filesystem server initialization}
 
-\subsection{[[Fileserver.init()]]}%%[[filsysinit()]]}
+%\subsection{[[Fileserver.init()]]}%%[[filsysinit()]]}
 
 <<signature [[Fileserver.init]]>>=
 (* internally creates a pipe between clients_fd/server_fd above *)
@@ -854,6 +844,7 @@ let thread (kbd : Keyboard.ctl) : unit =
 chan_keyboard: Keyboard.key Event.channel;
 @
 
+% will see later then things consuming what is produced here
 
 \section{Mouse thread}
 
@@ -933,10 +924,17 @@ Globals.win () |> Option.iter (fun (w : Window.t) ->
   (* todo: why if click then not corner cursor? *)
   else Wm.window_cursor w m.pos  mouse
   );
+
   (* less: send logical coordinates *)
   Event.send w.chan_mouse m |> Event.sync
 )
 @
+
+<<[[Window.t]] mouse fields>>=
+(* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
+chan_mouse: Mouse.state Event.channel;
+@
+% again will see later threads that consume what is produced here
 
 <<signature [[Wm.corner_cursor_or_window_cursor]]>>=
 val corner_cursor_or_window_cursor: 
@@ -948,10 +946,6 @@ val window_cursor:
   Window.t -> Point.t -> Mouse.ctl -> unit
 @
 
-<<[[Window.t]] mouse fields>>=
-(* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
-chan_mouse: Mouse.state Event.channel;
-@
 
 \subsection{Windowing system mouse events}
 
@@ -991,7 +985,8 @@ let window_at_point pt =
   );
   !res
 @
-
+% can have multiple windows under the mouse, but we look for the one
+% at the top!
 
 <<type [[Thread_mouse.under_mouse]]>>=
 type under_mouse =
@@ -1031,6 +1026,11 @@ match wopt, Globals.win () with
 | CurrentWin (w : Window.t) when m.buttons.middle ->
   if not w.mouse_opened
   then middle_click_system m mouse
+@
+%XXX
+<<function [[Thread_mouse.middle_click_system]]>>=
+let middle_click_system _m _mouse =
+  Logs.err (fun m -> m "Todo: middle click")
 @
 
 
@@ -1093,6 +1093,10 @@ let wrap f =
   fun ev -> Event.wrap ev f
 @
 
+<<signature [[Terminal.key_in]]>>=
+val key_in: t -> Keyboard.key -> unit
+@
+
 
 <<[[Window.t]] command fields>>=
 (* Threads_window.thread <-- Thread_mouse.thread? | ?? *)
@@ -1111,7 +1115,7 @@ type cmd =
 % more in Section X to actually produce and handle Delete
 
 <<[[Window.t]] other fields>>=
-(* todo: why need this? *)
+(* todo: why need this? race between delete window and other operation? *)
 mutable deleted: bool;
 @
 
@@ -1215,10 +1219,6 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   end
 @
 
-<<signature [[Terminal.key_in]]>>=
-val key_in: t -> Keyboard.key -> unit
-@
-
 
 \subsection{Mouse events listening}
 
@@ -1234,6 +1234,7 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
       Queue.add (m, w.mouse_counter) w.mouseclicks_queue;
       w.last_buttons <- m.buttons
     end;
+
   | false -> failwith "mouse_in: mouse not opened todo"
 @
 
@@ -1307,6 +1308,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
     answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
   )
 @
+% see error in appendix
 
 <<[[Fileserver.t]] other fields>>=
 (* refined after Tversion first message *)
@@ -1315,9 +1317,7 @@ mutable message_size: int;
 
 <<function [[Threads_fileserver.answer]]>>=
 let answer (fs : Fileserver.t) (res : P9.message) =
-  if !Globals.debug_9P
-  then Logs.debug (fun m -> m "%s" (P9.str_of_msg res));
-
+  <<[[Threads_fileserver.answer()]] debug>>
   P9.write_9P_msg res fs.server_fd
 @
 
@@ -1727,13 +1727,6 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
 @
 
 
-%XXX
-<<function [[Thread_mouse.middle_click_system]]>>=
-let middle_click_system _m _mouse =
-  Logs.err (fun m -> m "Todo: middle click")
-@
-
-
 
 \section{Window borders click}
 
@@ -1779,7 +1772,7 @@ val new_win:
   unit
 @
 
-\subsection{Window thread creation: [[new()]]}
+\subsection{Window thread creation}%%: [[new()]]}
 
 <<function [[Wm.new_win]]>>=
 (* New window! new process! new thread!
@@ -1788,7 +1781,8 @@ val new_win:
  *
  * CLI.thread_main -> Thread_mouse.thread -> Thread_mouse.wm_menu -> <>
  *)
-let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : string) (argv : string array) (pwd_opt : Fpath.t option)
+let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
+    (cmd : string) (argv : string array) (pwd_opt : Fpath.t option)
     (_mouse, fs, font) : unit =
 
   (* A new Window.t *)
@@ -1817,7 +1811,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : 
   pwd_opt |> Option.iter (fun str -> w.pwd <- str);
 
   (* TODO: Thread.critical_section := true; *)
-  Logs.warn (fun m -> m "TODO: Thread.critical_section");
+  (* Logs.warn (fun m -> m "TODO: Thread.critical_section"); *)
   let res = CapUnix.fork caps () in
   (match res with
   | -1 -> failwith "fork returned -1"
@@ -1845,7 +1839,51 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t) (cmd : 
   )
 @
 
-\subsection{[[Window]] allocation: [[wmk()]]}
+
+<<[[Window.t]] process fields>>=
+(* not really mutable, but set after Window.alloc() *)
+mutable pid: int;
+@
+
+<<[[Window.t]] process fields>>=
+(* can be changed through /mnt/wsys/wdir *)
+mutable pwd: Fpath.t;
+(* todo? notefd *)
+@
+
+
+
+<<signature [[Wm.threads_window_thread_func]]>>=
+(* for mutual dependencies in new_win *)
+val threads_window_thread_func: (Window.t -> unit) ref
+@
+% must be done before we create thhe mouse thread?
+<<global [[Wm.threads_window_thread_func]]>>=
+(* will be set to Threads_window.thread in CLI.ml *)
+let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
+  failwith "threads_window_thread_func undefined"
+)
+@
+
+<<[[CLI.thread_main()]] threads creation>>=
+(* To break some mutual dependencies.
+ * The mouse right-click and menu will trigger the creation
+ * of new windows and new window threads and call this function.
+ *)
+Wm.threads_window_thread_func := Threads_window.thread;
+@
+
+
+<<signature [[Wm.set_current_and_repaint]]>>=
+(* this also used to have a mouse parameter (should be renamed then
+ * set_current_and_repaint_borders_content_and_cursor)
+ *)
+val set_current_and_repaint:
+  Window.t option -> unit
+@
+
+
+\subsection{[[Window]] allocation}%%: [[wmk()]]}
 
 <<function [[Window.alloc]]>>=
 (* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)
@@ -1856,11 +1894,25 @@ let alloc (img : Display.image) (font : Font.t) : t =
   let w = 
   { 
     id = !wid_counter;
+    (* will be set in caller *)
     winname = "";
     label = "<unnamed>";
 
+    (* set later in Wm.ml in the caller *)
+    pid = -1;
+    pwd = Fpath.v (Sys.getcwd ());
+
     img = img;
     screenr = img.r;
+
+    topped = !topped_counter;
+
+    mouse_opened   = false;
+    consctl_opened = false;
+    raw_mode       = false;
+
+    deleted = false;
+
     mouse_cursor = None;
 
     chan_mouse    = Event.new_channel ();
@@ -1880,26 +1932,14 @@ let alloc (img : Display.image) (font : Font.t) : t =
 
     terminal = Terminal.alloc img font;
 
-    topped = !topped_counter;
-
-    mouse_opened   = false;
-    consctl_opened = false;
-    raw_mode       = false;
-
-    deleted = false;
-
     auto_scroll = false;
-
-    pwd = Fpath.v (Sys.getcwd ());
-    (* set later in Wm.ml in the caller *)
-    pid = -1;
   }
   in
   w
 @
 
 
-\subsection{Window process creation: [[winshell()]]}
+\subsection{Window process creation}%%: [[winshell()]]}
 
 <<signature [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>=
 val run_cmd_in_window_in_child_of_fork:
@@ -1929,8 +1969,10 @@ let run_cmd_in_window_in_child_of_fork
    *)
   Unix1.close Unix1.stdin;
   let _fd = Unix1.openfile "/dev/cons" [Unix1.O_RDONLY] 0o666 in
+  (* TODO? assert fd = 0? possible in OCaml? *)
   Unix1.close Unix1.stdout;
   let _fd = Unix1.openfile "/dev/cons" [Unix1.O_WRONLY] 0o666 in
+  (* TODO? assert fd = 1? possible in OCaml? *)
   Unix1.dup2 Unix1.stdout Unix1.stderr; 
 
   (* less: notify nil *)
@@ -1939,7 +1981,7 @@ let run_cmd_in_window_in_child_of_fork
   failwith "exec failed"
 @
 
-\subsection{Namespace adjustments: [[filsysmount()]]}
+\subsection{Namespace adjustments}%%: [[filsysmount()]]}
 
 \subsection{Public layer: [[wsetname()]]}
 
@@ -1961,13 +2003,18 @@ type sweep_state =
   | SweepMove of Point.t * Point.t * Image.t option
   (* release right click *)
   | SweepUnclicked of Image.t option
-  (* to factorize cornercursor *)
-  | SweepReturn of Image.t option
+  <<[[Mouse_action.sweep_state]] other cases>>
+@
 
-  (* error management when left or middle click or too small rectangle *)
-  | SweepRescue of bool (* clicked state *) * Image.t option
-  (* wait until no buttons *)
-  | SweepDrain
+%XXX
+<<[[Mouse_action.sweep_state]] other cases>>=
+(* to factorize cornercursor *)
+| SweepReturn of Image.t option
+
+(* error management when left or middle click or too small rectangle *)
+| SweepRescue of bool (* clicked state *) * Image.t option
+(* wait until no buttons *)
+| SweepDrain
 @
 
 <<function [[Mouse_action.sweep]]>>=
@@ -1976,87 +2023,108 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
   Mouse.set_cursor mouse Cursors.crosscursor;
 
   let rec transit = function
-    | SweepInit ->
-      let m = Mouse.read mouse in
-      if not (Mouse.has_click m)
-      then transit SweepInit
-      else 
-        (* less: force exactly right click? *)
-        (* todo: Mouse.Right at some point *)
-        if Mouse.has_button m Mouse.Left
-        then transit (SweepRightClicked m.Mouse.pos)
-        else transit (SweepRescue (true, None))
-    | SweepRightClicked p0 ->
-      (* less: onsceen (using clipr) *)
-      transit (SweepMove (p0, p0, None))
-    | SweepMove (p0, p1, old_img_opt) ->
-      let m = Mouse.flush_and_read display mouse in
-      (match () with
-      (* less: force exactly right click? *)
-      (* todo: Mouse.Right at some point *)
-      | _ when Mouse.has_button m Mouse.Left ->
-        if m.Mouse.pos = p1
-        then transit (SweepMove (p0, p1, old_img_opt))
-        else
-          (* less: onscreen *)
-          let p1 = m.Mouse.pos in
-          let r = Rectangle.canonical p0 p1 in
-          if Rectangle.dx r > 5 && Rectangle.dy r > 5 then begin
-            (* need that? should be transparent anyway no? *)
-            let grey = Color.mk2 0xEE 0xEE 0xEE in
-            (* todo? RefreshNothing? *)
-            let img = Layer.alloc desktop r grey in
-            old_img_opt |> Option.iter Layer.free;
-            Polygon.border img r Window.window_border_size 
-              !Globals.red Point.zero;
-            Display.flush display;
-            transit (SweepMove (p0, p1, Some img))
-          end
-          else transit (SweepMove (p0, p1, old_img_opt))
-      | _ when not (Mouse.has_click m) -> 
-        transit (SweepUnclicked (old_img_opt))
-      | _ -> 
-        assert(Mouse.has_click m);
-        transit (SweepRescue (true, old_img_opt))
-      )
-    | SweepUnclicked (old_img_opt) ->
-      (match old_img_opt with
-      | None -> transit (SweepReturn None)
-      | Some (old_img : Display.image) ->
-        let r = old_img.r in
-        if Rectangle.dx r < 100 || Rectangle.dy r < 3 * font.Font.height
-        then transit (SweepRescue (false, old_img_opt))
-        else begin
-          (* todo? RefreshBackup? *)
-          let img = Layer.alloc desktop r Color.white in
-          Layer.free old_img;
-          Polygon.border img r Window.window_border_size 
-            !Globals.red Point.zero;
-          (* done in caller but more logical here I think *)
-          Display.flush display;
-          (* finally!! got an image *)
-          transit (SweepReturn (Some img))
-        end
-      )
-    | SweepReturn img_opt ->
-      (* todo: cornercursor? pos! *)
-      (* less: moveto to force cursor update? ugly ... *)
-      (* less: menuing = false *)
-      img_opt
-
-    | SweepRescue (clicked_state, old_img_opt) ->
-      old_img_opt |> Option.iter Layer.free;
-      if clicked_state
-      then transit SweepDrain
-      else transit (SweepReturn None)
-    | SweepDrain ->
-      let m = Mouse.read mouse in
-      if not (Mouse.has_click m)
-      then transit (SweepReturn None)
-      else transit SweepDrain
+    <<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>
   in
   transit SweepInit
 @
+
+
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepInit ->
+  let m = Mouse.read mouse in
+  if not (Mouse.has_click m)
+  then transit SweepInit
+  else 
+    (* less: force exactly right click? *)
+    (* todo: Mouse.Right at some point *)
+    if Mouse.has_button m Mouse.Left
+    then transit (SweepRightClicked m.Mouse.pos)
+    else transit (SweepRescue (true, None))
+@
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepRightClicked p0 ->
+  (* less: onsceen (using clipr) *)
+  transit (SweepMove (p0, p0, None))
+@
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepMove (p0, p1, old_img_opt) ->
+  let m = Mouse.flush_and_read display mouse in
+  (match () with
+  (* less: force exactly right click? *)
+  (* todo: Mouse.Right at some point *)
+  | _ when Mouse.has_button m Mouse.Left ->
+    if m.Mouse.pos = p1
+    then transit (SweepMove (p0, p1, old_img_opt))
+    else
+      (* less: onscreen *)
+      let p1 = m.Mouse.pos in
+      let r = Rectangle.canonical p0 p1 in
+      if Rectangle.dx r > 5 && Rectangle.dy r > 5 then begin
+        (* need that? should be transparent anyway no? *)
+        let grey = Color.mk2 0xEE 0xEE 0xEE in
+        (* todo? RefreshNothing? *)
+        let img = Layer.alloc desktop r grey in
+        old_img_opt |> Option.iter Layer.free;
+        Polygon.border img r Window.window_border_size 
+          !Globals.red Point.zero;
+        Display.flush display;
+        transit (SweepMove (p0, p1, Some img))
+      end
+      else transit (SweepMove (p0, p1, old_img_opt))
+  | _ when not (Mouse.has_click m) -> 
+    transit (SweepUnclicked (old_img_opt))
+  | _ -> 
+    assert(Mouse.has_click m);
+    transit (SweepRescue (true, old_img_opt))
+  )
+@
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepUnclicked (old_img_opt) ->
+  (match old_img_opt with
+  | None -> transit (SweepReturn None)
+  | Some (old_img : Display.image) ->
+    let r = old_img.r in
+    if Rectangle.dx r < 100 || Rectangle.dy r < 3 * font.Font.height
+    then transit (SweepRescue (false, old_img_opt))
+    else begin
+      (* todo? RefreshBackup? *)
+      let img = Layer.alloc desktop r Color.white in
+      Layer.free old_img;
+      Polygon.border img r Window.window_border_size 
+        !Globals.red Point.zero;
+      (* done in caller but more logical here I think *)
+      Display.flush display;
+      (* finally!! got an image *)
+      transit (SweepReturn (Some img))
+    end
+  )
+@
+
+
+
+%XXX
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepReturn img_opt ->
+  (* todo: cornercursor? pos! *)
+  (* less: moveto to force cursor update? ugly ... *)
+  (* less: menuing = false *)
+  img_opt
+@
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepRescue (clicked_state, old_img_opt) ->
+  old_img_opt |> Option.iter Layer.free;
+  if clicked_state
+  then transit SweepDrain
+  else transit (SweepReturn None)
+@
+<<[[Mouse_action.sweep()]] match [[sweep_state]] cases>>=
+| SweepDrain ->
+  let m = Mouse.read mouse in
+  if not (Mouse.has_click m)
+  then transit (SweepReturn None)
+  else transit SweepDrain
+@
+
 
 \section{Window focus}
 
@@ -2092,13 +2160,6 @@ let top_win (w : Window.t) =
   end
 @
 
-<<signature [[Wm.set_current_and_repaint]]>>=
-(* this also used to have a mouse parameter (should be renamed then
- * set_current_and_repaint_borders_content_and_cursor)
- *)
-val set_current_and_repaint:
-  Window.t option -> unit
-@
 
 <<function [[Wm.set_current_and_repaint]]>>=
 (* old: was called wcurrent() in rio.
@@ -2171,11 +2232,15 @@ let close_win (w : Window.t) =
   ()
 @
 
+% who will terminate the window thread?
+
 %%\subsection{[[delete()]]}
 
 \subsection{[[deletetimeoutproc()]] and [[deletethread()]]}
 
 \subsection{[[Deleted]] and [[Exited]]}
+
+
 
 \subsection{Mouse action [[pointto()]]}
 
@@ -2297,6 +2362,7 @@ let resize_win (w : Window.t) (new_img : Display.image) =
 
 \subsection{Mouse action [[bandsize()]]}
 
+
 \section{Window visibility}
 \label{sec:window-hide}
 
@@ -2312,6 +2378,13 @@ let resize_win (w : Window.t) (new_img : Display.image) =
 (* (those actions used to have a mouse parameter to also update the cursor) *)
 val hide_win:
   Window.t ->  unit
+@
+
+\subsection{[[hidden]]}
+
+<<global [[Globals.hidden]]>>=
+(* a subset of 'windows' *)
+let hidden: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
 @
 
 \subsection{[[hide()]]}
@@ -2334,13 +2407,7 @@ let hide_win (w : Window.t) =
   Event.send w.chan_cmd cmd |> Event.sync;
   ()
 @
-
-\subsection{[[hidden]]}
-
-<<global [[Globals.hidden]]>>=
-(* a subset of 'windows' *)
-let hidden: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
-@
+% and what do you do with img? Reshape img so will copy its content?
 
 \subsection{[[unhide()]]}
 
@@ -2368,6 +2435,8 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
   ()
 @
 
+% Reshape abused again
+
 %******************************************************************************
 \chapter{Filesystem Server}
 %******************************************************************************
@@ -2382,6 +2451,8 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 \section{[[filsysrespond()]]}
 
 \section{Attach}
+
+% when is this called? just after Plan9.mount of winshell?
 
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* Attach *)
@@ -2552,6 +2623,8 @@ let check_fid op fid (fs : Fileserver.t) =
        error fs req str
     )
 @
+
+% device_of_devid
 
 %%\subsection{[[filsysopen()]]}
 %%\subsection{[[xfidopen()]]}
@@ -3021,6 +3094,8 @@ let honor_offset_and_count offset count data =
 
 \section{Resize}
 
+
+
 \section{[[/mnt/wsys/text]]}
 
 <<signature [[Dev_textual_window.dev_text]]>>=
@@ -3169,6 +3244,8 @@ let dev_winid = { Device.default with
 \label{chap:debugging-appendix}
 
 
+\section{Logging}
+
 <<[[CLI.main()]] locals>>=
 let level = ref (Some Logs.Warning) in
 @
@@ -3194,6 +3271,11 @@ if !Globals.debug_9P
 then Logs.debug (fun m -> m "%s" (P9.str_of_msg req));
 @
 
+<<[[Threads_fileserver.answer()]] debug>>=
+if !Globals.debug_9P
+then Logs.debug (fun m -> m "%s" (P9.str_of_msg res));
+@
+
 <<constant [[Globals.debug_draw]]>>=
 let debug_draw = ref false
 @
@@ -3207,6 +3289,8 @@ if !Globals.debug_draw
 then Display.debug display;
 @
 
+
+\section{Testing}
 
 <<[[CLI.main()]] [[options]] elements>>=
 "-test", Arg.Unit (fun () -> Test.test ()),
@@ -3250,9 +3334,8 @@ exception Error of string
 
 
 
-\section{Error codes}
-
-\section{[[error()]], [[derror()]]}
+%%\section{Error codes}
+%%\section{[[error()]], [[derror()]]}
 
 %******************************************************************************
 %%\chapter{Utilities}

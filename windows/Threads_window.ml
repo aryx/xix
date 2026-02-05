@@ -75,6 +75,7 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
       Queue.add (m, w.mouse_counter) w.mouseclicks_queue;
       w.last_buttons <- m.buttons
     end;
+
   | false -> failwith "mouse_in: mouse not opened todo"
 (*e: function [[Threads_window.mouse_in]] *)
 (*s: function [[Threads_window.mouse_out]] *)

@@ -147,6 +147,7 @@ type t = {
   (*s: [[Window.t]] process fields *)
   (* not really mutable, but set after Window.alloc() *)
   mutable pid: int;
+  (*x: [[Window.t]] process fields *)
   (* can be changed through /mnt/wsys/wdir *)
   mutable pwd: Fpath.t;
   (* todo? notefd *)
@@ -197,7 +198,7 @@ type t = {
   (* Misc *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] other fields *)
-  (* todo: why need this? *)
+  (* todo: why need this? race between delete window and other operation? *)
   mutable deleted: bool;
   (*e: [[Window.t]] other fields *)
 }
@@ -249,11 +250,25 @@ let alloc (img : Display.image) (font : Font.t) : t =
   let w = 
   { 
     id = !wid_counter;
+    (* will be set in caller *)
     winname = "";
     label = "<unnamed>";
 
+    (* set later in Wm.ml in the caller *)
+    pid = -1;
+    pwd = Fpath.v (Sys.getcwd ());
+
     img = img;
     screenr = img.r;
+
+    topped = !topped_counter;
+
+    mouse_opened   = false;
+    consctl_opened = false;
+    raw_mode       = false;
+
+    deleted = false;
+
     mouse_cursor = None;
 
     chan_mouse    = Event.new_channel ();
@@ -273,19 +288,7 @@ let alloc (img : Display.image) (font : Font.t) : t =
 
     terminal = Terminal.alloc img font;
 
-    topped = !topped_counter;
-
-    mouse_opened   = false;
-    consctl_opened = false;
-    raw_mode       = false;
-
-    deleted = false;
-
     auto_scroll = false;
-
-    pwd = Fpath.v (Sys.getcwd ());
-    (* set later in Wm.ml in the caller *)
-    pid = -1;
   }
   in
   w

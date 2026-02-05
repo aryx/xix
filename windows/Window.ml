@@ -24,17 +24,20 @@ type topped_counter = int
 
 (*s: type [[Window.cmd]] *)
 type cmd =
+  (*s: [[Window.cmd]] cases *)
   | Delete
+  (*x: [[Window.cmd]] cases *)
   (* for resize event but also for hide/show *)
   | Reshape of 
-      Image.t (* can be Layer.t or an off-screen Image.t when hidden *)
-      (*Mouse.ctl*) (* needed for window_cursor() when repaint border *)
-(*
-  | Move of Image.t * Rectangle.t
-  | Refresh
-  | Wakeup
-  (* less: RawOff | RawOn? HoldOn | HoldOff *)
-*)
+        Image.t (* can be Layer.t or an off-screen Image.t when hidden *)
+        (*Mouse.ctl*) (* needed for window_cursor() when repaint border *)
+  (*
+    | Move of Image.t * Rectangle.t
+    | Refresh
+    | Wakeup
+    (* less: RawOff | RawOn? HoldOn | HoldOff *)
+  *)
+  (*e: [[Window.cmd]] cases *)
 (*e: type [[Window.cmd]] *)
 
 (*s: type [[Window.t]] *)

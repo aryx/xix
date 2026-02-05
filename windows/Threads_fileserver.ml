@@ -87,6 +87,20 @@ let first_message = ref true
 let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t) =
   match request_typ with
   (*s: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
+  (* Version *)
+  | T.Version (msize, str) -> 
+    (match () with
+    | _ when not !first_message ->
+      error fs req "version: request not first message"
+    | _ when msize < 256 ->
+      error fs req "version: message size too small";
+    | _ when str <> "9P2000" ->
+      error fs req "version: unrecognized 9P version";
+    | _ ->
+      fs.message_size <- msize;
+      answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
+    )
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Attach *)
   | T.Attach (rootfid, _auth_fid_opt, uname, aname) ->
     (* stricter: *)
@@ -120,7 +134,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
         error fs req (spf "unknown id in attach: %s" aname)
     (* less: incref, qunlock *)
     ))
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Walk *)
   | T.Walk (fid, newfid_opt, xs) ->
     check_fid "walk" fid fs;
@@ -196,7 +210,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
         )
       )
     )
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Open *)
   | T.Open (fid, flags) ->
     check_fid "open" fid fs;
@@ -227,8 +241,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
        with Device.Error str ->
          error fs req str
       )
-
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Clunk *)
   | T.Clunk (fid) ->
     check_fid "clunk" fid fs;
@@ -250,7 +263,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
     );
     Hashtbl.remove fs.fids fid;
     answer fs { req with P9.typ = P9.R (R.Clunk) }
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Read *)
   | T.Read (fid, offset, count) ->
     check_fid "read" fid fs;
@@ -274,7 +287,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
     | File.Dir _ ->
       failwith "TODO: readdir"
     )
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Write *)
   | T.Write (fid, offset, data) ->
     check_fid "write" fid fs;
@@ -299,6 +312,7 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
     | File.Dir _ ->
       raise (Impossible "kernel should not call write on fid of a directory")
     )
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Stat *)
   | T.Stat (fid) ->
     check_fid "stat" fid fs;
@@ -329,32 +343,18 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
     }
     in
     answer fs { req with P9.typ = P9.R (R.Stat dir_entry) }
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Other *)
   | T.Create _ 
   | T.Remove _
   | T.Wstat _
       -> error fs req "permission denied"
-
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* todo: handle those one? *)
   | T.Flush _
   | T.Auth _
     -> 
     failwith (spf "TODO: req = %s" (P9.str_of_msg req))
-  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
-  (* Version *)
-  | T.Version (msize, str) -> 
-    (match () with
-    | _ when not !first_message ->
-      error fs req "version: request not first message"
-    | _ when msize < 256 ->
-      error fs req "version: message size too small";
-    | _ when str <> "9P2000" ->
-      error fs req "version: unrecognized 9P version";
-    | _ ->
-      fs.message_size <- msize;
-      answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
-    )
   (*e: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
 (*e: function [[Threads_fileserver.dispatch]] *)
 

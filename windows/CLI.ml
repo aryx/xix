@@ -130,23 +130,23 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     "-s", Arg.Unit (fun () -> raise Todo),
     " ";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-font", Arg.String (fun _s -> raise Todo),
-    " <fontname>";
-    (*x: [[CLI.main()]] [[options]] elements *)
     "-i", Arg.String (fun _s -> raise Todo),
     " <initcmd>";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-k", Arg.String (fun _s -> raise Todo),
     " <kbdcmd>";
     (*x: [[CLI.main()]] [[options]] elements *)
-    "-test", Arg.Unit (fun () -> Test.test ()),
-    " ";
+    "-font", Arg.String (fun _s -> raise Todo),
+    " <fontname>";
     (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: not in original *)
     "-debug_9P", Arg.Set Globals.debug_9P,
     " ";
     (*x: [[CLI.main()]] [[options]] elements *)
     "-debug_draw", Arg.Set Globals.debug_draw,
+    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-test", Arg.Unit (fun () -> Test.test ()),
     " ";
     (*e: [[CLI.main()]] [[options]] elements *)
   ] |> Arg.align

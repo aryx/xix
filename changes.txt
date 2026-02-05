@@ -17,10 +17,12 @@
 
 ** build infra
 - plan9 support resumed; you can link xix programs (e.g., orio, ocat, opwd)
-  with ocaml-light for plan9
+  with ocaml-light for plan9!
+- remove need for str.cma, switch to ocaml-re (pure ocaml)
 
 ** docs
-- lpization of oed in in principia/docs/principia/oed.nw (next to ed.nw)
+- lpization of oed in in oed.nw
+- basic LP distribute of orio_extra.nw in orio.nw
 
 ** internals
 - add dynamic capability restriction infra (useful for oed -r)

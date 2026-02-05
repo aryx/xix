@@ -23,13 +23,9 @@ let bytes_to_runes str =
   List.rev !res
 
 
-(* todo: remove once get List.iteri in 1.07 *)
-let iteri f xs =
-  xs |> Array.of_list |> Array.iteri f
-
 let string_of_runes xs =
   let str = Bytes.create (List.length xs) in
-  xs |> (*List.*)iteri (fun i c ->
+  xs |> List.iteri (fun i c ->
     Bytes.set str i c
   );
   Bytes.to_string str

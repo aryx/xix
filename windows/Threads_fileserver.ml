@@ -16,7 +16,6 @@ module R = P9.Response
 (*****************************************************************************)
 (* Constants *)
 (*****************************************************************************)
-
 (*s: constant [[Threads_fileserver.all_devices]] *)
 let all_devices = [
   File.WinName , Virtual_draw.dev_winname;
@@ -32,7 +31,6 @@ let all_devices = [
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[Threads_fileserver.device_of_devid]] *)
 let device_of_devid (devid : File.devid) : Device.t =
   try 
@@ -76,33 +74,19 @@ let check_fid op fid (fs : Fileserver.t) =
   then failwith (spf "%s: unknown fid %d" op fid)
 (*e: function [[Threads_fileserver.check_fid]] *)
   
-
 (*****************************************************************************)
 (* Dispatch *)
 (*****************************************************************************)
 
-(* for Version *)
 (*s: constant [[Threads_fileserver.first_message]] *)
+(* for Version *)
 let first_message = ref true
 (*e: constant [[Threads_fileserver.first_message]] *)
 
 (*s: function [[Threads_fileserver.dispatch]] *)
 let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t) =
   match request_typ with
-  (* Version *)
-  | T.Version (msize, str) -> 
-    (match () with
-    | _ when not !first_message ->
-      error fs req "version: request not first message"
-    | _ when msize < 256 ->
-      error fs req "version: message size too small";
-    | _ when str <> "9P2000" ->
-      error fs req "version: unrecognized 9P version";
-    | _ ->
-      fs.message_size <- msize;
-      answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
-    )
-
+  (*s: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
   (* Attach *)
   | T.Attach (rootfid, _auth_fid_opt, uname, aname) ->
     (* stricter: *)
@@ -357,6 +341,21 @@ let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t)
   | T.Auth _
     -> 
     failwith (spf "TODO: req = %s" (P9.str_of_msg req))
+  (*x: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
+  (* Version *)
+  | T.Version (msize, str) -> 
+    (match () with
+    | _ when not !first_message ->
+      error fs req "version: request not first message"
+    | _ when msize < 256 ->
+      error fs req "version: message size too small";
+    | _ when str <> "9P2000" ->
+      error fs req "version: unrecognized 9P version";
+    | _ ->
+      fs.message_size <- msize;
+      answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
+    )
+  (*e: [[Threads_fileserver.dispatch()]] match [[request_typ]] cases *)
 (*e: function [[Threads_fileserver.dispatch]] *)
 
 (*****************************************************************************)
@@ -370,9 +369,11 @@ let thread (fs : Fileserver.t) =
   while true do
     let req : P9.message = P9.read_9P_msg fs.server_fd in
 
+    (*s: [[Threads_fileserver.thread]] in loop, debug *)
     (* todo: should exit the whole proc if error *)
     if !Globals.debug_9P
     then Logs.debug (fun m -> m "%s" (P9.str_of_msg req));
+    (*e: [[Threads_fileserver.thread]] in loop, debug *)
 
     (match req.typ with
     | P9.T x -> dispatch fs req x

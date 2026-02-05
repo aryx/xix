@@ -263,7 +263,6 @@ let repaint_scrollbar term =
 (*****************************************************************************)
 (* Text content *)
 (*****************************************************************************)
-
 (*s: function [[Terminal.visible_lines]] *)
 let visible_lines term =
   let maxlines = Rectangle.dy term.textr / term.font.Font.height in
@@ -283,7 +282,6 @@ let visible_lines term =
   List.rev xs, lastp
 (*e: function [[Terminal.visible_lines]] *)
 
-
 (*s: function [[Terminal.repaint_content]] *)
 let repaint_content term colors =
   let xs, lastp = visible_lines term in
@@ -295,8 +293,8 @@ let repaint_content term colors =
       Text.string term.img !p colors.text_color Point.zero term.font s
     in
     p := { term.textr.min with y = !p.y + term.font.Font.height };
-(*e: function [[Terminal.repaint_content]] *)
   )
+(*e: function [[Terminal.repaint_content]] *)
 
 (* helper to know if we should send runes on channel connected to an app *)
 (*s: function [[Terminal.newline_after_output_point]] *)
@@ -330,7 +328,6 @@ let move_origin_to_see term pos =
 (*****************************************************************************)
 (* Tick (cursor) *)
 (*****************************************************************************)
-
 (*s: function [[Terminal.point_of_position]] *)
 let point_of_position term pos =
   if pos.i >= term.origin_visible.i && 
@@ -354,8 +351,6 @@ let point_of_position term pos =
   (* anything out of textr  *)
   term.textr.max
 (*e: function [[Terminal.point_of_position]] *)
-
-
 
 (*s: function [[Terminal.repaint_tick]] *)
 let repaint_tick term colors =
@@ -393,12 +388,10 @@ let repaint_tick term colors =
     Draw.draw term.img r img None Point.zero
   end
 (*e: function [[Terminal.repaint_tick]] *)
-  
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-
 (*s: function [[Terminal.alloc]] *)
 let alloc (img : Image.t) (font : Font.t) : t =
   init_colors img.I.display;
@@ -620,7 +613,6 @@ let key_in term key =
   else 
   repaint term
 (*e: function [[Terminal.key_in]] *)
-
 
 (*s: function [[Terminal.runes_in]] *)
 (* "when characters are sent from the host, they are inserted at

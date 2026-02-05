@@ -5,8 +5,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Helpers to build "virtual devices" (e.g., a virtual /dev/cons).
- *)
+(* Helpers to build "virtual devices" (e.g., a virtual /dev/cons) *)
 
 (*****************************************************************************)
 (* Types and constants *)

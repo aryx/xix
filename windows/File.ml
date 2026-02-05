@@ -75,6 +75,10 @@ type t = {
    *)
   fid: fid;
 
+  (* the state *)
+  mutable opened: Plan9.open_flags option;
+
+  (*s: [[File.t]] other fields *)
   (* The qid is what is returned by the "server" to identify a file (or dir).
    * It is mutable because a fid can be 'walked' to point to another file
    * on the server.
@@ -83,19 +87,18 @@ type t = {
   (* for stat (mutable for the same reason than qid above) *)
   mutable entry: dir_entry_short;
 
-  mutable opened: Plan9.open_flags option;
-
   (* less: we could also use a wid *)
   win: Window.t;
 
   (* less: nrpart for runes *)
+  (*e: [[File.t]] other fields *)
+
 }
 (*e: type [[File.t]] *)
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 (*s: function [[File.int_of_filecode]] *)
 let int_of_filecode = function
   | Dir Root -> 0

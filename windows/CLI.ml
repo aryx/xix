@@ -49,7 +49,7 @@ let usage =
 let thread_main (caps: < caps; .. >) : Exit.t =
 
   (* Rio, a graphical application *)
-
+  (*s: [[CLI.thread_main()]] graphics initializations *)
   let display : Display.t = Draw.init caps "orio" in
   (* alt: simpler (but does not allow rio under rio in): 
    * let view = display.image in
@@ -58,8 +58,10 @@ let thread_main (caps: < caps; .. >) : Exit.t =
   let view : Display.image = Draw_rio.get_view caps display in
   let font : Font.t = Font_default.load_default_font display in
 
+  (*s: [[CLI.thread_main()]] graphics initializations, debug *)
   if !Globals.debug_draw
   then Display.debug display;
+  (*e: [[CLI.thread_main()]] graphics initializations, debug *)
 
   let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
   Globals.red   := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
@@ -68,42 +70,44 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 
   let desktop : Baselayer.t = Baselayer.alloc view background in
 
-  let mouse : Mouse.ctl = Mouse.init caps in
-  let kbd : Keyboard.ctl = Keyboard.init caps in
-
   Draw.draw_color view view.r background;
-  (* to test: alternative to -test that leverages work done above
-  Test.test_display_default_font display view;
-  Test.test_display_text display view font;
-  *)
+    (* to test: alternative to -test that leverages work done above
+    Test.test_display_default_font display view;
+    Test.test_display_text display view font;
+    *)
 
   Display.flush display;
+  (*e: [[CLI.thread_main()]] graphics initializations *)
 
   (* Rio, a filesystem server *)
-
   let fs = Fileserver.init () in
 
   (* Rio, a concurrent application *)
-
-  let _kbd_thread   = 
-    Thread.create Thread_keyboard.thread kbd in
-
   let (exit_chan: Exit.t Event.channel) = Event.new_channel () in
+  (*s: [[CLI.thread_main()]] threads creation *)
   (* To break some mutual dependencies.
    * The mouse right-click and menu will trigger the creation
    * of new windows and new window threads and call this function.
    *)
   Wm.threads_window_thread_func := Threads_window.thread;
+  (*x: [[CLI.thread_main()]] threads creation *)
+  let mouse : Mouse.ctl = Mouse.init caps in
+  let kbd : Keyboard.ctl = Keyboard.init caps in
+
+  let _kbd_thread   = 
+    Thread.create Thread_keyboard.thread kbd in
+
   let _mouse_thread = 
-    Thread.create (Thread_mouse.thread caps) (exit_chan, 
-                                       mouse, (display, desktop, view, font),
-                                       fs) in
+    Thread.create (Thread_mouse.thread caps)
+       (exit_chan, 
+        mouse, (display, desktop, view, font),
+        fs) in
 
   let _fileserver_master_thread =
     Thread.create Threads_fileserver.thread fs in
-  
-  (* Wait *)
+  (*e: [[CLI.thread_main()]] threads creation *)
 
+  (* Wait *)
   let exit_code = Event.receive exit_chan |> Event.sync in
   (* todo: kill all procs? all the winshell processes? *)
   (* todo: kill all threads? done when do exit no? *)
@@ -117,38 +121,51 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     Exit.t =
 
-  let backtrace = ref false in
+  (*s: [[CLI.main()]] locals *)
   let level = ref (Some Logs.Warning) in
+  (*x: [[CLI.main()]] locals *)
+  let backtrace = ref false in
+  (*e: [[CLI.main()]] locals *)
 
-  let options = (*todo: Arg.align*) [
+  let options = [
+    (*s: [[CLI.main()]] [[options]] elements *)
     "-s", Arg.Unit (fun () -> raise Todo),
     " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-font", Arg.String (fun _s -> raise Todo),
     " <fontname>";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-i", Arg.String (fun _s -> raise Todo),
     " <initcmd>";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-k", Arg.String (fun _s -> raise Todo),
     " <kbdcmd>";
-
+    (*x: [[CLI.main()]] [[options]] elements *)
+    "-test", Arg.Unit (fun () -> Test.test ()),
+    " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     (* pad: not in original *)
     "-debug_9P", Arg.Set Globals.debug_9P,
     " ";
+    (*x: [[CLI.main()]] [[options]] elements *)
     "-debug_draw", Arg.Set Globals.debug_draw,
     " ";
-    "-test", Arg.Unit (fun () -> Test.test ()),
-    " ";
+    (*e: [[CLI.main()]] [[options]] elements *)
   ] |> Arg.align
   in
   (* This may raise ExitCode *)
   Arg_.parse_argv caps argv options (fun _f -> Arg.usage options usage) usage;
+
+  (*s: [[CLI.main()]] logging setup *)
   Logs_.setup !level ();
   Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
+  (*e: [[CLI.main()]] logging setup *)
 
   try 
     (* the main call *)
     thread_main caps
   with exn ->
+      (*s: [[CLI.main()]] handle [[exn]] *)
       if !backtrace
       then raise exn
       else 
@@ -158,5 +175,6 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
               Exit.Code 1
         | _ -> raise exn
         )
+      (*e: [[CLI.main()]] handle [[exn]] *)
 (*e: function [[CLI.main]] *)
 (*e: CLI.ml *)

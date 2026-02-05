@@ -149,8 +149,7 @@ open Common
 (*****************************************************************************)
 (* Prelude *)
 (*****************************************************************************)
-(* Helpers to build "virtual devices" (e.g., a virtual /dev/cons).
- *)
+(* Helpers to build "virtual devices" (e.g., a virtual /dev/cons) *)
 
 (*****************************************************************************)
 (* Types and constants *)
@@ -351,7 +350,6 @@ module N = Plan9
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 <<function [[File.int_of_filecode]]>>
 
 <<function [[File.int_of_fileid]]>>
@@ -406,33 +404,6 @@ module Unix2 = ThreadUnix
 @
 
 \section{[[Globals.ml]]}
-
-<<function [[Globals.window_at_point]]>>=
-(* old: was called wpointto in rio-C *)
-let window_at_point pt =
-  let res = ref None in
-  windows |> Hashtbl.iter (fun _k w ->
-    if Rectangle.pt_in_rect pt w.W.screenr && not w.W.deleted
-    then
-      match !res with
-      | None -> res := Some w
-      | Some w2 when w.W.topped > w2.W.topped -> res := Some w
-      | _ -> ()
-  );
-  !res
-@
-
-<<constant [[Globals.red]]>>=
-let red               = ref Display.fake_image
-@
-
-<<constant [[Globals.title_color]]>>=
-let title_color       = ref Display.fake_image
-@
-
-<<constant [[Globals.title_color_light]]>>=
-let title_color_light = ref Display.fake_image
-@
 
 %-------------------------------------------------------------
 
@@ -562,7 +533,6 @@ let run_cmd_in_window_in_child_of_fork
   failwith "exec failed"
 @
 
-
 %-------------------------------------------------------------
 
 <<Processes_winshell.ml>>=
@@ -616,14 +586,6 @@ type t = {
 
 <<signature [[Terminal.alloc]]>>=
 val alloc: Image.t -> Font.t -> t
-@
-
-<<signature [[Terminal.key_in]]>>=
-val key_in: t -> Keyboard.key -> unit
-@
-
-<<signature [[Terminal.runes_in]]>>=
-val runes_in: t -> Rune.t list -> unit
 @
 
 <<signature [[Terminal.newline_after_output_point]]>>=
@@ -898,6 +860,7 @@ let repaint_content term colors =
       Text.string term.img !p colors.text_color Point.zero term.font s
     in
     p := { term.textr.min with y = !p.y + term.font.Font.height };
+  )
 @
 
 <<function [[Terminal.newline_after_output_point]]>>=
@@ -1306,12 +1269,9 @@ module D = Display
 (*****************************************************************************)
 (* Text content *)
 (*****************************************************************************)
-
 <<function [[Terminal.visible_lines]]>>
 
-
 <<function [[Terminal.repaint_content]]>>
-  )
 
 (* helper to know if we should send runes on channel connected to an app *)
 <<function [[Terminal.newline_after_output_point]]>>
@@ -1321,18 +1281,13 @@ module D = Display
 (*****************************************************************************)
 (* Tick (cursor) *)
 (*****************************************************************************)
-
 <<function [[Terminal.point_of_position]]>>
 
-
-
 <<function [[Terminal.repaint_tick]]>>
-  
 
 (*****************************************************************************)
 (* Entry points *)
 (*****************************************************************************)
-
 <<function [[Terminal.alloc]]>>
 
 <<function [[Terminal.insert_runes]]>>
@@ -1354,7 +1309,6 @@ module D = Display
 
 <<function [[Terminal.key_in]]>>
 
-
 <<function [[Terminal.runes_in]]>>
 
 (* "When newline, chars between output point and newline are sent."
@@ -1366,14 +1320,6 @@ module D = Display
 
 
 \section{[[Threads_fileserver.mli]]}
-
-<<signature [[Threads_fileserver.thread]]>>=
-(* 
-  will serve all the virtual devices for new windows/processes created by rio.
- *)
-val thread: Fileserver.t -> unit
-@
-
 
 %-------------------------------------------------------------
 
@@ -1425,11 +1371,6 @@ let answer (fs : Fileserver.t) (res : P9.message) =
   P9.write_9P_msg res fs.server_fd
 @
 
-<<function [[Threads_fileserver.error]]>>=
-let error fs req str =
-  let res = { req with P9.typ = P9.R (R.Error str) } in
-  answer fs res
-@
 
 <<function [[Threads_fileserver.check_fid]]>>=
 (* less: could be check_and_find_fid to factorize more code in dispatch() *)
@@ -1438,307 +1379,6 @@ let check_fid op fid (fs : Fileserver.t) =
   if not (Hashtbl.mem fs.fids fid)
   then failwith (spf "%s: unknown fid %d" op fid)
 @
-
-<<constant [[Threads_fileserver.first_message]]>>=
-let first_message = ref true
-@
-
-<<function [[Threads_fileserver.dispatch]]>>=
-let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t) =
-  match request_typ with
-  (* Version *)
-  | T.Version (msize, str) -> 
-    (match () with
-    | _ when not !first_message ->
-      error fs req "version: request not first message"
-    | _ when msize < 256 ->
-      error fs req "version: message size too small";
-    | _ when str <> "9P2000" ->
-      error fs req "version: unrecognized 9P version";
-    | _ ->
-      fs.message_size <- msize;
-      answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
-    )
-
-  (* Attach *)
-  | T.Attach (rootfid, _auth_fid_opt, uname, aname) ->
-    (* stricter: *)
-    if Hashtbl.mem fs.fids rootfid
-    then failwith (spf "Attach: fid already used: %d" rootfid);
-
-    (match () with
-    | _ when uname <> fs.user ->
-      error fs req (spf "permission denied, %s <> %s" uname fs.user)
-    | _ ->
-    (* less: could do that in a worker thread (if use qlock) *)
-    (* less: newlymade, qlock all *)
-    (try
-       let wid = int_of_string aname in
-       let w = Hashtbl.find Globals.windows wid in
-
-       let entry = File.root_entry in
-       let file_id = entry.code, wid in
-       let qid = File.qid_of_fileid file_id entry.type_ in
-
-       let file = File.{
-         fid = rootfid; 
-         qid = qid; 
-         entry = entry;
-         opened = None;
-         win = w;
-       } in
-       Hashtbl.add fs.fids rootfid file;
-       answer fs {req with P9.typ = P9.R (R.Attach qid) }
-     with _exn ->
-        error fs req (spf "unknown id in attach: %s" aname)
-    (* less: incref, qunlock *)
-    ))
-
-  (* Walk *)
-  | T.Walk (fid, newfid_opt, xs) ->
-    check_fid "walk" fid fs;
-    let file : File.t = Hashtbl.find fs.fids fid in
-    let wid = file.win.id in
-    (match file.opened, newfid_opt with
-    | Some _, _ ->
-      error fs req "walk of open file"
-    (* stricter? failwith or error? *)
-    | _, Some newfid when Hashtbl.mem fs.fids newfid ->
-      error fs req (spf "clone to busy fid: %d" newfid)
-    | _ when List.length xs > P9.max_welem ->
-      error fs req (spf "name too long: [%s]" (String.concat ";" xs))
-    | _ ->
-      let file =
-        match newfid_opt with
-        | None -> file
-        | Some newfid ->
-          (* clone *)
-          (* less: incref on file.w *)
-          let newfile = { file with
-            File.fid = newfid; 
-            File.opened = None 
-            (* todo: nrpart? *)
-          } in
-          Hashtbl.add fs.fids newfid newfile;
-          newfile
-      in
-      let rec walk qid (entry : File.dir_entry_short) acc xs =
-        match xs with
-        | [] -> qid, entry, List.rev acc
-        | x::xs ->
-          if qid.N.typ <> N.QTDir
-          (* will be catched below and transformed in an 9P Rerror message *)
-          then failwith "not a directory";
-          (match entry.code, x with
-          | _Qwsys, ".." -> failwith "walk: Todo '..'"
-          | File.Dir File.Root, x ->
-            let entry = 
-              toplevel_entries |> List.find (fun (entry : File.dir_entry_short)->
-                       entry.name = x)
-            in
-            let file_id = entry.code, wid in
-            let qid = File.qid_of_fileid file_id entry.type_ in
-            (* continue with other path elements *)
-            walk qid entry (qid::acc) xs
-          (* todo: Wsys, snarf *)
-          | _ -> 
-            raise (Impossible "should be catched by 'not a directory' above")
-          )
-      in
-      (try 
-        let final_qid, final_entry, qids = 
-          walk file.qid file.entry [] xs
-        in
-        file.qid <- final_qid;
-        file.entry <- final_entry;
-        answer fs { req with P9.typ = P9.R (R.Walk qids) }
-      with exn ->
-        newfid_opt |> Option.iter (fun newfid ->
-          Hashtbl.remove fs.fids newfid
-        );
-        (match exn with
-        (* this can happen many times because /dev is a union-mount so
-         * we get walk requests also for /dev/draw/... and other devices
-         *)
-        | Not_found -> 
-          error fs req "file does not exist"
-        | Failure s when s = "not a directory" ->
-          error fs req "not a directory"
-        (* internal error then *)
-        | _ -> raise exn
-        )
-      )
-    )
-
-  (* Open *)
-  | T.Open (fid, flags) ->
-    check_fid "open" fid fs;
-    let file = Hashtbl.find fs.fids fid in
-    let w = file.win in
-    (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
-    let perm = file.entry.perm in
-    if flags.x || (flags.r && not perm.r)
-               || (flags.w && not perm.w)
-    then error fs req "permission denied"
-    else
-      if w.deleted
-      then error fs req "window deleted"
-      else 
-      (* less: could do that in a worker thread *)
-      (try 
-         (match file.entry.code with
-         | File.File devid ->
-           let dev = device_of_devid devid in
-           dev.D.open_ w
-         | File.Dir _dir ->
-           (* todo: nothing to do for dir? ok to open a dir? *)
-           ()
-         );
-         file.opened <- Some flags;
-         let iounit = fs.message_size - P9.io_header_size in
-         answer fs { req with P9.typ = P9.R (R.Open (file.qid, iounit)) }
-       with Device.Error str ->
-         error fs req str
-      )
-
-
-  (* Clunk *)
-  | T.Clunk (fid) ->
-    check_fid "clunk" fid fs;
-    let file = Hashtbl.find fs.fids fid in
-    (match file.opened with
-    | Some _flags ->
-      (match file.entry.code with
-      | File.File devid ->
-        let dev = device_of_devid devid in
-        dev.D.close file.win
-        (* todo: wclose? *)
-      | File.Dir _ ->
-        ()
-      )
-    (* stricter? can clunk a file not opened? *)
-    | None ->
-      (* todo: winclosechan *)
-      ()
-    );
-    Hashtbl.remove fs.fids fid;
-    answer fs { req with P9.typ = P9.R (R.Clunk) }
-
-  (* Read *)
-  | T.Read (fid, offset, count) ->
-    check_fid "read" fid fs;
-    let file = Hashtbl.find fs.fids fid in
-    let w = file.win in
-
-    (match file.entry.code with
-    | _ when w.deleted ->
-      error fs req "window deleted"
-    | File.File devid ->
-      (* a worker thread (less: opti: arena of workers? *)
-      Thread.create (fun () ->
-       (* less: getclock? *)
-       (try 
-         let dev = device_of_devid devid in
-         let data = dev.D.read_threaded offset count w in
-         answer fs { req with P9.typ = P9.R (R.Read data) }
-       with Device.Error str ->
-         error fs req str
-      )) () |> ignore
-    | File.Dir _ ->
-      failwith "TODO: readdir"
-    )
-
-  (* Write *)
-  | T.Write (fid, offset, data) ->
-    check_fid "write" fid fs;
-    let file = Hashtbl.find fs.fids fid in
-    let w = file.win in
-
-    (match file.entry.code with
-    | _ when w.deleted ->
-      error fs req "window deleted"
-    | File.File devid ->
-      (* a worker thread (less: opti: arena of workers? *)
-      Thread.create (fun () ->
-       (try 
-         let dev = device_of_devid devid in
-         (* less: case where want to let device return different count? *)
-         let count = String.length data in
-         dev.D.write_threaded offset data w;
-         answer fs { req with P9.typ = P9.R (R.Write count) }
-       with Device.Error str ->
-         error fs req str
-      )) () |> ignore
-    | File.Dir _ ->
-      raise (Impossible "kernel should not call write on fid of a directory")
-    )
-  (* Stat *)
-  | T.Stat (fid) ->
-    check_fid "stat" fid fs;
-    let file = Hashtbl.find fs.fids fid in
-    let short = file.entry in
-    (* less: getclock *)
-    let clock = 0 in
-    let dir_entry = {
-      N.name = short.name;
-      (* less: adjust version for snarf *)
-      N.qid = file.qid;
-      N.mode = (N.int_of_perm_property short.perm, 
-        match file.qid.N.typ with
-        | N.QTDir -> N.DMDir
-        | N.QTFile -> N.DMFile
-      );
-      N.length = 0; (*/* would be nice to do better */*)
-
-      N.atime = clock;
-      N.mtime = clock;
-
-      N.uid = fs.user;
-      N.gid = fs.user;
-      N.muid = fs.user;
-
-      N._typ = 0;
-      N._dev = 0;
-    }
-    in
-    answer fs { req with P9.typ = P9.R (R.Stat dir_entry) }
-
-  (* Other *)
-  | T.Create _ 
-  | T.Remove _
-  | T.Wstat _
-      -> error fs req "permission denied"
-
-  (* todo: handle those one? *)
-  | T.Flush _
-  | T.Auth _
-    -> 
-    failwith (spf "TODO: req = %s" (P9.str_of_msg req))
-@
-
-<<function [[Threads_fileserver.thread]]>>=
-(* the master *)
-let thread (fs : Fileserver.t) =
-  (* less: threadsetname *)
-  
-  while true do
-    let req : P9.message = P9.read_9P_msg fs.server_fd in
-
-    (* todo: should exit the whole proc if error *)
-    if !Globals.debug_9P
-    then Logs.debug (fun m -> m "%s" (P9.str_of_msg req));
-
-    (match req.typ with
-    | P9.T x -> dispatch fs req x
-    | P9.R _x ->
-      (* less: Ebadfcall *)
-      raise (Impossible (spf "got a response request: %s" (P9.str_of_msg req)))
-    );
-    (* for Version first-message check *)
-    first_message := false
-  done
-@
-
 
 %-------------------------------------------------------------
 
@@ -1760,13 +1400,11 @@ module R = P9.Response
 (*****************************************************************************)
 (* Constants *)
 (*****************************************************************************)
-
 <<constant [[Threads_fileserver.all_devices]]>>
 
 (*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
-
 <<function [[Threads_fileserver.device_of_devid]]>>
 
 <<constant [[Threads_fileserver.toplevel_entries]]>>
@@ -1777,12 +1415,10 @@ module R = P9.Response
 
 <<function [[Threads_fileserver.check_fid]]>>
   
-
 (*****************************************************************************)
 (* Dispatch *)
 (*****************************************************************************)
 
-(* for Version *)
 <<constant [[Threads_fileserver.first_message]]>>
 
 <<function [[Threads_fileserver.dispatch]]>>
@@ -1831,10 +1467,6 @@ open Common
 
 \section{[[Thread_mouse.ml]]}
 
-<<type [[Thread_mouse.event]]>>=
-type event =
-  | Mouse of Mouse.state
-@
 
 <<type [[Thread_mouse.under_mouse]]>>=
 type under_mouse =
@@ -2128,34 +1760,6 @@ open Point
 type mouse_counter = int
 @
 
-<<type [[Window.topped_counter]]>>=
-type topped_counter = int
-@
-
-<<type [[Window.cmd]]>>=
-type cmd =
-  | Delete
-  (* for resize event but also for hide/show *)
-  | Reshape of 
-      Image.t (* can be Layer.t or an off-screen Image.t when hidden *)
-      (*Mouse.ctl*) (* needed for window_cursor() when repaint border *)
-(*
-  | Move of Image.t * Rectangle.t
-  | Refresh
-  | Wakeup
-  (* less: RawOff | RawOn? HoldOn | HoldOff *)
-*)
-@
-
-<<constant [[Window.wid_counter]]>>=
-let wid_counter = 
-  ref 0
-@
-
-<<constant [[Window.topped_counter]]>>=
-let topped_counter =
-  ref 0
-@
 
 <<constant [[Window.window_border_size]]>>=
 (* important convention to follow for rio and draw to cooperate correctly *)
@@ -2168,19 +1772,6 @@ type border_status =
   | Unselected
 @
 
-<<function [[Window.pt_inside_border]]>>=
-(* old: was not an helper in rio-C, but should to be consistent with winborder.
- * alt: pt_on_content (window border vs window content in Windows.nw)
- *)
-let pt_inside_border pt w =
-  Rectangle.pt_in_rect pt (Rectangle.insetrect window_border_size w.screenr)
-@
-
-<<function [[Window.pt_on_border]]>>=
-(* old: was called winborder in rio-C *)
-let pt_on_border pt w =
-  Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
-@
 
 <<function [[Window.alloc]]>>=
 (* ... -> Thread_mouse.wm_menu -> Wm.new_win -> <> *)
@@ -2257,8 +1848,8 @@ open Common
 
 <<type [[Window.t]]>>
 
-<<constant [[Window.wid_counter]]>>
-<<constant [[Window.topped_counter]]>>
+<<global [[Window.wid_counter]]>>
+<<global [[Window.topped_counter]]>>
 
 <<constant [[Window.window_border_size]]>>
 
@@ -2294,18 +1885,6 @@ let window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) : unit =
   | None -> Mouse.reset_cursor mouse
 @
 
-<<function [[Wm._corner_cursor]]>>=
-let _corner_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
-  if Window.pt_on_border pt w
-  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
-@
-
-<<function [[Wm.corner_cursor_or_window_cursor]]>>=
-let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
-  if Window.pt_on_border pt w
-  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
-  else window_cursor w pt mouse
-@
 
 <<function [[Wm.draw_border]]>>=
 let draw_border (w : Window.t) (status : Window.border_status) =

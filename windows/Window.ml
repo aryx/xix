@@ -43,36 +43,38 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] id fields *)
   (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
   id: wid;
   (* public named image, visible in /mnt/wsys/winname; change when resize *)
   mutable winname: string;
-
+  (*x: [[Window.t]] id fields *)
   (* writable through /mnt/wsys/label *)
   mutable label: string;
+  (*e: [[Window.t]] id fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Graphics *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] graphics fields *)
   (* This is most of the time a layer, but it can also be a plain Image.t
    * when the window is hidden.
    * less: option? when delete the window structure and thread is still
    * out there because we wait for the process to terminate?
    *)
   mutable img: Image.t;
-
+  (*x: [[Window.t]] graphics fields *)
   (* todo: for originwindow and really virtual screen? vs img.r? *)
   mutable screenr: Rectangle.t;
-
+  (*x: [[Window.t]] graphics fields *)
   (* writable through /mnt/wsys/cursor *)
   mutable mouse_cursor: Cursor.t option;
+  (*e: [[Window.t]] graphics fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Mouse *)
   (* ---------------------------------------------------------------- *)
-  (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
-  chan_mouse: Mouse.state Event.channel;
-
+  (*s: [[Window.t]] mouse fields *)
   (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
    * The channel inside the channel will be used to write a mouse state
    * to thread_fileserver.
@@ -94,14 +96,15 @@ type t = {
   mutable last_mouse: Mouse.state;
   (* ?? how differ from last_mouse.buttons? *)
   mutable last_buttons: Mouse.buttons;
+  (*x: [[Window.t]] mouse fields *)
+  (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
+  chan_mouse: Mouse.state Event.channel;
+  (*e: [[Window.t]] mouse fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Keyboard *)
   (* ---------------------------------------------------------------- *)
-  (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
-  (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
-  chan_keyboard: Keyboard.key Event.channel;
-
+  (*s: [[Window.t]] keyboard fields *)
   (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
    * The first channel will be used by thread_fileserver to indicate the
    * number of bytes the process wants to read from its /dev/cons. The second
@@ -119,13 +122,20 @@ type t = {
 
   (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
   raw_keys: Keyboard.key Queue.t;
+  (*x: [[Window.t]] keyboard fields *)
+  (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
+  (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
+  chan_keyboard: Keyboard.key Event.channel;
+  (*e: [[Window.t]] keyboard fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Commands *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] command fields *)
   (* Threads_window.thread <-- Thread_mouse.thread? | ?? *)
   (* less: also list of cmds? [20]? *)
   chan_cmd: cmd Event.channel;
+  (*e: [[Window.t]] command fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Resize *)
@@ -134,36 +144,45 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Process *)
   (* ---------------------------------------------------------------- *)
-
+  (*s: [[Window.t]] process fields *)
   (* not really mutable, but set after Window.alloc() *)
   mutable pid: int;
   (* can be changed through /mnt/wsys/wdir *)
   mutable pwd: Fpath.t;
   (* todo? notefd *)
+  (*e: [[Window.t]] process fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Config *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] config fields *)
   mutable auto_scroll: bool;
+  (*e: [[Window.t]] config fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Wm *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] wm fields *)
   mutable topped: topped_counter;
+  (*e: [[Window.t]] wm fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Graphical Window *)
   (* ---------------------------------------------------------------- *)
-  mutable mouse_opened: bool;
-
+  (*s: [[Window.t]] graphical window fields *)
   (* can also be used in textual windows, but more rare *)
   mutable consctl_opened: bool;
   mutable raw_mode: bool;
+  (*x: [[Window.t]] graphical window fields *)
+  mutable mouse_opened: bool;
+  (*e: [[Window.t]] graphical window fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Textual Window *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] textual window fields *)
   terminal: Terminal.t;
+  (*e: [[Window.t]] textual window fields *)
 
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
@@ -177,20 +196,21 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Misc *)
   (* ---------------------------------------------------------------- *)
+  (*s: [[Window.t]] other fields *)
   (* todo: why need this? *)
   mutable deleted: bool;
-
+  (*e: [[Window.t]] other fields *)
 }
 (*e: type [[Window.t]] *)
 
-(*s: constant [[Window.wid_counter]] *)
+(*s: global [[Window.wid_counter]] *)
 let wid_counter = 
   ref 0
-(*e: constant [[Window.wid_counter]] *)
-(*s: constant [[Window.topped_counter]] *)
+(*e: global [[Window.wid_counter]] *)
+(*s: global [[Window.topped_counter]] *)
 let topped_counter =
   ref 0
-(*e: constant [[Window.topped_counter]] *)
+(*e: global [[Window.topped_counter]] *)
 
 (*s: constant [[Window.window_border_size]] *)
 (* important convention to follow for rio and draw to cooperate correctly *)

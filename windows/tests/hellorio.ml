@@ -5,12 +5,12 @@ open Common
 type event =
   | Mouse of Mouse.state
   | Key of Keyboard.key
-(*e: type [[Hellorio.event]] *)
   (* less: Resize *)
+(*e: type [[Hellorio.event]] *)
 
 (*s: function [[Hellorio.redraw]] *)
-let redraw (display : Display.t) (view : Display.image (*Image.t*))
-     (pos : Point.t) (bgcolor : Image.t) =
+let redraw (display : Display.t) (view : Display.image) (pos : Point.t)
+     (bgcolor : Image.t) : unit =
   Draw.draw view view.r bgcolor None Point.zero;
   (* todo: Text.string *)
   Line.line view pos (Point.add pos (Point.p 100 100))
@@ -21,13 +21,13 @@ let redraw (display : Display.t) (view : Display.image (*Image.t*))
 (*s: function [[Hellorio.thread_main]] *)
 (* the Keyboard.init() and Mouse.init() below create other threads *)
 let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) =
-  let display = Draw.init caps "Hello Rio" in
+  let display : Display.t = Draw.init caps "Hello Rio" in
   let view : Display.image = Draw_rio.get_view caps display in
 
-  let kbd = Keyboard.init caps in
-  let mouse = Mouse.init caps in
+  let kbd : Keyboard.ctl = Keyboard.init caps in
+  let mouse : Mouse.ctl = Mouse.init caps in
 
-  let bgcolor = 
+  let bgcolor : Image.t  = 
     Image.alloc display Rectangle.r_1x1 Channel.rgba32 true Color.magenta
   in
   (* if does not use originwindow, then need to add view.r.min *)
@@ -36,7 +36,8 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
   redraw display view !mousepos bgcolor;
 
   while true do
-    let ev = 
+    (*s: [[Hellorio.thread_main()]] in event loop *)
+    let ev : event = 
       [
         Keyboard.receive kbd |> (fun ev -> Event.wrap ev (fun x -> Key x));
         Mouse.receive mouse |> (fun ev -> Event.wrap ev (fun x -> Mouse x));
@@ -44,7 +45,7 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
     in
     (match ev with
     | Mouse m -> 
-      mousepos := m.Mouse.pos
+      mousepos := m.pos
     | Key c ->
       if c = 'q'
       then exit 0
@@ -53,6 +54,7 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
      * | Resize -> view := getwindow display
      *)
     );
+    (*e: [[Hellorio.thread_main()]] in event loop *)
     redraw display view !mousepos bgcolor;
   done
 (*e: function [[Hellorio.thread_main]] *)

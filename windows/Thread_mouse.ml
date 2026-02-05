@@ -90,8 +90,8 @@ let middle_click_system _m _mouse =
 (* Entry point *)
 (*****************************************************************************)
 (*s: function [[Thread_mouse.thread]] *)
-let thread (caps : < Cap.fork; .. >) (exitchan, 
-            mouse, (display, desktop, view, font), fs) =
+let thread (caps : < Cap.fork; .. >) 
+           (exitchan, mouse, (display, desktop, view, font), fs) =
   (* less: threadsetname *)
 
   while true do
@@ -106,6 +106,8 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
       (* less: loop again *)
       (* less: wkeyboard and ptinrect *)
       (* todo? race on Globals.win? can change between? need store in local?*)
+
+      (*s: [[Thread_mouse.thread()]] let [[sending_to_win]] *)
       let sending_to_win =
         match Globals.win () with
         | Some (w : Window.t) ->
@@ -119,8 +121,10 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
           inside && (w.mouse_opened || m.buttons.left)
         | None -> false
       in
+      (*e: [[Thread_mouse.thread()]] let [[sending_to_win]] *)
       (match sending_to_win with
       | true ->
+        (*s: [[Thread_mouse.thread()]] when [[sending_to_win]] *)
         (* could assert that Globals.win() <> None *)
         Globals.win () |> Option.iter (fun (w : Window.t) ->
           (if not (Mouse.has_click m)
@@ -131,7 +135,9 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
           (* less: send logical coordinates *)
           Event.send w.chan_mouse m |> Event.sync
         )
+        (*e: [[Thread_mouse.thread()]] when [[sending_to_win]] *)
       | false ->
+        (*s: [[Thread_mouse.thread()]] when not [[sending_to_win]] *)
         let wopt = Globals.window_at_point m.pos in
         (match wopt with
         | Some w -> Wm.corner_cursor_or_window_cursor w m.pos mouse
@@ -175,13 +181,14 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
           | OtherWin w when m.buttons.middle || m.buttons.right ->
             Wm.top_win w
             (* todo: should goto again, may need to send event *)
-            
+    
           | _ -> raise (Impossible "Mouse.has_click so one field is true")
           );
         (* todo: reset moving *)
         (* less: drain *)
-      )
+        (*e: [[Thread_mouse.thread()]] when not [[sending_to_win]] *)
     )
+  )
   done
 (*e: function [[Thread_mouse.thread]] *)
 (*e: Thread_mouse.ml *)

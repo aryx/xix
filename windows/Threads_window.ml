@@ -22,12 +22,14 @@ type event =
   (* reading from many places *)
   | Cmd   of Window.cmd
 
+  (*s: [[Threads_window.event]] other cases *)
   (* producing for thread_fileserver(Read Qmouse) *)
   | SentChannelForMouseRead
   (* producing for thread_fileserver(Read Qcons) *)
   | SentChannelsForConsRead
   (* producing and then consuming for thread_fileserver(Write Qcons) *)
   | SentChannelForConsWrite
+  (*e: [[Threads_window.event]] other cases *)
 (*e: type [[Threads_window.event]] *)
 
 (*****************************************************************************)
@@ -40,17 +42,20 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
     match w.raw_mode, w.mouse_opened with
-    | true, true (* less: || q0 == nr *) ->
-      Queue.add key w.raw_keys 
-    (* less: in theory we should allow also special navigation keys here *)
-    | true, false  ->
-      failwith "key_in: TODO: raw mode in textual window"
-    | false, true  ->
-      failwith "key_in: TODO: buffered mode in graphical window"
     (* todo: if holding *)
     | false, false -> 
       (* less: snarf *)
       Terminal.key_in w.terminal key
+
+    | true, true (* less: || q0 == nr *) ->
+      Queue.add key w.raw_keys 
+
+    (* less: in theory we should allow also special navigation keys here *)
+    | true, false  ->
+      failwith "key_in: TODO: raw mode in textual window"
+
+    | false, true  ->
+      failwith "key_in: TODO: buffered mode in graphical window"
   end
 (*e: function [[Threads_window.key_in]] *)
 (*s: function [[Threads_window.runes_in]] *)
@@ -126,11 +131,12 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
 (*s: function [[Threads_window.cmd_in]] *)
 let cmd_in (w : Window.t) (cmd : cmd) =
   match cmd with
+  (*s: [[Threads_window.cmd_in()]] match [[cmd]] cases *)
   | Delete -> 
     (* less: break if window already deleted *)
     (* todo: delete timeout process *)
     Wm.close_win w
-
+  (*x: [[Threads_window.cmd_in()]] match [[cmd]] cases *)
   | Reshape (new_img : Display.image) ->
     (* less: put all of that in Wm.resize_win ? *)
     if w.deleted
@@ -154,6 +160,7 @@ let cmd_in (w : Window.t) (cmd : cmd) =
     );
     (* less: Image.flush new_img, but useless cos done in thread () *)
     ()
+  (*e: [[Threads_window.cmd_in()]] match [[cmd]] cases *)
 (*e: function [[Threads_window.cmd_in]] *)
 
 (*****************************************************************************)
@@ -166,13 +173,13 @@ let wrap f =
 
 (*s: function [[Threads_window.thread]] *)
 let thread (w : Window.t) =
-  
   (* less: threadsetname *)
-
+  (*s: [[Threads_window.thread()]] channels creation *)
   let chan_devmouse = Event.new_channel () in
   let chan_devcons_read_count = Event.new_channel () in
   let chan_devcons_read_bytes = Event.new_channel () in
   let chan_devcons_write_runes = Event.new_channel () in
+  (*e: [[Threads_window.thread()]] channels creation *)
 
   while true do
     let ev = (
@@ -182,6 +189,7 @@ let thread (w : Window.t) =
       Event.receive w.chan_mouse    |> wrap (fun x -> Mouse x);
       Event.receive w.chan_cmd      |> wrap (fun x -> Cmd x);
     ] @
+      (*s: [[Threads_window.thread()]] other [[select]] elements *)
       (* sending *)
       (if w.mouse_counter <> w.last_count_sent 
        then [Event.send w.chan_devmouse_read chan_devmouse 
@@ -203,6 +211,7 @@ let thread (w : Window.t) =
             |> wrap (fun () -> SentChannelForConsWrite);]
        else []
       )
+      (*e: [[Threads_window.thread()]] other [[select]] elements *)
     ) |> Event.select
     in
     (match ev with
@@ -215,12 +224,14 @@ let thread (w : Window.t) =
        * When answer Exited? when Cmd is Exited?
        *)
       cmd_in w cmd
+    (*s: [[Threads_window.thread()]] match [[ev]] other cases *)
     | SentChannelForMouseRead -> 
       mouse_out w chan_devmouse
     | SentChannelsForConsRead -> 
       bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
     | SentChannelForConsWrite ->
       runes_in w chan_devcons_write_runes
+    (*e: [[Threads_window.thread()]] match [[ev]] other cases *)
     );
     if not w.deleted
     then Image.flush w.img;

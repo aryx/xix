@@ -70,33 +70,21 @@ Documentation License, Version 1.3.
 
 \section{[[hellorio.ml]]}
 
-<<type [[Hellorio.event]]>>=
-type event =
-  | Mouse of Mouse.state
-  | Key of Keyboard.key
-  (* less: Resize *)
-@
-
-<<function [[Hellorio.redraw]]>>=
-let redraw (display : Display.t) (view : Display.image (*Image.t*))
-     (pos : Point.t) (bgcolor : Image.t) =
-  Draw.draw view view.r bgcolor None Point.zero;
-  (* todo: Text.string *)
-  Line.line view pos (Point.add pos (Point.p 100 100))
-    Line.EndSquare Line.EndSquare 2 display.black Point.zero;
-  Display.flush display
+<<constant [[Hellorio._]]>>=
+let _ =
+  Cap.main (fun caps -> thread_main caps)
 @
 
 <<function [[Hellorio.thread_main]]>>=
 (* the Keyboard.init() and Mouse.init() below create other threads *)
 let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) =
-  let display = Draw.init caps "Hello Rio" in
+  let display : Display.t = Draw.init caps "Hello Rio" in
   let view : Display.image = Draw_rio.get_view caps display in
 
-  let kbd = Keyboard.init caps in
-  let mouse = Mouse.init caps in
+  let kbd : Keyboard.ctl = Keyboard.init caps in
+  let mouse : Mouse.ctl = Mouse.init caps in
 
-  let bgcolor = 
+  let bgcolor : Image.t  = 
     Image.alloc display Rectangle.r_1x1 Channel.rgba32 true Color.magenta
   in
   (* if does not use originwindow, then need to add view.r.min *)
@@ -105,30 +93,47 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
   redraw display view !mousepos bgcolor;
 
   while true do
-    let ev = 
-      [
-        Keyboard.receive kbd |> (fun ev -> Event.wrap ev (fun x -> Key x));
-        Mouse.receive mouse |> (fun ev -> Event.wrap ev (fun x -> Mouse x));
-      ] |> Event.select
-    in
-    (match ev with
-    | Mouse m -> 
-      mousepos := m.Mouse.pos
-    | Key c ->
-      if c = 'q'
-      then exit 0
-      else Logs.app (fun m -> m "%c" c)
-    (* less: 
-     * | Resize -> view := getwindow display
-     *)
-    );
+    <<[[Hellorio.thread_main()]] in event loop>>
     redraw display view !mousepos bgcolor;
   done
 @
 
-<<constant [[Hellorio._]]>>=
-let _ =
-  Cap.main (fun caps -> thread_main caps)
+<<function [[Hellorio.redraw]]>>=
+let redraw (display : Display.t) (view : Display.image) (pos : Point.t)
+     (bgcolor : Image.t) : unit =
+  Draw.draw view view.r bgcolor None Point.zero;
+  (* todo: Text.string *)
+  Line.line view pos (Point.add pos (Point.p 100 100))
+    Line.EndSquare Line.EndSquare 2 display.black Point.zero;
+  Display.flush display
+@
+%ocaml: less globals, pass down view and display
+
+<<type [[Hellorio.event]]>>=
+type event =
+  | Mouse of Mouse.state
+  | Key of Keyboard.key
+  (* less: Resize *)
+@
+
+<<[[Hellorio.thread_main()]] in event loop>>=
+let ev : event = 
+  [
+    Keyboard.receive kbd |> (fun ev -> Event.wrap ev (fun x -> Key x));
+    Mouse.receive mouse |> (fun ev -> Event.wrap ev (fun x -> Mouse x));
+  ] |> Event.select
+in
+(match ev with
+| Mouse m -> 
+  mousepos := m.pos
+| Key c ->
+  if c = 'q'
+  then exit 0
+  else Logs.app (fun m -> m "%c" c)
+(* less: 
+ * | Resize -> view := getwindow display
+ *)
+);
 @
 
 
@@ -137,19 +142,24 @@ let _ =
 \label{tab:code-orga}
 
 \section{Software architecture}
+
 \subsection{Processes,  procs, and threads relationships}
 \label{sec:thread-archi}
 \label{fig:soft-archi-threads}
 \label{fig:hellorio-and-shell}
+
 \subsection{Trace of a new window creation}
 \label{sec:trace-new-window}
 \label{sec:new-namespace}
 \label{sec:new-thread}
 \label{sec:new-layer}
+
 \subsection{Trace of a mouse click}
 \label{sec:trace-mouse-click}
+
 \subsection{Trace of a key press}
 \label{sec:trace-key-press}
+
 \subsection{Trace of a drawing operation}
 \label{sec:trace-draw}
 
@@ -163,18 +173,25 @@ let _ =
 %******************************************************************************
 \label{chap:core-ds}
 
-\section{Device handlers}
+\section{Device handles}
 
 \subsection{Output device: [[display]] and [[view]]}
+%ocaml: not globals anymore, passed down functions
 
-\subsection{Input devices: [[mousectl]] and [[keyboardctl]]}
+\subsection{Input devices: [[mouse]] and [[kbd]]}%%[[mousectl]] and [[keyboardctl]]}
+%ocaml: also not globals anymore! threads can be passed arguments!
 
-\section{Desktop, [[desktop]]}
+\section{Desktop}%%, [[desktop]]}
+%ocaml: also not a global anymore
+
+<<constant [[Globals.red]]>>=
+let red               = ref Display.fake_image
+@
 
 \section{Windows}
 \label{sec:core-ds-Windows}
 
-\subsection{[[Window]]}
+\subsection{[[Window.t]]}
 
 <<type [[Window.t]]>>=
 (* The window type! *)
@@ -182,89 +199,27 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* ID *)
   (* ---------------------------------------------------------------- *)
-  (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
-  id: wid;
-  (* public named image, visible in /mnt/wsys/winname; change when resize *)
-  mutable winname: string;
-
-  (* writable through /mnt/wsys/label *)
-  mutable label: string;
+  <<[[Window.t]] id fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Graphics *)
   (* ---------------------------------------------------------------- *)
-  (* This is most of the time a layer, but it can also be a plain Image.t
-   * when the window is hidden.
-   * less: option? when delete the window structure and thread is still
-   * out there because we wait for the process to terminate?
-   *)
-  mutable img: Image.t;
-
-  (* todo: for originwindow and really virtual screen? vs img.r? *)
-  mutable screenr: Rectangle.t;
-
-  (* writable through /mnt/wsys/cursor *)
-  mutable mouse_cursor: Cursor.t option;
+  <<[[Window.t]] graphics fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Mouse *)
   (* ---------------------------------------------------------------- *)
-  (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
-  chan_mouse: Mouse.state Event.channel;
-
-  (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
-   * The channel inside the channel will be used to write a mouse state
-   * to thread_fileserver.
-  *)
-  chan_devmouse_read: Mouse.state Event.channel Event.channel;
-
-  (* Note that we do not queue all mouse states; just the clicks/releases,
-   * otherwise the queue would be too big when you move around the mouse.
-   * less: max size = ? mutex around? recent queue.mli says not thread-safe 
-   *)
-  mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
-  (* less: could have simpler mouse_new_event: bool? *)
-  mutable mouse_counter: mouse_counter;
-  mutable last_count_sent: mouse_counter;
-
-  (* we do not queue all mouse states (we queue just the clicks/releases);
-   * for the rest (moving the mouse) we just keep the last state.
-   *)
-  mutable last_mouse: Mouse.state;
-  (* ?? how differ from last_mouse.buttons? *)
-  mutable last_buttons: Mouse.buttons;
+  <<[[Window.t]] mouse fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Keyboard *)
   (* ---------------------------------------------------------------- *)
-  (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
-  (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
-  chan_keyboard: Keyboard.key Event.channel;
-
-  (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
-   * The first channel will be used by thread_fileserver to indicate the
-   * number of bytes the process wants to read from its /dev/cons. The second
-   * channel will be used to send the bytes to thread_fileserver.
-   * Note that we send bytes, even though we read keys.
-  *)
-  chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
-
-  (* Threads_window.thread --> Thread_fileserver.dispatch(Write).
-   * Note that we send full runes, not bytes.
-   * The channel inside will be used to read from thread_fileserver(Write)
-   * the data the process wrote to its /dev/cons.
-   *)
-  chan_devcons_write: (Rune.t list Event.channel) Event.channel;
-
-  (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
-  raw_keys: Keyboard.key Queue.t;
+  <<[[Window.t]] keyboard fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Commands *)
   (* ---------------------------------------------------------------- *)
-  (* Threads_window.thread <-- Thread_mouse.thread? | ?? *)
-  (* less: also list of cmds? [20]? *)
-  chan_cmd: cmd Event.channel;
+  <<[[Window.t]] command fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Resize *)
@@ -273,36 +228,27 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Process *)
   (* ---------------------------------------------------------------- *)
-
-  (* not really mutable, but set after Window.alloc() *)
-  mutable pid: int;
-  (* can be changed through /mnt/wsys/wdir *)
-  mutable pwd: Fpath.t;
-  (* todo? notefd *)
+  <<[[Window.t]] process fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Config *)
   (* ---------------------------------------------------------------- *)
-  mutable auto_scroll: bool;
+  <<[[Window.t]] config fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Wm *)
   (* ---------------------------------------------------------------- *)
-  mutable topped: topped_counter;
+  <<[[Window.t]] wm fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Graphical Window *)
   (* ---------------------------------------------------------------- *)
-  mutable mouse_opened: bool;
-
-  (* can also be used in textual windows, but more rare *)
-  mutable consctl_opened: bool;
-  mutable raw_mode: bool;
+  <<[[Window.t]] graphical window fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Textual Window *)
   (* ---------------------------------------------------------------- *)
-  terminal: Terminal.t;
+  <<[[Window.t]] textual window fields>>
 
   (* ---------------------------------------------------------------- *)
   (* Concurrency *)
@@ -316,9 +262,7 @@ type t = {
   (* ---------------------------------------------------------------- *)
   (* Misc *)
   (* ---------------------------------------------------------------- *)
-  (* todo: why need this? *)
-  mutable deleted: bool;
-
+  <<[[Window.t]] other fields>>
 }
 @
 
@@ -327,12 +271,136 @@ type t = {
 type wid = int
 @
 
+
+<<[[Window.t]] id fields>>=
+(* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
+id: wid;
+(* public named image, visible in /mnt/wsys/winname; change when resize *)
+mutable winname: string;
+@
+
+<<global [[Window.wid_counter]]>>=
+let wid_counter = 
+  ref 0
+@
+
+
+<<[[Window.t]] id fields>>=
+(* writable through /mnt/wsys/label *)
+mutable label: string;
+@
+
+
+
+
+
+<<[[Window.t]] graphics fields>>=
+(* This is most of the time a layer, but it can also be a plain Image.t
+ * when the window is hidden.
+ * less: option? when delete the window structure and thread is still
+ * out there because we wait for the process to terminate?
+ *)
+mutable img: Image.t;
+@
+
+<<[[Window.t]] graphics fields>>=
+(* todo: for originwindow and really virtual screen? vs img.r? *)
+mutable screenr: Rectangle.t;
+@
+
+
+%XXX
+<<[[Window.t]] graphics fields>>=
+(* writable through /mnt/wsys/cursor *)
+mutable mouse_cursor: Cursor.t option;
+@
+
+
+<<[[Window.t]] mouse fields>>=
+(* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+ * The channel inside the channel will be used to write a mouse state
+ * to thread_fileserver.
+*)
+chan_devmouse_read: Mouse.state Event.channel Event.channel;
+
+(* Note that we do not queue all mouse states; just the clicks/releases,
+ * otherwise the queue would be too big when you move around the mouse.
+ * less: max size = ? mutex around? recent queue.mli says not thread-safe 
+ *)
+mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
+(* less: could have simpler mouse_new_event: bool? *)
+mutable mouse_counter: mouse_counter;
+mutable last_count_sent: mouse_counter;
+
+(* we do not queue all mouse states (we queue just the clicks/releases);
+ * for the rest (moving the mouse) we just keep the last state.
+ *)
+mutable last_mouse: Mouse.state;
+(* ?? how differ from last_mouse.buttons? *)
+mutable last_buttons: Mouse.buttons;
+@
+
+
+<<[[Window.t]] keyboard fields>>=
+(* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+ * The first channel will be used by thread_fileserver to indicate the
+ * number of bytes the process wants to read from its /dev/cons. The second
+ * channel will be used to send the bytes to thread_fileserver.
+ * Note that we send bytes, even though we read keys.
+*)
+chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
+
+(* Threads_window.thread --> Thread_fileserver.dispatch(Write).
+ * Note that we send full runes, not bytes.
+ * The channel inside will be used to read from thread_fileserver(Write)
+ * the data the process wrote to its /dev/cons.
+ *)
+chan_devcons_write: (Rune.t list Event.channel) Event.channel;
+
+(* see also Window.terminal below for keys when in non-raw (buffered) mode *)
+raw_keys: Keyboard.key Queue.t;
+@
+
+
+<<[[Window.t]] process fields>>=
+(* not really mutable, but set after Window.alloc() *)
+mutable pid: int;
+(* can be changed through /mnt/wsys/wdir *)
+mutable pwd: Fpath.t;
+(* todo? notefd *)
+@
+
+<<[[Window.t]] config fields>>=
+mutable auto_scroll: bool;
+@
+<<[[Window.t]] wm fields>>=
+mutable topped: topped_counter;
+@
+
+<<[[Window.t]] graphical window fields>>=
+(* can also be used in textual windows, but more rare *)
+mutable consctl_opened: bool;
+mutable raw_mode: bool;
+@
+
+
 \subsection{[[windows]]}
 
 <<global [[Globals.windows]]>>=
 let windows: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
 @
 
+<<type [[Window.topped_counter]]>>=
+type topped_counter = int
+@
+
+<<global [[Window.topped_counter]]>>=
+let topped_counter =
+  ref 0
+@
+
+
+%XXX
 <<global [[Globals.hidden]]>>=
 (* a subset of 'windows' *)
 let hidden: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
@@ -356,12 +424,21 @@ let win () =
 
 \subsection{Graphical windows}
 
+<<[[Window.t]] graphical window fields>>=
+mutable mouse_opened: bool;
+@
+
 \subsection{Textual windows}
+
+<<[[Window.t]] textual window fields>>=
+terminal: Terminal.t;
+@
 
 \section{Filesystem server}
 
 
-\subsection{[[FilSys]] and [[filsys]]}
+\subsection{[[Fileserver.t]]}%% and [[filsys]]}
+%ocaml: no filsys global
 
 <<type [[Fileserver.t]]>>=
 type t = {
@@ -381,18 +458,11 @@ type t = {
 }
 @
 
-\subsection{File state: [[Fid]]}
+\subsection{File state and file ids}
 
 <<type [[File.fid]]>>=
 (* This is maintained by the "client" (the kernel on behalf of a winshell) *)
 type fid = Protocol_9P.fid
-@
-
-<<type [[File.filecode]]>>=
-(* This is returned by the server (rio) to identify a file of the server *)
-type filecode = 
-  | Dir of dir
-  | File of devid
 @
 
 <<type [[File.t]]>>=
@@ -405,26 +475,41 @@ type t = {
    *)
   fid: fid;
 
-  (* The qid is what is returned by the "server" to identify a file (or dir).
-   * It is mutable because a fid can be 'walked' to point to another file
-   * on the server.
-   *)
-  mutable qid: Plan9.qid;
-  (* for stat (mutable for the same reason than qid above) *)
-  mutable entry: dir_entry_short;
-
+  (* the state *)
   mutable opened: Plan9.open_flags option;
 
-  (* less: we could also use a wid *)
-  win: Window.t;
+  <<[[File.t]] other fields>>
 
-  (* less: nrpart for runes *)
 }
 @
 
-\subsection{Workers and jobs: [[Xfid]]}
+%XXX
+<<[[File.t]] other fields>>=
+(* The qid is what is returned by the "server" to identify a file (or dir).
+ * It is mutable because a fid can be 'walked' to point to another file
+ * on the server.
+ *)
+mutable qid: Plan9.qid;
+(* for stat (mutable for the same reason than qid above) *)
+mutable entry: dir_entry_short;
 
-\subsection{9P callbacks: [[fcall]]}
+(* less: we could also use a wid *)
+win: Window.t;
+
+(* less: nrpart for runes *)
+@
+
+
+<<type [[File.filecode]]>>=
+(* This is returned by the server (rio) to identify a file of the server *)
+type filecode = 
+  | Dir of dir
+  | File of devid
+@
+
+%%\subsection{Workers and jobs: [[Xfid]]}
+
+%%\subsection{9P callbacks: [[fcall]]}
 
 \section{Devices}
 %ocaml: new section, new type
@@ -507,52 +592,48 @@ let usage =
 @
 
 
+%XXX
+<<[[CLI.main()]] [[options]] elements>>=
+"-s", Arg.Unit (fun () -> raise Todo),
+" ";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-font", Arg.String (fun _s -> raise Todo),
+" <fontname>";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-i", Arg.String (fun _s -> raise Todo),
+" <initcmd>";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-k", Arg.String (fun _s -> raise Todo),
+" <kbdcmd>";
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-test", Arg.Unit (fun () -> Test.test ()),
+" ";
+@
 
 <<function [[CLI.main]]>>=
 let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     Exit.t =
 
-  let backtrace = ref false in
-  let level = ref (Some Logs.Warning) in
+  <<[[CLI.main()]] locals>>
 
-  let options = (*todo: Arg.align*) [
-    "-s", Arg.Unit (fun () -> raise Todo),
-    " ";
-    "-font", Arg.String (fun _s -> raise Todo),
-    " <fontname>";
-
-    "-i", Arg.String (fun _s -> raise Todo),
-    " <initcmd>";
-    "-k", Arg.String (fun _s -> raise Todo),
-    " <kbdcmd>";
-
-    (* pad: not in original *)
-    "-debug_9P", Arg.Set Globals.debug_9P,
-    " ";
-    "-debug_draw", Arg.Set Globals.debug_draw,
-    " ";
-    "-test", Arg.Unit (fun () -> Test.test ()),
-    " ";
+  let options = [
+    <<[[CLI.main()]] [[options]] elements>>
   ] |> Arg.align
   in
   (* This may raise ExitCode *)
   Arg_.parse_argv caps argv options (fun _f -> Arg.usage options usage) usage;
-  Logs_.setup !level ();
-  Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
+
+  <<[[CLI.main()]] logging setup>>
 
   try 
     (* the main call *)
     thread_main caps
   with exn ->
-      if !backtrace
-      then raise exn
-      else 
-        (match exn with
-        | Failure s ->
-              Logs.err (fun m -> m "%s" s);
-              Exit.Code 1
-        | _ -> raise exn
-        )
+      <<[[CLI.main()]] handle [[exn]]>>
 @
 
 
@@ -565,61 +646,16 @@ val thread_main: < caps; ..> -> Exit.t
 let thread_main (caps: < caps; .. >) : Exit.t =
 
   (* Rio, a graphical application *)
-
-  let display : Display.t = Draw.init caps "orio" in
-  (* alt: simpler (but does not allow rio under rio in): 
-   * let view = display.image in
-   * less: let viewr save?
-   *)
-  let view : Display.image = Draw_rio.get_view caps display in
-  let font : Font.t = Font_default.load_default_font display in
-
-  if !Globals.debug_draw
-  then Display.debug display;
-
-  let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
-  Globals.red   := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
-  Globals.title_color       := Image.alloc_color display Color.greygreen;
-  Globals.title_color_light := Image.alloc_color display Color.palegreygreen;
-
-  let desktop : Baselayer.t = Baselayer.alloc view background in
-
-  let mouse : Mouse.ctl = Mouse.init caps in
-  let kbd : Keyboard.ctl = Keyboard.init caps in
-
-  Draw.draw_color view view.r background;
-  (* to test: alternative to -test that leverages work done above
-  Test.test_display_default_font display view;
-  Test.test_display_text display view font;
-  *)
-
-  Display.flush display;
+  <<[[CLI.thread_main()]] graphics initializations>>
 
   (* Rio, a filesystem server *)
-
   let fs = Fileserver.init () in
 
   (* Rio, a concurrent application *)
-
-  let _kbd_thread   = 
-    Thread.create Thread_keyboard.thread kbd in
-
   let (exit_chan: Exit.t Event.channel) = Event.new_channel () in
-  (* To break some mutual dependencies.
-   * The mouse right-click and menu will trigger the creation
-   * of new windows and new window threads and call this function.
-   *)
-  Wm.threads_window_thread_func := Threads_window.thread;
-  let _mouse_thread = 
-    Thread.create (Thread_mouse.thread caps) (exit_chan, 
-                                       mouse, (display, desktop, view, font),
-                                       fs) in
+  <<[[CLI.thread_main()]] threads creation>>
 
-  let _fileserver_master_thread =
-    Thread.create Threads_fileserver.thread fs in
-  
   (* Wait *)
-
   let exit_code = Event.receive exit_chan |> Event.sync in
   (* todo: kill all procs? all the winshell processes? *)
   (* todo: kill all threads? done when do exit no? *)
@@ -628,17 +664,77 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 
 \section{Graphics initialization}
 
-\section{Mouse initialization}
+<<[[CLI.thread_main()]] graphics initializations>>=
+let display : Display.t = Draw.init caps "orio" in
+(* alt: simpler (but does not allow rio under rio in): 
+ * let view = display.image in
+ * less: let viewr save?
+ *)
+let view : Display.image = Draw_rio.get_view caps display in
+let font : Font.t = Font_default.load_default_font display in
 
-\section{Keyboard initialization}
+<<[[CLI.thread_main()]] graphics initializations, debug>>
 
-\section{Channels creation}
+let background = Image.alloc_color display (Color.mk2 0x77 0x77 0x77) in
+Globals.red   := Image.alloc_color display (Color.mk2 0xDD 0x00 0x00);
+Globals.title_color       := Image.alloc_color display Color.greygreen;
+Globals.title_color_light := Image.alloc_color display Color.palegreygreen;
+
+let desktop : Baselayer.t = Baselayer.alloc view background in
+
+Draw.draw_color view view.r background;
+  (* to test: alternative to -test that leverages work done above
+  Test.test_display_default_font display view;
+  Test.test_display_text display view font;
+  *)
+
+Display.flush display;
+@
+
+<<constant [[Globals.title_color]]>>=
+let title_color       = ref Display.fake_image
+@
+<<constant [[Globals.title_color_light]]>>=
+let title_color_light = ref Display.fake_image
+@
+
+%%\section{Mouse initialization}
+
+%%\section{Keyboard initialization}
+
+%%\section{Channels creation}
 
 \section{Threads creation}
 
+<<[[CLI.thread_main()]] threads creation>>=
+(* To break some mutual dependencies.
+ * The mouse right-click and menu will trigger the creation
+ * of new windows and new window threads and call this function.
+ *)
+Wm.threads_window_thread_func := Threads_window.thread;
+@
+% must be done before we create thhe mouse thread?
+
+<<[[CLI.thread_main()]] threads creation>>=
+let mouse : Mouse.ctl = Mouse.init caps in
+let kbd : Keyboard.ctl = Keyboard.init caps in
+
+let _kbd_thread   = 
+  Thread.create Thread_keyboard.thread kbd in
+
+let _mouse_thread = 
+  Thread.create (Thread_mouse.thread caps)
+     (exit_chan, 
+      mouse, (display, desktop, view, font),
+      fs) in
+
+let _fileserver_master_thread =
+  Thread.create Threads_fileserver.thread fs in
+@
+
 \section{Filesystem server initialization}
 
-\subsection{[[filsysinit()]]}
+\subsection{[[Fileserver.init()]]}%%[[filsysinit()]]}
 
 <<signature [[Fileserver.init]]>>=
 (* internally creates a pipe between clients_fd/server_fd above *)
@@ -668,12 +764,15 @@ let init () =
   }
 @
 
-\subsection{Worker allocator: [[xfidinit()]]}
+%%\subsection{Worker allocator: [[xfidinit()]]}
 
 %******************************************************************************
-\chapter{Procs and Threads}
+\chapter{Threads} %% Procs and Threads
 %******************************************************************************
 \label{chap:processes-threads}
+%ocaml: no Procs and Threads, just threads as Thread do not block
+% on unix calls (thx to ThreadUnix) so no need intermediate proc
+% to do the read and thread for the channel.
 
 \section{Keyboard thread}
 
@@ -702,6 +801,13 @@ let thread (kbd : Keyboard.ctl) : unit =
 @
 
 
+<<[[Window.t]] keyboard fields>>=
+(* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
+(* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
+chan_keyboard: Keyboard.key Event.channel;
+@
+
+
 \section{Mouse thread}
 
 <<signature [[Thread_mouse.thread]]>>=
@@ -718,9 +824,14 @@ val thread:
   unit
 @
 
+<<type [[Thread_mouse.event]]>>=
+type event =
+  | Mouse of Mouse.state
+@
+
 <<function [[Thread_mouse.thread]]>>=
-let thread (caps : < Cap.fork; .. >) (exitchan, 
-            mouse, (display, desktop, view, font), fs) =
+let thread (caps : < Cap.fork; .. >) 
+           (exitchan, mouse, (display, desktop, view, font), fs) =
   (* less: threadsetname *)
 
   while true do
@@ -735,89 +846,124 @@ let thread (caps : < Cap.fork; .. >) (exitchan,
       (* less: loop again *)
       (* less: wkeyboard and ptinrect *)
       (* todo? race on Globals.win? can change between? need store in local?*)
-      let sending_to_win =
-        match Globals.win () with
-        | Some (w : Window.t) ->
-          (* less: logical coordinates with winput.img.r and winput.screenr *)
-          let xy = m.pos in
-          (* less: goto scrolling if scroll buttons *)
-          let inside = Window.pt_inside_border xy w in
-          (* todo: set scrolling *)
-          (* todo: set moving *)
-          (* less: || scrolling *)
-          inside && (w.mouse_opened || m.buttons.left)
-        | None -> false
-      in
+
+      <<[[Thread_mouse.thread()]] let [[sending_to_win]]>>
       (match sending_to_win with
       | true ->
-        (* could assert that Globals.win() <> None *)
-        Globals.win () |> Option.iter (fun (w : Window.t) ->
-          (if not (Mouse.has_click m)
-          then Wm.corner_cursor_or_window_cursor w m.pos mouse
-          (* todo: why if click then not corner cursor? *)
-          else Wm.window_cursor w m.pos  mouse
-          );
-          (* less: send logical coordinates *)
-          Event.send w.chan_mouse m |> Event.sync
-        )
+        <<[[Thread_mouse.thread()]] when [[sending_to_win]]>>
       | false ->
-        let wopt = Globals.window_at_point m.pos in
-        (match wopt with
-        | Some w -> Wm.corner_cursor_or_window_cursor w m.pos mouse
-        | None -> Mouse.reset_cursor mouse
-        );
-        (* todo: if moving and buttons *)
-        (* todo: set corner cursor again part2 *)
-
-        if Mouse.has_click m
-        then 
-          let under_mouse =
-            match wopt, Globals.win () with
-            | None, _ -> Nothing
-            (* less: look if w2.topped > 0? seems useless *)
-            | Some w1, Some w2 when w1 == w2 -> CurrentWin w1
-            | Some w, _ -> OtherWin w
-          in
-          (match under_mouse with
-          (* TODO: remove; just because hard to right click on QEMU and laptop*)
-          | Nothing when m.buttons.left ->
-            wm_menu caps m.pos Mouse.Left exitchan 
-              mouse (display, desktop, view, font) fs
-
-
-          | ((*Nothing |*) CurrentWin _) when m.buttons.left ->
-            ()
-
-          | Nothing when m.buttons.middle ->
-             middle_click_system m mouse
-          | CurrentWin (w : Window.t) when m.buttons.middle ->
-            if not w.mouse_opened
-            then middle_click_system m mouse
-
-          | (Nothing | CurrentWin _) when m.buttons.right ->
-            wm_menu caps m.pos Mouse.Right exitchan 
-              mouse (display, desktop, view, font) fs
-
-          | OtherWin w when m.buttons.left ->
-            Wm.top_win w
-            (* less: should drain and wait that release up, unless winborder *)
-          | OtherWin w when m.buttons.middle || m.buttons.right ->
-            Wm.top_win w
-            (* todo: should goto again, may need to send event *)
-            
-          | _ -> raise (Impossible "Mouse.has_click so one field is true")
-          );
-        (* todo: reset moving *)
-        (* less: drain *)
-      )
+        <<[[Thread_mouse.thread()]] when not [[sending_to_win]]>>
     )
+  )
   done
 @
 
 \subsection{Application mouse events}
 
+<<[[Thread_mouse.thread()]] let [[sending_to_win]]>>=
+let sending_to_win =
+  match Globals.win () with
+  | Some (w : Window.t) ->
+    (* less: logical coordinates with winput.img.r and winput.screenr *)
+    let xy = m.pos in
+    (* less: goto scrolling if scroll buttons *)
+    let inside = Window.pt_inside_border xy w in
+    (* todo: set scrolling *)
+    (* todo: set moving *)
+    (* less: || scrolling *)
+    inside && (w.mouse_opened || m.buttons.left)
+  | None -> false
+in
+@
+
+<<[[Thread_mouse.thread()]] when [[sending_to_win]]>>=
+(* could assert that Globals.win() <> None *)
+Globals.win () |> Option.iter (fun (w : Window.t) ->
+  (if not (Mouse.has_click m)
+  then Wm.corner_cursor_or_window_cursor w m.pos mouse
+  (* todo: why if click then not corner cursor? *)
+  else Wm.window_cursor w m.pos  mouse
+  );
+  (* less: send logical coordinates *)
+  Event.send w.chan_mouse m |> Event.sync
+)
+@
+
+<<[[Window.t]] mouse fields>>=
+(* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
+chan_mouse: Mouse.state Event.channel;
+@
+
 \subsection{Windowing system mouse events}
 
+
+%XXX
+<<[[Thread_mouse.thread()]] when not [[sending_to_win]]>>=
+let wopt = Globals.window_at_point m.pos in
+(match wopt with
+| Some w -> Wm.corner_cursor_or_window_cursor w m.pos mouse
+| None -> Mouse.reset_cursor mouse
+);
+(* todo: if moving and buttons *)
+(* todo: set corner cursor again part2 *)
+
+if Mouse.has_click m
+then 
+  let under_mouse =
+    match wopt, Globals.win () with
+    | None, _ -> Nothing
+    (* less: look if w2.topped > 0? seems useless *)
+    | Some w1, Some w2 when w1 == w2 -> CurrentWin w1
+    | Some w, _ -> OtherWin w
+  in
+  (match under_mouse with
+  (* TODO: remove; just because hard to right click on QEMU and laptop*)
+  | Nothing when m.buttons.left ->
+    wm_menu caps m.pos Mouse.Left exitchan 
+      mouse (display, desktop, view, font) fs
+
+
+  | ((*Nothing |*) CurrentWin _) when m.buttons.left ->
+    ()
+
+  | Nothing when m.buttons.middle ->
+     middle_click_system m mouse
+  | CurrentWin (w : Window.t) when m.buttons.middle ->
+    if not w.mouse_opened
+    then middle_click_system m mouse
+
+  | (Nothing | CurrentWin _) when m.buttons.right ->
+    wm_menu caps m.pos Mouse.Right exitchan 
+      mouse (display, desktop, view, font) fs
+
+  | OtherWin w when m.buttons.left ->
+    Wm.top_win w
+    (* less: should drain and wait that release up, unless winborder *)
+  | OtherWin w when m.buttons.middle || m.buttons.right ->
+    Wm.top_win w
+    (* todo: should goto again, may need to send event *)
+    
+  | _ -> raise (Impossible "Mouse.has_click so one field is true")
+  );
+(* todo: reset moving *)
+(* less: drain *)
+@
+
+
+<<function [[Globals.window_at_point]]>>=
+(* old: was called wpointto in rio-C *)
+let window_at_point pt =
+  let res = ref None in
+  windows |> Hashtbl.iter (fun _k w ->
+    if Rectangle.pt_in_rect pt w.W.screenr && not w.W.deleted
+    then
+      match !res with
+      | None -> res := Some w
+      | Some w2 when w.W.topped > w2.W.topped -> res := Some w
+      | _ -> ()
+  );
+  !res
+@
 
 \section{Window threads}
 
@@ -837,23 +983,13 @@ type event =
   (* reading from many places *)
   | Cmd   of Window.cmd
 
-  (* producing for thread_fileserver(Read Qmouse) *)
-  | SentChannelForMouseRead
-  (* producing for thread_fileserver(Read Qcons) *)
-  | SentChannelsForConsRead
-  (* producing and then consuming for thread_fileserver(Write Qcons) *)
-  | SentChannelForConsWrite
+  <<[[Threads_window.event]] other cases>>
 @
 
 <<function [[Threads_window.thread]]>>=
 let thread (w : Window.t) =
-  
   (* less: threadsetname *)
-
-  let chan_devmouse = Event.new_channel () in
-  let chan_devcons_read_count = Event.new_channel () in
-  let chan_devcons_read_bytes = Event.new_channel () in
-  let chan_devcons_write_runes = Event.new_channel () in
+  <<[[Threads_window.thread()]] channels creation>>
 
   while true do
     let ev = (
@@ -863,27 +999,7 @@ let thread (w : Window.t) =
       Event.receive w.chan_mouse    |> wrap (fun x -> Mouse x);
       Event.receive w.chan_cmd      |> wrap (fun x -> Cmd x);
     ] @
-      (* sending *)
-      (if w.mouse_counter <> w.last_count_sent 
-       then [Event.send w.chan_devmouse_read chan_devmouse 
-              |> wrap (fun () -> SentChannelForMouseRead)]
-       else []
-      ) @
-      (* less: npart *)
-      (if (w.raw_mode && Queue.length w.raw_keys > 0) ||
-          (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
-       then [Event.send w.chan_devcons_read 
-                (chan_devcons_read_count, chan_devcons_read_bytes)
-              |> wrap (fun () -> SentChannelsForConsRead)]
-       else []
-      ) @
-      (* less: auto_scroll, mouseopen?? 
-       * todo: qh vs org and nchars *)
-      (if true
-       then [Event.send w.chan_devcons_write chan_devcons_write_runes
-            |> wrap (fun () -> SentChannelForConsWrite);]
-       else []
-      )
+      <<[[Threads_window.thread()]] other [[select]] elements>>
     ) |> Event.select
     in
     (match ev with
@@ -896,18 +1012,101 @@ let thread (w : Window.t) =
        * When answer Exited? when Cmd is Exited?
        *)
       cmd_in w cmd
-    | SentChannelForMouseRead -> 
-      mouse_out w chan_devmouse
-    | SentChannelsForConsRead -> 
-      bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
-    | SentChannelForConsWrite ->
-      runes_in w chan_devcons_write_runes
+    <<[[Threads_window.thread()]] match [[ev]] other cases>>
     );
     if not w.deleted
     then Image.flush w.img;
   done
 @
 
+
+<<[[Window.t]] command fields>>=
+(* Threads_window.thread <-- Thread_mouse.thread? | ?? *)
+(* less: also list of cmds? [20]? *)
+chan_cmd: cmd Event.channel;
+@
+
+<<type [[Window.cmd]]>>=
+type cmd =
+  | Delete
+  (* for resize event but also for hide/show *)
+  | Reshape of 
+      Image.t (* can be Layer.t or an off-screen Image.t when hidden *)
+      (*Mouse.ctl*) (* needed for window_cursor() when repaint border *)
+(*
+  | Move of Image.t * Rectangle.t
+  | Refresh
+  | Wakeup
+  (* less: RawOff | RawOn? HoldOn | HoldOff *)
+*)
+@
+
+
+<<[[Window.t]] other fields>>=
+(* todo: why need this? *)
+mutable deleted: bool;
+@
+
+
+%XXX
+<<[[Threads_window.thread()]] channels creation>>=
+let chan_devmouse = Event.new_channel () in
+let chan_devcons_read_count = Event.new_channel () in
+let chan_devcons_read_bytes = Event.new_channel () in
+let chan_devcons_write_runes = Event.new_channel () in
+@
+%XXX
+<<[[Threads_window.event]] other cases>>=
+(* producing for thread_fileserver(Read Qmouse) *)
+| SentChannelForMouseRead
+(* producing for thread_fileserver(Read Qcons) *)
+| SentChannelsForConsRead
+(* producing and then consuming for thread_fileserver(Write Qcons) *)
+| SentChannelForConsWrite
+@
+
+%XXX
+<<[[Threads_window.thread()]] other [[select]] elements>>=
+(* sending *)
+(if w.mouse_counter <> w.last_count_sent 
+ then [Event.send w.chan_devmouse_read chan_devmouse 
+        |> wrap (fun () -> SentChannelForMouseRead)]
+ else []
+) @
+(* less: npart *)
+(if (w.raw_mode && Queue.length w.raw_keys > 0) ||
+    (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
+ then [Event.send w.chan_devcons_read 
+          (chan_devcons_read_count, chan_devcons_read_bytes)
+        |> wrap (fun () -> SentChannelsForConsRead)]
+ else []
+) @
+(* less: auto_scroll, mouseopen?? 
+ * todo: qh vs org and nchars *)
+(if true
+ then [Event.send w.chan_devcons_write chan_devcons_write_runes
+      |> wrap (fun () -> SentChannelForConsWrite);]
+ else []
+)
+@
+%XXX
+<<[[Threads_window.thread()]] match [[ev]] other cases>>=
+| SentChannelForMouseRead -> 
+  mouse_out w chan_devmouse
+| SentChannelsForConsRead -> 
+  bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
+| SentChannelForConsWrite ->
+  runes_in w chan_devcons_write_runes
+@
+<<function [[Threads_window.runes_in]]>>=
+(* output from application *)
+let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
+  let runes = Event.receive chan |> Event.sync in
+  Terminal.runes_in w.terminal runes
+@
+<<signature [[Terminal.runes_in]]>>=
+val runes_in: t -> Rune.t list -> unit
+@
 
 \subsection{Keyboard events listening}
 
@@ -917,26 +1116,27 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
     match w.raw_mode, w.mouse_opened with
-    | true, true (* less: || q0 == nr *) ->
-      Queue.add key w.raw_keys 
-    (* less: in theory we should allow also special navigation keys here *)
-    | true, false  ->
-      failwith "key_in: TODO: raw mode in textual window"
-    | false, true  ->
-      failwith "key_in: TODO: buffered mode in graphical window"
     (* todo: if holding *)
     | false, false -> 
       (* less: snarf *)
       Terminal.key_in w.terminal key
+
+    | true, true (* less: || q0 == nr *) ->
+      Queue.add key w.raw_keys 
+
+    (* less: in theory we should allow also special navigation keys here *)
+    | true, false  ->
+      failwith "key_in: TODO: raw mode in textual window"
+
+    | false, true  ->
+      failwith "key_in: TODO: buffered mode in graphical window"
   end
 @
 
-<<function [[Threads_window.runes_in]]>>=
-(* output from application *)
-let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
-  let runes = Event.receive chan |> Event.sync in
-  Terminal.runes_in w.terminal runes
+<<signature [[Terminal.key_in]]>>=
+val key_in: t -> Keyboard.key -> unit
 @
+
 
 \subsection{Mouse events listening}
 
@@ -960,45 +1160,368 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
 <<function [[Threads_window.cmd_in]]>>=
 let cmd_in (w : Window.t) (cmd : cmd) =
   match cmd with
-  | Delete -> 
-    (* less: break if window already deleted *)
-    (* todo: delete timeout process *)
-    Wm.close_win w
-
-  | Reshape (new_img : Display.image) ->
-    (* less: put all of that in Wm.resize_win ? *)
-    if w.deleted
-    (* less: free new_img if deleted, but when can happen? *)
-    then failwith "window already deleted";
-    let r = new_img.r in
-    w.screenr <- r;
-    Wm.resize_win w new_img;
-    (* less: set wctlready to true *)
-    (* todo: delete timeout proc for old name of window *)
-    (match Rectangle.dx r, Globals.win () with
-    | 0, Some w2 when w2 == w ->
-      Wm.set_current_and_repaint None
-    | _n, Some w2 when (w2 == w) -> 
-      (* less: could Wm.set_current_and_repaint_borders (Some w) mouse,
-       * useless opti I think to special case here w2 == w
-       *)
-      ()
-    | _n, (Some _ | None) ->
-      Wm.set_current_and_repaint (Some w)
-    );
-    (* less: Image.flush new_img, but useless cos done in thread () *)
-    ()
+  <<[[Threads_window.cmd_in()]] match [[cmd]] cases>>
 @
 
-\section{Filesystem server proc}
+%XXX
+<<[[Threads_window.cmd_in()]] match [[cmd]] cases>>=
+| Delete -> 
+  (* less: break if window already deleted *)
+  (* todo: delete timeout process *)
+  Wm.close_win w
+@
+%XXX
+<<[[Threads_window.cmd_in()]] match [[cmd]] cases>>=
+| Reshape (new_img : Display.image) ->
+  (* less: put all of that in Wm.resize_win ? *)
+  if w.deleted
+  (* less: free new_img if deleted, but when can happen? *)
+  then failwith "window already deleted";
+  let r = new_img.r in
+  w.screenr <- r;
+  Wm.resize_win w new_img;
+  (* less: set wctlready to true *)
+  (* todo: delete timeout proc for old name of window *)
+  (match Rectangle.dx r, Globals.win () with
+  | 0, Some w2 when w2 == w ->
+    Wm.set_current_and_repaint None
+  | _n, Some w2 when (w2 == w) -> 
+    (* less: could Wm.set_current_and_repaint_borders (Some w) mouse,
+     * useless opti I think to special case here w2 == w
+     *)
+    ()
+  | _n, (Some _ | None) ->
+    Wm.set_current_and_repaint (Some w)
+  );
+  (* less: Image.flush new_img, but useless cos done in thread () *)
+  ()
+@
 
-\subsection{[[filsysproc()]]}
+\section{Filesystem server thread} %% proc}
 
-\subsection{[[filsysversion()]]}
+%%\subsection{[[filsysproc()]]}
 
-\section{[[Xfid]] allocator thread}
+<<signature [[Threads_fileserver.thread]]>>=
+(* 
+  will serve all the virtual devices for new windows/processes created by rio.
+ *)
+val thread: Fileserver.t -> unit
+@
 
-\section{[[Xfid]] threads}
+<<function [[Threads_fileserver.thread]]>>=
+(* the master *)
+let thread (fs : Fileserver.t) =
+  (* less: threadsetname *)
+  
+  while true do
+    let req : P9.message = P9.read_9P_msg fs.server_fd in
+
+    <<[[Threads_fileserver.thread]] in loop, debug>>
+
+    (match req.typ with
+    | P9.T x -> dispatch fs req x
+    | P9.R _x ->
+      (* less: Ebadfcall *)
+      raise (Impossible (spf "got a response request: %s" (P9.str_of_msg req)))
+    );
+    (* for Version first-message check *)
+    first_message := false
+  done
+@
+
+<<constant [[Threads_fileserver.first_message]]>>=
+(* for Version *)
+let first_message = ref true
+@
+
+<<function [[Threads_fileserver.dispatch]]>>=
+let dispatch (fs : Fileserver.t) (req : P9.message) (request_typ : P9.Request.t) =
+  match request_typ with
+  <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>
+@
+
+
+%XXX
+<<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
+(* Attach *)
+| T.Attach (rootfid, _auth_fid_opt, uname, aname) ->
+  (* stricter: *)
+  if Hashtbl.mem fs.fids rootfid
+  then failwith (spf "Attach: fid already used: %d" rootfid);
+
+  (match () with
+  | _ when uname <> fs.user ->
+    error fs req (spf "permission denied, %s <> %s" uname fs.user)
+  | _ ->
+  (* less: could do that in a worker thread (if use qlock) *)
+  (* less: newlymade, qlock all *)
+  (try
+     let wid = int_of_string aname in
+     let w = Hashtbl.find Globals.windows wid in
+
+     let entry = File.root_entry in
+     let file_id = entry.code, wid in
+     let qid = File.qid_of_fileid file_id entry.type_ in
+
+     let file = File.{
+       fid = rootfid; 
+       qid = qid; 
+       entry = entry;
+       opened = None;
+       win = w;
+     } in
+     Hashtbl.add fs.fids rootfid file;
+     answer fs {req with P9.typ = P9.R (R.Attach qid) }
+   with _exn ->
+      error fs req (spf "unknown id in attach: %s" aname)
+  (* less: incref, qunlock *)
+  ))
+
+(* Walk *)
+| T.Walk (fid, newfid_opt, xs) ->
+  check_fid "walk" fid fs;
+  let file : File.t = Hashtbl.find fs.fids fid in
+  let wid = file.win.id in
+  (match file.opened, newfid_opt with
+  | Some _, _ ->
+    error fs req "walk of open file"
+  (* stricter? failwith or error? *)
+  | _, Some newfid when Hashtbl.mem fs.fids newfid ->
+    error fs req (spf "clone to busy fid: %d" newfid)
+  | _ when List.length xs > P9.max_welem ->
+    error fs req (spf "name too long: [%s]" (String.concat ";" xs))
+  | _ ->
+    let file =
+      match newfid_opt with
+      | None -> file
+      | Some newfid ->
+        (* clone *)
+        (* less: incref on file.w *)
+        let newfile = { file with
+          File.fid = newfid; 
+          File.opened = None 
+          (* todo: nrpart? *)
+        } in
+        Hashtbl.add fs.fids newfid newfile;
+        newfile
+    in
+    let rec walk qid (entry : File.dir_entry_short) acc xs =
+      match xs with
+      | [] -> qid, entry, List.rev acc
+      | x::xs ->
+        if qid.N.typ <> N.QTDir
+        (* will be catched below and transformed in an 9P Rerror message *)
+        then failwith "not a directory";
+        (match entry.code, x with
+        | _Qwsys, ".." -> failwith "walk: Todo '..'"
+        | File.Dir File.Root, x ->
+          let entry = 
+            toplevel_entries |> List.find (fun (entry : File.dir_entry_short)->
+                     entry.name = x)
+          in
+          let file_id = entry.code, wid in
+          let qid = File.qid_of_fileid file_id entry.type_ in
+          (* continue with other path elements *)
+          walk qid entry (qid::acc) xs
+        (* todo: Wsys, snarf *)
+        | _ -> 
+          raise (Impossible "should be catched by 'not a directory' above")
+        )
+    in
+    (try 
+      let final_qid, final_entry, qids = 
+        walk file.qid file.entry [] xs
+      in
+      file.qid <- final_qid;
+      file.entry <- final_entry;
+      answer fs { req with P9.typ = P9.R (R.Walk qids) }
+    with exn ->
+      newfid_opt |> Option.iter (fun newfid ->
+        Hashtbl.remove fs.fids newfid
+      );
+      (match exn with
+      (* this can happen many times because /dev is a union-mount so
+       * we get walk requests also for /dev/draw/... and other devices
+       *)
+      | Not_found -> 
+        error fs req "file does not exist"
+      | Failure s when s = "not a directory" ->
+        error fs req "not a directory"
+      (* internal error then *)
+      | _ -> raise exn
+      )
+    )
+  )
+
+(* Open *)
+| T.Open (fid, flags) ->
+  check_fid "open" fid fs;
+  let file = Hashtbl.find fs.fids fid in
+  let w = file.win in
+  (* less: OTRUNC | OCEXEC | ORCLOSE, and remove DMDIR| DMAPPEND from perm *)
+  let perm = file.entry.perm in
+  if flags.x || (flags.r && not perm.r)
+             || (flags.w && not perm.w)
+  then error fs req "permission denied"
+  else
+    if w.deleted
+    then error fs req "window deleted"
+    else 
+    (* less: could do that in a worker thread *)
+    (try 
+       (match file.entry.code with
+       | File.File devid ->
+         let dev = device_of_devid devid in
+         dev.D.open_ w
+       | File.Dir _dir ->
+         (* todo: nothing to do for dir? ok to open a dir? *)
+         ()
+       );
+       file.opened <- Some flags;
+       let iounit = fs.message_size - P9.io_header_size in
+       answer fs { req with P9.typ = P9.R (R.Open (file.qid, iounit)) }
+     with Device.Error str ->
+       error fs req str
+    )
+
+
+(* Clunk *)
+| T.Clunk (fid) ->
+  check_fid "clunk" fid fs;
+  let file = Hashtbl.find fs.fids fid in
+  (match file.opened with
+  | Some _flags ->
+    (match file.entry.code with
+    | File.File devid ->
+      let dev = device_of_devid devid in
+      dev.D.close file.win
+      (* todo: wclose? *)
+    | File.Dir _ ->
+      ()
+    )
+  (* stricter? can clunk a file not opened? *)
+  | None ->
+    (* todo: winclosechan *)
+    ()
+  );
+  Hashtbl.remove fs.fids fid;
+  answer fs { req with P9.typ = P9.R (R.Clunk) }
+
+(* Read *)
+| T.Read (fid, offset, count) ->
+  check_fid "read" fid fs;
+  let file = Hashtbl.find fs.fids fid in
+  let w = file.win in
+
+  (match file.entry.code with
+  | _ when w.deleted ->
+    error fs req "window deleted"
+  | File.File devid ->
+    (* a worker thread (less: opti: arena of workers? *)
+    Thread.create (fun () ->
+     (* less: getclock? *)
+     (try 
+       let dev = device_of_devid devid in
+       let data = dev.D.read_threaded offset count w in
+       answer fs { req with P9.typ = P9.R (R.Read data) }
+     with Device.Error str ->
+       error fs req str
+    )) () |> ignore
+  | File.Dir _ ->
+    failwith "TODO: readdir"
+  )
+
+(* Write *)
+| T.Write (fid, offset, data) ->
+  check_fid "write" fid fs;
+  let file = Hashtbl.find fs.fids fid in
+  let w = file.win in
+
+  (match file.entry.code with
+  | _ when w.deleted ->
+    error fs req "window deleted"
+  | File.File devid ->
+    (* a worker thread (less: opti: arena of workers? *)
+    Thread.create (fun () ->
+     (try 
+       let dev = device_of_devid devid in
+       (* less: case where want to let device return different count? *)
+       let count = String.length data in
+       dev.D.write_threaded offset data w;
+       answer fs { req with P9.typ = P9.R (R.Write count) }
+     with Device.Error str ->
+       error fs req str
+    )) () |> ignore
+  | File.Dir _ ->
+    raise (Impossible "kernel should not call write on fid of a directory")
+  )
+(* Stat *)
+| T.Stat (fid) ->
+  check_fid "stat" fid fs;
+  let file = Hashtbl.find fs.fids fid in
+  let short = file.entry in
+  (* less: getclock *)
+  let clock = 0 in
+  let dir_entry = {
+    N.name = short.name;
+    (* less: adjust version for snarf *)
+    N.qid = file.qid;
+    N.mode = (N.int_of_perm_property short.perm, 
+      match file.qid.N.typ with
+      | N.QTDir -> N.DMDir
+      | N.QTFile -> N.DMFile
+    );
+    N.length = 0; (*/* would be nice to do better */*)
+
+    N.atime = clock;
+    N.mtime = clock;
+
+    N.uid = fs.user;
+    N.gid = fs.user;
+    N.muid = fs.user;
+
+    N._typ = 0;
+    N._dev = 0;
+  }
+  in
+  answer fs { req with P9.typ = P9.R (R.Stat dir_entry) }
+
+(* Other *)
+| T.Create _ 
+| T.Remove _
+| T.Wstat _
+    -> error fs req "permission denied"
+
+(* todo: handle those one? *)
+| T.Flush _
+| T.Auth _
+  -> 
+  failwith (spf "TODO: req = %s" (P9.str_of_msg req))
+@
+
+
+
+\subsection{[[Version]] request}%%[[filsysversion()]]}
+
+<<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
+(* Version *)
+| T.Version (msize, str) -> 
+  (match () with
+  | _ when not !first_message ->
+    error fs req "version: request not first message"
+  | _ when msize < 256 ->
+    error fs req "version: message size too small";
+  | _ when str <> "9P2000" ->
+    error fs req "version: unrecognized 9P version";
+  | _ ->
+    fs.message_size <- msize;
+    answer fs {req with P9.typ = P9.R (R.Version (msize, str)) }
+  )
+@
+
+%%\section{[[Xfid]] allocator thread}
+
+%%\section{[[Xfid]] threads}
 
 %******************************************************************************
 \chapter{Cursors}
@@ -1272,6 +1795,37 @@ let l = {
 
 \subsection{[[cornercursor()]]}
 
+<<function [[Wm._corner_cursor]]>>=
+let _corner_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
+  if Window.pt_on_border pt w
+  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
+@
+
+
+<<function [[Wm.corner_cursor_or_window_cursor]]>>=
+let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
+  if Window.pt_on_border pt w
+  then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
+  else window_cursor w pt mouse
+@
+
+<<function [[Window.pt_on_border]]>>=
+(* old: was called winborder in rio-C *)
+let pt_on_border pt w =
+  Rectangle.pt_in_rect pt w.screenr && not (pt_inside_border pt w)
+@
+
+<<function [[Window.pt_inside_border]]>>=
+(* old: was not an helper in rio-C, but should to be consistent with winborder.
+ * alt: pt_on_content (window border vs window content in Windows.nw)
+ *)
+let pt_inside_border pt w =
+  Rectangle.pt_in_rect pt (Rectangle.insetrect window_border_size w.screenr)
+@
+
+
+
+
 <<signature [[Cursors.which_corner_cursor]]>>=
 val which_corner_cursor: Rectangle.t -> Point.t -> Cursor.t
 @
@@ -1338,9 +1892,12 @@ let portion x low high =
 
 \section{Right-click system menu}
 
+
+
 \section{Window borders click}
 
 \section{[[Wctlmesg]]}
+
 
 \section{Window creation}
 
@@ -2002,12 +2559,43 @@ let dev_winid = { Device.default with
 %******************************************************************************
 \label{chap:debugging-appendix}
 
+
+<<[[CLI.main()]] locals>>=
+let level = ref (Some Logs.Warning) in
+@
+
+<<[[CLI.main()]] logging setup>>=
+Logs_.setup !level ();
+Logs.info (fun m -> m "rio ran from %s" (Sys.getcwd()));
+@
+
+
 <<constant [[Globals.debug_9P]]>>=
 let debug_9P = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+(* pad: not in original *)
+"-debug_9P", Arg.Set Globals.debug_9P,
+" ";
+@
+
+<<[[Threads_fileserver.thread]] in loop, debug>>=
+(* todo: should exit the whole proc if error *)
+if !Globals.debug_9P
+then Logs.debug (fun m -> m "%s" (P9.str_of_msg req));
 @
 
 <<constant [[Globals.debug_draw]]>>=
 let debug_draw = ref false
+@
+<<[[CLI.main()]] [[options]] elements>>=
+"-debug_draw", Arg.Set Globals.debug_draw,
+" ";
+@
+
+<<[[CLI.thread_main()]] graphics initializations, debug>>=
+if !Globals.debug_draw
+then Display.debug display;
 @
 
 %******************************************************************************
@@ -2015,12 +2603,37 @@ let debug_draw = ref false
 %******************************************************************************
 \label{chap:error}
 
+<<[[CLI.main()]] locals>>=
+let backtrace = ref false in
+@
+
+<<[[CLI.main()]] handle [[exn]]>>=
+if !backtrace
+then raise exn
+else 
+  (match exn with
+  | Failure s ->
+        Logs.err (fun m -> m "%s" s);
+        Exit.Code 1
+  | _ -> raise exn
+  )
+@
+
+<<function [[Threads_fileserver.error]]>>=
+let error fs req str =
+  let res = { req with P9.typ = P9.R (R.Error str) } in
+  answer fs res
+@
+
+
 <<exception [[Device.Error]]>>=
 (* This will be catched up by thread_fileserver to transform the
  * exception in an Rerror 9P response.
  *)
 exception Error of string
 @
+
+
 
 \section{Error codes}
 

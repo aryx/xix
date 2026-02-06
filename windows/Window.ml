@@ -79,21 +79,16 @@ type t = {
   (* Mouse *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] mouse fields *)
-  (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
-   * The channel inside the channel will be used to write a mouse state
-   * to thread_fileserver.
-  *)
-  chan_devmouse_read: Mouse.state Event.channel Event.channel;
-
   (* Note that we do not queue all mouse states; just the clicks/releases,
    * otherwise the queue would be too big when you move around the mouse.
    * less: max size = ? mutex around? recent queue.mli says not thread-safe 
    *)
   mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
+  (*x: [[Window.t]] mouse fields *)
   (* less: could have simpler mouse_new_event: bool? *)
   mutable mouse_counter: mouse_counter;
   mutable last_count_sent: mouse_counter;
-
+  (*x: [[Window.t]] mouse fields *)
   (* we do not queue all mouse states (we queue just the clicks/releases);
    * for the rest (moving the mouse) we just keep the last state.
    *)
@@ -103,6 +98,12 @@ type t = {
   (*x: [[Window.t]] mouse fields *)
   (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
   chan_mouse: Mouse.state Event.channel;
+  (*x: [[Window.t]] mouse fields *)
+  (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+   * The channel inside the channel will be used to write a mouse state
+   * to thread_fileserver.
+  *)
+  chan_devmouse_read: Mouse.state Event.channel Event.channel;
   (*e: [[Window.t]] mouse fields *)
 
   (* ---------------------------------------------------------------- *)
@@ -116,7 +117,7 @@ type t = {
    * Note that we send bytes, even though we read keys.
   *)
   chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
-
+  (*x: [[Window.t]] keyboard fields *)
   (* Threads_window.thread --> Thread_fileserver.dispatch(Write).
    * Note that we send full runes, not bytes.
    * The channel inside will be used to read from thread_fileserver(Write)
@@ -178,9 +179,10 @@ type t = {
   (* Graphical Window *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] graphical window fields *)
+  mutable raw_mode: bool;
+  (*x: [[Window.t]] graphical window fields *)
   (* can also be used in textual windows, but more rare *)
   mutable consctl_opened: bool;
-  mutable raw_mode: bool;
   (*x: [[Window.t]] graphical window fields *)
   mutable mouse_opened: bool;
   (*e: [[Window.t]] graphical window fields *)

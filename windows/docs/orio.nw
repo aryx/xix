@@ -303,21 +303,18 @@ mutable screenr: Rectangle.t;
 
 %XXX
 <<[[Window.t]] mouse fields>>=
-(* Threads_window.thread --> Thread_fileserver.dispatch(Read).
- * The channel inside the channel will be used to write a mouse state
- * to thread_fileserver.
-*)
-chan_devmouse_read: Mouse.state Event.channel Event.channel;
-
 (* Note that we do not queue all mouse states; just the clicks/releases,
  * otherwise the queue would be too big when you move around the mouse.
  * less: max size = ? mutex around? recent queue.mli says not thread-safe 
  *)
 mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
+@
+<<[[Window.t]] mouse fields>>=
 (* less: could have simpler mouse_new_event: bool? *)
 mutable mouse_counter: mouse_counter;
 mutable last_count_sent: mouse_counter;
-
+@
+<<[[Window.t]] mouse fields>>=
 (* we do not queue all mouse states (we queue just the clicks/releases);
  * for the rest (moving the mouse) we just keep the last state.
  *)
@@ -335,7 +332,8 @@ mutable last_buttons: Mouse.buttons;
  * Note that we send bytes, even though we read keys.
 *)
 chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
-
+@
+<<[[Window.t]] keyboard fields>>=
 (* Threads_window.thread --> Thread_fileserver.dispatch(Write).
  * Note that we send full runes, not bytes.
  * The channel inside will be used to read from thread_fileserver(Write)
@@ -344,21 +342,19 @@ chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
 chan_devcons_write: (Rune.t list Event.channel) Event.channel;
 @
 
+%XXX
 <<[[Window.t]] keyboard fields>>=
 (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
 raw_keys: Keyboard.key Queue.t;
 @
-
-%XXX
-<<[[Window.t]] config fields>>=
-mutable auto_scroll: bool;
+<<[[Window.t]] graphical window fields>>=
+mutable raw_mode: bool;
 @
 
 %XXX
 <<[[Window.t]] graphical window fields>>=
 (* can also be used in textual windows, but more rare *)
 mutable consctl_opened: bool;
-mutable raw_mode: bool;
 @
 
 
@@ -485,11 +481,15 @@ scrollr: Rectangle.t;
 (* first character visible in window from 'text' *)
 mutable origin_visible: position;
 mutable runes_visible: int;
-
+@
+<<[[Terminal.t]] other fields>>=
 font: Font.t;
-
+@
+<<[[Terminal.t]] other fields>>=
 (* this will alter which color to use to render the text *)
 mutable is_selected: bool;
+@
+<<[[Terminal.t]] other fields>>=
 (* alt: mutable colors: colors; *)
 @
 
@@ -1119,6 +1119,8 @@ type event =
 
   <<[[Threads_window.event]] other cases>>
 @
+% those are all reading, but we will see later can also
+% send
 
 <<function [[Threads_window.thread]]>>=
 let thread (w : Window.t) =
@@ -1134,6 +1136,7 @@ let thread (w : Window.t) =
       Event.receive w.chan_cmd      |> wrap (fun x -> Cmd x);
     ] @
       <<[[Threads_window.thread()]] other [[select]] elements>>
+      []
     ) |> Event.select
     in
     (match ev with
@@ -1153,15 +1156,13 @@ let thread (w : Window.t) =
   done
 @
 
+% again, those are all Event.receive but in select can also have
+% Event.send
+
 <<function [[Threads_window.wrap]]>>=
 let wrap f = 
   fun ev -> Event.wrap ev f
 @
-
-<<signature [[Terminal.key_in]]>>=
-val key_in: t -> Keyboard.key -> unit
-@
-
 
 <<[[Window.t]] command fields>>=
 (* Threads_window.thread <-- Thread_mouse.thread? | ?? *)
@@ -1201,29 +1202,22 @@ mutable deleted: bool;
 
 %XXX
 <<[[Threads_window.thread()]] channels creation>>=
-let chan_devmouse = Event.new_channel () in
 let chan_devcons_read_count = Event.new_channel () in
 let chan_devcons_read_bytes = Event.new_channel () in
 let chan_devcons_write_runes = Event.new_channel () in
 @
 %XXX
 <<[[Threads_window.event]] other cases>>=
-(* producing for thread_fileserver(Read Qmouse) *)
-| SentChannelForMouseRead
 (* producing for thread_fileserver(Read Qcons) *)
 | SentChannelsForConsRead
+@
+<<[[Threads_window.event]] other cases>>=
 (* producing and then consuming for thread_fileserver(Write Qcons) *)
 | SentChannelForConsWrite
 @
 
 %XXX
 <<[[Threads_window.thread()]] other [[select]] elements>>=
-(* sending *)
-(if w.mouse_counter <> w.last_count_sent 
- then [Event.send w.chan_devmouse_read chan_devmouse 
-        |> wrap (fun () -> SentChannelForMouseRead)]
- else []
-) @
 (* less: npart *)
 (if (w.raw_mode && Queue.length w.raw_keys > 0) ||
     (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
@@ -1232,20 +1226,22 @@ let chan_devcons_write_runes = Event.new_channel () in
         |> wrap (fun () -> SentChannelsForConsRead)]
  else []
 ) @
+@
+<<[[Threads_window.thread()]] other [[select]] elements>>=
 (* less: auto_scroll, mouseopen?? 
  * todo: qh vs org and nchars *)
 (if true
  then [Event.send w.chan_devcons_write chan_devcons_write_runes
       |> wrap (fun () -> SentChannelForConsWrite);]
  else []
-)
+) @
 @
 %XXX
 <<[[Threads_window.thread()]] match [[ev]] other cases>>=
-| SentChannelForMouseRead -> 
-  mouse_out w chan_devmouse
 | SentChannelsForConsRead -> 
   bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
+@
+<<[[Threads_window.thread()]] match [[ev]] other cases>>=
 | SentChannelForConsWrite ->
   runes_in w chan_devcons_write_runes
 @
@@ -1277,6 +1273,11 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: snarf *)
   Terminal.key_in w.terminal key
 @
+
+<<signature [[Terminal.key_in]]>>=
+val key_in: t -> Keyboard.key -> unit
+@
+
 
 <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
 | true, true (* less: || q0 == nr *) ->
@@ -2968,41 +2969,96 @@ let dev_mouse = { (*Device.default with*)
   name = "mouse";
   perm = Plan9.rw;
 
-  open_ = (fun (w : Window.t) ->
-    if w.mouse_opened
-    then raise (Error "file in use");
-    w.mouse_opened <- true;
-    (* less: resized <- false? and race comment? *)
-    ()
-  );
-  close = (fun (w : Window.t) ->
-    (* stricter? check that was opened indeed? *)
-    w.mouse_opened <- false;
-    (* todo: resized? Refresh message?*)
-    ()
-  );
-  (* a process is reading on its /dev/mouse; we must read from mouse
-   * events coming to the window, events sent from the mouse thread.
-   *)
-  read_threaded = (fun _offset count (w : Window.t) ->
-    (* less: flushtag *)
-    (* less: qlock active *)
-    (* less: qlock unactive after answer? so need reorg this func? *)
-    let chan = Event.receive w.chan_devmouse_read |> Event.sync in
-    let m : Mouse.state    = Event.receive chan |> Event.sync in
-    (* less: resize message *)
-    let str = 
-      spf "%c%11d %11d %11d %11d " 
-        'm' m.pos.x m.pos.y (Mouse.int_of_buttons m.buttons) m.msec
-    in
-    (* bugfix: note that we do not honor_offset. /dev/mouse is a dynamic file *)
-    Device.honor_count count str
-  );
-  write_threaded = (fun _offset _str _w ->
-    failwith "TODO: virtual_mouse.write_threaded"
-  );
+  <<method [[Virtual_mouse.dev_mouse.open_]]>>
+  <<method [[Virtual_mouse.dev_mouse.close]]>>
+  <<method [[Virtual_mouse.dev_mouse.read_threaded]]>>
+  <<method [[Virtual_mouse.dev_mouse.write_threaded]]>>
 }
 @
+
+% classic open/close with important mouse_opened field which tells
+% the window manager that this is a graphical app
+<<method [[Virtual_mouse.dev_mouse.open_]]>>=
+open_ = (fun (w : Window.t) ->
+  if w.mouse_opened
+  then raise (Error "file in use");
+  w.mouse_opened <- true;
+
+  (* less: resized <- false? and race comment? *)
+  ()
+);
+@
+
+<<method [[Virtual_mouse.dev_mouse.close]]>>=
+close = (fun (w : Window.t) ->
+  (* stricter? check that was opened indeed? *)
+
+  w.mouse_opened <- false;
+
+  (* todo: resized? Refresh message?*)
+  ()
+);
+@
+
+\subsection{Reading part1}
+
+<<method [[Virtual_mouse.dev_mouse.read_threaded]]>>=
+(* a process is reading on its /dev/mouse; we must read from mouse
+ * events coming to the window, events sent from the mouse thread.
+ *)
+read_threaded = (fun _offset count (w : Window.t) ->
+  (* less: flushtag *)
+  (* less: qlock active *)
+  (* less: qlock unactive after answer? so need reorg this func? *)
+
+  let chan = Event.receive w.chan_devmouse_read |> Event.sync in
+  let m : Mouse.state    = Event.receive chan |> Event.sync in
+
+  (* less: resize message *)
+
+  let str = 
+    spf "%c%11d %11d %11d %11d " 
+      'm' m.pos.x m.pos.y (Mouse.int_of_buttons m.buttons) m.msec
+  in
+  (* bugfix: note that we do not honor_offset. /dev/mouse is a dynamic file *)
+  Device.honor_count count str
+);
+@
+
+<<[[Window.t]] mouse fields>>=
+(* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+ * The channel inside the channel will be used to write a mouse state
+ * to thread_fileserver.
+*)
+chan_devmouse_read: Mouse.state Event.channel Event.channel;
+@
+
+
+<<[[Threads_window.thread()]] other [[select]] elements>>=
+(* sending *)
+(if w.mouse_counter <> w.last_count_sent 
+ then [Event.send w.chan_devmouse_read chan_devmouse 
+        |> wrap (fun () -> SentChannelForMouseRead)]
+ else []
+) @
+@
+% Event.send! not Event.receive here, select can dispatch on
+% receiving and sending if someone is ready on the other side to receive
+
+<<[[Threads_window.thread()]] channels creation>>=
+let chan_devmouse = Event.new_channel () in
+@
+
+<<[[Threads_window.event]] other cases>>=
+(* producing for thread_fileserver(Read Qmouse) *)
+| SentChannelForMouseRead
+@
+
+<<[[Threads_window.thread()]] match [[ev]] other cases>>=
+| SentChannelForMouseRead -> 
+  mouse_out w chan_devmouse
+@
+
 
 <<function [[Device.honor_count]]>>=
 let honor_count count data =
@@ -3012,10 +3068,13 @@ let honor_count count data =
   else String.sub data 0 count
 @
 
-\subsection{Reading part1}
-
 \subsection{Writing}
 
+<<method [[Virtual_mouse.dev_mouse.write_threaded]]>>=
+write_threaded = (fun _offset _str _w ->
+  failwith "TODO: virtual_mouse.write_threaded"
+);
+@
 
 
 \section{[[/mnt/wsys/cons]]}
@@ -3276,6 +3335,10 @@ let honor_offset_and_count offset count data =
 \subsection{Other clicks}
 
 \section{Automatic scrolling mode}
+
+<<[[Window.t]] config fields>>=
+mutable auto_scroll: bool;
+@
 
 \section{Scroll bar interaction}
 

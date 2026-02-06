@@ -52,11 +52,12 @@ type t = {
   (* first character visible in window from 'text' *)
   mutable origin_visible: position;
   mutable runes_visible: int;
-
+  (*x: [[Terminal.t]] other fields *)
   font: Font.t;
-
+  (*x: [[Terminal.t]] other fields *)
   (* this will alter which color to use to render the text *)
   mutable is_selected: bool;
+  (*x: [[Terminal.t]] other fields *)
   (* alt: mutable colors: colors; *)
   (*e: [[Terminal.t]] other fields *)
 }

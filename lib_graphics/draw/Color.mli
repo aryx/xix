@@ -31,6 +31,10 @@ val darkred : t
 val palered : t
 val medred : t
 
+val darkblue : t
+val paleblue : t
+val medblue : t
+
 val greygreen : t
 val palegreygreen : t
 

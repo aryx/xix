@@ -1,4 +1,4 @@
-(* Copyright 2015-2017, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2015-2026 Yoann Padioleau, see copyright.txt *)
 
 (*****************************************************************************)
 (* Prelude *)
@@ -51,6 +51,10 @@ let yellow  = mk2 0xFF 0xFF 0x00
 let darkgreen = mk2 0x44 0x88 0x44
 let palegreen = mk2 0xAA 0xFF 0xAA
 let medgreen = mk2 0x88 0xCC 0x88
+
+let darkred = mk2 0x88 0x44 0x44
+let palered = mk2 0xFF 0xAA 0xAA
+let medred  = mk2 0xCC 0x88 0x88
 
 let greygreen = mk2 0x55 0xAA 0xAA
 let palegreygreen = mk2 0x9E 0xEE 0xEE

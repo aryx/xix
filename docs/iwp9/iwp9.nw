@@ -56,49 +56,50 @@ Table~\ref{tab:ports} presents the current state of the project.
 The code of \xix is available at \url{https://github.com/aryx/xix}.
 
 
-The first question about this project that comes to mind is why?
+The first question about this project that comes to mind is: why?
 %
-The main motivation for \xix comes actually from another project of
+The main motivation for \xix actually comes from another project of
 mine called {\em \principia}\furl{https://github.com/aryx/principia-softwarica}
 (I submitted a separate paper to this workshop describing \principia).
 %
 In short, \principia is a series of books explaining the code
-of \plan programs that are essential to the programmer such as the linker,
-assembler, build system, up to the windowing system.
+of \plan programs that are essential to programmers, such as the linker,
+assembler, build system, and up to the windowing system.
 %
 One strategy to fully understand a program, in order to explain its
-code in a book, is surprisingly to try to port it to another language.
+code in a book, is, perhaps surprisingly, to try to port it to
+another language.
 %
-Indeed, during the porting of a program, it is tempting, because
-good programmers are lazy, to not implement certain features initially judged 
-as accessory, and so to focus on the main parts of the program.
+Indeed, during the porting of a program, it is tempting--because
+good programmers are lazy--to not implement certain features initially judged 
+as accessory, and instead focus on the main parts of the program.
 %
-The process of discovering what are those essential parts already
+The process of discovering what those essential parts are already
 helps in understanding the original code.
 %
 Moreover, very often the final ported program does not work
 at first because those features judged as accessory turned out to be essential,
 which again helps to better understand the original code and its hidden
-subtelities.
+subtelties.
 
 
 I chose \ocaml mainly because it is the programming language I am the
 most familiar with, and as it happens it is also my favourite.
 % cite semgrep, pfff, coccinelle?
 %
-The port reached a point though where the \xix programs are actually 
+The port reached a point, however, where the \xix programs are actually 
 useful on their own, independently of \principia.
 %
 Indeed, first, \ocaml programs are usually portable and
 thanks to the \ocaml compiler targeting multiple architectures
 and operating systems
-most \xix programs are working without any extra effort
+most \xix programs work without any extra effort
 on Linux, macOS, and Windows
 (plan9port\furl{https://9fans.github.io/plan9port/} also helps to
 run \plan programs on Linux and macOS),
 on amd64 and arm64 architectures.
 %
-Second, the \ocaml code being smaller (see Table~\ref{tab:ports}),
+Second, the \ocaml code being smaller (see Table~\ref{tab:ports})
 and arguably clearer, I found it easier to modify and I now usually
 experiment with new features 
 (e.g., adding support for an [[MKSHELL]] environment variable in [[mk]])
@@ -108,8 +109,8 @@ first in \ocaml, and only later port the feature to the original C code.
 % interpreter, easier on functional programs with usually less
 % globals
 %
-Finally, \ocaml programs are ususally safer as segmentation faults
-or buffer overflows can not happen for example.
+Finally, \ocaml programs are ususally safer, as segmentation faults
+or buffer overflows can not happen, for example.
 %well actually it can happen, but usually in C code linked with OCaml code
 %said-later: more details on C vs OCaml
 %
@@ -159,7 +160,7 @@ Utilities         & [[cat pwd wc]]  & 173   & [[ocat opwd owc]]  & 220 \\
 \section{Current state}
 
 The port of [[mk]] to \ocaml, called [[omk]] (for [[o]]caml [[mk]]),
-is almost complete with only a few advanced features missing.
+is almost complete, with only a few advanced features missing.
 % give ex of missing feature ?
 The same is true for the shell [[orc]] and editor [[oed]].
 %
@@ -181,7 +182,7 @@ on \plan and Linux.
 
 
 Finally, the port of [[rio]], [[libdraw]], and [[lib9p]]
-reached the point where one can substitute [[rio]] by [[orio]]
+reached the point where one can substitute [[rio]] with [[orio]]
 in \plan and not notice any difference,
 like in Figure~\ref{fig:orio}, which illustrates also the use
 of a few other \xix programs.
@@ -217,7 +218,7 @@ provided by the \plan kernel.
 \section{\ocaml in \plan}
 
 To be able to run [[orio]], an \ocaml program, in \plan requires
-first to port \ocaml itself to \plan, but noone did.
+first to port \ocaml itself to \plan, but no one did.
 %
 Fortunately, \ocaml has two compilers: 
 one producing optimized {\em native code}, called [[ocamlopt]], and
@@ -247,7 +248,7 @@ bytecode program) to compile other programs.
 
 
 This work is available at \url{https://github.com/aryx/ocaml-light}.
-I started from an old version of \ocaml (1.07) because it had less
+I started from an old version of \ocaml (1.07) because it had fewer
 % so many forks :)
 dependencies than recent versions, making the porting work less difficult.
 %
@@ -286,11 +287,11 @@ have many of the bugs mentioned above while programming
 in OCaml.
 
 
-The numbers in Table~\ref{tab:ports} seems to indicate that
+The numbers in Table~\ref{tab:ports} seem to indicate that
 for the programs that have been almost fully ported 
 ([[mk]], [[rc]], [[ed]], and [[rio]]),
 the ratio of LOC between C and \ocaml is around 2, meaning
-\ocaml is 2x more succint than C. 
+\ocaml is 2x more succinct than C. 
 %
 However, the comparison is not totally fair because there
 are still advanced features in the C versions not ported
@@ -300,7 +301,7 @@ This is far lower than what functional programmers zealots
 (including myself) would claim when comparing C to \ocaml.
 %
 In fact, I have been constantly surprised while reading and porting
-the code of those \plan programs by the succintness and ingeniosity of
+the code of those \plan programs by the succinctness and ingenuity of
 the C code.
 %
 For example, C lacks \ocaml algebraic data types (ADTs, similar
@@ -316,7 +317,7 @@ a large literal array containing enum constants
 associated with a function using a simple switch
 to represent cases for machine-code generation.
 %
-All of those together allows to very succintely
+All of those together allow one to very succinctly
 encode the final machine-code generation phase of the linker.
 %
 The \ocaml code instead uses ADTs and simple pattern matching
@@ -326,7 +327,7 @@ that much smaller than the C code.
 %
 % no need optab.c, ocmp, ... just direct pattern matching on advanced
 % SHOW code diff C vs OCaml.
-Is is though arguably clearer to understand.
+Is is, however, arguably clearer to understand.
 % BUT! LOE will be bigger!
 
 

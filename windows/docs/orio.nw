@@ -306,24 +306,6 @@ mutable screenr: Rectangle.t;
 
 
 
-%XXX
-<<[[Window.t]] keyboard fields>>=
-(* Threads_window.thread --> Thread_fileserver.dispatch(Read).
- * The first channel will be used by thread_fileserver to indicate the
- * number of bytes the process wants to read from its /dev/cons. The second
- * channel will be used to send the bytes to thread_fileserver.
- * Note that we send bytes, even though we read keys.
-*)
-chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
-@
-<<[[Window.t]] keyboard fields>>=
-(* Threads_window.thread --> Thread_fileserver.dispatch(Write).
- * Note that we send full runes, not bytes.
- * The channel inside will be used to read from thread_fileserver(Write)
- * the data the process wrote to its /dev/cons.
- *)
-chan_devcons_write: (Rune.t list Event.channel) Event.channel;
-@
 
 \subsection{[[windows]]}
 
@@ -376,12 +358,6 @@ mutable raw_mode: bool;
 <<[[Window.t]] keyboard fields>>=
 (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
 raw_keys: Keyboard.key Queue.t;
-@
-
-
-<<[[Window.t]] graphical window fields>>=
-(* can also be used in textual windows, but more rare *)
-mutable consctl_opened: bool;
 @
 
 %meta:
@@ -584,7 +560,11 @@ win: Window.t;
 
 
 %%\subsection{Workers and jobs: [[Xfid]]}
+%ocaml: create read/write threads on the fly instead of worker pool
 %%\subsection{9P callbacks: [[fcall]]}
+%ocaml: use ADT for 9P request type, no need literal array, use
+% pattern matching cases instead on request type with appropriate
+% data passed
 
 \section{Devices}
 %ocaml: new section, new type
@@ -1089,7 +1069,6 @@ match wopt, Globals.win () with
   if not w.mouse_opened
   then middle_click_system m mouse
 @
-%XXX
 <<function [[Thread_mouse.middle_click_system]]>>=
 let middle_click_system _m _mouse =
   Logs.err (fun m -> m "Todo: middle click")
@@ -1181,9 +1160,6 @@ type cmd =
 mutable deleted: bool;
 @
 
-
-
-%XXX
 <<[[Window.cmd]] cases>>=
 (*
   | Move of Image.t * Rectangle.t
@@ -1193,65 +1169,6 @@ mutable deleted: bool;
 *)
 @
 
-
-
-
-%XXX
-<<[[Threads_window.thread()]] channels creation>>=
-let chan_devcons_read_count = Event.new_channel () in
-let chan_devcons_read_bytes = Event.new_channel () in
-let chan_devcons_write_runes = Event.new_channel () in
-@
-%XXX
-<<[[Threads_window.event]] other cases>>=
-(* producing for thread_fileserver(Read Qcons) *)
-| SentChannelsForConsRead
-@
-<<[[Threads_window.event]] other cases>>=
-(* producing and then consuming for thread_fileserver(Write Qcons) *)
-| SentChannelForConsWrite
-@
-
-%XXX
-<<[[Threads_window.thread()]] other [[select]] elements>>=
-(* less: npart *)
-(if (w.raw_mode && Queue.length w.raw_keys > 0) ||
-    (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
- then [Event.send w.chan_devcons_read 
-          (chan_devcons_read_count, chan_devcons_read_bytes)
-        |> wrap (fun () -> SentChannelsForConsRead)]
- else []
-) @
-@
-<<[[Threads_window.thread()]] other [[select]] elements>>=
-(* less: auto_scroll, mouseopen?? 
- * todo: qh vs org and nchars *)
-(if true
- then [Event.send w.chan_devcons_write chan_devcons_write_runes
-      |> wrap (fun () -> SentChannelForConsWrite);]
- else []
-) @
-@
-%XXX
-<<[[Threads_window.thread()]] match [[ev]] other cases>>=
-| SentChannelsForConsRead -> 
-  bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
-@
-
-%XXX
-<<[[Threads_window.thread()]] match [[ev]] other cases>>=
-| SentChannelForConsWrite ->
-  runes_in w chan_devcons_write_runes
-@
-<<function [[Threads_window.runes_in]]>>=
-(* output from application *)
-let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
-  let runes = Event.receive chan |> Event.sync in
-  Terminal.runes_in w.terminal runes
-@
-<<signature [[Terminal.runes_in]]>>=
-val runes_in: t -> Rune.t list -> unit
-@
 
 \subsection{Keyboard events listening}
 
@@ -1284,7 +1201,7 @@ val key_in: t -> Keyboard.key -> unit
 % raw_keys! and what will Queue.take on those raw_keys?
 
 
-%XXX
+% move where once implemented?
 <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
 (* less: in theory we should allow also special navigation keys here *)
 | true, false  ->
@@ -1934,22 +1851,31 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
 (* parent *)
 (* TODO: Thread.critical_section := false; *)
 w.pid <- pid;
+@
 
+<<[[Wm.new_win()]] when parent in fork with [[pid]] child>>=
 (* todo: how know if pb in child that require us then from
  * delete the window? need a cpid!
  *)
-
+(* less: notefd *)
+@
+<<[[Wm.new_win()]] when parent in fork with [[pid]] child>>=
 (* old: was in wsetpid() *)
 w.label <- spf "rc %d" pid;
-(* less: notefd *)
+@
 
+<<[[Wm.new_win()]] when parent in fork with [[pid]] child>>=
 (* less: not too late? race with child to access /dev/winname? *)
 let winname = spf "window.%d" w.id in
 w.winname <- winname;
 Draw_ipc.name_image w.img winname;
 (* less: namecount and retry again if already used *)
 @
-
+% important call! to make public the image (space) created during
+% the sweep, so that applications running into it
+% can access it from /dev/winname in their initdraw(),
+% or for terminal we have already access to window.img so no need
+% do anything special.
 
 <<[[Window.t]] process fields>>=
 (* not really mutable, but set after Window.alloc() *)
@@ -2031,7 +1957,7 @@ let alloc (img : Display.image) (font : Font.t) : t =
     chan_keyboard = Event.new_channel ();
     chan_cmd      = Event.new_channel ();
 
-    chan_devmouse_read = Event.new_channel ();
+    raw_keys = Queue.create ();
     mouseclicks_queue = Queue.create ();
 
     mouse_counter = 0;
@@ -2039,9 +1965,10 @@ let alloc (img : Display.image) (font : Font.t) : t =
     last_mouse = Mouse.fake_state;
     last_buttons = Mouse.nobuttons;
 
+    chan_devmouse_read = Event.new_channel ();
+
     chan_devcons_read  = Event.new_channel ();
     chan_devcons_write = Event.new_channel ();
-    raw_keys = Queue.create ();
 
     terminal = Terminal.alloc img font;
 
@@ -2049,6 +1976,10 @@ let alloc (img : Display.image) (font : Font.t) : t =
   }
   in
   w
+@
+
+<<signature [[Terminal.alloc]]>>=
+val alloc: Image.t -> Font.t -> t
 @
 
 
@@ -2606,11 +2537,12 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 \label{chap:filesystem-server}
 
 %%\section{Additional data structures}
+% seen before File.devid, Device.t
 
 %%\subsection{[[Qxxx]]}
 %ocaml: use ADT
 %%\subsection{[[dirtab]]}
-%ocaml: toplevel_entries?
+%ocaml: toplevel_entries instead
 
 %%\section{[[filsysrespond()]]}
 
@@ -2896,6 +2828,8 @@ let check_fid op fid (fs : Fileserver.t) =
     failwith "TODO: readdir"
   )
 @
+% Thread.create() ! again!
+%ocaml: no need xfid thread pool, create them on the fly when read/write syscalls
 
 %%\subsection{[[filsysread()]]}
 \subsection{Reading a directory}
@@ -2972,7 +2906,6 @@ let check_fid op fid (fs : Fileserver.t) =
 
 \section{Forbidden operations}
 
-%XXX
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* Other *)
 | T.Create _ 
@@ -2980,6 +2913,8 @@ let check_fid op fid (fs : Fileserver.t) =
 | T.Wstat _
     -> error fs req "permission denied"
 @
+
+
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* todo: handle those one? *)
 | T.Flush _
@@ -3121,6 +3056,11 @@ let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
 % and this send will go to the read_threaded 2nd receive above
 % why this 2 steps procedure?
 
+% after that the graphical app will have read the mouse state
+% from the queue or current state
+
+
+
 <<function [[Device.honor_count]]>>=
 let honor_count count data =
   let len = String.length data in
@@ -3150,39 +3090,180 @@ let dev_cons = { Device.default with
   name = "cons";
   perm = Plan9.rw;
 
-  (* a process is reading on its /dev/cons; we must read from key
-   * events coming to the window (events sent from the keyboard thread).
-   *)
-  read_threaded = (fun _offset count (w : Window.t) ->
-    (* less: flushtag *)
-    (* less: handle unicode partial runes *)
-    let (chan_count_out, chan_bytes_in) = 
-      Event.receive w.chan_devcons_read |> Event.sync in
-    Event.send chan_count_out count |> Event.sync;
-    (* less: handle if flushing *)
-    (* less: qlock active *)
-    let bytes = Event.receive chan_bytes_in |> Event.sync in
-    (* we asked for count so honor_count is redundant below (but defensive) *)
-    Device.honor_count count bytes
-  );
-  (* a process is writing on its /dev/cons; it wants to output strings
-   * on the terminal
-   *)
-  write_threaded = (fun _offset str (w : Window.t) ->
-    (* todo: partial runes *)
-    let runes = Rune.bytes_to_runes str in
-    (* less: flushtag *)
-    let chan_runes_out = Event.receive w.chan_devcons_write |> Event.sync in
-    (* less: handle if flushing *)
-    (* less: qlock active *)
-    Event.send chan_runes_out runes |> Event.sync;
-  );
+  <<method [[Virtual_cons.dev_cons.read_threaded]]>>
+  <<method [[Virtual_cons.dev_cons.write_threaded]]>>
 }
 @
 
 \subsection{Reading part1}
 
+<<method [[Virtual_cons.dev_cons.read_threaded]]>>=
+(* a process is reading on its /dev/cons; we must read from key
+ * events coming to the window (events sent from the keyboard thread).
+ *)
+read_threaded = (fun _offset count (w : Window.t) ->
+  (* less: flushtag *)
+  (* less: handle unicode partial runes *)
+
+  let (chan_count_out, chan_bytes_in) = 
+    Event.receive w.chan_devcons_read |> Event.sync in
+
+  Event.send chan_count_out count |> Event.sync;
+
+  (* less: handle if flushing *)
+  (* less: qlock active *)
+
+  let bytes = Event.receive chan_bytes_in |> Event.sync in
+  (* we asked for count so honor_count is redundant below (but defensive) *)
+  Device.honor_count count bytes
+);
+@
+
+<<[[Window.t]] keyboard fields>>=
+(* Threads_window.thread --> Thread_fileserver.dispatch(Read).
+ * The first channel will be used by thread_fileserver to indicate the
+ * number of bytes the process wants to read from its /dev/cons. The second
+ * channel will be used to send the bytes to thread_fileserver.
+ * Note that we send bytes, even though we read keys.
+*)
+chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
+@
+
+<<[[Threads_window.thread()]] other [[select]] elements>>=
+(* less: npart *)
+(if (w.raw_mode && Queue.length w.raw_keys > 0) ||
+    (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
+ then [Event.send w.chan_devcons_read 
+          (chan_devcons_read_count, chan_devcons_read_bytes)
+        |> wrap (fun () -> SentChannelsForConsRead)]
+ else []
+) @
+@
+
+
+<<[[Threads_window.thread()]] channels creation>>=
+let chan_devcons_read_count = Event.new_channel () in
+let chan_devcons_read_bytes = Event.new_channel () in
+@
+
+<<[[Threads_window.event]] other cases>>=
+(* producing for thread_fileserver(Read Qcons) *)
+| SentChannelsForConsRead
+@
+
+<<[[Threads_window.thread()]] match [[ev]] other cases>>=
+| SentChannelsForConsRead -> 
+  bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
+@
+
+
+<<function [[Threads_window.bytes_out]]>>=
+let bytes_out (w : Window.t) (chan_count, chan_bytes) =
+  let cnt = Event.receive chan_count |> Event.sync in
+  let buf = Bytes.create cnt in
+  let i = ref 0 in
+
+  (match w.raw_mode with
+  <<[[Threads_window.bytes_out()]] match [[w.raw_mode]] cases>>
+  );
+
+  let str =
+    if !i < cnt
+    then Bytes.sub_string buf 0 !i
+    else Bytes.to_string buf
+  in
+  Event.send chan_bytes str |> Event.sync
+@
+% pass down count to bytes_out function instead of using
+% channel? hmm but not bytes_out is called from Threads_window
+
+
+<<[[Threads_window.bytes_out()]] match [[w.raw_mode]] cases>>=
+| true ->
+  while !i < cnt && Queue.length w.raw_keys > 0 do
+    Bytes.set buf !i (Queue.take w.raw_keys);
+    incr i;
+  done
+@
+
+%XXX move later
+<<[[Threads_window.bytes_out()]] match [[w.raw_mode]] cases>>=
+| false ->
+  let term : Terminal.t = w.terminal in
+  (* "When newline, chars between output point and newline are sent."*)
+  while !i < cnt && term.output_point.i < term.nrunes do
+    let pos = term.output_point.i in
+    Bytes.set buf !i term.text.(pos);
+    term.output_point <- { Terminal.i = pos + 1};
+    incr i;
+  done
+@
+
 \subsection{Writing part1}
+
+<<method [[Virtual_cons.dev_cons.write_threaded]]>>=
+(* a process is writing on its /dev/cons; it wants to output strings
+ * on the terminal
+ *)
+write_threaded = (fun _offset str (w : Window.t) ->
+  (* todo: partial runes *)
+
+  let runes = Rune.bytes_to_runes str in
+  (* less: flushtag *)
+
+  let chan_runes_out = Event.receive w.chan_devcons_write |> Event.sync in
+
+  (* less: handle if flushing *)
+  (* less: qlock active *)
+
+  Event.send chan_runes_out runes |> Event.sync;
+);
+@
+
+
+
+<<[[Window.t]] keyboard fields>>=
+(* Threads_window.thread --> Thread_fileserver.dispatch(Write).
+ * Note that we send full runes, not bytes.
+ * The channel inside will be used to read from thread_fileserver(Write)
+ * the data the process wrote to its /dev/cons.
+ *)
+chan_devcons_write: (Rune.t list Event.channel) Event.channel;
+@
+
+<<[[Threads_window.thread()]] channels creation>>=
+let chan_devcons_write_runes = Event.new_channel () in
+@
+
+<<[[Threads_window.thread()]] other [[select]] elements>>=
+(* less: auto_scroll, mouseopen?? 
+ * todo: qh vs org and nchars *)
+(if true
+ then [Event.send w.chan_devcons_write chan_devcons_write_runes
+      |> wrap (fun () -> SentChannelForConsWrite);]
+ else []
+) @
+@
+
+<<[[Threads_window.event]] other cases>>=
+(* producing and then consuming for thread_fileserver(Write Qcons) *)
+| SentChannelForConsWrite
+@
+
+<<[[Threads_window.thread()]] match [[ev]] other cases>>=
+| SentChannelForConsWrite ->
+  runes_in w chan_devcons_write_runes
+@
+<<function [[Threads_window.runes_in]]>>=
+(* output from application *)
+let runes_in (w: Window.t) (chan : Rune.t list Event.channel) =
+  let runes = Event.receive chan |> Event.sync in
+  Terminal.runes_in w.terminal runes
+@
+<<signature [[Terminal.runes_in]]>>=
+val runes_in: t -> Rune.t list -> unit
+@
+
 
 %%\subsection{Bytes versus runes, partial runes}
 
@@ -3198,42 +3279,65 @@ let dev_consctl = { Device.default with
   name = "consctl";
   perm = Plan9.w;
   
-  open_ = (fun (w : Window.t) ->
-    if w.consctl_opened
-    then raise (Error "file in use");
-
-    w.consctl_opened <- true;
-  );
-  close = (fun (w : Window.t) ->
-    (* less: if holding *)
-    if w.raw_mode
-    then begin
-      w.raw_mode <- false;
-      (* less: send RawOff? but nop in Threads_window anyway *)
-    end;
-    w.consctl_opened <- false;
-  );
-    
-  write_threaded = (fun _offset str (w : Window.t) ->
-    match str with
-    | "rawon" -> 
-      (* less: holding *)
-      (* stricter: set to bool, not increment, so no support 
-       *  for multiple rawon *)
-      (* stricter? exn if already on? *)
-      w.raw_mode <- true;
-      (* less: send RawOn? *)
-    | "rawoff" ->
-      (* todo: send RawOff so terminal can process remaining queued raw keys *)
-      w.raw_mode <- false;
-    | "holdon" ->
-      failwith ("TODO: holdon")
-    | "holdoff" ->
-      failwith ("TODO: holdoff")
-    | _ -> 
-      raise (Error (spf "unknown control message: %s" str));
-  );
+  <<method [[Virtual_cons.dev_consctl.open_]]>>
+  <<method [[Virtual_cons.dev_consctl.close]]>>
+  <<method [[Virtual_cons.dev_consctl.write_threaded]]>>
 }
+@
+
+
+
+
+<<[[Window.t]] graphical window fields>>=
+(* can also be used in textual windows, but more rare *)
+mutable consctl_opened: bool;
+@
+
+<<method [[Virtual_cons.dev_consctl.open_]]>>=
+open_ = (fun (w : Window.t) ->
+  if w.consctl_opened
+  then raise (Error "file in use");
+
+  w.consctl_opened <- true;
+);
+@
+
+<<method [[Virtual_cons.dev_consctl.close]]>>=
+close = (fun (w : Window.t) ->
+  (* less: if holding *)
+  if w.raw_mode
+  then begin
+    w.raw_mode <- false;
+    (* less: send RawOff? but nop in Threads_window anyway *)
+  end;
+  w.consctl_opened <- false;
+);
+@
+
+
+<<method [[Virtual_cons.dev_consctl.write_threaded]]>>=
+write_threaded = (fun _offset str (w : Window.t) ->
+  match str with
+  | "rawon" -> 
+    (* less: holding *)
+    (* stricter: set to bool, not increment, so no support 
+     *  for multiple rawon *)
+    (* stricter? exn if already on? *)
+    w.raw_mode <- true;
+    (* less: send RawOn? *)
+
+  | "rawoff" ->
+    (* todo: send RawOff so terminal can process remaining queued raw keys *)
+    w.raw_mode <- false;
+
+  | "holdon" ->
+    failwith ("TODO: holdon")
+  | "holdoff" ->
+    failwith ("TODO: holdoff")
+
+  | _ -> 
+    raise (Error (spf "unknown control message: %s" str));
+);
 @
 
 \section{[[/mnt/wsys/cursor]]}

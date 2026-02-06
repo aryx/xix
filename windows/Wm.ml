@@ -167,15 +167,15 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
     (* parent *)
     (* TODO: Thread.critical_section := false; *)
     w.pid <- pid;
-
+    (*x: [[Wm.new_win()]] when parent in fork with [[pid]] child *)
     (* todo: how know if pb in child that require us then from
      * delete the window? need a cpid!
      *)
-
+    (* less: notefd *)
+    (*x: [[Wm.new_win()]] when parent in fork with [[pid]] child *)
     (* old: was in wsetpid() *)
     w.label <- spf "rc %d" pid;
-    (* less: notefd *)
-
+    (*x: [[Wm.new_win()]] when parent in fork with [[pid]] child *)
     (* less: not too late? race with child to access /dev/winname? *)
     let winname = spf "window.%d" w.id in
     w.winname <- winname;

@@ -113,6 +113,13 @@ type t = {
   (* Keyboard *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] keyboard fields *)
+  (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
+  raw_keys: Keyboard.key Queue.t;
+  (*x: [[Window.t]] keyboard fields *)
+  (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
+  (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
+  chan_keyboard: Keyboard.key Event.channel;
+  (*x: [[Window.t]] keyboard fields *)
   (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
    * The first channel will be used by thread_fileserver to indicate the
    * number of bytes the process wants to read from its /dev/cons. The second
@@ -127,13 +134,6 @@ type t = {
    * the data the process wrote to its /dev/cons.
    *)
   chan_devcons_write: (Rune.t list Event.channel) Event.channel;
-  (*x: [[Window.t]] keyboard fields *)
-  (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
-  raw_keys: Keyboard.key Queue.t;
-  (*x: [[Window.t]] keyboard fields *)
-  (* Threads_window.thread <-- Thread_keyboard.thread (<-- keyboard.thread) *)
-  (* todo: need list of keys? [20]?not reactif enough if buffer one key only? *)
-  chan_keyboard: Keyboard.key Event.channel;
   (*e: [[Window.t]] keyboard fields *)
 
   (* ---------------------------------------------------------------- *)
@@ -280,7 +280,7 @@ let alloc (img : Display.image) (font : Font.t) : t =
     chan_keyboard = Event.new_channel ();
     chan_cmd      = Event.new_channel ();
 
-    chan_devmouse_read = Event.new_channel ();
+    raw_keys = Queue.create ();
     mouseclicks_queue = Queue.create ();
 
     mouse_counter = 0;
@@ -288,9 +288,10 @@ let alloc (img : Display.image) (font : Font.t) : t =
     last_mouse = Mouse.fake_state;
     last_buttons = Mouse.nobuttons;
 
+    chan_devmouse_read = Event.new_channel ();
+
     chan_devcons_read  = Event.new_channel ();
     chan_devcons_write = Event.new_channel ();
-    raw_keys = Queue.create ();
 
     terminal = Terminal.alloc img font;
 

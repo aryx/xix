@@ -397,10 +397,6 @@ module Unix2 = ThreadUnix
 
 \section{[[Terminal.mli]]}
 
-<<signature [[Terminal.alloc]]>>=
-val alloc: Image.t -> Font.t -> t
-@
-
 <<signature [[Terminal.newline_after_output_point]]>>=
 val newline_after_output_point: t -> bool
 @
@@ -1203,39 +1199,6 @@ open Common
 @
 
 \section{[[Threads_window.ml]]}
-
-
-
-<<function [[Threads_window.bytes_out]]>>=
-let bytes_out (w : Window.t) (chan_count, chan_bytes) =
-  let cnt = Event.receive chan_count |> Event.sync in
-  let buf = Bytes.create cnt in
-  let i = ref 0 in
-
-  (match w.raw_mode with
-  | true ->
-    while !i < cnt && Queue.length w.raw_keys > 0 do
-      Bytes.set buf !i (Queue.take w.raw_keys);
-      incr i;
-    done
-  | false ->
-    let term : Terminal.t = w.terminal in
-    (* "When newline, chars between output point and newline are sent."*)
-    while !i < cnt && term.output_point.i < term.nrunes do
-      let pos = term.output_point.i in
-      Bytes.set buf !i term.text.(pos);
-      term.output_point <- { Terminal.i = pos + 1};
-      incr i;
-    done
-  );
-
-  let str =
-    if !i < cnt
-    then Bytes.sub_string buf 0 !i
-    else Bytes.to_string buf
-  in
-  Event.send chan_bytes str |> Event.sync
-@
 
 %-------------------------------------------------------------
 

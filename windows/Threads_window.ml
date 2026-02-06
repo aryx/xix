@@ -22,14 +22,14 @@ type event =
   | Cmd   of Window.cmd
 
   (*s: [[Threads_window.event]] other cases *)
+  (* producing for thread_fileserver(Read Qmouse) *)
+  | SentChannelForMouseRead
+  (*x: [[Threads_window.event]] other cases *)
   (* producing for thread_fileserver(Read Qcons) *)
   | SentChannelsForConsRead
   (*x: [[Threads_window.event]] other cases *)
   (* producing and then consuming for thread_fileserver(Write Qcons) *)
   | SentChannelForConsWrite
-  (*x: [[Threads_window.event]] other cases *)
-  (* producing for thread_fileserver(Read Qmouse) *)
-  | SentChannelForMouseRead
   (*e: [[Threads_window.event]] other cases *)
 (*e: type [[Threads_window.event]] *)
 
@@ -107,11 +107,13 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
   let i = ref 0 in
 
   (match w.raw_mode with
+  (*s: [[Threads_window.bytes_out()]] match [[w.raw_mode]] cases *)
   | true ->
     while !i < cnt && Queue.length w.raw_keys > 0 do
       Bytes.set buf !i (Queue.take w.raw_keys);
       incr i;
     done
+  (*x: [[Threads_window.bytes_out()]] match [[w.raw_mode]] cases *)
   | false ->
     let term : Terminal.t = w.terminal in
     (* "When newline, chars between output point and newline are sent."*)
@@ -121,6 +123,7 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
       term.output_point <- { Terminal.i = pos + 1};
       incr i;
     done
+  (*e: [[Threads_window.bytes_out()]] match [[w.raw_mode]] cases *)
   );
 
   let str =
@@ -181,11 +184,12 @@ let wrap f =
 let thread (w : Window.t) =
   (* less: threadsetname *)
   (*s: [[Threads_window.thread()]] channels creation *)
+  let chan_devmouse = Event.new_channel () in
+  (*x: [[Threads_window.thread()]] channels creation *)
   let chan_devcons_read_count = Event.new_channel () in
   let chan_devcons_read_bytes = Event.new_channel () in
-  let chan_devcons_write_runes = Event.new_channel () in
   (*x: [[Threads_window.thread()]] channels creation *)
-  let chan_devmouse = Event.new_channel () in
+  let chan_devcons_write_runes = Event.new_channel () in
   (*e: [[Threads_window.thread()]] channels creation *)
 
   while true do
@@ -197,6 +201,13 @@ let thread (w : Window.t) =
       Event.receive w.chan_cmd      |> wrap (fun x -> Cmd x);
     ] @
       (*s: [[Threads_window.thread()]] other [[select]] elements *)
+      (* sending *)
+      (if w.mouse_counter <> w.last_count_sent 
+       then [Event.send w.chan_devmouse_read chan_devmouse 
+              |> wrap (fun () -> SentChannelForMouseRead)]
+       else []
+      ) @
+      (*x: [[Threads_window.thread()]] other [[select]] elements *)
       (* less: npart *)
       (if (w.raw_mode && Queue.length w.raw_keys > 0) ||
           (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
@@ -211,13 +222,6 @@ let thread (w : Window.t) =
       (if true
        then [Event.send w.chan_devcons_write chan_devcons_write_runes
             |> wrap (fun () -> SentChannelForConsWrite);]
-       else []
-      ) @
-      (*x: [[Threads_window.thread()]] other [[select]] elements *)
-      (* sending *)
-      (if w.mouse_counter <> w.last_count_sent 
-       then [Event.send w.chan_devmouse_read chan_devmouse 
-              |> wrap (fun () -> SentChannelForMouseRead)]
        else []
       ) @
       (*e: [[Threads_window.thread()]] other [[select]] elements *)
@@ -235,14 +239,14 @@ let thread (w : Window.t) =
        *)
       cmd_in w cmd
     (*s: [[Threads_window.thread()]] match [[ev]] other cases *)
+    | SentChannelForMouseRead -> 
+      mouse_out w chan_devmouse
+    (*x: [[Threads_window.thread()]] match [[ev]] other cases *)
     | SentChannelsForConsRead -> 
       bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
     (*x: [[Threads_window.thread()]] match [[ev]] other cases *)
     | SentChannelForConsWrite ->
       runes_in w chan_devcons_write_runes
-    (*x: [[Threads_window.thread()]] match [[ev]] other cases *)
-    | SentChannelForMouseRead -> 
-      mouse_out w chan_devmouse
     (*e: [[Threads_window.thread()]] match [[ev]] other cases *)
     );
     if not w.deleted

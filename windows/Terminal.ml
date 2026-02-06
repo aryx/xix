@@ -53,6 +53,7 @@ let zero =
 type t = {
   (* the model *)
 
+  (*s: [[Terminal.t]] text data fields *)
   (* growing array (simpler than a gap buffer).
    * alt: a growing string, like in Efuns.
    *)
@@ -61,19 +62,22 @@ type t = {
   mutable nrunes: int;
 
   (* less: lines? like in Efuns? with EOF sentinel to simplify code? *)
-
-  (* where entered text go (and selection start) (old: q0 in rio-C) *)
+  (*e: [[Terminal.t]] text data fields *)
+  (*s: [[Terminal.t]] text cursor fields *)
+  (* where entered text go (and selection start) (old: q0 in rio) *)
   mutable cursor: position;
-  mutable end_selection: position option;      (* old: q1 in rio-C) *)
-
+  mutable end_selection: position option;      (* old: q1 in rio) *)
+  (*x: [[Terminal.t]] text cursor fields *)
   (* Division between characters the host has seen and characters not 
    * yet transmitted. The position in the text that separates output from input.
-   * old: qh in rio-C
+   * old: qh in rio
    *)
   mutable output_point: position;
+  (*e: [[Terminal.t]] text cursor fields *)
 
   (* the view *)
 
+  (*s: [[Terminal.t]] graphics fields *)
   img: Image.t;
 
   (* img.r without border and some extra space *)
@@ -84,7 +88,11 @@ type t = {
   textr: Rectangle.t;
   (* left side of r *)
   scrollr: Rectangle.t;
+  (*e: [[Terminal.t]] graphics fields *)
 
+  (* misc *)
+
+  (*s: [[Terminal.t]] other fields *)
   (* first character visible in window from 'text' *)
   mutable origin_visible: position;
   mutable runes_visible: int;
@@ -94,6 +102,7 @@ type t = {
   (* this will alter which color to use to render the text *)
   mutable is_selected: bool;
   (* alt: mutable colors: colors; *)
+  (*e: [[Terminal.t]] other fields *)
 }
 (*e: type [[Terminal.t]] *)
 

@@ -276,7 +276,6 @@ let wid_counter =
   ref 0
 @
 
-
 <<[[Window.t]] id fields>>=
 (* writable through /mnt/wsys/label *)
 mutable label: string;
@@ -409,6 +408,89 @@ mutable mouse_opened: bool;
 
 <<[[Window.t]] textual window fields>>=
 terminal: Terminal.t;
+@
+%ocaml: new intermediate type instead of putting all fields in Window.t
+
+<<type [[Terminal.t]]>>=
+type t = {
+  (* the model *)
+
+  <<[[Terminal.t]] text data fields>>
+  <<[[Terminal.t]] text cursor fields>>
+
+  (* the view *)
+
+  <<[[Terminal.t]] graphics fields>>
+
+  (* misc *)
+
+  <<[[Terminal.t]] other fields>>
+}
+@
+
+
+<<[[Terminal.t]] text data fields>>=
+(* growing array (simpler than a gap buffer).
+ * alt: a growing string, like in Efuns.
+ *)
+mutable text: Rune.t array;
+(* number of runes used in text (<= Array.length term.text) *)
+mutable nrunes: int;
+
+(* less: lines? like in Efuns? with EOF sentinel to simplify code? *)
+@
+
+<<[[Terminal.t]] text cursor fields>>=
+(* where entered text go (and selection start) (old: q0 in rio) *)
+mutable cursor: position;
+mutable end_selection: position option;      (* old: q1 in rio) *)
+@
+
+<<type [[Terminal.position]]>>=
+type position = {
+  i: int;
+}
+@
+<<constant [[Terminal.zero]]>>=
+let zero = 
+  { i = 0 }
+@
+
+<<[[Terminal.t]] text cursor fields>>=
+(* Division between characters the host has seen and characters not 
+ * yet transmitted. The position in the text that separates output from input.
+ * old: qh in rio
+ *)
+mutable output_point: position;
+@
+
+
+
+<<[[Terminal.t]] graphics fields>>=
+img: Image.t;
+
+(* img.r without border and some extra space *)
+r: Rectangle.t;
+(* right side of r, and no bottom rectangle covering a line of
+ * text with font below 
+ *)
+textr: Rectangle.t;
+(* left side of r *)
+scrollr: Rectangle.t;
+@
+
+
+%XXX
+<<[[Terminal.t]] other fields>>=
+(* first character visible in window from 'text' *)
+mutable origin_visible: position;
+mutable runes_visible: int;
+
+font: Font.t;
+
+(* this will alter which color to use to render the text *)
+mutable is_selected: bool;
+(* alt: mutable colors: colors; *)
 @
 
 \section{Filesystem server}

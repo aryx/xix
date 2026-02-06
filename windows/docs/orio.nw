@@ -97,6 +97,7 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
     redraw display view !mousepos bgcolor;
   done
 @
+% keyboard.init will turn rawon on /dev/consctl
 
 <<function [[Hellorio.redraw]]>>=
 let redraw (display : Display.t) (view : Display.image) (pos : Point.t)
@@ -135,7 +136,8 @@ in
  *)
 );
 @
-
+% both receive, but can also select on send! so whatever ready to
+% receive or send!
 
 
 \section{Code organization}
@@ -267,10 +269,7 @@ type wid = int
 <<[[Window.t]] id fields>>=
 (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
 id: wid;
-(* public named image, visible in /mnt/wsys/winname; change when resize *)
-mutable winname: string;
 @
-
 <<global [[Window.wid_counter]]>>=
 let wid_counter = 
   ref 0
@@ -282,6 +281,11 @@ mutable label: string;
 @
 
 
+<<[[Window.t]] id fields>>=
+(* public named image, visible in /mnt/wsys/winname; change when resize *)
+mutable winname: string;
+@
+% id field and graphics field actually
 
 
 
@@ -309,19 +313,6 @@ mutable screenr: Rectangle.t;
  *)
 mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
 @
-<<[[Window.t]] mouse fields>>=
-(* less: could have simpler mouse_new_event: bool? *)
-mutable mouse_counter: mouse_counter;
-mutable last_count_sent: mouse_counter;
-@
-<<[[Window.t]] mouse fields>>=
-(* we do not queue all mouse states (we queue just the clicks/releases);
- * for the rest (moving the mouse) we just keep the last state.
- *)
-mutable last_mouse: Mouse.state;
-(* ?? how differ from last_mouse.buttons? *)
-mutable last_buttons: Mouse.buttons;
-@
 
 %XXX
 <<[[Window.t]] keyboard fields>>=
@@ -341,22 +332,6 @@ chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
  *)
 chan_devcons_write: (Rune.t list Event.channel) Event.channel;
 @
-
-%XXX
-<<[[Window.t]] keyboard fields>>=
-(* see also Window.terminal below for keys when in non-raw (buffered) mode *)
-raw_keys: Keyboard.key Queue.t;
-@
-<<[[Window.t]] graphical window fields>>=
-mutable raw_mode: bool;
-@
-
-%XXX
-<<[[Window.t]] graphical window fields>>=
-(* can also be used in textual windows, but more rare *)
-mutable consctl_opened: bool;
-@
-
 
 \subsection{[[windows]]}
 
@@ -399,6 +374,30 @@ let win () =
 <<[[Window.t]] graphical window fields>>=
 mutable mouse_opened: bool;
 @
+
+% can also have raw_mode in textual window but the real use is
+% for graphical apps
+<<[[Window.t]] graphical window fields>>=
+mutable raw_mode: bool;
+@
+
+<<[[Window.t]] keyboard fields>>=
+(* see also Window.terminal below for keys when in non-raw (buffered) mode *)
+raw_keys: Keyboard.key Queue.t;
+@
+
+
+<<[[Window.t]] graphical window fields>>=
+(* can also be used in textual windows, but more rare *)
+mutable consctl_opened: bool;
+@
+
+%meta:
+% note that rio itself in main call Keyboard.init which turns
+% on raw mode and access /dev/consctl, but the real one! (unless
+% when rio is run under rio)
+
+
 
 \subsection{Textual windows}
 
@@ -492,6 +491,7 @@ mutable is_selected: bool;
 <<[[Terminal.t]] other fields>>=
 (* alt: mutable colors: colors; *)
 @
+
 
 \section{Filesystem server}
 
@@ -667,6 +667,7 @@ type t = {
   write_threaded: int64 -> string (* bytes *) -> Window.t -> unit;
 }
 @
+% methods
 
 <<constant [[Device.default]]>>=
 let default = {
@@ -767,6 +768,7 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 @
 
 \section{Graphics initialization}
+% rio a graphical app!
 
 % similar start to hellorio.ml
 
@@ -796,7 +798,6 @@ Draw.draw_color view view.r background;
 
 Display.flush display;
 @
-
 % desktop! baselayer on top of which can put layers
 % useful for?
 
@@ -815,6 +816,10 @@ let title_color_light = ref Display.fake_image
 %%\section{Channels creation}
 
 \section{Threads creation}
+% rio a concurrent app!
+% those keyboard/mouse threads will read raw keys and mouse events
+% from the device, from the kernel! (not virtual here, unless rio under rio)
+% Keyboard.init will open /dev/consctl and turn raw on
 
 % again similar to hellorio.ml
 <<[[CLI.thread_main()]] threads creation>>=
@@ -1119,8 +1124,7 @@ type event =
 
   <<[[Threads_window.event]] other cases>>
 @
-% those are all reading, but we will see later can also
-% send
+% those are all 'reading', but we will see later can also have 'sending'
 
 <<function [[Threads_window.thread]]>>=
 let thread (w : Window.t) =
@@ -1241,6 +1245,8 @@ let chan_devcons_write_runes = Event.new_channel () in
 | SentChannelsForConsRead -> 
   bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
 @
+
+%XXX
 <<[[Threads_window.thread()]] match [[ev]] other cases>>=
 | SentChannelForConsWrite ->
   runes_in w chan_devcons_write_runes
@@ -1273,20 +1279,20 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: snarf *)
   Terminal.key_in w.terminal key
 @
-
 <<signature [[Terminal.key_in]]>>=
 val key_in: t -> Keyboard.key -> unit
 @
+% will see later
 
 
 <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
 | true, true (* less: || q0 == nr *) ->
   Queue.add key w.raw_keys 
 @
+% raw_keys!
 
 
-
-
+%XXX
 <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
 (* less: in theory we should allow also special navigation keys here *)
 | true, false  ->
@@ -1314,6 +1320,30 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
 
   | false -> failwith "mouse_in: mouse not opened todo"
 @
+
+<<[[Window.t]] mouse fields>>=
+(* we do not queue all mouse states (we queue just the clicks/releases);
+ * for the rest (moving the mouse) we just keep the last state.
+ *)
+mutable last_mouse: Mouse.state;
+
+@
+<<[[Window.t]] mouse fields>>=
+(* ?? how differ from last_mouse.buttons? *)
+mutable last_buttons: Mouse.buttons;
+@
+
+<<[[Window.t]] mouse fields>>=
+(* less: could have simpler mouse_new_event: bool? *)
+mutable mouse_counter: mouse_counter;
+@
+% useful for?
+
+%XXX
+<<[[Window.t]] mouse fields>>=
+mutable last_count_sent: mouse_counter;
+@
+
 
 \subsection{Control events listening}
 
@@ -1866,7 +1896,9 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
 
   (* less: cpid channel?  *)
   (* less: scrollit *)
+
   let w : Window.t = Window.alloc img font in
+
   (* less: wscrdraw here? (instead of in alloc, ugly) and draw(cols[BACK])? *)
   (* less: incref? *)
 
@@ -1889,6 +1921,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
 
   (* TODO: Thread.critical_section := true; *)
   (* Logs.warn (fun m -> m "TODO: Thread.critical_section"); *)
+
   let res = CapUnix.fork caps () in
   (match res with
   | -1 -> failwith "fork returned -1"
@@ -1946,7 +1979,6 @@ let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
   failwith "threads_window_thread_func undefined"
 )
 @
-
 <<[[CLI.thread_main()]] threads creation>>=
 (* To break some mutual dependencies.
  * The mouse right-click and menu will trigger the creation
@@ -1954,6 +1986,7 @@ let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
  *)
 Wm.threads_window_thread_func := Threads_window.thread;
 @
+% what is the actual mutual dep? X -> Y -> X ?
 
 
 <<signature [[Wm.set_current_and_repaint]]>>=
@@ -2003,6 +2036,7 @@ let alloc (img : Display.image) (font : Font.t) : t =
 
     chan_devmouse_read = Event.new_channel ();
     mouseclicks_queue = Queue.create ();
+
     mouse_counter = 0;
     last_count_sent = 0;
     last_mouse = Mouse.fake_state;
@@ -2022,6 +2056,8 @@ let alloc (img : Display.image) (font : Font.t) : t =
 
 
 \subsection{Window process creation}%%: [[winshell()]]}
+
+% seen fork before and when in child call function below:
 
 <<signature [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>=
 val run_cmd_in_window_in_child_of_fork:
@@ -2064,6 +2100,8 @@ let run_cmd_in_window_in_child_of_fork
   (* should never reach this point *)
   failwith "exec failed"
 @
+% classic fork/adjust/exec idiom of unix, but here adjust is using mount
+% for filesystem in userspace magic!
 
 % pass down w.id so fileserver knows when see an Attach from which windows
 % it comes from! and any other request like Walk will start from
@@ -2109,7 +2147,7 @@ let set_current_and_repaint wopt (*mouse*) =
 @
 
 <<function [[Wm.repaint]]>>=
-(* old: was called wrepaint in rio-C *)
+(* old: was called wrepaint in rio *)
 let repaint (w : Window.t) =
   let status = 
     match Globals.win () with
@@ -2122,6 +2160,7 @@ let repaint (w : Window.t) =
   if not w.mouse_opened 
   then Terminal.repaint w.terminal 
 @
+% terminal put in different grey when window has focus or not
 
 <<type [[Window.border_status]]>>=
 type border_status = 

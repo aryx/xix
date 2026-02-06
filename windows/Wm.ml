@@ -59,7 +59,7 @@ let draw_border (w : Window.t) (status : Window.border_status) =
 
 (* repaint border, content for textual window, (and todo cursor?) *)
 (*s: function [[Wm.repaint]] *)
-(* old: was called wrepaint in rio-C *)
+(* old: was called wrepaint in rio *)
 let repaint (w : Window.t) =
   let status = 
     match Globals.win () with
@@ -130,7 +130,9 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
 
   (* less: cpid channel?  *)
   (* less: scrollit *)
+
   let w : Window.t = Window.alloc img font in
+
   (* less: wscrdraw here? (instead of in alloc, ugly) and draw(cols[BACK])? *)
   (* less: incref? *)
 
@@ -153,6 +155,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
 
   (* TODO: Thread.critical_section := true; *)
   (* Logs.warn (fun m -> m "TODO: Thread.critical_section"); *)
+
   let res = CapUnix.fork caps () in
   (match res with
   | -1 -> failwith "fork returned -1"

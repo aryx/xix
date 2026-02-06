@@ -50,11 +50,12 @@ type t = {
   (*s: [[Window.t]] id fields *)
   (* visible in /mnt/wsys/winid (and used for /mnt/wsys/<id>/devs) *)
   id: wid;
-  (* public named image, visible in /mnt/wsys/winname; change when resize *)
-  mutable winname: string;
   (*x: [[Window.t]] id fields *)
   (* writable through /mnt/wsys/label *)
   mutable label: string;
+  (*x: [[Window.t]] id fields *)
+  (* public named image, visible in /mnt/wsys/winname; change when resize *)
+  mutable winname: string;
   (*e: [[Window.t]] id fields *)
 
   (* ---------------------------------------------------------------- *)
@@ -85,19 +86,22 @@ type t = {
    *)
   mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
   (*x: [[Window.t]] mouse fields *)
-  (* less: could have simpler mouse_new_event: bool? *)
-  mutable mouse_counter: mouse_counter;
-  mutable last_count_sent: mouse_counter;
+  (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
+  chan_mouse: Mouse.state Event.channel;
   (*x: [[Window.t]] mouse fields *)
   (* we do not queue all mouse states (we queue just the clicks/releases);
    * for the rest (moving the mouse) we just keep the last state.
    *)
   mutable last_mouse: Mouse.state;
+
+  (*x: [[Window.t]] mouse fields *)
   (* ?? how differ from last_mouse.buttons? *)
   mutable last_buttons: Mouse.buttons;
   (*x: [[Window.t]] mouse fields *)
-  (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
-  chan_mouse: Mouse.state Event.channel;
+  (* less: could have simpler mouse_new_event: bool? *)
+  mutable mouse_counter: mouse_counter;
+  (*x: [[Window.t]] mouse fields *)
+  mutable last_count_sent: mouse_counter;
   (*x: [[Window.t]] mouse fields *)
   (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
    * The channel inside the channel will be used to write a mouse state
@@ -179,12 +183,12 @@ type t = {
   (* Graphical Window *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] graphical window fields *)
+  mutable mouse_opened: bool;
+  (*x: [[Window.t]] graphical window fields *)
   mutable raw_mode: bool;
   (*x: [[Window.t]] graphical window fields *)
   (* can also be used in textual windows, but more rare *)
   mutable consctl_opened: bool;
-  (*x: [[Window.t]] graphical window fields *)
-  mutable mouse_opened: bool;
   (*e: [[Window.t]] graphical window fields *)
 
   (* ---------------------------------------------------------------- *)
@@ -279,6 +283,7 @@ let alloc (img : Display.image) (font : Font.t) : t =
 
     chan_devmouse_read = Event.new_channel ();
     mouseclicks_queue = Queue.create ();
+
     mouse_counter = 0;
     last_count_sent = 0;
     last_mouse = Mouse.fake_state;

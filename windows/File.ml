@@ -27,7 +27,8 @@ type filecode =
 (*e: type [[File.filecode]] *)
 (*s: type [[File.dir]] *)
   and dir = 
-    (* '/' old: was called Qdir in rio *)
+    (* '/' 
+     * old: was called Qdir in rio *)
     | Root
 (*e: type [[File.dir]] *)
     (* less: '/wsys/' *)
@@ -54,6 +55,7 @@ type fileid = filecode * Window.wid
 type dir_entry_short = { 
   name: string;
   code: filecode;
+
   type_: Plan9.qid_type;
   (* just for the user; group and other are 'noperm' *)
   perm: Plan9.perm_property;
@@ -79,13 +81,11 @@ type t = {
   mutable opened: Plan9.open_flags option;
 
   (*s: [[File.t]] other fields *)
-  (* for stat (mutable for the same reason than qid above) *)
+  (* for stat (mutable for the same reason than qid) *)
   mutable entry: dir_entry_short;
   (*x: [[File.t]] other fields *)
   (* less: we could also use a wid *)
   win: Window.t;
-  (*x: [[File.t]] other fields *)
-  (* less: nrpart for runes *)
   (*x: [[File.t]] other fields *)
   (* The qid is what is returned by the "server" to identify a file (or dir).
    * It is mutable because a fid can be 'walked' to point to another file
@@ -93,6 +93,7 @@ type t = {
    *)
   mutable qid: Plan9.qid;
   (*e: [[File.t]] other fields *)
+  (* less: nrpart for runes *)
 }
 (*e: type [[File.t]] *)
 

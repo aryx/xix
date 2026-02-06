@@ -8,8 +8,10 @@ module Unix2 = ThreadUnix
 
 (*s: function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]] *)
 let run_cmd_in_window_in_child_of_fork
-  (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
-  (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
+     (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
+     (cmd : string) (argv : string array)
+     (w : Window.t) (fs : Fileserver.t) =
+
   (*Unix1*)CapUnix.chdir caps !!(w.pwd);
   (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
     

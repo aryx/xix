@@ -123,7 +123,7 @@ type t = {
    * the data the process wrote to its /dev/cons.
    *)
   chan_devcons_write: (Rune.t list Event.channel) Event.channel;
-
+  (*x: [[Window.t]] keyboard fields *)
   (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
   raw_keys: Keyboard.key Queue.t;
   (*x: [[Window.t]] keyboard fields *)

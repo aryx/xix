@@ -17,7 +17,7 @@ module R = P9.Response
 (* Constants *)
 (*****************************************************************************)
 (*s: constant [[Threads_fileserver.all_devices]] *)
-let all_devices = [
+let all_devices : (File.devid * Device.t) list = [
   File.WinName , Virtual_draw.dev_winname;
   File.Mouse   , Virtual_mouse.dev_mouse;
   File.Cons    , Virtual_cons.dev_cons;
@@ -41,7 +41,7 @@ let device_of_devid (devid : File.devid) : Device.t =
 (*e: function [[Threads_fileserver.device_of_devid]] *)
 
 (*s: constant [[Threads_fileserver.toplevel_entries]] *)
-let toplevel_entries =
+let toplevel_entries : File.dir_entry_short list =
   all_devices |> List.map (fun (devid, dev) ->
     File.{
       name = dev.D.name;

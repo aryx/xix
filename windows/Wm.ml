@@ -160,6 +160,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
     (* child *)
     Processes_winshell.run_cmd_in_window_in_child_of_fork caps cmd argv w fs
   | pid -> 
+    (*s: [[Wm.new_win()]] when parent in fork with [[pid]] child *)
     (* parent *)
     (* TODO: Thread.critical_section := false; *)
     w.pid <- pid;
@@ -177,6 +178,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
     w.winname <- winname;
     Draw_ipc.name_image w.img winname;
     (* less: namecount and retry again if already used *)
+    (*e: [[Wm.new_win()]] when parent in fork with [[pid]] child *)
   )
 (*e: function [[Wm.new_win]] *)
 

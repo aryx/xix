@@ -405,9 +405,6 @@ val alloc: Image.t -> Font.t -> t
 val newline_after_output_point: t -> bool
 @
 
-<<signature [[Terminal.repaint]]>>=
-val repaint: t -> unit
-@
 
 %-------------------------------------------------------------
 
@@ -1440,11 +1437,6 @@ type mouse_counter = int
 let window_border_size = Draw_rio.window_border_size (* 4 *)
 @
 
-<<type [[Window.border_status]]>>=
-type border_status = 
-  | Selected
-  | Unselected
-@
 
 %-------------------------------------------------------------
 
@@ -1507,32 +1499,7 @@ let window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) : unit =
 @
 
 
-<<function [[Wm.draw_border]]>>=
-let draw_border (w : Window.t) (status : Window.border_status) =
-  let img : Display.image = w.img in
-  (* less: if holding? *)
-  let color = 
-    match status with
-    | Window.Selected   -> !Globals.title_color
-    | Window.Unselected -> !Globals.title_color_light
-  in
-  Polygon.border img img.r Window.window_border_size color Point.zero
-@
 
-<<function [[Wm.repaint]]>>=
-(* old: was called wrepaint in rio-C *)
-let repaint (w : Window.t) =
-  let status = 
-    match Globals.win () with
-    | Some w2 when w2 == w -> Window.Selected
-    | _ -> Window.Unselected
-  in
-  draw_border w status;
-  (* less: wsetcursor again? *)
-  w.terminal.Terminal.is_selected <- (status = Window.Selected);
-  if not w.mouse_opened 
-  then Terminal.repaint w.terminal 
-@
 
 %-------------------------------------------------------------
 

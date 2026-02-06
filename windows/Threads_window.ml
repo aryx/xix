@@ -40,20 +40,22 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
     match w.raw_mode, w.mouse_opened with
+    (*s: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
     (* todo: if holding *)
     | false, false -> 
       (* less: snarf *)
       Terminal.key_in w.terminal key
-
+    (*x: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
     | true, true (* less: || q0 == nr *) ->
       Queue.add key w.raw_keys 
-
+    (*x: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
     (* less: in theory we should allow also special navigation keys here *)
     | true, false  ->
       failwith "key_in: TODO: raw mode in textual window"
-
+    (*x: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
     | false, true  ->
       failwith "key_in: TODO: buffered mode in graphical window"
+    (*e: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
   end
 (*e: function [[Threads_window.key_in]] *)
 (*s: function [[Threads_window.runes_in]] *)

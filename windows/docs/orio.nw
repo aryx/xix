@@ -301,11 +301,7 @@ mutable screenr: Rectangle.t;
 @
 
 
-%XXX
-<<[[Window.t]] graphics fields>>=
-(* writable through /mnt/wsys/cursor *)
-mutable mouse_cursor: Cursor.t option;
-@
+
 %XXX
 <<[[Window.t]] mouse fields>>=
 (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
@@ -347,7 +343,9 @@ chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
  * the data the process wrote to its /dev/cons.
  *)
 chan_devcons_write: (Rune.t list Event.channel) Event.channel;
+@
 
+<<[[Window.t]] keyboard fields>>=
 (* see also Window.terminal below for keys when in non-raw (buffered) mode *)
 raw_keys: Keyboard.key Queue.t;
 @
@@ -459,11 +457,12 @@ type t = {
   mutable opened: Plan9.open_flags option;
 
   <<[[File.t]] other fields>>
+  (* less: nrpart for runes *)
 }
 @
 
 <<[[File.t]] other fields>>=
-(* for stat (mutable for the same reason than qid above) *)
+(* for stat (mutable for the same reason than qid) *)
 mutable entry: dir_entry_short;
 @
 
@@ -472,6 +471,7 @@ mutable entry: dir_entry_short;
 type dir_entry_short = { 
   name: string;
   code: filecode;
+
   type_: Plan9.qid_type;
   (* just for the user; group and other are 'noperm' *)
   perm: Plan9.perm_property;
@@ -486,7 +486,8 @@ type filecode =
 @
 <<type [[File.dir]]>>=
   and dir = 
-    (* '/' old: was called Qdir in rio *)
+    (* '/' 
+     * old: was called Qdir in rio *)
     | Root
 @
 
@@ -502,25 +503,13 @@ let root_entry =
 win: Window.t;
 @
 % get back the window of the process doing the request! very important!
-% how do we get the window?
+% how do we get the window? during Attach and in Plan9.mount call
+% we pass the window id to mount, which is then seen in Attach for
+% the rootfid
 
-
-
-%XXX
-<<[[File.t]] other fields>>=
-(* less: nrpart for runes *)
-@
-
-
-%XXX
-<<type [[File.fileid]]>>=
-(* will generate a Qid.path *)
-type fileid = filecode * Window.wid
-@
 
 
 %%\subsection{Workers and jobs: [[Xfid]]}
-
 %%\subsection{9P callbacks: [[fcall]]}
 
 \section{Devices}
@@ -539,7 +528,7 @@ type fileid = filecode * Window.wid
 @
 
 <<constant [[Threads_fileserver.all_devices]]>>=
-let all_devices = [
+let all_devices : (File.devid * Device.t) list = [
   File.WinName , Virtual_draw.dev_winname;
   File.Mouse   , Virtual_mouse.dev_mouse;
   File.Cons    , Virtual_cons.dev_cons;
@@ -550,7 +539,7 @@ let all_devices = [
 ]
 @
 <<constant [[Threads_fileserver.toplevel_entries]]>>=
-let toplevel_entries =
+let toplevel_entries : File.dir_entry_short list =
   all_devices |> List.map (fun (devid, dev) ->
     File.{
       name = dev.D.name;
@@ -560,6 +549,7 @@ let toplevel_entries =
     }
   )
 @
+% used for Walk
 
 
 <<function [[Threads_fileserver.device_of_devid]]>>=
@@ -1195,23 +1185,34 @@ let key_in (w : Window.t) (key : Keyboard.key) =
   (* less: if key = 0? when can happen? EOF? Ctrl-D? *)
   if not w.deleted then begin
     match w.raw_mode, w.mouse_opened with
-    (* todo: if holding *)
-    | false, false -> 
-      (* less: snarf *)
-      Terminal.key_in w.terminal key
-
-    | true, true (* less: || q0 == nr *) ->
-      Queue.add key w.raw_keys 
-
-    (* less: in theory we should allow also special navigation keys here *)
-    | true, false  ->
-      failwith "key_in: TODO: raw mode in textual window"
-
-    | false, true  ->
-      failwith "key_in: TODO: buffered mode in graphical window"
+    <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>
   end
 @
 
+<<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
+(* todo: if holding *)
+| false, false -> 
+  (* less: snarf *)
+  Terminal.key_in w.terminal key
+@
+
+<<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
+| true, true (* less: || q0 == nr *) ->
+  Queue.add key w.raw_keys 
+@
+
+
+
+
+<<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
+(* less: in theory we should allow also special navigation keys here *)
+| true, false  ->
+  failwith "key_in: TODO: raw mode in textual window"
+@
+<<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
+| false, true  ->
+  failwith "key_in: TODO: buffered mode in graphical window"
+@
 
 \subsection{Mouse events listening}
 
@@ -1718,7 +1719,7 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
   Event.send exitchan Exit.OK |> Event.sync;
 );
 @
-
+% this will wakeup thread_main who was waiting on exitchan
 
 
 \section{Window borders click}
@@ -1812,24 +1813,28 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
     (* child *)
     Processes_winshell.run_cmd_in_window_in_child_of_fork caps cmd argv w fs
   | pid -> 
-    (* parent *)
-    (* TODO: Thread.critical_section := false; *)
-    w.pid <- pid;
-
-    (* todo: how know if pb in child that require us then from
-     * delete the window? need a cpid!
-     *)
-
-    (* old: was in wsetpid() *)
-    w.label <- spf "rc %d" pid;
-    (* less: notefd *)
-
-    (* less: not too late? race with child to access /dev/winname? *)
-    let winname = spf "window.%d" w.id in
-    w.winname <- winname;
-    Draw_ipc.name_image w.img winname;
-    (* less: namecount and retry again if already used *)
+    <<[[Wm.new_win()]] when parent in fork with [[pid]] child>>
   )
+@
+
+<<[[Wm.new_win()]] when parent in fork with [[pid]] child>>=
+(* parent *)
+(* TODO: Thread.critical_section := false; *)
+w.pid <- pid;
+
+(* todo: how know if pb in child that require us then from
+ * delete the window? need a cpid!
+ *)
+
+(* old: was in wsetpid() *)
+w.label <- spf "rc %d" pid;
+(* less: notefd *)
+
+(* less: not too late? race with child to access /dev/winname? *)
+let winname = spf "window.%d" w.id in
+w.winname <- winname;
+Draw_ipc.name_image w.img winname;
+(* less: namecount and retry again if already used *)
 @
 
 
@@ -1837,6 +1842,7 @@ let new_win (caps: < Cap.fork; Cap.exec; Cap.chdir; ..>) (img : Image.t)
 (* not really mutable, but set after Window.alloc() *)
 mutable pid: int;
 @
+% useful for?
 
 <<[[Window.t]] process fields>>=
 (* can be changed through /mnt/wsys/wdir *)
@@ -1942,8 +1948,10 @@ val run_cmd_in_window_in_child_of_fork:
 
 <<function [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>=
 let run_cmd_in_window_in_child_of_fork
-  (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
-  (cmd : string) (argv : string array) (w : Window.t) (fs : Fileserver.t) =
+     (caps : < Cap.chdir; Cap.exec; Cap.mount; Cap.bind; .. >)
+     (cmd : string) (argv : string array)
+     (w : Window.t) (fs : Fileserver.t) =
+
   (*Unix1*)CapUnix.chdir caps !!(w.pwd);
   (* todo? rfork for copy of namespace/fd/env, but ape fork does that? *)
     
@@ -1982,6 +1990,77 @@ let run_cmd_in_window_in_child_of_fork
 \subsection{Namespace adjustments}%%: [[filsysmount()]]}
 
 \subsection{Public layer: [[wsetname()]]}
+
+\subsection{Window painting}
+%ocaml: new section
+
+<<function [[Wm.set_current_and_repaint]]>>=
+(* old: was called wcurrent() in rio.
+ * alt: this function also sets the window cursor in rio-C, but this
+ * requires then to pass a mouse parameter, which in turn requires to
+ * pass the mouse in Reshape, which then requires to pass the mouse
+ * parameter to hide_win and show_win and other functions which is
+ * not super elegant. This is why I prefer to not pass a mouse parameter
+ * which means the user may have to move the mouse to see the cursor
+ * correctly updated after certain wm operations. I think this
+ * tradeoff is ok.
+ *)
+let set_current_and_repaint wopt (*mouse*) =
+  (* less: if wkeyboard *)
+  let old = !Globals.current in
+  Globals.current := wopt;
+  (match old, wopt with
+  | Some w2, Some w when not (w2 == w) ->
+    (* bugfix: was doing repaint w, hmm *)
+    repaint w2
+  | _ -> ()
+  );
+  wopt |> Option.iter (fun w ->
+    repaint w;
+    (* TODO: do that in caller? so no need pass mouse? *)
+    (* window_cursor w ptTODO mouse;*)
+
+    (* todo: wakeup? why? *)
+    ()
+  )
+@
+
+<<function [[Wm.repaint]]>>=
+(* old: was called wrepaint in rio-C *)
+let repaint (w : Window.t) =
+  let status = 
+    match Globals.win () with
+    | Some w2 when w2 == w -> Window.Selected
+    | _ -> Window.Unselected
+  in
+  draw_border w status;
+  (* less: wsetcursor again? *)
+  w.terminal.Terminal.is_selected <- (status = Window.Selected);
+  if not w.mouse_opened 
+  then Terminal.repaint w.terminal 
+@
+
+<<type [[Window.border_status]]>>=
+type border_status = 
+  | Selected
+  | Unselected
+@
+
+<<function [[Wm.draw_border]]>>=
+let draw_border (w : Window.t) (status : Window.border_status) =
+  let img : Display.image = w.img in
+  (* less: if holding? *)
+  let color = 
+    match status with
+    | Window.Selected   -> !Globals.title_color
+    | Window.Unselected -> !Globals.title_color_light
+  in
+  Polygon.border img img.r Window.window_border_size color Point.zero
+@
+
+<<signature [[Terminal.repaint]]>>=
+val repaint: t -> unit
+@
 
 \subsection{Mouse action [[sweep()]]}
 
@@ -2159,38 +2238,6 @@ let top_win (w : Window.t) =
 @
 
 
-<<function [[Wm.set_current_and_repaint]]>>=
-(* old: was called wcurrent() in rio.
- * alt: this function also sets the window cursor in rio-C, but this
- * requires then to pass a mouse parameter, which in turn requires to
- * pass the mouse in Reshape, which then requires to pass the mouse
- * parameter to hide_win and show_win and other functions which is
- * not super elegant. This is why I prefer to not pass a mouse parameter
- * which means the user may have to move the mouse to see the cursor
- * correctly updated after certain wm operations. I think this
- * tradeoff is ok.
- *)
-let set_current_and_repaint wopt (*mouse*) =
-  (* less: if wkeyboard *)
-  let old = !Globals.current in
-  Globals.current := wopt;
-  (match old, wopt with
-  | Some w2, Some w when not (w2 == w) ->
-    (* bugfix: was doing repaint w, hmm *)
-    repaint w2
-  | _ -> ()
-  );
-  wopt |> Option.iter (fun w ->
-    repaint w;
-    (* TODO: do that in caller? so no need pass mouse? *)
-    (* window_cursor w ptTODO mouse;*)
-
-    (* todo: wakeup? why? *)
-    ()
-  )
-@
-
-
 \section{Window deletion}
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
@@ -2233,11 +2280,8 @@ let close_win (w : Window.t) =
 % who will terminate the window thread?
 
 %%\subsection{[[delete()]]}
-
-\subsection{[[deletetimeoutproc()]] and [[deletethread()]]}
-
-\subsection{[[Deleted]] and [[Exited]]}
-
+%%\subsection{[[deletetimeoutproc()]] and [[deletethread()]]}
+%%\subsection{[[Deleted]] and [[Exited]]}
 
 
 \subsection{Mouse action [[pointto()]]}
@@ -2433,6 +2477,8 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
   ()
 @
 
+% lots of the heavy lifting is done by memlayer
+
 % Reshape abused again
 
 %******************************************************************************
@@ -2440,13 +2486,14 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 %******************************************************************************
 \label{chap:filesystem-server}
 
-\section{Additional data structures}
+%%\section{Additional data structures}
 
-\subsection{[[Qxxx]]}
+%%\subsection{[[Qxxx]]}
+%ocaml: use ADT
+%%\subsection{[[dirtab]]}
+%ocaml: toplevel_entries?
 
-\subsection{[[dirtab]]}
-
-\section{[[filsysrespond()]]}
+%%\section{[[filsysrespond()]]}
 
 \section{Attach}
 
@@ -2501,6 +2548,11 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 mutable qid: Plan9.qid;
 @
 
+<<type [[File.fileid]]>>=
+(* will generate a Qid.path *)
+type fileid = filecode * Window.wid
+@
+
 <<function [[File.qid_of_fileid]]>>=
 let qid_of_fileid file_id typ =
   { path = int_of_fileid file_id;
@@ -2514,6 +2566,7 @@ let int_of_fileid (qxxx, wid) =
   (wid lsl 8) lor
   int_of_filecode qxxx
 @
+% the window and then deviceid
 
 <<function [[File.int_of_filecode]]>>=
 let int_of_filecode = function
@@ -2982,6 +3035,11 @@ let dev_consctl = { Device.default with
 
 \section{[[/mnt/wsys/cursor]]}
 
+<<[[Window.t]] graphics fields>>=
+(* writable through /mnt/wsys/cursor *)
+mutable mouse_cursor: Cursor.t option;
+@
+
 <<signature [[Virtual_mouse.dev_cursor]]>>=
 (* a virtual "/dev/cursor" *)
 (* val dev_cursor: Device.t *)
@@ -3098,6 +3156,7 @@ let honor_offset_and_count offset count data =
 \section{Content modification}
 
 \subsection{[[winsert()]]}
+
 \subsection{Growing array}
 
 \section{Content rendering}
@@ -3115,16 +3174,23 @@ let honor_offset_and_count offset count data =
 \subsection{Repainting}
 
 \section{Keyboard events}
+
 \subsection{Text input queue}
+
 \subsection{[[/mnt/wsys/cons]] reading part3}
+
 \subsection{Navigation keys}
+
 \subsection{Special keys}
 
 \section{Application output events}
+
 \subsection{[[/mnt/wsys/cons]] writing part2}
 
 \section{Mouse events}
+
 \subsection{Middle click menu}
+
 \subsection{Other clicks}
 
 \section{Automatic scrolling mode}

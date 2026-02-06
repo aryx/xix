@@ -72,15 +72,16 @@ another language.
 %
 Indeed, during the porting of a program, it is tempting--because
 good programmers are lazy--to not implement certain features initially judged 
-as accessory, and instead focus on the main parts of the program.
+to be accessory, and instead focus on the main parts of the program.
 %
 The process of discovering what those essential parts are already
 helps in understanding the original code.
 %
 Moreover, very often the final ported program does not work
-at first because those features judged as accessory turned out to be essential,
+at first because those features judged to be accessory turned out to
+be essential,
 which again helps to better understand the original code and its hidden
-subtelties.
+subtleties.
 
 
 I chose \ocaml mainly because it is the programming language I am the
@@ -109,8 +110,8 @@ first in \ocaml, and only later port the feature to the original C code.
 % interpreter, easier on functional programs with usually less
 % globals
 %
-Finally, \ocaml programs are ususally safer, as segmentation faults
-or buffer overflows can not happen, for example.
+Finally, \ocaml programs are usually safer, as segmentation faults
+or buffer overflows cannot happen, for example.
 %well actually it can happen, but usually in C code linked with OCaml code
 %said-later: more details on C vs OCaml
 %
@@ -218,7 +219,7 @@ provided by the \plan kernel.
 \section{\ocaml in \plan}
 
 To be able to run [[orio]], an \ocaml program, in \plan requires
-first to port \ocaml itself to \plan, but no one did.
+first to port \ocaml itself to \plan, but no one has done so.
 %
 Fortunately, \ocaml has two compilers: 
 one producing optimized {\em native code}, called [[ocamlopt]], and
@@ -327,7 +328,7 @@ that much smaller than the C code.
 %
 % no need optab.c, ocmp, ... just direct pattern matching on advanced
 % SHOW code diff C vs OCaml.
-Is is, however, arguably clearer to understand.
+It is, however, arguably clearer to understand.
 % BUT! LOE will be bigger!
 
 

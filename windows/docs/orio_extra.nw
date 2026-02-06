@@ -1205,23 +1205,6 @@ open Common
 \section{[[Threads_window.ml]]}
 
 
-<<function [[Threads_window.mouse_out]]>>=
-let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
-  (*/* send a queued event or, if the queue is empty, the current state */
-    /* if the queue has filled, we discard all the events it contained. */
-    /* the intent is to discard frantic clicking by the user during long latencies. */
-  *)
-  let m, counter =
-    if Queue.length w.mouseclicks_queue > 0
-    then Queue.take w.mouseclicks_queue 
-    else w.last_mouse, w.mouse_counter
-  in
-  (* we use last_count_sent later to know if we are ready to send mouse
-   * states to someone
-   *)
-  w.last_count_sent <- counter;
-  Event.send chan m |> Event.sync
-@
 
 <<function [[Threads_window.bytes_out]]>>=
 let bytes_out (w : Window.t) (chan_count, chan_bytes) =

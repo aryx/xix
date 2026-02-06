@@ -13,10 +13,10 @@ let dev_mouse = { (*Device.default with*)
   open_ = (fun (w : Window.t) ->
     if w.mouse_opened
     then raise (Error "file in use");
+
     w.mouse_opened <- true;
 
     (* less: resized <- false? and race comment? *)
-    ()
   );
   (*e: method [[Virtual_mouse.dev_mouse.open_]] *)
   (*s: method [[Virtual_mouse.dev_mouse.close]] *)
@@ -26,7 +26,6 @@ let dev_mouse = { (*Device.default with*)
     w.mouse_opened <- false;
 
     (* todo: resized? Refresh message?*)
-    ()
   );
   (*e: method [[Virtual_mouse.dev_mouse.close]] *)
   (*s: method [[Virtual_mouse.dev_mouse.read_threaded]] *)

@@ -80,12 +80,6 @@ type t = {
   (* Mouse *)
   (* ---------------------------------------------------------------- *)
   (*s: [[Window.t]] mouse fields *)
-  (* Note that we do not queue all mouse states; just the clicks/releases,
-   * otherwise the queue would be too big when you move around the mouse.
-   * less: max size = ? mutex around? recent queue.mli says not thread-safe 
-   *)
-  mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
-  (*x: [[Window.t]] mouse fields *)
   (* Threads_window.thread <-- Thread_mouse.thread (<-- Mouse.thread) *)
   chan_mouse: Mouse.state Event.channel;
   (*x: [[Window.t]] mouse fields *)
@@ -93,7 +87,12 @@ type t = {
    * for the rest (moving the mouse) we just keep the last state.
    *)
   mutable last_mouse: Mouse.state;
-
+  (*x: [[Window.t]] mouse fields *)
+  (* Note that we do not queue all mouse states; just the clicks/releases,
+   * otherwise the queue would be too big when you move around the mouse.
+   * less: max size = ? mutex around? recent queue.mli says not thread-safe 
+   *)
+  mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
   (*x: [[Window.t]] mouse fields *)
   (* ?? how differ from last_mouse.buttons? *)
   mutable last_buttons: Mouse.buttons;
@@ -101,13 +100,13 @@ type t = {
   (* less: could have simpler mouse_new_event: bool? *)
   mutable mouse_counter: mouse_counter;
   (*x: [[Window.t]] mouse fields *)
-  mutable last_count_sent: mouse_counter;
-  (*x: [[Window.t]] mouse fields *)
   (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
    * The channel inside the channel will be used to write a mouse state
    * to thread_fileserver.
   *)
   chan_devmouse_read: Mouse.state Event.channel Event.channel;
+  (*x: [[Window.t]] mouse fields *)
+  mutable last_count_sent: mouse_counter;
   (*e: [[Window.t]] mouse fields *)
 
   (* ---------------------------------------------------------------- *)

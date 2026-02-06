@@ -45,6 +45,7 @@ let dev_consctl = { Device.default with
   open_ = (fun (w : Window.t) ->
     if w.consctl_opened
     then raise (Error "file in use");
+
     w.consctl_opened <- true;
   );
   close = (fun (w : Window.t) ->

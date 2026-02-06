@@ -305,14 +305,6 @@ mutable screenr: Rectangle.t;
 
 
 
-%XXX
-<<[[Window.t]] mouse fields>>=
-(* Note that we do not queue all mouse states; just the clicks/releases,
- * otherwise the queue would be too big when you move around the mouse.
- * less: max size = ? mutex around? recent queue.mli says not thread-safe 
- *)
-mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
-@
 
 %XXX
 <<[[Window.t]] keyboard fields>>=
@@ -1074,7 +1066,7 @@ match wopt, Globals.win () with
 @
 
 
-%XXX delete
+%TODO: delete at some point
 <<[[Thread_mouse.thread()]] match [[under_mouse]] cases>>=
 (* TODO: remove; just because hard to right click on QEMU and laptop*)
 | Nothing when m.buttons.left ->
@@ -1289,7 +1281,7 @@ val key_in: t -> Keyboard.key -> unit
 | true, true (* less: || q0 == nr *) ->
   Queue.add key w.raw_keys 
 @
-% raw_keys!
+% raw_keys! and what will Queue.take on those raw_keys?
 
 
 %XXX
@@ -1326,8 +1318,16 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
  * for the rest (moving the mouse) we just keep the last state.
  *)
 mutable last_mouse: Mouse.state;
-
 @
+
+<<[[Window.t]] mouse fields>>=
+(* Note that we do not queue all mouse states; just the clicks/releases,
+ * otherwise the queue would be too big when you move around the mouse.
+ * less: max size = ? mutex around? recent queue.mli says not thread-safe 
+ *)
+mouseclicks_queue: (Mouse.state * mouse_counter) Queue.t;
+@
+
 <<[[Window.t]] mouse fields>>=
 (* ?? how differ from last_mouse.buttons? *)
 mutable last_buttons: Mouse.buttons;
@@ -1339,10 +1339,7 @@ mutable mouse_counter: mouse_counter;
 @
 % useful for?
 
-%XXX
-<<[[Window.t]] mouse fields>>=
-mutable last_count_sent: mouse_counter;
-@
+
 
 
 \subsection{Control events listening}
@@ -3021,10 +3018,10 @@ let dev_mouse = { (*Device.default with*)
 open_ = (fun (w : Window.t) ->
   if w.mouse_opened
   then raise (Error "file in use");
+
   w.mouse_opened <- true;
 
   (* less: resized <- false? and race comment? *)
-  ()
 );
 @
 
@@ -3035,7 +3032,6 @@ close = (fun (w : Window.t) ->
   w.mouse_opened <- false;
 
   (* todo: resized? Refresh message?*)
-  ()
 );
 @
 
@@ -3064,6 +3060,7 @@ read_threaded = (fun _offset count (w : Window.t) ->
 );
 @
 
+
 <<[[Window.t]] mouse fields>>=
 (* Threads_window.thread --> Thread_fileserver.dispatch(Read).
  * The channel inside the channel will be used to write a mouse state
@@ -3084,6 +3081,11 @@ chan_devmouse_read: Mouse.state Event.channel Event.channel;
 % Event.send! not Event.receive here, select can dispatch on
 % receiving and sending if someone is ready on the other side to receive
 
+<<[[Window.t]] mouse fields>>=
+mutable last_count_sent: mouse_counter;
+@
+
+
 <<[[Threads_window.thread()]] channels creation>>=
 let chan_devmouse = Event.new_channel () in
 @
@@ -3098,6 +3100,26 @@ let chan_devmouse = Event.new_channel () in
   mouse_out w chan_devmouse
 @
 
+
+<<function [[Threads_window.mouse_out]]>>=
+let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
+  (*/* send a queued event or, if the queue is empty, the current state */
+    /* if the queue has filled, we discard all the events it contained. */
+    /* the intent is to discard frantic clicking by the user during long latencies. */
+  *)
+  let m, counter =
+    if Queue.length w.mouseclicks_queue > 0
+    then Queue.take w.mouseclicks_queue 
+    else w.last_mouse, w.mouse_counter
+  in
+  (* we use last_count_sent later to know if we are ready to send mouse
+   * states to someone
+   *)
+  w.last_count_sent <- counter;
+  Event.send chan m |> Event.sync
+@
+% and this send will go to the read_threaded 2nd receive above
+% why this 2 steps procedure?
 
 <<function [[Device.honor_count]]>>=
 let honor_count count data =
@@ -3179,6 +3201,7 @@ let dev_consctl = { Device.default with
   open_ = (fun (w : Window.t) ->
     if w.consctl_opened
     then raise (Error "file in use");
+
     w.consctl_opened <- true;
   );
   close = (fun (w : Window.t) ->
@@ -3284,6 +3307,7 @@ let honor_offset_and_count offset count data =
 %******************************************************************************
 \label{chap:graphical-windows}
 
+
 \section{Graphical window setup}
 
 \subsection{[[initdraw()]]}
@@ -3292,17 +3316,20 @@ let honor_offset_and_count offset count data =
 
 \subsection{[[initkeyboard()]], raw-access mode}
 
+
 \section{Mouse events}
 
 \subsection{Mouse state queue}
 
 \subsection{[[/mnt/wsys/mouse]]  reading part2}
 
+
 \section{Keyboard events}
 
 \subsection{Raw keys queue}
 
 \subsection{[[/mnt/wsys/cons]] reading part2}
+
 
 \section{Resize events}
 
@@ -3434,6 +3461,7 @@ let dev_winid = { Device.default with
 \section{[[/mnt/wsys/screen]]}
 
 \section{[[/mnt/wsys/wsys/]]}
+%???
 
 \section{[[/mnt/wsys/wctl]]}
 \label{sec:mnt-wsys-wctl}

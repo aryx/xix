@@ -211,7 +211,7 @@ provided by the \plan kernel.
 \begin{figure*}
 \centering
 \includegraphics[%angle=90, 
-  height=7.5cm]{plan9}
+  height=7.4cm]{plan9}
 \caption{[[orio]] in action.}
 \label{fig:orio}
 \end{figure*}
@@ -397,14 +397,15 @@ An obvious future work is to finish [[oas]], [[olk]], and [[occ]]
 to reach parity with the original C code, and then
 %
 go even further by targeting also Linux, macOS, and Windows
-on the modern architectures AMD64, ARM64, and RISC-V.
+on the AMD64, ARM64, and RISC-V architectures.
 % must reach closer LOC-C/LOC-OCAML 1.5 
 
 Another one is to try to port the [[9]] kernel to \ocaml.
 %
 I was able to run \ocaml on the bare metal linked with 
 \plan C libraries such as [[libc]] and [[memdraw]] and a minimal
-kernel in \ocaml; I managed to print [[hello world]], but a lot remain
+kernel\furl{https://github.com/aryx/xix/tree/master/kernel}
+in \ocaml; I managed to print [[hello world]], but a lot remain
 to implement a full kernel in \ocaml.
 % o9, memlayer, libc memory pool.c, 
 % raspberry pi C

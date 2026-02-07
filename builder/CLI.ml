@@ -1,5 +1,5 @@
 (*s: mk/CLI.ml *)
-(* Copyright 2016, 2018, 2024, 2025 Yoann Padioleau, see copyright.txt *)
+(* Copyright 2016-2026 Yoann Padioleau, see copyright.txt *)
 open Common
 open Fpath_.Operators
 open Regexp.Operators
@@ -49,7 +49,7 @@ module R = Rules
  *  - use of MKSHELL to configure which shell to use
  *    (original mk was doing that but only if MKSHELL was set in an mkfile)
  *  - simplifications by not supporting the features mentioned above
- *  - be more relaxing on date (or TODO use nanosec); if equal time then ok
+ *  - use nanosec precision for date comparison
  *    (modern machines can generate the .o and a.out in the same second)
  *  - generate error when no mkfile
  *  - TODO warn at least when we think shprint might be wrong
@@ -69,6 +69,7 @@ module R = Rules
  * 
  * todo:
  *  - look at source code of omake? and mk-in-go?
+*     remake of mk in Go: https://github.com/dcjones/mk
  *  - store all output of children process and output only
  *    command that generates error! luisa will be happier :) no more long
  *    command line scrolling

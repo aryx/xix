@@ -315,6 +315,8 @@ the C code.
 For example, C lacks \ocaml algebraic data types (ADTs, similar
 to tagged unions), pattern-matching, parametric polymorphism, closures,
 garbage collection, and more.
+% more ocaml advantages: polymorphism factorize code, marshalling remove code
+%ocmp pattern matching still a win in OCaml
 %
 Still, the code of the \plan linkers use
 simple enums to

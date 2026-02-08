@@ -211,7 +211,7 @@ provided by the \plan kernel.
 \begin{figure*}
 \centering
 \includegraphics[%angle=90, 
-  height=7.4cm]{plan9}
+  height=7.4cm]{orio1}
 \caption{[[orio]] in action.}
 \label{fig:orio}
 \end{figure*}

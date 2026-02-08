@@ -98,7 +98,7 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
       mousepos := m.pos
     | Key c ->
       if c = 'q'
-      then exit 0
+      then raise (Exit.ExitCode 0)
       else Logs.app (fun m -> m "%c" c)
     (* TODO: timer thread *)
     (* less: 
@@ -106,7 +106,9 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
      *)
     );
     redraw display view;
-  done
+  done;
+  Exit.OK
 
 let _ =
-  Cap.main (fun caps -> thread_main caps)
+  Cap.main (fun caps -> 
+      Exit.exit caps (Exit.catch (fun () -> thread_main caps)))

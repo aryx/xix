@@ -7,6 +7,9 @@
   and add a new -r restricted mode (like in GNU ed)
 - new ogrep, just a small wrapper around lib_core/regexps really
 
+** applications
+- oclock: port of plan9 clock.c
+
 ** libcore
 - new Arg_.ml small wrapper around Arg to factorize code in xix programs
 - removed UConsole.ml and UChan.ml (use Console.ml and FS.ml instead)
@@ -14,6 +17,12 @@
   produce pure ocaml programs that use lib_core/commons (no need to link
   any external C libs).
 - new lib_core/regexps/Regexp.ml extracted from lib_core/commons/Common.ml
+
+** libgraphics
+- port also Ellipse.ml and Arc.ml from plan9 ellipse.c
+
+** windows
+- resume and fix port of orio to plan9!
 
 ** build infra
 - plan9 support resumed; you can link xix programs (e.g., orio, ocat, opwd)

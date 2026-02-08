@@ -61,7 +61,7 @@ let redraw (display : Display.t) (view : Display.image) : unit =
 
 
 (* the Keyboard.init() and Mouse.init() below create other threads *)
-let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) =
+let main_thread (caps : < Cap.draw; Cap.keyboard; Cap.mouse; .. >) =
   let display : Display.t = Draw.init caps "clock" in
   let view : Display.image = Draw_rio.get_view caps display in
 
@@ -111,4 +111,4 @@ let thread_main (caps : < Cap.draw; Cap.open_in; Cap.keyboard; Cap.mouse; .. >) 
 
 let _ =
   Cap.main (fun caps -> 
-      Exit.exit caps (Exit.catch (fun () -> thread_main caps)))
+      Exit.exit caps (Exit.catch (fun () -> main_thread caps)))

@@ -68,6 +68,7 @@ let main_thread (caps : < Cap.draw; Cap.keyboard; Cap.mouse; .. >) =
   let kbd : Keyboard.ctl = Keyboard.init caps in
   let mouse : Mouse.ctl = Mouse.init caps in
 
+(* original colors:
   back := Draw.alloc_mix_colors display Color.palebluegreen Color.white;
   (* TODO: was CMAP8 not rgba32 *)
   hour_hand := Image.alloc display Rectangle.r_1x1
@@ -76,6 +77,15 @@ let main_thread (caps : < Cap.draw; Cap.keyboard; Cap.mouse; .. >) =
             Channel.rgba32 true Color.paleblue;
   dots := Image.alloc display Rectangle.r_1x1
             Channel.rgba32 true Color.blue;
+*)
+  back := Draw.alloc_mix_colors display Color.red Color.white;
+  (* TODO: was CMAP8 not rgba32 *)
+  hour_hand := Image.alloc display Rectangle.r_1x1
+            Channel.rgba32 true Color.darkred;
+  minute_hand := Image.alloc display Rectangle.r_1x1
+            Channel.rgba32 true Color.palered;
+  dots := Image.alloc display Rectangle.r_1x1
+            Channel.rgba32 true Color.red;
   
   (* if does not use originwindow, then need to add view.r.min *)
   let mousepos = ref (Point.add view.r.Rectangle.min (Point.p 10 10)) in

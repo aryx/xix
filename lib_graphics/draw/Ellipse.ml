@@ -9,10 +9,6 @@ module M = Draw_marshal
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Types and constants *)
-(*****************************************************************************)
-
-(*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 
@@ -32,5 +28,15 @@ let ellipse_gen cmd dst center xr yr thick src sp alpha phi op =
 (* API *)
 (*****************************************************************************)
 
+let ellipse dst center a b thick src sp =
+  ellipse_gen 'e' dst center a b thick src sp 0 0 Draw.SoverD
+
 let fill dst center a b src sp =
   ellipse_gen 'E' dst center a b 0 src sp 0 0 Draw.SoverD
+
+
+let _ellipse_op dst center a b thick src sp op =
+  ellipse_gen 'e' dst center a b thick src sp 0 0 op
+
+let _fill_op dst center a b src sp op =
+  ellipse_gen 'E' dst center a b 0 src sp 0 0 op

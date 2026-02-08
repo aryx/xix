@@ -32,15 +32,16 @@ EXTRALINKFLAGS=-thread
 PROG=orio
 
 <$TOP/mkconfig
+
 #TODO: switch to mkprog for plan9
 #<$TOP/mkfiles/mkprog
 <$TOP/mkfiles/mklib
 
-#ROOT=/home/pad/plan9/ROOT/
-#test:V:
-#	cp $PROG $ROOT/tests/xxx/
+install:V:
+      cp $PROG $TOP/principia/ROOT/tests/bytecode/
+
+#test:V: install
 #    cd /home/pad/plan9; make disk; make run
-#
 
 loc:V:
 	wc -l *.ml*

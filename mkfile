@@ -4,7 +4,7 @@ TOP=.
 ###############################################################################
 # Prelude
 ###############################################################################
-# Toplevel mkfile to compile xix using omk/orc
+# Toplevel mkfile to compile xix using omk/orc (or mk/rc)
 
 ###############################################################################
 # Vars
@@ -24,16 +24,19 @@ DIRS=\
   compiler\
   utilities/files
 
-#TODO: does not work yet with ocaml-light: vcs
+#TODO: linker/tools (dune only now), utilities/text/, utilities/hello
+#TODO: does not work yet with ocaml-light: 
+# vcs, lib_core/compression lib_core/crypto/
 
-# this does not work anymore with OCaml5 (no ThreadUnix) and
+# this does not work anymore with OCaml5 (we need ThreadUnix) and
 # while it may compile for Unix, it can only work when run on Plan9
 DIRS_PLAN9=\
   lib_core/system/plan9 \
   lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui \
   windows \
   kernel/core kernel/concurrency_ kernel/base kernel/concurrency \
-  kernel/memory kernel/processes kernel/scheduler kernel/time
+  kernel/memory kernel/processes kernel/scheduler kernel/time \
+  applications/clock
 
 #TODO: rename to TESTDIRS, reduce to just tests/ and in tests/ recurse
 TESTDIRS1=tests/assembler tests/compiler tests/linker

@@ -48,9 +48,16 @@ let init_colors (display : Display.t) : unit =
   then begin
     (* less: could use try and default to black/white if can not alloc image*)
     (* less: opti: use view->chan instead of rgb24 used by Image.alloc_color *)
+(* original colors, but I use blue below instead of green below to
+   better mark the differences between rio and orio
     background := Draw.alloc_mix_colors display Color.palegreen Color.white;
     background_highlighted := Image.alloc_color display (Color.darkgreen);
     border_color           := Image.alloc_color display (Color.medgreen);
+*)
+    background := Draw.alloc_mix_colors display Color.paleblue Color.white;
+    background_highlighted := Image.alloc_color display (Color.darkblue);
+    border_color           := Image.alloc_color display (Color.medblue);
+
     text_color       := display.D.black;
     text_highlighted := !background;
   end

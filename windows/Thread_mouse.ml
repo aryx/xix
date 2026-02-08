@@ -45,7 +45,7 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
     );
     (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
     (* less: the first item get selected the very first time; QEMU bug?  *)
-    "New", (fun () ->
+    "Nouveau", (fun () ->
       let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
       img_opt |> Option.iter (fun img ->
          Wm.new_win caps img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
@@ -62,19 +62,19 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
       )
     );
     (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
-    "Delete", (fun () -> 
+    "Detruire", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
       wopt |> Option.iter (fun (w : Window.t) ->
         let cmd = Window.Delete in
         Event.send w.chan_cmd cmd |> Event.sync;
       ));
     (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
-    "Move", (fun () -> raise Todo);
+    "Deplacer", (fun () -> raise Todo);
     (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
     (* old: was Reshape but here it's really resizing *)
-    "Resize", (fun () -> raise Todo);
+    "Retailler", (fun () -> raise Todo);
     (*x: [[Thread_mouse.wm_menu()]] [[items]] elements *)
-    "Hide", (fun () -> 
+    "Cacher", (fun () -> 
       let wopt = Mouse_action.point_to mouse in
       wopt |> Option.iter (fun w ->
         Wm.hide_win w

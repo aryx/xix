@@ -48,6 +48,11 @@ module Int_ :
     val roundup: int -> int (* power of 2 *) -> int
   end
 
+module Float_ :
+  sig
+    val pi: float
+  end
+
 module String_ :
   sig
     (* if the string is longer than max_len then it will be abbreviated

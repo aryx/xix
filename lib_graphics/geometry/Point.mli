@@ -10,5 +10,6 @@ val zero: t
 
 val add: t -> t -> t
 val sub: t -> t -> t
-val mul: t -> t -> t
-val div: t -> t -> t
+
+val mul: t -> int -> t
+val div: t -> int -> t

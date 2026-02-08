@@ -130,6 +130,14 @@ let roundup x pow2 =
 
 end
 
+module Float_ = struct
+
+(* TODO: remove once in ocaml-light (from OCaml 4.08) *)
+let pi = acos (-1.)
+(* alt: 4.0 *. atan 1.0 *)
+
+end
+
 module String_ = struct
 
 let show_max max_len str =

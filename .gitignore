@@ -118,6 +118,7 @@ lineage.pdf
 /utilities/files/opwd
 /utilities/files/owc
 /windows/orio
+/applications/clock/oclock
 
 # test binaries
 /lib_graphics/draw/tests/hellodraw

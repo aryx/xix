@@ -37,7 +37,12 @@ let add pt1 pt2 =
   binary (+) pt1 pt2
 let sub pt1 pt2 =
   binary (-) pt1 pt2
-let mul pt1 pt2 =
-  binary ( * ) pt1 pt2
-let div pt1 pt2 =
-  binary (/) pt1 pt2
+
+let mul pt n =
+  { x = pt.x * n;
+    y = pt.y * n;
+  }
+let div pt n =
+  { x = pt.x / n;
+    y = pt.y / n;
+  }

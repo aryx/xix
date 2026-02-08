@@ -37,6 +37,7 @@ val medblue : t
 
 val greygreen : t
 val palegreygreen : t
+val palebluegreen : t
 
 val nofill : t
 

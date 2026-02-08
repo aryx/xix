@@ -1,22 +1,16 @@
 TOP=../..
 
 SRC=clock.ml
+PROG=oclock
 
-INCLUDES=-I $TOP/lib_core/commons \
-  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
-  -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
-
-LIBS=$TOP/lib_core/commons/lib.cma $TOP/lib_core/regexps/lib.cma \
- $TOP/lib_graphics/geometry/lib.cma $TOP/lib_graphics/draw/lib.cma \
- $TOP/lib_graphics/input/lib.cma $TOP/lib_graphics/ui/lib.cma
-
+DEPS=lib_core/commons lib_core/regexps \
+  lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui
 SYSLIBS=unix.cma threads.cma
-
-#CCLIBS_EXTRA=-cclib $TOP/lib_core/system/plan9/libplan9.a
 EXTRA_FLAGS=-thread
 EXTRALINKFLAGS=-thread
 
-PROG=oclock
+INCLUDES=${DEPS:%=-I $TOP/%}
+LIBS=${DEPS:%=$TOP/%/lib.cma}
 
 <$TOP/mkconfig
 

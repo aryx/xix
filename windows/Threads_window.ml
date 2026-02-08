@@ -33,6 +33,12 @@ type event =
   (*e: [[Threads_window.event]] other cases *)
 (*e: type [[Threads_window.event]] *)
 
+let error _s =
+  (*
+  failwith s
+  *)
+  ()
+
 (*****************************************************************************)
 (* In and out helpers *)
 (*****************************************************************************)
@@ -53,10 +59,10 @@ let key_in (w : Window.t) (key : Keyboard.key) =
     (*x: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
     (* less: in theory we should allow also special navigation keys here *)
     | true, false  ->
-      failwith "key_in: TODO: raw mode in textual window"
+      error "key_in: TODO: raw mode in textual window"
     (*x: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
     | false, true  ->
-      failwith "key_in: TODO: buffered mode in graphical window"
+      error "key_in: TODO: buffered mode in graphical window"
     (*e: [[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases *)
   end
 (*e: function [[Threads_window.key_in]] *)
@@ -80,7 +86,7 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
       w.last_buttons <- m.buttons
     end;
 
-  | false -> failwith "mouse_in: mouse not opened todo"
+  | false -> error "mouse_in: mouse not opened todo"
 (*e: function [[Threads_window.mouse_in]] *)
 (*s: function [[Threads_window.mouse_out]] *)
 let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
@@ -148,7 +154,7 @@ let cmd_in (w : Window.t) (cmd : cmd) =
 
     if w.deleted
     (* less: free new_img if deleted, but when can happen? *)
-    then failwith "window already deleted";
+    then error "window already deleted";
 
     let r = new_img.r in
     w.screenr <- r;

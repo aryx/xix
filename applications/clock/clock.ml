@@ -4,7 +4,7 @@ module R = Rectangle
 type event =
   | Mouse of Mouse.state
   | Key of Keyboard.key
-  (* TODO:  Timer *)
+  | Timer
   (* less: Resize *)
 
 let circlept (c : Point.t) (r : int) (degress : int) : Point.t =
@@ -80,7 +80,24 @@ let main_thread (caps : < Cap.draw; Cap.keyboard; Cap.mouse; .. >) =
   (* if does not use originwindow, then need to add view.r.min *)
   let mousepos = ref (Point.add view.r.Rectangle.min (Point.p 10 10)) in
 
-  (* TODO: timer channel and time thread *)
+  (* timer channel and time thread *)
+  let timer : unit Event.channel = Event.new_channel () in
+
+  (* TODO: does not seem to work under plan9 :( otherlibs/threads
+   * miss the sigvtalarm to preempt? pure cooperative does not work
+   * for timers?
+   *)
+  let _timer_thd = 
+    Thread.create (fun () ->
+        while true do
+          Thread.delay 0.5;
+          Event.send timer ();
+          let _ = List.map (fun x -> x + 1) [1;2;3] in
+          (* TODO? Thread.sleep (); but who will do the wakeup? *)
+          ()
+        done
+    ) ()
+  in
 
   redraw display view;
 
@@ -89,18 +106,18 @@ let main_thread (caps : < Cap.draw; Cap.keyboard; Cap.mouse; .. >) =
       [
         Keyboard.receive kbd |> (fun ev -> Event.wrap ev (fun x -> Key x));
         Mouse.receive mouse |> (fun ev -> Event.wrap ev (fun x -> Mouse x));
-        (* TODO: timer channel *)
+        Event.receive timer |> (fun ev -> Event.wrap ev (fun _ -> Timer));
       ] |> Event.select
     in
     (match ev with
     | Mouse m -> 
-      (* TODO: exit menu *)
+      (* TODO: exit menu, Menu_ui *)
       mousepos := m.pos
     | Key c ->
       if c = 'q'
       then raise (Exit.ExitCode 0)
       else Logs.app (fun m -> m "%c" c)
-    (* TODO: timer thread *)
+    | Timer -> ()
     (* less: 
      * | Resize -> view := getwindow display
      *)

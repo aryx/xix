@@ -220,6 +220,8 @@ provided by the \plan kernel.
 
 To be able to run [[orio]], an \ocaml program, in \plan requires
 first to port \ocaml itself to \plan, but no one has done so.
+%update: actually found ocaml 3.10 in
+% https://9p.io/sources/contrib/andrey/INDEX
 %
 Fortunately, \ocaml has two compilers: 
 one producing optimized {\em native code}, called [[ocamlopt]], and

@@ -234,10 +234,10 @@ called [[ocamlrun]].
 %
 Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, 
 % bootstrap magic
-but the bytecode interpreter is a small C program (12 000 LOC) with
+but the bytecode interpreter is a small C program (10 500 LOC) with
 very few external dependencies.
-% actually less than 12 000 LOC, but because LPized; 
-% TODO: count in ocaml 1.07 original source instead
+% it's 12 000 LOC in ocaml-light but because LPized comments
+% 10 500 is in ocaml 1.07 original source instead
 %
 I just had to add a few [[ifdef]]s, add a few functions calling the \plan
 C library, and finally use the \plan C compiler to cross-compile this

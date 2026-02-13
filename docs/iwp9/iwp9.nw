@@ -195,6 +195,7 @@ of a few other \xix programs.
 Note that [[orio]] is the only program in the list that requires
 \plan to run as it relies on features such as namespaces only
 provided by the \plan kernel.
+%TODO: per-process namespace, filesystem in userspace, mount/bind syscalls
 %actually I also ported a rudimentary kernel.
 % but also utilities (ed, hoc? grep? sed? awk?), 
 
@@ -231,9 +232,12 @@ this bytecode must then be interpreted by a bytecode interpreter,
 called [[ocamlrun]].
 % a kind of VM, like nodejs, java, etc.
 %
-Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, but
-the bytecode interpreter is a small C program (12 000 LOC) with
+Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, 
+% bootstrap magic
+but the bytecode interpreter is a small C program (12 000 LOC) with
 very few external dependencies.
+% actually less than 12 000 LOC, but because LPized; 
+% TODO: count in ocaml 1.07 original source instead
 %
 I just had to add a few [[ifdef]]s, add a few functions calling the \plan
 C library, and finally use the \plan C compiler to cross-compile this

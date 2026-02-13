@@ -408,7 +408,10 @@ go even further by targeting also Linux, macOS, and Windows
 on the AMD64, ARM64, and RISC-V architectures.
 % must reach closer LOC-C/LOC-OCAML 1.5 
 
-Another one is to try to port the [[9]] kernel to \ocaml.
+% Other obvious is port more programs as I progress in principia.
+
+Another one is to try to port the \plan kernel [[9]] to \ocaml.
+% actually 9pi
 %
 I was able to run a minimal 
 kernel\furl{https://github.com/aryx/xix/tree/master/kernel} in \ocaml

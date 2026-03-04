@@ -1,9 +1,33 @@
 \section{Introduction}
 
 % ex: 1,3p for advanced commands with range addresses
-
+% Capabilities new feature of oed, also of GNU ed
+% super important in our day and age where Claude Code runs
+% lots of CLI utilities like grep, sed, ed (maybe less ed),
+% where sed can actually execute command! better to sed --restricted
+% and know it will not run command!
+%claude:
+[[oed]] is an OCaml port of the \plan [[ed]] line editor
+(see the previous chapter).
+The overall architecture is the same---temporary file as backing
+store, [[zero]] array of offsets, same commands---but the OCaml
+version benefits from algebraic types, pattern matching,
+proper exceptions instead of [[setjmp]]/[[longjmp]],
+and a {capability}-based security model (the [[-r]] restricted mode)
+inspired by GNU [[ed]].
+%
+Because OCaml is more expressive, the code is significantly shorter
+and many things that required explanation in C
+(pointer arithmetic, bit-stealing, buffer management)
+simply disappear.
 
 \section{Core data structures}
+
+%claude:
+Unlike the C version where command parsing was interleaved with
+execution, [[oed]] separates lexing and parsing into proper modules.
+Tokens, addresses, and the environment are all defined as
+OCaml types with [[deriving show]] for debugging.
 
 \subsection{Token}
 
@@ -27,6 +51,11 @@ type t =
 % parser for those.
 
 \subsection{Parser state}
+
+%claude:
+The parser uses a simple peek/consume interface over a [[Lexing.lexbuf]],
+with [[globp]] providing the same ``virtual input'' mechanism as
+in C (for preloaded commands like [["r"]] or [["a"]]).
 
 <<type [[Parser.state]]>>=
 type state = {
@@ -52,6 +81,12 @@ let init (caps : < Cap.stdin; ..>) : state =
 
 
 \subsection{Line addresses}
+
+%claude:
+Addresses are represented as an algebraic type rather than
+being parsed and evaluated in one pass.
+This clean separation---parse into an AST, then evaluate---is
+a natural OCaml idiom that would be awkward in C.
 
 <<type [[Address.t]]>>=
 (* An "address" is a way to specify a line number symbolically or literally *)
@@ -82,6 +117,12 @@ type range = {
 
 \subsection{The environment}
 %alt: globals
+
+%claude:
+Where the C version used global variables scattered throughout the file,
+[[oed]] packs them all into a single [[Env.t]] record that is threaded
+through every function. This makes dependencies explicit and
+would allow running multiple editor instances in the same process.
 
 <<type [[Env.t]]>>=
 (* The globals *)
@@ -135,6 +176,13 @@ type tfile_offset = Tfile_offset of int
 
 \subsection{The lines as file offsets: [[zero]]}
 
+%claude:
+The [[zero]] array uses a proper [[offset_and_mark]] record instead
+of the C version's bit-stealing trick (where the low bit of the
+integer offset doubled as a mark flag for [[g/re/cmd]]).
+This is cleaner and eliminates the need for [[tline]] to start at~2
+(though it still does, for historical fidelity).
+
 <<[[Env.t]] zero field>>=
 (* Growing array of line offsets in tfile. It is a 1-indexed array but the 0
  * entry is used as a sentinel. This array maps lineno -> tfile_offset.
@@ -159,6 +207,11 @@ let no_line = { offset = Tfile_offset 0; mark = false }
 % tline to Tfile_offset 2 (or 1)
 
 \subsection{Cursors: [[dot]] and [[dol]]}
+
+%claude:
+In OCaml, [[dot]] and [[dol]] are plain integers (line numbers)
+rather than pointers into the array as in C.
+A [[lineno]] type alias documents intent.
 
 <<type [[Env.lineno]]>>=
 (* ed uses 1-indexed line numbers, but 0 is also used as a special value.
@@ -193,6 +246,12 @@ mutable given: bool;
 
 \section{[[CLI.main()]]}
 
+%claude:
+The entry point uses the capability system: [[Cap.main]]
+provides a set of capabilities (file I/O, process creation, etc.)
+that are threaded through the program and can be restricted
+by the [[-r]] flag.
+
 <<toplevel [[Main._1]]>>=
 let _ = 
   Cap.main (fun (caps : Cap.all_caps) ->
@@ -216,8 +275,14 @@ type caps = <
 @
 
 
-%trans: 
+%trans:
+%claude:
 Here is the [<main>] skeleton.
+The [[while true]] loop replaces the C version's
+[[setjmp]]/[[longjmp]] error recovery: when an [[Error.Error]]
+exception is raised anywhere during command processing, it is
+caught here, the error message is printed, and the loop
+continues with the next command.
 
 <<function [[CLI.main]]>>=
 let main (caps : <caps; ..>) (argv : string array) : Exit.t =
@@ -336,6 +401,12 @@ if !oflag then env.in_.globp <- Some (Lexing.from_string "a");
 
 \subsection{[[init()]]}
 
+%claude:
+[<Env.init>] creates the environment record.
+Unlike the C version, there is no separate [<init()>] to re-create
+the temporary file on [[e]] commands---[[oed]] does not yet
+support the [[e]] command.
+
 <<function [[Env.init]]>>=
 let init (caps : < Cap.stdin; Cap.stdout; Cap.stderr; ..>) 
      (vflag : bool) (oflag : bool) (rflag:  bool) : t =
@@ -428,6 +499,12 @@ end;
 
 \section{Displaying and reading text}
 
+%claude:
+The output layer is much simpler than in C: OCaml's standard
+[[output_char]]/[[output_string]] replace the hand-rolled buffering
+in [[line[70]]].  The [[e.out]] channel is either [[stdout]] or
+[[stderr]] depending on the [[-o]] flag.
+
 \subsection{Displaying text}
 
 <<signature [[Out.putchr]]>>=
@@ -467,6 +544,13 @@ mutable col: int;
 
 % consume/peek here?
 % getty here?
+%claude:
+Reading is also simpler: [<In.gety>] delegates to an [[ocamllex]]
+rule that reads until a newline, and [<In.gettty>] wraps it with
+the [[.]] terminator check, returning [[None]] instead of [[EOF]].
+The callback signature [[unit -> string option]] is the OCaml
+equivalent of the C function-pointer-returning-int pattern used
+by [<append()>].
 
 <<signature [[In.gety]]>>=
 (* return a line (without trailing '\n') *)
@@ -514,6 +598,13 @@ let gettty (e : Env.t) () : string option =
 
 
 \section{Parsing commands}
+
+%claude:
+The lexer is written using [[ocamllex]].
+[<Parser.next_token>] checks [[globp]] first (for preloaded
+commands), falling back to the real [[stdin]] lexer---the same
+layering as [<getchr()>] in C, but expressed more cleanly with
+[[Option]] types.
 
 <<signature [[Lexer.token]]>>=
 val token: Lexing.lexbuf -> Token.t
@@ -594,6 +685,13 @@ let consume (st : state) : Token.t =
 \section{[[CLI.commands()]] interpreter loop}
 
 %trans: ok enough background to now see code of CLI.commands()
+%claude:
+The main loop first parses the address range into an
+[[Address.range]] AST, evaluates it to concrete line numbers,
+then dispatches on the command character via nested [[match]].
+The C version used [[continue]] to loop and [[error(Q)]] as default;
+here the loop is a [[while]] and unknown commands raise
+a [[failwith]].
 
 %\subsection{Skeleton}
 
@@ -664,6 +762,14 @@ val eval_range: Env.t -> range -> Env.lineno * Env.lineno
 % returned when no special address are given, as in 'p'
 
 \section{[[r]]eading a file: [[r]]}
+
+%claude:
+The reading pipeline is the same as in C:
+[<In.filename>] parses the filename,
+[<Commands.read>] opens the file and calls
+[[append e (Disk.getfile e chan) e.addr2]].
+The use of [[FS.with_open_in]] (a capability-aware file opener)
+ensures the file is properly closed even on errors.
 
 <<[[CLI.commands()]] match [[c]] reading case>>=
 | 'r' -> 
@@ -868,6 +974,13 @@ let getfile (e : Env.t) (chan : Chan.i) () : string option =
 
 \subsection{[[putline()]]}
 
+%claude:
+The OCaml [<Disk.putline>] and [<Disk.getline>] are straightforward:
+no block cache, no [[getblock()]] indirection---just [[Unix.lseek]]
+followed by [[Unix.write]] or character-by-character [[Unix.read]].
+The block-based I/O optimization from C was dropped; on modern
+systems the kernel buffer cache makes it unnecessary.
+
 <<function [[Disk.putline]]>>=
 (* store line in tfile and return its offset *)
 let putline (e : Env.t) (line : string) : Env.tfile_offset =
@@ -921,6 +1034,13 @@ let rec putd (e : Env.t) : unit =
 
 
 \section{[[w]]riting a file: [[w]]}
+
+%claude:
+Writing follows the same structure as in C: [<Disk.putfile>]
+iterates over the address range, calls [<Disk.getline>] for each
+line, and writes to the output channel.
+The OCaml [[for]] loop replaces the C [[do/while]] with pointer
+arithmetic.
 
 <<[[CLI.commands()]] match [[c]] writing cases>>=
 | 'w' | 'W' ->
@@ -1041,6 +1161,10 @@ let getline (e : Env.t) (addr : Env.lineno)  : string =
 
 
 \section{Main commands}
+
+%claude:
+The main commands are direct translations from C.
+Most are just a few lines calling the same helper functions.
 
 \subsection{[[p]]rinting lines: [[p]]}
 
@@ -1265,6 +1389,13 @@ let rdelete (e : Env.t) (ad1 : lineno) (ad2 : lineno) =
 \section{Command addresses}
 
 %ex: 1,3p
+%claude:
+Address parsing is split into two clean phases:
+[<Address.parse_range>] builds an [[Address.range]] AST from tokens,
+then [<Address.eval_range>] evaluates it against the current
+environment to produce concrete line numbers.
+In C, these two phases were tangled together in the [[address()]]
+function.
 
 \subsection{Parsing addresses}
 
@@ -1414,6 +1545,13 @@ let eval_range (e : Env.t) (r : range) : Env.lineno * Env.lineno =
 
 \section{Search and replace}
 
+%claude:
+[[oed]] uses OCaml's [[Str]] library (via [[Re_str]]) for
+regular expressions, so there is no need for [<compile()>] or
+[<match()>] wrappers---just [[Str.regexp]] and [[Str.search_forward]].
+The regexp itself is lexed by a dedicated [[ocamllex]] rule that
+handles the delimiter and backslash escapes.
+
 <<type [[Regex.t]]>>=
 type t = Str.regexp
 @
@@ -1549,6 +1687,13 @@ let match_str (re : t) (str: string) : bool =
 
 \subsection{[[s]]ubstitute: [[s]]}
 
+%claude:
+The substitute command is simpler than in C: OCaml's [[String.sub]]
+handles the before/matched/after splitting directly, without the
+manual [[genbuf]] shuffling of [<dosub()>].
+However, several features are still TODO: the [[g]] flag,
+[[&]] and [[\1]] in the replacement string, and the skip count.
+
 <<[[CLI.commands()]] match [[c]] modifying cases>>=
 | 's' ->
     Commands.nonzero e;
@@ -1625,6 +1770,14 @@ let substitute (e : Env.t) (_inglob: bool) : unit =
 
 \subsection{[[g]]lobal commands: [[g/re/cmd]] and [[v/re/cmd]]}
 
+%claude:
+The two-phase mark-then-execute design is preserved from C.
+Thanks to the [[offset_and_mark]] record, marking is just
+setting a boolean field ([[e.zero.(a1).mark <- true]])
+rather than stealing bits from the offset integer.
+The recursive call to [<commands>] for each marked line
+is the same.
+
 <<[[CLI.commands()]] match [[c]] global cases>>=
 | 'g' -> global caps e true
 | 'v' -> global caps e false
@@ -1692,6 +1845,11 @@ and global caps (e : Env.t) (pos_or_neg : bool) : unit =
 
 \subsection{Running a shell command: [[!]]}
 
+%claude:
+The [[!]] command uses [[CapSys.command]] (a capability-wrapped
+version of [[Sys.command]]) instead of the C [[fork]]/[[execl]]
+pair. In restricted mode ([[-r]]), this capability is revoked.
+
 <<[[CLI.commands()]] match [[c]] other cases>>=
 | '!' -> 
    Commands.callunix caps e
@@ -1717,6 +1875,16 @@ let callunix (caps : <Cap.forkew; ..>) (e: Env.t) : unit =
 @
 
 \subsection{[[ed -r]] and [[rflag]] restricted mode}
+
+%claude:
+The [[-r]] flag is a new feature (inspired by GNU [[ed]]'s
+restricted mode) that limits what [[oed]] can do: no shell
+commands, and file access restricted to the current directory.
+This is implemented by wrapping the capabilities object:
+[<restrict_caps>] returns a new object where [[exec]], [[open_in]],
+and [[open_out]] methods check the restriction before delegating.
+This is a good example of OCaml's object system used for
+capability-based security.
 
 <<[[CLI.main()]] local flags>>=
 (* new: restricted ed *)
@@ -1822,6 +1990,18 @@ set_dot : bool;
 
 \section{Error management and logging}
 
+%claude:
+The C [[setjmp]]/[[longjmp]] error recovery is replaced by
+OCaml exceptions. [[Error.Error]] is caught in the [[while true]]
+loop in [<CLI.main>], which prints [[?]] and the message---exactly
+matching the original [[ed]] behavior.
+%
+On top of this, [[oed]] adds proper logging via the [[Logs]] library:
+[[Error.e_warn]] and [[Error.e_err]] log a message at the
+appropriate level \emph{and} raise [[Error.Error]] for backward
+compatibility. The [[-verbose]] and [[-debug]] flags control
+log verbosity.
+
 \subsection{Legacy error management}
 
 <<exception [[Error.Error]]>>=
@@ -1910,6 +2090,11 @@ Logs.info (fun m -> m "end of input, back to ed");
 \section{Debugging support}
 
 % Logging helps a lot already when using -debug
+%claude:
+The [[deriving show]] annotations on all major types pay off here:
+[[Env.show]], [[Token.show]], and [[Address.show_range]] give
+free pretty-printing.  The [[X]] command dumps the full internal
+state, including the raw content of [[tfile]].
 
 <<[[CLI.main()]] debug env>>=
 Logs.debug (fun m -> m "env = %s" (Env.show env));

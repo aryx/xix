@@ -44,10 +44,8 @@ Rob Pike and Yoann Padioleau
 
 %\onecolumn
 \hrule
-\begin{quote}
-Copyright \copyright{} 2025 Yoann Padioleau \\
-All rights reserved.
-\end{quote}
+\input{latex/Copyright}
+\input{latex/CopyrightPlan9}
 \hrule
 %\twocolumn
 

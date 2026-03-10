@@ -14,48 +14,43 @@
 <p><em>Plan 9 programs, rewritten in OCaml</em></p>
 
 <p><small>
-<a href="#about">About</a> &middot;
 <a href="#news">What's New</a> &middot;
+<a href="#about">About</a> &middot;
 <a href="#books">The Books</a> &middot;
 <a href="#source">Source Code</a>
 </small></p>
 
-<h2 id="about">About</h2>
-
 <p>
-XIX is a collection of
+XIX (a recursive acronym for "XIX is XIX") is a port of the C source
+code of major
 <a href="https://en.wikipedia.org/wiki/Plan_9_from_Bell_Labs">Plan 9</a>
-programs ported to
+programs to
 <a href="https://ocaml.org/">OCaml</a>,
-a statically-typed functional language.
-The original motivation was to better understand the C code &mdash;
-porting a program to another language forces you to discover
-which parts are essential and which are accessory,
-and the bugs in the port reveal hidden subtleties in the original.
+an industrial-strength functional programming language.
+The ports include the build system <code>mk</code>,
+the shell <code>rc</code>,
+the ARM and MIPS toolchains (<code>5a</code>, <code>5c</code>,
+<code>5l</code>),
+the windowing system <code>rio</code>,
+and more.
 </p>
 <p>
-The ports turned out to be useful on their own.
-OCaml code is roughly 2x more succinct than C,
-arguably clearer, and safer (no segfaults or buffer overflows).
-The OCaml programs are also portable: unlike the Plan 9 C code,
-they run on Linux, macOS, and Windows without extra effort.
+The project also includes programs beyond Plan 9:
+<a href="https://github.com/aryx/ocaml-light">ocaml-light</a>,
+a simplified OCaml compiler used to run OCaml programs on Plan 9;
+<a href="https://github.com/aryx/efuns">efuns</a>,
+an Emacs clone;
+<a href="https://github.com/aryx/xix/tree/master/vcs">ogit</a>,
+a git implementation;
+and <a href="https://github.com/aryx/mmm">mmm</a>,
+a web browser.
 </p>
 <p>
-Each OCaml port has its own literate programming book, just like
-the C originals in the
-<a href="https://aryx.github.io/principia-softwarica/">Principia Softwarica</a>
-series.
-The books can be read standalone, but they occasionally reference
-their C counterparts for comparison.
-</p>
-
-<p>
-The OCaml ports also go beyond Plan 9: they include an
-<a href="https://aryx.github.io/assets/pdfs/OCaml-3.pdf">OCaml compiler</a>
-(a simplified ocamlc),
-an <a href="https://aryx.github.io/assets/pdfs/efuns-6.pdf">Emacs clone</a>,
-a <a href="https://aryx.github.io/assets/pdfs/VCS-10.pdf">git implementation</a>,
-and a <a href="https://aryx.github.io/assets/pdfs/mmm-3.pdf">web browser</a>.
+XIX is a companion project to
+<a href="https://aryx.github.io/principia-softwarica/">Principia Softwarica</a>,
+a series of literate programming books explaining Plan 9 source code.
+Each OCaml port has its own book
+(see <a href="#books">the full list</a>).
 </p>
 
 <hr>
@@ -63,6 +58,7 @@ and a <a href="https://aryx.github.io/assets/pdfs/mmm-3.pdf">web browser</a>.
 <h2 id="news">What's New</h2>
 
 <ul>
+<li><strong>March 2026</strong> &mdash; We're live! The XIX website is now online.</li>
 <li><strong>Q1 2026</strong> &mdash; OCaml editor (oed) v1; resumed Plan 9 port (orio runs on Plan 9 via ocaml-light).</li>
 <li><strong>Q4 2025</strong> &mdash; ELF/Linux support in assembler and linker; multi-architecture toolchain; new utilities (ocat, opwd, owc, oed); Dockerfile.</li>
 <li><strong>2019&ndash;2024</strong> &mdash; Hiatus (working on <a href="https://semgrep.dev">Semgrep</a>).</li>
@@ -74,7 +70,77 @@ and a <a href="https://aryx.github.io/assets/pdfs/mmm-3.pdf">web browser</a>.
 
 <hr>
 
+<h2 id="about">About</h2>
+
+<h3>Why port Plan 9 to OCaml?</h3>
+
+<p>
+The original motivation comes from the
+<a href="https://aryx.github.io/principia-softwarica/">Principia Softwarica</a>
+project, a series of books explaining Plan 9 source code.
+One strategy to fully understand a program &mdash; in order to explain
+its code in a book &mdash; is, perhaps surprisingly, to try to port it
+to another language.
+During the porting process, it is tempting to skip features initially
+judged to be accessory. Discovering what is truly essential already
+helps understand the original code.
+Moreover, the final port very often does not work at first because
+those "accessory" features turned out to be essential,
+which reveals hidden subtleties in the original.
+</p>
+
+<h3>Useful on their own</h3>
+
+<p>
+The ports turned out to be useful on their own.
+OCaml programs are portable &mdash; unlike the Plan 9 C code,
+most XIX programs run on Linux, macOS, and Windows without extra effort.
+The OCaml code is also roughly 2x more succinct than C,
+arguably clearer, and safer (no segfaults or buffer overflows).
+In fact, it became easier to experiment with new features first in
+OCaml, and only later port them back to the original C code.
+</p>
+<p>
+The pair <code>omk</code>/<code>orc</code> is mature enough to
+drive the build process of XIX itself, dogfooding those tools.
+And <code>orio</code> can substitute the original <code>rio</code>
+in Plan 9 without any visible difference.
+</p>
+
+<h3>OCaml in Plan 9</h3>
+
+<p>
+Running OCaml programs on Plan 9 required porting OCaml itself.
+Fortunately, OCaml has a bytecode compiler (<code>ocamlc</code>)
+whose interpreter (<code>ocamlrun</code>) is a small C program
+with very few dependencies.
+By cross-compiling this interpreter with the Plan 9 C compiler,
+you can then run <code>ocamlc</code> itself to compile other programs.
+This work is available as
+<a href="https://github.com/aryx/ocaml-light">ocaml-light</a>,
+based on an old version of OCaml (1.07) chosen for its minimal dependencies.
+</p>
+
+<p>
+Here is <code>orio</code> running on Plan 9, substituting the
+original C <code>rio</code> windowing system.
+The terminal windows show various XIX programs in use:
+<code>omk</code> building code, <code>orc</code> as the shell,
+and <code>oas</code>/<code>olk</code> compiling and linking programs
+&mdash; all OCaml binaries running on Plan 9 via <code>ocamlrun</code>.
+</p>
+<p><img src="iwp9/orio1.png" alt="orio running on Plan 9 - the OCaml windowing system replacing rio" width="700"></p>
+
+<hr>
+
 <h2 id="books">The Books</h2>
+
+<p>
+Each OCaml port has its own literate programming book, just like
+the C originals in the Principia series.
+The books can be read standalone, but they occasionally reference
+their C counterparts for comparison.
+</p>
 
 <p>
 <em>LOC</em> = lines of code;

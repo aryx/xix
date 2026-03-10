@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>XIX &mdash; OCaml Ports of Plan 9</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="github-ribbon"><a href="https://github.com/aryx/xix">Clone me on GitHub</a></div>
+
+<h1>XIX</h1>
+<p><em>Plan 9 programs, rewritten in OCaml</em></p>
+
+<p><small>
+<a href="#about">About</a> &middot;
+<a href="#news">What's New</a> &middot;
+<a href="#books">The Books</a> &middot;
+<a href="#source">Source Code</a>
+</small></p>
+
+<h2 id="about">About</h2>
+
+<p>
+XIX is a collection of
+<a href="https://en.wikipedia.org/wiki/Plan_9_from_Bell_Labs">Plan 9</a>
+programs ported to
+<a href="https://ocaml.org/">OCaml</a>,
+a statically-typed functional language.
+The original motivation was to better understand the C code &mdash;
+porting a program to another language forces you to discover
+which parts are essential and which are accessory,
+and the bugs in the port reveal hidden subtleties in the original.
+</p>
+<p>
+The ports turned out to be useful on their own.
+OCaml code is roughly 2x more succinct than C,
+arguably clearer, and safer (no segfaults or buffer overflows).
+The OCaml programs are also portable: unlike the Plan 9 C code,
+they run on Linux, macOS, and Windows without extra effort.
+</p>
+<p>
+Each OCaml port has its own literate programming book, just like
+the C originals in the
+<a href="https://aryx.github.io/principia-softwarica/">Principia Softwarica</a>
+series.
+The books can be read standalone, but they occasionally reference
+their C counterparts for comparison.
+</p>
+
+<p>
+The OCaml ports also go beyond Plan 9: they include an
+<a href="https://aryx.github.io/assets/pdfs/OCaml-3.pdf">OCaml compiler</a>
+(a simplified ocamlc),
+an <a href="https://aryx.github.io/assets/pdfs/efuns-6.pdf">Emacs clone</a>,
+a <a href="https://aryx.github.io/assets/pdfs/VCS-10.pdf">git implementation</a>,
+and a <a href="https://aryx.github.io/assets/pdfs/mmm-3.pdf">web browser</a>.
+</p>
+
+<hr>
+
+<h2 id="news">What's New</h2>
+
+<ul>
+<li><strong>Q1 2026</strong> &mdash; OCaml editor (oed) v1; resumed Plan 9 port (orio runs on Plan 9 via ocaml-light).</li>
+<li><strong>Q4 2025</strong> &mdash; ELF/Linux support in assembler and linker; multi-architecture toolchain; new utilities (ocat, opwd, owc, oed); Dockerfile.</li>
+<li><strong>2019&ndash;2024</strong> &mdash; Hiatus (working on <a href="https://semgrep.dev">Semgrep</a>).</li>
+<li><strong>2018</strong> &mdash; Git algorithms (diff3, diff_myers); syncweb code indexing.</li>
+<li><strong>2017</strong> &mdash; Git port (ogit); rio and libdraw port; OCaml kernel on Raspberry Pi.</li>
+<li><strong>2016</strong> &mdash; Ports of mk, rc, 5a, 5l, 5c, cpp, lex, yacc to OCaml.</li>
+<li><strong>2015</strong> &mdash; Project started: port of 5a (assembler), import of lex/yacc.</li>
+</ul>
+
+<hr>
+
+<h2 id="books">The Books</h2>
+
+<p>
+<em>LOC</em> = lines of code;
+<em>LOE</em> = lines of explanation;
+<em>Pages</em> = typeset pages.
+</p>
+
+<table border="1" cellpadding="4" cellspacing="0">
+<tr>
+<th>Category</th>
+<th>Book</th>
+<th>Program</th>
+<th>Ported from</th>
+<th>LOC</th>
+<th>LOE</th>
+<th width="40"><small>LOE/<br>LOC</small></th>
+<th>Pages</th>
+<th>Version</th>
+</tr>
+
+<tr>
+<td>Core system</td>
+<td><a href="https://aryx.github.io/assets/pdfs/orc-1.pdf">Shell</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/shell">orc</a></td>
+<td>rc</td>
+<td>2150</td>
+<td>1600</td>
+<td bgcolor="#c6efce">0.74</td>
+<td>117</td>
+<td><a href="https://aryx.github.io/assets/pdfs/orc-1.pdf">v1</a></td>
+</tr>
+
+<tr>
+<td rowspan="5">Development toolchain</td>
+<td><a href="https://aryx.github.io/assets/pdfs/occ-1.pdf">C compiler</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/compiler">occ</a></td>
+<td>5c</td>
+<td>6250</td>
+<td>850</td>
+<td bgcolor="#ffc7ce">0.14</td>
+<td>173</td>
+<td><a href="https://aryx.github.io/assets/pdfs/occ-1.pdf">v1</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/oas-1.pdf">Assembler</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/assembler">oas</a></td>
+<td>5a</td>
+<td>1750</td>
+<td>350</td>
+<td bgcolor="#ffc7ce">0.20</td>
+<td>76</td>
+<td><a href="https://aryx.github.io/assets/pdfs/oas-1.pdf">v1</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/olk-1.pdf">Linker</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/linker">olk</a></td>
+<td>5l</td>
+<td>2650</td>
+<td>500</td>
+<td bgcolor="#ffc7ce">0.19</td>
+<td>96</td>
+<td><a href="https://aryx.github.io/assets/pdfs/olk-1.pdf">v1</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/OCaml-3.pdf">OCaml compiler</a></td>
+<td><a href="https://github.com/aryx/ocaml-light">ocaml-light</a></td>
+<td>ocamlc/ocamlrun</td>
+<td>16300</td>
+<td>2250</td>
+<td bgcolor="#ffc7ce">0.14</td>
+<td>500</td>
+<td><a href="https://aryx.github.io/assets/pdfs/OCaml-3.pdf">v3</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/CompilerGenerator-3.pdf">Lex and Yacc</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/generators">olex, oyacc</a></td>
+<td>lex, yacc</td>
+<td>3500</td>
+<td>800</td>
+<td bgcolor="#ffc7ce">0.23</td>
+<td>111</td>
+<td><a href="https://aryx.github.io/assets/pdfs/CompilerGenerator-3.pdf">v3</a></td>
+</tr>
+
+<tr>
+<td rowspan="4">Developer tools</td>
+<td><a href="https://aryx.github.io/assets/pdfs/Principia-9.pdf">Editor</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/editor">oed</a></td>
+<td>ed</td>
+<td>1500</td>
+<td>350</td>
+<td bgcolor="#ffc7ce">0.23</td>
+<td>55</td>
+<td><a href="https://aryx.github.io/assets/pdfs/Principia-9.pdf">v1</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/efuns-6.pdf">Editor (advanced)</a></td>
+<td><a href="https://github.com/aryx/efuns">efuns</a></td>
+<td>Emacs</td>
+<td>5500</td>
+<td>4600</td>
+<td bgcolor="#c6efce">0.84</td>
+<td>175</td>
+<td><a href="https://aryx.github.io/assets/pdfs/efuns-6.pdf">v6</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/omk-1.pdf">Build system</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/builder">omk</a></td>
+<td>mk</td>
+<td>2750</td>
+<td>1400</td>
+<td bgcolor="#ffeb9c">0.51</td>
+<td>112</td>
+<td><a href="https://aryx.github.io/assets/pdfs/omk-1.pdf">v1</a></td>
+</tr>
+<tr>
+<td><a href="https://aryx.github.io/assets/pdfs/VCS-10.pdf">Version control</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/vcs">ogit</a></td>
+<td>git</td>
+<td>5600</td>
+<td>4400</td>
+<td bgcolor="#c6efce">0.79</td>
+<td>202</td>
+<td><a href="https://aryx.github.io/assets/pdfs/VCS-10.pdf">v10</a></td>
+</tr>
+
+<tr>
+<td>Graphics</td>
+<td><a href="https://aryx.github.io/assets/pdfs/orio-1.pdf">Windowing system</a></td>
+<td><a href="https://github.com/aryx/xix/tree/master/windows">orio</a></td>
+<td>rio</td>
+<td>3300</td>
+<td>550</td>
+<td bgcolor="#ffc7ce">0.17</td>
+<td>123</td>
+<td><a href="https://aryx.github.io/assets/pdfs/orio-1.pdf">v1</a></td>
+</tr>
+
+<tr>
+<td>Networking</td>
+<td><a href="https://aryx.github.io/assets/pdfs/mmm-3.pdf">Web browser</a></td>
+<td><a href="https://github.com/aryx/mmm">mmm</a></td>
+<td></td>
+<td>22350</td>
+<td>2450</td>
+<td bgcolor="#ffc7ce">0.11</td>
+<td>499</td>
+<td><a href="https://aryx.github.io/assets/pdfs/mmm-3.pdf">v3</a></td>
+</tr>
+</table>
+
+<hr>
+
+<h2 id="source">Source Code</h2>
+
+<p>
+The OCaml ports are spread across several repositories:
+</p>
+<ul>
+<li><a href="https://github.com/aryx/xix">github.com/aryx/xix</a> &mdash; shell, toolchain, build system, editor, git, windowing system</li>
+<li><a href="https://github.com/aryx/efuns">github.com/aryx/efuns</a> &mdash; Emacs clone in OCaml</li>
+<li><a href="https://github.com/aryx/mmm">github.com/aryx/mmm</a> &mdash; web browser in OCaml</li>
+<li><a href="https://github.com/aryx/ocaml-light">github.com/aryx/ocaml-light</a> &mdash; simplified OCaml compiler</li>
+</ul>
+
+<hr>
+<p><small>
+XIX is part of the
+<a href="https://aryx.github.io/principia-softwarica/">Principia Softwarica</a>
+project.
+</small></p>
+
+</body>
+</html>

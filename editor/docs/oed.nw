@@ -1,3 +1,5 @@
+%yoann: small paragraph introducing this appendix, diff with previous one; one hidden goal is to show ocaml cleaner
+
 \section{Introduction}
 
 % ex: 1,3p for advanced commands with range addresses
@@ -205,6 +207,8 @@ let no_line = { offset = Tfile_offset 0; mark = false }
 @
 %TODO? alt: use None, which then remove the need to initialize
 % tline to Tfile_offset 2 (or 1)
+
+%yoann: maybe ASCII diagram here to illustrate all those data structures
 
 \subsection{Cursors: [[dot]] and [[dol]]}
 

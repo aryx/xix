@@ -5,7 +5,7 @@ SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 
 DOC=orc
 DOC_EXTRA=control_flow.tex
-VERSION=1
+VERSION=2
 D=..
 SRC_ML=\
   $D/Builtin.ml $D/CLI.ml $D/Compile.ml $D/Env.ml $D/Error.ml \

@@ -128,12 +128,12 @@ pattern matching [[~]]         & \ref{chap:compile-interpret}  & [[Pattern.ml]] 
 shell builtins                 & \ref{chap:builtins}           & [[Builtin.ml]] & [<dispatch()>] [<dochdir()>]        & 157 \\
 shell environment              & \ref{chap:environment}        & [[Env.ml]]      & [<read_environment()>]                        & 2 \\
 signal management              & \ref{chap:signals}            & [[Trap.ml]]     &                           & \\
-% initialization chapter?
+initialization (bootstrap)     & \ref{chap:initialization-real} & [[CLI.ml]]     & [<bootstrap()>] [<dotcmds>]                   & \\
 
 \midrule
 wildcard matching              & \ref{chap:globbing}           & [[Glob.ml]]     &                           & 2 \\
-Debugging flags                   & \ref{chap:debugging}           & [[Flags.ml]]      & [<xflag>] [<sflag>] [<eflag>] & 58 \\
-here documents & \ref{chap:advanced-topics}    & [[Heredoc.ml]]     &                    & 2 \\
+debugging flags                & \ref{chap:debugging}           & [[Flags.ml]]      & [<xflag>] [<sflag>] [<eflag>] & 58 \\
+here documents                 & \ref{chap:advanced-topics}    & [[Heredoc.ml]]     &                    & 2 \\
 
 \otoprule
 Total                          &                               &                &                                                 & 3200 \\
@@ -149,6 +149,13 @@ Total                          &                               &                
 
 %toc: before presenting soft archi of rc itself, useful to see context
 % and how rc fits in the big picture.
+%claude:
+Before describing the internal architecture of [[rc]] itself,
+I will first present the broader context in which [[rc]] operates:
+the command-line user interface and the other system components
+(kernel, device drivers, terminal) that [[rc]] interacts with.
+Then I will describe [[rc]]'s own components and trace the
+execution of a simple command through them.
 
 \subsection{The command-line user interface}
 \n terminal, shell, login
@@ -223,40 +230,37 @@ write characters in [[/dev/cons]].
 
 \t separate program! huge innovation.
 
-\begin{verbatim}
-
-\t stdin stdout regular program
-%plan9:
-\t under \plan kernel run rc (see \book{Kernel} and Section{boot.rc}).
-%unix:
-\t Under \unix run init, then login, then shell in terminal. Even virtual
-\t  terminal in Linux, 
-\t under windowing system like rio also virtual terminals connected
-\t stdin and stdout of process (see \book{Windows}).
-% Figure X presents archi for plan9.
-
-% shell = stuff around a kernel in a coquillage.
-% history: multics.
-% A shell is a bastard. See es paper quote in abstract
-%  that reference unix programmnig environment book
-
-% separate prog from kernel, can change shell!
-%history: originated in Multics (one of the 2 things Thompson liked about
-% Multics, the other being the hierarchical filesystem)
-
-% for a long time actually there was no (external) shell? Shell was
-% part of kernel? With Unix it changed and shell can be a regular user program.
-
-% for interactive use, and for programming. Both uses, 
-% and different features for those 2 things.
-
-% regular program
-% backspace handled by kerne
-% line editing not shell
-% \footnote not libreadline raw mode, completion
 
 
-\end{verbatim}
+%\t stdin stdout regular program
+%%plan9:
+%\t under \plan kernel run rc (see \book{Kernel} and Section{boot.rc}).
+%%unix:
+%\t Under \unix run init, then login, then shell in terminal. Even virtual
+%\t  terminal in Linux, 
+%\t under windowing system like rio also virtual terminals connected
+%\t stdin and stdout of process (see \book{Windows}).
+%% Figure X presents archi for plan9.
+%
+%% shell = stuff around a kernel in a coquillage.
+%% history: multics.
+%% A shell is a bastard. See es paper quote in abstract
+%%  that reference unix programmnig environment book
+%
+%% separate prog from kernel, can change shell!
+%%history: originated in Multics (one of the 2 things Thompson liked about
+%% Multics, the other being the hierarchical filesystem)
+%
+%% for a long time actually there was no (external) shell? Shell was
+%% part of kernel? With Unix it changed and shell can be a regular user program.
+%
+%% for interactive use, and for programming. Both uses, 
+%% and different features for those 2 things.
+%
+%% regular program
+%% backspace handled by kerne
+%% line editing not shell
+%% \footnote not libreadline raw mode, completion
 
 
 
@@ -461,27 +465,23 @@ the opcodes I mentioned before:
 %
 I will explain [<O.Mark()>] and [<O.Word()>] later in this document.
 
-\begin{verbatim}
-
-% It is interesting to understand the full trace of a simple command
-% through the multiple layers of the software stack.
-% Here is again the trace of the command [[ls /<newline>]] 
-% entered in a terminal:
-
-\t full trace ls\n 
-\begin{enumerate}
-\item After [[rc]] displayed its prompt,
-\t 1 shell read(), sysread, connected to /dev/cons, consread
-\t blocked (see \book{kernel})
-
-\t item l
-
-\t item s space /
-
-\t item newline
-\end{enumerate}
-
-\end{verbatim}
+%% It is interesting to understand the full trace of a simple command
+%% through the multiple layers of the software stack.
+%% Here is again the trace of the command [[ls /<newline>]] 
+%% entered in a terminal:
+%
+%\t full trace ls\n 
+%\begin{enumerate}
+%\item After [[rc]] displayed its prompt,
+%\t 1 shell read(), sysread, connected to /dev/cons, consread
+%\t blocked (see \book{kernel})
+%
+%\t item l
+%
+%\t item s space /
+%
+%\t item newline
+%\end{enumerate}
 
 %\subsection{Trace of a pipe}
 % later
@@ -5083,7 +5083,7 @@ let strict_mode = ref false
 
 
 %******************************************************************************
-\chapter{Debugging for the [[mk]] Developer}
+\chapter{Debugging for the [[rc]] Developer}
 %******************************************************************************
 \label{chap:debugging-appendix}
 

@@ -1325,14 +1325,49 @@ mutable waitstatus: waitstatus;
 waitstatus = NothingToWaitfor;
 @
 
+%ocaml: Shell.nw Core DS topics NOT needed in OCaml version:
+% - Tree node linking (treenodes global list, freenodes()): OCaml has GC,
+%   no need for manual batch freeing of AST nodes after compilation.
+% - newtree(), tree1(), tree2(), tree3(): OCaml algebraic types replace
+%   the generic Tree struct; constructors like Simple, Pipe, If are direct.
+% - Empty sequence optimization in tree3(): handled differently in
+%   the OCaml parser via mk_Seq pattern matching.
+% - Code union (function pointer | integer | string): OCaml uses a clean
+%   variant type (O.F operation | O.S string | O.I int), no unsafe union.
+% - Word struct (string + next pointer): OCaml uses string list directly.
+% - Word list functions (newword, count, copywords, freewords): all
+%   replaced by standard List module operations.
+% - Pointer-to-pointer tail linking idiom (end = &v): pure C technique
+%   for building lists in forward order; OCaml uses List.rev or ::.
+% - List struct (two-level linked list for argv stack): OCaml simplifies
+%   to a flat string list for argv + a (string list) list for argv_stack.
+% - Hash table size (521 buckets, manual chaining via Var.next):
+%   OCaml uses Hashtbl with automatic resizing.
 
 %******************************************************************************
 \chapter{[[main()]]}
 %******************************************************************************
 \label{chap:main}
 
+%claude:
+I now switch from the bottom-up approach of Chapter~\ref{chap:core-ds}
+to a top-down approach:
+I will describe in the following chapters the main functions of [[rc]],
+starting in this chapter with [<main()>], the entry point of [[rc]].
 
 \section{Overview}
+
+%toc:
+%claude:
+The [<CLI.main>] function performs four tasks:
+it processes the command-line arguments (using OCaml's [[Arg]] module),
+it initializes the shell (environment variables, traps),
+it sets up the bootstrap bytecodes and the initial thread,
+and then it enters the bytecode interpreter loop.
+%
+I will present here a simplified version of the bootstrap;
+the actual bootstrap code (which sources [[rcmain]]) is
+described in Chapter~\ref{chap:initialization-real}.
 
 %claude:
 %ocaml:
@@ -1436,6 +1471,14 @@ let usage =
 \subsection{Interactive mode: [[rc -i]]}
 % and prompt part1
 
+%claude:
+Interactive mode determines whether [[rc]] displays a prompt
+and handles errors differently (e.g., not exiting on a parse error).
+The logic is subtle: [[rc]] is interactive by default
+when no script file is given and standard input is a terminal.
+The [[-I]] flag forces non-interactive mode
+(useful when piping commands into [[rc]] from another program).
+
 <<constant [[Flags.interactive]]>>=
 (* -i (on by default when detects that stdin is /dev/cons *)
 let interactive = ref false
@@ -1469,8 +1512,21 @@ iflag = false;
 
 %TODO: why per thread? why not use globals everywhere?
 
+%claude:
+The interactive flag is stored per-thread rather than as a global
+because the dot builtin ([[. file]]) creates a new thread
+that reads from a file---it should not display a prompt even
+if the top-level shell is interactive.
 
 \subsection{Login mode: [[rc -l]]}
+
+%claude:
+When invoked with the [[-l]] (login shell) flag,
+[[rc]] will source the user's profile ([[~$home/lib/profile]]).
+%ocaml:
+In the C version, [[rc]] also detects login mode when [[argv[0]]]
+starts with a dash---a \unix convention used by the kernel.
+The OCaml version relies solely on the [[-l]] flag via [[Arg]].
 
 <<constant [[Flags.login]]>>=
 (* -l (on by default if argv0 starts with a -) *)
@@ -1498,6 +1554,15 @@ let login = ref false
 
 \section{Bytecode interpreter loop}
 
+%claude:
+[<interpret_bootstrap>] creates the initial thread from the bootstrap
+bytecodes, pushes it onto [<runq>], populates it with command-line
+arguments, and enters the infinite interpreter loop.
+%ocaml:
+In the C version, these steps are split across several sections of
+[<main()>]---[<start()>], argument pushing, and the interpreter
+loop are separate. Here they are gathered in one function,
+which is cleaner.
 
 <<function [[CLI.interpret_bootstrap]]>>=
 let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
@@ -1601,6 +1666,16 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
 
 
 
+%claude:
+The command-line arguments are pushed onto the thread's argument stack.
+They are reversed first because [<push_word>] prepends to the list,
+so reversing ensures the first argument ends up at the top.
+The bootstrap code will later assign this list to [[\$*]].
+%ocaml:
+In the C version, [<pushlist()>] must be called first to create an
+empty word list on the stack, and the loop goes backwards.
+Here, [[List.rev]] followed by [[List.iter push_word]] is more idiomatic.
+
 <<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>=
 (* less: set argv0 *)
 args |> List.rev |> List.iter Runtime.push_word;
@@ -1609,6 +1684,15 @@ args |> List.rev |> List.iter Runtime.push_word;
 % see usage
 % but for REPL, empty
 
+
+%claude:
+Each thread has its own [<lexbuf>] (input source), because
+the dot builtin ([[. file]]) creates a new thread that reads
+from a different file. The bootstrap thread reads from [[stdin]].
+%ocaml:
+In the C version, threads store a raw file descriptor ([[cmdfd]])
+and a filename ([[cmdfile]]). OCaml's [[Lexing.lexbuf]] bundles
+both the input buffer and position tracking into one value.
 
 <<[[CLI.interpret_bootstrap()]] other initializations for [[t]]>>=
 t.R.lexbuf <- Lexing.from_channel stdin;
@@ -1640,6 +1724,13 @@ t.R.iflag <- !Flags.interactive;
 % see bootstrap_simple, and interpreter loop, so here we go
 % interpret_operation first case. Will gradually show in chapter X
 % but important understand this one also for lexing/parsing chapter
+
+%claude:
+[<O.REPL>] (called [[Xrdcmds]] in the C version) is the bytecode
+that implements the read-eval loop.
+It calls [<Parse.parse_line>] to read and parse one command,
+then [<Compile.compile>] to generate bytecodes, and pushes
+a new thread to execute them.
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* *)
@@ -1722,6 +1813,26 @@ else failwith s
 
 
 
+%ocaml: Shell.nw main() chapter topics NOT needed in OCaml version:
+% - Flag storage (char **flag[NFLAG] array indexed by character): OCaml
+%   uses Arg module with typed options; no need for a global array.
+% - getflags() format string ("SsrdiIlxepvVc:1m:1"): replaced by
+%   Arg.align with explicit option specs; much cleaner.
+% - Login shell argv[0] dash detection: the C version checks if argv[0]
+%   starts with '-'; OCaml relies solely on the -l flag via Arg.
+% - Plan 9 Isatty() via fd2path /dev/cons: Plan 9 specific; OCaml
+%   would use Unix.isatty if implemented.
+% - Initialization subsystems (kinit, Trapinit, Vinit): kinit() registers
+%   keywords for the hand-written lexer---not needed with ocamllex.
+%   Trapinit() sets up signal handlers---still a TODO in OCaml version.
+%   Only Var.init remains.
+% - start() with pc=1 (element 0 is reference count): OCaml arrays have
+%   no reference count slot; pc starts at 0.
+% - pushlist()/pushword() as explicit functions: OCaml uses List operations
+%   directly on string list; no need for wrapper functions.
+% - codecopy() with reference counting: OCaml's GC handles sharing; no
+%   need for manual reference counting of code vectors.
+
 %\chapter{Input}
 %\section{Overview}
 %\section{Reading a character: [[getnext()]]}
@@ -1741,6 +1852,19 @@ else failwith s
 % seen mentioned parse_line in REPL
 
 % parse_line() will call Lexer.token() via lexfunc below
+
+%claude:
+%ocaml:
+The C version of [[rc]] has a hand-written lexer ([<yylex()>]),
+with a separate input layer ([<getnext()>], [<nextc()>], [<advance()>])
+handling character-by-character reading, lookahead, and escaped newlines.
+In the OCaml version, all of this is replaced by [[ocamllex]]:
+the lexer is declared as a set of regular expression rules in [[Lexer.mll]],
+and [[ocamllex]] generates the lexer automatically.
+%
+However, one piece of complexity remains in a wrapper function
+[<lexfunc>]: the [[skipnl]] mechanism and the prompt display,
+which sit between the raw lexer and the parser.
 
 \section{[[lexfunc()]] skeleton}
 
@@ -1924,6 +2048,14 @@ val prompt : string ref
 let prompt = ref "% "
 @
 
+%claude:
+In [[rc]], the [[\$prompt]] variable is a two-element list:
+the first element is the normal prompt (e.g., [[; ]]),
+and the second is displayed for continuation lines
+(after a backslash-newline). After printing the first prompt,
+[<pprompt>] switches to the continuation prompt, so the user
+sees a different prompt while typing multi-line commands.
+
 % print prompt
 <<signature [[Prompt.pprompt]]>>=
 (* !will reset doprompt! *)
@@ -1958,12 +2090,22 @@ end;
 % prompt has 2 parts? when regular and when follow antislash newline?
 % this time the first part of the prompt
 
+%claude:
+A backslash before a newline tells the shell that the command
+continues on the next line. The lexer consumes both characters
+silently (returning no token) and displays the continuation
+prompt so the user knows more input is expected.
+%ocaml:
+In the C version, this is handled deep inside [<getnext()>],
+which returns a space instead of a newline.
+With [[ocamllex]], it is a simple two-character pattern.
+
 <<[[Lexer.token()]] space cases>>=
 | '\\''\n'  {
     incr_lineno ();
     Prompt.pprompt ();
     token lexbuf
-}    
+}
 @
 \label{sec:escaping-newline}
 
@@ -1983,6 +2125,19 @@ prompt :=
 
 \section{Operators ([[;]], [[&]], [[|]], [[<]], [[>]], [[$]], [[&&]], [[||]], \ldots)}
 %alt: Symbols?
+
+%claude:
+%ocaml:
+In the C version, operators are handled as cases in a large [[switch]]
+statement, and multi-character operators like [[&&]] require a
+manual lookahead call ([<nextis()>]).
+With [[ocamllex]], each operator is simply a pattern---multi-character
+operators like [[&&]] and [[||]] are matched directly by the longest-match
+rule.
+%
+Note that after binary operators like [[|]], [[&&]], and [[||]],
+the lexer sets [[skipnl := true]] so that newlines on the next line
+are treated as whitespace (allowing multi-line pipelines).
 
 <<[[Lexer.token()]] symbol cases>>=
 | ';'  { TSemicolon }
@@ -2175,11 +2330,40 @@ globbing expansion.
 }
 @
 
+%ocaml: Shell.nw Input + Lexing chapter topics NOT needed in OCaml version:
+% - Input chapter (getnext, nextc, advance, rchr): the entire input layer
+%   (character-by-character reading, one-char lookahead, buffered IO) is
+%   replaced by ocamllex's Lexing.lexbuf. No getnext(), nextc(), advance().
+% - EOF management (eof flag on thread): ocamllex returns an EOF token
+%   directly; no need for a per-thread eof flag.
+% - incomm global (inside comment flag): in the C version, getnext() must
+%   know if it's inside a comment to not treat backslash-newline as
+%   continuation. With ocamllex, the comment rule consumes everything
+%   up to newline in one pattern.
+% - inquote global (inside quote flag): same issue; getnext() must not
+%   treat backslash-newline specially inside quotes. With ocamllex, the
+%   separate 'quote' rule handles this naturally.
+% - lastdol global (previous token was $): needed in C for SUB vs (
+%   disambiguation. Not yet implemented in OCaml version (TODO).
+% - lastword global (previous token was a word): used by C grammar for
+%   free caret insertion. Not yet implemented in OCaml version (TODO).
+% - Redirection parsing inside lexer (Tree node with fd0/fd1/rtype):
+%   the C lexer builds AST nodes for redirections because the bracket
+%   syntax >[2=1] would be awkward in yacc. OCaml puts redirection
+%   types directly in tokens (TRedir of redirection_kind) and handles
+%   fd details in the parser/AST.
+% - Array subscript SUB trick ($x(1) vs grouping): not yet implemented
+%   in OCaml version (TODO).
 
 %******************************************************************************
 \chapter{Parsing}
 %******************************************************************************
 \label{chap:parsing}
+
+%claude:
+Now that we have seen how the lexer produces tokens from the
+input stream, we can describe the parser, which assembles
+those tokens into an abstract syntax tree.
 
 \section{[[parse_line()]] skeleton}
 
@@ -2398,6 +2582,19 @@ signaling the end of input (e.g., the user typed Ctrl-D).
 
 \section{Simple commands ([[<cmd> <arg1>...<argn>]]) }
 
+%toc:
+%claude:
+The grammar is layered:
+a [[line]] is one or more [[cmd]]s separated by [[;]] or [[&]],
+a [[cmd]] is a [[simple]] command (or a control flow statement),
+and a [[simple]] command is a [[first]] word followed by zero
+or more [[word]] arguments.
+%
+Note that newlines have a semantic role in [[rc]]:
+they terminate commands (like [[;]] in C). This is what
+makes the shell convenient for interactive use---you do not
+need an explicit semicolon to run a command.
+
 % a line can have a single command (stmt)
 <<rule [[Parser.line]]>>=
 /*(* =~ stmt *)*/
@@ -2502,7 +2699,21 @@ keyword:
 
 \section{Operators}
 
+%claude:
+Operators are spread across different grammar levels,
+which implicitly defines their priorities.
+Sequencing ([[;]] and [[&]]) is at the [[line]] level (lowest priority),
+logical operators ([[&&]], [[||]]) and pipes ([[|]]) are at the
+[[cmd]] level, and redirections are at the [[simple]] level
+(highest priority, closest to the command words).
+
 \subsection{Sequence ([[;]], [[&]])}
+
+%claude:
+The [[;]] operator sequences two commands.
+The [[&]] operator runs a command asynchronously (in the background)
+and is treated as a unary postfix operator:
+[[x & y]] is parsed as [[(x&); y]].
 
 <<[[Parser.line]] other cases>>=
 | cmdsa line { $1 $2  }
@@ -2557,6 +2768,17 @@ let mk_Seq (a, b) =
 %alt: move in advanced section, but nice to have a construct that
 % can go inside 'if' otherwise have to talk about 'test' or '[' or bash
 
+%claude:
+The \verb+~+ (twiddle) operator is the fundamental comparison
+operator in [[rc]]. Since all values are strings
+(or lists of strings), there are no arithmetic comparisons;
+instead, \verb+~+ performs pattern matching:
+\verb+~ $x foo*+ tests whether [[\$x]] matches the pattern [[foo*]].
+It can also be used for counting: \verb+~ $#list 0+ tests
+if a list is empty.
+This is a major simplification compared to the Bourne shell,
+which relies on the external [[test]] program (or \verb+[ ]+).
+
 <<[[Parser.cmd]] other cases>>=
 | TTwiddle word words { Match ($2, $3) }
 @
@@ -2588,6 +2810,15 @@ words_rev:
 
 \subsection{Redirections  ([[>]], [[<]])}
 
+%claude:
+Redirections are at the [[simple]] level in the grammar,
+which means they bind tighter than pipes and logical operators.
+For example, [[ls | grep foo > out]] is parsed as
+[[ls | (grep foo > out)]], not [[(ls | grep foo) > out]]---the
+redirection applies only to [[grep]], not to the whole pipeline.
+If you want to redirect the output of an entire pipeline,
+you need braces: \verb+{ls | grep foo} > out+.
+
 <<[[Parser.simple]] other cases>>=
 | simple redir { let (cmd, args, redirs) = $1 in (cmd, args, $2::redirs) }
 @
@@ -2611,7 +2842,42 @@ redirs |> List.fold_left (fun acc e ->
 
 %TODO? dump AST and see tree or Redir enclosing each other
 
+%claude:
+For example, [[grep pattern < input > output]] produces this AST:
+\begin{verbatim}
+  Redir (RWrite, "output")
+   |
+  Redir (RRead, "input")
+   |
+  Simple ("grep", ["pattern"])
+\end{verbatim}
+%
+The [[fold_left]] wraps each redirection around the command,
+outermost last. This means the bytecode generator encounters
+the redirections first and sets them up before executing the
+command---the same tree shape that the C version achieves
+via a post-hoc [<simplemung()>] transformation, but here
+it falls out naturally from the fold.
+
 \section{Control flow statements ([[if]], [[if not]], [[while]], [[switch]], [[for]])}
+
+%claude:
+Note that [[rc]] uses [[if not]] instead of [[else]].
+This is because [[rc]] parses and executes one line at a time:
+when the user types [[if(test) cmd]] and presses Enter,
+[[rc]] must execute it immediately. It cannot look ahead
+to see if the next line starts with [[else]].
+%
+The Bourne shell solves this with [[if...then...fi]]:
+the explicit [[fi]] tells the parser when the [[if]] block ends.
+[[rc]] takes a simpler approach: [[if not]] is a completely
+separate command that checks the exit status left by the
+previous [[if]]. No lookahead, no extra keywords, and each
+line is self-contained.
+%
+The [[for]] loop has two forms: [[for(x in a b c)]]
+iterates over an explicit list, and [[for(x)]] iterates
+over [[\$*]] (the script arguments).
 
 <<[[Parser.cmd]] other cases>>=
 | TIf paren_skipnl cmd { If ($2, $3) }
@@ -2720,6 +2986,13 @@ $2 |> List.fold_left (fun acc e ->
 
 \section{Functions ([[fn <f> { ... }]])}
 
+%claude:
+Function definition in [[rc]] uses \verb+fn name {body}+.
+In the C version, [[fn name]] without a body {\em deletes}
+the function, and [[words]] (not just a single word) is accepted
+so you can define the same handler for multiple signals at once
+(e.g., \verb+fn sigint sighup {...}+).
+
 <<[[Parser.cmd]] other cases>>=
 /*(* stricter: allow only word, not words *)*/
 | TFn word brace { Fn ($2, $3) }
@@ -2728,6 +3001,13 @@ $2 |> List.fold_left (fun acc e ->
 % function use =   [[f ( )]] so parsed as a simple command
 
 \section{Variables ([[<x> = ...]], [[$x]])}
+
+%claude:
+Variable assignment in [[rc]] is written [[x=value]].
+The interesting aspect is that an assignment can be followed
+by a command: [[x=value cmd]] makes the assignment local
+to that command only. When [[cmd]] is empty (just a newline),
+the assignment is global.
 
 <<[[Parser.cmd]] other cases>>=
 | assign cmd %prec TBang { $1 $2 }
@@ -2747,6 +3027,13 @@ assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 
 \section{Lists ([[(...)]])}
 
+%claude:
+In [[rc]], parentheses create lists: [[(a b c)]] is a list
+of three words. This is how you assign multiple values
+to a variable: [[x=(a b c)]].
+Lists are first-class values in [[rc]], which is one of its main
+improvements over the Bourne shell.
+
 % note that have seen parens in if/while context but
 % here different
 
@@ -2757,6 +3044,25 @@ assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 
 %\chapter{Checking}
 
+%ocaml: Shell.nw Parsing chapter topics NOT needed in OCaml version:
+% - .y file layout (%union, %token, %left, %type declarations): OCaml's
+%   ocamlyacc uses the same concepts but with slightly different syntax
+%   (%token <type>, %type <type> rule). No %union needed since OCaml
+%   has algebraic types---each token carries its own typed payload.
+% - simplemung() (percolate redirections to AST root): the C parser
+%   builds a flat ARGLIST tree with redirections mixed among arguments,
+%   then simplemung() hoists them. OCaml collects redirections in a
+%   separate list during parsing and uses fold_left to wrap them around
+%   the Simple node directly---no post-hoc tree surgery.
+% - mung1/mung2/mung3 helper functions: these set child pointers on
+%   a pre-allocated Tree node. OCaml constructs AST nodes directly
+%   with algebraic type constructors (If, While, Pipe, etc.).
+% - epimung() for brace epilog redirections: same fold_left approach
+%   as for simple command redirections; no separate function needed.
+% - tree2(ARGLIST, $1, $2) for argument accumulation: OCaml uses a
+%   list with $2::args and List.rev, no binary ARGLIST tree.
+% - token() function wrapping WORD nodes with Tree allocation: OCaml
+%   returns TWord tokens directly from the lexer.
 
 %******************************************************************************
 \chapter{Opcode Generation and Interpretation}

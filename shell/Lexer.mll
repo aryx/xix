@@ -59,7 +59,7 @@ rule token = parse
       incr_lineno ();
       Prompt.pprompt ();
       token lexbuf
-  }    
+  }
   (*e: [[Lexer.token()]] space cases *)
   (*s: [[Lexer.token()]] comment cases *)
   | '#' [^'\n']* { token lexbuf }

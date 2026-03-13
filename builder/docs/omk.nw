@@ -391,17 +391,40 @@ Finally, Appendix~\ref{chap:examples} presents examples of [[mkfile]]s.
 \end{verse}
 
 %toc: parsed -> "evaluated" -> executed
+%claude:
+The data structures in [[mk]] fall into three categories reflecting the
+stages of the build pipeline: {parsed} structures produced by the parser,
+{evaluated} structures produced after variable expansion and rule extraction,
+and {runtime} structures used during actual building.
 
 \section{Parsed structures}
 %alt: AST
 
 \subsection{Words}
 
+%claude:
+A {word} in [[mk]] is a fundamental concept: it represents a filename,
+a variable reference, or a pattern containing [[\%]].
+Unlike a simple string, a word can be a concatenation of heterogeneous
+elements --- a literal string fragment next to a variable reference
+next to a percent wildcard --- which is why [[word]] is defined as a list
+of [[word_element]]s rather than a plain string.
+%claude:
+This structured representation is necessary because [[mk]] must defer
+variable expansion to a later stage. At parse time, we do not yet know
+the values of variables, so we keep the unevaluated [[\$name]] references
+in the AST.
+
 <<type [[Ast.words]]>>=
 (* Words are separated by spaces. See also Env.values *)
 type words = word list
 @
 % words! core datatype of mk (and rc), list of things (files, objects, flags)
+%claude:
+The distinction between [[words]] (a list of words separated by spaces)
+and [[word]] (a single word made of concatenated elements) mirrors how
+[[mk]] syntax works: spaces separate arguments, but within an argument
+you can freely mix literal text and variable references like [[$CC]].
 
 <<type [[Ast.word]]>>=
 (* The elements below are not separated by any separator; they are direct
@@ -422,6 +445,12 @@ type word = W of word_element list
 @
 
 % vars, feature 1 of DSL!
+%claude:
+Variables are one of the two key features of [[mk]]'s domain-specific
+language (the other being patterns with [[\%]]).
+The [<SimpleVar>] constructor covers both [[\$name]] and [[\$\{name\}]]
+forms; the braces are needed when the variable name is immediately
+followed by more text (e.g., [[\$\{CC\}flags]]).
 
 <<type [[Ast.var]]>>=
 and var = 
@@ -431,6 +460,14 @@ and var =
 @
 
 \subsection{Rules}
+
+%claude:
+A rule at the AST level is still unevaluated: its targets and
+prerequisites are [[words]] that may contain variable references or
+patterns. The [<recipe>] is simply a list of shell command strings ---
+unlike targets and prerequisites, recipes are not parsed into
+structured words because they will be fed directly to the shell,
+which handles its own variable expansion.
 
 <<type [[Ast.rule]]>>=
 (* See also Rules.rule and Rules.rule_exec *)
@@ -453,6 +490,17 @@ type recipe = R of string list
 
 \subsection{Instructions}
 %alt: Parsed [[mkfile]]Instructions
+
+%claude:
+An [[mkfile]] is a sequence of {instructions}, where each instruction
+is either a rule, a variable definition, or an include directive.
+This is the top-level AST node produced by the parser.
+%claude:
+Note how [<Definition>] uses a plain [[string]] for the variable name
+rather than a [[word]] --- this is a deliberate strictness choice.
+In the original C [[mk]], you could write dynamic definitions like
+[[X=AVAR]] then [[\$X=42]], but [[omk]] forbids this, making the code
+easier to reason about.
 
 <<type [[Ast.instrs]]>>=
 type instrs = instr list
@@ -497,9 +545,22 @@ type loc = {
 \section{Evaluated structures}
 
 %trans: parsed, now evaluated/interpreted
+%claude:
+After parsing, the AST is {evaluated}: variable references are expanded
+to their string values, and rules are classified into {simple rules}
+(with concrete filenames) and {meta rules} (with [[\%]] patterns).
+The data structures in this section represent the result of that evaluation.
 
 \subsection{Environment}
 %alt: evaluated variables
+
+%claude:
+The {environment} [<Env.t>] is a hash table mapping variable names
+to their fully-expanded values.
+A variable's value is a list of strings (not a single string),
+because [[mk]] variables are inherently list-valued --- for instance,
+[[OFILES=a.o b.o c.o]] defines a variable with three elements.
+This is the same model used by [[rc]], the Plan~9 shell.
 
 <<type [[Env.t]]>>=
 type t = {
@@ -519,6 +580,11 @@ type values = string list
 % like in rc, core datatype is a list of words, but here after full expansion!
 %less: rename just value? more consistent with rc and
 % reads better to see varname, value
+%claude:
+The invariant that values never contain empty strings is important:
+it means you can safely concatenate list elements and use them as
+filenames without worrying about degenerate cases.
+[<Env.check_values>] enforces this invariant.
 
 <<signature [[Env.add_var]]>>=
 val add_var : t -> string -> values -> unit
@@ -550,6 +616,12 @@ let check_values xs =
 <<[[Env.t]] fields>>=
 internal_vars: (string, values) Hashtbl.t;
 @
+%claude:
+The [<internal_vars>] table holds special [[mk]] variables like
+[[\$target]], [[\$prereq]], and [[\$stem]] that are set automatically
+by [[mk]] for each rule execution. They are kept separate from
+user-defined variables so that a recipe can access them without
+conflicting with user definitions.
 
 <<constant [[Env.mk_vars]]>>=
 let mk_vars = [
@@ -568,6 +640,17 @@ let mk_vars = [
 
 % patterns, feature 2 of DSL
 % seen % and Percent before
+%claude:
+A {pattern} is the evaluated form of a word containing a [[\%]] wildcard.
+At the AST level, [[\%]] is just another [[word_element]]; after evaluation,
+it becomes a [<Percent.pattern>] --- a list of literal string fragments
+interspersed with [<PPercent>] wildcards.
+For example, the pattern [[\%.o]] becomes [[P [PPercent; PStr ".o"]]].
+%claude:
+Patterns are central to {meta rules} like [[\%.o: \%.c]], which express
+how to build any [[.o]] file from the corresponding [[.c]] file.
+The [[\%]] acts as a wildcard that matches any substring (called the
+{stem}), and the same stem is substituted in the prerequisites.
 
 <<type [[Percent.pattern]]>>=
 (* The list must contain at least one element *)
@@ -600,6 +683,17 @@ let check_pattern (P xs) =
 
 % already seen parsed rule, but now after 'eval'uation of vars and "parsing"
 % of patterns
+%claude:
+After evaluation, rules are split into two categories.
+{Simple rules} have concrete string targets like [[hello.o: hello.c]],
+while {meta rules} have pattern targets like [[\%.o: \%.c]].
+The polymorphic type [['a rule]] captures this distinction: simple rules
+are [[string rule]] and meta rules are [[Percent.pattern rule]].
+%claude:
+Simple rules are stored in a hash table keyed by target name
+(using [[Hashtbl.find_all]] because multiple rules can share a target),
+while meta rules are kept in a list since they must be tried by
+pattern matching.
 
 <<type [[Rules.rule]]>>=
 type 'a rule = {
@@ -626,6 +720,18 @@ type rules = {
 
 %trans: parsed, evaluated, now applied to concrete filesystem
 % kinda "instance" of rules
+%claude:
+The {graph of dependencies} is the central runtime data structure.
+It is a Directed Acyclic Graph (DAG) where each {node} represents
+a file (or a virtual target), and each {arc} connects a target to
+one of its prerequisites. The arcs also carry a reference to the
+rule whose recipe can regenerate the target.
+%claude:
+This graph is built once, before any recipes are executed, by
+applying the extracted rules to the filesystem. Each node records
+its file's modification time (or [[None]] if the file does not exist),
+and a mutable [<build_state>] that tracks whether the node has been
+processed during the build.
 
 <<type [[Graph.node]]>>=
 type node = {
@@ -653,6 +759,11 @@ type node = {
   }
 @
 %TODO: when None?? useful?
+%claude:
+Each arc carries a [<Rules.rule_exec>] --- a slimmed-down version
+of the original rule containing just what is needed at execution time:
+the recipe and the stem (for meta rules). This separation avoids
+dragging the full parsed rule through the build pipeline.
 
 <<[[Graph.arc]] other fields>>=
 (* what we need from the rule to execute a recipe (and report errors) *)
@@ -702,10 +813,23 @@ mutable state: build_state;
     | Made
 @
 % see explanation in principles section before \ref{}
+%claude:
+The three states --- [<NotMade>], [<BeingMade>], [<Made>] --- drive the
+build loop. A node starts as [<NotMade>]. When [<work()>] begins
+processing it, the state becomes [<BeingMade>] (preventing redundant
+processing). Once all its prerequisites are up-to-date and its recipe
+has run successfully, the state becomes [<Made>].
 
 <<type [[Graph.t]]>>=
 type t = node (* the root *)
 @
+
+%claude:
+The [<hnodes>] hash table is a global cache of all nodes ever created.
+It serves two purposes: first, it ensures that the dependency graph
+is a proper DAG where shared dependencies point to the same node object
+(not duplicates); second, it allows [<dorecipe()>] to look up all
+target nodes for a given rule by name.
 
 <<constant [[Graph.hnodes]]>>=
 (* The graph is a DAG; some arcs may point to previously created nodes.
@@ -768,6 +892,12 @@ let timeof (file : Fpath.t) : float option =
   with Unix.Unix_error (_, _, _) -> None
 @
 % note use of !! because Fpath.t vs string for filename, See lib_core/Fpath_.ml
+%claude:
+Note the use of [[Unix.stat]] rather than [[Unix.lstat]]: this follows
+symlinks to get the modification time of the actual file, not the
+symlink itself. Also note the subsecond [[float]] precision --- on
+modern machines, multiple files can be built within the same second,
+so integer timestamps would cause [[mk]] to miss outdated targets.
 
 \ifallcode
 <<signature [[File.str_of_time]]>>=
@@ -784,6 +914,13 @@ let str_of_time timeopt =
 %TODO: ex of dump_graph, still on same example
 
 \section{Jobs}
+
+%claude:
+A {job} represents a recipe that is ready to be executed. It bundles
+the rule's recipe with the environment in which it should run, plus
+references to the graph nodes that should be marked [<Made>] upon
+successful completion. Jobs are queued in [<Scheduler.jobs>] and
+dispatched by the scheduler as processors become available.
 
 <<type [[Job.t]]>>=
 type t = {
@@ -838,6 +975,13 @@ let nrunning = ref 0
 \label{chap:main}
 
 
+%claude:
+OCaml's capability system requires declaring upfront what system
+resources each function needs. The [<caps>] type lists everything
+[[mk]] uses: forking and executing processes for recipes,
+accessing environment variables, reading [[mkfile]]s, and writing
+temporary files.
+
 <<type [[CLI.caps]]>>=
 (* Need:
  *  - fork/exec/wait: obviously as we run shell commands
@@ -871,6 +1015,16 @@ let _ =
 
 \section{[[main()]] skeleton}
 
+%claude:
+The [<main()>] function follows the standard pattern: parse command-line
+arguments, then call [<build_targets()>] with the [[mkfile]] path,
+any targets given on the command line, and any variable overrides
+(like [[CC=gcc]]).
+%claude:
+Note how non-flag arguments are split: if an argument contains
+an [[=]] sign, it is treated as a variable override; otherwise it is
+treated as a target name. This allows [[mk CC=gcc hello.o]]
+to both set a variable and specify a target.
 
 <<function [[CLI.main]]>>=
 let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
@@ -995,6 +1149,12 @@ vars_commandline: string Hashtbl_.set;
 @
 % so added above, but when parsing the file and call to Env.add_var
 % with same var it will be overriden!
+%claude:
+This mechanism gives command-line definitions higher priority than
+[[mkfile]] definitions: the variable is added to [<vars_commandline>],
+and any subsequent [<Env.add_var>] call from the [[mkfile]] silently
+ignores the redefinition. This is the standard [[mk]] behavior ---
+it lets you override variables without editing the [[mkfile]].
 
 %\section{[[mk ]] remaining arguments processing}
 %ocaml: section not needed anymore
@@ -1005,6 +1165,13 @@ vars_commandline: string Hashtbl_.set;
 
 
 \section{Building the target(s)}
+
+%claude:
+[<build_targets()>] orchestrates the entire pipeline: initialize the
+environment, parse the [[mkfile]], evaluate the AST to extract rules
+and expand variables, and then call [<build_target()>] for each
+target specified on the command line (or the first target found
+in the [[mkfile]] if none were specified).
 
 <<function [[CLI.build_targets]]>>=
 let build_targets (caps : <caps; .. >) (infile : Fpath.t) (targets : string list ref) (vars : (string*string) list) : unit =
@@ -1059,6 +1226,20 @@ val eval :
 
 
 % include has been expanded, vars too, only get simple/meta rules
+%claude:
+[<build_target()>] is the heart of the algorithm. It first builds
+the dependency graph for the given target, then enters a [[while]]
+loop that repeatedly calls [<work()>] to find outdated files and
+schedule recipes. The loop continues until the root node reaches
+the [<Made>] state.
+%claude:
+The subtlety is parallelism: [<work()>] may not always make progress
+because all processor slots are busy, so [<build_target()>] calls
+[<waitup()>] to block until a running job finishes, freeing a slot.
+The [[did]] flag distinguishes these two cases ---
+if [<work()>] made no progress and no jobs are running, something
+is wrong (though in practice this cannot happen in a well-formed DAG).
+
 <<function [[CLI.build_target]]>>=
 let build_target (caps : <caps; ..>) (env : Env.t) (rules : Rules.rules) (target : string) : unit =
    let root = Graph.build_graph target rules in
@@ -1143,11 +1324,23 @@ then failwith "nothing to mk";
 
 %toc: skeleton, lex, parse, eval next chapter
 % Lex & Yacc requirement, see also \book{generators}
+%claude:
+Parsing an [[mkfile]] uses the standard ocamllex/ocamlyacc toolchain:
+a lexer produces tokens and a grammar assembles them into the AST.
+This is a significant improvement over the C version, which uses a
+hand-written recursive-descent parser interleaved with evaluation ---
+here, parsing and evaluation are cleanly separated into distinct phases.
 
 \section{[[parse()]] skeleton}
 \label{sec:parse}
 
 % parse and evaluate
+%claude:
+The [<parse()>] function sets up the lexer state (current file and
+line number for error reporting) and calls the grammar entry point.
+It wraps the call with a handler that turns ocamlyacc's opaque
+[[Parse_error]] exception into a message with file and line information.
+
 <<function [[Parse.parse]]>>=
 let parse (chan : Chan.i) : Ast.instr list =
     Globals.line := 1;
@@ -1193,7 +1386,14 @@ let error s =
 
 \section{Lexer}
 
-
+%claude:
+The [[mk]] lexer is more complex than it might appear because the
+meaning of characters depends on context. The lexer uses an explicit
+{state machine} to handle this: in [[Start]] state, a colon introduces
+a rule; in [[AfterColon]] state, an equals sign is part of a prerequisite,
+not a definition; in [[InRecipe]] state, lines are consumed verbatim
+as shell commands; and in [[AfterEq]] state, we are reading the
+right-hand side of a variable definition.
 
 \subsection{Overview}
 
@@ -1326,6 +1526,19 @@ rule token = parse
 
 \subsection{Lexer state}
 
+%claude:
+The state machine is the key to understanding the lexer.
+In [[Start]] state, a colon triggers a transition to [[AfterColon]]
+(we are now reading a rule's prerequisites). A newline in
+[[AfterColon]] transitions to [[InRecipe]], where subsequent lines
+starting with whitespace are consumed as recipe text. An equals
+sign transitions to [[AfterEq]], where a second equals sign is
+treated as literal text rather than a definition operator.
+%claude:
+The [<lexfunc>] wrapper in [<parse()>] dispatches to either
+[<Lexer.token>] or [<Lexer.recipe>] depending on the current state,
+using completely different lexing rules for recipe lines.
+
 <<type [[Lexer.state]]>>=
 (* lexer state *)
 type state = 
@@ -1377,6 +1590,16 @@ val recipe: Lexing.lexbuf -> Parser.token
 
 \subsection{Comments and spaces}
 
+%claude:
+Unlike most programming languages where whitespace is ignored, in
+[[mk]] spaces and newlines carry syntactic meaning. Spaces separate
+words within a line, so the lexer must return them as tokens (not
+skip them). Newlines delimit instructions and trigger state transitions.
+%claude:
+An escaped newline ([[\\$\backslash$n]]) is treated as a space --- this is
+how you write long lines in an [[mkfile]] by continuing on the
+next line. The same escaping works inside comments.
+
 <<lexer regexp aliases>>=
 let space = [' ''\t']
 @
@@ -1401,6 +1624,13 @@ let space = [' ''\t']
 
 \subsection{Newlines}
 
+%claude:
+When a newline is seen in [[AfterColon]] state, the lexer switches
+to [[InRecipe]] --- the next lines (if they start with whitespace) are
+recipe lines. Otherwise, the newline resets the state to [[Start]].
+This is how [[mk]] determines the boundary between a rule header
+and its recipe without requiring any explicit delimiter.
+
 <<[[Lexer.token()]] space cases>>=
 (* in mk, newline has a meaning *)
 | '\n' { incr Globals.line;
@@ -1416,6 +1646,18 @@ let space = [' ''\t']
 
 
 \subsection{Symbols}
+
+%claude:
+The colon is the most important symbol: it separates targets from
+prerequisites in a rule. When the lexer sees it, it switches to
+[[AfterColon]] state so that a subsequent [[=]] is treated as
+literal text (since prerequisites can contain [[=]] signs) rather
+than as a variable definition.
+%claude:
+The equals sign handling is subtle: the first [[=]] in [[Start]] state
+marks a variable definition and switches to [[AfterEq]]; any subsequent
+[[=]] in that state is returned as plain text. This prevents
+[[FOO=a=b]] from being parsed as two definitions.
 
 <<[[Lexer.token()]] symbol cases>>=
 | ':' { state_ := AfterColon; TColon (loc()) }
@@ -1474,6 +1716,12 @@ let ident = letter (letter | number)*
 
 % if filenane have space, because space is used as separator, need
 % escape mechanism or quoting mechanism
+%claude:
+Since spaces are word separators in [[mk]], filenames or values containing
+spaces must be quoted. Like the Plan~9 shell [[rc]], [[mk]] uses single
+quotes only --- there are no double quotes. A literal single quote is
+written as two consecutive single quotes ([['']]). This is simpler
+than the shell quoting rules in Bourne-style shells.
 
 <<[[Lexer.token()]] quoted string cases>>=
 | "'" { TQuoted (quote lexbuf) }
@@ -1502,6 +1750,16 @@ and quote = parse
 @
 
 \subsection{Recipe}
+
+%claude:
+Recipe lexing uses completely different rules from normal token lexing.
+A line starting with whitespace (space or tab) is part of the recipe;
+a line starting with a non-whitespace character signals the end of the
+recipe and triggers a transition back to [[Start]] state.
+The recipe text is returned as-is, stripped of its leading whitespace,
+ready to be fed to the shell. Comments in recipes (lines starting with
+[[\#]]) are also consumed but passed through, since they might be
+meaningful to the shell.
 
 <<rule [[Lexer.recipe]]>>=
 and recipe = parse
@@ -1634,6 +1892,18 @@ program: instrs EOF { $1 }
 
 \subsection{Instructions (definitions, includes, and rules)}
 
+%claude:
+The grammar for instructions is straightforward: each [[instr]] starts
+with a distinctive token that determines its kind.
+An include starts with [[<]], a definition has the form [[word = words]],
+and a rule has the form [[words : words recipe]].
+The grammar is unambiguous because these leading tokens are all different.
+%claude:
+Note that the rule production relies on the lexer state machine:
+after the colon, the lexer switches to [[AfterColon]] and then
+[[InRecipe]], so the grammar naturally sees recipe tokens after
+the prerequisites.
+
 <<rule [[Parser.instrs]]>>=
 instrs: 
  | instr instrs  { $1 @ $2 }
@@ -1711,6 +1981,14 @@ words_:
 
 \subsection{Word elements}
 
+%claude:
+A word is built by concatenating adjacent [[word_elem]]s without any
+separator. This is how [[mk]] handles expressions like [[\$\{CC\}flags]]
+or [[\%.o]] --- each piece becomes a separate element in the list,
+and they will be joined after variable expansion. The [<String>],
+[<Percent>], and [<Var>] constructors here correspond directly to
+the [<Ast.word_element>] type defined in the data structures chapter.
+
 <<word rules>>=
 /*(*less: normalize to concatenate possible TOther "xxx"::TOther "=" ? *)*/
 word:
@@ -1738,9 +2016,22 @@ word_elem:
 % not really an interpreter, so "evaluating" a big exaggerated;
 % just vars and include basically (and backquote extension in section X,
 % which is why need complex caps)
+%claude:
+Evaluation is the second stage of the pipeline: it walks the AST
+and processes variable definitions (storing values in the environment),
+include directives (recursively parsing and evaluating included files),
+and rules (classifying them as simple or meta and adding them to the
+appropriate collection). By the end, all variables are resolved and
+all rules from all included files are gathered together.
 
 \section{[[eval()]] skeleton}
 
+%claude:
+The [<eval()>] function returns both the extracted rules and the final
+environment. It uses two mutable collections internally: a hash table
+for simple rules and a list for meta rules, which are returned as a
+[<Rules.rules>] record. The [[instrs]] inner function is recursive
+because include processing triggers further parsing and evaluation.
 
 <<function [[Eval.eval]]>>=
 let eval (caps : < Cap.fork; Cap.exec; Cap.open_in; .. >) env targets_ref (xs : Ast.instr list) : Rules.rules * Env.t =
@@ -1776,6 +2067,15 @@ let warning (loc : Ast.loc) (s : string) : unit =
 
 \section{Evaluating definitions}
 
+%claude:
+Evaluating a definition like [[CC=gcc]] expands the right-hand side
+(which may itself contain variable references) and stores the result
+in the environment.
+The [[vars_we_set]] hash table tracks which variables were defined
+in the [[mkfile]] (as opposed to inherited from the shell environment),
+which is used later for strict mode checks and for deciding which
+variables to export to recipe subprocesses.
+
 <<[[Eval.eval()]] match instruction kind cases>>=
 | A.Definition (s, ws) ->
   let xs = 
@@ -1807,6 +2107,15 @@ vars_we_set: string Hashtbl_.set;
 
 \section{Evaluating includes}
 
+%claude:
+Include directives cause recursive parsing and evaluation: the included
+file is parsed into a fresh AST, then [[instrs]] is called recursively
+on it. This is why [<eval()>] needs the [[Cap.open_in]] capability.
+%claude:
+Missing include files produce a warning rather than an error --- this
+is deliberate, because [[mkfile]]s often include dependency files
+(like [[.depend]]) that may not exist yet on a fresh checkout.
+
 <<[[Eval.eval()]] match instruction kind cases>>=
 | A.Include ws ->
     let res = eval_words caps loc env ws in
@@ -1831,6 +2140,19 @@ vars_we_set: string Hashtbl_.set;
 % alt: failwith
 
 \section{Evaluating rules}
+
+%claude:
+Rule evaluation expands variable references in targets and prerequisites,
+then classifies the rule based on whether it contains [[\%]] patterns.
+The four cases correspond to all combinations:
+both sides concrete (simple rule), both sides with patterns (meta rule),
+only targets with patterns (also a meta rule --- e.g., [[\%.o: \$HFILES]]),
+and only prerequisites with patterns (an error --- you cannot have
+a concrete target matched by a pattern prerequisite).
+%claude:
+For simple rules, the first rule encountered also sets the default
+target (stored in [[targets_ref]]). This is why running [[mk]]
+without arguments builds the first target in the [[mkfile]].
 
 <<[[Eval.eval()]] match instruction kind cases>>=
 | A.Rule r -> 
@@ -1908,6 +2230,14 @@ then targets_ref := targets;
         
 \section{Evaluating words}
 
+%claude:
+[<eval_words()>] evaluates each word independently and then classifies
+the result: if any word contains a [[\%]], the entire list is treated
+as patterns (for a meta rule); otherwise, all words are concatenated
+into plain strings (for a simple rule or a definition).
+This is an important design choice --- a single [[\%]] anywhere in a
+rule's targets or prerequisites makes the whole rule a meta rule.
+
 <<function [[Eval.eval_words]]>>=
 let eval_words (caps :  < Cap.fork; Cap.exec; .. >) (loc : Ast.loc) (env : Env.t) (words : Ast.words) :
          (string list, Percent.pattern list) Either.t =
@@ -1939,6 +2269,21 @@ let contain_percent xs =
   )
 in
 @
+
+%claude:
+[<eval_word()>] is the most complex evaluation function because
+a single word can expand into multiple strings when it contains a
+list-valued variable. For example, if [[\$OFILES]] is [[a.o b.o c.o]],
+then the word [[\$OFILES]] expands to three strings.
+However, when the variable is part of a concatenation (like
+[[dir/\$OFILES]]), each element is prefixed, producing
+[[dir/a.o dir/b.o dir/c.o]].
+%claude:
+The function uses an accumulator of [<Percent.pattern_elem>] to
+build up the result character by character. When a scalar variable
+is encountered, its value is simply added to the accumulator. When
+a list variable appears, the accumulator so far becomes a prefix
+that is distributed across all elements of the list.
 
 <<function [[Eval.eval_word]]>>=
 (* A word can become multiple strings!
@@ -2027,6 +2372,12 @@ let rec eval_word (caps: < Cap.fork; Cap.exec; .. >) (loc: Ast.loc) (env : Env.t
 
 %trans:
 %toc:
+%claude:
+With the rules extracted and variables expanded, [[mk]] can now build
+the graph of dependencies for a specific target. The process starts
+from the target, finds which rules apply to it, creates nodes for
+each prerequisite, and recurses. The result is a DAG rooted at the
+target node, ready for the outdated-file analysis.
 
 <<function [[Graph.build_graph]]>>=
 let build_graph target rules =
@@ -2037,6 +2388,14 @@ let build_graph target rules =
 @
 
 \section{[[apply_rules()]] skeleton}
+
+%claude:
+[<apply_rules()>] is recursive: for each target, it looks for matching
+simple rules and meta rules, creates arcs to prerequisite nodes, and
+recurses on those prerequisites. The first check --- whether the node
+already exists in [<hnodes>] --- is what makes this a DAG construction
+rather than a tree: shared dependencies are represented by a single
+node with multiple arcs pointing to it.
 
 <<function [[Graph.apply_rules]]>>=
 (* todo: infinite rule detection *)
@@ -2071,6 +2430,17 @@ let rec apply_rules target rules =
 
 \section{Finding the simple rule(s) for a target}
 \label{sec:finding-simple-rules}
+
+%claude:
+Simple rule matching is a straightforward hash table lookup by target
+name. A target can have multiple matching simple rules (e.g., one
+providing a recipe and another adding extra prerequisites), which is
+why [<Hashtbl.find_all>] is used. For each rule, the function creates
+arcs to all prerequisite nodes and recurses.
+%claude:
+A rule with no prerequisites and no recipe is silently skipped ---
+this handles the case of dependency generators like [[ocamldep]]
+that sometimes produce empty entries.
 
 <<[[Graph.apply_rules()]] look for simple matching rules and update [[arcs]]>>=
 let rs = Hashtbl.find_all rules.R.simples target in
@@ -2118,6 +2488,15 @@ all_prereqs: string list;
 
 \section{Finding matching metarules}
 
+%claude:
+Meta rule matching is more involved: each meta rule's target patterns
+are tried against the current target name using [<Percent.match_>].
+If a pattern matches, it yields a {stem} --- the substring matched by
+[[\%]]. This stem is then substituted into the prerequisite patterns
+via [<Percent.subst>] to produce concrete prerequisite filenames.
+For example, with the rule [[\%.o: \%.c]] and the target [[hello.o]],
+the stem is [[hello]], producing the prerequisite [[hello.c]].
+
 <<[[Graph.apply_rules()]] look for meta matching rules and update [[arcs]]>>=
 let rs = rules.R.metas in
 rs |> List.iter (fun r ->
@@ -2158,6 +2537,15 @@ let rule_exec_meta (r: Percent.pattern Rules.rule) (stem : string) : Rules.rule_
 % step this time!
 
 \subsection{Matching a pattern: [[Percent.match_()]]}
+
+%claude:
+Pattern matching works by consuming the target string from left to right.
+Literal fragments ([<PStr>]) must match exactly at the current position.
+When [<PPercent>] is reached, the algorithm computes how much of the
+remaining string is not accounted for by the literal suffix after
+the percent, and that remainder is the stem.
+The stem must be non-empty --- a percent pattern must match at least
+one character.
 
 <<signature [[Percent.match_]]>>=
 (* return the possible stem *)
@@ -2237,6 +2625,12 @@ let subst (P pat) stem =
 
 \section{Checking the graph and the rules}
 \label{sec:check-graph}
+
+%claude:
+After the graph is built, three checks are performed: cycle detection,
+vacuous node detection, and ambiguous rule detection. The order matters ---
+vacuous checks must run before ambiguity checks because vacuous detection
+may remove arcs, which affects the ambiguity analysis.
 
 <<[[Graph.build_graph()]] checks on the graph [[root]]>>=
 check_cycle root;
@@ -2454,10 +2848,30 @@ let rec vacuous node =
 
 % outdated mean either inexistent target or time older than
 % its recently updated dependencies (e.g., .o vs .c)
+%claude:
+With the dependency graph built, [[mk]] must now determine which files
+need rebuilding. A file is {outdated} if it either does not exist or
+is older than one of its prerequisites. The algorithm performs a
+depth-first traversal of the graph, processing leaves (source files)
+first and working its way back up to the root (the final target).
 
 \section{Exploring the graph: [[work()]]}
 
 % main -> build_target -> <> -> outofdate; dorecipe
+%claude:
+[<work()>] traverses the graph depth-first. For each node, it first
+recurses into all prerequisites. Then it checks two flags:
+[[ready]] (whether all prerequisites have reached the [<Made>] state)
+and [[out_of_date]] (whether any prerequisite is newer than the current
+node). If all prerequisites are ready and the node is outdated,
+[<dorecipe()>] is called to schedule the recipe.
+%claude:
+The [<BeingMade>] check at the top prevents redundant work: if a
+recipe is already running for this node (scheduled in a previous
+iteration of the [<build_target()>] loop), we skip it and let the
+caller know that we are not [[ready]] yet, which will cause
+[<build_target()>] to call [<waitup()>] instead.
+
 <<function [[Outofdate.work]]>>=
 (* alt: we could return a job list, which would be cleaner, but it is
  * more efficient to run a job as soon as we find an opportunity.
@@ -2547,6 +2961,15 @@ let outofdate node arc =
 %alt: enqueuing recipes? or jobs?
 
 % main -> build_target -> work -> <> ->
+%claude:
+[<dorecipe()>] creates a job from the node's {master arc} --- the first
+arc with a recipe. It collects all target nodes (because a rule can
+have multiple targets) and sets their state to [<BeingMade>]. It also
+gathers all prerequisites in their original [[mkfile]] order, which is
+important because some tools (like the OCaml linker) are sensitive to
+argument ordering. The resulting [<Job.t>] is then handed to
+[<Scheduler.run>].
+
 <<function [[Outofdate.dorecipe]]>>=
 let dorecipe (caps : < Cap.fork; Cap.exec; .. >) env node (did : bool ref) : unit =
   if not (node.G.arcs |> List.exists (fun arc -> R.has_recipe arc.G.rule))
@@ -2637,6 +3060,16 @@ let opt0 opttime =
 \section{Enqueuing jobs: [[run()]]}
 
 % ... -> dorecipe -> <> -> sched
+%claude:
+[<run()>] adds a job to the queue and, if there is a free processor
+slot, immediately calls [<sched()>] to start executing it. The
+[[NPROC]] environment variable controls parallelism (defaulting to~2).
+%claude:
+Crucially, [<run()>] returns immediately after forking the child
+process --- it does not wait for the recipe to finish. This allows
+[<work()>] to continue traversing the graph and find more independent
+jobs to run in parallel.
+
 <<function [[Scheduler.run]]>>=
 let run (caps : < Shell.caps; .. >) (job : Job.t) : unit =
   Queue.add job jobs;
@@ -2660,6 +3093,19 @@ let nproclimit (caps: < Cap.env; ..>) =
 \section{[[sched()]] skeleton}
 
 % ... -> run | ??? -> <> -> ???
+%claude:
+[<sched()>] takes a job from the queue, sets up the special [[mk]]
+variables ([[\$target]], [[\$prereq]], [[\$stem]]) in the environment,
+prints the recipe (with variables expanded for readability), and
+then calls [<exec_recipe()>] to fork a child process that runs the
+recipe in a shell.
+%claude:
+The [[-e]] flag passed to the shell is critical: it enables the
+shell's ``exit on error'' mode, so that any failing command in the
+recipe immediately aborts the entire recipe. Without it, a failing
+intermediate command would be silently ignored and the recipe would
+appear to succeed.
+
 <<function [[Scheduler.sched]]>>=
 let sched (caps : < Shell.caps; .. >) () =
   try 
@@ -2754,6 +3200,15 @@ let shprint env s =
 
 \section{Executing Jobs: [[exec_recipe()]]}
 
+%claude:
+Recipe execution uses a classic Unix double-fork pattern. The first
+[<fork()>] creates a child process (whose PID is returned to the
+scheduler for [<waitpid()>]). That child creates a pipe, then forks
+again: one grandchild runs the shell with its stdin connected to
+the pipe, while the other grandchild writes the recipe text into
+the pipe. This way, the recipe is fed to the shell via its standard
+input, just as if you had typed the commands interactively.
+
 <<type [[Shell.caps]]>>=
 (* Need:
  *  - exec/fork/wait: obviously as we run a shell
@@ -2826,6 +3281,18 @@ let feed_shell_input (inputs : string list) (pipe_write : Unix.file_descr) : uni
 \label{sec:waiting-processes}
 
 % main -> build_target -> work(); <> -> ???
+%claude:
+[<waitup()>] calls [<Unix.wait>] to block until any child process
+finishes, then looks up the corresponding job in the [[running]]
+hash table. On success (exit code~0), it calls [<Graph.update>]
+on all target nodes to refresh their timestamps and mark them
+[<Made>]. It then tries to schedule another job if one is queued
+and a processor slot is free.
+%claude:
+On failure, [<waitup()>] raises an exception that propagates back
+to [<main()>], which waits for all remaining children before exiting
+--- this prevents leaving half-built object files on disk.
+
 <<function [[Scheduler.waitup]]>>=
 (* can call sched () hence the need for Shell.caps, not just Cap.wait *)
 let waitup (caps : < Shell.caps; Cap.open_out; .. >) () =
@@ -2933,7 +3400,13 @@ then failwith (spf "recipe did not update %s, time =%s" node.name
 %trans: %toc:
 % get env and use vars from enclosing env, and will prepare
 % new env for child shell process executing recipe
-
+%claude:
+[[mk]] interacts with the Unix environment in two directions:
+at startup, it reads shell environment variables (like [[PATH]])
+into its own [<Env.t>]; when executing recipes, it exports its
+variables back into the environment of the child shell process.
+The [<Shellenv.t>] type represents this environment as a list
+of name-value pairs.
 
 %\section{[[Shellenv]] and [[shellenv]]}
 %\label{sec:shellenv}
@@ -2946,6 +3419,14 @@ type t = (string * string list) list
 \section{Initializing the shell environment: [[initenv()]]}
 
 % main -> build_targets -> <>
+%claude:
+[<initenv()>] reads all current environment variables and populates
+the [<Env.t>] hash table. It filters out internal [[mk]] variables
+like [[\$stem]] that might leak from a parent [[mk]] process during
+recursive builds. It also constructs the [[MKFLAGS]] variable from
+the command-line arguments, so that recursive [[mk]] invocations
+inherit the same flags.
+
 <<signature [[Env.initenv]]>>=
 (* Will read the OS environment variables (e.g., PATH, HOME, objtype).
  * Need also Cap.argv to set MKFLAGS
@@ -3014,6 +3495,16 @@ let read_environment (caps : < Cap.env; ..>) =
 \section{Choice of shell and [[MKSHELL]]}
 %alt: move in core DS?
 
+%claude:
+[[mk]] supports multiple shells via the [<Shell.t>] type, which
+abstracts the shell's path, name, default flags, and environment
+word separator. The default is [[/bin/sh]], but you can set the
+[[MKSHELL]] environment variable to use [[rc]] (the Plan~9 shell)
+or another shell. The [[iws]] field (``inter-word separator'')
+controls how list-valued variables are joined when exported to
+the shell's environment: [[sh]] uses spaces, while [[rc]] uses
+[[\\001]] (the ASCII SOH character).
+
 <<type [[Shell.t]]>>=
 type t = { 
   path: Fpath.t;
@@ -3075,6 +3566,21 @@ let shell_from_env_opt (caps : < Cap.env; .. >) : t option =
 % finally
 
 % ??? -> sched -> exec_recipe -> <>
+%claude:
+[<exec_shell()>] is the final step: it calls [<execve()>] to replace
+the current process with the shell. The environment is constructed
+by joining list-valued variables with the shell's [[iws]] separator
+and filtering out empty variables (which confuse some programs like
+the OCaml compiler). The shell receives [[-e]] from the caller plus
+its own default flags (e.g., [[-I]] for [[rc]] to suppress the
+interactive prompt).
+%claude:
+A subtle bug trap: the first element of the [[argv]] array passed to
+[<execve>] must be the shell's name (not the first flag), because
+Unix convention is that [[argv[0]]] is the program name and the
+shell skips it. If you accidentally pass [[-e]] as [[argv[0]]], the
+shell ignores it and recipes silently continue after errors.
+
 <<function [[Shell.exec_shell]]>>=
 let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
   let shell = shell_from_env_opt caps ||| sh in
@@ -3128,6 +3634,11 @@ let exec_shell (caps : < Cap.exec; Cap.env; ..>) shellenv flags extra_params =
 % for debugging developer of mk itself (e.g., internal dumpers)
 
 % seen file/line fields in Rule, so can report error accurately.
+%claude:
+When a build fails or produces unexpected results, [[mk]] provides
+several debugging modes. These range from simple verbose logging
+to explain mode (which shows exactly why a file is considered outdated)
+and dry mode (which shows what recipes would run without executing them).
 
 %\section{Printing jobs: [[shprint()]]}
 %\subsection{Expanding and printing variables}
@@ -3165,6 +3676,12 @@ Logs.info (fun m -> m "ran from %s" (Sys.getcwd ()));
 
 \section{Explain mode: [[mk -e]]}
 
+%claude:
+Explain mode ([[mk -e]]) shows the timestamp comparisons that drive
+rebuilding decisions. For each outdated prerequisite, it prints the
+target and prerequisite names alongside their timestamps, making it
+easy to see which file change triggered a rebuild.
+
 <<constant [[Flags.explain_mode]]>>=
 let explain_mode = ref false
 @
@@ -3185,6 +3702,14 @@ then Logs.info (fun m -> m "%s(%.1f) < %s(%.1f)"
 @
 
 \section{Dry mode: [[mk -n]]}
+
+%claude:
+Dry mode ([[mk -n]]) prints the recipes that would be executed without
+actually running them. It achieves this by skipping [<exec_recipe()>]
+and instead faking node completion --- setting each target's timestamp
+to the current time and marking it [<Made>]. This way, the traversal
+algorithm proceeds as if the recipe had run, allowing [[mk]] to show
+the complete sequence of recipes that a real build would execute.
 
 <<constant [[Flags.dry_mode]]>>=
 let dry_mode = ref false
@@ -3214,6 +3739,14 @@ then job.J.target_nodes |> List.iter (fun node ->
 \section{Strict mode}
 
 %new: not in original mk
+%claude:
+Strict mode is an [[omk]]-specific extension not present in the original
+[[mk]]. It forbids variable redefinition within the [[mkfile]], catching
+a common source of bugs where a variable is accidentally set twice.
+However, it still allows overriding environment variables (otherwise
+recursive [[mk]] invocations would break) --- it only flags variables
+that were explicitly set in the [[mkfile]] itself.
+
 <<constant [[Flags.strict_mode]]>>=
 let strict_mode = ref false
 @
@@ -3262,10 +3795,22 @@ end;
 
 %\section{Regular-expression rules: [[:R:]]}
 %\label{sec:regexp}
+%claude:
+This chapter presents features that were omitted from earlier chapters
+to keep the main exposition simple. These are genuine [[mk]] features
+--- backquote expansion, dynamic includes, substitution variables, and
+rule attributes --- that interact with the pipeline at various stages.
 
 \section{Shell-command expansion: [[`]]{\em cmd}[[`]]}
 \label{sec:backquotes}
 %TODO: copy titles from Make.nw
+
+%claude:
+Backquotes allow embedding shell command output directly in an
+[[mkfile]]. For example, [[OFILES=`{ls *.o}]] sets [[OFILES]] to
+the list of [[.o]] files in the directory. Both the traditional
+backtick syntax ([[\`...\`]]) and the [[rc]]-style [[`\{...\}]]
+syntax are supported.
 
 \subsection{Parsing backquotes}
 
@@ -3338,6 +3883,14 @@ and backquote2 = parse
 
 \subsection{Executing backquotes}
 
+%claude:
+Backquote execution happens during variable evaluation: the command
+is run in a shell subprocess, its output is captured, and the result
+is split on whitespace to produce a list of strings. This means
+backquotes are expanded at evaluation time, not at recipe execution
+time --- an important distinction, as backquote results can influence
+which rules and targets are used.
+
 <<[[Eval.eval_word()]] match [[x]] other cases>>=
 | A.Backquoted cmd -> 
   let shellenv = Env.shellenv_of_env env in
@@ -3409,6 +3962,16 @@ let exec_backquote (caps : < caps; ..>) (shellenv : Shellenv.t) (input : string)
 
 % compensate for lack of ifdef of GNU make?
 % ifdef are kinda useful, see Makefiles of Goken9cc
+%claude:
+The [[<|]] directive runs a program and includes its output as if it
+were an [[mkfile]]. This is a powerful alternative to GNU Make's
+[[ifdef]]: instead of conditional compilation directives, you write
+a program that generates the appropriate rules based on the current
+system configuration.
+%claude:
+Internally, this works like a combination of backquotes and includes:
+the program's output is captured to a temporary file, then parsed
+and evaluated as additional [[mkfile]] instructions.
 
 <<[[Ast.instr_kind]] cases>>=
 (* the words can contain variables, ex: <|rc ../foo.rc $CONF 
@@ -3495,7 +4058,22 @@ let exec_pipecmd (caps: < caps; .. >) (shellenv : Shellenv.t) (input : string) :
 \section{Substitution variables: [[${]]{\em name}[[:]]{\em pattern}[[=]]{\em subst}[[}]]}
 \label{sec:subst-var}
 
+%claude:
+Substitution variables provide inline pattern replacement:
+[[\$\{OFILES:\%.o=\%.c\}]] replaces the [[.o]] suffix with [[.c]]
+in every element of [[OFILES]]. This is essential for deriving
+source file lists from object file lists (or vice versa) without
+defining a separate variable.
+
 \subsection{Parsing substitutions}
+
+%claude:
+Parsing substitution variables requires a fifth lexer state,
+[[InBrace]], to handle the [[=]] sign inside [[\$\{...\}]] correctly.
+Without this state, the [[=]] would be interpreted as a variable
+definition operator rather than as part of the substitution syntax.
+A single saved-state variable suffices because [[mk]] does not allow
+nested substitutions.
 
 <<[[Ast.var]] cases>>=
  (* ${name:a%b=c%d} *)
@@ -3594,6 +4172,13 @@ let match_and_subst pat sub str =
 \section{Rule attributes}
 \label{sec:rule-attributes-advanced}
 
+%claude:
+Rule attributes modify how a rule behaves. They are specified between
+a second pair of colons in the rule header, as in [[target:QV:prereqs]].
+Each letter activates a different feature: [[V]] for virtual targets,
+[[D]] for deleting targets on error, [[Q]] for quiet recipe output,
+and [[I]] for interactive recipes that need stdin.
+
 \subsection{Parsing and propagating rule attributes}
 <<rule [[Parser.instr]] other cases>>=
 | words TColon TOther TColon words_opt TNewline recipe 
@@ -3662,6 +4247,13 @@ attrs2: Ast.rule_attribute Set_.t;
 \subsection{Virtual target: [[:V:]]}
 \label{sec:virtual}
 
+%claude:
+A {virtual target} is one that does not correspond to a file on disk.
+The classic example is [[clean:V:]] --- there is no file called
+``clean'', but you want [[mk clean]] to run the cleanup recipe.
+Without the [[V]] attribute, [[mk]] would check for a file named
+[[clean]] and skip the recipe if such a file happened to exist.
+
 
 <<[[Ast.rule_attribute]] cases>>=
 | Virtual
@@ -3687,6 +4279,13 @@ then G.update node
 
 
 \subsection{Deleting a target when the recipe returns an error: [[:D:]]}
+
+%claude:
+The [[D]] attribute ensures that if a recipe fails, its target files
+are deleted. This prevents a partially-written output file from being
+mistaken for a valid result on the next build --- without [[D]], the
+corrupted file's timestamp might satisfy [[mk]] and the error would
+go unnoticed.
 
 <<[[Ast.rule_attribute]] cases>>=
 | Delete
@@ -3728,6 +4327,14 @@ if not (Set.mem Ast.Quiet rule.R.attrs2)
 %\label{sec:custom-comparison}
 
 \subsection{Interactive recipe: [[:I:]]}
+
+%claude:
+The [[I]] attribute is an [[omk]]-specific extension. Normally,
+recipes are fed to the shell via a pipe on stdin, which means
+programs launched by the recipe cannot read from stdin themselves.
+With [[:I:]], the recipe is written to a temporary file and the
+shell is invoked with that file as an argument, leaving stdin
+free for interactive programs.
 
 <<[[Ast.rule_attribute]] cases>>=
 | Interactive (* pad: I added this one *)
@@ -3809,6 +4416,23 @@ end
 %******************************************************************************
 \label{chap:conclusion}
 
+%claude:
+You now know how [[mk]] works, from parsing an [[mkfile]] through
+building a dependency graph to scheduling parallel jobs.
+The pipeline --- parse, evaluate, build graph, find outdated files,
+schedule recipes --- is a clean decomposition where each stage
+produces well-defined data structures consumed by the next.
+%claude:
+The OCaml implementation brings several advantages over the original
+C version: the separation of parsing and evaluation makes the code
+easier to understand; algebraic types make the different stages
+(parsed words vs.\ evaluated patterns vs.\ concrete strings) explicit
+in the type system; and the capability system documents exactly what
+system resources each function needs.
+%claude:
+For the original C implementation of [[mk]], see \book{Make} which
+covers the same program with the same chapter structure.
+For the shell that [[mk]] invokes to execute recipes, see \book{Shell}.
 
 %******************************************************************************
 \appendix

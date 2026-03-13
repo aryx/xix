@@ -3072,6 +3072,12 @@ improvements over the Bourne shell.
 
 \section{Overview}
 
+%toc:
+%claude:
+I merged bytecode generation and interpretation in one chapter
+because it helps to see the bytecodes generated from a given AST node
+together with the functions that interpret those bytecodes.
+
 %\subsection{[[emitxxx()]]}
 \subsection{[[compile()]]}
 
@@ -3276,6 +3282,24 @@ the command name ends up first.
 
 % need Mark so know when finish args
 
+%claude:
+For example, [[echo hello world]] produces the following
+AST and opcodes:
+\begin{verbatim}
+  AST:                          codevec:
+
+  Simple                        Mark
+   ("echo",                     Word "world"
+    ["hello"; "world"])          Word "hello"
+                                Word "echo"
+                                Simple
+\end{verbatim}
+%ocaml:
+The OCaml AST is simpler than the C version: no intermediate
+[[ARGLIST]] tree---just a constructor with a flat argument list.
+The reverse-order emission comes from [[xwords]] calling
+[[List.rev]] before iterating.
+
 <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
 | A.Word (s, _quoted) ->
     emit (O.F O.Word);
@@ -3351,6 +3375,14 @@ and the command arguments each need their own scope.
 % how can have enclosing argv_stack we need to save?
 
 \subsection{[[O.Simple()]]}
+
+%claude:
+[<O.Simple>] is the central bytecode: it takes the word list
+accumulated by [<O.Mark>] and [<O.Word>], and executes it as a command.
+It checks the first word ([[argv0]]) against three cases in order:
+builtins (like [[cd]], [[exit]], [[.]]), then user-defined functions
+(TODO in this version), and finally external programs via
+[<forkexec>].
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (args) *)
@@ -3609,6 +3641,18 @@ let s_of_unix_error err _s1 _s2 =
 
 % in bash $$?
 
+%claude:
+The exit status of the last command is stored in the
+[[\$status]] variable as a string (not an integer like in
+the Bourne shell). An empty string or [["0"]] means success;
+anything else means failure.
+%
+For pipelines like [[ls | wc]], [[rc]] combines the statuses
+into [["0|0"]]. [<truestatus>] considers a status ``true''
+if it contains only [[0]] and [[|]]---meaning every stage
+succeeded. This preserves per-stage failure information,
+unlike [[bash]] where [[\$?]] only reports the last command.
+
 <<signature [[Status.setstatus]]>>=
 val setstatus : string -> unit
 @
@@ -3720,6 +3764,14 @@ let waitfor (caps : < Cap.wait; .. >) (pid : int) : waitfor_result =
 
 \subsection{[[$path]] management}
 \label{sec:path-management}
+
+%claude:
+When executing an external command, [[rc]] must find it on
+the filesystem. If the command name contains a slash
+([[/bin/ls]], [[./myprog]], [[../tool]]) or starts with [[#]]
+(a \plan device path), it is used as-is.
+Otherwise, [[rc]] searches each directory in [[\$path]]
+until it finds an executable with that name.
 
 <<signature [[PATH.find_in_path]]>>=
 val find_dir_with_cmd_in_PATH :
@@ -3873,6 +3925,13 @@ let int_at_address t pc =
 
 \subsection{String matching}
 
+%claude:
+The \verb+~+ operator needs two [<O.Mark>] bytecodes because
+both the subject and the patterns can be multi-word
+(after variable expansion). The first Mark/words group collects
+the patterns, the second Mark/word collects the subject.
+[<O.Match>] pops both, concatenates the subject words into
+a single string, and tests each pattern with [<Pattern.match_str>].
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Match (w, ws) ->
@@ -3961,6 +4020,15 @@ standard file descriptor to redirect: 1 for stdout (with [[>]]),
 \swdefs{O.Popredir}
 
 \subsection{[[O.Write()]]}
+
+%claude:
+[<O.Write>] pops the filename from [[argv]], opens the file
+for writing (creating it if necessary), then pushes a
+redirection record pairing the opened file descriptor with
+the target (stdout by default). The actual [[dup2()]] call
+happens later, in [<doredir>], when the child process is about
+to [[exec]]. [<O.Popredir>] later closes the opened file
+descriptor to prevent leaks in the parent.
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* (file)[fd] *)
@@ -4476,6 +4544,21 @@ let split_when_case cmds =
 
 \subsection{Function definitions ([[fn <foo> { ... }]])}
 
+%claude:
+When defining a function with \verb+fn foo {body}+,
+the compiler emits the function name, then [<O.Fn>],
+a forward-jump placeholder (to skip over the body during
+normal execution), the body bytecodes, [[Unlocal]]
+(to remove the local [[\$*]] binding), and [[Return]].
+%
+At runtime, [<O.Fn>] stores the current code vector and
+the body's start address in a separate [[fns]] hashtable.
+%ocaml:
+Unlike the C version which stores functions in the same
+[[Var]] structure as variables (using [[fn]] and [[pc]] fields),
+the OCaml version uses a separate [<Runtime.fns>] hashtable,
+cleanly separating the two namespaces.
+
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Fn (w, cmds) ->
     emit (O.F O.Mark);
@@ -4595,6 +4678,14 @@ let rec split_at_non_assign = function
 
 \subsection{Variable uses ([[$<x>]])} %$
 
+%claude:
+[<O.Dollar>] handles variable expansion at runtime.
+It pops the variable name from [[argv]], looks it up
+in the variable table, and prepends the variable's value
+(a word list) to the current [[argv]].
+If the variable name is a number (e.g., [[\$1]], [[\$2]]),
+it indexes into [[\$*]] instead of looking up a named variable.
+
 <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
 | A.Dollar w ->
     emit (O.F O.Mark);
@@ -4647,6 +4738,21 @@ let vlook_varname_or_index varname =
 
 %\subsection{Interpolation}
 
+%ocaml: Shell.nw Opcode Generation topics NOT needed in OCaml version:
+% - Code union (code.i / code.f / code.s): OCaml uses an algebraic type O.t (I int | F operation | S string)
+% - codebuf global + emitf/emiti/emits: OCaml keeps codebuf local to compile() with emit/set closures
+% - codecopy/codefree reference counting: GC handles code vector lifetime
+% - ARGLIST tree traversal in outcode(): OCaml AST uses flat lists, no ARGLIST nodes
+% - simplemung/epimung tree surgery for redirections: OCaml parser handles this via fold_left
+% - async (&) compilation: not yet implemented in OCaml version
+% - while compilation: not yet implemented in OCaml version
+% - for compilation: not yet implemented in OCaml version
+% - Xcount/Xsub subscripting: not yet implemented in OCaml version
+% - Xconc/Xcat concatenation: not yet implemented in OCaml version
+% - Xbackq command output substitution: not yet implemented in OCaml version
+% - deglob() in Xdol: OCaml version does not use glob markers in strings
+% - Xrdcmds/Xrdfn environment I/O: Plan 9 /env/ filesystem not applicable on Unix
+% - exitnext fork optimization: not yet implemented in OCaml version
 
 %******************************************************************************
 \chapter{Builtins}
@@ -4716,6 +4822,13 @@ let dispatch (caps : < Cap.chdir; Cap.exit; Cap.open_in; ..>) s =
 
 \section{[[cd]]}
 
+%claude:
+[[cd]] with no argument changes to [[\$home]].
+With one argument, it attempts to change to that directory.
+The status is optimistically set to ``can't cd'' before
+trying, and reset to empty on success---a pattern that
+avoids a separate error flag.
+
 <<[[Builtin.dispatch()]] match [[s]] cases>>=
 | "cd" -> 
     let t = R.cur () in
@@ -4762,6 +4875,17 @@ let dochdir (caps : < Cap.chdir; .. >) s =
 \section{[[exit]]}
 
 \section{[['.']]}
+
+%claude:
+The [[.]] (dot) builtin sources a script: it reads and
+executes commands from a file in the current shell process
+(without forking). This is how [[rc]] loads initialization
+files like [[rcmain]] and the user's profile.
+%
+It creates a new thread whose [[lexbuf]] reads from
+the sourced file, pushes [[\$0]] and [[\$*]] as local
+variables, then enters the REPL loop to evaluate
+the file's commands.
 
 <<[[Builtin.dispatch()]] match [[s]] cases>>=
 | "." ->
@@ -4902,7 +5026,19 @@ argv |> Array.iter (fun s ->
 
 \section{[[wait]]}
 
-
+%ocaml: Shell.nw Builtins topics NOT needed in OCaml version:
+% - Builtin struct + builtins[] array: OCaml uses pattern matching in dispatch(), no registration table needed
+% - cdpath iteration in cd: not yet implemented (simplified to direct chdir)
+% - /dev/wdir in dochdir(): Plan 9 rio integration, not applicable on Unix
+% - execdot searchpath: OCaml version uses file path directly, no $path search for dot files
+% - execdot 'first' static for dotcmds initialization: OCaml builds dotcmds array at toplevel
+% - execeval + execcmds + opencore: eval not yet implemented in OCaml version
+% - execwait: wait builtin not yet implemented
+% - execexec: exec builtin not yet implemented
+% - execnewpgrp/rfork: Plan 9 rfork builtin, not applicable
+% - execwhatis: whatis builtin not yet implemented
+% - execshift: shift builtin not yet implemented
+% - execumask: not in Plan 9 rc
 
 %******************************************************************************
 \chapter{Environment}
@@ -4944,18 +5080,49 @@ let init (caps : < Cap.env; .. >) =
 %\section{Functions in the environment}
 % see also finit builtin
 
+%ocaml: Shell.nw Environment topics NOT needed in OCaml version:
+% - /env/ filesystem: Plan 9 stores environment as files; OCaml uses Unix environ via Env.read_environment
+% - Updenv()/addenv(): writing changed vars back to /env/ files; not applicable on Unix
+% - changed/fnchanged flags on Var: only needed for /env/ sync optimization
+% - null-byte separated encoding in /env/ files: OCaml uses Unix environ's KEY=VALUE format
+% - fn#name files for function export: Plan 9-specific, functions not exported to environment in OCaml version
+
 %******************************************************************************
 \chapter{Signals}
 %******************************************************************************
 \label{chap:signals}
 
+%claude:
+Signal handling is critical for a shell because the shell
+sits between the user and every running program.
+When the user presses [[^C]], the interrupt signal is sent
+to all processes in the foreground group---including the shell
+itself. If the shell simply died along with the interrupted
+command, the user would lose their terminal session.
+Instead, the shell must catch the signal, cancel the current
+command, and return to its prompt, ready for the next input.
 
-
+%ocaml: Shell.nw Signals topics NOT needed in OCaml version:
+% - Entire signal handling is not yet implemented in the OCaml version
+% - Plan 9 notes (notify/noted/NCONT/NDFLT): OCaml would use Unix signals (Sys.set_signal)
+% - Trapinit()/notifyf(): signal registration and note-to-index translation
+% - ntrap counter + dotrap() deferred dispatch: checking after each bytecode in interpreter loop
+% - fn sigint/fn sighup user-defined handlers via variable lookup
+% - interrupted flag + Noerror()/Eintr(): interrupt tracking for I/O retry
+% - trap loop detection (ntrap >= 32 abort)
 
 %******************************************************************************
 \chapter{Initialization}
 %******************************************************************************
 \label{chap:initialization-real}
+
+%claude:
+In Chapter~\ref{chap:main}, we showed a simplified version of [[main()]]
+to introduce the interpreter loop. This chapter reveals the
+real initialization sequence: how [[rc]] fabricates its own
+bootstrap bytecodes, sources the [[rcmain]] script to set up
+the default environment, and transitions into the
+read-eval-print loop that makes an interactive shell usable.
 
 \section{Actual bootstrapping code}
 
@@ -5011,6 +5178,13 @@ let bootstrap () : O.codevec =
 
 \section{Intitialization script and [[rc -m /path/to/rcmain]]}
 
+%claude:
+The default initialization script is [[/rc/lib/rcmain]],
+which sets up [[\$path]] and, for login shells,
+sources the user's profile.
+The [[-m]] flag allows overriding this path, which
+is useful during system bootstrap or testing.
+
 <<constant [[Flags.rcmain]]>>=
 (* can be changed with -m *)
 let rcmain = ref "/rc/lib/rcmain"
@@ -5027,6 +5201,11 @@ let rcmain = ref "/rc/lib/rcmain"
 
 % C code setvar "pid" and "rcname". Useful?
 
+%ocaml: Shell.nw Initialization topics NOT needed in OCaml version:
+% - bootstrap[] filled imperatively with index variable i: OCaml uses an array literal
+% - bootstrap[0].i = 1 start offset: OCaml array starts at index 0 directly
+% - $pid and $rcname built-in variables: not yet set up in OCaml version
+% - flag['m'] character-indexed flag array: OCaml uses Arg module with Flags.rcmain ref
 
 %******************************************************************************
 \chapter{Globbing}
@@ -5034,6 +5213,15 @@ let rcmain = ref "/rc/lib/rcmain"
 \label{chap:globbing}
 %TODO: move in previous chapter like other features? it is an
 % opcode in the end
+
+%claude:
+Globbing (also called wildcard expansion or pathname expansion)
+is one of the key features of a shell: when you write [[ls *.c]],
+the shell expands [[*.c]] into the list of matching filenames
+{\em before} passing them to [[ls]].
+This is a deliberate design choice: the expansion is done
+by the shell, not by individual programs, which
+factorizes the functionality.
 
 <<[[Opcode.operation]] other cases>>=
 (* Globbing *)
@@ -5059,8 +5247,14 @@ let rcmain = ref "/rc/lib/rcmain"
 
 \section{[[match()]]}
 
-
-
+%ocaml: Shell.nw Globbing topics NOT needed in OCaml version:
+% - Entire globbing chapter is not yet implemented (O.Glob is a stub)
+% - GLOB byte (\001) marker in strings: OCaml would likely use a variant type instead of byte stuffing
+% - deglob() to strip markers: unnecessary with a proper type representation
+% - globlist()/globlist1() recursive word list expansion: not yet implemented
+% - glob()/globdir()/globsort(): filesystem directory scanning and sorting
+% - matchfn()/match(): pattern matching against filenames (but Pattern.match_str exists for ~ operator)
+% - Globsize(): counting glob characters to estimate buffer size
 
 
 
@@ -5202,6 +5396,13 @@ let strict_mode = ref false
 \label{chap:advanced-topics}
 
 %alt: Advanced Topics
+
+%claude:
+In this chapter I present features that are not essential
+for understanding the core architecture of [[rc]], but that
+are important in practice. Many of these features---here
+documents, command substitution, general redirections,
+subshells---are what make a shell truly useful for scripting.
 
 %\section{Shell-like features implemented outside [[rc]]}
 % completion, history (readline?), ...
@@ -5475,12 +5676,59 @@ let strict_mode = ref false
 
 \subsection{[[shift]]}
 
+%ocaml: Shell.nw Advanced Topics topics NOT needed in OCaml version:
+% - rio providing shell features (history, completion, job control): context-only, no code impact
+% - rc -c flag implementation: not yet implemented in OCaml version
+% - Unicode/addutf(): OCaml handles UTF-8 natively, no special lexer code needed
+% - here documents (heredoc/readhere/openhere): not yet implemented
+% - <> read-write redirection: not yet implemented
+% - process substitution <{cmd} (Plan 9 /fd/ or Unix /dev/fd): not yet implemented
+% - command substitution `{cmd} / Xbackq: not yet implemented
+% - $" stringify / Xqdol: not yet implemented
+% - advanced pipes |[fd]: not yet implemented
+% - exec builtin (Xsimple exitnext optimization): not yet implemented
+% - whatis builtin (introspection): not yet implemented
+% - rfork builtin (Plan 9 specific): not applicable on Unix
+% - shift builtin: not yet implemented
 
 %******************************************************************************
 \chapter{Conclusion}
 %******************************************************************************
 \label{chap:conclusion}
 
+%claude:
+You now know how the \plan shell [[rc]] works,
+and more generally how many shells work.
+%
+Despite its modest size, [[rc]] implements a complete
+programming language: a lexer, a parser, a bytecode compiler,
+and a bytecode interpreter---the same architecture found
+in much larger language implementations like Python or Java.
+%
+Along the way, you have seen how [[rc]] uses only a handful
+of system calls---[[fork()]], [[exec()]], [[wait()]], [[pipe()]],
+[[open()]], [[close()]], [[dup2()]]---to implement
+pipes, redirections, and background jobs.
+The beauty of the \unix process model is that these
+few primitives are enough to build a surprisingly powerful
+command-line environment.
+
+%claude:
+This OCaml port demonstrates that the core ideas of [[rc]]
+translate cleanly to a higher-level language. Algebraic types
+replace the generic [[Tree]] struct, pattern matching replaces
+the [[switch]] on type tags, and closures replace global
+code buffers. The garbage collector eliminates reference
+counting on code vectors and manual memory management
+on word lists. Yet the fundamental architecture---compile
+to bytecodes, interpret with a run queue of threads---remains
+the same.
+
+%ocaml: Shell.nw Conclusion topics NOT needed in OCaml version:
+% - "6700 lines of C": different size for OCaml version
+% - rfork() in syscall list: OCaml uses fork() directly
+% - Connections to Kernel/Compiler/Generators/Builder books: same connections apply but less directly relevant for the OCaml port
+% - Missing features / rio delegation: same discussion applies but not repeated here
 
 %******************************************************************************
 \appendix
@@ -5667,6 +5915,16 @@ let do_action caps s xs =
 
 \section{[[/rc/lib/rcmain]]}
 \label{sec:rcmain}
+
+%claude:
+This is the initialization script sourced by the bootstrap
+bytecodes (see Chapter~\ref{chap:initialization-real}).
+It sets up default values for [[\$home]], [[\$ifs]], [[\$prompt]],
+and [[\$path]], calls [[finit]] to import shell functions
+from the environment, and then dispatches based on how
+[[rc]] was invoked: with [[-c]] (run a command string),
+with [[-i]] (interactive, source the user's profile and
+read from the console), or with a script file argument.
 
 % Unix version
 %coupling: content of ../data/rcmain-unix

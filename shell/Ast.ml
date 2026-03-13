@@ -16,7 +16,7 @@ let show_line _ = "NO DERIVING"
  * The only value in rc is the list of strings. Even a single
  * string is really a list with one element.
  *)
-type value = 
+type value =
   (* The string can contain the * ? [ special characters.
    * So, even a single word can expand to a list of strings.
    * less: they should be preceded by \001

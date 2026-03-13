@@ -210,7 +210,7 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
         set p (O.I !idx);
     (*x: [[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases *)
     | A.Assign (val1, val2, cmd) ->
-        let all_assigns, cmd = 
+        let all_assigns, cmd =
           split_at_non_assign (A.Assign (val1, val2, cmd)) in
         (match cmd with
         (* A=b; *)

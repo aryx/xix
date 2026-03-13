@@ -145,7 +145,7 @@ let interpret_operation (caps: < Cap.fork; Cap.exec; Cap.chdir; Cap.exit; .. >) 
       )
   (*x: [[Interpreter.interpret_operation()]] match [[operation]] cases *)
   (* [i j]{... Xreturn}{... Xreturn} *)
-  | O.Pipe -> 
+  | O.Pipe ->
       let t = R.cur () in
       let pc = t.R.pc in
       (* left file descriptor, should be stdout *)

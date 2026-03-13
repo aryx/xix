@@ -133,7 +133,7 @@ rule token = parse
   (* Keywords and unquoted words *)
   (* ----------------------------------------------------------------------- *)
   (*s: [[Lexer.token()]] keywords and unquoted words cases *)
-  | wordchr+ { 
+  | wordchr+ {
     match Lexing.lexeme lexbuf with
     | "if"    -> TIf
     | "while" -> TWhile

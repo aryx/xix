@@ -9,8 +9,8 @@ module O = Opcode
 (*s: function [[Builtin.is_builtin]] *)
 let is_builtin s =
   List.mem s [
-    "cd"; 
-    "."; 
+    "cd";
+    ".";
     "eval";
     "exit";
     "flag";
@@ -33,7 +33,7 @@ let dochdir (caps : < Cap.chdir; .. >) s =
 (*e: function [[Builtin.dochdir]] *)
 (*s: constant [[Builtin.dotcmds]] *)
 (* for the builtin '.' (called 'source' in bash) *)
-let dotcmds = 
+let dotcmds =
   [|
     O.F O.Mark;
       O.F O.Word;

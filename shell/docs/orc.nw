@@ -262,6 +262,19 @@ write characters in [[/dev/cons]].
 
 \subsection{[[rc]]'s components}
 
+%claude:
+At its core, [[rc]] is a small compiler paired with a bytecode interpreter.
+The compiler transforms shell commands through three stages:
+characters are grouped into tokens (lexing),
+tokens are assembled into an abstract syntax tree (parsing),
+and the AST is compiled into a flat array of opcodes.
+The interpreter then executes these opcodes using a stack machine model.
+%
+This architecture is the same as the C version, but the OCaml implementation
+replaces many hand-written components with tool-generated ones:
+[[ocamllex]] generates the lexer from regular expressions, and
+[[ocamlyacc]] generates the parser from a grammar specification.
+
 %dup: (reverted order if figures) Assembler.nw
 Figure~\ref{fig:dataflow}    describes the main data    flow of [[rc]], whereas
 Figure~\ref{fig:controlflow} describes the main control flow of [[rc]].
@@ -510,8 +523,18 @@ Chapter~\ref{chap:initialization-real} presents the actual code
 initializing [[rc]]. Indeed, Chapter~\ref{chap:main} presents
 only a simplified initialization to not introduce too much
 complexity early-on.
+%claude:
+%ocaml:
+The codebase is organized into 35 small OCaml modules totaling
+about 3,200 lines of code---roughly half the size of the C version (6,700~LOC).
+OCaml's module system encourages this fine-grained decomposition:
+each module (e.g., [[Ast.ml]], [[Opcode.ml]], [[Runtime.ml]])
+has a clear responsibility and a small interface.
+In the C version, global variables and function pointers
+are scattered across fewer, larger files.
+
 %dup: Assembler.nw
-Then, I will present advanced features of [[rc]] that I did not present 
+Then, I will present advanced features of [[rc]] that I did not present
 before to simplify the explanations, for instance,
 wildcard matching (e.g., [[ls *.c]]) in Chapter~\ref{chap:globbing},
 logging and other debugging helps in Chapter~\ref{chap:debugging},
@@ -598,6 +621,14 @@ Finally, Appendix~\ref{chap:examples} presents examples of [[rc]] scripts.
 @
 \swdefs{Parser.tokens}
 
+%claude:
+Most of these tokens are standard, but [[TNewline]] is the interesting one.
+In traditional programming languages, newlines are whitespace and ignored
+by the lexer. In a shell, a newline is {\em meaningful}: it terminates
+a command and triggers compilation and execution of whatever the user typed.
+This is what makes the shell interactive---each line is a complete
+program that is compiled and run immediately.
+
 % classic, except TNewline, usually skipped in trad lang but
 % here newline has special semantic and trigger special behavior
 % like terminating a command and displaying a prompt in interactive mode
@@ -657,6 +688,22 @@ and cmd =
   | Fn of value * cmd_sequence
   <<[[Ast.cmd]] other definition cases>>
 @
+%claude:
+%ocaml:
+This algebraic type makes the full grammar of [[rc]] visible at a glance.
+In the C version, the AST is a single [[Tree]] struct with a [[type]] field
+and up to three generic [[child]] pointers---you must mentally decode
+which child means what for each node type.
+Here, each constructor carries exactly the data it needs:
+[[If]] takes a condition (a [[cmd_sequence]]) and a body (a [[cmd]]),
+[[Pipe]] takes two commands, and so on.
+%
+Note the [[If]]/[[IfNot]] split: because [[rc]] is interactive and
+must execute commands as soon as a newline is entered,
+it cannot wait to see if an [[else]] follows.
+So [[if(test) cmd]] and [[if not cmd]] are separate constructs,
+processed on separate lines.
+
 % Assign because actually often do CFLAGS=xxx make
 
 % Simple is important one.
@@ -672,12 +719,21 @@ and values = value list
 @
 
 
+%claude:
+In [[rc]], there is only one type of value: a list of strings.
+There are no integers, no booleans, no floats.
+Even a single word like [[hello]] is really a one-element list.
+The [[Word]] constructor carries a [[quoted]] flag that records
+whether the string came from a quoted context ([['\ldots']]),
+which matters later for globbing: quoted strings are not
+subject to wildcard expansion.
+
 <<type [[Ast.value]]>>=
 (* rc does not use types; there is no integer, no boolean, no float.
  * The only value in rc is the list of strings. Even a single
  * string is really a list with one element.
  *)
-type value = 
+type value =
   (* The string can contain the * ? [ special characters.
    * So, even a single word can expand to a list of strings.
    * less: they should be preceded by \001
@@ -727,6 +783,20 @@ type t =
 @
 % 'I' useful for Jump pc
 % S will be Words mostly
+
+%claude:
+Why compile to bytecodes rather than interpret the AST directly?
+The flat array representation makes the bytecode interpreter simpler:
+it is just a loop with a program counter, incrementing through
+the array. Forward jumps (for [[if]], [[&&]], [[||]]) are easy
+to implement by storing a target index. Backpatching---filling in
+a jump target after the target code has been emitted---is trivial
+with array indices but awkward with tree pointers.
+%
+The [[codevec]] is essentially a tagged union array:
+each element is either an opcode ([[F]]), an integer operand ([[I]])
+for jump targets or file descriptors, or a string operand ([[S]])
+for command names and arguments.
 
 % a bit like assembly, opcodes, operands, but very simple.
 % why opcode? why not interpret AST instead?
@@ -814,6 +884,17 @@ type operation =
  *)
 type value = string list
 @
+%claude:
+Note that [[Runtime.value]] is distinct from [[Ast.value]].
+The AST type represents {\em unevaluated} expressions
+(a [[Dollar]] referencing a variable, a [[List]] of sub-expressions),
+whereas the runtime type is the {\em evaluated} result:
+just a flat [[string list]].
+%ocaml:
+In OCaml, this distinction is enforced by the type system---you
+cannot accidentally pass an unevaluated AST value where
+a runtime value is expected.
+
 % TODO? confusing to use value here with Ast.value?
 % or done on purpose to relate?
 
@@ -836,6 +917,15 @@ type var = {
   (* less: opti: changed: bool *)
 }
 @
+%claude:
+%ocaml:
+The [[option]] type captures a three-way distinction that the C version
+must encode with NULL pointers and empty strings:
+[[None]] means the variable was never set,
+[[Some []]] means it was explicitly set to the empty list (e.g., [[A=()]]),
+and [[Some [""]]] means it was set to a single empty string (e.g., [[A='']]).
+These three states have different semantics in [[rc]].
+
 % remember value is string list!
 
 <<signature [[Runtime.globals]]>>=
@@ -921,7 +1011,33 @@ type thread = {
 % called argv cos ultimately what will be passed to simple commands
 %  executed
 
+%claude:
+The [[argv]] field is the operand stack for the bytecode interpreter.
+Bytecodes like [<O.Word>] push strings onto it, and [<O.Simple>]
+consumes the accumulated list as the command's arguments.
+%
+The name ``argv'' is apt: the strings accumulated here are
+ultimately what gets passed to [[execv()]] as the argument vector
+of the child process.
+
 %less: use Stack.t for argv?
+
+%claude:
+Despite the name, a ``thread'' here is not an OS thread.
+It is an execution frame inside the interpreter:
+a code vector, a program counter, a local variable scope,
+and a stack of arguments.
+%
+The [[pc]] field is an [[int ref]]---a mutable reference to an integer---because
+bytecodes like [[O.True]] and [[O.Jump]] need to modify the program
+counter directly (for conditional and unconditional jumps).
+In the C version, [[pc]] is a plain integer mutated through a pointer.
+%
+The [<runq>] is a list of threads acting as a call stack:
+when [<O.REPL>] compiles a new command, it pushes a new thread;
+when the command finishes ([<O.Return>]), the thread is popped
+and the interpreter resumes the previous one (ultimately the
+bootstrap thread, which loops back to [<O.REPL>]).
 
 % called "thread" because kinda like thread? But in practice
 % will trigger fork/exec of separate process but the
@@ -1054,6 +1170,16 @@ let setvar (name : Runtime.varname) (v : Runtime.value) : unit =
 (* things to do before exec'ing the simple command *)
 mutable redirections: (redir list) list;
 @
+%claude:
+The redirections field is a list of lists---essentially a stack of
+redirection scopes. Each time a redirection opcode ([[O.Write]],
+[[O.Read]]) executes, it pushes a [[FromTo]] entry into the current
+(innermost) scope. When [<O.Popredir>] executes, it pops and closes
+the most recent redirection. When a new thread is created
+(in [<mk_thread>]), a fresh empty scope is pushed on top of
+the parent's redirections, so child commands can add redirections
+without affecting the parent's scope.
+
 %TODO: list list?? (redir list) stack ?
 
 <<type [[Runtime.redir]]>>=
@@ -1108,6 +1234,19 @@ waitstatus = NothingToWaitfor;
 
 
 \section{Overview}
+
+%claude:
+%ocaml:
+The [[caps]] type is an OCaml {capability} pattern: it declares
+exactly which OS operations the shell needs (fork, exec, wait,
+chdir, exit, open).
+Any function that wants to, say, fork a process must receive
+a value of type [[< Cap.forkew; .. >]]---there is no way to
+call [[fork]] without one. This makes the security boundary
+explicit in the type signatures, and makes it easy to audit
+which parts of the code perform which system calls.
+In the C version, any function can call any system call
+since they are all globally available.
 
 <<type [[CLI.caps]]>>=
 (* Need:
@@ -1287,6 +1426,19 @@ let interpret_bootstrap (caps : < caps >) (args : string list) : unit =
 [@@profiling]
 @
 
+%claude:
+The interpreter loop is deceptively simple: it fetches the current
+thread from [<runq>], pre-increments [[pc]], then dispatches the opcode
+at [[pc-1]]. The pre-increment matters: when an opcode like [<O.Word>]
+reads an inline operand, it finds it at [[!pc]] (the slot just past
+the opcode) and increments [[pc]] again to skip over it. This
+convention means opcodes never need to worry about advancing past
+their own slot---that is already done.
+%
+Note that [<runq>] is re-fetched every iteration because
+the previously interpreted opcode may have modified it
+(e.g., [<O.REPL>] pushes a new thread, [<O.Return>] pops one).
+
 % will see real one [<bootstrap()>] later, but for now
 % essentially this one below
 
@@ -1295,6 +1447,17 @@ let _bootstrap_simple : O.codevec =
   [| O.F O.REPL |]
 @
 
+
+%claude:
+The simplest possible bootstrap is a single-element array containing
+just [[O.REPL]]. This is enough to start the read-eval loop:
+the interpreter executes [[REPL]], which reads a command, compiles it,
+pushes a new thread, and decrements [[pc]] so that when the new thread
+finishes, the interpreter returns here and executes [[REPL]] again.
+%
+The real [<bootstrap()>] (in Chapter~\ref{chap:initialization-real}) is more
+elaborate: it sets [[\$*]] from the command-line arguments and sources
+the [[rcmain]] initialization script.
 
 % incr pc, so need pc -1 after, and in interpret_operation assume
 % pc will be one after and no need to incr, already done, unless
@@ -1415,6 +1578,17 @@ let op_REPL (caps : < Cap.exit; ..>) () =
     <<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>
 @
 
+%claude:
+The [[decr t.R.pc]] is the key trick that turns the bytecode
+interpreter into a REPL loop.
+After [<O.REPL>] pushes a new thread for the compiled command,
+it decrements the bootstrap thread's [[pc]] so it still points
+at the [[REPL]] opcode. When the command thread finishes
+(via [<O.Return>]), the interpreter pops it and resumes the bootstrap
+thread---which re-executes [<O.REPL>], reading the next command.
+This gives us an infinite read-eval loop without any explicit
+``while'' in the shell logic itself.
+
 % lexbuf, parse_line, compile, runq
 % and this is a hidden loop because of the decr t.R.pc!
 
@@ -1425,6 +1599,14 @@ val parse_line : Lexing.lexbuf -> Ast.line
 % and compile seen before, so overview of next chapter right here!
 
 
+
+%claude:
+Error recovery depends on whether the shell is interactive.
+In interactive mode ([[iflag]]), a parse error just prints a message
+and decrements [[pc]] to loop back for the next command---the user
+gets another prompt. In non-interactive mode (running a script),
+the error propagates as an exception, which ultimately causes
+the shell to exit with a failure status.
 
 <<[[Op_repl.op_REPL()]] when [[Failure s]] thrown>>=
 (* todo: check signals  *)
@@ -1529,6 +1711,19 @@ open Parser
 @
 
 
+
+%claude:
+%ocaml:
+The lexer is written using [[ocamllex]], OCaml's lexer generator.
+Instead of hand-writing a character-by-character state machine
+(as in the C version's [<yylex()>]), the programmer declares
+regular expression rules and the tool generates the lexer.
+Each rule consists of a pattern (e.g., [['\textbackslash n']],
+[["&&"]]) and an action returning a token.
+%
+The [[lexbuf]] argument is a mutable buffer managed by [[ocamllex]]
+that tracks the current position in the input.
+The [[Lexing.lexeme lexbuf]] call extracts the matched string.
 
 <<rule [[Lexer.token]]>>=
 rule token = parse
@@ -1764,6 +1959,20 @@ if !Globals.skipnl
 then got_skipnl_last_round := true;
 Globals.skipnl := false;
 @
+%claude:
+The [[skipnl]] mechanism is subtle because it operates with a one-token
+delay. When the lexer returns [[TPipe]], it sets [[skipnl := true]].
+But the {\em current} token is the pipe, not the newline---we want
+to skip the {\em next} newline. So [[lexfunc]] records the flag
+in [[got_skipnl_last_round]] and only acts on the {\em following} call.
+On that next call, if the token is a newline, [[lexfunc]] consumes it
+silently (and any consecutive newlines), displaying the continuation
+prompt each time.
+%
+This is what allows users to write multi-line pipelines like
+[[ls |<newline>grep foo]]---the newline after [[|]] is treated
+as whitespace rather than as a command terminator.
+
 % subtle, first round when just got |, then got_skipnl_last_round
 % is false so big code not executed but then skipnl reseted
 % and got_skipnl is set to true
@@ -1799,6 +2008,18 @@ Globals.skipnl := false;
 % the quote at least, including newline, including quote itself by using it 2 times,
 % a bit like %% in printf
 
+%claude:
+Unlike [[sh]] and [[bash]], [[rc]] has only single quotes---no
+double quotes. This eliminates the confusing distinction between
+single-quoted (literal) and double-quoted (interpolated) strings.
+To include a literal single quote inside a quoted string,
+you double it: [['it''s']] produces [[it's]].
+%
+The [[quote]] rule below is a recursive lexer rule:
+it accumulates characters until it hits a closing quote,
+handling the [['']]\/ escape and multi-line strings (with
+continuation prompts) along the way.
+
 % no double quote in rc, just single quote.
 %TODO: double quote meaning? dump its AST/tokens for x="a b c d" vs 'a b c d' ??
 
@@ -1830,8 +2051,19 @@ let wordchr = [^'\n' ' ' '\t' '#'
 @
 % see why need quote! for all those special characters!
 
+%claude:
+Keywords are recognized {\em after} lexing, not during: the lexer
+first matches a generic ``word'' (any sequence of [[wordchr]]),
+then pattern-matches the resulting string against the keyword list.
+This is simpler than the C version, which must check keywords
+character by character during scanning.
+%
+The [[false]] in [[TWord (s, false)]] means ``not quoted''---this
+word came from unquoted input and is therefore subject to
+globbing expansion.
+
 <<[[Lexer.token()]] keywords and unquoted words cases>>=
-| wordchr+ { 
+| wordchr+ {
   match Lexing.lexeme lexbuf with
   | "if"    -> TIf
   | "while" -> TWhile
@@ -1851,6 +2083,20 @@ let wordchr = [^'\n' ' ' '\t' '#'
 \label{chap:parsing}
 
 \section{[[parse_line()]] skeleton}
+
+%claude:
+%ocaml:
+The parser is generated by [[ocamlyacc]] from a grammar
+specification in [[Parser.mly]].
+This replaces the hand-written recursive descent parser in the C version
+with a declarative grammar: each rule directly states what
+constructs are valid. The trade-off is that error recovery
+is harder with a generated parser.
+%
+The [<parse_line>] function wraps the generated parser,
+providing the lexer callback and handling parse errors.
+It returns [[Some cmd_sequence]] for a valid command line,
+or [[None]] on end-of-file.
 
 %trans: finally parse_line!
 
@@ -2041,6 +2287,13 @@ rc:
 <<skipnl rules>>
 @
 
+%claude:
+The top-level grammar rule [[rc]] is what makes [[rc]] interactive:
+it parses exactly one [[line]] terminated by [[TNewline]], then returns.
+This means the parser processes one command at a time and gives
+control back to the interpreter. The [[EOF]] case returns [[None]],
+signaling the end of input (e.g., the user typed Ctrl-D).
+
 %EOF case! None
 %TNewline!
 
@@ -2086,6 +2339,14 @@ simple:
   | simple word  { let (cmd, args, redirs) = $1 in (cmd, $2::args, redirs) }
   <<[[Parser.simple]] other cases>>
 @
+%claude:
+The [[simple]] rule accumulates arguments in reverse order
+(each new [[word]] is prepended with [[$2::args]]),
+then the [[cmd]] rule reverses the list back. This is
+a standard pattern in [[yacc]] grammars: left-recursive rules
+are efficient for LALR parsers but naturally produce
+reversed lists.
+
 % List.rev above cos reverted here
 
 
@@ -2113,6 +2374,17 @@ word:
   | keyword          { Word ($1, false) }
   <<[[Parser.word]] other cases>>
 @
+%claude:
+The three-level word hierarchy ([[comword]], [[word]], [[keyword]])
+reflects an important design decision in [[rc]].
+A [[comword]] is what can appear as a {\em command name}
+(the first word)---keywords are excluded, so [[if]] cannot
+accidentally be treated as a program to execute.
+A [[word]] includes keywords, so [[if]] {\em can} appear as
+an argument: [[ls if]] lists a file named ``if''.
+This makes [[rc]] more flexible than languages where
+keywords are universally reserved.
+
 % flexible language, not like regular lang where if forbidden,
 % here if could be a filename argument of a command! it's just that
 % it can't be the command name
@@ -2147,6 +2419,13 @@ cmdsa:
 % $1 $2 and fun x -> ... grammar idiom
 
 % so cmd1 & cmd2 is really cmd1& ; cmd2
+
+%claude:
+The [[mk_Seq]] helper optimizes away empty commands in sequences.
+Since every newline produces an [[EmptyCommand]] in the grammar,
+a simple [[{\textbackslash n ls\textbackslash n}]] block would generate two unnecessary
+empty nodes. This optimization is important in practice because
+empty commands are pervasive in interactive use.
 
 <<function [[Parser.mk_seq]]>>=
 (* This is a useful optimisation as you can get lots of EmptyCommand,
@@ -2391,6 +2670,19 @@ assign: first TEq word { (fun x -> Assign ($1, $3, x))  }
 %\subsection{[[emitxxx()]]}
 \subsection{[[compile()]]}
 
+%claude:
+The [<compile>] function encapsulates the code buffer and emission
+functions in local closures. The [[emit]] closure appends an opcode
+to the growing array (doubling it when full), and the [[set]] closure
+patches a previously emitted slot---used for backpatching
+forward jump targets. The [[idx]] ref tracks the current write position.
+%
+%ocaml:
+Unlike the C version which uses a global [[codebuf]], the OCaml version
+keeps the code buffer local to [<compile>], returning only the
+trimmed result array. The [[emit]] and [[set]] closures capture
+the buffer by reference, avoiding the need for globals.
+
 <<function [[Compile.compile]]>>=
 let compile (seq : Ast.cmd_sequence) : Opcode.codevec =
 
@@ -2448,6 +2740,17 @@ let return (caps : < Cap.exit; .. >) () =
   | _x::xs -> 
       R.runq := xs
 @
+%claude:
+[<Process.return>] is the interpreter's equivalent of ``return
+from a function'': it pops the current thread from [<runq>],
+resuming the previous one. If only one thread remains
+(the bootstrap thread), it means we have reached the outermost
+level and the shell exits.
+%
+Before popping, [<turf_redir>] closes any redirections that the
+finishing thread had opened, restoring the original file
+descriptor state---a bracket pattern (open before, close after).
+
 % will see exit and getstatus later
 
 
@@ -2487,6 +2790,17 @@ then failwith (spf "Bad address %d in set()" idx2);
 
 % return unit cos side effect on enclosing codebuf in compile()
 % via emit or set or idx
+
+%claude:
+The code generator is structured as three mutually recursive functions
+that mirror the AST: [[xseq]] handles command sequences,
+[[xcmd]] handles individual commands, and [[xword]] handles values.
+The mutual recursion is necessary because commands can contain
+values (e.g., the arguments of [[Simple]]) and values can
+contain commands (e.g., [[CommandOutput]], a.k.a.\ backquote).
+%
+Each function walks its part of the AST and emits opcodes
+into the shared code buffer via the [[emit]] closure.
 
 <<function [[Compile.outcode_seq]]>>=
 let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
@@ -2542,6 +2856,19 @@ let outcode_seq (seq : Ast.cmd_sequence) eflag (emit,set,idx) : unit =
     emit (O.F O.Simple);
     <<[[Compile.outcode_seq]] in [[A.Simple]] case after emit [[O.Simple]]>>
 @
+%claude:
+The opcode sequence for a simple command like [[ls /etc]] is:
+[[Mark]], [[Word "/etc"]], [[Word "ls"]], [[Simple]].
+[[Mark]] pushes a new scope on the argument stack (via [<push_list>]),
+each [[Word]] pushes a string onto it, and [[Simple]] consumes
+the accumulated list as the command's argv.
+%
+Note that arguments are emitted in reverse order: [[xwords]]
+reverses the list before emitting, and the command name [[w]]
+is emitted last (after the arguments). Since each [[Word]]
+{\em prepends} to the stack, the final order is correct:
+the command name ends up first.
+
 % need Mark so know when finish args
 
 <<[[Compile.outcode_seq]] in nested [[xword()]] match [[w]] cases>>=
@@ -2605,6 +2932,17 @@ mutable argv_stack: (string list) list;
 <<[[Runtime.mk_thread()]] set other fields>>=
 argv_stack = [];
 @
+%claude:
+The [[argv_stack]] is the ``rest of the stack'' below the current
+working area. When [<O.Mark>] calls [<push_list>], the current
+[[argv]] is saved onto [[argv_stack]] and a fresh empty list
+becomes the new [[argv]]. When [<O.Simple>] or [<O.Assign>] calls
+[<pop_list>], the process reverses: the current [[argv]] is consumed
+and the previous one is restored from [[argv_stack]].
+This two-level structure lets the interpreter handle nested
+expressions like [[echo \$x]] where the variable expansion
+and the command arguments each need their own scope.
+
 % how can have enclosing argv_stack we need to save?
 
 \subsection{[[O.Simple()]]}
@@ -2704,6 +3042,18 @@ val dispatch : < Cap.chdir ; Cap.exit ; Cap.open_in; .. > -> string -> unit
 
 \subsection{Fork}
 
+%claude:
+This is the essence of a shell: the fork/exec/wait trinity.
+[<forkexec>] forks a new process; in the child, it calls [<exec>]
+which applies any pending redirections ([<doredir>]) and then
+calls [[execv()]] to replace the child process with the target
+program. The parent receives the child's [[pid]] and later
+calls [<waitfor>] to block until the child terminates.
+%
+A minimal shell could be just these 50 lines. Everything else
+in [[rc]]---pipes, redirections, variables, control flow---is
+layered on top of this fundamental pattern.
+
 % Essence of a shell! Fork/exec/wait)! a 50LOC mini shell will be that
 
 <<function [[Op_process.forkexec]]>>=
@@ -2801,6 +3151,21 @@ val error : < Cap.exit ; .. > -> string -> unit
 
 
 
+%claude:
+[<Error.error>] is the interpreter's exception mechanism.
+When a runtime error occurs (e.g., a command not found, a bad
+redirection), it logs the error, sets the status to ``error'',
+and then {\em loops} calling [<Process.return>] to pop threads
+from the run queue until it reaches one with [[iflag]] set
+(the interactive REPL thread). This effectively unwinds the
+interpreter's call stack, much like throwing an exception
+that is caught at the interactive prompt level.
+%
+%ocaml:
+Interestingly, this does not use OCaml's native exception mechanism.
+The unwinding is done manually by popping threads, matching
+the C version's approach.
+
 <<function [[Error.error]]>>=
 (* less: error1 similar to error but without %r *)
 let error (caps: < Cap.exit; ..>) (s : string) =
@@ -2896,6 +3261,19 @@ type waitfor_result =
   | WaitforFound
   | WaitforNotfound
 @
+
+%claude:
+[<waitfor>] loops calling [[Unix.wait()]], which returns the next
+child that exits---but that might not be the one we are looking for.
+When a different child exits, its status is recorded in the
+corresponding thread's [[waitstatus]] field (found by scanning
+[<runq>] for a thread with a matching [[WaitFor pid]]).
+The loop continues until our target [[pid]] is found.
+%
+This design handles the case where multiple children run
+concurrently (e.g., both sides of a pipe): [[wait()]] returns
+them in whatever order they finish, and [<waitfor>] distributes
+the results to the right threads.
 
 % Capa waitfor!
 <<function [[Process.waitfor]]>>=
@@ -3017,6 +3395,18 @@ seq |> List.iter (fun x -> xcmd x eflag)
 
     set p (O.I !idx)
 @
+%claude:
+Logical operators use a forward-jump-with-backpatching pattern.
+For [[cmd1 \&\& cmd2]], the compiler emits: opcodes for [[cmd1]],
+then [[O.True]], then a placeholder integer, then opcodes for [[cmd2]].
+After [[cmd2]]'s opcodes are emitted, the compiler backpatches
+the placeholder with the current index (the address just past [[cmd2]]).
+%
+At runtime, [[O.True]] checks the exit status: if true (status is empty
+or zero), it increments [[pc]] to execute [[cmd2]]; if false, it
+jumps over [[cmd2]] to the backpatched address. [[O.False]] (for [[||]])
+does the opposite.
+
 % True then execute pc+1 otherwise jump
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
@@ -3145,6 +3535,18 @@ let int_at_address t pc =
     emit (O.F O.Popredir);
 @
 
+%claude:
+The redirection compilation follows a bracket pattern:
+first resolve the filename (Mark, emit the word, Glob to expand
+wildcards), then emit the redirection opcode ([[Write]], [[Read]],
+or [[Append]]) with an inline file descriptor number,
+then emit the command that runs under this redirection,
+and finally emit [[Popredir]] to close the opened file descriptor.
+%
+The inline integer after the redirection opcode specifies which
+standard file descriptor to redirect: 1 for stdout (with [[>]]),
+0 for stdin (with [[<]]).
+
 % Glob!
 
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
@@ -3264,6 +3666,15 @@ R.doredir t.R.redirections;
 <<signature [[Runtime.doredir]]>>=
 val doredir : redir list list -> unit
 @
+%claude:
+[<doredir>] is called in the child process just before [[exec]].
+It flattens all redirection scopes into a single list, reverses it
+(so the outermost redirections are applied first), then performs
+the classic Unix ``fd dance'': [[dup2(from, to)]] makes the
+target file descriptor ([[to]], e.g., stdout) point to the opened
+file ([[from]]), then [[close(from)]] releases the now-redundant
+original descriptor.
+
 <<function [[Runtime.doredir]]>>=
 let doredir xxs =
   xxs |> List.flatten |> List.rev |> List.iter (fun redir ->
@@ -3283,6 +3694,20 @@ let doredir xxs =
 \subsection{Opcode generation}
 
 %\subsubsection{Trace of a pipe}
+
+%claude:
+Pipe compilation is the most complex opcode sequence.
+The emitted layout is:
+[[Pipe]], fd numbers (1 for stdout, 0 for stdin),
+two jump-target placeholders, the left command's opcodes
+(terminated by [[Exit]]---the child process exits after running),
+the right command's opcodes (terminated by [[Return]]---it runs
+in a new thread in the parent process),
+and finally [[PipeWait]] for the parent to collect the child's
+exit status.
+%
+The two placeholders are backpatched: one points to the start
+of the right command, the other to [[PipeWait]].
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Pipe (cmd1, cmd2) ->
@@ -3311,9 +3736,23 @@ let doredir xxs =
 
 \subsection{[[O.Pipe()]]}
 
+%claude:
+When [[O.Pipe]] executes, it creates a Unix pipe, then forks.
+The {\em child} process runs the left side of the pipe: it
+redirects stdout to the write end of the pipe and executes
+[[cmd1]] (which ends with [[O.Exit]]).
+The {\em parent} creates a new thread for the right side:
+it redirects stdin to the read end and executes [[cmd2]]
+(which ends with [[O.Return]]).
+%
+After the right-side thread finishes (its [[Return]] pops it),
+the parent reaches [[O.PipeWait]], which calls [[waitfor]] to
+collect the child's exit status. The combined status is
+the two statuses joined by ``|''.
+
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 (* [i j]{... Xreturn}{... Xreturn} *)
-| O.Pipe -> 
+| O.Pipe ->
     let t = R.cur () in
     let pc = t.R.pc in
     (* left file descriptor, should be stdout *)
@@ -3448,6 +3887,21 @@ let concstatus s1 s2 =
 
 \subsection{[[if not]]}
 
+%claude:
+The [[if]]/[[if not]] protocol uses a global [[ifnot]] flag
+as a communication channel between separate command lines.
+When [[O.If]] executes, it sets [[ifnot := true]].
+If the condition was true and the then-branch executes,
+[[O.Wastrue]] resets [[ifnot := false]].
+On the {\em next line}, if the user types [[if not cmd]],
+[<O.IfNot>] checks the flag: if still true (meaning the
+previous [[if]] took the false branch), it executes [[cmd]];
+otherwise it skips.
+%
+This is a clever workaround for interactive parsing:
+since [[rc]] must execute each line immediately, it cannot
+look ahead to see if an ``else'' follows.
+
 <<[[Interpreter.interpret_operation()]] match [[operation]] cases>>=
 | O.IfNot ->
     let t = R.cur () in
@@ -3496,6 +3950,22 @@ let ifnot = ref false
 @
 
 \subsection{[[switch]]}
+
+%claude:
+The [[switch]] compilation uses a chain of forward jumps
+and backpatching. For each [[case]], the compiler emits
+[[Mark]], the case patterns, [[O.Case]], and a placeholder
+for the next case's address. If the case matches at runtime,
+execution falls through to the case body; otherwise
+[[O.Case]] jumps to the next case. Each case body ends
+with a [[Jump]] to the common exit point ([[leave]]),
+and [[Popm]] at the end removes the switch value from
+the stack.
+%
+The [[out]] variable holds the address of the exit jump
+target, shared by all cases. This is the same forward-jump
+backpatching technique used for logical operators, just
+applied multiple times in a chain.
 
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Switch (w, cmds) ->
@@ -3624,9 +4094,22 @@ let split_when_case cmds =
 
 \subsection{Variable definitions ([[<x>=...]])}
 
+%claude:
+Variable assignment has two forms that compile differently.
+A bare assignment ([[A=b]]) uses [[O.Assign]] to set the variable
+globally. An assignment followed by a command ([[A=b cmd]])
+uses [[O.Local]] to create a temporary binding in the thread's
+local scope, executes the command, then [[O.Unlocal]] removes
+the binding. This is [[rc]]'s equivalent of environment variables
+in [[sh]]'s [[VAR=val cmd]] syntax.
+%
+The [[split_at_non_assign]] helper handles chained assignments
+like [[A=1 B=2 cmd]], collecting all the assignments before
+the command.
+
 <<[[Compile.outcode_seq]] in nested [[xcmd()]] match [[cmd]] cases>>=
 | A.Assign (val1, val2, cmd) ->
-    let all_assigns, cmd = 
+    let all_assigns, cmd =
       split_at_non_assign (A.Assign (val1, val2, cmd)) in
     (match cmd with
     (* A=b; *)
@@ -3767,11 +4250,23 @@ let vlook_varname_or_index varname =
 
 \section{Overview}
 
+%claude:
+Builtins are commands that the shell executes directly in its own
+process, without forking. They {\em must} be builtins because they
+need to modify the shell's own state: [[cd]] changes the shell's
+working directory (a child process changing its directory would
+have no effect on the parent), [[.]] (dot/source) loads and evaluates
+a script in the current shell, and [[exit]] terminates the shell itself.
+%
+The dispatch is a simple list membership check followed by
+a match on the command name---no registration table or hash map,
+just straightforward pattern matching.
+
 <<function [[Builtin.is_builtin]]>>=
 let is_builtin s =
   List.mem s [
-    "cd"; 
-    "."; 
+    "cd";
+    ".";
     "eval";
     "exit";
     "flag";
@@ -3912,9 +4407,19 @@ let ndots = ref 0
 @
 
 
+%claude:
+The [[dotcmds]] array is a hand-compiled bytecode sequence equivalent
+to the shell commands: [[local \$0 = <zero>; local \$* = <args>; REPL]].
+It first creates local bindings for [[\$0]] (the script name) and
+[[\$*]] (the script arguments), then enters the REPL loop to read
+and evaluate commands from the sourced file.
+When the sourced file reaches EOF, [<O.REPL>] calls [<Process.return>],
+which pops the dotcmds thread. The [[Unlocal]] opcodes then
+restore the previous [[\$0]] and [[\$*]] values.
+
 <<constant [[Builtin.dotcmds]]>>=
 (* for the builtin '.' (called 'source' in bash) *)
-let dotcmds = 
+let dotcmds =
   [|
     O.F O.Mark;
       O.F O.Word;
@@ -4002,6 +4507,16 @@ argv |> Array.iter (fun s ->
 
 \section{[[Var.init()]]}
 
+%claude:
+[<Var.init>] reads the process environment ([[environ]])
+and populates the shell's global variable table.
+The special case for [[PATH]] converts the Unix colon-separated
+format ([[/usr/bin:/bin]]) into [[rc]]'s list-valued
+[[\$path]] variable ([[(/usr/bin /bin)]]).
+This is a bridge between Unix conventions (uppercase [[PATH]],
+colon-separated) and Plan~9 conventions (lowercase [[path]],
+list-valued).
+
 <<function [[Var.vinit]]>>=
 let init (caps : < Cap.env; .. >) =
   Logs.info (fun m -> m "load globals from the environment");
@@ -4038,6 +4553,21 @@ let init (caps : < Cap.env; .. >) =
 \label{chap:initialization-real}
 
 \section{Actual bootstrapping code}
+
+%claude:
+The real bootstrap is a hand-compiled bytecode array equivalent to
+the shell command: [[\$*=(argv); . /usr/lib/rcmain \$*]].
+It first assigns the command-line arguments (pushed onto the stack
+by [<interpret_bootstrap>]) to [[\$*]], then executes the dot builtin
+to source [[rcmain]]. The [[rcmain]] script (shown in
+Chapter~\ref{chap:examples}) handles initialization details like
+setting up the prompt, sourcing the user's profile, and ultimately
+running [[. /dev/stdin]] to start reading commands from the terminal.
+%
+This ``shell bootstraps itself in its own language'' design
+is elegant: the core interpreter only needs to know how to
+execute bytecodes, and the initialization policy lives in
+an editable script.
 
 <<function [[CLI.bootstrap]]>>=
 (* This is more complex than just [| O.REPL |] in _bootstrap_simple.
@@ -4201,6 +4731,21 @@ Logs.info (fun m -> m "ran as %s from %s" argv.(0) (Sys.getcwd ()));
 (* -e, for strict error checking. Abort the script when an error happens.*)
 let eflag = ref false
 @
+%claude:
+The [[-e]] flag (``exit on error'') is implemented at the opcode level,
+not as a runtime check. The compiler emits an [[O.Eflag]] opcode
+after each [[Simple]] and [[Match]] command when [[eflag]] is true.
+At runtime, [[O.Eflag]] checks the status and exits the shell
+if it is non-null. This per-command granularity is important:
+[[eflag]] is {\em not} checked after control flow operators
+like [[if]] or [[&&]], only after commands that actually run programs.
+%
+The [[eflag]] parameter is threaded through the compilation functions
+rather than using the global [[Flags.eflag]] directly. This allows
+the compiler to suppress error checking in contexts where it
+would be incorrect (e.g., inside an [[if]] condition, which is
+expected to produce non-zero statuses).
+
 % passed down a lot in outcode (why not use Flags.eflag instead
 % of passing it down?)
 
@@ -4611,6 +5156,14 @@ let dump_opcodes = ref false
 <<[[Compile.compile()]] possibly dump returned opcodes>>=
 |> (fun x -> if !Flags.dump_opcodes then Logs.app (fun m -> m "%s" (Opcode.show_codevec x)); x)
 @
+
+%claude:
+The [[-r]] flag is invaluable for understanding how the interpreter
+works. At each step of the interpreter loop, it prints the
+process ID, the program counter, the current opcode, and the
+contents of the argument stack. This lets you trace exactly
+how a command is compiled and executed, seeing the Mark/Word/Simple
+stack machine protocol in action.
 
 \section{Opcode generator trace: [[rc -r]]}
 \label{sec:rc-r}

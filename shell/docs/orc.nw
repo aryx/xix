@@ -574,7 +574,37 @@ Finally, Appendix~\ref{chap:examples} presents examples of [[rc]] scripts.
 % follow mostly data flow order diagram of section X
 % token -> AST -> opcodes -> runq
 
+%toc:
+%claude:
+In this chapter, I will present the core data structures of [[rc]],
+following the data flow from Figure~\ref{fig:dataflow}.
+The first three sections cover the compiler side:
+tokens, the abstract syntax tree, and opcodes.
+The remaining sections cover the interpreter side:
+runtime values (words), variables, functions, and
+the thread/run queue that drives execution.
+
 \section{Tokens}
+
+%trans:
+%claude:
+The first step of the compilation pipeline is to transform
+a stream of characters into a stream of {tokens}.
+The lexer [<Lexer.token()>] (described in Chapter~\ref{chap:lexing})
+is responsible for this transformation.
+
+%toc:
+%claude:
+The token kinds are declared below using
+the [[ocamlyacc]] syntax \verb+%token+.
+They are grouped into categories:
+words, operators, variables, punctuation, and keywords.
+%ocaml:
+Unlike the C version where single-character operators like
+[[';']] or [['=']] are returned as raw ASCII values,
+here every token has an explicit constructor
+([[TSemicolon]], [[TEq]], etc.), which makes the grammar
+easier to read and the type checker can verify exhaustiveness.
 
 <<Parser tokens>>=
 /*(*-----------------------------------------*)*/
@@ -638,6 +668,19 @@ program that is compiled and run immediately.
 
 %trans: see TNewline, in fact in AST line concept! will see how
 % can have multi line command later, especially for statements if/while/...
+
+%trans:
+%claude:
+The second step of the compilation pipeline transforms the stream
+of tokens into an {abstract syntax tree} (AST).
+The parser [<Parse.parse_line()>] (described in Chapter~\ref{chap:parsing})
+is responsible for this transformation.
+%
+[[rc]] has a {\em command language}: it has variables, control flow
+statements ([[if]], [[while]], [[for]], [[switch]]),
+functions ([[fn]]),
+and operators (pipes, redirections, etc.).
+All those constructs are represented in the AST types below.
 
 <<type [[Ast.line]]>>=
 (* None when reads EOF *)
@@ -764,6 +807,13 @@ type value =
 
 
 \section{Opcodes}
+
+%trans:
+%claude:
+The third step of the compilation pipeline transforms the AST
+into a series of {opcodes}.
+The function [<compile()>] (described in Chapter~\ref{chap:compile-interpret})
+is responsible for this transformation.
 
 <<signature [[Compile.compile]]>>=
 val compile : Ast.cmd_sequence -> Opcode.codevec
@@ -1099,10 +1149,37 @@ let mk_thread code pc locals =
 
 %TODO? dump a thread for simple command?
 
+%claude:
+For example, after [[rc myscript.rc foo bar]] is initialized,
+the data structures look like this:
+\begin{verbatim}
+  runq = [ thread ]
+
+  thread:
+    code = bootstrap [| Mark; Word; "*"; Assign; ... |]
+    pc   = ref 0
+    argv = ["myscript.rc"; "foo"; "bar"]
+    locals = {}
+    waitstatus = NothingToWaitfor
+\end{verbatim}
+%
+The bootstrap code will then assign this list to [[\$*]]
+and source [[rcmain]], which sets up [[\$path]] and
+runs the script.
 
 \subsection{The stack}
 
 % argv
+
+%claude:
+The [[argv]] field is the operand stack for the bytecode interpreter.
+Bytecodes like [<O.Word>] push strings onto it, and [<O.Simple>]
+consumes the accumulated list as the command's arguments.
+%ocaml:
+In the C version, this is a two-level linked list ([[List]] of [[Word]] lists)
+requiring [[Xmark]] to push a new sub-list.
+Here it is a flat [[string list]], which is simpler but means the
+mark/pop operations must be handled differently.
 
 <<signature [[Runtime.push_word]]>>=
 val push_word : string -> unit
@@ -1130,6 +1207,13 @@ let pop_word () =
 
 \subsection{Local variables}
 
+%claude:
+Each thread has its own hashtable of {local variables}.
+These are created by constructs like [[for]] that bind a variable
+for the duration of a block.
+When looking up a variable with [<vlook()>], [[rc]] first
+searches the current thread's locals before falling back to
+the global variable table.
 
 <<signature [[Var.vlook]]>>=
 (* This will look first in the locals (in Runtime.cur().locals) and then
@@ -1204,6 +1288,21 @@ redirections =
 \subsection{Wait status}
 
 %trans: finally, wait status, last major field in thread data structure.
+
+%claude:
+The last major field in the thread structure tracks the
+relationship between a thread and an external process.
+When [<O.Pipe>] forks a child, it records the child's PID
+in [[WaitFor]] so that [<O.Pipewait>] knows which process
+to wait for. When the child terminates, the status is
+stored as [[ChildStatus]].
+%ocaml:
+The algebraic type [[waitstatus]] makes the three states
+explicit: [[NothingToWaitfor]], [[WaitFor of int]], and
+[[ChildStatus of string]]. In the C version, this is
+encoded as a plain [[int pid]] field where [[-1]] means
+``nothing to wait for'' and a separate [[char status[]]]
+buffer.
 
 <<[[Runtime.thread]] other fields>>=
 (* things to wait for after a thread forked a process *)

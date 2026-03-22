@@ -62,6 +62,171 @@ Pretty cool language and improvement over C. Maybe can add to C incrementally?
 
 * Last
 
+** Last1
+
+*** an orc -restricted like for ed, that disallows globbing!
+good for AI coding agent to forbid dangerous rm -rf * :)
+
+*** RELAX add a -profile for omk, orc, etc. with ppx_profiling
+
+*** xix iwp9.nw refinments until March 9
+fix omk/orc
+add ohoc, oawk, osed
+omothra? (use my html/css/js parser, resume meh and mmm?)
+resume o9
+improve oas/olk/occ/, add riscv?
+
+*** bug: plan9: why can't I just run 'opwd' in /bin path?
+I get a "no bytecode" error.
+But if I do /bin/opwd it works, weird.
+
+*** orc
+
+**** TEDIOUS implement globbing! 
+How is it implemented in C?
+
+alt: reuse Glob library in semgrep? maybe not worth it for now and
+good porting exercise to convert C code to OCaml.
+update: reuse re_glob.ml from ocaml-re now in lib_core/regexps/re/
+
+does not hurt though to have a look at the Glob library by Martin
+in semgrep-libs
+
+**** implement Subshell @{ for for loop, used heavily in xix mkfile
+add test? test infra?
+
+**** try use rc with mk! MKSHELL!
+but need globbing first, lots of commands are doing rm *.o for example
+
+*** => get orc/omk working enough that can compile xix, kencc, and plan9!
+# actually I lie in the iwp9 paper and said it was already working
+
+*** xix utilities
+
+**** RELAX LP split hoc
+
+**** RELAX port hoc to ocaml, skeleton
+
+**** LP split awk
+
+**** WAITING FUN port utilities/text/awk/ to OCaml
+but first better split it and explain it in Utilities.nw
+https://maximullaris.com/awk_tech_notes.html
+https://maximullaris.com/awk.html
+
+**** skeleton sed? do like ogrep, just mimimal program
+copy code of oed?
+
+**** LP split grep
+and port to ocaml
+even though already my grep v0 with just 100 LOC is already useful
+
+**** LP split sed
+and port to ocaml
+
+*** LATER: resume o9, get it working again on qemu-system-arm like in mkfile
+# can then talk about it in iwp9 paper!
+compile and link o9 for raspeberry pi! see xix/kernel/mkfile 
+
+*** misc
+
+**** switch to COMP_EXTRA_FLAGS in mkcommon
+use OCFLAGS, OLDFLAGS or OCFLAGS, OLFLAGS or O_CFLAGS O_LDFLAGS
+
+**** remove main.8 from byterun/mkfile
+anyway it's linked manually and can't work from a lib I think
+
+*** testinfra/devinfra: fix Nix CI xix
+also would be good to fix nix locally; I can't even compile
+xix under nix-shell --pure on my thelioastra
+pb when opam switch create 4.14.2 and in CI I have weird
+linking error about dll_stdcompat_stub.so
+
+*** still? omkrc, linked together, works?
+global state to reset? big? should be simple! FP power!
+
+then add discussion about it in xix paper!
+
+hmm but lose //ism then, because here we fork every recipe
+which is convenient because they execute in parallel.
+so good only for NPROC=1, for more would need actually multicore.
+hmm but can still get it if rc single-threaded but fork
+programs, but pb is we waitpid for programs in mk, not rc.
+
+*** xix and plan9
+
+**** can have 'oed' running under plan9?
+just comment callunix?
+hmm Disk use Unix, so have to rewrite code to instead
+use channel and just open each time you read or write
+and use Pervasives seek
+
+but pb is that need caps too at more places
+
+**** less: remove deps to Unix in all of xix/lib_core/commons
+CapUnix.ml and Proc.ml out in lib_system/?
+
+**** less: get rid of deps to Unix (and unix.a) in commons/
+
+**** less: remove deps to Str and dbe_of_filename stuff in Ftype.ml
+
+*** LPize xix
+# use Cursor and fill the explanations quickly! or use Claude Code in VScode?
+# or the recent google antigravity? or extend my own efuns?
+
+**** continue omk.nw
+
+***** start use \ifocaml in Intro.nw to differentiate
+like when taling about mk in C vs mk in OCaml and 5500 Lines of C ->
+3300 lines of OCaml?
+
+***** generate mk_help.tex automatically from ../mk binary!
+and included it in section 2.2
+
+**** continue orc.nw
+
+*** --------------------------------------------------
+
+*** cleanup todos/xix.txt, move stuff in ocaml-light/todo.txt too
+
+*** forbid use of stdout, stdin, stderr in semgrep.jsonnet
+
+*** omk on xix/ does not work well when NPROC=64
+weird unbound module because I think ocamldep is
+wrong
+
+*** xix C compiler
+
+**** handle global.c
+iterate over ids Storage.Global with initializer
+add Data and GLOBL directives
+
+**** handle tests/compiler/checking/initializer_not_constant.c
+issue correct warning
+
+**** handle Codegen for strings, outstring, 
+refine Compiler.nw accordingly too
+
+do the OSTRING -> ONAME in Rewrite.ml
+and return extra info to generate DATA pseudo
+instead of doing it in the middle of codegen
+
+**** fix o5c to at least compile helloc.c
+so solved Unary GetRef of String and Call
+
+**** => helloc.c working with 05c/o5a/o5l !! the whole toolchain
+
+*** xix assembler/linker toolchain
+
+**** finish oia v0, enough for simple examples
+Ast_asmi.ml with all constructs derived from a.y and lex.c
+
+**** testinfra for hello_linux_arm.exe! tests/assembler/ tests/linker/
+and use qemu-arm
+(hmm but segfault right now with those ELF binaries :( )
+
+
+
 * Ported (partially working)
 
 ** orc
@@ -685,6 +850,35 @@ imitate some of Bos API? or too complex IMHO.
 or extlib/utf8.ml good enough?
 
 or uchar.ml enough?
+
+* Books
+
+** orio.nw
+
+*** try Windows.nw and orio.nw
+tell orio.nw = porting of Windows.nw, tell to read Intro.nw
+to understand the program architecture and use
+
+
+** ogit.nw
+
+*** fix VCS-8.pdf
+but I think just annotation p14
+
+*** too many trans:dull? get inspiration from nice LP books, like
+David Hanson books? (C libs or C compiler)
+
+*** EASY? go through VCS.nw, address some of the comments, 
+or transform them in \t or \l
+
+*** algo chapter
+
+**** LP split diff more simplified Myers
+
+**** lpize diff3.ml and LP split
+or wait more robust?
+
+
 
 * Infra
 

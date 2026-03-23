@@ -66,10 +66,31 @@ Rob Pike and Yoann Padioleau
 
 \section{[[hellorio.ml]]}
 
+%claude:
+Before diving into [[rio]] itself, I will present a toy graphical
+application called [[hellorio]]. It draws a line that follows the
+mouse cursor, and prints typed characters. Despite its simplicity,
+it introduces the key concepts used throughout [[rio]]: display
+initialization, mouse and keyboard handling, and the event loop
+with [[Event.select]].
+
 <<constant [[Hellorio._]]>>=
 let _ =
   Cap.main (fun caps -> thread_main caps)
 @
+
+%claude:
+The main function takes a capability object listing everything the
+program needs: display access, keyboard, mouse, and file reading
+(for [[/dev/winname]]). This makes resource dependencies visible
+in the type signature rather than hidden in global state.
+%claude:
+The initialization follows a standard pattern: connect to the
+display with [[Draw.init]], obtain the window image with
+[[Draw_rio.get_view]], then set up input devices.
+[[Keyboard.init]] and [[Mouse.init]] each spawn a background
+thread that reads from the real [[/dev/cons]] and [[/dev/mouse]]
+and forwards events through channels.
 
 <<function [[Hellorio.thread_main]]>>=
 (* the Keyboard.init() and Mouse.init() below create other threads *)
@@ -106,12 +127,24 @@ let redraw (display : Display.t) (view : Display.image) (pos : Point.t)
 @
 %ocaml: less globals, pass down view and display
 
+%claude:
+The event type is a simple sum type---the OCaml equivalent
+of a tagged union. Each branch wraps the payload from the
+corresponding input device.
+
 <<type [[Hellorio.event]]>>=
 type event =
   | Mouse of Mouse.state
   | Key of Keyboard.key
   (* less: Resize *)
 @
+
+%claude:
+The event loop uses [[Event.select]] to wait on multiple channels
+simultaneously: whichever channel has data ready first wins.
+This is the OCaml equivalent of Plan~9's [[alt()]] or Go's
+[[select]] statement. Each channel is wrapped with [[Event.wrap]]
+to tag the payload into the [[event]] sum type.
 
 <<[[Hellorio.thread_main()]] in event loop>>=
 let ev : event = 
@@ -163,6 +196,15 @@ in
 
 \section{Book structure}
 
+%ocaml: Windows.nw Introduction topics NOT needed in OCaml version:
+% - threadmain() vs main(): OCaml threads do not need a special entry point
+% - proc creation for mouse/keyboard I/O: OCaml Thread module handles blocking I/O
+%   without needing separate procs (ThreadUnix sets non-blocking internally)
+% - Alt array with enum indices: OCaml uses Event.select with a list, no index enum needed
+% - Rune type introduction: OCaml chars are sufficient for now (less: full Unicode)
+% - view global: passed as function argument, not a global
+% - resize event handling: not yet implemented in hellorio.ml
+
 %###############################################################################
 
 
@@ -171,7 +213,20 @@ in
 %******************************************************************************
 \label{chap:core-ds}
 
+%claude:
+In this chapter, I will present the core data structures of [[rio]].
+The most important one is [[Window.t]], the central record type
+that groups together everything about a window: its graphics, input
+channels, process information, and text buffer.
+
 \section{Device handles}
+
+%claude:
+A graphical application under \plan needs three things: a display
+connection for output, and mouse and keyboard handles for input.
+In this OCaml version, these are not globals---they are local
+bindings created in [[thread_main]] and passed to the threads
+that need them.
 
 \subsection{Output device: [[display]] and [[view]]}
 %ocaml: not globals anymore, passed down functions
@@ -182,10 +237,24 @@ in
 \section{Desktop}%%, [[desktop]]}
 %ocaml: also not a global anymore
 
+%claude:
+The desktop is a [[Baselayer.t]], a screen on top of [[view]]
+that supports overlapping layers. Every window will be allocated
+as a layer on this desktop, which handles z-ordering and
+repainting of overlapping regions automatically.
+
 \section{Windows}
 \label{sec:core-ds-Windows}
 
 \subsection{[[Window.t]]}
+
+%claude:
+[[Window.t]] is the central data structure of [[rio]], grouping
+together everything about a window: its identity, its graphics
+surface, channels for receiving mouse and keyboard events, a link
+to the external process running in the window, and the text buffer
+for terminal emulation. The fields are organized into ten categories,
+presented gradually throughout the book.
 
 <<type [[Window.t]]>>=
 (* The window type! *)
@@ -305,6 +374,12 @@ mutable screenr: Rectangle.t;
 
 \subsection{[[windows]]}
 
+%claude:
+The [[windows]] hash table holds all managed windows, keyed by
+their integer ID. The [[topped]] counter is a logical timestamp:
+each time a window is brought to the front, it gets the current
+counter value, so comparing [[topped]] values determines z-order.
+
 <<global [[Globals.windows]]>>=
 let windows: (Window.wid, Window.t) Hashtbl.t = Hashtbl_.create ()
 @
@@ -326,6 +401,12 @@ mutable topped: topped_counter;
 \subsection{[[current]]}
 \label{sec:current}
 
+%claude:
+The [[current]] global tracks which window has the keyboard focus.
+It plays a role similar to [[up]] (the current process) in the
+\book{Kernel}: it is a global pointer that many parts of the code
+consult to know where to route input events.
+
 <<global [[Globals.current]]>>=
 (* the man page of rio (rio(1)) uses the term 'current' 
  * old: was called 'input' in rio
@@ -340,6 +421,16 @@ let win () =
 @
 
 \subsection{Graphical windows}
+
+%claude:
+[[rio]] distinguishes graphical from textual windows at runtime.
+If a client opens [[/mnt/wsys/mouse]], the [[mouse_opened]] flag
+is set to [[true]] and [[rio]] treats the window as graphical:
+raw mouse events are forwarded to the application.
+If [[mouse_opened]] is [[false]] (the default), the window is
+treated as a terminal, and [[rio]] interprets mouse events itself
+(for text selection, scrolling, etc.).
+The [[raw_mode]] flag plays a similar role for the keyboard.
 
 <<[[Window.t]] graphical window fields>>=
 mutable mouse_opened: bool;
@@ -365,10 +456,25 @@ raw_keys: Keyboard.key Queue.t;
 
 \subsection{Textual windows}
 
+%claude:
+A textual window (the default, used as a terminal) embeds a
+[[Terminal.t]] record that holds the text buffer, cursor positions,
+and rendering state. This is a separate type rather than inlining
+all fields into [[Window.t]], which makes the separation between
+windowing-system concerns and terminal-emulation concerns clearer.
+
 <<[[Window.t]] textual window fields>>=
 terminal: Terminal.t;
 @
 %ocaml: new intermediate type instead of putting all fields in Window.t
+
+%claude:
+The [[Terminal.t]] record has two layers: the {\em model} (text data
+and cursor positions) and the {\em view} (the image surface and
+layout rectangles for rendering). The key field is [[output_point]]:
+it divides the text buffer into two halves---everything before it
+is output from the application (already processed), and everything
+after it is input typed by the user (not yet sent to the application).
 
 <<type [[Terminal.t]]>>=
 type t = {
@@ -459,9 +565,24 @@ mutable is_selected: bool;
 
 \section{Filesystem server}
 
+%claude:
+[[rio]] is not just a graphical application---it is also a
+{filesystem server}. In \plan, any process can serve virtual
+files by listening on a pipe and speaking the 9P protocol.
+When a client process reads [[/dev/cons]] or [[/dev/mouse]],
+the kernel translates that into a 9P message on the pipe,
+and [[rio]]'s filesystem server thread handles it.
 
 \subsection{[[Fileserver.t]]}%% and [[filsys]]}
 %ocaml: no filsys global
+
+%claude:
+The [[Fileserver.t]] record holds the two ends of the pipe
+that connects [[rio]] to its client processes. The [[clients_fd]]
+end is inherited by child processes (via [[fork]]) and passed
+to [[Plan9.mount]] so the kernel routes their file operations
+through the pipe. The [[server_fd]] end is read by [[rio]]'s
+filesystem server thread.
 
 <<type [[Fileserver.t]]>>=
 type t = {
@@ -483,6 +604,16 @@ type t = {
 
 
 \subsection{File state and file ids}
+
+%claude:
+A {fid} is a 9P concept: a handle that the client uses to refer
+to a file on the server, similar to a file descriptor but at the
+protocol level. The server maintains a [[File.t]] record for each
+active fid, tracking which file it points to, whether it has been
+opened, and---crucially---which [[Window.t]] it belongs to.
+The [[win]] field is the bridge between the filesystem abstraction
+and the windowing system: it lets the server know which window
+a read or write request is for.
 
 <<type [[File.fid]]>>=
 (* This is maintained by the "client" (the kernel on behalf of a winshell) *)
@@ -565,6 +696,14 @@ win: Window.t;
 \section{Devices}
 %ocaml: new section, new type
 
+%claude:
+Each virtual device file ([[/mnt/wsys/mouse]], [[/mnt/wsys/cons]], etc.)
+is identified by a [[devid]] variant and implemented by a [[Device.t]]
+record containing open/close/read/write callbacks. This is essentially
+a vtable pattern: the filesystem server dispatches 9P operations to
+the right device by looking up the [[devid]] in the [[all_devices]]
+table.
+
 <<type [[File.devid]]>>=
   and devid = 
     | WinName
@@ -612,6 +751,13 @@ let device_of_devid (devid : File.devid) : Device.t =
 @
 
 
+%claude:
+The [[read_threaded]] and [[write_threaded]] callbacks are called
+``threaded'' because they may block waiting on channels (e.g., waiting
+for the next mouse event). The filesystem server spawns a new OCaml
+thread for each read or write request so that blocking does not
+stall other 9P operations.
+
 <<type [[Device.t]]>>=
 type t = {
   (* ex: "winname", "cons" *)
@@ -649,10 +795,24 @@ let default = {
 @
 
 
+%ocaml: Windows.nw Core DS topics NOT needed in OCaml version:
+% - Ref/Qlock concurrency fields: OCaml has no data races (single-domain), no need for reference counting or locks
+% - screenr vs i->r coordinate conversion: not yet using originwindow, so always equal
+% - Xfid worker pool type: OCaml creates threads on the fly for read/write, no pool needed
+% - fcall dispatch table (C function pointer array): OCaml uses pattern matching on ADT
+% - globals (display, view, screen, mousectl, keyboardctl): passed as function arguments
+
 %******************************************************************************
 \chapter{[[main()]]}
 %******************************************************************************
 \label{chap:main}
+
+%claude:
+[[rio]] has a triple nature that is visible right in [[thread_main]]:
+it is a graphical application (it calls [[Draw.init]]),
+a filesystem server (it calls [[Fileserver.init]]),
+and a concurrent application (it creates multiple threads and
+waits on an exit channel).
 
 <<toplevel [[Main._1]]>>=
 let _ = 
@@ -661,6 +821,13 @@ let _ =
   )
 @
 
+
+%claude:
+The capability type lists everything [[rio]] needs from the
+operating system. This is the complete set of resources: drawing,
+input devices, process management ([[fork]]/[[exec]]/[[chdir]]),
+and namespace manipulation ([[mount]]/[[bind]]) to set up
+virtual devices for each window.
 
 <<type [[CLI.caps]]>>=
 (* Need:
@@ -715,6 +882,15 @@ let main (caps : < caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
 val thread_main: < caps; ..> -> Exit.t
 @
 
+%claude:
+The structure of [[thread_main]] mirrors [[rio]]'s triple nature.
+First, it initializes the display and allocates colors (graphical
+application). Then it creates the filesystem server pipe
+(filesystem server). Finally, it spawns the mouse, keyboard, and
+fileserver threads, and blocks on [[exit_chan]] waiting for
+someone to send an exit code---which happens when the user selects
+``Exit'' from the right-click menu.
+
 <<function [[CLI.thread_main]]>>=
 let thread_main (caps: < caps; .. >) : Exit.t =
 
@@ -739,6 +915,13 @@ let thread_main (caps: < caps; .. >) : Exit.t =
 % rio a graphical app!
 
 % similar start to hellorio.ml
+
+%claude:
+The graphics initialization is almost identical to [[hellorio.ml]]:
+connect to the display, obtain the window image via
+[[Draw_rio.get_view]], and load the default font. The [[desktop]]
+is a [[Baselayer.t]] allocated on top of [[view]]---it provides
+z-ordering for overlapping window layers.
 
 <<[[CLI.thread_main()]] graphics initializations>>=
 let display : Display.t = Draw.init caps "orio" in
@@ -790,6 +973,16 @@ let title_color_light = ref Display.fake_image
 % Keyboard.init will open /dev/consctl and turn raw on
 
 % again similar to hellorio.ml
+
+%claude:
+[[rio]] creates only three threads at startup: the keyboard
+thread (a simple dispatcher that forwards keys to the current
+window), the mouse thread (a more complex dispatcher that also
+handles window management operations), and the filesystem server
+thread (which reads 9P requests from the pipe).
+Additional window threads are created later, one per window,
+when the user selects ``New'' from the menu.
+
 <<[[CLI.thread_main()]] threads creation>>=
 let mouse : Mouse.ctl = Mouse.init caps in
 let kbd : Keyboard.ctl = Keyboard.init caps in
@@ -810,6 +1003,12 @@ let _fileserver_master_thread =
 \section{Filesystem server initialization}
 
 %\subsection{[[Fileserver.init()]]}%%[[filsysinit()]]}
+
+%claude:
+The filesystem server initialization creates a pipe with
+[[Unix2.pipe]]. Both ends are set to non-blocking mode because
+OCaml's [[ThreadUnix]] requires it for cooperative threading---without
+this, a blocking read on one end would freeze all threads in the process.
 
 <<signature [[Fileserver.init]]>>=
 (* internally creates a pipe between clients_fd/server_fd above *)
@@ -841,6 +1040,14 @@ let init () =
 
 %%\subsection{Worker allocator: [[xfidinit()]]}
 
+%ocaml: Windows.nw main() topics NOT needed in OCaml version:
+% - threadmain() vs main(): no thread library preamble needed in OCaml
+% - proccreate for filsysproc: OCaml threads do not block each other, so no separate proc needed
+% - cexecpipe(): OCaml uses Unix2.pipe directly, no need for OCEXEC workaround
+% - xfidinit() worker pool: OCaml creates threads on the fly (Thread.create in Read/Write dispatch)
+% - channel creation section: channels are created where they are used, not in a separate section
+% - stack size constant (STACK): managed by OCaml runtime
+
 %******************************************************************************
 \chapter{Threads} %% Procs and Threads
 %******************************************************************************
@@ -849,7 +1056,23 @@ let init () =
 % on unix calls (thx to ThreadUnix) so no need intermediate proc
 % to do the read and thread for the channel.
 
+%claude:
+A windowing system is fundamentally a {reactive} program: it must
+respond to mouse movements, keyboard presses, window management
+requests, and filesystem operations, all happening concurrently.
+[[rio]] handles this by dedicating a separate thread to each
+concern: one for the keyboard, one for the mouse, one per window,
+and one for the filesystem server. These threads communicate
+exclusively through channels, never through shared mutable state
+protected by locks.
+
 \section{Keyboard thread}
+
+%claude:
+The keyboard thread is a simple {demultiplexer}: it receives keys
+from the underlying device (via [[Keyboard.receive]]) and forwards
+each key to the current window's [[chan_keyboard]] channel.
+If no window has focus, the key is silently dropped.
 
 <<signature [[Thread_keyboard.thread]]>>=
 (* Reads from the keyboard and sends the key to the "current" window *)
@@ -885,6 +1108,15 @@ chan_keyboard: Keyboard.key Event.channel;
 % will see later then things consuming what is produced here
 
 \section{Mouse thread}
+
+%claude:
+The mouse thread is more complex than the keyboard thread because
+mouse events have a dual nature: some belong to the application
+(e.g., a left-click for text selection in a terminal), and some
+belong to the window manager (e.g., a right-click to open the
+system menu, or a click on a different window to change focus).
+The mouse thread must decide, for each event, whether to forward
+it to the current window or handle it as a windowing system operation.
 
 <<signature [[Thread_mouse.thread]]>>=
 (* Reads from the mouse and sends the mouse state to the "current" window
@@ -938,6 +1170,12 @@ let thread (caps : < Cap.fork; .. >)
 
 \subsection{Application mouse events}
 
+%claude:
+A mouse event is forwarded to the window when the cursor is inside
+the window border and either the application has opened [[/dev/mouse]]
+([[mouse_opened]] is [[true]], meaning it is a graphical application),
+or the left button is pressed (used for text selection in terminals).
+
 <<[[Thread_mouse.thread()]] let [[sending_to_win]]>>=
 let sending_to_win =
   match Globals.win () with
@@ -987,6 +1225,14 @@ val window_cursor:
 
 \subsection{Windowing system mouse events}
 
+%claude:
+When a mouse event is not forwarded to the application, the mouse
+thread handles it as a windowing system operation. It determines
+which window is under the cursor with [<window_at_point>], then
+dispatches based on which button was clicked and whether the click
+landed on the current window, another window, or the desktop
+background.
+
 <<[[Thread_mouse.thread()]] when not [[sending_to_win]]>>=
 let wopt = Globals.window_at_point m.pos in
 (match wopt with
@@ -1009,6 +1255,12 @@ then
 (* less: drain *)
 @
 
+%claude:
+Multiple windows can overlap at the same point. To find the topmost
+one, [<window_at_point>] iterates over all windows and keeps the
+one with the highest [[topped]] counter---the logical timestamp
+assigned each time a window is brought to the front.
+
 <<function [[Globals.window_at_point]]>>=
 (* old: was called wpointto in rio *)
 let window_at_point pt =
@@ -1025,6 +1277,15 @@ let window_at_point pt =
 @
 % can have multiple windows under the mouse, but we look for the one
 % at the top!
+
+%claude:
+The [[under_mouse]] type captures the three possible situations
+when a click lands outside the current window: nothing under the
+cursor (click on the desktop background), the current window
+itself (but outside its content area, i.e., on its border), or
+a different window. Each case triggers different behavior: desktop
+clicks open the system menu, border clicks on the current window
+are ignored, and clicks on other windows change focus.
 
 <<type [[Thread_mouse.under_mouse]]>>=
 type under_mouse =
@@ -1073,6 +1334,15 @@ let middle_click_system _m _mouse =
 
 \section{Window threads}
 
+%claude:
+Each window has its own thread running an event loop that listens
+on multiple channels simultaneously using [[Event.select]]:
+keyboard events (from the keyboard thread), mouse events (from the
+mouse thread), control commands (resize, delete), and---for the
+virtual device protocol---channels to send mouse states and
+console data to the filesystem server. This is the {active object}
+pattern: each window is an autonomous entity with its own event loop.
+
 <<signature [[Threads_window.thread]]>>=
 (* Thread listening to keyboard/mouse/wm events for a particular window
  * and dispatching to the right channel.
@@ -1093,6 +1363,17 @@ type event =
 @
 % those are all 'reading', but we will see later can also have 'sending'
 
+%claude:
+The event loop is the heart of each window. Note that the
+[[Event.select]] call contains not only [[Event.receive]] entries
+(for incoming keyboard, mouse, and command events) but also
+[[Event.send]] entries (for outgoing data to the filesystem
+server). This is a key insight: [[select]] can dispatch on both
+receiving {\em and} sending---whichever side is ready first wins.
+The send entries are conditional: they are only included in the
+list when there is data ready to send (e.g., a new mouse state
+or a newline in the text buffer).
+
 <<function [[Threads_window.thread]]>>=
 let thread (w : Window.t) =
   (* less: threadsetname *)
@@ -1101,7 +1382,7 @@ let thread (w : Window.t) =
   while true do
     let ev = (
     (* receive *)
-    [ 
+    [
       Event.receive w.chan_keyboard |> wrap (fun x -> Key x);
       Event.receive w.chan_mouse    |> wrap (fun x -> Mouse x);
       Event.receive w.chan_cmd      |> wrap (fun x -> Cmd x);
@@ -1168,6 +1449,15 @@ mutable deleted: bool;
 
 \subsection{Keyboard events listening}
 
+%claude:
+The keyboard dispatch has four cases based on two flags:
+[[raw_mode]] (is the application reading raw keys?) and
+[[mouse_opened]] (is this a graphical application?).
+The common case for a terminal is [[false, false]]: keys go through
+[[Terminal.key_in]] for line editing.
+For a graphical application in raw mode ([[true, true]]),
+keys are queued directly in [[raw_keys]] for the application to read.
+
 <<function [[Threads_window.key_in]]>>=
 (* input from user *)
 let key_in (w : Window.t) (key : Keyboard.key) =
@@ -1209,6 +1499,13 @@ val key_in: t -> Keyboard.key -> unit
 @
 
 \subsection{Mouse events listening}
+
+%claude:
+For graphical applications ([[mouse_opened]] is [[true]]), mouse
+events are queued for the application to read via [[/dev/mouse]].
+Not every mouse move is queued---only clicks and button releases
+are, to avoid flooding the queue with move events. The latest
+mouse position is always available in [[last_mouse]].
 
 <<function [[Threads_window.mouse_in]]>>=
 let mouse_in (w : Window.t) (m : Mouse.state) =
@@ -1267,6 +1564,14 @@ let cmd_in (w : Window.t) (cmd : cmd) =
 \section{Filesystem server thread} %% proc}
 
 %%\subsection{[[filsysproc()]]}
+
+%claude:
+The filesystem server thread runs a simple loop: read a 9P message
+from the pipe, dispatch it based on the request type, and send
+back a response. This is a {master} thread---for read and write
+operations that may block (e.g., waiting for a mouse event or
+console input), it spawns a new worker thread so the master can
+continue processing other requests.
 
 <<signature [[Threads_fileserver.thread]]>>=
 (* 
@@ -1341,14 +1646,36 @@ let answer (fs : Fileserver.t) (res : P9.message) =
 %%\section{[[Xfid]] allocator thread}
 %%\section{[[Xfid]] threads}
 
+%ocaml: Windows.nw Threads topics NOT needed in OCaml version:
+% - Procs vs threads distinction: OCaml ThreadUnix handles blocking I/O without separate procs
+% - IO procs for mouse/keyboard: Keyboard.init/Mouse.init handle this internally
+% - Xfid allocator thread and worker pool: Thread.create is used on the fly for each Read/Write
+% - Alt array with enum indices: OCaml uses Event.select with a list
+% - double-buffering trick for keyboard (alternating ck arrays): not needed, single channel suffices
+% - coordinate conversion (physical vs logical): not yet using originwindow
+% - drain/flushimage after move/resize: simplified in OCaml version
+
 %******************************************************************************
 \chapter{Cursors}
 %******************************************************************************
 \label{chap:cursor}
 
+%claude:
+[[rio]] uses different cursor shapes to give visual feedback about
+window management operations: a cross when sweeping a new window,
+a box when moving, a sight when selecting a window to delete.
+Around window borders, the cursor changes to an arrow pointing
+toward the nearest edge or corner, hinting at resize directions.
+
 \section{Cursor graphics}
 
 \subsection{Classic cursors}
+
+%claude:
+Each cursor is defined as a pair of 16x16 bitmaps ([[clr]] and
+[[set]]) plus a hotspot offset. The [[clr]] bitmap defines the
+shape (where the cursor is non-transparent), and [[set]] defines
+which pixels within that shape are black vs.\ white.
 
 <<signature [[Cursors.crosscursor]]>>=
 val crosscursor : Cursor.t
@@ -1457,6 +1784,14 @@ let _query = {
 @
 
 \subsection{Border and corner cursors}
+
+%claude:
+When the mouse hovers over a window border, [[rio]] shows a
+directional arrow indicating which edge or corner can be
+grabbed for resizing. The [[which_corner]] function divides
+each border edge into three portions (near the start, middle,
+near the end) to determine which of the eight directions
+applies.
 
 <<type [[Cursors.corner]]>>=
 type corner = 
@@ -1616,6 +1951,13 @@ let l = {
 
 \subsection{[[cornercursor()]]}
 
+%claude:
+The cursor management has two levels: [<corner_cursor_or_window_cursor>]
+first checks if the mouse is on the window border (and shows the
+appropriate directional arrow), otherwise falls back to the
+window's own cursor. This is called from the mouse thread whenever
+the mouse moves over a window.
+
 <<function [[Wm._corner_cursor]]>>=
 let _corner_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.ctl) =
   if Window.pt_on_border pt w
@@ -1629,6 +1971,13 @@ let corner_cursor_or_window_cursor (w : Window.t) (pt : Point.t) (mouse : Mouse.
   then Mouse.set_cursor mouse (Cursors.which_corner_cursor w.screenr pt)
   else window_cursor w pt mouse
 @
+
+%claude:
+The window has two zones: the border (the ring between [[screenr]]
+and [[screenr]] inset by [[window_border_size]]) and the content
+area inside. [<pt_on_border>] returns true when the point is
+in the border ring; [<pt_inside_border>] returns true when it is
+in the content area.
 
 <<function [[Window.pt_on_border]]>>=
 (* old: was called winborder in rio *)
@@ -1704,10 +2053,22 @@ let portion x low high =
 
 \subsection{[[wsetcursor()]]}
 
+%ocaml: Windows.nw Cursors topics NOT needed in OCaml version:
+% - riosetcursor() with special wkeyboard handling: wkeyboard not implemented yet
+% - cursor2 bitmaps for holding mode: holding mode not implemented yet
+% - wsetcursor() with window-specific cursor: simplified, just uses Option handling
+
 %******************************************************************************
 \chapter{Window Manager}
 %******************************************************************************
 \label{chap:wm}
+
+%claude:
+This chapter covers the window management operations triggered by
+the user: creating, deleting, moving, resizing, hiding, and
+showing windows. All of these are initiated from the mouse thread
+(via the right-click menu or clicks on window borders) and
+communicated to window threads through the [[chan_cmd]] channel.
 
 \section{Overview}
 
@@ -1752,6 +2113,14 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
 
 \section{Window creation}
 
+%claude:
+Creating a new window is a three-step process:
+(1)~the user sweeps a rectangle on screen with the mouse,
+(2)~[[rio]] allocates a [[Window.t]], a layer on the desktop,
+and a new window thread,
+(3)~[[rio]] forks a child process, sets up its namespace
+(mount + bind) so it sees virtual devices, and execs the shell.
+
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
 (* less: the first item get selected the very first time; QEMU bug?  *)
 "Nouveau", (fun () ->
@@ -1790,6 +2159,15 @@ val new_win:
 @
 
 \subsection{Window thread creation}%%: [[new()]]}
+
+%claude:
+[<new_win>] ties together the three steps of window creation:
+allocate the data structure and create the window thread (so
+it starts listening for events), then fork a child process that
+will mount the filesystem server and exec the shell.
+The order matters: the window thread must be running before the
+child process starts, because the child will immediately begin
+accessing virtual devices through the filesystem server.
 
 <<function [[Wm.new_win]]>>=
 (* New window! new process! new thread!
@@ -1860,6 +2238,14 @@ w.pid <- pid;
 w.label <- spf "rc %d" pid;
 @
 
+%claude:
+[[Draw_ipc.name_image]] makes the layer publicly visible in the
+kernel's draw device under the name [["window.<id>"]]. This is
+essential: when the child process calls [[Draw.init]], the library
+reads [[/dev/winname]] (served by [[rio]]) to discover this name,
+then uses it to look up the layer. Without this call, the client
+would have no way to find its window's image.
+
 <<[[Wm.new_win()]] when parent in fork with [[pid]] child>>=
 (* less: not too late? race with child to access /dev/winname? *)
 let winname = spf "window.%d" w.id in
@@ -1892,6 +2278,14 @@ mutable pwd: Fpath.t;
 val threads_window_thread_func: (Window.t -> unit) ref
 @
 % must be done before we create thhe mouse thread?
+%claude:
+This is a workaround for a circular dependency: [[Wm.new_win]]
+needs to call [[Threads_window.thread]] to create window threads,
+but [[Threads_window]] depends on [[Wm]] (for border painting,
+etc.). The ref cell breaks the cycle: [[Wm]] calls through the
+indirection, and [[CLI.thread_main]] wires the two modules together
+at startup.
+
 <<global [[Wm.threads_window_thread_func]]>>=
 (* will be set to Threads_window.thread in CLI.ml *)
 let threads_window_thread_func: (Window.t -> unit) ref = ref (fun _ ->
@@ -1981,6 +2375,16 @@ val alloc: Image.t -> Font.t -> t
 
 \subsection{Window process creation}%%: [[winshell()]]}
 
+%claude:
+The child process follows the classic fork/adjust/exec idiom, but
+the ``adjust'' step is what makes \plan unique: instead of setting
+up pseudo-terminals (as Unix would), the child calls [[Plan9.mount]]
+to mount [[rio]]'s pipe as [[/mnt/wsys]], then [[Plan9.bind]] to
+overlay it onto [[/dev]]. After this, the child's [[/dev/cons]]
+and [[/dev/mouse]] are virtual files served by [[rio]], not the
+real kernel devices. The window ID is passed as the mount argument
+so the filesystem server knows which window each request belongs to.
+
 % seen fork before and when in child call function below:
 
 <<signature [[Processes_winshell.run_cmd_in_window_in_child_of_fork]]>>=
@@ -2038,6 +2442,13 @@ let run_cmd_in_window_in_child_of_fork
 
 \subsection{Window painting}
 %ocaml: new section
+
+%claude:
+When the current window changes, both the old and new windows need
+repainting: the old one gets a lighter border (unselected), and the
+new one gets a darker border (selected). The terminal background
+also changes shade to give visual feedback about which window has
+focus.
 
 <<function [[Wm.set_current_and_repaint]]>>=
 (* old: was called wcurrent() in rio.
@@ -2110,14 +2521,35 @@ val repaint: t -> unit
 
 \subsection{Mouse action [[sweep()]]}
 
+%claude:
+The [[sweep]] function lets the user draw a rectangle on screen by
+clicking and dragging. It is implemented as a state machine: the
+user clicks to set one corner, drags to set the opposite corner
+(with visual feedback via a temporary layer), and releases to
+confirm. If the rectangle is too small, or the wrong button is
+pressed, the operation is cancelled.
+
 <<signature [[Mouse_action.sweep]]>>=
 (* allows to specify a window area *)
 val sweep: 
   Mouse.ctl -> (Display.t * Baselayer.t * Font.t) -> Image.t option
 @
 
+%claude:
+The sweep state machine is encoded as a recursive function
+[[transit]] that pattern-matches on the current state. Each state
+carries the data accumulated so far (the two corner points, the
+preview layer). The transitions are:
+[[SweepInit]] $\to$ [[SweepRightClicked]] (on click)
+$\to$ [[SweepMove]] (tracking mouse)
+$\to$ [[SweepUnclicked]] (on release)
+$\to$ [[SweepReturn]] (if rectangle is large enough).
+[[SweepRescue]] handles error cases (wrong button, too small),
+and [[SweepDrain]] waits for all buttons to be released before
+returning.
+
 <<type [[Mouse_action.sweep_state]]>>=
-type sweep_state = 
+type sweep_state =
   (* start, no buttons *)
   | SweepInit
   (* right click *)
@@ -2251,6 +2683,13 @@ let sweep (mouse : Mouse.ctl) (display, desktop, font) : Image.t option =
 
 \section{Window focus}
 
+%claude:
+Clicking on a non-current window brings it to the front.
+[<top_win>] moves the window's layer to the top of the z-order,
+updates the [[topped]] counter (so [<window_at_point>] knows
+which window is on top), and repaints both the old and new
+current window borders.
+
 <<[[Thread_mouse.thread()]] match [[under_mouse]] cases>>=
 | OtherWin w when m.buttons.left ->
   Wm.top_win w
@@ -2286,8 +2725,15 @@ let top_win (w : Window.t) =
 
 \section{Window deletion}
 
+%claude:
+Deleting a window is a two-step process: the user selects a window
+with [<point_to>] (using the sight cursor), then [[rio]] sends a
+[[Delete]] command to the window's thread via [[chan_cmd]].
+The window thread calls [<close_win>], which removes the window
+from the global tables, frees the layer, and marks it as deleted.
+
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
-"Detruire", (fun () -> 
+"Detruire", (fun () ->
   let wopt = Mouse_action.point_to mouse in
   wopt |> Option.iter (fun (w : Window.t) ->
     let cmd = Window.Delete in
@@ -2306,6 +2752,14 @@ let top_win (w : Window.t) =
 val close_win:
   Window.t -> unit
 @
+
+%claude:
+Closing a window marks it as deleted, removes it from both the
+[[windows]] and [[hidden]] hash tables, and frees its layer.
+The layer deallocation makes the window disappear from the screen.
+Note that the window thread is not explicitly terminated---it will
+notice the [[deleted]] flag on its next iteration and stop
+processing events.
 
 <<function [[Wm.close_win]]>>=
 let close_win (w : Window.t) =
@@ -2332,8 +2786,16 @@ let close_win (w : Window.t) =
 
 \subsection{Mouse action [[pointto()]]}
 
+%claude:
+[<point_to>] lets the user select a window by clicking on it.
+The cursor changes to a sight (crosshair with circle), then the
+function blocks until a click is detected. If the user clicks
+with the right button, the window under the cursor is returned;
+any other button cancels the operation. After the click, the
+function waits for all buttons to be released before returning.
+
 <<signature [[Mouse_action.point_to]]>>=
-val point_to: 
+val point_to:
   Mouse.ctl -> Window.t option
 @
 
@@ -2374,6 +2836,15 @@ let point_to (mouse : Mouse.ctl) : Window.t option =
 
 
 \section{Window resize}
+
+%claude:
+Resizing works by allocating a new layer with the new dimensions,
+then sending a [[Reshape]] command to the window thread. The
+window thread copies the old content (if the dimensions match),
+frees the old image, and updates [[w.img]]. The [[Reshape]]
+command is also reused for hiding and showing windows: hiding
+replaces the layer with an off-screen image, and showing replaces
+the off-screen image with a new layer.
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
 (* old: was Reshape but here it's really resizing *)
@@ -2454,6 +2925,15 @@ let resize_win (w : Window.t) (new_img : Display.image) =
 \section{Window visibility}
 \label{sec:window-hide}
 
+%claude:
+Hiding a window replaces its on-screen layer with an off-screen
+[[Image.t]] (allocated with [[Image.alloc]] instead of
+[[Layer.alloc]]), so the content is preserved in memory but
+invisible. Showing reverses this: a new layer is allocated on the
+desktop, and the [[Reshape]] command triggers the window thread
+to swap back. The hidden windows appear at the bottom of the
+right-click menu so the user can select them to unhide.
+
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
 "Cacher", (fun () -> 
   let wopt = Mouse_action.point_to mouse in
@@ -2527,10 +3007,27 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 
 % Reshape abused again
 
+%ocaml: Windows.nw Window Manager topics NOT needed in OCaml version:
+% - Wctlmesg sum type with full lifecycle: simplified to Delete and Reshape only
+% - two-phase delete with timeout proc: simplified, no timeout mechanism
+% - reference counting (incref/decref): OCaml GC handles memory management
+% - Deleted/Exited distinction: simplified to a single deleted flag
+% - move/drag(): not yet implemented (raise Todo)
+% - bandsize(): not yet implemented
+% - sweeping/menuing global flags: not yet needed
+
 %******************************************************************************
 \chapter{Filesystem Server}
 %******************************************************************************
 \label{chap:filesystem-server}
+
+%claude:
+This chapter covers the 9P protocol handling: how [[rio]]
+responds to file operations (attach, walk, open, read, write,
+close, stat) from its client processes. Each 9P operation is
+handled by a case in [<dispatch>], which pattern-matches on the
+request type---the OCaml equivalent of the C version's function
+pointer table.
 
 %%\section{Additional data structures}
 % seen before File.devid, Device.t
@@ -2543,6 +3040,16 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 %%\section{[[filsysrespond()]]}
 
 \section{Attach}
+
+%claude:
+Attach is the first 9P operation after the version handshake.
+It happens when a child process calls [[Plan9.mount]]: the kernel
+sends a [[Tattach]] message with the user name and the ``aname''
+string---which, for [[rio]], contains the window ID. This is how
+the filesystem server associates each client connection with the
+right [[Window.t]]: it parses the aname as an integer, looks up
+the window in [[Globals.windows]], and stores it in the root fid's
+[[win]] field.
 
 % when is this called? just after Plan9.mount of winshell?
 % probably, and get passed the w.id!
@@ -2595,6 +3102,14 @@ let show_win (w : Window.t) (desktop : Baselayer.t) =
 mutable qid: Plan9.qid;
 @
 
+%claude:
+A [[fileid]] pairs the device code (which file: mouse, cons, etc.)
+with the window ID, so each window has its own set of qids.
+The encoding packs both into a single integer: the window ID is
+shifted left by 8 bits, and the device code occupies the low 8 bits.
+This is what the 9P protocol returns to the client as the file's
+unique identifier.
+
 <<type [[File.fileid]]>>=
 (* will generate a Qid.path *)
 type fileid = filecode * Window.wid
@@ -2631,6 +3146,15 @@ let int_of_filecode = function
 %%\subsection{[[xfidattach()]]}
 
 \section{Walk}
+
+%claude:
+Walk translates a path (e.g., [["mouse"]] or [["cons"]]) into a
+file identifier. Since [[rio]]'s filesystem is flat (just a root
+directory with device files), walking is simple: look up the name
+in [[toplevel_entries]]. The walk also supports cloning a fid
+(when [[newfid_opt]] is [[Some]]), which the kernel uses to keep
+the original fid pointing to the directory while the new fid
+walks to the file.
 
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* Walk *)
@@ -2730,6 +3254,13 @@ let check_fid op fid (fs : Fileserver.t) =
 
 \section{Open}
 
+%claude:
+Opening a file has two effects: it checks permissions and then
+calls the device's [[open_]] callback. For [[/dev/mouse]], the
+open callback sets [[mouse_opened]] to [[true]], which switches
+the window from textual to graphical mode---a critical side effect
+that changes how the window thread dispatches events.
+
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* Open *)
 | T.Open (fid, flags) ->
@@ -2798,6 +3329,14 @@ let check_fid op fid (fs : Fileserver.t) =
 %%\subsection{[[xfidclose()]]}
 
 \section{Read}
+
+%claude:
+Read is where the filesystem server spawns worker threads.
+The [[read_threaded]] callback of a device may block for an
+arbitrary amount of time---for instance, reading [[/dev/mouse]]
+blocks until a mouse event is available. Spawning a new thread
+with [[Thread.create]] ensures the master loop continues processing
+other 9P requests in the meantime.
 
 <<[[Threads_fileserver.dispatch()]] match [[request_typ]] cases>>=
 (* Read *)
@@ -2919,10 +3458,32 @@ let check_fid op fid (fs : Fileserver.t) =
   failwith (spf "TODO: req = %s" (P9.str_of_msg req))
 @
 
+%ocaml: Windows.nw Filesystem Server topics NOT needed in OCaml version:
+% - filsysrespond() helper: inlined as answer()
+% - Qxxx numeric constants and QSHIFT/QID macros: OCaml uses File.devid ADT and pattern matching
+% - dirtab arrays: replaced by toplevel_entries list of File.dir_entry_short
+% - xfidread()/xfidwrite() worker dispatch: OCaml creates threads directly in Read/Write cases
+% - npart handling for partial runes: not yet implemented
+
 %******************************************************************************
 \chapter{Virtual Devices}
 %******************************************************************************
 \label{chap:virtual-devices}
+
+%claude:
+This chapter presents the implementation of the virtual device
+files: [[/mnt/wsys/mouse]], [[/mnt/wsys/cons]], [[/mnt/wsys/consctl]],
+[[/mnt/wsys/cursor]], and [[/mnt/wsys/winname]]. When a client
+process reads or writes these files, the 9P request is dispatched
+to the corresponding [[Device.t]] callbacks defined here.
+%claude:
+The most interesting aspect is the {channel-of-channels} protocol
+used for [[/dev/mouse]] and [[/dev/cons]]: the filesystem server
+thread and the window thread communicate through a two-step
+handshake where one side sends a channel, and the other side uses
+that channel to send the actual data. This indirection is needed
+because [[Event.select]] can only wait on channels, not on arbitrary
+conditions.
 
 \section{[[/mnt/wsys/mouse]]}
 
@@ -2968,6 +3529,16 @@ close = (fun (w : Window.t) ->
 
 \subsection{Reading part1}
 
+%claude:
+Reading [[/dev/mouse]] is where the channel-of-channels pattern
+appears. The filesystem worker thread cannot simply read from a
+queue---it needs to synchronize with the window thread, which is
+the only thread allowed to access the window's mouse state.
+So the worker first receives a channel from [[chan_devmouse_read]]
+(this channel was sent by the window thread's [[Event.select]] when
+it had mouse data ready), then receives the actual mouse state
+on that channel.
+
 <<method [[Virtual_mouse.dev_mouse.read_threaded]]>>=
 (* a process is reading on its /dev/mouse; we must read from mouse
  * events coming to the window, events sent from the mouse thread.
@@ -3001,10 +3572,19 @@ chan_devmouse_read: Mouse.state Event.channel Event.channel;
 @
 
 
+%claude:
+This is the producer side of the channel-of-channels protocol for
+[[/dev/mouse]]. The window thread includes an [[Event.send]] in
+its [[select]] list {\em only} when there is a new mouse event
+(detected by comparing [[mouse_counter]] with [[last_count_sent]]).
+The send offers a fresh channel ([[chan_devmouse]]) to whoever is
+waiting on [[chan_devmouse_read]]---which is the filesystem worker
+thread handling a [[Tread]] for [[/dev/mouse]].
+
 <<[[Threads_window.thread()]] other [[select]] elements>>=
 (* sending *)
-(if w.mouse_counter <> w.last_count_sent 
- then [Event.send w.chan_devmouse_read chan_devmouse 
+(if w.mouse_counter <> w.last_count_sent
+ then [Event.send w.chan_devmouse_read chan_devmouse
         |> wrap (fun () -> SentChannelForMouseRead)]
  else []
 ) @
@@ -3031,6 +3611,14 @@ let chan_devmouse = Event.new_channel () in
   mouse_out w chan_devmouse
 @
 
+
+%claude:
+[<mouse_out>] is step~2 of the protocol: now that the filesystem
+worker has the channel, send the actual mouse data on it.
+If there are queued clicks, the oldest click is dequeued; otherwise
+the current mouse position is sent. This means the application
+always sees every click (in order), but may miss intermediate
+mouse-move positions during high latency.
 
 <<function [[Threads_window.mouse_out]]>>=
 let mouse_out (w : Window.t) (chan : Mouse.state Event.channel) =
@@ -3075,6 +3663,15 @@ write_threaded = (fun _offset _str _w ->
 
 
 \section{[[/mnt/wsys/cons]]}
+
+%claude:
+The virtual [[/dev/cons]] is the terminal's I/O interface.
+Reading it returns text typed by the user (after line editing),
+while writing it outputs text to the terminal. Like [[/dev/mouse]],
+it uses a channel-of-channels protocol, but slightly more complex:
+for reading, the filesystem worker receives {\em two} channels
+(one to send the requested byte count, one to receive the data),
+because the window thread needs to know how many bytes to send.
 
 <<signature [[Virtual_cons.dev_cons]]>>=
 (* virtual "/dev/cons" *)
@@ -3125,11 +3722,21 @@ read_threaded = (fun _offset count (w : Window.t) ->
 chan_devcons_read: (int Event.channel * string Event.channel) Event.channel;
 @
 
+%claude:
+The producer side for [[/dev/cons]] reads is similar to
+[[/dev/mouse]], but the readiness condition is different: in raw
+mode, data is ready when there are queued raw keys; in cooked mode,
+data is ready when a newline has been typed after the output point
+(the boundary between application output and user input in the
+terminal buffer). This implements the classic line discipline:
+the user types a line, and only when they press Enter does the
+data become available to the application's [[read()]] call.
+
 <<[[Threads_window.thread()]] other [[select]] elements>>=
 (* less: npart *)
 (if (w.raw_mode && Queue.length w.raw_keys > 0) ||
     (not w.raw_mode && Terminal.newline_after_output_point w.terminal)
- then [Event.send w.chan_devcons_read 
+ then [Event.send w.chan_devcons_read
           (chan_devcons_read_count, chan_devcons_read_bytes)
         |> wrap (fun () -> SentChannelsForConsRead)]
  else []
@@ -3152,6 +3759,15 @@ let chan_devcons_read_bytes = Event.new_channel () in
   bytes_out w (chan_devcons_read_count, chan_devcons_read_bytes)
 @
 
+
+%claude:
+[<bytes_out>] is the second step of the [[/dev/cons]] read protocol.
+It first receives the byte count requested by the application
+(from the filesystem worker via [[chan_count]]), then fills a buffer
+from either the raw key queue (in raw mode) or the terminal text
+buffer starting at the [[output_point]] (in cooked mode). In cooked
+mode, advancing the [[output_point]] effectively ``consumes'' the
+characters that the application has read.
 
 <<function [[Threads_window.bytes_out]]>>=
 let bytes_out (w : Window.t) (chan_count, chan_bytes) =
@@ -3196,6 +3812,14 @@ let bytes_out (w : Window.t) (chan_count, chan_bytes) =
 @
 
 \subsection{Writing part1}
+
+%claude:
+Writing to [[/dev/cons]] follows the same channel-of-channels
+pattern but in reverse: the filesystem worker receives a channel
+from [[chan_devcons_write]] (offered by the window thread's
+[[Event.select]]), then sends the runes on that channel. The window
+thread receives them and calls [[Terminal.runes_in]] to insert
+the text into the terminal buffer and render it.
 
 <<method [[Virtual_cons.dev_cons.write_threaded]]>>=
 (* a process is writing on its /dev/cons; it wants to output strings
@@ -3264,6 +3888,14 @@ val runes_in: t -> Rune.t list -> unit
 %%\subsection{Bytes versus runes, partial runes}
 
 \section{[[/mnt/wsys/consctl]]}
+
+%claude:
+Writing [["rawon"]] or [["rawoff"]] to [[/dev/consctl]] toggles
+the [[raw_mode]] flag, which changes how the window thread handles
+keyboard input: in raw mode, keys are queued directly in
+[[raw_keys]] for the application to read one at a time; in
+cooked mode (the default), keys go through [[Terminal.key_in]]
+for line editing.
 
 <<signature [[Virtual_cons.dev_consctl]]>>=
 (* virtual "/dev/consctl" *)
@@ -3372,6 +4004,14 @@ let _dev_cursor = { (*Device.default with*)
 
 \section{[[/dev/draw/]] and [[/mnt/wsys/winname]]}
 
+%claude:
+[[/dev/winname]] is the bridge between [[rio]] and the graphics
+system. When a client calls [[Draw.init]], the library reads
+[[/dev/winname]] to discover the name of its window's image
+(e.g., [["window.2"]]), then uses that name to look up the layer
+in the kernel's draw device. This is a simple, static file that
+just returns [[w.winname]].
+
 <<signature [[Virtual_draw.dev_winname]]>>=
 (* virtual "/dev/winname" *)
 val dev_winname: Device.t
@@ -3402,11 +4042,24 @@ let honor_offset_and_count offset count data =
 @
 
 
+%ocaml: Windows.nw Virtual Devices topics NOT needed in OCaml version:
+% - /dev/mouse resize event ('r' character): not yet implemented
+% - mouse reading parts 2-3 (producer side in winctl): covered in Threads chapter
+% - /dev/cons reading parts 2-3 (producer/consumer in winctl): covered in Threads chapter
+% - partial runes (npart): not yet implemented
+% - /dev/cursor: not yet implemented (stub with raise Todo)
+% - honor_offset for mouse (dynamic file): same approach, but noted explicitly
+
 %******************************************************************************
 \chapter{Graphical Windows}
 %******************************************************************************
 \label{chap:graphical-windows}
 
+%claude:
+This chapter will cover the graphical window side of [[rio]]:
+how a graphical application (one that opens [[/dev/mouse]])
+receives mouse, keyboard, and resize events. Most of this code
+is not yet implemented in the OCaml version.
 
 \section{Graphical window setup}
 
@@ -3439,6 +4092,13 @@ let honor_offset_and_count offset count data =
 \chapter{Textual Windows}
 %******************************************************************************
 \label{chap:textual-windows}
+
+%claude:
+This chapter will cover the textual window (terminal emulator)
+side of [[rio]]: text buffer management, frame rendering,
+keyboard line editing, scrolling, and the interaction between
+application output and user input through the [[output_point]].
+Most of this code is not yet implemented in the OCaml version.
 
 \section{Textual window creation}
 
@@ -3650,6 +4310,34 @@ let dev_winid = { Device.default with
 \chapter{Conclusion}
 %******************************************************************************
 \label{chap:conclusion}
+
+%claude:
+You now know how the \plan windowing system [[rio]] works,
+at least for the core architecture and the parts ported to OCaml
+so far.
+
+%claude:
+The key insight is [[rio]]'s triple nature: it is simultaneously
+a graphical application (using the display and input devices),
+a filesystem server (speaking 9P over a pipe to provide virtual
+[[/dev/cons]] and [[/dev/mouse]] to its clients), and a concurrent
+program (with dedicated threads for the keyboard, the mouse, each
+window, and the filesystem server, all communicating through channels).
+
+%claude:
+The channel-of-channels pattern, where the window thread's
+[[Event.select]] includes conditional [[Event.send]] entries to
+offer data to filesystem worker threads, is perhaps the most
+elegant concurrency pattern in the code. It allows the window
+thread to act as both a consumer (of keyboard and mouse events)
+and a producer (of data for [[/dev/mouse]] and [[/dev/cons]]
+readers) within a single event loop.
+
+%claude:
+For the full details of the textual window (terminal emulation,
+frame rendering, scrolling, text editing) and the many advanced
+features (snarf/paste, plumbing, auto-complete, recursive [[rio]]),
+see the C version in \book{Windows}.
 
 %###############################################################################
 

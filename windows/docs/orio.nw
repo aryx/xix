@@ -1201,11 +1201,11 @@ val key_in: t -> Keyboard.key -> unit
 <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
 (* less: in theory we should allow also special navigation keys here *)
 | true, false  ->
-  failwith "key_in: TODO: raw mode in textual window"
+  error "key_in: TODO: raw mode in textual window"
 @
 <<[[Threads_window.key_in()]] match [[raw_mode]] and [[mouse_opened]] cases>>=
 | false, true  ->
-  failwith "key_in: TODO: buffered mode in graphical window"
+  error "key_in: TODO: buffered mode in graphical window"
 @
 
 \subsection{Mouse events listening}
@@ -1223,7 +1223,7 @@ let mouse_in (w : Window.t) (m : Mouse.state) =
       w.last_buttons <- m.buttons
     end;
 
-  | false -> failwith "mouse_in: mouse not opened todo"
+  | false -> error "mouse_in: mouse not opened todo"
 @
 
 <<[[Window.t]] mouse fields>>=
@@ -1754,7 +1754,7 @@ let wm_menu (caps : < Cap.fork; .. >) (pos : Point.t) button
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
 (* less: the first item get selected the very first time; QEMU bug?  *)
-"New", (fun () ->
+"Nouveau", (fun () ->
   let img_opt = Mouse_action.sweep mouse (display, desktop, font) in
   img_opt |> Option.iter (fun img ->
      Wm.new_win caps img "/bin/rc" [|"rc"; "-i"|] None (mouse, fs, font)
@@ -2287,7 +2287,7 @@ let top_win (w : Window.t) =
 \section{Window deletion}
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
-"Delete", (fun () -> 
+"Detruire", (fun () -> 
   let wopt = Mouse_action.point_to mouse in
   wopt |> Option.iter (fun (w : Window.t) ->
     let cmd = Window.Delete in
@@ -2365,7 +2365,7 @@ let point_to (mouse : Mouse.ctl) : Window.t option =
 \section{Window move}
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
-"Move", (fun () -> raise Todo);
+"Deplacer", (fun () -> raise Todo);
 @
 
 \subsection{[[move()]]}
@@ -2377,7 +2377,7 @@ let point_to (mouse : Mouse.ctl) : Window.t option =
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
 (* old: was Reshape but here it's really resizing *)
-"Resize", (fun () -> raise Todo);
+"Retailler", (fun () -> raise Todo);
 @
 
 <<[[Window.cmd]] cases>>=
@@ -2393,7 +2393,7 @@ let point_to (mouse : Mouse.ctl) : Window.t option =
 
   if w.deleted
   (* less: free new_img if deleted, but when can happen? *)
-  then failwith "window already deleted";
+  then error "window already deleted";
 
   let r = new_img.r in
   w.screenr <- r;
@@ -2455,7 +2455,7 @@ let resize_win (w : Window.t) (new_img : Display.image) =
 \label{sec:window-hide}
 
 <<[[Thread_mouse.wm_menu()]] [[items]] elements>>=
-"Hide", (fun () -> 
+"Cacher", (fun () -> 
   let wopt = Mouse_action.point_to mouse in
   wopt |> Option.iter (fun w ->
     Wm.hide_win w

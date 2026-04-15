@@ -234,7 +234,7 @@ called [[ocamlrun]].
 %
 Both [[ocamlc]] and [[ocamlopt]] are written in \ocaml, 
 % bootstrap magic
-but the bytecode interpreter is a small C program (10 500 LOC) with
+but the bytecode interpreter is a relatively small C program (10 500 LOC) with
 very few external dependencies.
 % it's 12 000 LOC in ocaml-light but because LPized comments
 % 10 500 is in ocaml 1.07 original source instead
@@ -258,7 +258,7 @@ compile additional OCaml bindings to the \unix C library,
 and link C code implementing \ocaml cooperative threads using [[select()]].
 Fortunately, I was able to use the \plan{} [[pcc]] program and
 APE\furl{https://9p.io/sys/doc/ape.html} to compile almost as-is
-this \unix C code.
+this \unix C code for \plan.
 
 
 This work is available at \url{https://github.com/aryx/ocaml-light}.

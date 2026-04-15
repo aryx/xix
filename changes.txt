@@ -1,6 +1,6 @@
 # -*- org -*-
 
-* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v1)
+* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v1, iwp9)
 
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script

@@ -41,19 +41,15 @@ Rob Pike and Yoann Padioleau
 
 \maketitle 
 
-%\onecolumn
 \hrule
 \input{latex/Copyright}
 \input{latex/CopyrightPlan9}
 \hrule
-%\twocolumn
 
 \begingroup
 \hypersetup{linkcolor=blue}
-% need to s/onecolumn/twocolumn in report.cls :) for \tableofcontents
 \tableofcontents
 \endgroup
-
 
 %******************************************************************************
 \chapter{Introduction}

@@ -152,7 +152,8 @@ their C counterparts for comparison.
 </p>
 
 <p>
-<em>LOC</em> = lines of code;
+<em>LOC</em> = lines of OCaml code;
+<em>C LOC</em> = lines of code of the original C program;
 <em>LOE</em> = lines of explanation;
 <em>Pages</em> = typeset pages.
 </p>
@@ -164,6 +165,8 @@ their C counterparts for comparison.
 <th>Program</th>
 <th>Ported from</th>
 <th>LOC</th>
+<th>C LOC</th>
+<th width="40"><small>C/<br>OCaml</small></th>
 <th>LOE</th>
 <th width="40"><small>LOE/<br>LOC</small></th>
 <th>Pages</th>
@@ -175,6 +178,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/shell">orc</a></td>
 <td>rc</td>
 <td>2150</td>
+<td>6536</td>
+<td>3.04</td>
 <td>2310</td>
 <td bgcolor="#c6efce">1.07</td>
 <td>126</td>
@@ -186,6 +191,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/compiler">occ</a></td>
 <td>5c</td>
 <td>6250</td>
+<td>18700</td>
+<td>2.99</td>
 <td>850</td>
 <td bgcolor="#ffc7ce">0.14</td>
 <td>173</td>
@@ -195,6 +202,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/assembler">oas</a></td>
 <td>5a</td>
 <td>1750</td>
+<td>3570</td>
+<td>2.04</td>
 <td>350</td>
 <td bgcolor="#ffc7ce">0.20</td>
 <td>76</td>
@@ -204,6 +213,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/linker">olk</a></td>
 <td>5l</td>
 <td>2650</td>
+<td>7513</td>
+<td>2.84</td>
 <td>500</td>
 <td bgcolor="#ffc7ce">0.19</td>
 <td>96</td>
@@ -213,6 +224,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/ocaml-light">ocaml-light</a></td>
 <td>ocamlc/ocamlrun</td>
 <td>16300</td>
+<td></td>
+<td></td>
 <td>2250</td>
 <td bgcolor="#ffc7ce">0.14</td>
 <td>500</td>
@@ -222,6 +235,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/generators">olex, oyacc</a></td>
 <td>lex, yacc</td>
 <td>3500</td>
+<td></td>
+<td></td>
 <td>800</td>
 <td bgcolor="#ffc7ce">0.23</td>
 <td>111</td>
@@ -233,6 +248,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/editor">oed</a></td>
 <td>ed</td>
 <td>1500</td>
+<td>1597</td>
+<td>1.06</td>
 <td>350</td>
 <td bgcolor="#ffc7ce">0.23</td>
 <td>55</td>
@@ -242,8 +259,10 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/efuns">efuns</a></td>
 <td>Emacs</td>
 <td>7250</td>
+<td></td>
+<td></td>
 <td>2400</td>
-<td bgcolor="#ffeb9c">0.33</td>
+<td bgcolor="#ffd7b5">0.33</td>
 <td>175</td>
 </tr>
 <tr>
@@ -251,6 +270,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/builder">omk</a></td>
 <td>mk</td>
 <td>2750</td>
+<td>4356</td>
+<td>1.58</td>
 <td>1400</td>
 <td bgcolor="#ffeb9c">0.51</td>
 <td>112</td>
@@ -260,6 +281,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/vcs">ogit</a></td>
 <td>git</td>
 <td>5600</td>
+<td></td>
+<td></td>
 <td>4400</td>
 <td bgcolor="#c6efce">0.79</td>
 <td>202</td>
@@ -271,6 +294,8 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/xix/tree/master/windows">orio</a></td>
 <td>rio</td>
 <td>3300</td>
+<td>8825</td>
+<td>2.67</td>
 <td>550</td>
 <td bgcolor="#ffc7ce">0.17</td>
 <td>123</td>
@@ -282,11 +307,33 @@ their C counterparts for comparison.
 <td><a href="https://github.com/aryx/mmm">mmm</a></td>
 <td></td>
 <td>22350</td>
+<td></td>
+<td></td>
 <td>2450</td>
 <td bgcolor="#ffc7ce">0.11</td>
 <td>499</td>
 </tr>
 </table>
+
+<p>
+The <strong>C/OCaml</strong> column shows the ratio of C lines of code
+to OCaml lines of code, a rough measure of how succinct the OCaml
+port is compared to the C original. A ratio of 2.0 means the OCaml
+version is half the size (which means OCaml is 2x more succint than C). C&nbsp;LOC figures come from the
+<a href="https://aryx.github.io/principia-softwarica/">Principia Softwarica</a>
+companion books, and are left blank for ports whose original is not
+covered there (efuns, ogit, ocaml-light, lex/yacc, mmm).
+</p>
+
+<p>
+The <strong>LOE/LOC</strong> column shows the ratio of lines of explanation
+to lines of OCaml code. The goal is to reach a ratio of 1.0 for every book,
+meaning each line of code is matched by a line of explanation.
+<span style="background:#c6efce">Green</span> (&ge;&nbsp;0.75) means the book is close to that goal,
+<span style="background:#ffeb9c">yellow</span> (&ge;&nbsp;0.50) means it is getting there,
+<span style="background:#ffd7b5">orange</span> (&ge;&nbsp;0.25) means significant writing remains, and
+<span style="background:#ffc7ce">red</span> (&lt;&nbsp;0.25) means the book is mostly code with little explanation so far.
+</p>
 
 <hr>
 

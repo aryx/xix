@@ -12,6 +12,7 @@
  *  - https://roscidus.com/blog/blog/2023/04/26/lambda-capabilities/
  *
  * related work:
+ *  - TODO: https://www.redox-os.org/news/nlnet-cap-nsmgr-cwd/
  *  - TODO: recent OCaml lib for openBSD:
  *    https://codeberg.org/removewingman/restricted
  *  - https://en.wikipedia.org/wiki/E_(programming_language) which

@@ -2,7 +2,7 @@ TOP=../..
 
 SYNCFLAGS=-md5sum_in_auxfile -less_marks -lang ocaml
 
-DOC=VCS
+DOC=ogit
 DOC_EXTRA=
 VERSION=10
 
@@ -48,7 +48,7 @@ SRC=$SRC1 $SRC2 $SRC3
 
 SRC_VIEWS=${SRC1:%=../%} ${SRC2:%=../%} $SRC3
 
-SRC_ORIG=VCS.nw VCS_extra.nw
+SRC_ORIG=ogit.nw ogit_extra.nw
 
 <$TOP/docs/latex/mkcommon
 

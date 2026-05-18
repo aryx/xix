@@ -1,15 +1,11 @@
 \documentclass[12pt]{report}
-%alt: 12pt, twocolumn, landscape
 
 \input{latex/Packages}
 \input{latex/Noweb}
 \input{latex/Config}
 \input{latex/Macros}
 
-%last:
-% - git9! less than 10 000 LOC
-% - microgit, in Python, with diff-style doc (=~ LP)
-%   https://www.leshenko.net/p/ugit/#
+\newcommand{\xgit}{[[ocamlgit]]\xspace}
 
 %******************************************************************************
 % Prelude
@@ -25,27 +21,7 @@
 %    ocaml-git has just ogit.ml,
 %    git has many git-xxx.c but too many; porcelain vs plumb is useless)
 
-%thx to this manual, I better understand VCSs (and git):
-% - intuition of Torvalds for a stupid content tracker with very
-%   different strategies (e.g., rename handled at query time) 
-% - merge and MERGE_HEADS state?
-% - beauty of design using SHA1 used for so many things (Graydon Hoare?)
-
 %history LP-ization:
-% * wanted to LPize camp (simplified clone of darcs, also in Haskell)
-% * LPized finally dulwich (clone of git in Python)
-% - skeleton, mostly copy paste of Template.nw skeleton
-% - put all content of files in the Extra section, via 'pfff -lpize'
-%   which also now split in chunks!
-%    * function, global, struct, enum, constant, macro(actually function)
-%    * [[xxx]] other fields, [[xxx]] extra fields
-% - read Extra section, identify concepts, first TOC
-% - distribute parts of the Extra section in the main file
-% - understand main(), LP split main, improve TOC
-% - understand main functions, LP split, cluster, improve TOC
-% - LP split the structures, use datalog for flow to field info
-% - nullify, boolify, errorify, enumify,  typeify,    scheckify, plan9ify
-% - aspecify advanced features! remove useless features
 % * port dulwich to OCaml thx to lpized version of dulwich
 % * LPized my ocaml port of dulwich
 % - SEMI add figures
@@ -101,11 +77,210 @@ under the terms of the GNU Lesser General Public License version 2.1.
 \tableofcontents
 \endgroup
 
+%###############################################################################
+
 %******************************************************************************
-% Body
+\chapter{Introduction}
 %******************************************************************************
 
 #include "Intro.nw"
+
+
+\section{Copyright}
+
+I wrote most of the code in this document. 
+
+<<copyright ocamlgit>>=
+(* Copyright 2017 Yoann Padioleau, see copyright.txt *)
+@
+
+The code is licensed under the 
+GNU Lesser General Public License version 2.1
+as published by the Free Software Foundation.
+
+%dup: intro/ocamlgit
+As I said in Section~\ref{sec:vcs-git-ocamlgit},
+most of the code of [[ocamlgit]] is a port in OCaml of Python code from
+Dulwich, which is governed by the following copyright:
+
+<<dulwich license>>=
+# Dulwich is dual-licensed under the Apache License, Version 2.0 and the GNU
+# General Public License as public by the Free Software Foundation; version 2.0
+# or (at your option) any later version. You can redistribute it and/or
+# modify it under the terms of either of these two licenses.
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# You should have received a copy of the licenses; if not, see
+# <http://www.gnu.org/licenses/> for a copy of the GNU General Public License
+# and <http://www.apache.org/licenses/LICENSE-2.0> for a copy of the Apache
+# License, Version 2.0.
+@
+
+I also sometimes took inspiration from code written by Thomas Gazagnaire 
+for [[ocaml-git]]\furl{https://github.com/mirage/ocaml-git}
+(another clone of Git in OCaml but intented to be used
+as a library in the MirageOS ecosystem\furl{https://mirage.io/}).
+\l explain more later?
+
+<<copyright ocaml-git>>=
+(*
+ * Copyright (c) 2013-2017 Thomas Gazagnaire <thomas@gazagnaire.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *)
+@
+
+\ifallcode
+% Also use code from a few OCaml libraries.
+
+<<copyright ocaml-diff-myers>>=
+(*
+ * Copyright (C) 2016 OOHASHI Daichi
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *)
+@
+
+<<copyright ocaml-hex>>=
+(*
+ * Copyright (c) 2015 Trevor Summers Smith <trevorsummerssmith@gmail.com>
+ * Copyright (c) 2014 Thomas Gazagnaire <thomas@gazagnaire.org>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ *)
+@
+
+<<copyright uuidm>>=
+(*
+Copyright (c) 2008 Daniel C. Bünzli
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+*)
+@
+
+<<copyright ocaml-unzip>>=
+(*
+ * Unzip - inflate format decompression algorithm
+ * Copyright (C) 2004 Nicolas Cannasse
+ * Compliant with RFC 1950 and 1951
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version,
+ * with the special exception on linking described in file LICENSE.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public
+ * License along with this library; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ *)
+@
+
+<<copyright camlzip>>=
+(***********************************************************************)
+(*                                                                     *)
+(*                         The CamlZip library                         *)
+(*                                                                     *)
+(*            Xavier Leroy, projet Cristal, INRIA Rocquencourt         *)
+(*                                                                     *)
+(*  Copyright 2001 Institut National de Recherche en Informatique et   *)
+(*  en Automatique.  All rights reserved.  This file is distributed    *)
+(*  under the terms of the GNU Lesser General Public License, with     *)
+(*  the special exception on linking described in file LICENSE.        *)
+(*                                                                     *)
+(***********************************************************************)
+@
+\fi
+
+The prose and figures are mine and are licensed under the \license.
+
+\section{Acknowledgments}
+
+I would like to acknowledge first the author of Dulwich,
+Jelmer Vernooij, who wrote in some sense most of this book.
+%dup: intro/ocamlgit intro/copyright
+Indeed, I used mainly the code of Dulwich to write the code of [[ocamlgit]]. 
+Dulwich provided an easier path towards understanding
+the concepts and implementation of Git.
+\l Also Thomas gazanaire.
+
+
+I would like also to thank Linus Torvalds, the original author of Git,
+for designing this simple but powerful VCS.
+%
+Many of his design decisions seem obvious
+in retrospect but they are not: most VCSs chose different designs
+(for the storage, 
+file permissions, 
+for the way to handle renames,
+etc.)
+\l snapshot-based > changeset?, SHA1 DAG (but Monotone), GMT time, etc.
+which in the end are more complicated
+and usually less efficient than in Git.
+\l ocamlgit only 6400 LOC (C bigger but original C 1000 LOC), far more powerful 
+\l than RCS 30 000, in big part due to simple but clever design of Git
+
+
+%******************************************************************************
+\chapter{Overview}
+%******************************************************************************
+
+#include "Overview.nw"
 
 \section{Code organization}
 

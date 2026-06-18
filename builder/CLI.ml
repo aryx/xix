@@ -68,8 +68,10 @@ module R = Rules
  *  - less use of globals, pass them around
  * 
  * todo:
+ *  - implement concurrent version of builder in mk-in-ocaml? for fun. faster?
+ *    see concurrent ML book by Reppy on my remarkable
  *  - look at source code of omake? and mk-in-go?
-*     remake of mk in Go: https://github.com/dcjones/mk
+ *    remake of mk in Go: https://github.com/dcjones/mk
  *  - store all output of children process and output only
  *    command that generates error! luisa will be happier :) no more long
  *    command line scrolling

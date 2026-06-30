@@ -216,7 +216,9 @@ system and produce code using capability types. Thanks to
 those stronger types, the reviewer can also focus more on
 the interfaces and be sure, thanks to the OCaml type system,
 that the AI code in the implementation file does not
-call dangerous functions.
+call dangerous functions, or otherwise that
+the interface clearly says so.
+
 
 
 %If colleagues want to execute a program, need capability, need

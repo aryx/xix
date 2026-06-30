@@ -21,7 +21,7 @@
 \title{
 A Capability Type System for OCaml\\
 %alt: Static and dynamic capabilities for OCaml\\
-{\large a poor's man effect system using an object system}
+{\large a poor man's effect system using an object system}
 }
 \author{
 Yoann Padioleau\\
@@ -85,14 +85,14 @@ similar signature.
 
 Inspired by the [[eio]] library\furl{
 https://roscidus.com/blog/blog/2023/04/26/lambda-capabilities/
-}, The [[Cap.ml]] library\furl{
+}, the [[Cap.ml]] library\furl{
 https://github.com/aryx/xix/blob/master/lib_core/commons/Cap.ml
 } provides {\em capability types}
 to indicate the {\em effect} of a function.
 Here is an example:
 
 <<mymodule.mli>>=
-val bar: < Cap.fork; Cap.network; Cap.stdout; Cap.random; .. > int -> float
+val bar: < Cap.fork; Cap.network; Cap.stdout; Cap.random; .. > -> int -> float
 @
 
 The type of [[bar()]] above indicates that it requires
@@ -163,7 +163,7 @@ or even [[Stdlib.open_in]].
 
 \section{Capability rules}
 
-Of course, [[Cap.ml]] alone does not prevent programmers to call directly
+Of course, [[Cap.ml]] alone does not prevent programmers from calling directly
 the ``unsafe'' variant [[Unix.fork]] instead of [[CapUnix.fork]],
 which is why it must be coupled with an external tool,
 Semgrep\furl{https://semgrep.dev}, to enforce the use of the safe variants.
@@ -219,18 +219,18 @@ added by a junior programmer that escaped code review.
 
 Once the codebase was fully migrated, the OCaml type system 
 (and capability types) prevented
-many junior programmers to do quick and dirty hacks because
-the use of dangerous functions was now requiring to modify the
+many junior programmers from doing quick and dirty hacks because
+the use of dangerous functions now required modifying the
 call chain to pass the necessary capability in all the callers,
 which was easier to spot during code reviews.
 
-Finally, AI coding agents have no issue to learn the capability
+Finally, AI coding agents have no issue learning the capability
 system and produce code using capability types. Thanks to
 those stronger types, the reviewer can also focus more on
 the interfaces and be sure, thanks to the OCaml type system,
 that the AI code in the implementation file does not
 call dangerous functions, or if it does the
-interface clearly would clearly says so too.
+interface would clearly say so too.
 
 %alt: Conclusion
 % finally a use for objects :)

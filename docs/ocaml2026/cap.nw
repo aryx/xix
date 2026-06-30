@@ -11,8 +11,12 @@
  \let\nwdocspar=\par
 \usepackage{../../principia/docs/latex/syncweb}
 
+\newif\iffinal\newif\ifverbose\newif\ifallcode
+\input{../../principia/docs/latex/Macros}
+
 \title{
-Static and dynamic capabilities for OCaml\\
+A Capability Type System for OCaml\\
+%alt: Static and dynamic capabilities for OCaml\\
 {\large a poor's man effect system using an object system}
 }
 \author{
@@ -25,13 +29,13 @@ yoann.padioleau@gmail.com
 \maketitle
 
 \begin{abstract}
-[[Cap.ml]] is a small library providing capabilities to
+[[Cap.ml]] is a small library providing capability types to
 use in a disciplined manner the UNIX system calls behind
-standard library functions like [[Sys.command]], [[Unix.fork]],
-and even [[Stdlib.open_in]].
+standard library functions such as [[Sys.command]], [[Unix.fork]],
+or even [[Stdlib.open_in]].
 %
-When combined with the use of the Semgrep tool it can
-offer stronger guarantees on the code.
+When combined with the use of the Semgrep tool, it can
+offer stronger guarantees on a codebase.
 \end{abstract}
 
 \section{Motivations}
@@ -42,8 +46,10 @@ If you look at the interface of a module such as:
 val foo: int -> float
 @
 
-What can you say about this function? Can this function do dangerous
-things? The OCaml type system offers really no guarantee about
+What can you say about this function?
+Can this function do dangerous things?
+%
+The OCaml type system offers really no guarantee about
 this function. [[foo()]] above could
 go through your filesystem and delete all your files,
 or execute any program,
@@ -54,55 +60,177 @@ You can not really reason about a module.
 
 Haskell knows this and requires the use of the IO monad to
 {\em perform} things.
-But Haskell is another language and has coarse granularity when it comes
-to IO. A function making a network request or printing on stdout
-will have a similar signature.
+%
+But Haskell is another language and use coarse granularity;
+a function making a network request or printing on stdout will have a
+similar signature.
+
+%insane for our own sanity as a programmer no protection
+%also bad in SCA context
+%even more important in AI context where want stronger guarantees
+
+%Is there any intermediate step? 
+
+\section{Capability types}
+%alt\section{Static capabilities}
+
+%Advocated in eio, but here generalize and use Capability object types + semgrep!
+
+%How? abstract types. object types. type system.
+
+Inspired by the [[eio]] library\furl{
+https://roscidus.com/blog/blog/2023/04/26/lambda-capabilities/
+}, The [[Cap.ml]] library\furl{
+https://github.com/aryx/xix/blob/master/lib_core/commons/Cap.ml
+} provides {\em capability types}
+to indicate the {\em effect} of a function.
+Here is an example:
+
+<<mymodule.mli>>=
+val bar: < Cap.fork; Cap.network; Cap.stdout; Cap.random; .. > int -> float
+@
+
+The type of [[bar()]] above indicates that it requires
+many capabilities ([[Cap.fork]], [[Cap.network]], etc.) to run.
+%
+Those capabilities are abstract types defined in [[Cap.mli]] and can not
+be {forged}:
+
+<<Cap.mli>>=
+module Process : sig
+  type fork (* abstract *)
+  type exit (* abstract *)
+  type chdir (* abstract *)
+  ...
+end
+
+type fork = < fork : Process.fork >
+@
+
+The only function in [[Cap.mli]] that can produce values of
+those abstract types is [[main()]]:
+
+<<Cap.mli>>=
+type all_caps = < fork; network; random; stdout; stdin; exit; chdir; ... >
+val main : (all_caps -> 'a) -> 'a
+@
+
+[[main()]] takes a callback as an argument, sanity checks dynamically
+it has not been called before,
+and then calls the callback passing it an object that has {\em all} the
+capabilities.
+%
+This callback can then downcast this object and pass a subset of those
+capabilities to further functions (e.g., to [[bar()]] above).
+
+The [[Cap.ml]] library contains also a set of modules that
+wraps many standard library functions in capability-aware versions,
+for example:
+
+<<CapUnix.ml>>=
+let fork (caps : < Cap.fork; ..>) =
+  let _ = caps#fork in
+  Unix.fork
+let chdir (caps : < Cap.chdir; ..>) = 
+  let _ = caps#chdir in
+  Unix.chdir
+...
+@
+%cheat: had (* nosemgrep: use-caps *)
+
+Those capability types and wrapper modules offer a disciplined manner
+to use the UNIX system calls behind
+standard library functions such as [[Sys.command]], [[Unix.fork]],
+or even [[Stdlib.open_in]].
+
+%How? Enforced by semgrep to not call Stdlib but capability-aware wrappers,
+
+\section{Semgrep rules}
+
+Of course [[Cap.ml]] alone does not prevent programmers to call directly
+the ``unsafe'' variant [[Unix.fork]] instead of [[CapUnix.fork]],
+which is why it must be coupled with an external tool,
+Semgrep\furl{https://semgrep.dev}, to enforce the use of the safe variants.
+%
+Here is for example an excerpt of a Semgrep rule file forbidding the use
+of [[Unix.fork]]:
+
+<<myproject/semgrep.jsonnet>>=
+...
+local cap_rules = [{
+    id: 'use-caps',
+    match: { any:
+        [
+         'Unix.fork',
+         'Unix.wait',
+          ...
+        ]
+    },
+    languages: ['ocaml'],
+    severity: 'ERROR',
+    message: |||
+       Do not use Sys.xxx or Unix.xxx. Use CapSys or CapUnix and
+       capabilities for dangerous functions.
+    |||,
+  }]
+...
+@
 
 
-
-Is there any intermediate step? 
-Capabilities! Advocated in eio, but here generalize and use
-Capability object types + semgrep!
-
-\section{Static capabilities}
-
-
-< Cap.fork; Cap.network; Cap.random; ..> -> int -> float
-
-if int -> float, know it is "pure" in regards to capability system;
-sure no fork, no network, no random! (so deterministic too).
-Can finally reason at function signature and module boundaries!
-
-\section{Static capabilities}
-
-How?
-abstract types. object types. type system.
-
-How?
-Enforced by semgrep to not call Stdlib but capability-aware wrappers,
-
-experience on semgrep codebase itself, and xix project, port of 
-plan9 system programs to OCaml (build system, shell, assembler, compiler,
-even windowing system). Few annotations in the end. Good benefit!
-
-If colleagues want to execute a program, need capability, need
-then change all chain that call this function to add capability!
-First forbid by semgrep, then enforce by type system for all chain.
-
-If bad actor can catch it! easier to spot some code do
-network request if suddently a big chain of function got different
-type with Cap.network capability needed suddenly.
-
-Even more important in age of coding agent; can put strong barrier
-and confinment on code generated by AI. Note that AI are fast to learn
-about Cap and easily add the syntax annotations and new code
-automatically get the right annotation (and sometimes even caller, even though
-type system then catch remaining cases).
-
-
-XXX
+%if int -> float, know it is "pure" in regards to capability system;
+%sure no fork, no network, no random! (so deterministic too).
+%Can finally reason at function signature and module boundaries!
 
 \section{The talk}
 
+In the talk I will present the motivations, a quick overview of the
+[[Cap.ml]] library, and simple examples of use.
+%
+I will also report on the experience of using this library 
+on a few large OCaml codebases:
+on Semgrep itself\furl{https://github.com/aryx/osemgrep},
+on the [[mmm]] browser\furl{https://github.com/aryx/mmm},
+and on many Plan 9 systems programs (a build system, a shell,
+a windowing system, a toolchain) ported from C
+to OCaml in the XiX project\furl{https://github.com/aryx/xix}.
+%
+In all those cases, only a few type annotations and a few
+Semgrep rules were needed to enforce the use of capabilities
+on the whole codebase.
+
+I will also report concrete examples of benefits of the approach.
+%
+For instance, on the Semgrep codebase, during the migration
+to use capabilities, I discovered deep in the call stack
+the use of the external program [[uname]] via [[Unix.open_process_in]]
+(that was also a performance bottleneck)
+added by a junior programmer that escaped code review.
+%
+Once the codebase was migrated, the capability system prevented
+many junior programmers to do quick and dirty hacks because
+the use of dangerous functions were now requiring to modify the
+call chain to add the necessary capability in all the callers.
+%
+Finally, AI coding agents have no issue to learn the capability
+system and produce code using capability types. Thanks to
+those stronger types, the reviewer can also focus more on
+the interfaces and be sure, thanks to the OCaml type system,
+that the AI code in the implementation file does not
+call dangerous functions.
+
+
+%If colleagues want to execute a program, need capability, need
+%then change all chain that call this function to add capability!
+%First forbid by semgrep, then enforce by type system for all chain.
+%
+%If bad actor can catch it! easier to spot some code do
+%network request if suddently a big chain of function got different
+%type with Cap.network capability needed suddenly.
+%
+%Even more important in age of coding agent; can put strong barrier
+%and confinment on code generated by AI. Note that AI are fast to learn
+%about Cap and easily add the syntax annotations and new code
+%automatically get the right annotation (and sometimes even caller, even though
+%type system then catch remaining cases).
 
 \end{document}

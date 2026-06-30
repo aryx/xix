@@ -70,6 +70,8 @@ lineage.pdf
 # Articles
 /docs/iwp9/iwp9.pdf
 /docs/iwp9/iwp9.tex
+/docs/ocaml2026/cap.pdf
+/docs/ocaml2026/cap.tex
 
 # Parsers
 /assembler/Lexer_asm.ml

@@ -190,6 +190,8 @@ local cap_rules = [{
 %sure no fork, no network, no random! (so deterministic too).
 %Can finally reason at function signature and module boundaries!
 
+%TODO? could show an example of semgrep error message when the rule trigger
+
 %alt: \section{Dynamic capabilities}
 
 \section{The talk}
@@ -217,7 +219,7 @@ the use of the external program [[uname]] via [[Unix.open_process_in]]
 (that was also a performance bottleneck)
 added by a junior programmer that escaped code review.
 
-Once the codebase was fully migrated, the OCaml type system 
+Once the Semgrep codebase was fully migrated, the OCaml type system 
 (and capability types) prevented
 many junior programmers from doing quick and dirty hacks because
 the use of dangerous functions now required modifying the

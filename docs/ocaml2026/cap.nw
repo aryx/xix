@@ -100,6 +100,7 @@ many capabilities ([[Cap.fork]], [[Cap.network]], etc.) to run.
 %
 Those capabilities are abstract types defined in [[Cap.mli]] and can not
 be {forged}.
+% note that OCaml in_channel/out_channel are already (fine-grained) capabilities
 
 <<Cap.mli>>=
 module Process : sig
@@ -219,7 +220,7 @@ added by a junior programmer that escaped code review.
 Once the codebase was fully migrated, the OCaml type system 
 (and capability types) prevented
 many junior programmers to do quick and dirty hacks because
-the use of dangerous functions were now requiring to modify the
+the use of dangerous functions was now requiring to modify the
 call chain to pass the necessary capability in all the callers,
 which was easier to spot during code reviews.
 
@@ -228,10 +229,11 @@ system and produce code using capability types. Thanks to
 those stronger types, the reviewer can also focus more on
 the interfaces and be sure, thanks to the OCaml type system,
 that the AI code in the implementation file does not
-call dangerous functions, or otherwise that
-the interface clearly says so.
+call dangerous functions, or if it does the
+interface clearly would clearly says so too.
 
-
+%alt: Conclusion
+% finally a use for objects :)
 
 %If colleagues want to execute a program, need capability, need
 %then change all chain that call this function to add capability!

@@ -1,0 +1,13 @@
+
+so obviously right to use capability types everywhere.
+I actually don't understand people why not more spread.
+I saw many people at Semgrep against, even smart programmers :)
+I don't get it. So obviously right. I feel the same
+when 20 years ago I was explaining to (dynamic) programmers OCaml and
+strong typing is so obviously right,
+or PHP programmers at Facebook (they are now all convinced, and use
+gradual types in PHP, Python, JS).
+(actually not so obvious and the original "reasoning easier" turn out
+less effective than the real benefit: maintenance, ease of refactoring, etc.)
+actually now again "reasoning easier" argument possible :) but
+AI coding agent and maintenace also so obvious.

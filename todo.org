@@ -21,6 +21,36 @@ TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.
 # then finish ocaml-light .nw
 # make it work in plan9 and release graphics, windows, and even kernel!
 
+#   * xix (principia in OCaml):
+#     Originality announcement on discuss.ocaml.org and OPAM:
+#     (1) education purpose: small LOC, LP syncweb, and principia-ml!
+#     (2) capabilities: types, TCB?, and semgrep rules to enforce things
+#     - RELAX SEMI mk/rc OCaml version (and C versions on principia-softwarica.org)
+#     - lex/yacc OCaml version (need to finish yacc)
+#     - FUN tiger and target asmcomp cmm (nice intermediate step to ocaml-light)
+#     - FUN mincaml? (nice intermediate too?)
+#     - ocaml-light
+#         * LPized first bytecode compiler and runner
+#         * LPIzed native and its cmm backend
+#         * RELAX integrate and LPize zamcov as alternative to C bytecode runner
+#       => full loop; we can understand all of mk/rc (lex, yacc, ocaml compiler)
+#     - efuns minimal version (no tree-sitter), need repro/fix weird array bugs first
+#     - RELAX ogit (and new LP) 
+#     - games: elm-playground + physics 2D, 3D engine, doom, quake, rolling moon
+#     ...
+#     - gopad9cc: assembler/linker/compiler(macroprocessor) (5a/5l/5c and also amd64/arm64/riscv?)
+#       use chatGPT more to transpile C original goken9cc code to OCaml? and follow
+#       Rob/Russ strategy of exact byte matching with C code for generated objs/bins
+#       (but first must deoptimize 5c while still got tests to pass so easier
+#       then to port and compare to ocaml versions)
+#     - ocaml-light for plan9, graphics bindings for plan9 draw, and rio in ocaml!
+#     - kernel in ocaml (xv6 inspired first? and then plan9 inspired?)
+#   * syncweb! need make it releasable on OPAM (maybe not lipizer/indexer but
+#     at least the syncer at first)
+#   * release efuns (full version and its LP)
+#   * release codemap (and its LP), codegraph (and new LP)
+#     - need remove semgrep-libs deps or release on OPAM semgrep-libs parts
+
 ** LATER
 
 *** LATER FUN resume building and running orio (on Raspberry Pi? via ocaml-light plan9?)

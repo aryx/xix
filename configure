@@ -1,6 +1,7 @@
 #!/bin/sh
 #alt: #! /usr/bin/env bash
-set -eu # to debug this script add '-x'
+#config: to debug this script add '-x' in the list below
+set -eu
 
 ###############################################################################
 # Prelude

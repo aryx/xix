@@ -3,5 +3,4 @@
 tests/** linguist-documentation
 # lots of libxxx C code in there that bias the github language stats; skip it
 kernel/** linguist-documentation
-**/TOPORT/ linguist-documentation
-
+**/TOPORT/** linguist-documentation

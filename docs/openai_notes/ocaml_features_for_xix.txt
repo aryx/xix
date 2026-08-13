@@ -1,0 +1,393 @@
+OCaml features that would help factorize Xix
+============================================
+
+Context
+-------
+
+Xix is already organized around a lot of shared patterns:
+
+- capability-parameterized functions (`< Cap.open_in; .. >`, `Cap.main`)
+- many binaries with the same skeleton (`Main.ml`, `CLI.ml`, `Parse.ml`, `Ast.ml`)
+- backend families that differ mainly by architecture or platform
+- repeated “thin wrapper around a backend” code in `builder/`, `compiler/`,
+  `linker/`, `shell/`, `vcs/`, `windows/`, and `kernel/`
+- copy-paste notes that explicitly call out future factorization
+
+Pragmatic note:
+
+- this codebase can be built with very old OCaml variants, including
+  OCaml 1.07-era semantics through the `~/ocaml-light` fork
+- that is a constraint, but not the main objective here
+- I am fine with features that are narrow, ad hoc, or even “poor man’s”
+  versions of features that exist in other languages, as long as they remove
+  substantial duplication
+- the right question is not “is it general and pretty?”, but “does it delete a
+  lot of repetitive code in this repository?”
+
+Examples from the tree:
+
+- `shell/Env.ml` is explicitly a copy-paste of `mk/Shellenv.ml`
+- `linker/Codegenv.ml` says parts were copy-pasted from `Codegen5.ml`
+- `compiler/Typecheck.ml` and `compiler/Codegen.ml` both contain “could factorize”
+  comments around similar control-flow and declaration handling
+- `builder/CLI.ml`, `shell/CLI.ml`, `vcs/main.ml`, `assembler/CLI.ml` all follow
+  the same binary-entrypoint pattern
+
+The proposal below is not “what OCaml has today”, but “what OCaml could add to
+make this codebase much less repetitive”.
+
+In practice, that means it is acceptable if a feature is:
+
+- restricted to a small family of use cases
+- expressed as syntax sugar over a simpler core
+- less powerful than similar features in other languages
+- tuned specifically for ASTs, capabilities, module families, or backend
+  specializations
+
+
+1. Capability and effect parameters as a first-class language feature
+---------------------------------------------------------------------
+
+Xix already uses object-row capabilities to describe side effects, but it is
+still manual and verbose.
+
+What I would add:
+
+- syntax for capability/effect requirements on functions
+- compiler-checked effect propagation
+- automatic inference for “this function needs file I/O + env + fork”
+- ability to abstract over capability sets without object syntax noise
+
+Why it would help Xix:
+
+- remove a lot of repeated `< Cap.open_in; Cap.open_out; .. >` annotations
+- simplify the entrypoints in `Main.ml` files
+- make backend code easier to compose because the required powers are explicit
+  but not hand-threaded everywhere
+- reduce boilerplate in `shell/`, `builder/`, `vcs/`, `windows/`, and
+  `lib_core/system/plan9/`
+
+Example of the kind of API this would replace:
+
+```ocaml
+val read_environment : < Cap.env ; .. > -> t
+val init : < Cap.stdin; Cap.stdout; Cap.stderr; .. > -> state
+val exec_recipe : < Cap.fork; Cap.exec; .. > -> ...
+```
+
+The ideal feature would let the compiler infer the effect/capability footprint
+and let callers supply any object that satisfies it.
+
+
+2. Trait modules with defaults and associated types
+---------------------------------------------------
+
+OCaml modules already give structure, but Xix still pays a lot of “plumbing tax”
+when two modules share 90% of the same logic and differ in a few hooks.
+
+What I would add:
+
+- trait-like modules: signatures with default methods and overridable hooks
+- associated types inside module interfaces
+- explicit “inherit this implementation, override these functions”
+
+Why it would help Xix:
+
+- factorize the many backend families:
+  - `assembler/objects/*`
+  - `linker/Codegen*.ml`, `linker/Layout*.ml`, `linker/Rewrite*.ml`
+  - `compiler/Arch*.ml`
+  - `kernel/*` variants by platform
+- reduce copy-paste between “same algorithm, different target”
+- avoid split-brain interfaces where the `.mli` and `.ml` are mostly the same
+  across families
+
+This is especially attractive for the architecture-specific code paths in the
+assembler/linker/compiler pipeline.
+
+
+3. Open records and open variants with stable namespaces
+--------------------------------------------------------
+
+Xix has many evolving ASTs and configuration records. Today, sharing them across
+subsystems often means wrapping, copying, or re-describing the same data.
+
+What I would add:
+
+- open records with named extension points
+- open variants that can be extended across modules but remain type-safe
+- namespace sealing so extensions are explicit and do not become chaos
+
+Why it would help Xix:
+
+- share common AST fragments between `compiler`, `assembler`, `linker`, and
+  `shell`
+- let subsystem-specific fields grow without rebuilding wrapper types
+- reduce “convert from A.t to B.t” glue functions
+
+This would be particularly useful for:
+
+- command ASTs
+- linker/assembler intermediate representations
+- build graph / recipe / environment records
+- windowing and draw state records
+
+
+4. Built-in derivation for common structural operations
+-------------------------------------------------------
+
+Xix already uses `ppx_deriving show` in places, but the project still contains a
+lot of hand-written structural code.
+
+What I would add:
+
+- a small, purpose-built annotation system only for derivation
+- native derivation for printers, serializers, hashers, comparisons, visitors,
+  and folds
+- derivation for “generic map over the immediate children”
+- derivation for “clone with one field changed”
+- derivation for command-line usage/help from record and variant definitions
+
+Why it would help Xix:
+
+- eliminate repetitive `show_*`, `vof_*`, pretty-printer, and dump code
+- make AST and IR definitions easier to evolve
+- reduce the amount of “simple but tedious” code in:
+  - `compiler/Ast.ml`
+  - `assembler/objects/Ast_*.ml`
+  - `shell/Ast.ml`
+  - `linker/Types*.ml`
+  - `lib_core/commons/OCaml.ml`
+
+The useful version of this feature is not just “derive show”; it is “derive all
+the boring structural operations from the type definition once”.
+
+It does not need the whole OCaml attribute ecosystem. A much smaller mechanism
+would already be enough if it can:
+
+- attach a derivation request to a type declaration
+- pass a few derivation-specific options
+- stay syntactically local to the type being derived
+- desugar to generated code or a compiler plugin hook
+
+
+5. Linear or affine ownership types for resources
+-------------------------------------------------
+
+This is not directly a factorization feature, but it would remove a lot of
+cleanup and error-path duplication.
+
+What I would add:
+
+- affine types for resources that must be consumed once
+- compile-time tracking for open files, child processes, mounts, and locks
+- guaranteed release/close semantics
+
+Why it would help Xix:
+
+- simplify `open`/`close` and `fork`/`wait` patterns
+- reduce duplicated cleanup code in shell, builder, kernel, and vcs code
+- make error handling less ad hoc in code that manipulates OS resources
+
+This would be very useful in:
+
+- `builder/Shell.ml`
+- `shell/Interpreter.ml`
+- `vcs/repository.ml`
+- `windows/Wm.ml`
+- `kernel/processes/*`
+
+
+6. Named pattern views and pattern synonyms
+-------------------------------------------
+
+Xix contains a lot of large pattern matches on ASTs, instructions, and
+architecture-specific data. Those matches often repeat the same sub-shapes.
+
+What I would add:
+
+- reusable named patterns
+- view patterns / destructuring aliases
+- pattern macros that expand to verified pattern fragments
+
+Why it would help Xix:
+
+- factorize repeated matching logic in parsers, typecheckers, code generators,
+  and diff engines
+- give names to the shapes that recur across backends
+- reduce “same match tree, different payload” duplication
+
+This would be especially useful in:
+
+- `compiler/Typecheck.ml`
+- `compiler/Codegen.ml`
+- `linker/Resolve.ml`
+- `shell/Interpreter.ml`
+- `assembler/Parse_*.ml`
+
+
+7. A module-level “default skeleton” feature
+--------------------------------------------
+
+A lot of Xix binaries share a common structure:
+
+1. parse CLI
+2. build capabilities
+3. run the main logic
+4. exit through the capability wrapper
+
+What I would add:
+
+- a language-level way to declare a standard program skeleton
+- optional module fields with defaults
+- generated entrypoint glue from a small declaration
+
+Why it would help Xix:
+
+- factorize `Main.ml` boilerplate across the whole repo
+- keep the “real logic” in `CLI.ml` or domain modules
+- make it easier to introduce new tools with the same shape as existing ones
+
+This is mostly a quality-of-life feature, but Xix has enough small binaries that
+the accumulated gain would be real.
+
+
+8. Higher-order modules with inferred sharing
+---------------------------------------------
+
+Current functors are good, but they still require explicit plumbing.
+
+What I would add:
+
+- functors with inferred sharing constraints
+- automatic module argument inference when there is only one valid candidate
+- module partial application with named defaults
+
+Why it would help Xix:
+
+- make backend families easier to compose
+- reduce repetitive module instantiation in compiler/linker/graphics code
+- support a cleaner split between “algorithm” and “target-specific policy”
+
+
+9. Narrow, repo-specific sugar that could still pay off
+-------------------------------------------------------
+
+This is the most “poor man’s” category: features that would not be worth
+adding to a general-purpose language spec, but that would be excellent inside
+Xix.
+
+What I would add:
+
+- a `caps`-parameter declaration that expands to object-row capability types
+- a `derive` syntax for common structural functions on algebraic data types
+- a `backend` declaration that generates the boilerplate for family modules
+  differing only by a small set of hooks
+- a `skeleton` declaration for `Main.ml`/`CLI.ml`/`Parse.ml` style binaries
+- a restricted pattern-alias mechanism for frequently repeated shapes
+
+Why it would help Xix:
+
+- removes the most repeated boilerplate without requiring a new style of
+  programming everywhere
+- keeps the code readable because the feature surface stays intentionally small
+- avoids pushing generic abstractions too far when the problem is really
+  “these files are all doing the same thing with small variations”
+
+This category is probably the best fit for the repository if the goal is raw
+code reduction rather than language purity.
+
+For derivation specifically, the sweet spot is probably:
+
+- no general attribute system
+- no arbitrary metadata attached everywhere
+- just enough syntax to say “derive these functions for this type”
+- optional per-derivation configuration
+
+That keeps the feature small while still eliminating a lot of repetitive code in
+ASTs, IRs, dumps, and pretty-printers.
+
+
+Most valuable first
+-------------------
+
+If I had to prioritize only a few language changes for Xix, I would pick:
+
+1. capability/effect parameters
+2. trait modules with defaults
+3. built-in derivation for structural operations
+4. open records/variants with explicit extension points
+5. narrow repo-specific sugar for the repeated binary/backend skeletons
+
+Those features would remove the most obvious duplication without forcing the
+whole codebase into a new style.
+
+
+Bottom line
+-----------
+
+Xix is already very explicit and modular, but it still hits the same repetition
+patterns common in a large OCaml systems codebase:
+
+- backend specialization
+- capability plumbing
+- boilerplate entrypoints
+- structural visitors/printers/serializers
+- resource cleanup
+- AST matching
+
+A more powerful OCaml could attack that repetition directly, especially if it
+combined capability tracking, trait-like modules, built-in generic derivation,
+and small repo-specific syntactic sugar.
+
+
+Lower priority landscape
+------------------------
+
+These are still interesting, but they look less compelling for Xix unless a
+specific hotspot proves otherwise.
+
+1. Full dependent types
+
+   Probably too much machinery for this codebase. Most of the payoff here can
+   be captured by lighter-weight types, better derivation, or a few restricted
+   features.
+
+2. General reflection / runtime type inspection
+
+   Useful in theory, but Xix usually wants compile-time structure, not a fully
+   dynamic object model. The `lib_core/commons/OCaml.ml` style machinery is
+   already a more practical compromise.
+
+3. First-class macros for arbitrary syntax rewriting
+
+   Powerful, but easy to overuse. For Xix, restricted generation for
+   derivation/skeletons/backends is likely enough.
+
+4. Typeclasses as a universal abstraction mechanism
+
+   Helpful if the repo had a lot of ad hoc “same function over many types”
+   patterns. The current pain seems more about family-level code and backend
+   specialization than generic ad hoc polymorphism.
+
+5. Algebraic effects as a general runtime feature
+
+   Interesting for structuring control flow, but probably less directly useful
+   than capability/effect annotations for this particular codebase.
+
+6. Implicit conversions
+
+   Very dangerous in a codebase like this. The repo benefits from explicit
+   control flow and explicit data flow, especially in compiler, linker, and
+   kernel code.
+
+7. Overly general object-oriented extension points
+
+   Xix already has enough moving pieces. Generic inheritance hierarchies would
+   likely replace simple duplication with harder-to-follow indirection.
+
+8. A universal AST framework for every subsystem
+
+   Tempting, but probably too abstract. Xix has several different problem
+   domains, and the useful commonality is in a few shared operations, not in a
+   single super-AST.

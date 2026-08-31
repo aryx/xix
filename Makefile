@@ -69,7 +69,12 @@ build-dune:
 .PHONY: test
 test:
 	dune build
-	./test
+	# using the native test.exe, not the ./test bytecode symlink (kept for
+	# ocamldebug, see tests/dune), because bytecode needs dllstdcompat_stubs.so
+	# resolvable at runtime via CAML_LD_LIBRARY_PATH, which was not the case
+	# in the Nix CI job (fresh opam switch); the native exe has no such issue
+	# since C stubs are linked in statically.
+	_build/default/tests/test.exe
 
 ###############################################################################
 # Developer targets

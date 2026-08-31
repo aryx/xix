@@ -1,0 +1,3 @@
+[submodule "caps"]
+	path = caps
+	url = git@github.com:aryx/ocaml-caps.git

@@ -3,7 +3,7 @@ TOP=../..
 SRC=clock.ml
 PROG=oclock
 
-DEPS=lib_core/commons lib_core/regexps \
+DEPS=caps/src/caps lib_core/commons lib_core/regexps \
   lib_graphics/geometry lib_graphics/draw lib_graphics/input lib_graphics/ui
 SYSLIBS=unix.cma threads.cma
 EXTRA_FLAGS=-thread

@@ -1,5 +1,5 @@
 TOP=../..
-INCLUDES=-I .
+INCLUDES=-I . -I $TOP/caps/src/caps
 
 # We could have Set.ml and Map.ml below. It would work with ocamlc, but
 # not with ocamlopt :( so not worth the trouble.
@@ -10,9 +10,11 @@ INCLUDES=-I .
 
 #Ftype.ml
 
+#old: now in ocaml-caps repo
+# Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
+
 #coupling: dune '(modules ...)' stanza
 SRC=\
- Cap.ml CapStdlib.ml CapSys.ml CapUnix.ml \
  Eq.ml Ord.ml \
  Set_.ml Map_.ml \
  Common.ml \

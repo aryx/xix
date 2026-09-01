@@ -1,5 +1,5 @@
 // Semgrep rules for XiX, mostly to enforce the use of capabilities
-// (see lib_core/commons/Cap.mli).
+// (see caps/src/caps/Cap.mli).
 
 // ----------------------------------------------------------------------------
 // Simple rules
@@ -27,13 +27,13 @@ local semgrep_rules = [
   },
 ];
 // ----------------------------------------------------------------------------
-// TCB (Trusted Computing Base, see semgrep/TCB/ for more info)
+// TCB (Trusted Computing Base, see caps/src/tcb/ for more info)
 // ----------------------------------------------------------------------------
 
 // lex and yacc are also part of ocaml-light so better not impose caps there
 local exclude_dirs = ['lex/', 'yacc/', 'todo/'];
 
-// partial copy of semgrep/TCB/forbid_xxx.jsonnet
+// partial copy of caps/rules/forbid_xxx.jsonnet
 local cap_rules = [
   {
     id: 'use-caps',

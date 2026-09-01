@@ -15,7 +15,7 @@ MK=omk
 
 # STDLIB is defined or not (usually not) in mkconfig
 DIRS=\
-  $STDLIB lib_core/commons lib_core/regexps \
+  $STDLIB caps/src/caps lib_core/commons lib_core/regexps \
   builder shell\
   lib_parsing generators/lex generators/yacc\
   macroprocessor\

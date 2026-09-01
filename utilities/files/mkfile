@@ -2,10 +2,10 @@ TOP=../..
 
 PROGS=ocat opwd owc
 
-INCLUDES=-I $TOP/lib_core/commons
+INCLUDES=-I $TOP/caps/src/caps -I $TOP/lib_core/commons
 # no unix.cma and no str.cma here!
 SYSLIBS=
-LIBS=$TOP/lib_core/commons/lib.cma
+LIBS=$TOP/caps/src/caps/lib.cma $TOP/lib_core/commons/lib.cma
 
 all:V: $PROGS
 

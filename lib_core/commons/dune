@@ -10,7 +10,6 @@
  ; coupling: mkfile SRC variable
  (modules
   Set_ Map_
-  Cap CapStdlib CapSys CapUnix
   Eq Ord
   Common
   Dumper OCaml
@@ -27,6 +26,7 @@
  (libraries
     stdcompat
     fpath
+    caps
   )
  (preprocess (pps ppx_deriving.show))
 )

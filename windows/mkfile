@@ -14,7 +14,8 @@ SRC= \
                               Threads_fileserver.ml \
   test.ml CLI.ml Main.ml
 
-INCLUDES=-I $TOP/lib_core/commons -I $TOP/lib_core/system/plan9 \
+INCLUDES=-I $TOP/caps/src/caps -I $TOP/lib_core/commons \
+ -I $TOP/lib_core/system/plan9 \
  -I $TOP/lib_graphics/geometry -I $TOP/lib_graphics/draw \
  -I $TOP/lib_graphics/input -I $TOP/lib_graphics/ui
 

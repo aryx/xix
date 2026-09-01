@@ -25,6 +25,8 @@ jobs:
           #- 5.3.0
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - run: docker build --tag "syncweb" --build-arg OCAML_VERSION=${{matrix.ocaml}} .
 
   # Building XiX with ocaml-light!
@@ -32,4 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - run: docker build -f Dockerfile.light --tag xix-light .

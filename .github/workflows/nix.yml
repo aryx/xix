@@ -23,6 +23,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Set up Nix
         uses: DeterminateSystems/nix-installer-action@main
       - name: Cache Nix

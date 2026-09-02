@@ -11,6 +11,10 @@ finish rc enough so can use it with mk on xix itself! remove dependency to 9base
 TODO Can use rc/mk on principia and build and syncweb as well Editor.nw/Codemap.nw
   need implement globbing, subshell, etc.
 
+** Overview
+# add c-- target to occ! so better than plan 9! factorized code
+#  among 5c/6c/... once and for all, and reusable in OCaml too (and tiger)!
+
 ** big plan
 # release omk on OPAM and finish .nw (and reference too Make.nw?)
 # then finish orc (globbing, ...) enough to work with mk, and finish .nw

@@ -1,11 +1,17 @@
 # -*- org -*-
 
-* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v1, iwp9)
+* 0.19 (Q3 2026) ()
+
+** internals
+- moved Cap.ml and lib_core/commons in separate repositories and use
+  git submodule to vendored them back
+
+* 0.18 (Q1 2026) (oed v1, dynamic capability restrictions, plan9 port v1, iwp9 submission)
 
 ** utilities
 - oed: improve enough so can run mkenam.sh ed script
-  and add a new -r restricted mode (like in GNU ed)
-- new ogrep, just a small wrapper around lib_core/regexps really
+  and add a new -r restricted mode (like in GNU ed) using capabilities
+- new ogrep, just a small wrapper around lib_core/regexps really for now
 
 ** applications
 - oclock: port of plan9 clock.c
@@ -32,6 +38,8 @@
 ** docs
 - lpization of oed in in oed.nw
 - basic LP distribute of orio_extra.nw in orio.nw
+- submit xix for plan9 to IWP9 but got rejected (probably because I had 2
+  accepted papers already with principia and goken).
 
 ** internals
 - add dynamic capability restriction infra (useful for oed -r)

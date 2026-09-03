@@ -21,7 +21,7 @@
 
 default:
 	bash -c "dune build _build/install/default/bin/{omk,orc,olex,oyacc,test.bc,o5a,o5l,o5c,ova,ovl,ovc,oia,oic,oar,onm,ogit,orio,oed,ogrep,ohello}"
-	@echo you can also use ./bootstrap-mk.sh and ./bin/mk instead of make (and dune)
+	@echo "you can also use ./bootstrap-mk.sh and ./bin/mk instead of make (and dune)"
 
 all:
 	dune build

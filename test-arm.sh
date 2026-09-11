@@ -32,6 +32,7 @@ CASES=(
     "tests/linker/arm_diff/halfword_arm.s:_start"
     "tests/linker/arm_diff/longoff_arm.s:_start"
     "tests/linker/arm_diff/lacon_arm.s:_start"
+    "tests/linker/arm_diff/halflong_arm.s:_start"
 )
 
 FAIL=0

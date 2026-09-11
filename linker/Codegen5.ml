@@ -340,24 +340,25 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
 (*e: function [[Codegen5.gmem]] *)
 
 (* claude: ARM's "Load/Store Halfword and Load Signed Byte/Halfword"
- * immediate-offset instruction class (STRH/LDRH/LDRSH/LDRSB) -- a
- * distinct bit layout from LDR/STR's gmem above: the 8-bit magnitude
- * offset is split into two 4-bit nibbles (bits[11:8] and bits[3:0])
- * with bit22=1 marking "immediate offset" (vs a register offset,
- * which this port doesn't need), and bits[6:5] select the variant
- * (01=unsigned halfword, 11=signed halfword, 10=signed byte -- there
- * is no signed-byte *store*, byte stores don't care about sign, see
- * case 20/gmem above). Ported from goken's 5l/codegen.c's olhr/oshr
- * (STRH is oshr = olhr with the L bit toggled off). *)
-let ghalfword (op : mem_opcode) (kind : move_size) cond offset (R rbase) (R rt)
-  : Bits.t =
-  let (u_bit, mag) = if offset >= 0 then (1, offset) else (0, -offset) in
-  if mag >= 0x100
-  then raise (Impossible "halfword/signed-byte offset too large (8-bit split immediate)");
-  (* claude: goken's oshr/olhr for case 70 (STORE) never look at
+ * instruction class (STRH/LDRH/LDRSH/LDRSB) -- a distinct bit layout
+ * from LDR/STR's gmem above. Immediate-offset form: the 8-bit
+ * magnitude offset is split into two 4-bit nibbles (bits[11:8] and
+ * bits[3:0]) with bit22=1 marking "immediate offset". Register-offset
+ * form (case 72/73's long-offset REGTMP indexing): bit22=0, and the
+ * offset register goes directly in bits[3:0] (no nibble split, no
+ * magnitude limit) -- goken's oshrr/olhrr are olhr/oshr with bit22
+ * XORed off. Either way bits[6:5] select the variant (01=unsigned
+ * halfword, 11=signed halfword, 10=signed byte -- there is no
+ * signed-byte *store*, byte stores don't care about sign, see case
+ * 20/gmem above). Ported from goken's 5l/codegen.c's olhr/oshr/
+ * olhrr/oshrr (STRH forms are the LDRH forms with the L bit toggled
+ * off). *)
+let ghalfword (op : mem_opcode) (kind : move_size) cond
+    (offset_or_rm : (int, reg) Either.t) (R rbase) (R rt) : Bits.t =
+  (* claude: goken's oshr/olhr for case 70/72 (STORE) never look at
    * p->as at all -- there's only one STRH, sign is meaningless when
-   * storing, so it always uses the base SH=01 bits. Only case 71
-   * (LOAD) XORs those bits based on p->as (AMOVB/AMOVH) to select
+   * storing, so it always uses the base SH=01 bits. Only case 71/73
+   * (LOAD) XOR those bits based on p->as (AMOVB/AMOVH) to select
    * LDRSB/LDRSH/LDRH -- see olhr/oshr in codegen.c. *)
   let (bit6, bit5) =
     match op with
@@ -371,14 +372,27 @@ let ghalfword (op : mem_opcode) (kind : move_size) cond offset (R rbase) (R rt)
             raise (Impossible "ghalfword only for HalfWord or signed Byte")
         )
   in
-  [gcond cond; (1, 24) (* P: pre-indexed, no writeback support here *);
-   (u_bit, 23); (1, 22) (* I: immediate offset *);
-   (match op with LDR -> (1, 20) | STR -> (0, 20));
-   (rbase, 16); (rt, 12);
-   ((mag lsr 4) land 0xf, 8);
-   (1, 7); (bit6, 6); (bit5, 5); (1, 4);
-   (mag land 0xf, 0);
-  ]
+  let common = [
+    gcond cond; (1, 24) (* P: pre-indexed, no writeback support here *);
+    (match op with LDR -> (1, 20) | STR -> (0, 20));
+    (rbase, 16); (rt, 12);
+    (1, 7); (bit6, 6); (bit5, 5); (1, 4);
+  ] in
+  match offset_or_rm with
+  | Either.Left offset ->
+      let (u_bit, mag) = if offset >= 0 then (1, offset) else (0, -offset) in
+      if mag >= 0x100
+      then raise (Impossible "halfword/signed-byte offset too large (8-bit split immediate)");
+      common @ [(u_bit, 23); (1, 22) (* I: immediate offset *);
+                ((mag lsr 4) land 0xf, 8); (mag land 0xf, 0)]
+  (* claude: register-offset mode always adds (U bit set), same
+   * reasoning as gmem's Either.Right just above -- goken's
+   * oshrr/olhrr pass the offset *register number* (always >= 0) as
+   * olhr's "v" argument, whose `if(v>=0) o|=1<<23` always fires.
+   * bit22 (I, "immediate offset") is 0 here: there's no immediate at
+   * all, the low nibble is Rm directly, and bits[11:8] stay 0. *)
+  | Either.Right (R r) ->
+      common @ [(1, 23); (0, 22); (r, 0)]
 
 (*s: function [[Codegen5.gload_from_pool]] *)
 let gload_from_pool (nsrc : 'a T.node) cond rt =
@@ -867,19 +881,25 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             if abs offset < 0x100
             then
               { size = 4; x = None; binary = (fun () ->
-                [ ghalfword LDR size cond offset rbase (R rt) ]
+                [ ghalfword LDR size cond (Left offset) rbase (R rt) ]
               )}
             else
-              error node "TODO: Large offset"
+              (* case 73:	/* movb/movh/movhu L(R),R -> ldrsb/ldrsh/ldrh */ *)
+              (* claude: same REGTMP-via-pool pattern as case 31
+               * above, using ghalfword's register-offset form
+               * instead of gmem's. *)
+              { size = 8; x = Some (PoolOperand (Ast_asm.Int offset));
+                binary = (fun () ->
+                  [ gload_from_pool node cond rTMP;
+                    ghalfword LDR size cond (Right rTMP) rbase (R rt)
+                  ]
+              )}
         )
 
     (* case 32:	/* movh/movb L(R),R */ *)
-    (* claude: long-offset (omvl into REGTMP + ldrsb/ldrsh/ldrh,
-     * case 73's V4 real-instruction form) NOT ported yet; see the
-     * case-30/31/34 TODOs in docs/claude_notes/todo_arm_port.org. *)
-    (* case 33:	/* movh/movhu R,L(R) -> sb, sb */ *)
-    (* claude: long-offset (omvl into REGTMP + strh, case 72's V4
-     * form) NOT ported yet, same TODO. *)
+    (* claude: NOT ported, same reasoning as case 22 above (dead code
+     * under goken's default `armv4`; see case 73 just above for the
+     * real instruction). *)
 
     (* Store *)
 
@@ -920,6 +940,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* claude: NOT ported, same reasoning as case 22 above (dead code
      * under goken's default `armv4`; see case 70 just below for the
      * real instruction). *)
+    (* case 33:	/* movh/movhu R,L(R) -> sb, sb */ *)
+    (* claude: NOT ported, same reasoning as case 23 just above (dead
+     * code under goken's default `armv4`; see case 72 just below for
+     * the real instruction). *)
     (* case 70:	/* movh/movhu R,O(R) -> strh */ *)
     (* claude: halfword short-offset store, using the real ARMv4T STRH
      * instruction (see ghalfword above). *)
@@ -933,10 +957,18 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             if abs offset < 0x100
             then
               { size = 4; x = None; binary = (fun () ->
-                [ ghalfword STR size cond offset rbase rf ]
+                [ ghalfword STR size cond (Left offset) rbase rf ]
               )}
             else
-              error node "TODO: store with large offset"
+              (* case 72:	/* movh/movhu R,L(R) -> strh */ *)
+              (* claude: same REGTMP-via-pool pattern as case 30
+               * above, using ghalfword's register-offset form. *)
+              { size = 8; x = Some (PoolOperand (Ast_asm.Int offset));
+                binary = (fun () ->
+                  [ gload_from_pool node cond rTMP;
+                    ghalfword STR size cond (Right rTMP) rbase rf
+                  ]
+              )}
         )
 
     (* Swap *)

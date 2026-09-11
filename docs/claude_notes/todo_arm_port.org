@@ -202,6 +202,17 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    literal-pool entry), so this is verified indirectly by every
    fixture whose codegen falls back to a literal pool (bigimm_arm.s
    for case 12, lcon_arm.s for case 13), not by a dedicated fixture.
+** DONE case 72/73 movh/movhu R,L(R) -> strh / movb/movh/movhu L(R),R
+   -> ldrsb/ldrsh/ldrh -- long (>8-bit) offset halfword/signed-byte
+   store/load, same REGTMP-via-literal-pool pattern as case 30/31,
+   using ghalfword's new register-offset form (extended from
+   immediate-only: bit22=0, offset register directly in bits[3:0],
+   no magnitude limit -- ported from goken's oshrr/olhrr, which XOR
+   olhr/oshr's immediate-mode bit22 off). Added
+   tests/linker/arm_diff/halflong_arm.s (each offset used exactly
+   once, same literal-pool-dedup-avoidance reasoning as
+   longoff_arm.s). PASS byte-identical + PASS same qemu-arm exit
+   code.
 ** DONE case 70 movh/movhu R,O(R) -> strh (real ARMv4T STRH, ghalfword
    helper)
 ** DONE case 71 movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh (real
@@ -246,11 +257,6 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
 
 Not yet in Codegen5.ml at all:
 ** TODO case 17 mull (64-bit long multiply, register-pair result)
-** TODO case 32 movh/movb L(R),R -> ldrsb/ldrsh/ldrh via literal pool
-   (case 73's V4 real-instruction form, NOT the case-32 byte-split
-   fallback -- see the case 70/71 SKIP note above for why)
-** TODO case 33 movh/movhu R,L(R) -> strh via literal pool (case 72's
-   V4 form, not the case-33 byte-split fallback)
 ** TODO case 35 mov PSR,R
 ** TODO case 36 mov R,PSR
 ** TODO case 37 mov $con,PSR

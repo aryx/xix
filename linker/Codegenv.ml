@@ -40,11 +40,34 @@ let int_of_bits (n : 'a T.node) (x : Bits.int32) : int =
 (* Operand classes *)
 (*****************************************************************************)
 
-(* TODO: also 0x7fff, -0x8000, and 0 special cases *)
+(* claude: case 3 (MOVW $con,r, no memory) covers goken's actual
+ * classes ZCON/SCON/ADDCON/ANDCON -- i.e. exactly [-0x8000, 0xffff]
+ * (span.c's aclass()/cmp(), same boundary reasoning as case 4/10's
+ * ADD $con fix -- see that comment). The old `i <= 0xffff` check
+ * was missing the lower bound entirely: any negative i trivially
+ * satisfies "<= 0xffff" in OCaml, so a genuinely out-of-range value
+ * like -100000 would have silently gone through the direct-fit path
+ * below instead of correctly failing loudly (case 19/24's lu-based
+ * expansion, not ported for a plain literal -- only for $sym(SB)
+ * addresses). *)
 let constant_kind i =
-  if i <= 0xffff
+  if i >= -0x8000 && i <= 0xffff
   then Some i
   else None
+
+(* claude: which single instruction case 3 uses to load i into a
+ * register depends on i's *exact* class, not just whether it fits:
+ * ANDCON (positive, 0x8000-0xffff) doesn't fit ADDIU's native
+ * sign-extended immediate, so goken uses ORI (with source R0)
+ * there instead -- using ADDIU would sign-extend 0x8000 into
+ * -32768, the wrong value entirely. Everywhere else in
+ * constant_kind's range (ZCON/SCON/ADDCON, [-0x8000, 0x7fff])
+ * ADDIU/ADDU is correct and matches goken (confirmed via `vl -a`
+ * directly: 0x7fff uses ADDIU, 0x8000/0xffff use ORI). *)
+let movw_imm_opcode i =
+  if i >= 0x8000
+  then OR
+  else ADD (W, U)
 
 (* claude: BIG is the bias goken's vl gives R30 (aka SB, aka rSB
  * below) -- R30 is set up at program start to point BIG bytes into
@@ -375,11 +398,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      *)
     | Move2 (W__, (Right (Int i)), Gen (GReg rt)) ->
        (match constant_kind i with
-       | Some i -> 
+       | Some i ->
            { size = 4; x = None; binary = (fun () ->
                let r = rZERO in
-               (* TODO: can also be let op = OR if exactly ANDCON *)
-               let op = ADD (W, U) in
+               let op = movw_imm_opcode i in
                [ op_irr (opirr_arith_opcode op) i r rt ]
             ) }
        | None -> failwith "TODO: LCON"

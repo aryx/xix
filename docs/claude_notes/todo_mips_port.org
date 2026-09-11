@@ -117,7 +117,28 @@
 * Phase 1 -- asm.c case backlog (goken/linkers/vl/asm.c)
 Cases with a matching (* case N: *) comment already in Codegenv.ml:
 ** DONE case 1  mov[v] r1,r2 ==> OR r1,r0,r2
-** DONE case 3  mov $soreg, r ==> or/add $i,o,r
+** DONE case 3  mov $soreg, r ==> or/add $i,o,r (fixed a real bug)
+   constant_kind's range check was `i <= 0xffff` with no lower
+   bound -- trivially true for ANY negative i in OCaml, so a
+   genuinely out-of-range negative constant (needing case 19/24's
+   lu-based expansion, not ported for a plain literal) would have
+   silently gone through the direct-fit path instead of correctly
+   failing loudly. Fixed to `i >= -0x8000 && i <= 0xffff`, matching
+   goken's actual ZCON/SCON/ADDCON/ANDCON range (same boundary
+   reasoning as the case 4/10 fix just below).
+   Separately, also fixed which opcode case 3 emits: the old code
+   always used ADDU regardless of i's sign, but goken picks ORI
+   specifically for the ANDCON range (0x8000-0xffff) -- ADDU would
+   sign-extend e.g. $0x8000 into -32768 instead of +32768. Confirmed
+   against goken directly (`vl -a`): 0x7fff uses ADDIU, 0x8000/
+   0xffff use ORI. New movw_imm_opcode helper picks OR vs ADD(W,U)
+   accordingly.
+   Added tests/linker/mips_diff/movw_andcon_mips.s (MOVW $32768 and
+   $65535, the two ANDCON boundary values) -- no branches needed
+   here (unlike case 4/10's immcon_mips.s), so this one is fully
+   byte-identical, not just functionally correct. Added to
+   test-mips.sh's CASES. Verified: full MIPS + ARM baselines and
+   make test (134/134) all still pass.
 ** DONE case 5  syscall
 ** DONE case 7  mov r, soreg ==> sw o(r)
 ** DONE case 8  mov soreg, r ==> lw o(r)

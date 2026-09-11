@@ -18,6 +18,7 @@ CASES=(
     "tests/linker/mips_diff/kitchen_sink_mips.s:_start"
     "tests/linker/mips_diff/case2_mips.s:_start"
     "tests/linker/mips_diff/case9_mips.s:_start"
+    "tests/linker/mips_diff/movw_andcon_mips.s:_start"
 )
 # tests/linker/mips_diff/call_mips.s, case6_mips.s and
 # immcon_mips.s are deliberately NOT in this list: all three are

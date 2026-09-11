@@ -406,7 +406,7 @@ let write_headers (config : Exec_file.linker_config)
  * on a program with no data section, this table sits at the very
  * end of the file, so getting its byte *count* wrong shows up as a
  * wrong file size, not just wrong bytes at some offset (caught via
- * tests/arm_diff/exit_linux_arm.s, which has no data section and no
+ * tests/linker/arm_diff/exit_linux_arm.s, which has no data section and no
  * giveaway last data byte for its content to disappear into).
  *)
 let shstrtab_content = "\000.text\000.data\000.strtab\000\000"

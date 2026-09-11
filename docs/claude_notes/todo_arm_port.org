@@ -40,7 +40,7 @@
    so goken pool-loads both, while xix's old code fast-pathed the
    nonzero one. Verified: full baseline (5 fixtures) + make test
    (134/134) still pass after.
-** DONE add tests/arm_diff/kitchen_sink.s (hand-written, not from goken)
+** DONE add tests/linker/arm_diff/kitchen_sink.s (hand-written, not from goken)
    Combines ADD/SUB/MUL/SLL, a BL/RET local call, address-of-global,
    and write/exit in one straight-line program -- broader coverage
    per fixture. Writing it caught a real bug (see immrot/BIG entry
@@ -55,19 +55,21 @@
    list -- not chased now. Rewrote the fixture branch-free instead of
    chasing it. Worth its own investigation later if CMP/Bxx-heavy
    fixtures are added.
-** DONE extend corpus: tests/arm_diff/{exit_linux_arm,addr_arm,call_arm}.s
-   Moved hello_linux_arm.s from tests/linker/ into a new top-level
-   tests/arm_diff/ (these fixtures exercise assembler codegen + basic
-   exec layout, not linking proper -- one object file each, no
-   cross-object resolution -- so "tests/linker/" misdescribed them).
-   Added 3 more from goken's own tests/s/{exit,variants}/: exit_linux_arm.s
+** DONE extend corpus: tests/linker/arm_diff/{exit_linux_arm,addr_arm,call_arm}.s
+   Moved hello_linux_arm.s from tests/linker/ into tests/linker/arm_diff/
+   (a subfolder, not its own top-level dir: these fixtures exercise
+   assembler codegen + basic exec layout more than linking proper --
+   one object file each, no cross-object resolution -- but it's
+   still o5a+o5l's combined output being compared, and a sibling
+   tests/linker/mips_diff/ is expected once MIPS gets this treatment
+   too). Added 3 more from goken's own tests/s/{exit,variants}/: exit_linux_arm.s
    (minimal exit(42), no data section -- caught the elfstrtab 1-byte
    bug above), addr_arm.s ($sym(SB) address-of-global + pointer-valued
    DATA), call_arm.s (BL to a symbol, two TEXT procs). All 4: PASS
    byte-identical + PASS same qemu-arm exit code. Also fixed
    diff-arm.sh: `set -e` was aborting the script on a fixture's
    intentional non-zero exit code (exit_linux_arm.s exits 42).
-** DONE tests/arm_diff/hello_linux_arm.s: cmp -l clean vs goken
+** DONE tests/linker/arm_diff/hello_linux_arm.s: cmp -l clean vs goken
    PASS: byte-identical (4112 bytes both sides). Last 6 bytes closed
    in Layout5.ml: implemented goken's checkpool()'s "true end of
    program" flush trigger (`if(p->link==P) flushpool(p,true)`) --
@@ -83,7 +85,7 @@
    NOT implemented -- pools must stay small; a real limit, not just
    a decision to revisit later. Verified full `./test-arm.sh` +
    `make test` (134/134) after.
-** DONE tests/arm_diff/hello_linux_arm.s: runs correctly under qemu-arm
+** DONE tests/linker/arm_diff/hello_linux_arm.s: runs correctly under qemu-arm
    Root cause found and fixed: linker/Flags.ml's kencc_compatible
    defaulted to true, which sets the MOV instruction's Rn field to the
    destination register instead of 0 (Codegen5.ml:441). goken always

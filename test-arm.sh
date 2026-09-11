@@ -1,9 +1,11 @@
 #!/bin/bash
-# Differential test driver for the ARM port (mostly assembler codegen
-# -- each fixture here is a single object file, so the linker's own
-# job is minimal: no cross-object symbol resolution or archives are
-# actually exercised, just laying out one TEXT and writing the exec
-# format).
+# Differential test driver for the ARM port. Each fixture here is a
+# single object file (no cross-object symbol resolution or archives),
+# so what's mostly exercised is assembler codegen plus the linker's
+# exec-format writing -- still filed under tests/linker/ since it's
+# o5a+o5l's combined output being compared, and a sibling
+# tests/linker/mips_diff/ is expected once MIPS gets the same
+# treatment.
 #
 # Runs scripts/diff-arm.sh over the phase-0.5 baseline corpus (see
 # docs/claude_notes/notes_arm_port_plan.txt and
@@ -20,11 +22,11 @@ cd "$(dirname "$0")"
 # file:entry_symbol pairs -- entry defaults to _main (the linkers'
 # default) when not TEXT _start.
 CASES=(
-    "tests/arm_diff/hello_linux_arm.s:_start"
-    "tests/arm_diff/exit_linux_arm.s:_start"
-    "tests/arm_diff/addr_arm.s:_start"
-    "tests/arm_diff/call_arm.s:_start"
-    "tests/arm_diff/kitchen_sink.s:_start"
+    "tests/linker/arm_diff/hello_linux_arm.s:_start"
+    "tests/linker/arm_diff/exit_linux_arm.s:_start"
+    "tests/linker/arm_diff/addr_arm.s:_start"
+    "tests/linker/arm_diff/call_arm.s:_start"
+    "tests/linker/arm_diff/kitchen_sink.s:_start"
 )
 
 FAIL=0

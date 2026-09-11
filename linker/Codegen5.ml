@@ -86,19 +86,29 @@ let offset_to_R12 x = x - big
 let base_and_offset_of_indirect node symbols2 autosize x =
   match x with
   | Indirect (r, off) -> r, off 
-  | Entity (Param (_s, off)) ->
-      (* remember that the +4 below is because we access the frame of the
-       * caller which for sure is not a leaf. Note that autosize
-       * here had possibly a +4 done if the current function
-       * was also not a leaf, but still we need another +4 because what matters
-       * now is the adjustment in the frame of the caller!
-       *)
-      rSP, autosize + 4 + off
+  (* claude: this +4 used to be here, on Param, instead of on Local
+   * below -- swapped after verifying against goken directly with
+   * plain memory access (`MOVW x-8(FP), R1` / `MOVW x+8(SP), R1`,
+   * no $, before touching any $lacon code). Nothing before
+   * tests/linker/arm_diff/lacon_arm.s ever exercised Entity(Local)/
+   * Entity(Param) at all (every earlier fixture used raw
+   * Indirect(reg,off) syntax like `4(R13)` instead of a named
+   * FP/SP-relative local), so the swap went uncaught. The reasoning
+   * in the original comment (now on Local, below) still applies --
+   * it was just attached to the wrong branch. *)
   (* note that for locals the offset is negative as in -4(SP), and so
    * will be converted as SP+autofize (to compute the old version of SP) - 4
    *)
-  | Entity (Local (_s, off)) -> 
+  | Entity (Param (_s, off)) ->
       rSP, autosize + off
+  (* remember that the +4 below is because we access the frame of the
+   * caller which for sure is not a leaf. Note that autosize
+   * here had possibly a +4 done if the current function
+   * was also not a leaf, but still we need another +4 because what matters
+   * now is the adjustment in the frame of the caller!
+   *)
+  | Entity (Local (_s, off)) ->
+      rSP, autosize + 4 + off
   | Entity (Global (global, off)) ->
       let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
       (match v with
@@ -733,7 +743,63 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                 [ gload_from_pool node cond (R rt) ]
               )}
             )
-        | Address (Local _ | Param _) -> raise Todo
+        (* claude: address of a local/auto (SP-relative) or param
+         * (FP-relative, but our port has no separate FP -- see
+         * base_and_offset_of_indirect, which already folds Param
+         * into an SP+autosize+4 offset the same way the Indirect/
+         * Entity memory-operand cases do). Mirrors the Global case
+         * just above: fast path is case 4 (fits immrot -> single
+         * ADD), slow path is case 34 (doesn't fit -> REGTMP via
+         * literal pool, then ADD).
+         *
+         * RACON-vs-LACON classification quirk: goken's aclass()
+         * (span.c) decides RACON/LACON using the offset *before*
+         * Rewrite5.rewrite's own "+4 for RLINK-save" adjustment to
+         * autosize (`n.instr <- T.TEXT (..., size+4)`), which by the
+         * time Codegen5 runs has already been baked permanently into
+         * env.autosize -- the original, pre-adjustment frame size is
+         * gone. Confirmed empirically (frame=$8192, off=-8: the fully
+         * adjusted offset is 8192, which fits immrot, but goken still
+         * emits the slow/pool form, because ITS classification value
+         * is 8192-8=8184, which does not fit). So the fits-check
+         * below is done against a *reconstructed* pre-adjustment
+         * offset (env.autosize - 4, undoing that +4), while the
+         * actual encoded value in either branch still uses the real,
+         * fully-adjusted `offset`. *)
+        | Address ((Local _ | Param _) as entity) ->
+            let (rbase, offset) =
+              base_and_offset_of_indirect node env.syms env.autosize
+                (Entity entity) in
+            let (R r) = rbase in
+            let classification_offset =
+              let off = match entity with
+                | Local (_, off) | Param (_, off) -> off
+                | Global _ -> raise (Impossible "matched above")
+              in
+              env.autosize - 4 + off
+            in
+            (match immrot classification_offset with
+            (* case 4:		/* add $I,[R],R */ *)
+            | Some _ ->
+                (match immrot offset with
+                | Some (rot, v) ->
+                    { size = 4; x = None; binary = (fun () ->
+                      [[gcond cond; (1, 25); gop_arith ADD; (r, 16); (rt, 12);
+                        (rot, 8); (v, 0)]]
+                    )}
+                | None ->
+                    raise (Impossible
+                      "classification offset fits immrot but final offset doesn't"))
+            (* case 34:	/* mov $lacon,R -> LDR x(R15), R11; ADD R11, R13, R */ *)
+            | None ->
+                let (R rtmp) = rTMP in
+                { size = 8; x = Some (PoolOperand (Ast_asm.Int offset));
+                  binary = (fun () ->
+                    [ gload_from_pool node cond rTMP;
+                      [gcond cond; gop_arith ADD; (r, 16); (rt, 12); (rtmp, 0)]
+                    ]
+                )}
+            )
         )
 
     (* Load *)

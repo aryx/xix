@@ -139,6 +139,41 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    real op using REGTMP as the "from" register (size=8: LDR + OP).
    Added tests/linker/arm_diff/lcon_arm.s (ADD $0x12345678,R0,R1).
    PASS byte-identical + PASS same qemu-arm exit code first try.
+** DONE case 4/34 address-of-local/param ($lacon) -- mirrors the
+   address-of-global case 4/12 split, just SP-relative instead of
+   SB-relative: fast path (fits immrot) is a single ADD, slow path
+   is REGTMP via the literal pool + ADD. Reused
+   base_and_offset_of_indirect (feeding it `Entity entity` for the
+   Local/Param case) instead of duplicating its offset arithmetic.
+   Caught two real, previously unverified bugs -- nothing before
+   this exercised Entity(Local)/Entity(Param) at all, every earlier
+   fixture used raw Indirect(reg,off) syntax like `4(R13)` instead:
+   - base_and_offset_of_indirect's "+4 for the caller/RLINK-slot"
+     adjustment was on the wrong branch: Param (this codebase's name
+     for the SP-mapped token, per Parser_asm5.mly's `pointer` rule)
+     had it, Local (the FP-mapped token) didn't; should be the other
+     way. Confirmed directly against goken with plain memory access
+     (`MOVW x-8(FP),R1` / `MOVW x+8(SP),R1`, no $) before touching
+     any $lacon code, to isolate this from the $lacon-specific issue
+     below.
+   - goken's aclass() (span.c) decides RACON-vs-LACON (fits-immrot
+     fast path vs literal-pool slow path) using the offset *before*
+     Rewrite5.rewrite's own "+4 for RLINK-save" adjustment to
+     autosize -- a value no longer available by the time Codegen5
+     runs (Rewrite5 bakes it permanently into the TEXT node's frame
+     size: `n.instr <- T.TEXT (..., size+4)`). Confirmed empirically:
+     frame=$8192, off=-8 gives a fully-adjusted offset of 8192
+     (fits immrot), but goken still emits the slow/pool form, because
+     ITS classification value is 8192-8=8184 (doesn't fit). Fixed by
+     reconstructing the pre-adjustment offset (env.autosize - 4 + off)
+     purely for the fits-check, while still encoding the real,
+     fully-adjusted offset in either branch. This is not a rare edge
+     case -- any real program combining a round frame size (4096,
+     8192, ...) with a small local/param offset can hit it, so it
+     was worth chasing rather than dodging with a "safe" fixture.
+   Added tests/linker/arm_diff/lacon_arm.s (fast-path Local, fast-path
+   Param, and a second slow-path instance for good measure). PASS
+   byte-identical + PASS same qemu-arm exit code.
 ** DONE case 30/31 mov/movb/movbu R,L(R) / L(R),R -- long (>12-bit)
    stack/SB-relative offset: load it into REGTMP via the literal
    pool, then a register-offset LDR/STR (gmem's existing
@@ -216,7 +251,6 @@ Not yet in Codegen5.ml at all:
    fallback -- see the case 70/71 SKIP note above for why)
 ** TODO case 33 movh/movhu R,L(R) -> strh via literal pool (case 72's
    V4 form, not the case-33 byte-split fallback)
-** TODO case 34 mov $lacon,R -> LDR x(R15), R11; ADD R11, R13, R
 ** TODO case 35 mov PSR,R
 ** TODO case 36 mov R,PSR
 ** TODO case 37 mov $con,PSR

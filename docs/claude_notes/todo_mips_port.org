@@ -468,12 +468,39 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    confirmed match rather than a real functional check, since
    nothing there sets up a valid syscall). Verified: full MIPS + ARM
    baselines and make test (134/134) all still pass.
+** DONE case 34 mov $con,fr ==> or/add $i,r,r2 -- float-constant
+   load, reusing case 3's exact OR-vs-ADDU choice (movw_imm_opcode)
+   into REGTMP, then MTC1'd into the float register. goken's
+   optab.c only lists ADDCON/ANDCON for this case (constant_kind's
+   same [-0x8000,0xffff] range as case 3) -- no UCON/LCON variant
+   here; those instead reuse case 35/36's oprange per optab.c, which
+   already have a different, integer-register-specific
+   implementation, so whether that's genuinely shared or a distinct
+   sub-case needs its own look, left as a TODO.
+   Surprising finding, contradicting the case 30/31 precedent:
+   unlike a standalone MTC1 (which always gets a trailing delay-slot
+   nop), this fused ORI+MTC1 sequence does NOT -- confirmed via `vl
+   -a` directly (`MOVW $42,F0` right before SYSCALL is just 2 words,
+   no NOR/NOP). Not fully understood (goken's delay-slot marking
+   likely keys off the original, pre-expansion Prog, not each
+   emitted word) but empirically consistent: if something
+   immediately reads the float register afterward, *that*
+   instruction's own delay slot (case 31's nop) still produces the
+   right total byte count.
+   Added two fixtures: case34_mips.s (both the ADDCON and ANDCON
+   halves, nothing reading the float registers back -- byte-
+   identical) and case34_check_mips.s (loads 42 into F0, reads it
+   back via MFC1, self-checks with BEQ -- functionally correct but
+   inherits both MFC1's own delay-slot gap and BEQ/JMP's, kept out
+   of test-mips.sh's CASES like the other BEQ-based fixtures). PASS
+   byte-identical (case34_mips.s) + PASS functionally (both).
+   Verified: full MIPS + ARM baselines and make test (134/134) all
+   still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
 ** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
 ** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)
-** TODO case 34 mov $con,fr ==> or/add $i,r,r2
 ** TODO case 37 movw r,mr
 ** TODO case 38 movw mr,r
 ** TODO case 39 rfe ==> jmp+rfe

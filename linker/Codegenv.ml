@@ -672,6 +672,35 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * first), so this correctly falls through to the generic "not
      * handled" error below instead of emitting the wrong bytes. *)
 
+    (* case 34:	/* mov $con,fr ==> or/add $i,r,r2 */ *)
+    (* claude: float-constant load -- same OR-vs-ADDU choice as case
+     * 3 (reuses movw_imm_opcode), just landing in REGTMP first and
+     * then MTC1'd into the float register instead of writing an int
+     * register directly. goken's optab.c only lists ADDCON/ANDCON
+     * for this case (same [-0x8000,0xffff] range as case 3, via
+     * constant_kind) -- no UCON/LCON variant here; those instead
+     * reuse case 35/36's oprange (per optab.c), which already have
+     * a different, integer-register-specific implementation below,
+     * so porting the float UCON/LCON variants needs its own look at
+     * whether that's really shared or a distinct sub-case, left as
+     * a TODO rather than guessed at. Unlike case 30/31's standalone
+     * MTC1, this does NOT get a trailing nop -- confirmed via `vl
+     * -a` directly (a bare `MOVW $42,F0` right before SYSCALL is
+     * just the 2 words below, no NOR/NOP after). Whatever exempts it
+     * (goken's delay-slot marking likely keys off the *original*,
+     * pre-expansion instruction/Prog, not each emitted word) isn't
+     * fully understood, but if something immediately reads the
+     * float register afterward (e.g. a following MFC1), *that*
+     * instruction's own mandatory delay slot (case 31's nop) still
+     * applies and produces the right total byte count. *)
+    | Move2 (W__, (Right (Int i)), GFReg (FR rt)) when constant_kind i <> None ->
+        { size = 8; x = None; binary = (fun () ->
+            let op = movw_imm_opcode i in
+            let (R rtmp) = rTMP in
+            [ op_irr (opirr_arith_opcode op) i rZERO rTMP;
+              op_mfc_mtc true rtmp rt ]
+         ) }
+
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
     (* --------------------------------------------------------------------- *)

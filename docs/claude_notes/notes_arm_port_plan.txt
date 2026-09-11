@@ -5,9 +5,10 @@ Goal: automate porting the rest of the ARM linker/assembler (o5a/o5l)
 from the goken reference (~/goken, a C Plan 9 toolchain fork), driven
 by differential testing: assemble+link the same .s with both goken's
 5a/5l and xix's o5a/o5l, and require the final executables to be
-byte-identical. Scope for phase 1 is ARM only (assembler + linker);
-the compiler (o5c vs goken's 5c) is a natural phase 2 reusing the same
-harness with .c inputs instead of .s.
+byte-identical. Scope is ARM assembler + linker only, permanently --
+not phase-1-of-N. The compiler is explicitly NOT part of this
+byte-equal effort (see "Compiler is out of scope" below); there is no
+planned phase 2 that extends this harness to o5c vs goken's 5c.
 
 This is the forward-looking counterpart, for the OCaml port, of what
 goken's own docs/claude_notes/notes_arch_arm.txt did for reconciling
@@ -268,6 +269,16 @@ of any specific codegen case. Resist fixing anything ARM-codegen-
 related before the harness has actually produced a byte-level diff to
 point at.
 
-Phase 2 (later): extend the same harness to the compiler, comparing
-o5c-generated + assembled + linked executables against goken's
-5c/5a/5l pipeline on the same .c inputs.
+Compiler is out of scope
+----------------------------
+
+occ (xix's C compiler) is *not* going to be ported/kept byte-equal
+against goken's per-arch compilers (5c/6c/7c/8c/vc/ic/...). goken
+duplicates a lot of codegen logic across those per-arch compilers;
+the actual plan for occ is to instead reuse ~/c--'s backend
+architecture (a fork of Quick C--, at ~/github/fork-c--, with a
+proper shared arch/backend/ split instead of one-file-per-arch
+duplication). So this differential-testing/byte-equal methodology
+stays scoped to the assembler+linker (o5a/o5l vs goken's 5a/5l); it
+is not meant to be extended to the compiler later, and o5c vs 5c
+byte-equality is explicitly not a goal.

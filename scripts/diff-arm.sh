@@ -9,7 +9,11 @@
 # o5a's .o5 uses OCaml Marshal by design, not goken's object format).
 #
 # Usage:
-#   ./scripts/diff-arm.sh tests/linker/hello_linux_arm.s [entry_symbol]
+#   ./scripts/diff-arm.sh tests/linker/hello_linux_arm.s [entry_symbol] [extra_linker_flags]
+#
+# extra_linker_flags (e.g. "-f" for VFP instead of the default FPA
+# float encoding) are passed to *both* 5l and o5l identically, so the
+# comparison stays apples-to-apples.
 #
 # Env:
 #   GOKEN_ROOT   path to a built goken checkout (default: ~/goken)
@@ -18,6 +22,7 @@ set -e
 
 SFILE=$1
 ENTRY=${2:-_main}
+EXTRA_FLAGS=${3:-}
 
 if [ -z "$SFILE" ]; then
     echo "usage: $0 <file.s> [entry_symbol]" 1>&2
@@ -68,11 +73,11 @@ echo "== assembling+linking with goken ($GOKEN_5A / $GOKEN_5L) =="
 # -s: strip goken's native Plan9 symbol/debug table -- it embeds the
 # invocation cwd and source path, so it's not byte-reproducible and
 # xix never emits one anyway (see notes_arm_port_plan.txt).
-"$GOKEN_5L" -H7 -E "$ENTRY" -s -o "$BASE.goken.out" "$BASE.goken.5"
+"$GOKEN_5L" -H7 -E "$ENTRY" -s $EXTRA_FLAGS -o "$BASE.goken.out" "$BASE.goken.5"
 
 echo "== assembling+linking with xix ($XIX_O5A / $XIX_O5L) =="
 "$XIX_O5A" -o "$BASE.xix.o5" "$BASE.s"
-"$XIX_O5L" -E "$ENTRY" -o "$BASE.xix.out" "$BASE.xix.o5"
+"$XIX_O5L" -E "$ENTRY" $EXTRA_FLAGS -o "$BASE.xix.out" "$BASE.xix.o5"
 
 chmod +x "$BASE.goken.out" "$BASE.xix.out"
 

@@ -288,6 +288,41 @@ let gop_arithf (op : arithf_opcode) (prec : A.floatp_precision) : Bits.t =
 let gop_cmpf : Bits.t =
   [(0xe, 24); (0x9, 20); (0xf, 12); (1, 8); (1, 4)]
 
+(* claude: VFP encoding for the dyadic arith ops -- ported from
+ * opvfprrr()'s AADDF/AADDD/ASUBF/ASUBD/AMULF/AMULD/ADIVF/ADIVD
+ * cases. Unlike gop_arithf's FPA encoding, the precision bit lives
+ * inside the same 4-bit field as a fixed pattern (0xa for F, 0xb for
+ * D at bits[11:8]), not a separate standalone bit; SUB additionally
+ * sets bit6 (goken's `1<<6`) on top of the same bits[23:20]=0x3 ADD
+ * uses. *)
+let gop_arithf_vfp (op : arithf_opcode) (prec : A.floatp_precision) : Bits.t =
+  let prec_nibble = match prec with A.F -> 0xa | A.D -> 0xb in
+  (0xe, 24) ::
+  (match op with
+  | ADD_ -> [(prec_nibble, 8); (0x3, 20)]
+  | SUB_ -> [(prec_nibble, 8); (0x3, 20); (1, 6)]
+  | MUL_ -> [(prec_nibble, 8); (0x2, 20)]
+  | DIV_ -> [(prec_nibble, 8); (0x8, 20)]
+  )
+
+(* claude: VFP encoding for CMPF/CMPD -- ported from opvfprrr()'s
+ * ACMPF/ACMPD cases (same bits regardless of precision except the
+ * bits[11:8] nibble, same as gop_arithf_vfp above). Unlike FPA's
+ * gop_cmpf, this is only the *first* of two instructions goken
+ * emits for case 75 -- see gop_cmpf_vfp_mrs below for the second. *)
+let gop_cmpf_vfp (prec : A.floatp_precision) : Bits.t =
+  let prec_nibble = match prec with A.F -> 0xa | A.D -> 0xb in
+  [(0xe, 24); (prec_nibble, 8); (0xb, 20); (1, 6); (0x4, 16)]
+
+(* claude: goken's case 75 always emits this fixed second instruction
+ * after the VFP compare -- "MRS APSR_nzcv, FPSCR" -- to move VFP's
+ * comparison-result flags into the ARM CPSR's NZCV bits, since
+ * that's where a subsequent Bxx reads condition flags from. The
+ * literal `0x0ef1fa10` is goken's own hardcoded encoding (only the
+ * condition-code nibble varies). *)
+let gop_cmpf_vfp_mrs (cond : condition) : Bits.t =
+  [gcond cond; (0x0ef1fa10 land 0x0fffffff, 0)]
+
 (* claude: goken's float.c chipfloats[] -- the FPA coprocessor's
  * fixed set of 8 immediate constants (chipfloat() returns their
  * index, or -1 if not one of these -- which this port doesn't
@@ -479,47 +514,88 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   | T.I (instr, cond) ->
     (match instr with
     (* case 54:	/* floating point arith */ *)
-    (* claude: old ARM 7500 FP (coprocessor 1) encoding -- goken's
-     * case 54 also covers CMPF/CMPD (via `if(p->to.type==D_NONE)
-     * rt=0`, since CMP-style instructions put their 2nd operand in
-     * the *middle* field, not `to`), handled by our separate CmpF
-     * arm just below since our AST already splits that out.
-     * Immediate float operands are limited to goken's chipfloats[]
-     * (float.c): exactly {0,1,2,3,4,5,0.5,10} -- anything else is a
-     * genuine assembler error here (`error node`), not goken's own
-     * silent `diag(); rf=0` fallback. *)
+    (* case 74:	/* vfp floating point arith */ *)
+    (* claude: goken picks the encoding at build time via a global
+     * (`vfp = debug['f']` in 5l/span.c, off by default -- see
+     * Flags.vfp); we do the same at codegen time via !Flags.vfp,
+     * since our AST doesn't distinguish FPA-ArithF from
+     * VFP-ArithF -- it's the same ADD_/SUB_/MUL_/DIV_ instructions
+     * either way, just encoded differently. FPA (case 54, ARM 7500
+     * coprocessor 1) is goken's default; case 54 also covers
+     * CMPF/CMPD there (via `if(p->to.type==D_NONE) rt=0`), handled
+     * by our separate CmpF arm just below since our AST already
+     * splits that out. FPA immediate float operands are limited to
+     * goken's chipfloats[] (float.c): exactly {0,1,2,3,4,5,0.5,10}
+     * -- anything else is a genuine assembler error here
+     * (`error node`), not goken's own silent `diag(); rf=0`
+     * fallback. VFP (case 74) doesn't support float immediates at
+     * all (goken diag()s on D_FCONST there), and our AST's
+     * arithf_opcode has no MOVF/MOVD/MOVFD/MOVDF (the monadic
+     * move/precision-conversion ops that also live in case 74 in
+     * codegen.c), so this arm only ever needs the dyadic path. *)
     | ArithF ((op, prec), from, middle, (FR rt)) ->
         let r = match middle with Some (FR x) -> x | None -> rt in
-        let rf_bits = match from with
-          | Either.Right (FR rf) -> [(rf, 0)]
-          | Either.Left fval ->
-              (match chipfloat fval with
-              | Some idx -> [(idx, 0); (1, 3)]
-              | None ->
-                  error node (spf "float immediate %f not one of chipfloat's 8 constants" fval))
-        in
-        { size = 4; x = None; binary = (fun () ->
-          [ [gcond cond] @ gop_arithf op prec @ [(r, 16); (rt, 12)] @ rf_bits ]
-        )}
+        if !Flags.vfp
+        then
+          let rf = match from with
+            | Either.Right (FR rf) -> rf
+            | Either.Left _ ->
+                error node "VFP arithmetic does not support float immediates"
+          in
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @ gop_arithf_vfp op prec @ [(rt, 12); (r, 16); (rf, 0)] ]
+          )}
+        else
+          let rf_bits = match from with
+            | Either.Right (FR rf) -> [(rf, 0)]
+            | Either.Left fval ->
+                (match chipfloat fval with
+                | Some idx -> [(idx, 0); (1, 3)]
+                | None ->
+                    error node (spf "float immediate %f not one of chipfloat's 8 constants" fval))
+          in
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @ gop_arithf op prec @ [(r, 16); (rt, 12)] @ rf_bits ]
+          )}
 
     (* case 54:	/* floating point arith */ -- CMPF/CMPD share this
      * case in codegen.c; kept as its own OCaml arm since Ast_asm5's
-     * CmpF is already a separate constructor from ArithF. The 2nd
-     * float operand goes in the *middle* field (bits[19:16]), same
-     * as integer CMP -- see gop_cmp/Cmp above. *)
-    | CmpF (_prec, (FR fa), (FR fb)) ->
-        { size = 4; x = None; binary = (fun () ->
-          [ [gcond cond] @ gop_cmpf @ [(fb, 16); (fa, 0)] ]
-        )}
-
-    (* case 74:	/* vfp floating point arith */ *)
+     * CmpF is already a separate constructor from ArithF. *)
     (* case 75:	/* vfp floating point compare */ *)
+    (* claude: unlike FPA (single instruction, flags go straight to
+     * CPSR via the coprocessor mechanism), VFP's compare needs a
+     * *second* fixed instruction ("MRS APSR_nzcv, FPSCR",
+     * gop_cmpf_vfp_mrs) to move its comparison result into the ARM
+     * CPSR where a later Bxx reads condition flags from -- hence
+     * size=8 here vs 4 for FPA. Also note the field layout differs
+     * from FPA's gop_cmpf: VFP puts the 2nd (middle) operand at
+     * bit12, not bit16. goken's case 75 also supports `CMPF $0.0,
+     * Fx` (the only FCONST it allows), but Ast_asm5.CmpF has no
+     * immediate variant at all (unlike ArithF), so that path isn't
+     * reachable from this AST regardless. *)
+    | CmpF (prec, (FR fa), (FR fb)) ->
+        if !Flags.vfp
+        then
+          { size = 8; x = None; binary = (fun () ->
+            [ [gcond cond] @ gop_cmpf_vfp prec @ [(fb, 12); (fa, 0)];
+              gop_cmpf_vfp_mrs cond;
+            ]
+          )}
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @ gop_cmpf @ [(fb, 16); (fa, 0)] ]
+          )}
+
     (* case 76:	/* vfp floating point fix and float */ *)
-    (* claude: NOT ported -- opposite polarity of the armv4/case
-     * 22/23/32/33 story above: `vfp = debug['f']` (5l/span.c) is OFF
-     * by default, so VFP-flagged optab rows are dead unless goken is
-     * invoked with -f, which this harness never does. Case 54
-     * (FPA, just above) is what's actually active by default. *)
+    (* claude: NOT ported -- int<->float conversion (MOVFW/MOVWF/
+     * MOVWD/MOVDW); Ast_asm5.ml has no AST constructor for this at
+     * all (same gap as case 55's FPA equivalent), so it's not just
+     * a missing Codegen5.ml arm -- assembler grammar/AST work is
+     * needed first, same category as the PSR/MOVM TODOs. Without
+     * it, a VFP-encoded program can still be meaningfully tested
+     * (register-register arith starting from the zero-initialized
+     * register state, CMPF between two such registers), just not
+     * one that converts a real integer value into a float. *)
 
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)

@@ -382,6 +382,13 @@ let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     " debug layout code";
     "-debug_gen", Arg.Set Flags.debug_gen,
     " debug code generation";
+
+    (* claude: ARM-only (matches goken's 5l -f); a no-op for other
+     * archs, same as how goken's own vl/il/... don't have this flag
+     * at all -- kept here since CLI.ml's option list is shared
+     * across archs, like -debug_layout/-debug_gen above. *)
+    "-f", Arg.Set Flags.vfp,
+    " (ARM-only) use VFP float instructions instead of the legacy FPA ones";
   ] |> Arg.align
   in
   (* This may raise ExitCode *)

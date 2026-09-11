@@ -291,16 +291,47 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    so 70-73 always win over 22/23/32/33 unless goken is invoked with
    -h, which this harness never does. Porting 22/23/32/33 would be
    porting code no test here could ever exercise or verify.
-** SKIP  cases 74/75/76 (VFP arith/compare/fix-float) -- opposite
-   polarity of the armv4 story above: `vfp = debug['f']` (5l/span.c)
-   is OFF by default, so VFP-flagged optab rows are dead unless
-   goken is invoked with -f, which this harness never does. Case 54
-   (FPA, ADDF/SUBF/MULF/DIVF/CMPF/CMPD) is what's actually active by
-   default and is what got ported instead -- same reasoning as
-   picking 70-73 over 22/23/32/33, just the default flipped the
-   other way. If -f ever becomes part of the harness, 74-76 would
-   need porting and 54 would (per chipfloat()'s own `if(vfp)
-   return -1`) lose its immediate-constant fast path entirely.
+** DONE case 74/75 vfp floating point arith/compare -- turns out this
+   IS important in practice, not just a "-h"-style dead-code corner:
+   real ARMv6+ hardware (e.g. Raspberry Pi 1's ARM1176JZF-S) and
+   principia-softwarica's own kernel/userland both target VFP, not
+   FPA -- FPA is defunct hardware (see case 54's DONE entry), so any
+   float-using ARM program built with goken's *default* settings
+   would be non-functional on that real hardware, same failure mode
+   as fpa_arm.s's SIGILL under qemu-arm. `vfp = debug['f']`
+   (5l/span.c) is OFF by default (opposite polarity of the armv4
+   story), so this needed a new xix-side flag (`-f`, Flags.vfp,
+   ARM-only) mirroring goken's, plus scripts/diff-arm.sh and
+   test-arm.sh threading an optional extra-flags field through to
+   pass -f identically to both 5l and o5l.
+   ArithF's dyadic path (ADD_/SUB_/MUL_/DIV_) now dispatches on
+   !Flags.vfp between gop_arithf (FPA) and gop_arithf_vfp (VFP,
+   opvfprrr) -- VFP doesn't support float immediates at all (goken
+   diag()s on D_FCONST there) and our AST's arithf_opcode has no
+   MOVF/MOVD/MOVFD/MOVDF (case 74's monadic move/precision-
+   conversion ops), so only the dyadic path was ever reachable here
+   anyway. CmpF likewise dispatches -- VFP's compare is a genuinely
+   different shape from FPA's: it needs a *second* fixed instruction
+   ("MRS APSR_nzcv, FPSCR", gop_cmpf_vfp_mrs) to move the comparison
+   result into the ARM CPSR where Bxx reads flags from (size=8 vs
+   FPA's size=4), and the field layout for the 2nd operand differs
+   (bit12 vs FPA's bit16).
+   Added tests/linker/arm_diff/vfp_arm.s: register-register ADDF
+   starting from the zero-initialized register state (Linux's ELF
+   loader zeroes VFP registers too) + CMPF + BEQ. PASS
+   byte-identical on the first try, AND -- unlike fpa_arm.s --
+   PASS genuinely correct execution under qemu-arm (rc=0, the
+   CMPF/BEQ branch actually taken): VFP is real, still-relevant
+   hardware, so this is functionally verified, not just
+   encoding-parity like the FPA/SWP fixtures.
+** TODO case 76 vfp floating point fix and float -- same AST gap as
+   case 55's FPA equivalent (no int<->float conversion constructor
+   at all); needs assembler grammar/AST work first, same category as
+   the PSR/MOVM TODOs. Without it a VFP-encoded program can still be
+   meaningfully tested (register-register arith from the
+   zero-initialized state, CMPF between such registers, as
+   vfp_arm.s already does), just not one that converts a real
+   integer value into a float or vice versa.
 ** DONE case 12 movw $lcon, reg -- both the address-of-global slow
    path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
    too-big-immediate case (MOVW $0x12345678,R -> LDR from literal

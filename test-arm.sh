@@ -19,8 +19,9 @@ set -e
 
 cd "$(dirname "$0")"
 
-# file:entry_symbol pairs -- entry defaults to _main (the linkers'
-# default) when not TEXT _start.
+# file:entry_symbol[:extra_flags] triples -- entry defaults to _main
+# (the linkers' default) when not TEXT _start; extra_flags (e.g. -f
+# for VFP) are optional and passed to both 5l and o5l identically.
 CASES=(
     "tests/linker/arm_diff/hello_linux_arm.s:_start"
     "tests/linker/arm_diff/exit_linux_arm.s:_start"
@@ -35,14 +36,14 @@ CASES=(
     "tests/linker/arm_diff/halflong_arm.s:_start"
     "tests/linker/arm_diff/swp_arm.s:_start"
     "tests/linker/arm_diff/fpa_arm.s:_start"
+    "tests/linker/arm_diff/vfp_arm.s:_start:-f"
 )
 
 FAIL=0
 for c in "${CASES[@]}"; do
-    file=${c%%:*}
-    entry=${c##*:}
-    echo "### $file (entry $entry)"
-    if ! ./scripts/diff-arm.sh "$file" "$entry"; then
+    IFS=':' read -r file entry flags <<< "$c"
+    echo "### $file (entry $entry)${flags:+ (flags: $flags)}"
+    if ! ./scripts/diff-arm.sh "$file" "$entry" "$flags"; then
         FAIL=1
     fi
     echo

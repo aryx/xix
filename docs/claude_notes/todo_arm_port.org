@@ -3,14 +3,34 @@
 # See that file for rationale/design; this file is just checklist state.
 
 * Phase 0 -- harness
-** TODO diff harness script/Testo module (assemble+link both sides, cmp -l, qemu-arm)
+** DONE diff harness script (assemble+link both sides, cmp -l, qemu-arm)
+   scripts/diff-arm.sh + test-arm.sh (bash, not Testo -- see plan doc).
 ** TODO fix o5l exit-code propagation on error node "TODO: ..."
-** TODO ELF layout parity (INITTEXT/INITDATA/INITRND, section-header presence)
+** TODO ELF layout parity (section-header presence, program-header count)
+   Confirmed NOT the qemu-crash cause (the two LOAD segments byte-match
+   goken exactly); still a real cmp diff source: goken emits 3 program
+   headers + a section-header table, xix emits 2 program headers and
+   no section headers. See remaining cmp -l offsets on
+   hello_linux_arm.s: 33,34,45,49,51,121,133,137,141,145,165.
 
 * Phase 0.5 -- baseline corpus (constructs already ported)
 ** TODO tests/linker/hello_linux_arm.s: cmp -l clean vs goken
-** TODO tests/linker/hello_linux_arm.s: runs correctly under qemu-arm
-   (currently SIGILLs; goken's build runs fine and prints "Hello, world")
+   Remaining diffs (after the kencc_compatible fix below): the ELF
+   header/segment-count items above, plus offsets 193-198 and 387-395,
+   which are goken's synthetic "branch round the literal pool"
+   instruction (flushpool()'s skip=true case, see layout.c) that
+   Layout5.ml doesn't yet emit -- xix's pool constant sits 4 bytes
+   earlier and isn't preceded by a jump-over instruction. Functionally
+   harmless here (dead code after a syscall exit) but needed for
+   byte-equality.
+** DONE tests/linux_arm.s: runs correctly under qemu-arm
+   Root cause found and fixed: linker/Flags.ml's kencc_compatible
+   defaulted to true, which sets the MOV instruction's Rn field to the
+   destination register instead of 0 (Codegen5.ml:441). goken always
+   encodes Rn=0 for MOV; qemu-arm's decoder actually SIGILLs on the
+   Rn=rt encoding (verified by hex-patching just those 3 bytes in an
+   otherwise-crashing binary -- that alone fixed it). Fixed by
+   flipping the default to false. One-line fix, no case/logic touched.
 
 * Phase 1 -- codegen.c case backlog (goken/linkers/5l/codegen.c)
 Cases with a matching (* case N: *) comment already in Codegen5.ml:

@@ -130,11 +130,15 @@ case must not look like a silent pass.
 Phase 0 -- build the differential harness (one-time)
 --------------------------------------------------------
 
-1. Fixture/runner (a script, e.g. scripts/diff-arm.sh, or a Testo
-   module linker/tests/Test_linker5_diff.ml following the pattern in
-   compiler/tests/Test_compiler.ml). Per test file (see exact flags
-   under "Verified by hand" below -- entry point is `_start`, not the
-   linkers' default `_main`):
+1. Fixture/runner: a plain bash script (scripts/diff-arm.sh, driven
+   over the baseline corpus by test-arm.sh at the repo root, mirroring
+   test.sh's style), NOT a Testo module/test. Testo is reserved for
+   this project's actual correctness test suite (`make test`), which
+   must run without any external toolchain installed; this harness
+   has a hard dependency on a locally built goken checkout and is a
+   development/porting tool, not a CI test. Per test file (see exact
+   flags under "Verified by hand" below -- entry point is `_start`,
+   not the linkers' default `_main`):
      goken: 5a -o t.5 t.s && 5l -H7 -E _start -o t.out.goken t.5
      xix:   o5a -o t.o5 t.s && o5l -E _start -o t.out.xix t.o5
      cmp -l t.out.goken t.out.xix   (report byte offsets, not just

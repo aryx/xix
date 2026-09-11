@@ -5,7 +5,14 @@
 * Phase 0 -- harness
 ** DONE diff harness script (assemble+link both sides, cmp -l, qemu-arm)
    scripts/diff-arm.sh + test-arm.sh (bash, not Testo -- see plan doc).
-** TODO fix o5l exit-code propagation on error node "TODO: ..."
+** DONE fix o5l exit-code propagation on error node "TODO: ..."
+   Verified, not actually broken: CLI.ml's error handler already
+   catches `Failure s` (what `error node`/`failwith` raise) and
+   returns `Exit.Code 1`; anything else (e.g. Match_failure) just
+   bubbles out of Exit.catch and gets OCaml's default non-zero exit.
+   Confirmed empirically: a DIV instruction (Codegen5.ml's
+   `Arith ((DIV|MOD), _, _, _, _) -> error node "TODO: DIV/MOD"`)
+   makes o5l print the error and exit 1, not 0.
 ** DONE ELF layout parity (section-header presence, program-header count)
    Confirmed NOT the qemu-crash cause (the two LOAD segments already
    byte-matched goken). Implemented in Elf.ml/Elf.mli/Execgen.ml: the
@@ -99,36 +106,46 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
 ** DONE case 1  op R,[R],R
 ** DONE case 2  movbu $I,[R],R
 ** DONE case 3  add R<<[IR],[R],R
-** DONE case 5  bra s
+** DONE case 4  add $I,[R],R (address-of-global fast path, SB-relative)
+** DONE case 5  bra s (both B/BL/AL and Bxx/conditional -- same optab
+   case, only p->scond differs, e.g. optab.c's ABEQ row)
 ** DONE case 6  b ,O(R) -> add $O,R,PC
 ** DONE case 7  bl ,O(R) -> mov PC,link; add $O,R,PC
 ** DONE case 8  sll $c,[R],R -> mov (R<<$c),R
 ** DONE case 9  sll R,[R],R -> mov (R<<R),R
 ** DONE case 10 swi [$con]
+** DONE case 14 movb/movh/movhu R,R -> SLL/SRA/SRL (NOT movbu, that's
+   case 58 -- goken's own case-14 comment text is slightly imprecise)
 ** DONE case 15 mul r,[r,]r
+** DONE case 20 mov/movb/movbu R,O(R) (short/12-bit offset store)
+** DONE case 21 mov/movbu O(R),R (short/12-bit offset load; Byte U
+   only -- signed byte/halfword load is case 22, not this)
 ** DONE case 41 rfe -> movm.s.w.u 0(r13),[r15]
-
-Existing OCaml arms whose real case number was never pinned down
-(marked "case ??" in Codegen5.ml as of this writing) -- resolve
-against codegen.c before/while working the list below:
-** TODO case ?? @ Codegen5.ml:429 (MOVE Word ... -> plain MOV)
-** TODO case ?? @ Codegen5.ml:446 (MOVBU R,RT -> AND 0xff,R,RT)
-** TODO case ?? @ Codegen5.ml:453 (MOVB/MOVH/MOVHU R,R -> SLL/SRA/SRL)
-** TODO case ?? @ Codegen5.ml:532 (address-of-global fast path / pool)
-** TODO case ?? @ Codegen5.ml:551 (MOVW $global(SB),R)
-** TODO case ?? @ Codegen5.ml:599 (load: MOVW/MOVBU mem,R)
-** TODO case ?? @ Codegen5.ml:625 (store: MOVW/MOVB R,mem)
+** DONE case 58 movbu R,R -> AND $0xff, R, R
+** DONE case 12 movw $lcon, reg -- both the address-of-global slow
+   path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
+   too-big-immediate case (MOVW $0x12345678,R -> LDR from literal
+   pool, reusing Ast_asm.Int through the same PoolOperand mechanism,
+   already generically handled by Codegen.default_rules's WORD case).
+   Added tests/linker/arm_diff/bigimm_arm.s. PASS byte-identical +
+   PASS same qemu-arm exit code (120, from the truncated-to-byte
+   0x12345678 status value).
+** SKIP  case 16 div r,[r,]r -- goken itself just emits an invalid/
+   trap opcode here (o1 = 0xf<<28, the ARM "never" condition with a
+   bare invalid encoding; ARMv5/v6 has no hardware integer divide).
+   Porting this would mean porting a trap, not real functionality;
+   low value. Real div/mod on this target is a compiler (occ)
+   concern -- runtime library calls -- which is out of scope (see
+   "Compiler is out of scope" in the plan doc).
+** N/A   case 17 is AMULL (64-bit long multiply, register-pair
+   result), NOT mod/div as this file previously guessed -- optab.c
+   has no AMOD entry at all. Moved off the div/mod story; tracked
+   below with the other unported arithmetic cases.
 
 Not yet in Codegen5.ml at all:
-** TODO case 4  add $I,[R],R
 ** TODO case 11 word
-** TODO case 12 movw $lcon, reg
 ** TODO case 13 op $lcon, [R], R
-** TODO case 14 movb/movbu/movh/movhu R,R
-** TODO case 16 div r,[r,]r
-** TODO case 17 (mod, shares switch w/ 16)
-** TODO case 20 mov/movb/movbu R,O(R)
-** TODO case 21 mov/movbu O(R),R
+** TODO case 17 mull (64-bit long multiply, register-pair result)
 ** TODO case 22 movb/movh/movhu O(R),R -> lr,shl,shr
 ** TODO case 23 movh/movhu R,O(R) -> sb,sb
 ** TODO case 30 mov/movb/movbu R,L(R)
@@ -150,7 +167,6 @@ Not yet in Codegen5.ml at all:
 ** TODO case 55 floating point fix and float
 ** TODO case 56 move to FP[CS]R
 ** TODO case 57 move from FP[CS]R
-** TODO case 58 movbu R,R -> AND $0xff, R, R
 ** TODO case 59 movw/bu R<<I(R),R -> ldr indexed
 ** TODO case 60 movb R(R),R -> ldrsb indexed
 ** TODO case 61 movw/b/bu R,R<<[IR](R) -> str indexed

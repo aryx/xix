@@ -462,34 +462,57 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           [[gcond cond] @ gop_cmp op @ [(r, 16); (0, 12)] @ from_part]
         )}
 
-    (* case ?? *)        
-    | MOVE (Word, None, Imsr from, Imsr (Reg (R rt))) -> 
-        let from_part = 
-          match from with
-          | Reg (R rf) -> [(rf, 0)]
-          | Shift (a, b, c) -> gshift a b c
-          | Imm i ->
-              (match immrot i with
-              | Some (rot, v) -> [rot_bit; (rot, 8); (v, 0)]
-              | None -> error node "TODO"
-              )
-        in
+    (* claude: MOVW reuses the plain Arith cases: optab.c has AMOVW
+     * rows at cases 1/2/3 too (e.g. `{ AMOVW, C_REG, C_NONE, C_REG,
+     * 1, 4 }`), and codegen.c's case 1 body explicitly special-cases
+     * AMOVW/AMVN to force r=0 -- same as gop_arith MOV's r=0 default
+     * just below. *)
+    | MOVE (Word, None, Imsr from, Imsr (Reg (R rt))) ->
         let r = if !Flags.kencc_compatible then rt else 0 in
-        { size = 4; x = None; binary = (fun () ->
-          [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ from_part]
-        )}
+        (match from with
+        (* case 1:		/* op R,[R],R */ *)
+        | Reg (R rf) ->
+            { size = 4; x = None; binary = (fun () ->
+              [[gcond cond; gop_arith MOV; (r, 16); (rt, 12); (rf, 0)]]
+            )}
+        (* case 3:		/* op R<<[IR],[R],R */ *)
+        | Shift (a, b, c) ->
+            { size = 4; x = None; binary = (fun () ->
+              [[gcond cond; gop_arith MOV; (r, 16); (rt, 12)] @ gshift a b c]
+            )}
+        | Imm i ->
+            (match immrot i with
+            (* case 2:		/* op $I,[R],R */ *)
+            | Some (rot, v) ->
+                { size = 4; x = None; binary = (fun () ->
+                  [[gcond cond; gop_arith MOV; (r, 16); (rt, 12);
+                    rot_bit; (rot, 8); (v, 0)]]
+                )}
+            (* claude: case 12: /* movw $lcon, reg */ -- immrot failed
+             * (doesn't fit a rotated-immediate), so fall back to the
+             * same literal-pool mechanism as the address-of-global
+             * slow path above; Ast_asm.Int is already handled
+             * generically by Codegen.default_rules's WORD case when
+             * the pool gets flushed. *)
+            | None ->
+                { size = 4; x = Some (PoolOperand (Ast_asm.Int i));
+                  binary = (fun () -> [ gload_from_pool node cond (R rt) ]) }
+            )
+        )
 
-    (* case ?? *)        
-    (* MOVBU R, RT -> ADD 0xff, R, RT *)
-    | MOVE (Byte U, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) -> 
+    (* case 58:	/* movbu R,R -> AND $0xff, R, R */ *)
+    | MOVE (Byte U, None, Imsr (Reg (R r)), Imsr (Reg (R rt))) ->
         { size = 4; x = None; binary = (fun () ->
           [[gcond cond; (1, 25); gop_arith AND; (r, 16); (rt, 12); (0xff, 0)]]
         )}
 
-    (* case ?? *)        
+    (* case 14:	/* movb/movbu/movh/movhu R,R */ *)
+    (* claude: MOVBU R,R is actually case 58 above, not this case --
+     * goken's own case-14 optab rows are only AMOVB/AMOVH/AMOVHU
+     * C_REG,C_REG. *)
     (* MOVB RF, RT  -> SLL 24, RF, RT; SRA 24, RT, RT -> MOV (RF << 24), RT;...
      * MOVH RF, RT  -> SLL 16, RF, RT; SRA 16, RT, RT -> ...
-     * MOVHU RF, RT -> SLL 16, RF, RT; SRL 16, RT, RT -> 
+     * MOVHU RF, RT -> SLL 16, RF, RT; SRL 16, RT, RT ->
      *)
     | MOVE ((Byte _|HalfWord _)as size, None, Imsr(Reg(R rf)),Imsr(Reg(R rt)))->
         let rop =
@@ -565,7 +588,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )
 
-    (* case ?? *)        
+    (* case 5:		/* bra s */ *)
+    (* claude: conditional branches (ABEQ/ABNE/...) share the same
+     * optab case as unconditional B/BL -- only p->scond differs,
+     * e.g. `{ ABEQ, C_NONE, C_NONE, C_BRANCH, 5, 4 }` in optab.c *)
     | Bxx (cond2, x) ->
         if cond <> AL 
         then raise (Impossible "Bxx should always be with AL");
@@ -584,7 +610,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
 
     (* Address *)
-    (* case ?? *)        
+    (* claude: case 4/12 split: fast path (small SB-relative offset)
+     * is case 4 (`add $I,[R],R`, optab.c's `{ AMOVW, C_RECON,
+     * C_NONE, C_REG, 4, 4, REGSB }`); slow path (offset too big,
+     * needs a literal pool word) is case 12 (`movw $lcon,reg`,
+     * optab.c's `{ AMOVW, C_LCON, C_NONE, C_REG, 12, 4, 0, LFROM }`
+     * -- `omvl()`'s LFROM-flag literal-pool load), same split as the
+     * `from_part_when_small_offset_to_R12` match below. *)
     | MOVE (Word, None, Ximm ximm, Imsr (Reg (R rt))) ->
         (match ximm with
         | Int _ | Float _ -> 
@@ -614,14 +646,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               with Not_found -> None
             in
             (match from_part_when_small_offset_to_R12 with
+            (* case 4:		/* add $I,[R],R */ *)
             | Some (rot, v) ->
               (* MOVW $x(SB), RT -> ADD $offset_to_r12, R12, RT  *)
               { size = 4; x = None; binary = (fun () ->
                 let (R r) = rSB in
-                [[gcond cond; (1, 25); gop_arith ADD; (r, 16); (rt, 12); 
+                [[gcond cond; (1, 25); gop_arith ADD; (r, 16); (rt, 12);
                   (rot, 8); (v, 0)]]
             )}
-            | None -> 
+            (* case 12:	/* movw $lcon, reg */ *)
+            | None ->
               (* MOVW $L(SB), RT -> LDR x(R15), RT *)
               { size = 4; x = Some (PoolOperand ximm); binary = (fun () ->
                 [ gload_from_pool node cond (R rt) ]
@@ -632,7 +666,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* Load *)
 
-    (* case ?? *)        
+    (* case 21:	/* mov/movbu O(R),R */ *)
+    (* claude: short (12-bit) SB/SP/plain-register-relative offset;
+     * optab.c's rows are AMOVW/AMOVBU only (C_SEXT/C_SAUTO/C_SOREG)
+     * -- signed byte/halfword loads need extra shift-based sign
+     * extension and go through case 22 instead, hence the `Byte U`
+     * (not `Byte _`) restriction here matching optab.c exactly. *)
     | MOVE ((Word | Byte U) as size, opt, from, Imsr (Reg rt)) ->
         (match from with
         | Imsr (Imm _ | Reg _) -> 
@@ -658,8 +697,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* Store *)
 
-    (* case ?? *)        
-    (* note that works for Byte Signed and Unsigned here *)
+    (* case 20:	/* mov/movb/movbu R,O(R) */ *)
+    (* claude: unlike the load side (case 21, Byte U only), STRB
+     * doesn't care about signedness -- optab.c has both AMOVB and
+     * AMOVBU rows for this case, hence `Byte _` (not just `Byte U`)
+     * here.
+     * note that works for Byte Signed and Unsigned here *)
     | MOVE ((Word | Byte _) as size, opt, Imsr (Reg rf), dest) ->
         (match dest with
         | Imsr (Reg _) -> raise (Impossible "pattern covered before")

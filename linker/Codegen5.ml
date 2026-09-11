@@ -323,6 +323,61 @@ let gop_cmpf_vfp (prec : A.floatp_precision) : Bits.t =
 let gop_cmpf_vfp_mrs (cond : condition) : Bits.t =
   [gcond cond; (0x0ef1fa10 land 0x0fffffff, 0)]
 
+(* claude: goken's FREGTMP (include/objexec/5.out.h): the VFP scratch
+ * float register (F15/D15) used to shuttle a raw bit pattern between
+ * an ARM core register and a VFP register via VMOV, when converting
+ * the "other" direction from the one being converted -- see case 76
+ * below. Mirrors rTMP (R11) on the integer side. *)
+let fREGTMP = 15
+
+(* claude: goken's oprrr() AMOVWF/AMOVWD/AMOVFW/AMOVDW cases -- FPA's
+ * (case 55) fix-and-float base encoding, shared shape for both
+ * directions (only the dir bit at bit20 and the D-precision bit at
+ * bit7 vary); register placement differs by direction and is added
+ * by the caller (case 55 below), not here. *)
+let gop_fixfloat (dir : [`ToFloat | `ToInt]) (prec : A.floatp_precision) : Bits.t =
+  let dirbit = match dir with `ToFloat -> 0 | `ToInt -> 1 in
+  [(0xe, 24); (dirbit, 20); (1, 8); (1, 4)] @
+  (match prec with A.F -> [] | A.D -> [(1, 7)])
+
+(* claude: VFP's case 76 (fix and float) is a genuinely different
+ * shape from FPA's single-instruction case 55: converting between
+ * an ARM core register and a VFP register needs an extra VMOV to
+ * shuttle the raw bit pattern in/out of a VFP register first (VFP's
+ * convert instructions only operate register-to-register within the
+ * VFP register file, they can't read/write a core register
+ * directly) -- ported from codegen.c's case 76 body + opvfprrr()'s
+ * AMOVWF/AMOVWD/AMOVFW/AMOVDW encodings.
+ * int -> float (MOVWF/MOVWD): [VMOV Sd=rt,Rm=rf ; convert Sd=rt,Sm=rt in place]
+ * float -> int (MOVFW/MOVDW): [convert Sd=FREGTMP,Sm=rf ; VMOV Rd=rt,Sn=FREGTMP] *)
+let gop_fixfloat_vfp_to_float (cond : condition) (prec : A.floatp_precision)
+    (rt : int) (rf : int) : Bits.t list =
+  let prec_nibble = match prec with A.F -> 0xa | A.D -> 0xb in
+  [ (* VMOV F,R: literal 0x0e000a10 -- bits[23:20]=0 (the fixed "op"
+     * bit that's 1 for the opposite direction below), rt/rf slots
+     * (bits 19:16/15:12) both 0 in the base. *)
+    [gcond cond; (0xe, 24); (rt, 16); (rf, 12); (0xa, 8); (0x1, 4)];
+    (* AMOVWF/AMOVWD (opvfprrr), Sd=Sm=rt (convert in place). Unlike
+     * the VMOV literal above, opvfprrr's own `0xe<<24` base isn't
+     * implicit here -- it must be listed explicitly. *)
+    [gcond cond; (0xe, 24); (0xb, 20); (0x8, 16); (rt, 12); (prec_nibble, 8);
+     (0xc, 4); (rt, 0)];
+  ]
+let gop_fixfloat_vfp_to_int (cond : condition) (prec : A.floatp_precision)
+    (rt : int) (rf : int) : Bits.t list =
+  let prec_nibble = match prec with A.F -> 0xa | A.D -> 0xb in
+  [ (* AMOVFW/AMOVDW (opvfprrr), Sd=FREGTMP, Sm=rf (convert into the
+     * scratch reg) -- same `0xe<<24` note as above. *)
+    [gcond cond; (0xe, 24); (0xb, 20); (0xd, 16); (fREGTMP, 12); (prec_nibble, 8);
+     (0xc, 4); (rf, 0)];
+    (* VMOV R,F: literal 0x0e100a10 -- bits[23:20]=1, the fixed "op"
+     * bit distinguishing this direction from VMOV F,R above (a
+     * previous draft mis-derived this as part of the bits[19:16]
+     * register slot instead; it's a separate, non-overlapping
+     * field). *)
+    [gcond cond; (0xe, 24); (0x1, 20); (fREGTMP, 16); (rt, 12); (0xa, 8); (0x1, 4)];
+  ]
+
 (* claude: goken's float.c chipfloats[] -- the FPA coprocessor's
  * fixed set of 8 immediate constants (chipfloat() returns their
  * index, or -1 if not one of these -- which this port doesn't
@@ -586,16 +641,36 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ [gcond cond] @ gop_cmpf @ [(fb, 16); (fa, 0)] ]
           )}
 
+    (* case 55:	/* floating point fix and float */ *)
     (* case 76:	/* vfp floating point fix and float */ *)
-    (* claude: NOT ported -- int<->float conversion (MOVFW/MOVWF/
-     * MOVWD/MOVDW); Ast_asm5.ml has no AST constructor for this at
-     * all (same gap as case 55's FPA equivalent), so it's not just
-     * a missing Codegen5.ml arm -- assembler grammar/AST work is
-     * needed first, same category as the PSR/MOVM TODOs. Without
-     * it, a VFP-encoded program can still be meaningfully tested
-     * (register-register arith starting from the zero-initialized
-     * register state, CMPF between two such registers), just not
-     * one that converts a real integer value into a float. *)
+    (* claude: int -> float/double (MOVWF/MOVWD). See gop_fixfloat/
+     * gop_fixfloat_vfp_to_float above for the two encodings; same
+     * !Flags.vfp dispatch as ArithF/CmpF above. *)
+    | MOVWF (prec, (R rf), (FR rt)) ->
+        if !Flags.vfp
+        then
+          { size = 8; x = None; binary = (fun () ->
+            gop_fixfloat_vfp_to_float cond prec rt rf
+          )}
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @ gop_fixfloat `ToFloat prec @ [(rt, 16); (rf, 12)] ]
+          )}
+
+    (* case 55:	/* floating point fix and float */ *)
+    (* case 76:	/* vfp floating point fix and float */ *)
+    (* claude: float/double -> int (MOVFW/MOVDW), the other
+     * direction of the pair just above. *)
+    | MOVFW (prec, (FR rf), (R rt)) ->
+        if !Flags.vfp
+        then
+          { size = 8; x = None; binary = (fun () ->
+            gop_fixfloat_vfp_to_int cond prec rt rf
+          )}
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @ gop_fixfloat `ToInt prec @ [(rf, 0); (rt, 12)] ]
+          )}
 
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)

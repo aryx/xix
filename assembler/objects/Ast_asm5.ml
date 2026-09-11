@@ -133,6 +133,13 @@ type instr =
   (*x: [[Ast_asm5.instr]] arithmetic instructions cases *)
   | ArithF of (arithf_opcode * A.floatp_precision) *
       (A.floatp, freg) Either_.t * freg option * freg
+  (* claude: case 55 (FPA)/76 (VFP): fix and float, i.e. int<->float
+   * conversion (goken's AMOVWF/AMOVFW/AMOVWD/AMOVDW). Direction is
+   * baked into which constructor is used, matching the mnemonic,
+   * rather than a shared from/to operand-order convention like
+   * ArithF/MOVE. *)
+  | MOVWF of A.floatp_precision * reg * freg (* int -> float/double *)
+  | MOVFW of A.floatp_precision * freg * reg (* float/double -> int *)
   (*e: [[Ast_asm5.instr]] arithmetic instructions cases *)
 
   (* Memory *)
@@ -243,7 +250,8 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | B opd -> Some opd
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
-  | Arith _ | ArithF _ | MOVE _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> None
+  | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | SWAP _ | Cmp _ | CmpF _
+  | SWI _ | RFE -> None
 (*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
 (*s: function [[Ast_asm5.visit_globals_instr]] *)
@@ -261,6 +269,7 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | B b -> A.visit_globals_branch_operand f b
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
-  | Arith _ | ArithF _ | SWAP _ | Cmp _ | CmpF _ | SWI _ | RFE -> () 
+  | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | SWAP _ | Cmp _ | CmpF _ | SWI _
+  | RFE -> ()
 (*e: function [[Ast_asm5.visit_globals_instr]] *)
 (*e: objects/Ast_asm5.ml *)

@@ -120,6 +120,9 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       | "CMPF" -> TCMPF A.F
       | "CMPD" -> TCMPF A.D
+
+      | "MOVWF" -> TMOVWF A.F | "MOVWD" -> TMOVWF A.D
+      | "MOVFW" -> TMOVFW A.F | "MOVDW" -> TMOVFW A.D
       (*x: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* advanced *)
       | "C" -> TC

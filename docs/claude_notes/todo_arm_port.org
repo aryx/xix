@@ -324,14 +324,45 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    CMPF/BEQ branch actually taken): VFP is real, still-relevant
    hardware, so this is functionally verified, not just
    encoding-parity like the FPA/SWP fixtures.
-** TODO case 76 vfp floating point fix and float -- same AST gap as
-   case 55's FPA equivalent (no int<->float conversion constructor
-   at all); needs assembler grammar/AST work first, same category as
-   the PSR/MOVM TODOs. Without it a VFP-encoded program can still be
-   meaningfully tested (register-register arith from the
-   zero-initialized state, CMPF between such registers, as
-   vfp_arm.s already does), just not one that converts a real
-   integer value into a float or vice versa.
+** DONE case 55/76 floating point fix and float (int<->float
+   conversion, MOVWF/MOVFW/MOVWD/MOVDW) -- added the AST/grammar
+   work this needed (Ast_asm5.MOVWF/MOVFW, Parser_asm5.mly/
+   Parse_asm5.ml keyword table, Meta_ast_asm5.ml's hand-maintained
+   vof_instr, Rewrite5.ml's exhaustive match) since without this a
+   VFP/FPA program could compute but never get a real integer value
+   into or out of a float register -- genuinely useful now, not just
+   a register-shuffling demo. IMPORTANT: adding AST constructors
+   bumped Object_file.version (8->9) per Ast_asm5.ml's own header
+   warning -- a stale bin_dune copy built against the old count of
+   constructors segfaulted (not a catchable OCaml exception) on
+   every fixture, not just the new ones, until rebuilt; this is the
+   same bin_dune staleness gotcha as always, just with an unusually
+   scary-looking symptom this time.
+   FPA (case 55, gop_fixfloat): direction (dirbit at bit20: 0=to
+   float, 1=to int) and D-precision (bit7) vary; register placement
+   differs by direction (int reg @ bit12/freg @ bit16 for ToFloat,
+   freg @ bit0/int reg @ bit12 for ToInt).
+   VFP (case 76) is a genuinely different shape: converting between
+   a core register and a VFP register needs an extra VMOV to shuttle
+   the raw bit pattern in/out first (VFP's convert instructions only
+   operate within the VFP register file) -- 2 instructions each
+   direction, using FREGTMP (F15/D15, matching int-side REGTMP) as
+   the scratch register for the ToInt direction. Got the encoding
+   wrong twice on the first attempt (caught by testing against goken
+   directly, not by manual verification): missed the `0xe<<24` base
+   bits on the two opvfprrr-formula instructions (the VMOV literals
+   already have it baked in, but the *convert* instructions don't --
+   easy to reuse the wrong "already has 0xe24" assumption from the
+   VMOV pattern above them), and mis-derived which hex digit encodes
+   VMOV's direction bit (bits[23:20], a genuinely separate,
+   non-overlapping field -- not bits[19:16] as first computed, which
+   is actually the register slot).
+   Added tests/linker/arm_diff/fixfloat_fpa.s and fixfloat_vfp.s
+   (both: 42 -> float reg -> back -> exit(42)). PASS byte-identical
+   AND PASS genuine functional round-trip under qemu-arm (rc=42 both
+   sides, both FPA and VFP) -- FPA's arithmetic SIGILLs
+   (fpa_arm.s) but apparently qemu does implement these two
+   particular legacy opcodes.
 ** DONE case 12 movw $lcon, reg -- both the address-of-global slow
    path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
    too-big-immediate case (MOVW $0x12345678,R -> LDR from literal
@@ -373,11 +404,6 @@ Not yet in Codegen5.ml at all:
 ** TODO case 51 floating point load
 ** TODO case 52 floating point store, long offset UGLY
 ** TODO case 53 floating point load, long offset UGLY
-** TODO case 55 floating point fix and float
-   (int<->float conversion, MOVWF/MOVFW/MOVWD/MOVDW -- no AST
-   constructor exists for this at all, unlike case 54's ArithF/CmpF;
-   needs assembler grammar/AST work first, same category as the
-   PSR/MOVM TODOs above.)
 ** TODO case 56 move to FP[CS]R
 ** TODO case 57 move from FP[CS]R
 ** TODO case 59 movw/bu R<<I(R),R -> ldr indexed

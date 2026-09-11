@@ -40,6 +40,7 @@ module L = Location_cpp
 %token <Ast_asm5.arith_opcode> TARITH
 %token <Ast_asm5.arithf_opcode * Ast_asm.floatp_precision> TARITHF
 %token <Ast_asm.floatp_precision> TCMPF
+%token <Ast_asm.floatp_precision> TMOVWF TMOVFW
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
@@ -197,6 +198,8 @@ instr:
  | TARITHF cond frcon         TC freg  { (ArithF ($1, $3, None, $5), $2) }
  | TARITHF cond frcon TC freg TC freg  { (ArithF ($1, $3, Some $5, $7), $2) }
  | TCMPF cond freg TC freg             { (CmpF ($1, $3, $5), $2) }
+ | TMOVWF cond reg  TC freg            { (MOVWF ($1, $3, $5), $2) }
+ | TMOVFW cond freg TC reg             { (MOVFW ($1, $3, $5), $2) }
 
  | TMOV   cond  gen  TC gen     { (MOVE ($1, None, $3, $5), $2) }
 

@@ -37,6 +37,8 @@ CASES=(
     "tests/linker/arm_diff/swp_arm.s:_start"
     "tests/linker/arm_diff/fpa_arm.s:_start"
     "tests/linker/arm_diff/vfp_arm.s:_start:-f"
+    "tests/linker/arm_diff/fixfloat_fpa.s:_start"
+    "tests/linker/arm_diff/fixfloat_vfp.s:_start:-f"
 )
 
 FAIL=0

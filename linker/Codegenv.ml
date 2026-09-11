@@ -282,6 +282,12 @@ let op_frrr (op : Bits.t) (FR r1 : freg) (FR r2 : freg) (FR r3 : freg) : Bits.t 
 let op_mfc_mtc (is_mtc1 : bool) (r_int : int) (r_float : int) : Bits.t =
   sp 2 1 @ [((if is_mtc1 then 4 else 0), 21); (r_int, 16); (r_float, 11)]
 
+(* claude: same shape as op_mfc_mtc, but SP(2,0) (coprocessor-0, not
+ * -1) and a size-dependent sub-field: case 37 (MTC0/DMTC0) uses 4/5,
+ * case 38 (MFC0/DMFC0) uses 0/1 -- W__ vs V__. *)
+let op_mc0 (sub : int) (r_int : int) (r_m : int) : Bits.t =
+  sp 2 0 @ [(sub, 21); (r_int, 16); (r_m, 11)]
+
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
@@ -539,6 +545,36 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 8; x = None; binary = (fun () ->
             [ op_mfc_mtc false rt rf; nop ]
          ) }
+
+    (* case 37:	/* movw r,mr */ *)
+    (* claude: MTC0/DMTC0 (coprocessor-0/MMU register write) -- no
+     * delay slot needed here, unlike case 38's read below (confirmed
+     * via `vl -a`: a write immediately followed by a read of the
+     * *same* M register needs no padding between them at all). *)
+    | Move2 (W__, Left (Gen (GReg (R rf))), MReg (M rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_mc0 4 rf rt ]) }
+    | Move2 (V__, Left (Gen (GReg (R rf))), MReg (M rt)) ->
+        { size = 4; x = None; binary = (fun () -> [ op_mc0 5 rf rt ]) }
+
+    (* case 38:	/* movw mr,r */ *)
+    (* claude: MFC0/DMFC0 -- goken's noop.c has a dedicated 2-NOP
+     * special case for any AMOVW/AMOVV whose *source* is D_MREG or
+     * D_FCREG (`if(p->from.type==D_FCREG||D_MREG){addnop(p);
+     * addnop(p);}`), distinct from the COP1/float and plain-load
+     * 1-NOP hazards elsewhere this session. Confirmed via `vl -a`
+     * for an isolated MFC0 (2 NOPs even with an unrelated eligible
+     * instruction right after -- unlike sched()'s usual hoisting,
+     * this specific pair is inserted directly in noop.c's own first
+     * pass), but NOT fully characterized when *another* MREG/FCREG
+     * instruction sits nearby (one combined test showed only one of
+     * two chained reads getting padded) -- this always emits 2 nops
+     * unconditionally, matching the isolated case; a fixture
+     * chaining multiple M-register ops close together may not be
+     * byte-identical. *)
+    | Move2 (W__, Left (MReg (M rf)), Gen (GReg (R rt))) ->
+        { size = 12; x = None; binary = (fun () -> [ op_mc0 0 rt rf; nop; nop ]) }
+    | Move2 (V__, Left (MReg (M rf)), Gen (GReg (R rt))) ->
+        { size = 12; x = None; binary = (fun () -> [ op_mc0 1 rt rf; nop; nop ]) }
 
     (* case 32:	/* fadd fr1,[fr2],fr3 */ *)
     (* claude: ADD_/SUB_/MUL_/DIV_ only -- see oprrr_arithf_opcode's

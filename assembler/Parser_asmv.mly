@@ -265,12 +265,14 @@ vgen:
  | gen { Gen $1 }
  | TLOHI { LoHi $1 }
  | freg { GFReg $1 }
+ | mreg { MReg $1 }
 
 /*(*TODO: far more cases *)*/
 vlgen:
  | lgen { match $1 with Left x -> Left (Gen x) | Right x -> Right x }
  | TLOHI { Left (LoHi $1) }
  | freg { Left (GFReg $1) }
+ | mreg { Left (MReg $1) }
 
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/
@@ -312,9 +314,17 @@ offset:
 
 freg:
  | TFx                { $1 }
- | TF TOPAR con TCPAR 
+ | TF TOPAR con TCPAR
      { if $3 <= 32 && $3 >= 0
        then FR $3
+       else error "register value out of range"
+     }
+
+mreg:
+ | TMx                { $1 }
+ | TM TOPAR con TCPAR
+     { if $3 <= 31 && $3 >= 0
+       then M $3
        else error "register value out of range"
      }
 

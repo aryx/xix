@@ -90,6 +90,9 @@ type vgen =
    * (MOVW between an int and a float register, MTC1/MFC1) and case
    * 34 (float constant load) in Codegenv.ml. *)
   | GFReg of freg
+  (* claude: an M (coprocessor-0/MMU) register -- case 37/38
+   * (MTC0/MFC0/DMTC0/DMFC0) in Codegenv.ml. *)
+  | MReg of mreg
   (* | ... far more stuff *)
 [@@deriving show {with_path = false}]
 
@@ -214,6 +217,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
     | Gen x -> mov_operand x
     | LoHi _ -> ()
     | GFReg _ -> ()
+    | MReg _ -> ()
   in
   match i with
   | Move1 (_, x1, gen2) -> 

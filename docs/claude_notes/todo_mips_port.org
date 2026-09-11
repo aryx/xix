@@ -590,11 +590,45 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    fine), but not root-caused. Check Layoutv.ml/Datagen.ml's BSS
    handling against goken's `dodata()` before trusting a GLOBL-only
    symbol's layout on MIPS.
+** DONE case 37 movw r,mr (MTC0/DMTC0) / case 38 movw mr,r
+   (MFC0/DMFC0) -- coprocessor-0/MMU register moves. Required *new
+   AST* (added `MReg of mreg` to `vgen`, same spot as GFReg/LoHi;
+   Object_file.version bumped 11->12) but the token/lexer
+   infrastructure (TM/TMx, "M5" and "M(5)" syntax) already existed,
+   unused, mirroring freg's -- only the `mreg`/`vgen`/`vlgen` grammar
+   rules themselves were missing. New op_mc0 helper, same shape as
+   case 30/31's op_mfc_mtc but SP(2,0) instead of SP(2,1) and a
+   size-dependent (W__/V__) sub-field: 4/5 for write (case 37), 0/1
+   for read (case 38).
+   Case 37 (write) needs no delay slot. Case 38 (read) has its own,
+   *different* hazard from every other one this session: goken's
+   noop.c has a dedicated, unconditional 2-NOP special case for any
+   AMOVW/AMOVV whose source is D_MREG or D_FCREG (inserted directly
+   in noop.c's own marking pass, not decided by sched()'s usual
+   hoisting) -- confirmed via `vl -a` for an isolated MFC0 (2 NOPs
+   even with an eligible instruction available right after), but NOT
+   fully characterized when another MREG/FCREG instruction sits
+   nearby (one combined test showed only one of two chained reads
+   getting padded) -- always emits 2 nops unconditionally, matching
+   the isolated case.
+   MTC0/MFC0 are privileged (kernel-mode) instructions, illegal
+   under qemu-mips' user-mode emulation -- confirmed to crash
+   identically on both goken's and xix's output (same as any other
+   matching-behavior check this session, just via an illegal-
+   instruction trap instead of a real exit code).
+   Added tests/linker/mips_diff/case37_38_mips.s (case 37 writes
+   only, byte-identical) and case37_38_check_mips.s (case 37+38
+   chained, same shape as every other _check fixture though not a
+   true functional check here since qemu can't run it -- excluded
+   from test-mips.sh's CASES like the others). PASS byte-identical
+   (case37_38_mips.s) + PASS same qemu-mips behavior (both). Left
+   case 41/42 (FCR/floating-point control register moves) as a
+   follow-up: case 41 specifically needs a 2-instruction dummy-read-
+   then-write sequence (a real MIPS I FCR hazard workaround) that's
+   more involved than case 37/38's single instruction each.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 37 movw r,mr
-** TODO case 38 movw mr,r
 ** TODO case 39 rfe ==> jmp+rfe
 ** TODO case 40 word
 ** TODO case 41 movw r,fcr

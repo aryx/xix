@@ -340,12 +340,45 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    PASS functionally (all three, qemu-mips exit codes match).
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
+** DONE case 24 mov $ucon,,r ==> lu r (case 23/25 -- see the TODO
+   just below instead, they turned out to need a different plan)
+   UCON (low 16 bits all zero, magnitude outside case 3's range):
+   a single LUI, no OR needed. Case 3's own guard was converted from
+   an internal `constant_kind` Option-match to a direct `when` guard
+   so case 24 (and the LCON fallthrough below) can sit as separate,
+   later match arms on the same pattern shape.
+   Tried porting case 19 for a *plain integer literal* too (not just
+   the already-working Address-of-Global path further below) using
+   the same LU+OR shape -- turned out to be WRONG: confirmed via
+   `vl -a` directly that a genuine LCON literal (nonzero low 16
+   bits, magnitude beyond ANDCON) makes goken's `va` rewrite the
+   MOVW into a 4-instruction sequence loading the constant's value
+   from a synthesized SB-relative data symbol (a literal pool,
+   analogous to ARM's -- see Layout5.ml's pool-dedup TODO) instead
+   of synthesizing it arithmetically. This is a genuine
+   *assembler*-side mechanism (needs a MIPS literal pool in `ova`),
+   not a Codegenv.ml/linker one -- case 19's LU+OR is only correct
+   for the Address-of-Global path, which goes through a different,
+   non-literal-pool-rewriting aclass() branch in goken. Reverted
+   that arm; a plain out-of-range literal now falls through to the
+   pre-existing generic "not handled" error instead of emitting
+   wrong bytes.
+   Added tests/linker/mips_diff/movw_ucon_mips.s (a positive and a
+   negative UCON value). PASS byte-identical + PASS same qemu-mips
+   exit code. Verified: full MIPS + ARM baselines and make test
+   (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 23 add $lcon,r1,r2 ==> lu+or+add
-** TODO case 24 mov $ucon,,r ==> lu r
-** TODO case 25 add/and $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2
+** TODO case 23 add $lcon,r1,r2 ==> lu+or+add -- checked against
+   goken directly (`vl -a`, ADD $305419896,R1,R3): unlike MOVW's
+   plain-literal case 19, ADD's immediate form does NOT hit the
+   literal-pool surprise -- it's the plain 3-instruction LU+OR+ADD
+   (REGTMP-based), matching case 4/10's existing pattern. Safe to
+   port as originally planned.
+** TODO case 25 add/and $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2 --
+   likewise checked (`vl -a`, ADD $65536,R1,R2): plain 2-instruction
+   LU+ADD, no literal-pool surprise. Safe to port as planned.
 ** TODO case 26 mov $lsext/auto/oreg,,r2 ==> lu+or+add
 ** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
 ** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)

@@ -504,19 +504,47 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           [ op_rrr (oprrr_arith_opcode OR) rZERO rZERO rt ]
         ) }
 
-    (* Constant to register move (move but no memory involved) 
+    (* Constant to register move (move but no memory involved)
      * case 3:		/* mov $soreg, r ==> or/add $i,o,r */
      *)
-    | Move2 (W__, (Right (Int i)), Gen (GReg rt)) ->
-       (match constant_kind i with
-       | Some i ->
-           { size = 4; x = None; binary = (fun () ->
-               let r = rZERO in
-               let op = movw_imm_opcode i in
-               [ op_irr (opirr_arith_opcode op) i r rt ]
-            ) }
-       | None -> failwith "TODO: LCON"
-       )
+    | Move2 (W__, (Right (Int i)), Gen (GReg rt)) when constant_kind i <> None ->
+       { size = 4; x = None; binary = (fun () ->
+           let r = rZERO in
+           let op = movw_imm_opcode i in
+           [ op_irr (opirr_arith_opcode op) i r rt ]
+        ) }
+
+    (* case 24:	/* mov $ucon,,r ==> lu r */ *)
+    (* claude: UCON (low 16 bits all zero, magnitude outside case
+     * 3's range above) -- a single LUI, no OR needed since there
+     * are no low bits to merge in. `i asr 16` (not `lsr`) to match
+     * goken's C `v>>16` on a signed value -- irrelevant to the
+     * final encoding (op_irr masks with `land 0xffff` anyway) but
+     * keeps the intermediate value's sign consistent with goken's. *)
+    | Move2 (W__, (Right (Int i)), Gen (GReg rt)) when i land 0xffff = 0 ->
+       { size = 4; x = None; binary = (fun () ->
+           [ op_irr op_last (i asr 16) rZERO rt ]
+        ) }
+
+    (* claude: NOT case 19 -- tried that first (plain LU+OR, same
+     * shape as the Address-of-Global variant of case 19 further
+     * below) but it's WRONG here: confirmed via `vl -a` directly
+     * that a genuine LCON *literal* (nonzero low 16 bits, magnitude
+     * beyond case 10's ANDCON range) makes goken's `va` rewrite the
+     * MOVW into a completely different 4-instruction sequence that
+     * loads the constant's *value* from a synthesized SB-relative
+     * data symbol (a literal pool, analogous to ARM's -- see
+     * Layout5.ml/docs/claude_notes/todo_arm_port.org's pool-dedup
+     * TODO) -- e.g. `MOVW $305419896,R1` assembles to LUI+ORI+ADD+
+     * LW against a symbol literally named "12345678(SB)", not a
+     * plain LU+OR. This is a genuine *assembler*-side mechanism
+     * (`va`/`ova`), not a linker/Codegenv.ml one -- case 19's LU+OR
+     * is only correct for the Address-of-Global path below, which
+     * goes through a different aclass() branch in goken (D_EXTERN/
+     * D_STATIC, not this literal-pool-rewriting D_CONST path).
+     * Unported (would need a MIPS literal pool in the assembler
+     * first), so this correctly falls through to the generic "not
+     * handled" error below instead of emitting the wrong bytes. *)
 
     (* --------------------------------------------------------------------- *)
     (* Control flow *)

@@ -626,11 +626,20 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    follow-up: case 41 specifically needs a 2-instruction dummy-read-
    then-write sequence (a real MIPS I FCR hazard workaround) that's
    more involved than case 37/38's single instruction each.
+** DONE case 40 word -- a raw constant word embedded in TEXT. Already
+   handled generically by Codegen.default_rules (shared across all
+   archs, matched at the very top of `rules` via `T.WORD`), no
+   MIPS-specific code needed. Added tests/linker/mips_diff/
+   case40_mips.s just to confirm that shared path produces
+   byte-identical output on MIPS too (it does). PASS byte-identical
+   + PASS same qemu-mips behavior (an intentional segfault on both
+   sides -- the raw word sits in the TEXT stream right at the entry
+   point and isn't a valid instruction). Verified: full MIPS + ARM
+   baselines and make test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
 ** TODO case 39 rfe ==> jmp+rfe
-** TODO case 40 word
 ** TODO case 41 movw r,fcr
 ** TODO case 42 movw fcr,r
 ** TODO case 45 case r

@@ -94,6 +94,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       | "SWI" -> TSWI
       | "RFE" -> TRFE
 
+      | "SWPW" -> TSWAP A.Word | "SWPBU" -> TSWAP (A.Byte A.U)
+
       (* conditions *)
       | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
       | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 

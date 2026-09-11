@@ -127,34 +127,55 @@ let base_and_offset_of_indirect node symbols2 autosize x =
 (*****************************************************************************)
 
 (*s: function [[Codegen5.immrot]] *)
-(* claude: full port of goken's 5l/span.c immrot(). ARM's "immediate"
- * data-processing operand is an 8-bit value paired with a 4-bit
- * rotation field R; the decoded value is that 8-bit value rotated
- * RIGHT by 2*R bits (R in 0..15, so any even rotation amount
- * 0,2,..,30). To encode x, try each such rotation and see if
- * rotating x LEFT by that same amount brings all its set bits into
- * the low 8 bits -- if so, that's the (R, low-8-bits) pair to use.
+(* claude: full port of goken's 5l/span.c immrot(ulong v). The C code
+ * reads:
+ *   for(i=0; i<16; i++) {
+ *     if((v & ~0xff) == 0) return (1<<25)|(i<<8)|v;
+ *     v = (v<<2) | (v>>30);
+ *   }
+ *   return 0;
+ * which LOOKS like a 32-bit rotate-left-by-2 repeated up to 16 times
+ * (checking, after each rotation, whether all set bits have been
+ * brought into the low 8 bits) -- but `ulong` is 64 bits on this
+ * host (`typedef unsigned long ulong` in include/core/types.h, and
+ * `unsigned long` is 64-bit on x86-64/arm64 Linux). `v<<2` on a
+ * 64-bit value does NOT wrap its top bits back around into `v>>30`
+ * the way it would on a 32-bit host -- bits pushed past bit 63 are
+ * simply lost, and `v>>30` after several iterations starts pulling
+ * in bits that came from *lower* down in `v`, not from a genuine
+ * 32-bit wraparound. So on this build immrot is, relative to true
+ * ARM rotated-immediate semantics, subtly WRONG for some values that
+ * are mathematically encodable but this specific (64-bit-`ulong`)
+ * computation fails to recognize -- e.g. 0x9000 IS a valid ARM
+ * rotated immediate (0x90 rotated), but this immrot() returns 0 for
+ * it, so goken takes the literal-pool slow path (case 12) instead of
+ * a single MOV/ADD (case 2/4) for that value on this build. Since
+ * the whole point of this port is byte-for-byte matching THIS actual
+ * goken binary, not "more correct" ARM codegen, this must replicate
+ * the 64-bit non-wrapping computation exactly (caught by
+ * tests/linker/arm_diff/swp_arm.s: `MOVW $0x9000, R4` diverged from
+ * goken until this was fixed) -- hence Int64, not a 32-bit OCaml
+ * int, to get real 64-bit unsigned truncating shifts.
  *
- * x is treated as a plain 32-bit bit pattern, matching goken's
- * `immrot(ulong v)`: to encode a negative value, mask it to 32 bits
- * first (OCaml's native int is wider than 32 bits, so a negative x
- * here would otherwise carry sign-extended 1s above bit 31 that
- * would never rotate away). Returns None when no rotation works
- * (goken returns a plain 0 in that case; callers already treat
- * `None` as "not encodable", so this preserves their logic exactly,
- * it's just no longer limited to plain 0..255 values).
+ * A negative x reinterprets as its 64-bit two's-complement pattern
+ * directly (matching `long instoffset` -> `ulong` in C, both already
+ * 64-bit on this host -- no 32-bit sign-extension step involved).
+ * Returns None when no rotation works (goken returns a plain 0 in
+ * that case; callers already treat `None` as "not encodable").
  *
  * TODO: return directly a Bits.t
  *)
 let immrot x =
-  let mask32 = 0xFFFFFFFF in
+  let mask8 = 0xffL in
   let rec search i v =
     if i > 15 then None
-    else if v land (mask32 land (lnot 0xff)) =|= 0
-    then Some (i, v land 0xff)
-    else search (i + 1) (((v lsl 2) lor (v lsr 30)) land mask32)
+    else if Int64.equal (Int64.logand v (Int64.lognot mask8)) 0L
+    then Some (i, Int64.to_int (Int64.logand v mask8))
+    else
+      let v' = Int64.logor (Int64.shift_left v 2) (Int64.shift_right_logical v 30) in
+      search (i + 1) v'
   in
-  search 0 (x land mask32)
+  search 0 (Int64.of_int x)
 (*e: function [[Codegen5.immrot]] *)
 
 let rot_bit = (1, 25)
@@ -972,7 +993,35 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )
 
     (* Swap *)
-    | SWAP _ -> error node "TODO: SWAP"
+    (* case 40:	/* swp oreg,reg,reg */ *)
+    (* claude: SWPW/SWPBU, ARM's atomic exchange (deprecated since
+     * ARMv6 in favor of LDREX/STREX, but still a real, used
+     * instruction -- goken's own runtime uses it for spinlocks,
+     * e.g. GO/pkg/runtime/arm/cas5.s: `SWPW (R4), R3`). The 2-operand
+     * form (reg_b=None, e.g. `SWPW (R4), R3` from that real example)
+     * is the classic atomic-exchange-in-place idiom: the same
+     * register (reg_a) is both the new value written to memory (Rm)
+     * and the destination that receives the old value read back
+     * (Rd). The 3-operand form (reg_b=Some) isn't independently
+     * verified against a real fixture -- Rm=reg_a (source, matching
+     * the token order: it comes before the indirect operand in
+     * Parser_asm5.mly's grammar), Rd=reg_b (destination). *)
+    | SWAP (size, (R rn), reg_a, reg_b_opt) ->
+        let (rm, rd) = match reg_b_opt with
+          | None -> reg_a, reg_a
+          | Some reg_b -> reg_a, reg_b
+        in
+        let (R rm_int) = rm and (R rd_int) = rd in
+        let byte_bit = match size with
+          | Byte U -> [(1, 22)]
+          | Word -> []
+          | Byte S | HalfWord _ ->
+              raise (Impossible "SWAP only supports Word or Byte U")
+        in
+        { size = 4; x = None; binary = (fun () ->
+          [[gcond cond; (0x2, 23); (0x9, 4)] @ byte_bit
+            @ [(rn, 16); (rd_int, 12); (rm_int, 0)]]
+        )}
 
     (* Half words and signed bytes *)
     | MOVE ((HalfWord _ | Byte _), _opt, _from, _dest) -> 

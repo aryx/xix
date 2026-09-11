@@ -202,6 +202,43 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    literal-pool entry), so this is verified indirectly by every
    fixture whose codegen falls back to a literal pool (bigimm_arm.s
    for case 12, lcon_arm.s for case 13), not by a dedicated fixture.
+** DONE case 40 swp oreg,reg,reg -- ARM's atomic exchange (SWPW/
+   SWPBU), deprecated since ARMv6 in favor of LDREX/STREX but still
+   real (goken's own runtime uses it for spinlocks, e.g.
+   GO/pkg/runtime/arm/cas5.s: `SWPW (R4), R3`). The AST shape
+   (Ast_asm5.SWAP) and grammar (Parser_asm5.mly) already existed but
+   the SWPW/SWPBU keyword-table entries were never wired up in
+   Parse_asm5.ml -- added those two lines. The 2-operand grammar form
+   (`SWPW (R4), R3`) is the classic atomic-exchange-in-place idiom:
+   the same register is both the new value written (Rm) and the
+   destination that receives the old value (Rd); the 3-operand form
+   is implemented too but not independently verified against a real
+   fixture. Added tests/linker/arm_diff/swp_arm.s.
+** MAJOR FIND, FIXED: immrot() was subtly wrong for some values --
+   goken's own `immrot(ulong v)` (5l/span.c) is, relative to true ARM
+   rotated-immediate semantics, buggy on a 64-bit host: `ulong` is
+   64-bit unsigned here (typedef in include/core/types.h), but the
+   rotation trick (`v = (v<<2)|(v>>30)` up to 16 times) was written
+   assuming 32-bit wraparound. On a 64-bit `ulong`, bits pushed past
+   bit 63 are simply lost and `v>>30` starts pulling in bits that
+   never actually wrapped around from a genuine 32-bit rotation --
+   so for some values that ARE valid ARM rotated immediates (e.g.
+   0x9000 = 0x90 rotated), goken's own immrot() returns 0 (not
+   encodable), and it takes the literal-pool slow path (case 12/34)
+   instead of a single MOV/ADD (case 2/4). Since the whole point of
+   this port is byte-for-byte matching THIS actual goken binary (not
+   "more correct" ARM codegen), Codegen5.ml's immrot needed to
+   replicate that exact 64-bit non-wrapping computation, not the
+   mathematically-correct 32-bit version it had before -- rewritten
+   using Int64 (OCaml's native int can't safely hold the needed
+   64-bit unsigned patterns). This was previously undetected because
+   every earlier fixture's constants either fit directly (0-255, way
+   below where the two versions could ever disagree) or were clearly
+   too large either way (like 0x12345678); tests/linker/arm_diff/
+   swp_arm.s's `MOVW $0x9000, R4` is what exposed it. Re-verified
+   the entire existing corpus (all fixtures using case 2/4/12/13/34)
+   still passes byte-identical after the fix -- nothing had
+   coincidentally depended on the old, wrong 32-bit behavior.
 ** DONE case 72/73 movh/movhu R,L(R) -> strh / movb/movh/movhu L(R),R
    -> ldrsb/ldrsh/ldrh -- long (>8-bit) offset halfword/signed-byte
    store/load, same REGTMP-via-literal-pool pattern as case 30/31,
@@ -260,9 +297,18 @@ Not yet in Codegen5.ml at all:
 ** TODO case 35 mov PSR,R
 ** TODO case 36 mov R,PSR
 ** TODO case 37 mov $con,PSR
+   (cases 35-37 need a PSR AST constructor first -- Ast_asm5.ml's own
+   prelude TODO already flags "PSR, MCR/MRC" as unrepresented; this
+   is a bigger lift than the codegen-only cases above, needing
+   grammar/lexer + AST work before any Codegen5.ml arm is possible.)
 ** TODO case 38 movm $con,oreg -> stm
 ** TODO case 39 movm oreg,$con -> ldm
-** TODO case 40 swp oreg,reg,reg
+   (cases 38/39 likewise need a MOVM AST constructor first, plus
+   parsing the .IA/.DB/.FD/.ED-style addressing-mode suffixes and a
+   register-list syntax `[R0-R3,R14]` -- Ast_asm5.ml's own prelude
+   TODO already flags "MOVM (and his special bits .IA/...)" as
+   unrepresented. Same category of work as 35-37: assembler
+   grammar/AST first, Codegen5.ml second.)
 ** TODO case 50 floating point store
 ** TODO case 51 floating point load
 ** TODO case 52 floating point store, long offset UGLY

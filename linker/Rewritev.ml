@@ -88,20 +88,37 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
         autosize_opt |> Option.iter (fun autosize ->
           (* for layout text we need to set the final autosize *)
           n.instr <- T.TEXT (global, attrs, autosize);
-          (* ADD $-autosize, SP
-           * MOVW RLINK, 0(SP)
-           *)
-          let rec n1 = T.{
-            instr = T.I (Arith (ADD (W, A.S), 
+          (* claude: a leaf function that still needs a frame
+           * (autosize > 0, e.g. it has locals but calls nothing)
+           * still gets the SP adjustment below, but must NOT save
+           * RLINK -- nothing ever calls out of it, so RLINK is
+           * never clobbered, and goken's own noop.c (the ATEXT case)
+           * confirms this: `autosize = p->to.offset+4;` always, but
+           * the AMOVW REGLINK,0(SP) save is only emitted
+           * `if(!(curtext->mark & LEAF))`. The old code here always
+           * emitted both, unconditionally -- caught by
+           * tests/linker/mips_diff/lacon_mips.s (a leaf function
+           * with an 8192-byte frame), which had 2 extra spurious
+           * words (this RLINK save) before this fix. Note: the RET
+           * side (below) has the same latent gap for a leaf
+           * function with autosize > 0 -- goken does a direct
+           * `ADD $autosize,SP; JMP RLINK` there instead of this
+           * code's load-from-memory+restore+jmp, but no fixture
+           * exercises RET on a leaf-with-locals function yet, so
+           * that's left as still-TODO rather than guessed at. *)
+          let is_leaf_here = Hashtbl.mem is_leaf global in
+          let n1 = T.{
+            instr = T.I (Arith (ADD (W, A.S),
                          Imm (- autosize), None, rSP));
-            next = Some n2;
-            branch = None; n_loc = n.n_loc; real_pc = -1;
-          }
-          and n2 = T.{
-            instr = T.I (Move2 (W__,  
-                              Either.Left (Gen (GReg rLINK)), 
-                              Gen (Indirect (rSP, 0))));
-            next = n.next;
+            next =
+              (if is_leaf_here then n.next
+               else Some T.{
+                 instr = T.I (Move2 (W__,
+                                   Either.Left (Gen (GReg rLINK)),
+                                   Gen (Indirect (rSP, 0))));
+                 next = n.next;
+                 branch = None; n_loc = n.n_loc; real_pc = -1;
+               });
             branch = None; n_loc = n.n_loc; real_pc = -1;
           }
           in

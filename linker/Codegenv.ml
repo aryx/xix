@@ -98,7 +98,19 @@ let offset_to_R30 x = x - big
 let base_and_offset_of_entity node symbols2 autosize x =
   match x with
   (* | Indirect (r, off) -> r, off  *)
+  (* claude: the +4 below used to be on Param instead of Local (and
+   * Local had no adjustment at all) -- swapped after verifying
+   * against goken directly (case 26's address-of-local/param, `vl
+   * -a` on a fixture with a named FP/SP-relative local and param,
+   * frame=$8192: goken computed offset 8192 for `x-8(FP)` (Local)
+   * and 8204 for `y+8(SP)` (Param), which only matches autosize=8196
+   * with the +4 on Local, not Param -- the exact same bug shape as
+   * the confirmed ARM one in base_and_offset_of_indirect, see
+   * docs/claude_notes/todo_arm_port.org's case 4/34 entry). See
+   * tests/linker/mips_diff/lacon_mips.s. *)
   | (Param (_s, off)) ->
+      rSP, autosize + off
+  | (Local (_s, off)) ->
       (* remember that the +4 below is because we access the frame of the
        * caller which for sure is not a leaf. Note that autosize
        * here had possibly a +4 done if the current function
@@ -106,8 +118,6 @@ let base_and_offset_of_entity node symbols2 autosize x =
        * now is the adjustment in the frame of the caller!
        *)
       rSP, autosize + 4 + off
-  | (Local (_s, off)) -> 
-      rSP, autosize + off
   | (Global (global, off)) ->
       let v = Hashtbl.find symbols2 (T.symbol_of_global global) in
       (match v with
@@ -682,7 +692,26 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   op_irr (opirr_arith_opcode OR) lcon rt rt;
                 ]
               )}
-        | Address (Local _ | Param _) -> raise Todo
+        (* case 26:	/* mov $lsext/auto/oreg,,r2 ==> lu+or+add */ *)
+        (* claude: address-of-local/param. Unlike Address-of-Global
+         * just above, goken's C_SACON fast path (small SP-relative
+         * offset, single ADDU) is ALSO permanently dead here for
+         * the exact same reason as C_SECON/offset_to_R30: aclass()
+         * gates it on `instoffset >= -BIG && instoffset < BIG`, and
+         * BIG=0 on MIPS makes that condition unsatisfiable -- so
+         * this always takes the generic LU+OR+ADDU path (case 26),
+         * never the fast one, matching goken exactly. goken's C
+         * also diags if p->to.reg is REGTMP itself; not replicated,
+         * same reasoning as case 23's identical diag. *)
+        | Address ((Local _ | Param _) as entity) ->
+            { size = 12; x = None; binary = (fun () ->
+                let (rbase, offset) =
+                  base_and_offset_of_entity node env.syms env.autosize entity in
+                [ op_irr op_last (offset asr 16) rZERO rTMP;
+                  op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+                  op_rrr (oprrr_arith_opcode (ADD (W, U))) rTMP rbase rt;
+                ]
+             ) }
         )
 
     (* Store/Load *)

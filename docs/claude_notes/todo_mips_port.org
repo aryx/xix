@@ -3,21 +3,11 @@
 # See that file for rationale/design; this file is just checklist state.
 
 * Phase 0 -- harness
-** TODO investigate: base_and_offset_of_entity's Param/Local +4 split
-   (Codegenv.ml) has the *exact same shape* as a real, confirmed bug
-   found in ARM's Codegen5.ml equivalent (base_and_offset_of_indirect):
-   there, the "+4 for the caller/RLINK-slot adjustment" comment was
-   attached to the wrong branch (Param had it, Local didn't; should
-   have been the other way -- see docs/claude_notes/todo_arm_port.org's
-   case 4/34 entry). This MIPS version reads identically (Param:
-   `autosize + 4 + off`, Local: `autosize + off`, same comment
-   wording) and was almost certainly copy-pasted from the same
-   original source, so it may well have the identical bug -- but
-   nothing has exercised Entity(Local)/Entity(Param) on MIPS yet (no
-   fixture uses a named FP/SP-relative local), so this is unverified,
-   not confirmed. Check directly against goken with plain memory
-   access (`MOVW x-8(FP), R1` / `MOVW x+8(SP), R1` equivalents, no $)
-   before trusting either branch, same methodology as the ARM fix.
+** DONE investigate (and fix): base_and_offset_of_entity's Param/Local
+   +4 split -- confirmed, via case 26's lacon_mips.s fixture, to be
+   the exact same bug as ARM's (see the case 26 entry further down
+   for the full writeup and the goken `vl -a` numbers). Fixed by
+   swapping the +4 onto Local instead of Param.
 ** DONE diff harness script (assemble+link both sides, cmp -l, qemu-mips)
    scripts/diff-mips.sh + test-mips.sh, mirrors the ARM ones. No -H
    flag needed (vl/ovl both default to ELF already). qemu-mips, not
@@ -384,10 +374,45 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    boundary, combined via SUB -- case 2). PASS byte-identical + PASS
    same qemu-mips exit code. Verified: full MIPS + ARM baselines and
    make test (134/134) all still pass.
+** DONE case 26 mov $lsext/auto/oreg,,r2 ==> lu+or+add -- address-of-
+   local/param, the SP-relative sibling of the Address-of-Global
+   case 19 just above. No small-offset fast path here either: like
+   offset_to_R30 (address-of-global), goken's C_SACON fast path is
+   gated on `instoffset >= -BIG && instoffset < BIG`, permanently
+   dead since BIG=0 on MIPS -- so this always takes the generic
+   3-instruction LU+OR+ADDU path, reusing the pre-existing
+   base_and_offset_of_entity helper.
+   That helper had a real, previously-flagged-as-unverified bug
+   (see Phase 0's now-resolved TODO): the "+4 for the caller/RLINK-
+   slot adjustment" was on the Param branch instead of Local (Local
+   had no adjustment at all) -- the exact same bug shape as the
+   confirmed ARM one in base_and_offset_of_indirect. Confirmed via
+   `vl -a` on a fixture with a named FP/SP-relative local and param
+   (frame=$8192): goken computes offset 8192 for `x-8(FP)` (Local)
+   and 8204 for `y+8(SP)` (Param), only consistent with
+   autosize=8196 and the +4 on Local. Fixed by swapping the +4.
+   Fixing this exposed a SECOND, separate real bug while testing:
+   Rewritev.ml's TEXT-prologue rewrite always emitted an RLINK save
+   whenever autosize > 0, even for a LEAF function with a nonzero
+   frame (locals but no calls) -- goken's noop.c (the ATEXT case)
+   always reserves the +4-adjusted SP space, but only actually
+   saves RLINK `if(!(curtext->mark & LEAF))`. Fixed by gating the
+   RLINK-save half of the prologue on the same is_leaf table step1
+   already builds. Left a documented TODO for the analogous RET-side
+   gap (a leaf function with autosize > 0 should do a direct `ADD
+   $autosize,SP; JMP RLINK`, not this code's load-from-memory+
+   restore+jmp) since no fixture exercises RET on a leaf-with-locals
+   function yet.
+   Added tests/linker/mips_diff/lacon_mips.s (a named FP local and
+   SP param, combined via SUB). PASS byte-identical (only after both
+   fixes -- the base_and_offset_of_entity swap alone left an 8-byte
+   diff from the spurious RLINK save) + PASS same qemu-mips exit
+   code. Verified: full MIPS + ARM baselines and make test (134/134)
+   all still pass, including call_mips.s (non-leaf, run manually --
+   still its known, pre-existing, unrelated 4-byte scheduler diff).
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 26 mov $lsext/auto/oreg,,r2 ==> lu+or+add
 ** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
 ** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)
 ** TODO case 30 movw r,fr

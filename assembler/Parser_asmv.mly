@@ -262,11 +262,13 @@ rel:
 vgen:
  | gen { Gen $1 }
  | TLOHI { LoHi $1 }
+ | freg { GFReg $1 }
 
 /*(*TODO: far more cases *)*/
 vlgen:
  | lgen { match $1 with Left x -> Left (Gen x) | Right x -> Right x }
  | TLOHI { Left (LoHi $1) }
+ | freg { Left (GFReg $1) }
 
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/

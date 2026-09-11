@@ -271,6 +271,17 @@ let oprrr_arithf_opcode ((code, prec) : arithf_opcode * A.floatp_precision) : Bi
 let op_frrr (op : Bits.t) (FR r1 : freg) (FR r2 : freg) (FR r3 : freg) : Bits.t =
   op @ [(r1, 16); (r2, 11); (r3, 6)]
 
+(* claude: OP_RRR(SP(2,1)|(4<<21), rint, 0, rfloat) for MTC1 (case
+ * 30, is_mtc1=true) and OP_RRR(SP(2,1)|(0<<21), rint, 0, rfloat)
+ * for MFC1 (case 31, is_mtc1=false) -- the 4-vs-0 sub-field (bits
+ * 21-25) selects the direction; goken's C always passes 0 for the
+ * "r2" slot there, which per OP_RRR's own layout is really just
+ * this same sub-field, not an actual middle operand -- hence baking
+ * it directly into the opcode prefix here instead of a separate
+ * Bits.t tuple. *)
+let op_mfc_mtc (is_mtc1 : bool) (r_int : int) (r_float : int) : Bits.t =
+  sp 2 1 @ [((if is_mtc1 then 4 else 0), 21); (r_int, 16); (r_float, 11)]
+
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
@@ -497,6 +508,29 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
             let r = r_opt ||| rt in
             [ op_rrr (oprrr_mul_opcode op) rf r rZERO ]
+         ) }
+
+    (* case 30:	/* movw r,fr */ *)
+    (* claude: MTC1/MFC1 (case 30/31) have a mandatory MIPS I COP1
+     * transfer delay slot, just like a branch -- confirmed via
+     * `vl -a`: an isolated MTC1/MFC1 right before SYSCALL gets a
+     * plain NOR/NOP padded after it (nothing eligible to hoist
+     * there), and when something IS eligible, goken's sched.c fills
+     * the slot with a real hoisted instruction instead (it also
+     * specifically avoids putting a second COP1 transfer in that
+     * slot -- confirmed empirically, not fully characterized). Same
+     * already-documented, out-of-scope scheduler gap as every
+     * branch/call delay slot and the MUL/HI-LO hazard this session
+     * -- this always emits a plain nop, not a hoisted instruction. *)
+    | Move2 (W__, Left (Gen (GReg (R rf))), GFReg (FR rt)) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_mfc_mtc true rf rt; nop ]
+         ) }
+
+    (* case 31:	/* movw fr,r */ *)
+    | Move2 (W__, Left (GFReg (FR rf)), Gen (GReg (R rt))) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_mfc_mtc false rt rf; nop ]
          ) }
 
     (* case 32:	/* fadd fr1,[fr2],fr3 */ *)

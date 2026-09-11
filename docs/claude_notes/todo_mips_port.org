@@ -432,13 +432,47 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    PASS same (trivial, floats all start at 0) qemu-mips exit code.
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
+** DONE case 30 movw r,fr (MTC1) / case 31 movw fr,r (MFC1) --
+   required *new AST*, unlike case 32/33: none of Ast_asmv.ml's
+   existing operand types could represent a float register on one
+   side of a Move2. Added `GFReg of freg` to `vgen` (fitting the
+   type's existing pattern, same spot LoHi was added to for case
+   20/21). Object_file.version bumped (10->11). Grammar: `vgen`/
+   `vlgen` both got a plain `freg` alternative (mirroring how they
+   each needed their own TLOHI alternative for case 20/21 --
+   `vlgen` wraps `lgen`, which still only derives from `gen`/`ximm`).
+   New op_mfc_mtc helper for OP_RRR(SP(2,1)|(4-or-0<<21), rint, 0,
+   rfloat) -- the 4-vs-0 sub-field selects direction; goken's "r2=0"
+   is really that same sub-field, not a real middle operand, so it's
+   baked into the opcode prefix rather than a separate Bits.t tuple.
+   Discovered (via `vl -a`) that MTC1/MFC1 have a mandatory MIPS I
+   COP1-transfer delay slot, just like a branch: an isolated
+   MTC1/MFC1 right before SYSCALL gets a plain NOP padded after it,
+   and goken's sched.c fills the slot with a real hoisted
+   instruction when one's eligible (empirically, it also avoids
+   putting a *second* COP1 transfer in that slot, not fully
+   characterized why). Same already-documented, out-of-scope
+   scheduler gap as every other one this session -- emits a plain
+   nop unconditionally (size=8), same pattern as case 6/11/18's
+   branches.
+   Added two fixtures: case30_31_mips.s (MTC1 and MFC1 each right
+   before SYSCALL, nothing eligible to hoist, so goken pads a plain
+   NOP too -- byte-identical) and case30_31_check_mips.s (MTC1 then
+   MFC1 of the *same* register, round-tripping 42 and self-checking
+   with BEQ -- functionally correct but inherits both the COP1-hazard
+   NOP-padding gap and BEQ/JMP's own delay-slot gap, kept out of
+   test-mips.sh's CASES like the other BEQ-based fixtures). PASS
+   byte-identical (case30_31_mips.s) + PASS functionally (both,
+   qemu-mips exit codes match -- case30_31_mips.s itself actually
+   traps under qemu-mips on *both* sides identically, a `vl -a`-
+   confirmed match rather than a real functional check, since
+   nothing there sets up a valid syscall). Verified: full MIPS + ARM
+   baselines and make test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
 ** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
 ** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)
-** TODO case 30 movw r,fr
-** TODO case 31 movw fr,r
 ** TODO case 34 mov $con,fr ==> or/add $i,r,r2
 ** TODO case 37 movw r,mr
 ** TODO case 38 movw mr,r

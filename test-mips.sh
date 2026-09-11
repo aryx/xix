@@ -16,6 +16,7 @@ CASES=(
     "tests/linker/mips_diff/exit_linux_mips.s:_start"
     "tests/linker/mips_diff/addr_mips.s:_start"
     "tests/linker/mips_diff/kitchen_sink_mips.s:_start"
+    "tests/linker/mips_diff/case2_mips.s:_start"
 )
 # tests/linker/mips_diff/call_mips.s is deliberately NOT in this list:
 # it's functionally correct but not byte-identical yet (goken's

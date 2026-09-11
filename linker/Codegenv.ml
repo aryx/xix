@@ -259,6 +259,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ op_irr (opirr_arith_opcode op) v r rt ]
          ) }
 
+    (* case 2:		/* add/sub r1,[r2],r3 */ *)
+    (* claude: generic register-register-register arith; explicitly
+     * excludes SLL/SRL/SRA even though oprrr_arith_opcode already
+     * handles them, since goken's case 9 ("asl r1,[r2],r3") uses a
+     * *different* operand order for shifts (`OP_RRR(oprrr(p->as),
+     * r, p->from.reg, p->to.reg)` -- r and from.reg swapped relative
+     * to this case) and case 9 isn't ported yet -- reusing this arm
+     * for shifts would silently emit wrong bytes. *)
+    | Arith ((ADD _ | SUB _ | AND | OR | XOR | SGT _) as op, Reg rf, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_rrr (oprrr_arith_opcode op) rf r rt ]
+         ) }
+
     (* case 1:		/* mov[v] r1,r2 ==> OR r1,r0,r2 */ where r1 = RO
      * which was C_ZCON case in vl span.c which was then accepted for C_REG
      * in span.c cmp() and so was matching the entry in optab.c:

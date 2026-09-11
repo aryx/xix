@@ -3,6 +3,21 @@
 # See that file for rationale/design; this file is just checklist state.
 
 * Phase 0 -- harness
+** TODO investigate: base_and_offset_of_entity's Param/Local +4 split
+   (Codegenv.ml) has the *exact same shape* as a real, confirmed bug
+   found in ARM's Codegen5.ml equivalent (base_and_offset_of_indirect):
+   there, the "+4 for the caller/RLINK-slot adjustment" comment was
+   attached to the wrong branch (Param had it, Local didn't; should
+   have been the other way -- see docs/claude_notes/todo_arm_port.org's
+   case 4/34 entry). This MIPS version reads identically (Param:
+   `autosize + 4 + off`, Local: `autosize + off`, same comment
+   wording) and was almost certainly copy-pasted from the same
+   original source, so it may well have the identical bug -- but
+   nothing has exercised Entity(Local)/Entity(Param) on MIPS yet (no
+   fixture uses a named FP/SP-relative local), so this is unverified,
+   not confirmed. Check directly against goken with plain memory
+   access (`MOVW x-8(FP), R1` / `MOVW x+8(SP), R1` equivalents, no $)
+   before trusting either branch, same methodology as the ARM fix.
 ** DONE diff harness script (assemble+link both sides, cmp -l, qemu-mips)
    scripts/diff-mips.sh + test-mips.sh, mirrors the ARM ones. No -H
    flag needed (vl/ovl both default to ELF already). qemu-mips, not
@@ -112,10 +127,22 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
 ** DONE case 19 mov $lcon,r ==> lu+or
 ** DONE case 35 mov r,lext/luto/oreg ==> sw o(r)
 ** DONE case 36 mov lext/lauto/lreg,r ==> lw o(r30)
+** DONE case 2  add/sub r1,[r2],r3 -- generic register-register-
+   register arith (ADD/SUB/AND, plus OR/XOR/SGT via goken's
+   oprange-aliasing in span.c's buildop() equivalent, same pattern
+   as ARM's buildop()). oprrr_arith_opcode already had all these
+   opcodes encoded (used by case 1's OR trick already), so this was
+   just wiring up the match arm -- explicitly excludes SLL/SRL/SRA
+   even though oprrr_arith_opcode also handles those, since case 9
+   ("asl r1,[r2],r3") uses a *different*, swapped operand order for
+   shifts and isn't ported yet; reusing this arm for shifts would
+   silently emit wrong bytes. Added tests/linker/mips_diff/
+   case2_mips.s (ADD/SUB/AND chained into the exit code, avoiding
+   plain register-to-register MOVW which isn't ported yet either).
+   PASS byte-identical + PASS same qemu-mips exit code.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 2  add/sub r1,[r2],r3
 ** TODO case 6  beq r1,[r2],sbra
 ** TODO case 9  asl r1,[r2],r3
 ** TODO case 10 add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2

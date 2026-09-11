@@ -122,6 +122,13 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    only -- signed byte/halfword load is case 22, not this)
 ** DONE case 41 rfe -> movm.s.w.u 0(r13),[r15]
 ** DONE case 58 movbu R,R -> AND $0xff, R, R
+** DONE case 13 op $lcon, [R], R -- generic Arith (AND/ORR/EOR/ADD/
+   SUB/BIC/ADC/SBC/RSB/RSC/MVN/MOV, aliased via goken's buildop() to
+   the same oprange as AADD/AMVN/ACMP) with a too-big immediate:
+   load it into REGTMP via the literal pool first, then apply the
+   real op using REGTMP as the "from" register (size=8: LDR + OP).
+   Added tests/linker/arm_diff/lcon_arm.s (ADD $0x12345678,R0,R1).
+   PASS byte-identical + PASS same qemu-arm exit code first try.
 ** DONE case 12 movw $lcon, reg -- both the address-of-global slow
    path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
    too-big-immediate case (MOVW $0x12345678,R -> LDR from literal
@@ -144,7 +151,6 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
 
 Not yet in Codegen5.ml at all:
 ** TODO case 11 word
-** TODO case 13 op $lcon, [R], R
 ** TODO case 17 mull (64-bit long multiply, register-pair result)
 ** TODO case 22 movb/movh/movhu O(R),R -> lr,shl,shr
 ** TODO case 23 movh/movhu R,O(R) -> sb,sb

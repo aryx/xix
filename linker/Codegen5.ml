@@ -364,29 +364,50 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         let r =
           if (op =*= MVN || op =*= MOV)
           then 0
-          else 
+          else
             (* TODO: use |||  *)
-            match middle with 
-            | Some (R x) -> x 
-            | None -> rt 
+            match middle with
+            | Some (R x) -> x
+            | None -> rt
         in
-        let from_part =
-          match from with
-          (* case 1:		/* op R,[R],R */ *)
-          | Reg (R rf)      -> [(rf, 0)]
-          (* case 2:		/* movbu $I,[R],R */ *)
-          | Imm i ->
-              (match immrot i with
-              | Some (rot, v) -> [rot_bit; (rot, 8); (v, 0)]
-              | None -> error node "TODO: LCON"
-              )
-          (* case 3:		/* add R<<[IR],[R],R */ *)
-          | Shift (a, b, c) -> gshift a b c
-        in
-        { size = 4; x = None; binary = (fun () ->
-          [[gcond cond; gop_arith op] @ gsetbit opt @ [(r, 16); (rt, 12)] 
-            @ from_part]
-        )}
+        (match from with
+        (* case 1:		/* op R,[R],R */ *)
+        | Reg (R rf) ->
+            { size = 4; x = None; binary = (fun () ->
+              [[gcond cond; gop_arith op] @ gsetbit opt
+                @ [(r, 16); (rt, 12); (rf, 0)]]
+            )}
+        (* case 3:		/* add R<<[IR],[R],R */ *)
+        | Shift (a, b, c) ->
+            { size = 4; x = None; binary = (fun () ->
+              [[gcond cond; gop_arith op] @ gsetbit opt @ [(r, 16); (rt, 12)]
+                @ gshift a b c]
+            )}
+        | Imm i ->
+            (match immrot i with
+            (* case 2:		/* movbu $I,[R],R */ *)
+            | Some (rot, v) ->
+                { size = 4; x = None; binary = (fun () ->
+                  [[gcond cond; gop_arith op] @ gsetbit opt
+                    @ [(r, 16); (rt, 12); rot_bit; (rot, 8); (v, 0)]]
+                )}
+            (* claude: case 13: /* op $lcon, [R], R */ -- immrot
+             * failed, so load the constant into REGTMP via the
+             * literal pool first (`omvl(p, &p->from, REGTMP)` in
+             * codegen.c), then apply the real op using REGTMP as the
+             * "from" register instead of the immediate. Two
+             * instructions, hence size=8, unlike case 2's size=4. *)
+            | None ->
+                let (R rtmp) = rTMP in
+                { size = 8; x = Some (PoolOperand (Ast_asm.Int i));
+                  binary = (fun () ->
+                    [ gload_from_pool node cond rTMP;
+                      [gcond cond; gop_arith op] @ gsetbit opt
+                        @ [(r, 16); (rt, 12); (rtmp, 0)]
+                    ]
+                )}
+            )
+        )
 
     (* case 8:		/* sll $c,[R],R -> mov (R<<$c),R */ *)
     (* case 9:		/* sll R,[R],R -> mov (R<<R),R */ *)

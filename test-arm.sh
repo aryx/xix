@@ -28,6 +28,7 @@ CASES=(
     "tests/linker/arm_diff/call_arm.s:_start"
     "tests/linker/arm_diff/kitchen_sink.s:_start"
     "tests/linker/arm_diff/bigimm_arm.s:_start"
+    "tests/linker/arm_diff/lcon_arm.s:_start"
 )
 
 FAIL=0

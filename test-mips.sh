@@ -14,7 +14,14 @@ cd "$(dirname "$0")"
 CASES=(
     "tests/linker/mips_diff/hello_linux_mips.s:_start"
     "tests/linker/mips_diff/exit_linux_mips.s:_start"
+    "tests/linker/mips_diff/addr_mips.s:_start"
+    "tests/linker/mips_diff/kitchen_sink_mips.s:_start"
 )
+# tests/linker/mips_diff/call_mips.s is deliberately NOT in this list:
+# it's functionally correct but not byte-identical yet (goken's
+# sched.c hoists a real instruction into JAL's delay slot instead of
+# a plain NOP -- see docs/claude_notes/todo_mips_port.org). Run it
+# manually with scripts/diff-mips.sh to see the (small, known) diff.
 
 FAIL=0
 for c in "${CASES[@]}"; do

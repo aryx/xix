@@ -43,14 +43,61 @@
    byte-identical (326 bytes) + matching qemu-mips exit code (42)
    after. Verified: MIPS hello-world fixture, ARM baseline (5
    fixtures), and make test (134/134) all still pass.
-** TODO JAL (case 11) likely has the same missing-delay-slot gap
-   Case 18's fix was scoped to JMP/RET specifically; JAL (calls) has
-   the same mandatory delay slot and almost certainly needs the same
-   treatment, but goken's sched.c is a real instruction scheduler
-   that can fill a call's delay slot with a *useful* instruction
-   moved from the call site, not just a NOP -- matching that
-   byte-for-byte would be harder than case 18 was. Not fixed yet;
-   no current fixture exercises JAL to confirm/measure the gap.
+** DONE fix JAL's (case 11) missing delay slot -- functional bug, not just bytes
+   Confirmed via tests/linker/mips_diff/call_mips.s (hand-written,
+   no goken equivalent existed): missing delay-slot handling on JAL
+   was a real correctness bug, not just a byte-cosmetic one. Without
+   an explicit slot, the CALLER's next instruction (setting up the
+   exit code, in this fixture) got silently consumed as the delay
+   slot -- executing right after JAL but *before* the callee ran --
+   and its effect was then clobbered by the callee's own register
+   use, producing the wrong exit code (1 instead of 0) on xix while
+   goken's build ran correctly. Fixed by giving JAL the same NOP
+   treatment as case 18 (shared `nop` constant, size=8, hoisted the
+   NOP definition out of case 18 into a shared let). Exit codes now
+   match on both sides.
+   Byte-equality is NOT fully reached for call_mips.s though (4 bytes
+   still differ, offsets 180-184): goken's sched.c is a real
+   instruction scheduler (dependency analysis via depend()/
+   conflict()/offoverlap() in vl/sched.c) that hoists the callee's
+   first instruction into the delay slot instead of a plain NOP, and
+   duplicates it so it's still there for other entry paths. Decided
+   NOT to port this: it's a genuine scheduler implementation, much
+   bigger than any single case so far, for a payoff limited to a few
+   bytes on call-adjacent code that's already functionally correct.
+   call_mips.s is kept as a fixture but deliberately left out of
+   test-mips.sh's CASES list for this reason (run it manually with
+   scripts/diff-mips.sh to see the diff). Revisit only if a future
+   fixture's byte-equality actually depends on it.
+** DONE fix Codegenv.ml's offset_to_R30 (address-of-global) -- and why it was never started
+   Mirrors the ARM immrot/BIG story (Codegen5.ml), but simpler in the
+   end. offset_to_R30 had the same kind of stub ARM's offset_to_R12
+   did ("LATER? x - BIG optimisation"), and the dispatch code had two
+   dead-end `failwith "TODO: ..."` branches for any nonzero
+   R30-relative offset -- confirmed by tests/linker/mips_diff/
+   kitchen_sink_mips.s (hand-written, two GLOBLs at different
+   offsets, same setup that found the ARM bug), which crashed ovl
+   outright rather than just producing wrong bytes.
+   Root-caused by reading goken's actual span.c aclass() (the D_ADDR/
+   SDATA case): the fast R30-relative-ADD path's condition is
+   `instoffset >= -BIG && instoffset < BIG && instoffset != 0`, and
+   goken's own linkers/vl/l.h sets `BIG = 0` (an old value of 32766
+   is left commented out right above it) -- collapsing the condition
+   to `instoffset >= 0 && instoffset < 0`, which no integer ever
+   satisfies. So this fast path is permanently dead in goken *itself*
+   on MIPS, unlike ARM where BIG=4092 could occasionally still make
+   it reachable for a large enough data segment. That's exactly why
+   it was never started here: matching goken means never taking it,
+   for any offset, so there was nothing to port beyond "always fall
+   through to the absolute-constant (lu+or) load" -- which is what
+   the fix now does unconditionally, replacing both failwith branches
+   with a comment pointing at this explanation. Heavily commented in
+   Codegenv.ml itself too, since neither the ARM nor the MIPS version
+   of this mechanism was well understood going in.
+   PASS: byte-identical (both addr_mips.s and kitchen_sink_mips.s,
+   the latter on the very first run after the fix) + matching
+   qemu-mips behavior. Verified: full MIPS + ARM baselines and
+   make test (134/134) all still pass.
 
 * Phase 1 -- asm.c case backlog (goken/linkers/vl/asm.c)
 Cases with a matching (* case N: *) comment already in Codegenv.ml:

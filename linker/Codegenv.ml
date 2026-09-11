@@ -46,9 +46,31 @@ let constant_kind i =
   then Some i
   else None
 
-(* LATER? x - BIG optimisation *)
-let offset_to_R30 x =
-  x
+(* claude: BIG is the bias goken's vl gives R30 (aka SB, aka rSB
+ * below) -- R30 is set up at program start to point BIG bytes into
+ * the data segment, so a *later* MOVW $sym(SB) could in principle
+ * reach it with one `ADD $(offset-BIG), R30, Rt` instead of loading
+ * the full 32-bit absolute address (see the "lu+or" case below).
+ * This is the exact same idea as ARM's R12/BIG (see Codegen5.ml's
+ * offset_to_R12/immrot and docs/claude_notes/notes_arm_port_plan.txt)
+ * -- except on MIPS goken's own linkers/vl/l.h sets `BIG = 0` (an
+ * old value of 32766 is left commented out right above it). That
+ * makes goken's actual fast-path condition,
+ *   instoffset >= -BIG && instoffset < BIG && instoffset != 0
+ * (span.c's aclass(), the D_ADDR/SDATA case), collapse to
+ *   instoffset >= 0 && instoffset < 0
+ * which no integer ever satisfies -- so on MIPS this fast path is
+ * permanently dead in goken itself, not just unimplemented here.
+ * That's why it was never ported: matching goken means *never*
+ * taking it, for any offset, so there was nothing to port beyond
+ * "always fall through to the absolute-constant load". This is
+ * simpler than the ARM story, where BIG=4092 could occasionally
+ * still make the fast path reachable for a large enough data
+ * segment; on MIPS there is no such live case to handle.
+ *)
+let big = 0
+
+let offset_to_R30 x = x - big
 
 let base_and_offset_of_entity node symbols2 autosize x =
   match x with
@@ -178,6 +200,20 @@ let op_jmp (op : Bits.t) (i : int) : Bits.t =
  *)
 let op_last = sp 1 7
 
+(* claude: MIPS jump/branch instructions have a mandatory delay slot
+ * -- the instruction right after a jump always executes too, jump
+ * or not. goken's noops() (vl/noop.c) fills it with a NOP whenever
+ * nothing useful can be scheduled there, and Plan9's canonical MIPS
+ * NOP encoding is `NOR R0,R0,R0` (funct 0x27), not the all-zero
+ * `SLL R0,R0,0` some other toolchains use -- verified against
+ * goken's actual output byte-for-byte. Used below for both JMP
+ * (case 18) and JAL (case 11); goken's sched.c can additionally fill
+ * a *call's* delay slot with a real instruction hoisted from the
+ * call target (duplicating it there) instead of a plain NOP, which
+ * this doesn't replicate -- see docs/claude_notes/todo_mips_port.org.
+ *)
+let nop = op_rrr (op 4 7) rZERO rZERO rZERO
+
 (*****************************************************************************)
 (* More complex code generation helpers *)
 (*****************************************************************************)
@@ -255,27 +291,23 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | JMP { contents = (IndirectJump rt) } ->
         let r = rZERO in
         let op_jmp = op 1 0 in
-        (* claude: MIPS jump/branch instructions have a mandatory
-         * delay slot -- the instruction right after a jump always
-         * executes too, jump or not. goken's noops() (vl/noop.c)
-         * fills it with a NOP when nothing useful is available to
-         * schedule there (this case is the expansion of a leaf-
-         * function RET with no locals, so nothing is); without it
-         * the word right after the jump would be whatever
-         * instruction happened to follow in memory, executed
-         * unconditionally as part of the jump. Plan9's canonical
-         * MIPS NOP encoding is `NOR R0,R0,R0` (funct 0x27), not the
-         * all-zero `SLL R0,R0,0` some other toolchains use --
-         * verified against goken's actual output byte-for-byte.
-         *)
-        let nop = op_rrr (op 4 7) rZERO rZERO rZERO in
+        (* delay slot -- see the `nop` definition above *)
         { size = 8; x = None; binary = (fun () ->
            [ op_rrr op_jmp rZERO rt r; nop ]
          ) }
     (* case 11:	/* jmp lbra */ *)
     | JAL { contents = (Absolute _) } ->
-        { size = 4; x = None; binary = (fun () ->
-          [ gbranch_static node true ]
+        (* delay slot -- see the `nop` definition above. Unlike case
+         * 18's RET expansion, this doesn't yet replicate goken's
+         * sched.c hoisting a real instruction from the call target
+         * into the slot -- functionally correct (verified: fixes a
+         * real bug where the caller's next instruction was silently
+         * consumed as the delay slot instead, clobbered by the
+         * callee), but not byte-identical to goken's scheduled
+         * output. See docs/claude_notes/todo_mips_port.org.
+         *)
+        { size = 8; x = None; binary = (fun () ->
+          [ gbranch_static node true; nop ]
           ) }
     (* --------------------------------------------------------------------- *)
     (* Memory *)
@@ -290,30 +322,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             (* stricter? what does vl do with that? confusing I think *)
             error node "string not allowed in MOVW; use DATA"
         | Address (Global (global, _offsetTODO)) ->
-            let from_part_when_small_offset_to_R30 =
-              try 
-                let v = Hashtbl.find env.syms (T.symbol_of_global global) in
-                match v with
-                | T.SData2 (offset, _kind) ->
-                    let final_offset = offset_to_R30 offset in
-                    (* super important condition! for bootstrapping
-                     * setR30 in MOVW $setR30(SB), R30 and not
-                     * transform it in ADD offset_set_R30, R30, R30.
-                     *)
-                    if final_offset = 0 
-                    then None
-                    else failwith "TODO: final_offset <> 0"
-                | T.SText2 _real_pc -> None
-              (* layout_text has not been fully done yet so we may have
-               * the address of a procedure we don't know yet
+              (* claude: no fast R30-relative path here -- see the
+               * long comment on offset_to_R30/big above for why:
+               * goken's own BIG=0 makes it permanently unreachable
+               * in vl itself, so always fall through to loading the
+               * full absolute address below. (offset_to_R30 is still
+               * called from base_and_offset_of_entity for indirect
+               * addressing -- e.g. O(R30) -- which is a different,
+               * still-live code path; only the address-of-global
+               * fast path here is dead.)
                *)
-              with Not_found -> None
-            in
-            (match from_part_when_small_offset_to_R30 with
-            | Some _ ->
-                 failwith "TODO: from_part_when_small_offset_to_R30 is a Some"
-            | None ->
-
               (* case 19:	/* mov $lcon,r ==> lu+or */ *)
               { size = 8; x = None; binary = (fun () ->
               (* similar to WORD case *)
@@ -332,7 +350,6 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   op_irr (opirr_arith_opcode OR) lcon rt rt;
                 ]
               )}
-            )
         | Address (Local _ | Param _) -> raise Todo
         )
 

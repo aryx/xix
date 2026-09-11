@@ -140,11 +140,19 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    case2_mips.s (ADD/SUB/AND chained into the exit code, avoiding
    plain register-to-register MOVW which isn't ported yet either).
    PASS byte-identical + PASS same qemu-mips exit code.
+** DONE case 9  asl r1,[r2],r3 -- shift-by-register (SLL/SRL/SRA),
+   same shape as case 2 but with the shift-amount register and the
+   value-being-shifted register swapped in the encoding call
+   (goken's `OP_RRR(oprrr(p->as), r, p->from.reg, p->to.reg)` vs
+   case 2's `OP_RRR(oprrr(p->as), p->from.reg, r, p->to.reg)`) --
+   exactly the gap flagged when case 2 was ported. Added
+   tests/linker/mips_diff/case9_mips.s (SLL then SRL chained into
+   the exit code: 1<<4=16, 16>>2=4). PASS byte-identical + PASS same
+   qemu-mips exit code.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
 ** TODO case 6  beq r1,[r2],sbra
-** TODO case 9  asl r1,[r2],r3
 ** TODO case 10 add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2
 ** TODO case 12 movbs r,r
 ** TODO case 13 movbu r,r

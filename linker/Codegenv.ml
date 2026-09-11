@@ -273,6 +273,18 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ op_rrr (oprrr_arith_opcode op) rf r rt ]
          ) }
 
+    (* case 9:		/* asl r1,[r2],r3 */ *)
+    (* claude: shift-by-register; same shape as case 2 just above,
+     * but with `r` (the shift-amount register) and `rf` (the value
+     * being shifted) swapped in the encoding call -- goken's
+     * `OP_RRR(oprrr(p->as), r, p->from.reg, p->to.reg)` vs case 2's
+     * `OP_RRR(oprrr(p->as), p->from.reg, r, p->to.reg)`. *)
+    | Arith ((SLL W | SRL W | SRA W) as op, Reg rf, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_rrr (oprrr_arith_opcode op) r rf rt ]
+         ) }
+
     (* case 1:		/* mov[v] r1,r2 ==> OR r1,r0,r2 */ where r1 = RO
      * which was C_ZCON case in vl span.c which was then accepted for C_REG
      * in span.c cmp() and so was matching the entry in optab.c:

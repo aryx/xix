@@ -130,13 +130,9 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    test-mips.sh's CASES. Verified: full MIPS + ARM baselines and
    make test (134/134) all still pass.
 ** DONE case 5  syscall
-** DONE case 7  mov r, soreg ==> sw o(r)
-** DONE case 8  mov soreg, r ==> lw o(r)
 ** DONE case 11 jmp lbra
 ** DONE case 18 jmp [r1],0(r2)
 ** DONE case 19 mov $lcon,r ==> lu+or
-** DONE case 35 mov r,lext/luto/oreg ==> sw o(r)
-** DONE case 36 mov lext/lauto/lreg,r ==> lw o(r30)
 ** DONE case 2  add/sub r1,[r2],r3 -- generic register-register-
    register arith (ADD/SUB/AND, plus OR/XOR/SGT via goken's
    oprange-aliasing in span.c's buildop() equivalent, same pattern
@@ -496,11 +492,107 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    byte-identical (case34_mips.s) + PASS functionally (both).
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
+** DONE case 7 mov r,soreg ==> sw o(r) (fixed a real, previously
+   untested bug) / case 8 mov soreg,r ==> lw o(r) (same) / case
+   35/36 (Indirect variant added) -- discovered while starting to
+   port case 27/28 (float memory access, see the next entry): case
+   7/8's *existing*, already-committed implementation was wrong for
+   any nonzero offset, case 35/36 was missing an entire addressing
+   variant, and two separate assembler-level gaps (a missing
+   keyword and missing grammar rules) had made this whole family
+   untestable via real source until now.
+   Root cause (case 7/8): span.c's aclass() for a plain D_NONE
+   register-indirect operand (Indirect(reg,off), no $ symbol)
+   returns C_ZOREG only for offset==0 exactly, else C_SOREG if
+   `instoffset >= -BIG && instoffset < BIG` -- unsatisfiable for ANY
+   offset since BIG=0, the same dead-fast-path shape as
+   C_SECON/C_SACON (address-of) but never previously flagged for
+   this specific D_NONE/indirect-value case. So C_SOREG is ALSO
+   permanently dead: case 7/8's single-instruction fast path is only
+   ever reached for offset==0; any other offset needs case 35/36's
+   REGTMP-based expansion instead (confirmed via `vl -a`: `MOVW
+   R1,4(R5)` takes the 4-instruction path, `MOVW R1,0(R5)` the
+   1-instruction one). The old case 7/8 code (with a standing
+   "TODO: need look for offset if SOREG or LOREG" -- exactly this)
+   took the fast path unconditionally, previously untested since no
+   fixture used Indirect with a nonzero offset. Fixed by guarding
+   case 7/8 to offset==0 literally, and adding a new Indirect-based
+   match arm to case 35/36 (previously Entity-only) for any other
+   offset, reusing the exact same REGTMP expansion but with a plain
+   register base (no base_and_offset_of_entity needed).
+   Separately: every LOAD in this family (case 8/36/27, not the
+   STORE cases 7/35/28) has its own mandatory MIPS I load-delay-slot
+   hazard (the classic "the register loaded by lw isn't safe to use
+   in the very next instruction") -- confirmed via `vl -a` for each
+   variant (ZOREG/LOREG/Entity, int and float). This was ALSO a
+   previously-undetected gap in case 36 (committed earlier this
+   session, before any fixture exercised a bare Indirect or Entity
+   load) -- fixed by adding a plain nop after every load variant,
+   same already-documented out-of-scope scheduler pattern as
+   everywhere else this session (goken's sched.c sometimes hides it
+   by hoisting a real instruction instead).
+   Two assembler-level gaps found and fixed along the way, both
+   genuinely blocking rather than a codegen concern:
+   - "MOVF"/"MOVD" were entirely missing from Parse_asmv.ml's
+     keyword table (only "MOVW"/"MOVV" were mapped to TMOVE2) --
+     *every* MOVF/MOVD instruction, including ones already
+     "working" via case 32/33/34, had never actually been run
+     through a real parse (those fixtures' encoding was verified
+     correct by direct inspection, but the .s source itself
+     silently failed to assemble on xix's own toolchain until this
+     fix). Fixed by adding both keywords.
+   - `gen` (Parser_asmv.mly) had no production for plain
+     register-indirect (`N(Rx)`, no symbol) or bare-entity (`sym(SB)`
+     /`x(FP)`/`y(SP)`, no $) addressing at all -- only `GReg` via a
+     bare register. Both are marked with a long-standing "TODO: far
+     more cases" comment. Added `con TOPAR reg TCPAR -> Indirect` and
+     `name -> Entity`. This means case 35/36 (Entity-based store/load)
+     had *also* never been exercised via real assembly source before
+     now, only ever reachable through Rewritev.ml's own internally-
+     synthesized instructions.
+   Added tests/linker/mips_diff/case7_8_mips.s (int store, ZOREG +
+   LOREG, byte-identical) and case7_8_check_mips.s (functional
+   load round-trip, self-checked with BEQ, excluded from CASES for
+   the usual scheduler-gap reasons). PASS byte-identical
+   (case7_8_mips.s) + PASS functionally (both). Verified: full MIPS
+   + ARM baselines and make test (134/134) all still pass.
+** DONE case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r) (F__ only) /
+   case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r) (F__ only) --
+   float memory access, reusing the same ZOREG/LOREG/Entity split
+   and REGTMP expansion just fixed/completed for case 7/8/35/36
+   above (this is what surfaced those bugs in the first place). New
+   op_irr_raw helper (like op_irr but taking a plain int instead of
+   a typed reg for r3, since the destination/source here is a float
+   register). F__ (single-precision) only -- D__ needs two word
+   transfers (to freg+1 and freg, a double occupies a consecutive
+   float-register pair) and opirr_mem has no D__ encoding yet either
+   (see its own "TODO: opirr_mem D__"), left as a follow-up. goken's
+   C also diags if the base register is REGTMP itself for the
+   slow-path arms; not replicated, a real assembler-error case no
+   fixture exercises.
+   Added tests/linker/mips_diff/case27_28_mips.s (float store,
+   ZOREG + LOREG -- the Entity/GLOBL variant is NOT covered by a
+   fixture: a GLOBL with no DATA statement produces a very different
+   total file size between goken and xix, 4104 vs 358 bytes in one
+   attempt, seemingly an unrelated pre-existing BSS-layout
+   difference, not investigated further here -- see the next entry)
+   and case27_28_check_mips.s (functional float load round-trip
+   through MFC1). PASS byte-identical (case27_28_mips.s) + PASS
+   functionally (both). Verified: full MIPS + ARM baselines and make
+   test (134/134) all still pass.
+** TODO investigate: GLOBL-without-DATA total file size mismatch --
+   flagged above while testing case 27/28's Entity variant. A
+   GLOBL'd symbol with no corresponding DATA statement produced very
+   different total executable sizes between goken (~4300 bytes) and
+   xix (~350-4100 bytes across two attempts) -- likely a BSS/data-
+   segment layout difference unrelated to case 27/28 itself (every
+   *working* GLOBL+DATA fixture, e.g. kitchen_sink_mips.s, matches
+   fine), but not root-caused. Check Layoutv.ml/Datagen.ml's BSS
+   handling against goken's `dodata()` before trusting a GLOBL-only
+   symbol's layout on MIPS.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
-** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)
 ** TODO case 37 movw r,mr
 ** TODO case 38 movw mr,r
 ** TODO case 39 rfe ==> jmp+rfe

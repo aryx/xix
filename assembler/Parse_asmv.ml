@@ -111,6 +111,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
 
       | "MOVW" -> TMOVE2 W__
       | "MOVV" -> TMOVE2 V__
+      | "MOVF" -> TMOVE2 F__
+      | "MOVD" -> TMOVE2 D__
 
       | "ABSF" -> TARITHF (ABS_, A.F) | "ABSD" -> TARITHF (ABS_, A.D)
       | "NEGF" -> TARITHF (NEG_, A.F) | "NEGD" -> TARITHF (NEG_, A.D)

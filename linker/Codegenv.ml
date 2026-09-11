@@ -829,6 +829,40 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* Store/Load *)
 
+    (* claude: BIG=0 strikes again here, in a form that wasn't
+     * previously flagged: span.c's aclass() for a plain D_NONE
+     * register-indirect operand (Indirect(reg,off), no $ symbol)
+     * returns C_ZOREG only for offset==0 exactly, else C_SOREG if
+     * `instoffset >= -BIG && instoffset < BIG` -- which, same as
+     * every other BIG-gated fast path this session, is
+     * unsatisfiable for ANY offset since BIG=0. So C_SOREG is ALSO
+     * permanently dead: case 7/8's single-instruction fast path
+     * below is only ever reached for offset==0 (matching C_ZOREG,
+     * which cmp() accepts wherever SOREG is needed); any OTHER
+     * offset needs case 35/36's REGTMP-based expansion instead --
+     * confirmed empirically against goken directly (`vl -a`:
+     * `MOVW R1,4(R5)` takes the 4-instruction path, `MOVW R1,0(R5)`
+     * the 1-instruction one). The old code here (a standing "TODO:
+     * need look for offset if SOREG or LOREG" -- exactly this) took
+     * the fast path unconditionally, previously untested since no
+     * fixture used Indirect with a nonzero offset. Found while
+     * porting case 27/28 (float memory access), which share this
+     * exact SOREG/LOREG split.
+     *
+     * Separately: every LOAD below (case 8/36/27, not the STORE
+     * cases 7/35/28) has its own mandatory MIPS I load-delay-slot
+     * hazard -- the classic "the register loaded by lw isn't safe
+     * to use in the very next instruction" -- confirmed via `vl -a`
+     * directly for each variant (ZOREG/LOREG/Entity, int and
+     * float). Same already-documented, out-of-scope scheduler gap
+     * as every other one this session (goken's sched.c fills it
+     * with a real hoisted instruction when eligible); this always
+     * emits a plain nop. Previously-undetected gap in the existing
+     * case 36 (committed earlier this session, before any fixture
+     * exercised a bare register-indirect or Entity load) as well as
+     * the new case 8/27 code -- no fixture had used Indirect
+     * addressing at all until this investigation. *)
+
     (* case 35:	/* mov r,lext/luto/oreg ==> sw o(r) */ *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Entity ent)) ->
         { size = 16; x = None; binary = (fun () ->
@@ -842,9 +876,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             op_irr (opirr_mem W__ STR) 0 rTMP rf;
           ]
           ) }
-    (* case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */ *)    
-    | Move2 (W__, Left (Gen (Entity ent)), Gen (GReg rt)) ->
+    (* case 35 (LOREG variant): same as just above, but the base is
+     * already a plain register (no base_and_offset_of_entity
+     * needed) -- see the BIG=0/SOREG comment above. *)
+    | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) when offset <> 0 ->
         { size = 16; x = None; binary = (fun () ->
+          [ op_irr op_last (offset lsr 16) rZERO rTMP;
+            op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+            op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+            op_irr (opirr_mem W__ STR) 0 rTMP rf;
+          ]
+          ) }
+    (* case 36:	/* mov lext/lauto/lreg,r ==> lw o(r30) */ *)
+    | Move2 (W__, Left (Gen (Entity ent)), Gen (GReg rt)) ->
+        { size = 20; x = None; binary = (fun () ->
             let (rbase, offset) =
                  base_and_offset_of_entity node env.syms env.autosize ent
             in
@@ -853,25 +898,31 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               op_irr (opirr_arith_opcode OR) v rTMP rTMP;
               op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
               op_irr (opirr_mem W__ LDR) 0 rTMP rt;
+              nop;
+            ]
+          ) }
+    (* case 36 (LOREG variant) -- see case 35's LOREG comment above. *)
+    | Move2 (W__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) when offset <> 0 ->
+        { size = 20; x = None; binary = (fun () ->
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr (opirr_mem W__ LDR) 0 rTMP rt;
+              nop;
             ]
           ) }
 
     (* case 7:		/* mov r, soreg ==> sw o(r) */ *)
-    | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rt, offset))) ->
-        (* TODO: need look for offset if SOREG or LOREG *)
+    (* claude: ZOREG (offset==0) only -- see the BIG=0/SOREG comment
+     * on case 35/36 above for any other offset. *)
+    | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rt, 0))) ->
         { size = 4; x = None; binary = (fun () ->
-          let r = rt in
-          (* TODO: regoff *)
-          let v = offset in
-          [ op_irr (opirr_mem W__ STR) v r rf ]
+          [ op_irr (opirr_mem W__ STR) 0 rt rf ]
          ) }
     (* case 8:		/* mov soreg, r ==> lw o(r) */ *)
-    | Move2 (W__, Left (Gen (Indirect (rf, offset))), Gen (GReg rt)) ->
-         { size = 4; x = None; binary = (fun () ->
-           let r = rf in
-           (* TODO: regoff *)
-           let v = offset in
-           [ op_irr (opirr_mem W__ LDR) v r rt ]
+    | Move2 (W__, Left (Gen (Indirect (rf, 0))), Gen (GReg rt)) ->
+         { size = 8; x = None; binary = (fun () ->
+           [ op_irr (opirr_mem W__ LDR) 0 rf rt; nop ]
          ) }
 
     (* --------------------------------------------------------------------- *)

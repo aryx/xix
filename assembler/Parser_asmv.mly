@@ -236,6 +236,8 @@ reg:
 /*(*TODO: far more cases *)*/
 gen:
  | reg   { GReg $1 }
+ | con TOPAR reg TCPAR { Indirect ($3, $1) }
+ | name  { Entity $1 }
 
 ximm:
  | imm             { Int $1 }

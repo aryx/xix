@@ -215,7 +215,12 @@ let oprrr_arith_opcode (code : arith_opcode) : Bits.t =
 
   | _ -> failwith "TODO:oprrr"
 
-let _oprrr_mul_opcode (code : mul_opcode) : Bits.t =
+(* claude: only MUL(W,_) is actually reachable below (case 22) --
+ * goken's own optab.c has no row at all for ADIV/AREM (nor their V
+ * variants), so those mnemonics are simply unsupported by vl, not
+ * just unported here. AMULU aliases the exact same oprange as AMUL
+ * (span.c: `oprange[AMULU] = oprange[r]`), matching MUL(W,U) below. *)
+let oprrr_mul_opcode (code : mul_opcode) : Bits.t =
   match code with
   | REM S | DIV (W, S) -> op 3 2
   | REM U | DIV (W, U) -> op 3 3
@@ -402,6 +407,61 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
             let r = r_opt ||| rt in
             [ op_srr (opirr_arith_opcode op) v r rt ]
+         ) }
+
+    (* case 22:	/* mul r1,r2 */ *)
+    (* claude: real MIPS MULT has no destination register field at
+     * all (the result always lands in HI/LO, retrieved separately
+     * via case 20's MFHI/MFLO) -- goken's optab.c row for AMUL has
+     * "to" declared C_NONE, so REGZERO fills that encoding slot
+     * unconditionally. xix's own grammar (Parser_asmv.mly) parses
+     * the 2-operand form "MUL R1,R2" into ArithMul(MUL,R1,None,R2)
+     * (dest=R2, no r_opt) rather than into r_opt -- but `r_opt|||rt`
+     * recovers the same R2 either way, landing on the identical
+     * encoding as goken's own parser (confirmed via `vl -a`
+     * directly: R1 ends up in the rt field, R2 in rs, matching
+     * OP_RRR(op, p->from.reg=R1, p->reg=R2, REGZERO) exactly). *)
+    | ArithMul ((MUL (W, _) as op), rf, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_rrr (oprrr_mul_opcode op) rf r rZERO ]
+         ) }
+
+    (* case 20:	/* mov lohi,r */ *)
+    (* claude: MFHI/MFLO -- reads the implicit HI/LO result register
+     * (see case 22 above) into a real register. goken's C special-
+     * cases on `p->from.type == D_LO` to flip between OP(2,0) and
+     * OP(2,2); here that's just direct pattern matching on the
+     * lohireg. Note: goken's *scheduler* (sched.c) sometimes pads
+     * two NOPs around a MUL result being read via MFHI/MFLO (a real
+     * MIPS I HI/LO hazard) -- confirmed empirically via `vl -a`, but
+     * the exact trigger isn't fully characterized (it's not simply
+     * "immediately after the MUL": some adjacent arrangements need
+     * no padding while some buffered ones do -- see
+     * docs/claude_notes/todo_mips_port.org). Not ported, same
+     * already-documented reason as every other sched.c gap this
+     * session (branch/call delay slots) -- a fixture chaining MUL
+     * into MFHI/MFLO will be functionally correct but not
+     * necessarily byte-identical. *)
+    | Move2 (W__, Left (LoHi LO), Gen (GReg rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_rrr (op 2 2) rZERO rZERO rt ]
+         ) }
+    | Move2 (W__, Left (LoHi HI), Gen (GReg rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_rrr (op 2 0) rZERO rZERO rt ]
+         ) }
+
+    (* case 21:	/* mov r,lohi */ *)
+    (* claude: MTHI/MTLO -- the reverse of case 20, writing a real
+     * register's value into the implicit HI or LO register. *)
+    | Move2 (W__, Left (Gen (GReg rf)), LoHi LO) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_rrr (op 2 3) rZERO rf rZERO ]
+         ) }
+    | Move2 (W__, Left (Gen (GReg rf)), LoHi HI) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_rrr (op 2 1) rZERO rf rZERO ]
          ) }
 
     (* case 12:	/* movbs r,r */ *)

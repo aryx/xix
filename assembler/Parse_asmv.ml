@@ -83,7 +83,9 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
       | "DIVV" -> TMULOP (DIV (V, A.S)) | "DIVVU"  -> TMULOP (DIV (V, A.U))
 
       | "REM" -> TMULOP (REM A.S) | "REMU" -> TMULOP (REM A.U)
-    
+
+      | "HI" -> TLOHI HI | "LO" -> TLOHI LO
+
       | "JMP" -> TJMP | "JAL" -> TJAL
 
       | "BEQ" -> TBEQ | "BNE" -> TBNE

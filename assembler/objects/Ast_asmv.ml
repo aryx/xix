@@ -42,6 +42,13 @@ type mreg = M of int (* between 0 and 31 *)
 type fcrreg = FCR of int (* between 0 and 31 *)
 [@@deriving show]
 
+(* claude: goken's D_HI/D_LO -- the two implicit registers real
+ * MIPS MULT/DIV write their result into (see case 20/21 in
+ * Codegenv.ml, and case 22's comment on why MUL itself has no
+ * destination register at all). *)
+type lohireg = HI | LO
+[@@deriving show]
+
 (* reserved by the linker *)
 let rTMP = R 28
 let rSP = R 29
@@ -78,6 +85,7 @@ type gen =
 (* alt: move_operand2 *)
 type vgen =
   | Gen of gen
+  | LoHi of lohireg
   (* | ... far more stuff *)
 [@@deriving show {with_path = false}]
 
@@ -200,6 +208,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_vgen x =
     match x with
     | Gen x -> mov_operand x
+    | LoHi _ -> ()
   in
   match i with
   | Move1 (_, x1, gen2) -> 

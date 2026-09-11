@@ -43,6 +43,7 @@ module L = Location_cpp
 %token <Ast_asmv.tlb_kind> TTLB
 %token <Ast_asmv.move1_size> TMOVE1
 %token <Ast_asmv.move2_size> TMOVE2
+%token <Ast_asmv.lohireg> TLOHI
 
 %token TRET TNOP
 
@@ -260,10 +261,12 @@ rel:
 /*(*TODO: far more cases *)*/
 vgen:
  | gen { Gen $1 }
+ | TLOHI { LoHi $1 }
 
 /*(*TODO: far more cases *)*/
 vlgen:
  | lgen { match $1 with Left x -> Left (Gen x) | Right x -> Right x }
+ | TLOHI { Left (LoHi $1) }
 
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/

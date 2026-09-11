@@ -290,12 +290,59 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    1<<4=16, 16>>2=4, 4>>1=2). PASS byte-identical + PASS same
    qemu-mips exit code. Verified: full MIPS + ARM baselines and make
    test (134/134) all still pass.
+** DONE case 20 mov lohi,r / case 21 mov r,lohi / case 22 mul r1,r2
+   -- MFHI/MFLO, MTHI/MTLO, and MUL. Required *new AST*, unlike
+   every other MIPS case so far: goken's D_HI/D_LO pseudo-registers
+   had no representation at all in Ast_asmv.ml. Added `type
+   lohireg = HI | LO` and a new `LoHi of lohireg` constructor on
+   `vgen` (the type's own pre-existing "| ... far more stuff"
+   comment anticipated exactly this kind of extension), reusing
+   Move2 rather than adding a whole new instr case -- goken's own
+   optab.c only lists HI/LO under AMOVW/AMOVV, so this is a Move2
+   (register-move) concern, not Move1's. Unlike ARM's Ast_asm5.ml,
+   there's no hand-maintained Meta_ast_asmv.ml reflection file for
+   MIPS to keep in sync -- one less file to touch than the VFP
+   MOVWF/MOVFW addition earlier this session. Bumped
+   Object_file.version (9->10). Grammar: new TLOHI token, plus a
+   `vlgen` alternative (`vlgen: ... | TLOHI { Left (LoHi $1) }`) --
+   discovered vlgen wraps `lgen`, which only derives from `gen |
+   ximm`, so LoHi needed its own alternative there too, not just on
+   `vgen`. Lexer: "HI"/"LO" keywords.
+   Case 22 (MUL) has no destination register at all in real MIPS --
+   the result always lands in HI/LO (goken's optab.c row for AMUL
+   declares "to" as C_NONE, REGZERO fills that encoding slot
+   unconditionally); xix's own grammar puts the 2-operand form's
+   second register into ArithMul's `dest` slot rather than `r_opt`,
+   but `r_opt|||rt` recovers the same value either way (confirmed
+   identical to goken's own encoding via `vl -a`). Only MUL(W,_) is
+   implemented -- goken's optab.c has no row at all for ADIV/AREM
+   (nor their V variants), so those mnemonics are simply unsupported
+   by vl itself, not just unported here; AMULU aliases the same
+   oprange as AMUL (span.c's buildop()-equivalent), so both MUL
+   signs work.
+   Discovered along the way (empirically, via `vl -a`, not fully
+   characterized): goken's sched.c pads two NOPs around certain
+   MUL-result HI/LO read/write transitions -- e.g. MUL then MFLO
+   then MFHI then MTLO needs no padding, but MUL then MFLO then (an
+   unrelated buffer instruction) then MFHI *does*, non-monotonically
+   in the buffering. This is the same already-documented, out-of-
+   scope scheduler subsystem as every branch/call delay slot this
+   session (sched.c), just a different corner of it -- not chased
+   further, same reasoning as call_mips.s's JAL gap.
+   Added three fixtures: case22_mips.s (MUL alone, no HI/LO
+   readback, byte-identical), mullohi_mips.s (MTLO/MTHI/MFLO/MFHI
+   round-trip with *no* MUL at all, byte-identical), and
+   mullohi_check_mips.s (MUL immediately followed by MFLO,
+   self-checked with BEQ -- functionally correct but inherits *both*
+   the MUL/HI-LO scheduler gap *and* BEQ/JMP's own delay-slot gap,
+   so kept out of test-mips.sh's CASES like the other BEQ-based
+   fixtures). PASS byte-identical (case22_mips.s, mullohi_mips.s) +
+   PASS functionally (all three, qemu-mips exit codes match).
+   Verified: full MIPS + ARM baselines and make test (134/134) all
+   still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 20 mov lohi,r
-** TODO case 21 mov r,lohi
-** TODO case 22 mul r1,r2
 ** TODO case 23 add $lcon,r1,r2 ==> lu+or+add
 ** TODO case 24 mov $ucon,,r ==> lu r
 ** TODO case 25 add/and $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2

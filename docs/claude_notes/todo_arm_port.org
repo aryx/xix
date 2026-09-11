@@ -6,23 +6,27 @@
 ** DONE diff harness script (assemble+link both sides, cmp -l, qemu-arm)
    scripts/diff-arm.sh + test-arm.sh (bash, not Testo -- see plan doc).
 ** TODO fix o5l exit-code propagation on error node "TODO: ..."
-** TODO ELF layout parity (section-header presence, program-header count)
-   Confirmed NOT the qemu-crash cause (the two LOAD segments byte-match
-   goken exactly); still a real cmp diff source: goken emits 3 program
-   headers + a section-header table, xix emits 2 program headers and
-   no section headers. See remaining cmp -l offsets on
-   hello_linux_arm.s: 33,34,45,49,51,121,133,137,141,145,165.
+** DONE ELF layout parity (section-header presence, program-header count)
+   Confirmed NOT the qemu-crash cause (the two LOAD segments already
+   byte-matched goken). Implemented in Elf.ml/Elf.mli/Execgen.ml: the
+   3rd (NOPTYPE/symtab-placeholder) program header, and the .text/
+   .data/.strtab section header table + string table, both ported
+   from goken's linkers/8l/elf.c (elf32/elf32sectab) -- every constant
+   (offsets, the 0x10000 section addralign, the "sh_size=14 but
+   content is 21 bytes" quirk) traced there, not guessed. Also added
+   `-s` to the harness's goken invocation to strip goken's native
+   Plan9 symbol/debug table (embeds the invocation cwd, not
+   byte-reproducible, and xix never emits one anyway).
 
 * Phase 0.5 -- baseline corpus (constructs already ported)
 ** TODO tests/linker/hello_linux_arm.s: cmp -l clean vs goken
-   Remaining diffs (after the kencc_compatible fix below): the ELF
-   header/segment-count items above, plus offsets 193-198 and 387-395,
-   which are goken's synthetic "branch round the literal pool"
-   instruction (flushpool()'s skip=true case, see layout.c) that
-   Layout5.ml doesn't yet emit -- xix's pool constant sits 4 bytes
-   earlier and isn't preceded by a jump-over instruction. Functionally
-   harmless here (dead code after a syscall exit) but needed for
-   byte-equality.
+   Down to 6 differing bytes (offsets 165, 193-198), all from the
+   same remaining gap: goken's synthetic "branch round the literal
+   pool" instruction (flushpool()'s skip=true case, see layout.c)
+   that Layout5.ml doesn't yet emit -- xix's pool constant sits 4
+   bytes earlier and isn't preceded by a jump-over instruction.
+   Functionally harmless here (dead code after a syscall exit) but
+   needed for byte-equality. Next thing to close.
 ** DONE tests/linux_arm.s: runs correctly under qemu-arm
    Root cause found and fixed: linker/Flags.ml's kencc_compatible
    defaulted to true, which sets the MOV instruction's Rn field to the

@@ -58,6 +58,9 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
       seek_out chan.oc offset_disk_data;
       ds |> Array.iter (output_char chan.oc);
 
+      (* claude: section header table (seeks itself, see Elf.write_sections) *)
+      Elf.write_sections config sizes chan.oc;
+
       ()
 (*e: function [[Execgen.gen]] *)
 (*e: Execgen.ml *)

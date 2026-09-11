@@ -65,7 +65,10 @@ cd "$TMP"
 
 echo "== assembling+linking with goken ($GOKEN_5A / $GOKEN_5L) =="
 "$GOKEN_5A" -o "$BASE.goken.5" "$BASE.s"
-"$GOKEN_5L" -H7 -E "$ENTRY" -o "$BASE.goken.out" "$BASE.goken.5"
+# -s: strip goken's native Plan9 symbol/debug table -- it embeds the
+# invocation cwd and source path, so it's not byte-reproducible and
+# xix never emits one anyway (see notes_arm_port_plan.txt).
+"$GOKEN_5L" -H7 -E "$ENTRY" -s -o "$BASE.goken.out" "$BASE.goken.5"
 
 echo "== assembling+linking with xix ($XIX_O5A / $XIX_O5L) =="
 "$XIX_O5A" -o "$BASE.xix.o5" "$BASE.s"

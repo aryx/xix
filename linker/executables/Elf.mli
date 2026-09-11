@@ -10,4 +10,8 @@ val write_headers:
   Exec_file.linker_config -> Exec_file.sections_size -> int (* entry_addr *) ->
   out_channel -> int * int
 (*e: signature [[Elf.write_headers]] *)
+
+(* claude: section header table; seeks the channel itself, see Elf.ml *)
+val write_sections:
+  Exec_file.linker_config -> Exec_file.sections_size -> out_channel -> unit
 (*e: executables/Elf.mli *)

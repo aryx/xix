@@ -24,6 +24,7 @@ CASES=(
     "tests/linker/mips_diff/mullohi_mips.s:_start"
     "tests/linker/mips_diff/case22_mips.s:_start"
     "tests/linker/mips_diff/movw_ucon_mips.s:_start"
+    "tests/linker/mips_diff/case23_25_mips.s:_start"
 )
 # tests/linker/mips_diff/call_mips.s, case6_mips.s, immcon_mips.s,
 # movbh_check_mips.s and mullohi_check_mips.s are deliberately NOT

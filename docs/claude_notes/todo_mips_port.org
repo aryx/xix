@@ -367,18 +367,26 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    negative UCON value). PASS byte-identical + PASS same qemu-mips
    exit code. Verified: full MIPS + ARM baselines and make test
    (134/134) all still pass.
+** DONE case 23 add $lcon,r1,r2 ==> lu+or+add / case 25 add/and
+   $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2 -- confirmed via `vl
+   -a` beforehand (see the now-resolved TODO note this replaces)
+   that ADD's immediate forms do NOT hit MOVW case 19's
+   literal-pool surprise, so both ported exactly as case 4/10's
+   REGTMP-based pattern already suggested: case 25 (UCON, low 16
+   bits zero) is LU into REGTMP then the real op (no OR needed,
+   mirroring case 24's MOVW/UCON shape); case 23 (LCON, the
+   fallback for anything not ADD0CON/SCON/ANDCON/UCON) adds an OR
+   step to merge in the low bits before the real op. goken's C also
+   diags if p->to.reg or p->reg is REGTMP itself ("cant synthesize
+   large constant") -- not replicated, a real assembler-error case
+   no fixture exercises, not a byte-matching concern.
+   Added tests/linker/mips_diff/case23_25_mips.s (one ADD at each
+   boundary, combined via SUB -- case 2). PASS byte-identical + PASS
+   same qemu-mips exit code. Verified: full MIPS + ARM baselines and
+   make test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 23 add $lcon,r1,r2 ==> lu+or+add -- checked against
-   goken directly (`vl -a`, ADD $305419896,R1,R3): unlike MOVW's
-   plain-literal case 19, ADD's immediate form does NOT hit the
-   literal-pool surprise -- it's the plain 3-instruction LU+OR+ADD
-   (REGTMP-based), matching case 4/10's existing pattern. Safe to
-   port as originally planned.
-** TODO case 25 add/and $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2 --
-   likewise checked (`vl -a`, ADD $65536,R1,R2): plain 2-instruction
-   LU+ADD, no literal-pool surprise. Safe to port as planned.
 ** TODO case 26 mov $lsext/auto/oreg,,r2 ==> lu+or+add
 ** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
 ** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)

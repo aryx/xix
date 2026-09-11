@@ -339,10 +339,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * empirically against goken directly (`vl -a`) for the full
      * [-0x8000, 0x7fff] range, single instruction both ends.
      * Outside that range needs case 10's REGTMP+OR trick (ANDCON,
-     * 0x8000-0xffff) below; further out (UCON/LCON, cases 25/23)
-     * isn't ported yet and correctly falls through to the generic
-     * "not handled" error instead of this guard's old TODO, which
-     * silently truncated any value via `i land 0xffff` -- a real,
+     * 0x8000-0xffff) below, or cases 25/23 further below still
+     * (UCON/LCON) -- this guard used to silently truncate any
+     * out-of-range value via `i land 0xffff` instead, a real,
      * previously-latent bug for e.g. ADD $0x8000,R1,R2 (would have
      * encoded as ADDI $-0x8000 instead of REGTMP-based +0x8000).
      *)
@@ -366,6 +365,39 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 8; x = None; binary = (fun () ->
             let r = r_opt ||| rt in
             [ op_irr (opirr_arith_opcode OR) i rZERO rTMP;
+              op_rrr (oprrr_arith_opcode op) rTMP r rt ]
+         ) }
+
+    (* case 25:	/* add/and $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2 */ *)
+    (* claude: UCON (low 16 bits all zero, magnitude beyond case
+     * 10's ANDCON range) -- LU into REGTMP (no OR needed, no low
+     * bits to merge), then the real op. Unlike MOVW's case 19,
+     * ADD's immediate forms do NOT hit the literal-pool surprise
+     * documented on case 24/19 above -- confirmed via `vl -a`
+     * directly (`ADD $65536,R1,R2` is the plain 2-instruction
+     * LU+ADD shown here, no symbol reference). *)
+    | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) when i land 0xffff = 0 ->
+        { size = 8; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr op_last (i asr 16) rZERO rTMP;
+              op_rrr (oprrr_arith_opcode op) rTMP r rt ]
+         ) }
+
+    (* case 23:	/* add $lcon,r1,r2 ==> lu+or+add */ *)
+    (* claude: the fallback for any i that's neither ADD0CON/SCON/
+     * ANDCON (case 4/10) nor UCON (case 25) -- a genuine 32-bit
+     * constant, needing both halves loaded into REGTMP before the
+     * real op. Also confirmed via `vl -a` to be the plain
+     * 3-instruction LU+OR+ADD, no literal-pool surprise (unlike
+     * MOVW's case 19). goken's C also diags if p->to.reg or p->reg
+     * is REGTMP itself ("cant synthesize large constant") -- not
+     * replicated, since it's a real assembler-error case that no
+     * fixture exercises, not a byte-matching concern. *)
+    | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) ->
+        { size = 12; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr op_last (i asr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) i rTMP rTMP;
               op_rrr (oprrr_arith_opcode op) rTMP r rt ]
          ) }
 

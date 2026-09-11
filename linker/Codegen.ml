@@ -42,8 +42,18 @@ let default_rules (env : env) (init_data : Types.addr option)
   | Types.TEXT (_, _, _) -> 
       { size = 0; x = None; binary = (fun () -> []) }
 
+  (* 5l: case 11: /* word */ *)
+  (* claude: goken's asmout() just does `o1 = instoffset` here (the
+   * resolved constant/address value), same as below; AWORD $lext is
+   * never hand-written, it's what 5a itself generates for a
+   * literal-pool entry (see optab.c's comment on the AWORD/C_LEXT
+   * row: "the constant-pool word for 'MOVW $fmtalloc(SB), Rx'"), so
+   * this is exercised indirectly by every fixture whose codegen
+   * overflows an immediate and falls back to a literal pool (e.g.
+   * Codegen5.ml's cases 9/12/13), not by a fixture that writes WORD
+   * directly. *)
   | Types.WORD x ->
-      { size = 4; x = None; binary = (fun () -> 
+      { size = 4; x = None; binary = (fun () ->
         match x with
         (* TODO? should apply endianess ? *)
         | Ast_asm.Int i -> [ [(i land 0xffffffff, 0)] ]

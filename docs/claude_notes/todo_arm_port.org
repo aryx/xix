@@ -92,6 +92,16 @@
    NOT implemented -- pools must stay small; a real limit, not just
    a decision to revisit later. Verified full `./test-arm.sh` +
    `make test` (134/134) after.
+** TODO literal-pool value deduplication (goken's addpool() reuses an
+   existing pool word when a new entry's constant/address value
+   exactly matches one already pending, instead of adding a
+   duplicate) -- NOT ported. Discovered while verifying case 30/31
+   (see below): a fixture using the same large offset twice diverges
+   in pool *layout* from goken even though the actual load/store
+   instructions it generates are correct. Low urgency (no test
+   currently needs it -- tests/linker/arm_diff/longoff_arm.s is
+   deliberately written to avoid triggering it), but real; will
+   resurface for any fixture that repeats a big constant/address.
 ** DONE tests/linker/arm_diff/hello_linux_arm.s: runs correctly under qemu-arm
    Root cause found and fixed: linker/Flags.ml's kencc_compatible
    defaulted to true, which sets the MOV instruction's Rn field to the
@@ -129,6 +139,34 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    real op using REGTMP as the "from" register (size=8: LDR + OP).
    Added tests/linker/arm_diff/lcon_arm.s (ADD $0x12345678,R0,R1).
    PASS byte-identical + PASS same qemu-arm exit code first try.
+** DONE case 30/31 mov/movb/movbu R,L(R) / L(R),R -- long (>12-bit)
+   stack/SB-relative offset: load it into REGTMP via the literal
+   pool, then a register-offset LDR/STR (gmem's existing
+   Either.Right path). Caught two real, previously-latent bugs while
+   verifying against goken:
+   - gmem's Either.Right (register-offset) branch never set the U
+     (add) bit, defaulting to SUB instead of ADD -- goken's
+     olr()/olrr() always ADD when passed a register number (always
+     >= 0), since olrr reuses olr's "v>=0 -> U bit" check by passing
+     the register number itself as that check's input. Nothing
+     before case 30/31 ever exercised gmem's register-offset path.
+   - Layout5.ml's literal_pools is a stack (LIFO push) but was
+     flushed without reversing, so a pool with 2+ simultaneous
+     entries came out in reverse insertion order vs goken's FIFO
+     addpool()/flushpool(). Every earlier fixture only ever had one
+     pending pool entry per flush, so this never showed up before.
+   Also surfaced (see the separate "literal-pool value
+   deduplication" TODO above): goken dedups repeated pool values,
+   we don't yet -- tests/linker/arm_diff/longoff_arm.s deliberately
+   uses each offset only once to isolate case 30/31's own
+   correctness from that gap.
+   PASS byte-identical + PASS same qemu-arm exit code.
+** DONE case 11 word -- already handled generically by the shared
+   Codegen.default_rules (used by ARM/MIPS/RISC-V alike): AWORD is
+   never hand-written (it's what 5a itself generates for a
+   literal-pool entry), so this is verified indirectly by every
+   fixture whose codegen falls back to a literal pool (bigimm_arm.s
+   for case 12, lcon_arm.s for case 13), not by a dedicated fixture.
 ** DONE case 70 movh/movhu R,O(R) -> strh (real ARMv4T STRH, ghalfword
    helper)
 ** DONE case 71 movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh (real
@@ -172,10 +210,7 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    below with the other unported arithmetic cases.
 
 Not yet in Codegen5.ml at all:
-** TODO case 11 word
 ** TODO case 17 mull (64-bit long multiply, register-pair result)
-** TODO case 30 mov/movb/movbu R,L(R)
-** TODO case 31 mov/movbu L(R),R
 ** TODO case 32 movh/movb L(R),R -> ldrsb/ldrsh/ldrh via literal pool
    (case 73's V4 real-instruction form, NOT the case-32 byte-split
    fallback -- see the case 70/71 SKIP note above for why)

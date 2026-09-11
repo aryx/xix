@@ -152,7 +152,15 @@ let layout_text (symbols2 : T.symbol_table2) (init_text : T.real_pc) (cg : 'a T.
             aux x xs
       in
       n.next <- Some skip_branch;
-      aux skip_branch !literal_pools;
+      (* claude: literal_pools is a stack (Stack_.push above = LIFO),
+       * so without this reversal the pool would come out in reverse
+       * insertion order -- a real, latent bug (every earlier fixture
+       * only ever had one pending pool entry per flush, so order
+       * never mattered until a fixture with 2+ simultaneous entries,
+       * e.g. tests/linker/arm_diff/longoff_arm.s, exposed it).
+       * goken's addpool()/flushpool() walk the pool in insertion
+       * (FIFO) order. *)
+      aux skip_branch (List.rev !literal_pools);
       literal_pools := [];
     end;
 

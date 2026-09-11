@@ -311,11 +311,21 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
    (rbase, 16); (rt, 12);
   ] @
   (match offset_or_rm with
-  | Either.Left offset -> 
-      if offset >= 0 
+  | Either.Left offset ->
+      if offset >= 0
       then [(1, 23); (offset, 0)]
       else [(0, 23); (-offset, 0)]
-  | Either.Right (R r) -> [(1, 25); (r, 0)]
+  (* claude: register-offset addressing always adds (U bit set),
+   * never subtracts -- matches goken's olr()/olrr(): olrr(a,sc,i,b,r)
+   * calls olr(a,sc,i,b,r), passing the *register number* i as olr's
+   * "offset" argument, and a register number is always >= 0, so
+   * olr's `if(v>=0) o|=1<<23` unconditionally sets the U bit for
+   * this addressing mode. This was a real bug (bit23 always 0,
+   * silently doing SUB rN instead of ADD rN) -- caught by
+   * tests/linker/arm_diff/longoff_arm.s, the first fixture to
+   * actually exercise this path (case 30/31's REGTMP-offset
+   * load/store). *)
+  | Either.Right (R r) -> [(1, 25); (1, 23); (r, 0)]
   )
 (*e: function [[Codegen5.gmem]] *)
 
@@ -746,15 +756,27 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             then raise (Impossible "pattern covered before")
             else error node "illegal combination"
         | Indirect _ | Entity _ ->
-            let (rbase, offset) = 
+            let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
             if immoffset offset
             then
-              { size = 4; x = None; binary = (fun () -> 
+              { size = 4; x = None; binary = (fun () ->
                 [ gmem cond LDR size opt (Left offset) rbase rt ]
               )}
             else
-              error node "TODO: Large offset"
+              (* case 31:	/* mov/movbu L(R),R */ *)
+              (* claude: offset too big for LDR's 12-bit immediate:
+               * load it into REGTMP via the literal pool first
+               * (`omvl(p, &p->from, REGTMP)` in codegen.c), then do
+               * a register-offset LDR (Rbase + REGTMP) -- reusing
+               * gmem's existing `Either.Right` (register-offset)
+               * path, which case 21 above never needed. *)
+              { size = 8; x = Some (PoolOperand (Ast_asm.Int offset));
+                binary = (fun () ->
+                  [ gload_from_pool node cond rTMP;
+                    gmem cond LDR size opt (Right rTMP) rbase rt
+                  ]
+              )}
         )
 
     (* case 22:	/* movb/movh/movhu O(R),R -> lr,shl,shr */ *)
@@ -808,15 +830,24 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | Imsr _ | Ximm _ -> 
             error node "illegal to store in an (extended) immediate"
         | Indirect _ | Entity _ ->
-            let (rbase, offset) = 
+            let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
             if immoffset offset
             then
-              { size = 4; x = None; binary = (fun () -> 
+              { size = 4; x = None; binary = (fun () ->
                 [ gmem cond STR size opt (Left offset) rbase rf ]
               )}
             else
-              error node "TODO: store with large offset"
+              (* case 30:	/* mov/movb/movbu R,L(R) */ *)
+              (* claude: offset too big for STR's 12-bit immediate,
+               * same reasoning as case 31 above: load it into REGTMP
+               * via the literal pool, then a register-offset STR. *)
+              { size = 8; x = Some (PoolOperand (Ast_asm.Int offset));
+                binary = (fun () ->
+                  [ gload_from_pool node cond rTMP;
+                    gmem cond STR size opt (Right rTMP) rbase rf
+                  ]
+              )}
         )
 
     (* case 23:	/* movh/movhu R,O(R) -> sb,sb */ *)

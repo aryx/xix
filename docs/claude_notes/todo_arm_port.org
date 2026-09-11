@@ -129,6 +129,28 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    real op using REGTMP as the "from" register (size=8: LDR + OP).
    Added tests/linker/arm_diff/lcon_arm.s (ADD $0x12345678,R0,R1).
    PASS byte-identical + PASS same qemu-arm exit code first try.
+** DONE case 70 movh/movhu R,O(R) -> strh (real ARMv4T STRH, ghalfword
+   helper)
+** DONE case 71 movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh (real
+   ARMv4T LDRSB/LDRSH/LDRH). Added ghalfword (ARM's distinct
+   Load/Store-Halfword-and-Signed-Byte bit layout, split 8-bit
+   immediate, SH-bit variant selector) -- caught a real bug while
+   verifying against goken: the STORE side (case 70/oshr) never looks
+   at signedness at all (there's only one STRH), only the LOAD side
+   (case 71/olhr's XOR based on p->as) does; ghalfword's first draft
+   wrongly varied the SH bits by signedness for STORE too, encoding
+   STRH as a bogus STRD-shaped opcode -- caught by a 1-byte cmp -l
+   diff, fixed, now genuinely byte-identical (not just "close").
+   Added tests/linker/arm_diff/halfword_arm.s. PASS byte-identical +
+   PASS same qemu-arm exit code.
+** SKIP  cases 22/23/32/33 (movb/movh/movhu via byte-split-and-shift,
+   the pre-ARMv4T fallback for O(R) and L(R) offsets) -- confirmed
+   dead in practice: goken's buildop() only disables the V4-flagged
+   optab rows (70-73, real STRH/LDRH/LDRSB/LDRSH) when `armv4` is
+   false, and `armv4 = !debug['h']` (5l/span.c) -- true by default,
+   so 70-73 always win over 22/23/32/33 unless goken is invoked with
+   -h, which this harness never does. Porting 22/23/32/33 would be
+   porting code no test here could ever exercise or verify.
 ** DONE case 12 movw $lcon, reg -- both the address-of-global slow
    path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
    too-big-immediate case (MOVW $0x12345678,R -> LDR from literal
@@ -152,12 +174,13 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
 Not yet in Codegen5.ml at all:
 ** TODO case 11 word
 ** TODO case 17 mull (64-bit long multiply, register-pair result)
-** TODO case 22 movb/movh/movhu O(R),R -> lr,shl,shr
-** TODO case 23 movh/movhu R,O(R) -> sb,sb
 ** TODO case 30 mov/movb/movbu R,L(R)
 ** TODO case 31 mov/movbu L(R),R
-** TODO case 32 movh/movb L(R),R
-** TODO case 33 movh/movhu R,L(R) -> sb, sb
+** TODO case 32 movh/movb L(R),R -> ldrsb/ldrsh/ldrh via literal pool
+   (case 73's V4 real-instruction form, NOT the case-32 byte-split
+   fallback -- see the case 70/71 SKIP note above for why)
+** TODO case 33 movh/movhu R,L(R) -> strh via literal pool (case 72's
+   V4 form, not the case-33 byte-split fallback)
 ** TODO case 34 mov $lacon,R -> LDR x(R15), R11; ADD R11, R13, R
 ** TODO case 35 mov PSR,R
 ** TODO case 36 mov R,PSR

@@ -319,6 +319,47 @@ let gmem cond op move_size opt offset_or_rm (R rbase) (R rt) =
   )
 (*e: function [[Codegen5.gmem]] *)
 
+(* claude: ARM's "Load/Store Halfword and Load Signed Byte/Halfword"
+ * immediate-offset instruction class (STRH/LDRH/LDRSH/LDRSB) -- a
+ * distinct bit layout from LDR/STR's gmem above: the 8-bit magnitude
+ * offset is split into two 4-bit nibbles (bits[11:8] and bits[3:0])
+ * with bit22=1 marking "immediate offset" (vs a register offset,
+ * which this port doesn't need), and bits[6:5] select the variant
+ * (01=unsigned halfword, 11=signed halfword, 10=signed byte -- there
+ * is no signed-byte *store*, byte stores don't care about sign, see
+ * case 20/gmem above). Ported from goken's 5l/codegen.c's olhr/oshr
+ * (STRH is oshr = olhr with the L bit toggled off). *)
+let ghalfword (op : mem_opcode) (kind : move_size) cond offset (R rbase) (R rt)
+  : Bits.t =
+  let (u_bit, mag) = if offset >= 0 then (1, offset) else (0, -offset) in
+  if mag >= 0x100
+  then raise (Impossible "halfword/signed-byte offset too large (8-bit split immediate)");
+  (* claude: goken's oshr/olhr for case 70 (STORE) never look at
+   * p->as at all -- there's only one STRH, sign is meaningless when
+   * storing, so it always uses the base SH=01 bits. Only case 71
+   * (LOAD) XORs those bits based on p->as (AMOVB/AMOVH) to select
+   * LDRSB/LDRSH/LDRH -- see olhr/oshr in codegen.c. *)
+  let (bit6, bit5) =
+    match op with
+    | STR -> (0, 1)
+    | LDR ->
+        (match kind with
+        | HalfWord U -> (0, 1)
+        | HalfWord S -> (1, 1)
+        | Byte S -> (1, 0)
+        | Byte U | Word ->
+            raise (Impossible "ghalfword only for HalfWord or signed Byte")
+        )
+  in
+  [gcond cond; (1, 24) (* P: pre-indexed, no writeback support here *);
+   (u_bit, 23); (1, 22) (* I: immediate offset *);
+   (match op with LDR -> (1, 20) | STR -> (0, 20));
+   (rbase, 16); (rt, 12);
+   ((mag lsr 4) land 0xf, 8);
+   (1, 7); (bit6, 6); (bit5, 5); (1, 4);
+   (mag land 0xf, 0);
+  ]
+
 (*s: function [[Codegen5.gload_from_pool]] *)
 let gload_from_pool (nsrc : 'a T.node) cond rt =
   match nsrc.branch with
@@ -716,6 +757,32 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               error node "TODO: Large offset"
         )
 
+    (* case 71:	/* movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh */ *)
+    (* claude: signed byte / any halfword short-offset load, using the
+     * real ARMv4T LDRSB/LDRSH/LDRH instructions (see ghalfword above).
+     * Cases 22 (byte-split-and-shift, the pre-ARMv4T fallback) are
+     * NOT ported: goken's buildop() only keeps V4-flagged optab rows
+     * (cases 70-73, this one included) when `armv4` is set, and
+     * `armv4 = !debug['h']` -- true unless goken is invoked with -h,
+     * which this harness never does. Porting 22/23/32/33 would mean
+     * porting dead code no test could ever verify.
+     * Together with case 21 (Word/Byte U) this covers every
+     * move_size. *)
+    | MOVE ((Byte S | HalfWord _) as size, _opt, from, Imsr (Reg (R rt))) ->
+        (match from with
+        | Imsr _ | Ximm _ -> error node "illegal combination?"
+        | Indirect _ | Entity _ ->
+            let (rbase, offset) =
+              base_and_offset_of_indirect node env.syms env.autosize from in
+            if abs offset < 0x100
+            then
+              { size = 4; x = None; binary = (fun () ->
+                [ ghalfword LDR size cond offset rbase (R rt) ]
+              )}
+            else
+              error node "TODO: Large offset"
+        )
+
     (* Store *)
 
     (* case 20:	/* mov/movb/movbu R,O(R) */ *)
@@ -737,6 +804,27 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             then
               { size = 4; x = None; binary = (fun () -> 
                 [ gmem cond STR size opt (Left offset) rbase rf ]
+              )}
+            else
+              error node "TODO: store with large offset"
+        )
+
+    (* case 70:	/* movh/movhu R,O(R) -> strh */ *)
+    (* claude: halfword short-offset store, using the real ARMv4T STRH
+     * instruction (see ghalfword above). Case 23 (split into two byte
+     * stores, the pre-ARMv4T fallback) is NOT ported, same reasoning
+     * as case 71 above (dead code under goken's default `armv4`). *)
+    | MOVE ((HalfWord _) as size, _opt, Imsr (Reg rf), dest) ->
+        (match dest with
+        | Imsr _ | Ximm _ ->
+            error node "illegal to store in an (extended) immediate"
+        | Indirect _ | Entity _ ->
+            let (rbase, offset) =
+              base_and_offset_of_indirect node env.syms env.autosize dest in
+            if abs offset < 0x100
+            then
+              { size = 4; x = None; binary = (fun () ->
+                [ ghalfword STR size cond offset rbase rf ]
               )}
             else
               error node "TODO: store with large offset"

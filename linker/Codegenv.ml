@@ -285,6 +285,13 @@ let op_mfc_mtc (is_mtc1 : bool) (r_int : int) (r_float : int) : Bits.t =
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
+(* claude: like op_irr but taking plain ints instead of a typed reg
+ * for r3 -- needed for case 27/28 (LWC1/SWC1), where r3 is a float
+ * register (freg), not an int one, but occupies the exact same
+ * bit field. *)
+let op_irr_raw (op : Bits.t) (i : int) (r2 : int) (r3 : int) : Bits.t =
+  op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
+
 (* claude: OP_SRR(op,s,r2,r3) in goken's asm.c -- shift-immediate
  * form, used by case 12's SLL/SRA-based sign-extend trick below
  * (case 16, sll $c,[r1],r2, would also use this but isn't ported
@@ -909,6 +916,78 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
               op_irr (opirr_mem W__ LDR) 0 rTMP rt;
               nop;
+            ]
+          ) }
+
+    (* case 27:	/* mov [sl]ext/auto/oreg,fr ==> lwc1 o(r) */ *)
+    (* claude: F__ (single-precision) only -- D__ needs two word
+     * transfers (to freg+1 and freg, since a double occupies a
+     * consecutive float-register pair) and opirr_mem doesn't have a
+     * D__ encoding yet either (see its own "TODO: opirr_mem D__"),
+     * left as a follow-up. Indirect splits into ZOREG (offset==0,
+     * direct single instruction) vs LOREG (REGTMP-based, same as
+     * case 35/36's LOREG variant) per the BIG=0/SOREG comment
+     * above; Entity (SEXT/SAUTO/LEXT/LAUTO) always takes the slow
+     * REGTMP path too, same as case 35/36's Entity variant. *)
+    | Move2 (F__, Left (Gen (Indirect (R rbase, 0))), GFReg (FR rt)) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_irr_raw (opirr_mem F__ LDR) 0 rbase rt; nop ]
+         ) }
+    | Move2 (F__, Left (Gen (Indirect (R rbase, offset))), GFReg (FR rt)) ->
+        { size = 20; x = None; binary = (fun () ->
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) (R rbase) rTMP rTMP;
+              op_irr_raw (opirr_mem F__ LDR) 0 rtmp rt;
+              nop;
+            ]
+         ) }
+    | Move2 (F__, Left (Gen (Entity ent)), GFReg (FR rt)) ->
+        { size = 20; x = None; binary = (fun () ->
+            let (rbase, offset) =
+                   base_and_offset_of_entity node env.syms env.autosize ent
+            in
+            let v = offset in
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (v lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) v rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr_raw (opirr_mem F__ LDR) 0 rtmp rt;
+              nop;
+            ]
+          ) }
+
+    (* case 28:	/* mov fr,[sl]ext/auto/oreg ==> swc1 o(r) */ *)
+    (* claude: F__ only, same reasoning as case 27 above. goken's C
+     * also diags if the base register is REGTMP itself (a real
+     * assembler-error case for the slow-path arms, since REGTMP is
+     * the scratch register for the address computation); not
+     * replicated, same reasoning as case 23/26's identical diag. *)
+    | Move2 (F__, Left (GFReg (FR fsrc)), Gen (Indirect (R rbase, 0))) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_irr_raw (opirr_mem F__ STR) 0 rbase fsrc ]
+         ) }
+    | Move2 (F__, Left (GFReg (FR fsrc)), Gen (Indirect (R rbase, offset))) ->
+        { size = 16; x = None; binary = (fun () ->
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (offset lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) offset rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) (R rbase) rTMP rTMP;
+              op_irr_raw (opirr_mem F__ STR) 0 rtmp fsrc;
+            ]
+         ) }
+    | Move2 (F__, Left (GFReg (FR fsrc)), Gen (Entity ent)) ->
+        { size = 16; x = None; binary = (fun () ->
+            let (rbase, offset) =
+                   base_and_offset_of_entity node env.syms env.autosize ent
+            in
+            let v = offset in
+            let (R rtmp) = rTMP in
+            [ op_irr op_last (v lsr 16) rZERO rTMP;
+              op_irr (opirr_arith_opcode OR) v rTMP rTMP;
+              op_rrr (oprrr_arith_opcode (ADD (W, U))) rbase rTMP rTMP;
+              op_irr_raw (opirr_mem F__ STR) 0 rtmp fsrc;
             ]
           ) }
 

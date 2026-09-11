@@ -202,6 +202,25 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    literal-pool entry), so this is verified indirectly by every
    fixture whose codegen falls back to a literal pool (bigimm_arm.s
    for case 12, lcon_arm.s for case 13), not by a dedicated fixture.
+** DONE case 54 floating point arith (ArithF: ADDF/SUBF/MULF/DIVF/
+   ADDD/SUBD/MULD/DIVD, plus CmpF: CMPF/CMPD which share this case
+   in codegen.c via `if(p->to.type==D_NONE) rt=0` -- kept as its own
+   OCaml arm since Ast_asm5.CmpF is already a separate constructor).
+   This is goken's legacy ARM 7500 FP (coprocessor 1) encoding --
+   defunct hardware (no chip has implemented it since the
+   ARM7500FE era), but it's what goken emits BY DEFAULT
+   (`vfp = debug['f']`, off unless -f is passed; VFP -- cases 74-76
+   -- is the opt-in one, same "disabled unless a flag is passed"
+   pattern as armv4/cases 22/23/32/33, just the opposite default
+   polarity). Float immediates are limited to goken's chipfloats[]
+   (float.c): exactly {0,1,2,3,4,5,0.5,10} -- anything else is a
+   genuine assembler error here, not goken's own silent
+   `diag(); rf=0` fallback. Added tests/linker/arm_diff/fpa_arm.s.
+   PASS byte-identical; confirmed empirically that qemu-arm has no
+   FPA coprocessor at all to trap/emulate it -- both sides SIGILL
+   identically (rc=132) on the very first FPA instruction, which is
+   itself the matching signal (same crash, not a different one),
+   same reasoning as swp_arm.s's deliberately-unmapped test address.
 ** DONE case 40 swp oreg,reg,reg -- ARM's atomic exchange (SWPW/
    SWPBU), deprecated since ARMv6 in favor of LDREX/STREX but still
    real (goken's own runtime uses it for spinlocks, e.g.
@@ -272,6 +291,16 @@ Cases with a matching (* case N: *) comment already in Codegen5.ml:
    so 70-73 always win over 22/23/32/33 unless goken is invoked with
    -h, which this harness never does. Porting 22/23/32/33 would be
    porting code no test here could ever exercise or verify.
+** SKIP  cases 74/75/76 (VFP arith/compare/fix-float) -- opposite
+   polarity of the armv4 story above: `vfp = debug['f']` (5l/span.c)
+   is OFF by default, so VFP-flagged optab rows are dead unless
+   goken is invoked with -f, which this harness never does. Case 54
+   (FPA, ADDF/SUBF/MULF/DIVF/CMPF/CMPD) is what's actually active by
+   default and is what got ported instead -- same reasoning as
+   picking 70-73 over 22/23/32/33, just the default flipped the
+   other way. If -f ever becomes part of the harness, 74-76 would
+   need porting and 54 would (per chipfloat()'s own `if(vfp)
+   return -1`) lose its immediate-constant fast path entirely.
 ** DONE case 12 movw $lcon, reg -- both the address-of-global slow
    path (MOVW $L(SB),RT -> LDR from literal pool) and the plain
    too-big-immediate case (MOVW $0x12345678,R -> LDR from literal
@@ -313,8 +342,11 @@ Not yet in Codegen5.ml at all:
 ** TODO case 51 floating point load
 ** TODO case 52 floating point store, long offset UGLY
 ** TODO case 53 floating point load, long offset UGLY
-** TODO case 54 floating point arith
 ** TODO case 55 floating point fix and float
+   (int<->float conversion, MOVWF/MOVFW/MOVWD/MOVDW -- no AST
+   constructor exists for this at all, unlike case 54's ArithF/CmpF;
+   needs assembler grammar/AST work first, same category as the
+   PSR/MOVM TODOs above.)
 ** TODO case 56 move to FP[CS]R
 ** TODO case 57 move from FP[CS]R
 ** TODO case 59 movw/bu R<<I(R),R -> ldr indexed
@@ -328,10 +360,3 @@ Not yet in Codegen5.ml at all:
 ** TODO case 67 movh/movhu R,addr -> sb, sb
 ** TODO case 68 floating point store -> ADDR
 ** TODO case 69 floating point load <- ADDR
-** TODO case 70 movh/movhu R,O(R) -> strh
-** TODO case 71 movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh
-** TODO case 72 movh/movhu R,L(R) -> strh
-** TODO case 73 movb/movh/movhu L(R),R -> ldrsb/ldrsh/ldrh
-** TODO case 74 vfp floating point arith
-** TODO case 75 vfp floating point compare
-** TODO case 76 vfp floating point fix and float

@@ -271,6 +271,38 @@ let gop_cmp op =
   | CMN -> [(0xb, 21); (1, 20)]
 (*e: function [[Codegen5.gop_cmp]] *)
 
+(* claude: goken's old ARM 7500 FP (coprocessor 1) encoding for the
+ * dyadic arith ops -- ported from oprrr()'s AADDF/AADDD/etc cases.
+ * Precision D sets an extra bit (7) on top of the same opcode used
+ * for F. *)
+let gop_arithf (op : arithf_opcode) (prec : A.floatp_precision) : Bits.t =
+  let opcode = match op with
+    | ADD_ -> 0x0 | MUL_ -> 0x1 | SUB_ -> 0x2 | DIV_ -> 0x4
+  in
+  [(0xe, 24); (opcode, 20); (1, 8)] @
+  (match prec with A.F -> [] | A.D -> [(1, 7)])
+
+(* claude: goken's oprrr() ACMPF/ACMPD case -- same bits regardless
+ * of precision (no D-bit here, unlike gop_arithf above; that's what
+ * the C code actually does, not an omission). *)
+let gop_cmpf : Bits.t =
+  [(0xe, 24); (0x9, 20); (0xf, 12); (1, 8); (1, 4)]
+
+(* claude: goken's float.c chipfloats[] -- the FPA coprocessor's
+ * fixed set of 8 immediate constants (chipfloat() returns their
+ * index, or -1 if not one of these -- which this port doesn't
+ * replicate: an unencodable float immediate is a genuine assembler
+ * error, `error node`, not a silent fallback like goken's own
+ * `diag(); rf = 0` recovery). *)
+let chipfloat (f : float) : int option =
+  let chipfloats = [| 0.0; 1.0; 2.0; 3.0; 4.0; 5.0; 0.5; 10.0 |] in
+  let rec search i =
+    if i >= Array.length chipfloats then None
+    else if Float.equal chipfloats.(i) f then Some i
+    else search (i + 1)
+  in
+  search 0
+
 (*s: function [[Codegen5.gop_bitshift_register]] *)
 let gop_bitshift_register op =
   match op with
@@ -446,7 +478,48 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
   | T.I (instr, cond) ->
     (match instr with
-    | ArithF _ | CmpF _ -> raise Todo
+    (* case 54:	/* floating point arith */ *)
+    (* claude: old ARM 7500 FP (coprocessor 1) encoding -- goken's
+     * case 54 also covers CMPF/CMPD (via `if(p->to.type==D_NONE)
+     * rt=0`, since CMP-style instructions put their 2nd operand in
+     * the *middle* field, not `to`), handled by our separate CmpF
+     * arm just below since our AST already splits that out.
+     * Immediate float operands are limited to goken's chipfloats[]
+     * (float.c): exactly {0,1,2,3,4,5,0.5,10} -- anything else is a
+     * genuine assembler error here (`error node`), not goken's own
+     * silent `diag(); rf=0` fallback. *)
+    | ArithF ((op, prec), from, middle, (FR rt)) ->
+        let r = match middle with Some (FR x) -> x | None -> rt in
+        let rf_bits = match from with
+          | Either.Right (FR rf) -> [(rf, 0)]
+          | Either.Left fval ->
+              (match chipfloat fval with
+              | Some idx -> [(idx, 0); (1, 3)]
+              | None ->
+                  error node (spf "float immediate %f not one of chipfloat's 8 constants" fval))
+        in
+        { size = 4; x = None; binary = (fun () ->
+          [ [gcond cond] @ gop_arithf op prec @ [(r, 16); (rt, 12)] @ rf_bits ]
+        )}
+
+    (* case 54:	/* floating point arith */ -- CMPF/CMPD share this
+     * case in codegen.c; kept as its own OCaml arm since Ast_asm5's
+     * CmpF is already a separate constructor from ArithF. The 2nd
+     * float operand goes in the *middle* field (bits[19:16]), same
+     * as integer CMP -- see gop_cmp/Cmp above. *)
+    | CmpF (_prec, (FR fa), (FR fb)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ [gcond cond] @ gop_cmpf @ [(fb, 16); (fa, 0)] ]
+        )}
+
+    (* case 74:	/* vfp floating point arith */ *)
+    (* case 75:	/* vfp floating point compare */ *)
+    (* case 76:	/* vfp floating point fix and float */ *)
+    (* claude: NOT ported -- opposite polarity of the armv4/case
+     * 22/23/32/33 story above: `vfp = debug['f']` (5l/span.c) is OFF
+     * by default, so VFP-flagged optab rows are dead unless goken is
+     * invoked with -f, which this harness never does. Case 54
+     * (FPA, just above) is what's actually active by default. *)
 
     (* --------------------------------------------------------------------- *)
     (* Arithmetics *)

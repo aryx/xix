@@ -34,6 +34,7 @@ CASES=(
     "tests/linker/arm_diff/lacon_arm.s:_start"
     "tests/linker/arm_diff/halflong_arm.s:_start"
     "tests/linker/arm_diff/swp_arm.s:_start"
+    "tests/linker/arm_diff/fpa_arm.s:_start"
 )
 
 FAIL=0

@@ -757,15 +757,17 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               error node "TODO: Large offset"
         )
 
+    (* case 22:	/* movb/movh/movhu O(R),R -> lr,shl,shr */ *)
+    (* claude: NOT ported, see case 71 just below (real ARMv4T
+     * LDRSB/LDRSH/LDRH): goken's buildop() only keeps this
+     * byte-split-and-shift fallback when `armv4` is unset
+     * (`armv4 = !debug['h']`, 5l/span.c), i.e. only when goken is
+     * invoked with -h -- which this harness never does, so case
+     * 70-73's real instructions always win instead. Porting this
+     * would be porting dead code no test could verify. *)
     (* case 71:	/* movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh */ *)
     (* claude: signed byte / any halfword short-offset load, using the
      * real ARMv4T LDRSB/LDRSH/LDRH instructions (see ghalfword above).
-     * Cases 22 (byte-split-and-shift, the pre-ARMv4T fallback) are
-     * NOT ported: goken's buildop() only keeps V4-flagged optab rows
-     * (cases 70-73, this one included) when `armv4` is set, and
-     * `armv4 = !debug['h']` -- true unless goken is invoked with -h,
-     * which this harness never does. Porting 22/23/32/33 would mean
-     * porting dead code no test could ever verify.
      * Together with case 21 (Word/Byte U) this covers every
      * move_size. *)
     | MOVE ((Byte S | HalfWord _) as size, _opt, from, Imsr (Reg (R rt))) ->
@@ -782,6 +784,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             else
               error node "TODO: Large offset"
         )
+
+    (* case 32:	/* movh/movb L(R),R */ *)
+    (* claude: long-offset (omvl into REGTMP + ldrsb/ldrsh/ldrh,
+     * case 73's V4 real-instruction form) NOT ported yet; see the
+     * case-30/31/34 TODOs in docs/claude_notes/todo_arm_port.org. *)
+    (* case 33:	/* movh/movhu R,L(R) -> sb, sb */ *)
+    (* claude: long-offset (omvl into REGTMP + strh, case 72's V4
+     * form) NOT ported yet, same TODO. *)
 
     (* Store *)
 
@@ -809,11 +819,13 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               error node "TODO: store with large offset"
         )
 
+    (* case 23:	/* movh/movhu R,O(R) -> sb,sb */ *)
+    (* claude: NOT ported, same reasoning as case 22 above (dead code
+     * under goken's default `armv4`; see case 70 just below for the
+     * real instruction). *)
     (* case 70:	/* movh/movhu R,O(R) -> strh */ *)
     (* claude: halfword short-offset store, using the real ARMv4T STRH
-     * instruction (see ghalfword above). Case 23 (split into two byte
-     * stores, the pre-ARMv4T fallback) is NOT ported, same reasoning
-     * as case 71 above (dead code under goken's default `armv4`). *)
+     * instruction (see ghalfword above). *)
     | MOVE ((HalfWord _) as size, _opt, Imsr (Reg rf), dest) ->
         (match dest with
         | Imsr _ | Ximm _ ->

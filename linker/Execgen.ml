@@ -35,7 +35,7 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
    * Datagen.ml already takes endian as a parameter and isn't
    * affected; this was the one hardcoded spot.
    *)
-  let (_, output_32) = Endian.output_functions_of_endian (Arch.endian_of_arch config.arch) in
+  let (_, output_32, _) = Endian.output_functions_of_endian (Arch.endian_of_arch config.arch) in
 
   match format with
   | Exec_file.A_out ->

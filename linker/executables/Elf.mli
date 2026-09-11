@@ -1,7 +1,9 @@
 (*s: executables/Elf.mli *)
 
 (*s: signature [[Elf.header_size]] *)
-val header_size: int
+(* claude: parameterized by bits (was a plain constant) since ELF64
+ * (riscv64/ojl) needs a different header_size than ELF32 *)
+val header_size: Arch.bits -> int
 (*e: signature [[Elf.header_size]] *)
 
 (*s: signature [[Elf.write_headers]] *)

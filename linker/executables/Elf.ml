@@ -17,12 +17,17 @@ open Common
 (*s: constant [[Elf.exec_header_32_size]] *)
 let exec_header_32_size = 52
 (*e: constant [[Elf.exec_header_32_size]] *)
+(* claude: ELF64 (riscv64/ojl) sizes, from goken's liblk/elf.h
+ * (Ehdr64sz/Phdr64sz/Shdr64sz) *)
+let exec_header_64_size = 64
 (*s: constant [[Elf.program_header_32_size]] *)
 let program_header_32_size = 32
 (*e: constant [[Elf.program_header_32_size]] *)
+let program_header_64_size = 56
 (*s: constant [[Elf.section_header_32_size]] *)
 let section_header_32_size = 40
 (*e: constant [[Elf.section_header_32_size]] *)
+let section_header_64_size = 64
 
 (*s: constant [[Elf.nb_program_headers]] *)
 (* claude: Text, Data, and (empty) Symbol table, like goken's 5l/8l
@@ -33,9 +38,18 @@ let nb_program_headers = 3
 (*e: constant [[Elf.nb_program_headers]] *)
 
 (*s: constant [[Elf.header_size]] *)
-let header_size =
-  Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
-  16
+(* claude: parameterized by bits (was a plain constant) once ELF64
+ * (riscv64/ojl) needed a different header_size than ELF32 *)
+let header_size (bits : Arch.bits) : int =
+  match bits with
+  | Arch.Arch32 ->
+      Int_.rnd (exec_header_32_size + nb_program_headers * program_header_32_size)
+      16
+  | Arch.Arch64 ->
+      Int_.rnd (exec_header_64_size + nb_program_headers * program_header_64_size)
+      16
+  | Arch.Arch8 | Arch.Arch16 ->
+      failwith "8 and 16 bits arch not supported by ELF"
 (*e: constant [[Elf.header_size]] *)
 
 (* claude: number of ELF section headers we emit: .text, .data, and
@@ -94,8 +108,10 @@ type machine =
   | MArm
   | MArm64
   | MMips
+  (* claude: EM_RISCV is the same machine id for both riscv (rv32) and
+   * riscv64 -- goken's elf32()/elf64() pass the same `243` regardless
+   * of thechar, see liblk/elf.c and il/obj.c. No separate MRiscv64. *)
   | MRiscv
-  (* | MRiscv64? *)
 
   (* other: *)
   | MM32
@@ -279,7 +295,7 @@ let write_ident (bo : byte_order) (class_ : ident_class) (chan: out_channel) : u
 (*s: function [[Elf.program_header_32]] *)
 let program_header_32 (endian: Endian.t) (ph: program_header_type)
   offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
-  let (_, output_32) = Endian.output_functions_of_endian endian in
+  let (_, output_32, _) = Endian.output_functions_of_endian endian in
   output_32 chan (int_of_program_header_type ph);
   output_32 chan offset;
   output_32 chan vaddr;
@@ -289,6 +305,22 @@ let program_header_32 (endian: Endian.t) (ph: program_header_type)
   output_32 chan (int_of_prots prots);
   output_32 chan align
 (*e: function [[Elf.program_header_32]] *)
+
+(* claude: Elf64_Phdr field order differs from Elf32_Phdr -- p_flags
+ * moves right after p_type (both still 4 bytes), then everything else
+ * (offset/vaddr/paddr/filesz/memsz/align) is 8 bytes wide. Ported from
+ * goken's liblk/elf.c's elf64phdr. *)
+let program_header_64 (endian: Endian.t) (ph: program_header_type)
+  offset (vaddr, paddr) (filesz, memsz) prots align (chan : out_channel) =
+  let (_, output_32, output_64) = Endian.output_functions_of_endian endian in
+  output_32 chan (int_of_program_header_type ph);
+  output_32 chan (int_of_prots prots);
+  output_64 chan offset;
+  output_64 chan vaddr;
+  output_64 chan paddr;
+  output_64 chan filesz;
+  output_64 chan memsz;
+  output_64 chan align
   
 (*****************************************************************************)
 (* Entry point *)
@@ -307,46 +339,69 @@ let write_headers (config : Exec_file.linker_config)
     | Endian.Little -> BLSB
     | Endian.Big -> BMSB
   in
+  let bits = Arch.bits_of_arch arch in
   let class_ : ident_class =
-    match Arch.bits_of_arch arch with
+    match bits with
     | Arch.Arch32 -> C32
     | Arch.Arch64 -> C64
-    | Arch.Arch8 | Arch.Arch16 -> 
+    | Arch.Arch8 | Arch.Arch16 ->
         failwith "8 and 16 bits arch not supported by ELF"
   in
   write_ident bo class_ chan;
 
-  (* Rest of ELF header (36 bytes => total 52 bytes) *)
+  (* Rest of ELF header *)
 
   let mach : machine =
     match arch with
     | Arch.Arm -> MArm
     | Arch.Arm64 -> MArm64
     | Arch.Mips -> MMips
-    | Arch.Riscv -> MRiscv
-    | Arch.Riscv64 -> failwith "TODO: Riscv64"
+    | Arch.Riscv | Arch.Riscv64 -> MRiscv
     | Arch.X86 -> MI386 (* what about MI486? *)
     | Arch.Amd64 -> MAmd64
   in
-  let output_16, output_32 = Endian.output_functions_of_endian endian in
+  let output_16, output_32, output_64 = Endian.output_functions_of_endian endian in
   output_16 chan (int_of_elf_type TExec);
   output_16 chan (int_of_machine mach);
   output_32 chan (int_of_version VCurrent); (* again? *)
-  output_32 chan entry_addr;
-  output_32 chan exec_header_32_size; (* offset to first phdr *)
-  (* claude: offset to first shdr; symsize is always 0, we never
-   * emit a Plan9-native symbol table (see write_sections) *)
-  output_32 chan (config.header_size + sizes.text_size + sizes.data_size);
+
+  (* claude: from here on ELF32 (Elf32_Ehdr) and ELF64 (Elf64_Ehdr)
+   * diverge: e_entry/e_phoff/e_shoff are 8 bytes wide instead of 4 on
+   * ELF64, matching goken's elf32() vs elf64() split in liblk/elf.c. *)
+  (match bits with
+  | Arch.Arch32 ->
+      output_32 chan entry_addr;
+      output_32 chan exec_header_32_size; (* offset to first phdr *)
+      (* claude: offset to first shdr; symsize is always 0, we never
+       * emit a Plan9-native symbol table (see write_sections) *)
+      output_32 chan (config.header_size + sizes.text_size + sizes.data_size);
+  | Arch.Arch64 ->
+      output_64 chan entry_addr;
+      output_64 chan exec_header_64_size;
+      output_64 chan (config.header_size + sizes.text_size + sizes.data_size);
+  | Arch.Arch8 | Arch.Arch16 ->
+      failwith "8 and 16 bits arch not supported by ELF"
+  );
   (match arch with
   | Arch.Arm ->
         (* version5 EABI for Linux *)
         output_32 chan 0x5000200;
   | _ -> output_32 chan 0
   );
-  output_16 chan exec_header_32_size;
-  output_16 chan program_header_32_size;
-  output_16 chan nb_program_headers; (* # of Phdrs *)
-  output_16 chan section_header_32_size;
+  (match bits with
+  | Arch.Arch32 ->
+      output_16 chan exec_header_32_size;
+      output_16 chan program_header_32_size;
+      output_16 chan nb_program_headers; (* # of Phdrs *)
+      output_16 chan section_header_32_size;
+  | Arch.Arch64 ->
+      output_16 chan exec_header_64_size;
+      output_16 chan program_header_64_size;
+      output_16 chan nb_program_headers;
+      output_16 chan section_header_64_size;
+  | Arch.Arch8 | Arch.Arch16 ->
+      failwith "8 and 16 bits arch not supported by ELF"
+  );
   output_16 chan nb_section_headers; (* # of Shdrs *)
   (* claude: Shdr table index of .strtab, see write_sections *)
   output_16 chan (nb_section_headers - 1);
@@ -355,9 +410,17 @@ let write_headers (config : Exec_file.linker_config)
 
   (* Program headers *)
 
+  let program_header =
+    match bits with
+    | Arch.Arch32 -> program_header_32
+    | Arch.Arch64 -> program_header_64
+    | Arch.Arch8 | Arch.Arch16 ->
+        failwith "8 and 16 bits arch not supported by ELF"
+  in
+
   (* Text *)
   let offset_disk_text = config.header_size in
-  program_header_32 endian PH_PT_Load 
+  program_header endian PH_PT_Load
    offset_disk_text (config.init_text, config.init_text)
     (sizes.text_size, sizes.text_size) [R; X] config.init_round chan;
 
@@ -365,23 +428,27 @@ let write_headers (config : Exec_file.linker_config)
    * address modulo a page must match file offset modulo
    * a page, so simpler to start data at a page boundary
    *)
-  let offset_disk_data = 
+  let offset_disk_data =
     Int_.rnd (config.header_size + sizes.text_size) config.init_round
   in
   let init_data =
     match config.init_data with
-    | None -> 
+    | None ->
         raise (Impossible "init_data should be set by now after layout_text")
     | Some x -> x
   in
-  program_header_32 endian PH_PT_Load
+  (* claude: goken's elf32phdr always passes R|W|X for the data
+   * segment, but elf64phdr passes R|W (no X) -- see liblk/elf.c's
+   * elf32() vs elf64(); matched as-is, not just "close enough". *)
+  let data_prots = match bits with Arch.Arch64 -> [R; W] | _ -> [R; W; X] in
+  program_header endian PH_PT_Load
     offset_disk_data (init_data, init_data)
-     (sizes.data_size, sizes.data_size + sizes.bss_size) [R; W; X]
+     (sizes.data_size, sizes.data_size + sizes.bss_size) data_prots
      config.init_round chan;
 
   (* claude: symbol table placeholder, like goken's 5l/8l elf.c; we
    * never emit a Plan9-native symbol table, so filesz=memsz=0 always *)
-  program_header_32 endian PH_None
+  program_header endian PH_None
     (config.header_size + sizes.text_size + sizes.data_size) (0, 0)
     (0, 0) [R] 4 chan;
 
@@ -423,7 +490,8 @@ let write_sections (config : Exec_file.linker_config)
   let shoff = config.header_size + sizes.text_size + sizes.data_size in
   seek_out chan shoff;
   let endian = Arch.endian_of_arch config.arch in
-  let (_, output_32) = Endian.output_functions_of_endian endian in
+  let bits = Arch.bits_of_arch config.arch in
+  let (_, output_32, output_64) = Endian.output_functions_of_endian endian in
   let section_header_32 name_idx typ flags addr offset size align =
     output_32 chan name_idx;
     output_32 chan (int_of_section_header_type typ);
@@ -436,6 +504,36 @@ let write_sections (config : Exec_file.linker_config)
     output_32 chan align;
     output_32 chan 0 (* entsize *)
   in
+  (* claude: Elf64_Shdr keeps sh_name/sh_type as 4 bytes but widens
+   * sh_flags/sh_addr/sh_offset/sh_size/sh_addralign/sh_entsize to 8
+   * bytes (sh_link/sh_info stay 4 bytes) -- ported from goken's
+   * liblk/elf.c's elf64shdr. *)
+  let section_header_64 name_idx typ flags addr offset size align =
+    output_32 chan name_idx;
+    output_32 chan (int_of_section_header_type typ);
+    output_64 chan (int_of_section_flags flags);
+    output_64 chan addr;
+    output_64 chan offset;
+    output_64 chan size;
+    output_32 chan 0 (* link *);
+    output_32 chan 0 (* info *);
+    output_64 chan align;
+    output_64 chan 0 (* entsize *)
+  in
+  let section_header =
+    match bits with
+    | Arch.Arch32 -> section_header_32
+    | Arch.Arch64 -> section_header_64
+    | Arch.Arch8 | Arch.Arch16 ->
+        failwith "8 and 16 bits arch not supported by ELF"
+  in
+  let section_header_size =
+    match bits with
+    | Arch.Arch32 -> section_header_32_size
+    | Arch.Arch64 -> section_header_64_size
+    | Arch.Arch8 | Arch.Arch16 ->
+        failwith "8 and 16 bits arch not supported by ELF"
+  in
   let text_off = config.header_size in
   let data_off = Int_.rnd (config.header_size + sizes.text_size) config.init_round in
   let init_data =
@@ -445,12 +543,12 @@ let write_sections (config : Exec_file.linker_config)
   in
   (* claude: 0x10000 here is a literal in goken's elf.c (elf32sectab),
    * not tied to INITRND/config.init_round -- matched as-is *)
-  section_header_32 1 SH_Progbits [SHF_Alloc; SHF_Exec]
+  section_header 1 SH_Progbits [SHF_Alloc; SHF_Exec]
     config.init_text text_off sizes.text_size 0x10000;
-  section_header_32 7 SH_Progbits [SHF_Write; SHF_Alloc]
+  section_header 7 SH_Progbits [SHF_Write; SHF_Alloc]
     init_data data_off sizes.data_size 0x10000;
-  section_header_32 13 SH_Strtab [SHF_Strings]
-    0 (shoff + nb_section_headers * section_header_32_size)
+  section_header 13 SH_Strtab [SHF_Strings]
+    0 (shoff + nb_section_headers * section_header_size)
     shstrtab_declared_size 1;
   output_string chan shstrtab_content
 (*e: executables/Elf.ml *)

@@ -91,10 +91,13 @@ let assemble (caps: < Cap.open_in; .. >) (conf : Preprocessor.conf) (arch: Arch.
   | Arch.Mips -> 
       let prog = assemblev caps conf infile in
       Object_file.save arch prog chan
-  | Arch.Riscv -> 
+  (* claude: riscv64/oja reuses assemblei/Ast_asmi as-is, mirroring
+   * goken's ia/ja sharing the same binary (see linker/CLI.ml's linki
+   * for the same reasoning on the linker side) *)
+  | Arch.Riscv | Arch.Riscv64 ->
       let prog = assemblei caps conf infile in
       Object_file.save arch prog chan
-  | _ -> 
+  | _ ->
    failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 (*e: function [[CLI.assemble]] *)
 
@@ -110,6 +113,7 @@ let main (caps: <caps; Cap.stdout; Cap.stderr; ..>) (argv: string array) :
     | "o5a" -> Arch.Arm
     | "ova" -> Arch.Mips
     | "oia" -> Arch.Riscv
+    | "oja" -> Arch.Riscv64
     | s -> failwith (spf "arch could not be detected from argv0 %s" s)
   in
 

@@ -16,6 +16,7 @@
   (Main.exe as o5l)
   (Main.exe as ovl)
   (Main.exe as oil)
+  (Main.exe as ojl)
   ; useful to debug, see ../../debug and ocamldebug
   (Main.bc as o5l.bc))
 )

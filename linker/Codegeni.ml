@@ -100,6 +100,10 @@ let fits_addi_imm x = x >= -big && x < big
 
 let op_opimm = 0x13 (* ADDI/SLTI/etc *)
 let op_lui = 0x37
+(* claude: AUIPC (PC-relative "add upper immediate"); riscv64/ojl uses
+ * this instead of LUI for absolute-address computations -- see
+ * gen_pcrelative and case 20 below. *)
+let op_auipc = 0x17
 let op_system = 0x73 (* ECALL/EBREAK *)
 
 (* I-type: imm[31:20] rs1[19:15] funct3[14:12] rd[11:7] opcode[6:0] *)
@@ -119,11 +123,20 @@ let op_utype opcode (R rd) (imm20 : int) : Bits.t =
  * otherwise subtract instead of add when that low part's bit 11 is
  * set. Then ADDI the (now-consistent) low 12 bits into rd itself.
  *)
-let gen_absolute (rd : reg) (v : int) : Bits.t list =
+let gen_absolute_via (opcode : int) (rd : reg) (v : int) : Bits.t list =
   let v = if v land 0x800 <> 0 then v + 0x1000 else v in
-  [ op_utype op_lui rd v;
+  [ op_utype opcode rd v;
     op_itype op_opimm 0 rd rd (v land 0xfff);
   ]
+let gen_absolute (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_lui rd v
+
+(* claude: same instruction pair as gen_absolute, but AUIPC instead of
+ * LUI -- goken's riscv64 (thechar='j') uses this for case 12/13/18/20
+ * (see il/asm.c's `thechar == 'j' ? OP_UP(...) : OP_U(...)`) so that
+ * the materialized address stays correct as a *delta from this
+ * instruction's own pc* rather than a 32-bit-truncated absolute
+ * value. Caller is responsible for passing that delta as `v`. *)
+let gen_pcrelative (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_auipc rd v
 
 (*****************************************************************************)
 (* The rules! *)
@@ -133,7 +146,12 @@ let gen_absolute (rd : reg) (v : int) : Bits.t list =
  * - rt = register to (p->to.reg in il)
  *)
 
-let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
+(* claude: is_64 is only ever read inside a `binary` thunk (never
+ * during the sizing pass -- see size_of_instruction below), mirroring
+ * how init_data is threaded; it's riscv64/ojl's equivalent of goken's
+ * global `thechar == 'j'` check. *)
+let rules (is_64 : bool)
+    (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
   match node.instr with
   (* Reusable *)
   | T.Virt _ | T.TEXT _ | T.WORD _ ->
@@ -241,7 +259,23 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               { size = 8; x = None; binary = (fun () ->
                 match init_data with
                 | None -> raise (Impossible "init_data should be set by now")
-                | Some init_data -> gen_absolute rt (offset + init_data)
+                | Some init_data ->
+                    let target_abs = offset + init_data in
+                    if is_64
+                    then
+                      (* claude: riscv64/ojl: `vv = regoff(&p->from) +
+                       * instoffx - (pc + INITTEXT)` in il/asm.c's
+                       * case 20 -- AUIPC encodes a delta from *this
+                       * instruction's own* absolute pc, not the
+                       * absolute address itself. Unlike goken's raw
+                       * `pc` (text-relative, 0 at the first
+                       * instruction, needing the explicit +INITTEXT),
+                       * xix's node.real_pc is already absolute (see
+                       * Layouti.layout_text: `pc := ref init_text`),
+                       * so no extra +INITTEXT term is needed here. *)
+                      let delta = target_abs - node.real_pc in
+                      gen_pcrelative rt delta
+                    else gen_absolute rt target_abs
               )}
         )
 
@@ -290,7 +324,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
 (* must return a multiple of 4 *)
 let size_of_instruction (env : Codegen.env) (node : 'a T.node) : int =
-  let action = rules env None node in
+  (* is_64 doesn't affect any instruction's *size* (AUIPC vs LUI is
+   * still one 4-byte instruction either way), only the `binary`
+   * thunk's contents -- never forced during sizing, so this dummy
+   * value is never actually read. *)
+  let action = rules false env None node in
   action.size
 
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
@@ -303,8 +341,10 @@ let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
 
   cg |> T.iter (fun n ->
 
+    let is_64 = (match config.arch with Arch.Riscv64 -> true | _ -> false) in
     let {size; binary; x = _} =
-        rules Codegen.{ syms = symbols2; autosize = !autosize }
+        rules is_64
+        Codegen.{ syms = symbols2; autosize = !autosize }
         config.init_data n
     in
     let instrs = binary () in

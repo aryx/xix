@@ -31,7 +31,10 @@ let of_arch (arch : Arch.t) : 'instr t =
        visit_globals_instr = Ast_asmv.visit_globals_instr;
        rTMP = Ast_asmv.rTMP;
      }
-  | Arch.Riscv -> 
+  (* claude: riscv64/ojl reuses Ast_asmi as-is, same reasoning as
+   * linker/CLI.ml's linki and assembler/CLI.ml's assemble -- goken's
+   * ia/il and ja/jl are literally the same binaries. *)
+  | Arch.Riscv | Arch.Riscv64 ->
      (* nosemgrep: do-not-use-obj-magic *)
      Obj.magic {
        branch_opd_of_instr = Ast_asmi.branch_opd_of_instr;

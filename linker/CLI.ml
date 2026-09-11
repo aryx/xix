@@ -129,7 +129,7 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
       }
       
   | "elf" | "elf_linux" ->
-      let header_size = Elf.header_size in
+      let header_size = Elf.header_size (Arch.bits_of_arch arch) in
       Exec_file.{ 
         header_type = Exec_file.Elf;
         arch;
@@ -141,7 +141,11 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
               (match arch with
               | Arch.Arm -> 0x8000
               | Arch.Mips -> 0x400000
-              | Arch.Riscv -> 0x10000
+              (* claude: same default INITTEXT for riscv64 -- goken's
+               * il/obj.c picks INITTEXT from HEADTYPE only, not
+               * thechar, see mkfiles/riscv64/mkfile's "ja/jc/jl are
+               * the *same* binaries as ia/ic/il" comment *)
+              | Arch.Riscv | Arch.Riscv64 -> 0x10000
               | _ ->
                 failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
               ) + header_size
@@ -289,7 +293,13 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
      link5 caps config files chan
   | Arch.Mips ->
      linkv caps config files chan
-  | Arch.Riscv ->
+  (* claude: riscv64/ojl reuses linki as-is, mirroring goken itself --
+   * il/jl are literally the same binary (thechar dispatches on argv0
+   * at runtime, see mkfiles/riscv64/mkfile); none of Codegeni.ml,
+   * Rewritei.ml, Layouti.ml reference Arch.t at all, so they're
+   * already arch-width-agnostic. Only Elf.ml (ELF32 vs ELF64) and
+   * this dispatch needed to change. *)
+  | Arch.Riscv | Arch.Riscv64 ->
      linki caps config files chan
   | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 (*e: function [[CLI.link]] *)
@@ -306,6 +316,7 @@ let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     | "o5l" -> Arch.Arm
     | "ovl" -> Arch.Mips
     | "oil" -> Arch.Riscv
+    | "ojl" -> Arch.Riscv64
     | s -> failwith (spf "arch could not detected from argv0 %s" s)
   in
 

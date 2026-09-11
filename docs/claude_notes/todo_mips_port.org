@@ -261,11 +261,29 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    fixture but left out of test-mips.sh's CASES list, run manually
    with scripts/diff-mips.sh. Verified: full MIPS + ARM baselines
    and make test (134/134) all still pass.
+** DONE case 12 movbs r,r / case 13 movbu r,r -- sign/zero-extending
+   byte or half register move, no memory involved (Move1's first
+   xix codegen match arms -- Move1 also covers register<->memory
+   forms, cases 27/28/etc, not ported yet). Sign-extend (MOVB/MOVH)
+   has no dedicated instruction in goken: SLL then SRA by 24 (byte)
+   or 16 (half), pushing the sign bit up to bit 31 then arithmetic-
+   shifting it back down. Zero-extend (MOVBU/MOVHU) is a plain
+   AND-immediate mask (0xff/0xffff). New op_srr helper for
+   OP_SRR(op,s,r2,r3) (shift-immediate encoding, shared with case
+   16's still-unported sll $c,[r1],r2). Encoding confirmed against
+   goken directly via `vl -a` before writing the fixtures.
+   Added tests/linker/mips_diff/movbh_mips.s (all four forms on the
+   same -1 register value, combined via SUB into a branch-free,
+   fully byte-identical check) and movbh_check_mips.s (a BEQ-based
+   functional check of the sign-extend side specifically -- inherits
+   the same known delay-slot-scheduler diff as case6_mips.s/
+   immcon_mips.s, so kept out of test-mips.sh's CASES like those).
+   PASS byte-identical (movbh_mips.s) + PASS functionally (both,
+   qemu-mips exit codes match). Verified: full MIPS + ARM baselines
+   and make test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 12 movbs r,r
-** TODO case 13 movbu r,r
 ** TODO case 16 sll $c,[r1],r2
 ** TODO case 20 mov lohi,r
 ** TODO case 21 mov r,lohi

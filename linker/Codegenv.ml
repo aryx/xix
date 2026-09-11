@@ -229,6 +229,13 @@ let _oprrr_mul_opcode (code : mul_opcode) : Bits.t =
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
+(* claude: OP_SRR(op,s,r2,r3) in goken's asm.c -- shift-immediate
+ * form, used by case 12's SLL/SRA-based sign-extend trick below
+ * (case 16, sll $c,[r1],r2, would also use this but isn't ported
+ * yet). *)
+let op_srr (op : Bits.t) (s : int) (R r2 : reg) (R r3 : reg) : Bits.t =
+  op @ [(s land 0x1f, 6); (r2, 16); (r3, 11)]
+
 (* claude: like op_irr but without the r3/bits[20:16] field -- needed
  * for case 6's Bxx (BGEZ/BGEZAL/BLTZ/BLTZAL) family, whose `op`
  * prefix already bakes a real value into that same bit range via
@@ -381,6 +388,36 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
             let r = r_opt ||| rt in
             [ op_rrr (oprrr_arith_opcode op) r rf rt ]
+         ) }
+
+    (* case 12:	/* movbs r,r */ *)
+    (* claude: sign-extending byte/half register move, done with no
+     * dedicated instruction -- goken shifts left then arithmetic-
+     * shifts right by the same amount (24 for a byte, 16 for a
+     * half), which pushes the sign bit up to bit 31 and then
+     * sign-extends it back down. *)
+    | Move1 (B_ S, Left (GReg rf), GReg rt) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_srr (opirr_arith_opcode (SLL W)) 24 rf rt;
+              op_srr (opirr_arith_opcode (SRA W)) 24 rt rt ]
+         ) }
+    | Move1 (H_ S, Left (GReg rf), GReg rt) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_srr (opirr_arith_opcode (SLL W)) 16 rf rt;
+              op_srr (opirr_arith_opcode (SRA W)) 16 rt rt ]
+         ) }
+
+    (* case 13:	/* movbu r,r */ *)
+    (* claude: zero-extending byte/half register move -- just a
+     * plain AND-immediate mask (0xff or 0xffff), no shifting
+     * needed. *)
+    | Move1 (B_ U, Left (GReg rf), GReg rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_irr (opirr_arith_opcode AND) 0xff rf rt ]
+         ) }
+    | Move1 (H_ U, Left (GReg rf), GReg rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_irr (opirr_arith_opcode AND) 0xffff rf rt ]
          ) }
 
     (* case 1:		/* mov[v] r1,r2 ==> OR r1,r0,r2 */ where r1 = RO

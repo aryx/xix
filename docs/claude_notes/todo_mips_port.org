@@ -118,7 +118,6 @@
 Cases with a matching (* case N: *) comment already in Codegenv.ml:
 ** DONE case 1  mov[v] r1,r2 ==> OR r1,r0,r2
 ** DONE case 3  mov $soreg, r ==> or/add $i,o,r
-** DONE case 4  add $scon,[r1],r2
 ** DONE case 5  syscall
 ** DONE case 7  mov r, soreg ==> sw o(r)
 ** DONE case 8  mov soreg, r ==> lw o(r)
@@ -195,10 +194,55 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    test-mips.sh's CASES list, run manually with scripts/diff-mips.sh.
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
+** DONE case 4 (fixed a real bug) + case 10  add $con,[r1],r2
+   Codegenv.ml's case 4 previously had a standing TODO
+   ("C_ADD0CON vs C_ANDCON generate different opcodes") and just
+   always emitted a single op_irr, truncating the immediate via
+   `land 0xffff` regardless of its actual size -- a real,
+   previously-latent bug: e.g. `ADD $0x8000,R1,R2` would have
+   silently encoded as ADDI $-0x8000 (wrong sign) instead of the
+   REGTMP-based +0x8000 goken actually uses. Root-caused via
+   goken's span.c aclass()/cmp(): case 4's needed class
+   (C_ADD0CON) is reached whenever the constant fits ADDI/ADDIU's
+   native sign-extended 16-bit immediate directly -- actual class
+   ZCON, SCON, *or* ADDCON, i.e. the *full* [-0x8000, 0x7fff]
+   range (confirmed empirically against goken with `vl -a`,
+   single instruction at both ends, including exactly -0x8000).
+   Outside that range (ANDCON, [0x8000, 0xffff]) needs case 10's
+   REGTMP+OR expansion instead. Case 4 is now guarded by this
+   exact range and case 10 added right after it for the ANDCON
+   half; further out (UCON/LCON, cases 25/23, not ported) now
+   correctly falls through to the generic "not handled" error
+   instead of silently emitting wrong bytes.
+   Note: case 10's goken C code also has an AADDU/sign-extend
+   variant for *negative* values (`if(v<0) r=AADDU`), but that's
+   only ever reached for AAND (AND-immediate isn't ported at all
+   yet -- case 4/10 here are ADD-only, matching the pre-existing
+   pattern's own restriction to `ADD (W,_sign)`), so only the
+   OR/positive half of case 10 is implemented.
+   Added tests/linker/mips_diff/immcon_mips.s: ADD at all four
+   boundary corners (32767/-32768 for case 4, 32768/65535 for case
+   10), each pair combined via ADD/SUB (case 2) into a small,
+   self-checked delta via BEQ. Hit a genuine, unrelated quirk along
+   the way: comparing against a plain `MOVW $-32768,R` (rather than
+   combining boundary values arithmetically) makes *goken's own*
+   assembler emit a literal-pool SB-relative load instead of a
+   direct immediate for that one exact literal, and the resulting
+   executable then segfaults under qemu-mips on goken's side --
+   nothing to do with case 4/10's ADD path itself (confirmed
+   separately via `vl -a` that ADD $-32768 correctly stays a single
+   ADDI on goken); just avoided in the fixture, which stays about
+   case 4/10 arithmetic, not that separate MOVW quirk.
+   PASS functionally (exit code 7 both sides) but NOT
+   byte-identical, for the same already-documented reason as
+   case6_mips.s (this fixture uses BEQ/JMP to self-check, so it
+   inherits the same delay-slot-scheduler diff) -- kept as a
+   fixture but left out of test-mips.sh's CASES list, run manually
+   with scripts/diff-mips.sh. Verified: full MIPS + ARM baselines
+   and make test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 10 add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2
 ** TODO case 12 movbs r,r
 ** TODO case 13 movbu r,r
 ** TODO case 16 sll $c,[r1],r2

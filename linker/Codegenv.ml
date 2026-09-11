@@ -296,12 +296,42 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* --------------------------------------------------------------------- *)
 
     (* case 4:		/* add $scon,[r1],r2 */ *)
-    | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) ->
-        (* TODO: C_ADD0CON vs C_ANDCON generate different opcodes *)
+    (* claude: goken's case 4 (needed class C_ADD0CON) is reached
+     * whenever the constant fits directly in ADDI/ADDIU's native
+     * sign-extended 16-bit immediate, i.e. actual class ZCON, SCON
+     * or ADDCON (span.c's cmp(): C_ADD0CON falls through to
+     * C_ADDCON's own C_ZCON/C_SCON acceptance) -- confirmed
+     * empirically against goken directly (`vl -a`) for the full
+     * [-0x8000, 0x7fff] range, single instruction both ends.
+     * Outside that range needs case 10's REGTMP+OR trick (ANDCON,
+     * 0x8000-0xffff) below; further out (UCON/LCON, cases 25/23)
+     * isn't ported yet and correctly falls through to the generic
+     * "not handled" error instead of this guard's old TODO, which
+     * silently truncated any value via `i land 0xffff` -- a real,
+     * previously-latent bug for e.g. ADD $0x8000,R1,R2 (would have
+     * encoded as ADDI $-0x8000 instead of REGTMP-based +0x8000).
+     *)
+    | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) when i >= -0x8000 && i <= 0x7fff ->
         { size = 4; x = None; binary = (fun () ->
-            let v = i in
             let r = r_opt ||| rt in
-            [ op_irr (opirr_arith_opcode op) v r rt ]
+            [ op_irr (opirr_arith_opcode op) i r rt ]
+         ) }
+
+    (* case 10:	/* add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2 */ *)
+    (* claude: the ANDCON range (0x8000-0xffff -- positive, doesn't
+     * fit ADDI's signed immediate, but does fit a 16-bit OR-with-R0
+     * load). goken's C also has an AADDU/sign-extend variant for
+     * negative values here (`if(v<0) r=AADDU`), but that path is
+     * only ever reached for AAND (ADD's own negative case is fully
+     * covered by case 4 above, per the ADDCON note there) --
+     * AND-immediate isn't ported at all yet (case 4 above is
+     * ADD-only), so this only implements the OR/positive half.
+     *)
+    | Arith (ADD (W, _sign) as op, Imm i, r_opt, rt) when i >= 0x8000 && i <= 0xffff ->
+        { size = 8; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_irr (opirr_arith_opcode OR) i rZERO rTMP;
+              op_rrr (oprrr_arith_opcode op) rTMP r rt ]
          ) }
 
     (* case 2:		/* add/sub r1,[r2],r3 */ *)

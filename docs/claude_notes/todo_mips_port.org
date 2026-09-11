@@ -29,6 +29,28 @@
    extra nm/onm test block). PASS: byte-identical (4112 bytes both
    sides) on the first real run, once the endian bug above was fixed.
    Both sides print "Hello, world" and exit 0 under qemu-mips.
+** DONE tests/linker/mips_diff/exit_linux_mips.s: cmp -l clean + qemu-mips
+   Copied from goken's tests/s/exit/exit_linux_mips.s (no data
+   section, same reasoning as exit_linux_arm.s for keeping a
+   no-data fixture in the corpus). Caught a real bug: case 18's JMP
+   (the expansion of a leaf RET) emitted just the jump, missing
+   MIPS' mandatory branch-delay-slot instruction -- goken's noops()
+   (vl/noop.c) always fills it, with `NOR R0,R0,R0` (funct 0x27)
+   specifically, not the all-zero `SLL R0,R0,0` some other MIPS
+   toolchains use as NOP (checked against goken's actual output
+   byte-for-byte, first guess of a plain zero word was wrong).
+   Fixed in Codegenv.ml (case 18 now emits 2 words, size=8). PASS:
+   byte-identical (326 bytes) + matching qemu-mips exit code (42)
+   after. Verified: MIPS hello-world fixture, ARM baseline (5
+   fixtures), and make test (134/134) all still pass.
+** TODO JAL (case 11) likely has the same missing-delay-slot gap
+   Case 18's fix was scoped to JMP/RET specifically; JAL (calls) has
+   the same mandatory delay slot and almost certainly needs the same
+   treatment, but goken's sched.c is a real instruction scheduler
+   that can fill a call's delay slot with a *useful* instruction
+   moved from the call site, not just a NOP -- matching that
+   byte-for-byte would be harder than case 18 was. Not fixed yet;
+   no current fixture exercises JAL to confirm/measure the gap.
 
 * Phase 1 -- asm.c case backlog (goken/linkers/vl/asm.c)
 Cases with a matching (* case N: *) comment already in Codegenv.ml:

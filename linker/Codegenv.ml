@@ -255,8 +255,22 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | JMP { contents = (IndirectJump rt) } ->
         let r = rZERO in
         let op_jmp = op 1 0 in
-        { size = 4; x = None; binary = (fun () -> 
-           [ op_rrr op_jmp rZERO rt r ]
+        (* claude: MIPS jump/branch instructions have a mandatory
+         * delay slot -- the instruction right after a jump always
+         * executes too, jump or not. goken's noops() (vl/noop.c)
+         * fills it with a NOP when nothing useful is available to
+         * schedule there (this case is the expansion of a leaf-
+         * function RET with no locals, so nothing is); without it
+         * the word right after the jump would be whatever
+         * instruction happened to follow in memory, executed
+         * unconditionally as part of the jump. Plan9's canonical
+         * MIPS NOP encoding is `NOR R0,R0,R0` (funct 0x27), not the
+         * all-zero `SLL R0,R0,0` some other toolchains use --
+         * verified against goken's actual output byte-for-byte.
+         *)
+        let nop = op_rrr (op 4 7) rZERO rZERO rZERO in
+        { size = 8; x = None; binary = (fun () ->
+           [ op_rrr op_jmp rZERO rt r; nop ]
          ) }
     (* case 11:	/* jmp lbra */ *)
     | JAL { contents = (Absolute _) } ->

@@ -13,6 +13,7 @@ cd "$(dirname "$0")"
 # default) when not TEXT _start.
 CASES=(
     "tests/linker/mips_diff/hello_linux_mips.s:_start"
+    "tests/linker/mips_diff/exit_linux_mips.s:_start"
 )
 
 FAIL=0

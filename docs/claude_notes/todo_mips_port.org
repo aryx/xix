@@ -149,10 +149,55 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    tests/linker/mips_diff/case9_mips.s (SLL then SRL chained into
    the exit code: 1<<4=16, 16>>2=4). PASS byte-identical + PASS same
    qemu-mips exit code.
+** DONE case 6  beq r1,[r2],sbra -- conditional branches: BEQ/BNE
+   (2-register form, from AST's BEQ/BNE) and the whole
+   ABGEZ/ABGEZAL/ABGTZ/ABLEZ/ABLTZ/ABLTZAL family (1-register-vs-zero,
+   from AST's Bxx) -- goken's case 6 covers all of these uniformly
+   with one formula (`OP_IRR(opirr(p->as), v, p->from.reg, p->reg)`,
+   optab.c: all share oprange 6), split here into two match arms only
+   because BEQ/BNE's middle register is a real optional operand
+   (defaults to R0) while Bxx's "register" slot is always occupied by
+   the BCOND sub-opcode bits instead (BCOND(x,y)=(x<<19)|(y<<16),
+   selecting BGEZ/BGEZAL/BLTZ/BLTZAL within SP(0,1) -- see
+   opirr_bxx_opcode). Needed a new op_irr_no_r3 helper for the Bxx
+   arm: reusing plain op_irr with r3=0 would add a *second* Bits.t
+   tuple at bit offset 16 on top of BCOND's own (y,16) contribution,
+   which Bits.sanity_check_32 rejects (two entries at the same
+   offset) even though the actual encoded value is identical (goken's
+   C passes p->reg==NREG there, which OP_IRR's `&31` masks down to 0
+   -- a no-op contribution, just not expressible as a *second*
+   tuple in this representation).
+   The branch offset itself needed a new helper (gbranch_offset),
+   distinct from gbranch_static (JMP/JAL's *absolute* word address):
+   case 6 is PC-relative (`v = (p->cond->pc - pc - 4) >> 2` in
+   goken), the -4 being the mandatory delay slot.
+   Also completed case 11 alongside this (it was only handling JAL's
+   variant, `JAL {Absolute _}`; optab.c shows plain unconditional
+   `JMP label` -- as opposed to case 18's `JMP (r)` indirect form --
+   shares the exact same oprange 11, just without linking) since the
+   case6_mips.s fixture needs unconditional jumps for its control
+   flow anyway.
+   Added tests/linker/mips_diff/case6_mips.s (BEQ, BNE, BGTZ, BLTZ,
+   each on its taken path, accumulating 1+2+4+8=15 into the exit
+   code; the not-taken path sets an out-of-range wrong value so a
+   real branch/delay-slot bug would show up in the qemu-mips exit
+   code, not just in the byte diff). PASS functionally (exit code 15
+   both sides) but NOT byte-identical (goken: 414 bytes, xix: 430
+   bytes, diff spread across several delay slots) -- same root cause
+   as call_mips.s's known JAL diff: goken's sched.c hoists real
+   instructions into branch delay slots instead of this port's plain
+   NOPs, and with 8 branches/jumps in this fixture (4 conditional + 4
+   unconditional JMP) there are more delay slots for it to fill than
+   call_mips.s's single JAL. Deliberately not chasing this (same
+   decision as call_mips.s: the scheduler is a real, much bigger
+   subsystem for a payoff limited to a few bytes on already-correct
+   code) -- case6_mips.s is kept as a fixture but left out of
+   test-mips.sh's CASES list, run manually with scripts/diff-mips.sh.
+   Verified: full MIPS + ARM baselines and make test (134/134) all
+   still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 6  beq r1,[r2],sbra
 ** TODO case 10 add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2
 ** TODO case 12 movbs r,r
 ** TODO case 13 movbu r,r

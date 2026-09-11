@@ -150,6 +150,25 @@ let opirr_jmp (is_jal : bool) : Bits.t =
   then sp 0 3
   else sp 0 2
 
+(* claude: BCOND(x,y) = (x<<19)|(y<<16) in goken's asm.c -- a
+ * sub-opcode selector reusing SP(0,1)'s otherwise-unused low bits to
+ * distinguish BGEZ/BGEZAL/BLTZ/BLTZAL from each other (they'd
+ * otherwise all share the same SP(0,1) base). *)
+let bcond (x : int) (y : int) : Bits.t = [(x, 19); (y, 16)]
+
+(* case 6's b_condition family (BGTZ/BLEZ don't need BCOND at all;
+ * BGEZ/BGEZAL/BLTZ/BLTZAL do). Mirrors goken's opirr() cases for
+ * these mnemonics exactly (asm.c). Paired with op_irr_no_r3, not
+ * op_irr -- see its comment above. *)
+let opirr_bxx_opcode (c : b_condition) : Bits.t =
+  match c with
+  | GEZ    -> sp 0 1 @ bcond 0 1
+  | GEZAL  -> sp 0 1 @ bcond 2 1
+  | GTZ    -> sp 0 7
+  | LEZ    -> sp 0 6
+  | LTZ    -> sp 0 1 @ bcond 0 0
+  | LTZAL  -> sp 0 1 @ bcond 2 0
+
 let oprrr_arith_opcode (code : arith_opcode) : Bits.t =
   match code with
   | ADD (W, S) -> op 4 0
@@ -186,6 +205,17 @@ let _oprrr_mul_opcode (code : mul_opcode) : Bits.t =
   
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
+
+(* claude: like op_irr but without the r3/bits[20:16] field -- needed
+ * for case 6's Bxx (BGEZ/BGEZAL/BLTZ/BLTZAL) family, whose `op`
+ * prefix already bakes a real value into that same bit range via
+ * BCOND (see bcond/opirr_bxx_opcode below). goken's C just passes
+ * p->reg == NREG there, which OP_IRR masks down to 0 anyway
+ * (`&31`), so this is byte-for-byte equivalent -- but reusing plain
+ * op_irr with an explicit 0 would put two entries at bit offset 16
+ * in the Bits.t list, which Bits.sanity_check_32 rejects. *)
+let op_irr_no_r3 (op : Bits.t) (i : int) (R r2 : reg) : Bits.t =
+  op @ [(i land 0xffff, 0); (r2, 21)]
 
 let op_rrr (op : Bits.t) (R r1 : reg) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(r1, 16); (r2, 21); (r3, 11)]
@@ -229,6 +259,21 @@ let gbranch_static (nsrc : 'a T.node) (is_jal : bool) : Bits.t =
 
       let v = dst_pc lsr 2 in
       op_jmp (opirr_jmp is_jal) v
+
+(* claude: unlike gbranch_static above (JMP/JAL, an absolute word
+ * address), case 6's conditional branches encode a PC-relative
+ * 16-bit word displacement -- goken: `v = (p->cond->pc - pc - 4) >>
+ * 2` (asm.c). The -4 accounts for the branch-delay slot: by the
+ * time the branch is evaluated, pc has already advanced past the
+ * delay-slot instruction that always executes right after it. *)
+let gbranch_offset (nsrc : 'a T.node) : int =
+  match nsrc.branch with
+  | None -> raise (Impossible "resolving should have set the branch field")
+  | Some ndst ->
+      let dst_pc = ndst.real_pc in
+      if dst_pc mod 4 <> 0 || nsrc.real_pc mod 4 <> 0
+      then raise (Impossible "layout text wrong, not word aligned node");
+      (dst_pc - nsrc.real_pc - 4) asr 2
 
 (*****************************************************************************)
 (* The rules! *)
@@ -335,6 +380,44 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 8; x = None; binary = (fun () ->
           [ gbranch_static node true; nop ]
           ) }
+    (* claude: same case 11 in goken's optab.c (AJMP, C_LBRA also
+     * resolves to oprange 11, just without linking) -- unconditional
+     * `JMP label`, as opposed to case 18's `JMP (r)` indirect form
+     * just above. Added alongside case 6 below since its fixture
+     * needs an unconditional jump for control flow. *)
+    | JMP { contents = (Absolute _) } ->
+        { size = 8; x = None; binary = (fun () ->
+          [ gbranch_static node false; nop ]
+          ) }
+
+    (* case 6:	/* beq r1,[r2],sbra */ *)
+    (* claude: goken's case 6 covers ABEQ/ABNE (2-register form) and
+     * the whole ABGEZ/ABGEZAL/ABGTZ/ABLEZ/ABLTZ/ABLTZAL family
+     * (1-register-vs-zero) uniformly with one formula, `OP_IRR(
+     * opirr(p->as), v, p->from.reg, p->reg)` -- see optab.c, all
+     * these mnemonics share oprange 6. Split into two match arms
+     * here only because BEQ/BNE have a genuine optional middle
+     * register (r_opt, defaulting to R0) while Bxx's "register"
+     * slot is always the BCOND sub-opcode bits instead (see
+     * op_irr_no_r3/opirr_bxx_opcode above). Same delay-slot caveat
+     * as case 11 (JAL) just above: a plain nop, not goken's
+     * scheduler-hoisted instruction -- see
+     * docs/claude_notes/todo_mips_port.org. *)
+    | BEQ (GReg rf, r_opt, _branch) ->
+        { size = 8; x = None; binary = (fun () ->
+            let r = r_opt ||| rZERO in
+            [ op_irr (sp 0 4) (gbranch_offset node) rf r; nop ]
+         ) }
+    | BNE (GReg rf, r_opt, _branch) ->
+        { size = 8; x = None; binary = (fun () ->
+            let r = r_opt ||| rZERO in
+            [ op_irr (sp 0 5) (gbranch_offset node) rf r; nop ]
+         ) }
+    | Bxx (cond, GReg rf, _branch) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_irr_no_r3 (opirr_bxx_opcode cond) (gbranch_offset node) rf; nop ]
+         ) }
+
     (* --------------------------------------------------------------------- *)
     (* Memory *)
     (* --------------------------------------------------------------------- *)

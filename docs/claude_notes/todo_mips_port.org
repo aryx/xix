@@ -281,10 +281,18 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    PASS byte-identical (movbh_mips.s) + PASS functionally (both,
    qemu-mips exit codes match). Verified: full MIPS + ARM baselines
    and make test (134/134) all still pass.
+** DONE case 16 sll $c,[r1],r2 -- shift-by-immediate, the natural
+   sibling of case 9 (shift-by-register) and reusing op_srr (added
+   for case 12 just above). Same scoping choice as case 9: only the
+   W-sized (32-bit) SLL/SRL/SRA opcodes, not goken's V-sized/vshift()
+   ALAST-aliased >=32 path. Added tests/linker/mips_diff/
+   case16_mips.s (SLL then SRL then SRA chained into the exit code:
+   1<<4=16, 16>>2=4, 4>>1=2). PASS byte-identical + PASS same
+   qemu-mips exit code. Verified: full MIPS + ARM baselines and make
+   test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 16 sll $c,[r1],r2
 ** TODO case 20 mov lohi,r
 ** TODO case 21 mov r,lohi
 ** TODO case 22 mul r1,r2

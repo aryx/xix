@@ -390,6 +390,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ op_rrr (oprrr_arith_opcode op) r rf rt ]
          ) }
 
+    (* case 16:	/* sll $c,[r1],r2 */ *)
+    (* claude: shift-by-immediate; goken's C also has a >=32-shift
+     * ALAST-aliased path for the vshift() opcodes (SLLV/SRLV/SRAV,
+     * AST's V-sized shifts), not implemented here -- same scoping
+     * choice as case 9 just above, which also only covers W-sized
+     * shifts. A W-sized shift count is always < 32 in practice
+     * (undefined otherwise on real MIPS hardware), so this always
+     * takes goken's plain (non-ALAST) OP_SRR branch. *)
+    | Arith ((SLL W | SRL W | SRA W) as op, Imm v, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_srr (opirr_arith_opcode op) v r rt ]
+         ) }
+
     (* case 12:	/* movbs r,r */ *)
     (* claude: sign-extending byte/half register move, done with no
      * dedicated instruction -- goken shifts left then arithmetic-

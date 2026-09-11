@@ -20,6 +20,7 @@ CASES=(
     "tests/linker/mips_diff/case9_mips.s:_start"
     "tests/linker/mips_diff/movw_andcon_mips.s:_start"
     "tests/linker/mips_diff/movbh_mips.s:_start"
+    "tests/linker/mips_diff/case16_mips.s:_start"
 )
 # tests/linker/mips_diff/call_mips.s, case6_mips.s, immcon_mips.s
 # and movbh_check_mips.s are deliberately NOT in this list: all

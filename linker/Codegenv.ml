@@ -240,7 +240,37 @@ let oprrr_mul_opcode (code : mul_opcode) : Bits.t =
   | DIV (V, U) -> op 3 7
 
   | _ -> failwith "TODO:oprrr_mul"
-  
+
+(* claude: FPF(x,y) = SP(2,1)|(16<<21)|(x<<3)|y and FPD(x,y) is the
+ * same with 17 instead of 16 -- goken's asm.c macros selecting
+ * single- vs double-precision floating point ops (bit 21's value is
+ * the "fmt" field in the real MIPS FPU encoding: 16=single,
+ * 17=double). *)
+let fpf (x : int) (y : int) : Bits.t = sp 2 1 @ [(16, 21)] @ op x y
+let fpd (x : int) (y : int) : Bits.t = sp 2 1 @ [(17, 21)] @ op x y
+
+(* claude: only ADD_/SUB_/MUL_/DIV_ (case 32) and ABS_/NEG_ (case
+ * 33) below -- CMPEQ_/CMPGT_/CMPGE_ also alias into case 32 per
+ * goken's optab.c (ACMPEQF's row: `C_FREG,C_REG,C_NONE -> 32`, note
+ * the C_REG not C_FREG on the *second* operand, and C_NONE dest --
+ * a real comparison writes to an implicit FP condition flag, not a
+ * normal freg, so it doesn't fit case 32's ArithF-with-a-real-dest
+ * shape as cleanly as ADD/SUB/MUL/DIV/ABS/NEG do) -- left as a TODO
+ * rather than guessed at. *)
+let oprrr_arithf_opcode ((code, prec) : arithf_opcode * A.floatp_precision) : Bits.t =
+  let f = match prec with A.F -> fpf | A.D -> fpd in
+  match code with
+  | ADD_ -> f 0 0
+  | SUB_ -> f 0 1
+  | MUL_ -> f 0 2
+  | DIV_ -> f 0 3
+  | ABS_ -> f 0 5
+  | NEG_ -> f 0 7
+  | CMPEQ_ | CMPGE_ | CMPGT_ -> failwith "TODO:oprrr_arithf CMPxx"
+
+let op_frrr (op : Bits.t) (FR r1 : freg) (FR r2 : freg) (FR r3 : freg) : Bits.t =
+  op @ [(r1, 16); (r2, 11); (r3, 6)]
+
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
@@ -467,6 +497,26 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 4; x = None; binary = (fun () ->
             let r = r_opt ||| rt in
             [ op_rrr (oprrr_mul_opcode op) rf r rZERO ]
+         ) }
+
+    (* case 32:	/* fadd fr1,[fr2],fr3 */ *)
+    (* claude: ADD_/SUB_/MUL_/DIV_ only -- see oprrr_arithf_opcode's
+     * comment above for why CMPEQ_/CMPGT_/CMPGE_ (which also alias
+     * into this same oprange in goken) aren't included. *)
+    | ArithF (((ADD_ | SUB_ | MUL_ | DIV_), _) as op, rf, r_opt, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            let r = r_opt ||| rt in
+            [ op_frrr (oprrr_arithf_opcode op) rf r rt ]
+         ) }
+
+    (* case 33:	/* fabs fr1,fr3 */ *)
+    (* claude: unary -- goken's C always fills the ft field with 0
+     * (unused for a 2-operand op), and per the AST/grammar these
+     * never take a middle register (ArithF's r_opt is always None
+     * for ABS_/NEG_ -- see the AST comment on arithf_opcode). *)
+    | ArithF (((ABS_ | NEG_), _) as op, rf, None, rt) ->
+        { size = 4; x = None; binary = (fun () ->
+            [ op_frrr (oprrr_arithf_opcode op) (FR 0) rf rt ]
          ) }
 
     (* case 20:	/* mov lohi,r */ *)

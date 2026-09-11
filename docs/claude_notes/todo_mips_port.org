@@ -410,6 +410,28 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    code. Verified: full MIPS + ARM baselines and make test (134/134)
    all still pass, including call_mips.s (non-leaf, run manually --
    still its known, pre-existing, unrelated 4-byte scheduler diff).
+** DONE case 32 fadd fr1,[fr2],fr3 (ADD_/SUB_/MUL_/DIV_ only) / case
+   33 fabs fr1,fr3 (ABS_/NEG_) -- unlike case 27/28/30/31/34, these
+   already fit the existing ArithF AST (freg * freg option * freg)
+   with no new AST needed. New helpers fpf/fpd (goken's FPF/FPD
+   macros -- SP(2,1) plus the single/double "fmt" field, bit 21:
+   16=single, 17=double) and op_frrr (OP_FRRR's r1@16/r2@11/r3@6
+   layout, distinct from op_rrr's r1@16/r2@21/r3@11 -- confirmed via
+   `vl -a` directly). CMPEQ_/CMPGT_/CMPGE_ also alias into case 32's
+   oprange in goken (optab.c), but left unimplemented: their optab
+   row has C_REG (not C_FREG) on the second operand and C_NONE on
+   the dest -- a real comparison writes to an implicit FP condition
+   flag, not a normal freg, so it doesn't fit case 32's
+   ArithF-with-a-real-dest shape as cleanly as ADD/SUB/MUL/DIV/ABS/
+   NEG do; needs its own investigation rather than guessing.
+   Added tests/linker/mips_diff/case32_33_mips.s (ADDF/ADDD/SUBF/
+   MULF/DIVF/ABSF/NEGD) -- byte-comparison only, since there's no
+   way yet to load a meaningful value into a float register (that
+   needs case 30/31/34, which DO require new AST -- a float-register
+   `gen`-like operand -- unlike case 32/33). PASS byte-identical +
+   PASS same (trivial, floats all start at 0) qemu-mips exit code.
+   Verified: full MIPS + ARM baselines and make test (134/134) all
+   still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
@@ -417,8 +439,6 @@ Not yet in Codegenv.ml at all:
 ** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)
 ** TODO case 30 movw r,fr
 ** TODO case 31 movw fr,r
-** TODO case 32 fadd fr1,[fr2],fr3
-** TODO case 33 fabs fr1,fr3
 ** TODO case 34 mov $con,fr ==> or/add $i,r,r2
 ** TODO case 37 movw r,mr
 ** TODO case 38 movw mr,r

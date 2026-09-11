@@ -19,14 +19,22 @@
    byte-reproducible, and xix never emits one anyway).
 
 * Phase 0.5 -- baseline corpus (constructs already ported)
-** TODO tests/linker/hello_linux_arm.s: cmp -l clean vs goken
-   Down to 6 differing bytes (offsets 165, 193-198), all from the
-   same remaining gap: goken's synthetic "branch round the literal
-   pool" instruction (flushpool()'s skip=true case, see layout.c)
-   that Layout5.ml doesn't yet emit -- xix's pool constant sits 4
-   bytes earlier and isn't preceded by a jump-over instruction.
-   Functionally harmless here (dead code after a syscall exit) but
-   needed for byte-equality. Next thing to close.
+** DONE tests/linker/hello_linux_arm.s: cmp -l clean vs goken
+   PASS: byte-identical (4112 bytes both sides). Last 6 bytes closed
+   in Layout5.ml: implemented goken's checkpool()'s "true end of
+   program" flush trigger (`if(p->link==P) flushpool(p,true)`) --
+   inserting a synthetic self-branch ("B .", an unreachable trap)
+   right before the flushed literal pool, matching goken's always-
+   guard-against-fallthrough behavior even though it's dead code
+   here. The self-loop falls out naturally from gbranch_static
+   reading the branch's own .branch field. Heavily commented in
+   Layout5.ml since the literal-pool mechanism itself (not just this
+   fix) wasn't well understood going in; added two permanent
+   Logs.debug traces (pool-entry-added, pool-flushed) for next time.
+   Mid-function early-flush (pool > ~4KB or LDR offset overflow) is
+   NOT implemented -- pools must stay small; a real limit, not just
+   a decision to revisit later. Verified full `./test-arm.sh` +
+   `make test` (134/134) after.
 ** DONE tests/linux_arm.s: runs correctly under qemu-arm
    Root cause found and fixed: linker/Flags.ml's kencc_compatible
    defaulted to true, which sets the MOV instruction's Rn field to the

@@ -238,8 +238,11 @@ Phase 1 -- the porting backlog and per-case workflow
 ---------------------------------------------------------
 
 Backlog = every numbered case in goken's codegen.c switch not yet in
-Codegen5.ml (see list above). Track it as a checklist in xix/todo.org
-rather than a new doc.
+Codegen5.ml (see list above). Tracked as a checklist in
+docs/claude_notes/todo_arm_port.org (xix/todo.org itself is large and
+covers the whole project, so this plan gets its own progress file
+instead) -- check case items off there as they're ported, rather than
+here.
 
 Per case N:
   1. Read codegen.c's `case N:` block and its comment.

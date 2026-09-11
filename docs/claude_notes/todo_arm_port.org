@@ -1,0 +1,89 @@
+# -*- org -*-
+# Progress tracker for docs/claude_notes/notes_arm_port_plan.txt.
+# See that file for rationale/design; this file is just checklist state.
+
+* Phase 0 -- harness
+** TODO diff harness script/Testo module (assemble+link both sides, cmp -l, qemu-arm)
+** TODO fix o5l exit-code propagation on error node "TODO: ..."
+** TODO ELF layout parity (INITTEXT/INITDATA/INITRND, section-header presence)
+
+* Phase 0.5 -- baseline corpus (constructs already ported)
+** TODO tests/linker/hello_linux_arm.s: cmp -l clean vs goken
+** TODO tests/linker/hello_linux_arm.s: runs correctly under qemu-arm
+   (currently SIGILLs; goken's build runs fine and prints "Hello, world")
+
+* Phase 1 -- codegen.c case backlog (goken/linkers/5l/codegen.c)
+Cases with a matching (* case N: *) comment already in Codegen5.ml:
+** DONE case 1  op R,[R],R
+** DONE case 2  movbu $I,[R],R
+** DONE case 3  add R<<[IR],[R],R
+** DONE case 5  bra s
+** DONE case 6  b ,O(R) -> add $O,R,PC
+** DONE case 7  bl ,O(R) -> mov PC,link; add $O,R,PC
+** DONE case 8  sll $c,[R],R -> mov (R<<$c),R
+** DONE case 9  sll R,[R],R -> mov (R<<R),R
+** DONE case 10 swi [$con]
+** DONE case 15 mul r,[r,]r
+** DONE case 41 rfe -> movm.s.w.u 0(r13),[r15]
+
+Existing OCaml arms whose real case number was never pinned down
+(marked "case ??" in Codegen5.ml as of this writing) -- resolve
+against codegen.c before/while working the list below:
+** TODO case ?? @ Codegen5.ml:429 (MOVE Word ... -> plain MOV)
+** TODO case ?? @ Codegen5.ml:446 (MOVBU R,RT -> AND 0xff,R,RT)
+** TODO case ?? @ Codegen5.ml:453 (MOVB/MOVH/MOVHU R,R -> SLL/SRA/SRL)
+** TODO case ?? @ Codegen5.ml:532 (address-of-global fast path / pool)
+** TODO case ?? @ Codegen5.ml:551 (MOVW $global(SB),R)
+** TODO case ?? @ Codegen5.ml:599 (load: MOVW/MOVBU mem,R)
+** TODO case ?? @ Codegen5.ml:625 (store: MOVW/MOVB R,mem)
+
+Not yet in Codegen5.ml at all:
+** TODO case 4  add $I,[R],R
+** TODO case 11 word
+** TODO case 12 movw $lcon, reg
+** TODO case 13 op $lcon, [R], R
+** TODO case 14 movb/movbu/movh/movhu R,R
+** TODO case 16 div r,[r,]r
+** TODO case 17 (mod, shares switch w/ 16)
+** TODO case 20 mov/movb/movbu R,O(R)
+** TODO case 21 mov/movbu O(R),R
+** TODO case 22 movb/movh/movhu O(R),R -> lr,shl,shr
+** TODO case 23 movh/movhu R,O(R) -> sb,sb
+** TODO case 30 mov/movb/movbu R,L(R)
+** TODO case 31 mov/movbu L(R),R
+** TODO case 32 movh/movb L(R),R
+** TODO case 33 movh/movhu R,L(R) -> sb, sb
+** TODO case 34 mov $lacon,R -> LDR x(R15), R11; ADD R11, R13, R
+** TODO case 35 mov PSR,R
+** TODO case 36 mov R,PSR
+** TODO case 37 mov $con,PSR
+** TODO case 38 movm $con,oreg -> stm
+** TODO case 39 movm oreg,$con -> ldm
+** TODO case 40 swp oreg,reg,reg
+** TODO case 50 floating point store
+** TODO case 51 floating point load
+** TODO case 52 floating point store, long offset UGLY
+** TODO case 53 floating point load, long offset UGLY
+** TODO case 54 floating point arith
+** TODO case 55 floating point fix and float
+** TODO case 56 move to FP[CS]R
+** TODO case 57 move from FP[CS]R
+** TODO case 58 movbu R,R -> AND $0xff, R, R
+** TODO case 59 movw/bu R<<I(R),R -> ldr indexed
+** TODO case 60 movb R(R),R -> ldrsb indexed
+** TODO case 61 movw/b/bu R,R<<[IR](R) -> str indexed
+** TODO case 62 case R -> movw R<<2(PC),PC
+** TODO case 63 bcase
+** TODO case 64 mov/movb/movbu R,addr
+** TODO case 65 mov/movbu addr,R
+** TODO case 66 movh/movhu/movb addr,R
+** TODO case 67 movh/movhu R,addr -> sb, sb
+** TODO case 68 floating point store -> ADDR
+** TODO case 69 floating point load <- ADDR
+** TODO case 70 movh/movhu R,O(R) -> strh
+** TODO case 71 movb/movh/movhu O(R),R -> ldrsb/ldrsh/ldrh
+** TODO case 72 movh/movhu R,L(R) -> strh
+** TODO case 73 movb/movh/movhu L(R),R -> ldrsb/ldrsh/ldrh
+** TODO case 74 vfp floating point arith
+** TODO case 75 vfp floating point compare
+** TODO case 76 vfp floating point fix and float

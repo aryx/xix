@@ -1,0 +1,123 @@
+# -*- org -*-
+# Progress tracker for docs/claude_notes/notes_riscv_port_plan.txt.
+# See that file for rationale/design; this file is just checklist state.
+
+* Phase -1 -- the linker didn't exist yet
+** DONE build Codegeni.ml/.mli, Layouti.ml/.mli, Rewritei.ml, Typesi.ml
+   From scratch, mirroring Codegen5.ml/Codegenv.ml/Layout5.ml/
+   Layoutv.ml/Rewrite5.ml/Rewritev.ml's structure and the case-N
+   comment convention (goken's linkers/il/asm.c). Layouti.ml is
+   simpler than the ARM/MIPS versions: RISC-V never needs a literal
+   pool (large constants always inline via LUI+ADDI), so there's no
+   pool/splicing bookkeeping at all.
+** DONE wire CLI.ml + linker/dune + assembler/objects/Object_file.ml
+   Added `linki` (mirrors link5/linkv) and Arch.Riscv to `link`'s
+   dispatch and to config_of_header_type_and_flags's INITTEXT
+   default (0x10000, confirmed against goken's actual entry point
+   0x100a0 = 0x10000 + header_size 0xa0). Added "oil" to CLI.ml's
+   argv0 arch-detection and to linker/dune's install stanza (mirrors
+   how o5l/ovl already share one Main.exe). Object_file.is_obj_filename's
+   regex was `.*\.o[5v]$` (ARM/MIPS only) -- added 'i' for RISC-V's .oi.
+** DONE fix Elf.ml's int_of_machine (MRiscv was `failwith "TODO"`)
+   Filled in with 243 (EM_RISCV, the standard ELF machine ID).
+** DONE fix a real, blocking assembler bug (Parse_asmi.ml)
+   The whole keyword-recognition table was a copy-pasted-then-
+   commented-out ARM template, never adapted -- MOVW/ECALL (or
+   anything else) couldn't even be tokenized, so nothing could
+   assemble at all ("Syntax error, last name: MOVW"). Wired up
+   "MOVW" -> TMOVE2 W__ and "ECALL" -> TSYSCALL (matching Ast_asmi's
+   actual Move1/Move2 grammar, not ARM's single TMOV token the
+   template had). MOVB/MOVH/MOVBU/MOVHU and arithmetic/branch/JAL
+   mnemonics left unwired -- real backlog, not guessed at (see notes
+   doc for why Move1's exact intended use isn't obvious yet).
+
+* Phase 0 -- harness
+** DONE diff harness script (assemble+link both sides, cmp -l, qemu-riscv32)
+   scripts/diff-riscv.sh + test-riscv.sh, mirrors the ARM/MIPS ones.
+   goken's il needs `-c` (disable RVC instruction compression --
+   see below) `-s` (strip native symbol table, same as ARM/MIPS).
+   No -H flag needed on either side (il defaults to ELF already,
+   like vl; oil's CLI.ml always defaults to "elf" regardless of arch).
+** DONE discover goken's il compresses instructions (RVC) by default
+   linkers/il/compress.c, called unconditionally from asm.c's encode
+   loop unless `-c` is passed (`if(!debug['c'] && o->ctype)`) --
+   found by disassembling goken's default output and hitting 16-bit
+   opcodes a plain-RV32 disassembler couldn't decode (e.g. bytes
+   `05 45` = `C.LI a2,13`, replacing a 4-byte `addi a2,zero,13`).
+   Decided NOT to implement compression in xix (substantial separate
+   feature: deciding what's losslessly shrinkable, then re-doing
+   layout since it changes instruction sizes/addresses). The harness
+   always passes goken's `-c` so the comparison is apples to apples.
+
+* Phase 0.5 -- baseline corpus
+** DONE tests/linker/riscv_diff/hello_linux_riscv.s: cmp -l clean + qemu-riscv32
+   Copied from goken's tests/s/mini/ (simpler than xix's own
+   tests/assembler/hello_linux_riscv.s, which adds extra stuff not
+   needed for this baseline). PASS: byte-identical (4112 bytes both
+   sides) on the very first successful link, once the assembler bug,
+   the -c flag, and the BIG/fits_addi_imm address-of-global formula
+   were all in place -- no separate "found via a second fixture" bug
+   hunt needed this time, unlike ARM/MIPS's kitchen-sink stories.
+   Both sides print "Hello, world" and exit 0 under qemu-riscv32.
+   This fixture already exercises BOTH the address-of-global fast
+   path (`MOVW $msg(SB),R11`) and slow path (`MOVW $setSB(SB),RSB`,
+   forced there by the `final_offset <> 0` exclusion, not by a range/
+   encoding failure like ARM's setR12 case -- see notes doc).
+
+* Phase 1 -- asm.c case backlog (goken/linkers/il/asm.c)
+Cases with a matching (* case N: *) comment already in Codegeni.ml:
+** DONE case 2  addi $I,[R,]D (used for the prologue/epilogue SP
+   adjustment in Rewritei.ml, and for MOVW-immediate-fits-12-bit)
+** DONE case 6  sb R,I(S) (store; needed by the link-register-save
+   prologue)
+** DONE case 7  lb I(S),D (load; needed by the link-register-restore
+   epilogue)
+** DONE case 9  lui I1,D; addi I0,D (MOVW-immediate too big for 12 bits)
+** DONE case 11 addi $I,R,D (address-of-global fast path)
+** DONE case 20 lui/auipc I1,D; addi I0;D (address-of-global slow/
+   absolute path; also used for address-of-procedure/STText2)
+** DONE case 24 SYS (ECALL)
+
+Not yet in Codegeni.ml at all:
+** TODO case 0  add S,[R,]D (register-register add; also likely how
+   plain register-to-register MOVW should lower -- "add S,zero,D")
+** TODO case 1  slli $I,[R,]D
+** TODO case 3  beq S,[R,]L
+** TODO case 4  jal [D,]L
+** TODO case 5  jalr [D,]I(S) (RET when not-leaf uses this shape too,
+   currently hardcoded inline in Codegeni.ml's JMP case instead of
+   going through a general case-5 encoder -- revisit if/when a
+   general JALR-with-offset is needed)
+** TODO case 8  lui I,D (used standalone, not just as case 9/20's
+   first half)
+** TODO case 10 sign extend (MOVB/MOVH -- see the Move1 backlog note
+   in the plan doc)
+** TODO case 12 mov r,lext => lui/auipc I1,T; sb r,I0(T)
+** TODO case 13 mov lext, r => lui/auipc I1,T; lb r,I0(T)
+** TODO case 14 op $lcon,[r,]d => lui L1,T; addi $L0,T,T; op T,r,d
+** TODO case 15 mov r,L(s) => lui L1,T; add s,T,T; sb r,L0(T)
+** TODO case 16 mov L(s),r => lui L1,T; add s,T,T; lb r,L0(T)
+** TODO case 17 fcvt S,D
+** TODO case 18 lui L1, T; jal [r,]L0(T)
+** TODO case 19 addiw $0, rs, rd (RV64-only, thechar 'j' -- probably
+   not applicable to this RV32 port at all)
+** TODO case 21 lui I,D; s[lr]ai N,D
+** TODO case 22 CSRRx C, rs, rd
+** TODO case 25 word $x
+** TODO case 26 pseudo ops
+
+* Notes for later
+** MOVB/MOVH/MOVBU/MOVHU not wired in the assembler
+   See notes_riscv_port_plan.txt's "Not yet wired in the assembler"
+   section -- Move1 vs Move2's exact intended split for byte/half
+   isn't obvious from the AST alone; investigate goken's il/asm.c
+   case 10 ("sign extend") and the a.y grammar before guessing.
+** Rewritev.ml (MIPS) may have a latent leaf-with-locals gap
+   Found while reading goken's il/noop.c for RISC-V's 3-way leaf/
+   frame logic: MIPS's Rewritev.ml only has a 2-way split (leaf-with-
+   no-locals vs everything else), always doing the full RLINK save/
+   restore even for a leaf procedure that merely has locals. Whether
+   goken's vl/noop.c actually has the same 3-way distinction (making
+   this a real MIPS gap) wasn't checked -- no MIPS fixture currently
+   exercises a leaf-with-nonzero-declared-size TEXT to expose it
+   either way.

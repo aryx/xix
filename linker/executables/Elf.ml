@@ -211,7 +211,8 @@ let int_of_machine (m : machine) : int =
   | MAmd64 -> 62
   | MArm64 -> 183
 
-  | MRiscv -> failwith "TODO: MRiscv"
+  (* claude: EM_RISCV, standard ELF machine ID (elf.h) *)
+  | MRiscv -> 243
 (*e: function [[Elf.int_of_machine]] *)
 
 (*s: function [[Elf.int_of_program_header_type]] *)

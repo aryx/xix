@@ -57,6 +57,6 @@ let load (chan : Chan.i) : 'instr t =
 
 (*s: function [[Object_file.is_obj_filename]] *)
 let is_obj_filename (file : Fpath.t) : bool =
-  !!file =~ ".*\\.o[5v]$"
+  !!file =~ ".*\\.o[5vi]$"
 (*e: function [[Object_file.is_obj_filename]] *)
 (*e: objects/Object_file.ml *)

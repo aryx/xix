@@ -141,7 +141,8 @@ let config_of_header_type_and_flags (arch : Arch.t) (header_type : string) :
               (match arch with
               | Arch.Arm -> 0x8000
               | Arch.Mips -> 0x400000
-              | _ -> 
+              | Arch.Riscv -> 0x10000
+              | _ ->
                 failwith (spf "arch not supported yet: %s" (Arch.thestring arch))
               ) + header_size
         );
@@ -245,6 +246,41 @@ let linkv (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let datas  = Datagen.gen symbols2 init_data sizes endian data in
   Execgen.gen config sizes instrs datas symbols2 chan
 
+(* claude: new function, mirroring link5/linkv (which I didn't write) *)
+let linki (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
+  let arch : Ast_asmi.instr Arch_linker.t = Arch_linker.of_arch config.arch in
+  let (code, data, symbols) = Load.load caps files arch in
+  T.lookup (config.entry_point, T.Public) None symbols |> ignore;
+  let graph = Resolve.build_graph arch.branch_opd_of_instr symbols code in
+  let graph, new_data =
+    match config.profile with | None -> graph, []
+    | Some kind -> Profile.rewrite kind arch.rTMP symbols graph
+  in
+  let data = data @ new_data in
+  let graph = Rewritei.rewrite graph in
+  let symbols2, (data_size, bss_size) =
+    Layout.layout_data symbols data in
+  (* claude: setSB's value is BIG, not 0 -- see Codegeni.ml's `big`
+   * for why this matters on RISC-V (unlike ARM's setR12, where the
+   * choice of 0 vs BIG happens to not matter for the fixtures so
+   * far -- see docs/claude_notes/notes_riscv_port_plan.txt). *)
+  Layout.xdefine symbols2 symbols ("setSB" , T.Public)
+    (T.SData2 (Codegeni.big, T.Data));
+  Check.check symbols;
+  let symbols2, graph, text_size =
+    Layouti.layout_text symbols2 config.init_text graph in
+  let sizes = Exec_file.{ text_size; data_size; bss_size } in
+  let init_data =
+    match config.init_data with | Some x -> x
+    | None -> Int_.rnd (text_size + config.init_text) config.init_round
+  in
+  let config = { config with Exec_file.init_data = Some init_data } in
+  Logs.info (fun m -> m "final config is %s"
+        (Exec_file.show_linker_config config));
+  let instrs = Codegeni.gen symbols2 config graph in
+  let endian = Arch.endian_of_arch config.arch in
+  let datas  = Datagen.gen symbols2 init_data sizes endian data in
+  Execgen.gen config sizes instrs datas symbols2 chan
 
 (*s: function [[CLI.link]] *)
 let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_config) (files : Fpath.t list) (chan : Chan.o) : unit =
@@ -253,6 +289,8 @@ let link (caps : < Cap.open_in; ..> ) (arch: Arch.t) (config : Exec_file.linker_
      link5 caps config files chan
   | Arch.Mips ->
      linkv caps config files chan
+  | Arch.Riscv ->
+     linki caps config files chan
   | _ -> failwith (spf "TODO: arch not supported yet: %s" (Arch.thestring arch))
 (*e: function [[CLI.link]] *)
 
@@ -267,6 +305,7 @@ let main (caps : <caps; Cap.stdout; Cap.stderr; ..>) (argv : string array) :
     match Filename.basename argv.(0) with
     | "o5l" -> Arch.Arm
     | "ovl" -> Arch.Mips
+    | "oil" -> Arch.Riscv
     | s -> failwith (spf "arch could not detected from argv0 %s" s)
   in
 

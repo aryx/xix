@@ -59,72 +59,27 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
 
   | T.TIDENT s ->
       (match s with
-      (* instructions *)
-(*
-      | "AND" -> TARITH AND | "ORR" -> TARITH ORR | "EOR" -> TARITH EOR
+      (* claude: this whole dispatch was a copy-pasted-then-commented
+       * ARM template (Parse_asm5.ml's keyword table, complete with
+       * ARM-only mnemonics like SWI/RFE/BHI/CMPF that don't even
+       * exist on RISC-V) -- none of it had been adapted to Ast_asmi's
+       * actual grammar (Parser_asmi.mly), which uses TMOVE1/TMOVE2
+       * (not ARM's single TMOV) and TSYSCALL (not TSWI), among other
+       * differences. Wiring up only what's currently exercised by a
+       * fixture (MOVW, ECALL); the rest (MOVB/MOVH/MOVBU/MOVHU,
+       * arithmetic, branches, JAL/JALR) is real backlog, not yet
+       * done -- see docs/claude_notes/notes_riscv_port_plan.txt.
+       *)
 
-      | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
-      | "MUL" -> TARITH MUL | "DIV" -> TARITH DIV | "MOD" -> TARITH MOD
-      | "SLL" -> TARITH SLL | "SRL" -> TARITH SRL | "SRA" -> TARITH SRA
+      (* MOVW $imm,R / MOVW $sym(SB),R / MOVW R,R / MOVW mem,R / MOVW R,mem
+       * all go through Move2's W__ (word) case, the same as ARM/MIPS's
+       * unified Move2 -- unlike MOVB/MOVH, which need Move1 for their
+       * sign/zero-extension distinction on loads (not wired yet).
+       *)
+      | "MOVW" -> TMOVE2 W__
 
-      | "BIC" -> TARITH BIC
-      | "ADC" -> TARITH ADC | "SBC" -> TARITH SBC
-      | "RSB" -> TARITH RSB | "RSC" -> TARITH RSC
+      | "ECALL" -> TSYSCALL
 
-      | "MVN" -> TMVN
-*)
-
-      (* could move to Lexer_asm.mll and Ast_asm.virtual_instr *)
-(*
-      | "MOVW" -> TMOV A.Word
-      | "MOVB" -> TMOV (A.Byte     A.S) | "MOVBU" -> TMOV (A.Byte     A.U)
-      | "MOVH" -> TMOV (A.HalfWord A.S) | "MOVHU" -> TMOV (A.HalfWord A.U)
-
-      | "B" -> TB | "BL" -> TBL
-      | "CMP" -> TCMP CMP 
-      | "TST" -> TCMP TST | "TEQ" -> TCMP TEQ | "CMN" -> TCMP CMN
-
-      | "BEQ" -> TBx EQ | "BNE" -> TBx NE
-      | "BGT" -> TBx (GT A.S) | "BLT" -> TBx (LT A.S)
-      | "BGE" -> TBx (GE A.S) | "BLE" -> TBx (LE A.S)
-      | "BHI" -> TBx (GT A.U) | "BLO" -> TBx (LT A.U) 
-      | "BHS" -> TBx (GE A.U) | "BLS" -> TBx (LE A.U)
-      | "BMI" -> TBx MI | "BPL" -> TBx PL 
-      | "BVS" -> TBx VS | "BVC" -> TBx VC
-
-      | "SWI" -> TSWI
-      | "RFE" -> TRFE
-
-      (* conditions *)
-      | ".EQ" -> TCOND EQ | ".NE" -> TCOND NE
-      | ".GT" -> TCOND (GT A.S)   | ".LT" -> TCOND (LT A.S) 
-      | ".GE" -> TCOND (GE A.S)   | ".LE" -> TCOND (LE A.S)
-      | ".HI" -> TCOND (GT A.U) | ".LO" -> TCOND (LT A.U)
-      | ".HS" -> TCOND (GE A.U) | ".LS" -> TCOND (LE A.U)
-      | ".MI" -> TCOND MI | ".PL" -> TCOND PL 
-      | ".VS" -> TCOND VS | ".VC" -> TCOND VC
-
-      (* less: special bits *)
-      (* float, MUL, ... *)
-      | "ADDF" -> TARITHF (ADD_, A.F)
-      | "SUBF" -> TARITHF (SUB_, A.F)
-      | "MULF" -> TARITHF (MUL_, A.F)
-      | "DIVF" -> TARITHF (DIV_, A.F)
-      | "ADDD" -> TARITHF (ADD_, A.D) 
-      | "SUBD" -> TARITHF (SUB_, A.D)
-      | "MULD" -> TARITHF (MUL_, A.D)
-      | "DIVD" -> TARITHF (DIV_, A.D)
-
-      | "CMPF" -> TCMPF A.F
-      | "CMPD" -> TCMPF A.D
-      (* advanced *)
-      | "C" -> TC
-      | _ when s =~ "^C\\([0-9]+\\)$" ->
-            let i = int_of_string (Regexp_.matched1 s) in
-            if i >= 0 && i <= 15
-            then TCx (C i)
-            else Lexer_asm.error ("register number not valid")
-*)
       | _ -> TIDENT s
       )
 

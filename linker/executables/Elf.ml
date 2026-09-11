@@ -395,14 +395,21 @@ let write_headers (config : Exec_file.linker_config)
  * text/data sections themselves, matching goken's on-disk layout
  * (byte-for-byte comparable output).
  *
- * goken's elf32sectab() declares this section's sh_size as a
- * hardcoded 14 (just enough for "\0.text\0.data\0"), but the string
- * table it *writes* is 21 bytes ("\0.text\0.data\0.strtab\0", since
- * the strtab section's own sh_name=13 points into ".strtab"). sh_size
- * not covering the section's own name is apparently harmless (nothing
- * reads it that way) but reproduced as-is for byte-for-byte parity.
+ * goken's elfstrtab() (8l/elf.c) always writes this exact 22-byte
+ * sequence -- "\0.text\0.data\0.strtab\0\0", note the two trailing
+ * NULs -- while elf32sectab() declares this section's own sh_size as
+ * a hardcoded 14 (just enough for "\0.text\0.data\0"; the strtab
+ * section's own sh_name=13 points past that, into ".strtab", which
+ * sh_size doesn't cover -- apparently harmless since nothing reads it
+ * that way). Both the exact content and the mismatched sh_size are
+ * reproduced as-is for byte-for-byte parity, not just "close enough":
+ * on a program with no data section, this table sits at the very
+ * end of the file, so getting its byte *count* wrong shows up as a
+ * wrong file size, not just wrong bytes at some offset (caught via
+ * tests/arm_diff/exit_linux_arm.s, which has no data section and no
+ * giveaway last data byte for its content to disappear into).
  *)
-let shstrtab_content = "\000.text\000.data\000.strtab\000"
+let shstrtab_content = "\000.text\000.data\000.strtab\000\000"
 let shstrtab_declared_size = 14
 
 (* claude: writes the section header table + string table computed

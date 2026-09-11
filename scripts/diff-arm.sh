@@ -89,12 +89,24 @@ fi
 
 if command -v qemu-arm >/dev/null 2>&1; then
     echo "== running under qemu-arm =="
+    # a test program's exit code is often intentionally non-zero
+    # (e.g. an explicit exit(42) fixture) -- don't let `set -e` treat
+    # that as a script failure.
     echo "-- goken --"
+    set +e
     qemu-arm "./$BASE.goken.out"; GOKEN_RC=$?
+    set -e
     echo "(exit code: $GOKEN_RC)"
     echo "-- xix --"
+    set +e
     qemu-arm "./$BASE.xix.out"; XIX_RC=$?
+    set -e
     echo "(exit code: $XIX_RC)"
+    if [ "$GOKEN_RC" = "$XIX_RC" ]; then
+        echo "PASS: same exit code"
+    else
+        echo "FAIL: exit codes differ (goken=$GOKEN_RC xix=$XIX_RC)"
+    fi
 else
     echo "== qemu-arm not found, skipping functional run ==" 1>&2
 fi

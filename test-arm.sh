@@ -1,5 +1,9 @@
 #!/bin/bash
-# Differential test driver for the ARM assembler/linker port.
+# Differential test driver for the ARM port (mostly assembler codegen
+# -- each fixture here is a single object file, so the linker's own
+# job is minimal: no cross-object symbol resolution or archives are
+# actually exercised, just laying out one TEXT and writing the exec
+# format).
 #
 # Runs scripts/diff-arm.sh over the phase-0.5 baseline corpus (see
 # docs/claude_notes/notes_arm_port_plan.txt and
@@ -16,7 +20,10 @@ cd "$(dirname "$0")"
 # file:entry_symbol pairs -- entry defaults to _main (the linkers'
 # default) when not TEXT _start.
 CASES=(
-    "tests/linker/hello_linux_arm.s:_start"
+    "tests/arm_diff/hello_linux_arm.s:_start"
+    "tests/arm_diff/exit_linux_arm.s:_start"
+    "tests/arm_diff/addr_arm.s:_start"
+    "tests/arm_diff/call_arm.s:_start"
 )
 
 FAIL=0

@@ -12,14 +12,29 @@
    3rd (NOPTYPE/symtab-placeholder) program header, and the .text/
    .data/.strtab section header table + string table, both ported
    from goken's linkers/8l/elf.c (elf32/elf32sectab) -- every constant
-   (offsets, the 0x10000 section addralign, the "sh_size=14 but
-   content is 21 bytes" quirk) traced there, not guessed. Also added
+   (offsets, the 0x10000 section addralign, the exact 22-byte string
+   table content incl. goken's own double-trailing-NUL quirk in
+   elfstrtab(), the "sh_size=14 doesn't cover it" mismatch) traced
+   there, not guessed (first attempt got the string table 1 byte
+   short -- caught by exit_linux_arm.s, see Phase 0.5). Also added
    `-s` to the harness's goken invocation to strip goken's native
    Plan9 symbol/debug table (embeds the invocation cwd, not
    byte-reproducible, and xix never emits one anyway).
 
 * Phase 0.5 -- baseline corpus (constructs already ported)
-** DONE tests/linker/hello_linux_arm.s: cmp -l clean vs goken
+** DONE extend corpus: tests/arm_diff/{exit_linux_arm,addr_arm,call_arm}.s
+   Moved hello_linux_arm.s from tests/linker/ into a new top-level
+   tests/arm_diff/ (these fixtures exercise assembler codegen + basic
+   exec layout, not linking proper -- one object file each, no
+   cross-object resolution -- so "tests/linker/" misdescribed them).
+   Added 3 more from goken's own tests/s/{exit,variants}/: exit_linux_arm.s
+   (minimal exit(42), no data section -- caught the elfstrtab 1-byte
+   bug above), addr_arm.s ($sym(SB) address-of-global + pointer-valued
+   DATA), call_arm.s (BL to a symbol, two TEXT procs). All 4: PASS
+   byte-identical + PASS same qemu-arm exit code. Also fixed
+   diff-arm.sh: `set -e` was aborting the script on a fixture's
+   intentional non-zero exit code (exit_linux_arm.s exits 42).
+** DONE tests/arm_diff/hello_linux_arm.s: cmp -l clean vs goken
    PASS: byte-identical (4112 bytes both sides). Last 6 bytes closed
    in Layout5.ml: implemented goken's checkpool()'s "true end of
    program" flush trigger (`if(p->link==P) flushpool(p,true)`) --
@@ -35,7 +50,7 @@
    NOT implemented -- pools must stay small; a real limit, not just
    a decision to revisit later. Verified full `./test-arm.sh` +
    `make test` (134/134) after.
-** DONE tests/linux_arm.s: runs correctly under qemu-arm
+** DONE tests/arm_diff/hello_linux_arm.s: runs correctly under qemu-arm
    Root cause found and fixed: linker/Flags.ml's kencc_compatible
    defaulted to true, which sets the MOV instruction's Rn field to the
    destination register instead of 0 (Codegen5.ml:441). goken always

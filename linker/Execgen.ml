@@ -26,13 +26,24 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
   let format = config.header_type in
   Logs.info (fun m -> m "saving executable in %s" (Chan.destination chan));
 
+  (* claude: was hardcoded to Endian.Little regardless of arch (see
+   * the old comment this replaced in Arch.ml's endian_of_arch: "if
+   * put Big here I get a segfault with ovl" -- that's because the
+   * ELF header's byte-order marker would say MSB while the actual
+   * instruction words were still written LSB, so any consumer
+   * reading them as big-endian, e.g. qemu-mips, decoded garbage).
+   * Datagen.ml already takes endian as a parameter and isn't
+   * affected; this was the one hardcoded spot.
+   *)
+  let (_, output_32) = Endian.output_functions_of_endian (Arch.endian_of_arch config.arch) in
+
   match format with
   | Exec_file.A_out ->
       (* Header *)
       A_out.write_header config.arch sizes entry_addr chan.oc;
 
       (* Text section *)
-      cs |> List.iter (Endian.Little.output_32 chan.oc);
+      cs |> List.iter (output_32 chan.oc);
 
       (* Data section (no seek to a page boundary; disk image != memory image) *)
       ds |> Array.iter (output_char chan.oc);
@@ -52,7 +63,7 @@ let gen (config : Exec_file.linker_config) (sizes : Exec_file.sections_size) (cs
        *)
       seek_out chan.oc offset_disk_text; (* = config.header_size *)
       (* Text section *)
-      cs |> List.iter (Endian.Little.output_32 chan.oc);
+      cs |> List.iter (output_32 chan.oc);
 
       (* Data section *)
       seek_out chan.oc offset_disk_data;

@@ -1,0 +1,88 @@
+# -*- org -*-
+# Progress tracker for docs/claude_notes/notes_mips_port_plan.txt.
+# See that file for rationale/design; this file is just checklist state.
+
+* Phase 0 -- harness
+** DONE diff harness script (assemble+link both sides, cmp -l, qemu-mips)
+   scripts/diff-mips.sh + test-mips.sh, mirrors the ARM ones. No -H
+   flag needed (vl/ovl both default to ELF already). qemu-mips, not
+   qemu-mipsel, since Mips is now Endian.Big.
+** DONE fix a real, previously-flagged, endianness bug
+   lib_core/commons/Arch.ml's Mips was Endian.Little (PS1-motivated);
+   switched to Endian.Big to match goken and enable byte-equal
+   testing (explicitly decided, dropping PS1 compat as a goal). That
+   immediately reproduced the segfault the code had a standing TODO
+   about ("if put Big here I get a segfault with ovl, why ???").
+   Root cause: linker/Execgen.ml hardcoded Endian.Little.output_32
+   for the TEXT section in both the A_out and Elf branches, so the
+   ELF header claimed MSB while instruction words stayed LSB -- any
+   big-endian consumer (qemu-mips) decoded garbage. Fixed by deriving
+   the output function from Arch.endian_of_arch config.arch instead.
+   Datagen.ml was already correctly parametrized by endian.
+   Verified: ARM baseline (5 fixtures) still passes, make test still
+   134/134, unaffected by this generalization.
+
+* Phase 0.5 -- baseline corpus (constructs already ported)
+** DONE tests/linker/mips_diff/hello_linux_mips.s: cmp -l clean + qemu-mips
+   Copied from goken's tests/s/mini/hello_linux_mips.s (the simpler
+   version, without xix's own tests/assembler/hello_linux_mips.s's
+   extra nm/onm test block). PASS: byte-identical (4112 bytes both
+   sides) on the first real run, once the endian bug above was fixed.
+   Both sides print "Hello, world" and exit 0 under qemu-mips.
+
+* Phase 1 -- asm.c case backlog (goken/linkers/vl/asm.c)
+Cases with a matching (* case N: *) comment already in Codegenv.ml:
+** DONE case 1  mov[v] r1,r2 ==> OR r1,r0,r2
+** DONE case 3  mov $soreg, r ==> or/add $i,o,r
+** DONE case 4  add $scon,[r1],r2
+** DONE case 5  syscall
+** DONE case 7  mov r, soreg ==> sw o(r)
+** DONE case 8  mov soreg, r ==> lw o(r)
+** DONE case 11 jmp lbra
+** DONE case 18 jmp [r1],0(r2)
+** DONE case 19 mov $lcon,r ==> lu+or
+** DONE case 35 mov r,lext/luto/oreg ==> sw o(r)
+** DONE case 36 mov lext/lauto/lreg,r ==> lw o(r30)
+
+Not yet in Codegenv.ml at all:
+** TODO case 0  pseudo ops
+** TODO case 2  add/sub r1,[r2],r3
+** TODO case 6  beq r1,[r2],sbra
+** TODO case 9  asl r1,[r2],r3
+** TODO case 10 add $con,[r1],r2 ==> mov $con,t; add t,[r1],r2
+** TODO case 12 movbs r,r
+** TODO case 13 movbu r,r
+** TODO case 16 sll $c,[r1],r2
+** TODO case 20 mov lohi,r
+** TODO case 21 mov r,lohi
+** TODO case 22 mul r1,r2
+** TODO case 23 add $lcon,r1,r2 ==> lu+or+add
+** TODO case 24 mov $ucon,,r ==> lu r
+** TODO case 25 add/and $ucon,[r1],r2 ==> lu $con,t; add t,[r1],r2
+** TODO case 26 mov $lsext/auto/oreg,,r2 ==> lu+or+add
+** TODO case 27 mov [sl]ext/auto/oreg,fr ==> lwc1 o(r)
+** TODO case 28 mov fr,[sl]ext/auto/oreg ==> swc1 o(r)
+** TODO case 30 movw r,fr
+** TODO case 31 movw fr,r
+** TODO case 32 fadd fr1,[fr2],fr3
+** TODO case 33 fabs fr1,fr3
+** TODO case 34 mov $con,fr ==> or/add $i,r,r2
+** TODO case 37 movw r,mr
+** TODO case 38 movw mr,r
+** TODO case 39 rfe ==> jmp+rfe
+** TODO case 40 word
+** TODO case 41 movw r,fcr
+** TODO case 42 movw fcr,r
+** TODO case 45 case r
+** TODO case 46 bcase $con,lbra
+** TODO case 47 sc r, soreg
+** TODO case 48 ll soreg, r
+
+* Notes for later
+** Expect a BIG/immrot-equivalent story for address-of-global (R30 bias)
+   hello_linux_mips.s's `MOVW $setR30(SB), R30` is MIPS' analogue of
+   ARM's `MOVW $setR12(SB), R12`. When a fixture with multiple GLOBLs
+   at nonzero offsets gets added (mirroring kitchen_sink.s), expect
+   to need the MIPS equivalent of the ARM BIG-bias + immrot fix in
+   Codegenv.ml's address-of-global path -- check for a similar
+   "less: x - BIG" style stub there first.

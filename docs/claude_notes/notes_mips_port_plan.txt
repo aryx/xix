@@ -1,0 +1,112 @@
+Porting the MIPS toolchain (ova/ovl) against goken, byte-equal
+================================================================
+
+Goal: same as docs/claude_notes/notes_arm_port_plan.txt, mirrored for
+MIPS: assemble+link the same .s with both goken's va/vl (Plan 9 MIPS
+assembler/linker) and xix's ova/ovl, and require the final executables
+to be byte-identical. Scope is MIPS assembler + linker only, same
+reasoning as the ARM doc for why the compiler stays out of it (occ is
+headed towards ~/c--'s shared backend, not goken's per-arch compilers).
+
+Read notes_arm_port_plan.txt first -- this doc only calls out what's
+MIPS-specific or different from the ARM story; the general approach
+(harness shape, syncweb rules, where changes land, goken flag
+adjustments allowed) is identical and not repeated here.
+
+Grounding: how goken's va/vl map onto xix
+----------------------------------------------
+
+Unlike 5l (split into codegen.c/datagen.c/layout.c/...), goken's vl
+is NOT split -- it's still the older monolithic asm.c (the numbered
+case-N switch, our codegen.c equivalent) plus separate pass.c/span.c/
+optab.c/obj.c/list.c/sched.c/noop.c. The case-N switch (asmout-style)
+is in linkers/vl/asm.c, cases 0-48 (not contiguous: 0,1,2,3,4,5,6,7,
+8,9,10,11,12,13,16,18,19,20,21,22,23,24,25,26,27,28,30,31,32,33,34,
+35,36,37,38,39,40,41,42,45,46,47,48).
+
+xix's Codegenv.ml already has 11 cases tagged (1,3,4,5,7,8,11,18,19,
+35,36) -- MIPS starts from a similar place ARM did, not from zero.
+
+goken's va/vl binaries are already built at
+~/goken/ROOT/arch/boot-gcc/bin/{va,vl} (same GOKEN_ROOT convention).
+
+A genuine architecture fork, not a bug: endianness
+--------------------------------------------------------
+
+goken's va/vl produce big-endian MIPS (MSB). xix's
+lib_core/commons/Arch.ml had deliberately chosen little-endian for
+Mips (comment: "the PS1 is a little-endian R3000"), for PS1/embedded-
+little-endian-MIPS compatibility. These are genuinely incompatible
+bit patterns for anything wider than a byte -- there is no way to be
+byte-equal with goken while staying little-endian.
+
+Decision (asked and answered): switch xix's Mips to big-endian
+(Endian.Big) to match goken and get real byte-equal testing, dropping
+PS1 compatibility as a goal for now. Goal is to run on qemu-mips
+(big-endian) and match what goken produces, not qemu-mipsel.
+
+That flip immediately reproduced a segfault/crash the code had a
+standing TODO about ("if put Big here I get a segfault with ovl, why
+???" -- Arch.ml, before this change). Root cause: linker/Execgen.ml
+hardcoded `Endian.Little.output_32` for writing the TEXT section's
+instruction words, in both the A_out and Elf branches, regardless of
+`config.arch`. So flipping just the ELF header's byte-order marker
+(which Elf.ml already correctly derives from Arch.endian_of_arch)
+produced a file claiming MSB while the actual instruction words were
+still LSB -- any consumer decoding them as big-endian (qemu-mips)
+read garbage 32-bit words and hit an illegal instruction. Fixed by
+deriving the output functions from `Arch.endian_of_arch config.arch`
+instead of hardcoding Little. Datagen.ml was already correctly
+parametrized by endian -- Execgen.ml's text-section writer was the
+only hardcoded spot found so far.
+
+Verified: tests/linker/mips_diff/hello_linux_mips.s is byte-identical
+against goken and runs correctly under qemu-mips (prints "Hello,
+world", exits 0) on both sides. make test still 134/134 after (the
+compiler's codegen tests exercise Arch.Mips too, via Test_compiler.ml
+-- worth double-checking after any further Mips-endian-adjacent
+change, since those tests don't currently check machine code bytes,
+only compiler stdout/stderr, so they wouldn't have caught this).
+
+Harness
+----------
+
+scripts/diff-mips.sh + test-mips.sh, structurally identical to
+scripts/diff-arm.sh + test-arm.sh (same bash-not-Testo reasoning, same
+GOKEN_ROOT convention, same -s to strip goken's native symbol table).
+Two differences from the ARM harness:
+  - No -H flag needed on either side: vl defaults HEADTYPE to 7 (ELF)
+    already (obj.c: `if(HEADTYPE == -1) HEADTYPE = 7`), unlike 5l
+    which defaults to Plan 9 native and needs `-H7` explicit. ovl's
+    CLI.ml also always defaults header_type to "elf" regardless of
+    arch, so this was already consistent on the xix side.
+  - qemu-mips (big-endian), not qemu-mipsel, now that Mips is
+    Endian.Big. qemu-mips/qemu-mipsel/qemu-mips64/qemu-mips64el are
+    all installed on this host.
+  - Default INITTEXT for MIPS+ELF: goken's vl uses 0x00400000+HEADR;
+    xix's CLI.ml already had exactly `0x400000 + header_size` for
+    Arch.Mips (matches, was already correct, unlike the endian bug).
+
+Test corpus sources
+----------------------
+
+tests/linker/mips_diff/, sibling to tests/linker/arm_diff/ (see that
+folder's rationale in the ARM doc -- same applies here: mostly
+assembler codegen + minimal exec-layout being exercised, still filed
+under tests/linker/ since it's ova+ovl's combined output).
+
+First fixture: tests/linker/mips_diff/hello_linux_mips.s, copied from
+goken's tests/s/mini/hello_linux_mips.s (the simpler version -- xix's
+own tests/assembler/hello_linux_mips.s adds an extra "never_executed"
+TEXT+JAL+WORD block for nm/onm testing, not needed for this baseline
+and skipped for now to keep the first fixture minimal, same "start
+small" reasoning as hello_linux_arm.s). Registers: R2=$v0 (syscall
+number and return value), R4-R10=$a0-$a6 (syscall args), R30=$sp-ish
+SB-bias register (MIPS' equivalent of ARM's R12/BIG mechanism --
+`MOVW $setR30(SB), R30` is the MIPS analogue of `MOVW $setR12(SB),
+R12`; expect a BIG-equivalent bias and an immrot-equivalent encoding
+check in Codegenv.ml's address-of-global path once that's reached,
+per the ARM immrot/BIG story).
+
+Entry point is `_start` (not the linkers' default `_main`), same as
+every ARM fixture -- pass `-E _start` on both sides.

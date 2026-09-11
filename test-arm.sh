@@ -24,6 +24,7 @@ CASES=(
     "tests/arm_diff/exit_linux_arm.s:_start"
     "tests/arm_diff/addr_arm.s:_start"
     "tests/arm_diff/call_arm.s:_start"
+    "tests/arm_diff/kitchen_sink.s:_start"
 )
 
 FAIL=0

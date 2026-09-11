@@ -64,9 +64,22 @@ let int_of_bits (n : 'a T.node) (x : Bits.int32) : int =
 (*e: function [[Codegen5.int_of_bits]] *)
 
 (*s: function [[Codegen5.offset_to_R12]] *)
-let offset_to_R12 x =
-  (* less: x - BIG at some point if want some optimisation *)
-  x
+(* claude: BIG, ported from goken's 5l/l.h. R12 (aka SB, aka rSB
+ * below) is set up at program start to point BIG bytes into the
+ * data segment, not to its very start -- so a *later* MOVW $sym(SB)
+ * can reach both "before" and "after" that point with a single
+ * 12-bit-ish signed displacement, via `ADD $(offset-BIG), R12, Rt`,
+ * instead of always going through the literal pool. See immrot
+ * below for when that displacement is actually encodable: for a
+ * small data segment (every fixture we have so far), offset-BIG
+ * stays a large negative number that immrot can't encode, so this
+ * fast path essentially never triggers yet -- but it needs to exist
+ * and be correct for when it does (a big enough data segment, or a
+ * symbol placed close enough to BIG).
+ *)
+let big = (1 lsl 12) - 4
+
+let offset_to_R12 x = x - big
 (*e: function [[Codegen5.offset_to_R12]] *)
 
 (*s: function [[Codegen5.base_and_offset_of_indirect]] *)
@@ -104,11 +117,34 @@ let base_and_offset_of_indirect node symbols2 autosize x =
 (*****************************************************************************)
 
 (*s: function [[Codegen5.immrot]] *)
-(* TODO: port full code of immrot and return directly a Bits.t *)
+(* claude: full port of goken's 5l/span.c immrot(). ARM's "immediate"
+ * data-processing operand is an 8-bit value paired with a 4-bit
+ * rotation field R; the decoded value is that 8-bit value rotated
+ * RIGHT by 2*R bits (R in 0..15, so any even rotation amount
+ * 0,2,..,30). To encode x, try each such rotation and see if
+ * rotating x LEFT by that same amount brings all its set bits into
+ * the low 8 bits -- if so, that's the (R, low-8-bits) pair to use.
+ *
+ * x is treated as a plain 32-bit bit pattern, matching goken's
+ * `immrot(ulong v)`: to encode a negative value, mask it to 32 bits
+ * first (OCaml's native int is wider than 32 bits, so a negative x
+ * here would otherwise carry sign-extended 1s above bit 31 that
+ * would never rotate away). Returns None when no rotation works
+ * (goken returns a plain 0 in that case; callers already treat
+ * `None` as "not encodable", so this preserves their logic exactly,
+ * it's just no longer limited to plain 0..255 values).
+ *
+ * TODO: return directly a Bits.t
+ *)
 let immrot x =
-  if x >= 0 && x <= 0xff
-  then Some (0, x)
-  else raise Todo
+  let mask32 = 0xFFFFFFFF in
+  let rec search i v =
+    if i > 15 then None
+    else if v land (mask32 land (lnot 0xff)) =|= 0
+    then Some (i, v land 0xff)
+    else search (i + 1) (((v lsl 2) lor (v lsr 30)) land mask32)
+  in
+  search 0 (x land mask32)
 (*e: function [[Codegen5.immrot]] *)
 
 let rot_bit = (1, 25)

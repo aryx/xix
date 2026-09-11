@@ -22,6 +22,39 @@
    byte-reproducible, and xix never emits one anyway).
 
 * Phase 0.5 -- baseline corpus (constructs already ported)
+** DONE fix Codegen5.ml's immrot + offset_to_R12 (address-of-global)
+   Both were already-flagged stubs ("less: x - BIG at some point",
+   "TODO: port full code of immrot") -- finished properly rather than
+   patched around, since a real immrot (full 8-bit-rotated-immediate
+   search) is needed generally, not just for this one case. Ported
+   goken's actual algorithm (5l/span.c immrot(): try each of the 16
+   even rotations, unsigned 32-bit arithmetic) and the BIG bias
+   ((1<<12)-4, 5l/l.h) that offset_to_R12 was missing. Caught by
+   kitchen_sink.s (below) using two GLOBLs: with only one global at
+   offset 0 (every earlier fixture), xix's old "offset=0 -> pool,
+   else fast ADD path" happened to agree with goken by coincidence;
+   a second global at a nonzero offset exposed that goken's real
+   condition is "immrot(offset-BIG) succeeds and isn't exactly 0",
+   which for any small data segment is essentially never true (BIG
+   is meant for symbols positioned near it in a *large* segment) --
+   so goken pool-loads both, while xix's old code fast-pathed the
+   nonzero one. Verified: full baseline (5 fixtures) + make test
+   (134/134) still pass after.
+** DONE add tests/arm_diff/kitchen_sink.s (hand-written, not from goken)
+   Combines ADD/SUB/MUL/SLL, a BL/RET local call, address-of-global,
+   and write/exit in one straight-line program -- broader coverage
+   per fixture. Writing it caught a real bug (see immrot/BIG entry
+   below), then an unrelated real *finding* once fixed: an earlier
+   version used CMP+BEQ to pick between two exit messages, and goken
+   turned out to duplicate the short exit epilogue (mov r7,#1; svc
+   #0; pop {pc}) into *both* branches instead of having one branch
+   to a shared tail -- i.e. goken doesn't always emit the branch our
+   codegen would for a "B labelname" whose target sits past another
+   block; something in 5a/5l's asm/noop layer decides to duplicate
+   short tails instead. Real, but distinct from anything in our case
+   list -- not chased now. Rewrote the fixture branch-free instead of
+   chasing it. Worth its own investigation later if CMP/Bxx-heavy
+   fixtures are added.
 ** DONE extend corpus: tests/arm_diff/{exit_linux_arm,addr_arm,call_arm}.s
    Moved hello_linux_arm.s from tests/linker/ into a new top-level
    tests/arm_diff/ (these fixtures exercise assembler codegen + basic

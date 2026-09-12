@@ -119,7 +119,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
           error node (spf "use of procedure %s in indirect with offset"
                        (A.s_of_global global))
       )
-  | Imsr _ | Ximm _ | FImsr _ | FCRImsr _ ->
+  | Imsr _ | Ximm _ | FImsr _ | FCRImsr _ | PSRImsr _ ->
       raise (Impossible "should be called only for indirects")
 (*e: function [[Codegen5.base_and_offset_of_indirect]] *)
 
@@ -582,6 +582,25 @@ let gfsr_vfp (prec : A.floatp_precision) (offset : int) (R rbase) (R rf) : Bits.
 let gfcr (fcr : fcrreg) (R rint) : Bits.t =
   let fcr_val = match fcr with FPSR -> 1 | FPCR -> 2 in
   [(0xe, 24); (1, 8); (1, 4); (fcr_val, 21); (rint, 12)]
+
+let psr_bit (psr : psrreg) = match psr with CPSR -> 0 | SPSR -> 1
+
+(* claude: case 35 (mov PSR,R -- MRS). goken's codegen.c: `o1 =
+ * (2<<23)|(0xf<<16)|(0<<0); o1 |= (from.reg&1)<<22 | to.reg<<12`.
+ * The `0xf<<16` field is a fixed "must be 1111" field in the real
+ * MRS encoding (unrelated to any operand). *)
+let gpsr_read (psr : psrreg) (R rt) : Bits.t =
+  [(0x2, 23); (0xf, 16); (psr_bit psr, 22); (rt, 12)]
+
+(* claude: case 36 (mov R,PSR) / case 37 (mov $con,PSR) -- MSR,
+ * shared base encoding (goken's codegen.c: `o1 =
+ * (2<<23)|(0x29f<<12)|(0<<4); ... o1 |= (to.reg&1)<<22`), then the
+ * caller ORs in either a plain register (case 36, `from.reg<<0`) or
+ * an immrot-encoded immediate (case 37, `immrot(instoffset)`) --
+ * see psrreg's own comment for why the ".F" (flags-only) suffix
+ * isn't wired (always the "full PSR write" encoding here). *)
+let gpsr_write_base (psr : psrreg) : Bits.t =
+  [(0x2, 23); (0x29f, 12); (psr_bit psr, 22)]
 
 (* claude: case 17 (MULL/MULLU/MULAL/MULALU, 64-bit long multiply) --
  * oprrr()'s 4 cases in codegen.c all share `(v<<21)|(0x9<<4)`, where
@@ -1162,6 +1181,14 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   [ [gcond cond] @ gfcr fcr rt @ [(1, 20)] ]
                 )}
             | Byte _ | HalfWord _ -> error node "MOV from FP[CS]R must be Word")
+        (* case 35:	/* mov PSR,R */ *)
+        | PSRImsr psr ->
+            (match size with
+            | Word ->
+                { size = 4; x = None; binary = (fun () ->
+                  [ [gcond cond] @ gpsr_read psr rt ]
+                )}
+            | Byte _ | HalfWord _ -> error node "MOV from PSR must be Word")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1204,6 +1231,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | Imsr _ | Ximm _ -> error node "illegal combination?"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
+        | PSRImsr _ -> raise (Impossible "PSRImsr is Word-MOVE-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1245,10 +1273,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | Imsr _ | Ximm _ -> 
             error node "illegal to store in an (extended) immediate"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
-        (* case 56:	/* mov R,PSR */ -- wait, PSR is case 35-37;
-         * this is FP[CS]R (case 56), dispatched here since goken
-         * uses the same "MOVW" mnemonic for both int stores and
-         * FP[CS]R writes (see FCRImsr's own comment). *)
+        (* case 56:	/* move to FP[CS]R */ *)
         | FCRImsr fcr ->
             (match size with
             | Word ->
@@ -1256,6 +1281,15 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   [ [gcond cond] @ gfcr fcr rf ]
                 )}
             | Byte _ | HalfWord _ -> error node "MOV to FP[CS]R must be Word")
+        (* case 36:	/* mov R,PSR */ *)
+        | PSRImsr psr ->
+            (match size with
+            | Word ->
+                let (R rf_i) = rf in
+                { size = 4; x = None; binary = (fun () ->
+                  [ [gcond cond] @ gpsr_write_base psr @ [(rf_i, 0)] ]
+                )}
+            | Byte _ | HalfWord _ -> error node "MOV to PSR must be Word")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1277,6 +1311,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               )}
         )
 
+    (* case 37:	/* mov $con,PSR */ -- a new top-level arm (the
+     * source here is an immediate, not a register, unlike case 36
+     * just above -- goken's own `aclass(&p->from)` + immrot dance,
+     * no literal-pool fallback: goken diag()s if the constant isn't
+     * immrot-encodable, so this errors loudly the same way rather
+     * than silently emitting wrong bytes. *)
+    | MOVE (Word, _, Imsr (Imm i), PSRImsr psr) ->
+        (match immrot i with
+        | Some (rot, v) ->
+            { size = 4; x = None; binary = (fun () ->
+              [ [gcond cond] @ gpsr_write_base psr @ [rot_bit; (rot, 8); (v, 0)] ]
+            )}
+        | None -> error node "immediate not encodable for MOV $con,PSR")
+
     (* case 23:	/* movh/movhu R,O(R) -> sb,sb */ *)
     (* claude: NOT ported, same reasoning as case 22 above (dead code
      * under goken's default `armv4`; see case 70 just below for the
@@ -1294,6 +1342,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             error node "illegal to store in an (extended) immediate"
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
+        | PSRImsr _ -> raise (Impossible "PSRImsr is Word-MOVE-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in

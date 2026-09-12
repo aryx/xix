@@ -43,6 +43,7 @@ module L = Location_cpp
 %token <Ast_asm.floatp_precision> TMOVWF TMOVFW
 %token <Ast_asm.floatp_precision> TMOVF
 %token <Ast_asm5.fcrreg> TFCR
+%token <Ast_asm5.psrreg> TPSR
 %token <Ast_asm.sign * bool> TMULL
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
@@ -286,6 +287,9 @@ gen:
     * mnemonic/gen mechanism as ordinary int moves, dispatched by
     * operand shape in Codegen5.ml, not by grammar. *)*/
  | TFCR  { FCRImsr $1 }
+ /*(* case 35/36/37: "MOVW CPSR,R0" / "MOVW R0,CPSR" / "MOVW $5,CPSR"
+    * -- same MOVW mnemonic/gen mechanism as FCRImsr. *)*/
+ | TPSR  { PSRImsr $1 }
 
  | ioreg { $1 }
  | name                    { Entity $1 }

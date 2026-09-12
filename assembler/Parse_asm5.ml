@@ -133,6 +133,9 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       (* claude: case 56/57, move to/from FP[CS]R. *)
       | "FPSR" -> TFCR FPSR | "FPCR" -> TFCR FPCR
+
+      (* claude: case 35/36/37, move to/from PSR. *)
+      | "CPSR" -> TPSR CPSR | "SPSR" -> TPSR SPSR
       (*x: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* advanced *)
       | "C" -> TC

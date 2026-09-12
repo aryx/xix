@@ -22,7 +22,7 @@ type 'instr t = {
 
 (* less: could be sha1 of ast_asmxxx.ml for even safer marshalling *)
 (*s: constant [[Object_file.version]] *)
-let version = 19
+let version = 20
 (*e: constant [[Object_file.version]] *)
 
 (*****************************************************************************)

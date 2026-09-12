@@ -64,6 +64,21 @@ type creg = C of int (* between 0 and 15 *)
 type fcrreg = FPSR | FPCR
 [@@deriving show]
 
+(* claude: case 35/36/37 (mov PSR,R / mov R,PSR / mov $con,PSR) --
+ * goken's D_PSR ("CPSR"/"SPSR" tokens, lex.c: CPSR=0, SPSR=1). The
+ * ".F" (flags-only write) suffix isn't wired: xix's own grammar has
+ * no existing mechanism at all for parsing dot-suffix flag bits on a
+ * MOVE (goken unifies .S/.P/.W/.U/.F/etc into one generic `scond`
+ * accumulator via a shared grammar rule that xix never ported; even
+ * the already-existing arith_cond/move_cond types, e.g. Arith's own
+ * ".S", are hardcoded to `None` in Parser_asm5.mly, never actually
+ * parsed from real .s text) -- building that from scratch for one
+ * flag bit was judged not worth it; the default (unset, "full PSR
+ * write") is still a real, useful, independently-testable
+ * instruction shape on its own. *)
+type psrreg = CPSR | SPSR
+[@@deriving show]
+
 (* reserved by linker *)
 (*s: constant [[Ast_asm5.rTMP]] *)
 let rTMP = R 11
@@ -133,6 +148,10 @@ type mov_operand =
    * MOVF/MOVD, so this is a mov_operand alternative (used with the
    * existing MOVE instr) rather than a new instr constructor. *)
   | FCRImsr of fcrreg
+  (* claude: case 35/36/37 -- same "MOVW"/gen mechanism as FCRImsr
+   * above, see psrreg's own comment for why the ".F" suffix isn't
+   * wired. *)
+  | PSRImsr of psrreg
 (*e: type [[Ast_asm5.mov_operand]] *)
 
 [@@deriving show]
@@ -296,7 +315,7 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
     | Ximm x -> A.visit_globals_ximm f x
-    | Imsr _ | Indirect _ | FImsr _ | FCRImsr _ -> ()
+    | Imsr _ | Indirect _ | FImsr _ | FCRImsr _ | PSRImsr _ -> ()
   in
   match fst i with
   | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2

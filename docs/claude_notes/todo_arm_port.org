@@ -405,13 +405,35 @@ Not yet in Codegen5.ml at all:
    longoff_case30_31.s. PASS byte-identical + PASS same qemu-arm
    exit code. Verified: full ARM/MIPS/RISC-V baselines and make test
    (134/134) all still pass.
-** TODO case 35 mov PSR,R
-** TODO case 36 mov R,PSR
-** TODO case 37 mov $con,PSR
-   (cases 35-37 need a PSR AST constructor first -- Ast_asm5.ml's own
-   prelude TODO already flags "PSR, MCR/MRC" as unrepresented; this
-   is a bigger lift than the codegen-only cases above, needing
-   grammar/lexer + AST work before any Codegen5.ml arm is possible.)
+** DONE case 35 mov PSR,R (MRS) / case 36 mov R,PSR (MSR) / case 37
+   mov $con,PSR (MSR) -- real, reachable via the same "MOVW"
+   mnemonic/gen mechanism as FP[CS]R (case 56/57): new `psrreg`
+   (CPSR/SPSR, goken's D_PSR) and `PSRImsr of psrreg` on
+   `mov_operand`. New Codegen5.ml helpers `gpsr_read` (MRS) and
+   `gpsr_write_base` (MSR, shared by both the register and immediate
+   source forms; case 37's immediate goes through the existing
+   `immrot` helper, erroring loudly like goken's own diag() if the
+   constant isn't immrot-encodable rather than silently emitting
+   wrong bytes -- no literal-pool fallback).
+   Scoped limitation: the ".F" (flags-only write) suffix isn't
+   wired -- xix's grammar has no dot-suffix-flag parsing mechanism
+   at all yet (goken unifies .S/.P/.W/.U/.F/etc into one generic
+   `scond` bitmask via a shared grammar rule xix never ported; even
+   the already-existing arith_cond/move_cond fields, e.g. Arith's
+   own ".S", are hardcoded to `None` in every Parser_asm5.mly
+   production, never actually parsed from real .s text). Building
+   that subsystem from scratch for one flag bit wasn't worth it;
+   this always emits the "full PSR write" encoding, which is still
+   a real, independently-testable instruction shape on its own.
+   Added psr_move_case35_36_37.s (CPSR round-trip: read, write from
+   register, write from immediate, read again -- exit code depends
+   on the actual CPSR bits qemu-arm's user-mode emulation preserves).
+   PASS byte-identical (334 bytes both sides) + PASS same qemu-arm
+   exit code. SPSR verified ad hoc (not its own fixture, same
+   reasoning as fcr_move_case56_57.s's FPCR aside): byte-identical
+   against goken and traps identically as "Illegal instruction" on
+   both sides (no SPSR access in user mode) -- confirms the shared
+   encoding but adds no further coverage.
 ** TODO case 38 movm $con,oreg -> stm
 ** TODO case 39 movm oreg,$con -> ldm
    (cases 38/39 likewise need a MOVM AST constructor first, plus

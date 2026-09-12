@@ -10,8 +10,10 @@ verified under qemu-aarch64: tests/linker/arm64_diff/exit_linux.s
 (plain exit), kitchen_sink.s (register/immediate arithmetic, shift,
 compare, conditional branch), call_leaf.s and
 call_leaf_with_frame.s (BL/RETURN-based local calls, both a true leaf
-and a leaf-with-locals), and global_addr.s (address-of-global and
-SB-relative load, both routed through the literal pool -- see below).
+and a leaf-with-locals), global_addr.s (address-of-global and
+SB-relative load, both routed through the literal pool -- see below),
+and w32_arith.s (the *W-suffixed 32-bit-view forms of Arith/Shift/
+Cmp/ArithMul -- see below).
 Covered so far: Arith (ADD/SUB/AND/ORR/EOR/BIC, register or small
 "addcon"-range immediate), Shift (LSL/LSR/ASR/ROR, immediate or
 register), Cmp (CMP/CMN), ArithMul (simple 3-operand MUL), Move
@@ -66,6 +68,20 @@ full derivation. New AST needed for this: `PreIndex`/`PostIndex` on
 shared `TBANG` token ("!"), and the shared `Ast_asm.virtual_instr.RET`
 wired in via a new "RETURN" keyword (distinct from "RET").
 
+**The *W-suffixed 32-bit-view forms are now implemented** for Arith/
+Shift/Cmp/ArithMul (ADDW/SUBW/ANDW/ORRW/EORW/BICW, LSLW/LSRW/ASRW/
+RORW, CMPW/CMNW, MULW). Confirmed against asmout.c's oprrr()/opirr()
+tables that every W-suffixed row is byte-for-byte identical to its
+64-bit counterpart with only the "sf" bit (bit 31) cleared (and, for
+the bitfield-move-encoded immediate-shift forms, the N bit at bit 22
+also cleared, and immr/imms computed mod 32 instead of mod 64) -- so
+these are modeled as sibling opcode constructors (`ADDW`, `LSLW`, ...)
+rather than a separate width field threaded through the AST, keeping
+checkpoint 1's grammar/AST shape for these instructions unchanged.
+Verified with tests/linker/arm64_diff/w32_arith.s. Register-immediate
+moves at 32-bit width ("MOVW $con,R") are NOT covered by this -- that's
+part of the still-separate B_/H_/W_ move-size gap below.
+
 Not yet done, real follow-up work (see "Suggested phase plan" below):
  - B_/H_/W_ (byte/halfword/32-bit-view) move sizes are declared in
    Ast_asm7.ml but not implemented in Codegen7.ml yet -- only X_
@@ -73,7 +89,17 @@ Not yet done, real follow-up work (see "Suggested phase plan" below):
  - AND/ORR/EOR/BIC's *immediate* form (a "bitmask immediate" encoding,
    genuinely different from ADD/SUB's plain 12-bit-optionally-shifted
    immediate) isn't implemented -- only their register-register form
-   is. Same for the *W-suffixed 32-bit-view forms of everything.
+   is (both widths). This is a deliberate scoping decision, not just
+   an oversight: goken's own C-side notes (`notes_arch_arm64.txt`)
+   document a real, multi-round bug history in exactly this bitmask-
+   pattern computation (`findmask`/`isbitcon`, a 32-bit-vs-64-bit
+   element-replication subtlety that silently corrupted upper register
+   bits in goken itself until fixed) -- porting it faithfully needs
+   careful hardware-level verification (qemu register-content checks,
+   not just byte-diffing against goken, since a wrong port could
+   byte-match a *goken bug* rather than correct hardware behavior),
+   which is a bigger, more careful piece of work than the rest of this
+   phase. Left for a dedicated follow-up rather than rushed here.
  - A real, reproducible build-staleness gotcha worth knowing about
    before touching this port again: `rm -f _build/default/bin_dune/
    o7a _build/default/bin_dune/o7l && dune build` (the fix that's

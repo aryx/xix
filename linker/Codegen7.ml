@@ -113,12 +113,17 @@ let gload_from_pool (nsrc : 'a T.node) (rt : int) : Bits.t =
 (*****************************************************************************)
 (* Instruction encoding helpers *)
 (*****************************************************************************)
-(* claude: only the 64-bit ("sf"=1) forms are ever used here -- see this
- * file's prelude comment. *)
+(* claude: the "sf" bit (bit 31) -- 1 for the default 64-bit-register
+ * forms, 0 for the *W-suffixed 32-bit-view forms (see Ast_asm7.ml's
+ * arith_opcode comment: every W-suffixed row in goken's own oprrr()/
+ * opirr() tables is identical to its bare counterpart with this one
+ * bit cleared, nothing else differs). *)
 let s64 = 1 lsl 31
+let s32 = 0
 
 (* claude: case 1 -- register-register arith base opcodes (goken's
- * oprrr(), the AADD/ASUB/AAND/AORR/AEOR/ABIC rows only). *)
+ * oprrr(), the AADD/ASUB/AAND/AORR/AEOR/ABIC rows and their W-suffixed
+ * siblings). *)
 let oprrr_arith (op : arith_opcode) : int =
   match op with
   | ADD -> s64 lor (0x0b lsl 24)
@@ -127,16 +132,25 @@ let oprrr_arith (op : arith_opcode) : int =
   | ORR -> s64 lor (1 lsl 29) lor (0xA lsl 24)
   | EOR -> s64 lor (2 lsl 29) lor (0xA lsl 24)
   | BIC -> s64 lor (0xA lsl 24) lor (1 lsl 21)
+  | ADDW -> s32 lor (0x0b lsl 24)
+  | SUBW -> s32 lor (1 lsl 30) lor (0x0b lsl 24)
+  | ANDW -> s32 lor (0xA lsl 24)
+  | ORRW -> s32 lor (1 lsl 29) lor (0xA lsl 24)
+  | EORW -> s32 lor (2 lsl 29) lor (0xA lsl 24)
+  | BICW -> s32 lor (0xA lsl 24) lor (1 lsl 21)
 
 (* claude: case 2/4 -- register-immediate ("addcon") base opcodes (goken's
- * opirr(), ADD/SUB rows only -- AND/ORR/EOR/BIC's immediate form uses a
- * different, "bitmask immediate" encoding not implemented here, see this
- * file's prelude comment). *)
+ * opirr(), ADD/SUB rows and their W-suffixed siblings only -- AND/ORR/
+ * EOR/BIC's immediate form (both widths) uses a different, "bitmask
+ * immediate" encoding not implemented here, see this file's prelude
+ * comment). *)
 let opirr_addsub (op : arith_opcode) : int =
   match op with
   | ADD -> s64 lor (0x11 lsl 24)
   | SUB -> s64 lor (1 lsl 30) lor (0x11 lsl 24)
-  | AND_ | ORR | EOR | BIC ->
+  | ADDW -> s32 lor (0x11 lsl 24)
+  | SUBW -> s32 lor (1 lsl 30) lor (0x11 lsl 24)
+  | AND_ | ORR | EOR | BIC | ANDW | ORRW | EORW | BICW ->
       failwith "TODO:opirr_addsub AND/ORR/EOR/BIC immediate (bitmask-immediate encoding not implemented)"
 
 (* claude: goken's oaddi() -- packs a 12-bit unsigned immediate (or,
@@ -165,10 +179,14 @@ let oprrr_cmp (op : cmp_opcode) : int =
   match op with
   | CMP -> s64 lor (1 lsl 30) lor (1 lsl 29) lor (0x0b lsl 24) (* SUBS *)
   | CMN -> s64 lor (1 lsl 29) lor (0x0b lsl 24) (* ADDS *)
+  | CMPW -> s32 lor (1 lsl 30) lor (1 lsl 29) lor (0x0b lsl 24) (* SUBSW *)
+  | CMNW -> s32 lor (1 lsl 29) lor (0x0b lsl 24) (* ADDSW *)
 let opirr_cmp (op : cmp_opcode) : int =
   match op with
   | CMP -> s64 lor (1 lsl 30) lor (1 lsl 29) lor (0x11 lsl 24) (* SUBS $imm *)
   | CMN -> s64 lor (1 lsl 29) lor (0x11 lsl 24) (* ADDS $imm *)
+  | CMPW -> s32 lor (1 lsl 30) lor (1 lsl 29) lor (0x11 lsl 24) (* SUBSW $imm *)
+  | CMNW -> s32 lor (1 lsl 29) lor (0x11 lsl 24) (* ADDSW $imm *)
 
 (* claude: case 8 -- shift by immediate, via the bitfield-move family
  * (UBFM/SBFM for LSL/LSR/ASR, EXTR for ROR -- goken's opbfm()/opextr()).
@@ -178,6 +196,13 @@ let opirr_cmp (op : cmp_opcode) : int =
 let opirr_ubfm = s64 lor (2 lsl 29) lor (0x26 lsl 23) lor (1 lsl 22)
 let opirr_sbfm = s64 lor (0x26 lsl 23) lor (1 lsl 22)
 let opirr_extr = s64 lor (0x27 lsl 23) lor (1 lsl 22)
+(* claude: the W-suffixed 32-bit forms of the same 3 bitfield-move base
+ * opcodes above -- s32 instead of s64, and the N bit (bit 22, `1 lsl
+ * 22` in the 64-bit rows above) cleared instead of set, confirmed
+ * against asmout.c's AUBFMW/ASBFMW/AEXTRW rows. *)
+let opirr_ubfmw = s32 lor (2 lsl 29) lor (0x26 lsl 23)
+let opirr_sbfmw = s32 lor (0x26 lsl 23)
+let opirr_extrw = s32 lor (0x27 lsl 23)
 let opbfm (base : int) (r : int) (s : int) (rf : int) (rt : int) : int =
   base lor ((r land 0x3F) lsl 16) lor ((s land 0x3F) lsl 10) lor (rf lsl 5) lor rt
 let opextr (base : int) (v : int) (rn : int) (rm : int) (rt : int) : int =
@@ -193,11 +218,18 @@ let oprrr_shift (op : shift_opcode) : int =
   | LSR -> s64 lor opdp2 9
   | ASR -> s64 lor opdp2 10
   | ROR -> s64 lor opdp2 11
+  | LSLW -> s32 lor opdp2 8
+  | LSRW -> s32 lor opdp2 9
+  | ASRW -> s32 lor opdp2 10
+  | RORW -> s32 lor opdp2 11
 
 (* claude: case 15's simple (no from3/accumulate) MUL Rm,[Rn,]Rd, an
  * alias of MADD with Ra=ZR -- goken's `oprrr(AMUL) = S64 | 0<<29 |
- * 0x1B<<24 | 0<<21 | 0<<15`. *)
-let oprrr_mul = s64 lor (0x1B lsl 24)
+ * 0x1B<<24 | 0<<21 | 0<<15`. MULW is the same row with S32 instead. *)
+let oprrr_mul (op : mul_opcode) : int =
+  match op with
+  | MUL -> s64 lor (0x1B lsl 24)
+  | MULW -> s32 lor (0x1B lsl 24)
 
 (* claude: case 5/6 -- unconditional branch/call. `opbra(AB/ABL)` for the
  * direct-label form (imm26 field, packed by the caller), `opbrr()`
@@ -467,6 +499,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             | LSR -> opbfm opirr_ubfm v 63 rf rt
             | ASR -> opbfm opirr_sbfm v 63 rf rt
             | ROR -> opextr opirr_extr v rf rf rt
+            | LSLW -> opbfm opirr_ubfmw ((32 - v) land 31) (31 - v) rf rt
+            | LSRW -> opbfm opirr_ubfmw v 31 rf rt
+            | ASRW -> opbfm opirr_sbfmw v 31 rf rt
+            | RORW -> opextr opirr_extrw v rf rf rt
           ) ]
         )}
     (* case 9: shift by register *)
@@ -487,10 +523,10 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )}
 
     (* case 15: simple 3-operand MUL Rm,[Rn,]Rd (no accumulate) *)
-    | ArithMul ((R rf), middle, (R rt)) ->
+    | ArithMul (op, (R rf), middle, (R rt)) ->
         let (R r) = middle ||| R rt in
         { size = 4; x = None; binary = (fun () ->
-          [ w1 (oprrr_mul lor (rf lsl 16) lor (31 lsl 10) lor (r lsl 5) lor rt) ]
+          [ w1 (oprrr_mul op lor (rf lsl 16) lor (31 lsl 10) lor (r lsl 5) lor rt) ]
         )}
 
     (* --------------------------------------------------------------------- *)

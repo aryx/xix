@@ -82,19 +82,30 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       | "AND" -> TARITH AND_ | "ORR" -> TARITH ORR
       | "EOR" -> TARITH EOR | "BIC" -> TARITH BIC
 
+      (* claude: the *W-suffixed 32-bit-view forms -- see Ast_asm7.ml's
+       * arith_opcode comment for why these are sibling constructors
+       * rather than a separate width field. *)
+      | "ADDW" -> TARITH ADDW | "SUBW" -> TARITH SUBW
+      | "ANDW" -> TARITH ANDW | "ORRW" -> TARITH ORRW
+      | "EORW" -> TARITH EORW | "BICW" -> TARITH BICW
+
       (* claude: case 8 (shift by immediate, bitfield-move encoding) /
        * case 9 (shift by register, simple oprrr encoding) -- same
        * mnemonic either way, dispatched by operand shape at codegen
        * time (Codegen7.ml). *)
       | "LSL" -> TSHIFT LSL | "LSR" -> TSHIFT LSR
       | "ASR" -> TSHIFT ASR | "ROR" -> TSHIFT ROR
+      | "LSLW" -> TSHIFT LSLW | "LSRW" -> TSHIFT LSRW
+      | "ASRW" -> TSHIFT ASRW | "RORW" -> TSHIFT RORW
 
       (* claude: case 7 -- CMP/CMN, no destination register. *)
       | "CMP" -> TCMP CMP | "CMN" -> TCMP CMN
+      | "CMPW" -> TCMP CMPW | "CMNW" -> TCMP CMNW
 
       (* claude: case 15's simple 3-operand MUL only -- see
        * ArithMul's comment in Ast_asm7.ml for what's deferred. *)
-      | "MUL" -> TMULOP
+      | "MUL" -> TMULOP MUL
+      | "MULW" -> TMULOP MULW
 
       (* claude: case 3 -- MOV/MOVB/MOVBU/MOVH/MOVHU/MOVW/MOVWU, one
        * grammar shape ("gen,gen") dispatched by operand type at

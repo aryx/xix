@@ -162,7 +162,7 @@ type instr =
    * Rm,[Rn,]Rd` -- accumulate-register forms (MADD/MSUB with an explicit
    * 4th operand, and the *W-suffixed 32-bit-result variants) are a
    * follow-up -- see ArithMul's "not wired" comment in Codegen7.ml. *)
-  | ArithMul of reg * reg option * reg
+  | ArithMul of mul_opcode * reg * reg option * reg
   (* claude: LTYPE3 in a.y -- MOV/MOVB/MOVBU/MOVH/MOVHU/MOVW/MOVWU, all
    * one grammar shape ("gen,gen") dispatched by operand type at codegen
    * time, exactly like Ast_asmi.ml's Move1/RISC-V and unlike ARM32's
@@ -200,12 +200,29 @@ type instr =
    * one any Linux userspace program needs). *)
   | SVC of int
 
+  (* claude: every "*W"-suffixed mnemonic below (ADDW/LSLW/CMPW/MULW/...)
+   * is goken's 32-bit-view form of the same operation -- same operand
+   * shape and same instruction encoding as its 64-bit counterpart
+   * except the "sf" bit (bit 31) is 0 instead of 1 (confirmed directly
+   * against asmout.c's oprrr()/opirr() tables: every W-suffixed row is
+   * byte-for-byte identical to its bare row with `S64` swapped for
+   * `S32`, nothing else differs) -- so these are modeled as sibling
+   * opcode constructors rather than a separate `width` field threaded
+   * through Arith/Shift/Cmp/ArithMul, keeping the grammar/AST shape
+   * from checkpoint 1 unchanged. See Codegen7.ml's oprrr_arith/
+   * opirr_addsub/oprrr_cmp/opirr_cmp/oprrr_shift/oprrr_mul for the
+   * encoding. *)
   and arith_opcode =
     | ADD | SUB | AND_ | ORR | EOR | BIC
+    | ADDW | SUBW | ANDW | ORRW | EORW | BICW
   and shift_opcode =
     | LSL | LSR | ASR | ROR
+    | LSLW | LSRW | ASRW | RORW
   and cmp_opcode =
     | CMP | CMN
+    | CMPW | CMNW
+  and mul_opcode =
+    | MUL | MULW
 
   and move_size =
     | B_ of A.sign (* byte *)

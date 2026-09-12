@@ -16,6 +16,7 @@ CASES=(
     "tests/linker/arm64_diff/call_leaf.s"
     "tests/linker/arm64_diff/call_leaf_with_frame.s"
     "tests/linker/arm64_diff/global_addr.s"
+    "tests/linker/arm64_diff/w32_arith.s"
 )
 
 FAIL=0

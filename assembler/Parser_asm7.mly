@@ -36,7 +36,7 @@ module L = Location_cpp
 %token <Ast_asm7.arith_opcode> TARITH
 %token <Ast_asm7.shift_opcode> TSHIFT
 %token <Ast_asm7.cmp_opcode> TCMP
-%token TMULOP
+%token <Ast_asm7.mul_opcode> TMULOP
 %token <Ast_asm7.move_size> TMOV
 %token TB TBL
 %token <Ast_asm7.condition> TBx
@@ -201,8 +201,8 @@ instr:
  | TCMP imr TC reg              { Cmp ($1, $2, $4) }
 
  /*(* case 15: "MUL Rm,[Rn,]Rd" *)*/
- | TMULOP reg TC reg TC reg     { ArithMul ($2, Some $4, $6) }
- | TMULOP reg        TC reg     { ArithMul ($2, None, $4) }
+ | TMULOP reg TC reg TC reg     { ArithMul ($1, $2, Some $4, $6) }
+ | TMULOP reg        TC reg     { ArithMul ($1, $2, None, $4) }
 
  /*(* case 3: "MOV(B[U]|H[U]|W[U])? gen,gen" -- covers register move,
     * register<->memory, and register<->immediate, dispatched by operand

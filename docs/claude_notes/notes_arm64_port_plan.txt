@@ -13,9 +13,11 @@ call_leaf_with_frame.s (BL/RETURN-based local calls, both a true leaf
 and a leaf-with-locals), global_addr.s (address-of-global and
 SB-relative load, both routed through the literal pool -- see below),
 w32_arith.s (the *W-suffixed 32-bit-view forms of Arith/Shift/
-Cmp/ArithMul -- see below), and sized_move.s (byte/halfword/32-bit
+Cmp/ArithMul -- see below), sized_move.s (byte/halfword/32-bit
 sized loads/stores, plus a real address-of-global gotcha -- see
-below).
+below), float_arith.s/float_mem.s (dyadic double-precision float
+arith, int<->float conversion, float<->float/memory move -- see
+below), and barrier.s (DMB/DSB/ISB).
 Covered so far: Arith (ADD/SUB/AND/ORR/EOR/BIC, register or small
 "addcon"-range immediate), Shift (LSL/LSR/ASR/ROR, immediate or
 register), Cmp (CMP/CMN), ArithMul (simple 3-operand MUL), Move
@@ -28,7 +30,59 @@ the literal pool, see below), B/BL/Bxx/CBxx (direct and register-
 indirect), RET (the real hardware instruction) and RETURN (the
 compiler-facing pseudo-op, now with full leaf/frame-size-driven
 prologue/epilogue synthesis -- see Rewrite7.ml, ported from goken's
-own noop.c), SVC.
+own noop.c), SVC, FArith/FCmp (dyadic double/single-precision float
+arith and compare), float<->float/memory/int Move (FMOVS/FMOVD/
+SCVTFS/SCVTFD/FCVTZSS/FCVTZSD), and Barrier (DMB/DSB/ISB).
+
+**Floating point and barriers are now implemented** (both requested
+explicitly, alongside a look at load/store pair -- see below).
+FArith/FCmp are new instr constructors (goken's LTYPEK/LTYPEL,
+dispatched separately from Move since they're genuine 3-operand
+arithmetic, not data movement); FMOVS/FMOVD/SCVTF*/FCVTZS* instead
+extend the *existing* Move/gen/move_size machinery with a new `GFReg`
+operand and float-specific move_size tags, since goken itself
+dispatches all of these through the exact same generic "gen,gen"
+LTYPE3 grammar production as ordinary MOV -- this let float<->memory
+and the SB-relative fast path fall out of the *already-generalized*
+sized-move code from the previous increment almost for free (just
+widening `ldstr12u_size_opc` to also carry the "V" float/integer
+register-file bit, see Codegen7.ml's ldstr12u_size_v_opc comment).
+goken's own float-*immediate* operand support (`D_FCONST`/
+`chipfloat()`) is dead code in the reference implementation itself
+(`if(rf<0||1) diag(...)` -- always triggers the error path, confirmed
+reading asmout.c) -- so this port carries no float-immediate operand
+at all; every float value in a fixture comes from an int->float
+conversion (SCVTFD) instead. Verified: float_arith.s (int->float,
+FADDD/FSUBD/FMULD/FDIVD, float->int truncating, both byte-identical
+*and* numerically correct: 29/3 truncates to the expected 9), and
+float_mem.s (float<->memory via both Indirect and the SB-relative
+fast path, plus float<->float register move). Barrier (DMB/DSB/ISB
+$imm, goken's case 51/SYSOP-based encoding) verified with barrier.s.
+Deliberately NOT wired: bare NOP and HINT (see Ast_asm7.ml's Barrier
+comment -- NOP is dead code in goken's own reference implementation,
+deleted by noop.c before it ever reaches asmout.c, so there's no real
+byte sequence to test against), SYS/SYSL/MRS/MSR (real system-register
+selectors, a separate and more involved family), FABSS/FABSD/FNEGS/
+FNEGD/FSQRTS/FSQRTD/FCVTSD/FCVTDS (same FPOP1S shape as FMOVS/FMOVD,
+trivial to add later, just not wired as their own mnemonics yet), and
+the signaling FCMPES/FCMPED compare variants.
+
+**Load/store pair (LDP/STP) investigated and confirmed dead in goken
+itself, not implemented.** goken's grammar/lexer/opcode-enum all
+declare the "MOVP"/"MOVPQ"/"MOVPD"/etc mnemonic family (a.y's LTYPEJ),
+but `asmout.c`/`optab.c` have ZERO rows or cases for `AMOVP` at all --
+confirmed empirically: every operand ordering tried (`MOVP R1,R2,
+0(R3)`, `MOVP 0(R3),R2,R1`, `MOVPQ`/`MOVPD` variants) fails to LINK
+with goken's real 7l ("illegal combination MOVP ..."), regardless of
+how it's spelled. This is genuinely dead/unimplemented functionality
+in the reference implementation itself (not a flag-gated or dlm-only
+feature the way ARM32's case 64-69 ADDR class was) -- there is no
+ground truth to differentially test against, so implementing it here
+would mean inventing an encoding with nothing to verify it against,
+breaking the whole methodology this port is built on. Same treatment
+as arm_port.md's case 62/63 (CASE/BCASE) writeup: investigated,
+confirmed not worth (here: not *possible* to) port, documented rather
+than silently skipped.
 
 **The literal pool is now implemented** (Layout7.ml, ported from
 Layout5.ml's own splicing shape, same "flush at the true end of the

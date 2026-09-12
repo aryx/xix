@@ -117,6 +117,31 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       | "MOVH" -> TMOV (H_ A.S) | "MOVHU" -> TMOV (H_ A.U)
       | "MOVW" -> TMOV (W_ A.S) | "MOVWU" -> TMOV (W_ A.U)
 
+      (* claude: float<->float register move / float<->memory (FS_/
+       * FD_) and int<->float conversion (SCVTF_S/SCVTF_D/FCVTZS_S/
+       * FCVTZS_D) -- all dispatched through the same "gen,gen" TMOV
+       * production as ordinary MOV, see Ast_asm7.ml's Move/move_size
+       * comment. *)
+      | "FMOVS" -> TMOV FS_ | "FMOVD" -> TMOV FD_
+      | "SCVTFS" -> TMOV SCVTF_S | "SCVTFD" -> TMOV SCVTF_D
+      | "FCVTZSS" -> TMOV FCVTZS_S | "FCVTZSD" -> TMOV FCVTZS_D
+
+      (* claude: case 54 -- dyadic float arith, both precisions. *)
+      | "FADDS" -> TFARITH FADDS | "FADDD" -> TFARITH FADDD
+      | "FSUBS" -> TFARITH FSUBS | "FSUBD" -> TFARITH FSUBD
+      | "FMULS" -> TFARITH FMULS | "FMULD" -> TFARITH FMULD
+      | "FDIVS" -> TFARITH FDIVS | "FDIVD" -> TFARITH FDIVD
+
+      (* claude: case 56 -- float compare, both precisions (the
+       * "signaling" FCMPES/FCMPED variants aren't wired, same
+       * "narrower but real" scoping as elsewhere in this file). *)
+      | "FCMPS" -> TFCMP FCMPS | "FCMPD" -> TFCMP FCMPD
+
+      (* claude: case 51 -- memory/instruction barriers (see
+       * Ast_asm7.ml's Barrier comment for why bare NOP and HINT
+       * aren't wired here). *)
+      | "DMB" -> TDMB DMB_ | "DSB" -> TDMB DSB_ | "ISB" -> TDMB ISB_
+
       (* claude: case 5/6 -- unconditional branch/call, direct or
        * indirect through a register. *)
       | "B" -> TB | "BL" -> TBL

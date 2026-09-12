@@ -125,6 +125,11 @@ type imr =
 
 type gen =
   | GReg of reg
+  (* claude: goken dispatches float<->float register move ("FMOVD
+   * Fm,Fd") and int<->float conversion ("SCVTFD Rn,Fd"/"FCVTZSD
+   * Fn,Rd") through the exact same generic "gen,gen" MOV grammar
+   * shape as everything else -- see Move's own instr comment. *)
+  | GFReg of freg
   | Indirect of reg * A.offset
   | Entity of A.entity
   (* claude: goken's D_XPRE/D_XPOST -- pre/post-index writeback
@@ -194,11 +199,50 @@ type instr =
    * all. *)
   | RET of reg option
 
+  (* Floating point *)
+  (* claude: LTYPEK -- dyadic float arith (goken's case 54, "op
+   * Fm,[Fn,]Fd" -- same 2-or-3-operand shape as the integer `Arith`
+   * above, just with no immediate form: goken's own float-immediate
+   * support (`D_FCONST`/`chipfloat()`) is dead code in the reference
+   * implementation itself (`if(rf<0||1) diag(...)` -- always
+   * triggers the error branch, confirmed reading asmout.c), so this
+   * port doesn't carry a float-immediate operand at all -- every
+   * float value here comes from SCVTFD/SCVTFS (int->float
+   * conversion) instead, see FCvt below. *)
+  | FArith of fp_arith_opcode * freg * freg option * freg
+  (* claude: LTYPEL -- FCMPS/FCMPD, no destination (goken's case 56;
+   * the float-zero-immediate comparison form, "FCMPD $0.0,Fn", is
+   * also skipped for the same dead-immediate-support reason as
+   * FArith above). *)
+  | FCmp of fp_cmp_opcode * freg * freg
+  (* claude: LTYPE3 -- goken dispatches FMOVS/FMOVD (float<->float
+   * register move, case 54's own "monadic" branch; float<->memory,
+   * case 20/21, reusing the exact same scaled-12-bit machinery as
+   * the integer sized Move below) and SCVTF*/FCVTZS* (int<->float
+   * conversion, case 29) through the *same* generic "gen,gen" grammar
+   * production as ordinary MOV -- so these live as extra `move_size`
+   * tags on the existing `Move` constructor rather than a separate
+   * one; see `gen`'s new `GFReg` case and `move_size`'s FS_/FD_/
+   * SCVTF_S/SCVTF_D/FCVTZS_S/FCVTZS_D tags below. *)
+
   (* System *)
   (* claude: LTYPE6 -- SVC (goken's case 10 also covers BRK/HVC/HLT/
    * DCPS1-3/DRPS/CLREX with the same shape, deferred: SVC is the only
    * one any Linux userspace program needs). *)
   | SVC of int
+  (* claude: LDMB -- DMB/DSB/ISB $imm (goken's case 51; HINT $imm --
+   * case 52 -- and bare "NOP" are both skipped: NOP is a genuinely
+   * dead pseudo-op in goken's own reference implementation, deleted
+   * outright by noop.c's `case ANOP: q->link = q1; continue;` before
+   * it ever reaches asmout.c, so there is no real "NOP" byte sequence
+   * to differentially test against; HINT is the same LTYPEQ/opirr
+   * shape as DMB/DSB/ISB and would be trivial to add later if ever
+   * needed, just not wired now since it's rarely used directly by
+   * hand-written or compiler-generated code the way barriers are.
+   * SYS/SYSL/MRS/MSR -- goken's `sysarg`, real system-register
+   * selectors -- are a separate, genuinely more involved family, also
+   * deferred, see notes_arm64_port_plan.txt. *)
+  | Barrier of barrier_opcode * int
 
   (* claude: every "*W"-suffixed mnemonic below (ADDW/LSLW/CMPW/MULW/...)
    * is goken's 32-bit-view form of the same operation -- same operand
@@ -224,12 +268,33 @@ type instr =
   and mul_opcode =
     | MUL | MULW
 
+  (* claude: single (S, 32-bit) vs double (D, 64-bit) precision only
+   * differ in goken's own FPOP2S/FPOP1S/FPCMP/FPCVTI encodings by one
+   * "type" bit, same "sibling constructor, not a separate width flag"
+   * choice as arith_opcode's *W forms above. *)
+  and fp_arith_opcode =
+    | FADDS | FADDD | FSUBS | FSUBD | FMULS | FMULD | FDIVS | FDIVD
+  and fp_cmp_opcode =
+    | FCMPS | FCMPD
+
   and move_size =
     | B_ of A.sign (* byte *)
     | H_ of A.sign (* halfword *)
     | W_ of A.sign (* word (32-bit); S = sign-extend to 64 on load (MOVW),
                     * U = zero-extend (MOVWU) *)
     | X_ (* doubleword (64-bit), bare "MOV" *)
+    | FS_ (* FMOVS -- float<->float register move, or float<->memory,
+           * single (32-bit) precision *)
+    | FD_ (* FMOVD -- same, double (64-bit) precision *)
+    | SCVTF_S (* SCVTFS -- int (X reg) -> single-precision float *)
+    | SCVTF_D (* SCVTFD -- int (X reg) -> double-precision float *)
+    | FCVTZS_S (* FCVTZSS -- single-precision float -> int (X reg),
+                * truncating *)
+    | FCVTZS_D (* FCVTZSD -- double-precision float -> int (X reg),
+                * truncating *)
+
+  and barrier_opcode =
+    | DMB_ | DSB_ | ISB_
 
   (* claude: same shape/encoding as Ast_asm5.condition (ARM32) -- AArch64
    * reused the identical 4-bit condition-code encoding (0=EQ..14=AL,
@@ -270,14 +335,15 @@ let branch_opd_of_instr (instr : instr) : A.branch_operand option =
   | BL opd -> Some opd
   | Bxx (_, opd) -> Some opd
   | CBxx (_, _, opd) -> Some opd
-  | Arith _ | Shift _ | Cmp _ | ArithMul _ | Move _ | RET _ | SVC _ -> None
+  | Arith _ | Shift _ | Cmp _ | ArithMul _ | Move _ | RET _ | SVC _
+  | FArith _ | FCmp _ | Barrier _ -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   let mov_operand x =
     match x with
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
-    | GReg _ | Indirect _ | PreIndex _ | PostIndex _ -> ()
+    | GReg _ | GFReg _ | Indirect _ | PreIndex _ | PostIndex _ -> ()
   in
   match i with
   | Move (_, x1, gen2) ->
@@ -290,4 +356,5 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | CBxx (_, _, b) -> A.visit_globals_branch_operand f b
-  | Arith _ | Shift _ | Cmp _ | ArithMul _ | RET _ | SVC _ -> ()
+  | Arith _ | Shift _ | Cmp _ | ArithMul _ | RET _ | SVC _
+  | FArith _ | FCmp _ | Barrier _ -> ()

@@ -18,6 +18,9 @@ CASES=(
     "tests/linker/arm64_diff/global_addr.s"
     "tests/linker/arm64_diff/w32_arith.s"
     "tests/linker/arm64_diff/sized_move.s"
+    "tests/linker/arm64_diff/float_arith.s"
+    "tests/linker/arm64_diff/float_mem.s"
+    "tests/linker/arm64_diff/barrier.s"
 )
 
 FAIL=0

@@ -37,6 +37,9 @@ module L = Location_cpp
 %token <Ast_asm7.shift_opcode> TSHIFT
 %token <Ast_asm7.cmp_opcode> TCMP
 %token <Ast_asm7.mul_opcode> TMULOP
+%token <Ast_asm7.fp_arith_opcode> TFARITH
+%token <Ast_asm7.fp_cmp_opcode> TFCMP
+%token <Ast_asm7.barrier_opcode> TDMB
 %token <Ast_asm7.move_size> TMOV
 %token TB TBL
 %token <Ast_asm7.condition> TBx
@@ -228,6 +231,16 @@ instr:
  | TSVC                         { SVC 0 }
  | TSVC imm                     { SVC $2 }
 
+ /*(* case 54: "FADDD Fm,[Fn,]Fd" *)*/
+ | TFARITH freg TC freg TC freg { FArith ($1, $2, Some $4, $6) }
+ | TFARITH freg        TC freg  { FArith ($1, $2, None, $4) }
+
+ /*(* case 56: "FCMPD Fm,Fn" *)*/
+ | TFCMP freg TC freg           { FCmp ($1, $2, $4) }
+
+ /*(* case 51: "DMB $imm" / "DSB $imm" / "ISB $imm" *)*/
+ | TDMB imm                     { Barrier ($1, $2) }
+
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
 /*(*************************************************************************)*/
@@ -246,6 +259,14 @@ reg:
        else error "register value out of range"
      }
 
+freg:
+ | TFx                { $1 }
+ | TF TOPAR expr TCPAR
+     { if $3 <= 31 && $3 >= 0
+       then FR $3
+       else error "register value out of range"
+     }
+
 /*(* claude: needed for e.g. "MOVW 8(R2),R5" (case 3's Indirect memory
    * side) -- same shape as Parser_asmi.mly/Parser_asmv.mly's identical
    * rule. The "(Rn)(Rm)" register-offset form is still deferred, see
@@ -254,6 +275,7 @@ reg:
    * Rewrite7.ml's RETURN-expansion link-register save/restore. *)*/
 gen:
  | reg                 { GReg $1 }
+ | freg                { GFReg $1 }
  | con TOPAR reg TCPAR { Indirect ($3, $1) }
  | name                { Entity $1 }
  /*(* case 22/23-ish: "-16(RSP)!" -- pre-index, offset applied before

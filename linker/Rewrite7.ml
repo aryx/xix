@@ -223,6 +223,7 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
 
      | T.I (Arith _ | Shift _ | Cmp _ | ArithMul _ | Move _
            | B _ | BL _ | Bxx _ | CBxx _ | RET _ | SVC _
+           | FArith _ | FCmp _ | Barrier _
            ) ->
         frame
   ) None;

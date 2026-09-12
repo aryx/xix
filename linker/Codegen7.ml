@@ -293,18 +293,32 @@ let olsr12u (node : 'a T.node) (base : int) (v : int) (b : int) (r : int) : int 
  * B/H/W/X), goken's `offsetshift()` -- same "offset divided by the
  * access size, must divide evenly" shape already used for the X_-only
  * helpers above, just generalized to the other 3 sizes here. *)
-let ldstr12u_size_opc (ms : move_size) : int * int =
+(* claude: extended to a (sz,v,opc) triple to also cover FMOVS/FMOVD's
+ * memory form -- goken's own opldr12(AFMOVS)=LDSTR12U(2,1,1),
+ * opldr12(AFMOVD)=LDSTR12U(3,1,1): same LDSTR12U shape as the integer
+ * sizes, just the "V" bit (float-vs-integer register file) set to 1
+ * instead of 0. SCVTF_*/FCVTZS_* are never a memory-access shape in
+ * goken (register-to-register only, case 29, see Move's FCvt-style
+ * arms in `rules` below) so they error loudly here rather than
+ * silently producing a bogus memory encoding. *)
+let ldstr12u_size_v_opc (ms : move_size) : int * int * int =
   match ms with
-  | B_ A.S -> 0, 2 | B_ A.U -> 0, 1
-  | H_ A.S -> 1, 2 | H_ A.U -> 1, 1
-  | W_ A.S -> 2, 2 | W_ A.U -> 2, 1
-  | X_ -> 3, 1
+  | B_ A.S -> 0, 0, 2 | B_ A.U -> 0, 0, 1
+  | H_ A.S -> 1, 0, 2 | H_ A.U -> 1, 0, 1
+  | W_ A.S -> 2, 0, 2 | W_ A.U -> 2, 0, 1
+  | X_ -> 3, 0, 1
+  | FS_ -> 2, 1, 1
+  | FD_ -> 3, 1, 1
+  | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D ->
+      failwith "Codegen7: SCVTF/FCVTZS is register-to-register only, not a memory shape"
 let scale_shift_of_size (ms : move_size) : int =
   match ms with
-  | B_ _ -> 0 | H_ _ -> 1 | W_ _ -> 2 | X_ -> 3
+  | B_ _ -> 0 | H_ _ -> 1 | W_ _ | FS_ -> 2 | X_ | FD_ -> 3
+  | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D ->
+      failwith "Codegen7: SCVTF/FCVTZS is register-to-register only, not a memory shape"
 let opldr12_sized (ms : move_size) : int =
-  let sz, opc = ldstr12u_size_opc ms in
-  ldstr12u sz 0 opc
+  let sz, v, opc = ldstr12u_size_v_opc ms in
+  ldstr12u sz v opc
 let opstr12_sized (ms : move_size) : int =
   (opldr12_sized ms) land (lnot (3 lsl 22))
 
@@ -481,6 +495,87 @@ let branch_delta (node : 'a T.node) : int =
   | None -> raise (Impossible "resolving should have set the branch field")
   | Some ndst -> (ndst.real_pc - node.real_pc) asr 2
 
+(* claude: goken's float-arith/compare/register-move/conversion base
+ * opcodes (asmout.c's `#define FPOP2S/FPOP1S/FPCMP/FPCVTI` macros,
+ * transcribed directly, `m`/`s` always 0 here -- ARMv8.2 half-
+ * precision and different rounding modes aren't wired). `type_`
+ * selects single (0) vs double (1) precision -- see this file's
+ * fp_arith_opcode/move_size comments for why S/D are sibling
+ * constructors rather than a separate width flag, same convention as
+ * the *W-suffixed integer forms. *)
+let fpop2s (type_ : int) (op : int) : int =
+  (0x1E lsl 24) lor (type_ lsl 22) lor (1 lsl 21) lor (op lsl 12) lor (2 lsl 10)
+(* claude: case 54 -- dyadic float arith (FADD/FSUB/FMUL/FDIV, both
+ * precisions); goken's own float-immediate operand support is dead
+ * code in the reference implementation (see Ast_asm7.ml's FArith
+ * comment), so only the register-register form is ported. *)
+let oprrr_farith (op : fp_arith_opcode) : int =
+  match op with
+  | FADDS -> fpop2s 0 2 | FADDD -> fpop2s 1 2
+  | FSUBS -> fpop2s 0 3 | FSUBD -> fpop2s 1 3
+  | FMULS -> fpop2s 0 0 | FMULD -> fpop2s 1 0
+  | FDIVS -> fpop2s 0 1 | FDIVD -> fpop2s 1 1
+
+let fpcmp (type_ : int) : int =
+  (0x1E lsl 24) lor (type_ lsl 22) lor (1 lsl 21) lor (8 lsl 10)
+(* claude: case 56 -- FCMPS/FCMPD, no destination register (compares
+ * Fm,Fn and sets the condition flags, same as the integer Cmp's
+ * implicit-ZR-destination shape). *)
+let oprrr_fcmp (op : fp_cmp_opcode) : int =
+  match op with FCMPS -> fpcmp 0 | FCMPD -> fpcmp 1
+
+let fpop1s (type_ : int) (op : int) : int =
+  (0x1E lsl 24) lor (type_ lsl 22) lor (1 lsl 21) lor (op lsl 15) lor (0x10 lsl 10)
+(* claude: case 54's own "monadic" branch (goken detects a FPOP1S-
+ * shaped opcode -- bit 11 clear, unlike FPOP2S's bit 11 set -- and
+ * reuses the *same* case for both dyadic and monadic float ops) --
+ * FMOVS/FMOVD's register-to-register form (op=0) lands here since
+ * it's dispatched as a Move (move_size FS_/FD_), not FArith; goken's
+ * own FABSS/FABSD/FNEGS/FNEGD/FSQRTS/FSQRTD/FCVTSD/FCVTDS share this
+ * same FPOP1S shape (different `op` values) but aren't wired as their
+ * own mnemonics in this port yet. *)
+let oprrr_fmovreg (ms : move_size) : int =
+  match ms with
+  | FS_ -> fpop1s 0 0 | FD_ -> fpop1s 1 0
+  | B_ _ | H_ _ | W_ _ | X_ | SCVTF_S | SCVTF_D | FCVTZS_S | FCVTZS_D ->
+      raise (Impossible "oprrr_fmovreg: not FS_/FD_")
+
+(* claude: case 29 -- SCVTF*/FCVTZS* (int<->float conversion),
+ * goken's `#define FPCVTI(sf,s,type,rmode,op)`. `sf` selects whether
+ * the *integer* side is a 64-bit X register (1, the only form wired
+ * here -- goken's own *W variants, e.g. SCVTFWD, use a 32-bit W
+ * register instead and aren't ported); `type_` selects the *float*
+ * side's precision (0=S,1=D) regardless of which side is the
+ * conversion's source vs destination; `rmode`/`op` distinguish
+ * int->float (0,2) from float->int-truncating (3,0) -- values
+ * transcribed directly from asmout.c's ASCVTFD/ASCVTFS/AFCVTZSD/
+ * AFCVTZSS rows, not re-derived. *)
+let fpcvti (sf : int) (type_ : int) (rmode : int) (op : int) : int =
+  (sf lsl 31) lor (0x1E lsl 24) lor (type_ lsl 22) lor (1 lsl 21)
+    lor (rmode lsl 19) lor (op lsl 16)
+let oprrr_fcvt (ms : move_size) : int =
+  match ms with
+  | SCVTF_S -> fpcvti 1 0 0 2 | SCVTF_D -> fpcvti 1 1 0 2
+  | FCVTZS_S -> fpcvti 1 0 3 0 | FCVTZS_D -> fpcvti 1 1 3 0
+  | B_ _ | H_ _ | W_ _ | X_ | FS_ | FD_ ->
+      raise (Impossible "oprrr_fcvt: not SCVTF_*/FCVTZS_*")
+
+(* claude: case 51 -- DMB/DSB/ISB $imm, goken's `#define
+ * SYSOP(l,op0,op1,crn,crm,op2,rt)` with the user's immediate ORed
+ * directly into the crm field's own bit position (`o1 |=
+ * (offset&0xF)<<8`, transcribed as-is -- see Ast_asm7.ml's Barrier
+ * comment for why bare NOP/HINT and SYS/SYSL/MRS/MSR aren't wired
+ * here). *)
+let sysop (l : int) (op0 : int) (op1 : int) (crn : int) (crm : int)
+    (op2 : int) (rt : int) : int =
+  (0x354 lsl 22) lor (l lsl 21) lor (op0 lsl 19) lor (op1 lsl 16)
+    lor (crn lsl 12) lor (crm lsl 8) lor (op2 lsl 5) lor rt
+let opirr_barrier (op : barrier_opcode) : int =
+  match op with
+  | DSB_ -> sysop 0 0 3 3 0 4 0x1F
+  | DMB_ -> sysop 0 0 3 3 0 5 0x1F
+  | ISB_ -> sysop 0 0 3 3 0 6 0x1F
+
 (*****************************************************************************)
 (* The rules! *)
 (*****************************************************************************)
@@ -552,6 +647,23 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )}
 
     (* --------------------------------------------------------------------- *)
+    (* Floating point *)
+    (* --------------------------------------------------------------------- *)
+
+    (* case 54: FADDD Fm,[Fn,]Fd (dyadic float arith) *)
+    | FArith (op, (FR rf), middle, (FR rt)) ->
+        let (FR r) = middle ||| FR rt in
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_farith op lor (rf lsl 16) lor (r lsl 5) lor rt) ]
+        )}
+
+    (* case 56: FCMPD Fm,Fn *)
+    | FCmp (op, (FR rf), (FR rn)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_fcmp op lor (rf lsl 16) lor (rn lsl 5)) ]
+        )}
+
+    (* --------------------------------------------------------------------- *)
     (* Memory / Move *)
     (* --------------------------------------------------------------------- *)
 
@@ -559,6 +671,23 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | Move (X_, Left (GReg (R rf)), GReg (R rt)) ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (gmov_reg_reg rf rt) ]
+        )}
+
+    (* case 54 (monadic branch): FMOVS/FMOVD Fs,Fd (float register move) *)
+    | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), GFReg (FR rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_fmovreg ms lor (rf lsl 5) lor rt) ]
+        )}
+
+    (* case 29: SCVTFS/SCVTFD Rs,Fd (int -> float) *)
+    | Move ((SCVTF_S | SCVTF_D as ms), Left (GReg (R rf)), GFReg (FR rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_fcvt ms lor (rf lsl 5) lor rt) ]
+        )}
+    (* case 29: FCVTZSS/FCVTZSD Fs,Rd (float -> int, truncating) *)
+    | Move ((FCVTZS_S | FCVTZS_D as ms), Left (GFReg (FR rf)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (oprrr_fcvt ms lor (rf lsl 5) lor rt) ]
         )}
 
     (* case 32: MOV $con,Rd -> movz/movn (see move_immediate_encoding's
@@ -626,6 +755,27 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
           )}
 
+    (* case 20/21, float memory form: FMOVS/FMOVD Fs,O(Rbase) /
+     * FMOVS/FMOVD O(Rbase),Fd -- same scaled-12-bit machinery as the
+     * integer sizes above, just the "V" bit set (see
+     * ldstr12u_size_v_opc). *)
+    | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), Indirect ((R rbase), offset)) ->
+        let shift = scale_shift_of_size ms in
+        if offset land ((1 lsl shift) - 1) <> 0
+        then error node "TODO: unaligned/unscaled store offset (not yet implemented)"
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rbase rf) ]
+          )}
+    | Move ((FS_ | FD_ as ms), Left (Indirect ((R rbase), offset)), GFReg (FR rt)) ->
+        let shift = scale_shift_of_size ms in
+        if offset land ((1 lsl shift) - 1) <> 0
+        then error node "TODO: unaligned/unscaled load offset (not yet implemented)"
+        else
+          { size = 4; x = None; binary = (fun () ->
+            [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
+          )}
+
     (* case 20/21 (SB-relative fast path): "MOV Rf,sym(SB)" / "MOV
      * sym(SB),Rd" -- store/load the *value* at a global (as opposed
      * to "MOV $sym(SB),Rd", address-of-global, which always goes
@@ -653,6 +803,38 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               )}
         )
     | Move (ms, Left (Entity (A.Global (global, goffset))), GReg (R rt)) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset + goffset in
+            let shift = scale_shift_of_size ms in
+            if final_offset land ((1 lsl shift) - 1) <> 0
+            then error node "TODO: unaligned SB-relative load offset"
+            else
+              let (R rsb_i) = rSB in
+              { size = 4; x = None; binary = (fun () ->
+                [ w1 (olsr12u node (opldr12_sized ms) (final_offset asr shift) rsb_i rt) ]
+              )}
+        )
+
+    (* case 20/21, float SB-relative fast path *)
+    | Move ((FS_ | FD_ as ms), Left (GFReg (FR rf)), Entity (A.Global (global, goffset))) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: storing to a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset + goffset in
+            let shift = scale_shift_of_size ms in
+            if final_offset land ((1 lsl shift) - 1) <> 0
+            then error node "TODO: unaligned SB-relative store offset"
+            else
+              let (R rsb_i) = rSB in
+              { size = 4; x = None; binary = (fun () ->
+                [ w1 (olsr12u node (opstr12_sized ms) (final_offset asr shift) rsb_i rf) ]
+              )}
+        )
+    | Move ((FS_ | FD_ as ms), Left (Entity (A.Global (global, goffset))), GFReg (FR rt)) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
         (match v with
         | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
@@ -743,6 +925,12 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | SVC i ->
         { size = 4; x = None; binary = (fun () ->
           [ w1 (opimm_svc lor ((i land 0xffff) lsl 5)) ]
+        )}
+
+    (* case 51: DMB/DSB/ISB $imm *)
+    | Barrier (op, i) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (opirr_barrier op lor ((i land 0xF) lsl 8)) ]
         )}
 
     (* --------------------------------------------------------------------- *)

@@ -318,17 +318,22 @@ Not yet in Codegeni.ml at all:
    and RV64.
 
 * Notes for later
-** MOVB/MOVH/MOVBU/MOVHU not wired in the assembler
-   See notes_riscv_port_plan.txt's "Not yet wired in the assembler"
-   section -- Move1 vs Move2's exact intended split for byte/half
-   isn't obvious from the AST alone; investigate goken's il/asm.c
-   case 10 ("sign extend") and the a.y grammar before guessing.
-** Rewritev.ml (MIPS) may have a latent leaf-with-locals gap
-   Found while reading goken's il/noop.c for RISC-V's 3-way leaf/
-   frame logic: MIPS's Rewritev.ml only has a 2-way split (leaf-with-
-   no-locals vs everything else), always doing the full RLINK save/
-   restore even for a leaf procedure that merely has locals. Whether
-   goken's vl/noop.c actually has the same 3-way distinction (making
-   this a real MIPS gap) wasn't checked -- no MIPS fixture currently
-   exercises a leaf-with-nonzero-declared-size TEXT to expose it
-   either way.
+** DONE (stale note, already resolved) MOVB/MOVH/MOVBU/MOVHU wiring
+   Resolved by case 6/7/10's own work above: MOVB/MOVH/MOVBU/MOVHU
+   are wired (TMOVE1, Parse_asmi.ml), both memory (case 6/7,
+   generalized) and register-to-register (case 10) forms.
+** DONE Rewritev.ml (MIPS) leaf-with-locals RET bug -- confirmed real, fixed
+   Checked goken's vl/noop.c directly: it DOES have the same 3-way
+   leaf/frame distinction as il/noop.c. Rewritev.ml's RET expansion
+   only had a 2-way split, unconditionally doing a load-restore-jump
+   epilogue even for a leaf-with-locals procedure whose prologue never
+   wrote anything to restore -- confirmed as a real, live segfault
+   (not just theoretical), reproduced by temporarily reverting the fix
+   and re-running the new regression fixture under qemu-mips. Fixed by
+   threading `(autosize, needs_link_save)` through step2, same shape
+   as Rewritei.ml's own `frame` type. See
+   tests/linker/mips_diff/leaf_locals_ret_check.s (a `_check` fixture,
+   not byte-identical -- goken's sched.c hoists the epilogue's
+   SP-restore into RET's own delay slot, same documented scheduler gap
+   as everywhere else in this port) and mips_port.md's "Post-completion
+   fix" section.

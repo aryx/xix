@@ -698,3 +698,30 @@ Case numbers refer to `linkers/vl/asm.c`'s `switch(o->type)`.
   root-caused. Check `Layoutv.ml`/`Datagen.ml`'s BSS handling against
   goken's `dodata()` before trusting a GLOBL-only symbol's layout on
   MIPS.
+
+## Post-completion fix (found while porting RISC-V)
+
+**A real, previously-latent bug in `Rewritev.ml`'s RET expansion for
+a leaf procedure that still declares a nonzero frame** ("leaf with
+locals" -- no calls, but has locals). Found while reading goken's
+`il/noop.c` for RISC-V's own 3-way leaf/frame logic and checking
+whether MIPS's `vl/noop.c` has the same shape (it does, confirmed by
+reading its `ATEXT`/`ARET` cases directly). Before the fix,
+`Rewritev.ml` always expanded RET as "load RLINK from 0(SP); restore
+SP; jump to it" regardless of leaf-ness, but the matching prologue
+only ever *wrote* RLINK to 0(SP) for a non-leaf TEXT -- for a
+leaf-with-locals procedure, 0(SP) was never initialized, so the
+"restored" return address was garbage, jumped to unconditionally.
+Confirmed as a real, live bug (not just theoretical): reverting the
+fix and re-running `tests/linker/mips_diff/leaf_locals_ret_check.s`
+segfaults under `qemu-mips`. Fixed by threading `(autosize,
+needs_link_save)` through `Rewritev.ml`'s step2 (same shape as
+`Rewritei.ml`'s own `frame : (int * bool) option`, RISC-V), so RET
+now correctly takes the no-save/no-restore "case 2" shape for a leaf
+with locals. Not byte-identical against goken (`_check` fixture, not
+in `test-mips.sh`'s `CASES` list): goken's `sched.c` hoists the
+epilogue's SP-restore into the RET's own delay slot, the same
+documented, deliberately-not-replicated scheduler gap as everywhere
+else in this port -- confirmed this hoisting happens for *both* the
+leaf-with-locals and non-leaf RET shapes, not something new this fix
+introduced.

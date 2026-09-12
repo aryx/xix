@@ -60,32 +60,39 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
         env
   ) (None, None);
   
-  (* step2: transform *)
-  cg |> T.iter_with_env (fun autosize_opt n ->
+  (* step2: transform, threading (autosize, needs_link_save) through the
+   * graph so RET (processed later) knows which of the 3 shapes applies.
+   * None = case 1 (no frame at all); Some(autosize, false) = case 2
+   * (leaf with a frame, no link save/restore); Some(autosize, true) =
+   * case 3 (not leaf, full save/restore) -- mirrors Rewritei.ml's own
+   * `frame` shape (RISC-V), ported here to fix a real, confirmed bug:
+   * see the TEXT case's own comment below for what was wrong before. *)
+  cg |> T.iter_with_env (fun (frame : (int * bool) option) n ->
     match n.instr with
     | T.TEXT (global, attrs, size) ->
         (* sanity checks *)
         if size mod 4 <> 0
         then failwith (spf "size of locals should be a multiple of 4 for %s"
                          (A.s_of_global global));
-        if size < 0 
+        if size < 0
         then failwith "TODO: handle size local -4";
 
-        let autosize_opt = 
+        let is_leaf_here = Hashtbl.mem is_leaf global in
+        let frame =
           (* TODO? in theory can do something different when size == 0 and not
            * leaf but simpler to have less cases
            *)
-          if size == 0 && Hashtbl.mem is_leaf global
-          then begin 
-             Logs.debug (fun m -> m "found a leaf procedure without locals: %s" 
+          if size == 0 && is_leaf_here
+          then begin
+             Logs.debug (fun m -> m "found a leaf procedure without locals: %s"
                           (A.s_of_global global));
              (* not needed: n.instr <- T.TEXT (global, attrs, 0) *)
              None
           end
           (* + 4 extra space for saving rLINK *)
-          else Some (size + 4)
+          else Some (size + 4, not is_leaf_here)
         in
-        autosize_opt |> Option.iter (fun autosize ->
+        frame |> Option.iter (fun (autosize, needs_link_save) ->
           (* for layout text we need to set the final autosize *)
           n.instr <- T.TEXT (global, attrs, autosize);
           (* claude: a leaf function that still needs a frame
@@ -99,19 +106,30 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
            * emitted both, unconditionally -- caught by
            * tests/linker/mips_diff/lacon_mips.s (a leaf function
            * with an 8192-byte frame), which had 2 extra spurious
-           * words (this RLINK save) before this fix. Note: the RET
-           * side (below) has the same latent gap for a leaf
-           * function with autosize > 0 -- goken does a direct
-           * `ADD $autosize,SP; JMP RLINK` there instead of this
-           * code's load-from-memory+restore+jmp, but no fixture
-           * exercises RET on a leaf-with-locals function yet, so
-           * that's left as still-TODO rather than guessed at. *)
-          let is_leaf_here = Hashtbl.mem is_leaf global in
+           * words (this RLINK save) before this fix.
+           *
+           * The RET side (below) had the exact same latent gap for a
+           * leaf function with autosize > 0 -- unconditionally doing
+           * a load-from-memory+restore+jmp epilogue even though the
+           * prologue here never actually stored anything at 0(SP) for
+           * a leaf, meaning R2 would be loaded with garbage and
+           * jumped to. Confirmed as a REAL bug (not just a
+           * theoretical one), not previously caught since no MIPS
+           * fixture exercised RET on a leaf-with-locals function --
+           * discovered and fixed while investigating RISC-V's own
+           * `notes_riscv_port_plan.txt`/`todo_riscv_port.org`, which
+           * had flagged this exact question (goken's il/noop.c has
+           * the identical 3-way shape) without checking whether it
+           * also applied to MIPS's vl/noop.c; it does, confirmed by
+           * reading vl/noop.c's ATEXT/ARET cases directly. Fixed by
+           * threading `needs_link_save` (rather than just an autosize
+           * option) through to the RET case below, same shape as
+           * Rewritei.ml's own `frame : (int * bool) option`. *)
           let n1 = T.{
             instr = T.I (Arith (ADD (W, A.S),
                          Imm (- autosize), None, rSP));
             next =
-              (if is_leaf_here then n.next
+              (if not needs_link_save then n.next
                else Some T.{
                  instr = T.I (Move2 (W__,
                                    Either.Left (Gen (GReg rLINK)),
@@ -124,28 +142,41 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
           in
           n.next <- Some n1;
         );
-        autosize_opt
+        frame
 
-    | T.WORD _ -> autosize_opt
+    | T.WORD _ -> frame
     | T.Virt virt ->
         (match virt with
         | A.RET ->
-          (match autosize_opt with
-          | None -> 
-            (* JMP (RLINK) *)
+          (match frame with
+          | None ->
+            (* case 1: JMP (RLINK) *)
             n.instr <- T.I (JMP (ref (A.IndirectJump (rLINK))))
-         | Some autosize ->
-           (* MOVW 0(SP), R2
-            * ADD $autosize, SP
-            * JMP (R2)
-            * alt? why not reusing rLINK instead of an extra R2?
-            *)
+          | Some (autosize, false) ->
+            (* case 2 (leaf with a frame, no link save/restore):
+             * ADD $autosize, SP
+             * JMP (RLINK) *)
+            n.instr <- T.I (Arith (ADD (W, A.S), Imm autosize, None, rSP));
+            let n1 = T.{
+              instr = T.I (JMP (ref (A.IndirectJump (rLINK))));
+              next = n.next;
+              branch = None; n_loc = n.n_loc; real_pc = -1;
+            }
+            in
+            n.next <- Some n1
+          | Some (autosize, true) ->
+            (* case 3 (not leaf, full save/restore):
+             * MOVW 0(SP), R2
+             * ADD $autosize, SP
+             * JMP (R2)
+             * alt? why not reusing rLINK instead of an extra R2?
+             *)
             n.instr <- T.I (Move2 (W__,
                            Either.Left (Gen (Indirect (rSP, 0))),
                            Gen (GReg r2TMP)));
 
             let rec n1 = T.{
-              instr = T.I (Arith (ADD (W, A.S), 
+              instr = T.I (Arith (ADD (W, A.S),
                          Imm (autosize), None, rSP));
               next = Some n2;
               branch = None; n_loc = n.n_loc; real_pc = -1;
@@ -158,10 +189,10 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
           in
           n.next <- Some n1;
         );
-       
+
         | A.NOP -> raise (Impossible "NOP was removed in step1")
 
-        | A.JmpAndLink opd -> 
+        | A.JmpAndLink opd ->
             n.instr <- T.I (JAL opd)
         | A.AddI (sign, i, reg) ->
             n.instr <- T.I (Arith (ADD (W, sign), Imm i, None, reg))
@@ -176,16 +207,16 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
         | A.Cmp _ -> raise Todo
         | A.JEq _ -> raise Todo
        );
-       autosize_opt
+       frame
 
-     | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _ 
+     | T.I  ( Arith _ | NOR _ | ArithMul _ | ArithF _
             | Move1 _ | Move2 _
             | JMP _ | RFE _ | JAL _ | JALReg _ | BEQ _ | BNE _
             | Bxx _
             | SYSCALL | BREAK | TLB _
             | LL _ | SC _
             ) ->
-        autosize_opt
+        frame
   ) None;
 
   (* works by side effect, still return first node *)

@@ -123,6 +123,9 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       | "MOVWF" -> TMOVWF A.F | "MOVWD" -> TMOVWF A.D
       | "MOVFW" -> TMOVFW A.F | "MOVDW" -> TMOVFW A.D
+
+      (* claude: case 50/51/52/53, float load/store. *)
+      | "MOVF" -> TMOVF A.F | "MOVD" -> TMOVF A.D
       (*x: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* advanced *)
       | "C" -> TC

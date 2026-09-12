@@ -115,6 +115,12 @@ type mov_operand =
   | Indirect of reg * A.offset
   (* another form of Indirect *)
   | Entity of A.entity
+  (* claude: the register side of a float load/store (case 50/51/52/
+   * 53, MOVEF below) -- the memory side still uses Indirect/Entity
+   * above unchanged, since FPA/VFP load/store still addresses memory
+   * via a plain *integer* base register + offset, only the data
+   * register being loaded/stored is a float one. *)
+  | FImsr of freg
 (*e: type [[Ast_asm5.mov_operand]] *)
 
 [@@deriving show]
@@ -146,8 +152,16 @@ type instr =
   (*s: [[Ast_asm5.instr]] memory instructions cases *)
   | MOVE of A.move_size * move_option *
       mov_operand (* src *) * mov_operand (* dst *) (* virtual *)
-  | SWAP of A.move_size (* actually only (Byte x) *) * 
+  | SWAP of A.move_size (* actually only (Byte x) *) *
        reg (* indirect *) * reg * reg option
+  (* claude: case 50/51/52/53 (MOVF/MOVD load/store) -- kept as its
+   * own constructor rather than folded into MOVE, since MOVE's size
+   * is Ast_asm.move_size (Word/Byte/HalfWord, shared across archs)
+   * with no Float case, and adding one there would be a cross-arch
+   * change for an ARM-only feature -- floatp_precision (F/D) already
+   * exists and is exactly what's needed instead. *)
+  | MOVEF of A.floatp_precision *
+      mov_operand (* src *) * mov_operand (* dst *)
   (*e: [[Ast_asm5.instr]] memory instructions cases *)
 
   (* Control flow *)
@@ -250,8 +264,8 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | B opd -> Some opd
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
-  | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | SWAP _ | Cmp _ | CmpF _
-  | SWI _ | RFE -> None
+  | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _ | SWAP _
+  | Cmp _ | CmpF _ | SWI _ | RFE -> None
 (*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
 (*s: function [[Ast_asm5.visit_globals_instr]] *)
@@ -261,10 +275,11 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
     | Ximm x -> A.visit_globals_ximm f x
-    | Imsr _ | Indirect _ -> ()
+    | Imsr _ | Indirect _ | FImsr _ -> ()
   in
   match fst i with
   | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
+  | MOVEF (_, m1, m2) -> mov_operand m1; mov_operand m2
   (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
   | B b -> A.visit_globals_branch_operand f b
   | BL b -> A.visit_globals_branch_operand f b

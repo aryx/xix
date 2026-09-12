@@ -58,9 +58,10 @@ let rec vof_mov_operand =
       let v1 = vof_register v1
       and v2 = vof_offset v2
       in Ocaml.VSum (("Indirect", [ v1; v2 ]))
-  | Entity v1 -> 
+  | Entity v1 ->
     let v1 = vof_entity v1 in
     Ocaml.VSum (("Entity", [v1]))
+  | FImsr v1 -> let v1 = vof_fregister v1 in Ocaml.VSum (("FImsr", [ v1 ]))
 
 and vof_entity = 
  function
@@ -124,6 +125,11 @@ let rec vof_instr =
       and v3 = vof_mov_operand v3
       and v4 = vof_mov_operand v4
       in Ocaml.VSum (("MOVE", [ v1; v2; v3; v4 ]))
+  | MOVEF ((v1, v2, v3)) ->
+      let v1 = vof_floatp_precision v1
+      and v2 = vof_mov_operand v2
+      and v3 = vof_mov_operand v3
+      in Ocaml.VSum (("MOVEF", [ v1; v2; v3 ]))
   | SWAP ((v1, v2, v3, v4)) ->
       let v1 = vof_move_size v1
       and v2 = vof_register v2

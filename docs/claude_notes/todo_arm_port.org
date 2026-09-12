@@ -400,10 +400,48 @@ Not yet in Codegen5.ml at all:
    TODO already flags "MOVM (and his special bits .IA/...)" as
    unrepresented. Same category of work as 35-37: assembler
    grammar/AST first, Codegen5.ml second.)
-** TODO case 50 floating point store
-** TODO case 51 floating point load
-** TODO case 52 floating point store, long offset UGLY
-** TODO case 53 floating point load, long offset UGLY
+** DONE case 50 floating point store / case 51 floating point load /
+   case 52 floating point store, long offset UGLY / case 53 floating
+   point load, long offset UGLY -- MOVF/MOVD to/from a plain register
+   +offset address, the float analogue of case 20/21/30/31 (int
+   store/load). Unlike case 59-63/64-69, this one IS real, reachable
+   .s syntax (optab.c's C_FEXT/C_FAUTO/C_FOREG/C_LEXT/C_LAUTO/C_LOREG
+   rows, not C_ADDR's DLM-only or C_SHIFT's peephole-only path), so
+   it's byte-tested against 5a/5l like every ordinary case.
+   Required new AST, kept ARM-local rather than extending the shared
+   Ast_asm.move_size (which has no Float case and is used by every
+   arch): added `FImsr of freg` to `mov_operand` (the register side;
+   the memory side still reuses Indirect/Entity and
+   base_and_offset_of_indirect as-is, since float load/store still
+   addresses memory through a plain *integer* base register) and a
+   new top-level `MOVEF of A.floatp_precision * mov_operand *
+   mov_operand` instr constructor (mirroring MOVE's shape but keyed
+   on floatp_precision instead of move_size). Object_file.version
+   bumped 17->18. Grammar: new TMOVF token, "MOVF"/"MOVD" keywords,
+   and `gen` (already producing mov_operand) grew a bare `freg`
+   alternative.
+   New encoding helpers gfsr/gfsr_vfp (ofsr()/ovfpmem() in
+   codegen.c), dispatched via the same `!Flags.vfp` convention as
+   ArithF/CmpF/MOVWF/MOVFW. New fimmoffset (the short-offset range:
+   a signed, word-aligned offset with magnitude < 1024, i.e. gfsr's
+   8-bit word-count field) alongside the existing immoffset. The
+   long-offset case (52/53) needs an explicit `ADD REGTMP,Rbase,
+   REGTMP` after loading the offset from the literal pool, unlike
+   int case 30/31's gmem-register-offset shortcut -- FPA/VFP
+   load/store has no register-offset addressing mode at all, only a
+   fixed-size immediate, so the full address must be materialized in
+   REGTMP first.
+   Added float_mem_case50_51.s / float_mem_vfp_case50_51.s
+   (short-offset store+load round-trip through MOVWF/MOVFW into the
+   exit code) and float_mem_longoff_case52_53.s /
+   float_mem_vfp_longoff_case52_53.s (long-offset, mirroring
+   longoff_case30_31.s's own two-different-offsets workaround for the
+   already-known literal-pool-deduplication gap -- confirmed hitting
+   that exact 2-byte diff with a same-offset round-trip version
+   before rewriting it this way). PASS byte-identical + PASS same
+   qemu-arm exit code, all four (FPA/VFP x short/long-offset).
+   Verified: full ARM/MIPS/RISC-V baselines and make test (134/134)
+   all still pass.
 ** TODO case 56 move to FP[CS]R
 ** TODO case 57 move from FP[CS]R
 ** TODO (investigated, deliberately not implemented) case 59 movw/bu

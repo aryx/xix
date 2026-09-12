@@ -41,6 +41,7 @@ module L = Location_cpp
 %token <Ast_asm5.arithf_opcode * Ast_asm.floatp_precision> TARITHF
 %token <Ast_asm.floatp_precision> TCMPF
 %token <Ast_asm.floatp_precision> TMOVWF TMOVFW
+%token <Ast_asm.floatp_precision> TMOVF
 %token TMVN
 %token <Ast_asm.move_size> TMOV TSWAP
 %token TB  TBL
@@ -203,6 +204,12 @@ instr:
 
  | TMOV   cond  gen  TC gen     { (MOVE ($1, None, $3, $5), $2) }
 
+ /*(* case 50/51/52/53: MOVF/MOVD load/store -- same `gen` shape as
+    * MOVW/MOVB/MOVH above (memory side via Indirect/Entity), `gen`
+    * having grown a `freg` alternative below for the float-register
+    * side. *)*/
+ | TMOVF  cond  gen  TC gen     { (MOVEF ($1, $3, $5), $2) }
+
  | TSWAP  cond  reg  TC ireg    { (SWAP ($1, $5, $3, None), $2) }
  | TSWAP  cond  ireg TC reg     { (SWAP ($1, $3, $5, None), $2) }
  | TSWAP  cond  reg  TC ireg TC reg 
@@ -258,6 +265,11 @@ gen:
  | ximm  { match $1 with Int x -> Imsr (Imm x) | x -> Ximm x }
  | shift { Imsr ($1) }
  | reg   { Imsr (Reg $1) }
+ /*(* claude: the float-register side of a MOVF/MOVD (case 50-53) --
+    * the only place a bare `freg` can appear as a `gen`/mov_operand
+    * on its own (as opposed to freg's other uses, e.g. ArithF, which
+    * don't go through `gen` at all). *)*/
+ | freg  { FImsr $1 }
 
  | ioreg { $1 }
  | name                    { Entity $1 }

@@ -119,7 +119,8 @@ let base_and_offset_of_indirect node symbols2 autosize x =
           error node (spf "use of procedure %s in indirect with offset"
                        (A.s_of_global global))
       )
-  | Imsr _ | Ximm _ -> raise (Impossible "should be called only for indirects")
+  | Imsr _ | Ximm _ | FImsr _ ->
+      raise (Impossible "should be called only for indirects")
 (*e: function [[Codegen5.base_and_offset_of_indirect]] *)
 
 (*****************************************************************************)
@@ -184,6 +185,13 @@ let rot_bit = (1, 25)
 let immoffset x =
   (x >= 0 && x <= 0xfff) || (x < 0 && x >= -0xfff)
 (*e: function [[Codegen5.immoffset]] *)
+
+(* claude: case 50/51's short-offset range -- gfsr/gfsr_vfp's shared
+ * 8-bit word-count field, i.e. a signed multiple-of-4 offset with
+ * magnitude < 1024 (goken's ofsr/ovfpmem: `if(v&3) diag(...); else if
+ * (v >= (1<<10)) diag(...)`). *)
+let fimmoffset x =
+  x mod 4 =|= 0 && ((x >= 0 && x < 0x400) || (x < 0 && x > -0x400))
 
 (*****************************************************************************)
 (* Code generation helpers *)
@@ -536,6 +544,33 @@ let ghalfword (op : mem_opcode) (kind : move_size) cond
    * all, the low nibble is Rm directly, and bits[11:8] stay 0. *)
   | Either.Right (R r) ->
       common @ [(1, 23); (0, 22); (r, 0)]
+
+(* claude: case 50/51 (FPA LDF/STF) -- ofsr() in codegen.c. Coprocessor
+ * data-transfer class (bits 27-25=110), always pre-indexed (bit24=1
+ * -- goken's own C ORs this bit in twice, once conditionally on
+ * !P and once unconditionally right after, so it's set regardless;
+ * not replicated as a real .P/post-index option since nothing here
+ * ever produces one), coprocessor number 1 (bit8), offset is a
+ * word-count (v>>2) in the low 8 bits (magnitude only -- caller
+ * passes the sign via the U bit), and bit15 selects Double vs Float.
+ * The L bit (load vs store) is added by the caller, not here, same
+ * as goken's own case 51 (`ofsr(...) | (1<<20)`). *)
+let gfsr (prec : A.floatp_precision) (offset : int) (R rbase) (R rf) : Bits.t =
+  let double_bit = match prec with A.D -> [(1, 15)] | A.F -> [] in
+  let (u_bit, mag) = if offset < 0 then (0, -offset) else (1, offset) in
+  [(0x6, 25); (1, 24); (u_bit, 23); (1, 8);
+   ((mag asr 2) land 0xff, 0); (rbase, 16); (rf, 12)] @ double_bit
+
+(* claude: case 50/51's VFP encoding (VLDR/VSTR) -- ovfpmem() in
+ * codegen.c. bits[27:24]=0xd marks the VLDR/VSTR class; the
+ * coprocessor "size" nibble at bits[11:8] is 0xa/0xb (F/D), same
+ * values gop_arithf_vfp already uses for the same distinction. The L
+ * bit is added by the caller, same as gfsr above. *)
+let gfsr_vfp (prec : A.floatp_precision) (offset : int) (R rbase) (R rf) : Bits.t =
+  let prec_nibble = match prec with A.F -> 0xa | A.D -> 0xb in
+  let (u_bit, mag) = if offset < 0 then (0, -offset) else (1, offset) in
+  [(0xd, 24); (u_bit, 23); ((mag asr 2) land 0xff, 0);
+   (rbase, 16); (rf, 12); (prec_nibble, 8)]
 
 (*s: function [[Codegen5.gload_from_pool]] *)
 let gload_from_pool (nsrc : 'a T.node) cond rt =
@@ -1080,6 +1115,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             if size =*= Word 
             then raise (Impossible "pattern covered before")
             else error node "illegal combination"
+        | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1120,6 +1156,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     | MOVE ((Byte S | HalfWord _) as size, _opt, from, Imsr (Reg (R rt))) ->
         (match from with
         | Imsr _ | Ximm _ -> error node "illegal combination?"
+        | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1160,6 +1197,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         (* stricter: better error message *)
         | Imsr _ | Ximm _ -> 
             error node "illegal to store in an (extended) immediate"
+        | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1196,6 +1234,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         (match dest with
         | Imsr _ | Ximm _ ->
             error node "illegal to store in an (extended) immediate"
+        | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1232,6 +1271,73 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * peepholing and emits plain, unfused assembly -- not this exact
      * fused-shift-into-addressing-mode shape goken's 5c produces.
      *)
+
+    (* case 50/51: floating point store/load -- MOVF/MOVD to/from a
+     * short-offset SB/SP/plain-register-relative address, the float
+     * analogue of case 20/21 (int store/load). Same
+     * base_and_offset_of_indirect reuse (the memory side always
+     * addresses through a plain *integer* base register regardless
+     * of the data register's type), just gated by fimmoffset's
+     * narrower 10-bit-word-count range instead of immoffset's 12-bit
+     * one, and dispatched through gfsr/gfsr_vfp per !Flags.vfp
+     * (same convention as ArithF/CmpF/MOVWF above). *)
+    | MOVEF (prec, FImsr (FR rf), ((Indirect _ | Entity _) as dest)) ->
+        let (rbase, offset) =
+          base_and_offset_of_indirect node env.syms env.autosize dest in
+        if fimmoffset offset
+        then
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @
+              (if !Flags.vfp then gfsr_vfp prec offset rbase (R rf)
+               else gfsr prec offset rbase (R rf))
+            ]
+          )}
+        else
+          (* case 52: floating point store, long offset UGLY -- no
+           * register-offset addressing mode exists for FPA/VFP
+           * load/store (unlike gmem's int STR/LDR), so the full
+           * address must be computed explicitly into REGTMP first
+           * (`ADD REGTMP,Rbase,REGTMP` after loading the offset from
+           * the pool), then a zero-offset store relative to REGTMP.
+           *)
+          { size = 12; x = Some (PoolOperand (Ast_asm.Int offset));
+            binary = (fun () ->
+              let (R rbase_i) = rbase and (R rtmp_i) = rTMP in
+              [ gload_from_pool node cond rTMP;
+                [gcond cond; gop_arith ADD; (rtmp_i, 16); (rtmp_i, 12); (rbase_i, 0)];
+                [gcond cond] @
+                (if !Flags.vfp then gfsr_vfp prec 0 rTMP (R rf)
+                 else gfsr prec 0 rTMP (R rf))
+              ]
+          )}
+
+    | MOVEF (prec, ((Indirect _ | Entity _) as src), FImsr (FR rt)) ->
+        let (rbase, offset) =
+          base_and_offset_of_indirect node env.syms env.autosize src in
+        if fimmoffset offset
+        then
+          { size = 4; x = None; binary = (fun () ->
+            [ [gcond cond] @
+              (if !Flags.vfp then gfsr_vfp prec offset rbase (R rt)
+               else gfsr prec offset rbase (R rt)) @ [(1, 20)]
+            ]
+          )}
+        else
+          (* case 53: floating point load, long offset UGLY -- same
+           * REGTMP-address-then-zero-offset trick as case 52. *)
+          { size = 12; x = Some (PoolOperand (Ast_asm.Int offset));
+            binary = (fun () ->
+              let (R rbase_i) = rbase and (R rtmp_i) = rTMP in
+              [ gload_from_pool node cond rTMP;
+                [gcond cond; gop_arith ADD; (rtmp_i, 16); (rtmp_i, 12); (rbase_i, 0)];
+                [gcond cond] @
+                (if !Flags.vfp then gfsr_vfp prec 0 rTMP (R rt)
+                 else gfsr prec 0 rTMP (R rt)) @ [(1, 20)]
+              ]
+          )}
+
+    | MOVEF (_, _, _) ->
+        error node "illegal MOVEF operand combination"
 
     (* Swap *)
     (* case 40:	/* swp oreg,reg,reg */ *)

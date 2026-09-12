@@ -8,13 +8,13 @@ INCLUDES=-I $TOP/caps/src/caps -I $TOP/lib_core/commons -I $TOP/lib_core/regexps
 
 # Layout is after Codegen because it calls the Codegen.size_of_instruction
 SRC= Flags.ml\
- Types.ml Types5.ml Typesv.ml \
+ Types.ml Types5.ml Typesv.ml Typesi.ml \
  Load.ml Check.ml Resolve.ml \
  Profile.ml \
- Rewrite.ml Rewrite5.ml Rewritev.ml \
+ Rewrite.ml Rewrite5.ml Rewritev.ml Rewritei.ml \
  Optimize.ml Optimize5.ml Optimizev.ml \
- Codegen.ml Codegen5.ml Codegenv.ml \
- Layout.ml Layout5.ml Layoutv.ml \
+ Codegen.ml Codegen5.ml Codegenv.ml Codegeni.ml \
+ Layout.ml Layout5.ml Layoutv.ml Layouti.ml \
  Datagen.ml \
  Execgen.ml \
  CLI.ml Main.ml

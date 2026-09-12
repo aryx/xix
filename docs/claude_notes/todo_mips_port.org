@@ -664,10 +664,36 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    byte-identical (case41_42_mips.s) + PASS functionally (both).
    Verified: full MIPS + ARM baselines and make test (134/134) all
    still pass.
+** DONE case 39 rfe ==> jmp+rfe -- kernel-only "return from
+   exception": JR (r) followed by a fixed RFE instruction (goken's
+   `oprrr(ARFE)` = MMU(2,0), no operands). RFE already existed in
+   the AST (`RFE of branch_operand`); only needed a grammar rule
+   (`TRFE branch`, reusing the same `branch` nonterminal JMP/JAL
+   already use for their indirect form) since none existed at all.
+   Unlike every other jump/branch this session, RFE itself fills
+   JR's own mandatory delay slot by design -- no extra nop needed
+   (confirmed via `vl -a`: exactly 2 words). Reuses case 18's exact
+   OP_RRR shape (r1=0, r2=target, r3=0).
+   Hit a real, not-worth-chasing surprise while testing: goken's own
+   assembler drops any code textually following an RFE with no
+   label pointing at it (a genuine, intentional dead-code
+   elimination for unreachable code after an unconditional computed
+   jump) -- a first fixture with `RFE (R5)` followed by `SYSCALL`
+   came out 8 bytes smaller on goken's side because the SYSCALL was
+   silently dropped, while xix's port (with no such dead-code pass)
+   kept it. Not implemented here (a general "unreachable code after
+   an unconditional jump" DCE pass is a much bigger, unrelated
+   feature) -- fixed by just not putting anything after RFE in the
+   fixture, matching how real Plan9 kernel code uses it anyway (RFE
+   last in an exception handler).
+   Added tests/linker/mips_diff/case39_mips.s (byte-comparison only,
+   RFE being privileged and illegal under qemu-mips user-mode
+   emulation same as case37_38_mips.s's MTC0/MFC0). PASS
+   byte-identical + PASS same qemu-mips trap on both sides. Verified:
+   full MIPS + ARM baselines and make test (134/134) all still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
-** TODO case 39 rfe ==> jmp+rfe
 ** TODO case 45 case r
 ** TODO case 46 bcase $con,lbra
 ** TODO case 47 sc r, soreg

@@ -34,6 +34,7 @@ CASES=(
     "tests/linker/mips_diff/case37_38_mips.s:_start"
     "tests/linker/mips_diff/case40_mips.s:_start"
     "tests/linker/mips_diff/case41_42_mips.s:_start"
+    "tests/linker/mips_diff/case39_mips.s:_start"
 )
 # tests/linker/mips_diff/call_mips.s, case6_mips.s, immcon_mips.s,
 # movbh_check_mips.s, mullohi_check_mips.s, case30_31_check_mips.s,

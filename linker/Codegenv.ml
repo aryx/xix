@@ -784,6 +784,22 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 8; x = None; binary = (fun () ->
            [ op_rrr op_jmp rZERO rt r; nop ]
          ) }
+    (* case 39:	/* rfe ==> jmp+rfe */ *)
+    (* claude: kernel-only "return from exception": JR (r) followed
+     * by a fixed RFE instruction (goken's `oprrr(ARFE)` = MMU(2,0),
+     * no operands) -- unlike every other jump/branch this session,
+     * RFE itself fills JR's own mandatory delay slot by design (this
+     * is the whole point: exception state is restored exactly as
+     * the jump takes effect), so no extra nop is needed. Confirmed
+     * via `vl -a` directly: exactly 2 words, no padding. Reuses the
+     * same OP_RRR shape as case 18's JMP (r1=0, r2=target, r3=0). *)
+    | RFE { contents = (IndirectJump rt) } ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_rrr (op 1 0) rZERO rt rZERO;
+              sp 2 0 @ [ (16, 21); (2, 3); (0, 0) ];
+            ]
+         ) }
+
     (* case 11:	/* jmp lbra */ *)
     | JAL { contents = (Absolute _) } ->
         (* delay slot -- see the `nop` definition above. Unlike case

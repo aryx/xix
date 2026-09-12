@@ -203,6 +203,7 @@ instr:
  | TJAL branch { JAL $2 }
  /*(* was just nireg here for branch *)*/
  | TJAL reg TC branch { JALReg ($2, $4) }
+ | TRFE branch { RFE $2 }
 
  | TBEQ gen TC rel           { BEQ ($2, None, $4) }
  | TBNE gen TC rel           { BNE ($2, None, $4) }

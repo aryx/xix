@@ -409,8 +409,37 @@ Not yet in Codegen5.ml at all:
 ** TODO case 59 movw/bu R<<I(R),R -> ldr indexed
 ** TODO case 60 movb R(R),R -> ldrsb indexed
 ** TODO case 61 movw/b/bu R,R<<[IR](R) -> str indexed
-** TODO case 62 case R -> movw R<<2(PC),PC
-** TODO case 63 bcase
+** TODO (investigated, deliberately not implemented) case 62 case R
+   -> movw R<<2(PC),PC / case 63 bcase -- switch-statement jump
+   table. Confirmed real (unlike MIPS's case 45/46, see
+   mips_port.md): goken's 5c *does* emit ACASE/ABCASE for a
+   dense-enough switch (compilers/5c/swt.c's `swit2`). But goken's 5a
+   (this port's actual, permanent target) has no grammar rule for
+   either mnemonic -- only the separate, explicitly out-of-scope
+   5ak/5lk lineage can parse "CASE"/"BCASE" as text at all -- so
+   there is no way to ever build a byte-identical fixture against
+   5a/5l for this case.
+   A prototype was built and worked (encoding confirmed bit-for-bit
+   against linkers/5l/codegen.c and cross-checked once against
+   goken's 5ak/5lk output; a hand-run fixture dispatched correctly
+   under qemu-arm with xix's own o5a/o5l) by adding `Case`/`BCase`
+   *generically* to Ast_asm.ml's shared virtual_instr, parsed via a
+   shared CASE/BCASE keyword duplicated in every arch's grammar, with
+   only Rewrite5.ml/Codegen5.ml doing a real lowering. Reverted rather
+   than kept: it required loosening two previously-clean, shared
+   invariants that held across every arch -- assembler/
+   Resolve_labels.ml's label-resolution pass never looking inside
+   `Virtual` nodes at all, and Rewrite{5,v,i}.ml's step1 blanket
+   "branch should not be set on virtual instr" check (BCase is the
+   first Virtual construct ever reachable from real .s source
+   carrying an unresolved branch target, which is what exposed both).
+   Not worth that cost for a feature with no current consumer
+   (nothing in xix emits switch-statement code yet) and no possible
+   differential test against the actual target. Revisit only if a
+   real driver shows up (e.g. a future xix C compiler backend wanting
+   jump-table codegen) -- at that point the actual requirements would
+   be concrete instead of guessed at, and might justify the shared-
+   invariant changes on their own merits.
 ** TODO case 64 mov/movb/movbu R,addr
 ** TODO case 65 mov/movbu addr,R
 ** TODO case 66 movh/movhu/movb addr,R

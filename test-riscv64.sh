@@ -29,6 +29,7 @@ CASES=(
     "tests/linker/riscv64_diff/sb_value_case6_7.s"
     "tests/linker/riscv64_diff/sb_value_case12_13.s"
     "tests/linker/riscv64_diff/lcon_case14.s"
+    "tests/linker/riscv64_diff/lreg_case15_16.s"
 )
 
 FAIL=0

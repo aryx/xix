@@ -209,7 +209,20 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
             branch = None; n_loc = n.n_loc; real_pc = -1;
           }
           and n2 = T.{
-            instr = T.I (Move2 (W__,
+            (* claude: pointer-width save (V__ = 64-bit "vlong" on
+             * riscv64, W__ = 32-bit "word" on riscv32) -- NOT always
+             * W__: unlike a real user-written "MOVW" (always 32-bit
+             * regardless of arch, confirmed against goken's own
+             * optab.c), RLINK itself is a full pointer, 8 bytes wide
+             * on riscv64. Using W__ unconditionally here was a real,
+             * confirmed bug (silently truncating the saved return
+             * address to its low 32 bits on riscv64) -- caught while
+             * porting case 15/16, which share Codegeni.ml's case 6/7
+             * encoder with this exact save/restore and exposed the
+             * is_64 vs mnemonic-width conflation once a genuine
+             * user-written large-offset "MOVW" fixture needed the
+             * *other* (always-32-bit) behavior from the same tag. *)
+            instr = T.I (Move2 ((if is_64 then V__ else W__),
                               Either.Left (Gen (GReg rLINK)),
                               Gen (Indirect (rSP, 0))));
             next = n.next;
@@ -243,8 +256,10 @@ let rewrite (is_64 : bool) (cg : instr T.code_graph) : instr T.code_graph =
             in
             n.next <- Some n1
           | Some (autosize, true) ->
-            (* case 3: MOVW 0(SP), RLINK; ADD $autosize, SP; JMP (RLINK) *)
-            n.instr <- T.I (Move2 (W__,
+            (* case 3: MOVW/MOV 0(SP), RLINK; ADD $autosize, SP;
+             * JMP (RLINK) -- pointer-width restore, see the matching
+             * save's own comment above for why this isn't always W__. *)
+            n.instr <- T.I (Move2 ((if is_64 then V__ else W__),
                            Either.Left (Gen (Indirect (rSP, 0))),
                            Gen (GReg rLINK)));
 

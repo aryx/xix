@@ -187,19 +187,37 @@ let op_stype funct3 (R rs1) (R rs2) (imm : int) : Bits.t =
   [(0x23, 0); (imm land 0x1f, 7); (funct3, 12);
    (rs1, 15); (rs2, 20); ((imm lsr 5) land 0x7f, 25)]
 
-(* claude: case 6/7's shared "imm out of range" bounds check (goken's
- * `if(v < -BIG || v >= BIG) diag(...)`) and 4-byte-instruction
- * wrapping, factored out since both the store and load sides, and
- * now each of their W__/V__ and B_/H_ variants, need the identical
- * check. *)
-let gen_store (node : 'a T.node) (offset : int) (mk : unit -> Bits.t) =
-  if not (fits_addi_imm offset)
-  then error node "TODO: store offset out of 12-bit range"
-  else { size = 4; x = None; binary = (fun () -> [ mk () ]) }
-let gen_load (node : 'a T.node) (offset : int) (mk : unit -> Bits.t) =
-  if not (fits_addi_imm offset)
-  then error node "TODO: load offset out of 12-bit range"
-  else { size = 4; x = None; binary = (fun () -> [ mk () ]) }
+(* claude: case 6/7 (small offset, goken's `if(v < -BIG || v >= BIG)
+ * diag(...)` range check) / case 15/16 (large offset, "mov r,L(s)"/
+ * "mov L(s),r" -- an arbitrary base register, unlike case 12/13's
+ * SB-specific slow path: no INITDAT/BIG bias, just the raw offset).
+ * Shared by both the store and load sides, and each of their W__/V__
+ * and B_/H_ variants -- goken's own case 15/16 is fully generic over
+ * SB/SH/SW/SD/LB/LH/LW/LD/LBU/LHU too (confirmed via optab.c: the
+ * same C_LOREG class every one of case 6/7's own C_SOREG mnemonics
+ * also has a row for), so this generalizes the exact same way case
+ * 6/7 already did. Large-offset case materializes the offset's upper
+ * bits into REGTMP via LUI (same rounding as case 9/20/12/13's own
+ * `gen_upper_and_low_via`), adds the base register into REGTMP (goken's
+ * plain `OP_ADD`, no funct7/funct3 needed beyond the implicit ADD
+ * opcode), then stores/loads through REGTMP with the low 12 bits
+ * folded into the instruction's own immediate field. *)
+let gen_store (_node : 'a T.node) (funct3 : int) (rbase : reg) (rf : reg) (offset : int) =
+  if fits_addi_imm offset
+  then { size = 4; x = None; binary = (fun () -> [ op_stype funct3 rbase rf offset ]) }
+  else
+    { size = 12; x = None; binary = (fun () ->
+      let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP offset in
+      [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_stype funct3 rTMP rf low12 ]
+    )}
+let gen_load (_node : 'a T.node) (funct3 : int) (rbase : reg) (rt : reg) (offset : int) =
+  if fits_addi_imm offset
+  then { size = 4; x = None; binary = (fun () -> [ op_itype 0x03 funct3 rbase rt offset ]) }
+  else
+    { size = 12; x = None; binary = (fun () ->
+      let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP offset in
+      [ lui_bits; op_rtype op_op 0 0 rbase rTMP rTMP; op_itype 0x03 funct3 rTMP rt low12 ]
+    )}
 
 let op_branch = 0x63 (* BEQ/BNE/BLT/BGE/BLTU/BGEU -- goken's OBRANCH *)
 let op_jal = 0x6f (* goken's OJAL *)
@@ -591,34 +609,45 @@ let rules (is_64 : bool)
      * fully generic over SB/SH/SW/SD, the only difference between
      * mnemonics being which funct3 the optab looked up beforehand;
      * this mirrors that by taking funct3 as a parameter, used below
-     * both by Move2's W__/V__ (word/doubleword, needed by
-     * Rewritei.ml's link-register-save prologue) and Move1's B_/H_
-     * (byte/half stores, e.g. user-written "MOVB R,I(S)"). *)
+     * both by Move2's W__ ("MOVW", always 32-bit, confirmed against
+     * goken's own optab.c: AMOVW's row is unconditional, never
+     * is_64-gated) and Move1's B_/H_ (byte/half stores, e.g.
+     * user-written "MOVB R,I(S)"). V__ ("MOV", bare/pointer-width --
+     * needed by Rewritei.ml's own link-register save/restore, always
+     * a full pointer, 8 bytes on riscv64 -- confirmed empirically
+     * that bare "MOV" is genuinely is_64-dependent in goken, unlike
+     * "MOVW") gets its own, separate arm just below rather than
+     * sharing W__'s is_64-independent funct3 -- conflating the two
+     * was a real, confirmed bug (silently truncating RLINK's save on
+     * riscv64), caught while porting case 15/16. *)
     | Move2 (W__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
-        let funct3 = if is_64 then 3 (* SD *) else 2 (* SW *) in
-        gen_store node offset (fun () -> op_stype funct3 rbase rf offset)
+        gen_store node 2 (* SW, always *) rbase rf offset
+    | Move2 (V__, Left (Gen (GReg rf)), Gen (Indirect (rbase, offset))) ->
+        gen_store node (if is_64 then 3 (* SD *) else 2 (* SW *)) rbase rf offset
 
     | Move1 (B_ _, Left (GReg rf), Indirect (rbase, offset)) ->
-        gen_store node offset (fun () -> op_stype 0 (* SB *) rbase rf offset)
+        gen_store node 0 (* SB *) rbase rf offset
     | Move1 (H_ _, Left (GReg rf), Indirect (rbase, offset)) ->
-        gen_store node offset (fun () -> op_stype 1 (* SH *) rbase rf offset)
+        gen_store node 1 (* SH *) rbase rf offset
 
     (* case 7:		/* lb I(S),D */
      * claude: same generalization as case 6 -- goken picks the
      * funct3 (0/4=LB/LBU, 1/5=LH/LHU, 2=LW, 3=LD) purely from which
-     * mnemonic was used, the encoding itself (OP_I) is identical. *)
+     * mnemonic was used, the encoding itself (OP_I) is identical.
+     * W__/V__ split matches the store side's own comment above. *)
     | Move2 (W__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
-        let funct3 = if is_64 then 3 (* LD *) else 2 (* LW *) in
-        gen_load node offset (fun () -> op_itype 0x03 funct3 rbase rt offset)
+        gen_load node 2 (* LW, always *) rbase rt offset
+    | Move2 (V__, Left (Gen (Indirect (rbase, offset))), Gen (GReg rt)) ->
+        gen_load node (if is_64 then 3 (* LD *) else 2 (* LW *)) rbase rt offset
 
     | Move1 (B_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node offset (fun () -> op_itype 0x03 0 (* LB *) rbase rt offset)
+        gen_load node 0 (* LB *) rbase rt offset
     | Move1 (B_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node offset (fun () -> op_itype 0x03 4 (* LBU *) rbase rt offset)
+        gen_load node 4 (* LBU *) rbase rt offset
     | Move1 (H_ A.S, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node offset (fun () -> op_itype 0x03 1 (* LH *) rbase rt offset)
+        gen_load node 1 (* LH *) rbase rt offset
     | Move1 (H_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
-        gen_load node offset (fun () -> op_itype 0x03 5 (* LHU *) rbase rt offset)
+        gen_load node 5 (* LHU *) rbase rt offset
 
     (* case 6 (SB-relative fast path, reusing case 6/11's shared
      * "fits addi" test) / case 12 (SB-relative slow path, "mov
@@ -652,7 +681,7 @@ let rules (is_64 : bool)
              * address computation), which doesn't apply to an
              * ordinary store/load memory access. *)
             if fits_addi_imm final_offset
-            then gen_store node final_offset (fun () -> op_stype funct3 rSB rf final_offset)
+            then gen_store node funct3 rSB rf final_offset
             else
               { size = 8; x = None; binary = (fun () ->
                 match init_data with
@@ -682,7 +711,7 @@ let rules (is_64 : bool)
              * store arm's own comment above. *)
             let funct3 = 2 in
             if fits_addi_imm final_offset
-            then gen_load node final_offset (fun () -> op_itype 0x03 funct3 rSB rt final_offset)
+            then gen_load node funct3 rSB rt final_offset
             else
               { size = 8; x = None; binary = (fun () ->
                 match init_data with

@@ -350,8 +350,33 @@ Not yet in Codegeni.ml at all:
    same as MULH/MULHSU/MULHU/CSRRWI etc elsewhere in this port.
    Added tests/linker/riscv_diff/lcon_case14.s (+ riscv64_diff copy):
    PASS byte-identical + PASS same exit code on both RV32 and RV64.
-** TODO case 15 mov r,L(s) => lui L1,T; add s,T,T; sb r,L0(T)
-** TODO case 16 mov L(s),r => lui L1,T; add s,T,T; lb r,L0(T)
+** DONE case 15/16 mov r,L(s) / mov L(s),r => lui L1,T; add s,T,T; s[bhwd]/l[bhwd] r,L0(T)
+   Large offset relative to an arbitrary base register (unlike case
+   12/13's SB-specific slow path, no INITDAT/BIG bias -- goken's
+   `OP_ADD(r,REGTMP,REGTMP)` just adds the base register at runtime).
+   Generalized `gen_store`/`gen_load` (previously a thin "check offset
+   fits, else error" wrapper around a caller-supplied encoder thunk)
+   to take the funct3/registers directly and internally pick the
+   small-offset (case 6/7) or large-offset (case 15/16) shape itself
+   -- shared by all 6 existing call sites (Move2 W__/V__, Move1
+   B_/H_), so case 15/16 support "fell out" for all of them at once,
+   not just W__.
+   Found and fixed a real, confirmed bug while testing: Rewritei.ml's
+   own link-register save/restore used move_size W__ ("MOVW", always
+   32-bit per goken's own optab.c) when it actually wants
+   pointer-width behavior (bare "MOV", is_64-dependent, confirmed
+   empirically: goken emits SW for bare "MOV" on riscv32 and SD on
+   riscv64) -- conflating the two in one shared encoder arm was
+   harmless until a genuine large-offset user "MOVW" fixture on
+   riscv64 needed the *other* (always-32-bit) behavior from the exact
+   same tag. Fixed by giving `Move2 (W__, ...)` and `Move2 (V__, ...)`
+   their own separate Codegeni.ml arms (W__ always funct3=2, V__
+   is_64-dependent) and switching Rewritei.ml's RLINK save/restore to
+   build `V__` (not `W__`) nodes.
+   Added tests/linker/riscv_diff/lreg_case15_16.s (+ riscv64_diff
+   copy): PASS byte-identical + PASS same exit code on both RV32 and
+   RV64 (this fixture is what originally caught the RLINK bug above,
+   on RV64 specifically).
 ** TODO case 17 fcvt S,D
 ** TODO case 18 lui L1, T; jal [r,]L0(T)
 ** DONE (confirmed dead in goken, not implemented) case 19 addiw $0, rs, rd. Investigated: goken's optab has a

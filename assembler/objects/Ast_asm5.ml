@@ -25,11 +25,11 @@ open Ast_asm
  * 
  * TODO:
  *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU (or better in Ast_asm.ml too?)
- *  - MCR/MRC,
  *  - handle the instructions used in the kernel
- * (claude: MULA/MULL, MOVM (and its .IA/.DB/etc special bits), and
- * PSR are now implemented -- see MULL, MOVM/movm_addr_mode, and
- * PSRImsr/psrreg below.)
+ * (claude: MULA/MULL, MOVM (and its .IA/.DB/etc special bits), PSR,
+ * and MCR/MRC are now implemented -- see MULL, MOVM/movm_addr_mode,
+ * PSRImsr/psrreg, and Parser_asm5.mly's MCR/MRC pseudo_instr
+ * production below/there.)
  *)
 
 (*****************************************************************************)
@@ -344,6 +344,31 @@ type instr =
 (*e: type [[Ast_asm5.move_cond]] *)
 
 [@@deriving show]
+
+(* claude: the raw 4-bit ARM condition-code value, e.g. for MCR/MRC's
+ * grammar action (Parser_asm5.mly) which builds its final encoded
+ * word directly at parse time, bypassing Codegen5.ml entirely --
+ * unlike Codegen5.ml's own `gcond` (same mapping, but returns a
+ * Bits.t tuple, and lives in a different dune library the assembler
+ * doesn't depend on). *)
+let int_of_condition (c : condition) : int =
+  match c with
+  | EQ     -> 0x0
+  | NE     -> 0x1
+  | GE (U) -> 0x2
+  | LT (U) -> 0x3
+  | MI     -> 0x4
+  | PL     -> 0x5
+  | VS     -> 0x6
+  | VC     -> 0x7
+  | GT (U) -> 0x8
+  | LE (U) -> 0x9
+  | GE (S) -> 0xa
+  | LT (S) -> 0xb
+  | GT (S) -> 0xc
+  | LE (S) -> 0xd
+  | AL     -> 0xe
+  | NV     -> 0xf
 
 (* ------------------------------------------------------------------------- *)
 (* Program *)

@@ -52,6 +52,10 @@ module L = Location_cpp
 %token <Ast_asm5.condition> TBx TCOND
 %token TSWI TRFE
 %token TMOVM
+/*(* MCR (0) / MRC (1) -- matches goken's own LSYSTEM token value,
+   * used directly in the encoded word (see the pseudo_instr
+   * production below). *)*/
+%token <int> TMCR
 /*(* case 38/39: the generic dot-suffix-flag token (P/U/W/S/F bits,
    * see Ast_asm5.ml's sflag_* comment) -- only MOVM's `condf` rule
    * (below) folds these in for now; every other instruction still
@@ -170,11 +174,41 @@ pseudo_instr:
  | TGLOBL global TC con TC imm
      { GLOBL ($2, attributes_of_int $4, $6) }
 
- | TDATA global_and_offset TSLASH con TC ximm  
+ | TDATA global_and_offset TSLASH con TC ximm
      { DATA (fst $2, snd $2, $4, $6) }
  | TWORD ximm
      { WORD $2 }
 
+ /*(* claude: MCR/MRC (coprocessor register move). Unlike every other
+    * instruction, goken computes the final 32-bit word directly in
+    * the grammar action itself (a.y's own comment: "MCR MRC"), no
+    * codegen.c dispatch at all, and emits it as a plain WORD
+    * pseudo-op -- so this reuses Ast_asm.WORD directly rather than
+    * adding a new instr constructor (no AST/Object_file.version
+    * change needed). Real ARM syntax: "MCR 15,0,R0,C1,C0,0"
+    * (coprocessor#, opcode1, Rd, Crn, Crm, opcode2 -- opcode2
+    * defaults to 0 via `oexpr` if omitted). Coprocessor access is
+    * normally privileged (CP15 etc), though qemu-arm's user-mode
+    * emulation actually implements some reads (e.g. MRC of the Main
+    * ID Register) rather than trapping -- see mcr_mrc.s for the
+    * details of what's byte-tested and what's only trap-tested. *)*/
+ | TMCR cond con TC expr TC reg TC creg TC creg oexpr
+     { let (R rd) = $7 in
+       let (C crn) = $9 and (C crm) = $11 in
+       let word =
+         (0xe lsl 24)
+         lor ($1 lsl 20)
+         lor (Ast_asm5.int_of_condition $2 lsl 28)
+         lor (($3 land 15) lsl 8)
+         lor (($5 land 7) lsl 21)
+         lor ((rd land 15) lsl 12)
+         lor ((crn land 15) lsl 16)
+         lor ((crm land 15) lsl 0)
+         lor (($12 land 7) lsl 5)
+         lor (1 lsl 4)
+       in
+       WORD (Int word)
+     }
 
 /*(* stricter: I introduced those intermediate rules *)*/
 global: name
@@ -292,6 +326,19 @@ reg:
 
 /*(* for MULL (case 17): "(HI,LO)" *)*/
 regreg: TOPAR reg TC reg TCPAR { ($2, $4) }
+
+/*(* for MCR/MRC: "C1" (a coprocessor register). goken's a.y also
+   * allows a computed "C(expr)" alternate spelling, but that's a
+   * rarely-used form (real code just writes the numeric mnemonic);
+   * not supported here, narrower but real, same precedent as PSR's
+   * ".F" or MOVM's ".S". *)*/
+creg: TCx { $1 }
+
+/*(* for MCR/MRC: the optional trailing ",opcode2" -- defaults to 0
+   * when omitted, matching goken's own `oexpr` rule. *)*/
+oexpr:
+ | /* empty */ { 0 }
+ | TC expr     { $2 }
 
 /*(* ARM specific *)*/
 shift:

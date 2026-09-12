@@ -606,3 +606,27 @@ Not yet in Codegen5.ml at all:
    codegen.c cases with no reachable path to a byte-identical
    fixture), just gated by a linker flag instead of a missing
    assembler grammar rule.
+** DONE MCR/MRC (coprocessor register move) -- real, reachable
+   syntax: "MCR con,expr,reg,creg,creg[,expr]" (a.y's own comment:
+   "MCR MRC"). Unlike every other ARM case, goken computes the final
+   32-bit word directly in the grammar action itself, no codegen.c
+   dispatch at all, and emits it as a plain WORD pseudo-op -- so this
+   reuses Ast_asm.WORD directly (Parser_asm5.mly's `pseudo_instr`
+   nonterminal) rather than adding a new instr constructor: no
+   Ast_asm5.instr/Meta_ast_asm5.ml/Codegen5.ml/Object_file.version
+   change needed at all, just grammar + a new `int_of_condition`
+   helper (Ast_asm5.ml) to get the raw condition nibble without
+   depending on Codegen5.ml's Bits.t-returning `gcond` (assembler and
+   linker are separate dune libraries). New `creg`/`oexpr`
+   nonterminals; creg only supports the plain "C3" numeric spelling,
+   not goken's rarer computed "C(expr)" alternate form (narrower but
+   real, same precedent as PSR's ".F" or MOVM's ".S").
+   Added mcr_mrc.s: "MRC 15,0,R0,C0,C0,0" (read CP15's Main ID
+   Register). PASS byte-identical (318 bytes) + PASS same qemu-arm
+   exit code (112, MIDR's low byte) -- unlike FP[CS]R/PSR's
+   privileged aside cases, qemu-arm's user-mode emulation actually
+   implements this specific read rather than trapping, so it's a
+   genuine functional round-trip. MCR (write side, "MCR
+   15,0,R0,C1,C0,0" writing SCTLR) verified ad hoc, same pattern as
+   those asides: byte-identical against goken, traps identically as
+   "Illegal instruction" on both sides.

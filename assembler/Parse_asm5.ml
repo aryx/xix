@@ -142,6 +142,10 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
       (* claude: case 38/39, multi-register load/store. *)
       | "MOVM" -> TMOVM
 
+      (* claude: MCR/MRC, coprocessor register move -- goken's own
+       * LSYSTEM token value (0/1), used directly in the encoded word. *)
+      | "MCR" -> TMCR 0 | "MRC" -> TMCR 1
+
       (* claude: case 38/39's generic dot-suffix-flag vocabulary,
        * ported bit-for-bit from goken's lex.c special-bits table
        * (only P/U/W are ever decoded, by Parser_asm5.mly's MOVM

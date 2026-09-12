@@ -1,22 +1,45 @@
 Porting the ARM64 toolchain (7a/7l) against goken, byte-equal
 ===============================================================
 
-Status: basic structure in place and byte-verified (first checkpoint).
-`o7a`/`o7l` exist and assemble+link real .s fixtures to output that's
-byte-identical to goken's 7a/7l, verified under qemu-aarch64:
-tests/linker/arm64_diff/exit_linux.s (plain exit) and kitchen_sink.s
-(register/immediate arithmetic, shift, compare, conditional branch).
-Covered so far: Arith (ADD/SUB/AND/ORR/EOR/BIC, register or small
-"addcon"-range immediate), Shift (LSL/LSR/ASR/ROR, immediate or
-register), Cmp (CMP/CMN), ArithMul (simple 3-operand MUL), Move
-(register<->register, register<->memory with a plain scaled 12-bit-
-unsigned offset, and "MOV $con,R" for a constant that fits goken's
-own real classification chain -- see Codegen7.ml's
-move_immediate_encoding comment for the genuinely surprising part of
-that), B/BL/Bxx/CBxx (direct and register-indirect), RET, SVC.
+Status: basic structure in place and byte-verified (first checkpoint),
+now extended with real leaf/frame-size prologue+epilogue synthesis
+(second increment, same session). `o7a`/`o7l` exist and assemble+link
+real .s fixtures to output that's byte-identical to goken's 7a/7l,
+verified under qemu-aarch64: tests/linker/arm64_diff/exit_linux.s
+(plain exit), kitchen_sink.s (register/immediate arithmetic, shift,
+compare, conditional branch), call_leaf.s and
+call_leaf_with_frame.s (BL/RETURN-based local calls, both a true leaf
+and a leaf-with-locals). Covered so far: Arith (ADD/SUB/AND/ORR/EOR/
+BIC, register or small "addcon"-range immediate), Shift (LSL/LSR/ASR/
+ROR, immediate or register), Cmp (CMP/CMN), ArithMul (simple
+3-operand MUL), Move (register<->register, register<->memory with a
+plain scaled 12-bit-unsigned offset or pre/post-index writeback, and
+"MOV $con,R" for a constant that fits goken's own real classification
+chain -- see Codegen7.ml's move_immediate_encoding comment for the
+genuinely surprising part of that), B/BL/Bxx/CBxx (direct and
+register-indirect), RET (the real hardware instruction) and RETURN
+(the compiler-facing pseudo-op, now with full leaf/frame-size-driven
+prologue/epilogue synthesis -- see Rewrite7.ml, ported from goken's
+own noop.c), SVC.
 
-Not yet done, real follow-up work (see "Suggested phase plan" below,
-now updated in light of what this first pass actually found):
+**The RET/frame mystery from checkpoint 1 is resolved**: goken has TWO
+distinct return-shaped mnemonics, not one -- the real hardware "RET
+[Rn]" (a plain instruction, no side effects, exactly what this port's
+own `Ast_asm7.RET` already was) and a separate compiler-facing
+"RETURN" pseudo-op that noop.c expands based on leaf/frame analysis.
+The checkpoint-1 test that seemed to show "RET R30" triggering an
+automatic prologue was testing the wrong mnemonic's mental model, not
+an unexplained goken quirk. Rewrite7.ml now ports noop.c's algorithm
+directly (PCSZ=8, STACKALIGN=16, the 3-case leaf/frame shape already
+familiar from Rewrite{5,v,i}.ml, just with ARM64's own instructions:
+SUB/ADD SP adjustment and a pre/post-index STR/LDR for the
+link-register save/restore) -- see Rewrite7.ml's own comment for the
+full derivation. New AST needed for this: `PreIndex`/`PostIndex` on
+`gen` (goken's D_XPRE/D_XPOST, "-16(RSP)!" / "(RSP)16!"), a new
+shared `TBANG` token ("!"), and the shared `Ast_asm.virtual_instr.RET`
+wired in via a new "RETURN" keyword (distinct from "RET").
+
+Not yet done, real follow-up work (see "Suggested phase plan" below):
  - No literal pool at all yet. Needed for: any "MOV $con,R" whose
    constant doesn't fit the direct MOVZ/MOVN encoding (including,
    surprisingly, some *small* values -- goken's own constant
@@ -31,23 +54,8 @@ now updated in light of what this first pass actually found):
    literal-pool mechanism on this arch, not a dedicated ADD-from-SB
    instruction the way ARM32/MIPS/RISC-V do it -- see Ast_asm7.ml's
    prelude comment). Port Layout5.ml's pool-splicing shape when this
-   lands, not reinvent it.
- - No TEXT-frame-size-driven prologue/epilogue synthesis. Confirmed
-   empirically that goken's own assembler inserts a real SP-adjustment
-   prologue/epilogue whenever a TEXT's declared frame size is nonzero,
-   *regardless* of whether the .s text also writes its own explicit
-   RSP-relative accesses -- this port's Rewrite7.ml is currently a
-   pure no-op (see its own comment). Needs its own investigation,
-   mirroring Rewrite{5,v,i}.ml's leaf-detection logic but for
-   whatever goken's actual ARM64 rule turns out to be.
- - Similarly, goken's RET appears to trigger an automatic link-
-   register save/restore prologue around the whole procedure whenever
-   the procedure body references R30 at all (confirmed empirically: a
-   leaf, $0-frame TEXT with an explicit "RET R30" still got a goken-
-   inserted "str x30,[sp,#-16]!" / matching restore) -- not yet
-   understood well enough to replicate; BL/RET-based local calls are
-   not covered by a fixture yet for this reason (kitchen_sink.s
-   deliberately avoids them, see its own comment).
+   lands, not reinvent it. This is now the single biggest remaining
+   gap -- it blocks any fixture using GLOBL/DATA at all.
  - B_/H_/W_ (byte/halfword/32-bit-view) move sizes are declared in
    Ast_asm7.ml but not implemented in Codegen7.ml yet -- only X_
    (64-bit) register-register and register-memory moves are.

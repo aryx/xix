@@ -63,6 +63,7 @@ module L = Location_cpp
    * change behavior of anything already working. *)*/
 %token <int> TSUF
 %token TLBRACKET TRBRACKET
+%token TBANG
 
 %token TRET TNOP
 

@@ -218,6 +218,22 @@ let olsr12u (node : 'a T.node) (base : int) (v : int) (b : int) (r : int) : int 
   then error node "TODO: offset out of 12-bit scaled range (needs literal pool / unscaled form, not yet implemented)"
   else base lor ((v land 0xFFF) lsl 10) lor (b lsl 5) lor r
 
+(* claude: case 22/23 -- pre/post-index writeback load/store ("MOV
+ * Rt,-16(Rbase)!" / "MOV Rt,(Rbase)16!"), goken's `opldrpp()`
+ * (AMOV row: `3<<30 | 7<<27 | 0<<26 | 0<<24 | 1<<22`, LD2STR clears
+ * the opc field for the store direction) plus a `v<<12` signed 9-bit
+ * offset and a mode field at bits[11:10] (goken: `1<<10` for
+ * post-index, `3<<10` for pre-index). Needed for Rewrite7.ml's
+ * RETURN-expansion link-register save/restore. *)
+let opldrpp_mov = (3 lsl 30) lor (7 lsl 27) lor (1 lsl 22)
+let opstrpp_mov = opldrpp_mov land (lnot (3 lsl 22))
+let ldrstr_pp (node : 'a T.node) (base : int) (is_post : bool) (v : int) (b : int) (r : int) : int =
+  if v < -256 || v > 255
+  then error node "TODO: pre/post-index offset out of 9-bit signed range"
+  else
+    let mode_bits = if is_post then 1 else 3 in
+    base lor (mode_bits lsl 10) lor ((v land 0x1FF) lsl 12) lor (b lsl 5) lor r
+
 (* claude: case 32 -- "MOV $con,R -> movz/movn". A plain integer literal
  * for a MOV pseudo-op goes through goken's full `aclass()`/`cmp()`
  * constant-classification chain (span.c), NOT just a direct movcon()
@@ -477,6 +493,27 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           { size = 4; x = None; binary = (fun () ->
             [ w1 (olsr12u node opldr12_mov (offset / 8) rbase rt) ]
           )}
+
+    (* case 23: MOV Rf,-16(Rbase)! / MOV Rf,(Rbase)16! -- pre/post-index
+     * writeback store *)
+    | Move (X_, Left (GReg (R rf)), PreIndex ((R rbase), offset)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (ldrstr_pp node opstrpp_mov false offset rbase rf) ]
+        )}
+    | Move (X_, Left (GReg (R rf)), PostIndex ((R rbase), offset)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (ldrstr_pp node opstrpp_mov true offset rbase rf) ]
+        )}
+    (* case 22: MOV -16(Rbase)!,Rt / MOV (Rbase)16!,Rt -- pre/post-index
+     * writeback load *)
+    | Move (X_, Left (PreIndex ((R rbase), offset)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (ldrstr_pp node opldrpp_mov false offset rbase rt) ]
+        )}
+    | Move (X_, Left (PostIndex ((R rbase), offset)), GReg (R rt)) ->
+        { size = 4; x = None; binary = (fun () ->
+          [ w1 (ldrstr_pp node opldrpp_mov true offset rbase rt) ]
+        )}
 
     (* --------------------------------------------------------------------- *)
     (* Control flow *)

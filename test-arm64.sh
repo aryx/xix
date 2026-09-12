@@ -13,6 +13,8 @@ cd "$(dirname "$0")"
 CASES=(
     "tests/linker/arm64_diff/exit_linux.s"
     "tests/linker/arm64_diff/kitchen_sink.s"
+    "tests/linker/arm64_diff/call_leaf.s"
+    "tests/linker/arm64_diff/call_leaf_with_frame.s"
 )
 
 FAIL=0

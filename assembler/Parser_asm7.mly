@@ -44,6 +44,13 @@ module L = Location_cpp
 %token TRET
 %token TNOP
 %token TSVC
+/*(* claude: goken's compiler-facing "RETURN" pseudo-op -- distinct
+   * from the real hardware "RET" instruction above. RETURN is expanded
+   * by Rewrite7.ml (leaf/frame-size-driven prologue+epilogue
+   * synthesis, mirroring goken's own noop.c) into the shared
+   * Ast_asm.virtual_instr.RET, same convention ARM32/MIPS/RISC-V
+   * already use for their own (compiler-only) RET. *)*/
+%token TRETURN
 
 %token TTEXT TGLOBL
 %token TDATA TWORD
@@ -59,6 +66,10 @@ module L = Location_cpp
 
 %token TC
 %token TLBRACKET TRBRACKET
+/*(* claude: pre/post-index writeback addressing (e.g. "-16(RSP)!" /
+   * "(RSP)16!") -- needed for the link-register save/restore Rewrite7.ml
+   * synthesizes for RETURN. *)*/
+%token TBANG
 
 /*(*-----------------------------------------*)*/
 /*(*2 Constants *)*/
@@ -129,10 +140,19 @@ line:
  |               TSEMICOLON { [] }
  | instr         TSEMICOLON { [(Instr $1, $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
+ | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
 
  | label_def line           { $1::$2 }
 
 label_def: TIDENT TCOLON    { (LabelDef $1, !L.line) }
+
+/*(*************************************************************************)*/
+/*(*1 Virtual instructions (arch independent) *)*/
+/*(*************************************************************************)*/
+virtual_instr:
+ /*(* claude: goken's compiler-facing "RETURN" pseudo-op -- see TRETURN's
+    * own comment. *)*/
+ | TRETURN                  { RET }
 
 /*(*************************************************************************)*/
 /*(*1 Pseudo instructions (arch independent) *)*/
@@ -228,12 +248,19 @@ reg:
 
 /*(* claude: needed for e.g. "MOVW 8(R2),R5" (case 3's Indirect memory
    * side) -- same shape as Parser_asmi.mly/Parser_asmv.mly's identical
-   * rule. Only the plain-immediate-offset form is wired -- goken's own
-   * "!" pre/post-increment writeback and "(Rn)(Rm)" register-offset
-   * forms are deferred, see Ast_asm7.ml's prelude comment. *)*/
+   * rule. The "(Rn)(Rm)" register-offset form is still deferred, see
+   * Ast_asm7.ml's prelude comment; the "!" pre/post-index writeback
+   * forms (goken's D_XPRE/D_XPOST) are wired below, needed for
+   * Rewrite7.ml's RETURN-expansion link-register save/restore. *)*/
 gen:
  | reg                 { GReg $1 }
  | con TOPAR reg TCPAR { Indirect ($3, $1) }
+ /*(* case 22/23-ish: "-16(RSP)!" -- pre-index, offset applied before
+    * the access, base register updated afterward. *)*/
+ | con TOPAR reg TCPAR TBANG { PreIndex ($3, $1) }
+ /*(* "(RSP)16!" -- post-index, offset applied (and base updated)
+    * after the access. *)*/
+ | TOPAR reg TCPAR con TBANG { PostIndex ($2, $4) }
 
 ximm:
  | imm             { Int $1 }

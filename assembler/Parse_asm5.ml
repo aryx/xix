@@ -44,6 +44,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TCPAR-> TCPAR
   | T.TLBRACKET-> TLBRACKET
   | T.TRBRACKET-> TRBRACKET
+  | T.TBANG-> TBANG
   | T.TPLUS-> TPLUS
   | T.TMINUS-> TMINUS
   | T.TMUL-> TMUL

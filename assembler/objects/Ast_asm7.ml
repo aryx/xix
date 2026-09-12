@@ -127,6 +127,13 @@ type gen =
   | GReg of reg
   | Indirect of reg * A.offset
   | Entity of A.entity
+  (* claude: goken's D_XPRE/D_XPOST -- pre/post-index writeback
+   * addressing ("-16(RSP)!" / "(RSP)16!"), needed for Rewrite7.ml's
+   * RETURN-expansion link-register save/restore (a real, reachable
+   * addressing mode, not just an RFE-style internal-only construct --
+   * see PreIndex/PostIndex's own grammar comment in Parser_asm7.mly). *)
+  | PreIndex of reg * A.offset
+  | PostIndex of reg * A.offset
 [@@deriving show { with_path = false }]
 
 (* ------------------------------------------------------------------------- *)
@@ -253,7 +260,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
     match x with
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
-    | GReg _ | Indirect _ -> ()
+    | GReg _ | Indirect _ | PreIndex _ | PostIndex _ -> ()
   in
   match i with
   | Move (_, x1, gen2) ->

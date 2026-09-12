@@ -92,6 +92,7 @@ module L = Location_cpp
    * but the token is shared in Token_asm.ml so every arch's
    * Parse_asmX.ml must still translate it *)*/
 %token TLBRACKET TRBRACKET
+%token TBANG
 
 /*(*-----------------------------------------*)*/
 /*(*2 Operators *)*/

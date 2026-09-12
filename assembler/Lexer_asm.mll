@@ -103,6 +103,7 @@ rule token = parse
   | '(' { TOPAR } | ')' { TCPAR }
   | '$' { TDOLLAR }
   | '[' { TLBRACKET } | ']' { TRBRACKET }
+  | '!' { TBANG }
 
   | '+' { TPLUS } | '-' { TMINUS } 
   (* '/' is used for division and for DATA too *)

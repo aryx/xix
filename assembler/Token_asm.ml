@@ -27,6 +27,10 @@ type t =
    * actually uses it (i/v's Parse_asmX.ml just pass it through, same
    * as any other token their own grammar doesn't reference). *)
   | TLBRACKET | TRBRACKET
+  (* claude: ARM64's "!" pre/post-index writeback addressing suffix
+   * (e.g. "-16(RSP)!"), same shared-but-mostly-unused convention as
+   * TLBRACKET/TRBRACKET above. *)
+  | TBANG
   (* operators *)
   | TPLUS | TMINUS
   | TMUL | TSLASH | TMOD

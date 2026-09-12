@@ -53,6 +53,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
   | T.TCPAR -> TCPAR
   | T.TLBRACKET -> TLBRACKET
   | T.TRBRACKET -> TRBRACKET
+  | T.TBANG -> TBANG
   | T.TPLUS -> TPLUS
   | T.TMINUS -> TMINUS
   | T.TMUL -> TMUL
@@ -130,6 +131,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
       | "CBZ" -> TCBx false | "CBNZ" -> TCBx true
 
       | "SVC" -> TSVC
+      | "RETURN" -> TRETURN
 
       (* claude: goken's own a.y lexes both "ZR" and "RSP" to the exact
        * same D_REG/reg=31 node (see Ast_asm7.ml's prelude comment) --

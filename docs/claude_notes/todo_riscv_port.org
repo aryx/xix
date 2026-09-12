@@ -199,8 +199,15 @@ Not yet in Codegeni.ml at all:
    not applicable to this RV32 port at all)
 ** TODO case 21 lui I,D; s[lr]ai N,D
 ** TODO case 22 CSRRx C, rs, rd
-** TODO case 25 word $x
-** TODO case 26 pseudo ops
+** DONE case 25 word $x / case 26 pseudo ops -- both already routed
+   through the arch-independent Codegen.default_rules (the
+   `T.Virt _ | T.TEXT _ | T.WORD _ -> Codegen.default_rules ...`
+   catch-all already at the top of `rules`, same shared code path
+   ARM/MIPS use), confirmed via tests/linker/riscv_diff/
+   case25_26_riscv.s (+ riscv64_diff copy) with no new code needed --
+   same "confirmed no new code needed" precedent as MIPS's case 0/
+   case 40. PASS byte-identical + PASS same exit code on both RV32
+   and RV64.
 
 * Notes for later
 ** MOVB/MOVH/MOVBU/MOVHU not wired in the assembler

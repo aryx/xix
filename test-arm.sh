@@ -49,6 +49,8 @@ CASES=(
     "tests/linker/arm_diff/psr_move_case35_36_37.s"
     "tests/linker/arm_diff/movm_case38_39.s"
     "tests/linker/arm_diff/mcr_mrc.s"
+    "tests/linker/arm_diff/static_symbol.s"
+    "tests/linker/arm_diff/cret_leaf.s"
 )
 
 FAIL=0

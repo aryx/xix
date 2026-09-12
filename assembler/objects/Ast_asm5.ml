@@ -289,6 +289,16 @@ type instr =
   (*s: [[Ast_asm5.instr]] system instructions cases *)
   | SWI of int (* value actually unused in Plan 9 and Linux *)
   | RFE (* virtual, sugar for MOVM *)
+  (* claude: conditional/plain return ("RET.MI", from real 5c -S
+   * output compiling e.g. "if(x<0) return -x;" into a predicated
+   * return instead of a branch) -- same "virtual, sugar for X" shape
+   * as RFE above, except the real expansion (B(LR) vs a stack-
+   * restoring MOVE, depending on frame size) isn't known until
+   * Rewrite5.ml's step2 sees the enclosing TEXT's frame size, so it
+   * stays a placeholder like Ast_asm.virtual_instr's own plain RET,
+   * just carrying a real condition (Ast_asm.virtual_instr has no
+   * notion of per-arch conditions, so this couldn't live there). *)
+  | CRET
   (*e: [[Ast_asm5.instr]] system instructions cases *)
 (*e: type [[Ast_asm5.instr]] *)
 
@@ -400,7 +410,7 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _ | SWAP _
-  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ | MOVM _ -> None
+  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ | MOVM _ | CRET -> None
 (*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
 (*s: function [[Ast_asm5.visit_globals_instr]] *)
@@ -421,6 +431,6 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
   | BL b -> A.visit_globals_branch_operand f b
   | Bxx (_, b) -> A.visit_globals_branch_operand f b
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | SWAP _ | Cmp _ | CmpF _ | SWI _
-  | RFE | MULL _ -> ()
+  | RFE | MULL _ | CRET -> ()
 (*e: function [[Ast_asm5.visit_globals_instr]] *)
 (*e: objects/Ast_asm5.ml *)

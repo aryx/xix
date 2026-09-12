@@ -105,9 +105,12 @@ rule token = parse
   | '[' { TLBRACKET } | ']' { TRBRACKET }
   | '!' { TBANG }
 
-  | '+' { TPLUS } | '-' { TMINUS } 
+  | '+' { TPLUS } | '-' { TMINUS }
   (* '/' is used for division and for DATA too *)
   | '*' { TMUL }  | '/' { TSLASH } | '%' { TMOD }
+  (* claude: "foo<>" static-symbol suffix, and "<<"/">>" shifts --
+   * see Token_asm.ml's TLT/TGT comment. *)
+  | '<' { TLT } | '>' { TGT }
 
   (* has to be before the rule for identifiers *)
   | '.' { TDOT }
@@ -142,6 +145,11 @@ rule token = parse
       (* virtual instructions *)
       | "RET" -> TRET
       | "NOP" -> TNOP
+      (* claude: end-of-file marker 5c/5a's own -S/-print output always
+       * emits ("END\t,"); a true no-op, carries no code/data. Shared
+       * here like RET/NOP since every arch's compiler emits it the
+       * same way. *)
+      | "END" -> TEND
 
       (* registers (see also the special rule above for R digit+) *)
       | "R" -> TR

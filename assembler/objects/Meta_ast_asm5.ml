@@ -204,6 +204,7 @@ let rec vof_instr =
       in Ocaml.VSum (("Bxx", [ v1; v2 ]))
   | SWI v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("SWI", [ v1 ]))
   | RFE -> Ocaml.VSum (("RFE", []))
+  | CRET -> Ocaml.VSum (("CRET", []))
 and vof_arithf_opcode = function
   | ADD_ -> Ocaml.VSum (("ADD", []))
   | SUB_ -> Ocaml.VSum (("SUB", []))

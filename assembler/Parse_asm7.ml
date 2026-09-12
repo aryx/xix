@@ -29,6 +29,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
    * own real-instruction TRET token (see Ast_asm7.ml's RET/Parser_asm7.mly's
    * "TRET"/"TRET reg" productions), not a virtual one. *)
   | T.TRET -> TRET
+  | T.TEND -> TEND
   (* claude: goken's ARM64 does have a real NOP instruction (HINT #0
    * encoding, LTYPEQ) but it's not wired in Parser_asm7.mly yet -- this
    * mapping only exists to satisfy match exhaustiveness (same
@@ -54,6 +55,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
   | T.TLBRACKET -> TLBRACKET
   | T.TRBRACKET -> TRBRACKET
   | T.TBANG -> TBANG
+  | T.TLT -> TLT
+  | T.TGT -> TGT
   | T.TPLUS -> TPLUS
   | T.TMINUS -> TMINUS
   | T.TMUL -> TMUL

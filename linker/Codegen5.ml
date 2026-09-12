@@ -987,8 +987,20 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* case 5:		/* bra s */ *)
     (* case 6:		/* b ,O(R) -> add $O,R,PC */ *)
     | B x ->
-        if cond <> AL 
-        then raise (Impossible "B should always be with AL");
+        (* claude: only the Absolute (label) form is forced AL --
+         * goken's own grammar never lets a label-targeted B carry a
+         * condition (that's what the separate Bxx family is for).
+         * The IndirectJump form, though, is CRET's own leaf-procedure
+         * return expansion (Rewrite5.ml: "B(R14)" for "RET.MI" with
+         * no frame) and real ARM's ADD-to-PC encoding below is
+         * predicable like any other data-processing instruction, so
+         * it must thread the real condition through instead of
+         * asserting AL -- confirmed against goken's real 5a/5l via
+         * tests/linker/arm_diff/cret_case_leaf.s. *)
+        (match !x with
+        | Absolute _ when cond <> AL ->
+            raise (Impossible "B to an absolute/label target should always be AL")
+        | _ -> ());
 
         { size = 4; x = Some LPOOL; binary = (fun () ->
           match !x with
@@ -999,7 +1011,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               let (R rt) = rPC in
               (* TODO? can have offset with IndirectJump ? *)
               let offset = [rot_bit; (0, 0)] in
-              [ [gcond AL; gop_arith ADD; (r, 16); (rt, 12)] @ offset 
+              [ [gcond cond; gop_arith ADD; (r, 16); (rt, 12)] @ offset
               ]
           | _ -> raise (Impossible "5a or 5l should have resolved this branch")
         )}
@@ -1541,9 +1553,11 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         )}
     (* case 41:	/* rfe -> movm.s.w.u 0(r13),[r15] */ *)
     | RFE ->
-        { size = 4; x = None; binary = (fun () -> 
+        { size = 4; x = None; binary = (fun () ->
           [ [(0xe8fd8000, 0)] ]
         )}
+    | CRET ->
+        raise (Impossible "CRET should have been rewritten away in Rewrite5.ml's step2")
     (* --------------------------------------------------------------------- *)
     (* Other *)
     (* --------------------------------------------------------------------- *)

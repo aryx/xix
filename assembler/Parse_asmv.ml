@@ -26,6 +26,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TDATA -> TDATA
   | T.TWORD -> TWORD
   | T.TRET -> TRET
+  | T.TEND -> TEND
   | T.TNOP -> TNOP
   | T.TR -> TR
   | T.TF -> TF
@@ -46,6 +47,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmv.token =
   | T.TLBRACKET-> TLBRACKET
   | T.TRBRACKET-> TRBRACKET
   | T.TBANG-> TBANG
+  | T.TLT-> TLT
+  | T.TGT-> TGT
   | T.TPLUS-> TPLUS
   | T.TMINUS-> TMINUS
   | T.TMUL-> TMUL

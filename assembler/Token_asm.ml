@@ -5,7 +5,7 @@ type t =
   | TTEXT | TGLOBL
   | TWORD | TDATA 
   (* virtual *)
-  | TRET | TNOP
+  | TRET | TNOP | TEND
   (* registers *)
   | TR | TF
   | TPC | TSB | TFP | TSP
@@ -31,6 +31,13 @@ type t =
    * (e.g. "-16(RSP)!"), same shared-but-mostly-unused convention as
    * TLBRACKET/TRBRACKET above. *)
   | TBANG
+  (* claude: '<' and '>', for the "foo<>" static/local-symbol suffix
+   * (every Parser_asmX.mly already has a "TIDENT TLT TGT ..." rule for
+   * it, and Parser_asm.mk_g/priv already plumb it all the way to
+   * linker/Load.ml's per-object-file disambiguation) and for "<<"/">>"
+   * shift operators in constant expressions -- this lexer just never
+   * produced the single-char tokens those rules needed. *)
+  | TLT | TGT
   (* operators *)
   | TPLUS | TMINUS
   | TMUL | TSLASH | TMOD

@@ -37,7 +37,10 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
                 prev.T.next <- n.T.next;
               );
               (curtext, prev_no_nop)
-          | A.RET -> (curtext, Some n)
+          | A.RET ->
+              raise (Impossible
+                "ARM's grammar builds CRET (Ast_asm5.instr), not this \
+                 shared, condition-less Ast_asm.virtual_instr.RET")
           | A.Load _ | A.Store _ | A.AddI _ | A.Cmp _
           | A.Jmp _ | A.JmpAndLink _ | A.JEq _ ->
               (curtext, Some n)
@@ -112,18 +115,9 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
     | T.Virt virt ->
       (match virt with
       | A.RET ->
-        n.instr <- T.I
-          ((match autosize_opt with
-           (* B (R14) *)
-           | None -> B (ref (A.IndirectJump rLINK))
-           (* increment SP and restore rPC in one operation:
-            *    MOVW.P autosize(SP), PC 
-            *)
-           | Some autosize -> MOVE (A.Word, Some PostOffsetWrite,
-                                   Indirect (rSP, autosize), 
-                                   Imsr (Reg rPC))
-           ), AL);
-
+          raise (Impossible
+            "ARM's grammar builds CRET (Ast_asm5.instr), not this \
+             shared, condition-less Ast_asm.virtual_instr.RET")
       | A.NOP -> raise (Impossible "NOP was removed in step1")
       | A.JmpAndLink opd ->
           n.instr <- T.I (BL opd, AL)
@@ -134,6 +128,37 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
       | (A.AddI _ | A.Load _ | A.Store _ | A.Jmp _) -> raise Todo
       );
       autosize_opt
+
+     | T.I (CRET, cond) ->
+        n.instr <- T.I
+          ((match autosize_opt, cond with
+           (* B.cond (R14) -- validated byte-identical against goken's
+            * real 5a/5l, see tests/linker/arm_diff/cret_leaf.s. *)
+           | None, _ -> B (ref (A.IndirectJump rLINK))
+           | Some _, AL ->
+              (match autosize_opt with
+               | Some autosize ->
+                 (* increment SP and restore rPC in one operation:
+                  *    MOVW.P autosize(SP), PC
+                  *)
+                 MOVE (A.Word, Some PostOffsetWrite,
+                       Indirect (rSP, autosize), Imsr (Reg rPC))
+               | None -> assert false)
+           (* claude: a *conditional* RET in a framed (non-leaf)
+            * procedure -- e.g. fmt/dofmt.c's "if(...) return ...;"
+            * compiled with locals allocated. Tried the same
+            * MOVW.P.cond expansion as the leaf case (single predicated
+            * load-with-writeback), but a differential test against
+            * goken's real 5a/5l (tests/linker/arm_diff/
+            * cret_framed.s, kept as a scratch repro, not committed)
+            * showed goken emits a shorter/different byte sequence --
+            * genuinely not yet reverse-engineered, so fail loudly
+            * instead of silently emitting bytes that don't match
+            * goken, same convention as riscv_port.md's case-18 guard. *)
+           | Some _, _ ->
+              raise Todo
+           ), cond);
+        autosize_opt
 
      | T.I (
             ( RFE | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _

@@ -64,8 +64,13 @@ module L = Location_cpp
 %token <int> TSUF
 %token TLBRACKET TRBRACKET
 %token TBANG
+/*(* claude: "foo<>" static/local-symbol suffix, and "<<"/">>" shifts
+   * (see the "%left TLT TGT" priority line below, and Token_asm.ml's
+   * TLT/TGT comment) -- %left alone does NOT declare a token for this
+   * ocamlyacc, unlike real yacc's convention. *)*/
+%token TLT TGT
 
-%token TRET TNOP
+%token TRET TNOP TEND
 
 %token TTEXT TGLOBL 
 %token TDATA TWORD 
@@ -149,11 +154,17 @@ lines:
  | /*empty*/  { [] }
  | line lines { $1 @ $2 }
 
-line: 
+line:
  |               TSEMICOLON { [] }
  | instr         TSEMICOLON { [(Instr (fst $1, snd $1), $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
- | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
+ /*(* claude: RET moved into `instr` below (as CRET) so it can carry a
+    * real condition ("RET.MI") -- see CRET's own Ast_asm5.ml comment.
+    * ARM's virtual_instr is otherwise unused (TNOP is a dead token
+    * here, like several other arch's shared-but-unused tokens). *)*/
+ /*(* claude: end-of-file marker (real 5a accepts a bare "END", no
+    * operands) -- a true no-op. *)*/
+ | TEND          TSEMICOLON { [] }
 
  | label_def line           { $1::$2 }
 
@@ -225,14 +236,6 @@ global_and_offset: name
   } 
 
 /*(*************************************************************************)*/
-/*(*1 Virtual instructions (arch independent) *)*/
-/*(*************************************************************************)*/
-
-virtual_instr:
- /*(* was in instr before. stricter: no cond (nor comma) *)*/
- | TRET                  { RET }
-
-/*(*************************************************************************)*/
 /*(*1 Instructions, arch specific!! *)*/
 /*(*************************************************************************)*/
 
@@ -265,10 +268,17 @@ instr:
  | TB        branch           { (B $2, AL) }
  | TBx       rel              { (Bxx ($1, $2), AL) }
  | TBL  cond branch           { (BL $3, $2)}
- | TCMP cond imsr TC reg  { (Cmp ($1, $3, $5), $2) } 
+ | TCMP cond imsr TC reg  { (Cmp ($1, $3, $5), $2) }
 
  | TSWI cond imm { (SWI $3, $2) }
  | TRFE cond     { (RFE, $2) }
+
+ /*(* claude: RET, possibly conditional ("RET.MI" -- goken's real 5a
+    * accepts this, confirmed empirically; a predicated early-return,
+    * e.g. compiling "if(x<0) return -x;") -- see CRET's own
+    * Ast_asm5.ml comment for why this replaced the old
+    * unconditional-only `virtual_instr: TRET`. *)*/
+ | TRET cond     { (CRET, $2) }
 
  /*(* case 17: "MULL cond R1,R2,(HI,LO)" *)*/
  | TMULL cond reg TC reg TC regreg

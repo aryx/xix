@@ -46,7 +46,7 @@ module L = Location_cpp
 %token <Ast_asmv.move2_size> TMOVE2
 %token <Ast_asmv.lohireg> TLOHI
 
-%token TRET TNOP
+%token TRET TNOP TEND
 
 %token TTEXT TGLOBL 
 %token TDATA TWORD 
@@ -92,6 +92,8 @@ module L = Location_cpp
    * Parse_asmX.ml must still translate it *)*/
 %token TLBRACKET TRBRACKET
 %token TBANG
+/*(* claude: see Parser_asm5.mly's identical comment. *)*/
+%token TLT TGT
 
 /*(*-----------------------------------------*)*/
 /*(*2 Operators *)*/
@@ -141,6 +143,9 @@ line:
  | instr         TSEMICOLON { [(Instr $1, $2)] }
  | pseudo_instr  TSEMICOLON { [(Pseudo $1, $2)] }
  | virtual_instr TSEMICOLON { [(Virtual $1, $2)] }
+ /*(* claude: end-of-file marker, real vc/va -S output always emits
+    * it ("END\t,") -- a true no-op. *)*/
+ | TEND          TSEMICOLON { [] }
 
  | label_def line           { $1::$2 }
 

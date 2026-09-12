@@ -261,6 +261,12 @@ gen:
     * "MOVB 4(R2),R5" -- mirrors Parser_asmv.mly's (MIPS) identical
     * rule. *)*/
  | con TOPAR reg TCPAR { Indirect ($3, $1) }
+ /*(* claude: needed for case 6/12 ("MOVW R,sym(SB)") and case 7/13
+    * ("MOVW sym(SB),R") -- storing/loading a global's *value*, as
+    * opposed to `ximm`'s "$sym(SB)" (address-of, a completely
+    * different operand shape). Mirrors Parser_asmv.mly/Parser_asm5.mly's
+    * identical rule. *)*/
+ | name  { Entity $1 }
 
 ximm:
  | imm             { Int $1 }

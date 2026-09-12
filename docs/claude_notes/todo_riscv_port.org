@@ -299,8 +299,44 @@ Not yet in Codegeni.ml at all:
    on reusing the exact same already-byte-verified encoding helpers
    as case 1 (SLLI/SRAI shift-immediate) and case 2 (ANDI), not on a
    dedicated differential fixture of its own.
-** TODO case 12 mov r,lext => lui/auipc I1,T; sb r,I0(T)
-** TODO case 13 mov lext, r => lui/auipc I1,T; lb r,I0(T)
+** DONE case 12/13 mov r,lext / mov lext,r => lui/auipc I1,T; s[bhwd]/l[bhwd] r,I0(T)
+   Found this was a bigger gap than the case list suggested: "MOVW
+   R,sym(SB)" / "MOVW sym(SB),R" (storing/loading a global's *value*
+   by symbol, as opposed to the already-done case 9/11/20 address-of)
+   had ZERO codegen at all, not just the large-offset slow path --
+   `Ast_asmi.ml`'s `Entity` gen constructor existed but nothing built
+   it (`gen`'s grammar had no `name -> Entity` rule) and nothing
+   consumed it in Codegeni.ml. Implemented both the small-offset fast
+   path (reuses case 6/7's shape with RSB as the base register,
+   confirmed via optab.c: the same C_SOREG class a plain "sb R,I(S)"
+   and a small-offset "sb R,sym(SB)" both resolve to) and the
+   large-offset slow path proper (new `gen_upper_and_low_via` helper:
+   same LUI/AUIPC rounding as case 9/20's `gen_absolute_via`, but
+   hands the low 12 bits back to the caller to fold directly into the
+   store/load's own immediate field instead of a separate ADDI).
+   Found and fixed a real bug while testing: "MOVW" always means
+   32-bit width regardless of arch (goken's own optab.c:
+   `AMOVW,...,OSTORE,2` is unconditional, not is_64-gated) -- the
+   pre-existing case 6/7 helper is_64-branches its own funct3 only
+   because it's *also* reused internally by Rewritei.ml's own
+   pointer-width RLINK save (never reachable from real .s source);
+   the new, directly-user-reachable case 12/13 code must not (and now
+   doesn't) inherit that.
+   Also found, but deliberately NOT fixed here (separate from case
+   12/13's own codegen correctness): combining two GLOBLs of very
+   different sizes (a small `foo` and an 8192-byte `bigbuf`) in one
+   program shifts `foo`'s own resolved SB-relative offset by 4 bytes
+   between goken and xix -- a data-segment layout/alignment
+   discrepancy, not a case 12/13 encoding bug (confirmed: each global
+   alone, in its own fixture, is fully byte-identical). Worked around
+   by keeping the two new fixtures' globals to one each; revisit
+   Layouti.ml's own data-segment layout against goken's `dodata()` if
+   a fixture ever needs multiple differently-sized GLOBLs in one
+   program (same category of issue as mips_port.md's own
+   "GLOBL-without-DATA total file size mismatch" open issue).
+   Added tests/linker/riscv_diff/sb_value_case6_7.s and
+   sb_value_case12_13.s (+ riscv64_diff copies): PASS byte-identical +
+   PASS same exit code on both RV32 and RV64.
 ** TODO case 14 op $lcon,[r,]d => lui L1,T; addi $L0,T,T; op T,r,d
 ** TODO case 15 mov r,L(s) => lui L1,T; add s,T,T; sb r,L0(T)
 ** TODO case 16 mov L(s),r => lui L1,T; add s,T,T; lb r,L0(T)

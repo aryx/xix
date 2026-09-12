@@ -167,6 +167,19 @@ let gen_absolute (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_lui rd
  * value. Caller is responsible for passing that delta as `v`. *)
 let gen_pcrelative (rd : reg) (v : int) : Bits.t list = gen_absolute_via op_auipc rd v
 
+(* claude: case 12/13's own LUI(-only)/AUIPC helper -- same rounding
+ * as gen_absolute_via above (bit 11 forces a round-up so the
+ * following signed 12-bit field adds rather than subtracts), but the
+ * low 12 bits are handed back to the caller instead of being folded
+ * in via a second ADDI: case 12/13 fold them directly into the
+ * store/load instruction's own 12-bit immediate field instead,
+ * saving the separate ADDI case 9/20's "materialize an address into
+ * a register" shape needs (goken's own `o1=OP_U(REGTMP,v); v&=0xFFF;
+ * o2=OP_S(REGTMP,...,v)`, no separate ADDI at all). *)
+let gen_upper_and_low_via (opcode : int) (rd : reg) (v : int) : Bits.t * int =
+  let v = if v land 0x800 <> 0 then v + 0x1000 else v in
+  (op_utype opcode rd v, v land 0xfff)
+
 (* S-type: imm[31:25] rs2[24:20] rs1[19:15] funct3[14:12] imm[11:7]
  * opcode[6:0] -- goken's OP_S(rs1,rs2,imm) (case 6, STORE opcode
  * 0x23), shared by SB/SH/SW/SD (see op_itype's LOAD counterpart). *)
@@ -576,6 +589,85 @@ let rules (is_64 : bool)
         gen_load node offset (fun () -> op_itype 0x03 1 (* LH *) rbase rt offset)
     | Move1 (H_ A.U, Left (Indirect (rbase, offset)), GReg rt) ->
         gen_load node offset (fun () -> op_itype 0x03 5 (* LHU *) rbase rt offset)
+
+    (* case 6 (SB-relative fast path, reusing case 6/11's shared
+     * "fits addi" test) / case 12 (SB-relative slow path, "mov
+     * r,lext"): "MOVW R,sym(SB)" -- store the value of a register to
+     * a global, as opposed to Right(Address ...) above which computes
+     * the global's *address*. goken's own assembler resolves the
+     * small-offset case straight to case 6 (RSB is just another
+     * register once biased by BIG, confirmed via optab.c: the same
+     * C_SOREG class both a plain "sb R,I(S)" and a small-offset
+     * "sb R,sym(SB)" resolve to), only reaching case 12 when the
+     * resolved offset doesn't fit ADDI's 12-bit field. *)
+    | Move2 (W__, Left (Gen (GReg rf)), Gen (Entity (A.Global (global, goffset)))) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: storing to a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset_to_SB (offset + goffset) in
+            (* claude: unlike case 6/7's own shared helper above (whose
+             * `Move2 (W__, ...)` arm is_64-branches because it's also
+             * reused internally by Rewritei.ml's own pointer-width
+             * RLINK save, never reachable from real .s source), a
+             * user-written "MOVW" reaching *this* case is a genuine,
+             * direct AMOVW mnemonic -- confirmed against goken's own
+             * optab.c: `AMOVW,...,OSTORE,2` is unconditional, not
+             * is_64-gated, since the "W" suffix itself already means
+             * "32-bit", on either arch. *)
+            let funct3 = 2 (* SW, always -- see comment above *) in
+            (* claude: no "final_offset <> 0" exclusion here, unlike
+             * case 11's address-of -- that exclusion exists solely to
+             * avoid a circular ADDI when *defining* setSB itself (an
+             * address computation), which doesn't apply to an
+             * ordinary store/load memory access. *)
+            if fits_addi_imm final_offset
+            then gen_store node final_offset (fun () -> op_stype funct3 rSB rf final_offset)
+            else
+              { size = 8; x = None; binary = (fun () ->
+                match init_data with
+                | None -> raise (Impossible "init_data should be set by now")
+                | Some init_data ->
+                    let target_abs = offset + goffset + init_data in
+                    if is_64 then
+                      let delta = target_abs - node.real_pc in
+                      let (lui_bits, low12) = gen_upper_and_low_via op_auipc rTMP delta in
+                      [ lui_bits; op_stype funct3 rTMP rf low12 ]
+                    else
+                      let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP target_abs in
+                      [ lui_bits; op_stype funct3 rTMP rf low12 ]
+              )}
+        )
+
+    (* case 7 (SB-relative fast path) / case 13 (SB-relative slow
+     * path, "mov lext,r"): "MOVW sym(SB),R" -- load the value at a
+     * global, mirror of the store case above. *)
+    | Move2 (W__, Left (Gen (Entity (A.Global (global, goffset)))), Gen (GReg rt)) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset_to_SB (offset + goffset) in
+            (* claude: always LW (funct3=2) -- see the mirror-image
+             * store arm's own comment above. *)
+            let funct3 = 2 in
+            if fits_addi_imm final_offset
+            then gen_load node final_offset (fun () -> op_itype 0x03 funct3 rSB rt final_offset)
+            else
+              { size = 8; x = None; binary = (fun () ->
+                match init_data with
+                | None -> raise (Impossible "init_data should be set by now")
+                | Some init_data ->
+                    let target_abs = offset + goffset + init_data in
+                    if is_64 then
+                      let delta = target_abs - node.real_pc in
+                      let (lui_bits, low12) = gen_upper_and_low_via op_auipc rTMP delta in
+                      [ lui_bits; op_itype 0x03 funct3 rTMP rt low12 ]
+                    else
+                      let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP target_abs in
+                      [ lui_bits; op_itype 0x03 funct3 rTMP rt low12 ]
+              )}
+        )
 
     (* case 10:		/* sign extend */ *)
     (* claude: register-to-register sign/zero-extend, e.g. "MOVB

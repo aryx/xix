@@ -12,8 +12,10 @@ compare, conditional branch), call_leaf.s and
 call_leaf_with_frame.s (BL/RETURN-based local calls, both a true leaf
 and a leaf-with-locals), global_addr.s (address-of-global and
 SB-relative load, both routed through the literal pool -- see below),
-and w32_arith.s (the *W-suffixed 32-bit-view forms of Arith/Shift/
-Cmp/ArithMul -- see below).
+w32_arith.s (the *W-suffixed 32-bit-view forms of Arith/Shift/
+Cmp/ArithMul -- see below), and sized_move.s (byte/halfword/32-bit
+sized loads/stores, plus a real address-of-global gotcha -- see
+below).
 Covered so far: Arith (ADD/SUB/AND/ORR/EOR/BIC, register or small
 "addcon"-range immediate), Shift (LSL/LSR/ASR/ROR, immediate or
 register), Cmp (CMP/CMN), ArithMul (simple 3-operand MUL), Move
@@ -82,10 +84,36 @@ Verified with tests/linker/arm64_diff/w32_arith.s. Register-immediate
 moves at 32-bit width ("MOVW $con,R") are NOT covered by this -- that's
 part of the still-separate B_/H_/W_ move-size gap below.
 
+**B_/H_/W_ (byte/halfword/32-bit-view) sized Move is now implemented**
+for register<->memory access (both the plain register-base Indirect
+form and the SB-relative fast path) -- goken's own (sz,opc) table per
+mnemonic (AMOVB/AMOVBU/AMOVH/AMOVHU/AMOVW/AMOVWU), with the opc field
+only mattering for loads (sign- vs zero-extend into the 64-bit
+destination; stores always clear it) and the scaled-12-bit immediate's
+scale factor equal to the access size in bytes. Register-immediate
+moves at these sizes ("MOVW $con,R" etc, as opposed to X_'s "MOV
+$con,R") and register-to-register moves at these sizes are NOT
+covered -- goken's own case 24/32 are genuinely X_-only shapes to
+begin with (not a narrowed subset of something wider), so this isn't
+a gap so much as scope matching the real ISA. Verified with
+tests/linker/arm64_diff/sized_move.s.
+
+**Real bug caught while adding this**: address-of-global ("MOV
+$sym(SB),Rd") does NOT always go through the literal pool, contrary to
+this doc's own earlier claim. Re-reading span.c's aclass() (caught via
+byte-diff, not analysis alone): the direct "ADD $offset,RSB,Rd" fast
+path (goken's C_AECON, case 4) fires whenever the resolved SB-relative
+offset is BOTH *nonzero* and fits ADD's addcon immediate range; the
+pool is only the fallback for offset=0 (which is why the very first
+literal-pool fixture, where the lone global happened to sit at
+data-offset 0, only ever exercised the pool path and never surfaced
+this) or an offset too big for addcon. Fixed in Codegen7.ml's
+Move(X_,Right(Address ...),...) arm; tests/linker/arm64_diff/
+sized_move.s's "foo" is deliberately placed at a nonzero, addcon-sized
+offset to exercise the ADD path, alongside global_addr.s's own
+offset-0 pool-path case.
+
 Not yet done, real follow-up work (see "Suggested phase plan" below):
- - B_/H_/W_ (byte/halfword/32-bit-view) move sizes are declared in
-   Ast_asm7.ml but not implemented in Codegen7.ml yet -- only X_
-   (64-bit) register-register and register-memory moves are.
  - AND/ORR/EOR/BIC's *immediate* form (a "bitmask immediate" encoding,
    genuinely different from ADD/SUB's plain 12-bit-optionally-shifted
    immediate) isn't implemented -- only their register-register form

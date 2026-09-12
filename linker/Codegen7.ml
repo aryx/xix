@@ -42,26 +42,22 @@ open Codegen
  * successfully elsewhere in this project, is more faithful and less
  * error-prone here than re-deriving a from-scratch Bits.t decomposition.
  *
- * Scope of this first version (see docs/claude_notes/
- * notes_arm64_port_plan.txt): only 64-bit (X-register, bare-mnemonic)
- * forms are implemented -- the *W-suffixed 32-bit forms (ADDW, MOVW's
- * register-move meaning as opposed to its load/store meaning, etc.) are
- * a real, separate opcode family in goken (a different `sf` bit and, for
- * loads, a different sign-extension story) and are deferred, same
- * "narrower but real" scoping as RISC-V's RV64 *W variants in
- * Codegeni.ml. AND/ORR/EOR/BIC's *immediate* forms (a "bitmask
- * immediate" encoding, genuinely different from ADD/SUB's plain 12-bit
- * uimm) are also deferred -- only their register-register form is
- * implemented; only ADD/SUB support an immediate operand for now.
- * Byte/halfword/32-bit-sign-or-zero-extending moves (B_/H_/W_ in
- * move_size) are declared in the AST already but not implemented yet
- * either. Most importantly: no literal pool yet at all (see Layout7.ml's
- * own comment) -- so "MOV $bigconst,R" and any address-of-global /
- * load-from-global access (which goken's own 7l, confirmed empirically,
- * routes through the *same* literal-pool mechanism as a big plain
- * integer constant -- see Ast_asm7.ml's prelude comment) isn't
- * implemented here yet either; only small ADD-fast-path immediates and
- * plain-register-base (e.g. RSP-relative) memory access are.
+ * Scope (see docs/claude_notes/notes_arm64_port_plan.txt for the
+ * up-to-date status): Arith/Shift/Cmp/ArithMul have both their bare
+ * (64-bit) and *W-suffixed (32-bit-view) forms; register<->memory
+ * Move (Indirect and the SB-relative fast path) covers all 4 sizes
+ * (B_/H_/W_/X_); the literal pool covers "MOV $bigconst,R" and
+ * address-of-global (see Layout7.ml's own comment). Still deferred:
+ * AND/ORR/EOR/BIC's *immediate* form (a "bitmask immediate" encoding,
+ * genuinely different from ADD/SUB's plain 12-bit uimm, and a real
+ * bug-history minefield in goken's own C side -- see this file's
+ * opirr_addsub comment) -- only their register-register form is
+ * implemented, both widths; register-immediate moves at B_/H_/W_ size
+ * ("MOVW $con,R" etc, as opposed to X_'s "MOV $con,R") and register-
+ * to-register moves at those sizes aren't implemented either -- only
+ * X_'s "MOV Rs,Rd"/"MOV $con,Rd" are, per goken's own case 24/32 (which
+ * are genuinely X_-only shapes to begin with, not a narrowed subset of
+ * something wider).
  *)
 
 (*****************************************************************************)
@@ -270,13 +266,13 @@ let opcbz (nonzero : bool) : int = (0x1A lsl 25) lor ((if nonzero then 1 else 0)
  * HLT/etc share this LTYPE but aren't wired -- see Ast_asm7.ml). *)
 let opimm_svc = (0xD4 lsl 24) lor 1
 
-(* claude: case 20/21 -- MOV(64-bit only, "AMOV" in goken) load/store,
- * scaled-12-bit-unsigned-offset form only (goken's `v >= 0` branch of
- * case 20/21; the `v < 0` "unscaled 9-bit signed" branch, and the pre/
- * post-increment "!" forms of case 22/23, aren't implemented yet).
- * goken's `LDSTR12U(sz,v,opc) = sz<<30 | 7<<27 | v<<26 | 1<<24 | opc<<22`
- * with (sz=3,v=0,opc=1) for AMOV's *load*; store is the same opcode with
- * opc's bit cleared (goken's `LD2STR`, `o & ~(3<<22)`). *)
+(* claude: case 20/21 -- MOV load/store, scaled-12-bit-unsigned-offset
+ * form only (goken's `v >= 0` branch of case 20/21; the `v < 0`
+ * "unscaled 9-bit signed" branch, and the pre/post-increment "!" forms
+ * of case 22/23, aren't implemented yet). goken's `LDSTR12U(sz,v,opc)
+ * = sz<<30 | 7<<27 | v<<26 | 1<<24 | opc<<22` with (sz=3,v=0,opc=1)
+ * for AMOV's *load*; store is the same opcode with opc's bit cleared
+ * (goken's `LD2STR`, `o & ~(3<<22)`). *)
 let ldstr12u (sz : int) (v : int) (opc : int) : int =
   (sz lsl 30) lor (7 lsl 27) lor (v lsl 26) lor (1 lsl 24) lor (opc lsl 22)
 let opldr12_mov = ldstr12u 3 0 1
@@ -285,6 +281,32 @@ let olsr12u (node : 'a T.node) (base : int) (v : int) (b : int) (r : int) : int 
   if v < 0 || v >= (1 lsl 12)
   then error node "TODO: offset out of 12-bit scaled range (needs literal pool / unscaled form, not yet implemented)"
   else base lor ((v land 0xFFF) lsl 10) lor (b lsl 5) lor r
+
+(* claude: the byte/halfword/32-bit-view sized siblings of opldr12_mov/
+ * opstr12_mov above -- goken's own opldr12()/opstr12() table (`(sz,opc)`
+ * per mnemonic: AMOVB->(0,2), AMOVBU->(0,1), AMOVH->(1,2), AMOVHU->(1,1),
+ * AMOVW->(2,2) [sign-extend into the 64-bit dest], AMOVWU->(2,1)
+ * [zero-extend]; `opc` only ever matters for *loads* -- stores always
+ * clear it via LD2STR, same as opstr12_mov above, since a narrow store
+ * has no sign/zero-extension to speak of). The scaled-12-bit
+ * immediate's own scale factor is the size in bytes (1/2/4/8 for
+ * B/H/W/X), goken's `offsetshift()` -- same "offset divided by the
+ * access size, must divide evenly" shape already used for the X_-only
+ * helpers above, just generalized to the other 3 sizes here. *)
+let ldstr12u_size_opc (ms : move_size) : int * int =
+  match ms with
+  | B_ A.S -> 0, 2 | B_ A.U -> 0, 1
+  | H_ A.S -> 1, 2 | H_ A.U -> 1, 1
+  | W_ A.S -> 2, 2 | W_ A.U -> 2, 1
+  | X_ -> 3, 1
+let scale_shift_of_size (ms : move_size) : int =
+  match ms with
+  | B_ _ -> 0 | H_ _ -> 1 | W_ _ -> 2 | X_ -> 3
+let opldr12_sized (ms : move_size) : int =
+  let sz, opc = ldstr12u_size_opc ms in
+  ldstr12u sz 0 opc
+let opstr12_sized (ms : move_size) : int =
+  (opldr12_sized ms) land (lnot (3 lsl 22))
 
 (* claude: case 22/23 -- pre/post-index writeback load/store ("MOV
  * Rt,-16(Rbase)!" / "MOV Rt,(Rbase)16!"), goken's `opldrpp()`
@@ -552,33 +574,56 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
               [ gload_from_pool node rt ]
             )})
 
-    (* case 12: MOV $sym(SB),Rd -- address-of-global. Confirmed
-     * empirically (see Ast_asm7.ml's prelude comment) that this ALWAYS
-     * goes through the literal pool on this arch, never a direct
-     * ADD-from-SB the way ARM32/MIPS/RISC-V do it -- the assembler
-     * can't know the link-time absolute address up front, so it can
-     * never take move_immediate_encoding's direct-MOVZ fast path at
-     * all (that's only ever reachable for an assembly-time-known
-     * plain integer). *)
-    | Move (X_, Right (Address (Global (global, offset))), GReg (R rt)) ->
-        { size = 4; x = Some (PoolOperand (Ast_asm.Address (Global (global, offset))));
-          binary = (fun () -> [ gload_from_pool node rt ]) }
+    (* case 4 (C_AECON)/case 12 (C_LCON): MOV $sym(SB),Rd --
+     * address-of-global. Caught the hard way (byte-diff against
+     * goken): this does NOT always go through the literal pool --
+     * span.c's own aclass() (D_STATIC/D_EXTERN's default case) takes
+     * a direct "ADD $offset,RSB,Rt" fast path (same C_AECON/case-4
+     * "addcon" shape as Arith's own $addcon immediate, reusing
+     * oaddi/opirr_addsub below) whenever the resolved SB-relative
+     * offset is BOTH nonzero AND fits ADD's addcon range (`isaddcon`)
+     * -- confirmed directly: a global at data-offset 0 (nonzero check
+     * fails) goes through the pool, but a global at a later,
+     * small-enough offset (e.g. 8, following another global) uses the
+     * direct ADD instead. The pool is only the fallback for offset=0
+     * or an offset too large for addcon, not the universal case this
+     * file previously (incorrectly) assumed. *)
+    | Move (X_, Right (Address (Global (global, goffset))), GReg (R rt)) ->
+        let final_offset =
+          match Hashtbl.find_opt env.syms (T.symbol_of_global global) with
+          | Some (T.SData2 (offset, _kind)) -> Some (offset + goffset)
+          | Some (T.SText2 _) | None -> None
+        in
+        (match final_offset with
+        | Some fo when fo <> 0 && isaddcon fo ->
+            let (R rsb_i) = rSB in
+            { size = 4; x = None; binary = (fun () ->
+              [ w1 (oaddi node (opirr_addsub ADD) fo rsb_i rt) ]
+            )}
+        | _ ->
+            { size = 4; x = Some (PoolOperand (Ast_asm.Address (Global (global, goffset))));
+              binary = (fun () -> [ gload_from_pool node rt ]) }
+        )
 
-    (* case 20: MOV Rs,O(Rbase) -> STR (scaled 12-bit unsigned offset only) *)
-    | Move (X_, Left (GReg (R rf)), Indirect ((R rbase), offset)) ->
-        if offset mod 8 <> 0
+    (* case 20: MOV(B[U]|H[U]|W[U])? Rs,O(Rbase) -> STR (scaled 12-bit
+     * unsigned offset only), any size *)
+    | Move (ms, Left (GReg (R rf)), Indirect ((R rbase), offset)) ->
+        let shift = scale_shift_of_size ms in
+        if offset land ((1 lsl shift) - 1) <> 0
         then error node "TODO: unaligned/unscaled store offset (not yet implemented)"
         else
           { size = 4; x = None; binary = (fun () ->
-            [ w1 (olsr12u node opstr12_mov (offset / 8) rbase rf) ]
+            [ w1 (olsr12u node (opstr12_sized ms) (offset asr shift) rbase rf) ]
           )}
-    (* case 21: MOV O(Rbase),Rd -> LDR (scaled 12-bit unsigned offset only) *)
-    | Move (X_, Left (Indirect ((R rbase), offset)), GReg (R rt)) ->
-        if offset mod 8 <> 0
+    (* case 21: MOV(B[U]|H[U]|W[U])? O(Rbase),Rd -> LDR (scaled 12-bit
+     * unsigned offset only), any size *)
+    | Move (ms, Left (Indirect ((R rbase), offset)), GReg (R rt)) ->
+        let shift = scale_shift_of_size ms in
+        if offset land ((1 lsl shift) - 1) <> 0
         then error node "TODO: unaligned/unscaled load offset (not yet implemented)"
         else
           { size = 4; x = None; binary = (fun () ->
-            [ w1 (olsr12u node opldr12_mov (offset / 8) rbase rt) ]
+            [ w1 (olsr12u node (opldr12_sized ms) (offset asr shift) rbase rt) ]
           )}
 
     (* case 20/21 (SB-relative fast path): "MOV Rf,sym(SB)" / "MOV
@@ -592,32 +637,34 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * offsets that don't fit aren't implemented yet (would need a
      * pool-loaded-offset + register-offset STR/LDR, same shape as
      * ARM32's case 30/31). *)
-    | Move (X_, Left (GReg (R rf)), Entity (A.Global (global, goffset))) ->
+    | Move (ms, Left (GReg (R rf)), Entity (A.Global (global, goffset))) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
         (match v with
         | T.SText2 _ -> error node "TODO: storing to a TEXT symbol"
         | T.SData2 (offset, _kind) ->
             let final_offset = offset + goffset in
-            if final_offset mod 8 <> 0
+            let shift = scale_shift_of_size ms in
+            if final_offset land ((1 lsl shift) - 1) <> 0
             then error node "TODO: unaligned SB-relative store offset"
             else
               let (R rsb_i) = rSB in
               { size = 4; x = None; binary = (fun () ->
-                [ w1 (olsr12u node opstr12_mov (final_offset / 8) rsb_i rf) ]
+                [ w1 (olsr12u node (opstr12_sized ms) (final_offset asr shift) rsb_i rf) ]
               )}
         )
-    | Move (X_, Left (Entity (A.Global (global, goffset))), GReg (R rt)) ->
+    | Move (ms, Left (Entity (A.Global (global, goffset))), GReg (R rt)) ->
         let v = Hashtbl.find env.syms (T.symbol_of_global global) in
         (match v with
         | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
         | T.SData2 (offset, _kind) ->
             let final_offset = offset + goffset in
-            if final_offset mod 8 <> 0
+            let shift = scale_shift_of_size ms in
+            if final_offset land ((1 lsl shift) - 1) <> 0
             then error node "TODO: unaligned SB-relative load offset"
             else
               let (R rsb_i) = rSB in
               { size = 4; x = None; binary = (fun () ->
-                [ w1 (olsr12u node opldr12_mov (final_offset / 8) rsb_i rt) ]
+                [ w1 (olsr12u node (opldr12_sized ms) (final_offset asr shift) rsb_i rt) ]
               )}
         )
 

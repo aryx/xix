@@ -65,6 +65,20 @@ open Codegen
  *)
 
 (*****************************************************************************)
+(* Types and constants *)
+(*****************************************************************************)
+(* claude: goken's own literal-pool mechanism (span.c/asmout.c's
+ * `omovlit()`), needed for any "MOV $con,R"/"MOV $sym(SB),R" that
+ * doesn't fit a direct MOVZ/MOVN -- see move_immediate_encoding's own
+ * comment. Mirrors Codegen5.ml's identical `pool` type/mechanism
+ * (ARM32's own literal pool); Layout7.ml does the actual splicing,
+ * same shape as Layout5.ml. No `LPOOL` marker/early-flush trigger is
+ * implemented on this arch yet -- only "flush at the true end of the
+ * program" (see Layout7.ml), matching this port's ARM32 counterpart's
+ * own current scope. *)
+type pool = PoolOperand of Ast_asm.ximm
+
+(*****************************************************************************)
 (* Helpers *)
 (*****************************************************************************)
 let error (node : 'a T.node) (s : string) =
@@ -73,6 +87,28 @@ let error (node : 'a T.node) (s : string) =
         (Types7.show_instr node.instr))
 
 let w1 (x : int) : Bits.t = [(x land 0xffffffff, 0)]
+
+(* claude: goken's `omovlit()` else-branch (the literal-pool path) --
+ * "LDR (literal)", `o1 = (w<<30)|(fp<<26)|(3<<27) |
+ * ((v&0x7FFFF)<<5) | dr`, w=1 for a 64-bit load (fp=0, non-float).
+ * `v` is the SAME word-scaled PC-relative delta as a branch (goken's
+ * `brdist(p,0,19,2)` -- literally the same call case 7/Bcc uses), so
+ * this reuses `branch_delta` below by treating the pool entry's own
+ * node exactly like a branch target. *)
+let opldr_literal_mov = (1 lsl 30) lor (3 lsl 27)
+
+(* claude: unlike ARM32 (PC = instr+8), AArch64's PC-relative fields
+ * are relative to the instruction's own address with no bias --
+ * same reasoning as the `branch_delta` helper further down, just
+ * needed earlier here (this file's helpers are declared roughly in
+ * the order goken's own asmout.c introduces the corresponding
+ * concepts, and the pool mechanism comes before branches there). *)
+let gload_from_pool (nsrc : 'a T.node) (rt : int) : Bits.t =
+  match nsrc.T.branch with
+  | None -> raise (Impossible "literal pool should be attached to node")
+  | Some ndst ->
+      let v = (ndst.T.real_pc - nsrc.T.real_pc) asr 2 in
+      [ (opldr_literal_mov lor ((v land 0x7FFFF) lsl 5) lor rt) land 0xffffffff, 0 ]
 
 (*****************************************************************************)
 (* Instruction encoding helpers *)
@@ -470,12 +506,27 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
     (* case 32: MOV $con,Rd -> movz/movn (see move_immediate_encoding's
      * own comment; no literal pool yet for anything that needs it) *)
     | Move (X_, Right (Int i), GReg (R rt)) ->
-        { size = 4; x = None; binary = (fun () ->
-          [ w1 (match move_immediate_encoding i with
-            | Some base -> base lor rt
-            | None ->
-                error node "TODO: constant needs the literal pool (not yet implemented)")
-          ] )}
+        (match move_immediate_encoding i with
+        | Some base ->
+            { size = 4; x = None; binary = (fun () -> [ w1 (base lor rt) ]) }
+        | None ->
+            (* case 12: movT $lcon,reg -- doesn't fit a direct
+             * MOVZ/MOVN, needs the literal pool. *)
+            { size = 4; x = Some (PoolOperand (Ast_asm.Int i)); binary = (fun () ->
+              [ gload_from_pool node rt ]
+            )})
+
+    (* case 12: MOV $sym(SB),Rd -- address-of-global. Confirmed
+     * empirically (see Ast_asm7.ml's prelude comment) that this ALWAYS
+     * goes through the literal pool on this arch, never a direct
+     * ADD-from-SB the way ARM32/MIPS/RISC-V do it -- the assembler
+     * can't know the link-time absolute address up front, so it can
+     * never take move_immediate_encoding's direct-MOVZ fast path at
+     * all (that's only ever reachable for an assembly-time-known
+     * plain integer). *)
+    | Move (X_, Right (Address (Global (global, offset))), GReg (R rt)) ->
+        { size = 4; x = Some (PoolOperand (Ast_asm.Address (Global (global, offset))));
+          binary = (fun () -> [ gload_from_pool node rt ]) }
 
     (* case 20: MOV Rs,O(Rbase) -> STR (scaled 12-bit unsigned offset only) *)
     | Move (X_, Left (GReg (R rf)), Indirect ((R rbase), offset)) ->
@@ -493,6 +544,46 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
           { size = 4; x = None; binary = (fun () ->
             [ w1 (olsr12u node opldr12_mov (offset / 8) rbase rt) ]
           )}
+
+    (* case 20/21 (SB-relative fast path): "MOV Rf,sym(SB)" / "MOV
+     * sym(SB),Rd" -- store/load the *value* at a global (as opposed
+     * to "MOV $sym(SB),Rd", address-of-global, which always goes
+     * through the pool -- see the Right(Address ...) arms above and
+     * Ast_asm7.ml's prelude comment). REGSB (x28) is set up to point
+     * at data-offset 0 with no bias at all (confirmed empirically,
+     * unlike ARM32/RISC-V's BIG-biased SB register), so the fast path
+     * is just a plain scaled-12-bit-unsigned STR/LDR off x28 -- long
+     * offsets that don't fit aren't implemented yet (would need a
+     * pool-loaded-offset + register-offset STR/LDR, same shape as
+     * ARM32's case 30/31). *)
+    | Move (X_, Left (GReg (R rf)), Entity (A.Global (global, goffset))) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: storing to a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset + goffset in
+            if final_offset mod 8 <> 0
+            then error node "TODO: unaligned SB-relative store offset"
+            else
+              let (R rsb_i) = rSB in
+              { size = 4; x = None; binary = (fun () ->
+                [ w1 (olsr12u node opstr12_mov (final_offset / 8) rsb_i rf) ]
+              )}
+        )
+    | Move (X_, Left (Entity (A.Global (global, goffset))), GReg (R rt)) ->
+        let v = Hashtbl.find env.syms (T.symbol_of_global global) in
+        (match v with
+        | T.SText2 _ -> error node "TODO: loading the value at a TEXT symbol"
+        | T.SData2 (offset, _kind) ->
+            let final_offset = offset + goffset in
+            if final_offset mod 8 <> 0
+            then error node "TODO: unaligned SB-relative load offset"
+            else
+              let (R rsb_i) = rSB in
+              { size = 4; x = None; binary = (fun () ->
+                [ w1 (olsr12u node opldr12_mov (final_offset / 8) rsb_i rt) ]
+              )}
+        )
 
     (* case 23: MOV Rf,-16(Rbase)! / MOV Rf,(Rbase)16! -- pre/post-index
      * writeback store *)
@@ -588,9 +679,9 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 (* Entry points *)
 (*****************************************************************************)
 
-let size_of_instruction (env : Codegen.env) (node : 'a T.node) : int =
+let size_of_instruction (env : Codegen.env) (node : 'a T.node) : int (* a multiple of 4 *) * pool option =
   let action = rules env None node in
-  action.size
+  action.size, action.x
 
 let gen (symbols2 : T.symbol_table2) (config : Exec_file.linker_config)
    (cg : 'a T.code_graph) : T.word list =

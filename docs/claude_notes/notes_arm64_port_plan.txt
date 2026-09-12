@@ -2,25 +2,52 @@ Porting the ARM64 toolchain (7a/7l) against goken, byte-equal
 ===============================================================
 
 Status: basic structure in place and byte-verified (first checkpoint),
-now extended with real leaf/frame-size prologue+epilogue synthesis
-(second increment, same session). `o7a`/`o7l` exist and assemble+link
+extended with real leaf/frame-size prologue+epilogue synthesis
+(second increment), and now with a full literal-pool implementation
+(third increment, same session). `o7a`/`o7l` exist and assemble+link
 real .s fixtures to output that's byte-identical to goken's 7a/7l,
 verified under qemu-aarch64: tests/linker/arm64_diff/exit_linux.s
 (plain exit), kitchen_sink.s (register/immediate arithmetic, shift,
 compare, conditional branch), call_leaf.s and
 call_leaf_with_frame.s (BL/RETURN-based local calls, both a true leaf
-and a leaf-with-locals). Covered so far: Arith (ADD/SUB/AND/ORR/EOR/
-BIC, register or small "addcon"-range immediate), Shift (LSL/LSR/ASR/
-ROR, immediate or register), Cmp (CMP/CMN), ArithMul (simple
-3-operand MUL), Move (register<->register, register<->memory with a
-plain scaled 12-bit-unsigned offset or pre/post-index writeback, and
-"MOV $con,R" for a constant that fits goken's own real classification
-chain -- see Codegen7.ml's move_immediate_encoding comment for the
-genuinely surprising part of that), B/BL/Bxx/CBxx (direct and
-register-indirect), RET (the real hardware instruction) and RETURN
-(the compiler-facing pseudo-op, now with full leaf/frame-size-driven
+and a leaf-with-locals), and global_addr.s (address-of-global and
+SB-relative load, both routed through the literal pool -- see below).
+Covered so far: Arith (ADD/SUB/AND/ORR/EOR/BIC, register or small
+"addcon"-range immediate), Shift (LSL/LSR/ASR/ROR, immediate or
+register), Cmp (CMP/CMN), ArithMul (simple 3-operand MUL), Move
+(register<->register, register<->memory with a plain scaled 12-bit-
+unsigned offset or pre/post-index writeback, "MOV $con,R" for a
+constant that fits goken's own real classification chain -- see
+Codegen7.ml's move_immediate_encoding comment for the genuinely
+surprising part of that -- and "MOV $sym(SB),R"/large constants via
+the literal pool, see below), B/BL/Bxx/CBxx (direct and register-
+indirect), RET (the real hardware instruction) and RETURN (the
+compiler-facing pseudo-op, now with full leaf/frame-size-driven
 prologue/epilogue synthesis -- see Rewrite7.ml, ported from goken's
 own noop.c), SVC.
+
+**The literal pool is now implemented** (Layout7.ml, ported from
+Layout5.ml's own splicing shape, same "flush at the true end of the
+program" scope-limit as ARM32's still has). The one genuinely new
+wrinkle vs. ARM32: every pool entry here is a full 8-byte (64-bit)
+DWORD, not a 4-byte word, because AArch64's pool-fed loads are always
+64-bit LDRs (goken never routes a *W-sized move through the pool).
+Each `PoolOperand` is spliced as a chained pair of `T.WORD` nodes (low
+32 bits, then a high-word node -- `(i asr 32) land 0xffffffff` for a
+large `Int`, always `0` for an `Address`, since this harness's address
+range never exceeds 32 bits) rather than a single node, and the
+end-of-program splicing walks to each pair's *tail* before chaining
+the next pair, so multiple entries thread as one flat
+low1,high1,low2,high2,... sequence. This also matters for *alignment*:
+goken 8-byte-aligns the pool's start and never deduplicates identical
+pool values (confirmed empirically -- two loads of the same global's
+address get two separate, separately-aligned 8-byte slots), so a
+pre-flush pad (`WORD $0`) is inserted whenever the natural post-guard-
+branch position isn't already a multiple of 8. Verified against a
+fixture with two chained pool entries (tests/linker/arm64_diff/
+global_addr.s: address-of-`setSB` then address-of-a-real-global),
+confirming both the multi-entry alignment and the low/high pairing are
+correct, not just the single-entry case.
 
 **The RET/frame mystery from checkpoint 1 is resolved**: goken has TWO
 distinct return-shaped mnemonics, not one -- the real hardware "RET
@@ -40,22 +67,6 @@ shared `TBANG` token ("!"), and the shared `Ast_asm.virtual_instr.RET`
 wired in via a new "RETURN" keyword (distinct from "RET").
 
 Not yet done, real follow-up work (see "Suggested phase plan" below):
- - No literal pool at all yet. Needed for: any "MOV $con,R" whose
-   constant doesn't fit the direct MOVZ/MOVN encoding (including,
-   surprisingly, some *small* values -- goken's own constant
-   classification chases isaddcon/isbitcon/movcon in a specific
-   priority order where a value being a valid ARM64 "logical
-   immediate" bit pattern routes it to the pool even when it would
-   trivially fit a direct MOVZ otherwise; fully reverse-engineered
-   and documented in Codegen7.ml, but the pool itself isn't built),
-   any SB-relative global load/store whose offset doesn't fit the
-   scaled 12-bit immediate, and address-of-global entirely (confirmed
-   empirically that even "MOV $sym(SB),R" goes through the *same*
-   literal-pool mechanism on this arch, not a dedicated ADD-from-SB
-   instruction the way ARM32/MIPS/RISC-V do it -- see Ast_asm7.ml's
-   prelude comment). Port Layout5.ml's pool-splicing shape when this
-   lands, not reinvent it. This is now the single biggest remaining
-   gap -- it blocks any fixture using GLOBL/DATA at all.
  - B_/H_/W_ (byte/halfword/32-bit-view) move sizes are declared in
    Ast_asm7.ml but not implemented in Codegen7.ml yet -- only X_
    (64-bit) register-register and register-memory moves are.
@@ -67,13 +78,30 @@ Not yet done, real follow-up work (see "Suggested phase plan" below):
    before touching this port again: `rm -f _build/default/bin_dune/
    o7a _build/default/bin_dune/o7l && dune build` (the fix that's
    always worked for every other arch in this project) was NOT
-   sufficient here on at least two separate occasions -- a source
-   edit's effect (confirmed present in `_build/default/linker/
-   Codegen7.ml` and even a debug Printf) still didn't show up in the
-   actual behavior of `_build/default/bin_dune/o7l` until `dune build
-   --force` was used instead. Prefer `--force` when a fix doesn't
-   seem to take effect on this port, rather than assuming the fix
-   itself is wrong.
+   sufficient here on multiple separate occasions -- a source edit's
+   effect (confirmed present in `_build/default/linker/Codegen7.ml`
+   and even a debug Printf) still didn't show up in the actual
+   behavior of `_build/default/bin_dune/o7l` until `dune build
+   --force` was used instead, and even that wasn't always enough:
+   at least once a stale binary's `strings -a` output still showed an
+   old debug string that had already been removed from the source,
+   requiring `rm -rf ~/.cache/dune/db && dune build --force` (clearing
+   dune's shared build cache) before a genuinely fresh binary came
+   out. When in doubt, don't trust the binary's behavior alone --
+   `strings -a` it for an expected/removed marker string, or compare
+   its mtime against the source file's, before concluding a fix did
+   or didn't work.
+ - Debugging technique note: plain `Printf.eprintf` calls added to
+   `Codegen7.ml`/`Layout7.ml` during pool development repeatedly
+   produced no visible output via this session's shell tool, even with
+   explicit stderr redirection -- root cause not fully pinned down. A
+   `failwith` with the accumulated debug info as the exception message
+   worked reliably as a one-off diagnostic (exceptions always surfaced
+   correctly), but that's a hack to strip out afterwards, not a
+   pattern to leave in place. `Logs.debug` (already used elsewhere in
+   this codebase, e.g. `Flags.debug_layout`'s `Logs.app` calls in this
+   very file) is the right tool if this kind of tracing is needed
+   again -- prefer it over ad-hoc eprintf/failwith next time.
 
 Goal: same methodology as docs/claude_notes/arm_port.md (ARM32),
 mips_port.md (MIPS), and notes_riscv_port_plan.txt (RISC-V): assemble

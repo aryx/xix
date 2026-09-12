@@ -305,10 +305,10 @@ let link7 (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   let graph = Rewrite7.rewrite graph in
   let symbols2, (data_size, bss_size) =
     Layout.layout_data symbols data in
-  (* claude: no setSB xdefine yet -- v1 doesn't implement any SB-relative
-   * addressing (no literal pool at all yet, see Codegen7.ml/Layout7.ml's
-   * own comments), so nothing currently reads a "setSB" symbol. Add this
-   * once address-of-global/large-constant support lands. *)
+  (* claude: REGSB (x28) points at data-offset 0 with no bias at all
+   * (confirmed empirically -- see Ast_asm7.ml's prelude comment),
+   * unlike ARM32's/RISC-V's BIG-biased SB register. *)
+  Layout.xdefine symbols2 symbols ("setSB" , T.Public) (T.SData2 (0, T.Data));
   Check.check symbols;
   let symbols2, graph, text_size =
     Layout7.layout_text symbols2 config.init_text graph in

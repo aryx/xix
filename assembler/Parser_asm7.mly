@@ -255,6 +255,7 @@ reg:
 gen:
  | reg                 { GReg $1 }
  | con TOPAR reg TCPAR { Indirect ($3, $1) }
+ | name                { Entity $1 }
  /*(* case 22/23-ish: "-16(RSP)!" -- pre-index, offset applied before
     * the access, base register updated afterward. *)*/
  | con TOPAR reg TCPAR TBANG { PreIndex ($3, $1) }

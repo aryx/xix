@@ -13,20 +13,29 @@ let fill_bytes_for_int (global : A.global) (arr : T.byte array) (base : int)
     (n : int) (bits: Arch.bits) (endian: Endian.t) :
     unit =
 
-  let array_16, array_32 = Endian.array_functions_of_endian endian in
+  let array_16, array_32, array_64 = Endian.array_functions_of_endian endian in
 
-   (* TODO: if negative still need check range and convert to 
-    * corresponding unsigned value with sign bits on? 
+   (* TODO: if negative still need check range and convert to
+    * corresponding unsigned value with sign bits on?
     *)
    match bits with
-   | Arch.Arch8 when n >= 0 && n <= 0xff -> 
+   | Arch.Arch8 when n >= 0 && n <= 0xff ->
       arr.(base) <- (Char.chr n)
-   | Arch.Arch16 when n >= 0 && n <= 0xffff -> 
+   | Arch.Arch16 when n >= 0 && n <= 0xffff ->
       array_16 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
-   | Arch.Arch32 when n >= 0 && n <= 0xffffffff -> 
+   | Arch.Arch32 when n >= 0 && n <= 0xffffffff ->
       array_32 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
-   | Arch.Arch64 -> raise Todo
-   | _ -> 
+   (* claude: needed for ARM64 (and any other 64-bit arch) DATA
+    * statements with an 8-byte int slice, e.g. a plain integer global
+    * -- OCaml's native int is only 63 bits, so the upper bound this
+    * project's other size cases check (e.g. Arch32's 0xffffffff)
+    * isn't meaningfully expressible here; any `n` representable as an
+    * OCaml int at all already fits within 8 bytes, so only the
+    * existing "not negative" concern (see the TODO above, pre-
+    * existing and not specific to this case) applies. *)
+   | Arch.Arch64 when n >= 0 ->
+      array_64 n |> Array.iteri (fun i el -> arr.(base + i) <- el)
+   | _ ->
       failwith (spf "int for %s < 0 or too big for its size"
                             (A.s_of_global global))
 
@@ -52,13 +61,18 @@ let gen (symbols2 : T.symbol_table2) (init_data : T.addr)
         let base = offset + offset2 in
 
         (match v with
-        | A.Int n -> 
+        | A.Int n ->
             (match size_slice with
-            | 1 | 2 | 4 ->
-               fill_bytes_for_int global arr base n 
+            (* claude: added 8 -- a real, needed size on 64-bit archs
+             * (ARM64's own literal-pool WORD entries for an
+             * address-of-global or big constant are 8 bytes, going
+             * through this same DATA-writing path when the pool is
+             * flushed -- see Layout7.ml/Codegen7.ml). *)
+            | 1 | 2 | 4 | 8 ->
+               fill_bytes_for_int global arr base n
                         (Arch.bits_of_intsize size_slice) endian
-            | _ -> 
-                failwith (spf "size for %s not in {1,2,4}"
+            | _ ->
+                failwith (spf "size for %s not in {1,2,4,8}"
                             (A.s_of_global global));
             )
 

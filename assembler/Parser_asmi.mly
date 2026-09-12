@@ -88,6 +88,10 @@ module L = Location_cpp
 %token TCOLON TDOT TDOLLAR
 %token TC
 %token TOPAR TCPAR
+/*(* unused here; only Parser_asm5.mly's MOVM grammar needs these,
+   * but the token is shared in Token_asm.ml so every arch's
+   * Parse_asmX.ml must still translate it *)*/
+%token TLBRACKET TRBRACKET
 
 /*(*-----------------------------------------*)*/
 /*(*2 Operators *)*/

@@ -23,12 +23,13 @@ open Ast_asm
  *
  * !!! If you modify this file please increment Object_file.version !!!
  * 
- * TODO: 
+ * TODO:
  *  - 5c-only opcodes? CASE, BCASE, MULU/DIVU/MODU (or better in Ast_asm.ml too?)
- *  - MULA, MULL,
- *  - MOVM (and his special bits .IA/...), 
- *  - PSR, MCR/MRC,
+ *  - MCR/MRC,
  *  - handle the instructions used in the kernel
+ * (claude: MULA/MULL, MOVM (and its .IA/.DB/etc special bits), and
+ * PSR are now implemented -- see MULL, MOVM/movm_addr_mode, and
+ * PSRImsr/psrreg below.)
  *)
 
 (*****************************************************************************)
@@ -66,18 +67,73 @@ type fcrreg = FPSR | FPCR
 
 (* claude: case 35/36/37 (mov PSR,R / mov R,PSR / mov $con,PSR) --
  * goken's D_PSR ("CPSR"/"SPSR" tokens, lex.c: CPSR=0, SPSR=1). The
- * ".F" (flags-only write) suffix isn't wired: xix's own grammar has
- * no existing mechanism at all for parsing dot-suffix flag bits on a
- * MOVE (goken unifies .S/.P/.W/.U/.F/etc into one generic `scond`
- * accumulator via a shared grammar rule that xix never ported; even
- * the already-existing arith_cond/move_cond types, e.g. Arith's own
- * ".S", are hardcoded to `None` in Parser_asm5.mly, never actually
- * parsed from real .s text) -- building that from scratch for one
- * flag bit was judged not worth it; the default (unset, "full PSR
- * write") is still a real, useful, independently-testable
- * instruction shape on its own. *)
+ * ".F" (flags-only write) suffix isn't wired: the generic dot-
+ * suffix-flag mechanism (`condf`/TSUF, see movm_addr_mode below)
+ * exists for MOVM's P/U/W bits, but no PSR production uses it, so
+ * ".F" stays unparseable here. The default (unset, "full PSR write")
+ * is still a real, useful, independently-testable instruction shape
+ * on its own. *)
 type psrreg = CPSR | SPSR
 [@@deriving show]
+
+(* claude: case 38/39 (movm $con,oreg -> stm / movm oreg,$con -> ldm,
+ * ARM's block data transfer, i.e. multi-register load/store). Unlike
+ * PSR's lone ".F" bit above, MOVM's P/U/W address-mode suffix bits
+ * (goken's C_PBIT/C_UBIT/C_WBIT, lex.c's ".IA"/".DB"/".IAW"/".DBW"/
+ * etc tokens) are essential to any real use -- e.g. a function
+ * prologue push is written "MOVM.DB.W [regs],(SP)" -- so this is what
+ * finally justified building a real generic dot-suffix-flag grammar
+ * mechanism (see Parser_asm5.mly's `condf` rule and TSUF token, a
+ * left-recursive bitmask accumulator directly mirroring goken's own
+ * `cond: cond LS { $1 | $2 }`). `movm_addr_mode` is that mechanism's
+ * decoded payload for MOVM specifically -- a plain P/U/W bitset.
+ * The S bit (C_SBIT, PSR transfer on the LDM/STM used by exception
+ * return) is deliberately not wired: RFE already emits its own fixed
+ * MOVM encoding by hand (see Codegen5.ml's RFE case), so no real .s
+ * text needs to spell MOVM.S directly -- Parser_asm5.mly's MOVM
+ * productions reject it with a real error instead of silently
+ * ignoring it (same "error loudly, don't emit wrong bytes" precedent
+ * as case 37's immrot check). *)
+type movm_addr_mode = {
+  mm_pre : bool;       (* P: pre-index vs post-index *)
+  mm_up : bool;        (* U: increment vs decrement (address direction) *)
+  mm_writeback : bool; (* W: write address back to the base register *)
+}
+[@@deriving show]
+
+(* claude: bit values for the generic dot-suffix-flag token (TSUF),
+ * one per suffix xix's lexer recognizes, so that multiple suffixes
+ * fold via plain bitwise-or in Parser_asm5.mly's `condf` rule -- the
+ * same accumulator shape as goken's `scond`. Only sflag_pbit/
+ * sflag_ubit/sflag_wbit are actually decoded anywhere
+ * (movm_addr_mode_of_flags below); sflag_sbit/sflag_fbit exist so the
+ * full suffix vocabulary can be recognized (and explicitly rejected
+ * where unsupported, e.g. MOVM.S) instead of being a lexer/grammar
+ * error that looks unrelated to the real reason.
+ * NOTE: unlike goken's own lex.c, these are 5 independent bits.
+ * goken actually reuses ONE physical bit (C_UBIT and C_FBIT are both
+ * `1<<7`, GO/C/cmd/5l/5.out.h) for two unrelated meanings ("up" on
+ * MOVM, "flags-only" on MSR) -- a bit-packing accident, not a real
+ * language feature (nobody writes "MOVM.F" expecting up-bit
+ * behavior). Confirmed directly: assembling+linking
+ * "MOVM.F.DB.W [R4,R5],(R13)" with goken produces the exact same
+ * bytes as "MOVM.U.DB.W" would. Replicating that aliasing quirk
+ * bit-for-bit isn't worth it for something no real .s text relies
+ * on -- xix instead keeps ".F" and ".U" as textually and bit-wise
+ * distinct tokens, so MOVM.F is simply rejected (see the MOVM
+ * productions in Parser_asm5.mly) rather than silently behaving like
+ * MOVM.U. *)
+let sflag_sbit = 1
+let sflag_pbit = 2
+let sflag_ubit = 4
+let sflag_wbit = 8
+let sflag_fbit = 16
+
+let movm_addr_mode_of_flags (flags : int) : movm_addr_mode =
+  { mm_pre = flags land sflag_pbit <> 0;
+    mm_up = flags land sflag_ubit <> 0;
+    mm_writeback = flags land sflag_wbit <> 0;
+  }
 
 (* reserved by linker *)
 (*s: constant [[Ast_asm5.rTMP]] *)
@@ -152,6 +208,14 @@ type mov_operand =
    * above, see psrreg's own comment for why the ".F" suffix isn't
    * wired. *)
   | PSRImsr of psrreg
+  (* claude: case 38/39 -- the "[R4-R11,R14]" register-list operand of
+   * MOVM below, a plain bitmask (bit i set means Ri is in the list),
+   * mirroring goken's own D_CONST reglist-bitmask representation
+   * (a.y's `reglist` rule folds ranges/commas into one int the same
+   * way). Paired with an Indirect base register via MOVM; direction
+   * (store vs load) is inferred from which side is RegList vs
+   * Indirect, the same convention MOVE already uses for its src/dst. *)
+  | RegList of int
 (*e: type [[Ast_asm5.mov_operand]] *)
 
 [@@deriving show]
@@ -201,6 +265,12 @@ type instr =
    * change for an ARM-only feature -- floatp_precision (F/D) already
    * exists and is exactly what's needed instead. *)
   | MOVEF of A.floatp_precision *
+      mov_operand (* src *) * mov_operand (* dst *)
+  (* claude: case 38 (movm $con,oreg -> stm, "MOVM [regs],(Rbase)")
+   * and case 39 (movm oreg,$con -> ldm, "MOVM (Rbase),[regs]") -- see
+   * movm_addr_mode's own comment for the P/U/W suffix bits and the
+   * S-bit caveat. *)
+  | MOVM of movm_addr_mode *
       mov_operand (* src *) * mov_operand (* dst *)
   (*e: [[Ast_asm5.instr]] memory instructions cases *)
 
@@ -305,7 +375,7 @@ let branch_opd_of_instr (instr : instr_with_cond) : A.branch_operand option =
   | BL opd -> Some opd
   | Bxx (_cond, opd) -> Some opd
   | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _ | SWAP _
-  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ -> None
+  | Cmp _ | CmpF _ | SWI _ | RFE | MULL _ | MOVM _ -> None
 (*e: function [[Ast_asm5.branch_opd_of_instr]] *)
 
 (*s: function [[Ast_asm5.visit_globals_instr]] *)
@@ -315,11 +385,12 @@ let visit_globals_instr (f : global -> unit) (i : instr_with_cond) : unit =
     | Entity (A.Global (x, _)) -> f x
     | Entity (A.Param _ | A.Local _) -> ()
     | Ximm x -> A.visit_globals_ximm f x
-    | Imsr _ | Indirect _ | FImsr _ | FCRImsr _ | PSRImsr _ -> ()
+    | Imsr _ | Indirect _ | FImsr _ | FCRImsr _ | PSRImsr _ | RegList _ -> ()
   in
   match fst i with
   | MOVE (_, _, m1, m2) -> mov_operand m1; mov_operand m2
   | MOVEF (_, m1, m2) -> mov_operand m1; mov_operand m2
+  | MOVM (_, m1, m2) -> mov_operand m1; mov_operand m2
   (* ocaml-light: | B b | BL b | Bxx (_, b) -> branch_operand b *)
   | B b -> A.visit_globals_branch_operand f b
   | BL b -> A.visit_globals_branch_operand f b

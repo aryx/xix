@@ -42,6 +42,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
   | T.TDOLLAR-> TDOLLAR
   | T.TOPAR-> TOPAR
   | T.TCPAR-> TCPAR
+  | T.TLBRACKET-> TLBRACKET
+  | T.TRBRACKET-> TRBRACKET
   | T.TPLUS-> TPLUS
   | T.TMINUS-> TMINUS
   | T.TMUL-> TMUL
@@ -136,6 +138,28 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asm5.token =
 
       (* claude: case 35/36/37, move to/from PSR. *)
       | "CPSR" -> TPSR CPSR | "SPSR" -> TPSR SPSR
+
+      (* claude: case 38/39, multi-register load/store. *)
+      | "MOVM" -> TMOVM
+
+      (* claude: case 38/39's generic dot-suffix-flag vocabulary,
+       * ported bit-for-bit from goken's lex.c special-bits table
+       * (only P/U/W are ever decoded, by Parser_asm5.mly's MOVM
+       * productions -- see Ast_asm5.ml's sflag_* comment). *)
+      | ".S"   -> TSUF Ast_asm5.sflag_sbit
+      | ".P"   -> TSUF Ast_asm5.sflag_pbit
+      | ".W"   -> TSUF Ast_asm5.sflag_wbit
+      | ".U"   -> TSUF Ast_asm5.sflag_ubit
+      | ".IB"  -> TSUF (Ast_asm5.sflag_pbit lor Ast_asm5.sflag_ubit)
+      | ".IA"  -> TSUF Ast_asm5.sflag_ubit
+      | ".DB"  -> TSUF Ast_asm5.sflag_pbit
+      | ".PW"  -> TSUF (Ast_asm5.sflag_wbit lor Ast_asm5.sflag_pbit)
+      | ".WP"  -> TSUF (Ast_asm5.sflag_wbit lor Ast_asm5.sflag_pbit)
+      | ".IBW" -> TSUF (Ast_asm5.sflag_wbit lor Ast_asm5.sflag_pbit lor Ast_asm5.sflag_ubit)
+      | ".IAW" -> TSUF (Ast_asm5.sflag_wbit lor Ast_asm5.sflag_ubit)
+      | ".DBW" -> TSUF (Ast_asm5.sflag_wbit lor Ast_asm5.sflag_pbit)
+      | ".DAW" -> TSUF Ast_asm5.sflag_wbit
+      | ".F"   -> TSUF Ast_asm5.sflag_fbit
       (*x: [[Parse_asm5.token]] in [[TIDENT]] case, other cases *)
       (* advanced *)
       | "C" -> TC

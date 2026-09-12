@@ -138,7 +138,7 @@ let rewrite (cg : 'a T.code_graph) : 'a T.code_graph =
      | T.I (
             ( RFE | Arith _ | ArithF _ | MOVWF _ | MOVFW _ | MOVE _ | MOVEF _
             | SWAP _ | B _ | BL _ | Cmp _ | CmpF _ | Bxx _
-            | SWI _ | MULL _
+            | SWI _ | MULL _ | MOVM _
             )
             , _) ->
         autosize_opt

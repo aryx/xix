@@ -51,6 +51,14 @@ module L = Location_cpp
 %token <Ast_asm5.cmp_opcode> TCMP   
 %token <Ast_asm5.condition> TBx TCOND
 %token TSWI TRFE
+%token TMOVM
+/*(* case 38/39: the generic dot-suffix-flag token (P/U/W/S/F bits,
+   * see Ast_asm5.ml's sflag_* comment) -- only MOVM's `condf` rule
+   * (below) folds these in for now; every other instruction still
+   * uses the plain `cond` rule unchanged, so this can't silently
+   * change behavior of anything already working. *)*/
+%token <int> TSUF
+%token TLBRACKET TRBRACKET
 
 %token TRET TNOP
 
@@ -234,6 +242,33 @@ instr:
        (MULL (sign, accum, $3, $5, hi, lo), $2)
      }
 
+ /*(* case 38: "MOVM condf [reglist],oreg" -- stm (store: registers ->
+    * memory). condf (not cond) since P/U/W address-mode suffixes are
+    * how this instruction is actually written in practice (e.g.
+    * ".DB.W" for a stack push); see movm_addr_mode's own comment.
+    * Neither S nor F is supported: S is real on goken (the "load/
+    * store user-mode registers" / "restore CPSR from SPSR" special
+    * form) but privileged-only, with RFE already covering the one
+    * exception-return use case that matters under this harness; F
+    * is just goken's own C_UBIT/C_FBIT bit-packing accident aliased
+    * onto MOVM (see sflag_fbit's comment in Ast_asm5.ml) -- both are
+    * rejected here with a real error rather than silently doing
+    * something a user wouldn't expect. *)*/
+ | TMOVM condf TLBRACKET reglist TRBRACKET TC ioreg
+     { let (c, flags) = $2 in
+       if flags land (Ast_asm5.sflag_sbit lor Ast_asm5.sflag_fbit) <> 0
+       then error "MOVM.S/.F is not supported"
+       else (MOVM (Ast_asm5.movm_addr_mode_of_flags flags, RegList $4, $7), c)
+     }
+ /*(* case 39: "MOVM condf oreg,[reglist]" -- ldm (load: memory ->
+    * registers). *)*/
+ | TMOVM condf ioreg TC TLBRACKET reglist TRBRACKET
+     { let (c, flags) = $2 in
+       if flags land (Ast_asm5.sflag_sbit lor Ast_asm5.sflag_fbit) <> 0
+       then error "MOVM.S/.F is not supported"
+       else (MOVM (Ast_asm5.movm_addr_mode_of_flags flags, $3, RegList $6), c)
+     }
+
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/
 /*(*************************************************************************)*/
@@ -405,9 +440,37 @@ expr:
 /*(*1 Misc *)*/
 /*(*************************************************************************)*/
 
-/*(* todo: special bits or inline in previous rule? *)*/
 cond:
  | /* empty */ { AL }
  | TCOND  { $1 }
+
+/*(* claude: case 38/39 -- the generic condition+suffix-flags
+   * accumulator, directly mirroring goken's own left-recursive
+   * `cond: empty | cond LCOND | cond LS` (a.y). Kept as its own
+   * nonterminal (rather than changing `cond` itself, which every
+   * other instruction above still uses) so that adding this doesn't
+   * silently change what any existing, already-tested production
+   * accepts -- only MOVM opts into flag parsing. A future case that
+   * wants e.g. Arith's ".S" or MOVE's ".W"/".P" to be real would
+   * switch that production to `condf` too, and decide there how to
+   * handle/reject bits it doesn't understand, same as MOVM does
+   * below for ".S"/".F". *)*/
+condf:
+ | /* empty */  { (AL, 0) }
+ | condf TCOND  { let (_, flags) = $1 in ($2, flags) }
+ | condf TSUF   { let (c, flags) = $1 in (c, flags lor $2) }
+
+/*(* case 38/39: "[R4-R11,R14]" -- a plain register-bitmask, folded
+   * left-to-right same as goken's own `reglist` rule (a.y). *)*/
+reglist:
+ | reg { let (R i) = $1 in 1 lsl i }
+ | reg TMINUS reg
+     { let (R a) = $1 and (R b) = $3 in
+       let lo = min a b and hi = max a b in
+       let bits = ref 0 in
+       for i = lo to hi do bits := !bits lor (1 lsl i) done;
+       !bits
+     }
+ | reg TC reglist { let (R i) = $1 in (1 lsl i) lor $3 }
 
 /*(*e: Parser_asm5.mly *)*/

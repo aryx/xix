@@ -21,6 +21,12 @@ type t =
   | TSEMICOLON of int (* global line number *)
   | TCOLON | TDOT | TCOMMA | TDOLLAR
   | TOPAR | TCPAR
+  (* claude: case 38/39 (ARM MOVM's "[R4-R11,R14]" register-list
+   * operand) -- shared in Token_asm.ml/Lexer_asm.mll like every other
+   * punctuation token, even though only Parser_asm5.mly's grammar
+   * actually uses it (i/v's Parse_asmX.ml just pass it through, same
+   * as any other token their own grammar doesn't reference). *)
+  | TLBRACKET | TRBRACKET
   (* operators *)
   | TPLUS | TMINUS
   | TMUL | TSLASH | TMOD

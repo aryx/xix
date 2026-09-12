@@ -119,7 +119,7 @@ let base_and_offset_of_indirect node symbols2 autosize x =
           error node (spf "use of procedure %s in indirect with offset"
                        (A.s_of_global global))
       )
-  | Imsr _ | Ximm _ | FImsr _ | FCRImsr _ | PSRImsr _ ->
+  | Imsr _ | Ximm _ | FImsr _ | FCRImsr _ | PSRImsr _ | RegList _ ->
       raise (Impossible "should be called only for indirects")
 (*e: function [[Codegen5.base_and_offset_of_indirect]] *)
 
@@ -601,6 +601,19 @@ let gpsr_read (psr : psrreg) (R rt) : Bits.t =
  * isn't wired (always the "full PSR write" encoding here). *)
 let gpsr_write_base (psr : psrreg) : Bits.t =
   [(0x2, 23); (0x29f, 12); (psr_bit psr, 22)]
+
+(* claude: case 38/39 (MOVM -> STM/LDM). goken's codegen.c: base
+ * `o1 = (0x4<<25)`, then P/U/W bits at [24]/[23]/[21] (S at [22], not
+ * wired -- see movm_addr_mode's Ast_asm5.ml comment) and finally the
+ * L bit at [20] distinguishing LDM (1, case 39) from STM (0, case
+ * 38) -- ARM's standard block-data-transfer encoding
+ * (cond|100|P|U|S|W|L|Rn|register_list). *)
+let gmovm_opcode (mode : movm_addr_mode) ~(is_load : bool) : Bits.t =
+  [(0x4, 25)]
+  @ (if mode.mm_pre then [(1, 24)] else [])
+  @ (if mode.mm_up then [(1, 23)] else [])
+  @ (if mode.mm_writeback then [(1, 21)] else [])
+  @ (if is_load then [(1, 20)] else [])
 
 (* claude: case 17 (MULL/MULLU/MULAL/MULALU, 64-bit long multiply) --
  * oprrr()'s 4 cases in codegen.c all share `(v<<21)|(0x9<<4)`, where
@@ -1189,6 +1202,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   [ [gcond cond] @ gpsr_read psr rt ]
                 )}
             | Byte _ | HalfWord _ -> error node "MOV from PSR must be Word")
+        | RegList _ -> raise (Impossible "RegList is MOVM-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1232,6 +1246,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
         | PSRImsr _ -> raise (Impossible "PSRImsr is Word-MOVE-only")
+        | RegList _ -> raise (Impossible "RegList is MOVM-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize from in
@@ -1290,6 +1305,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
                   [ [gcond cond] @ gpsr_write_base psr @ [(rf_i, 0)] ]
                 )}
             | Byte _ | HalfWord _ -> error node "MOV to PSR must be Word")
+        | RegList _ -> raise (Impossible "RegList is MOVM-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1343,6 +1359,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         | FImsr _ -> raise (Impossible "FImsr is MOVEF-only")
         | FCRImsr _ -> raise (Impossible "FCRImsr is Word-MOVE-only")
         | PSRImsr _ -> raise (Impossible "PSRImsr is Word-MOVE-only")
+        | RegList _ -> raise (Impossible "RegList is MOVM-only")
         | Indirect _ | Entity _ ->
             let (rbase, offset) =
               base_and_offset_of_indirect node env.syms env.autosize dest in
@@ -1446,6 +1463,31 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     | MOVEF (_, _, _) ->
         error node "illegal MOVEF operand combination"
+
+    (* Multiple move (block data transfer) *)
+    (* case 38:	/* movm $con,oreg -> stm */ -- store: registers to
+     * memory. Offset must be zero (goken's own `aclass` + "offset
+     * must be zero in MOVM" diag()), so this errors loudly rather
+     * than silently ignoring a nonzero offset, same precedent as
+     * case 37's immrot check. *)
+    | MOVM (mode, RegList bits, Indirect (rbase, offset)) ->
+        if offset <> 0 then error node "offset must be zero in MOVM";
+        let (R rbase_i) = rbase in
+        { size = 4; x = None; binary = (fun () ->
+          [ [gcond cond] @ gmovm_opcode mode ~is_load:false
+            @ [(rbase_i, 16); (bits, 0)] ]
+        )}
+    (* case 39:	/* movm oreg,$con -> ldm */ -- load: memory to
+     * registers. *)
+    | MOVM (mode, Indirect (rbase, offset), RegList bits) ->
+        if offset <> 0 then error node "offset must be zero in MOVM";
+        let (R rbase_i) = rbase in
+        { size = 4; x = None; binary = (fun () ->
+          [ [gcond cond] @ gmovm_opcode mode ~is_load:true
+            @ [(rbase_i, 16); (bits, 0)] ]
+        )}
+    | MOVM (_, _, _) ->
+        error node "illegal MOVM operand combination"
 
     (* Swap *)
     (* case 40:	/* swp oreg,reg,reg */ *)

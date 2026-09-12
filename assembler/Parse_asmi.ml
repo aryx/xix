@@ -40,6 +40,8 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
   | T.TDOLLAR-> TDOLLAR
   | T.TOPAR-> TOPAR
   | T.TCPAR-> TCPAR
+  | T.TLBRACKET-> TLBRACKET
+  | T.TRBRACKET-> TRBRACKET
   | T.TPLUS-> TPLUS
   | T.TMINUS-> TMINUS
   | T.TMUL-> TMUL

@@ -64,6 +64,7 @@ let rec vof_mov_operand =
   | FImsr v1 -> let v1 = vof_fregister v1 in Ocaml.VSum (("FImsr", [ v1 ]))
   | FCRImsr v1 -> let v1 = vof_fcrreg v1 in Ocaml.VSum (("FCRImsr", [ v1 ]))
   | PSRImsr v1 -> let v1 = vof_psrreg v1 in Ocaml.VSum (("PSRImsr", [ v1 ]))
+  | RegList v1 -> let v1 = Ocaml.vof_int v1 in Ocaml.VSum (("RegList", [ v1 ]))
 
 and vof_fcrreg =
   function
@@ -74,6 +75,20 @@ and vof_psrreg =
   function
   | CPSR -> Ocaml.VSum (("CPSR", []))
   | SPSR -> Ocaml.VSum (("SPSR", []))
+
+and vof_movm_addr_mode
+    { mm_pre = v_mm_pre; mm_up = v_mm_up; mm_writeback = v_mm_writeback } =
+  let bnds = [] in
+  let arg = Ocaml.vof_bool v_mm_writeback in
+  let bnd = ("mm_writeback", arg) in
+  let bnds = bnd :: bnds in
+  let arg = Ocaml.vof_bool v_mm_up in
+  let bnd = ("mm_up", arg) in
+  let bnds = bnd :: bnds in
+  let arg = Ocaml.vof_bool v_mm_pre in
+  let bnd = ("mm_pre", arg) in
+  let bnds = bnd :: bnds in
+  Ocaml.VDict bnds
 
 and vof_entity = 
  function
@@ -142,6 +157,11 @@ let rec vof_instr =
       and v2 = vof_mov_operand v2
       and v3 = vof_mov_operand v3
       in Ocaml.VSum (("MOVEF", [ v1; v2; v3 ]))
+  | MOVM ((v1, v2, v3)) ->
+      let v1 = vof_movm_addr_mode v1
+      and v2 = vof_mov_operand v2
+      and v3 = vof_mov_operand v3
+      in Ocaml.VSum (("MOVM", [ v1; v2; v3 ]))
   | SWAP ((v1, v2, v3, v4)) ->
       let v1 = vof_move_size v1
       and v2 = vof_register v2

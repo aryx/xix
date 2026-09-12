@@ -48,6 +48,7 @@ CASES=(
     "tests/linker/arm_diff/fcr_move_case56_57.s"
     "tests/linker/arm_diff/mull_case17.s"
     "tests/linker/arm_diff/psr_move_case35_36_37.s"
+    "tests/linker/arm_diff/movm_case38_39.s"
 )
 
 FAIL=0

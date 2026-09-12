@@ -434,14 +434,55 @@ Not yet in Codegen5.ml at all:
    against goken and traps identically as "Illegal instruction" on
    both sides (no SPSR access in user mode) -- confirms the shared
    encoding but adds no further coverage.
-** TODO case 38 movm $con,oreg -> stm
-** TODO case 39 movm oreg,$con -> ldm
-   (cases 38/39 likewise need a MOVM AST constructor first, plus
-   parsing the .IA/.DB/.FD/.ED-style addressing-mode suffixes and a
-   register-list syntax `[R0-R3,R14]` -- Ast_asm5.ml's own prelude
-   TODO already flags "MOVM (and his special bits .IA/...)" as
-   unrepresented. Same category of work as 35-37: assembler
-   grammar/AST first, Codegen5.ml second.)
+** DONE case 38 movm $con,oreg -> stm / case 39 movm oreg,$con -> ldm
+   (ARM's block data transfer, multi-register load/store) -- real,
+   reachable syntax: "MOVM [reglist],oreg" (store) / "MOVM oreg,
+   [reglist]" (load), a.y's `reglist` rule (register range or comma
+   list, confirmed against goken directly that combining both in one
+   list, e.g. "[R4-R6,R14]", is a syntax error on BOTH sides -- not
+   an xix limitation). New `RegList of int` mov_operand (a plain
+   bitmask) and `MOVM of movm_addr_mode * mov_operand * mov_operand`
+   instr, direction inferred from which side is RegList vs Indirect
+   (same convention as MOVE's src/dst).
+   Unlike PSR's lone ".F" bit, MOVM's P/U/W address-mode suffix bits
+   (".IA"/".DB"/".IAW"/".DBW"/etc) are essential to any real use
+   (e.g. a function-prologue push is "MOVM.DB.W [regs],(SP)") --
+   this is what finally justified building a real generic dot-
+   suffix-flag grammar mechanism: Parser_asm5.mly's `condf` rule and
+   TSUF token, a left-recursive bitmask accumulator directly
+   mirroring goken's own `cond: cond LS { $1 | $2 }` (a.y). Kept as
+   a separate nonterminal from the existing `cond` rule (still used
+   unchanged by every other instruction) so building this couldn't
+   silently change what any already-tested production accepts --
+   only MOVM opts in. A future case wiring e.g. Arith's ".S" or
+   MOVE's ".W"/".P" for real would switch that production to
+   `condf` too and decide there how to handle bits it doesn't
+   understand, same as MOVM does below.
+   The S bit (goken's "load/store user-mode registers" / "restore
+   CPSR from SPSR" special form) is real on goken but privileged-
+   only -- RFE already covers the one exception-return use that
+   matters under this harness -- so it's rejected with a real
+   grammar-time error rather than silently ignored. The F bit is
+   also rejected, but for a completely different reason: goken's own
+   C_UBIT and C_FBIT are literally the same physical bit (`1<<7`,
+   GO/C/cmd/5l/5.out.h) reused for two unrelated meanings ("up" on
+   MOVM, "flags-only" on MSR) -- confirmed directly that assembling
+   "MOVM.F.DB.W [...]" with goken produces byte-identical output to
+   "MOVM.U.DB.W", a bit-packing accident rather than a real language
+   feature nobody's .s text relies on. xix keeps ".F"/".U" as
+   distinct tokens rather than replicating that aliasing, so MOVM.F
+   is simply rejected instead of silently behaving like MOVM.U.
+   Also needed 2 new shared punctuation tokens, TLBRACKET/TRBRACKET
+   ("["/"]"), added to Token_asm.ml/Lexer_asm.mll like any other
+   punctuation (i/v's Parse_asmX.ml just pass them through unused,
+   same as other tokens their own grammars don't reference).
+   Added movm_case38_39.s: two self-balanced push/pop pairs against
+   the real stack pointer (R13, valid at Linux process entry) using
+   ".DB.W"/".IA.W", one with a comma reglist and one with a range
+   reglist, each restoring and summing its registers into the exit
+   code. PASS byte-identical (398 bytes both sides) + PASS same
+   qemu-arm exit code (66) -- a genuine functional round-trip, not
+   just matching bytes.
 ** DONE case 50 floating point store / case 51 floating point load /
    case 52 floating point store, long offset UGLY / case 53 floating
    point load, long offset UGLY -- MOVF/MOVD to/from a plain register

@@ -288,6 +288,13 @@ let op_mfc_mtc (is_mtc1 : bool) (r_int : int) (r_float : int) : Bits.t =
 let op_mc0 (sub : int) (r_int : int) (r_m : int) : Bits.t =
   sp 2 0 @ [(sub, 21); (r_int, 16); (r_m, 11)]
 
+(* claude: MFCC1/MTCC1 (case 41/42, moves to/from an FCR -- a
+ * *control* register, not a data one like MTC1/MFC1 above, hence
+ * the different sub-field within the same SP(2,1) family: 2 for
+ * MFCC1 (read), 6 for MTCC1 (write). *)
+let op_cfc_ctc (is_ctc1 : bool) (r_int : int) (r_fcr : int) : Bits.t =
+  sp 2 1 @ [((if is_ctc1 then 6 else 2), 21); (r_int, 16); (r_fcr, 11)]
+
 let op_irr (op : Bits.t) (i : int) (R r2 : reg) (R r3 : reg) : Bits.t =
   op @ [(i land 0xffff, 0); (r2, 21); (r3, 16)]
 
@@ -575,6 +582,28 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
         { size = 12; x = None; binary = (fun () -> [ op_mc0 0 rt rf; nop; nop ]) }
     | Move2 (V__, Left (MReg (M rf)), Gen (GReg (R rt))) ->
         { size = 12; x = None; binary = (fun () -> [ op_mc0 1 rt rf; nop; nop ]) }
+
+    (* case 41:	/* movw r,fcr */ *)
+    (* claude: MTCC1 (write) -- goken's C does a dummy MFCC1 read
+     * into REGZERO first (`OP_RRR(SP(2,1)|(2<<21), REGZERO, 0,
+     * p->to.reg)`), a real MIPS I FCR hazard workaround, before the
+     * actual MTCC1 write; no delay slot needed after (confirmed via
+     * `vl -a`). *)
+    | Move2 (W__, Left (Gen (GReg (R rf))), FCReg (FCR rt)) ->
+        { size = 8; x = None; binary = (fun () ->
+            [ op_cfc_ctc false 0 rt; op_cfc_ctc true rf rt ]
+         ) }
+
+    (* case 42:	/* movw fcr,r */ *)
+    (* claude: MFCC1 (read) -- single instruction, but like case 38
+     * (MFC0) this is a D_FCREG source, so it gets the same
+     * unconditional 2-NOP special case from noop.c (see case 38's
+     * comment) rather than the 1-NOP COP1/load hazards elsewhere
+     * this session. *)
+    | Move2 (W__, Left (FCReg (FCR rf)), Gen (GReg (R rt))) ->
+        { size = 12; x = None; binary = (fun () ->
+            [ op_cfc_ctc false rt rf; nop; nop ]
+         ) }
 
     (* case 32:	/* fadd fr1,[fr2],fr3 */ *)
     (* claude: ADD_/SUB_/MUL_/DIV_ only -- see oprrr_arithf_opcode's

@@ -33,35 +33,37 @@ CASES=(
     "tests/linker/mips_diff/case27_28_mips.s:_start"
     "tests/linker/mips_diff/case37_38_mips.s:_start"
     "tests/linker/mips_diff/case40_mips.s:_start"
+    "tests/linker/mips_diff/case41_42_mips.s:_start"
 )
 # tests/linker/mips_diff/call_mips.s, case6_mips.s, immcon_mips.s,
 # movbh_check_mips.s, mullohi_check_mips.s, case30_31_check_mips.s,
-# case34_check_mips.s, case7_8_check_mips.s, case27_28_check_mips.s
-# and case37_38_check_mips.s are deliberately NOT in this list: all
-# ten produce the same qemu-mips behavior on both sides (an actual
-# exit-code match for the BEQ-based ones; an identical illegal-
-# instruction trap for case37_38_check_mips.s, since MTC0/MFC0 are
-# privileged) but are not byte-identical, because goken's sched.c
-# hoists real instructions into branch/call delay slots (and,
-# separately, pads NOPs around certain MUL-result HI/LO read/write
-# transitions, MTC1/MFC1 COP1-transfer read/write transitions,
-# plain load-delay-slot reads, i.e. case 8/27/36, and MFC0/DMFC0's
-# own 2-NOP hazard, i.e. case 38) instead of what this port emits --
-# see docs/claude_notes/todo_mips_port.org. immcon_mips.s and
-# movbh_check_mips.s use BEQ/JMP purely to self-check their own
-# arithmetic, so they inherit the same scheduler-only diff as
-# case6_mips.s (which has more branches than call_mips.s, hence a
-# bigger diff -- 16 bytes across several delay slots, not just 4);
-# mullohi_check_mips.s, case30_31_check_mips.s, case34_check_mips.s,
-# case7_8_check_mips.s, case27_28_check_mips.s and
-# case37_38_check_mips.s each inherit *both* that BEQ/JMP gap *and*
-# their own respective hazard's NOP-padding gap (see
-# mullohi_mips.s's, case30_31_mips.s's, case34_mips.s's,
-# case7_8_mips.s's, case27_28_mips.s's and case37_38_mips.s's own
-# comments for what's byte-identical there instead). The root cause
-# and the decision not to port the scheduler are identical in all
-# ten. Run any of them manually with scripts/diff-mips.sh to see
-# their (small, known, scheduler-only) diffs.
+# case34_check_mips.s, case7_8_check_mips.s, case27_28_check_mips.s,
+# case37_38_check_mips.s and case41_42_check_mips.s are deliberately
+# NOT in this list: all eleven produce the same qemu-mips behavior
+# on both sides (an actual exit-code match for the BEQ-based ones;
+# an identical illegal-instruction trap for case37_38_check_mips.s,
+# since MTC0/MFC0 are privileged) but are not byte-identical,
+# because goken's sched.c hoists real instructions into branch/call
+# delay slots (and, separately, pads NOPs around certain MUL-result
+# HI/LO read/write transitions, MTC1/MFC1 COP1-transfer read/write
+# transitions, plain load-delay-slot reads, i.e. case 8/27/36, and
+# the D_MREG/D_FCREG source 2-NOP hazard, i.e. case 38/42) instead
+# of what this port emits -- see docs/claude_notes/todo_mips_port.org.
+# immcon_mips.s and movbh_check_mips.s use BEQ/JMP purely to
+# self-check their own arithmetic, so they inherit the same
+# scheduler-only diff as case6_mips.s (which has more branches than
+# call_mips.s, hence a bigger diff -- 16 bytes across several delay
+# slots, not just 4); mullohi_check_mips.s, case30_31_check_mips.s,
+# case34_check_mips.s, case7_8_check_mips.s, case27_28_check_mips.s,
+# case37_38_check_mips.s and case41_42_check_mips.s each inherit
+# *both* that BEQ/JMP gap *and* their own respective hazard's
+# NOP-padding gap (see mullohi_mips.s's, case30_31_mips.s's,
+# case34_mips.s's, case7_8_mips.s's, case27_28_mips.s's,
+# case37_38_mips.s's and case41_42_mips.s's own comments for what's
+# byte-identical there instead). The root cause and the decision not
+# to port the scheduler are identical in all eleven. Run any of them
+# manually with scripts/diff-mips.sh to see their (small, known,
+# scheduler-only) diffs.
 
 FAIL=0
 for c in "${CASES[@]}"; do

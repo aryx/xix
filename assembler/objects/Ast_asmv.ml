@@ -93,6 +93,9 @@ type vgen =
   (* claude: an M (coprocessor-0/MMU) register -- case 37/38
    * (MTC0/MFC0/DMTC0/DMFC0) in Codegenv.ml. *)
   | MReg of mreg
+  (* claude: an FCR (floating point control register, e.g. FCR31)
+   * -- case 41/42 (MFCC1/MTCC1) in Codegenv.ml. *)
+  | FCReg of fcrreg
   (* | ... far more stuff *)
 [@@deriving show {with_path = false}]
 
@@ -218,6 +221,7 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
     | LoHi _ -> ()
     | GFReg _ -> ()
     | MReg _ -> ()
+    | FCReg _ -> ()
   in
   match i with
   | Move1 (_, x1, gen2) -> 

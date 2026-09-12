@@ -636,12 +636,38 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    sides -- the raw word sits in the TEXT stream right at the entry
    point and isn't a valid instruction). Verified: full MIPS + ARM
    baselines and make test (134/134) all still pass.
+** DONE case 41 movw r,fcr (MTCC1) / case 42 movw fcr,r (MFCC1) --
+   floating point control register moves (e.g. FCR31), the follow-up
+   deferred from case 37/38. Required new AST (`FCReg of fcrreg` on
+   `vgen`, same spot as MReg/GFReg; Object_file.version bumped
+   12->13); the fcrreg token/lexer infrastructure (TFCR/TFCRx,
+   "FCR31" syntax) already existed unused, same story as mreg's.
+   New op_cfc_ctc helper: same SP(2,1) family as case 30/31's
+   MTC1/MFC1, but a different sub-field (2 for MFCC1, 6 for MTCC1)
+   since these move a *control* register, not a data one.
+   Case 41 (write) does a dummy MFCC1 read into REGZERO first (a
+   real MIPS I FCR hazard workaround already in goken's C, not
+   something added here), then the real MTCC1 write -- no delay
+   slot needed after. Case 42 (read) is a single instruction but
+   gets the same unconditional 2-NOP D_FCREG-source special case as
+   case 38's MFC0 (see that entry) rather than the 1-NOP hazards
+   elsewhere this session.
+   Unlike case 37/38 (MTC0/MFC0, privileged/kernel-only), FCR31 is
+   accessible from user mode -- confirmed to actually run correctly
+   under qemu-mips (exit code 0/1 as expected), not just trap
+   identically.
+   Added tests/linker/mips_diff/case41_42_mips.s (write only,
+   byte-identical) and case41_42_check_mips.s (write+read round
+   trip, self-checked with BEQ -- functionally correct but inherits
+   case 42's 2-NOP gap and BEQ/JMP's own, kept out of
+   test-mips.sh's CASES like the other scheduler-gap fixtures). PASS
+   byte-identical (case41_42_mips.s) + PASS functionally (both).
+   Verified: full MIPS + ARM baselines and make test (134/134) all
+   still pass.
 
 Not yet in Codegenv.ml at all:
 ** TODO case 0  pseudo ops
 ** TODO case 39 rfe ==> jmp+rfe
-** TODO case 41 movw r,fcr
-** TODO case 42 movw fcr,r
 ** TODO case 45 case r
 ** TODO case 46 bcase $con,lbra
 ** TODO case 47 sc r, soreg

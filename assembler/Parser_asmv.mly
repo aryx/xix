@@ -266,6 +266,7 @@ vgen:
  | TLOHI { LoHi $1 }
  | freg { GFReg $1 }
  | mreg { MReg $1 }
+ | fcrreg { FCReg $1 }
 
 /*(*TODO: far more cases *)*/
 vlgen:
@@ -273,6 +274,7 @@ vlgen:
  | TLOHI { Left (LoHi $1) }
  | freg { Left (GFReg $1) }
  | mreg { Left (MReg $1) }
+ | fcrreg { Left (FCReg $1) }
 
 /*(*-----------------------------------------*)*/
 /*(*2 name and offset (arch independent)  *)*/
@@ -325,6 +327,14 @@ mreg:
  | TM TOPAR con TCPAR
      { if $3 <= 31 && $3 >= 0
        then M $3
+       else error "register value out of range"
+     }
+
+fcrreg:
+ | TFCRx              { $1 }
+ | TFCR TOPAR con TCPAR
+     { if $3 <= 31 && $3 >= 0
+       then FCR $3
        else error "register value out of range"
      }
 

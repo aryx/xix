@@ -22,7 +22,7 @@ type 'instr t = {
 
 (* less: could be sha1 of ast_asmxxx.ml for even safer marshalling *)
 (*s: constant [[Object_file.version]] *)
-let version = 21
+let version = 22
 (*e: constant [[Object_file.version]] *)
 
 (*****************************************************************************)
@@ -57,6 +57,6 @@ let load (chan : Chan.i) : 'instr t =
 
 (*s: function [[Object_file.is_obj_filename]] *)
 let is_obj_filename (file : Fpath.t) : bool =
-  !!file =~ ".*\\.o[5vij]$"
+  !!file =~ ".*\\.o[5vij7]$"
 (*e: function [[Object_file.is_obj_filename]] *)
 (*e: objects/Object_file.ml *)

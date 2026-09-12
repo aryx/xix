@@ -1,0 +1,310 @@
+Porting the ARM64 toolchain (7a/7l) against goken, byte-equal
+===============================================================
+
+Status: basic structure in place and byte-verified (first checkpoint).
+`o7a`/`o7l` exist and assemble+link real .s fixtures to output that's
+byte-identical to goken's 7a/7l, verified under qemu-aarch64:
+tests/linker/arm64_diff/exit_linux.s (plain exit) and kitchen_sink.s
+(register/immediate arithmetic, shift, compare, conditional branch).
+Covered so far: Arith (ADD/SUB/AND/ORR/EOR/BIC, register or small
+"addcon"-range immediate), Shift (LSL/LSR/ASR/ROR, immediate or
+register), Cmp (CMP/CMN), ArithMul (simple 3-operand MUL), Move
+(register<->register, register<->memory with a plain scaled 12-bit-
+unsigned offset, and "MOV $con,R" for a constant that fits goken's
+own real classification chain -- see Codegen7.ml's
+move_immediate_encoding comment for the genuinely surprising part of
+that), B/BL/Bxx/CBxx (direct and register-indirect), RET, SVC.
+
+Not yet done, real follow-up work (see "Suggested phase plan" below,
+now updated in light of what this first pass actually found):
+ - No literal pool at all yet. Needed for: any "MOV $con,R" whose
+   constant doesn't fit the direct MOVZ/MOVN encoding (including,
+   surprisingly, some *small* values -- goken's own constant
+   classification chases isaddcon/isbitcon/movcon in a specific
+   priority order where a value being a valid ARM64 "logical
+   immediate" bit pattern routes it to the pool even when it would
+   trivially fit a direct MOVZ otherwise; fully reverse-engineered
+   and documented in Codegen7.ml, but the pool itself isn't built),
+   any SB-relative global load/store whose offset doesn't fit the
+   scaled 12-bit immediate, and address-of-global entirely (confirmed
+   empirically that even "MOV $sym(SB),R" goes through the *same*
+   literal-pool mechanism on this arch, not a dedicated ADD-from-SB
+   instruction the way ARM32/MIPS/RISC-V do it -- see Ast_asm7.ml's
+   prelude comment). Port Layout5.ml's pool-splicing shape when this
+   lands, not reinvent it.
+ - No TEXT-frame-size-driven prologue/epilogue synthesis. Confirmed
+   empirically that goken's own assembler inserts a real SP-adjustment
+   prologue/epilogue whenever a TEXT's declared frame size is nonzero,
+   *regardless* of whether the .s text also writes its own explicit
+   RSP-relative accesses -- this port's Rewrite7.ml is currently a
+   pure no-op (see its own comment). Needs its own investigation,
+   mirroring Rewrite{5,v,i}.ml's leaf-detection logic but for
+   whatever goken's actual ARM64 rule turns out to be.
+ - Similarly, goken's RET appears to trigger an automatic link-
+   register save/restore prologue around the whole procedure whenever
+   the procedure body references R30 at all (confirmed empirically: a
+   leaf, $0-frame TEXT with an explicit "RET R30" still got a goken-
+   inserted "str x30,[sp,#-16]!" / matching restore) -- not yet
+   understood well enough to replicate; BL/RET-based local calls are
+   not covered by a fixture yet for this reason (kitchen_sink.s
+   deliberately avoids them, see its own comment).
+ - B_/H_/W_ (byte/halfword/32-bit-view) move sizes are declared in
+   Ast_asm7.ml but not implemented in Codegen7.ml yet -- only X_
+   (64-bit) register-register and register-memory moves are.
+ - AND/ORR/EOR/BIC's *immediate* form (a "bitmask immediate" encoding,
+   genuinely different from ADD/SUB's plain 12-bit-optionally-shifted
+   immediate) isn't implemented -- only their register-register form
+   is. Same for the *W-suffixed 32-bit-view forms of everything.
+ - A real, reproducible build-staleness gotcha worth knowing about
+   before touching this port again: `rm -f _build/default/bin_dune/
+   o7a _build/default/bin_dune/o7l && dune build` (the fix that's
+   always worked for every other arch in this project) was NOT
+   sufficient here on at least two separate occasions -- a source
+   edit's effect (confirmed present in `_build/default/linker/
+   Codegen7.ml` and even a debug Printf) still didn't show up in the
+   actual behavior of `_build/default/bin_dune/o7l` until `dune build
+   --force` was used instead. Prefer `--force` when a fix doesn't
+   seem to take effect on this port, rather than assuming the fix
+   itself is wrong.
+
+Goal: same methodology as docs/claude_notes/arm_port.md (ARM32),
+mips_port.md (MIPS), and notes_riscv_port_plan.txt (RISC-V): assemble
++link the same .s with both goken's 7a/7l (Plan 9 ARM64 assembler/
+linker, ~/goken) and a new xix o7a/o7l, and require the final
+executables to be byte-identical. Scope is ARM64 assembler + linker
+only, permanently -- the compiler (7c) is out of scope for the exact
+same reason as every other arch (see "Compiler is out of scope"
+below).
+
+Read arm_port.md first -- this doc only calls out what's ARM64-
+specific or different from the ARM32 story; the general approach
+(harness shape, syncweb rules, where changes land, goken flag
+adjustments allowed, per-case workflow) is identical and not repeated
+here.
+
+The one load-bearing difference from every arch ported so far
+------------------------------------------------------------------
+
+MIPS and RISC-V32/64 both started from an existing, if partial, xix
+side: MIPS's `Codegenv.ml` already had 11 cases tagged before the
+differential-testing work began, and RISC-V's assembler (`oia`,
+`Ast_asmi.ml`/`Parser_asmi.mly`/etc.) was hand-written by the project
+owner before Claude was asked to write the linker (`Codegeni.ml`/
+`oil`) from scratch. ARM64 has neither: `assembler/objects/TODO/
+Ast_asm7.ml` is a 30-line, unwired stub (just `register`/`fregister`/
+a `vregister` type alias, sitting in a TODO/ directory, not referenced
+by any dune file), and there is no `Parser_asm7.mly`, `Codegen7.ml`,
+`o7a`, or `o7l` at all. So this port needs a full assembler (grammar,
+lexer, AST, the `Parse_asm7.ml`/`Meta_ast_asm7.ml`/`Object_file`
+plumbing) *and* the linker's codegen, in that order -- there is no
+"linker-only, assembler already exists" shortcut available this time.
+
+`lib_core/commons/Arch.ml` already has `Arm64` as a first-class
+variant (`Endian.Little`, `Arch64`, letter `'7'`, matching goken's own
+`7a`/`7l` naming) -- so the one piece of cross-cutting plumbing that
+needed real thought for MIPS (endianness) is already correctly wired
+here; nothing to flip before starting, unlike the MIPS big/little-
+endian saga.
+
+Scale, compared to what's already been ported
+---------------------------------------------------
+
+Rough line counts (goken's C source, `wc -l`), ARM64 vs the already-
+ported arches:
+
+                    assembler (a.y+lex.c+...)   linker (all .c/.h)
+    ARM32 (5a/5l)          2886                       8210
+    MIPS  (va/vl)          2573                       6214
+    ARM64 (7a/7l)          3581                      13685
+
+The linker side is the standout: 7l is ~1.7x 5l's size and ~2.2x
+vl's, even though its main `asmout.c` switch has a similar *case
+count* to 5l's `codegen.c` (70 cases, up to case 66, vs 5l's 67 cases
+up to case 76 -- comparable granularity, not more cases per se).
+`optab.c` (the operand-class-to-case dispatch table) is bigger too:
+447 rows vs 5l's 304 and vl's 235. The extra bulk is real new
+*instruction categories* 5a/5l never had to deal with at all, not
+just more of the same shape (see next section) -- expect the
+per-case average cost to be higher than ARM32's, not just the count.
+
+The assembler's mnemonic table is the most dramatic jump: goken's
+`assemblers/7a/lex.c` has ~497 recognized mnemonic/keyword entries vs
+5a's ~140 -- roughly 3.5x. Most of that is legitimate ISA breadth
+(condition-select family, bitfield ops, SIMD, barriers, system
+instructions -- see below) rather than redundant aliasing, so expect
+the grammar/lexer/AST work (`Parser_asm7.mly`/`Ast_asm7.ml`) to be a
+proportionally larger fraction of the total effort here than it was
+for ARM32, where the codegen side (`Codegen5.ml`) dominated.
+
+Net read: this is a bigger port than ARM32 in both absolute size and
+proportion of genuinely new ground (not just "more of the same
+cases") -- budget for something in the 1.5-2x range of the ARM32
+effort's case count and complexity, concentrated more heavily on the
+assembler/grammar side than ARM32 was.
+
+What's genuinely new here (not just "ARM32 but bigger")
+------------------------------------------------------------
+
+- **Register 31 is contextual, not a fixed name.** ARM32 gave SP/PC
+  their own dedicated register numbers (R13/R15). AArch64's encoding
+  reuses register slot 31 for either the stack pointer OR the zero
+  register (`REGZERO`/`REGSP` both `#define`d to 31 in goken's
+  `7.out.h`), disambiguated by which instruction/operand *position*
+  it appears in -- goken tracks this with an extra `D_SP` operand-type
+  tag rather than by the register number alone. `Ast_asm.register = R
+  of int` (the shared, cross-arch type) has no room for that
+  distinction; this needs a real design decision early (a wrapper
+  type, a separate SP/ZR operand variant, or something else) before
+  any register-operand grammar work happens, not something to
+  discover case-by-case the way the ARM32 port discovered smaller
+  bugs.
+- **64-bit-native throughout.** Every general register is 64 bits by
+  default (`W`-suffixed mnemonics select the 32-bit view of the same
+  register file) -- much closer to the RISC-V64 (`oja`/`Codegenj.ml`)
+  precedent than to ARM32; that prior work is a better model to reuse
+  than ARM32's for the width-handling parts specifically.
+- **A real literal-address/large-constant story that isn't a literal
+  pool.** ARM32's big story here was the literal pool (`Layout5.ml`,
+  `addpool`/`flushpool`/`checkpool`, still not fully ported -- see
+  arm_port.md's "Open issues"). AArch64 instead has `ADRP`+`ADD`
+  (PC-relative page address plus low-12-bit offset) and `MOVZ`/`MOVK`
+  (build a 64-bit constant 16 bits at a time) as its normal address/
+  large-constant mechanisms -- a materially different, arguably
+  simpler mechanism (no pool layout/flush-timing logic needed at all
+  for the common case), but a new one to design and encode correctly
+  from scratch; not reusable from Layout5.ml/Codegen5.ml.
+- **SIMD/vector registers and instructions** (`a.y`'s "SIMD" section,
+  `V` registers, `vregister` in the existing stub) -- an entirely new
+  register file and operand shape (128-bit vector regs, addressed as
+  whole registers or by per-lane width) with no ARM32/MIPS/RISC-V
+  analogue in this codebase at all. Given the "Compiler is out of
+  scope" stance and that occ (via the future c-- backend) is unlikely
+  to emit SIMD directly any time soon, this is a strong candidate for
+  an explicit, early scoping decision (defer entirely, or a narrow
+  "just enough to parse `~/goken`'s own test corpus" subset) rather
+  than something to reluctantly discover is disproportionately
+  expensive midway through, the way ARM32's CASE/BCASE detour did.
+- **Load/store *pair*** (`LDP`/`STP`, a.y's "MOVP/MOVNP") -- a
+  genuinely new operand shape (two destination/source registers, one
+  memory operand) with no precedent in any arch ported so far.
+- **The conditional-select family** (`CSEL`/`CINC`/`CINV`/`CNEG`/
+  `CSET`, a.y's "CSEL/CINC/CNEG/CINV" and "CSET" sections) and
+  **bitfield instructions** (`BFM`/`BFI`/`UBFM`/`EXTR`, used by
+  goken's own case 8/9 to synthesize `LSL $c,...` the way ARM32's
+  case 8/9 used plain shifted-register MOV) -- new instruction shapes,
+  though likely no harder to encode than anything already ported once
+  understood; new grammar/AST, not new *methodology*.
+- **Atomics are already a known minefield, per goken's own history.**
+  `docs/claude_notes/notes_arch_arm64.txt` (goken's C-side notes, not
+  this repo's) documents LDAR/STLR/LDXR/STXR/LDAXR/STLXR having been
+  broken in goken's own 7a/7l in four independent ways at once (wrong
+  grammar arity for STLR, missing optab.c rows for several mnemonics,
+  wrong size bits, wrong arity assumption in asmout.c's stxr case) --
+  fixed by porting from 9front, with a real qemu-verified regression
+  test (`tests/s/features/arm64_atomic_ldxr_stxr.s` on the goken
+  side). Worth reading that file's "Atomics" section before touching
+  this family here: goken's own reference implementation for exactly
+  this corner has a real, documented bug history, so don't assume its
+  current behavior is obviously correct without checking against
+  hardware semantics too, the way most other cases in this
+  methodology only ever need checking against goken.
+- **System instructions and barriers** (`SYS`/`SYSL`, `DMB`, `HINT`) --
+  privileged/no-op-in-userspace territory, same "byte-test it, expect
+  qemu-aarch64 to trap or no-op identically on both sides" pattern
+  already established for ARM32's MCR/MRC, PSR moves, and MIPS's
+  MTC0/MFC0.
+- **Floating point**: `FADDD`/`FCMP`/`FCCMP`/`FMULA` (fused multiply-
+  add, no ARM32 FPA/VFP analogue) and `FCSEL` -- AArch64 has one
+  float unit (no FPA-vs-VFP default-vs-opt-in split like ARM32), so
+  expect this to be more like MIPS's float story (case 32/33/54)
+  than ARM32's two-encoding one.
+
+Harness
+----------
+
+Same recipe as arm_port.md's "Harness" section, arm64-specific
+details:
+- qemu-aarch64 (and qemu-aarch64_be) are already installed on this
+  host -- confirmed, no new setup needed for the "actually run it"
+  pillar of the harness.
+- Unlike 5l (defaults to Plan 9 native, needs explicit `-H7`), 7l
+  already defaults HEADTYPE to ELF (7) automatically on Linux via
+  `$GOOS` detection (`obj.c`'s `getgoos()` check) -- one less flag to
+  pass explicitly, closer to vl's (MIPS) already-ELF-by-default
+  behavior than to 5l's.
+- goken's own arm64 test fixtures already exist and are Linux/qemu-
+  runnable: `tests/s/exit/exit_linux_arm64.s` (a plain `MOV
+  $42,R0; MOV $93,R8; SVC $0` exit, no data section -- note ARM64's
+  Linux syscall convention puts the syscall number in R8, not R7 like
+  ARM32/EABI), and see `tests/s/hello_arch/` for a Linux-runnable
+  hello-world equivalent. Reuse these the same way arm_port.md's
+  corpus reused goken's own `tests/s/mini/`/`tests/s/variants/`
+  fixtures instead of writing everything from scratch.
+- Entry point: same `_start` convention as every other arch's
+  fixtures in this methodology, `-E _start` on both sides.
+
+Where changes land / syncweb / compiler out of scope
+------------------------------------------------------
+
+Identical to arm_port.md's corresponding sections -- xix-side is
+where the bulk of the work and fixes land, goken stays the reference
+(small flag-gated adjustments to goken itself are fine, same
+conditions as before), syncweb markers in both repos are never
+touched, and 7c (the ARM64 compiler) is exactly as out of scope as
+5c/vc/ic/jc -- occ's plan is c--'s backend, not per-arch goken
+compiler parity, and that doesn't change per architecture.
+
+Suggested phase plan
+------------------------
+
+Phase 0 -- harness (mostly reusable):
+  - `scripts/diff-arm64.sh` + `test-arm64.sh`, structurally identical
+    to `scripts/diff-{arm,mips,riscv}.sh` -- same `GOKEN_ROOT`
+    convention, `cmp -l`, qemu-aarch64 run, skip-not-fail when goken
+    isn't installed.
+  - Confirm ELF layout parity the same way arm_port.md's Phase 0 did
+    (goken already defaults to ELF here, so this may be a smaller
+    step than ARM32's was, but don't assume -- verify).
+
+Phase 1 -- assembler from scratch (the genuinely new-scope part):
+  - Decide the register-31/SP-vs-ZR representation question (see
+    above) before writing any grammar rule that touches it -- this
+    is a real design decision, not a per-case detail.
+  - `Ast_asm7.ml`/`Parser_asm7.mly`/`Lexer_asm.mll` additions (shared
+    lexer, same as every other arch)/`Parse_asm7.ml`/
+    `Meta_ast_asm7.ml`/`Object_file.ml` wiring, bin_dune entries
+    (`o7a`). Reuse `Ast_asm.ml`'s shared types (register, fregister,
+    move_size, branch_operand, ximm, ...) exactly as much as ARM32/
+    MIPS/RISC-V did; extend only where AArch64 genuinely needs new
+    shared or arch-local concepts (SP/ZR, vregister, condition-select
+    predicates, bitfield immediates).
+  - Likely worth doing this in its own sub-phase, mnemonic-family by
+    mnemonic-family (matching a.y's own section comments: ADD/MOV/
+    MOVK/B-BL/Bcc/SVC/CMP/CBZ/CSET/CSEL-family/TBZ/CCMN/ADR/BFM-BFI/
+    EXTR/RET/NOP/TEXT-GLOBL/DATA/CASE/word/float-arith/FCMP/FCCMP/
+    FMULA/FCSEL/SIMD/MOVP-MOVNP/MADD/SYS-SYSL/DMB-HINT/STXR/END) since
+    that's already a natural, goken-authored decomposition of the
+    grammar, rather than inventing a different grouping.
+
+Phase 2 -- linker codegen (`Codegen7.ml`), case by case:
+  - Same per-case workflow as every arch so far: read `asmout.c`'s
+    `case N:` block and comment, add the matching OCaml arm (tagged
+    `(* case N: <verbatim C comment> *)`), write a minimal fixture,
+    `cmp -l` + qemu-aarch64, commit case by case.
+  - Expect the SIMD/atomics/system-instruction families to be the
+    ones worth an explicit scoping conversation (implement vs.
+    document-and-skip) rather than assuming every case is worth
+    porting the way most of ARM32's were -- see "What's genuinely new
+    here" above for which families are likely candidates for that
+    conversation, and arm_port.md's case 62/63 (CASE/BCASE) and case
+    59-61 entries for the established template of what a well-
+    justified "investigated, deliberately not implemented" writeup
+    looks like when a case turns out not to be worth it.
+
+Track progress the same way arm_port.md now does (post-merge): a
+single running doc rather than a separate notes+todo pair from the
+start, given the split's main value (rationale vs. checklist staying
+in sync) was really about the *middle* of a long port, not the
+beginning -- update this file directly with a "Port log" section as
+cases land, and fold in a status line once/if the whole thing
+completes.

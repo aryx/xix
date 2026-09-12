@@ -1,0 +1,174 @@
+(* Claude Code, Copyright (C) 2026 Yoann Padioleau, see copyright.txt *)
+open Common
+
+module L = Location_cpp
+module T = Token_asm
+module A = Ast_asm
+open Parser_asm7
+open Ast_asm7
+
+(*****************************************************************************)
+(* Prelude *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Lexer *)
+(*****************************************************************************)
+let token (lexbuf : Lexing.lexbuf) : Parser_asm7.token =
+  let tok = Lexer_asm.token lexbuf in
+  match tok with
+  | T.TTEXT -> TTEXT
+  | T.TGLOBL -> TGLOBL
+  | T.TDATA -> TDATA
+  | T.TWORD -> TWORD
+  (* claude: ARM64 has a real "RET" hardware instruction (unlike
+   * ARM32/MIPS/RISC-V, where RET is purely a compiler-facing virtual
+   * instr expanded by Rewrite{5,v,i}.ml) -- but the shared Lexer_asm.mll
+   * still special-cases the raw string "RET" into this shared T.TRET
+   * token regardless of arch, so this dispatch produces this grammar's
+   * own real-instruction TRET token (see Ast_asm7.ml's RET/Parser_asm7.mly's
+   * "TRET"/"TRET reg" productions), not a virtual one. *)
+  | T.TRET -> TRET
+  (* claude: goken's ARM64 does have a real NOP instruction (HINT #0
+   * encoding, LTYPEQ) but it's not wired in Parser_asm7.mly yet -- this
+   * mapping only exists to satisfy match exhaustiveness (same
+   * declared-but-unused pattern ARM32/RISC-V already have for their own
+   * virtual NOP). *)
+  | T.TNOP -> TNOP
+  | T.TR -> TR
+  | T.TF -> TF
+  | T.TPC -> TPC
+  | T.TSB -> TSB
+  | T.TFP -> TFP
+  | T.TSP -> TSP
+  | T.TINT i -> TINT i
+  | T.TFLOAT f -> TFLOAT f
+  | T.TSTRING s -> TSTRING s
+  | T.TSEMICOLON i -> TSEMICOLON i
+  | T.TCOLON -> TCOLON
+  | T.TDOT -> TDOT
+  | T.TCOMMA -> TC
+  | T.TDOLLAR -> TDOLLAR
+  | T.TOPAR -> TOPAR
+  | T.TCPAR -> TCPAR
+  | T.TLBRACKET -> TLBRACKET
+  | T.TRBRACKET -> TRBRACKET
+  | T.TPLUS -> TPLUS
+  | T.TMINUS -> TMINUS
+  | T.TMUL -> TMUL
+  | T.TSLASH -> TSLASH
+  | T.TMOD -> TMOD
+  | T.TSharp -> TSharp
+  | T.EOF -> EOF
+
+  | T.TRx ((A.R i) as x) ->
+      if i < Ast_asm7.nb_registers && i >= 0
+      then TRx x
+      else Lexer_asm.error ("register number not valid")
+  | T.TFx ((A.FR i) as x) ->
+      if i < Ast_asm7.nb_fregisters && i >= 0
+      then TFx x
+      else Lexer_asm.error ("register number not valid")
+
+  | T.TIDENT s ->
+      (match s with
+      (* claude: case 1 -- register-register-or-immediate arith. AND's
+       * OCaml constructor is `AND_` (a plain `AND` would shadow
+       * Stdlib/Common's own boolean `&&`-family identifier -- same
+       * "trailing underscore to dodge a keyword clash" convention used
+       * elsewhere in this codebase, e.g. Ast_asmi.ml's `W_`/`H_`). *)
+      | "ADD" -> TARITH ADD | "SUB" -> TARITH SUB
+      | "AND" -> TARITH AND_ | "ORR" -> TARITH ORR
+      | "EOR" -> TARITH EOR | "BIC" -> TARITH BIC
+
+      (* claude: case 8 (shift by immediate, bitfield-move encoding) /
+       * case 9 (shift by register, simple oprrr encoding) -- same
+       * mnemonic either way, dispatched by operand shape at codegen
+       * time (Codegen7.ml). *)
+      | "LSL" -> TSHIFT LSL | "LSR" -> TSHIFT LSR
+      | "ASR" -> TSHIFT ASR | "ROR" -> TSHIFT ROR
+
+      (* claude: case 7 -- CMP/CMN, no destination register. *)
+      | "CMP" -> TCMP CMP | "CMN" -> TCMP CMN
+
+      (* claude: case 15's simple 3-operand MUL only -- see
+       * ArithMul's comment in Ast_asm7.ml for what's deferred. *)
+      | "MUL" -> TMULOP
+
+      (* claude: case 3 -- MOV/MOVB/MOVBU/MOVH/MOVHU/MOVW/MOVWU, one
+       * grammar shape ("gen,gen") dispatched by operand type at
+       * codegen time, matching goken's own a.y (LTYPE3 covers all of
+       * these under one production). Bare "MOV" is the 64-bit
+       * (doubleword) form. *)
+      | "MOV" -> TMOV X_
+      | "MOVB" -> TMOV (B_ A.S) | "MOVBU" -> TMOV (B_ A.U)
+      | "MOVH" -> TMOV (H_ A.S) | "MOVHU" -> TMOV (H_ A.U)
+      | "MOVW" -> TMOV (W_ A.S) | "MOVWU" -> TMOV (W_ A.U)
+
+      (* claude: case 5/6 -- unconditional branch/call, direct or
+       * indirect through a register. *)
+      | "B" -> TB | "BL" -> TBL
+
+      (* claude: case 7 (branch variant) -- BEQ/BNE/...; BCS/BHS and
+       * BCC/BLO are goken's own synonym pairs for the same condition
+       * (unsigned GE/LT respectively), both wired to the identical
+       * AST value here, same as ARM32's Ast_asm5.condition sharing one
+       * GE/LT-of-sign constructor for HS/LO. *)
+      | "BEQ" -> TBx EQ | "BNE" -> TBx NE
+      | "BCS" -> TBx (GE A.U) | "BHS" -> TBx (GE A.U)
+      | "BCC" -> TBx (LT A.U) | "BLO" -> TBx (LT A.U)
+      | "BMI" -> TBx MI | "BPL" -> TBx PL
+      | "BVS" -> TBx VS | "BVC" -> TBx VC
+      | "BHI" -> TBx (GT A.U) | "BLS" -> TBx (LE A.U)
+      | "BGE" -> TBx (GE A.S) | "BLT" -> TBx (LT A.S)
+      | "BGT" -> TBx (GT A.S) | "BLE" -> TBx (LE A.S)
+
+      (* claude: case 8 (a distinct LTYPE from Shift's own case-8
+       * mnemonic above -- goken reuses case numbers across
+       * completely different grammar productions/optab rows, same as
+       * every other arch ported so far). *)
+      | "CBZ" -> TCBx false | "CBNZ" -> TCBx true
+
+      | "SVC" -> TSVC
+
+      (* claude: goken's own a.y lexes both "ZR" and "RSP" to the exact
+       * same D_REG/reg=31 node (see Ast_asm7.ml's prelude comment) --
+       * mirrored here by mapping both spellings to the same TRx (R 31)
+       * token, letting Codegen7.ml's per-instruction encoding decide
+       * whether register 31 in a given position means the zero
+       * register or the stack pointer, exactly as real AArch64 does. *)
+      | "ZR" -> TRx (A.R 31) | "RSP" -> TRx (A.R 31)
+
+      | _ -> TIDENT s
+      )
+
+(*****************************************************************************)
+(* Entry points *)
+(*****************************************************************************)
+
+let parse (caps : < Cap.open_in; .. >) (conf : Preprocessor.conf)
+      (file : Fpath.t) :
+    Ast_asm7.program =
+  let hooks = Parse_cpp.{
+     lexer = token;
+     parser = Parser_asm7.program;
+     category = (fun t ->
+       match t with
+       | Parser_asm7.EOF -> Parse_cpp.Eof
+       | Parser_asm7.TSharp -> Parse_cpp.Sharp
+       | Parser_asm7.TIDENT s -> Parse_cpp.Ident s
+       | _ -> Parse_cpp.Other
+     );
+     eof = Parser_asm7.EOF;
+  }
+  in
+  Parse_cpp.parse caps hooks conf file
+
+(* Simpler code path; possibly useful in tests *)
+let parse_no_cpp (chan : Chan.i) : Ast_asm7.program =
+  L.line := 1;
+  let lexbuf = Lexing.from_channel chan.ic in
+  try
+    Parser_asm7.program token lexbuf, []
+  with Parsing.Parse_error ->
+      failwith (spf "Syntax error: line %d" !L.line)

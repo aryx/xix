@@ -123,6 +123,17 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
        * `name`), matching what Codegeni.ml's case 8 implements. *)
       | "LUI" -> TLUI
 
+      (* claude: case 22, control-and-status register access. "CSR"
+       * itself is a separate keyword from the CSRRW/CSRRS/CSRRC
+       * mnemonics -- mirrors goken's own lexer (LCTL vs LCSR),
+       * "CSRRW CSR($num),S,D" being the concrete syntax. Immediate
+       * variants (CSRRWI/CSRRSI/CSRRCI) aren't wired -- see
+       * Ast_asmi.ml's CSR comment. *)
+      | "CSR" -> TCSRTOK
+      | "CSRRW" -> TCSR CSRRW
+      | "CSRRS" -> TCSR CSRRS
+      | "CSRRC" -> TCSR CSRRC
+
       | _ -> TIDENT s
       )
 

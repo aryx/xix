@@ -136,6 +136,13 @@ type instr =
   | BREAK
   (* ?? *)
   | SYS
+  (* Special RISCV: "CSRRW CSR($num),S,D" (case 22) -- read/write a
+   * control-and-status register. goken's own grammar also has
+   * immediate variants (CSRRWI/CSRRSI/CSRRCI, `S` replaced by a
+   * plain `$imm`) which aren't wired here, same "narrower but
+   * real" scoping as elsewhere this session (e.g. MULH/MULHSU/
+   * MULHU). *)
+  | CSR of csr_op * int (* CSR number, 0-0xFFF *) * reg * reg
 
   and arith_opcode =
     (* logic *)
@@ -177,6 +184,8 @@ type instr =
     | LT of A.sign | GT of A.sign
     | LE of A.sign | GE of A.sign
 
+  and csr_op = CSRRW | CSRRS | CSRRC
+
 [@@deriving show {with_path = false}]
 
 (* ------------------------------------------------------------------------- *)
@@ -207,7 +216,7 @@ let branch_opd_of_instr (instr: instr) : A.branch_operand option =
   | Bxx (_, _, _, opd) -> Some opd
   | Arith _ | ArithF _ | ArithMul _ | LUI _
   | Move1 _ | Move2 _ | FENCE_I
-  | ECALL | SYS | BREAK
+  | ECALL | SYS | BREAK | CSR _
      -> None
 
 let visit_globals_instr (f : global -> unit) (i : instr) : unit =
@@ -243,4 +252,4 @@ let visit_globals_instr (f : global -> unit) (i : instr) : unit =
       A.visit_globals_branch_operand f b
   | Arith _ | ArithMul _ | ArithF _ | LUI _
   | FENCE_I
-  | ECALL | SYS | BREAK -> () 
+  | ECALL | SYS | BREAK | CSR _ -> () 

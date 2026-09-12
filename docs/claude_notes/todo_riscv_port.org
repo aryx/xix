@@ -277,10 +277,36 @@ Not yet in Codegeni.ml at all:
 ** TODO case 16 mov L(s),r => lui L1,T; add s,T,T; lb r,L0(T)
 ** TODO case 17 fcvt S,D
 ** TODO case 18 lui L1, T; jal [r,]L0(T)
-** TODO case 19 addiw $0, rs, rd (RV64-only, thechar 'j' -- probably
-   not applicable to this RV32 port at all)
+** TODO case 19 addiw $0, rs, rd. Investigated: goken's optab has a
+   real `AMOVW C_REG C_REG` entry mapping to this (ADDIW, zero
+   immediate, used to re-sign-extend a 32-bit value already sitting
+   in a register on riscv64), but obj.c *rewrites* AMOVW/AMOVWU to
+   plain AMOV whenever NEITHER operand is a memory reference
+   (`if(from.type!=D_OREG && to.type!=D_OREG) o=AMOV`), on *both*
+   riscv32 and riscv64 -- confirmed empirically ("MOVW R5,R6" on
+   both `ia`/`il` and `ja`/`jl` produces a plain ADD-with-REGZERO
+   encoding, opcode 0x33, never ADDIW's 0x1B). So this optab entry
+   looks unreachable via any concrete goken syntax at all, same
+   category as case 4's bare "JAL label"/case 8's standalone "LUI"/
+   case 10's register-to-register MOVB -- deferred rather than wired
+   with no way to verify it.
 ** TODO case 21 lui I,D; s[lr]ai N,D
-** TODO case 22 CSRRx C, rs, rd
+** DONE case 22 CSRRx C, rs, rd. New `csr_op = CSRRW | CSRRS | CSRRC`
+   and `CSR of csr_op * int * reg * reg` (bumped Object_file.version
+   16->17), with "CSR" wired as its own keyword (TCSRTOK) separate
+   from the CSRRW/CSRRS/CSRRC mnemonics (TCSR), mirroring goken's own
+   lexer split (LCTL vs LCSR) -- concrete syntax "CSRRW
+   CSR($num),S,D". funct3 (1/2/3 for W/S/C) reuses the existing
+   op_itype/op_system encoding, same opcode family as ECALL. The
+   immediate variants (CSRRWI/CSRRSI/CSRRCI) aren't wired, narrower-
+   but-real scoping matching MULH/MULHSU/MULHU's precedent.
+   Tested via system_csr_case22.s (+ riscv64_diff copy): PASS byte-
+   identical on both RV32 and RV64; the actual CSR access traps as
+   "Illegal instruction" under qemu-user on both goken and xix
+   equally (expected -- CSR access needs kernel/privileged mode,
+   which qemu-user doesn't emulate), so this only confirms the
+   encoding, the same reasoning as why ECALL's own tests never
+   inspect kernel-side state either.
 ** DONE case 25 word $x / case 26 pseudo ops -- both already routed
    through the arch-independent Codegen.default_rules (the
    `T.Virt _ | T.TEXT _ | T.WORD _ -> Codegen.default_rules ...`

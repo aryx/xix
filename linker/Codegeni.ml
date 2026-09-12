@@ -353,6 +353,13 @@ let rules (is_64 : bool)
           [ op_itype op_system 0 rZERO rZERO 0 ]
         )}
 
+    (* case 22:	/* CSRRx C, rs, rd */ *)
+    | CSR (op, csrnum, rs, rd) ->
+        let funct3 = (match op with CSRRW -> 1 | CSRRS -> 2 | CSRRC -> 3) in
+        { size = 4; x = None; binary = (fun () ->
+          [ op_itype op_system funct3 rs rd csrnum ]
+        )}
+
     (* --------------------------------------------------------------------- *)
     (* Control flow *)
     (* --------------------------------------------------------------------- *)

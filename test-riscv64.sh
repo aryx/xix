@@ -22,6 +22,7 @@ CASES=(
     "tests/linker/riscv64_diff/case8_riscv64.s:_start"
     "tests/linker/riscv64_diff/case2_general_riscv64.s:_start"
     "tests/linker/riscv64_diff/case6_7_riscv64.s:_start"
+    "tests/linker/riscv64_diff/system_csr_case22.s:_start"
 )
 
 FAIL=0

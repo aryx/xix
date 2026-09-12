@@ -38,6 +38,8 @@ module L = Location_cpp
 %token TSYSCALL TRFE TBREAK
 %token TJMP TJAL
 %token TLUI
+%token <Ast_asmi.csr_op> TCSR
+%token TCSRTOK
 %token TBEQ TBNE
 %token <Ast_asmi.b_condition> TB
 %token <Ast_asmi.move1_size> TMOVE1
@@ -209,6 +211,11 @@ instr:
  | TSYSCALL { ECALL }
 
  | TLUI imm TC reg { LUI ($2, $4) }
+
+ /*(* case 22: "CSRRW CSR($num),S,D" *)*/
+ | TCSR ctlreg TC reg TC reg { CSR ($1, $2, $4, $6) }
+
+ctlreg: TCSRTOK TOPAR con TCPAR { $3 }
 
 /*(*************************************************************************)*/
 /*(*1 Operands *)*/

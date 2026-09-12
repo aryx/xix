@@ -729,9 +729,14 @@ Cases with a matching (* case N: *) comment already in Codegenv.ml:
    40). Nothing left to port -- no new code, no new fixture beyond
    what already exercises TEXT/GLOBL throughout this whole file.
 
-Not yet in Codegenv.ml at all:
-** TODO case 45 case r
-** TODO case 46 bcase $con,lbra
+** DONE (confirmed dead on this arch, not ported) case 45 case r /
+   case 46 bcase $con,lbra -- the jump-table switch-statement pair.
+   Unreachable from .s source (no grammar rule in goken's va/a.y),
+   and goken's own MIPS compiler (vc/swt.c) never emits it either --
+   its switch lowering is a binary-search of branches instead,
+   unlike 5c/7c/2c. No way to make goken itself exercise this, so no
+   way to test a port. Documented in Codegenv.ml, right before the
+   "System" section; no CASE/BCASE constructor added to Ast_asmv.ml.
 
 * Notes for later
 ** Expect a BIG/immrot-equivalent story for address-of-global (R30 bias)

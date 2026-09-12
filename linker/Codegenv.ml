@@ -1110,6 +1110,16 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
             [ op_irr (sp 6 0) 0 rf rt; nop ]
          ) }
 
+    (* case 45/46:	/* case r */ / /* bcase $con,lbra */ -- NOT PORTED.
+     * The jump-table switch-statement pair. Confirmed dead on this
+     * arch: unreachable from .s source (no grammar rule in goken's
+     * va/a.y), and goken's own MIPS compiler (vc/swt.c) never emits
+     * it either -- its switch lowering is a binary-search of
+     * branches instead, unlike 5c/7c/2c. No way to make goken itself
+     * exercise this, so no way to test a port -- see
+     * docs/claude_notes/todo_mips_port.org.
+     *)
+
     (* --------------------------------------------------------------------- *)
     (* System *)
     (* --------------------------------------------------------------------- *)

@@ -6,7 +6,7 @@
 // large offsets (4096 vs 8192), same reason as longoff_case30_31.s:
 // goken's literal-pool value deduplication (addpool() reuses an
 // existing constant, see the "literal-pool value deduplication" TODO
-// near the top of todo_arm_port.org) would otherwise make the pool
+// near the top of arm_port.md) would otherwise make the pool
 // layout diverge for a reason unrelated to case 52/53's own codegen
 // -- confirmed by hitting exactly that 2-byte diff with a same-
 // offset round-trip version of this fixture before rewriting it this

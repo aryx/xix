@@ -1382,7 +1382,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
 
     (* case 59/60/61: movw/bu R<<I(R),R -> ldr indexed / movb R(R),R
      * -> ldrsb indexed / movw/b/bu R,R<<[IR](R) -> str indexed --
-     * NOT PORTED. Same shape as case 62/63 (see todo_arm_port.org):
+     * NOT PORTED. Same shape as case 62/63 (see arm_port.md):
      * goken's 5a grammar has no rule combining a shift operand with a
      * base register at all, so this addressing mode can't be spelled
      * in real .s text either -- compilers/5c/peep.c confirms it's a

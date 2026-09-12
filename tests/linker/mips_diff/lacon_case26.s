@@ -9,7 +9,7 @@
 // `vl -a` (frame=$8192: goken computes offset 8192 for x-8(FP) and
 // 8204 for y+8(SP), only consistent with autosize=8196 and the +4
 // on Local) -- the exact same bug shape as the confirmed ARM one,
-// see docs/claude_notes/todo_arm_port.org's case 4/34 entry. No
+// see docs/claude_notes/arm_port.md's case 4/34 entry. No
 // small-offset fast path here (goken's C_SACON is permanently dead
 // on MIPS, same BIG=0 reasoning as address-of-global -- see
 // offset_to_R30's comment), so this always takes the 3-instruction

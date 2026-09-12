@@ -1,14 +1,14 @@
 Porting the RISC-V (RV32) toolchain (oia/oil) against goken, byte-equal
 =========================================================================
 
-Goal: same as docs/claude_notes/notes_arm_port_plan.txt and
+Goal: same as docs/claude_notes/arm_port.md and
 docs/claude_notes/mips_port.md, mirrored for RISC-V: assemble+link the same
 .s with both goken's ia/il (Plan 9 RISC-V assembler/linker) and xix's
 oia/oil, and require the final executables to be byte-identical.
 Scope is RISC-V (RV32, thechar 'i') assembler + linker only, same
 reasoning as the other two docs for why the compiler stays out of it.
 
-Read notes_arm_port_plan.txt first -- this doc only calls out what's
+Read arm_port.md first -- this doc only calls out what's
 RISC-V-specific or different; the general approach (harness shape,
 syncweb rules, where changes land, goken flag adjustments allowed) is
 identical and not repeated here.
@@ -118,7 +118,7 @@ hello_linux.s itself already exercises both paths --
 `MOVW $setSB(SB), RSB` takes the slow path (the explicit `!= 0`
 exclusion is what forces it there, unlike ARM where the exclusion
 happened to not matter because immrot(-BIG) also independently
-failed -- see notes_arm_port_plan.txt's own writeup of that). Also
+failed -- see arm_port.md's own writeup of that). Also
 note: setSB's own xdefine'd value is BIG (matching goken's
 `xdefine("setSB", SDATA, 0L+BIG)` exactly), unlike xix's own ARM
 convention which uses 0 for setR12 (works there only because immrot

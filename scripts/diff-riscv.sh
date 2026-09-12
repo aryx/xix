@@ -5,7 +5,7 @@
 # available) run both under it.
 #
 # Mirrors scripts/diff-arm.sh/diff-mips.sh -- see
-# docs/claude_notes/notes_arm_port_plan.txt for why only the final
+# docs/claude_notes/arm_port.md for why only the final
 # executable is ever compared, never the intermediate object files.
 #
 # Usage:

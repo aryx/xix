@@ -4,7 +4,7 @@
 // register-offset LDR/STR. Each large offset value here is used
 // exactly once (store at 5000, load at 6000) to avoid goken's
 // literal-pool value deduplication (a separate, undocumented gap in
-// our Layout5.ml -- see notes_arm_port_plan.txt), which would
+// our Layout5.ml -- see arm_port.md), which would
 // otherwise make the pool layout diverge for a reason unrelated to
 // case 30/31's actual codegen.
 TEXT _start(SB), $8192

@@ -75,7 +75,7 @@ let movw_imm_opcode i =
  * reach it with one `ADD $(offset-BIG), R30, Rt` instead of loading
  * the full 32-bit absolute address (see the "lu+or" case below).
  * This is the exact same idea as ARM's R12/BIG (see Codegen5.ml's
- * offset_to_R12/immrot and docs/claude_notes/notes_arm_port_plan.txt)
+ * offset_to_R12/immrot and docs/claude_notes/arm_port.md)
  * -- except on MIPS goken's own linkers/vl/l.h sets `BIG = 0` (an
  * old value of 32766 is left commented out right above it). That
  * makes goken's actual fast-path condition,
@@ -106,7 +106,7 @@ let base_and_offset_of_entity node symbols2 autosize x =
    * and 8204 for `y+8(SP)` (Param), which only matches autosize=8196
    * with the +4 on Local, not Param -- the exact same bug shape as
    * the confirmed ARM one in base_and_offset_of_indirect, see
-   * docs/claude_notes/todo_arm_port.org's case 4/34 entry). See
+   * docs/claude_notes/arm_port.md's case 4/34 entry). See
    * tests/linker/mips_diff/lacon_mips.s. *)
   | (Param (_s, off)) ->
       rSP, autosize + off
@@ -732,7 +732,7 @@ let rules (env : Codegen.env) (init_data : T.addr option) (node : 'a T.node) =
      * MOVW into a completely different 4-instruction sequence that
      * loads the constant's *value* from a synthesized SB-relative
      * data symbol (a literal pool, analogous to ARM's -- see
-     * Layout5.ml/docs/claude_notes/todo_arm_port.org's pool-dedup
+     * Layout5.ml/docs/claude_notes/arm_port.md's pool-dedup
      * TODO) -- e.g. `MOVW $305419896,R1` assembles to LUI+ORI+ADD+
      * LW against a symbol literally named "12345678(SB)", not a
      * plain LU+OR. This is a genuine *assembler*-side mechanism

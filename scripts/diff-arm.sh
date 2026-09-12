@@ -4,7 +4,7 @@
 # ELF executables byte-for-byte and (when qemu-arm is available) run
 # both under it.
 #
-# See docs/claude_notes/notes_arm_port_plan.txt for why only the final
+# See docs/claude_notes/arm_port.md for why only the final
 # executable is ever compared (never the intermediate object files:
 # o5a's .o5 uses OCaml Marshal by design, not goken's object format).
 #
@@ -72,7 +72,7 @@ echo "== assembling+linking with goken ($GOKEN_5A / $GOKEN_5L) =="
 "$GOKEN_5A" -o "$BASE.goken.5" "$BASE.s"
 # -s: strip goken's native Plan9 symbol/debug table -- it embeds the
 # invocation cwd and source path, so it's not byte-reproducible and
-# xix never emits one anyway (see notes_arm_port_plan.txt).
+# xix never emits one anyway (see arm_port.md).
 "$GOKEN_5L" -H7 -E "$ENTRY" -s $EXTRA_FLAGS -o "$BASE.goken.out" "$BASE.goken.5"
 
 echo "== assembling+linking with xix ($XIX_O5A / $XIX_O5L) =="

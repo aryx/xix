@@ -8,14 +8,14 @@ to need no new code, or confirmed dead/unreachable in goken itself. See
 
 ## Goal
 
-Same as `docs/claude_notes/notes_arm_port_plan.txt`, mirrored for MIPS:
+Same as `docs/claude_notes/arm_port.md`, mirrored for MIPS:
 assemble+link the same `.s` with both goken's va/vl (Plan 9 MIPS
 assembler/linker) and xix's ova/ovl, and require the final executables
 to be byte-identical. Scope is MIPS assembler + linker only, same
 reasoning as the ARM doc for why the compiler stays out of it (occ is
 headed towards ~/c--'s shared backend, not goken's per-arch compilers).
 
-Read `notes_arm_port_plan.txt` first -- this doc only calls out what's
+Read `arm_port.md` first -- this doc only calls out what's
 MIPS-specific or different from the ARM story; the general approach
 (harness shape, syncweb rules, where changes land, goken flag
 adjustments allowed) is identical and not repeated here.

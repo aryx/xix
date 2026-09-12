@@ -4,7 +4,7 @@
 // instead of gmem's). Each offset used exactly once (5000, 6000,
 // 7000) to avoid goken's literal-pool value deduplication (see
 // tests/linker/arm_diff/longoff_case30_31.s and
-// docs/claude_notes/todo_arm_port.org).
+// docs/claude_notes/arm_port.md).
 TEXT _start(SB), $8192
     MOVW    $0x1234, R1
     MOVH    R1, 5000(R13)

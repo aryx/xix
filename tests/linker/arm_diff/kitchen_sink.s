@@ -18,7 +18,7 @@
 // duplicate the short exit epilogue into both branches instead of
 // having one jump to a shared tail -- a real assembler/linker
 // behavior, but a distinct one from anything in our current case
-// list (see docs/claude_notes/todo_arm_port.org). Keeping this
+// list (see docs/claude_notes/arm_port.md). Keeping this
 // fixture branch-free avoids exercising that gap by accident.
 
 TEXT _start(SB), $0

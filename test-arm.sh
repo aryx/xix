@@ -8,8 +8,7 @@
 # treatment.
 #
 # Runs scripts/diff-arm.sh over the phase-0.5 baseline corpus (see
-# docs/claude_notes/notes_arm_port_plan.txt and
-# docs/claude_notes/todo_arm_port.org): .s files that only exercise
+# docs/claude_notes/arm_port.md): .s files that only exercise
 # constructs already ported in Codegen5.ml, byte-compared against
 # goken's 5a/5l and (when qemu-arm is available) actually run.
 #

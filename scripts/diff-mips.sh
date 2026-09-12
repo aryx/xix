@@ -4,7 +4,7 @@
 # ELF executables byte-for-byte and (when qemu-mips is available)
 # run both under it.
 #
-# Mirrors scripts/diff-arm.sh -- see docs/claude_notes/notes_arm_port_plan.txt
+# Mirrors scripts/diff-arm.sh -- see docs/claude_notes/arm_port.md
 # for why only the final executable is ever compared, never the
 # intermediate object files.
 #
@@ -67,7 +67,7 @@ echo "== assembling+linking with goken ($GOKEN_VA / $GOKEN_VL) =="
 "$GOKEN_VA" -o "$BASE.goken.v" "$BASE.s"
 # -s: strip goken's native Plan9 symbol/debug table -- it embeds the
 # invocation cwd and source path, so it's not byte-reproducible and
-# xix never emits one anyway (see notes_arm_port_plan.txt). No -H
+# xix never emits one anyway (see arm_port.md). No -H
 # needed: vl already defaults to ELF (HEADTYPE=7), unlike 5l.
 "$GOKEN_VL" -E "$ENTRY" -s -o "$BASE.goken.out" "$BASE.goken.v"
 

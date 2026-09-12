@@ -319,12 +319,19 @@ let rules (is_64 : bool)
 
     (* case 2:		/* addi $I,[R,]D */ *)
     | Arith (ADD None, Imm i, middle, rt) ->
-        let (R r) = (match middle with Some x -> x | None -> rt) in
-        if not (fits_addi_imm i)
-        then error node "TODO: addi immediate out of 12-bit range"
-        else
+        let r = middle ||| rt in
+        if fits_addi_imm i
+        then
           { size = 4; x = None; binary = (fun () ->
-            [ op_itype op_opimm 0 (R r) rt i ]
+            [ op_itype op_opimm 0 r rt i ]
+          )}
+        else
+          (* case 14: lui L1,T; addi $L0,T,T; add T,r,d -- see the
+           * generalized AND/OR/XOR arm below for the full comment. *)
+          { size = 12; x = None; binary = (fun () ->
+            let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP i in
+            [ lui_bits; op_itype op_opimm 0 rTMP rTMP low12;
+              op_rtype op_op 0 0 r rTMP rt ]
           )}
 
     (* case 2 (generalized): andi/ori/xori/slti/sltiu $I,[R,]D --
@@ -338,12 +345,35 @@ let rules (is_64 : bool)
     | Arith (((AND | OR | XOR | SLT _) as op), Imm i, middle, rt) ->
         let r = middle ||| rt in
         let (funct3, _) = oprrr_arith_opcode op in
-        if not (fits_addi_imm i)
-        then error node "TODO: immediate out of 12-bit range"
-        else
+        if fits_addi_imm i
+        then
           { size = 4; x = None; binary = (fun () ->
             [ op_itype op_opimm funct3 r rt i ]
           )}
+        else
+          (match op with
+          | AND | OR | XOR ->
+              (* case 14: lui L1,T; addi $L0,T,T; op T,r,d -- goken's
+               * optab.c only has a C_LCON row for ADD/AND/OR/XOR
+               * (confirmed: SLT/SLTU/SUB/SLL/SRL/SRA have none), each
+               * reached the same way as case 9/20's own big-constant
+               * materialization (LUI+ADDI into REGTMP), followed by
+               * the real op register-register using REGTMP as the
+               * "from" operand -- `OP_RO(r,REGTMP,rt)`'s own encoding
+               * has no funct7 term at all (always 0), which is
+               * exactly why only these 4 (whose register-register
+               * funct7 is already 0) are reachable here; SUB/SRA's
+               * own funct7=0x20 genuinely can't be expressed this
+               * way, matching goken's own reference. *)
+              { size = 12; x = None; binary = (fun () ->
+                let (lui_bits, low12) = gen_upper_and_low_via op_lui rTMP i in
+                [ lui_bits; op_itype op_opimm 0 rTMP rTMP low12;
+                  op_rtype op_op funct3 0 r rTMP rt ]
+              )}
+          | SLT _ ->
+              error node "TODO: SLT/SLTU immediate out of 12-bit range (no C_LCON row for this op in goken's own optab)"
+          | ADD _ | SUB _ | SLL _ | SRL _ | SRA _ ->
+              raise (Impossible "unreachable: outer pattern already restricts op to AND/OR/XOR/SLT"))
 
     (* case 8:		/* lui	I,D */ *)
     (* claude: standalone LUI -- goken's asm.c case 8 takes the raw

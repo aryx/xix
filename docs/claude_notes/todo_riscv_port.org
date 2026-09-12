@@ -337,7 +337,19 @@ Not yet in Codegeni.ml at all:
    Added tests/linker/riscv_diff/sb_value_case6_7.s and
    sb_value_case12_13.s (+ riscv64_diff copies): PASS byte-identical +
    PASS same exit code on both RV32 and RV64.
-** TODO case 14 op $lcon,[r,]d => lui L1,T; addi $L0,T,T; op T,r,d
+** DONE case 14 op $lcon,[r,]d => lui L1,T; addi $L0,T,T; op T,r,d
+   ADD/AND/OR/XOR only -- confirmed via optab.c that only these 4 have
+   a C_LCON row reaching case 14 (no SUB/SLT/SLTU/SLL/SRL/SRA row
+   exists): `OP_RO(r,REGTMP,rt)`'s own encoding has no funct7 term at
+   all (always 0), matching exactly the 4 ops whose register-register
+   funct7 is already 0. Reuses `gen_upper_and_low_via` (introduced for
+   case 12/13) to materialize the constant into REGTMP via LUI+ADDI,
+   then the real op register-register with REGTMP as the "from"
+   operand. The RV64-only "awkward edge case" for v>=0x7ffff800
+   (goken's own comment) isn't handled -- narrower-but-real scoping,
+   same as MULH/MULHSU/MULHU/CSRRWI etc elsewhere in this port.
+   Added tests/linker/riscv_diff/lcon_case14.s (+ riscv64_diff copy):
+   PASS byte-identical + PASS same exit code on both RV32 and RV64.
 ** TODO case 15 mov r,L(s) => lui L1,T; add s,T,T; sb r,L0(T)
 ** TODO case 16 mov L(s),r => lui L1,T; add s,T,T; lb r,L0(T)
 ** TODO case 17 fcvt S,D

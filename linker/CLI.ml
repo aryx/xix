@@ -272,7 +272,7 @@ let linki (caps : < Cap.open_in; ..> ) (config : Exec_file.linker_config) (files
   (* claude: setSB's value is BIG, not 0 -- see Codegeni.ml's `big`
    * for why this matters on RISC-V (unlike ARM's setR12, where the
    * choice of 0 vs BIG happens to not matter for the fixtures so
-   * far -- see docs/claude_notes/notes_riscv_port_plan.txt). *)
+   * far -- see docs/claude_notes/riscv_port.md). *)
   Layout.xdefine symbols2 symbols ("setSB" , T.Public)
     (T.SData2 (Codegeni.big, T.Data));
   Check.check symbols;

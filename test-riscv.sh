@@ -1,8 +1,7 @@
 #!/bin/bash
-# Differential test driver for the RISC-V (RV32) port. Mirrors
-# test-arm.sh/test-mips.sh -- see
-# docs/claude_notes/notes_riscv_port_plan.txt and
-# docs/claude_notes/todo_riscv_port.org.
+# Differential test driver for the RISC-V (RV32) port (complete --
+# see docs/claude_notes/riscv_port.md). Mirrors test-arm.sh/
+# test-mips.sh.
 #
 # Usage: ./test-riscv.sh
 #

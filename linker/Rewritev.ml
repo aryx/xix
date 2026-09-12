@@ -117,7 +117,7 @@ let rewrite (cg : instr T.code_graph) : instr T.code_graph =
            * theoretical one), not previously caught since no MIPS
            * fixture exercised RET on a leaf-with-locals function --
            * discovered and fixed while investigating RISC-V's own
-           * `notes_riscv_port_plan.txt`/`todo_riscv_port.org`, which
+           * `riscv_port.md`/`riscv_port.md`, which
            * had flagged this exact question (goken's il/noop.c has
            * the identical 3-way shape) without checking whether it
            * also applied to MIPS's vl/noop.c; it does, confirmed by

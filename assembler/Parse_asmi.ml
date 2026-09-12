@@ -71,7 +71,7 @@ let token (lexbuf : Lexing.lexbuf) : Parser_asmi.token =
        * differences. Wiring up only what's currently exercised by a
        * fixture (MOVW, ECALL); the rest (MOVB/MOVH/MOVBU/MOVHU,
        * arithmetic, branches, JAL/JALR) is real backlog, not yet
-       * done -- see docs/claude_notes/notes_riscv_port_plan.txt.
+       * done -- see docs/claude_notes/riscv_port.md.
        *)
 
       (* MOVW $imm,R / MOVW $sym(SB),R / MOVW R,R / MOVW mem,R / MOVW R,mem

@@ -1,0 +1,266 @@
+# Porting the RISC-V toolchain (oia/oil, oja/ojl) against goken, byte-equal
+
+Status: **complete**. Every `linkers/il/asm.c` case (0-26) that has a
+reachable, real concrete syntax in goken is either ported, confirmed
+to need no new code, or confirmed dead/unreachable in goken itself
+(cases 19 and 21). Case 18 (a far-branch fallback) is guarded against
+silently-wrong bytes but deliberately deferred -- see "Open issues"
+at the end for that and everything else still genuinely open.
+
+## Goal
+
+Same methodology as `arm_port.md` (ARM32), `mips_port.md` (MIPS), and
+`arm64_port.md` (ARM64): assemble+link the same `.s` with both
+goken's ia/il (RV32) and ja/jl (RV64) and xix's own oia/oil and
+oja/ojl, and require the final executables to be byte-identical.
+Scope is RISC-V assembler + linker only, permanently -- the compiler
+stays out of it for the same reason as every other arch.
+
+Read `arm_port.md` first for the harness shape, syncweb rules,
+where-changes-land guidance, and goken-flag conventions shared across
+this whole effort; this doc only calls out what's RISC-V-specific.
+`Codegeni.ml`/`Rewritei.ml`/`Layouti.ml`/`Typesi.ml` are shared
+verbatim between RV32 (`oil`) and RV64 (`ojl`) -- an `is_64` flag
+threaded through both distinguishes the few places that genuinely
+differ (pointer/RLINK width, the AUIPC-vs-LUI address story). Every
+fixture in `tests/linker/riscv_diff/` has an identical
+`tests/linker/riscv64_diff/` copy for this reason, verified on both.
+
+## The one load-bearing difference from ARM/MIPS: starting from nothing
+
+Unlike ARM/MIPS (fixing bugs in an existing port), RISC-V's *linker*
+didn't exist in xix at all before this port -- only the assembler
+(`oia`) had been started, by the project owner, before any of this
+differential-testing work began. Built from scratch, mirroring the
+ARM/MIPS module split exactly (`Typesi.ml`, `Layouti.ml`,
+`Rewritei.ml`, `Codegeni.ml`, `link7`-style CLI wiring, `Object_file`/
+`Elf.ml` plumbing). `Layouti.ml` is simpler than ARM32/MIPS's own:
+RISC-V never needs a literal pool at all -- large constants always
+materialize inline via LUI(+ADDI), so there's no pool/splicing
+bookkeeping.
+
+A real, blocking bug was found in the *assembler* before any linker
+work could even be tested: `Parse_asmi.ml`'s entire keyword table was
+a copy-pasted-then-commented-out ARM template, never adapted --
+`hello_linux.s` wouldn't even tokenize ("Syntax error, last name:
+MOVW"). Fixed by wiring up exactly what was needed at the time
+("MOVW"/"ECALL"); everything else (arithmetic, branches, JAL, byte/
+half moves, float conversion) was real backlog, closed out case by
+case over the rest of this port rather than guessed at up front.
+
+## Real findings, gotchas, and design decisions
+
+**goken's `il` compresses instructions (RVC) by default** --
+`linkers/il/compress.c` applies RISC-V's "C" extension (16-bit
+encodings for eligible instructions) unconditionally unless `-c` is
+passed. Confirmed by disassembling goken's default output and hitting
+16-bit opcodes a plain-RV32 disassembler couldn't decode. Deciding
+what's losslessly shrinkable, then re-doing layout since it changes
+instruction sizes/addresses, is a substantial separate feature --
+this port never emits compressed instructions at all; the harness
+always passes goken's own `-c` so the comparison stays apples to
+apples (qemu handles plain 32-bit-instruction binaries fine either
+way).
+
+**The address-of-global (RSB/BIG) story is closer to ARM32 than
+MIPS.** RSB (aka SB, aka `gp`/x3) is set up via `MOVW $setSB(SB),
+RSB`. `BIG = 2048` (unlike MIPS's dead `BIG = 0`) is a genuinely
+*live* value, and not a coincidence: 2048 is exactly the magnitude of
+a signed 12-bit immediate's range, so "does the SB-relative offset
+fit BIG" and "does it fit ADDI's own immediate field" are the same
+check (`fits_addi_imm`) -- genuinely simpler than ARM32's own
+bit-rotation search (`immrot`), while still being a live fast path
+(unlike MIPS). `hello_linux.s` itself exercises both the fast path
+(`MOVW $msg(SB),R11`) and the slow path (`MOVW $setSB(SB),RSB`,
+forced there by an explicit `!= 0` exclusion avoiding a circular ADDI
+when *defining* `setSB` itself, not by a range/encoding failure the
+way ARM32's own `setR12` case happened to work out).
+
+**RISC-V has no branch-delay slots** (a real MIPS-specific
+complication that simply doesn't apply here) -- jumps/branches take
+effect immediately, no slot to fill, no goken `sched.c`-style hoisting
+to worry about replicating. `Rewritei.ml`'s RET/JMP expansion is
+correspondingly simpler than `Rewritev.ml`'s own delay-slot-aware one.
+
+**The leaf/frame logic (RET expansion) is genuinely 3-way, not 2-way
+like MIPS originally was** -- ported from goken's `il/noop.c`
+directly: (1) leaf, no locals: no prologue/epilogue at all, RET is
+just `JMP (RLINK)`; (2) leaf, with locals (declares a nonzero frame
+but makes no calls, so RLINK is never clobbered): prologue only
+adjusts SP, no RLINK save, RET's epilogue just adjusts SP back and
+jumps; (3) not leaf: full save-adjust-SP prologue and
+restore-adjust-SP-jump epilogue. Built correctly from the start here
+since the C source was already open -- and this same 3-way shape
+turned out to be a real, previously-latent MIPS bug too (see
+`mips_port.md`'s own "Post-completion fix" section, found while
+writing this doc's own leaf/frame story and cross-checking `vl/
+noop.c`).
+
+**A real, confirmed bug: `Rewritei.ml`'s own RLINK save/restore was
+using the wrong "which mnemonic width" tag.** The `move_size` tag
+`W__` means "MOVW" -- always 32-bit, regardless of arch (confirmed
+against goken's own `optab.c`: `AMOVW`'s row is unconditional, never
+`is_64`-gated). But RLINK itself is a full pointer, 8 bytes wide on
+riscv64 -- that's what a bare "MOV" (no width suffix) means in goken,
+and bare "MOV" genuinely *is* `is_64`-dependent (confirmed
+empirically: goken emits `SW` for bare `MOV` on riscv32 and `SD` on
+riscv64). Conflating the two in one shared encoder arm (tagging
+`Rewritei.ml`'s own save/restore as `W__` and `is_64`-branching
+inside the encoder) was harmless until a genuine large-offset,
+directly-user-written "MOVW" fixture on riscv64 needed the *other*
+(always-32-bit) behavior from the exact same tag -- caught while
+porting case 15/16. Fixed by giving `W__` and `V__` (the real
+"vlong"/pointer-width tag) their own separate `Codegeni.ml` arms and
+switching `Rewritei.ml` to build `V__` nodes for RLINK on 64-bit.
+
+**A second real, confirmed bug of the same shape, found earlier
+(case 5):** `Rewritei.ml`'s leaf-detection only cleared the leaf flag
+for the label-targeted `JAL`/`JALR` forms, never for the new,
+register-plus-offset `JALRI` -- so a function calling through
+`JALR D,I(S)` was misclassified as a leaf and missed its RLINK-save
+prologue entirely. Fixed by clearing leaf status for `JALRI` whenever
+its destination register isn't the zero register (the JMP-spelled
+form's own fixed default in this port's grammar, never
+user-overridable -- an exact proxy for goken's own AJAL-vs-AJMP
+identity check).
+
+**Byte/halfword/32-bit-view memory access generalizes cleanly across
+all three offset "distances"** (small/SB-relative-large/
+arbitrary-register-large): `gen_store`/`gen_load` were refactored
+from a thin "does it fit, else error" wrapper into helpers that
+internally pick the small-offset (case 6/7) shape or synthesize the
+large-offset (case 15/16, or case 12/13 for the SB-specific slow
+path) LUI-based fallback themselves -- shared by every Move1/Move2
+call site at once, so support for the large-offset cases "fell out"
+for byte/half/word/doubleword together rather than needing separate
+work per size.
+
+**Storing/loading a global's *value* by symbol had zero codegen at
+all**, not just a "large offset" gap -- `Ast_asmi.ml`'s `Entity` gen
+constructor existed (used by `visit_globals_instr`) but nothing built
+it (`gen`'s own grammar had no `name -> Entity` rule at all) and
+nothing consumed it in `Codegeni.ml`. This is what case 12/13 turned
+out to really be about, once investigated.
+
+**Combining two GLOBLs of very different sizes shifts a small
+global's own resolved offset by 4 bytes** between goken and xix -- a
+data-segment layout/alignment discrepancy, confirmed unrelated to any
+specific case's own encoding correctness (each global alone, in its
+own fixture, is fully byte-identical). Same category of issue as
+`mips_port.md`'s own "GLOBL-without-DATA total file size mismatch"
+open issue -- not root-caused, worked around by keeping fixtures to
+one global each.
+
+**Case 17 (`fcvt`)'s funct7 term is easy to miss reading `asm.c`
+alone** -- it's buried in the `OP_RF` macro's own definition, a
+screen away from the case 17 body that calls it, not inlined at the
+call site the way most other cases' bit-fiddling is. Every
+(funct7, rs2-field, rounding-mode) triple for the 6 real conversion
+directions (`MOVFD`/`MOVDF`/`MOVFW`/`MOVDW`/`MOVWF`/`MOVWD`) was
+verified empirically against real goken output, not just derived
+from the C source.
+
+**Case 4's JAL/JMP/JALR-to-label had no range check at all** before
+this was noticed while investigating case 18 -- an out-of-range
+target (beyond the direct J-type immediate's ±2²⁰-byte reach) would
+have silently produced wrong bytes. `fits_jal_range` now errors
+loudly instead. The check has to live inside the lazily-evaluated
+`binary` thunk, not evaluated eagerly at match-arm level -- eagerly
+checking `branch_delta` broke an existing, previously-passing fixture
+outright, since `real_pc` isn't finalized yet during the sizing pass
+that runs before layout.
+
+**goken's assembler applies real code-layout optimizations this port
+doesn't replicate**, discovered via branch/jump fixtures: (1) a
+"branch to L1, immediately followed by unconditional JMP to L2"
+idiom (classic if/then/else) gets inverted and L1's code relocated to
+the end of the function; (2) dead code after an unconditional JMP
+gets elided; (3) combined with a later JAL/indirect-return in the
+same function, a "loop rotation" was observed (via an ad-hoc test) to
+miscompute a target into non-4-byte-aligned garbage. None of these
+are replicated (same category as MIPS's own `sched.c` delay-slot
+story) -- worked around by writing fixtures in shapes that don't
+trigger them (e.g. "invert-and-skip-one-instruction" instead of
+"branch + trailing JMP").
+
+## Investigated and skipped (confirmed dead in goken itself)
+
+- **Case 19** (`addiw $0,rs,rd`) -- goken's optab has a real
+  `AMOVW C_REG C_REG` row mapping here (meant for re-sign-extending a
+  32-bit value already in a register on riscv64), but `obj.c`
+  *rewrites* `AMOVW`/`AMOVWU` to plain `AMOV` whenever neither operand
+  is a memory reference, on both riscv32 and riscv64 -- confirmed
+  empirically ("MOVW R5,R6" produces a plain ADD-with-REGZERO
+  encoding on both `ia`/`il` and `ja`/`jl`, never `ADDIW`). Unreachable
+  via any concrete goken syntax.
+- **Case 21** (`lui I,D; s[lr]ai N,D`, a sparse-64-bit-constant
+  shortcut via `vconshift`) -- the only place goken ever classifies a
+  constant this way is permanently short-circuited off in `pass.c`
+  via a literal `if(0 && ...)`, the classic "disabled, never
+  re-enabled" idiom. Confirmed empirically too: a genuinely sparse
+  64-bit constant on riscv64 produces an SB-relative DATA load
+  instead, never this shape.
+- **A bare, label-only "JAL label"** (no explicit register) --
+  goken's own grammar always requires an explicit register for
+  "JAL"/"JALR", so there's no real syntax to differentially test
+  against; xix's own grammar still accepts it (shares the tested
+  JALR-with-Absolute encoding path) as a building block with no
+  dedicated fixture of its own.
+- **A standalone "LUI $I,D"** -- goken's grammar parses it, but its
+  own linker `optab.c` has no entry for `ALUI` at all ("illegal
+  combination"). Only reachable in practice via the MOVW-immediate
+  fast path (case 8), which *is* tested.
+- **Register-to-register `MOVB`/`MOVH`/`MOVBU`/`MOVHU`** (case 10) --
+  goken's own grammar has no register-to-register syntax for these
+  mnemonics at all, even though the underlying machinery fully
+  supports a register "from" operand. xix's own syntax is kept as a
+  building block, verified only indirectly (it reuses the same
+  already-tested SLLI/SRAI/ANDI encoding helpers as case 1/2).
+
+## Deliberately out of scope (not investigated as dead, just not attempted)
+
+- **The explicit-32-bit-on-riscv64 `*W` variants** (`ADDW`/`SLLW`/
+  etc, a genuinely separate opcode family, `OOP_32` not `OOP`) for
+  case 0/1's register-register/shift-immediate arithmetic.
+- **`MULH`/`MULHSU`/`MULHU`** and the immediate CSR variants
+  (`CSRRWI`/`CSRRSI`/`CSRRCI`) -- `Ast_asmi.ml`'s own opcode types
+  have no constructors for them yet.
+- **`BLE`/`BGT`** -- real RISC-V has no such hardware branch, only an
+  operand-swapping pseudo-op rewrite goken's own assembler doesn't
+  even accept as a mnemonic.
+- **Unsigned int↔float/double conversions** (`FCVT.*.WU`/`FCVT.WU.*`)
+  -- goken itself has no `MOVFWU`/`MOVDWU`/`MOVWUF`/`MOVWUD`
+  mnemonics either.
+- **Case 18's full LUI+JALR far-branch fallback** -- see "Open
+  issues" below; guarded against silently-wrong bytes but not
+  implemented.
+
+## Open issues
+
+- **Case 18 (far JAL/JMP/JALR-to-label)** is a genuine
+  assembler-level "does this reach" decision (closer in scope to
+  ARM32/MIPS's own multi-pass branch-range stories than an isolated
+  encoder function), deferred rather than rushed -- no current
+  fixture's functions are anywhere near the ±2²⁰-byte range limit.
+  Guarded (`fits_jal_range`) so an out-of-range target errors loudly
+  instead of silently corrupting output; revisit if a real program
+  ever needs functions that far apart.
+- **RV64's address-of-procedure uses AUIPC in goken, LUI+ADDI here**
+  -- functionally correct (confirmed by matching exit codes across
+  fixtures that exercise it indirectly) but not byte-identical.
+  Surfaced while testing case 5; worked around by reaching test
+  callees via the already-verified JAL mechanism instead of an
+  address-of-procedure load. Revisit `Codegeni.ml`'s case 9/20
+  AUIPC-vs-LUI dispatch for RV64 specifically if a fixture ever needs
+  `"$proc(SB)"` directly.
+- **A data-segment layout/alignment discrepancy** when combining two
+  GLOBLs of very different sizes in one program (a small global's own
+  resolved offset shifts by 4 bytes between goken and xix). Not
+  root-caused; same category as `mips_port.md`'s own open
+  GLOBL-layout issue. Worked around in every affected fixture by
+  keeping one GLOBL per program.
+- **goken's real large-64-bit-constant story isn't implemented at
+  all** -- confirmed (see case 21's own writeup) that goken falls
+  back to an SB-relative DATA load for a constant too big for case
+  9/14's own LUI+ADDI range, a mechanism this port hasn't built.
+  Likely rare in practice; not investigated further.

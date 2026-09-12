@@ -25,7 +25,7 @@ Same kind of problem, same kind of playbook, different target
 language.
 
 Same methodology later extended, arch by arch: RISC-V32/64 (`oil`/
-`ojl`, see `notes_riscv_port_plan.txt`), then MIPS (`ova`/`ovl`, see
+`ojl`, see `riscv_port.md`), then MIPS (`ova`/`ovl`, see
 `mips_port.md`) -- both docs point back here for the shared harness
 shape, syncweb rules, where-changes-land guidance, and goken-flag
 conventions, so read this one first even when working on another

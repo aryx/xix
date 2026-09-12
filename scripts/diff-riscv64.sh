@@ -8,7 +8,7 @@
 # thechar on argv0's basename at runtime, see
 # mkfiles/riscv64/mkfile) -- mirrors scripts/diff-riscv.sh exactly,
 # just pointed at the 'j' names and qemu-riscv64. See
-# docs/claude_notes/notes_riscv_port_plan.txt for why only the final
+# docs/claude_notes/riscv_port.md for why only the final
 # executable is ever compared, never the intermediate object files.
 #
 # Usage:

@@ -1,9 +1,7 @@
 #!/bin/bash
-# Differential test driver for the RISC-V64 port (ojl, sharing
-# Codegeni.ml/Rewritei.ml/Layouti.ml/Ast_asmi.ml with the RV32 port --
-# goken's ja/jl are literally the same binaries as ia/il). Mirrors
-# test-riscv.sh -- see docs/claude_notes/notes_riscv_port_plan.txt and
-# docs/claude_notes/todo_riscv_port.org.
+# Differential test driver for the RISC-V64 port (complete -- see
+# docs/claude_notes/riscv_port.md). Shares Codegeni.ml/Rewritei.ml/
+# Layouti.ml/Ast_asmi.ml with the RV32 port. Mirrors test-riscv.sh.
 #
 # Usage: ./test-riscv64.sh
 #

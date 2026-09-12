@@ -22,7 +22,7 @@ out of scope: see "Investigated and skipped" and "Open issues" below.
 ## Goal
 
 Same methodology as `arm_port.md` (ARM32), `mips_port.md` (MIPS), and
-`notes_riscv_port_plan.txt` (RISC-V): assemble+link the same `.s`
+`riscv_port.md` (RISC-V): assemble+link the same `.s`
 with both goken's 7a/7l (Plan 9 ARM64 assembler/linker, `~/goken`)
 and xix's o7a/o7l, and require the final executables to be
 byte-identical. Scope is ARM64 assembler + linker only, permanently

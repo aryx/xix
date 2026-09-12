@@ -9,7 +9,7 @@
 // fixture -- combining it with a second, differently-sized global in
 // one program was found to trigger a separate, pre-existing
 // data-segment layout/alignment discrepancy unrelated to case 12/13
-// itself (see todo_riscv_port.org's "Notes for later").
+// itself (see riscv_port.md's "Notes for later").
 TEXT _start(SB), $0
     MOVW $setSB(SB), R3
     MOVW $77, R6

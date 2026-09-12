@@ -42,7 +42,7 @@ open Codegen
  * given `-c`; this port never emits compressed instructions, so the
  * differential harness always passes `-c` to goken's il to compare
  * apples to apples -- see scripts/diff-riscv.sh and
- * docs/claude_notes/notes_riscv_port_plan.txt.
+ * docs/claude_notes/riscv_port.md.
  *)
 
 (*****************************************************************************)
@@ -289,7 +289,7 @@ let opirr_bxx_funct3 (c : b_condition) : int =
   | GT _ | LE _ -> failwith "TODO:opirr_bxx_funct3 GT/LE (no direct RISC-V encoding)"
 
 (* claude: RISC-V has no branch-delay slot (unlike MIPS -- see
- * notes_riscv_port_plan.txt), so a branch/jump's immediate is just a
+ * riscv_port.md), so a branch/jump's immediate is just a
  * plain PC-relative delta, no -4/-8 bias to account for. `node.
  * real_pc` and the branch target's `real_pc` are both absolute (not
  * goken's text-relative raw `pc`), but since this is a *difference*
@@ -313,7 +313,7 @@ let branch_delta (node : 'a T.node) : int =
  * this port's own "loud error over silently-wrong bytes" policy,
  * `fits_jal_range` guards case 4's 3 call sites so an out-of-range
  * target errors instead of silently truncating -- see
- * todo_riscv_port.org for the deferred case 18 writeup. *)
+ * riscv_port.md for the deferred case 18 writeup. *)
 let fits_jal_range (delta : int) : bool =
   delta >= - (1 lsl 20) && delta < (1 lsl 20) && delta land 1 = 0
 
@@ -485,7 +485,7 @@ let rules (is_64 : bool)
     (* --------------------------------------------------------------------- *)
 
     (* claude: RISC-V has no branch-delay slot (unlike MIPS) -- see
-     * docs/claude_notes/notes_riscv_port_plan.txt /
+     * docs/claude_notes/riscv_port.md /
      * docs/claude_notes/mips_port.md for that story. RET (Rewritei.ml)
      * expands to a plain
      * `JMP (RLINK)`, encoded as `JALR x0, 0(RLINK)` (rd=x0 means
@@ -508,7 +508,7 @@ let rules (is_64 : bool)
      * the genuinely-indirect "JALR reg,(reg2)" form; this arm
      * exactly targets the label-shaped Absolute case, the other
      * (IndirectJump, an actual nonzero-rd computed jump) is a
-     * follow-up -- see docs/claude_notes/todo_riscv_port.org).
+     * follow-up -- see docs/claude_notes/riscv_port.md).
      * Bare `JAL` (Ast_asmi's own JAL constructor, defaulting r to
      * REGLINK, no explicit register at all) is also wired here for
      * completeness, even though it can't be verified directly

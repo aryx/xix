@@ -14,7 +14,7 @@
 // (address-of-procedure uses AUIPC there in goken, this port still
 // used an absolute LUI+ADDI, functionally correct but not byte-
 // identical) -- separate from case 5 itself, not fixed here, see
-// todo_riscv_port.org.
+// riscv_port.md.
 TEXT inc(SB), $0
     ADD $1, R6, R6
     JMP 0(R1)
